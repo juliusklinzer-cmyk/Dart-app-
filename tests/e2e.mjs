@@ -21,7 +21,8 @@ const server = http.createServer((req, res) => {
   res.end(fs.readFileSync(file));
 });
 await new Promise((r) => server.listen(0, r));
-const BASE = `http://127.0.0.1:${server.address().port}/index.html`;
+/* Standard: die normale App. TARGET=dart-turnier.html testet den Einzeldatei-Build. */
+const BASE = `http://127.0.0.1:${server.address().port}/${process.env.TARGET || 'index.html'}`;
 
 let failures = 0;
 function check(name, cond, extra = '') {
@@ -36,7 +37,10 @@ const browser = await chromium.launch(fs.existsSync(preinstalled) ? { executable
 const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
 const errors = [];
 page.on('pageerror', (e) => errors.push(String(e)));
-page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+/* Ladefehler werden über die Antworten geprüft; das automatische /favicon.ico
+   des Browsers zählt nicht als Fehler der App. */
+page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push(m.text()); });
+page.on('response', (r) => { if (r.status() >= 400 && !r.url().endsWith('/favicon.ico')) errors.push('HTTP ' + r.status() + ': ' + r.url()); });
 
 const $ = (sel) => page.locator(sel);
 const visible = (sel) => $(sel).isVisible();

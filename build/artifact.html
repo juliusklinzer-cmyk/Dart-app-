@@ -1,0 +1,1464 @@
+<title>Dart Turnier – 501 Double Out</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root {
+  --bg: #0e1116;
+  --bg-2: #161b23;
+  --bg-3: #1e2530;
+  --line: #2a3340;
+  --text: #eef2f7;
+  --muted: #8d9aab;
+  --green: #35d07f;
+  --green-dark: #1f7d4d;
+  --red: #ff5a5a;
+  --amber: #ffc14d;
+  --accent: #35d07f;
+  --radius: 14px;
+  --tap: 56px;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+/* Buttons auf iPad/iPhone: kein Doppeltipp-Zoom, keine Textauswahl beim Halten. */
+button { touch-action: manipulation; -webkit-user-select: none; user-select: none; font-family: inherit; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  max-width: var(--maxw, 620px);
+  margin: 0 auto;
+  padding: env(safe-area-inset-top) 12px calc(12px + env(safe-area-inset-bottom));
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+h1 { font-size: 1.5rem; margin: 0; letter-spacing: -0.02em; }
+h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 10px; }
+.muted { color: var(--muted); }
+.hidden { display: none !important; }
+
+/* ---------- Screens ---------- */
+.screen { display: none; padding-bottom: 24px; }
+.screen.active { display: block; }
+.screen.center { min-height: 88vh; display: none; }
+.screen.center.active { display: flex; flex-direction: column; justify-content: center; gap: 16px; }
+
+.app-header { padding: 18px 4px 14px; }
+.app-header.row { display: flex; align-items: center; justify-content: space-between; }
+.app-header .sub { margin: 4px 0 0; color: var(--muted); font-size: 0.9rem; }
+.footer-note { text-align: center; color: var(--muted); font-size: 0.78rem; margin: 14px 0 0; }
+
+/* ---------- Cards ---------- */
+.card {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 12px;
+}
+.card.no-pad { padding: 0; overflow: hidden; }
+.card.resume { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-color: var(--green-dark); }
+.card.resume span { display: block; font-size: 0.8rem; margin-top: 2px; }
+
+/* ---------- Buttons ---------- */
+.btn {
+  border: 1px solid var(--line);
+  background: var(--bg-3);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: var(--tap);
+}
+.btn:active { transform: scale(0.98); }
+.btn.full { width: 100%; }
+.btn.big { min-height: 62px; font-size: 1.1rem; }
+.btn.small { min-height: 38px; padding: 6px 12px; font-size: 0.85rem; }
+.btn.primary { background: var(--green); border-color: var(--green); color: #04240f; }
+.btn.ghost { background: transparent; }
+.btn.danger { color: var(--red); border-color: #4a2530; }
+.icon-btn {
+  background: var(--bg-3); border: 1px solid var(--line); color: var(--text);
+  width: 44px; height: 44px; border-radius: 12px; font-size: 1.4rem; line-height: 1; cursor: pointer;
+}
+
+/* ---------- Spielerliste ---------- */
+.player-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.player-row { display: flex; align-items: center; gap: 8px; }
+.player-row .idx {
+  width: 28px; height: 28px; flex: none; border-radius: 50%;
+  background: var(--bg-3); color: var(--muted);
+  display: grid; place-items: center; font-size: 0.8rem; font-weight: 700;
+}
+.player-row input {
+  flex: 1; background: var(--bg-3); border: 1px solid var(--line); color: var(--text);
+  border-radius: 10px; padding: 12px; font-size: 1rem; min-height: 48px;
+}
+.player-row input:focus { outline: 2px solid var(--green-dark); }
+.player-row .rm {
+  background: none; border: none; color: var(--muted); font-size: 1.3rem; cursor: pointer;
+  width: 40px; height: 40px; flex: none;
+}
+
+/* ---------- Einstellungen ---------- */
+.setting { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.setting label { font-size: 0.92rem; color: var(--muted); }
+.segmented { display: flex; background: var(--bg-3); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.segmented button {
+  background: none; border: none; color: var(--muted); padding: 10px 12px;
+  font-size: 0.85rem; font-weight: 600; cursor: pointer; min-height: 42px;
+}
+.segmented button.active { background: var(--green); color: #04240f; }
+.segmented.small button { padding: 7px 12px; min-height: 36px; font-size: 0.8rem; }
+.hint { font-size: 0.78rem; color: var(--muted); margin: 6px 0 0; line-height: 1.45; }
+
+/* ---------- Tabelle ---------- */
+.standings { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+.standings th {
+  font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted);
+  font-weight: 600; padding: 10px 6px; background: var(--bg-3);
+}
+.standings td { padding: 12px 6px; text-align: center; border-top: 1px solid var(--line); }
+.standings .left, .standings td.left { text-align: left; padding-left: 12px; }
+.standings tr.leader td { background: rgba(53, 208, 127, 0.07); }
+.standings .rank { color: var(--muted); font-size: 0.8rem; }
+.standings .name { font-weight: 600; }
+.standings .wins { color: var(--green); font-weight: 700; }
+
+/* ---------- Spielplan ---------- */
+.match-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 10px; border-radius: 10px; background: var(--bg-3); margin-bottom: 8px;
+  border: 1px solid transparent;
+}
+.match-row.done { opacity: 0.62; }
+.match-row.next { border-color: var(--green-dark); }
+.match-row .pair { flex: 1; font-size: 0.95rem; }
+.match-row .pair b { font-weight: 700; }
+.match-row .res { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--muted); }
+.match-row .go {
+  background: var(--green); color: #04240f; border: none; border-radius: 9px;
+  padding: 9px 14px; font-weight: 700; cursor: pointer; min-height: 40px;
+}
+.round-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 12px 0 6px; }
+.round-label:first-child { margin-top: 0; }
+
+/* ---------- Statistik ---------- */
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.stat-card { background: var(--bg-3); border-radius: 10px; padding: 10px 12px; }
+.stat-card .who { font-weight: 700; margin-bottom: 6px; }
+.stat-card .line { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--muted); padding: 2px 0; }
+.stat-card .line b { color: var(--text); font-variant-numeric: tabular-nums; }
+
+/* ---------- Bull-Off ---------- */
+.bulloff { display: grid; gap: 12px; }
+.bulloff button {
+  background: var(--bg-2); border: 1px solid var(--line); color: var(--text);
+  border-radius: var(--radius); padding: 26px; font-size: 1.35rem; font-weight: 700; cursor: pointer;
+}
+.bulloff button:active { border-color: var(--green); }
+
+/* ---------- Spiel ---------- */
+.screen.game { display: none; }
+.screen.game.active { display: flex; flex-direction: column; min-height: calc(100vh - 12px); min-height: calc(100dvh - 12px); }
+.game-body { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.game-main { display: flex; flex-direction: column; min-height: 0; }
+.game-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 0; }
+.game-title { text-align: center; display: flex; flex-direction: column; gap: 2px; font-size: 0.9rem; font-weight: 600; }
+.game-title .muted { font-size: 0.75rem; font-weight: 500; }
+
+.scoreboard { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.pcard {
+  background: var(--bg-2); border: 2px solid var(--line); border-radius: var(--radius);
+  padding: 12px 10px; text-align: center; position: relative;
+}
+.pcard.active { border-color: var(--green); background: rgba(53, 208, 127, 0.08); }
+.pcard .pname { font-size: 0.95rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.pcard .legs { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+.pcard .rest { font-size: 3.4rem; font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; margin: 4px 0 2px; }
+.pcard.active .rest { color: var(--green); }
+.pcard .meta { display: flex; justify-content: center; gap: 12px; font-size: 0.72rem; color: var(--muted); }
+.pcard .meta b { color: var(--text); font-variant-numeric: tabular-nums; }
+.pcard .arrow { color: var(--green); }
+
+.checkout-bar {
+  min-height: 46px; display: flex; align-items: center; justify-content: center; gap: 6px;
+  background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px;
+  padding: 8px; margin-bottom: 8px; flex-wrap: wrap;
+}
+.checkout-bar .label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+.checkout-bar .chip {
+  background: var(--bg-3); border: 1px solid var(--line); border-radius: 8px;
+  padding: 5px 10px; font-weight: 700; font-size: 0.95rem;
+}
+.checkout-bar .chip.first { background: var(--green); color: #04240f; border-color: var(--green); }
+.checkout-bar .none { color: var(--muted); font-size: 0.85rem; }
+
+.history {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  flex: 1; min-height: 0; overflow-y: auto; margin-bottom: 8px;
+}
+.history .col { display: flex; flex-direction: column; gap: 4px; }
+.history .v {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+  background: var(--bg-2); border-radius: 8px; padding: 6px 10px; font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+.history .v .s { font-weight: 700; }
+.history .v .r { color: var(--muted); font-size: 0.78rem; }
+.history .v.bust .s { color: var(--red); text-decoration: line-through; }
+.history .v.co .s { color: var(--green); }
+
+.input-area { margin-top: auto; }
+.mode-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.visit-darts { display: flex; gap: 5px; }
+.visit-darts .d {
+  min-width: 42px; text-align: center; background: var(--bg-3); border: 1px solid var(--line);
+  border-radius: 8px; padding: 6px 8px; font-size: 0.82rem; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.visit-darts .d.empty { color: var(--muted); opacity: 0.4; font-weight: 500; }
+
+.pad { display: block; }
+.quick-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 8px; }
+.quick-row button {
+  background: var(--bg-3); border: 1px solid var(--line); color: var(--text);
+  border-radius: 10px; padding: 10px 0; font-size: 0.92rem; font-weight: 600; cursor: pointer; min-height: 44px;
+}
+.quick-row button.miss { color: var(--red); }
+
+.display-row { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 8px; min-height: 44px; }
+.score-display {
+  font-size: 2.2rem; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: 0.02em;
+}
+.score-display.empty { color: var(--muted); opacity: 0.35; }
+.input-error { color: var(--red); font-size: 0.82rem; }
+
+.keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.keypad button {
+  background: var(--bg-2); border: 1px solid var(--line); color: var(--text);
+  border-radius: 12px; font-size: 1.5rem; font-weight: 700; min-height: 60px; cursor: pointer;
+}
+.keypad button.fn { font-size: 1.3rem; color: var(--muted); }
+.keypad button.ok { background: var(--green); border-color: var(--green); color: #04240f; font-size: 1.1rem; }
+.keypad button:active { background: var(--bg-3); }
+.keypad button.ok:active { background: var(--green-dark); }
+
+.mult-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 6px; }
+.mult-row button {
+  background: var(--bg-2); border: 1px solid var(--line); color: var(--text);
+  border-radius: 10px; min-height: 48px; font-weight: 700; font-size: 0.95rem; cursor: pointer;
+}
+.mult-row button.active { background: var(--green); border-color: var(--green); color: #04240f; }
+.num-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.num-grid button {
+  background: var(--bg-2); border: 1px solid var(--line); color: var(--text);
+  border-radius: 10px; min-height: 52px; font-size: 1.15rem; font-weight: 700; cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+.num-grid button:active { background: var(--bg-3); }
+.num-grid button.wide { grid-column: span 2; }
+.num-grid button.miss { color: var(--red); }
+.num-grid button.bull { color: var(--amber); }
+.num-grid button.hl { outline: 2px solid var(--green); }
+
+/* ---------- Overlay ---------- */
+.overlay {
+  position: fixed; inset: 0; background: rgba(6, 9, 13, 0.86);
+  display: grid; place-items: center; padding: 20px; z-index: 50;
+}
+.overlay-card {
+  background: var(--bg-2); border: 1px solid var(--line); border-radius: 18px;
+  padding: 22px; width: 100%; max-width: 380px; text-align: center;
+}
+.overlay-card h3 { margin: 0 0 6px; font-size: 1.4rem; }
+.overlay-card p { color: var(--muted); margin: 0 0 16px; font-size: 0.9rem; }
+.overlay-card .btn { margin-top: 8px; }
+.overlay-card .row-btns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.overlay-card .row-btns.two { grid-template-columns: repeat(2, 1fr); }
+.big-emoji { font-size: 3rem; margin-bottom: 6px; }
+
+/* ---------- Sieger ---------- */
+.podium { display: flex; flex-direction: column; gap: 8px; margin: 16px 0; }
+.podium .p {
+  display: flex; align-items: center; gap: 12px; background: var(--bg-2);
+  border: 1px solid var(--line); border-radius: 12px; padding: 14px;
+}
+.podium .p.first { border-color: var(--green); background: rgba(53, 208, 127, 0.1); }
+.podium .medal { font-size: 1.5rem; width: 34px; text-align: center; }
+.podium .pn { flex: 1; font-weight: 700; font-size: 1.05rem; }
+.podium .pv { color: var(--muted); font-size: 0.85rem; }
+
+@media (max-height: 700px) and (max-width: 699px) {
+  .pcard .rest { font-size: 2.6rem; }
+  .keypad button { min-height: 50px; font-size: 1.3rem; }
+  .num-grid button { min-height: 46px; }
+}
+
+/* ================= Tablet / iPad ================= */
+@media (min-width: 700px) and (min-height: 600px) {
+  :root { --maxw: 860px; --tap: 60px; }
+  body { padding-left: 20px; padding-right: 20px; }
+  h1 { font-size: 1.8rem; }
+  .card { padding: 18px; margin-bottom: 16px; }
+  .btn.big { min-height: 70px; font-size: 1.2rem; }
+  .standings { font-size: 1.05rem; }
+  .standings td { padding: 15px 8px; }
+  .stats-grid { grid-template-columns: repeat(4, 1fr); }
+  .setting label { font-size: 1rem; }
+  .segmented button { padding: 12px 18px; min-height: 50px; font-size: 0.95rem; }
+  .player-row input { min-height: 54px; font-size: 1.05rem; }
+  .bulloff { grid-template-columns: repeat(2, 1fr); }
+  .bulloff button { padding: 48px 20px; font-size: 1.6rem; }
+  .match-row { padding: 15px 14px; }
+  .match-row .pair { font-size: 1.05rem; }
+  .match-row .go { padding: 12px 20px; min-height: 48px; }
+  .overlay-card { max-width: 460px; padding: 28px; }
+
+  .pcard { min-height: 200px; display: flex; flex-direction: column; justify-content: center; }
+  .pcard .rest { font-size: 4.6rem; }
+  .pcard .pname { font-size: 1.25rem; }
+  .pcard .legs, .pcard .meta { font-size: 0.85rem; }
+  .checkout-bar { min-height: 60px; }
+  .checkout-bar .chip { font-size: 1.15rem; padding: 8px 14px; }
+  .history .v { font-size: 1rem; padding: 9px 12px; }
+  .quick-row button { min-height: 54px; font-size: 1.05rem; }
+  .keypad button { min-height: 74px; font-size: 1.8rem; }
+  .keypad button.ok { font-size: 1.3rem; }
+  .mult-row button { min-height: 58px; font-size: 1.1rem; }
+  .num-grid button { min-height: 64px; font-size: 1.35rem; }
+  .visit-darts .d { min-width: 56px; font-size: 1rem; padding: 9px 10px; }
+  .score-display { font-size: 2.8rem; }
+}
+
+/* Querformat (iPad, großes Handy quer): Stand links, Eingabe rechts.
+   Nichts muss gescrollt werden, die Tasten füllen die Höhe. */
+@media (orientation: landscape) and (min-width: 700px) {
+  :root { --maxw: 1100px; }
+  .game-body { flex-direction: row; align-items: stretch; gap: 16px; }
+  .game-main { flex: 1 1 50%; min-width: 0; }
+  .input-area { flex: 1 1 50%; min-width: 0; margin-top: 0; display: flex; flex-direction: column; }
+  .pad { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+  .pad .keypad, .pad .num-grid { flex: 1; grid-auto-rows: 1fr; }
+  .quick-row, .mult-row, .display-row { margin-bottom: 0; }
+  .app-header { padding: 14px 4px 10px; }
+  .screen.center.active { min-height: calc(100dvh - 24px); }
+  .pcard { min-height: 0; }
+  .pcard .rest { font-size: 3.6rem; }
+  .pad .num-grid, .pad .keypad { max-height: 620px; }
+}
+
+/* Handy im Querformat: sehr flach, alles muss ohne Scrollen passen. */
+@media (orientation: landscape) and (max-height: 520px) {
+  body { padding-top: 4px; padding-bottom: 4px; }
+  .screen.game.active { min-height: calc(100vh - 8px); min-height: calc(100dvh - 8px); }
+  .game-header { padding: 4px 0; }
+  .icon-btn { width: 38px; height: 38px; }
+  .pcard { padding: 6px 8px; }
+  .pcard .rest { font-size: 2.3rem; margin: 0; }
+  .pcard .legs { display: none; }
+  .checkout-bar { min-height: 38px; padding: 5px; margin-bottom: 6px; }
+  .history { display: none; }
+  .keypad button { min-height: 44px; font-size: 1.2rem; }
+  .num-grid button { min-height: 36px; font-size: 1rem; }
+  .mult-row button { min-height: 38px; }
+  .quick-row button { min-height: 38px; font-size: 0.85rem; }
+  .visit-darts .d { padding: 4px 6px; }
+}
+
+</style>
+<!-- ============ SETUP ============ -->
+<section id="screen-setup" class="screen">
+  <header class="app-header">
+    <h1>🎯 Dart Turnier</h1>
+    <p class="sub">Jeder gegen jeden · 501 Double Out</p>
+  </header>
+
+  <div id="resume-box" class="card resume hidden">
+    <div>
+      <strong>Laufendes Turnier gefunden</strong>
+      <span class="muted" id="resume-info"></span>
+    </div>
+    <button class="btn primary" data-action="resume">Fortsetzen</button>
+  </div>
+
+  <div class="card">
+    <h2>Spieler</h2>
+    <div id="player-list" class="player-list"></div>
+    <button class="btn ghost full" data-action="add-player">+ Spieler hinzufügen</button>
+  </div>
+
+  <div class="card">
+    <h2>Einstellungen</h2>
+    <div class="setting">
+      <label>Startpunkte</label>
+      <div class="segmented" data-setting="start">
+        <button data-value="301">301</button>
+        <button data-value="501">501</button>
+        <button data-value="701">701</button>
+      </div>
+    </div>
+    <div class="setting">
+      <label>Legs pro Spiel</label>
+      <div class="segmented" data-setting="bestOf">
+        <button data-value="1">1 Leg</button>
+        <button data-value="3">Best of 3</button>
+        <button data-value="5">Best of 5</button>
+      </div>
+    </div>
+    <div class="setting">
+      <label>Einzel-Darts ab Rest</label>
+      <div class="segmented" data-setting="dartModeFrom">
+        <button data-value="100">100</button>
+        <button data-value="170">170</button>
+        <button data-value="180">180</button>
+        <button data-value="0">nie</button>
+      </div>
+    </div>
+    <p class="hint">Über diesem Rest tippst du die geworfene Gesamtpunktzahl (bis 180), darunter
+      schaltet die App automatisch auf Einzel-Darts (Single/Double/Triple) mit Finish-Vorschlag um.</p>
+  </div>
+
+  <button class="btn primary full big" data-action="start-tournament">Turnier starten</button>
+  <p class="footer-note">Läuft komplett offline · Stand wird automatisch gespeichert</p>
+</section>
+
+<!-- ============ TURNIER-ÜBERSICHT ============ -->
+<section id="screen-tournament" class="screen">
+  <header class="app-header row">
+    <h1>Tabelle</h1>
+    <button class="btn ghost small" data-action="to-setup">Einstellungen</button>
+  </header>
+
+  <div class="card no-pad">
+    <table class="standings">
+      <thead>
+        <tr><th>#</th><th class="left">Spieler</th><th>S</th><th>N</th><th>Legs</th><th>Ø</th></tr>
+      </thead>
+      <tbody id="standings-body"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Spielplan</h2>
+    <div id="schedule"></div>
+  </div>
+
+  <button class="btn primary full big" data-action="next-match">Nächstes Spiel</button>
+
+  <div class="card">
+    <h2>Statistik</h2>
+    <div id="stats-grid" class="stats-grid"></div>
+  </div>
+
+  <button class="btn danger ghost full" data-action="reset">Turnier zurücksetzen</button>
+</section>
+
+<!-- ============ BULL-OFF ============ -->
+<section id="screen-bulloff" class="screen center">
+  <header class="app-header">
+    <h1>Bull werfen</h1>
+    <p class="sub">Wer war näher am Bull und darf anfangen?</p>
+  </header>
+  <div id="bulloff-buttons" class="bulloff"></div>
+  <button class="btn ghost full" data-action="to-tournament">Zurück</button>
+</section>
+
+<!-- ============ SPIEL ============ -->
+<section id="screen-game" class="screen game">
+  <header class="game-header">
+    <button class="icon-btn" data-action="to-tournament" aria-label="Zurück">‹</button>
+    <div class="game-title">
+      <span id="game-match-label"></span>
+      <span id="game-leg-label" class="muted"></span>
+    </div>
+    <button class="icon-btn" data-action="undo" aria-label="Rückgängig">↺</button>
+  </header>
+
+  <div class="game-body">
+  <div class="game-main">
+    <div id="scoreboard" class="scoreboard"></div>
+
+    <div id="checkout-bar" class="checkout-bar"></div>
+
+    <div id="history" class="history"></div>
+  </div>
+
+  <div class="input-area">
+    <div class="mode-row">
+      <div class="segmented small" id="mode-toggle">
+        <button data-mode="total">Punkte</button>
+        <button data-mode="darts">Einzel-Darts</button>
+      </div>
+      <div id="visit-darts" class="visit-darts"></div>
+    </div>
+
+    <!-- Punkte-Eingabe -->
+    <div id="pad-total" class="pad">
+      <div class="quick-row" id="quick-row"></div>
+      <div class="display-row">
+        <div id="score-display" class="score-display">0</div>
+        <div id="input-error" class="input-error"></div>
+      </div>
+      <div class="keypad">
+        <button data-key="1">1</button><button data-key="2">2</button><button data-key="3">3</button>
+        <button data-key="4">4</button><button data-key="5">5</button><button data-key="6">6</button>
+        <button data-key="7">7</button><button data-key="8">8</button><button data-key="9">9</button>
+        <button data-key="del" class="fn">←</button>
+        <button data-key="0">0</button>
+        <button data-key="ok" class="ok">OK</button>
+      </div>
+    </div>
+
+    <!-- Einzel-Dart-Eingabe -->
+    <div id="pad-darts" class="pad hidden">
+      <div class="mult-row" id="mult-row">
+        <button data-mult="1" class="active">Single</button>
+        <button data-mult="2">Double</button>
+        <button data-mult="3">Triple</button>
+      </div>
+      <div class="num-grid" id="num-grid"></div>
+    </div>
+  </div>
+  </div>
+</section>
+
+<!-- ============ SIEGER ============ -->
+<section id="screen-winner" class="screen center">
+  <div id="winner-box"></div>
+  <button class="btn primary full big" data-action="to-tournament">Tabelle ansehen</button>
+</section>
+
+<!-- ============ OVERLAY ============ -->
+<div id="overlay" class="overlay hidden">
+  <div class="overlay-card" id="overlay-card"></div>
+</div>
+<script>
+/*
+ * Checkout-Solver für Double-Out.
+ * Berechnet den sinnvollsten Finish-Weg für einen Reststand und die Anzahl
+ * der noch verfügbaren Darts (1-3). Es wird zuerst nach möglichst wenigen
+ * Darts optimiert, danach nach "Wurf-Qualität" (T20/T19 zuerst, gute Doppel
+ * am Ende, schlechte Doppel wie D2/D4 werden gemieden).
+ */
+(function (global) {
+  'use strict';
+
+  /** Alle möglichen Felder auf dem Board. */
+  function buildFields() {
+    var fields = [];
+    for (var n = 1; n <= 20; n++) {
+      fields.push({ label: 'S' + n, value: n, mult: 1, num: n, double: false });
+      fields.push({ label: 'D' + n, value: 2 * n, mult: 2, num: n, double: true });
+      fields.push({ label: 'T' + n, value: 3 * n, mult: 3, num: n, double: false });
+    }
+    fields.push({ label: '25', value: 25, mult: 1, num: 25, double: false });
+    fields.push({ label: 'BULL', value: 50, mult: 2, num: 25, double: true });
+    return fields;
+  }
+
+  var FIELDS = buildFields();
+
+  /* Wie gerne wirft man ein Feld als Punkte-Dart? (kleiner = lieber) */
+  function scoringCost(f) {
+    if (f.mult === 3) return (20 - f.num) * 1.5;    // T20 = 0 ... T1 = 28.5
+    if (f.label === 'BULL') return 15;              // Bull als Punkte-Dart: ungern
+    if (f.label === '25') return 20;
+    if (f.mult === 1) return 12 + (20 - f.num) * 0.4;
+    return 30 + (20 - f.num) * 0.4;                 // Doppel als Punkte-Dart: ungern
+  }
+
+  /* Wie gerne steht man auf diesem Doppel? (kleiner = lieber) */
+  var DOUBLE_RANK = {
+    20: 0, 16: 1, 12: 2, 10: 3, 8: 4, 18: 5, 14: 6,
+    6: 9, 4: 12, 2: 18, 25: 13
+  };
+  function finishCost(f) {
+    if (DOUBLE_RANK[f.num] !== undefined) return DOUBLE_RANK[f.num];
+    return 12 + (20 - f.num) * 0.2;                 // ungerade Doppel (D19, D17, ...)
+  }
+
+  /*
+   * Reihenfolge der Kriterien:
+   * 1. weniger Darts   2. geringere Kosten
+   * 3. besseres Schluss-Doppel   4. höherer erster Dart (T20 vor T19)
+   */
+  function better(candidate, current) {
+    if (!current) return true;
+    if (candidate.darts.length !== current.darts.length) {
+      return candidate.darts.length < current.darts.length;
+    }
+    if (Math.abs(candidate.cost - current.cost) > 1e-9) return candidate.cost < current.cost;
+    var candFinish = finishCostOf(candidate.darts[candidate.darts.length - 1]);
+    var curFinish = finishCostOf(current.darts[current.darts.length - 1]);
+    if (candFinish !== curFinish) return candFinish < curFinish;
+    return fieldValue(candidate.darts[0]) > fieldValue(current.darts[0]);
+  }
+
+  function finishCostOf(label) {
+    for (var i = 0; i < FIELDS.length; i++) {
+      if (FIELDS[i].label === label) return finishCost(FIELDS[i]);
+    }
+    return 99;
+  }
+
+  var cache = Object.create(null);
+
+  /**
+   * Bester Finish-Weg.
+   * @param {number} remaining Reststand
+   * @param {number} dartsLeft verbleibende Darts dieser Aufnahme (1-3)
+   * @returns {{darts: string[], cost: number}|null}
+   */
+  function best(remaining, dartsLeft) {
+    if (!(remaining > 1) || remaining > 170 || dartsLeft < 1) return null;
+    var key = remaining + ':' + dartsLeft;
+    if (cache[key] !== undefined) return cache[key];
+
+    var result = null;
+
+    // 1 Dart: muss direkt ein Doppel sein.
+    for (var i = 0; i < FIELDS.length; i++) {
+      var f = FIELDS[i];
+      if (f.double && f.value === remaining) {
+        var cand = { darts: [f.label], cost: finishCost(f) };
+        if (better(cand, result)) result = cand;
+      }
+    }
+    if (result || dartsLeft === 1) {
+      cache[key] = result;
+      return result;
+    }
+
+    // 2-3 Darts: erster Dart punktet, Rest rekursiv.
+    for (var j = 0; j < FIELDS.length; j++) {
+      var d = FIELDS[j];
+      var rest = remaining - d.value;
+      if (rest < 2) continue;
+      var sub = best(rest, dartsLeft - 1);
+      if (!sub) continue;
+      var cand2 = { darts: [d.label].concat(sub.darts), cost: scoringCost(d) + sub.cost };
+      if (better(cand2, result)) result = cand2;
+    }
+    cache[key] = result;
+    return result;
+  }
+
+  /** Gibt nur die Wurffolge zurück, z.B. ['T20','T20','BULL'] oder null. */
+  function suggest(remaining, dartsLeft) {
+    var r = best(remaining, dartsLeft === undefined ? 3 : dartsLeft);
+    return r ? r.darts : null;
+  }
+
+  /** Ist ein Checkout mit genau so vielen Darts möglich? */
+  function possible(remaining, dartsLeft) {
+    return best(remaining, dartsLeft) !== null;
+  }
+
+  /** Kleinste Anzahl Darts, mit der remaining ausgecheckt werden kann (oder null). */
+  function minDarts(remaining) {
+    for (var n = 1; n <= 3; n++) if (possible(remaining, n)) return n;
+    return null;
+  }
+
+  /** Wert eines Feld-Labels ('T20' -> 60). */
+  function fieldValue(label) {
+    for (var i = 0; i < FIELDS.length; i++) if (FIELDS[i].label === label) return FIELDS[i].value;
+    return 0;
+  }
+
+  /** Hübsche Anzeige: 'T20' -> 'T20', 'BULL' -> 'Bull', 'S7' -> '7' */
+  function pretty(label) {
+    if (label === 'BULL') return 'Bull';
+    if (label === '25') return '25';
+    if (label.charAt(0) === 'S') return label.slice(1);
+    return label;
+  }
+
+  global.Checkout = {
+    suggest: suggest,
+    possible: possible,
+    minDarts: minDarts,
+    fieldValue: fieldValue,
+    pretty: pretty,
+    FIELDS: FIELDS
+  };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefined' ? window : globalThis).Checkout;
+
+/*
+ * Dart-Turnier – Jeder gegen jeden, 501 Double Out.
+ * Kein Framework, kein Build: State im Speicher, Persistenz via localStorage.
+ */
+(function () {
+  'use strict';
+
+  var STORAGE_KEY = 'dart-turnier-v1';
+  var DEFAULT_PLAYERS = ['Lenas', 'Tobi', 'Domi', 'Julius'];
+  var QUICK_SCORES = [26, 41, 45, 60, 81, 85, 100, 140, 180];
+  /* Summen, die mit 3 Darts nicht zu werfen sind. */
+  var IMPOSSIBLE = { 163: 1, 166: 1, 169: 1, 172: 1, 173: 1, 175: 1, 176: 1, 178: 1, 179: 1 };
+
+  var S = null;
+  var UI = { input: '', darts: [], mult: 1, modeOverride: null, overlay: null, error: '' };
+
+  /* ================= Helfer ================= */
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+  function uid() { return Math.random().toString(36).slice(2, 9); }
+  function sum(arr, f) { var t = 0; for (var i = 0; i < arr.length; i++) t += f(arr[i]); return t; }
+
+  function newState() {
+    return {
+      v: 1,
+      screen: 'setup',
+      settings: { start: 501, bestOf: 1, dartModeFrom: 170 },
+      players: DEFAULT_PLAYERS.map(function (n) { return { id: uid(), name: n }; }),
+      matches: [],
+      current: null
+    };
+  }
+
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(S)); } catch (e) { /* Speicher voll / privater Modus */ }
+  }
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      var s = JSON.parse(raw);
+      if (!s || s.v !== 1 || !Array.isArray(s.players)) return null;
+      return s;
+    } catch (e) { return null; }
+  }
+
+  function player(id) {
+    for (var i = 0; i < S.players.length; i++) if (S.players[i].id === id) return S.players[i];
+    return { id: id, name: '?' };
+  }
+  function pname(id) { return player(id).name; }
+  function legsToWin() { return Math.floor(S.settings.bestOf / 2) + 1; }
+
+  /* ================= Turnierplan ================= */
+  /* Kreis-Methode: jeder gegen jeden, gleichmäßig auf Runden verteilt. */
+  function buildSchedule(ids) {
+    var list = ids.slice();
+    if (list.length % 2 === 1) list.push(null);
+    var n = list.length;
+    var matches = [];
+    for (var r = 0; r < n - 1; r++) {
+      for (var i = 0; i < n / 2; i++) {
+        var a = list[i], b = list[n - 1 - i];
+        if (a === null || b === null) continue;
+        matches.push({
+          id: uid(),
+          round: r + 1,
+          p: r % 2 === 0 ? [a, b] : [b, a],
+          starter: null,
+          legs: [],
+          done: false,
+          winner: null
+        });
+      }
+      list.splice(1, 0, list.pop());
+    }
+    return matches;
+  }
+
+  function matchById(id) {
+    for (var i = 0; i < S.matches.length; i++) if (S.matches[i].id === id) return S.matches[i];
+    return null;
+  }
+  function currentMatch() { return S.current ? matchById(S.current) : null; }
+  function nextOpenMatch() {
+    for (var i = 0; i < S.matches.length; i++) if (!S.matches[i].done) return S.matches[i];
+    return null;
+  }
+  function allMatchesDone() { return S.matches.length > 0 && !nextOpenMatch(); }
+
+  /* ================= Leg-Logik ================= */
+  function legsWon(match, pid) {
+    return sum(match.legs, function (l) { return l.winner === pid ? 1 : 0; });
+  }
+
+  function ensureLeg(match) {
+    var last = match.legs[match.legs.length - 1];
+    if (last && !last.winner) return last;
+    if (match.done) return last || null;
+    var other = match.p[0] === match.starter ? match.p[1] : match.p[0];
+    var starter = match.legs.length % 2 === 0 ? match.starter : other;
+    var leg = { starter: starter, visits: [], winner: null };
+    match.legs.push(leg);
+    return leg;
+  }
+
+  function activeLeg(match) { return match.legs[match.legs.length - 1] || null; }
+
+  function remainingIn(leg, pid) {
+    var rest = S.settings.start;
+    for (var i = 0; i < leg.visits.length; i++) {
+      var v = leg.visits[i];
+      if (v.p === pid && !v.b) rest -= v.s;
+    }
+    return rest;
+  }
+
+  function activePlayer(leg, match) {
+    var other = match.p[0] === leg.starter ? match.p[1] : match.p[0];
+    return leg.visits.length % 2 === 0 ? leg.starter : other;
+  }
+
+  function dartsIn(leg, pid) {
+    return sum(leg.visits, function (v) { return v.p === pid ? v.d : 0; });
+  }
+
+  /* Aufnahme abschließen und Leg-/Matchstand fortschreiben. */
+  function commitVisit(score, darts, isCheckout, isBust) {
+    var m = currentMatch();
+    var leg = activeLeg(m);
+    var pid = activePlayer(leg, m);
+    leg.visits.push({ p: pid, s: isBust ? 0 : score, d: darts, b: !!isBust, c: !!isCheckout, o: isBust ? score : 0 });
+
+    UI.input = '';
+    UI.darts = [];
+    UI.mult = 1;
+    UI.modeOverride = null;
+    UI.error = '';
+
+    if (isCheckout) {
+      leg.winner = pid;
+      if (legsWon(m, pid) >= legsToWin()) {
+        m.done = true;
+        m.winner = pid;
+        UI.overlay = { type: 'match-done', pid: pid };
+      } else {
+        UI.overlay = { type: 'leg-done', pid: pid };
+      }
+    }
+    save();
+    render();
+  }
+
+  /* ================= Eingabe: Gesamtpunkte ================= */
+  function submitTotal() {
+    if (UI.input === '') return;
+    var v = parseInt(UI.input, 10);
+    var m = currentMatch();
+    var leg = activeLeg(m);
+    var rest = remainingIn(leg, activePlayer(leg, m));
+
+    if (v > 180) { UI.error = 'Maximal 180'; UI.input = ''; render(); return; }
+    if (IMPOSSIBLE[v]) { UI.error = v + ' ist mit 3 Darts nicht möglich'; UI.input = ''; render(); return; }
+
+    var after = rest - v;
+    if (after < 0 || after === 1) { commitVisit(v, 3, false, true); return; }
+    if (after === 0) {
+      var opts = [];
+      for (var n = 1; n <= 3; n++) if (Checkout.possible(rest, n)) opts.push(n);
+      if (!opts.length) { UI.error = 'Kein gültiges Finish auf Doppel'; UI.input = ''; render(); return; }
+      UI.overlay = { type: 'checkout-darts', score: v, options: opts };
+      render();
+      return;
+    }
+    commitVisit(v, 3, false, false);
+  }
+
+  function pressKey(k) {
+    UI.error = '';
+    if (k === 'del') { UI.input = UI.input.slice(0, -1); render(); return; }
+    if (k === 'ok') { submitTotal(); return; }
+    var next = UI.input + k;
+    if (next.length > 3) return;
+    var val = parseInt(next, 10);
+    if (val > 180) { UI.error = 'Maximal 180'; render(); return; }
+    UI.input = String(val);
+    // Sobald keine weitere Ziffer mehr passen kann, direkt übernehmen (spart einen Tap).
+    if (val >= 19) { submitTotal(); return; }
+    render();
+  }
+
+  /* ================= Eingabe: Einzel-Darts ================= */
+  function pushDart(mult, num) {
+    UI.error = '';
+    var m = currentMatch();
+    var leg = activeLeg(m);
+    var pid = activePlayer(leg, m);
+    var rest = remainingIn(leg, pid) - sum(UI.darts, function (d) { return d.v; });
+    var value = mult * num;
+
+    UI.darts.push({ m: mult, n: num, v: value });
+    UI.mult = 1;
+
+    var after = rest - value;
+    var thrown = UI.darts.length;
+    var total = sum(UI.darts, function (d) { return d.v; });
+
+    if (after < 0 || after === 1 || (after === 0 && mult !== 2)) {
+      commitVisit(total, thrown, false, true);
+      return;
+    }
+    if (after === 0) { commitVisit(total, thrown, true, false); return; }
+    if (thrown === 3) { commitVisit(total, 3, false, false); return; }
+    render();
+  }
+
+  /* ================= Undo ================= */
+  function undo() {
+    if (UI.overlay && UI.overlay.type === 'checkout-darts') { UI.overlay = null; UI.input = ''; render(); return; }
+    if (UI.darts.length) { UI.darts.pop(); UI.mult = 1; render(); return; }
+
+    var m = currentMatch();
+    if (!m) return;
+    while (m.legs.length && m.legs[m.legs.length - 1].visits.length === 0) m.legs.pop();
+    if (!m.legs.length) { UI.overlay = null; render(); return; }
+
+    var leg = m.legs[m.legs.length - 1];
+    leg.visits.pop();
+    leg.winner = null;
+    m.done = false;
+    m.winner = null;
+    UI.overlay = null;
+    UI.input = '';
+    save();
+    render();
+  }
+
+  /* ================= Statistik ================= */
+  function stats() {
+    var map = {};
+    S.players.forEach(function (p) {
+      map[p.id] = {
+        id: p.id, name: p.name, darts: 0, points: 0, legsWon: 0, legsLost: 0,
+        won: 0, lost: 0, played: 0, s180: 0, s140: 0, highCO: 0, bestLeg: null
+      };
+    });
+    S.matches.forEach(function (m) {
+      if (m.done) {
+        map[m.p[0]].played++; map[m.p[1]].played++;
+        if (map[m.winner]) map[m.winner].won++;
+        var loser = m.winner === m.p[0] ? m.p[1] : m.p[0];
+        if (map[loser]) map[loser].lost++;
+      }
+      m.legs.forEach(function (leg) {
+        leg.visits.forEach(function (v) {
+          var st = map[v.p];
+          if (!st) return;
+          st.darts += v.d;
+          if (!v.b) {
+            st.points += v.s;
+            if (v.s === 180) st.s180++;
+            else if (v.s >= 140) st.s140++;
+            if (v.c && v.s > st.highCO) st.highCO = v.s;
+          }
+        });
+        if (leg.winner && map[leg.winner]) {
+          map[leg.winner].legsWon++;
+          var opp = m.p[0] === leg.winner ? m.p[1] : m.p[0];
+          if (map[opp]) map[opp].legsLost++;
+          var d = dartsIn(leg, leg.winner);
+          if (map[leg.winner].bestLeg === null || d < map[leg.winner].bestLeg) map[leg.winner].bestLeg = d;
+        }
+      });
+    });
+    Object.keys(map).forEach(function (k) {
+      var st = map[k];
+      st.avg = st.darts ? (st.points / st.darts) * 3 : 0;
+      st.legDiff = st.legsWon - st.legsLost;
+    });
+    return map;
+  }
+
+  function standings() {
+    var map = stats();
+    return S.players.map(function (p) { return map[p.id]; }).sort(function (a, b) {
+      if (b.won !== a.won) return b.won - a.won;
+      if (b.legDiff !== a.legDiff) return b.legDiff - a.legDiff;
+      if (b.avg !== a.avg) return b.avg - a.avg;
+      return a.name.localeCompare(b.name);
+    });
+  }
+
+  /* ================= Rendering ================= */
+  function show(screen) {
+    ['setup', 'tournament', 'bulloff', 'game', 'winner'].forEach(function (s) {
+      $('screen-' + s).classList.toggle('active', s === screen);
+    });
+  }
+
+  function render() {
+    show(S.screen);
+    if (S.screen === 'setup') renderSetup();
+    if (S.screen === 'tournament') renderTournament();
+    if (S.screen === 'bulloff') renderBullOff();
+    if (S.screen === 'game') renderGame();
+    if (S.screen === 'winner') renderWinner();
+    renderOverlay();
+  }
+
+  function renderSetup() {
+    var list = $('player-list');
+    list.innerHTML = S.players.map(function (p, i) {
+      return '<div class="player-row" data-pid="' + p.id + '">' +
+        '<div class="idx">' + (i + 1) + '</div>' +
+        '<input type="text" value="' + esc(p.name) + '" placeholder="Name" maxlength="14" data-role="pname">' +
+        (S.players.length > 2 ? '<button class="rm" data-action="rm-player" aria-label="Entfernen">×</button>' : '') +
+        '</div>';
+    }).join('');
+
+    document.querySelectorAll('.segmented[data-setting]').forEach(function (seg) {
+      var key = seg.getAttribute('data-setting');
+      seg.querySelectorAll('button').forEach(function (b) {
+        b.classList.toggle('active', Number(b.getAttribute('data-value')) === S.settings[key]);
+      });
+    });
+
+    var running = S.matches.length > 0 && !allMatchesDone();
+    $('resume-box').classList.toggle('hidden', !running);
+    if (running) {
+      var done = sum(S.matches, function (m) { return m.done ? 1 : 0; });
+      $('resume-info').textContent = done + ' von ' + S.matches.length + ' Spielen gespielt';
+    }
+  }
+
+  function renderTournament() {
+    var table = standings();
+    $('standings-body').innerHTML = table.map(function (st, i) {
+      return '<tr class="' + (i === 0 && st.won > 0 ? 'leader' : '') + '">' +
+        '<td class="rank">' + (i + 1) + '</td>' +
+        '<td class="left name">' + esc(st.name) + '</td>' +
+        '<td class="wins">' + st.won + '</td>' +
+        '<td>' + st.lost + '</td>' +
+        '<td>' + st.legsWon + ':' + st.legsLost + '</td>' +
+        '<td>' + (st.avg ? st.avg.toFixed(1) : '–') + '</td>' +
+        '</tr>';
+    }).join('');
+
+    var next = nextOpenMatch();
+    var html = '';
+    var round = 0;
+    S.matches.forEach(function (m) {
+      if (m.round !== round) { round = m.round; html += '<div class="round-label">Runde ' + round + '</div>'; }
+      var a = pname(m.p[0]), b = pname(m.p[1]);
+      var isNext = next && next.id === m.id;
+      var score = m.legs.length ? legsWon(m, m.p[0]) + ':' + legsWon(m, m.p[1]) : '–:–';
+      html += '<div class="match-row ' + (m.done ? 'done' : '') + ' ' + (isNext ? 'next' : '') + '">' +
+        '<div class="pair">' +
+          (m.winner === m.p[0] ? '<b>' + esc(a) + '</b>' : esc(a)) + ' <span class="muted">vs</span> ' +
+          (m.winner === m.p[1] ? '<b>' + esc(b) + '</b>' : esc(b)) +
+        '</div>' +
+        '<div class="res">' + score + '</div>' +
+        (m.done ? '' : '<button class="go" data-action="open-match" data-id="' + m.id + '">' +
+          (m.legs.length ? 'weiter' : 'start') + '</button>') +
+        '</div>';
+    });
+    $('schedule').innerHTML = html;
+
+    var btn = document.querySelector('[data-action="next-match"]');
+    if (allMatchesDone()) {
+      btn.textContent = 'Endstand ansehen';
+      btn.setAttribute('data-action', 'to-winner');
+    } else {
+      btn.textContent = next ? 'Nächstes Spiel: ' + pname(next.p[0]) + ' vs ' + pname(next.p[1]) : 'Nächstes Spiel';
+      btn.setAttribute('data-action', 'next-match');
+    }
+
+    var map = stats();
+    $('stats-grid').innerHTML = S.players.map(function (p) {
+      var st = map[p.id];
+      return '<div class="stat-card">' +
+        '<div class="who">' + esc(p.name) + '</div>' +
+        '<div class="line"><span>Ø 3 Darts</span><b>' + (st.avg ? st.avg.toFixed(1) : '–') + '</b></div>' +
+        '<div class="line"><span>180er</span><b>' + st.s180 + '</b></div>' +
+        '<div class="line"><span>140+</span><b>' + st.s140 + '</b></div>' +
+        '<div class="line"><span>Höchstes Finish</span><b>' + (st.highCO || '–') + '</b></div>' +
+        '<div class="line"><span>Bestes Leg</span><b>' + (st.bestLeg ? st.bestLeg + ' Darts' : '–') + '</b></div>' +
+        '</div>';
+    }).join('');
+  }
+
+  function renderBullOff() {
+    var m = currentMatch();
+    if (!m) { S.screen = 'tournament'; render(); return; }
+    $('bulloff-buttons').innerHTML = m.p.map(function (pid) {
+      return '<button data-action="pick-starter" data-id="' + pid + '">' + esc(pname(pid)) + '</button>';
+    }).join('');
+  }
+
+  function renderGame() {
+    var m = currentMatch();
+    if (!m) { S.screen = 'tournament'; render(); return; }
+    var leg = ensureLeg(m);
+    if (!leg) { S.screen = 'tournament'; render(); return; }
+
+    var active = activePlayer(leg, m);
+    var idx = S.matches.indexOf(m);
+    $('game-match-label').textContent = 'Spiel ' + (idx + 1) + ' von ' + S.matches.length;
+    $('game-leg-label').textContent = S.settings.bestOf > 1
+      ? 'Leg ' + m.legs.length + ' · Stand ' + legsWon(m, m.p[0]) + ':' + legsWon(m, m.p[1]) + ' (first to ' + legsToWin() + ')'
+      : 'Ein Leg · ' + S.settings.start + ' Double Out';
+
+    var pendingSum = sum(UI.darts, function (d) { return d.v; });
+    $('scoreboard').innerHTML = m.p.map(function (pid) {
+      var rest = remainingIn(leg, pid) - (pid === active ? pendingSum : 0);
+      var darts = dartsIn(leg, pid) + (pid === active ? UI.darts.length : 0);
+      var scored = S.settings.start - remainingIn(leg, pid) + (pid === active ? pendingSum : 0);
+      var avg = darts ? (scored / darts * 3).toFixed(1) : '–';
+      return '<div class="pcard ' + (pid === active ? 'active' : '') + '">' +
+        '<div class="pname">' + (pid === active ? '<span class="arrow">▸</span>' : '') + esc(pname(pid)) + '</div>' +
+        '<div class="legs">Legs ' + legsWon(m, pid) + '</div>' +
+        '<div class="rest">' + rest + '</div>' +
+        '<div class="meta"><span>Ø <b>' + avg + '</b></span><span>Darts <b>' + darts + '</b></span></div>' +
+        '</div>';
+    }).join('');
+
+    var restActive = remainingIn(leg, active) - pendingSum;
+    var mode = effectiveMode(restActive);
+    var dartsLeft = mode === 'darts' ? 3 - UI.darts.length : 3;
+    var route = Checkout.suggest(restActive, dartsLeft);
+
+    if (route) {
+      $('checkout-bar').innerHTML = '<span class="label">Finish</span>' + route.map(function (d, i) {
+        return '<span class="chip ' + (i === 0 ? 'first' : '') + '">' + Checkout.pretty(d) + '</span>';
+      }).join('');
+    } else {
+      $('checkout-bar').innerHTML = restActive > 170
+        ? '<span class="none">Noch kein Finish möglich</span>'
+        : '<span class="none">Kein Finish mit ' + dartsLeft + ' Dart' + (dartsLeft > 1 ? 's' : '') + '</span>';
+    }
+
+    $('history').innerHTML = m.p.map(function (pid) {
+      var rowRest = S.settings.start;
+      var rows = [];
+      leg.visits.forEach(function (v) {
+        if (v.p !== pid) return;
+        if (!v.b) rowRest -= v.s;
+        rows.push('<div class="v ' + (v.b ? 'bust' : v.c ? 'co' : '') + '">' +
+          '<span class="s">' + (v.b ? v.o : v.s) + '</span>' +
+          '<span class="r">' + (v.b ? 'Bust' : 'Rest ' + rowRest) + '</span></div>');
+      });
+      return '<div class="col">' + rows.reverse().slice(0, 5).join('') + '</div>';
+    }).join('');
+
+    $('visit-darts').classList.toggle('hidden', mode !== 'darts');
+    $('visit-darts').innerHTML = [0, 1, 2].map(function (i) {
+      var d = UI.darts[i];
+      return '<div class="d ' + (d ? '' : 'empty') + '">' + (d ? dartLabel(d) : '–') + '</div>';
+    }).join('');
+
+    $('mode-toggle').querySelectorAll('button').forEach(function (b) {
+      b.classList.toggle('active', b.getAttribute('data-mode') === mode);
+    });
+    $('pad-total').classList.toggle('hidden', mode !== 'total');
+    $('pad-darts').classList.toggle('hidden', mode !== 'darts');
+
+    if (mode === 'total') {
+      $('quick-row').innerHTML = '<button class="miss" data-quick="0">0</button>' +
+        QUICK_SCORES.map(function (q) { return '<button data-quick="' + q + '">' + q + '</button>'; }).join('');
+      var disp = $('score-display');
+      disp.textContent = UI.input === '' ? '0' : UI.input;
+      disp.classList.toggle('empty', UI.input === '');
+      $('input-error').textContent = UI.error;
+    } else {
+      $('mult-row').querySelectorAll('button').forEach(function (b) {
+        b.classList.toggle('active', Number(b.getAttribute('data-mult')) === UI.mult);
+      });
+      var hl = route ? route[0] : null;
+      var hlNum = hl ? (hl === 'BULL' ? 25 : (hl === '25' ? 25 : parseInt(hl.slice(1), 10))) : null;
+      var nums = '';
+      for (var n = 1; n <= 20; n++) {
+        nums += '<button data-num="' + n + '" class="' + (n === hlNum ? 'hl' : '') + '">' + (UI.mult * n) + '</button>';
+      }
+      nums += '<button class="miss wide" data-num="0">Miss</button>';
+      nums += '<button data-num="25">25</button>';
+      nums += '<button class="bull wide" data-bull="1">Bull 50</button>';
+      $('num-grid').innerHTML = nums;
+    }
+  }
+
+  function dartLabel(d) {
+    if (d.n === 0) return '0';
+    if (d.n === 25) return d.m === 2 ? 'Bull' : '25';
+    return (d.m === 3 ? 'T' : d.m === 2 ? 'D' : '') + d.n;
+  }
+
+  function effectiveMode(rest) {
+    if (UI.modeOverride) return UI.modeOverride;
+    var t = S.settings.dartModeFrom;
+    return (t > 0 && rest <= t) ? 'darts' : 'total';
+  }
+
+  function renderWinner() {
+    var table = standings();
+    var medals = ['🥇', '🥈', '🥉'];
+    $('winner-box').innerHTML =
+      '<div style="text-align:center"><div class="big-emoji">🏆</div>' +
+      '<h1>' + esc(table[0].name) + ' gewinnt!</h1>' +
+      '<p class="muted">' + table[0].won + ' von ' + (S.players.length - 1) + ' Spielen gewonnen</p></div>' +
+      '<div class="podium">' + table.map(function (st, i) {
+        return '<div class="p ' + (i === 0 ? 'first' : '') + '">' +
+          '<div class="medal">' + (medals[i] || (i + 1) + '.') + '</div>' +
+          '<div class="pn">' + esc(st.name) + '</div>' +
+          '<div class="pv">' + st.won + ' Siege · Legs ' + st.legsWon + ':' + st.legsLost + ' · Ø ' + (st.avg ? st.avg.toFixed(1) : '–') + '</div>' +
+          '</div>';
+      }).join('') + '</div>';
+  }
+
+  function renderOverlay() {
+    var ov = $('overlay');
+    if (!UI.overlay) { ov.classList.add('hidden'); return; }
+    ov.classList.remove('hidden');
+    var o = UI.overlay;
+    var html = '';
+
+    if (o.type === 'checkout-darts') {
+      html = '<h3>Checkout!</h3><p>Mit wie vielen Darts wurde ' + o.score + ' beendet?</p>' +
+        '<div class="row-btns">' + o.options.map(function (n) {
+          return '<button class="btn primary" data-action="co-darts" data-n="' + n + '">' + n + '</button>';
+        }).join('') + '</div>' +
+        '<button class="btn ghost full" data-action="ov-cancel">Abbrechen</button>';
+    } else if (o.type === 'leg-done') {
+      var m1 = currentMatch();
+      html = '<div class="big-emoji">🎯</div><h3>Leg an ' + esc(pname(o.pid)) + '</h3>' +
+        '<p>Stand: ' + legsWon(m1, m1.p[0]) + ':' + legsWon(m1, m1.p[1]) + '</p>' +
+        '<button class="btn primary full" data-action="ov-next-leg">Nächstes Leg</button>' +
+        '<button class="btn ghost full" data-action="undo">Eingabe rückgängig</button>';
+    } else if (o.type === 'match-done') {
+      var m2 = currentMatch();
+      var last = !nextOpenMatch();
+      html = '<div class="big-emoji">🏅</div><h3>' + esc(pname(o.pid)) + ' gewinnt</h3>' +
+        '<p>' + esc(pname(m2.p[0])) + ' ' + legsWon(m2, m2.p[0]) + ':' + legsWon(m2, m2.p[1]) + ' ' + esc(pname(m2.p[1])) + '</p>' +
+        (last
+          ? '<button class="btn primary full" data-action="ov-finish">Turnier auswerten</button>'
+          : '<button class="btn primary full" data-action="ov-next-match">Nächstes Spiel</button>') +
+        '<button class="btn ghost full" data-action="ov-to-table">Zur Tabelle</button>' +
+        '<button class="btn ghost full" data-action="undo">Eingabe rückgängig</button>';
+    } else if (o.type === 'confirm-reset') {
+      html = '<h3>Turnier zurücksetzen?</h3><p>Alle Ergebnisse und Statistiken gehen verloren.</p>' +
+        '<div class="row-btns two">' +
+        '<button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
+        '<button class="btn danger" data-action="ov-reset">Zurücksetzen</button></div>';
+    }
+    $('overlay-card').innerHTML = html;
+  }
+
+  /* ================= Aktionen ================= */
+  function startTournament() {
+    document.querySelectorAll('#player-list .player-row').forEach(function (row) {
+      var p = player(row.getAttribute('data-pid'));
+      var val = row.querySelector('[data-role="pname"]').value.trim();
+      if (val) p.name = val;
+    });
+    var names = {};
+    S.players.forEach(function (p, i) {
+      if (!p.name) p.name = 'Spieler ' + (i + 1);
+      if (names[p.name]) p.name = p.name + ' ' + (i + 1);
+      names[p.name] = 1;
+    });
+    S.matches = buildSchedule(S.players.map(function (p) { return p.id; }));
+    S.current = null;
+    S.screen = 'tournament';
+    save();
+    render();
+  }
+
+  function openMatch(id) {
+    var m = matchById(id);
+    if (!m) return;
+    S.current = id;
+    UI.input = ''; UI.darts = []; UI.mult = 1; UI.modeOverride = null; UI.error = ''; UI.overlay = null;
+    S.screen = m.starter ? 'game' : 'bulloff';
+    save();
+    render();
+  }
+
+  function handleAction(action, el) {
+    switch (action) {
+      case 'add-player':
+        if (S.players.length >= 12) return;
+        S.players.push({ id: uid(), name: 'Spieler ' + (S.players.length + 1) });
+        save(); render();
+        break;
+      case 'rm-player': {
+        var pid = el.closest('.player-row').getAttribute('data-pid');
+        if (S.players.length <= 2) return;
+        S.players = S.players.filter(function (p) { return p.id !== pid; });
+        save(); render();
+        break;
+      }
+      case 'start-tournament':
+        startTournament();
+        break;
+      case 'resume':
+        S.screen = 'tournament'; save(); render();
+        break;
+      case 'to-setup':
+        S.screen = 'setup'; save(); render();
+        break;
+      case 'to-tournament':
+        S.screen = 'tournament'; UI.overlay = null; save(); render();
+        break;
+      case 'to-winner':
+        S.screen = 'winner'; save(); render();
+        break;
+      case 'next-match': {
+        var nm = nextOpenMatch();
+        if (nm) openMatch(nm.id);
+        break;
+      }
+      case 'open-match':
+        openMatch(el.getAttribute('data-id'));
+        break;
+      case 'pick-starter': {
+        var m = currentMatch();
+        if (!m) return;
+        m.starter = el.getAttribute('data-id');
+        S.screen = 'game';
+        save(); render();
+        break;
+      }
+      case 'undo':
+        undo();
+        break;
+      case 'co-darts': {
+        var n = Number(el.getAttribute('data-n'));
+        var score = UI.overlay.score;
+        UI.overlay = null;
+        commitVisit(score, n, true, false);
+        break;
+      }
+      case 'ov-cancel':
+        UI.overlay = null; UI.input = ''; render();
+        break;
+      case 'ov-next-leg':
+        UI.overlay = null; render();
+        break;
+      case 'ov-next-match': {
+        UI.overlay = null;
+        var next = nextOpenMatch();
+        if (next) openMatch(next.id); else { S.screen = 'winner'; save(); render(); }
+        break;
+      }
+      case 'ov-to-table':
+        UI.overlay = null; S.screen = 'tournament'; save(); render();
+        break;
+      case 'ov-finish':
+        UI.overlay = null; S.screen = 'winner'; save(); render();
+        break;
+      case 'reset':
+        UI.overlay = { type: 'confirm-reset' }; render();
+        break;
+      case 'ov-reset': {
+        var keep = S.players.map(function (p) { return { id: uid(), name: p.name }; });
+        var settings = S.settings;
+        S = newState();
+        S.players = keep;
+        S.settings = settings;
+        UI.overlay = null;
+        save(); render();
+        break;
+      }
+    }
+  }
+
+  /* ================= Events ================= */
+  document.addEventListener('click', function (ev) {
+    var t = ev.target.closest('[data-action]');
+    if (t) { handleAction(t.getAttribute('data-action'), t); return; }
+
+    var seg = ev.target.closest('.segmented[data-setting] button');
+    if (seg) {
+      var key = seg.parentElement.getAttribute('data-setting');
+      S.settings[key] = Number(seg.getAttribute('data-value'));
+      save(); render();
+      return;
+    }
+
+    var modeBtn = ev.target.closest('#mode-toggle button');
+    if (modeBtn) { UI.modeOverride = modeBtn.getAttribute('data-mode'); UI.error = ''; render(); return; }
+
+    var key2 = ev.target.closest('.keypad button');
+    if (key2) { pressKey(key2.getAttribute('data-key')); return; }
+
+    var quick = ev.target.closest('[data-quick]');
+    if (quick) { UI.input = quick.getAttribute('data-quick'); submitTotal(); return; }
+
+    var mult = ev.target.closest('#mult-row button');
+    if (mult) { UI.mult = Number(mult.getAttribute('data-mult')); render(); return; }
+
+    var bull = ev.target.closest('[data-bull]');
+    if (bull) { pushDart(2, 25); return; }
+
+    var num = ev.target.closest('[data-num]');
+    if (num) {
+      var n2 = Number(num.getAttribute('data-num'));
+      if (n2 === 0) pushDart(1, 0);
+      else if (n2 === 25) pushDart(1, 25);
+      else pushDart(UI.mult, n2);
+      return;
+    }
+  });
+
+  document.addEventListener('input', function (ev) {
+    if (ev.target.getAttribute('data-role') === 'pname') {
+      var pid = ev.target.closest('.player-row').getAttribute('data-pid');
+      player(pid).name = ev.target.value;
+      save();
+    }
+  });
+
+  document.addEventListener('keydown', function (ev) {
+    if (S.screen !== 'game' || UI.overlay) return;
+    if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+    var m = currentMatch();
+    if (!m) return;
+    var leg = activeLeg(m);
+    if (!leg) return;
+    var rest = remainingIn(leg, activePlayer(leg, m)) - sum(UI.darts, function (d) { return d.v; });
+    if (effectiveMode(rest) !== 'total') return;
+    if (ev.key >= '0' && ev.key <= '9') { pressKey(ev.key); ev.preventDefault(); }
+    else if (ev.key === 'Enter') { pressKey('ok'); ev.preventDefault(); }
+    else if (ev.key === 'Backspace') { pressKey('del'); ev.preventDefault(); }
+    else if (ev.key.toLowerCase() === 'z') { undo(); ev.preventDefault(); }
+  });
+
+  /* ================= Start ================= */
+  S = load() || newState();
+  if (S.screen === 'game' && !currentMatch()) S.screen = 'tournament';
+  if (S.screen === 'bulloff' && !currentMatch()) S.screen = 'tournament';
+  if (!S.matches.length && S.screen === 'tournament') S.screen = 'setup';
+  render();
+
+  // Für Tests unter Node/Headless
+  if (typeof window !== 'undefined') {
+    window.__dart = {
+      state: function () { return S; },
+      ui: function () { return UI; },
+      action: handleAction,
+      pushDart: pushDart,
+      pressKey: pressKey,
+      submitTotal: submitTotal,
+      undo: undo,
+      standings: standings,
+      stats: stats,
+      remainingIn: remainingIn,
+      activeLeg: activeLeg,
+      activePlayer: activePlayer,
+      currentMatch: currentMatch,
+      reset: function () { S = newState(); UI = { input: '', darts: [], mult: 1, modeOverride: null, overlay: null, error: '' }; render(); }
+    };
+  }
+})();
+
+</script>
