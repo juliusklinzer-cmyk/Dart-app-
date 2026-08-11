@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#0e1116">
+<title>Dart Turnier – 501 Double Out</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<!-- ============ SETUP ============ -->
+<section id="screen-setup" class="screen">
+  <header class="app-header">
+    <h1>🎯 Dart Turnier</h1>
+    <p class="sub">Jeder gegen jeden · 501 Double Out</p>
+  </header>
+
+  <div id="resume-box" class="card resume hidden">
+    <div>
+      <strong>Laufendes Turnier gefunden</strong>
+      <span class="muted" id="resume-info"></span>
+    </div>
+    <button class="btn primary" data-action="resume">Fortsetzen</button>
+  </div>
+
+  <div class="card">
+    <h2>Spieler</h2>
+    <div id="player-list" class="player-list"></div>
+    <button class="btn ghost full" data-action="add-player">+ Spieler hinzufügen</button>
+  </div>
+
+  <div class="card">
+    <h2>Einstellungen</h2>
+    <div class="setting">
+      <label>Startpunkte</label>
+      <div class="segmented" data-setting="start">
+        <button data-value="301">301</button>
+        <button data-value="501">501</button>
+        <button data-value="701">701</button>
+      </div>
+    </div>
+    <div class="setting">
+      <label>Legs pro Spiel</label>
+      <div class="segmented" data-setting="bestOf">
+        <button data-value="1">1 Leg</button>
+        <button data-value="3">Best of 3</button>
+        <button data-value="5">Best of 5</button>
+      </div>
+    </div>
+    <div class="setting">
+      <label>Einzel-Darts ab Rest</label>
+      <div class="segmented" data-setting="dartModeFrom">
+        <button data-value="100">100</button>
+        <button data-value="170">170</button>
+        <button data-value="180">180</button>
+        <button data-value="0">nie</button>
+      </div>
+    </div>
+    <p class="hint">Über diesem Rest tippst du die geworfene Gesamtpunktzahl (bis 180), darunter
+      schaltet die App automatisch auf Einzel-Darts (Single/Double/Triple) mit Finish-Vorschlag um.</p>
+  </div>
+
+  <button class="btn primary full big" data-action="start-tournament">Turnier starten</button>
+  <p class="footer-note">Läuft komplett offline · Stand wird automatisch gespeichert</p>
+</section>
+
+<!-- ============ TURNIER-ÜBERSICHT ============ -->
+<section id="screen-tournament" class="screen">
+  <header class="app-header row">
+    <h1>Tabelle</h1>
+    <button class="btn ghost small" data-action="to-setup">Einstellungen</button>
+  </header>
+
+  <div class="card no-pad">
+    <table class="standings">
+      <thead>
+        <tr><th>#</th><th class="left">Spieler</th><th>S</th><th>N</th><th>Legs</th><th>Ø</th></tr>
+      </thead>
+      <tbody id="standings-body"></tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2>Spielplan</h2>
+    <div id="schedule"></div>
+  </div>
+
+  <button class="btn primary full big" data-action="next-match">Nächstes Spiel</button>
+
+  <div class="card">
+    <h2>Statistik</h2>
+    <div id="stats-grid" class="stats-grid"></div>
+  </div>
+
+  <button class="btn danger ghost full" data-action="reset">Turnier zurücksetzen</button>
+</section>
+
+<!-- ============ BULL-OFF ============ -->
+<section id="screen-bulloff" class="screen center">
+  <header class="app-header">
+    <h1>Bull werfen</h1>
+    <p class="sub">Wer war näher am Bull und darf anfangen?</p>
+  </header>
+  <div id="bulloff-buttons" class="bulloff"></div>
+  <button class="btn ghost full" data-action="to-tournament">Zurück</button>
+</section>
+
+<!-- ============ SPIEL ============ -->
+<section id="screen-game" class="screen game">
+  <header class="game-header">
+    <button class="icon-btn" data-action="to-tournament" aria-label="Zurück">‹</button>
+    <div class="game-title">
+      <span id="game-match-label"></span>
+      <span id="game-leg-label" class="muted"></span>
+    </div>
+    <button class="icon-btn" data-action="undo" aria-label="Rückgängig">↺</button>
+  </header>
+
+  <div id="scoreboard" class="scoreboard"></div>
+
+  <div id="checkout-bar" class="checkout-bar"></div>
+
+  <div id="history" class="history"></div>
+
+  <div class="input-area">
+    <div class="mode-row">
+      <div class="segmented small" id="mode-toggle">
+        <button data-mode="total">Punkte</button>
+        <button data-mode="darts">Einzel-Darts</button>
+      </div>
+      <div id="visit-darts" class="visit-darts"></div>
+    </div>
+
+    <!-- Punkte-Eingabe -->
+    <div id="pad-total" class="pad">
+      <div class="quick-row" id="quick-row"></div>
+      <div class="display-row">
+        <div id="score-display" class="score-display">0</div>
+        <div id="input-error" class="input-error"></div>
+      </div>
+      <div class="keypad">
+        <button data-key="1">1</button><button data-key="2">2</button><button data-key="3">3</button>
+        <button data-key="4">4</button><button data-key="5">5</button><button data-key="6">6</button>
+        <button data-key="7">7</button><button data-key="8">8</button><button data-key="9">9</button>
+        <button data-key="del" class="fn">←</button>
+        <button data-key="0">0</button>
+        <button data-key="ok" class="ok">OK</button>
+      </div>
+    </div>
+
+    <!-- Einzel-Dart-Eingabe -->
+    <div id="pad-darts" class="pad hidden">
+      <div class="mult-row" id="mult-row">
+        <button data-mult="1" class="active">Single</button>
+        <button data-mult="2">Double</button>
+        <button data-mult="3">Triple</button>
+      </div>
+      <div class="num-grid" id="num-grid"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ SIEGER ============ -->
+<section id="screen-winner" class="screen center">
+  <div id="winner-box"></div>
+  <button class="btn primary full big" data-action="to-tournament">Tabelle ansehen</button>
+</section>
+
+<!-- ============ OVERLAY ============ -->
+<div id="overlay" class="overlay hidden">
+  <div class="overlay-card" id="overlay-card"></div>
+</div>
+
+<script src="js/checkout.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
