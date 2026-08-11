@@ -8,10 +8,17 @@ ohne Account, ohne Server.
 
 **Am schnellsten:** `index.html` im Browser öffnen (Doppelklick reicht).
 
-**Auf dem Handy als App:** Die Dateien irgendwo hosten (z. B. GitHub Pages:
-Repo-Einstellungen → Pages → Branch auswählen), Seite im Handy-Browser öffnen und
-„Zum Startbildschirm hinzufügen“. Danach startet sie wie eine native App und
-funktioniert auch ohne Internet.
+**Auf Handy oder iPad als App:** Die Dateien irgendwo hosten (z. B. GitHub Pages:
+Repo-Einstellungen → Pages → Branch auswählen), Seite im Browser öffnen und über das
+Teilen-Menü „Zum Home-Bildschirm“ hinzufügen. Danach startet sie ohne Browserleiste
+wie eine native App und funktioniert auch ohne Internet.
+
+**iPad:** Hoch- und Querformat werden unterstützt. Im Querformat steht der Spielstand
+links und das Eingabefeld rechts, sodass nichts gescrollt werden muss und die Tasten
+mit dem Daumen erreichbar bleiben; im Hochformat liegt die Eingabe unten. Tasten und
+Schrift werden auf Tablets automatisch größer, Doppeltipp-Zoom ist auf Buttons
+deaktiviert. Split View funktioniert ebenfalls – bei schmaler Spalte schaltet die App
+auf das Handy-Layout um.
 
 Lokal testen: `npm start` (Server auf http://localhost:8080).
 
