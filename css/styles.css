@@ -265,6 +265,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 }
 .num-grid button:active { background: var(--bg-3); }
 .num-grid button.wide { grid-column: span 2; }
+.num-grid .mx { color: var(--green); font-size: 0.72em; margin-right: 2px; vertical-align: 2px; }
 .num-grid button.miss { color: var(--red); }
 .num-grid button.bull { color: var(--amber); }
 .num-grid button.hl { outline: 2px solid var(--green); }

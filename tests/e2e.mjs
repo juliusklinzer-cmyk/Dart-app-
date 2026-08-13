@@ -105,6 +105,14 @@ check('Gegner 381', (await rest(1)) === '381');
 check('Auto-Umschaltung auf Einzel-Darts bei Rest <= 170', await visible('#pad-darts'));
 check('Finish-Vorschlag T20 T19 D12', (await text('#checkout-bar')).replace(/\s+/g, ' ').includes('T20 T19 D12'));
 
+group('Tastenbeschriftung im Einzel-Dart-Modus');
+await page.locator('#mult-row button[data-mult="2"]').click();
+check('Doppel zeigt weiter die Feldzahl 18 (nicht 36)', (await page.locator('#num-grid button[data-num="18"]').innerText()).replace(/\s/g, '') === 'D18');
+await page.locator('#mult-row button[data-mult="3"]').click();
+check('Triple zeigt T20 statt 60', (await page.locator('#num-grid button[data-num="20"]').innerText()).replace(/\s/g, '') === 'T20');
+await page.locator('#mult-row button[data-mult="1"]').click();
+check('Single zeigt die blanke Zahl', (await page.locator('#num-grid button[data-num="20"]').innerText()).trim() === '20');
+
 group('Bust-Regel');
 await page.locator('#mode-toggle button[data-mode="total"]').click();
 await typeScore(140); // 141 - 140 = 1 -> Bust, Rest bleibt stehen

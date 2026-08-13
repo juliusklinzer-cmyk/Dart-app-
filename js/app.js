@@ -475,15 +475,24 @@
       $('mult-row').querySelectorAll('button').forEach(function (b) {
         b.classList.toggle('active', Number(b.getAttribute('data-mult')) === UI.mult);
       });
+      /* Nur markieren, wenn der eingestellte Multiplikator auch zum
+         vorgeschlagenen Feld passt – sonst zeigt die Markierung auf D20,
+         obwohl T20 gemeint ist. */
       var hl = route ? route[0] : null;
-      var hlNum = hl ? (hl === 'BULL' ? 25 : (hl === '25' ? 25 : parseInt(hl.slice(1), 10))) : null;
+      var hlMult = hl ? (hl.charAt(0) === 'T' ? 3 : hl.charAt(0) === 'D' || hl === 'BULL' ? 2 : 1) : 0;
+      var hlNum = hl && hl !== 'BULL' && hl !== '25' && UI.mult === hlMult ? parseInt(hl.slice(1), 10) : null;
+      /* Die Feldzahl bleibt immer stehen (18 bleibt 18), davor nur ein
+         kleines D/T – sonst ist im Finish nicht auf einen Blick klar,
+         welches Feld man gerade trifft. */
+      var prefix = UI.mult === 3 ? 'T' : UI.mult === 2 ? 'D' : '';
       var nums = '';
       for (var n = 1; n <= 20; n++) {
-        nums += '<button data-num="' + n + '" class="' + (n === hlNum ? 'hl' : '') + '">' + (UI.mult * n) + '</button>';
+        nums += '<button data-num="' + n + '" class="' + (n === hlNum ? 'hl' : '') + '">' +
+          (prefix ? '<span class="mx">' + prefix + '</span>' : '') + n + '</button>';
       }
       nums += '<button class="miss wide" data-num="0">Miss</button>';
-      nums += '<button data-num="25">25</button>';
-      nums += '<button class="bull wide" data-bull="1">Bull 50</button>';
+      nums += '<button data-num="25" class="' + (hl === '25' ? 'hl' : '') + '">25</button>';
+      nums += '<button class="bull wide ' + (hl === 'BULL' ? 'hl' : '') + '" data-bull="1">Bull 50</button>';
       $('num-grid').innerHTML = nums;
     }
   }
