@@ -24,8 +24,8 @@ Lokal testen: `npm start` (Server auf http://localhost:8080).
 
 ## Ablauf
 
-1. **Setup** – Namen anpassen (Lenas, Tobi, Domi, Julius sind vorbelegt), Startpunkte
-   und Legs pro Spiel wählen. Zwischen 2 und 12 Spielern möglich.
+1. **Setup** – Antippen, wer heute mitspielt (2 bis 12 Spieler), Startpunkte und Legs
+   pro Spiel wählen. Spieler sind dauerhafte Profile mit Foto, siehe unten.
 2. **Spielplan** – Es wird automatisch „jeder gegen jeden“ ausgelost und auf Runden
    verteilt (4 Spieler = 6 Spiele in 3 Runden).
 3. **Bull-Off** – Vor jedem Spiel fragt die App, wer näher am Bull war. Dieser Spieler
@@ -44,8 +44,9 @@ Schnellwahl mit den häufigsten Werten (26, 41, 45, 60, 81, 85, 100, 140, 180).
 **Einzel-Dart-Modus:** Schaltet automatisch um, sobald der Rest im Finish-Bereich
 liegt (Standard: ab 170, in den Einstellungen auf 100/180/nie änderbar). Dann wird
 Dart für Dart eingegeben: Single/Double/Triple wählen, Zahl tippen – plus `25`,
-`Bull 50` und `Miss`. Die Zahlen auf den Tasten zeigen direkt den Wert, der gezählt
-wird. Umschalten geht jederzeit von Hand über „Punkte / Einzel-Darts“.
+`Bull 50` und `Miss`. Die Tasten behalten dabei die Feldzahl (18 bleibt 18) und
+bekommen ein kleines D bzw. T davor, damit das Zielfeld erkennbar bleibt. Umschalten
+geht jederzeit von Hand über „Punkte / Einzel-Darts“.
 
 **Finish-Vorschlag:** Über der Eingabe steht immer der sinnvollste Weg zum Double-Out
 für den aktuellen Rest – und zwar passend zu den *noch verfügbaren* Darts der
@@ -67,16 +68,60 @@ bzw. Aufnahme für Aufnahme zurück – auch über ein bereits gewonnenes Leg hi
 
 **Tastatur (am Laptop):** Ziffern, `Enter` = OK, `Backspace` = löschen, `z` = Undo.
 
-## Statistik
+## Spielerprofile
 
-Pro Spieler: 3-Dart-Average, 180er, 140+, höchstes Finish, bestes Leg (Darts),
-Siege/Niederlagen und Leg-Differenz. Alles wird aus den gespeicherten Aufnahmen
-berechnet, ein Undo korrigiert die Statistik also automatisch mit.
+Spieler sind dauerhaft: Name und Foto werden einmal angelegt und gelten für jedes
+weitere Turnier. Das Foto kommt aus der Fotomediathek oder direkt von der Kamera und
+wird auf 220 × 220 Pixel zugeschnitten, damit der Speicher nicht vollläuft; ohne Foto
+zeigt die App die Initialen auf einer aus dem Namen abgeleiteten Farbe.
+
+Wer nicht mehr mitspielt, lässt sich **ausblenden** statt löschen — dann verschwindet
+er aus der Aufstellung, seine Ergebnisse bleiben aber in Statistik, Ranglisten und
+Spielverlauf erhalten.
+
+## Statistik und Ranglisten
+
+Jedes gespielte Spiel wird vollständig gespeichert — mit allen Aufnahmen und, im
+Einzel-Dart-Modus, jedem einzelnen Dart. Sämtliche Werte werden daraus neu berechnet,
+ein Undo korrigiert also auch die Karrierewerte.
+
+**Im Spielerprofil** (Reiter „Spieler"):
+
+| Bereich | Werte |
+|---|---|
+| Scoring | 3-Dart-Average, First-9-Average, höchste Aufnahme, 180er, 140–179, 100–139, 60–99, Aufnahmen, geworfene Darts |
+| Finishing | Doppelquote, Doppelversuche, Checkouts, höchstes Finish, Finishes ab 100, bestes Leg, Ø Darts je gewonnenem Leg |
+| Bilanz | Spiele, Siege/Niederlagen, Siegquote, Legs, Turniere, Turniersiege, Form der letzten Spiele |
+
+Dazu die letzten Spiele mit Gegner, Ergebnis und Datum.
+
+**Im Reiter „Rangliste"** stehen dieselben Werte als Bestenlisten — Average, First 9,
+Doppelquote, höchstes Finish, 180er, höchste Aufnahme, bestes Leg, 100+ Aufnahmen,
+Siege, Siegquote, Legs und Turniersiege — dazu eine Rekordtafel und der Verlauf aller
+je gespielten Spiele.
+
+Zwei Definitionen, damit die Zahlen einordbar sind:
+
+- **First-9-Average**: Average der ersten drei Aufnahmen eines Legs, das übliche Maß
+  für den Scoring-Antritt.
+- **Doppelquote**: getroffene Finishes je Dart, der auf ein *mögliches* Doppel geworfen
+  wurde (Rest gerade und ≤ 40 oder genau 50). Da die App im Finish-Bereich automatisch
+  auf Einzel-Darts umschaltet, sind diese Würfe dartgenau erfasst. Bei einem Checkout
+  über die Punkte-Eingabe zählt ein Versuch mit einem Treffer.
+
+Damit Zufallswerte die Listen nicht verzerren, erscheinen Spieler in den
+Durchschnitts-Ranglisten erst ab 9 geworfenen Darts bzw. 3 Doppelversuchen.
+
+Ein Turnier wandert per **„Turnier abschließen"** ins Archiv (die letzten 200 bleiben
+gespeichert); abgebrochene Turniere behalten ihre bereits gespielten Spiele in der
+Statistik.
 
 ## Technik
 
 Reines HTML/CSS/JavaScript, kein Build-Schritt, keine Abhängigkeiten zur Laufzeit.
-Der Turnierstand liegt in `localStorage` und übersteht Reload und App-Neustart.
+Profile, laufendes Turnier und Archiv liegen in `localStorage` und überstehen Reload
+und App-Neustart. Ältere Stände werden beim Laden automatisch auf das aktuelle
+Datenmodell gehoben.
 
 | Datei | Inhalt |
 |---|---|
@@ -85,6 +130,7 @@ Der Turnierstand liegt in `localStorage` und übersteht Reload und App-Neustart.
 | `js/checkout.js` | Finish-Solver (Double-Out-Wege für Rest 2–170) |
 | `js/app.js` | Turnierlogik, Spiellogik, Rendering, Persistenz |
 | `sw.js`, `manifest.webmanifest` | Offline-Betrieb und Installation als App |
+| `build-single.mjs` | baut `dart-turnier.html` – alles in einer Datei (`npm run build`) |
 | `tests/e2e.mjs` | Browser-Tests des kompletten Turnierablaufs |
 
 Der Finish-Solver sucht zuerst den Weg mit den wenigsten Darts und bewertet danach die
@@ -101,4 +147,7 @@ npm test
 
 Der Test startet einen echten Chromium, spielt ein komplettes Turnier durch und prüft
 Spielplan, Anwurfwechsel, Bust- und Double-Out-Regeln, Finish-Vorschläge, Undo,
-Checkout-Abfrage, Tabelle und Persistenz nach Reload.
+Checkout-Abfrage, Tabelle, Karrierewerte, Ranglisten, Profilverwaltung, Archivierung
+und Persistenz nach Reload.
+
+`TARGET=dart-turnier.html npm test` prüft dieselben Abläufe im Einzeldatei-Bündel.

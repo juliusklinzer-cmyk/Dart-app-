@@ -66,8 +66,9 @@ await page.goto(BASE);
 
 group('Setup');
 check('Setup-Screen sichtbar', await visible('#screen-setup'));
-const names = await page.locator('#player-list input').evaluateAll((els) => els.map((e) => e.value));
-check('4 Spieler vorbelegt', JSON.stringify(names) === '["Lenas","Tobi","Domi","Julius"]', names.join(','));
+const names = await page.locator('#roster .nm').allInnerTexts();
+check('4 Profile vorbelegt', JSON.stringify(names) === '["Lenas","Tobi","Domi","Julius"]', names.join(','));
+check('alle vier für das Turnier ausgewählt', (await page.locator('.roster-item.selected').count()) === 4);
 check('501 vorausgewählt', await page.locator('[data-setting="start"] button[data-value="501"]').evaluate((e) => e.classList.contains('active')));
 
 group('Turnierplan');
@@ -83,7 +84,8 @@ check('keine Paarung doppelt', new Set(pairs).size === 6);
 group('Bull-Off & Spielstart');
 await page.locator('[data-action="next-match"]').click();
 check('Bull-Off-Screen', await visible('#screen-bulloff'));
-const firstName = await page.locator('#bulloff-buttons button').first().innerText();
+/* Der Button enthält Avatar und Name – nur den Namen lesen. */
+const firstName = await page.locator('#bulloff-buttons button').first().locator('span:not(.av)').innerText();
 await page.locator('#bulloff-buttons button').first().click();
 check('Spiel-Screen', await visible('#screen-game'));
 check('beide starten bei 501', (await rest(0)) === '501' && (await rest(1)) === '501');
@@ -202,6 +204,74 @@ await page.reload();
 check('Stand nach Reload erhalten', await visible('#screen-winner'));
 const afterReload = await st();
 check('Statistik nach Reload identisch', JSON.stringify(afterReload.map((p) => p.won)) === JSON.stringify(final.map((p) => p.won)));
+
+const carr = () => page.evaluate(() => window.__dart.career());
+const board = (key) => page.evaluate((k) => window.__dart.ranking(k), key);
+
+group('Karriere-Statistik');
+const c1 = await carr();
+const champ = Object.values(c1).find((s) => s.name === firstName);
+check('Karriere zählt alle Spiele des Turniers', Object.values(c1).reduce((a, s) => a + s.matches, 0) === 12, 'Summe Spielteilnahmen');
+check('Average über alle Spiele vorhanden', champ.avg > 0 && champ.darts > 0);
+check('First-9-Average berechnet', champ.first9 > 0, String(champ.first9));
+check('Doppelquote aus Doppelversuchen', champ.doubleAttempts > 0 && champ.doubleQuote > 0, `${champ.checkouts}/${champ.doubleAttempts}`);
+check('180er über alle Spiele gezählt', champ.s180 >= 2, String(champ.s180));
+check('100+ Aufnahmen gezählt', champ.tons >= champ.s180);
+
+group('Ranglisten');
+await page.locator('#screen-winner [data-action="to-tournament"]').click();
+check('Navigation außerhalb des Spiels sichtbar', await visible('#nav'));
+await page.locator('#nav [data-screen="boards"]').click();
+check('Rangliste sichtbar', await visible('#screen-boards'));
+check('Average-Rangliste hat Einträge', (await page.locator('.board-row').count()) > 0);
+const avgBoard = await board('avg');
+check('Rangliste absteigend sortiert', avgBoard.every((s, i) => i === 0 || avgBoard[i - 1].avg >= s.avg));
+await page.locator('[data-action="board"][data-key="s180"]').click();
+check('Kategorie 180er wechselbar', (await text('#board-hint')).includes('Triple 20'));
+await page.locator('[data-action="board"][data-key="bestLeg"]').click();
+const legBoard = await board('bestLeg');
+check('Bestes Leg aufsteigend (wenigste Darts zuerst)', legBoard.every((s, i) => i === 0 || legBoard[i - 1].bestLeg <= s.bestLeg));
+check('Rekord-Kacheln gefüllt', (await page.locator('.records .rec').count()) === 6);
+check('Alle Spiele dokumentiert', (await page.locator('#match-log .log-row').count()) === 6);
+
+group('Spielerprofile');
+await page.locator('#nav [data-screen="players"]').click();
+check('Spielerliste sichtbar', (await page.locator('.player-card').count()) === 4);
+await page.locator('.player-card').first().click();
+check('Profil-Detail offen', await visible('#screen-profile'));
+const detail = await text('#profile-detail');
+check('Profil zeigt Scoring-Werte', detail.includes('3-Dart-Average') && detail.includes('First-9-Average'));
+check('Profil zeigt Finishing-Werte', detail.includes('Doppelquote') && detail.includes('Bestes Leg'));
+check('Profil listet gespielte Spiele', (await page.locator('#profile-detail .log-row').count()) === 3);
+
+group('Neues Profil anlegen');
+await page.locator('#nav [data-screen="players"]').click();
+await page.locator('#screen-players [data-action="new-profile"]').click();
+await page.locator('[data-role="profile-name"]').fill('Testspieler');
+await page.locator('[data-action="save-profile"]').click();
+const profileNames = await page.evaluate(() => window.__dart.state().profiles.map((p) => p.name));
+check('Profil gespeichert', profileNames.includes('Testspieler'), profileNames.join(','));
+check('neues Profil ist für das nächste Turnier ausgewählt', await page.evaluate(() => {
+  const s = window.__dart.state();
+  return s.lineup.includes(s.profiles.find((p) => p.name === 'Testspieler').id);
+}));
+
+group('Turnier abschließen & Archiv');
+await page.locator('#nav [data-screen="boards"]').click();
+await page.locator('#nav [data-screen="setup"]').click();
+check('Turnierscreen des laufenden Turniers', await visible('#screen-tournament'));
+await page.locator('[data-action="to-winner"]').click();
+await page.locator('[data-action="finish-tournament"]').click();
+check('nach Abschluss zurück im Setup', await visible('#screen-setup'));
+check('Turnier archiviert', await page.evaluate(() => window.__dart.state().history.length) === 1);
+check('kein laufendes Turnier mehr', await page.evaluate(() => window.__dart.state().matches.length) === 0);
+const c2 = await carr();
+check('Karriere-Werte bleiben nach Archivierung erhalten',
+  Object.values(c2).reduce((a, s) => a + s.matches, 0) === 12);
+check('Turniersieg gezählt', Object.values(c2).reduce((a, s) => a + s.tourWins, 0) === 1);
+await page.reload();
+const c3 = await carr();
+check('Archiv übersteht Reload', JSON.stringify(Object.values(c3).map((s) => s.matches)) === JSON.stringify(Object.values(c2).map((s) => s.matches)));
 
 group('Fehlerfreiheit');
 check('keine JS-Fehler', errors.length === 0, errors.join(' | '));

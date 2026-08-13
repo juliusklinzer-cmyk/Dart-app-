@@ -14,6 +14,12 @@
 </head>
 <body>
 
+<nav id="nav" class="nav hidden">
+  <button data-action="nav" data-screen="setup">Turnier</button>
+  <button data-action="nav" data-screen="boards">Rangliste</button>
+  <button data-action="nav" data-screen="players">Spieler</button>
+</nav>
+
 <!-- ============ SETUP ============ -->
 <section id="screen-setup" class="screen">
   <header class="app-header">
@@ -23,16 +29,16 @@
 
   <div id="resume-box" class="card resume hidden">
     <div>
-      <strong>Laufendes Turnier gefunden</strong>
+      <strong>Laufendes Turnier</strong>
       <span class="muted" id="resume-info"></span>
     </div>
     <button class="btn primary" data-action="resume">Fortsetzen</button>
   </div>
 
   <div class="card">
-    <h2>Spieler</h2>
-    <div id="player-list" class="player-list"></div>
-    <button class="btn ghost full" data-action="add-player">+ Spieler hinzufügen</button>
+    <h2>Wer spielt mit?</h2>
+    <div id="roster" class="roster"></div>
+    <button class="btn ghost full" data-action="new-profile">+ Neuer Spieler</button>
   </div>
 
   <div class="card">
@@ -67,13 +73,13 @@
   </div>
 
   <button class="btn primary full big" data-action="start-tournament">Turnier starten</button>
-  <p class="footer-note">Läuft komplett offline · Stand wird automatisch gespeichert</p>
+  <p class="footer-note">Läuft komplett offline · Profile und Statistiken bleiben gespeichert</p>
 </section>
 
 <!-- ============ TURNIER-ÜBERSICHT ============ -->
 <section id="screen-tournament" class="screen">
   <header class="app-header row">
-    <h1>Tabelle</h1>
+    <h1>Turnier</h1>
     <button class="btn ghost small" data-action="to-setup">Einstellungen</button>
   </header>
 
@@ -94,11 +100,51 @@
   <button class="btn primary full big" data-action="next-match">Nächstes Spiel</button>
 
   <div class="card">
-    <h2>Statistik</h2>
+    <h2>Turnier-Statistik</h2>
     <div id="stats-grid" class="stats-grid"></div>
   </div>
 
-  <button class="btn danger ghost full" data-action="reset">Turnier zurücksetzen</button>
+  <button class="btn danger ghost full" data-action="reset">Turnier abbrechen</button>
+</section>
+
+<!-- ============ RANGLISTE ============ -->
+<section id="screen-boards" class="screen">
+  <header class="app-header">
+    <h1>Rangliste</h1>
+    <p class="sub" id="boards-sub"></p>
+  </header>
+
+  <div class="chips" id="board-chips"></div>
+  <div class="card no-pad"><div id="board-list" class="board-list"></div></div>
+  <p class="hint" id="board-hint"></p>
+
+  <div class="card">
+    <h2>Rekorde</h2>
+    <div id="records" class="records"></div>
+  </div>
+
+  <div class="card">
+    <h2>Alle Spiele</h2>
+    <div id="match-log"></div>
+  </div>
+</section>
+
+<!-- ============ SPIELER ============ -->
+<section id="screen-players" class="screen">
+  <header class="app-header row">
+    <h1>Spieler</h1>
+    <button class="btn ghost small" data-action="new-profile">+ Neu</button>
+  </header>
+  <div id="players-list"></div>
+</section>
+
+<!-- ============ SPIELER-DETAIL ============ -->
+<section id="screen-profile" class="screen">
+  <header class="app-header row">
+    <button class="icon-btn" data-action="nav" data-screen="players" aria-label="Zurück">‹</button>
+    <button class="btn ghost small" data-action="edit-current-profile">Bearbeiten</button>
+  </header>
+  <div id="profile-detail"></div>
 </section>
 
 <!-- ============ BULL-OFF ============ -->
@@ -173,13 +219,16 @@
 <!-- ============ SIEGER ============ -->
 <section id="screen-winner" class="screen center">
   <div id="winner-box"></div>
-  <button class="btn primary full big" data-action="to-tournament">Tabelle ansehen</button>
+  <button class="btn primary full big" data-action="finish-tournament">Turnier abschließen</button>
+  <button class="btn ghost full" data-action="to-tournament">Zurück zum Turnier</button>
 </section>
 
 <!-- ============ OVERLAY ============ -->
 <div id="overlay" class="overlay hidden">
   <div class="overlay-card" id="overlay-card"></div>
 </div>
+
+<input type="file" id="avatar-input" accept="image/*" class="hidden">
 
 <script src="js/checkout.js"></script>
 <script src="js/app.js"></script>

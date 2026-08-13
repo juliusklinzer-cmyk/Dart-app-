@@ -1,6 +1,15 @@
 /*
  * Dart-Turnier – Jeder gegen jeden, 501 Double Out.
  * Kein Framework, kein Build: State im Speicher, Persistenz via localStorage.
+ *
+ * Datenmodell (v2):
+ *   profiles  dauerhafte Spieler (Name + Bild), überleben jedes Turnier
+ *   lineup    Profil-IDs des laufenden Turniers
+ *   matches   Spiele des laufenden Turniers (Legs -> Aufnahmen -> Darts)
+ *   history   abgeschlossene Turniere, vollständig mit allen Aufnahmen
+ *
+ * Alle Statistiken werden aus den gespeicherten Aufnahmen neu berechnet.
+ * Dadurch stimmen Karriere-Werte und Ranglisten auch nach einem Undo.
  */
 (function () {
   'use strict';
@@ -10,24 +19,34 @@
   var QUICK_SCORES = [26, 41, 45, 60, 81, 85, 100, 140, 180];
   /* Summen, die mit 3 Darts nicht zu werfen sind. */
   var IMPOSSIBLE = { 163: 1, 166: 1, 169: 1, 172: 1, 173: 1, 175: 1, 176: 1, 178: 1, 179: 1 };
+  var MIN_DARTS_FOR_AVG = 9;    // ab wann ein Average in der Rangliste zählt
+  var MAX_HISTORY = 200;        // so viele Turniere bleiben gespeichert
 
   var S = null;
-  var UI = { input: '', darts: [], mult: 1, modeOverride: null, overlay: null, error: '' };
+  var UI = { input: '', darts: [], mult: 1, modeOverride: null, overlay: null, error: '', board: 'avg', profile: null };
 
   /* ================= Helfer ================= */
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
   function uid() { return Math.random().toString(36).slice(2, 9); }
   function sum(arr, f) { var t = 0; for (var i = 0; i < arr.length; i++) t += f(arr[i]); return t; }
+  function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
+  function fmtDate(ts) {
+    if (!ts) return '';
+    var d = new Date(ts);
+    return ('0' + d.getDate()).slice(-2) + '.' + ('0' + (d.getMonth() + 1)).slice(-2) + '.' + d.getFullYear();
+  }
 
   function newState() {
     return {
-      v: 1,
+      v: 2,
       screen: 'setup',
       settings: { start: 501, bestOf: 1, dartModeFrom: 170 },
-      players: DEFAULT_PLAYERS.map(function (n) { return { id: uid(), name: n }; }),
+      profiles: DEFAULT_PLAYERS.map(function (n) { return { id: uid(), name: n, avatar: null, created: Date.now() }; }),
+      lineup: [],
       matches: [],
-      current: null
+      current: null,
+      history: []
     };
   }
 
@@ -40,16 +59,77 @@
       var raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return null;
       var s = JSON.parse(raw);
-      if (!s || s.v !== 1 || !Array.isArray(s.players)) return null;
+      if (!s) return null;
+      if (s.v === 1) s = migrate1to2(s);
+      if (s.v !== 2 || !Array.isArray(s.profiles)) return null;
+      if (!Array.isArray(s.history)) s.history = [];
+      if (!Array.isArray(s.lineup)) s.lineup = [];
       return s;
     } catch (e) { return null; }
   }
 
-  function player(id) {
-    for (var i = 0; i < S.players.length; i++) if (S.players[i].id === id) return S.players[i];
-    return { id: id, name: '?' };
+  /* Aus den Turnier-Spielern der ersten Version werden dauerhafte Profile. */
+  function migrate1to2(s) {
+    return {
+      v: 2,
+      screen: s.screen === 'game' || s.screen === 'bulloff' ? 'tournament' : s.screen,
+      settings: s.settings,
+      profiles: (s.players || []).map(function (p) {
+        return { id: p.id, name: p.name, avatar: null, created: Date.now() };
+      }),
+      lineup: (s.players || []).map(function (p) { return p.id; }),
+      matches: s.matches || [],
+      current: s.current || null,
+      history: []
+    };
   }
-  function pname(id) { return player(id).name; }
+
+  /* ================= Profile ================= */
+  function profile(id) {
+    for (var i = 0; i < S.profiles.length; i++) if (S.profiles[i].id === id) return S.profiles[i];
+    return { id: id, name: 'Unbekannt', avatar: null };
+  }
+  function pname(id) { return profile(id).name; }
+  function activeProfiles() { return S.profiles.filter(function (p) { return !p.hidden; }); }
+
+  function initials(name) {
+    var parts = String(name).trim().split(/\s+/);
+    if (!parts[0]) return '?';
+    return (parts.length > 1 ? parts[0][0] + parts[1][0] : parts[0].slice(0, 2)).toUpperCase();
+  }
+  function hue(id) {
+    var h = 0;
+    for (var i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 360;
+    return h;
+  }
+  function avatarHTML(p, cls) {
+    var c = 'av ' + (cls || '');
+    if (p.avatar) return '<span class="' + c + '" style="background-image:url(' + p.avatar + ')"></span>';
+    return '<span class="' + c + ' init" style="background:hsl(' + hue(p.id) + ',38%,30%)">' + esc(initials(p.name)) + '</span>';
+  }
+
+  /* Bild auf 220px quadratisch zuschneiden – sonst sprengen Fotos den Speicher. */
+  function readAvatar(file, cb) {
+    var reader = new FileReader();
+    reader.onload = function () {
+      var img = new Image();
+      img.onload = function () {
+        var size = 220;
+        var canvas = document.createElement('canvas');
+        canvas.width = size; canvas.height = size;
+        var side = Math.min(img.width, img.height);
+        canvas.getContext('2d').drawImage(
+          img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, size, size
+        );
+        try { cb(canvas.toDataURL('image/jpeg', 0.82)); } catch (e) { cb(null); }
+      };
+      img.onerror = function () { cb(null); };
+      img.src = reader.result;
+    };
+    reader.onerror = function () { cb(null); };
+    reader.readAsDataURL(file);
+  }
+
   function legsToWin() { return Math.floor(S.settings.bestOf / 2) + 1; }
 
   /* ================= Turnierplan ================= */
@@ -64,13 +144,8 @@
         var a = list[i], b = list[n - 1 - i];
         if (a === null || b === null) continue;
         matches.push({
-          id: uid(),
-          round: r + 1,
-          p: r % 2 === 0 ? [a, b] : [b, a],
-          starter: null,
-          legs: [],
-          done: false,
-          winner: null
+          id: uid(), round: r + 1, p: r % 2 === 0 ? [a, b] : [b, a],
+          starter: null, legs: [], done: false, winner: null, at: null
         });
       }
       list.splice(1, 0, list.pop());
@@ -125,24 +200,24 @@
     return sum(leg.visits, function (v) { return v.p === pid ? v.d : 0; });
   }
 
-  /* Aufnahme abschließen und Leg-/Matchstand fortschreiben. */
-  function commitVisit(score, darts, isCheckout, isBust) {
+  /* Aufnahme abschließen und Leg-/Matchstand fortschreiben.
+     k = Einzeldarts (nur im Einzel-Dart-Modus vorhanden, für Doppelquote). */
+  function commitVisit(score, darts, isCheckout, isBust, k) {
     var m = currentMatch();
     var leg = activeLeg(m);
     var pid = activePlayer(leg, m);
-    leg.visits.push({ p: pid, s: isBust ? 0 : score, d: darts, b: !!isBust, c: !!isCheckout, o: isBust ? score : 0 });
+    var visit = { p: pid, s: isBust ? 0 : score, d: darts, b: !!isBust, c: !!isCheckout, o: isBust ? score : 0 };
+    if (k && k.length) visit.k = k.map(function (x) { return { m: x.m, n: x.n }; });
+    leg.visits.push(visit);
 
-    UI.input = '';
-    UI.darts = [];
-    UI.mult = 1;
-    UI.modeOverride = null;
-    UI.error = '';
+    UI.input = ''; UI.darts = []; UI.mult = 1; UI.modeOverride = null; UI.error = '';
 
     if (isCheckout) {
       leg.winner = pid;
       if (legsWon(m, pid) >= legsToWin()) {
         m.done = true;
         m.winner = pid;
+        m.at = Date.now();
         UI.overlay = { type: 'match-done', pid: pid };
       } else {
         UI.overlay = { type: 'leg-done', pid: pid };
@@ -207,11 +282,11 @@
     var total = sum(UI.darts, function (d) { return d.v; });
 
     if (after < 0 || after === 1 || (after === 0 && mult !== 2)) {
-      commitVisit(total, thrown, false, true);
+      commitVisit(total, thrown, false, true, UI.darts);
       return;
     }
-    if (after === 0) { commitVisit(total, thrown, true, false); return; }
-    if (thrown === 3) { commitVisit(total, 3, false, false); return; }
+    if (after === 0) { commitVisit(total, thrown, true, false, UI.darts); return; }
+    if (thrown === 3) { commitVisit(total, 3, false, false, UI.darts); return; }
     render();
   }
 
@@ -230,6 +305,7 @@
     leg.winner = null;
     m.done = false;
     m.winner = null;
+    m.at = null;
     UI.overlay = null;
     UI.input = '';
     save();
@@ -237,53 +313,152 @@
   }
 
   /* ================= Statistik ================= */
-  function stats() {
+  /* Ein Dart-Wurf auf ein Doppel ist möglich, wenn der Rest in einem Dart
+     ausgecheckt werden kann – daran wird die Doppelquote gemessen. */
+  function oneDartFinish(rest) { return (rest <= 40 && rest % 2 === 0) || rest === 50; }
+
+  function emptyStat(id) {
+    return {
+      id: id, name: pname(id),
+      darts: 0, points: 0, visits: 0,
+      matches: 0, won: 0, lost: 0,
+      legsWon: 0, legsLost: 0,
+      first9Points: 0, first9Darts: 0,
+      checkouts: 0, doubleAttempts: 0,
+      highCO: 0, highFinishes: 0, highScore: 0,
+      s180: 0, s140: 0, s100: 0, s60: 0,
+      bestLeg: null, tournaments: 0, tourWins: 0,
+      lastResults: []
+    };
+  }
+
+  function finalize(st) {
+    st.avg = st.darts ? (st.points / st.darts) * 3 : 0;
+    st.first9 = st.first9Darts ? (st.first9Points / st.first9Darts) * 3 : 0;
+    st.doubleQuote = st.doubleAttempts ? (st.checkouts / st.doubleAttempts) * 100 : 0;
+    st.legDiff = st.legsWon - st.legsLost;
+    st.legs = st.legsWon + st.legsLost;
+    st.winPct = st.matches ? (st.won / st.matches) * 100 : 0;
+    st.dartsPerLeg = st.legsWon ? st.dartsInWonLegs / st.legsWon : 0;
+    st.tons = st.s100 + st.s140 + st.s180;
+    return st;
+  }
+
+  /* Wertet eine Liste von Spielen aus – für ein Turnier genauso wie für die Karriere. */
+  function collectStats(matchLists, ids) {
     var map = {};
-    S.players.forEach(function (p) {
-      map[p.id] = {
-        id: p.id, name: p.name, darts: 0, points: 0, legsWon: 0, legsLost: 0,
-        won: 0, lost: 0, played: 0, s180: 0, s140: 0, highCO: 0, bestLeg: null
-      };
-    });
-    S.matches.forEach(function (m) {
-      if (m.done) {
-        map[m.p[0]].played++; map[m.p[1]].played++;
-        if (map[m.winner]) map[m.winner].won++;
-        var loser = m.winner === m.p[0] ? m.p[1] : m.p[0];
-        if (map[loser]) map[loser].lost++;
-      }
-      m.legs.forEach(function (leg) {
-        leg.visits.forEach(function (v) {
-          var st = map[v.p];
-          if (!st) return;
-          st.darts += v.d;
-          if (!v.b) {
-            st.points += v.s;
-            if (v.s === 180) st.s180++;
-            else if (v.s >= 140) st.s140++;
-            if (v.c && v.s > st.highCO) st.highCO = v.s;
+    ids.forEach(function (id) { map[id] = emptyStat(id); map[id].dartsInWonLegs = 0; });
+    function stat(id) {
+      if (!map[id]) { map[id] = emptyStat(id); map[id].dartsInWonLegs = 0; }
+      return map[id];
+    }
+
+    matchLists.forEach(function (entry) {
+      var start = entry.start || 501;
+      entry.matches.forEach(function (m) {
+        if (m.done) {
+          stat(m.p[0]).matches++; stat(m.p[1]).matches++;
+          stat(m.winner).won++;
+          var loser = m.winner === m.p[0] ? m.p[1] : m.p[0];
+          stat(loser).lost++;
+          stat(m.winner).lastResults.push({ at: m.at, win: true });
+          stat(loser).lastResults.push({ at: m.at, win: false });
+        }
+        m.legs.forEach(function (leg) {
+          var rest = {};
+          rest[m.p[0]] = start; rest[m.p[1]] = start;
+          var visitNo = {};
+          visitNo[m.p[0]] = 0; visitNo[m.p[1]] = 0;
+
+          leg.visits.forEach(function (v) {
+            var st = stat(v.p);
+            var before = rest[v.p];
+            st.darts += v.d;
+            st.visits++;
+
+            // Erste 9 Darts eines Legs
+            if (visitNo[v.p] < 3) {
+              st.first9Darts += v.d;
+              st.first9Points += v.b ? 0 : v.s;
+            }
+            visitNo[v.p]++;
+
+            // Doppelversuche: aus Einzeldarts exakt, sonst aus dem Checkout selbst
+            if (v.k && v.k.length) {
+              var r = before;
+              for (var i = 0; i < v.k.length; i++) {
+                var d = v.k[i];
+                if (oneDartFinish(r)) st.doubleAttempts++;
+                r -= d.m * d.n;
+              }
+            } else if (v.c) {
+              st.doubleAttempts++;
+            }
+
+            if (!v.b) {
+              st.points += v.s;
+              rest[v.p] = before - v.s;
+              if (v.s > st.highScore) st.highScore = v.s;
+              if (v.s === 180) st.s180++;
+              else if (v.s >= 140) st.s140++;
+              else if (v.s >= 100) st.s100++;
+              else if (v.s >= 60) st.s60++;
+              if (v.c) {
+                st.checkouts++;
+                if (v.s > st.highCO) st.highCO = v.s;
+                if (v.s >= 100) st.highFinishes++;
+              }
+            }
+          });
+
+          if (leg.winner) {
+            var w = stat(leg.winner);
+            w.legsWon++;
+            var opp = m.p[0] === leg.winner ? m.p[1] : m.p[0];
+            stat(opp).legsLost++;
+            var used = dartsInLeg(leg, leg.winner);
+            w.dartsInWonLegs += used;
+            if (w.bestLeg === null || used < w.bestLeg) w.bestLeg = used;
           }
         });
-        if (leg.winner && map[leg.winner]) {
-          map[leg.winner].legsWon++;
-          var opp = m.p[0] === leg.winner ? m.p[1] : m.p[0];
-          if (map[opp]) map[opp].legsLost++;
-          var d = dartsIn(leg, leg.winner);
-          if (map[leg.winner].bestLeg === null || d < map[leg.winner].bestLeg) map[leg.winner].bestLeg = d;
-        }
       });
     });
+
+    return map;
+  }
+
+  function dartsInLeg(leg, pid) {
+    return sum(leg.visits, function (v) { return v.p === pid ? v.d : 0; });
+  }
+
+  /* Statistik des laufenden Turniers. */
+  function stats() {
+    var map = collectStats([{ matches: S.matches, start: S.settings.start }], S.lineup);
+    Object.keys(map).forEach(function (k) { finalize(map[k]); });
+    return map;
+  }
+
+  /* Statistik über alles, was je gespielt wurde (inkl. laufendem Turnier). */
+  function career() {
+    var lists = S.history.map(function (h) { return { matches: h.matches, start: (h.settings && h.settings.start) || 501 }; });
+    if (S.matches.length) lists.push({ matches: S.matches, start: S.settings.start });
+    var ids = S.profiles.map(function (p) { return p.id; });
+    var map = collectStats(lists, ids);
+    S.history.forEach(function (h) {
+      (h.lineup || []).forEach(function (id) { if (map[id]) map[id].tournaments++; });
+      if (h.winner && map[h.winner]) map[h.winner].tourWins++;
+    });
     Object.keys(map).forEach(function (k) {
-      var st = map[k];
-      st.avg = st.darts ? (st.points / st.darts) * 3 : 0;
-      st.legDiff = st.legsWon - st.legsLost;
+      map[k].name = pname(k);
+      finalize(map[k]);
+      map[k].lastResults.sort(function (a, b) { return (b.at || 0) - (a.at || 0); });
     });
     return map;
   }
 
   function standings() {
     var map = stats();
-    return S.players.map(function (p) { return map[p.id]; }).sort(function (a, b) {
+    return S.lineup.map(function (id) { return map[id]; }).sort(function (a, b) {
       if (b.won !== a.won) return b.won - a.won;
       if (b.legDiff !== a.legDiff) return b.legDiff - a.legDiff;
       if (b.avg !== a.avg) return b.avg - a.avg;
@@ -291,17 +466,90 @@
     });
   }
 
-  /* ================= Rendering ================= */
-  function show(screen) {
-    ['setup', 'tournament', 'bulloff', 'game', 'winner'].forEach(function (s) {
-      $('screen-' + s).classList.toggle('active', s === screen);
+  /* ================= Ranglisten ================= */
+  var BOARDS = [
+    { key: 'avg', label: 'Average', unit: '', get: function (s) { return s.avg; }, fmt: function (v) { return v.toFixed(2); }, min: function (s) { return s.darts >= MIN_DARTS_FOR_AVG; }, hint: 'Punkte je 3 Darts über alle Spiele. Zählt ab ' + MIN_DARTS_FOR_AVG + ' geworfenen Darts.' },
+    { key: 'first9', label: 'First 9', get: function (s) { return s.first9; }, fmt: function (v) { return v.toFixed(2); }, min: function (s) { return s.first9Darts >= 9; }, hint: 'Average der ersten 9 Darts eines Legs – das Maß für den Scoring-Antritt.' },
+    { key: 'doubleQuote', label: 'Doppelquote', get: function (s) { return s.doubleQuote; }, fmt: function (v) { return v.toFixed(1) + ' %'; }, min: function (s) { return s.doubleAttempts >= 3; }, hint: 'Getroffene Finishes je Dart auf ein mögliches Doppel (Rest 2–40 gerade oder Bull). Zählt ab 3 Versuchen.' },
+    { key: 'highCO', label: 'Höchstes Finish', get: function (s) { return s.highCO; }, fmt: function (v) { return String(v); }, min: function (s) { return s.highCO > 0; }, hint: 'Der höchste je ausgecheckte Rest.' },
+    { key: 's180', label: '180er', get: function (s) { return s.s180; }, fmt: function (v) { return String(v); }, min: function (s) { return s.s180 > 0; }, hint: 'Maximum – alle drei Darts in die Triple 20.' },
+    { key: 'highScore', label: 'Höchste Aufnahme', get: function (s) { return s.highScore; }, fmt: function (v) { return String(v); }, min: function (s) { return s.highScore > 0; }, hint: 'Die beste einzelne Aufnahme aus 3 Darts.' },
+    { key: 'bestLeg', label: 'Bestes Leg', get: function (s) { return s.bestLeg; }, fmt: function (v) { return v + ' Darts'; }, min: function (s) { return s.bestLeg !== null; }, asc: true, hint: 'Wenigste Darts für ein gewonnenes Leg.' },
+    { key: 'tons', label: '100+ Aufnahmen', get: function (s) { return s.tons; }, fmt: function (v) { return String(v); }, min: function (s) { return s.tons > 0; }, hint: 'Alle Aufnahmen ab 100 Punkten (inkl. 140+ und 180).' },
+    { key: 'won', label: 'Siege', get: function (s) { return s.won; }, fmt: function (v) { return String(v); }, min: function (s) { return s.matches > 0; }, hint: 'Gewonnene Spiele über alle Turniere.' },
+    { key: 'winPct', label: 'Siegquote', get: function (s) { return s.winPct; }, fmt: function (v) { return v.toFixed(0) + ' %'; }, min: function (s) { return s.matches >= 3; }, hint: 'Anteil gewonnener Spiele. Zählt ab 3 Spielen.' },
+    { key: 'legsWon', label: 'Legs', get: function (s) { return s.legsWon; }, fmt: function (v) { return String(v); }, min: function (s) { return s.legsWon > 0; }, hint: 'Gewonnene Legs insgesamt.' },
+    { key: 'tourWins', label: 'Turniersiege', get: function (s) { return s.tourWins; }, fmt: function (v) { return String(v); }, min: function (s) { return s.tourWins > 0; }, hint: 'Gewonnene, abgeschlossene Turniere.' }
+  ];
+
+  function boardDef(key) {
+    for (var i = 0; i < BOARDS.length; i++) if (BOARDS[i].key === key) return BOARDS[i];
+    return BOARDS[0];
+  }
+
+  function ranking(def, map) {
+    var rows = Object.keys(map).map(function (k) { return map[k]; }).filter(function (s) {
+      return def.min(s) && !profile(s.id).hidden;
     });
+    rows.sort(function (a, b) {
+      var d = def.asc ? def.get(a) - def.get(b) : def.get(b) - def.get(a);
+      return d !== 0 ? d : a.name.localeCompare(b.name);
+    });
+    return rows;
+  }
+
+  /* Alle je gespielten Spiele, neueste zuerst. */
+  function allMatches() {
+    var out = [];
+    if (S.matches.length) {
+      S.matches.forEach(function (m) { if (m.done) out.push({ m: m, start: S.settings.start, live: true }); });
+    }
+    S.history.forEach(function (h) {
+      h.matches.forEach(function (m) { if (m.done) out.push({ m: m, start: (h.settings && h.settings.start) || 501, at: h.at }); });
+    });
+    out.sort(function (a, b) { return (b.m.at || b.at || 0) - (a.m.at || a.at || 0); });
+    return out;
+  }
+
+  /* ================= Turnier abschließen ================= */
+  function archiveTournament() {
+    if (!S.matches.length) return;
+    var table = standings();
+    S.history.unshift({
+      id: uid(), at: Date.now(),
+      lineup: S.lineup.slice(),
+      settings: { start: S.settings.start, bestOf: S.settings.bestOf },
+      matches: S.matches,
+      winner: allMatchesDone() && table[0] ? table[0].id : null
+    });
+    if (S.history.length > MAX_HISTORY) S.history.length = MAX_HISTORY;
+    S.matches = [];
+    S.current = null;
+    save();
+  }
+
+  /* ================= Rendering ================= */
+  var SCREENS = ['setup', 'tournament', 'boards', 'players', 'profile', 'bulloff', 'game', 'winner'];
+  var NAV_SCREENS = { setup: 'setup', tournament: 'setup', boards: 'boards', players: 'players', profile: 'players' };
+
+  function show(screen) {
+    SCREENS.forEach(function (s) { $('screen-' + s).classList.toggle('active', s === screen); });
+    var navFor = NAV_SCREENS[screen];
+    $('nav').classList.toggle('hidden', !navFor);
+    if (navFor) {
+      $('nav').querySelectorAll('button').forEach(function (b) {
+        b.classList.toggle('active', b.getAttribute('data-screen') === navFor);
+      });
+    }
   }
 
   function render() {
     show(S.screen);
     if (S.screen === 'setup') renderSetup();
     if (S.screen === 'tournament') renderTournament();
+    if (S.screen === 'boards') renderBoards();
+    if (S.screen === 'players') renderPlayers();
+    if (S.screen === 'profile') renderProfile();
     if (S.screen === 'bulloff') renderBullOff();
     if (S.screen === 'game') renderGame();
     if (S.screen === 'winner') renderWinner();
@@ -309,14 +557,18 @@
   }
 
   function renderSetup() {
-    var list = $('player-list');
-    list.innerHTML = S.players.map(function (p, i) {
-      return '<div class="player-row" data-pid="' + p.id + '">' +
-        '<div class="idx">' + (i + 1) + '</div>' +
-        '<input type="text" value="' + esc(p.name) + '" placeholder="Name" maxlength="14" data-role="pname">' +
-        (S.players.length > 2 ? '<button class="rm" data-action="rm-player" aria-label="Entfernen">×</button>' : '') +
+    var map = career();
+    $('roster').innerHTML = activeProfiles().map(function (p) {
+      var st = map[p.id];
+      var sel = S.lineup.indexOf(p.id) >= 0;
+      return '<div class="roster-item ' + (sel ? 'selected' : '') + '" data-action="toggle-lineup" data-id="' + p.id + '" role="button" tabindex="0">' +
+        avatarHTML(p, 'md') +
+        '<div class="who"><div class="nm">' + esc(p.name) + '</div>' +
+        '<div class="sm">' + (st && st.matches ? 'Ø ' + st.avg.toFixed(1) + ' · ' + st.won + ' Siege' : 'noch kein Spiel') + '</div></div>' +
+        '<button class="edit" data-action="edit-profile" data-id="' + p.id + '" aria-label="Bearbeiten">✎</button>' +
+        '<span class="check">✓</span>' +
         '</div>';
-    }).join('');
+    }).join('') || '<p class="hint">Noch keine Spieler angelegt.</p>';
 
     document.querySelectorAll('.segmented[data-setting]').forEach(function (seg) {
       var key = seg.getAttribute('data-setting');
@@ -338,7 +590,7 @@
     $('standings-body').innerHTML = table.map(function (st, i) {
       return '<tr class="' + (i === 0 && st.won > 0 ? 'leader' : '') + '">' +
         '<td class="rank">' + (i + 1) + '</td>' +
-        '<td class="left name">' + esc(st.name) + '</td>' +
+        '<td class="left name"><span class="cell">' + avatarHTML(profile(st.id), 'sm') + esc(st.name) + '</span></td>' +
         '<td class="wins">' + st.won + '</td>' +
         '<td>' + st.lost + '</td>' +
         '<td>' + st.legsWon + ':' + st.legsLost + '</td>' +
@@ -366,7 +618,7 @@
     });
     $('schedule').innerHTML = html;
 
-    var btn = document.querySelector('[data-action="next-match"]');
+    var btn = document.querySelector('#screen-tournament [data-action="next-match"], #screen-tournament [data-action="to-winner"]');
     if (allMatchesDone()) {
       btn.textContent = 'Endstand ansehen';
       btn.setAttribute('data-action', 'to-winner');
@@ -376,24 +628,178 @@
     }
 
     var map = stats();
-    $('stats-grid').innerHTML = S.players.map(function (p) {
-      var st = map[p.id];
+    $('stats-grid').innerHTML = S.lineup.map(function (id) {
+      var st = map[id];
       return '<div class="stat-card">' +
-        '<div class="who">' + esc(p.name) + '</div>' +
+        '<div class="who">' + avatarHTML(profile(id), 'sm') + esc(st.name) + '</div>' +
         '<div class="line"><span>Ø 3 Darts</span><b>' + (st.avg ? st.avg.toFixed(1) : '–') + '</b></div>' +
+        '<div class="line"><span>First 9</span><b>' + (st.first9 ? st.first9.toFixed(1) : '–') + '</b></div>' +
         '<div class="line"><span>180er</span><b>' + st.s180 + '</b></div>' +
-        '<div class="line"><span>140+</span><b>' + st.s140 + '</b></div>' +
+        '<div class="line"><span>100+</span><b>' + st.tons + '</b></div>' +
         '<div class="line"><span>Höchstes Finish</span><b>' + (st.highCO || '–') + '</b></div>' +
+        '<div class="line"><span>Doppelquote</span><b>' + (st.doubleAttempts ? st.doubleQuote.toFixed(0) + ' %' : '–') + '</b></div>' +
         '<div class="line"><span>Bestes Leg</span><b>' + (st.bestLeg ? st.bestLeg + ' Darts' : '–') + '</b></div>' +
         '</div>';
     }).join('');
+  }
+
+  function renderBoards() {
+    var map = career();
+    var def = boardDef(UI.board);
+
+    var played = allMatches().length;
+    $('boards-sub').textContent = played
+      ? played + ' Spiel' + (played === 1 ? '' : 'e') + ' · ' + S.history.length + ' abgeschlossene Turniere'
+      : 'Noch keine Spiele gespielt';
+
+    $('board-chips').innerHTML = BOARDS.map(function (b) {
+      return '<button class="chip ' + (b.key === UI.board ? 'active' : '') + '" data-action="board" data-key="' + b.key + '">' + b.label + '</button>';
+    }).join('');
+
+    var rows = ranking(def, map);
+    var medals = ['🥇', '🥈', '🥉'];
+    $('board-list').innerHTML = rows.length ? rows.map(function (st, i) {
+      return '<div class="board-row ' + (i === 0 ? 'top' : '') + '" data-action="open-profile" data-id="' + st.id + '">' +
+        '<div class="pos">' + (medals[i] || (i + 1) + '.') + '</div>' +
+        avatarHTML(profile(st.id), 'sm') +
+        '<div class="nm">' + esc(st.name) + '</div>' +
+        '<div class="val">' + def.fmt(def.get(st)) + '</div>' +
+        '</div>';
+    }).join('') : '<div class="board-empty">Dafür fehlen noch Daten.</div>';
+    $('board-hint').textContent = def.hint;
+
+    /* Rekorde: die Bestmarken quer über alle Kategorien. */
+    var recs = [
+      { k: 'highCO', t: 'Höchstes Finish' },
+      { k: 'highScore', t: 'Höchste Aufnahme' },
+      { k: 'bestLeg', t: 'Kürzestes Leg' },
+      { k: 'avg', t: 'Bester Average' },
+      { k: 's180', t: 'Meiste 180er' },
+      { k: 'doubleQuote', t: 'Beste Doppelquote' }
+    ];
+    $('records').innerHTML = recs.map(function (r) {
+      var d = boardDef(r.k);
+      var top = ranking(d, map)[0];
+      return '<div class="rec">' +
+        '<div class="rt">' + r.t + '</div>' +
+        '<div class="rv">' + (top ? d.fmt(d.get(top)) : '–') + '</div>' +
+        '<div class="rn">' + (top ? esc(top.name) : 'noch offen') + '</div>' +
+        '</div>';
+    }).join('');
+
+    $('match-log').innerHTML = allMatches().slice(0, 30).map(function (e) {
+      var m = e.m;
+      var la = legsWon(m, m.p[0]), lb = legsWon(m, m.p[1]);
+      var avgOf = function (pid) {
+        var d = 0, p = 0;
+        m.legs.forEach(function (leg) {
+          leg.visits.forEach(function (v) { if (v.p === pid) { d += v.d; if (!v.b) p += v.s; } });
+        });
+        return d ? ((p / d) * 3).toFixed(1) : '–';
+      };
+      return '<div class="log-row">' +
+        '<div class="lp ' + (m.winner === m.p[0] ? 'w' : '') + '">' + esc(pname(m.p[0])) + '<span class="a">Ø ' + avgOf(m.p[0]) + '</span></div>' +
+        '<div class="ls">' + la + ':' + lb + '</div>' +
+        '<div class="lp right ' + (m.winner === m.p[1] ? 'w' : '') + '">' + esc(pname(m.p[1])) + '<span class="a">Ø ' + avgOf(m.p[1]) + '</span></div>' +
+        '<div class="ld">' + fmtDate(m.at || e.at) + (e.live ? ' · aktuelles Turnier' : '') + '</div>' +
+        '</div>';
+    }).join('') || '<p class="hint">Noch keine Spiele.</p>';
+  }
+
+  function renderPlayers() {
+    var map = career();
+    $('players-list').innerHTML = S.profiles.map(function (p) {
+      var st = map[p.id];
+      return '<div class="card player-card ' + (p.hidden ? 'hidden-profile' : '') + '" data-action="open-profile" data-id="' + p.id + '">' +
+        avatarHTML(p, 'lg') +
+        '<div class="pc-main">' +
+          '<div class="pc-name">' + esc(p.name) + (p.hidden ? ' <span class="muted">(ausgeblendet)</span>' : '') + '</div>' +
+          '<div class="pc-stats">' +
+            '<span>Ø <b>' + (st.darts ? st.avg.toFixed(1) : '–') + '</b></span>' +
+            '<span>Siege <b>' + st.won + '</b></span>' +
+            '<span>180er <b>' + st.s180 + '</b></span>' +
+            '<span>Bestes Finish <b>' + (st.highCO || '–') + '</b></span>' +
+          '</div>' +
+        '</div>' +
+        '<span class="chev">›</span>' +
+        '</div>';
+    }).join('');
+  }
+
+  function renderProfile() {
+    var p = profile(UI.profile);
+    var st = career()[p.id];
+    if (!st) { S.screen = 'players'; render(); return; }
+
+    var form = st.lastResults.slice(0, 8).map(function (r) {
+      return '<span class="form ' + (r.win ? 'w' : 'l') + '">' + (r.win ? 'S' : 'N') + '</span>';
+    }).join('');
+
+    function line(label, value, hint) {
+      return '<div class="pline"><span>' + label + (hint ? ' <i>' + hint + '</i>' : '') + '</span><b>' + value + '</b></div>';
+    }
+
+    var mine = allMatches().filter(function (e) { return e.m.p.indexOf(p.id) >= 0; }).slice(0, 15);
+
+    $('profile-detail').innerHTML =
+      '<div class="profile-head">' + avatarHTML(p, 'xl') +
+        '<div><h1>' + esc(p.name) + '</h1>' +
+        '<div class="muted">' + (st.matches
+          ? plural(st.won, 'Sieg', 'Siege') + ' · ' + plural(st.lost, 'Niederlage', 'Niederlagen') +
+            ' · ' + plural(st.tourWins, 'Turniersieg', 'Turniersiege')
+          : 'Noch kein Spiel gespielt') + '</div>' +
+        '<div class="form-row">' + form + '</div></div></div>' +
+
+      '<div class="card"><h2>Scoring</h2>' +
+        line('3-Dart-Average', st.darts ? st.avg.toFixed(2) : '–') +
+        line('First-9-Average', st.first9Darts ? st.first9.toFixed(2) : '–') +
+        line('Höchste Aufnahme', st.highScore || '–') +
+        line('180er', st.s180) +
+        line('140 – 179', st.s140) +
+        line('100 – 139', st.s100) +
+        line('60 – 99', st.s60) +
+        line('Aufnahmen gesamt', st.visits) +
+        line('Darts geworfen', st.darts) +
+      '</div>' +
+
+      '<div class="card"><h2>Finishing</h2>' +
+        line('Doppelquote', st.doubleAttempts ? st.doubleQuote.toFixed(1) + ' %' : '–', 'Treffer je Wurf auf ein mögliches Doppel') +
+        line('Doppelversuche', st.doubleAttempts) +
+        line('Checkouts', st.checkouts) +
+        line('Höchstes Finish', st.highCO || '–') +
+        line('Finishes ab 100', st.highFinishes) +
+        line('Bestes Leg', st.bestLeg ? st.bestLeg + ' Darts' : '–') +
+        line('Ø Darts je gewonnenem Leg', st.dartsPerLeg ? st.dartsPerLeg.toFixed(1) : '–') +
+      '</div>' +
+
+      '<div class="card"><h2>Bilanz</h2>' +
+        line('Spiele', st.matches) +
+        line('Siege / Niederlagen', st.won + ' / ' + st.lost) +
+        line('Siegquote', st.matches ? st.winPct.toFixed(0) + ' %' : '–') +
+        line('Legs gewonnen / verloren', st.legsWon + ' / ' + st.legsLost) +
+        line('Turniere gespielt', st.tournaments) +
+        line('Turniersiege', st.tourWins) +
+      '</div>' +
+
+      '<div class="card"><h2>Letzte Spiele</h2>' + (mine.length ? mine.map(function (e) {
+        var m = e.m;
+        var opp = m.p[0] === p.id ? m.p[1] : m.p[0];
+        var win = m.winner === p.id;
+        return '<div class="log-row">' +
+          '<div class="lp ' + (win ? 'w' : '') + '">' + (win ? 'Sieg' : 'Niederlage') + '</div>' +
+          '<div class="ls">' + legsWon(m, p.id) + ':' + legsWon(m, opp) + '</div>' +
+          '<div class="lp right">gegen ' + esc(pname(opp)) + '</div>' +
+          '<div class="ld">' + fmtDate(m.at || e.at) + (e.live ? ' · aktuelles Turnier' : '') + '</div>' +
+          '</div>';
+      }).join('') : '<p class="hint">Noch keine Spiele.</p>') + '</div>';
   }
 
   function renderBullOff() {
     var m = currentMatch();
     if (!m) { S.screen = 'tournament'; render(); return; }
     $('bulloff-buttons').innerHTML = m.p.map(function (pid) {
-      return '<button data-action="pick-starter" data-id="' + pid + '">' + esc(pname(pid)) + '</button>';
+      return '<button data-action="pick-starter" data-id="' + pid + '">' +
+        avatarHTML(profile(pid), 'md') + '<span>' + esc(pname(pid)) + '</span></button>';
     }).join('');
   }
 
@@ -417,7 +823,7 @@
       var scored = S.settings.start - remainingIn(leg, pid) + (pid === active ? pendingSum : 0);
       var avg = darts ? (scored / darts * 3).toFixed(1) : '–';
       return '<div class="pcard ' + (pid === active ? 'active' : '') + '">' +
-        '<div class="pname">' + (pid === active ? '<span class="arrow">▸</span>' : '') + esc(pname(pid)) + '</div>' +
+        '<div class="pname">' + avatarHTML(profile(pid), 'sm') + esc(pname(pid)) + '</div>' +
         '<div class="legs">Legs ' + legsWon(m, pid) + '</div>' +
         '<div class="rest">' + rest + '</div>' +
         '<div class="meta"><span>Ø <b>' + avg + '</b></span><span>Darts <b>' + darts + '</b></span></div>' +
@@ -511,14 +917,16 @@
 
   function renderWinner() {
     var table = standings();
+    if (!table.length) { S.screen = 'setup'; render(); return; }
     var medals = ['🥇', '🥈', '🥉'];
     $('winner-box').innerHTML =
       '<div style="text-align:center"><div class="big-emoji">🏆</div>' +
       '<h1>' + esc(table[0].name) + ' gewinnt!</h1>' +
-      '<p class="muted">' + table[0].won + ' von ' + (S.players.length - 1) + ' Spielen gewonnen</p></div>' +
+      '<p class="muted">' + table[0].won + ' von ' + (S.lineup.length - 1) + ' Spielen gewonnen</p></div>' +
       '<div class="podium">' + table.map(function (st, i) {
         return '<div class="p ' + (i === 0 ? 'first' : '') + '">' +
           '<div class="medal">' + (medals[i] || (i + 1) + '.') + '</div>' +
+          avatarHTML(profile(st.id), 'sm') +
           '<div class="pn">' + esc(st.name) + '</div>' +
           '<div class="pv">' + st.won + ' Siege · Legs ' + st.legsWon + ':' + st.legsLost + ' · Ø ' + (st.avg ? st.avg.toFixed(1) : '–') + '</div>' +
           '</div>';
@@ -555,28 +963,38 @@
         '<button class="btn ghost full" data-action="ov-to-table">Zur Tabelle</button>' +
         '<button class="btn ghost full" data-action="undo">Eingabe rückgängig</button>';
     } else if (o.type === 'confirm-reset') {
-      html = '<h3>Turnier zurücksetzen?</h3><p>Alle Ergebnisse und Statistiken gehen verloren.</p>' +
+      html = '<h3>Turnier abbrechen?</h3>' +
+        '<p>Die bereits gespielten Spiele bleiben in Statistik und Rangliste erhalten.</p>' +
         '<div class="row-btns two">' +
-        '<button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
-        '<button class="btn danger" data-action="ov-reset">Zurücksetzen</button></div>';
+        '<button class="btn ghost" data-action="ov-cancel">Weiterspielen</button>' +
+        '<button class="btn danger" data-action="ov-reset">Abbrechen</button></div>';
+    } else if (o.type === 'profile') {
+      var p = o.draft;
+      var isNew = !o.id;
+      html = '<h3>' + (isNew ? 'Neuer Spieler' : 'Spieler bearbeiten') + '</h3>' +
+        '<div class="avatar-edit" data-action="pick-avatar">' +
+          avatarHTML({ id: o.id || 'neu', name: p.name || '?', avatar: p.avatar }, 'xl') +
+          '<span class="cam">Foto wählen</span>' +
+        '</div>' +
+        '<input class="name-input" type="text" data-role="profile-name" value="' + esc(p.name) + '" placeholder="Name" maxlength="16">' +
+        (p.avatar ? '<button class="btn ghost full" data-action="clear-avatar">Foto entfernen</button>' : '') +
+        '<div class="row-btns two"><button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
+        '<button class="btn primary" data-action="save-profile">Speichern</button></div>' +
+        (isNew ? '' : '<button class="btn danger ghost full" data-action="hide-profile">' +
+          (profile(o.id).hidden ? 'Wieder einblenden' : 'Spieler ausblenden') + '</button>' +
+          '<p class="hint">Ausgeblendete Spieler tauchen nicht mehr in der Aufstellung auf, ihre Ergebnisse bleiben aber in Statistik und Rangliste erhalten.</p>');
+    } else if (o.type === 'need-players') {
+      html = '<h3>Zu wenig Spieler</h3><p>Wähle mindestens zwei Spieler für das Turnier aus.</p>' +
+        '<button class="btn primary full" data-action="ov-cancel">Alles klar</button>';
     }
     $('overlay-card').innerHTML = html;
   }
 
   /* ================= Aktionen ================= */
   function startTournament() {
-    document.querySelectorAll('#player-list .player-row').forEach(function (row) {
-      var p = player(row.getAttribute('data-pid'));
-      var val = row.querySelector('[data-role="pname"]').value.trim();
-      if (val) p.name = val;
-    });
-    var names = {};
-    S.players.forEach(function (p, i) {
-      if (!p.name) p.name = 'Spieler ' + (i + 1);
-      if (names[p.name]) p.name = p.name + ' ' + (i + 1);
-      names[p.name] = 1;
-    });
-    S.matches = buildSchedule(S.players.map(function (p) { return p.id; }));
+    if (S.lineup.length < 2) { UI.overlay = { type: 'need-players' }; render(); return; }
+    if (S.matches.length) archiveTournament();
+    S.matches = buildSchedule(S.lineup.slice());
     S.current = null;
     S.screen = 'tournament';
     save();
@@ -595,18 +1013,82 @@
 
   function handleAction(action, el) {
     switch (action) {
-      case 'add-player':
-        if (S.players.length >= 12) return;
-        S.players.push({ id: uid(), name: 'Spieler ' + (S.players.length + 1) });
-        save(); render();
-        break;
-      case 'rm-player': {
-        var pid = el.closest('.player-row').getAttribute('data-pid');
-        if (S.players.length <= 2) return;
-        S.players = S.players.filter(function (p) { return p.id !== pid; });
+      case 'nav': {
+        var target = el.getAttribute('data-screen');
+        // Solange ein Turnier nicht abgeschlossen ist, führt "Turnier" dorthin.
+        if (target === 'setup' && S.matches.length) target = 'tournament';
+        S.screen = target;
         save(); render();
         break;
       }
+      case 'toggle-lineup': {
+        var id = el.getAttribute('data-id');
+        var i = S.lineup.indexOf(id);
+        if (i >= 0) S.lineup.splice(i, 1);
+        else if (S.lineup.length < 12) S.lineup.push(id);
+        save(); render();
+        break;
+      }
+      case 'new-profile':
+        UI.overlay = { type: 'profile', id: null, draft: { name: '', avatar: null } };
+        render();
+        break;
+      case 'edit-profile': {
+        var p = profile(el.getAttribute('data-id'));
+        UI.overlay = { type: 'profile', id: p.id, draft: { name: p.name, avatar: p.avatar } };
+        render();
+        break;
+      }
+      case 'edit-current-profile': {
+        var cp = profile(UI.profile);
+        UI.overlay = { type: 'profile', id: cp.id, draft: { name: cp.name, avatar: cp.avatar } };
+        render();
+        break;
+      }
+      case 'pick-avatar':
+        $('avatar-input').click();
+        break;
+      case 'clear-avatar':
+        UI.overlay.draft.avatar = null;
+        render();
+        break;
+      case 'save-profile': {
+        var draft = UI.overlay.draft;
+        var name = (draft.name || '').trim();
+        if (!name) name = 'Spieler ' + (S.profiles.length + 1);
+        if (UI.overlay.id) {
+          var ex = profile(UI.overlay.id);
+          ex.name = name;
+          ex.avatar = draft.avatar;
+        } else {
+          var np = { id: uid(), name: name, avatar: draft.avatar, created: Date.now() };
+          S.profiles.push(np);
+          if (S.lineup.length < 12) S.lineup.push(np.id);
+        }
+        UI.overlay = null;
+        save(); render();
+        break;
+      }
+      case 'hide-profile': {
+        var hp = profile(UI.overlay.id);
+        hp.hidden = !hp.hidden;
+        if (hp.hidden) {
+          var li = S.lineup.indexOf(hp.id);
+          if (li >= 0) S.lineup.splice(li, 1);
+        }
+        UI.overlay = null;
+        save(); render();
+        break;
+      }
+      case 'open-profile':
+        UI.profile = el.getAttribute('data-id');
+        S.screen = 'profile';
+        save(); render();
+        break;
+      case 'board':
+        UI.board = el.getAttribute('data-key');
+        render();
+        break;
       case 'start-tournament':
         startTournament();
         break;
@@ -621,6 +1103,11 @@
         break;
       case 'to-winner':
         S.screen = 'winner'; save(); render();
+        break;
+      case 'finish-tournament':
+        archiveTournament();
+        S.screen = 'setup';
+        save(); render();
         break;
       case 'next-match': {
         var nm = nextOpenMatch();
@@ -669,16 +1156,12 @@
       case 'reset':
         UI.overlay = { type: 'confirm-reset' }; render();
         break;
-      case 'ov-reset': {
-        var keep = S.players.map(function (p) { return { id: uid(), name: p.name }; });
-        var settings = S.settings;
-        S = newState();
-        S.players = keep;
-        S.settings = settings;
+      case 'ov-reset':
+        archiveTournament();
         UI.overlay = null;
+        S.screen = 'setup';
         save(); render();
         break;
-      }
     }
   }
 
@@ -720,12 +1203,21 @@
     }
   });
 
+  /* Name im Profil-Dialog: nur den Entwurf pflegen, nicht neu rendern –
+     sonst verliert das Feld beim Tippen den Fokus. */
   document.addEventListener('input', function (ev) {
-    if (ev.target.getAttribute('data-role') === 'pname') {
-      var pid = ev.target.closest('.player-row').getAttribute('data-pid');
-      player(pid).name = ev.target.value;
-      save();
+    if (ev.target.getAttribute('data-role') === 'profile-name' && UI.overlay) {
+      UI.overlay.draft.name = ev.target.value;
     }
+  });
+
+  $('avatar-input').addEventListener('change', function (ev) {
+    var file = ev.target.files && ev.target.files[0];
+    ev.target.value = '';
+    if (!file || !UI.overlay) return;
+    readAvatar(file, function (dataUrl) {
+      if (dataUrl && UI.overlay) { UI.overlay.draft.avatar = dataUrl; render(); }
+    });
   });
 
   document.addEventListener('keydown', function (ev) {
@@ -745,9 +1237,11 @@
 
   /* ================= Start ================= */
   S = load() || newState();
+  if (!S.lineup.length) S.lineup = activeProfiles().slice(0, 4).map(function (p) { return p.id; });
   if (S.screen === 'game' && !currentMatch()) S.screen = 'tournament';
   if (S.screen === 'bulloff' && !currentMatch()) S.screen = 'tournament';
   if (!S.matches.length && S.screen === 'tournament') S.screen = 'setup';
+  if (S.screen === 'profile' && !UI.profile) S.screen = 'players';
   render();
 
   if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
@@ -766,11 +1260,14 @@
       undo: undo,
       standings: standings,
       stats: stats,
+      career: career,
+      allMatches: allMatches,
+      ranking: function (key) { return ranking(boardDef(key), career()); },
       remainingIn: remainingIn,
       activeLeg: activeLeg,
       activePlayer: activePlayer,
       currentMatch: currentMatch,
-      reset: function () { S = newState(); UI = { input: '', darts: [], mult: 1, modeOverride: null, overlay: null, error: '' }; render(); }
+      reset: function () { S = newState(); UI.overlay = null; render(); }
     };
   }
 })();
