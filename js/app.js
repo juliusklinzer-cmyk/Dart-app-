@@ -32,7 +32,9 @@
   var lastQuick = { key: '', at: 0 };
   function quickDoubleTap(key) {
     var now = Date.now();
-    if (key === lastQuick.key && now - lastQuick.at < 400) return true;
+    // 150 ms: ein prellender Doppeltipp liegt darunter, zwei bewusst
+    // getippte Aufnahmen immer darüber.
+    if (key === lastQuick.key && now - lastQuick.at < 150) return true;
     lastQuick.key = key;
     lastQuick.at = now;
     return false;
@@ -238,8 +240,11 @@
 
   function withdrawFromTournament(pid) {
     S.matches.forEach(function (m) {
-      if (m.done) return;
-      if (m.p.indexOf(pid) >= 0) m.void = true;
+      if (m.done || m.p.indexOf(pid) < 0) return;
+      // Bereits geworfene Legs bleiben gewertet – die Partie gilt als
+      // abgebrochen, nicht als nie stattgefunden.
+      m.void = true;
+      m.started = m.legs.some(function (l) { return l.visits.length > 0; });
     });
     save();
   }
@@ -933,7 +938,7 @@
 
   /* ================= Rendering ================= */
   var SCREENS = ['setup', 'tournament', 'boards', 'players', 'profile', 'bulloff', 'game', 'cricket', 'rtw', 'summary', 'winner'];
-  var NAV_SCREENS = { setup: 'setup', tournament: 'setup', boards: 'boards', players: 'players', profile: 'players' };
+  var NAV_SCREENS = { setup: 'setup', tournament: 'setup', boards: 'boards', players: 'players', profile: 'players', summary: 'setup' };
 
   function show(screen) {
     SCREENS.forEach(function (s) { $('screen-' + s).classList.toggle('active', s === screen); });
@@ -1042,7 +1047,7 @@
           (m.winner === m.p[0] ? '<b>' + esc(a) + '</b>' : esc(a)) + ' <span class="muted">vs</span> ' +
           (m.winner === m.p[1] ? '<b>' + esc(b) + '</b>' : esc(b)) +
         '</div>' +
-        '<div class="res">' + (m.void ? 'entfällt' : score) + '</div>' +
+        '<div class="res">' + (m.void ? (m.started ? 'abgebrochen ' + score : 'entfällt') : score) + '</div>' +
         (m.done || m.void ? '' : '<button class="go" data-action="open-match" data-id="' + m.id + '">' +
           (m.legs.length ? 'Weiter' : 'Start') + '</button>') +
         '</div>';
@@ -1381,7 +1386,7 @@
     var active = m.done && m.winner ? m.winner : activePlayer(leg, m);
     var idx = S.matches.indexOf(m);
     $('game-match-label').textContent = 'Spiel ' + (idx + 1) + ' von ' + S.matches.length;
-    $('game-leg-label').textContent = S.settings.bestOf > 1
+    $('game-leg-label').textContent = tour().bestOf > 1
       ? 'Leg ' + m.legs.length + ' · Stand ' + legsWon(m, m.p[0]) + ':' + legsWon(m, m.p[1]) + ' · ' + plural(legsToWin(), 'Leg', 'Legs') + ' zum Sieg'
       : 'Ein Leg · ' + tourStart() + ' Double Out';
 
@@ -1429,13 +1434,13 @@
         var why = '';
         if (v.b) {
           var after = before - v.o;
-          why = after < 0 ? 'überworfen' : after === 1 ? 'Rest 1' : 'kein Doppel';
+          why = after < 0 ? ' · überworfen' : after === 1 ? ' · Rest 1' : after === 0 ? ' · kein Doppel' : '';
         }
         var vi = leg.visits.indexOf(v);
         rows.push('<div class="v ' + (v.b ? 'bust' : v.c ? 'co' : '') + (v.c ? '' : ' tap') + '"' +
           (v.c ? '' : ' data-action="edit-visit" data-i="' + vi + '" role="button" tabindex="0"') + '>' +
           '<span class="s">' + (v.b ? v.o : v.s) + '</span>' +
-          '<span class="r">' + (v.b ? 'Bust · ' + why : 'Rest ' + rowRest) + '</span></div>');
+          '<span class="r">' + (v.b ? 'Bust' + why : 'Rest ' + rowRest) + '</span></div>');
       });
       return '<div class="col">' + rows.reverse().slice(0, 5).join('') + '</div>';
     }).join('');
@@ -1703,12 +1708,15 @@
           return statRow('Leg ' + (i + 1), esc(pname(leg.winner)) + ' · ' + d + ' Darts · Ø ' + ((pts / d) * 3).toFixed(1));
         }).join('') + '</div>' + note;
 
+      var fixBtn = m.done
+        ? '<button class="btn ghost full" data-action="reopen-match" data-id="' + m.id + '">Letzte Aufnahme zurücknehmen</button>'
+        : '';
       if (found.live && !allMatchesDone()) {
         actions = '<button class="btn primary full big" data-action="ov-next-match">Nächstes Spiel</button>' +
-          '<button class="btn ghost full" data-action="to-tournament">Zur Tabelle</button>';
+          '<button class="btn ghost full" data-action="to-tournament">Zur Tabelle</button>' + fixBtn;
       } else if (found.live) {
         actions = '<button class="btn primary full big" data-action="to-winner">Turnier auswerten</button>' +
-          '<button class="btn ghost full" data-action="to-tournament">Zur Tabelle</button>';
+          '<button class="btn ghost full" data-action="to-tournament">Zur Tabelle</button>' + fixBtn;
       } else {
         actions = '<button class="btn ghost full" data-action="summary-back">Zurück</button>';
       }
@@ -1929,15 +1937,13 @@
   var SETTLE_ACTIONS = { 'restart-game': 1, 'ov-next-leg': 1, 'co-darts': 1 };
 
   function handleAction(action, el) {
-    if (SETTLE_ACTIONS[action]) settleUntil = Date.now() + 300;
+    if (SETTLE_ACTIONS[action]) settleUntil = Date.now() + 150;
     switch (action) {
       case 'nav': {
         var target = el.getAttribute('data-screen');
-        // Solange ein Spiel läuft, führt "Turnier" dorthin zurück.
-        if (target === 'setup' && S.game && S.game.done) {
-          UI.summary = { kind: S.game.kind, id: 'current' };
-          target = 'summary';
-        } else if (target === 'setup' && S.game) target = S.game.kind;
+        // Ein laufendes Spiel führt zurück aufs Board; ein beendetes, noch
+        // nicht gespeichertes zeigt sich im Setup als Hinweis-Box.
+        if (target === 'setup' && S.game && !S.game.done) target = S.game.kind;
         else if (target === 'setup' && S.matches.length) target = 'tournament';
         S.screen = target;
         save(); render();
@@ -2013,6 +2019,15 @@
         S.screen = 'summary';
         save(); render();
         break;
+      case 'reopen-match': {
+        var rid = el.getAttribute('data-id');
+        if (!matchById(rid)) return;
+        S.current = rid;
+        UI.summary = null;
+        S.screen = 'game';
+        undo();          // hebt das Finish auf und öffnet das Match wieder
+        break;
+      }
       case 'summary-back':
         UI.summary = null;
         S.screen = S.game ? S.game.kind : (S.matches.length ? 'tournament' : 'boards');
@@ -2157,7 +2172,13 @@
   }
 
   /* ================= Events ================= */
+  /* Ein Tipp neben den Dialog schließt ihn – außer dort, wo eine Antwort
+     nötig ist (Checkout-Abfrage, Spielende). */
+  var STICKY_OVERLAYS = { 'checkout-darts': 1, 'leg-done': 1, 'match-done': 1, 'game-done': 1 };
   document.addEventListener('click', function (ev) {
+    if (ev.target.id === 'overlay' && UI.overlay && !STICKY_OVERLAYS[UI.overlay.type]) {
+      UI.overlay = null; UI.input = ''; render(); return;
+    }
     var t = ev.target.closest('[data-action]');
     if (t) { handleAction(t.getAttribute('data-action'), t); return; }
 
@@ -2237,6 +2258,10 @@
 
   /* Als Schaltfläche angesagte Elemente müssen auch per Tastatur gehen. */
   document.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Escape' && UI.overlay && !STICKY_OVERLAYS[UI.overlay.type]) {
+      UI.overlay = null; UI.input = ''; render();
+      return;
+    }
     if (ev.key !== 'Enter' && ev.key !== ' ') return;
     var t = ev.target.closest('[role="button"][data-action]');
     if (!t) return;

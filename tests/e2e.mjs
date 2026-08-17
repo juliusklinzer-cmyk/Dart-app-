@@ -634,6 +634,47 @@ check('Nachzügler bekommt Spiele gegen alle',
   `${matchesBefore} -> ${await page.evaluate(() => window.__dart.state().matches.length)}`);
 check('Nachzügler steht in der Tabelle', (await st()).length === 5);
 
+group('Regression: Nebenwirkungen der ersten Korrekturrunde');
+await page.evaluate(() => localStorage.clear());
+await page.reload();
+await page.locator('[data-action="start-game"]').click();
+await page.locator('[data-action="next-match"]').click();
+await page.locator('#bulloff-buttons button').first().click();
+
+// Zwei gleiche Aufnahmen kurz nacheinander müssen beide zählen
+await page.locator('[data-quick="60"]').click();
+await page.waitForTimeout(200);
+await page.locator('[data-quick="60"]').click();
+check('zwei gleiche Aufnahmen hintereinander zählen beide',
+  (await page.evaluate(() => window.__dart.activeLeg(window.__dart.currentMatch()).visits.length)) === 2);
+
+// Legzeile folgt dem Turnier, nicht dem Setup
+await page.locator('#screen-game [data-action="to-tournament"]').click();
+await page.locator('[data-action="to-setup"]').click();
+await page.locator('[data-setting="bestOf"] button[data-value="5"]').click();
+await page.locator('#nav [data-screen="setup"]').click();
+await page.locator('.match-row .go').first().click();
+check('Legzeile zeigt weiter die Turnierregel',
+  (await text('#game-leg-label')).includes('Ein Leg'), await text('#game-leg-label'));
+
+// Ergebnis nach dem Overlay noch korrigierbar (Spieler hat schon 60 geworfen)
+await typeScore(180); await typeScore(60); await typeScore(180); await typeScore(60);
+await page.locator('#mode-toggle button[data-mode="total"]').click();
+await typeScore(81);
+await page.locator('#overlay-card [data-action="co-darts"]').first().click();
+await page.locator('#overlay-card [data-action="open-summary"]').click();
+check('Spielstatistik bietet das Zurücknehmen an',
+  (await page.locator('#summary-actions [data-action="reopen-match"]').count()) === 1);
+await page.locator('#summary-actions [data-action="reopen-match"]').click();
+check('Match ist wieder offen', await page.evaluate(() => !window.__dart.currentMatch().done));
+check('das Finish wurde zurückgenommen', (await rest(0)) === '81', await rest(0));
+
+// Dialoge lassen sich per Tipp daneben schließen
+await page.locator('#history .col').first().locator('.v').last().click();
+check('Korrektur-Dialog offen', await visible('#overlay'));
+await page.locator('#overlay').click({ position: { x: 5, y: 5 } });
+check('Tipp neben den Dialog schließt ihn', !(await visible('#overlay')));
+
 group('Fehlerfreiheit');
 check('keine JS-Fehler', errors.length === 0, errors.join(' | '));
 

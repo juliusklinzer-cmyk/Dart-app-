@@ -104,7 +104,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .btn.danger { color: var(--red); border-color: #4a2530; }
 .icon-btn {
   background: var(--bg-3); border: 1px solid var(--line); color: var(--text);
-  width: 44px; height: 44px; border-radius: 12px; font-size: 1.4rem; line-height: 1; cursor: pointer;
+  width: 44px; height: 44px; flex: none; border-radius: 12px; font-size: 1.4rem; line-height: 1; cursor: pointer;
 }
 
 /* ---------- Navigation ---------- */
@@ -173,15 +173,14 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .cr-head span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cr-head.act { background: var(--accent-soft); color: var(--accent); }
 .cr-num { background: var(--bg-3); font-weight: 700; font-size: 0.9rem; }
-.cr-num.dead { color: #6b7688; }
+.cr-num.dead { color: #93a0b2; }
 .cr-mark { font-size: 1.15rem; font-weight: 700; color: var(--muted); min-height: 40px; }
 .cr-mark.m1, .cr-mark.m2 { color: var(--text); }
 .cr-mark.m3 { color: var(--accent); background: var(--accent-soft); }
 .cr-mark.act { outline: 1px solid var(--accent); }
 .cr-score { font-weight: 800; font-size: 1.05rem; background: var(--bg-3); }
 .cr-score.act { color: var(--accent); }
-.cricket-grid { grid-template-columns: repeat(4, 1fr); }
-.num-grid button.dim { color: #7b8698; border-style: dashed; }
+.num-grid button.dim { color: #93a0b2; border-style: dashed; }
 
 /* ---------- Round the World ---------- */
 .rtw-board { display: flex; flex-direction: column; gap: 8px; }
@@ -213,6 +212,11 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .chips::-webkit-scrollbar { display: none; }
 /* Weiche Kante rechts als Hinweis, dass die Zeile weitergeht. */
 .chips { -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent); mask-image: linear-gradient(90deg, #000 88%, transparent); }
+@media (min-width: 700px) {
+  /* Genug Platz: alle Kategorien sichtbar statt hinter einer Wischkante. */
+  .chips { flex-wrap: wrap; overflow-x: visible; -webkit-mask-image: none; mask-image: none; }
+  .chips .chip { flex: 0 0 auto; }
+}
 .chips .chip { flex: none; white-space: nowrap; }
 .chips .chip {
   background: var(--bg-2); border: 1px solid var(--line); color: var(--muted);
@@ -273,7 +277,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 
 /* ---------- Spielerkarten & Profil ---------- */
 .player-card { display: flex; align-items: center; gap: 14px; cursor: pointer; }
-.player-card.hidden-profile { opacity: 0.55; }
+.player-card.hidden-profile { border-style: dashed; }
 .player-card .pc-main { flex: 1; min-width: 0; }
 .player-card .pc-name { font-weight: 700; font-size: 1.05rem; margin-bottom: 4px; }
 .player-card .pc-stats { display: flex; flex-wrap: wrap; gap: 10px; font-size: 0.78rem; color: var(--muted); }
@@ -451,7 +455,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   min-width: 42px; text-align: center; background: var(--bg-3); border: 1px solid var(--line);
   border-radius: 8px; padding: 6px 8px; font-size: 0.82rem; font-weight: 700; font-variant-numeric: tabular-nums;
 }
-.visit-darts .d.empty { color: #6b7688; font-weight: 500; }
+.visit-darts .d.empty { color: #8d9aab; font-weight: 500; }
 
 .pad { display: block; }
 .quick-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 8px; }
@@ -465,7 +469,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .score-display {
   font-size: 2.2rem; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: 0.02em;
 }
-.score-display.empty { color: #6b7688; }
+.score-display.empty { color: #8d9aab; }
 .input-error { color: var(--red); font-size: 0.82rem; }
 
 .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
@@ -492,6 +496,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 }
 .num-grid button:active { background: var(--bg-3); }
 .num-grid button.wide { grid-column: span 2; }
+.num-grid.cricket-grid { grid-template-columns: repeat(4, 1fr); }
 .num-grid .mx { color: var(--accent); font-size: 0.72em; margin-right: 2px; vertical-align: 2px; }
 .num-grid button.miss { color: var(--red); }
 .num-grid button.bull { color: var(--amber); }
@@ -500,8 +505,11 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 /* ---------- Overlay ---------- */
 .overlay {
   position: fixed; inset: 0; background: rgba(6, 9, 13, 0.86);
-  display: grid; place-items: center; padding: 20px; z-index: 50;
+  display: grid; place-items: start center; padding: 16px 16px 40px; z-index: 50;
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
 }
+/* Auf hohen Schirmen mittig, auf flachen von oben – sonst ragt der Dialog raus. */
+@media (min-height: 620px) { .overlay { place-items: center; } }
 .overlay-card {
   background: var(--bg-2); border: 1px solid var(--line); border-radius: 18px;
   padding: 22px; width: 100%; max-width: 380px; text-align: center;
@@ -525,17 +533,31 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .podium .pv { color: var(--muted); font-size: 0.85rem; }
 
 @media (max-width: 699px) and (orientation: portrait) {
-  /* Auf niedrigen Handys (z. B. 360x800) sonst unter der Falz. */
+  /* Höhenverteilung am Handy: Kopf, Spielstand und Eingabe stehen fest,
+     der Wurfverlauf bekommt den Rest – aber nie null, sonst ist die
+     Korrektur per Tipp nicht erreichbar. */
   .screen.game.active { height: calc(100dvh - 12px); min-height: 0; overflow: hidden; }
-  .pad { display: flex; flex-direction: column; gap: 6px; min-height: 0; }
-  .pad .keypad, .pad .num-grid { flex: 1; min-height: 0; grid-auto-rows: 1fr; }
-  .history { min-height: 0; }
+  .game-body { min-height: 0; }
+  .game-main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .history { flex: 1; min-height: 88px; overflow-y: auto; }
+  .input-area { flex: none; margin-top: 0; }
+  .pad { display: block; }
+  /* Etwas flacheres Tastenfeld, damit der Verlauf zwei Zeilen behält. */
+  .keypad button { min-height: 52px; }
+  .display-row { min-height: 36px; margin-bottom: 6px; }
+  .quick-row { gap: 5px; }
+  .quick-row button { min-height: 44px; }
+  .num-grid button { min-height: 48px; }
 }
-@media (max-height: 720px) and (max-width: 699px) {
+/* Kleine Handys (z. B. 360x800): eine Zeile Verlauf genügt, Hauptsache
+   das Tastenfeld bleibt vollständig sichtbar. */
+@media (max-height: 820px) and (max-width: 699px) and (orientation: portrait) {
   .pcard .rest { font-size: 2.4rem; }
+  .pcard { padding: 8px; }
+  .history { min-height: 44px; }
   .keypad button { min-height: 46px; font-size: 1.25rem; }
-  .num-grid button { min-height: 42px; }
-  .quick-row button { min-height: 40px; }
+  .num-grid button { min-height: 44px; }
+  .quick-row button { min-height: 44px; }
 }
 
 /* ================= Tablet / iPad ================= */
@@ -559,6 +581,15 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   .overlay-card { max-width: 460px; padding: 28px; }
 
   .pcard { min-height: 200px; display: flex; flex-direction: column; justify-content: center; }
+  /* Cricket-Tafel und Trainingsliste auch im Hochformat mitwachsen lassen. */
+  .cricket-board { flex: 1; min-height: 0; }
+  .cr-grid { height: 100%; grid-auto-rows: 1fr; }
+  .cr-head { font-size: 0.9rem; }
+  .cr-num { font-size: 1.3rem; }
+  .cr-mark { font-size: clamp(1.3rem, 3vh, 2.2rem); }
+  .cr-score { font-size: 1.4rem; }
+  .rtw-board { flex: 1; min-height: 0; }
+  .rtw-row .rw-target { font-size: clamp(2rem, 5vh, 3.4rem); }
   .pcard .rest { font-size: 4.6rem; }
   .pcard .pname { font-size: 1.25rem; }
   .pcard .legs, .pcard .meta { font-size: 0.85rem; }
@@ -591,7 +622,16 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   .pcard .rest { font-size: clamp(3.6rem, 9vh, 6.5rem); }
   .checkout-bar .chip { font-size: clamp(1.15rem, 2.6vh, 1.9rem); padding: 8px 16px; }
   .checkout-bar .label { font-size: 0.95rem; }
-  .pad .num-grid, .pad .keypad { max-height: 520px; }
+  .pad .num-grid, .pad .keypad { max-height: min(560px, 100%); }
+  /* Turnierseite ebenfalls zweispaltig, sonst scrollt sie über Bildschirme. */
+  #screen-tournament.active { display: grid; grid-template-columns: 1.1fr 1fr; gap: 0 16px; align-items: start; }
+  #screen-tournament.active > .app-header { grid-column: 1 / -1; }
+  /* Die klebende Hauptaktion braucht eigenen Grund und Platz darunter. */
+  #screen-tournament [data-action="next-match"],
+  #screen-tournament [data-action="to-winner"] {
+    background: var(--accent); box-shadow: 0 -10px 16px var(--bg);
+  }
+  #screen-tournament .card:has(#schedule) { padding-bottom: 76px; }
   /* Cricket-Tafel und Trainingsliste dürfen die freie Höhe nutzen. */
   .cricket-board { flex: 1; min-height: 0; }
   .cr-grid { height: 100%; grid-auto-rows: 1fr; }
@@ -640,8 +680,18 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   .keypad button { min-height: 44px; font-size: 1.2rem; }
   .num-grid button { min-height: 44px; font-size: 1rem; }
   .mult-row button { min-height: 44px; }
-  .quick-row { gap: 4px; margin-bottom: 0; }
-  .quick-row button { min-height: 44px; font-size: 0.85rem; }
+  /* Schnellwahl als eine wischbare Zeile statt zweier Reihen – das sind
+     44 px, die dem Zahlenfeld fehlen würden. */
+  .quick-row {
+    display: flex; gap: 4px; margin-bottom: 0; overflow-x: auto;
+    scrollbar-width: none; -webkit-mask-image: linear-gradient(90deg, #000 92%, transparent);
+  }
+  .quick-row::-webkit-scrollbar { display: none; }
+  .quick-row button { min-height: 44px; font-size: 0.85rem; flex: 0 0 62px; }
+  .turn-label { font-size: 0.9rem; }
+  .rtw-row .av.md { width: 26px; height: 26px; font-size: 0.6rem; }
+  .rtw-row .rw-bar { margin-top: 3px; }
+  .rtw-row .rw-sub { margin-top: 1px; }
   .rtw-key { min-height: 44px; padding: 6px; }
   .rtw-key .k { font-size: 1rem; }
   .rtw-key .sub { font-size: 0.65rem; }
@@ -698,7 +748,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 }
 
 /* ---------- Aufnahme korrigieren ---------- */
-.history .v.tap { cursor: pointer; }
+.history .v.tap { cursor: pointer; min-height: 44px; }
 .history .v.tap:active { background: var(--bg-3); }
 .edit-value {
   font-size: 2.2rem; font-weight: 800; font-variant-numeric: tabular-nums;
@@ -714,7 +764,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .rc-row { display: flex; align-items: center; gap: 10px; background: var(--bg-3); border-radius: 10px; padding: 8px 10px; }
 .rc-row .rc-name { flex: 1; font-weight: 600; }
 .rc-row .muted { font-size: 0.75rem; }
-.match-row.void { opacity: 0.7; }
+.match-row.void .pair, .match-row.void .res { color: #93a0b2; }
 .match-row.void .pair { text-decoration: line-through; }
 .rtw-row.fin { border-color: var(--accent-dark); }
 .rtw-row.fin .rw-target { color: var(--accent); }
@@ -1257,7 +1307,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   var lastQuick = { key: '', at: 0 };
   function quickDoubleTap(key) {
     var now = Date.now();
-    if (key === lastQuick.key && now - lastQuick.at < 400) return true;
+    // 150 ms: ein prellender Doppeltipp liegt darunter, zwei bewusst
+    // getippte Aufnahmen immer darüber.
+    if (key === lastQuick.key && now - lastQuick.at < 150) return true;
     lastQuick.key = key;
     lastQuick.at = now;
     return false;
@@ -1463,8 +1515,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
   function withdrawFromTournament(pid) {
     S.matches.forEach(function (m) {
-      if (m.done) return;
-      if (m.p.indexOf(pid) >= 0) m.void = true;
+      if (m.done || m.p.indexOf(pid) < 0) return;
+      // Bereits geworfene Legs bleiben gewertet – die Partie gilt als
+      // abgebrochen, nicht als nie stattgefunden.
+      m.void = true;
+      m.started = m.legs.some(function (l) { return l.visits.length > 0; });
     });
     save();
   }
@@ -2158,7 +2213,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
   /* ================= Rendering ================= */
   var SCREENS = ['setup', 'tournament', 'boards', 'players', 'profile', 'bulloff', 'game', 'cricket', 'rtw', 'summary', 'winner'];
-  var NAV_SCREENS = { setup: 'setup', tournament: 'setup', boards: 'boards', players: 'players', profile: 'players' };
+  var NAV_SCREENS = { setup: 'setup', tournament: 'setup', boards: 'boards', players: 'players', profile: 'players', summary: 'setup' };
 
   function show(screen) {
     SCREENS.forEach(function (s) { $('screen-' + s).classList.toggle('active', s === screen); });
@@ -2267,7 +2322,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           (m.winner === m.p[0] ? '<b>' + esc(a) + '</b>' : esc(a)) + ' <span class="muted">vs</span> ' +
           (m.winner === m.p[1] ? '<b>' + esc(b) + '</b>' : esc(b)) +
         '</div>' +
-        '<div class="res">' + (m.void ? 'entfällt' : score) + '</div>' +
+        '<div class="res">' + (m.void ? (m.started ? 'abgebrochen ' + score : 'entfällt') : score) + '</div>' +
         (m.done || m.void ? '' : '<button class="go" data-action="open-match" data-id="' + m.id + '">' +
           (m.legs.length ? 'Weiter' : 'Start') + '</button>') +
         '</div>';
@@ -2606,7 +2661,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var active = m.done && m.winner ? m.winner : activePlayer(leg, m);
     var idx = S.matches.indexOf(m);
     $('game-match-label').textContent = 'Spiel ' + (idx + 1) + ' von ' + S.matches.length;
-    $('game-leg-label').textContent = S.settings.bestOf > 1
+    $('game-leg-label').textContent = tour().bestOf > 1
       ? 'Leg ' + m.legs.length + ' · Stand ' + legsWon(m, m.p[0]) + ':' + legsWon(m, m.p[1]) + ' · ' + plural(legsToWin(), 'Leg', 'Legs') + ' zum Sieg'
       : 'Ein Leg · ' + tourStart() + ' Double Out';
 
@@ -2654,13 +2709,13 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         var why = '';
         if (v.b) {
           var after = before - v.o;
-          why = after < 0 ? 'überworfen' : after === 1 ? 'Rest 1' : 'kein Doppel';
+          why = after < 0 ? ' · überworfen' : after === 1 ? ' · Rest 1' : after === 0 ? ' · kein Doppel' : '';
         }
         var vi = leg.visits.indexOf(v);
         rows.push('<div class="v ' + (v.b ? 'bust' : v.c ? 'co' : '') + (v.c ? '' : ' tap') + '"' +
           (v.c ? '' : ' data-action="edit-visit" data-i="' + vi + '" role="button" tabindex="0"') + '>' +
           '<span class="s">' + (v.b ? v.o : v.s) + '</span>' +
-          '<span class="r">' + (v.b ? 'Bust · ' + why : 'Rest ' + rowRest) + '</span></div>');
+          '<span class="r">' + (v.b ? 'Bust' + why : 'Rest ' + rowRest) + '</span></div>');
       });
       return '<div class="col">' + rows.reverse().slice(0, 5).join('') + '</div>';
     }).join('');
@@ -2928,12 +2983,15 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           return statRow('Leg ' + (i + 1), esc(pname(leg.winner)) + ' · ' + d + ' Darts · Ø ' + ((pts / d) * 3).toFixed(1));
         }).join('') + '</div>' + note;
 
+      var fixBtn = m.done
+        ? '<button class="btn ghost full" data-action="reopen-match" data-id="' + m.id + '">Letzte Aufnahme zurücknehmen</button>'
+        : '';
       if (found.live && !allMatchesDone()) {
         actions = '<button class="btn primary full big" data-action="ov-next-match">Nächstes Spiel</button>' +
-          '<button class="btn ghost full" data-action="to-tournament">Zur Tabelle</button>';
+          '<button class="btn ghost full" data-action="to-tournament">Zur Tabelle</button>' + fixBtn;
       } else if (found.live) {
         actions = '<button class="btn primary full big" data-action="to-winner">Turnier auswerten</button>' +
-          '<button class="btn ghost full" data-action="to-tournament">Zur Tabelle</button>';
+          '<button class="btn ghost full" data-action="to-tournament">Zur Tabelle</button>' + fixBtn;
       } else {
         actions = '<button class="btn ghost full" data-action="summary-back">Zurück</button>';
       }
@@ -3154,15 +3212,13 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   var SETTLE_ACTIONS = { 'restart-game': 1, 'ov-next-leg': 1, 'co-darts': 1 };
 
   function handleAction(action, el) {
-    if (SETTLE_ACTIONS[action]) settleUntil = Date.now() + 300;
+    if (SETTLE_ACTIONS[action]) settleUntil = Date.now() + 150;
     switch (action) {
       case 'nav': {
         var target = el.getAttribute('data-screen');
-        // Solange ein Spiel läuft, führt "Turnier" dorthin zurück.
-        if (target === 'setup' && S.game && S.game.done) {
-          UI.summary = { kind: S.game.kind, id: 'current' };
-          target = 'summary';
-        } else if (target === 'setup' && S.game) target = S.game.kind;
+        // Ein laufendes Spiel führt zurück aufs Board; ein beendetes, noch
+        // nicht gespeichertes zeigt sich im Setup als Hinweis-Box.
+        if (target === 'setup' && S.game && !S.game.done) target = S.game.kind;
         else if (target === 'setup' && S.matches.length) target = 'tournament';
         S.screen = target;
         save(); render();
@@ -3238,6 +3294,15 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         S.screen = 'summary';
         save(); render();
         break;
+      case 'reopen-match': {
+        var rid = el.getAttribute('data-id');
+        if (!matchById(rid)) return;
+        S.current = rid;
+        UI.summary = null;
+        S.screen = 'game';
+        undo();          // hebt das Finish auf und öffnet das Match wieder
+        break;
+      }
       case 'summary-back':
         UI.summary = null;
         S.screen = S.game ? S.game.kind : (S.matches.length ? 'tournament' : 'boards');
@@ -3382,7 +3447,13 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   }
 
   /* ================= Events ================= */
+  /* Ein Tipp neben den Dialog schließt ihn – außer dort, wo eine Antwort
+     nötig ist (Checkout-Abfrage, Spielende). */
+  var STICKY_OVERLAYS = { 'checkout-darts': 1, 'leg-done': 1, 'match-done': 1, 'game-done': 1 };
   document.addEventListener('click', function (ev) {
+    if (ev.target.id === 'overlay' && UI.overlay && !STICKY_OVERLAYS[UI.overlay.type]) {
+      UI.overlay = null; UI.input = ''; render(); return;
+    }
     var t = ev.target.closest('[data-action]');
     if (t) { handleAction(t.getAttribute('data-action'), t); return; }
 
@@ -3462,6 +3533,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
   /* Als Schaltfläche angesagte Elemente müssen auch per Tastatur gehen. */
   document.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Escape' && UI.overlay && !STICKY_OVERLAYS[UI.overlay.type]) {
+      UI.overlay = null; UI.input = ''; render();
+      return;
+    }
     if (ev.key !== 'Enter' && ev.key !== ' ') return;
     var t = ev.target.closest('[role="button"][data-action]');
     if (!t) return;
