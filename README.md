@@ -23,6 +23,9 @@ auf das Handy-Layout um.
 
 Lokal testen: `npm start` (Server auf http://localhost:8080).
 
+**Auf eigener Domain für die ganze Gruppe:** siehe [DEPLOY.md](DEPLOY.md) – Subdomain
+mit HTTPS, „Zum Home-Bildschirm“ auf jedem Gerät, Updates per `git pull`.
+
 ## Spielmodi
 
 Der Modus wird im Setup gewählt, die Aufstellung gilt für alle drei gleich.
