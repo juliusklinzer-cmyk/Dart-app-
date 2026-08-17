@@ -45,6 +45,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 
 /* ---------- Screens ---------- */
 .screen { display: none; padding-bottom: 24px; }
+#screen-setup.active { padding-top: 8px; }
 .screen.active { display: block; }
 .screen.center { min-height: 88vh; display: none; }
 .screen.center.active { display: flex; flex-direction: column; justify-content: center; gap: 16px; }
@@ -307,8 +308,16 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 }
 
 /* ---------- Einstellungen ---------- */
-.setting { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.setting { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
 .setting label { font-size: 0.92rem; color: var(--muted); }
+/* Auswahlkacheln im selben Stil wie die Modusauswahl */
+.options { display: flex; flex-wrap: wrap; gap: 8px; }
+.options button {
+  flex: 1 1 0; min-width: 76px; min-height: 50px;
+  background: var(--bg-3); border: 1px solid var(--line); color: var(--text);
+  border-radius: 12px; padding: 12px 10px; font-size: 1rem; font-weight: 700; cursor: pointer;
+}
+.options button.active { border-color: var(--green); background: rgba(53, 208, 127, 0.13); color: var(--green); }
 .segmented { display: flex; background: var(--bg-3); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 .segmented button {
   background: none; border: none; color: var(--muted); padding: 10px 12px;

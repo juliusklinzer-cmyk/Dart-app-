@@ -22,11 +22,6 @@
 
 <!-- ============ SETUP ============ -->
 <section id="screen-setup" class="screen">
-  <header class="app-header">
-    <h1>🎯 Dart Turnier</h1>
-    <p class="sub">Jeder gegen jeden · 501 Double Out</p>
-  </header>
-
   <div id="resume-box" class="card resume hidden">
     <div>
       <strong>Laufendes Turnier</strong>
@@ -63,15 +58,14 @@
     <h2>Einstellungen</h2>
     <div class="setting">
       <label>Startpunkte</label>
-      <div class="segmented" data-setting="start">
+      <div class="options" data-setting="start">
         <button data-value="301">301</button>
         <button data-value="501">501</button>
-        <button data-value="701">701</button>
       </div>
     </div>
     <div class="setting">
       <label>Legs pro Spiel</label>
-      <div class="segmented" data-setting="bestOf">
+      <div class="options" data-setting="bestOf">
         <button data-value="1">1 Leg</button>
         <button data-value="3">Best of 3</button>
         <button data-value="5">Best of 5</button>
@@ -79,7 +73,7 @@
     </div>
     <div class="setting">
       <label>Einzel-Darts ab Rest</label>
-      <div class="segmented" data-setting="dartModeFrom">
+      <div class="options" data-setting="dartModeFrom">
         <button data-value="100">100</button>
         <button data-value="170">170</button>
         <button data-value="180">180</button>
@@ -94,7 +88,7 @@
     <h2>Cricket</h2>
     <div class="setting">
       <label>Punkte zählen</label>
-      <div class="segmented" data-setting="cricketScoring">
+      <div class="options" data-setting="cricketScoring">
         <button data-value="1">mit Punkten</button>
         <button data-value="0">ohne Punkte</button>
       </div>

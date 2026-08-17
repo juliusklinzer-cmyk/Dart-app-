@@ -67,6 +67,7 @@
       if (!Array.isArray(s.history)) s.history = [];
       if (!Array.isArray(s.lineup)) s.lineup = [];
       if (!s.mode) s.mode = '501';
+      if (s.settings.start !== 301 && s.settings.start !== 501) s.settings.start = 501;
       if (s.game === undefined) s.game = null;
       if (s.settings.cricketScoring === undefined) s.settings.cricketScoring = 1;
       return s;
@@ -761,7 +762,7 @@
         '</div>';
     }).join('') || '<p class="hint">Noch keine Spieler angelegt.</p>';
 
-    document.querySelectorAll('.segmented[data-setting]').forEach(function (seg) {
+    document.querySelectorAll('[data-setting]').forEach(function (seg) {
       var key = seg.getAttribute('data-setting');
       seg.querySelectorAll('button').forEach(function (b) {
         b.classList.toggle('active', Number(b.getAttribute('data-value')) === S.settings[key]);
@@ -1692,7 +1693,7 @@
     var t = ev.target.closest('[data-action]');
     if (t) { handleAction(t.getAttribute('data-action'), t); return; }
 
-    var seg = ev.target.closest('.segmented[data-setting] button');
+    var seg = ev.target.closest('[data-setting] button');
     if (seg) {
       var key = seg.parentElement.getAttribute('data-setting');
       S.settings[key] = Number(seg.getAttribute('data-value'));
