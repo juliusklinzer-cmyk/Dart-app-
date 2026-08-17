@@ -218,13 +218,49 @@
     return matches;
   }
 
+  /* Nachzügler und Frühgeher: Ein laufendes Turnier lässt sich erweitern,
+     und wer geht, dessen offene Spiele entfallen – Gespieltes bleibt. */
+  function addPlayerToTournament(pid) {
+    var t = tour();
+    if (t.players.indexOf(pid) >= 0) return;
+    var lastRound = 0;
+    S.matches.forEach(function (m) { if (m.round > lastRound) lastRound = m.round; });
+    t.players.forEach(function (other) {
+      S.matches.push({
+        id: uid(), round: lastRound + 1, p: [other, pid],
+        starter: null, legs: [], done: false, winner: null, at: null, added: true
+      });
+    });
+    t.players.push(pid);
+    if (S.lineup.indexOf(pid) < 0) S.lineup.push(pid);
+    save();
+  }
+
+  function withdrawFromTournament(pid) {
+    S.matches.forEach(function (m) {
+      if (m.done) return;
+      if (m.p.indexOf(pid) >= 0) m.void = true;
+    });
+    save();
+  }
+
+  function isPlaying(pid) {
+    for (var i = 0; i < S.matches.length; i++) {
+      var m = S.matches[i];
+      if (!m.void && !m.done && m.p.indexOf(pid) >= 0) return true;
+    }
+    return false;
+  }
+
   function matchById(id) {
     for (var i = 0; i < S.matches.length; i++) if (S.matches[i].id === id) return S.matches[i];
     return null;
   }
   function currentMatch() { return S.current ? matchById(S.current) : null; }
   function nextOpenMatch() {
-    for (var i = 0; i < S.matches.length; i++) if (!S.matches[i].done) return S.matches[i];
+    for (var i = 0; i < S.matches.length; i++) {
+      if (!S.matches[i].done && !S.matches[i].void) return S.matches[i];
+    }
     return null;
   }
   function allMatchesDone() { return S.matches.length > 0 && !nextOpenMatch(); }
@@ -355,6 +391,52 @@
     if (after === 0) { commitVisit(total, thrown, true, false, UI.darts); return; }
     if (thrown === 3) { commitVisit(total, 3, false, false, UI.darts); return; }
     render();
+  }
+
+  /* ================= Aufnahme korrigieren =================
+     Der häufigste Fehler am Abend ist eine falsch getippte Aufnahme, die
+     erst später auffällt. Statt alles dazwischen zurückzunehmen, lässt sich
+     der Wert direkt ändern – solange das Leg dadurch schlüssig bleibt. */
+  function visitFits(leg, pid) {
+    var rest = tourStart();
+    for (var i = 0; i < leg.visits.length; i++) {
+      var v = leg.visits[i];
+      if (v.p !== pid) continue;
+      if (v.b) continue;
+      var after = rest - v.s;
+      if (after < 0 || after === 1) return false;
+      if (after === 0 && !v.c) return false;
+      if (v.c && after !== 0) return false;
+      rest = after;
+    }
+    return true;
+  }
+
+  function applyVisitEdit(idx, value) {
+    var m = currentMatch();
+    if (!m || m.done) return 'Das Spiel ist beendet.';
+    var leg = activeLeg(m);
+    var v = leg && leg.visits[idx];
+    if (!v) return 'Aufnahme nicht gefunden.';
+    if (v.c) return 'Ein Finish lässt sich nicht ändern – dafür bitte zurücknehmen.';
+    if (value > 180) return 'Maximal 180.';
+    if (IMPOSSIBLE[value]) return value + ' ist mit 3 Darts nicht möglich.';
+
+    var backup = { s: v.s, b: v.b, o: v.o, k: v.k };
+    var rest = tourStart();
+    leg.visits.forEach(function (x, i) { if (x.p === v.p && i < idx && !x.b) rest -= x.s; });
+    var after = rest - value;
+    delete v.k;                       // Einzeldarts passen nach der Korrektur nicht mehr
+    if (after < 0 || after === 1) { v.s = 0; v.b = true; v.o = value; }
+    else if (after === 0) { v.s = backup.s; v.b = backup.b; v.o = backup.o; v.k = backup.k; return 'Ein Finish bitte über den Wurf eingeben.'; }
+    else { v.s = value; v.b = false; v.o = 0; }
+
+    if (!visitFits(leg, v.p)) {
+      v.s = backup.s; v.b = backup.b; v.o = backup.o; if (backup.k) v.k = backup.k;
+      return 'Mit diesem Wert passen die späteren Aufnahmen nicht mehr.';
+    }
+    save();
+    return null;
   }
 
   /* ================= Undo ================= */
@@ -689,25 +771,63 @@
   /* ================= Round the World ================= */
   /* Ziel 1..20, danach Bull (25). Ein Treffer rückt um den Multiplikator vor,
      über die 20 hinaus landet man immer auf Bull. */
+  /* Round the World wird Aufnahme für Aufnahme nachgespielt: Wer den Bull
+     getroffen hat, wird übersprungen, und die angefangene Runde wird zu Ende
+     gespielt, damit der spätere Startplatz nicht benachteiligt ist.
+     Es gewinnt, wer den Bull mit den wenigsten Darts trifft; bei Gleichstand
+     der frühere Treffer. */
   function rtwState(g) {
-    var st = { target: {}, darts: {}, hits: {}, winner: null };
+    var n = g.players.length;
+    var st = { target: {}, darts: {}, hits: {}, finished: {}, winner: null, closing: false, turn: 0, visit: [] };
     g.players.forEach(function (id) { st.target[id] = 1; st.darts[id] = 0; st.hits[id] = 0; });
 
-    for (var i = 0; i < g.throws.length; i++) {
+    var turn = 0, inVisit = 0, over = false;
+    for (var i = 0; i < g.throws.length && !over; i++) {
       var t = g.throws[i];
-      var pid = g.players[Math.floor(i / 3) % g.players.length];
+      var pid = g.players[turn];
+      st.visit.push(t);
       st.darts[pid]++;
       var target = st.target[pid];
-      if (!t.n) continue;
 
-      if (target === 25) {
-        if (t.n === 25) { st.hits[pid]++; if (st.winner === null) st.winner = pid; }
-        continue;
+      if (t.n && target === 25 && t.n === 25) {
+        st.hits[pid]++;
+        st.finished[pid] = { darts: st.darts[pid], at: i };
+      } else if (t.n && target !== 25 && t.n === target) {
+        st.hits[pid]++;
+        var next = target + t.m;
+        st.target[pid] = next > 20 ? 25 : next;
       }
-      if (t.n !== target) continue;
-      st.hits[pid]++;
-      var next = target + t.m;
-      st.target[pid] = next > 20 ? 25 : next;
+
+      inVisit++;
+      // Mit dem Bull ist die Aufnahme sofort zu Ende – die restlichen Darts
+      // der eigenen Aufnahme werden nicht mehr geworfen.
+      if (inVisit === 3 || st.finished[pid]) {
+        inVisit = 0;
+        st.visit = [];
+        // Nächsten Spieler suchen, fertige überspringen.
+        var steps = 0, wrapped = false, next2 = turn;
+        do {
+          next2 = (next2 + 1) % n;
+          if (next2 === 0) wrapped = true;
+          steps++;
+        } while (st.finished[g.players[next2]] && steps <= n);
+        turn = next2;
+        if (Object.keys(st.finished).length && (wrapped || steps > n)) over = true;
+      }
+    }
+
+    st.turn = turn;
+    st.inVisit = inVisit;
+    var done = Object.keys(st.finished);
+    if (done.length) {
+      st.closing = !over;
+      if (over) {
+        done.sort(function (a, b) {
+          var fa = st.finished[a], fb = st.finished[b];
+          return fa.darts !== fb.darts ? fa.darts - fb.darts : fa.at - fb.at;
+        });
+        st.winner = done[0];
+      }
     }
     return st;
   }
@@ -725,10 +845,19 @@
 
   /* ================= Gemeinsames für beide Modi ================= */
   function gameTurnPlayer(g) {
+    if (g.kind === 'rtw') return g.players[rtwState(g).turn];
     return g.players[Math.floor(g.throws.length / 3) % g.players.length];
   }
+  /* Die Darts der laufenden Aufnahme – nach einem Sieg mit dem dritten Dart
+     bleibt die Aufnahme sichtbar, statt leer zu wirken. */
   function gameVisitDarts(g) {
-    return g.throws.slice(Math.floor(g.throws.length / 3) * 3);
+    if (g.kind === 'rtw') {
+      var st = rtwState(g);
+      return st.inVisit === 0 && g.throws.length ? g.throws.slice(-3) : st.visit;
+    }
+    var startIdx = Math.floor(g.throws.length / 3) * 3;
+    if (startIdx === g.throws.length && g.throws.length) startIdx -= 3;
+    return g.throws.slice(startIdx);
   }
   function undoGame() {
     var g = S.game;
@@ -908,13 +1037,13 @@
       var a = pname(m.p[0]), b = pname(m.p[1]);
       var isNext = next && next.id === m.id;
       var score = m.legs.length ? legsWon(m, m.p[0]) + ':' + legsWon(m, m.p[1]) : '–:–';
-      html += '<div class="match-row ' + (m.done ? 'done' : '') + ' ' + (isNext ? 'next' : '') + '">' +
+      html += '<div class="match-row ' + (m.done ? 'done' : '') + (m.void ? ' void' : '') + ' ' + (isNext ? 'next' : '') + '">' +
         '<div class="pair">' +
           (m.winner === m.p[0] ? '<b>' + esc(a) + '</b>' : esc(a)) + ' <span class="muted">vs</span> ' +
           (m.winner === m.p[1] ? '<b>' + esc(b) + '</b>' : esc(b)) +
         '</div>' +
-        '<div class="res">' + score + '</div>' +
-        (m.done ? '' : '<button class="go" data-action="open-match" data-id="' + m.id + '">' +
+        '<div class="res">' + (m.void ? 'entfällt' : score) + '</div>' +
+        (m.done || m.void ? '' : '<button class="go" data-action="open-match" data-id="' + m.id + '">' +
           (m.legs.length ? 'Weiter' : 'Start') + '</button>') +
         '</div>';
     });
@@ -1064,7 +1193,7 @@
     var rows = ranking(def, map);
     var medals = ['🥇', '🥈', '🥉'];
     $('board-list').innerHTML = rows.length ? rows.map(function (st, i) {
-      return '<div class="board-row ' + (i === 0 ? 'top' : '') + '" data-action="open-profile" data-id="' + st.id + '">' +
+      return '<div class="board-row ' + (i === 0 ? 'top' : '') + '" data-action="open-profile" data-id="' + st.id + '" role="button" tabindex="0">' +
         '<div class="pos">' + (medals[i] || (i + 1) + '.') + '</div>' +
         avatarHTML(profile(st.id), 'sm') +
         '<div class="nm">' + esc(st.name) + '</div>' +
@@ -1104,7 +1233,7 @@
       if (row.kind !== '501') {
         var h = row.h;
         var title = h.kind === 'cricket' ? 'Cricket' + (h.scoring ? '' : ' (ohne Punkte)') : 'Round the World';
-        return '<div class="log-row tap" data-action="open-summary" data-kind="' + h.kind + '" data-id="' + (h.id || 'current') + '">' +
+        return '<div class="log-row tap" data-action="open-summary" data-kind="' + h.kind + '" data-id="' + (h.id || 'current') + '" role="button" tabindex="0">' +
           '<div class="lp w">' + esc(pname(h.winner)) + '<span class="a">' + title + '</span></div>' +
           '<div class="ls">🏆</div>' +
           '<div class="lp right">' + h.players.length + ' Spieler<span class="a">' +
@@ -1122,7 +1251,7 @@
         });
         return d ? ((p / d) * 3).toFixed(1) : '–';
       };
-      return '<div class="log-row tap" data-action="open-summary" data-kind="501" data-id="' + m.id + '">' +
+      return '<div class="log-row tap" data-action="open-summary" data-kind="501" data-id="' + m.id + '" role="button" tabindex="0">' +
         '<div class="lp ' + (m.winner === m.p[0] ? 'w' : '') + '">' + esc(pname(m.p[0])) + '<span class="a">Ø ' + avgOf(m.p[0]) + '</span></div>' +
         '<div class="ls">' + la + ':' + lb + '</div>' +
         '<div class="lp right ' + (m.winner === m.p[1] ? 'w' : '') + '">' + esc(pname(m.p[1])) + '<span class="a">Ø ' + avgOf(m.p[1]) + '</span></div>' +
@@ -1135,7 +1264,7 @@
     var map = career();
     $('players-list').innerHTML = S.profiles.map(function (p) {
       var st = map[p.id];
-      return '<div class="card player-card ' + (p.hidden ? 'hidden-profile' : '') + '" data-action="open-profile" data-id="' + p.id + '">' +
+      return '<div class="card player-card ' + (p.hidden ? 'hidden-profile' : '') + '" data-action="open-profile" data-id="' + p.id + '" role="button" tabindex="0">' +
         avatarHTML(p, 'lg') +
         '<div class="pc-main">' +
           '<div class="pc-name">' + esc(p.name) + (p.hidden ? ' <span class="muted">(ausgeblendet)</span>' : '') + '</div>' +
@@ -1173,8 +1302,10 @@
           ? plural(st.won, 'Sieg', 'Siege') + ' · ' + plural(st.lost, 'Niederlage', 'Niederlagen') +
             ' · ' + plural(st.tourWins, 'Turniersieg', 'Turniersiege')
           : 'Noch kein Spiel gespielt') + '</div>' +
-        '<div class="form-row">' + form + '</div></div></div>' +
+        (form ? '<div class="form-label">Letzte Spiele</div><div class="form-row">' + form + '</div>' : '') +
+        '</div></div>' +
 
+      '<p class="hint">Alle Werte über sämtliche gespielten Classic-Spiele.</p>' +
       '<div class="card"><h2>Scoring</h2>' +
         line('3-Dart-Average', st.darts ? st.avg.toFixed(2) : '–') +
         line('First-9-Average', st.first9Darts ? st.first9.toFixed(2) : '–') +
@@ -1255,6 +1386,10 @@
       : 'Ein Leg · ' + tourStart() + ' Double Out';
 
     var pendingSum = sum(UI.darts, function (d) { return d.v; });
+    $('game-turn').innerHTML = m.done
+      ? '<b>' + esc(pname(m.winner)) + '</b> hat gewonnen'
+      : '<span class="muted">Am Wurf</span> <b>' + esc(pname(active)) + '</b>' +
+        '<span class="muted"> · Rest ' + (remainingIn(leg, active) - pendingSum) + '</span>';
     $('scoreboard').innerHTML = m.p.map(function (pid) {
       var rest = remainingIn(leg, pid) - (pid === active ? pendingSum : 0);
       var darts = dartsIn(leg, pid) + (pid === active ? UI.darts.length : 0);
@@ -1296,7 +1431,9 @@
           var after = before - v.o;
           why = after < 0 ? 'überworfen' : after === 1 ? 'Rest 1' : 'kein Doppel';
         }
-        rows.push('<div class="v ' + (v.b ? 'bust' : v.c ? 'co' : '') + '">' +
+        var vi = leg.visits.indexOf(v);
+        rows.push('<div class="v ' + (v.b ? 'bust' : v.c ? 'co' : '') + (v.c ? '' : ' tap') + '"' +
+          (v.c ? '' : ' data-action="edit-visit" data-i="' + vi + '" role="button" tabindex="0"') + '>' +
           '<span class="s">' + (v.b ? v.o : v.s) + '</span>' +
           '<span class="r">' + (v.b ? 'Bust · ' + why : 'Rest ' + rowRest) + '</span></div>');
       });
@@ -1394,6 +1531,16 @@
       '<div class="cr-grid" style="grid-template-columns:44px repeat(' + g.players.length + ',minmax(52px,1fr))">' +
       head + rows + foot + '</div>';
 
+    var lead = g.players.slice().sort(function (a, b) {
+      var ca = CRICKET_NUMBERS.filter(function (n) { return st.marks[a][n] >= 3; }).length;
+      var cb = CRICKET_NUMBERS.filter(function (n) { return st.marks[b][n] >= 3; }).length;
+      return g.scoring ? (st.score[b] - st.score[a]) || (cb - ca) : (cb - ca);
+    })[0];
+    $('cricket-legend').innerHTML =
+      '<span>/ = 1 · ✕ = 2 · ⊗ = zu</span>' +
+      '<span>Grau = bei allen zu, bringt keine Punkte mehr</span>' +
+      (g.players.length > 1 ? '<span>Vorn: <b>' + esc(pname(lead)) + '</b></span>' : '');
+
     $('cricket-turn').innerHTML = g.done
       ? '<b>' + esc(pname(g.winner)) + '</b> gewinnt'
       : '<span class="muted">Am Wurf</span> <b>' + esc(pname(active)) + '</b>';
@@ -1428,21 +1575,24 @@
 
     $('rtw-board').innerHTML = g.players.map(function (id) {
       var t = st.target[id];
-      var done = t === 25 ? 20 : t - 1;
-      return '<div class="rtw-row ' + (id === active ? 'act' : '') + '">' +
+      var fin = st.finished[id];
+      /* 21 Stationen: die 20 Zahlen und der Bull. */
+      var doneSteps = fin ? 21 : (t === 25 ? 20 : t - 1);
+      return '<div class="rtw-row ' + (id === active ? 'act' : '') + (fin ? ' fin' : '') + '">' +
         avatarHTML(profile(id), 'md') +
         '<div class="rw-main">' +
           '<div class="rw-name">' + esc(pname(id)) + '</div>' +
-          '<div class="rw-bar"><span style="width:' + (done / 20 * 100) + '%"></span></div>' +
-          '<div class="rw-sub">' + st.darts[id] + ' Darts · ' + st.hits[id] + ' Treffer</div>' +
+          '<div class="rw-bar"><span style="width:' + (doneSteps / 21 * 100) + '%"></span></div>' +
+          '<div class="rw-sub">' + plural(st.darts[id], 'Dart', 'Darts') + ' · ' + plural(st.hits[id], 'Treffer', 'Treffer') + '</div>' +
         '</div>' +
-        '<div class="rw-target">' + (t === 25 ? 'Bull' : t) + '</div>' +
+        '<div class="rw-target">' + (fin ? '✓' : t === 25 ? 'Bull' : t) + '</div>' +
         '</div>';
     }).join('');
 
     $('rtw-turn').innerHTML = g.done
       ? '<b>' + esc(pname(g.winner)) + '</b> gewinnt'
-      : '<span class="muted">Am Wurf</span> <b>' + esc(pname(active)) + '</b> <span class="muted">auf</span> <b>' +
+      : (st.closing ? '<span class="muted">Runde wird zu Ende gespielt · </span>' : '') +
+        '<span class="muted">Am Wurf</span> <b>' + esc(pname(active)) + '</b> <span class="muted">auf</span> <b>' +
         (st.target[active] === 25 ? 'Bull' : st.target[active]) + '</b>';
 
     $('rtw-darts').innerHTML = [0, 1, 2].map(function (i) {
@@ -1620,9 +1770,17 @@
     var table = standings();
     if (!table.length) { S.screen = 'setup'; render(); return; }
     var medals = ['🥇', '🥈', '🥉'];
+    /* Bei exaktem Gleichstand gibt es keinen alphabetischen Sieger. */
+    var tied = table.filter(function (st) {
+      return st.won === table[0].won && st.legDiff === table[0].legDiff &&
+        Math.abs(st.avg - table[0].avg) < 0.005;
+    });
+    var title = tied.length > 1
+      ? 'Geteilter Sieg: ' + tied.map(function (st) { return esc(st.name); }).join(' und ')
+      : esc(table[0].name) + ' gewinnt!';
     $('winner-box').innerHTML =
       '<div style="text-align:center"><div class="big-emoji">🏆</div>' +
-      '<h1>' + esc(table[0].name) + ' gewinnt!</h1>' +
+      '<h1>' + title + '</h1>' +
       '<p class="muted">' + plural(table[0].won, 'Spiel', 'Spiele') + ' von ' + (tourPlayers().length - 1) + ' gewonnen</p></div>' +
       '<div class="podium">' + table.map(function (st, i) {
         return '<div class="p ' + (i === 0 ? 'first' : '') + '">' +
@@ -1687,6 +1845,39 @@
         '<p>' + (S.game && S.game.kind === 'cricket' ? 'Cricket' : 'Round the World') + '</p>' +
         '<button class="btn primary full" data-action="open-summary" data-kind="' + (S.game ? S.game.kind : 'cricket') + '" data-id="current">Weiter zur Spielstatistik</button>' +
         '<button class="btn ghost full" data-action="undo-game">Letzten Dart zurück</button>';
+    } else if (o.type === 'roster-change') {
+      var inTour = tourPlayers();
+      html = '<h3>Spieler im Turnier</h3>' +
+        '<p>Nachzügler bekommen Spiele gegen alle bisherigen Teilnehmer. Wer abgemeldet wird, behält seine gespielten Ergebnisse; seine offenen Spiele entfallen.</p>' +
+        '<div class="roster-change">' +
+        inTour.map(function (id) {
+          var out = !isPlaying(id);
+          return '<div class="rc-row">' + avatarHTML(profile(id), 'sm') +
+            '<span class="rc-name">' + esc(pname(id)) + '</span>' +
+            (out ? '<span class="muted">keine offenen Spiele</span>'
+                 : '<button class="btn danger ghost small" data-action="withdraw-player" data-id="' + id + '">Abmelden</button>') +
+            '</div>';
+        }).join('') +
+        activeProfiles().filter(function (p) { return inTour.indexOf(p.id) < 0; }).map(function (p) {
+          return '<div class="rc-row">' + avatarHTML(p, 'sm') +
+            '<span class="rc-name">' + esc(p.name) + '</span>' +
+            '<button class="btn small" data-action="add-player" data-id="' + p.id + '">Nachtragen</button>' +
+            '</div>';
+        }).join('') +
+        '</div>' +
+        '<button class="btn primary full" data-action="ov-cancel">Fertig</button>';
+    } else if (o.type === 'edit-visit') {
+      html = '<h3>Aufnahme korrigieren</h3>' +
+        '<p>Eingetragen waren <b>' + o.old + '</b> Punkte für ' + esc(pname(o.pid)) + '.</p>' +
+        '<div class="edit-value">' + (o.value === '' ? '–' : o.value) + '</div>' +
+        (o.error ? '<p class="edit-error">' + esc(o.error) + '</p>' : '') +
+        '<div class="keypad edit-pad">' +
+          [1,2,3,4,5,6,7,8,9].map(function (n) { return '<button data-editkey="' + n + '">' + n + '</button>'; }).join('') +
+          '<button class="fn" data-editkey="del">←</button>' +
+          '<button data-editkey="0">0</button>' +
+          '<button class="ok" data-editkey="ok">Übernehmen</button>' +
+        '</div>' +
+        '<button class="btn ghost full" data-action="ov-cancel">Abbrechen</button>';
     } else if (o.type === 'confirm-new-tournament') {
       html = '<h3>Laufendes Turnier beenden?</h3>' +
         '<p>Im aktuellen Turnier ' + (o.played === 1 ? 'ist bereits 1 Spiel' : 'sind bereits ' + o.played + ' Spiele') +
@@ -1902,6 +2093,17 @@
       case 'undo':
         undo();
         break;
+      case 'edit-visit': {
+        var m3 = currentMatch();
+        if (!m3 || m3.done) return;
+        var idx = Number(el.getAttribute('data-i'));
+        var leg3 = activeLeg(m3);
+        var v3 = leg3 && leg3.visits[idx];
+        if (!v3) return;
+        UI.overlay = { type: 'edit-visit', idx: idx, pid: v3.p, old: v3.b ? v3.o : v3.s, value: '', error: '' };
+        render();
+        break;
+      }
       case 'co-darts': {
         var n = Number(el.getAttribute('data-n'));
         var score = UI.overlay.score;
@@ -1931,6 +2133,17 @@
       case 'ov-finish':
         UI.overlay = null; S.screen = 'winner'; save(); render();
         break;
+      case 'roster-change':
+        UI.overlay = { type: 'roster-change' }; render();
+        break;
+      case 'add-player':
+        addPlayerToTournament(el.getAttribute('data-id'));
+        render();
+        break;
+      case 'withdraw-player':
+        withdrawFromTournament(el.getAttribute('data-id'));
+        render();
+        break;
       case 'reset':
         UI.overlay = { type: 'confirm-reset' }; render();
         break;
@@ -1958,6 +2171,22 @@
 
     var modeBtn = ev.target.closest('#mode-toggle button');
     if (modeBtn) { UI.modeOverride = modeBtn.getAttribute('data-mode'); UI.error = ''; render(); return; }
+
+    var editKey = ev.target.closest('[data-editkey]');
+    if (editKey && UI.overlay && UI.overlay.type === 'edit-visit') {
+      var k = editKey.getAttribute('data-editkey');
+      if (k === 'del') UI.overlay.value = String(UI.overlay.value).slice(0, -1);
+      else if (k === 'ok') {
+        if (UI.overlay.value === '') return;
+        var err = applyVisitEdit(UI.overlay.idx, parseInt(UI.overlay.value, 10));
+        if (err) UI.overlay.error = err; else UI.overlay = null;
+      } else if (String(UI.overlay.value + k).length <= 3) {
+        UI.overlay.value = String(Number(UI.overlay.value + k));
+        UI.overlay.error = '';
+      }
+      render();
+      return;
+    }
 
     var key2 = ev.target.closest('.keypad button');
     if (key2) { pressKey(key2.getAttribute('data-key')); return; }
@@ -2004,6 +2233,15 @@
     readAvatar(file, function (dataUrl) {
       if (dataUrl && UI.overlay) { UI.overlay.draft.avatar = dataUrl; render(); }
     });
+  });
+
+  /* Als Schaltfläche angesagte Elemente müssen auch per Tastatur gehen. */
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key !== 'Enter' && ev.key !== ' ') return;
+    var t = ev.target.closest('[role="button"][data-action]');
+    if (!t) return;
+    ev.preventDefault();
+    handleAction(t.getAttribute('data-action'), t);
   });
 
   document.addEventListener('keydown', function (ev) {

@@ -401,7 +401,13 @@ await rDart('MISS');
 check('Miss auf Bull ändert nichts', (await rTarget()) === 25);
 await misses();
 await rDart('S25');
-check('Bull beendet das Spiel', (await text('#overlay-card')).includes('Glückwunsch'));
+check('nach dem Bull läuft die Runde fair zu Ende',
+  !(await page.evaluate(() => window.__dart.game().done)));
+check('Hinweis auf die Schlussrunde', (await text('#rtw-turn')).includes('Runde wird zu Ende gespielt'));
+check('der fertige Spieler wirft nicht mehr',
+  !(await text('#rtw-turn')).includes('Am Wurf ' + (await page.evaluate((id) => window.__dart.state().profiles.find((p) => p.id === id).name, rA))));
+await misses();
+check('nach der Schlussrunde ist das Spiel beendet', (await text('#overlay-card')).includes('Glückwunsch'));
 check('Sieger ist der Bull-Werfer', await page.evaluate((id) => window.__dart.game().winner === id, rA));
 await page.locator('#overlay-card [data-action="open-summary"]').click();
 const rSum = await text('#summary-box');
@@ -571,6 +577,62 @@ await page.evaluate(() => {
 });
 await page.reload();
 check('Spielstand ohne Spielerliste wird verworfen, App bleibt bedienbar', await visible('#screen-setup'));
+
+group('Neue Funktionen aus der Prüfung');
+await page.evaluate(() => localStorage.clear());
+await page.reload();
+await page.locator('[data-action="start-game"]').click();
+await page.locator('[data-action="next-match"]').click();
+await page.locator('#bulloff-buttons button').first().click();
+await typeScore(100); await typeScore(60); await typeScore(140);
+check('Wer am Wurf ist, steht im Klartext', (await text('#game-turn')).includes('Am Wurf'));
+
+// Aufnahme nachträglich korrigieren
+await page.locator('#history .col').first().locator('.v').last().click();
+check('Korrektur-Dialog offen', (await text('#overlay-card')).includes('Aufnahme korrigieren'));
+for (const d of ['1', '4', '0']) await page.locator(`[data-editkey="${d}"]`).click();
+await page.locator('[data-editkey="ok"]').click();
+check('korrigierter Wert übernommen',
+  (await page.evaluate(() => window.__dart.activeLeg(window.__dart.currentMatch()).visits[0].s)) === 140);
+check('Reststand folgt der Korrektur', (await rest(0)) === String(501 - 140 - 140), await rest(0));
+await page.locator('#history .col').first().locator('.v').last().click();
+for (const d of ['1', '7', '9']) await page.locator(`[data-editkey="${d}"]`).click();
+await page.locator('[data-editkey="ok"]').click();
+check('unmöglicher Wert wird abgelehnt', (await text('#overlay-card')).includes('nicht möglich'));
+for (const d of ['d', 'e', 'l']) await page.locator('[data-editkey="del"]').click();
+for (const d of ['5', '0', '0']) await page.locator(`[data-editkey="${d}"]`).click();
+await page.locator('[data-editkey="ok"]').click();
+check('zu hoher Wert wird abgelehnt', (await text('#overlay-card')).includes('Maximal 180'));
+await page.locator('#overlay-card [data-action="ov-cancel"]').click();
+
+// Spieler nachtragen und abmelden
+await page.locator('#screen-game [data-action="to-tournament"]').click();
+const matchesBefore = await page.evaluate(() => window.__dart.state().matches.length);
+await page.locator('[data-action="roster-change"]').click();
+await page.locator('#overlay-card [data-action="withdraw-player"]').first().click();
+const voided = await page.evaluate(() => window.__dart.state().matches.filter((m) => m.void).length);
+check('offene Spiele des Abgemeldeten entfallen', voided > 0, String(voided));
+check('gespielte Spiele bleiben erhalten',
+  (await page.evaluate(() => window.__dart.state().matches.filter((m) => m.done && m.void).length)) === 0);
+await page.locator('#overlay-card [data-action="ov-cancel"]').click();
+check('Tabelle behält den Abgemeldeten', (await st()).length === 4);
+await page.locator('[data-action="roster-change"]').click();
+const addable = await page.locator('#overlay-card [data-action="add-player"]').count();
+if (addable === 0) {
+  await page.locator('#overlay-card [data-action="ov-cancel"]').click();
+  await page.locator('#nav [data-screen="players"]').click();
+  await page.locator('#screen-players [data-action="new-profile"]').click();
+  await page.locator('[data-role="profile-name"]').fill('Nachzügler');
+  await page.locator('[data-action="save-profile"]').click();
+  await page.locator('#nav [data-screen="setup"]').click();
+  await page.locator('[data-action="roster-change"]').click();
+}
+await page.locator('#overlay-card [data-action="add-player"]').first().click();
+await page.locator('#overlay-card [data-action="ov-cancel"]').click();
+check('Nachzügler bekommt Spiele gegen alle',
+  (await page.evaluate(() => window.__dart.state().matches.length)) > matchesBefore,
+  `${matchesBefore} -> ${await page.evaluate(() => window.__dart.state().matches.length)}`);
+check('Nachzügler steht in der Tabelle', (await st()).length === 5);
 
 group('Fehlerfreiheit');
 check('keine JS-Fehler', errors.length === 0, errors.join(' | '));

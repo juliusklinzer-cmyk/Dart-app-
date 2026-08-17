@@ -38,6 +38,10 @@
 
 /* Buttons auf iPad/iPhone: kein Doppeltipp-Zoom, keine Textauswahl beim Halten. */
 button { touch-action: manipulation; -webkit-user-select: none; user-select: none; font-family: inherit; }
+/* Ohne eigenen Fokusstil ist auf dem dunklen Grund nicht zu sehen, wo man ist. */
+button:focus-visible, [role="button"]:focus-visible, input:focus-visible {
+  outline: 3px solid var(--accent); outline-offset: 2px;
+}
 
 html, body {
   margin: 0;
@@ -102,7 +106,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .btn:active { transform: scale(0.98); }
 .btn.full { width: 100%; }
 .btn.big { min-height: 62px; font-size: 1.1rem; }
-.btn.small { min-height: 38px; padding: 6px 12px; font-size: 0.85rem; }
+.btn.small { min-height: 44px; padding: 8px 14px; font-size: 0.85rem; }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .btn.ghost { background: transparent; }
 .btn.danger { color: var(--red); border-color: #4a2530; }
@@ -148,8 +152,8 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .roster-item .nm { font-weight: 600; }
 .roster-item .sm { font-size: 0.76rem; color: var(--muted); }
 .roster-item .edit {
-  background: none; border: none; color: var(--muted); font-size: 1.1rem; cursor: pointer;
-  width: 40px; height: 40px; flex: none;
+  background: none; border: none; color: var(--muted); font-size: 1.2rem; cursor: pointer;
+  width: 44px; height: 44px; flex: none;
 }
 .roster-item .check { color: var(--accent); font-weight: 800; opacity: 0; width: 18px; }
 .roster-item.selected .check { opacity: 1; }
@@ -177,7 +181,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .cr-head span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cr-head.act { background: var(--accent-soft); color: var(--accent); }
 .cr-num { background: var(--bg-3); font-weight: 700; font-size: 0.9rem; }
-.cr-num.dead { color: var(--muted); opacity: 0.5; }
+.cr-num.dead { color: #6b7688; }
 .cr-mark { font-size: 1.15rem; font-weight: 700; color: var(--muted); min-height: 40px; }
 .cr-mark.m1, .cr-mark.m2 { color: var(--text); }
 .cr-mark.m3 { color: var(--accent); background: var(--accent-soft); }
@@ -185,7 +189,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .cr-score { font-weight: 800; font-size: 1.05rem; background: var(--bg-3); }
 .cr-score.act { color: var(--accent); }
 .cricket-grid { grid-template-columns: repeat(4, 1fr); }
-.num-grid button.dim { opacity: 0.45; }
+.num-grid button.dim { color: #7b8698; border-style: dashed; }
 
 /* ---------- Round the World ---------- */
 .rtw-board { display: flex; flex-direction: column; gap: 8px; }
@@ -215,10 +219,12 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   padding-bottom: 2px;
 }
 .chips::-webkit-scrollbar { display: none; }
+/* Weiche Kante rechts als Hinweis, dass die Zeile weitergeht. */
+.chips { -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent); mask-image: linear-gradient(90deg, #000 88%, transparent); }
 .chips .chip { flex: none; white-space: nowrap; }
 .chips .chip {
   background: var(--bg-2); border: 1px solid var(--line); color: var(--muted);
-  border-radius: 999px; padding: 8px 14px; font-size: 0.85rem; font-weight: 600; cursor: pointer; min-height: 40px;
+  border-radius: 999px; padding: 8px 14px; font-size: 0.85rem; font-weight: 600; cursor: pointer; min-height: 46px;
 }
 .chips .chip.active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .board-list { display: flex; flex-direction: column; }
@@ -297,7 +303,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 }
 .pline:first-of-type { border-top: none; }
 .pline span { color: var(--muted); }
-.pline span i { display: block; font-style: normal; font-size: 0.7rem; opacity: 0.75; }
+.pline span i { display: block; font-style: normal; font-size: 0.72rem; color: #7f8b9d; }
 .pline b { font-variant-numeric: tabular-nums; font-size: 1.05rem; }
 
 /* ---------- Profil-Dialog ---------- */
@@ -344,7 +350,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   font-size: 0.85rem; font-weight: 600; cursor: pointer; min-height: 42px;
 }
 .segmented button.active { background: var(--accent); color: var(--on-accent); }
-.segmented.small button { padding: 7px 12px; min-height: 36px; font-size: 0.8rem; }
+.segmented.small button { padding: 8px 14px; min-height: 44px; font-size: 0.82rem; }
 .hint { font-size: 0.78rem; color: var(--muted); margin: 6px 0 0; line-height: 1.45; }
 
 /* ---------- Tabelle ---------- */
@@ -366,14 +372,15 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   padding: 12px 10px; border-radius: 10px; background: var(--bg-3); margin-bottom: 8px;
   border: 1px solid transparent;
 }
-.match-row.done { opacity: 0.62; }
+.match-row.done { background: var(--bg-2); }
+.match-row.done .res { color: var(--text); }
 .match-row.next { border-color: var(--accent-dark); }
 .match-row .pair { flex: 1; font-size: 0.95rem; }
 .match-row .pair b { font-weight: 700; }
 .match-row .res { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--muted); }
 .match-row .go {
   background: var(--accent); color: var(--on-accent); border: none; border-radius: 9px;
-  padding: 9px 14px; font-weight: 700; cursor: pointer; min-height: 40px;
+  padding: 9px 16px; font-weight: 700; cursor: pointer; min-height: 44px;
 }
 .round-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 12px 0 6px; }
 .round-label:first-child { margin-top: 0; }
@@ -452,7 +459,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   min-width: 42px; text-align: center; background: var(--bg-3); border: 1px solid var(--line);
   border-radius: 8px; padding: 6px 8px; font-size: 0.82rem; font-weight: 700; font-variant-numeric: tabular-nums;
 }
-.visit-darts .d.empty { color: var(--muted); opacity: 0.4; font-weight: 500; }
+.visit-darts .d.empty { color: #6b7688; font-weight: 500; }
 
 .pad { display: block; }
 .quick-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 8px; }
@@ -466,7 +473,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .score-display {
   font-size: 2.2rem; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: 0.02em;
 }
-.score-display.empty { color: var(--muted); opacity: 0.35; }
+.score-display.empty { color: #6b7688; }
 .input-error { color: var(--red); font-size: 0.82rem; }
 
 .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
@@ -525,10 +532,18 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .podium .pn { flex: 1; font-weight: 700; font-size: 1.05rem; }
 .podium .pv { color: var(--muted); font-size: 0.85rem; }
 
-@media (max-height: 700px) and (max-width: 699px) {
-  .pcard .rest { font-size: 2.6rem; }
-  .keypad button { min-height: 50px; font-size: 1.3rem; }
-  .num-grid button { min-height: 46px; }
+@media (max-width: 699px) and (orientation: portrait) {
+  /* Auf niedrigen Handys (z. B. 360x800) sonst unter der Falz. */
+  .screen.game.active { height: calc(100dvh - 12px); min-height: 0; overflow: hidden; }
+  .pad { display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+  .pad .keypad, .pad .num-grid { flex: 1; min-height: 0; grid-auto-rows: 1fr; }
+  .history { min-height: 0; }
+}
+@media (max-height: 720px) and (max-width: 699px) {
+  .pcard .rest { font-size: 2.4rem; }
+  .keypad button { min-height: 46px; font-size: 1.25rem; }
+  .num-grid button { min-height: 42px; }
+  .quick-row button { min-height: 40px; }
 }
 
 /* ================= Tablet / iPad ================= */
@@ -570,7 +585,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 /* Querformat (iPad, großes Handy quer): Stand links, Eingabe rechts.
    Nichts muss gescrollt werden, die Tasten füllen die Höhe. */
 @media (orientation: landscape) and (min-width: 700px) {
-  :root { --maxw: 1100px; }
+  :root { --maxw: 1320px; }
   .game-body { flex-direction: row; align-items: stretch; gap: 16px; }
   .game-main { flex: 1 1 50%; min-width: 0; }
   .input-area { flex: 1 1 50%; min-width: 0; margin-top: 0; display: flex; flex-direction: column; }
@@ -579,27 +594,80 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   .quick-row, .mult-row, .display-row { margin-bottom: 0; }
   .app-header { padding: 14px 4px 10px; }
   .screen.center.active { min-height: calc(100dvh - 24px); }
+  /* Der Reststand ist die Zahl, die aus zwei Metern lesbar sein muss. */
   .pcard { min-height: 0; }
-  .pcard .rest { font-size: 3.6rem; }
-  .pad .num-grid, .pad .keypad { max-height: 620px; }
+  .pcard .rest { font-size: clamp(3.6rem, 9vh, 6.5rem); }
+  .checkout-bar .chip { font-size: clamp(1.15rem, 2.6vh, 1.9rem); padding: 8px 16px; }
+  .checkout-bar .label { font-size: 0.95rem; }
+  .pad .num-grid, .pad .keypad { max-height: 520px; }
+  /* Cricket-Tafel und Trainingsliste dürfen die freie Höhe nutzen. */
+  .cricket-board { flex: 1; min-height: 0; }
+  .cr-grid { height: 100%; grid-auto-rows: 1fr; }
+  .cr-head { font-size: 0.95rem; }
+  .cr-num { font-size: 1.35rem; }
+  .cr-mark { font-size: clamp(1.3rem, 3.4vh, 2.2rem); }
+  .cr-score { font-size: 1.5rem; }
+  .rtw-board { flex: 1; min-height: 0; overflow-y: auto; }
+  .rtw-row .rw-target { font-size: clamp(2rem, 6vh, 3.8rem); min-width: 4.5ch; }
+  .turn-label { font-size: 1.25rem; }
+  .pad .rtw-pad-grid { flex: 1; grid-auto-rows: 1fr; }
+  /* Setup und Rangliste zweispaltig, damit nichts unter die Falz rutscht. */
+  #screen-setup.active { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; align-items: start; }
+  #screen-setup.active > #resume-box,
+  #screen-setup.active > [data-action="start-game"],
+  #screen-setup.active > .footer-note { grid-column: 1 / -1; }
+  #screen-boards.active { display: grid; grid-template-columns: 1.15fr 1fr; gap: 0 16px; align-items: start; }
+  #screen-boards.active > .app-header,
+  #screen-boards.active > #board-mode { grid-column: 1 / -1; }
+  #board-chart .chart { max-height: 42vh; }
+  /* Die Hauptaktion des Turniers bleibt immer sichtbar. */
+  #screen-tournament [data-action="next-match"],
+  #screen-tournament [data-action="to-winner"] { position: sticky; bottom: 8px; z-index: 10; }
 }
 
 /* Handy im Querformat: sehr flach, alles muss ohne Scrollen passen. */
-@media (orientation: landscape) and (max-height: 520px) {
+@media (orientation: landscape) and (max-height: 560px) {
   body { padding-top: 4px; padding-bottom: 4px; }
-  .screen.game.active { min-height: calc(100vh - 8px); min-height: calc(100dvh - 8px); }
-  .game-header { padding: 4px 0; }
-  .icon-btn { width: 38px; height: 38px; }
-  .pcard { padding: 6px 8px; }
-  .pcard .rest { font-size: 2.3rem; margin: 0; }
+  /* Feste Höhe statt Mindesthöhe: das Bedienfeld darf nie unter die Falz. */
+  .screen.game.active { height: calc(100dvh - 8px); min-height: 0; overflow: hidden; }
+  .game-header { padding: 2px 0; }
+  .icon-btn { width: 44px; height: 44px; font-size: 1.2rem; }
+  .game-title { font-size: 0.8rem; }
+  .pcard { padding: 4px 8px; }
+  .pcard .rest { font-size: clamp(1.9rem, 9vh, 2.6rem); margin: 0; }
   .pcard .legs { display: none; }
-  .checkout-bar { min-height: 38px; padding: 5px; margin-bottom: 6px; }
+  .pcard .meta { font-size: 0.68rem; }
+  .checkout-bar { min-height: 34px; padding: 4px; margin-bottom: 5px; }
+  .checkout-bar .chip { padding: 3px 8px; font-size: 0.85rem; }
   .history { display: none; }
+  .mode-row { margin-bottom: 4px; }
+  .display-row { min-height: 30px; margin-bottom: 4px; }
+  .score-display { font-size: 1.5rem; }
+  .pad { display: flex; flex-direction: column; gap: 5px; height: 100%; }
+  .pad .keypad, .pad .num-grid, .pad .rtw-pad-grid { flex: 1; min-height: 0; grid-auto-rows: 1fr; }
   .keypad button { min-height: 44px; font-size: 1.2rem; }
-  .num-grid button { min-height: 36px; font-size: 1rem; }
-  .mult-row button { min-height: 38px; }
-  .quick-row button { min-height: 38px; font-size: 0.85rem; }
-  .visit-darts .d { padding: 4px 6px; }
+  .num-grid button { min-height: 44px; font-size: 1rem; }
+  .mult-row button { min-height: 44px; }
+  .quick-row { gap: 4px; margin-bottom: 0; }
+  .quick-row button { min-height: 44px; font-size: 0.85rem; }
+  .rtw-key { min-height: 44px; padding: 6px; }
+  .rtw-key .k { font-size: 1rem; }
+  .rtw-key .sub { font-size: 0.65rem; }
+  .rtw-row { padding: 5px 8px; gap: 8px; }
+  .rtw-row .rw-target { font-size: 1.5rem; min-width: 3.5ch; }
+  .rtw-row .av.md { width: 32px; height: 32px; font-size: 0.75rem; }
+  .rtw-board { overflow-y: auto; }
+  /* Cricket: die Punktezeile muss sichtbar bleiben. */
+  .cr-cell { padding: 2px 3px; }
+  .cr-head { font-size: 0.62rem; padding: 2px; gap: 2px; }
+  .cr-head .av.sm { width: 18px; height: 18px; font-size: 0.5rem; }
+  .cr-mark { min-height: 26px; font-size: 0.95rem; }
+  .cr-num { font-size: 0.8rem; }
+  .cr-score { font-size: 0.9rem; }
+  .cricket-board { flex: 1; min-height: 0; overflow: auto; }
+  .bulloff button { padding: 12px; font-size: 1.1rem; gap: 6px; }
+  .bulloff .av.md { width: 34px; height: 34px; }
+  .visit-darts .d { padding: 4px 6px; min-width: 34px; }
 }
 
 /* ---------- Round the World: Eingabe nur für die aktuelle Zahl ---------- */
@@ -635,6 +703,40 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   position: sticky; top: 0; z-index: 40;
   background: #4a2530; border: 1px solid var(--red); color: var(--text);
   border-radius: 10px; padding: 10px 12px; margin: 8px 0; font-size: 0.85rem; line-height: 1.4;
+}
+
+/* ---------- Aufnahme korrigieren ---------- */
+.history .v.tap { cursor: pointer; }
+.history .v.tap:active { background: var(--bg-3); }
+.edit-value {
+  font-size: 2.2rem; font-weight: 800; font-variant-numeric: tabular-nums;
+  margin: 6px 0 10px; min-height: 2.4rem;
+}
+.edit-error { color: var(--red); font-size: 0.85rem; margin: 0 0 10px; }
+.edit-pad { margin-bottom: 10px; }
+.edit-pad button { min-height: 52px; font-size: 1.3rem; }
+.edit-pad button.ok { font-size: 0.95rem; }
+
+/* ---------- Spieler im Turnier ändern ---------- */
+.roster-change { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; text-align: left; }
+.rc-row { display: flex; align-items: center; gap: 10px; background: var(--bg-3); border-radius: 10px; padding: 8px 10px; }
+.rc-row .rc-name { flex: 1; font-weight: 600; }
+.rc-row .muted { font-size: 0.75rem; }
+.match-row.void { opacity: 0.7; }
+.match-row.void .pair { text-decoration: line-through; }
+.rtw-row.fin { border-color: var(--accent-dark); }
+.rtw-row.fin .rw-target { color: var(--accent); }
+
+/* ---------- Kontext: wer wirft, was bedeuten die Zeichen ---------- */
+.game-turn { margin-bottom: 6px; }
+.cricket-legend {
+  display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px;
+  font-size: 0.75rem; color: var(--muted);
+}
+.cricket-legend b { color: var(--text); }
+.form-label { font-size: 0.72rem; color: var(--muted); margin-top: 8px; }
+@media (orientation: landscape) and (max-height: 560px) {
+  .game-turn, .cricket-legend { display: none; }
 }
 
 </style>
@@ -773,6 +875,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
     <div id="stats-grid" class="stats-grid"></div>
   </div>
 
+  <button class="btn ghost full" data-action="roster-change">Spieler nachtragen oder abmelden</button>
   <button class="btn danger ghost full" data-action="reset">Turnier vorzeitig beenden</button>
 </section>
 
@@ -847,6 +950,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 
   <div class="game-body">
   <div class="game-main">
+    <div id="game-turn" class="turn-label game-turn"></div>
     <div id="scoreboard" class="scoreboard"></div>
 
     <div id="checkout-bar" class="checkout-bar"></div>
@@ -907,6 +1011,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   <div class="game-body">
     <div class="game-main">
       <div id="cricket-board" class="cricket-board"></div>
+      <div id="cricket-legend" class="cricket-legend"></div>
     </div>
     <div class="input-area">
       <div class="mode-row">
@@ -1348,13 +1453,49 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return matches;
   }
 
+  /* Nachzügler und Frühgeher: Ein laufendes Turnier lässt sich erweitern,
+     und wer geht, dessen offene Spiele entfallen – Gespieltes bleibt. */
+  function addPlayerToTournament(pid) {
+    var t = tour();
+    if (t.players.indexOf(pid) >= 0) return;
+    var lastRound = 0;
+    S.matches.forEach(function (m) { if (m.round > lastRound) lastRound = m.round; });
+    t.players.forEach(function (other) {
+      S.matches.push({
+        id: uid(), round: lastRound + 1, p: [other, pid],
+        starter: null, legs: [], done: false, winner: null, at: null, added: true
+      });
+    });
+    t.players.push(pid);
+    if (S.lineup.indexOf(pid) < 0) S.lineup.push(pid);
+    save();
+  }
+
+  function withdrawFromTournament(pid) {
+    S.matches.forEach(function (m) {
+      if (m.done) return;
+      if (m.p.indexOf(pid) >= 0) m.void = true;
+    });
+    save();
+  }
+
+  function isPlaying(pid) {
+    for (var i = 0; i < S.matches.length; i++) {
+      var m = S.matches[i];
+      if (!m.void && !m.done && m.p.indexOf(pid) >= 0) return true;
+    }
+    return false;
+  }
+
   function matchById(id) {
     for (var i = 0; i < S.matches.length; i++) if (S.matches[i].id === id) return S.matches[i];
     return null;
   }
   function currentMatch() { return S.current ? matchById(S.current) : null; }
   function nextOpenMatch() {
-    for (var i = 0; i < S.matches.length; i++) if (!S.matches[i].done) return S.matches[i];
+    for (var i = 0; i < S.matches.length; i++) {
+      if (!S.matches[i].done && !S.matches[i].void) return S.matches[i];
+    }
     return null;
   }
   function allMatchesDone() { return S.matches.length > 0 && !nextOpenMatch(); }
@@ -1485,6 +1626,52 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (after === 0) { commitVisit(total, thrown, true, false, UI.darts); return; }
     if (thrown === 3) { commitVisit(total, 3, false, false, UI.darts); return; }
     render();
+  }
+
+  /* ================= Aufnahme korrigieren =================
+     Der häufigste Fehler am Abend ist eine falsch getippte Aufnahme, die
+     erst später auffällt. Statt alles dazwischen zurückzunehmen, lässt sich
+     der Wert direkt ändern – solange das Leg dadurch schlüssig bleibt. */
+  function visitFits(leg, pid) {
+    var rest = tourStart();
+    for (var i = 0; i < leg.visits.length; i++) {
+      var v = leg.visits[i];
+      if (v.p !== pid) continue;
+      if (v.b) continue;
+      var after = rest - v.s;
+      if (after < 0 || after === 1) return false;
+      if (after === 0 && !v.c) return false;
+      if (v.c && after !== 0) return false;
+      rest = after;
+    }
+    return true;
+  }
+
+  function applyVisitEdit(idx, value) {
+    var m = currentMatch();
+    if (!m || m.done) return 'Das Spiel ist beendet.';
+    var leg = activeLeg(m);
+    var v = leg && leg.visits[idx];
+    if (!v) return 'Aufnahme nicht gefunden.';
+    if (v.c) return 'Ein Finish lässt sich nicht ändern – dafür bitte zurücknehmen.';
+    if (value > 180) return 'Maximal 180.';
+    if (IMPOSSIBLE[value]) return value + ' ist mit 3 Darts nicht möglich.';
+
+    var backup = { s: v.s, b: v.b, o: v.o, k: v.k };
+    var rest = tourStart();
+    leg.visits.forEach(function (x, i) { if (x.p === v.p && i < idx && !x.b) rest -= x.s; });
+    var after = rest - value;
+    delete v.k;                       // Einzeldarts passen nach der Korrektur nicht mehr
+    if (after < 0 || after === 1) { v.s = 0; v.b = true; v.o = value; }
+    else if (after === 0) { v.s = backup.s; v.b = backup.b; v.o = backup.o; v.k = backup.k; return 'Ein Finish bitte über den Wurf eingeben.'; }
+    else { v.s = value; v.b = false; v.o = 0; }
+
+    if (!visitFits(leg, v.p)) {
+      v.s = backup.s; v.b = backup.b; v.o = backup.o; if (backup.k) v.k = backup.k;
+      return 'Mit diesem Wert passen die späteren Aufnahmen nicht mehr.';
+    }
+    save();
+    return null;
   }
 
   /* ================= Undo ================= */
@@ -1819,25 +2006,63 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   /* ================= Round the World ================= */
   /* Ziel 1..20, danach Bull (25). Ein Treffer rückt um den Multiplikator vor,
      über die 20 hinaus landet man immer auf Bull. */
+  /* Round the World wird Aufnahme für Aufnahme nachgespielt: Wer den Bull
+     getroffen hat, wird übersprungen, und die angefangene Runde wird zu Ende
+     gespielt, damit der spätere Startplatz nicht benachteiligt ist.
+     Es gewinnt, wer den Bull mit den wenigsten Darts trifft; bei Gleichstand
+     der frühere Treffer. */
   function rtwState(g) {
-    var st = { target: {}, darts: {}, hits: {}, winner: null };
+    var n = g.players.length;
+    var st = { target: {}, darts: {}, hits: {}, finished: {}, winner: null, closing: false, turn: 0, visit: [] };
     g.players.forEach(function (id) { st.target[id] = 1; st.darts[id] = 0; st.hits[id] = 0; });
 
-    for (var i = 0; i < g.throws.length; i++) {
+    var turn = 0, inVisit = 0, over = false;
+    for (var i = 0; i < g.throws.length && !over; i++) {
       var t = g.throws[i];
-      var pid = g.players[Math.floor(i / 3) % g.players.length];
+      var pid = g.players[turn];
+      st.visit.push(t);
       st.darts[pid]++;
       var target = st.target[pid];
-      if (!t.n) continue;
 
-      if (target === 25) {
-        if (t.n === 25) { st.hits[pid]++; if (st.winner === null) st.winner = pid; }
-        continue;
+      if (t.n && target === 25 && t.n === 25) {
+        st.hits[pid]++;
+        st.finished[pid] = { darts: st.darts[pid], at: i };
+      } else if (t.n && target !== 25 && t.n === target) {
+        st.hits[pid]++;
+        var next = target + t.m;
+        st.target[pid] = next > 20 ? 25 : next;
       }
-      if (t.n !== target) continue;
-      st.hits[pid]++;
-      var next = target + t.m;
-      st.target[pid] = next > 20 ? 25 : next;
+
+      inVisit++;
+      // Mit dem Bull ist die Aufnahme sofort zu Ende – die restlichen Darts
+      // der eigenen Aufnahme werden nicht mehr geworfen.
+      if (inVisit === 3 || st.finished[pid]) {
+        inVisit = 0;
+        st.visit = [];
+        // Nächsten Spieler suchen, fertige überspringen.
+        var steps = 0, wrapped = false, next2 = turn;
+        do {
+          next2 = (next2 + 1) % n;
+          if (next2 === 0) wrapped = true;
+          steps++;
+        } while (st.finished[g.players[next2]] && steps <= n);
+        turn = next2;
+        if (Object.keys(st.finished).length && (wrapped || steps > n)) over = true;
+      }
+    }
+
+    st.turn = turn;
+    st.inVisit = inVisit;
+    var done = Object.keys(st.finished);
+    if (done.length) {
+      st.closing = !over;
+      if (over) {
+        done.sort(function (a, b) {
+          var fa = st.finished[a], fb = st.finished[b];
+          return fa.darts !== fb.darts ? fa.darts - fb.darts : fa.at - fb.at;
+        });
+        st.winner = done[0];
+      }
     }
     return st;
   }
@@ -1855,10 +2080,19 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
   /* ================= Gemeinsames für beide Modi ================= */
   function gameTurnPlayer(g) {
+    if (g.kind === 'rtw') return g.players[rtwState(g).turn];
     return g.players[Math.floor(g.throws.length / 3) % g.players.length];
   }
+  /* Die Darts der laufenden Aufnahme – nach einem Sieg mit dem dritten Dart
+     bleibt die Aufnahme sichtbar, statt leer zu wirken. */
   function gameVisitDarts(g) {
-    return g.throws.slice(Math.floor(g.throws.length / 3) * 3);
+    if (g.kind === 'rtw') {
+      var st = rtwState(g);
+      return st.inVisit === 0 && g.throws.length ? g.throws.slice(-3) : st.visit;
+    }
+    var startIdx = Math.floor(g.throws.length / 3) * 3;
+    if (startIdx === g.throws.length && g.throws.length) startIdx -= 3;
+    return g.throws.slice(startIdx);
   }
   function undoGame() {
     var g = S.game;
@@ -2038,13 +2272,13 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       var a = pname(m.p[0]), b = pname(m.p[1]);
       var isNext = next && next.id === m.id;
       var score = m.legs.length ? legsWon(m, m.p[0]) + ':' + legsWon(m, m.p[1]) : '–:–';
-      html += '<div class="match-row ' + (m.done ? 'done' : '') + ' ' + (isNext ? 'next' : '') + '">' +
+      html += '<div class="match-row ' + (m.done ? 'done' : '') + (m.void ? ' void' : '') + ' ' + (isNext ? 'next' : '') + '">' +
         '<div class="pair">' +
           (m.winner === m.p[0] ? '<b>' + esc(a) + '</b>' : esc(a)) + ' <span class="muted">vs</span> ' +
           (m.winner === m.p[1] ? '<b>' + esc(b) + '</b>' : esc(b)) +
         '</div>' +
-        '<div class="res">' + score + '</div>' +
-        (m.done ? '' : '<button class="go" data-action="open-match" data-id="' + m.id + '">' +
+        '<div class="res">' + (m.void ? 'entfällt' : score) + '</div>' +
+        (m.done || m.void ? '' : '<button class="go" data-action="open-match" data-id="' + m.id + '">' +
           (m.legs.length ? 'Weiter' : 'Start') + '</button>') +
         '</div>';
     });
@@ -2194,7 +2428,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var rows = ranking(def, map);
     var medals = ['🥇', '🥈', '🥉'];
     $('board-list').innerHTML = rows.length ? rows.map(function (st, i) {
-      return '<div class="board-row ' + (i === 0 ? 'top' : '') + '" data-action="open-profile" data-id="' + st.id + '">' +
+      return '<div class="board-row ' + (i === 0 ? 'top' : '') + '" data-action="open-profile" data-id="' + st.id + '" role="button" tabindex="0">' +
         '<div class="pos">' + (medals[i] || (i + 1) + '.') + '</div>' +
         avatarHTML(profile(st.id), 'sm') +
         '<div class="nm">' + esc(st.name) + '</div>' +
@@ -2234,7 +2468,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       if (row.kind !== '501') {
         var h = row.h;
         var title = h.kind === 'cricket' ? 'Cricket' + (h.scoring ? '' : ' (ohne Punkte)') : 'Round the World';
-        return '<div class="log-row tap" data-action="open-summary" data-kind="' + h.kind + '" data-id="' + (h.id || 'current') + '">' +
+        return '<div class="log-row tap" data-action="open-summary" data-kind="' + h.kind + '" data-id="' + (h.id || 'current') + '" role="button" tabindex="0">' +
           '<div class="lp w">' + esc(pname(h.winner)) + '<span class="a">' + title + '</span></div>' +
           '<div class="ls">🏆</div>' +
           '<div class="lp right">' + h.players.length + ' Spieler<span class="a">' +
@@ -2252,7 +2486,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         });
         return d ? ((p / d) * 3).toFixed(1) : '–';
       };
-      return '<div class="log-row tap" data-action="open-summary" data-kind="501" data-id="' + m.id + '">' +
+      return '<div class="log-row tap" data-action="open-summary" data-kind="501" data-id="' + m.id + '" role="button" tabindex="0">' +
         '<div class="lp ' + (m.winner === m.p[0] ? 'w' : '') + '">' + esc(pname(m.p[0])) + '<span class="a">Ø ' + avgOf(m.p[0]) + '</span></div>' +
         '<div class="ls">' + la + ':' + lb + '</div>' +
         '<div class="lp right ' + (m.winner === m.p[1] ? 'w' : '') + '">' + esc(pname(m.p[1])) + '<span class="a">Ø ' + avgOf(m.p[1]) + '</span></div>' +
@@ -2265,7 +2499,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var map = career();
     $('players-list').innerHTML = S.profiles.map(function (p) {
       var st = map[p.id];
-      return '<div class="card player-card ' + (p.hidden ? 'hidden-profile' : '') + '" data-action="open-profile" data-id="' + p.id + '">' +
+      return '<div class="card player-card ' + (p.hidden ? 'hidden-profile' : '') + '" data-action="open-profile" data-id="' + p.id + '" role="button" tabindex="0">' +
         avatarHTML(p, 'lg') +
         '<div class="pc-main">' +
           '<div class="pc-name">' + esc(p.name) + (p.hidden ? ' <span class="muted">(ausgeblendet)</span>' : '') + '</div>' +
@@ -2303,8 +2537,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           ? plural(st.won, 'Sieg', 'Siege') + ' · ' + plural(st.lost, 'Niederlage', 'Niederlagen') +
             ' · ' + plural(st.tourWins, 'Turniersieg', 'Turniersiege')
           : 'Noch kein Spiel gespielt') + '</div>' +
-        '<div class="form-row">' + form + '</div></div></div>' +
+        (form ? '<div class="form-label">Letzte Spiele</div><div class="form-row">' + form + '</div>' : '') +
+        '</div></div>' +
 
+      '<p class="hint">Alle Werte über sämtliche gespielten Classic-Spiele.</p>' +
       '<div class="card"><h2>Scoring</h2>' +
         line('3-Dart-Average', st.darts ? st.avg.toFixed(2) : '–') +
         line('First-9-Average', st.first9Darts ? st.first9.toFixed(2) : '–') +
@@ -2385,6 +2621,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       : 'Ein Leg · ' + tourStart() + ' Double Out';
 
     var pendingSum = sum(UI.darts, function (d) { return d.v; });
+    $('game-turn').innerHTML = m.done
+      ? '<b>' + esc(pname(m.winner)) + '</b> hat gewonnen'
+      : '<span class="muted">Am Wurf</span> <b>' + esc(pname(active)) + '</b>' +
+        '<span class="muted"> · Rest ' + (remainingIn(leg, active) - pendingSum) + '</span>';
     $('scoreboard').innerHTML = m.p.map(function (pid) {
       var rest = remainingIn(leg, pid) - (pid === active ? pendingSum : 0);
       var darts = dartsIn(leg, pid) + (pid === active ? UI.darts.length : 0);
@@ -2426,7 +2666,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           var after = before - v.o;
           why = after < 0 ? 'überworfen' : after === 1 ? 'Rest 1' : 'kein Doppel';
         }
-        rows.push('<div class="v ' + (v.b ? 'bust' : v.c ? 'co' : '') + '">' +
+        var vi = leg.visits.indexOf(v);
+        rows.push('<div class="v ' + (v.b ? 'bust' : v.c ? 'co' : '') + (v.c ? '' : ' tap') + '"' +
+          (v.c ? '' : ' data-action="edit-visit" data-i="' + vi + '" role="button" tabindex="0"') + '>' +
           '<span class="s">' + (v.b ? v.o : v.s) + '</span>' +
           '<span class="r">' + (v.b ? 'Bust · ' + why : 'Rest ' + rowRest) + '</span></div>');
       });
@@ -2524,6 +2766,16 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       '<div class="cr-grid" style="grid-template-columns:44px repeat(' + g.players.length + ',minmax(52px,1fr))">' +
       head + rows + foot + '</div>';
 
+    var lead = g.players.slice().sort(function (a, b) {
+      var ca = CRICKET_NUMBERS.filter(function (n) { return st.marks[a][n] >= 3; }).length;
+      var cb = CRICKET_NUMBERS.filter(function (n) { return st.marks[b][n] >= 3; }).length;
+      return g.scoring ? (st.score[b] - st.score[a]) || (cb - ca) : (cb - ca);
+    })[0];
+    $('cricket-legend').innerHTML =
+      '<span>/ = 1 · ✕ = 2 · ⊗ = zu</span>' +
+      '<span>Grau = bei allen zu, bringt keine Punkte mehr</span>' +
+      (g.players.length > 1 ? '<span>Vorn: <b>' + esc(pname(lead)) + '</b></span>' : '');
+
     $('cricket-turn').innerHTML = g.done
       ? '<b>' + esc(pname(g.winner)) + '</b> gewinnt'
       : '<span class="muted">Am Wurf</span> <b>' + esc(pname(active)) + '</b>';
@@ -2558,21 +2810,24 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
     $('rtw-board').innerHTML = g.players.map(function (id) {
       var t = st.target[id];
-      var done = t === 25 ? 20 : t - 1;
-      return '<div class="rtw-row ' + (id === active ? 'act' : '') + '">' +
+      var fin = st.finished[id];
+      /* 21 Stationen: die 20 Zahlen und der Bull. */
+      var doneSteps = fin ? 21 : (t === 25 ? 20 : t - 1);
+      return '<div class="rtw-row ' + (id === active ? 'act' : '') + (fin ? ' fin' : '') + '">' +
         avatarHTML(profile(id), 'md') +
         '<div class="rw-main">' +
           '<div class="rw-name">' + esc(pname(id)) + '</div>' +
-          '<div class="rw-bar"><span style="width:' + (done / 20 * 100) + '%"></span></div>' +
-          '<div class="rw-sub">' + st.darts[id] + ' Darts · ' + st.hits[id] + ' Treffer</div>' +
+          '<div class="rw-bar"><span style="width:' + (doneSteps / 21 * 100) + '%"></span></div>' +
+          '<div class="rw-sub">' + plural(st.darts[id], 'Dart', 'Darts') + ' · ' + plural(st.hits[id], 'Treffer', 'Treffer') + '</div>' +
         '</div>' +
-        '<div class="rw-target">' + (t === 25 ? 'Bull' : t) + '</div>' +
+        '<div class="rw-target">' + (fin ? '✓' : t === 25 ? 'Bull' : t) + '</div>' +
         '</div>';
     }).join('');
 
     $('rtw-turn').innerHTML = g.done
       ? '<b>' + esc(pname(g.winner)) + '</b> gewinnt'
-      : '<span class="muted">Am Wurf</span> <b>' + esc(pname(active)) + '</b> <span class="muted">auf</span> <b>' +
+      : (st.closing ? '<span class="muted">Runde wird zu Ende gespielt · </span>' : '') +
+        '<span class="muted">Am Wurf</span> <b>' + esc(pname(active)) + '</b> <span class="muted">auf</span> <b>' +
         (st.target[active] === 25 ? 'Bull' : st.target[active]) + '</b>';
 
     $('rtw-darts').innerHTML = [0, 1, 2].map(function (i) {
@@ -2750,9 +3005,17 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var table = standings();
     if (!table.length) { S.screen = 'setup'; render(); return; }
     var medals = ['🥇', '🥈', '🥉'];
+    /* Bei exaktem Gleichstand gibt es keinen alphabetischen Sieger. */
+    var tied = table.filter(function (st) {
+      return st.won === table[0].won && st.legDiff === table[0].legDiff &&
+        Math.abs(st.avg - table[0].avg) < 0.005;
+    });
+    var title = tied.length > 1
+      ? 'Geteilter Sieg: ' + tied.map(function (st) { return esc(st.name); }).join(' und ')
+      : esc(table[0].name) + ' gewinnt!';
     $('winner-box').innerHTML =
       '<div style="text-align:center"><div class="big-emoji">🏆</div>' +
-      '<h1>' + esc(table[0].name) + ' gewinnt!</h1>' +
+      '<h1>' + title + '</h1>' +
       '<p class="muted">' + plural(table[0].won, 'Spiel', 'Spiele') + ' von ' + (tourPlayers().length - 1) + ' gewonnen</p></div>' +
       '<div class="podium">' + table.map(function (st, i) {
         return '<div class="p ' + (i === 0 ? 'first' : '') + '">' +
@@ -2817,6 +3080,39 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '<p>' + (S.game && S.game.kind === 'cricket' ? 'Cricket' : 'Round the World') + '</p>' +
         '<button class="btn primary full" data-action="open-summary" data-kind="' + (S.game ? S.game.kind : 'cricket') + '" data-id="current">Weiter zur Spielstatistik</button>' +
         '<button class="btn ghost full" data-action="undo-game">Letzten Dart zurück</button>';
+    } else if (o.type === 'roster-change') {
+      var inTour = tourPlayers();
+      html = '<h3>Spieler im Turnier</h3>' +
+        '<p>Nachzügler bekommen Spiele gegen alle bisherigen Teilnehmer. Wer abgemeldet wird, behält seine gespielten Ergebnisse; seine offenen Spiele entfallen.</p>' +
+        '<div class="roster-change">' +
+        inTour.map(function (id) {
+          var out = !isPlaying(id);
+          return '<div class="rc-row">' + avatarHTML(profile(id), 'sm') +
+            '<span class="rc-name">' + esc(pname(id)) + '</span>' +
+            (out ? '<span class="muted">keine offenen Spiele</span>'
+                 : '<button class="btn danger ghost small" data-action="withdraw-player" data-id="' + id + '">Abmelden</button>') +
+            '</div>';
+        }).join('') +
+        activeProfiles().filter(function (p) { return inTour.indexOf(p.id) < 0; }).map(function (p) {
+          return '<div class="rc-row">' + avatarHTML(p, 'sm') +
+            '<span class="rc-name">' + esc(p.name) + '</span>' +
+            '<button class="btn small" data-action="add-player" data-id="' + p.id + '">Nachtragen</button>' +
+            '</div>';
+        }).join('') +
+        '</div>' +
+        '<button class="btn primary full" data-action="ov-cancel">Fertig</button>';
+    } else if (o.type === 'edit-visit') {
+      html = '<h3>Aufnahme korrigieren</h3>' +
+        '<p>Eingetragen waren <b>' + o.old + '</b> Punkte für ' + esc(pname(o.pid)) + '.</p>' +
+        '<div class="edit-value">' + (o.value === '' ? '–' : o.value) + '</div>' +
+        (o.error ? '<p class="edit-error">' + esc(o.error) + '</p>' : '') +
+        '<div class="keypad edit-pad">' +
+          [1,2,3,4,5,6,7,8,9].map(function (n) { return '<button data-editkey="' + n + '">' + n + '</button>'; }).join('') +
+          '<button class="fn" data-editkey="del">←</button>' +
+          '<button data-editkey="0">0</button>' +
+          '<button class="ok" data-editkey="ok">Übernehmen</button>' +
+        '</div>' +
+        '<button class="btn ghost full" data-action="ov-cancel">Abbrechen</button>';
     } else if (o.type === 'confirm-new-tournament') {
       html = '<h3>Laufendes Turnier beenden?</h3>' +
         '<p>Im aktuellen Turnier ' + (o.played === 1 ? 'ist bereits 1 Spiel' : 'sind bereits ' + o.played + ' Spiele') +
@@ -3032,6 +3328,17 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       case 'undo':
         undo();
         break;
+      case 'edit-visit': {
+        var m3 = currentMatch();
+        if (!m3 || m3.done) return;
+        var idx = Number(el.getAttribute('data-i'));
+        var leg3 = activeLeg(m3);
+        var v3 = leg3 && leg3.visits[idx];
+        if (!v3) return;
+        UI.overlay = { type: 'edit-visit', idx: idx, pid: v3.p, old: v3.b ? v3.o : v3.s, value: '', error: '' };
+        render();
+        break;
+      }
       case 'co-darts': {
         var n = Number(el.getAttribute('data-n'));
         var score = UI.overlay.score;
@@ -3061,6 +3368,17 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       case 'ov-finish':
         UI.overlay = null; S.screen = 'winner'; save(); render();
         break;
+      case 'roster-change':
+        UI.overlay = { type: 'roster-change' }; render();
+        break;
+      case 'add-player':
+        addPlayerToTournament(el.getAttribute('data-id'));
+        render();
+        break;
+      case 'withdraw-player':
+        withdrawFromTournament(el.getAttribute('data-id'));
+        render();
+        break;
       case 'reset':
         UI.overlay = { type: 'confirm-reset' }; render();
         break;
@@ -3088,6 +3406,22 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
     var modeBtn = ev.target.closest('#mode-toggle button');
     if (modeBtn) { UI.modeOverride = modeBtn.getAttribute('data-mode'); UI.error = ''; render(); return; }
+
+    var editKey = ev.target.closest('[data-editkey]');
+    if (editKey && UI.overlay && UI.overlay.type === 'edit-visit') {
+      var k = editKey.getAttribute('data-editkey');
+      if (k === 'del') UI.overlay.value = String(UI.overlay.value).slice(0, -1);
+      else if (k === 'ok') {
+        if (UI.overlay.value === '') return;
+        var err = applyVisitEdit(UI.overlay.idx, parseInt(UI.overlay.value, 10));
+        if (err) UI.overlay.error = err; else UI.overlay = null;
+      } else if (String(UI.overlay.value + k).length <= 3) {
+        UI.overlay.value = String(Number(UI.overlay.value + k));
+        UI.overlay.error = '';
+      }
+      render();
+      return;
+    }
 
     var key2 = ev.target.closest('.keypad button');
     if (key2) { pressKey(key2.getAttribute('data-key')); return; }
@@ -3134,6 +3468,15 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     readAvatar(file, function (dataUrl) {
       if (dataUrl && UI.overlay) { UI.overlay.draft.avatar = dataUrl; render(); }
     });
+  });
+
+  /* Als Schaltfläche angesagte Elemente müssen auch per Tastatur gehen. */
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key !== 'Enter' && ev.key !== ' ') return;
+    var t = ev.target.closest('[role="button"][data-action]');
+    if (!t) return;
+    ev.preventDefault();
+    handleAction(t.getAttribute('data-action'), t);
   });
 
   document.addEventListener('keydown', function (ev) {

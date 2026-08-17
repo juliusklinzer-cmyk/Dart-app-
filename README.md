@@ -59,7 +59,10 @@ eigene aktuelle Zahl:
 - **Double** – eine Zahl wird übersprungen
 - **Triple** – zwei Zahlen werden übersprungen
 
-Wer über die 20 hinausspringt, landet auf Bull; gewonnen hat, wer den Bull trifft.
+Wer über die 20 hinausspringt, landet auf Bull. Mit dem Bull-Treffer ist die eigene
+Aufnahme beendet, die angefangene Runde wird aber zu Ende gespielt – so ist der
+spätere Startplatz nicht benachteiligt. Es gewinnt, wer den Bull mit den wenigsten
+Darts getroffen hat, bei Gleichstand der frühere Treffer.
 Jeder Spieler hat seinen eigenen Fortschritt, die Anzeige zeigt Ziel, Darts und
 Treffer.
 
@@ -78,7 +81,12 @@ Darts auf den nächsten Spieler. Auf Bull bleiben nur noch „Bull" und „Miss"
    wirft im ersten Leg an, danach wird pro Leg abgewechselt.
 4. **Spielen** – Eingabe wie unten beschrieben.
 5. **Tabelle** – Sortiert nach Siegen, bei Gleichstand nach Leg-Differenz und dann
-   nach Average. Am Ende gibt es einen Siegerbildschirm mit Podium.
+   nach Average. Sind alle drei Werte gleich, weist der Siegerbildschirm einen
+   geteilten Sieg aus.
+6. **Nachzügler und Frühgeher** – „Spieler nachtragen oder abmelden" auf der
+   Turnierseite ergänzt einen Spieler samt Spielen gegen alle bisherigen Teilnehmer
+   oder streicht die offenen Spiele eines Abgemeldeten. Gespielte Ergebnisse bleiben
+   in jedem Fall erhalten.
 
 ## Eingabe
 
@@ -108,9 +116,12 @@ markiert, im Einzel-Dart-Modus ist die passende Zahl zusätzlich umrandet.
 - Mit 3 Darts unmögliche Summen (179, 178, 176, 175, 173, 172, 169, 166, 163) werden
   abgelehnt.
 
-**Verlauf & Undo:** Unter dem Spielstand stehen die letzten Aufnahmen beider Spieler
-(Bust durchgestrichen, Checkout grün). Der ↺-Button oben rechts nimmt Dart für Dart
-bzw. Aufnahme für Aufnahme zurück – auch über ein bereits gewonnenes Leg hinweg.
+**Verlauf, Undo & Korrektur:** Unter dem Spielstand stehen die letzten Aufnahmen
+beider Spieler (Bust durchgestrichen mit Grund, Checkout grün). Der ↺-Button oben
+rechts nimmt Dart für Dart bzw. Aufnahme für Aufnahme zurück – auch über ein bereits
+gewonnenes Leg hinweg. Fällt ein Tippfehler erst später auf, genügt ein Tipp auf die
+betroffene Zeile: Der Wert lässt sich direkt korrigieren, solange das Leg damit
+schlüssig bleibt.
 
 **Tastatur (am Laptop):** Ziffern, `Enter` = OK, `Backspace` = löschen, `z` = Undo.
 
