@@ -985,7 +985,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
       <span id="game-match-label"></span>
       <span id="game-leg-label" class="muted"></span>
     </div>
-    <button class="icon-btn" data-action="undo" aria-label="Rückgängig">↺</button>
+    <button class="icon-btn" data-action="undo" aria-label="Letzte Eingabe zurücknehmen">↺</button>
   </header>
 
   <div class="game-body">
@@ -1040,12 +1040,12 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 <!-- ============ CRICKET ============ -->
 <section id="screen-cricket" class="screen game">
   <header class="game-header">
-    <button class="icon-btn" data-action="leave-game" aria-label="Spiel verlassen">‹</button>
+    <button class="icon-btn" data-action="leave-game" aria-label="Cricket verlassen">‹</button>
     <div class="game-title">
       <span>Cricket</span>
       <span id="cricket-sub" class="muted"></span>
     </div>
-    <button class="icon-btn" data-action="undo-game" aria-label="Rückgängig">↺</button>
+    <button class="icon-btn" data-action="undo-game" aria-label="Letzten Dart zurücknehmen">↺</button>
   </header>
 
   <div class="game-body">
@@ -1073,12 +1073,12 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 <!-- ============ ROUND THE WORLD ============ -->
 <section id="screen-rtw" class="screen game">
   <header class="game-header">
-    <button class="icon-btn" data-action="leave-game" aria-label="Spiel verlassen">‹</button>
+    <button class="icon-btn" data-action="leave-game" aria-label="Training verlassen">‹</button>
     <div class="game-title">
       <span>Round the World</span>
       <span id="rtw-sub" class="muted"></span>
     </div>
-    <button class="icon-btn" data-action="undo-game" aria-label="Rückgängig">↺</button>
+    <button class="icon-btn" data-action="undo-game" aria-label="Letzten Dart zurücknehmen">↺</button>
   </header>
 
   <div class="game-body">
@@ -1316,6 +1316,22 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   }
   var settleUntil = 0;
   function settling() { return Date.now() < settleUntil; }
+
+  /* Wechselt durch einen Tipp der Bildschirm, rutscht an dieselbe Stelle ein
+     anderes Bedienelement. Ein Nachtipp dorthin ist ein Fehltipp – aber nur
+     an genau dieser Stelle, damit bewusste schnelle Bedienung frei bleibt. */
+  var ghostTapUntil = 0;
+  function armGhostTapGuard() { ghostTapUntil = Date.now() + 400; }
+  function isGhostTap(ev) {
+    /* `detail >= 2` ist die Doppelklick-Zählung des Browsers: zweite
+       Berührung an derselben Stelle in kurzer Folge. Genau das ist der
+       Fehltipp, den wir nach einem Bildschirmwechsel abfangen wollen –
+       bewusste Einzeltipps bleiben unberührt. */
+    if (Date.now() > ghostTapUntil) return false;
+    if (!ev.detail || ev.detail < 2) return false;
+    ghostTapUntil = 0;
+    return true;
+  }
   var UI = { input: '', darts: [], mult: 1, modeOverride: null, overlay: null, error: '', board: 'avg', boardMode: '501', profile: null, summary: null };
 
   /* ================= Helfer ================= */
@@ -1499,7 +1515,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
      und wer geht, dessen offene Spiele entfallen – Gespieltes bleibt. */
   function addPlayerToTournament(pid) {
     var t = tour();
-    if (t.players.indexOf(pid) >= 0) return;
+    if (t.players.indexOf(pid) >= 0 || t.players.length >= 12) return;
     var lastRound = 0;
     S.matches.forEach(function (m) { if (m.round > lastRound) lastRound = m.round; });
     t.players.forEach(function (other) {
@@ -1753,7 +1769,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       matches: 0, won: 0, lost: 0,
       legsWon: 0, legsLost: 0,
       first9Points: 0, first9Darts: 0,
-      checkouts: 0, doubleAttempts: 0,
+      checkouts: 0, doubleAttempts: 0, doubleHits: 0,
       highCO: 0, highFinishes: 0, highScore: 0,
       s180: 0, s140: 0, s100: 0, s60: 0,
       bestLeg: null, tournaments: 0, tourWins: 0,
@@ -1766,7 +1782,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   function finalize(st) {
     st.avg = st.darts ? (st.points / st.darts) * 3 : 0;
     st.first9 = st.first9Darts ? (st.first9Points / st.first9Darts) * 3 : 0;
-    st.doubleQuote = st.doubleAttempts ? (st.checkouts / st.doubleAttempts) * 100 : 0;
+    st.doubleQuote = st.doubleAttempts ? (st.doubleHits / st.doubleAttempts) * 100 : 0;
     st.legDiff = st.legsWon - st.legsLost;
     st.legs = st.legsWon + st.legsLost;
     st.winPct = st.matches ? (st.won / st.matches) * 100 : 0;
@@ -1815,10 +1831,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
             }
             visitNo[v.p]++;
 
-            /* Doppelversuche: jeder Dart, der auf ein mögliches Doppel geworfen
-               wurde. Im Einzel-Dart-Modus dartgenau; bei der Punkte-Eingabe
-               zählen die Darts der Aufnahme, sobald sie auf einem Doppel-Rest
-               begonnen hat – sonst hinge die Quote am Eingabeweg. */
+            /* Doppelquote nur aus dartgenau erfassten Aufnahmen: Wie viele
+               Darts auf einem Doppel lagen, weiß die App nur im Einzel-Dart-
+               Modus. Eine Schätzung für die Punkte-Eingabe hinge sonst am
+               Eingabeweg statt an der Leistung – lieber ehrlich weglassen.
+               Da die App im Finish-Bereich automatisch umschaltet, sind das
+               im Normalbetrieb praktisch alle Finish-Darts. */
             if (v.k && v.k.length) {
               var r = before;
               for (var i = 0; i < v.k.length; i++) {
@@ -1826,10 +1844,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
                 if (oneDartFinish(r)) st.doubleAttempts++;
                 r -= d.m * d.n;
               }
-            } else if (oneDartFinish(before)) {
-              st.doubleAttempts += v.d;
-            } else if (v.c) {
-              st.doubleAttempts += v.d;
+              if (v.c) st.doubleHits++;
             }
 
             if (!v.b) {
@@ -1907,12 +1922,14 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         if (h.winner && map[h.winner]) map[h.winner].cricketWins++;
       } else if (kind === 'rtw') {
         var rs = rtwState({ players: h.players, throws: h.throws });
-        h.players.forEach(function (id) { if (map[id]) map[id].rtwGames++; });
-        if (h.winner && map[h.winner]) {
-          map[h.winner].rtwWins++;
-          var used = rs.darts[h.winner];
-          if (map[h.winner].rtwBest === null || used < map[h.winner].rtwBest) map[h.winner].rtwBest = used;
-        }
+        h.players.forEach(function (id) {
+          if (!map[id]) return;
+          map[id].rtwGames++;
+          // Jeder komplette Durchlauf zählt für die Bestleistung, nicht nur der Sieg.
+          var fin = rs.finished[id];
+          if (fin && (map[id].rtwBest === null || fin.darts < map[id].rtwBest)) map[id].rtwBest = fin.darts;
+        });
+        if (h.winner && map[h.winner]) map[h.winner].rtwWins++;
       }
     });
     Object.keys(map).forEach(function (k) {
@@ -1975,14 +1992,23 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   }
 
   /* Alle je gespielten Spiele, neueste zuerst. */
+  function knownPlayers(ids) {
+    return ids.every(function (id) {
+      for (var i = 0; i < S.profiles.length; i++) if (S.profiles[i].id === id) return true;
+      return false;
+    });
+  }
+
   function allMatches() {
     var out = [];
     if (S.matches.length) {
-      S.matches.forEach(function (m) { if (m.done) out.push({ m: m, start: tourStart(), live: true }); });
+      S.matches.forEach(function (m) { if (m.done && knownPlayers(m.p)) out.push({ m: m, start: tourStart(), live: true }); });
     }
     S.history.forEach(function (h) {
       if ((h.kind || '501') !== '501') return;   // Cricket/RTW haben keine Match-Liste
-      h.matches.forEach(function (m) { if (m.done) out.push({ m: m, start: (h.settings && h.settings.start) || 501, at: h.at }); });
+      h.matches.forEach(function (m) {
+        if (m.done && knownPlayers(m.p)) out.push({ m: m, start: (h.settings && h.settings.start) || 501, at: h.at });
+      });
     });
     out.sort(function (a, b) { return (b.m.at || b.at || 0) - (a.m.at || a.at || 0); });
     return out;
@@ -2283,13 +2309,14 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       resumeBtn.textContent = 'Ergebnis ansehen';
     } else if (runningGame) {
       $('resume-box').querySelector('strong').textContent = S.game.kind === 'cricket' ? 'Laufendes Cricket' : 'Laufendes Training';
-      $('resume-info').textContent = S.game.players.length + ' Spieler · ' + S.game.throws.length + ' Darts geworfen';
+      $('resume-info').textContent = plural(S.game.players.length, 'Spieler', 'Spieler') + ' · ' +
+        plural(S.game.throws.length, 'Dart', 'Darts') + ' geworfen';
       resumeBtn.textContent = 'Fortsetzen';
     } else if (running) {
       resumeBtn.textContent = 'Fortsetzen';
       $('resume-box').querySelector('strong').textContent = 'Laufendes Turnier';
       var done = sum(S.matches, function (m) { return m.done ? 1 : 0; });
-      $('resume-info').textContent = done + ' von ' + S.matches.length + ' Spielen gespielt';
+      $('resume-info').textContent = done + ' von ' + plural(S.matches.length, 'Spiel', 'Spielen') + ' gespielt';
     }
   }
 
@@ -3212,7 +3239,15 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   var SETTLE_ACTIONS = { 'restart-game': 1, 'ov-next-leg': 1, 'co-darts': 1 };
 
   function handleAction(action, el) {
+    var screenBefore = S.screen;
     if (SETTLE_ACTIONS[action]) settleUntil = Date.now() + 150;
+    handleActionInner(action, el);
+    // Neuer Bildschirm unter dem Finger: einen nachrutschenden Doppeltipp
+    // abfangen, bewusste Eingaben aber sofort wieder annehmen.
+    if (S.screen !== screenBefore) armGhostTapGuard();
+  }
+
+  function handleActionInner(action, el) {
     switch (action) {
       case 'nav': {
         var target = el.getAttribute('data-screen');
@@ -3289,7 +3324,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         save(); render();
         break;
       case 'open-summary':
-        UI.summary = { kind: el.getAttribute('data-kind'), id: el.getAttribute('data-id') };
+        UI.summary = { kind: el.getAttribute('data-kind'), id: el.getAttribute('data-id'), from: S.screen };
         UI.overlay = null;
         S.screen = 'summary';
         save(); render();
@@ -3303,11 +3338,15 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         undo();          // hebt das Finish auf und öffnet das Match wieder
         break;
       }
-      case 'summary-back':
+      case 'summary-back': {
+        var from = UI.summary && UI.summary.from;
         UI.summary = null;
-        S.screen = S.game ? S.game.kind : (S.matches.length ? 'tournament' : 'boards');
+        S.screen = from === 'boards' || from === 'players' ? from
+          : S.game && !S.game.done ? S.game.kind
+          : S.matches.length ? 'tournament' : 'boards';
         save(); render();
         break;
+      }
       case 'board':
         UI.board = el.getAttribute('data-key');
         render();
@@ -3417,12 +3456,6 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         if (next) openMatch(next.id); else { S.screen = 'winner'; save(); render(); }
         break;
       }
-      case 'ov-to-table':
-        UI.overlay = null; S.screen = 'tournament'; save(); render();
-        break;
-      case 'ov-finish':
-        UI.overlay = null; S.screen = 'winner'; save(); render();
-        break;
       case 'roster-change':
         UI.overlay = { type: 'roster-change' }; render();
         break;
@@ -3451,6 +3484,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
      nötig ist (Checkout-Abfrage, Spielende). */
   var STICKY_OVERLAYS = { 'checkout-darts': 1, 'leg-done': 1, 'match-done': 1, 'game-done': 1 };
   document.addEventListener('click', function (ev) {
+    if (isGhostTap(ev)) return;
     if (ev.target.id === 'overlay' && UI.overlay && !STICKY_OVERLAYS[UI.overlay.type]) {
       UI.overlay = null; UI.input = ''; render(); return;
     }
@@ -3489,7 +3523,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
     var quick = ev.target.closest('[data-quick]');
     if (quick) {
-      if (quickDoubleTap(quick.getAttribute('data-quick'))) return;
+      if (settling() || quickDoubleTap(quick.getAttribute('data-quick'))) return;
+      UI.error = '';
       UI.input = quick.getAttribute('data-quick');
       submitTotal();
       return;
@@ -3540,6 +3575,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (ev.key !== 'Enter' && ev.key !== ' ') return;
     var t = ev.target.closest('[role="button"][data-action]');
     if (!t) return;
+    // Solange ein Dialog offen ist, zählt nur, was im Dialog steht.
+    if (UI.overlay && !t.closest('#overlay')) return;
     ev.preventDefault();
     handleAction(t.getAttribute('data-action'), t);
   });

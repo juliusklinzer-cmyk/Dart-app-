@@ -675,6 +675,61 @@ check('Korrektur-Dialog offen', await visible('#overlay'));
 await page.locator('#overlay').click({ position: { x: 5, y: 5 } });
 check('Tipp neben den Dialog schließt ihn', !(await visible('#overlay')));
 
+group('Regression: zweite Prüfungsrunde');
+await page.evaluate(() => localStorage.clear());
+await page.reload();
+
+// Doppeltipp auf "Nächstes Spiel" darf den Bull-Off nicht überspringen
+await page.locator('[data-action="start-game"]').click();
+await page.locator('[data-action="next-match"]').dblclick();
+check('Doppeltipp überspringt den Bull-Off nicht', await visible('#screen-bulloff'),
+  await page.evaluate(() => window.__dart.state().screen));
+await page.locator('#bulloff-buttons button').first().click();
+
+// Doppeltipp auf "Start" im Spielplan darf keine Aufnahme buchen
+await page.locator('#screen-game [data-action="to-tournament"]').click();
+await page.locator('.match-row .go').first().dblclick();
+check('Doppeltipp auf Start bucht keine Aufnahme',
+  (await page.evaluate(() => window.__dart.activeLeg(window.__dart.currentMatch()).visits.length)) === 0);
+
+// Doppelquote: gleiche Würfe über beide Eingabewege
+await typeScore(180); await typeScore(60); await typeScore(180); await typeScore(60);
+/* Rest 141 -> T20/T19 lassen 24 stehen, der dritte Dart liegt also auf
+   einem möglichen Doppel und zählt als Versuch. */
+await dart('T20'); await dart('T19'); await dart('S4');
+await typeScore(60);
+await dart('D10');   // Rest 20, getroffen -> Versuch mit Treffer
+const quoteDartWeg = await page.evaluate(() => {
+  const m = window.__dart.currentMatch();
+  const s = window.__dart.stats();
+  return { versuche: s[m.p[0]].doubleAttempts, treffer: s[m.p[0]].doubleHits, quote: s[m.p[0]].doubleQuote };
+});
+check('Doppelversuche werden dartgenau gezählt',
+  quoteDartWeg.versuche === 2 && quoteDartWeg.treffer === 1 && Math.round(quoteDartWeg.quote) === 50,
+  JSON.stringify(quoteDartWeg));
+const quotePunkteWeg = await page.evaluate(() => {
+  const m = window.__dart.currentMatch();
+  const leg = m.legs[0];
+  // Aufnahme ohne Einzeldarts (wie über die Punkte-Eingabe) einfügen
+  leg.visits.push({ p: m.p[1], s: 20, d: 3, b: false, c: false, o: 0 });
+  const st = window.__dart.stats();
+  return { versuche: st[m.p[1]].doubleAttempts, treffer: st[m.p[1]].doubleHits };
+});
+check('Punkte-Eingabe erzeugt keine geschätzten Doppelversuche',
+  quotePunkteWeg.versuche === 0, JSON.stringify(quotePunkteWeg));
+
+// Obergrenze beim Nachtragen
+await page.evaluate(() => {
+  const s = window.__dart.state();
+  while (s.profiles.length < 15) {
+    s.profiles.push({ id: 'x' + s.profiles.length, name: 'Test' + s.profiles.length, avatar: null, hue: 200, created: Date.now() });
+  }
+  s.tour.players = s.profiles.slice(0, 12).map((p) => p.id);
+});
+await page.evaluate(() => window.__dart.action('add-player', { getAttribute: () => 'x13' }));
+check('Nachtragen achtet die Obergrenze von 12',
+  (await page.evaluate(() => window.__dart.state().tour.players.length)) === 12);
+
 group('Fehlerfreiheit');
 check('keine JS-Fehler', errors.length === 0, errors.join(' | '));
 

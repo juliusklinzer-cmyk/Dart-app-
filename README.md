@@ -197,9 +197,12 @@ Zwei Definitionen, damit die Zahlen einordbar sind:
 - **First-9-Average**: Average der ersten drei Aufnahmen eines Legs, das übliche Maß
   für den Scoring-Antritt.
 - **Doppelquote**: getroffene Finishes je Dart, der auf ein *mögliches* Doppel geworfen
-  wurde (Rest gerade und ≤ 40 oder genau 50). Da die App im Finish-Bereich automatisch
-  auf Einzel-Darts umschaltet, sind diese Würfe dartgenau erfasst. Bei einem Checkout
-  über die Punkte-Eingabe zählt ein Versuch mit einem Treffer.
+  wurde (Rest gerade und ≤ 40 oder genau 50). Gezählt wird ausschließlich, was
+  dartgenau erfasst ist – also der Einzel-Dart-Modus, in den die App im Finish-Bereich
+  automatisch umschaltet. Aufnahmen, die als Gesamtpunktzahl eingetippt wurden,
+  bleiben außen vor: Wie viele der drei Darts dort auf einem Doppel lagen, weiß die
+  App nicht, und eine Schätzung würde die Quote vom Eingabeweg abhängig machen statt
+  von der Leistung.
 
 Damit Zufallswerte die Listen nicht verzerren, erscheinen Spieler in den
 Durchschnitts-Ranglisten erst ab 9 geworfenen Darts bzw. 3 Doppelversuchen.
