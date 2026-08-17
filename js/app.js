@@ -841,7 +841,7 @@
       return '<div class="roster-item ' + (sel ? 'selected' : '') + '" data-action="toggle-lineup" data-id="' + p.id + '" role="button" tabindex="0">' +
         avatarHTML(p, 'md') +
         '<div class="who"><div class="nm">' + esc(p.name) + '</div>' +
-        '<div class="sm">' + (st && st.matches ? 'Ø ' + st.avg.toFixed(1) + ' · ' + st.won + ' Siege' : 'noch kein Spiel') + '</div></div>' +
+        '<div class="sm">' + (st && st.matches ? 'Ø ' + st.avg.toFixed(1) + ' · ' + plural(st.won, 'Sieg', 'Siege') : 'noch kein Spiel') + '</div></div>' +
         '<button class="edit" data-action="edit-profile" data-id="' + p.id + '" aria-label="Bearbeiten">✎</button>' +
         '<span class="check">✓</span>' +
         '</div>';
@@ -886,6 +886,9 @@
 
   function renderTournament() {
     var table = standings();
+    $('tournament-format').textContent = tourStart() + ' Double Out · ' +
+      (tour().bestOf === 1 ? 'ein Leg' : 'Best of ' + tour().bestOf) + ' · ' +
+      plural(tourPlayers().length, 'Spieler', 'Spieler');
     $('standings-body').innerHTML = table.map(function (st, i) {
       return '<tr class="' + (i === 0 && st.won > 0 ? 'leader' : '') + '">' +
         '<td class="rank">' + (i + 1) + '</td>' +
@@ -912,7 +915,7 @@
         '</div>' +
         '<div class="res">' + score + '</div>' +
         (m.done ? '' : '<button class="go" data-action="open-match" data-id="' + m.id + '">' +
-          (m.legs.length ? 'weiter' : 'start') + '</button>') +
+          (m.legs.length ? 'Weiter' : 'Start') + '</button>') +
         '</div>';
     });
     $('schedule').innerHTML = html;
@@ -1041,8 +1044,8 @@
     var log = allGamesLog().filter(function (row) { return row.kind === mode; });
     var modeName = mode === '501' ? 'Classic' : mode === 'cricket' ? 'Cricket' : 'Round the World';
     $('boards-sub').textContent = log.length
-      ? modeName + ' · ' + log.length + ' Spiel' + (log.length === 1 ? '' : 'e') +
-        (mode === '501' ? ' · ' + S.history.filter(function (h) { return (h.kind || '501') === '501'; }).length + ' Turniere' : '')
+      ? modeName + ' · ' + plural(log.length, 'Spiel', 'Spiele') +
+        (mode === '501' ? ' · ' + plural(S.history.filter(function (h) { return (h.kind || '501') === '501'; }).length, 'Turnier', 'Turniere') : '')
       : modeName + ' · noch keine Spiele';
 
     /* Verlauf: eine farbige Linie je Spieler. */
@@ -1074,7 +1077,7 @@
     var recs = mode === '501' ? [
       { k: 'highCO', t: 'Höchstes Finish' },
       { k: 'highScore', t: 'Höchste Aufnahme' },
-      { k: 'bestLeg', t: 'Kürzestes Leg' },
+      { k: 'bestLeg', t: 'Bestes Leg' },
       { k: 'avg', t: 'Bester Average' },
       { k: 's180', t: 'Meiste 180er' },
       { k: 'doubleQuote', t: 'Beste Doppelquote' }
@@ -1140,7 +1143,7 @@
             '<span>Ø <b>' + (st.darts ? st.avg.toFixed(1) : '–') + '</b></span>' +
             '<span>Siege <b>' + st.won + '</b></span>' +
             '<span>180er <b>' + st.s180 + '</b></span>' +
-            '<span>Bestes Finish <b>' + (st.highCO || '–') + '</b></span>' +
+            '<span>Höchstes Finish <b>' + (st.highCO || '–') + '</b></span>' +
           '</div>' +
         '</div>' +
         '<span class="chev">›</span>' +
@@ -1248,7 +1251,7 @@
     var idx = S.matches.indexOf(m);
     $('game-match-label').textContent = 'Spiel ' + (idx + 1) + ' von ' + S.matches.length;
     $('game-leg-label').textContent = S.settings.bestOf > 1
-      ? 'Leg ' + m.legs.length + ' · Stand ' + legsWon(m, m.p[0]) + ':' + legsWon(m, m.p[1]) + ' (first to ' + legsToWin() + ')'
+      ? 'Leg ' + m.legs.length + ' · Stand ' + legsWon(m, m.p[0]) + ':' + legsWon(m, m.p[1]) + ' · ' + plural(legsToWin(), 'Leg', 'Legs') + ' zum Sieg'
       : 'Ein Leg · ' + tourStart() + ' Double Out';
 
     var pendingSum = sum(UI.darts, function (d) { return d.v; });
@@ -1270,14 +1273,15 @@
     var dartsLeft = mode === 'darts' ? 3 - UI.darts.length : 3;
     var route = Checkout.suggest(restActive, dartsLeft);
 
+    var whose = esc(pname(active));
     if (route) {
-      $('checkout-bar').innerHTML = '<span class="label">Finish</span>' + route.map(function (d, i) {
+      $('checkout-bar').innerHTML = '<span class="label">Finish ' + whose + '</span>' + route.map(function (d, i) {
         return '<span class="chip ' + (i === 0 ? 'first' : '') + '">' + Checkout.pretty(d) + '</span>';
       }).join('');
     } else {
       $('checkout-bar').innerHTML = restActive > 170
-        ? '<span class="none">Noch kein Finish möglich</span>'
-        : '<span class="none">Kein Finish mit ' + dartsLeft + ' Dart' + (dartsLeft > 1 ? 's' : '') + '</span>';
+        ? '<span class="none">' + whose + ': noch kein Finish möglich</span>'
+        : '<span class="none">' + whose + ': kein Finish mit ' + plural(dartsLeft, 'Dart', 'Darts') + '</span>';
     }
 
     $('history').innerHTML = m.p.map(function (pid) {
@@ -1285,10 +1289,16 @@
       var rows = [];
       leg.visits.forEach(function (v) {
         if (v.p !== pid) return;
+        var before = rowRest;
         if (!v.b) rowRest -= v.s;
+        var why = '';
+        if (v.b) {
+          var after = before - v.o;
+          why = after < 0 ? 'überworfen' : after === 1 ? 'Rest 1' : 'kein Doppel';
+        }
         rows.push('<div class="v ' + (v.b ? 'bust' : v.c ? 'co' : '') + '">' +
           '<span class="s">' + (v.b ? v.o : v.s) + '</span>' +
-          '<span class="r">' + (v.b ? 'Bust' : 'Rest ' + rowRest) + '</span></div>');
+          '<span class="r">' + (v.b ? 'Bust · ' + why : 'Rest ' + rowRest) + '</span></div>');
       });
       return '<div class="col">' + rows.reverse().slice(0, 5).join('') + '</div>';
     }).join('');
@@ -1306,7 +1316,7 @@
     $('pad-darts').classList.toggle('hidden', mode !== 'darts');
 
     if (mode === 'total') {
-      $('quick-row').innerHTML = '<button class="miss" data-quick="0">0</button>' +
+      $('quick-row').innerHTML = '<button class="miss" data-quick="0">0 Pkt</button>' +
         QUICK_SCORES.map(function (q) { return '<button data-quick="' + q + '">' + q + '</button>'; }).join('');
       var disp = $('score-display');
       disp.textContent = UI.input === '' ? '0' : UI.input;
@@ -1414,7 +1424,7 @@
     var active = g.done ? g.winner : gameTurnPlayer(g);
     var visit = gameVisitDarts(g);
 
-    $('rtw-sub').textContent = 'Single = 1 weiter · Double = 2 · Triple = 3';
+    $('rtw-sub').textContent = 'Single 1 weiter · Double überspringt 1 · Triple überspringt 2';
 
     $('rtw-board').innerHTML = g.players.map(function (id) {
       var t = st.target[id];
@@ -1527,7 +1537,7 @@
               '<div class="muted">' + st.legsWon + ' Leg' + (st.legsWon === 1 ? '' : 's') + '</div></div></div>' +
             statRow('3-Dart-Average', st.darts ? st.avg.toFixed(2) : '–') +
             statRow('First 9', st.first9Darts ? st.first9.toFixed(2) : '–') +
-            statRow('Beste Aufnahme', st.highScore || '–') +
+            statRow('Höchste Aufnahme', st.highScore || '–') +
             statRow('180 / 140+ / 100+', st.s180 + ' / ' + st.s140 + ' / ' + st.s100) +
             statRow('Höchstes Finish', st.highCO || '–') +
             statRow('Doppelquote', st.doubleAttempts ? st.doubleQuote.toFixed(0) + ' % (' + st.checkouts + '/' + st.doubleAttempts + ')' : '–') +
@@ -1619,7 +1629,7 @@
           '<div class="medal">' + (medals[i] || (i + 1) + '.') + '</div>' +
           avatarHTML(profile(st.id), 'sm') +
           '<div class="pn">' + esc(st.name) + '</div>' +
-          '<div class="pv">' + st.won + ' Siege · Legs ' + st.legsWon + ':' + st.legsLost + ' · Ø ' + (st.avg ? st.avg.toFixed(1) : '–') + '</div>' +
+          '<div class="pv">' + plural(st.won, 'Sieg', 'Siege') + ' · Legs ' + st.legsWon + ':' + st.legsLost + ' · Ø ' + (st.avg ? st.avg.toFixed(1) : '–') + '</div>' +
           '</div>';
       }).join('') + '</div>';
   }
@@ -1652,11 +1662,11 @@
         (last ? '' : '<button class="btn ghost full" data-action="ov-next-match">Direkt zum nächsten Spiel</button>') +
         '<button class="btn ghost full" data-action="undo">Eingabe rückgängig</button>';
     } else if (o.type === 'confirm-reset') {
-      html = '<h3>Turnier abbrechen?</h3>' +
-        '<p>Die bereits gespielten Spiele bleiben in Statistik und Rangliste erhalten.</p>' +
+      html = '<h3>Turnier vorzeitig beenden?</h3>' +
+        '<p>Die bereits gespielten Spiele bleiben in Statistik und Rangliste erhalten, die offenen Spiele entfallen.</p>' +
         '<div class="row-btns two">' +
-        '<button class="btn ghost" data-action="ov-cancel">Weiterspielen</button>' +
-        '<button class="btn danger" data-action="ov-reset">Abbrechen</button></div>';
+        '<button class="btn ghost" data-action="ov-cancel">Nein, weiterspielen</button>' +
+        '<button class="btn danger" data-action="ov-reset">Ja, beenden</button></div>';
     } else if (o.type === 'profile') {
       var p = o.draft;
       var isNew = !o.id;
@@ -1685,7 +1695,10 @@
         '<button class="btn ghost" data-action="ov-cancel">Zurück</button>' +
         '<button class="btn primary" data-action="ov-new-tournament">Neues Turnier</button></div>';
     } else if (o.type === 'need-players') {
-      html = '<h3>Zu wenig Spieler</h3><p>Wähle mindestens zwei Spieler für das Turnier aus.</p>' +
+      html = '<h3>Zu wenig Spieler</h3><p>' +
+        (S.mode === 'rtw' ? 'Wähle mindestens einen Spieler für das Training aus.'
+          : S.mode === 'cricket' ? 'Wähle mindestens zwei Spieler für das Cricket aus.'
+          : 'Wähle mindestens zwei Spieler für das Turnier aus.') + '</p>' +
         '<button class="btn primary full" data-action="ov-cancel">Alles klar</button>';
     }
     $('overlay-card').innerHTML = html;

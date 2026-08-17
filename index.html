@@ -44,11 +44,11 @@
       </button>
       <button data-action="set-mode" data-value="cricket">
         <span class="mt">Cricket</span>
-        <span class="md">Alle zusammen, 15–20 und Bull</span>
+        <span class="md">Alle gegen alle, 20 bis 15 und Bull</span>
       </button>
       <button data-action="set-mode" data-value="rtw">
         <span class="mt">Round the World</span>
-        <span class="md">Training: 1 bis 20 und Bull</span>
+        <span class="md">Training: 1 bis 20, dann Bull</span>
       </button>
     </div>
   </div>
@@ -82,7 +82,7 @@
         <button data-value="100">100</button>
         <button data-value="170">170</button>
         <button data-value="180">180</button>
-        <button data-value="0">nie</button>
+        <button data-value="0">nie automatisch</button>
       </div>
     </div>
     <p class="hint">Über diesem Rest tippst du die geworfene Gesamtpunktzahl (bis 180), darunter
@@ -119,14 +119,17 @@
 <!-- ============ TURNIER-ÜBERSICHT ============ -->
 <section id="screen-tournament" class="screen">
   <header class="app-header row">
-    <h1>Turnier</h1>
-    <button class="btn ghost small" data-action="to-setup">Einstellungen</button>
+    <div>
+      <h1>Turnier</h1>
+      <p class="sub" id="tournament-format"></p>
+    </div>
+    <button class="btn ghost small" data-action="to-setup">Turnier verlassen</button>
   </header>
 
   <div class="card no-pad">
     <table class="standings">
       <thead>
-        <tr><th>#</th><th class="left">Spieler</th><th>S</th><th>N</th><th>Legs</th><th>Ø</th></tr>
+        <tr><th>#</th><th class="left">Spieler</th><th>Siege</th><th>Nied.</th><th>Legs</th><th>Ø</th></tr>
       </thead>
       <tbody id="standings-body"></tbody>
     </table>
@@ -144,7 +147,7 @@
     <div id="stats-grid" class="stats-grid"></div>
   </div>
 
-  <button class="btn danger ghost full" data-action="reset">Turnier abbrechen</button>
+  <button class="btn danger ghost full" data-action="reset">Turnier vorzeitig beenden</button>
 </section>
 
 <!-- ============ RANGLISTE ============ -->
@@ -189,7 +192,7 @@
 <!-- ============ SPIELER-DETAIL ============ -->
 <section id="screen-profile" class="screen">
   <header class="app-header row">
-    <button class="icon-btn" data-action="nav" data-screen="players" aria-label="Zurück">‹</button>
+    <button class="icon-btn" data-action="nav" data-screen="players" aria-label="Zur Spielerliste">‹</button>
     <button class="btn ghost small" data-action="edit-current-profile">Bearbeiten</button>
   </header>
   <div id="profile-detail"></div>
@@ -208,7 +211,7 @@
 <!-- ============ SPIEL ============ -->
 <section id="screen-game" class="screen game">
   <header class="game-header">
-    <button class="icon-btn" data-action="to-tournament" aria-label="Zurück">‹</button>
+    <button class="icon-btn" data-action="to-tournament" aria-label="Spiel verlassen, Stand bleibt erhalten">‹</button>
     <div class="game-title">
       <span id="game-match-label"></span>
       <span id="game-leg-label" class="muted"></span>
@@ -267,7 +270,7 @@
 <!-- ============ CRICKET ============ -->
 <section id="screen-cricket" class="screen game">
   <header class="game-header">
-    <button class="icon-btn" data-action="leave-game" aria-label="Zurück">‹</button>
+    <button class="icon-btn" data-action="leave-game" aria-label="Spiel verlassen">‹</button>
     <div class="game-title">
       <span>Cricket</span>
       <span id="cricket-sub" class="muted"></span>
@@ -299,7 +302,7 @@
 <!-- ============ ROUND THE WORLD ============ -->
 <section id="screen-rtw" class="screen game">
   <header class="game-header">
-    <button class="icon-btn" data-action="leave-game" aria-label="Zurück">‹</button>
+    <button class="icon-btn" data-action="leave-game" aria-label="Spiel verlassen">‹</button>
     <div class="game-title">
       <span>Round the World</span>
       <span id="rtw-sub" class="muted"></span>
@@ -324,7 +327,7 @@
 <!-- ============ SPIELSTATISTIK ============ -->
 <section id="screen-summary" class="screen">
   <header class="app-header row">
-    <button class="icon-btn" data-action="summary-back" aria-label="Zurück">‹</button>
+    <button class="icon-btn" data-action="summary-back" aria-label="Statistik schließen">‹</button>
     <h1>Spielstatistik</h1>
     <span style="width:44px"></span>
   </header>

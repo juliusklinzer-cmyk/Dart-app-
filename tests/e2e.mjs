@@ -105,6 +105,8 @@ check('bei Gegner (441) weiter Punkte-Eingabe', await visible('#pad-total'));
 await typeScore(60);
 check('Gegner 381', (await rest(1)) === '381');
 check('Auto-Umschaltung auf Einzel-Darts bei Rest <= 170', await visible('#pad-darts'));
+const hist0 = (await page.locator('#history .col').first().innerText()).replace(/\s+/g, ' ');
+check('Wurfverlauf zeigt die eigenen Reste', hist0.includes('Rest 141') && hist0.includes('Rest 321'), hist0);
 check('Finish-Vorschlag T20 T19 D12', (await text('#checkout-bar')).replace(/\s+/g, ' ').includes('T20 T19 D12'));
 
 group('Tastenbeschriftung im Einzel-Dart-Modus');
