@@ -145,7 +145,7 @@ check('Überwurf ist Bust, Rest bleibt 12', (await rest(0)) === '12');
 await typeScore(60);
 check('Finish-Vorschlag D6', (await text('#checkout-bar')).replace(/\s+/g, ' ').includes('D6'));
 await dart('D6');
-check('Match-Ende-Overlay', (await visible('#overlay')) && (await text('#overlay-card')).includes('gewinnt'));
+check('Match-Ende-Overlay mit Glückwunsch', (await visible('#overlay')) && (await text('#overlay-card')).includes('Glückwunsch'));
 
 const table1 = await st();
 const winner = table1.find((p) => p.name === firstName);
@@ -159,7 +159,7 @@ await page.locator('#overlay-card [data-action="undo"]').click();
 check('Rest wieder 12', (await rest(0)) === '12');
 check('Match wieder offen', await page.evaluate(() => !window.__dart.currentMatch().done));
 await dart('D6');
-check('erneut ausgecheckt', (await text('#overlay-card')).includes('gewinnt'));
+check('erneut ausgecheckt', (await text('#overlay-card')).includes('Glückwunsch'));
 
 /* Ein Leg im Schnelldurchlauf: Anwerfer checkt mit 180 / 180 / 141 aus. */
 async function quickLeg() {
@@ -182,7 +182,7 @@ check('Checkout-Dialog fragt nach Dart-Anzahl', (await text('#overlay-card')).in
 const opts = await page.locator('#overlay-card [data-action="co-darts"]').allInnerTexts();
 check('nur 3 Darts möglich für 141', opts.join(',') === '3', opts.join(','));
 await page.locator('#overlay-card [data-action="co-darts"]').first().click();
-check('Match beendet', (await text('#overlay-card')).includes('gewinnt'));
+check('Match beendet', (await text('#overlay-card')).includes('Glückwunsch'));
 
 group('Restliches Turnier & Endstand');
 for (let i = 0; i < 4; i++) {
@@ -191,8 +191,16 @@ for (let i = 0; i < 4; i++) {
   await quickLeg();
   await page.locator('#overlay-card [data-action="co-darts"]').first().click();
 }
-check('letztes Spiel bietet Auswertung', (await text('#overlay-card')).includes('Turnier auswerten'));
-await page.locator('#overlay-card [data-action="ov-finish"]').click();
+check('Glückwunsch vor der Auswertung', (await text('#overlay-card')).includes('Glückwunsch'));
+check('Weg zur Spielstatistik angeboten', (await text('#overlay-card')).includes('Spielstatistik'));
+await page.locator('#overlay-card [data-action="open-summary"]').click();
+check('Spielstatistik sichtbar', await visible('#screen-summary'));
+const sumText = await text('#summary-box');
+check('Statistik zeigt Sieger und Legs', sumText.includes('gewinnt') && sumText.toLowerCase().includes('legs'));
+check('Statistik zeigt Average je Spieler', (await page.locator('#summary-box .sum-card').count()) === 2 && sumText.includes('3-Dart-Average'));
+check('Statistik zeigt Doppelquote und bestes Leg', sumText.includes('Doppelquote') && sumText.includes('Bestes Leg'));
+check('Hinweis auf Gesamtstatistik', (await text('#summary-box')).includes('Karriere-Statistik'));
+await page.locator('#summary-actions [data-action="to-winner"]').click();
 check('Sieger-Screen', await visible('#screen-winner'));
 check('Podium mit 4 Plätzen', (await page.locator('.podium .p').count()) === 4);
 const final = await st();
@@ -281,7 +289,15 @@ async function modeDart(scope, label) {
   await page.locator(`#${scope}-grid button[data-num="${num}"]`).click();
 }
 const cDart = (l) => modeDart('cricket', l);
-const rDart = (l) => modeDart('rtw', l);
+/* Round the World zeigt nur die eigene Zahl: Single/Double/Triple/Miss. */
+async function rDart(label) {
+  if (label === 'MISS') return page.locator('#rtw-pad [data-num="0"]').click();
+  const mult = label[0] === 'T' ? 3 : label[0] === 'D' ? 2 : 1;
+  const num = parseInt(label.replace(/^[TDS]/, ''), 10);
+  const key = page.locator(`#rtw-pad [data-num="${num}"][data-mult="${mult}"]`);
+  if (await key.count()) return key.click();
+  return null;   // Zahl steht nicht zur Wahl – das ist der Testfall "falsche Zahl"
+}
 async function reduceLineupToTwo() {
   for (let i = 0; i < 10; i++) {
     const sel = page.locator('.roster-item.selected');
@@ -327,13 +343,17 @@ await cDart('D25');
 cs = await page.evaluate(() => window.__dart.cricketState());
 check('Doppel-Bull zählt zwei Marken', cs.marks[pA][25] === 2);
 await cDart('S25');
-check('alles zu und vorne: Sieg', (await text('#overlay-card')).includes('gewinnt'));
+check('alles zu und vorne: Sieg', (await text('#overlay-card')).includes('Glückwunsch'));
 check('Sieger korrekt', await page.evaluate((id) => window.__dart.game().winner === id, pA));
 
 await page.locator('#overlay-card [data-action="undo-game"]').click();
 check('Undo nimmt den letzten Dart zurück', !(await page.evaluate(() => window.__dart.game().done)));
 await cDart('S25');
-await page.locator('#overlay-card [data-action="finish-game"]').click();
+await page.locator('#overlay-card [data-action="open-summary"]').click();
+const cSum = await text('#summary-box');
+check('Cricket-Statistik zeigt MPR und Marken', cSum.includes('MPR') && cSum.includes('Marken'));
+check('Cricket-Statistik zeigt Punkte und Felder', cSum.includes('Punkte') && cSum.includes('Felder zu'));
+await page.locator('#summary-actions [data-action="finish-game"]').click();
 check('Cricket gespeichert', await page.evaluate(() => window.__dart.state().history.filter((h) => h.kind === 'cricket').length) === 1);
 const cCar = await carr();
 const cWinner = Object.values(cCar).find((s) => s.id === pA);
@@ -348,33 +368,37 @@ check('alle starten auf der 1', await page.evaluate(() => {
   const s = window.__dart.rtwState();
   return Object.values(s.target).every((t) => t === 1);
 }));
-const [rA, rB] = await page.evaluate(() => window.__dart.game().players);
+const [rA] = await page.evaluate(() => window.__dart.game().players);
+const misses = async () => { for (const _ of [1, 2, 3]) await rDart('MISS'); };
+const rTarget = async () => (await page.evaluate(() => window.__dart.rtwState())).target[rA];
+
+check('Eingabefeld zeigt nur die Startzahl', (await text('#rtw-pad')).includes('Single 1'));
 await rDart('S1');
-let rs = await page.evaluate(() => window.__dart.rtwState());
-check('Single rückt ein Feld weiter (1 -> 2)', rs.target[rA] === 2);
+check('Single rückt ein Feld weiter (1 -> 2)', (await rTarget()) === 2);
+check('Eingabefeld folgt sofort der neuen Zahl', (await text('#rtw-pad')).includes('Single 2'));
+check('Sprungziel wird angezeigt', (await text('#rtw-pad')).includes('weiter auf 4'));
+check('nur die eigene Zahl steht zur Wahl', (await page.locator('#rtw-pad [data-num="9"]').count()) === 0);
 await rDart('D2');
-rs = await page.evaluate(() => window.__dart.rtwState());
-check('Double überspringt eine Zahl (2 -> 4)', rs.target[rA] === 4, String(rs.target[rA]));
+check('Double überspringt eine Zahl (2 -> 4)', (await rTarget()) === 4, String(await rTarget()));
 await rDart('T4');
-rs = await page.evaluate(() => window.__dart.rtwState());
-check('Triple überspringt zwei Zahlen (4 -> 7)', rs.target[rA] === 7, String(rs.target[rA]));
-for (const _ of [1, 2, 3]) await rDart('MISS');
-await rDart('S9');
-rs = await page.evaluate(() => window.__dart.rtwState());
-check('falsche Zahl bringt nichts', rs.target[rA] === 7);
-await rDart('T7'); await rDart('T10');
-for (const _ of [1, 2, 3]) await rDart('MISS');
-await rDart('T13'); await rDart('T16'); await rDart('T19');
-rs = await page.evaluate(() => window.__dart.rtwState());
-check('über die 20 hinaus geht es auf Bull', rs.target[rA] === 25, String(rs.target[rA]));
-for (const _ of [1, 2, 3]) await rDart('MISS');
-await rDart('S20');
-rs = await page.evaluate(() => window.__dart.rtwState());
-check('auf Bull zählt nur Bull', rs.target[rA] === 25 && !(await page.evaluate(() => window.__dart.game().done)));
+check('Triple überspringt zwei Zahlen (4 -> 7)', (await rTarget()) === 7, String(await rTarget()));
+await misses();
+await rDart('T7'); await rDart('T10'); await rDart('T13');
+check('drei Darts, dann ist der Nächste dran', (await rTarget()) === 16, String(await rTarget()));
+await misses();
+await rDart('T16'); await rDart('T19');
+check('über die 20 hinaus geht es auf Bull', (await rTarget()) === 25, String(await rTarget()));
+check('auf Bull gibt es nur Bull oder Miss', (await page.locator('#rtw-pad button').count()) === 2);
+await rDart('MISS');
+check('Miss auf Bull ändert nichts', (await rTarget()) === 25);
+await misses();
 await rDart('S25');
-check('Bull beendet das Spiel', (await text('#overlay-card')).includes('gewinnt'));
+check('Bull beendet das Spiel', (await text('#overlay-card')).includes('Glückwunsch'));
 check('Sieger ist der Bull-Werfer', await page.evaluate((id) => window.__dart.game().winner === id, rA));
-await page.locator('#overlay-card [data-action="finish-game"]').click();
+await page.locator('#overlay-card [data-action="open-summary"]').click();
+const rSum = await text('#summary-box');
+check('RTW-Statistik zeigt Darts und Trefferquote', rSum.includes('Trefferquote') && rSum.includes('Gekommen bis'));
+await page.locator('#summary-actions [data-action="finish-game"]').click();
 const rCar = await carr();
 const rWin = Object.values(rCar).find((s) => s.id === rA);
 check('RTW-Sieg gespeichert', rWin.rtwWins === 1);
@@ -386,6 +410,11 @@ await page.locator('[data-action="board"][data-key="mpr"]').click();
 check('MPR-Rangliste gefüllt', (await page.locator('.board-row').count()) > 0);
 await page.locator('[data-action="board"][data-key="rtwBest"]').click();
 check('RTW-Rangliste gefüllt', (await page.locator('.board-row').count()) > 0);
+await page.locator('[data-action="board"][data-key="avg"]').click();
+await page.locator('#match-log .log-row').first().click();
+check('Spielstatistik aus dem Verlauf abrufbar', await visible('#screen-summary'));
+await page.locator('#summary-actions [data-action="summary-back"]').click();
+check('Zurück aus der Statistik', await visible('#screen-boards'));
 check('Verlauf enthält Cricket und Round the World',
   (await text('#match-log')).includes('Cricket') && (await text('#match-log')).includes('Round the World'));
 await page.locator('#nav [data-screen="players"]').click();

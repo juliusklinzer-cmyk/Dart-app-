@@ -218,12 +218,33 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .rec .rv { font-size: 1.3rem; font-weight: 800; margin: 3px 0 1px; font-variant-numeric: tabular-nums; }
 .rec .rn { font-size: 0.75rem; color: var(--muted); }
 
+/* ---------- Spielstatistik ---------- */
+.sum-head { text-align: center; padding: 6px 0 14px; }
+.sum-title { font-size: 1.4rem; margin: 0 0 6px; text-transform: none; letter-spacing: 0; color: var(--text); }
+.sum-score {
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  font-size: 1rem; color: var(--muted);
+}
+.sum-score b { font-size: 1.6rem; color: var(--text); font-variant-numeric: tabular-nums; }
+.sum-score .w { color: var(--green); font-weight: 700; }
+.sum-cards { display: grid; grid-template-columns: 1fr; gap: 12px; }
+.sum-card.win { border-color: var(--green-dark); }
+.sum-who { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.sum-who .nm { font-weight: 700; font-size: 1.05rem; }
+.hint.center { text-align: center; }
+#summary-actions { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+@media (min-width: 700px) {
+  .sum-cards { grid-template-columns: 1fr 1fr; }
+}
+
 /* ---------- Spiel-Log ---------- */
 .log-row {
   display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center;
   padding: 10px 4px; border-top: 1px solid var(--line); font-size: 0.9rem;
 }
 .log-row:first-child { border-top: none; }
+.log-row.tap { cursor: pointer; }
+.log-row.tap:active { background: var(--bg-3); }
 .log-row .lp { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .log-row .lp.right { text-align: right; }
 .log-row .lp.w { color: var(--green); font-weight: 700; }
@@ -550,4 +571,23 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   .mult-row button { min-height: 38px; }
   .quick-row button { min-height: 38px; font-size: 0.85rem; }
   .visit-darts .d { padding: 4px 6px; }
+}
+
+/* ---------- Round the World: Eingabe nur für die aktuelle Zahl ---------- */
+.rtw-pad-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.rtw-pad-grid.bull { grid-template-columns: 1fr 1fr; }
+.rtw-key {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  background: var(--bg-2); border: 1px solid var(--line); color: var(--text);
+  border-radius: 14px; padding: 18px 10px; min-height: 84px; cursor: pointer;
+}
+.rtw-key:active { background: var(--bg-3); }
+.rtw-key .k { font-size: 1.25rem; font-weight: 800; }
+.rtw-key .sub { font-size: 0.74rem; color: var(--muted); }
+.rtw-key.miss .k { color: var(--red); }
+.rtw-key.bull { border-color: var(--amber); }
+.rtw-key.bull .k { color: var(--amber); }
+@media (min-width: 700px) and (min-height: 600px) {
+  .rtw-key { min-height: 110px; }
+  .rtw-key .k { font-size: 1.5rem; }
 }

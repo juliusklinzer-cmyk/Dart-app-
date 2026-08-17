@@ -23,7 +23,7 @@
   var MAX_HISTORY = 200;        // so viele Turniere bleiben gespeichert
 
   var S = null;
-  var UI = { input: '', darts: [], mult: 1, modeOverride: null, overlay: null, error: '', board: 'avg', profile: null };
+  var UI = { input: '', darts: [], mult: 1, modeOverride: null, overlay: null, error: '', board: 'avg', profile: null, summary: null };
 
   /* ================= Helfer ================= */
   function $(id) { return document.getElementById(id); }
@@ -664,7 +664,7 @@
     if (S.lineup.length < 2 && kind === 'cricket') { UI.overlay = { type: 'need-players' }; render(); return; }
     if (!S.lineup.length) { UI.overlay = { type: 'need-players' }; render(); return; }
     S.game = {
-      kind: kind, at: null, players: S.lineup.slice(), throws: [],
+      id: uid(), kind: kind, at: null, players: S.lineup.slice(), throws: [],
       scoring: kind === 'cricket' ? S.settings.cricketScoring === 1 : false,
       done: false, winner: null
     };
@@ -678,7 +678,7 @@
     var g = S.game;
     if (g && g.done) {
       S.history.unshift({
-        id: uid(), kind: g.kind, at: g.at || Date.now(),
+        id: g.id || uid(), kind: g.kind, at: g.at || Date.now(),
         players: g.players.slice(), scoring: g.scoring, throws: g.throws, winner: g.winner
       });
       if (S.history.length > MAX_HISTORY) S.history.length = MAX_HISTORY;
@@ -717,7 +717,7 @@
   }
 
   /* ================= Rendering ================= */
-  var SCREENS = ['setup', 'tournament', 'boards', 'players', 'profile', 'bulloff', 'game', 'cricket', 'rtw', 'winner'];
+  var SCREENS = ['setup', 'tournament', 'boards', 'players', 'profile', 'bulloff', 'game', 'cricket', 'rtw', 'summary', 'winner'];
   var NAV_SCREENS = { setup: 'setup', tournament: 'setup', boards: 'boards', players: 'players', profile: 'players' };
 
   function show(screen) {
@@ -742,6 +742,7 @@
     if (S.screen === 'game') renderGame();
     if (S.screen === 'cricket') renderCricket();
     if (S.screen === 'rtw') renderRtw();
+    if (S.screen === 'summary') renderSummary();
     if (S.screen === 'winner') renderWinner();
     renderOverlay();
   }
@@ -895,7 +896,7 @@
       if (row.kind !== '501') {
         var h = row.h;
         var title = h.kind === 'cricket' ? 'Cricket' + (h.scoring ? '' : ' (ohne Punkte)') : 'Round the World';
-        return '<div class="log-row">' +
+        return '<div class="log-row tap" data-action="open-summary" data-kind="' + h.kind + '" data-id="' + (h.id || 'current') + '">' +
           '<div class="lp w">' + esc(pname(h.winner)) + '<span class="a">' + title + '</span></div>' +
           '<div class="ls">🏆</div>' +
           '<div class="lp right">' + h.players.length + ' Spieler<span class="a">' +
@@ -913,7 +914,7 @@
         });
         return d ? ((p / d) * 3).toFixed(1) : '–';
       };
-      return '<div class="log-row">' +
+      return '<div class="log-row tap" data-action="open-summary" data-kind="501" data-id="' + m.id + '">' +
         '<div class="lp ' + (m.winner === m.p[0] ? 'w' : '') + '">' + esc(pname(m.p[0])) + '<span class="a">Ø ' + avgOf(m.p[0]) + '</span></div>' +
         '<div class="ls">' + la + ':' + lb + '</div>' +
         '<div class="lp right ' + (m.winner === m.p[1] ? 'w' : '') + '">' + esc(pname(m.p[1])) + '<span class="a">Ø ' + avgOf(m.p[1]) + '</span></div>' +
@@ -1234,26 +1235,170 @@
       return '<div class="d ' + (d ? '' : 'empty') + '">' + (d ? throwLabel(d) : '–') + '</div>';
     }).join('');
 
-    $('rtw-mult').querySelectorAll('button').forEach(function (b) {
-      b.classList.toggle('active', Number(b.getAttribute('data-mult')) === UI.mult);
-    });
-
-    var pfx = UI.mult === 3 ? 'T' : UI.mult === 2 ? 'D' : '';
+    /* Es wird immer nur auf die eigene aktuelle Zahl geworfen – deshalb nur
+       diese eine Zahl zeigen, dafür groß und mit dem jeweiligen Sprung. */
     var target = st.target[active];
-    var nums = '';
-    for (var n = 1; n <= 20; n++) {
-      nums += '<button data-num="' + n + '" class="' + (n === target ? 'hl' : '') + '">' +
-        (pfx ? '<span class="mx">' + pfx + '</span>' : '') + n + '</button>';
+    if (target === 25) {
+      $('rtw-pad').innerHTML =
+        '<div class="rtw-pad-grid bull">' +
+        '<button class="rtw-key bull" data-num="25" data-mult="1"><span class="k">Bull</span><span class="sub">Spiel gewonnen</span></button>' +
+        '<button class="rtw-key miss" data-num="0" data-mult="1"><span class="k">Miss</span><span class="sub">daneben</span></button>' +
+        '</div>';
+    } else {
+      var jump = function (mult) {
+        var next = target + mult;
+        return next > 20 ? 'weiter auf Bull' : 'weiter auf ' + next;
+      };
+      $('rtw-pad').innerHTML = '<div class="rtw-pad-grid">' +
+        '<button class="rtw-key" data-num="' + target + '" data-mult="1"><span class="k">Single ' + target + '</span><span class="sub">' + jump(1) + '</span></button>' +
+        '<button class="rtw-key" data-num="' + target + '" data-mult="2"><span class="k">Double ' + target + '</span><span class="sub">' + jump(2) + '</span></button>' +
+        '<button class="rtw-key" data-num="' + target + '" data-mult="3"><span class="k">Triple ' + target + '</span><span class="sub">' + jump(3) + '</span></button>' +
+        '<button class="rtw-key miss" data-num="0" data-mult="1"><span class="k">Miss</span><span class="sub">daneben</span></button>' +
+        '</div>';
     }
-    nums += '<button class="miss wide" data-num="0">Miss</button>';
-    nums += '<button class="bull wide ' + (target === 25 ? 'hl' : '') + '" data-num="25">Bull</button>';
-    $('rtw-grid').innerHTML = nums;
   }
 
   function throwLabel(t) {
     if (!t.n) return '0';
     if (t.n === 25) return t.m === 2 ? 'Bull×2' : 'Bull';
     return (t.m === 3 ? 'T' : t.m === 2 ? 'D' : '') + t.n;
+  }
+
+  /* ================= Spielstatistik nach dem Spiel ================= */
+  /* Findet ein Spiel im laufenden Turnier oder im Archiv wieder. */
+  function findGame(kind, id) {
+    if (kind === '501') {
+      for (var i = 0; i < S.matches.length; i++) {
+        if (S.matches[i].id === id) return { m: S.matches[i], start: S.settings.start, live: true };
+      }
+      for (var h = 0; h < S.history.length; h++) {
+        var e = S.history[h];
+        if ((e.kind || '501') !== '501') continue;
+        for (var j = 0; j < e.matches.length; j++) {
+          if (e.matches[j].id === id) return { m: e.matches[j], start: (e.settings && e.settings.start) || 501, live: false };
+        }
+      }
+      return null;
+    }
+    if (S.game && S.game.done && (id === 'current' || id === S.game.id)) return { g: S.game, live: true };
+    for (var k = 0; k < S.history.length; k++) {
+      if (S.history[k].id === id) return { g: S.history[k], live: false };
+    }
+    return null;
+  }
+
+  function statRow(label, value, hint) {
+    return '<div class="pline"><span>' + label + (hint ? ' <i>' + hint + '</i>' : '') + '</span><b>' + value + '</b></div>';
+  }
+
+  function renderSummary() {
+    var s = UI.summary;
+    var found = s ? findGame(s.kind, s.id) : null;
+    if (!found) { S.screen = S.matches.length ? 'tournament' : 'setup'; render(); return; }
+
+    var box = '';
+    var actions = '';
+    var note = '<p class="hint center">Diese Werte fließen in Karriere-Statistik und Ranglisten ein.</p>';
+
+    if (s.kind === '501') {
+      var m = found.m;
+      var map = collectStats([{ matches: [m], start: found.start }], m.p);
+      m.p.forEach(function (id) { finalize(map[id]); });
+
+      box = '<div class="sum-head">' +
+        '<div class="big-emoji">🏆</div>' +
+        '<h2 class="sum-title">' + esc(pname(m.winner)) + ' gewinnt</h2>' +
+        '<div class="sum-score">' +
+          '<span class="' + (m.winner === m.p[0] ? 'w' : '') + '">' + esc(pname(m.p[0])) + '</span>' +
+          '<b>' + legsWon(m, m.p[0]) + ':' + legsWon(m, m.p[1]) + '</b>' +
+          '<span class="' + (m.winner === m.p[1] ? 'w' : '') + '">' + esc(pname(m.p[1])) + '</span>' +
+        '</div></div>' +
+
+        '<div class="sum-cards">' + m.p.map(function (id) {
+          var st = map[id];
+          return '<div class="card sum-card ' + (m.winner === id ? 'win' : '') + '">' +
+            '<div class="sum-who">' + avatarHTML(profile(id), 'md') +
+              '<div><div class="nm">' + esc(pname(id)) + '</div>' +
+              '<div class="muted">' + st.legsWon + ' Leg' + (st.legsWon === 1 ? '' : 's') + '</div></div></div>' +
+            statRow('3-Dart-Average', st.darts ? st.avg.toFixed(2) : '–') +
+            statRow('First 9', st.first9Darts ? st.first9.toFixed(2) : '–') +
+            statRow('Beste Aufnahme', st.highScore || '–') +
+            statRow('180 / 140+ / 100+', st.s180 + ' / ' + st.s140 + ' / ' + st.s100) +
+            statRow('Höchstes Finish', st.highCO || '–') +
+            statRow('Doppelquote', st.doubleAttempts ? st.doubleQuote.toFixed(0) + ' % (' + st.checkouts + '/' + st.doubleAttempts + ')' : '–') +
+            statRow('Bestes Leg', st.bestLeg ? st.bestLeg + ' Darts' : '–') +
+            statRow('Darts geworfen', st.darts) +
+            '</div>';
+        }).join('') + '</div>' +
+
+        '<div class="card"><h2>Legs</h2>' + m.legs.map(function (leg, i) {
+          if (!leg.winner) return '';
+          var d = dartsInLeg(leg, leg.winner);
+          var pts = found.start;
+          return statRow('Leg ' + (i + 1), esc(pname(leg.winner)) + ' · ' + d + ' Darts · Ø ' + ((pts / d) * 3).toFixed(1));
+        }).join('') + '</div>' + note;
+
+      if (found.live && !allMatchesDone()) {
+        actions = '<button class="btn primary full big" data-action="ov-next-match">Nächstes Spiel</button>' +
+          '<button class="btn ghost full" data-action="to-tournament">Zur Tabelle</button>';
+      } else if (found.live) {
+        actions = '<button class="btn primary full big" data-action="to-winner">Turnier auswerten</button>' +
+          '<button class="btn ghost full" data-action="to-tournament">Zur Tabelle</button>';
+      } else {
+        actions = '<button class="btn ghost full" data-action="summary-back">Zurück</button>';
+      }
+
+    } else if (s.kind === 'cricket') {
+      var g = found.g;
+      var cst = cricketState(g);
+      box = '<div class="sum-head"><div class="big-emoji">🏆</div>' +
+        '<h2 class="sum-title">' + esc(pname(g.winner)) + ' gewinnt</h2>' +
+        '<div class="muted">Cricket ' + (g.scoring ? 'mit Punkten' : 'ohne Punkte') + '</div></div>' +
+        '<div class="sum-cards">' + g.players.map(function (id) {
+          var closed = CRICKET_NUMBERS.filter(function (n) { return cst.marks[id][n] >= 3; }).length;
+          var mpr = cst.darts[id] ? (cst.allMarks[id] / cst.darts[id]) * 3 : 0;
+          return '<div class="card sum-card ' + (g.winner === id ? 'win' : '') + '">' +
+            '<div class="sum-who">' + avatarHTML(profile(id), 'md') +
+              '<div class="nm">' + esc(pname(id)) + '</div></div>' +
+            statRow('MPR', mpr.toFixed(2), 'Marken je 3 Darts') +
+            statRow('Marken', cst.allMarks[id]) +
+            (g.scoring ? statRow('Punkte', cst.score[id]) : '') +
+            statRow('Felder zu', closed + ' / 7') +
+            statRow('Darts', cst.darts[id]) +
+            '</div>';
+        }).join('') + '</div>' + note;
+
+      actions = found.live
+        ? '<button class="btn primary full big" data-action="restart-game">Nochmal spielen</button>' +
+          '<button class="btn ghost full" data-action="finish-game">Speichern &amp; beenden</button>'
+        : '<button class="btn ghost full" data-action="summary-back">Zurück</button>';
+
+    } else {
+      var rg = found.g;
+      var rst = rtwState(rg);
+      box = '<div class="sum-head"><div class="big-emoji">🏆</div>' +
+        '<h2 class="sum-title">' + esc(pname(rg.winner)) + ' gewinnt</h2>' +
+        '<div class="muted">Round the World · ' + rst.darts[rg.winner] + ' Darts bis Bull</div></div>' +
+        '<div class="sum-cards">' + rg.players.map(function (id) {
+          var t = rst.target[id];
+          return '<div class="card sum-card ' + (rg.winner === id ? 'win' : '') + '">' +
+            '<div class="sum-who">' + avatarHTML(profile(id), 'md') +
+              '<div class="nm">' + esc(pname(id)) + '</div></div>' +
+            statRow('Gekommen bis', rg.winner === id ? 'Bull ✓' : (t === 25 ? 'Bull' : t)) +
+            statRow('Darts', rst.darts[id]) +
+            statRow('Treffer', rst.hits[id]) +
+            statRow('Trefferquote', rst.darts[id] ? Math.round(rst.hits[id] / rst.darts[id] * 100) + ' %' : '–') +
+            '</div>';
+        }).join('') + '</div>' + note;
+
+      actions = found.live
+        ? '<button class="btn primary full big" data-action="restart-game">Nochmal spielen</button>' +
+          '<button class="btn ghost full" data-action="finish-game">Speichern &amp; beenden</button>'
+        : '<button class="btn ghost full" data-action="summary-back">Zurück</button>';
+    }
+
+    $('summary-box').innerHTML = box;
+    $('summary-actions').innerHTML = actions;
   }
 
   function renderWinner() {
@@ -1296,12 +1441,10 @@
     } else if (o.type === 'match-done') {
       var m2 = currentMatch();
       var last = !nextOpenMatch();
-      html = '<div class="big-emoji">🏅</div><h3>' + esc(pname(o.pid)) + ' gewinnt</h3>' +
+      html = '<div class="big-emoji">🏅</div><h3>Glückwunsch, ' + esc(pname(o.pid)) + '!</h3>' +
         '<p>' + esc(pname(m2.p[0])) + ' ' + legsWon(m2, m2.p[0]) + ':' + legsWon(m2, m2.p[1]) + ' ' + esc(pname(m2.p[1])) + '</p>' +
-        (last
-          ? '<button class="btn primary full" data-action="ov-finish">Turnier auswerten</button>'
-          : '<button class="btn primary full" data-action="ov-next-match">Nächstes Spiel</button>') +
-        '<button class="btn ghost full" data-action="ov-to-table">Zur Tabelle</button>' +
+        '<button class="btn primary full" data-action="open-summary" data-kind="501" data-id="' + m2.id + '">Weiter zur Spielstatistik</button>' +
+        (last ? '' : '<button class="btn ghost full" data-action="ov-next-match">Direkt zum nächsten Spiel</button>') +
         '<button class="btn ghost full" data-action="undo">Eingabe rückgängig</button>';
     } else if (o.type === 'confirm-reset') {
       html = '<h3>Turnier abbrechen?</h3>' +
@@ -1325,10 +1468,9 @@
           (profile(o.id).hidden ? 'Wieder einblenden' : 'Spieler ausblenden') + '</button>' +
           '<p class="hint">Ausgeblendete Spieler tauchen nicht mehr in der Aufstellung auf, ihre Ergebnisse bleiben aber in Statistik und Rangliste erhalten.</p>');
     } else if (o.type === 'game-done') {
-      html = '<div class="big-emoji">🏆</div><h3>' + esc(pname(o.pid)) + ' gewinnt</h3>' +
+      html = '<div class="big-emoji">🏆</div><h3>Glückwunsch, ' + esc(pname(o.pid)) + '!</h3>' +
         '<p>' + (S.game && S.game.kind === 'cricket' ? 'Cricket' : 'Round the World') + '</p>' +
-        '<button class="btn primary full" data-action="restart-game">Nochmal spielen</button>' +
-        '<button class="btn ghost full" data-action="finish-game">Speichern &amp; beenden</button>' +
+        '<button class="btn primary full" data-action="open-summary" data-kind="' + (S.game ? S.game.kind : 'cricket') + '" data-id="current">Weiter zur Spielstatistik</button>' +
         '<button class="btn ghost full" data-action="undo-game">Letzten Dart zurück</button>';
     } else if (o.type === 'need-players') {
       html = '<h3>Zu wenig Spieler</h3><p>Wähle mindestens zwei Spieler für das Turnier aus.</p>' +
@@ -1431,6 +1573,17 @@
       case 'open-profile':
         UI.profile = el.getAttribute('data-id');
         S.screen = 'profile';
+        save(); render();
+        break;
+      case 'open-summary':
+        UI.summary = { kind: el.getAttribute('data-kind'), id: el.getAttribute('data-id') };
+        UI.overlay = null;
+        S.screen = 'summary';
+        save(); render();
+        break;
+      case 'summary-back':
+        UI.summary = null;
+        S.screen = S.game ? S.game.kind : (S.matches.length ? 'tournament' : 'boards');
         save(); render();
         break;
       case 'board':
@@ -1565,8 +1718,9 @@
     var num = ev.target.closest('[data-num]');
     if (num) {
       var n2 = Number(num.getAttribute('data-num'));
-      if (S.screen === 'cricket') { cricketDart(UI.mult, n2); return; }
-      if (S.screen === 'rtw') { rtwDart(UI.mult, n2); return; }
+      var own = num.getAttribute('data-mult');
+      if (S.screen === 'cricket') { cricketDart(own ? Number(own) : UI.mult, n2); return; }
+      if (S.screen === 'rtw') { rtwDart(own ? Number(own) : UI.mult, n2); return; }
       if (n2 === 0) pushDart(1, 0);
       else if (n2 === 25) pushDart(1, 25);
       else pushDart(UI.mult, n2);
@@ -1615,6 +1769,7 @@
   if (S.screen === 'bulloff' && !currentMatch()) S.screen = 'tournament';
   if (!S.matches.length && S.screen === 'tournament') S.screen = 'setup';
   if (S.screen === 'profile' && !UI.profile) S.screen = 'players';
+  if (S.screen === 'summary' && !UI.summary) S.screen = S.matches.length ? 'tournament' : 'setup';
   render();
 
   if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {

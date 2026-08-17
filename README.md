@@ -60,6 +60,11 @@ Wer über die 20 hinausspringt, landet auf Bull; gewonnen hat, wer den Bull trif
 Jeder Spieler hat seinen eigenen Fortschritt, die Anzeige zeigt Ziel, Darts und
 Treffer.
 
+Die Eingabe zeigt immer nur die Zahl, die gerade dran ist – als vier große Tasten
+(Single, Double, Triple, Miss), jeweils mit dem Hinweis, wohin der Treffer führt
+(„weiter auf 7"). Nach jedem Dart springt die Anzeige auf die neue Zahl, nach drei
+Darts auf den nächsten Spieler. Auf Bull bleiben nur noch „Bull" und „Miss".
+
 ## Ablauf (501 Turnier)
 
 1. **Setup** – Antippen, wer heute mitspielt (2 bis 12 Spieler), Startpunkte und Legs
@@ -105,6 +110,21 @@ markiert, im Einzel-Dart-Modus ist die passende Zahl zusätzlich umrandet.
 bzw. Aufnahme für Aufnahme zurück – auch über ein bereits gewonnenes Leg hinweg.
 
 **Tastatur (am Laptop):** Ziffern, `Enter` = OK, `Backspace` = löschen, `z` = Undo.
+
+## Spielabschluss
+
+Ist ein Spiel entschieden, kommt zuerst der Glückwunsch für den Sieger und danach eine
+eigene **Spielstatistik** – für genau dieses Spiel, bevor es weitergeht:
+
+- **501**: Ergebnis in Legs, je Spieler 3-Dart-Average, First 9, beste Aufnahme,
+  180/140+/100+, höchstes Finish, Doppelquote mit Treffern/Versuchen, bestes Leg und
+  geworfene Darts, dazu jedes Leg einzeln mit Sieger, Darts und Average.
+- **Cricket**: MPR, Marken, Punkte, geschlossene Felder und Darts je Spieler.
+- **Round the World**: erreichte Zahl, Darts, Treffer und Trefferquote je Spieler.
+
+Von dort geht es direkt weiter zum nächsten Spiel bzw. zur Turnierauswertung, oder das
+Trainingsspiel wird gespeichert. Dieselbe Auswertung lässt sich später jederzeit über
+den Spielverlauf in der Rangliste wieder öffnen.
 
 ## Spielerprofile
 
