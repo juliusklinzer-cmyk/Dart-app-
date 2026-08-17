@@ -41,7 +41,9 @@
     return {
       v: 2,
       screen: 'setup',
-      settings: { start: 501, bestOf: 1, dartModeFrom: 170 },
+      settings: { start: 501, bestOf: 1, dartModeFrom: 170, cricketScoring: 1 },
+      mode: '501',
+      game: null,
       profiles: DEFAULT_PLAYERS.map(function (n) { return { id: uid(), name: n, avatar: null, created: Date.now() }; }),
       lineup: [],
       matches: [],
@@ -64,6 +66,9 @@
       if (s.v !== 2 || !Array.isArray(s.profiles)) return null;
       if (!Array.isArray(s.history)) s.history = [];
       if (!Array.isArray(s.lineup)) s.lineup = [];
+      if (!s.mode) s.mode = '501';
+      if (s.game === undefined) s.game = null;
+      if (s.settings.cricketScoring === undefined) s.settings.cricketScoring = 1;
       return s;
     } catch (e) { return null; }
   }
@@ -80,7 +85,9 @@
       lineup: (s.players || []).map(function (p) { return p.id; }),
       matches: s.matches || [],
       current: s.current || null,
-      history: []
+      history: [],
+      mode: '501',
+      game: null
     };
   }
 
@@ -328,6 +335,8 @@
       highCO: 0, highFinishes: 0, highScore: 0,
       s180: 0, s140: 0, s100: 0, s60: 0,
       bestLeg: null, tournaments: 0, tourWins: 0,
+      cricketGames: 0, cricketWins: 0, cricketMarks: 0, cricketDarts: 0,
+      rtwGames: 0, rtwWins: 0, rtwBest: null,
       lastResults: []
     };
   }
@@ -341,6 +350,7 @@
     st.winPct = st.matches ? (st.won / st.matches) * 100 : 0;
     st.dartsPerLeg = st.legsWon ? st.dartsInWonLegs / st.legsWon : 0;
     st.tons = st.s100 + st.s140 + st.s180;
+    st.mpr = st.cricketDarts ? (st.cricketMarks / st.cricketDarts) * 3 : 0;
     return st;
   }
 
@@ -440,13 +450,37 @@
 
   /* Statistik über alles, was je gespielt wurde (inkl. laufendem Turnier). */
   function career() {
-    var lists = S.history.map(function (h) { return { matches: h.matches, start: (h.settings && h.settings.start) || 501 }; });
+    var lists = S.history.filter(function (h) { return (h.kind || '501') === '501'; })
+      .map(function (h) { return { matches: h.matches, start: (h.settings && h.settings.start) || 501 }; });
     if (S.matches.length) lists.push({ matches: S.matches, start: S.settings.start });
     var ids = S.profiles.map(function (p) { return p.id; });
     var map = collectStats(lists, ids);
-    S.history.forEach(function (h) {
-      (h.lineup || []).forEach(function (id) { if (map[id]) map[id].tournaments++; });
-      if (h.winner && map[h.winner]) map[h.winner].tourWins++;
+    var open = S.game && S.game.done ? [S.game] : [];
+    S.history.concat(open).forEach(function (h) {
+      var kind = h.kind || '501';
+      if (kind === '501') {
+        (h.lineup || []).forEach(function (id) { if (map[id]) map[id].tournaments++; });
+        if (h.winner && map[h.winner]) map[h.winner].tourWins++;
+        return;
+      }
+      if (kind === 'cricket') {
+        var cs = cricketState({ players: h.players, throws: h.throws, scoring: h.scoring });
+        h.players.forEach(function (id) {
+          if (!map[id]) return;
+          map[id].cricketGames++;
+          map[id].cricketDarts += cs.darts[id];
+          map[id].cricketMarks += cs.allMarks[id];
+        });
+        if (h.winner && map[h.winner]) map[h.winner].cricketWins++;
+      } else if (kind === 'rtw') {
+        var rs = rtwState({ players: h.players, throws: h.throws });
+        h.players.forEach(function (id) { if (map[id]) map[id].rtwGames++; });
+        if (h.winner && map[h.winner]) {
+          map[h.winner].rtwWins++;
+          var used = rs.darts[h.winner];
+          if (map[h.winner].rtwBest === null || used < map[h.winner].rtwBest) map[h.winner].rtwBest = used;
+        }
+      }
     });
     Object.keys(map).forEach(function (k) {
       map[k].name = pname(k);
@@ -479,7 +513,11 @@
     { key: 'won', label: 'Siege', get: function (s) { return s.won; }, fmt: function (v) { return String(v); }, min: function (s) { return s.matches > 0; }, hint: 'Gewonnene Spiele über alle Turniere.' },
     { key: 'winPct', label: 'Siegquote', get: function (s) { return s.winPct; }, fmt: function (v) { return v.toFixed(0) + ' %'; }, min: function (s) { return s.matches >= 3; }, hint: 'Anteil gewonnener Spiele. Zählt ab 3 Spielen.' },
     { key: 'legsWon', label: 'Legs', get: function (s) { return s.legsWon; }, fmt: function (v) { return String(v); }, min: function (s) { return s.legsWon > 0; }, hint: 'Gewonnene Legs insgesamt.' },
-    { key: 'tourWins', label: 'Turniersiege', get: function (s) { return s.tourWins; }, fmt: function (v) { return String(v); }, min: function (s) { return s.tourWins > 0; }, hint: 'Gewonnene, abgeschlossene Turniere.' }
+    { key: 'tourWins', label: 'Turniersiege', get: function (s) { return s.tourWins; }, fmt: function (v) { return String(v); }, min: function (s) { return s.tourWins > 0; }, hint: 'Gewonnene, abgeschlossene Turniere.' },
+    { key: 'mpr', label: 'Cricket MPR', get: function (s) { return s.mpr; }, fmt: function (v) { return v.toFixed(2); }, min: function (s) { return s.cricketDarts >= 9; }, hint: 'Marks per Round: getroffene Marken je 3 Darts im Cricket.' },
+    { key: 'cricketWins', label: 'Cricket-Siege', get: function (s) { return s.cricketWins; }, fmt: function (v) { return String(v); }, min: function (s) { return s.cricketGames > 0; }, hint: 'Gewonnene Cricket-Spiele.' },
+    { key: 'rtwBest', label: 'Round the World', get: function (s) { return s.rtwBest; }, fmt: function (v) { return v + ' Darts'; }, min: function (s) { return s.rtwBest !== null; }, asc: true, hint: 'Wenigste Darts für einen kompletten Durchlauf von der 1 bis Bull.' },
+    { key: 'rtwWins', label: 'RTW-Siege', get: function (s) { return s.rtwWins; }, fmt: function (v) { return String(v); }, min: function (s) { return s.rtwGames > 0; }, hint: 'Gewonnene Round-the-World-Trainings.' }
   ];
 
   function boardDef(key) {
@@ -505,9 +543,159 @@
       S.matches.forEach(function (m) { if (m.done) out.push({ m: m, start: S.settings.start, live: true }); });
     }
     S.history.forEach(function (h) {
+      if ((h.kind || '501') !== '501') return;   // Cricket/RTW haben keine Match-Liste
       h.matches.forEach(function (m) { if (m.done) out.push({ m: m, start: (h.settings && h.settings.start) || 501, at: h.at }); });
     });
     out.sort(function (a, b) { return (b.m.at || b.at || 0) - (a.m.at || a.at || 0); });
+    return out;
+  }
+
+  /* ================= Cricket ================= */
+  var CRICKET_NUMBERS = [20, 19, 18, 17, 16, 15, 25];
+  function cricketLabel(n) { return n === 25 ? 'Bull' : String(n); }
+
+  /* Der Zustand wird immer aus der Wurfliste neu aufgebaut – so ist jeder
+     Dart einzeln rücknehmbar und nichts kann auseinanderlaufen. */
+  function cricketState(g) {
+    var st = { marks: {}, score: {}, darts: {}, allMarks: {}, closed: {}, winner: null, winAt: -1 };
+    g.players.forEach(function (id) {
+      st.marks[id] = {}; st.score[id] = 0; st.darts[id] = 0; st.allMarks[id] = 0;
+      CRICKET_NUMBERS.forEach(function (n) { st.marks[id][n] = 0; });
+    });
+
+    for (var i = 0; i < g.throws.length; i++) {
+      var t = g.throws[i];
+      var pid = g.players[Math.floor(i / 3) % g.players.length];
+      st.darts[pid]++;
+      if (!t.n || CRICKET_NUMBERS.indexOf(t.n) < 0) continue;
+
+      st.allMarks[pid] += t.m;
+      var open = 3 - st.marks[pid][t.n];
+      var used = Math.min(t.m, open);
+      st.marks[pid][t.n] += used;
+      var extra = t.m - used;
+      if (extra > 0 && g.scoring) {
+        var stillOpen = g.players.some(function (o) { return o !== pid && st.marks[o][t.n] < 3; });
+        if (stillOpen) st.score[pid] += extra * t.n;
+      }
+
+      if (st.winner === null && hasAllClosed(st, pid)) {
+        var best = 0;
+        g.players.forEach(function (o) { if (o !== pid && st.score[o] > best) best = st.score[o]; });
+        if (!g.scoring || st.score[pid] >= best) { st.winner = pid; st.winAt = i; }
+      }
+    }
+    g.players.forEach(function (id) { st.closed[id] = hasAllClosed(st, id); });
+    return st;
+  }
+
+  function hasAllClosed(st, pid) {
+    for (var i = 0; i < CRICKET_NUMBERS.length; i++) {
+      if (st.marks[pid][CRICKET_NUMBERS[i]] < 3) return false;
+    }
+    return true;
+  }
+
+  function cricketDart(mult, num) {
+    var g = S.game;
+    if (!g || g.done) return;
+    // Bull: 25 zählt eine Marke, Doppel-Bull zwei.
+    var m = num === 25 ? (mult === 2 ? 2 : 1) : mult;
+    g.throws.push({ n: num, m: num === 0 ? 0 : m });
+    var st = cricketState(g);
+    if (st.winner) { g.done = true; g.winner = st.winner; g.at = Date.now(); UI.overlay = { type: 'game-done', pid: st.winner }; }
+    save(); render();
+  }
+
+  /* ================= Round the World ================= */
+  /* Ziel 1..20, danach Bull (25). Ein Treffer rückt um den Multiplikator vor,
+     über die 20 hinaus landet man immer auf Bull. */
+  function rtwState(g) {
+    var st = { target: {}, darts: {}, hits: {}, winner: null };
+    g.players.forEach(function (id) { st.target[id] = 1; st.darts[id] = 0; st.hits[id] = 0; });
+
+    for (var i = 0; i < g.throws.length; i++) {
+      var t = g.throws[i];
+      var pid = g.players[Math.floor(i / 3) % g.players.length];
+      st.darts[pid]++;
+      var target = st.target[pid];
+      if (!t.n) continue;
+
+      if (target === 25) {
+        if (t.n === 25) { st.hits[pid]++; if (st.winner === null) st.winner = pid; }
+        continue;
+      }
+      if (t.n !== target) continue;
+      st.hits[pid]++;
+      var next = target + t.m;
+      st.target[pid] = next > 20 ? 25 : next;
+    }
+    return st;
+  }
+
+  function rtwDart(mult, num) {
+    var g = S.game;
+    if (!g || g.done) return;
+    var m = num === 25 ? (mult === 2 ? 2 : 1) : mult;
+    g.throws.push({ n: num, m: num === 0 ? 0 : m });
+    var st = rtwState(g);
+    if (st.winner) { g.done = true; g.winner = st.winner; g.at = Date.now(); UI.overlay = { type: 'game-done', pid: st.winner }; }
+    save(); render();
+  }
+
+  /* ================= Gemeinsames für beide Modi ================= */
+  function gameTurnPlayer(g) {
+    return g.players[Math.floor(g.throws.length / 3) % g.players.length];
+  }
+  function gameVisitDarts(g) {
+    return g.throws.slice(Math.floor(g.throws.length / 3) * 3);
+  }
+  function undoGame() {
+    var g = S.game;
+    if (!g || !g.throws.length) return;
+    g.throws.pop();
+    g.done = false; g.winner = null; g.at = null;
+    UI.overlay = null;
+    UI.mult = 1;
+    save(); render();
+  }
+
+  function startGame(kind) {
+    if (S.lineup.length < 2 && kind === 'cricket') { UI.overlay = { type: 'need-players' }; render(); return; }
+    if (!S.lineup.length) { UI.overlay = { type: 'need-players' }; render(); return; }
+    S.game = {
+      kind: kind, at: null, players: S.lineup.slice(), throws: [],
+      scoring: kind === 'cricket' ? S.settings.cricketScoring === 1 : false,
+      done: false, winner: null
+    };
+    UI.mult = 1;
+    UI.overlay = null;
+    S.screen = kind;
+    save(); render();
+  }
+
+  function finishGame() {
+    var g = S.game;
+    if (g && g.done) {
+      S.history.unshift({
+        id: uid(), kind: g.kind, at: g.at || Date.now(),
+        players: g.players.slice(), scoring: g.scoring, throws: g.throws, winner: g.winner
+      });
+      if (S.history.length > MAX_HISTORY) S.history.length = MAX_HISTORY;
+    }
+    S.game = null;
+    UI.overlay = null;
+    S.screen = 'setup';
+    save(); render();
+  }
+
+  /* Verlauf über alle Spielarten, neueste zuerst. */
+  function allGamesLog() {
+    var out = allMatches().map(function (e) { return { kind: '501', at: e.m.at || e.at, e: e, live: e.live }; });
+    var extra = S.history.filter(function (h) { return (h.kind || '501') !== '501'; });
+    if (S.game && S.game.done) extra = extra.concat([S.game]);
+    extra.forEach(function (h) { out.push({ kind: h.kind, at: h.at, h: h, live: h === S.game }); });
+    out.sort(function (a, b) { return (b.at || 0) - (a.at || 0); });
     return out;
   }
 
@@ -529,7 +717,7 @@
   }
 
   /* ================= Rendering ================= */
-  var SCREENS = ['setup', 'tournament', 'boards', 'players', 'profile', 'bulloff', 'game', 'winner'];
+  var SCREENS = ['setup', 'tournament', 'boards', 'players', 'profile', 'bulloff', 'game', 'cricket', 'rtw', 'winner'];
   var NAV_SCREENS = { setup: 'setup', tournament: 'setup', boards: 'boards', players: 'players', profile: 'players' };
 
   function show(screen) {
@@ -552,6 +740,8 @@
     if (S.screen === 'profile') renderProfile();
     if (S.screen === 'bulloff') renderBullOff();
     if (S.screen === 'game') renderGame();
+    if (S.screen === 'cricket') renderCricket();
+    if (S.screen === 'rtw') renderRtw();
     if (S.screen === 'winner') renderWinner();
     renderOverlay();
   }
@@ -577,9 +767,23 @@
       });
     });
 
-    var running = S.matches.length > 0 && !allMatchesDone();
+    $('mode-select').querySelectorAll('button').forEach(function (b) {
+      b.classList.toggle('active', b.getAttribute('data-value') === S.mode);
+    });
+    $('settings-501').classList.toggle('hidden', S.mode !== '501');
+    $('settings-cricket').classList.toggle('hidden', S.mode !== 'cricket');
+    $('settings-rtw').classList.toggle('hidden', S.mode !== 'rtw');
+    document.querySelector('[data-action="start-game"]').textContent =
+      S.mode === 'cricket' ? 'Cricket starten' : S.mode === 'rtw' ? 'Round the World starten' : 'Turnier starten';
+
+    var runningGame = !!S.game;
+    var running = runningGame || (S.matches.length > 0 && !allMatchesDone());
     $('resume-box').classList.toggle('hidden', !running);
-    if (running) {
+    if (runningGame) {
+      $('resume-box').querySelector('strong').textContent = S.game.kind === 'cricket' ? 'Laufendes Cricket' : 'Laufendes Training';
+      $('resume-info').textContent = S.game.players.length + ' Spieler · ' + S.game.throws.length + ' Darts geworfen';
+    } else if (running) {
+      $('resume-box').querySelector('strong').textContent = 'Laufendes Turnier';
       var done = sum(S.matches, function (m) { return m.done ? 1 : 0; });
       $('resume-info').textContent = done + ' von ' + S.matches.length + ' Spielen gespielt';
     }
@@ -687,7 +891,19 @@
         '</div>';
     }).join('');
 
-    $('match-log').innerHTML = allMatches().slice(0, 30).map(function (e) {
+    $('match-log').innerHTML = allGamesLog().slice(0, 30).map(function (row) {
+      if (row.kind !== '501') {
+        var h = row.h;
+        var title = h.kind === 'cricket' ? 'Cricket' + (h.scoring ? '' : ' (ohne Punkte)') : 'Round the World';
+        return '<div class="log-row">' +
+          '<div class="lp w">' + esc(pname(h.winner)) + '<span class="a">' + title + '</span></div>' +
+          '<div class="ls">🏆</div>' +
+          '<div class="lp right">' + h.players.length + ' Spieler<span class="a">' +
+            h.players.filter(function (id) { return id !== h.winner; }).map(pname).map(esc).join(', ') + '</span></div>' +
+          '<div class="ld">' + fmtDate(row.at) + (row.live ? ' · noch nicht gespeichert' : '') + '</div>' +
+          '</div>';
+      }
+      var e = row.e;
       var m = e.m;
       var la = legsWon(m, m.p[0]), lb = legsWon(m, m.p[1]);
       var avgOf = function (pid) {
@@ -781,7 +997,20 @@
         line('Turniersiege', st.tourWins) +
       '</div>' +
 
-      '<div class="card"><h2>Letzte Spiele</h2>' + (mine.length ? mine.map(function (e) {
+      (st.cricketGames ? '<div class="card"><h2>Cricket</h2>' +
+        line('Spiele', st.cricketGames) +
+        line('Siege', st.cricketWins) +
+        line('MPR', st.cricketDarts ? st.mpr.toFixed(2) : '–', 'Marks per Round – Marken je 3 Darts') +
+        line('Marken gesamt', st.cricketMarks) +
+      '</div>' : '') +
+
+      (st.rtwGames ? '<div class="card"><h2>Round the World</h2>' +
+        line('Spiele', st.rtwGames) +
+        line('Siege', st.rtwWins) +
+        line('Bestes Ergebnis', st.rtwBest ? st.rtwBest + ' Darts' : '–') +
+      '</div>' : '') +
+
+      '<div class="card"><h2>Letzte 501-Spiele</h2>' + (mine.length ? mine.map(function (e) {
         var m = e.m;
         var opp = m.p[0] === p.id ? m.p[1] : m.p[0];
         var win = m.winner === p.id;
@@ -915,6 +1144,118 @@
     return (t > 0 && rest <= t) ? 'darts' : 'total';
   }
 
+  function renderCricket() {
+    var g = S.game;
+    if (!g || g.kind !== 'cricket') { S.screen = 'setup'; render(); return; }
+    var st = cricketState(g);
+    var active = g.done ? g.winner : gameTurnPlayer(g);
+    var visit = gameVisitDarts(g);
+
+    $('cricket-sub').textContent = (g.scoring ? 'mit Punkten' : 'ohne Punkte') + ' · ' + g.players.length + ' Spieler';
+
+    var head = '<div class="cr-cell cr-corner"></div>' + g.players.map(function (id) {
+      return '<div class="cr-cell cr-head ' + (id === active ? 'act' : '') + '">' +
+        avatarHTML(profile(id), 'sm') + '<span>' + esc(pname(id)) + '</span></div>';
+    }).join('');
+
+    var rows = CRICKET_NUMBERS.map(function (n) {
+      var allClosed = g.players.every(function (id) { return st.marks[id][n] >= 3; });
+      return '<div class="cr-cell cr-num ' + (allClosed ? 'dead' : '') + '">' + cricketLabel(n) + '</div>' +
+        g.players.map(function (id) {
+          var m = st.marks[id][n];
+          return '<div class="cr-cell cr-mark ' + (id === active ? 'act' : '') + ' m' + m + '">' +
+            (m === 0 ? '' : m === 1 ? '/' : m === 2 ? '✕' : '⊗') + '</div>';
+        }).join('');
+    }).join('');
+
+    var foot = '<div class="cr-cell cr-num">' + (g.scoring ? 'Pkt' : 'Zu') + '</div>' +
+      g.players.map(function (id) {
+        var val = g.scoring ? st.score[id] : CRICKET_NUMBERS.filter(function (n) { return st.marks[id][n] >= 3; }).length + '/7';
+        return '<div class="cr-cell cr-score ' + (id === active ? 'act' : '') + '">' + val + '</div>';
+      }).join('');
+
+    $('cricket-board').innerHTML =
+      '<div class="cr-grid" style="grid-template-columns:44px repeat(' + g.players.length + ',minmax(52px,1fr))">' +
+      head + rows + foot + '</div>';
+
+    $('cricket-turn').innerHTML = g.done
+      ? '<b>' + esc(pname(g.winner)) + '</b> gewinnt'
+      : '<span class="muted">Am Wurf</span> <b>' + esc(pname(active)) + '</b>';
+
+    $('cricket-darts').innerHTML = [0, 1, 2].map(function (i) {
+      var d = visit[i];
+      return '<div class="d ' + (d ? '' : 'empty') + '">' + (d ? throwLabel(d) : '–') + '</div>';
+    }).join('');
+
+    $('cricket-mult').querySelectorAll('button').forEach(function (b) {
+      b.classList.toggle('active', Number(b.getAttribute('data-mult')) === UI.mult);
+    });
+
+    var prefix = UI.mult === 3 ? 'T' : UI.mult === 2 ? 'D' : '';
+    $('cricket-grid').innerHTML = [20, 19, 18, 17, 16, 15].map(function (n) {
+      var closedForAll = g.players.every(function (id) { return st.marks[id][n] >= 3; });
+      return '<button data-num="' + n + '" class="' + (closedForAll ? 'dim' : '') + '">' +
+        (prefix ? '<span class="mx">' + prefix + '</span>' : '') + n + '</button>';
+    }).join('') +
+      '<button class="bull" data-num="25">Bull</button>' +
+      '<button class="miss wide" data-num="0">Miss</button>';
+  }
+
+  function renderRtw() {
+    var g = S.game;
+    if (!g || g.kind !== 'rtw') { S.screen = 'setup'; render(); return; }
+    var st = rtwState(g);
+    var active = g.done ? g.winner : gameTurnPlayer(g);
+    var visit = gameVisitDarts(g);
+
+    $('rtw-sub').textContent = 'Single = 1 weiter · Double = 2 · Triple = 3';
+
+    $('rtw-board').innerHTML = g.players.map(function (id) {
+      var t = st.target[id];
+      var done = t === 25 ? 20 : t - 1;
+      return '<div class="rtw-row ' + (id === active ? 'act' : '') + '">' +
+        avatarHTML(profile(id), 'md') +
+        '<div class="rw-main">' +
+          '<div class="rw-name">' + esc(pname(id)) + '</div>' +
+          '<div class="rw-bar"><span style="width:' + (done / 20 * 100) + '%"></span></div>' +
+          '<div class="rw-sub">' + st.darts[id] + ' Darts · ' + st.hits[id] + ' Treffer</div>' +
+        '</div>' +
+        '<div class="rw-target">' + (t === 25 ? 'Bull' : t) + '</div>' +
+        '</div>';
+    }).join('');
+
+    $('rtw-turn').innerHTML = g.done
+      ? '<b>' + esc(pname(g.winner)) + '</b> gewinnt'
+      : '<span class="muted">Am Wurf</span> <b>' + esc(pname(active)) + '</b> <span class="muted">auf</span> <b>' +
+        (st.target[active] === 25 ? 'Bull' : st.target[active]) + '</b>';
+
+    $('rtw-darts').innerHTML = [0, 1, 2].map(function (i) {
+      var d = visit[i];
+      return '<div class="d ' + (d ? '' : 'empty') + '">' + (d ? throwLabel(d) : '–') + '</div>';
+    }).join('');
+
+    $('rtw-mult').querySelectorAll('button').forEach(function (b) {
+      b.classList.toggle('active', Number(b.getAttribute('data-mult')) === UI.mult);
+    });
+
+    var pfx = UI.mult === 3 ? 'T' : UI.mult === 2 ? 'D' : '';
+    var target = st.target[active];
+    var nums = '';
+    for (var n = 1; n <= 20; n++) {
+      nums += '<button data-num="' + n + '" class="' + (n === target ? 'hl' : '') + '">' +
+        (pfx ? '<span class="mx">' + pfx + '</span>' : '') + n + '</button>';
+    }
+    nums += '<button class="miss wide" data-num="0">Miss</button>';
+    nums += '<button class="bull wide ' + (target === 25 ? 'hl' : '') + '" data-num="25">Bull</button>';
+    $('rtw-grid').innerHTML = nums;
+  }
+
+  function throwLabel(t) {
+    if (!t.n) return '0';
+    if (t.n === 25) return t.m === 2 ? 'Bull×2' : 'Bull';
+    return (t.m === 3 ? 'T' : t.m === 2 ? 'D' : '') + t.n;
+  }
+
   function renderWinner() {
     var table = standings();
     if (!table.length) { S.screen = 'setup'; render(); return; }
@@ -983,6 +1324,12 @@
         (isNew ? '' : '<button class="btn danger ghost full" data-action="hide-profile">' +
           (profile(o.id).hidden ? 'Wieder einblenden' : 'Spieler ausblenden') + '</button>' +
           '<p class="hint">Ausgeblendete Spieler tauchen nicht mehr in der Aufstellung auf, ihre Ergebnisse bleiben aber in Statistik und Rangliste erhalten.</p>');
+    } else if (o.type === 'game-done') {
+      html = '<div class="big-emoji">🏆</div><h3>' + esc(pname(o.pid)) + ' gewinnt</h3>' +
+        '<p>' + (S.game && S.game.kind === 'cricket' ? 'Cricket' : 'Round the World') + '</p>' +
+        '<button class="btn primary full" data-action="restart-game">Nochmal spielen</button>' +
+        '<button class="btn ghost full" data-action="finish-game">Speichern &amp; beenden</button>' +
+        '<button class="btn ghost full" data-action="undo-game">Letzten Dart zurück</button>';
     } else if (o.type === 'need-players') {
       html = '<h3>Zu wenig Spieler</h3><p>Wähle mindestens zwei Spieler für das Turnier aus.</p>' +
         '<button class="btn primary full" data-action="ov-cancel">Alles klar</button>';
@@ -1015,8 +1362,9 @@
     switch (action) {
       case 'nav': {
         var target = el.getAttribute('data-screen');
-        // Solange ein Turnier nicht abgeschlossen ist, führt "Turnier" dorthin.
-        if (target === 'setup' && S.matches.length) target = 'tournament';
+        // Solange ein Spiel läuft, führt "Turnier" dorthin zurück.
+        if (target === 'setup' && S.game) target = S.game.kind;
+        else if (target === 'setup' && S.matches.length) target = 'tournament';
         S.screen = target;
         save(); render();
         break;
@@ -1089,11 +1437,32 @@
         UI.board = el.getAttribute('data-key');
         render();
         break;
-      case 'start-tournament':
-        startTournament();
+      case 'set-mode':
+        S.mode = el.getAttribute('data-value');
+        save(); render();
         break;
+      case 'start-game':
+        if (S.mode === '501') startTournament();
+        else startGame(S.mode);
+        break;
+      case 'leave-game':
+        if (S.game && S.game.done) finishGame();
+        else { S.screen = 'setup'; UI.overlay = null; save(); render(); }
+        break;
+      case 'undo-game':
+        undoGame();
+        break;
+      case 'finish-game':
+        finishGame();
+        break;
+      case 'restart-game': {
+        var kind = S.game ? S.game.kind : S.mode;
+        finishGame();
+        startGame(kind);
+        break;
+      }
       case 'resume':
-        S.screen = 'tournament'; save(); render();
+        S.screen = S.game ? S.game.kind : 'tournament'; save(); render();
         break;
       case 'to-setup':
         S.screen = 'setup'; save(); render();
@@ -1187,7 +1556,7 @@
     var quick = ev.target.closest('[data-quick]');
     if (quick) { UI.input = quick.getAttribute('data-quick'); submitTotal(); return; }
 
-    var mult = ev.target.closest('#mult-row button');
+    var mult = ev.target.closest('.mult-row button');
     if (mult) { UI.mult = Number(mult.getAttribute('data-mult')); render(); return; }
 
     var bull = ev.target.closest('[data-bull]');
@@ -1196,6 +1565,8 @@
     var num = ev.target.closest('[data-num]');
     if (num) {
       var n2 = Number(num.getAttribute('data-num'));
+      if (S.screen === 'cricket') { cricketDart(UI.mult, n2); return; }
+      if (S.screen === 'rtw') { rtwDart(UI.mult, n2); return; }
       if (n2 === 0) pushDart(1, 0);
       else if (n2 === 25) pushDart(1, 25);
       else pushDart(UI.mult, n2);
@@ -1238,6 +1609,8 @@
   /* ================= Start ================= */
   S = load() || newState();
   if (!S.lineup.length) S.lineup = activeProfiles().slice(0, 4).map(function (p) { return p.id; });
+  if ((S.screen === 'cricket' || S.screen === 'rtw') && !S.game) S.screen = 'setup';
+  if (S.game && (S.screen === 'cricket' || S.screen === 'rtw') && S.game.kind !== S.screen) S.screen = S.game.kind;
   if (S.screen === 'game' && !currentMatch()) S.screen = 'tournament';
   if (S.screen === 'bulloff' && !currentMatch()) S.screen = 'tournament';
   if (!S.matches.length && S.screen === 'tournament') S.screen = 'setup';
@@ -1267,6 +1640,9 @@
       activeLeg: activeLeg,
       activePlayer: activePlayer,
       currentMatch: currentMatch,
+      game: function () { return S.game; },
+      cricketState: function () { return cricketState(S.game); },
+      rtwState: function () { return rtwState(S.game); },
       reset: function () { S = newState(); UI.overlay = null; render(); }
     };
   }

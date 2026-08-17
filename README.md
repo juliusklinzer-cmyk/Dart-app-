@@ -1,8 +1,9 @@
 # 🎯 Dart Turnier – 501 Double Out
 
-Schnelle Turnier-App für den Abend mit Freunden: jeder gegen jeden, 501 Double Out,
-Finish-Vorschläge und Tabelle. Läuft komplett offline im Browser, ohne Installation,
-ohne Account, ohne Server.
+Schnelle Dart-App für den Abend mit Freunden: 501-Turnier jeder gegen jeden, Cricket
+für die ganze Runde und Round the World als Training – mit Finish-Vorschlägen,
+dauerhaften Spielerprofilen und Ranglisten. Läuft komplett offline im Browser, ohne
+Installation, ohne Account, ohne Server.
 
 ## Loslegen
 
@@ -22,7 +23,44 @@ auf das Handy-Layout um.
 
 Lokal testen: `npm start` (Server auf http://localhost:8080).
 
-## Ablauf
+## Spielmodi
+
+Der Modus wird im Setup gewählt, die Aufstellung gilt für alle drei gleich.
+
+### 501 Turnier (jeder gegen jeden)
+
+Der Hauptmodus, siehe Ablauf und Eingabe unten.
+
+### Cricket
+
+Alle ausgewählten Spieler spielen gleichzeitig an einem Board. Die Zahlen 20, 19, 18,
+17, 16, 15 und Bull müssen je dreimal getroffen werden – ein Double zählt zwei
+Treffer, ein Triple drei, das einfache Bull einen und das Doppel-Bull zwei. Die
+Markierungen stehen wie am Board: `/`, `✕`, `⊗` für zu.
+
+- **Mit Punkten** (Standard): Wer eine Zahl zugemacht hat, sammelt mit weiteren
+  Treffern darauf Punkte in Höhe des Feldwerts – aber nur so lange, wie die Zahl bei
+  mindestens einem Mitspieler noch offen ist. Gewonnen hat, wer alle sieben Felder zu
+  hat **und** dabei mindestens so viele Punkte wie alle anderen hat.
+- **Ohne Punkte**: Wer zuerst alle sieben Felder zumacht, gewinnt.
+
+Reihum drei Darts, jeder Dart einzeln eingegeben; der ↺-Button nimmt Dart für Dart
+zurück.
+
+### Round the World (Training)
+
+Reihum von der 1 hoch bis zur 20 und zum Schluss Bull. Getroffen wird immer nur die
+eigene aktuelle Zahl:
+
+- **Single** – ein Feld weiter
+- **Double** – eine Zahl wird übersprungen
+- **Triple** – zwei Zahlen werden übersprungen
+
+Wer über die 20 hinausspringt, landet auf Bull; gewonnen hat, wer den Bull trifft.
+Jeder Spieler hat seinen eigenen Fortschritt, die Anzeige zeigt Ziel, Darts und
+Treffer.
+
+## Ablauf (501 Turnier)
 
 1. **Setup** – Antippen, wer heute mitspielt (2 bis 12 Spieler), Startpunkte und Legs
    pro Spiel wählen. Spieler sind dauerhafte Profile mit Foto, siehe unten.
@@ -95,10 +133,15 @@ ein Undo korrigiert also auch die Karrierewerte.
 
 Dazu die letzten Spiele mit Gegner, Ergebnis und Datum.
 
+Für Cricket kommt die **MPR** (Marks per Round – getroffene Marken je 3 Darts, das
+übliche Cricket-Maß) samt Siegen dazu, für Round the World die Bestleistung in Darts
+und die Siege.
+
 **Im Reiter „Rangliste"** stehen dieselben Werte als Bestenlisten — Average, First 9,
 Doppelquote, höchstes Finish, 180er, höchste Aufnahme, bestes Leg, 100+ Aufnahmen,
-Siege, Siegquote, Legs und Turniersiege — dazu eine Rekordtafel und der Verlauf aller
-je gespielten Spiele.
+Siege, Siegquote, Legs, Turniersiege, Cricket-MPR, Cricket-Siege, Round-the-World-
+Bestzeit und RTW-Siege — dazu eine Rekordtafel und der Verlauf aller je gespielten
+Spiele über alle Modi.
 
 Zwei Definitionen, damit die Zahlen einordbar sind:
 
@@ -128,7 +171,7 @@ Datenmodell gehoben.
 | `index.html` | Aufbau aller Screens |
 | `css/styles.css` | Styling (Dark, Touch-Ziele ≥ 44 px) |
 | `js/checkout.js` | Finish-Solver (Double-Out-Wege für Rest 2–170) |
-| `js/app.js` | Turnierlogik, Spiellogik, Rendering, Persistenz |
+| `js/app.js` | Turnier-, Cricket- und RTW-Logik, Statistik, Rendering, Persistenz |
 | `sw.js`, `manifest.webmanifest` | Offline-Betrieb und Installation als App |
 | `build-single.mjs` | baut `dart-turnier.html` – alles in einer Datei (`npm run build`) |
 | `tests/e2e.mjs` | Browser-Tests des kompletten Turnierablaufs |
@@ -145,9 +188,10 @@ npm install   # einmalig, lädt Playwright
 npm test
 ```
 
-Der Test startet einen echten Chromium, spielt ein komplettes Turnier durch und prüft
-Spielplan, Anwurfwechsel, Bust- und Double-Out-Regeln, Finish-Vorschläge, Undo,
-Checkout-Abfrage, Tabelle, Karrierewerte, Ranglisten, Profilverwaltung, Archivierung
-und Persistenz nach Reload.
+Der Test startet einen echten Chromium, spielt ein komplettes Turnier sowie je eine
+Partie Cricket und Round the World durch und prüft Spielplan, Anwurfwechsel, Bust- und
+Double-Out-Regeln, Finish-Vorschläge, Undo, Checkout-Abfrage, Tabelle, Cricket-Marken
+und -Punkte, die Sprungregeln von Round the World, Karrierewerte, Ranglisten,
+Profilverwaltung, Archivierung und Persistenz nach Reload.
 
 `TARGET=dart-turnier.html npm test` prüft dieselben Abläufe im Einzeldatei-Bündel.

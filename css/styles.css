@@ -133,6 +133,59 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .roster-item .check { color: var(--green); font-weight: 800; opacity: 0; width: 18px; }
 .roster-item.selected .check { opacity: 1; }
 
+/* ---------- Modusauswahl ---------- */
+.modes { display: flex; flex-direction: column; gap: 8px; }
+.modes button {
+  display: flex; flex-direction: column; gap: 2px; text-align: left; cursor: pointer;
+  background: var(--bg-3); border: 1px solid var(--line); color: var(--text);
+  border-radius: 12px; padding: 12px 14px; min-height: 58px;
+}
+.modes button.active { border-color: var(--green); background: rgba(53, 208, 127, 0.09); }
+.modes .mt { font-weight: 700; font-size: 1rem; }
+.modes .md { font-size: 0.78rem; color: var(--muted); }
+
+/* ---------- Cricket ---------- */
+.cricket-board { overflow-x: auto; }
+.cr-grid { display: grid; gap: 3px; min-width: min-content; }
+.cr-cell {
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  padding: 8px 4px; border-radius: 8px; background: var(--bg-2); font-variant-numeric: tabular-nums;
+}
+.cr-corner { background: none; }
+.cr-head { flex-direction: column; font-size: 0.72rem; font-weight: 600; gap: 4px; padding: 8px 2px; }
+.cr-head span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cr-head.act { background: rgba(53, 208, 127, 0.16); color: var(--green); }
+.cr-num { background: var(--bg-3); font-weight: 700; font-size: 0.9rem; }
+.cr-num.dead { color: var(--muted); opacity: 0.5; }
+.cr-mark { font-size: 1.15rem; font-weight: 700; color: var(--muted); min-height: 40px; }
+.cr-mark.m1, .cr-mark.m2 { color: var(--text); }
+.cr-mark.m3 { color: var(--green); background: rgba(53, 208, 127, 0.12); }
+.cr-mark.act { outline: 1px solid rgba(53, 208, 127, 0.35); }
+.cr-score { font-weight: 800; font-size: 1.05rem; background: var(--bg-3); }
+.cr-score.act { color: var(--green); }
+.cricket-grid { grid-template-columns: repeat(4, 1fr); }
+.num-grid button.dim { opacity: 0.45; }
+
+/* ---------- Round the World ---------- */
+.rtw-board { display: flex; flex-direction: column; gap: 8px; }
+.rtw-row {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--bg-2); border: 2px solid var(--line); border-radius: var(--radius); padding: 10px 12px;
+}
+.rtw-row.act { border-color: var(--green); background: rgba(53, 208, 127, 0.08); }
+.rtw-row .rw-main { flex: 1; min-width: 0; }
+.rtw-row .rw-name { font-weight: 700; }
+.rtw-row .rw-sub { font-size: 0.74rem; color: var(--muted); margin-top: 3px; }
+.rtw-row .rw-bar { height: 6px; background: var(--bg-3); border-radius: 3px; overflow: hidden; margin-top: 6px; }
+.rtw-row .rw-bar span { display: block; height: 100%; background: var(--green); border-radius: 3px; }
+.rtw-row .rw-target {
+  font-size: 2rem; font-weight: 800; font-variant-numeric: tabular-nums; min-width: 68px; text-align: right;
+}
+.rtw-row.act .rw-target { color: var(--green); }
+
+.turn-label { font-size: 0.92rem; }
+.turn-label b { font-weight: 700; }
+
 /* ---------- Ranglisten ---------- */
 /* Eine wischbare Zeile statt vier Reihen Kategorien. */
 .chips {

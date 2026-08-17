@@ -36,12 +36,30 @@
   </div>
 
   <div class="card">
+    <h2>Spielmodus</h2>
+    <div class="modes" id="mode-select">
+      <button data-action="set-mode" data-value="501">
+        <span class="mt">501 Turnier</span>
+        <span class="md">Jeder gegen jeden, Double Out</span>
+      </button>
+      <button data-action="set-mode" data-value="cricket">
+        <span class="mt">Cricket</span>
+        <span class="md">Alle zusammen, 15–20 und Bull</span>
+      </button>
+      <button data-action="set-mode" data-value="rtw">
+        <span class="mt">Round the World</span>
+        <span class="md">Training: 1 bis 20 und Bull</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="card">
     <h2>Wer spielt mit?</h2>
     <div id="roster" class="roster"></div>
     <button class="btn ghost full" data-action="new-profile">+ Neuer Spieler</button>
   </div>
 
-  <div class="card">
+  <div class="card" id="settings-501">
     <h2>Einstellungen</h2>
     <div class="setting">
       <label>Startpunkte</label>
@@ -72,7 +90,30 @@
       schaltet die App automatisch auf Einzel-Darts (Single/Double/Triple) mit Finish-Vorschlag um.</p>
   </div>
 
-  <button class="btn primary full big" data-action="start-tournament">Turnier starten</button>
+  <div class="card hidden" id="settings-cricket">
+    <h2>Cricket</h2>
+    <div class="setting">
+      <label>Punkte zählen</label>
+      <div class="segmented" data-setting="cricketScoring">
+        <button data-value="1">mit Punkten</button>
+        <button data-value="0">ohne Punkte</button>
+      </div>
+    </div>
+    <p class="hint">Jede Zahl von 20 bis 15 und Bull muss dreimal getroffen werden (Double zählt
+      zweifach, Triple dreifach). <b>Mit Punkten:</b> Wer eine Zahl zugemacht hat, sammelt mit
+      weiteren Treffern Punkte, solange sie bei mindestens einem Mitspieler offen ist – gewonnen
+      hat, wer alles zu hat und dabei vorne liegt. <b>Ohne Punkte:</b> Wer zuerst alles zumacht,
+      gewinnt.</p>
+  </div>
+
+  <div class="card hidden" id="settings-rtw">
+    <h2>Round the World</h2>
+    <p class="hint">Reihum von der 1 bis zur 20, danach Bull. Ein Single rückt ein Feld weiter,
+      ein <b>Double überspringt eine Zahl</b>, ein <b>Triple überspringt zwei</b>. Über die 20
+      hinaus geht es immer auf Bull – und wer den Bull trifft, hat gewonnen.</p>
+  </div>
+
+  <button class="btn primary full big" data-action="start-game">Turnier starten</button>
   <p class="footer-note">Läuft komplett offline · Profile und Statistiken bleiben gespeichert</p>
 </section>
 
@@ -213,6 +254,70 @@
       <div class="num-grid" id="num-grid"></div>
     </div>
   </div>
+  </div>
+</section>
+
+<!-- ============ CRICKET ============ -->
+<section id="screen-cricket" class="screen game">
+  <header class="game-header">
+    <button class="icon-btn" data-action="leave-game" aria-label="Zurück">‹</button>
+    <div class="game-title">
+      <span>Cricket</span>
+      <span id="cricket-sub" class="muted"></span>
+    </div>
+    <button class="icon-btn" data-action="undo-game" aria-label="Rückgängig">↺</button>
+  </header>
+
+  <div class="game-body">
+    <div class="game-main">
+      <div id="cricket-board" class="cricket-board"></div>
+    </div>
+    <div class="input-area">
+      <div class="mode-row">
+        <div id="cricket-turn" class="turn-label"></div>
+        <div id="cricket-darts" class="visit-darts"></div>
+      </div>
+      <div class="pad">
+        <div class="mult-row" id="cricket-mult">
+          <button data-mult="1" class="active">Single</button>
+          <button data-mult="2">Double</button>
+          <button data-mult="3">Triple</button>
+        </div>
+        <div class="num-grid cricket-grid" id="cricket-grid"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ROUND THE WORLD ============ -->
+<section id="screen-rtw" class="screen game">
+  <header class="game-header">
+    <button class="icon-btn" data-action="leave-game" aria-label="Zurück">‹</button>
+    <div class="game-title">
+      <span>Round the World</span>
+      <span id="rtw-sub" class="muted"></span>
+    </div>
+    <button class="icon-btn" data-action="undo-game" aria-label="Rückgängig">↺</button>
+  </header>
+
+  <div class="game-body">
+    <div class="game-main">
+      <div id="rtw-board" class="rtw-board"></div>
+    </div>
+    <div class="input-area">
+      <div class="mode-row">
+        <div id="rtw-turn" class="turn-label"></div>
+        <div id="rtw-darts" class="visit-darts"></div>
+      </div>
+      <div class="pad">
+        <div class="mult-row" id="rtw-mult">
+          <button data-mult="1" class="active">Single</button>
+          <button data-mult="2">Double</button>
+          <button data-mult="3">Triple</button>
+        </div>
+        <div class="num-grid" id="rtw-grid"></div>
+      </div>
+    </div>
   </div>
 </section>
 
