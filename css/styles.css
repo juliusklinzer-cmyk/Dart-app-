@@ -2,14 +2,14 @@
   /* ---- Akzentfarbe der App ----------------------------------------
      Nur diese fünf Werte tauschen, dann zieht sich die Farbe durch
      Buttons, Rahmen, Diagramm und Hervorhebungen.
-     Grün-Variante:  #35d07f / #1f7d4d / rgba(53,208,127,.13) /
-                     rgba(53,208,127,.08) / var(--on-accent)
+     Rot-Variante:   #e5484d / #8f2c30 / rgba(229,72,77,.16) /
+                     rgba(229,72,77,.09) / #ffffff
   ------------------------------------------------------------------ */
-  --accent: #e5484d;
-  --accent-dark: #8f2c30;
-  --accent-soft: rgba(229, 72, 77, 0.16);
-  --accent-faint: rgba(229, 72, 77, 0.09);
-  --on-accent: #ffffff;
+  --accent: #35d07f;
+  --accent-dark: #1f7d4d;
+  --accent-soft: rgba(53, 208, 127, 0.13);
+  --accent-faint: rgba(53, 208, 127, 0.08);
+  --on-accent: #04240f;
 
   --bg: #0e1116;
   --bg-2: #161b23;
@@ -17,7 +17,7 @@
   --line: #2a3340;
   --text: #eef2f7;
   --muted: #8d9aab;
-  --red: #ff8f6b;
+  --red: #ff5a5a;
   --amber: #ffc14d;
   --radius: 14px;
   --tap: 56px;
@@ -279,7 +279,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   display: inline-grid; place-items: center;
 }
 .form.w { background: var(--accent-soft); color: var(--accent); }
-.form.l { background: rgba(255, 143, 107, 0.16); color: var(--red); }
+.form.l { background: rgba(255, 90, 90, 0.15); color: var(--red); }
 .pline {
   display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
   padding: 9px 0; border-top: 1px solid var(--line); font-size: 0.92rem;
