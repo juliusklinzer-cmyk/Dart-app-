@@ -622,7 +622,19 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 #board-mode { margin-bottom: 12px; }
 #board-mode button { font-size: 0.9rem; }
 
+/* ---------- Warnung, wenn nicht gespeichert werden kann ---------- */
+.save-warning {
+  position: sticky; top: 0; z-index: 40;
+  background: #4a2530; border: 1px solid var(--red); color: var(--text);
+  border-radius: 10px; padding: 10px 12px; margin: 8px 0; font-size: 0.85rem; line-height: 1.4;
+}
+
 </style>
+<div id="save-warning" class="save-warning hidden">
+  ⚠️ Der Spielstand kann gerade nicht gespeichert werden – bitte Speicherplatz prüfen
+  oder den privaten Modus verlassen. Der Abend läuft weiter, geht aber beim Neustart verloren.
+</div>
+
 <nav id="nav" class="nav hidden">
   <button data-action="nav" data-screen="setup">Turnier</button>
   <button data-action="nav" data-screen="boards">Rangliste</button>
@@ -1125,9 +1137,25 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   /* Summen, die mit 3 Darts nicht zu werfen sind. */
   var IMPOSSIBLE = { 163: 1, 166: 1, 169: 1, 172: 1, 173: 1, 175: 1, 176: 1, 178: 1, 179: 1 };
   var MIN_DARTS_FOR_AVG = 9;    // ab wann ein Average in der Rangliste zählt
-  var MAX_HISTORY = 200;        // so viele Turniere bleiben gespeichert
+  var MAX_HISTORY = 500;        // so viele Spiele bleiben archiviert
 
   var S = null;
+  /* Doppeltipp-Schutz, zweifach:
+     1. Die Schnellwahl trägt eine ganze Aufnahme ein – zweimal dasselbe
+        innerhalb eines Wimpernschlags ist immer ein Fehltipp.
+        (Der Zahlenblock ist bewusst ausgenommen: dreimal T20 ist ein 180er.)
+     2. Direkt nach einem Menü-Tipp werden Würfe kurz ignoriert, damit der
+        zweite Tipp auf „Nochmal spielen" nicht im neuen Spiel landet. */
+  var lastQuick = { key: '', at: 0 };
+  function quickDoubleTap(key) {
+    var now = Date.now();
+    if (key === lastQuick.key && now - lastQuick.at < 400) return true;
+    lastQuick.key = key;
+    lastQuick.at = now;
+    return false;
+  }
+  var settleUntil = 0;
+  function settling() { return Date.now() < settleUntil; }
   var UI = { input: '', darts: [], mult: 1, modeOverride: null, overlay: null, error: '', board: 'avg', boardMode: '501', profile: null, summary: null };
 
   /* ================= Helfer ================= */
@@ -1159,8 +1187,22 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     };
   }
 
+  var saveBroken = false;
   function save() {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(S)); } catch (e) { /* Speicher voll / privater Modus */ }
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(S));
+      if (saveBroken) { saveBroken = false; renderSaveWarning(); }
+    } catch (e) {
+      // Speicher voll oder privater Modus: der Abend läuft weiter, aber
+      // stillschweigend Daten zu verlieren wäre das Schlimmste.
+      if (!saveBroken) { saveBroken = true; renderSaveWarning(); }
+    }
+  }
+
+  function renderSaveWarning() {
+    var bar = $('save-warning');
+    if (!bar) return;
+    bar.classList.toggle('hidden', !saveBroken);
   }
 
   function load() {
@@ -1223,6 +1265,14 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return HUES[(idx < 0 ? 0 : idx) % HUES.length];
   }
   function playerColor(id) { return 'hsl(' + hue(id) + ',70%,58%)'; }
+  /* Erst die noch unbenutzten Farbtöne vergeben, damit sich zwei Spieler
+     nicht dieselbe Farbe teilen, solange es freie gibt. */
+  function freeHue() {
+    var used = {};
+    S.profiles.forEach(function (p) { used[p.hue] = 1; });
+    for (var i = 0; i < HUES.length; i++) if (!used[HUES[i]]) return HUES[i];
+    return HUES[S.profiles.length % HUES.length];
+  }
   function avatarHTML(p, cls) {
     var c = 'av ' + (cls || '');
     if (p.avatar) return '<span class="' + c + '" style="background-image:url(' + p.avatar + ')"></span>';
@@ -1251,7 +1301,18 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     reader.readAsDataURL(file);
   }
 
-  function legsToWin() { return Math.floor(S.settings.bestOf / 2) + 1; }
+  /* Ein laufendes Turnier hält seine eigenen Regeln fest. Sonst würde eine
+     Änderung im Setup rückwirkend die Reststände eines Legs verschieben. */
+  function tour() {
+    if (!S.tour) S.tour = { start: S.settings.start, bestOf: S.settings.bestOf, players: S.lineup.slice() };
+    return S.tour;
+  }
+  function tourStart() { return tour().start; }
+  function tourPlayers() {
+    var t = tour();
+    return t.players && t.players.length ? t.players : S.lineup;
+  }
+  function legsToWin() { return Math.floor(tour().bestOf / 2) + 1; }
 
   /* ================= Turnierplan ================= */
   /* Kreis-Methode: jeder gegen jeden, gleichmäßig auf Runden verteilt. */
@@ -1304,7 +1365,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   function activeLeg(match) { return match.legs[match.legs.length - 1] || null; }
 
   function remainingIn(leg, pid) {
-    var rest = S.settings.start;
+    var rest = tourStart();
     for (var i = 0; i < leg.visits.length; i++) {
       var v = leg.visits[i];
       if (v.p === pid && !v.b) rest -= v.s;
@@ -1353,6 +1414,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (UI.input === '') return;
     var v = parseInt(UI.input, 10);
     var m = currentMatch();
+    if (!m || m.done) return;   // beendetes Spiel nimmt keine Würfe mehr an
     var leg = activeLeg(m);
     var rest = remainingIn(leg, activePlayer(leg, m));
 
@@ -1390,6 +1452,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   function pushDart(mult, num) {
     UI.error = '';
     var m = currentMatch();
+    if (!m || m.done || settling()) return;   // beendet oder gerade erst geöffnet
     var leg = activeLeg(m);
     var pid = activePlayer(leg, m);
     var rest = remainingIn(leg, pid) - sum(UI.darts, function (d) { return d.v; });
@@ -1507,7 +1570,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
             }
             visitNo[v.p]++;
 
-            // Doppelversuche: aus Einzeldarts exakt, sonst aus dem Checkout selbst
+            /* Doppelversuche: jeder Dart, der auf ein mögliches Doppel geworfen
+               wurde. Im Einzel-Dart-Modus dartgenau; bei der Punkte-Eingabe
+               zählen die Darts der Aufnahme, sobald sie auf einem Doppel-Rest
+               begonnen hat – sonst hinge die Quote am Eingabeweg. */
             if (v.k && v.k.length) {
               var r = before;
               for (var i = 0; i < v.k.length; i++) {
@@ -1515,8 +1581,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
                 if (oneDartFinish(r)) st.doubleAttempts++;
                 r -= d.m * d.n;
               }
+            } else if (oneDartFinish(before)) {
+              st.doubleAttempts += v.d;
             } else if (v.c) {
-              st.doubleAttempts++;
+              st.doubleAttempts += v.d;
             }
 
             if (!v.b) {
@@ -1557,7 +1625,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
   /* Statistik des laufenden Turniers. */
   function stats() {
-    var map = collectStats([{ matches: S.matches, start: S.settings.start }], S.lineup);
+    var map = collectStats([{ matches: S.matches, start: tourStart() }], tourPlayers());
     Object.keys(map).forEach(function (k) { finalize(map[k]); });
     return map;
   }
@@ -1566,15 +1634,21 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   function career() {
     var lists = S.history.filter(function (h) { return (h.kind || '501') === '501'; })
       .map(function (h) { return { matches: h.matches, start: (h.settings && h.settings.start) || 501 }; });
-    if (S.matches.length) lists.push({ matches: S.matches, start: S.settings.start });
+    if (S.matches.length) lists.push({ matches: S.matches, start: tourStart() });
     var ids = S.profiles.map(function (p) { return p.id; });
     var map = collectStats(lists, ids);
     var open = S.game && S.game.done ? [S.game] : [];
     S.history.concat(open).forEach(function (h) {
       var kind = h.kind || '501';
       if (kind === '501') {
-        (h.lineup || []).forEach(function (id) { if (map[id]) map[id].tournaments++; });
-        if (h.winner && map[h.winner]) map[h.winner].tourWins++;
+        // Nur wer in diesem Turnier auch gespielt hat, bekommt eine Teilnahme.
+        var played = {};
+        (h.matches || []).forEach(function (m) {
+          if (!m.done) return;
+          played[m.p[0]] = 1; played[m.p[1]] = 1;
+        });
+        Object.keys(played).forEach(function (id) { if (map[id]) map[id].tournaments++; });
+        if (h.winner && map[h.winner] && played[h.winner]) map[h.winner].tourWins++;
         return;
       }
       if (kind === 'cricket') {
@@ -1606,7 +1680,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
   function standings() {
     var map = stats();
-    return S.lineup.map(function (id) { return map[id]; }).sort(function (a, b) {
+    return tourPlayers().map(function (id) { return map[id]; }).sort(function (a, b) {
       if (b.won !== a.won) return b.won - a.won;
       if (b.legDiff !== a.legDiff) return b.legDiff - a.legDiff;
       if (b.avg !== a.avg) return b.avg - a.avg;
@@ -1643,8 +1717,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   }
 
   function ranking(def, map) {
+    var known = {};
+    S.profiles.forEach(function (p) { known[p.id] = p; });
     var rows = Object.keys(map).map(function (k) { return map[k]; }).filter(function (s) {
-      return def.min(s) && !profile(s.id).hidden;
+      return def.min(s) && known[s.id] && !known[s.id].hidden;
     });
     rows.sort(function (a, b) {
       var d = def.asc ? def.get(a) - def.get(b) : def.get(b) - def.get(a);
@@ -1657,7 +1733,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   function allMatches() {
     var out = [];
     if (S.matches.length) {
-      S.matches.forEach(function (m) { if (m.done) out.push({ m: m, start: S.settings.start, live: true }); });
+      S.matches.forEach(function (m) { if (m.done) out.push({ m: m, start: tourStart(), live: true }); });
     }
     S.history.forEach(function (h) {
       if ((h.kind || '501') !== '501') return;   // Cricket/RTW haben keine Match-Liste
@@ -1686,7 +1762,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       st.darts[pid]++;
       if (!t.n || CRICKET_NUMBERS.indexOf(t.n) < 0) continue;
 
-      st.allMarks[pid] += t.m;
+      // Ein Feld, das bei allen zu ist, bringt keine Marken mehr (übliche MPR-Zählung).
+      var dead = g.players.every(function (o) { return st.marks[o][t.n] >= 3; });
+      if (!dead) st.allMarks[pid] += t.m;
       var open = 3 - st.marks[pid][t.n];
       var used = Math.min(t.m, open);
       st.marks[pid][t.n] += used;
@@ -1715,10 +1793,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
   function cricketDart(mult, num) {
     var g = S.game;
-    if (!g || g.done) return;
+    if (!g || g.done || settling()) return;
     // Bull: 25 zählt eine Marke, Doppel-Bull zwei.
     var m = num === 25 ? (mult === 2 ? 2 : 1) : mult;
     g.throws.push({ n: num, m: num === 0 ? 0 : m });
+    UI.mult = 1;   // wie im 501-Modus: nach jedem Dart zurück auf Single
     var st = cricketState(g);
     if (st.winner) { g.done = true; g.winner = st.winner; g.at = Date.now(); UI.overlay = { type: 'game-done', pid: st.winner }; }
     save(); render();
@@ -1752,9 +1831,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
   function rtwDart(mult, num) {
     var g = S.game;
-    if (!g || g.done) return;
+    if (!g || g.done || settling()) return;
     var m = num === 25 ? (mult === 2 ? 2 : 1) : mult;
     g.throws.push({ n: num, m: num === 0 ? 0 : m });
+    UI.mult = 1;
     var st = rtwState(g);
     if (st.winner) { g.done = true; g.winner = st.winner; g.at = Date.now(); UI.overlay = { type: 'game-done', pid: st.winner }; }
     save(); render();
@@ -1778,6 +1858,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   }
 
   function startGame(kind) {
+    // Ein beendetes, noch nicht gespeichertes Spiel zuerst sichern.
+    if (S.game && S.game.done) archiveGame(S.game);
     if (S.lineup.length < 2 && kind === 'cricket') { UI.overlay = { type: 'need-players' }; render(); return; }
     if (!S.lineup.length) { UI.overlay = { type: 'need-players' }; render(); return; }
     S.game = {
@@ -1791,15 +1873,18 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     save(); render();
   }
 
+  function archiveGame(g) {
+    if (!g || !g.done) return;
+    for (var i = 0; i < S.history.length; i++) if (S.history[i].id === g.id) return;  // nicht doppelt
+    S.history.unshift({
+      id: g.id || uid(), kind: g.kind, at: g.at || Date.now(),
+      players: g.players.slice(), scoring: g.scoring, throws: g.throws, winner: g.winner
+    });
+    if (S.history.length > MAX_HISTORY) S.history.length = MAX_HISTORY;
+  }
+
   function finishGame() {
-    var g = S.game;
-    if (g && g.done) {
-      S.history.unshift({
-        id: g.id || uid(), kind: g.kind, at: g.at || Date.now(),
-        players: g.players.slice(), scoring: g.scoring, throws: g.throws, winner: g.winner
-      });
-      if (S.history.length > MAX_HISTORY) S.history.length = MAX_HISTORY;
-    }
+    archiveGame(S.game);
     S.game = null;
     UI.overlay = null;
     S.screen = 'setup';
@@ -1822,14 +1907,15 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var table = standings();
     S.history.unshift({
       id: uid(), at: Date.now(),
-      lineup: S.lineup.slice(),
-      settings: { start: S.settings.start, bestOf: S.settings.bestOf },
+      lineup: tourPlayers().slice(),
+      settings: { start: tourStart(), bestOf: tour().bestOf },
       matches: S.matches,
       winner: allMatchesDone() && table[0] ? table[0].id : null
     });
     if (S.history.length > MAX_HISTORY) S.history.length = MAX_HISTORY;
     S.matches = [];
     S.current = null;
+    S.tour = null;
     save();
   }
 
@@ -1897,10 +1983,18 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var runningGame = !!S.game;
     var running = runningGame || (S.matches.length > 0 && !allMatchesDone());
     $('resume-box').classList.toggle('hidden', !running);
-    if (runningGame) {
+    var resumeBtn = $('resume-box').querySelector('[data-action="resume"]');
+    if (runningGame && S.game.done) {
+      $('resume-box').querySelector('strong').textContent =
+        (S.game.kind === 'cricket' ? 'Cricket' : 'Round the World') + ' beendet';
+      $('resume-info').textContent = 'Sieger: ' + pname(S.game.winner) + ' · Ergebnis noch nicht gespeichert';
+      resumeBtn.textContent = 'Ergebnis ansehen';
+    } else if (runningGame) {
       $('resume-box').querySelector('strong').textContent = S.game.kind === 'cricket' ? 'Laufendes Cricket' : 'Laufendes Training';
       $('resume-info').textContent = S.game.players.length + ' Spieler · ' + S.game.throws.length + ' Darts geworfen';
+      resumeBtn.textContent = 'Fortsetzen';
     } else if (running) {
+      resumeBtn.textContent = 'Fortsetzen';
       $('resume-box').querySelector('strong').textContent = 'Laufendes Turnier';
       var done = sum(S.matches, function (m) { return m.done ? 1 : 0; });
       $('resume-info').textContent = done + ' von ' + S.matches.length + ' Spielen gespielt';
@@ -1950,7 +2044,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     }
 
     var map = stats();
-    $('stats-grid').innerHTML = S.lineup.map(function (id) {
+    $('stats-grid').innerHTML = tourPlayers().map(function (id) {
       var st = map[id];
       return '<div class="stat-card">' +
         '<div class="who">' + avatarHTML(profile(id), 'sm') + esc(st.name) + '</div>' +
@@ -2036,8 +2130,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         'stroke-linejoin="round" stroke-linecap="round"/>' + dots;
     }).join('');
 
-    var axis = '<text x="' + L + '" y="' + (H - 8) + '" font-size="9" fill="#8d9aab">vor ' + (maxN - 1) + ' Spielen</text>' +
-      '<text x="' + (W - R) + '" y="' + (H - 8) + '" text-anchor="end" font-size="9" fill="#8d9aab">letztes Spiel</text>';
+    /* Jede Linie zeigt die letzten Spiele DIESES Spielers, rechts das jeweils
+       jüngste – die Linien liegen also nicht auf einer gemeinsamen Zeitachse. */
+    var axis = '<text x="' + L + '" y="' + (H - 8) + '" font-size="9" fill="#8d9aab">früher</text>' +
+      '<text x="' + (W - R) + '" y="' + (H - 8) + '" text-anchor="end" font-size="9" fill="#8d9aab">jeweils letztes Spiel</text>';
 
     return '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(label) + '">' +
       grid + lines + axis + '</svg>' +
@@ -2067,7 +2163,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       : modeName + ' · noch keine Spiele';
 
     /* Verlauf: eine farbige Linie je Spieler. */
-    var chartLabel = mode === '501' ? '3-Dart-Average je Spiel' : 'MPR je Spiel';
+    var chartLabel = (mode === '501' ? '3-Dart-Average' : 'MPR') + ' – je Spieler die letzten ' + CHART_GAMES + ' Spiele';
     var chart = mode === 'rtw' ? null : lineChart(chartSeries(mode), chartLabel);
     $('board-chart').classList.toggle('hidden', mode === 'rtw');
     if (mode !== 'rtw') {
@@ -2265,18 +2361,18 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var leg = ensureLeg(m);
     if (!leg) { S.screen = 'tournament'; render(); return; }
 
-    var active = activePlayer(leg, m);
+    var active = m.done && m.winner ? m.winner : activePlayer(leg, m);
     var idx = S.matches.indexOf(m);
     $('game-match-label').textContent = 'Spiel ' + (idx + 1) + ' von ' + S.matches.length;
     $('game-leg-label').textContent = S.settings.bestOf > 1
       ? 'Leg ' + m.legs.length + ' · Stand ' + legsWon(m, m.p[0]) + ':' + legsWon(m, m.p[1]) + ' (first to ' + legsToWin() + ')'
-      : 'Ein Leg · ' + S.settings.start + ' Double Out';
+      : 'Ein Leg · ' + tourStart() + ' Double Out';
 
     var pendingSum = sum(UI.darts, function (d) { return d.v; });
     $('scoreboard').innerHTML = m.p.map(function (pid) {
       var rest = remainingIn(leg, pid) - (pid === active ? pendingSum : 0);
       var darts = dartsIn(leg, pid) + (pid === active ? UI.darts.length : 0);
-      var scored = S.settings.start - remainingIn(leg, pid) + (pid === active ? pendingSum : 0);
+      var scored = tourStart() - remainingIn(leg, pid) + (pid === active ? pendingSum : 0);
       var avg = darts ? (scored / darts * 3).toFixed(1) : '–';
       return '<div class="pcard ' + (pid === active ? 'active' : '') + '">' +
         '<div class="pname">' + avatarHTML(profile(pid), 'sm') + esc(pname(pid)) + '</div>' +
@@ -2302,7 +2398,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     }
 
     $('history').innerHTML = m.p.map(function (pid) {
-      var rowRest = S.settings.start;
+      var rowRest = tourStart();
       var rows = [];
       leg.visits.forEach(function (v) {
         if (v.p !== pid) return;
@@ -2424,7 +2520,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       return '<button data-num="' + n + '" class="' + (closedForAll ? 'dim' : '') + '">' +
         (prefix ? '<span class="mx">' + prefix + '</span>' : '') + n + '</button>';
     }).join('') +
-      '<button class="bull" data-num="25">Bull</button>' +
+      '<button class="bull" data-num="25">' + (UI.mult === 2 ? 'Bull ×2' : 'Bull') + '</button>' +
       '<button class="miss wide" data-num="0">Miss</button>';
   }
 
@@ -2495,7 +2591,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   function findGame(kind, id) {
     if (kind === '501') {
       for (var i = 0; i < S.matches.length; i++) {
-        if (S.matches[i].id === id) return { m: S.matches[i], start: S.settings.start, live: true };
+        if (S.matches[i].id === id) return { m: S.matches[i], start: tourStart(), live: true };
       }
       for (var h = 0; h < S.history.length; h++) {
         var e = S.history[h];
@@ -2634,7 +2730,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     $('winner-box').innerHTML =
       '<div style="text-align:center"><div class="big-emoji">🏆</div>' +
       '<h1>' + esc(table[0].name) + ' gewinnt!</h1>' +
-      '<p class="muted">' + table[0].won + ' von ' + (S.lineup.length - 1) + ' Spielen gewonnen</p></div>' +
+      '<p class="muted">' + plural(table[0].won, 'Spiel', 'Spiele') + ' von ' + (tourPlayers().length - 1) + ' gewonnen</p></div>' +
       '<div class="podium">' + table.map(function (st, i) {
         return '<div class="p ' + (i === 0 ? 'first' : '') + '">' +
           '<div class="medal">' + (medals[i] || (i + 1) + '.') + '</div>' +
@@ -2698,6 +2794,13 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '<p>' + (S.game && S.game.kind === 'cricket' ? 'Cricket' : 'Round the World') + '</p>' +
         '<button class="btn primary full" data-action="open-summary" data-kind="' + (S.game ? S.game.kind : 'cricket') + '" data-id="current">Weiter zur Spielstatistik</button>' +
         '<button class="btn ghost full" data-action="undo-game">Letzten Dart zurück</button>';
+    } else if (o.type === 'confirm-new-tournament') {
+      html = '<h3>Laufendes Turnier beenden?</h3>' +
+        '<p>Im aktuellen Turnier ' + (o.played === 1 ? 'ist bereits 1 Spiel' : 'sind bereits ' + o.played + ' Spiele') +
+        ' gespielt. Das Turnier wird gewertet und archiviert, dann beginnt ein neues.</p>' +
+        '<div class="row-btns two">' +
+        '<button class="btn ghost" data-action="ov-cancel">Zurück</button>' +
+        '<button class="btn primary" data-action="ov-new-tournament">Neues Turnier</button></div>';
     } else if (o.type === 'need-players') {
       html = '<h3>Zu wenig Spieler</h3><p>Wähle mindestens zwei Spieler für das Turnier aus.</p>' +
         '<button class="btn primary full" data-action="ov-cancel">Alles klar</button>';
@@ -2706,9 +2809,17 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   }
 
   /* ================= Aktionen ================= */
-  function startTournament() {
+  function startTournament(confirmed) {
     if (S.lineup.length < 2) { UI.overlay = { type: 'need-players' }; render(); return; }
+    // Ein Turnier mit Ergebnissen wird nie kommentarlos ersetzt.
+    var played = sum(S.matches, function (m) { return m.done ? 1 : 0; });
+    if (played > 0 && !confirmed) {
+      UI.overlay = { type: 'confirm-new-tournament', played: played };
+      render();
+      return;
+    }
     if (S.matches.length) archiveTournament();
+    S.tour = { start: S.settings.start, bestOf: S.settings.bestOf, players: S.lineup.slice() };
     S.matches = buildSchedule(S.lineup.slice());
     S.current = null;
     S.screen = 'tournament';
@@ -2726,12 +2837,20 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     render();
   }
 
+  /* Nach diesen Tipps erscheint sofort ein Spielfeld unter dem Finger –
+     ein nachrutschender zweiter Tipp darf dort kein Wurf werden. */
+  var SETTLE_ACTIONS = { 'restart-game': 1, 'ov-next-leg': 1, 'co-darts': 1 };
+
   function handleAction(action, el) {
+    if (SETTLE_ACTIONS[action]) settleUntil = Date.now() + 300;
     switch (action) {
       case 'nav': {
         var target = el.getAttribute('data-screen');
         // Solange ein Spiel läuft, führt "Turnier" dorthin zurück.
-        if (target === 'setup' && S.game) target = S.game.kind;
+        if (target === 'setup' && S.game && S.game.done) {
+          UI.summary = { kind: S.game.kind, id: 'current' };
+          target = 'summary';
+        } else if (target === 'setup' && S.game) target = S.game.kind;
         else if (target === 'setup' && S.matches.length) target = 'tournament';
         S.screen = target;
         save(); render();
@@ -2777,8 +2896,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           ex.name = name;
           ex.avatar = draft.avatar;
         } else {
-          var np = { id: uid(), name: name, avatar: draft.avatar, created: Date.now(),
-            hue: HUES[S.profiles.length % HUES.length] };
+          var np = { id: uid(), name: name, avatar: draft.avatar, created: Date.now(), hue: freeHue() };
           S.profiles.push(np);
           if (S.lineup.length < 12) S.lineup.push(np.id);
         }
@@ -2847,7 +2965,13 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         break;
       }
       case 'resume':
-        S.screen = S.game ? S.game.kind : 'tournament'; save(); render();
+        if (S.game && S.game.done) {
+          UI.summary = { kind: S.game.kind, id: 'current' };
+          S.screen = 'summary';
+        } else {
+          S.screen = S.game ? S.game.kind : 'tournament';
+        }
+        save(); render();
         break;
       case 'to-setup':
         S.screen = 'setup'; save(); render();
@@ -2891,6 +3015,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       }
       case 'ov-cancel':
         UI.overlay = null; UI.input = ''; render();
+        break;
+      case 'ov-new-tournament':
+        UI.overlay = null;
+        startTournament(true);
         break;
       case 'ov-next-leg':
         UI.overlay = null; render();
@@ -2939,7 +3067,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (key2) { pressKey(key2.getAttribute('data-key')); return; }
 
     var quick = ev.target.closest('[data-quick]');
-    if (quick) { UI.input = quick.getAttribute('data-quick'); submitTotal(); return; }
+    if (quick) {
+      if (quickDoubleTap(quick.getAttribute('data-quick'))) return;
+      UI.input = quick.getAttribute('data-quick');
+      submitTotal();
+      return;
+    }
 
     var mult = ev.target.closest('.mult-row button');
     if (mult) { UI.mult = Number(mult.getAttribute('data-mult')); render(); return; }
@@ -2984,12 +3117,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (!m) return;
     var leg = activeLeg(m);
     if (!leg) return;
+    if (ev.key.toLowerCase() === 'z') { undo(); ev.preventDefault(); return; }
     var rest = remainingIn(leg, activePlayer(leg, m)) - sum(UI.darts, function (d) { return d.v; });
     if (effectiveMode(rest) !== 'total') return;
     if (ev.key >= '0' && ev.key <= '9') { pressKey(ev.key); ev.preventDefault(); }
     else if (ev.key === 'Enter') { pressKey('ok'); ev.preventDefault(); }
     else if (ev.key === 'Backspace') { pressKey('del'); ev.preventDefault(); }
-    else if (ev.key.toLowerCase() === 'z') { undo(); ev.preventDefault(); }
   });
 
   /* ================= Start ================= */
@@ -2997,6 +3130,16 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   if (!S.lineup.length) S.lineup = activeProfiles().slice(0, 4).map(function (p) { return p.id; });
   if ((S.screen === 'cricket' || S.screen === 'rtw') && !S.game) S.screen = 'setup';
   if (S.game && (S.screen === 'cricket' || S.screen === 'rtw') && S.game.kind !== S.screen) S.screen = S.game.kind;
+  /* Ein beendetes Spiel führt zur Auswertung, nicht auf ein totes Board –
+     sonst kann man in ein fertiges Match weitertippen. */
+  if (S.game && S.game.done) {
+    UI.summary = { kind: S.game.kind, id: 'current' };
+    S.screen = 'summary';
+  }
+  if (S.screen === 'game' && currentMatch() && currentMatch().done) {
+    UI.summary = { kind: '501', id: currentMatch().id };
+    S.screen = 'summary';
+  }
   if (S.screen === 'game' && !currentMatch()) S.screen = 'tournament';
   if (S.screen === 'bulloff' && !currentMatch()) S.screen = 'tournament';
   if (!S.matches.length && S.screen === 'tournament') S.screen = 'setup';

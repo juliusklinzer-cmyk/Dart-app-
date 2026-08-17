@@ -456,6 +456,120 @@ const det = (await text('#profile-detail')).toLowerCase();
 check('Profil zeigt Cricket-Werte', det.includes('mpr') && det.includes('marken gesamt'));
 check('Profil zeigt Round-the-World-Werte', det.includes('round the world') && det.includes('bestes ergebnis'));
 
+group('Regression: gemeldete Fehler');
+/* Frisch anfangen, damit die Prüfungen unabhängig vom bisherigen Verlauf sind. */
+await page.evaluate(() => localStorage.clear());
+await page.reload();
+const ids = () => page.evaluate(() => window.__dart.state().profiles.map((p) => p.id));
+
+// (1) Beendetes Match darf nach einem Reload nicht überschreibbar sein
+await page.locator('[data-action="start-game"]').click();
+await page.locator('[data-action="next-match"]').click();
+await page.locator('#bulloff-buttons button').first().click();
+await typeScore(180); await typeScore(60); await typeScore(180); await typeScore(60);
+await page.locator('#mode-toggle button[data-mode="total"]').click();
+await typeScore(141);
+await page.locator('#overlay-card [data-action="co-darts"]').first().click();
+const winnerBefore = await page.evaluate(() => window.__dart.currentMatch().winner);
+await page.reload();
+check('Reload nach Matchende landet in der Spielstatistik, nicht im Spiel',
+  await visible('#screen-summary'), await page.evaluate(() => window.__dart.state().screen));
+check('das beendete Match ist unverändert',
+  (await page.evaluate(() => window.__dart.currentMatch().winner)) === winnerBefore);
+const dartsBefore = await page.evaluate(() => window.__dart.currentMatch().legs[0].visits.length);
+await page.evaluate(() => { window.__dart.state().screen = 'game'; });
+await page.reload();
+await page.evaluate(() => window.__dart.submitTotal());
+check('kein Nachtragen von Würfen in ein beendetes Match',
+  (await page.evaluate(() => window.__dart.currentMatch().legs[0].visits.length)) === dartsBefore);
+
+// (2) Einstellungen wirken nicht rückwirkend auf ein laufendes Turnier
+await page.locator('#summary-actions [data-action="ov-next-match"]').click();
+await page.locator('#bulloff-buttons button').first().click();
+await typeScore(180);
+const restBefore = await rest(0);
+await page.locator('#screen-game [data-action="to-tournament"]').click();
+await page.locator('[data-action="to-setup"]').click();
+await page.locator('[data-setting="start"] button[data-value="301"]').click();
+await page.locator('[data-setting="bestOf"] button[data-value="5"]').click();
+await page.locator('#nav [data-screen="setup"]').click();
+await page.locator('.match-row .go').first().click();
+check('Startpunkte-Wechsel verschiebt das laufende Leg nicht', (await rest(0)) === restBefore, `${restBefore} -> ${await rest(0)}`);
+check('Legs pro Spiel bleibt für das laufende Turnier gültig',
+  !(await text('#game-leg-label')).includes('first to 3'), await text('#game-leg-label'));
+
+// (3) Spieler ausblenden zerstört das laufende Turnier nicht
+const standingsBefore = (await st()).length;
+const loserId = await page.evaluate(() => {
+  const m = window.__dart.currentMatch();
+  return m.p[0];
+});
+await page.evaluate((id) => {
+  const s = window.__dart.state();
+  s.profiles.find((p) => p.id === id).hidden = true;
+  const i = s.lineup.indexOf(id);
+  if (i >= 0) s.lineup.splice(i, 1);
+}, loserId);
+check('Tabelle behält alle Turnierteilnehmer', (await st()).length === standingsBefore, `${standingsBefore} -> ${(await st()).length}`);
+await page.evaluate((id) => {
+  const s = window.__dart.state();
+  s.profiles.find((p) => p.id === id).hidden = false;
+  if (s.lineup.indexOf(id) < 0) s.lineup.push(id);
+}, loserId);
+
+// (4) Neues Turnier fragt nach, wenn Ergebnisse vorliegen
+await page.locator('#screen-game [data-action="to-tournament"]').click();
+await page.locator('[data-action="to-setup"]').click();
+await page.locator('[data-action="start-game"]').click();
+check('Rückfrage vor dem Verwerfen eines laufenden Turniers',
+  (await text('#overlay-card')).includes('Laufendes Turnier beenden'));
+await page.locator('#overlay-card [data-action="ov-cancel"]').click();
+
+// (5) Doppeltipp auf die Schnellwahl bucht nur eine Aufnahme
+await page.locator('#nav [data-screen="setup"]').click();
+await page.locator('.match-row .go').first().click();
+await page.waitForTimeout(400);
+const visitsBefore = await page.evaluate(() => window.__dart.activeLeg(window.__dart.currentMatch()).visits.length);
+await page.locator('[data-quick="60"]').dblclick();
+check('Doppeltipp auf die Schnellwahl zählt einmal',
+  (await page.evaluate(() => window.__dart.activeLeg(window.__dart.currentMatch()).visits.length)) === visitsBefore + 1);
+
+// (6) Multiplikator springt im Cricket zurück auf Single
+await page.evaluate(() => {
+  const s = JSON.parse(localStorage.getItem('dart-turnier-v1'));
+  s.matches = []; s.tour = null; s.current = null; s.screen = 'setup';
+  localStorage.setItem('dart-turnier-v1', JSON.stringify(s));
+});
+await page.reload();
+await page.locator('[data-action="set-mode"][data-value="cricket"]').click();
+await page.locator('[data-action="start-game"]').click();
+await cDart('T20');
+check('Cricket setzt den Multiplikator nach dem Dart zurück',
+  await page.locator('#cricket-mult button[data-mult="1"]').evaluate((e) => e.classList.contains('active')));
+await page.locator('#cricket-grid button[data-num="19"]').click();
+check('die nächste Zahl zählt einfach', await page.evaluate(() => window.__dart.cricketState().marks[window.__dart.game().players[0]][19]) === 1);
+
+// (7) Beschädigter Speicherstand wirft Profile und Archiv nicht weg
+const profileCount = (await ids()).length;
+await page.evaluate(() => {
+  const s = JSON.parse(localStorage.getItem('dart-turnier-v1'));
+  delete s.settings;
+  delete s.mode;
+  localStorage.setItem('dart-turnier-v1', JSON.stringify(s));
+});
+await page.reload();
+check('unvollständiger Stand wird ergänzt statt verworfen', (await ids()).length === profileCount, `${profileCount} -> ${(await ids()).length}`);
+
+// (8) Kaputter Spielstand bringt den Cricket-Screen nicht zum Absturz
+await page.evaluate(() => {
+  const s = JSON.parse(localStorage.getItem('dart-turnier-v1'));
+  s.screen = 'cricket';
+  s.game = { id: 'x', kind: 'cricket', throws: [], done: false };
+  localStorage.setItem('dart-turnier-v1', JSON.stringify(s));
+});
+await page.reload();
+check('Spielstand ohne Spielerliste wird verworfen, App bleibt bedienbar', await visible('#screen-setup'));
+
 group('Fehlerfreiheit');
 check('keine JS-Fehler', errors.length === 0, errors.join(' | '));
 

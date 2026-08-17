@@ -618,3 +618,10 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .chart-legend .cl b { color: var(--text); font-variant-numeric: tabular-nums; }
 #board-mode { margin-bottom: 12px; }
 #board-mode button { font-size: 0.9rem; }
+
+/* ---------- Warnung, wenn nicht gespeichert werden kann ---------- */
+.save-warning {
+  position: sticky; top: 0; z-index: 40;
+  background: #4a2530; border: 1px solid var(--red); color: var(--text);
+  border-radius: 10px; padding: 10px 12px; margin: 8px 0; font-size: 0.85rem; line-height: 1.4;
+}
