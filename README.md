@@ -157,11 +157,26 @@ Für Cricket kommt die **MPR** (Marks per Round – getroffene Marken je 3 Darts
 übliche Cricket-Maß) samt Siegen dazu, für Round the World die Bestleistung in Darts
 und die Siege.
 
-**Im Reiter „Rangliste"** stehen dieselben Werte als Bestenlisten — Average, First 9,
-Doppelquote, höchstes Finish, 180er, höchste Aufnahme, bestes Leg, 100+ Aufnahmen,
-Siege, Siegquote, Legs, Turniersiege, Cricket-MPR, Cricket-Siege, Round-the-World-
-Bestzeit und RTW-Siege — dazu eine Rekordtafel und der Verlauf aller je gespielten
-Spiele über alle Modi.
+**Im Reiter „Rangliste"** sind die Werte nach Spielmodus getrennt – Classic, Cricket
+und Round the World haben je eigene Bestenlisten, eigene Rekordtafel und einen eigenen
+Spielverlauf:
+
+| Modus | Bestenlisten |
+|---|---|
+| Classic (301/501) | Average, First 9, Doppelquote, höchstes Finish, 180er, höchste Aufnahme, bestes Leg, 100+ Aufnahmen, Siege, Siegquote, Legs, Turniersiege |
+| Cricket | MPR, Siege |
+| Round the World | Bestes Ergebnis (Darts), Siege |
+
+Über den Listen zeichnet ein **Verlaufsdiagramm** die Entwicklung über die letzten bis
+zu 40 Spiele – eine Linie je Spieler in seiner Farbe, links die Skala, unten die
+Spiele. Bei Classic ist es der 3-Dart-Average je Spiel, bei Cricket die MPR je Spiel.
+Jeder Spieler hat eine feste Farbe, die auch sein Avatar trägt.
+
+**Die Modi werden strikt getrennt gerechnet.** Average, First 9, Doppelquote, Finishes,
+180er und die gesamte 501-Bilanz stammen ausschließlich aus Classic-Spielen (301/501).
+Ein Round-the-World-Training, in dem reihum 1, 2 und 3 geworfen werden, taucht dort
+also nirgends auf – es zählt nur in die eigene RTW-Auswertung. Genauso fließen
+Cricket-Würfe nur in MPR, Marken und Cricket-Siege.
 
 Zwei Definitionen, damit die Zahlen einordbar sind:
 

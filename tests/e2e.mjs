@@ -357,8 +357,14 @@ await page.locator('#summary-actions [data-action="finish-game"]').click();
 check('Cricket gespeichert', await page.evaluate(() => window.__dart.state().history.filter((h) => h.kind === 'cricket').length) === 1);
 const cCar = await carr();
 const cWinner = Object.values(cCar).find((s) => s.id === pA);
+const before = Object.values(c1).find((s) => s.id === pA);
 check('Cricket-Sieg in der Karriere', cWinner.cricketWins === 1);
 check('MPR berechnet', cWinner.mpr > 0, String(cWinner.mpr));
+check('Cricket-Darts zählen NICHT in den 501-Average',
+  cWinner.darts === before.darts && cWinner.avg === before.avg,
+  `${before.darts} -> ${cWinner.darts} Darts`);
+check('Cricket verändert die Doppelquote nicht', cWinner.doubleAttempts === before.doubleAttempts);
+check('Cricket zählt nicht als 501-Spiel', cWinner.matches === before.matches);
 
 group('Round the World');
 await page.locator('[data-action="set-mode"][data-value="rtw"]').click();
@@ -401,22 +407,48 @@ check('RTW-Statistik zeigt Darts und Trefferquote', rSum.includes('Trefferquote'
 await page.locator('#summary-actions [data-action="finish-game"]').click();
 const rCar = await carr();
 const rWin = Object.values(rCar).find((s) => s.id === rA);
+const rBefore = Object.values(cCar).find((s) => s.id === rA);
 check('RTW-Sieg gespeichert', rWin.rtwWins === 1);
 check('Bestleistung in Darts festgehalten', rWin.rtwBest > 0, String(rWin.rtwBest));
+check('Round-the-World-Darts zählen NICHT in den 501-Average',
+  rWin.darts === rBefore.darts && rWin.avg === rBefore.avg,
+  `${rBefore.darts} -> ${rWin.darts} Darts`);
+check('RTW verändert Doppelquote und 501-Bilanz nicht',
+  rWin.doubleAttempts === rBefore.doubleAttempts && rWin.matches === rBefore.matches);
+check('RTW zählt auch nicht in die Cricket-Werte', rWin.cricketDarts === rBefore.cricketDarts);
 
-group('Ranglisten für die neuen Modi');
+group('Statistik nach Spielmodus');
 await page.locator('#nav [data-screen="boards"]').click();
-await page.locator('[data-action="board"][data-key="mpr"]').click();
+check('Classic ist voreingestellt', await page.locator('[data-action="board-mode"][data-value="501"]').evaluate((e) => e.classList.contains('active')));
+check('Classic-Kategorien sichtbar', (await page.locator('[data-action="board"][data-key="avg"]').count()) === 1);
+check('Cricket-Kategorien nicht in Classic', (await page.locator('[data-action="board"][data-key="mpr"]').count()) === 0);
+check('Verlaufsdiagramm für Classic', (await page.locator('#board-chart .chart').count()) === 1);
+const lines = await page.locator('#board-chart .chart polyline').count();
+check('eine Linie je Spieler', lines >= 2, `${lines} Linien`);
+const legend = await page.locator('#board-chart .chart-legend .cl').count();
+check('Legende mit Spielerfarben', legend === lines);
+const colors = await page.locator('#board-chart .chart polyline').evaluateAll((els) => els.map((e) => e.getAttribute('stroke')));
+check('jeder Spieler eine eigene Farbe', new Set(colors).size === colors.length, colors.join(' '));
+check('Classic-Verlauf zeigt nur Classic-Spiele', (await text('#log-title')).toLowerCase().includes('classic'));
+
+await page.locator('[data-action="board-mode"][data-value="cricket"]').click();
+check('Cricket-Tab aktiv', (await page.locator('[data-action="board"][data-key="mpr"]').count()) === 1);
+check('Average-Kategorie nicht bei Cricket', (await page.locator('[data-action="board"][data-key="avg"]').count()) === 0);
 check('MPR-Rangliste gefüllt', (await page.locator('.board-row').count()) > 0);
+check('Cricket-Verlauf getrennt', (await text('#match-log')).includes('Cricket') && !(await text('#match-log')).includes('Round the World'));
+
+await page.locator('[data-action="board-mode"][data-value="rtw"]').click();
 await page.locator('[data-action="board"][data-key="rtwBest"]').click();
 check('RTW-Rangliste gefüllt', (await page.locator('.board-row').count()) > 0);
-await page.locator('[data-action="board"][data-key="avg"]').click();
+check('kein Diagramm für Round the World', !(await visible('#board-chart')));
+check('RTW-Verlauf getrennt', (await text('#match-log')).includes('Round the World'));
+
+await page.locator('[data-action="board-mode"][data-value="501"]').click();
 await page.locator('#match-log .log-row').first().click();
 check('Spielstatistik aus dem Verlauf abrufbar', await visible('#screen-summary'));
 await page.locator('#summary-actions [data-action="summary-back"]').click();
 check('Zurück aus der Statistik', await visible('#screen-boards'));
-check('Verlauf enthält Cricket und Round the World',
-  (await text('#match-log')).includes('Cricket') && (await text('#match-log')).includes('Round the World'));
+
 await page.locator('#nav [data-screen="players"]').click();
 await page.locator('.player-card').first().click();
 /* Überschriften werden per CSS groß gesetzt, daher ohne Groß-/Kleinschreibung prüfen. */

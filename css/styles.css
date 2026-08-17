@@ -600,3 +600,12 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   .rtw-key { min-height: 110px; }
   .rtw-key .k { font-size: 1.5rem; }
 }
+
+/* ---------- Verlaufsdiagramm ---------- */
+.chart { width: 100%; height: auto; display: block; overflow: visible; }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 10px 14px; margin-top: 10px; }
+.chart-legend .cl { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--muted); }
+.chart-legend .cl i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.chart-legend .cl b { color: var(--text); font-variant-numeric: tabular-nums; }
+#board-mode { margin-bottom: 12px; }
+#board-mode button { font-size: 0.9rem; }

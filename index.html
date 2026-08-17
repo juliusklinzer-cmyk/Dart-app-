@@ -149,6 +149,14 @@
     <p class="sub" id="boards-sub"></p>
   </header>
 
+  <div class="options" id="board-mode">
+    <button data-action="board-mode" data-value="501">Classic</button>
+    <button data-action="board-mode" data-value="cricket">Cricket</button>
+    <button data-action="board-mode" data-value="rtw">Round the World</button>
+  </div>
+
+  <div class="card" id="board-chart"></div>
+
   <div class="chips" id="board-chips"></div>
   <div class="card no-pad"><div id="board-list" class="board-list"></div></div>
   <p class="hint" id="board-hint"></p>
@@ -159,7 +167,7 @@
   </div>
 
   <div class="card">
-    <h2>Alle Spiele</h2>
+    <h2 id="log-title">Alle Spiele</h2>
     <div id="match-log"></div>
   </div>
 </section>

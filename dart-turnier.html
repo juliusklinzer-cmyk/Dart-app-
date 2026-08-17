@@ -612,6 +612,15 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   .rtw-key .k { font-size: 1.5rem; }
 }
 
+/* ---------- Verlaufsdiagramm ---------- */
+.chart { width: 100%; height: auto; display: block; overflow: visible; }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 10px 14px; margin-top: 10px; }
+.chart-legend .cl { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--muted); }
+.chart-legend .cl i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.chart-legend .cl b { color: var(--text); font-variant-numeric: tabular-nums; }
+#board-mode { margin-bottom: 12px; }
+#board-mode button { font-size: 0.9rem; }
+
 </style>
 </head>
 <body>
@@ -750,6 +759,14 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
     <p class="sub" id="boards-sub"></p>
   </header>
 
+  <div class="options" id="board-mode">
+    <button data-action="board-mode" data-value="501">Classic</button>
+    <button data-action="board-mode" data-value="cricket">Cricket</button>
+    <button data-action="board-mode" data-value="rtw">Round the World</button>
+  </div>
+
+  <div class="card" id="board-chart"></div>
+
   <div class="chips" id="board-chips"></div>
   <div class="card no-pad"><div id="board-list" class="board-list"></div></div>
   <p class="hint" id="board-hint"></p>
@@ -760,7 +777,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   </div>
 
   <div class="card">
-    <h2>Alle Spiele</h2>
+    <h2 id="log-title">Alle Spiele</h2>
     <div id="match-log"></div>
   </div>
 </section>
@@ -1112,7 +1129,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   var MAX_HISTORY = 200;        // so viele Turniere bleiben gespeichert
 
   var S = null;
-  var UI = { input: '', darts: [], mult: 1, modeOverride: null, overlay: null, error: '', board: 'avg', profile: null, summary: null };
+  var UI = { input: '', darts: [], mult: 1, modeOverride: null, overlay: null, error: '', board: 'avg', boardMode: '501', profile: null, summary: null };
 
   /* ================= Helfer ================= */
   function $(id) { return document.getElementById(id); }
@@ -1133,7 +1150,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       settings: { start: 501, bestOf: 1, dartModeFrom: 170, cricketScoring: 1 },
       mode: '501',
       game: null,
-      profiles: DEFAULT_PLAYERS.map(function (n) { return { id: uid(), name: n, avatar: null, created: Date.now() }; }),
+      profiles: DEFAULT_PLAYERS.map(function (n, i) {
+        return { id: uid(), name: n, avatar: null, hue: HUES[i % HUES.length], created: Date.now() };
+      }),
       lineup: [],
       matches: [],
       current: null,
@@ -1159,6 +1178,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       if (s.settings.start !== 301 && s.settings.start !== 501) s.settings.start = 501;
       if (s.game === undefined) s.game = null;
       if (s.settings.cricketScoring === undefined) s.settings.cricketScoring = 1;
+      s.profiles.forEach(function (p, i) { if (typeof p.hue !== 'number') p.hue = HUES[i % HUES.length]; });
       return s;
     } catch (e) { return null; }
   }
@@ -1194,15 +1214,20 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (!parts[0]) return '?';
     return (parts.length > 1 ? parts[0][0] + parts[1][0] : parts[0].slice(0, 2)).toUpperCase();
   }
+  /* Feste, gut unterscheidbare Farbtöne – dieselbe Farbe für Avatar,
+     Diagramm und Legende, damit ein Spieler überall gleich aussieht. */
+  var HUES = [145, 210, 40, 0, 275, 175, 320, 90, 25, 250, 120, 300];
   function hue(id) {
-    var h = 0;
-    for (var i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 360;
-    return h;
+    var p = profile(id);
+    if (typeof p.hue === 'number') return p.hue;
+    var idx = S.profiles.indexOf(p);
+    return HUES[(idx < 0 ? 0 : idx) % HUES.length];
   }
+  function playerColor(id) { return 'hsl(' + hue(id) + ',70%,58%)'; }
   function avatarHTML(p, cls) {
     var c = 'av ' + (cls || '');
     if (p.avatar) return '<span class="' + c + '" style="background-image:url(' + p.avatar + ')"></span>';
-    return '<span class="' + c + ' init" style="background:hsl(' + hue(p.id) + ',38%,30%)">' + esc(initials(p.name)) + '</span>';
+    return '<span class="' + c + ' init" style="background:hsl(' + hue(p.id) + ',40%,28%)">' + esc(initials(p.name)) + '</span>';
   }
 
   /* Bild auf 220px quadratisch zuschneiden – sonst sprengen Fotos den Speicher. */
@@ -1592,27 +1617,30 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
   /* ================= Ranglisten ================= */
   var BOARDS = [
-    { key: 'avg', label: 'Average', unit: '', get: function (s) { return s.avg; }, fmt: function (v) { return v.toFixed(2); }, min: function (s) { return s.darts >= MIN_DARTS_FOR_AVG; }, hint: 'Punkte je 3 Darts über alle Spiele. Zählt ab ' + MIN_DARTS_FOR_AVG + ' geworfenen Darts.' },
-    { key: 'first9', label: 'First 9', get: function (s) { return s.first9; }, fmt: function (v) { return v.toFixed(2); }, min: function (s) { return s.first9Darts >= 9; }, hint: 'Average der ersten 9 Darts eines Legs – das Maß für den Scoring-Antritt.' },
-    { key: 'doubleQuote', label: 'Doppelquote', get: function (s) { return s.doubleQuote; }, fmt: function (v) { return v.toFixed(1) + ' %'; }, min: function (s) { return s.doubleAttempts >= 3; }, hint: 'Getroffene Finishes je Dart auf ein mögliches Doppel (Rest 2–40 gerade oder Bull). Zählt ab 3 Versuchen.' },
-    { key: 'highCO', label: 'Höchstes Finish', get: function (s) { return s.highCO; }, fmt: function (v) { return String(v); }, min: function (s) { return s.highCO > 0; }, hint: 'Der höchste je ausgecheckte Rest.' },
-    { key: 's180', label: '180er', get: function (s) { return s.s180; }, fmt: function (v) { return String(v); }, min: function (s) { return s.s180 > 0; }, hint: 'Maximum – alle drei Darts in die Triple 20.' },
-    { key: 'highScore', label: 'Höchste Aufnahme', get: function (s) { return s.highScore; }, fmt: function (v) { return String(v); }, min: function (s) { return s.highScore > 0; }, hint: 'Die beste einzelne Aufnahme aus 3 Darts.' },
-    { key: 'bestLeg', label: 'Bestes Leg', get: function (s) { return s.bestLeg; }, fmt: function (v) { return v + ' Darts'; }, min: function (s) { return s.bestLeg !== null; }, asc: true, hint: 'Wenigste Darts für ein gewonnenes Leg.' },
-    { key: 'tons', label: '100+ Aufnahmen', get: function (s) { return s.tons; }, fmt: function (v) { return String(v); }, min: function (s) { return s.tons > 0; }, hint: 'Alle Aufnahmen ab 100 Punkten (inkl. 140+ und 180).' },
-    { key: 'won', label: 'Siege', get: function (s) { return s.won; }, fmt: function (v) { return String(v); }, min: function (s) { return s.matches > 0; }, hint: 'Gewonnene Spiele über alle Turniere.' },
-    { key: 'winPct', label: 'Siegquote', get: function (s) { return s.winPct; }, fmt: function (v) { return v.toFixed(0) + ' %'; }, min: function (s) { return s.matches >= 3; }, hint: 'Anteil gewonnener Spiele. Zählt ab 3 Spielen.' },
-    { key: 'legsWon', label: 'Legs', get: function (s) { return s.legsWon; }, fmt: function (v) { return String(v); }, min: function (s) { return s.legsWon > 0; }, hint: 'Gewonnene Legs insgesamt.' },
-    { key: 'tourWins', label: 'Turniersiege', get: function (s) { return s.tourWins; }, fmt: function (v) { return String(v); }, min: function (s) { return s.tourWins > 0; }, hint: 'Gewonnene, abgeschlossene Turniere.' },
-    { key: 'mpr', label: 'Cricket MPR', get: function (s) { return s.mpr; }, fmt: function (v) { return v.toFixed(2); }, min: function (s) { return s.cricketDarts >= 9; }, hint: 'Marks per Round: getroffene Marken je 3 Darts im Cricket.' },
-    { key: 'cricketWins', label: 'Cricket-Siege', get: function (s) { return s.cricketWins; }, fmt: function (v) { return String(v); }, min: function (s) { return s.cricketGames > 0; }, hint: 'Gewonnene Cricket-Spiele.' },
-    { key: 'rtwBest', label: 'Round the World', get: function (s) { return s.rtwBest; }, fmt: function (v) { return v + ' Darts'; }, min: function (s) { return s.rtwBest !== null; }, asc: true, hint: 'Wenigste Darts für einen kompletten Durchlauf von der 1 bis Bull.' },
-    { key: 'rtwWins', label: 'RTW-Siege', get: function (s) { return s.rtwWins; }, fmt: function (v) { return String(v); }, min: function (s) { return s.rtwGames > 0; }, hint: 'Gewonnene Round-the-World-Trainings.' }
+    { mode: '501', key: 'avg', label: 'Average', unit: '', get: function (s) { return s.avg; }, fmt: function (v) { return v.toFixed(2); }, min: function (s) { return s.darts >= MIN_DARTS_FOR_AVG; }, hint: 'Punkte je 3 Darts über alle Spiele. Zählt ab ' + MIN_DARTS_FOR_AVG + ' geworfenen Darts.' },
+    { mode: '501', key: 'first9', label: 'First 9', get: function (s) { return s.first9; }, fmt: function (v) { return v.toFixed(2); }, min: function (s) { return s.first9Darts >= 9; }, hint: 'Average der ersten 9 Darts eines Legs – das Maß für den Scoring-Antritt.' },
+    { mode: '501', key: 'doubleQuote', label: 'Doppelquote', get: function (s) { return s.doubleQuote; }, fmt: function (v) { return v.toFixed(1) + ' %'; }, min: function (s) { return s.doubleAttempts >= 3; }, hint: 'Getroffene Finishes je Dart auf ein mögliches Doppel (Rest 2–40 gerade oder Bull). Zählt ab 3 Versuchen.' },
+    { mode: '501', key: 'highCO', label: 'Höchstes Finish', get: function (s) { return s.highCO; }, fmt: function (v) { return String(v); }, min: function (s) { return s.highCO > 0; }, hint: 'Der höchste je ausgecheckte Rest.' },
+    { mode: '501', key: 's180', label: '180er', get: function (s) { return s.s180; }, fmt: function (v) { return String(v); }, min: function (s) { return s.s180 > 0; }, hint: 'Maximum – alle drei Darts in die Triple 20.' },
+    { mode: '501', key: 'highScore', label: 'Höchste Aufnahme', get: function (s) { return s.highScore; }, fmt: function (v) { return String(v); }, min: function (s) { return s.highScore > 0; }, hint: 'Die beste einzelne Aufnahme aus 3 Darts.' },
+    { mode: '501', key: 'bestLeg', label: 'Bestes Leg', get: function (s) { return s.bestLeg; }, fmt: function (v) { return v + ' Darts'; }, min: function (s) { return s.bestLeg !== null; }, asc: true, hint: 'Wenigste Darts für ein gewonnenes Leg.' },
+    { mode: '501', key: 'tons', label: '100+ Aufnahmen', get: function (s) { return s.tons; }, fmt: function (v) { return String(v); }, min: function (s) { return s.tons > 0; }, hint: 'Alle Aufnahmen ab 100 Punkten (inkl. 140+ und 180).' },
+    { mode: '501', key: 'won', label: 'Siege', get: function (s) { return s.won; }, fmt: function (v) { return String(v); }, min: function (s) { return s.matches > 0; }, hint: 'Gewonnene Spiele über alle Turniere.' },
+    { mode: '501', key: 'winPct', label: 'Siegquote', get: function (s) { return s.winPct; }, fmt: function (v) { return v.toFixed(0) + ' %'; }, min: function (s) { return s.matches >= 3; }, hint: 'Anteil gewonnener Spiele. Zählt ab 3 Spielen.' },
+    { mode: '501', key: 'legsWon', label: 'Legs', get: function (s) { return s.legsWon; }, fmt: function (v) { return String(v); }, min: function (s) { return s.legsWon > 0; }, hint: 'Gewonnene Legs insgesamt.' },
+    { mode: '501', key: 'tourWins', label: 'Turniersiege', get: function (s) { return s.tourWins; }, fmt: function (v) { return String(v); }, min: function (s) { return s.tourWins > 0; }, hint: 'Gewonnene, abgeschlossene Turniere.' },
+    { mode: 'cricket', key: 'mpr', label: 'MPR', get: function (s) { return s.mpr; }, fmt: function (v) { return v.toFixed(2); }, min: function (s) { return s.cricketDarts >= 9; }, hint: 'Marks per Round: getroffene Marken je 3 Darts im Cricket.' },
+    { mode: 'cricket', key: 'cricketWins', label: 'Siege', get: function (s) { return s.cricketWins; }, fmt: function (v) { return String(v); }, min: function (s) { return s.cricketGames > 0; }, hint: 'Gewonnene Cricket-Spiele.' },
+    { mode: 'rtw', key: 'rtwBest', label: 'Bestes Ergebnis', get: function (s) { return s.rtwBest; }, fmt: function (v) { return v + ' Darts'; }, min: function (s) { return s.rtwBest !== null; }, asc: true, hint: 'Wenigste Darts für einen kompletten Durchlauf von der 1 bis Bull.' },
+    { mode: 'rtw', key: 'rtwWins', label: 'Siege', get: function (s) { return s.rtwWins; }, fmt: function (v) { return String(v); }, min: function (s) { return s.rtwGames > 0; }, hint: 'Gewonnene Round-the-World-Trainings.' }
   ];
 
   function boardDef(key) {
     for (var i = 0; i < BOARDS.length; i++) if (BOARDS[i].key === key) return BOARDS[i];
     return BOARDS[0];
+  }
+  function boardsFor(mode) {
+    return BOARDS.filter(function (b) { return b.mode === mode; });
   }
 
   function ranking(def, map) {
@@ -1938,16 +1966,117 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     }).join('');
   }
 
+  /* ================= Verlaufsdiagramm ================= */
+  var CHART_GAMES = 40;
+
+  /* Je Spieler eine Reihe mit einem Wert pro Spiel, älteste zuerst. */
+  function chartSeries(mode) {
+    var per = {};
+    function push(id, value) {
+      if (!per[id]) per[id] = [];
+      per[id].push(value);
+    }
+
+    if (mode === '501') {
+      allMatches().slice().reverse().forEach(function (e) {
+        e.m.p.forEach(function (id) {
+          var darts = 0, points = 0;
+          e.m.legs.forEach(function (leg) {
+            leg.visits.forEach(function (v) { if (v.p === id) { darts += v.d; if (!v.b) points += v.s; } });
+          });
+          if (darts) push(id, (points / darts) * 3);
+        });
+      });
+    } else if (mode === 'cricket') {
+      var games = S.history.filter(function (h) { return h.kind === 'cricket'; }).slice().reverse();
+      if (S.game && S.game.kind === 'cricket' && S.game.done) games.push(S.game);
+      games.forEach(function (h) {
+        var cs = cricketState({ players: h.players, throws: h.throws, scoring: h.scoring });
+        h.players.forEach(function (id) {
+          if (cs.darts[id]) push(id, (cs.allMarks[id] / cs.darts[id]) * 3);
+        });
+      });
+    }
+
+    return Object.keys(per).filter(function (id) { return !profile(id).hidden; }).map(function (id) {
+      return { id: id, name: pname(id), color: playerColor(id), points: per[id].slice(-CHART_GAMES) };
+    }).filter(function (r) { return r.points.length > 0; });
+  }
+
+  /* Schlichtes SVG-Liniendiagramm: links die Skala, unten die Spiele. */
+  function lineChart(series, label) {
+    var maxN = 0, min = Infinity, max = -Infinity;
+    series.forEach(function (r) {
+      maxN = Math.max(maxN, r.points.length);
+      r.points.forEach(function (v) { min = Math.min(min, v); max = Math.max(max, v); });
+    });
+    if (!series.length || maxN < 2) return null;
+
+    var pad = (max - min) * 0.15 || 5;
+    var lo = Math.max(0, min - pad), hi = max + pad;
+    var W = 340, H = 190, L = 36, R = 10, T = 12, B = 26;
+    var pw = W - L - R, ph = H - T - B;
+    var x = function (i, n) { return L + pw - (n - 1 - i) * (pw / (maxN - 1)); };
+    var y = function (v) { return T + ph - ((v - lo) / (hi - lo)) * ph; };
+
+    var grid = '';
+    for (var g = 0; g <= 3; g++) {
+      var val = lo + ((hi - lo) * g) / 3;
+      var gy = y(val);
+      grid += '<line x1="' + L + '" y1="' + gy.toFixed(1) + '" x2="' + (W - R) + '" y2="' + gy.toFixed(1) + '" stroke="#2a3340" stroke-width="1"/>' +
+        '<text x="' + (L - 6) + '" y="' + (gy + 3.5).toFixed(1) + '" text-anchor="end" font-size="9" fill="#8d9aab">' + val.toFixed(0) + '</text>';
+    }
+
+    var lines = series.map(function (r) {
+      var n = r.points.length;
+      var pts = r.points.map(function (v, i) { return x(i, n).toFixed(1) + ',' + y(v).toFixed(1); }).join(' ');
+      var dots = r.points.map(function (v, i) {
+        return '<circle cx="' + x(i, n).toFixed(1) + '" cy="' + y(v).toFixed(1) + '" r="2.4" fill="' + r.color + '"/>';
+      }).join('');
+      return '<polyline points="' + pts + '" fill="none" stroke="' + r.color + '" stroke-width="2.2" ' +
+        'stroke-linejoin="round" stroke-linecap="round"/>' + dots;
+    }).join('');
+
+    var axis = '<text x="' + L + '" y="' + (H - 8) + '" font-size="9" fill="#8d9aab">vor ' + (maxN - 1) + ' Spielen</text>' +
+      '<text x="' + (W - R) + '" y="' + (H - 8) + '" text-anchor="end" font-size="9" fill="#8d9aab">letztes Spiel</text>';
+
+    return '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(label) + '">' +
+      grid + lines + axis + '</svg>' +
+      '<div class="chart-legend">' + series.map(function (r) {
+        var last = r.points[r.points.length - 1];
+        return '<span class="cl"><i style="background:' + r.color + '"></i>' + esc(r.name) +
+          ' <b>' + last.toFixed(1) + '</b></span>';
+      }).join('') + '</div>';
+  }
+
   function renderBoards() {
     var map = career();
+    var mode = UI.boardMode;
+    var defs = boardsFor(mode);
+    if (!defs.some(function (b) { return b.key === UI.board; })) UI.board = defs[0].key;
     var def = boardDef(UI.board);
 
-    var played = allMatches().length;
-    $('boards-sub').textContent = played
-      ? played + ' Spiel' + (played === 1 ? '' : 'e') + ' · ' + S.history.length + ' abgeschlossene Turniere'
-      : 'Noch keine Spiele gespielt';
+    $('board-mode').querySelectorAll('button').forEach(function (b) {
+      b.classList.toggle('active', b.getAttribute('data-value') === mode);
+    });
 
-    $('board-chips').innerHTML = BOARDS.map(function (b) {
+    var log = allGamesLog().filter(function (row) { return row.kind === mode; });
+    var modeName = mode === '501' ? 'Classic' : mode === 'cricket' ? 'Cricket' : 'Round the World';
+    $('boards-sub').textContent = log.length
+      ? modeName + ' · ' + log.length + ' Spiel' + (log.length === 1 ? '' : 'e') +
+        (mode === '501' ? ' · ' + S.history.filter(function (h) { return (h.kind || '501') === '501'; }).length + ' Turniere' : '')
+      : modeName + ' · noch keine Spiele';
+
+    /* Verlauf: eine farbige Linie je Spieler. */
+    var chartLabel = mode === '501' ? '3-Dart-Average je Spiel' : 'MPR je Spiel';
+    var chart = mode === 'rtw' ? null : lineChart(chartSeries(mode), chartLabel);
+    $('board-chart').classList.toggle('hidden', mode === 'rtw');
+    if (mode !== 'rtw') {
+      $('board-chart').innerHTML = '<h2>' + chartLabel + '</h2>' +
+        (chart || '<p class="hint">Ab dem zweiten Spiel wird hier der Verlauf gezeichnet.</p>');
+    }
+
+    $('board-chips').innerHTML = defs.map(function (b) {
       return '<button class="chip ' + (b.key === UI.board ? 'active' : '') + '" data-action="board" data-key="' + b.key + '">' + b.label + '</button>';
     }).join('');
 
@@ -1963,14 +2092,20 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     }).join('') : '<div class="board-empty">Dafür fehlen noch Daten.</div>';
     $('board-hint').textContent = def.hint;
 
-    /* Rekorde: die Bestmarken quer über alle Kategorien. */
-    var recs = [
+    /* Rekorde des jeweiligen Modus. */
+    var recs = mode === '501' ? [
       { k: 'highCO', t: 'Höchstes Finish' },
       { k: 'highScore', t: 'Höchste Aufnahme' },
       { k: 'bestLeg', t: 'Kürzestes Leg' },
       { k: 'avg', t: 'Bester Average' },
       { k: 's180', t: 'Meiste 180er' },
       { k: 'doubleQuote', t: 'Beste Doppelquote' }
+    ] : mode === 'cricket' ? [
+      { k: 'mpr', t: 'Beste MPR' },
+      { k: 'cricketWins', t: 'Meiste Siege' }
+    ] : [
+      { k: 'rtwBest', t: 'Wenigste Darts' },
+      { k: 'rtwWins', t: 'Meiste Siege' }
     ];
     $('records').innerHTML = recs.map(function (r) {
       var d = boardDef(r.k);
@@ -1982,7 +2117,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '</div>';
     }).join('');
 
-    $('match-log').innerHTML = allGamesLog().slice(0, 30).map(function (row) {
+    $('log-title').textContent = mode === '501' ? 'Alle Classic-Spiele'
+      : mode === 'cricket' ? 'Alle Cricket-Spiele' : 'Alle Trainings';
+    $('match-log').innerHTML = log.slice(0, 30).map(function (row) {
       if (row.kind !== '501') {
         var h = row.h;
         var title = h.kind === 'cricket' ? 'Cricket' + (h.scoring ? '' : ' (ohne Punkte)') : 'Round the World';
@@ -2641,7 +2778,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           ex.name = name;
           ex.avatar = draft.avatar;
         } else {
-          var np = { id: uid(), name: name, avatar: draft.avatar, created: Date.now() };
+          var np = { id: uid(), name: name, avatar: draft.avatar, created: Date.now(),
+            hue: HUES[S.profiles.length % HUES.length] };
           S.profiles.push(np);
           if (S.lineup.length < 12) S.lineup.push(np.id);
         }
@@ -2678,6 +2816,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         break;
       case 'board':
         UI.board = el.getAttribute('data-key');
+        render();
+        break;
+      case 'board-mode':
+        UI.boardMode = el.getAttribute('data-value');
+        UI.board = boardsFor(UI.boardMode)[0].key;
         render();
         break;
       case 'set-mode':
