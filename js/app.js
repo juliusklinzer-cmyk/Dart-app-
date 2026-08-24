@@ -1400,9 +1400,35 @@
     var forGame = S.game && !S.game.started;
     var ids = forGame ? S.game.players : (currentMatch() ? currentMatch().p : null);
     if (!ids) { S.screen = 'tournament'; render(); return; }
+
+    /* Bei mehr als zwei Spielern gibt der Bull-Wurf nicht nur den Anfänger vor,
+       sondern die ganze Reihenfolge – deshalb hier eine Liste, die sich mit
+       Hoch/Runter in Sekunden sortieren lässt. */
+    if (forGame && ids.length > 2) {
+      $('bulloff-sub').textContent = 'Bull werfen und danach sortieren: Wer am nächsten dran war, steht oben.';
+      $('bulloff-buttons').className = 'bulloff-order';
+      $('bulloff-buttons').innerHTML =
+        '<div class="bo-list">' + ids.map(function (pid, i) {
+          var nm = esc(pname(pid));
+          return '<div class="bo-row">' +
+            '<span class="bo-pos">' + (i + 1) + '.</span>' +
+            avatarHTML(profile(pid), 'sm') +
+            '<span class="bo-name">' + nm + '</span>' +
+            '<button class="bo-mv" data-action="order-up" data-id="' + pid + '"' +
+              (i === 0 ? ' disabled' : '') + ' aria-label="' + nm + ' nach oben">▲</button>' +
+            '<button class="bo-mv" data-action="order-down" data-id="' + pid + '"' +
+              (i === ids.length - 1 ? ' disabled' : '') + ' aria-label="' + nm + ' nach unten">▼</button>' +
+            '</div>';
+        }).join('') + '</div>' +
+        '<button class="btn primary full" data-action="start-order">' +
+          esc(pname(ids[0])) + ' beginnt · Los geht\'s</button>';
+      return;
+    }
+
     $('bulloff-sub').textContent = ids.length > 2
       ? 'Wer war am nächsten am Bull? Er beginnt, danach geht es reihum weiter.'
       : 'Wer war näher am Bull und darf anfangen?';
+    $('bulloff-buttons').className = 'bulloff';
     $('bulloff-buttons').innerHTML = ids.map(function (pid) {
       return '<button data-action="pick-starter" data-id="' + pid + '">' +
         avatarHTML(profile(pid), 'md') + '<span>' + esc(pname(pid)) + '</span></button>';
@@ -1456,25 +1482,42 @@
         : '<span class="none">' + whose + ': kein Finish mit ' + plural(dartsLeft, 'Dart', 'Darts') + '</span>';
     }
 
+    /* Kompletter Match-Verlauf, neueste Aufnahme oben, mit Leg-Trennern.
+       Korrigieren lässt sich nur das laufende Leg – abgeschlossene Legs
+       stehen als Beleg da und würden sonst ihr Finish verlieren. */
     $('history').innerHTML = m.p.map(function (pid) {
-      var rowRest = tourStart();
       var rows = [];
-      leg.visits.forEach(function (v) {
-        if (v.p !== pid) return;
-        var before = rowRest;
-        if (!v.b) rowRest -= v.s;
-        var why = '';
-        if (v.b) {
-          var after = before - v.o;
-          why = after < 0 ? ' · überworfen' : after === 1 ? ' · Rest 1' : after === 0 ? ' · kein Doppel' : '';
+      for (var li = m.legs.length - 1; li >= 0; li--) {
+        var lg = m.legs[li];
+        var isActiveLeg = lg === leg;
+        var restRun = tourStart();
+        var entries = [];
+        lg.visits.forEach(function (v, vi) {
+          if (v.p !== pid) return;
+          var before = restRun;
+          if (!v.b) restRun -= v.s;
+          entries.push({ v: v, before: before, rest: restRun, idx: vi });
+        });
+        if (!entries.length && !isActiveLeg) continue;
+        if (m.legs.length > 1) {
+          rows.push('<div class="leg-sep">Leg ' + (li + 1) +
+            (lg.winner ? (lg.winner === pid ? ' · gewonnen' : ' · verloren') : ' · läuft') + '</div>');
         }
-        var vi = leg.visits.indexOf(v);
-        rows.push('<div class="v ' + (v.b ? 'bust' : v.c ? 'co' : '') + (v.c ? '' : ' tap') + '"' +
-          (v.c ? '' : ' data-action="edit-visit" data-i="' + vi + '" role="button" tabindex="0"') + '>' +
-          '<span class="s">' + (v.b ? v.o : v.s) + '</span>' +
-          '<span class="r">' + (v.b ? 'Bust' + why : 'Rest ' + rowRest) + '</span></div>');
-      });
-      return '<div class="col">' + rows.reverse().slice(0, 5).join('') + '</div>';
+        entries.reverse().forEach(function (e) {
+          var v = e.v;
+          var why = '';
+          if (v.b) {
+            var after = e.before - v.o;
+            why = after < 0 ? ' · überworfen' : after === 1 ? ' · Rest 1' : after === 0 ? ' · kein Doppel' : '';
+          }
+          var editable = isActiveLeg && !v.c && !m.done;
+          rows.push('<div class="v ' + (v.b ? 'bust' : v.c ? 'co' : '') + (editable ? ' tap' : '') + '"' +
+            (editable ? ' data-action="edit-visit" data-i="' + e.idx + '" role="button" tabindex="0"' : '') + '>' +
+            '<span class="s">' + (v.b ? v.o : v.s) + '</span>' +
+            '<span class="r">' + (v.b ? 'Bust' + why : 'Rest ' + e.rest) + '</span></div>');
+        });
+      }
+      return '<div class="col">' + rows.join('') + '</div>';
     }).join('');
 
     $('visit-darts').classList.toggle('hidden', mode !== 'darts');
@@ -1560,7 +1603,8 @@
       return '<div class="cr-cell cr-num ' + (allClosed ? 'dead' : '') + '">' + cricketLabel(n) + '</div>' +
         g.players.map(function (id) {
           var m = st.marks[id][n];
-          return '<div class="cr-cell cr-mark ' + (id === active ? 'act' : '') + ' m' + m + '">' +
+          return '<div class="cr-cell cr-mark ' + (allClosed ? 'dead ' : '') +
+            (id === active ? 'act' : '') + ' m' + m + '">' +
             (m === 0 ? '' : m === 1 ? '/' : m === 2 ? '✕' : '⊗') + '</div>';
         }).join('');
     }).join('');
@@ -1616,6 +1660,10 @@
         '<button class="bull" data-num="25" data-mult="1">Bull</button>' +
         '<button class="bull" data-num="25" data-mult="2">Bull ×2</button>' +
         '<button class="miss" data-num="0" data-mult="1">Miss</button>' +
+        /* Nichts getroffen? Ein Tipp beendet die Aufnahme und füllt die
+           fehlenden Darts als Fehlwürfe auf. */
+        '<button class="skip" data-action="end-cricket-visit">' +
+          (g.throws.length % 3 ? 'Weiter ▸' : 'Nichts ▸') + '</button>' +
       '</div>';
   }
 
@@ -2180,6 +2228,34 @@
         save(); render();
         break;
       }
+      case 'end-cricket-visit': {
+        var cg = S.game;
+        if (!cg || cg.kind !== 'cricket' || cg.done || settling()) return;
+        var need = 3 - (cg.throws.length % 3);
+        for (var ci = 0; ci < need; ci++) cg.throws.push({ n: 0, m: 0 });
+        UI.mult = 1;
+        save(); render();
+        break;
+      }
+      case 'order-up':
+      case 'order-down': {
+        var og = S.game;
+        if (!og || og.started) return;
+        var oi = og.players.indexOf(el.getAttribute('data-id'));
+        var oj = oi + (action === 'order-up' ? -1 : 1);
+        if (oi < 0 || oj < 0 || oj >= og.players.length) return;
+        var swap = og.players[oi]; og.players[oi] = og.players[oj]; og.players[oj] = swap;
+        save(); render();
+        break;
+      }
+      case 'start-order': {
+        var sg = S.game;
+        if (!sg || sg.started) return;
+        sg.started = true;
+        S.screen = sg.kind;
+        save(); render();
+        break;
+      }
       case 'undo':
         undo();
         break;
@@ -2416,6 +2492,8 @@
       game: function () { return S.game; },
       cricketState: function () { return cricketState(S.game); },
       rtwState: function () { return rtwState(S.game); },
+      gameTurnPlayer: function () { return S.game ? gameTurnPlayer(S.game) : null; },
+      render: render,
       reset: function () { S = newState(); UI.overlay = null; render(); }
     };
   }

@@ -32,6 +32,9 @@
   --amber: #ffc14d;
   --radius: 14px;
   --tap: 56px;
+  /* Ausgegraut: Zahl ist bei allen zu und bringt nichts mehr. */
+  --dead: #7c8798;
+  --dead-bg: #141920;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -181,7 +184,14 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .cr-head span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cr-head.act { background: var(--accent-soft); color: var(--accent); }
 .cr-num { background: var(--bg-3); font-weight: 700; font-size: 0.9rem; }
-.cr-num.dead { color: #93a0b2; }
+/* Zu bei allen: die ganze Zeile verliert Farbe, damit klar ist, dass sie
+   nichts mehr bringt. */
+.cr-num.dead { color: var(--dead); background: var(--dead-bg); }
+.cr-cell.cr-mark.dead,
+.cr-cell.cr-mark.dead.m1,
+.cr-cell.cr-mark.dead.m2,
+.cr-cell.cr-mark.dead.m3 { color: var(--dead); background: var(--dead-bg); }
+.cr-cell.cr-mark.dead.act { outline: none; }
 .cr-mark { font-size: 1.15rem; font-weight: 700; color: var(--muted); min-height: 40px; }
 .cr-mark.m1, .cr-mark.m2 { color: var(--text); }
 .cr-mark.m3 { color: var(--accent); background: var(--accent-soft); }
@@ -404,6 +414,37 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   display: flex; flex-direction: column; align-items: center; gap: 12px;
 }
 .bulloff button:active { border-color: var(--accent); }
+
+/* Bull-Out mit mehr als zwei Spielern: die ganze Reihenfolge festlegen. */
+.bulloff-order { display: flex; flex-direction: column; gap: 14px; }
+.bo-list { display: flex; flex-direction: column; gap: 8px; }
+.bo-row {
+  display: flex; align-items: center; gap: 10px; text-align: left;
+  background: var(--bg-2); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 8px 10px;
+}
+.bo-pos {
+  min-width: 28px; font-weight: 800; font-size: 1.05rem; color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.bo-name { flex: 1; font-weight: 700; font-size: 1.05rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bo-mv {
+  background: var(--bg-3); border: 1px solid var(--line); color: var(--text);
+  border-radius: 10px; min-width: 48px; min-height: 48px; font-size: 1rem; cursor: pointer;
+}
+.bo-mv:active { border-color: var(--accent); }
+.bo-mv[disabled] { color: var(--dead); background: var(--dead-bg); border-color: var(--dead-bg); cursor: default; }
+@media (orientation: landscape) and (min-width: 700px) {
+  .bo-row { padding: 12px 14px; }
+  .bo-name { font-size: 1.25rem; }
+  .bo-mv { min-width: 56px; min-height: 56px; font-size: 1.15rem; }
+}
+@media (orientation: landscape) and (max-height: 560px) {
+  .bulloff-order { gap: 8px; }
+  .bo-list { gap: 6px; }
+  .bo-row { padding: 4px 8px; }
+  .bo-mv { min-height: 44px; min-width: 44px; }
+}
 
 /* ---------- Spiel ---------- */
 .screen.game { display: none; }
@@ -800,29 +841,33 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 }
 .cg-block button {
   background: var(--bg-2); border: 1px solid var(--line); color: var(--text);
-  border-radius: 10px; min-height: 48px; font-size: 1.05rem; font-weight: 700; cursor: pointer;
+  border-radius: 10px; min-height: 58px; font-size: 1.2rem; font-weight: 700; cursor: pointer;
   font-variant-numeric: tabular-nums;
 }
 .cg-block button:active { background: var(--bg-3); }
-.cg-block button.dim { color: #93a0b2; border-style: dashed; }
+.cg-block button.dim { color: var(--dead); background: var(--dead-bg); border-color: var(--dead-bg); }
+.cg-block button.dim .mx { color: var(--dead); }
 .cg-block button.bull { color: var(--amber); }
 .cg-block button.miss { color: var(--red); }
+.cg-block button.skip { color: var(--accent); font-size: 1rem; }
 .cg-block .mx { color: var(--accent); font-size: 0.72em; margin-right: 2px; vertical-align: 2px; }
-.cg-extra { grid-template-columns: repeat(3, 1fr); }
+.cg-extra { grid-template-columns: repeat(4, 1fr); }
 .cr-mpr { font-size: 0.62rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .cr-head.act .cr-mpr { color: var(--accent); }
 .num-grid button.end-visit { font-size: 0.95rem; color: var(--accent); }
 
 @media (orientation: landscape) and (min-width: 700px) {
   .cricket-grid { gap: 10px; }
-  .cg-block button { min-height: 56px; font-size: 1.2rem; }
+  .cg-block button { min-height: 72px; font-size: 1.45rem; }
+  .cg-block button.skip { font-size: 1.15rem; }
   .cg-block .cg-label { font-size: 0.8rem; }
   .cr-mpr { font-size: 0.8rem; }
 }
 @media (orientation: landscape) and (max-height: 560px) {
   .cricket-grid { gap: 4px; }
   .cg-block { gap: 3px; }
-  .cg-block button { min-height: 44px; font-size: 0.9rem; }
+  .cg-block button { min-height: 46px; font-size: 0.95rem; }
+  .cg-block button.skip { font-size: 0.8rem; }
   .cg-block .cg-label { display: none; }
 }
 
@@ -839,9 +884,17 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   .cricket-legend { font-size: 0.68rem; gap: 2px 10px; margin-top: 4px; }
   .cricket-grid { gap: 5px; }
   .cg-block { gap: 4px; }
-  .cg-block button { min-height: 44px; font-size: 0.95rem; }
+  .cg-block button { min-height: 52px; font-size: 1.05rem; }
+  .cg-block button.skip { font-size: 0.85rem; }
   .cg-block .cg-label { font-size: 0.62rem; }
 }
+
+/* ---------- Verlauf über das ganze Match ---------- */
+.history .leg-sep {
+  font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--muted); padding: 6px 2px 2px; border-top: 1px solid var(--line); margin-top: 4px;
+}
+.history .col > .leg-sep:first-child { border-top: none; margin-top: 0; padding-top: 0; }
 
 </style>
 </head>
@@ -2734,9 +2787,35 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var forGame = S.game && !S.game.started;
     var ids = forGame ? S.game.players : (currentMatch() ? currentMatch().p : null);
     if (!ids) { S.screen = 'tournament'; render(); return; }
+
+    /* Bei mehr als zwei Spielern gibt der Bull-Wurf nicht nur den Anfänger vor,
+       sondern die ganze Reihenfolge – deshalb hier eine Liste, die sich mit
+       Hoch/Runter in Sekunden sortieren lässt. */
+    if (forGame && ids.length > 2) {
+      $('bulloff-sub').textContent = 'Bull werfen und danach sortieren: Wer am nächsten dran war, steht oben.';
+      $('bulloff-buttons').className = 'bulloff-order';
+      $('bulloff-buttons').innerHTML =
+        '<div class="bo-list">' + ids.map(function (pid, i) {
+          var nm = esc(pname(pid));
+          return '<div class="bo-row">' +
+            '<span class="bo-pos">' + (i + 1) + '.</span>' +
+            avatarHTML(profile(pid), 'sm') +
+            '<span class="bo-name">' + nm + '</span>' +
+            '<button class="bo-mv" data-action="order-up" data-id="' + pid + '"' +
+              (i === 0 ? ' disabled' : '') + ' aria-label="' + nm + ' nach oben">▲</button>' +
+            '<button class="bo-mv" data-action="order-down" data-id="' + pid + '"' +
+              (i === ids.length - 1 ? ' disabled' : '') + ' aria-label="' + nm + ' nach unten">▼</button>' +
+            '</div>';
+        }).join('') + '</div>' +
+        '<button class="btn primary full" data-action="start-order">' +
+          esc(pname(ids[0])) + ' beginnt · Los geht\'s</button>';
+      return;
+    }
+
     $('bulloff-sub').textContent = ids.length > 2
       ? 'Wer war am nächsten am Bull? Er beginnt, danach geht es reihum weiter.'
       : 'Wer war näher am Bull und darf anfangen?';
+    $('bulloff-buttons').className = 'bulloff';
     $('bulloff-buttons').innerHTML = ids.map(function (pid) {
       return '<button data-action="pick-starter" data-id="' + pid + '">' +
         avatarHTML(profile(pid), 'md') + '<span>' + esc(pname(pid)) + '</span></button>';
@@ -2790,25 +2869,42 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         : '<span class="none">' + whose + ': kein Finish mit ' + plural(dartsLeft, 'Dart', 'Darts') + '</span>';
     }
 
+    /* Kompletter Match-Verlauf, neueste Aufnahme oben, mit Leg-Trennern.
+       Korrigieren lässt sich nur das laufende Leg – abgeschlossene Legs
+       stehen als Beleg da und würden sonst ihr Finish verlieren. */
     $('history').innerHTML = m.p.map(function (pid) {
-      var rowRest = tourStart();
       var rows = [];
-      leg.visits.forEach(function (v) {
-        if (v.p !== pid) return;
-        var before = rowRest;
-        if (!v.b) rowRest -= v.s;
-        var why = '';
-        if (v.b) {
-          var after = before - v.o;
-          why = after < 0 ? ' · überworfen' : after === 1 ? ' · Rest 1' : after === 0 ? ' · kein Doppel' : '';
+      for (var li = m.legs.length - 1; li >= 0; li--) {
+        var lg = m.legs[li];
+        var isActiveLeg = lg === leg;
+        var restRun = tourStart();
+        var entries = [];
+        lg.visits.forEach(function (v, vi) {
+          if (v.p !== pid) return;
+          var before = restRun;
+          if (!v.b) restRun -= v.s;
+          entries.push({ v: v, before: before, rest: restRun, idx: vi });
+        });
+        if (!entries.length && !isActiveLeg) continue;
+        if (m.legs.length > 1) {
+          rows.push('<div class="leg-sep">Leg ' + (li + 1) +
+            (lg.winner ? (lg.winner === pid ? ' · gewonnen' : ' · verloren') : ' · läuft') + '</div>');
         }
-        var vi = leg.visits.indexOf(v);
-        rows.push('<div class="v ' + (v.b ? 'bust' : v.c ? 'co' : '') + (v.c ? '' : ' tap') + '"' +
-          (v.c ? '' : ' data-action="edit-visit" data-i="' + vi + '" role="button" tabindex="0"') + '>' +
-          '<span class="s">' + (v.b ? v.o : v.s) + '</span>' +
-          '<span class="r">' + (v.b ? 'Bust' + why : 'Rest ' + rowRest) + '</span></div>');
-      });
-      return '<div class="col">' + rows.reverse().slice(0, 5).join('') + '</div>';
+        entries.reverse().forEach(function (e) {
+          var v = e.v;
+          var why = '';
+          if (v.b) {
+            var after = e.before - v.o;
+            why = after < 0 ? ' · überworfen' : after === 1 ? ' · Rest 1' : after === 0 ? ' · kein Doppel' : '';
+          }
+          var editable = isActiveLeg && !v.c && !m.done;
+          rows.push('<div class="v ' + (v.b ? 'bust' : v.c ? 'co' : '') + (editable ? ' tap' : '') + '"' +
+            (editable ? ' data-action="edit-visit" data-i="' + e.idx + '" role="button" tabindex="0"' : '') + '>' +
+            '<span class="s">' + (v.b ? v.o : v.s) + '</span>' +
+            '<span class="r">' + (v.b ? 'Bust' + why : 'Rest ' + e.rest) + '</span></div>');
+        });
+      }
+      return '<div class="col">' + rows.join('') + '</div>';
     }).join('');
 
     $('visit-darts').classList.toggle('hidden', mode !== 'darts');
@@ -2894,7 +2990,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       return '<div class="cr-cell cr-num ' + (allClosed ? 'dead' : '') + '">' + cricketLabel(n) + '</div>' +
         g.players.map(function (id) {
           var m = st.marks[id][n];
-          return '<div class="cr-cell cr-mark ' + (id === active ? 'act' : '') + ' m' + m + '">' +
+          return '<div class="cr-cell cr-mark ' + (allClosed ? 'dead ' : '') +
+            (id === active ? 'act' : '') + ' m' + m + '">' +
             (m === 0 ? '' : m === 1 ? '/' : m === 2 ? '✕' : '⊗') + '</div>';
         }).join('');
     }).join('');
@@ -2950,6 +3047,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '<button class="bull" data-num="25" data-mult="1">Bull</button>' +
         '<button class="bull" data-num="25" data-mult="2">Bull ×2</button>' +
         '<button class="miss" data-num="0" data-mult="1">Miss</button>' +
+        /* Nichts getroffen? Ein Tipp beendet die Aufnahme und füllt die
+           fehlenden Darts als Fehlwürfe auf. */
+        '<button class="skip" data-action="end-cricket-visit">' +
+          (g.throws.length % 3 ? 'Weiter ▸' : 'Nichts ▸') + '</button>' +
       '</div>';
   }
 
@@ -3514,6 +3615,34 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         save(); render();
         break;
       }
+      case 'end-cricket-visit': {
+        var cg = S.game;
+        if (!cg || cg.kind !== 'cricket' || cg.done || settling()) return;
+        var need = 3 - (cg.throws.length % 3);
+        for (var ci = 0; ci < need; ci++) cg.throws.push({ n: 0, m: 0 });
+        UI.mult = 1;
+        save(); render();
+        break;
+      }
+      case 'order-up':
+      case 'order-down': {
+        var og = S.game;
+        if (!og || og.started) return;
+        var oi = og.players.indexOf(el.getAttribute('data-id'));
+        var oj = oi + (action === 'order-up' ? -1 : 1);
+        if (oi < 0 || oj < 0 || oj >= og.players.length) return;
+        var swap = og.players[oi]; og.players[oi] = og.players[oj]; og.players[oj] = swap;
+        save(); render();
+        break;
+      }
+      case 'start-order': {
+        var sg = S.game;
+        if (!sg || sg.started) return;
+        sg.started = true;
+        S.screen = sg.kind;
+        save(); render();
+        break;
+      }
       case 'undo':
         undo();
         break;
@@ -3746,6 +3875,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       game: function () { return S.game; },
       cricketState: function () { return cricketState(S.game); },
       rtwState: function () { return rtwState(S.game); },
+      gameTurnPlayer: function () { return S.game ? gameTurnPlayer(S.game) : null; },
+      render: render,
       reset: function () { S = newState(); UI.overlay = null; render(); }
     };
   }

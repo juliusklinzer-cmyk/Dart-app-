@@ -47,11 +47,18 @@ Markierungen stehen wie am Board: `/`, `✕`, `⊗` für zu.
   hat **und** dabei mindestens so viele Punkte wie alle anderen hat.
 - **Ohne Punkte**: Wer zuerst alle sieben Felder zumacht, gewinnt.
 
-Vor dem Spiel wird wie im Turnier ausgeworfen, wer anfängt – danach geht es reihum
-weiter. Die Eingabe zeigt **alle Felder gleichzeitig**: je ein Block für Single, Double
-und Triple mit den Zahlen 20 bis 15, dazu Bull, Doppel-Bull und Miss. Ein Tipp je Dart,
-kein Umschalten. Über jeder Spalte der Tafel steht die aktuelle **MPR**, der ↺-Button
-nimmt Dart für Dart zurück.
+Vor dem Spiel wird wie im Turnier ausgeworfen. Bei zwei Spielern reicht ein Tipp auf
+den Anfänger; ab drei Spielern legt der Bull-Wurf die **ganze Reihenfolge** fest –
+dafür steht jeder Teilnehmer in einer Zeile und lässt sich mit ▲/▼ verschieben, dann
+startet das Spiel mit einem Tipp.
+
+Die Eingabe zeigt **alle Felder gleichzeitig**: je ein Block für Single, Double und
+Triple mit den Zahlen 20 bis 15, dazu Bull, Doppel-Bull, Miss und ein
+**Weiter ▸**-Knopf, der die Aufnahme sofort beendet und die fehlenden Darts als
+Fehlwürfe verbucht – praktisch, wenn jemand gar nichts getroffen hat. Ein Tipp je Dart,
+kein Umschalten. Eine Zahl, die bei **allen** Spielern zu ist, bringt nichts mehr und
+wird deshalb auf der Tafel und in den Eingabeblöcken grau ausgegraut. Über jeder Spalte
+der Tafel steht die aktuelle **MPR**, der ↺-Button nimmt Dart für Dart zurück.
 
 ### Round the World (Training)
 

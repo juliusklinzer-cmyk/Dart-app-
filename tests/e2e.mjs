@@ -299,6 +299,15 @@ async function rDart(label) {
   if (await key.count()) return key.click();
   return null;   // Zahl steht nicht zur Wahl – das ist der Testfall "falsche Zahl"
 }
+/* Bull-Off eines Trainings-/Cricket-Spiels bestätigen: bei zwei Spielern per
+   Tipp auf den Anfänger, bei mehr über die Reihenfolge-Liste. */
+async function bullOffGo() {
+  if (await page.locator('[data-action="start-order"]').count()) {
+    await page.locator('[data-action="start-order"]').click();
+  } else {
+    await page.locator('#bulloff-buttons button').first().click();
+  }
+}
 async function reduceLineupToTwo() {
   for (let i = 0; i < 10; i++) {
     const sel = page.locator('.roster-item.selected');
@@ -556,7 +565,7 @@ await page.evaluate(() => {
 await page.reload();
 await page.locator('[data-action="set-mode"][data-value="cricket"]').click();
 await page.locator('[data-action="start-game"]').click();
-await page.locator('#bulloff-buttons button').first().click();
+await bullOffGo();
 check('Single-, Double- und Triple-Block vorhanden',
   (await page.locator('#cricket-grid .cg-block').count()) === 4);
 check('alle sechs Zahlen je Block', (await page.locator('#cricket-grid button[data-mult="3"]').count()) === 6);
@@ -764,6 +773,107 @@ await page.locator('[data-action="end-visit"]').click();
 check('angefangene Aufnahme wird übernommen', (await rest(0)) === '81', await rest(0));
 check('auch dann drei Darts',
   (await page.evaluate(() => window.__dart.activeLeg(window.__dart.currentMatch()).visits.slice(-1)[0])).d === 3);
+
+group('Wurfverlauf über das ganze Match');
+await page.evaluate(() => localStorage.clear());
+await page.reload();
+await page.locator('[data-setting="bestOf"] button[data-value="3"]').click();
+await page.locator('[data-action="start-game"]').click();
+await page.locator('[data-action="next-match"]').click();
+await page.locator('#bulloff-buttons button').first().click();
+/* Leg 1 gewinnen: 180, 180, 141 */
+await typeScore(180); await typeScore(60); await typeScore(180); await typeScore(60);
+await page.locator('#mode-toggle button[data-mode="total"]').click();
+await typeScore(141);
+await page.locator('#overlay-card [data-action="co-darts"]').first().click();
+await page.locator('#overlay-card [data-action="ov-next-leg"]').click();
+await typeScore(100); await typeScore(60); await typeScore(85);
+const histText = (await text('#history')).replace(/\s+/g, ' ');
+const histLower = histText.toLowerCase();
+check('Verlauf zeigt auch das vorige Leg', histLower.includes('leg 1'), histText.slice(0, 120));
+check('Leg-Trenner nennt den Ausgang', histLower.includes('gewonnen') || histLower.includes('verloren'));
+check('mehr als fünf Aufnahmen sichtbar',
+  (await page.locator('#history .v').count()) > 5, String(await page.locator('#history .v').count()));
+check('alle Aufnahmen des Matches enthalten',
+  (await page.locator('#history .v').count()) ===
+  (await page.evaluate(() => window.__dart.currentMatch().legs.reduce((a, l) => a + l.visits.length, 0))));
+check('Verlauf ist scrollbar', await page.locator('#history').evaluate((e) => getComputedStyle(e).overflowY === 'auto'));
+check('nur das laufende Leg ist korrigierbar',
+  (await page.locator('#history .v.tap').count()) === 3,
+  String(await page.locator('#history .v.tap').count()));
+
+group('Cricket: Reihenfolge, graue Zahlen, Aufnahme abkürzen');
+await page.evaluate(() => localStorage.clear());
+await page.reload();
+check('vier Spieler in der Aufstellung', (await page.evaluate(() => window.__dart.state().lineup.length)) === 4);
+await page.locator('[data-action="set-mode"][data-value="cricket"]').click();
+await page.locator('[data-action="start-game"]').click();
+check('Bull-Off zeigt die ganze Reihenfolge', (await page.locator('.bo-row').count()) === 4,
+  String(await page.locator('.bo-row').count()));
+const orderBefore = await page.evaluate(() => window.__dart.game().players.slice());
+await page.locator('.bo-row').nth(3).locator('[data-action="order-up"]').click();
+const orderAfter = await page.evaluate(() => window.__dart.game().players.slice());
+check('Hoch-Button schiebt einen Spieler nach vorn',
+  orderAfter[2] === orderBefore[3] && orderAfter[3] === orderBefore[2], orderAfter.join(','));
+await page.locator('.bo-row').first().locator('[data-action="order-down"]').click();
+const orderAfter2 = await page.evaluate(() => window.__dart.game().players.slice());
+check('Runter-Button schiebt einen Spieler zurück', orderAfter2[1] === orderBefore[0], orderAfter2.join(','));
+check('erste Reihe kann nicht weiter nach oben',
+  await page.locator('.bo-row').first().locator('[data-action="order-up"]').isDisabled());
+check('letzte Reihe kann nicht weiter nach unten',
+  await page.locator('.bo-row').last().locator('[data-action="order-down"]').isDisabled());
+check('Startknopf nennt den ersten Spieler',
+  (await text('[data-action="start-order"]')).toLowerCase()
+    .includes((await page.evaluate((id) => window.__dart.state().profiles.find((p) => p.id === id).name, orderAfter2[0])).toLowerCase()));
+await page.locator('[data-action="start-order"]').click();
+check('Cricket startet in der eingestellten Reihenfolge',
+  (await visible('#screen-cricket')) &&
+  (await page.evaluate(() => window.__dart.gameTurnPlayer())) === orderAfter2[0]);
+
+// Aufnahme abkürzen: ein Tipp statt dreimal Miss
+const throwsBefore = await page.evaluate(() => window.__dart.game().throws.length);
+await page.locator('#cricket-grid [data-action="end-cricket-visit"]').click();
+check('Weiter-Knopf füllt die Aufnahme mit drei Fehlwürfen',
+  (await page.evaluate(() => window.__dart.game().throws.length)) === throwsBefore + 3);
+check('danach ist der nächste Spieler am Wurf',
+  (await page.evaluate(() => window.__dart.gameTurnPlayer())) === orderAfter2[1]);
+await cDart('T20');
+const throwsMid = await page.evaluate(() => window.__dart.game().throws.length);
+await page.locator('#cricket-grid [data-action="end-cricket-visit"]').click();
+check('angefangene Aufnahme wird auf drei Darts aufgefüllt',
+  (await page.evaluate(() => window.__dart.game().throws.length)) === throwsMid + 2);
+
+// Zahl bei allen zu: ausgegraut
+await page.evaluate(() => {
+  const g = window.__dart.game();
+  g.throws.length = 0;
+  g.players.forEach(() => { for (let i = 0; i < 3; i++) g.throws.push({ n: 20, m: 3 }); });
+  window.__dart.render();
+});
+check('20 ist bei allen zu', await page.evaluate(() => {
+  const st = window.__dart.cricketState(), g = window.__dart.game();
+  return g.players.every((id) => st.marks[id][20] >= 3);
+}));
+check('geschlossene Zahl ist auf der Tafel ausgegraut',
+  (await page.locator('.cr-num.dead').count()) === 1, String(await page.locator('.cr-num.dead').count()));
+check('auch die Marken der Zeile sind grau',
+  (await page.locator('.cr-mark.dead').count()) === (await page.evaluate(() => window.__dart.game().players.length)));
+const deadColor = await page.locator('.cr-num.dead').first().evaluate((e) => getComputedStyle(e).color);
+const liveColor = await page.locator('.cr-num:not(.dead)').first().evaluate((e) => getComputedStyle(e).color);
+check('graue Zahl unterscheidet sich sichtbar', deadColor !== liveColor, `${deadColor} vs ${liveColor}`);
+check('Eingabefelder der toten Zahl sind ebenfalls grau',
+  (await page.locator('#cricket-grid button.dim').count()) === 3,
+  String(await page.locator('#cricket-grid button.dim').count()));
+const cgKey = page.locator('#cricket-grid button[data-mult="3"]').first();
+check('Eingabefelder am Handy groß genug zum schnellen Tippen',
+  (await cgKey.boundingBox()).height >= 52, String((await cgKey.boundingBox()).height));
+await page.setViewportSize({ width: 1194, height: 834 });
+await page.waitForTimeout(120);
+check('Eingabefelder am iPad deutlich größer',
+  (await cgKey.boundingBox()).height >= 70, String((await cgKey.boundingBox()).height));
+check('Weiter-Knopf steht neben Miss',
+  (await page.locator('#cricket-grid .cg-extra button').count()) === 4);
+await page.setViewportSize({ width: 390, height: 844 });
 
 group('Fehlerfreiheit');
 check('keine JS-Fehler', errors.length === 0, errors.join(' | '));
