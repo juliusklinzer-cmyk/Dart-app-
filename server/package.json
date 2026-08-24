@@ -1,0 +1,15 @@
+{
+  "name": "dart-turnier-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Accounts und geteilte Spielhistorie fuer die Dart-App",
+  "engines": {
+    "node": ">=22.5"
+  },
+  "scripts": {
+    "dev": "node main.mjs",
+    "invite": "node scripts/invite-hash.mjs",
+    "reset-password": "node scripts/reset-password.mjs"
+  }
+}

@@ -4,3 +4,14 @@ package-lock.json
 
 # Wegwerf-Skripte der Prüfläufe
 .agent-*.mjs
+
+# Laufzeitdaten des Servers (SQLite) – gehören nie ins Repo
+server/data/
+deploy/.env
+
+# Werkzeug-Skills aus anderen Projekten – Arbeitsmittel, nicht Teil der App.
+# Der projekteigene Prüf-Agent und /abschluss bleiben dagegen im Repo.
+.claude/skills/impeccable/
+.claude/skills/frontend-design/
+.claude/skills/spec-driven-development/
+.claude/skills/planning-and-task-breakdown/

@@ -1,0 +1,46 @@
+# Dart-Turnier: Site-Block für den Wirtschaftln-Caddy.
+#
+# BEWUSST NICHT automatisch eingetragen. Der Caddy auf dem Server ist der
+# einzige Eingang für wirtschaftln.de -- eine kaputte Konfiguration nimmt die
+# Seite mit runter. Dieser Block wird von Hand eingefügt, wenn alles andere
+# steht.
+#
+# ---------------------------------------------------------------------------
+# REIHENFOLGE (wichtig)
+# ---------------------------------------------------------------------------
+# 1. DNS setzen: A-Record darts.wirtschaftln.de -> 178.105.234.52.
+#    Vorher eingefügt, versucht Caddy vergeblich ein Zertifikat zu holen und
+#    protokolliert im Minutentakt ACME-Fehler. Wirtschaftln läuft dabei
+#    weiter -- Caddy behandelt Zertifikate je Site getrennt -- aber die Logs
+#    sind dann unbrauchbar.
+# 2. Darts-Container starten (bash deploy/deploy.sh). Er hängt sich ans
+#    edge-Netz; ohne ihn liefert dieser Block nur 502.
+# 3. Erst dann diesen Block ans Ende von Wirtschaftln/deploy/Caddyfile
+#    anfügen und prüfen, BEVOR neu geladen wird:
+#
+#       ssh root@178.105.234.52 \
+#         "docker compose -f /opt/wirtschaftln/docker-compose.yml exec caddy \
+#          caddy validate --config /etc/caddy/Caddyfile"
+#
+#    Erst wenn das "Valid configuration" sagt, deployen. Caddy lädt die
+#    Konfiguration im laufenden Betrieb neu; bei einem Syntaxfehler behält es
+#    die alte und wirtschaftln.de bleibt oben.
+# ---------------------------------------------------------------------------
+
+# Dart-Turnier: eigener Container am edge-Netz, Wirtschaftln bleibt unberührt.
+# Ein einziger Node-Prozess liefert dort Seite UND API aus, deshalb braucht es
+# keine getrennten handle-Blöcke wie beim Firmengolf-Staging.
+# Details: darts-app/DEPLOY.md
+darts.wirtschaftln.de {
+    reverse_proxy darts-app:3002
+    encode gzip zstd
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        # Private Runde – die App gehört nicht in Suchmaschinen.
+        X-Robots-Tag "noindex, nofollow"
+    }
+}

@@ -4,10 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
 <meta name="theme-color" content="#0e1116">
-<title>Dart Turnier – 501 Double Out</title>
+<title>Blink 180 – Dart Turnier</title>
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="icon.svg">
+<link rel="icon" href="icons/icon-192.webp" type="image/webp">
+<!-- iOS liest ausschließlich diesen Link und kann kein WebP. -->
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="stylesheet" href="css/styles.css">
@@ -19,10 +20,14 @@
   oder den privaten Modus verlassen. Der Abend läuft weiter, geht aber beim Neustart verloren.
 </div>
 
+<div id="sync-status" class="sync-status hidden"></div>
+
 <nav id="nav" class="nav hidden">
   <button data-action="nav" data-screen="setup">Turnier</button>
   <button data-action="nav" data-screen="boards">Rangliste</button>
   <button data-action="nav" data-screen="players">Spieler</button>
+  <!-- Erscheint nur, wenn die Seite von einem Server kommt (siehe js/auth.js). -->
+  <button id="nav-konto" class="hidden" data-action="nav" data-screen="konto">Konto</button>
 </nav>
 
 <!-- ============ SETUP ============ -->
@@ -39,7 +44,7 @@
     <h2>Spielmodus</h2>
     <div class="modes" id="mode-select">
       <button data-action="set-mode" data-value="501">
-        <span class="mt">501 Turnier</span>
+        <span class="mt">X01 Turnier</span>
         <span class="md">Jeder gegen jeden, Double Out</span>
       </button>
       <button data-action="set-mode" data-value="cricket">
@@ -49,6 +54,10 @@
       <button data-action="set-mode" data-value="rtw">
         <span class="mt">Round the World</span>
         <span class="md">Training: 1 bis 20, dann Bull</span>
+      </button>
+      <button data-action="set-mode" data-value="finisher">
+        <span class="mt">Finisher</span>
+        <span class="md">Alle auf derselben Zahl – nur Finishen</span>
       </button>
     </div>
   </div>
@@ -66,6 +75,7 @@
       <div class="options" data-setting="start">
         <button data-value="301">301</button>
         <button data-value="501">501</button>
+        <button data-value="701">701</button>
       </div>
     </div>
     <div class="setting">
@@ -82,7 +92,7 @@
         <button data-value="100">100</button>
         <button data-value="170">170</button>
         <button data-value="180">180</button>
-        <button data-value="0">nie automatisch</button>
+        <button data-value="0">nie</button>
       </div>
     </div>
     <p class="hint">Über diesem Rest tippst du die geworfene Gesamtpunktzahl (bis 180), darunter
@@ -103,6 +113,22 @@
       weiteren Treffern Punkte, solange sie bei mindestens einem Mitspieler offen ist – gewonnen
       hat, wer alles zu hat und dabei vorne liegt. <b>Ohne Punkte:</b> Wer zuerst alles zumacht,
       gewinnt.</p>
+  </div>
+
+  <div class="card hidden" id="settings-finisher">
+    <h2>Finisher</h2>
+    <div class="setting">
+      <label>Punkte zum Sieg</label>
+      <div class="options" data-setting="finisherTo">
+        <button data-value="3">3</button>
+        <button data-value="5">5</button>
+        <button data-value="10">10</button>
+      </div>
+    </div>
+    <p class="hint">Die App zieht jede Runde eine Zahl zwischen 6 und 120. <b>Alle starten
+      auf derselben Zahl</b> und spielen sie ganz normal herunter, Double Out – kein
+      Scoring, nur das Finishen. Wer zuerst auscheckt, gewinnt die Runde; wer noch nicht
+      dran war, darf gleichziehen. Schaffen es mehrere, entscheidet ein Stechen auf Bull.</p>
   </div>
 
   <div class="card hidden" id="settings-rtw">
@@ -162,6 +188,7 @@
     <button data-action="board-mode" data-value="501">Classic</button>
     <button data-action="board-mode" data-value="cricket">Cricket</button>
     <button data-action="board-mode" data-value="rtw">Round the World</button>
+    <button data-action="board-mode" data-value="finisher">Finisher</button>
   </div>
 
   <div class="card" id="board-chart"></div>
@@ -340,6 +367,46 @@
   <button class="btn ghost full" data-action="to-tournament">Zurück zum Turnier</button>
 </section>
 
+<!-- ============ FINISHER ============ -->
+<section id="screen-finisher" class="screen game">
+  <header class="game-header">
+    <button class="icon-btn" data-action="leave-game" aria-label="Spiel verlassen">‹</button>
+    <div class="game-title">
+      <span>Finisher</span>
+      <span id="fin-sub" class="muted"></span>
+    </div>
+    <button class="icon-btn" data-action="undo-game" aria-label="Letzten Dart zurücknehmen">↺</button>
+  </header>
+
+  <div class="game-body">
+    <div class="game-main">
+      <div id="fin-board"></div>
+    </div>
+    <div class="input-area">
+      <div class="mode-row">
+        <div id="fin-turn" class="turn-label"></div>
+        <div id="fin-darts" class="visit-darts"></div>
+      </div>
+      <div id="fin-hint" class="finish-hint"></div>
+      <div class="pad" id="fin-pad"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ KONTO ============ -->
+<section id="screen-konto" class="screen">
+  <header class="app-header">
+    <h1>Konto</h1>
+  </header>
+  <!-- Fest im HTML, nicht aus JavaScript erzeugt: so steht das Logo schon da,
+       bevor die Konto-Schicht geladen hat, und der Anmeldebildschirm ist nie
+       einen Wimpernschlag lang leer. -->
+  <div class="konto-logo">
+    <img src="icons/icon-512.webp" width="512" height="512" alt="Blink 180" decoding="async">
+  </div>
+  <div id="konto-inhalt"></div>
+</section>
+
 <!-- ============ OVERLAY ============ -->
 <div id="overlay" class="overlay hidden">
   <div class="overlay-card" id="overlay-card"></div>
@@ -348,6 +415,13 @@
 <input type="file" id="avatar-input" accept="image/*" class="hidden">
 
 <script src="js/checkout.js"></script>
+<!-- Optionale Online-Schicht. Sie läuft VOR app.js, damit die Anmeldeschranke
+     schon steht, bevor zum ersten Mal gezeichnet wird – sonst blitzt die App
+     kurz auf, obwohl niemand angemeldet ist. An window.__dart hängt sie sich
+     erst später (DOMContentLoaded). Fehlen die Dateien, etwa im
+     Einzeldatei-Bündel, bleibt die App rein lokal. -->
+<script src="js/auth.js"></script>
+<script src="js/sync.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

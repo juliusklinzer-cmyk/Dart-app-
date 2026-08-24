@@ -5,7 +5,12 @@
   "private": true,
   "scripts": {
     "start": "python3 -m http.server 8080",
+    "server": "node server/main.mjs",
     "test": "node tests/e2e.mjs",
+    "test:api": "node tests/api.mjs",
+    "test:konto": "node tests/konto.mjs",
+    "test:alle": "npm test && npm run test:api && npm run test:konto",
+    "invite": "node server/scripts/invite-hash.mjs",
     "build": "node build-single.mjs"
   },
   "devDependencies": {

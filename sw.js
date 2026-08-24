@@ -1,13 +1,18 @@
 /* Offline-Cache für die App-Shell. Bei Änderungen CACHE hochzählen. */
-var CACHE = 'dart-turnier-v1';
+var CACHE = 'dart-turnier-v5';
 var ASSETS = [
   './',
   './index.html',
   './css/styles.css',
   './js/app.js',
   './js/checkout.js',
+  './js/auth.js',
+  './js/sync.js',
   './manifest.webmanifest',
-  './icon.svg'
+  './icons/icon-192.webp',
+  './icons/icon-512.webp',
+  './icons/icon-maskable-512.webp',
+  './icons/apple-touch-icon.png'
 ];
 
 self.addEventListener('install', function (e) {
@@ -22,6 +27,13 @@ self.addEventListener('activate', function (e) {
 
 self.addEventListener('fetch', function (e) {
   if (e.request.method !== 'GET') return;
+
+  /* Die API bleibt aussen vor. Würden wir sie mitcachen, käme nach dem
+     Abmelden die alte Antwort von /api/me zurück und der Spielabgleich
+     bekäme veraltete Daten – abgesehen davon, dass fremde Spielstände
+     nichts im Offline-Cache verloren haben. */
+  if (new URL(e.request.url).pathname.indexOf('/api/') === 0) return;
+
   e.respondWith(
     caches.match(e.request).then(function (hit) {
       return hit || fetch(e.request).then(function (res) {

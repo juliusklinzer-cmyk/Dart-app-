@@ -110,7 +110,9 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 /* ---------- Navigation ---------- */
 .nav {
   position: sticky; top: 0; z-index: 20;
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px;
+  /* Automatische Spalten: der Konto-Knopf kommt nur dazu, wenn die Seite von
+     einem Server geladen wurde – dann rückt die Leiste von 3 auf 4. */
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px;
   background: rgba(14, 17, 22, 0.92); backdrop-filter: blur(8px);
   padding: 8px 0; margin: 0 0 4px;
 }
@@ -884,3 +886,140 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   color: var(--muted); padding: 6px 2px 2px; border-top: 1px solid var(--line); margin-top: 4px;
 }
 .history .col > .leg-sep:first-child { border-top: none; margin-top: 0; padding-top: 0; }
+
+/* ---------- Konto und Abgleich ---------- */
+
+/* Schmale Zeile ganz oben: was noch nicht beim Server ist. Bewusst ruhig
+   gehalten – das ist ein Hinweis, kein Alarm wie die Speicher-Warnung. */
+.sync-status {
+  position: sticky; top: 0; z-index: 30;
+  background: var(--bg-2); border: 1px solid var(--line); color: var(--muted);
+  border-radius: 10px; padding: 7px 12px; margin: 8px 0 0;
+  font-size: 0.78rem; line-height: 1.4;
+}
+
+.konto-karte { display: flex; flex-direction: column; gap: 10px; }
+
+.konto-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.konto-tabs button {
+  background: var(--bg-3); border: 1px solid var(--line); color: var(--muted);
+  border-radius: 10px; padding: 10px; font-weight: 600; cursor: pointer; min-height: 44px;
+}
+.konto-tabs button.active { color: var(--text); border-color: var(--accent-dark); background: var(--accent-soft); }
+
+.konto-feld { display: flex; flex-direction: column; gap: 4px; }
+.konto-feld span { font-size: 0.78rem; color: var(--muted); }
+.konto-feld input {
+  background: var(--bg-3); border: 1px solid var(--line); color: var(--text);
+  border-radius: 10px; padding: 12px; font-size: 1rem; font-family: inherit;
+  /* 16 px verhindert, dass iOS beim Antippen ins Feld hineinzoomt. */
+  min-height: var(--tap);
+}
+
+.konto-meldung {
+  border-radius: 10px; padding: 10px 12px; font-size: 0.85rem; line-height: 1.4; margin: 0 0 10px;
+}
+.konto-meldung.fehler { background: #4a2530; border: 1px solid var(--red); color: var(--text); }
+.konto-meldung.ok { background: var(--accent-faint); border: 1px solid var(--accent-dark); color: var(--text); }
+
+.konto-kopf { display: flex; align-items: center; gap: 12px; }
+.konto-kopf .who { min-width: 0; }
+.konto-kopf .nm { font-weight: 700; font-size: 1.05rem; }
+.konto-kopf .sm { font-size: 0.78rem; color: var(--muted); }
+
+.zuordnung-zeile {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg-3); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px;
+}
+.zuordnung-zeile .who { flex: 1; min-width: 0; }
+.zuordnung-zeile .nm { font-weight: 600; }
+.zuordnung-zeile .sm { font-size: 0.76rem; color: var(--muted); }
+.zuordnung-zeile select {
+  background: var(--bg-2); border: 1px solid var(--line); color: var(--text);
+  border-radius: 10px; padding: 10px; font-size: 0.9rem; font-family: inherit;
+  min-height: 44px; max-width: 55%;
+}
+
+/* Mannschaftslogo über dem Login. Auf kleinen Geräten kleiner, damit
+   Formular und Tastatur noch nebeneinander Platz haben. */
+.konto-logo { display: flex; justify-content: center; margin: 4px 0 16px; }
+.konto-logo img {
+  width: 168px; height: 168px; max-width: 62vw; max-height: 62vw;
+  border-radius: 50%;
+  /* Das Artwork steht auf reinem Schwarz – ein weicher Schein hebt es vom
+     etwas helleren App-Hintergrund ab, ohne einen harten Rand zu ziehen. */
+  box-shadow: 0 0 0 1px var(--line), 0 12px 32px rgba(0, 0, 0, 0.55);
+}
+@media (max-height: 680px) {
+  .konto-logo img { width: 108px; height: 108px; }
+  .konto-logo { margin: 0 0 10px; }
+}
+
+/* ---------- Anmeldeschranke ---------- */
+
+/* Vor der Anmeldung gibt es nur den Anmeldebildschirm. Die Überschrift
+   „Konto" fällt weg – das Logo sagt schon, wo man ist. */
+body.gesperrt #screen-konto > .app-header { display: none; }
+body.gesperrt #screen-konto { padding-top: 6vh; }
+body.gesperrt .konto-logo img { width: 200px; height: 200px; max-width: 68vw; max-height: 68vw; }
+body.gesperrt .konto-logo { margin: 0 0 22px; }
+/* Die Statuszeile des Abgleichs gehört hinter die Anmeldung. */
+body.gesperrt #sync-status { display: none !important; }
+
+@media (max-height: 680px) {
+  body.gesperrt .konto-logo img { width: 128px; height: 128px; }
+  body.gesperrt #screen-konto { padding-top: 2vh; }
+}
+
+/* ---------- Finisher ---------- */
+
+/* Die Zielzahl ist der Kern des Modus – sie steht groß und allein. */
+.fin-zahl {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  background: var(--bg-2); border: 1px solid var(--accent-dark);
+  border-radius: var(--radius); padding: 10px 14px 12px; margin-bottom: 10px;
+}
+.fin-zahl .lbl {
+  font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted);
+}
+.fin-zahl .zahl {
+  font-size: 3.2rem; font-weight: 800; line-height: 1;
+  font-variant-numeric: tabular-nums; color: var(--accent);
+}
+
+.fin-liste { display: flex; flex-direction: column; gap: 6px; }
+.fin-row {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg-2); border: 1px solid var(--line);
+  border-radius: 12px; padding: 8px 12px;
+}
+.fin-row.active { border-color: var(--accent); background: var(--accent-faint); }
+/* Wer durch ist, tritt zurück – aber bleibt sichtbar, die anderen ziehen ja nach. */
+.fin-row.fertig { opacity: 0.72; border-color: var(--accent-dark); }
+.fin-row .who { flex: 1; min-width: 0; }
+.fin-row .nm { font-weight: 600; }
+.fin-row .sm { font-size: 0.74rem; color: var(--muted); }
+.fin-row .pkt {
+  min-width: 28px; text-align: center; font-weight: 700;
+  font-variant-numeric: tabular-nums; color: var(--muted);
+}
+.fin-row .rest {
+  min-width: 62px; text-align: right;
+  font-size: 1.7rem; font-weight: 800; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.fin-row.fertig .rest { color: var(--accent); }
+
+.fin-stechen { margin-top: 12px; border-color: var(--amber); }
+.fin-stechen .btn { margin-top: 6px; }
+
+/* Finish-Vorschlag über dem Zahlenfeld, wie im X01. */
+.finish-hint {
+  display: flex; flex-wrap: wrap; gap: 5px; align-items: center;
+  min-height: 30px; margin-bottom: 6px;
+}
+
+@media (min-width: 820px) {
+  .fin-zahl .zahl { font-size: 4rem; }
+  .fin-row .rest { font-size: 2rem; min-width: 74px; }
+}

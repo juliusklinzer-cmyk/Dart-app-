@@ -1,9 +1,13 @@
-# 🎯 Dart Turnier – 501 Double Out
+# 🎯 Blink 180 – Dart Turnier
 
-Schnelle Dart-App für den Abend mit Freunden: 501-Turnier jeder gegen jeden, Cricket
-für die ganze Runde und Round the World als Training – mit Finish-Vorschlägen,
-dauerhaften Spielerprofilen und Ranglisten. Läuft komplett offline im Browser, ohne
-Installation, ohne Account, ohne Server.
+Schnelle Dart-App für den Abend mit der Mannschaft: X01-Turnier jeder gegen jeden,
+Cricket für die ganze Runde, Round the World als Training und **Finisher** als
+gezieltes Finish-Training – mit Finish-Vorschlägen, dauerhaften Spielerprofilen und
+Ranglisten.
+
+Läuft komplett offline im Browser, ohne Installation. Wahlweise ganz ohne Server auf
+dem eigenen Gerät – oder mit Anmeldung, dann hat jeder seine eigene Karriere, egal auf
+wessen iPad mitgeschrieben wurde (siehe [Anmelden und gemeinsam spielen](#anmelden-und-gemeinsam-spielen)).
 
 ## Loslegen
 
@@ -28,9 +32,9 @@ mit HTTPS, „Zum Home-Bildschirm“ auf jedem Gerät, Updates per `git pull`.
 
 ## Spielmodi
 
-Der Modus wird im Setup gewählt, die Aufstellung gilt für alle drei gleich.
+Der Modus wird im Setup gewählt, die Aufstellung gilt für alle vier gleich.
 
-### 501 Turnier (jeder gegen jeden)
+### X01 Turnier (jeder gegen jeden)
 
 Der Hauptmodus, siehe Ablauf und Eingabe unten.
 
@@ -82,9 +86,34 @@ die gerade dran ist – als vier große Tasten
 („weiter auf 7"). Nach jedem Dart springt die Anzeige auf die neue Zahl, nach drei
 Darts auf den nächsten Spieler. Auf Bull bleiben nur noch „Bull" und „Miss".
 
-## Ablauf (501 Turnier)
+### Finisher (Finish-Training)
 
-1. **Setup** – Antippen, wer heute mitspielt (2 bis 12 Spieler), Startpunkte und Legs
+Der Modus für genau den Teil, der im echten Spiel am längsten dauert: das Auschecken.
+
+Die App zieht jede Runde eine **Zufallszahl zwischen 6 und 120**. Alle Spieler starten
+auf derselben Zahl und spielen sie ganz normal herunter – Double Out, Bust-Regeln wie
+im X01. Kein Scoring-Teil, nur Finishen.
+
+- Wer zuerst auscheckt, gewinnt die Runde.
+- **Wer in dieser Runde noch nicht dran war, darf gleichziehen.** Eine Runde endet
+  erst, wenn alle gleich viele Aufnahmen hatten – der spätere Startplatz ist also
+  nicht benachteiligt.
+- Checken mehrere in derselben Runde aus, entscheidet ein **Stechen auf Bull**: einmal
+  werfen, und wer näher dran war, wird angetippt (messen kann die App das nicht, am
+  Board sieht man es sofort).
+- Gespielt wird auf 3, 5 oder 10 Punkte.
+
+Die Zielzahl steht groß über der Tafel, darunter jeder Spieler mit Punktestand und
+aktuellem Rest. Der Finish-Vorschlag arbeitet wie im X01 mit. Der ↺-Button nimmt Dart
+für Dart zurück – und über eine Rundengrenze hinweg auch eine schon entschiedene Runde
+samt gezogener Zahl.
+
+In der Rangliste zählt der Modus **gewonnene Runden**, **Ø Darts je Finish**, das
+schnellste Finish und die höchste weggemachte Zahl.
+
+## Ablauf (X01 Turnier)
+
+1. **Setup** – Antippen, wer heute mitspielt (2 bis 12 Spieler), Startpunkte (301/501/701) und Legs
    pro Spiel wählen. Spieler sind dauerhafte Profile mit Foto, siehe unten.
 2. **Spielplan** – Es wird automatisch „jeder gegen jeden“ ausgelost und auf Runden
    verteilt (4 Spieler = 6 Spiele in 3 Runden).
@@ -227,6 +256,44 @@ Ein Turnier wandert per **„Turnier abschließen"** ins Archiv (die letzten 200
 gespeichert); abgebrochene Turniere behalten ihre bereits gespielten Spiele in der
 Statistik.
 
+## Anmelden und gemeinsam spielen
+
+Wird die App von einem Server mit Kontoschicht ausgeliefert (siehe
+[DEPLOY.md](DEPLOY.md), Variante B), erscheint der Reiter **Konto**. Dann hat jeder
+seine eigene Karriere, egal auf wessen Gerät mitgeschrieben wurde.
+
+**Anmelden ist ein Angebot, keine Hürde.** Ohne Account läuft alles wie bisher, nur
+eben nur auf diesem Gerät. Ohne Server – Datei per Doppelklick, Einzeldatei-Bündel,
+GitHub Pages – ist der Reiter gar nicht erst da.
+
+- **Registrieren** geht mit einem Einladungscode, den du in die Gruppe schickst.
+  Keine Bestätigungsmail, kein fremder Dienst. Wer sein Passwort vergisst, wendet
+  sich an dich (siehe DEPLOY.md).
+- **Beim ersten Anmelden** fragt die App einmalig, wer wer ist: die Spieler, die es
+  auf dem Gerät schon gab, lassen sich den Accounts zuordnen. Ihre bisherigen Spiele
+  zählen dann dort weiter. Wer keinen Account hat, bleibt **Gastspieler** – das geht
+  unverändert, Gäste tauchen nur nirgendwo sonst auf.
+- **Für andere mitschreiben** ist der Normalfall: du meldest dich an, wählst deine
+  Kollegen aus der Liste und spielst das Turnier ab. Am Ende landet das Ergebnis in
+  der Karriere jedes Beteiligten, auch wenn die an dem Abend gar nichts angefasst
+  haben. In der Historie steht, wer es eingetragen hat.
+- **Ohne Netz** ändert sich nichts. Das Turnier läuft lokal weiter, fertige Spiele
+  stellen sich in eine Warteschlange, und sobald wieder Verbindung da ist, gehen sie
+  raus. Eine schmale Zeile über der Navigation sagt, wie viele noch warten.
+
+Was der Server **nicht** tut: rechnen. Er speichert fertige Spiele und gibt sie
+wieder heraus – Averages, Doppelquote und Ranglisten entstehen weiterhin im Browser
+aus den gespeicherten Würfen. Dadurch gibt es die Spielregeln nur an einer Stelle.
+
+Zwei Dinge, die man wissen sollte:
+
+- Wer ein Spiel einträgt, kann die Werte der anderen beeinflussen. Bei zehn Leuten,
+  die sich kennen, ist das die pragmatische Lösung; wer sich vertippt hat, kann sein
+  eigenes Spiel zurückziehen.
+- Schreiben zwei Geräte **denselben** Abend mit, entstehen zwei Spiele und die Werte
+  zählen doppelt. Die App weist im Konto-Bildschirm darauf hin, wenn sie so etwas
+  sieht (gleiche Besetzung, keine halbe Stunde auseinander).
+
 ## Technik
 
 Reines HTML/CSS/JavaScript, kein Build-Schritt, keine Abhängigkeiten zur Laufzeit.
@@ -240,9 +307,43 @@ Datenmodell gehoben.
 | `css/styles.css` | Styling (Dark, Touch-Ziele ≥ 44 px) |
 | `js/checkout.js` | Finish-Solver (Double-Out-Wege für Rest 2–170) |
 | `js/app.js` | Turnier-, Cricket- und RTW-Logik, Statistik, Rendering, Persistenz |
+| `js/auth.js` | *optional:* Anmelden, Roster, Zuordnung alter Profile |
+| `js/sync.js` | *optional:* Warteschlange, Hoch- und Runterladen von Spielen |
+| `server/` | *optional:* Node + SQLite – Accounts und geteilte Historie |
 | `sw.js`, `manifest.webmanifest` | Offline-Betrieb und Installation als App |
+| `icons/` | App-Icons aus dem Mannschaftslogo (WebP, dazu ein PNG für iOS) |
+| `assets/blink180.jpeg` | das Logo im Original – Quelle für die Icons |
+| `tools/make-icons.mjs` | erzeugt `icons/` neu, falls sich das Logo ändert |
 | `build-single.mjs` | baut `dart-turnier.html` – alles in einer Datei (`npm run build`) |
 | `tests/e2e.mjs` | Browser-Tests des kompletten Turnierablaufs |
+| `tests/api.mjs`, `tests/konto.mjs` | Tests der Kontoschicht |
+
+Die beiden `optional`-Zeilen heißen genau das: `js/auth.js` und `js/sync.js` docken
+über `window.__dart` an und melden sich gar nicht erst an, wenn kein Server
+antwortet. `js/app.js` ruft sie nur über `window.DartKonto` / `window.DartSync` auf,
+falls vorhanden. Deshalb funktionieren `index.html` per Doppelklick und das
+Einzeldatei-Bündel unverändert weiter – ohne Konto, ohne Netz, ohne Fehlermeldung.
+
+Der Server bringt **keine** npm-Abhängigkeit mit: SQLite steckt seit Node 22.5 in
+der Laufzeit (`node:sqlite`), Passwörter macht `node:crypto` (scrypt). Sessions sind
+zufällige Tokens in einer Tabelle, das Cookie ist `HttpOnly`, `Secure` und
+`SameSite=Lax`.
+
+### Logo und Icons
+
+Das Mannschaftslogo steht als App-Icon auf dem Home-Bildschirm und über dem Login.
+Neues Logo nach `assets/blink180.jpeg` legen, dann:
+
+```bash
+node tools/make-icons.mjs      # danach CACHE in sw.js hochzählen!
+```
+
+Gerechnet wird im Chromium, den Playwright für die Tests ohnehin mitbringt – das
+Projekt braucht also weiterhin keine Bildbibliothek. Erzeugt werden 192er und 512er
+in WebP, eine `maskable`-Fassung (auf 76 % verkleinert, weil Android das Icon in eine
+eigene Form schneidet und nur der innere Kreis sicher ist) und ein 180er PNG für iOS,
+das kein WebP liest. WebP statt PNG, weil das verrauschte Artwork verlustfrei rund
+900 KB wiegt und alles davon im Offline-Cache landet – so sind es 250 KB.
 
 Der Finish-Solver sucht zuerst den Weg mit den wenigsten Darts und bewertet danach die
 Wurfqualität (T20/T19 zuerst, gute Schluss-Doppel wie D20/D16/D12, D2 und Bull nur wenn
@@ -263,3 +364,19 @@ und -Punkte, die Sprungregeln von Round the World, Karrierewerte, Ranglisten,
 Profilverwaltung, Archivierung und Persistenz nach Reload.
 
 `TARGET=dart-turnier.html npm test` prüft dieselben Abläufe im Einzeldatei-Bündel.
+
+Für die Kontoschicht kommen zwei Durchläufe dazu:
+
+```bash
+npm run test:api     # Server allein: Registrierung, Rechte, Rate-Limit, Grabsteine
+npm run test:konto   # zwei Browser, zwei Accounts, ein gemeinsames Spiel
+npm run test:alle    # alle drei nacheinander
+```
+
+`test:konto` startet den echten Server gegen eine Wegwerf-Datenbank, registriert zwei
+Konten über die echten Formulare, spielt eine Partie Cricket durch und prüft, dass sie
+auf dem zweiten Gerät in der Karriere landet – inklusive Zwischenstopp mit
+abgeschaltetem Netz.
+
+`npm test` läuft dabei bewusst **ohne** Server: dass die App dann sauber als lokale
+App weiterläuft (kein Konto-Knopf, keine Fehlermeldung), wird dort mitgeprüft.

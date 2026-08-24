@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const TYPES = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json' };
+const TYPES = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.webmanifest': 'application/manifest+json' };
 
 const server = http.createServer((req, res) => {
   const rel = decodeURIComponent(req.url.split('?')[0]);
@@ -40,7 +40,19 @@ page.on('pageerror', (e) => errors.push(String(e)));
 /* Ladefehler werden über die Antworten geprüft; das automatische /favicon.ico
    des Browsers zählt nicht als Fehler der App. */
 page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push(m.text()); });
-page.on('response', (r) => { if (r.status() >= 400 && !r.url().endsWith('/favicon.ico')) errors.push('HTTP ' + r.status() + ': ' + r.url()); });
+/*
+ * `/api/*` ebenfalls nicht: dieser Test läuft absichtlich gegen einen reinen
+ * Dateiserver ohne Backend – genau die Lage, die auch bei GitHub Pages
+ * herrscht. Die Konto-Schicht fragt einmal nach, bekommt 404 und schaltet
+ * sich still ab. Dass die App dabei sauber weiterläuft, ist der Sinn dieses
+ * Durchlaufs; geprüft wird es unten über den fehlenden Konto-Knopf.
+ */
+page.on('response', (r) => {
+  const url = r.url();
+  if (r.status() < 400) return;
+  if (url.endsWith('/favicon.ico') || url.indexOf('/api/') >= 0) return;
+  errors.push('HTTP ' + r.status() + ': ' + url);
+});
 
 const $ = (sel) => page.locator(sel);
 const visible = (sel) => $(sel).isVisible();
@@ -874,6 +886,184 @@ check('Eingabefelder am iPad deutlich größer',
 check('Weiter-Knopf steht neben Miss',
   (await page.locator('#cricket-grid .cg-extra button').count()) === 4);
 await page.setViewportSize({ width: 390, height: 844 });
+
+/* ---------- Finisher ---------- */
+
+/* Ein Dart im Finisher. Die Zahlen 1–20 richten sich nach der eingestellten
+   Multiplikatorreihe, 25 und Bull haben sie fest am Knopf. */
+async function finDart(label) {
+  if (label === 'BULL') return page.locator('#fin-pad button[data-num="25"][data-mult="2"]').click();
+  if (label === '25') return page.locator('#fin-pad button[data-num="25"][data-mult="1"]').click();
+  const mult = label[0] === 'T' ? 3 : label[0] === 'D' ? 2 : 1;
+  const num = parseInt(label.slice(1), 10);
+  await page.locator(`#fin-pad .mult-row button[data-mult="${mult}"]`).click();
+  return page.locator(`#fin-pad .num-grid button[data-num="${num}"]`).click();
+}
+
+/* Der Solver sagt uns, wie die gezogene Zahl zu treffen ist – so kann der
+   Test jede Zufallszahl auschecken, ohne sie vorher zu kennen. */
+async function finCheckout() {
+  const route = await page.evaluate(() => {
+    const g = window.__dart.game();
+    const st = window.__dart.finisherState();
+    return window.Checkout.suggest(st.rest[g.players[st.turn]], 3 - st.inVisit);
+  });
+  if (!route) return false;
+  for (const label of route) await finDart(label);
+  return true;
+}
+
+async function finMiss(n) {
+  for (let i = 0; i < n; i++) await page.locator('#fin-pad button.miss').click();
+}
+
+const finState = () => page.evaluate(() => window.__dart.finisherState());
+
+/* Angefangene Aufnahme zu Ende werfen, damit wieder drei Darts zur Verfügung
+   stehen – sonst findet der Solver für den Rest keinen Weg mehr. */
+async function finVisitEnde() {
+  let st = await finState();
+  while (st.inVisit !== 0) {
+    await page.locator('#fin-pad button.miss').click();
+    st = await finState();
+  }
+}
+
+/* Eine ganze Runde: der Spieler am Wurf checkt aus, der andere zieht nicht
+   nach. Danach ist die Runde entschieden und die nächste Zahl gezogen. */
+async function finRundeGewinnen() {
+  await finVisitEnde();
+  const ok = await finCheckout();
+  await finMiss(3);
+  return ok;
+}
+
+group('Finisher: alle auf dieselbe Zahl');
+await page.evaluate(() => window.__dart.setScreen('setup'));
+await reduceLineupToTwo();
+await page.locator('[data-action="set-mode"][data-value="finisher"]').click();
+check('Finisher-Einstellungen sichtbar', await visible('#settings-finisher'));
+check('X01-Einstellungen ausgeblendet', !(await visible('#settings-501')));
+check('Startknopf passt zum Modus', (await text('[data-action="start-game"]')).includes('Finisher'));
+await page.locator('[data-setting="finisherTo"] button[data-value="3"]').click();
+await page.locator('[data-action="start-game"]').click();
+await bullOffGo();
+check('Finisher-Screen', await visible('#screen-finisher'));
+
+let fst = await finState();
+const [fA, fB] = await page.evaluate(() => window.__dart.game().players);
+check('Zahl liegt zwischen 6 und 120', fst.zahl >= 6 && fst.zahl <= 120, String(fst.zahl));
+check('beide starten auf derselben Zahl', fst.rest[fA] === fst.zahl && fst.rest[fB] === fst.zahl);
+check('Zahl steht groß auf der Tafel', (await text('#fin-board')).includes(String(fst.zahl)));
+check('noch keine Punkte', fst.punkte[fA] === 0 && fst.punkte[fB] === 0);
+
+/* Bust: mehr werfen als übrig ist, setzt die Aufnahme zurück. */
+const zuViel = Math.min(20, Math.ceil(fst.zahl / 3) + 1);
+await page.locator('#fin-pad .mult-row button[data-mult="3"]').click();
+await page.locator(`#fin-pad .num-grid button[data-num="${zuViel}"]`).click();
+fst = await finState();
+check('Bust setzt den Rest zurück', fst.rest[fA] === fst.zahl, String(fst.rest[fA]));
+check('der Dart zählt trotzdem', fst.darts[fA] === 1);
+check('nach dem Bust ist der Gegner dran', fst.turn === 1);
+
+await finMiss(3);
+fst = await finState();
+check('Miss bringt nichts', fst.rest[fB] === fst.zahl);
+check('wieder der Erste am Wurf', fst.turn === 0);
+
+check('Spieler A checkt die Zahl', await finCheckout());
+fst = await finState();
+check('A ist durch', !!fst.fertig[fA]);
+check('Runde läuft noch – B war noch nicht dran', !fst.rundeVorbei);
+check('B darf gleichziehen', fst.turn === 1);
+
+await finMiss(3);
+fst = await finState();
+check('Runde vorbei, sobald alle gleich oft dran waren', fst.punkte[fA] === 1);
+check('neue Runde mit neuer Zahl', fst.runde === 1 && fst.zahl >= 6 && fst.zahl <= 120);
+check('alle wieder auf Anfang', fst.rest[fA] === fst.zahl && fst.rest[fB] === fst.zahl);
+
+group('Finisher: Stechen, wenn beide gleichziehen');
+// Beide checken dieselbe Zahl in ihrer ersten Aufnahme aus.
+check('A checkt aus', await finCheckout());
+await finVisitEnde();
+check('B zieht gleich', await finCheckout());
+fst = await finState();
+const stechenDa = await page.evaluate(() => !!window.__dart.finisherRunde().stechen);
+check('beide gefinished, also Stechen', stechenDa);
+check('Punkte noch unverändert', fst.punkte[fA] === 1 && fst.punkte[fB] === 0);
+check('Stechen steht sichtbar auf dem Schirm', await page.locator('.fin-stechen').isVisible());
+/* innerText liefert Überschriften so, wie sie dastehen – und h2 ist per CSS
+   in Großbuchstaben. Deshalb ohne Rücksicht auf die Schreibweise prüfen. */
+check('mit beiden Namen darin', await page.evaluate((ids) => {
+  const t = document.querySelector('.fin-stechen').innerText.toLowerCase();
+  return ids.every((n) => t.includes(n.toLowerCase()));
+}, await page.evaluate((ids) => ids.map((i) => window.__dart.profile(i).name), [fA, fB])));
+check('Zahlenfeld ist gesperrt', (await text('#fin-pad')).includes('Stechen entscheiden'));
+await page.locator(`[data-action="fin-stechen"][data-id="${fB}"]`).click();
+fst = await finState();
+check('der Getippte bekommt den Punkt', fst.punkte[fB] === 1);
+
+group('Finisher: dritte Runde');
+check('A gewinnt die dritte Runde', await finRundeGewinnen());
+fst = await finState();
+check('A führt mit 2 zu 1', fst.punkte[fA] === 2 && fst.punkte[fB] === 1, JSON.stringify(fst.punkte));
+
+/* Undo über eine Rundengrenze hinweg: die frische Runde wird verworfen und
+   die entschiedene wieder geöffnet – sonst käme man aus einer neu gezogenen
+   Zahl nie mehr zurück. */
+group('Finisher: Undo über die Rundengrenze');
+const rundeVorher = fst.runde;
+await page.locator('#screen-finisher [data-action="undo-game"]').click();
+fst = await finState();
+check('die frische Runde ist weg', fst.runde === rundeVorher - 1);
+check('der Punkt ist zurückgenommen', fst.punkte[fA] === 1);
+check('die Runde ist wieder offen',
+  !(await page.evaluate(() => !!window.__dart.finisherRunde().sieger)));
+check('Spiel läuft weiter', !(await page.evaluate(() => window.__dart.game().done)));
+
+// Die wieder geöffnete Runde zu Ende spielen – A steht ja schon auf null.
+await finVisitEnde();
+fst = await finState();
+check('erneut gewonnen, wieder 2 zu 1', fst.punkte[fA] === 2 && fst.punkte[fB] === 1, JSON.stringify(fst.punkte));
+
+group('Finisher: Spielende');
+check('A gewinnt die letzte Runde', await finRundeGewinnen());
+fst = await finState();
+check('A hat drei Punkte', fst.punkte[fA] === 3, JSON.stringify(fst.punkte));
+check('Spiel ist beendet', await page.evaluate(() => window.__dart.game().done));
+check('Sieger steht fest', await page.evaluate((id) => window.__dart.game().winner === id, fA));
+check('Glückwunsch-Overlay', (await text('#overlay-card')).includes('Glückwunsch'));
+
+await page.locator('#overlay-card [data-action="open-summary"]').click();
+const finSum = await text('#summary-box');
+check('Auswertung zeigt Punkte und Darts', finSum.includes('Punkte') && finSum.includes('Ø Darts je Finish'));
+check('Auswertung listet die Runden', finSum.includes('Runde 1'));
+await page.locator('#summary-actions [data-action="finish-game"]').click();
+check('Finisher gespeichert',
+  (await page.evaluate(() => window.__dart.state().history.filter((h) => h.kind === 'finisher').length)) === 1);
+
+const finCar = await carr();
+check('Karriere zählt gewonnene Runden', finCar[fA].finRounds === 3, String(finCar[fA].finRounds));
+check('Karriere zählt den Spielsieg', finCar[fA].finWins === 1);
+check('auch der Verlierer hat seine Runde', finCar[fB].finRounds === 1, String(finCar[fB].finRounds));
+check('zusammen sind es vier Runden', finCar[fA].finRounds + finCar[fB].finRounds === 4);
+check('schnellstes Finish ist gesetzt', finCar[fA].finBest > 0);
+
+await page.locator('#nav [data-screen="boards"]').click();
+await page.locator('[data-action="board-mode"][data-value="finisher"]').click();
+check('Finisher-Rangliste da', (await text('#board-list')).length > 0);
+check('kein Diagramm im Finisher', !(await visible('#board-chart')));
+
+group('Ohne Server bleibt es die lokale App');
+/* Aus dem laufenden Cricket zurück ins Setup – dort ist die Navigation
+   sichtbar, im Spiel wird sie bewusst ausgeblendet. */
+await page.evaluate(() => window.__dart.setScreen('setup'));
+check('kein Konto-Knopf ohne Backend', await page.locator('#nav-konto').isHidden());
+check('keine Konto-Schicht angemeldet', await page.evaluate(() => !window.DartKonto));
+check('Statuszeile bleibt unsichtbar', await page.locator('#sync-status').isHidden());
+check('Aufstellung funktioniert weiterhin',
+  (await page.locator('#roster .roster-item').count()) > 0);
 
 group('Fehlerfreiheit');
 check('keine JS-Fehler', errors.length === 0, errors.join(' | '));

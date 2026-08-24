@@ -1,0 +1,47 @@
+# Dart-Turnier auf dem GETEILTEN Wirtschaftln-Server (Hetzner CPX12, 2 GB).
+#
+# Gleiche Hausregel wie beim Firmengolf-Staging (Absprache 03.08.2026):
+# Wirtschaftln darf nichts merken. Deshalb hartes Speicherlimit, halbes
+# CPU-Gewicht und KEIN veroeffentlichter Port -- der Weg nach draussen fuehrt
+# ausschliesslich ueber den Wirtschaftln-Caddy im gemeinsamen edge-Netz.
+name: dart-turnier
+
+services:
+  # ACHTUNG, teuer gelernt (24.08.2026): Der Dienstname MUSS im edge-Netz
+  # eindeutig sein. Docker Compose vergibt den Dienstnamen als DNS-Alias auf
+  # JEDEM Netz, dem der Dienst beitritt. Der Dienst hiess zuerst "app" -- so
+  # wie der von Wirtschaftln. Damit zeigte "app" im gemeinsamen edge-Netz
+  # ploetzlich hierher, der Wirtschaftln-Caddy landete bei uns auf Port 3000
+  # (wo nichts lauscht) und wirtschaftln.de lieferte eine Minute lang 502.
+  #
+  # Belegte Aliase im edge-Netz: app, caddy (Wirtschaftln),
+  # api, web, fg-api, fg-web (Firmengolf-Staging).
+  darts:
+    image: dart-turnier:latest
+    container_name: darts-app
+    restart: unless-stopped
+    # Einladungscode-Hash und Co. liegen NUR auf dem Server in dieser Datei.
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      PORT: "3002"
+      HOST: 0.0.0.0
+      DARTS_DB: /data/darts.db
+      # Hinter Caddy ist X-Forwarded-For vertrauenswuerdig -- ohne das
+      # traefe das Rate-Limit alle Nutzer als eine einzige IP.
+      DARTS_TRUST_PROXY: "1"
+      DARTS_SECURE_COOKIES: "1"
+    volumes:
+      - darts-data:/data
+    networks: [edge]
+    mem_limit: 200m
+    cpu_shares: 512
+
+volumes:
+  darts-data:
+
+networks:
+  # Gemeinsames Netz mit dem Wirtschaftln-Caddy (dort einmalig angelegt:
+  # docker network create --subnet 172.30.0.0/24 edge).
+  edge:
+    external: true

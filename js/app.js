@@ -16,6 +16,10 @@
 
   var STORAGE_KEY = 'dart-turnier-v1';
   var DEFAULT_PLAYERS = ['Lenas', 'Tobi', 'Domi', 'Julius'];
+  /* Startpunkte des X01-Turniers. Der Modus heißt intern weiter '501' –
+     das steht so in jedem archivierten Spiel und darf sich nicht ändern. */
+  var START_SCORES = [301, 501, 701];
+  var FIN_TARGETS = [3, 5, 10];   // Punkte zum Sieg im Finisher
   var QUICK_SCORES = [26, 41, 45, 60, 81, 85, 100, 140, 180];
   /* Summen, die mit 3 Darts nicht zu werfen sind. */
   var IMPOSSIBLE = { 163: 1, 166: 1, 169: 1, 172: 1, 173: 1, 175: 1, 176: 1, 178: 1, 179: 1 };
@@ -75,7 +79,7 @@
     return {
       v: 2,
       screen: 'setup',
-      settings: { start: 501, bestOf: 1, dartModeFrom: 170, cricketScoring: 1 },
+      settings: { start: 501, bestOf: 1, dartModeFrom: 170, cricketScoring: 1, finisherTo: 5 },
       mode: '501',
       game: null,
       profiles: DEFAULT_PLAYERS.map(function (n, i) {
@@ -117,9 +121,14 @@
       if (!Array.isArray(s.history)) s.history = [];
       if (!Array.isArray(s.lineup)) s.lineup = [];
       if (!s.mode) s.mode = '501';
-      if (s.settings.start !== 301 && s.settings.start !== 501) s.settings.start = 501;
+      if (START_SCORES.indexOf(s.settings.start) < 0) s.settings.start = 501;
       if (s.game === undefined) s.game = null;
+      /* Ein Finisher-Spiel ohne Runden kann es nicht geben – ein solcher
+         Stand käme aus einer kaputten Speicherung und würde beim Zeichnen
+         auffliegen. Lieber verwerfen als abstürzen. */
+      if (s.game && s.game.kind === 'finisher' && !Array.isArray(s.game.rounds)) s.game = null;
       if (s.settings.cricketScoring === undefined) s.settings.cricketScoring = 1;
+      if (FIN_TARGETS.indexOf(s.settings.finisherTo) < 0) s.settings.finisherTo = 5;
       s.profiles.forEach(function (p, i) { if (typeof p.hue !== 'number') p.hue = HUES[i % HUES.length]; });
       return s;
     } catch (e) { return null; }
@@ -149,7 +158,23 @@
     return { id: id, name: 'Unbekannt', avatar: null };
   }
   function pname(id) { return profile(id).name; }
+
+  /* Ein Ort für die Namen der Spielarten – sie tauchen an einem halben Dutzend
+     Stellen auf, und eine vergessene wäre sofort sichtbar. */
+  function kindName(kind) {
+    if (kind === 'cricket') return 'Cricket';
+    if (kind === 'rtw') return 'Round the World';
+    if (kind === 'finisher') return 'Finisher';
+    return 'X01';
+  }
   function activeProfiles() { return S.profiles.filter(function (p) { return !p.hidden; }); }
+
+  /* Gastspieler gehören dem Gerät, Accounts ihrem Besitzer. Fremde Accounts
+     hier zu ändern hätte keinen Bestand – der nächste Abgleich holt Name und
+     Bild ohnehin wieder vom Server. Also gar nicht erst anbieten. */
+  function bearbeitbar(id) {
+    return !window.DartKonto || window.DartKonto.darfBearbeiten(id);
+  }
 
   function initials(name) {
     var parts = String(name).trim().split(/\s+/);
@@ -500,6 +525,7 @@
       bestLeg: null, tournaments: 0, tourWins: 0,
       cricketGames: 0, cricketWins: 0, cricketMarks: 0, cricketDarts: 0,
       rtwGames: 0, rtwWins: 0, rtwBest: null,
+      finGames: 0, finWins: 0, finRounds: 0, finDarts: 0, finBest: null, finHigh: 0,
       lastResults: []
     };
   }
@@ -514,6 +540,7 @@
     st.dartsPerLeg = st.legsWon ? st.dartsInWonLegs / st.legsWon : 0;
     st.tons = st.s100 + st.s140 + st.s180;
     st.mpr = st.cricketDarts ? (st.cricketMarks / st.cricketDarts) * 3 : 0;
+    st.finAvgDarts = st.finRounds ? st.finDarts / st.finRounds : 0;
     return st;
   }
 
@@ -655,6 +682,19 @@
           if (fin && (map[id].rtwBest === null || fin.darts < map[id].rtwBest)) map[id].rtwBest = fin.darts;
         });
         if (h.winner && map[h.winner]) map[h.winner].rtwWins++;
+      } else if (kind === 'finisher') {
+        h.players.forEach(function (id) { if (map[id]) map[id].finGames++; });
+        // Gezählt wird je gewonnener Runde – da steckt die Leistung drin,
+        // nicht im Spielsieg allein.
+        (h.rounds || []).forEach(function (rd) {
+          var s = rd.sieger && map[rd.sieger];
+          if (!s || !rd.darts) return;
+          s.finRounds++;
+          s.finDarts += rd.darts;
+          if (s.finBest === null || rd.darts < s.finBest) s.finBest = rd.darts;
+          if (rd.zahl > s.finHigh) s.finHigh = rd.zahl;
+        });
+        if (h.winner && map[h.winner]) map[h.winner].finWins++;
       }
     });
     Object.keys(map).forEach(function (k) {
@@ -692,7 +732,12 @@
     { mode: 'cricket', key: 'mpr', label: 'MPR', get: function (s) { return s.mpr; }, fmt: function (v) { return v.toFixed(2); }, min: function (s) { return s.cricketDarts >= 9; }, hint: 'Marks per Round: getroffene Marken je 3 Darts im Cricket.' },
     { mode: 'cricket', key: 'cricketWins', label: 'Siege', get: function (s) { return s.cricketWins; }, fmt: function (v) { return String(v); }, min: function (s) { return s.cricketGames > 0; }, hint: 'Gewonnene Cricket-Spiele.' },
     { mode: 'rtw', key: 'rtwBest', label: 'Bestes Ergebnis', get: function (s) { return s.rtwBest; }, fmt: function (v) { return v + ' Darts'; }, min: function (s) { return s.rtwBest !== null; }, asc: true, hint: 'Wenigste Darts für einen kompletten Durchlauf von der 1 bis Bull.' },
-    { mode: 'rtw', key: 'rtwWins', label: 'Siege', get: function (s) { return s.rtwWins; }, fmt: function (v) { return String(v); }, min: function (s) { return s.rtwGames > 0; }, hint: 'Gewonnene Round-the-World-Trainings.' }
+    { mode: 'rtw', key: 'rtwWins', label: 'Siege', get: function (s) { return s.rtwWins; }, fmt: function (v) { return String(v); }, min: function (s) { return s.rtwGames > 0; }, hint: 'Gewonnene Round-the-World-Trainings.' },
+    { mode: 'finisher', key: 'finRounds', label: 'Gewonnene Runden', get: function (s) { return s.finRounds; }, fmt: function (v) { return String(v); }, min: function (s) { return s.finGames > 0; }, hint: 'Jede Runde, in der du als Erster ausgecheckt hast.' },
+    { mode: 'finisher', key: 'finAvgDarts', label: 'Ø Darts je Finish', get: function (s) { return s.finAvgDarts; }, fmt: function (v) { return v.toFixed(1); }, min: function (s) { return s.finRounds >= 3; }, asc: true, hint: 'Wie viele Darts du im Schnitt für ein gewonnenes Finish brauchst. Zählt ab 3 gewonnenen Runden.' },
+    { mode: 'finisher', key: 'finBest', label: 'Schnellstes Finish', get: function (s) { return s.finBest; }, fmt: function (v) { return plural(v, 'Dart', 'Darts'); }, min: function (s) { return s.finBest !== null; }, asc: true, hint: 'Wenigste Darts für ein gewonnenes Finish.' },
+    { mode: 'finisher', key: 'finHigh', label: 'Höchste Zahl', get: function (s) { return s.finHigh; }, fmt: function (v) { return String(v); }, min: function (s) { return s.finHigh > 0; }, hint: 'Die höchste Zahl, die du in einer Runde als Erster weggemacht hast.' },
+    { mode: 'finisher', key: 'finWins', label: 'Siege', get: function (s) { return s.finWins; }, fmt: function (v) { return String(v); }, min: function (s) { return s.finGames > 0; }, hint: 'Gewonnene Finisher-Spiele.' }
   ];
 
   function boardDef(key) {
@@ -892,8 +937,178 @@
   }
   function undoGame() {
     var g = S.game;
+    if (g && g.kind === 'finisher') return undoFinisher(g);
     if (!g || !g.throws.length) return;
     g.throws.pop();
+    g.done = false; g.winner = null; g.at = null;
+    UI.overlay = null;
+    UI.mult = 1;
+    save(); render();
+  }
+
+  /* ================= Finisher =================
+   *
+   * Alle starten auf derselben Zahl zwischen 6 und 120 und spielen sie ganz
+   * normal herunter, Double Out. Kein Scoring-Teil – nur das Finishen, weil
+   * genau das im echten Spiel am längsten dauert und deshalb Training braucht.
+   *
+   * Wer zuerst auscheckt, gewinnt die Runde. Wer in dieser Runde noch nicht
+   * dran war, darf noch gleichziehen – deshalb endet eine Runde erst, wenn
+   * alle gleich viele Aufnahmen hatten. Schaffen es mehrere, entscheidet ein
+   * Stechen auf Bull (von Hand, wie beim Anwurf: werfen und antippen).
+   */
+  var FIN_MIN = 6, FIN_MAX = 120;
+
+  function zieheFinishZahl(letzte) {
+    var z;
+    do {
+      z = FIN_MIN + Math.floor(Math.random() * (FIN_MAX - FIN_MIN + 1));
+    } while (z === letzte);   // zweimal dieselbe Zahl hintereinander wirkt kaputt
+    return z;
+  }
+
+  function neueFinisherRunde(g) {
+    var letzte = g.rounds.length ? g.rounds[g.rounds.length - 1].zahl : 0;
+    g.rounds.push({ zahl: zieheFinishZahl(letzte), throws: [], sieger: null, stechen: null, darts: 0 });
+  }
+
+  function finisherRunde(g) { return g.rounds[g.rounds.length - 1]; }
+
+  /*
+   * Der ganze Spielstand wird aus den gespeicherten Würfen neu gerechnet –
+   * wie bei Cricket und RTW. Dadurch ist Undo einfach ein Wurf weniger.
+   */
+  function finisherState(g) {
+    var n = g.players.length;
+    var st = {
+      punkte: {}, runde: g.rounds.length - 1, zahl: 0,
+      rest: {}, darts: {}, aufnahmen: {}, fertig: {},
+      turn: 0, inVisit: 0, visit: [], restVorVisit: 0,
+      rundeVorbei: false, stechen: null, sieger: null
+    };
+    g.players.forEach(function (id) { st.punkte[id] = 0; });
+    g.rounds.forEach(function (rd) {
+      if (rd.sieger && st.punkte[rd.sieger] !== undefined) st.punkte[rd.sieger]++;
+    });
+
+    var rd = finisherRunde(g);
+    st.zahl = rd.zahl;
+    st.stechen = rd.stechen;
+    st.sieger = rd.sieger;
+    g.players.forEach(function (id) { st.rest[id] = rd.zahl; st.darts[id] = 0; st.aufnahmen[id] = 0; });
+
+    var turn = 0, inVisit = 0, restVorVisit = rd.zahl, visit = [];
+    for (var i = 0; i < rd.throws.length; i++) {
+      var t = rd.throws[i];
+      var pid = g.players[turn];
+      if (inVisit === 0) restVorVisit = st.rest[pid];
+
+      st.darts[pid]++;
+      visit.push(t);
+      inVisit++;
+
+      var nach = st.rest[pid] - t.n * t.m;
+      var fertig = false, bust = false;
+      // Genau wie im X01: unter null, auf 1 stehen bleiben oder ohne Doppel
+      // auf null – alles drei ist ein Bust, die ganze Aufnahme verfällt.
+      if (nach === 0 && t.m === 2) { st.rest[pid] = 0; fertig = true; }
+      else if (nach < 0 || nach === 1 || nach === 0) bust = true;
+      else st.rest[pid] = nach;
+
+      if (fertig) st.fertig[pid] = { darts: st.darts[pid], at: i };
+      if (bust) st.rest[pid] = restVorVisit;
+
+      if (fertig || bust || inVisit === 3) {
+        st.aufnahmen[pid]++;
+        inVisit = 0;
+        visit = [];
+        // Wer durch ist, wirft nicht mehr – aber die anderen ziehen nach.
+        var steps = 0, next = turn;
+        do {
+          next = (next + 1) % n;
+          steps++;
+        } while (st.fertig[g.players[next]] && steps <= n);
+        turn = next;
+      }
+    }
+
+    st.turn = turn;
+    st.inVisit = inVisit;
+    st.visit = visit;
+    st.restVorVisit = restVorVisit;
+
+    // Runde vorbei, sobald jemand gefinished hat UND alle gleich oft dran waren.
+    if (Object.keys(st.fertig).length) {
+      var gleich = true;
+      for (var k = 1; k < n; k++) {
+        if (st.aufnahmen[g.players[k]] !== st.aufnahmen[g.players[0]]) gleich = false;
+      }
+      st.rundeVorbei = gleich;
+    }
+    return st;
+  }
+
+  function finisherDart(mult, num) {
+    var g = S.game;
+    if (!g || g.kind !== 'finisher' || g.done || settling()) return;
+    var rd = finisherRunde(g);
+    if (rd.stechen) return;          // erst das Stechen entscheiden
+    rd.throws.push({ n: num, m: num === 0 ? 0 : mult });
+    UI.mult = 1;
+    pruefeFinisherRunde(g);
+    save(); render();
+  }
+
+  function pruefeFinisherRunde(g) {
+    var rd = finisherRunde(g);
+    if (rd.sieger || rd.stechen) return;
+    var st = finisherState(g);
+    if (!st.rundeVorbei) return;
+    var fertige = Object.keys(st.fertig);
+    if (fertige.length > 1) {
+      // Gleichgezogen: das entscheidet der Bull, nicht die Dartzahl.
+      rd.stechen = { spieler: fertige };
+      return;
+    }
+    finisherRundeAn(g, fertige[0]);
+  }
+
+  function finisherRundeAn(g, sieger) {
+    var rd = finisherRunde(g);
+    var st = finisherState(g);
+    rd.sieger = sieger;
+    rd.stechen = null;
+    rd.darts = st.fertig[sieger] ? st.fertig[sieger].darts : 0;
+    if ((st.punkte[sieger] || 0) + 1 >= g.ziel) {
+      g.done = true;
+      g.winner = sieger;
+      g.at = Date.now();
+      UI.overlay = { type: 'game-done', pid: sieger };
+    } else {
+      neueFinisherRunde(g);
+    }
+  }
+
+  /* Undo im Finisher: einen Dart zurück. Ist die Runde leer, wird die
+     vorherige wieder geöffnet – sonst käme man aus einer frisch gezogenen
+     Zahl nie mehr heraus. */
+  function undoFinisher(g) {
+    var rd = finisherRunde(g);
+    if (rd.throws.length) {
+      rd.throws.pop();
+      rd.stechen = null;
+      rd.sieger = null;
+      rd.darts = 0;
+    } else if (g.rounds.length > 1) {
+      g.rounds.pop();
+      var vor = finisherRunde(g);
+      vor.sieger = null;
+      vor.stechen = null;
+      vor.darts = 0;
+      if (vor.throws.length) vor.throws.pop();
+    } else {
+      return;
+    }
     g.done = false; g.winner = null; g.at = null;
     UI.overlay = null;
     UI.mult = 1;
@@ -910,6 +1125,11 @@
       scoring: kind === 'cricket' ? S.settings.cricketScoring === 1 : false,
       done: false, winner: null, started: false
     };
+    if (kind === 'finisher') {
+      S.game.ziel = S.settings.finisherTo;
+      S.game.rounds = [];
+      neueFinisherRunde(S.game);
+    }
     UI.mult = 1;
     UI.overlay = null;
     // Wie im Turnier wird auch hier ausgeworfen, wer anfängt.
@@ -920,11 +1140,28 @@
   function archiveGame(g) {
     if (!g || !g.done) return;
     for (var i = 0; i < S.history.length; i++) if (S.history[i].id === g.id) return;  // nicht doppelt
-    S.history.unshift({
+    var eintrag = {
       id: g.id || uid(), kind: g.kind, at: g.at || Date.now(),
-      players: g.players.slice(), scoring: g.scoring, throws: g.throws, winner: g.winner
-    });
+      players: g.players.slice(), winner: g.winner
+    };
+    // Finisher speichert Runden statt einer flachen Wurfliste – jede Runde
+    // hat ihre eigene Zielzahl, die sich sonst nicht rekonstruieren liesse.
+    if (g.kind === 'finisher') {
+      eintrag.rounds = g.rounds;
+      eintrag.ziel = g.ziel;
+    } else {
+      eintrag.scoring = g.scoring;
+      eintrag.throws = g.throws;
+    }
+    S.history.unshift(eintrag);
     if (S.history.length > MAX_HISTORY) S.history.length = MAX_HISTORY;
+    meldeNeuesSpiel(S.history[0]);
+  }
+
+  /* Die Online-Schicht (js/sync.js) ist optional: ohne sie – Einzeldatei-
+     Bündel, per Doppelklick geöffnet – passiert hier schlicht nichts. */
+  function meldeNeuesSpiel(eintrag) {
+    if (window.DartSync && eintrag) window.DartSync.neuesSpiel(eintrag);
   }
 
   function finishGame() {
@@ -957,19 +1194,125 @@
       winner: allMatchesDone() && table[0] ? table[0].id : null
     });
     if (S.history.length > MAX_HISTORY) S.history.length = MAX_HISTORY;
+    meldeNeuesSpiel(S.history[0]);
     S.matches = [];
     S.current = null;
     S.tour = null;
     save();
   }
 
+  /* ================= Für die Online-Schicht ================= */
+
+  /*
+   * Lokale Spieler-Kennungen durch die des Servers ersetzen. Nötig genau
+   * einmal: beim ersten Anmelden, wenn aus dem lokalen Profil „Tobi" der
+   * Account von Tobi wird. Die alte Kennung steckt an vielen Stellen (Profile,
+   * Aufstellung, Spielplan, Archiv, laufendes Spiel), deshalb wird der ganze
+   * Zustand durchgegangen statt jede Stelle einzeln aufzuzählen – eine
+   * vergessene Stelle würde die Historie zerreißen.
+   *
+   * Kennungen stehen im gespeicherten Zustand immer als Wert, nie als
+   * Schlüssel; deshalb reicht das Ersetzen von Zeichenketten.
+   */
+  function ersetzeSpielerIds(map) {
+    function geh(wert) {
+      if (typeof wert === 'string') return map[wert] || wert;
+      if (Array.isArray(wert)) {
+        for (var i = 0; i < wert.length; i++) wert[i] = geh(wert[i]);
+        return wert;
+      }
+      if (wert && typeof wert === 'object') {
+        for (var k in wert) if (Object.prototype.hasOwnProperty.call(wert, k)) wert[k] = geh(wert[k]);
+        return wert;
+      }
+      return wert;
+    }
+    geh(S);
+
+    // Nach dem Ersetzen kann derselbe Spieler zweimal in der Liste stehen:
+    // einmal das umbenannte lokale Profil, einmal das vom Server geholte.
+    // Der erste Treffer gewinnt, sein Bild bleibt erhalten.
+    var gesehen = {};
+    S.profiles = S.profiles.filter(function (p) {
+      if (gesehen[p.id]) return false;
+      gesehen[p.id] = 1;
+      return true;
+    });
+    var inAufstellung = {};
+    S.lineup = S.lineup.filter(function (id) {
+      if (inAufstellung[id]) return false;
+      inAufstellung[id] = 1;
+      return true;
+    });
+
+    save();
+  }
+
+  /*
+   * Spiele vom Server in die eigene Historie einmischen. Ein Eintrag ist
+   * wortgleich das, was archiveGame()/archiveTournament() erzeugt haben –
+   * deshalb rechnet career() damit ohne jede Sonderbehandlung weiter.
+   */
+  function uebernehmeSpiele(liste) {
+    if (!liste || !liste.length) return 0;
+    var vorhanden = {};
+    S.history.forEach(function (h) { vorhanden[h.id] = h; });
+    var geaendert = 0;
+
+    liste.forEach(function (s) {
+      if (s.geloescht) {
+        if (!vorhanden[s.id]) return;
+        S.history = S.history.filter(function (h) { return h.id !== s.id; });
+        delete vorhanden[s.id];
+        geaendert++;
+        return;
+      }
+      if (vorhanden[s.id] || !s.payload) return;
+      var eintrag = s.payload;
+      eintrag.id = s.id;
+      // Wer es eingetragen hat, bleibt sichtbar – bei fremden Einträgen ist
+      // das die einzige Möglichkeit nachzuvollziehen, wo sie herkommen.
+      if (s.eingetragenVonName) eintrag.von = s.eingetragenVonName;
+      S.history.push(eintrag);
+      vorhanden[s.id] = eintrag;
+      geaendert++;
+    });
+
+    if (geaendert) {
+      S.history.sort(function (a, b) { return (b.at || 0) - (a.at || 0); });
+      if (S.history.length > MAX_HISTORY) S.history.length = MAX_HISTORY;
+      save();
+    }
+    return geaendert;
+  }
+
   /* ================= Rendering ================= */
-  var SCREENS = ['setup', 'tournament', 'boards', 'players', 'profile', 'bulloff', 'game', 'cricket', 'rtw', 'summary', 'winner'];
-  var NAV_SCREENS = { setup: 'setup', tournament: 'setup', boards: 'boards', players: 'players', profile: 'players', summary: 'setup' };
+  var SCREENS = ['setup', 'tournament', 'boards', 'players', 'profile', 'bulloff', 'game', 'cricket', 'rtw', 'finisher', 'summary', 'winner', 'konto'];
+  var NAV_SCREENS = { setup: 'setup', tournament: 'setup', boards: 'boards', players: 'players', profile: 'players', summary: 'setup', konto: 'konto' };
+
+  /* Solange die Anmeldung aussteht, ist die App zu. Ohne Server (Doppelklick,
+     Einzeldatei-Bündel, GitHub Pages) gibt es keine Schranke. */
+  function gesperrt() {
+    if (window.DartKonto) return window.DartKonto.gesperrt();
+    /* Beim allerersten Zeichnen ist die Konto-Schicht noch nicht fertig. Sie
+       hat die Schranke aber schon als Klasse am <body> gesetzt, damit hier
+       nichts aufblitzt, was niemand sehen soll. */
+    return document.body.classList.contains('gesperrt');
+  }
 
   function show(screen) {
-    SCREENS.forEach(function (s) { $('screen-' + s).classList.toggle('active', s === screen); });
-    var navFor = NAV_SCREENS[screen];
+    /* `screen-konto` fehlt im Einzeldatei-Bündel – dort gibt es keine Konten.
+       Deshalb hier nicht blind zugreifen. */
+    SCREENS.forEach(function (s) {
+      var el = $('screen-' + s);
+      if (el) el.classList.toggle('active', s === screen);
+    });
+    /* Der Konto-Knopf erscheint nur, wenn die Seite von einem Server kommt.
+       Per Doppelklick geöffnet gibt es niemanden, bei dem man sich anmelden
+       könnte – dann wäre der Knopf eine leere Versprechung. */
+    var kontoBtn = $('nav-konto');
+    if (kontoBtn) kontoBtn.classList.toggle('hidden', !window.DartKonto);
+    var navFor = gesperrt() ? null : NAV_SCREENS[screen];
     $('nav').classList.toggle('hidden', !navFor);
     if (navFor) {
       $('nav').querySelectorAll('button').forEach(function (b) {
@@ -979,6 +1322,14 @@
   }
 
   function render() {
+    /* Vor der Anmeldung gibt es nur den Anmeldebildschirm – kein Blick auf
+       Spieler, Ranglisten oder ein laufendes Turnier. */
+    if (gesperrt()) {
+      show('konto');
+      if (window.DartKonto) window.DartKonto.render();
+      renderOverlay();
+      return;
+    }
     show(S.screen);
     if (S.screen === 'setup') renderSetup();
     if (S.screen === 'tournament') renderTournament();
@@ -989,9 +1340,22 @@
     if (S.screen === 'game') renderGame();
     if (S.screen === 'cricket') renderCricket();
     if (S.screen === 'rtw') renderRtw();
+    if (S.screen === 'finisher') renderFinisher();
     if (S.screen === 'summary') renderSummary();
     if (S.screen === 'winner') renderWinner();
+    if (S.screen === 'konto' && window.DartKonto) window.DartKonto.render();
+    renderSyncStatus();
     renderOverlay();
+  }
+
+  /* Schmale Zeile über der Navigation: was noch nicht beim Server ist.
+     Gleiche Haltung wie renderSaveWarning() – lieber sichtbar als still. */
+  function renderSyncStatus() {
+    var bar = $('sync-status');
+    if (!bar) return;
+    var text = window.DartSync ? window.DartSync.statusText() : '';
+    bar.textContent = text;
+    bar.classList.toggle('hidden', !text);
   }
 
   function renderSetup() {
@@ -1003,7 +1367,7 @@
         avatarHTML(p, 'md') +
         '<div class="who"><div class="nm">' + esc(p.name) + '</div>' +
         '<div class="sm">' + (st && st.matches ? 'Ø ' + st.avg.toFixed(1) + ' · ' + plural(st.won, 'Sieg', 'Siege') : 'noch kein Spiel') + '</div></div>' +
-        '<button class="edit" data-action="edit-profile" data-id="' + p.id + '" aria-label="Bearbeiten">✎</button>' +
+        (bearbeitbar(p.id) ? '<button class="edit" data-action="edit-profile" data-id="' + p.id + '" aria-label="Bearbeiten">✎</button>' : '') +
         '<span class="check">✓</span>' +
         '</div>';
     }).join('') || '<p class="hint">Noch keine Spieler angelegt.</p>';
@@ -1021,8 +1385,10 @@
     $('settings-501').classList.toggle('hidden', S.mode !== '501');
     $('settings-cricket').classList.toggle('hidden', S.mode !== 'cricket');
     $('settings-rtw').classList.toggle('hidden', S.mode !== 'rtw');
+    $('settings-finisher').classList.toggle('hidden', S.mode !== 'finisher');
     document.querySelector('[data-action="start-game"]').textContent =
-      S.mode === 'cricket' ? 'Cricket starten' : S.mode === 'rtw' ? 'Round the World starten' : 'Turnier starten';
+      S.mode === 'cricket' ? 'Cricket starten' : S.mode === 'rtw' ? 'Round the World starten'
+        : S.mode === 'finisher' ? 'Finisher starten' : 'Turnier starten';
 
     var runningGame = !!S.game;
     var running = runningGame || (S.matches.length > 0 && !allMatchesDone());
@@ -1030,7 +1396,7 @@
     var resumeBtn = $('resume-box').querySelector('[data-action="resume"]');
     if (runningGame && S.game.done) {
       $('resume-box').querySelector('strong').textContent =
-        (S.game.kind === 'cricket' ? 'Cricket' : 'Round the World') + ' beendet';
+        kindName(S.game.kind) + ' beendet';
       $('resume-info').textContent = 'Sieger: ' + pname(S.game.winner) + ' · Ergebnis noch nicht gespeichert';
       resumeBtn.textContent = 'Ergebnis ansehen';
     } else if (runningGame) {
@@ -1204,7 +1570,7 @@
     });
 
     var log = allGamesLog().filter(function (row) { return row.kind === mode; });
-    var modeName = mode === '501' ? 'Classic' : mode === 'cricket' ? 'Cricket' : 'Round the World';
+    var modeName = mode === '501' ? 'Classic' : kindName(mode);
     $('boards-sub').textContent = log.length
       ? modeName + ' · ' + plural(log.length, 'Spiel', 'Spiele') +
         (mode === '501' ? ' · ' + plural(S.history.filter(function (h) { return (h.kind || '501') === '501'; }).length, 'Turnier', 'Turniere') : '')
@@ -1213,7 +1579,7 @@
     /* Verlauf: eine farbige Linie je Spieler. */
     var chartLabel = (mode === '501' ? '3-Dart-Average' : 'MPR') + ' – je Spieler die letzten ' + CHART_GAMES + ' Spiele';
     var chart = mode === 'rtw' ? null : lineChart(chartSeries(mode), chartLabel);
-    $('board-chart').classList.toggle('hidden', mode === 'rtw');
+    $('board-chart').classList.toggle('hidden', mode === 'rtw' || mode === 'finisher');
     if (mode !== 'rtw') {
       $('board-chart').innerHTML = '<h2>' + chartLabel + '</h2>' +
         (chart || '<p class="hint">Ab dem zweiten Spiel wird hier der Verlauf gezeichnet.</p>');
@@ -1265,7 +1631,7 @@
     $('match-log').innerHTML = log.slice(0, 30).map(function (row) {
       if (row.kind !== '501') {
         var h = row.h;
-        var title = h.kind === 'cricket' ? 'Cricket' + (h.scoring ? '' : ' (ohne Punkte)') : 'Round the World';
+        var title = h.kind === 'cricket' ? 'Cricket' + (h.scoring ? '' : ' (ohne Punkte)') : kindName(h.kind);
         return '<div class="log-row tap" data-action="open-summary" data-kind="' + h.kind + '" data-id="' + (h.id || 'current') + '" role="button" tabindex="0">' +
           '<div class="lp w">' + esc(pname(h.winner)) + '<span class="a">' + title + '</span></div>' +
           '<div class="ls">🏆</div>' +
@@ -1316,6 +1682,8 @@
   function renderProfile() {
     var p = profile(UI.profile);
     var st = career()[p.id];
+    var editBtn = document.querySelector('[data-action="edit-current-profile"]');
+    if (editBtn) editBtn.classList.toggle('hidden', !bearbeitbar(p.id));
     if (!st) { S.screen = 'players'; render(); return; }
 
     var form = st.lastResults.slice(0, 8).map(function (r) {
@@ -1383,7 +1751,7 @@
         line('Bestes Ergebnis', st.rtwBest ? st.rtwBest + ' Darts' : '–') +
       '</div>' : '') +
 
-      '<div class="card"><h2>Letzte 501-Spiele</h2>' + (mine.length ? mine.map(function (e) {
+      '<div class="card"><h2>Letzte X01-Spiele</h2>' + (mine.length ? mine.map(function (e) {
         var m = e.m;
         var opp = m.p[0] === p.id ? m.p[1] : m.p[0];
         var win = m.winner === p.id;
@@ -1759,6 +2127,94 @@
     return '<div class="pline"><span>' + label + (hint ? ' <i>' + hint + '</i>' : '') + '</span><b>' + value + '</b></div>';
   }
 
+  function renderFinisher() {
+    var g = S.game;
+    if (!g || g.kind !== 'finisher') { S.screen = 'setup'; render(); return; }
+    var st = finisherState(g);
+    var rd = finisherRunde(g);
+    var aktiv = g.players[st.turn];
+
+    $('fin-sub').textContent = 'Runde ' + (st.runde + 1) + ' · auf ' + g.ziel + ' Punkte';
+
+    /* Die Zielzahl ist der Kern des Modus – die gehört groß und oben hin. */
+    var kopf = '<div class="fin-zahl">' +
+      '<span class="lbl">alle finishen</span>' +
+      '<span class="zahl">' + st.zahl + '</span>' +
+      '</div>';
+
+    var liste = g.players.map(function (id) {
+      var fertig = st.fertig[id];
+      var klassen = ['fin-row'];
+      if (fertig) klassen.push('fertig');
+      else if (id === aktiv && !rd.stechen) klassen.push('active');
+      return '<div class="' + klassen.join(' ') + '">' +
+        avatarHTML(profile(id), 'sm') +
+        '<div class="who"><div class="nm">' + esc(pname(id)) + '</div>' +
+        '<div class="sm">' + (st.darts[id] ? plural(st.darts[id], 'Dart', 'Darts') : 'noch nichts') + '</div></div>' +
+        '<div class="pkt" title="Punkte">' + (st.punkte[id] || 0) + '</div>' +
+        '<div class="rest">' + (fertig ? '✓' : st.rest[id]) + '</div>' +
+        '</div>';
+    }).join('');
+
+    /* Stechen: gleichgezogen, jetzt entscheidet der Bull. Wie beim Anwurf
+       wird von Hand getippt, wer näher dran war – messen kann die App das
+       nicht, und am Board sieht man es sofort. */
+    var stechen = '';
+    if (rd.stechen) {
+      stechen = '<div class="card fin-stechen"><h2>Stechen auf Bull</h2>' +
+        '<p class="hint">' + rd.stechen.spieler.map(function (id) { return esc(pname(id)); }).join(' und ') +
+        ' haben beide gefinished. Einmal auf Bull werfen – wer war näher dran?</p>' +
+        rd.stechen.spieler.map(function (id) {
+          return '<button class="btn full" data-action="fin-stechen" data-id="' + id + '">' +
+            esc(pname(id)) + '</button>';
+        }).join('') + '</div>';
+    }
+
+    $('fin-board').innerHTML = kopf + '<div class="fin-liste">' + liste + '</div>' + stechen;
+
+    // Finish-Vorschlag für den, der gerade wirft.
+    var hinweis = '';
+    if (!rd.stechen && !st.fertig[aktiv]) {
+      var rest = st.rest[aktiv];
+      var dartsLeft = 3 - st.inVisit;
+      var route = Checkout.suggest(rest, dartsLeft);
+      if (route && route.length) {
+        hinweis = route.map(function (d, i) {
+          return '<span class="chip ' + (i === 0 ? 'first' : '') + '">' + Checkout.pretty(d) + '</span>';
+        }).join('');
+      } else {
+        hinweis = '<span class="muted">kein Finish mit ' + plural(dartsLeft, 'Dart', 'Darts') + '</span>';
+      }
+    }
+    $('fin-hint').innerHTML = hinweis;
+
+    $('fin-turn').textContent = rd.stechen ? 'Stechen' : pname(aktiv) + ' ist dran';
+    $('fin-darts').innerHTML = st.visit.map(function (d) {
+      return '<span class="vd">' + dartLabel(d) + '</span>';
+    }).join('') || '<span class="vd empty">–</span>';
+
+    // Zahlenfeld: derselbe Aufbau wie im Finish-Bereich des X01.
+    if (rd.stechen) {
+      $('fin-pad').innerHTML = '<p class="hint center">Erst das Stechen entscheiden.</p>';
+    } else {
+      var prefix = UI.mult === 3 ? 'T' : UI.mult === 2 ? 'D' : '';
+      var nums = '';
+      for (var n = 1; n <= 20; n++) {
+        nums += '<button data-num="' + n + '">' +
+          (prefix ? '<span class="mx">' + prefix + '</span>' : '') + n + '</button>';
+      }
+      nums += '<button class="miss" data-num="0" data-mult="1">Miss</button>';
+      nums += '<button data-num="25" data-mult="1">25</button>';
+      nums += '<button class="bull" data-num="25" data-mult="2">Bull</button>';
+      $('fin-pad').innerHTML =
+        '<div class="mult-row">' +
+          '<button data-mult="1" class="' + (UI.mult === 1 ? 'active' : '') + '">Single</button>' +
+          '<button data-mult="2" class="' + (UI.mult === 2 ? 'active' : '') + '">Double</button>' +
+          '<button data-mult="3" class="' + (UI.mult === 3 ? 'active' : '') + '">Triple</button>' +
+        '</div><div class="num-grid">' + nums + '</div>';
+    }
+  }
+
   function renderSummary() {
     var s = UI.summary;
     var found = s ? findGame(s.kind, s.id) : null;
@@ -1837,6 +2293,43 @@
             statRow('Felder zu', closed + ' / 7') +
             statRow('Darts', cst.darts[id]) +
             '</div>';
+        }).join('') + '</div>' + note;
+
+      actions = found.live
+        ? '<button class="btn primary full big" data-action="restart-game">Nochmal spielen</button>' +
+          '<button class="btn ghost full" data-action="finish-game">Speichern &amp; beenden</button>'
+        : '<button class="btn ghost full" data-action="summary-back">Zurück</button>';
+
+    } else if (s.kind === 'finisher') {
+      var fg2 = found.g;
+      var gewonnen = {}, dartsSum = {}, best = {}, hoch = {};
+      fg2.players.forEach(function (id) { gewonnen[id] = 0; dartsSum[id] = 0; best[id] = null; hoch[id] = 0; });
+      (fg2.rounds || []).forEach(function (rd) {
+        if (!rd.sieger || !rd.darts || gewonnen[rd.sieger] === undefined) return;
+        gewonnen[rd.sieger]++;
+        dartsSum[rd.sieger] += rd.darts;
+        if (best[rd.sieger] === null || rd.darts < best[rd.sieger]) best[rd.sieger] = rd.darts;
+        if (rd.zahl > hoch[rd.sieger]) hoch[rd.sieger] = rd.zahl;
+      });
+      var gespielt = (fg2.rounds || []).filter(function (rd) { return rd.sieger; }).length;
+
+      box = '<div class="sum-head"><div class="big-emoji">🏆</div>' +
+        '<h2 class="sum-title">' + esc(pname(fg2.winner)) + ' gewinnt</h2>' +
+        '<div class="muted">Finisher · ' + plural(gespielt, 'Runde', 'Runden') + ' · auf ' + fg2.ziel + ' Punkte</div></div>' +
+        '<div class="sum-cards">' + fg2.players.map(function (id) {
+          return '<div class="card sum-card ' + (fg2.winner === id ? 'win' : '') + '">' +
+            '<div class="sum-who">' + avatarHTML(profile(id), 'md') +
+              '<div class="nm">' + esc(pname(id)) + '</div></div>' +
+            statRow('Punkte', gewonnen[id]) +
+            statRow('Ø Darts je Finish', gewonnen[id] ? (dartsSum[id] / gewonnen[id]).toFixed(1) : '–') +
+            statRow('Schnellstes Finish', best[id] === null ? '–' : plural(best[id], 'Dart', 'Darts')) +
+            statRow('Höchste Zahl', hoch[id] || '–') +
+            '</div>';
+        }).join('') + '</div>' +
+        '<div class="card"><h2>Runden</h2>' + (fg2.rounds || []).map(function (rd, i) {
+          if (!rd.sieger) return '';
+          return statRow('Runde ' + (i + 1) + ' · ' + rd.zahl,
+            esc(pname(rd.sieger)) + ' · ' + plural(rd.darts, 'Dart', 'Darts'));
         }).join('') + '</div>' + note;
 
       actions = found.live
@@ -1948,7 +2441,7 @@
           '<p class="hint">Ausgeblendete Spieler tauchen nicht mehr in der Aufstellung auf, ihre Ergebnisse bleiben aber in Statistik und Rangliste erhalten.</p>');
     } else if (o.type === 'game-done') {
       html = '<div class="big-emoji">🏆</div><h3>Glückwunsch, ' + esc(pname(o.pid)) + '!</h3>' +
-        '<p>' + (S.game && S.game.kind === 'cricket' ? 'Cricket' : 'Round the World') + '</p>' +
+        '<p>' + (S.game ? kindName(S.game.kind) : '') + '</p>' +
         '<button class="btn primary full" data-action="open-summary" data-kind="' + (S.game ? S.game.kind : 'cricket') + '" data-id="current">Weiter zur Spielstatistik</button>' +
         '<button class="btn ghost full" data-action="undo-game">Letzten Dart zurück</button>';
     } else if (o.type === 'roster-change') {
@@ -2044,6 +2537,12 @@
   }
 
   function handleActionInner(action, el) {
+    /* Alles rund ums Konto gehört der Online-Schicht (js/auth.js). Fehlt sie,
+       gibt es auch keine Knöpfe, die das auslösen könnten. */
+    if (action.indexOf('konto-') === 0) {
+      if (window.DartKonto) window.DartKonto.aktion(action, el);
+      return;
+    }
     switch (action) {
       case 'nav': {
         var target = el.getAttribute('data-screen');
@@ -2094,6 +2593,10 @@
           var ex = profile(UI.overlay.id);
           ex.name = name;
           ex.avatar = draft.avatar;
+          /* Gehört das Profil zu einem Account, muss die Änderung zum Server –
+             sonst überschreibt der nächste Abgleich Bild und Name wieder mit
+             dem, was dort steht. */
+          if (window.DartKonto) window.DartKonto.profilGeaendert(ex.id);
         } else {
           var np = { id: uid(), name: name, avatar: draft.avatar, created: Date.now(), hue: freeHue() };
           S.profiles.push(np);
@@ -2164,6 +2667,11 @@
         if (S.game && S.game.done) finishGame();
         else { S.screen = 'setup'; UI.overlay = null; save(); render(); }
         break;
+      case 'fin-stechen': {
+        var fg = S.game;
+        if (fg && fg.kind === 'finisher') { finisherRundeAn(fg, el.getAttribute('data-id')); save(); render(); }
+        break;
+      }
       case 'undo-game':
         undoGame();
         break;
@@ -2388,6 +2896,7 @@
       var own = num.getAttribute('data-mult');
       if (S.screen === 'cricket') { cricketDart(own ? Number(own) : UI.mult, n2); return; }
       if (S.screen === 'rtw') { rtwDart(own ? Number(own) : UI.mult, n2); return; }
+      if (S.screen === 'finisher') { finisherDart(own ? Number(own) : UI.mult, n2); return; }
       if (n2 === 0) pushDart(1, 0);
       else if (n2 === 25) pushDart(1, 25);
       else pushDart(UI.mult, n2);
@@ -2445,10 +2954,10 @@
   /* ================= Start ================= */
   S = load() || newState();
   if (!S.lineup.length) S.lineup = activeProfiles().slice(0, 4).map(function (p) { return p.id; });
-  if ((S.screen === 'cricket' || S.screen === 'rtw') && !S.game) S.screen = 'setup';
+  if ((S.screen === 'cricket' || S.screen === 'rtw' || S.screen === 'finisher') && !S.game) S.screen = 'setup';
   if (S.game && !S.game.started && !S.game.throws.length) S.screen = 'bulloff';
   if (S.game && S.game.started === undefined) S.game.started = true;   // ältere Stände
-  if (S.game && (S.screen === 'cricket' || S.screen === 'rtw') && S.game.kind !== S.screen) S.screen = S.game.kind;
+  if (S.game && (S.screen === 'cricket' || S.screen === 'rtw' || S.screen === 'finisher') && S.game.kind !== S.screen) S.screen = S.game.kind;
   /* Ein beendetes Spiel führt zur Auswertung, nicht auf ein totes Board –
      sonst kann man in ein fertiges Match weitertippen. */
   if (S.game && S.game.done) {
@@ -2470,12 +2979,24 @@
     navigator.serviceWorker.register('sw.js').catch(function () { /* offline-Cache optional */ });
   }
 
-  // Für Tests unter Node/Headless
+  // Für Tests unter Node/Headless – und als einzige Andockstelle für die
+  // optionale Online-Schicht (js/auth.js, js/sync.js).
   if (typeof window !== 'undefined') {
     window.__dart = {
       state: function () { return S; },
       ui: function () { return UI; },
       action: handleAction,
+      save: save,
+      uid: uid,
+      esc: esc,
+      avatarHTML: avatarHTML,
+      profile: profile,
+      activeProfiles: activeProfiles,
+      freeHue: freeHue,
+      HUES: HUES,
+      setScreen: function (name) { S.screen = name; save(); render(); },
+      ersetzeSpielerIds: ersetzeSpielerIds,
+      uebernehmeSpiele: uebernehmeSpiele,
       pushDart: pushDart,
       pressKey: pressKey,
       submitTotal: submitTotal,
@@ -2491,6 +3012,8 @@
       currentMatch: currentMatch,
       game: function () { return S.game; },
       cricketState: function () { return cricketState(S.game); },
+      finisherState: function () { return finisherState(S.game); },
+      finisherRunde: function () { return finisherRunde(S.game); },
       rtwState: function () { return rtwState(S.game); },
       gameTurnPlayer: function () { return S.game ? gameTurnPlayer(S.game) : null; },
       render: render,

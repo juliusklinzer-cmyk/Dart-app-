@@ -21,7 +21,12 @@ const js = [read('js/checkout.js'), read('js/app.js')]
 
 const html = read('index.html');
 const body = html.slice(html.indexOf('<body>') + 6, html.lastIndexOf('</body>')).trim()
-  .replace(/\n\s*<script src="[^"]+"><\/script>/g, '');
+  .replace(/\n\s*<script src="[^"]+"><\/script>/g, '')
+  // Ohne Server gibt es keine Konten. Der Abschnitt bliebe nicht nur tot
+  // liegen, er verwiese auch auf ein Logo, das neben der Einzeldatei nicht
+  // existiert – das gibt beim Öffnen eine Fehlermeldung in der Konsole.
+  .replace(/\n\s*<!-- =+ KONTO =+ -->[\s\S]*?<\/section>/, '')
+  .replace(/\n\s*<!--[^>]*js\/auth\.js[\s\S]*?-->/, '');
 
 const title = 'Dart Turnier – 501 Double Out';
 const fragment = [
