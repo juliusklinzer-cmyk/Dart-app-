@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
-<meta name="theme-color" content="#0e1116">
+<meta name="theme-color" content="#0d0a0b">
 <title>Blink 180 – Dart Turnier</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.webp" type="image/webp">
@@ -33,7 +33,7 @@
 <!-- ============ SETUP ============ -->
 <section id="screen-setup" class="screen">
   <div class="marke">
-    <img src="icons/icon-192.webp" width="192" height="192" alt="" decoding="async">
+    <span class="blink-logo" role="img" aria-label="Blink 180"></span>
     <div>
       <div class="wort">Blink <span class="rot">180</span></div>
       <div class="sub">Dart Turnier · est. 2026</div>
@@ -153,9 +153,12 @@
 <!-- ============ TURNIER-ÜBERSICHT ============ -->
 <section id="screen-tournament" class="screen">
   <header class="app-header row">
-    <div>
-      <h1>Turnier</h1>
-      <p class="sub" id="tournament-format"></p>
+    <div class="kopf-mit-logo">
+      <span class="blink-logo sm" role="img" aria-label="Blink 180"></span>
+      <div>
+        <h1>Turnier</h1>
+        <p class="sub" id="tournament-format"></p>
+      </div>
     </div>
     <button class="btn ghost small" data-action="to-setup">Turnier verlassen</button>
   </header>
@@ -187,9 +190,12 @@
 
 <!-- ============ RANGLISTE ============ -->
 <section id="screen-boards" class="screen">
-  <header class="app-header">
-    <h1>Rangliste</h1>
-    <p class="sub" id="boards-sub"></p>
+  <header class="app-header kopf-mit-logo">
+    <span class="blink-logo sm" role="img" aria-label="Blink 180"></span>
+    <div>
+      <h1>Rangliste</h1>
+      <p class="sub" id="boards-sub"></p>
+    </div>
   </header>
 
   <div class="options" id="board-mode">
@@ -219,7 +225,10 @@
 <!-- ============ SPIELER ============ -->
 <section id="screen-players" class="screen">
   <header class="app-header row">
-    <h1>Spieler</h1>
+    <div class="kopf-mit-logo">
+      <span class="blink-logo sm" role="img" aria-label="Blink 180"></span>
+      <h1>Spieler</h1>
+    </div>
     <button class="btn ghost small" data-action="new-profile">+ Neu</button>
   </header>
   <div id="players-list"></div>

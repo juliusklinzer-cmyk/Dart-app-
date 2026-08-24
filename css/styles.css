@@ -25,6 +25,27 @@
   font-display: swap;
   src: url('../fonts/barlow-condensed-700.woff2') format('woff2');
 }
+@font-face {
+  font-family: 'Barlow';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/barlow-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Barlow';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('../fonts/barlow-600.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Barlow';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../fonts/barlow-700.woff2') format('woff2');
+}
 
 :root {
   /* ---- Blink 180 -----------------------------------------------------
@@ -41,30 +62,41 @@
   --accent-faint: rgba(229, 72, 77, 0.09);
   --on-accent: #ffffff;
 
-  /* Die Hauptaktion ist hell, nicht rot – Rot bleibt den Werten und
-     Hervorhebungen vorbehalten, sonst schreit die Oberfläche. */
+  /* Die Hauptaktion ist hell, nicht rot. Rot bleibt dem Finish-Chip, den
+     Siegen, den Rekorden und der Punkteingabe vorbehalten – sparsam
+     eingesetzt sticht es, überall verteilt schreit es nur. */
   --primary: #f2eeee;
-  --on-primary: #17110f;
+  --on-primary: #0d0a0b;
+  /* „Ausgewählt" heißt weiße Kante auf leicht aufgehellter Fläche. */
+  --aktiv-linie: #f2eeee;
+  --aktiv-flaeche: #1a1516;
 
-  --bg: #0a0708;
-  --bg-2: #171213;
-  --bg-3: #241c1e;
-  --line: #2b2224;
-  --line-hell: #3a3436;
+  --bg: #0d0a0b;
+  --bg-2: #141011;
+  --bg-3: #171213;
+  --line: #241c1e;
+  --line-hell: #2b2224;
   --text: #f2eeee;
   --muted: #9a8f90;
   /* Warnfarbe bewusst heller als der Akzent, damit „Achtung" trotz des
      roten Akzents noch als Achtung durchkommt. */
   --red: #ff5a5a;
   --amber: #ffc14d;
-  --radius: 14px;
+  --radius: 16px;
   --tap: 56px;
   /* Ausgegraut: Zahl ist bei allen zu und bringt nichts mehr. */
   --dead: #6f6465;
-  --dead-bg: #141011;
+  --dead-bg: #120e0f;
+
+  /* Das Barlicht der Location: ein kalter blauer Schein, der die warme
+     Schwarz-Rot-Palette erst zum Leuchten bringt. */
+  --schein: rgba(70, 170, 215, 0.28);
+  --schein-stark: rgba(70, 170, 215, 0.35);
+  --schein-weich: rgba(70, 170, 215, 0.22);
 
   --font-display: 'Anton', 'Barlow Condensed', 'Arial Narrow', sans-serif;
-  --font-cond: 'Barlow Condensed', 'Arial Narrow', -apple-system, sans-serif;
+  --font-cond: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  --font-body: 'Barlow', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -81,10 +113,23 @@ html, body {
   padding: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-body);
   font-size: 16px;
   overscroll-behavior: none;
   -webkit-text-size-adjust: 100%;
+}
+
+/*
+ * Das Barlicht: zwei weiche blaue Lichtquellen, oben rechts und unten links.
+ * Sie liegen fest am Fenster, nicht am Inhalt – sonst würde der Schein beim
+ * Scrollen mitwandern und wirkte wie ein Fleck statt wie Licht im Raum.
+ */
+body {
+  background-image:
+    radial-gradient(1000px 560px at 72% -5%, rgba(64, 150, 195, 0.16), transparent 62%),
+    radial-gradient(800px 500px at 15% 105%, rgba(64, 150, 195, 0.08), transparent 60%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
 }
 
 body {
@@ -1062,11 +1107,13 @@ body.gesperrt #sync-status { display: none !important; }
 .fin-stechen { margin-top: 12px; border-color: var(--amber); }
 .fin-stechen .btn { margin-top: 6px; }
 
-/* Finish-Vorschlag über dem Zahlenfeld, wie im X01. */
+/* Finish-Vorschlag über dem Zahlenfeld – dieselbe Leiste wie im X01. */
 .finish-hint {
-  display: flex; flex-wrap: wrap; gap: 5px; align-items: center;
-  min-height: 30px; margin-bottom: 6px;
+  min-height: 46px; display: flex; align-items: center; justify-content: center; gap: 6px;
+  background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px;
+  padding: 8px; margin-bottom: 8px; flex-wrap: wrap;
 }
+.finish-hint:empty { display: none; }
 
 @media (min-width: 820px) {
   .fin-zahl .zahl { font-size: 4rem; }
@@ -1093,12 +1140,11 @@ h1 {
   font-size: 1.7rem;
 }
 h2 {
-  font-family: var(--font-cond);
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-weight: 400;
   font-size: 0.95rem;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
   color: var(--text);
-  opacity: 0.86;
 }
 
 /* Zahlen sind in dieser App der Inhalt. Barlow Condensed macht sie schmal
@@ -1177,13 +1223,7 @@ h2 {
 /* Kompakt und nur im Setup: eine dauerhafte Kopfleiste auf jedem Screen
    würde am Handy senkrecht zu viel kosten. */
 .marke { display: flex; align-items: center; gap: 12px; padding: 14px 4px 6px; }
-.marke img {
-  width: 44px; height: 44px; border-radius: 50%; flex: none;
-  border: 2px solid var(--line);
-  /* Der kalte Schein aus dem Entwurf – er hebt das Logo vom warmen
-     Schwarz ab, ohne einen harten Rand zu ziehen. */
-  box-shadow: 0 0 18px rgba(70, 170, 215, 0.32);
-}
+.marke .blink-logo { width: 46px; height: 46px; }
 .marke .wort {
   font-family: var(--font-display);
   text-transform: uppercase;
@@ -1203,7 +1243,7 @@ h2 {
 }
 
 @media (min-width: 820px) {
-  .marke img { width: 56px; height: 56px; }
+  .marke .blink-logo { width: 56px; height: 56px; }
   .marke .wort { font-size: 1.9rem; }
 }
 
@@ -1219,14 +1259,19 @@ h2 {
   letter-spacing: 0.04em;
 }
 
-/* Der Finish-Vorschlag im Finisher benutzt dieselben Chips wie das X01,
-   war dort aber ohne Elternklasse ungestylt. */
+/* Der Finisher benutzt dieselbe Checkout-Leiste wie das X01 – dort war sie
+   an die Elternklasse gebunden und blieb hier ungestylt. */
 .finish-hint .chip {
   background: var(--bg-3); border: 1px solid var(--line); border-radius: 8px;
   padding: 5px 10px; font-size: 0.95rem;
   font-family: var(--font-cond); font-weight: 700;
 }
 .finish-hint .chip.first { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.finish-hint .label {
+  font-family: var(--font-cond); font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; font-size: 0.75rem; color: var(--muted);
+}
+.finish-hint .none { color: var(--muted); font-size: 0.85rem; }
 
 /* Zahlenfeld und Multiplikator schmal setzen – dreistellige Reste und die
    Zahlen 1 bis 20 stehen so ruhiger nebeneinander. */
@@ -1238,3 +1283,99 @@ h2 {
 @media (min-width: 820px) {
   .finish-hint .chip { font-size: 1.15rem; padding: 8px 14px; }
 }
+
+/* ================= Handoff-Korrekturen =================
+   Nach der genauen Spezifikation aus „Dart App Rebranding/README.md".
+   Der erste Anlauf hatte drei Dinge falsch: den blauen Schein gar nicht,
+   die aktiven Zustände rot statt weiß, und die Hintergrundstufen um eine
+   Stufe verschoben.
+========================================================= */
+
+/* ---------- Aktive Zustände: weiße Kante, keine rote ---------- */
+
+/* Karten und Zeilen werden ausgewählt, nicht eingefärbt. Rot bliebe sonst
+   nicht mehr als Signal übrig – und genau das soll es sein. */
+.roster-item.selected,
+.modes button.active,
+.match-row.next {
+  border-color: var(--aktiv-linie);
+  background: var(--aktiv-flaeche);
+}
+.roster-item.selected .check { color: var(--text); }
+
+/* Die aktive Spielerkarte steht im Licht. */
+.pcard.active {
+  border-color: var(--aktiv-linie);
+  background: var(--aktiv-flaeche);
+  box-shadow: 0 0 36px var(--schein);
+}
+/* Der Rest des Aktiven bleibt weiß – rot ist er erst im Finish-Bereich,
+   und das entscheidet die Checkout-Leiste, nicht die Karte. */
+.pcard.active .rest { color: var(--text); }
+
+/* Einstellungen: weiße Kante, dunkle Fläche, weiße Schrift. Nicht gefüllt –
+   sonst konkurrieren fünf weiße Blöcke mit der Hauptaktion. */
+[data-setting] button.active {
+  background: var(--aktiv-flaeche);
+  border-color: var(--aktiv-linie);
+  color: var(--text);
+}
+
+/* Reiter und Filter dagegen sind gefüllt – sie sind die Navigation. */
+#board-mode button.active,
+.chips .chip.active,
+.nav button.active,
+.konto-tabs button.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+}
+
+/* ---------- Blauer Schein ---------- */
+
+.btn.primary { box-shadow: 0 0 30px var(--schein-weich); }
+.btn.primary:active { box-shadow: 0 0 18px var(--schein-weich); }
+.konto-logo img { box-shadow: 0 0 0 1px var(--line), 0 0 34px var(--schein); }
+
+/* ---------- Fließtext ---------- */
+
+/* Barlow statt System-Schrift, wie im Handoff. Knöpfe erben sie nicht von
+   selbst, deshalb ausdrücklich. */
+button, input, select, textarea { font-family: inherit; }
+.hint, .muted, label, p, td, th { font-family: var(--font-body); }
+
+/* ---------- Karten ---------- */
+
+.card { border-radius: var(--radius); }
+
+/* ---------- Logo in den Kopfzeilen ---------- */
+
+/* Als Hintergrundbild, nicht als <img>: so steht die Datei im
+   Einzeldatei-Bündel genau einmal statt bei jedem Vorkommen erneut. */
+.blink-logo {
+  display: inline-block; flex: none;
+  background: url('../icons/icon-192.webp') center / cover no-repeat;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  box-shadow: 0 0 20px var(--schein-stark);
+}
+.blink-logo.sm { width: 40px; height: 40px; }
+.blink-logo.lg { width: 46px; height: 46px; }
+
+.kopf-mit-logo { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.kopf-mit-logo h1 { line-height: 1.05; }
+
+@media (min-width: 820px) {
+  .blink-logo.sm { width: 46px; height: 46px; }
+  .blink-logo.lg { width: 52px; height: 52px; }
+}
+
+/* Finisher: „am Wurf" ist eine weiße Kante wie überall sonst, und die
+   Zielzahl-Karte trägt einen neutralen Rahmen – die rote Zahl darin ist
+   Signal genug. */
+.fin-row.active {
+  border-color: var(--aktiv-linie);
+  background: var(--aktiv-flaeche);
+}
+.fin-row.fertig { border-color: var(--line-hell); }
+.fin-zahl { border-color: var(--line); }

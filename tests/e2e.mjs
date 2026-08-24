@@ -960,13 +960,25 @@ check('beide starten auf derselben Zahl', fst.rest[fA] === fst.zahl && fst.rest[
 check('Zahl steht groß auf der Tafel', (await text('#fin-board')).includes(String(fst.zahl)));
 check('noch keine Punkte', fst.punkte[fA] === 0 && fst.punkte[fB] === 0);
 
-/* Bust: mehr werfen als übrig ist, setzt die Aufnahme zurück. */
-const zuViel = Math.min(20, Math.ceil(fst.zahl / 3) + 1);
-await page.locator('#fin-pad .mult-row button[data-mult="3"]').click();
-await page.locator(`#fin-pad .num-grid button[data-num="${zuViel}"]`).click();
+/*
+ * Bust. Die Zielzahl ist zufällig, also braucht es einen Wurf, der bei JEDER
+ * Zahl von 6 bis 120 überwirft: T20. Bis 60 liegt er drüber, bei genau 60
+ * trifft er null ohne Doppel – auch das ist ein Bust. Über 60 bustet
+ * spätestens der zweite.
+ *
+ * (Vorher stand hier eine gerechnete Zahl, gedeckelt auf 20 – die bustete
+ * bei großen Zielzahlen nicht und der Test ging nur mit Glück durch.)
+ */
+async function t20() {
+  await page.locator('#fin-pad .mult-row button[data-mult="3"]').click();
+  await page.locator('#fin-pad .num-grid button[data-num="20"]').click();
+}
+const zielzahl = fst.zahl;
+await t20();
+if ((await finState()).rest[fA] !== zielzahl) await t20();
 fst = await finState();
-check('Bust setzt den Rest zurück', fst.rest[fA] === fst.zahl, String(fst.rest[fA]));
-check('der Dart zählt trotzdem', fst.darts[fA] === 1);
+check('Bust setzt den Rest zurück', fst.rest[fA] === zielzahl, String(fst.rest[fA]) + ' statt ' + zielzahl);
+check('die Darts zählen trotzdem', fst.darts[fA] >= 1, String(fst.darts[fA]));
 check('nach dem Bust ist der Gegner dran', fst.turn === 1);
 
 await finMiss(3);

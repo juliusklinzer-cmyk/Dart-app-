@@ -2172,21 +2172,26 @@
 
     $('fin-board').innerHTML = kopf + '<div class="fin-liste">' + liste + '</div>' + stechen;
 
-    // Finish-Vorschlag für den, der gerade wirft.
-    var hinweis = '';
+    /* Finish-Vorschlag – wortgleich zum X01, denn im Finisher ist die ganze
+       Runde Finish-Bereich. Deshalb auch dieselbe Leiste mit Namen davor. */
+    var route = null;
     if (!rd.stechen && !st.fertig[aktiv]) {
-      var rest = st.rest[aktiv];
+      var restAktiv = st.rest[aktiv];
       var dartsLeft = 3 - st.inVisit;
-      var route = Checkout.suggest(rest, dartsLeft);
-      if (route && route.length) {
-        hinweis = route.map(function (d, i) {
-          return '<span class="chip ' + (i === 0 ? 'first' : '') + '">' + Checkout.pretty(d) + '</span>';
-        }).join('');
+      route = Checkout.suggest(restAktiv, dartsLeft);
+      var wer = esc(pname(aktiv));
+      if (route) {
+        $('fin-hint').innerHTML = '<span class="label">Finish ' + wer + '</span>' +
+          route.map(function (d, i) {
+            return '<span class="chip ' + (i === 0 ? 'first' : '') + '">' + Checkout.pretty(d) + '</span>';
+          }).join('');
       } else {
-        hinweis = '<span class="muted">kein Finish mit ' + plural(dartsLeft, 'Dart', 'Darts') + '</span>';
+        $('fin-hint').innerHTML = '<span class="none">' + wer + ': kein Finish mit ' +
+          plural(dartsLeft, 'Dart', 'Darts') + '</span>';
       }
+    } else {
+      $('fin-hint').innerHTML = '';
     }
-    $('fin-hint').innerHTML = hinweis;
 
     $('fin-turn').textContent = rd.stechen ? 'Stechen' : pname(aktiv) + ' ist dran';
     $('fin-darts').innerHTML = st.visit.map(function (d) {
@@ -2197,15 +2202,21 @@
     if (rd.stechen) {
       $('fin-pad').innerHTML = '<p class="hint center">Erst das Stechen entscheiden.</p>';
     } else {
+      /* Das vorgeschlagene Feld wird im Zahlenfeld markiert – aber nur, wenn
+         die eingestellte Multiplikatorreihe dazu passt. Sonst zeigte die
+         Markierung auf D20, obwohl T20 gemeint ist. */
+      var hl = route ? route[0] : null;
+      var hlMult = hl ? (hl.charAt(0) === 'T' ? 3 : hl.charAt(0) === 'D' || hl === 'BULL' ? 2 : 1) : 0;
+      var hlNum = hl && hl !== 'BULL' && hl !== '25' && UI.mult === hlMult ? parseInt(hl.slice(1), 10) : null;
       var prefix = UI.mult === 3 ? 'T' : UI.mult === 2 ? 'D' : '';
       var nums = '';
       for (var n = 1; n <= 20; n++) {
-        nums += '<button data-num="' + n + '">' +
+        nums += '<button data-num="' + n + '" class="' + (n === hlNum ? 'hl' : '') + '">' +
           (prefix ? '<span class="mx">' + prefix + '</span>' : '') + n + '</button>';
       }
       nums += '<button class="miss" data-num="0" data-mult="1">Miss</button>';
-      nums += '<button data-num="25" data-mult="1">25</button>';
-      nums += '<button class="bull" data-num="25" data-mult="2">Bull</button>';
+      nums += '<button data-num="25" class="' + (hl === '25' ? 'hl' : '') + '" data-mult="1">25</button>';
+      nums += '<button class="bull ' + (hl === 'BULL' ? 'hl' : '') + '" data-num="25" data-mult="2">Bull</button>';
       $('fin-pad').innerHTML =
         '<div class="mult-row">' +
           '<button data-mult="1" class="' + (UI.mult === 1 ? 'active' : '') + '">Single</button>' +

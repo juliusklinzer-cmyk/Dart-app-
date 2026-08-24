@@ -345,6 +345,29 @@ eigene Form schneidet und nur der innere Kreis sicher ist) und ein 180er PNG fü
 das kein WebP liest. WebP statt PNG, weil das verrauschte Artwork verlustfrei rund
 900 KB wiegt und alles davon im Offline-Cache landet – so sind es 250 KB.
 
+### Anstrich
+
+Die Gestaltung folgt dem Handoff in
+[Dart App Rebranding/README.md](Dart%20App%20Rebranding/README.md): warmes
+Schwarz, ein Rot, viel Weiß, dazu ein blauer Lichtschein wie das Barlicht der
+Location. Alle Farben hängen an wenigen Variablen ganz oben in
+`css/styles.css`.
+
+Zwei Regeln, an denen der Look hängt:
+
+- **Rot ist sparsam.** Es gehört dem Finish-Chip, den Siegen, den Rekorden und
+  der Punkteingabe – sonst nichts. Überall verteilt schreit es nur.
+- **„Ausgewählt" ist weiß**, nicht rot: Karten und Zeilen bekommen eine weiße
+  Kante auf leicht aufgehellter Fläche, Navigation und Filter eine weiße
+  Füllung.
+
+Drei Schriften: **Anton** für Überschriften und die Hauptaktion, **Barlow
+Condensed** für alle großen Zahlen, **Barlow** für Fließtext. Sie liegen unter
+`fonts/` und werden selbst ausgeliefert – ein Google-Fonts-Link würde den
+Offline-Betrieb brechen und bei jedem Start die IP jedes Mitspielers an Google
+schicken. Nur die Latin-Teilmenge, zusammen 128 KB. Neu holen mit
+`node tools/fetch-fonts.mjs`, danach `CACHE` in `sw.js` hochzählen.
+
 Der Finish-Solver sucht zuerst den Weg mit den wenigsten Darts und bewertet danach die
 Wurfqualität (T20/T19 zuerst, gute Schluss-Doppel wie D20/D16/D12, D2 und Bull nur wenn
 nötig). Die Ergebnisse entsprechen der gängigen Checkout-Tabelle, z. B. 170 → T20 T20

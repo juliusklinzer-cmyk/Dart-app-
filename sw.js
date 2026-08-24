@@ -1,5 +1,5 @@
 /* Offline-Cache für die App-Shell. Bei Änderungen CACHE hochzählen. */
-var CACHE = 'dart-turnier-v6';
+var CACHE = 'dart-turnier-v7';
 var ASSETS = [
   './',
   './index.html',
@@ -15,7 +15,10 @@ var ASSETS = [
   './icons/apple-touch-icon.png',
   './fonts/anton-400.woff2',
   './fonts/barlow-condensed-600.woff2',
-  './fonts/barlow-condensed-700.woff2'
+  './fonts/barlow-condensed-700.woff2',
+  './fonts/barlow-400.woff2',
+  './fonts/barlow-600.woff2',
+  './fonts/barlow-700.woff2'
 ];
 
 self.addEventListener('install', function (e) {

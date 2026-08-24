@@ -24,7 +24,12 @@ const einbetten = (p, typ) => 'data:' + typ + ';base64,' + base64(p);
 
 const css = read('css/styles.css')
   .replace(/url\('\.\.\/fonts\/([^']+)'\)/g,
-    (_, datei) => "url('" + einbetten('fonts/' + datei, 'font/woff2') + "')");
+    (_, datei) => "url('" + einbetten('fonts/' + datei, 'font/woff2') + "')")
+  // Das Logo steht als Hintergrundbild genau einmal im CSS – deshalb landet
+  // es hier auch nur einmal in der Datei, egal an wie vielen Stellen es
+  // angezeigt wird.
+  .replace(/url\('\.\.\/icons\/([^']+)'\)/g,
+    (_, datei) => "url('" + einbetten('icons/' + datei, 'image/webp') + "')");
 const js = [read('js/checkout.js'), read('js/app.js')]
   // Ohne Nachbardateien gibt es keinen Service Worker zu registrieren.
   .join('\n')

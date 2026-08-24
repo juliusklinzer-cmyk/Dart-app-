@@ -21,10 +21,22 @@ const ZIEL = path.join(ROOT, 'fonts');
 /* Ohne Browser-Kennung liefert Google veraltete Formate statt woff2. */
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
+/*
+ * Drei Familien, wie im Handoff festgelegt:
+ *   Anton             Überschriften und die Hauptaktion
+ *   Barlow Condensed  alle großen Zahlen
+ *   Barlow            Fließtext und Bedienelemente
+ *
+ * Barlow ohne 800: der Browser nimmt dafür die 700 – der Unterschied ist
+ * kleiner als die 20 KB, die eine vierte Datei jeden Abend kosten würde.
+ */
 const FAMILIEN = [
-  { css: 'Anton', datei: 'anton-400.woff2', family: 'Anton', gewicht: '400' },
-  { css: 'Barlow+Condensed:wght@600', datei: 'barlow-condensed-600.woff2', family: 'Barlow Condensed', gewicht: '600' },
-  { css: 'Barlow+Condensed:wght@700', datei: 'barlow-condensed-700.woff2', family: 'Barlow Condensed', gewicht: '700' }
+  { css: 'Anton', datei: 'anton-400.woff2' },
+  { css: 'Barlow+Condensed:wght@600', datei: 'barlow-condensed-600.woff2' },
+  { css: 'Barlow+Condensed:wght@700', datei: 'barlow-condensed-700.woff2' },
+  { css: 'Barlow:wght@400', datei: 'barlow-400.woff2' },
+  { css: 'Barlow:wght@600', datei: 'barlow-600.woff2' },
+  { css: 'Barlow:wght@700', datei: 'barlow-700.woff2' }
 ];
 
 fs.mkdirSync(ZIEL, { recursive: true });
