@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;600;700;800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body { margin: 0; background: #0a0708; }
+a { color: #e5484d; } a:hover { color: #ff6b6f; }
+</style>
+</helmet>
+<div style="min-height:100vh; background:radial-gradient(1000px 560px at 72% -5%, rgba(64,150,195,0.16), transparent 62%), radial-gradient(800px 500px at 15% 105%, rgba(64,150,195,0.08), transparent 60%), #0a0708; display:flex; flex-direction:column; align-items:center; padding:32px 24px; font-family:'Barlow',sans-serif; color:#f2eeee">
+  <div style="display:flex; align-items:center; gap:16px; margin-bottom:20px">
+    <img src="uploads/Blink%20180%20.jpeg" alt="Blink 180 Logo" style="width:56px; height:56px; border-radius:50%; border:2px solid #2b2224; box-shadow:0 0 20px rgba(70,170,215,0.35)">
+    <div>
+      <div style="font-family:'Anton',sans-serif; letter-spacing:0.04em; text-transform:uppercase; font-size:26px; letter-spacing:0.03em">BLINK 180 · App-Redesign v2</div>
+      <div style="font-size:13px; color:#9a8f90">Tablet · Querformat · schwarz / rot / weiß</div>
+    </div>
+  </div>
+  <div style="display:flex; gap:8px; margin-bottom:24px">
+    <sc-for list="{{ tabs }}" as="tab" hint-placeholder-count="4">
+      <button onClick="{{ tab.go }}" style="{{ tab.style }}" style-hover="border-color:#e5484d">{{ tab.label }}</button>
+    </sc-for>
+  </div>
+
+  <!-- Tablet-Rahmen -->
+  <div style="width:1220px; max-width:100%; background:#111; border-radius:28px; padding:18px; box-shadow:0 30px 80px rgba(0,0,0,0.7), inset 0 0 0 2px #262022">
+  <div style="border-radius:14px; overflow:hidden; background:radial-gradient(760px 440px at 82% 0%, rgba(64,155,200,0.13), transparent 65%), #0d0a0b; height:820px; position:relative; font-family:'Barlow',sans-serif">
+
+    <!-- ============ SETUP ============ -->
+    <sc-if value="{{ showSetup }}" hint-placeholder-val="{{ true }}">
+    <div style="height:100%; display:flex; flex-direction:column">
+      <header style="display:flex; align-items:center; justify-content:space-between; padding:18px 28px 14px; border-bottom:1px solid #241c1e; background:linear-gradient(180deg,#141011,#0d0a0b)">
+        <div style="display:flex; align-items:center; gap:14px">
+          <img src="uploads/Blink%20180%20.jpeg" alt="Logo" style="width:52px; height:52px; border-radius:50%; border:2px solid #2b2224; box-shadow:0 0 20px rgba(70,170,215,0.35)">
+          <div>
+            <div style="font-family:'Anton',sans-serif; letter-spacing:0.05em; font-size:30px; line-height:1; color:#fff">BLINK <span style="color:#e5484d">180</span></div>
+            <div style="font-size:12px; letter-spacing:0.22em; text-transform:uppercase; color:#9a8f90; margin-top:3px">Dart Turnier · Est. 2026</div>
+          </div>
+        </div>
+        <nav style="display:flex; gap:6px">
+          <button style="background:#f2eeee; border:1px solid #f2eeee; color:#0d0a0b; border-radius:10px; padding:10px 22px; font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:17px; letter-spacing:0.06em; text-transform:uppercase; cursor:pointer">Turnier</button>
+          <button style="background:#171213; border:1px solid #2b2224; color:#9a8f90; border-radius:10px; padding:10px 22px; font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:17px; letter-spacing:0.06em; text-transform:uppercase; cursor:pointer">Rangliste</button>
+          <button style="background:#171213; border:1px solid #2b2224; color:#9a8f90; border-radius:10px; padding:10px 22px; font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:17px; letter-spacing:0.06em; text-transform:uppercase; cursor:pointer">Spieler</button>
+        </nav>
+      </header>
+      <div style="flex:1; display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:20px 28px; overflow:hidden">
+        <div style="display:flex; flex-direction:column; gap:14px">
+          <div style="background:#141011; border:1px solid #241c1e; border-radius:16px; padding:18px">
+            <div style="font-family:'Anton',sans-serif; letter-spacing:0.08em; text-transform:uppercase; font-size:15px; color:#f2eeee; margin-bottom:12px">Spielmodus</div>
+            <div style="display:flex; flex-direction:column; gap:8px">
+              <div style="background:#1a1516; border:1px solid #f2eeee; border-radius:12px; padding:14px 16px">
+                <div style="font-weight:700; font-size:17px; color:#fff">501 Turnier</div>
+                <div style="font-size:13px; color:#9a8f90">Jeder gegen jeden, Double Out</div>
+              </div>
+              <div style="background:#171213; border:1px solid #2b2224; border-radius:12px; padding:14px 16px">
+                <div style="font-weight:700; font-size:17px">Cricket</div>
+                <div style="font-size:13px; color:#9a8f90">Alle gegen alle, 20 bis 15 und Bull</div>
+              </div>
+              <div style="background:#171213; border:1px solid #2b2224; border-radius:12px; padding:14px 16px">
+                <div style="font-weight:700; font-size:17px">Round the World</div>
+                <div style="font-size:13px; color:#9a8f90">Training: 1 bis 20, dann Bull</div>
+              </div>
+            </div>
+          </div>
+          <div style="background:#141011; border:1px solid #241c1e; border-radius:16px; padding:18px">
+            <div style="font-family:'Anton',sans-serif; letter-spacing:0.08em; text-transform:uppercase; font-size:15px; color:#f2eeee; margin-bottom:12px">Einstellungen</div>
+            <div style="display:flex; flex-direction:column; gap:12px">
+              <div>
+                <div style="font-size:13px; color:#9a8f90; margin-bottom:6px">Startpunkte</div>
+                <div style="display:flex; gap:8px">
+                  <div style="flex:1; text-align:center; background:#171213; border:1px solid #2b2224; border-radius:10px; padding:11px; font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:19px; color:#9a8f90">301</div>
+                  <div style="flex:1; text-align:center; background:#1a1516; border:1px solid #f2eeee; border-radius:10px; padding:11px; font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:19px; color:#f2eeee">501</div>
+                </div>
+              </div>
+              <div>
+                <div style="font-size:13px; color:#9a8f90; margin-bottom:6px">Legs pro Spiel</div>
+                <div style="display:flex; gap:8px">
+                  <div style="flex:1; text-align:center; background:#171213; border:1px solid #2b2224; border-radius:10px; padding:11px; font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:19px; color:#9a8f90">1 Leg</div>
+                  <div style="flex:1; text-align:center; background:#1a1516; border:1px solid #f2eeee; border-radius:10px; padding:11px; font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:19px; color:#f2eeee">Best of 3</div>
+                  <div style="flex:1; text-align:center; background:#171213; border:1px solid #2b2224; border-radius:10px; padding:11px; font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:19px; color:#9a8f90">Best of 5</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:14px">
+          <div style="background:#141011; border:1px solid #241c1e; border-radius:16px; padding:18px; flex:1">
+            <div style="font-family:'Anton',sans-serif; letter-spacing:0.08em; text-transform:uppercase; font-size:15px; color:#f2eeee; margin-bottom:12px">Wer spielt mit?</div>
+            <div style="display:flex; flex-direction:column; gap:8px">
+              <sc-for list="{{ roster }}" as="p" hint-placeholder-count="4">
+                <div style="{{ p.rowStyle }}">
+                  <div style="{{ p.avStyle }}">{{ p.init }}</div>
+                  <div style="flex:1">
+                    <div style="font-weight:700; font-size:16px">{{ p.name }}</div>
+                    <div style="font-size:12px; color:#9a8f90">{{ p.sub }}</div>
+                  </div>
+                  <div style="{{ p.checkStyle }}">✕</div>
+                </div>
+              </sc-for>
+              <div style="border:1px dashed #3a2d30; border-radius:12px; padding:12px; text-align:center; color:#9a8f90; font-weight:600; font-size:15px">+ Neuer Spieler</div>
+            </div>
+          </div>
+          <button style="background:#f2eeee; border:none; color:#0d0a0b; border-radius:14px; padding:20px; font-family:'Anton',sans-serif; letter-spacing:0.08em; text-transform:uppercase; font-size:22px; letter-spacing:0.04em; cursor:pointer; box-shadow:0 0 30px rgba(70,170,215,0.22)" style-hover="background:#ffffff">Turnier starten</button>
+          <div style="text-align:center; color:#6f6465; font-size:12px">Läuft komplett offline · Profile und Statistiken bleiben gespeichert</div>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ============ SPIEL ============ -->
+    <sc-if value="{{ showGame }}" hint-placeholder-val="{{ false }}">
+    <div style="height:100%; display:flex; flex-direction:column">
+      <header style="display:flex; align-items:center; justify-content:space-between; padding:12px 20px; border-bottom:1px solid #241c1e">
+        <button style="width:44px; height:44px; background:#171213; border:1px solid #2b2224; color:#f2eeee; border-radius:10px; font-size:20px; cursor:pointer">‹</button>
+        <div style="text-align:center">
+          <div style="font-family:'Anton',sans-serif; letter-spacing:0.05em; font-size:18px">Michi <span style="color:#e5484d">vs</span> Julius</div>
+          <div style="font-size:12px; color:#9a8f90">Leg 2 von 3 · Best of 3</div>
+        </div>
+        <button style="width:44px; height:44px; background:#171213; border:1px solid #2b2224; color:#f2eeee; border-radius:10px; font-size:20px; cursor:pointer">↺</button>
+      </header>
+      <div style="flex:1; display:flex; gap:16px; padding:16px 20px; min-height:0">
+        <div style="flex:1.05; display:flex; flex-direction:column; gap:10px; min-width:0">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px">
+            <div style="background:#1a1516; border:2px solid #f2eeee; border-radius:16px; padding:16px 12px; text-align:center; box-shadow:0 0 36px rgba(70,170,215,0.28)">
+              <div style="display:flex; align-items:center; justify-content:center; gap:8px; font-weight:700; font-size:17px"><span style="color:#e5484d">▸</span> Michi</div>
+              <div style="font-size:12px; color:#9a8f90; margin-top:2px">Legs 1 : 0</div>
+              <div style="font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:96px; line-height:1; color:#fff; margin:6px 0 4px; font-variant-numeric:tabular-nums">170</div>
+              <div style="display:flex; justify-content:center; gap:14px; font-size:12px; color:#9a8f90">Ø <b style="color:#f2eeee">62.4</b> · Darts <b style="color:#f2eeee">15</b></div>
+            </div>
+            <div style="background:#141011; border:2px solid #241c1e; border-radius:16px; padding:16px 12px; text-align:center">
+              <div style="font-weight:700; font-size:17px">Julius</div>
+              <div style="font-size:12px; color:#9a8f90; margin-top:2px">Legs 0 : 1</div>
+              <div style="font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:96px; line-height:1; color:#9a8f90; margin:6px 0 4px; font-variant-numeric:tabular-nums">238</div>
+              <div style="display:flex; justify-content:center; gap:14px; font-size:12px; color:#9a8f90">Ø <b style="color:#f2eeee">52.6</b> · Darts <b style="color:#f2eeee">15</b></div>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; justify-content:center; gap:8px; background:#141011; border:1px solid #241c1e; border-radius:12px; padding:12px">
+            <span style="font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:#9a8f90">Finish</span>
+            <span style="background:#e5484d; color:#fff; border-radius:8px; padding:6px 14px; font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:22px">T20</span>
+            <span style="background:#171213; border:1px solid #2b2224; border-radius:8px; padding:6px 14px; font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:22px">T20</span>
+            <span style="background:#171213; border:1px solid #2b2224; border-radius:8px; padding:6px 14px; font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:22px">Bull</span>
+          </div>
+          <div style="flex:1; display:grid; grid-template-columns:1fr 1fr; gap:10px; min-height:0; overflow:hidden">
+            <div style="display:flex; flex-direction:column; gap:5px">
+              <sc-for list="{{ histA }}" as="h" hint-placeholder-count="4">
+                <div style="{{ h.style }}"><span style="{{ h.sStyle }}">{{ h.score }}</span><span style="color:#9a8f90; font-size:13px">{{ h.rest }}</span></div>
+              </sc-for>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:5px">
+              <sc-for list="{{ histB }}" as="h" hint-placeholder-count="4">
+                <div style="{{ h.style }}"><span style="{{ h.sStyle }}">{{ h.score }}</span><span style="color:#9a8f90; font-size:13px">{{ h.rest }}</span></div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+        <div style="flex:1; display:flex; flex-direction:column; gap:10px; min-width:0">
+          <div style="display:flex; align-items:center; justify-content:space-between">
+            <div style="display:flex; background:#171213; border:1px solid #2b2224; border-radius:10px; overflow:hidden">
+              <span style="background:#f2eeee; color:#0d0a0b; padding:10px 18px; font-weight:700; font-size:14px">Punkte</span>
+              <span style="color:#9a8f90; padding:10px 18px; font-weight:600; font-size:14px">Einzel-Darts</span>
+            </div>
+            <div style="display:flex; gap:5px">
+              <span style="min-width:48px; text-align:center; background:#171213; border:1px solid #2b2224; border-radius:8px; padding:8px; font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:16px">60</span>
+              <span style="min-width:48px; text-align:center; background:#171213; border:1px solid #2b2224; border-radius:8px; padding:8px; color:#6f6465">–</span>
+              <span style="min-width:48px; text-align:center; background:#171213; border:1px solid #2b2224; border-radius:8px; padding:8px; color:#6f6465">–</span>
+            </div>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:7px">
+            <sc-for list="{{ quicks }}" as="q" hint-placeholder-count="5">
+              <div style="text-align:center; background:#171213; border:1px solid #2b2224; border-radius:10px; padding:12px 0; font-family:'Barlow Condensed',sans-serif; font-weight:700; font-size:19px; cursor:pointer">{{ q }}</div>
+            </sc-for>
+          </div>
+          <div style="text-align:center; font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:52px; color:#e5484d; min-height:58px; font-variant-numeric:tabular-nums">60</div>
+          <div style="flex:1; display:grid; grid-template-columns:repeat(3,1fr); grid-auto-rows:1fr; gap:8px; min-height:0">
+            <sc-for list="{{ keys }}" as="k" hint-placeholder-count="12">
+              <button style="{{ k.style }}" style-hover="border-color:#e5484d">{{ k.label }}</button>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ============ TURNIER ============ -->
+    <sc-if value="{{ showTournament }}" hint-placeholder-val="{{ false }}">
+    <div style="height:100%; display:flex; flex-direction:column">
+      <header style="display:flex; align-items:center; justify-content:space-between; padding:18px 28px 14px; border-bottom:1px solid #241c1e">
+        <div style="display:flex; align-items:center; gap:14px">
+          <img src="uploads/Blink%20180%20.jpeg" alt="Logo" style="width:46px; height:46px; border-radius:50%; border:2px solid #2b2224; box-shadow:0 0 20px rgba(70,170,215,0.35)">
+          <div>
+            <div style="font-family:'Anton',sans-serif; letter-spacing:0.04em; text-transform:uppercase; font-size:26px; color:#fff">Turnier</div>
+            <div style="font-size:13px; color:#9a8f90">501 Double Out · Best of 3 · 4 Spieler</div>
+          </div>
+        </div>
+        <button style="background:transparent; border:1px solid #2b2224; color:#9a8f90; border-radius:10px; padding:10px 18px; font-weight:600; font-size:14px; cursor:pointer">Turnier verlassen</button>
+      </header>
+      <div style="flex:1; display:grid; grid-template-columns:1.1fr 1fr; gap:16px; padding:20px 28px; overflow:hidden">
+        <div style="display:flex; flex-direction:column; gap:14px">
+          <div style="background:#141011; border:1px solid #241c1e; border-radius:16px; overflow:hidden">
+            <div style="display:grid; grid-template-columns:44px 1fr 70px 70px 70px 70px; padding:12px 14px; background:#171213; font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:#9a8f90; font-weight:600">
+              <span>#</span><span>Spieler</span><span style="text-align:center">Siege</span><span style="text-align:center">Nied.</span><span style="text-align:center">Legs</span><span style="text-align:center">Ø</span>
+            </div>
+            <sc-for list="{{ standings }}" as="s" hint-placeholder-count="4">
+              <div style="{{ s.style }}">
+                <span style="color:#9a8f90">{{ s.pos }}</span>
+                <span style="display:flex; align-items:center; gap:10px"><span style="{{ s.avStyle }}">{{ s.init }}</span><b>{{ s.name }}</b></span>
+                <span style="text-align:center; color:#e5484d; font-weight:800">{{ s.w }}</span>
+                <span style="text-align:center; color:#9a8f90">{{ s.l }}</span>
+                <span style="text-align:center">{{ s.legs }}</span>
+                <span style="text-align:center; font-variant-numeric:tabular-nums">{{ s.avg }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <button style="background:#f2eeee; border:none; color:#0d0a0b; border-radius:14px; padding:20px; font-family:'Anton',sans-serif; letter-spacing:0.08em; text-transform:uppercase; font-size:20px; cursor:pointer; box-shadow:0 0 30px rgba(70,170,215,0.22)" style-hover="background:#ffffff">Nächstes Spiel ▸</button>
+        </div>
+        <div style="background:#141011; border:1px solid #241c1e; border-radius:16px; padding:18px; overflow-y:auto">
+          <div style="font-family:'Anton',sans-serif; letter-spacing:0.08em; text-transform:uppercase; font-size:15px; color:#f2eeee; margin-bottom:12px">Spielplan</div>
+          <div style="display:flex; flex-direction:column; gap:8px">
+            <div style="font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:#9a8f90">Runde 1</div>
+            <div style="display:flex; align-items:center; gap:10px; background:#171213; border-radius:10px; padding:12px 14px">
+              <span style="flex:1; font-size:15px"><b>Michi</b> gegen <b>Julius</b></span>
+              <span style="font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:17px; color:#fff">2 : 1</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px; background:#171213; border-radius:10px; padding:12px 14px">
+              <span style="flex:1; font-size:15px"><b>Basti</b> gegen <b>Lena</b></span>
+              <span style="font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:17px; color:#fff">2 : 0</span>
+            </div>
+            <div style="font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:#9a8f90; margin-top:6px">Runde 2</div>
+            <div style="display:flex; align-items:center; gap:10px; background:#171213; border:1px solid #f2eeee; border-radius:10px; padding:12px 14px">
+              <span style="flex:1; font-size:15px"><b>Michi</b> gegen <b>Basti</b></span>
+              <span style="background:#e5484d; color:#fff; border-radius:8px; padding:8px 16px; font-weight:700; font-size:14px; cursor:pointer">Los ▸</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px; background:#171213; border-radius:10px; padding:12px 14px">
+              <span style="flex:1; font-size:15px; color:#9a8f90"><b>Julius</b> gegen <b>Lena</b></span>
+              <span style="color:#6f6465; font-size:14px">offen</span>
+            </div>
+            <div style="font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:#9a8f90; margin-top:6px">Runde 3</div>
+            <div style="display:flex; align-items:center; gap:10px; background:#171213; border-radius:10px; padding:12px 14px">
+              <span style="flex:1; font-size:15px; color:#9a8f90"><b>Michi</b> gegen <b>Lena</b></span>
+              <span style="color:#6f6465; font-size:14px">offen</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px; background:#171213; border-radius:10px; padding:12px 14px">
+              <span style="flex:1; font-size:15px; color:#9a8f90"><b>Julius</b> gegen <b>Basti</b></span>
+              <span style="color:#6f6465; font-size:14px">offen</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ============ RANGLISTE ============ -->
+    <sc-if value="{{ showBoards }}" hint-placeholder-val="{{ false }}">
+    <div style="height:100%; display:flex; flex-direction:column">
+      <header style="display:flex; align-items:center; justify-content:space-between; padding:18px 28px 14px; border-bottom:1px solid #241c1e">
+        <div style="display:flex; align-items:center; gap:14px">
+          <img src="uploads/Blink%20180%20.jpeg" alt="Logo" style="width:46px; height:46px; border-radius:50%; border:2px solid #2b2224; box-shadow:0 0 20px rgba(70,170,215,0.35)">
+          <div>
+            <div style="font-family:'Anton',sans-serif; letter-spacing:0.04em; text-transform:uppercase; font-size:26px; color:#fff">Rangliste</div>
+            <div style="font-size:13px; color:#9a8f90">Classic (301/501) · 23 Spiele</div>
+          </div>
+        </div>
+        <div style="display:flex; background:#171213; border:1px solid #2b2224; border-radius:10px; overflow:hidden">
+          <span style="background:#f2eeee; color:#0d0a0b; padding:10px 20px; font-weight:700; font-size:14px">Classic</span>
+          <span style="color:#9a8f90; padding:10px 20px; font-weight:600; font-size:14px">Cricket</span>
+          <span style="color:#9a8f90; padding:10px 20px; font-weight:600; font-size:14px">Round the World</span>
+        </div>
+      </header>
+      <div style="flex:1; display:grid; grid-template-columns:1.15fr 1fr; gap:16px; padding:20px 28px; overflow:hidden">
+        <div style="display:flex; flex-direction:column; gap:14px; min-height:0">
+          <div style="display:flex; gap:6px; flex-wrap:wrap">
+            <span style="background:#f2eeee; color:#0d0a0b; border-radius:999px; padding:9px 18px; font-weight:700; font-size:14px">Average</span>
+            <span style="background:#171213; border:1px solid #2b2224; color:#9a8f90; border-radius:999px; padding:9px 18px; font-weight:600; font-size:14px">First 9</span>
+            <span style="background:#171213; border:1px solid #2b2224; color:#9a8f90; border-radius:999px; padding:9px 18px; font-weight:600; font-size:14px">Doppelquote</span>
+            <span style="background:#171213; border:1px solid #2b2224; color:#9a8f90; border-radius:999px; padding:9px 18px; font-weight:600; font-size:14px">180er</span>
+            <span style="background:#171213; border:1px solid #2b2224; color:#9a8f90; border-radius:999px; padding:9px 18px; font-weight:600; font-size:14px">Höchstes Finish</span>
+          </div>
+          <div style="background:#141011; border:1px solid #241c1e; border-radius:16px; overflow:hidden; flex:1">
+            <sc-for list="{{ board }}" as="b" hint-placeholder-count="4">
+              <div style="{{ b.style }}">
+                <span style="width:32px; text-align:center; font-family:'Anton',sans-serif; letter-spacing:0.05em; font-size:18px; color:{{ b.posColor }}">{{ b.pos }}</span>
+                <span style="{{ b.avStyle }}">{{ b.init }}</span>
+                <span style="flex:1; font-weight:700; font-size:16px">{{ b.name }}</span>
+                <span style="font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:26px; font-variant-numeric:tabular-nums; color:{{ b.valColor }}">{{ b.val }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:14px; min-height:0">
+          <div style="background:#141011; border:1px solid #241c1e; border-radius:16px; padding:18px">
+            <div style="font-family:'Anton',sans-serif; letter-spacing:0.08em; text-transform:uppercase; font-size:15px; color:#f2eeee; margin-bottom:12px">Rekorde</div>
+            <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:8px">
+              <div style="background:#171213; border-radius:12px; padding:12px; text-align:center">
+                <div style="font-size:10px; letter-spacing:0.08em; text-transform:uppercase; color:#9a8f90">Höchstes Finish</div>
+                <div style="font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:30px; color:#e5484d; margin:4px 0 2px">121</div>
+                <div style="font-size:12px; color:#9a8f90">Michi</div>
+              </div>
+              <div style="background:#171213; border-radius:12px; padding:12px; text-align:center">
+                <div style="font-size:10px; letter-spacing:0.08em; text-transform:uppercase; color:#9a8f90">Beste Aufnahme</div>
+                <div style="font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:30px; color:#e5484d; margin:4px 0 2px">180</div>
+                <div style="font-size:12px; color:#9a8f90">Julius</div>
+              </div>
+              <div style="background:#171213; border-radius:12px; padding:12px; text-align:center">
+                <div style="font-size:10px; letter-spacing:0.08em; text-transform:uppercase; color:#9a8f90">Bestes Leg</div>
+                <div style="font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:30px; color:#e5484d; margin:4px 0 2px">15</div>
+                <div style="font-size:12px; color:#9a8f90">Basti · Darts</div>
+              </div>
+            </div>
+          </div>
+          <div style="background:#141011; border:1px solid #241c1e; border-radius:16px; padding:18px; flex:1; overflow-y:auto">
+            <div style="font-family:'Anton',sans-serif; letter-spacing:0.08em; text-transform:uppercase; font-size:15px; color:#f2eeee; margin-bottom:12px">Letzte Spiele</div>
+            <div style="display:flex; flex-direction:column; gap:2px">
+              <div style="display:grid; grid-template-columns:1fr auto 1fr; gap:8px; align-items:center; padding:10px 4px; font-size:14px">
+                <span style="text-align:right; color:#e5484d; font-weight:700">Michi</span>
+                <span style="font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:17px">2 : 1</span>
+                <span>Julius</span>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr auto 1fr; gap:8px; align-items:center; padding:10px 4px; border-top:1px solid #241c1e; font-size:14px">
+                <span style="text-align:right; color:#e5484d; font-weight:700">Basti</span>
+                <span style="font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:17px">2 : 0</span>
+                <span>Lena</span>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr auto 1fr; gap:8px; align-items:center; padding:10px 4px; border-top:1px solid #241c1e; font-size:14px">
+                <span style="text-align:right">Julius</span>
+                <span style="font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:17px">1 : 2</span>
+                <span style="color:#e5484d; font-weight:700">Lena</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+  </div>
+  </div>
+  <div style="max-width:1220px; margin-top:18px; font-size:13px; color:#9a8f90; text-align:center; line-height:1.6">
+    Umsetzung in deiner App: In <code style="color:#e5484d">css/styles.css</code> die fünf Akzent-Variablen auf Rot tauschen (der Kommentar dort nennt schon die Werte), dazu die dunkleren Hintergründe und die beiden Fonts. Sag Bescheid, dann schreibe ich dir den fertigen CSS-Block.
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 1300, &quot;height&quot;: 1040}}">
+class Component extends DCLogic {
+  state = { screen: 'setup' };
+  renderVals() {
+    const s = this.state.screen;
+    const tabDefs = [['setup','Setup'],['game','Spiel'],['tournament','Turnier'],['boards','Rangliste']];
+    const tabs = tabDefs.map(([id,label]) => ({
+      label,
+      go: () => this.setState({ screen: id }),
+      style: id === s
+        ? 'background:#f2eeee; border:1px solid #f2eeee; color:#0d0a0b; border-radius:10px; padding:10px 24px; font-family:Barlow,sans-serif; font-weight:700; font-size:15px; cursor:pointer'
+        : 'background:#171213; border:1px solid #2b2224; color:#9a8f90; border-radius:10px; padding:10px 24px; font-family:Barlow,sans-serif; font-weight:600; font-size:15px; cursor:pointer'
+    }));
+    const avColors = { M: '#e5484d', J: '#8f2c30', B: '#3a3436', L: '#5c2326' };
+    const av = (init, size) => `width:${size}px; height:${size}px; flex:none; border-radius:50%; background:${avColors[init[0]] || '#3a3436'}; color:#fff; font-weight:800; font-size:${Math.round(size*0.38)}px; display:inline-flex; align-items:center; justify-content:center`;
+    const rosterData = [
+      { name: 'Michi', sub: 'Ø 58.2 · 12 Siege', sel: true },
+      { name: 'Julius', sub: 'Ø 54.7 · 9 Siege', sel: true },
+      { name: 'Basti', sub: 'Ø 49.1 · 7 Siege', sel: true },
+      { name: 'Lena', sub: 'Ø 46.8 · 5 Siege', sel: false },
+    ];
+    const roster = rosterData.map(p => ({
+      name: p.name, sub: p.sub, init: p.name.slice(0,2).toUpperCase(),
+      rowStyle: p.sel
+        ? 'display:flex; align-items:center; gap:12px; background:#1a1516; border:1px solid #f2eeee; border-radius:12px; padding:10px 14px'
+        : 'display:flex; align-items:center; gap:12px; background:#171213; border:1px solid #2b2224; border-radius:12px; padding:10px 14px',
+      avStyle: av(p.name, 40),
+      checkStyle: p.sel ? 'color:#e5484d; font-weight:800; font-size:18px' : 'color:transparent; font-size:18px'
+    }));
+    const histRow = (score, rest, kind) => ({
+      score, rest,
+      style: 'display:flex; justify-content:space-between; align-items:baseline; background:#141011; border:1px solid #1d1618; border-radius:8px; padding:8px 12px; font-variant-numeric:tabular-nums',
+      sStyle: kind === 'bust' ? 'font-weight:700; font-size:16px; color:#ff5a5a; text-decoration:line-through'
+        : kind === 'hi' ? 'font-weight:800; font-size:16px; color:#e5484d'
+        : 'font-weight:700; font-size:16px; color:#f2eeee'
+    });
+    const histA = [histRow('60','Rest 170'), histRow('100','Rest 230','hi'), histRow('85','Rest 330'), histRow('86','Rest 415')];
+    const histB = [histRow('45','Rest 238'), histRow('26','Rest 283'), histRow('41','Rest 309','bust'), histRow('81','Rest 350','hi')];
+    const keyBase = 'background:#141011; border:1px solid #2b2224; color:#fff; border-radius:12px; font-family:"Barlow Condensed",sans-serif; font-weight:800; font-size:30px; cursor:pointer';
+    const keys = ['1','2','3','4','5','6','7','8','9'].map(n => ({ label: n, style: keyBase }));
+    keys.push({ label: '←', style: keyBase + '; color:#9a8f90; font-size:24px' });
+    keys.push({ label: '0', style: keyBase });
+    keys.push({ label: 'OK', style: 'background:#f2eeee; border:1px solid #f2eeee; color:#0d0a0b; border-radius:12px; font-family:"Barlow Condensed",sans-serif; font-weight:800; font-size:24px; cursor:pointer' });
+    const standingsData = [
+      { pos: 1, name: 'Michi', w: 1, l: 0, legs: '2:1', avg: '62.4', lead: true },
+      { pos: 2, name: 'Basti', w: 1, l: 0, legs: '2:0', avg: '51.9', lead: false },
+      { pos: 3, name: 'Julius', w: 0, l: 1, legs: '1:2', avg: '54.7', lead: false },
+      { pos: 4, name: 'Lena', w: 0, l: 1, legs: '0:2', avg: '44.2', lead: false },
+    ];
+    const standings = standingsData.map(x => ({
+      ...x, init: x.name.slice(0,2).toUpperCase(), avStyle: av(x.name, 30),
+      style: (x.lead ? 'background:rgba(242,238,238,0.04); ' : '') + 'display:grid; grid-template-columns:44px 1fr 70px 70px 70px 70px; align-items:center; padding:13px 14px; border-top:1px solid #241c1e; font-size:15px'
+    }));
+    const boardData = [
+      { pos: 1, name: 'Michi', val: '58.2' }, { pos: 2, name: 'Julius', val: '54.7' },
+      { pos: 3, name: 'Basti', val: '49.1' }, { pos: 4, name: 'Lena', val: '46.8' },
+    ];
+    const board = boardData.map((x, i) => ({
+      ...x, init: x.name.slice(0,2).toUpperCase(), avStyle: av(x.name, 36),
+      posColor: i === 0 ? '#e5484d' : '#6f6465', valColor: i === 0 ? '#e5484d' : '#f2eeee',
+      style: (i === 0 ? 'background:rgba(242,238,238,0.04); ' : '') + 'display:flex; align-items:center; gap:14px; padding:15px 18px; border-top:1px solid #241c1e' + (i === 0 ? '; border-top:none' : '')
+    }));
+    return {
+      tabs, roster, histA, histB, keys, standings, board,
+      quicks: ['26','41','45','60','100'],
+      showSetup: s === 'setup', showGame: s === 'game',
+      showTournament: s === 'tournament', showBoards: s === 'boards',
+    };
+  }
+}
+</script>
+</body>
+</html>

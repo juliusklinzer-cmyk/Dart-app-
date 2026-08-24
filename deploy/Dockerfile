@@ -18,6 +18,7 @@ COPY index.html manifest.webmanifest sw.js ./
 COPY css ./css
 COPY js ./js
 COPY icons ./icons
+COPY fonts ./fonts
 
 # Die Datenbank liegt im Volume, nicht im Image.
 RUN mkdir -p /data && chown -R node:node /data /app

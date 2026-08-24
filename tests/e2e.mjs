@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const TYPES = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.webmanifest': 'application/manifest+json' };
+const TYPES = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json' };
 
 const server = http.createServer((req, res) => {
   const rel = decodeURIComponent(req.url.split('?')[0]);
@@ -57,6 +57,9 @@ page.on('response', (r) => {
 const $ = (sel) => page.locator(sel);
 const visible = (sel) => $(sel).isVisible();
 const text = (sel) => $(sel).innerText();
+/* Knöpfe und Überschriften stehen per CSS in Versalien – innerText gibt sie
+   auch so zurück. Für Textprüfungen deshalb kleinschreiben. */
+const textKlein = async (sel) => (await $(sel).innerText()).toLowerCase();
 const tapText = async (t, scope = 'body') => { await page.locator(`${scope} >> text="${t}"`).first().click(); };
 
 /* Punkte über das Zahlenfeld eingeben (wie am Handy getippt). */
@@ -206,7 +209,7 @@ for (let i = 0; i < 4; i++) {
   await page.locator('#overlay-card [data-action="co-darts"]').first().click();
 }
 check('Glückwunsch vor der Auswertung', (await text('#overlay-card')).includes('Glückwunsch'));
-check('Weg zur Spielstatistik angeboten', (await text('#overlay-card')).includes('Spielstatistik'));
+check('Weg zur Spielstatistik angeboten', (await textKlein('#overlay-card')).includes('spielstatistik'));
 await page.locator('#overlay-card [data-action="open-summary"]').click();
 check('Spielstatistik sichtbar', await visible('#screen-summary'));
 const sumText = await text('#summary-box');
@@ -335,7 +338,7 @@ check('zwei Spieler in der Aufstellung', (await page.evaluate(() => window.__dar
 await page.locator('[data-action="set-mode"][data-value="cricket"]').click();
 check('Cricket-Einstellungen sichtbar', await visible('#settings-cricket'));
 check('501-Einstellungen ausgeblendet', !(await visible('#settings-501')));
-check('Startbutton passt zum Modus', (await text('[data-action="start-game"]')).includes('Cricket'));
+check('Startbutton passt zum Modus', (await textKlein('[data-action="start-game"]')).includes('cricket'));
 await page.locator('[data-action="start-game"]').click();
 check('Bull-Off auch im Cricket', await visible('#screen-bulloff'));
 await page.locator('#bulloff-buttons button').first().click();
@@ -944,7 +947,7 @@ await reduceLineupToTwo();
 await page.locator('[data-action="set-mode"][data-value="finisher"]').click();
 check('Finisher-Einstellungen sichtbar', await visible('#settings-finisher'));
 check('X01-Einstellungen ausgeblendet', !(await visible('#settings-501')));
-check('Startknopf passt zum Modus', (await text('[data-action="start-game"]')).includes('Finisher'));
+check('Startknopf passt zum Modus', (await textKlein('[data-action="start-game"]')).includes('finisher'));
 await page.locator('[data-setting="finisherTo"] button[data-value="3"]').click();
 await page.locator('[data-action="start-game"]').click();
 await bullOffGo();

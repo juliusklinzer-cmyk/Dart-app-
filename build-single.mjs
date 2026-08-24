@@ -12,8 +12,19 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
+const base64 = (p) => fs.readFileSync(path.join(ROOT, p)).toString('base64');
 
-const css = read('css/styles.css');
+/*
+ * Schriften und Logo wandern als data:-URL mit in die Datei. Sonst wären es
+ * Verweise auf Nachbarordner, die es neben einer per AirDrop verschickten
+ * Einzeldatei nicht gibt – die Datei sähe dann nackt aus. Kostet rund 100 KB,
+ * dafür ist sie wirklich in sich geschlossen.
+ */
+const einbetten = (p, typ) => 'data:' + typ + ';base64,' + base64(p);
+
+const css = read('css/styles.css')
+  .replace(/url\('\.\.\/fonts\/([^']+)'\)/g,
+    (_, datei) => "url('" + einbetten('fonts/' + datei, 'font/woff2') + "')");
 const js = [read('js/checkout.js'), read('js/app.js')]
   // Ohne Nachbardateien gibt es keinen Service Worker zu registrieren.
   .join('\n')
@@ -26,9 +37,11 @@ const body = html.slice(html.indexOf('<body>') + 6, html.lastIndexOf('</body>'))
   // liegen, er verwiese auch auf ein Logo, das neben der Einzeldatei nicht
   // existiert – das gibt beim Öffnen eine Fehlermeldung in der Konsole.
   .replace(/\n\s*<!-- =+ KONTO =+ -->[\s\S]*?<\/section>/, '')
-  .replace(/\n\s*<!--[^>]*js\/auth\.js[\s\S]*?-->/, '');
+  .replace(/\n\s*<!--[^>]*js\/auth\.js[\s\S]*?-->/, '')
+  // Die Wortmarke behält ihr Logo – als eingebettetes Bild.
+  .replace(/src="icons\/icon-192\.webp"/g, 'src="' + einbetten('icons/icon-192.webp', 'image/webp') + '"');
 
-const title = 'Dart Turnier – 501 Double Out';
+const title = 'Blink 180 – Dart Turnier';
 const fragment = [
   `<title>${title}</title>`,
   '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">',

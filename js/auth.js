@@ -264,8 +264,8 @@
         : feld('konto-email', 'E-Mail', 'email') +
           feld('konto-pass', 'Passwort', 'password') +
           '<button class="btn primary full" data-action="konto-login">Anmelden</button>') +
-      '<p class="hint">Ohne Anmeldung läuft alles weiter wie bisher – nur eben ' +
-        'nur auf diesem Gerät.</p>' +
+      '<p class="hint">Einmal angemeldet, läuft die App auch ohne Netz weiter – ' +
+        'die Spiele werden nachgereicht, sobald wieder Empfang da ist.</p>' +
       '</div>';
   }
 

@@ -51,13 +51,14 @@ const TYPEN = {
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
   '.webp': 'image/webp',
+  '.woff2': 'font/woff2',
   '.ico': 'image/x-icon'
 };
 
 /* Was ausgeliefert werden darf. Alles andere im Repo (server/, tests/, .git)
    geht niemanden etwas an. */
 const ERLAUBT = new Set(['index.html', 'manifest.webmanifest', 'sw.js', 'dart-turnier.html']);
-const ERLAUBTE_ORDNER = new Set(['css', 'js', 'icons']);
+const ERLAUBTE_ORDNER = new Set(['css', 'js', 'icons', 'fonts']);
 
 function statischerPfad(pfad) {
   const rein = decodeURIComponent(pfad).replace(/\/+$/, '') || '/index.html';

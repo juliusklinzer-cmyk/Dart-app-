@@ -1,29 +1,70 @@
-:root {
-  /* ---- Akzentfarbe der App ----------------------------------------
-     Nur diese fünf Werte tauschen, dann zieht sich die Farbe durch
-     Buttons, Rahmen, Diagramm und Hervorhebungen.
-     Rot-Variante:   #e5484d / #8f2c30 / rgba(229,72,77,.16) /
-                     rgba(229,72,77,.09) / #ffffff
-  ------------------------------------------------------------------ */
-  --accent: #35d07f;
-  --accent-dark: #1f7d4d;
-  --accent-soft: rgba(53, 208, 127, 0.13);
-  --accent-faint: rgba(53, 208, 127, 0.08);
-  --on-accent: #04240f;
+/* ---- Schriften ----------------------------------------------------
+   Selbst ausgeliefert, nicht von Google eingebunden: die App muss offline
+   laufen, und ein Font-Link würde bei jedem Start die IP jedes Mitspielers
+   an Google schicken. Nur die Latin-Teilmenge (deckt Umlaute und ß ab),
+   zusammen 62 KB. Neu holen mit: node tools/fetch-fonts.mjs
+------------------------------------------------------------------- */
+@font-face {
+  font-family: 'Anton';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/anton-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('../fonts/barlow-condensed-600.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Barlow Condensed';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../fonts/barlow-condensed-700.woff2') format('woff2');
+}
 
-  --bg: #0e1116;
-  --bg-2: #161b23;
-  --bg-3: #1e2530;
-  --line: #2a3340;
-  --text: #eef2f7;
-  --muted: #8d9aab;
+:root {
+  /* ---- Blink 180 -----------------------------------------------------
+     Palette aus dem Rebranding-Entwurf („Dart App Rebranding"):
+     warmes Schwarz, ein Rot, viel Weiß. Nur diese fünf Akzentwerte
+     tauschen, dann zieht sich die Farbe durch Buttons, Rahmen, Diagramm
+     und Hervorhebungen.
+     Grün-Variante:  #35d07f / #1f7d4d / rgba(53,208,127,.13) /
+                     rgba(53,208,127,.08) / #04240f
+  ------------------------------------------------------------------ */
+  --accent: #e5484d;
+  --accent-dark: #8f2c30;
+  --accent-soft: rgba(229, 72, 77, 0.16);
+  --accent-faint: rgba(229, 72, 77, 0.09);
+  --on-accent: #ffffff;
+
+  /* Die Hauptaktion ist hell, nicht rot – Rot bleibt den Werten und
+     Hervorhebungen vorbehalten, sonst schreit die Oberfläche. */
+  --primary: #f2eeee;
+  --on-primary: #17110f;
+
+  --bg: #0a0708;
+  --bg-2: #171213;
+  --bg-3: #241c1e;
+  --line: #2b2224;
+  --line-hell: #3a3436;
+  --text: #f2eeee;
+  --muted: #9a8f90;
+  /* Warnfarbe bewusst heller als der Akzent, damit „Achtung" trotz des
+     roten Akzents noch als Achtung durchkommt. */
   --red: #ff5a5a;
   --amber: #ffc14d;
   --radius: 14px;
   --tap: 56px;
   /* Ausgegraut: Zahl ist bei allen zu und bringt nichts mehr. */
-  --dead: #7c8798;
-  --dead-bg: #141920;
+  --dead: #6f6465;
+  --dead-bg: #141011;
+
+  --font-display: 'Anton', 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  --font-cond: 'Barlow Condensed', 'Arial Narrow', -apple-system, sans-serif;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -113,7 +154,9 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   /* Automatische Spalten: der Konto-Knopf kommt nur dazu, wenn die Seite von
      einem Server geladen wurde – dann rückt die Leiste von 3 auf 4. */
   display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px;
-  background: rgba(14, 17, 22, 0.92); backdrop-filter: blur(8px);
+  /* Muss zu --bg passen, sonst liegt beim Scrollen ein andersfarbiger
+     Streifen ueber dem Inhalt. */
+  background: rgba(10, 7, 8, 0.92); backdrop-filter: blur(8px);
   padding: 8px 0; margin: 0 0 4px;
 }
 .nav button {
@@ -189,7 +232,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .cr-mark.act { outline: 1px solid var(--accent); }
 .cr-score { font-weight: 800; font-size: 1.05rem; background: var(--bg-3); }
 .cr-score.act { color: var(--accent); }
-.num-grid button.dim { color: #93a0b2; border-style: dashed; }
+.num-grid button.dim { color: var(--dead); border-style: dashed; }
 
 /* ---------- Round the World ---------- */
 .rtw-board { display: flex; flex-direction: column; gap: 8px; }
@@ -308,7 +351,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 }
 .pline:first-of-type { border-top: none; }
 .pline span { color: var(--muted); }
-.pline span i { display: block; font-style: normal; font-size: 0.72rem; color: #7f8b9d; }
+.pline span i { display: block; font-style: normal; font-size: 0.72rem; color: var(--muted); }
 .pline b { font-variant-numeric: tabular-nums; font-size: 1.05rem; }
 
 /* ---------- Profil-Dialog ---------- */
@@ -495,7 +538,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   min-width: 42px; text-align: center; background: var(--bg-3); border: 1px solid var(--line);
   border-radius: 8px; padding: 6px 8px; font-size: 0.82rem; font-weight: 700; font-variant-numeric: tabular-nums;
 }
-.visit-darts .d.empty { color: #8d9aab; font-weight: 500; }
+.visit-darts .d.empty { color: var(--muted); font-weight: 500; }
 
 .pad { display: block; }
 .quick-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 8px; }
@@ -509,7 +552,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .score-display {
   font-size: 2.2rem; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: 0.02em;
 }
-.score-display.empty { color: #8d9aab; }
+.score-display.empty { color: var(--muted); }
 .input-error { color: var(--red); font-size: 0.82rem; }
 
 .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
@@ -804,7 +847,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .rc-row { display: flex; align-items: center; gap: 10px; background: var(--bg-3); border-radius: 10px; padding: 8px 10px; }
 .rc-row .rc-name { flex: 1; font-weight: 600; }
 .rc-row .muted { font-size: 0.75rem; }
-.match-row.void .pair, .match-row.void .res { color: #93a0b2; }
+.match-row.void .pair, .match-row.void .res { color: var(--dead); }
 .match-row.void .pair { text-decoration: line-through; }
 .rtw-row.fin { border-color: var(--accent-dark); }
 .rtw-row.fin .rw-target { color: var(--accent); }
@@ -920,7 +963,13 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   border-radius: 10px; padding: 10px 12px; font-size: 0.85rem; line-height: 1.4; margin: 0 0 10px;
 }
 .konto-meldung.fehler { background: #4a2530; border: 1px solid var(--red); color: var(--text); }
-.konto-meldung.ok { background: var(--accent-faint); border: 1px solid var(--accent-dark); color: var(--text); }
+/* Erfolg darf nicht aussehen wie ein Fehler. Seit der Akzent rot ist, wäre
+   ein roter Rahmen hier genau das – deshalb neutral hell statt farbig. */
+.konto-meldung.ok {
+  background: rgba(242, 238, 238, 0.06);
+  border: 1px solid var(--line-hell);
+  color: var(--text);
+}
 
 .konto-kopf { display: flex; align-items: center; gap: 12px; }
 .konto-kopf .who { min-width: 0; }
@@ -1022,4 +1071,170 @@ body.gesperrt #sync-status { display: none !important; }
 @media (min-width: 820px) {
   .fin-zahl .zahl { font-size: 4rem; }
   .fin-row .rest { font-size: 2rem; min-width: 74px; }
+}
+
+/* ================= Blink-180-Rebranding =================
+   Aufgesetzt auf die bestehenden Regeln, damit die Geometrie unberührt
+   bleibt: Touch-Ziele, iPad-Layout und Querformat sind getestet und
+   sollen sich durch den neuen Anstrich nicht verschieben. Hier ändert
+   sich nur, wie es aussieht – nicht, wo es steht.
+   Entwurf: „Dart App Rebranding/Blink 180 Redesign v2.dc.html"
+========================================================== */
+
+/* ---------- Typografie ---------- */
+
+/* Anton ist eine reine Versalienschrift – Kleinbuchstaben sehen darin
+   falsch aus, deshalb überall dort, wo sie steht, auch uppercase. */
+h1 {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-weight: 400;
+  font-size: 1.7rem;
+}
+h2 {
+  font-family: var(--font-cond);
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: 0.12em;
+  color: var(--text);
+  opacity: 0.86;
+}
+
+/* Zahlen sind in dieser App der Inhalt. Barlow Condensed macht sie schmal
+   und damit auch dreistellig noch groß lesbar. */
+.pcard .rest, .fin-zahl .zahl, .fin-row .rest, .rec .rv, .sum-score b,
+.board-row .val, .cr-cell, .edit-value {
+  font-family: var(--font-cond);
+  font-weight: 700;
+}
+
+/* ---------- Hauptaktion ---------- */
+
+/* Hell statt rot: Rot bleibt den Werten vorbehalten. */
+.btn.primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 400;
+}
+.btn.primary:active { background: #ffffff; }
+.btn.big { letter-spacing: 0.06em; }
+
+/* ---------- Navigation und Segmente ---------- */
+
+.nav button {
+  font-family: var(--font-cond);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.9rem;
+}
+.nav button.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+}
+
+.options button, .konto-tabs button, .chips .chip {
+  font-family: var(--font-cond);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  font-size: 0.95rem;
+}
+/* Der aktive Zustand ist hell – wie in der Navigation, damit „ausgewählt"
+   überall dieselbe Sprache spricht. */
+.options button.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+}
+.chips .chip.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+}
+.konto-tabs button.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+}
+
+/* ---------- Modusauswahl ---------- */
+
+.modes .mt {
+  font-family: var(--font-cond);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  font-size: 1.1rem;
+}
+
+/* ---------- Wortmarke ---------- */
+
+/* Kompakt und nur im Setup: eine dauerhafte Kopfleiste auf jedem Screen
+   würde am Handy senkrecht zu viel kosten. */
+.marke { display: flex; align-items: center; gap: 12px; padding: 14px 4px 6px; }
+.marke img {
+  width: 44px; height: 44px; border-radius: 50%; flex: none;
+  border: 2px solid var(--line);
+  /* Der kalte Schein aus dem Entwurf – er hebt das Logo vom warmen
+     Schwarz ab, ohne einen harten Rand zu ziehen. */
+  box-shadow: 0 0 18px rgba(70, 170, 215, 0.32);
+}
+.marke .wort {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  font-size: 1.5rem;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+.marke .wort .rot { color: var(--accent); }
+.marke .sub {
+  font-family: var(--font-cond);
+  font-weight: 600;
+  font-size: 0.68rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: 3px;
+}
+
+@media (min-width: 820px) {
+  .marke img { width: 56px; height: 56px; }
+  .marke .wort { font-size: 1.9rem; }
+}
+
+/* ---------- Nachträge zum Rebranding ---------- */
+
+/* „Ausgewählt" ist überall hell, auch beim Multiplikator – sonst leuchtet
+   ein roter Balken über dem Zahlenfeld, der wie eine Warnung aussieht. */
+.mult-row button.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+  font-family: var(--font-cond);
+  letter-spacing: 0.04em;
+}
+
+/* Der Finish-Vorschlag im Finisher benutzt dieselben Chips wie das X01,
+   war dort aber ohne Elternklasse ungestylt. */
+.finish-hint .chip {
+  background: var(--bg-3); border: 1px solid var(--line); border-radius: 8px;
+  padding: 5px 10px; font-size: 0.95rem;
+  font-family: var(--font-cond); font-weight: 700;
+}
+.finish-hint .chip.first { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+
+/* Zahlenfeld und Multiplikator schmal setzen – dreistellige Reste und die
+   Zahlen 1 bis 20 stehen so ruhiger nebeneinander. */
+.num-grid button, .keypad button, .quick-row button {
+  font-family: var(--font-cond);
+  font-weight: 700;
+}
+
+@media (min-width: 820px) {
+  .finish-hint .chip { font-size: 1.15rem; padding: 8px 14px; }
 }
