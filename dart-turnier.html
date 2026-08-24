@@ -789,6 +789,60 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   .game-turn, .cricket-legend { display: none; }
 }
 
+/* ---------- Cricket-Eingabe: Single, Double, Triple auf einen Blick ---------- */
+.cricket-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
+.cg-block {
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; align-items: stretch;
+}
+.cg-block .cg-label {
+  grid-column: 1 / -1; font-size: 0.7rem; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--muted); margin-bottom: -2px;
+}
+.cg-block button {
+  background: var(--bg-2); border: 1px solid var(--line); color: var(--text);
+  border-radius: 10px; min-height: 48px; font-size: 1.05rem; font-weight: 700; cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+.cg-block button:active { background: var(--bg-3); }
+.cg-block button.dim { color: #93a0b2; border-style: dashed; }
+.cg-block button.bull { color: var(--amber); }
+.cg-block button.miss { color: var(--red); }
+.cg-block .mx { color: var(--accent); font-size: 0.72em; margin-right: 2px; vertical-align: 2px; }
+.cg-extra { grid-template-columns: repeat(3, 1fr); }
+.cr-mpr { font-size: 0.62rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.cr-head.act .cr-mpr { color: var(--accent); }
+.num-grid button.end-visit { font-size: 0.95rem; color: var(--accent); }
+
+@media (orientation: landscape) and (min-width: 700px) {
+  .cricket-grid { gap: 10px; }
+  .cg-block button { min-height: 56px; font-size: 1.2rem; }
+  .cg-block .cg-label { font-size: 0.8rem; }
+  .cr-mpr { font-size: 0.8rem; }
+}
+@media (orientation: landscape) and (max-height: 560px) {
+  .cricket-grid { gap: 4px; }
+  .cg-block { gap: 3px; }
+  .cg-block button { min-height: 44px; font-size: 0.9rem; }
+  .cg-block .cg-label { display: none; }
+}
+
+/* ---------- Cricket am Handy im Hochformat ---------- */
+@media (max-width: 699px) and (orientation: portrait) {
+  #screen-cricket .game-main { min-height: 0; }
+  .cricket-board { flex: 1; min-height: 0; overflow: auto; }
+  .cr-cell { padding: 4px 3px; }
+  .cr-head { font-size: 0.66rem; padding: 4px 2px; gap: 2px; }
+  .cr-head .av.sm { width: 20px; height: 20px; font-size: 0.55rem; }
+  .cr-mark { min-height: 30px; font-size: 1rem; }
+  .cr-num { font-size: 0.8rem; }
+  .cr-score { font-size: 0.95rem; }
+  .cricket-legend { font-size: 0.68rem; gap: 2px 10px; margin-top: 4px; }
+  .cricket-grid { gap: 5px; }
+  .cg-block { gap: 4px; }
+  .cg-block button { min-height: 44px; font-size: 0.95rem; }
+  .cg-block .cg-label { font-size: 0.62rem; }
+}
+
 </style>
 </head>
 <body>
@@ -981,7 +1035,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 <section id="screen-bulloff" class="screen center">
   <header class="app-header">
     <h1>Bull werfen</h1>
-    <p class="sub">Wer war näher am Bull und darf anfangen?</p>
+    <p class="sub" id="bulloff-sub">Wer war näher am Bull und darf anfangen?</p>
   </header>
   <div id="bulloff-buttons" class="bulloff"></div>
   <button class="btn ghost full" data-action="to-tournament">Zurück</button>
@@ -1069,12 +1123,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
         <div id="cricket-darts" class="visit-darts"></div>
       </div>
       <div class="pad">
-        <div class="mult-row" id="cricket-mult">
-          <button data-mult="1" class="active">Single</button>
-          <button data-mult="2">Double</button>
-          <button data-mult="3">Triple</button>
-        </div>
-        <div class="num-grid cricket-grid" id="cricket-grid"></div>
+        <div class="cricket-grid" id="cricket-grid"></div>
       </div>
     </div>
   </div>
@@ -2193,11 +2242,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     S.game = {
       id: uid(), kind: kind, at: null, players: S.lineup.slice(), throws: [],
       scoring: kind === 'cricket' ? S.settings.cricketScoring === 1 : false,
-      done: false, winner: null
+      done: false, winner: null, started: false
     };
     UI.mult = 1;
     UI.overlay = null;
-    S.screen = kind;
+    // Wie im Turnier wird auch hier ausgeworfen, wer anfängt.
+    S.screen = 'bulloff';
     save(); render();
   }
 
@@ -2681,9 +2731,13 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   }
 
   function renderBullOff() {
-    var m = currentMatch();
-    if (!m) { S.screen = 'tournament'; render(); return; }
-    $('bulloff-buttons').innerHTML = m.p.map(function (pid) {
+    var forGame = S.game && !S.game.started;
+    var ids = forGame ? S.game.players : (currentMatch() ? currentMatch().p : null);
+    if (!ids) { S.screen = 'tournament'; render(); return; }
+    $('bulloff-sub').textContent = ids.length > 2
+      ? 'Wer war am nächsten am Bull? Er beginnt, danach geht es reihum weiter.'
+      : 'Wer war näher am Bull und darf anfangen?';
+    $('bulloff-buttons').innerHTML = ids.map(function (pid) {
       return '<button data-action="pick-starter" data-id="' + pid + '">' +
         avatarHTML(profile(pid), 'md') + '<span>' + esc(pname(pid)) + '</span></button>';
     }).join('');
@@ -2795,9 +2849,14 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         nums += '<button data-num="' + n + '" class="' + (n === hlNum ? 'hl' : '') + '">' +
           (prefix ? '<span class="mx">' + prefix + '</span>' : '') + n + '</button>';
       }
-      nums += '<button class="miss wide" data-num="0">Miss</button>';
+      nums += '<button class="miss" data-num="0">Miss</button>';
       nums += '<button data-num="25" class="' + (hl === '25' ? 'hl' : '') + '">25</button>';
-      nums += '<button class="bull wide ' + (hl === 'BULL' ? 'hl' : '') + '" data-bull="1">Bull 50</button>';
+      nums += '<button class="bull ' + (hl === 'BULL' ? 'hl' : '') + '" data-bull="1">Bull</button>';
+      /* Dreimal am Doppel vorbei muss nicht dreimal getippt werden: dieser
+         Knopf schließt die Aufnahme ab und füllt die fehlenden Darts als
+         Fehlwürfe auf. */
+      nums += '<button class="end-visit wide" data-action="end-visit">' +
+        (UI.darts.length ? 'Weiter ▸' : '0 Punkte ▸') + '</button>';
       $('num-grid').innerHTML = nums;
     }
   }
@@ -2824,8 +2883,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     $('cricket-sub').textContent = (g.scoring ? 'mit Punkten' : 'ohne Punkte') + ' · ' + g.players.length + ' Spieler';
 
     var head = '<div class="cr-cell cr-corner"></div>' + g.players.map(function (id) {
+      var mpr = st.darts[id] ? (st.allMarks[id] / st.darts[id]) * 3 : 0;
       return '<div class="cr-cell cr-head ' + (id === active ? 'act' : '') + '">' +
-        avatarHTML(profile(id), 'sm') + '<span>' + esc(pname(id)) + '</span></div>';
+        avatarHTML(profile(id), 'sm') + '<span>' + esc(pname(id)) + '</span>' +
+        '<span class="cr-mpr">MPR ' + (st.darts[id] ? mpr.toFixed(2) : '–') + '</span></div>';
     }).join('');
 
     var rows = CRICKET_NUMBERS.map(function (n) {
@@ -2867,18 +2928,29 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       return '<div class="d ' + (d ? '' : 'empty') + '">' + (d ? throwLabel(d) : '–') + '</div>';
     }).join('');
 
-    $('cricket-mult').querySelectorAll('button').forEach(function (b) {
-      b.classList.toggle('active', Number(b.getAttribute('data-mult')) === UI.mult);
+    /* Alle Felder auf einen Blick: je ein Block für Single, Double und
+       Triple – ein Tipp je Dart, kein Umschalten. */
+    var CN = [20, 19, 18, 17, 16, 15];
+    var dead = {};
+    CN.forEach(function (n) {
+      dead[n] = g.players.every(function (id) { return st.marks[id][n] >= 3; });
     });
-
-    var prefix = UI.mult === 3 ? 'T' : UI.mult === 2 ? 'D' : '';
-    $('cricket-grid').innerHTML = [20, 19, 18, 17, 16, 15].map(function (n) {
-      var closedForAll = g.players.every(function (id) { return st.marks[id][n] >= 3; });
-      return '<button data-num="' + n + '" class="' + (closedForAll ? 'dim' : '') + '">' +
-        (prefix ? '<span class="mx">' + prefix + '</span>' : '') + n + '</button>';
-    }).join('') +
-      '<button class="bull" data-num="25">' + (UI.mult === 2 ? 'Bull ×2' : 'Bull') + '</button>' +
-      '<button class="miss wide" data-num="0">Miss</button>';
+    function block(label, mult) {
+      return '<div class="cg-block">' +
+        '<div class="cg-label">' + label + '</div>' +
+        CN.map(function (n) {
+          return '<button data-num="' + n + '" data-mult="' + mult + '" class="' + (dead[n] ? 'dim' : '') + '">' +
+            (mult > 1 ? '<span class="mx">' + (mult === 3 ? 'T' : 'D') + '</span>' : '') + n + '</button>';
+        }).join('') + '</div>';
+    }
+    $('cricket-grid').innerHTML =
+      block('Single', 1) + block('Double', 2) + block('Triple', 3) +
+      '<div class="cg-block cg-extra">' +
+        '<div class="cg-label">Bull &amp; Rest</div>' +
+        '<button class="bull" data-num="25" data-mult="1">Bull</button>' +
+        '<button class="bull" data-num="25" data-mult="2">Bull ×2</button>' +
+        '<button class="miss" data-num="0" data-mult="1">Miss</button>' +
+      '</div>';
   }
 
   function renderRtw() {
@@ -3403,7 +3475,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         S.screen = 'setup'; save(); render();
         break;
       case 'to-tournament':
-        S.screen = 'tournament'; UI.overlay = null; save(); render();
+        // Aus dem Bull-Off eines Trainingsspiels führt der Weg ins Setup zurück.
+        if (S.game && !S.game.started) { S.game = null; S.screen = 'setup'; }
+        else S.screen = 'tournament';
+        UI.overlay = null; save(); render();
         break;
       case 'to-winner':
         S.screen = 'winner'; save(); render();
@@ -3422,9 +3497,19 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         openMatch(el.getAttribute('data-id'));
         break;
       case 'pick-starter': {
+        var pid2 = el.getAttribute('data-id');
+        if (S.game && !S.game.started) {
+          // Reihenfolge so drehen, dass der Bull-Sieger anfängt.
+          var idx2 = S.game.players.indexOf(pid2);
+          if (idx2 > 0) S.game.players = S.game.players.slice(idx2).concat(S.game.players.slice(0, idx2));
+          S.game.started = true;
+          S.screen = S.game.kind;
+          save(); render();
+          break;
+        }
         var m = currentMatch();
         if (!m) return;
-        m.starter = el.getAttribute('data-id');
+        m.starter = pid2;
         S.screen = 'game';
         save(); render();
         break;
@@ -3432,6 +3517,15 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       case 'undo':
         undo();
         break;
+      case 'end-visit': {
+        var em = currentMatch();
+        if (!em || em.done) return;
+        // Fehlende Darts als Fehlwürfe ergänzen, dann normal verbuchen.
+        while (UI.darts.length < 3) UI.darts.push({ m: 1, n: 0, v: 0 });
+        var total = sum(UI.darts, function (d) { return d.v; });
+        commitVisit(total, 3, false, false, UI.darts);
+        break;
+      }
       case 'edit-visit': {
         var m3 = currentMatch();
         if (!m3 || m3.done) return;
@@ -3610,6 +3704,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   S = load() || newState();
   if (!S.lineup.length) S.lineup = activeProfiles().slice(0, 4).map(function (p) { return p.id; });
   if ((S.screen === 'cricket' || S.screen === 'rtw') && !S.game) S.screen = 'setup';
+  if (S.game && !S.game.started && !S.game.throws.length) S.screen = 'bulloff';
+  if (S.game && S.game.started === undefined) S.game.started = true;   // ältere Stände
   if (S.game && (S.screen === 'cricket' || S.screen === 'rtw') && S.game.kind !== S.screen) S.screen = S.game.kind;
   /* Ein beendetes Spiel führt zur Auswertung, nicht auf ein totes Board –
      sonst kann man in ein fertiges Match weitertippen. */
@@ -3622,7 +3718,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     S.screen = 'summary';
   }
   if (S.screen === 'game' && !currentMatch()) S.screen = 'tournament';
-  if (S.screen === 'bulloff' && !currentMatch()) S.screen = 'tournament';
+  if (S.screen === 'bulloff' && !currentMatch() && !S.game) S.screen = 'tournament';
   if (!S.matches.length && S.screen === 'tournament') S.screen = 'setup';
   if (S.screen === 'profile' && !UI.profile) S.screen = 'players';
   if (S.screen === 'summary' && !UI.summary) S.screen = S.matches.length ? 'tournament' : 'setup';

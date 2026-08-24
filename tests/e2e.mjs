@@ -283,14 +283,13 @@ await page.reload();
 const c3 = await carr();
 check('Archiv übersteht Reload', JSON.stringify(Object.values(c3).map((s) => s.matches)) === JSON.stringify(Object.values(c2).map((s) => s.matches)));
 
-/* Würfe in Cricket bzw. Round the World: 'T20', 'D25', 'MISS' */
-async function modeDart(scope, label) {
+/* Cricket: alle Felder liegen als Single-, Double- und Triple-Block bereit. */
+async function cDart(label) {
+  if (label === 'MISS') return page.locator('#cricket-grid [data-num="0"]').click();
   const mult = label[0] === 'T' ? 3 : label[0] === 'D' ? 2 : 1;
-  const num = label === 'MISS' ? 0 : parseInt(label.replace(/^[TDS]/, ''), 10);
-  await page.locator(`#${scope}-mult button[data-mult="${mult}"]`).click();
-  await page.locator(`#${scope}-grid button[data-num="${num}"]`).click();
+  const num = parseInt(label.replace(/^[TDS]/, ''), 10);
+  return page.locator(`#cricket-grid button[data-num="${num}"][data-mult="${mult}"]`).click();
 }
-const cDart = (l) => modeDart('cricket', l);
 /* Round the World zeigt nur die eigene Zahl: Single/Double/Triple/Miss. */
 async function rDart(label) {
   if (label === 'MISS') return page.locator('#rtw-pad [data-num="0"]').click();
@@ -317,6 +316,8 @@ check('Cricket-Einstellungen sichtbar', await visible('#settings-cricket'));
 check('501-Einstellungen ausgeblendet', !(await visible('#settings-501')));
 check('Startbutton passt zum Modus', (await text('[data-action="start-game"]')).includes('Cricket'));
 await page.locator('[data-action="start-game"]').click();
+check('Bull-Off auch im Cricket', await visible('#screen-bulloff'));
+await page.locator('#bulloff-buttons button').first().click();
 check('Cricket-Screen', await visible('#screen-cricket'));
 check('Board hat 7 Zahlen (20–15 und Bull)', (await page.locator('.cr-num').count()) === 8, 'inkl. Punktezeile');
 
@@ -371,7 +372,11 @@ check('Cricket zählt nicht als 501-Spiel', cWinner.matches === before.matches);
 group('Round the World');
 await page.locator('[data-action="set-mode"][data-value="rtw"]').click();
 await page.locator('[data-action="start-game"]').click();
+check('Bull-Off auch im Training', await visible('#screen-bulloff'));
+const rtwStarter = await page.locator('#bulloff-buttons button').first().locator('span:not(.av)').innerText();
+await page.locator('#bulloff-buttons button').first().click();
 check('RTW-Screen', await visible('#screen-rtw'));
+check('der Bull-Sieger beginnt', (await text('#rtw-turn')).includes(rtwStarter), await text('#rtw-turn'));
 check('alle starten auf der 1', await page.evaluate(() => {
   const s = window.__dart.rtwState();
   return Object.values(s.target).every((t) => t === 1);
@@ -551,11 +556,18 @@ await page.evaluate(() => {
 await page.reload();
 await page.locator('[data-action="set-mode"][data-value="cricket"]').click();
 await page.locator('[data-action="start-game"]').click();
+await page.locator('#bulloff-buttons button').first().click();
+check('Single-, Double- und Triple-Block vorhanden',
+  (await page.locator('#cricket-grid .cg-block').count()) === 4);
+check('alle sechs Zahlen je Block', (await page.locator('#cricket-grid button[data-mult="3"]').count()) === 6);
 await cDart('T20');
-check('Cricket setzt den Multiplikator nach dem Dart zurück',
-  await page.locator('#cricket-mult button[data-mult="1"]').evaluate((e) => e.classList.contains('active')));
-await page.locator('#cricket-grid button[data-num="19"]').click();
-check('die nächste Zahl zählt einfach', await page.evaluate(() => window.__dart.cricketState().marks[window.__dart.game().players[0]][19]) === 1);
+await cDart('S19');
+check('Single und Triple ohne Umschalten',
+  await page.evaluate(() => {
+    const g = window.__dart.game(), st = window.__dart.cricketState();
+    return st.marks[g.players[0]][20] === 3 && st.marks[g.players[0]][19] === 1;
+  }));
+check('MPR steht unter dem Namen', (await text('#cricket-board')).includes('MPR'));
 
 // (7) Beschädigter Speicherstand wirft Profile und Archiv nicht weg
 const profileCount = (await ids()).length;
@@ -729,6 +741,29 @@ await page.evaluate(() => {
 await page.evaluate(() => window.__dart.action('add-player', { getAttribute: () => 'x13' }));
 check('Nachtragen achtet die Obergrenze von 12',
   (await page.evaluate(() => window.__dart.state().tour.players.length)) === 12);
+
+group('Aufnahme im Einzel-Dart-Modus abschließen');
+await page.evaluate(() => localStorage.clear());
+await page.reload();
+await page.locator('[data-action="start-game"]').click();
+await page.locator('[data-action="next-match"]').click();
+await page.locator('#bulloff-buttons button').first().click();
+await typeScore(180); await typeScore(60); await typeScore(180); await typeScore(60);
+check('Einzel-Darts aktiv', await visible('#pad-darts'));
+check('Knopf heißt 0 Punkte, solange nichts geworfen ist',
+  (await page.locator('[data-action="end-visit"]').innerText()).includes('0 Punkte'));
+await page.locator('[data-action="end-visit"]').click();
+check('drei Fehlwürfe in einem Tipp', (await rest(0)) === '141', await rest(0));
+check('Aufnahme zählt drei Darts',
+  (await page.evaluate(() => window.__dart.activeLeg(window.__dart.currentMatch()).visits.slice(-1)[0])).d === 3);
+await typeScore(60);
+await dart('T20');
+check('Knopf heißt Weiter, sobald ein Dart steht',
+  (await page.locator('[data-action="end-visit"]').innerText()).includes('Weiter'));
+await page.locator('[data-action="end-visit"]').click();
+check('angefangene Aufnahme wird übernommen', (await rest(0)) === '81', await rest(0));
+check('auch dann drei Darts',
+  (await page.evaluate(() => window.__dart.activeLeg(window.__dart.currentMatch()).visits.slice(-1)[0])).d === 3);
 
 group('Fehlerfreiheit');
 check('keine JS-Fehler', errors.length === 0, errors.join(' | '));

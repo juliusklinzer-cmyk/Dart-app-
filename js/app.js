@@ -908,11 +908,12 @@
     S.game = {
       id: uid(), kind: kind, at: null, players: S.lineup.slice(), throws: [],
       scoring: kind === 'cricket' ? S.settings.cricketScoring === 1 : false,
-      done: false, winner: null
+      done: false, winner: null, started: false
     };
     UI.mult = 1;
     UI.overlay = null;
-    S.screen = kind;
+    // Wie im Turnier wird auch hier ausgeworfen, wer anfängt.
+    S.screen = 'bulloff';
     save(); render();
   }
 
@@ -1396,9 +1397,13 @@
   }
 
   function renderBullOff() {
-    var m = currentMatch();
-    if (!m) { S.screen = 'tournament'; render(); return; }
-    $('bulloff-buttons').innerHTML = m.p.map(function (pid) {
+    var forGame = S.game && !S.game.started;
+    var ids = forGame ? S.game.players : (currentMatch() ? currentMatch().p : null);
+    if (!ids) { S.screen = 'tournament'; render(); return; }
+    $('bulloff-sub').textContent = ids.length > 2
+      ? 'Wer war am nächsten am Bull? Er beginnt, danach geht es reihum weiter.'
+      : 'Wer war näher am Bull und darf anfangen?';
+    $('bulloff-buttons').innerHTML = ids.map(function (pid) {
       return '<button data-action="pick-starter" data-id="' + pid + '">' +
         avatarHTML(profile(pid), 'md') + '<span>' + esc(pname(pid)) + '</span></button>';
     }).join('');
@@ -1510,9 +1515,14 @@
         nums += '<button data-num="' + n + '" class="' + (n === hlNum ? 'hl' : '') + '">' +
           (prefix ? '<span class="mx">' + prefix + '</span>' : '') + n + '</button>';
       }
-      nums += '<button class="miss wide" data-num="0">Miss</button>';
+      nums += '<button class="miss" data-num="0">Miss</button>';
       nums += '<button data-num="25" class="' + (hl === '25' ? 'hl' : '') + '">25</button>';
-      nums += '<button class="bull wide ' + (hl === 'BULL' ? 'hl' : '') + '" data-bull="1">Bull 50</button>';
+      nums += '<button class="bull ' + (hl === 'BULL' ? 'hl' : '') + '" data-bull="1">Bull</button>';
+      /* Dreimal am Doppel vorbei muss nicht dreimal getippt werden: dieser
+         Knopf schließt die Aufnahme ab und füllt die fehlenden Darts als
+         Fehlwürfe auf. */
+      nums += '<button class="end-visit wide" data-action="end-visit">' +
+        (UI.darts.length ? 'Weiter ▸' : '0 Punkte ▸') + '</button>';
       $('num-grid').innerHTML = nums;
     }
   }
@@ -1539,8 +1549,10 @@
     $('cricket-sub').textContent = (g.scoring ? 'mit Punkten' : 'ohne Punkte') + ' · ' + g.players.length + ' Spieler';
 
     var head = '<div class="cr-cell cr-corner"></div>' + g.players.map(function (id) {
+      var mpr = st.darts[id] ? (st.allMarks[id] / st.darts[id]) * 3 : 0;
       return '<div class="cr-cell cr-head ' + (id === active ? 'act' : '') + '">' +
-        avatarHTML(profile(id), 'sm') + '<span>' + esc(pname(id)) + '</span></div>';
+        avatarHTML(profile(id), 'sm') + '<span>' + esc(pname(id)) + '</span>' +
+        '<span class="cr-mpr">MPR ' + (st.darts[id] ? mpr.toFixed(2) : '–') + '</span></div>';
     }).join('');
 
     var rows = CRICKET_NUMBERS.map(function (n) {
@@ -1582,18 +1594,29 @@
       return '<div class="d ' + (d ? '' : 'empty') + '">' + (d ? throwLabel(d) : '–') + '</div>';
     }).join('');
 
-    $('cricket-mult').querySelectorAll('button').forEach(function (b) {
-      b.classList.toggle('active', Number(b.getAttribute('data-mult')) === UI.mult);
+    /* Alle Felder auf einen Blick: je ein Block für Single, Double und
+       Triple – ein Tipp je Dart, kein Umschalten. */
+    var CN = [20, 19, 18, 17, 16, 15];
+    var dead = {};
+    CN.forEach(function (n) {
+      dead[n] = g.players.every(function (id) { return st.marks[id][n] >= 3; });
     });
-
-    var prefix = UI.mult === 3 ? 'T' : UI.mult === 2 ? 'D' : '';
-    $('cricket-grid').innerHTML = [20, 19, 18, 17, 16, 15].map(function (n) {
-      var closedForAll = g.players.every(function (id) { return st.marks[id][n] >= 3; });
-      return '<button data-num="' + n + '" class="' + (closedForAll ? 'dim' : '') + '">' +
-        (prefix ? '<span class="mx">' + prefix + '</span>' : '') + n + '</button>';
-    }).join('') +
-      '<button class="bull" data-num="25">' + (UI.mult === 2 ? 'Bull ×2' : 'Bull') + '</button>' +
-      '<button class="miss wide" data-num="0">Miss</button>';
+    function block(label, mult) {
+      return '<div class="cg-block">' +
+        '<div class="cg-label">' + label + '</div>' +
+        CN.map(function (n) {
+          return '<button data-num="' + n + '" data-mult="' + mult + '" class="' + (dead[n] ? 'dim' : '') + '">' +
+            (mult > 1 ? '<span class="mx">' + (mult === 3 ? 'T' : 'D') + '</span>' : '') + n + '</button>';
+        }).join('') + '</div>';
+    }
+    $('cricket-grid').innerHTML =
+      block('Single', 1) + block('Double', 2) + block('Triple', 3) +
+      '<div class="cg-block cg-extra">' +
+        '<div class="cg-label">Bull &amp; Rest</div>' +
+        '<button class="bull" data-num="25" data-mult="1">Bull</button>' +
+        '<button class="bull" data-num="25" data-mult="2">Bull ×2</button>' +
+        '<button class="miss" data-num="0" data-mult="1">Miss</button>' +
+      '</div>';
   }
 
   function renderRtw() {
@@ -2118,7 +2141,10 @@
         S.screen = 'setup'; save(); render();
         break;
       case 'to-tournament':
-        S.screen = 'tournament'; UI.overlay = null; save(); render();
+        // Aus dem Bull-Off eines Trainingsspiels führt der Weg ins Setup zurück.
+        if (S.game && !S.game.started) { S.game = null; S.screen = 'setup'; }
+        else S.screen = 'tournament';
+        UI.overlay = null; save(); render();
         break;
       case 'to-winner':
         S.screen = 'winner'; save(); render();
@@ -2137,9 +2163,19 @@
         openMatch(el.getAttribute('data-id'));
         break;
       case 'pick-starter': {
+        var pid2 = el.getAttribute('data-id');
+        if (S.game && !S.game.started) {
+          // Reihenfolge so drehen, dass der Bull-Sieger anfängt.
+          var idx2 = S.game.players.indexOf(pid2);
+          if (idx2 > 0) S.game.players = S.game.players.slice(idx2).concat(S.game.players.slice(0, idx2));
+          S.game.started = true;
+          S.screen = S.game.kind;
+          save(); render();
+          break;
+        }
         var m = currentMatch();
         if (!m) return;
-        m.starter = el.getAttribute('data-id');
+        m.starter = pid2;
         S.screen = 'game';
         save(); render();
         break;
@@ -2147,6 +2183,15 @@
       case 'undo':
         undo();
         break;
+      case 'end-visit': {
+        var em = currentMatch();
+        if (!em || em.done) return;
+        // Fehlende Darts als Fehlwürfe ergänzen, dann normal verbuchen.
+        while (UI.darts.length < 3) UI.darts.push({ m: 1, n: 0, v: 0 });
+        var total = sum(UI.darts, function (d) { return d.v; });
+        commitVisit(total, 3, false, false, UI.darts);
+        break;
+      }
       case 'edit-visit': {
         var m3 = currentMatch();
         if (!m3 || m3.done) return;
@@ -2325,6 +2370,8 @@
   S = load() || newState();
   if (!S.lineup.length) S.lineup = activeProfiles().slice(0, 4).map(function (p) { return p.id; });
   if ((S.screen === 'cricket' || S.screen === 'rtw') && !S.game) S.screen = 'setup';
+  if (S.game && !S.game.started && !S.game.throws.length) S.screen = 'bulloff';
+  if (S.game && S.game.started === undefined) S.game.started = true;   // ältere Stände
   if (S.game && (S.screen === 'cricket' || S.screen === 'rtw') && S.game.kind !== S.screen) S.screen = S.game.kind;
   /* Ein beendetes Spiel führt zur Auswertung, nicht auf ein totes Board –
      sonst kann man in ein fertiges Match weitertippen. */
@@ -2337,7 +2384,7 @@
     S.screen = 'summary';
   }
   if (S.screen === 'game' && !currentMatch()) S.screen = 'tournament';
-  if (S.screen === 'bulloff' && !currentMatch()) S.screen = 'tournament';
+  if (S.screen === 'bulloff' && !currentMatch() && !S.game) S.screen = 'tournament';
   if (!S.matches.length && S.screen === 'tournament') S.screen = 'setup';
   if (S.screen === 'profile' && !UI.profile) S.screen = 'players';
   if (S.screen === 'summary' && !UI.summary) S.screen = S.matches.length ? 'tournament' : 'setup';

@@ -47,8 +47,11 @@ Markierungen stehen wie am Board: `/`, `✕`, `⊗` für zu.
   hat **und** dabei mindestens so viele Punkte wie alle anderen hat.
 - **Ohne Punkte**: Wer zuerst alle sieben Felder zumacht, gewinnt.
 
-Reihum drei Darts, jeder Dart einzeln eingegeben; der ↺-Button nimmt Dart für Dart
-zurück.
+Vor dem Spiel wird wie im Turnier ausgeworfen, wer anfängt – danach geht es reihum
+weiter. Die Eingabe zeigt **alle Felder gleichzeitig**: je ein Block für Single, Double
+und Triple mit den Zahlen 20 bis 15, dazu Bull, Doppel-Bull und Miss. Ein Tipp je Dart,
+kein Umschalten. Über jeder Spalte der Tafel steht die aktuelle **MPR**, der ↺-Button
+nimmt Dart für Dart zurück.
 
 ### Round the World (Training)
 
@@ -66,7 +69,8 @@ Darts getroffen hat, bei Gleichstand der frühere Treffer.
 Jeder Spieler hat seinen eigenen Fortschritt, die Anzeige zeigt Ziel, Darts und
 Treffer.
 
-Die Eingabe zeigt immer nur die Zahl, die gerade dran ist – als vier große Tasten
+Auch hier wird vorher der Anwerfer ausgeworfen. Die Eingabe zeigt immer nur die Zahl,
+die gerade dran ist – als vier große Tasten
 (Single, Double, Triple, Miss), jeweils mit dem Hinweis, wohin der Treffer führt
 („weiter auf 7"). Nach jedem Dart springt die Anzeige auf die neue Zahl, nach drei
 Darts auf den nächsten Spieler. Auf Bull bleiben nur noch „Bull" und „Miss".
@@ -98,9 +102,14 @@ Schnellwahl mit den häufigsten Werten (26, 41, 45, 60, 81, 85, 100, 140, 180).
 **Einzel-Dart-Modus:** Schaltet automatisch um, sobald der Rest im Finish-Bereich
 liegt (Standard: ab 170, in den Einstellungen auf 100/180/nie änderbar). Dann wird
 Dart für Dart eingegeben: Single/Double/Triple wählen, Zahl tippen – plus `25`,
-`Bull 50` und `Miss`. Die Tasten behalten dabei die Feldzahl (18 bleibt 18) und
+`Bull` und `Miss`. Die Tasten behalten dabei die Feldzahl (18 bleibt 18) und
 bekommen ein kleines D bzw. T davor, damit das Zielfeld erkennbar bleibt. Umschalten
 geht jederzeit von Hand über „Punkte / Einzel-Darts“.
+
+Rechts unten sitzt **„0 Punkte ▸"**: Wer dreimal am Doppel vorbeiwirft, schließt die
+Aufnahme mit einem Tipp ab, statt dreimal „Miss" zu tippen. Steht schon ein Dart, heißt
+der Knopf **„Weiter ▸"** und übernimmt das Geworfene – die fehlenden Darts werden als
+Fehlwürfe ergänzt, damit die Dart-Zahl und damit der Average stimmen.
 
 **Finish-Vorschlag:** Über der Eingabe steht immer der sinnvollste Weg zum Double-Out
 für den aktuellen Rest – und zwar passend zu den *noch verfügbaren* Darts der
