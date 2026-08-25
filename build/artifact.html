@@ -1490,6 +1490,8 @@ button, input, select, textarea { font-family: inherit; }
   display: grid; grid-template-columns: 1.6fr 1fr 1fr; gap: 8px;
   flex: 1 1 auto; min-height: 132px;
 }
+/* Einfach und Bull: es gibt nur eine Antwort, die nimmt die ganze Breite. */
+.rtw-treffer.nur-zahl,
 .rtw-treffer.nur-bull { grid-template-columns: 1fr; }
 .rtw-reihe { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; flex: none; }
 .rtw-key.gross, .rtw-key.mult { padding: 8px; gap: 2px; }
@@ -1659,6 +1661,10 @@ button, input, select, textarea { font-family: inherit; }
   .rtw-key.gross .z { font-size: clamp(2rem, 13vw, 4rem); }
   .rtw-key.mult .k { font-size: clamp(1.5rem, 8vw, 2.6rem); }
   .rtw-key.gross.bull .z { font-size: clamp(1.8rem, 10vw, 3rem); }
+  /* Steht die Zahl allein auf voller Breite, darf sie auch hoeher sein
+     als die drei Kacheln im Boost -- sie ist dort die ganze Eingabe. */
+  .rtw-treffer.nur-zahl { height: clamp(132px, 34vw, 230px); }
+  .rtw-treffer.nur-zahl .rtw-key.gross .z { font-size: clamp(3rem, 20vw, 6rem); }
 }
 
 /* Stechen im Round the World – dieselbe Karte wie im Finisher. */

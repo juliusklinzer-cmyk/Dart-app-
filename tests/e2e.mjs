@@ -1273,6 +1273,13 @@ check('Einfach steht in der Kopfzeile', (await textKlein('#rtw-sub')).includes('
 check('kein Doppel zur Wahl', (await page.locator('#rtw-pad [data-mult="2"]').count()) === 0);
 check('kein Triple zur Wahl', (await page.locator('#rtw-pad [data-mult="3"]').count()) === 0);
 check('nur eine Treffer-Taste', (await page.locator("#rtw-pad .rtw-treffer .rtw-key").count()) === 1);
+/* Wenn es nur eine Antwort gibt, nimmt sie die ganze Breite – sonst stuende
+   sie in der Spalte, die im Boost fuer die Zahl neben D und T reserviert ist. */
+check('und die nimmt die volle Breite', await page.evaluate(() => {
+  const block = document.querySelector('#rtw-pad .rtw-treffer');
+  const taste = block.querySelector('.rtw-key');
+  return Math.abs(block.getBoundingClientRect().width - taste.getBoundingClientRect().width) < 1;
+}));
 await rDart('S1');
 check('ein Treffer rückt genau ein Feld weiter', (await eZiel()) === 2, String(await eZiel()));
 /* Der entscheidende Unterschied: derselbe Wurf, der im Boost zwei Felder
