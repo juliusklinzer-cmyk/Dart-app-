@@ -113,6 +113,20 @@
         });
       }
     });
+
+    /*
+     * Ein Account, der nicht mehr im Kader steht, ist stillgelegt worden.
+     * Sein Profil bleibt liegen -- seine alten Spiele koennten noch darauf
+     * zeigen -- aber es gehoert nicht mehr in die Aufstellung. Ohne das
+     * stuenden stillgelegte Konten dort fuer immer, und aendern kann man
+     * sie ja auch nicht.
+     */
+    var imKader = {};
+    roster.forEach(function (r) { imKader[r.id] = 1; });
+    S.profiles.forEach(function (p) {
+      if (istAccount(p.id) && !imKader[p.id] && !p.hidden) p.hidden = true;
+    });
+
     D.save();
   }
 

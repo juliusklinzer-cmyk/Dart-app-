@@ -578,6 +578,35 @@ async function main() {
       return liste.length === 0;
     }));
 
+    /*
+     * Ein stillgelegtes Konto verschwindet aus dem Kader. Sein Profil bleibt
+     * liegen -- alte Spiele koennen noch darauf zeigen -- aber es gehoert
+     * nicht mehr in die Aufstellung. Ohne das staende es dort fuer immer,
+     * und aendern kann man es als Fremder ja auch nicht.
+     */
+    group('Stillgelegte Konten verschwinden aus der Aufstellung');
+    await julius.page.evaluate(() => {
+      const S = window.__dart.state();
+      S.profiles.push({ id: 'u_ehemaliger', name: 'Ehemaliger', avatar: null, hue: 10, created: Date.now() });
+      window.__dart.save();
+    });
+    check('das Profil ist erst einmal da',
+      await julius.page.evaluate(() => !!window.__dart.profile('u_ehemaliger')));
+    await julius.page.evaluate(() => window.DartKonto.holeRoster());
+    await julius.page.waitForTimeout(400);
+    check('nach dem Abgleich ist es ausgeblendet',
+      await julius.page.evaluate(() => window.__dart.profile('u_ehemaliger').hidden === true));
+    check('und steht nicht mehr in der Aufstellung',
+      await julius.page.evaluate(() =>
+        !window.__dart.activeProfiles().some((p) => p.id === 'u_ehemaliger')));
+    check('wer im Kader steht, bleibt unangetastet',
+      await julius.page.evaluate((id) => !window.__dart.profile(id).hidden, tobiId));
+    await julius.page.evaluate(() => {
+      const S = window.__dart.state();
+      S.profiles = S.profiles.filter((p) => p.id !== 'u_ehemaliger');
+      window.__dart.save();
+    });
+
     group('Doppel-Warnung nur bei zwei Schreibern');
     const warnung = () => julius.page.evaluate(() => window.DartSync.langText());
     const setzeVerlauf = (eintraege) => julius.page.evaluate((liste) => {
