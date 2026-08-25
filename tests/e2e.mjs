@@ -338,7 +338,9 @@ check('zwei Spieler in der Aufstellung', (await page.evaluate(() => window.__dar
 await page.locator('[data-action="set-mode"][data-value="cricket"]').click();
 check('Cricket-Einstellungen sichtbar', await visible('#settings-cricket'));
 check('501-Einstellungen ausgeblendet', !(await visible('#settings-501')));
-check('Startbutton passt zum Modus', (await textKlein('[data-action="start-game"]')).includes('cricket'));
+/* Der Knopf heisst in jedem Modus gleich – welcher Modus laeuft, sagt die
+   Auswahl darueber, nicht der Knopf. */
+check('Startknopf heisst überall gleich', (await textKlein('[data-action="start-game"]')).includes('spiel starten'));
 await page.locator('[data-action="start-game"]').click();
 check('Bull-Off auch im Cricket', await visible('#screen-bulloff'));
 await page.locator('#bulloff-buttons button').first().click();
@@ -947,7 +949,7 @@ await reduceLineupToTwo();
 await page.locator('[data-action="set-mode"][data-value="finisher"]').click();
 check('Finisher-Einstellungen sichtbar', await visible('#settings-finisher'));
 check('X01-Einstellungen ausgeblendet', !(await visible('#settings-501')));
-check('Startknopf passt zum Modus', (await textKlein('[data-action="start-game"]')).includes('finisher'));
+check('Startknopf unverändert', (await textKlein('[data-action="start-game"]')).includes('spiel starten'));
 await page.locator('[data-setting="finisherTo"] button[data-value="3"]').click();
 await page.locator('[data-action="start-game"]').click();
 await bullOffGo();
@@ -1069,6 +1071,74 @@ await page.locator('#nav [data-screen="boards"]').click();
 await page.locator('[data-action="board-mode"][data-value="finisher"]').click();
 check('Finisher-Rangliste da', (await text('#board-list')).length > 0);
 check('kein Diagramm im Finisher', !(await visible('#board-chart')));
+
+/* ---------- Schnelles Spiel ---------- */
+
+group('Schnelles Spiel: alle gleichzeitig, ein Leg');
+await page.evaluate(() => window.__dart.setScreen('setup'));
+await page.evaluate(() => {
+  const S = window.__dart.state();
+  S.lineup = window.__dart.activeProfiles().slice(0, 3).map((p) => p.id);
+  window.__dart.setScreen('setup');
+});
+await page.locator('[data-action="set-mode"][data-value="quick"]').click();
+check('teilt sich die Einstellungen mit dem Turnier', await visible('#settings-501'));
+check('kein Legs-Feld – es gibt nur eines', !(await visible('#setting-bestof')));
+await page.locator('#settings-501 [data-setting="start"] button[data-value="301"]').click();
+/* Für diesen Durchlauf bleibt die Punkte-Eingabe an: sonst schaltet die App
+   im Finish-Bereich auf Einzel-Darts um und das Zahlenfeld ist weg. Der
+   Umschaltpunkt selbst wird oben im X01-Teil geprüft. */
+await page.locator('#settings-501 [data-setting="dartModeFrom"] button[data-value="0"]').click();
+await page.locator('[data-action="start-game"]').click();
+await bullOffGo();
+check('läuft auf dem X01-Bildschirm', await visible('#screen-game'));
+
+const qIds = await page.evaluate(() => window.__dart.currentMatch().p);
+check('alle drei Spieler auf der Tafel', (await page.locator('#scoreboard .pcard').count()) === 3);
+check('alle starten auf 301', await page.evaluate(() => {
+  const D = window.__dart, m = D.currentMatch(), leg = D.activeLeg(m);
+  return m.p.every((id) => D.remainingIn(leg, id) === 301);
+}));
+check('kein Turnier-Zaehler in der Kopfzeile',
+  (await textKlein('#game-match-label')).includes('schnelles spiel'));
+
+/* Reihum: nach drei Darts ist der Naechste dran, nicht wieder der Erste. */
+const amWurf = () => page.evaluate(() => {
+  const D = window.__dart, m = D.currentMatch();
+  return D.activePlayer(D.activeLeg(m), m);
+});
+await typeScore(60);
+check('nach der ersten Aufnahme ist Spieler 2 dran', (await amWurf()) === qIds[1]);
+await typeScore(60);
+check('dann Spieler 3', (await amWurf()) === qIds[2]);
+await typeScore(60);
+check('danach ist wieder Spieler 1 dran', (await amWurf()) === qIds[0]);
+
+/* Spieler 1 checkt aus: 301 - 60 = 241 - 180 = 61 - 41 = 20, dann D10. */
+await typeScore(180);
+await typeScore(60); await typeScore(60);            // die anderen beiden
+await typeScore(41);                                  // Spieler 1 auf Rest 20
+await typeScore(60); await typeScore(60);            // die anderen beiden
+await typeScore(20);                                  // Finish – App fragt nach den Darts
+await page.locator('#overlay-card [data-action="co-darts"]').first().click();
+check('Spiel ist entschieden', await page.evaluate(() => window.__dart.currentMatch().done));
+check('Sieger ist Spieler 1', await page.evaluate((id) => window.__dart.currentMatch().winner === id, qIds[0]));
+check('Glückwunsch-Overlay', (await textKlein('#overlay-card')).includes('glückwunsch'));
+
+await page.locator('#overlay-card [data-action="open-summary"]').click();
+const qSum = await text('#summary-box');
+check('Auswertung nennt alle drei', qIds.every((id) => qSum.includes('Darts geworfen')));
+check('Auswertung nennt den Modus', (await textKlein('#summary-box')).includes('schnelles spiel'));
+await page.locator('#summary-actions [data-action="finish-game"]').click();
+check('im Archiv gelandet',
+  (await page.evaluate(() => window.__dart.state().history.filter((h) => h.kind === 'quick').length)) === 1);
+
+const qCar = await carr();
+check('zaehlt als Spiel fuer alle drei', qIds.every((id) => qCar[id].matches >= 1));
+check('genau ein Sieg vergeben',
+  qIds.reduce((s, id) => s + qCar[id].won, 0) === qIds.length - (qIds.length - 1));
+check('der Sieger hat ihn', qCar[qIds[0]].won >= 1);
+check('Average wurde gerechnet', qCar[qIds[0]].avg > 0);
 
 group('Ohne Server bleibt es die lokale App');
 /* Aus dem laufenden Cricket zurück ins Setup – dort ist die Navigation

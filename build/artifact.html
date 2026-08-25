@@ -65,6 +65,15 @@
   --accent-faint: rgba(229, 72, 77, 0.09);
   --on-accent: #ffffff;
 
+  /* Die Hauptaktion ist hell, nicht rot. Rot bleibt dem Finish-Chip, den
+     Siegen, den Rekorden und der Punkteingabe vorbehalten – sparsam
+     eingesetzt sticht es, überall verteilt schreit es nur. */
+  --primary: #f2eeee;
+  --on-primary: #0d0a0b;
+  /* „Ausgewählt" heißt weiße Kante auf leicht aufgehellter Fläche. */
+  --aktiv-linie: #f2eeee;
+  --aktiv-flaeche: #1a1516;
+
   --bg: #0d0a0b;
   --bg-2: #141011;
   --bg-3: #171213;
@@ -76,7 +85,7 @@
      roten Akzents noch als Achtung durchkommt. */
   --red: #ff5a5a;
   --amber: #ffc14d;
-  --radius: 14px;
+  --radius: 16px;
   --tap: 56px;
   /* Ausgegraut: Zahl ist bei allen zu und bringt nichts mehr. */
   --dead: #6f6465;
@@ -149,6 +158,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .app-header { padding: 18px 4px 14px; }
 .app-header.row { display: flex; align-items: center; justify-content: space-between; }
 .app-header .sub { margin: 4px 0 0; color: var(--muted); font-size: 0.9rem; }
+.footer-note { text-align: center; color: var(--muted); font-size: 0.78rem; margin: 14px 0 0; }
 
 /* ---------- Cards ---------- */
 .card {
@@ -192,14 +202,13 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   /* Automatische Spalten: der Konto-Knopf kommt nur dazu, wenn die Seite von
      einem Server geladen wurde – dann rückt die Leiste von 3 auf 4. */
   display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px;
-  /* Durchsichtig, damit der blaue Schein durchkommt. Statt einer Farbe
-     macht die Weichzeichnung den Inhalt lesbar, der beim Scrollen
-     darunter durchläuft. */
-  background: transparent; backdrop-filter: blur(14px);
+  /* Muss zu --bg passen, sonst liegt beim Scrollen ein andersfarbiger
+     Streifen ueber dem Inhalt. */
+  background: rgba(10, 7, 8, 0.92); backdrop-filter: blur(8px);
   padding: 8px 0; margin: 0 0 4px;
 }
 .nav button {
-  background: transparent; border: 1px solid var(--line); color: var(--muted);
+  background: var(--bg-2); border: 1px solid var(--line); color: var(--muted);
   border-radius: 10px; padding: 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer; min-height: 44px;
 }
 .nav button.active { color: var(--text); border-color: var(--accent-dark); background: var(--accent-soft); }
@@ -768,7 +777,8 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   /* Setup und Rangliste zweispaltig, damit nichts unter die Falz rutscht. */
   #screen-setup.active { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; align-items: start; }
   #screen-setup.active > #resume-box,
-  #screen-setup.active > [data-action="start-game"] { grid-column: 1 / -1; }
+  #screen-setup.active > [data-action="start-game"],
+  #screen-setup.active > .footer-note { grid-column: 1 / -1; }
   #screen-boards.active { display: grid; grid-template-columns: 1.15fr 1fr; gap: 0 16px; align-items: start; }
   #screen-boards.active > .app-header,
   #screen-boards.active > #board-mode { grid-column: 1 / -1; }
@@ -1113,20 +1123,18 @@ body.gesperrt #sync-status { display: none !important; }
   .fin-row .rest { font-size: 2rem; min-width: 74px; }
 }
 
-
-/* ================= Blink 180 =================
-   Hier steht nur Anstrich: Schriften, Wortmarke, Logo und der Lichtschein.
-   Das FARBSYSTEM bleibt das alte – was ausgewählt oder Hauptaktion ist,
-   trägt die Akzentfarbe, wie vorher das Grün. Genau eine Sprache für
-   „ausgewählt", überall auf der Seite.
-   Entwurf: „Dart App Rebranding/"
-============================================== */
+/* ================= Blink-180-Rebranding =================
+   Aufgesetzt auf die bestehenden Regeln, damit die Geometrie unberührt
+   bleibt: Touch-Ziele, iPad-Layout und Querformat sind getestet und
+   sollen sich durch den neuen Anstrich nicht verschieben. Hier ändert
+   sich nur, wie es aussieht – nicht, wo es steht.
+   Entwurf: „Dart App Rebranding/Blink 180 Redesign v2.dc.html"
+========================================================== */
 
 /* ---------- Typografie ---------- */
 
-/* Anton ist eine reine Versalienschrift – Kleinbuchstaben sähen darin
-   falsch aus, deshalb dort auch uppercase. Bewusst nur Überschriften:
-   auf Knöpfen würde sie deren Text verändern, und der soll bleiben. */
+/* Anton ist eine reine Versalienschrift – Kleinbuchstaben sehen darin
+   falsch aus, deshalb überall dort, wo sie steht, auch uppercase. */
 h1 {
   font-family: var(--font-display);
   text-transform: uppercase;
@@ -1134,31 +1142,91 @@ h1 {
   font-weight: 400;
   font-size: 1.7rem;
 }
+h2 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  color: var(--text);
+}
 
 /* Zahlen sind in dieser App der Inhalt. Barlow Condensed macht sie schmal
-   und damit auch dreistellig groß lesbar. */
+   und damit auch dreistellig noch groß lesbar. */
 .pcard .rest, .fin-zahl .zahl, .fin-row .rest, .rec .rv, .sum-score b,
-.board-row .val, .cr-cell, .edit-value, .score-display,
-.num-grid button, .keypad button, .quick-row button {
+.board-row .val, .cr-cell, .edit-value {
   font-family: var(--font-cond);
   font-weight: 700;
 }
 
-.modes .mt { font-family: var(--font-cond); font-weight: 700; font-size: 1.1rem; }
+/* ---------- Hauptaktion ---------- */
 
-/* ---------- Der Schein ---------- */
+/* Hell statt rot: Rot bleibt den Werten vorbehalten. */
+.btn.primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 400;
+}
+.btn.primary:active { background: #ffffff; }
+.btn.big { letter-spacing: 0.06em; }
 
-/* Nur dort, wo er etwas sagt: an dem, der gerade dran ist, am gewählten
-   Spielmodus und am Logo. Auf Knöpfen verteilt wäre er Dekoration statt
-   Hinweis. */
-.pcard.active,
-.modes button.active { box-shadow: 0 0 36px var(--schein); }
-.blink-logo, .marke .blink-logo { box-shadow: 0 0 20px var(--schein-stark); }
-.konto-logo img { box-shadow: 0 0 0 1px var(--line), 0 0 34px var(--schein); }
+/* ---------- Navigation und Segmente ---------- */
+
+.nav button {
+  font-family: var(--font-cond);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.9rem;
+}
+.nav button.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+}
+
+.options button, .konto-tabs button, .chips .chip {
+  font-family: var(--font-cond);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  font-size: 0.95rem;
+}
+/* Der aktive Zustand ist hell – wie in der Navigation, damit „ausgewählt"
+   überall dieselbe Sprache spricht. */
+.options button.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+}
+.chips .chip.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+}
+.konto-tabs button.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+}
+
+/* ---------- Modusauswahl ---------- */
+
+.modes .mt {
+  font-family: var(--font-cond);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  font-size: 1.1rem;
+}
 
 /* ---------- Wortmarke ---------- */
 
+/* Kompakt und nur im Setup: eine dauerhafte Kopfleiste auf jedem Screen
+   würde am Handy senkrecht zu viel kosten. */
 .marke { display: flex; align-items: center; gap: 12px; padding: 14px 4px 6px; }
+.marke .blink-logo { width: 46px; height: 46px; }
 .marke .wort {
   font-family: var(--font-display);
   text-transform: uppercase;
@@ -1177,7 +1245,113 @@ h1 {
   margin-top: 3px;
 }
 
-/* ---------- Logo ---------- */
+@media (min-width: 820px) {
+  .marke .blink-logo { width: 56px; height: 56px; }
+  .marke .wort { font-size: 1.9rem; }
+}
+
+/* ---------- Nachträge zum Rebranding ---------- */
+
+/* „Ausgewählt" ist überall hell, auch beim Multiplikator – sonst leuchtet
+   ein roter Balken über dem Zahlenfeld, der wie eine Warnung aussieht. */
+.mult-row button.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+  font-family: var(--font-cond);
+  letter-spacing: 0.04em;
+}
+
+/* Der Finisher benutzt dieselbe Checkout-Leiste wie das X01 – dort war sie
+   an die Elternklasse gebunden und blieb hier ungestylt. */
+.finish-hint .chip {
+  background: var(--bg-3); border: 1px solid var(--line); border-radius: 8px;
+  padding: 5px 10px; font-size: 0.95rem;
+  font-family: var(--font-cond); font-weight: 700;
+}
+.finish-hint .chip.first { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.finish-hint .label {
+  font-family: var(--font-cond); font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; font-size: 0.75rem; color: var(--muted);
+}
+.finish-hint .none { color: var(--muted); font-size: 0.85rem; }
+
+/* Zahlenfeld und Multiplikator schmal setzen – dreistellige Reste und die
+   Zahlen 1 bis 20 stehen so ruhiger nebeneinander. */
+.num-grid button, .keypad button, .quick-row button {
+  font-family: var(--font-cond);
+  font-weight: 700;
+}
+
+@media (min-width: 820px) {
+  .finish-hint .chip { font-size: 1.15rem; padding: 8px 14px; }
+}
+
+/* ================= Handoff-Korrekturen =================
+   Nach der genauen Spezifikation aus „Dart App Rebranding/README.md".
+   Der erste Anlauf hatte drei Dinge falsch: den blauen Schein gar nicht,
+   die aktiven Zustände rot statt weiß, und die Hintergrundstufen um eine
+   Stufe verschoben.
+========================================================= */
+
+/* ---------- Aktive Zustände: weiße Kante, keine rote ---------- */
+
+/* Karten und Zeilen werden ausgewählt, nicht eingefärbt. Rot bliebe sonst
+   nicht mehr als Signal übrig – und genau das soll es sein. */
+.roster-item.selected,
+.modes button.active,
+.match-row.next {
+  border-color: var(--aktiv-linie);
+  background: var(--aktiv-flaeche);
+}
+.roster-item.selected .check { color: var(--text); }
+
+/* Die aktive Spielerkarte steht im Licht. */
+.pcard.active {
+  border-color: var(--aktiv-linie);
+  background: var(--aktiv-flaeche);
+  box-shadow: 0 0 36px var(--schein);
+}
+/* Der Rest des Aktiven bleibt weiß – rot ist er erst im Finish-Bereich,
+   und das entscheidet die Checkout-Leiste, nicht die Karte. */
+.pcard.active .rest { color: var(--text); }
+
+/* Einstellungen: weiße Kante, dunkle Fläche, weiße Schrift. Nicht gefüllt –
+   sonst konkurrieren fünf weiße Blöcke mit der Hauptaktion. */
+[data-setting] button.active {
+  background: var(--aktiv-flaeche);
+  border-color: var(--aktiv-linie);
+  color: var(--text);
+}
+
+/* Reiter und Filter dagegen sind gefüllt – sie sind die Navigation. */
+#board-mode button.active,
+.chips .chip.active,
+.nav button.active,
+.konto-tabs button.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+}
+
+/* ---------- Blauer Schein ---------- */
+
+.btn.primary { box-shadow: 0 0 30px var(--schein-weich); }
+.btn.primary:active { box-shadow: 0 0 18px var(--schein-weich); }
+.konto-logo img { box-shadow: 0 0 0 1px var(--line), 0 0 34px var(--schein); }
+
+/* ---------- Fließtext ---------- */
+
+/* Barlow statt System-Schrift, wie im Handoff. Knöpfe erben sie nicht von
+   selbst, deshalb ausdrücklich. */
+button, input, select, textarea { font-family: inherit; }
+.hint, .muted, label, p, td, th { font-family: var(--font-body); }
+
+/* ---------- Karten ---------- */
+
+.card { border-radius: var(--radius); }
+
+/* ---------- Logo in den Kopfzeilen ---------- */
 
 /* Als Hintergrundbild, nicht als <img>: so steht die Datei im
    Einzeldatei-Bündel genau einmal statt bei jedem Vorkommen erneut. */
@@ -1186,47 +1360,63 @@ h1 {
   background: url('data:image/webp;base64,UklGRuZJAABXRUJQVlA4WAoAAAAgAAAAvwAAvwAASUNDUMgBAAAAAAHIAAAAAAQwAABtbnRyUkdCIFhZWiAH4AABAAEAAAAAAABhY3NwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAA9tYAAQAAAADTLQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAlkZXNjAAAA8AAAACRyWFlaAAABFAAAABRnWFlaAAABKAAAABRiWFlaAAABPAAAABR3dHB0AAABUAAAABRyVFJDAAABZAAAAChnVFJDAAABZAAAAChiVFJDAAABZAAAAChjcHJ0AAABjAAAADxtbHVjAAAAAAAAAAEAAAAMZW5VUwAAAAgAAAAcAHMAUgBHAEJYWVogAAAAAAAAb6IAADj1AAADkFhZWiAAAAAAAABimQAAt4UAABjaWFlaIAAAAAAAACSgAAAPhAAAts9YWVogAAAAAAAA9tYAAQAAAADTLXBhcmEAAAAAAAQAAAACZmYAAPKnAAANWQAAE9AAAApbAAAAAAAAAABtbHVjAAAAAAAAAAEAAAAMZW5VUwAAACAAAAAcAEcAbwBvAGcAbABlACAASQBuAGMALgAgADIAMAAxADZWUDgg+EcAADCiAJ0BKsAAwAA+IQyEQiGHK5IGAIEswBooPh/j/yj7srSvjv6v+z/5afL5XX7R+GuVHprzJvIP1j/T/3/8kPgL6kf0z/w/cA/UL/Rf4P8b/it9SH7YeoD+ef3L/mf6D3a/9V+0Hug/vX+x9gD+a/3D/n9gh+73sAfs36uX/A/9n+d+Cz9rv/L/pf3/+gn+g/17/j/n/8gH/m9QD0AOxz/qHns77Pnv47ftb6p/inyL9X/t/67f23/v/6P4Sf5jwieY/sX+x/yP7d+4v8X+t32z+yf5H/Lf4D/2/8b4j/0v2sehv5R+3/5L8rP65+3n2Bfif8g/tP9e/Z/+6f+X/YfRV7P/zv8f/l+9B0r/Bf7j/P+wL6xfN/8b/c/8p/w/8F+6nsgf2H5Te6f6B/a/8/+Zn+X+wD+N/zL/Jf3T9uf8F/+vmH/Ff7v/D+Qp9P/uX++/xv5H/YB/Iv5//nf8B/j/+p/l///9o/8F/uv8V/qP+9/sP///4fhN+b/2//e/4r/Of+T/Nf///3/oF/G/5t/kv7h/kv+p/iP///2vuU/5/5//Nv9hv9x7lH6kf7D85f3///7rHvi7M4D+5uc+X0n7H/0HUYfAWKcpnEMDBKuzWK2r3Lo5tW67jMd9/Ex81VTahUWGzrdUhxlGRTc9VGYYb+HHx7Ad1ZlVZx60uoVZWcknOxCjiHSz/+R0YhlVkC5d7UF4ph8QRLLck76lTVO52tyHHNkn8QspkQj+r7J2aVyV8aWApopUIYor39XPjPNo0NcyYxqmi9K6PiFg2Gs2I3kqfovnH4B7yblHyX1mzDSX7jynOygYHiNYfg6VwfYsPP+M+3KLlAp7gEcO1Dr7hm3uMHhNKRVh1kMYEGCiV7ewSoElT0ylV052HtAcTW+LMVn6BDI0f7vYvYiGA28opaxZA7pmJx5wO0Rj4OvTtOffxYSIdDdE87RvbTp1ZTLI0vuFkaZaalGjDHPbOzp6Kbq7aJA8/fwChlp9cD6zv148Uus0O4lQLfdYTxfLqI7P6A1E2JUqQ1yrKUUOG5FCCB97xYy9ZYjsLHYyfh2FAskhAr757WRmfPNHJ8q5b5RmSPUqqx8B25gOShnDaTtqAtDvs/D4TCUjYDKNzEvnHWsPiv7n+hK7hH5lqphUemvGODpBfoz8qE3nKobHhuoIdBAjabHr02FMvAghCWbcm5bwAm9JANaZ3qdqMJaUesd5J6Jdrya/lTRux1oyTRPouY8q2+EPrcg+t/rSmkH+I+acZX33zcn5EmPvTCp7hStv//KkiDdmnuvFkJtrAsmVeJKgD87+aobnctV1pK3QZBz8NBEH+RKQkAgPVNR6vvp1EgumiZZ5VGS47Mm63uOjDMbLhxURLllJoktpJrVsMYXwHaz1Hm7KcM2/sPHRf8KMg+G6meGAqztx3cPtCAvQv6PHtHk5lPm603fYWJsz2voq7VcF8/8FFKtXx9bYJ/cOfHgJhVwKz9DaWj956uFeI1b3H8485mVMmgRY/4zeX5BiJJj/M0fiiG28xBiitIAhgjZO5eXdniBRSzx/Yq1ePpuoh+zE6ouAWcue/vPy0W8Ln5Q0+uJgPH7vmxGoTYZixYcjEtUGDrWYi48PjUpXPt78DIcZPTeEFIXvROaXnefAzFdo3kJYB2CjI1oFWiK0LHZm0NfvRfs9DvOU2K3XbW1dd/4TKxp79Rbdx6AZ+/3QLxSbX3uwDYGjDbLa58Id4naJgMhl5QAA/v+rI2J0pg1WhOHIeOQ9IamlaUrR7jCQa7svNLbF0PkXX0NiqlO50qqo0kR5qH5k8hKtVkkKik3Uy8+DBoLK2VYOXiybEX6qTk3Xvk2Pvf/8dkHgVqoBOkJBY1be0GqfB/TztY63atefju1xxyw+8uTtPzX9BwxPsXlGmvMmg/g0pm+4rshuVLlgh4j0eiRrzFZP/AiWGiO3+UhMD+76ozYmfFkImrLJNWRhG878Yi5URd0GbCZ4WxYLZZOfYHCE4a4hR5mwk079piWGpC2F5kBpr8ohETEo/Ub03sNZygL6++W8YTuMztp9wdXR3W1QuEvF5prYITMGlmPmmf0QIhYshe1FatLOOdXxz+uzIhy/GJ4XXIkmGRXKYVBWfFCPDEvv0Z+v5oXUwJIRSBj+tfUtRk5A9g9H4jlVSnwgD99VHssMA7bfVoSwb39eGwKOtmbf04oJgqiT6aQTvES6Ii14lGjwyT0laIgI2Xyr+19v75KalP5JlSVn7U4XHzQzFT0fq3sevxP5TuDV8Y2GZkVBhk1k85MKsmnz9n5wK008Mp0r+X5qK1B4DNEvQbkpVL9uI5BmT180TjhYznQJVTayyUmZC4Z6J3XdOwoE2p50dq0ycc7nKH2E8s0YHy0Qh/qNCKK56ms1VWPLnVpuTeN+yb2Xs8lTn2zjyCr188mR3xkQ8Fp2K2q7f0jadnTcUaXpvaccfjhIlx4f4YvMDj6yDM/BIq6FUEKCZ48pYBhCwoxHyZlL+KTQHXD+uioJhZULSR387PWatshOO+B/r25WAPyzZzYEWanWdk9U8jwa0N4RR9S+A93UTD82WBrxYQA13hyKi9DhHL4tZOEuJNf7DEftqJ3bgOSf1bEkeTdPFogxUjVfyyObFAUxirxLCDAfTPE+N5kpGv0lLyl35TERXDJUJN7TMfUnS9o7m6QwvmfTvro3Ex8F3/a2z9J4OxMho/JXu/UuYNQbmYz7pUFkzcx5KWypxxrNt9IzijSzJdb5/R+K4CAY22prD1DUqbnstHmwjLJzwHxFVBIKljLmR8yYnZO95VH7oTXa0MPO8jLpJaCLmTRsmgVsis7bvZwHfXH6jbwo2eeGr/BDQd0UeP6EzUaQyb5lVLC2iuXhl3cHVhMQRjuRpf4r/2tXjAT9lcfJl1f/jToquftCgyOCEf6VRdper5Cox+ZKSsqxsQSgE1rRMZAW582LRrxC6GZXW+cl7TyufByO68U2i/a4RKl3Upv5+DP0xm2MMhUpD47z+N1GtQbTKmZFWJfztlljo+mzsbRYCiX+A2koIAgeOoZWJXCcgmDWLoQ65E1Dxi0BurEwOjWrNP3V59nAtXaXUjCE+Ofb6mVTyMkYHkaooQ0/5VaE+DHlipyA+/+gIB2cdHoUoLgJwz7M9swwMHna9DCv85GNhEcDo+kHI0k5MZHXwObtXyDJzIpp+402XBaq8hcXIbVPa7fqo703ku4hXO6niVXXHnzVOnLBZCvcS7RZxx7YU5CGdl4BYNTbUnTuj581OA3fekdCd5qEbPeibGIJsHYcHMCp43exFi8qwcVQTwtRW7zeY6ShAgGkYJs9/1hcHL6C2gIEZVxO99TTE5Catu6xSKCrVlZ780+QqnIHyBh4BA4mhoL5kZCTeDMub9w3r5UScyvEwVZ8lMgvnjIprgfmHtvrtqUlT5M2seKNPcSGfTzp+nwojFiSsLq7N7Fbx9pvsdfxnKDn7XfZLP7Djk3eqrHvElSmnv4cpUjG6xrO0byA6sA4rj+NOuyefxjn1AjtziPpVrJzO1b6UrA0hpT4JWK9Q469gfASmSC18ybB9Po3i5/E760mB5wYhFXa0cwcOnkPNL1WptczqFO7AKKagaaaabGpTQ8vphd/4m4m5VVXQHaXk9Rjb9IlS/tnXv6LTXsztlgw3M5FUJxd9qENeD0EnjqMTGnIn+GoANy13fLVpazr9Zk4hT2prpCgdm6f6MfFarQJQ1WpGwO7Sb4XLBpkj5hDWE8T/Q3BgNhG563jvumTACLjYVGFSVjEs2b8suMEN7vhmURyvuoJcvblvG8jLN6uQ4XFKBx7/tt2cmRIlaUW+KSEt2TVdFCNT53fyC5ny5wBV01hY2D2lTQ+xjdJdKtoe4SP08V/ptvf0G9X+yuib1XQnhJKzpY/YayL4SS+27aEnuz3GDVLsNsmFJWNpz0VfX1ThkEKccLhb4GHdtTnTRUGUNI+9ojd8oSGLBUtjjotP/Q1unSBGqSRzX0yqkYo/8HPzX6oQqhJB2lQa/Az/6VT3BYJAbpBCDycUfPyP6F0YpvQsAHxjeLRlIhV8CggIj7JAA28GSPT5xE9JdBa8NKotxJ7i138/54tqwY5s4WPlnRRkzmwfuQ5m5vueUweaLH7OuGH92nANQ89EBZ/SnT28UCTQpfA6PlRRgsiq/tNjwlWlngBgWTmUmQTIia1REl7cGt7xhnRCYcRiHlWUBjjNLZbDOPH55fivXkVxmDlwXr7m6baWQ4T3mkOnmOlH+rmgYCEC6cCWj8820Og8WIorOyOfo9mAxa4l+QoavSQC27f0eYqq3VDe4Y5sbzJY8LojdoAMGbPPxNOSR8oXhxsnbAFXv+EUEgHsAvyCCMiLkgR74QdRu8clCxt86Na7/u/Y0Dw9esaBiHJk81KGQdM234JX/ZQEz8asCclDbKaYvlO2MWzdH4FXrZZNMlvQ3A5CF9gRyOik+ddp5Q2vvFda0NVSXsyaSxP/oyK49qW73c0qJI+4TQK4F1SXxyd5NC+SpI6/irvZp74wgAnQbulQLfWzcZXo3v2lQneHdvfXF9odcRsj9MZ6PbySoSNsPPNfuWnMfGePL3DexDhW1giVeGmpgbbFlJ9rTBT0YECMJcim9sMuQa4hQ9eCOxhAY1Y5+98wQV0kPSDG2vbdMDi6oSKsUCaXD3o7RHhaakZXZZ/d10Kph2Wb/Qu4pH7mEoz6pN6NEaAoyx045xM8ytb+aHJXOWeLEypAqHEl+PMdOxUUL7t35aTmNUzfVZkHbAvla4mhYYW4bFeLrADub2/elEIgMsGDNDDpracB4R7eLcTW4vUljCn/PB8gRtuKxIIhrJ7TWXm/mq4n3PqoMa723t+xR2TOp5995zN0sa+SNf6KgHzluwWfFqpr1S9VRBvGJ2xIf5ZO2HR5T0TosDB26V7jbL1wjczLgzJP1lxAqWGoKwVC47w6hxCY93S+Wxr3TnSC3BhSRDdMWFqQXKxbZAvJnLv0b1wCS1UaNIen/Tss4zrV9/LTSP+La/ciryJw5GE01kn8PLSMPY9v7R2wCdP61fVp3Xaunr6lfw5AAfeuGTuPgjowKSwCloVWePhTKQwkJmEEvHJ86AjyCAf/WPBkR4MEACVN0JEHj+6KzS2E/qzxQm6kzGDnj7QTVjVgAxuTvFb5fyVfN+WkB2X8NBqozuzGz/D6mkesWYj5PVaf5p+jMNSkmz8n80SACUs7pc6MYLDtTqTIBJqwQUeece//sYGHz6McY4v6h3WNFTlcFiykjDHhdbKABZxxva6DD0EUB83MQ5QysCHSzQjyX00fcbqf3E8T7+B0k51A8Ua+f3e/XPghxTSbYe03WrRxWcfhV/znOXdcNARl6JQ7oRPHQZOqdShZZFPRs7Twh1shMCIXvmWQjXONgaTAv2R6VXF+f8fwlzc8gKEEmi7yzQwmth8+2r4TLBqWouB0UJV2G7yHESuijveoLOR18NwdkAj/fe+uGnQq6mr+KvAvR77HF3WT2buCQgjjbMY+bPnx4N6C36A73MdU3Abl6BqQr5SPEH1JgZbByEU6oj2+mJ3tYRJ79Vue8iKpwfAake9jeGUoaMYkSSuIbcR3aHxjCblrcQ6dG0SaXhX5+gNTqW3qJqdCMiW8UagwCrSfc8qcZPPWrfoe8xVVBfRYyGMO8cYaTnMy2vxioVtd0yMDBM3QLbEB/8aOO5JHM/A/KpZCJZxqI7/yBk6GMrBiqjFc0yD1nC9JZcfQVeJJ042mruNzqG3r9FUBSluK31PN9pVDjCuc763W7e21HRRHs0xlX4rYRNoteuWBSnEtkVZnd5tG18LedGwA0VYi8bQnCFwQqNPLo3DJ/IA2BaelNAOHAT1LzeHauNOgYrNJyogB0M3qzwRALZtHUbRTBuPPTifbRROzjPCcBmgaZLkbLonrJOzJmmaAc2HeOfkPeePAEtl6zYtsWjgfWSa4+0nnOoZuHkz589THYGeyVKjgnQpKSAJVUebiK52wTy7ZpSXPkluyOueMOvA0Zxwcor4/dIVJBastsD8WoXY8hRGztMLvcV9AzcbJMUYFHjx5PaOEroVuf++NVIlHJvDNByTlnd3BC9nsRp1lvYmq4BYmEOh0JBaslVYJjQuXoxUWHh5zKJ+kYP0FSQwGXk+y78hPBeQ7UJgY0Rr3GgNESX7Tvphfis8M8B7pVnlEXq0OAbhQWGhGeIQuocC+SmolSMm9esc9lJzWe3xtuS/92ZazAR0kyNehJ0A6ugAX2DEmxW5xTp2vFKOJ0E0qBH02UBxCSFnsniMJqnY+IThC9N3M6GgjTu2G9CLYevAKnOMspMcHMTg54xFQwwGHhwd8kFUiN9vvpl0gPtHDFdtcucd9kZ5Uk9JnuYojwQ6km8Jpa3mjvGigUUkn95pQRrn1vHSAB4EMlfte8oGa9OmcrRcOk/YJEoIGqyWaWGEMaDY8voB33swLFCGYXD6KX0StQl9ejcd9SmmzZ2j3/kwiCLFyPIkTpXahK4nd/Fv48YLpJp89el3VmjCwgM/NyryY3+Sq0FTG+jRO2RWuTpBa1wxyHV8flyZSPMyIYNFYBSN1r2ZmUgKXYmq3pUTpSY4wRR134nyMyZ8Ux8qAJWErQhIDtJLCE1hQyWmKAFSG8M95msGsBKAsj3jI9N6cCYqzVtdw9sUB1v+V2sHUq1y630AVeFrRhOUFRaJVxonGiRs62JfndMCFPqcChukPp8/E7SjVxOTrYbBU0eMKKrflXeH4kx8nBWtgghdSHfg+nfE/gnoybIm9EICX5yVAddgifhsu0hvKZV0DhNnIqr1xcbt+H/m4ya9nFEa/OcsogLxKZUZ5Y/Fde6ofDjDjtxmdF9NhEifQgtTkNTVIO6xeEFGb5M1ZuEpbLXyWzsm0u69YDCgLaXxi1Wq1fVLG4cO7U3UV0qyVJkxLpFnzFNsEZNZkXL9g3QV15Ayiyhq5igLmpRtQwrz/ZlFprmAgtgFfOHJEdHNTb17BnD9pidR6xWEF93jtAPL+2Y8tAyY1gqhYxwj6iyty9xfGTrGoJKKWr0Ub84OgarGVfDjbQKTnGy1TR6P6RW4O99jfl8N1GhMxgD07Eq5ZMDo+/cso7OLs6nq6cWNS4Nob4hpWptnPi4UwQ1SLiiFtE8NXRYcHOiEWuKgJFx5T0P0eFAa4EaKbc3b/Vu+58g0KJ/yr7aSO3mCo4FDBZiFlS3WtaURK1/Yb5bQnogsLeBUIGWGe3H+GkjwLhkGDbRvCxvGjqNVKjcII7ct8UvGxc/ArMJPj5jcS2BAjNGFIPp0BNbnAGMhASmUv3xqnFmGU5VWUeWJT0JoZ4eVibbREuIFj1l2B/OGzmCR1BaIIkjRW8BmXCnmZRTaoJdxL7serUZDR81F28koQEFt4s8bbRybXtXHucnz3U14pFoOcEZXUu0dU4ISu2S/jc56PYsA1lK6sEUMhkqH37tMSoiixZAM/Gc1qKskBw8WqVCqrSTv0V9O2f6ePevE9eGahaBGOp+6su91AV0rv7qsWsF2VvZuCrJSwfaZGUCK/otkT1FZJYZN3NCzI2d0FaOKWM2W8yaaOBTz0t/z81FaVzZWoVeeLPlXECywoKZwsvgeTYXhvLvAMwQraZeUcItkWuFyTCuN9M1jrU2Pab5IEV7BDC9arVD+UXz3tuLkkoWieqKTNcsXn0lsh0THD1qbvi0igHLna94MRXbNduwrah3Hwm88/5sDStg4S1dOzIGEPHDBigvNQeX/5Sfsx5FX/N4dDQoXclHyteD4e7z7vZ7qmz+2Agu6MatyJhzBF5ImBi5Du65d8gers9VxfhN8N+IvNAcqk89d8+0tOJ6G/rp5atFShs40peaYvdI7DSrXkq69zgpOpe9jXve/d5TvwxE4sTPx3EbSmbB6S1yaaS59LUlc4uYEhijOyq1HBA5UQeGDxiaVhr0cic0Vwx68sIv0qaxoE3T5pWUjXttcqQMWtCU9pbXoQshRAgGZBtjN0QVJr+DS07SSTTMA6Du3ZfLhqOcuecCauRFtSsm3NucywRFxrq+XRxO3AtFCjoMSvL/p4cc6fiZIbNMUjVcnNlqic9AZfzPsqi5Gdan55FKSjrBgZNzmU0eCvdVZb48JUkGCIMf7BH1WgXJKp47wYYNaw52GDU3yAU718pX2mFaOXN+iyYkHDNPu/CHpzRjLluWofRhpREdRv9LNCtjMFEOUJGjmfzObIpz6yF7XTxANfHhDafEYhCgLbOcOu0kIZ+RzgB/sfEyvuXtiv4sVmoNElbol24GslCiwPvCaEsPwCP1YLQFeelRg8c/qa0ew8JYt7S/YfcDL+SapzlGSDyE42b101UU3d8JcfPg3WUywVEVcHIOsfs6xqwmvR0DeZae86Jt5OTp/8cUJhFOdiQS+Hhy6KyowYvOB3ZRuYLMZGVW49ybnurz+NFg79oIXPAUpWJxIKYo87o7cTILBXgP/ikYcryWX/kBXVl8ZtWYVjnLbvft1jD1WqMNcDjPgnBzCaCGx3TNoih+shZvfDqYWSpJ+LUM99Pa9xkFwZ4zw5GzOgavrX4GLFVBI+55oJtKSyTUSF+JbXrPchqgt87HSKrRBlF6io2/DpO89O2xciZfPXzhFd+DNIjTPy3pnz6cgwtxTrZsH2q214ai55YJ17N/wJWuvzNpppnUFpYUbFj2V9rqiC9iNwtjtPjZa3PaU7OVx+DuYFAHsVAwFx/bQ8CIEqo5gMPT5tKwHXgCa2jAv9KmPZHY9NwnPkBtK/D5YlvH04a1rfZi3eQkJr4jT2NdwHNwKiega6YUlna+VH0rj5bRLsR5Qmecvzya5mV5Ad1m49dmEXlwOUD8Udc21Q8qwbMmUdXIczMxZf6AKEXfLoTBz9/eUyulIZVuiHgJcLbHauH2TP48seyzLv9rDTKH45KEbb8ON2dsSrBOhu/woCvrr6bJZVHuVuePZaH+aiQAlEAh3yj/H1VTV1j3sBn7iznQnJ3qJ8T29jya/CwxWeTh5voz0y6YZNA2bQXq0e31MrTnhs+H8g5rwKsuDsmevkEQMQAocqzpOqYM7ihMKElDn+zjgXtONv3qmsP8XIKcNS4wAs2BCR9CJmzcvmn3zFMTMesh2S+yBb8GQtowTaCy+nmGFk37kStegmNE104K/hTqIJ9H9LyOgWNjIpFKsZz0fJxo10uTRcR6Laqyj+O3QJbmbgfodK+Xve84BI5dJrFjN09KD7jpZE2UR0KW71UcilZrjowncvTIZpu8cSc+5aEXmanXgjXjI0tRAnEn+me/FwETfEeS65TOwjilEFA0y6wacW9HBZbK5NUMtBfz0Yj1JBjwoOz9O5JC3pcjV9/SmnLhqENd0bYUZSU7C/LfsjiL5BYmI5OQYL/sJPPh/3eC3gHm6r8phGsOGB0FSGOvgbb4CkUKHdiRZtI/rKxEMLeehEeatLUXqMclMMBeb2T994xmloMYWAk7Ab9YHbTKSFTbTlpQUhqfohzYR1dWVLyrb3sUeYT8JNrGCvFVrIFk6Skpz4hof8UOIn7yMZyJrm5u7SiDd037bkO/uEl+NWNC+xBc6JoYvjUv0twFdovY/REUSYXUD1hc0Ejgs6hWY+G8OUJW381B1PvJDnIra5rfM4b+kN3Iaxj3tNHEeyeU5F4H+UHTWti8+qn6StQFcsbyOm5SAvht44+tTmC5h6PbOASzGWMc5gVcF0TkT0iyHn5Wb6GcsWe+QVpmh6uYVxDkKv7EYXSPUfGI2o5s6ucaIOxMGS26JeL9R5WDoyClm6hDivgnRFt7NmnFiDx2g6O7sM4jl6N/9Iizu8n/xOhvCodXmnVjuhJKHK40eU68slF2neJSZhS90YKHtfEjXNz8K8gNOJSHHuH1cokM41pxS2wt9F5JpeB+yKjFmOXToL9aty5D5Ep1xgcAfDve0ze9/e5MYjLohAjnjSAdmoADGZ2/UIkAlVsvvkcHX6IdikBs3+t3Wt+N/RjcH9pQjR2McPFuGiqfvBVG00Cp7+ytjSDgywtMidSM3bMdHNzmBXzpKdQTyFUs1sAto0LfNDf0Ekscg77llhbkHO1YUqVD/UnTBSODI4u0k5LgdtT6hTU/MAuyk+h3kEzrkz+xKXwyLtD4AQkEx8khmeA/iHjPLX5/k8Q/lNSnYBBERY3L9wn5sWtW8cQXvE1xENoRquL0UgRji/SxJlJ2QzFYEb4a9uWiCj2c80/6FT0MQJ1JWlKirqlnj/BqsHJU5lAdxGcErW5kHpkeePFc5WwqAD0fC1rM/vzodeU2fhfIG9zttZZgMNNsYhArRQLKFCJ8stdX7d8TGgLVr4n8jwJyn1HmaMpg1p2ccDE93SJwmhow6jvHwlUkDijI/CNpNIEPWH946YfNSJUOre4n5JCjqRdAcs0zxXK4pwrN1wXbzBt7wL4ZOIMmHGk3iLO+IyfCXNADmgUOzmG0AVvnGneqa2ScFldjwZ9w7r2bFMKGhAbNPCmo8iM4SBZUcY87Gign3OOw0nJ8cSulhPcYHBZRSvndRC1BkX4u3gpBJxvm/WOTlJR2UushZ8OrvcSiGAvmeALFhSjsx0KDTo9BsBN7cUvykEyt8lomBRjeOuGVBDpIdk0WtPv3biTAKnChlOahUD3L+rKlcLuQDAGhJRpR+5M+eGU71Dth9q3wvArPu6HFM/jGd9BZgLN1LFUVeHG6JlllnX1NvDvnlNacxEGp4QOCXVfeK5m47bqObWadwujSBCZUxhV5wgb4IscGoYxmAymZ7tpbiNgHZWu9zWj7YByKPMXF/ZGvMEpBIy3Hc6tSp++rLVpWTf+njYguxeDijtXJsPtbaNjudhVYB2tk8mlfGI9o1jnQF9VUPHH70NHnxxKCroiaHlnYT87ow02F91mZipn0ghB5wR9c6cIDnKzCPGw9wXuCdxqUYSNCNRlUTTCG1+LUSMS7dj1p5XDnBDCcvWysScHhbRiEZqfHbZlZAUXX5eFbW6seiwvX1xehMxT3/HhnRZ4zYhWSQby3UfgD1LLQ4d0ID6TD+IuvX8YjuYc+eAV+BJlHKN/ud570A481N1+FXl3G3i7ojrh7Arr4stK5yRog84XSz/HU650mv/0kNRm8OxRO/c6B7J+KkD416DxeYigVJrczyJ6JJB7SpcSxWUY7Np3DTThkG5393ZsxIPwijEqFArPnv3hgfhuUnC8siVrDlkOJXgFhigxl7bbcsxT4Eodo3cAiQ5jTj1z0OJTbfIo6jVRj9rEsTcYrt7X6EmvDchSDHeCBHiajibEj561/sXVWXaqrOZ2Szq98/s79yCmvdio2HjfVU73+NNStL7HAAAbiWDyUsgs7ySG+VoHDmktyqXo1/kPyMNhoJpsgf8NbIQN7T0H/vjxWQwDTtBpYnjXPQUYOnreGDiC4t8eIl4z39C+V8W26E5T9KP0QKeTZ8pRhp3b0aH+LbeeGZYKg21qD6kLF9rS/ZUfiqAJt+ykhv/1/RproE9LEtH8jm4J3pbGb7LRY+iVGXv1qXIFN5R9Wgopt/tYfNS+My1NYkVo9j4HaDL3+0oeonDn24TndZuP8Ja7E+0C/v5RBGx++ueNX+9XlMn7pMPmpEaYHehslg79RJT3vYAcafGnF50ONXy13eviLrLUDs4VX3WQc6RlRd9xVEW0Q2ovlyQu6OAIpHGJ6feP+2w/D5rD/ECRDU3nzZnBfXJWqGMqqSCLxnHxUUWM5LzIp5P/j3CWWFq3ctTwDRe1EXujn838aVDic8zgl+pvBQ3+ECxtpxf6sCGkIi2H1wBsni1QspixbGNkp1YE7zVEvy72Q2cFcckSSlSK5nUqpfgEZHEuldVC5xphYBpLv8q81G7ZL8mYEHEIoYqTOsdVPG9zVnPLf2x4KrfMsrSHSSh1o5sf287/lqrw/eDXi+SJJF/8uAW+wAZwONwhxjOyQwGka5irakzd95dPWAUvvJxo0RMbYubX1GSK/s0LV3IzCNn8ehcGAJDZaykde5ffWtATYJGklCjfGgXI0OYzNKNMmdCEmA1USWG+KgEABMfphGJQXSfsaIqG9rLjVxHmZZuL7WCd2tWqDQ+2qIqL3+ABgcNRZjd70B1mgeWmVM0MwndSqvfjHtugNEFiQunbvIOP0hbYlWU/LuWOOZs9FV6uIe48fBLVGX1F4U1EltptidCjKP2/BywMRXuH5DUk6lZ9qjJ1oi+TCX4Rhp/xgD2KYtV5F2ZUMxslPGA94N/JZ2cp4yeFvxB+BlhXYd+9+OXFrz29JwWuSQ76Hbz8hxJ4xtF00UvfFT5BVl8Jt2gawGABFgzpEnVZ5dHVZ+HNLLGgDexuN+PJWHdgBDHw8GjXqAQbIsLs0pHXtb+kR9Jd3xGQsAtrXPBb7VbrEtyXYDMZBqBlRUiNfsFuV2tGp6AXL8dbGMHwqehpLGZ13iTIBLORSf6sqy10ViUxy7Y9S7U8Nh/9VTQCYCwFJzbH3LWSB0Z/G6Dnqd6X6tkHzRLAi7wuo6ZTqWAS6UxWpfdiHHxtRtcqck90WMk2EB+nf2uNPugyE5FhcGqsTz5/bXl99u71desGZYTrmibbqoP6+VBwiS+Z1ft/QTwVKNu93xEsZMKNtKAx6eXcArknnEoq9dY+eeetrxnIcAgJQaDLcKULodKrFnXNUKVrvCT6ivdqJ/GYzRv5J6dBqOgAIYRvhPU0GsC8pD6cVtcmBKujeKP44P+d05ABeTN8EwM2kMZnZzptXIWYywfFOMHZrywQOEa6uxz5MR3K7NGotGP4kgj1JEpT013LzSmVJNGEfdCL7CQnm/NHKXl5eUTNI+Z63BQmeZRPv0wLwUSmqZpf6bQiblqSjCvisbzy99ueOoXQKiiHKtBdsJ77s8P582mYIbHN7+K43D04T9r1q2YecodKJh02Jt8vjaMW7uKjiCuFdlFu4GOhJbm28t0YjNNecrONOkRM6AuSZURBxiBupcTWIpnhnt8LB5YOLR0GyLuu0h9/804PBpHR1lsyXTa+ewXD5fgttUy2AlOC6fDBcNY46JN/JkNS/cCKzauNIrQDVBekxejYm95WfKwobeDAK4LSih4feb2iHJIJFhtpt9Gs3jAglAZNTdU8zx02AokV5zYF1p2HDSPDO87toky6nbVb8wPZvZ8PObtpvazUeESz/MQOIg5rQkmL6/r9emxlKMAfhBdfr/dLEoBreixKnHdfv0dG9XAD8ZujrETvN8AbJWIKn7pctlEupRPt7o6SzNMIhw0mWgd6xjf3RT2aUOqly/FFtWrBYY0v50/6kPgIBGOM3gTYuMixtRDrq22m7P48Q8fxQ5OamLhE58/X5l/KCztMET0QF60JcsxDlbn016ma2TLkS4yN+U1A6esDus8hewbcStnSismb0uAlltl2VNnScPnI2IXKrZMr9YiPh0UqT8ImYJX84wcKajGrK2YLsTmSPHfzJRseszVhyEVBXRCKWiabun/+Eqvcnc9o6A35d3Q477YhAEx7VSG3SwlFbFoX7jO+t3Me9sZW7V5T28R1axQOS3PL16MA3juxrmRbVXzbpD0gsm4TtbkmwQe5359+v5ps6/1J1YyjC0tm6EhN0BOGGL2gQBMcGpXjTmuv5gZxqGkMNmzlDGuDAYu4XPNSYoW5q5AsZDhiwbSmgSQMDs46E9WWzGMEinDyG2rokS0t8ZoFeAT8I5mRbsPNBqX2sIJHGpsDF+Q6FSUjlvqOJmRkmKtZuIt9GXDdQ2HxfCyGQPbiFWpNByLqIOhM7bTKKYaUj0VODWDFQ3gAYq1abxD6/cxwGzG/0wRzPcMhrC4jRL42w3+gwsyoCExOQOiwxt0ANWVz7fZe63fwcUkTaijA85H7nVHupX5ipUY2B2zXTVsu/r3LX+PCjHASb9JQXovKfAxQs7+++zJ3HD9m6f/VNCvzRIskzKGqbLz1/j87U/yoVAuIDQiR690IVpz7s59msunttpnWh1SlVh8JeeAGFdihdlK8A/ry55MHX8degd+tpBLe3AUJCnPA/deQPFLYveT0kZD3kOAT5WbiCfhMOSfxnBr6ypie/ShBtMnGqZ4yLlbd40brtDORIqU7NzHBcJZyzw978hl38ihUR9wLPSXyiD5YIuBkJykzSMk7rb4y/lXu6ThSt8S3u8NB5P0KAba/WIs3ePZTpNHHWEM6EKj3C1SmgJjDVqfj4n7O7i+FqZ7bZNcUprNtv0xG8Jp0azB236vgh2efa6g5LRcn3ymP5XNeq6Qpkk7KE+Vba1MWdy0r6hRD+Qyb/w2vO4cjsZMDE3uRuWhq3yfoIrjwulxYQuNbw1wDqU+3EPoDReM/I/RSCYdYDjuAQ5GYKQKXW05OfLXrKaBzAoZrK11kYbWR7uNyyoHgwQ64pG80we/JN6h6XRN+XBQCI4L0p6Ir2R/sHBcPs4R28F0VMuvHUtNkuAUdaX+lVqsAZT5HsA6e9zIe/f4P8sO6Ue8qNIhzdWh124uq4wQ8nZ2N+bG0ANhU39hm9+fQ5+G8fL+BVuUWFz1Vz5mU3DXmvP33gciGHLY517b4xUuubnF5vjjSKHBeOq4KXJKPREWEfco277PGlNhJ5H+Pscj/moB33zg54BVAztVgd0ZOFgxytRi8Lhj9j5qfWJ0A9BknP9B86gi0ZNVnC3CCM81AYw0Jq6SbZuxJaa9LiW1+Zifhs8y9kyd51FbqBEi8pVSerozehhZobZ/TY7vP40+zJ6VKkVFI+gfyeBiuQoA9Fvu3LBJ850JuNoSkW6bQrKvPlzFrS0wb1xXe1KPlfuIUfBFHZMNacwOY197uDI++SOFNBYVgGOLHeLi8JEJPAuZPiEoFT0UMCDElLJUL22FxKO1T+4A+ZBgtVKBz+QjigJgCc9imBUj3D33+6kmgbcEf1Vj6mj3d6PxXpaybp6epB35WWAIXj4y/M4sSFSo7m65G3G5zj3E73F8yNcwD9J27KgCVvDig8/ZmAoej/I9o0C4M4URuUHDYB4Y6Sry5wS05kH8ssQwIhXTIjC0ZdAs0X6jqXLclTB5SLbOzsEMt0uUPaWTcVHS5RuMRW+wBIlq99t6Qww4rBzKfr9A4LEm3rq5Q4Rr+cJqJVxqEREvtNEGnLVLIgIqp5nevDpgMIupbO6yyoZIqI1ibUfc0uExWV3cBFUDxeSe8OUfiaY5KSuMu70UGrjVbkt4qwMkqFyNQcKFnsyztP3ZFH71vWA9HLQDXZcM/T9aXZzqipV5sWcTp413so6+eQ0akH/5BOiFqJt4jDX+Gcw8GxcOAVZ8WYc8+XjN/aExWyUtdfE0JjSwX66kupoXaUgOp2DpqPRXWPJOr0RbuEJn6QO/nCzUDFY3pQngRNytY8WDQLteFyUSqxmkpAFKLtgkerSluxoYAe3zBYUzXROiszy62biYDFgp2OCjBUIHkG/6Y+POX8tVLuM3zwkL1O8n4EQ2swnG7Agznss0fJA2NMCXZTI7xF5owgX5siBO7kVOHu3RNWkis4+FLc9sJ6/acdm1bzZWL2tUjGa3vUfhS4wug3D9QlJkjL6ydYU1qGDEg5nwMy91Uxl3FqNqU4HblZlXIyZGR/AlJ4VlO7z2ih92sgdiOFEqvBgybQEaLm+Oda1W/RduQGp6ROdlrIEAon4M6/jpjlFAhXf+b1nVk5wR8Vw67FmCCLWGGIS3d9iL3D9vDdaJ49KmAJx+2s82KaDhruHVhBh/norrfNfpO6P7FcRTTSkXjjcSygcYdahCiqBIabxocrcqtTAI/f5eJehTjVuyO6sMqEasHi/7mWl4joY7s8xWS3fx9QwLt8gC4/B2wRkJOKMWboWDOF2Qb5VIQBm/6Irs8iOrHItFn7SdBkb08qxya7qNm3Sa71fu4O2j7ZOWK7bAHyNxQQENMn0G8BYZr1moJ21RJ5Gwjl8dQfI5pASunPJXOLZmjVW0re1oTeM2otjtCvHNDaAh4zRnKC+qPCHKwcJYXI9ViJybYL/rmZHMjto3m9gAGDi56yjBqMLiF7ppmu+t65UjT59lU+UoIXsurZ3F7R/cHEKczGAEA61MXQuD5DnJb/9PZVPMmmdXBnrVRz0n4yZeNxUUPUSHn35HZeoaNKO3GYT7jXtb9a2355L3FFvb074y0YVJ0tz2jKtlhhjftR5WNsHq9NGg3SfZtTO64ENivMYOA+CxvPh/UXE76ibZnvrZMrRc35nKmNVZ5+QUm9A2lUU0SSTGIUfD74TmoDvwbq6j5oqxazYGuKNYWfesYMJsfKtSR/F4XU6yttceiL+y59bbnPEjR6BNrEDUIANsc/IfQCM+l2MZQrUYbNe4roolBEpX0xt4Y58qJlVVSeX8yy6GyNFFxxpWQ5xpFiaEt3qSv74Koolrk4aiMuDSEKNHz6wqZW8x8mFz/zENaXmyYZ9xpgj+hhOPTOp7K1zqQcFP9+tGhuTToYLQx89kmASkgUEeee0J1a68ZthsJltjARRaUX+6RgCL2YxiHTSPSt9k4fOx/d62YacI6Rzxaxa3fbJMPfQc1knxHWZe8AEB11ZjbXezqfNVoDfomL+wt+OIsCL2MCX8tlDfM9AslctJFvc8bPvLZAFW0sR80Mc4BwGGuh8pqj+mk1mN9+OK53pDOO8SAfYJbl+fkDfq8MFqU/jSzhwkzZsXFZ4UQ4akhW2atD7Bwhnch2RIitOzjToFtxqYDGp+yWwgtknz6ZOZEWvQORx0vN0DLibNHfKseDuuZvyRsro2/BJlm6PYid9rbhF2p3VAYzd2gW50rWO+ZMs1eih16CZlGI1P0V/8bn6NAlMVFERRfjh2DoPl5BXcRtJNCyf9TeZ6CoiN41CwL0CgAMiKXzH+Ytke09UGNv8RSu/ccBE2Jxfhzg11rDa5MJSB3DuUUTCkxIRCZbDILCfX0M7hYfigwGPEPv5zheuk0Y3Fw6asKkrN7gsSm74IPovF1CVeoX1Le/XArzbYUf083EnGbUIw5FQIiHpLh5l4DPV5v8urWDk2kxK50buXBpeUaYFm+xNTaktnuwS3n9FUIwaIx2dlnJ38R6usuIso8l02ykarzKUTo9zYQGb2LsokeKFdXFoI+BN5HOPKRvkMC/94bfwGo2FPRTrFPb1dOsaFMDI4i1lz4Hg/MDiZSeOvecfh2okP/I+9H5COLyMygnGC75RQhr4PuqsJUN6i/3ZO5/SlBujtMnlraddQM4UqoXGxtHdaaI3Emuj6O3iSm3KYNlUuSDAikXp8l+1xc15DHPq0B7KGkE0g47Gwjx6YcEPHm4n86Vbp/lKTfFAQn5NXtDYowMz6G+SEqA3unp31h07v44clYVh/re63hWj97fN+H50eGXp6kySzMl/0466QJPNggn+smpQgO4lGnTkFdaAEkiNlveQctAgqWrcrLA+Z7FL3/bUWzcr9G5BEVphk4uzf53jWAySIDVQ5vVPZH4RWbuR5u3QniHQtS/kYNcEneX3hjOAMS2s2+gQCviYr1FBK9F4LuGNgHx5oXXgGHEdZXxdgAF3PvXpwI1e96mdX8wGmfT4D1BjQh084xq4DntSyZE6XUuA0yaRsVhfOqUewR4QyE5TYfH8HcLZPPZ7mIfAWR186BaiWNZc4Y0Ft09vvA+cg6vPSA9hbYczvsTFns2WUq7EbWVawlHoPLEiQgbgCdRnnuJrDcUhnJd0n3XKpQMla+ieZ2uzAsf/x5BtcGY1/SBN8lfCu/SailytKAnfEB4w7gss1Ms4uCeiSI1+CcQRV9BumSCubPitvmE3ECTDe39ulAEqWh6m/kzL6lWvkRngJHaZfGtrBbhCUJXJo93ZgOVTpMEO0YMk1zEyLX/LimtMtiR0oC2Pr/pZDZ8+odJ9boere8/Q6Wiy0fv7RW2tAnaKKqYpyCmJG9RcAj/DJN6rGbzzmXZrJ/Lo2cUaqlLEiWcC6NQt3sV0bD+PepGhgBLS50pv0NSochzQ/06lW4y7MwcyYxm6jASf7CgSLip6Bh2jca/XaQQTGCC8w5nnt0GSCH56zVMiMma2u1ZB+C+Y8BKk8avk/9tKuS6aHKxzzvtKQeOVq0q4kIXvBCCIUA+3ISetjng+oLl7e0vtRN57PW0ImsSOI9TUGsiVCckqF2iVUo+0im6VWD/xotnFLiBp+tNFp4zxZ8QiwxiOjpc+IffRxKdmvXpvYYf0KTd9BH61+8wcGrsM5+mAmQ8Gr5rI8CfdlErXC3HgDMNZR7ReEL4KjDnfcNKu7xa4Wd/sZFB4GX/J/GxWUjFwVaeFTw7oR5BsBA5fxuaXt+NapE9WhMGqMfmS1wkUElvMqj9cWzT9fOYi85mMAAR7GC59vyXvlUbAmGuW5wgvefaYoDRsOnXDBFMr3fsP58JG7thqvqBHAhxqIELlIkVI/6bsS2H/hoA4jilHFLG5PhSYVKyVOSAEqtJiv3HaYtwwObIP4t4p6IydSQeit5uecyC+3eZBHLXWnpeviBhylnOhQh+sc5tqQfC7I7Xr+2f2eQS3S15iM5g4lzgMlR2h//nYanttmjorygu67DOPzjKnSTZnGPHAtOxA9xiR6OPv+WEu8Loazti1qQ9pLAsvuu9HLmB5uSuCCmsR7yaz5jYfsihLBXAGw1Q1tHZfRJKd7buzNuQj8GM94vV2u9uiY+Ys9QBWdlfah3KYQdRCqKL2OTDMVvIs+UjAeCADwPbIfvGa2wx8hB7/AuiZi+V+gegU/6Y/zXbyCS1pfzFBstmRrLziNM3GuQgOkevM8vb7fmhXVNWpM3mKoasEo+u8xDYlxUswO8khF0g4BGFUtQi/gpVY/m8u2xtrQsD2QI9rbkp/mRcBN050t9zUoFssEcnBYC3TvP0y+f2oHKEiO+Xw0VHM0ykncP4zJIZ9lBMXz1xgDiQWRUMLPPlotUHxqaC5enmprifrj6JV/hxeXGJ0yBuVICXux0wwOK3Z3zuUUucd3L9nVhUQi/U8Cg/SuYK/rleujo9guJ+HdXhMSDTfPhEaKTMXR9ZJOq/tGcvy49aiKXuAs4ExPGa29CIkzRhEpZMjp80EeDqgpyEXwgadQf0u2H3Vi1sJThiDYcYFPG11a/fpsDtgZdjO4M1WX4NWFfLbE6wcgypxPGUXbnk0QwJuoHvhkjo/8ojJp1BjKVoz/pY8rSBxZJKUtBKVbsEzNxfYnRppNFvoR2i/bGRy0R28LrPvJ3s+fyAOJvRti/A/4TtBkdKFfXHOXjD81dWr9TmpJoUIYHlr+I70qmLolzJc7QpHClqZjeuE67TDlG+6FCadmhTGOfBc6y4tQSvRio8SiNZMGTRJ4T3EwtGaOdUBBQWYkcR9QDFyo5G2czAP7UUN5PJvlhCuTddYfgfQAP5qa0VRPMiyg9Dtr6WbhwpvP9B1Cc5M2MkxLOP4513RHuh3Q3Sd3S3FjbzAdgS3p9hc3EYNgbS+ZcWDiCJ1s/1XjP+/93C8d6DUTC59WJTRoNhAldriU7uTxoUhMja46OpUZ6yq/S+F3qonpBPVoAbDqbKjkikYWdFcKAUVTM42tqS83S2r8bV+i1OgDMdlr7dnUvDvRHPqK9vFilzrMyR8FxkraCh66R68IAJkoHAnr92Aq2ZKXvP/W7ADmpBhN8vORH270mVHX58Pi/Bw2Mn8y1mqHEIQWXVrVZSUlBiuUcfLiCs7+uijnJulnzPGGCKB1mAj0xTL6OlmmapTZsAb1EE53nwiNIkpB4B6VmlpI+iGPGrl6NAEoVJURWpYbg4aK6y45ViJyF6aaW7Fm75QUXB7rnHxA1tCPaOBRDVA5cRfq6Gkumc6gcRjgLwI4HOvLFpqKw/+fq0aXfe6ialxitk/MKeYX3Twbf4tEg3ofI1++PgEy9hDpFDhT3naR3ZvZhFmoUavlX8vy8ZNMf/PWky8Jn/+4enCdEcsb2p3gFKsluV3v0edzqNy4nI2dQJfms/L6m+Sjfh/oOM5Ahwy7p/H0J8RKiIkwFEqo7Y6rfIipg7jgzV0jzfoR2TGYdKN9Un8XljLKmwxQztLZri75YJHewYw07kKdPOzhzbsM/ImvPlIo8gPn+LdxpuOeH20hDGA8OZ+oKESP+AqUyDXXKEjMwe6jJ6yGEHNAvh9HwznjPhMNZ7VVwLsuv9DyheDC+Kqx/alO3dTz4z7WShPhGywGyhCQUR0Kq8fdo0ZRecrPaMUdmMy7LY9cRh+40gNg+6OsaozOSRmTb2X7SSv/p7gmPPpysJMlhUFVRWlExThxs82IlDKI/g4vv7+yNxjGeH5iMNMJ+6VW0LP79ZfG/r/FbHkQHWd+XnczS7/cfT+BSi+gAvKooDT/k5BKbb9hGcPn9cqFW1shXArbjO9VldU8HLWwjFCjWaYB7O2PPO7FOHBcYu3eYcNaO03kwJ9TCVuMpBmnsW7HBuFptm5Ke68ZdQWPGpumaEU4By4tu6y7ogVLhnKokw2hVyiPIqtOm5ztjyIMVDPctXTs1crnFU5f31I+Kq846oC7sVNc1MVzZIiBI/UFfjE8bZiqRnUUhs4Lan9BW9NJ+/23WVrVWeuNPqD3ST8QgX4DPWl72JMAMLw5Q+lPSpQj7CX+UJ4i0jrQWFC9do7o2OvlCXJD8Jx4vY7F9Dy2SMn4ZF26b3IdTikc/tqJxPmhYXzMhpaj6/6Bfcmd7xlb68cWd5ouSrjbbAoimFoHqgLNi3qkvzn+bxU0v7L2rK3nUFySBKJhRJwcKipWAJ8HLA9IZuYAH4yswuR/KSFTxuHsQWz6wzjJJLQu91v3nuhFQSmxd5lvQEmr5wCJg4x3mh3elI+U2wI6nsd3CaLX1zx0P+PDh7/a0hp7HGFH5TEMx7MxKLQHwE4C4U4UKVvHe200pZtRlBapYXLZWMcUp1h9qfgy8OxnJtqBzFjzfQrBl5qbLbU8cY2CG68RRJWiXLJbnV3gUOnsG6FPxMwR1JQ8fe6QCSEV7rnjjJ4Wn6ZGxaOg898i1FHz0vPhMDSfIRpl7CAXCFGuMEjpPyRajKmnBJVQ5N/lKJJo/TXtx0mwR5skjuaXEh7gDysjQoX+Z29eJjIMzz3VMK+y8miWRyT5LYlLZxubWcHCACUecrZFgErPHgSl/ShYhXWWIXuKUJLzdIyqFgqgZKoUGmCsiZnQ0dvogTTdjinFVZNcixoyHN8jvgiFnTGKoopE30WaH3k3a6XhBDG0oVPnaq5pKcOryNPVv/d6pq28ageWX2ZKY5PIRF7IQo5qF2z3fMV+zMeYz1eH2QAXcOZ/3x2aFbaroMvQDB7M+Bo45rGWMnggKD2hQRf7RTKGaOCdONnMCMcfNo1FZjOGDM3G3SunkL5S5952qp1DFq3oMRmGBNQIHr8y+MAuJtpT5l2BDb8pCL1JgJQm1uaQOymVVR8lddvyOhjTE/w/YHgz01glFzSC6psIUC49og7bHSgAnPZmhdEgEILq5LtSFHx085VeH/yRPO7iD+vxmQqAU9JTnWAqaZ6ZPImrcJlyOW+cT+lJOyO/qXciWqEjy/tnImzalTDeMpNPmvn7dZln+pQzt43/yLWMCUf5EgzLlG6FKgzsrLzMpvc75fNS9j0z+/ZBfqAboB23hkOmzdel39v/W2GSYtAf3gh+coYrxRvY4F109dMEzg92eT7GuuZsnSqCNBzO7J6yfkrA1mJWWkyjxvW2gjXddbhP6ZdVHl4SoA+QQ7nuUZEJUfuLqc4Jb+H18L62bTp799IfbkppGmf+LjRv/ybh7H3N7liyPi6DPn1DgNYoVrsovH9lCq4O2PFNNrpyktMl4NxJ/o8C3l8udYIyh8/GkPGuYIoTdOc9FVhPm9dKXcnZQwDYOUeJWxlZYuSsuptm3XW2Ghj5e1oAL0Qzcs7yxMNL1NRJc4qWU7LDC6AQ76X5eY18YhLDd8OVmXGyA+4SP6HiCeUB/xqcI71h6kg9aGkyn9EUBManXecSzkDiQCqTiT1x74AW0+0pc8ua4b5z0X5GaeHqH3zkozKON86yOoXOZlwcl8B6aDXsVkqWz6ZKvOHKHu9i+NrCQxtTxY+Y6kBFlz693ZFDIp34NUo7v+tUIw3XXtPlg8bnA5hl8pI62ye3+D61W/1y6C+8iElbuAaq5j0rSWc2OsA73uKaUK+Y0tiF3pOBkSL/v6Orr8451uMzZSvC4h/J69DTYSrSrMhc7d6k2ccOhlbYqpVzfvfEld7Rt6EEiN8rxvR0qcAaZ1AJCLs+unFNDb3NE3uSFDtrUnpbFO7TgHK42eow+XPXpijA8agBxZA4e5Lo9XJW0JAvzw/+BcT1GwMFbR462nUGiHUf1AqC55n3e7l8FyU8nw9ycsm1pqaXUx2xK11xZ2VyB7gn1btpdxMH4VHxlaNtLibw9zFlUqXt1k2Bm9G+HskwQT5W0SIoQnrAg09s4LCN/xFTkv+N+xgp7pTrKVSZQ/6JtLD42bZne8r7bb6vYGo4qcPyO4alTU4Mf8T6p1o73AzbnigbDBUFI6YimD3pnvNRdT+lhNrTXw4OWbiyC+0oQop2IQSqbSH+V05dhd4vsbyzTrQbjSDA6zI28LDJ7GXczLpx7X1dq99IxluIOXBEibS+TFwK/B9+YDpFJ3USUb0ShWJXH5esw0cZMmNqnsCQBfxXKJ/qLiBhmK2IDca8G9eoZoHfWey+sw5L2c0c9QAimvRI+6y1fL0PPCZwsCXxHNzaFTK/qsDSOPlIRRqkR9aeNP7bihecCKfOFOgI1k8S2c2u+WmFiizCBlyl/80BM4TTQG3kKAqAjWEFHZam+eTzu4oHNoEBBCrRdcVEhYt+UNUFwUSYtJJW38cpnWpTTpigEvaSQy0V3E1m7jYnXQK+mR2rAZrAKfMQDO/B36LsSd7ID7PA19SjvlUoG2eXJuVIy0rXIJKP8p8JnAT34lRkVr/2K1Tnp4RJls+cEEye0UOtJSKSMCQYx3qj4mEXvWTUsoe4VyrG7NS1E0DqeFzDXUL7cji84tzlKIYFB3uu/boZrihJuZCWXj7FXK24DBAkr3lBoHOjYDDN2J3FWpuOigpffaMV0kC3bL+EtirrXWz2lcGWul2JzW+AZ76s9b3XDTf8IU93LSFBf7GEjy+VsJImKBKNr63Ir0z0S/X4CpjEFEcxox5UZlXz7ObYa8tSK9cadzWN1MHdpcHKf3NJ3cgr+YU2A/U0XOyT1w8AaFMulYkxJQ78Iz7xuUWYBUKdZcUUYynRcjBmf8EFYDW4/siz7BiZoZU3C9q/vKPal+by+aAljNmVwdrx2doy6oAAvP2+b1tRXI7w30V8XHXv8tgAcbn4IDy+GyW7W5I1leDdxj+9SIAB9Zd5mRJUQVOoQE35STzIrIzZ19dDwmhTMxoEDDvsq+olmVJUm8GjcvICxmuPKPODp2haiUcoQZe9HPaL95fOK0/zVriOEAXgt10pZv4F1CQgV/zsn6ov276cRtxO+32tm38F6pXFr/dbYGP7rIbEYQ5dFOcrVuhkL/E8RsYmOkjraXCm08lSPmygqGuOuub82F+1fmNK/V9Zsi9hqXiFSLyYk59gWUi0A7o8xqpwRGSJmQow1gw1Ss0ZPN25R+Dzq3+MtFYJVPQK3OWADXm7J/Ic3LFDDajL31AMHq61j2MTdHGlRLDATXmiJ8mhIXOhrUlrEFZWeA9Rb7n5nrPVSPuzndkRQGQxn5S3PajF86EfRVP8xseYZUJAThl9SGnNrir/I3jts1C94DapsFGJxuqkZxnL/jT49paoV5FvCO+rRfMuI31xLLAKtOHdWk63fkJ/qCxKNQLQkj+UOPkuu43Wqte0xKOZUfT4eJYdgreuYcnhHVDtYa4sULmJWHFb82kiFATmNZRnUNi6R4S4QAO4Rtfre3hrL3Y67cdlI4PcCcDATiiJjUxqqO/nNQuwM+kc1fGjOYpE35M0bgjc3vmF7Ep6I72D8tg37trsc+hRw2MNcsuN9vXd0pEWS4t9wXN7idGUs16noV2yaaf0Lq995RXhE9jL5gqwBzjYYxjBrO1uyYSW1y/90O1QKF9Af9Cfy/SB+eFFvftFukZ/MUBMsARQSgx/s8vmNo51px/UCXAuEaYNkm62z1ay+q9b4DY8jFkclzdkg463YLG79KEewxBYe9moPDLTBeyok7y7CsqNRtXwJezVCbceGX4d81VwxdKKEqoLC0pE0ZTn9Wc7ex432icKHdMkCQPttOyh9Iv7inhAroLW7v94Imj/dmuMliHL/pwZJPI1xulXsETsv0MGQrjlduh+89exSVI+Ma2QhW+nSCrCGDSI9DsMtl/WWlMjjznmgnbzC8XWJJ4Kh4qV6txSE6RD1U5Y06k83MMBQ6bhoUXn8vi5G5dYUEk9TowqM30U9obafb6A61pYBcm/NswD5USVbnQy1RBtpyEkGnG8fRDgB4K+61lHfHhcRiQ+xEQ9OkB/4u6P0UaEfWZskit9LwXUo8MV/qChm/8xrVQX8vYoU9SV2bFmNRWmne7pbbI5cbu/3MDngAn5Zo/JdA2sD6LtkvGY7vDr0cXuqBhRw8oDH4i2hUig3ivKoIkr+k8A+Aw3MFgxGxhoV9HIUKcjxwLqtmmWLoDAIo3S2Zp+7vJoNGQBUAAAAA=') center / cover no-repeat;
   border-radius: 50%;
   border: 2px solid var(--line);
+  box-shadow: 0 0 20px var(--schein-stark);
 }
 .blink-logo.sm { width: 40px; height: 40px; }
-.marke .blink-logo { width: 46px; height: 46px; }
+.blink-logo.lg { width: 46px; height: 46px; }
 
 .kopf-mit-logo { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .kopf-mit-logo h1 { line-height: 1.05; }
 
 @media (min-width: 820px) {
   .blink-logo.sm { width: 46px; height: 46px; }
-  .marke .blink-logo { width: 56px; height: 56px; }
-  .marke .wort { font-size: 1.9rem; }
+  .blink-logo.lg { width: 52px; height: 52px; }
 }
 
-/* ---------- Konto ---------- */
-
-/* Die Reiter des Anmeldebildschirms folgen derselben Regel wie alle
-   anderen Segmente: ausgewählt heißt Akzentfarbe. */
-.konto-tabs button.active {
-  border-color: var(--accent); background: var(--accent-soft); color: var(--accent);
+/* Finisher: „am Wurf" ist eine weiße Kante wie überall sonst, und die
+   Zielzahl-Karte trägt einen neutralen Rahmen – die rote Zahl darin ist
+   Signal genug. */
+.fin-row.active {
+  border-color: var(--aktiv-linie);
+  background: var(--aktiv-flaeche);
 }
+.fin-row.fertig { border-color: var(--line-hell); }
+.fin-zahl { border-color: var(--line); }
 
-/* ---------- Finish-Vorschlag im Finisher ---------- */
+/* ================= Nachträge =================
+   Auf dem Stand, den Julius freigegeben hat, nur diese Änderungen:
+============================================== */
 
-/* Dieselbe Leiste wie im X01 – dort hing sie an der Elternklasse und
-   blieb hier ungestylt. */
-.finish-hint {
-  min-height: 46px; display: flex; align-items: center; justify-content: center; gap: 6px;
-  background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px;
-  padding: 8px; margin-bottom: 8px; flex-wrap: wrap;
+/* Die Leiste selbst ist durchsichtig, damit der Lichtschein durchkommt.
+   Die Knöpfe darin brauchen aber eine Fläche, sonst schwimmen sie darin. */
+.nav {
+  background: transparent;
+  backdrop-filter: blur(14px);
 }
-.finish-hint:empty { display: none; }
-.finish-hint .label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
-.finish-hint .chip {
-  background: var(--bg-3); border: 1px solid var(--line); border-radius: 8px;
-  padding: 5px 10px; font-family: var(--font-cond); font-weight: 700; font-size: 0.95rem;
-}
-.finish-hint .chip.first { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
-.finish-hint .none { color: var(--muted); font-size: 0.85rem; }
+.nav button { background: var(--bg-2); }
 
+/* Der gewählte Spielmodus steht im selben Licht wie der, der gerade dran
+   ist – beides ist „hier läuft es gerade". */
+.modes button.active { box-shadow: 0 0 36px var(--schein); }
+
+/* Kein Rot in Knöpfen. Die OK-Taste und die Start-Knöpfe im Spielplan sind
+   Hauptaktionen und deshalb hell, wie „Spiel starten" auch. */
+.keypad button.ok,
+.match-row .go {
+  background: var(--primary);
+  border: 1px solid var(--primary);
+  color: var(--on-primary);
+}
+.keypad button.ok:active, .match-row .go:active { background: #ffffff; }
+
+/* Der klebende Turnier-Knopf holt seine Farbe jetzt aus .btn.primary. Vorher
+   stand hier der Akzent fest – geschrieben, als der noch grün war, und seit
+   er rot ist kam Rot mit dunkler Schrift heraus. */
 @media (min-width: 820px) {
-  .finish-hint .chip { font-size: 1.15rem; padding: 8px 14px; }
+  #screen-tournament [data-action="next-match"],
+  #screen-tournament [data-action="to-winner"] {
+    background: var(--primary);
+  }
 }
 
 </style>
@@ -1265,6 +1455,10 @@ h1 {
   <div class="card">
     <h2>Spielmodus</h2>
     <div class="modes" id="mode-select">
+      <button data-action="set-mode" data-value="quick">
+        <span class="mt">Schnelles Spiel</span>
+        <span class="md">Alle gleichzeitig, ein Leg, wer zuerst auscheckt</span>
+      </button>
       <button data-action="set-mode" data-value="501">
         <span class="mt">X01 Turnier</span>
         <span class="md">Jeder gegen jeden, Double Out</span>
@@ -1300,7 +1494,8 @@ h1 {
         <button data-value="701">701</button>
       </div>
     </div>
-    <div class="setting">
+    <!-- Nur im Turnier: das Schnelle Spiel hat genau ein Leg. -->
+    <div class="setting" id="setting-bestof">
       <label>Legs pro Spiel</label>
       <div class="options" data-setting="bestOf">
         <button data-value="1">1 Leg</button>
@@ -1951,10 +2146,15 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
   /* Ein Ort für die Namen der Spielarten – sie tauchen an einem halben Dutzend
      Stellen auf, und eine vergessene wäre sofort sichtbar. */
+  /* Das Schnelle Spiel laeuft auf dem X01-Bildschirm, die anderen freien
+     Spiele haben je einen eigenen. */
+  function spielScreen(kind) { return kind === 'quick' ? 'game' : kind; }
+
   function kindName(kind) {
     if (kind === 'cricket') return 'Cricket';
     if (kind === 'rtw') return 'Round the World';
     if (kind === 'finisher') return 'Finisher';
+    if (kind === 'quick') return 'Schnelles Spiel';
     return 'X01';
   }
   function activeProfiles() { return S.profiles.filter(function (p) { return !p.hidden; }); }
@@ -2102,7 +2302,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     for (var i = 0; i < S.matches.length; i++) if (S.matches[i].id === id) return S.matches[i];
     return null;
   }
-  function currentMatch() { return S.current ? matchById(S.current) : null; }
+  /* Ein Schnelles Spiel ist selbst die laufende Partie – dadurch tragen
+     Spielbildschirm, Eingabe, Finish-Vorschlag und Undo unveraendert. */
+  function currentMatch() {
+    if (S.game && S.game.kind === 'quick') return S.game;
+    return S.current ? matchById(S.current) : null;
+  }
   function nextOpenMatch() {
     for (var i = 0; i < S.matches.length; i++) {
       if (!S.matches[i].done && !S.matches[i].void) return S.matches[i];
@@ -2120,17 +2325,35 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var last = match.legs[match.legs.length - 1];
     if (last && !last.winner) return last;
     if (match.done) return last || null;
-    var other = match.p[0] === match.starter ? match.p[1] : match.p[0];
-    var starter = match.legs.length % 2 === 0 ? match.starter : other;
-    var leg = { starter: starter, visits: [], winner: null };
+    /* Der Anwurf wandert von Leg zu Leg weiter – bei zwei Spielern also im
+       Wechsel, im Schnellen Spiel reihum. */
+    var idx = match.p.indexOf(match.starter);
+    if (idx < 0) idx = 0;
+    var starter = match.p[(idx + match.legs.length) % match.p.length];
+    var leg = { starter: starter, visits: [], winner: null, start: matchStart(match) };
     match.legs.push(leg);
     return leg;
   }
 
+  /* Ein Schnelles Spiel bringt seine Startpunktzahl selbst mit, eine
+     Turnierpartie holt sie aus den Turniereinstellungen. */
+  function matchStart(match) {
+    return match && typeof match.start === 'number' ? match.start : tourStart();
+  }
+  function matchLegsToWin(match) {
+    return match && match.bestOf ? Math.floor(match.bestOf / 2) + 1 : legsToWin();
+  }
+
   function activeLeg(match) { return match.legs[match.legs.length - 1] || null; }
 
+  /* Die Startpunktzahl steht am Leg selbst. Alte Stände haben sie nicht –
+     dort gilt weiter die Turniereinstellung. */
+  function legStart(leg) {
+    return leg && typeof leg.start === 'number' ? leg.start : tourStart();
+  }
+
   function remainingIn(leg, pid) {
-    var rest = tourStart();
+    var rest = legStart(leg);
     for (var i = 0; i < leg.visits.length; i++) {
       var v = leg.visits[i];
       if (v.p === pid && !v.b) rest -= v.s;
@@ -2138,9 +2361,14 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return rest;
   }
 
+  /* Reihum durch die Aufstellung, beginnend beim Anwerfer. Für zwei Spieler
+     ist das dasselbe wie vorher, ab drei (Schnelles Spiel) geht es weiter
+     im Kreis. */
   function activePlayer(leg, match) {
-    var other = match.p[0] === leg.starter ? match.p[1] : match.p[0];
-    return leg.visits.length % 2 === 0 ? leg.starter : other;
+    var n = match.p.length;
+    var start = match.p.indexOf(leg.starter);
+    if (start < 0) start = 0;
+    return match.p[(start + leg.visits.length) % n];
   }
 
   function dartsIn(leg, pid) {
@@ -2161,11 +2389,13 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
     if (isCheckout) {
       leg.winner = pid;
-      if (legsWon(m, pid) >= legsToWin()) {
+      if (legsWon(m, pid) >= matchLegsToWin(m)) {
         m.done = true;
         m.winner = pid;
         m.at = Date.now();
-        UI.overlay = { type: 'match-done', pid: pid };
+        /* Das Schnelle Spiel ist mit dem Checkout vorbei – danach geht es in
+           die Auswertung, nicht zum nächsten Spiel eines Spielplans. */
+        UI.overlay = { type: m.kind === 'quick' ? 'game-done' : 'match-done', pid: pid };
       } else {
         UI.overlay = { type: 'leg-done', pid: pid };
       }
@@ -2357,18 +2587,19 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       var start = entry.start || 501;
       entry.matches.forEach(function (m) {
         if (m.done) {
-          stat(m.p[0]).matches++; stat(m.p[1]).matches++;
-          stat(m.winner).won++;
-          var loser = m.winner === m.p[0] ? m.p[1] : m.p[0];
-          stat(loser).lost++;
-          stat(m.winner).lastResults.push({ at: m.at, win: true });
-          stat(loser).lastResults.push({ at: m.at, win: false });
+          /* Nicht auf zwei Spieler festgelegt: ein Schnelles Spiel hat so
+             viele Teilnehmer wie ausgewaehlt wurden. Gewonnen hat einer,
+             verloren haben alle anderen. */
+          m.p.forEach(function (pid) {
+            stat(pid).matches++;
+            if (pid === m.winner) { stat(pid).won++; stat(pid).lastResults.push({ at: m.at, win: true }); }
+            else { stat(pid).lost++; stat(pid).lastResults.push({ at: m.at, win: false }); }
+          });
         }
         m.legs.forEach(function (leg) {
           var rest = {};
-          rest[m.p[0]] = start; rest[m.p[1]] = start;
           var visitNo = {};
-          visitNo[m.p[0]] = 0; visitNo[m.p[1]] = 0;
+          m.p.forEach(function (pid) { rest[pid] = leg && typeof leg.start === 'number' ? leg.start : start; visitNo[pid] = 0; });
 
           leg.visits.forEach(function (v) {
             var st = stat(v.p);
@@ -2444,7 +2675,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
   /* Statistik über alles, was je gespielt wurde (inkl. laufendem Turnier). */
   function career() {
-    var lists = S.history.filter(function (h) { return (h.kind || '501') === '501'; })
+    /* Turniere und Schnelle Spiele liefern beide Match-Listen und fließen
+       damit in dieselbe Classic-Auswertung. */
+    var lists = S.history.filter(function (h) { return (h.kind || '501') === '501' || h.kind === 'quick'; })
       .map(function (h) { return { matches: h.matches, start: (h.settings && h.settings.start) || 501 }; });
     if (S.matches.length) lists.push({ matches: S.matches, start: tourStart() });
     var ids = S.profiles.map(function (p) { return p.id; });
@@ -2575,7 +2808,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       S.matches.forEach(function (m) { if (m.done && knownPlayers(m.p)) out.push({ m: m, start: tourStart(), live: true }); });
     }
     S.history.forEach(function (h) {
-      if ((h.kind || '501') !== '501') return;   // Cricket/RTW haben keine Match-Liste
+      // Cricket, RTW und Finisher haben keine Match-Liste.
+      if ((h.kind || '501') !== '501' && h.kind !== 'quick') return;
       h.matches.forEach(function (m) {
         if (m.done && knownPlayers(m.p)) out.push({ m: m, start: (h.settings && h.settings.start) || 501, at: h.at });
       });
@@ -2738,6 +2972,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   function undoGame() {
     var g = S.game;
     if (g && g.kind === 'finisher') return undoFinisher(g);
+    // Das Schnelle Spiel benutzt die Aufnahmen-Logik des X01, also auch
+    // deren Undo – Dart für Dart und über Aufnahmen hinweg.
+    if (g && g.kind === 'quick') return undo();
     if (!g || !g.throws.length) return;
     g.throws.pop();
     g.done = false; g.winner = null; g.at = null;
@@ -2931,6 +3168,20 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       S.game.rounds = [];
       neueFinisherRunde(S.game);
     }
+    /*
+     * Schnelles Spiel: kein Turnier, alle an einem Board, ein Leg, wer zuerst
+     * auscheckt gewinnt. Es bekommt dieselben Felder wie eine Turnierpartie
+     * (p, starter, legs, …) – dadurch laufen Spielbildschirm, Punkte- und
+     * Einzel-Dart-Eingabe, Finish-Vorschlag, Undo und Korrektur unveraendert
+     * weiter, ohne dass es davon eine zweite Fassung braucht.
+     */
+    if (kind === 'quick') {
+      S.game.p = S.lineup.slice();
+      S.game.start = S.settings.start;
+      S.game.bestOf = 1;
+      S.game.starter = S.lineup[0];
+      S.game.legs = [];
+    }
     UI.mult = 1;
     UI.overlay = null;
     // Wie im Turnier wird auch hier ausgeworfen, wer anfängt.
@@ -2950,6 +3201,17 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (g.kind === 'finisher') {
       eintrag.rounds = g.rounds;
       eintrag.ziel = g.ziel;
+    } else if (g.kind === 'quick') {
+      /* Das Schnelle Spiel wird wie eine Turnierpartie abgelegt – eine
+         Match-Liste mit genau einem Eintrag. Dadurch rechnet collectStats()
+         Average, First 9, Doppelquote und Rekorde daraus ohne jede
+         Sonderbehandlung. */
+      eintrag.lineup = g.p.slice();
+      eintrag.settings = { start: g.start };
+      eintrag.matches = [{
+        id: g.id, p: g.p.slice(), starter: g.starter, legs: g.legs,
+        done: true, winner: g.winner, at: eintrag.at, start: g.start
+      }];
     } else {
       eintrag.scoring = g.scoring;
       eintrag.throws = g.throws;
@@ -3183,13 +3445,15 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     $('mode-select').querySelectorAll('button').forEach(function (b) {
       b.classList.toggle('active', b.getAttribute('data-value') === S.mode);
     });
-    $('settings-501').classList.toggle('hidden', S.mode !== '501');
     $('settings-cricket').classList.toggle('hidden', S.mode !== 'cricket');
     $('settings-rtw').classList.toggle('hidden', S.mode !== 'rtw');
     $('settings-finisher').classList.toggle('hidden', S.mode !== 'finisher');
-    document.querySelector('[data-action="start-game"]').textContent =
-      S.mode === 'cricket' ? 'Cricket starten' : S.mode === 'rtw' ? 'Round the World starten'
-        : S.mode === 'finisher' ? 'Finisher starten' : 'Turnier starten';
+    /* Turnier und Schnelles Spiel teilen sich die Einstellungen – Startpunkte
+       und Einzel-Dart-Grenze gelten für beide. Nur die Legs sind Turniersache;
+       zwei getrennte Karten wären zwei Bedienelemente für dieselbe Einstellung. */
+    $('settings-501').classList.toggle('hidden', S.mode !== '501' && S.mode !== 'quick');
+    $('setting-bestof').classList.toggle('hidden', S.mode !== '501');
+    document.querySelector('[data-action="start-game"]').textContent = 'Spiel starten';
 
     var runningGame = !!S.game;
     var running = runningGame || (S.matches.length > 0 && !allMatchesDone());
@@ -3201,9 +3465,14 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       $('resume-info').textContent = 'Sieger: ' + pname(S.game.winner) + ' · Ergebnis noch nicht gespeichert';
       resumeBtn.textContent = 'Ergebnis ansehen';
     } else if (runningGame) {
-      $('resume-box').querySelector('strong').textContent = S.game.kind === 'cricket' ? 'Laufendes Cricket' : 'Laufendes Training';
+      $('resume-box').querySelector('strong').textContent = 'Laufendes ' + kindName(S.game.kind);
+      /* Das Schnelle Spiel zählt seine Darts in Aufnahmen, die anderen
+         Spielarten in einer flachen Wurfliste. */
+      var geworfen = S.game.kind === 'quick'
+        ? sum(S.game.legs || [], function (l) { return sum(l.visits, function (v) { return v.d; }); })
+        : (S.game.throws || []).length;
       $('resume-info').textContent = plural(S.game.players.length, 'Spieler', 'Spieler') + ' · ' +
-        plural(S.game.throws.length, 'Dart', 'Darts') + ' geworfen';
+        plural(geworfen, 'Dart', 'Darts') + ' geworfen';
       resumeBtn.textContent = 'Fortsetzen';
     } else if (running) {
       resumeBtn.textContent = 'Fortsetzen';
@@ -3611,11 +3880,18 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (!leg) { S.screen = 'tournament'; render(); return; }
 
     var active = m.done && m.winner ? m.winner : activePlayer(leg, m);
-    var idx = S.matches.indexOf(m);
-    $('game-match-label').textContent = 'Spiel ' + (idx + 1) + ' von ' + S.matches.length;
-    $('game-leg-label').textContent = tour().bestOf > 1
-      ? 'Leg ' + m.legs.length + ' · Stand ' + legsWon(m, m.p[0]) + ':' + legsWon(m, m.p[1]) + ' · ' + plural(legsToWin(), 'Leg', 'Legs') + ' zum Sieg'
-      : 'Ein Leg · ' + tourStart() + ' Double Out';
+    var schnell = m.kind === 'quick';
+    if (schnell) {
+      $('game-match-label').textContent = 'Schnelles Spiel';
+      $('game-leg-label').textContent = plural(m.p.length, 'Spieler', 'Spieler') + ' · ' +
+        matchStart(m) + ' Double Out';
+    } else {
+      var idx = S.matches.indexOf(m);
+      $('game-match-label').textContent = 'Spiel ' + (idx + 1) + ' von ' + S.matches.length;
+      $('game-leg-label').textContent = tour().bestOf > 1
+        ? 'Leg ' + m.legs.length + ' · Stand ' + legsWon(m, m.p[0]) + ':' + legsWon(m, m.p[1]) + ' · ' + plural(legsToWin(), 'Leg', 'Legs') + ' zum Sieg'
+        : 'Ein Leg · ' + tourStart() + ' Double Out';
+    }
 
     var pendingSum = sum(UI.darts, function (d) { return d.v; });
     $('game-turn').innerHTML = m.done
@@ -3625,11 +3901,13 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     $('scoreboard').innerHTML = m.p.map(function (pid) {
       var rest = remainingIn(leg, pid) - (pid === active ? pendingSum : 0);
       var darts = dartsIn(leg, pid) + (pid === active ? UI.darts.length : 0);
-      var scored = tourStart() - remainingIn(leg, pid) + (pid === active ? pendingSum : 0);
+      var scored = matchStart(m) - remainingIn(leg, pid) + (pid === active ? pendingSum : 0);
       var avg = darts ? (scored / darts * 3).toFixed(1) : '–';
       return '<div class="pcard ' + (pid === active ? 'active' : '') + '">' +
         '<div class="pname">' + avatarHTML(profile(pid), 'sm') + esc(pname(pid)) + '</div>' +
-        '<div class="legs">Legs ' + legsWon(m, pid) + '</div>' +
+        /* Im Schnellen Spiel gibt es keine Legs zu zählen – dort steht die
+           geworfene Dartzahl, die sagt in dem Moment mehr. */
+        '<div class="legs">' + (schnell ? plural(darts, 'Dart', 'Darts') : 'Legs ' + legsWon(m, pid)) + '</div>' +
         '<div class="rest">' + rest + '</div>' +
         '<div class="meta"><span>Ø <b>' + avg + '</b></span><span>Darts <b>' + darts + '</b></span></div>' +
         '</div>';
@@ -3659,7 +3937,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       for (var li = m.legs.length - 1; li >= 0; li--) {
         var lg = m.legs[li];
         var isActiveLeg = lg === leg;
-        var restRun = tourStart();
+        var restRun = legStart(leg);
         var entries = [];
         lg.visits.forEach(function (v, vi) {
           if (v.p !== pid) return;
@@ -4112,6 +4390,39 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           '<button class="btn ghost full" data-action="finish-game">Speichern &amp; beenden</button>'
         : '<button class="btn ghost full" data-action="summary-back">Zurück</button>';
 
+    } else if (s.kind === 'quick') {
+      var qg = found.g;
+      var qm = qg.matches ? qg.matches[0] : qg;          // archiviert oder noch live
+      var qStart = (qg.settings && qg.settings.start) || qg.start || 501;
+      var qMap = collectStats([{ matches: [qm], start: qStart }], qm.p);
+      qm.p.forEach(function (id) { finalize(qMap[id]); });
+      var qLeg = qm.legs[qm.legs.length - 1];
+
+      box = '<div class="sum-head"><div class="big-emoji">🏆</div>' +
+        '<h2 class="sum-title">' + esc(pname(qm.winner)) + ' gewinnt</h2>' +
+        '<div class="muted">Schnelles Spiel · ' + qStart + ' Double Out · ' +
+          plural(qm.p.length, 'Spieler', 'Spieler') + '</div></div>' +
+        '<div class="sum-cards">' + qm.p.map(function (id) {
+          var st = qMap[id];
+          var rest = qLeg ? remainingIn(qLeg, id) : 0;
+          return '<div class="card sum-card ' + (qm.winner === id ? 'win' : '') + '">' +
+            '<div class="sum-who">' + avatarHTML(profile(id), 'md') +
+              '<div><div class="nm">' + esc(pname(id)) + '</div>' +
+              '<div class="muted">' + (qm.winner === id ? 'ausgecheckt' : 'Rest ' + rest) + '</div></div></div>' +
+            statRow('3-Dart-Average', st.darts ? st.avg.toFixed(2) : '–') +
+            statRow('First 9', st.first9Darts ? st.first9.toFixed(2) : '–') +
+            statRow('Höchste Aufnahme', st.highScore || '–') +
+            statRow('180 / 140+ / 100+', st.s180 + ' / ' + st.s140 + ' / ' + st.s100) +
+            statRow('Höchstes Finish', st.highCO || '–') +
+            statRow('Darts geworfen', st.darts) +
+            '</div>';
+        }).join('') + '</div>' + note;
+
+      actions = found.live
+        ? '<button class="btn primary full big" data-action="restart-game">Nochmal spielen</button>' +
+          '<button class="btn ghost full" data-action="finish-game">Speichern &amp; beenden</button>'
+        : '<button class="btn ghost full" data-action="summary-back">Zurück</button>';
+
     } else if (s.kind === 'finisher') {
       var fg2 = found.g;
       var gewonnen = {}, dartsSum = {}, best = {}, hoch = {};
@@ -4502,7 +4813,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           UI.summary = { kind: S.game.kind, id: 'current' };
           S.screen = 'summary';
         } else {
-          S.screen = S.game ? S.game.kind : 'tournament';
+          S.screen = S.game ? spielScreen(S.game.kind) : 'tournament';
         }
         save(); render();
         break;
@@ -4512,6 +4823,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       case 'to-tournament':
         // Aus dem Bull-Off eines Trainingsspiels führt der Weg ins Setup zurück.
         if (S.game && !S.game.started) { S.game = null; S.screen = 'setup'; }
+        // Ein Schnelles Spiel gehört zu keinem Spielplan – zurück ins Setup,
+        // das laufende Spiel bleibt in der Fortsetzen-Box stehen.
+        else if (S.game && S.game.kind === 'quick') S.screen = 'setup';
         else S.screen = 'tournament';
         UI.overlay = null; save(); render();
         break;
@@ -4538,7 +4852,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           var idx2 = S.game.players.indexOf(pid2);
           if (idx2 > 0) S.game.players = S.game.players.slice(idx2).concat(S.game.players.slice(0, idx2));
           S.game.started = true;
-          S.screen = S.game.kind;
+          S.screen = spielScreen(S.game.kind);
           save(); render();
           break;
         }
@@ -4573,7 +4887,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         var sg = S.game;
         if (!sg || sg.started) return;
         sg.started = true;
-        S.screen = sg.kind;
+        S.screen = spielScreen(sg.kind);
         save(); render();
         break;
       }
@@ -4768,9 +5082,13 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   S = load() || newState();
   if (!S.lineup.length) S.lineup = activeProfiles().slice(0, 4).map(function (p) { return p.id; });
   if ((S.screen === 'cricket' || S.screen === 'rtw' || S.screen === 'finisher') && !S.game) S.screen = 'setup';
-  if (S.game && !S.game.started && !S.game.throws.length) S.screen = 'bulloff';
+  /* Ein angefangenes Schnelles Spiel liegt in S.game, nicht im Spielplan –
+     ohne diese Zeile landete man nach einem Neustart im leeren Turnier. */
+  if (S.screen === 'game' && S.game && S.game.kind === 'quick' && !S.game.done) S.screen = 'game';
+  if (S.game && S.game.kind !== 'quick' && !S.game.started && !S.game.throws.length) S.screen = 'bulloff';
+  if (S.game && S.game.kind === 'quick' && !S.game.started) S.screen = 'bulloff';
   if (S.game && S.game.started === undefined) S.game.started = true;   // ältere Stände
-  if (S.game && (S.screen === 'cricket' || S.screen === 'rtw' || S.screen === 'finisher') && S.game.kind !== S.screen) S.screen = S.game.kind;
+  if (S.game && (S.screen === 'cricket' || S.screen === 'rtw' || S.screen === 'finisher') && S.game.kind !== S.screen) S.screen = spielScreen(S.game.kind);
   /* Ein beendetes Spiel führt zur Auswertung, nicht auf ein totes Board –
      sonst kann man in ein fertiges Match weitertippen. */
   if (S.game && S.game.done) {

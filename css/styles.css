@@ -62,6 +62,15 @@
   --accent-faint: rgba(229, 72, 77, 0.09);
   --on-accent: #ffffff;
 
+  /* Die Hauptaktion ist hell, nicht rot. Rot bleibt dem Finish-Chip, den
+     Siegen, den Rekorden und der Punkteingabe vorbehalten – sparsam
+     eingesetzt sticht es, überall verteilt schreit es nur. */
+  --primary: #f2eeee;
+  --on-primary: #0d0a0b;
+  /* „Ausgewählt" heißt weiße Kante auf leicht aufgehellter Fläche. */
+  --aktiv-linie: #f2eeee;
+  --aktiv-flaeche: #1a1516;
+
   --bg: #0d0a0b;
   --bg-2: #141011;
   --bg-3: #171213;
@@ -73,7 +82,7 @@
      roten Akzents noch als Achtung durchkommt. */
   --red: #ff5a5a;
   --amber: #ffc14d;
-  --radius: 14px;
+  --radius: 16px;
   --tap: 56px;
   /* Ausgegraut: Zahl ist bei allen zu und bringt nichts mehr. */
   --dead: #6f6465;
@@ -146,6 +155,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .app-header { padding: 18px 4px 14px; }
 .app-header.row { display: flex; align-items: center; justify-content: space-between; }
 .app-header .sub { margin: 4px 0 0; color: var(--muted); font-size: 0.9rem; }
+.footer-note { text-align: center; color: var(--muted); font-size: 0.78rem; margin: 14px 0 0; }
 
 /* ---------- Cards ---------- */
 .card {
@@ -189,14 +199,13 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   /* Automatische Spalten: der Konto-Knopf kommt nur dazu, wenn die Seite von
      einem Server geladen wurde – dann rückt die Leiste von 3 auf 4. */
   display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px;
-  /* Durchsichtig, damit der blaue Schein durchkommt. Statt einer Farbe
-     macht die Weichzeichnung den Inhalt lesbar, der beim Scrollen
-     darunter durchläuft. */
-  background: transparent; backdrop-filter: blur(14px);
+  /* Muss zu --bg passen, sonst liegt beim Scrollen ein andersfarbiger
+     Streifen ueber dem Inhalt. */
+  background: rgba(10, 7, 8, 0.92); backdrop-filter: blur(8px);
   padding: 8px 0; margin: 0 0 4px;
 }
 .nav button {
-  background: transparent; border: 1px solid var(--line); color: var(--muted);
+  background: var(--bg-2); border: 1px solid var(--line); color: var(--muted);
   border-radius: 10px; padding: 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer; min-height: 44px;
 }
 .nav button.active { color: var(--text); border-color: var(--accent-dark); background: var(--accent-soft); }
@@ -765,7 +774,8 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   /* Setup und Rangliste zweispaltig, damit nichts unter die Falz rutscht. */
   #screen-setup.active { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; align-items: start; }
   #screen-setup.active > #resume-box,
-  #screen-setup.active > [data-action="start-game"] { grid-column: 1 / -1; }
+  #screen-setup.active > [data-action="start-game"],
+  #screen-setup.active > .footer-note { grid-column: 1 / -1; }
   #screen-boards.active { display: grid; grid-template-columns: 1.15fr 1fr; gap: 0 16px; align-items: start; }
   #screen-boards.active > .app-header,
   #screen-boards.active > #board-mode { grid-column: 1 / -1; }
@@ -1110,20 +1120,18 @@ body.gesperrt #sync-status { display: none !important; }
   .fin-row .rest { font-size: 2rem; min-width: 74px; }
 }
 
-
-/* ================= Blink 180 =================
-   Hier steht nur Anstrich: Schriften, Wortmarke, Logo und der Lichtschein.
-   Das FARBSYSTEM bleibt das alte – was ausgewählt oder Hauptaktion ist,
-   trägt die Akzentfarbe, wie vorher das Grün. Genau eine Sprache für
-   „ausgewählt", überall auf der Seite.
-   Entwurf: „Dart App Rebranding/"
-============================================== */
+/* ================= Blink-180-Rebranding =================
+   Aufgesetzt auf die bestehenden Regeln, damit die Geometrie unberührt
+   bleibt: Touch-Ziele, iPad-Layout und Querformat sind getestet und
+   sollen sich durch den neuen Anstrich nicht verschieben. Hier ändert
+   sich nur, wie es aussieht – nicht, wo es steht.
+   Entwurf: „Dart App Rebranding/Blink 180 Redesign v2.dc.html"
+========================================================== */
 
 /* ---------- Typografie ---------- */
 
-/* Anton ist eine reine Versalienschrift – Kleinbuchstaben sähen darin
-   falsch aus, deshalb dort auch uppercase. Bewusst nur Überschriften:
-   auf Knöpfen würde sie deren Text verändern, und der soll bleiben. */
+/* Anton ist eine reine Versalienschrift – Kleinbuchstaben sehen darin
+   falsch aus, deshalb überall dort, wo sie steht, auch uppercase. */
 h1 {
   font-family: var(--font-display);
   text-transform: uppercase;
@@ -1131,31 +1139,91 @@ h1 {
   font-weight: 400;
   font-size: 1.7rem;
 }
+h2 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  color: var(--text);
+}
 
 /* Zahlen sind in dieser App der Inhalt. Barlow Condensed macht sie schmal
-   und damit auch dreistellig groß lesbar. */
+   und damit auch dreistellig noch groß lesbar. */
 .pcard .rest, .fin-zahl .zahl, .fin-row .rest, .rec .rv, .sum-score b,
-.board-row .val, .cr-cell, .edit-value, .score-display,
-.num-grid button, .keypad button, .quick-row button {
+.board-row .val, .cr-cell, .edit-value {
   font-family: var(--font-cond);
   font-weight: 700;
 }
 
-.modes .mt { font-family: var(--font-cond); font-weight: 700; font-size: 1.1rem; }
+/* ---------- Hauptaktion ---------- */
 
-/* ---------- Der Schein ---------- */
+/* Hell statt rot: Rot bleibt den Werten vorbehalten. */
+.btn.primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 400;
+}
+.btn.primary:active { background: #ffffff; }
+.btn.big { letter-spacing: 0.06em; }
 
-/* Nur dort, wo er etwas sagt: an dem, der gerade dran ist, am gewählten
-   Spielmodus und am Logo. Auf Knöpfen verteilt wäre er Dekoration statt
-   Hinweis. */
-.pcard.active,
-.modes button.active { box-shadow: 0 0 36px var(--schein); }
-.blink-logo, .marke .blink-logo { box-shadow: 0 0 20px var(--schein-stark); }
-.konto-logo img { box-shadow: 0 0 0 1px var(--line), 0 0 34px var(--schein); }
+/* ---------- Navigation und Segmente ---------- */
+
+.nav button {
+  font-family: var(--font-cond);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.9rem;
+}
+.nav button.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+}
+
+.options button, .konto-tabs button, .chips .chip {
+  font-family: var(--font-cond);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  font-size: 0.95rem;
+}
+/* Der aktive Zustand ist hell – wie in der Navigation, damit „ausgewählt"
+   überall dieselbe Sprache spricht. */
+.options button.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+}
+.chips .chip.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+}
+.konto-tabs button.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+}
+
+/* ---------- Modusauswahl ---------- */
+
+.modes .mt {
+  font-family: var(--font-cond);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  font-size: 1.1rem;
+}
 
 /* ---------- Wortmarke ---------- */
 
+/* Kompakt und nur im Setup: eine dauerhafte Kopfleiste auf jedem Screen
+   würde am Handy senkrecht zu viel kosten. */
 .marke { display: flex; align-items: center; gap: 12px; padding: 14px 4px 6px; }
+.marke .blink-logo { width: 46px; height: 46px; }
 .marke .wort {
   font-family: var(--font-display);
   text-transform: uppercase;
@@ -1174,7 +1242,113 @@ h1 {
   margin-top: 3px;
 }
 
-/* ---------- Logo ---------- */
+@media (min-width: 820px) {
+  .marke .blink-logo { width: 56px; height: 56px; }
+  .marke .wort { font-size: 1.9rem; }
+}
+
+/* ---------- Nachträge zum Rebranding ---------- */
+
+/* „Ausgewählt" ist überall hell, auch beim Multiplikator – sonst leuchtet
+   ein roter Balken über dem Zahlenfeld, der wie eine Warnung aussieht. */
+.mult-row button.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+  font-family: var(--font-cond);
+  letter-spacing: 0.04em;
+}
+
+/* Der Finisher benutzt dieselbe Checkout-Leiste wie das X01 – dort war sie
+   an die Elternklasse gebunden und blieb hier ungestylt. */
+.finish-hint .chip {
+  background: var(--bg-3); border: 1px solid var(--line); border-radius: 8px;
+  padding: 5px 10px; font-size: 0.95rem;
+  font-family: var(--font-cond); font-weight: 700;
+}
+.finish-hint .chip.first { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.finish-hint .label {
+  font-family: var(--font-cond); font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; font-size: 0.75rem; color: var(--muted);
+}
+.finish-hint .none { color: var(--muted); font-size: 0.85rem; }
+
+/* Zahlenfeld und Multiplikator schmal setzen – dreistellige Reste und die
+   Zahlen 1 bis 20 stehen so ruhiger nebeneinander. */
+.num-grid button, .keypad button, .quick-row button {
+  font-family: var(--font-cond);
+  font-weight: 700;
+}
+
+@media (min-width: 820px) {
+  .finish-hint .chip { font-size: 1.15rem; padding: 8px 14px; }
+}
+
+/* ================= Handoff-Korrekturen =================
+   Nach der genauen Spezifikation aus „Dart App Rebranding/README.md".
+   Der erste Anlauf hatte drei Dinge falsch: den blauen Schein gar nicht,
+   die aktiven Zustände rot statt weiß, und die Hintergrundstufen um eine
+   Stufe verschoben.
+========================================================= */
+
+/* ---------- Aktive Zustände: weiße Kante, keine rote ---------- */
+
+/* Karten und Zeilen werden ausgewählt, nicht eingefärbt. Rot bliebe sonst
+   nicht mehr als Signal übrig – und genau das soll es sein. */
+.roster-item.selected,
+.modes button.active,
+.match-row.next {
+  border-color: var(--aktiv-linie);
+  background: var(--aktiv-flaeche);
+}
+.roster-item.selected .check { color: var(--text); }
+
+/* Die aktive Spielerkarte steht im Licht. */
+.pcard.active {
+  border-color: var(--aktiv-linie);
+  background: var(--aktiv-flaeche);
+  box-shadow: 0 0 36px var(--schein);
+}
+/* Der Rest des Aktiven bleibt weiß – rot ist er erst im Finish-Bereich,
+   und das entscheidet die Checkout-Leiste, nicht die Karte. */
+.pcard.active .rest { color: var(--text); }
+
+/* Einstellungen: weiße Kante, dunkle Fläche, weiße Schrift. Nicht gefüllt –
+   sonst konkurrieren fünf weiße Blöcke mit der Hauptaktion. */
+[data-setting] button.active {
+  background: var(--aktiv-flaeche);
+  border-color: var(--aktiv-linie);
+  color: var(--text);
+}
+
+/* Reiter und Filter dagegen sind gefüllt – sie sind die Navigation. */
+#board-mode button.active,
+.chips .chip.active,
+.nav button.active,
+.konto-tabs button.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--on-primary);
+}
+
+/* ---------- Blauer Schein ---------- */
+
+.btn.primary { box-shadow: 0 0 30px var(--schein-weich); }
+.btn.primary:active { box-shadow: 0 0 18px var(--schein-weich); }
+.konto-logo img { box-shadow: 0 0 0 1px var(--line), 0 0 34px var(--schein); }
+
+/* ---------- Fließtext ---------- */
+
+/* Barlow statt System-Schrift, wie im Handoff. Knöpfe erben sie nicht von
+   selbst, deshalb ausdrücklich. */
+button, input, select, textarea { font-family: inherit; }
+.hint, .muted, label, p, td, th { font-family: var(--font-body); }
+
+/* ---------- Karten ---------- */
+
+.card { border-radius: var(--radius); }
+
+/* ---------- Logo in den Kopfzeilen ---------- */
 
 /* Als Hintergrundbild, nicht als <img>: so steht die Datei im
    Einzeldatei-Bündel genau einmal statt bei jedem Vorkommen erneut. */
@@ -1183,45 +1357,61 @@ h1 {
   background: url('../icons/icon-192.webp') center / cover no-repeat;
   border-radius: 50%;
   border: 2px solid var(--line);
+  box-shadow: 0 0 20px var(--schein-stark);
 }
 .blink-logo.sm { width: 40px; height: 40px; }
-.marke .blink-logo { width: 46px; height: 46px; }
+.blink-logo.lg { width: 46px; height: 46px; }
 
 .kopf-mit-logo { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .kopf-mit-logo h1 { line-height: 1.05; }
 
 @media (min-width: 820px) {
   .blink-logo.sm { width: 46px; height: 46px; }
-  .marke .blink-logo { width: 56px; height: 56px; }
-  .marke .wort { font-size: 1.9rem; }
+  .blink-logo.lg { width: 52px; height: 52px; }
 }
 
-/* ---------- Konto ---------- */
-
-/* Die Reiter des Anmeldebildschirms folgen derselben Regel wie alle
-   anderen Segmente: ausgewählt heißt Akzentfarbe. */
-.konto-tabs button.active {
-  border-color: var(--accent); background: var(--accent-soft); color: var(--accent);
+/* Finisher: „am Wurf" ist eine weiße Kante wie überall sonst, und die
+   Zielzahl-Karte trägt einen neutralen Rahmen – die rote Zahl darin ist
+   Signal genug. */
+.fin-row.active {
+  border-color: var(--aktiv-linie);
+  background: var(--aktiv-flaeche);
 }
+.fin-row.fertig { border-color: var(--line-hell); }
+.fin-zahl { border-color: var(--line); }
 
-/* ---------- Finish-Vorschlag im Finisher ---------- */
+/* ================= Nachträge =================
+   Auf dem Stand, den Julius freigegeben hat, nur diese Änderungen:
+============================================== */
 
-/* Dieselbe Leiste wie im X01 – dort hing sie an der Elternklasse und
-   blieb hier ungestylt. */
-.finish-hint {
-  min-height: 46px; display: flex; align-items: center; justify-content: center; gap: 6px;
-  background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px;
-  padding: 8px; margin-bottom: 8px; flex-wrap: wrap;
+/* Die Leiste selbst ist durchsichtig, damit der Lichtschein durchkommt.
+   Die Knöpfe darin brauchen aber eine Fläche, sonst schwimmen sie darin. */
+.nav {
+  background: transparent;
+  backdrop-filter: blur(14px);
 }
-.finish-hint:empty { display: none; }
-.finish-hint .label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
-.finish-hint .chip {
-  background: var(--bg-3); border: 1px solid var(--line); border-radius: 8px;
-  padding: 5px 10px; font-family: var(--font-cond); font-weight: 700; font-size: 0.95rem;
-}
-.finish-hint .chip.first { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
-.finish-hint .none { color: var(--muted); font-size: 0.85rem; }
+.nav button { background: var(--bg-2); }
 
+/* Der gewählte Spielmodus steht im selben Licht wie der, der gerade dran
+   ist – beides ist „hier läuft es gerade". */
+.modes button.active { box-shadow: 0 0 36px var(--schein); }
+
+/* Kein Rot in Knöpfen. Die OK-Taste und die Start-Knöpfe im Spielplan sind
+   Hauptaktionen und deshalb hell, wie „Spiel starten" auch. */
+.keypad button.ok,
+.match-row .go {
+  background: var(--primary);
+  border: 1px solid var(--primary);
+  color: var(--on-primary);
+}
+.keypad button.ok:active, .match-row .go:active { background: #ffffff; }
+
+/* Der klebende Turnier-Knopf holt seine Farbe jetzt aus .btn.primary. Vorher
+   stand hier der Akzent fest – geschrieben, als der noch grün war, und seit
+   er rot ist kam Rot mit dunkler Schrift heraus. */
 @media (min-width: 820px) {
-  .finish-hint .chip { font-size: 1.15rem; padding: 8px 14px; }
+  #screen-tournament [data-action="next-match"],
+  #screen-tournament [data-action="to-winner"] {
+    background: var(--primary);
+  }
 }

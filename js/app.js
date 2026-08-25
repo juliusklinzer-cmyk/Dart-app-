@@ -161,10 +161,15 @@
 
   /* Ein Ort für die Namen der Spielarten – sie tauchen an einem halben Dutzend
      Stellen auf, und eine vergessene wäre sofort sichtbar. */
+  /* Das Schnelle Spiel laeuft auf dem X01-Bildschirm, die anderen freien
+     Spiele haben je einen eigenen. */
+  function spielScreen(kind) { return kind === 'quick' ? 'game' : kind; }
+
   function kindName(kind) {
     if (kind === 'cricket') return 'Cricket';
     if (kind === 'rtw') return 'Round the World';
     if (kind === 'finisher') return 'Finisher';
+    if (kind === 'quick') return 'Schnelles Spiel';
     return 'X01';
   }
   function activeProfiles() { return S.profiles.filter(function (p) { return !p.hidden; }); }
@@ -312,7 +317,12 @@
     for (var i = 0; i < S.matches.length; i++) if (S.matches[i].id === id) return S.matches[i];
     return null;
   }
-  function currentMatch() { return S.current ? matchById(S.current) : null; }
+  /* Ein Schnelles Spiel ist selbst die laufende Partie – dadurch tragen
+     Spielbildschirm, Eingabe, Finish-Vorschlag und Undo unveraendert. */
+  function currentMatch() {
+    if (S.game && S.game.kind === 'quick') return S.game;
+    return S.current ? matchById(S.current) : null;
+  }
   function nextOpenMatch() {
     for (var i = 0; i < S.matches.length; i++) {
       if (!S.matches[i].done && !S.matches[i].void) return S.matches[i];
@@ -330,17 +340,35 @@
     var last = match.legs[match.legs.length - 1];
     if (last && !last.winner) return last;
     if (match.done) return last || null;
-    var other = match.p[0] === match.starter ? match.p[1] : match.p[0];
-    var starter = match.legs.length % 2 === 0 ? match.starter : other;
-    var leg = { starter: starter, visits: [], winner: null };
+    /* Der Anwurf wandert von Leg zu Leg weiter – bei zwei Spielern also im
+       Wechsel, im Schnellen Spiel reihum. */
+    var idx = match.p.indexOf(match.starter);
+    if (idx < 0) idx = 0;
+    var starter = match.p[(idx + match.legs.length) % match.p.length];
+    var leg = { starter: starter, visits: [], winner: null, start: matchStart(match) };
     match.legs.push(leg);
     return leg;
   }
 
+  /* Ein Schnelles Spiel bringt seine Startpunktzahl selbst mit, eine
+     Turnierpartie holt sie aus den Turniereinstellungen. */
+  function matchStart(match) {
+    return match && typeof match.start === 'number' ? match.start : tourStart();
+  }
+  function matchLegsToWin(match) {
+    return match && match.bestOf ? Math.floor(match.bestOf / 2) + 1 : legsToWin();
+  }
+
   function activeLeg(match) { return match.legs[match.legs.length - 1] || null; }
 
+  /* Die Startpunktzahl steht am Leg selbst. Alte Stände haben sie nicht –
+     dort gilt weiter die Turniereinstellung. */
+  function legStart(leg) {
+    return leg && typeof leg.start === 'number' ? leg.start : tourStart();
+  }
+
   function remainingIn(leg, pid) {
-    var rest = tourStart();
+    var rest = legStart(leg);
     for (var i = 0; i < leg.visits.length; i++) {
       var v = leg.visits[i];
       if (v.p === pid && !v.b) rest -= v.s;
@@ -348,9 +376,14 @@
     return rest;
   }
 
+  /* Reihum durch die Aufstellung, beginnend beim Anwerfer. Für zwei Spieler
+     ist das dasselbe wie vorher, ab drei (Schnelles Spiel) geht es weiter
+     im Kreis. */
   function activePlayer(leg, match) {
-    var other = match.p[0] === leg.starter ? match.p[1] : match.p[0];
-    return leg.visits.length % 2 === 0 ? leg.starter : other;
+    var n = match.p.length;
+    var start = match.p.indexOf(leg.starter);
+    if (start < 0) start = 0;
+    return match.p[(start + leg.visits.length) % n];
   }
 
   function dartsIn(leg, pid) {
@@ -371,11 +404,13 @@
 
     if (isCheckout) {
       leg.winner = pid;
-      if (legsWon(m, pid) >= legsToWin()) {
+      if (legsWon(m, pid) >= matchLegsToWin(m)) {
         m.done = true;
         m.winner = pid;
         m.at = Date.now();
-        UI.overlay = { type: 'match-done', pid: pid };
+        /* Das Schnelle Spiel ist mit dem Checkout vorbei – danach geht es in
+           die Auswertung, nicht zum nächsten Spiel eines Spielplans. */
+        UI.overlay = { type: m.kind === 'quick' ? 'game-done' : 'match-done', pid: pid };
       } else {
         UI.overlay = { type: 'leg-done', pid: pid };
       }
@@ -567,18 +602,19 @@
       var start = entry.start || 501;
       entry.matches.forEach(function (m) {
         if (m.done) {
-          stat(m.p[0]).matches++; stat(m.p[1]).matches++;
-          stat(m.winner).won++;
-          var loser = m.winner === m.p[0] ? m.p[1] : m.p[0];
-          stat(loser).lost++;
-          stat(m.winner).lastResults.push({ at: m.at, win: true });
-          stat(loser).lastResults.push({ at: m.at, win: false });
+          /* Nicht auf zwei Spieler festgelegt: ein Schnelles Spiel hat so
+             viele Teilnehmer wie ausgewaehlt wurden. Gewonnen hat einer,
+             verloren haben alle anderen. */
+          m.p.forEach(function (pid) {
+            stat(pid).matches++;
+            if (pid === m.winner) { stat(pid).won++; stat(pid).lastResults.push({ at: m.at, win: true }); }
+            else { stat(pid).lost++; stat(pid).lastResults.push({ at: m.at, win: false }); }
+          });
         }
         m.legs.forEach(function (leg) {
           var rest = {};
-          rest[m.p[0]] = start; rest[m.p[1]] = start;
           var visitNo = {};
-          visitNo[m.p[0]] = 0; visitNo[m.p[1]] = 0;
+          m.p.forEach(function (pid) { rest[pid] = leg && typeof leg.start === 'number' ? leg.start : start; visitNo[pid] = 0; });
 
           leg.visits.forEach(function (v) {
             var st = stat(v.p);
@@ -654,7 +690,9 @@
 
   /* Statistik über alles, was je gespielt wurde (inkl. laufendem Turnier). */
   function career() {
-    var lists = S.history.filter(function (h) { return (h.kind || '501') === '501'; })
+    /* Turniere und Schnelle Spiele liefern beide Match-Listen und fließen
+       damit in dieselbe Classic-Auswertung. */
+    var lists = S.history.filter(function (h) { return (h.kind || '501') === '501' || h.kind === 'quick'; })
       .map(function (h) { return { matches: h.matches, start: (h.settings && h.settings.start) || 501 }; });
     if (S.matches.length) lists.push({ matches: S.matches, start: tourStart() });
     var ids = S.profiles.map(function (p) { return p.id; });
@@ -785,7 +823,8 @@
       S.matches.forEach(function (m) { if (m.done && knownPlayers(m.p)) out.push({ m: m, start: tourStart(), live: true }); });
     }
     S.history.forEach(function (h) {
-      if ((h.kind || '501') !== '501') return;   // Cricket/RTW haben keine Match-Liste
+      // Cricket, RTW und Finisher haben keine Match-Liste.
+      if ((h.kind || '501') !== '501' && h.kind !== 'quick') return;
       h.matches.forEach(function (m) {
         if (m.done && knownPlayers(m.p)) out.push({ m: m, start: (h.settings && h.settings.start) || 501, at: h.at });
       });
@@ -948,6 +987,9 @@
   function undoGame() {
     var g = S.game;
     if (g && g.kind === 'finisher') return undoFinisher(g);
+    // Das Schnelle Spiel benutzt die Aufnahmen-Logik des X01, also auch
+    // deren Undo – Dart für Dart und über Aufnahmen hinweg.
+    if (g && g.kind === 'quick') return undo();
     if (!g || !g.throws.length) return;
     g.throws.pop();
     g.done = false; g.winner = null; g.at = null;
@@ -1141,6 +1183,20 @@
       S.game.rounds = [];
       neueFinisherRunde(S.game);
     }
+    /*
+     * Schnelles Spiel: kein Turnier, alle an einem Board, ein Leg, wer zuerst
+     * auscheckt gewinnt. Es bekommt dieselben Felder wie eine Turnierpartie
+     * (p, starter, legs, …) – dadurch laufen Spielbildschirm, Punkte- und
+     * Einzel-Dart-Eingabe, Finish-Vorschlag, Undo und Korrektur unveraendert
+     * weiter, ohne dass es davon eine zweite Fassung braucht.
+     */
+    if (kind === 'quick') {
+      S.game.p = S.lineup.slice();
+      S.game.start = S.settings.start;
+      S.game.bestOf = 1;
+      S.game.starter = S.lineup[0];
+      S.game.legs = [];
+    }
     UI.mult = 1;
     UI.overlay = null;
     // Wie im Turnier wird auch hier ausgeworfen, wer anfängt.
@@ -1160,6 +1216,17 @@
     if (g.kind === 'finisher') {
       eintrag.rounds = g.rounds;
       eintrag.ziel = g.ziel;
+    } else if (g.kind === 'quick') {
+      /* Das Schnelle Spiel wird wie eine Turnierpartie abgelegt – eine
+         Match-Liste mit genau einem Eintrag. Dadurch rechnet collectStats()
+         Average, First 9, Doppelquote und Rekorde daraus ohne jede
+         Sonderbehandlung. */
+      eintrag.lineup = g.p.slice();
+      eintrag.settings = { start: g.start };
+      eintrag.matches = [{
+        id: g.id, p: g.p.slice(), starter: g.starter, legs: g.legs,
+        done: true, winner: g.winner, at: eintrag.at, start: g.start
+      }];
     } else {
       eintrag.scoring = g.scoring;
       eintrag.throws = g.throws;
@@ -1393,13 +1460,15 @@
     $('mode-select').querySelectorAll('button').forEach(function (b) {
       b.classList.toggle('active', b.getAttribute('data-value') === S.mode);
     });
-    $('settings-501').classList.toggle('hidden', S.mode !== '501');
     $('settings-cricket').classList.toggle('hidden', S.mode !== 'cricket');
     $('settings-rtw').classList.toggle('hidden', S.mode !== 'rtw');
     $('settings-finisher').classList.toggle('hidden', S.mode !== 'finisher');
-    document.querySelector('[data-action="start-game"]').textContent =
-      S.mode === 'cricket' ? 'Cricket starten' : S.mode === 'rtw' ? 'Round the World starten'
-        : S.mode === 'finisher' ? 'Finisher starten' : 'Turnier starten';
+    /* Turnier und Schnelles Spiel teilen sich die Einstellungen – Startpunkte
+       und Einzel-Dart-Grenze gelten für beide. Nur die Legs sind Turniersache;
+       zwei getrennte Karten wären zwei Bedienelemente für dieselbe Einstellung. */
+    $('settings-501').classList.toggle('hidden', S.mode !== '501' && S.mode !== 'quick');
+    $('setting-bestof').classList.toggle('hidden', S.mode !== '501');
+    document.querySelector('[data-action="start-game"]').textContent = 'Spiel starten';
 
     var runningGame = !!S.game;
     var running = runningGame || (S.matches.length > 0 && !allMatchesDone());
@@ -1411,9 +1480,14 @@
       $('resume-info').textContent = 'Sieger: ' + pname(S.game.winner) + ' · Ergebnis noch nicht gespeichert';
       resumeBtn.textContent = 'Ergebnis ansehen';
     } else if (runningGame) {
-      $('resume-box').querySelector('strong').textContent = S.game.kind === 'cricket' ? 'Laufendes Cricket' : 'Laufendes Training';
+      $('resume-box').querySelector('strong').textContent = 'Laufendes ' + kindName(S.game.kind);
+      /* Das Schnelle Spiel zählt seine Darts in Aufnahmen, die anderen
+         Spielarten in einer flachen Wurfliste. */
+      var geworfen = S.game.kind === 'quick'
+        ? sum(S.game.legs || [], function (l) { return sum(l.visits, function (v) { return v.d; }); })
+        : (S.game.throws || []).length;
       $('resume-info').textContent = plural(S.game.players.length, 'Spieler', 'Spieler') + ' · ' +
-        plural(S.game.throws.length, 'Dart', 'Darts') + ' geworfen';
+        plural(geworfen, 'Dart', 'Darts') + ' geworfen';
       resumeBtn.textContent = 'Fortsetzen';
     } else if (running) {
       resumeBtn.textContent = 'Fortsetzen';
@@ -1821,11 +1895,18 @@
     if (!leg) { S.screen = 'tournament'; render(); return; }
 
     var active = m.done && m.winner ? m.winner : activePlayer(leg, m);
-    var idx = S.matches.indexOf(m);
-    $('game-match-label').textContent = 'Spiel ' + (idx + 1) + ' von ' + S.matches.length;
-    $('game-leg-label').textContent = tour().bestOf > 1
-      ? 'Leg ' + m.legs.length + ' · Stand ' + legsWon(m, m.p[0]) + ':' + legsWon(m, m.p[1]) + ' · ' + plural(legsToWin(), 'Leg', 'Legs') + ' zum Sieg'
-      : 'Ein Leg · ' + tourStart() + ' Double Out';
+    var schnell = m.kind === 'quick';
+    if (schnell) {
+      $('game-match-label').textContent = 'Schnelles Spiel';
+      $('game-leg-label').textContent = plural(m.p.length, 'Spieler', 'Spieler') + ' · ' +
+        matchStart(m) + ' Double Out';
+    } else {
+      var idx = S.matches.indexOf(m);
+      $('game-match-label').textContent = 'Spiel ' + (idx + 1) + ' von ' + S.matches.length;
+      $('game-leg-label').textContent = tour().bestOf > 1
+        ? 'Leg ' + m.legs.length + ' · Stand ' + legsWon(m, m.p[0]) + ':' + legsWon(m, m.p[1]) + ' · ' + plural(legsToWin(), 'Leg', 'Legs') + ' zum Sieg'
+        : 'Ein Leg · ' + tourStart() + ' Double Out';
+    }
 
     var pendingSum = sum(UI.darts, function (d) { return d.v; });
     $('game-turn').innerHTML = m.done
@@ -1835,11 +1916,13 @@
     $('scoreboard').innerHTML = m.p.map(function (pid) {
       var rest = remainingIn(leg, pid) - (pid === active ? pendingSum : 0);
       var darts = dartsIn(leg, pid) + (pid === active ? UI.darts.length : 0);
-      var scored = tourStart() - remainingIn(leg, pid) + (pid === active ? pendingSum : 0);
+      var scored = matchStart(m) - remainingIn(leg, pid) + (pid === active ? pendingSum : 0);
       var avg = darts ? (scored / darts * 3).toFixed(1) : '–';
       return '<div class="pcard ' + (pid === active ? 'active' : '') + '">' +
         '<div class="pname">' + avatarHTML(profile(pid), 'sm') + esc(pname(pid)) + '</div>' +
-        '<div class="legs">Legs ' + legsWon(m, pid) + '</div>' +
+        /* Im Schnellen Spiel gibt es keine Legs zu zählen – dort steht die
+           geworfene Dartzahl, die sagt in dem Moment mehr. */
+        '<div class="legs">' + (schnell ? plural(darts, 'Dart', 'Darts') : 'Legs ' + legsWon(m, pid)) + '</div>' +
         '<div class="rest">' + rest + '</div>' +
         '<div class="meta"><span>Ø <b>' + avg + '</b></span><span>Darts <b>' + darts + '</b></span></div>' +
         '</div>';
@@ -1869,7 +1952,7 @@
       for (var li = m.legs.length - 1; li >= 0; li--) {
         var lg = m.legs[li];
         var isActiveLeg = lg === leg;
-        var restRun = tourStart();
+        var restRun = legStart(leg);
         var entries = [];
         lg.visits.forEach(function (v, vi) {
           if (v.p !== pid) return;
@@ -2322,6 +2405,39 @@
           '<button class="btn ghost full" data-action="finish-game">Speichern &amp; beenden</button>'
         : '<button class="btn ghost full" data-action="summary-back">Zurück</button>';
 
+    } else if (s.kind === 'quick') {
+      var qg = found.g;
+      var qm = qg.matches ? qg.matches[0] : qg;          // archiviert oder noch live
+      var qStart = (qg.settings && qg.settings.start) || qg.start || 501;
+      var qMap = collectStats([{ matches: [qm], start: qStart }], qm.p);
+      qm.p.forEach(function (id) { finalize(qMap[id]); });
+      var qLeg = qm.legs[qm.legs.length - 1];
+
+      box = '<div class="sum-head"><div class="big-emoji">🏆</div>' +
+        '<h2 class="sum-title">' + esc(pname(qm.winner)) + ' gewinnt</h2>' +
+        '<div class="muted">Schnelles Spiel · ' + qStart + ' Double Out · ' +
+          plural(qm.p.length, 'Spieler', 'Spieler') + '</div></div>' +
+        '<div class="sum-cards">' + qm.p.map(function (id) {
+          var st = qMap[id];
+          var rest = qLeg ? remainingIn(qLeg, id) : 0;
+          return '<div class="card sum-card ' + (qm.winner === id ? 'win' : '') + '">' +
+            '<div class="sum-who">' + avatarHTML(profile(id), 'md') +
+              '<div><div class="nm">' + esc(pname(id)) + '</div>' +
+              '<div class="muted">' + (qm.winner === id ? 'ausgecheckt' : 'Rest ' + rest) + '</div></div></div>' +
+            statRow('3-Dart-Average', st.darts ? st.avg.toFixed(2) : '–') +
+            statRow('First 9', st.first9Darts ? st.first9.toFixed(2) : '–') +
+            statRow('Höchste Aufnahme', st.highScore || '–') +
+            statRow('180 / 140+ / 100+', st.s180 + ' / ' + st.s140 + ' / ' + st.s100) +
+            statRow('Höchstes Finish', st.highCO || '–') +
+            statRow('Darts geworfen', st.darts) +
+            '</div>';
+        }).join('') + '</div>' + note;
+
+      actions = found.live
+        ? '<button class="btn primary full big" data-action="restart-game">Nochmal spielen</button>' +
+          '<button class="btn ghost full" data-action="finish-game">Speichern &amp; beenden</button>'
+        : '<button class="btn ghost full" data-action="summary-back">Zurück</button>';
+
     } else if (s.kind === 'finisher') {
       var fg2 = found.g;
       var gewonnen = {}, dartsSum = {}, best = {}, hoch = {};
@@ -2712,7 +2828,7 @@
           UI.summary = { kind: S.game.kind, id: 'current' };
           S.screen = 'summary';
         } else {
-          S.screen = S.game ? S.game.kind : 'tournament';
+          S.screen = S.game ? spielScreen(S.game.kind) : 'tournament';
         }
         save(); render();
         break;
@@ -2722,6 +2838,9 @@
       case 'to-tournament':
         // Aus dem Bull-Off eines Trainingsspiels führt der Weg ins Setup zurück.
         if (S.game && !S.game.started) { S.game = null; S.screen = 'setup'; }
+        // Ein Schnelles Spiel gehört zu keinem Spielplan – zurück ins Setup,
+        // das laufende Spiel bleibt in der Fortsetzen-Box stehen.
+        else if (S.game && S.game.kind === 'quick') S.screen = 'setup';
         else S.screen = 'tournament';
         UI.overlay = null; save(); render();
         break;
@@ -2748,7 +2867,7 @@
           var idx2 = S.game.players.indexOf(pid2);
           if (idx2 > 0) S.game.players = S.game.players.slice(idx2).concat(S.game.players.slice(0, idx2));
           S.game.started = true;
-          S.screen = S.game.kind;
+          S.screen = spielScreen(S.game.kind);
           save(); render();
           break;
         }
@@ -2783,7 +2902,7 @@
         var sg = S.game;
         if (!sg || sg.started) return;
         sg.started = true;
-        S.screen = sg.kind;
+        S.screen = spielScreen(sg.kind);
         save(); render();
         break;
       }
@@ -2978,9 +3097,13 @@
   S = load() || newState();
   if (!S.lineup.length) S.lineup = activeProfiles().slice(0, 4).map(function (p) { return p.id; });
   if ((S.screen === 'cricket' || S.screen === 'rtw' || S.screen === 'finisher') && !S.game) S.screen = 'setup';
-  if (S.game && !S.game.started && !S.game.throws.length) S.screen = 'bulloff';
+  /* Ein angefangenes Schnelles Spiel liegt in S.game, nicht im Spielplan –
+     ohne diese Zeile landete man nach einem Neustart im leeren Turnier. */
+  if (S.screen === 'game' && S.game && S.game.kind === 'quick' && !S.game.done) S.screen = 'game';
+  if (S.game && S.game.kind !== 'quick' && !S.game.started && !S.game.throws.length) S.screen = 'bulloff';
+  if (S.game && S.game.kind === 'quick' && !S.game.started) S.screen = 'bulloff';
   if (S.game && S.game.started === undefined) S.game.started = true;   // ältere Stände
-  if (S.game && (S.screen === 'cricket' || S.screen === 'rtw' || S.screen === 'finisher') && S.game.kind !== S.screen) S.screen = S.game.kind;
+  if (S.game && (S.screen === 'cricket' || S.screen === 'rtw' || S.screen === 'finisher') && S.game.kind !== S.screen) S.screen = spielScreen(S.game.kind);
   /* Ein beendetes Spiel führt zur Auswertung, nicht auf ein totes Board –
      sonst kann man in ein fertiges Match weitertippen. */
   if (S.game && S.game.done) {

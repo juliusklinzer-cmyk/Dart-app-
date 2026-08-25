@@ -51,6 +51,10 @@
   <div class="card">
     <h2>Spielmodus</h2>
     <div class="modes" id="mode-select">
+      <button data-action="set-mode" data-value="quick">
+        <span class="mt">Schnelles Spiel</span>
+        <span class="md">Alle gleichzeitig, ein Leg, wer zuerst auscheckt</span>
+      </button>
       <button data-action="set-mode" data-value="501">
         <span class="mt">X01 Turnier</span>
         <span class="md">Jeder gegen jeden, Double Out</span>
@@ -86,7 +90,8 @@
         <button data-value="701">701</button>
       </div>
     </div>
-    <div class="setting">
+    <!-- Nur im Turnier: das Schnelle Spiel hat genau ein Leg. -->
+    <div class="setting" id="setting-bestof">
       <label>Legs pro Spiel</label>
       <div class="options" data-setting="bestOf">
         <button data-value="1">1 Leg</button>
