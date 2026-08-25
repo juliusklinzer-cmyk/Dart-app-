@@ -1244,6 +1244,13 @@ check('keine Konto-Schicht angemeldet', await page.evaluate(() => !window.DartKo
 check('Statuszeile bleibt unsichtbar', await page.locator('#sync-status').isHidden());
 check('Aufstellung funktioniert weiterhin',
   (await page.locator('#roster .roster-item').count()) > 0);
+/* Ohne Konto-Schicht raeumt niemand die Startspieler weg -- die App per
+   Doppelklick waere sonst beim ersten Oeffnen leer. */
+check('die vier Startspieler bleiben ohne Server erhalten',
+  await page.evaluate(() => ['Lenas', 'Tobi', 'Domi', 'Julius']
+    .every((n) => window.__dart.state().profiles.some((p) => p.name === n))));
+check('und niemand ist als Gast markiert',
+  await page.evaluate(() => !window.__dart.state().profiles.some((p) => p.gast)));
 
 group('Fehlerfreiheit');
 check('keine JS-Fehler', errors.length === 0, errors.join(' | '));

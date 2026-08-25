@@ -70,7 +70,10 @@ async function geraet(browser, name, altbestand) {
   return { name, ctx, page, fehlerLog };
 }
 
-async function registriere(g, anzeigename, email, passwort) {
+/* mitZuordnung: nur wenn auf dem Geraet noch Profile mit eigener Historie
+   liegen. Auf einem frischen Geraet gibt es nichts zuzuordnen -- die vier
+   Startspieler sind dort schon weg, bevor der erste Bildschirm steht. */
+async function registriere(g, anzeigename, email, passwort, mitZuordnung) {
   // Kein Klick auf die Navigation noetig: vor der Anmeldung ist sie aus, und
   // der Anmeldebildschirm steht ohnehin schon da.
   await g.page.waitForSelector('[data-action="konto-tab-register"]', { timeout: 10000 });
@@ -80,8 +83,13 @@ async function registriere(g, anzeigename, email, passwort) {
   await g.page.locator('#konto-email').fill(email);
   await g.page.locator('#konto-pass').fill(passwort);
   await g.page.locator('[data-action="konto-register"]').click();
-  // Nach der Registrierung kommt die Zuordnung der alten Profile.
-  await g.page.waitForSelector('[data-action="konto-zuordnung-speichern"]', { timeout: 10000 });
+  if (mitZuordnung) {
+    await g.page.waitForSelector('[data-action="konto-zuordnung-speichern"]', { timeout: 10000 });
+  } else {
+    // Ohne Zuordnung geht es direkt in die App: die Schranke faellt.
+    await g.page.waitForFunction(
+      () => !document.body.classList.contains('gesperrt'), null, { timeout: 10000 });
+  }
 }
 
 async function zuordnungUebernehmen(g) {
@@ -207,40 +215,28 @@ async function main() {
     check('kein Account angelegt', await julius.page.evaluate(() => !window.DartKonto.nutzer()));
 
     group('Registrierung, beide Geräte');
+    /*
+     * Die vier Startspieler (Lenas, Tobi, Domi, Julius) sind ein Erbe aus der
+     * Zeit ohne Login. Sobald ein Dart-Server antwortet, kommt der Kader von
+     * dort – und niemand soll beim ersten Anmelden gefragt werden, welcher
+     * von vier Erfundenen er ist.
+     */
+    check('die Startspieler sind schon vor dem Anmelden weg',
+      (await julius.page.evaluate(() => window.__dart.state().profiles.length)) === 0,
+      JSON.stringify(await julius.page.evaluate(() =>
+        window.__dart.state().profiles.map((p) => p.name))));
+
     await registriere(julius, 'Julius', 'julius@example.de', 'turnierabend2026');
-    check('Zuordnungs-Schirm erscheint',
-      await julius.page.locator('[data-action="konto-zuordnung-speichern"]').isVisible());
-    check('alte Profile stehen zur Zuordnung',
-      (await julius.page.locator('select[data-profil]').count()) === 4);
-    /* Der Zeilentext taugt zum Suchen nicht – die Auswahlliste enthält jeden
-       Account-Namen, also steht "Julius" in jeder Zeile. Über den Namen im
-       .nm-Feld ist die Zeile eindeutig. */
-    check('gleichnamiges Profil ist vorgeschlagen', await julius.page.evaluate(() => {
-      const zeile = [...document.querySelectorAll('.zuordnung-zeile')]
-        .find((z) => z.querySelector('.nm').textContent.trim() === 'Julius');
-      const sel = zeile && zeile.querySelector('select');
-      return !!sel && sel.value.indexOf('u_') === 0;
-    }));
-    check('für die anderen ist Gastspieler voreingestellt', await julius.page.evaluate(() => {
-      const zeile = [...document.querySelectorAll('.zuordnung-zeile')]
-        .find((z) => z.querySelector('.nm').textContent.trim() === 'Domi');
-      return !!zeile && zeile.querySelector('select').value === 'gast';
-    }));
-    await zuordnungUebernehmen(julius);
+    check('kein Zuordnungs-Schirm auf einem frischen Gerät',
+      (await julius.page.locator('[data-action="konto-zuordnung-speichern"]').count()) === 0);
     const nachher = await julius.page.evaluate(() => window.__dart.state().profiles);
     check('Julius ist jetzt ein Account',
       nachher.some((p) => p.name === 'Julius' && p.id.indexOf('u_') === 0));
     check('kein Profil doppelt',
       new Set(nachher.map((p) => p.id)).size === nachher.length);
-    check('die anderen bleiben Gastspieler',
-      nachher.filter((p) => p.gast).length === 3);
-    check('Sicherung des Vorzustands liegt bereit',
-      await julius.page.evaluate(() => !!localStorage.getItem('dart-turnier-vor-anmeldung')));
-    /* Vier lokale Profile plus das vom Server geholte macht fünf; nach der
-       Zuordnung fallen die zwei "Julius" zu einem zusammen. */
-    check('aus fünf Profilen werden vier', nachher.length === 4, 'waren: ' + nachher.length);
-    check('genau ein Account darunter',
-      nachher.filter((p) => p.id.indexOf('u_') === 0).length === 1);
+    check('nur der eigene Account steht in der Liste', nachher.length === 1,
+      'waren: ' + nachher.length);
+    check('kein Gast dabei', nachher.filter((p) => p.gast).length === 0);
 
     group('Nach der Anmeldung ist die App offen');
     check('Schranke ist gefallen',
@@ -265,7 +261,6 @@ async function main() {
     await julius.page.locator('[data-setting="start"] button[data-value="501"]').click();
 
     await registriere(tobi, 'Tobi', 'tobi@example.de', 'dreifachzwanzig');
-    await zuordnungUebernehmen(tobi);
     check('Tobi ist angemeldet',
       await tobi.page.evaluate(() => window.DartKonto.nutzer().name === 'Tobi'));
 
@@ -356,6 +351,8 @@ async function main() {
     check('Warteschlange wurde geleert', await warteAufUpload(julius.page, 10));
 
     group('Tobi bekommt das Spiel auf sein Gerät');
+    // Nach dem Anmelden steht man im Turnier, nicht im Konto -- also hin.
+    await tobi.page.locator('#nav-konto').click();
     await tobi.page.locator('[data-action="konto-sync"]').click();
     await tobi.page.waitForTimeout(1200);
     const tobiHist = await tobi.page.evaluate(() => window.__dart.state().history);
@@ -415,6 +412,85 @@ async function main() {
       await julius.page.evaluate(() => window.DartKonto.nutzer().name === 'Julius'));
     check('Zuordnung wird nicht nochmal verlangt',
       (await julius.page.evaluate(() => window.__dart.state().screen)) !== 'zuordnung');
+    check('die Startspieler kommen auch nach dem Neustart nicht zurück',
+      await julius.page.evaluate(() => !window.__dart.state().profiles
+        .some((p) => ['Lenas', 'Domi'].indexOf(p.name) >= 0)));
+
+    /*
+     * Ein Gast ist der Besuch von heute Abend: kein Account, gehoert dem
+     * Geraet, und nach dem Abend raeumt er sich selbst weg. Wer schon
+     * geworfen hat, wird nur ausgeblendet -- geloescht stuende im Archiv
+     * "Unbekannt".
+     */
+    group('Gäste');
+    await julius.page.locator('#nav [data-screen="setup"]').click();
+    await julius.page.locator('#screen-setup [data-action="new-profile"]').click();
+    await julius.page.locator('[data-role="profile-name"]').fill('Onkel Heinz');
+    await julius.page.locator('[data-action="save-profile"]').click();
+    const gastId = await julius.page.evaluate(() =>
+      (window.__dart.state().profiles.find((p) => p.name === 'Onkel Heinz') || {}).id);
+    check('von Hand angelegt heisst angemeldet: Gast',
+      await julius.page.evaluate((id) => !!window.__dart.profile(id).gast, gastId));
+    check('Gast trägt ein Abzeichen in der Aufstellung',
+      (await julius.page.locator('.roster-item[data-id="' + gastId + '"] .gast-marke').count()) === 1);
+    check('der eigene Account nicht',
+      (await julius.page.locator('.roster-item[data-id="' + juliusId + '"] .gast-marke').count()) === 0);
+    check('Gäste stehen unter den Accounts', await julius.page.evaluate((id) => {
+      const ids = [...document.querySelectorAll('.roster-item')].map((e) => e.getAttribute('data-id'));
+      return ids[ids.length - 1] === id;
+    }, gastId));
+    check('ein Gast landet nicht in "Wer ist wer?"',
+      (await julius.page.locator('[data-action="konto-zuordnung-speichern"]').count()) === 0);
+
+    await julius.page.locator('.roster-item[data-id="' + gastId + '"] .edit').click();
+    check('ein Gast ohne Spiel lässt sich richtig löschen',
+      (await julius.page.locator('[data-action="delete-profile"]').count()) === 1);
+    await julius.page.locator('[data-action="ov-cancel"]').click();
+
+    /* Abend vorbei: der Gast wurde vor mehr als zwölf Stunden angelegt und
+       hat nie geworfen. Beim nächsten Start ist er weg. */
+    await julius.page.evaluate((id) => {
+      window.__dart.profile(id).created = Date.now() - 20 * 3600 * 1000;
+      window.__dart.save();
+    }, gastId);
+    await julius.page.reload();
+    await julius.page.waitForFunction(() => !!window.DartKonto && !!window.DartKonto.nutzer(), null, { timeout: 10000 });
+    check('ein Gast ohne Spiel ist am nächsten Tag weg',
+      await julius.page.evaluate((id) => !window.__dart.state().profiles.some((p) => p.id === id), gastId));
+
+    /* Derselbe Ablauf, aber der Gast hat mitgespielt: dann darf er nicht
+       verschwinden, sonst stuende in der Spielstatistik "Unbekannt". */
+    await julius.page.locator('#screen-setup [data-action="new-profile"]').click();
+    await julius.page.locator('[data-role="profile-name"]').fill('Tante Erna');
+    await julius.page.locator('[data-action="save-profile"]').click();
+    const ernaId = await julius.page.evaluate(() => {
+      const S = window.__dart.state();
+      const p = S.profiles.find((x) => x.name === 'Tante Erna');
+      p.created = Date.now() - 20 * 3600 * 1000;
+      S.history.unshift({
+        id: 'gastspiel', kind: 'cricket', at: Date.now() - 19 * 3600 * 1000,
+        players: [p.id], scoring: true, throws: [], winner: p.id
+      });
+      window.__dart.save();
+      return p.id;
+    });
+    await julius.page.reload();
+    await julius.page.waitForFunction(() => !!window.DartKonto && !!window.DartKonto.nutzer(), null, { timeout: 10000 });
+    check('ein Gast mit Spiel bleibt erhalten',
+      await julius.page.evaluate((id) => !!window.__dart.state().profiles.find((p) => p.id === id), ernaId));
+    check('er ist aber ausgeblendet',
+      await julius.page.evaluate((id) => window.__dart.profile(id).hidden === true, ernaId));
+    check('und steht nicht mehr in der Aufstellung',
+      (await julius.page.locator('.roster-item[data-id="' + ernaId + '"]').count()) === 0);
+    check('sein Name steht weiterhin in der Historie',
+      await julius.page.evaluate((id) => window.__dart.profile(id).name === 'Tante Erna', ernaId));
+    // Aufraeumen, damit die folgenden Pruefungen auf ihren Zahlen bleiben.
+    await julius.page.evaluate((id) => {
+      const S = window.__dart.state();
+      S.history = S.history.filter((e) => e.id !== 'gastspiel');
+      S.profiles = S.profiles.filter((p) => p.id !== id);
+      window.__dart.save();
+    }, ernaId);
 
     /*
      * Das eigentliche Versprechen: was vor der Anmeldepflicht gespielt wurde,
@@ -459,7 +535,7 @@ async function main() {
     check('nichts wartet auf Upload, solange niemand angemeldet ist',
       (await lenas.page.evaluate(() => window.DartSync.wartend())) === 0);
 
-    await registriere(lenas, 'Lenas', 'lenas@example.de', 'einhundertachtzig');
+    await registriere(lenas, 'Lenas', 'lenas@example.de', 'einhundertachtzig', true);
     await zuordnungUebernehmen(lenas);
     check('das alte Spiel geht nach der Zuordnung raus', await warteAufUpload(lenas.page, 15));
 

@@ -504,7 +504,20 @@
     document.body.classList.toggle('gesperrt', an);
   }
 
+  /*
+   * Es gibt einen Dart-Server. Damit kommt der Kader von dort, und die vier
+   * Startspieler aus der lokalen Zeit haben ausgedient – die räumt app.js
+   * weg, solange sie nie geworfen haben. Gleichzeitig verabschieden sich
+   * Gäste, deren Abend vorbei ist.
+   */
+  function aufraeumen() {
+    if (!D) return;
+    D.platzhalterEntfernen();
+    D.gaesteAufraeumen();
+  }
+
   function anmelden() {
+    aufraeumen();
     window.DartKonto = {
       render: render,
       aktion: aktion,

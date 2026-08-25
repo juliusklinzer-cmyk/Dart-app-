@@ -1516,3 +1516,14 @@ button, input, select, textarea { font-family: inherit; }
 .scoreboard.viele .pcard .pname { font-size: 0.85rem; }
 .scoreboard.viele .pcard .legs { display: none; }
 .scoreboard.viele .pcard .meta { font-size: 0.66rem; gap: 8px; }
+
+/* Gäste sind keine Kollegen mit Account: sie gehören diesem Gerät, stehen
+   in der Aufstellung unten und tragen ein Abzeichen. */
+.gast-marke {
+  display: inline-block; vertical-align: 2px; margin-left: 6px;
+  font-family: var(--font-cond); font-size: 0.66rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted); border: 1px solid var(--line);
+  border-radius: 999px; padding: 1px 7px; line-height: 1.5;
+}
+.roster-item.selected .gast-marke { border-color: var(--aktiv-linie); }

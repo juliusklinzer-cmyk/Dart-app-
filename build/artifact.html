@@ -1520,6 +1520,17 @@ button, input, select, textarea { font-family: inherit; }
 .scoreboard.viele .pcard .legs { display: none; }
 .scoreboard.viele .pcard .meta { font-size: 0.66rem; gap: 8px; }
 
+/* Gäste sind keine Kollegen mit Account: sie gehören diesem Gerät, stehen
+   in der Aufstellung unten und tragen ein Abzeichen. */
+.gast-marke {
+  display: inline-block; vertical-align: 2px; margin-left: 6px;
+  font-family: var(--font-cond); font-size: 0.66rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted); border: 1px solid var(--line);
+  border-radius: 999px; padding: 1px 7px; line-height: 1.5;
+}
+.roster-item.selected .gast-marke { border-color: var(--aktiv-linie); }
+
 </style>
 <div id="save-warning" class="save-warning hidden">
   ⚠️ Der Spielstand kann gerade nicht gespeichert werden – bitte Speicherplatz prüfen
@@ -2276,14 +2287,82 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return !window.DartKonto || window.DartKonto.darfBearbeiten(id);
   }
 
-  /* Wer angemeldet ist, steht oben. Man sucht sich nicht selbst in einer
-     Liste – und man wählt sich fast immer mit aus. */
+  /* Wer angemeldet ist, steht oben, danach die anderen Accounts, ganz unten
+     die Gäste. Man sucht sich nicht selbst in einer Liste – und man wählt
+     sich fast immer mit aus. */
   function rosterReihenfolge() {
     var ich = window.DartKonto && window.DartKonto.nutzer() ? window.DartKonto.nutzer().id : null;
-    if (!ich) return activeProfiles();
-    return activeProfiles().slice().sort(function (a, b) {
-      return (b.id === ich) - (a.id === ich);
+    var liste = activeProfiles().slice();
+    return liste.sort(function (a, b) {
+      if (ich && (a.id === ich) !== (b.id === ich)) return (b.id === ich) - (a.id === ich);
+      return (a.gast ? 1 : 0) - (b.gast ? 1 : 0);
     });
+  }
+
+  /* Wann war dieser Spieler zuletzt dabei? Turniere führen ihre Teilnehmer
+     unter lineup, freie Spiele unter players. */
+  function letztesSpielAm(id) {
+    for (var i = 0; i < S.history.length; i++) {
+      var e = S.history[i];
+      var teil = e.players || e.lineup || [];
+      if (teil.indexOf(id) >= 0) return e.at || 0;
+    }
+    return 0;
+  }
+
+  /*
+   * Gäste räumen sich nach dem Abend selbst weg – sonst wächst die
+   * Aufstellung mit jedem Besuch. „Weg" heißt ausgeblendet, nicht gelöscht:
+   * ihre Spiele stehen im Archiv nur unter der Kennung, ohne das Profil
+   * stünde dort „Unbekannt". Wer nie geworfen hat, wird wirklich gelöscht.
+   * Kommt der Gast wieder, holt man ihn unter Spieler mit einem Tipp zurück.
+   */
+  /*
+   * Die vier Startspieler (siehe DEFAULT_PLAYERS) stammen aus der Zeit vor
+   * dem Login: ohne sie war die App beim ersten Öffnen leer. Sobald es einen
+   * Server gibt, kommt der Kader von dort, und sie wären nur noch vier
+   * Fremde, nach denen beim Anmelden auch noch gefragt würde. Also weg –
+   * aber nur, solange sie nie geworfen haben. Wer eine Historie hat, bleibt
+   * und wird wie bisher einem Account zugeordnet.
+   *
+   * Im Einzeldatei-Bündel gibt es keine Konto-Schicht, die das aufruft:
+   * dort behält die App ihre vier Startspieler.
+   */
+  function platzhalterEntfernen() {
+    var weg = S.profiles.filter(function (p) {
+      return DEFAULT_PLAYERS.indexOf(p.name) >= 0 &&
+        String(p.id).indexOf('u_') !== 0 && !p.gast && !letztesSpielAm(p.id);
+    });
+    if (!weg.length) return 0;
+    var raus = {};
+    weg.forEach(function (p) { raus[p.id] = 1; });
+    S.profiles = S.profiles.filter(function (p) { return !raus[p.id]; });
+    S.lineup = S.lineup.filter(function (id) { return !raus[id]; });
+    save();
+    return weg.length;
+  }
+
+  var GAST_FRIST = 12 * 3600 * 1000;   // ein Abend
+  function gaesteAufraeumen() {
+    var jetzt = Date.now();
+    var geaendert = false;
+    S.profiles = S.profiles.filter(function (p) {
+      if (!p.gast || p.hidden) return true;
+      var zuletzt = letztesSpielAm(p.id);
+      if (jetzt - (zuletzt || p.created || jetzt) < GAST_FRIST) return true;
+      geaendert = true;
+      if (!zuletzt) return false;          // nie gespielt: ersatzlos weg
+      p.hidden = true;
+      return true;
+    });
+    if (geaendert) {
+      S.lineup = S.lineup.filter(function (id) {
+        var p = null;
+        for (var i = 0; i < S.profiles.length; i++) if (S.profiles[i].id === id) p = S.profiles[i];
+        return p && !p.hidden;
+      });
+      save();
+    }
   }
 
   function initials(name) {
@@ -3538,7 +3617,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       var sel = S.lineup.indexOf(p.id) >= 0;
       return '<div class="roster-item ' + (sel ? 'selected' : '') + '" data-action="toggle-lineup" data-id="' + p.id + '" role="button" tabindex="0">' +
         avatarHTML(p, 'md') +
-        '<div class="who"><div class="nm">' + esc(p.name) + '</div>' +
+        '<div class="who"><div class="nm">' + esc(p.name) +
+        (p.gast ? ' <span class="gast-marke">Gast</span>' : '') + '</div>' +
         '<div class="sm">' + (st && st.matches ? 'Ø ' + st.avg.toFixed(1) + ' · ' + plural(st.won, 'Sieg', 'Siege') : 'noch kein Spiel') + '</div></div>' +
         (bearbeitbar(p.id) ? '<button class="edit" data-action="edit-profile" data-id="' + p.id + '" aria-label="Bearbeiten">✎</button>' : '') +
         '<span class="check">✓</span>' +
@@ -3846,7 +3926,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       return '<div class="card player-card ' + (p.hidden ? 'hidden-profile' : '') + '" data-action="open-profile" data-id="' + p.id + '" role="button" tabindex="0">' +
         avatarHTML(p, 'lg') +
         '<div class="pc-main">' +
-          '<div class="pc-name">' + esc(p.name) + (p.hidden ? ' <span class="muted">(ausgeblendet)</span>' : '') + '</div>' +
+          '<div class="pc-name">' + esc(p.name) +
+            (p.gast ? ' <span class="gast-marke">Gast</span>' : '') +
+            (p.hidden ? ' <span class="muted">(ausgeblendet)</span>' : '') + '</div>' +
           '<div class="pc-stats">' +
             '<span>Ø <b>' + (st.darts ? st.avg.toFixed(1) : '–') + '</b></span>' +
             '<span>Siege <b>' + st.won + '</b></span>' +
@@ -4752,9 +4834,22 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         (p.avatar ? '<button class="btn ghost full" data-action="clear-avatar">Foto entfernen</button>' : '') +
         '<div class="row-btns two"><button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
         '<button class="btn primary" data-action="save-profile">Speichern</button></div>' +
-        (isNew ? '' : '<button class="btn danger ghost full" data-action="hide-profile">' +
-          (profile(o.id).hidden ? 'Wieder einblenden' : 'Spieler ausblenden') + '</button>' +
-          '<p class="hint">Ausgeblendete Spieler tauchen nicht mehr in der Aufstellung auf, ihre Ergebnisse bleiben aber in Statistik und Rangliste erhalten.</p>');
+        (isNew ? '' : (function () {
+          var vor = profile(o.id);
+          /* Ein Gast, der nie geworfen hat, hängt an nichts – der lässt sich
+             wirklich löschen. Sobald Spiele dranhängen, bleibt nur das
+             Ausblenden: sonst stünde im Archiv „Unbekannt". */
+          var loeschbar = vor.gast && !letztesSpielAm(o.id);
+          return '<button class="btn danger ghost full" data-action="' +
+            (loeschbar ? 'delete-profile' : 'hide-profile') + '">' +
+            (loeschbar ? 'Gast löschen' : vor.hidden ? 'Wieder einblenden' : 'Spieler ausblenden') + '</button>' +
+            '<p class="hint">' + (loeschbar
+              ? 'Der Gast hat noch kein Spiel – er verschwindet spurlos.'
+              : (vor.gast
+                ? 'Gäste blenden sich nach dem Abend von selbst aus. Ihre Ergebnisse bleiben erhalten, und mit einem Tipp sind sie wieder dabei.'
+                : 'Ausgeblendete Spieler tauchen nicht mehr in der Aufstellung auf, ihre Ergebnisse bleiben aber in Statistik und Rangliste erhalten.')) +
+            '</p>';
+        })());
     } else if (o.type === 'game-done') {
       html = '<div class="big-emoji">🏆</div><h3>Glückwunsch, ' + esc(pname(o.pid)) + '!</h3>' +
         '<p>' + (S.game ? kindName(S.game.kind) : '') + '</p>' +
@@ -4916,10 +5011,25 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           if (window.DartKonto) window.DartKonto.profilGeaendert(ex.id);
         } else {
           var np = { id: uid(), name: name, avatar: draft.avatar, created: Date.now(), hue: freeHue() };
+          /* Angemeldet legt man hier keine Kollegen an – die haben Accounts.
+             Wer von Hand dazukommt, ist der Besuch von heute Abend. */
+          if (window.DartKonto && window.DartKonto.nutzer()) np.gast = true;
           S.profiles.push(np);
           if (S.lineup.length < 12) S.lineup.push(np.id);
         }
         UI.overlay = null;
+        save(); render();
+        break;
+      }
+      /* Nur für Gäste ohne ein einziges Spiel – alles andere hinge an
+         Archiv-Einträgen, die dann ins Leere zeigen würden. */
+      case 'delete-profile': {
+        var dp = profile(UI.overlay.id);
+        if (!dp.gast || letztesSpielAm(dp.id)) return;
+        S.profiles = S.profiles.filter(function (x) { return x.id !== dp.id; });
+        S.lineup = S.lineup.filter(function (x) { return x !== dp.id; });
+        UI.overlay = null;
+        if (S.screen === 'profile' && UI.profile === dp.id) S.screen = 'players';
         save(); render();
         break;
       }
@@ -5348,6 +5458,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       setScreen: function (name) { S.screen = name; save(); render(); },
       ersetzeSpielerIds: ersetzeSpielerIds,
       uebernehmeSpiele: uebernehmeSpiele,
+      letztesSpielAm: letztesSpielAm,
+      gaesteAufraeumen: gaesteAufraeumen,
+      platzhalterEntfernen: platzhalterEntfernen,
       pushDart: pushDart,
       cricketDart: cricketDart,
       rtwDart: rtwDart,
