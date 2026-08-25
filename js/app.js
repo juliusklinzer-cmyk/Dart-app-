@@ -261,6 +261,24 @@
     }
   }
 
+  /* Auswahlliste fürs Lieblingsdoppel. Oben die, auf die man üblicherweise
+     stellt, darunter der Rest – gesucht wird fast immer eines der ersten. */
+  var DOPPEL_WAHL = [20, 16, 18, 12, 10, 14, 8, 6, 4, 2, 19, 17, 15, 13, 11, 9, 7, 5, 3, 1];
+  function doppelOptionen(gewaehlt) {
+    var html = '<option value="0"' + (gewaehlt ? '' : ' selected') + '>egal</option>' +
+      '<option value="25"' + (gewaehlt === 25 ? ' selected' : '') + '>Bull</option>';
+    DOPPEL_WAHL.forEach(function (n) {
+      html += '<option value="' + n + '"' + (gewaehlt === n ? ' selected' : '') + '>D' + n + '</option>';
+    });
+    return html;
+  }
+
+  /* Das Lieblingsdoppel dessen, der gerade wirft – der Vorschlag gilt ihm. */
+  function lieblingsDoppel(pid) {
+    var p = profile(pid);
+    return p && p.dbl ? p.dbl : null;
+  }
+
   function initials(name) {
     var parts = String(name).trim().split(/\s+/);
     if (!parts[0]) return '?';
@@ -2099,7 +2117,7 @@
     var restActive = remainingIn(leg, active) - pendingSum;
     var mode = effectiveMode(restActive);
     var dartsLeft = mode === 'darts' ? 3 - UI.darts.length : 3;
-    var route = Checkout.suggest(restActive, dartsLeft);
+    var route = Checkout.suggest(restActive, dartsLeft, lieblingsDoppel(active));
 
     var whose = esc(pname(active));
     if (route) {
@@ -2555,7 +2573,7 @@
     if (!rd.stechen && !st.fertig[aktiv]) {
       var restAktiv = st.rest[aktiv];
       var dartsLeft = 3 - st.inVisit;
-      route = Checkout.suggest(restAktiv, dartsLeft);
+      route = Checkout.suggest(restAktiv, dartsLeft, lieblingsDoppel(aktiv));
       var wer = esc(pname(aktiv));
       if (route) {
         $('fin-hint').innerHTML = '<span class="label">Finish ' + wer + '</span>' +
@@ -2866,6 +2884,14 @@
           '<span class="cam">Foto wählen</span>' +
         '</div>' +
         '<input class="name-input" type="text" data-role="profile-name" value="' + esc(p.name) + '" placeholder="Name" maxlength="16">' +
+        /* Lieblingsdoppel: der Finish-Vorschlag stellt dann bevorzugt darauf.
+           Kein Umweg über einen zusätzlichen Dart – nur die Wahl zwischen
+           gleich langen Wegen, siehe js/checkout.js. */
+        '<label class="dbl-wahl"><span>Lieblingsdoppel</span>' +
+          '<select data-role="profile-double">' + doppelOptionen(p.dbl) + '</select>' +
+        '</label>' +
+        '<p class="hint">Bei gleich vielen Darts stellt der Finish-Vorschlag auf dieses Doppel. ' +
+          'Einen Dart mehr kostet es nie.</p>' +
         (p.avatar ? '<button class="btn ghost full" data-action="clear-avatar">Foto entfernen</button>' : '') +
         '<div class="row-btns two"><button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
         '<button class="btn primary" data-action="save-profile">Speichern</button></div>' +
@@ -3010,18 +3036,18 @@
         break;
       }
       case 'new-profile':
-        UI.overlay = { type: 'profile', id: null, draft: { name: '', avatar: null } };
+        UI.overlay = { type: 'profile', id: null, draft: { name: '', avatar: null, dbl: null } };
         render();
         break;
       case 'edit-profile': {
         var p = profile(el.getAttribute('data-id'));
-        UI.overlay = { type: 'profile', id: p.id, draft: { name: p.name, avatar: p.avatar } };
+        UI.overlay = { type: 'profile', id: p.id, draft: { name: p.name, avatar: p.avatar, dbl: p.dbl || null } };
         render();
         break;
       }
       case 'edit-current-profile': {
         var cp = profile(UI.profile);
-        UI.overlay = { type: 'profile', id: cp.id, draft: { name: cp.name, avatar: cp.avatar } };
+        UI.overlay = { type: 'profile', id: cp.id, draft: { name: cp.name, avatar: cp.avatar, dbl: cp.dbl || null } };
         render();
         break;
       }
@@ -3040,12 +3066,13 @@
           var ex = profile(UI.overlay.id);
           ex.name = name;
           ex.avatar = draft.avatar;
+          ex.dbl = draft.dbl || null;
           /* Gehört das Profil zu einem Account, muss die Änderung zum Server –
              sonst überschreibt der nächste Abgleich Bild und Name wieder mit
              dem, was dort steht. */
           if (window.DartKonto) window.DartKonto.profilGeaendert(ex.id);
         } else {
-          var np = { id: uid(), name: name, avatar: draft.avatar, created: Date.now(), hue: freeHue() };
+          var np = { id: uid(), name: name, avatar: draft.avatar, created: Date.now(), hue: freeHue(), dbl: draft.dbl || null };
           /* Angemeldet legt man hier keine Kollegen an – die haben Accounts.
              Wer von Hand dazukommt, ist der Besuch von heute Abend. */
           if (window.DartKonto && window.DartKonto.nutzer()) np.gast = true;
@@ -3418,6 +3445,11 @@
   document.addEventListener('input', function (ev) {
     if (ev.target.getAttribute('data-role') === 'profile-name' && UI.overlay) {
       UI.overlay.draft.name = ev.target.value;
+    }
+    /* Lieblingsdoppel: 0 heisst „egal". Auch hier nicht neu zeichnen – der
+       Dialog wuerde sonst mitten in der Auswahl unter den Fingern wegspringen. */
+    if (ev.target.getAttribute('data-role') === 'profile-double' && UI.overlay) {
+      UI.overlay.draft.dbl = Number(ev.target.value) || null;
     }
   });
 

@@ -38,10 +38,10 @@ export function createApi(db, config) {
 
   /* Nach aussen geben wir nie den Passwort-Hash oder fremde E-Mails heraus. */
   function oeffentlich(u) {
-    return { id: u.id, name: u.display_name, avatar: u.avatar, hue: u.hue };
+    return { id: u.id, name: u.display_name, avatar: u.avatar, hue: u.hue, dbl: u.dbl };
   }
   function eigenesProfil(u) {
-    return { id: u.id, name: u.display_name, email: u.email, avatar: u.avatar, hue: u.hue, seit: u.created_at };
+    return { id: u.id, name: u.display_name, email: u.email, avatar: u.avatar, hue: u.hue, dbl: u.dbl, seit: u.created_at };
   }
 
   function uid(praefix) {
@@ -88,6 +88,18 @@ export function createApi(db, config) {
     }
     if (a.length > 400000) throw new HttpFehler(400, 'Das Bild ist zu gross.');
     return a;
+  }
+
+  /*
+   * Lieblingsdoppel: 1..20 oder 25 (Bull), sonst NULL fuer "egal". Der Server
+   * kennt keine Dart-Regeln -- er prueft nur, dass hier eine Feldzahl steht
+   * und nicht irgendein Wert, der spaeter im Client Unsinn ergibt.
+   */
+  function pruefeDoppel(wert) {
+    if (wert === null || wert === undefined || wert === 0 || wert === '') return null;
+    const n = Number(wert);
+    if (!Number.isInteger(n)) return null;
+    return (n >= 1 && n <= 20) || n === 25 ? n : null;
   }
 
   function pruefeHue(wert) {
@@ -183,7 +195,9 @@ export function createApi(db, config) {
     const name = body.name === undefined ? u.display_name : pruefeName(body.name);
     const avatar = body.avatar === undefined ? u.avatar : pruefeAvatar(body.avatar);
     const hue = body.hue === undefined ? u.hue : pruefeHue(body.hue);
-    db.prepare('UPDATE users SET display_name = ?, avatar = ?, hue = ? WHERE id = ?').run(name, avatar, hue, u.id);
+    const dbl = body.dbl === undefined ? u.dbl : pruefeDoppel(body.dbl);
+    db.prepare('UPDATE users SET display_name = ?, avatar = ?, hue = ?, dbl = ? WHERE id = ?')
+      .run(name, avatar, hue, dbl, u.id);
     const frisch = db.prepare('SELECT * FROM users WHERE id = ?').get(u.id);
     sendJson(res, 200, { nutzer: eigenesProfil(frisch) });
   }
@@ -209,7 +223,7 @@ export function createApi(db, config) {
     verlangeNutzer(req);
     const alle = db
       .prepare(
-        "SELECT id, display_name, avatar, hue FROM users WHERE status = 'aktiv'" +
+        "SELECT id, display_name, avatar, hue, dbl FROM users WHERE status = 'aktiv'" +
           ' ORDER BY display_name COLLATE NOCASE'
       )
       .all();

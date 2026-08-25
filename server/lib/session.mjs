@@ -47,7 +47,7 @@ export function currentUser(db, token) {
   if (!token) return null;
   const row = db
     .prepare(
-      `SELECT u.id, u.email, u.display_name, u.avatar, u.hue, u.status, u.created_at, s.expires_at
+      `SELECT u.id, u.email, u.display_name, u.avatar, u.hue, u.dbl, u.status, u.created_at, s.expires_at
          FROM sessions s JOIN users u ON u.id = s.user_id
         WHERE s.token = ?`
     )

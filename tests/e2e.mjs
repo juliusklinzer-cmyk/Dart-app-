@@ -1477,6 +1477,82 @@ check('der erste Dart im Finish-Vorschlag bleibt rot', chipFarbe === farben.akze
   chipFarbe + ' vs ' + farben.akzent);
 await page.locator('#mult-row button[data-mult="1"]').click();
 
+/* ---------- Lieblingsdoppel ---------- */
+
+group('Lieblingsdoppel: der Finish-Vorschlag stellt darauf');
+/* Erst der Rechenkern allein – so ist bei einem Fehlschlag sofort klar, ob
+   die Regel falsch ist oder nur die Anzeige. */
+const weg = (rest, dbl) => page.evaluate(([r, d]) => window.Checkout.suggest(r, 3, d).join(' '), [rest, dbl]);
+check('ohne Vorliebe bleibt alles wie bisher', (await weg(140, null)) === 'T20 T20 D10', await weg(140, null));
+check('mit D16 wird auf D16 gestellt', (await weg(140, 16)) === 'T20 T16 D16', await weg(140, 16));
+check('auch beim kleinen Rest (41)', (await weg(41, 16)) === 'S9 D16', await weg(41, 16));
+check('Bull-Liebhaber bekommen den Bull', (await weg(60, 25)) === 'S10 BULL', await weg(60, 25));
+/* Die Grenze: mehr Darts darf es nie kosten, und ein krummer Stellwurf
+   wie T7 oder die 25 wird nicht angesagt, nur um das Doppel zu erreichen. */
+check('nie ein Dart mehr', await page.evaluate(() => {
+  for (let r = 2; r <= 170; r++) {
+    const a = window.Checkout.suggest(r, 3);
+    if (!a) continue;
+    for (const d of [20, 18, 16, 12, 10, 8, 25]) {
+      const b = window.Checkout.suggest(r, 3, d);
+      if (b.length !== a.length) return false;
+    }
+  }
+  return true;
+}));
+/* Nur die Wege, die WEGEN des Lieblingsdoppels abweichen, muessen sich an
+   die Stellwurf-Regel halten. Der allgemeine Weg darf weiter T14 oder T13
+   ansagen (62 und 63 gehen nun mal so) – daran aendert eine Vorliebe nichts. */
+check('kein krummer Stellwurf, nur um das Doppel zu erreichen', await page.evaluate(() => {
+  const schlecht = (w) => w === '25' || w[0] === 'D' || (w[0] === 'T' && Number(w.slice(1)) < 15);
+  for (let r = 2; r <= 170; r++) {
+    const a = window.Checkout.suggest(r, 3);
+    if (!a) continue;
+    for (const d of [20, 18, 16, 12, 10, 8, 25]) {
+      const b = window.Checkout.suggest(r, 3, d);
+      if (b.join() === a.join()) continue;          // unveraendert: nicht unser Fall
+      if (b.slice(0, -1).some(schlecht)) return r + ' D' + d + ': ' + b.join(' ');
+    }
+  }
+  return true;
+}) === true);
+
+// Und jetzt durch die Oberflaeche: einstellen, speichern, im Spiel sehen.
+await page.evaluate(() => window.__dart.setScreen('setup'));
+const dblId = await page.evaluate(() => window.__dart.activeProfiles()[0].id);
+await page.locator('.roster-item[data-id="' + dblId + '"] .edit').click();
+check('das Profil bietet ein Lieblingsdoppel an',
+  (await page.locator('[data-role="profile-double"]').count()) === 1);
+check('voreingestellt ist "egal"',
+  (await page.locator('[data-role="profile-double"]').inputValue()) === '0');
+await page.locator('[data-role="profile-double"]').selectOption('16');
+await page.locator('[data-action="save-profile"]').click();
+check('die Wahl steht im Profil',
+  await page.evaluate((id) => window.__dart.profile(id).dbl === 16, dblId));
+await page.reload();
+await page.waitForFunction(() => !!window.__dart);
+check('und ueberlebt einen Neustart',
+  await page.evaluate((id) => window.__dart.profile(id).dbl === 16, dblId));
+
+await page.evaluate((id) => {
+  const D = window.__dart, S = D.state();
+  S.game = null;
+  S.lineup = [id];
+  D.setScreen('setup');
+}, dblId);
+await page.locator('[data-action="set-mode"][data-value="quick"]').click();
+await page.locator('#settings-501 [data-setting="start"] button[data-value="301"]').click();
+await page.locator('#settings-501 [data-setting="dartModeFrom"] button[data-value="0"]').click();
+await page.locator('[data-action="start-game"]').click();
+await bullOffGo();
+await typeScore(161);   // 301 - 161 = 140
+check('die Leiste zeigt den Weg auf das Lieblingsdoppel',
+  (await text('#checkout-bar')).includes('D16'), await text('#checkout-bar'));
+check('und nicht mehr den allgemeinen',
+  !(await text('#checkout-bar')).includes('D10'), await text('#checkout-bar'));
+/* Zurueck auf "egal", damit die folgenden Gruppen ihren gewohnten Stand haben. */
+await page.evaluate((id) => { window.__dart.profile(id).dbl = null; window.__dart.save(); }, dblId);
+
 group('Ohne Server bleibt es die lokale App');
 /* Aus dem laufenden Cricket zurück ins Setup – dort ist die Navigation
    sichtbar, im Spiel wird sie bewusst ausgeblendet. */

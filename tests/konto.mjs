@@ -422,6 +422,45 @@ async function main() {
      * geworfen hat, wird nur ausgeblendet -- geloescht stuende im Archiv
      * "Unbekannt".
      */
+    /*
+     * Das Lieblingsdoppel gehoert dem Account, nicht dem Geraet. Sonst
+     * bekaeme Tobi Julius' Doppel vorgeschlagen, sobald Julius den Abend
+     * mitschreibt -- und genau das ist der Normalfall.
+     */
+    group('Lieblingsdoppel reist mit dem Account');
+    await julius.page.locator('#nav [data-screen="setup"]').click();
+    await julius.page.locator('.roster-item[data-id="' + juliusId + '"] .edit').click();
+    await julius.page.locator('[data-role="profile-double"]').selectOption('16');
+    await julius.page.locator('[data-action="save-profile"]').click();
+    await julius.page.waitForTimeout(600);
+    check('lokal gesetzt',
+      await julius.page.evaluate((id) => window.__dart.profile(id).dbl === 16, juliusId));
+    check('und beim Server angekommen', await julius.page.evaluate(async () => {
+      const r = await fetch('/api/me', { headers: { 'X-Darts-App': '1' } });
+      return (await r.json()).nutzer.dbl === 16;
+    }));
+    /* Tobis Geraet ist an dieser Stelle abgemeldet – gepruet wird deshalb
+       am Kader, den der Server ausliefert. Genau den holt sich jedes andere
+       Geraet beim Abgleich. */
+    check('es steht im Kader, den alle anderen bekommen', await julius.page.evaluate(async (id) => {
+      const r = await fetch('/api/users', { headers: { 'X-Darts-App': '1' } });
+      const kader = (await r.json()).nutzer;
+      return kader.find((n) => n.id === id).dbl === 16;
+    }, juliusId));
+    check('Tobis Vorliebe bleibt davon unberuehrt', await julius.page.evaluate(async (id) => {
+      const r = await fetch('/api/users', { headers: { 'X-Darts-App': '1' } });
+      const kader = (await r.json()).nutzer;
+      return kader.filter((n) => n.id !== id).every((n) => !n.dbl);
+    }, juliusId));
+    check('an einem fremden Profil laesst sie sich nicht aendern',
+      (await julius.page.locator('.roster-item[data-id="' + tobiId + '"] .edit').count()) === 0);
+    await julius.page.locator('.roster-item[data-id="' + juliusId + '"] .edit').click();
+    await julius.page.locator('[data-role="profile-double"]').selectOption('0');
+    await julius.page.locator('[data-action="save-profile"]').click();
+    await julius.page.waitForTimeout(600);
+    check('zuruecksetzen auf "egal" geht auch',
+      await julius.page.evaluate((id) => !window.__dart.profile(id).dbl, juliusId));
+
     group('Gäste');
     await julius.page.locator('#nav [data-screen="setup"]').click();
     await julius.page.locator('#screen-setup [data-action="new-profile"]').click();

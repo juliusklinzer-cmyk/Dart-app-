@@ -1866,6 +1866,15 @@ button, input, select, textarea { font-family: inherit; }
   .feier-mitte, .feier-zahl, .feier-name { animation: none; }
 }
 
+/* Lieblingsdoppel im Profil-Dialog. */
+.dbl-wahl { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; }
+.dbl-wahl > span { font-size: 0.9rem; color: var(--muted); }
+.dbl-wahl select {
+  background: var(--bg-3); border: 1px solid var(--line); color: var(--text);
+  border-radius: 10px; padding: 10px 12px; min-height: 44px; font-size: 0.95rem;
+  font-variant-numeric: tabular-nums; min-width: 7.5rem;
+}
+
 </style>
 <div id="save-warning" class="save-warning hidden">
   ⚠️ Der Spielstand kann gerade nicht gespeichert werden – bitte Speicherplatz prüfen
@@ -2338,7 +2347,21 @@ button, input, select, textarea { font-family: inherit; }
     20: 0, 16: 1, 12: 2, 10: 3, 8: 4, 18: 5, 14: 6,
     6: 9, 4: 12, 2: 18, 25: 13
   };
-  function finishCost(f) {
+  /*
+   * Das Lieblingsdoppel eines Spielers zaehlt mehr als jede allgemeine
+   * Rangfolge: wer D16 sicher trifft, will dorthin gestellt werden, auch
+   * wenn D20 "objektiv" das bessere Doppel ist.
+   *
+   * Der Bonus ist mit Absicht begrenzt (-6). Die Reihenfolge in better()
+   * zaehlt zuerst die Darts -- ein Umweg ueber einen zusaetzlichen Dart
+   * kommt also nie zustande. Innerhalb derselben Dartzahl gewinnt das
+   * Lieblingsdoppel nur, wenn der Punkte-Dart davor nicht mehr als 6
+   * Kosteneinheiten schlechter ist. Sonst stuende auf 100 statt T20 D20
+   * plötzlich ein krummer Weg nur wegen des Doppels.
+   */
+  var LIEBLINGS_BONUS = -6;
+  function finishCost(f, lieblings) {
+    if (lieblings && f.num === lieblings && f.double) return LIEBLINGS_BONUS;
     if (DOUBLE_RANK[f.num] !== undefined) return DOUBLE_RANK[f.num];
     return 12 + (20 - f.num) * 0.2;                 // ungerade Doppel (D19, D17, ...)
   }
@@ -2348,21 +2371,21 @@ button, input, select, textarea { font-family: inherit; }
    * 1. weniger Darts   2. geringere Kosten
    * 3. besseres Schluss-Doppel   4. höherer erster Dart (T20 vor T19)
    */
-  function better(candidate, current) {
+  function better(candidate, current, lieblings) {
     if (!current) return true;
     if (candidate.darts.length !== current.darts.length) {
       return candidate.darts.length < current.darts.length;
     }
     if (Math.abs(candidate.cost - current.cost) > 1e-9) return candidate.cost < current.cost;
-    var candFinish = finishCostOf(candidate.darts[candidate.darts.length - 1]);
-    var curFinish = finishCostOf(current.darts[current.darts.length - 1]);
+    var candFinish = finishCostOf(candidate.darts[candidate.darts.length - 1], lieblings);
+    var curFinish = finishCostOf(current.darts[current.darts.length - 1], lieblings);
     if (candFinish !== curFinish) return candFinish < curFinish;
     return fieldValue(candidate.darts[0]) > fieldValue(current.darts[0]);
   }
 
-  function finishCostOf(label) {
+  function finishCostOf(label, lieblings) {
     for (var i = 0; i < FIELDS.length; i++) {
-      if (FIELDS[i].label === label) return finishCost(FIELDS[i]);
+      if (FIELDS[i].label === label) return finishCost(FIELDS[i], lieblings);
     }
     return 99;
   }
@@ -2375,9 +2398,11 @@ button, input, select, textarea { font-family: inherit; }
    * @param {number} dartsLeft verbleibende Darts dieser Aufnahme (1-3)
    * @returns {{darts: string[], cost: number}|null}
    */
-  function best(remaining, dartsLeft) {
+  function best(remaining, dartsLeft, lieblings) {
     if (!(remaining > 1) || remaining > 170 || dartsLeft < 1) return null;
-    var key = remaining + ':' + dartsLeft;
+    // Das Lieblingsdoppel gehoert in den Schluessel: sonst bekaeme der
+    // naechste Spieler den Weg des vorigen aus dem Zwischenspeicher.
+    var key = remaining + ':' + dartsLeft + ':' + (lieblings || 0);
     if (cache[key] !== undefined) return cache[key];
 
     var result = null;
@@ -2386,8 +2411,8 @@ button, input, select, textarea { font-family: inherit; }
     for (var i = 0; i < FIELDS.length; i++) {
       var f = FIELDS[i];
       if (f.double && f.value === remaining) {
-        var cand = { darts: [f.label], cost: finishCost(f) };
-        if (better(cand, result)) result = cand;
+        var cand = { darts: [f.label], cost: finishCost(f, lieblings) };
+        if (better(cand, result, lieblings)) result = cand;
       }
     }
     if (result || dartsLeft === 1) {
@@ -2400,19 +2425,50 @@ button, input, select, textarea { font-family: inherit; }
       var d = FIELDS[j];
       var rest = remaining - d.value;
       if (rest < 2) continue;
-      var sub = best(rest, dartsLeft - 1);
+      var sub = best(rest, dartsLeft - 1, lieblings);
       if (!sub) continue;
       var cand2 = { darts: [d.label].concat(sub.darts), cost: scoringCost(d) + sub.cost };
-      if (better(cand2, result)) result = cand2;
+      if (better(cand2, result, lieblings)) result = cand2;
     }
     cache[key] = result;
     return result;
   }
 
   /** Gibt nur die Wurffolge zurück, z.B. ['T20','T20','BULL'] oder null. */
-  function suggest(remaining, dartsLeft) {
-    var r = best(remaining, dartsLeft === undefined ? 3 : dartsLeft);
-    return r ? r.darts : null;
+  /*
+   * Ein Stellwurf, den man wirklich wirft: ein Single (grosses Feld), ein
+   * hohes Triple oder Bull. Ein T7 oder die 25 nur deshalb anzusagen, weil
+   * danach das Lieblingsdoppel steht, waere schlechter Rat -- die trifft
+   * niemand absichtlich.
+   */
+  function vernuenftigerStellwurf(label) {
+    var f = null;
+    for (var i = 0; i < FIELDS.length; i++) if (FIELDS[i].label === label) f = FIELDS[i];
+    if (!f) return false;
+    // Bull und die 25 sind als Stellwurf nur dann richtig, wenn der Weg
+    // ohnehin dorthin fuehrt -- nicht, um ein Doppel zu erzwingen.
+    if (f.num === 25) return false;
+    if (f.mult === 1) return true;
+    if (f.mult === 3) return f.num >= 15;
+    return false;                                   // Doppel als Stellwurf: nein
+  }
+
+  /*
+   * Der Weg zum Lieblingsdoppel gilt nur, wenn er auch ohne das Doppel
+   * vertretbar waere. Sonst bleibt es beim allgemein besten Weg. Die Pruefung
+   * steht hier und nicht in der Rekursion: dort muesste sie bei jedem
+   * Teilweg mitlaufen, hier reicht sie einmal am fertigen Vorschlag.
+   */
+  function suggest(remaining, dartsLeft, lieblings) {
+    var d = dartsLeft === undefined ? 3 : dartsLeft;
+    var ohne = best(remaining, d, null);
+    if (!lieblings) return ohne ? ohne.darts : null;
+    var mit = best(remaining, d, lieblings);
+    if (!mit) return ohne ? ohne.darts : null;
+    for (var i = 0; i < mit.darts.length - 1; i++) {
+      if (!vernuenftigerStellwurf(mit.darts[i])) return ohne ? ohne.darts : null;
+    }
+    return mit.darts;
   }
 
   /** Ist ein Checkout mit genau so vielen Darts möglich? */
@@ -2713,6 +2769,24 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       });
       save();
     }
+  }
+
+  /* Auswahlliste fürs Lieblingsdoppel. Oben die, auf die man üblicherweise
+     stellt, darunter der Rest – gesucht wird fast immer eines der ersten. */
+  var DOPPEL_WAHL = [20, 16, 18, 12, 10, 14, 8, 6, 4, 2, 19, 17, 15, 13, 11, 9, 7, 5, 3, 1];
+  function doppelOptionen(gewaehlt) {
+    var html = '<option value="0"' + (gewaehlt ? '' : ' selected') + '>egal</option>' +
+      '<option value="25"' + (gewaehlt === 25 ? ' selected' : '') + '>Bull</option>';
+    DOPPEL_WAHL.forEach(function (n) {
+      html += '<option value="' + n + '"' + (gewaehlt === n ? ' selected' : '') + '>D' + n + '</option>';
+    });
+    return html;
+  }
+
+  /* Das Lieblingsdoppel dessen, der gerade wirft – der Vorschlag gilt ihm. */
+  function lieblingsDoppel(pid) {
+    var p = profile(pid);
+    return p && p.dbl ? p.dbl : null;
   }
 
   function initials(name) {
@@ -4553,7 +4627,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var restActive = remainingIn(leg, active) - pendingSum;
     var mode = effectiveMode(restActive);
     var dartsLeft = mode === 'darts' ? 3 - UI.darts.length : 3;
-    var route = Checkout.suggest(restActive, dartsLeft);
+    var route = Checkout.suggest(restActive, dartsLeft, lieblingsDoppel(active));
 
     var whose = esc(pname(active));
     if (route) {
@@ -5009,7 +5083,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (!rd.stechen && !st.fertig[aktiv]) {
       var restAktiv = st.rest[aktiv];
       var dartsLeft = 3 - st.inVisit;
-      route = Checkout.suggest(restAktiv, dartsLeft);
+      route = Checkout.suggest(restAktiv, dartsLeft, lieblingsDoppel(aktiv));
       var wer = esc(pname(aktiv));
       if (route) {
         $('fin-hint').innerHTML = '<span class="label">Finish ' + wer + '</span>' +
@@ -5320,6 +5394,14 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           '<span class="cam">Foto wählen</span>' +
         '</div>' +
         '<input class="name-input" type="text" data-role="profile-name" value="' + esc(p.name) + '" placeholder="Name" maxlength="16">' +
+        /* Lieblingsdoppel: der Finish-Vorschlag stellt dann bevorzugt darauf.
+           Kein Umweg über einen zusätzlichen Dart – nur die Wahl zwischen
+           gleich langen Wegen, siehe js/checkout.js. */
+        '<label class="dbl-wahl"><span>Lieblingsdoppel</span>' +
+          '<select data-role="profile-double">' + doppelOptionen(p.dbl) + '</select>' +
+        '</label>' +
+        '<p class="hint">Bei gleich vielen Darts stellt der Finish-Vorschlag auf dieses Doppel. ' +
+          'Einen Dart mehr kostet es nie.</p>' +
         (p.avatar ? '<button class="btn ghost full" data-action="clear-avatar">Foto entfernen</button>' : '') +
         '<div class="row-btns two"><button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
         '<button class="btn primary" data-action="save-profile">Speichern</button></div>' +
@@ -5464,18 +5546,18 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         break;
       }
       case 'new-profile':
-        UI.overlay = { type: 'profile', id: null, draft: { name: '', avatar: null } };
+        UI.overlay = { type: 'profile', id: null, draft: { name: '', avatar: null, dbl: null } };
         render();
         break;
       case 'edit-profile': {
         var p = profile(el.getAttribute('data-id'));
-        UI.overlay = { type: 'profile', id: p.id, draft: { name: p.name, avatar: p.avatar } };
+        UI.overlay = { type: 'profile', id: p.id, draft: { name: p.name, avatar: p.avatar, dbl: p.dbl || null } };
         render();
         break;
       }
       case 'edit-current-profile': {
         var cp = profile(UI.profile);
-        UI.overlay = { type: 'profile', id: cp.id, draft: { name: cp.name, avatar: cp.avatar } };
+        UI.overlay = { type: 'profile', id: cp.id, draft: { name: cp.name, avatar: cp.avatar, dbl: cp.dbl || null } };
         render();
         break;
       }
@@ -5494,12 +5576,13 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           var ex = profile(UI.overlay.id);
           ex.name = name;
           ex.avatar = draft.avatar;
+          ex.dbl = draft.dbl || null;
           /* Gehört das Profil zu einem Account, muss die Änderung zum Server –
              sonst überschreibt der nächste Abgleich Bild und Name wieder mit
              dem, was dort steht. */
           if (window.DartKonto) window.DartKonto.profilGeaendert(ex.id);
         } else {
-          var np = { id: uid(), name: name, avatar: draft.avatar, created: Date.now(), hue: freeHue() };
+          var np = { id: uid(), name: name, avatar: draft.avatar, created: Date.now(), hue: freeHue(), dbl: draft.dbl || null };
           /* Angemeldet legt man hier keine Kollegen an – die haben Accounts.
              Wer von Hand dazukommt, ist der Besuch von heute Abend. */
           if (window.DartKonto && window.DartKonto.nutzer()) np.gast = true;
@@ -5872,6 +5955,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   document.addEventListener('input', function (ev) {
     if (ev.target.getAttribute('data-role') === 'profile-name' && UI.overlay) {
       UI.overlay.draft.name = ev.target.value;
+    }
+    /* Lieblingsdoppel: 0 heisst „egal". Auch hier nicht neu zeichnen – der
+       Dialog wuerde sonst mitten in der Auswahl unter den Fingern wegspringen. */
+    if (ev.target.getAttribute('data-role') === 'profile-double' && UI.overlay) {
+      UI.overlay.draft.dbl = Number(ev.target.value) || null;
     }
   });
 

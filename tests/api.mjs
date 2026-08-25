@@ -323,6 +323,24 @@ async function main() {
     r = await julius.ruf('PATCH', '/api/me', { avatar: 'https://beispiel.de/bild.png' });
     gleich(r.status, 400, 'ein fremd gehostetes Bild wird abgewiesen');
 
+    /* Das Lieblingsdoppel gehoert dem Account, nicht dem Geraet -- sonst
+       gaelte es nicht, wenn ein Kollege den Abend mitschreibt. */
+    r = await julius.ruf('PATCH', '/api/me', { dbl: 16 });
+    gleich(r.daten.nutzer.dbl, 16, 'Lieblingsdoppel laesst sich setzen');
+    r = await julius.ruf('GET', '/api/users');
+    gleich(r.daten.nutzer.find((n) => n.id === julius_id).dbl, 16,
+      'und steht auch im Kader, den die anderen sehen');
+    r = await julius.ruf('PATCH', '/api/me', { name: 'Julius K.' });
+    gleich(r.daten.nutzer.dbl, 16, 'eine Namensaenderung laesst es unangetastet');
+    r = await julius.ruf('PATCH', '/api/me', { dbl: 25 });
+    gleich(r.daten.nutzer.dbl, 25, 'Bull geht auch');
+    r = await julius.ruf('PATCH', '/api/me', { dbl: 21 });
+    gleich(r.daten.nutzer.dbl, null, 'ein Feld, das es nicht gibt, wird zu "egal"');
+    r = await julius.ruf('PATCH', '/api/me', { dbl: 'T20' });
+    gleich(r.daten.nutzer.dbl, null, 'und Unsinn ebenfalls');
+    r = await julius.ruf('PATCH', '/api/me', { dbl: 20 });
+    gleich(r.daten.nutzer.dbl, 20, 'zurueck auf D20');
+
     console.log('\nRate-Limit');
     let gesperrt = false;
     for (let i = 0; i < 8; i++) {

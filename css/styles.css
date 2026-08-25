@@ -1862,3 +1862,12 @@ button, input, select, textarea { font-family: inherit; }
   .feier-blitz, .feier-strahlen, .feier-konfetti { display: none; }
   .feier-mitte, .feier-zahl, .feier-name { animation: none; }
 }
+
+/* Lieblingsdoppel im Profil-Dialog. */
+.dbl-wahl { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; }
+.dbl-wahl > span { font-size: 0.9rem; color: var(--muted); }
+.dbl-wahl select {
+  background: var(--bg-3); border: 1px solid var(--line); color: var(--text);
+  border-radius: 10px; padding: 10px 12px; min-height: 44px; font-size: 0.95rem;
+  font-variant-numeric: tabular-nums; min-width: 7.5rem;
+}
