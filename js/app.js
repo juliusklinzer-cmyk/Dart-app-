@@ -176,6 +176,16 @@
     return !window.DartKonto || window.DartKonto.darfBearbeiten(id);
   }
 
+  /* Wer angemeldet ist, steht oben. Man sucht sich nicht selbst in einer
+     Liste – und man wählt sich fast immer mit aus. */
+  function rosterReihenfolge() {
+    var ich = window.DartKonto && window.DartKonto.nutzer() ? window.DartKonto.nutzer().id : null;
+    if (!ich) return activeProfiles();
+    return activeProfiles().slice().sort(function (a, b) {
+      return (b.id === ich) - (a.id === ich);
+    });
+  }
+
   function initials(name) {
     var parts = String(name).trim().split(/\s+/);
     if (!parts[0]) return '?';
@@ -1118,7 +1128,8 @@
   function startGame(kind) {
     // Ein beendetes, noch nicht gespeichertes Spiel zuerst sichern.
     if (S.game && S.game.done) archiveGame(S.game);
-    if (S.lineup.length < 2 && kind === 'cricket') { UI.overlay = { type: 'need-players' }; render(); return; }
+    /* Cricket, Round the World und Finisher gehen auch allein – als Training
+       gegen sich selbst. Nur ganz ohne Spieler geht nichts. */
     if (!S.lineup.length) { UI.overlay = { type: 'need-players' }; render(); return; }
     S.game = {
       id: uid(), kind: kind, at: null, players: S.lineup.slice(), throws: [],
@@ -1360,7 +1371,7 @@
 
   function renderSetup() {
     var map = career();
-    $('roster').innerHTML = activeProfiles().map(function (p) {
+    $('roster').innerHTML = rosterReihenfolge().map(function (p) {
       var st = map[p.id];
       var sel = S.lineup.indexOf(p.id) >= 0;
       return '<div class="roster-item ' + (sel ? 'selected' : '') + '" data-action="toggle-lineup" data-id="' + p.id + '" role="button" tabindex="0">' +
@@ -2497,9 +2508,10 @@
         '<button class="btn primary" data-action="ov-new-tournament">Neues Turnier</button></div>';
     } else if (o.type === 'need-players') {
       html = '<h3>Zu wenig Spieler</h3><p>' +
-        (S.mode === 'rtw' ? 'Wähle mindestens einen Spieler für das Training aus.'
-          : S.mode === 'cricket' ? 'Wähle mindestens zwei Spieler für das Cricket aus.'
-          : 'Wähle mindestens zwei Spieler für das Turnier aus.') + '</p>' +
+        (S.mode === '501'
+          ? 'Ein Turnier braucht mindestens zwei Spieler – jeder gegen jeden. '
+            + 'Zum Üben allein nimm Cricket, Round the World oder Finisher.'
+          : 'Wähle mindestens einen Spieler aus.') + '</p>' +
         '<button class="btn primary full" data-action="ov-cancel">Alles klar</button>';
     }
     $('overlay-card').innerHTML = html;
@@ -3009,6 +3021,9 @@
       ersetzeSpielerIds: ersetzeSpielerIds,
       uebernehmeSpiele: uebernehmeSpiele,
       pushDart: pushDart,
+      cricketDart: cricketDart,
+      rtwDart: rtwDart,
+      finisherDart: finisherDart,
       pressKey: pressKey,
       submitTotal: submitTotal,
       undo: undo,

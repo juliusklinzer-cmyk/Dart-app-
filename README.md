@@ -34,6 +34,10 @@ mit HTTPS, „Zum Home-Bildschirm“ auf jedem Gerät, Updates per `git pull`.
 
 Der Modus wird im Setup gewählt, die Aufstellung gilt für alle vier gleich.
 
+Cricket, Round the World und Finisher gehen auch **allein** – als Training gegen
+sich selbst. Nur das X01-Turnier braucht mindestens zwei Spieler, es ist ja jeder
+gegen jeden.
+
 ### X01 Turnier (jeder gegen jeden)
 
 Der Hauptmodus, siehe Ablauf und Eingabe unten.
@@ -403,3 +407,28 @@ abgeschaltetem Netz.
 
 `npm test` läuft dabei bewusst **ohne** Server: dass die App dann sauber als lokale
 App weiterläuft (kein Konto-Knopf, keine Fehlermeldung), wird dort mitgeprüft.
+
+## Testdaten
+
+Zum Ausprobieren des Layouts mit realistischem Inhalt – sechs Testspieler mit Bild
+und einer gespielten Historie:
+
+```bash
+node server/scripts/demo.mjs        # sechs Konten anlegen (@demo.blink180)
+node tools/demo.mjs                 # Bilder setzen und 20 Spiele durchspielen
+node server/scripts/demo.mjs --weg  # alles wieder entfernen
+```
+
+Die Spiele werden **nicht als Datenstruktur erfunden**, sondern von der App selbst
+gespielt: das Skript ruft dieselben Funktionen auf, die auch ein Fingertipp auslöst.
+Nur so sind Averages, Doppelquote und Rekorde hinterher echte Zahlen.
+
+Auf dem Server läuft das Anlegen über den Container:
+
+```bash
+docker compose -f compose.yml exec darts node server/scripts/demo.mjs
+DEMO_URL=https://darts.wirtschaftln.de node tools/demo.mjs
+```
+
+Die Konten laufen alle auf `@demo.blink180` – daran erkennt `--weg` sie wieder,
+und niemand verwechselt sie mit einem echten Kollegen.
