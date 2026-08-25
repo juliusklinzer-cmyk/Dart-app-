@@ -2274,11 +2274,17 @@
       return '<div class="d ' + (d ? '' : 'empty') + '">' + (d ? throwLabel(d) : '–') + '</div>';
     }).join('');
 
-    /* Es wird immer nur auf die eigene aktuelle Zahl geworfen – deshalb steht
-       genau diese Zahl groß da. Darunter Doppel und Triple, die weiter
-       springen, und „Weiter", das die restlichen Darts der Aufnahme als
-       Fehlwürfe verbucht: getroffen wird meist höchstens einmal, dreimal
-       Miss zu tippen wäre die häufigste Eingabe des Spiels. */
+    /*
+     * Es wird immer nur auf die eigene Zahl geworfen. Die drei Treffer, die
+     * es dafür gibt, stehen deshalb nebeneinander in einer Reihe: die Zahl
+     * breit und groß, Doppel und Triple daneben als gleichwertige Tasten.
+     * Untereinander wäre die Zahl ein Plakat und D/T zwei Fußnoten – dabei
+     * ist es dieselbe Frage, nur mit drei Antworten.
+     *
+     * Darunter Miss und „Weiter", das die restlichen Darts der Aufnahme als
+     * Fehlwürfe verbucht: getroffen wird meist höchstens einmal, dreimal
+     * Miss zu tippen wäre sonst die häufigste Eingabe des Spiels.
+     */
     var target = st.target[active];
     var weiter = '<button class="rtw-key skip" data-action="end-rtw-visit">' +
       '<span class="k">' + (st.inVisit ? 'Weiter ▸' : 'Nichts ▸') + '</span>' +
@@ -2286,31 +2292,31 @@
     var miss = '<button class="rtw-key miss" data-num="0" data-mult="1">' +
       '<span class="k">Miss</span><span class="sub">ein Dart daneben</span></button>';
 
+    var treffer;
     if (target === 25) {
-      $('rtw-pad').innerHTML = rtwFortschritt(st, active) +
-        '<div class="rtw-pad-grid ziel">' +
+      treffer = '<div class="rtw-treffer nur-bull">' +
         '<button class="rtw-key gross bull" data-num="25" data-mult="1">' +
           '<span class="z">Bull</span><span class="sub">Spiel gewonnen</span></button>' +
-        '<div class="rtw-reihe">' + miss + weiter + '</div>' +
         '</div>';
     } else {
       var jump = function (mult) {
         var next = target + mult;
         return next > 20 ? 'dann Bull' : 'dann ' + next;
       };
-      $('rtw-pad').innerHTML = rtwFortschritt(st, active) +
-        '<div class="rtw-pad-grid ziel">' +
+      treffer = '<div class="rtw-treffer">' +
         '<button class="rtw-key gross" data-num="' + target + '" data-mult="1">' +
           '<span class="z">' + target + '</span><span class="sub">' + jump(1) + '</span></button>' +
-        '<div class="rtw-reihe">' +
-          '<button class="rtw-key" data-num="' + target + '" data-mult="2">' +
-            '<span class="k">D' + target + '</span><span class="sub">' + jump(2) + '</span></button>' +
-          '<button class="rtw-key" data-num="' + target + '" data-mult="3">' +
-            '<span class="k">T' + target + '</span><span class="sub">' + jump(3) + '</span></button>' +
-        '</div>' +
-        '<div class="rtw-reihe">' + miss + weiter + '</div>' +
+        '<button class="rtw-key mult" data-num="' + target + '" data-mult="2">' +
+          '<span class="k">D' + target + '</span><span class="sub">' + jump(2) + '</span></button>' +
+        '<button class="rtw-key mult" data-num="' + target + '" data-mult="3">' +
+          '<span class="k">T' + target + '</span><span class="sub">' + jump(3) + '</span></button>' +
         '</div>';
     }
+
+    $('rtw-pad').innerHTML = rtwFortschritt(st, active) +
+      '<div class="rtw-pad-grid ziel">' + treffer +
+      '<div class="rtw-reihe">' + miss + weiter + '</div>' +
+      '</div>';
   }
 
   /* Wie weit ist der, der gerade wirft? Die Reihe zeigt alle 21 Stationen –

@@ -1490,17 +1490,27 @@ button, input, select, textarea { font-family: inherit; }
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
-/* Round the World: die eigene Zahl steht groß da, Doppel und Triple
-   darunter, ganz unten Miss und Weiter. */
+/* Round the World: die drei moeglichen Treffer stehen in einer Reihe --
+   die Zahl breit und gross, Doppel und Triple daneben als gleichwertige
+   Tasten. Darunter Miss und Weiter. */
 .rtw-pad-grid.ziel { display: flex; flex-direction: column; gap: 8px; grid-template-columns: none; }
-.rtw-reihe { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.rtw-key.gross { padding: 10px; gap: 2px; }
-.rtw-key.gross .z {
-  font-family: var(--font-display, inherit);
-  font-size: clamp(2.6rem, 11vh, 5rem); line-height: 1; font-weight: 800;
-  letter-spacing: 0.02em;
+.rtw-treffer {
+  display: grid; grid-template-columns: 1.6fr 1fr 1fr; gap: 8px;
+  flex: 1 1 auto; min-height: 132px;
 }
-.rtw-key.gross.bull .z { color: var(--amber); font-size: clamp(2rem, 8vh, 3.6rem); }
+.rtw-treffer.nur-bull { grid-template-columns: 1fr; }
+.rtw-reihe { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; flex: none; }
+.rtw-key.gross, .rtw-key.mult { padding: 8px; gap: 2px; }
+.rtw-key.gross .z, .rtw-key.mult .k {
+  font-family: var(--font-display, inherit);
+  line-height: 1; font-weight: 800; letter-spacing: 0.02em;
+}
+.rtw-key.gross .z { font-size: clamp(2.6rem, 9vh, 4.4rem); }
+.rtw-key.mult .k { font-size: clamp(1.6rem, 5vh, 2.6rem); }
+/* Bull steht allein, also nicht ganz so breitbeinig. */
+.rtw-key.gross.bull .z { color: var(--amber); font-size: clamp(2rem, 7vh, 3.4rem); }
+/* Die Zusatzzeile darf in der schmalen Spalte nicht umbrechen. */
+.rtw-key.mult .sub, .rtw-key.gross .sub { white-space: nowrap; }
 .rtw-key.skip .k { color: var(--muted); }
 
 .rtw-fortschritt { margin-bottom: 8px; }
@@ -1515,8 +1525,17 @@ button, input, select, textarea { font-family: inherit; }
   margin-top: 5px; font-size: 0.74rem; color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
-.rtw-pad-grid.ziel .rtw-key.gross { flex: 1 1 auto; }
 .rtw-fortschritt { flex: none; }
+/* Im Hochformat blieb zwischen Tafel und Eingabe ein totes Loch: die Tafel
+   stand oben, das Tastenfeld unten. Die Zeilen der Tafel wachsen jetzt in
+   den freien Platz -- gedeckelt, damit zwei Spieler keine Plakate werden. */
+@media (max-width: 699px) and (orientation: portrait) {
+  #screen-rtw .rtw-board { flex: 1 1 auto; min-height: 0; }
+  /* Die Zeilen fuellen den freien Platz. Deckeln waere schlimmer: dann
+     bliebe das Loch nur woanders, und das Tastenfeld haenge nicht mehr
+     unten am Rand, wo der Daumen ist. */
+  #screen-rtw .rtw-row { flex: 1 1 auto; }
+}
 
 /* Ab drei Spielern: kompaktere Karten, damit unter dem Spielstand noch
    Platz für den Verlauf bleibt. Und der Verlauf wird sauber abgeschnitten,
@@ -4390,11 +4409,17 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       return '<div class="d ' + (d ? '' : 'empty') + '">' + (d ? throwLabel(d) : '–') + '</div>';
     }).join('');
 
-    /* Es wird immer nur auf die eigene aktuelle Zahl geworfen – deshalb steht
-       genau diese Zahl groß da. Darunter Doppel und Triple, die weiter
-       springen, und „Weiter", das die restlichen Darts der Aufnahme als
-       Fehlwürfe verbucht: getroffen wird meist höchstens einmal, dreimal
-       Miss zu tippen wäre die häufigste Eingabe des Spiels. */
+    /*
+     * Es wird immer nur auf die eigene Zahl geworfen. Die drei Treffer, die
+     * es dafür gibt, stehen deshalb nebeneinander in einer Reihe: die Zahl
+     * breit und groß, Doppel und Triple daneben als gleichwertige Tasten.
+     * Untereinander wäre die Zahl ein Plakat und D/T zwei Fußnoten – dabei
+     * ist es dieselbe Frage, nur mit drei Antworten.
+     *
+     * Darunter Miss und „Weiter", das die restlichen Darts der Aufnahme als
+     * Fehlwürfe verbucht: getroffen wird meist höchstens einmal, dreimal
+     * Miss zu tippen wäre sonst die häufigste Eingabe des Spiels.
+     */
     var target = st.target[active];
     var weiter = '<button class="rtw-key skip" data-action="end-rtw-visit">' +
       '<span class="k">' + (st.inVisit ? 'Weiter ▸' : 'Nichts ▸') + '</span>' +
@@ -4402,31 +4427,31 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var miss = '<button class="rtw-key miss" data-num="0" data-mult="1">' +
       '<span class="k">Miss</span><span class="sub">ein Dart daneben</span></button>';
 
+    var treffer;
     if (target === 25) {
-      $('rtw-pad').innerHTML = rtwFortschritt(st, active) +
-        '<div class="rtw-pad-grid ziel">' +
+      treffer = '<div class="rtw-treffer nur-bull">' +
         '<button class="rtw-key gross bull" data-num="25" data-mult="1">' +
           '<span class="z">Bull</span><span class="sub">Spiel gewonnen</span></button>' +
-        '<div class="rtw-reihe">' + miss + weiter + '</div>' +
         '</div>';
     } else {
       var jump = function (mult) {
         var next = target + mult;
         return next > 20 ? 'dann Bull' : 'dann ' + next;
       };
-      $('rtw-pad').innerHTML = rtwFortschritt(st, active) +
-        '<div class="rtw-pad-grid ziel">' +
+      treffer = '<div class="rtw-treffer">' +
         '<button class="rtw-key gross" data-num="' + target + '" data-mult="1">' +
           '<span class="z">' + target + '</span><span class="sub">' + jump(1) + '</span></button>' +
-        '<div class="rtw-reihe">' +
-          '<button class="rtw-key" data-num="' + target + '" data-mult="2">' +
-            '<span class="k">D' + target + '</span><span class="sub">' + jump(2) + '</span></button>' +
-          '<button class="rtw-key" data-num="' + target + '" data-mult="3">' +
-            '<span class="k">T' + target + '</span><span class="sub">' + jump(3) + '</span></button>' +
-        '</div>' +
-        '<div class="rtw-reihe">' + miss + weiter + '</div>' +
+        '<button class="rtw-key mult" data-num="' + target + '" data-mult="2">' +
+          '<span class="k">D' + target + '</span><span class="sub">' + jump(2) + '</span></button>' +
+        '<button class="rtw-key mult" data-num="' + target + '" data-mult="3">' +
+          '<span class="k">T' + target + '</span><span class="sub">' + jump(3) + '</span></button>' +
         '</div>';
     }
+
+    $('rtw-pad').innerHTML = rtwFortschritt(st, active) +
+      '<div class="rtw-pad-grid ziel">' + treffer +
+      '<div class="rtw-reihe">' + miss + weiter + '</div>' +
+      '</div>';
   }
 
   /* Wie weit ist der, der gerade wirft? Die Reihe zeigt alle 21 Stationen –
