@@ -7,7 +7,7 @@
  * nur damit man "alle Spiele von X" abfragen kann.
  */
 import { randomBytes } from 'node:crypto';
-import { nextSeq, transaktion } from './lib/db.mjs';
+import { nextSeq, transaktion, zaehler } from './lib/db.mjs';
 import { hashPassword, verifyPassword, checkPassword } from './lib/password.mjs';
 import * as sess from './lib/session.mjs';
 import * as limit from './lib/ratelimit.mjs';
@@ -346,7 +346,230 @@ export function createApi(db, config) {
     sendJson(res, 200, { ok: true });
   }
 
+  /* ---------- Geteilte Turniere ---------- */
+  /*
+   * Ein Turnier, zwei Scheiben, zwei Geraete. Der Server verwahrt den
+   * Spielplan und die fertigen Partien -- gerechnet wird weiterhin nur im
+   * Client. Seine einzige eigene Aufgabe: dafuer sorgen, dass nicht zwei
+   * Geraete dieselbe Partie mitschreiben.
+   */
+
+  /* Eine Partie, die jemand beansprucht und dann nicht zu Ende spielt, darf
+     das Turnier nicht blockieren. Nach dieser Frist darf sie ein anderer
+     uebernehmen -- lang genug fuer eine echte Partie, kurz genug, dass ein
+     leergelaufener Akku den Abend nicht aufhaelt. */
+  const CLAIM_FRIST = 45 * 60000;
+
+  function turnierId(wert) {
+    const id = String(wert || '');
+    if (!/^[A-Za-z0-9_-]{4,64}$/.test(id)) throw new HttpFehler(400, 'Die Turnier-Kennung ist unbrauchbar.');
+    return id;
+  }
+
+  function verlangeTurnier(id) {
+    const t = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(id);
+    if (!t) throw new HttpFehler(404, 'Dieses Turnier gibt es nicht.');
+    return t;
+  }
+
+  /* Nur wer mitspielt, darf mitschreiben. */
+  function verlangeTeilnahme(t, u) {
+    const da = db.prepare('SELECT 1 FROM tournament_players WHERE tournament_id = ? AND user_id = ?')
+      .get(t.id, u.id);
+    if (!da) throw new HttpFehler(403, 'Du spielst in diesem Turnier nicht mit.');
+  }
+
+  function partieZeile(r) {
+    return {
+      matchId: r.match_id,
+      claimedBy: r.claimed_by,
+      claimedByName: r.claimed_by ? (namen.get(r.claimed_by) || null) : null,
+      claimedAt: r.claimed_at,
+      result: r.result ? JSON.parse(r.result) : null,
+      seq: r.seq
+    };
+  }
+
+  /* Kleiner Namens-Cache: die Partien-Liste braucht zu jedem Anspruch einen
+     Namen, und das sind immer dieselben zehn Leute. */
+  const namen = new Map();
+  function namenLaden() {
+    namen.clear();
+    for (const r of db.prepare('SELECT id, display_name FROM users').all()) namen.set(r.id, r.display_name);
+  }
+
+  function turnierAntwort(t, seit) {
+    namenLaden();
+    const zeilen = db
+      .prepare('SELECT * FROM tournament_matches WHERE tournament_id = ? AND seq > ? ORDER BY seq')
+      .all(t.id, Number(seit) || 0);
+    const hoechste = db
+      .prepare('SELECT MAX(seq) AS m FROM tournament_matches WHERE tournament_id = ?')
+      .get(t.id).m || 0;
+    return {
+      id: t.id,
+      plan: JSON.parse(t.plan),
+      status: t.status,
+      angelegtVon: t.created_by,
+      angelegtVonName: namen.get(t.created_by) || null,
+      partien: zeilen.map(partieZeile),
+      cursor: hoechste
+    };
+  }
+
+  async function turnierAnlegen(req, res) {
+    pruefeHerkunft(req);
+    const u = verlangeNutzer(req);
+    const body = await leseJson(req);
+    const id = turnierId(body.id);
+    if (!body.plan || typeof body.plan !== 'object') throw new HttpFehler(400, 'Der Spielplan fehlt.');
+
+    // Schon da? Dann war das ein zweiter Versuch aus der Warteschlange.
+    const da = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(id);
+    if (da) return sendJson(res, 200, { turnier: turnierAntwort(da, 0), schonDa: true });
+
+    const mitspieler = Array.isArray(body.players) ? body.players : [];
+    const konten = [];
+    for (const p of mitspieler) {
+      const treffer = db.prepare("SELECT id FROM users WHERE id = ? AND status = 'aktiv'").get(String(p));
+      if (treffer) konten.push(treffer.id);
+    }
+    // Der Anlegende gehoert immer dazu, auch wenn er selbst nicht mitwirft --
+    // sonst saehe er sein eigenes Turnier nicht mehr.
+    if (!konten.includes(u.id)) konten.push(u.id);
+
+    transaktion(db, function () {
+      db.prepare('INSERT INTO tournaments (id, plan, created_by, created_at) VALUES (?, ?, ?, ?)')
+        .run(id, JSON.stringify(body.plan), u.id, new Date().toISOString());
+      const ins = db.prepare('INSERT INTO tournament_players (tournament_id, user_id) VALUES (?, ?)');
+      for (const k of konten) ins.run(id, k);
+    });
+    sendJson(res, 201, { turnier: turnierAntwort(verlangeTurnier(id), 0) });
+  }
+
+  /* Alle offenen Turniere, an denen ich beteiligt bin. */
+  function turniereListe(req, res) {
+    const u = verlangeNutzer(req);
+    const zeilen = db
+      .prepare(
+        "SELECT t.* FROM tournaments t JOIN tournament_players p ON p.tournament_id = t.id" +
+          " WHERE p.user_id = ? AND t.status = 'offen' ORDER BY t.created_at DESC LIMIT 10"
+      )
+      .all(u.id);
+    sendJson(res, 200, { turniere: zeilen.map((t) => turnierAntwort(t, 0)) });
+  }
+
+  function turnierHolen(req, res, id, url) {
+    const u = verlangeNutzer(req);
+    const t = verlangeTurnier(turnierId(id));
+    verlangeTeilnahme(t, u);
+    sendJson(res, 200, { turnier: turnierAntwort(t, url.searchParams.get('since')) });
+  }
+
+  /*
+   * Partie beanspruchen. Wer sie hat, schreibt sie mit; bei den anderen
+   * steht "laeuft bei X" statt eines Start-Knopfes. Ein zweiter Versuch
+   * desselben Geraets ist in Ordnung -- das ist bloss ein Neuladen.
+   */
+  async function partieBeanspruchen(req, res, treffer) {
+    pruefeHerkunft(req);
+    const u = verlangeNutzer(req);
+    const t = verlangeTurnier(turnierId(treffer[0]));
+    verlangeTeilnahme(t, u);
+    if (t.status !== 'offen') throw new HttpFehler(409, 'Dieses Turnier ist beendet.');
+    const mid = turnierId(treffer[1]);
+
+    const jetzt = Date.now();
+    const da = db.prepare('SELECT * FROM tournament_matches WHERE tournament_id = ? AND match_id = ?')
+      .get(t.id, mid);
+    if (da && da.result) throw new HttpFehler(409, 'Diese Partie ist schon gespielt.');
+    if (da && da.claimed_by && da.claimed_by !== u.id && jetzt - (da.claimed_at || 0) < CLAIM_FRIST) {
+      namenLaden();
+      throw new HttpFehler(409, (namen.get(da.claimed_by) || 'Jemand') + ' schreibt diese Partie gerade mit.');
+    }
+
+    transaktion(db, function () {
+      const s = zaehler(db, 'tournament_seq');
+      db.prepare(
+        'INSERT INTO tournament_matches (tournament_id, match_id, claimed_by, claimed_at, seq, updated_at)' +
+          ' VALUES (?, ?, ?, ?, ?, ?)' +
+          ' ON CONFLICT(tournament_id, match_id) DO UPDATE SET' +
+          ' claimed_by = excluded.claimed_by, claimed_at = excluded.claimed_at,' +
+          ' seq = excluded.seq, updated_at = excluded.updated_at'
+      ).run(t.id, mid, u.id, jetzt, s, new Date().toISOString());
+    });
+    sendJson(res, 200, { turnier: turnierAntwort(t, 0) });
+  }
+
+  /* Anspruch zurueckgeben, ohne gespielt zu haben (zurueck aus der Partie). */
+  async function partieFreigeben(req, res, treffer) {
+    pruefeHerkunft(req);
+    const u = verlangeNutzer(req);
+    const t = verlangeTurnier(turnierId(treffer[0]));
+    verlangeTeilnahme(t, u);
+    const mid = turnierId(treffer[1]);
+    const da = db.prepare('SELECT * FROM tournament_matches WHERE tournament_id = ? AND match_id = ?')
+      .get(t.id, mid);
+    // Nur den eigenen Anspruch, und nur solange nichts eingetragen ist.
+    if (da && !da.result && da.claimed_by === u.id) {
+      transaktion(db, function () {
+        const s = zaehler(db, 'tournament_seq');
+        db.prepare(
+          'UPDATE tournament_matches SET claimed_by = NULL, claimed_at = NULL, seq = ?, updated_at = ?' +
+            ' WHERE tournament_id = ? AND match_id = ?'
+        ).run(s, new Date().toISOString(), t.id, mid);
+      });
+    }
+    sendJson(res, 200, { turnier: turnierAntwort(t, 0) });
+  }
+
+  /* Ergebnis eintragen. Wortgleich das, was der Client als Partie fuehrt. */
+  async function partieErgebnis(req, res, treffer) {
+    pruefeHerkunft(req);
+    const u = verlangeNutzer(req);
+    const t = verlangeTurnier(turnierId(treffer[0]));
+    verlangeTeilnahme(t, u);
+    const mid = turnierId(treffer[1]);
+    const body = await leseJson(req);
+    if (!body.result || typeof body.result !== 'object') throw new HttpFehler(400, 'Das Ergebnis fehlt.');
+
+    const da = db.prepare('SELECT * FROM tournament_matches WHERE tournament_id = ? AND match_id = ?')
+      .get(t.id, mid);
+    // Fremdes Ergebnis ueberschreiben waere der eine Fall, in dem wirklich
+    // etwas verlorenginge -- also nur der, der die Partie beansprucht hat.
+    if (da && da.claimed_by && da.claimed_by !== u.id) {
+      namenLaden();
+      throw new HttpFehler(409, (namen.get(da.claimed_by) || 'Jemand') + ' schreibt diese Partie mit.');
+    }
+
+    transaktion(db, function () {
+      const s = zaehler(db, 'tournament_seq');
+      db.prepare(
+        'INSERT INTO tournament_matches (tournament_id, match_id, claimed_by, claimed_at, result, seq, updated_at)' +
+          ' VALUES (?, ?, ?, ?, ?, ?, ?)' +
+          ' ON CONFLICT(tournament_id, match_id) DO UPDATE SET' +
+          ' claimed_by = excluded.claimed_by, result = excluded.result,' +
+          ' seq = excluded.seq, updated_at = excluded.updated_at'
+      ).run(t.id, mid, u.id, Date.now(), JSON.stringify(body.result), s, new Date().toISOString());
+    });
+    sendJson(res, 200, { turnier: turnierAntwort(t, 0) });
+  }
+
+  async function turnierBeenden(req, res, id) {
+    pruefeHerkunft(req);
+    const u = verlangeNutzer(req);
+    const t = verlangeTurnier(turnierId(id));
+    verlangeTeilnahme(t, u);
+    if (t.status === 'offen') {
+      db.prepare("UPDATE tournaments SET status = 'beendet', ended_at = ? WHERE id = ?")
+        .run(new Date().toISOString(), t.id);
+    }
+    sendJson(res, 200, { turnier: turnierAntwort(verlangeTurnier(t.id), 0) });
+  }
+
   /* ---------- Verteiler ---------- */
+
+  const TID = '([A-Za-z0-9_-]{4,64})';
 
   const routen = [
     ['POST', /^\/api\/register$/, register],
@@ -358,7 +581,15 @@ export function createApi(db, config) {
     ['GET', /^\/api\/users$/, nutzerListe],
     ['POST', /^\/api\/games$/, spielHochladen],
     ['GET', /^\/api\/games$/, spieleHolen],
-    ['DELETE', /^\/api\/games\/([A-Za-z0-9_-]{4,64})$/, spielLoeschen]
+    ['DELETE', /^\/api\/games\/([A-Za-z0-9_-]{4,64})$/, spielLoeschen],
+
+    ['POST', /^\/api\/tournaments$/, turnierAnlegen],
+    ['GET', /^\/api\/tournaments$/, turniereListe],
+    ['GET', new RegExp('^\\/api\\/tournaments\\/' + TID + '$'), turnierHolen],
+    ['POST', new RegExp('^\\/api\\/tournaments\\/' + TID + '\\/ende$'), turnierBeenden],
+    ['POST', new RegExp('^\\/api\\/tournaments\\/' + TID + '\\/matches\\/' + TID + '\\/claim$'), partieBeanspruchen],
+    ['POST', new RegExp('^\\/api\\/tournaments\\/' + TID + '\\/matches\\/' + TID + '\\/frei$'), partieFreigeben],
+    ['PUT', new RegExp('^\\/api\\/tournaments\\/' + TID + '\\/matches\\/' + TID + '$'), partieErgebnis]
   ];
 
   return async function handleApi(req, res, url) {
@@ -371,7 +602,9 @@ export function createApi(db, config) {
       pfadPasst = true;
       if (req.method !== methode) continue;
       try {
-        await fn(req, res, treffer[1] !== undefined ? treffer[1] : url, url);
+        // Alle Fangstellen durchreichen: /api/tournaments/:id/matches/:mid hat
+        // zwei. Routen ohne Fangstelle bekommen weiterhin die URL.
+        await fn(req, res, treffer.length > 2 ? treffer.slice(1) : (treffer[1] !== undefined ? treffer[1] : url), url);
       } catch (e) {
         if (e instanceof HttpFehler) return sendFehler(res, e.code, e.text);
         console.error('API-Fehler:', e);

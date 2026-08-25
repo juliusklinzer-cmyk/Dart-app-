@@ -1875,6 +1875,20 @@ button, input, select, textarea { font-family: inherit; }
   font-variant-numeric: tabular-nums; min-width: 7.5rem;
 }
 
+/* Geteiltes Turnier: Beitreten-Liste und der Hinweis im Spielplan. */
+.beitreten-zeile {
+  display: flex; align-items: center; gap: 12px; padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+.beitreten-zeile:first-child { border-top: none; }
+.beitreten-zeile .who { flex: 1; min-width: 0; }
+.beitreten-zeile .nm { font-weight: 700; }
+.beitreten-zeile .sm { font-size: 0.78rem; color: var(--muted); }
+.match-row .belegt {
+  font-size: 0.78rem; color: var(--laser-hell); white-space: nowrap;
+  text-shadow: 0 0 8px var(--laser-weich);
+}
+
 </style>
 <div id="save-warning" class="save-warning hidden">
   ⚠️ Der Spielstand kann gerade nicht gespeichert werden – bitte Speicherplatz prüfen
@@ -1901,6 +1915,13 @@ button, input, select, textarea { font-family: inherit; }
       <button class="btn ghost small" data-action="beenden">Beenden</button>
       <button class="btn primary" data-action="resume">Fortsetzen</button>
     </div>
+  </div>
+
+  <!-- Geteilte Turniere, an denen ich beteiligt bin. Keine Einladung, kein
+       Code: wer mitspielt, sieht es hier und steigt ein. -->
+  <div id="beitreten-box" class="card hidden">
+    <h2>Turnier läuft</h2>
+    <div id="beitreten-liste"></div>
   </div>
 
   <!-- Linke Spalte: Wortmarke, darunter direkt die Teilnehmer. -->
@@ -1966,6 +1987,17 @@ button, input, select, textarea { font-family: inherit; }
         <button data-value="3">Best of 3</button>
         <button data-value="5">Best of 5</button>
       </div>
+    </div>
+    <!-- Nur angemeldet sichtbar: ohne Konto gibt es niemanden zum Teilen. -->
+    <div class="setting hidden" id="setting-geteilt">
+      <label>An zwei Scheiben</label>
+      <div class="options" data-setting="turnierGeteilt">
+        <button data-value="0">ein Gerät</button>
+        <button data-value="1">geteilt</button>
+      </div>
+      <p class="hint">Geteilt heißt: alle Mitspieler sehen das Turnier auf ihrem Gerät und können
+        eine offene Partie übernehmen. Wer eine Partie mitschreibt, hat sie für sich – die anderen
+        sehen so lange „läuft bei …“. Ergebnisse stehen sofort in der Tabelle.</p>
     </div>
     <div class="setting">
       <label>Einzel-Darts ab Rest</label>
@@ -2915,6 +2947,100 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     for (var i = 0; i < S.matches.length; i++) if (S.matches[i].id === id) return S.matches[i];
     return null;
   }
+
+  /* ================= Geteiltes Turnier ================= */
+  /*
+   * Zwei Scheiben, zwei Geräte, ein Spielplan. Der Plan und die fertigen
+   * Partien liegen auf dem Server; gerechnet wird weiterhin nur hier.
+   *
+   * Diese Funktion ist die einzige Stelle, an der fremde Daten in das eigene
+   * Turnier kommen. Sie gibt zurück, ob sich etwas geändert hat – der
+   * Hintergrundtakt zeichnet sonst achtmal die Minute ohne Grund neu.
+   */
+  function geteiltesTurnier() { return S.tour && S.tour.geteilt ? S.tour : null; }
+
+  function planZuMatches(plan) {
+    return (plan.matches || []).map(function (m) {
+      return {
+        id: m.id, round: m.round, p: m.p.slice(),
+        starter: null, legs: [], done: false, winner: null, at: null
+      };
+    });
+  }
+
+  function uebernehmeTurnier(daten) {
+    if (!daten || !daten.plan) return false;
+    var neu = false;
+
+    // Noch nicht dabei: Plan übernehmen. Ein laufendes eigenes Turnier ist an
+    // dieser Stelle schon weggeräumt – siehe turnierBeitreten().
+    if (!S.tour || S.tour.sid !== daten.id) {
+      S.tour = {
+        start: daten.plan.start, bestOf: daten.plan.bestOf,
+        players: (daten.plan.players || []).slice(),
+        geteilt: true, sid: daten.id, cursor: 0,
+        angelegtVon: daten.angelegtVonName || null
+      };
+      S.matches = planZuMatches(daten.plan);
+      S.current = null;
+      /* Gaeste aus dem Plan uebernehmen: sie gehoeren dem Geraet, das sie
+         angelegt hat, und ohne sie stuende hier ueberall "Unbekannt". */
+      var g = daten.plan.gaeste || {};
+      Object.keys(g).forEach(function (gid) {
+        if (S.profiles.some(function (p) { return p.id === gid; })) return;
+        S.profiles.push({
+          id: gid, name: g[gid], avatar: null, hue: freeHue(),
+          created: Date.now(), gast: true
+        });
+      });
+      neu = true;
+    }
+
+    var ich = window.DartKonto && window.DartKonto.nutzer() ? window.DartKonto.nutzer().id : null;
+    (daten.partien || []).forEach(function (p) {
+      var m = matchById(p.matchId);
+      if (!m) return;
+      if (p.result) {
+        /* Ein fertiges Ergebnis gewinnt immer – auch gegen eine Partie, die
+           hier gerade offen aussieht. Wer sie beansprucht hatte, hat sie
+           gespielt; alles andere wäre ein zweiter Datenstand derselben
+           Partie, und genau den soll es nicht geben. */
+        if (!m.done || m.at !== p.result.at) {
+          S.matches[S.matches.indexOf(m)] = p.result;
+          if (S.current === m.id) S.current = null;
+          neu = true;
+        }
+        var fertig = matchById(p.matchId);
+        if (fertig && fertig.belegtVon) delete fertig.belegtVon;
+        return;
+      }
+      // Fremder Anspruch: kein Start-Knopf, dafür der Name daneben.
+      var von = p.claimedBy && p.claimedBy !== ich ? (p.claimedByName || 'jemandem') : null;
+      if ((m.belegtVon || null) !== von) {
+        if (von) m.belegtVon = von; else delete m.belegtVon;
+        neu = true;
+      }
+    });
+
+    if (typeof daten.cursor === 'number' && daten.cursor > (S.tour.cursor || 0)) {
+      S.tour.cursor = daten.cursor;
+    }
+    if (daten.status === 'beendet') S.tour.beendet = true;
+    if (neu) save();
+    return neu;
+  }
+
+  /* Einem laufenden Turnier beitreten. Ein eigenes Turnier, das noch läuft,
+     wird vorher archiviert – wie beim Start eines neuen. */
+  function turnierBeitreten(daten) {
+    if (S.matches.length) archiveTournament();
+    S.tour = null;
+    S.matches = [];
+    uebernehmeTurnier(daten);
+    S.screen = 'tournament';
+    save();
+    render();
+  }
   /* Ein Schnelles Spiel ist selbst die laufende Partie – dadurch tragen
      Spielbildschirm, Eingabe, Finish-Vorschlag und Undo unveraendert. */
   function currentMatch() {
@@ -3071,6 +3197,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         /* Das Schnelle Spiel ist mit dem Checkout vorbei – danach geht es in
            die Auswertung, nicht zum nächsten Spiel eines Spielplans. */
         UI.overlay = { type: m.kind === 'quick' ? 'game-done' : 'match-done', pid: pid };
+        /* Im geteilten Turnier steht die Partie sofort bei allen anderen –
+           nicht erst, wenn der ganze Abend vorbei ist. */
+        if (geteiltesTurnier() && m.kind !== 'quick' && window.DartSync && window.DartSync.turnier) {
+          window.DartSync.turnier.ergebnis(m);
+        }
       } else {
         UI.overlay = { type: 'leg-done', pid: pid };
       }
@@ -3952,9 +4083,17 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   /* ================= Turnier abschließen ================= */
   function archiveTournament() {
     if (!S.matches.length) return;
+    var geteilt = geteiltesTurnier();
+    /*
+     * Beim geteilten Turnier archivieren beide Geräte dasselbe Turnier. Damit
+     * daraus nicht zwei Einträge werden, bekommt der Archiv-Eintrag die
+     * Kennung des geteilten Turniers: der Server nimmt dieselbe Kennung nur
+     * einmal an, und das andere Gerät erkennt sie beim Abgleich wieder.
+     */
+    if (geteilt && window.DartSync && window.DartSync.turnier) window.DartSync.turnier.ende();
     var table = standings();
     S.history.unshift({
-      id: uid(), at: Date.now(),
+      id: geteilt && geteilt.sid ? geteilt.sid : uid(), at: Date.now(),
       lineup: tourPlayers().slice(),
       settings: { start: tourStart(), bestOf: tour().bestOf },
       matches: S.matches,
@@ -4099,6 +4238,14 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     }
     show(S.screen);
     if (S.screen === 'setup') renderSetup();
+    /* Der Hintergrundtakt laeuft nur da, wo man ihn auch sieht: im
+       Turnierbildschirm. Sonst fragt die App den ganzen Abend nach Daten,
+       die niemand anschaut. */
+    if (window.DartSync && window.DartSync.turnier) {
+      window.DartSync.turnier.takt(S.screen === 'tournament' && !!geteiltesTurnier());
+    }
+    if (S.screen === 'setup' && letzterScreen !== 'setup') beitretbareHolen();
+    letzterScreen = S.screen;
     if (S.screen === 'tournament') renderTournament();
     if (S.screen === 'boards') renderBoards();
     if (S.screen === 'players') renderPlayers();
@@ -4125,7 +4272,45 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     bar.classList.toggle('hidden', !text);
   }
 
+  /*
+   * Geteilte Turniere, an denen ich beteiligt bin. Die Liste wird nicht bei
+   * jedem Zeichnen geholt – das wäre bei jedem Tastendruck eine Anfrage.
+   * Sie kommt beim Betreten des Setups und nach dem Anmelden.
+   */
+  var beitretbare = [];
+  function beitretbareHolen() {
+    if (!window.DartSync || !window.DartSync.turnier) return;
+    window.DartSync.turnier.offen().then(function (liste) {
+      var eigen = geteiltesTurnier();
+      var neu = liste.filter(function (t) { return !eigen || t.id !== eigen.sid; });
+      var vorher = beitretbare.map(function (t) { return t.id; }).join(',');
+      beitretbare = neu;
+      if (vorher !== neu.map(function (t) { return t.id; }).join(',')) render();
+    });
+  }
+
+  function renderBeitreten() {
+    var box = $('beitreten-box');
+    if (!box) return;
+    box.classList.toggle('hidden', !beitretbare.length);
+    $('beitreten-liste').innerHTML = beitretbare.map(function (t) {
+      var offen = (t.plan.matches || []).length -
+        (t.partien || []).filter(function (p) { return p.result; }).length;
+      return '<div class="beitreten-zeile">' +
+        '<div class="who"><div class="nm">von ' + esc(t.angelegtVonName || 'jemandem') + '</div>' +
+        '<div class="sm">' + plural((t.plan.players || []).length, 'Spieler', 'Spieler') + ' · ' +
+        plural(offen, 'Partie offen', 'Partien offen') + '</div></div>' +
+        '<button class="btn primary small" data-action="turnier-beitreten" data-id="' + esc(t.id) + '">Mitmachen</button>' +
+        '</div>';
+    }).join('');
+  }
+
+  /* Beim Betreten des Setups einmal nachsehen, ob ein Turnier laeuft --
+     nicht bei jedem Zeichnen, das waere eine Anfrage je Tastendruck. */
+  var letzterScreen = null;
+
   function renderSetup() {
+    renderBeitreten();
     var map = career();
     $('roster').innerHTML = rosterReihenfolge().map(function (p) {
       var st = map[p.id];
@@ -4150,6 +4335,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     $('mode-select').querySelectorAll('button').forEach(function (b) {
       b.classList.toggle('active', b.getAttribute('data-value') === S.mode);
     });
+    /* Ohne Konto gibt es niemanden, mit dem man teilen könnte – und im
+       Schnellen Spiel gibt es keinen Spielplan zum Aufteilen. */
+    var kannTeilen = !!(window.DartKonto && window.DartKonto.nutzer()) && S.mode === '501';
+    $('setting-geteilt').classList.toggle('hidden', !kannTeilen);
+
     $('settings-cricket').classList.toggle('hidden', S.mode !== 'cricket');
     $('settings-rtw').classList.toggle('hidden', S.mode !== 'rtw');
     $('settings-finisher').classList.toggle('hidden', S.mode !== 'finisher');
@@ -4217,8 +4407,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           (m.winner === m.p[1] ? '<b>' + esc(b) + '</b>' : esc(b)) +
         '</div>' +
         '<div class="res">' + (m.void ? (m.started ? 'abgebrochen ' + score : 'entfällt') : score) + '</div>' +
-        (m.done || m.void ? '' : '<button class="go" data-action="open-match" data-id="' + m.id + '">' +
-          (m.legs.length ? 'Weiter' : 'Start') + '</button>') +
+        (m.done || m.void ? ''
+          : m.belegtVon ? '<span class="belegt">läuft bei ' + esc(m.belegtVon) + '</span>'
+          : '<button class="go" data-action="open-match" data-id="' + m.id + '">' +
+            (m.legs.length ? 'Weiter' : 'Start') + '</button>') +
         '</div>';
     });
     $('schedule').innerHTML = html;
@@ -5353,7 +5545,15 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           return '<button class="btn primary" data-action="co-darts" data-n="' + n + '">' + n + '</button>';
         }).join('') + '</div>' +
         '<button class="btn ghost full" data-action="ov-cancel">Abbrechen</button>';
-    } else if (o.type === 'leg-done') {
+    } else if (o.type === 'leg-done' || o.type === 'match-done') {
+      /* Die laufende Partie kann unter dem Overlay wegfallen: im geteilten
+         Turnier traegt ein anderes Geraet vielleicht gerade dasselbe
+         Ergebnis ein. Dann gibt es nichts mehr zu zeigen -- Overlay zu,
+         statt beim Zeichnen ins Leere zu greifen. */
+      if (!currentMatch()) { UI.overlay = null; ov.classList.add('hidden'); return; }
+    }
+
+    if (o.type === 'leg-done') {
       var m1 = currentMatch();
       html = '<div class="big-emoji">🎯</div><h3>Leg an ' + esc(pname(o.pid)) + '</h3>' +
         '<p>Stand: ' + legsWon(m1, m1.p[0]) + ':' + legsWon(m1, m1.p[1]) + '</p>' +
@@ -5374,6 +5574,19 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '<div class="row-btns two">' +
         '<button class="btn ghost" data-action="ov-cancel">Nein, weiterspielen</button>' +
         '<button class="btn danger" data-action="ov-discard-game">Ja, verwerfen</button></div>';
+    } else if (o.type === 'warte') {
+      html = '<p>' + esc(o.text) + '</p>';
+    } else if (o.type === 'hinweis') {
+      html = '<h3>Geht gerade nicht</h3><p>' + esc(o.text) + '</p>' +
+        '<button class="btn primary full" data-action="ov-hinweis-zu">Verstanden</button>';
+    } else if (o.type === 'confirm-beitreten') {
+      html = '<h3>Turnier wechseln?</h3>' +
+        '<p>Hier läuft noch ein eigenes Turnier mit <b>' +
+        plural(o.played, 'gespieltem Spiel', 'gespielten Spielen') + '</b>. ' +
+        'Das wird abgeschlossen und wandert in die Rangliste, bevor du beim geteilten mitmachst.</p>' +
+        '<div class="row-btns two">' +
+        '<button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
+        '<button class="btn primary" data-action="ov-beitreten">Mitmachen</button></div>';
     } else if (o.type === 'confirm-reset') {
       var offeneSpiele = sum(S.matches, function (m) { return m.done || m.void ? 0 : 1; });
       var fertige = sum(S.matches, function (m) { return m.done ? 1 : 0; });
@@ -5492,6 +5705,35 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     S.matches = buildSchedule(S.lineup.slice());
     S.current = null;
     S.screen = 'tournament';
+
+    /* Geteilt: der Spielplan geht zum Server, damit die anderen einsteigen
+       koennen. Klappt das nicht, laeuft das Turnier eben nur hier -- besser
+       als gar nicht zu starten, weil das WLAN gerade hakt. */
+    if (S.settings.turnierGeteilt === 1 && window.DartSync && window.DartSync.turnier &&
+        window.DartKonto && window.DartKonto.nutzer()) {
+      var sid = uid();
+      /* Gastspieler gibt es nur auf diesem Geraet. Ohne ihre Namen im Plan
+         staende beim Kollegen ueberall "Unbekannt" -- ihre Kennung sagt ihm
+         ja nichts. */
+      var gaeste = {};
+      S.tour.players.forEach(function (id) {
+        if (String(id).indexOf('u_') !== 0) gaeste[id] = pname(id);
+      });
+      var plan = {
+        start: S.tour.start, bestOf: S.tour.bestOf, players: S.tour.players.slice(),
+        gaeste: gaeste,
+        matches: S.matches.map(function (m) { return { id: m.id, round: m.round, p: m.p.slice() }; })
+      };
+      S.tour.geteilt = true;
+      S.tour.sid = sid;
+      S.tour.cursor = 0;
+      var konten = S.tour.players.filter(function (id) { return String(id).indexOf('u_') === 0; });
+      window.DartSync.turnier.anlegen(sid, plan, konten).catch(function () {
+        S.tour.geteilt = false;
+        delete S.tour.sid;
+        save(); render();
+      });
+    }
     save();
     render();
   }
@@ -5499,11 +5741,48 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   function openMatch(id) {
     var m = matchById(id);
     if (!m) return;
+
+    /*
+     * Im geteilten Turnier wird die Partie erst beim Server beansprucht.
+     * Erst danach geht es aufs Feld – sonst schreiben an zwei Scheiben zwei
+     * Leute dieselbe Partie mit und eine der beiden Fassungen ist am Ende
+     * für nichts gewesen.
+     */
+    if (geteiltesTurnier() && window.DartSync && window.DartSync.turnier) {
+      UI.overlay = { type: 'warte', text: 'Partie wird übernommen …' };
+      render();
+      window.DartSync.turnier.beanspruchen(id).then(function () {
+        UI.overlay = null;
+        oeffneJetzt(id);
+      }).catch(function (e) {
+        UI.overlay = { type: 'hinweis', text: e && e.message ? e.message : 'Das hat nicht geklappt.' };
+        render();
+      });
+      return;
+    }
+    oeffneJetzt(id);
+  }
+
+  function oeffneJetzt(id) {
+    var m = matchById(id);
+    if (!m) { render(); return; }
     S.current = id;
     UI.input = ''; UI.darts = []; UI.mult = 1; UI.modeOverride = null; UI.error = ''; UI.overlay = null;
     S.screen = m.starter ? 'game' : 'bulloff';
     save();
     render();
+  }
+
+  /* Zurück aus einer Partie, in der noch nichts steht: Anspruch zurückgeben,
+     damit sie nicht bis zum Ablauf der Frist für alle blockiert ist. */
+  function partieVerlassen() {
+    var t = geteiltesTurnier();
+    if (!t || !S.current || !window.DartSync || !window.DartSync.turnier) return;
+    var m = matchById(S.current);
+    if (!m || m.done) return;
+    var geworfen = m.legs.some(function (l) { return l.visits.length > 0; });
+    if (geworfen) return;                     // angefangen bleibt beansprucht
+    window.DartSync.turnier.freigeben(m.id);
   }
 
   /* Nach diesen Tipps erscheint sofort ein Spielfeld unter dem Finger –
@@ -5666,6 +5945,34 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         if (S.game && S.game.done) finishGame();
         else { S.screen = 'setup'; UI.overlay = null; save(); render(); }
         break;
+      /* Einem geteilten Turnier beitreten. Ein eigenes laufendes Turnier
+         wird vorher archiviert – wie beim Start eines neuen auch. */
+      case 'turnier-beitreten': {
+        var bid = el.getAttribute('data-id');
+        var eintrag = null;
+        beitretbare.forEach(function (t) { if (t.id === bid) eintrag = t; });
+        if (!eintrag) return;
+        var gespielt = sum(S.matches, function (m) { return m.done ? 1 : 0; });
+        if (gespielt > 0 && !UI.beitrittBestaetigt) {
+          UI.overlay = { type: 'confirm-beitreten', played: gespielt, id: bid };
+          render();
+          return;
+        }
+        UI.beitrittBestaetigt = false;
+        turnierBeitreten(eintrag);
+        break;
+      }
+      case 'ov-beitreten': {
+        UI.beitrittBestaetigt = true;
+        var oid = UI.overlay && UI.overlay.id;
+        UI.overlay = null;
+        handleActionInner('turnier-beitreten', { getAttribute: function () { return oid; } });
+        break;
+      }
+      case 'ov-hinweis-zu':
+        UI.overlay = null;
+        render();
+        break;
       case 'rtw-stechen': {
         var rsg = S.game;
         if (!rsg || rsg.kind !== 'rtw' || rsg.done) return;
@@ -5714,7 +6021,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         // Ein Schnelles Spiel gehört zu keinem Spielplan – zurück ins Setup,
         // das laufende Spiel bleibt in der Fortsetzen-Box stehen.
         else if (S.game && S.game.kind === 'quick') S.screen = 'setup';
-        else S.screen = 'tournament';
+        else { partieVerlassen(); S.screen = 'tournament'; }
         UI.overlay = null; save(); render();
         break;
       case 'to-winner':
@@ -6048,6 +6355,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       setScreen: function (name) { S.screen = name; save(); render(); },
       ersetzeSpielerIds: ersetzeSpielerIds,
       uebernehmeSpiele: uebernehmeSpiele,
+      uebernehmeTurnier: uebernehmeTurnier,
+      turnierListeAktualisieren: beitretbareHolen,
+      turnierBeitreten: turnierBeitreten,
       letztesSpielAm: letztesSpielAm,
       gaesteAufraeumen: gaesteAufraeumen,
       platzhalterEntfernen: platzhalterEntfernen,

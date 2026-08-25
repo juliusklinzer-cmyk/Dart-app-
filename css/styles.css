@@ -1871,3 +1871,17 @@ button, input, select, textarea { font-family: inherit; }
   border-radius: 10px; padding: 10px 12px; min-height: 44px; font-size: 0.95rem;
   font-variant-numeric: tabular-nums; min-width: 7.5rem;
 }
+
+/* Geteiltes Turnier: Beitreten-Liste und der Hinweis im Spielplan. */
+.beitreten-zeile {
+  display: flex; align-items: center; gap: 12px; padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+.beitreten-zeile:first-child { border-top: none; }
+.beitreten-zeile .who { flex: 1; min-width: 0; }
+.beitreten-zeile .nm { font-weight: 700; }
+.beitreten-zeile .sm { font-size: 0.78rem; color: var(--muted); }
+.match-row .belegt {
+  font-size: 0.78rem; color: var(--laser-hell); white-space: nowrap;
+  text-shadow: 0 0 8px var(--laser-weich);
+}

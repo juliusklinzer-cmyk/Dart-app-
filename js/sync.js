@@ -218,6 +218,7 @@
         else statusNeu();
         if (!rauf && !runterZahl) return letzterFehler || 'Alles auf dem neuesten Stand.';
         var teile = [];
+        if (D.turnierListeAktualisieren) D.turnierListeAktualisieren();
         if (rauf) teile.push(rauf === 1 ? '1 Spiel hochgeladen' : rauf + ' Spiele hochgeladen');
         if (runterZahl) teile.push(runterZahl === 1 ? '1 neues Spiel geholt' : runterZahl + ' neue Spiele geholt');
         return teile.join(', ') + '.';
@@ -325,6 +326,95 @@
     statusNeu();
   }
 
+  /* ================= Geteiltes Turnier ================= */
+  /*
+   * Ein Turnier, zwei Scheiben, zwei Geräte. Der Spielplan liegt auf dem
+   * Server, die Partien werden dort beansprucht und die Ergebnisse sofort
+   * eingetragen – nicht erst am Ende wie beim Turnier auf einem Gerät.
+   *
+   * Gerechnet wird weiterhin nur hier: der Server bekommt fertige Partien
+   * und gibt sie unverändert wieder heraus. Er sorgt allein dafür, dass
+   * nicht zwei Geräte dieselbe Partie mitschreiben.
+   */
+  var TURNIER_TAKT = 8000;
+  var turnierTimer = null;
+
+  function turnierRuf(methode, pfad, body) {
+    if (!window.DartKonto || !nutzer) return Promise.reject(new Error('Nicht angemeldet.'));
+    return window.DartKonto.ruf(methode, '/api/tournaments' + pfad, body);
+  }
+
+  /* Offene Turniere, an denen ich beteiligt bin – für die Liste im Setup. */
+  function turniereOffen() {
+    if (!nutzer) return Promise.resolve([]);
+    return turnierRuf('GET', '').then(function (d) { return d.turniere || []; })
+      .catch(function () { return []; });
+  }
+
+  function turnierAnlegen(sid, plan, spieler) {
+    return turnierRuf('POST', '', { id: sid, plan: plan, players: spieler });
+  }
+
+  /*
+   * Abgleich. Holt alles seit dem letzten Cursor und übergibt es app.js –
+   * die Spiellogik bleibt dort. Gibt zurück, ob sich etwas geändert hat,
+   * damit der Aufrufer nur dann neu zeichnet.
+   */
+  function turnierAbgleich() {
+    var t = D.state().tour;
+    if (!t || !t.geteilt || !t.sid || !nutzer) return Promise.resolve(false);
+    var seit = t.cursor || 0;
+    return turnierRuf('GET', '/' + t.sid + '?since=' + seit).then(function (d) {
+      return D.uebernehmeTurnier(d.turnier);
+    }).catch(function () {
+      // Kein Netz oder Server weg: der Abend geht lokal weiter, der nächste
+      // Takt holt auf. Nur nicht laut sein – das passiert im Hintergrund.
+      return false;
+    });
+  }
+
+  function turnierBeanspruchen(matchId) {
+    var t = D.state().tour;
+    if (!t || !t.geteilt || !t.sid) return Promise.resolve(true);
+    return turnierRuf('POST', '/' + t.sid + '/matches/' + matchId + '/claim').then(function (d) {
+      D.uebernehmeTurnier(d.turnier);
+      return true;
+    });
+  }
+
+  function turnierFreigeben(matchId) {
+    var t = D.state().tour;
+    if (!t || !t.geteilt || !t.sid) return Promise.resolve();
+    return turnierRuf('POST', '/' + t.sid + '/matches/' + matchId + '/frei').then(function (d) {
+      D.uebernehmeTurnier(d.turnier);
+    }).catch(function () { /* nicht schlimm: der Anspruch verfällt von selbst */ });
+  }
+
+  function turnierErgebnis(match) {
+    var t = D.state().tour;
+    if (!t || !t.geteilt || !t.sid) return Promise.resolve();
+    return turnierRuf('PUT', '/' + t.sid + '/matches/' + match.id, { result: match })
+      .then(function (d) { D.uebernehmeTurnier(d.turnier); })
+      .catch(function () {
+        // Ergebnis liegt lokal, der Takt schiebt es gleich nochmal hoch.
+      });
+  }
+
+  function turnierEnde() {
+    var t = D.state().tour;
+    if (!t || !t.geteilt || !t.sid) return Promise.resolve();
+    return turnierRuf('POST', '/' + t.sid + '/ende').catch(function () {});
+  }
+
+  /* Nur takten, solange man auch hinschaut: im Turnierbildschirm. */
+  function turnierTakt(an) {
+    if (turnierTimer) { clearInterval(turnierTimer); turnierTimer = null; }
+    if (!an) return;
+    turnierTimer = setInterval(function () {
+      turnierAbgleich().then(function (neu) { if (neu) D.render(); });
+    }, TURNIER_TAKT);
+  }
+
   /* ================= Start ================= */
 
   function start() {
@@ -340,7 +430,17 @@
       jetzt: jetzt,
       statusText: statusText,
       langText: langText,
-      wartend: function () { return zustand.outbox.length; }
+      wartend: function () { return zustand.outbox.length; },
+      turnier: {
+        offen: turniereOffen,
+        anlegen: turnierAnlegen,
+        abgleich: turnierAbgleich,
+        beanspruchen: turnierBeanspruchen,
+        freigeben: turnierFreigeben,
+        ergebnis: turnierErgebnis,
+        ende: turnierEnde,
+        takt: turnierTakt
+      }
     };
 
     // Wieder online, App wieder im Vordergrund, oder einfach nach einer Weile.

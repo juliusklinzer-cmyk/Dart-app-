@@ -126,6 +126,12 @@ async function spieleCricket(page) {
   await page.locator('#summary-actions [data-action="finish-game"]').click();
 }
 
+/* Punktzahl ueber das Zahlenfeld eintippen -- so wie am Board auch. */
+async function typeScoreAuf(page, n) {
+  for (const c of String(n)) await page.locator('.keypad button[data-key="' + c + '"]').click();
+  if (n <= 18) await page.locator('.keypad button[data-key="ok"]').click();
+}
+
 /* Wartet, bis die Warteschlange leer ist (oder gibt auf). */
 async function warteAufUpload(page, sekunden) {
   for (let i = 0; i < sekunden * 10; i++) {
@@ -432,6 +438,133 @@ async function main() {
      * Besetzung -- also den Normalfall. Gemeint war immer nur der Fall, dass
      * zwei Leute denselben Abend aufgeschrieben haben.
      */
+    /*
+     * Zwei Scheiben, zwei Geraete, ein Turnier. Julius legt es an, Tobi
+     * sieht es ohne Einladung und uebernimmt eine andere Partie. Beide
+     * Ergebnisse stehen danach bei beiden.
+     */
+    group('Geteiltes Turnier an zwei Scheiben');
+    await julius.page.locator('#nav [data-screen="setup"]').click();
+    /* Drei Spieler, damit der Plan mehr als eine Partie hat -- und einer
+       davon ein Gast, denn genau so sieht ein echter Abend aus. */
+    const turnierGast = await julius.page.evaluate(() => {
+      const D = window.__dart, S = D.state();
+      const g = { id: 'gast-alfons', name: 'Alfons', avatar: null, hue: 40, created: Date.now(), gast: true };
+      if (!S.profiles.some((p) => p.id === g.id)) S.profiles.push(g);
+      S.lineup = S.profiles.filter((p) => !p.hidden).map((p) => p.id).slice(0, 3);
+      S.matches = [];
+      D.setScreen('setup');
+      return g.id;
+    });
+    await julius.page.locator('[data-action="set-mode"][data-value="501"]').click();
+    check('die Teilen-Einstellung ist angemeldet sichtbar',
+      await julius.page.locator('#setting-geteilt').isVisible());
+    await julius.page.locator('#setting-geteilt [data-value="1"]').click();
+    await julius.page.locator('[data-action="start-game"]').click();
+    await julius.page.waitForTimeout(900);
+    check('Julius spielt ein geteiltes Turnier',
+      await julius.page.evaluate(() => !!window.__dart.state().tour.geteilt));
+    const sid = await julius.page.evaluate(() => window.__dart.state().tour.sid);
+    check('es hat eine Kennung beim Server', !!sid);
+
+    // Tobi meldet sich wieder an -- er war beim Abmelde-Test ausgeloggt.
+    await tobi.page.locator('#konto-email').fill('tobi@example.de');
+    await tobi.page.locator('#konto-pass').fill('dreifachzwanzig');
+    await tobi.page.locator('[data-action="konto-login"]').click();
+    await tobi.page.waitForFunction(() => !document.body.classList.contains('gesperrt'), null, { timeout: 10000 });
+    await tobi.page.evaluate(() => window.__dart.turnierListeAktualisieren());
+    await tobi.page.waitForTimeout(800);
+    check('Tobi sieht das Turnier ohne Einladung',
+      await tobi.page.locator('#beitreten-box').isVisible());
+    check('mit dem Namen dessen, der es angelegt hat',
+      (await tobi.page.locator('#beitreten-liste').innerText()).includes('Julius'));
+    await tobi.page.locator('[data-action="turnier-beitreten"]').click();
+    await tobi.page.waitForTimeout(500);
+    check('nach dem Beitreten steht er im Turnier',
+      await tobi.page.evaluate((id) => window.__dart.state().tour.sid === id, sid));
+    const planGleich = await tobi.page.evaluate(() => window.__dart.state().matches.map((m) => m.id).join(','));
+    const planJulius = await julius.page.evaluate(() => window.__dart.state().matches.map((m) => m.id).join(','));
+    check('beide haben denselben Spielplan', planGleich === planJulius, planGleich + ' vs ' + planJulius);
+    /* Der Gast gehoert Julius' Geraet -- ohne seinen Namen im Plan stuende
+       bei Tobi ueberall "Unbekannt". */
+    check('der Gastspieler kommt mit Namen mit',
+      await tobi.page.evaluate((id) => window.__dart.profile(id).name === 'Alfons', turnierGast));
+    check('und ist bei Tobi als Gast markiert',
+      await tobi.page.evaluate((id) => window.__dart.profile(id).gast === true, turnierGast));
+
+    /* Julius nimmt die erste Partie. Tobi darf sie danach nicht mehr. */
+    const ersteId = await julius.page.evaluate(() => window.__dart.state().matches[0].id);
+    await julius.page.locator('#schedule [data-action="open-match"][data-id="' + ersteId + '"]').click();
+    await julius.page.waitForTimeout(700);
+    check('Julius ist in der Partie',
+      (await julius.page.evaluate(() => window.__dart.state().screen)) !== 'tournament');
+    await tobi.page.evaluate(() => window.DartSync.turnier.abgleich());
+    await tobi.page.waitForTimeout(600);
+    await tobi.page.evaluate(() => window.__dart.render());
+    check('bei Tobi steht "läuft bei Julius"',
+      (await tobi.page.locator('#schedule').innerText()).includes('läuft bei Julius'),
+      await tobi.page.locator('#schedule').innerText());
+    check('und kein Start-Knopf mehr dafuer',
+      (await tobi.page.locator('#schedule [data-action="open-match"][data-id="' + ersteId + '"]').count()) === 0);
+
+    /* Tobi nimmt eine andere Partie und spielt sie zu Ende. */
+    const zweiteId = await tobi.page.evaluate(() => window.__dart.state().matches[1].id);
+    await tobi.page.locator('#schedule [data-action="open-match"][data-id="' + zweiteId + '"]').click();
+    await tobi.page.waitForTimeout(700);
+    check('Tobi kommt in seine Partie',
+      (await tobi.page.evaluate(() => window.__dart.state().screen)) !== 'tournament');
+    // Bull-Off, dann ein Leg im Schnelldurchlauf.
+    if (await tobi.page.locator('#bulloff-buttons button:not(.bo-mv)').count()) {
+      await tobi.page.locator('#bulloff-buttons button:not(.bo-mv)').first().click();
+    }
+    await tobi.page.evaluate(() => {
+      const D = window.__dart, m = D.currentMatch(), leg = D.activeLeg(m);
+      // Kuerzeste ehrliche Abkuerzung: Stand setzen, Checkout ueber die App.
+      leg.visits.push({ p: m.p[0], s: 461, d: 9, b: false, c: false, o: 0 });
+      leg.visits.push({ p: m.p[1], s: 0, d: 3, b: false, c: false, o: 0 });
+      D.save(); D.render();
+    });
+    /* Rest 40: die App ist auf Einzel-Darts umgeschaltet, also D20 tippen. */
+    await tobi.page.locator('#mult-row button[data-mult="2"]').click();
+    await tobi.page.locator('#num-grid button[data-num="20"]').click();
+    if (await tobi.page.locator('#overlay-card [data-action="co-darts"]').count()) {
+      await tobi.page.locator('#overlay-card [data-action="co-darts"]').first().click();
+    }
+    await tobi.page.waitForTimeout(900);
+    check('Tobis Partie ist entschieden',
+      await tobi.page.evaluate((id) => {
+        const m = window.__dart.state().matches.find((x) => x.id === id);
+        return !!(m && m.done);
+      }, zweiteId));
+
+    await julius.page.evaluate(() => window.DartSync.turnier.abgleich());
+    await julius.page.waitForTimeout(600);
+    check('Julius bekommt Tobis Ergebnis', await julius.page.evaluate((id) => {
+      const m = window.__dart.state().matches.find((x) => x.id === id);
+      return !!(m && m.done && m.winner);
+    }, zweiteId));
+    check('und es steht in seiner Tabelle', await julius.page.evaluate(() => {
+      return window.__dart.standings().some((s) => s.won > 0);
+    }));
+
+    /* Aufraeumen: Turnier beenden und beide Geraete zurueck ins Setup, damit
+       die folgenden Gruppen nicht in einer laufenden Partie starten. */
+    await julius.page.evaluate(async () => {
+      await window.DartSync.turnier.ende();
+      const D = window.__dart, S = D.state();
+      S.matches = []; S.tour = null; S.current = null; S.game = null;
+      D.setScreen('setup');
+    });
+    await tobi.page.evaluate(() => {
+      const D = window.__dart, S = D.state();
+      S.matches = []; S.tour = null; S.current = null; S.game = null;
+      D.setScreen('setup');
+    });
+    check('danach steht das Turnier nicht mehr zum Beitreten', await julius.page.evaluate(async () => {
+      const liste = await window.DartSync.turnier.offen();
+      return liste.length === 0;
+    }));
+
     group('Doppel-Warnung nur bei zwei Schreibern');
     const warnung = () => julius.page.evaluate(() => window.DartSync.langText());
     const setzeVerlauf = (eintraege) => julius.page.evaluate((liste) => {
@@ -622,10 +755,13 @@ async function main() {
     await zuordnungUebernehmen(lenas);
     check('das alte Spiel geht nach der Zuordnung raus', await warteAufUpload(lenas.page, 15));
 
-    await tobi.page.locator('[data-action="konto-login"]').isVisible();
-    await tobi.page.locator('#konto-email').fill('tobi@example.de');
-    await tobi.page.locator('#konto-pass').fill('dreifachzwanzig');
-    await tobi.page.locator('[data-action="konto-login"]').click();
+    /* Tobi ist seit dem geteilten Turnier schon wieder angemeldet -- dann
+       gibt es hier nichts auszufuellen. */
+    if (await tobi.page.locator('#konto-email').isVisible()) {
+      await tobi.page.locator('#konto-email').fill('tobi@example.de');
+      await tobi.page.locator('#konto-pass').fill('dreifachzwanzig');
+      await tobi.page.locator('[data-action="konto-login"]').click();
+    }
     // Nach dem Anmelden faellt die Schranke und man landet im Turnier –
     // nicht mehr auf dem Konto-Bildschirm.
     await tobi.page.waitForFunction(

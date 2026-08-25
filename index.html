@@ -43,6 +43,13 @@
     </div>
   </div>
 
+  <!-- Geteilte Turniere, an denen ich beteiligt bin. Keine Einladung, kein
+       Code: wer mitspielt, sieht es hier und steigt ein. -->
+  <div id="beitreten-box" class="card hidden">
+    <h2>Turnier läuft</h2>
+    <div id="beitreten-liste"></div>
+  </div>
+
   <!-- Linke Spalte: Wortmarke, darunter direkt die Teilnehmer. -->
   <div class="setup-links">
     <div class="marke">
@@ -106,6 +113,17 @@
         <button data-value="3">Best of 3</button>
         <button data-value="5">Best of 5</button>
       </div>
+    </div>
+    <!-- Nur angemeldet sichtbar: ohne Konto gibt es niemanden zum Teilen. -->
+    <div class="setting hidden" id="setting-geteilt">
+      <label>An zwei Scheiben</label>
+      <div class="options" data-setting="turnierGeteilt">
+        <button data-value="0">ein Gerät</button>
+        <button data-value="1">geteilt</button>
+      </div>
+      <p class="hint">Geteilt heißt: alle Mitspieler sehen das Turnier auf ihrem Gerät und können
+        eine offene Partie übernehmen. Wer eine Partie mitschreibt, hat sie für sich – die anderen
+        sehen so lange „läuft bei …“. Ergebnisse stehen sofort in der Tabelle.</p>
     </div>
     <div class="setting">
       <label>Einzel-Darts ab Rest</label>

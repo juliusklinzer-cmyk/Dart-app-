@@ -77,5 +77,11 @@ export function transaktion(db, fn) {
 
 /* Naechster Sync-Cursor. Steigt bei Einfuegen UND bei Loeschen. */
 export function nextSeq(db) {
-  return db.prepare("UPDATE counters SET value = value + 1 WHERE name = 'game_seq' RETURNING value").get().value;
+  return zaehler(db, 'game_seq');
+}
+
+/* Fortlaufende Zaehler. Geteilte Turniere haben einen eigenen, damit ihr
+   Cursor nicht bei jedem hochgeladenen Spiel weiterspringt. */
+export function zaehler(db, name) {
+  return db.prepare('UPDATE counters SET value = value + 1 WHERE name = ? RETURNING value').get(name).value;
 }

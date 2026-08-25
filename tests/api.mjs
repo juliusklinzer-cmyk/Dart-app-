@@ -341,6 +341,87 @@ async function main() {
     r = await julius.ruf('PATCH', '/api/me', { dbl: 20 });
     gleich(r.daten.nutzer.dbl, 20, 'zurueck auf D20');
 
+    /*
+     * Geteiltes Turnier: zwei Scheiben, zwei Geraete, ein Spielplan. Der
+     * Server verwahrt nur -- seine einzige eigene Aufgabe ist, dass nicht
+     * zwei Leute dieselbe Partie mitschreiben.
+     */
+    console.log('\nGeteiltes Turnier');
+    const plan = {
+      start: 501,
+      bestOf: 1,
+      players: [julius_id, tobi_id],
+      matches: [
+        { id: 'm1r1', round: 1, p: [julius_id, tobi_id] },
+        { id: 'm2r1', round: 1, p: [tobi_id, julius_id] }
+      ]
+    };
+    r = await julius.ruf('POST', '/api/tournaments', {
+      id: 'turnier1', plan, players: [julius_id, tobi_id]
+    });
+    gleich(r.status, 201, 'Julius legt ein geteiltes Turnier an');
+    gleich(r.daten.turnier.plan.matches.length, 2, 'der Spielplan kommt zurueck');
+
+    r = await julius.ruf('POST', '/api/tournaments', { id: 'turnier1', plan, players: [julius_id] });
+    gleich(r.status, 200, 'ein zweiter Versuch mit derselben Kennung meckert nicht');
+    ok(r.daten.schonDa === true, 'sondern sagt, dass es das schon gibt');
+
+    r = await tobi.ruf('GET', '/api/tournaments');
+    gleich(r.daten.turniere.length, 1, 'Tobi sieht das Turnier, ohne dass ihn jemand einladen muss');
+    gleich(r.daten.turniere[0].id, 'turnier1', 'und zwar genau dieses');
+
+    r = await fremd.ruf('GET', '/api/tournaments');
+    gleich(r.status, 401, 'ohne Anmeldung sieht man gar nichts');
+
+    r = await julius.ruf('POST', '/api/tournaments/turnier1/matches/m1r1/claim');
+    gleich(r.status, 200, 'Julius beansprucht die erste Partie');
+    r = await tobi.ruf('POST', '/api/tournaments/turnier1/matches/m1r1/claim');
+    gleich(r.status, 409, 'Tobi kann dieselbe Partie nicht auch beanspruchen');
+    ok(String(r.daten.fehler).includes('Julius'), 'und erfaehrt, wer sie hat');
+
+    r = await julius.ruf('POST', '/api/tournaments/turnier1/matches/m1r1/claim');
+    gleich(r.status, 200, 'derselbe darf nochmal -- das ist bloss ein Neuladen');
+
+    r = await tobi.ruf('POST', '/api/tournaments/turnier1/matches/m2r1/claim');
+    gleich(r.status, 200, 'die zweite Partie nimmt Tobi');
+    const beideDa = r.daten.turnier.partien;
+    gleich(beideDa.length, 2, 'beide Partien sind vergeben');
+
+    r = await tobi.ruf('PUT', '/api/tournaments/turnier1/matches/m1r1', {
+      result: { winner: tobi_id, legs: [] }
+    });
+    gleich(r.status, 409, 'ein fremdes Ergebnis wird nicht angenommen');
+
+    r = await julius.ruf('PUT', '/api/tournaments/turnier1/matches/m1r1', {
+      result: { id: 'm1r1', winner: julius_id, legs: [{ winner: julius_id, visits: [] }], done: true }
+    });
+    gleich(r.status, 200, 'sein eigenes schon');
+
+    r = await tobi.ruf('GET', '/api/tournaments/turnier1');
+    const m1 = r.daten.turnier.partien.find((p) => p.matchId === 'm1r1');
+    ok(m1 && m1.result && m1.result.winner === julius_id, 'Tobi sieht Julius Ergebnis');
+    const cursor = r.daten.turnier.cursor;
+    r = await tobi.ruf('GET', '/api/tournaments/turnier1?since=' + cursor);
+    gleich(r.daten.turnier.partien.length, 0, 'mit Cursor kommt nur Neues');
+
+    r = await julius.ruf('POST', '/api/tournaments/turnier1/matches/m2r1/frei');
+    gleich(r.status, 200, 'freigeben eines fremden Anspruchs laeuft ins Leere');
+    r = await tobi.ruf('GET', '/api/tournaments/turnier1');
+    const m2 = r.daten.turnier.partien.find((p) => p.matchId === 'm2r1');
+    ok(m2 && m2.claimedBy === tobi_id, 'Tobis Anspruch steht noch');
+
+    r = await tobi.ruf('POST', '/api/tournaments/turnier1/matches/m2r1/frei');
+    gleich(r.status, 200, 'den eigenen darf man zurueckgeben');
+    r = await julius.ruf('POST', '/api/tournaments/turnier1/matches/m2r1/claim');
+    gleich(r.status, 200, 'danach ist die Partie wieder frei');
+
+    r = await julius.ruf('POST', '/api/tournaments/turnier1/ende');
+    gleich(r.daten.turnier.status, 'beendet', 'das Turnier laesst sich beenden');
+    r = await tobi.ruf('GET', '/api/tournaments');
+    gleich(r.daten.turniere.length, 0, 'danach steht es nicht mehr zum Beitreten');
+    r = await julius.ruf('POST', '/api/tournaments/turnier1/matches/m2r1/claim');
+    gleich(r.status, 409, 'und es wird nichts mehr beansprucht');
+
     console.log('\nRate-Limit');
     let gesperrt = false;
     for (let i = 0; i < 8; i++) {
