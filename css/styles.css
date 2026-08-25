@@ -1469,3 +1469,50 @@ button, input, select, textarea { font-family: inherit; }
 
 /* Zwei Knöpfe in der Fortsetzen-Box: beenden und fortsetzen. */
 .resume-btns { display: flex; align-items: center; gap: 8px; flex: none; }
+
+/* Schnelles Spiel: ab drei Spielern wird der Verlauf eine einzige Liste,
+   in der jede Aufnahme ihren Werfer beim Namen nennt. */
+.history.einspaltig { grid-template-columns: 1fr; }
+.history.einspaltig .v { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; }
+.history .v .wer {
+  font-weight: 600; color: var(--primary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* Round the World: die eigene Zahl steht groß da, Doppel und Triple
+   darunter, ganz unten Miss und Weiter. */
+.rtw-pad-grid.ziel { display: flex; flex-direction: column; gap: 8px; grid-template-columns: none; }
+.rtw-reihe { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.rtw-key.gross { padding: 10px; gap: 2px; }
+.rtw-key.gross .z {
+  font-family: var(--font-display, inherit);
+  font-size: clamp(2.6rem, 11vh, 5rem); line-height: 1; font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.rtw-key.gross.bull .z { color: var(--amber); font-size: clamp(2rem, 8vh, 3.6rem); }
+.rtw-key.skip .k { color: var(--muted); }
+
+.rtw-fortschritt { margin-bottom: 8px; }
+.rtw-fortschritt .pfad { display: flex; gap: 3px; align-items: center; }
+.rtw-fortschritt .pfad span {
+  flex: 1; height: 5px; border-radius: 3px; background: var(--bg-3);
+}
+.rtw-fortschritt .pfad span.ok { background: var(--accent); }
+.rtw-fortschritt .pfad span.jetzt { background: var(--primary); box-shadow: 0 0 0 2px var(--schein); }
+.rtw-fortschritt .pfad span.bull { flex: 0 0 14px; }
+.rtw-fortschritt .txt {
+  margin-top: 5px; font-size: 0.74rem; color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.rtw-pad-grid.ziel .rtw-key.gross { flex: 1 1 auto; }
+.rtw-fortschritt { flex: none; }
+
+/* Ab drei Spielern: kompaktere Karten, damit unter dem Spielstand noch
+   Platz für den Verlauf bleibt. Und der Verlauf wird sauber abgeschnitten,
+   statt hinter die Eingabe zu rutschen. */
+.game-main { overflow: hidden; }
+.scoreboard.viele .pcard { padding: 6px 8px; min-height: 0; }
+.scoreboard.viele .pcard .rest { font-size: clamp(1.9rem, 5vh, 3.2rem); margin: 1px 0 0; }
+.scoreboard.viele .pcard .pname { font-size: 0.85rem; }
+.scoreboard.viele .pcard .legs { display: none; }
+.scoreboard.viele .pcard .meta { font-size: 0.66rem; gap: 8px; }

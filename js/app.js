@@ -1913,6 +1913,10 @@
       ? '<b>' + esc(pname(m.winner)) + '</b> hat gewonnen'
       : '<span class="muted">Am Wurf</span> <b>' + esc(pname(active)) + '</b>' +
         '<span class="muted"> · Rest ' + (remainingIn(leg, active) - pendingSum) + '</span>';
+    /* Vier Karten in Turniergröße füllen ein Handydisplay allein aus und
+       drängen den Verlauf hinter das Zahlenfeld – ab drei Spielern werden
+       sie deshalb kompakter. */
+    $('scoreboard').classList.toggle('viele', m.p.length > 2);
     $('scoreboard').innerHTML = m.p.map(function (pid) {
       var rest = remainingIn(leg, pid) - (pid === active ? pendingSum : 0);
       var darts = dartsIn(leg, pid) + (pid === active ? UI.darts.length : 0);
@@ -1944,43 +1948,77 @@
         : '<span class="none">' + whose + ': kein Finish mit ' + plural(dartsLeft, 'Dart', 'Darts') + '</span>';
     }
 
-    /* Kompletter Match-Verlauf, neueste Aufnahme oben, mit Leg-Trennern.
-       Korrigieren lässt sich nur das laufende Leg – abgeschlossene Legs
-       stehen als Beleg da und würden sonst ihr Finish verlieren. */
-    $('history').innerHTML = m.p.map(function (pid) {
-      var rows = [];
-      for (var li = m.legs.length - 1; li >= 0; li--) {
-        var lg = m.legs[li];
-        var isActiveLeg = lg === leg;
-        var restRun = legStart(leg);
-        var entries = [];
-        lg.visits.forEach(function (v, vi) {
-          if (v.p !== pid) return;
-          var before = restRun;
-          if (!v.b) restRun -= v.s;
-          entries.push({ v: v, before: before, rest: restRun, idx: vi });
-        });
-        if (!entries.length && !isActiveLeg) continue;
-        if (m.legs.length > 1) {
-          rows.push('<div class="leg-sep">Leg ' + (li + 1) +
-            (lg.winner ? (lg.winner === pid ? ' · gewonnen' : ' · verloren') : ' · läuft') + '</div>');
+    /*
+     * Ab drei Spielern (Schnelles Spiel) wird der Verlauf zu einer einzigen
+     * Liste, neueste Aufnahme oben, mit dem Namen davor. Vier schmale
+     * Spalten nebeneinander wären nur noch Zahlenkolonnen, denen man nicht
+     * ansieht, wer sie geworfen hat.
+     */
+    var vieleSpieler = m.p.length > 2;
+    $('history').classList.toggle('einspaltig', vieleSpieler);
+    if (vieleSpieler) {
+      var lauf = {};
+      m.p.forEach(function (pid) { lauf[pid] = legStart(leg); });
+      var zeilen = [];
+      leg.visits.forEach(function (v, vi) {
+        var vorher = lauf[v.p];
+        if (!v.b) lauf[v.p] -= v.s;
+        zeilen.push({ v: v, before: vorher, rest: lauf[v.p], idx: vi });
+      });
+      $('history').innerHTML = '<div class="col">' + zeilen.reverse().map(function (e) {
+        var v = e.v;
+        var grund = '';
+        if (v.b) {
+          var danach = e.before - v.o;
+          grund = danach < 0 ? ' · überworfen' : danach === 1 ? ' · Rest 1' : danach === 0 ? ' · kein Doppel' : '';
         }
-        entries.reverse().forEach(function (e) {
-          var v = e.v;
-          var why = '';
-          if (v.b) {
-            var after = e.before - v.o;
-            why = after < 0 ? ' · überworfen' : after === 1 ? ' · Rest 1' : after === 0 ? ' · kein Doppel' : '';
+        var aenderbar = !v.c && !m.done;
+        return '<div class="v ' + (v.b ? 'bust' : v.c ? 'co' : '') + (aenderbar ? ' tap' : '') + '"' +
+          (aenderbar ? ' data-action="edit-visit" data-i="' + e.idx + '" role="button" tabindex="0"' : '') + '>' +
+          '<span class="wer">' + esc(pname(v.p)) + '</span>' +
+          '<span class="s">' + (v.b ? v.o : v.s) + '</span>' +
+          '<span class="r">' + (v.b ? 'Bust' + grund : 'Rest ' + e.rest) + '</span></div>';
+      }).join('') + '</div>';
+    } else {
+
+      /* Kompletter Match-Verlauf, neueste Aufnahme oben, mit Leg-Trennern.
+         Korrigieren lässt sich nur das laufende Leg – abgeschlossene Legs
+         stehen als Beleg da und würden sonst ihr Finish verlieren. */
+      $('history').innerHTML = m.p.map(function (pid) {
+        var rows = [];
+        for (var li = m.legs.length - 1; li >= 0; li--) {
+          var lg = m.legs[li];
+          var isActiveLeg = lg === leg;
+          var restRun = legStart(leg);
+          var entries = [];
+          lg.visits.forEach(function (v, vi) {
+            if (v.p !== pid) return;
+            var before = restRun;
+            if (!v.b) restRun -= v.s;
+            entries.push({ v: v, before: before, rest: restRun, idx: vi });
+          });
+          if (!entries.length && !isActiveLeg) continue;
+          if (m.legs.length > 1) {
+            rows.push('<div class="leg-sep">Leg ' + (li + 1) +
+              (lg.winner ? (lg.winner === pid ? ' · gewonnen' : ' · verloren') : ' · läuft') + '</div>');
           }
-          var editable = isActiveLeg && !v.c && !m.done;
-          rows.push('<div class="v ' + (v.b ? 'bust' : v.c ? 'co' : '') + (editable ? ' tap' : '') + '"' +
-            (editable ? ' data-action="edit-visit" data-i="' + e.idx + '" role="button" tabindex="0"' : '') + '>' +
-            '<span class="s">' + (v.b ? v.o : v.s) + '</span>' +
-            '<span class="r">' + (v.b ? 'Bust' + why : 'Rest ' + e.rest) + '</span></div>');
-        });
-      }
-      return '<div class="col">' + rows.join('') + '</div>';
-    }).join('');
+          entries.reverse().forEach(function (e) {
+            var v = e.v;
+            var why = '';
+            if (v.b) {
+              var after = e.before - v.o;
+              why = after < 0 ? ' · überworfen' : after === 1 ? ' · Rest 1' : after === 0 ? ' · kein Doppel' : '';
+            }
+            var editable = isActiveLeg && !v.c && !m.done;
+            rows.push('<div class="v ' + (v.b ? 'bust' : v.c ? 'co' : '') + (editable ? ' tap' : '') + '"' +
+              (editable ? ' data-action="edit-visit" data-i="' + e.idx + '" role="button" tabindex="0"' : '') + '>' +
+              '<span class="s">' + (v.b ? v.o : v.s) + '</span>' +
+              '<span class="r">' + (v.b ? 'Bust' + why : 'Rest ' + e.rest) + '</span></div>');
+          });
+        }
+        return '<div class="col">' + rows.join('') + '</div>';
+      }).join('');
+    }
 
     $('visit-darts').classList.toggle('hidden', mode !== 'darts');
     $('visit-darts').innerHTML = [0, 1, 2].map(function (i) {
@@ -2136,7 +2174,7 @@
     var active = g.done ? g.winner : gameTurnPlayer(g);
     var visit = gameVisitDarts(g);
 
-    $('rtw-sub').textContent = 'Single 1 weiter · Double überspringt 1 · Triple überspringt 2';
+    $('rtw-sub').textContent = 'Einfach 1 weiter · Doppel überspringt 1 · Triple überspringt 2';
 
     $('rtw-board').innerHTML = g.players.map(function (id) {
       var t = st.target[id];
@@ -2165,27 +2203,60 @@
       return '<div class="d ' + (d ? '' : 'empty') + '">' + (d ? throwLabel(d) : '–') + '</div>';
     }).join('');
 
-    /* Es wird immer nur auf die eigene aktuelle Zahl geworfen – deshalb nur
-       diese eine Zahl zeigen, dafür groß und mit dem jeweiligen Sprung. */
+    /* Es wird immer nur auf die eigene aktuelle Zahl geworfen – deshalb steht
+       genau diese Zahl groß da. Darunter Doppel und Triple, die weiter
+       springen, und „Weiter", das die restlichen Darts der Aufnahme als
+       Fehlwürfe verbucht: getroffen wird meist höchstens einmal, dreimal
+       Miss zu tippen wäre die häufigste Eingabe des Spiels. */
     var target = st.target[active];
+    var weiter = '<button class="rtw-key skip" data-action="end-rtw-visit">' +
+      '<span class="k">' + (st.inVisit ? 'Weiter ▸' : 'Nichts ▸') + '</span>' +
+      '<span class="sub">' + plural(3 - st.inVisit, 'Dart', 'Darts') + ' daneben</span></button>';
+    var miss = '<button class="rtw-key miss" data-num="0" data-mult="1">' +
+      '<span class="k">Miss</span><span class="sub">ein Dart daneben</span></button>';
+
     if (target === 25) {
-      $('rtw-pad').innerHTML =
-        '<div class="rtw-pad-grid bull">' +
-        '<button class="rtw-key bull" data-num="25" data-mult="1"><span class="k">Bull</span><span class="sub">Spiel gewonnen</span></button>' +
-        '<button class="rtw-key miss" data-num="0" data-mult="1"><span class="k">Miss</span><span class="sub">daneben</span></button>' +
+      $('rtw-pad').innerHTML = rtwFortschritt(st, active) +
+        '<div class="rtw-pad-grid ziel">' +
+        '<button class="rtw-key gross bull" data-num="25" data-mult="1">' +
+          '<span class="z">Bull</span><span class="sub">Spiel gewonnen</span></button>' +
+        '<div class="rtw-reihe">' + miss + weiter + '</div>' +
         '</div>';
     } else {
       var jump = function (mult) {
         var next = target + mult;
-        return next > 20 ? 'weiter auf Bull' : 'weiter auf ' + next;
+        return next > 20 ? 'dann Bull' : 'dann ' + next;
       };
-      $('rtw-pad').innerHTML = '<div class="rtw-pad-grid">' +
-        '<button class="rtw-key" data-num="' + target + '" data-mult="1"><span class="k">Single ' + target + '</span><span class="sub">' + jump(1) + '</span></button>' +
-        '<button class="rtw-key" data-num="' + target + '" data-mult="2"><span class="k">Double ' + target + '</span><span class="sub">' + jump(2) + '</span></button>' +
-        '<button class="rtw-key" data-num="' + target + '" data-mult="3"><span class="k">Triple ' + target + '</span><span class="sub">' + jump(3) + '</span></button>' +
-        '<button class="rtw-key miss" data-num="0" data-mult="1"><span class="k">Miss</span><span class="sub">daneben</span></button>' +
+      $('rtw-pad').innerHTML = rtwFortschritt(st, active) +
+        '<div class="rtw-pad-grid ziel">' +
+        '<button class="rtw-key gross" data-num="' + target + '" data-mult="1">' +
+          '<span class="z">' + target + '</span><span class="sub">' + jump(1) + '</span></button>' +
+        '<div class="rtw-reihe">' +
+          '<button class="rtw-key" data-num="' + target + '" data-mult="2">' +
+            '<span class="k">D' + target + '</span><span class="sub">' + jump(2) + '</span></button>' +
+          '<button class="rtw-key" data-num="' + target + '" data-mult="3">' +
+            '<span class="k">T' + target + '</span><span class="sub">' + jump(3) + '</span></button>' +
+        '</div>' +
+        '<div class="rtw-reihe">' + miss + weiter + '</div>' +
         '</div>';
     }
+  }
+
+  /* Wie weit ist der, der gerade wirft? Die Reihe zeigt alle 21 Stationen –
+     die 20 Zahlen und den Bull – und markiert die erledigten. */
+  function rtwFortschritt(st, pid) {
+    var ziel = st.target[pid];
+    var fertig = st.finished[pid] ? 21 : (ziel === 25 ? 20 : ziel - 1);
+    var punkte = '';
+    for (var i = 0; i < 21; i++) {
+      punkte += '<span class="' + (i < fertig ? 'ok' : i === fertig ? 'jetzt' : '') +
+        (i === 20 ? ' bull' : '') + '"></span>';
+    }
+    return '<div class="rtw-fortschritt">' +
+      '<div class="pfad">' + punkte + '</div>' +
+      '<div class="txt" id="rtw-fortschritt-txt">Station ' + Math.min(fertig + 1, 21) + ' von 21 · ' +
+        plural(st.darts[pid], 'Dart', 'Darts') + ' geworfen</div>' +
+      '</div>';
   }
 
   function throwLabel(t) {
@@ -2895,6 +2966,19 @@
         if (!cg || cg.kind !== 'cricket' || cg.done || settling()) return;
         var need = 3 - (cg.throws.length % 3);
         for (var ci = 0; ci < need; ci++) cg.throws.push({ n: 0, m: 0 });
+        UI.mult = 1;
+        save(); render();
+        break;
+      }
+      /* Round the World: die restlichen Darts der Aufnahme sind daneben.
+         Anders als bei Cricket zählt hier nicht die Zahl der Würfe modulo 3 –
+         eine Aufnahme endet auch vorzeitig, wenn jemand den Bull trifft.
+         Deshalb kommt die Zahl der schon geworfenen Darts aus dem Zustand. */
+      case 'end-rtw-visit': {
+        var rwg = S.game;
+        if (!rwg || rwg.kind !== 'rtw' || rwg.done || settling()) return;
+        var offen = 3 - rtwState(rwg).inVisit;
+        for (var ri = 0; ri < offen; ri++) rwg.throws.push({ n: 0, m: 0 });
         UI.mult = 1;
         save(); render();
         break;

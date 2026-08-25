@@ -409,25 +409,43 @@ check('alle starten auf der 1', await page.evaluate(() => {
 }));
 const [rA] = await page.evaluate(() => window.__dart.game().players);
 const misses = async () => { for (const _ of [1, 2, 3]) await rDart('MISS'); };
+const weiter = () => page.locator('#rtw-pad [data-action="end-rtw-visit"]').click();
 const rTarget = async () => (await page.evaluate(() => window.__dart.rtwState())).target[rA];
 
-check('Eingabefeld zeigt nur die Startzahl', (await text('#rtw-pad')).includes('Single 1'));
+const rGross = () => text('#rtw-pad .rtw-key.gross .z');
+check('die eigene Zahl steht groß da', (await rGross()) === '1', await rGross());
+check('Fortschritt zeigt die erste von 21 Stationen',
+  (await text('#rtw-fortschritt-txt')).includes('Station 1 von 21'), await text('#rtw-fortschritt-txt'));
 await rDart('S1');
 check('Single rückt ein Feld weiter (1 -> 2)', (await rTarget()) === 2);
-check('Eingabefeld folgt sofort der neuen Zahl', (await text('#rtw-pad')).includes('Single 2'));
-check('Sprungziel wird angezeigt', (await text('#rtw-pad')).includes('weiter auf 4'));
+check('die große Zahl folgt sofort', (await rGross()) === '2', await rGross());
+check('Sprungziel wird angezeigt', (await text('#rtw-pad')).includes('dann 4'));
 check('nur die eigene Zahl steht zur Wahl', (await page.locator('#rtw-pad [data-num="9"]').count()) === 0);
 await rDart('D2');
 check('Double überspringt eine Zahl (2 -> 4)', (await rTarget()) === 4, String(await rTarget()));
 await rDart('T4');
 check('Triple überspringt zwei Zahlen (4 -> 7)', (await rTarget()) === 7, String(await rTarget()));
-await misses();
+/* Getroffen wird selten – deshalb muss eine Aufnahme mit einem Tipp
+   abzuschließen sein, statt drei Mal Miss zu verlangen. */
+const wurfZahl = () => page.evaluate(() => window.__dart.game().throws.length);
+const vorWeiter = await wurfZahl();
+await weiter();
+check('Weiter verbucht die ganze Aufnahme als Fehlwürfe',
+  (await wurfZahl()) === vorWeiter + 3, `${vorWeiter} -> ${await wurfZahl()}`);
 await rDart('T7'); await rDart('T10'); await rDart('T13');
 check('drei Darts, dann ist der Nächste dran', (await rTarget()) === 16, String(await rTarget()));
-await misses();
+const vorRest = await wurfZahl();
+await rDart('MISS');
+await weiter();
+check('Weiter füllt nur die noch offenen Darts auf',
+  (await wurfZahl()) === vorRest + 3, `${vorRest} -> ${await wurfZahl()}`);
 await rDart('T16'); await rDart('T19');
 check('über die 20 hinaus geht es auf Bull', (await rTarget()) === 25, String(await rTarget()));
-check('auf Bull gibt es nur Bull oder Miss', (await page.locator('#rtw-pad button').count()) === 2);
+check('auf Bull steht nur noch Bull oder Miss zur Wahl',
+  (await page.locator('#rtw-pad [data-num]').count()) === 2);
+check('Bull steht groß da', (await rGross()) === 'Bull', await rGross());
+check('Fortschritt zeigt die letzte Station',
+  (await text('#rtw-fortschritt-txt')).includes('Station 21 von 21'), await text('#rtw-fortschritt-txt'));
 await rDart('MISS');
 check('Miss auf Bull ändert nichts', (await rTarget()) === 25);
 await misses();
@@ -1177,6 +1195,18 @@ await typeScore(60);
 check('dann Spieler 3', (await amWurf()) === qIds[2]);
 await typeScore(60);
 check('danach ist wieder Spieler 1 dran', (await amWurf()) === qIds[0]);
+
+/* Ab drei Spielern sagt der Verlauf dazu, wer geworfen hat – sonst stünden
+   dort nur Zahlen, die niemandem zuzuordnen sind. */
+const qNamen = await page.evaluate((ids) => ids.map((id) =>
+  window.__dart.state().profiles.find((p) => p.id === id).name), qIds);
+const qLog = await text('#history');
+check('Verlauf ist eine Liste statt Spalten',
+  await page.evaluate(() => document.getElementById('history').classList.contains('einspaltig')));
+check('jede Aufnahme nennt ihren Werfer',
+  qNamen.every((n) => qLog.includes(n)), qLog.replace(/\s+/g, ' ').slice(0, 120));
+check('der Verlauf hat eine Zeile je Aufnahme',
+  (await page.locator('#history .v').count()) === 3);
 
 /* Spieler 1 checkt aus: 301 - 60 = 241 - 180 = 61 - 41 = 20, dann D10. */
 await typeScore(180);
