@@ -1072,9 +1072,73 @@ await page.locator('[data-action="board-mode"][data-value="finisher"]').click();
 check('Finisher-Rangliste da', (await text('#board-list')).length > 0);
 check('kein Diagramm im Finisher', !(await visible('#board-chart')));
 
+/* ---------- Turnier vorzeitig beenden ---------- */
+
+group('Turnier beenden: Gespieltes bleibt, Offenes faellt weg');
+await page.evaluate(() => window.__dart.setScreen('setup'));
+await page.evaluate(() => {
+  const S = window.__dart.state();
+  S.lineup = window.__dart.activeProfiles().slice(0, 4).map((p) => p.id);
+  S.mode = '501';
+  window.__dart.setScreen('setup');
+});
+await page.locator('[data-action="set-mode"][data-value="501"]').click();
+await page.locator('[data-action="start-game"]').click();
+await page.waitForTimeout(300);
+
+/* Zwei der sechs Partien zu Ende spielen, die anderen offen lassen. */
+const vorher = await page.evaluate(() => {
+  const c = window.__dart.career();
+  return Object.keys(c).reduce((s, k) => s + c[k].matches, 0);
+});
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  S.matches.slice(0, 2).forEach((m) => {
+    m.starter = m.p[0];
+    m.legs = [{ starter: m.p[0], visits: [
+      { p: m.p[0], s: 180, d: 3, b: false, c: false },
+      { p: m.p[1], s: 100, d: 3, b: false, c: false },
+      { p: m.p[0], s: 180, d: 3, b: false, c: false },
+      { p: m.p[1], s: 100, d: 3, b: false, c: false },
+      { p: m.p[0], s: 141, d: 3, b: false, c: true }
+    ], winner: m.p[0], start: 501 }];
+    m.done = true; m.winner = m.p[0]; m.at = Date.now();
+  });
+  D.setScreen('tournament');
+});
+check('zwei Partien fertig, vier offen', await page.evaluate(() =>
+  window.__dart.state().matches.filter((m) => m.done).length === 2 &&
+  window.__dart.state().matches.filter((m) => !m.done).length === 4));
+
+/* Der Weg dorthin, den Julius sucht: die Fortsetzen-Box im Setup. */
+await page.evaluate(() => window.__dart.setScreen('setup'));
+check('Fortsetzen-Box ist da', await visible('#resume-box'));
+check('und hat einen Beenden-Knopf', await page.locator('#resume-box [data-action="beenden"]').isVisible());
+await page.locator('#resume-box [data-action="beenden"]').click();
+const rfrage = await textKlein('#overlay-card');
+check('fragt vorher nach', rfrage.includes('vorzeitig beenden'));
+check('nennt die gespielten Partien', rfrage.includes('2 gespielte spiele'));
+check('nennt die offenen', rfrage.includes('4 offenen partien'));
+await page.locator('#overlay-card [data-action="ov-reset"]').click();
+
+check('Turnier ist weg', (await page.evaluate(() => window.__dart.state().matches.length)) === 0);
+check('zurück im Setup', await visible('#screen-setup'));
+const nachher = await page.evaluate(() => {
+  const c = window.__dart.career();
+  return Object.keys(c).reduce((s, k) => s + c[k].matches, 0);
+});
+check('die zwei gespielten Partien zaehlen weiter', nachher === vorher + 4, vorher + ' -> ' + nachher);
+check('die offenen nicht', nachher !== vorher + 12);
+
 /* ---------- Schnelles Spiel ---------- */
 
 group('Schnelles Spiel: alle gleichzeitig, ein Leg');
+/* Vorher merken: in der Karriere stehen schon Siege aus den Tests davor,
+   also zaehlt hier die Differenz und nicht der absolute Stand. */
+const wonVorher = await page.evaluate(() => {
+  const c = window.__dart.career();
+  return Object.keys(c).reduce((s, k) => s + c[k].won, 0);
+});
 await page.evaluate(() => window.__dart.setScreen('setup'));
 await page.evaluate(() => {
   const S = window.__dart.state();
@@ -1135,8 +1199,9 @@ check('im Archiv gelandet',
 
 const qCar = await carr();
 check('zaehlt als Spiel fuer alle drei', qIds.every((id) => qCar[id].matches >= 1));
-check('genau ein Sieg vergeben',
-  qIds.reduce((s, id) => s + qCar[id].won, 0) === qIds.length - (qIds.length - 1));
+const wonNachher = Object.keys(qCar).reduce((s, k) => s + qCar[k].won, 0);
+check('genau ein Sieg dazugekommen', wonNachher === wonVorher + 1,
+  wonVorher + ' -> ' + wonNachher);
 check('der Sieger hat ihn', qCar[qIds[0]].won >= 1);
 check('Average wurde gerechnet', qCar[qIds[0]].avg > 0);
 

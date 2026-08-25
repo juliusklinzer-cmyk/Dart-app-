@@ -1478,6 +1478,9 @@ button, input, select, textarea { font-family: inherit; }
   #roster { max-height: 54vh; }
 }
 
+/* Zwei Knöpfe in der Fortsetzen-Box: beenden und fortsetzen. */
+.resume-btns { display: flex; align-items: center; gap: 8px; flex: none; }
+
 </style>
 </head>
 <body>
@@ -1502,7 +1505,10 @@ button, input, select, textarea { font-family: inherit; }
       <strong>Laufendes Turnier</strong>
       <span class="muted" id="resume-info"></span>
     </div>
-    <button class="btn primary" data-action="resume">Fortsetzen</button>
+    <div class="resume-btns">
+      <button class="btn ghost small" data-action="beenden">Beenden</button>
+      <button class="btn primary" data-action="resume">Fortsetzen</button>
+    </div>
   </div>
 
   <!-- Linke Spalte: Wortmarke, darunter direkt die Teilnehmer. -->
@@ -4608,9 +4614,21 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '<button class="btn primary full" data-action="open-summary" data-kind="501" data-id="' + m2.id + '">Weiter zur Spielstatistik</button>' +
         (last ? '' : '<button class="btn ghost full" data-action="ov-next-match">Direkt zum nächsten Spiel</button>') +
         '<button class="btn ghost full" data-action="undo">Eingabe rückgängig</button>';
+    } else if (o.type === 'confirm-discard-game') {
+      html = '<h3>' + kindName(S.game ? S.game.kind : '') + ' abbrechen?</h3>' +
+        '<p>Das Spiel ist noch nicht entschieden – es gibt also nichts, was in die ' +
+        'Statistik gehören würde. Der bisherige Verlauf geht verloren.</p>' +
+        '<div class="row-btns two">' +
+        '<button class="btn ghost" data-action="ov-cancel">Nein, weiterspielen</button>' +
+        '<button class="btn danger" data-action="ov-discard-game">Ja, verwerfen</button></div>';
     } else if (o.type === 'confirm-reset') {
+      var offeneSpiele = sum(S.matches, function (m) { return m.done || m.void ? 0 : 1; });
+      var fertige = sum(S.matches, function (m) { return m.done ? 1 : 0; });
       html = '<h3>Turnier vorzeitig beenden?</h3>' +
-        '<p>Die bereits gespielten Spiele bleiben in Statistik und Rangliste erhalten, die offenen Spiele entfallen.</p>' +
+        '<p><b>' + plural(fertige, 'gespieltes Spiel', 'gespielte Spiele') + '</b> ' +
+        (fertige === 1 ? 'bleibt' : 'bleiben') + ' in Statistik und Rangliste. ' +
+        'Die <b>' + plural(offeneSpiele, 'offene Partie', 'offenen Partien') + '</b> ' +
+        (offeneSpiele === 1 ? 'entfällt' : 'entfallen') + '.</p>' +
         '<div class="row-btns two">' +
         '<button class="btn ghost" data-action="ov-cancel">Nein, weiterspielen</button>' +
         '<button class="btn danger" data-action="ov-reset">Ja, beenden</button></div>';
@@ -5017,6 +5035,24 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         break;
       case 'reset':
         UI.overlay = { type: 'confirm-reset' }; render();
+        break;
+      /*
+       * „Beenden" in der Fortsetzen-Box. Derselbe Weg wie unten auf der
+       * Turnierseite, nur dort, wo man ihn sucht: wer etwas Neues anfangen
+       * will, schaut zuerst hier.
+       */
+      case 'beenden':
+        if (S.game && S.game.done) { finishGame(); }
+        else if (S.game) { UI.overlay = { type: 'confirm-discard-game' }; render(); }
+        else if (S.matches.length) { UI.overlay = { type: 'confirm-reset' }; render(); }
+        break;
+      /* Ein abgebrochenes freies Spiel hat keinen Sieger und damit nichts,
+         was in die Statistik gehören würde – es wird verworfen. */
+      case 'ov-discard-game':
+        S.game = null;
+        UI.overlay = null;
+        S.screen = 'setup';
+        save(); render();
         break;
       case 'ov-reset':
         archiveTournament();
