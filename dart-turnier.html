@@ -1443,7 +1443,12 @@ button, input, select, textarea { font-family: inherit; }
   overflow-y: auto;
   /* Beim Scrollen soll die Liste nicht die ganze Seite mitziehen. */
   overscroll-behavior: contain;
+  /* Ohne sichtbare Leiste: am Finger scrollt man ohnehin direkt, und ein
+     Balken mitten in der Aufstellung stört nur. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
+#roster::-webkit-scrollbar { width: 0; height: 0; display: none; }
 
 /* Der Startknopf klebt unten – er ist die eine Aktion dieser Seite und
    soll nie erst gesucht werden müssen. */
