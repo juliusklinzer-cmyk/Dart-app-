@@ -73,12 +73,22 @@ function bildBauen(page, name, hue) {
 
 /* ---------- Anmelden ---------- */
 
+/*
+ * Fuer jeden Spieler ein frischer Browser-Kontext statt Ab- und Anmelden.
+ * Das Abmelden ist asynchron und laesst den Anmeldebildschirm manchmal auf
+ * sich warten – ein eigener Kontext hat schlicht kein Cookie und ist damit
+ * immer im gewuenschten Zustand.
+ */
+async function frischeSeite(browser) {
+  const ctx = await browser.newContext({ viewport: { width: 1194, height: 834 } });
+  const p = await ctx.newPage();
+  p.on('pageerror', (e) => console.log('  [Seite]', String(e).slice(0, 160)));
+  return p;
+}
+
 async function anmelden(page, name) {
   await page.goto(URL + '/');
   await page.waitForFunction(() => !!window.__dart);
-  if (await page.evaluate(() => !!(window.DartKonto && window.DartKonto.nutzer()))) {
-    await page.evaluate(() => window.DartKonto.aktion('konto-logout'));
-  }
   await page.waitForSelector('[data-action="konto-login"]', { timeout: 20000 });
   await page.locator('#konto-email').fill(name.toLowerCase() + '@demo.blink180');
   await page.locator('#konto-pass').fill(PASSWORT);
@@ -255,19 +265,20 @@ async function spieleFrei(page, art, ids) {
 /* ---------- Hauptlauf ---------- */
 
 const browser = await chromium.launch(fs.existsSync(pre) ? { executablePath: pre } : {});
-const page = await (await browser.newContext({ viewport: { width: 1194, height: 834 } })).newPage();
-page.on('pageerror', (e) => console.log('  [Seite]', String(e).slice(0, 160)));
 
 console.log('Bilder setzen …');
-for (const name of NAMEN) {
-  await anmelden(page, name);
-  const hue = await page.evaluate(() => window.DartKonto.nutzer().hue || 0);
-  const bild = await bildBauen(page, name, hue);
-  await page.evaluate((b) => window.DartKonto.ruf('PATCH', '/api/me', { avatar: b }), bild);
-  console.log('  ' + name);
+for (let i = 0; i < NAMEN.length; i++) {
+  const seite = await frischeSeite(browser);
+  await anmelden(seite, NAMEN[i]);
+  const hue = await seite.evaluate(() => window.DartKonto.nutzer().hue || 0);
+  const bild = await bildBauen(seite, NAMEN[i], hue || i * 55);
+  await seite.evaluate((b) => window.DartKonto.ruf('PATCH', '/api/me', { avatar: b }), bild);
+  console.log('  ' + NAMEN[i]);
+  await seite.context().close();
 }
 
 console.log('\nAnmelden und Mitspieler holen …');
+const page = await frischeSeite(browser);
 await anmelden(page, NAMEN[0]);
 await page.evaluate(() => window.DartSync.jetzt());
 await page.waitForTimeout(2000);
