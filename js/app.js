@@ -2256,7 +2256,10 @@
         avatarHTML(profile(id), 'md') +
         '<div class="rw-main">' +
           '<div class="rw-name">' + esc(pname(id)) + '</div>' +
-          '<div class="rw-bar"><span style="width:' + (doneSteps / 21 * 100) + '%"></span></div>' +
+          /* Die Klinge glüht an ihrer Spitze – bei null Stationen gibt es
+             keine Spitze, sonst säße der Lichtpunkt am linken Rand. */
+          '<div class="rw-bar"><span class="klinge' + (doneSteps ? '' : ' aus') +
+            '" style="width:' + (doneSteps / 21 * 100) + '%"></span></div>' +
           '<div class="rw-sub">' + plural(st.darts[id], 'Dart', 'Darts') + ' · ' + plural(st.hits[id], 'Treffer', 'Treffer') + '</div>' +
         '</div>' +
         '<div class="rw-target">' + (fin ? '✓' : t === 25 ? 'Bull' : t) + '</div>' +

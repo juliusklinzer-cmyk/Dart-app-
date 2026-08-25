@@ -1550,6 +1550,106 @@ button, input, select, textarea { font-family: inherit; }
 }
 .roster-item.selected .gast-marke { border-color: var(--aktiv-linie); }
 
+/* ================= Round the World: Klinge ================= */
+/*
+ * Der Fortschritt ist eine Lichtklinge: weisser Kern, blauer Hof, eine
+ * gluehende Spitze und Blitze, die daran entlanglaufen. Animiert wird nur
+ * beim Spieler, der gerade dran ist -- sechs zuckende Balken nebeneinander
+ * waeren Kirmes, und die Animation soll ja gerade zeigen, wer wirft.
+ */
+:root {
+  --laser: #46aad7;
+  --laser-hell: #a9e4ff;
+  --laser-weich: rgba(70, 170, 215, 0.55);
+}
+
+/* Wer am Wurf ist, steht im Licht -- weiss umrandet mit blauem Schein,
+   wie die aktive Karte im X01. Rot bleibt dem Signal vorbehalten. */
+.rtw-row.act {
+  border-color: var(--aktiv-linie);
+  background: var(--aktiv-flaeche);
+  box-shadow: 0 0 36px var(--schein);
+}
+.rtw-row.act .rw-target { color: var(--text); }
+
+/* Der Griff: schmale, dunkle Rinne. Sichtbar bleibt, was darueber
+   hinausleuchtet -- deshalb kein overflow: hidden mehr. */
+.rtw-row .rw-bar {
+  height: 7px; background: #0b0809; border-radius: 999px;
+  overflow: visible; position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+.rtw-row .rw-bar .klinge {
+  position: relative; height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--laser) 0%, var(--laser-hell) 55%, #fff 100%);
+  box-shadow: 0 0 5px var(--laser-weich), 0 0 12px var(--laser-weich);
+  transition: width 0.25s ease-out;
+}
+.rtw-row .rw-bar .klinge.aus { box-shadow: none; }
+
+/* Die Spitze: der hellste Punkt, dort wo es gerade weitergeht. */
+.rtw-row .rw-bar .klinge::after {
+  content: ''; position: absolute; right: -4px; top: 50%;
+  width: 11px; height: 11px; border-radius: 50%;
+  background: #fff; transform: translateY(-50%);
+  box-shadow: 0 0 7px #fff, 0 0 16px var(--laser), 0 0 28px var(--laser-weich);
+}
+.rtw-row .rw-bar .klinge.aus::after { display: none; }
+
+/* Die Blitze: ein steiler Streifenverlauf, der die Klinge entlangwandert.
+   screen legt ihn additiv aufs Licht, statt es zu uebermalen. */
+.rtw-row .rw-bar .klinge::before {
+  content: ''; position: absolute; inset: -1px 0; border-radius: 999px;
+  background: repeating-linear-gradient(74deg,
+    transparent 0 5px, rgba(255, 255, 255, 0.9) 5px 6px,
+    transparent 6px 9px, rgba(169, 228, 255, 0.7) 9px 10px, transparent 10px 16px);
+  mix-blend-mode: screen; opacity: 0.28; pointer-events: none;
+}
+.rtw-row.act .rw-bar .klinge {
+  box-shadow: 0 0 7px var(--laser), 0 0 18px var(--laser-weich), 0 0 34px var(--laser-weich);
+}
+.rtw-row.act .rw-bar .klinge::before { animation: blitze 0.85s linear infinite; }
+.rtw-row.act .rw-bar .klinge::after  { animation: klingenspitze 1.5s ease-in-out infinite; }
+
+@keyframes blitze {
+  0%   { background-position:   0 0; opacity: 0.30; }
+  30%  { background-position: -13px 0; opacity: 0.85; }
+  46%  { background-position: -19px 0; opacity: 0.22; }
+  68%  { background-position: -29px 0; opacity: 0.70; }
+  100% { background-position: -48px 0; opacity: 0.34; }
+}
+/* Nur transform, keine box-shadow-Animation: der Schein wird beim Skalieren
+   mitskaliert, kostet aber nichts -- ein animierter Schatten wuerde die
+   Klinge in jedem Bild neu zeichnen, und das ueber einen ganzen Abend. */
+@keyframes klingenspitze {
+  0%, 100% { transform: translateY(-50%) scale(1); }
+  50%      { transform: translateY(-50%) scale(1.22); }
+}
+
+/* Dieselbe Klinge, in Stationen zerlegt: die Leiste unter dem Namen dessen,
+   der gerade wirft. */
+.rtw-fortschritt .pfad span { height: 6px; }
+.rtw-fortschritt .pfad span.ok {
+  background: linear-gradient(180deg, var(--laser-hell), var(--laser));
+  box-shadow: 0 0 5px var(--laser-weich), 0 0 11px var(--laser-weich);
+}
+.rtw-fortschritt .pfad span.jetzt {
+  background: #fff;
+  box-shadow: 0 0 6px #fff, 0 0 15px var(--laser), 0 0 28px var(--laser-weich);
+  animation: stationsfunke 1.5s ease-in-out infinite;
+}
+@keyframes stationsfunke {
+  0%, 100% { transform: scaleY(1); }
+  50%      { transform: scaleY(1.5); }
+}
+
+/* Wer Bewegung im Bild nicht vertraegt, bekommt das Licht ohne das Zucken. */
+@media (prefers-reduced-motion: reduce) {
+  .rtw-row .rw-bar .klinge::before,
+  .rtw-row .rw-bar .klinge::after,
+  .rtw-fortschritt .pfad span.jetzt { animation: none; }
+}
+
 </style>
 <div id="save-warning" class="save-warning hidden">
   ⚠️ Der Spielstand kann gerade nicht gespeichert werden – bitte Speicherplatz prüfen
@@ -4381,7 +4481,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         avatarHTML(profile(id), 'md') +
         '<div class="rw-main">' +
           '<div class="rw-name">' + esc(pname(id)) + '</div>' +
-          '<div class="rw-bar"><span style="width:' + (doneSteps / 21 * 100) + '%"></span></div>' +
+          /* Die Klinge glüht an ihrer Spitze – bei null Stationen gibt es
+             keine Spitze, sonst säße der Lichtpunkt am linken Rand. */
+          '<div class="rw-bar"><span class="klinge' + (doneSteps ? '' : ' aus') +
+            '" style="width:' + (doneSteps / 21 * 100) + '%"></span></div>' +
           '<div class="rw-sub">' + plural(st.darts[id], 'Dart', 'Darts') + ' · ' + plural(st.hits[id], 'Treffer', 'Treffer') + '</div>' +
         '</div>' +
         '<div class="rw-target">' + (fin ? '✓' : t === 25 ? 'Bull' : t) + '</div>' +
