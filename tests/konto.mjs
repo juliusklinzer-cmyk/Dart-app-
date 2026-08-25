@@ -328,6 +328,23 @@ async function main() {
     }, juliusId);
     check('Bild ist lokal gespeichert', bildLokal === 'data:image/jpeg;base64', String(bildLokal));
 
+    /*
+     * Der Fehler vom 25.08.2026: hochgeladen, gespeichert, beim Server
+     * angekommen -- und im Konto stand trotzdem weiter der leere Kreis. Die
+     * Konto-Ansicht wird nur neu gebaut, wenn sich ihr Schluessel aendert,
+     * und das Bild stand nicht darin. Geprueft wird deshalb hier, vor jedem
+     * Neuladen: danach zeichnet die App ohnehin von vorn.
+     */
+    check('das Bild steht sofort im Konto, ohne Neuladen',
+      await julius.page.evaluate(() => {
+        const kopf = document.querySelector('#konto-inhalt .konto-kopf .av');
+        return !!kopf && (kopf.getAttribute('style') || '').indexOf('url(data:image') >= 0;
+      }),
+      await julius.page.evaluate(() => {
+        const k = document.querySelector('#konto-inhalt .konto-kopf');
+        return k ? k.innerHTML.slice(0, 80) : 'kein Kopf';
+      }));
+
     // Genau der Moment, in dem es vorher verschwunden ist.
     await julius.page.evaluate(() => window.DartSync.jetzt());
     await julius.page.waitForTimeout(1200);
@@ -349,6 +366,14 @@ async function main() {
       const d = await res.json();
       return !!(d.nutzer && d.nutzer.avatar);
     }));
+
+    /*
+     * Der Fehler vom 25.08.2026: hochgeladen, gespeichert, beim Server
+     * angekommen -- und im Konto stand trotzdem weiter der leere Kreis. Die
+     * Konto-Ansicht wird nur neu gebaut, wenn sich ihr Schluessel aendert,
+     * und das Bild stand nicht darin.
+     */
+
 
     check('Tobi sieht Julius mit Bild', await tobi.page.evaluate(async (id) => {
       await window.DartSync.jetzt();
@@ -594,11 +619,15 @@ async function main() {
       await julius.page.evaluate(() => !!window.__dart.profile('u_ehemaliger')));
     await julius.page.evaluate(() => window.DartKonto.holeRoster());
     await julius.page.waitForTimeout(400);
-    check('nach dem Abgleich ist es ausgeblendet',
-      await julius.page.evaluate(() => window.__dart.profile('u_ehemaliger').hidden === true));
-    check('und steht nicht mehr in der Aufstellung',
+    /* Ohne ein einziges Spiel haengt nichts daran -- dann fliegt das Profil
+       ganz raus, statt als Karteileiche mit dem Vermerk "ausgeblendet"
+       unter Spieler stehen zu bleiben. */
+    check('ohne Spiele ist es ganz weg',
       await julius.page.evaluate(() =>
-        !window.__dart.activeProfiles().some((p) => p.id === 'u_ehemaliger')));
+        !window.__dart.state().profiles.some((p) => p.id === 'u_ehemaliger')));
+    check('und auch aus der Aufstellung raus',
+      await julius.page.evaluate(() =>
+        !window.__dart.state().lineup.includes('u_ehemaliger')));
     check('wer im Kader steht, bleibt unangetastet',
       await julius.page.evaluate((id) => !window.__dart.profile(id).hidden, tobiId));
     await julius.page.evaluate(() => {

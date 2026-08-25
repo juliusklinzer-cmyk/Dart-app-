@@ -116,16 +116,26 @@
 
     /*
      * Ein Account, der nicht mehr im Kader steht, ist stillgelegt worden.
-     * Sein Profil bleibt liegen -- seine alten Spiele koennten noch darauf
-     * zeigen -- aber es gehoert nicht mehr in die Aufstellung. Ohne das
-     * stuenden stillgelegte Konten dort fuer immer, und aendern kann man
-     * sie ja auch nicht.
+     * Sein Profil gehört dann nicht mehr in die Aufstellung.
+     *
+     * Hat er nie gespielt oder sind seine Spiele weg, fliegt das Profil ganz
+     * raus – sonst sammeln sich unter "Spieler" Karteileichen mit dem
+     * Vermerk „ausgeblendet", die niemand mehr loswird. Hängen noch Spiele
+     * daran, wird es nur ausgeblendet: im Archiv steht bloß die Kennung,
+     * ohne Profil stünde dort „Unbekannt".
      */
     var imKader = {};
     roster.forEach(function (r) { imKader[r.id] = 1; });
+    var raus = {};
     S.profiles.forEach(function (p) {
-      if (istAccount(p.id) && !imKader[p.id] && !p.hidden) p.hidden = true;
+      if (!istAccount(p.id) || imKader[p.id]) return;
+      if (D.letztesSpielAm(p.id)) p.hidden = true;
+      else raus[p.id] = 1;
     });
+    if (Object.keys(raus).length) {
+      S.profiles = S.profiles.filter(function (p) { return !raus[p.id]; });
+      S.lineup = S.lineup.filter(function (id) { return !raus[id]; });
+    }
 
     D.save();
   }
@@ -256,8 +266,27 @@
    * würde das Formular beim Absenden neu aufgebaut und die eingetippten
    * Felder wären leer, bevor sie ausgelesen sind.
    */
+  /*
+   * Woran erkennt man, dass sich der Konto-Bildschirm geändert hat?
+   *
+   * Nur an Ansicht und Nutzer zu hängen war zu wenig: ein frisch
+   * hochgeladenes Profilbild änderte davon nichts, also blieb die Karte
+   * stehen und zeigte weiter den leeren Kreis. Dasselbe galt für den Namen,
+   * das Lieblingsdoppel und für Bilder der Kollegen in der Mitspieler-Liste.
+   *
+   * Beim eigenen Profil steht das Bild selbst im Schlüssel – es ist dieselbe
+   * Zeichenkette wie beim letzten Mal, der Vergleich kostet also nichts. Beim
+   * Kader reicht die Länge: dort geht es nur darum, ein Neuzeichnen
+   * auszulösen.
+   */
   function ansichtSchluessel() {
-    return ansicht + '|' + (nutzer ? nutzer.id : '-') + '|' + roster.length;
+    var eigen = nutzer && D ? D.profile(nutzer.id) : null;
+    var kader = roster.map(function (r) {
+      return r.id + ':' + (r.avatar ? r.avatar.length : 0) + ':' + (r.name || '') + ':' + (r.dbl || 0);
+    }).join(',');
+    return ansicht + '|' + (nutzer ? nutzer.id : '-') + '|' + kader +
+      '|' + (eigen ? eigen.name : '') + '|' + (eigen ? eigen.dbl || 0 : 0) +
+      '|' + (eigen && eigen.avatar ? eigen.avatar : '');
   }
 
   function feld(id, label, typ, hinweis) {
