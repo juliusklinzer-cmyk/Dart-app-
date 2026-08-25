@@ -1778,7 +1778,11 @@
         '<div class="who"><div class="nm">' + esc(p.name) +
         (p.gast ? ' <span class="gast-marke">Gast</span>' : '') + '</div>' +
         '<div class="sm">' + (st && st.matches ? 'Ø ' + st.avg.toFixed(1) + ' · ' + plural(st.won, 'Sieg', 'Siege') : 'noch kein Spiel') + '</div></div>' +
-        (bearbeitbar(p.id) ? '<button class="edit" data-action="edit-profile" data-id="' + p.id + '" aria-label="Bearbeiten">✎</button>' : '') +
+        /* Hier wird nur ausgewaehlt. Das eigene Profil pflegt man im Konto,
+           und Gaeste bearbeitet man unter Spieler -- ein Stift neben jedem
+           Namen laedt sonst dazu ein, mitten in der Aufstellung an fremden
+           Daten zu drehen. */
+
         '<span class="check">✓</span>' +
         '</div>';
     }).join('') || '<p class="hint">Noch keine Spieler angelegt.</p>';

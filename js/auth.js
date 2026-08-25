@@ -313,6 +313,9 @@
         '<div class="sm">' + esc(nutzer.email) + '</div></div>' +
       '</div>' +
       (syncText ? '<p class="hint">' + esc(syncText) + '</p>' : '') +
+      /* Bild und Lieblingsdoppel gehoeren hierher, nicht in die Aufstellung:
+         dort wird ausgewaehlt, nicht gepflegt. */
+      '<button class="btn full" data-action="konto-profil">Bild und Lieblingsdoppel</button>' +
       (offen ? '<button class="btn full" data-action="konto-zuordnen">Alte Profile zuordnen (' + offen + ')</button>' : '') +
       '<button class="btn ghost full" data-action="konto-passwort">Passwort ändern</button>' +
       '<button class="btn ghost full" data-action="konto-logout">Abmelden</button>' +
@@ -448,6 +451,11 @@
             neuZeichnen(true);
           })
           .catch(fehlerZeigen);
+        break;
+
+      case 'konto-profil':
+        // Derselbe Dialog wie unter Spieler -- eine Maske, ein Verhalten.
+        D.action('edit-profile', { getAttribute: function () { return nutzer.id; } });
         break;
 
       case 'konto-zuordnung-speichern':

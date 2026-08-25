@@ -1520,7 +1520,11 @@ check('kein krummer Stellwurf, nur um das Doppel zu erreichen', await page.evalu
 // Und jetzt durch die Oberflaeche: einstellen, speichern, im Spiel sehen.
 await page.evaluate(() => window.__dart.setScreen('setup'));
 const dblId = await page.evaluate(() => window.__dart.activeProfiles()[0].id);
-await page.locator('.roster-item[data-id="' + dblId + '"] .edit').click();
+/* Ohne Server gibt es kein Konto -- den Profil-Dialog erreicht man hier
+   ueber die Spielerliste. */
+await page.evaluate(() => window.__dart.setScreen('players'));
+await page.locator('.player-card[data-id="' + dblId + '"]').click();
+await page.locator('[data-action="edit-current-profile"]').click();
 check('das Profil bietet ein Lieblingsdoppel an',
   (await page.locator('[data-role="profile-double"]').count()) === 1);
 check('voreingestellt ist "egal"',

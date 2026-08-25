@@ -126,6 +126,13 @@ async function spieleCricket(page) {
   await page.locator('#summary-actions [data-action="finish-game"]').click();
 }
 
+/* Den Profil-Dialog oeffnen: seit die Aufstellung nur noch auswaehlt, geht
+   das ueber das Konto. */
+async function profilOeffnen(g) {
+  await g.page.locator('#nav-konto').click();
+  await g.page.locator('[data-action="konto-profil"]').click();
+}
+
 /* Punktzahl ueber das Zahlenfeld eintippen -- so wie am Board auch. */
 async function typeScoreAuf(page, n) {
   for (const c of String(n)) await page.locator('.keypad button[data-key="' + c + '"]').click();
@@ -288,12 +295,18 @@ async function main() {
      */
     group('Profilbild bleibt');
     await julius.page.locator('#nav [data-screen="setup"]').click();
-    check('eigenes Profil ist bearbeitbar',
-      (await julius.page.locator('.roster-item[data-id="' + juliusId + '"] .edit').count()) === 1);
-    check('fremdes Profil nicht',
-      (await julius.page.locator('.roster-item[data-id="' + tobiId + '"] .edit').count()) === 0);
+    /* In der Aufstellung wird nur ausgewaehlt -- kein Stift neben irgendeinem
+       Namen, auch nicht neben dem eigenen. Das Profil pflegt man im Konto. */
+    check('in der Aufstellung gibt es keinen Bearbeiten-Knopf mehr',
+      (await julius.page.locator('#roster .edit').count()) === 0);
+    check('das eigene Profil pflegt man im Konto',
+      await julius.page.evaluate(async () => {
+        document.getElementById('nav-konto').click();
+        await new Promise((r) => setTimeout(r, 100));
+        return !!document.querySelector('[data-action="konto-profil"]');
+      }));
 
-    await julius.page.locator('.roster-item[data-id="' + juliusId + '"] .edit').click();
+    await profilOeffnen(julius);
     await julius.page.locator('#avatar-input').setInputFiles({
       name: 'foto.png',
       mimeType: 'image/png',
@@ -606,7 +619,7 @@ async function main() {
 
     group('Lieblingsdoppel reist mit dem Account');
     await julius.page.locator('#nav [data-screen="setup"]').click();
-    await julius.page.locator('.roster-item[data-id="' + juliusId + '"] .edit').click();
+    await profilOeffnen(julius);
     await julius.page.locator('[data-role="profile-double"]').selectOption('16');
     await julius.page.locator('[data-action="save-profile"]').click();
     await julius.page.waitForTimeout(600);
@@ -629,9 +642,9 @@ async function main() {
       const kader = (await r.json()).nutzer;
       return kader.filter((n) => n.id !== id).every((n) => !n.dbl);
     }, juliusId));
-    check('an einem fremden Profil laesst sie sich nicht aendern',
-      (await julius.page.locator('.roster-item[data-id="' + tobiId + '"] .edit').count()) === 0);
-    await julius.page.locator('.roster-item[data-id="' + juliusId + '"] .edit').click();
+    check('fremde Profile gibt es hier gar nicht zu bearbeiten',
+      (await julius.page.locator('#roster .edit').count()) === 0);
+    await profilOeffnen(julius);
     await julius.page.locator('[data-role="profile-double"]').selectOption('0');
     await julius.page.locator('[data-action="save-profile"]').click();
     await julius.page.waitForTimeout(600);
@@ -658,7 +671,10 @@ async function main() {
     check('ein Gast landet nicht in "Wer ist wer?"',
       (await julius.page.locator('[data-action="konto-zuordnung-speichern"]').count()) === 0);
 
-    await julius.page.locator('.roster-item[data-id="' + gastId + '"] .edit').click();
+    /* Gaeste bearbeitet man unter Spieler -- dort steht die ganze Liste. */
+    await julius.page.locator('#nav [data-screen="players"]').click();
+    await julius.page.locator('.player-card[data-id="' + gastId + '"]').click();
+    await julius.page.locator('[data-action="edit-current-profile"]').click();
     check('ein Gast ohne Spiel lässt sich richtig löschen',
       (await julius.page.locator('[data-action="delete-profile"]').count()) === 1);
     await julius.page.locator('[data-action="ov-cancel"]').click();
