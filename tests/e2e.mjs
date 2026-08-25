@@ -491,6 +491,20 @@ group('Statistik nach Spielmodus');
 await page.locator('#nav [data-screen="boards"]').click();
 check('Classic ist voreingestellt', await page.locator('[data-action="board-mode"][data-value="501"]').evaluate((e) => e.classList.contains('active')));
 check('Classic-Kategorien sichtbar', (await page.locator('[data-action="board"][data-key="avg"]').count()) === 1);
+/* In jedem Modus stehen Siege vorn, dann der Average -- und was vorn steht,
+   ist auch das, was beim Moduswechsel als Erstes gezeigt wird. */
+const kategorien = async () => page.evaluate(() =>
+  [...document.querySelectorAll('#board-chips .chip')].map((c) => c.textContent.trim()));
+check('Siege stehen an erster Stelle', (await kategorien())[0] === 'Siege', (await kategorien()).join(' | '));
+check('danach der Average', (await kategorien())[1] === 'Average');
+check('und Siege ist voreingestellt',
+  await page.locator('[data-action="board"][data-key="won"]').evaluate((e) => e.classList.contains('active')));
+check('der erste Platz traegt die Klinge', await page.evaluate(() => {
+  const erste = document.querySelector('#board-list .board-row');
+  if (!erste) return true;                       // ohne Daten gibt es nichts zu kroenen
+  return erste.classList.contains('top') &&
+    getComputedStyle(erste, '::after').content !== 'none';
+}));
 check('Cricket-Kategorien nicht in Classic', (await page.locator('[data-action="board"][data-key="mpr"]').count()) === 0);
 check('Verlaufsdiagramm für Classic', (await page.locator('#board-chart .chart').count()) === 1);
 const lines = await page.locator('#board-chart .chart polyline').count();

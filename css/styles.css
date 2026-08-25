@@ -1885,3 +1885,43 @@ button, input, select, textarea { font-family: inherit; }
   font-size: 0.78rem; color: var(--laser-hell); white-space: nowrap;
   text-shadow: 0 0 8px var(--laser-weich);
 }
+
+/* ================= Rangliste im gleichen Licht ================= */
+/*
+ * Die Liste ist eine Rangfolge, keine Warnung – also weisser Rahmen und
+ * blauer Schein statt roter Flaeche. Der erste Platz bekommt die Klinge
+ * unter die Zeile gelegt, so wie der Fuehrende im Cricket.
+ */
+.board-row {
+  border-radius: 12px; margin-bottom: 4px; position: relative;
+  border-top: none;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.board-row:first-child { border-top: none; }
+.board-row.top {
+  background: var(--aktiv-flaeche);
+  box-shadow: inset 0 0 0 1px var(--aktiv-linie), 0 0 26px var(--schein);
+}
+.board-row.top .nm { font-weight: 800; }
+.board-row.top .val {
+  color: #fff;
+  text-shadow: 0 0 8px var(--laser), 0 0 18px var(--laser-weich);
+}
+/* Die Klinge: liegt unter der ersten Zeile und leuchtet nach aussen. */
+.board-row.top::after {
+  content: ''; position: absolute; left: 14px; right: 14px; bottom: 4px; height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--laser), var(--laser-hell) 55%, #fff);
+  box-shadow: 0 0 5px var(--laser), 0 0 14px var(--laser-weich);
+}
+
+/* Dieselbe Sprache in der Turniertabelle. */
+.standings tr.leader td {
+  background: var(--aktiv-flaeche);
+  box-shadow: inset 0 1px 0 var(--aktiv-linie), inset 0 -1px 0 var(--aktiv-linie);
+}
+.standings tr.leader td:first-child { box-shadow: inset 1px 1px 0 var(--aktiv-linie), inset 0 -1px 0 var(--aktiv-linie); }
+.standings tr.leader td:last-child { box-shadow: inset -1px 1px 0 var(--aktiv-linie), inset 0 -1px 0 var(--aktiv-linie); }
+.standings tr.leader td:last-child {
+  color: #fff; text-shadow: 0 0 8px var(--laser), 0 0 18px var(--laser-weich);
+}
