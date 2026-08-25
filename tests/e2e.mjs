@@ -1439,6 +1439,44 @@ check('der Ueberwurf ist als Bust verbucht', await page.evaluate(() => {
 }));
 check('und wird nicht gefeiert', !(await feierAn()));
 
+/* ---------- Farben im Einzel-Dart-Zahlenfeld ---------- */
+
+group('Einzel-Darts: D und T sind blau, der Finish-Vorschlag bleibt rot');
+await page.locator('#mode-toggle button[data-mode="darts"]').click();
+await page.locator('#mult-row button[data-mult="3"]').click();
+const farben = await page.evaluate(() => {
+  const wurzel = getComputedStyle(document.documentElement);
+  const nimm = (v) => wurzel.getPropertyValue(v).trim();
+  const alsRgb = (c) => { const d = document.createElement('div');
+    d.style.color = c; document.body.appendChild(d);
+    const r = getComputedStyle(d).color; d.remove(); return r; };
+  return {
+    mx: getComputedStyle(document.querySelector('#num-grid .mx')).color,
+    laser: alsRgb(nimm('--laser-hell')),
+    akzent: alsRgb(nimm('--accent'))
+  };
+});
+check('das T vor der Feldzahl ist blau', farben.mx === farben.laser,
+  farben.mx + ' vs ' + farben.laser);
+check('und ausdruecklich nicht mehr rot', farben.mx !== farben.akzent);
+await page.locator('#mult-row button[data-mult="2"]').click();
+check('beim Doppel steht ein D da', (await text('#num-grid')).includes('D'));
+/* Der Finish-Vorschlag war nie gemeint und bleibt, wie er war. Ob gerade ein
+   Finish moeglich ist, haengt am Spielstand – deshalb wird die Regel an
+   einem eingesetzten Chip gemessen statt an einem zufaellig vorhandenen. */
+const chipFarbe = await page.evaluate(() => {
+  const leiste = document.querySelector('.checkout-bar');
+  const probe = document.createElement('span');
+  probe.className = 'chip first';
+  leiste.appendChild(probe);
+  const f = getComputedStyle(probe).backgroundColor;
+  probe.remove();
+  return f;
+});
+check('der erste Dart im Finish-Vorschlag bleibt rot', chipFarbe === farben.akzent,
+  chipFarbe + ' vs ' + farben.akzent);
+await page.locator('#mult-row button[data-mult="1"]').click();
+
 group('Ohne Server bleibt es die lokale App');
 /* Aus dem laufenden Cricket zurück ins Setup – dort ist die Navigation
    sichtbar, im Spiel wird sie bewusst ausgeblendet. */

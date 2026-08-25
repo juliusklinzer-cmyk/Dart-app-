@@ -1742,20 +1742,13 @@ button, input, select, textarea { font-family: inherit; }
    .bull steht spaeter im Stylesheet und wuerde sonst gewinnen. */
 .cg-block button.dim.bull { color: var(--dead); }
 
-/* Der Finish-Vorschlag nannte den ersten Dart rot. T20 und D10 sind aber
-   eine Ansage, kein Alarm -- also dieselbe Klinge wie ueberall. */
-.checkout-bar .chip.first,
-.finish-hint .chip.first {
-  background: rgba(70, 170, 215, 0.16);
-  border-color: var(--laser-weich);
-  color: #fff;
-  text-shadow: 0 0 7px var(--laser), 0 0 16px var(--laser-weich);
-  box-shadow: 0 0 12px var(--schein);
-}
-
 /* Ausgewaehlt ist ueberall hell – auch der Umschalter ueber dem Zahlenfeld.
    Rot bleibt dem Signal vorbehalten (Miss). */
 .segmented button.active { background: var(--primary); color: var(--on-primary); }
+
+/* Das kleine D bzw. T vor der Feldzahl im Einzel-Dart-Zahlenfeld – dieselbe
+   Angabe wie im Cricket, also auch dieselbe Farbe. */
+.num-grid .mx { color: var(--laser-hell); }
 .num-grid button.end-visit { color: var(--muted); }
 
 /* ================= Die 180er-Feier ================= */
