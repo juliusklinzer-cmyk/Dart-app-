@@ -32,14 +32,6 @@
 
 <!-- ============ SETUP ============ -->
 <section id="screen-setup" class="screen">
-  <div class="marke">
-    <span class="blink-logo" role="img" aria-label="Blink 180"></span>
-    <div>
-      <div class="wort">Blink <span class="rot">180</span></div>
-      <div class="sub">Dart Turnier · est. 2026</div>
-    </div>
-  </div>
-
   <div id="resume-box" class="card resume hidden">
     <div>
       <strong>Laufendes Turnier</strong>
@@ -48,7 +40,26 @@
     <button class="btn primary" data-action="resume">Fortsetzen</button>
   </div>
 
-  <div class="card">
+  <!-- Linke Spalte: Wortmarke, darunter direkt die Teilnehmer. -->
+  <div class="setup-links">
+    <div class="marke">
+      <span class="blink-logo" role="img" aria-label="Blink 180"></span>
+      <div>
+        <div class="wort">Blink <span class="rot">180</span></div>
+        <div class="sub">Dart Turnier · est. 2026</div>
+      </div>
+    </div>
+
+    <div class="card" id="karte-spieler">
+      <h2>Wer spielt mit?</h2>
+      <div id="roster" class="roster"></div>
+      <button class="btn ghost full" data-action="new-profile">+ Neuer Spieler</button>
+    </div>
+  </div>
+
+  <!-- Rechte Spalte: Modus und Einstellungen. -->
+  <div class="setup-rechts">
+    <div class="card">
     <h2>Spielmodus</h2>
     <div class="modes" id="mode-select">
       <button data-action="set-mode" data-value="quick">
@@ -74,13 +85,7 @@
     </div>
   </div>
 
-  <div class="card">
-    <h2>Wer spielt mit?</h2>
-    <div id="roster" class="roster"></div>
-    <button class="btn ghost full" data-action="new-profile">+ Neuer Spieler</button>
-  </div>
-
-  <div class="card" id="settings-501">
+    <div class="card" id="settings-501">
     <h2>Einstellungen</h2>
     <div class="setting">
       <label>Startpunkte</label>
@@ -112,7 +117,7 @@
       schaltet die App automatisch auf Einzel-Darts (Single/Double/Triple) mit Finish-Vorschlag um.</p>
   </div>
 
-  <div class="card hidden" id="settings-cricket">
+    <div class="card hidden" id="settings-cricket">
     <h2>Cricket</h2>
     <div class="setting">
       <label>Punkte zählen</label>
@@ -128,7 +133,7 @@
       gewinnt.</p>
   </div>
 
-  <div class="card hidden" id="settings-finisher">
+    <div class="card hidden" id="settings-finisher">
     <h2>Finisher</h2>
     <div class="setting">
       <label>Punkte zum Sieg</label>
@@ -144,14 +149,15 @@
       dran war, darf gleichziehen. Schaffen es mehrere, entscheidet ein Stechen auf Bull.</p>
   </div>
 
-  <div class="card hidden" id="settings-rtw">
+    <div class="card hidden" id="settings-rtw">
     <h2>Round the World</h2>
     <p class="hint">Reihum von der 1 bis zur 20, danach Bull. Ein Single rückt ein Feld weiter,
       ein <b>Double überspringt eine Zahl</b>, ein <b>Triple überspringt zwei</b>. Über die 20
       hinaus geht es immer auf Bull – und wer den Bull trifft, hat gewonnen.</p>
   </div>
+  </div>
 
-  <button class="btn primary full big" data-action="start-game">Turnier starten</button>
+  <button class="btn primary full big" data-action="start-game">Spiel starten</button>
 </section>
 
 <!-- ============ TURNIER-ÜBERSICHT ============ -->
