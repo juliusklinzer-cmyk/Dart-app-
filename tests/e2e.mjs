@@ -912,6 +912,26 @@ check('graue Zahl unterscheidet sich sichtbar', deadColor !== liveColor, `${dead
 check('Eingabefelder der toten Zahl sind ebenfalls grau',
   (await page.locator('#cricket-grid button.dim').count()) === 3,
   String(await page.locator('#cricket-grid button.dim').count()));
+/* Der Bull war von dieser Regel ausgenommen und blieb im Eingabefeld hell,
+   obwohl er bei allen zu war und nichts mehr bringt. */
+await page.evaluate(() => {
+  const g = window.__dart.game();
+  g.throws.length = 0;
+  g.players.forEach(() => { for (let i = 0; i < 3; i++) g.throws.push({ n: 25, m: 2 }); });
+  window.__dart.render();
+});
+check('Bull ist bei allen zu', await page.evaluate(() => {
+  const st = window.__dart.cricketState(), g = window.__dart.game();
+  return g.players.every((id) => st.marks[id][25] >= 3);
+}));
+check('auch der Bull wird im Eingabefeld ausgegraut',
+  (await page.locator('#cricket-grid button.bull.dim').count()) === 2,
+  String(await page.locator('#cricket-grid button.bull.dim').count()));
+const bullTot = await page.locator('#cricket-grid button.bull.dim').first()
+  .evaluate((e) => getComputedStyle(e).color);
+check('und zwar sichtbar, nicht nur als Klasse',
+  bullTot === deadColor, bullTot + ' vs ' + deadColor);
+
 const cgKey = page.locator('#cricket-grid button[data-mult="3"]').first();
 check('Eingabefelder am Handy groß genug zum schnellen Tippen',
   (await cgKey.boundingBox()).height >= 52, String((await cgKey.boundingBox()).height));
@@ -1331,6 +1351,93 @@ check('der Stechen-Sieg zählt in der Karriere',
   Object.values(stCar).find((s) => s.id === rtwIds[1]).rtwWins >= 1);
 check('die Spielart liegt im Archiv',
   await page.evaluate(() => window.__dart.state().history[0].boost === true));
+
+/* ---------- Die 180er-Feier ---------- */
+
+group('180: die Feier');
+/* In den Gruppen davor faellt auch schon mal eine 180 – erst abwarten, bis
+   die Buehne wieder frei ist, sonst prueft man die falsche Feier. */
+await page.waitForFunction(() => !document.getElementById('feier').classList.contains('an'),
+  null, { timeout: 6000 });
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  S.game = null;
+  S.lineup = D.activeProfiles().slice(0, 2).map((p) => p.id);
+  D.setScreen('setup');
+});
+await page.locator('[data-action="set-mode"][data-value="quick"]').click();
+await page.locator('#settings-501 [data-setting="start"] button[data-value="501"]').click();
+await page.locator('#settings-501 [data-setting="dartModeFrom"] button[data-value="0"]').click();
+await page.locator('[data-action="start-game"]').click();
+await bullOffGo();
+check('vor der 180 ist es still', !(await page.evaluate(() =>
+  document.getElementById('feier').classList.contains('an'))));
+await typeScore(140);
+check('140 ist keine Feier wert', !(await page.evaluate(() =>
+  document.getElementById('feier').classList.contains('an'))));
+await typeScore(180);   // der zweite Spieler
+check('die Feier läuft', await page.evaluate(() =>
+  document.getElementById('feier').classList.contains('an')));
+const feierText = await text('#feier');
+check('die 180 steht gross da', feierText.includes('180'));
+/* Die Anzeige schreibt den Namen gross (text-transform), im Profil steht er
+   normal – also ohne Ruecksicht auf die Schreibweise vergleichen. */
+const werferName = await page.evaluate((id) =>
+  window.__dart.state().profiles.find((p) => p.id === id).name,
+  await page.evaluate(() => window.__dart.currentMatch().p[1]));
+check('mit dem Namen des Werfers',
+  feierText.toLowerCase().includes(werferName.toLowerCase()),
+  feierText.replace(/\s+/g, ' ') + ' | gesucht: ' + werferName);
+check('und einer Gratulation', feierText.toLowerCase().includes('gratuliere'));
+check('Konfetti fliegt', (await page.locator('#feier .feier-konfetti i').count()) > 40);
+check('Laserstrahlen auch', (await page.locator('#feier .feier-strahlen i').count()) === 8);
+/*
+ * Der wichtigste Test von allen: die Feier legt sich ueber den ganzen
+ * Bildschirm, darf aber keinen einzigen Tipp schlucken. Wer sofort
+ * weiterschreiben will, soll nicht fuenf Sekunden warten muessen.
+ */
+check('sie nimmt keine Klicks an', await page.evaluate(() => {
+  const e = document.elementFromPoint(innerWidth / 2, innerHeight * 0.5);
+  return !!e && !e.closest('#feier');
+}));
+const vorWurf = await page.evaluate(() => window.__dart.activeLeg(window.__dart.currentMatch()).visits.length);
+await typeScore(60);
+check('und man kann waehrenddessen weiterschreiben',
+  (await page.evaluate(() => window.__dart.activeLeg(window.__dart.currentMatch()).visits.length)) === vorWurf + 1);
+/* Hoechstens fuenf Sekunden – danach ist wieder Ruhe. */
+await page.waitForFunction(() => !document.getElementById('feier').classList.contains('an'),
+  null, { timeout: 6000 });
+check('nach spaetestens fuenf Sekunden ist Schluss', true);
+check('und der Bildschirm ist wieder leer',
+  (await page.evaluate(() => document.getElementById('feier').innerHTML)) === '');
+check('der Wurf selbst ist ganz normal verbucht', await page.evaluate((id) => {
+  const D = window.__dart, m = D.currentMatch();
+  return D.activeLeg(m).visits.some((v) => v.p === id && v.s === 180);
+}, await page.evaluate(() => window.__dart.currentMatch().p[1])));
+
+/*
+ * Ein Ueberwurf ist keine 180, auch wenn 180 dasteht: die Punkte zaehlen
+ * nicht. Also wird auch nicht gefeiert. Spieler 2 steht nach zwei 180ern
+ * auf 141 – der dritte kann gar nicht mehr aufgehen.
+ */
+const feierAn = () => page.evaluate(() => document.getElementById('feier').classList.contains('an'));
+await typeScore(60);        // Spieler 1
+await typeScore(180);       // Spieler 2 auf 141, feiert nochmal
+await page.waitForFunction(() => !document.getElementById('feier').classList.contains('an'),
+  null, { timeout: 6000 });
+await typeScore(60);        // Spieler 1
+const restVorBust = await page.evaluate(() => {
+  const D = window.__dart, m = D.currentMatch(), leg = D.activeLeg(m);
+  return D.remainingIn(leg, D.activePlayer(leg, m));
+});
+check('der Werfer steht unter 180, kann also nur ueberwerfen',
+  restVorBust < 180, String(restVorBust));
+await typeScore(180);
+check('der Ueberwurf ist als Bust verbucht', await page.evaluate(() => {
+  const D = window.__dart, m = D.currentMatch(), leg = D.activeLeg(m);
+  return leg.visits[leg.visits.length - 1].b === true;
+}));
+check('und wird nicht gefeiert', !(await feierAn()));
 
 group('Ohne Server bleibt es die lokale App');
 /* Aus dem laufenden Cricket zurück ins Setup – dort ist die Navigation

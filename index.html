@@ -450,6 +450,11 @@
   <div class="overlay-card" id="overlay-card"></div>
 </div>
 
+<!-- Die 180er-Feier. Liegt bewusst ausserhalb der Screens: render() zeichnet
+     sie nicht mit, und sie laeuft ueber allem ab. Sie nimmt nie Klicks an
+     (pointer-events: none) - wer weiterschreiben will, soll nicht warten. -->
+<div id="feier" class="feier" aria-hidden="true"></div>
+
 <input type="file" id="avatar-input" accept="image/*" class="hidden">
 
 <script src="js/checkout.js"></script>

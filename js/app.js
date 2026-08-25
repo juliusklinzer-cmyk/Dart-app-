@@ -460,6 +460,65 @@
     return sum(leg.visits, function (v) { return v.p === pid ? v.d : 0; });
   }
 
+  /* ================= Die 180er-Feier ================= */
+  /*
+   * Eine 180 ist das Höchste, was drei Darts hergeben, und passiert an einem
+   * Abend selten. Also wird sie gefeiert: Konfetti, Blitze, Laserstrahlen,
+   * blinkender Name – knapp fünf Sekunden, dann ist wieder Ruhe.
+   *
+   * Zwei Regeln, die das Ganze harmlos halten:
+   * - Die Feier nimmt keine Klicks an. Wer sofort weiterschreiben will, tippt
+   *   einfach durch sie hindurch; niemand muss auf das Ende warten.
+   * - Sie liegt ausserhalb der Screens, render() fasst sie also nicht an.
+   */
+  var FEIER_MS = 4600;
+  var feierTimer = null;
+  var KONFETTI_FARBEN = ['#e5484d', '#46aad7', '#ffc14d', '#f2eeee', '#3fbf7f', '#e763c8', '#ff8a3d'];
+
+  function feiere180(pid) {
+    var box = $('feier');
+    if (!box) return;
+    var ruhig = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    var teile = '';
+    if (!ruhig) {
+      // Konfetti: jeder Schnipsel bekommt eigene Bahn, Tempo und Drehung –
+      // gleichmässig fallende Rechtecke sähen nach Bildschirmschoner aus.
+      for (var i = 0; i < 70; i++) {
+        teile += '<i style="left:' + (Math.random() * 100).toFixed(2) + '%;' +
+          'background:' + KONFETTI_FARBEN[i % KONFETTI_FARBEN.length] + ';' +
+          '--fall:' + (1.7 + Math.random() * 2.1).toFixed(2) + 's;' +
+          '--verz:' + (Math.random() * 1.4).toFixed(2) + 's;' +
+          '--drift:' + (Math.random() * 160 - 80).toFixed(0) + 'px;' +
+          '--dreh:' + (Math.random() * 1080 - 540).toFixed(0) + 'deg;' +
+          'width:' + (5 + Math.random() * 7).toFixed(0) + 'px;' +
+          'height:' + (9 + Math.random() * 12).toFixed(0) + 'px"></i>';
+      }
+    }
+    var strahlen = '';
+    if (!ruhig) for (var s = 0; s < 8; s++) strahlen += '<i style="--dreh:' + (s * 22.5) + 'deg"></i>';
+
+    box.innerHTML =
+      '<div class="feier-blitz"></div>' +
+      '<div class="feier-strahlen">' + strahlen + '</div>' +
+      '<div class="feier-konfetti">' + teile + '</div>' +
+      '<div class="feier-mitte">' +
+        '<div class="feier-zahl">180</div>' +
+        '<div class="feier-name">' + esc(pname(pid)) + '</div>' +
+        '<div class="feier-gruss">Gratuliere!</div>' +
+      '</div>';
+
+    box.classList.remove('an');
+    void box.offsetWidth;          // Neustart erzwingen, wenn zwei 180er folgen
+    box.classList.add('an');
+    if (feierTimer) clearTimeout(feierTimer);
+    feierTimer = setTimeout(function () {
+      box.classList.remove('an');
+      box.innerHTML = '';
+      feierTimer = null;
+    }, ruhig ? 2000 : FEIER_MS);
+  }
+
   /* Aufnahme abschließen und Leg-/Matchstand fortschreiben.
      k = Einzeldarts (nur im Einzel-Dart-Modus vorhanden, für Doppelquote). */
   function commitVisit(score, darts, isCheckout, isBust, k) {
@@ -469,6 +528,9 @@
     var visit = { p: pid, s: isBust ? 0 : score, d: darts, b: !!isBust, c: !!isCheckout, o: isBust ? score : 0 };
     if (k && k.length) visit.k = k.map(function (x) { return { m: x.m, n: x.n }; });
     leg.visits.push(visit);
+
+    // Höher geht es mit drei Darts nicht.
+    if (!isBust && score === 180) feiere180(pid);
 
     UI.input = ''; UI.darts = []; UI.mult = 1; UI.modeOverride = null; UI.error = '';
 
@@ -2251,7 +2313,9 @@
        Triple – ein Tipp je Dart, kein Umschalten. */
     var CN = [20, 19, 18, 17, 16, 15];
     var dead = {};
-    CN.forEach(function (n) {
+    /* Auch der Bull: er stand bisher nicht in dieser Liste und blieb im
+       Eingabefeld hell, obwohl er bei allen zu war und nichts mehr bringt. */
+    CRICKET_NUMBERS.forEach(function (n) {
       dead[n] = g.players.every(function (id) { return st.marks[id][n] >= 3; });
     });
     function block(label, mult) {
@@ -2266,8 +2330,8 @@
       block('Single', 1) + block('Double', 2) + block('Triple', 3) +
       '<div class="cg-block cg-extra">' +
         '<div class="cg-label">Bull &amp; Rest</div>' +
-        '<button class="bull" data-num="25" data-mult="1">Bull</button>' +
-        '<button class="bull" data-num="25" data-mult="2">Bull ×2</button>' +
+        '<button class="bull' + (dead[25] ? ' dim' : '') + '" data-num="25" data-mult="1">Bull</button>' +
+        '<button class="bull' + (dead[25] ? ' dim' : '') + '" data-num="25" data-mult="2">Bull ×2</button>' +
         '<button class="miss" data-num="0" data-mult="1">Miss</button>' +
         /* Nichts getroffen? Ein Tipp beendet die Aufnahme und füllt die
            fehlenden Darts als Fehlwürfe auf. */

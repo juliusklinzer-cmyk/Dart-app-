@@ -1746,6 +1746,141 @@ button, input, select, textarea { font-family: inherit; }
 .cg-block .mx { color: var(--laser-hell); }
 .cg-block button.skip { color: var(--muted); }
 
+/* Bull bei allen zu: die Taste muss grau werden wie die Zahlen auch --
+   .bull steht spaeter im Stylesheet und wuerde sonst gewinnen. */
+.cg-block button.dim.bull { color: var(--dead); }
+
+/* Der Finish-Vorschlag nannte den ersten Dart rot. T20 und D10 sind aber
+   eine Ansage, kein Alarm -- also dieselbe Klinge wie ueberall. */
+.checkout-bar .chip.first,
+.finish-hint .chip.first {
+  background: rgba(70, 170, 215, 0.16);
+  border-color: var(--laser-weich);
+  color: #fff;
+  text-shadow: 0 0 7px var(--laser), 0 0 16px var(--laser-weich);
+  box-shadow: 0 0 12px var(--schein);
+}
+
+/* Ausgewaehlt ist ueberall hell – auch der Umschalter ueber dem Zahlenfeld.
+   Rot bleibt dem Signal vorbehalten (Miss). */
+.segmented button.active { background: var(--primary); color: var(--on-primary); }
+.num-grid button.end-visit { color: var(--muted); }
+
+/* ================= Die 180er-Feier ================= */
+/*
+ * Bewusst lauter als der Rest der App: Konfetti in Partyfarben, weisse
+ * Blitze, rotierende Laserstrahlen, ein blinkender Name. Das passiert an
+ * einem Abend vielleicht einmal – dafuer darf es dann knallen.
+ *
+ * pointer-events: none ist keine Kosmetik, sondern die Bedingung: die Feier
+ * legt sich ueber den ganzen Bildschirm, und wer sofort weiterschreiben
+ * will, muss durch sie hindurchtippen koennen.
+ */
+.feier {
+  position: fixed; inset: 0; z-index: 90;
+  pointer-events: none; display: none; overflow: hidden;
+}
+.feier.an { display: block; }
+
+/* Der Blitz: ein paar harte weisse Schlaege, danach ein blaues Glimmen. */
+.feier-blitz {
+  position: absolute; inset: 0;
+  background: radial-gradient(circle at 50% 45%, rgba(255,255,255,0.9), rgba(70,170,215,0.35) 35%, transparent 70%);
+  animation: feier-blitz 4.6s ease-out forwards;
+}
+@keyframes feier-blitz {
+  0%   { opacity: 0; }
+  3%   { opacity: 1; }
+  7%   { opacity: 0.05; }
+  11%  { opacity: 0.95; }
+  15%  { opacity: 0.08; }
+  20%  { opacity: 0.7; }
+  26%  { opacity: 0.12; }
+  38%  { opacity: 0.3; }
+  100% { opacity: 0; }
+}
+
+/* Acht Klingen, die aus der Mitte schlagen und langsam durchdrehen. */
+.feier-strahlen {
+  position: absolute; left: 50%; top: 46%; width: 0; height: 0;
+  animation: feier-drehen 4.6s linear forwards;
+}
+.feier-strahlen i {
+  position: absolute; left: -3px; top: -100vh;
+  width: 6px; height: 200vh;
+  transform: rotate(var(--dreh));
+  background: linear-gradient(180deg, transparent, var(--laser) 42%, #fff 50%, var(--laser) 58%, transparent);
+  box-shadow: 0 0 14px var(--laser), 0 0 30px var(--laser-weich);
+  opacity: 0.55;
+}
+@keyframes feier-drehen {
+  0%   { transform: rotate(0deg)   scale(0.2); opacity: 0; }
+  8%   { opacity: 1; }
+  75%  { opacity: 0.8; }
+  100% { transform: rotate(150deg) scale(1.4); opacity: 0; }
+}
+
+/* Konfetti: jeder Schnipsel hat eigene Bahn, eigenes Tempo, eigene Drehung. */
+.feier-konfetti { position: absolute; inset: 0; }
+.feier-konfetti i {
+  position: absolute; top: -8vh; border-radius: 2px;
+  animation: feier-fallen var(--fall) linear var(--verz) forwards;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.35);
+}
+@keyframes feier-fallen {
+  0%   { transform: translate3d(0, 0, 0) rotate(0deg); opacity: 1; }
+  85%  { opacity: 1; }
+  100% { transform: translate3d(var(--drift), 118vh, 0) rotate(var(--dreh)); opacity: 0; }
+}
+
+/* Die Ansage in der Mitte. */
+.feier-mitte {
+  position: absolute; left: 0; right: 0; top: 46%;
+  transform: translateY(-50%); text-align: center;
+  animation: feier-weg 4.6s ease-in forwards;
+}
+.feier-zahl {
+  font-family: var(--font-display);
+  font-size: clamp(5rem, 32vw, 14rem); line-height: 0.9; color: #fff;
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 12px #fff, 0 0 34px var(--laser), 0 0 70px var(--laser), 0 0 120px var(--laser-weich);
+  animation: feier-schlag 0.7s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+.feier-name {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 9vw, 3.4rem); line-height: 1.1; margin-top: 6px;
+  color: var(--laser-hell); letter-spacing: 0.06em; text-transform: uppercase;
+  text-shadow: 0 0 10px var(--laser), 0 0 28px var(--laser-weich);
+  /* 2,4 Blitze je Sekunde: deutlich als Blinken zu sehen, aber unter der
+     Schwelle, ab der Stroboskop-Effekte problematisch werden. */
+  animation: feier-blinken 0.42s steps(1, end) infinite;
+}
+.feier-gruss {
+  font-family: var(--font-cond); font-weight: 700;
+  font-size: clamp(1rem, 4.5vw, 1.6rem); letter-spacing: 0.22em;
+  text-transform: uppercase; color: #fff; margin-top: 10px;
+  text-shadow: 0 0 10px var(--laser), 0 0 24px var(--laser-weich);
+}
+@keyframes feier-schlag {
+  0%   { transform: scale(0.2) rotate(-9deg); opacity: 0; }
+  60%  { transform: scale(1.14) rotate(2deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); }
+}
+@keyframes feier-blinken {
+  0%, 49%   { opacity: 1; }
+  50%, 100% { opacity: 0.28; }
+}
+@keyframes feier-weg {
+  0%, 78% { opacity: 1; }
+  100%    { opacity: 0; }
+}
+
+/* Wer Bewegung nicht vertraegt, bekommt die Ansage ohne den Sturm. */
+@media (prefers-reduced-motion: reduce) {
+  .feier-blitz, .feier-strahlen, .feier-konfetti { display: none; }
+  .feier-mitte, .feier-zahl, .feier-name { animation: none; }
+}
+
 </style>
 </head>
 <body>
@@ -2168,6 +2303,11 @@ button, input, select, textarea { font-family: inherit; }
 <div id="overlay" class="overlay hidden">
   <div class="overlay-card" id="overlay-card"></div>
 </div>
+
+<!-- Die 180er-Feier. Liegt bewusst ausserhalb der Screens: render() zeichnet
+     sie nicht mit, und sie laeuft ueber allem ab. Sie nimmt nie Klicks an
+     (pointer-events: none) - wer weiterschreiben will, soll nicht warten. -->
+<div id="feier" class="feier" aria-hidden="true"></div>
 
 <input type="file" id="avatar-input" accept="image/*" class="hidden">
 <!-- Optionale Online-Schicht. Sie läuft VOR app.js, damit die Anmeldeschranke
@@ -2791,6 +2931,65 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return sum(leg.visits, function (v) { return v.p === pid ? v.d : 0; });
   }
 
+  /* ================= Die 180er-Feier ================= */
+  /*
+   * Eine 180 ist das Höchste, was drei Darts hergeben, und passiert an einem
+   * Abend selten. Also wird sie gefeiert: Konfetti, Blitze, Laserstrahlen,
+   * blinkender Name – knapp fünf Sekunden, dann ist wieder Ruhe.
+   *
+   * Zwei Regeln, die das Ganze harmlos halten:
+   * - Die Feier nimmt keine Klicks an. Wer sofort weiterschreiben will, tippt
+   *   einfach durch sie hindurch; niemand muss auf das Ende warten.
+   * - Sie liegt ausserhalb der Screens, render() fasst sie also nicht an.
+   */
+  var FEIER_MS = 4600;
+  var feierTimer = null;
+  var KONFETTI_FARBEN = ['#e5484d', '#46aad7', '#ffc14d', '#f2eeee', '#3fbf7f', '#e763c8', '#ff8a3d'];
+
+  function feiere180(pid) {
+    var box = $('feier');
+    if (!box) return;
+    var ruhig = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    var teile = '';
+    if (!ruhig) {
+      // Konfetti: jeder Schnipsel bekommt eigene Bahn, Tempo und Drehung –
+      // gleichmässig fallende Rechtecke sähen nach Bildschirmschoner aus.
+      for (var i = 0; i < 70; i++) {
+        teile += '<i style="left:' + (Math.random() * 100).toFixed(2) + '%;' +
+          'background:' + KONFETTI_FARBEN[i % KONFETTI_FARBEN.length] + ';' +
+          '--fall:' + (1.7 + Math.random() * 2.1).toFixed(2) + 's;' +
+          '--verz:' + (Math.random() * 1.4).toFixed(2) + 's;' +
+          '--drift:' + (Math.random() * 160 - 80).toFixed(0) + 'px;' +
+          '--dreh:' + (Math.random() * 1080 - 540).toFixed(0) + 'deg;' +
+          'width:' + (5 + Math.random() * 7).toFixed(0) + 'px;' +
+          'height:' + (9 + Math.random() * 12).toFixed(0) + 'px"></i>';
+      }
+    }
+    var strahlen = '';
+    if (!ruhig) for (var s = 0; s < 8; s++) strahlen += '<i style="--dreh:' + (s * 22.5) + 'deg"></i>';
+
+    box.innerHTML =
+      '<div class="feier-blitz"></div>' +
+      '<div class="feier-strahlen">' + strahlen + '</div>' +
+      '<div class="feier-konfetti">' + teile + '</div>' +
+      '<div class="feier-mitte">' +
+        '<div class="feier-zahl">180</div>' +
+        '<div class="feier-name">' + esc(pname(pid)) + '</div>' +
+        '<div class="feier-gruss">Gratuliere!</div>' +
+      '</div>';
+
+    box.classList.remove('an');
+    void box.offsetWidth;          // Neustart erzwingen, wenn zwei 180er folgen
+    box.classList.add('an');
+    if (feierTimer) clearTimeout(feierTimer);
+    feierTimer = setTimeout(function () {
+      box.classList.remove('an');
+      box.innerHTML = '';
+      feierTimer = null;
+    }, ruhig ? 2000 : FEIER_MS);
+  }
+
   /* Aufnahme abschließen und Leg-/Matchstand fortschreiben.
      k = Einzeldarts (nur im Einzel-Dart-Modus vorhanden, für Doppelquote). */
   function commitVisit(score, darts, isCheckout, isBust, k) {
@@ -2800,6 +2999,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var visit = { p: pid, s: isBust ? 0 : score, d: darts, b: !!isBust, c: !!isCheckout, o: isBust ? score : 0 };
     if (k && k.length) visit.k = k.map(function (x) { return { m: x.m, n: x.n }; });
     leg.visits.push(visit);
+
+    // Höher geht es mit drei Darts nicht.
+    if (!isBust && score === 180) feiere180(pid);
 
     UI.input = ''; UI.darts = []; UI.mult = 1; UI.modeOverride = null; UI.error = '';
 
@@ -4582,7 +4784,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
        Triple – ein Tipp je Dart, kein Umschalten. */
     var CN = [20, 19, 18, 17, 16, 15];
     var dead = {};
-    CN.forEach(function (n) {
+    /* Auch der Bull: er stand bisher nicht in dieser Liste und blieb im
+       Eingabefeld hell, obwohl er bei allen zu war und nichts mehr bringt. */
+    CRICKET_NUMBERS.forEach(function (n) {
       dead[n] = g.players.every(function (id) { return st.marks[id][n] >= 3; });
     });
     function block(label, mult) {
@@ -4597,8 +4801,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       block('Single', 1) + block('Double', 2) + block('Triple', 3) +
       '<div class="cg-block cg-extra">' +
         '<div class="cg-label">Bull &amp; Rest</div>' +
-        '<button class="bull" data-num="25" data-mult="1">Bull</button>' +
-        '<button class="bull" data-num="25" data-mult="2">Bull ×2</button>' +
+        '<button class="bull' + (dead[25] ? ' dim' : '') + '" data-num="25" data-mult="1">Bull</button>' +
+        '<button class="bull' + (dead[25] ? ' dim' : '') + '" data-num="25" data-mult="2">Bull ×2</button>' +
         '<button class="miss" data-num="0" data-mult="1">Miss</button>' +
         /* Nichts getroffen? Ein Tipp beendet die Aufnahme und füllt die
            fehlenden Darts als Fehlwürfe auf. */

@@ -1734,3 +1734,138 @@ button, input, select, textarea { font-family: inherit; }
    sondern eine Angabe. Miss bleibt rot, das ist eins. */
 .cg-block .mx { color: var(--laser-hell); }
 .cg-block button.skip { color: var(--muted); }
+
+/* Bull bei allen zu: die Taste muss grau werden wie die Zahlen auch --
+   .bull steht spaeter im Stylesheet und wuerde sonst gewinnen. */
+.cg-block button.dim.bull { color: var(--dead); }
+
+/* Der Finish-Vorschlag nannte den ersten Dart rot. T20 und D10 sind aber
+   eine Ansage, kein Alarm -- also dieselbe Klinge wie ueberall. */
+.checkout-bar .chip.first,
+.finish-hint .chip.first {
+  background: rgba(70, 170, 215, 0.16);
+  border-color: var(--laser-weich);
+  color: #fff;
+  text-shadow: 0 0 7px var(--laser), 0 0 16px var(--laser-weich);
+  box-shadow: 0 0 12px var(--schein);
+}
+
+/* Ausgewaehlt ist ueberall hell – auch der Umschalter ueber dem Zahlenfeld.
+   Rot bleibt dem Signal vorbehalten (Miss). */
+.segmented button.active { background: var(--primary); color: var(--on-primary); }
+.num-grid button.end-visit { color: var(--muted); }
+
+/* ================= Die 180er-Feier ================= */
+/*
+ * Bewusst lauter als der Rest der App: Konfetti in Partyfarben, weisse
+ * Blitze, rotierende Laserstrahlen, ein blinkender Name. Das passiert an
+ * einem Abend vielleicht einmal – dafuer darf es dann knallen.
+ *
+ * pointer-events: none ist keine Kosmetik, sondern die Bedingung: die Feier
+ * legt sich ueber den ganzen Bildschirm, und wer sofort weiterschreiben
+ * will, muss durch sie hindurchtippen koennen.
+ */
+.feier {
+  position: fixed; inset: 0; z-index: 90;
+  pointer-events: none; display: none; overflow: hidden;
+}
+.feier.an { display: block; }
+
+/* Der Blitz: ein paar harte weisse Schlaege, danach ein blaues Glimmen. */
+.feier-blitz {
+  position: absolute; inset: 0;
+  background: radial-gradient(circle at 50% 45%, rgba(255,255,255,0.9), rgba(70,170,215,0.35) 35%, transparent 70%);
+  animation: feier-blitz 4.6s ease-out forwards;
+}
+@keyframes feier-blitz {
+  0%   { opacity: 0; }
+  3%   { opacity: 1; }
+  7%   { opacity: 0.05; }
+  11%  { opacity: 0.95; }
+  15%  { opacity: 0.08; }
+  20%  { opacity: 0.7; }
+  26%  { opacity: 0.12; }
+  38%  { opacity: 0.3; }
+  100% { opacity: 0; }
+}
+
+/* Acht Klingen, die aus der Mitte schlagen und langsam durchdrehen. */
+.feier-strahlen {
+  position: absolute; left: 50%; top: 46%; width: 0; height: 0;
+  animation: feier-drehen 4.6s linear forwards;
+}
+.feier-strahlen i {
+  position: absolute; left: -3px; top: -100vh;
+  width: 6px; height: 200vh;
+  transform: rotate(var(--dreh));
+  background: linear-gradient(180deg, transparent, var(--laser) 42%, #fff 50%, var(--laser) 58%, transparent);
+  box-shadow: 0 0 14px var(--laser), 0 0 30px var(--laser-weich);
+  opacity: 0.55;
+}
+@keyframes feier-drehen {
+  0%   { transform: rotate(0deg)   scale(0.2); opacity: 0; }
+  8%   { opacity: 1; }
+  75%  { opacity: 0.8; }
+  100% { transform: rotate(150deg) scale(1.4); opacity: 0; }
+}
+
+/* Konfetti: jeder Schnipsel hat eigene Bahn, eigenes Tempo, eigene Drehung. */
+.feier-konfetti { position: absolute; inset: 0; }
+.feier-konfetti i {
+  position: absolute; top: -8vh; border-radius: 2px;
+  animation: feier-fallen var(--fall) linear var(--verz) forwards;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.35);
+}
+@keyframes feier-fallen {
+  0%   { transform: translate3d(0, 0, 0) rotate(0deg); opacity: 1; }
+  85%  { opacity: 1; }
+  100% { transform: translate3d(var(--drift), 118vh, 0) rotate(var(--dreh)); opacity: 0; }
+}
+
+/* Die Ansage in der Mitte. */
+.feier-mitte {
+  position: absolute; left: 0; right: 0; top: 46%;
+  transform: translateY(-50%); text-align: center;
+  animation: feier-weg 4.6s ease-in forwards;
+}
+.feier-zahl {
+  font-family: var(--font-display);
+  font-size: clamp(5rem, 32vw, 14rem); line-height: 0.9; color: #fff;
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 12px #fff, 0 0 34px var(--laser), 0 0 70px var(--laser), 0 0 120px var(--laser-weich);
+  animation: feier-schlag 0.7s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+.feier-name {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 9vw, 3.4rem); line-height: 1.1; margin-top: 6px;
+  color: var(--laser-hell); letter-spacing: 0.06em; text-transform: uppercase;
+  text-shadow: 0 0 10px var(--laser), 0 0 28px var(--laser-weich);
+  /* 2,4 Blitze je Sekunde: deutlich als Blinken zu sehen, aber unter der
+     Schwelle, ab der Stroboskop-Effekte problematisch werden. */
+  animation: feier-blinken 0.42s steps(1, end) infinite;
+}
+.feier-gruss {
+  font-family: var(--font-cond); font-weight: 700;
+  font-size: clamp(1rem, 4.5vw, 1.6rem); letter-spacing: 0.22em;
+  text-transform: uppercase; color: #fff; margin-top: 10px;
+  text-shadow: 0 0 10px var(--laser), 0 0 24px var(--laser-weich);
+}
+@keyframes feier-schlag {
+  0%   { transform: scale(0.2) rotate(-9deg); opacity: 0; }
+  60%  { transform: scale(1.14) rotate(2deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); }
+}
+@keyframes feier-blinken {
+  0%, 49%   { opacity: 1; }
+  50%, 100% { opacity: 0.28; }
+}
+@keyframes feier-weg {
+  0%, 78% { opacity: 1; }
+  100%    { opacity: 0; }
+}
+
+/* Wer Bewegung nicht vertraegt, bekommt die Ansage ohne den Sturm. */
+@media (prefers-reduced-motion: reduce) {
+  .feier-blitz, .feier-strahlen, .feier-konfetti { display: none; }
+  .feier-mitte, .feier-zahl, .feier-name { animation: none; }
+}
