@@ -358,6 +358,15 @@ check('Treffer auf geschlossene Zahl bringt 20 Punkte', cs.score[pA] === 20, Str
 await cDart('T19');
 cs = await page.evaluate(() => window.__dart.cricketState());
 check('19 ebenfalls zu', cs.marks[pA][19] === 3);
+/* Wer vorn liegt, wird an der Punktzahl markiert – aber nur einer, und nur
+   wenn ueberhaupt schon Punkte da sind. */
+const fuehrend = () => page.evaluate(() => {
+  const zellen = [...document.querySelectorAll('#cricket-board .cr-score')];
+  return zellen.map((z) => z.classList.contains('fuehrt'));
+});
+check('genau einer ist vorn', (await fuehrend()).filter(Boolean).length === 1,
+  JSON.stringify(await fuehrend()));
+check('und zwar der mit den Punkten', (await fuehrend())[0] === true);
 check('nach 3 Darts ist der Gegner am Wurf',
   (await text('#cricket-turn')).includes(await page.evaluate((id) => window.__dart.state().profiles.find((p) => p.id === id).name, pB)));
 
@@ -397,6 +406,10 @@ check('Cricket zählt nicht als 501-Spiel', cWinner.matches === before.matches);
 
 group('Round the World');
 await page.locator('[data-action="set-mode"][data-value="rtw"]').click();
+check('zwei Spielarten zur Wahl',
+  (await page.locator('#settings-rtw [data-setting="rtwBoost"] button').count()) === 2);
+check('Boost ist voreingestellt',
+  await page.evaluate(() => window.__dart.state().settings.rtwBoost === 1));
 await page.locator('[data-action="start-game"]').click();
 check('Bull-Off auch im Training', await visible('#screen-bulloff'));
 const rtwStarter = await page.locator('#bulloff-buttons button').first().locator('span:not(.av)').innerText();
@@ -1234,6 +1247,83 @@ check('genau ein Sieg dazugekommen', wonNachher === wonVorher + 1,
   wonVorher + ' -> ' + wonNachher);
 check('der Sieger hat ihn', qCar[qIds[0]].won >= 1);
 check('Average wurde gerechnet', qCar[qIds[0]].avg > 0);
+
+/* ---------- Round the World: Spielart Einfach ---------- */
+
+group('Round the World: Einfach zählt nur die Zahl');
+const rtwAufbau = async (boost, spieler) => {
+  await page.evaluate((n) => {
+    const D = window.__dart, S = D.state();
+    S.game = null;
+    S.lineup = D.activeProfiles().slice(0, n).map((p) => p.id);
+    D.setScreen('setup');
+  }, spieler);
+  await page.locator('[data-action="set-mode"][data-value="rtw"]').click();
+  await page.locator('#settings-rtw [data-setting="rtwBoost"] button[data-value="' + boost + '"]').click();
+  await page.locator('[data-action="start-game"]').click();
+  await page.locator('#bulloff-buttons button').first().click();
+};
+await rtwAufbau(0, 2);
+const eZiel = async () => {
+  const [id] = await page.evaluate(() => window.__dart.game().players);
+  return (await page.evaluate(() => window.__dart.rtwState())).target[id];
+};
+check('Einfach steht in der Kopfzeile', (await textKlein('#rtw-sub')).includes('einfach'),
+  await text('#rtw-sub'));
+check('kein Doppel zur Wahl', (await page.locator('#rtw-pad [data-mult="2"]').count()) === 0);
+check('kein Triple zur Wahl', (await page.locator('#rtw-pad [data-mult="3"]').count()) === 0);
+check('nur eine Treffer-Taste', (await page.locator("#rtw-pad .rtw-treffer .rtw-key").count()) === 1);
+await rDart('S1');
+check('ein Treffer rückt genau ein Feld weiter', (await eZiel()) === 2, String(await eZiel()));
+/* Der entscheidende Unterschied: derselbe Wurf, der im Boost zwei Felder
+   überspringen würde, zählt hier auch nur eins. Getippt wird er über die
+   einzige Taste – ein Triple gibt es in dieser Spielart gar nicht. */
+await page.evaluate(() => window.__dart.rtwDart(3, 2));
+check('auch ein Triple rückt nur ein Feld weiter', (await eZiel()) === 3, String(await eZiel()));
+check('die Spielart steht am Spiel, nicht in den Einstellungen',
+  await page.evaluate(() => window.__dart.game().boost === false));
+
+/* ---------- Round the World: Stechen bei Gleichstand ---------- */
+
+group('Round the World: Nearest to the Bull bei Gleichstand');
+await rtwAufbau(1, 2);
+const rtwIds = await page.evaluate(() => window.__dart.game().players);
+/* Beide werfen dieselbe Folge: 1-4-7-10-13-16-19-Bull in acht Darts. Damit
+   sind sie gleichauf, und der frühere Treffer darf nicht entscheiden.
+   Geworfen wird abwechselnd – nach drei Darts ist der Nächste dran. */
+const aufnahme = async (...wuerfe) => { for (const w of wuerfe) await rDart(w); };
+await aufnahme('T1', 'T4', 'T7');        // Spieler 1 auf 10
+await aufnahme('T1', 'T4', 'T7');        // Spieler 2 auf 10
+await aufnahme('T10', 'T13', 'T16');     // Spieler 1 auf 19
+await aufnahme('T10', 'T13', 'T16');     // Spieler 2 auf 19
+await aufnahme('T19', 'S25');            // Spieler 1 fertig, 8 Darts
+await aufnahme('T19', 'S25');            // Spieler 2 zieht gleich, 8 Darts
+const rtwSt = () => page.evaluate(() => window.__dart.rtwState());
+check('beide sind mit acht Darts fertig', await page.evaluate((ids) => {
+  const s = window.__dart.rtwState();
+  return ids.every((id) => s.finished[id] && s.finished[id].darts === 8);
+}, rtwIds), JSON.stringify((await rtwSt()).finished));
+check('kein Sieger ohne Stechen', (await rtwSt()).winner === null);
+check('das Spiel läuft noch', await page.evaluate(() => !window.__dart.game().done));
+check('Stechen wird angeboten', await visible('#rtw-pad .rtw-stechen'));
+check('beide stehen zur Wahl', (await page.locator('[data-action="rtw-stechen"]').count()) === 2);
+check('die Kopfzeile sagt es auch', (await textKlein('#rtw-turn')).includes('stechen'));
+check('geworfen wird nicht mehr', (await page.locator('#rtw-pad [data-num]').count()) === 0);
+/* Der Zweite gewinnt – vorher hätte immer der frühere Treffer gewonnen,
+   also der Erste. Genau das soll das Stechen aushebeln. */
+await page.locator('[data-action="rtw-stechen"][data-id="' + rtwIds[1] + '"]').click();
+check('der Angetippte gewinnt',
+  await page.evaluate((id) => window.__dart.game().winner === id, rtwIds[1]));
+check('und nicht der frühere Treffer',
+  await page.evaluate((id) => window.__dart.game().winner !== id, rtwIds[0]));
+check('Spiel ist beendet', await page.evaluate(() => window.__dart.game().done));
+await page.locator('#overlay-card [data-action="open-summary"]').click();
+await page.locator('#summary-actions [data-action="finish-game"]').click();
+const stCar = await carr();
+check('der Stechen-Sieg zählt in der Karriere',
+  Object.values(stCar).find((s) => s.id === rtwIds[1]).rtwWins >= 1);
+check('die Spielart liegt im Archiv',
+  await page.evaluate(() => window.__dart.state().history[0].boost === true));
 
 group('Ohne Server bleibt es die lokale App');
 /* Aus dem laufenden Cricket zurück ins Setup – dort ist die Navigation

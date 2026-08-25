@@ -1646,3 +1646,85 @@ button, input, select, textarea { font-family: inherit; }
   .rtw-row .rw-bar .klinge::after,
   .rtw-fortschritt .pfad span.jetzt { animation: none; }
 }
+
+/* Im Hochformat bekommen die Treffer-Tasten eine Hoehe, die zu ihrer Breite
+   passt -- sie sollen quadratisch wirken und nicht den halben Bildschirm
+   fuellen. Deshalb an vw gebunden, an derselben Groesse wie die Spalten.
+   Was uebrig bleibt, geht an die Tafel (siehe #screen-rtw .rtw-row). */
+@media (orientation: portrait) and (max-width: 699px) {
+  .rtw-treffer { height: clamp(108px, 27vw, 190px); min-height: 0; flex: none; }
+  .rtw-key.gross .z { font-size: clamp(2rem, 13vw, 4rem); }
+  .rtw-key.mult .k { font-size: clamp(1.5rem, 8vw, 2.6rem); }
+  .rtw-key.gross.bull .z { font-size: clamp(1.8rem, 10vw, 3rem); }
+}
+
+/* Stechen im Round the World – dieselbe Karte wie im Finisher. */
+.rtw-stechen { margin: 0; border-color: var(--amber); }
+.rtw-stechen .btn { margin-top: 6px; }
+
+/* ================= Cricket im selben Licht ================= */
+/*
+ * Dieselbe Sprache wie im X01 und im Round the World: die Auswahl ist weiss
+ * mit blauem Schein, Rot bleibt dem Signal (Miss) vorbehalten. Treffer
+ * gluehen wie die Klinge, und wer vorn liegt, bekommt sie unter die Punkte
+ * gelegt.
+ */
+.cr-head.act, .cr-score.act {
+  background: var(--aktiv-flaeche); color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--aktiv-linie), 0 0 22px var(--schein);
+}
+.cr-head.act .cr-mpr { color: var(--text); }
+/* Die Spalte des Aktiven wird nur getoent. Jede Zelle einzeln weiss zu
+   umranden ergaebe ein Gitter, das lauter waere als die Marken darin --
+   den klaren Rahmen tragen nur Kopf und Fuss, also die Enden der Spalte. */
+.cr-mark.act { outline: 1px solid rgba(242, 238, 238, 0.14); background: var(--aktiv-flaeche); }
+.cr-mark.act.m3 { background: rgba(70, 170, 215, 0.12); }
+
+/* Die Zahlenspalte traegt nur noch einen Rahmen statt einer Fuellung –
+   sie beschriftet die Zeile, sie ist nicht selbst ein Wert. */
+.cr-num {
+  background: none;
+  box-shadow: inset 0 0 0 1px rgba(242, 238, 238, 0.28);
+  color: var(--text);
+}
+.cr-num.dead { background: var(--dead-bg); box-shadow: none; }
+
+/* Treffer gluehen: eine Marke zart, zwei deutlicher, zu ist die volle
+   Klinge. So sieht man den Fortschritt einer Zahl schon am Licht. */
+.cr-mark.m1 { color: var(--text); text-shadow: 0 0 6px var(--schein); }
+.cr-mark.m2 { color: var(--laser-hell); text-shadow: 0 0 7px var(--laser-weich); }
+.cr-mark.m3 {
+  color: #fff;
+  background: rgba(70, 170, 215, 0.10);
+  box-shadow: inset 0 0 0 1px var(--laser-weich), 0 0 14px var(--schein);
+  text-shadow: 0 0 6px var(--laser), 0 0 16px var(--laser-weich);
+}
+/* Bei allen zu: das Licht geht aus, die Zeile bringt nichts mehr. */
+.cr-cell.cr-mark.dead,
+.cr-cell.cr-mark.dead.m1,
+.cr-cell.cr-mark.dead.m2,
+.cr-cell.cr-mark.dead.m3 {
+  color: var(--dead); background: var(--dead-bg);
+  box-shadow: none; text-shadow: none;
+}
+
+/* Wer vorn liegt, bekommt die Klinge unter die Punktzahl gelegt. */
+.cr-score { position: relative; }
+.cr-score.fuehrt {
+  color: #fff;
+  background: linear-gradient(180deg, rgba(70, 170, 215, 0.20), rgba(70, 170, 215, 0.07));
+  text-shadow: 0 0 8px var(--laser), 0 0 18px var(--laser-weich);
+}
+.cr-score.fuehrt::after {
+  content: ''; position: absolute; left: 9px; right: 9px; bottom: 4px; height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--laser), var(--laser-hell) 55%, #fff);
+  box-shadow: 0 0 5px var(--laser), 0 0 13px var(--laser-weich);
+}
+/* Vorn UND am Wurf: der weisse Rahmen gewinnt, die Klinge bleibt. */
+.cr-score.act.fuehrt { background: var(--aktiv-flaeche); }
+
+/* Doppel und Triple im Eingabefeld waren rot – auch das ist kein Signal,
+   sondern eine Angabe. Miss bleibt rot, das ist eins. */
+.cg-block .mx { color: var(--laser-hell); }
+.cg-block button.skip { color: var(--muted); }

@@ -79,7 +79,7 @@
     return {
       v: 2,
       screen: 'setup',
-      settings: { start: 501, bestOf: 1, dartModeFrom: 170, cricketScoring: 1, finisherTo: 5 },
+      settings: { start: 501, bestOf: 1, dartModeFrom: 170, cricketScoring: 1, finisherTo: 5, rtwBoost: 1 },
       mode: '501',
       game: null,
       profiles: DEFAULT_PLAYERS.map(function (n, i) {
@@ -128,6 +128,8 @@
          auffliegen. Lieber verwerfen als abstürzen. */
       if (s.game && s.game.kind === 'finisher' && !Array.isArray(s.game.rounds)) s.game = null;
       if (s.settings.cricketScoring === undefined) s.settings.cricketScoring = 1;
+      /* Vor der Wahl gab es nur Boost -- wer von damals kommt, behaelt das. */
+      if (s.settings.rtwBoost === undefined) s.settings.rtwBoost = 1;
       if (FIN_TARGETS.indexOf(s.settings.finisherTo) < 0) s.settings.finisherTo = 5;
       s.profiles.forEach(function (p, i) { if (typeof p.hue !== 'number') p.hue = HUES[i % HUES.length]; });
       return s;
@@ -789,7 +791,7 @@
         });
         if (h.winner && map[h.winner]) map[h.winner].cricketWins++;
       } else if (kind === 'rtw') {
-        var rs = rtwState({ players: h.players, throws: h.throws });
+        var rs = rtwState({ players: h.players, throws: h.throws, boost: h.boost !== false });
         h.players.forEach(function (id) {
           if (!map[id]) return;
           map[id].rtwGames++;
@@ -968,7 +970,7 @@
      getroffen hat, wird übersprungen, und die angefangene Runde wird zu Ende
      gespielt, damit der spätere Startplatz nicht benachteiligt ist.
      Es gewinnt, wer den Bull mit den wenigsten Darts trifft; bei Gleichstand
-     der frühere Treffer. */
+     entscheidet ein Stechen auf Bull. */
   function rtwState(g) {
     var n = g.players.length;
     var st = { target: {}, darts: {}, hits: {}, finished: {}, winner: null, closing: false, turn: 0, visit: [] };
@@ -987,7 +989,12 @@
         st.finished[pid] = { darts: st.darts[pid], at: i };
       } else if (t.n && target !== 25 && t.n === target) {
         st.hits[pid]++;
-        var next = target + t.m;
+        /* Einfach: nur die Zahl zaehlt, jeder Treffer rueckt genau ein Feld
+           weiter. Boost: Double ueberspringt eine Zahl, Triple zwei.
+           Die Spielart steht am Spiel, nicht in den Einstellungen -- sonst
+           wuerde ein Umschalten mitten im Abend jeden schon geworfenen Dart
+           rueckwirkend anders bewerten. */
+        var next = target + (g.boost ? t.m : 1);
         st.target[pid] = next > 20 ? 25 : next;
       }
 
@@ -1019,7 +1026,21 @@
           var fa = st.finished[a], fb = st.finished[b];
           return fa.darts !== fb.darts ? fa.darts - fb.darts : fa.at - fb.at;
         });
-        st.winner = done[0];
+        /*
+         * Gleich viele Darts heisst gleich gut. Vorher gewann der frühere
+         * Treffer – das ist aber nur der bessere Startplatz, keine Leistung.
+         * Also entscheidet der Bull, genau wie im Finisher. Das Ergebnis
+         * lässt sich nicht aus den Würfen ableiten und steht deshalb am
+         * Spiel, nicht im Zustand.
+         */
+        var beste = st.finished[done[0]].darts;
+        st.gleich = done.filter(function (id) { return st.finished[id].darts === beste; });
+        if (st.gleich.length > 1) {
+          if (g.stechenSieger && st.gleich.indexOf(g.stechenSieger) >= 0) st.winner = g.stechenSieger;
+          else st.stechen = st.gleich;
+        } else {
+          st.winner = done[0];
+        }
       }
     }
     return st;
@@ -1028,6 +1049,8 @@
   function rtwDart(mult, num) {
     var g = S.game;
     if (!g || g.done || settling()) return;
+    // Im Stechen wird nicht mehr eingetragen, sondern entschieden.
+    if (rtwState(g).stechen) return;
     var m = num === 25 ? (mult === 2 ? 2 : 1) : mult;
     g.throws.push({ n: num, m: num === 0 ? 0 : m });
     UI.mult = 1;
@@ -1060,6 +1083,9 @@
     if (g && g.kind === 'quick') return undo();
     if (!g || !g.throws.length) return;
     g.throws.pop();
+    /* Auch das Stechen zurueck: sonst staende der Sieger noch fest, obwohl
+       der Dart, der den Gleichstand ueberhaupt erzeugt hat, weg ist. */
+    g.stechenSieger = null;
     g.done = false; g.winner = null; g.at = null;
     UI.overlay = null;
     UI.mult = 1;
@@ -1246,6 +1272,7 @@
       scoring: kind === 'cricket' ? S.settings.cricketScoring === 1 : false,
       done: false, winner: null, started: false
     };
+    if (kind === 'rtw') S.game.boost = S.settings.rtwBoost === 1;
     if (kind === 'finisher') {
       S.game.ziel = S.settings.finisherTo;
       S.game.rounds = [];
@@ -1298,6 +1325,10 @@
     } else {
       eintrag.scoring = g.scoring;
       eintrag.throws = g.throws;
+      /* Ohne die Spielart liesse sich das Spiel spaeter nicht nachrechnen:
+         dieselben Wuerfe ergeben in Einfach und Boost verschiedene
+         Zahlenfolgen. Altbestand hat sie nicht und war immer Boost. */
+      if (g.kind === 'rtw') eintrag.boost = g.boost !== false;
     }
     S.history.unshift(eintrag);
     if (S.history.length > MAX_HISTORY) S.history.length = MAX_HISTORY;
@@ -2180,21 +2211,28 @@
         }).join('');
     }).join('');
 
+    var zu = function (id) {
+      return CRICKET_NUMBERS.filter(function (n) { return st.marks[id][n] >= 3; }).length;
+    };
+    var lead = g.players.slice().sort(function (a, b) {
+      return g.scoring ? (st.score[b] - st.score[a]) || (zu(b) - zu(a)) : (zu(b) - zu(a));
+    })[0];
+    /* „Vorn" heisst nur etwas, wenn ueberhaupt schon etwas passiert ist –
+       am Anfang stehen alle auf null, und dann waere der Erste in der Liste
+       willkuerlich der Anfuehrer. Und allein fuehrt man nicht. */
+    var fuehrt = g.players.length > 1 && (g.scoring ? st.score[lead] > 0 : zu(lead) > 0)
+      ? lead : null;
+
     var foot = '<div class="cr-cell cr-num">' + (g.scoring ? 'Pkt' : 'Zu') + '</div>' +
       g.players.map(function (id) {
-        var val = g.scoring ? st.score[id] : CRICKET_NUMBERS.filter(function (n) { return st.marks[id][n] >= 3; }).length + '/7';
-        return '<div class="cr-cell cr-score ' + (id === active ? 'act' : '') + '">' + val + '</div>';
+        var val = g.scoring ? st.score[id] : zu(id) + '/7';
+        return '<div class="cr-cell cr-score ' + (id === active ? 'act ' : '') +
+          (id === fuehrt ? 'fuehrt' : '') + '">' + val + '</div>';
       }).join('');
 
     $('cricket-board').innerHTML =
       '<div class="cr-grid" style="grid-template-columns:44px repeat(' + g.players.length + ',minmax(52px,1fr))">' +
       head + rows + foot + '</div>';
-
-    var lead = g.players.slice().sort(function (a, b) {
-      var ca = CRICKET_NUMBERS.filter(function (n) { return st.marks[a][n] >= 3; }).length;
-      var cb = CRICKET_NUMBERS.filter(function (n) { return st.marks[b][n] >= 3; }).length;
-      return g.scoring ? (st.score[b] - st.score[a]) || (cb - ca) : (cb - ca);
-    })[0];
     $('cricket-legend').innerHTML =
       '<span>/ = 1 · ✕ = 2 · ⊗ = zu</span>' +
       '<span>Grau = bei allen zu, bringt keine Punkte mehr</span>' +
@@ -2245,7 +2283,9 @@
     var active = g.done ? g.winner : gameTurnPlayer(g);
     var visit = gameVisitDarts(g);
 
-    $('rtw-sub').textContent = 'Einfach 1 weiter · Doppel überspringt 1 · Triple überspringt 2';
+    $('rtw-sub').textContent = g.boost
+      ? 'Boost · Doppel überspringt 1 · Triple überspringt 2'
+      : 'Einfach · jeder Treffer rückt ein Feld weiter';
 
     $('rtw-board').innerHTML = g.players.map(function (id) {
       var t = st.target[id];
@@ -2268,9 +2308,11 @@
 
     $('rtw-turn').innerHTML = g.done
       ? '<b>' + esc(pname(g.winner)) + '</b> gewinnt'
-      : (st.closing ? '<span class="muted">Runde wird zu Ende gespielt · </span>' : '') +
-        '<span class="muted">Am Wurf</span> <b>' + esc(pname(active)) + '</b> <span class="muted">auf</span> <b>' +
-        (st.target[active] === 25 ? 'Bull' : st.target[active]) + '</b>';
+      : st.stechen
+        ? '<b>Stechen</b> <span class="muted">– der Bull entscheidet</span>'
+        : (st.closing ? '<span class="muted">Runde wird zu Ende gespielt · </span>' : '') +
+          '<span class="muted">Am Wurf</span> <b>' + esc(pname(active)) + '</b> <span class="muted">auf</span> <b>' +
+          (st.target[active] === 25 ? 'Bull' : st.target[active]) + '</b>';
 
     $('rtw-darts').innerHTML = [0, 1, 2].map(function (i) {
       var d = visit[i];
@@ -2301,6 +2343,14 @@
         '<button class="rtw-key gross bull" data-num="25" data-mult="1">' +
           '<span class="z">Bull</span><span class="sub">Spiel gewonnen</span></button>' +
         '</div>';
+    } else if (!g.boost) {
+      /* Einfach: es gibt nur eine Antwort – getroffen oder nicht. Dann
+         braucht die Zahl auch keine Nachbarn und nimmt die Breite allein. */
+      treffer = '<div class="rtw-treffer nur-zahl">' +
+        '<button class="rtw-key gross" data-num="' + target + '" data-mult="1">' +
+          '<span class="z">' + target + '</span>' +
+          '<span class="sub">' + (target === 20 ? 'dann Bull' : 'dann ' + (target + 1)) + '</span></button>' +
+        '</div>';
     } else {
       var jump = function (mult) {
         var next = target + mult;
@@ -2314,6 +2364,24 @@
         '<button class="rtw-key mult" data-num="' + target + '" data-mult="3">' +
           '<span class="k">T' + target + '</span><span class="sub">' + jump(3) + '</span></button>' +
         '</div>';
+    }
+
+    /*
+     * Gleich viele Darts – jetzt wirft jeder der Gleichauf einen Dart auf
+     * den Bull, und wer am nächsten dran war, wird angetippt. Wie beim
+     * Finisher wird das Ergebnis eingetragen, nicht gerechnet: die App sieht
+     * das Board nicht.
+     */
+    if (st.stechen) {
+      $('rtw-pad').innerHTML = '<div class="card rtw-stechen"><h2>Nearest to the Bull</h2>' +
+        '<p class="hint">' + st.stechen.map(function (id) { return esc(pname(id)); }).join(' und ') +
+        ' sind mit <b>' + plural(st.finished[st.stechen[0]].darts, 'Dart', 'Darts') +
+        '</b> gleichauf. Jeder wirft einen Dart auf den Bull – wer am nächsten dran ist, gewinnt.</p>' +
+        st.stechen.map(function (id) {
+          return '<button class="btn full" data-action="rtw-stechen" data-id="' + id + '">' +
+            esc(pname(id)) + ' war näher</button>';
+        }).join('') + '</div>';
+      return;
     }
 
     $('rtw-pad').innerHTML = rtwFortschritt(st, active) +
@@ -2997,6 +3065,19 @@
         if (S.game && S.game.done) finishGame();
         else { S.screen = 'setup'; UI.overlay = null; save(); render(); }
         break;
+      case 'rtw-stechen': {
+        var rsg = S.game;
+        if (!rsg || rsg.kind !== 'rtw' || rsg.done) return;
+        var wer = el.getAttribute('data-id');
+        var rss = rtwState(rsg);
+        // Nur wer wirklich gleichauf ist, kann das Stechen gewinnen.
+        if (!rss.stechen || rss.stechen.indexOf(wer) < 0) return;
+        rsg.stechenSieger = wer;
+        rsg.done = true; rsg.winner = wer; rsg.at = Date.now();
+        UI.overlay = { type: 'game-done', pid: wer };
+        save(); render();
+        break;
+      }
       case 'fin-stechen': {
         var fg = S.game;
         if (fg && fg.kind === 'finisher') { finisherRundeAn(fg, el.getAttribute('data-id')); save(); render(); }
