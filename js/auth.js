@@ -313,7 +313,6 @@
         '<div class="sm">' + esc(nutzer.email) + '</div></div>' +
       '</div>' +
       (syncText ? '<p class="hint">' + esc(syncText) + '</p>' : '') +
-      '<button class="btn full" data-action="konto-sync">Jetzt abgleichen</button>' +
       (offen ? '<button class="btn full" data-action="konto-zuordnen">Alte Profile zuordnen (' + offen + ')</button>' : '') +
       '<button class="btn ghost full" data-action="konto-passwort">Passwort ändern</button>' +
       '<button class="btn ghost full" data-action="konto-logout">Abmelden</button>' +
@@ -453,16 +452,6 @@
 
       case 'konto-zuordnung-speichern':
         zuordnungSpeichern(document.getElementById('konto-inhalt'));
-        break;
-
-      case 'konto-sync':
-        if (!window.DartSync) return;
-        setzeMeldung('Gleiche ab …', 'ok'); render();
-        window.DartSync.jetzt().then(function (bericht) {
-          setzeMeldung(bericht, 'ok');
-          letzterSchluessel = null;
-          render();
-        }).catch(fehlerZeigen);
         break;
     }
   }

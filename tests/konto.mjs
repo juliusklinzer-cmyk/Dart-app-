@@ -267,7 +267,7 @@ async function main() {
     group('Kollegen tauchen ohne Neuladen auf');
     // Nach dem Anmelden landet man im Turnier, nicht im Konto – also hin.
     await julius.page.locator('#nav-konto').click();
-    await julius.page.locator('[data-action="konto-sync"]').click();
+    await julius.page.evaluate(() => window.DartSync.jetzt());
     await julius.page.waitForTimeout(600);
     check('Julius sieht Tobis Account', await julius.page.evaluate(() =>
       window.DartKonto.roster().some((r) => r.name === 'Tobi')));
@@ -353,7 +353,7 @@ async function main() {
     group('Tobi bekommt das Spiel auf sein Gerät');
     // Nach dem Anmelden steht man im Turnier, nicht im Konto -- also hin.
     await tobi.page.locator('#nav-konto').click();
-    await tobi.page.locator('[data-action="konto-sync"]').click();
+    await tobi.page.evaluate(() => window.DartSync.jetzt());
     await tobi.page.waitForTimeout(1200);
     const tobiHist = await tobi.page.evaluate(() => window.__dart.state().history);
     check('Spiel ist angekommen', tobiHist.length === 1, 'Historie: ' + tobiHist.length);
@@ -427,6 +427,50 @@ async function main() {
      * bekaeme Tobi Julius' Doppel vorgeschlagen, sobald Julius den Abend
      * mitschreibt -- und genau das ist der Normalfall.
      */
+    /*
+     * Die Doppel-Warnung meldete bisher jede Wiederholung derselben
+     * Besetzung -- also den Normalfall. Gemeint war immer nur der Fall, dass
+     * zwei Leute denselben Abend aufgeschrieben haben.
+     */
+    group('Doppel-Warnung nur bei zwei Schreibern');
+    const warnung = () => julius.page.evaluate(() => window.DartSync.langText());
+    const setzeVerlauf = (eintraege) => julius.page.evaluate((liste) => {
+      const S = window.__dart.state();
+      S.sicherung = JSON.stringify(S.history);
+      S.history = liste;
+      window.__dart.save();
+    }, eintraege);
+    const jetztMs = Date.now();
+    /* Vollstaendig geformte Eintraege: career() rechnet ueber die Historie,
+       ein Eintrag ohne Wurfliste wuerde beim naechsten Zeichnen krachen. */
+    const paar = (vonA, vonB) => [
+      { id: 'd1', kind: 'cricket', at: jetztMs, players: ['x', 'y'], scoring: false, throws: [], winner: 'x', von: vonA },
+      { id: 'd2', kind: 'cricket', at: jetztMs + 60000, players: ['y', 'x'], scoring: false, throws: [], winner: 'y', von: vonB }
+    ].map((e) => (e.von ? e : (delete e.von, e)));
+
+    await setzeVerlauf(paar(null, null));
+    check('zwei Partien derselben Leute vom selben Schreiber: keine Warnung',
+      !(await warnung()).includes('Achtung'), await warnung());
+    await setzeVerlauf(paar(null, 'Tobi'));
+    check('einmal selbst, einmal von Tobi: Warnung',
+      (await warnung()).includes('Achtung'), await warnung());
+    check('und sie sagt, worum es geht',
+      (await warnung()).includes('von zwei Leuten aufgeschrieben'), await warnung());
+    await setzeVerlauf(paar('Lenas', 'Tobi'));
+    check('auch aus der Sicht eines Dritten',
+      (await warnung()).includes('Achtung'), await warnung());
+    await setzeVerlauf(paar('Tobi', 'Tobi'));
+    check('zweimal von Tobi geholt heisst nicht doppelt eingetragen',
+      !(await warnung()).includes('Achtung'), await warnung());
+    await julius.page.evaluate(() => {
+      const S = window.__dart.state();
+      S.history = JSON.parse(S.sicherung);
+      delete S.sicherung;
+      window.__dart.save();
+    });
+    check('der echte Verlauf ist unversehrt zurueck',
+      (await julius.page.evaluate(() => window.__dart.state().history.length)) > 0);
+
     group('Lieblingsdoppel reist mit dem Account');
     await julius.page.locator('#nav [data-screen="setup"]').click();
     await julius.page.locator('.roster-item[data-id="' + juliusId + '"] .edit').click();

@@ -262,8 +262,8 @@
     var doppel = moeglicheDoppel();
     if (doppel) {
       teile.push(doppel === 1
-        ? 'Achtung: 1 Spiel sieht aus wie ein Doppeleintrag (gleiche Besetzung, fast gleiche Zeit).'
-        : 'Achtung: ' + doppel + ' Spiele sehen aus wie Doppeleinträge.');
+        ? 'Achtung: 1 Spiel wurde offenbar von zwei Leuten aufgeschrieben – gleiche Besetzung, fast gleiche Zeit. Eins davon lässt sich im Verlauf löschen.'
+        : 'Achtung: ' + doppel + ' Spiele wurden offenbar von zwei Leuten aufgeschrieben. Sie zählen sonst doppelt.');
     }
     if (letzterFehler) teile.push(letzterFehler);
     return teile.join(' ');
@@ -273,7 +273,20 @@
    * Schreiben zwei Geräte denselben Abend mit, zählt er doppelt. Verhindern
    * können wir das nicht – aber es auffallen lassen. Wer es eingetragen hat,
    * kann es über die Historie zurückziehen.
+   *
+   * Entscheidend ist, dass die beiden von VERSCHIEDENEN Leuten stammen.
+   * Gleiche Besetzung kurz hintereinander ist sonst der Normalfall: zwei
+   * Partien derselben Leute in einer halben Stunde sind kein Doppeleintrag,
+   * sondern ein normaler Abend. Vorher hat die Warnung genau das gemeldet
+   * und lag damit fast immer daneben.
+   *
+   * Das Feld `von` steht an jedem Eintrag, der vom Server kam und von jemand
+   * anderem aufgeschrieben wurde; an den eigenen steht es nicht. Damit
+   * stimmt die Prüfung aus jeder Sicht: bei dem, der selbst mitgeschrieben
+   * hat, genauso wie bei einem Dritten, der beide Fassungen geholt hat.
    */
+  function schreiber(h) { return h.von || ''; }
+
   function moeglicheDoppel() {
     var hist = D.state().history;
     var treffer = 0;
@@ -282,6 +295,7 @@
         var a = hist[i], b = hist[j];
         if (Math.abs((a.at || 0) - (b.at || 0)) > DOPPEL_FENSTER) break;
         if (art(a) !== art(b)) continue;
+        if (schreiber(a) === schreiber(b)) continue;   // derselbe hat beide notiert
         var sa = beteiligte(a).slice().sort().join(',');
         var sb = beteiligte(b).slice().sort().join(',');
         if (sa && sa === sb) treffer++;
