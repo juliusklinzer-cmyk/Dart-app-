@@ -605,6 +605,13 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   border-radius: 8px; padding: 6px 8px; font-size: 0.82rem; font-weight: 700; font-variant-numeric: tabular-nums;
 }
 .visit-darts .d.empty { color: var(--muted); font-weight: 500; }
+/* Fertige Aufnahme des Vorgängers (Cricket, RTW): gedimmt und beschriftet,
+   damit sie neben „Am Wurf" nicht wie die Würfe des Nächsten aussieht. */
+.visit-darts .d.alt { opacity: 0.5; }
+.visit-darts .d-vorher {
+  align-self: center; font-size: 0.62rem; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--muted);
+}
 
 .pad { display: block; }
 .quick-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 8px; }

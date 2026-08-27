@@ -2087,6 +2087,12 @@
     ] : mode === 'cricket' ? [
       { k: 'mpr', t: 'Beste MPR' },
       { k: 'cricketWins', t: 'Meiste Siege' }
+    ] : mode === 'finisher' ? [
+      /* Eigene Rekorde – vorher standen hier versehentlich die von
+         Round the World („Wenigste Darts" eines ganz anderen Spiels). */
+      { k: 'finBest', t: 'Schnellstes Finish' },
+      { k: 'finHigh', t: 'Höchste Zahl' },
+      { k: 'finWins', t: 'Meiste Siege' }
     ] : [
       { k: 'rtwBest', t: 'Wenigste Darts' },
       { k: 'rtwWins', t: 'Meiste Siege' }
@@ -2102,7 +2108,8 @@
     }).join('');
 
     $('log-title').textContent = mode === '501' ? 'Alle Classic-Spiele'
-      : mode === 'cricket' ? 'Alle Cricket-Spiele' : 'Alle Trainings';
+      : mode === 'cricket' ? 'Alle Cricket-Spiele'
+      : mode === 'finisher' ? 'Alle Finisher-Spiele' : 'Alle Trainings';
     $('match-log').innerHTML = log.slice(0, 30).map(function (row) {
       if (row.kind !== '501') {
         var h = row.h;
@@ -2575,10 +2582,16 @@
       ? '<b>' + esc(pname(g.winner)) + '</b> gewinnt'
       : '<span class="muted">Am Wurf</span> <b>' + esc(pname(active)) + '</b>';
 
-    $('cricket-darts').innerHTML = [0, 1, 2].map(function (i) {
-      var d = visit[i];
-      return '<div class="d ' + (d ? '' : 'empty') + '">' + (d ? throwLabel(d) : '–') + '</div>';
-    }).join('');
+    /* Nach einer vollen Aufnahme zeigen die Chips noch die Darts des
+       Vorgängers (zum Nachprüfen – einen Verlauf gibt es hier nicht).
+       Damit sie neben „Am Wurf <Nächster>" nicht wie dessen Würfe aussehen,
+       stehen sie gedimmt hinter einem „zuletzt". */
+    var crVorher = !g.done && g.throws.length > 0 && g.throws.length % 3 === 0;
+    $('cricket-darts').innerHTML = (crVorher ? '<div class="d-vorher">zuletzt</div>' : '') +
+      [0, 1, 2].map(function (i) {
+        var d = visit[i];
+        return '<div class="d ' + (d ? (crVorher ? 'alt' : '') : 'empty') + '">' + (d ? throwLabel(d) : '–') + '</div>';
+      }).join('');
 
     /* Alle Felder auf einen Blick: je ein Block für Single, Double und
        Triple – ein Tipp je Dart, kein Umschalten. */
@@ -2649,10 +2662,13 @@
           '<span class="muted">Am Wurf</span> <b>' + esc(pname(active)) + '</b> <span class="muted">auf</span> <b>' +
           (st.target[active] === 25 ? 'Bull' : st.target[active]) + '</b>';
 
-    $('rtw-darts').innerHTML = [0, 1, 2].map(function (i) {
-      var d = visit[i];
-      return '<div class="d ' + (d ? '' : 'empty') + '">' + (d ? throwLabel(d) : '–') + '</div>';
-    }).join('');
+    // Wie im Cricket: die fertige Aufnahme des Vorgängers gedimmt kennzeichnen.
+    var rwVorher = !g.done && st.inVisit === 0 && g.throws.length > 0;
+    $('rtw-darts').innerHTML = (rwVorher ? '<div class="d-vorher">zuletzt</div>' : '') +
+      [0, 1, 2].map(function (i) {
+        var d = visit[i];
+        return '<div class="d ' + (d ? (rwVorher ? 'alt' : '') : 'empty') + '">' + (d ? throwLabel(d) : '–') + '</div>';
+      }).join('');
 
     /*
      * Es wird immer nur auf die eigene Zahl geworfen. Die drei Treffer, die
@@ -2878,8 +2894,11 @@
       }
     } else {
       $('fin-hint').innerHTML = '<span class="none">' +
-        (rd.stechen ? 'Stechen auf Bull' : g.done ? 'Spiel beendet' : 'Runde läuft aus') + '</span>';
+        (g.done ? 'Spiel beendet' : 'Runde läuft aus') + '</span>';
     }
+    /* Beim Stechen sagt schon die gelbe Karte, worum es geht – die leere
+       Finish-Leiste würde denselben Satz nur doppeln. */
+    $('fin-hint').classList.toggle('hidden', !!rd.stechen);
 
     /* Der Verlauf als eine Liste mit Namen – wie im Schnellen Spiel ab drei
        Spielern. Ältere Runden bleiben mit Trenner darunter stehen. */
