@@ -351,17 +351,22 @@
     </div>
 
     <!-- Turnier-Modus: für den Liga-Abend mit Bildschirm am Board.
-         Feld und Zeile stehen fest im HTML, damit das Feld beim
-         Neuzeichnen den Fokus behält – Eingabe über eine echte Tastatur,
-         Enter bucht, Löschen nimmt Ziffern und dann Aufnahmen zurück. -->
+         Drei Spalten: links die Aufnahmen des einen Spielers, in der Mitte
+         groß die Eingabe, rechts die des anderen. Das Feld steht fest im
+         HTML, damit es beim Neuzeichnen den Fokus behält – Eingabe über
+         eine echte Tastatur: Enter bucht, Löschen nimmt Ziffern und dann
+         Aufnahmen zurück, Esc beendet den Modus, Shift zeigt die Wurfliste. -->
     <div id="pad-key" class="pad pad-key hidden">
-      <div id="key-last" class="key-last"></div>
-      <form id="key-form" autocomplete="off">
-        <input id="key-input" type="text" inputmode="numeric" autocomplete="off"
-               enterkeyhint="done" maxlength="3" placeholder="Punkte · Enter"
-               aria-label="Punkte der Aufnahme eintippen">
-      </form>
-      <div id="key-error" class="input-error"></div>
+      <div id="key-hist-l" class="key-hist"></div>
+      <div class="key-mitte">
+        <form id="key-form" autocomplete="off">
+          <input id="key-input" type="text" inputmode="numeric" autocomplete="off"
+                 enterkeyhint="done" maxlength="3" placeholder="Punkte · Enter"
+                 aria-label="Punkte der Aufnahme eintippen">
+        </form>
+        <div id="key-error" class="input-error"></div>
+      </div>
+      <div id="key-hist-r" class="key-hist"></div>
     </div>
   </div>
   </div>

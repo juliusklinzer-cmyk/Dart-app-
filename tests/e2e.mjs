@@ -1314,6 +1314,7 @@ check('dritter Umschalter neben Punkte und Einzel-Darts',
 await page.locator('#mode-toggle button[data-mode="turnier"]').click();
 check('Tastatur-Feld sichtbar', await visible('#pad-key'));
 check('Zahlenfeld und Einzel-Darts weg', !(await visible('#pad-total')) && !(await visible('#pad-darts')));
+check('auch der Umschalter selbst ist weg – Esc führt zurück', !(await visible('#mode-toggle')));
 check('Verlauf ausgeblendet', !(await page.locator('#history').isVisible()));
 check('Finish-Leiste bleibt stehen', await visible('#checkout-bar'));
 check('Rest steht in Plakatgröße', await page.locator('.pcard .rest').first()
@@ -1325,8 +1326,12 @@ check('das Feld hat von allein den Fokus',
 await page.keyboard.type('60');
 await page.keyboard.press('Enter');
 check('Aufnahme gebucht: 301 - 60 = 241', (await rest(0)) === '241', await rest(0));
-check('die letzte Aufnahme steht zur Kontrolle da',
-  (await text('#key-last')).includes('60'), await text('#key-last'));
+check('die letzte Aufnahme steht in der Spielerkarte',
+  (await text('#scoreboard')).includes('Letzte 60'), await text('#scoreboard'));
+check('und in der Wurfliste neben der Eingabe', await page.evaluate(() => {
+  const t = document.getElementById('key-hist-l').innerText;
+  return t.includes('60') && t.includes('Rest 241');
+}), await text('#key-hist-l'));
 check('die Sechzig ruft den Löwen', (await page.locator('.feier .feier-logo').count()) === 1 &&
   (await text('.feier')).includes('SECHZIG'));
 
@@ -1344,6 +1349,13 @@ await page.keyboard.press('Enter');
 check('der Modus bleibt nach der Aufnahme an', await visible('#pad-key'));
 check('45 gebucht', (await rest(0)) === '256', await rest(0));
 
+/* Shift gedrückt halten: die Wurfliste, je Spieler auf seiner Seite. */
+await page.keyboard.down('Shift');
+check('Shift zeigt die Wurfliste', await page.locator('#history').isVisible());
+check('mit den Aufnahmen beider Seiten', (await page.locator('#history .col').count()) === 2);
+await page.keyboard.up('Shift');
+check('Loslassen führt in die Spielansicht zurück', !(await page.locator('#history').isVisible()));
+
 /* Die Sechzig kommt in jedem Eingabemodus – auch bei Punkte-Eingabe. Die
    erste Feier steht noch ein paar Sekunden im Bild, fürs Prüfen wegräumen. */
 await page.evaluate(() => {
@@ -1351,8 +1363,8 @@ await page.evaluate(() => {
   f.classList.remove('an', 'sechzig');
   f.innerHTML = '';
 });
-await page.locator('#mode-toggle button[data-mode="total"]').click();
-check('zurück zur Punkte-Eingabe', await visible('#pad-total'));
+await page.keyboard.press('Escape');
+check('Esc beendet den Turnier-Modus', await visible('#pad-total'));
 await typeScore(60);
 await page.waitForTimeout(100);
 check('der Löwe kommt auch bei der Punkte-Eingabe',

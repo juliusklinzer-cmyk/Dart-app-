@@ -2314,13 +2314,29 @@
       var darts = dartsIn(leg, pid) + (pid === active ? UI.darts.length : 0);
       var scored = matchStart(m) - remainingIn(leg, pid) + (pid === active ? pendingSum : 0);
       var avg = darts ? (scored / darts * 3).toFixed(1) : '–';
-      return '<div class="pcard ' + (pid === active ? 'active' : '') + '">' +
-        '<div class="pname">' + avatarHTML(profile(pid), 'sm') + esc(pname(pid)) + '</div>' +
+      var zeile, meta;
+      if (UI.turnier) {
+        /* Turnier-Modus: die letzte Aufnahme steht direkt beim Spieler – wer
+           am Board tippt, sieht so ohne Umweg, ob richtig geschrieben wurde. */
+        var lv = null;
+        for (var vi = leg.visits.length - 1; vi >= 0 && !lv; vi--) {
+          if (leg.visits[vi].p === pid) lv = leg.visits[vi];
+        }
+        zeile = (schnell ? '' : 'Legs ' + legsWon(m, pid) + ' · ') +
+          (lv ? 'Letzte ' + (lv.b ? 'Bust (' + lv.o + ')' : lv.s) : 'Noch kein Wurf') +
+          ' · ' + plural(darts, 'Dart', 'Darts');
+        meta = '<span>Ø <b>' + avg + '</b></span>';
+      } else {
         /* Im Schnellen Spiel gibt es keine Legs zu zählen – dort steht die
            geworfene Dartzahl, die sagt in dem Moment mehr. */
-        '<div class="legs">' + (schnell ? plural(darts, 'Dart', 'Darts') : 'Legs ' + legsWon(m, pid)) + '</div>' +
+        zeile = schnell ? plural(darts, 'Dart', 'Darts') : 'Legs ' + legsWon(m, pid);
+        meta = '<span>Ø <b>' + avg + '</b></span><span>Darts <b>' + darts + '</b></span>';
+      }
+      return '<div class="pcard ' + (pid === active ? 'active' : '') + '">' +
+        '<div class="pname">' + avatarHTML(profile(pid), 'sm') + esc(pname(pid)) + '</div>' +
+        '<div class="legs">' + zeile + '</div>' +
         '<div class="rest">' + rest + '</div>' +
-        '<div class="meta"><span>Ø <b>' + avg + '</b></span><span>Darts <b>' + darts + '</b></span></div>' +
+        '<div class="meta">' + meta + '</div>' +
         '</div>';
     }).join('');
 
@@ -2429,20 +2445,24 @@
     $('screen-game').classList.toggle('turnier', mode === 'turnier');
 
     if (mode === 'turnier') {
-      /* Die letzte Aufnahme steht zur Kontrolle unter der Anzeige – wer am
-         Board tippt, sieht so sofort, ob richtig geschrieben wurde. Nach
-         einem Legwechsel zählt die letzte Aufnahme des vorigen Legs. */
-      var letzte = null;
-      for (var lli = m.legs.length - 1; lli >= 0 && !letzte; lli--) {
-        var lvs = m.legs[lli].visits;
-        if (lvs.length) letzte = lvs[lvs.length - 1];
-      }
-      $('key-last').innerHTML = letzte
-        ? '<span class="muted">Letzte Aufnahme</span> <b>' + esc(pname(letzte.p)) + '</b>' +
-          (letzte.b
-            ? '<b class="bust">' + letzte.o + ' · Bust</b>'
-            : '<b class="pts">' + letzte.s + (letzte.c ? ' · Checkout' : '') + '</b>')
-        : '<span class="muted">Noch keine Aufnahme</span>';
+      /* Links und rechts der Eingabe stehen die Aufnahmen des laufenden Legs
+         je Spieler auf seiner Seite, neueste oben – die letzte auch noch mal
+         direkt in der Spielerkarte. */
+      var histSpalte = function (pid) {
+        if (!pid) return '';
+        var restLauf = legStart(leg);
+        var zeilen = [];
+        leg.visits.forEach(function (v) {
+          if (v.p !== pid) return;
+          if (!v.b) restLauf -= v.s;
+          zeilen.push('<div class="v ' + (v.b ? 'bust' : v.c ? 'co' : '') + '">' +
+            '<span class="s">' + (v.b ? v.o : v.s) + '</span>' +
+            '<span class="r">' + (v.b ? 'Bust' : 'Rest ' + restLauf) + '</span></div>');
+        });
+        return zeilen.reverse().join('');
+      };
+      $('key-hist-l').innerHTML = histSpalte(m.p[0]);
+      $('key-hist-r').innerHTML = histSpalte(m.p[1]);
       $('key-error').textContent = UI.error;
       var feld = $('key-input');
       if (!UI.overlay && !m.done && document.activeElement !== feld) feld.focus();
@@ -3916,6 +3936,14 @@
       UI.overlay = null; UI.input = ''; render();
       return;
     }
+    /* Esc beendet den Turnier-Modus – der Umschalter ist dort ausgeblendet,
+       die Tastatur ist der einzige Weg zurück. Ein offener Dialog geht vor. */
+    if (ev.key === 'Escape' && !UI.overlay && S.screen === 'game' && UI.turnier) {
+      UI.turnier = false;
+      S.settings.turnierModus = 0;
+      save(); render();
+      return;
+    }
     if (ev.key !== 'Enter' && ev.key !== ' ') return;
     var t = ev.target.closest('[role="button"][data-action]');
     if (!t) return;
@@ -3971,6 +3999,24 @@
       if (keyFeld.value !== sauber) keyFeld.value = sauber;
     });
   }
+
+  /* Shift gedrückt halten zeigt die Wurfliste des Matches – je Spieler auf
+     seiner Seite, alle Legs mit Trennern. Loslassen führt zurück in die
+     Spielansicht; verliert das Fenster den Fokus (Alt-Tab), klappt die
+     Ansicht ebenfalls zu, sonst bliebe sie hängen. */
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key !== 'Shift' || S.screen !== 'game' || !UI.turnier) return;
+    $('screen-game').classList.add('verlauf');
+  });
+  document.addEventListener('keyup', function (ev) {
+    if (ev.key !== 'Shift') return;
+    var sgEl = $('screen-game');
+    if (sgEl) sgEl.classList.remove('verlauf');
+  });
+  window.addEventListener('blur', function () {
+    var sgEl = $('screen-game');
+    if (sgEl) sgEl.classList.remove('verlauf');
+  });
 
   /* Verliert das Feld den Fokus (ein Tipp daneben genügt), holt der nächste
      Tastendruck ihn zurück – am Board soll niemand erst die Maus suchen. */

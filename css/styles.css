@@ -1881,12 +1881,15 @@ button, input, select, textarea { font-family: inherit; }
 /* ================= Turnier-Modus ================= */
 /*
  * Für Ligaspiele, wenn der Bildschirm vorn am Board hängt: die Reste beider
- * Spieler in Plakatgröße, darunter nur der Finish-Weg und die letzte
- * Aufnahme zur Kontrolle. Eingetippt wird auf einer echten Tastatur in das
- * Freitextfeld – Enter bucht die Aufnahme, Löschen nimmt erst Ziffern und
- * im leeren Feld die letzte Aufnahme zurück.
+ * Spieler in Plakatgröße, der Finish-Weg groß genug für die Abwurflinie,
+ * unten drei Spalten – links und rechts die Aufnahmen je Spieler, in der
+ * Mitte groß die Eingabe. Getippt wird auf einer echten Tastatur: Enter
+ * bucht, Löschen nimmt Ziffern und dann Aufnahmen zurück, Esc beendet den
+ * Modus (der Umschalter ist hier ausgeblendet), Shift zeigt die Wurfliste.
  */
 #screen-game.turnier #history { display: none; }
+#screen-game.turnier .mode-row { display: none; }
+#screen-game.turnier .game-turn { display: none; }
 #screen-game.turnier .game-main { flex: 1; min-height: 0; }
 #screen-game.turnier .scoreboard { flex: 1; min-height: 0; grid-auto-rows: 1fr; }
 #screen-game.turnier .pcard {
@@ -1900,31 +1903,74 @@ button, input, select, textarea { font-family: inherit; }
 #screen-game.turnier .scoreboard.viele .pcard .rest {
   font-size: clamp(2.6rem, min(16vw, 18vh), 8rem);
 }
-/* Auch Name und Finish-Weg müssen von der Abwurflinie aus lesbar sein. */
-#screen-game.turnier .pcard .pname { font-size: 1.2rem; }
-#screen-game.turnier .pcard .legs, #screen-game.turnier .pcard .meta { font-size: 0.9rem; }
-#screen-game.turnier .checkout-bar { min-height: 56px; }
-#screen-game.turnier .checkout-bar .chip { font-size: 1.3rem; padding: 8px 14px; }
+/* Auch Name und die letzte Aufnahme müssen von der Abwurflinie aus lesbar sein. */
+#screen-game.turnier .pcard .pname { font-size: 1.3rem; }
+#screen-game.turnier .pcard .legs, #screen-game.turnier .pcard .meta { font-size: 1.05rem; }
 
-/* Die Tastatur-Eingabe: eine Zeile Kontrolle, ein Feld, sonst nichts. */
-.pad-key { display: flex; flex-direction: column; gap: 8px; }
-.key-last {
-  display: flex; align-items: baseline; justify-content: center; gap: 8px;
-  min-height: 28px; font-size: 1.05rem;
+/* Wer dran ist, steht sichtbar im Licht – der normale Schein ist auf
+   2,40 m kaum noch als Leuchten zu erkennen. */
+#screen-game.turnier .pcard.active {
+  box-shadow: 0 0 26px var(--laser-weich), 0 0 90px 14px var(--schein-stark);
 }
-.key-last b { font-variant-numeric: tabular-nums; }
-.key-last b.pts { font-size: 1.35rem; }
-.key-last .bust { color: var(--red); }
+#screen-game.turnier .pcard.active .rest { text-shadow: 0 0 34px var(--laser-weich); }
+
+/* Der Finish-Weg in Plakatgröße. */
+#screen-game.turnier .checkout-bar { min-height: 84px; gap: 10px; }
+#screen-game.turnier .checkout-bar .label { font-size: 1.15rem; }
+#screen-game.turnier .checkout-bar .chip {
+  font-size: clamp(1.7rem, 5vh, 3rem); padding: 10px 22px;
+}
+#screen-game.turnier .checkout-bar .none { font-size: 1.25rem; }
+
+/* Unten drei Spalten: Aufnahmen | Eingabe | Aufnahmen. */
+.pad-key {
+  display: grid; grid-template-columns: 1fr 1.3fr 1fr; gap: 10px;
+  align-items: start;
+}
+.key-hist {
+  display: flex; flex-direction: column; gap: 4px;
+  max-height: min(26vh, 210px); overflow-y: auto;
+  overscroll-behavior: contain; scrollbar-width: none;
+}
+.key-hist::-webkit-scrollbar { display: none; }
+.key-hist .v {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+  background: var(--bg-2); border-radius: 8px; padding: 6px 12px;
+  font-size: 1.05rem; font-variant-numeric: tabular-nums;
+}
+.key-hist .v .s { font-weight: 700; font-family: var(--font-cond); font-size: 1.2rem; }
+.key-hist .v .r { color: var(--muted); font-size: 0.95rem; }
+.key-hist .v.bust .s { color: var(--red); text-decoration: line-through; }
+.key-hist .v.co .s { color: var(--accent); }
+.key-mitte { display: flex; flex-direction: column; gap: 6px; }
 #key-input {
   width: 100%;
   background: var(--bg-3); border: 1px solid var(--line); color: var(--text);
-  border-radius: 12px; padding: 10px 14px; min-height: var(--tap);
-  font-size: 1.7rem; text-align: center;
+  border-radius: 14px; padding: 12px 16px; min-height: 76px;
+  font-size: 2.4rem; text-align: center;
   font-family: var(--font-cond); font-weight: 700; font-variant-numeric: tabular-nums;
 }
-#key-input:focus { outline: 2px solid var(--accent-dark); }
-#key-input::placeholder { color: var(--muted); font-weight: 400; font-size: 1.05rem; }
+/* Ausgewählt heißt in dieser App weiße Kante, nicht rot. */
+#key-input:focus { outline: 2px solid var(--aktiv-linie); }
+#key-input::placeholder { color: var(--muted); font-weight: 400; font-size: 1.15rem; }
 .pad-key .input-error { text-align: center; min-height: 1.2em; }
+/* Am schmalen Handy hochkant haben drei Spalten keinen Platz – dort bleibt
+   nur das Feld, die Aufnahmen stehen ja in den Spielerkarten. */
+@media (max-width: 699px) and (orientation: portrait) {
+  .pad-key { grid-template-columns: 1fr; }
+  .key-hist { display: none; }
+}
+
+/* Shift gedrückt: die Wurfliste des Matches, je Spieler auf seiner Seite.
+   Die Karten schrumpfen zu Kopfzeilen über ihren Spalten. */
+#screen-game.turnier.verlauf #history { display: grid; flex: 1 1 auto; min-height: 88px; }
+#screen-game.turnier.verlauf .scoreboard { flex: 0 0 auto; }
+#screen-game.turnier.verlauf .pcard { padding: 8px 10px; }
+#screen-game.turnier.verlauf .pcard .rest { font-size: 2.4rem; }
+#screen-game.turnier.verlauf .pcard .meta { display: none; }
+#screen-game.turnier.verlauf .checkout-bar { display: none; }
+#screen-game.turnier.verlauf .history .v { font-size: 1.05rem; }
+#screen-game.turnier.verlauf .input-area { display: none; }
 
 /* Am Board hängt der Bildschirm meist quer. Die Zweispalten-Aufteilung des
    Spielbildschirms bringt hier nichts – ein Textfeld braucht keine halbe
@@ -1938,7 +1984,10 @@ button, input, select, textarea { font-family: inherit; }
 /* Auch am flachen Handy quer zählt im Turnier-Modus nur die Anzeige. */
 @media (orientation: landscape) and (max-height: 560px) {
   #screen-game.turnier .pcard { padding: 4px 8px; }
-  #screen-game.turnier .checkout-bar { min-height: 40px; }
+  #screen-game.turnier .checkout-bar { min-height: 48px; }
+  #screen-game.turnier .checkout-bar .chip { font-size: 1.3rem; padding: 6px 12px; }
+  #key-input { min-height: 52px; font-size: 1.6rem; }
+  .key-hist { max-height: 20vh; }
 }
 
 /* ---------- Die Sechzig ---------- */
