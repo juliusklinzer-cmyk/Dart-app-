@@ -151,21 +151,26 @@ body {
   min-height: 100dvh;
 }
 
-/* Der obere Rand der App: der Inhalt blurt ganz leicht aus, statt hart an
-   der Kante (oder unter der iPhone-Statusleiste) abzuschneiden. Liegt fest
-   am Fenster, nimmt keine Tipps an und deckt genau die Schutzzone plus ein
-   paar Pixel – die Maske lässt den Effekt nach unten weich auslaufen. */
+/* Der obere Rand der App: ein fester, dunkler Schleier mit Blur unter der
+   iPhone-/iPad-Statusleiste. Der Inhalt scrollt durch und blurt weich aus,
+   wird dort aber so weit abgedunkelt, dass Apples weiße Uhr und die
+   Batterieanzeige auch über hellen Karten und weißen Knöpfen lesbar bleiben.
+   Liegt fest am Fenster, nimmt keine Tipps an; die Maske lässt den Effekt
+   nach unten weich auslaufen, damit keine harte Kante entsteht. */
 body::before {
   content: '';
   position: fixed; top: 0; left: 0; right: 0;
-  height: calc(env(safe-area-inset-top, 0px) + 14px);
+  height: calc(env(safe-area-inset-top, 14px) + 18px);
   z-index: 15;
   pointer-events: none;
-  background: linear-gradient(180deg, rgba(13, 10, 11, 0.8), rgba(13, 10, 11, 0));
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
-  -webkit-mask-image: linear-gradient(180deg, #000 40%, transparent);
-  mask-image: linear-gradient(180deg, #000 40%, transparent);
+  background: linear-gradient(180deg,
+    rgba(13, 10, 11, 0.94) 0,
+    rgba(13, 10, 11, 0.82) env(safe-area-inset-top, 14px),
+    rgba(13, 10, 11, 0));
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  -webkit-mask-image: linear-gradient(180deg, #000 55%, transparent);
+  mask-image: linear-gradient(180deg, #000 55%, transparent);
 }
 
 h1 { font-size: 1.5rem; margin: 0; letter-spacing: -0.02em; }
@@ -223,16 +228,12 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 
 /* ---------- Navigation ---------- */
 .nav {
-  /* Nicht bei 0 festmachen: als installierte App reicht die Seite bis unter
-     die iPhone-Statusleiste, und die Reiter klebten beim Scrollen hinter
-     Uhrzeit und Batterie. Die Leiste bleibt unterhalb der Schutzzone. */
-  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  /* Die Leiste klebt nicht: sie scrollt mit dem Inhalt weg (Julius' Wunsch
+     vom zweiten Testtag – auch am iPad). Was oben lesbar bleiben muss, ist
+     Apples Uhr und Batterie, und das regelt der Schleier am body::before. */
   /* Automatische Spalten: der Konto-Knopf kommt nur dazu, wenn die Seite von
      einem Server geladen wurde – dann rückt die Leiste von 3 auf 4. */
   display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px;
-  /* Muss zu --bg passen, sonst liegt beim Scrollen ein andersfarbiger
-     Streifen ueber dem Inhalt. */
-  background: rgba(10, 7, 8, 0.92); backdrop-filter: blur(8px);
   padding: 8px 0; margin: 0 0 4px;
 }
 .nav button {
@@ -1347,10 +1348,7 @@ button, input, select, textarea { font-family: inherit; }
 
 /* Die Leiste selbst ist durchsichtig, damit der Lichtschein durchkommt.
    Die Knöpfe darin brauchen aber eine Fläche, sonst schwimmen sie darin. */
-.nav {
-  background: transparent;
-  backdrop-filter: blur(14px);
-}
+.nav { background: transparent; }
 .nav button { background: var(--bg-2); }
 
 /* Der gewählte Spielmodus steht im selben Licht wie der, der gerade dran
