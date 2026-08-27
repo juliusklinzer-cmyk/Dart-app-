@@ -1,5 +1,5 @@
 /* Offline-Cache für die App-Shell. Bei Änderungen CACHE hochzählen. */
-var CACHE = 'dart-turnier-v27';
+var CACHE = 'dart-turnier-v28';
 var ASSETS = [
   './',
   './index.html',
@@ -13,6 +13,7 @@ var ASSETS = [
   './icons/icon-512.webp',
   './icons/icon-maskable-512.webp',
   './icons/apple-touch-icon.png',
+  './icons/1860.webp',
   './fonts/anton-400.woff2',
   './fonts/barlow-condensed-600.woff2',
   './fonts/barlow-condensed-700.woff2',

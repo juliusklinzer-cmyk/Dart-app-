@@ -140,6 +140,23 @@ body {
   min-height: 100dvh;
 }
 
+/* Der obere Rand der App: der Inhalt blurt ganz leicht aus, statt hart an
+   der Kante (oder unter der iPhone-Statusleiste) abzuschneiden. Liegt fest
+   am Fenster, nimmt keine Tipps an und deckt genau die Schutzzone plus ein
+   paar Pixel – die Maske lässt den Effekt nach unten weich auslaufen. */
+body::before {
+  content: '';
+  position: fixed; top: 0; left: 0; right: 0;
+  height: calc(env(safe-area-inset-top, 0px) + 14px);
+  z-index: 15;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(13, 10, 11, 0.8), rgba(13, 10, 11, 0));
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  -webkit-mask-image: linear-gradient(180deg, #000 40%, transparent);
+  mask-image: linear-gradient(180deg, #000 40%, transparent);
+}
+
 h1 { font-size: 1.5rem; margin: 0; letter-spacing: -0.02em; }
 h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 10px; }
 .muted { color: var(--muted); }
@@ -195,7 +212,10 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 
 /* ---------- Navigation ---------- */
 .nav {
-  position: sticky; top: 0; z-index: 20;
+  /* Nicht bei 0 festmachen: als installierte App reicht die Seite bis unter
+     die iPhone-Statusleiste, und die Reiter klebten beim Scrollen hinter
+     Uhrzeit und Batterie. Die Leiste bleibt unterhalb der Schutzzone. */
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
   /* Automatische Spalten: der Konto-Knopf kommt nur dazu, wenn die Seite von
      einem Server geladen wurde – dann rückt die Leiste von 3 auf 4. */
   display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px;
@@ -870,7 +890,8 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 
 /* ---------- Warnung, wenn nicht gespeichert werden kann ---------- */
 .save-warning {
-  position: sticky; top: 0; z-index: 40;
+  /* Wie die Navigation: unterhalb der iPhone-Statusleiste bleiben. */
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 40;
   background: #4a2530; border: 1px solid var(--red); color: var(--text);
   border-radius: 10px; padding: 10px 12px; margin: 8px 0; font-size: 0.85rem; line-height: 1.4;
 }
@@ -980,7 +1001,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 /* Schmale Zeile ganz oben: was noch nicht beim Server ist. Bewusst ruhig
    gehalten – das ist ein Hinweis, kein Alarm wie die Speicher-Warnung. */
 .sync-status {
-  position: sticky; top: 0; z-index: 30;
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 30;
   background: var(--bg-2); border: 1px solid var(--line); color: var(--muted);
   border-radius: 10px; padding: 7px 12px; margin: 8px 0 0;
   font-size: 0.78rem; line-height: 1.4;
@@ -1067,58 +1088,15 @@ body.gesperrt #sync-status { display: none !important; }
 
 /* ---------- Finisher ---------- */
 
-/* Die Zielzahl ist der Kern des Modus – sie steht groß und allein. */
-.fin-zahl {
-  display: flex; flex-direction: column; align-items: center; gap: 2px;
-  background: var(--bg-2); border: 1px solid var(--accent-dark);
-  border-radius: var(--radius); padding: 10px 14px 12px; margin-bottom: 10px;
-}
-.fin-zahl .lbl {
-  font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted);
-}
-.fin-zahl .zahl {
-  font-size: 3.2rem; font-weight: 800; line-height: 1;
-  font-variant-numeric: tabular-nums; color: var(--accent);
-}
+/* Der Finisher steht auf denselben Spielerkarten wie das X01. Eigenes hat
+   er nur noch zweierlei: den Haken dessen, der durch ist, und das Stechen. */
 
-.fin-liste { display: flex; flex-direction: column; gap: 6px; }
-.fin-row {
-  display: flex; align-items: center; gap: 10px;
-  background: var(--bg-2); border: 1px solid var(--line);
-  border-radius: 12px; padding: 8px 12px;
-}
-.fin-row.active { border-color: var(--accent); background: var(--accent-faint); }
 /* Wer durch ist, tritt zurück – aber bleibt sichtbar, die anderen ziehen ja nach. */
-.fin-row.fertig { opacity: 0.72; border-color: var(--accent-dark); }
-.fin-row .who { flex: 1; min-width: 0; }
-.fin-row .nm { font-weight: 600; }
-.fin-row .sm { font-size: 0.74rem; color: var(--muted); }
-.fin-row .pkt {
-  min-width: 28px; text-align: center; font-weight: 700;
-  font-variant-numeric: tabular-nums; color: var(--muted);
-}
-.fin-row .rest {
-  min-width: 62px; text-align: right;
-  font-size: 1.7rem; font-weight: 800; line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-.fin-row.fertig .rest { color: var(--accent); }
+.pcard.fertig { border-color: var(--accent-dark); }
+.pcard.fertig .rest { color: var(--accent); }
 
 .fin-stechen { margin-top: 12px; border-color: var(--amber); }
 .fin-stechen .btn { margin-top: 6px; }
-
-/* Finish-Vorschlag über dem Zahlenfeld – dieselbe Leiste wie im X01. */
-.finish-hint {
-  min-height: 46px; display: flex; align-items: center; justify-content: center; gap: 6px;
-  background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px;
-  padding: 8px; margin-bottom: 8px; flex-wrap: wrap;
-}
-.finish-hint:empty { display: none; }
-
-@media (min-width: 820px) {
-  .fin-zahl .zahl { font-size: 4rem; }
-  .fin-row .rest { font-size: 2rem; min-width: 74px; }
-}
 
 /* ================= Blink-180-Rebranding =================
    Aufgesetzt auf die bestehenden Regeln, damit die Geometrie unberührt
@@ -1149,7 +1127,7 @@ h2 {
 
 /* Zahlen sind in dieser App der Inhalt. Barlow Condensed macht sie schmal
    und damit auch dreistellig noch groß lesbar. */
-.pcard .rest, .fin-zahl .zahl, .fin-row .rest, .rec .rv, .sum-score b,
+.pcard .rest, .rec .rv, .sum-score b,
 .board-row .val, .cr-cell, .edit-value {
   font-family: var(--font-cond);
   font-weight: 700;
@@ -1259,29 +1237,11 @@ h2 {
   letter-spacing: 0.04em;
 }
 
-/* Der Finisher benutzt dieselbe Checkout-Leiste wie das X01 – dort war sie
-   an die Elternklasse gebunden und blieb hier ungestylt. */
-.finish-hint .chip {
-  background: var(--bg-3); border: 1px solid var(--line); border-radius: 8px;
-  padding: 5px 10px; font-size: 0.95rem;
-  font-family: var(--font-cond); font-weight: 700;
-}
-.finish-hint .chip.first { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
-.finish-hint .label {
-  font-family: var(--font-cond); font-weight: 700; letter-spacing: 0.08em;
-  text-transform: uppercase; font-size: 0.75rem; color: var(--muted);
-}
-.finish-hint .none { color: var(--muted); font-size: 0.85rem; }
-
 /* Zahlenfeld und Multiplikator schmal setzen – dreistellige Reste und die
    Zahlen 1 bis 20 stehen so ruhiger nebeneinander. */
 .num-grid button, .keypad button, .quick-row button {
   font-family: var(--font-cond);
   font-weight: 700;
-}
-
-@media (min-width: 820px) {
-  .finish-hint .chip { font-size: 1.15rem; padding: 8px 14px; }
 }
 
 /* ================= Handoff-Korrekturen =================
@@ -1370,16 +1330,6 @@ button, input, select, textarea { font-family: inherit; }
   .blink-logo.lg { width: 52px; height: 52px; }
 }
 
-/* Finisher: „am Wurf" ist eine weiße Kante wie überall sonst, und die
-   Zielzahl-Karte trägt einen neutralen Rahmen – die rote Zahl darin ist
-   Signal genug. */
-.fin-row.active {
-  border-color: var(--aktiv-linie);
-  background: var(--aktiv-flaeche);
-}
-.fin-row.fertig { border-color: var(--line-hell); }
-.fin-zahl { border-color: var(--line); }
-
 /* ================= Nachträge =================
    Auf dem Stand, den Julius freigegeben hat, nur diese Änderungen:
 ============================================== */
@@ -1439,13 +1389,17 @@ button, input, select, textarea { font-family: inherit; }
 }
 #roster::-webkit-scrollbar { width: 0; height: 0; display: none; }
 
-/* Der Startknopf klebt unten – er ist die eine Aktion dieser Seite und
-   soll nie erst gesucht werden müssen. */
-#screen-setup.active > [data-action="start-game"] {
-  position: sticky;
-  bottom: 8px;
-  z-index: 10;
-  box-shadow: 0 -14px 20px var(--bg), 0 0 30px var(--schein-weich);
+/* Der Startknopf klebt nur am großen Schirm unten. Am iPhone steht er wie
+   jeder andere Knopf am Ende der Seite – klebend verdeckte er dort beim
+   Scrollen die halbe Einstellungskarte. Die Mindesthöhe hält auch das
+   quergedrehte Handy heraus, das breiter als manches Tablet ist. */
+@media (min-width: 820px) and (min-height: 600px) {
+  #screen-setup.active > [data-action="start-game"] {
+    position: sticky;
+    bottom: 8px;
+    z-index: 10;
+    box-shadow: 0 -14px 20px var(--bg), 0 0 30px var(--schein-weich);
+  }
 }
 
 @media (min-width: 820px) {
@@ -1924,4 +1878,88 @@ button, input, select, textarea { font-family: inherit; }
 .standings tr.leader td:last-child { box-shadow: inset -1px 1px 0 var(--aktiv-linie), inset 0 -1px 0 var(--aktiv-linie); }
 .standings tr.leader td:last-child {
   color: #fff; text-shadow: 0 0 8px var(--laser), 0 0 18px var(--laser-weich);
+}
+
+/* ================= Turnier-Modus ================= */
+/*
+ * Für Ligaspiele, wenn der Bildschirm vorn am Board hängt: die Reste beider
+ * Spieler in Plakatgröße, darunter nur der Finish-Weg und die letzte
+ * Aufnahme zur Kontrolle. Eingetippt wird auf einer echten Tastatur in das
+ * Freitextfeld – Enter bucht die Aufnahme, Löschen nimmt erst Ziffern und
+ * im leeren Feld die letzte Aufnahme zurück.
+ */
+#screen-game.turnier #history { display: none; }
+#screen-game.turnier .game-main { flex: 1; min-height: 0; }
+#screen-game.turnier .scoreboard { flex: 1; min-height: 0; grid-auto-rows: 1fr; }
+#screen-game.turnier .pcard {
+  display: flex; flex-direction: column; justify-content: center; min-height: 0;
+}
+#screen-game.turnier .pcard .rest {
+  font-size: clamp(4rem, min(26vw, 34vh), 16rem);
+  margin: 0;
+}
+/* Ab drei Spielern (Schnelles Spiel) müssen vier Karten aufs Bild. */
+#screen-game.turnier .scoreboard.viele .pcard .rest {
+  font-size: clamp(2.6rem, min(16vw, 18vh), 8rem);
+}
+/* Auch Name und Finish-Weg müssen von der Abwurflinie aus lesbar sein. */
+#screen-game.turnier .pcard .pname { font-size: 1.2rem; }
+#screen-game.turnier .pcard .legs, #screen-game.turnier .pcard .meta { font-size: 0.9rem; }
+#screen-game.turnier .checkout-bar { min-height: 56px; }
+#screen-game.turnier .checkout-bar .chip { font-size: 1.3rem; padding: 8px 14px; }
+
+/* Die Tastatur-Eingabe: eine Zeile Kontrolle, ein Feld, sonst nichts. */
+.pad-key { display: flex; flex-direction: column; gap: 8px; }
+.key-last {
+  display: flex; align-items: baseline; justify-content: center; gap: 8px;
+  min-height: 28px; font-size: 1.05rem;
+}
+.key-last b { font-variant-numeric: tabular-nums; }
+.key-last b.pts { font-size: 1.35rem; }
+.key-last .bust { color: var(--red); }
+#key-input {
+  width: 100%;
+  background: var(--bg-3); border: 1px solid var(--line); color: var(--text);
+  border-radius: 12px; padding: 10px 14px; min-height: var(--tap);
+  font-size: 1.7rem; text-align: center;
+  font-family: var(--font-cond); font-weight: 700; font-variant-numeric: tabular-nums;
+}
+#key-input:focus { outline: 2px solid var(--accent-dark); }
+#key-input::placeholder { color: var(--muted); font-weight: 400; font-size: 1.05rem; }
+.pad-key .input-error { text-align: center; min-height: 1.2em; }
+
+/* Am Board hängt der Bildschirm meist quer. Die Zweispalten-Aufteilung des
+   Spielbildschirms bringt hier nichts – ein Textfeld braucht keine halbe
+   Bildbreite. Alles bleibt untereinander, die Karten bekommen die Höhe. */
+@media (orientation: landscape) and (min-width: 700px) {
+  #screen-game.turnier .game-body { flex-direction: column; }
+  #screen-game.turnier .game-main { flex: 1 1 auto; min-height: 0; }
+  #screen-game.turnier .input-area { flex: none; display: block; margin-top: 0; }
+  #screen-game.turnier .pcard .rest { font-size: clamp(4rem, min(20vw, 38vh), 18rem); }
+}
+/* Auch am flachen Handy quer zählt im Turnier-Modus nur die Anzeige. */
+@media (orientation: landscape) and (max-height: 560px) {
+  #screen-game.turnier .pcard { padding: 4px 8px; }
+  #screen-game.turnier .checkout-bar { min-height: 40px; }
+}
+
+/* ---------- Die Sechzig ---------- */
+/* Das Wappen vor den blauen Strahlen, darunter „SECHZIG!" – bei jeder
+   geworfenen 60 (siehe feiere60 in js/app.js). Als CSS-Hintergrund, damit
+   das Bild im Einzeldatei-Bündel genau einmal eingebettet wird. */
+
+/* Die Sechzig liegt unter den Dialogen (.overlay, z-index 50): checkt jemand
+   mit genau 60 aus, gewinnt die Dart-Abfrage bzw. der Leg-Dialog das Bild,
+   der Löwe leuchtet dahinter. Die 180 behält die oberste Ebene. */
+.feier.sechzig { z-index: 45; }
+.feier-logo {
+  width: clamp(160px, min(46vw, 34vh), 420px);
+  aspect-ratio: 1920 / 2395;
+  margin: 0 auto;
+  background: url('../icons/1860.webp') center / contain no-repeat;
+  filter: drop-shadow(0 0 18px var(--laser)) drop-shadow(0 0 60px var(--laser-weich));
+  animation: feier-schlag 0.7s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .feier-logo { animation: none; }
 }

@@ -61,7 +61,10 @@
     ghostTapUntil = 0;
     return true;
   }
-  var UI = { input: '', darts: [], mult: 1, modeOverride: null, overlay: null, error: '', board: 'won', boardMode: '501', profile: null, summary: null };
+  /* turnier: der Turnier-Modus des X01-Bildschirms – Riesenanzeige, Eingabe
+     über eine echte Tastatur. Er bleibt über Aufnahmen und Spiele hinweg an,
+     bis jemand zurückschaltet (anders als modeOverride, der je Aufnahme gilt). */
+  var UI = { input: '', darts: [], mult: 1, modeOverride: null, turnier: false, overlay: null, error: '', board: 'won', boardMode: '501', profile: null, summary: null };
 
   /* ================= Helfer ================= */
   function $(id) { return document.getElementById(id); }
@@ -79,7 +82,7 @@
     return {
       v: 2,
       screen: 'setup',
-      settings: { start: 501, bestOf: 1, dartModeFrom: 170, cricketScoring: 1, finisherTo: 5, rtwBoost: 1 },
+      settings: { start: 501, bestOf: 1, dartModeFrom: 170, cricketScoring: 1, finisherTo: 5, rtwBoost: 1, turnierModus: 0 },
       mode: '501',
       game: null,
       profiles: DEFAULT_PLAYERS.map(function (n, i) {
@@ -620,12 +623,50 @@
         '<div class="feier-gruss">Gratuliere!</div>' +
       '</div>';
 
-    box.classList.remove('an');
+    box.classList.remove('an', 'sechzig');   // eine laufende Sechzig tritt zurück
     void box.offsetWidth;          // Neustart erzwingen, wenn zwei 180er folgen
     box.classList.add('an');
     if (feierTimer) clearTimeout(feierTimer);
     feierTimer = setTimeout(function () {
       box.classList.remove('an');
+      box.innerHTML = '';
+      feierTimer = null;
+    }, ruhig ? 2000 : FEIER_MS);
+  }
+
+  /*
+   * Die Sechzig: jede geworfene 60 ruft den Löwen auf den Bildschirm – das
+   * 1860-Wappen vor blauen Strahlen, darunter „SECHZIG!". Sie läuft in jedem
+   * Modus; fällt sie mit einem Dialog zusammen (60er-Checkout und Leg-Ende),
+   * liegt der Dialog darüber – die Feier hat dafür eine eigene, niedrigere
+   * Ebene (siehe .feier-sechzig im CSS).
+   */
+  function feiere60(pid) {
+    var box = $('feier');
+    if (!box) return;
+    var ruhig = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var strahlen = '';
+    if (!ruhig) for (var s = 0; s < 8; s++) strahlen += '<i style="--dreh:' + (s * 22.5) + 'deg"></i>';
+
+    /* Eigene Ebene unterhalb der Dialoge: checkt jemand mit genau 60 aus,
+       stehen Leg-Dialog und Feier gleichzeitig im Bild – der Dialog gewinnt,
+       der Löwe leuchtet dahinter. Die 180 bleibt auf der obersten Ebene. */
+    box.classList.add('sechzig');
+    box.innerHTML =
+      '<div class="feier-blitz"></div>' +
+      '<div class="feier-strahlen">' + strahlen + '</div>' +
+      '<div class="feier-mitte">' +
+        '<div class="feier-logo"></div>' +
+        '<div class="feier-name">SECHZIG!</div>' +
+        '<div class="feier-gruss">' + esc(pname(pid)) + '</div>' +
+      '</div>';
+
+    box.classList.remove('an');
+    void box.offsetWidth;
+    box.classList.add('an');
+    if (feierTimer) clearTimeout(feierTimer);
+    feierTimer = setTimeout(function () {
+      box.classList.remove('an', 'sechzig');
       box.innerHTML = '';
       feierTimer = null;
     }, ruhig ? 2000 : FEIER_MS);
@@ -643,6 +684,8 @@
 
     // Höher geht es mit drei Darts nicht.
     if (!isBust && score === 180) feiere180(pid);
+    // Die 60 gehört dem Löwen – bei jeder geworfenen 60 (siehe feiere60).
+    else if (!isBust && score === 60) feiere60(pid);
 
     UI.input = ''; UI.darts = []; UI.mult = 1; UI.modeOverride = null; UI.error = '';
 
@@ -2380,8 +2423,30 @@
     });
     $('pad-total').classList.toggle('hidden', mode !== 'total');
     $('pad-darts').classList.toggle('hidden', mode !== 'darts');
+    $('pad-key').classList.toggle('hidden', mode !== 'turnier');
+    /* Der Turnier-Modus stellt den ganzen Bildschirm um: Reste in
+       Plakatgröße, kein Verlauf – das regelt das CSS über diese Klasse. */
+    $('screen-game').classList.toggle('turnier', mode === 'turnier');
 
-    if (mode === 'total') {
+    if (mode === 'turnier') {
+      /* Die letzte Aufnahme steht zur Kontrolle unter der Anzeige – wer am
+         Board tippt, sieht so sofort, ob richtig geschrieben wurde. Nach
+         einem Legwechsel zählt die letzte Aufnahme des vorigen Legs. */
+      var letzte = null;
+      for (var lli = m.legs.length - 1; lli >= 0 && !letzte; lli--) {
+        var lvs = m.legs[lli].visits;
+        if (lvs.length) letzte = lvs[lvs.length - 1];
+      }
+      $('key-last').innerHTML = letzte
+        ? '<span class="muted">Letzte Aufnahme</span> <b>' + esc(pname(letzte.p)) + '</b>' +
+          (letzte.b
+            ? '<b class="bust">' + letzte.o + ' · Bust</b>'
+            : '<b class="pts">' + letzte.s + (letzte.c ? ' · Checkout' : '') + '</b>')
+        : '<span class="muted">Noch keine Aufnahme</span>';
+      $('key-error').textContent = UI.error;
+      var feld = $('key-input');
+      if (!UI.overlay && !m.done && document.activeElement !== feld) feld.focus();
+    } else if (mode === 'total') {
       $('quick-row').innerHTML = '<button class="miss" data-quick="0">0 Pkt</button>' +
         QUICK_SCORES.map(function (q) { return '<button data-quick="' + q + '">' + q + '</button>'; }).join('');
       var disp = $('score-display');
@@ -2426,6 +2491,7 @@
   }
 
   function effectiveMode(rest) {
+    if (UI.turnier) return 'turnier';
     if (UI.modeOverride) return UI.modeOverride;
     var t = S.settings.dartModeFrom;
     return (t > 0 && rest <= t) ? 'darts' : 'total';
@@ -2689,6 +2755,41 @@
     return '<div class="pline"><span>' + label + (hint ? ' <i>' + hint + '</i>' : '') + '</span><b>' + value + '</b></div>';
   }
 
+  /* Die Aufnahmen einer Runde, fürs Protokoll nachgespielt – dieselbe
+     Reihum-Logik wie in finisherState(), nur dass hier jede abgeschlossene
+     Aufnahme als Zeile herausfällt (wer, wie viel, Rest danach). */
+  function finisherAufnahmen(g, rd) {
+    var n = g.players.length;
+    var rest = {}, fertig = {}, turn = 0, inVisit = 0, restVor = rd.zahl, geworfen = 0;
+    g.players.forEach(function (id) { rest[id] = rd.zahl; });
+    var visits = [];
+    for (var i = 0; i < rd.throws.length; i++) {
+      var t = rd.throws[i];
+      var pid = g.players[turn];
+      if (inVisit === 0) { restVor = rest[pid]; geworfen = 0; }
+      geworfen += t.n * t.m;
+      inVisit++;
+      var nach = rest[pid] - t.n * t.m;
+      var co = false, bust = false;
+      if (nach === 0 && t.m === 2) { rest[pid] = 0; co = true; }
+      else if (nach < 0 || nach === 1 || nach === 0) bust = true;
+      else rest[pid] = nach;
+      if (co) fertig[pid] = 1;
+      if (bust) rest[pid] = restVor;
+      if (co || bust || inVisit === 3) {
+        visits.push({ p: pid, s: geworfen, b: bust, c: co, rest: rest[pid] });
+        inVisit = 0;
+        var steps = 0, next = turn;
+        do {
+          next = (next + 1) % n;
+          steps++;
+        } while (fertig[g.players[next]] && steps <= n);
+        turn = next;
+      }
+    }
+    return visits;
+  }
+
   function renderFinisher() {
     var g = S.game;
     if (!g || g.kind !== 'finisher') { S.screen = 'setup'; render(); return; }
@@ -2696,48 +2797,52 @@
     var rd = finisherRunde(g);
     var aktiv = g.players[st.turn];
 
-    $('fin-sub').textContent = 'Runde ' + (st.runde + 1) + ' · auf ' + g.ziel + ' Punkte';
+    /* Oben im Kopf steht die Zufalls-Finish-Zahl – genau da, wo das Schnelle
+       Spiel seine Startpunktzahl zeigt. Der Rundenstand wandert nach unten
+       neben die Eingabe. */
+    $('fin-sub').textContent = plural(g.players.length, 'Spieler', 'Spieler') + ' · ' + st.zahl + ' Double Out';
+    $('fin-runde').textContent = 'Runde ' + (st.runde + 1) + ' · auf ' + g.ziel + ' Punkte';
 
-    /* Die Zielzahl ist der Kern des Modus – die gehört groß und oben hin. */
-    var kopf = '<div class="fin-zahl">' +
-      '<span class="lbl">alle finishen</span>' +
-      '<span class="zahl">' + st.zahl + '</span>' +
-      '</div>';
+    $('fin-turn').innerHTML = g.done
+      ? '<b>' + esc(pname(g.winner)) + '</b> hat gewonnen'
+      : rd.stechen
+        ? '<b>Stechen</b><span class="muted"> – der Bull entscheidet</span>'
+        : '<span class="muted">Am Wurf</span> <b>' + esc(pname(aktiv)) + '</b>' +
+          '<span class="muted"> · Rest ' + st.rest[aktiv] + '</span>';
 
-    var liste = g.players.map(function (id) {
-      var fertig = st.fertig[id];
-      var klassen = ['fin-row'];
-      if (fertig) klassen.push('fertig');
-      else if (id === aktiv && !rd.stechen) klassen.push('active');
-      return '<div class="' + klassen.join(' ') + '">' +
-        avatarHTML(profile(id), 'sm') +
-        '<div class="who"><div class="nm">' + esc(pname(id)) + '</div>' +
-        '<div class="sm">' + (st.darts[id] ? plural(st.darts[id], 'Dart', 'Darts') : 'noch nichts') + '</div></div>' +
-        '<div class="pkt" title="Punkte">' + (st.punkte[id] || 0) + '</div>' +
-        '<div class="rest">' + (fertig ? '✓' : st.rest[id]) + '</div>' +
-        '</div>';
-    }).join('');
-
-    /* Stechen: gleichgezogen, jetzt entscheidet der Bull. Wie beim Anwurf
-       wird von Hand getippt, wer näher dran war – messen kann die App das
-       nicht, und am Board sieht man es sofort. */
-    var stechen = '';
-    if (rd.stechen) {
-      stechen = '<div class="card fin-stechen"><h2>Stechen auf Bull</h2>' +
-        '<p class="hint">' + rd.stechen.spieler.map(function (id) { return esc(pname(id)); }).join(' und ') +
-        ' haben beide gefinished. Einmal auf Bull werfen – wer war näher dran?</p>' +
-        rd.stechen.spieler.map(function (id) {
-          return '<button class="btn full" data-action="fin-stechen" data-id="' + id + '">' +
-            esc(pname(id)) + '</button>';
-        }).join('') + '</div>';
-    }
-
-    $('fin-board').innerHTML = kopf + '<div class="fin-liste">' + liste + '</div>' + stechen;
+    /* Dieselben Spielerkarten wie im X01: großer Rest, darunter Darts und
+       Aufnahmen. Wer durch ist, trägt den Haken statt einer Zahl. */
+    $('fin-board').innerHTML = '<div class="scoreboard' + (g.players.length > 2 ? ' viele' : '') + '">' +
+      g.players.map(function (id) {
+        var fertig = st.fertig[id];
+        var klassen = ['pcard'];
+        if (fertig) klassen.push('fertig');
+        else if (id === aktiv && !rd.stechen && !g.done) klassen.push('active');
+        return '<div class="' + klassen.join(' ') + '">' +
+          '<div class="pname">' + avatarHTML(profile(id), 'sm') + esc(pname(id)) + '</div>' +
+          '<div class="legs">Punkte ' + (st.punkte[id] || 0) + ' von ' + g.ziel + '</div>' +
+          '<div class="rest">' + (fertig ? '✓' : st.rest[id]) + '</div>' +
+          '<div class="meta"><span>Darts <b>' + st.darts[id] + '</b></span>' +
+            '<span>Aufnahmen <b>' + st.aufnahmen[id] + '</b></span></div>' +
+          '</div>';
+      }).join('') + '</div>' +
+      /* Stechen: gleichgezogen, jetzt entscheidet der Bull. Wie beim Anwurf
+         wird von Hand getippt, wer näher dran war – messen kann die App das
+         nicht, und am Board sieht man es sofort. */
+      (rd.stechen
+        ? '<div class="card fin-stechen"><h2>Stechen auf Bull</h2>' +
+          '<p class="hint">' + rd.stechen.spieler.map(function (id) { return esc(pname(id)); }).join(' und ') +
+          ' haben beide gefinished. Einmal auf Bull werfen – wer war näher dran?</p>' +
+          rd.stechen.spieler.map(function (id) {
+            return '<button class="btn full" data-action="fin-stechen" data-id="' + id + '">' +
+              esc(pname(id)) + '</button>';
+          }).join('') + '</div>'
+        : '');
 
     /* Finish-Vorschlag – wortgleich zum X01, denn im Finisher ist die ganze
        Runde Finish-Bereich. Deshalb auch dieselbe Leiste mit Namen davor. */
     var route = null;
-    if (!rd.stechen && !st.fertig[aktiv]) {
+    if (!g.done && !rd.stechen && !st.fertig[aktiv]) {
       var restAktiv = st.rest[aktiv];
       var dartsLeft = 3 - st.inVisit;
       route = Checkout.suggest(restAktiv, dartsLeft, lieblingsDoppel(aktiv));
@@ -2752,13 +2857,34 @@
           plural(dartsLeft, 'Dart', 'Darts') + '</span>';
       }
     } else {
-      $('fin-hint').innerHTML = '';
+      $('fin-hint').innerHTML = '<span class="none">' +
+        (rd.stechen ? 'Stechen auf Bull' : g.done ? 'Spiel beendet' : 'Runde läuft aus') + '</span>';
     }
 
-    $('fin-turn').textContent = rd.stechen ? 'Stechen' : pname(aktiv) + ' ist dran';
-    $('fin-darts').innerHTML = st.visit.map(function (d) {
-      return '<span class="vd">' + dartLabel(d) + '</span>';
-    }).join('') || '<span class="vd empty">–</span>';
+    /* Der Verlauf als eine Liste mit Namen – wie im Schnellen Spiel ab drei
+       Spielern. Ältere Runden bleiben mit Trenner darunter stehen. */
+    var rows = [];
+    for (var ri = g.rounds.length - 1; ri >= 0; ri--) {
+      var runde = g.rounds[ri];
+      var eintraege = finisherAufnahmen(g, runde);
+      if (!eintraege.length && ri !== g.rounds.length - 1) continue;
+      if (g.rounds.length > 1) {
+        rows.push('<div class="leg-sep">Runde ' + (ri + 1) + ' · ' + runde.zahl +
+          (runde.sieger ? ' · ' + esc(pname(runde.sieger)) : ' · läuft') + '</div>');
+      }
+      eintraege.reverse().forEach(function (e) {
+        rows.push('<div class="v ' + (e.b ? 'bust' : e.c ? 'co' : '') + '">' +
+          '<span class="wer">' + esc(pname(e.p)) + '</span>' +
+          '<span class="s">' + e.s + '</span>' +
+          '<span class="r">' + (e.b ? 'Bust' : e.c ? 'Finish' : 'Rest ' + e.rest) + '</span></div>');
+      });
+    }
+    $('fin-history').innerHTML = '<div class="col">' + rows.join('') + '</div>';
+
+    $('fin-darts').innerHTML = [0, 1, 2].map(function (i) {
+      var d = st.visit[i];
+      return '<div class="d ' + (d ? '' : 'empty') + '">' + (d ? dartLabel(d) : '–') + '</div>';
+    }).join('');
 
     // Zahlenfeld: derselbe Aufbau wie im Finish-Bereich des X01.
     if (rd.stechen) {
@@ -2779,6 +2905,10 @@
       nums += '<button class="miss" data-num="0" data-mult="1">Miss</button>';
       nums += '<button data-num="25" class="' + (hl === '25' ? 'hl' : '') + '" data-mult="1">25</button>';
       nums += '<button class="bull ' + (hl === 'BULL' ? 'hl' : '') + '" data-num="25" data-mult="2">Bull</button>';
+      /* Wie im X01: dreimal am Doppel vorbei muss nicht dreimal getippt
+         werden – dieser Knopf füllt die Aufnahme mit Fehlwürfen auf. */
+      nums += '<button class="end-visit wide" data-action="fin-end-visit">' +
+        (st.inVisit ? 'Weiter ▸' : '0 Punkte ▸') + '</button>';
       $('fin-pad').innerHTML =
         '<div class="mult-row">' +
           '<button data-mult="1" class="' + (UI.mult === 1 ? 'active' : '') + '">Single</button>' +
@@ -3511,6 +3641,13 @@
           // Reihenfolge so drehen, dass der Bull-Sieger anfängt.
           var idx2 = S.game.players.indexOf(pid2);
           if (idx2 > 0) S.game.players = S.game.players.slice(idx2).concat(S.game.players.slice(0, idx2));
+          /* Das Schnelle Spiel läuft über die Match-Felder p und starter, die
+             beim Anlegen kopiert wurden – ohne diesen Abgleich bliebe der
+             Bull-Sieger folgenlos und es begänne weiter der Erste der Liste. */
+          if (S.game.kind === 'quick') {
+            S.game.p = S.game.players.slice();
+            S.game.starter = S.game.players[0];
+          }
           S.game.started = true;
           S.screen = spielScreen(S.game.kind);
           save(); render();
@@ -3545,6 +3682,20 @@
         save(); render();
         break;
       }
+      /* Finisher: die restlichen Darts der Aufnahme als Fehlwürfe auffüllen –
+         dasselbe Abkürzen wie im X01 und im Cricket. */
+      case 'fin-end-visit': {
+        var fg = S.game;
+        if (!fg || fg.kind !== 'finisher' || fg.done || settling()) return;
+        var frd = finisherRunde(fg);
+        if (frd.stechen) return;
+        var offenFin = 3 - finisherState(fg).inVisit;
+        for (var fi = 0; fi < offenFin; fi++) frd.throws.push({ n: 0, m: 0 });
+        UI.mult = 1;
+        pruefeFinisherRunde(fg);
+        save(); render();
+        break;
+      }
       case 'order-up':
       case 'order-down': {
         var og = S.game;
@@ -3559,6 +3710,11 @@
       case 'start-order': {
         var sg = S.game;
         if (!sg || sg.started) return;
+        // Siehe pick-starter: die sortierte Reihenfolge muss ins Match.
+        if (sg.kind === 'quick') {
+          sg.p = sg.players.slice();
+          sg.starter = sg.players[0];
+        }
         sg.started = true;
         S.screen = spielScreen(sg.kind);
         save(); render();
@@ -3672,7 +3828,17 @@
     }
 
     var modeBtn = ev.target.closest('#mode-toggle button');
-    if (modeBtn) { UI.modeOverride = modeBtn.getAttribute('data-mode'); UI.error = ''; render(); return; }
+    if (modeBtn) {
+      var gewaehlterModus = modeBtn.getAttribute('data-mode');
+      UI.turnier = gewaehlterModus === 'turnier';
+      UI.modeOverride = UI.turnier ? null : gewaehlterModus;
+      /* Der Turnier-Modus überlebt einen Neustart: der Bildschirm hängt am
+         Board und soll nach dem Wiederöffnen nicht neu eingestellt werden. */
+      S.settings.turnierModus = UI.turnier ? 1 : 0;
+      UI.error = '';
+      save(); render();
+      return;
+    }
 
     var editKey = ev.target.closest('[data-editkey]');
     if (editKey && UI.overlay && UI.overlay.type === 'edit-visit') {
@@ -3766,7 +3932,10 @@
     if (!m) return;
     var leg = activeLeg(m);
     if (!leg) return;
-    if (ev.key.toLowerCase() === 'z') { undo(); ev.preventDefault(); return; }
+    /* Im Turnier-Modus gehört die Tastatur dem Eingabefeld – ein „z", das
+       daneben geht, darf nicht still eine Aufnahme zurücknehmen. Dort ist
+       Löschen im leeren Feld der Weg zurück. */
+    if (ev.key.toLowerCase() === 'z' && !UI.turnier) { undo(); ev.preventDefault(); return; }
     var rest = remainingIn(leg, activePlayer(leg, m)) - sum(UI.darts, function (d) { return d.v; });
     if (effectiveMode(rest) !== 'total') return;
     if (ev.key >= '0' && ev.key <= '9') { pressKey(ev.key); ev.preventDefault(); }
@@ -3774,8 +3943,79 @@
     else if (ev.key === 'Backspace') { pressKey('del'); ev.preventDefault(); }
   });
 
+  /* ---------- Turnier-Modus: Eingabe über die Tastatur ---------- */
+  function turnierEingabe() {
+    var feld = $('key-input');
+    var wert = feld.value.trim();
+    if (wert === '') return;
+    UI.error = '';
+    UI.input = String(parseInt(wert, 10));
+    feld.value = '';
+    submitTotal();
+  }
+
+  var keyFeld = $('key-input');
+  if (keyFeld) {
+    $('key-form').addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      if (!UI.overlay) turnierEingabe();
+    });
+    /* Löschen im leeren Feld nimmt die letzte Aufnahme zurück – so korrigiert
+       man vom Board aus ohne Maus bis zum vorigen Spieler zurück. */
+    keyFeld.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Backspace' && keyFeld.value === '') { undo(); ev.preventDefault(); }
+    });
+    // Nur Ziffern, höchstens drei – alles andere fliegt schon beim Tippen raus.
+    keyFeld.addEventListener('input', function () {
+      var sauber = keyFeld.value.replace(/\D/g, '').slice(0, 3);
+      if (keyFeld.value !== sauber) keyFeld.value = sauber;
+    });
+  }
+
+  /* Verliert das Feld den Fokus (ein Tipp daneben genügt), holt der nächste
+     Tastendruck ihn zurück – am Board soll niemand erst die Maus suchen. */
+  document.addEventListener('keydown', function (ev) {
+    if (S.screen !== 'game' || !UI.turnier || UI.overlay) return;
+    if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    var feld = $('key-input');
+    if (feld && document.activeElement !== feld) feld.focus();
+  });
+
+  /* Auch die Abfragen zwischen den Aufnahmen gehen ohne Maus: 1/2/3
+     beantworten die Dart-Frage beim Checkout, Enter startet das nächste Leg,
+     Löschen nimmt die Eingabe zurück. */
+  document.addEventListener('keydown', function (ev) {
+    if (S.screen !== 'game' || !UI.overlay) return;
+    var ov = UI.overlay;
+    if (ov.type === 'checkout-darts') {
+      if (ev.key >= '0' && ev.key <= '9') {
+        /* Jede Ziffer wird geschluckt – auch eine falsche. Sonst landet sie
+           im weiterhin fokussierten Eingabefeld und klebt vor der nächsten
+           Aufnahme (aus einer getippten 5 würde still eine 95). */
+        ev.preventDefault();
+        var anz = parseInt(ev.key, 10);
+        if (anz >= 1 && anz <= 3 && ov.options.indexOf(anz) >= 0) {
+          var coScore = ov.score;
+          UI.overlay = null;
+          commitVisit(coScore, anz, true, false);
+        }
+      } else if (ev.key === 'Backspace') {
+        undo(); ev.preventDefault();
+      }
+    } else if (ov.type === 'leg-done') {
+      /* Steht der Fokus auf einem Knopf im Dialog (per Tab erreicht), gilt
+         dessen Beschriftung – Enter darf dann nicht am Knopf vorbei das Leg
+         bestätigen, während „Eingabe rückgängig" unter dem Finger liegt. */
+      var fokus = document.activeElement;
+      var imDialog = fokus && fokus.closest && fokus.closest('#overlay');
+      if (ev.key === 'Enter' && !imDialog) { UI.overlay = null; render(); ev.preventDefault(); }
+      else if (ev.key === 'Backspace' && !imDialog) { undo(); ev.preventDefault(); }
+    }
+  });
+
   /* ================= Start ================= */
   S = load() || newState();
+  UI.turnier = !!(S.settings && S.settings.turnierModus === 1);
   if (!S.lineup.length) S.lineup = activeProfiles().slice(0, 4).map(function (p) { return p.id; });
   if ((S.screen === 'cricket' || S.screen === 'rtw' || S.screen === 'finisher') && !S.game) S.screen = 'setup';
   /* Ein angefangenes Schnelles Spiel liegt in S.game, nicht im Spielplan –

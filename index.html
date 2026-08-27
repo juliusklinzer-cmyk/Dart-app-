@@ -318,6 +318,7 @@
       <div class="segmented small" id="mode-toggle">
         <button data-mode="total">Punkte</button>
         <button data-mode="darts">Einzel-Darts</button>
+        <button data-mode="turnier">Turnier</button>
       </div>
       <div id="visit-darts" class="visit-darts"></div>
     </div>
@@ -347,6 +348,20 @@
         <button data-mult="3">Triple</button>
       </div>
       <div class="num-grid" id="num-grid"></div>
+    </div>
+
+    <!-- Turnier-Modus: für den Liga-Abend mit Bildschirm am Board.
+         Feld und Zeile stehen fest im HTML, damit das Feld beim
+         Neuzeichnen den Fokus behält – Eingabe über eine echte Tastatur,
+         Enter bucht, Löschen nimmt Ziffern und dann Aufnahmen zurück. -->
+    <div id="pad-key" class="pad pad-key hidden">
+      <div id="key-last" class="key-last"></div>
+      <form id="key-form" autocomplete="off">
+        <input id="key-input" type="text" inputmode="numeric" autocomplete="off"
+               enterkeyhint="done" maxlength="3" placeholder="Punkte · Enter"
+               aria-label="Punkte der Aufnahme eintippen">
+      </form>
+      <div id="key-error" class="input-error"></div>
     </div>
   </div>
   </div>
@@ -424,6 +439,9 @@
 </section>
 
 <!-- ============ FINISHER ============ -->
+<!-- Derselbe Aufbau wie das Schnelle Spiel (#screen-game): oben der Kopf mit
+     der Zufalls-Finish-Zahl, dann Spielerkarten, Checkout-Leiste, Verlauf und
+     das gleiche Zahlenfeld. Wer das eine kennt, kennt das andere. -->
 <section id="screen-finisher" class="screen game">
   <header class="game-header">
     <button class="icon-btn" data-action="leave-game" aria-label="Spiel verlassen">‹</button>
@@ -436,14 +454,16 @@
 
   <div class="game-body">
     <div class="game-main">
+      <div id="fin-turn" class="turn-label game-turn"></div>
       <div id="fin-board"></div>
+      <div id="fin-hint" class="checkout-bar"></div>
+      <div id="fin-history" class="history einspaltig"></div>
     </div>
     <div class="input-area">
       <div class="mode-row">
-        <div id="fin-turn" class="turn-label"></div>
+        <div id="fin-runde" class="turn-label muted"></div>
         <div id="fin-darts" class="visit-darts"></div>
       </div>
-      <div id="fin-hint" class="finish-hint"></div>
       <div class="pad" id="fin-pad"></div>
     </div>
   </div>

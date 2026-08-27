@@ -1219,8 +1219,23 @@ await page.locator('#settings-501 [data-setting="start"] button[data-value="301"
    Umschaltpunkt selbst wird oben im X01-Teil geprüft. */
 await page.locator('#settings-501 [data-setting="dartModeFrom"] button[data-value="0"]').click();
 await page.locator('[data-action="start-game"]').click();
+/* Das Ausbullen muss im Spiel ankommen: die sortierte Reihenfolge steht
+   hinterher auch im Match (p und starter) – nicht nur in der Bull-Off-Liste.
+   Genau das war kaputt: die Wahl wurde angezeigt, aber es begann trotzdem
+   immer der Erste der Aufstellung. */
+await page.locator('.bo-row').nth(2).locator('[data-action="order-up"]').click();
+await page.locator('.bo-row').nth(1).locator('[data-action="order-up"]').click();
+const qOrder = await page.evaluate(() => window.__dart.game().players.slice());
 await bullOffGo();
 check('läuft auf dem X01-Bildschirm', await visible('#screen-game'));
+check('die ausgebullte Reihenfolge gilt im Spiel', await page.evaluate((order) => {
+  const m = window.__dart.currentMatch();
+  return JSON.stringify(m.p) === JSON.stringify(order) && m.starter === order[0];
+}, qOrder));
+check('der Ausbull-Sieger ist am Wurf', await page.evaluate((id) => {
+  const D = window.__dart, m = D.currentMatch();
+  return D.activePlayer(D.activeLeg(m), m) === id;
+}, qOrder[0]));
 
 const qIds = await page.evaluate(() => window.__dart.currentMatch().p);
 check('alle drei Spieler auf der Tafel', (await page.locator('#scoreboard .pcard').count()) === 3);
@@ -1281,6 +1296,110 @@ check('genau ein Sieg dazugekommen', wonNachher === wonVorher + 1,
   wonVorher + ' -> ' + wonNachher);
 check('der Sieger hat ihn', qCar[qIds[0]].won >= 1);
 check('Average wurde gerechnet', qCar[qIds[0]].avg > 0);
+
+/* ---------- Turnier-Modus: Riesenanzeige, Tastatur-Eingabe ---------- */
+
+group('Turnier-Modus: Anzeige am Board, Eingabe per Tastatur');
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  S.game = null;
+  S.lineup = D.activeProfiles().slice(0, 2).map((p) => p.id);
+  S.mode = 'quick';
+  D.setScreen('setup');
+});
+await page.locator('[data-action="start-game"]').click();
+await page.locator('#bulloff-buttons button').first().click();
+check('dritter Umschalter neben Punkte und Einzel-Darts',
+  (await page.locator('#mode-toggle button[data-mode="turnier"]').count()) === 1);
+await page.locator('#mode-toggle button[data-mode="turnier"]').click();
+check('Tastatur-Feld sichtbar', await visible('#pad-key'));
+check('Zahlenfeld und Einzel-Darts weg', !(await visible('#pad-total')) && !(await visible('#pad-darts')));
+check('Verlauf ausgeblendet', !(await page.locator('#history').isVisible()));
+check('Finish-Leiste bleibt stehen', await visible('#checkout-bar'));
+check('Rest steht in Plakatgröße', await page.locator('.pcard .rest').first()
+  .evaluate((e) => parseFloat(getComputedStyle(e).fontSize) > 60));
+check('das Feld hat von allein den Fokus',
+  await page.evaluate(() => document.activeElement === document.getElementById('key-input')));
+
+/* Eintippen wie am Liga-Abend: Zahl, Enter. */
+await page.keyboard.type('60');
+await page.keyboard.press('Enter');
+check('Aufnahme gebucht: 301 - 60 = 241', (await rest(0)) === '241', await rest(0));
+check('die letzte Aufnahme steht zur Kontrolle da',
+  (await text('#key-last')).includes('60'), await text('#key-last'));
+check('die Sechzig ruft den Löwen', (await page.locator('.feier .feier-logo').count()) === 1 &&
+  (await text('.feier')).includes('SECHZIG'));
+
+/* Löschen im leeren Feld: zurück zum letzten Spieler. */
+await page.keyboard.press('Backspace');
+check('leeres Feld + Löschen nimmt die Aufnahme zurück', (await rest(0)) === '301', await rest(0));
+
+/* Unmögliche Aufnahme: Fehler erscheint unter dem Feld. */
+await page.keyboard.type('179');
+await page.keyboard.press('Enter');
+check('unmögliche Zahl wird abgewiesen', (await text('#key-error')).includes('nicht möglich'));
+
+await page.keyboard.type('45');
+await page.keyboard.press('Enter');
+check('der Modus bleibt nach der Aufnahme an', await visible('#pad-key'));
+check('45 gebucht', (await rest(0)) === '256', await rest(0));
+
+/* Die Sechzig kommt in jedem Eingabemodus – auch bei Punkte-Eingabe. Die
+   erste Feier steht noch ein paar Sekunden im Bild, fürs Prüfen wegräumen. */
+await page.evaluate(() => {
+  const f = document.getElementById('feier');
+  f.classList.remove('an', 'sechzig');
+  f.innerHTML = '';
+});
+await page.locator('#mode-toggle button[data-mode="total"]').click();
+check('zurück zur Punkte-Eingabe', await visible('#pad-total'));
+await typeScore(60);
+await page.waitForTimeout(100);
+check('der Löwe kommt auch bei der Punkte-Eingabe',
+  (await page.locator('.feier .feier-logo').count()) === 1);
+check('die Sechzig liegt unter der Dialog-Ebene', await page.evaluate(() => {
+  const f = document.getElementById('feier');
+  return f.classList.contains('sechzig') &&
+    parseInt(getComputedStyle(f).zIndex, 10) < 50;
+}));
+
+/* Der Modus überlebt den Neustart – der Bildschirm hängt ja fest am Board. */
+await page.locator('#mode-toggle button[data-mode="turnier"]').click();
+await page.reload();
+check('Turnier-Modus übersteht den Neustart', await visible('#pad-key'));
+check('und das Feld ist wieder fokussiert',
+  await page.evaluate(() => document.activeElement === document.getElementById('key-input')));
+
+/* Checkout am Board: die Dart-Frage wird mit 1/2/3 beantwortet – und eine
+   verirrte Ziffer darf nicht im weiter fokussierten Feld kleben bleiben,
+   sonst würde aus der nächsten 5 still eine 95. */
+const tippe = async (z) => { await page.keyboard.type(z); await page.keyboard.press('Enter'); };
+await tippe('180');   // Lenas 256 -> 76
+await tippe('100');   // Tobi 241 -> 141
+await tippe('36');    // Lenas -> 40
+await tippe('100');   // Tobi -> 41
+await tippe('40');    // Lenas checkt aus – Abfrage nach den Darts
+check('Checkout-Abfrage steht', (await text('#overlay-card')).includes('wie vielen Darts'));
+await page.keyboard.press('9');   // daneben getippt – darf nichts tun
+check('verirrte Ziffer landet nicht im Eingabefeld',
+  (await page.locator('#key-input').inputValue()) === '');
+check('die Abfrage steht noch', (await text('#overlay-card')).includes('wie vielen Darts'));
+await page.keyboard.press('1');
+check('Taste 1 bucht den Checkout mit einem Dart', await page.evaluate(() => {
+  const m = window.__dart.currentMatch();
+  const co = m.legs[0].visits.filter((x) => x.c)[0];
+  return m.done && co && co.d === 1;
+}));
+
+/* Aufräumen für die nächsten Gruppen: Spiel verwerfen, Modus aus. */
+await page.evaluate(() => {
+  window.__dart.ui().overlay = null;
+  window.__dart.ui().turnier = false;
+  const S = window.__dart.state();
+  S.game = null;
+  S.settings.turnierModus = 0;
+  window.__dart.setScreen('setup');
+});
 
 /* ---------- Round the World: Spielart Einfach ---------- */
 
@@ -1439,7 +1558,11 @@ await typeScore(60);        // Spieler 1
 await typeScore(180);       // Spieler 2 auf 141, feiert nochmal
 await page.waitForFunction(() => !document.getElementById('feier').classList.contains('an'),
   null, { timeout: 6000 });
-await typeScore(60);        // Spieler 1
+await typeScore(60);        // Spieler 1 – feiert inzwischen selbst den Löwen
+/* Erst die Sechzig abklingen lassen: gleich soll geprüft werden, dass der
+   BUST nicht gefeiert wird – nicht die 60 von eben. */
+await page.waitForFunction(() => !document.getElementById('feier').classList.contains('an'),
+  null, { timeout: 6000 });
 const restVorBust = await page.evaluate(() => {
   const D = window.__dart, m = D.currentMatch(), leg = D.activeLeg(m);
   return D.remainingIn(leg, D.activePlayer(leg, m));

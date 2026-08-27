@@ -107,10 +107,13 @@ im X01. Kein Scoring-Teil, nur Finishen.
   Board sieht man es sofort).
 - Gespielt wird auf 3, 5 oder 10 Punkte.
 
-Die Zielzahl steht groß über der Tafel, darunter jeder Spieler mit Punktestand und
-aktuellem Rest. Der Finish-Vorschlag arbeitet wie im X01 mit. Der ↺-Button nimmt Dart
-für Dart zurück – und über eine Rundengrenze hinweg auch eine schon entschiedene Runde
-samt gezogener Zahl.
+Der Bildschirm ist derselbe Aufbau wie im Schnellen Spiel: oben im Kopf steht die
+gezogene Finish-Zahl (dort, wo sonst die Startpunktzahl steht), darunter die
+Spielerkarten mit großem Rest, Punktestand, Darts und Aufnahmen, dann Finish-Leiste
+und der Verlauf der Aufnahmen mit Rundentrennern. Wer durch ist, trägt einen Haken
+statt einer Zahl. Das Zahlenfeld ist das des X01 – inklusive **„Weiter ▸"**, das eine
+Aufnahme mit Fehlwürfen auffüllt. Der ↺-Button nimmt Dart für Dart zurück – und über
+eine Rundengrenze hinweg auch eine schon entschiedene Runde samt gezogener Zahl.
 
 In der Rangliste zählt der Modus **gewonnene Runden**, **Ø Darts je Finish**, das
 schnellste Finish und die höchste weggemachte Zahl.
@@ -150,6 +153,20 @@ Rechts unten sitzt **„0 Punkte ▸"**: Wer dreimal am Doppel vorbeiwirft, schl
 Aufnahme mit einem Tipp ab, statt dreimal „Miss" zu tippen. Steht schon ein Dart, heißt
 der Knopf **„Weiter ▸"** und übernimmt das Geworfene – die fehlenden Darts werden als
 Fehlwürfe ergänzt, damit die Dart-Zahl und damit der Average stimmen.
+
+**Turnier-Modus:** Der dritte Umschalter neben „Punkte / Einzel-Darts" – für
+Ligaspiele, wenn der Bildschirm vorn am Board hängt. Die Reste beider Spieler stehen
+in Plakatgröße, Verlauf und Zahlenfeld verschwinden; unten bleiben nur der
+Finish-Vorschlag, die letzte Aufnahme zur Kontrolle und ein Freitextfeld. Eingetippt
+wird auf einer echten Tastatur: **Enter** bucht die Aufnahme, **Löschen** nimmt erst
+Ziffern und im leeren Feld die letzte Aufnahme zurück (auch über den Spielerwechsel
+hinweg). Die Checkout-Abfrage lässt sich mit den Tasten **1/2/3** beantworten, das
+nächste Leg startet mit **Enter**. Der Modus bleibt auch nach einem Neustart an – der
+Bildschirm hängt ja fest am Board.
+
+**Die Sechzig:** Wirft jemand genau **60**, kommt der Löwe – das 1860-Wappen vor
+blauen Strahlen, darunter „SECHZIG!". In jedem Eingabemodus; fällt die Feier mit
+einem Dialog zusammen (60er-Checkout), bleibt der Dialog obenauf.
 
 **Finish-Vorschlag:** Über der Eingabe steht immer der sinnvollste Weg zum Double-Out
 für den aktuellen Rest – und zwar passend zu den *noch verfügbaren* Darts der
