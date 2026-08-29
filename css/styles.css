@@ -1732,6 +1732,26 @@ button, input, select, textarea { font-family: inherit; }
 }
 .feier.an { display: block; }
 
+/* Während der Feier blurt der Spielstand dahinter leicht aus – die Feier
+   gehört kurz allein ins Bild, und danach ist alles wieder scharf. */
+.feier.an::before {
+  content: ''; position: absolute; inset: 0;
+  background: rgba(6, 9, 13, 0.22);
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
+}
+
+/* Der Herzschlag der Feiern: zwei Schläge, kurze Pause – „SECH-ZIG",
+   bum-bum. Die 180 pulsiert im selben Takt. */
+@keyframes feier-puls {
+  0%   { transform: scale(1); }
+  12%  { transform: scale(1.14); }
+  24%  { transform: scale(1); }
+  36%  { transform: scale(1.14); }
+  50%  { transform: scale(1); }
+  100% { transform: scale(1); }
+}
+
 /* Der Blitz: ein paar harte weisse Schlaege, danach ein blaues Glimmen. */
 .feier-blitz {
   position: absolute; inset: 0;
@@ -1759,10 +1779,21 @@ button, input, select, textarea { font-family: inherit; }
   position: absolute; left: -3px; top: -100vh;
   width: 6px; height: 200vh;
   transform: rotate(var(--dreh));
-  background: linear-gradient(180deg, transparent, var(--laser) 42%, #fff 50%, var(--laser) 58%, transparent);
-  box-shadow: 0 0 14px var(--laser), 0 0 30px var(--laser-weich);
+  background: linear-gradient(180deg, transparent, var(--strahl, var(--laser)) 42%, #fff 50%, var(--strahl, var(--laser)) 58%, transparent);
+  box-shadow: 0 0 14px var(--strahl, var(--laser)), 0 0 30px var(--laser-weich);
   opacity: 0.55;
 }
+
+/* Bei der 180 schlagen die Strahlen bunt aus – Partyfarben wie das
+   Konfetti. Die Sechzig bleibt beim Vereinsblau. */
+.feier:not(.sechzig) .feier-strahlen i:nth-child(8n+1) { --strahl: #e5484d; }
+.feier:not(.sechzig) .feier-strahlen i:nth-child(8n+2) { --strahl: #46aad7; }
+.feier:not(.sechzig) .feier-strahlen i:nth-child(8n+3) { --strahl: #ffc14d; }
+.feier:not(.sechzig) .feier-strahlen i:nth-child(8n+4) { --strahl: #3fbf7f; }
+.feier:not(.sechzig) .feier-strahlen i:nth-child(8n+5) { --strahl: #e763c8; }
+.feier:not(.sechzig) .feier-strahlen i:nth-child(8n+6) { --strahl: #ff8a3d; }
+.feier:not(.sechzig) .feier-strahlen i:nth-child(8n+7) { --strahl: #a9e4ff; }
+.feier:not(.sechzig) .feier-strahlen i:nth-child(8n+8) { --strahl: #f2eeee; }
 @keyframes feier-drehen {
   0%   { transform: rotate(0deg)   scale(0.2); opacity: 0; }
   8%   { opacity: 1; }
@@ -1794,7 +1825,9 @@ button, input, select, textarea { font-family: inherit; }
   font-size: clamp(5rem, 32vw, 14rem); line-height: 0.9; color: #fff;
   letter-spacing: 0.02em;
   text-shadow: 0 0 12px #fff, 0 0 34px var(--laser), 0 0 70px var(--laser), 0 0 120px var(--laser-weich);
-  animation: feier-schlag 0.7s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+  animation:
+    feier-schlag 0.7s cubic-bezier(0.2, 1.6, 0.4, 1) both,
+    feier-puls 1.15s ease-in-out 0.7s infinite;
 }
 .feier-name {
   font-family: var(--font-display);
@@ -1910,6 +1943,20 @@ button, input, select, textarea { font-family: inherit; }
    Schutzzone selbst (env > 0), kommt nichts dazu – auf dem iPad im
    Vollbild meldet es aber gern 0, und dann hält diese Reserve den Platz. */
 #screen-game.turnier { padding-top: max(0px, 28px - env(safe-area-inset-top, 0px)); }
+
+/* Kein Scrollen am Board: der Bildschirm ist die ganze Seite, alles muss
+   hineinpassen – die Karten geben nach, nicht die Seite. */
+#screen-game.turnier.active {
+  height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 12px);
+  min-height: 0;
+  overflow: hidden;
+  padding-bottom: 8px;
+}
+
+/* Die beiden Kopf-Knöpfe (Spiel verlassen, zurücknehmen) sind am Board
+   weg – zurückgenommen wird mit Löschen, raus geht es über Esc bzw. ⌘+. */
+#screen-game.turnier .game-header .icon-btn { display: none; }
+#screen-game.turnier .game-header { justify-content: center; padding: 4px 0; }
 #screen-game.turnier .game-main { flex: 1; min-height: 0; }
 #screen-game.turnier .scoreboard { flex: 1; min-height: 0; grid-auto-rows: 1fr; }
 #screen-game.turnier .pcard {
@@ -1962,7 +2009,8 @@ button, input, select, textarea { font-family: inherit; }
 }
 .key-hist {
   display: flex; flex-direction: column; gap: 4px;
-  max-height: min(26vh, 210px); overflow-y: auto;
+  /* Fünf Aufnahmen passen hinein (mehr rendert renderGame gar nicht erst). */
+  max-height: min(32vh, 250px); overflow-y: auto;
   overscroll-behavior: contain; scrollbar-width: none;
 }
 .key-hist::-webkit-scrollbar { display: none; }
@@ -1976,16 +2024,21 @@ button, input, select, textarea { font-family: inherit; }
 .key-hist .v.bust .s { color: var(--red); text-decoration: line-through; }
 .key-hist .v.co .s { color: var(--accent); }
 .key-mitte { display: flex; flex-direction: column; gap: 6px; }
-#key-input {
+/* Die Eingabe-Anzeige: dreimal so groß wie ein normales Feld, damit der
+   Schreiber auch auf Entfernung sieht, was er tippt. Kein echtes <input> –
+   siehe Kommentar im HTML (iPad-Tastaturleiste). */
+.key-display {
   width: 100%;
-  background: var(--bg-3); border: 1px solid var(--line); color: var(--text);
-  border-radius: 14px; padding: 8px 16px; min-height: 112px;
-  font-size: clamp(3.2rem, 10vh, 5rem); text-align: center;
+  background: var(--bg-3); border: 1px solid var(--aktiv-linie); color: var(--text);
+  border-radius: 14px; padding: 8px 16px; min-height: 150px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: clamp(4rem, 15vh, 7.5rem); line-height: 1;
   font-family: var(--font-cond); font-weight: 700; font-variant-numeric: tabular-nums;
 }
-/* Ausgewählt heißt in dieser App weiße Kante, nicht rot. */
-#key-input:focus { outline: 2px solid var(--aktiv-linie); }
-#key-input::placeholder { color: var(--muted); font-weight: 400; font-size: 1.3rem; }
+.key-display.leer {
+  color: var(--muted); font-weight: 400; font-size: 1.25rem;
+  font-family: var(--font-body); letter-spacing: 0.02em;
+}
 .pad-key .input-error { text-align: center; min-height: 1.2em; }
 /* Am schmalen Handy hochkant haben drei Spalten keinen Platz – dort bleibt
    nur das Feld, die Aufnahmen stehen ja in den Spielerkarten. */
@@ -2002,8 +2055,12 @@ button, input, select, textarea { font-family: inherit; }
 #screen-game.turnier.verlauf .pcard .rest { font-size: 2.4rem; }
 #screen-game.turnier.verlauf .pcard .meta { display: none; }
 #screen-game.turnier.verlauf .pcard .pfinish { display: none; }
-#screen-game.turnier.verlauf .history .v { font-size: 1.05rem; }
 #screen-game.turnier.verlauf .input-area { display: none; }
+/* Deutlich größer als der normale Verlauf – und höchstens 13 Zeilen je
+   Seite, mehr passt ohne Scrollen nicht ins Bild. */
+#screen-game.turnier.verlauf .history .v { font-size: 1.35rem; padding: 8px 14px; }
+#screen-game.turnier.verlauf .history .leg-sep { font-size: 0.9rem; }
+#screen-game.turnier.verlauf .history .col > :nth-child(n+14) { display: none; }
 
 /* Am Board hängt der Bildschirm meist quer. Die Zweispalten-Aufteilung des
    Spielbildschirms bringt hier nichts – ein Textfeld braucht keine halbe
@@ -2020,7 +2077,7 @@ button, input, select, textarea { font-family: inherit; }
   #screen-game.turnier .pcard .pfinish { min-height: 34px; gap: 6px; }
   #screen-game.turnier .pcard .pfinish .chip { font-size: 1.1rem; padding: 3px 10px; }
   #screen-game.turnier .pcard .meta { font-size: 1rem; }
-  #key-input { min-height: 56px; font-size: 2rem; }
+  .key-display { min-height: 56px; font-size: 2rem; }
   .key-hist { max-height: 20vh; }
 }
 
@@ -2067,28 +2124,21 @@ button, input, select, textarea { font-family: inherit; }
   0%, 72% { opacity: 1; }
   100%    { opacity: 0; }
 }
+/* Der Löwe kommt mit einem kurzen Schlag ins Bild und pulsiert danach im
+   Sprechchor-Takt: „SECH-ZIG", bum-bum, kurze Pause, bum-bum. */
 .feier.sechzig .feier-logo {
   animation:
-    sechzig-schlag 0.45s cubic-bezier(0.2, 1.8, 0.4, 1) both,
-    sechzig-wackeln 0.55s ease-in-out 0.45s infinite;
+    sechzig-schlag 0.4s cubic-bezier(0.2, 1.7, 0.4, 1) both,
+    feier-puls 1.15s ease-in-out 0.4s infinite;
 }
 @keyframes sechzig-schlag {
-  0%   { transform: scale(0.1) rotate(-16deg); opacity: 0; }
-  55%  { transform: scale(1.16) rotate(5deg); opacity: 1; }
+  0%   { transform: scale(0.2) rotate(-8deg); opacity: 0; }
+  60%  { transform: scale(1.12) rotate(2deg); opacity: 1; }
   100% { transform: scale(1) rotate(0deg); }
 }
-@keyframes sechzig-wackeln {
-  0%, 100% { transform: rotate(-3deg) scale(1); }
-  50%      { transform: rotate(3deg) scale(1.07); }
-}
+/* Der Schriftzug pulsiert im selben Takt wie der Löwe. */
 .feier.sechzig .feier-name {
-  animation:
-    feier-blinken 0.3s steps(1, end) infinite,
-    sechzig-pumpen 0.6s ease-in-out infinite;
-}
-@keyframes sechzig-pumpen {
-  0%, 100% { transform: scale(1); }
-  50%      { transform: scale(1.14); }
+  animation: feier-puls 1.15s ease-in-out 0.4s infinite;
 }
 @media (prefers-reduced-motion: reduce) {
   .feier-logo,

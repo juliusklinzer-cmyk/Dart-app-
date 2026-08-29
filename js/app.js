@@ -2326,9 +2326,9 @@
       var avg = darts ? (scored / darts * 3).toFixed(1) : '–';
       var zeile, meta, pfinish = '';
       if (UI.turnier) {
-        /* Die letzte Aufnahme steht in den Wurflisten unten links und rechts –
-           hier nur noch Legs und Dartzahl. */
-        zeile = (schnell ? '' : 'Legs ' + legsWon(m, pid) + ' · ') + plural(darts, 'Dart', 'Darts');
+        /* Was geworfen wurde, steht in den Wurflisten unten links und
+           rechts – in der Karte bleibt nur der Leg-Stand. */
+        zeile = schnell ? '' : 'Legs ' + legsWon(m, pid);
         meta = '<span>Ø <b>' + avg + '</b></span>';
         /* Der Finish-Weg erscheint erst, wenn einer ansteht – groß im Feld
            des Spielers am Wurf, lesbar von der Abwurflinie. Der Kasten steht
@@ -2459,8 +2459,10 @@
     $('pad-darts').classList.toggle('hidden', mode !== 'darts');
     $('pad-key').classList.toggle('hidden', mode !== 'turnier');
     /* Der Turnier-Modus stellt den ganzen Bildschirm um: Reste in
-       Plakatgröße, kein Verlauf – das regelt das CSS über diese Klasse. */
+       Plakatgröße, kein Verlauf – das regelt das CSS über diese Klasse.
+       Beim Verlassen klappt auch eine offene Wurflisten-Ansicht zu. */
     $('screen-game').classList.toggle('turnier', mode === 'turnier');
+    if (mode !== 'turnier') $('screen-game').classList.remove('verlauf');
 
     if (mode === 'turnier') {
       /* Links und rechts der Eingabe stehen die Aufnahmen des laufenden Legs
@@ -2477,13 +2479,16 @@
             '<span class="s">' + (v.b ? v.o : v.s) + '</span>' +
             '<span class="r">' + (v.b ? 'Bust' : 'Rest ' + restLauf) + '</span></div>');
         });
-        return zeilen.reverse().join('');
+        // Die letzten fünf Aufnahmen, neueste oben – mehr passt nicht ins
+        // Bild, und die Seite soll am Board nie scrollen.
+        return zeilen.slice(-5).reverse().join('');
       };
       $('key-hist-l').innerHTML = histSpalte(m.p[0]);
       $('key-hist-r').innerHTML = histSpalte(m.p[1]);
       $('key-error').textContent = UI.error;
-      var feld = $('key-input');
-      if (!UI.overlay && !m.done && document.activeElement !== feld) feld.focus();
+      var anzeige = $('key-display');
+      anzeige.textContent = UI.input === '' ? 'Punkte tippen · Enter' : UI.input;
+      anzeige.classList.toggle('leer', UI.input === '');
     } else if (mode === 'total') {
       $('quick-row').innerHTML = '<button class="miss" data-quick="0">0 Pkt</button>' +
         QUICK_SCORES.map(function (q) { return '<button data-quick="' + q + '">' + q + '</button>'; }).join('');
@@ -3773,12 +3778,6 @@
       case 'undo':
         undo();
         break;
-      // Ausstieg aus dem Turnier-Modus zum Antippen – siehe Kommentar im HTML.
-      case 'turnier-aus':
-        UI.turnier = false;
-        S.settings.turnierModus = 0;
-        save(); render();
-        break;
       case 'end-visit': {
         var em = currentMatch();
         if (!em || em.done) return;
@@ -4010,34 +4009,34 @@
     else if (ev.key === 'Backspace') { pressKey('del'); ev.preventDefault(); }
   });
 
-  /* ---------- Turnier-Modus: Eingabe über die Tastatur ---------- */
-  function turnierEingabe() {
-    var feld = $('key-input');
-    var wert = feld.value.trim();
-    if (wert === '') return;
-    UI.error = '';
-    UI.input = String(parseInt(wert, 10));
-    feld.value = '';
-    submitTotal();
-  }
-
-  var keyFeld = $('key-input');
-  if (keyFeld) {
-    $('key-form').addEventListener('submit', function (ev) {
+  /* ---------- Turnier-Modus: Eingabe über die Tastatur ----------
+     Bewusst OHNE echtes Eingabefeld: ein fokussiertes Feld ruft am iPad die
+     System-Tastaturleiste (DE/EN, Pfeile) auf den Schirm. Die Ziffern kommen
+     als Tastendrücke direkt an der Seite an und landen in UI.input – dieselbe
+     Ablage, aus der auch submitTotal() liest. */
+  document.addEventListener('keydown', function (ev) {
+    if (S.screen !== 'game' || !UI.turnier || UI.overlay) return;
+    if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    var tm = currentMatch();
+    if (!tm || tm.done) return;
+    if (ev.key >= '0' && ev.key <= '9') {
+      if (UI.input.length < 3) {
+        UI.input = UI.input === '0' ? ev.key : UI.input + ev.key;
+        UI.error = '';
+        render();
+      }
       ev.preventDefault();
-      if (!UI.overlay) turnierEingabe();
-    });
-    /* Löschen im leeren Feld nimmt die letzte Aufnahme zurück – so korrigiert
-       man vom Board aus ohne Maus bis zum vorigen Spieler zurück. */
-    keyFeld.addEventListener('keydown', function (ev) {
-      if (ev.key === 'Backspace' && keyFeld.value === '') { undo(); ev.preventDefault(); }
-    });
-    // Nur Ziffern, höchstens drei – alles andere fliegt schon beim Tippen raus.
-    keyFeld.addEventListener('input', function () {
-      var sauber = keyFeld.value.replace(/\D/g, '').slice(0, 3);
-      if (keyFeld.value !== sauber) keyFeld.value = sauber;
-    });
-  }
+    } else if (ev.key === 'Enter') {
+      if (UI.input !== '') { UI.error = ''; submitTotal(); }
+      ev.preventDefault();
+    } else if (ev.key === 'Backspace') {
+      /* Erst Ziffern löschen, im leeren Zustand die letzte Aufnahme – so
+         korrigiert man vom Board aus ohne Maus bis zum vorigen Spieler. */
+      if (UI.input) { UI.input = UI.input.slice(0, -1); UI.error = ''; render(); }
+      else undo();
+      ev.preventDefault();
+    }
+  });
 
   /* Shift gedrückt halten zeigt die Wurfliste des Matches – je Spieler auf
      seiner Seite, alle Legs mit Trennern. Loslassen führt zurück in die
@@ -4055,15 +4054,6 @@
   window.addEventListener('blur', function () {
     var sgEl = $('screen-game');
     if (sgEl) sgEl.classList.remove('verlauf');
-  });
-
-  /* Verliert das Feld den Fokus (ein Tipp daneben genügt), holt der nächste
-     Tastendruck ihn zurück – am Board soll niemand erst die Maus suchen. */
-  document.addEventListener('keydown', function (ev) {
-    if (S.screen !== 'game' || !UI.turnier || UI.overlay) return;
-    if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
-    var feld = $('key-input');
-    if (feld && document.activeElement !== feld) feld.focus();
   });
 
   /* Auch die Abfragen zwischen den Aufnahmen gehen ohne Maus: 1/2/3

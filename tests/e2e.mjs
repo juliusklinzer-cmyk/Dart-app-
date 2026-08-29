@@ -1328,15 +1328,23 @@ check('wer nicht dran ist, tritt leicht zurück', await page.evaluate(() => {
 }));
 check('Rest steht in Plakatgröße', await page.locator('.pcard .rest').first()
   .evaluate((e) => parseFloat(getComputedStyle(e).fontSize) > 60));
-check('das Feld hat von allein den Fokus',
-  await page.evaluate(() => document.activeElement === document.getElementById('key-input')));
+check('die Eingabe-Anzeige steht bereit (kein echtes Feld, keine iPad-Leiste)',
+  (await visible('#key-display')) &&
+  (await page.evaluate(() => !document.querySelector('#pad-key input'))));
+check('die Kopf-Knöpfe sind weg – alles läuft über die Tastatur',
+  !(await page.locator('#screen-game .game-header .icon-btn').first().isVisible()));
+check('die Seite füllt genau den Bildschirm, nichts scrollt',
+  await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 1));
 
 /* Eintippen wie am Liga-Abend: Zahl, Enter. */
 await page.keyboard.type('60');
+check('die Anzeige zeigt groß, was getippt wurde', (await text('#key-display')).trim() === '60');
 await page.keyboard.press('Enter');
 check('Aufnahme gebucht: 301 - 60 = 241', (await rest(0)) === '241', await rest(0));
-check('die Dartzahl steht in der Spielerkarte',
-  (await text('#scoreboard')).includes('3 Darts'), await text('#scoreboard'));
+check('die Karte bleibt schlank: nur Ø, keine Wurfdetails', await page.evaluate(() => {
+  const t = document.getElementById('scoreboard').innerText;
+  return t.includes('Ø') && !t.includes('Letzte') && !t.includes('Darts');
+}));
 check('und in der Wurfliste neben der Eingabe', await page.evaluate(() => {
   const t = document.getElementById('key-hist-l').innerText;
   return t.includes('60') && t.includes('Rest 241');
@@ -1365,9 +1373,9 @@ check('mit den Aufnahmen beider Seiten', (await page.locator('#history .col').co
 await page.keyboard.up('Shift');
 check('Loslassen führt in die Spielansicht zurück', !(await page.locator('#history').isVisible()));
 
-/* Ohne Esc-Taste (Magic Keyboard am iPad): der Knopf unter der Eingabe. */
-await page.locator('[data-action="turnier-aus"]').click();
-check('„Turnier-Modus beenden" führt zur Punkte-Eingabe', await visible('#pad-total'));
+/* Ohne Esc-Taste (Magic Keyboard am iPad): ⌘+. ist das Apple-Escape. */
+await page.keyboard.press('Meta+.');
+check('⌘+. beendet den Turnier-Modus', await visible('#pad-total'));
 await page.locator('#mode-toggle button[data-mode="turnier"]').click();
 check('und der Weg zurück steht wieder', await visible('#pad-key'));
 
@@ -1394,12 +1402,11 @@ check('die Sechzig liegt unter der Dialog-Ebene', await page.evaluate(() => {
 await page.locator('#mode-toggle button[data-mode="turnier"]').click();
 await page.reload();
 check('Turnier-Modus übersteht den Neustart', await visible('#pad-key'));
-check('und das Feld ist wieder fokussiert',
-  await page.evaluate(() => document.activeElement === document.getElementById('key-input')));
+check('und die Eingabe-Anzeige steht wieder bereit', await visible('#key-display'));
 
 /* Checkout am Board: die Dart-Frage wird mit 1/2/3 beantwortet – und eine
-   verirrte Ziffer darf nicht im weiter fokussierten Feld kleben bleiben,
-   sonst würde aus der nächsten 5 still eine 95. */
+   verirrte Ziffer darf die Eingabe nicht verändern, sonst würde aus der
+   nächsten 5 still eine 95. */
 const tippe = async (z) => { await page.keyboard.type(z); await page.keyboard.press('Enter'); };
 await tippe('180');   // Lenas 256 -> 76
 await tippe('100');   // Tobi 241 -> 141
@@ -1410,8 +1417,8 @@ check('der Finish-Weg steht im Feld des Spielers am Wurf',
 await tippe('40');    // Lenas checkt aus – Abfrage nach den Darts
 check('Checkout-Abfrage steht', (await text('#overlay-card')).includes('wie vielen Darts'));
 await page.keyboard.press('9');   // daneben getippt – darf nichts tun
-check('verirrte Ziffer landet nicht im Eingabefeld',
-  (await page.locator('#key-input').inputValue()) === '');
+check('verirrte Ziffer verändert die Eingabe nicht',
+  await page.evaluate(() => window.__dart.ui().input === '40'));
 check('die Abfrage steht noch', (await text('#overlay-card')).includes('wie vielen Darts'));
 await page.keyboard.press('1');
 check('Taste 1 bucht den Checkout mit einem Dart', await page.evaluate(() => {

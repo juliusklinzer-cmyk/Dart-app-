@@ -359,15 +359,12 @@
     <div id="pad-key" class="pad pad-key hidden">
       <div id="key-hist-l" class="key-hist"></div>
       <div class="key-mitte">
-        <form id="key-form" autocomplete="off">
-          <input id="key-input" type="text" inputmode="numeric" autocomplete="off"
-                 enterkeyhint="done" maxlength="3" placeholder="Punkte · Enter"
-                 aria-label="Punkte der Aufnahme eintippen">
-        </form>
+        <!-- Kein echtes Eingabefeld: ein fokussiertes Feld ruft am iPad die
+             System-Tastaturleiste (DE/EN, Pfeile) auf den Schirm. Die Ziffern
+             kommen als Tastendrücke direkt an der Seite an, das hier ist nur
+             die Anzeige. Tab schaltet den Turnier-Modus an und aus. -->
+        <div id="key-display" class="key-display leer" aria-live="polite"></div>
         <div id="key-error" class="input-error"></div>
-        <!-- Das Magic Keyboard am iPad hat keine Esc-Taste – deshalb gibt es
-             den Ausstieg auch zum Antippen (und ⌘+. als Apple-Escape). -->
-        <button class="btn ghost small" data-action="turnier-aus">Turnier-Modus beenden</button>
       </div>
       <div id="key-hist-r" class="key-hist"></div>
     </div>

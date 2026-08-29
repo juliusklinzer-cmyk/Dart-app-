@@ -156,15 +156,17 @@ Fehlwürfe ergänzt, damit die Dart-Zahl und damit der Average stimmen.
 
 **Turnier-Modus:** Der dritte Umschalter neben „Punkte / Einzel-Darts" – für
 Ligaspiele, wenn der Bildschirm vorn am Board hängt. Die Reste beider Spieler stehen
-in Plakatgröße, Verlauf und Zahlenfeld verschwinden; unten bleiben nur der
-Finish-Vorschlag, die letzte Aufnahme zur Kontrolle und ein Freitextfeld. Eingetippt
-wird auf einer echten Tastatur: **Enter** bucht die Aufnahme, **Löschen** nimmt erst
-Ziffern und im leeren Feld die letzte Aufnahme zurück (auch über den Spielerwechsel
-hinweg). Die Checkout-Abfrage lässt sich mit den Tasten **1/2/3** beantworten, das
-nächste Leg startet mit **Enter**. Der Modus bleibt auch nach einem Neustart an – der
-Bildschirm hängt ja fest am Board. Beendet wird er mit **Esc**, am iPad-Magic-Keyboard
-(das keine Esc-Taste hat) mit **⌘+.** oder über den Knopf **„Turnier-Modus beenden"**
-unter dem Eingabefeld.
+in Plakatgröße (wer nicht dran ist, tritt leicht zurück), der Finish-Weg erscheint
+groß im Feld des Spielers am Wurf, sobald einer möglich ist, und unten stehen die
+letzten fünf Aufnahmen je Spieler neben einer großen Eingabe-Anzeige. Es gibt kein
+Eingabefeld und keine Knöpfe – deshalb blendet das iPad auch keine
+Tastatur-Systemleiste ein, und die Seite scrollt nie. Alles läuft über die Tastatur:
+**Ziffern** tippen, **Enter** bucht, **Löschen** nimmt erst Ziffern und dann
+Aufnahmen zurück (auch über den Spielerwechsel hinweg), die Checkout-Abfrage
+beantworten **1/2/3**, das nächste Leg startet **Enter**, und **Shift** gedrückt
+halten zeigt die große Wurfliste (bis 13 Zeilen je Seite). Beendet wird der Modus
+mit **Esc**, am Magic Keyboard (ohne Esc-Taste) mit **⌘+.** – und er überlebt einen
+Neustart.
 
 **Die Sechzig:** Wirft jemand genau **60**, kommt der Löwe – das 1860-Wappen vor
 blauen Strahlen, darunter „SECHZIG!". In jedem Eingabemodus; fällt die Feier mit
