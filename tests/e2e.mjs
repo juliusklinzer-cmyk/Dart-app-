@@ -1557,8 +1557,11 @@ await typeScore(140);
 check('140 ist keine Feier wert', !(await page.evaluate(() =>
   document.getElementById('feier').classList.contains('an'))));
 await typeScore(180);   // der zweite Spieler
-check('die Feier läuft', await page.evaluate(() =>
-  document.getElementById('feier').classList.contains('an')));
+/* Der Neustart der Feier gönnt sich eine Frame-Pause (Safari-Fix) –
+   deshalb kurz warten statt sofort nachzusehen. */
+await page.waitForFunction(() => document.getElementById('feier').classList.contains('an'),
+  null, { timeout: 2000 });
+check('die Feier läuft', true);
 const feierText = await text('#feier');
 check('die 180 steht gross da', feierText.includes('180'));
 /* Die Anzeige schreibt den Namen gross (text-transform), im Profil steht er

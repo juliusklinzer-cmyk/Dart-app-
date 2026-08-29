@@ -587,9 +587,17 @@
    * - Sie liegt ausserhalb der Screens, render() fasst sie also nicht an.
    */
   var FEIER_MS = 4600;
-  /* Die Sechzig ist halb so lang wie die 180 – sie kommt ja auch deutlich
-     öfter. Kurz, laut, wackelnd, wieder weg (Animationen: .feier.sechzig). */
-  var SECHZIG_MS = 2300;
+  /* Die Sechzig ist kurz: ein Puls („SECH-ZIG", bum-bum), dann wieder weg –
+     sie kommt ja auch deutlich öfter als die 180. */
+  var SECHZIG_MS = 1200;
+
+  /* Feier anwerfen. Kein display-Umschalten und kein Klassen-Neustart-Trick:
+     die Kinder werden je Feier frisch eingesetzt und starten ihre Animationen
+     von selbst – das ist der einzige Neustart, den auch Safari immer mitmacht
+     (display none→block auf der Blur-Ebene ließ dort Folge-Feiern ausfallen). */
+  function feierAnwerfen(box) {
+    box.classList.add('an');
+  }
   var feierTimer = null;
   var KONFETTI_FARBEN = ['#e5484d', '#46aad7', '#ffc14d', '#f2eeee', '#3fbf7f', '#e763c8', '#ff8a3d'];
 
@@ -626,9 +634,8 @@
         '<div class="feier-gruss">Gratuliere!</div>' +
       '</div>';
 
-    box.classList.remove('an', 'sechzig');   // eine laufende Sechzig tritt zurück
-    void box.offsetWidth;          // Neustart erzwingen, wenn zwei 180er folgen
-    box.classList.add('an');
+    box.classList.remove('sechzig');   // eine laufende Sechzig tritt zurück
+    feierAnwerfen(box);
     if (feierTimer) clearTimeout(feierTimer);
     feierTimer = setTimeout(function () {
       box.classList.remove('an');
@@ -664,15 +671,13 @@
         '<div class="feier-gruss">' + esc(pname(pid)) + '</div>' +
       '</div>';
 
-    box.classList.remove('an');
-    void box.offsetWidth;
-    box.classList.add('an');
+    feierAnwerfen(box);
     if (feierTimer) clearTimeout(feierTimer);
     feierTimer = setTimeout(function () {
       box.classList.remove('an', 'sechzig');
       box.innerHTML = '';
       feierTimer = null;
-    }, ruhig ? 1400 : SECHZIG_MS);
+    }, ruhig ? 900 : SECHZIG_MS);
   }
 
   /* Aufnahme abschließen und Leg-/Matchstand fortschreiben.

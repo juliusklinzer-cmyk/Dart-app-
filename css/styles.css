@@ -1726,11 +1726,13 @@ button, input, select, textarea { font-family: inherit; }
  * legt sich ueber den ganzen Bildschirm, und wer sofort weiterschreiben
  * will, muss durch sie hindurchtippen koennen.
  */
+/* Immer im Layout, nie anklickbar: ohne Inhalt ist die Ebene unsichtbar.
+   Kein display-Umschalten – das ließ WebKit die Blur-Ebene (::before) nach
+   der ersten Feier gelegentlich gar nicht mehr zeichnen. */
 .feier {
   position: fixed; inset: 0; z-index: 90;
-  pointer-events: none; display: none; overflow: hidden;
+  pointer-events: none; overflow: hidden;
 }
-.feier.an { display: block; }
 
 /* Während der Feier blurt der Spielstand dahinter leicht aus – die Feier
    gehört kurz allein ins Bild, und danach ist alles wieder scharf. */
@@ -2114,34 +2116,33 @@ button, input, select, textarea { font-family: inherit; }
    knallt rein und wackelt durchgehend, die Strahlen drehen doppelt so
    schnell, der Schriftzug pumpt im Takt des Blinkens. Eigene Keyframes,
    weil die 4,6-Sekunden-Kurven der 180 hier mitten im Bild abrissen. */
-.feier.sechzig .feier-blitz { animation: sechzig-blitz 2.3s ease-out forwards; }
+.feier.sechzig .feier-blitz { animation: sechzig-blitz 1.2s ease-out forwards; }
 @keyframes sechzig-blitz {
   0%   { opacity: 0; }
-  4%   { opacity: 1; }
-  10%  { opacity: 0.08; }
-  16%  { opacity: 0.85; }
-  24%  { opacity: 0.1; }
-  42%  { opacity: 0.3; }
+  6%   { opacity: 1; }
+  16%  { opacity: 0.1; }
+  26%  { opacity: 0.7; }
+  45%  { opacity: 0.2; }
   100% { opacity: 0; }
 }
-.feier.sechzig .feier-strahlen { animation: sechzig-drehen 2.3s linear forwards; }
+.feier.sechzig .feier-strahlen { animation: sechzig-drehen 1.2s linear forwards; }
 @keyframes sechzig-drehen {
   0%   { transform: rotate(0deg) scale(0.25); opacity: 0; }
-  10%  { opacity: 1; }
-  78%  { opacity: 0.85; }
-  100% { transform: rotate(260deg) scale(1.5); opacity: 0; }
+  12%  { opacity: 1; }
+  75%  { opacity: 0.85; }
+  100% { transform: rotate(150deg) scale(1.4); opacity: 0; }
 }
-.feier.sechzig .feier-mitte { animation: sechzig-weg 2.3s ease-in forwards; }
+.feier.sechzig .feier-mitte { animation: sechzig-weg 1.2s ease-in forwards; }
 @keyframes sechzig-weg {
-  0%, 72% { opacity: 1; }
+  0%, 68% { opacity: 1; }
   100%    { opacity: 0; }
 }
-/* Der Löwe kommt mit einem kurzen Schlag ins Bild und pulsiert danach im
-   Sprechchor-Takt: „SECH-ZIG", bum-bum, kurze Pause, bum-bum. */
+/* Der Löwe kommt mit einem kurzen Schlag ins Bild und pulsiert genau
+   einmal im Sprechchor-Takt: „SECH-ZIG", bum-bum – fertig. */
 .feier.sechzig .feier-logo {
   animation:
-    sechzig-schlag 0.4s cubic-bezier(0.2, 1.7, 0.4, 1) both,
-    feier-puls 1.15s ease-in-out 0.4s infinite;
+    sechzig-schlag 0.3s cubic-bezier(0.2, 1.7, 0.4, 1) both,
+    feier-puls 0.75s ease-in-out 0.3s 1 both;
 }
 @keyframes sechzig-schlag {
   0%   { transform: scale(0.2) rotate(-8deg); opacity: 0; }
@@ -2150,7 +2151,7 @@ button, input, select, textarea { font-family: inherit; }
 }
 /* Der Schriftzug pulsiert im selben Takt wie der Löwe. */
 .feier.sechzig .feier-name {
-  animation: feier-puls 1.15s ease-in-out 0.4s infinite;
+  animation: feier-puls 0.75s ease-in-out 0.3s 1 both;
 }
 @media (prefers-reduced-motion: reduce) {
   .feier-logo,
