@@ -2046,9 +2046,21 @@ button, input, select, textarea { font-family: inherit; }
   font-size: clamp(4rem, 15vh, 7.5rem); line-height: 1;
   font-family: var(--font-cond); font-weight: 700; font-variant-numeric: tabular-nums;
 }
-.key-display.leer {
-  color: var(--muted); font-weight: 400; font-size: 1.25rem;
-  font-family: var(--font-body); letter-spacing: 0.02em;
+/* Der blaue Eingabestrich: blinkt wie ein echter Cursor – mehr steht in
+   der leeren Anzeige nicht. */
+.key-display .cursor {
+  display: inline-block; width: 5px; height: 0.85em;
+  margin-left: 0.06em; border-radius: 3px;
+  background: var(--laser);
+  box-shadow: 0 0 10px var(--laser-weich);
+  animation: cursor-blinken 1.1s steps(1, end) infinite;
+}
+@keyframes cursor-blinken {
+  0%, 55%   { opacity: 1; }
+  56%, 100% { opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .key-display .cursor { animation: none; }
 }
 .pad-key .input-error { text-align: center; min-height: 1.2em; }
 /* Am schmalen Handy hochkant haben drei Spalten keinen Platz – dort bleibt
@@ -2508,7 +2520,7 @@ button, input, select, textarea { font-family: inherit; }
              System-Tastaturleiste (DE/EN, Pfeile) auf den Schirm. Die Ziffern
              kommen als Tastendrücke direkt an der Seite an, das hier ist nur
              die Anzeige. Tab schaltet den Turnier-Modus an und aus. -->
-        <div id="key-display" class="key-display leer" aria-live="polite"></div>
+        <div id="key-display" class="key-display" aria-live="polite"></div>
         <div id="key-error" class="input-error"></div>
       </div>
       <div id="key-hist-r" class="key-hist"></div>
@@ -5324,9 +5336,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       $('key-hist-l').innerHTML = histSpalte(m.p[0]);
       $('key-hist-r').innerHTML = histSpalte(m.p[1]);
       $('key-error').textContent = UI.error;
-      var anzeige = $('key-display');
-      anzeige.textContent = UI.input === '' ? 'Punkte tippen · Enter' : UI.input;
-      anzeige.classList.toggle('leer', UI.input === '');
+      /* Kein Platzhaltertext – nur die Ziffern und der blaue Eingabestrich,
+         wie in einem echten Feld. */
+      $('key-display').innerHTML = esc(UI.input) + '<span class="cursor"></span>';
     } else if (mode === 'total') {
       $('quick-row').innerHTML = '<button class="miss" data-quick="0">0 Pkt</button>' +
         QUICK_SCORES.map(function (q) { return '<button data-quick="' + q + '">' + q + '</button>'; }).join('');

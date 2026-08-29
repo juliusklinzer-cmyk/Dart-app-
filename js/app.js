@@ -2486,9 +2486,9 @@
       $('key-hist-l').innerHTML = histSpalte(m.p[0]);
       $('key-hist-r').innerHTML = histSpalte(m.p[1]);
       $('key-error').textContent = UI.error;
-      var anzeige = $('key-display');
-      anzeige.textContent = UI.input === '' ? 'Punkte tippen · Enter' : UI.input;
-      anzeige.classList.toggle('leer', UI.input === '');
+      /* Kein Platzhaltertext – nur die Ziffern und der blaue Eingabestrich,
+         wie in einem echten Feld. */
+      $('key-display').innerHTML = esc(UI.input) + '<span class="cursor"></span>';
     } else if (mode === 'total') {
       $('quick-row').innerHTML = '<button class="miss" data-quick="0">0 Pkt</button>' +
         QUICK_SCORES.map(function (q) { return '<button data-quick="' + q + '">' + q + '</button>'; }).join('');
