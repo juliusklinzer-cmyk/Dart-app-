@@ -1412,8 +1412,12 @@ await tippe('180');   // Lenas 256 -> 76
 await tippe('100');   // Tobi 241 -> 141
 await tippe('36');    // Lenas -> 40
 await tippe('100');   // Tobi -> 41
-check('der Finish-Weg steht im Feld des Spielers am Wurf',
-  (await page.locator('.pcard.active .pfinish').innerText()).includes('D20'));
+check('der Finish-Weg steht im Kasten – auch beim Wartenden', await page.evaluate(() => {
+  // Lenas (40, am Wurf) sieht ihr D20 – und auch Tobi (41, wartet) seinen Weg.
+  const aktiv = document.querySelector('.pcard.active .pfinish').innerText;
+  const wartend = document.querySelector('.pcard:not(.active) .pfinish').innerText;
+  return aktiv.includes('D20') && wartend.trim() !== '';
+}));
 await tippe('40');    // Lenas checkt aus – Abfrage nach den Darts
 check('Checkout-Abfrage steht', (await text('#overlay-card')).includes('wie vielen Darts'));
 await page.keyboard.press('9');   // daneben getippt – darf nichts tun

@@ -1991,15 +1991,14 @@ button, input, select, textarea { font-family: inherit; }
 #screen-game.turnier .checkout-bar { display: none; }
 #screen-game.turnier .pcard .pfinish {
   display: flex; justify-content: center; align-items: center; gap: 10px;
-  flex-wrap: wrap; min-height: 62px; margin-top: 4px;
+  flex-wrap: wrap; min-height: 62px; margin-top: 10px;
+  /* Abgedunkelt: eine Vorbereitung, kein Signal – Rot bleibt den Feiern. */
+  opacity: 0.7;
 }
 #screen-game.turnier .pcard .pfinish .chip {
-  background: var(--bg-3); border: 1px solid var(--line); border-radius: 12px;
+  background: var(--bg-3); border: 1px solid var(--line-hell); border-radius: 12px;
   padding: 6px 18px; font-family: var(--font-cond); font-weight: 700;
   font-size: clamp(1.6rem, 4.4vh, 2.6rem); line-height: 1.2;
-}
-#screen-game.turnier .pcard .pfinish .chip.first {
-  background: var(--accent); border-color: var(--accent); color: var(--on-accent);
 }
 
 /* Unten drei Spalten: Aufnahmen | Eingabe | Aufnahmen. */

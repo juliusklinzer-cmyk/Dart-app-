@@ -2330,13 +2330,13 @@
            rechts – in der Karte bleibt nur der Leg-Stand. */
         zeile = schnell ? '' : 'Legs ' + legsWon(m, pid);
         meta = '<span>Ø <b>' + avg + '</b></span>';
-        /* Der Finish-Weg erscheint erst, wenn einer ansteht – groß im Feld
-           des Spielers am Wurf, lesbar von der Abwurflinie. Der Kasten steht
-           in jeder Karte, damit die große Zahl nicht springt. */
-        var fRoute = pid === active && !m.done
+        /* Der Finish-Weg erscheint, sobald einer ansteht – bei jedem Spieler
+           im eigenen Kasten, auch während der andere wirft: so kann man sich
+           auf seine Aufnahme vorbereiten. Abgedunkelt, kein Signalrot. */
+        var fRoute = !m.done && rest >= 2
           ? Checkout.suggest(rest, 3, lieblingsDoppel(pid)) : null;
-        pfinish = '<div class="pfinish">' + (fRoute ? fRoute.map(function (d, i) {
-          return '<span class="chip ' + (i === 0 ? 'first' : '') + '">' + Checkout.pretty(d) + '</span>';
+        pfinish = '<div class="pfinish">' + (fRoute ? fRoute.map(function (d) {
+          return '<span class="chip">' + Checkout.pretty(d) + '</span>';
         }).join('') : '') + '</div>';
       } else {
         /* Im Schnellen Spiel gibt es keine Legs zu zählen – dort steht die
@@ -2347,8 +2347,8 @@
       return '<div class="pcard ' + (pid === active ? 'active' : '') + '">' +
         '<div class="pname">' + avatarHTML(profile(pid), 'sm') + esc(pname(pid)) + '</div>' +
         '<div class="legs">' + zeile + '</div>' +
-        '<div class="rest">' + rest + '</div>' + pfinish +
-        '<div class="meta">' + meta + '</div>' +
+        '<div class="rest">' + rest + '</div>' +
+        '<div class="meta">' + meta + '</div>' + pfinish +
         '</div>';
     }).join('');
 

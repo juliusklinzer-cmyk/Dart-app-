@@ -1994,15 +1994,14 @@ button, input, select, textarea { font-family: inherit; }
 #screen-game.turnier .checkout-bar { display: none; }
 #screen-game.turnier .pcard .pfinish {
   display: flex; justify-content: center; align-items: center; gap: 10px;
-  flex-wrap: wrap; min-height: 62px; margin-top: 4px;
+  flex-wrap: wrap; min-height: 62px; margin-top: 10px;
+  /* Abgedunkelt: eine Vorbereitung, kein Signal – Rot bleibt den Feiern. */
+  opacity: 0.7;
 }
 #screen-game.turnier .pcard .pfinish .chip {
-  background: var(--bg-3); border: 1px solid var(--line); border-radius: 12px;
+  background: var(--bg-3); border: 1px solid var(--line-hell); border-radius: 12px;
   padding: 6px 18px; font-family: var(--font-cond); font-weight: 700;
   font-size: clamp(1.6rem, 4.4vh, 2.6rem); line-height: 1.2;
-}
-#screen-game.turnier .pcard .pfinish .chip.first {
-  background: var(--accent); border-color: var(--accent); color: var(--on-accent);
 }
 
 /* Unten drei Spalten: Aufnahmen | Eingabe | Aufnahmen. */
@@ -5170,13 +5169,13 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
            rechts – in der Karte bleibt nur der Leg-Stand. */
         zeile = schnell ? '' : 'Legs ' + legsWon(m, pid);
         meta = '<span>Ø <b>' + avg + '</b></span>';
-        /* Der Finish-Weg erscheint erst, wenn einer ansteht – groß im Feld
-           des Spielers am Wurf, lesbar von der Abwurflinie. Der Kasten steht
-           in jeder Karte, damit die große Zahl nicht springt. */
-        var fRoute = pid === active && !m.done
+        /* Der Finish-Weg erscheint, sobald einer ansteht – bei jedem Spieler
+           im eigenen Kasten, auch während der andere wirft: so kann man sich
+           auf seine Aufnahme vorbereiten. Abgedunkelt, kein Signalrot. */
+        var fRoute = !m.done && rest >= 2
           ? Checkout.suggest(rest, 3, lieblingsDoppel(pid)) : null;
-        pfinish = '<div class="pfinish">' + (fRoute ? fRoute.map(function (d, i) {
-          return '<span class="chip ' + (i === 0 ? 'first' : '') + '">' + Checkout.pretty(d) + '</span>';
+        pfinish = '<div class="pfinish">' + (fRoute ? fRoute.map(function (d) {
+          return '<span class="chip">' + Checkout.pretty(d) + '</span>';
         }).join('') : '') + '</div>';
       } else {
         /* Im Schnellen Spiel gibt es keine Legs zu zählen – dort steht die
@@ -5187,8 +5186,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       return '<div class="pcard ' + (pid === active ? 'active' : '') + '">' +
         '<div class="pname">' + avatarHTML(profile(pid), 'sm') + esc(pname(pid)) + '</div>' +
         '<div class="legs">' + zeile + '</div>' +
-        '<div class="rest">' + rest + '</div>' + pfinish +
-        '<div class="meta">' + meta + '</div>' +
+        '<div class="rest">' + rest + '</div>' +
+        '<div class="meta">' + meta + '</div>' + pfinish +
         '</div>';
     }).join('');
 
