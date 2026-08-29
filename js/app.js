@@ -2324,18 +2324,20 @@
       var darts = dartsIn(leg, pid) + (pid === active ? UI.darts.length : 0);
       var scored = matchStart(m) - remainingIn(leg, pid) + (pid === active ? pendingSum : 0);
       var avg = darts ? (scored / darts * 3).toFixed(1) : '–';
-      var zeile, meta;
+      var zeile, meta, pfinish = '';
       if (UI.turnier) {
-        /* Turnier-Modus: die letzte Aufnahme steht direkt beim Spieler – wer
-           am Board tippt, sieht so ohne Umweg, ob richtig geschrieben wurde. */
-        var lv = null;
-        for (var vi = leg.visits.length - 1; vi >= 0 && !lv; vi--) {
-          if (leg.visits[vi].p === pid) lv = leg.visits[vi];
-        }
-        zeile = (schnell ? '' : 'Legs ' + legsWon(m, pid) + ' · ') +
-          (lv ? 'Letzte ' + (lv.b ? 'Bust (' + lv.o + ')' : lv.s) : 'Noch kein Wurf') +
-          ' · ' + plural(darts, 'Dart', 'Darts');
+        /* Die letzte Aufnahme steht in den Wurflisten unten links und rechts –
+           hier nur noch Legs und Dartzahl. */
+        zeile = (schnell ? '' : 'Legs ' + legsWon(m, pid) + ' · ') + plural(darts, 'Dart', 'Darts');
         meta = '<span>Ø <b>' + avg + '</b></span>';
+        /* Der Finish-Weg erscheint erst, wenn einer ansteht – groß im Feld
+           des Spielers am Wurf, lesbar von der Abwurflinie. Der Kasten steht
+           in jeder Karte, damit die große Zahl nicht springt. */
+        var fRoute = pid === active && !m.done
+          ? Checkout.suggest(rest, 3, lieblingsDoppel(pid)) : null;
+        pfinish = '<div class="pfinish">' + (fRoute ? fRoute.map(function (d, i) {
+          return '<span class="chip ' + (i === 0 ? 'first' : '') + '">' + Checkout.pretty(d) + '</span>';
+        }).join('') : '') + '</div>';
       } else {
         /* Im Schnellen Spiel gibt es keine Legs zu zählen – dort steht die
            geworfene Dartzahl, die sagt in dem Moment mehr. */
@@ -2345,7 +2347,7 @@
       return '<div class="pcard ' + (pid === active ? 'active' : '') + '">' +
         '<div class="pname">' + avatarHTML(profile(pid), 'sm') + esc(pname(pid)) + '</div>' +
         '<div class="legs">' + zeile + '</div>' +
-        '<div class="rest">' + rest + '</div>' +
+        '<div class="rest">' + rest + '</div>' + pfinish +
         '<div class="meta">' + meta + '</div>' +
         '</div>';
     }).join('');

@@ -1320,7 +1320,12 @@ check('Tastatur-Feld sichtbar', await visible('#pad-key'));
 check('Zahlenfeld und Einzel-Darts weg', !(await visible('#pad-total')) && !(await visible('#pad-darts')));
 check('auch der Umschalter selbst ist weg – Esc führt zurück', !(await visible('#mode-toggle')));
 check('Verlauf ausgeblendet', !(await page.locator('#history').isVisible()));
-check('Finish-Leiste bleibt stehen', await visible('#checkout-bar'));
+check('keine mittlere Finish-Leiste – der Finish steht im Spielerfeld',
+  !(await visible('#checkout-bar')));
+check('wer nicht dran ist, tritt leicht zurück', await page.evaluate(() => {
+  const o = parseFloat(getComputedStyle(document.querySelector('.pcard:not(.active)')).opacity);
+  return o >= 0.79 && o < 1;
+}));
 check('Rest steht in Plakatgröße', await page.locator('.pcard .rest').first()
   .evaluate((e) => parseFloat(getComputedStyle(e).fontSize) > 60));
 check('das Feld hat von allein den Fokus',
@@ -1330,8 +1335,8 @@ check('das Feld hat von allein den Fokus',
 await page.keyboard.type('60');
 await page.keyboard.press('Enter');
 check('Aufnahme gebucht: 301 - 60 = 241', (await rest(0)) === '241', await rest(0));
-check('die letzte Aufnahme steht in der Spielerkarte',
-  (await text('#scoreboard')).includes('Letzte 60'), await text('#scoreboard'));
+check('die Dartzahl steht in der Spielerkarte',
+  (await text('#scoreboard')).includes('3 Darts'), await text('#scoreboard'));
 check('und in der Wurfliste neben der Eingabe', await page.evaluate(() => {
   const t = document.getElementById('key-hist-l').innerText;
   return t.includes('60') && t.includes('Rest 241');
@@ -1400,6 +1405,8 @@ await tippe('180');   // Lenas 256 -> 76
 await tippe('100');   // Tobi 241 -> 141
 await tippe('36');    // Lenas -> 40
 await tippe('100');   // Tobi -> 41
+check('der Finish-Weg steht im Feld des Spielers am Wurf',
+  (await page.locator('.pcard.active .pfinish').innerText()).includes('D20'));
 await tippe('40');    // Lenas checkt aus – Abfrage nach den Darts
 check('Checkout-Abfrage steht', (await text('#overlay-card')).includes('wie vielen Darts'));
 await page.keyboard.press('9');   // daneben getippt – darf nichts tun

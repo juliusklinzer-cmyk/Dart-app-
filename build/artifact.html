@@ -1909,6 +1909,10 @@ button, input, select, textarea { font-family: inherit; }
 #screen-game.turnier #history { display: none; }
 #screen-game.turnier .mode-row { display: none; }
 #screen-game.turnier .game-turn { display: none; }
+/* Oben bleibt Platz für Apples Uhrzeit und Batterie. Meldet das System die
+   Schutzzone selbst (env > 0), kommt nichts dazu – auf dem iPad im
+   Vollbild meldet es aber gern 0, und dann hält diese Reserve den Platz. */
+#screen-game.turnier { padding-top: max(0px, 28px - env(safe-area-inset-top, 0px)); }
 #screen-game.turnier .game-main { flex: 1; min-height: 0; }
 #screen-game.turnier .scoreboard { flex: 1; min-height: 0; grid-auto-rows: 1fr; }
 #screen-game.turnier .pcard {
@@ -1922,24 +1926,37 @@ button, input, select, textarea { font-family: inherit; }
 #screen-game.turnier .scoreboard.viele .pcard .rest {
   font-size: clamp(2.6rem, min(16vw, 18vh), 8rem);
 }
-/* Auch Name und die letzte Aufnahme müssen von der Abwurflinie aus lesbar sein. */
+/* Auch Name und Dartzahl müssen von der Abwurflinie aus lesbar sein. */
 #screen-game.turnier .pcard .pname { font-size: 1.3rem; }
-#screen-game.turnier .pcard .legs, #screen-game.turnier .pcard .meta { font-size: 1.05rem; }
+#screen-game.turnier .pcard .legs { font-size: 1.05rem; }
+/* Der Average unter dem Rest: groß genug für zwei Meter, aber leicht
+   zurückgenommen – er soll die große Zahl nicht anschreien. */
+#screen-game.turnier .pcard .meta { font-size: 1.6rem; opacity: 0.55; }
 
 /* Wer dran ist, steht sichtbar im Licht – der normale Schein ist auf
-   2,40 m kaum noch als Leuchten zu erkennen. */
+   2,40 m kaum noch als Leuchten zu erkennen. Wer nicht dran ist, tritt
+   leicht zurück (höchstens 20 Prozent). */
 #screen-game.turnier .pcard.active {
   box-shadow: 0 0 26px var(--laser-weich), 0 0 90px 14px var(--schein-stark);
 }
 #screen-game.turnier .pcard.active .rest { text-shadow: 0 0 34px var(--laser-weich); }
+#screen-game.turnier .pcard:not(.active) { opacity: 0.8; }
 
-/* Der Finish-Weg in Plakatgröße. */
-#screen-game.turnier .checkout-bar { min-height: 84px; gap: 10px; }
-#screen-game.turnier .checkout-bar .label { font-size: 1.15rem; }
-#screen-game.turnier .checkout-bar .chip {
-  font-size: clamp(1.7rem, 5vh, 3rem); padding: 10px 22px;
+/* Die mittlere Finish-Leiste gibt es hier nicht mehr – der Finish-Weg
+   steht im Feld des Spielers (siehe .pfinish), und nur wenn einer ansteht. */
+#screen-game.turnier .checkout-bar { display: none; }
+#screen-game.turnier .pcard .pfinish {
+  display: flex; justify-content: center; align-items: center; gap: 10px;
+  flex-wrap: wrap; min-height: 62px; margin-top: 4px;
 }
-#screen-game.turnier .checkout-bar .none { font-size: 1.25rem; }
+#screen-game.turnier .pcard .pfinish .chip {
+  background: var(--bg-3); border: 1px solid var(--line); border-radius: 12px;
+  padding: 6px 18px; font-family: var(--font-cond); font-weight: 700;
+  font-size: clamp(1.6rem, 4.4vh, 2.6rem); line-height: 1.2;
+}
+#screen-game.turnier .pcard .pfinish .chip.first {
+  background: var(--accent); border-color: var(--accent); color: var(--on-accent);
+}
 
 /* Unten drei Spalten: Aufnahmen | Eingabe | Aufnahmen. */
 .pad-key {
@@ -1965,13 +1982,13 @@ button, input, select, textarea { font-family: inherit; }
 #key-input {
   width: 100%;
   background: var(--bg-3); border: 1px solid var(--line); color: var(--text);
-  border-radius: 14px; padding: 12px 16px; min-height: 76px;
-  font-size: 2.4rem; text-align: center;
+  border-radius: 14px; padding: 8px 16px; min-height: 112px;
+  font-size: clamp(3.2rem, 10vh, 5rem); text-align: center;
   font-family: var(--font-cond); font-weight: 700; font-variant-numeric: tabular-nums;
 }
 /* Ausgewählt heißt in dieser App weiße Kante, nicht rot. */
 #key-input:focus { outline: 2px solid var(--aktiv-linie); }
-#key-input::placeholder { color: var(--muted); font-weight: 400; font-size: 1.15rem; }
+#key-input::placeholder { color: var(--muted); font-weight: 400; font-size: 1.3rem; }
 .pad-key .input-error { text-align: center; min-height: 1.2em; }
 /* Am schmalen Handy hochkant haben drei Spalten keinen Platz – dort bleibt
    nur das Feld, die Aufnahmen stehen ja in den Spielerkarten. */
@@ -1987,7 +2004,7 @@ button, input, select, textarea { font-family: inherit; }
 #screen-game.turnier.verlauf .pcard { padding: 8px 10px; }
 #screen-game.turnier.verlauf .pcard .rest { font-size: 2.4rem; }
 #screen-game.turnier.verlauf .pcard .meta { display: none; }
-#screen-game.turnier.verlauf .checkout-bar { display: none; }
+#screen-game.turnier.verlauf .pcard .pfinish { display: none; }
 #screen-game.turnier.verlauf .history .v { font-size: 1.05rem; }
 #screen-game.turnier.verlauf .input-area { display: none; }
 
@@ -2003,9 +2020,10 @@ button, input, select, textarea { font-family: inherit; }
 /* Auch am flachen Handy quer zählt im Turnier-Modus nur die Anzeige. */
 @media (orientation: landscape) and (max-height: 560px) {
   #screen-game.turnier .pcard { padding: 4px 8px; }
-  #screen-game.turnier .checkout-bar { min-height: 48px; }
-  #screen-game.turnier .checkout-bar .chip { font-size: 1.3rem; padding: 6px 12px; }
-  #key-input { min-height: 52px; font-size: 1.6rem; }
+  #screen-game.turnier .pcard .pfinish { min-height: 34px; gap: 6px; }
+  #screen-game.turnier .pcard .pfinish .chip { font-size: 1.1rem; padding: 3px 10px; }
+  #screen-game.turnier .pcard .meta { font-size: 1rem; }
+  #key-input { min-height: 56px; font-size: 2rem; }
   .key-hist { max-height: 20vh; }
 }
 
@@ -5087,18 +5105,20 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       var darts = dartsIn(leg, pid) + (pid === active ? UI.darts.length : 0);
       var scored = matchStart(m) - remainingIn(leg, pid) + (pid === active ? pendingSum : 0);
       var avg = darts ? (scored / darts * 3).toFixed(1) : '–';
-      var zeile, meta;
+      var zeile, meta, pfinish = '';
       if (UI.turnier) {
-        /* Turnier-Modus: die letzte Aufnahme steht direkt beim Spieler – wer
-           am Board tippt, sieht so ohne Umweg, ob richtig geschrieben wurde. */
-        var lv = null;
-        for (var vi = leg.visits.length - 1; vi >= 0 && !lv; vi--) {
-          if (leg.visits[vi].p === pid) lv = leg.visits[vi];
-        }
-        zeile = (schnell ? '' : 'Legs ' + legsWon(m, pid) + ' · ') +
-          (lv ? 'Letzte ' + (lv.b ? 'Bust (' + lv.o + ')' : lv.s) : 'Noch kein Wurf') +
-          ' · ' + plural(darts, 'Dart', 'Darts');
+        /* Die letzte Aufnahme steht in den Wurflisten unten links und rechts –
+           hier nur noch Legs und Dartzahl. */
+        zeile = (schnell ? '' : 'Legs ' + legsWon(m, pid) + ' · ') + plural(darts, 'Dart', 'Darts');
         meta = '<span>Ø <b>' + avg + '</b></span>';
+        /* Der Finish-Weg erscheint erst, wenn einer ansteht – groß im Feld
+           des Spielers am Wurf, lesbar von der Abwurflinie. Der Kasten steht
+           in jeder Karte, damit die große Zahl nicht springt. */
+        var fRoute = pid === active && !m.done
+          ? Checkout.suggest(rest, 3, lieblingsDoppel(pid)) : null;
+        pfinish = '<div class="pfinish">' + (fRoute ? fRoute.map(function (d, i) {
+          return '<span class="chip ' + (i === 0 ? 'first' : '') + '">' + Checkout.pretty(d) + '</span>';
+        }).join('') : '') + '</div>';
       } else {
         /* Im Schnellen Spiel gibt es keine Legs zu zählen – dort steht die
            geworfene Dartzahl, die sagt in dem Moment mehr. */
@@ -5108,7 +5128,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       return '<div class="pcard ' + (pid === active ? 'active' : '') + '">' +
         '<div class="pname">' + avatarHTML(profile(pid), 'sm') + esc(pname(pid)) + '</div>' +
         '<div class="legs">' + zeile + '</div>' +
-        '<div class="rest">' + rest + '</div>' +
+        '<div class="rest">' + rest + '</div>' + pfinish +
         '<div class="meta">' + meta + '</div>' +
         '</div>';
     }).join('');
