@@ -1137,6 +1137,53 @@ await page.locator('[data-action="board-mode"][data-value="finisher"]').click();
 check('Finisher-Rangliste da', (await text('#board-list')).length > 0);
 check('kein Diagramm im Finisher', !(await visible('#board-chart')));
 
+/* ---------- Finisher: die drei Kacheln ---------- */
+
+group('Finisher: drei Kacheln zeigen den Weg');
+await page.evaluate(() => window.__dart.setScreen('setup'));
+await page.locator('[data-action="set-mode"][data-value="finisher"]').click();
+await page.locator('[data-action="start-game"]').click();
+await page.locator('#bulloff-buttons button').first().click();
+/* Fester Wert statt Zufall, damit die Prüfungen deterministisch sind. */
+await page.evaluate(() => { window.__dart.finisherRunde().zahl = 39; window.__dart.render(); });
+check('es stehen immer drei Kacheln da', (await page.locator('#fin-hint .fk').count()) === 3);
+check('die nächste zu werfende ist rot',
+  await page.locator('#fin-hint .fk').first().evaluate((e) => e.classList.contains('jetzt')));
+check('ohne FINISH-Etikett – der Spieler leuchtet ja',
+  !(await text('#fin-hint')).toLowerCase().includes('finish'));
+check('keine Wurf-Chips mehr über dem Zahlenfeld',
+  (await page.locator('#fin-darts').count()) === 0);
+
+/* Der empfohlene erste Wurf wird geworfen: die Kachel wird grün. */
+await page.evaluate(() => {
+  const l = window.Checkout.suggest(39, 3, null)[0];
+  const m = l === 'BULL' ? 2 : l[0] === 'T' ? 3 : l[0] === 'D' ? 2 : 1;
+  const n = l === 'BULL' || l === '25' ? 25 : parseInt(l.replace(/\D/g, ''), 10);
+  window.__dart.finisherDart(m, n);
+});
+check('getroffen wie vorgegeben wird grün',
+  (await page.locator('#fin-hint .fk.gut').count()) === 1);
+check('und die nächste Kachel ist jetzt rot',
+  await page.locator('#fin-hint .fk').nth(1).evaluate((e) => e.classList.contains('jetzt')));
+
+/* Zwei Fehlwürfe: der letzte Dart kann 39 nicht finishen – grauer Stellwurf. */
+await page.locator('#screen-finisher [data-action="undo-game"]').click();
+await page.evaluate(() => {
+  const rd = window.__dart.finisherRunde();
+  rd.throws.push({ n: 0, m: 0 }, { n: 0, m: 0 });
+  window.__dart.render();
+});
+check('Fehlwürfe stehen als – in den Kacheln',
+  (await page.locator('#fin-hint .fk.anders').count()) === 2 &&
+  (await page.locator('#fin-hint .fk.anders').first().innerText()).trim() === '–');
+check('der letzte Dart kann nicht finishen: grauer Stellwurf 7 (auf D16)',
+  (await page.locator('#fin-hint .fk.stellen').innerText()).trim() === '7');
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  S.game = null;
+  D.setScreen('setup');
+});
+
 /* ---------- Turnier vorzeitig beenden ---------- */
 
 group('Turnier beenden: Gespieltes bleibt, Offenes faellt weg');

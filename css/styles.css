@@ -2195,3 +2195,32 @@ button, input, select, textarea { font-family: inherit; }
   }
   #screen-liga.active #liga-liste .card { margin-bottom: 0; }
 }
+
+/* ================= Finisher: die drei Kacheln ================= */
+/*
+ * Eine Kachel je Dart der Aufnahme, ohne Etikett – selbsterklärend:
+ * grün = getroffen wie vorgegeben, weiß = anders geworfen (die Zahl steht
+ * drin), rot = der nächste zu werfende, grau gestrichelt = Stellwurf,
+ * „–" = noch offen.
+ */
+.fin-kacheln {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  margin-bottom: 8px;
+}
+.fin-kacheln .fk {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 54px; border-radius: 12px;
+  background: var(--bg-2); border: 1px solid var(--line);
+  font-family: var(--font-cond); font-weight: 700; font-size: 1.7rem;
+  font-variant-numeric: tabular-nums;
+}
+.fin-kacheln .fk.jetzt { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.fin-kacheln .fk.gut {
+  background: rgba(63, 191, 127, 0.14); border-color: #2c7d54; color: #6fe0a8;
+}
+.fin-kacheln .fk.anders { border-color: var(--line-hell); }
+.fin-kacheln .fk.stellen { color: var(--muted); border-style: dashed; }
+.fin-kacheln .fk.leer { color: var(--dead); }
+@media (min-width: 820px) {
+  .fin-kacheln .fk { min-height: 66px; font-size: 2.1rem; }
+}

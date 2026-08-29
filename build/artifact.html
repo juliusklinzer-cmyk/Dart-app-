@@ -2199,6 +2199,35 @@ button, input, select, textarea { font-family: inherit; }
   #screen-liga.active #liga-liste .card { margin-bottom: 0; }
 }
 
+/* ================= Finisher: die drei Kacheln ================= */
+/*
+ * Eine Kachel je Dart der Aufnahme, ohne Etikett – selbsterklärend:
+ * grün = getroffen wie vorgegeben, weiß = anders geworfen (die Zahl steht
+ * drin), rot = der nächste zu werfende, grau gestrichelt = Stellwurf,
+ * „–" = noch offen.
+ */
+.fin-kacheln {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  margin-bottom: 8px;
+}
+.fin-kacheln .fk {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 54px; border-radius: 12px;
+  background: var(--bg-2); border: 1px solid var(--line);
+  font-family: var(--font-cond); font-weight: 700; font-size: 1.7rem;
+  font-variant-numeric: tabular-nums;
+}
+.fin-kacheln .fk.jetzt { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.fin-kacheln .fk.gut {
+  background: rgba(63, 191, 127, 0.14); border-color: #2c7d54; color: #6fe0a8;
+}
+.fin-kacheln .fk.anders { border-color: var(--line-hell); }
+.fin-kacheln .fk.stellen { color: var(--muted); border-style: dashed; }
+.fin-kacheln .fk.leer { color: var(--dead); }
+@media (min-width: 820px) {
+  .fin-kacheln .fk { min-height: 66px; font-size: 2.1rem; }
+}
+
 </style>
 <div id="save-warning" class="save-warning hidden">
   ⚠️ Der Spielstand kann gerade nicht gespeichert werden – bitte Speicherplatz prüfen
@@ -2664,13 +2693,14 @@ button, input, select, textarea { font-family: inherit; }
     <div class="game-main">
       <div id="fin-turn" class="turn-label game-turn"></div>
       <div id="fin-board"></div>
-      <div id="fin-hint" class="checkout-bar"></div>
+      <!-- Drei Kacheln, eine je Dart der Aufnahme: grün = getroffen wie
+           vorgegeben, rot = der nächste Wurf, grau = Stellwurf. -->
+      <div id="fin-hint" class="fin-kacheln"></div>
       <div id="fin-history" class="history einspaltig"></div>
     </div>
     <div class="input-area">
       <div class="mode-row">
         <div id="fin-runde" class="turn-label muted"></div>
-        <div id="fin-darts" class="visit-darts"></div>
       </div>
       <div class="pad" id="fin-pad"></div>
     </div>
@@ -5898,6 +5928,35 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return visits;
   }
 
+  /* Ein Routen-Label des Solvers ('T20', 'BULL', 'S7') in Multiplikator und
+     Feld zerlegen, um es mit einem geworfenen Dart zu vergleichen. */
+  function labelDart(label) {
+    if (label === 'BULL') return { m: 2, n: 25 };
+    if (label === '25') return { m: 1, n: 25 };
+    var m = label.charAt(0) === 'T' ? 3 : label.charAt(0) === 'D' ? 2 : 1;
+    return { m: m, n: parseInt(label.slice(1), 10) };
+  }
+
+  /* Kein Finish mehr mit den restlichen Darts: welcher eine Wurf stellt am
+     besten? Bevorzugt aufs Lieblingsdoppel, sonst D16, D20, … – und nur
+     Würfe, die man absichtlich wirft: Singles zuerst, dann hohe Triple. */
+  function finisherStellwurf(rest, dbl) {
+    var ziele = [];
+    if (dbl) ziele.push(2 * dbl);
+    [32, 40, 24, 20, 16, 36, 12, 8, 4, 2].forEach(function (z) {
+      if (ziele.indexOf(z) < 0) ziele.push(z);
+    });
+    var wuerfe = [];
+    for (var n = 20; n >= 1; n--) wuerfe.push({ v: n, label: String(n) });
+    for (var t = 20; t >= 15; t--) wuerfe.push({ v: 3 * t, label: 'T' + t });
+    for (var zi = 0; zi < ziele.length; zi++) {
+      for (var wi = 0; wi < wuerfe.length; wi++) {
+        if (rest - wuerfe[wi].v === ziele[zi]) return wuerfe[wi].label;
+      }
+    }
+    return null;
+  }
+
   function renderFinisher() {
     var g = S.game;
     if (!g || g.kind !== 'finisher') { S.screen = 'setup'; render(); return; }
@@ -5947,29 +6006,37 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           }).join('') + '</div>'
         : '');
 
-    /* Finish-Vorschlag – wortgleich zum X01, denn im Finisher ist die ganze
-       Runde Finish-Bereich. Deshalb auch dieselbe Leiste mit Namen davor. */
-    var route = null;
+    /* Unten immer drei Kacheln – eine je Dart der Aufnahme, ohne Etikett
+       (wer dran ist, leuchtet ja). Geworfen und getroffen wie vorgegeben →
+       grün; daneben geworfen → die geworfene Zahl; der nächste Wurf → rot;
+       geht kein Finish mehr, steht grau der Stellwurf; der Rest ist „–". */
+    var kacheln = ['', '', ''];
     if (!g.done && !rd.stechen && !st.fertig[aktiv]) {
-      var restAktiv = st.rest[aktiv];
-      var dartsLeft = 3 - st.inVisit;
-      route = Checkout.suggest(restAktiv, dartsLeft, lieblingsDoppel(aktiv));
-      var wer = esc(pname(aktiv));
-      if (route) {
-        $('fin-hint').innerHTML = '<span class="label">Finish ' + wer + '</span>' +
-          route.map(function (d, i) {
-            return '<span class="chip ' + (i === 0 ? 'first' : '') + '">' + Checkout.pretty(d) + '</span>';
-          }).join('');
-      } else {
-        $('fin-hint').innerHTML = '<span class="none">' + wer + ': kein Finish mit ' +
-          plural(dartsLeft, 'Dart', 'Darts') + '</span>';
+      var dbl = lieblingsDoppel(aktiv);
+      var restLauf = st.restVorVisit;
+      for (var ki = 0; ki < st.inVisit; ki++) {
+        var wurf = st.visit[ki];
+        var empf = Checkout.suggest(restLauf, 3 - ki, dbl);
+        var soll = empf && empf.length ? labelDart(empf[0]) : null;
+        var getroffen = soll && wurf.n === soll.n && wurf.m === soll.m;
+        kacheln[ki] = '<span class="fk ' + (getroffen ? 'gut' : 'anders') + '">' +
+          (wurf.n === 0 ? '–' : dartLabel(wurf)) + '</span>';
+        restLauf -= wurf.n * wurf.m;
       }
-    } else {
-      $('fin-hint').innerHTML = '<span class="none">' +
-        (g.done ? 'Spiel beendet' : 'Runde läuft aus') + '</span>';
+      var route = Checkout.suggest(st.rest[aktiv], 3 - st.inVisit, dbl);
+      if (route) {
+        for (var ri = 0; ri < route.length && st.inVisit + ri < 3; ri++) {
+          kacheln[st.inVisit + ri] = '<span class="fk' + (ri === 0 ? ' jetzt' : '') + '">' +
+            Checkout.pretty(route[ri]) + '</span>';
+        }
+      } else if (st.inVisit < 3) {
+        var stell = finisherStellwurf(st.rest[aktiv], dbl);
+        if (stell) kacheln[st.inVisit] = '<span class="fk stellen">' + stell + '</span>';
+      }
     }
-    /* Beim Stechen sagt schon die gelbe Karte, worum es geht – die leere
-       Finish-Leiste würde denselben Satz nur doppeln. */
+    for (var kl = 0; kl < 3; kl++) if (!kacheln[kl]) kacheln[kl] = '<span class="fk leer">–</span>';
+    $('fin-hint').innerHTML = kacheln.join('');
+    /* Beim Stechen sagt schon die gelbe Karte, worum es geht. */
     $('fin-hint').classList.toggle('hidden', !!rd.stechen);
 
     /* Der Verlauf als eine Liste mit Namen – wie im Schnellen Spiel ab drei
@@ -5992,10 +6059,6 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     }
     $('fin-history').innerHTML = '<div class="col">' + rows.join('') + '</div>';
 
-    $('fin-darts').innerHTML = [0, 1, 2].map(function (i) {
-      var d = st.visit[i];
-      return '<div class="d ' + (d ? '' : 'empty') + '">' + (d ? dartLabel(d) : '–') + '</div>';
-    }).join('');
 
     // Zahlenfeld: derselbe Aufbau wie im Finish-Bereich des X01.
     if (rd.stechen) {
