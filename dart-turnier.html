@@ -2317,6 +2317,71 @@ button, input, select, textarea { font-family: inherit; }
 #liga-regeln h2 { margin: 18px 0 10px; }
 #liga-regeln h2:first-child { margin-top: 4px; }
 
+/* ================= Spielbericht (SDM-Bogen) ================= */
+/*
+ * Ein weißes Blatt wie das Original: Serifenschrift, schwarze Linien,
+ * graue Kopfzellen. Jede Zelle ist antippbar (contenteditable) und wird
+ * so gedruckt, wie sie auf dem Schirm steht.
+ */
+.blatt {
+  background: #fff; color: #000;
+  font-family: 'Bookman Old Style', Georgia, 'Times New Roman', serif;
+  font-size: 12px; line-height: 1.35;
+  padding: 18px; border-radius: 6px; margin-bottom: 14px;
+  max-width: 820px; margin-left: auto; margin-right: auto;
+}
+.blatt [contenteditable] { min-height: 1.2em; outline: none; }
+.blatt [contenteditable]:focus { background: #fdf3d0; }
+
+.b-kopf { display: flex; gap: 14px; border: 2px solid #000; padding: 8px; margin-bottom: 12px; }
+.b-marke { flex: 0 0 150px; }
+.b-sdm { font-weight: 700; font-size: 40px; line-height: 0.9; font-style: italic; }
+.b-sdm-sub { font-size: 11px; font-weight: 700; }
+.b-sdm-sub::first-letter { color: #b98b00; }
+.b-liga { font-size: 18px; margin-top: 14px; }
+.b-recht { flex: 1; font-size: 10.5px; border-left: 2px solid #000; padding-left: 12px; }
+
+.b-info { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 12px; }
+.b-spalten { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 12px; align-items: start; }
+
+.b-tab { width: 100%; border-collapse: collapse; }
+.b-tab th, .b-tab td { border: 1px solid #000; padding: 3px 6px; text-align: left; }
+.b-tab th { background: #d9d9d9; font-weight: 700; white-space: nowrap; }
+.b-rot { color: #c00000; }
+.b-schwarz { background: #000 !important; color: #fff; }
+.b-trenn th, .b-trenn td { border-bottom-width: 3px; }
+.b-zeit { display: inline-block; min-width: 45%; }
+.b-zeit b { font-weight: 400; border-bottom: 1px dotted #888; padding: 0 6px; display: inline-block; min-width: 46px; }
+.b-einzel td, .b-ende td { text-align: center; font-variant-numeric: tabular-nums; }
+.b-ende { margin-top: 10px; }
+.b-titel { font-weight: 700; background: #d9d9d9; border: 1px solid #000; padding: 3px 6px; margin: 10px 0 0; }
+.b-hl th { width: 24px; text-align: center; }
+.b-klein { font-size: 10px; margin: 10px 0 0; }
+.b-unterschrift { border: 1px solid #000; height: 70px; margin-top: 4px; }
+.b-fuss { font-size: 10px; margin-top: 12px; display: flex; justify-content: space-between; }
+.b-nach td { height: 26px; }
+.b-protest { border: 1px solid #000; min-height: 300px; margin-top: 4px; }
+.b-seite2 { page-break-before: always; }
+
+/* Die Scheibe des Einzels im Spielplan (S1/S2 laufen parallel). */
+.match-row .scheibe {
+  flex: none; font-family: var(--font-cond); font-weight: 700; font-size: 0.72rem;
+  color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px;
+}
+
+/* Nichts anzeigen, wenn Finish-Hilfen fürs Ligaspiel abgeschaltet sind. */
+.checkout-bar.aus { display: none !important; }
+
+/* Beim Drucken erscheint nur das Blatt – ohne App-Rahmen, ohne Dunkelmodus. */
+@media print {
+  body { background: #fff !important; max-width: none; padding: 0; }
+  body::before, .nav, .bericht-kopfzeile, .bericht-hinweis, #sync-status, #save-warning { display: none !important; }
+  .screen { display: none !important; }
+  #screen-bericht.active { display: block !important; padding: 0; }
+  .blatt { border-radius: 0; margin: 0; max-width: none; padding: 0; }
+  .blatt [contenteditable]:focus { background: transparent; }
+}
+
 </style>
 </head>
 <body>
@@ -2548,6 +2613,7 @@ button, input, select, textarea { font-family: inherit; }
 
   <div class="options" id="board-mode">
     <button data-action="board-mode" data-value="501">Classic</button>
+    <button data-action="board-mode" data-value="liga">Liga</button>
     <button data-action="board-mode" data-value="cricket">Cricket</button>
     <button data-action="board-mode" data-value="rtw">Round the World</button>
     <button data-action="board-mode" data-value="finisher">Finisher</button>
@@ -2987,6 +3053,21 @@ button, input, select, textarea { font-family: inherit; }
   </div>
 </section>
 
+<!-- ============ SPIELBERICHT ============ -->
+<!-- Der SDM-Spielberichtsbogen (V5.2) als ausfüllbares Blatt: automatisch
+     aus dem Ligaspiel befüllt, jede Zelle antippbar und korrigierbar,
+     danach direkt drucken. Beim Druck erscheint nur das Blatt. -->
+<section id="screen-bericht" class="screen">
+  <header class="app-header row bericht-kopfzeile">
+    <button class="icon-btn" data-action="bericht-zurueck" aria-label="Zurück">‹</button>
+    <h1>Spielbericht</h1>
+    <button class="btn primary small" data-action="bericht-drucken">Drucken</button>
+  </header>
+  <p class="hint bericht-hinweis">Alle Felder lassen sich antippen und von Hand korrigieren,
+    bevor gedruckt wird. Seite 2 (Nachmeldungen, Proteste) druckt als Leerformular mit.</p>
+  <div id="bericht-blatt"></div>
+</section>
+
 <!-- ============ OVERLAY ============ -->
 <div id="overlay" class="overlay hidden">
   <div class="overlay-card" id="overlay-card"></div>
@@ -3260,12 +3341,19 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     ]
   };
 
-  /* Die 16 Einzel eines 4er-Ligaspiels: vier Durchgänge, jeder Heimspieler
-     gegen jeden Gastspieler. Sollte der gedruckte Spielberichtsbogen eine
-     andere Reihenfolge vorgeben, hier anpassen – laut SWO dürfen die TCs die
-     Reihenfolge ohnehin einvernehmlich ändern. Index 0..3 = Position 1..4,
-     je Paar [Heimposition, Gastposition]. */
+  /* Die 16 Einzel eines 4er-Ligaspiels, exakt in der Reihenfolge des
+     SDM-Spielberichtsbogens (V5.2): H1–G1, H2–G2, H3–G3, H4–G4, H1–G2,
+     H2–G1, H3–G4, H4–G3, H3–G1, H4–G2, H2–G3, H1–G4, H4–G1, H3–G2,
+     H1–G3, H2–G4. Index 0..3 = Position 1..4, je Paar [Heim, Gast]. */
   var LIGA_EINZEL = [
+    [0, 0], [1, 1], [2, 2], [3, 3],
+    [0, 1], [1, 0], [2, 3], [3, 2],
+    [2, 0], [3, 1], [1, 2], [0, 3],
+    [3, 0], [2, 1], [0, 2], [1, 3]
+  ];
+  /* Die Tabelle der allerersten Fassung (Durchgang 3/4 anders) – nur noch
+     für die Migration alter Stände und Berichte aus dem Alt-Archiv. */
+  var LIGA_EINZEL_ALT = [
     [0, 0], [1, 1], [2, 2], [3, 3],
     [0, 1], [1, 0], [2, 3], [3, 2],
     [0, 2], [1, 3], [2, 0], [3, 1],
@@ -3314,7 +3402,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   /* turnier: der Turnier-Modus des X01-Bildschirms – Riesenanzeige, Eingabe
      über eine echte Tastatur. Er bleibt über Aufnahmen und Spiele hinweg an,
      bis jemand zurückschaltet (anders als modeOverride, der je Aufnahme gilt). */
-  var UI = { input: '', darts: [], mult: 1, modeOverride: null, turnier: false, overlay: null, error: '', board: 'won', boardMode: '501', profile: null, summary: null, ligaTab: 'plan' };
+  var UI = { input: '', darts: [], mult: 1, modeOverride: null, turnier: false, overlay: null, error: '', board: 'won', boardMode: '501', profile: null, summary: null, ligaTab: 'plan', bericht: null };
 
   /* ================= Helfer ================= */
   function $(id) { return document.getElementById(id); }
@@ -3385,6 +3473,28 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       if (s.settings.rtwBoost === undefined) s.settings.rtwBoost = 1;
       if (FIN_TARGETS.indexOf(s.settings.finisherTo) < 0) s.settings.finisherTo = 5;
       s.profiles.forEach(function (p, i) { if (typeof p.hue !== 'number') p.hue = HUES[i % HUES.length]; });
+      /* Liga-Stände aus der ersten Fassung (vor dem Bogen-Ausbau) kennen
+         posH/posG, die Spielerlisten und die neuen Match-Felder nicht –
+         nachrüsten, sonst friert der Wechsel-Dialog die App ein. Die alten
+         Matches wurden nach der alten Paarungstabelle angelegt. */
+      if (s.tour && s.tour.liga) {
+        var lgAlt = s.tour.liga;
+        if (!lgAlt.heimSpieler) lgAlt.heimSpieler = (lgAlt.heim ? lgAlt.wir : lgAlt.sie).slice();
+        if (!lgAlt.gastSpieler) lgAlt.gastSpieler = (lgAlt.heim ? lgAlt.sie : lgAlt.wir).slice();
+        if (!lgAlt.posH) lgAlt.posH = lgAlt.heimSpieler.slice(0, 4);
+        if (!lgAlt.posG) lgAlt.posG = lgAlt.gastSpieler.slice(0, 4);
+        if (lgAlt.finish === undefined) lgAlt.finish = true;   // lief bisher mit Hilfen
+        if (lgAlt.ort === undefined) lgAlt.ort = '';
+        if (lgAlt.tag === undefined) lgAlt.tag = '';
+        if (lgAlt.zeitVon === undefined) lgAlt.zeitVon = null;
+        if (lgAlt.zeitBis === undefined) lgAlt.zeitBis = null;
+        if (Array.isArray(s.matches)) {
+          s.matches.forEach(function (m, i) {
+            if (!m.posPaar && LIGA_EINZEL_ALT[i]) m.posPaar = LIGA_EINZEL_ALT[i].slice();
+            if (!m.scheibe) m.scheibe = i % 2 === 0 ? 'S1' : 'S2';
+          });
+        }
+      }
       return s;
     } catch (e) { return null; }
   }
@@ -3675,7 +3785,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       return {
         id: m.id, round: m.round, p: m.p.slice(),
         // Ligaspiele bringen ihren Anwerfer mit (kein Ausbullen), Turniere nicht.
-        starter: m.starter || null, legs: [], done: false, winner: null, at: null
+        starter: m.starter || null,
+        posPaar: m.posPaar || null, scheibe: m.scheibe || null,
+        legs: [], done: false, winner: null, at: null
       };
     });
   }
@@ -3739,6 +3851,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       S.tour.cursor = daten.cursor;
     }
     if (daten.status === 'beendet') S.tour.beendet = true;
+    /* Kam das letzte Einzel des Ligaspiels vom anderen Gerät, stempelt auch
+       dieses Gerät die Endzeit für den Spielberichtsbogen. */
+    if (neu && S.tour.liga && !S.tour.liga.zeitBis && S.matches.length && !nextOpenMatch()) {
+      S.tour.liga.zeitBis = Date.now();
+    }
     if (neu) save();
     return neu;
   }
@@ -3966,6 +4083,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       } else {
         UI.overlay = { type: 'leg-done', pid: pid };
       }
+      /* Das letzte Einzel des Ligaspiels stempelt die Endzeit für den
+         Spielberichtsbogen. */
+      if (m.done && S.tour && S.tour.liga && !S.tour.liga.zeitBis && !nextOpenMatch()) {
+        S.tour.liga.zeitBis = Date.now();
+      }
     }
     save();
     render();
@@ -4098,6 +4220,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     m.done = false;
     m.winner = null;
     m.at = null;
+    /* Der letzte Checkout des Ligaspiels wurde zurückgenommen: die Endzeit
+       auf dem Bogen stimmt dann nicht mehr. */
+    if (S.tour && S.tour.liga && S.tour.liga.zeitBis && nextOpenMatch()) {
+      S.tour.liga.zeitBis = null;
+    }
     UI.overlay = null;
     UI.input = '';
     save();
@@ -4305,6 +4432,39 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return map;
   }
 
+  /* Karriere-Statistik nur über Ligaspiele – für den Liga-Reiter der
+     Rangliste. Gleiche Rechnung wie career(), andere Auswahl. */
+  function careerLiga() {
+    var lists = S.history.filter(function (h) { return h.liga && h.matches; })
+      .map(function (h) { return { matches: h.matches, start: (h.settings && h.settings.start) || 501 }; });
+    if (S.matches.length && S.tour && S.tour.liga) lists.push({ matches: S.matches, start: tourStart() });
+    var map = collectStats(lists, S.profiles.map(function (p) { return p.id; }));
+    Object.keys(map).forEach(function (k) {
+      map[k].name = pname(k);
+      finalize(map[k]);
+      map[k].lastResults.sort(function (a, b) { return (b.at || 0) - (a.at || 0); });
+    });
+    return map;
+  }
+
+  /* Alle fertigen Liga-Einzel, neueste zuerst – fürs Liga-Verlaufsdiagramm. */
+  function alleLigaMatches() {
+    var out = [];
+    if (S.matches.length && S.tour && S.tour.liga) {
+      S.matches.forEach(function (m) {
+        if (m.done && knownPlayers(m.p)) out.push({ m: m, at: m.at, live: true });
+      });
+    }
+    S.history.forEach(function (h) {
+      if (!h.liga || !h.matches) return;
+      h.matches.forEach(function (m) {
+        if (m.done && knownPlayers(m.p)) out.push({ m: m, at: h.at });
+      });
+    });
+    out.sort(function (a, b) { return (b.m.at || b.at || 0) - (a.m.at || a.at || 0); });
+    return out;
+  }
+
   function standings() {
     var map = stats();
     return tourPlayers().map(function (id) { return map[id]; }).sort(function (a, b) {
@@ -4342,6 +4502,16 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     { mode: 'finisher', key: 'finBest', label: 'Schnellstes Finish', get: function (s) { return s.finBest; }, fmt: function (v) { return plural(v, 'Dart', 'Darts'); }, min: function (s) { return s.finBest !== null; }, asc: true, hint: 'Wenigste Darts für ein gewonnenes Finish.' },
     { mode: 'finisher', key: 'finHigh', label: 'Höchste Zahl', get: function (s) { return s.finHigh; }, fmt: function (v) { return String(v); }, min: function (s) { return s.finHigh > 0; }, hint: 'Die höchste Zahl, die du in einer Runde als Erster weggemacht hast.' }
   ];
+
+  /* Die Liga-Rangliste: dieselben Classic-Kategorien, aber nur über
+     Ligaspiele gerechnet. Turniersiege gibt es dort nicht. */
+  BOARDS.filter(function (b) { return b.mode === '501' && b.key !== 'tourWins'; })
+    .forEach(function (b) {
+      var kopie = {};
+      Object.keys(b).forEach(function (k) { kopie[k] = b[k]; });
+      kopie.mode = 'liga';
+      BOARDS.push(kopie);
+    });
 
   function boardDef(key) {
     for (var i = 0; i < BOARDS.length; i++) if (BOARDS[i].key === key) return BOARDS[i];
@@ -4963,7 +5133,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   }
 
   /* ================= Rendering ================= */
-  var SCREENS = ['setup', 'tournament', 'boards', 'players', 'profile', 'bulloff', 'game', 'cricket', 'rtw', 'finisher', 'summary', 'winner', 'liga', 'konto'];
+  var SCREENS = ['setup', 'tournament', 'boards', 'players', 'profile', 'bulloff', 'game', 'cricket', 'rtw', 'finisher', 'summary', 'winner', 'liga', 'bericht', 'konto'];
   var NAV_SCREENS = { setup: 'setup', tournament: 'setup', boards: 'boards', players: 'players', profile: 'players', summary: 'setup', liga: 'liga', konto: 'konto' };
 
   /* Solange die Anmeldung aussteht, ist die App zu. Ohne Server (Doppelklick,
@@ -5031,6 +5201,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (S.screen === 'summary') renderSummary();
     if (S.screen === 'winner') renderWinner();
     if (S.screen === 'liga') renderLiga();
+    if (S.screen === 'bericht') renderBericht();
     if (S.screen === 'konto' && window.DartKonto) window.DartKonto.render();
     renderSyncStatus();
     renderOverlay();
@@ -5222,10 +5393,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         (tour().bestOf === 1 ? 'ein Leg' : 'Best of ' + tour().bestOf) + ' · ' +
         plural(tourPlayers().length, 'Spieler', 'Spieler');
 
-    /* Im Ligaspiel zählt der Team-Stand, keine Einzeltabelle – und Spieler
-       nachtragen gibt es nicht, die Positionen sind laut SWO verbindlich. */
+    /* Im Ligaspiel zählt der Team-Stand, keine Einzeltabelle – und statt
+       Nachzüglern gibt es den Positionswechsel nach SWO. */
     document.querySelector('#screen-tournament .card.no-pad').classList.toggle('hidden', !!liga);
-    document.querySelector('[data-action="roster-change"]').classList.toggle('hidden', !!liga);
+    var rosterBtn = document.querySelector('[data-action="roster-change"]');
+    rosterBtn.textContent = liga ? 'Spieler wechseln (gleiche Position)' : 'Spieler nachtragen oder abmelden';
     $('liga-stand').classList.toggle('hidden', !liga);
     if (liga) {
       var lsd = ligaStandDaten();
@@ -5233,7 +5405,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         ligaTeamsHtml(lsd) +
         '<div class="lg-legs">Legs ' + lsd.wirL + ':' + lsd.sieL + ' · ' +
           lsd.fertige + ' von ' + S.matches.length + ' Einzeln gespielt</div>' +
-        ligaHighlightsHtml(lsd);
+        ligaHighlightsHtml(lsd) +
+        '<button class="btn ghost full" data-action="liga-bericht">Spielbericht ansehen &amp; drucken</button>';
     }
 
     $('standings-body').innerHTML = table.map(function (st, i) {
@@ -5263,6 +5436,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           (m.winner === m.p[0] ? '<b>' + esc(a) + '</b>' : esc(a)) + ' <span class="muted">vs</span> ' +
           (m.winner === m.p[1] ? '<b>' + esc(b) + '</b>' : esc(b)) +
         '</div>' +
+        (liga && m.scheibe ? '<span class="scheibe">' + m.scheibe + '</span>' : '') +
         '<div class="res">' + (m.void ? (m.started ? 'abgebrochen ' + score : 'entfällt') : score) + '</div>' +
         (m.done || m.void ? ''
           : m.belegtVon ? '<span class="belegt">läuft bei ' + esc(m.belegtVon) + '</span>'
@@ -5308,8 +5482,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       per[id].push(value);
     }
 
-    if (mode === '501') {
-      allMatches().slice().reverse().forEach(function (e) {
+    if (mode === '501' || mode === 'liga') {
+      var quelle = mode === 'liga' ? alleLigaMatches() : allMatches();
+      quelle.slice().reverse().forEach(function (e) {
         e.m.p.forEach(function (id) {
           var darts = 0, points = 0;
           e.m.legs.forEach(function (leg) {
@@ -5383,8 +5558,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   }
 
   function renderBoards() {
-    var map = career();
     var mode = UI.boardMode;
+    /* Der Liga-Reiter rechnet dieselben Classic-Werte, aber nur über
+       Ligaspiele – eigene Karriere-Karte statt der großen. */
+    var map = mode === 'liga' ? careerLiga() : career();
     var defs = boardsFor(mode);
     if (!defs.some(function (b) { return b.key === UI.board; })) UI.board = defs[0].key;
     var def = boardDef(UI.board);
@@ -5393,15 +5570,20 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       b.classList.toggle('active', b.getAttribute('data-value') === mode);
     });
 
+    var ligaSpieltage = S.history.filter(function (h) { return h.liga && h.matches; });
     var log = allGamesLog().filter(function (row) { return row.kind === mode; });
-    var modeName = mode === '501' ? 'Classic' : kindName(mode);
-    $('boards-sub').textContent = log.length
-      ? modeName + ' · ' + plural(log.length, 'Spiel', 'Spiele') +
-        (mode === '501' ? ' · ' + plural(S.history.filter(function (h) { return (h.kind || '501') === '501'; }).length, 'Turnier', 'Turniere') : '')
-      : modeName + ' · noch keine Spiele';
+    var modeName = mode === '501' ? 'Classic' : mode === 'liga' ? 'Liga' : kindName(mode);
+    $('boards-sub').textContent = mode === 'liga'
+      ? (ligaSpieltage.length
+        ? 'Liga · ' + plural(ligaSpieltage.length, 'Spieltag', 'Spieltage') + ' · ' + LIGA.saison
+        : 'Liga · noch kein Spieltag gespielt')
+      : log.length
+        ? modeName + ' · ' + plural(log.length, 'Spiel', 'Spiele') +
+          (mode === '501' ? ' · ' + plural(S.history.filter(function (h) { return (h.kind || '501') === '501'; }).length, 'Turnier', 'Turniere') : '')
+        : modeName + ' · noch keine Spiele';
 
     /* Verlauf: eine farbige Linie je Spieler. */
-    var chartLabel = (mode === '501' ? '3-Dart-Average' : 'MPR') + ' – je Spieler die letzten ' + CHART_GAMES + ' Spiele';
+    var chartLabel = (mode === '501' || mode === 'liga' ? '3-Dart-Average' : 'MPR') + ' – je Spieler die letzten ' + CHART_GAMES + ' Spiele';
     var chart = mode === 'rtw' ? null : lineChart(chartSeries(mode), chartLabel);
     $('board-chart').classList.toggle('hidden', mode === 'rtw' || mode === 'finisher');
     if (mode !== 'rtw') {
@@ -5426,7 +5608,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     $('board-hint').textContent = def.hint;
 
     /* Rekorde des jeweiligen Modus. */
-    var recs = mode === '501' ? [
+    var recs = mode === '501' || mode === 'liga' ? [
       { k: 'highCO', t: 'Höchstes Finish' },
       { k: 'highScore', t: 'Höchste Aufnahme' },
       { k: 'bestLeg', t: 'Bestes Leg' },
@@ -5457,8 +5639,34 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     }).join('');
 
     $('log-title').textContent = mode === '501' ? 'Alle Classic-Spiele'
+      : mode === 'liga' ? 'Alle Ligaspiele'
       : mode === 'cricket' ? 'Alle Cricket-Spiele'
       : mode === 'finisher' ? 'Alle Finisher-Spiele' : 'Alle Trainings';
+
+    /* Ligaspiele: eine Zeile je Spieltag mit dem Team-Ergebnis. */
+    if (mode === 'liga') {
+      var ligaLog = ligaSpieltage.slice();
+      if (S.tour && S.tour.liga && S.matches.length) {
+        ligaLog.unshift({ liga: S.tour.liga, matches: S.matches, at: Date.now(), live: true });
+      }
+      $('match-log').innerHTML = ligaLog.map(function (h) {
+        var wirS = 0, sieS = 0;
+        h.matches.forEach(function (m) {
+          if (!m.done) return;
+          var uns = h.liga.wir.indexOf(m.p[0]) >= 0 ? m.p[0] : m.p[1];
+          if (m.winner === uns) wirS++; else sieS++;
+        });
+        return '<div class="log-row">' +
+          '<div class="lp ' + (wirS > sieS ? 'w' : '') + '">' + esc(LIGA.team) +
+            '<span class="a">' + h.liga.nr + '. Spieltag · ' + (h.liga.heim ? 'Heim' : 'Auswärts') + '</span></div>' +
+          '<div class="ls">' + wirS + ':' + sieS + '</div>' +
+          '<div class="lp right ' + (sieS > wirS ? 'w' : '') + '">' + esc(h.liga.gegner) + '</div>' +
+          '<div class="ld">' + fmtDate(h.at) + (h.live ? ' · läuft gerade' : '') + '</div>' +
+          '</div>';
+      }).join('') || '<p class="hint">Noch keine Ligaspiele.</p>';
+      return;
+    }
+
     $('match-log').innerHTML = log.slice(0, 30).map(function (row) {
       if (row.kind !== '501') {
         var h = row.h;
@@ -5692,6 +5900,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
                   'data-id="' + t.id + '" data-dabei="' + (binDabei ? '0' : '1') + '">' +
                   (binDabei ? 'Bin raus' : 'Ich bin dabei') + '</button>'
                 : '') +
+              (S.history.some(function (h) { return h.liga && h.liga.terminId === t.id && h.matches; })
+                ? '<button class="btn ghost small" data-action="liga-bericht" data-termin="' + t.id + '">Spielbericht</button>'
+                : '') +
               '<button class="btn ghost small" data-action="liga-spiel" data-id="' + t.id + '">Ligaspiel starten</button>' +
             '</span>' +
           '</div>') +
@@ -5785,6 +5996,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
     var active = m.done && m.winner ? m.winner : activePlayer(leg, m);
     var schnell = m.kind === 'quick';
+    /* Ligaspiel ohne Finish-Hilfen: die App sagt das Doppel nicht an
+       (WDF 3.08) – keine Wege, keine Markierungen. Der Rest bleibt
+       natürlich stehen, den verlangt die Regel sogar (WDF 3.07). */
+    var ohneFinish = !schnell && S.tour && S.tour.liga && !S.tour.liga.finish;
     if (schnell) {
       $('game-match-label').textContent = 'Schnelles Spiel';
       $('game-leg-label').textContent = plural(m.p.length, 'Spieler', 'Spieler') + ' · ' +
@@ -5820,7 +6035,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         /* Der Finish-Weg erscheint, sobald einer ansteht – bei jedem Spieler
            im eigenen Kasten, auch während der andere wirft: so kann man sich
            auf seine Aufnahme vorbereiten. Abgedunkelt, kein Signalrot. */
-        var fRoute = !m.done && rest >= 2
+        var fRoute = !ohneFinish && !m.done && rest >= 2
           ? Checkout.suggest(rest, 3, lieblingsDoppel(pid)) : null;
         pfinish = '<div class="pfinish">' + (fRoute ? fRoute.map(function (d) {
           return '<span class="chip">' + Checkout.pretty(d) + '</span>';
@@ -5842,13 +6057,14 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var restActive = remainingIn(leg, active) - pendingSum;
     var mode = effectiveMode(restActive);
     var dartsLeft = mode === 'darts' ? 3 - UI.darts.length : 3;
-    var route = Checkout.suggest(restActive, dartsLeft, lieblingsDoppel(active));
+    var route = ohneFinish ? null : Checkout.suggest(restActive, dartsLeft, lieblingsDoppel(active));
 
     /* Ab drei Spielern am Handy: solange der Aktive nicht in Finish-Nähe
        ist, sagt die Leiste nur „noch kein Finish möglich" und stiehlt dem
        Verlauf die einzige Zeile – dort verschwindet sie dann (per CSS nur
        am Handy, am iPad bleibt sie stehen). */
     $('checkout-bar').classList.toggle('fern', m.p.length > 2 && restActive > 170 && !m.done);
+    $('checkout-bar').classList.toggle('aus', !!ohneFinish);
 
     var whose = esc(pname(active));
     if (route) {
@@ -6494,6 +6710,186 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     }
   }
 
+  /* ================= Spielbericht (SDM-Bogen) ================= */
+
+  /* Woher kommt der Bericht: aus dem laufenden Ligaspiel oder – über den
+     Spieltag im Liga-Reiter – aus dem Archiv. */
+  function ligaBerichtQuelle() {
+    if (UI.bericht) {
+      for (var i = 0; i < S.history.length; i++) {
+        var h = S.history[i];
+        if (h.liga && h.liga.terminId === UI.bericht && h.matches) {
+          return { liga: h.liga, matches: h.matches, start: (h.settings && h.settings.start) || 501, at: h.at };
+        }
+      }
+      return null;
+    }
+    if (S.tour && S.tour.liga) {
+      return { liga: S.tour.liga, matches: S.matches, start: tourStart(), at: null };
+    }
+    return null;
+  }
+
+  function berichtZeit(ts) {
+    if (!ts) return '';
+    var d = new Date(ts);
+    return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  }
+
+  /* Eine Highlight-Zeilenliste je Bogen-Seite: „Mark 180 ×2", „Mark 141
+     Finish", „Mark 18-Darter" – höchstens 7 Zeilen, wie auf dem Bogen. */
+  function berichtHighlights(ids, stM) {
+    var zeilen = [];
+    ids.forEach(function (id) {
+      var s = stM[id];
+      if (!s) return;
+      if (s.s180 > 0) zeilen.push(esc(s.name) + ' 180' + (s.s180 > 1 ? ' ×' + s.s180 : ''));
+      if (s.highCO >= 100) zeilen.push(esc(s.name) + ' ' + s.highCO + ' Finish');
+      if (s.bestLeg && s.bestLeg <= 21) zeilen.push(esc(s.name) + ' ' + s.bestLeg + '-Darter');
+    });
+    return zeilen.slice(0, 7);
+  }
+
+  /* Nicht bei jedem Zeichnen neu bauen: der Hintergrund-Abgleich würde
+     sonst Handkorrekturen im Blatt kommentarlos wegwischen. Neu gezeichnet
+     wird nur, wenn eine andere Quelle dran ist oder Ergebnisse dazukamen. */
+  var berichtStand = null;
+
+  function renderBericht() {
+    var q = ligaBerichtQuelle();
+    if (!q) { S.screen = 'liga'; render(); return; }
+    var kennung = (UI.bericht || 'live') + ':' +
+      q.matches.filter(function (m) { return m.done; }).length;
+    if (berichtStand === kennung && $('bericht-blatt').innerHTML) return;
+    berichtStand = kennung;
+    var lg = q.liga;
+    var heimTeam = lg.heim ? LIGA.team : lg.gegner;
+    var gastTeam = lg.heim ? lg.gegner : LIGA.team;
+    var heimIds = lg.heimSpieler || (lg.heim ? lg.wir : lg.sie);
+    var gastIds = lg.gastSpieler || (lg.heim ? lg.sie : lg.wir);
+
+    var stM = collectStats([{ matches: q.matches, start: q.start }], heimIds.concat(gastIds));
+    Object.keys(stM).forEach(function (k) { stM[k].name = pname(k); finalize(stM[k]); });
+
+    /* Spielerzeilen H1–H8 / G1–G8: der Anzeigename steht im Vornamen-Feld,
+       der bürgerliche Nachname wird von Hand ergänzt (SWO verlangt ihn). */
+    var spielerZeilen = function (praefix, ids) {
+      var zeilen = '';
+      for (var i = 0; i < 8; i++) {
+        zeilen += '<tr' + (i === 3 ? ' class="b-trenn"' : '') + '>' +
+          '<th>' + praefix + (i + 1) + '</th>' +
+          '<td contenteditable>' + (ids[i] ? esc(pname(ids[i])) : '') + '</td>' +
+          '<td contenteditable></td></tr>';
+      }
+      return zeilen;
+    };
+
+    /* Die 16 Einzel in Bogen-Reihenfolge. Die Ergebnis-Spalte kumuliert wie
+       auf dem handgeführten Bogen: in der Reihenfolge, in der die Einzel
+       tatsächlich fertig wurden – nicht in Zeilenreihenfolge. */
+    var lauf = {}, hs = 0, gs = 0;
+    q.matches.filter(function (m) { return m.done; })
+      .slice().sort(function (a, b) { return (a.at || 0) - (b.at || 0); })
+      .forEach(function (m) {
+        if (m.winner === m.p[0]) hs++; else gs++;
+        lauf[m.id] = hs + ' : ' + gs;
+      });
+    var heimSpiele = hs, gastSpiele = gs, heimLegs = 0, gastLegs = 0;
+    var einzelZeilen = q.matches.map(function (m, i) {
+      // Alt-Archiv ohne posPaar: die Matches entstanden nach der alten Tabelle.
+      var paar = m.posPaar || LIGA_EINZEL_ALT[i] || [0, 0];
+      var lh = legsWon(m, m.p[0]), lgs = legsWon(m, m.p[1]);
+      heimLegs += lh; gastLegs += lgs;
+      return '<tr' + (i % 4 === 3 ? ' class="b-trenn"' : '') + '>' +
+        '<th>H' + (paar[0] + 1) + ' – G' + (paar[1] + 1) + '</th>' +
+        '<td contenteditable>' + (m.legs.length ? lh + ' : ' + lgs : ' : ') + '</td>' +
+        '<td contenteditable>' + (m.done && lauf[m.id] ? lauf[m.id] : ' : ') + '</td></tr>';
+    }).join('');
+
+    var hlHeim = berichtHighlights(heimIds, stM);
+    var hlGast = berichtHighlights(gastIds, stM);
+    var hlZeilen = function (praefix, liste) {
+      var zeilen = '';
+      for (var i = 0; i < 7; i++) {
+        zeilen += '<tr><th>' + praefix + '</th><td contenteditable>' + (liste[i] || '') + '</td></tr>';
+      }
+      return zeilen;
+    };
+
+    $('bericht-blatt').innerHTML =
+      '<div class="blatt">' +
+        '<div class="b-kopf">' +
+          '<div class="b-marke"><div class="b-sdm">sdm</div>' +
+            '<div class="b-sdm-sub">steeldart münchen</div><div class="b-liga">4er Liga</div></div>' +
+          '<div class="b-recht">Der ausgefüllte Spielbericht ist der Ligaleitung unverzüglich zukommen ' +
+            'zu lassen. Wird der Spielbericht nicht innerhalb von 3 Werktagen nach dem Spieltag abgesandt, ' +
+            'wird das Ligaspiel für das Heimteam mit 0:2 Punkten und 0:16 Spielen als verloren gewertet. ' +
+            'Für den Umgang mit den angegebenen personenbezogenen Daten wird auf das Datenschutz-Merkblatt ' +
+            'der SDM verwiesen.<br><br>' +
+            'Spielleiter: Udo Kern · spielbericht@steeldart-muenchen.de</div>' +
+        '</div>' +
+        '<div class="b-info">' +
+          '<table class="b-tab"><tr><th>Spielort:</th><td contenteditable>' + esc(lg.ort || '') + '</td></tr>' +
+          '<tr><th class="b-rot">Spieltag Nr.:</th><td contenteditable>' + lg.nr + '</td></tr>' +
+          '<tr><th class="b-schwarz">Heim-Team:</th><td contenteditable>' + esc(heimTeam) + '</td></tr></table>' +
+          '<table class="b-tab"><tr><th>Datum:</th><td contenteditable>' +
+            (lg.tag ? ligaDatum(lg.tag) : '') + '</td></tr>' +
+          '<tr><th>Spielzeit:</th><td><span class="b-zeit">von: <b contenteditable>' + berichtZeit(lg.zeitVon) +
+            '</b></span><span class="b-zeit">bis: <b contenteditable>' + berichtZeit(lg.zeitBis) + '</b></span></td></tr>' +
+          '<tr><th class="b-schwarz">Gast-Team:</th><td contenteditable>' + esc(gastTeam) + '</td></tr></table>' +
+        '</div>' +
+        '<div class="b-spalten">' +
+          '<table class="b-tab b-spieler"><tr><th>Spieler</th><th>Vorname</th><th>Name</th></tr>' +
+            spielerZeilen('H', heimIds) + '</table>' +
+          '<table class="b-tab b-spieler"><tr><th>Spieler</th><th>Vorname</th><th>Name</th></tr>' +
+            spielerZeilen('G', gastIds) + '</table>' +
+        '</div>' +
+        '<div class="b-spalten">' +
+          '<div>' +
+            '<table class="b-tab b-einzel"><tr><th>Einzelspiele</th><th>Legs</th><th>Ergebnis</th></tr>' +
+              einzelZeilen + '</table>' +
+            '<table class="b-tab b-ende"><tr><th>Endergebnis:</th>' +
+              '<td contenteditable>' + heimSpiele + ' : ' + gastSpiele + '</td>' +
+              '<td contenteditable>' + heimLegs + ' : ' + gastLegs + '</td></tr></table>' +
+            '<table class="b-tab b-ende"><tr><td contenteditable>Nachmeldungen: ja O&nbsp;&nbsp;nein O</td>' +
+              '<td contenteditable>Proteste: ja O&nbsp;&nbsp;nein O</td></tr></table>' +
+          '</div>' +
+          '<div>' +
+            '<div class="b-titel">Highlights Heim:</div>' +
+            '<table class="b-tab b-hl">' + hlZeilen('H', hlHeim) + '</table>' +
+            '<div class="b-titel">Highlights Gast:</div>' +
+            '<table class="b-tab b-hl">' + hlZeilen('G', hlGast) + '</table>' +
+            '<p class="b-klein">Eingetragene Spielpositionen sind verbindlich! Ausgewechselte ' +
+              'Spieler:innen dürfen nur auf derselben Position wieder eingewechselt werden, jedoch ' +
+              'können auf einer Position auch mehrere Spieler:innen eingesetzt werden!</p>' +
+          '</div>' +
+        '</div>' +
+        '<div class="b-spalten">' +
+          '<div><div class="b-titel">TC Heim:</div><div class="b-unterschrift" contenteditable></div></div>' +
+          '<div><div class="b-titel">TC Gast:</div><div class="b-unterschrift" contenteditable></div></div>' +
+        '</div>' +
+        '<div class="b-fuss">nach SDM-Spielbericht-4er-V5.2 · Blink-180-App · Seite 1/2</div>' +
+      '</div>' +
+
+      /* Seite 2: Nachmeldungen und Proteste, als Leerformular. */
+      '<div class="blatt b-seite2">' +
+        '<div class="b-titel">Nachmeldungen:</div>' +
+        '<table class="b-tab b-nach"><tr><th>Team</th><th>Nachname</th><th>Vorname</th><th>U18?</th><th>w/m/d</th><th>Unterschrift</th></tr>' +
+          '<tr><td contenteditable></td><td contenteditable></td><td contenteditable></td><td contenteditable></td><td contenteditable></td><td></td></tr>'.repeat(6) +
+        '</table>' +
+        '<p class="b-klein">Für eine gültige Nachmeldung müssen alle Felder ausgefüllt sowie die ' +
+          'Unterschrift der neu gemeldeten Person geleistet werden. Die Person bestätigt mit der ' +
+          'Unterschrift, dass sie damit einverstanden ist, dass ihr Team an Spielen der SDM-Ligen ' +
+          'teilnimmt und ihre persönlichen Daten gemäß dem Datenschutz-Merkblatt der SDM verarbeitet ' +
+          'werden. Ferner erkennt sie die Sport- und Wettkampfordnung der SDM an. Bei Nachmeldungen ' +
+          'ist die Spielergebühr innerhalb von 14 Tagen zu entrichten (10 € je Person, 2 € bei U18 – ' +
+          'Steeldart München e.V., Stadtsparkasse München, IBAN DE23 7015 0000 0036 1357 47).</p>' +
+        '<div class="b-titel">Proteste und Anmerkungen:</div>' +
+        '<div class="b-protest" contenteditable></div>' +
+        '<div class="b-fuss">Seite 2/2</div>' +
+      '</div>';
+  }
+
   function renderSummary() {
     var s = UI.summary;
     var found = s ? findGame(s.kind, s.id) : null;
@@ -6698,7 +7094,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '<p class="muted">' + lw.nr + '. Spieltag · ' + esc(LIGA.team) + ' gegen ' + esc(lw.gegner) + '</p>' +
         ligaTeamsHtml(lwd) +
         '<p class="muted">Legs ' + lwd.wirL + ':' + lwd.sieL + '</p></div>' +
-        (ligaHighlightsHtml(lwd) ? '<div class="card">' + ligaHighlightsHtml(lwd) + '</div>' : '');
+        (ligaHighlightsHtml(lwd) ? '<div class="card">' + ligaHighlightsHtml(lwd) + '</div>' : '') +
+        '<button class="btn ghost full" data-action="liga-bericht">Spielbericht ansehen &amp; drucken</button>';
       return;
     }
 
@@ -6817,6 +7214,13 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
             '<button data-action="liga-bestof" data-value="3" class="' + (ld.bestOf === 3 ? 'active' : '') + '">Best of 3</button>' +
             '<button data-action="liga-bestof" data-value="5" class="' + (ld.bestOf === 5 ? 'active' : '') + '">Best of 5</button>' +
           '</div>' +
+          '<div class="ls-titel">Finish-Anzeigen</div>' +
+          '<div class="options">' +
+            '<button data-action="liga-finish" data-value="0" class="' + (ld.finish ? '' : 'active') + '">ohne</button>' +
+            '<button data-action="liga-finish" data-value="1" class="' + (ld.finish ? 'active' : '') + '">mit</button>' +
+          '</div>' +
+          '<p class="hint">Ohne ist Liga-konform: Der Schreiber darf das benötigte Doppel ' +
+            'nicht ansagen (WDF 3.08) – die App zeigt dann keine Finish-Wege.</p>' +
           (kannTeilenLiga
             ? '<div class="ls-titel">An zwei Scheiben</div>' +
               '<div class="options">' +
@@ -6828,6 +7232,49 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '<div class="row-btns two">' +
         '<button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
         '<button class="btn primary" data-action="liga-los">Los geht\'s</button></div>';
+    } else if (o.type === 'liga-wechsel') {
+      /* Die acht Positionen mit ihrer aktuellen Besetzung – Wechsel je
+         Position, wie es die SWO erlaubt. */
+      var wlg = S.tour && S.tour.liga;
+      if (!wlg) { UI.overlay = null; ov.classList.add('hidden'); return; }
+      var wUnsere = wlg.heim ? 'H' : 'G';
+      var wZeile = function (seite, posListe) {
+        return posListe.map(function (id, i) {
+          return '<div class="rc-row">' +
+            '<span class="bo-pos">' + seite + (i + 1) + '</span>' +
+            avatarHTML(profile(id), 'sm') +
+            '<span class="rc-name">' + esc(pname(id)) +
+              (seite === wUnsere ? '' : ' <span class="gast-marke">Gast</span>') + '</span>' +
+            '<button class="btn ghost small" data-action="liga-wechsel-pos" ' +
+              'data-seite="' + seite + '" data-pos="' + i + '">Wechseln</button>' +
+            '</div>';
+        }).join('');
+      };
+      html = '<h3>Spieler wechseln</h3>' +
+        '<p class="hint">Nur auf derselben Position (SWO §8), höchstens 8 Spieler je Team. ' +
+          'Der Wechsel gilt für alle noch nicht begonnenen Einzel der Position.</p>' +
+        '<div class="roster-change">' +
+          '<div class="ls-titel">Heim</div>' + wZeile('H', wlg.posH) +
+          '<div class="ls-titel">Gast</div>' + wZeile('G', wlg.posG) +
+        '</div>' +
+        '<button class="btn primary full" data-action="ov-cancel">Fertig</button>';
+    } else if (o.type === 'liga-wechsel-zu') {
+      var wz = o;
+      html = '<h3>Wechsel auf Position ' + wz.seite + (wz.pos + 1) + '</h3>' +
+        (o.fehler ? '<p class="edit-error">' + esc(o.fehler) + '</p>' : '') +
+        (wz.eigene
+          ? '<label class="ls-zeile liga-start"><span>Neu</span>' +
+            '<select data-role="liga-neu">' +
+            activeProfiles().map(function (p) {
+              return '<option value="' + p.id + '"' + (wz.draft.neu === p.id ? ' selected' : '') + '>' +
+                esc(p.name) + '</option>';
+            }).join('') + '</select></label>'
+          : '<label class="ls-zeile liga-start"><span>Neu</span>' +
+            '<input data-role="liga-neu-name" maxlength="30" value="' + esc(wz.draft.name) + '" ' +
+            'placeholder="Name des neuen Gegners"></label>') +
+        '<div class="row-btns two">' +
+        '<button class="btn ghost" data-action="roster-change">Zurück</button>' +
+        '<button class="btn primary" data-action="liga-wechsel-ok">Einwechseln</button></div>';
     } else if (o.type === 'confirm-reset') {
       var offeneSpiele = sum(S.matches, function (m) { return m.done || m.void ? 0 : 1; });
       var fertige = sum(S.matches, function (m) { return m.done ? 1 : 0; });
@@ -6971,36 +7418,39 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
        sich selbst), und Ausgeblendete kommen zurück ins Licht. */
     var sie = [];
     namen.forEach(function (n) {
-      var da = null;
-      S.profiles.forEach(function (p) {
-        if (!da && p.gast && p.name === n &&
-            wir.indexOf(p.id) < 0 && sie.indexOf(p.id) < 0) da = p;
-      });
-      if (da) {
-        da.hidden = false;
-        sie.push(da.id);
-        return;
-      }
-      var neu = { id: uid(), name: n, avatar: null, hue: freeHue(), created: Date.now(), gast: true };
-      S.profiles.push(neu);
-      sie.push(neu.id);
+      sie.push(ligaGastId(n, wir.concat(sie)));
     });
 
     if (S.matches.length) archiveTournament();
     if (S.game && S.game.done) archiveGame(S.game);
     S.game = null;
+    /* heimSpieler/gastSpieler sind die Bogen-Listen H1–H8 bzw. G1–G8 (erst
+       die vier Startpositionen, Wechselspieler kommen hinten dazu).
+       posH/posG ist die AKTUELLE Besetzung der vier Positionen. */
+    var heimListe = daheim ? wir.slice() : sie.slice();
+    var gastListe = daheim ? sie.slice() : wir.slice();
     S.tour = {
       start: 501, bestOf: d.bestOf, players: wir.concat(sie),
-      liga: { terminId: t.id, nr: t.nr, gegner: gegnerTeam, heim: daheim, wir: wir, sie: sie }
+      liga: {
+        terminId: t.id, nr: t.nr, gegner: gegnerTeam, heim: daheim,
+        wir: wir, sie: sie,
+        heimSpieler: heimListe, gastSpieler: gastListe,
+        posH: heimListe.slice(0, 4), posG: gastListe.slice(0, 4),
+        ort: t.ort || '', tag: t.tag || '',
+        finish: !!d.finish, zeitVon: Date.now(), zeitBis: null
+      }
     };
     S.matches = LIGA_EINZEL.map(function (paar, i) {
-      var h = daheim ? wir[paar[0]] : sie[paar[0]];
-      var g = daheim ? sie[paar[1]] : wir[paar[1]];
+      var h = heimListe[paar[0]], g = gastListe[paar[1]];
       return {
         id: uid(), round: Math.floor(i / 4) + 1, p: [h, g],
         /* Kein Ausbullen im Ligaspiel: der Heimspieler wirft das erste Leg
            an, jedes weitere Leg wechselt (macht ensureLeg von selbst). */
         starter: h,
+        /* Welche Bogen-Positionen hier spielen und auf welcher Scheibe die
+           Partie im Doppelbetrieb läuft (zwei nebeneinander je Durchgang). */
+        posPaar: paar.slice(),
+        scheibe: i % 2 === 0 ? 'S1' : 'S2',
         legs: [], done: false, winner: null, at: null
       };
     });
@@ -7022,7 +7472,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         start: S.tour.start, bestOf: S.tour.bestOf, players: S.tour.players.slice(),
         gaeste: gaeste, liga: S.tour.liga,
         matches: S.matches.map(function (m) {
-          return { id: m.id, round: m.round, p: m.p.slice(), starter: m.starter };
+          return { id: m.id, round: m.round, p: m.p.slice(), starter: m.starter, posPaar: m.posPaar, scheibe: m.scheibe };
         })
       };
       S.tour.geteilt = true;
@@ -7037,6 +7487,91 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     }
     save();
     render();
+  }
+
+  /* Gegner-Gast finden oder anlegen: Wiederverwendung per Namensgleichheit,
+     aber nie ein Profil, das schon im Spiel steht – und Ausgeblendete
+     kommen zurück ins Licht. */
+  function ligaGastId(name, ausschluss) {
+    var da = null;
+    S.profiles.forEach(function (p) {
+      if (!da && p.gast && p.name === name && ausschluss.indexOf(p.id) < 0) da = p;
+    });
+    if (da) {
+      da.hidden = false;
+      return da.id;
+    }
+    var neu = { id: uid(), name: name, avatar: null, hue: freeHue(), created: Date.now(), gast: true };
+    S.profiles.push(neu);
+    return neu.id;
+  }
+
+  /* ---------- Spielerwechsel im Ligaspiel ----------
+   * SWO: Gewechselt wird nur auf derselben Position; wer auf einer Position
+   * gespielt hat, darf nur dort wieder eingesetzt werden; je Team höchstens
+   * 8 Spieler. Der Wechsel greift für alle noch nicht begonnenen Einzel der
+   * Position – Gespieltes bleibt beim alten Spieler. */
+
+  function ligaGespieltePos(pid, seite) {
+    var idx = seite === 'H' ? 0 : 1;
+    var posn = [];
+    S.matches.forEach(function (m) {
+      if (!m.posPaar) return;
+      var begonnen = m.done || m.legs.some(function (l) { return l.visits.length > 0; });
+      if (!begonnen) return;
+      if (m.p[idx] === pid && posn.indexOf(m.posPaar[idx]) < 0) posn.push(m.posPaar[idx]);
+    });
+    return posn;
+  }
+
+  function ligaWechseln(seite, pos, neueId) {
+    var lg = S.tour && S.tour.liga;
+    if (!lg) return 'Kein Ligaspiel.';
+    /* Im geteilten Spiel kennt das andere Gerät nur den alten Plan und
+       würde das Einzel mit dem alten Spieler mitschreiben – die Stände
+       liefen auseinander. Bis der Plan-Abgleich das kann: gesperrt. */
+    if (geteiltesTurnier()) {
+      return 'Im geteilten Ligaspiel geht der Wechsel noch nicht – bitte auf einem Gerät spielen.';
+    }
+    var posListe = seite === 'H' ? lg.posH : lg.posG;
+    var teamListe = seite === 'H' ? lg.heimSpieler : lg.gastSpieler;
+    if (posListe[pos] === neueId) return null;
+    /* Niemand steht auf zwei Positionen – und schon gar nicht auf beiden
+       Seiten des Bogens. */
+    if (lg.posH.indexOf(neueId) >= 0 || lg.posG.indexOf(neueId) >= 0) {
+      return 'Dieser Spieler steht schon auf einer Position.';
+    }
+    var andereListe = seite === 'H' ? lg.gastSpieler : lg.heimSpieler;
+    if (andereListe.indexOf(neueId) >= 0) {
+      return 'Dieser Spieler gehört zum anderen Team.';
+    }
+    var gespielt = ligaGespieltePos(neueId, seite);
+    if (gespielt.length && gespielt.indexOf(pos) < 0) {
+      return 'Laut SWO darf ein Spieler nur auf seiner bisherigen Position (' +
+        (gespielt[0] + 1) + ') wieder eingewechselt werden.';
+    }
+    if (teamListe.indexOf(neueId) < 0) {
+      if (teamListe.length >= 8) return 'Mehr als 8 Spieler je Team lässt die SWO nicht zu.';
+      teamListe.push(neueId);
+    }
+    posListe[pos] = neueId;
+    if (S.tour.players.indexOf(neueId) < 0) S.tour.players.push(neueId);
+    var unsereSeite = lg.heim ? 'H' : 'G';
+    if (seite === unsereSeite) {
+      if (lg.wir.indexOf(neueId) < 0) lg.wir.push(neueId);
+    } else if (lg.sie.indexOf(neueId) < 0) {
+      lg.sie.push(neueId);
+    }
+    var idx = seite === 'H' ? 0 : 1;
+    S.matches.forEach(function (m) {
+      if (!m.posPaar || m.posPaar[idx] !== pos) return;
+      var begonnen = m.done || m.legs.some(function (l) { return l.visits.length > 0; });
+      if (begonnen) return;
+      m.p[idx] = neueId;
+      if (idx === 0) m.starter = neueId;   // der Heimspieler wirft an
+    });
+    save();
+    return null;
   }
 
   function startTournament(confirmed) {
@@ -7509,7 +8044,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         });
         UI.overlay = {
           type: 'liga-start', termin: lsTermin,
-          draft: { bestOf: 3, wir: lsVorschlag.slice(0, 4), gegner: ['', '', '', ''], geteilt: false }
+          /* Best of 3 (unsere 4. Liga) und ohne Finish-Hilfen (WDF 3.08:
+             das Doppel wird nicht angesagt) sind die Voreinstellung. */
+          draft: { bestOf: 3, wir: lsVorschlag.slice(0, 4), gegner: ['', '', '', ''], geteilt: false, finish: false }
         };
         render();
         break;
@@ -7526,8 +8063,30 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           render();
         }
         break;
+      case 'liga-finish':
+        if (UI.overlay && UI.overlay.type === 'liga-start') {
+          UI.overlay.draft.finish = el.getAttribute('data-value') === '1';
+          render();
+        }
+        break;
       case 'liga-los':
         ligaSpielStarten();
+        break;
+      case 'liga-bericht':
+        UI.bericht = el.getAttribute('data-termin') || null;
+        UI.berichtVon = S.screen;
+        S.screen = 'bericht';
+        save(); render();
+        break;
+      case 'bericht-zurueck':
+        S.screen = UI.bericht ? 'liga'
+          : UI.berichtVon === 'winner' ? 'winner'
+          : S.tour && S.tour.liga ? 'tournament' : 'liga';
+        UI.bericht = null;
+        save(); render();
+        break;
+      case 'bericht-drucken':
+        window.print();
         break;
       case 'liga-zusage': {
         if (!(window.DartSync && window.DartSync.liga && window.DartKonto && window.DartKonto.nutzer())) return;
@@ -7585,8 +8144,47 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         break;
       }
       case 'roster-change':
-        UI.overlay = { type: 'roster-change' }; render();
+        UI.overlay = S.tour && S.tour.liga ? { type: 'liga-wechsel' } : { type: 'roster-change' };
+        render();
         break;
+      case 'liga-wechsel-pos': {
+        var lwSeite = el.getAttribute('data-seite');
+        var lwPos = Number(el.getAttribute('data-pos'));
+        var lwLg = S.tour && S.tour.liga;
+        if (!lwLg) break;
+        var unsere = lwLg.heim ? 'H' : 'G';
+        var lwEigene = lwSeite === unsere;
+        var lwErste = lwEigene ? (activeProfiles()[0] || {}).id || '' : '';
+        UI.overlay = {
+          type: 'liga-wechsel-zu', seite: lwSeite, pos: lwPos,
+          eigene: lwEigene,
+          draft: { neu: lwErste, name: '' }
+        };
+        render();
+        break;
+      }
+      case 'liga-wechsel-ok': {
+        var lo = UI.overlay;
+        if (!lo || lo.type !== 'liga-wechsel-zu') break;
+        var loLg = S.tour.liga;
+        var neuId;
+        if (lo.eigene) {
+          neuId = lo.draft.neu;
+          if (!neuId) { lo.fehler = 'Bitte einen Spieler auswählen.'; render(); break; }
+        } else {
+          var loName = String(lo.draft.name || '').trim().slice(0, 30);
+          if (!loName) { lo.fehler = 'Bitte den Namen des neuen Gegners eintragen.'; render(); break; }
+          /* Nur die AKTIVE Besetzung ausschließen: wer auf der Bank sitzt,
+             wird am Namen wiedererkannt und darf zurückwechseln – sonst
+             entstünde ein zweites Profil desselben Menschen. */
+          neuId = ligaGastId(loName, loLg.posH.concat(loLg.posG));
+        }
+        var loFehler = ligaWechseln(lo.seite, lo.pos, neuId);
+        if (loFehler) { lo.fehler = loFehler; render(); break; }
+        UI.overlay = { type: 'liga-wechsel' };
+        render();
+        break;
+      }
       case 'add-player':
         addPlayerToTournament(el.getAttribute('data-id'));
         render();
@@ -7724,6 +8322,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     }
     if (ev.target.getAttribute('data-role') === 'liga-pos' && UI.overlay && UI.overlay.draft) {
       UI.overlay.draft.wir[Number(ev.target.getAttribute('data-i'))] = ev.target.value;
+    }
+    if (ev.target.getAttribute('data-role') === 'liga-neu' && UI.overlay && UI.overlay.draft) {
+      UI.overlay.draft.neu = ev.target.value;
+    }
+    if (ev.target.getAttribute('data-role') === 'liga-neu-name' && UI.overlay && UI.overlay.draft) {
+      UI.overlay.draft.name = ev.target.value;
     }
   });
 

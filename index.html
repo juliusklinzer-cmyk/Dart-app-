@@ -244,6 +244,7 @@
 
   <div class="options" id="board-mode">
     <button data-action="board-mode" data-value="501">Classic</button>
+    <button data-action="board-mode" data-value="liga">Liga</button>
     <button data-action="board-mode" data-value="cricket">Cricket</button>
     <button data-action="board-mode" data-value="rtw">Round the World</button>
     <button data-action="board-mode" data-value="finisher">Finisher</button>
@@ -681,6 +682,21 @@
       <div class="pad" id="fin-pad"></div>
     </div>
   </div>
+</section>
+
+<!-- ============ SPIELBERICHT ============ -->
+<!-- Der SDM-Spielberichtsbogen (V5.2) als ausfüllbares Blatt: automatisch
+     aus dem Ligaspiel befüllt, jede Zelle antippbar und korrigierbar,
+     danach direkt drucken. Beim Druck erscheint nur das Blatt. -->
+<section id="screen-bericht" class="screen">
+  <header class="app-header row bericht-kopfzeile">
+    <button class="icon-btn" data-action="bericht-zurueck" aria-label="Zurück">‹</button>
+    <h1>Spielbericht</h1>
+    <button class="btn primary small" data-action="bericht-drucken">Drucken</button>
+  </header>
+  <p class="hint bericht-hinweis">Alle Felder lassen sich antippen und von Hand korrigieren,
+    bevor gedruckt wird. Seite 2 (Nachmeldungen, Proteste) druckt als Leerformular mit.</p>
+  <div id="bericht-blatt"></div>
 </section>
 
 <!-- ============ KONTO ============ -->

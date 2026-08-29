@@ -1926,16 +1926,86 @@ check('die 180er stehen fuer den Spielbericht bereit', await page.evaluate(() =>
   const el = document.getElementById('liga-stand');
   return el.innerText.includes('180er');
 }));
+check('jedes Einzel traegt seine Scheibe', await page.evaluate(() => {
+  const M = window.__dart.state().matches;
+  return M[0].scheibe === 'S1' && M[1].scheibe === 'S2';
+}));
 
-/* Aufraeumen fuer die folgenden Gruppen – auch die Dachauer Gaeste gehen
-   wieder, ihr Testspiel wird ja verworfen. */
+/* Ohne Finish-Hilfen (Voreinstellung): im Einzel gibt es keine Finish-Leiste –
+   der Schreiber darf das Doppel ja nicht ansagen (WDF 3.08). */
+await page.locator('#schedule .match-row .go').first().click();
+check('Liga-konform: keine Finish-Leiste im Einzel', !(await visible('#checkout-bar')));
+await page.locator('#screen-game [data-action="to-tournament"]').click();
+
+/* Spielerwechsel: nur auf derselben Position, Gegner als neuer Gast. */
+await page.locator('[data-action="roster-change"]').click();
+check('der Wechsel-Dialog zeigt alle acht Positionen',
+  (await page.locator('#overlay-card [data-action="liga-wechsel-pos"]').count()) === 8);
+await page.locator('[data-action="liga-wechsel-pos"][data-seite="G"][data-pos="1"]').click();
+await page.locator('[data-role="liga-neu-name"]').fill('Dachau Ersatz');
+await page.locator('[data-action="liga-wechsel-ok"]').click();
+check('der Ersatz steht auf G2 und das Team zaehlt fuenf', await page.evaluate(() => {
+  const lg = window.__dart.state().tour.liga;
+  return window.__dart.profile(lg.posG[1]).name === 'Dachau Ersatz' && lg.gastSpieler.length === 5;
+}));
+check('alle offenen G2-Einzel gehoeren jetzt dem Ersatz', await page.evaluate(() => {
+  const S = window.__dart.state();
+  return S.matches
+    .filter((m) => m.posPaar && m.posPaar[1] === 1 && !m.done && !m.legs.some((l) => l.visits.length))
+    .every((m) => window.__dart.profile(m.p[1]).name === 'Dachau Ersatz');
+}));
+await page.locator('#overlay-card [data-action="ov-cancel"]').click();
+
+/* Der Spielbericht: Udos Bogen, automatisch befuellt und korrigierbar. */
+await page.locator('[data-action="liga-bericht"]').click();
+check('der Spielbericht oeffnet sich', await visible('#screen-bericht'));
+check('mit den 16 Einzeln in Bogen-Reihenfolge', await page.evaluate(() => {
+  const t = document.getElementById('bericht-blatt').textContent;
+  return t.includes('H1 – G1') && t.includes('H3 – G1') && t.includes('H2 – G4');
+}));
+check('Legs und laufendes Ergebnis stehen drin', await page.evaluate(() => {
+  const t = document.getElementById('bericht-blatt').textContent.replace(/\s+/g, ' ');
+  return t.includes('2 : 1') && t.includes('1 : 0');
+}));
+check('die Highlights stehen in Udos Form', await page.evaluate(() => {
+  const t = document.getElementById('bericht-blatt').textContent;
+  return t.includes('Lenas 180') && t.includes('141 Finish');
+}));
+check('das Blatt laesst sich Feld fuer Feld korrigieren',
+  (await page.locator('#bericht-blatt [contenteditable]').count()) > 40);
+await page.locator('[data-action="bericht-zurueck"]').click();
+check('zurueck im Ligaspiel', await visible('#screen-tournament'));
+
+/* Vorzeitig beenden: das gespielte Einzel wandert als Ligaspiel ins Archiv. */
+await page.locator('[data-action="reset"]').click();
+await page.locator('[data-action="ov-reset"]').click();
+check('das Ligaspiel liegt im Archiv', await page.evaluate(() =>
+  window.__dart.state().history.filter((h) => h.liga).length === 1));
+
+group('Liga-Rangliste: Classic-Werte nur aus Ligaspielen');
+await page.locator('#nav [data-screen="boards"]').click();
+await page.locator('[data-action="board-mode"][data-value="liga"]').click();
+check('der Liga-Reiter steht in der Rangliste', (await text('#boards-sub')).includes('Spieltag'));
+check('mit den Classic-Kategorien, aber ohne Turniersiege', await page.evaluate(() => {
+  const t = document.getElementById('board-chips').innerText;
+  return t.includes('Siege') && t.includes('Average') && !t.includes('Turniersiege');
+}));
+check('Lenas fuehrt mit ihrem Liga-Sieg',
+  (await page.locator('#board-list .board-row').first().innerText()).includes('Lenas'));
+check('das Ligaspiel steht im Spieltag-Log', await page.evaluate(() => {
+  const t = document.getElementById('match-log').innerText;
+  return t.includes('1:0') && t.includes('TSV Dachau');
+}));
+check('die Rekorde kommen aus dem Ligaspiel', (await text('#records')).includes('141'));
+
+/* Aufraeumen fuer die folgenden Gruppen – Liga-Archiv und Dachauer Gaeste
+   verschwinden wieder, der Rest der Suite rechnet ohne sie. */
 await page.evaluate(() => {
   const D = window.__dart, S = D.state();
-  S.matches = [];
-  S.tour = null;
-  S.current = null;
-  S.profiles = S.profiles.filter((p) => !(p.gast && p.name.indexOf('Dachau ') === 0));
+  S.history = S.history.filter((h) => !h.liga);
+  S.profiles = S.profiles.filter((p) => !(p.gast && p.name.indexOf('Dachau') === 0));
   S.lineup = D.activeProfiles().filter((p) => !p.gast).slice(0, 4).map((p) => p.id);
+  D.ui().boardMode = '501';
   D.setScreen('setup');
 });
 

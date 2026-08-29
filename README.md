@@ -136,14 +136,27 @@ Von jedem Spieltag im Liga-Reiter lässt sich mit **„Ligaspiel starten"** der
 Spielabend nach SDM-Spielberichtsbogen aufsetzen: unsere vier **Positionen**
 (vorbelegt mit den Zusagen des Termins), die vier Gegner als Namen (sie werden
 Gäste dieses Geräts und beim nächsten Aufeinandertreffen wiedererkannt), Best
-of 3 oder 5 – und auf Wunsch **geteilt an zwei Scheiben**, wie es die SWO
-ohnehin verlangt. Der Spielplan sind die **16 Einzel in vier Durchgängen**
-(jeder gegen jeden, Reihenfolge in `LIGA_EINZEL` anpassbar). Es wird **nicht
-ausgebullt**: das erste Leg beginnt der Heimspieler, danach wechselt der
-Anwurf (SWO §8). Die Übersicht zeigt statt der Einzeltabelle den
-**Team-Stand** (Spiele und Legs) und darunter fertig für den Bogen die
-**Highlights**: 180er, High-Finishes ab 100 und Shortlegs bis 21 Darts. Im
-Regeln-Reiter der Liga-Seite stehen dazu ein FAQ für Neue und Udos Regelecke.
+of 3 oder 5, **Finish-Anzeigen an oder aus** (aus ist Liga-konform, WDF 3.08) –
+und auf Wunsch **geteilt an zwei Scheiben**, wie es die SWO ohnehin verlangt.
+Der Spielplan sind die **16 Einzel in vier Durchgängen, exakt in der
+Reihenfolge des Spielberichtsbogens** (`LIGA_EINZEL`); jedes Einzel trägt
+seine Scheibe (S1/S2). Es wird **nicht ausgebullt**: das erste Leg beginnt der
+Heimspieler, danach wechselt der Anwurf (SWO §8). Die Übersicht zeigt den
+**Team-Stand** (Spiele und Legs) und die **Highlights** für den Bogen (180er,
+High-Finishes ab 100, Shortlegs bis 21 Darts).
+
+**Spielerwechsel** gibt es nach SWO: nur auf derselben Position, höchstens
+8 Spieler je Team, der Wechsel greift für alle noch nicht begonnenen Einzel
+der Position (im geteilten Spiel derzeit gesperrt). Der **Spielbericht** –
+Udos Bogen als Blatt – füllt sich automatisch (Teams, Spieler H1–H8/G1–G8,
+Legs, laufendes Ergebnis, Endergebnis, Spielzeit, Highlights je Seite), jede
+Zelle lässt sich antippen und korrigieren, und **„Drucken"** gibt Seite 1
+plus das Nachmelde-/Protest-Leerformular als Seite 2 aus. Nach dem Abschluss
+bleibt der Bericht über den Spieltag im Liga-Reiter abrufbar. In der
+**Rangliste** gibt es den Reiter **„Liga"**: dieselben Classic-Kategorien
+(Average, First 9, Doppelquote, …), gerechnet nur über Ligaspiele, mit
+Spieltag-Log und Rekorden. Im Regeln-Reiter der Liga-Seite stehen dazu ein
+FAQ für Neue und Udos Regelecke.
 
 ## Ablauf (X01 Turnier)
 

@@ -2305,3 +2305,68 @@ button, input, select, textarea { font-family: inherit; }
 
 #liga-regeln h2 { margin: 18px 0 10px; }
 #liga-regeln h2:first-child { margin-top: 4px; }
+
+/* ================= Spielbericht (SDM-Bogen) ================= */
+/*
+ * Ein weißes Blatt wie das Original: Serifenschrift, schwarze Linien,
+ * graue Kopfzellen. Jede Zelle ist antippbar (contenteditable) und wird
+ * so gedruckt, wie sie auf dem Schirm steht.
+ */
+.blatt {
+  background: #fff; color: #000;
+  font-family: 'Bookman Old Style', Georgia, 'Times New Roman', serif;
+  font-size: 12px; line-height: 1.35;
+  padding: 18px; border-radius: 6px; margin-bottom: 14px;
+  max-width: 820px; margin-left: auto; margin-right: auto;
+}
+.blatt [contenteditable] { min-height: 1.2em; outline: none; }
+.blatt [contenteditable]:focus { background: #fdf3d0; }
+
+.b-kopf { display: flex; gap: 14px; border: 2px solid #000; padding: 8px; margin-bottom: 12px; }
+.b-marke { flex: 0 0 150px; }
+.b-sdm { font-weight: 700; font-size: 40px; line-height: 0.9; font-style: italic; }
+.b-sdm-sub { font-size: 11px; font-weight: 700; }
+.b-sdm-sub::first-letter { color: #b98b00; }
+.b-liga { font-size: 18px; margin-top: 14px; }
+.b-recht { flex: 1; font-size: 10.5px; border-left: 2px solid #000; padding-left: 12px; }
+
+.b-info { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 12px; }
+.b-spalten { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 12px; align-items: start; }
+
+.b-tab { width: 100%; border-collapse: collapse; }
+.b-tab th, .b-tab td { border: 1px solid #000; padding: 3px 6px; text-align: left; }
+.b-tab th { background: #d9d9d9; font-weight: 700; white-space: nowrap; }
+.b-rot { color: #c00000; }
+.b-schwarz { background: #000 !important; color: #fff; }
+.b-trenn th, .b-trenn td { border-bottom-width: 3px; }
+.b-zeit { display: inline-block; min-width: 45%; }
+.b-zeit b { font-weight: 400; border-bottom: 1px dotted #888; padding: 0 6px; display: inline-block; min-width: 46px; }
+.b-einzel td, .b-ende td { text-align: center; font-variant-numeric: tabular-nums; }
+.b-ende { margin-top: 10px; }
+.b-titel { font-weight: 700; background: #d9d9d9; border: 1px solid #000; padding: 3px 6px; margin: 10px 0 0; }
+.b-hl th { width: 24px; text-align: center; }
+.b-klein { font-size: 10px; margin: 10px 0 0; }
+.b-unterschrift { border: 1px solid #000; height: 70px; margin-top: 4px; }
+.b-fuss { font-size: 10px; margin-top: 12px; display: flex; justify-content: space-between; }
+.b-nach td { height: 26px; }
+.b-protest { border: 1px solid #000; min-height: 300px; margin-top: 4px; }
+.b-seite2 { page-break-before: always; }
+
+/* Die Scheibe des Einzels im Spielplan (S1/S2 laufen parallel). */
+.match-row .scheibe {
+  flex: none; font-family: var(--font-cond); font-weight: 700; font-size: 0.72rem;
+  color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px;
+}
+
+/* Nichts anzeigen, wenn Finish-Hilfen fürs Ligaspiel abgeschaltet sind. */
+.checkout-bar.aus { display: none !important; }
+
+/* Beim Drucken erscheint nur das Blatt – ohne App-Rahmen, ohne Dunkelmodus. */
+@media print {
+  body { background: #fff !important; max-width: none; padding: 0; }
+  body::before, .nav, .bericht-kopfzeile, .bericht-hinweis, #sync-status, #save-warning { display: none !important; }
+  .screen { display: none !important; }
+  #screen-bericht.active { display: block !important; padding: 0; }
+  .blatt { border-radius: 0; margin: 0; max-width: none; padding: 0; }
+  .blatt [contenteditable]:focus { background: transparent; }
+}
