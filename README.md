@@ -130,6 +130,21 @@ vollständig ist (`LIGA.sollSpieler`, derzeit 4). Die Zusagen liegen auf dem
 Server und sind für alle gleich; ohne Server bleibt der Spielplan lesbar, nur
 das Eintragen entfällt. Vergangene Spieltage rücken gedimmt nach hinten.
 
+## Ligaspiel (SDM-Spielberichtsbogen)
+
+Von jedem Spieltag im Liga-Reiter lässt sich mit **„Ligaspiel starten"** der
+Spielabend nach SDM-Spielberichtsbogen aufsetzen: unsere vier **Positionen**
+(vorbelegt mit den Zusagen des Termins), die vier Gegner als Namen (sie werden
+Gäste dieses Geräts und beim nächsten Aufeinandertreffen wiedererkannt), Best
+of 3 oder 5 – und auf Wunsch **geteilt an zwei Scheiben**, wie es die SWO
+ohnehin verlangt. Der Spielplan sind die **16 Einzel in vier Durchgängen**
+(jeder gegen jeden, Reihenfolge in `LIGA_EINZEL` anpassbar). Es wird **nicht
+ausgebullt**: das erste Leg beginnt der Heimspieler, danach wechselt der
+Anwurf (SWO §8). Die Übersicht zeigt statt der Einzeltabelle den
+**Team-Stand** (Spiele und Legs) und darunter fertig für den Bogen die
+**Highlights**: 180er, High-Finishes ab 100 und Shortlegs bis 21 Darts. Im
+Regeln-Reiter der Liga-Seite stehen dazu ein FAQ für Neue und Udos Regelecke.
+
 ## Ablauf (X01 Turnier)
 
 1. **Setup** – Antippen, wer heute mitspielt (2 bis 12 Spieler), Startpunkte (301/501/701) und Legs

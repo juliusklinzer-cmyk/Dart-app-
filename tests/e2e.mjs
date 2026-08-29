@@ -1845,7 +1845,13 @@ check('und enthaelt genau einen Eintrag',
 await page.locator('#liga-tabs button[data-tab="regeln"]').click();
 check('der Regeln-Reiter zeigt die Regelecke',
   (await visible('#liga-regeln')) && !(await visible('#liga-plan')));
-check('mit vier aufklappbaren Regeln', (await page.locator('#liga-regeln details').count()) === 4);
+check('mit FAQ und Regelecke zum Aufklappen', (await page.locator('#liga-regeln details').count()) === 13,
+  String(await page.locator('#liga-regeln details').count()));
+check('das FAQ beantwortet die Grundfragen', await page.evaluate(() => {
+  const t = document.getElementById('liga-regeln').textContent;
+  return t.includes('16 Einzel') && t.includes('nicht ausgebullt') &&
+    t.includes('Schiedsrichter') && t.includes('Bust') && t.includes('Gastspieler');
+}));
 check('darunter der Schreiber und das Score-Nachfragen', await page.evaluate(() => {
   // textContent statt innerText: zugeklappte <details> verstecken ihren Text.
   const t = document.getElementById('liga-regeln').textContent;
@@ -1855,6 +1861,83 @@ check('und die Regelwerke sind verlinkt',
   (await page.locator('#liga-regeln .regel-links a').count()) === 3);
 await page.locator('#liga-tabs button[data-tab="plan"]').click();
 check('zurueck zum Spielplan', await visible('#liga-plan'));
+
+/* ---------- Ligaspiel-Modus: der Spielberichtsbogen als Spielplan ---------- */
+
+group('Ligaspiel: 16 Einzel nach Spielberichtsbogen');
+await page.locator('#liga-liste [data-action="liga-spiel"]').first().click();
+check('die Aufstellung oeffnet sich', (await text('#overlay-card')).includes('Ligaspiel'));
+check('unsere vier Positionen sind vorbelegt',
+  (await page.locator('[data-role="liga-pos"]').count()) === 4);
+/* Ohne Gegner geht es nicht los. */
+await page.locator('[data-action="liga-los"]').click();
+check('ohne Gegnernamen gibt es eine Ansage', (await text('#overlay-card')).includes('vier Gegner'));
+for (let i = 0; i < 4; i++) {
+  await page.locator(`[data-role="liga-gegner"][data-i="${i}"]`).fill('Dachau ' + (i + 1));
+}
+await page.locator('[data-action="liga-los"]').click();
+check('das Ligaspiel steht', await visible('#screen-tournament'));
+check('der Kopf sagt Ligaspiel', (await text('#screen-tournament h1')).toLowerCase().includes('ligaspiel'));
+check('16 Einzel in 4 Durchgaengen', await page.evaluate(() => {
+  const M = window.__dart.state().matches;
+  return M.length === 16 && M.filter((m) => m.round === 4).length === 4;
+}));
+check('der Team-Stand steht statt der Tabelle',
+  (await visible('#liga-stand')) && !(await page.locator('#screen-tournament .standings').isVisible()));
+check('die Gegner sind als Gaeste angelegt', await page.evaluate(() => {
+  return window.__dart.state().profiles.filter((p) => p.gast && p.name.indexOf('Dachau ') === 0).length === 4;
+}));
+
+/* Erstes Einzel: kein Ausbullen – der Heimspieler wirft an. */
+await page.locator('#schedule .match-row .go').first().click();
+check('direkt auf dem Spielbildschirm, ohne Bull-Off', await visible('#screen-game'));
+check('der Heimspieler wirft das erste Leg an', await page.evaluate(() => {
+  const D = window.__dart, m = D.currentMatch();
+  return m.starter === m.p[0] && D.activePlayer(D.activeLeg(m), m) === m.p[0];
+}));
+/* Ein Einzel im Schnelldurchlauf: der Anwurf wechselt je Leg, also gewinnt
+   immer der Anwerfer – Heim, Gast, Heim: 2:1 fuer unseren Spieler. */
+const visit = (n) => page.evaluate((v) => {
+  window.__dart.ui().input = String(v);
+  window.__dart.submitTotal();
+}, n);
+for (let leg = 0; leg < 3; leg++) {
+  await visit(180); await visit(41);
+  await visit(180); await visit(41);
+  await visit(141);
+  await page.locator('#overlay-card [data-action="co-darts"]').first().click();
+  if (await page.locator('#overlay-card [data-action="ov-next-leg"]').count()) {
+    await page.locator('#overlay-card [data-action="ov-next-leg"]').click();
+  }
+}
+check('das Einzel ist entschieden', await page.evaluate(() => window.__dart.currentMatch().done));
+check('unser Heimspieler hat es 2:1 gewonnen', await page.evaluate(() => {
+  const m = window.__dart.currentMatch();
+  return m.winner === m.p[0];
+}));
+/* Zurueck zur Uebersicht (ueber die Statistik, wie am Abend auch). */
+await page.locator('#overlay-card [data-action="open-summary"]').click();
+await page.locator('[data-action="summary-back"]').click();
+check('der Team-Stand zaehlt 1:0 und Legs 2:1', await page.evaluate(() => {
+  const t = document.getElementById('liga-stand').innerText.replace(/\s+/g, ' ');
+  return t.includes('Legs 2:1') && t.includes('1 von 16');
+}));
+check('die 180er stehen fuer den Spielbericht bereit', await page.evaluate(() => {
+  const el = document.getElementById('liga-stand');
+  return el.innerText.includes('180er');
+}));
+
+/* Aufraeumen fuer die folgenden Gruppen – auch die Dachauer Gaeste gehen
+   wieder, ihr Testspiel wird ja verworfen. */
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  S.matches = [];
+  S.tour = null;
+  S.current = null;
+  S.profiles = S.profiles.filter((p) => !(p.gast && p.name.indexOf('Dachau ') === 0));
+  S.lineup = D.activeProfiles().filter((p) => !p.gast).slice(0, 4).map((p) => p.id);
+  D.setScreen('setup');
+});
 
 group('Ohne Server bleibt es die lokale App');
 /* Aus dem laufenden Cricket zurück ins Setup – dort ist die Navigation

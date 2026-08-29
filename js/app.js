@@ -53,6 +53,18 @@
       { id: 'st18', nr: 18, tag: null }
     ]
   };
+
+  /* Die 16 Einzel eines 4er-Ligaspiels: vier Durchgänge, jeder Heimspieler
+     gegen jeden Gastspieler. Sollte der gedruckte Spielberichtsbogen eine
+     andere Reihenfolge vorgeben, hier anpassen – laut SWO dürfen die TCs die
+     Reihenfolge ohnehin einvernehmlich ändern. Index 0..3 = Position 1..4,
+     je Paar [Heimposition, Gastposition]. */
+  var LIGA_EINZEL = [
+    [0, 0], [1, 1], [2, 2], [3, 3],
+    [0, 1], [1, 0], [2, 3], [3, 2],
+    [0, 2], [1, 3], [2, 0], [3, 1],
+    [0, 3], [1, 2], [2, 1], [3, 0]
+  ];
   /* Summen, die mit 3 Darts nicht zu werfen sind. */
   var IMPOSSIBLE = { 163: 1, 166: 1, 169: 1, 172: 1, 173: 1, 175: 1, 176: 1, 178: 1, 179: 1 };
   var MIN_DARTS_FOR_AVG = 9;    // ab wann ein Average in der Rangliste zählt
@@ -456,7 +468,8 @@
     return (plan.matches || []).map(function (m) {
       return {
         id: m.id, round: m.round, p: m.p.slice(),
-        starter: null, legs: [], done: false, winner: null, at: null
+        // Ligaspiele bringen ihren Anwerfer mit (kein Ausbullen), Turniere nicht.
+        starter: m.starter || null, legs: [], done: false, winner: null, at: null
       };
     });
   }
@@ -472,7 +485,8 @@
         start: daten.plan.start, bestOf: daten.plan.bestOf,
         players: (daten.plan.players || []).slice(),
         geteilt: true, sid: daten.id, cursor: 0,
-        angelegtVon: daten.angelegtVonName || null
+        angelegtVon: daten.angelegtVonName || null,
+        liga: daten.plan.liga || null
       };
       S.matches = planZuMatches(daten.plan);
       S.current = null;
@@ -1641,9 +1655,15 @@
       lineup: tourPlayers().slice(),
       settings: { start: tourStart(), bestOf: tour().bestOf },
       matches: S.matches,
-      winner: allMatchesDone() && table[0] ? table[0].id : null
+      /* Ein Ligaspiel hat keinen Einzelsieger – sonst bekäme der individuell
+         beste der acht (womöglich ein Gegner) einen erfundenen Turniersieg
+         in Karriere und Rangliste. */
+      winner: allMatchesDone() && table[0] && !(S.tour && S.tour.liga) ? table[0].id : null
     });
     if (S.history.length > MAX_HISTORY) S.history.length = MAX_HISTORY;
+    // Ligaspiele behalten ihre Team-Daten – die Auswertung soll später noch
+    // wissen, gegen wen und an welchem Spieltag das war.
+    if (S.tour && S.tour.liga) S.history[0].liga = S.tour.liga;
     meldeNeuesSpiel(S.history[0]);
     S.matches = [];
     S.current = null;
@@ -1923,17 +1943,93 @@
       resumeBtn.textContent = 'Fortsetzen';
     } else if (running) {
       resumeBtn.textContent = 'Fortsetzen';
-      $('resume-box').querySelector('strong').textContent = 'Laufendes Turnier';
+      $('resume-box').querySelector('strong').textContent =
+        S.tour && S.tour.liga ? 'Laufendes Ligaspiel' : 'Laufendes Turnier';
       var done = sum(S.matches, function (m) { return m.done ? 1 : 0; });
       $('resume-info').textContent = done + ' von ' + plural(S.matches.length, 'Spiel', 'Spielen') + ' gespielt';
     }
   }
 
+  /* Team-Stand und Spielbericht-Highlights eines Ligaspiels – gebraucht in
+     der Übersicht und auf dem Endstand-Bildschirm. */
+  function ligaStandDaten() {
+    var lg = S.tour && S.tour.liga;
+    if (!lg) return null;
+    var d = { wirS: 0, sieS: 0, wirL: 0, sieL: 0, fertige: 0, hl: [] };
+    S.matches.forEach(function (m) {
+      var unsere = lg.wir.indexOf(m.p[0]) >= 0 ? m.p[0] : m.p[1];
+      var ihre = m.p[0] === unsere ? m.p[1] : m.p[0];
+      d.wirL += legsWon(m, unsere);
+      d.sieL += legsWon(m, ihre);
+      if (m.done) {
+        d.fertige++;
+        if (m.winner === unsere) d.wirS++; else d.sieS++;
+      }
+    });
+    /* Die Highlights, die der Spielberichtsbogen abfragt: 180er,
+       High-Finishes ab 100 und Shortlegs bis 21 Darts – nur unsere Seite. */
+    var stMap = stats();
+    var hl180 = [], hlFin = [], hlLeg = [];
+    lg.wir.forEach(function (id) {
+      var s = stMap[id];
+      if (!s) return;
+      if (s.s180 > 0) hl180.push(esc(s.name) + (s.s180 > 1 ? ' ×' + s.s180 : ''));
+      if (s.highCO >= 100) hlFin.push(s.highCO + ' ' + esc(s.name));
+      if (s.bestLeg && s.bestLeg <= 21) hlLeg.push(s.bestLeg + ' Darts ' + esc(s.name));
+    });
+    if (hl180.length) d.hl.push('<b>180er:</b> ' + hl180.join(' · '));
+    if (hlFin.length) d.hl.push('<b>High-Finishes:</b> ' + hlFin.join(' · '));
+    if (hlLeg.length) d.hl.push('<b>Shortlegs:</b> ' + hlLeg.join(' · '));
+    return d;
+  }
+
+  function ligaTeamsHtml(d) {
+    return '<div class="lg-teams">' +
+      '<div class="lg-team"><div class="lg-name">' + esc(LIGA.team) + '</div>' +
+        '<div class="lg-zahl">' + d.wirS + '</div></div>' +
+      '<div class="lg-doppel">:</div>' +
+      '<div class="lg-team"><div class="lg-name">' + esc(S.tour.liga.gegner) + '</div>' +
+        '<div class="lg-zahl">' + d.sieS + '</div></div>' +
+      '</div>';
+  }
+
+  function ligaHighlightsHtml(d) {
+    if (!d.hl.length) return '';
+    return '<div class="lg-hl"><div class="lg-hl-titel">Für den Spielbericht</div>' +
+      d.hl.map(function (z) { return '<div>' + z + '</div>'; }).join('') + '</div>';
+  }
+
   function renderTournament() {
+    var liga = S.tour && S.tour.liga ? S.tour.liga : null;
+    var kopfH1 = document.querySelector('#screen-tournament .app-header h1');
+    if (kopfH1) kopfH1.textContent = liga ? 'Ligaspiel' : 'Turnier';
+    document.querySelector('#screen-tournament [data-action="to-setup"]').textContent =
+      liga ? 'Ligaspiel verlassen' : 'Turnier verlassen';
+    document.querySelector('#screen-tournament [data-action="reset"]').textContent =
+      liga ? 'Ligaspiel vorzeitig beenden' : 'Turnier vorzeitig beenden';
+
     var table = standings();
-    $('tournament-format').textContent = tourStart() + ' Double Out · ' +
-      (tour().bestOf === 1 ? 'ein Leg' : 'Best of ' + tour().bestOf) + ' · ' +
-      plural(tourPlayers().length, 'Spieler', 'Spieler');
+    $('tournament-format').textContent = liga
+      ? liga.nr + '. Spieltag · ' + (liga.heim ? 'Heim' : 'Auswärts') + ' gegen ' + liga.gegner +
+        ' · Best of ' + tour().bestOf
+      : tourStart() + ' Double Out · ' +
+        (tour().bestOf === 1 ? 'ein Leg' : 'Best of ' + tour().bestOf) + ' · ' +
+        plural(tourPlayers().length, 'Spieler', 'Spieler');
+
+    /* Im Ligaspiel zählt der Team-Stand, keine Einzeltabelle – und Spieler
+       nachtragen gibt es nicht, die Positionen sind laut SWO verbindlich. */
+    document.querySelector('#screen-tournament .card.no-pad').classList.toggle('hidden', !!liga);
+    document.querySelector('[data-action="roster-change"]').classList.toggle('hidden', !!liga);
+    $('liga-stand').classList.toggle('hidden', !liga);
+    if (liga) {
+      var lsd = ligaStandDaten();
+      $('liga-stand').innerHTML =
+        ligaTeamsHtml(lsd) +
+        '<div class="lg-legs">Legs ' + lsd.wirL + ':' + lsd.sieL + ' · ' +
+          lsd.fertige + ' von ' + S.matches.length + ' Einzeln gespielt</div>' +
+        ligaHighlightsHtml(lsd);
+    }
+
     $('standings-body').innerHTML = table.map(function (st, i) {
       return '<tr class="' + (i === 0 && st.won > 0 ? 'leader' : '') + '">' +
         '<td class="rank">' + (i + 1) + '</td>' +
@@ -1949,7 +2045,10 @@
     var html = '';
     var round = 0;
     S.matches.forEach(function (m) {
-      if (m.round !== round) { round = m.round; html += '<div class="round-label">Runde ' + round + '</div>'; }
+      if (m.round !== round) {
+        round = m.round;
+        html += '<div class="round-label">' + (liga ? 'Durchgang ' : 'Runde ') + round + '</div>';
+      }
       var a = pname(m.p[0]), b = pname(m.p[1]);
       var isNext = next && next.id === m.id;
       var score = m.legs.length ? legsWon(m, m.p[0]) + ':' + legsWon(m, m.p[1]) : '–:–';
@@ -2381,11 +2480,14 @@
                   : 'Vollständig – ' + plural(leute.length, 'Spieler', 'Spieler') + ' dabei') +
                 '</span>'
               : '<span></span>') +
-            (online
-              ? '<button class="btn ghost small" data-action="liga-zusage" ' +
-                'data-id="' + t.id + '" data-dabei="' + (binDabei ? '0' : '1') + '">' +
-                (binDabei ? 'Bin raus' : 'Ich bin dabei') + '</button>'
-              : '') +
+            '<span class="lt-knoepfe">' +
+              (online
+                ? '<button class="btn ghost small" data-action="liga-zusage" ' +
+                  'data-id="' + t.id + '" data-dabei="' + (binDabei ? '0' : '1') + '">' +
+                  (binDabei ? 'Bin raus' : 'Ich bin dabei') + '</button>'
+                : '') +
+              '<button class="btn ghost small" data-action="liga-spiel" data-id="' + t.id + '">Ligaspiel starten</button>' +
+            '</span>' +
           '</div>') +
         '</div>';
     }).join('');
@@ -3370,6 +3472,30 @@
   }
 
   function renderWinner() {
+    var abschluss = document.querySelector('#screen-winner [data-action="finish-tournament"]');
+    if (abschluss) {
+      abschluss.textContent = S.tour && S.tour.liga ? 'Ligaspiel abschließen' : 'Turnier abschließen';
+    }
+    /* Ligaspiel: hier gewinnt ein Team, kein Einzelner. Die Highlights
+       stehen auch hier – der Bogen wird oft erst nach dem letzten Einzel
+       ausgefüllt, und dann soll nichts verschwunden sein. */
+    if (S.tour && S.tour.liga) {
+      var lw = S.tour.liga;
+      var lwd = ligaStandDaten();
+      var titel = lwd.wirS > lwd.sieS ? esc(LIGA.team) + ' gewinnt!'
+        : lwd.wirS < lwd.sieS ? esc(lw.gegner) + ' gewinnt'
+        : 'Unentschieden';
+      var emoji = lwd.wirS > lwd.sieS ? '🏆' : lwd.wirS === lwd.sieS ? '🤝' : '🎯';
+      $('winner-box').innerHTML =
+        '<div style="text-align:center"><div class="big-emoji">' + emoji + '</div>' +
+        '<h1>' + titel + '</h1>' +
+        '<p class="muted">' + lw.nr + '. Spieltag · ' + esc(LIGA.team) + ' gegen ' + esc(lw.gegner) + '</p>' +
+        ligaTeamsHtml(lwd) +
+        '<p class="muted">Legs ' + lwd.wirL + ':' + lwd.sieL + '</p></div>' +
+        (ligaHighlightsHtml(lwd) ? '<div class="card">' + ligaHighlightsHtml(lwd) + '</div>' : '');
+      return;
+    }
+
     var table = standings();
     if (!table.length) { S.screen = 'setup'; render(); return; }
     var medals = ['🥇', '🥈', '🥉'];
@@ -3450,10 +3576,56 @@
         '<div class="row-btns two">' +
         '<button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
         '<button class="btn primary" data-action="ov-beitreten">Mitmachen</button></div>';
+    } else if (o.type === 'liga-start') {
+      /* Aufstellung fürs Ligaspiel: unsere vier Positionen als Auswahl
+         (vorbelegt mit den Zusagen des Spieltags), die vier Gegner als
+         Namensfelder – sie werden Gäste dieses Geräts. */
+      var lt = o.termin, ld = o.draft;
+      var ltDaheim = lt.heim === LIGA.team;
+      var ltGegner = ltDaheim ? lt.gast : lt.heim;
+      var ltProfile = activeProfiles();
+      var kannTeilenLiga = !!(window.DartKonto && window.DartKonto.nutzer() &&
+        window.DartSync && window.DartSync.turnier);
+      html = '<h3>Ligaspiel</h3>' +
+        '<p>' + lt.nr + '. Spieltag · ' + esc(lt.heim) + ' vs ' + esc(lt.gast) +
+          (lt.ort ? ' · ' + esc(lt.ort) : '') + '</p>' +
+        (o.fehler ? '<p class="edit-error">' + esc(o.fehler) + '</p>' : '') +
+        '<div class="liga-start">' +
+          '<div class="ls-titel">Unsere Positionen</div>' +
+          [0, 1, 2, 3].map(function (i) {
+            return '<label class="ls-zeile"><span>' + (i + 1) + '</span>' +
+              '<select data-role="liga-pos" data-i="' + i + '">' +
+              ltProfile.map(function (p) {
+                return '<option value="' + p.id + '"' + (ld.wir[i] === p.id ? ' selected' : '') + '>' +
+                  esc(p.name) + '</option>';
+              }).join('') + '</select></label>';
+          }).join('') +
+          '<div class="ls-titel">' + esc(ltGegner) + '</div>' +
+          [0, 1, 2, 3].map(function (i) {
+            return '<label class="ls-zeile"><span>' + (i + 1) + '</span>' +
+              '<input data-role="liga-gegner" data-i="' + i + '" maxlength="30" ' +
+              'value="' + esc(ld.gegner[i]) + '" placeholder="Name eintragen"></label>';
+          }).join('') +
+          '<div class="ls-titel">Legs je Einzel</div>' +
+          '<div class="options">' +
+            '<button data-action="liga-bestof" data-value="3" class="' + (ld.bestOf === 3 ? 'active' : '') + '">Best of 3</button>' +
+            '<button data-action="liga-bestof" data-value="5" class="' + (ld.bestOf === 5 ? 'active' : '') + '">Best of 5</button>' +
+          '</div>' +
+          (kannTeilenLiga
+            ? '<div class="ls-titel">An zwei Scheiben</div>' +
+              '<div class="options">' +
+                '<button data-action="liga-geteilt" data-value="0" class="' + (ld.geteilt ? '' : 'active') + '">ein Gerät</button>' +
+                '<button data-action="liga-geteilt" data-value="1" class="' + (ld.geteilt ? 'active' : '') + '">geteilt</button>' +
+              '</div>'
+            : '') +
+        '</div>' +
+        '<div class="row-btns two">' +
+        '<button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
+        '<button class="btn primary" data-action="liga-los">Los geht\'s</button></div>';
     } else if (o.type === 'confirm-reset') {
       var offeneSpiele = sum(S.matches, function (m) { return m.done || m.void ? 0 : 1; });
       var fertige = sum(S.matches, function (m) { return m.done ? 1 : 0; });
-      html = '<h3>Turnier vorzeitig beenden?</h3>' +
+      html = '<h3>' + (S.tour && S.tour.liga ? 'Ligaspiel' : 'Turnier') + ' vorzeitig beenden?</h3>' +
         '<p><b>' + plural(fertige, 'gespieltes Spiel', 'gespielte Spiele') + '</b> ' +
         (fertige === 1 ? 'bleibt' : 'bleiben') + ' in Statistik und Rangliste. ' +
         'Die <b>' + plural(offeneSpiele, 'offene Partie', 'offenen Partien') + '</b> ' +
@@ -3554,6 +3726,113 @@
   }
 
   /* ================= Aktionen ================= */
+  /* ================= Ligaspiel =================
+   * Der SDM-Spielberichtsbogen als Spielmodus: 16 Einzel (501 Double Out,
+   * Best of 3 oder 5) zwischen unseren vier Positionen und den vier des
+   * Gegners. Läuft komplett auf dem Turnier-Unterbau – nur der Spielplan
+   * ist vorgegeben statt ausgelost, es wird nicht ausgebullt (das erste
+   * Leg beginnt der Heimspieler, danach wechselt der Anwurf, SWO §8), und
+   * die Übersicht zeigt den Team-Stand statt einer Einzeltabelle.
+   */
+  function ligaSpielStarten() {
+    var o = UI.overlay;
+    if (!o || o.type !== 'liga-start') return;
+    var d = o.draft, t = o.termin;
+
+    var wir = d.wir.slice(0, 4);
+    var doppelt = wir.some(function (id, i) { return wir.indexOf(id) !== i; });
+    if (wir.length < 4 || doppelt) {
+      o.fehler = 'Bitte vier verschiedene eigene Spieler aufstellen.';
+      render(); return;
+    }
+    var namen = d.gegner.map(function (n) { return String(n || '').trim().slice(0, 30); });
+    if (namen.some(function (n) { return !n; })) {
+      o.fehler = 'Bitte alle vier Gegner eintragen.';
+      render(); return;
+    }
+    /* Zwei gleichnamige Gegner würden auf dasselbe Gastprofil fallen und
+       ihre Statistik verschmelzen – lieber gleich unterscheidbar machen. */
+    if (namen.some(function (n, i) { return namen.indexOf(n) !== i; })) {
+      o.fehler = 'Zwei Gegner heißen gleich – bitte unterscheidbar machen (z. B. Nachname dazu).';
+      render(); return;
+    }
+
+    var daheim = t.heim === LIGA.team;
+    var gegnerTeam = daheim ? t.gast : t.heim;
+    /* Die Gegner sind Gäste dieses Geräts. Wer schon einmal gegen uns
+       geworfen hat, wird am Namen wiedererkannt – aber nie ein Profil, das
+       bereits auf unserer Seite aufgestellt ist (sonst spielte jemand gegen
+       sich selbst), und Ausgeblendete kommen zurück ins Licht. */
+    var sie = [];
+    namen.forEach(function (n) {
+      var da = null;
+      S.profiles.forEach(function (p) {
+        if (!da && p.gast && p.name === n &&
+            wir.indexOf(p.id) < 0 && sie.indexOf(p.id) < 0) da = p;
+      });
+      if (da) {
+        da.hidden = false;
+        sie.push(da.id);
+        return;
+      }
+      var neu = { id: uid(), name: n, avatar: null, hue: freeHue(), created: Date.now(), gast: true };
+      S.profiles.push(neu);
+      sie.push(neu.id);
+    });
+
+    if (S.matches.length) archiveTournament();
+    if (S.game && S.game.done) archiveGame(S.game);
+    S.game = null;
+    S.tour = {
+      start: 501, bestOf: d.bestOf, players: wir.concat(sie),
+      liga: { terminId: t.id, nr: t.nr, gegner: gegnerTeam, heim: daheim, wir: wir, sie: sie }
+    };
+    S.matches = LIGA_EINZEL.map(function (paar, i) {
+      var h = daheim ? wir[paar[0]] : sie[paar[0]];
+      var g = daheim ? sie[paar[1]] : wir[paar[1]];
+      return {
+        id: uid(), round: Math.floor(i / 4) + 1, p: [h, g],
+        /* Kein Ausbullen im Ligaspiel: der Heimspieler wirft das erste Leg
+           an, jedes weitere Leg wechselt (macht ensureLeg von selbst). */
+        starter: h,
+        legs: [], done: false, winner: null, at: null
+      };
+    });
+    S.current = null;
+    S.lineup = wir.slice();
+    UI.overlay = null;
+    S.screen = 'tournament';
+
+    /* Geteilt wie beim Turnier: zwei iPads schreiben – die SWO will ohnehin
+       zwei Boards. Der Plan trägt die Liga-Daten und die Anwerfer mit. */
+    if (d.geteilt && window.DartSync && window.DartSync.turnier &&
+        window.DartKonto && window.DartKonto.nutzer()) {
+      var sid = uid();
+      var gaeste = {};
+      S.tour.players.forEach(function (id) {
+        if (String(id).indexOf('u_') !== 0) gaeste[id] = pname(id);
+      });
+      var plan = {
+        start: S.tour.start, bestOf: S.tour.bestOf, players: S.tour.players.slice(),
+        gaeste: gaeste, liga: S.tour.liga,
+        matches: S.matches.map(function (m) {
+          return { id: m.id, round: m.round, p: m.p.slice(), starter: m.starter };
+        })
+      };
+      S.tour.geteilt = true;
+      S.tour.sid = sid;
+      S.tour.cursor = 0;
+      var konten = S.tour.players.filter(function (id) { return String(id).indexOf('u_') === 0; });
+      window.DartSync.turnier.anlegen(sid, plan, konten).catch(function () {
+        S.tour.geteilt = false;
+        delete S.tour.sid;
+        save(); render();
+      });
+    }
+    save();
+    render();
+  }
+
   function startTournament(confirmed) {
     if (S.lineup.length < 2) { UI.overlay = { type: 'need-players' }; render(); return; }
     // Ein Turnier mit Ergebnissen wird nie kommentarlos ersetzt.
@@ -3999,6 +4278,51 @@
         UI.ligaTab = el.getAttribute('data-tab');
         render();
         break;
+      case 'liga-spiel': {
+        /* Ein laufendes Turnier oder Spiel wird nicht kommentarlos ersetzt –
+           ein fertiges, nur noch nicht gespeichertes darf aber weichen, das
+           archiviert ligaSpielStarten() von selbst. */
+        if ((S.game && !S.game.done) || (S.matches.length && !allMatchesDone())) {
+          UI.overlay = { type: 'hinweis', text: 'Es läuft noch ein Spiel oder Turnier – bitte erst abschließen oder beenden.' };
+          render();
+          break;
+        }
+        var lsTermin = null;
+        LIGA.termine.forEach(function (t) { if (t.id === el.getAttribute('data-id')) lsTermin = t; });
+        if (!lsTermin || !lsTermin.tag) break;
+        /* Aufstellung vorbelegen: erst die Zusagen des Spieltags, dann die
+           übrigen Profile, bis vier Positionen stehen. Nur aktive Profile –
+           eine versteckte Kennung stünde sonst unsichtbar im Entwurf, während
+           die Auswahl einen ganz anderen Namen anzeigt. */
+        var lsAktive = activeProfiles();
+        var lsVorschlag = ((ligaZusagen && ligaZusagen[lsTermin.id]) || [])
+          .map(function (p) { return p.id; })
+          .filter(function (id) { return lsAktive.some(function (p) { return p.id === id; }); });
+        lsAktive.forEach(function (p) {
+          if (lsVorschlag.length < 4 && lsVorschlag.indexOf(p.id) < 0) lsVorschlag.push(p.id);
+        });
+        UI.overlay = {
+          type: 'liga-start', termin: lsTermin,
+          draft: { bestOf: 3, wir: lsVorschlag.slice(0, 4), gegner: ['', '', '', ''], geteilt: false }
+        };
+        render();
+        break;
+      }
+      case 'liga-bestof':
+        if (UI.overlay && UI.overlay.type === 'liga-start') {
+          UI.overlay.draft.bestOf = Number(el.getAttribute('data-value'));
+          render();
+        }
+        break;
+      case 'liga-geteilt':
+        if (UI.overlay && UI.overlay.type === 'liga-start') {
+          UI.overlay.draft.geteilt = el.getAttribute('data-value') === '1';
+          render();
+        }
+        break;
+      case 'liga-los':
+        ligaSpielStarten();
+        break;
       case 'liga-zusage': {
         if (!(window.DartSync && window.DartSync.liga && window.DartKonto && window.DartKonto.nutzer())) return;
         var lgTermin = el.getAttribute('data-id');
@@ -4186,6 +4510,14 @@
        Dialog wuerde sonst mitten in der Auswahl unter den Fingern wegspringen. */
     if (ev.target.getAttribute('data-role') === 'profile-double' && UI.overlay) {
       UI.overlay.draft.dbl = Number(ev.target.value) || null;
+    }
+    /* Ligaspiel-Aufstellung: Entwurf pflegen, nicht neu zeichnen – sonst
+       verlieren die Felder beim Tippen den Fokus. */
+    if (ev.target.getAttribute('data-role') === 'liga-gegner' && UI.overlay && UI.overlay.draft) {
+      UI.overlay.draft.gegner[Number(ev.target.getAttribute('data-i'))] = ev.target.value;
+    }
+    if (ev.target.getAttribute('data-role') === 'liga-pos' && UI.overlay && UI.overlay.draft) {
+      UI.overlay.draft.wir[Number(ev.target.getAttribute('data-i'))] = ev.target.value;
     }
   });
 

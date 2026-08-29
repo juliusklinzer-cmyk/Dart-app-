@@ -2252,3 +2252,56 @@ button, input, select, textarea { font-family: inherit; }
 .regel-links { margin: 0; padding-left: 18px; font-size: 0.9rem; line-height: 1.8; }
 .regel-links a { color: var(--laser-hell); }
 #liga-tabs { margin-bottom: 12px; }
+
+/* ---------- Ligaspiel ---------- */
+
+/* Der Team-Stand: zwei Namen, zwei grosse Zahlen, die Legs darunter. */
+#liga-stand { text-align: center; }
+.lg-teams {
+  display: grid; grid-template-columns: 1fr auto 1fr;
+  align-items: center; gap: 12px; margin: 4px 0 6px;
+}
+.lg-team .lg-name {
+  font-family: var(--font-cond); font-weight: 700; font-size: 1rem;
+  letter-spacing: 0.03em; margin-bottom: 2px;
+}
+.lg-team .lg-zahl {
+  font-family: var(--font-cond); font-weight: 700; font-size: 3.4rem;
+  line-height: 1; font-variant-numeric: tabular-nums;
+}
+.lg-doppel { font-size: 2rem; color: var(--muted); }
+.lg-legs { color: var(--muted); font-size: 0.9rem; }
+.lg-hl {
+  margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line);
+  font-size: 0.85rem; text-align: left; line-height: 1.7;
+}
+.lg-hl-titel {
+  font-family: var(--font-display); font-size: 0.8rem; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 4px;
+}
+
+/* Aufstellungs-Dialog: Position, daneben Auswahl bzw. Namensfeld. */
+.liga-start { text-align: left; }
+.liga-start .ls-titel {
+  font-family: var(--font-display); font-size: 0.8rem; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--muted); margin: 12px 0 6px;
+}
+.liga-start .ls-zeile {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 6px;
+}
+.liga-start .ls-zeile > span {
+  width: 22px; text-align: center; font-weight: 700; color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.liga-start select, .liga-start input {
+  flex: 1; min-width: 0; background: var(--bg-3); border: 1px solid var(--line);
+  color: var(--text); border-radius: 10px; padding: 10px 12px;
+  font-size: 1rem; font-family: inherit; min-height: 46px;
+}
+.liga-start input:focus, .liga-start select:focus { outline: 2px solid var(--line-hell); }
+
+/* Zwei kleine Knoepfe nebeneinander am Spieltag. */
+.lt-knoepfe { display: flex; gap: 6px; flex: none; }
+
+#liga-regeln h2 { margin: 18px 0 10px; }
+#liga-regeln h2:first-child { margin-top: 4px; }
