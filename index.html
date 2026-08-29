@@ -268,16 +268,101 @@
      die Zusagen liegen auf dem Server – ohne Server bleibt der Spielplan
      lesbar, nur das Eintragen entfällt. -->
 <section id="screen-liga" class="screen">
-  <header class="app-header kopf-mit-logo">
-    <span class="blink-logo sm" role="img" aria-label="Blink 180"></span>
-    <div>
-      <h1>Liga</h1>
-      <p class="sub" id="liga-sub"></p>
+  <header class="app-header row">
+    <div class="kopf-mit-logo">
+      <span class="blink-logo sm" role="img" aria-label="Blink 180"></span>
+      <div>
+        <h1>Liga</h1>
+        <p class="sub" id="liga-sub"></p>
+      </div>
     </div>
+    <!-- Alle Termine auf einmal in den Kalender; je Termin gibt es das
+         gleiche Icon noch einmal einzeln. -->
+    <button class="icon-btn rund" data-action="liga-ical" title="Alle Termine in den Kalender"
+            aria-label="Alle Termine in den Kalender">📅</button>
   </header>
-  <button class="btn ghost full" data-action="liga-ical">In den Kalender – Termine als iCal laden</button>
-  <p class="hint hidden" id="liga-hinweis"></p>
-  <div id="liga-liste"></div>
+
+  <div class="konto-tabs" id="liga-tabs">
+    <button data-action="liga-tab" data-tab="plan" class="active">Spielplan</button>
+    <button data-action="liga-tab" data-tab="regeln">Regeln</button>
+  </div>
+
+  <div id="liga-plan">
+    <p class="hint hidden" id="liga-hinweis"></p>
+    <div id="liga-liste"></div>
+  </div>
+
+  <!-- Die Regelecke: fest im HTML, sie ändert sich nur, wenn Udo etwas
+       Neues schreibt. Aufklappbar, damit die Seite nicht zur Tapete wird. -->
+  <div id="liga-regeln" class="hidden">
+    <p class="hint">Aus der Regelecke unserer Liga (von Udo) – zum Aufklappen. Ganz unten
+      stehen die Regelwerke, auf die sich alles stützt.</p>
+
+    <details class="card regel">
+      <summary>Wurf: keine wurffertige Haltung, solange der Gegner vorn ist</summary>
+      <p><b>§4 Wurf (4):</b> Solange ein Spieler sich im Wurfbereich befindet, ist es seinem
+        Gegner nicht gestattet, eine wurffertige Haltung einzunehmen.</p>
+      <p>Es gibt leider sehr viele Spieler, die es kaum erwarten können, ihre Darts zu werfen.
+        Davon abgesehen, dass es gefährlich ist – vor kurzem hat ein Spieler in München, nachdem
+        er den Score in den PC eingegeben hatte und seine Darts aus dem Board ziehen wollte,
+        einen Dart zwischen die Finger geworfen bekommen! Gerade in engen Locations muss man
+        sich oft zwischen den Werfern durchzwängen, um hinter das Oche zu kommen. Bleibt einfach
+        vom Oche weg, solange der Gegner noch nicht zurück ist – dadurch geht kaum Zeit
+        verloren, denn werfen kann man ohnehin erst, wenn der Platz frei ist.</p>
+    </details>
+
+    <details class="card regel">
+      <summary>Der Schreiber: Rolle und Verhalten</summary>
+      <p>Der Schreiber zählt nicht nur die Punkte zusammen – er ist für die Partie auch der
+        <b>Schiedsrichter</b>. Er verhält sich neutral, unterlässt Zwischenrufe und bewegt sich
+        möglichst nicht, während geworfen wird. Besonders das Kopfrecken, weil der zweite Dart
+        den ersten verdeckt, lenkt den Werfer beim dritten Dart ab – und da sind auch schon
+        Darts dicht an Köpfen vorbeigeflogen. Ihr habt genug Zeit, die genaue Position zu
+        ermitteln, wenn alle drei Darts stecken.</p>
+      <p>Wer beim Rechnen noch nicht sicher ist: keine Panik. Der Spieler darf die Darts
+        eigentlich erst ziehen, wenn der Score ermittelt ist – und in der Regel wissen die
+        Werfer, was sie geworfen haben; man darf also auch auf das angesagte Ergebnis vertrauen
+        (so wird es auch in der Bayernliga praktiziert, wenn die Schreiber hinter den Spielern
+        stehen).</p>
+      <p>Bei Unstimmigkeiten entscheiden die TCs – der Schreiber gibt als neutraler Beobachter
+        seine Sicht ab. Im Zweifel gilt die Meinung des Heim-TCs; der gegnerische TC kann auf
+        dem Spielbericht <b>„Protest"</b> ankreuzen und den Fall auf der Rückseite erläutern.
+        Dann entscheidet der Spielleiter, ggf. nach Anhörung – und mit dieser Entscheidung ist
+        zu leben.</p>
+    </details>
+
+    <details class="card regel">
+      <summary>Score nachfragen: erlaubt – aber nur der Restwert</summary>
+      <p>Wen die Rechnerei aus dem Rhythmus bringt – gerade im Finish-Bereich – der fragt
+        lieber beim Schreiber nach. Der Schreiber nennt dann den <b>Restwert</b>, aber
+        ausdrücklich <b>nicht das benötigte Doppel</b> – das ist verboten! Also
+        <b>„40 Rest"</b> und nicht „Doppel 20".</p>
+      <p>Verrechnet sich der Schreiber bei der Auskunft, zählt trotzdem, was angesagt wurde –
+        der Werfer kann nichts dafür.</p>
+      <p>Zusammengefasst: Als Spieler darfst du fragen, welchen Score du geworfen hast, wo der
+        Dart steckt (Single 7 oder Triple 19 ist ein Unterschied) und welchen Restscore du
+        hast. Als Schreiber bist du verpflichtet, Auskunft zu geben – und die Auskunft ist auch
+        bei Irrtum verbindlich.</p>
+    </details>
+
+    <details class="card regel">
+      <summary>Wo die Regeln stehen</summary>
+      <p>Für uns gilt zuerst die <b>SWO der SDM</b> (Steeldart München) – dort steht alles zum
+        Liga- und Turnierbetrieb. Echte Dartregeln stehen dort kaum; Punkt 8 „Spielablauf"
+        verweist auf die allgemeinen Dartspielregeln des DDV e.&#8203;V. Deren SWO enthält
+        neben den Liga- und Turnierrichtlinien fast das gesamte <b>WDF-Regelwerk</b> in
+        deutscher Übersetzung – und das WDF-Regelwerk ist das, was weltweit gilt.</p>
+      <p>Und weil nicht alles in Regeln zu fassen ist, das Credo vom Schiedsrichterseminar:
+        Was nicht drinsteht, wird dem Regelwerk entsprechend behandelt. (Es steht z.&#8239;B.
+        nirgends, dass man sich während der Aufnahme nicht vor die Scheibe setzen und Brotzeit
+        machen darf – es wäre trotzdem grobe Unsportlichkeit.)</p>
+      <ul class="regel-links">
+        <li><a href="https://www.steeldart-muenchen.de" target="_blank" rel="noopener">SDM – Steeldart München</a> (SWO im Download-Bereich)</li>
+        <li><a href="https://www.dartverband.de" target="_blank" rel="noopener">DDV e.&#8203;V. – Deutscher Dart-Verband</a> (SWO mit den Dartregeln auf Deutsch)</li>
+        <li><a href="https://dartswdf.com/storage/uploads/fb05b306-c92c-4f08-b512-affb092a1b3d/2018-02-28_WDF_Playing_and_Tournament_Rules_rev20.pdf" target="_blank" rel="noopener">WDF Playing &amp; Tournament Rules</a> (PDF, englisch)</li>
+      </ul>
+    </details>
+  </div>
 </section>
 
 <!-- ============ SPIELER ============ -->

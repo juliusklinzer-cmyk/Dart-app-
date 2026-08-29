@@ -1811,16 +1811,18 @@ check('der erste Spieltag traegt Datum, Gegner und Ort',
   ersterSpieltag.includes('06.10.2026') && ersterSpieltag.includes('TSV Dachau') &&
   ersterSpieltag.includes('Bar Sehnsucht'), ersterSpieltag.replace(/\s+/g, ' ').slice(0, 80));
 check('Heimspiele sind als Heim markiert', ersterSpieltag.toLowerCase().includes('heim'));
-check('der Kalender-Knopf steht bereit',
-  (await page.locator('[data-action="liga-ical"]').count()) === 1);
+check('das runde Kalender-Icon sitzt oben im Kopf',
+  (await page.locator('#screen-liga .app-header [data-action="liga-ical"]').count()) === 1);
+check('und jeder Termin hat sein eigenes Kalender-Icon',
+  (await page.locator('#liga-liste [data-action="liga-ical"]').count()) === 16);
 /* Ohne Server gibt es keine Konten – der Plan bleibt lesbar, das
    Eintragen erklaert sich per Hinweis. */
 check('ohne Konto gibt es keinen Eintragen-Knopf',
   (await page.locator('[data-action="liga-zusage"]').count()) === 0);
-/* Die iCal-Datei selbst: der Klick stoesst einen Download an. */
+/* Die iCal-Datei selbst: das Kopf-Icon laedt alle Termine. */
 const [ical] = await Promise.all([
   page.waitForEvent('download'),
-  page.locator('[data-action="liga-ical"]').click()
+  page.locator('#screen-liga .app-header [data-action="liga-ical"]').click()
 ]);
 check('die iCal-Datei heisst nach dem Team',
   ical.suggestedFilename() === 'blink180-spielplan.ics');
@@ -1829,6 +1831,30 @@ const icalInhalt = fs.readFileSync(icalPfad, 'utf8');
 check('sie enthaelt 16 Termine', (icalInhalt.match(/BEGIN:VEVENT/g) || []).length === 16);
 check('mit Datum und Ort des ersten Spieltags',
   icalInhalt.includes('DTSTART;VALUE=DATE:20261006') && icalInhalt.includes('Bar Sehnsucht'));
+/* Das Icon am einzelnen Termin laedt nur diesen einen. */
+const [einzel] = await Promise.all([
+  page.waitForEvent('download'),
+  page.locator('#liga-liste [data-action="liga-ical"]').first().click()
+]);
+check('ein Termin allein heisst nach seinem Spieltag',
+  einzel.suggestedFilename() === 'blink180-spieltag-1.ics');
+check('und enthaelt genau einen Eintrag',
+  (fs.readFileSync(await einzel.path(), 'utf8').match(/BEGIN:VEVENT/g) || []).length === 1);
+
+/* Der Regeln-Reiter: Udos Regelecke, aufklappbar. */
+await page.locator('#liga-tabs button[data-tab="regeln"]').click();
+check('der Regeln-Reiter zeigt die Regelecke',
+  (await visible('#liga-regeln')) && !(await visible('#liga-plan')));
+check('mit vier aufklappbaren Regeln', (await page.locator('#liga-regeln details').count()) === 4);
+check('darunter der Schreiber und das Score-Nachfragen', await page.evaluate(() => {
+  // textContent statt innerText: zugeklappte <details> verstecken ihren Text.
+  const t = document.getElementById('liga-regeln').textContent;
+  return t.includes('Schreiber') && t.includes('40 Rest') && t.includes('wurffertige Haltung');
+}));
+check('und die Regelwerke sind verlinkt',
+  (await page.locator('#liga-regeln .regel-links a').count()) === 3);
+await page.locator('#liga-tabs button[data-tab="plan"]').click();
+check('zurueck zum Spielplan', await visible('#liga-plan'));
 
 group('Ohne Server bleibt es die lokale App');
 /* Aus dem laufenden Cricket zurück ins Setup – dort ist die Navigation

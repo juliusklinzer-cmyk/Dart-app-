@@ -96,7 +96,7 @@
   /* turnier: der Turnier-Modus des X01-Bildschirms – Riesenanzeige, Eingabe
      über eine echte Tastatur. Er bleibt über Aufnahmen und Spiele hinweg an,
      bis jemand zurückschaltet (anders als modeOverride, der je Aufnahme gilt). */
-  var UI = { input: '', darts: [], mult: 1, modeOverride: null, turnier: false, overlay: null, error: '', board: 'won', boardMode: '501', profile: null, summary: null };
+  var UI = { input: '', darts: [], mult: 1, modeOverride: null, turnier: false, overlay: null, error: '', board: 'won', boardMode: '501', profile: null, summary: null, ligaTab: 'plan' };
 
   /* ================= Helfer ================= */
   function $(id) { return document.getElementById(id); }
@@ -2314,6 +2314,15 @@
   function renderLiga() {
     $('liga-sub').textContent = 'Spielplan ' + LIGA.team + ' · ' + LIGA.saison;
 
+    /* Zwei Reiter: der Spielplan und die Regelecke (steht fest im HTML). */
+    var tab = UI.ligaTab || 'plan';
+    $('liga-tabs').querySelectorAll('button').forEach(function (b) {
+      b.classList.toggle('active', b.getAttribute('data-tab') === tab);
+    });
+    $('liga-plan').classList.toggle('hidden', tab !== 'plan');
+    $('liga-regeln').classList.toggle('hidden', tab !== 'regeln');
+    if (tab !== 'plan') return;
+
     /* Ohne Server (Einzeldatei) oder ohne Anmeldung bleibt der Spielplan
        lesbar – nur das Eintragen braucht ein Konto. */
     var online = !!(window.DartSync && window.DartSync.liga && window.DartKonto && window.DartKonto.nutzer());
@@ -2348,7 +2357,11 @@
       return '<div class="card liga-spieltag' + (vorbei ? ' vorbei' : '') + '">' +
         '<div class="lt-kopf">' +
           '<span class="lt-datum">' + ligaDatum(t.tag) + '</span>' +
-          '<span class="lt-nr">' + t.nr + '. Spieltag · ' + (daheim ? 'Heim' : 'Auswärts') + '</span>' +
+          '<span class="lt-rechts">' +
+            '<span class="lt-nr">' + t.nr + '. Spieltag · ' + (daheim ? 'Heim' : 'Auswärts') + '</span>' +
+            '<button class="icon-btn rund lt-cal" data-action="liga-ical" data-id="' + t.id + '" ' +
+              'title="Diesen Termin in den Kalender" aria-label="Diesen Termin in den Kalender">📅</button>' +
+          '</span>' +
         '</div>' +
         '<div class="lt-paarung">' +
           (daheim ? '<b>' + esc(t.heim) + '</b>' : esc(t.heim)) +
@@ -2357,19 +2370,23 @@
         '</div>' +
         '<div class="lt-ort">' + esc(t.ort) + '</div>' +
         (ligaZusagen
-          ? '<div class="lt-leute">' + (koepfe || '<span class="muted">Noch niemand eingetragen.</span>') + '</div>' +
-            (vorbei ? '' :
-              '<div class="lt-status ' + (fehlt > 0 ? 'offen' : 'voll') + '">' +
+          ? '<div class="lt-leute">' + (koepfe || '<span class="muted">Noch niemand eingetragen.</span>') + '</div>'
+          : '') +
+        (vorbei ? '' :
+          '<div class="lt-fuss">' +
+            (ligaZusagen
+              ? '<span class="lt-status ' + (fehlt > 0 ? 'offen' : 'voll') + '">' +
                 (fehlt > 0
-                  ? 'Noch ' + plural(fehlt, 'Spieler', 'Spieler') + ', dann sind wir vollständig'
+                  ? 'Noch ' + plural(fehlt, 'Spieler', 'Spieler') + ' bis wir vollständig sind'
                   : 'Vollständig – ' + plural(leute.length, 'Spieler', 'Spieler') + ' dabei') +
-              '</div>')
-          : '') +
-        (online && !vorbei
-          ? '<button class="btn ' + (binDabei ? 'ghost' : 'primary') + ' full" data-action="liga-zusage" ' +
-            'data-id="' + t.id + '" data-dabei="' + (binDabei ? '0' : '1') + '">' +
-            (binDabei ? 'Ich bin raus' : 'Ich bin dabei') + '</button>'
-          : '') +
+                '</span>'
+              : '<span></span>') +
+            (online
+              ? '<button class="btn ghost small" data-action="liga-zusage" ' +
+                'data-id="' + t.id + '" data-dabei="' + (binDabei ? '0' : '1') + '">' +
+                (binDabei ? 'Bin raus' : 'Ich bin dabei') + '</button>'
+              : '') +
+          '</div>') +
         '</div>';
     }).join('');
   }
@@ -2380,10 +2397,13 @@
     return String(s).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,');
   }
 
-  function ligaKalender() {
+  function ligaKalender(nurId) {
     var zeilen = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Blink 180//Dart Turnier//DE', 'CALSCALE:GREGORIAN'];
+    var nummer = null;
     LIGA.termine.forEach(function (t) {
       if (!t.tag) return;
+      if (nurId && t.id !== nurId) return;
+      if (nurId) nummer = t.nr;
       var d = new Date(t.tag + 'T12:00:00');
       d.setDate(d.getDate() + 1);
       var ende = d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
@@ -2403,7 +2423,7 @@
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
     a.href = url;
-    a.download = 'blink180-spielplan.ics';
+    a.download = nummer ? 'blink180-spieltag-' + nummer + '.ics' : 'blink180-spielplan.ics';
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -3972,7 +3992,12 @@
         undo();
         break;
       case 'liga-ical':
-        ligaKalender();
+        // Ohne data-id: alle Termine. Mit: nur dieser eine Spieltag.
+        ligaKalender(el.getAttribute('data-id') || null);
+        break;
+      case 'liga-tab':
+        UI.ligaTab = el.getAttribute('data-tab');
+        render();
         break;
       case 'liga-zusage': {
         if (!(window.DartSync && window.DartSync.liga && window.DartKonto && window.DartKonto.nutzer())) return;

@@ -2224,3 +2224,31 @@ button, input, select, textarea { font-family: inherit; }
 @media (min-width: 820px) {
   .fin-kacheln .fk { min-height: 66px; font-size: 2.1rem; }
 }
+
+/* ---------- Liga: Kalender-Icons, Fusszeile, Regelecke ---------- */
+
+.icon-btn.rund { border-radius: 50%; font-size: 1.1rem; }
+.lt-rechts { display: inline-flex; align-items: center; gap: 8px; }
+.lt-cal { width: 34px; height: 34px; font-size: 0.9rem; opacity: 0.8; }
+
+/* Status links, die Zusage als leiser kleiner Knopf rechts – die eine
+   Aktion des Abends muss hier nichts anschreien. */
+.lt-fuss {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 10px; margin-top: 10px;
+}
+.lt-fuss .btn.small { flex: none; }
+
+/* Die Regelecke: aufklappbare Karten. */
+.regel summary {
+  cursor: pointer; font-weight: 700; font-size: 1rem;
+  font-family: var(--font-cond); letter-spacing: 0.02em;
+  min-height: 28px;
+}
+.regel summary::marker { color: var(--muted); }
+.regel[open] summary { margin-bottom: 8px; }
+.regel p { font-size: 0.9rem; line-height: 1.55; color: var(--text); margin: 0 0 10px; }
+.regel p:last-child { margin-bottom: 0; }
+.regel-links { margin: 0; padding-left: 18px; font-size: 0.9rem; line-height: 1.8; }
+.regel-links a { color: var(--laser-hell); }
+#liga-tabs { margin-bottom: 12px; }
