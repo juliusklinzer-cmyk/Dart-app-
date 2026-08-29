@@ -162,7 +162,9 @@ wird auf einer echten Tastatur: **Enter** bucht die Aufnahme, **Löschen** nimmt
 Ziffern und im leeren Feld die letzte Aufnahme zurück (auch über den Spielerwechsel
 hinweg). Die Checkout-Abfrage lässt sich mit den Tasten **1/2/3** beantworten, das
 nächste Leg startet mit **Enter**. Der Modus bleibt auch nach einem Neustart an – der
-Bildschirm hängt ja fest am Board.
+Bildschirm hängt ja fest am Board. Beendet wird er mit **Esc**, am iPad-Magic-Keyboard
+(das keine Esc-Taste hat) mit **⌘+.** oder über den Knopf **„Turnier-Modus beenden"**
+unter dem Eingabefeld.
 
 **Die Sechzig:** Wirft jemand genau **60**, kommt der Löwe – das 1860-Wappen vor
 blauen Strahlen, darunter „SECHZIG!". In jedem Eingabemodus; fällt die Feier mit

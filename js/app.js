@@ -2355,6 +2355,12 @@
     var dartsLeft = mode === 'darts' ? 3 - UI.darts.length : 3;
     var route = Checkout.suggest(restActive, dartsLeft, lieblingsDoppel(active));
 
+    /* Ab drei Spielern am Handy: solange der Aktive nicht in Finish-Nähe
+       ist, sagt die Leiste nur „noch kein Finish möglich" und stiehlt dem
+       Verlauf die einzige Zeile – dort verschwindet sie dann (per CSS nur
+       am Handy, am iPad bleibt sie stehen). */
+    $('checkout-bar').classList.toggle('fern', m.p.length > 2 && restActive > 170 && !m.done);
+
     var whose = esc(pname(active));
     if (route) {
       $('checkout-bar').innerHTML = '<span class="label">Finish ' + whose + '</span>' + route.map(function (d, i) {
@@ -3765,6 +3771,12 @@
       case 'undo':
         undo();
         break;
+      // Ausstieg aus dem Turnier-Modus zum Antippen – siehe Kommentar im HTML.
+      case 'turnier-aus':
+        UI.turnier = false;
+        S.settings.turnierModus = 0;
+        save(); render();
+        break;
       case 'end-visit': {
         var em = currentMatch();
         if (!em || em.done) return;
@@ -3958,9 +3970,12 @@
       UI.overlay = null; UI.input = ''; render();
       return;
     }
-    /* Esc beendet den Turnier-Modus – der Umschalter ist dort ausgeblendet,
-       die Tastatur ist der einzige Weg zurück. Ein offener Dialog geht vor. */
-    if (ev.key === 'Escape' && !UI.overlay && S.screen === 'game' && UI.turnier) {
+    /* Esc beendet den Turnier-Modus – der Umschalter ist dort ausgeblendet.
+       Das Magic Keyboard am iPad hat keine Esc-Taste, dort ist ⌘+. das
+       Escape (zur Not gibt es den Knopf unter der Eingabe). Ein offener
+       Dialog geht vor. */
+    var istEscape = ev.key === 'Escape' || (ev.key === '.' && (ev.metaKey || ev.ctrlKey));
+    if (istEscape && !UI.overlay && S.screen === 'game' && UI.turnier) {
       UI.turnier = false;
       S.settings.turnierModus = 0;
       save(); render();

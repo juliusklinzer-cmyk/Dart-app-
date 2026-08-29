@@ -1245,6 +1245,9 @@ check('alle starten auf 301', await page.evaluate(() => {
 }));
 check('kein Turnier-Zaehler in der Kopfzeile',
   (await textKlein('#game-match-label')).includes('schnelles spiel'));
+/* Ab drei Spielern am Handy erscheint die Finish-Leiste erst, wenn beim
+   Aktiven ein Finish ansteht – vorher stiehlt sie dem Verlauf die Zeile. */
+check('Finish-Leiste wartet am Handy, bis ein Finish naht', !(await visible('#checkout-bar')));
 
 /* Reihum: nach drei Darts ist der Naechste dran, nicht wieder der Erste. */
 const amWurf = () => page.evaluate(() => {
@@ -1273,6 +1276,7 @@ check('der Verlauf hat eine Zeile je Aufnahme',
 /* Spieler 1 checkt aus: 301 - 60 = 241 - 180 = 61 - 41 = 20, dann D10. */
 await typeScore(180);
 await typeScore(60); await typeScore(60);            // die anderen beiden
+check('sobald ein Finish ansteht, ist die Leiste da', await visible('#checkout-bar'));
 await typeScore(41);                                  // Spieler 1 auf Rest 20
 await typeScore(60); await typeScore(60);            // die anderen beiden
 await typeScore(20);                                  // Finish – App fragt nach den Darts
@@ -1355,6 +1359,12 @@ check('Shift zeigt die Wurfliste', await page.locator('#history').isVisible());
 check('mit den Aufnahmen beider Seiten', (await page.locator('#history .col').count()) === 2);
 await page.keyboard.up('Shift');
 check('Loslassen führt in die Spielansicht zurück', !(await page.locator('#history').isVisible()));
+
+/* Ohne Esc-Taste (Magic Keyboard am iPad): der Knopf unter der Eingabe. */
+await page.locator('[data-action="turnier-aus"]').click();
+check('„Turnier-Modus beenden" führt zur Punkte-Eingabe', await visible('#pad-total'));
+await page.locator('#mode-toggle button[data-mode="turnier"]').click();
+check('und der Weg zurück steht wieder', await visible('#pad-key'));
 
 /* Die Sechzig kommt in jedem Eingabemodus – auch bei Punkte-Eingabe. Die
    erste Feier steht noch ein paar Sekunden im Bild, fürs Prüfen wegräumen. */

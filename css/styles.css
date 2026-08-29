@@ -581,6 +581,15 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 }
 .checkout-bar .chip.first { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 .checkout-bar .none { color: var(--muted); font-size: 0.85rem; }
+/* Schnelles Spiel ab drei Spielern am Handy: die Leiste erscheint erst,
+   wenn beim Aktiven ein Finish ansteht (Klasse kommt aus renderGame).
+   Am iPad und am grossen Schirm bleibt sie immer stehen. */
+@media (max-width: 699px) and (orientation: portrait) {
+  .checkout-bar.fern { display: none; }
+}
+@media (orientation: landscape) and (max-height: 560px) {
+  .checkout-bar.fern { display: none; }
+}
 
 .history {
   display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
