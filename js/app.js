@@ -587,6 +587,9 @@
    * - Sie liegt ausserhalb der Screens, render() fasst sie also nicht an.
    */
   var FEIER_MS = 4600;
+  /* Die Sechzig ist halb so lang wie die 180 – sie kommt ja auch deutlich
+     öfter. Kurz, laut, wackelnd, wieder weg (Animationen: .feier.sechzig). */
+  var SECHZIG_MS = 2300;
   var feierTimer = null;
   var KONFETTI_FARBEN = ['#e5484d', '#46aad7', '#ffc14d', '#f2eeee', '#3fbf7f', '#e763c8', '#ff8a3d'];
 
@@ -669,7 +672,7 @@
       box.classList.remove('an', 'sechzig');
       box.innerHTML = '';
       feierTimer = null;
-    }, ruhig ? 2000 : FEIER_MS);
+    }, ruhig ? 1400 : SECHZIG_MS);
   }
 
   /* Aufnahme abschließen und Leg-/Matchstand fortschreiben.

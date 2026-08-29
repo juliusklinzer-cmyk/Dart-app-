@@ -2012,8 +2012,60 @@ button, input, select, textarea { font-family: inherit; }
   margin: 0 auto;
   background: url('../icons/1860.webp') center / contain no-repeat;
   filter: drop-shadow(0 0 18px var(--laser)) drop-shadow(0 0 60px var(--laser-weich));
-  animation: feier-schlag 0.7s cubic-bezier(0.2, 1.6, 0.4, 1) both;
+}
+
+/* Die Sechzig dauert nur 2,3 Sekunden – dafür steht nichts still: der Löwe
+   knallt rein und wackelt durchgehend, die Strahlen drehen doppelt so
+   schnell, der Schriftzug pumpt im Takt des Blinkens. Eigene Keyframes,
+   weil die 4,6-Sekunden-Kurven der 180 hier mitten im Bild abrissen. */
+.feier.sechzig .feier-blitz { animation: sechzig-blitz 2.3s ease-out forwards; }
+@keyframes sechzig-blitz {
+  0%   { opacity: 0; }
+  4%   { opacity: 1; }
+  10%  { opacity: 0.08; }
+  16%  { opacity: 0.85; }
+  24%  { opacity: 0.1; }
+  42%  { opacity: 0.3; }
+  100% { opacity: 0; }
+}
+.feier.sechzig .feier-strahlen { animation: sechzig-drehen 2.3s linear forwards; }
+@keyframes sechzig-drehen {
+  0%   { transform: rotate(0deg) scale(0.25); opacity: 0; }
+  10%  { opacity: 1; }
+  78%  { opacity: 0.85; }
+  100% { transform: rotate(260deg) scale(1.5); opacity: 0; }
+}
+.feier.sechzig .feier-mitte { animation: sechzig-weg 2.3s ease-in forwards; }
+@keyframes sechzig-weg {
+  0%, 72% { opacity: 1; }
+  100%    { opacity: 0; }
+}
+.feier.sechzig .feier-logo {
+  animation:
+    sechzig-schlag 0.45s cubic-bezier(0.2, 1.8, 0.4, 1) both,
+    sechzig-wackeln 0.55s ease-in-out 0.45s infinite;
+}
+@keyframes sechzig-schlag {
+  0%   { transform: scale(0.1) rotate(-16deg); opacity: 0; }
+  55%  { transform: scale(1.16) rotate(5deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); }
+}
+@keyframes sechzig-wackeln {
+  0%, 100% { transform: rotate(-3deg) scale(1); }
+  50%      { transform: rotate(3deg) scale(1.07); }
+}
+.feier.sechzig .feier-name {
+  animation:
+    feier-blinken 0.3s steps(1, end) infinite,
+    sechzig-pumpen 0.6s ease-in-out infinite;
+}
+@keyframes sechzig-pumpen {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.14); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .feier-logo { animation: none; }
+  .feier-logo,
+  .feier.sechzig .feier-mitte,
+  .feier.sechzig .feier-logo,
+  .feier.sechzig .feier-name { animation: none; }
 }
