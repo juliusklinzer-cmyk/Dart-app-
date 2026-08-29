@@ -2000,6 +2000,13 @@ button, input, select, textarea { font-family: inherit; }
   padding: 6px 18px; font-family: var(--font-cond); font-weight: 700;
   font-size: clamp(1.6rem, 4.4vh, 2.6rem); line-height: 1.2;
 }
+/* Wer am Wurf ist, sieht seinen Weg in Farbe – der erste Dart in Rot,
+   wie in der alten Finish-Leiste. Nur der Wartende bleibt abgedunkelt. */
+#screen-game.turnier .pcard.active .pfinish { opacity: 1; }
+#screen-game.turnier .pcard.active .pfinish .chip { border-color: var(--line); }
+#screen-game.turnier .pcard.active .pfinish .chip:first-child {
+  background: var(--accent); border-color: var(--accent); color: var(--on-accent);
+}
 
 /* Unten drei Spalten: Aufnahmen | Eingabe | Aufnahmen. */
 .pad-key {
