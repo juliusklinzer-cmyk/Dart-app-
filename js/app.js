@@ -2486,9 +2486,10 @@
       $('key-hist-l').innerHTML = histSpalte(m.p[0]);
       $('key-hist-r').innerHTML = histSpalte(m.p[1]);
       $('key-error').textContent = UI.error;
-      /* Kein Platzhaltertext – nur die Ziffern und der blaue Eingabestrich,
-         wie in einem echten Feld. */
-      $('key-display').innerHTML = esc(UI.input) + '<span class="cursor"></span>';
+      /* Kein Platzhaltertext – leer steht nur der blaue Eingabestrich,
+         und sobald Ziffern da sind, stehen nur die Ziffern. */
+      $('key-display').innerHTML = UI.input === ''
+        ? '<span class="cursor"></span>' : esc(UI.input);
     } else if (mode === 'total') {
       $('quick-row').innerHTML = '<button class="miss" data-quick="0">0 Pkt</button>' +
         QUICK_SCORES.map(function (q) { return '<button data-quick="' + q + '">' + q + '</button>'; }).join('');
@@ -3971,14 +3972,16 @@
       UI.overlay = null; UI.input = ''; render();
       return;
     }
-    /* Esc beendet den Turnier-Modus – der Umschalter ist dort ausgeblendet.
-       Das Magic Keyboard am iPad hat keine Esc-Taste, dort ist ⌘+. das
-       Escape (zur Not gibt es den Knopf unter der Eingabe). Ein offener
-       Dialog geht vor. */
-    var istEscape = ev.key === 'Escape' || (ev.key === '.' && (ev.metaKey || ev.ctrlKey));
-    if (istEscape && !UI.overlay && S.screen === 'game' && UI.turnier) {
+    /* Tab (und Esc bzw. ⌘+. am Magic Keyboard ohne Esc-Taste) führt aus dem
+       Turnier-Modus zurück in den normalen Modus – der Umschalter ist dort
+       ja ausgeblendet. Ein offener Dialog geht vor. */
+    var istAusstieg = ev.key === 'Tab' || ev.key === 'Escape' ||
+      (ev.key === '.' && (ev.metaKey || ev.ctrlKey));
+    if (istAusstieg && !UI.overlay && S.screen === 'game' && UI.turnier) {
+      ev.preventDefault();
       UI.turnier = false;
       S.settings.turnierModus = 0;
+      UI.input = '';
       save(); render();
       return;
     }

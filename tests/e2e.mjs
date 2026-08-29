@@ -1337,8 +1337,12 @@ check('die Seite füllt genau den Bildschirm, nichts scrollt',
   await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 1));
 
 /* Eintippen wie am Liga-Abend: Zahl, Enter. */
+check('leer steht nur der blaue Eingabestrich',
+  (await page.locator('#key-display .cursor').count()) === 1);
 await page.keyboard.type('60');
 check('die Anzeige zeigt groß, was getippt wurde', (await text('#key-display')).trim() === '60');
+check('und der Strich ist beim Tippen weg',
+  (await page.locator('#key-display .cursor').count()) === 0);
 await page.keyboard.press('Enter');
 check('Aufnahme gebucht: 301 - 60 = 241', (await rest(0)) === '241', await rest(0));
 check('die Karte bleibt schlank: nur Ø, keine Wurfdetails', await page.evaluate(() => {
@@ -1373,9 +1377,13 @@ check('mit den Aufnahmen beider Seiten', (await page.locator('#history .col').co
 await page.keyboard.up('Shift');
 check('Loslassen führt in die Spielansicht zurück', !(await page.locator('#history').isVisible()));
 
-/* Ohne Esc-Taste (Magic Keyboard am iPad): ⌘+. ist das Apple-Escape. */
+/* Zurück in den normalen Modus: Tab – und ohne Esc-Taste (Magic Keyboard
+   am iPad) geht auch ⌘+. als Apple-Escape. */
+await page.keyboard.press('Tab');
+check('Tab führt in den normalen Modus zurück', await visible('#pad-total'));
+await page.locator('#mode-toggle button[data-mode="turnier"]').click();
 await page.keyboard.press('Meta+.');
-check('⌘+. beendet den Turnier-Modus', await visible('#pad-total'));
+check('⌘+. beendet den Turnier-Modus ebenfalls', await visible('#pad-total'));
 await page.locator('#mode-toggle button[data-mode="turnier"]').click();
 check('und der Weg zurück steht wieder', await visible('#pad-key'));
 

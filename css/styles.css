@@ -2041,21 +2041,13 @@ button, input, select, textarea { font-family: inherit; }
   font-size: clamp(4rem, 15vh, 7.5rem); line-height: 1;
   font-family: var(--font-cond); font-weight: 700; font-variant-numeric: tabular-nums;
 }
-/* Der blaue Eingabestrich: blinkt wie ein echter Cursor – mehr steht in
-   der leeren Anzeige nicht. */
+/* Der blaue Eingabestrich: steht ruhig in der leeren Anzeige und
+   verschwindet, sobald Ziffern getippt sind. */
 .key-display .cursor {
   display: inline-block; width: 5px; height: 0.85em;
-  margin-left: 0.06em; border-radius: 3px;
+  border-radius: 3px;
   background: var(--laser);
   box-shadow: 0 0 10px var(--laser-weich);
-  animation: cursor-blinken 1.1s steps(1, end) infinite;
-}
-@keyframes cursor-blinken {
-  0%, 55%   { opacity: 1; }
-  56%, 100% { opacity: 0; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .key-display .cursor { animation: none; }
 }
 .pad-key .input-error { text-align: center; min-height: 1.2em; }
 /* Am schmalen Handy hochkant haben drei Spalten keinen Platz – dort bleibt

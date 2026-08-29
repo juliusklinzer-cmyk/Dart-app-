@@ -165,8 +165,8 @@ Tastatur-Systemleiste ein, und die Seite scrollt nie. Alles läuft über die Tas
 Aufnahmen zurück (auch über den Spielerwechsel hinweg), die Checkout-Abfrage
 beantworten **1/2/3**, das nächste Leg startet **Enter**, und **Shift** gedrückt
 halten zeigt die große Wurfliste (bis 13 Zeilen je Seite). Beendet wird der Modus
-mit **Esc**, am Magic Keyboard (ohne Esc-Taste) mit **⌘+.** – und er überlebt einen
-Neustart.
+mit **Tab** (oder Esc, am Magic Keyboard ohne Esc-Taste auch **⌘+.**) – und er
+überlebt einen Neustart.
 
 **Die Sechzig:** Wirft jemand genau **60**, kommt der Löwe – das 1860-Wappen vor
 blauen Strahlen, darunter „SECHZIG!". In jedem Eingabemodus; fällt die Feier mit
