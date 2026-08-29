@@ -1745,6 +1745,44 @@ check('und nicht mehr den allgemeinen',
 /* Zurueck auf "egal", damit die folgenden Gruppen ihren gewohnten Stand haben. */
 await page.evaluate((id) => { window.__dart.profile(id).dbl = null; window.__dart.save(); }, dblId);
 
+group('Liga: Spielplan, Kalender, Zusagen-Hinweis');
+/* Das Trainingsspiel der Gruppe davor verwerfen – im Spiel ist die
+   Navigation ja ausgeblendet. */
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  S.game = null;
+  D.setScreen('setup');
+});
+await page.locator('#nav [data-screen="liga"]').click();
+check('Liga-Seite oeffnet sich', await visible('#screen-liga'));
+check('Kopf nennt Team und Saison', (await text('#liga-sub')).includes('Blink 180'));
+check('18 Spieltage stehen im Plan', (await page.locator('.liga-spieltag').count()) === 18,
+  String(await page.locator('.liga-spieltag').count()));
+check('zwei davon sind spielfrei', (await page.locator('.liga-spieltag.frei').count()) === 2);
+const ersterSpieltag = await page.locator('.liga-spieltag:not(.frei)').first().innerText();
+check('der erste Spieltag traegt Datum, Gegner und Ort',
+  ersterSpieltag.includes('06.10.2026') && ersterSpieltag.includes('TSV Dachau') &&
+  ersterSpieltag.includes('Bar Sehnsucht'), ersterSpieltag.replace(/\s+/g, ' ').slice(0, 80));
+check('Heimspiele sind als Heim markiert', ersterSpieltag.toLowerCase().includes('heim'));
+check('der Kalender-Knopf steht bereit',
+  (await page.locator('[data-action="liga-ical"]').count()) === 1);
+/* Ohne Server gibt es keine Konten – der Plan bleibt lesbar, das
+   Eintragen erklaert sich per Hinweis. */
+check('ohne Konto gibt es keinen Eintragen-Knopf',
+  (await page.locator('[data-action="liga-zusage"]').count()) === 0);
+/* Die iCal-Datei selbst: der Klick stoesst einen Download an. */
+const [ical] = await Promise.all([
+  page.waitForEvent('download'),
+  page.locator('[data-action="liga-ical"]').click()
+]);
+check('die iCal-Datei heisst nach dem Team',
+  ical.suggestedFilename() === 'blink180-spielplan.ics');
+const icalPfad = await ical.path();
+const icalInhalt = fs.readFileSync(icalPfad, 'utf8');
+check('sie enthaelt 16 Termine', (icalInhalt.match(/BEGIN:VEVENT/g) || []).length === 16);
+check('mit Datum und Ort des ersten Spieltags',
+  icalInhalt.includes('DTSTART;VALUE=DATE:20261006') && icalInhalt.includes('Bar Sehnsucht'));
+
 group('Ohne Server bleibt es die lokale App');
 /* Aus dem laufenden Cricket zurück ins Setup – dort ist die Navigation
    sichtbar, im Spiel wird sie bewusst ausgeblendet. */

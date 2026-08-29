@@ -422,6 +422,35 @@ async function main() {
     r = await julius.ruf('POST', '/api/tournaments/turnier1/matches/m2r1/claim');
     gleich(r.status, 409, 'und es wird nichts mehr beansprucht');
 
+    console.log('\nLiga-Zusagen');
+    r = await fremd.ruf('GET', '/api/liga/zusagen');
+    gleich(r.status, 401, 'ohne Anmeldung gibt es keine Zusagen');
+    r = await julius.ruf('GET', '/api/liga/zusagen');
+    gleich(r.status, 200, 'angemeldet schon');
+    ok(r.daten.zusagen && Object.keys(r.daten.zusagen).length === 0, 'anfangs ist niemand eingetragen');
+
+    r = await julius.ruf('PUT', '/api/liga/zusagen/st01', { dabei: true });
+    gleich(r.status, 200, 'Julius traegt sich fuer den 1. Spieltag ein');
+    gleich(r.daten.zusagen.st01.length, 1, 'und steht in der Liste');
+    ok(r.daten.zusagen.st01[0].name && !r.daten.zusagen.st01[0].email, 'mit Namen, ohne E-Mail');
+
+    r = await julius.ruf('PUT', '/api/liga/zusagen/st01', { dabei: true });
+    gleich(r.daten.zusagen.st01.length, 1, 'doppelt eintragen zaehlt nicht doppelt');
+
+    r = await tobi.ruf('PUT', '/api/liga/zusagen/st01', { dabei: true });
+    gleich(r.daten.zusagen.st01.length, 2, 'Tobi kommt dazu');
+    r = await tobi.ruf('GET', '/api/liga/zusagen');
+    gleich(r.daten.zusagen.st01.length, 2, 'beide sehen dieselbe Liste');
+
+    r = await julius.ruf('PUT', '/api/liga/zusagen/st01', { dabei: false });
+    gleich(r.daten.zusagen.st01.length, 1, 'austragen entfernt nur die eigene Zusage');
+    gleich(r.daten.zusagen.st01[0].name, 'Tobi', 'Tobi bleibt drin');
+
+    r = await fremd.ruf('PUT', '/api/liga/zusagen/st01', { dabei: true });
+    gleich(r.status, 401, 'ohne Anmeldung traegt sich niemand ein');
+    r = await julius.ruf('PUT', '/api/liga/zusagen/BOESE!!', { dabei: true });
+    ok(r.status === 400 || r.status === 404, 'kaputte Termin-Kennungen werden abgewiesen');
+
     console.log('\nRate-Limit');
     let gesperrt = false;
     for (let i = 0; i < 8; i++) {

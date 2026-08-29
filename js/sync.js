@@ -415,6 +415,24 @@
     }, TURNIER_TAKT);
   }
 
+  /* ================= Liga-Zusagen ================= */
+  /*
+   * Wer ist beim Spieltag dabei? Die Termine kennt der Client (LIGA in
+   * js/app.js), der Server verwahrt nur die Zusagen je Termin-Kennung.
+   */
+  function ligaZusagenHolen() {
+    if (!window.DartKonto || !nutzer) return Promise.resolve(null);
+    return window.DartKonto.ruf('GET', '/api/liga/zusagen')
+      .then(function (d) { return d.zusagen || {}; })
+      .catch(function () { return null; });
+  }
+
+  function ligaZusageSetzen(terminId, dabei) {
+    if (!window.DartKonto || !nutzer) return Promise.reject(new Error('Nicht angemeldet.'));
+    return window.DartKonto.ruf('PUT', '/api/liga/zusagen/' + encodeURIComponent(terminId), { dabei: !!dabei })
+      .then(function (d) { return d.zusagen || {}; });
+  }
+
   /* ================= Start ================= */
 
   function start() {
@@ -431,6 +449,10 @@
       statusText: statusText,
       langText: langText,
       wartend: function () { return zustand.outbox.length; },
+      liga: {
+        zusagen: ligaZusagenHolen,
+        zusage: ligaZusageSetzen
+      },
       turnier: {
         offen: turniereOffen,
         anlegen: turnierAnlegen,

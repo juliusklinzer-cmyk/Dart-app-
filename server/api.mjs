@@ -567,6 +567,55 @@ export function createApi(db, config) {
     sendJson(res, 200, { turnier: turnierAntwort(verlangeTurnier(t.id), 0) });
   }
 
+  /* ---------- Liga-Zusagen ---------- */
+  /*
+   * Wer ist beim Spieltag dabei? Die Termine selbst kennt nur der Client
+   * (LIGA in js/app.js) -- hier steht je Termin-Kennung nur die Liste der
+   * Zusagen. Sichtbar fuer alle Angemeldeten, aendern kann jeder nur die
+   * eigene Zusage.
+   */
+
+  function ligaTerminId(wert) {
+    const id = String(wert || '');
+    if (!/^[a-z0-9-]{2,40}$/.test(id)) throw new HttpFehler(400, 'Diesen Spieltag gibt es nicht.');
+    return id;
+  }
+
+  function ligaAlleZusagen() {
+    const zeilen = db.prepare(
+      'SELECT z.termin_id, u.id, u.display_name, u.avatar, u.hue' +
+      '  FROM liga_zusagen z JOIN users u ON u.id = z.user_id' +
+      ' ORDER BY z.created_at'
+    ).all();
+    const je = {};
+    for (const z of zeilen) {
+      if (!je[z.termin_id]) je[z.termin_id] = [];
+      je[z.termin_id].push({ id: z.id, name: z.display_name, avatar: z.avatar, hue: z.hue });
+    }
+    return je;
+  }
+
+  async function ligaZusagen(req, res) {
+    verlangeNutzer(req);
+    sendJson(res, 200, { zusagen: ligaAlleZusagen() });
+  }
+
+  async function ligaZusageSetzen(req, res, id) {
+    pruefeHerkunft(req);
+    const u = verlangeNutzer(req);
+    const termin = ligaTerminId(id);
+    const daten = await leseJson(req);
+    if (daten.dabei) {
+      db.prepare(
+        'INSERT INTO liga_zusagen (termin_id, user_id, created_at) VALUES (?, ?, ?) ' +
+        'ON CONFLICT (termin_id, user_id) DO NOTHING'
+      ).run(termin, u.id, new Date().toISOString());
+    } else {
+      db.prepare('DELETE FROM liga_zusagen WHERE termin_id = ? AND user_id = ?').run(termin, u.id);
+    }
+    sendJson(res, 200, { zusagen: ligaAlleZusagen() });
+  }
+
   /* ---------- Verteiler ---------- */
 
   const TID = '([A-Za-z0-9_-]{4,64})';
@@ -582,6 +631,9 @@ export function createApi(db, config) {
     ['POST', /^\/api\/games$/, spielHochladen],
     ['GET', /^\/api\/games$/, spieleHolen],
     ['DELETE', /^\/api\/games\/([A-Za-z0-9_-]{4,64})$/, spielLoeschen],
+
+    ['GET', /^\/api\/liga\/zusagen$/, ligaZusagen],
+    ['PUT', /^\/api\/liga\/zusagen\/([a-z0-9-]{2,40})$/, ligaZusageSetzen],
 
     ['POST', /^\/api\/tournaments$/, turnierAnlegen],
     ['GET', /^\/api\/tournaments$/, turniereListe],

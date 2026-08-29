@@ -118,6 +118,18 @@ eine Rundengrenze hinweg auch eine schon entschiedene Runde samt gezogener Zahl.
 In der Rangliste zählt der Modus **gewonnene Runden**, **Ø Darts je Finish**, das
 schnellste Finish und die höchste weggemachte Zahl.
 
+## Liga-Spielplan
+
+Der Reiter **Liga** zeigt den Spielplan der Saison (fest im Client, `LIGA` in
+`js/app.js`): je Spieltag Datum, Paarung mit Heim-/Auswärts-Kennung und Lokal,
+Spielfrei-Runden inklusive. **„In den Kalender"** lädt alle Termine als
+iCal-Datei (ganztägig – eine Anwurfzeit steht nicht im Plan). Angemeldete
+Spieler können sich je Spieltag **eintragen**: Wer zugesagt hat, steht mit Bild
+und Namen am Termin, darunter steht, wie viele noch fehlen, bis die Aufstellung
+vollständig ist (`LIGA.sollSpieler`, derzeit 4). Die Zusagen liegen auf dem
+Server und sind für alle gleich; ohne Server bleibt der Spielplan lesbar, nur
+das Eintragen entfällt. Vergangene Spieltage rücken gedimmt nach hinten.
+
 ## Ablauf (X01 Turnier)
 
 1. **Setup** – Antippen, wer heute mitspielt (2 bis 12 Spieler), Startpunkte (301/501/701) und Legs

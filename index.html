@@ -24,6 +24,7 @@
 
 <nav id="nav" class="nav hidden">
   <button data-action="nav" data-screen="setup">Game on!</button>
+  <button data-action="nav" data-screen="liga">Liga</button>
   <button data-action="nav" data-screen="boards">Rangliste</button>
   <button data-action="nav" data-screen="players">Spieler</button>
   <!-- Erscheint nur, wenn die Seite von einem Server kommt (siehe js/auth.js). -->
@@ -259,6 +260,24 @@
     <h2 id="log-title">Alle Spiele</h2>
     <div id="match-log"></div>
   </div>
+</section>
+
+<!-- ============ LIGA ============ -->
+<!-- Der Spielplan der Liga-Saison: Termine ansehen, als Kalender laden und
+     sich je Spieltag eintragen. Die Termine stehen in js/app.js (LIGA),
+     die Zusagen liegen auf dem Server – ohne Server bleibt der Spielplan
+     lesbar, nur das Eintragen entfällt. -->
+<section id="screen-liga" class="screen">
+  <header class="app-header kopf-mit-logo">
+    <span class="blink-logo sm" role="img" aria-label="Blink 180"></span>
+    <div>
+      <h1>Liga</h1>
+      <p class="sub" id="liga-sub"></p>
+    </div>
+  </header>
+  <button class="btn ghost full" data-action="liga-ical">In den Kalender – Termine als iCal laden</button>
+  <p class="hint hidden" id="liga-hinweis"></p>
+  <div id="liga-liste"></div>
 </section>
 
 <!-- ============ SPIELER ============ -->
