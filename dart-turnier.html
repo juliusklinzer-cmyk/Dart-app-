@@ -2046,8 +2046,10 @@ button, input, select, textarea { font-family: inherit; }
    siehe Kommentar im HTML (iPad-Tastaturleiste). */
 .key-display {
   width: 100%;
-  background: var(--bg-3); border: 1px solid var(--aktiv-linie); color: var(--text);
-  border-radius: 14px; padding: 8px 16px; min-height: 150px;
+  /* Ruhig wie die Karte des Wartenden – dunkle Fläche, dezente Kante,
+     kein leuchtender Rahmen. Nur der Strich und die Ziffern sind hell. */
+  background: var(--bg-2); border: 2px solid var(--line); color: var(--text);
+  border-radius: var(--radius); padding: 8px 16px; min-height: 150px;
   display: flex; align-items: center; justify-content: center;
   font-size: clamp(4rem, 15vh, 7.5rem); line-height: 1;
   font-family: var(--font-cond); font-weight: 700; font-variant-numeric: tabular-nums;
