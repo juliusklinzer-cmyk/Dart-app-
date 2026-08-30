@@ -48,6 +48,7 @@
 }
 
 :root {
+  color-scheme: dark;
   /* ---- Blink 180 -----------------------------------------------------
      Palette aus dem Rebranding-Entwurf („Dart App Rebranding"):
      warmes Schwarz, ein Rot, viel Weiß. Nur diese fünf Akzentwerte
@@ -408,7 +409,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   width: 22px; height: 22px; border-radius: 6px; font-size: 0.7rem; font-weight: 700;
   display: inline-grid; place-items: center;
 }
-.form.w { background: var(--accent-soft); color: var(--accent); }
+.form.w { background: rgba(74, 222, 128, 0.14); color: #4ade80; }
 .form.l { background: rgba(255, 90, 90, 0.15); color: var(--red); }
 .pline {
   display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
@@ -458,6 +459,14 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 }
 .options button.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
 .segmented { display: flex; background: var(--bg-3); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+/* Eine Taste statt dreier Knoepfe: zeigt den aktuellen Eingabemodus,
+   ein Tipp schaltet zum naechsten (Punkte -> Einzel-Darts -> Turnier). */
+.mode-cycle {
+  background: var(--bg-3); border: 1px solid var(--line); border-radius: 10px;
+  color: var(--text); font-weight: 600; font-size: 0.82rem;
+  padding: 8px 14px; min-height: 44px; white-space: nowrap;
+}
+.mode-cycle .pfeile { color: var(--muted); margin-left: 6px; }
 .segmented button {
   background: none; border: none; color: var(--muted); padding: 10px 12px;
   font-size: 0.85rem; font-weight: 600; cursor: pointer; min-height: 42px;
@@ -823,9 +832,9 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   #screen-boards.active > #board-chips,
   #screen-boards.active > #board-log { grid-column: 1 / -1; }
   #screen-boards.active > .card.no-pad,
-  #screen-boards.active > #board-hint { grid-column: 1; }
-  #screen-boards.active > #board-chart,
-  #screen-boards.active > #board-rekorde { grid-column: 2; }
+  #screen-boards.active > #board-hint,
+  #screen-boards.active > #board-rekorde { grid-column: 1; }
+  #screen-boards.active > #board-chart { grid-column: 2; }
   #screen-boards.active .board-row .pos { width: 50px; }
   #board-chart .chart { max-height: 42vh; }
   /* Die Hauptaktion des Turniers bleibt immer sichtbar. */
@@ -1418,15 +1427,6 @@ button, input, select, textarea { font-family: inherit; }
    jeder andere Knopf am Ende der Seite – klebend verdeckte er dort beim
    Scrollen die halbe Einstellungskarte. Die Mindesthöhe hält auch das
    quergedrehte Handy heraus, das breiter als manches Tablet ist. */
-@media (min-width: 820px) and (min-height: 600px) {
-  #screen-setup.active > [data-action="start-game"] {
-    position: sticky;
-    bottom: 8px;
-    z-index: 10;
-    box-shadow: 0 -14px 20px var(--bg), 0 0 30px var(--schein-weich);
-  }
-}
-
 @media (min-width: 820px) {
   #screen-setup.active {
     display: grid;
@@ -1435,15 +1435,25 @@ button, input, select, textarea { font-family: inherit; }
     align-items: start;
   }
   /* Feste Plätze statt automatischer Verteilung: die Fortsetzen-Box ist
-     meistens ausgeblendet, und dann würde alles eine Reihe hochrutschen. */
-  #screen-setup.active > #resume-box { grid-area: 1 / 1 / 2 / -1; }
-  .setup-links  { grid-area: 2 / 1 / 3 / 2; }
-  .setup-rechts { grid-area: 2 / 2 / 3 / 3; }
-  #screen-setup.active > [data-action="start-game"] { grid-area: 3 / 1 / 4 / -1; }
+     meistens ausgeblendet, und dann würde alles eine Reihe hochrutschen.
+     Der Startknopf steht in der rechten Spalte unter den Einstellungen
+     (nicht mehr unten festgeklebt), die Marke über beiden Spalten. */
+  #screen-setup.active > #resume-box     { grid-area: 1 / 1 / 2 / -1; }
+  #screen-setup.active > #beitreten-box  { grid-area: 2 / 1 / 3 / -1; }
+  #screen-setup.active > .marke          { grid-area: 3 / 1 / 4 / -1; }
+  .setup-links  { grid-area: 4 / 1 / 5 / 2; }
+  .setup-rechts { grid-area: 4 / 2 / 5 / 3; }
 
   .setup-links, .setup-rechts { display: block; }
-  /* Mehr Platz für die Liste, wenn das Fenster ihn hergibt. */
-  #roster { max-height: 54vh; }
+  /* Die linke Spalte waechst hoechstens auf die Hoehe der rechten:
+     height 0 haelt sie aus der Zeilenrechnung heraus, min-height 100%
+     streckt sie auf die Zeile - innen scrollt dann die Teilnehmerliste. */
+  .setup-links { height: 0; min-height: 100%; }
+  #karte-spieler {
+    height: 100%; box-sizing: border-box;
+    display: flex; flex-direction: column;
+  }
+  #karte-spieler #roster { flex: 1 1 auto; min-height: 0; max-height: none; }
 }
 
 /* Zwei Knöpfe in der Fortsetzen-Box: beenden und fortsetzen. */
@@ -2397,3 +2407,31 @@ button, input, select, textarea { font-family: inherit; }
   outline-offset: -2px; border-radius: 4px;
 }
 #liga-tabelle .btn.full { margin-top: 12px; }
+
+
+/* Echte Namen fuer die Liga: Vor- und Nachname je zur Haelfte nebeneinander. */
+.namen-titel { font-size: 0.78rem; color: var(--muted); margin: 10px 0 4px; text-align: left; }
+.namen-paar { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.namen-paar .name-input { margin: 0; }
+
+/* Solo-Spiel (ein Spieler): eine grosse Karte statt einer halb leeren
+   Zweierreihe, darunter Finish-Kaestchen und der Verlauf mittig. */
+#scoreboard.solo { grid-template-columns: 1fr; }
+#scoreboard.solo .pcard .rest { font-size: 4.6rem; }
+#screen-game.solo #checkout-bar { text-align: center; }
+#screen-game.solo #history { grid-template-columns: 1fr; max-width: 560px; margin-left: auto; margin-right: auto; }
+
+/* Der Notausgang aus dem Turnier-Modus fuer Geraete ohne Tastatur:
+   schwebt unten mittig, nur solange sichtbar, wie jemand getippt hat. */
+.turnier-exit {
+  /* Zentriert ueber Auto-Margins, NICHT ueber translateX: .btn:active
+     ersetzt transform durch scale(0.98) - mit translateX spraenge der
+     Knopf beim Druecken zur Seite und der Finger traefe ins Leere. */
+  position: fixed; left: 0; right: 0; bottom: 18px;
+  margin: 0 auto; width: fit-content;
+  z-index: 45; padding: 12px 22px;
+  background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+}
+
+#screen-game:not(.turnier) .turnier-exit { display: none; }

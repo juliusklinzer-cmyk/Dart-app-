@@ -133,7 +133,7 @@ await page.locator('#mult-row button[data-mult="1"]').click();
 check('Single zeigt die blanke Zahl', (await page.locator('#num-grid button[data-num="20"]').innerText()).trim() === '20');
 
 group('Bust-Regel');
-await page.locator('#mode-toggle button[data-mode="total"]').click();
+await page.locator('#mode-cycle').click();   // Einzel-Darts -> Punkte
 await typeScore(140); // 141 - 140 = 1 -> Bust, Rest bleibt stehen
 check('Rest bleibt 141 nach Bust auf 1', (await rest(0)) === '141');
 check('Bust beendet die Aufnahme (Gegner ist dran)', await page.locator('.pcard').nth(1).evaluate((e) => e.classList.contains('active')));
@@ -182,7 +182,7 @@ check('erneut ausgecheckt', (await text('#overlay-card')).includes('Glückwunsch
 async function quickLeg() {
   await typeScore(180); await typeScore(60);   // 321 / 441
   await typeScore(180); await typeScore(60);   // 141 / 381
-  await page.locator('#mode-toggle button[data-mode="total"]').click();
+  await page.locator('#mode-cycle').click();   // Einzel-Darts -> Punkte
   return typeScore(141);
 }
 
@@ -191,7 +191,7 @@ await page.locator('#overlay-card [data-action="ov-next-match"]').click();
 await page.locator('#bulloff-buttons button').first().click();
 await typeScore(180); await typeScore(60);
 await typeScore(180); await typeScore(60);
-await page.locator('#mode-toggle button[data-mode="total"]').click();
+await page.locator('#mode-cycle').click();   // Einzel-Darts -> Punkte
 await typeScore(179);
 check('179 als unmöglicher Wurf abgelehnt', (await text('#input-error')).includes('nicht möglich'));
 await typeScore(141);
@@ -317,6 +317,7 @@ async function rDart(label) {
 /* Bull-Off eines Trainings-/Cricket-Spiels bestätigen: bei zwei Spielern per
    Tipp auf den Anfänger, bei mehr über die Reihenfolge-Liste. */
 async function bullOffGo() {
+  if (!(await visible('#screen-bulloff'))) return;   // allein wird nicht ausgebullt
   if (await page.locator('[data-action="start-order"]').count()) {
     await page.locator('[data-action="start-order"]').click();
   } else {
@@ -552,7 +553,7 @@ await page.locator('[data-action="start-game"]').click();
 await page.locator('[data-action="next-match"]').click();
 await page.locator('#bulloff-buttons button').first().click();
 await typeScore(180); await typeScore(60); await typeScore(180); await typeScore(60);
-await page.locator('#mode-toggle button[data-mode="total"]').click();
+await page.locator('#mode-cycle').click();   // Einzel-Darts -> Punkte
 await typeScore(141);
 await page.locator('#overlay-card [data-action="co-darts"]').first().click();
 const winnerBefore = await page.evaluate(() => window.__dart.currentMatch().winner);
@@ -743,7 +744,7 @@ check('Legzeile zeigt weiter die Turnierregel',
 
 // Ergebnis nach dem Overlay noch korrigierbar (Spieler hat schon 60 geworfen)
 await typeScore(180); await typeScore(60); await typeScore(180); await typeScore(60);
-await page.locator('#mode-toggle button[data-mode="total"]').click();
+await page.locator('#mode-cycle').click();   // Einzel-Darts -> Punkte
 await typeScore(81);
 await page.locator('#overlay-card [data-action="co-darts"]').first().click();
 await page.locator('#overlay-card [data-action="open-summary"]').click();
@@ -846,7 +847,7 @@ await page.locator('[data-action="next-match"]').click();
 await page.locator('#bulloff-buttons button').first().click();
 /* Leg 1 gewinnen: 180, 180, 141 */
 await typeScore(180); await typeScore(60); await typeScore(180); await typeScore(60);
-await page.locator('#mode-toggle button[data-mode="total"]').click();
+await page.locator('#mode-cycle').click();   // Einzel-Darts -> Punkte
 await typeScore(141);
 await page.locator('#overlay-card [data-action="co-darts"]').first().click();
 await page.locator('#overlay-card [data-action="ov-next-leg"]').click();
@@ -1349,9 +1350,9 @@ check('genau ein Sieg dazugekommen', wonNachher === wonVorher + 1,
 check('der Sieger hat ihn', qCar[qIds[0]].won >= 1);
 check('Average wurde gerechnet', qCar[qIds[0]].avg > 0);
 
-/* ---------- Turnier-Modus: Riesenanzeige, Tastatur-Eingabe ---------- */
+/* ---------- Turnier-Modus: nur im Ligaspiel, Umschalten per Zyklus-Taste ---------- */
 
-group('Turnier-Modus: Anzeige am Board, Eingabe per Tastatur');
+group('Umschalt-Taste: Punkte und Einzel-Darts im Kreis');
 await page.evaluate(() => {
   const D = window.__dart, S = D.state();
   S.game = null;
@@ -1361,140 +1362,238 @@ await page.evaluate(() => {
 });
 await page.locator('[data-action="start-game"]').click();
 await page.locator('#bulloff-buttons button').first().click();
-check('dritter Umschalter neben Punkte und Einzel-Darts',
-  (await page.locator('#mode-toggle button[data-mode="turnier"]').count()) === 1);
-await page.locator('#mode-toggle button[data-mode="turnier"]').click();
-check('Tastatur-Feld sichtbar', await visible('#pad-key'));
-check('Zahlenfeld und Einzel-Darts weg', !(await visible('#pad-total')) && !(await visible('#pad-darts')));
-check('auch der Umschalter selbst ist weg – Esc führt zurück', !(await visible('#mode-toggle')));
-check('Verlauf ausgeblendet', !(await page.locator('#history').isVisible()));
-check('keine mittlere Finish-Leiste – der Finish steht im Spielerfeld',
-  !(await visible('#checkout-bar')));
-check('wer nicht dran ist, tritt leicht zurück', await page.evaluate(() => {
-  const o = parseFloat(getComputedStyle(document.querySelector('.pcard:not(.active)')).opacity);
-  return o >= 0.79 && o < 1;
-}));
-check('Rest steht in Plakatgröße', await page.locator('.pcard .rest').first()
-  .evaluate((e) => parseFloat(getComputedStyle(e).fontSize) > 60));
-check('die Eingabe-Anzeige steht bereit (kein echtes Feld, keine iPad-Leiste)',
-  (await visible('#key-display')) &&
-  (await page.evaluate(() => !document.querySelector('#pad-key input'))));
-check('die Kopf-Knöpfe sind weg – alles läuft über die Tastatur',
-  !(await page.locator('#screen-game .game-header .icon-btn').first().isVisible()));
-check('die Seite füllt genau den Bildschirm, nichts scrollt',
-  await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 1));
-
-/* Eintippen wie am Liga-Abend: Zahl, Enter. */
-check('leer steht nur der blaue Eingabestrich',
-  (await page.locator('#key-display .cursor').count()) === 1);
-await page.keyboard.type('60');
-check('die Anzeige zeigt groß, was getippt wurde', (await text('#key-display')).trim() === '60');
-check('und der Strich ist beim Tippen weg',
-  (await page.locator('#key-display .cursor').count()) === 0);
-await page.keyboard.press('Enter');
-check('Aufnahme gebucht: 301 - 60 = 241', (await rest(0)) === '241', await rest(0));
-check('die Karte bleibt schlank: nur Ø, keine Wurfdetails', await page.evaluate(() => {
-  const t = document.getElementById('scoreboard').innerText;
-  return t.includes('Ø') && !t.includes('Letzte') && !t.includes('Darts');
-}));
-check('und in der Wurfliste neben der Eingabe', await page.evaluate(() => {
-  const t = document.getElementById('key-hist-l').innerText;
-  return t.includes('60') && t.includes('Rest 241');
-}), await text('#key-hist-l'));
-check('die Sechzig ruft den Löwen', (await page.locator('.feier .feier-logo').count()) === 1 &&
+check('die Umschalt-Taste zeigt den aktuellen Modus', (await text('#mode-cycle')).includes('Punkte'));
+/* Die Sechzig ruft den Loewen - im normalen Spiel, nicht in der Liga. */
+await typeScore(60);
+await page.waitForTimeout(100);
+check('die Sechzig ruft den Loewen', (await page.locator('.feier .feier-logo').count()) === 1 &&
   (await text('.feier')).includes('SECHZIG'));
-
-/* Löschen im leeren Feld: zurück zum letzten Spieler. */
-await page.keyboard.press('Backspace');
-check('leeres Feld + Löschen nimmt die Aufnahme zurück', (await rest(0)) === '301', await rest(0));
-
-/* Unmögliche Aufnahme: Fehler erscheint unter dem Feld. */
-await page.keyboard.type('179');
-await page.keyboard.press('Enter');
-check('unmögliche Zahl wird abgewiesen', (await text('#key-error')).includes('nicht möglich'));
-
-await page.keyboard.type('45');
-await page.keyboard.press('Enter');
-check('der Modus bleibt nach der Aufnahme an', await visible('#pad-key'));
-check('45 gebucht', (await rest(0)) === '256', await rest(0));
-
-/* Shift gedrückt halten: die Wurfliste, je Spieler auf seiner Seite. */
-await page.keyboard.down('Shift');
-check('Shift zeigt die Wurfliste', await page.locator('#history').isVisible());
-check('mit den Aufnahmen beider Seiten', (await page.locator('#history .col').count()) === 2);
-await page.keyboard.up('Shift');
-check('Loslassen führt in die Spielansicht zurück', !(await page.locator('#history').isVisible()));
-
-/* Zurück in den normalen Modus: Tab – und ohne Esc-Taste (Magic Keyboard
-   am iPad) geht auch ⌘+. als Apple-Escape. */
-await page.keyboard.press('Tab');
-check('Tab führt in den normalen Modus zurück', await visible('#pad-total'));
-await page.locator('#mode-toggle button[data-mode="turnier"]').click();
-await page.keyboard.press('Meta+.');
-check('⌘+. beendet den Turnier-Modus ebenfalls', await visible('#pad-total'));
-await page.locator('#mode-toggle button[data-mode="turnier"]').click();
-check('und der Weg zurück steht wieder', await visible('#pad-key'));
-
-/* Die Sechzig kommt in jedem Eingabemodus – auch bei Punkte-Eingabe. Die
-   erste Feier steht noch ein paar Sekunden im Bild, fürs Prüfen wegräumen. */
+check('die Sechzig liegt unter der Dialog-Ebene', await page.evaluate(() => {
+  const f = document.getElementById('feier');
+  return f.classList.contains('sechzig') && parseInt(getComputedStyle(f).zIndex, 10) < 50;
+}));
 await page.evaluate(() => {
   const f = document.getElementById('feier');
   f.classList.remove('an', 'sechzig');
   f.innerHTML = '';
 });
-await page.keyboard.press('Escape');
-check('Esc beendet den Turnier-Modus', await visible('#pad-total'));
-await typeScore(60);
-await page.waitForTimeout(100);
-check('der Löwe kommt auch bei der Punkte-Eingabe',
-  (await page.locator('.feier .feier-logo').count()) === 1);
-check('die Sechzig liegt unter der Dialog-Ebene', await page.evaluate(() => {
+/* Eine vom Liga-Abend uebrig gebliebene Board-Einstellung: das Schnelle
+   Spiel bleibt trotzdem im normalen Bild und loescht sie nicht. */
+await page.evaluate(() => {
+  const D = window.__dart;
+  D.state().settings.turnierModus = 1;
+  D.ui().turnier = true;
+  D.setScreen('game');
+});
+check('trotz gemerktem Turnier-Modus bleibt das Schnelle Spiel normal',
+  (await visible('#pad-total')) &&
+  await page.evaluate(() => document.getElementById('scoreboard').innerText.includes('Darts')));
+await page.locator('#mode-cycle').click();
+check('ein Tipp wechselt auf Einzel-Darts', await visible('#pad-darts'));
+check('und die Board-Einstellung ueberlebt den Modus-Tipp',
+  await page.evaluate(() => window.__dart.state().settings.turnierModus === 1));
+await page.locator('#mode-cycle').click();
+check('der naechste Tipp fuehrt zurueck zu Punkte - kein Turnier-Modus im Schnellen Spiel',
+  await visible('#pad-total'));
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  S.game = null;
+  S.settings.turnierModus = 0;
+  D.ui().turnier = false;
+  D.setScreen('setup');
+});
+
+group('Allein spielen: kein Ausbullen, eine grosse Karte');
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  S.game = null;
+  S.lineup = [D.activeProfiles()[0].id];
+  S.mode = 'quick';
+  S.settings.start = 501;
+  D.setScreen('setup');
+});
+await page.locator('[data-action="start-game"]').click();
+check('direkt im Spiel - gegen sich selbst bullt niemand aus', await visible('#screen-game'));
+check('eine grosse Karte statt einer halb leeren Zweierreihe', await page.evaluate(() =>
+  document.getElementById('scoreboard').classList.contains('solo') &&
+  document.querySelectorAll('#scoreboard .pcard').length === 1));
+check('der Verlauf steht mittig in einer Spalte', await page.evaluate(() =>
+  document.getElementById('screen-game').classList.contains('solo')));
+await page.locator('#mode-cycle').click();
+await page.locator('#mode-cycle').click();
+check('der Zyklus kennt allein nur Punkte und Einzel-Darts', await visible('#pad-total'));
+/* Der Zurueck-Knopf verspricht "Stand bleibt erhalten" - auch allein. */
+await page.evaluate(() => { window.__dart.ui().input = '60'; window.__dart.submitTotal(); });
+await page.locator('#screen-game [data-action="to-tournament"]').click();
+check('zurueck fuehrt ins Setup und das Spiel bleibt stehen',
+  (await visible('#screen-setup')) && await page.evaluate(() => !!window.__dart.state().game));
+check('die Fortsetzen-Box bietet es an', await visible('#resume-box'));
+await page.locator('[data-action="resume"]').click();
+check('Fortsetzen fuehrt zurueck ins Spiel mit dem alten Stand',
+  (await visible('#screen-game')) && (await rest(0)) === '441', await rest(0));
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  S.game = null;
+  S.lineup = D.activeProfiles().slice(0, 4).map((p) => p.id);
+  /* Der Solo-Sechziger hat den Loewen gerufen - Buehne freimachen, damit
+     der "keine Feier im Ligaspiel"-Check gleich nicht die alte Feier sieht. */
   const f = document.getElementById('feier');
-  return f.classList.contains('sechzig') &&
-    parseInt(getComputedStyle(f).zIndex, 10) < 50;
+  f.classList.remove('an', 'sechzig');
+  f.innerHTML = '';
+  D.setScreen('setup');
+});
+
+group('Turnier-Modus: Anzeige am Board, Eingabe per Tastatur - im Liga-Einzel');
+await page.locator('#nav [data-screen="liga"]').click();
+await page.locator('#liga-liste [data-action="liga-spiel"]').first().click();
+for (let i = 0; i < 4; i++) {
+  await page.locator(`[data-role="liga-gegner"][data-i="${i}"]`).fill('Probe');
+  await page.locator(`[data-role="liga-gegner-nach"][data-i="${i}"]`).fill('Gegner' + (i + 1));
+}
+/* Mit Finish-Anzeigen - der Finish-Weg im Spielerfeld gehoert zum Test. */
+await page.locator('[data-action="liga-finish"][data-value="1"]').click();
+await page.locator('[data-action="liga-los"]').click();
+check('das Ligaspiel steht', await visible('#screen-tournament'));
+await page.locator('#schedule .match-row .go:not(.wo)').first().click();
+check('im Liga-Einzel haengt der Turnier-Modus mit im Zyklus', await visible('#screen-game'));
+await page.locator('#mode-cycle').click();   // Punkte -> Einzel-Darts
+await page.locator('#mode-cycle').click();   // Einzel-Darts -> Turnier
+check('Tastatur-Feld sichtbar', await visible('#pad-key'));
+check('Zahlenfeld und Einzel-Darts weg', !(await visible('#pad-total')) && !(await visible('#pad-darts')));
+check('auch der Umschalter selbst ist weg - Esc fuehrt zurueck', !(await visible('#mode-cycle')));
+check('Verlauf ausgeblendet', !(await page.locator('#history').isVisible()));
+check('keine mittlere Finish-Leiste - der Finish steht im Spielerfeld',
+  !(await visible('#checkout-bar')));
+check('wer nicht dran ist, tritt leicht zurueck', await page.evaluate(() => {
+  const o = parseFloat(getComputedStyle(document.querySelector('.pcard:not(.active)')).opacity);
+  return o >= 0.79 && o < 1;
 }));
+check('Rest steht in Plakatgroesse', await page.locator('.pcard .rest').first()
+  .evaluate((e) => parseFloat(getComputedStyle(e).fontSize) > 60));
+check('die Eingabe-Anzeige steht bereit (kein echtes Feld, keine iPad-Leiste)',
+  (await visible('#key-display')) &&
+  (await page.evaluate(() => !document.querySelector('#pad-key input'))));
+check('die Kopf-Knoepfe sind weg - alles laeuft ueber die Tastatur',
+  !(await page.locator('#screen-game .game-header .icon-btn').first().isVisible()));
+check('die Seite fuellt genau den Bildschirm, nichts scrollt',
+  await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 1));
 
-/* Der Modus überlebt den Neustart – der Bildschirm hängt ja fest am Board. */
-await page.locator('#mode-toggle button[data-mode="turnier"]').click();
+/* Eintippen wie am Liga-Abend: Zahl, Enter. Es wirft der Heimspieler an. */
+check('leer steht nur der blaue Eingabestrich',
+  (await page.locator('#key-display .cursor').count()) === 1);
+await page.keyboard.type('60');
+check('die Anzeige zeigt gross, was getippt wurde', (await text('#key-display')).trim() === '60');
+check('und der Strich ist beim Tippen weg',
+  (await page.locator('#key-display .cursor').count()) === 0);
+await page.keyboard.press('Enter');
+check('Aufnahme gebucht: 501 - 60 = 441', (await rest(0)) === '441', await rest(0));
+check('die Karte bleibt schlank: nur O-Schnitt, keine Wurfdetails', await page.evaluate(() => {
+  const t = document.getElementById('scoreboard').innerText;
+  return t.includes('\u00d8') && !t.includes('Letzte') && !t.includes('Darts');
+}));
+check('und in der Wurfliste neben der Eingabe', await page.evaluate(() => {
+  const t = document.getElementById('key-hist-l').innerText;
+  return t.includes('60') && t.includes('Rest 441');
+}), await text('#key-hist-l'));
+check('keine Sechzig-Feier im Ligaspiel - auch nicht am Board', await page.evaluate(() =>
+  !document.getElementById('feier').classList.contains('an')));
+
+/* Loeschen im leeren Feld: zurueck zum letzten Spieler. */
+await page.keyboard.press('Backspace');
+check('leeres Feld + Loeschen nimmt die Aufnahme zurueck', (await rest(0)) === '501', await rest(0));
+
+/* Unmoegliche Aufnahme: Fehler erscheint unter dem Feld. */
+await page.keyboard.type('179');
+await page.keyboard.press('Enter');
+check('unmoegliche Zahl wird abgewiesen', (await text('#key-error')).includes('nicht möglich'));
+
+await page.keyboard.type('45');
+await page.keyboard.press('Enter');
+check('der Modus bleibt nach der Aufnahme an', await visible('#pad-key'));
+check('45 gebucht', (await rest(0)) === '456', await rest(0));
+
+/* Shift gedrueckt halten: die Wurfliste, je Spieler auf seiner Seite. */
+await page.keyboard.down('Shift');
+check('Shift zeigt die Wurfliste', await page.locator('#history').isVisible());
+check('mit den Aufnahmen beider Seiten', (await page.locator('#history .col').count()) === 2);
+await page.keyboard.up('Shift');
+check('Loslassen fuehrt in die Spielansicht zurueck', !(await page.locator('#history').isVisible()));
+
+/* Zurueck in den normalen Modus: Tab - und ohne Esc-Taste (Magic Keyboard
+   am iPad) geht auch Cmd+. als Apple-Escape. */
+await page.keyboard.press('Tab');
+check('Tab fuehrt in den normalen Modus zurueck', await visible('#pad-total'));
+await page.locator('#mode-cycle').click();
+await page.locator('#mode-cycle').click();
+await page.keyboard.press('Meta+.');
+check('Cmd+. beendet den Turnier-Modus ebenfalls', await visible('#pad-total'));
+await page.locator('#mode-cycle').click();
+await page.locator('#mode-cycle').click();
+check('und der Weg zurueck steht wieder', await visible('#pad-key'));
+
+/* Ohne Hardware-Tastatur gaebe es weder Tab noch Esc - ein Tipp irgendwo
+   ins Bild zeigt deshalb kurz den Notausgang. */
+await page.locator('#screen-game').click({ position: { x: 200, y: 160 } });
+check('ein Tipp ins Bild zeigt den Notausgang', await visible('#turnier-exit'));
+await page.locator('#turnier-exit').click();
+check('der Notausgang beendet den Turnier-Modus', await visible('#pad-total'));
+await page.locator('#mode-cycle').click();
+await page.locator('#mode-cycle').click();
+check('und auch danach steht der Weg zurueck', await visible('#pad-key'));
+
+/* Der Modus ueberlebt den Neustart - der Bildschirm haengt ja fest am Board.
+   Nach dem Laden steht die Uebersicht; das naechste Liga-Einzel oeffnet
+   direkt in der Riesenanzeige. */
 await page.reload();
-check('Turnier-Modus übersteht den Neustart', await visible('#pad-key'));
+check('Turnier-Modus uebersteht den Neustart', await visible('#pad-key'));
 check('und die Eingabe-Anzeige steht wieder bereit', await visible('#key-display'));
+/* Auch der Weg ueber die Uebersicht: am Board-iPad (Modus gemerkt) oeffnet
+   ein Liga-Einzel direkt in der Riesenanzeige. */
+await page.evaluate(() => window.__dart.setScreen('tournament'));
+await page.locator('#schedule .match-row .go:not(.wo)').first().click();
+check('das Liga-Einzel oeffnet direkt im Turnier-Modus', await visible('#pad-key'));
 
-/* Checkout am Board: die Dart-Frage wird mit 1/2/3 beantwortet – und eine
-   verirrte Ziffer darf die Eingabe nicht verändern, sonst würde aus der
-   nächsten 5 still eine 95. */
+/* Checkout am Board: die Dart-Frage wird mit 1/2/3 beantwortet - und eine
+   verirrte Ziffer darf die Eingabe nicht veraendern, sonst wuerde aus der
+   naechsten 5 still eine 95. */
 const tippe = async (z) => { await page.keyboard.type(z); await page.keyboard.press('Enter'); };
-await tippe('180');   // Lenas 256 -> 76
-await tippe('100');   // Tobi 241 -> 141
-await tippe('36');    // Lenas -> 40
-await tippe('100');   // Tobi -> 41
-check('der Finish-Weg steht im Kasten – auch beim Wartenden', await page.evaluate(() => {
-  // Lenas (40, am Wurf) sieht ihr D20 – und auch Tobi (41, wartet) seinen Weg.
+await tippe('100');   // Gast -> 401
+await tippe('180');   // Heim 456 -> 276
+await tippe('100');   // Gast -> 301
+await tippe('140');   // Heim -> 136
+await tippe('140');   // Gast -> 161
+await tippe('96');    // Heim -> 40
+await tippe('60');    // Gast -> 101
+check('der Finish-Weg steht im Kasten - auch beim Wartenden', await page.evaluate(() => {
+  // Heim (40, am Wurf) sieht sein D20 - und der Gast (101, wartet) seinen Weg.
   const aktiv = document.querySelector('.pcard.active .pfinish').innerText;
   const wartend = document.querySelector('.pcard:not(.active) .pfinish').innerText;
   return aktiv.includes('D20') && wartend.trim() !== '';
 }));
-await tippe('40');    // Lenas checkt aus – Abfrage nach den Darts
+await tippe('40');    // Heim checkt aus - Abfrage nach den Darts
 check('Checkout-Abfrage steht', (await text('#overlay-card')).includes('wie vielen Darts'));
-await page.keyboard.press('9');   // daneben getippt – darf nichts tun
-check('verirrte Ziffer verändert die Eingabe nicht',
+await page.keyboard.press('9');   // daneben getippt - darf nichts tun
+check('verirrte Ziffer veraendert die Eingabe nicht',
   await page.evaluate(() => window.__dart.ui().input === '40'));
 check('die Abfrage steht noch', (await text('#overlay-card')).includes('wie vielen Darts'));
 await page.keyboard.press('1');
 check('Taste 1 bucht den Checkout mit einem Dart', await page.evaluate(() => {
   const m = window.__dart.currentMatch();
   const co = m.legs[0].visits.filter((x) => x.c)[0];
-  return m.done && co && co.d === 1;
+  return !m.done && co && co.d === 1;
 }));
 
-/* Aufräumen für die nächsten Gruppen: Spiel verwerfen, Modus aus. */
+/* Aufraeumen fuer die naechsten Gruppen: das Probe-Ligaspiel restlos weg. */
 await page.evaluate(() => {
-  window.__dart.ui().overlay = null;
-  window.__dart.ui().turnier = false;
-  const S = window.__dart.state();
-  S.game = null;
+  const D = window.__dart, S = D.state();
+  D.ui().overlay = null;
+  D.ui().turnier = false;
   S.settings.turnierModus = 0;
-  window.__dart.setScreen('setup');
+  S.tour = null; S.matches = []; S.current = null; S.game = null;
+  S.history = S.history.filter((h) => !h.liga);
+  S.profiles = S.profiles.filter((p) => !(p.gast && (p.voll || '').indexOf('Probe ') === 0));
+  S.lineup = D.activeProfiles().filter((p) => !p.gast).slice(0, 4).map((p) => p.id);
+  D.setScreen('setup');
 });
 
 /* ---------- Round the World: Spielart Einfach ---------- */
@@ -1678,7 +1777,7 @@ check('und wird nicht gefeiert', !(await feierAn()));
 /* ---------- Farben im Einzel-Dart-Zahlenfeld ---------- */
 
 group('Einzel-Darts: D und T sind blau, der Finish-Vorschlag bleibt rot');
-await page.locator('#mode-toggle button[data-mode="darts"]').click();
+for (let i = 0; i < 3 && !(await visible('#pad-darts')); i++) await page.locator('#mode-cycle').click();
 await page.locator('#mult-row button[data-mult="3"]').click();
 const farben = await page.evaluate(() => {
   const wurzel = getComputedStyle(document.documentElement);
@@ -1884,9 +1983,11 @@ group('Buergerlicher Name im Profil');
 await page.locator('#nav [data-screen="players"]').click();
 await page.locator('#players-list .player-card:has-text("Lenas")').click();
 await page.locator('[data-action="edit-current-profile"]').click();
-check('das Profil hat ein Feld fuer den buergerlichen Namen',
-  (await page.locator('[data-role="profile-voll"]').count()) === 1);
-await page.locator('[data-role="profile-voll"]').fill('Lena Musterfrau');
+check('das Profil hat je ein Feld fuer Vor- und Nachnamen',
+  (await page.locator('[data-role="profile-vor"]').count()) === 1 &&
+  (await page.locator('[data-role="profile-nach"]').count()) === 1);
+await page.locator('[data-role="profile-vor"]').fill('Lena');
+await page.locator('[data-role="profile-nach"]').fill('Musterfrau');
 await page.locator('[data-action="save-profile"]').click();
 check('der volle Name ist gespeichert', await page.evaluate(() =>
   window.__dart.state().profiles.find((p) => p.name === 'Lenas').voll === 'Lena Musterfrau'));
@@ -1903,7 +2004,8 @@ check('unsere vier Positionen sind vorbelegt',
 await page.locator('[data-action="liga-los"]').click();
 check('ohne Gegnernamen gibt es eine Ansage', (await text('#overlay-card')).includes('vier Gegner'));
 for (let i = 0; i < 4; i++) {
-  await page.locator(`[data-role="liga-gegner"][data-i="${i}"]`).fill('Dachau ' + (i + 1));
+  await page.locator(`[data-role="liga-gegner"][data-i="${i}"]`).fill('Dachau');
+  await page.locator(`[data-role="liga-gegner-nach"][data-i="${i}"]`).fill(String(i + 1));
 }
 await page.locator('[data-action="liga-los"]').click();
 check('das Ligaspiel steht', await visible('#screen-tournament'));
@@ -2020,7 +2122,8 @@ await page.locator('[data-action="roster-change"]').click();
 check('der Wechsel-Dialog zeigt alle acht Positionen',
   (await page.locator('#overlay-card [data-action="liga-wechsel-pos"]').count()) === 8);
 await page.locator('[data-action="liga-wechsel-pos"][data-seite="G"][data-pos="1"]').click();
-await page.locator('[data-role="liga-neu-name"]').fill('Dachau Ersatz');
+await page.locator('[data-role="liga-neu-name"]').fill('Dachau');
+await page.locator('[data-role="liga-neu-nach"]').fill('Ersatz');
 await page.locator('[data-action="liga-wechsel-ok"]').click();
 check('der Ersatz steht auf G2 und das Team zaehlt fuenf', await page.evaluate(() => {
   const lg = window.__dart.state().tour.liga;

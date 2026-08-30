@@ -51,16 +51,18 @@
     <div id="beitreten-liste"></div>
   </div>
 
-  <!-- Linke Spalte: Wortmarke, darunter direkt die Teilnehmer. -->
-  <div class="setup-links">
-    <div class="marke">
-      <span class="blink-logo" role="img" aria-label="Blink 180"></span>
-      <div>
-        <div class="wort">Blink <span class="rot">180</span></div>
-        <div class="sub">Dart Turnier · est. 2026</div>
-      </div>
+  <!-- Die Wortmarke steht ueber beiden Spalten - so beginnen "Wer spielt
+       mit?" und "Spielmodus" auf derselben Hoehe. -->
+  <div class="marke">
+    <span class="blink-logo" role="img" aria-label="Blink 180"></span>
+    <div>
+      <div class="wort">Blink <span class="rot">180</span></div>
+      <div class="sub">Dart Turnier · est. 2026</div>
     </div>
+  </div>
 
+  <!-- Linke Spalte: die Teilnehmer. -->
+  <div class="setup-links">
     <div class="card" id="karte-spieler">
       <h2>Wer spielt mit?</h2>
       <div id="roster" class="roster"></div>
@@ -185,9 +187,9 @@
       jeder Treffer rückt ein Feld weiter – egal ob Single, Double oder Triple.
       <b>Boost:</b> Ein <b>Double überspringt eine Zahl</b>, ein <b>Triple überspringt zwei</b>.</p>
   </div>
-  </div>
 
   <button class="btn primary full big" data-action="start-game">Spiel starten</button>
+  </div>
 </section>
 
 <!-- ============ TURNIER-ÜBERSICHT ============ -->
@@ -540,11 +542,9 @@
 
   <div class="input-area">
     <div class="mode-row">
-      <div class="segmented small" id="mode-toggle">
-        <button data-mode="total">Punkte</button>
-        <button data-mode="darts">Einzel-Darts</button>
-        <button data-mode="turnier">Turnier</button>
-      </div>
+      <!-- Eine Taste, die zyklisch durch die Eingabemodi schaltet:
+           Punkte -> Einzel-Darts -> (im Ligaspiel: Turnier) -> Punkte. -->
+      <button class="mode-cycle" id="mode-cycle">Punkte</button>
       <div id="visit-darts" class="visit-darts"></div>
     </div>
 
@@ -595,6 +595,11 @@
     </div>
   </div>
   </div>
+
+  <!-- Notausgang fuer Geraete ohne Tastatur: erscheint kurz nach einem
+       Tipp irgendwo im Bild - sonst saesse man im Turnier-Modus ohne
+       Tab/Esc fest. -->
+  <button id="turnier-exit" class="btn ghost turnier-exit hidden" data-action="turnier-exit">Turnier-Modus beenden</button>
 </section>
 
 <!-- ============ CRICKET ============ -->

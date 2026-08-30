@@ -34,9 +34,11 @@ mit HTTPS, „Zum Home-Bildschirm“ auf jedem Gerät, Updates per `git pull`.
 
 Der Modus wird im Setup gewählt, die Aufstellung gilt für alle vier gleich.
 
-Cricket, Round the World und Finisher gehen auch **allein** – als Training gegen
-sich selbst. Nur das X01-Turnier braucht mindestens zwei Spieler, es ist ja jeder
-gegen jeden.
+Cricket, Round the World, Finisher und das Schnelle Spiel gehen auch **allein** –
+als Training gegen sich selbst. Allein wird nicht ausgebullt, es geht direkt los,
+und der Spielbildschirm zeigt eine große Karte mit Finish-Vorschlag und dem Verlauf
+mittig darunter. Nur das X01-Turnier braucht mindestens zwei Spieler, es ist ja
+jeder gegen jeden.
 
 ### X01 Turnier (jeder gegen jeden)
 
@@ -206,15 +208,19 @@ liegt (Standard: ab 170, in den Einstellungen auf 100/180/nie änderbar). Dann w
 Dart für Dart eingegeben: Single/Double/Triple wählen, Zahl tippen – plus `25`,
 `Bull` und `Miss`. Die Tasten behalten dabei die Feldzahl (18 bleibt 18) und
 bekommen ein kleines D bzw. T davor, damit das Zielfeld erkennbar bleibt. Umschalten
-geht jederzeit von Hand über „Punkte / Einzel-Darts“.
+geht jederzeit von Hand über die **Umschalt-Taste** über der Eingabe: Sie zeigt den
+aktuellen Modus und schaltet mit jedem Tipp zyklisch weiter (Punkte → Einzel-Darts →
+Punkte; im Liga-Einzel hängt der Turnier-Modus mit im Kreis).
 
 Rechts unten sitzt **„0 Punkte ▸"**: Wer dreimal am Doppel vorbeiwirft, schließt die
 Aufnahme mit einem Tipp ab, statt dreimal „Miss" zu tippen. Steht schon ein Dart, heißt
 der Knopf **„Weiter ▸"** und übernimmt das Geworfene – die fehlenden Darts werden als
 Fehlwürfe ergänzt, damit die Dart-Zahl und damit der Average stimmen.
 
-**Turnier-Modus:** Der dritte Umschalter neben „Punkte / Einzel-Darts" – für
-Ligaspiele, wenn der Bildschirm vorn am Board hängt. Die Reste beider Spieler stehen
+**Turnier-Modus:** Nur in **Liga-Einzeln** – für den Bildschirm, der vorn am Board
+hängt. Schnelles Spiel und normale Turniere kennen ihn nicht (allein sowieso nicht);
+am Board-iPad, das ihn einmal an hatte, öffnet jedes weitere Liga-Einzel direkt in
+der Riesenanzeige. Die Reste beider Spieler stehen
 in Plakatgröße (wer nicht dran ist, tritt leicht zurück), der Finish-Weg erscheint
 groß im Feld des Spielers am Wurf, sobald einer möglich ist, und unten stehen die
 letzten fünf Aufnahmen je Spieler neben einer großen Eingabe-Anzeige. Es gibt kein
@@ -225,7 +231,9 @@ Aufnahmen zurück (auch über den Spielerwechsel hinweg), die Checkout-Abfrage
 beantworten **1/2/3**, das nächste Leg startet **Enter**, und **Shift** gedrückt
 halten zeigt die große Wurfliste (bis 13 Zeilen je Seite). Beendet wird der Modus
 mit **Tab** (oder Esc, am Magic Keyboard ohne Esc-Taste auch **⌘+.**) – und er
-überlebt einen Neustart.
+überlebt einen Neustart. Auf einem Gerät ohne Tastatur zeigt ein Tipp irgendwo
+ins Bild für ein paar Sekunden den Knopf **„Turnier-Modus beenden"** – der
+Notausgang, damit niemand ohne Tab und Esc gefangen sitzt.
 
 **Die Sechzig:** Wirft jemand genau **60**, kommt der Löwe – das 1860-Wappen vor
 blauen Strahlen, darunter „SECHZIG!". In jedem Eingabemodus; fällt die Feier mit
@@ -276,9 +284,13 @@ weitere Turnier. Das Foto kommt aus der Fotomediathek oder direkt von der Kamera
 wird auf 220 × 220 Pixel zugeschnitten, damit der Speicher nicht vollläuft; ohne Foto
 zeigt die App die Initialen auf einer aus dem Namen abgeleiteten Farbe.
 
-Neben dem Anzeigenamen nimmt das Profil den **bürgerlichen Namen** auf – er
-erscheint überall im Liga-Kontext (Spielplan, Spielbildschirm, Spielbericht),
-damit auf dem Bogen nichts nachgetragen werden muss.
+Neben dem Anzeigenamen nimmt das Profil unter „Echte Namen für die Liga" **Vor-
+und Nachnamen** auf (zwei Felder nebeneinander) – sie erscheinen überall im
+Liga-Kontext (Spielplan, Spielbildschirm, Spielbericht), damit auf dem Bogen
+nichts nachgetragen werden muss. Das Profil zeigt den echten Namen unter dem
+Anzeigenamen; gepflegt wird alles über **Bearbeiten** (im Konto oder am Profil).
+Auch die **Gegner** eines Ligaspiels werden mit Vor- und Nachnamen erfasst –
+die SWO verlangt bürgerliche Namen auf dem Bogen.
 
 Wer nicht mehr mitspielt, lässt sich **ausblenden** statt löschen — dann verschwindet
 er aus der Aufstellung, seine Ergebnisse bleiben aber in Statistik, Ranglisten und

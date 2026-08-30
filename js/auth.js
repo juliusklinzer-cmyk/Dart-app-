@@ -359,21 +359,12 @@
         '<div class="sm">' + esc(nutzer.email) + '</div></div>' +
       '</div>' +
       (syncText ? '<p class="hint">' + esc(syncText) + '</p>' : '') +
-      /* Bild und Lieblingsdoppel gehoeren hierher, nicht in die Aufstellung:
-         dort wird ausgewaehlt, nicht gepflegt. */
-      '<button class="btn full" data-action="konto-profil">Bild und Lieblingsdoppel</button>' +
+      /* Profilpflege (Bild, Namen, Lieblingsdoppel) gehoert hierher, nicht
+         in die Aufstellung: dort wird ausgewaehlt, nicht gepflegt. */
+      '<button class="btn full" data-action="konto-profil">Bearbeiten</button>' +
       (offen ? '<button class="btn full" data-action="konto-zuordnen">Alte Profile zuordnen (' + offen + ')</button>' : '') +
       '<button class="btn ghost full" data-action="konto-passwort">Passwort ändern</button>' +
       '<button class="btn ghost full" data-action="konto-logout">Abmelden</button>' +
-      '</div>' +
-      '<div class="card konto-karte">' +
-        '<h2>Mitspieler</h2>' +
-        '<p class="hint">Alle, die sich angemeldet haben. Du kannst sie im Turnier ' +
-        'auswählen und für sie mitschreiben.</p>' +
-        (roster.map(function (r) {
-          return '<div class="zuordnung-zeile">' + D.avatarHTML(D.profile(r.id), 'sm') +
-            '<div class="who"><div class="nm">' + esc(r.name) + '</div></div></div>';
-        }).join('') || '<p class="hint">Noch niemand sonst.</p>') +
       '</div>';
   }
 

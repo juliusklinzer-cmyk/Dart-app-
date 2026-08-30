@@ -493,6 +493,25 @@
    */
   function geteiltesTurnier() { return S.tour && S.tour.geteilt ? S.tour : null; }
 
+  /* Der Turnier-Modus (Riesenanzeige am Board) gehoert nur zu Liga-Einzeln -
+     Schnelles Spiel und normale Turniere laufen im normalen Bild. */
+  function ligaEinzel() {
+    return !!(S.tour && S.tour.liga) && !(S.game && S.game.kind === 'quick');
+  }
+
+  /* Buergerlicher Name als ein String gespeichert, im Formular getrennt:
+     das letzte Wort ist der Nachname. */
+  function vollSplit(voll) {
+    var t = String(voll || '').trim().split(/\s+/).filter(Boolean);
+    if (!t.length) return { vor: '', nach: '' };
+    var nach = t.length > 1 ? t.pop() : '';
+    return { vor: t.join(' '), nach: nach };
+  }
+  function vollAusTeilen(vor, nach) {
+    return (String(vor || '').trim() + ' ' + String(nach || '').trim())
+      .replace(/\s+/g, ' ').trim() || null;
+  }
+
   function planZuMatches(plan) {
     return (plan.matches || []).map(function (m) {
       return {
@@ -527,7 +546,7 @@
       Object.keys(g).forEach(function (gid) {
         if (S.profiles.some(function (p) { return p.id === gid; })) return;
         S.profiles.push({
-          id: gid, name: g[gid], avatar: null, hue: freeHue(),
+          id: gid, name: g[gid], voll: g[gid], avatar: null, hue: freeHue(),
           created: Date.now(), gast: true
         });
       });
@@ -1667,8 +1686,16 @@
     }
     UI.mult = 1;
     UI.overlay = null;
-    // Wie im Turnier wird auch hier ausgeworfen, wer anfängt.
-    S.screen = 'bulloff';
+    // Wie im Turnier wird auch hier ausgeworfen, wer anfängt - ausser
+    // allein: gegen sich selbst bullt niemand aus. Das Spiel gilt dann
+    // sofort als begonnen, sonst raeumte der Zurueck-Knopf es weg und
+    // ein Neustart landete auf dem Bull-Off.
+    if (S.lineup.length === 1) {
+      S.game.started = true;
+      S.screen = kind === 'cricket' ? 'cricket' : kind === 'rtw' ? 'rtw' : kind === 'finisher' ? 'finisher' : 'game';
+    } else {
+      S.screen = 'bulloff';
+    }
     save(); render();
   }
 
@@ -2237,7 +2264,7 @@
   }
 
   /* ================= Verlaufsdiagramm ================= */
-  var CHART_GAMES = 40;
+  var CHART_GAMES = 10;
 
   /* Je Spieler eine Reihe mit einem Wert pro Spiel, älteste zuerst. */
   function chartSeries(mode) {
@@ -2516,6 +2543,7 @@
     $('profile-detail').innerHTML =
       '<div class="profile-head">' + avatarHTML(p, 'xl') +
         '<div><h1>' + esc(p.name) + '</h1>' +
+        (p.voll ? '<div class="muted">' + esc(p.voll) + ' \u00b7 echter Name f\u00fcr die Liga</div>' : '') +
         '<div class="muted">' + (st.matches
           ? plural(st.won, 'Sieg', 'Siege') + ' · ' + plural(st.lost, 'Niederlage', 'Niederlagen') +
             ' · ' + plural(st.tourWins, 'Turniersieg', 'Turniersiege')
@@ -2853,13 +2881,15 @@
        drängen den Verlauf hinter das Zahlenfeld – ab drei Spielern werden
        sie deshalb kompakter. */
     $('scoreboard').classList.toggle('viele', m.p.length > 2);
+    $('scoreboard').classList.toggle('solo', m.p.length === 1);
+    $('screen-game').classList.toggle('solo', m.p.length === 1);
     $('scoreboard').innerHTML = m.p.map(function (pid) {
       var rest = remainingIn(leg, pid) - (pid === active ? pendingSum : 0);
       var darts = dartsIn(leg, pid) + (pid === active ? UI.darts.length : 0);
       var scored = matchStart(m) - remainingIn(leg, pid) + (pid === active ? pendingSum : 0);
       var avg = darts ? (scored / darts * 3).toFixed(1) : '–';
       var zeile, meta, pfinish = '';
-      if (UI.turnier) {
+      if (UI.turnier && ligaEinzel()) {
         /* Was geworfen wurde, steht in den Wurflisten unten links und
            rechts – in der Karte bleibt nur der Leg-Stand. */
         zeile = schnell ? '' : 'Legs ' + legsWon(m, pid);
@@ -2916,7 +2946,7 @@
      * ansieht, wer sie geworfen hat.
      */
     var vieleSpieler = m.p.length > 2;
-    $('history').classList.toggle('einspaltig', vieleSpieler);
+    $('history').classList.toggle('einspaltig', vieleSpieler || m.p.length === 1);
     if (vieleSpieler) {
       var lauf = {};
       m.p.forEach(function (pid) { lauf[pid] = legStart(leg); });
@@ -2987,9 +3017,9 @@
       return '<div class="d ' + (d ? '' : 'empty') + '">' + (d ? dartLabel(d) : '–') + '</div>';
     }).join('');
 
-    $('mode-toggle').querySelectorAll('button').forEach(function (b) {
-      b.classList.toggle('active', b.getAttribute('data-mode') === mode);
-    });
+    var modusNamen = { total: 'Punkte', darts: 'Einzel-Darts', turnier: 'Turnier' };
+    UI.letzterModus = mode;
+    $('mode-cycle').innerHTML = modusNamen[mode] + '<span class="pfeile">\u21c4</span>';
     $('pad-total').classList.toggle('hidden', mode !== 'total');
     $('pad-darts').classList.toggle('hidden', mode !== 'darts');
     $('pad-key').classList.toggle('hidden', mode !== 'turnier');
@@ -3070,7 +3100,7 @@
   }
 
   function effectiveMode(rest) {
-    if (UI.turnier) return 'turnier';
+    if (UI.turnier && ligaEinzel()) return 'turnier';
     if (UI.modeOverride) return UI.modeOverride;
     var t = S.settings.dartModeFrom;
     return (t > 0 && rest <= t) ? 'darts' : 'total';
@@ -4063,11 +4093,15 @@
                   esc(p.name) + '</option>';
               }).join('') + '</select></label>';
           }).join('') +
-          '<div class="ls-titel">' + esc(ltGegner) + '</div>' +
+          '<div class="ls-titel">' + esc(ltGegner) + ' \u2013 Vor- und Nachname (SWO)</div>' +
           [0, 1, 2, 3].map(function (i) {
             return '<label class="ls-zeile"><span>' + (i + 1) + '</span>' +
+              '<span class="namen-paar">' +
               '<input data-role="liga-gegner" data-i="' + i + '" maxlength="30" ' +
-              'value="' + esc(ld.gegner[i]) + '" placeholder="Name eintragen"></label>';
+              'value="' + esc(ld.gegner[i]) + '" placeholder="Vorname">' +
+              '<input data-role="liga-gegner-nach" data-i="' + i + '" maxlength="30" ' +
+              'value="' + esc((ld.gegnerNach || [])[i] || '') + '" placeholder="Nachname">' +
+              '</span></label>';
           }).join('') +
           '<div class="ls-titel">Legs je Einzel</div>' +
           '<div class="options">' +
@@ -4132,7 +4166,10 @@
       };
       html = '<h3>Spieler wechseln</h3>' +
         '<p class="hint">Nur auf derselben Position (SWO §8), höchstens 8 Spieler je Team. ' +
-          'Der Wechsel gilt für alle noch nicht begonnenen Einzel der Position.</p>' +
+          'Der Wechsel gilt für alle noch nicht begonnenen Einzel der Position – ' +
+          'ein angefangenes Einzel spielt sein Spieler zu Ende. Wer auf einer Position ' +
+          'gespielt hat, bleibt auf ihr (Rotation dort ist erlaubt). Höchstens ein nicht ' +
+          'gemeldeter Gastspieler pro Mannschaft und Ligaspiel.</p>' +
         '<div class="roster-change">' +
           '<div class="ls-titel">Heim</div>' + wZeile('H', wlg.posH) +
           '<div class="ls-titel">Gast</div>' + wZeile('G', wlg.posG) +
@@ -4150,8 +4187,12 @@
                 esc(p.name) + '</option>';
             }).join('') + '</select></label>'
           : '<label class="ls-zeile liga-start"><span>Neu</span>' +
+            '<span class="namen-paar">' +
             '<input data-role="liga-neu-name" maxlength="30" value="' + esc(wz.draft.name) + '" ' +
-            'placeholder="Name des neuen Gegners"></label>') +
+            'placeholder="Vorname">' +
+            '<input data-role="liga-neu-nach" maxlength="30" value="' + esc(wz.draft.nach || '') + '" ' +
+            'placeholder="Nachname">' +
+            '</span></label>') +
         '<div class="row-btns two">' +
         '<button class="btn ghost" data-action="roster-change">Zurück</button>' +
         '<button class="btn primary" data-action="liga-wechsel-ok">Einwechseln</button></div>';
@@ -4174,11 +4215,16 @@
           avatarHTML({ id: o.id || 'neu', name: p.name || '?', avatar: p.avatar }, 'xl') +
           '<span class="cam">Foto wählen</span>' +
         '</div>' +
-        '<input class="name-input" type="text" data-role="profile-name" value="' + esc(p.name) + '" placeholder="Name" maxlength="16">' +
+        '<input class="name-input" type="text" data-role="profile-name" value="' + esc(p.name) + '" placeholder="Anzeigename" maxlength="16">' +
         /* Der buergerliche Name steht auf dem Liga-Spielbericht - die SWO
            will Vor- und Nachnamen, keine Kuenstlernamen. */
-        '<input class="name-input klein" type="text" data-role="profile-voll" value="' + esc(p.voll || '') + '" ' +
-          'placeholder="B\u00fcrgerlicher Name (f\u00fcr die Liga)" maxlength="60">' +
+        '<div class="namen-titel">Echte Namen f\u00fcr die Liga</div>' +
+        '<div class="namen-paar">' +
+          '<input class="name-input klein" type="text" data-role="profile-vor" value="' + esc(p.vor || '') + '" ' +
+            'placeholder="Vorname" maxlength="30">' +
+          '<input class="name-input klein" type="text" data-role="profile-nach" value="' + esc(p.nach || '') + '" ' +
+            'placeholder="Nachname" maxlength="30">' +
+        '</div>' +
         /* Lieblingsdoppel: der Finish-Vorschlag stellt dann bevorzugt darauf.
            Kein Umweg über einen zusätzlichen Dart – nur die Wahl zwischen
            gleich langen Wegen, siehe js/checkout.js. */
@@ -4292,9 +4338,14 @@
       o.fehler = 'Bitte vier verschiedene eigene Spieler aufstellen.';
       render(); return;
     }
-    var namen = d.gegner.map(function (n) { return String(n || '').trim().slice(0, 30); });
-    if (namen.some(function (n) { return !n; })) {
-      o.fehler = 'Bitte alle vier Gegner eintragen.';
+    var namen = d.gegner.map(function (n, i) {
+      return (String(n || '').trim().slice(0, 30) + ' ' +
+        String((d.gegnerNach || [])[i] || '').trim().slice(0, 30)).replace(/\s+/g, ' ').trim();
+    });
+    if (d.gegner.some(function (n, i) {
+      return !String(n || '').trim() || !String((d.gegnerNach || [])[i] || '').trim();
+    })) {
+      o.fehler = 'Bitte alle vier Gegner mit Vor- und Nachnamen eintragen (SWO: bürgerliche Namen).';
       render(); return;
     }
     /* Zwei gleichnamige Gegner würden auf dasselbe Gastprofil fallen und
@@ -4389,13 +4440,16 @@
   function ligaGastId(name, ausschluss) {
     var da = null;
     S.profiles.forEach(function (p) {
-      if (!da && p.gast && p.name === name && ausschluss.indexOf(p.id) < 0) da = p;
+      if (!da && p.gast && (p.name === name || p.voll === name) && ausschluss.indexOf(p.id) < 0) da = p;
     });
     if (da) {
       da.hidden = false;
+      if (!da.voll) da.voll = name;
       return da.id;
     }
-    var neu = { id: uid(), name: name, avatar: null, hue: freeHue(), created: Date.now(), gast: true };
+    /* Gegner werden mit vollem buergerlichen Namen gefuehrt - so verlangt
+       es die SWO fuer den Bogen, und so sind sie eindeutig wiedererkennbar. */
+    var neu = { id: uid(), name: name.slice(0, 30), voll: name, avatar: null, hue: freeHue(), created: Date.now(), gast: true };
     S.profiles.push(neu);
     return neu.id;
   }
@@ -4545,6 +4599,9 @@
     if (!m) { render(); return; }
     S.current = id;
     UI.input = ''; UI.darts = []; UI.mult = 1; UI.modeOverride = null; UI.error = ''; UI.overlay = null;
+    /* Am Board-iPad (Turnier-Modus gemerkt) startet jedes Liga-Einzel
+       direkt in der Riesenanzeige. */
+    UI.turnier = !!(S.settings.turnierModus === 1 && S.tour && S.tour.liga);
     S.screen = m.starter ? 'game' : 'bulloff';
     save();
     render();
@@ -4602,18 +4659,20 @@
         break;
       }
       case 'new-profile':
-        UI.overlay = { type: 'profile', id: null, draft: { name: '', avatar: null, dbl: null, voll: '' } };
+        UI.overlay = { type: 'profile', id: null, draft: { name: '', avatar: null, dbl: null, vor: '', nach: '' } };
         render();
         break;
       case 'edit-profile': {
         var p = profile(el.getAttribute('data-id'));
-        UI.overlay = { type: 'profile', id: p.id, draft: { name: p.name, avatar: p.avatar, dbl: p.dbl || null, voll: p.voll || '' } };
+        var pTeile = vollSplit(p.voll);
+        UI.overlay = { type: 'profile', id: p.id, draft: { name: p.name, avatar: p.avatar, dbl: p.dbl || null, vor: pTeile.vor, nach: pTeile.nach } };
         render();
         break;
       }
       case 'edit-current-profile': {
         var cp = profile(UI.profile);
-        UI.overlay = { type: 'profile', id: cp.id, draft: { name: cp.name, avatar: cp.avatar, dbl: cp.dbl || null, voll: cp.voll || '' } };
+        var cpTeile = vollSplit(cp.voll);
+        UI.overlay = { type: 'profile', id: cp.id, draft: { name: cp.name, avatar: cp.avatar, dbl: cp.dbl || null, vor: cpTeile.vor, nach: cpTeile.nach } };
         render();
         break;
       }
@@ -4633,13 +4692,13 @@
           ex.name = name;
           ex.avatar = draft.avatar;
           ex.dbl = draft.dbl || null;
-          ex.voll = (draft.voll || '').trim() || null;
+          ex.voll = vollAusTeilen(draft.vor, draft.nach);
           /* Gehört das Profil zu einem Account, muss die Änderung zum Server –
              sonst überschreibt der nächste Abgleich Bild und Name wieder mit
              dem, was dort steht. */
           if (window.DartKonto) window.DartKonto.profilGeaendert(ex.id);
         } else {
-          var np = { id: uid(), name: name, avatar: draft.avatar, created: Date.now(), hue: freeHue(), dbl: draft.dbl || null, voll: (draft.voll || '').trim() || null };
+          var np = { id: uid(), name: name, avatar: draft.avatar, created: Date.now(), hue: freeHue(), dbl: draft.dbl || null, voll: vollAusTeilen(draft.vor, draft.nach) };
           /* Angemeldet legt man hier keine Kollegen an – die haben Accounts.
              Wer von Hand dazukommt, ist der Besuch von heute Abend. */
           if (window.DartKonto && window.DartKonto.nutzer()) np.gast = true;
@@ -4956,7 +5015,7 @@
           type: 'liga-start', termin: lsTermin,
           /* Best of 3 (unsere 4. Liga) und ohne Finish-Hilfen (WDF 3.08:
              das Doppel wird nicht angesagt) sind die Voreinstellung. */
-          draft: { bestOf: 3, wir: lsVorschlag.slice(0, 4), gegner: ['', '', '', ''], geteilt: false, finish: false }
+          draft: { bestOf: 3, wir: lsVorschlag.slice(0, 4), gegner: ['', '', '', ''], gegnerNach: ['', '', '', ''], geteilt: false, finish: false }
         };
         render();
         break;
@@ -5079,6 +5138,14 @@
         UI.overlay = S.tour && S.tour.liga ? { type: 'liga-wechsel' } : { type: 'roster-change' };
         render();
         break;
+      case 'turnier-exit': {
+        UI.turnier = false;
+        S.settings.turnierModus = 0;
+        UI.input = '';
+        $('turnier-exit').classList.add('hidden');
+        save(); render();
+        break;
+      }
       case 'liga-kampflos': {
         var kfM = matchById(el.getAttribute('data-id'));
         if (!kfM || !(S.tour && S.tour.liga)) break;
@@ -5143,8 +5210,11 @@
           neuId = lo.draft.neu;
           if (!neuId) { lo.fehler = 'Bitte einen Spieler auswählen.'; render(); break; }
         } else {
-          var loName = String(lo.draft.name || '').trim().slice(0, 30);
-          if (!loName) { lo.fehler = 'Bitte den Namen des neuen Gegners eintragen.'; render(); break; }
+          var loName = (String(lo.draft.name || '').trim().slice(0, 30) + ' ' +
+            String(lo.draft.nach || '').trim().slice(0, 30)).replace(/\s+/g, ' ').trim();
+          if (!String(lo.draft.name || '').trim() || !String(lo.draft.nach || '').trim()) {
+            lo.fehler = 'Bitte Vor- und Nachnamen des neuen Gegners eintragen.'; render(); break;
+          }
           /* Nur die AKTIVE Besetzung ausschließen: wer auf der Bank sitzt,
              wird am Namen wiedererkannt und darf zurückwechseln – sonst
              entstünde ein zweites Profil desselben Menschen. */
@@ -5198,10 +5268,26 @@
   /* Ein Tipp neben den Dialog schließt ihn – außer dort, wo eine Antwort
      nötig ist (Checkout-Abfrage, Spielende). */
   var STICKY_OVERLAYS = { 'checkout-darts': 1, 'leg-done': 1, 'match-done': 1, 'game-done': 1 };
+  /* Turnier-Modus ohne Hardware-Tastatur: ein Tipp irgendwo ins Bild zeigt
+     fuer ein paar Sekunden den Beenden-Knopf - der einzige Weg zurueck,
+     wenn Tab und Esc fehlen (iPad ohne Tastatur). */
+  var turnierExitTimer = null;
+  function zeigeTurnierExit() {
+    var b = $('turnier-exit');
+    if (!b) return;
+    b.classList.remove('hidden');
+    if (turnierExitTimer) clearTimeout(turnierExitTimer);
+    turnierExitTimer = setTimeout(function () { b.classList.add('hidden'); }, 4000);
+  }
+
   document.addEventListener('click', function (ev) {
     if (isGhostTap(ev)) return;
     if (ev.target.id === 'overlay' && UI.overlay && !STICKY_OVERLAYS[UI.overlay.type]) {
       UI.overlay = null; UI.input = ''; render(); return;
+    }
+    if (UI.turnier && ligaEinzel() && S.screen === 'game' && !UI.overlay &&
+        !ev.target.closest('#turnier-exit')) {
+      zeigeTurnierExit();
     }
     var t = ev.target.closest('[data-action]');
     if (t) { handleAction(t.getAttribute('data-action'), t); return; }
@@ -5214,14 +5300,21 @@
       return;
     }
 
-    var modeBtn = ev.target.closest('#mode-toggle button');
-    if (modeBtn) {
-      var gewaehlterModus = modeBtn.getAttribute('data-mode');
-      UI.turnier = gewaehlterModus === 'turnier';
-      UI.modeOverride = UI.turnier ? null : gewaehlterModus;
+    var cycleBtn = ev.target.closest('#mode-cycle');
+    if (cycleBtn) {
+      /* Zyklisch zum naechsten Modus: Punkte -> Einzel-Darts -> Punkte,
+         im Liga-Einzel haengt der Turnier-Modus mit im Kreis. */
+      var folge = ['total', 'darts'];
+      if (ligaEinzel()) folge.push('turnier');
+      var jetztM = folge.indexOf(UI.letzterModus) >= 0 ? UI.letzterModus : 'total';
+      var neuerModus = folge[(folge.indexOf(jetztM) + 1) % folge.length];
+      UI.turnier = neuerModus === 'turnier';
+      UI.modeOverride = UI.turnier ? null : neuerModus;
       /* Der Turnier-Modus überlebt einen Neustart: der Bildschirm hängt am
-         Board und soll nach dem Wiederöffnen nicht neu eingestellt werden. */
-      S.settings.turnierModus = UI.turnier ? 1 : 0;
+         Board und soll nach dem Wiederöffnen nicht neu eingestellt werden.
+         Nur Liga-Einzel schreiben das Gedaechtnis - ein Modus-Tipp im
+         Schnellen Spiel darf die Board-Einstellung nicht loeschen. */
+      if (ligaEinzel()) S.settings.turnierModus = UI.turnier ? 1 : 0;
       UI.error = '';
       save(); render();
       return;
@@ -5286,13 +5379,19 @@
     if (ev.target.getAttribute('data-role') === 'profile-double' && UI.overlay) {
       UI.overlay.draft.dbl = Number(ev.target.value) || null;
     }
-    if (ev.target.getAttribute('data-role') === 'profile-voll' && UI.overlay) {
-      UI.overlay.draft.voll = ev.target.value;
+    if (ev.target.getAttribute('data-role') === 'profile-vor' && UI.overlay) {
+      UI.overlay.draft.vor = ev.target.value;
+    }
+    if (ev.target.getAttribute('data-role') === 'profile-nach' && UI.overlay) {
+      UI.overlay.draft.nach = ev.target.value;
     }
     /* Ligaspiel-Aufstellung: Entwurf pflegen, nicht neu zeichnen – sonst
        verlieren die Felder beim Tippen den Fokus. */
     if (ev.target.getAttribute('data-role') === 'liga-gegner' && UI.overlay && UI.overlay.draft) {
       UI.overlay.draft.gegner[Number(ev.target.getAttribute('data-i'))] = ev.target.value;
+    }
+    if (ev.target.getAttribute('data-role') === 'liga-gegner-nach' && UI.overlay && UI.overlay.draft) {
+      UI.overlay.draft.gegnerNach[Number(ev.target.getAttribute('data-i'))] = ev.target.value;
     }
     if (ev.target.getAttribute('data-role') === 'liga-pos' && UI.overlay && UI.overlay.draft) {
       UI.overlay.draft.wir[Number(ev.target.getAttribute('data-i'))] = ev.target.value;
@@ -5302,6 +5401,9 @@
     }
     if (ev.target.getAttribute('data-role') === 'liga-neu-name' && UI.overlay && UI.overlay.draft) {
       UI.overlay.draft.name = ev.target.value;
+    }
+    if (ev.target.getAttribute('data-role') === 'liga-neu-nach' && UI.overlay && UI.overlay.draft) {
+      UI.overlay.draft.nach = ev.target.value;
     }
   });
 
