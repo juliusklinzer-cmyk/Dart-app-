@@ -459,14 +459,6 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 }
 .options button.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
 .segmented { display: flex; background: var(--bg-3); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
-/* Eine Taste statt dreier Knoepfe: zeigt den aktuellen Eingabemodus,
-   ein Tipp schaltet zum naechsten (Punkte -> Einzel-Darts -> Turnier). */
-.mode-cycle {
-  background: var(--bg-3); border: 1px solid var(--line); border-radius: 10px;
-  color: var(--text); font-weight: 600; font-size: 0.82rem;
-  padding: 8px 14px; min-height: 44px; white-space: nowrap;
-}
-.mode-cycle .pfeile { color: var(--muted); margin-left: 6px; }
 .segmented button {
   background: none; border: none; color: var(--muted); padding: 10px 12px;
   font-size: 0.85rem; font-weight: 600; cursor: pointer; min-height: 42px;

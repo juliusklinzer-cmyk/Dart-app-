@@ -208,19 +208,19 @@ liegt (Standard: ab 170, in den Einstellungen auf 100/180/nie änderbar). Dann w
 Dart für Dart eingegeben: Single/Double/Triple wählen, Zahl tippen – plus `25`,
 `Bull` und `Miss`. Die Tasten behalten dabei die Feldzahl (18 bleibt 18) und
 bekommen ein kleines D bzw. T davor, damit das Zielfeld erkennbar bleibt. Umschalten
-geht jederzeit von Hand über die **Umschalt-Taste** über der Eingabe: Sie zeigt den
-aktuellen Modus und schaltet mit jedem Tipp zyklisch weiter (Punkte → Einzel-Darts →
-Punkte; im Liga-Einzel hängt der Turnier-Modus mit im Kreis).
+geht jederzeit von Hand über die drei Knöpfe über der Eingabe:
+**Punkte / Einzel-Darts / Turnier** – direkt anklickbar. Der Turnier-Knopf
+verschwindet nur, wenn jemand allein spielt.
 
 Rechts unten sitzt **„0 Punkte ▸"**: Wer dreimal am Doppel vorbeiwirft, schließt die
 Aufnahme mit einem Tipp ab, statt dreimal „Miss" zu tippen. Steht schon ein Dart, heißt
 der Knopf **„Weiter ▸"** und übernimmt das Geworfene – die fehlenden Darts werden als
 Fehlwürfe ergänzt, damit die Dart-Zahl und damit der Average stimmen.
 
-**Turnier-Modus:** Nur in **Liga-Einzeln** – für den Bildschirm, der vorn am Board
-hängt. Schnelles Spiel und normale Turniere kennen ihn nicht (allein sowieso nicht);
-am Board-iPad, das ihn einmal an hatte, öffnet jedes weitere Liga-Einzel direkt in
-der Riesenanzeige. Die Reste beider Spieler stehen
+**Turnier-Modus:** Die Riesenanzeige für den Bildschirm, der vorn am Board hängt.
+In **Liga-Einzeln** öffnet er sich am Board-iPad (das ihn einmal an hatte) von
+selbst; im X01-Turnier und im Schnellen Spiel schaltet ihn der dritte Knopf bewusst
+dazu – automatisch startet dort nichts. Allein gibt es ihn nicht. Die Reste beider Spieler stehen
 in Plakatgröße (wer nicht dran ist, tritt leicht zurück), der Finish-Weg erscheint
 groß im Feld des Spielers am Wurf, sobald einer möglich ist, und unten stehen die
 letzten fünf Aufnahmen je Spieler neben einer großen Eingabe-Anzeige. Es gibt kein

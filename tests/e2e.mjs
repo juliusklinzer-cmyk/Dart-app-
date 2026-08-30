@@ -133,7 +133,7 @@ await page.locator('#mult-row button[data-mult="1"]').click();
 check('Single zeigt die blanke Zahl', (await page.locator('#num-grid button[data-num="20"]').innerText()).trim() === '20');
 
 group('Bust-Regel');
-await page.locator('#mode-cycle').click();   // Einzel-Darts -> Punkte
+await page.locator('#mode-toggle button[data-mode="total"]').click();
 await typeScore(140); // 141 - 140 = 1 -> Bust, Rest bleibt stehen
 check('Rest bleibt 141 nach Bust auf 1', (await rest(0)) === '141');
 check('Bust beendet die Aufnahme (Gegner ist dran)', await page.locator('.pcard').nth(1).evaluate((e) => e.classList.contains('active')));
@@ -182,7 +182,7 @@ check('erneut ausgecheckt', (await text('#overlay-card')).includes('Glückwunsch
 async function quickLeg() {
   await typeScore(180); await typeScore(60);   // 321 / 441
   await typeScore(180); await typeScore(60);   // 141 / 381
-  await page.locator('#mode-cycle').click();   // Einzel-Darts -> Punkte
+  await page.locator('#mode-toggle button[data-mode="total"]').click();
   return typeScore(141);
 }
 
@@ -191,7 +191,7 @@ await page.locator('#overlay-card [data-action="ov-next-match"]').click();
 await page.locator('#bulloff-buttons button').first().click();
 await typeScore(180); await typeScore(60);
 await typeScore(180); await typeScore(60);
-await page.locator('#mode-cycle').click();   // Einzel-Darts -> Punkte
+await page.locator('#mode-toggle button[data-mode="total"]').click();
 await typeScore(179);
 check('179 als unmöglicher Wurf abgelehnt', (await text('#input-error')).includes('nicht möglich'));
 await typeScore(141);
@@ -553,7 +553,7 @@ await page.locator('[data-action="start-game"]').click();
 await page.locator('[data-action="next-match"]').click();
 await page.locator('#bulloff-buttons button').first().click();
 await typeScore(180); await typeScore(60); await typeScore(180); await typeScore(60);
-await page.locator('#mode-cycle').click();   // Einzel-Darts -> Punkte
+await page.locator('#mode-toggle button[data-mode="total"]').click();
 await typeScore(141);
 await page.locator('#overlay-card [data-action="co-darts"]').first().click();
 const winnerBefore = await page.evaluate(() => window.__dart.currentMatch().winner);
@@ -744,7 +744,7 @@ check('Legzeile zeigt weiter die Turnierregel',
 
 // Ergebnis nach dem Overlay noch korrigierbar (Spieler hat schon 60 geworfen)
 await typeScore(180); await typeScore(60); await typeScore(180); await typeScore(60);
-await page.locator('#mode-cycle').click();   // Einzel-Darts -> Punkte
+await page.locator('#mode-toggle button[data-mode="total"]').click();
 await typeScore(81);
 await page.locator('#overlay-card [data-action="co-darts"]').first().click();
 await page.locator('#overlay-card [data-action="open-summary"]').click();
@@ -847,7 +847,7 @@ await page.locator('[data-action="next-match"]').click();
 await page.locator('#bulloff-buttons button').first().click();
 /* Leg 1 gewinnen: 180, 180, 141 */
 await typeScore(180); await typeScore(60); await typeScore(180); await typeScore(60);
-await page.locator('#mode-cycle').click();   // Einzel-Darts -> Punkte
+await page.locator('#mode-toggle button[data-mode="total"]').click();
 await typeScore(141);
 await page.locator('#overlay-card [data-action="co-darts"]').first().click();
 await page.locator('#overlay-card [data-action="ov-next-leg"]').click();
@@ -1352,7 +1352,7 @@ check('Average wurde gerechnet', qCar[qIds[0]].avg > 0);
 
 /* ---------- Turnier-Modus: nur im Ligaspiel, Umschalten per Zyklus-Taste ---------- */
 
-group('Umschalt-Taste: Punkte und Einzel-Darts im Kreis');
+group('Modus-Knoepfe: Punkte, Einzel-Darts und Turnier direkt klickbar');
 await page.evaluate(() => {
   const D = window.__dart, S = D.state();
   S.game = null;
@@ -1362,7 +1362,11 @@ await page.evaluate(() => {
 });
 await page.locator('[data-action="start-game"]').click();
 await page.locator('#bulloff-buttons button').first().click();
-check('die Umschalt-Taste zeigt den aktuellen Modus', (await text('#mode-cycle')).includes('Punkte'));
+check('drei Umschalter stehen oben - auch im Schnellen Spiel',
+  (await page.locator('#mode-toggle button:visible').count()) === 3,
+  String(await page.locator('#mode-toggle button:visible').count()));
+check('Punkte ist aktiv', await page.locator('#mode-toggle button[data-mode="total"]')
+  .evaluate((e) => e.classList.contains('active')));
 /* Die Sechzig ruft den Loewen - im normalen Spiel, nicht in der Liga. */
 await typeScore(60);
 await page.waitForTimeout(100);
@@ -1377,24 +1381,28 @@ await page.evaluate(() => {
   f.classList.remove('an', 'sechzig');
   f.innerHTML = '';
 });
-/* Eine vom Liga-Abend uebrig gebliebene Board-Einstellung: das Schnelle
-   Spiel bleibt trotzdem im normalen Bild und loescht sie nicht. */
+/* Eine vom Liga-Abend uebrig gebliebene Board-Einstellung startet das
+   Schnelle Spiel NICHT automatisch in der Riesenanzeige - und ein Wechsel
+   zwischen Punkte und Einzel-Darts loescht sie auch nicht. */
 await page.evaluate(() => {
   const D = window.__dart;
   D.state().settings.turnierModus = 1;
-  D.ui().turnier = true;
   D.setScreen('game');
 });
-check('trotz gemerktem Turnier-Modus bleibt das Schnelle Spiel normal',
+check('trotz gemerkter Board-Einstellung startet das Schnelle Spiel normal',
   (await visible('#pad-total')) &&
   await page.evaluate(() => document.getElementById('scoreboard').innerText.includes('Darts')));
-await page.locator('#mode-cycle').click();
+await page.locator('#mode-toggle button[data-mode="darts"]').click();
 check('ein Tipp wechselt auf Einzel-Darts', await visible('#pad-darts'));
-check('und die Board-Einstellung ueberlebt den Modus-Tipp',
+check('und die Board-Einstellung ueberlebt den Wechsel',
   await page.evaluate(() => window.__dart.state().settings.turnierModus === 1));
-await page.locator('#mode-cycle').click();
-check('der naechste Tipp fuehrt zurueck zu Punkte - kein Turnier-Modus im Schnellen Spiel',
-  await visible('#pad-total'));
+await page.locator('#mode-toggle button[data-mode="total"]').click();
+check('zurueck zu Punkte', await visible('#pad-total'));
+/* Der Turnier-Knopf schaltet die Riesenanzeige bewusst auch hier ein. */
+await page.locator('#mode-toggle button[data-mode="turnier"]').click();
+check('Turnier-Modus auch im Schnellen Spiel per Knopf', await visible('#pad-key'));
+await page.keyboard.press('Tab');
+check('Tab fuehrt zurueck', await visible('#pad-total'));
 await page.evaluate(() => {
   const D = window.__dart, S = D.state();
   S.game = null;
@@ -1419,9 +1427,8 @@ check('eine grosse Karte statt einer halb leeren Zweierreihe', await page.evalua
   document.querySelectorAll('#scoreboard .pcard').length === 1));
 check('der Verlauf steht mittig in einer Spalte', await page.evaluate(() =>
   document.getElementById('screen-game').classList.contains('solo')));
-await page.locator('#mode-cycle').click();
-await page.locator('#mode-cycle').click();
-check('der Zyklus kennt allein nur Punkte und Einzel-Darts', await visible('#pad-total'));
+check('allein gibt es keinen Turnier-Knopf',
+  await page.locator('#mode-toggle button[data-mode="turnier"]').isHidden());
 /* Der Zurueck-Knopf verspricht "Stand bleibt erhalten" - auch allein. */
 await page.evaluate(() => { window.__dart.ui().input = '60'; window.__dart.submitTotal(); });
 await page.locator('#screen-game [data-action="to-tournament"]').click();
@@ -1455,12 +1462,11 @@ await page.locator('[data-action="liga-finish"][data-value="1"]').click();
 await page.locator('[data-action="liga-los"]').click();
 check('das Ligaspiel steht', await visible('#screen-tournament'));
 await page.locator('#schedule .match-row .go:not(.wo)').first().click();
-check('im Liga-Einzel haengt der Turnier-Modus mit im Zyklus', await visible('#screen-game'));
-await page.locator('#mode-cycle').click();   // Punkte -> Einzel-Darts
-await page.locator('#mode-cycle').click();   // Einzel-Darts -> Turnier
+check('das Einzel oeffnet mit drei Umschaltern', await visible('#mode-toggle'));
+await page.locator('#mode-toggle button[data-mode="turnier"]').click();
 check('Tastatur-Feld sichtbar', await visible('#pad-key'));
 check('Zahlenfeld und Einzel-Darts weg', !(await visible('#pad-total')) && !(await visible('#pad-darts')));
-check('auch der Umschalter selbst ist weg - Esc fuehrt zurueck', !(await visible('#mode-cycle')));
+check('auch die Umschalter selbst sind weg - Esc fuehrt zurueck', !(await visible('#mode-toggle')));
 check('Verlauf ausgeblendet', !(await page.locator('#history').isVisible()));
 check('keine mittlere Finish-Leiste - der Finish steht im Spielerfeld',
   !(await visible('#checkout-bar')));
@@ -1523,12 +1529,10 @@ check('Loslassen fuehrt in die Spielansicht zurueck', !(await page.locator('#his
    am iPad) geht auch Cmd+. als Apple-Escape. */
 await page.keyboard.press('Tab');
 check('Tab fuehrt in den normalen Modus zurueck', await visible('#pad-total'));
-await page.locator('#mode-cycle').click();
-await page.locator('#mode-cycle').click();
+await page.locator('#mode-toggle button[data-mode="turnier"]').click();
 await page.keyboard.press('Meta+.');
 check('Cmd+. beendet den Turnier-Modus ebenfalls', await visible('#pad-total'));
-await page.locator('#mode-cycle').click();
-await page.locator('#mode-cycle').click();
+await page.locator('#mode-toggle button[data-mode="turnier"]').click();
 check('und der Weg zurueck steht wieder', await visible('#pad-key'));
 
 /* Ohne Hardware-Tastatur gaebe es weder Tab noch Esc - ein Tipp irgendwo
@@ -1537,8 +1541,7 @@ await page.locator('#screen-game').click({ position: { x: 200, y: 160 } });
 check('ein Tipp ins Bild zeigt den Notausgang', await visible('#turnier-exit'));
 await page.locator('#turnier-exit').click();
 check('der Notausgang beendet den Turnier-Modus', await visible('#pad-total'));
-await page.locator('#mode-cycle').click();
-await page.locator('#mode-cycle').click();
+await page.locator('#mode-toggle button[data-mode="turnier"]').click();
 check('und auch danach steht der Weg zurueck', await visible('#pad-key'));
 
 /* Der Modus ueberlebt den Neustart - der Bildschirm haengt ja fest am Board.
@@ -1777,7 +1780,7 @@ check('und wird nicht gefeiert', !(await feierAn()));
 /* ---------- Farben im Einzel-Dart-Zahlenfeld ---------- */
 
 group('Einzel-Darts: D und T sind blau, der Finish-Vorschlag bleibt rot');
-for (let i = 0; i < 3 && !(await visible('#pad-darts')); i++) await page.locator('#mode-cycle').click();
+await page.locator('#mode-toggle button[data-mode="darts"]').click();
 await page.locator('#mult-row button[data-mult="3"]').click();
 const farben = await page.evaluate(() => {
   const wurzel = getComputedStyle(document.documentElement);

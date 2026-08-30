@@ -493,10 +493,16 @@
    */
   function geteiltesTurnier() { return S.tour && S.tour.geteilt ? S.tour : null; }
 
-  /* Der Turnier-Modus (Riesenanzeige am Board) gehoert nur zu Liga-Einzeln -
-     Schnelles Spiel und normale Turniere laufen im normalen Bild. */
+  /* Der Turnier-Modus (Riesenanzeige am Board) gehoert zu Liga-Einzeln -
+     dort startet er am Board-iPad von selbst. In normalen Turnieren und im
+     Schnellen Spiel laesst er sich per Knopf dazuschalten; nur allein gibt
+     es ihn nicht (eine Seite des Bildes bliebe leer). */
   function ligaEinzel() {
     return !!(S.tour && S.tour.liga) && !(S.game && S.game.kind === 'quick');
+  }
+  function turnierErlaubt() {
+    if (S.game && S.game.kind === 'quick') return S.game.p.length > 1;
+    return !!S.tour;
   }
 
   /* Buergerlicher Name als ein String gespeichert, im Formular getrennt:
@@ -1686,6 +1692,7 @@
     }
     UI.mult = 1;
     UI.overlay = null;
+    UI.turnier = false;
     // Wie im Turnier wird auch hier ausgeworfen, wer anfängt - ausser
     // allein: gegen sich selbst bullt niemand aus. Das Spiel gilt dann
     // sofort als begonnen, sonst raeumte der Zurueck-Knopf es weg und
@@ -2889,7 +2896,7 @@
       var scored = matchStart(m) - remainingIn(leg, pid) + (pid === active ? pendingSum : 0);
       var avg = darts ? (scored / darts * 3).toFixed(1) : '–';
       var zeile, meta, pfinish = '';
-      if (UI.turnier && ligaEinzel()) {
+      if (UI.turnier && turnierErlaubt()) {
         /* Was geworfen wurde, steht in den Wurflisten unten links und
            rechts – in der Karte bleibt nur der Leg-Stand. */
         zeile = schnell ? '' : 'Legs ' + legsWon(m, pid);
@@ -3017,9 +3024,11 @@
       return '<div class="d ' + (d ? '' : 'empty') + '">' + (d ? dartLabel(d) : '–') + '</div>';
     }).join('');
 
-    var modusNamen = { total: 'Punkte', darts: 'Einzel-Darts', turnier: 'Turnier' };
-    UI.letzterModus = mode;
-    $('mode-cycle').innerHTML = modusNamen[mode] + '<span class="pfeile">\u21c4</span>';
+    $('mode-toggle').querySelectorAll('button').forEach(function (b) {
+      var bm = b.getAttribute('data-mode');
+      b.classList.toggle('active', bm === mode);
+      if (bm === 'turnier') b.classList.toggle('hidden', !turnierErlaubt());
+    });
     $('pad-total').classList.toggle('hidden', mode !== 'total');
     $('pad-darts').classList.toggle('hidden', mode !== 'darts');
     $('pad-key').classList.toggle('hidden', mode !== 'turnier');
@@ -3100,7 +3109,7 @@
   }
 
   function effectiveMode(rest) {
-    if (UI.turnier && ligaEinzel()) return 'turnier';
+    if (UI.turnier && turnierErlaubt()) return 'turnier';
     if (UI.modeOverride) return UI.modeOverride;
     var t = S.settings.dartModeFrom;
     return (t > 0 && rest <= t) ? 'darts' : 'total';
@@ -4532,6 +4541,7 @@
       return;
     }
     if (S.matches.length) archiveTournament();
+    UI.turnier = false;
     S.tour = { start: S.settings.start, bestOf: S.settings.bestOf, players: S.lineup.slice() };
     S.matches = buildSchedule(S.lineup.slice());
     S.current = null;
@@ -4600,8 +4610,9 @@
     S.current = id;
     UI.input = ''; UI.darts = []; UI.mult = 1; UI.modeOverride = null; UI.error = ''; UI.overlay = null;
     /* Am Board-iPad (Turnier-Modus gemerkt) startet jedes Liga-Einzel
-       direkt in der Riesenanzeige. */
-    UI.turnier = !!(S.settings.turnierModus === 1 && S.tour && S.tour.liga);
+       direkt in der Riesenanzeige. In normalen Turnieren bleibt einfach
+       an, was der Spieler zuletzt gewaehlt hat. */
+    if (S.tour && S.tour.liga) UI.turnier = S.settings.turnierModus === 1;
     S.screen = m.starter ? 'game' : 'bulloff';
     save();
     render();
@@ -5285,7 +5296,7 @@
     if (ev.target.id === 'overlay' && UI.overlay && !STICKY_OVERLAYS[UI.overlay.type]) {
       UI.overlay = null; UI.input = ''; render(); return;
     }
-    if (UI.turnier && ligaEinzel() && S.screen === 'game' && !UI.overlay &&
+    if (UI.turnier && turnierErlaubt() && S.screen === 'game' && !UI.overlay &&
         !ev.target.closest('#turnier-exit')) {
       zeigeTurnierExit();
     }
@@ -5300,21 +5311,20 @@
       return;
     }
 
-    var cycleBtn = ev.target.closest('#mode-cycle');
-    if (cycleBtn) {
-      /* Zyklisch zum naechsten Modus: Punkte -> Einzel-Darts -> Punkte,
-         im Liga-Einzel haengt der Turnier-Modus mit im Kreis. */
-      var folge = ['total', 'darts'];
-      if (ligaEinzel()) folge.push('turnier');
-      var jetztM = folge.indexOf(UI.letzterModus) >= 0 ? UI.letzterModus : 'total';
-      var neuerModus = folge[(folge.indexOf(jetztM) + 1) % folge.length];
-      UI.turnier = neuerModus === 'turnier';
-      UI.modeOverride = UI.turnier ? null : neuerModus;
+    var modeBtn = ev.target.closest('#mode-toggle button');
+    if (modeBtn) {
+      var gewaehlterModus = modeBtn.getAttribute('data-mode');
+      if (gewaehlterModus === 'turnier' && !turnierErlaubt()) return;
+      var turnierVorher = UI.turnier;
+      UI.turnier = gewaehlterModus === 'turnier';
+      UI.modeOverride = UI.turnier ? null : gewaehlterModus;
       /* Der Turnier-Modus überlebt einen Neustart: der Bildschirm hängt am
          Board und soll nach dem Wiederöffnen nicht neu eingestellt werden.
-         Nur Liga-Einzel schreiben das Gedaechtnis - ein Modus-Tipp im
-         Schnellen Spiel darf die Board-Einstellung nicht loeschen. */
-      if (ligaEinzel()) S.settings.turnierModus = UI.turnier ? 1 : 0;
+         Die Einstellung aendert sich nur, wenn der Modus selbst ein- oder
+         ausgeschaltet wird - ein Wechsel zwischen Punkte und Einzel-Darts
+         laesst das Board-Gedaechtnis in Ruhe. */
+      if (UI.turnier) S.settings.turnierModus = 1;
+      else if (turnierVorher) S.settings.turnierModus = 0;
       UI.error = '';
       save(); render();
       return;
@@ -5543,7 +5553,9 @@
 
   /* ================= Start ================= */
   S = load() || newState();
-  UI.turnier = !!(S.settings && S.settings.turnierModus === 1);
+  /* Die gemerkte Board-Einstellung zieht beim Start nur mitten im
+     Ligaspiel - ein normales Spiel beginnt immer im normalen Bild. */
+  UI.turnier = !!(S.settings && S.settings.turnierModus === 1 && S.tour && S.tour.liga);
   if (!S.lineup.length) S.lineup = activeProfiles().slice(0, 4).map(function (p) { return p.id; });
   if ((S.screen === 'cricket' || S.screen === 'rtw' || S.screen === 'finisher') && !S.game) S.screen = 'setup';
   /* Ein angefangenes Schnelles Spiel liegt in S.game, nicht im Spielplan –

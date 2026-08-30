@@ -542,9 +542,14 @@
 
   <div class="input-area">
     <div class="mode-row">
-      <!-- Eine Taste, die zyklisch durch die Eingabemodi schaltet:
-           Punkte -> Einzel-Darts -> (im Ligaspiel: Turnier) -> Punkte. -->
-      <button class="mode-cycle" id="mode-cycle">Punkte</button>
+      <!-- Drei direkt klickbare Eingabemodi. "Turnier" (Riesenanzeige am
+           Board) gibt es nur mit mindestens zwei Spielern - allein wird
+           der Knopf ausgeblendet. -->
+      <div class="segmented small" id="mode-toggle">
+        <button data-mode="total">Punkte</button>
+        <button data-mode="darts">Einzel-Darts</button>
+        <button data-mode="turnier">Turnier</button>
+      </div>
       <div id="visit-darts" class="visit-darts"></div>
     </div>
 
