@@ -451,6 +451,43 @@ async function main() {
     r = await julius.ruf('PUT', '/api/liga/zusagen/BOESE!!', { dabei: true });
     ok(r.status === 400 || r.status === 404, 'kaputte Termin-Kennungen werden abgewiesen');
 
+    console.log('\nBürgerlicher Name');
+    r = await julius.ruf('PATCH', '/api/me', { voll: '  Julius Klinzer  ' });
+    gleich(r.status, 200, 'der volle Name laesst sich am Profil speichern');
+    gleich(r.daten.nutzer.voll, 'Julius Klinzer', 'und kommt geputzt zurueck');
+    r = await tobi.ruf('GET', '/api/users');
+    {
+      const jU = r.daten.nutzer.find((n) => n.id === julius_id);
+      gleich(jU && jU.voll, 'Julius Klinzer', 'andere sehen den vollen Namen in der Mannschaftsliste');
+    }
+    r = await julius.ruf('PATCH', '/api/me', { voll: '' });
+    gleich(r.daten.nutzer.voll, null, 'leerer Eintrag loescht den vollen Namen wieder');
+    r = await julius.ruf('PATCH', '/api/me', { voll: 'x'.repeat(61) });
+    gleich(r.status, 400, 'ueberlange Namen werden abgewiesen');
+
+    console.log('\nLiga-Tabelle');
+    r = await fremd.ruf('GET', '/api/liga/tabelle');
+    gleich(r.status, 401, 'ohne Anmeldung gibt es keine Tabelle');
+    r = await julius.ruf('GET', '/api/liga/tabelle');
+    gleich(r.status, 200, 'angemeldet schon');
+    gleich(r.daten.tabelle, null, 'anfangs ist noch nichts eingetragen');
+    r = await julius.ruf('PUT', '/api/liga/tabelle', {
+      tabelle: { zeilen: [{ team: 'Blink 180', spiele: '1', punkte: '4', legs: '4:0' }] }
+    });
+    gleich(r.status, 200, 'Julius speichert einen Tabellenstand');
+    r = await tobi.ruf('GET', '/api/liga/tabelle');
+    gleich(r.daten.tabelle && r.daten.tabelle.zeilen[0].punkte, '4', 'Tobi sieht denselben Stand');
+    r = await tobi.ruf('PUT', '/api/liga/tabelle', {
+      tabelle: { zeilen: [{ team: 'Blink 180', spiele: '2', punkte: '8', legs: '8:0' }] }
+    });
+    gleich(r.status, 200, 'Tobi ueberschreibt ihn');
+    r = await julius.ruf('GET', '/api/liga/tabelle');
+    gleich(r.daten.tabelle.zeilen[0].punkte, '8', 'und Julius sieht die neue Fassung');
+    r = await julius.ruf('PUT', '/api/liga/tabelle', { tabelle: { blob: 'x'.repeat(30000) } });
+    gleich(r.status, 400, 'zu grosse Datenpakete werden abgewiesen');
+    r = await fremd.ruf('PUT', '/api/liga/tabelle', { tabelle: {} });
+    gleich(r.status, 401, 'ohne Anmeldung speichert niemand');
+
     console.log('\nRate-Limit');
     let gesperrt = false;
     for (let i = 0; i < 8; i++) {

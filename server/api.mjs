@@ -38,10 +38,10 @@ export function createApi(db, config) {
 
   /* Nach aussen geben wir nie den Passwort-Hash oder fremde E-Mails heraus. */
   function oeffentlich(u) {
-    return { id: u.id, name: u.display_name, avatar: u.avatar, hue: u.hue, dbl: u.dbl };
+    return { id: u.id, name: u.display_name, avatar: u.avatar, hue: u.hue, dbl: u.dbl, voll: u.real_name || null };
   }
   function eigenesProfil(u) {
-    return { id: u.id, name: u.display_name, email: u.email, avatar: u.avatar, hue: u.hue, dbl: u.dbl, seit: u.created_at };
+    return { id: u.id, name: u.display_name, email: u.email, avatar: u.avatar, hue: u.hue, dbl: u.dbl, voll: u.real_name || null, seit: u.created_at };
   }
 
   function uid(praefix) {
@@ -100,6 +100,15 @@ export function createApi(db, config) {
     const n = Number(wert);
     if (!Number.isInteger(n)) return null;
     return (n >= 1 && n <= 20) || n === 25 ? n : null;
+  }
+
+  /* Der buergerliche Name fuer den Spielberichtsbogen: optional, aber wenn,
+     dann etwas, das nach Vor- und Nachname aussieht. */
+  function pruefeVollName(wert) {
+    if (wert === null || wert === undefined || String(wert).trim() === '') return null;
+    const n = String(wert).trim().replace(/\s+/g, ' ');
+    if (n.length > 60) throw new HttpFehler(400, 'Der Name ist zu lang.');
+    return n;
   }
 
   function pruefeHue(wert) {
@@ -196,8 +205,9 @@ export function createApi(db, config) {
     const avatar = body.avatar === undefined ? u.avatar : pruefeAvatar(body.avatar);
     const hue = body.hue === undefined ? u.hue : pruefeHue(body.hue);
     const dbl = body.dbl === undefined ? u.dbl : pruefeDoppel(body.dbl);
-    db.prepare('UPDATE users SET display_name = ?, avatar = ?, hue = ?, dbl = ? WHERE id = ?')
-      .run(name, avatar, hue, dbl, u.id);
+    const voll = body.voll === undefined ? u.real_name : pruefeVollName(body.voll);
+    db.prepare('UPDATE users SET display_name = ?, avatar = ?, hue = ?, dbl = ?, real_name = ? WHERE id = ?')
+      .run(name, avatar, hue, dbl, voll, u.id);
     const frisch = db.prepare('SELECT * FROM users WHERE id = ?').get(u.id);
     sendJson(res, 200, { nutzer: eigenesProfil(frisch) });
   }
@@ -223,7 +233,7 @@ export function createApi(db, config) {
     verlangeNutzer(req);
     const alle = db
       .prepare(
-        "SELECT id, display_name, avatar, hue, dbl FROM users WHERE status = 'aktiv'" +
+        "SELECT id, display_name, real_name, avatar, hue, dbl FROM users WHERE status = 'aktiv'" +
           ' ORDER BY display_name COLLATE NOCASE'
       )
       .all();
@@ -616,6 +626,37 @@ export function createApi(db, config) {
     sendJson(res, 200, { zusagen: ligaAlleZusagen() });
   }
 
+  /* ---------- Ligatabelle ---------- */
+  /* Ein manuell gepflegter JSON-Blob: der Client baut die Tabelle, der
+     Server verwahrt nur den letzten Stand. */
+
+  async function ligaTabelleHolen(req, res) {
+    verlangeNutzer(req);
+    const z = db.prepare('SELECT daten, updated_at FROM liga_tabelle WHERE id = 1').get();
+    sendJson(res, 200, z
+      ? { tabelle: JSON.parse(z.daten), stand: z.updated_at }
+      : { tabelle: null, stand: null });
+  }
+
+  async function ligaTabelleSpeichern(req, res) {
+    pruefeHerkunft(req);
+    const u = verlangeNutzer(req);
+    const body = await leseJson(req);
+    /* Der Client rechnet mit { zeilen: [...] } - alles andere wuerde beim
+       Rendern jeden Reiter zerschiessen, also gar nicht erst annehmen. */
+    if (body.tabelle !== null && body.tabelle !== undefined &&
+        (typeof body.tabelle !== 'object' || !Array.isArray(body.tabelle.zeilen))) {
+      throw new HttpFehler(400, 'Unbrauchbare Tabellendaten.');
+    }
+    const daten = JSON.stringify(body.tabelle || null);
+    if (daten.length > 20000) throw new HttpFehler(400, 'Die Tabelle ist zu gross.');
+    db.prepare(
+      'INSERT INTO liga_tabelle (id, daten, updated_at, updated_by) VALUES (1, ?, ?, ?) ' +
+      'ON CONFLICT (id) DO UPDATE SET daten = excluded.daten, updated_at = excluded.updated_at, updated_by = excluded.updated_by'
+    ).run(daten, new Date().toISOString(), u.id);
+    sendJson(res, 200, { ok: true });
+  }
+
   /* ---------- Verteiler ---------- */
 
   const TID = '([A-Za-z0-9_-]{4,64})';
@@ -633,6 +674,8 @@ export function createApi(db, config) {
     ['DELETE', /^\/api\/games\/([A-Za-z0-9_-]{4,64})$/, spielLoeschen],
 
     ['GET', /^\/api\/liga\/zusagen$/, ligaZusagen],
+    ['GET', /^\/api\/liga\/tabelle$/, ligaTabelleHolen],
+    ['PUT', /^\/api\/liga\/tabelle$/, ligaTabelleSpeichern],
     ['PUT', /^\/api\/liga\/zusagen\/([a-z0-9-]{2,40})$/, ligaZusageSetzen],
 
     ['POST', /^\/api\/tournaments$/, turnierAnlegen],
