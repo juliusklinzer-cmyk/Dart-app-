@@ -15,3 +15,4 @@ deploy/.env
 .claude/skills/frontend-design/
 .claude/skills/spec-driven-development/
 .claude/skills/planning-and-task-breakdown/
+.agent-deploy.sh
