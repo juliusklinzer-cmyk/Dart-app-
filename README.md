@@ -209,8 +209,9 @@ Dart für Dart eingegeben: Single/Double/Triple wählen, Zahl tippen – plus `2
 `Bull` und `Miss`. Die Tasten behalten dabei die Feldzahl (18 bleibt 18) und
 bekommen ein kleines D bzw. T davor, damit das Zielfeld erkennbar bleibt. Umschalten
 geht jederzeit von Hand über die drei Knöpfe über der Eingabe:
-**Punkte / Einzel-Darts / Turnier** – direkt anklickbar. Der Turnier-Knopf
-verschwindet nur, wenn jemand allein spielt.
+**Punkte / Einzel-Darts / Turnier** – direkt anklickbar, und mit der
+**Tab-Taste** schaltet die Tastatur durch dieselben drei Modi im Kreis.
+Der Turnier-Knopf verschwindet nur, wenn jemand allein spielt.
 
 Rechts unten sitzt **„0 Punkte ▸"**: Wer dreimal am Doppel vorbeiwirft, schließt die
 Aufnahme mit einem Tipp ab, statt dreimal „Miss" zu tippen. Steht schon ein Dart, heißt
@@ -229,8 +230,9 @@ Tastatur-Systemleiste ein, und die Seite scrollt nie. Alles läuft über die Tas
 **Ziffern** tippen, **Enter** bucht, **Löschen** nimmt erst Ziffern und dann
 Aufnahmen zurück (auch über den Spielerwechsel hinweg), die Checkout-Abfrage
 beantworten **1/2/3**, das nächste Leg startet **Enter**, und **Shift** gedrückt
-halten zeigt die große Wurfliste (bis 13 Zeilen je Seite). Beendet wird der Modus
-mit **Tab** (oder Esc, am Magic Keyboard ohne Esc-Taste auch **⌘+.**) – und er
+halten zeigt die große Wurfliste (bis 13 Zeilen je Seite). **Tab** schaltet zum
+nächsten Modus weiter (aus dem Turnier-Modus also zurück zu Punkte), **Esc**
+(am Magic Keyboard ohne Esc-Taste auch **⌘+.**) beendet ihn direkt – und er
 überlebt einen Neustart. Auf einem Gerät ohne Tastatur zeigt ein Tipp irgendwo
 ins Bild für ein paar Sekunden den Knopf **„Turnier-Modus beenden"** – der
 Notausgang, damit niemand ohne Tab und Esc gefangen sitzt.

@@ -1402,7 +1402,14 @@ check('zurueck zu Punkte', await visible('#pad-total'));
 await page.locator('#mode-toggle button[data-mode="turnier"]').click();
 check('Turnier-Modus auch im Schnellen Spiel per Knopf', await visible('#pad-key'));
 await page.keyboard.press('Tab');
-check('Tab fuehrt zurueck', await visible('#pad-total'));
+check('Tab schaltet aus dem Turnier-Modus weiter zu Punkte', await visible('#pad-total'));
+/* Tab wandert durch alle drei Modi - wie ein Klick auf den naechsten Knopf. */
+await page.keyboard.press('Tab');
+check('Tab: Punkte -> Einzel-Darts', await visible('#pad-darts'));
+await page.keyboard.press('Tab');
+check('Tab: Einzel-Darts -> Turnier', await visible('#pad-key'));
+await page.keyboard.press('Tab');
+check('Tab: Turnier -> wieder Punkte', await visible('#pad-total'));
 await page.evaluate(() => {
   const D = window.__dart, S = D.state();
   S.game = null;
@@ -1429,6 +1436,9 @@ check('der Verlauf steht mittig in einer Spalte', await page.evaluate(() =>
   document.getElementById('screen-game').classList.contains('solo')));
 check('allein gibt es keinen Turnier-Knopf',
   await page.locator('#mode-toggle button[data-mode="turnier"]').isHidden());
+await page.keyboard.press('Tab');
+await page.keyboard.press('Tab');
+check('Tab pendelt allein nur zwischen Punkte und Einzel-Darts', await visible('#pad-total'));
 /* Der Zurueck-Knopf verspricht "Stand bleibt erhalten" - auch allein. */
 await page.evaluate(() => { window.__dart.ui().input = '60'; window.__dart.submitTotal(); });
 await page.locator('#screen-game [data-action="to-tournament"]').click();

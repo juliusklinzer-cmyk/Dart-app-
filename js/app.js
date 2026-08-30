@@ -3024,6 +3024,7 @@
       return '<div class="d ' + (d ? '' : 'empty') + '">' + (d ? dartLabel(d) : '–') + '</div>';
     }).join('');
 
+    UI.letzterModus = mode;
     $('mode-toggle').querySelectorAll('button').forEach(function (b) {
       var bm = b.getAttribute('data-mode');
       b.classList.toggle('active', bm === mode);
@@ -5279,6 +5280,22 @@
   /* Ein Tipp neben den Dialog schließt ihn – außer dort, wo eine Antwort
      nötig ist (Checkout-Abfrage, Spielende). */
   var STICKY_OVERLAYS = { 'checkout-darts': 1, 'leg-done': 1, 'match-done': 1, 'game-done': 1 };
+  /* Einen Eingabemodus waehlen - per Knopf oder Tab-Taste. Der Turnier-Modus
+     überlebt einen Neustart: der Bildschirm hängt am Board und soll nach dem
+     Wiederöffnen nicht neu eingestellt werden. Die Einstellung aendert sich
+     nur, wenn der Modus selbst ein- oder ausgeschaltet wird - ein Wechsel
+     zwischen Punkte und Einzel-Darts laesst das Board-Gedaechtnis in Ruhe. */
+  function waehleEingabemodus(neuerModus) {
+    if (neuerModus === 'turnier' && !turnierErlaubt()) return;
+    var turnierVorher = UI.turnier;
+    UI.turnier = neuerModus === 'turnier';
+    UI.modeOverride = UI.turnier ? null : neuerModus;
+    if (UI.turnier) S.settings.turnierModus = 1;
+    else if (turnierVorher) { S.settings.turnierModus = 0; UI.input = ''; }
+    UI.error = '';
+    save(); render();
+  }
+
   /* Turnier-Modus ohne Hardware-Tastatur: ein Tipp irgendwo ins Bild zeigt
      fuer ein paar Sekunden den Beenden-Knopf - der einzige Weg zurueck,
      wenn Tab und Esc fehlen (iPad ohne Tastatur). */
@@ -5313,20 +5330,7 @@
 
     var modeBtn = ev.target.closest('#mode-toggle button');
     if (modeBtn) {
-      var gewaehlterModus = modeBtn.getAttribute('data-mode');
-      if (gewaehlterModus === 'turnier' && !turnierErlaubt()) return;
-      var turnierVorher = UI.turnier;
-      UI.turnier = gewaehlterModus === 'turnier';
-      UI.modeOverride = UI.turnier ? null : gewaehlterModus;
-      /* Der Turnier-Modus überlebt einen Neustart: der Bildschirm hängt am
-         Board und soll nach dem Wiederöffnen nicht neu eingestellt werden.
-         Die Einstellung aendert sich nur, wenn der Modus selbst ein- oder
-         ausgeschaltet wird - ein Wechsel zwischen Punkte und Einzel-Darts
-         laesst das Board-Gedaechtnis in Ruhe. */
-      if (UI.turnier) S.settings.turnierModus = 1;
-      else if (turnierVorher) S.settings.turnierModus = 0;
-      UI.error = '';
-      save(); render();
+      waehleEingabemodus(modeBtn.getAttribute('data-mode'));
       return;
     }
 
@@ -5432,10 +5436,21 @@
       UI.overlay = null; UI.input = ''; render();
       return;
     }
-    /* Tab (und Esc bzw. ⌘+. am Magic Keyboard ohne Esc-Taste) führt aus dem
-       Turnier-Modus zurück in den normalen Modus – der Umschalter ist dort
-       ja ausgeblendet. Ein offener Dialog geht vor. */
-    var istAusstieg = ev.key === 'Tab' || ev.key === 'Escape' ||
+    /* Tab schaltet die drei Eingabemodi im Kreis durch - dieselben Knoepfe,
+       nur per Tastatur: Punkte -> Einzel-Darts -> Turnier -> Punkte (der
+       Turnier-Modus haengt nur mit im Kreis, wo es ihn gibt). Ein offener
+       Dialog geht vor. */
+    if (ev.key === 'Tab' && !UI.overlay && S.screen === 'game') {
+      ev.preventDefault();
+      var mFolge = ['total', 'darts'];
+      if (turnierErlaubt()) mFolge.push('turnier');
+      var mJetzt = mFolge.indexOf(UI.letzterModus) >= 0 ? UI.letzterModus : 'total';
+      waehleEingabemodus(mFolge[(mFolge.indexOf(mJetzt) + 1) % mFolge.length]);
+      return;
+    }
+    /* Esc (bzw. ⌘+. am Magic Keyboard ohne Esc-Taste) beendet den
+       Turnier-Modus direkt. */
+    var istAusstieg = ev.key === 'Escape' ||
       (ev.key === '.' && (ev.metaKey || ev.ctrlKey));
     if (istAusstieg && !UI.overlay && S.screen === 'game' && UI.turnier) {
       ev.preventDefault();
