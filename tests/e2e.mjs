@@ -499,11 +499,12 @@ check('Siege stehen an erster Stelle', (await kategorien())[0] === 'Siege', (awa
 check('danach der Average', (await kategorien())[1] === 'Average');
 check('und Siege ist voreingestellt',
   await page.locator('[data-action="board"][data-key="won"]').evaluate((e) => e.classList.contains('active')));
-check('der erste Platz traegt die Klinge', await page.evaluate(() => {
+check('nur der Erste leuchtet - Name und Zahl, keine Klinge mehr', await page.evaluate(() => {
   const erste = document.querySelector('#board-list .board-row');
   if (!erste) return true;                       // ohne Daten gibt es nichts zu kroenen
   return erste.classList.contains('top') &&
-    getComputedStyle(erste, '::after').content !== 'none';
+    getComputedStyle(erste, '::after').content === 'none' &&
+    getComputedStyle(erste.querySelector('.nm')).textShadow !== 'none';
 }));
 check('Cricket-Kategorien nicht in Classic', (await page.locator('[data-action="board"][data-key="mpr"]').count()) === 0);
 check('Verlaufsdiagramm für Classic', (await page.locator('#board-chart .chart').count()) === 1);
@@ -1862,6 +1863,35 @@ check('und die Regelwerke sind verlinkt',
 await page.locator('#liga-tabs button[data-tab="plan"]').click();
 check('zurueck zum Spielplan', await visible('#liga-plan'));
 
+group('Liga-Tabelle: eigener Reiter, von Hand gepflegt');
+await page.locator('#liga-tabs button[data-tab="tabelle"]').click();
+check('der Tabellen-Reiter oeffnet sich',
+  (await visible('#liga-tabelle')) && !(await visible('#liga-plan')));
+check('alle neun Teams der Liga stehen vorbefuellt drin',
+  (await page.locator('#lt-tabelle tbody tr').count()) === 9,
+  String(await page.locator('#lt-tabelle tbody tr').count()));
+check('Blink 180 ist hervorgehoben', await page.evaluate(() => {
+  const tr = document.querySelector('#lt-tabelle tr.leader');
+  return !!tr && tr.textContent.includes('Blink 180');
+}));
+check('jede Zeile laesst sich Feld fuer Feld ausfuellen',
+  (await page.locator('#lt-tabelle td[contenteditable]').count()) === 36);
+check('ohne Konto gibt es keinen Speichern-Knopf', await page.locator('#lt-speichern').isHidden());
+check('dafuer den Hinweis, sich anzumelden', (await text('#lt-stand')).includes('anmelden'));
+await page.locator('#liga-tabs button[data-tab="plan"]').click();
+
+group('Buergerlicher Name im Profil');
+await page.locator('#nav [data-screen="players"]').click();
+await page.locator('#players-list .player-card:has-text("Lenas")').click();
+await page.locator('[data-action="edit-current-profile"]').click();
+check('das Profil hat ein Feld fuer den buergerlichen Namen',
+  (await page.locator('[data-role="profile-voll"]').count()) === 1);
+await page.locator('[data-role="profile-voll"]').fill('Lena Musterfrau');
+await page.locator('[data-action="save-profile"]').click();
+check('der volle Name ist gespeichert', await page.evaluate(() =>
+  window.__dart.state().profiles.find((p) => p.name === 'Lenas').voll === 'Lena Musterfrau'));
+await page.locator('#nav [data-screen="liga"]').click();
+
 /* ---------- Ligaspiel-Modus: der Spielberichtsbogen als Spielplan ---------- */
 
 group('Ligaspiel: 16 Einzel nach Spielberichtsbogen');
@@ -1887,9 +1917,14 @@ check('der Team-Stand steht statt der Tabelle',
 check('die Gegner sind als Gaeste angelegt', await page.evaluate(() => {
   return window.__dart.state().profiles.filter((p) => p.gast && p.name.indexOf('Dachau ') === 0).length === 4;
 }));
+check('jede Begegnung traegt ihre H/G-Kennungen',
+  (await page.locator('#schedule .posmark').count()) === 32,
+  String(await page.locator('#schedule .posmark').count()));
+check('im Liga-Kontext steht der buergerliche Name statt des Spitznamens',
+  (await text('#schedule')).includes('Lena Musterfrau'));
 
 /* Erstes Einzel: kein Ausbullen – der Heimspieler wirft an. */
-await page.locator('#schedule .match-row .go').first().click();
+await page.locator('#schedule .match-row .go:not(.wo)').first().click();
 check('direkt auf dem Spielbildschirm, ohne Bull-Off', await visible('#screen-game'));
 check('der Heimspieler wirft das erste Leg an', await page.evaluate(() => {
   const D = window.__dart, m = D.currentMatch();
@@ -1902,7 +1937,12 @@ const visit = (n) => page.evaluate((v) => {
   window.__dart.submitTotal();
 }, n);
 for (let leg = 0; leg < 3; leg++) {
-  await visit(180); await visit(41);
+  await visit(180);
+  if (leg === 0) {
+    check('keine 180er-Feier mitten im Ligaspiel',
+      await page.evaluate(() => !document.querySelector('.feier.an')));
+  }
+  await visit(41);
   await visit(180); await visit(41);
   await visit(141);
   await page.locator('#overlay-card [data-action="co-darts"]').first().click();
@@ -1926,16 +1966,54 @@ check('die 180er stehen fuer den Spielbericht bereit', await page.evaluate(() =>
   const el = document.getElementById('liga-stand');
   return el.innerText.includes('180er');
 }));
+check('gross stehen die SWO-Punkte: 2:1 gewonnen = 3:1', await page.evaluate(() => {
+  const z = [...document.querySelectorAll('#liga-stand .lg-zahl')].map((e) => e.textContent.trim());
+  return z.join(':') === '3:1';
+}));
 check('jedes Einzel traegt seine Scheibe', await page.evaluate(() => {
   const M = window.__dart.state().matches;
   return M[0].scheibe === 'S1' && M[1].scheibe === 'S2';
 }));
 
+group('Kampflos nach SWO: nicht gestellter Spieler');
+check('offene Einzel bieten den w.o.-Knopf an',
+  (await page.locator('#schedule .go.wo').count()) === 15,
+  String(await page.locator('#schedule .go.wo').count()));
+await page.locator('#schedule .go.wo').first().click();
+check('der Dialog fragt, wer nicht antritt', (await text('#overlay-card')).includes('Kampflos'));
+/* Der Gast (zweiter Knopf) fehlt - unser Heimspieler gewinnt 2:0 ohne Wurf. */
+await page.locator('[data-action="liga-kampflos-wer"]').nth(1).click();
+check('das Einzel ist ohne einen einzigen Wurf gewertet', await page.evaluate(() => {
+  const m = window.__dart.state().matches.find((x) => x.kampflos);
+  return !!m && m.done && m.legs.length === 0;
+}));
+check('der Stand zaehlt es voll: 7:1 Punkte und Legs 4:1', await page.evaluate(() => {
+  const z = [...document.querySelectorAll('#liga-stand .lg-zahl')].map((e) => e.textContent.trim());
+  const t = document.getElementById('liga-stand').innerText.replace(/\s+/g, ' ');
+  return z.join(':') === '7:1' && t.includes('Legs 4:1');
+}));
+check('am gewerteten Einzel steht jetzt aendern', (await text('#schedule')).includes('ändern'));
+/* Und die Wertung laesst sich zuruecknehmen ... */
+await page.locator('#schedule .go.wo').first().click();
+await page.locator('[data-action="liga-kampflos-zurueck"]').click();
+check('zurueckgenommen: wieder 3:1 Punkte und das Einzel offen', await page.evaluate(() => {
+  const z = [...document.querySelectorAll('#liga-stand .lg-zahl')].map((e) => e.textContent.trim());
+  return z.join(':') === '3:1' && !window.__dart.state().matches.some((x) => x.kampflos);
+}));
+/* ... und fuer den Spielbericht gleich wieder eintragen. */
+await page.locator('#schedule .go.wo').first().click();
+await page.locator('[data-action="liga-kampflos-wer"]').nth(1).click();
+
 /* Ohne Finish-Hilfen (Voreinstellung): im Einzel gibt es keine Finish-Leiste –
    der Schreiber darf das Doppel ja nicht ansagen (WDF 3.08). */
-await page.locator('#schedule .match-row .go').first().click();
+await page.locator('#schedule .match-row .go:not(.wo)').first().click();
 check('Liga-konform: keine Finish-Leiste im Einzel', !(await visible('#checkout-bar')));
 await page.locator('#screen-game [data-action="to-tournament"]').click();
+/* Das Oeffnen hat ein leeres Leg angelegt - der w.o.-Knopf muss bleiben,
+   solange kein echter Wurf gefallen ist (15 = 14 offene + 1x aendern). */
+check('ein nur angetipptes Einzel behaelt den w.o.-Knopf',
+  (await page.locator('#schedule .go.wo').count()) === 15,
+  String(await page.locator('#schedule .go.wo').count()));
 
 /* Spielerwechsel: nur auf derselben Position, Gegner als neuer Gast. */
 await page.locator('[data-action="roster-change"]').click();
@@ -1963,9 +2041,17 @@ check('mit den 16 Einzeln in Bogen-Reihenfolge', await page.evaluate(() => {
   const t = document.getElementById('bericht-blatt').textContent;
   return t.includes('H1 – G1') && t.includes('H3 – G1') && t.includes('H2 – G4');
 }));
-check('Legs und laufendes Ergebnis stehen drin', await page.evaluate(() => {
+check('Legs und kumulierte SWO-Punkte stehen drin', await page.evaluate(() => {
   const t = document.getElementById('bericht-blatt').textContent.replace(/\s+/g, ' ');
-  return t.includes('2 : 1') && t.includes('1 : 0');
+  return t.includes('2 : 1') && t.includes('3 : 1') && t.includes('7 : 1');
+}));
+check('das kampflose Einzel traegt den w.o.-Vermerk', await page.evaluate(() => {
+  const t = document.getElementById('bericht-blatt').textContent.replace(/\s+/g, ' ');
+  return t.includes('2 : 0 w.o.');
+}));
+check('der Nachname aus dem Profil steht getrennt im Bogen', await page.evaluate(() => {
+  const t = document.getElementById('bericht-blatt').textContent;
+  return t.includes('Musterfrau');
 }));
 check('die Highlights stehen in Udos Form', await page.evaluate(() => {
   const t = document.getElementById('bericht-blatt').textContent;
@@ -1994,9 +2080,27 @@ check('Lenas fuehrt mit ihrem Liga-Sieg',
   (await page.locator('#board-list .board-row').first().innerText()).includes('Lenas'));
 check('das Ligaspiel steht im Spieltag-Log', await page.evaluate(() => {
   const t = document.getElementById('match-log').innerText;
-  return t.includes('1:0') && t.includes('TSV Dachau');
+  /* Zwei gewertete Einzel: das gespielte und das kampflose. */
+  return t.includes('2:0') && t.includes('TSV Dachau');
 }));
 check('die Rekorde kommen aus dem Ligaspiel', (await text('#records')).includes('141'));
+
+group('Gast direkt loeschen');
+await page.evaluate(() => window.__dart.setScreen('players'));
+check('der Dachauer Gast steht in der Spielerliste', (await text('#players-list')).includes('Dachau 1'));
+await page.locator('#players-list .player-card:has-text("Dachau 1")').click();
+await page.locator('[data-action="edit-current-profile"]').click();
+check('der Dialog bietet direktes Loeschen an',
+  (await page.locator('[data-action="delete-guest"]').count()) === 1);
+await page.locator('[data-action="delete-guest"]').click();
+check('der Gast ist sofort aus der Spielerliste verschwunden',
+  !(await text('#players-list')).includes('Dachau 1'));
+check('seine Einzel bleiben in der Historie erhalten', await page.evaluate(() => {
+  const h = window.__dart.state().history.find((x) => x.liga);
+  return !!h && h.matches.some((m) => m.done);
+}));
+await page.locator('#nav [data-screen="boards"]').click();
+check('aus der Rangliste ist er ebenfalls raus', !(await text('#board-list')).includes('Dachau 1'));
 
 /* Aufraeumen fuer die folgenden Gruppen – Liga-Archiv und Dachauer Gaeste
    verschwinden wieder, der Rest der Suite rechnet ohne sie. */

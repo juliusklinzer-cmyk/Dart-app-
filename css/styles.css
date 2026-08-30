@@ -347,8 +347,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   border-top: 1px solid var(--line); cursor: pointer;
 }
 .board-row:first-child { border-top: none; }
-.board-row.top { background: var(--accent-faint); }
-.board-row .pos { width: 28px; text-align: center; color: var(--muted); font-size: 0.9rem; }
+.board-row .pos { width: 36px; text-align: center; color: var(--muted); font-size: 0.9rem; }
 .board-row .nm { flex: 1; font-weight: 600; }
 .board-row .val { font-weight: 800; font-variant-numeric: tabular-nums; }
 .board-empty { padding: 18px; text-align: center; color: var(--muted); font-size: 0.9rem; }
@@ -813,9 +812,21 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   #screen-setup.active > #resume-box,
   #screen-setup.active > [data-action="start-game"],
   #screen-setup.active > .footer-note { grid-column: 1 / -1; }
-  #screen-boards.active { display: grid; grid-template-columns: 1.15fr 1fr; gap: 0 16px; align-items: start; }
+  /* Rangliste: Modus und Unterfilter volle Breite, darunter links die
+     Liste und rechts Verlauf plus Rekorde – keine leeren Felder. */
+  #screen-boards.active {
+    display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    gap: 0 16px; align-items: start; grid-auto-flow: row dense;
+  }
   #screen-boards.active > .app-header,
-  #screen-boards.active > #board-mode { grid-column: 1 / -1; }
+  #screen-boards.active > #board-mode,
+  #screen-boards.active > #board-chips,
+  #screen-boards.active > #board-log { grid-column: 1 / -1; }
+  #screen-boards.active > .card.no-pad,
+  #screen-boards.active > #board-hint { grid-column: 1; }
+  #screen-boards.active > #board-chart,
+  #screen-boards.active > #board-rekorde { grid-column: 2; }
+  #screen-boards.active .board-row .pos { width: 50px; }
   #board-chart .chart { max-height: 42vh; }
   /* Die Hauptaktion des Turniers bleibt immer sichtbar. */
   #screen-tournament [data-action="next-match"],
@@ -1889,33 +1900,16 @@ button, input, select, textarea { font-family: inherit; }
   text-shadow: 0 0 8px var(--laser-weich);
 }
 
-/* ================= Rangliste im gleichen Licht ================= */
+/* ================= Rangliste ================= */
 /*
- * Die Liste ist eine Rangfolge, keine Warnung – also weisser Rahmen und
- * blauer Schein statt roter Flaeche. Der erste Platz bekommt die Klinge
- * unter die Zeile gelegt, so wie der Fuehrende im Cricket.
+ * Schlichte Zeilen mit Trennlinien – hervorgehoben wird nur der Erste,
+ * und zwar allein durch Name und Zahl im Laserlicht. Keine Rahmen,
+ * keine Klinge, keine Flaeche: die Liste selbst bleibt ruhig.
  */
-.board-row {
-  border-radius: 12px; margin-bottom: 4px; position: relative;
-  border-top: none;
-  box-shadow: inset 0 0 0 1px var(--line);
-}
-.board-row:first-child { border-top: none; }
-.board-row.top {
-  background: var(--aktiv-flaeche);
-  box-shadow: inset 0 0 0 1px var(--aktiv-linie), 0 0 26px var(--schein);
-}
-.board-row.top .nm { font-weight: 800; }
+.board-row.top .nm,
 .board-row.top .val {
-  color: #fff;
+  font-weight: 800; color: #fff;
   text-shadow: 0 0 8px var(--laser), 0 0 18px var(--laser-weich);
-}
-/* Die Klinge: liegt unter der ersten Zeile und leuchtet nach aussen. */
-.board-row.top::after {
-  content: ''; position: absolute; left: 14px; right: 14px; bottom: 4px; height: 3px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, var(--laser), var(--laser-hell) 55%, #fff);
-  box-shadow: 0 0 5px var(--laser), 0 0 14px var(--laser-weich);
 }
 
 /* Dieselbe Sprache in der Turniertabelle. */
@@ -2370,3 +2364,36 @@ button, input, select, textarea { font-family: inherit; }
   .blatt { border-radius: 0; margin: 0; max-width: none; padding: 0; }
   .blatt [contenteditable]:focus { background: transparent; }
 }
+
+/* Positionskennung (H1/G1) vor den Namen im Liga-Spielplan – klein und
+   gedeckt, damit der Name das Bild bestimmt. */
+.posmark {
+  display: inline-block; min-width: 22px; text-align: center;
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.4px;
+  color: var(--muted); background: var(--accent-faint);
+  border: 1px solid var(--line); border-radius: 6px;
+  padding: 1px 3px; vertical-align: 1px;
+}
+
+/* Der kampflos-Knopf neben einer Begegnung: leiser als "Spielen",
+   aber mit eigenem Rahmen als Knopf erkennbar (.go selbst ist rahmenlos). */
+.match-row .go.wo {
+  background: transparent; color: var(--muted);
+  border: 1px solid var(--line); font-weight: 500;
+}
+
+/* Drei Reiter statt zwei (Liga: Spielplan | Tabelle | Regeln). */
+.konto-tabs.drei { grid-template-columns: 1fr 1fr 1fr; }
+
+/* Bürgerlicher Name im Profil – gleiche Optik wie das Namensfeld,
+   nur eine Stufe kleiner, weil es das Nebenfeld ist. */
+.name-input.klein { font-size: 1rem; }
+
+/* Von Hand gepflegte Ligatabelle: editierbare Zellen bekommen beim
+   Bearbeiten einen ruhigen Fokusrahmen statt des Browser-Standards. */
+#lt-tabelle td[contenteditable] { min-width: 44px; cursor: text; }
+#lt-tabelle td[contenteditable]:focus {
+  outline: 2px solid var(--accent-dark);
+  outline-offset: -2px; border-radius: 4px;
+}
+#liga-tabelle .btn.full { margin-top: 12px; }

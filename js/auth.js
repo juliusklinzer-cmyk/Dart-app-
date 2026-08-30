@@ -78,7 +78,7 @@
     if (!nutzer) return Promise.resolve();
     var p = D.profile(nutzer.id);
     if (!p) return Promise.resolve();
-    return ruf('PATCH', '/api/me', { name: p.name, avatar: p.avatar, hue: p.hue, dbl: p.dbl || null }).then(function (daten) {
+    return ruf('PATCH', '/api/me', { name: p.name, avatar: p.avatar, hue: p.hue, dbl: p.dbl || null, voll: p.voll || null }).then(function (daten) {
       nutzer = daten.nutzer;
       profilOffen = false;
     });
@@ -103,12 +103,15 @@
         // Das Lieblingsdoppel gehoert dem Account, nicht dem Geraet: so gilt
         // es auch, wenn ein Kollege den Abend auf seinem iPad mitschreibt.
         p.dbl = r.dbl || null;
+        // Der buergerliche Name ebenso -- er steht auf dem Spielbericht.
+        p.voll = r.voll || null;
         p.hidden = false;
       } else {
         S.profiles.push({
           id: r.id, name: r.name, avatar: r.avatar,
           hue: typeof r.hue === 'number' && r.hue ? r.hue : D.freeHue(),
           dbl: r.dbl || null,
+          voll: r.voll || null,
           created: Date.now()
         });
       }

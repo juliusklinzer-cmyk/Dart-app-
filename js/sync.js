@@ -433,6 +433,19 @@
       .then(function (d) { return d.zusagen || {}; });
   }
 
+  /* Die manuell gepflegte Ligatabelle: ein Blob auf dem Server. */
+  function ligaTabelleHolen() {
+    if (!window.DartKonto || !nutzer) return Promise.resolve(null);
+    return window.DartKonto.ruf('GET', '/api/liga/tabelle')
+      .then(function (d) { return d.tabelle || null; })
+      .catch(function () { return null; });
+  }
+
+  function ligaTabelleSpeichern(tabelle) {
+    if (!window.DartKonto || !nutzer) return Promise.reject(new Error('Nicht angemeldet.'));
+    return window.DartKonto.ruf('PUT', '/api/liga/tabelle', { tabelle: tabelle });
+  }
+
   /* ================= Start ================= */
 
   function start() {
@@ -451,7 +464,9 @@
       wartend: function () { return zustand.outbox.length; },
       liga: {
         zusagen: ligaZusagenHolen,
-        zusage: ligaZusageSetzen
+        zusage: ligaZusageSetzen,
+        tabelle: ligaTabelleHolen,
+        tabelleSpeichern: ligaTabelleSpeichern
       },
       turnier: {
         offen: turniereOffen,

@@ -772,10 +772,14 @@
     if (k && k.length) visit.k = k.map(function (x) { return { m: x.m, n: x.n }; });
     leg.visits.push(visit);
 
+    /* Im Ligaspiel wird nicht gefeiert - der Schreiber ist Schiedsrichter,
+       und ein Vollbild-Loewe mitten im Einzel gegen ein fremdes Team waere
+       genau die Zwischenaktion, die die SWO dem Schreiber verbietet. */
+    var ligaMatch = m.kind !== 'quick' && S.tour && S.tour.liga;
     // Höher geht es mit drei Darts nicht.
-    if (!isBust && score === 180) feiere180(pid);
+    if (!isBust && score === 180 && !ligaMatch) feiere180(pid);
     // Die 60 gehört dem Löwen – bei jeder geworfenen 60 (siehe feiere60).
-    else if (!isBust && score === 60) feiere60(pid);
+    else if (!isBust && score === 60 && !ligaMatch) feiere60(pid);
 
     UI.input = ''; UI.darts = []; UI.mult = 1; UI.modeOverride = null; UI.error = '';
 
@@ -993,6 +997,7 @@
     matchLists.forEach(function (entry) {
       var start = entry.start || 501;
       entry.matches.forEach(function (m) {
+        if (m.kampflos) return;
         if (m.done) {
           /* Nicht auf zwei Spieler festgelegt: ein Schnelles Spiel hat so
              viele Teilnehmer wie ausgewaehlt wurden. Gewonnen hat einer,
@@ -1900,7 +1905,7 @@
     if (S.screen === 'setup' && letzterScreen !== 'setup') beitretbareHolen();
     // Zusagen frisch holen, wenn man die Liga-Seite betritt – nicht bei
     // jedem Zeichnen, das wäre eine Anfrage je Tastendruck.
-    if (S.screen === 'liga' && letzterScreen !== 'liga') ligaZusagenLaden();
+    if (S.screen === 'liga' && letzterScreen !== 'liga') { ligaZusagenLaden(); ligaTabelleLaden(); }
     letzterScreen = S.screen;
     if (S.screen === 'tournament') renderTournament();
     if (S.screen === 'boards') renderBoards();
@@ -2040,20 +2045,50 @@
     }
   }
 
+  /* Im Liga-Betrieb zaehlt der buergerliche Name (SWO: keine Kuenstlernamen).
+     Wer keinen gepflegt hat, steht mit dem Anzeigenamen da. */
+  function ligaName(pid) {
+    var p = profile(pid);
+    return p && p.voll ? p.voll : pname(pid);
+  }
+
+  /* Die Punktestaffel der SWO je Einzel: Best of 3: 2:0 = 4:0, 2:1 = 3:1 -
+     Best of 5: 3:0 = 6:0, 3:1 = 5:1, 3:2 = 4:2. Kampflos zaehlt wie ein
+     glattes Ergebnis. Rueckgabe [Punkte Sieger, Punkte Verlierer]. */
+  function ligaPunkte(m, gewinnLegs) {
+    if (!m.done) return [0, 0];
+    var not = gewinnLegs || legsToWin();
+    var verliererLegs = m.kampflos ? 0
+      : legsWon(m, m.winner === m.p[0] ? m.p[1] : m.p[0]);
+    if (not === 2) return verliererLegs === 0 ? [4, 0] : [3, 1];
+    return verliererLegs === 0 ? [6, 0] : verliererLegs === 1 ? [5, 1] : [4, 2];
+  }
+
   /* Team-Stand und Spielbericht-Highlights eines Ligaspiels – gebraucht in
      der Übersicht und auf dem Endstand-Bildschirm. */
   function ligaStandDaten() {
     var lg = S.tour && S.tour.liga;
     if (!lg) return null;
-    var d = { wirS: 0, sieS: 0, wirL: 0, sieL: 0, fertige: 0, hl: [] };
+    var d = { wirS: 0, sieS: 0, wirL: 0, sieL: 0, wirP: 0, sieP: 0, fertige: 0, hl: [] };
     S.matches.forEach(function (m) {
       var unsere = lg.wir.indexOf(m.p[0]) >= 0 ? m.p[0] : m.p[1];
       var ihre = m.p[0] === unsere ? m.p[1] : m.p[0];
-      d.wirL += legsWon(m, unsere);
-      d.sieL += legsWon(m, ihre);
+      /* Ein kampfloses Einzel hat keine echten Legs - fuer Stand und Bogen
+         zaehlt es trotzdem als glattes Ergebnis. */
+      if (m.kampflos && m.done) {
+        if (m.winner === unsere) d.wirL += legsToWin(); else d.sieL += legsToWin();
+      } else {
+        d.wirL += legsWon(m, unsere);
+        d.sieL += legsWon(m, ihre);
+      }
       if (m.done) {
         d.fertige++;
-        if (m.winner === unsere) d.wirS++; else d.sieS++;
+        var pkt = ligaPunkte(m);
+        if (m.winner === unsere) {
+          d.wirS++; d.wirP += pkt[0]; d.sieP += pkt[1];
+        } else {
+          d.sieS++; d.sieP += pkt[0]; d.wirP += pkt[1];
+        }
       }
     });
     /* Die Highlights, die der Spielberichtsbogen abfragt: 180er,
@@ -2074,12 +2109,14 @@
   }
 
   function ligaTeamsHtml(d) {
+    /* Gross stehen die PUNKTE nach SWO-Staffel - das ist die Wertung, die
+       in die Ligatabelle geht. Einzel und Legs stehen darunter. */
     return '<div class="lg-teams">' +
       '<div class="lg-team"><div class="lg-name">' + esc(LIGA.team) + '</div>' +
-        '<div class="lg-zahl">' + d.wirS + '</div></div>' +
+        '<div class="lg-zahl">' + d.wirP + '</div></div>' +
       '<div class="lg-doppel">:</div>' +
       '<div class="lg-team"><div class="lg-name">' + esc(S.tour.liga.gegner) + '</div>' +
-        '<div class="lg-zahl">' + d.sieS + '</div></div>' +
+        '<div class="lg-zahl">' + d.sieP + '</div></div>' +
       '</div>';
   }
 
@@ -2116,8 +2153,9 @@
       var lsd = ligaStandDaten();
       $('liga-stand').innerHTML =
         ligaTeamsHtml(lsd) +
-        '<div class="lg-legs">Legs ' + lsd.wirL + ':' + lsd.sieL + ' · ' +
-          lsd.fertige + ' von ' + S.matches.length + ' Einzeln gespielt</div>' +
+        '<div class="lg-legs">Einzel ' + lsd.wirS + ':' + lsd.sieS + ' · Legs ' +
+          lsd.wirL + ':' + lsd.sieL + ' · ' +
+          lsd.fertige + ' von ' + S.matches.length + ' gespielt</div>' +
         ligaHighlightsHtml(lsd) +
         '<button class="btn ghost full" data-action="liga-bericht">Spielbericht ansehen &amp; drucken</button>';
     }
@@ -2141,20 +2179,34 @@
         round = m.round;
         html += '<div class="round-label">' + (liga ? 'Durchgang ' : 'Runde ') + round + '</div>';
       }
-      var a = pname(m.p[0]), b = pname(m.p[1]);
+      /* Im Ligaspiel steht die Begegnung wie auf dem Bogen: H1 Name - G1
+         Name, mit buergerlichen Namen, wenn gepflegt. */
+      var a = liga ? ligaName(m.p[0]) : pname(m.p[0]);
+      var b = liga ? ligaName(m.p[1]) : pname(m.p[1]);
+      var posA = liga && m.posPaar ? '<span class="posmark">H' + (m.posPaar[0] + 1) + '</span> ' : '';
+      var posB = liga && m.posPaar ? '<span class="posmark">G' + (m.posPaar[1] + 1) + '</span> ' : '';
       var isNext = next && next.id === m.id;
-      var score = m.legs.length ? legsWon(m, m.p[0]) + ':' + legsWon(m, m.p[1]) : '–:–';
+      var score = m.kampflos
+        ? (m.winner === m.p[0] ? legsToWin() + ':0' : '0:' + legsToWin()) + ' w.o.'
+        : m.legs.length ? legsWon(m, m.p[0]) + ':' + legsWon(m, m.p[1]) : '–:–';
       html += '<div class="match-row ' + (m.done ? 'done' : '') + (m.void ? ' void' : '') + ' ' + (isNext ? 'next' : '') + '">' +
         '<div class="pair">' +
-          (m.winner === m.p[0] ? '<b>' + esc(a) + '</b>' : esc(a)) + ' <span class="muted">vs</span> ' +
-          (m.winner === m.p[1] ? '<b>' + esc(b) + '</b>' : esc(b)) +
+          posA + (m.winner === m.p[0] ? '<b>' + esc(a) + '</b>' : esc(a)) + ' <span class="muted">vs</span> ' +
+          posB + (m.winner === m.p[1] ? '<b>' + esc(b) + '</b>' : esc(b)) +
         '</div>' +
         (liga && m.scheibe ? '<span class="scheibe">' + m.scheibe + '</span>' : '') +
         '<div class="res">' + (m.void ? (m.started ? 'abgebrochen ' + score : 'entfällt') : score) + '</div>' +
-        (m.done || m.void ? ''
+        (m.done || m.void
+          ? (liga && m.kampflos
+            ? '<button class="go wo" data-action="liga-kampflos" data-id="' + m.id + '">ändern</button>'
+            : '')
           : m.belegtVon ? '<span class="belegt">läuft bei ' + esc(m.belegtVon) + '</span>'
           : '<button class="go" data-action="open-match" data-id="' + m.id + '">' +
-            (m.legs.length ? 'Weiter' : 'Start') + '</button>') +
+            (m.legs.length ? 'Weiter' : 'Start') + '</button>' +
+            (liga && !m.legs.some(function (l) { return l.visits.length > 0; })
+              ? '<button class="go wo" data-action="liga-kampflos" data-id="' + m.id + '" ' +
+                'title="Kampflos werten" aria-label="Kampflos werten">w.o.</button>'
+              : '')) +
         '</div>';
     });
     $('schedule').innerHTML = html;
@@ -2363,18 +2415,24 @@
         ligaLog.unshift({ liga: S.tour.liga, matches: S.matches, at: Date.now(), live: true });
       }
       $('match-log').innerHTML = ligaLog.map(function (h) {
-        var wirS = 0, sieS = 0;
+        /* Gewonnen ist ein Spieltag nach SWO-PUNKTEN - 8:8 nach Einzeln
+           kann nach Punkten laengst entschieden sein. */
+        var not = Math.floor(((h.settings && h.settings.bestOf) || 3) / 2) + 1;
+        var wirS = 0, sieS = 0, wirP = 0, sieP = 0;
         h.matches.forEach(function (m) {
           if (!m.done) return;
           var uns = h.liga.wir.indexOf(m.p[0]) >= 0 ? m.p[0] : m.p[1];
-          if (m.winner === uns) wirS++; else sieS++;
+          var pkt = ligaPunkte(m, not);
+          if (m.winner === uns) { wirS++; wirP += pkt[0]; sieP += pkt[1]; }
+          else { sieS++; sieP += pkt[0]; wirP += pkt[1]; }
         });
         return '<div class="log-row">' +
-          '<div class="lp ' + (wirS > sieS ? 'w' : '') + '">' + esc(LIGA.team) +
+          '<div class="lp ' + (wirP > sieP ? 'w' : '') + '">' + esc(LIGA.team) +
             '<span class="a">' + h.liga.nr + '. Spieltag · ' + (h.liga.heim ? 'Heim' : 'Auswärts') + '</span></div>' +
-          '<div class="ls">' + wirS + ':' + sieS + '</div>' +
-          '<div class="lp right ' + (sieS > wirS ? 'w' : '') + '">' + esc(h.liga.gegner) + '</div>' +
-          '<div class="ld">' + fmtDate(h.at) + (h.live ? ' · läuft gerade' : '') + '</div>' +
+          '<div class="ls">' + wirP + ':' + sieP + '</div>' +
+          '<div class="lp right ' + (sieP > wirP ? 'w' : '') + '">' + esc(h.liga.gegner) + '</div>' +
+          '<div class="ld">' + fmtDate(h.at) + ' · Einzel ' + wirS + ':' + sieS +
+            (h.live ? ' · läuft gerade' : '') + '</div>' +
           '</div>';
       }).join('') || '<p class="hint">Noch keine Ligaspiele.</p>';
       return;
@@ -2413,7 +2471,12 @@
 
   function renderPlayers() {
     var map = career();
-    $('players-list').innerHTML = S.profiles.map(function (p) {
+    /* Geloeschte bzw. abgeraeumte Gaeste tauchen hier gar nicht mehr auf –
+       ausgeblendete Team-Profile bleiben (ausgegraut) sichtbar, damit man
+       sie wieder einblenden kann. */
+    $('players-list').innerHTML = S.profiles.filter(function (p) {
+      return !(p.gast && p.hidden);
+    }).map(function (p) {
       var st = map[p.id];
       return '<div class="card player-card ' + (p.hidden ? 'hidden-profile' : '') + '" data-action="open-profile" data-id="' + p.id + '" role="button" tabindex="0">' +
         avatarHTML(p, 'lg') +
@@ -2521,6 +2584,58 @@
   /* ================= Liga-Spielplan ================= */
 
   var ligaZusagen = null;   // { terminId: [{id, name, avatar, hue}] } vom Server
+  var ligaTabelle = null;   // { zeilen: [{team, spiele, punkte, legs}] } vom Server
+  var ligaTabelleKennung = null;
+  var ligaTabelleMeldung = '';
+
+  /* Alle Teams unserer Liga - fuer die leere Tabelle vorbefuellt. */
+  var LIGA_TEAMS = ['Blink 180', 'TSV Dachau 1865 4', 'Dart Artists Germering II',
+    'Voodoo Darters', 'd`Haberer 2', 'DCO', 'Treff ma nix', 'TSV Oberpframmern',
+    'FT Gern Darts II'];
+
+  function ligaTabelleLaden() {
+    if (!window.DartSync || !window.DartSync.liga || !window.DartSync.liga.tabelle) return;
+    window.DartSync.liga.tabelle().then(function (t) {
+      if (!t) return;
+      ligaTabelle = t;
+      if (S.screen === 'liga') render();
+    });
+  }
+
+  function renderLigaTabelle() {
+    var online = !!(window.DartSync && window.DartSync.liga && window.DartKonto && window.DartKonto.nutzer());
+    $('lt-speichern').classList.toggle('hidden', !online);
+    $('lt-stand').textContent = online
+      ? ligaTabelleMeldung
+      : 'Zum Speichern für alle bitte anmelden – hier lässt sich nur probeweise tippen.';
+
+    /* Waehrend jemand in einer Zelle tippt, wird nichts neu gebaut - auch
+       dann nicht, wenn gerade ein anderer Serverstand hereingekommen ist.
+       Sonst verschwaende die Eingabe unter den Fingern. */
+    var fokus = document.activeElement;
+    if (fokus && fokus.closest && fokus.closest('#lt-tabelle')) return;
+
+    /* Nicht bei jedem Zeichnen neu bauen - Neuaufbau nur bei anderem
+       Serverstand (sonst blieben Handkorrekturen nicht stehen). */
+    var zeilen = (ligaTabelle && Array.isArray(ligaTabelle.zeilen) && ligaTabelle.zeilen.length)
+      ? ligaTabelle.zeilen
+      : LIGA_TEAMS.map(function (t) { return { team: t, spiele: '', punkte: '', legs: '' }; });
+    var kennung = JSON.stringify(zeilen);
+    if (ligaTabelleKennung === kennung && $('lt-tabelle').innerHTML) return;
+    ligaTabelleKennung = kennung;
+
+    $('lt-tabelle').innerHTML =
+      '<thead><tr><th>#</th><th class="left">Team</th><th>Spiele</th><th>Punkte</th><th>Legs</th></tr></thead>' +
+      '<tbody>' + zeilen.map(function (z, i) {
+        var wir = z.team === LIGA.team;
+        return '<tr' + (wir ? ' class="leader"' : '') + '>' +
+          '<td class="rank">' + (i + 1) + '</td>' +
+          '<td class="left name" contenteditable>' + esc(z.team || '') + '</td>' +
+          '<td contenteditable>' + esc(String(z.spiele || '')) + '</td>' +
+          '<td contenteditable>' + esc(String(z.punkte || '')) + '</td>' +
+          '<td contenteditable>' + esc(String(z.legs || '')) + '</td></tr>';
+      }).join('') + '</tbody>';
+  }
 
   function ligaZusagenLaden() {
     if (!window.DartSync || !window.DartSync.liga) return;
@@ -2546,7 +2661,9 @@
       b.classList.toggle('active', b.getAttribute('data-tab') === tab);
     });
     $('liga-plan').classList.toggle('hidden', tab !== 'plan');
+    $('liga-tabelle').classList.toggle('hidden', tab !== 'tabelle');
     $('liga-regeln').classList.toggle('hidden', tab !== 'regeln');
+    if (tab === 'tabelle') { renderLigaTabelle(); return; }
     if (tab !== 'plan') return;
 
     /* Ohne Server (Einzeldatei) oder ohne Anmeldung bleibt der Spielplan
@@ -2713,6 +2830,8 @@
        (WDF 3.08) – keine Wege, keine Markierungen. Der Rest bleibt
        natürlich stehen, den verlangt die Regel sogar (WDF 3.07). */
     var ohneFinish = !schnell && S.tour && S.tour.liga && !S.tour.liga.finish;
+    /* Im Ligaspiel laufen die buergerlichen Namen mit - auch am Board. */
+    var spielerName = !schnell && S.tour && S.tour.liga ? ligaName : pname;
     if (schnell) {
       $('game-match-label').textContent = 'Schnelles Spiel';
       $('game-leg-label').textContent = plural(m.p.length, 'Spieler', 'Spieler') + ' · ' +
@@ -2727,8 +2846,8 @@
 
     var pendingSum = sum(UI.darts, function (d) { return d.v; });
     $('game-turn').innerHTML = m.done
-      ? '<b>' + esc(pname(m.winner)) + '</b> hat gewonnen'
-      : '<span class="muted">Am Wurf</span> <b>' + esc(pname(active)) + '</b>' +
+      ? '<b>' + esc(spielerName(m.winner)) + '</b> hat gewonnen'
+      : '<span class="muted">Am Wurf</span> <b>' + esc(spielerName(active)) + '</b>' +
         '<span class="muted"> · Rest ' + (remainingIn(leg, active) - pendingSum) + '</span>';
     /* Vier Karten in Turniergröße füllen ein Handydisplay allein aus und
        drängen den Verlauf hinter das Zahlenfeld – ab drei Spielern werden
@@ -2760,7 +2879,7 @@
         meta = '<span>Ø <b>' + avg + '</b></span><span>Darts <b>' + darts + '</b></span>';
       }
       return '<div class="pcard ' + (pid === active ? 'active' : '') + '">' +
-        '<div class="pname">' + avatarHTML(profile(pid), 'sm') + esc(pname(pid)) + '</div>' +
+        '<div class="pname">' + avatarHTML(profile(pid), 'sm') + esc(spielerName(pid)) + '</div>' +
         '<div class="legs">' + zeile + '</div>' +
         '<div class="rest">' + rest + '</div>' +
         '<div class="meta">' + meta + '</div>' + pfinish +
@@ -2779,7 +2898,7 @@
     $('checkout-bar').classList.toggle('fern', m.p.length > 2 && restActive > 170 && !m.done);
     $('checkout-bar').classList.toggle('aus', !!ohneFinish);
 
-    var whose = esc(pname(active));
+    var whose = esc(spielerName(active));
     if (route) {
       $('checkout-bar').innerHTML = '<span class="label">Finish ' + whose + '</span>' + route.map(function (d, i) {
         return '<span class="chip ' + (i === 0 ? 'first' : '') + '">' + Checkout.pretty(d) + '</span>';
@@ -3432,13 +3551,17 @@
       for (var i = 0; i < S.history.length; i++) {
         var h = S.history[i];
         if (h.liga && h.liga.terminId === UI.bericht && h.matches) {
-          return { liga: h.liga, matches: h.matches, start: (h.settings && h.settings.start) || 501, at: h.at };
+          return {
+            liga: h.liga, matches: h.matches,
+            start: (h.settings && h.settings.start) || 501,
+            bestOf: (h.settings && h.settings.bestOf) || 3, at: h.at
+          };
         }
       }
       return null;
     }
     if (S.tour && S.tour.liga) {
-      return { liga: S.tour.liga, matches: S.matches, start: tourStart(), at: null };
+      return { liga: S.tour.liga, matches: S.matches, start: tourStart(), bestOf: tour().bestOf, at: null };
     }
     return null;
   }
@@ -3489,33 +3612,57 @@
     var spielerZeilen = function (praefix, ids) {
       var zeilen = '';
       for (var i = 0; i < 8; i++) {
+        var vor = '', nach = '';
+        if (ids[i]) {
+          var prof = profile(ids[i]);
+          if (prof && prof.voll) {
+            /* Buergerlicher Name: das letzte Wort ist der Nachname. */
+            var teile = prof.voll.trim().split(' ');
+            nach = teile.length > 1 ? teile.pop() : '';
+            vor = teile.join(' ');
+          } else {
+            vor = pname(ids[i]);
+          }
+        }
         zeilen += '<tr' + (i === 3 ? ' class="b-trenn"' : '') + '>' +
           '<th>' + praefix + (i + 1) + '</th>' +
-          '<td contenteditable>' + (ids[i] ? esc(pname(ids[i])) : '') + '</td>' +
-          '<td contenteditable></td></tr>';
+          '<td contenteditable>' + esc(vor) + '</td>' +
+          '<td contenteditable>' + esc(nach) + '</td></tr>';
       }
       return zeilen;
     };
 
-    /* Die 16 Einzel in Bogen-Reihenfolge. Die Ergebnis-Spalte kumuliert wie
-       auf dem handgeführten Bogen: in der Reihenfolge, in der die Einzel
-       tatsächlich fertig wurden – nicht in Zeilenreihenfolge. */
-    var lauf = {}, hs = 0, gs = 0;
+    /* Die 16 Einzel in Bogen-Reihenfolge. Links die Legs, rechts die nach
+       der SWO-Staffel kumulierten PUNKTE (Best of 3: 2:0 = 4:0, 2:1 = 3:1;
+       Best of 5: 6:0 / 5:1 / 4:2) – kumuliert in der Reihenfolge, in der
+       die Einzel tatsächlich fertig wurden, wie auf dem handgeführten Bogen. */
+    var gewinnLegs = Math.floor((q.bestOf || 3) / 2) + 1;
+    var lauf = {}, hp = 0, gp = 0;
     q.matches.filter(function (m) { return m.done; })
       .slice().sort(function (a, b) { return (a.at || 0) - (b.at || 0); })
       .forEach(function (m) {
-        if (m.winner === m.p[0]) hs++; else gs++;
-        lauf[m.id] = hs + ' : ' + gs;
+        var pkt = ligaPunkte(m, gewinnLegs);
+        if (m.winner === m.p[0]) { hp += pkt[0]; gp += pkt[1]; }
+        else { gp += pkt[0]; hp += pkt[1]; }
+        lauf[m.id] = hp + ' : ' + gp;
       });
-    var heimSpiele = hs, gastSpiele = gs, heimLegs = 0, gastLegs = 0;
+    var heimLegs = 0, gastLegs = 0;
     var einzelZeilen = q.matches.map(function (m, i) {
       // Alt-Archiv ohne posPaar: die Matches entstanden nach der alten Tabelle.
       var paar = m.posPaar || LIGA_EINZEL_ALT[i] || [0, 0];
-      var lh = legsWon(m, m.p[0]), lgs = legsWon(m, m.p[1]);
+      var lh, lgs;
+      if (m.kampflos && m.done) {
+        lh = m.winner === m.p[0] ? gewinnLegs : 0;
+        lgs = m.winner === m.p[1] ? gewinnLegs : 0;
+      } else {
+        lh = legsWon(m, m.p[0]);
+        lgs = legsWon(m, m.p[1]);
+      }
       heimLegs += lh; gastLegs += lgs;
       return '<tr' + (i % 4 === 3 ? ' class="b-trenn"' : '') + '>' +
         '<th>H' + (paar[0] + 1) + ' – G' + (paar[1] + 1) + '</th>' +
-        '<td contenteditable>' + (m.legs.length ? lh + ' : ' + lgs : ' : ') + '</td>' +
+        '<td contenteditable>' + (m.done || m.legs.length
+          ? lh + ' : ' + lgs + (m.kampflos ? ' w.o.' : '') : ' : ') + '</td>' +
         '<td contenteditable>' + (m.done && lauf[m.id] ? lauf[m.id] : ' : ') + '</td></tr>';
     }).join('');
 
@@ -3562,8 +3709,8 @@
             '<table class="b-tab b-einzel"><tr><th>Einzelspiele</th><th>Legs</th><th>Ergebnis</th></tr>' +
               einzelZeilen + '</table>' +
             '<table class="b-tab b-ende"><tr><th>Endergebnis:</th>' +
-              '<td contenteditable>' + heimSpiele + ' : ' + gastSpiele + '</td>' +
-              '<td contenteditable>' + heimLegs + ' : ' + gastLegs + '</td></tr></table>' +
+              '<td contenteditable>' + heimLegs + ' : ' + gastLegs + '</td>' +
+              '<td contenteditable>' + hp + ' : ' + gp + '</td></tr></table>' +
             '<table class="b-tab b-ende"><tr><td contenteditable>Nachmeldungen: ja O&nbsp;&nbsp;nein O</td>' +
               '<td contenteditable>Proteste: ja O&nbsp;&nbsp;nein O</td></tr></table>' +
           '</div>' +
@@ -3797,16 +3944,16 @@
     if (S.tour && S.tour.liga) {
       var lw = S.tour.liga;
       var lwd = ligaStandDaten();
-      var titel = lwd.wirS > lwd.sieS ? esc(LIGA.team) + ' gewinnt!'
-        : lwd.wirS < lwd.sieS ? esc(lw.gegner) + ' gewinnt'
+      var titel = lwd.wirP > lwd.sieP ? esc(LIGA.team) + ' gewinnt!'
+        : lwd.wirP < lwd.sieP ? esc(lw.gegner) + ' gewinnt'
         : 'Unentschieden';
-      var emoji = lwd.wirS > lwd.sieS ? '🏆' : lwd.wirS === lwd.sieS ? '🤝' : '🎯';
+      var emoji = lwd.wirP > lwd.sieP ? '🏆' : lwd.wirP === lwd.sieP ? '🤝' : '🎯';
       $('winner-box').innerHTML =
         '<div style="text-align:center"><div class="big-emoji">' + emoji + '</div>' +
         '<h1>' + titel + '</h1>' +
         '<p class="muted">' + lw.nr + '. Spieltag · ' + esc(LIGA.team) + ' gegen ' + esc(lw.gegner) + '</p>' +
         ligaTeamsHtml(lwd) +
-        '<p class="muted">Legs ' + lwd.wirL + ':' + lwd.sieL + '</p></div>' +
+        '<p class="muted">Einzel ' + lwd.wirS + ':' + lwd.sieS + ' · Legs ' + lwd.wirL + ':' + lwd.sieL + '</p></div>' +
         (ligaHighlightsHtml(lwd) ? '<div class="card">' + ligaHighlightsHtml(lwd) + '</div>' : '') +
         '<button class="btn ghost full" data-action="liga-bericht">Spielbericht ansehen &amp; drucken</button>';
       return;
@@ -3945,6 +4092,26 @@
         '<div class="row-btns two">' +
         '<button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
         '<button class="btn primary" data-action="liga-los">Los geht\'s</button></div>';
+    } else if (o.type === 'liga-kampflos') {
+      /* Tritt eine Position nicht an (nur 3 gemeldet, jemand fehlt), wird
+         das Einzel kampflos gewertet: volle Legs und Punkte fuer den
+         Antretenden, ohne einen einzigen Wurf in der Statistik. */
+      var kfMatch = matchById(o.id);
+      if (!kfMatch) { UI.overlay = null; ov.classList.add('hidden'); return; }
+      html = '<h3>Kampflos werten</h3>' +
+        (kfMatch.kampflos
+          ? '<p>' + esc(ligaName(kfMatch.winner)) + ' hat dieses Einzel kampflos gewonnen.</p>' +
+            (geteiltesTurnier()
+              ? '<p class="hint">Im geteilten Spiel lässt sich die Wertung nicht zurücknehmen – ' +
+                'das andere Gerät hat sie bereits übernommen.</p>'
+              : '<button class="btn ghost full" data-action="liga-kampflos-zurueck">Wertung zurücknehmen</button>')
+          : '<p>Wer tritt zu diesem Einzel <b>nicht</b> an? Der andere gewinnt ' +
+            legsToWin() + ':0 ohne Würfe (SWO: nicht gestellter Spieler).</p>' +
+            '<button class="btn full" data-action="liga-kampflos-wer" data-wer="' + kfMatch.p[0] + '">' +
+              esc(ligaName(kfMatch.p[0])) + ' fehlt</button>' +
+            '<button class="btn full" data-action="liga-kampflos-wer" data-wer="' + kfMatch.p[1] + '">' +
+              esc(ligaName(kfMatch.p[1])) + ' fehlt</button>') +
+        '<button class="btn ghost full" data-action="ov-cancel">Abbrechen</button>';
     } else if (o.type === 'liga-wechsel') {
       /* Die acht Positionen mit ihrer aktuellen Besetzung – Wechsel je
          Position, wie es die SWO erlaubt. */
@@ -4008,6 +4175,10 @@
           '<span class="cam">Foto wählen</span>' +
         '</div>' +
         '<input class="name-input" type="text" data-role="profile-name" value="' + esc(p.name) + '" placeholder="Name" maxlength="16">' +
+        /* Der buergerliche Name steht auf dem Liga-Spielbericht - die SWO
+           will Vor- und Nachnamen, keine Kuenstlernamen. */
+        '<input class="name-input klein" type="text" data-role="profile-voll" value="' + esc(p.voll || '') + '" ' +
+          'placeholder="B\u00fcrgerlicher Name (f\u00fcr die Liga)" maxlength="60">' +
         /* Lieblingsdoppel: der Finish-Vorschlag stellt dann bevorzugt darauf.
            Kein Umweg über einen zusätzlichen Dart – nur die Wahl zwischen
            gleich langen Wegen, siehe js/checkout.js. */
@@ -4025,13 +4196,23 @@
              wirklich löschen. Sobald Spiele dranhängen, bleibt nur das
              Ausblenden: sonst stünde im Archiv „Unbekannt". */
           var loeschbar = vor.gast && !letztesSpielAm(o.id);
+          var imSpielplan = vor.gast && S.tour &&
+            S.matches.some(function (m) { return m.p.indexOf(o.id) >= 0; });
+          /* Gaeste lassen sich direkt loeschen: ohne Spiele spurlos, mit
+             Spielen verschwinden sie aus allen Listen – die Ergebnisse der
+             Mitspieler bleiben unangetastet. Nur mitten im laufenden
+             Spielplan geht das nicht. */
+          if (imSpielplan) {
+            return '<p class="hint">' + esc(vor.name) + ' steht im laufenden Spielplan – ' +
+              'löschen geht erst, wenn das Spiel beendet ist.</p>';
+          }
           return '<button class="btn danger ghost full" data-action="' +
-            (loeschbar ? 'delete-profile' : 'hide-profile') + '">' +
-            (loeschbar ? 'Gast löschen' : vor.hidden ? 'Wieder einblenden' : 'Spieler ausblenden') + '</button>' +
+            (vor.gast ? (loeschbar ? 'delete-profile' : 'delete-guest') : 'hide-profile') + '">' +
+            (vor.gast ? 'Gast löschen' : vor.hidden ? 'Wieder einblenden' : 'Spieler ausblenden') + '</button>' +
             '<p class="hint">' + (loeschbar
               ? 'Der Gast hat noch kein Spiel – er verschwindet spurlos.'
               : (vor.gast
-                ? 'Gäste blenden sich nach dem Abend von selbst aus. Ihre Ergebnisse bleiben erhalten, und mit einem Tipp sind sie wieder dabei.'
+                ? 'Der Gast verschwindet sofort aus Aufstellung, Spielerliste und Rangliste. Die gespielten Partien bleiben in der Historie der anderen erhalten.'
                 : 'Ausgeblendete Spieler tauchen nicht mehr in der Aufstellung auf, ihre Ergebnisse bleiben aber in Statistik und Rangliste erhalten.')) +
             '</p>';
         })());
@@ -4421,18 +4602,18 @@
         break;
       }
       case 'new-profile':
-        UI.overlay = { type: 'profile', id: null, draft: { name: '', avatar: null, dbl: null } };
+        UI.overlay = { type: 'profile', id: null, draft: { name: '', avatar: null, dbl: null, voll: '' } };
         render();
         break;
       case 'edit-profile': {
         var p = profile(el.getAttribute('data-id'));
-        UI.overlay = { type: 'profile', id: p.id, draft: { name: p.name, avatar: p.avatar, dbl: p.dbl || null } };
+        UI.overlay = { type: 'profile', id: p.id, draft: { name: p.name, avatar: p.avatar, dbl: p.dbl || null, voll: p.voll || '' } };
         render();
         break;
       }
       case 'edit-current-profile': {
         var cp = profile(UI.profile);
-        UI.overlay = { type: 'profile', id: cp.id, draft: { name: cp.name, avatar: cp.avatar, dbl: cp.dbl || null } };
+        UI.overlay = { type: 'profile', id: cp.id, draft: { name: cp.name, avatar: cp.avatar, dbl: cp.dbl || null, voll: cp.voll || '' } };
         render();
         break;
       }
@@ -4452,12 +4633,13 @@
           ex.name = name;
           ex.avatar = draft.avatar;
           ex.dbl = draft.dbl || null;
+          ex.voll = (draft.voll || '').trim() || null;
           /* Gehört das Profil zu einem Account, muss die Änderung zum Server –
              sonst überschreibt der nächste Abgleich Bild und Name wieder mit
              dem, was dort steht. */
           if (window.DartKonto) window.DartKonto.profilGeaendert(ex.id);
         } else {
-          var np = { id: uid(), name: name, avatar: draft.avatar, created: Date.now(), hue: freeHue(), dbl: draft.dbl || null };
+          var np = { id: uid(), name: name, avatar: draft.avatar, created: Date.now(), hue: freeHue(), dbl: draft.dbl || null, voll: (draft.voll || '').trim() || null };
           /* Angemeldet legt man hier keine Kollegen an – die haben Accounts.
              Wer von Hand dazukommt, ist der Besuch von heute Abend. */
           if (window.DartKonto && window.DartKonto.nutzer()) np.gast = true;
@@ -4477,6 +4659,21 @@
         S.lineup = S.lineup.filter(function (x) { return x !== dp.id; });
         UI.overlay = null;
         if (S.screen === 'profile' && UI.profile === dp.id) S.screen = 'players';
+        save(); render();
+        break;
+      }
+      /* Gast mit Spielen: kein hartes Loeschen (die Archiv-Eintraege zeigen
+         auf seine Id), aber er verschwindet komplett aus der Oberflaeche. */
+      case 'delete-guest': {
+        var dg = profile(UI.overlay.id);
+        if (!dg.gast) return;
+        /* Steht der Gast im laufenden Spielplan, wuerde das Loeschen offene
+           Einzel verwaisen lassen - erst das Turnier beenden. */
+        if (S.tour && S.matches.some(function (m) { return m.p.indexOf(dg.id) >= 0; })) return;
+        dg.hidden = true;
+        S.lineup = S.lineup.filter(function (x) { return x !== dg.id; });
+        UI.overlay = null;
+        if (S.screen === 'profile' && UI.profile === dg.id) S.screen = 'players';
         save(); render();
         break;
       }
@@ -4785,6 +4982,28 @@
       case 'liga-los':
         ligaSpielStarten();
         break;
+      case 'liga-tabelle-speichern': {
+        if (!(window.DartSync && window.DartSync.liga && window.DartSync.liga.tabelleSpeichern)) break;
+        var ltZeilen = [];
+        document.querySelectorAll('#lt-tabelle tbody tr').forEach(function (tr) {
+          var z = tr.querySelectorAll('td');
+          ltZeilen.push({
+            team: z[1].textContent.trim().slice(0, 60),
+            spiele: z[2].textContent.trim().slice(0, 12),
+            punkte: z[3].textContent.trim().slice(0, 12),
+            legs: z[4].textContent.trim().slice(0, 12)
+          });
+        });
+        window.DartSync.liga.tabelleSpeichern({ zeilen: ltZeilen }).then(function () {
+          ligaTabelle = { zeilen: ltZeilen };
+          ligaTabelleMeldung = 'Gespeichert – alle sehen jetzt diesen Stand.';
+          $('lt-stand').textContent = ligaTabelleMeldung;
+        }).catch(function () {
+          ligaTabelleMeldung = 'Speichern hat nicht geklappt – bitte später nochmal.';
+          $('lt-stand').textContent = ligaTabelleMeldung;
+        });
+        break;
+      }
       case 'liga-bericht':
         UI.bericht = el.getAttribute('data-termin') || null;
         UI.berichtVon = S.screen;
@@ -4860,6 +5079,45 @@
         UI.overlay = S.tour && S.tour.liga ? { type: 'liga-wechsel' } : { type: 'roster-change' };
         render();
         break;
+      case 'liga-kampflos': {
+        var kfM = matchById(el.getAttribute('data-id'));
+        if (!kfM || !(S.tour && S.tour.liga)) break;
+        UI.overlay = { type: 'liga-kampflos', id: kfM.id };
+        render();
+        break;
+      }
+      case 'liga-kampflos-wer': {
+        var kwM = matchById(UI.overlay && UI.overlay.id);
+        if (!kwM || kwM.legs.some(function (l) { return l.visits.length > 0; })) break;
+        var nichtDa = el.getAttribute('data-wer');
+        kwM.done = true;
+        kwM.kampflos = true;
+        kwM.winner = kwM.p[0] === nichtDa ? kwM.p[1] : kwM.p[0];
+        kwM.at = Date.now();
+        kwM.legs = [];
+        if (S.tour.liga && !S.tour.liga.zeitBis && !nextOpenMatch()) S.tour.liga.zeitBis = Date.now();
+        UI.overlay = null;
+        save();
+        /* Im geteilten Spiel steht die Wertung sofort auch am anderen
+           Geraet - sonst koennte dort jemand das Einzel noch spielen. */
+        if (geteiltesTurnier() && window.DartSync && window.DartSync.turnier) {
+          window.DartSync.turnier.ergebnis(kwM);
+        }
+        render();
+        break;
+      }
+      case 'liga-kampflos-zurueck': {
+        var kzM = matchById(UI.overlay && UI.overlay.id);
+        if (!kzM || !kzM.kampflos || geteiltesTurnier()) break;
+        kzM.done = false;
+        kzM.kampflos = false;
+        kzM.winner = null;
+        kzM.at = null;
+        if (S.tour.liga && S.tour.liga.zeitBis && nextOpenMatch()) S.tour.liga.zeitBis = null;
+        UI.overlay = null;
+        save(); render();
+        break;
+      }
       case 'liga-wechsel-pos': {
         var lwSeite = el.getAttribute('data-seite');
         var lwPos = Number(el.getAttribute('data-pos'));
@@ -5027,6 +5285,9 @@
        Dialog wuerde sonst mitten in der Auswahl unter den Fingern wegspringen. */
     if (ev.target.getAttribute('data-role') === 'profile-double' && UI.overlay) {
       UI.overlay.draft.dbl = Number(ev.target.value) || null;
+    }
+    if (ev.target.getAttribute('data-role') === 'profile-voll' && UI.overlay) {
+      UI.overlay.draft.voll = ev.target.value;
     }
     /* Ligaspiel-Aufstellung: Entwurf pflegen, nicht neu zeichnen – sonst
        verlieren die Felder beim Tippen den Fokus. */

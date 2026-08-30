@@ -129,6 +129,10 @@ und Namen am Termin, darunter steht, wie viele noch fehlen, bis die Aufstellung
 vollständig ist (`LIGA.sollSpieler`, derzeit 4). Die Zusagen liegen auf dem
 Server und sind für alle gleich; ohne Server bleibt der Spielplan lesbar, nur
 das Eintragen entfällt. Vergangene Spieltage rücken gedimmt nach hinten.
+Der Reiter **Tabelle** ist die von Hand gepflegte Ligatabelle: alle neun Teams
+vorbefüllt, jede Zelle (Team, Spiele, Punkte, Legs) antippbar; **„Tabelle
+speichern"** legt den Stand auf dem Server ab, sodass alle Angemeldeten
+dieselbe Tabelle sehen (`PUT /api/liga/tabelle`).
 
 ## Ligaspiel (SDM-Spielberichtsbogen)
 
@@ -139,17 +143,32 @@ Gäste dieses Geräts und beim nächsten Aufeinandertreffen wiedererkannt), Best
 of 3 oder 5, **Finish-Anzeigen an oder aus** (aus ist Liga-konform, WDF 3.08) –
 und auf Wunsch **geteilt an zwei Scheiben**, wie es die SWO ohnehin verlangt.
 Der Spielplan sind die **16 Einzel in vier Durchgängen, exakt in der
-Reihenfolge des Spielberichtsbogens** (`LIGA_EINZEL`); jedes Einzel trägt
-seine Scheibe (S1/S2). Es wird **nicht ausgebullt**: das erste Leg beginnt der
-Heimspieler, danach wechselt der Anwurf (SWO §8). Die Übersicht zeigt den
-**Team-Stand** (Spiele und Legs) und die **Highlights** für den Bogen (180er,
-High-Finishes ab 100, Shortlegs bis 21 Darts).
+Reihenfolge des Spielberichtsbogens** (`LIGA_EINZEL`); jede Begegnung steht
+als **H1 Name – G1 Name** da, und im Liga-Kontext erscheint der
+**bürgerliche Name** aus dem Profil statt des Spitznamens (die SWO will keine
+Künstlernamen). Jedes Einzel trägt seine Scheibe (S1/S2). Es wird **nicht
+ausgebullt**: das erste Leg beginnt der Heimspieler, danach wechselt der
+Anwurf (SWO §8). Die Übersicht zeigt den **Team-Stand** – groß die **Punkte
+nach SWO-Staffel** (Best of 3: 2:0 = 4:0 und 2:1 = 3:1; Best of 5: 6:0 / 5:1
+/ 4:2), darunter Einzel und Legs – und die **Highlights** für den Bogen
+(180er, High-Finishes ab 100, Shortlegs bis 21 Darts). Die 60er- und
+180er-Feiern bleiben im Ligaspiel aus – mitten im Einzel gegen ein fremdes
+Team wäre der Löwe fehl am Platz.
+
+Tritt eine Position nicht an (nur drei gemeldet), wertet der **w.o.-Knopf**
+am Einzel es **kampflos**: der Anwesende gewinnt 2:0 (bzw. 3:0) mit vollen
+Punkten nach Staffel – in der persönlichen Statistik und Rangliste zählt das
+Einzel gar nicht (kein Wurf, kein Sieg, keine Niederlage). Über **„ändern"**
+lässt sich die Wertung zurücknehmen; im geteilten Spiel wandert sie sofort
+auf das andere Gerät und ist dort nicht mehr rückholbar.
 
 **Spielerwechsel** gibt es nach SWO: nur auf derselben Position, höchstens
 8 Spieler je Team, der Wechsel greift für alle noch nicht begonnenen Einzel
 der Position (im geteilten Spiel derzeit gesperrt). Der **Spielbericht** –
-Udos Bogen als Blatt – füllt sich automatisch (Teams, Spieler H1–H8/G1–G8,
-Legs, laufendes Ergebnis, Endergebnis, Spielzeit, Highlights je Seite), jede
+Udos Bogen als Blatt – füllt sich automatisch (Teams, Spieler H1–H8/G1–G8
+mit Vor- und Nachname aus dem bürgerlichen Namen, Legs je Einzel – kampflose
+mit **w.o.** –, rechts die laufend kumulierten SWO-Punkte, Endergebnis als
+Legs und Punkte, Spielzeit, Highlights je Seite), jede
 Zelle lässt sich antippen und korrigieren, und **„Drucken"** gibt Seite 1
 plus das Nachmelde-/Protest-Leerformular als Seite 2 aus. Nach dem Abschluss
 bleibt der Bericht über den Spieltag im Liga-Reiter abrufbar. In der
@@ -257,9 +276,16 @@ weitere Turnier. Das Foto kommt aus der Fotomediathek oder direkt von der Kamera
 wird auf 220 × 220 Pixel zugeschnitten, damit der Speicher nicht vollläuft; ohne Foto
 zeigt die App die Initialen auf einer aus dem Namen abgeleiteten Farbe.
 
+Neben dem Anzeigenamen nimmt das Profil den **bürgerlichen Namen** auf – er
+erscheint überall im Liga-Kontext (Spielplan, Spielbildschirm, Spielbericht),
+damit auf dem Bogen nichts nachgetragen werden muss.
+
 Wer nicht mehr mitspielt, lässt sich **ausblenden** statt löschen — dann verschwindet
 er aus der Aufstellung, seine Ergebnisse bleiben aber in Statistik, Ranglisten und
-Spielverlauf erhalten.
+Spielverlauf erhalten. **Gäste** lassen sich dagegen jederzeit direkt
+**löschen**: ohne Spiele spurlos, mit Spielen verschwinden sie sofort aus
+Spielerliste, Aufstellung und Rangliste – die Partien der Mitspieler bleiben
+in der Historie.
 
 ## Statistik und Ranglisten
 
@@ -493,3 +519,12 @@ DEMO_URL=https://darts.wirtschaftln.de node tools/demo.mjs
 
 Die Konten laufen alle auf `@demo.blink180` – daran erkennt `--weg` sie wieder,
 und niemand verwechselt sie mit einem echten Kollegen.
+
+Für Aufräumarbeiten am echten Server gibt es drei Verwaltungs-Skripte
+(im Container per `docker compose exec darts node …` aufrufen):
+
+```bash
+node server/scripts/konto-anlegen.mjs <e-mail> <anzeigename> <passwort>
+node server/scripts/spiel-zurueckziehen.mjs <spiel-id> [...]   # Soft-Delete, Geräte räumen nach
+node server/scripts/konto-loeschen.mjs <e-mail>                # verweigert bei aktiven Spielen
+```

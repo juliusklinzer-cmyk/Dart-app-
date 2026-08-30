@@ -250,18 +250,20 @@
     <button data-action="board-mode" data-value="finisher">Finisher</button>
   </div>
 
-  <div class="card" id="board-chart"></div>
-
+  <!-- Reihenfolge bewusst: erst die Unterfilter (volle Breite), dann die
+       Liste – am iPad rueckt der Verlauf per Grid daneben. -->
   <div class="chips" id="board-chips"></div>
   <div class="card no-pad"><div id="board-list" class="board-list"></div></div>
   <p class="hint" id="board-hint"></p>
 
-  <div class="card">
+  <div class="card" id="board-chart"></div>
+
+  <div class="card" id="board-rekorde">
     <h2>Rekorde</h2>
     <div id="records" class="records"></div>
   </div>
 
-  <div class="card">
+  <div class="card" id="board-log">
     <h2 id="log-title">Alle Spiele</h2>
     <div id="match-log"></div>
   </div>
@@ -287,14 +289,28 @@
             aria-label="Alle Termine in den Kalender">📅</button>
   </header>
 
-  <div class="konto-tabs" id="liga-tabs">
+  <div class="konto-tabs drei" id="liga-tabs">
     <button data-action="liga-tab" data-tab="plan" class="active">Spielplan</button>
+    <button data-action="liga-tab" data-tab="tabelle">Tabelle</button>
     <button data-action="liga-tab" data-tab="regeln">Regeln</button>
   </div>
 
   <div id="liga-plan">
     <p class="hint hidden" id="liga-hinweis"></p>
     <div id="liga-liste"></div>
+  </div>
+
+  <!-- Die Ligatabelle: von Hand gepflegt (die Liga veröffentlicht die
+       Ergebnisse, wir tragen sie ab), für alle Angemeldeten derselbe Stand. -->
+  <div id="liga-tabelle" class="hidden">
+    <p class="hint">Die Tabelle pflegen wir von Hand nach den Veröffentlichungen der
+      Ligaleitung: Zellen antippen, Werte eintragen, speichern – dann sehen alle
+      denselben Stand.</p>
+    <div class="card no-pad">
+      <table class="standings" id="lt-tabelle"></table>
+    </div>
+    <button class="btn primary full hidden" id="lt-speichern" data-action="liga-tabelle-speichern">Tabelle speichern</button>
+    <p class="hint" id="lt-stand"></p>
   </div>
 
   <!-- Regeln und FAQ: fest im HTML, verständlich zusammengefasst aus der
