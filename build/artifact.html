@@ -379,6 +379,12 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 #summary-actions { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
 @media (min-width: 700px) {
   .sum-cards { grid-template-columns: 1fr 1fr; }
+  /* Solo-Statistik: die eine Karte steht mittig ueber die volle Zeile,
+     statt halbbreit neben einer Leerspalte zu kleben. */
+  .sum-cards > .sum-card:only-child {
+    grid-column: 1 / -1;
+    width: 100%; max-width: 720px; margin: 0 auto;
+  }
 }
 
 /* ---------- Spiel-Log ---------- */
@@ -2414,7 +2420,9 @@ button, input, select, textarea { font-family: inherit; }
 #scoreboard.solo { grid-template-columns: 1fr; }
 #scoreboard.solo .pcard .rest { font-size: 4.6rem; }
 #screen-game.solo #checkout-bar { text-align: center; }
-#screen-game.solo #history { grid-template-columns: 1fr; max-width: 560px; margin-left: auto; margin-right: auto; }
+/* Der Verlauf nutzt allein die volle Breite seiner Spalte - am iPad
+   fuellt er die linke Haelfte, am Handy ohnehin alles. */
+#screen-game.solo #history { grid-template-columns: 1fr; }
 
 /* Der Notausgang aus dem Turnier-Modus fuer Geraete ohne Tastatur:
    schwebt unten mittig, nur solange sichtbar, wie jemand getippt hat. */
