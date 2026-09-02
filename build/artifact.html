@@ -805,8 +805,8 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   .quick-row button { min-height: 54px; font-size: 1.05rem; }
   .keypad button { min-height: 74px; font-size: 1.8rem; }
   .keypad button.ok { font-size: 1.3rem; }
-  .mult-row button { min-height: 58px; font-size: 1.1rem; }
-  .num-grid button { min-height: 64px; font-size: 1.35rem; }
+  .mult-row button { min-height: 68px; font-size: 1.25rem; }
+  .num-grid button { min-height: 68px; font-size: 1.6rem; }
   .visit-darts .d { min-width: 56px; font-size: 1rem; padding: 9px 10px; }
   .score-display { font-size: 2.8rem; }
 }
@@ -820,6 +820,12 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   .input-area { flex: 1 1 50%; min-width: 0; margin-top: 0; display: flex; flex-direction: column; }
   .pad { flex: 1; display: flex; flex-direction: column; gap: 8px; }
   .pad .keypad, .pad .num-grid { flex: 1; grid-auto-rows: 1fr; }
+  /* Single/Double/Triple genau so hoch wie eine Zahlenreihe: das
+     Zahlenfeld hat fuenf Reihen, also teilt sich die Hoehe 1:5. */
+  #pad-darts .mult-row { flex: 1 1 0; min-height: 0; }
+  #pad-darts .mult-row button { min-height: 0; height: 100%; font-size: 1.35rem; }
+  #pad-darts .num-grid { flex: 5 1 0; }
+  .num-grid button { font-size: 1.6rem; }
   .quick-row, .mult-row, .display-row { margin-bottom: 0; }
   /* Das Spielbild steht fest im Rahmen: nichts scrollt aus dem Bild,
      nur der Wurfverlauf scrollt in seinem eigenen Kasten. Die Tasten
@@ -2617,6 +2623,12 @@ button.blitzt { animation: tastenblitz 240ms var(--ease-out-stark); }
   border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px;
 }
 .te-hint { color: var(--muted); font-size: clamp(1.1rem, 2.8vh, 1.5rem); margin: 2vh 0 0; }
+/* Die per Pfeiltaste gewaehlte Option traegt dasselbe Licht wie die
+   gewaehlte Begegnung. */
+.overlay.gross .btn.wahl {
+  border: 1px solid var(--aktiv-linie);
+  box-shadow: 0 0 26px var(--schein);
+}
 
 /* Ausbullen ohne Springen: gewaehlte Namen lassen links eine leere
    Stelle zurueck, rechts warten nummerierte Slots, der Startknopf haelt
@@ -7994,10 +8006,14 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
             '</p>';
         })());
     } else if (o.type === 'game-done') {
+      /* Am Board laeuft auch das Spielende ueber die Tastatur: die Pfeile
+         waehlen zwischen Statistik und Ruecknahme, Enter bestaetigt. */
+      var gdWahl = UI.turnier && turnierErlaubt() ? (o.wahl || 0) : -1;
       html = '<div class="big-emoji">🏆</div><h3>Glückwunsch, ' + esc(pname(o.pid)) + '!</h3>' +
         '<p>' + (S.game ? kindName(S.game.kind) : '') + '</p>' +
-        '<button class="btn primary full" data-action="open-summary" data-kind="' + (S.game ? S.game.kind : 'cricket') + '" data-id="current">Weiter zur Spielstatistik</button>' +
-        '<button class="btn ghost full" data-action="undo-game">Letzten Dart zurück</button>';
+        '<button class="btn primary full' + (gdWahl === 0 ? ' wahl' : '') + '" data-action="open-summary" data-kind="' + (S.game ? S.game.kind : 'cricket') + '" data-id="current">Weiter zur Spielstatistik</button>' +
+        '<button class="btn ghost full' + (gdWahl === 1 ? ' wahl' : '') + '" data-action="undo-game">Letzten Dart zurück</button>' +
+        (gdWahl >= 0 ? '<p class="te-hint">↑ ↓ · wählen &nbsp;&nbsp; Enter · bestätigen</p>' : '');
     } else if (o.type === 'roster-change') {
       var inTour = tourPlayers();
       html = '<h3>Spieler im Turnier</h3>' +
@@ -9331,6 +9347,20 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       } else if ((ev.key === 'ArrowUp' || ev.key === 'ArrowLeft') && ov.phase === 'weiter') {
         ov.wahl = Math.max((ov.wahl || 0) - 1, 0);
         render(); ev.preventDefault();
+      } else if (ev.key === 'Backspace') {
+        undo(); ev.preventDefault();
+      }
+    } else if (ov.type === 'game-done' && UI.turnier && turnierErlaubt()) {
+      if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp' || ev.key === 'ArrowRight' || ev.key === 'ArrowLeft') {
+        ov.wahl = (ev.key === 'ArrowDown' || ev.key === 'ArrowRight') ? 1 : 0;
+        render(); ev.preventDefault();
+      } else if (ev.key === 'Enter') {
+        ev.preventDefault();
+        /* Den markierten Knopf wirklich druecken - er traegt data-kind und
+           data-id, die der Handler braucht. */
+        var gdKnoepfe = document.querySelectorAll('#overlay-card .btn[data-action]');
+        var gdZiel = gdKnoepfe[ov.wahl || 0];
+        if (gdZiel) handleAction(gdZiel.getAttribute('data-action'), gdZiel);
       } else if (ev.key === 'Backspace') {
         undo(); ev.preventDefault();
       }

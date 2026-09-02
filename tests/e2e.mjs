@@ -1408,6 +1408,7 @@ await page.evaluate(() => {
   S.game = null;
   S.lineup = D.activeProfiles().slice(0, 2).map((p) => p.id);
   S.mode = 'quick';
+  S.settings.start = 501;   // fruehere Gruppen spielen 301 - hier zaehlt 501
   D.setScreen('setup');
 });
 await page.locator('[data-action="start-game"]').click();
@@ -1460,6 +1461,29 @@ await page.keyboard.press('Tab');
 check('Tab: Einzel-Darts -> Turnier', await visible('#pad-key'));
 await page.keyboard.press('Tab');
 check('Tab: Turnier -> wieder Punkte', await visible('#pad-total'));
+/* Spielende am Board: Pfeile waehlen zwischen Statistik und Ruecknahme,
+   Enter bestaetigt - auch das Schnelle Spiel laeuft ohne Bildschirm-Tipp. */
+await page.locator('#mode-toggle button[data-mode="turnier"]').click();
+const tippeQ = async (z) => { await page.keyboard.type(z); await page.keyboard.press('Enter'); };
+await tippeQ('180'); await tippeQ('180'); await tippeQ('180'); await tippeQ('180');
+await tippeQ('141');
+await page.keyboard.press('3');
+check('das Spielende markiert die erste Wahl', await page.evaluate(() => {
+  const o = window.__dart.ui().overlay;
+  return !!(o && o.type === 'game-done' && document.querySelector('#overlay-card .btn.wahl') &&
+    document.querySelector('#overlay-card .btn.wahl').textContent.includes('Spielstatistik'));
+}));
+await page.keyboard.press('ArrowDown');
+check('Pfeil runter waehlt "Letzten Dart zurueck"', await page.evaluate(() =>
+  document.querySelector('#overlay-card .btn.wahl').textContent.includes('zurück')));
+await page.keyboard.press('Enter');
+check('Enter bestaetigt: der Checkout ist zurueckgenommen', await page.evaluate(() =>
+  !window.__dart.ui().overlay && !window.__dart.state().game.done));
+await tippeQ('141');
+await page.keyboard.press('3');
+await page.keyboard.press('Enter');
+check('Enter oeffnet die Spielstatistik', await visible('#screen-summary'));
+
 await page.evaluate(() => {
   const D = window.__dart, S = D.state();
   S.game = null;

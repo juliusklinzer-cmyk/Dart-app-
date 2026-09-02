@@ -4413,10 +4413,14 @@
             '</p>';
         })());
     } else if (o.type === 'game-done') {
+      /* Am Board laeuft auch das Spielende ueber die Tastatur: die Pfeile
+         waehlen zwischen Statistik und Ruecknahme, Enter bestaetigt. */
+      var gdWahl = UI.turnier && turnierErlaubt() ? (o.wahl || 0) : -1;
       html = '<div class="big-emoji">🏆</div><h3>Glückwunsch, ' + esc(pname(o.pid)) + '!</h3>' +
         '<p>' + (S.game ? kindName(S.game.kind) : '') + '</p>' +
-        '<button class="btn primary full" data-action="open-summary" data-kind="' + (S.game ? S.game.kind : 'cricket') + '" data-id="current">Weiter zur Spielstatistik</button>' +
-        '<button class="btn ghost full" data-action="undo-game">Letzten Dart zurück</button>';
+        '<button class="btn primary full' + (gdWahl === 0 ? ' wahl' : '') + '" data-action="open-summary" data-kind="' + (S.game ? S.game.kind : 'cricket') + '" data-id="current">Weiter zur Spielstatistik</button>' +
+        '<button class="btn ghost full' + (gdWahl === 1 ? ' wahl' : '') + '" data-action="undo-game">Letzten Dart zurück</button>' +
+        (gdWahl >= 0 ? '<p class="te-hint">↑ ↓ · wählen &nbsp;&nbsp; Enter · bestätigen</p>' : '');
     } else if (o.type === 'roster-change') {
       var inTour = tourPlayers();
       html = '<h3>Spieler im Turnier</h3>' +
@@ -5750,6 +5754,20 @@
       } else if ((ev.key === 'ArrowUp' || ev.key === 'ArrowLeft') && ov.phase === 'weiter') {
         ov.wahl = Math.max((ov.wahl || 0) - 1, 0);
         render(); ev.preventDefault();
+      } else if (ev.key === 'Backspace') {
+        undo(); ev.preventDefault();
+      }
+    } else if (ov.type === 'game-done' && UI.turnier && turnierErlaubt()) {
+      if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp' || ev.key === 'ArrowRight' || ev.key === 'ArrowLeft') {
+        ov.wahl = (ev.key === 'ArrowDown' || ev.key === 'ArrowRight') ? 1 : 0;
+        render(); ev.preventDefault();
+      } else if (ev.key === 'Enter') {
+        ev.preventDefault();
+        /* Den markierten Knopf wirklich druecken - er traegt data-kind und
+           data-id, die der Handler braucht. */
+        var gdKnoepfe = document.querySelectorAll('#overlay-card .btn[data-action]');
+        var gdZiel = gdKnoepfe[ov.wahl || 0];
+        if (gdZiel) handleAction(gdZiel.getAttribute('data-action'), gdZiel);
       } else if (ev.key === 'Backspace') {
         undo(); ev.preventDefault();
       }

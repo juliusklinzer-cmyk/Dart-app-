@@ -246,7 +246,8 @@ nächsten Modus weiter (aus dem Turnier-Modus also zurück zu Punkte), **Esc**
 alle Anzeigen sind auf die Distanz vom Oche (~3 m) ausgelegt: Spielername,
 Legs und Ø stehen groß in der Karte, die Dialoge sprechen Plakatgröße.
 Nach einem Leg: **Enter** startet das nächste, **Löschen** nimmt die Eingabe
-zurück. Alle Dialoge füllen dabei den **ganzen Bildschirm** in maximaler
+zurück; auch am Spielende wählen die **Pfeiltasten** zwischen Statistik und
+„Letzten Dart zurück", Enter bestätigt. Alle Dialoge füllen dabei den **ganzen Bildschirm** in maximaler
 Schrift. Nach dem Einzel erscheint **8 Sekunden groß die Kurzstatistik**
 (Ø, 180er, höchstes Finish beider Spieler) – Enter überspringt –, danach die
 **nächsten Begegnungen in groß**: mit den **Pfeiltasten** wird gewählt (die

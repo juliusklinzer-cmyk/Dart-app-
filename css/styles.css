@@ -802,8 +802,8 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   .quick-row button { min-height: 54px; font-size: 1.05rem; }
   .keypad button { min-height: 74px; font-size: 1.8rem; }
   .keypad button.ok { font-size: 1.3rem; }
-  .mult-row button { min-height: 58px; font-size: 1.1rem; }
-  .num-grid button { min-height: 64px; font-size: 1.35rem; }
+  .mult-row button { min-height: 68px; font-size: 1.25rem; }
+  .num-grid button { min-height: 68px; font-size: 1.6rem; }
   .visit-darts .d { min-width: 56px; font-size: 1rem; padding: 9px 10px; }
   .score-display { font-size: 2.8rem; }
 }
@@ -817,6 +817,12 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   .input-area { flex: 1 1 50%; min-width: 0; margin-top: 0; display: flex; flex-direction: column; }
   .pad { flex: 1; display: flex; flex-direction: column; gap: 8px; }
   .pad .keypad, .pad .num-grid { flex: 1; grid-auto-rows: 1fr; }
+  /* Single/Double/Triple genau so hoch wie eine Zahlenreihe: das
+     Zahlenfeld hat fuenf Reihen, also teilt sich die Hoehe 1:5. */
+  #pad-darts .mult-row { flex: 1 1 0; min-height: 0; }
+  #pad-darts .mult-row button { min-height: 0; height: 100%; font-size: 1.35rem; }
+  #pad-darts .num-grid { flex: 5 1 0; }
+  .num-grid button { font-size: 1.6rem; }
   .quick-row, .mult-row, .display-row { margin-bottom: 0; }
   /* Das Spielbild steht fest im Rahmen: nichts scrollt aus dem Bild,
      nur der Wurfverlauf scrollt in seinem eigenen Kasten. Die Tasten
@@ -2614,6 +2620,12 @@ button.blitzt { animation: tastenblitz 240ms var(--ease-out-stark); }
   border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px;
 }
 .te-hint { color: var(--muted); font-size: clamp(1.1rem, 2.8vh, 1.5rem); margin: 2vh 0 0; }
+/* Die per Pfeiltaste gewaehlte Option traegt dasselbe Licht wie die
+   gewaehlte Begegnung. */
+.overlay.gross .btn.wahl {
+  border: 1px solid var(--aktiv-linie);
+  box-shadow: 0 0 26px var(--schein);
+}
 
 /* Ausbullen ohne Springen: gewaehlte Namen lassen links eine leere
    Stelle zurueck, rechts warten nummerierte Slots, der Startknopf haelt
