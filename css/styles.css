@@ -2769,5 +2769,13 @@ button.blitzt { animation: tastenblitz 240ms var(--ease-out-stark); }
 #screen-bulloff.turnier > [data-action="to-tournament"] { flex: none; }
 
 /* Am Board: volle Breite bis an die Geraetekante - kein schwarzer
-   Randstreifen, der das Licht des aktiven Spielers unterbricht. */
-body.am-board { max-width: none; }
+   Randstreifen, der das Licht des aktiven Spielers unterbricht. Das
+   Seitenpolster wandert vom body in den Screen: overflow schneidet an
+   der Polsterkante, also erst an der echten Bildschirmkante - der Schein
+   laeuft durch das Polster bis ganz nach aussen. */
+body.am-board { max-width: none; padding-left: 0; padding-right: 0; }
+body.am-board #screen-game.turnier.active,
+body.am-board #screen-bulloff.turnier.active {
+  padding-left: max(12px, env(safe-area-inset-left, 0px));
+  padding-right: max(12px, env(safe-area-inset-right, 0px));
+}

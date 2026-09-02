@@ -269,9 +269,22 @@
   function rosterReihenfolge() {
     var ich = window.DartKonto && window.DartKonto.nutzer() ? window.DartKonto.nutzer().id : null;
     var liste = activeProfiles().slice();
+    /* Wer die App am meisten nutzt, steht oben: Spiele ueber alle Modi,
+       bei Gleichstand die Siege - ich selbst ganz vorn, Gaeste ans Ende. */
+    var map = career();
+    var nutzung = function (id) {
+      var s = map[id];
+      if (!s) return 0;
+      return (s.matches || 0) + (s.cricketGames || 0) + (s.rtwGames || 0) + (s.finGames || 0);
+    };
     return liste.sort(function (a, b) {
       if (ich && (a.id === ich) !== (b.id === ich)) return (b.id === ich) - (a.id === ich);
-      return (a.gast ? 1 : 0) - (b.gast ? 1 : 0);
+      if ((a.gast ? 1 : 0) !== (b.gast ? 1 : 0)) return (a.gast ? 1 : 0) - (b.gast ? 1 : 0);
+      var na = nutzung(a.id), nb = nutzung(b.id);
+      if (na !== nb) return nb - na;
+      var wa = (map[a.id] || {}).won || 0, wb = (map[b.id] || {}).won || 0;
+      if (wa !== wb) return wb - wa;
+      return 0;
     });
   }
 
@@ -1304,7 +1317,9 @@
     var known = {};
     S.profiles.forEach(function (p) { known[p.id] = p; });
     var rows = Object.keys(map).map(function (k) { return map[k]; }).filter(function (s) {
-      return def.min(s) && known[s.id] && !known[s.id].hidden && !known[s.id].bot;
+      /* Nur Stammspieler: Gaeste eines Abends (und Bots) gehoeren nicht
+         in die Rangliste der Mannschaft - ihre Spiele bleiben im Verlauf. */
+      return def.min(s) && known[s.id] && !known[s.id].hidden && !known[s.id].bot && !known[s.id].gast;
     });
     rows.sort(function (a, b) {
       var d = def.asc ? def.get(a) - def.get(b) : def.get(b) - def.get(a);
@@ -4589,14 +4604,18 @@
         '</div>' +
         '<input class="name-input" type="text" data-role="profile-name" value="' + esc(p.name) + '" placeholder="Anzeigename" maxlength="16">' +
         /* Der buergerliche Name steht auf dem Liga-Spielbericht - die SWO
-           will Vor- und Nachnamen, keine Kuenstlernamen. */
-        '<div class="namen-titel">Echte Namen f\u00fcr die Liga</div>' +
-        '<div class="namen-paar">' +
-          '<input class="name-input klein" type="text" data-role="profile-vor" value="' + esc(p.vor || '') + '" ' +
-            'placeholder="Vorname" maxlength="30">' +
-          '<input class="name-input klein" type="text" data-role="profile-nach" value="' + esc(p.nach || '') + '" ' +
-            'placeholder="Nachname" maxlength="30">' +
-        '</div>' +
+           will Vor- und Nachnamen, keine Kuenstlernamen. Gaeste eines
+           Abends brauchen das nicht: Foto aus Spass, Name, Lieblingsdoppel
+           - fertig. */
+        (isNew || (o.id && profile(o.id).gast)
+          ? ''
+          : '<div class="namen-titel">Echte Namen f\u00fcr die Liga</div>' +
+            '<div class="namen-paar">' +
+              '<input class="name-input klein" type="text" data-role="profile-vor" value="' + esc(p.vor || '') + '" ' +
+                'placeholder="Vorname" maxlength="30">' +
+              '<input class="name-input klein" type="text" data-role="profile-nach" value="' + esc(p.nach || '') + '" ' +
+                'placeholder="Nachname" maxlength="30">' +
+            '</div>') +
         /* Lieblingsdoppel: der Finish-Vorschlag stellt dann bevorzugt darauf.
            Kein Umweg über einen zusätzlichen Dart – nur die Wahl zwischen
            gleich langen Wegen, siehe js/checkout.js. */
@@ -5248,7 +5267,11 @@
           ex.name = name;
           ex.avatar = draft.avatar;
           ex.dbl = draft.dbl || null;
-          ex.voll = vollAusTeilen(draft.vor, draft.nach);
+          /* Der Gast-Dialog fragt keine Liga-Namen ab - dann bleibt, was
+             da ist (z. B. der Name aus einer Ligaspiel-Aufstellung). */
+          if (draft.vor !== undefined || draft.nach !== undefined) {
+            ex.voll = vollAusTeilen(draft.vor, draft.nach) || ex.voll || null;
+          }
           /* Gehört das Profil zu einem Account, muss die Änderung zum Server –
              sonst überschreibt der nächste Abgleich Bild und Name wieder mit
              dem, was dort steht. */

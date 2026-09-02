@@ -2423,6 +2423,32 @@ check('das Ligaspiel steht im Spieltag-Log', await page.evaluate(() => {
 }));
 check('die Rekorde kommen aus dem Ligaspiel', (await text('#records')).includes('141'));
 
+group('Rangliste nur mit Stammspielern, Aufstellung nach Nutzung');
+await page.evaluate(() => { window.__dart.ui().boardMode = '501'; window.__dart.setScreen('boards'); });
+check('kein Gast steht in der Rangliste', await page.evaluate(() => {
+  const S = window.__dart.state();
+  const gaeste = S.profiles.filter((p) => p.gast).map((p) => p.name);
+  const t = document.getElementById('board-list').innerText;
+  return gaeste.every((n) => !t.includes(n));
+}));
+await page.evaluate(() => window.__dart.setScreen('setup'));
+check('die Aufstellung sortiert Vielspieler nach oben und Gaeste ans Ende',
+  await page.evaluate(() => {
+    const S = window.__dart.state();
+    const reihen = [...document.querySelectorAll('#roster .roster-item')];
+    const gastAb = reihen.findIndex((r) => r.querySelector('.gast-marke'));
+    // Nach dem Gast-Marker darf kein Stammspieler mehr kommen.
+    return gastAb === -1 || reihen.slice(gastAb).every((r) => r.querySelector('.gast-marke'));
+  }));
+/* Neuer Gast: schlanker Dialog ohne Liga-Namen, Lieblingsdoppel bleibt. */
+await page.locator('#screen-setup [data-action="new-profile"]').click();
+check('der Gast-Dialog fragt keine Liga-Namen ab',
+  (await page.locator('[data-role="profile-vor"]').count()) === 0 &&
+  (await page.locator('[data-role="profile-name"]').count()) === 1);
+check('das Lieblingsdoppel wird weiter abgefragt',
+  (await page.locator('[data-role="profile-double"]').count()) === 1);
+await page.locator('[data-action="ov-cancel"]').click();
+
 group('Gast direkt loeschen');
 await page.evaluate(() => window.__dart.setScreen('players'));
 check('der Dachauer Gast steht in der Spielerliste', (await text('#players-list')).includes('Dachau 1'));
