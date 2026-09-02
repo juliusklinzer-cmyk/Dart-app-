@@ -120,6 +120,9 @@
 
   /* ================= Helfer ================= */
   function $(id) { return document.getElementById(id); }
+  /* Klaenge sind optional - ohne js/sound.js bleibt alles stumm. */
+  function pomp() { if (window.DartSound) window.DartSound.pomp(); }
+  function klick() { if (window.DartSound) window.DartSound.klick(); }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
   function uid() { return Math.random().toString(36).slice(2, 9); }
   function sum(arr, f) { var t = 0; for (var i = 0; i < arr.length; i++) t += f(arr[i]); return t; }
@@ -864,6 +867,7 @@
     if (v > 180) { UI.error = 'Maximal 180'; UI.input = ''; render(); return; }
     if (IMPOSSIBLE[v]) { UI.error = v + ' ist mit 3 Darts nicht möglich'; UI.input = ''; render(); return; }
 
+    pomp();
     var after = rest - v;
     if (after < 0 || after === 1) { commitVisit(v, 3, false, true); return; }
     if (after === 0) {
@@ -879,7 +883,7 @@
 
   function pressKey(k) {
     UI.error = '';
-    if (k === 'del') { UI.input = UI.input.slice(0, -1); render(); return; }
+    if (k === 'del') { klick(); UI.input = UI.input.slice(0, -1); render(); return; }
     if (k === 'ok') { submitTotal(); return; }
     var next = UI.input + k;
     if (next.length > 3) return;
@@ -903,6 +907,7 @@
 
     UI.darts.push({ m: mult, n: num, v: value });
     UI.mult = 1;
+    pomp();
 
     var after = rest - value;
     var thrown = UI.darts.length;
@@ -965,6 +970,7 @@
 
   /* ================= Undo ================= */
   function undo() {
+    klick();
     if (UI.overlay && UI.overlay.type === 'checkout-darts') { UI.overlay = null; UI.input = ''; render(); return; }
     if (UI.darts.length) { UI.darts.pop(); UI.mult = 1; render(); return; }
 
@@ -1369,6 +1375,7 @@
   function cricketDart(mult, num) {
     var g = S.game;
     if (!g || g.done || settling()) return;
+    pomp();
     // Bull: 25 zählt eine Marke, Doppel-Bull zwei.
     var m = num === 25 ? (mult === 2 ? 2 : 1) : mult;
     g.throws.push({ n: num, m: num === 0 ? 0 : m });
@@ -1466,6 +1473,7 @@
     if (!g || g.done || settling()) return;
     // Im Stechen wird nicht mehr eingetragen, sondern entschieden.
     if (rtwState(g).stechen) return;
+    pomp();
     var m = num === 25 ? (mult === 2 ? 2 : 1) : mult;
     g.throws.push({ n: num, m: num === 0 ? 0 : m });
     UI.mult = 1;
@@ -1614,6 +1622,7 @@
     if (!g || g.kind !== 'finisher' || g.done || settling()) return;
     var rd = finisherRunde(g);
     if (rd.stechen) return;          // erst das Stechen entscheiden
+    pomp();
     rd.throws.push({ n: num, m: num === 0 ? 0 : mult });
     UI.mult = 1;
     pruefeFinisherRunde(g);
@@ -5076,6 +5085,7 @@
       case 'end-cricket-visit': {
         var cg = S.game;
         if (!cg || cg.kind !== 'cricket' || cg.done || settling()) return;
+        pomp();
         var need = 3 - (cg.throws.length % 3);
         for (var ci = 0; ci < need; ci++) cg.throws.push({ n: 0, m: 0 });
         UI.mult = 1;
@@ -5102,6 +5112,7 @@
         if (!fg || fg.kind !== 'finisher' || fg.done || settling()) return;
         var frd = finisherRunde(fg);
         if (frd.stechen) return;
+        pomp();
         var offenFin = 3 - finisherState(fg).inVisit;
         for (var fi = 0; fi < offenFin; fi++) frd.throws.push({ n: 0, m: 0 });
         UI.mult = 1;
@@ -5263,6 +5274,7 @@
       case 'end-visit': {
         var em = currentMatch();
         if (!em || em.done) return;
+        pomp();
         // Fehlende Darts als Fehlwürfe ergänzen, dann normal verbuchen.
         while (UI.darts.length < 3) UI.darts.push({ m: 1, n: 0, v: 0 });
         var total = sum(UI.darts, function (d) { return d.v; });
@@ -5542,7 +5554,7 @@
     }
 
     var mult = ev.target.closest('.mult-row button');
-    if (mult) { UI.mult = Number(mult.getAttribute('data-mult')); render(); return; }
+    if (mult) { UI.mult = Number(mult.getAttribute('data-mult')); pomp(); render(); return; }
 
     var bull = ev.target.closest('[data-bull]');
     if (bull) { pushDart(2, 25); return; }
@@ -5691,7 +5703,7 @@
     } else if (ev.key === 'Backspace') {
       /* Erst Ziffern löschen, im leeren Zustand die letzte Aufnahme – so
          korrigiert man vom Board aus ohne Maus bis zum vorigen Spieler. */
-      if (UI.input) { UI.input = UI.input.slice(0, -1); UI.error = ''; render(); }
+      if (UI.input) { klick(); UI.input = UI.input.slice(0, -1); UI.error = ''; render(); }
       else undo();
       ev.preventDefault();
     }

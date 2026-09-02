@@ -2654,3 +2654,10 @@ button.blitzt { animation: tastenblitz 240ms var(--ease-out-stark); }
 @media (min-width: 700px) {
   .fin-pille { width: 20px; height: 20px; }
 }
+
+/* Die Reihenfolge-Nummern beim Ausbullen leuchten blau wie das Barlicht -
+   Rot bleibt Finish und Warnung vorbehalten. */
+.bulloff-order .bo-pos {
+  color: var(--laser-hell);
+  text-shadow: 0 0 8px var(--laser-weich);
+}

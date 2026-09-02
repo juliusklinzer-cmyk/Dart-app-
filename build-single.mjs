@@ -30,7 +30,7 @@ const css = read('css/styles.css')
   // angezeigt wird.
   .replace(/url\('\.\.\/icons\/([^']+)'\)/g,
     (_, datei) => "url('" + einbetten('icons/' + datei, 'image/webp') + "')");
-const js = [read('js/checkout.js'), read('js/app.js')]
+const js = [read('js/sound.js'), read('js/checkout.js'), read('js/app.js')]
   // Ohne Nachbardateien gibt es keinen Service Worker zu registrieren.
   .join('\n')
   .replace(/\n\s*if \('serviceWorker' in navigator[\s\S]*?\n\s*\}\n/, '\n');

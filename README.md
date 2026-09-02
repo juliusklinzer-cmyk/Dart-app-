@@ -256,6 +256,15 @@ Eine eigene Statistik-Seite gibt es im Turnier-Modus nicht. Auf einem Gerät ohn
 ins Bild für ein paar Sekunden den Knopf **„Turnier-Modus beenden"** – der
 Notausgang, damit niemand ohne Tab und Esc gefangen sitzt.
 
+**Klang:** Jede gebuchte Eingabe klingt wie ein Pfeil, der ins Board schlägt –
+**„Pomp"** (Julius' eigene Aufnahme, eingebettet in `js/sound.js`): beim
+Einzel-Dart je gesetztem Pfeil (auch Double/Triple-Wahl), bei der
+Punkte-Eingabe je Buchung (OK, Auto-Übernahme, Schnellwahl, Enter am Board),
+im Cricket, Round the World und Finisher je Feld, und einmal beim
+„Weiter ▸". Jede **Rücknahme klickt** stattdessen trocken. Der Ton startet
+nach der ersten Berührung (iOS gibt Audio erst nach einer Geste frei);
+Browser ohne AAC bekommen einen synthetischen Ersatzschlag.
+
 **Tastgefühl:** Jede gedrückte Taste **blitzt kurz hell auf** – auch bei
 einem 30-Millisekunden-Tipp. So ist am Board immer klar, ob die Eingabe
 angekommen ist; wer eine Taste hält, sieht sie erhellt stehen. Dialoge
