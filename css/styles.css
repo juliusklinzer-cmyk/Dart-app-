@@ -817,11 +817,12 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   .input-area { flex: 1 1 50%; min-width: 0; margin-top: 0; display: flex; flex-direction: column; }
   .pad { flex: 1; display: flex; flex-direction: column; gap: 8px; }
   .pad .keypad, .pad .num-grid { flex: 1; grid-auto-rows: 1fr; }
-  /* Single/Double/Triple genau so hoch wie eine Zahlenreihe: das
-     Zahlenfeld hat fuenf Reihen, also teilt sich die Hoehe 1:5. */
-  #pad-darts .mult-row { flex: 1 1 0; min-height: 0; }
-  #pad-darts .mult-row button { min-height: 0; height: 100%; font-size: 1.35rem; }
-  #pad-darts .num-grid { flex: 5 1 0; }
+  /* Single/Double/Triple exakt so hoch wie eine Zahlenreihe: sechs
+     gleiche Reihen, abzueglich Pad-Gap (8px) und der vier Gaps im
+     Zahlenfeld (24px). */
+  #pad-darts .mult-row { flex: none; height: calc((100% - 32px) / 6); min-height: 0; }
+  #pad-darts .mult-row button { min-height: 0; height: 100%; font-size: 1.25rem; }
+  #pad-darts .num-grid { flex: 1 1 0; }
   .num-grid button { font-size: 1.6rem; }
   .quick-row, .mult-row, .display-row { margin-bottom: 0; }
   /* Das Spielbild steht fest im Rahmen: nichts scrollt aus dem Bild,
@@ -849,12 +850,9 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   /* Turnierseite ebenfalls zweispaltig, sonst scrollt sie über Bildschirme. */
   #screen-tournament.active { display: grid; grid-template-columns: 1.1fr 1fr; gap: 0 16px; align-items: start; }
   #screen-tournament.active > .app-header { grid-column: 1 / -1; }
-  /* Die klebende Hauptaktion braucht eigenen Grund und Platz darunter. */
-  #screen-tournament [data-action="next-match"],
-  #screen-tournament [data-action="to-winner"] {
-    background: var(--accent); box-shadow: 0 -10px 16px var(--bg);
-  }
-  #screen-tournament .card:has(#schedule) { padding-bottom: 76px; }
+  #screen-tournament.active .turnier-links  { grid-column: 1; }
+  #screen-tournament.active .turnier-rechts { grid-column: 2; grid-row: 2; }
+
   /* Cricket-Tafel und Trainingsliste dürfen die freie Höhe nutzen. */
   .cricket-board { flex: 1; min-height: 0; }
   .cr-grid { height: 100%; grid-auto-rows: 1fr; }
@@ -887,9 +885,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   #screen-boards.active > #board-chart { grid-column: 2; }
   #screen-boards.active .board-row .pos { width: 50px; }
   #board-chart .chart { max-height: 42vh; }
-  /* Die Hauptaktion des Turniers bleibt immer sichtbar. */
-  #screen-tournament [data-action="next-match"],
-  #screen-tournament [data-action="to-winner"] { position: sticky; bottom: 8px; z-index: 10; }
+
 }
 
 /* Handy im Querformat: sehr flach, alles muss ohne Scrollen passen. */
@@ -1046,7 +1042,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .cg-extra { grid-template-columns: repeat(4, 1fr); }
 .cr-mpr { font-size: 0.62rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .cr-head.act .cr-mpr { color: var(--accent); }
-.num-grid button.end-visit { font-size: 0.95rem; color: var(--accent); }
+.num-grid button.end-visit { color: var(--text); }
 
 @media (orientation: landscape) and (min-width: 700px) {
   .cricket-grid { gap: 10px; }
@@ -1319,12 +1315,14 @@ h2 {
 
 /* ---------- Nachträge zum Rebranding ---------- */
 
-/* „Ausgewählt" ist überall hell, auch beim Multiplikator – sonst leuchtet
-   ein roter Balken über dem Zahlenfeld, der wie eine Warnung aussieht. */
+/* „Ausgewählt" beim Multiplikator: dunkle Fläche mit weißer Kante und
+   blauem Schein – klar erkennbar, aber kein weißer Balken, der über dem
+   Zahlenfeld dominiert (und kein Rot, das wie eine Warnung aussieht). */
 .mult-row button.active {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: var(--on-primary);
+  background: var(--aktiv-flaeche);
+  border-color: var(--aktiv-linie);
+  color: var(--text);
+  box-shadow: 0 0 16px var(--schein);
   font-family: var(--font-cond);
   letter-spacing: 0.04em;
 }
@@ -1449,10 +1447,7 @@ button, input, select, textarea { font-family: inherit; }
    stand hier der Akzent fest – geschrieben, als der noch grün war, und seit
    er rot ist kam Rot mit dunkler Schrift heraus. */
 @media (min-width: 820px) {
-  #screen-tournament [data-action="next-match"],
-  #screen-tournament [data-action="to-winner"] {
-    background: var(--primary);
-  }
+
 }
 
 /* ---------- Aufbau des Startbildschirms ---------- */
@@ -1797,7 +1792,7 @@ button, input, select, textarea { font-family: inherit; }
 /* Das kleine D bzw. T vor der Feldzahl im Einzel-Dart-Zahlenfeld – dieselbe
    Angabe wie im Cricket, also auch dieselbe Farbe. */
 .num-grid .mx { color: var(--laser-hell); }
-.num-grid button.end-visit { color: var(--muted); }
+.num-grid button.end-visit { color: var(--text); }
 
 /* ================= Die 180er-Feier ================= */
 /*
@@ -2661,3 +2656,51 @@ button.blitzt { animation: tastenblitz 240ms var(--ease-out-stark); }
   color: var(--laser-hell);
   text-shadow: 0 0 8px var(--laser-weich);
 }
+
+
+/* Die Mini-Anzeige der Aufnahme neben den Modus-Knoepfen ist Geschichte:
+   die drei grossen Kacheln links tragen die geworfenen Darts. */
+#visit-darts { display: none; }
+
+
+/* Turnier-Uebersicht: am Handy loesen sich die Spalten auf (Spielplan
+   zuerst), am iPad stehen sie nebeneinander. Verwalten wohnt unten im
+   Spielplan-Kasten, leise abgesetzt. */
+.turnier-links, .turnier-rechts { display: contents; }
+@media (orientation: landscape) and (min-width: 700px) {
+  .turnier-links, .turnier-rechts { display: block; }
+}
+.spielplan-aktionen {
+  margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line);
+  display: flex; flex-direction: column; gap: 8px;
+}
+#turnier-endstand { margin-top: 14px; }
+
+/* ================= Ausbullen am Board ================= */
+/* Zwei Felder, die den Bildschirm fuellen - vom Oche erkennbar, mit der
+   Tastatur waehlbar. Die Wahl traegt das bekannte Licht. */
+#screen-bulloff.turnier.active {
+  height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 12px);
+  min-height: 0; overflow: hidden;
+  display: flex; flex-direction: column; justify-content: center;
+}
+#screen-bulloff.turnier .bulloff {
+  flex: 1; min-height: 0;
+  grid-template-columns: 1fr 1fr; gap: 20px; align-items: stretch;
+}
+#screen-bulloff.turnier .bulloff button {
+  height: 100%; min-height: 0; padding: 20px;
+  font-size: clamp(2rem, 7vh, 3.6rem); font-family: var(--font-cond); font-weight: 700;
+}
+#screen-bulloff.turnier .bulloff button.wahl {
+  border-color: var(--aktiv-linie); background: var(--aktiv-flaeche);
+  box-shadow: 0 0 34px var(--schein);
+}
+#screen-bulloff.turnier .app-header h1 { font-size: clamp(2rem, 6vh, 3rem); }
+#screen-bulloff.turnier .app-header .sub { font-size: clamp(1.1rem, 3vh, 1.6rem); }
+#screen-bulloff.turnier .bulloff .te-hint { grid-column: 1 / -1; text-align: center; margin: 0; }
+#screen-bulloff.turnier > [data-action="to-tournament"] { flex: none; }
+
+/* Am Board: volle Breite bis an die Geraetekante - kein schwarzer
+   Randstreifen, der das Licht des aktiven Spielers unterbricht. */
+body.am-board { max-width: none; }

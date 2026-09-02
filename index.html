@@ -206,33 +206,41 @@
     <button class="btn ghost small" data-action="to-setup">Turnier verlassen</button>
   </header>
 
-  <!-- Nur im Ligaspiel: der Team-Stand mit den Angaben für den
-       Spielberichtsbogen. Die Einzeltabelle darunter bleibt dann versteckt. -->
-  <div class="card hidden" id="liga-stand"></div>
-
-  <div class="card no-pad">
-    <table class="standings">
-      <thead>
-        <tr><th>#</th><th class="left">Spieler</th><th>Siege</th><th>Nied.</th><th>Legs</th><th>Ø</th></tr>
-      </thead>
-      <tbody id="standings-body"></tbody>
-    </table>
+  <!-- Links die naechsten Spiele (gestartet wird direkt an der Partie),
+       rechts Tabelle und Statistik - am Handy alles untereinander,
+       Spielplan zuerst. Den nie benutzten "Naechstes Spiel"-Knopf gibt es
+       nicht mehr; nur der Endstand bekommt einen, wenn alles gespielt ist. -->
+  <div class="turnier-links">
+    <div class="card">
+      <h2>Spielplan</h2>
+      <div id="schedule"></div>
+      <button class="btn primary full hidden" id="turnier-endstand" data-action="to-winner">Endstand ansehen</button>
+      <div class="spielplan-aktionen">
+        <button class="btn ghost full" data-action="roster-change">Spieler nachtragen oder abmelden</button>
+        <button class="btn danger ghost full" data-action="reset">Turnier vorzeitig beenden</button>
+      </div>
+    </div>
   </div>
 
-  <div class="card">
-    <h2>Spielplan</h2>
-    <div id="schedule"></div>
+  <div class="turnier-rechts">
+    <!-- Nur im Ligaspiel: der Team-Stand mit den Angaben für den
+         Spielberichtsbogen. Die Einzeltabelle darunter bleibt dann versteckt. -->
+    <div class="card hidden" id="liga-stand"></div>
+
+    <div class="card no-pad">
+      <table class="standings">
+        <thead>
+          <tr><th>#</th><th class="left">Spieler</th><th>Siege</th><th>Nied.</th><th>Legs</th><th>Ø</th></tr>
+        </thead>
+        <tbody id="standings-body"></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>Turnier-Statistik</h2>
+      <div id="stats-grid" class="stats-grid"></div>
+    </div>
   </div>
-
-  <button class="btn primary full big" data-action="next-match">Nächstes Spiel</button>
-
-  <div class="card">
-    <h2>Turnier-Statistik</h2>
-    <div id="stats-grid" class="stats-grid"></div>
-  </div>
-
-  <button class="btn ghost full" data-action="roster-change">Spieler nachtragen oder abmelden</button>
-  <button class="btn danger ghost full" data-action="reset">Turnier vorzeitig beenden</button>
 </section>
 
 <!-- ============ RANGLISTE ============ -->

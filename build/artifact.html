@@ -820,11 +820,12 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   .input-area { flex: 1 1 50%; min-width: 0; margin-top: 0; display: flex; flex-direction: column; }
   .pad { flex: 1; display: flex; flex-direction: column; gap: 8px; }
   .pad .keypad, .pad .num-grid { flex: 1; grid-auto-rows: 1fr; }
-  /* Single/Double/Triple genau so hoch wie eine Zahlenreihe: das
-     Zahlenfeld hat fuenf Reihen, also teilt sich die Hoehe 1:5. */
-  #pad-darts .mult-row { flex: 1 1 0; min-height: 0; }
-  #pad-darts .mult-row button { min-height: 0; height: 100%; font-size: 1.35rem; }
-  #pad-darts .num-grid { flex: 5 1 0; }
+  /* Single/Double/Triple exakt so hoch wie eine Zahlenreihe: sechs
+     gleiche Reihen, abzueglich Pad-Gap (8px) und der vier Gaps im
+     Zahlenfeld (24px). */
+  #pad-darts .mult-row { flex: none; height: calc((100% - 32px) / 6); min-height: 0; }
+  #pad-darts .mult-row button { min-height: 0; height: 100%; font-size: 1.25rem; }
+  #pad-darts .num-grid { flex: 1 1 0; }
   .num-grid button { font-size: 1.6rem; }
   .quick-row, .mult-row, .display-row { margin-bottom: 0; }
   /* Das Spielbild steht fest im Rahmen: nichts scrollt aus dem Bild,
@@ -852,12 +853,9 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   /* Turnierseite ebenfalls zweispaltig, sonst scrollt sie über Bildschirme. */
   #screen-tournament.active { display: grid; grid-template-columns: 1.1fr 1fr; gap: 0 16px; align-items: start; }
   #screen-tournament.active > .app-header { grid-column: 1 / -1; }
-  /* Die klebende Hauptaktion braucht eigenen Grund und Platz darunter. */
-  #screen-tournament [data-action="next-match"],
-  #screen-tournament [data-action="to-winner"] {
-    background: var(--accent); box-shadow: 0 -10px 16px var(--bg);
-  }
-  #screen-tournament .card:has(#schedule) { padding-bottom: 76px; }
+  #screen-tournament.active .turnier-links  { grid-column: 1; }
+  #screen-tournament.active .turnier-rechts { grid-column: 2; grid-row: 2; }
+
   /* Cricket-Tafel und Trainingsliste dürfen die freie Höhe nutzen. */
   .cricket-board { flex: 1; min-height: 0; }
   .cr-grid { height: 100%; grid-auto-rows: 1fr; }
@@ -890,9 +888,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   #screen-boards.active > #board-chart { grid-column: 2; }
   #screen-boards.active .board-row .pos { width: 50px; }
   #board-chart .chart { max-height: 42vh; }
-  /* Die Hauptaktion des Turniers bleibt immer sichtbar. */
-  #screen-tournament [data-action="next-match"],
-  #screen-tournament [data-action="to-winner"] { position: sticky; bottom: 8px; z-index: 10; }
+
 }
 
 /* Handy im Querformat: sehr flach, alles muss ohne Scrollen passen. */
@@ -1049,7 +1045,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .cg-extra { grid-template-columns: repeat(4, 1fr); }
 .cr-mpr { font-size: 0.62rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .cr-head.act .cr-mpr { color: var(--accent); }
-.num-grid button.end-visit { font-size: 0.95rem; color: var(--accent); }
+.num-grid button.end-visit { color: var(--text); }
 
 @media (orientation: landscape) and (min-width: 700px) {
   .cricket-grid { gap: 10px; }
@@ -1322,12 +1318,14 @@ h2 {
 
 /* ---------- Nachträge zum Rebranding ---------- */
 
-/* „Ausgewählt" ist überall hell, auch beim Multiplikator – sonst leuchtet
-   ein roter Balken über dem Zahlenfeld, der wie eine Warnung aussieht. */
+/* „Ausgewählt" beim Multiplikator: dunkle Fläche mit weißer Kante und
+   blauem Schein – klar erkennbar, aber kein weißer Balken, der über dem
+   Zahlenfeld dominiert (und kein Rot, das wie eine Warnung aussieht). */
 .mult-row button.active {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: var(--on-primary);
+  background: var(--aktiv-flaeche);
+  border-color: var(--aktiv-linie);
+  color: var(--text);
+  box-shadow: 0 0 16px var(--schein);
   font-family: var(--font-cond);
   letter-spacing: 0.04em;
 }
@@ -1452,10 +1450,7 @@ button, input, select, textarea { font-family: inherit; }
    stand hier der Akzent fest – geschrieben, als der noch grün war, und seit
    er rot ist kam Rot mit dunkler Schrift heraus. */
 @media (min-width: 820px) {
-  #screen-tournament [data-action="next-match"],
-  #screen-tournament [data-action="to-winner"] {
-    background: var(--primary);
-  }
+
 }
 
 /* ---------- Aufbau des Startbildschirms ---------- */
@@ -1800,7 +1795,7 @@ button, input, select, textarea { font-family: inherit; }
 /* Das kleine D bzw. T vor der Feldzahl im Einzel-Dart-Zahlenfeld – dieselbe
    Angabe wie im Cricket, also auch dieselbe Farbe. */
 .num-grid .mx { color: var(--laser-hell); }
-.num-grid button.end-visit { color: var(--muted); }
+.num-grid button.end-visit { color: var(--text); }
 
 /* ================= Die 180er-Feier ================= */
 /*
@@ -2665,6 +2660,54 @@ button.blitzt { animation: tastenblitz 240ms var(--ease-out-stark); }
   text-shadow: 0 0 8px var(--laser-weich);
 }
 
+
+/* Die Mini-Anzeige der Aufnahme neben den Modus-Knoepfen ist Geschichte:
+   die drei grossen Kacheln links tragen die geworfenen Darts. */
+#visit-darts { display: none; }
+
+
+/* Turnier-Uebersicht: am Handy loesen sich die Spalten auf (Spielplan
+   zuerst), am iPad stehen sie nebeneinander. Verwalten wohnt unten im
+   Spielplan-Kasten, leise abgesetzt. */
+.turnier-links, .turnier-rechts { display: contents; }
+@media (orientation: landscape) and (min-width: 700px) {
+  .turnier-links, .turnier-rechts { display: block; }
+}
+.spielplan-aktionen {
+  margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line);
+  display: flex; flex-direction: column; gap: 8px;
+}
+#turnier-endstand { margin-top: 14px; }
+
+/* ================= Ausbullen am Board ================= */
+/* Zwei Felder, die den Bildschirm fuellen - vom Oche erkennbar, mit der
+   Tastatur waehlbar. Die Wahl traegt das bekannte Licht. */
+#screen-bulloff.turnier.active {
+  height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 12px);
+  min-height: 0; overflow: hidden;
+  display: flex; flex-direction: column; justify-content: center;
+}
+#screen-bulloff.turnier .bulloff {
+  flex: 1; min-height: 0;
+  grid-template-columns: 1fr 1fr; gap: 20px; align-items: stretch;
+}
+#screen-bulloff.turnier .bulloff button {
+  height: 100%; min-height: 0; padding: 20px;
+  font-size: clamp(2rem, 7vh, 3.6rem); font-family: var(--font-cond); font-weight: 700;
+}
+#screen-bulloff.turnier .bulloff button.wahl {
+  border-color: var(--aktiv-linie); background: var(--aktiv-flaeche);
+  box-shadow: 0 0 34px var(--schein);
+}
+#screen-bulloff.turnier .app-header h1 { font-size: clamp(2rem, 6vh, 3rem); }
+#screen-bulloff.turnier .app-header .sub { font-size: clamp(1.1rem, 3vh, 1.6rem); }
+#screen-bulloff.turnier .bulloff .te-hint { grid-column: 1 / -1; text-align: center; margin: 0; }
+#screen-bulloff.turnier > [data-action="to-tournament"] { flex: none; }
+
+/* Am Board: volle Breite bis an die Geraetekante - kein schwarzer
+   Randstreifen, der das Licht des aktiven Spielers unterbricht. */
+body.am-board { max-width: none; }
+
 </style>
 <div id="save-warning" class="save-warning hidden">
   ⚠️ Der Spielstand kann gerade nicht gespeichert werden – bitte Speicherplatz prüfen
@@ -2856,33 +2899,41 @@ button.blitzt { animation: tastenblitz 240ms var(--ease-out-stark); }
     <button class="btn ghost small" data-action="to-setup">Turnier verlassen</button>
   </header>
 
-  <!-- Nur im Ligaspiel: der Team-Stand mit den Angaben für den
-       Spielberichtsbogen. Die Einzeltabelle darunter bleibt dann versteckt. -->
-  <div class="card hidden" id="liga-stand"></div>
-
-  <div class="card no-pad">
-    <table class="standings">
-      <thead>
-        <tr><th>#</th><th class="left">Spieler</th><th>Siege</th><th>Nied.</th><th>Legs</th><th>Ø</th></tr>
-      </thead>
-      <tbody id="standings-body"></tbody>
-    </table>
+  <!-- Links die naechsten Spiele (gestartet wird direkt an der Partie),
+       rechts Tabelle und Statistik - am Handy alles untereinander,
+       Spielplan zuerst. Den nie benutzten "Naechstes Spiel"-Knopf gibt es
+       nicht mehr; nur der Endstand bekommt einen, wenn alles gespielt ist. -->
+  <div class="turnier-links">
+    <div class="card">
+      <h2>Spielplan</h2>
+      <div id="schedule"></div>
+      <button class="btn primary full hidden" id="turnier-endstand" data-action="to-winner">Endstand ansehen</button>
+      <div class="spielplan-aktionen">
+        <button class="btn ghost full" data-action="roster-change">Spieler nachtragen oder abmelden</button>
+        <button class="btn danger ghost full" data-action="reset">Turnier vorzeitig beenden</button>
+      </div>
+    </div>
   </div>
 
-  <div class="card">
-    <h2>Spielplan</h2>
-    <div id="schedule"></div>
+  <div class="turnier-rechts">
+    <!-- Nur im Ligaspiel: der Team-Stand mit den Angaben für den
+         Spielberichtsbogen. Die Einzeltabelle darunter bleibt dann versteckt. -->
+    <div class="card hidden" id="liga-stand"></div>
+
+    <div class="card no-pad">
+      <table class="standings">
+        <thead>
+          <tr><th>#</th><th class="left">Spieler</th><th>Siege</th><th>Nied.</th><th>Legs</th><th>Ø</th></tr>
+        </thead>
+        <tbody id="standings-body"></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>Turnier-Statistik</h2>
+      <div id="stats-grid" class="stats-grid"></div>
+    </div>
   </div>
-
-  <button class="btn primary full big" data-action="next-match">Nächstes Spiel</button>
-
-  <div class="card">
-    <h2>Turnier-Statistik</h2>
-    <div id="stats-grid" class="stats-grid"></div>
-  </div>
-
-  <button class="btn ghost full" data-action="roster-change">Spieler nachtragen oder abmelden</button>
-  <button class="btn danger ghost full" data-action="reset">Turnier vorzeitig beenden</button>
 </section>
 
 <!-- ============ RANGLISTE ============ -->
@@ -5668,6 +5719,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       return;
     }
     show(S.screen);
+    /* Am Board nimmt die App die volle Bildschirmbreite ein - die uebliche
+       Maximalbreite liesse am grossen iPad schwarze Raender, die den
+       Schein des aktiven Spielers hart abschneiden. */
+    document.body.classList.toggle('am-board',
+      UI.turnier && turnierErlaubt() && (S.screen === 'game' || S.screen === 'bulloff'));
     if (S.screen === 'setup') renderSetup();
     /* Der Hintergrundtakt laeuft nur da, wo man ihn auch sieht: im
        Turnierbildschirm. Sonst fragt die App den ganzen Abend nach Daten,
@@ -5984,14 +6040,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     });
     $('schedule').innerHTML = html;
 
-    var btn = document.querySelector('#screen-tournament [data-action="next-match"], #screen-tournament [data-action="to-winner"]');
-    if (allMatchesDone()) {
-      btn.textContent = 'Endstand ansehen';
-      btn.setAttribute('data-action', 'to-winner');
-    } else {
-      btn.textContent = next ? 'Nächstes Spiel: ' + pname(next.p[0]) + ' vs ' + pname(next.p[1]) : 'Nächstes Spiel';
-      btn.setAttribute('data-action', 'next-match');
-    }
+    /* Gestartet wird direkt an der Partie - einen "Naechstes Spiel"-Knopf
+       gibt es nicht mehr. Nur wenn alles gespielt ist, fuehrt ein Knopf
+       zum Endstand. */
+    $('turnier-endstand').classList.toggle('hidden', !allMatchesDone());
 
     var map = stats();
     $('stats-grid').innerHTML = tourPlayers().map(function (id) {
@@ -6609,11 +6661,18 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     $('bulloff-sub').textContent = ids.length > 2
       ? 'Wer war am nächsten am Bull? Er beginnt, danach geht es reihum weiter.'
       : 'Wer war näher am Bull und darf anfangen?';
+    /* Am Board laeuft auch das Bullen ueber die Tastatur: Pfeile oder Tab
+       wechseln, Enter bestaetigt - und die Felder fuellen den Bildschirm. */
+    var amBoard = UI.turnier && turnierErlaubt();
+    $('screen-bulloff').classList.toggle('turnier', amBoard);
+    var bWahl = amBoard ? Math.min(UI.bullWahl || 0, ids.length - 1) : -1;
     $('bulloff-buttons').className = 'bulloff';
-    $('bulloff-buttons').innerHTML = ids.map(function (pid) {
-      return '<button data-action="pick-starter" data-id="' + pid + '">' +
-        avatarHTML(profile(pid), 'md') + '<span>' + esc(pname(pid)) + '</span></button>';
-    }).join('');
+    $('bulloff-buttons').innerHTML = ids.map(function (pid, i) {
+      return '<button data-action="pick-starter" data-id="' + pid + '"' +
+        (i === bWahl ? ' class="wahl"' : '') + '>' +
+        avatarHTML(profile(pid), 'md') + '<span>' + esc(ligaName && S.tour && S.tour.liga ? ligaName(pid) : pname(pid)) + '</span></button>';
+    }).join('') +
+      (amBoard ? '<p class="te-hint">← → · wählen &nbsp;&nbsp; Enter · der beginnt</p>' : '');
   }
 
   function renderGame() {
@@ -7832,11 +7891,13 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var html = '';
 
     if (o.type === 'checkout-darts') {
+      var coWahl = UI.turnier && turnierErlaubt() ? Math.min(o.wahl || 0, o.options.length - 1) : -1;
       html = '<h3>Checkout!</h3><p>Mit wie vielen Darts wurde ' + o.score + ' beendet?</p>' +
-        '<div class="row-btns">' + o.options.map(function (n) {
-          return '<button class="btn primary" data-action="co-darts" data-n="' + n + '">' + n + '</button>';
+        '<div class="row-btns">' + o.options.map(function (n, i) {
+          return '<button class="btn primary' + (i === coWahl ? ' wahl' : '') + '" data-action="co-darts" data-n="' + n + '">' + n + '</button>';
         }).join('') + '</div>' +
-        '<button class="btn ghost full" data-action="ov-cancel">Abbrechen</button>';
+        '<button class="btn ghost full" data-action="ov-cancel">Abbrechen</button>' +
+        (coWahl >= 0 ? '<p class="te-hint">1/2/3 direkt &nbsp;&nbsp; ← → · wählen &nbsp;&nbsp; Enter · bestätigen</p>' : '');
     } else if (o.type === 'leg-done' || o.type === 'match-done') {
       /* Die laufende Partie kann unter dem Overlay wegfallen: im geteilten
          Turnier traegt ein anderes Geraet vielleicht gerade dasselbe
@@ -8462,6 +8523,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (!m) { render(); return; }
     S.current = id;
     UI.input = ''; UI.darts = []; UI.mult = 1; UI.modeOverride = null; UI.error = ''; UI.overlay = null;
+    UI.bullWahl = 0;
     /* Am Board-iPad (Turnier-Modus gemerkt) startet jedes Liga-Einzel
        direkt in der Riesenanzeige. In normalen Turnieren bleibt einfach
        an, was der Spieler zuletzt gewaehlt hat. */
@@ -8748,11 +8810,6 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         S.screen = 'setup';
         save(); render();
         break;
-      case 'next-match': {
-        var nm = nextOpenMatch();
-        if (nm) openMatch(nm.id);
-        break;
-      }
       case 'open-match':
         openMatch(el.getAttribute('data-id'));
         break;
@@ -9253,7 +9310,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     }
 
     var mult = ev.target.closest('.mult-row button');
-    if (mult) { UI.mult = Number(mult.getAttribute('data-mult')); pomp(); render(); return; }
+    if (mult) { UI.mult = Number(mult.getAttribute('data-mult')); render(); return; }
 
     var bull = ev.target.closest('[data-bull]');
     if (bull) { pushDart(2, 25); return; }
@@ -9332,6 +9389,30 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
        nur per Tastatur: Punkte -> Einzel-Darts -> Turnier -> Punkte (der
        Turnier-Modus haengt nur mit im Kreis, wo es ihn gibt). Ein offener
        Dialog geht vor. */
+    /* Ausbullen am Board: Pfeile/Tab wechseln den Kandidaten, Enter
+       bestaetigt den Anwerfer. */
+    if (S.screen === 'bulloff' && UI.turnier && turnierErlaubt() && !UI.overlay) {
+      var bKnoepfe = document.querySelectorAll('#bulloff-buttons [data-action="pick-starter"]');
+      if (bKnoepfe.length) {
+        if (ev.key === 'ArrowLeft' || ev.key === 'ArrowUp' ||
+            ev.key === 'ArrowRight' || ev.key === 'ArrowDown' || ev.key === 'Tab') {
+          ev.preventDefault();
+          var bAlt = UI.bullWahl || 0;
+          UI.bullWahl = ev.key === 'ArrowLeft' || ev.key === 'ArrowUp'
+            ? Math.max(0, bAlt - 1)
+            : ev.key === 'Tab' ? (bAlt + 1) % bKnoepfe.length
+            : Math.min(bKnoepfe.length - 1, bAlt + 1);
+          render();
+          return;
+        }
+        if (ev.key === 'Enter') {
+          ev.preventDefault();
+          var bZiel = bKnoepfe[Math.min(UI.bullWahl || 0, bKnoepfe.length - 1)];
+          if (bZiel) handleAction('pick-starter', bZiel);
+          return;
+        }
+      }
+    }
     if (ev.key === 'Tab' && !UI.overlay && S.screen === 'game') {
       ev.preventDefault();
       var mFolge = ['total', 'darts'];
@@ -9397,7 +9478,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       }
       ev.preventDefault();
     } else if (ev.key === 'Enter') {
-      if (UI.input !== '') { UI.error = ''; submitTotal(); }
+      /* Markieren: DIESES Enter hat die Aufnahme gebucht - der Overlay-
+         Listener weiter unten darf es nicht gleich noch als Bestaetigung
+         der frisch geoeffneten Checkout-Frage verstehen. */
+      if (UI.input !== '') { UI.error = ''; ev.eingabeGebucht = true; submitTotal(); }
       ev.preventDefault();
     } else if (ev.key === 'Backspace') {
       /* Erst Ziffern löschen, im leeren Zustand die letzte Aufnahme – so
@@ -9444,6 +9528,21 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           UI.overlay = null;
           commitVisit(coScore, anz, true, false);
         }
+      } else if (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight' ||
+                 ev.key === 'ArrowUp' || ev.key === 'ArrowDown' || ev.key === 'Tab') {
+        ev.preventDefault();
+        var coAlt = ov.wahl || 0;
+        ov.wahl = ev.key === 'ArrowLeft' || ev.key === 'ArrowUp'
+          ? Math.max(0, coAlt - 1)
+          : ev.key === 'Tab' ? (coAlt + 1) % ov.options.length
+          : Math.min(ov.options.length - 1, coAlt + 1);
+        render();
+      } else if (ev.key === 'Enter' && !ev.eingabeGebucht) {
+        ev.preventDefault();
+        var coAnz = ov.options[Math.min(ov.wahl || 0, ov.options.length - 1)];
+        var coSc = ov.score;
+        UI.overlay = null;
+        commitVisit(coSc, coAnz, true, false);
       } else if (ev.key === 'Backspace') {
         undo(); ev.preventDefault();
       }

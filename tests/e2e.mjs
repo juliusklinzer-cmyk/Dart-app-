@@ -97,7 +97,7 @@ const pairs = await page.evaluate(() => window.__dart.state().matches.map((m) =>
 check('keine Paarung doppelt', new Set(pairs).size === 6);
 
 group('Bull-Off & Spielstart');
-await page.locator('[data-action="next-match"]').click();
+await page.locator('#schedule .match-row .go:not(.wo)').first().click();
 check('Bull-Off-Screen', await visible('#screen-bulloff'));
 /* Der Button enthält Avatar und Name – nur den Namen lesen. */
 const firstName = await page.locator('#bulloff-buttons button').first().locator('span:not(.av)').innerText();
@@ -569,7 +569,7 @@ const ids = () => page.evaluate(() => window.__dart.state().profiles.map((p) => 
 
 // (1) Beendetes Match darf nach einem Reload nicht überschreibbar sein
 await page.locator('[data-action="start-game"]').click();
-await page.locator('[data-action="next-match"]').click();
+await page.locator('#schedule .match-row .go:not(.wo)').first().click();
 await page.locator('#bulloff-buttons button').first().click();
 await typeScore(180); await typeScore(60); await typeScore(180); await typeScore(60);
 await page.locator('#mode-toggle button[data-mode="total"]').click();
@@ -686,7 +686,7 @@ group('Neue Funktionen aus der Prüfung');
 await page.evaluate(() => localStorage.clear());
 await page.reload();
 await page.locator('[data-action="start-game"]').click();
-await page.locator('[data-action="next-match"]').click();
+await page.locator('#schedule .match-row .go:not(.wo)').first().click();
 await page.locator('#bulloff-buttons button').first().click();
 await typeScore(100); await typeScore(60); await typeScore(140);
 check('keine doppelte Am-Wurf-Zeile - die leuchtende Kachel sagt es selbst',
@@ -743,7 +743,7 @@ group('Regression: Nebenwirkungen der ersten Korrekturrunde');
 await page.evaluate(() => localStorage.clear());
 await page.reload();
 await page.locator('[data-action="start-game"]').click();
-await page.locator('[data-action="next-match"]').click();
+await page.locator('#schedule .match-row .go:not(.wo)').first().click();
 await page.locator('#bulloff-buttons button').first().click();
 
 // Zwei gleiche Aufnahmen kurz nacheinander müssen beide zählen
@@ -786,7 +786,7 @@ await page.reload();
 
 // Doppeltipp auf "Nächstes Spiel" darf den Bull-Off nicht überspringen
 await page.locator('[data-action="start-game"]').click();
-await page.locator('[data-action="next-match"]').dblclick();
+await page.locator('#schedule .match-row .go:not(.wo)').first().dblclick();
 check('Doppeltipp überspringt den Bull-Off nicht', await visible('#screen-bulloff'),
   await page.evaluate(() => window.__dart.state().screen));
 await page.locator('#bulloff-buttons button').first().click();
@@ -839,7 +839,7 @@ group('Aufnahme im Einzel-Dart-Modus abschließen');
 await page.evaluate(() => localStorage.clear());
 await page.reload();
 await page.locator('[data-action="start-game"]').click();
-await page.locator('[data-action="next-match"]').click();
+await page.locator('#schedule .match-row .go:not(.wo)').first().click();
 await page.locator('#bulloff-buttons button').first().click();
 await typeScore(180); await typeScore(60); await typeScore(180); await typeScore(60);
 check('Einzel-Darts aktiv', await visible('#pad-darts'));
@@ -863,7 +863,7 @@ await page.evaluate(() => localStorage.clear());
 await page.reload();
 await page.locator('[data-setting="bestOf"] button[data-value="3"]').click();
 await page.locator('[data-action="start-game"]').click();
-await page.locator('[data-action="next-match"]').click();
+await page.locator('#schedule .match-row .go:not(.wo)').first().click();
 await page.locator('#bulloff-buttons button').first().click();
 /* Leg 1 gewinnen: 180, 180, 141 */
 await typeScore(180); await typeScore(60); await typeScore(180); await typeScore(60);
@@ -2355,6 +2355,65 @@ await page.evaluate(() => {
   S.profiles = S.profiles.filter((p) => !(p.gast && p.name.indexOf('Dachau') === 0));
   S.lineup = D.activeProfiles().filter((p) => !p.gast).slice(0, 4).map((p) => p.id);
   D.ui().boardMode = '501';
+  D.setScreen('setup');
+});
+
+group('Ausbullen und Checkout am Board per Tastatur');
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  S.game = null; S.matches = []; S.tour = null; S.current = null;
+  S.lineup = D.activeProfiles().filter((p) => !p.gast).slice(0, 2).map((p) => p.id);
+  S.mode = '501'; S.settings.start = 501; S.settings.bestOf = 1;
+  D.setScreen('setup');
+});
+await page.locator('[data-action="start-game"]').click();
+await page.evaluate(() => { window.__dart.ui().turnier = true; window.__dart.render && window.__dart.render(); });
+await page.locator('#schedule .match-row .go:not(.wo)').first().click();
+check('das Ausbullen traegt den Board-Zuschnitt', await page.evaluate(() =>
+  document.getElementById('screen-bulloff').classList.contains('turnier')));
+check('die erste Wahl leuchtet', await page.evaluate(() =>
+  document.querySelectorAll('#bulloff-buttons button')[0].classList.contains('wahl')));
+await page.keyboard.press('ArrowRight');
+check('Pfeil rechts wechselt den Kandidaten', await page.evaluate(() =>
+  document.querySelectorAll('#bulloff-buttons button')[1].classList.contains('wahl')));
+await page.keyboard.press('Enter');
+check('Enter setzt den Anwerfer und startet in der Riesenanzeige',
+  (await visible('#pad-key')) && await page.evaluate(() => {
+    const m = window.__dart.currentMatch();
+    return m.starter === m.p[1];
+  }));
+/* Auf Rest 40 spielen, dann die Dart-Frage mit Pfeilen beantworten. */
+{
+  const tp = async (z) => { await page.keyboard.type(z); await page.keyboard.press('Enter'); };
+  await tp('180'); await tp('60'); await tp('180'); await tp('60'); await tp('101'); await tp('60');
+  await tp('40');
+}
+check('die Dart-Frage markiert die erste Antwort', await page.evaluate(() => {
+  const o = window.__dart.ui().overlay;
+  return o && o.type === 'checkout-darts' &&
+    document.querySelector('#overlay-card .btn.wahl').textContent.trim() === '1';
+}));
+await page.keyboard.press('ArrowRight');
+check('Pfeil rechts waehlt 2 Darts', await page.evaluate(() =>
+  document.querySelector('#overlay-card .btn.wahl').textContent.trim() === '2'));
+await page.keyboard.press('Enter');
+check('Enter bucht den Checkout mit 2 Darts', await page.evaluate(() => {
+  const m = window.__dart.currentMatch();
+  const co = m.legs[0].visits.filter((x) => x.c)[0];
+  return m.done && co && co.d === 2;
+}));
+check('danach uebernimmt die grosse Endsequenz', await page.evaluate(() => {
+  const o = window.__dart.ui().overlay;
+  return o && o.type === 'turnier-ende' && o.phase === 'stat';
+}));
+await page.keyboard.press('Enter');
+await page.keyboard.press('Enter');
+check('ohne offene Spiele fuehrt Enter zum Endstand', await visible('#screen-winner'));
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  S.matches = []; S.tour = null; S.current = null; S.game = null;
+  S.settings.turnierModus = 0; D.ui().turnier = false;
+  S.lineup = D.activeProfiles().filter((p) => !p.gast).slice(0, 4).map((p) => p.id);
   D.setScreen('setup');
 });
 

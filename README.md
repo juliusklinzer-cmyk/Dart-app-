@@ -184,6 +184,12 @@ bleibt der Bericht über den Spieltag im Liga-Reiter abrufbar. In der
 Spieltag-Log und Rekorden. Im Regeln-Reiter der Liga-Seite stehen dazu ein
 FAQ für Neue und Udos Regelecke.
 
+Die **Turnier-Übersicht** zeigt links den Spielplan (gestartet wird direkt an
+der Partie – einen „Nächstes Spiel"-Knopf gibt es nicht mehr; erst wenn alles
+gespielt ist, erscheint „Endstand ansehen"), rechts Tabelle und
+Turnier-Statistik. Spielerwechsel und vorzeitiges Beenden wohnen unten im
+Spielplan-Kasten.
+
 ## Ablauf (X01 Turnier)
 
 1. **Setup** – Antippen, wer heute mitspielt (2 bis 12 Spieler), Startpunkte (301/501/701) und Legs
@@ -247,7 +253,11 @@ alle Anzeigen sind auf die Distanz vom Oche (~3 m) ausgelegt: Spielername,
 Legs und Ø stehen groß in der Karte, die Dialoge sprechen Plakatgröße.
 Nach einem Leg: **Enter** startet das nächste, **Löschen** nimmt die Eingabe
 zurück; auch am Spielende wählen die **Pfeiltasten** zwischen Statistik und
-„Letzten Dart zurück", Enter bestätigt. Alle Dialoge füllen dabei den **ganzen Bildschirm** in maximaler
+„Letzten Dart zurück", Enter bestätigt. Das **Ausbullen** füllt am Board den
+ganzen Bildschirm (Pfeile wählen, Enter bestimmt den Anwerfer), die
+**Checkout-Frage** geht mit 1/2/3 oder Pfeilen + Enter, und die App nimmt am
+Board die volle Gerätebreite ein – kein schwarzer Rand, der den Schein
+abschneidet. Alle Dialoge füllen dabei den **ganzen Bildschirm** in maximaler
 Schrift. Nach dem Einzel erscheint **8 Sekunden groß die Kurzstatistik**
 (Ø, 180er, höchstes Finish beider Spieler) – Enter überspringt –, danach die
 **nächsten Begegnungen in groß**: mit den **Pfeiltasten** wird gewählt (die

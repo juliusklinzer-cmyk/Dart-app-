@@ -1969,6 +1969,11 @@
       return;
     }
     show(S.screen);
+    /* Am Board nimmt die App die volle Bildschirmbreite ein - die uebliche
+       Maximalbreite liesse am grossen iPad schwarze Raender, die den
+       Schein des aktiven Spielers hart abschneiden. */
+    document.body.classList.toggle('am-board',
+      UI.turnier && turnierErlaubt() && (S.screen === 'game' || S.screen === 'bulloff'));
     if (S.screen === 'setup') renderSetup();
     /* Der Hintergrundtakt laeuft nur da, wo man ihn auch sieht: im
        Turnierbildschirm. Sonst fragt die App den ganzen Abend nach Daten,
@@ -2285,14 +2290,10 @@
     });
     $('schedule').innerHTML = html;
 
-    var btn = document.querySelector('#screen-tournament [data-action="next-match"], #screen-tournament [data-action="to-winner"]');
-    if (allMatchesDone()) {
-      btn.textContent = 'Endstand ansehen';
-      btn.setAttribute('data-action', 'to-winner');
-    } else {
-      btn.textContent = next ? 'Nächstes Spiel: ' + pname(next.p[0]) + ' vs ' + pname(next.p[1]) : 'Nächstes Spiel';
-      btn.setAttribute('data-action', 'next-match');
-    }
+    /* Gestartet wird direkt an der Partie - einen "Naechstes Spiel"-Knopf
+       gibt es nicht mehr. Nur wenn alles gespielt ist, fuehrt ein Knopf
+       zum Endstand. */
+    $('turnier-endstand').classList.toggle('hidden', !allMatchesDone());
 
     var map = stats();
     $('stats-grid').innerHTML = tourPlayers().map(function (id) {
@@ -2910,11 +2911,18 @@
     $('bulloff-sub').textContent = ids.length > 2
       ? 'Wer war am nächsten am Bull? Er beginnt, danach geht es reihum weiter.'
       : 'Wer war näher am Bull und darf anfangen?';
+    /* Am Board laeuft auch das Bullen ueber die Tastatur: Pfeile oder Tab
+       wechseln, Enter bestaetigt - und die Felder fuellen den Bildschirm. */
+    var amBoard = UI.turnier && turnierErlaubt();
+    $('screen-bulloff').classList.toggle('turnier', amBoard);
+    var bWahl = amBoard ? Math.min(UI.bullWahl || 0, ids.length - 1) : -1;
     $('bulloff-buttons').className = 'bulloff';
-    $('bulloff-buttons').innerHTML = ids.map(function (pid) {
-      return '<button data-action="pick-starter" data-id="' + pid + '">' +
-        avatarHTML(profile(pid), 'md') + '<span>' + esc(pname(pid)) + '</span></button>';
-    }).join('');
+    $('bulloff-buttons').innerHTML = ids.map(function (pid, i) {
+      return '<button data-action="pick-starter" data-id="' + pid + '"' +
+        (i === bWahl ? ' class="wahl"' : '') + '>' +
+        avatarHTML(profile(pid), 'md') + '<span>' + esc(ligaName && S.tour && S.tour.liga ? ligaName(pid) : pname(pid)) + '</span></button>';
+    }).join('') +
+      (amBoard ? '<p class="te-hint">← → · wählen &nbsp;&nbsp; Enter · der beginnt</p>' : '');
   }
 
   function renderGame() {
@@ -4133,11 +4141,13 @@
     var html = '';
 
     if (o.type === 'checkout-darts') {
+      var coWahl = UI.turnier && turnierErlaubt() ? Math.min(o.wahl || 0, o.options.length - 1) : -1;
       html = '<h3>Checkout!</h3><p>Mit wie vielen Darts wurde ' + o.score + ' beendet?</p>' +
-        '<div class="row-btns">' + o.options.map(function (n) {
-          return '<button class="btn primary" data-action="co-darts" data-n="' + n + '">' + n + '</button>';
+        '<div class="row-btns">' + o.options.map(function (n, i) {
+          return '<button class="btn primary' + (i === coWahl ? ' wahl' : '') + '" data-action="co-darts" data-n="' + n + '">' + n + '</button>';
         }).join('') + '</div>' +
-        '<button class="btn ghost full" data-action="ov-cancel">Abbrechen</button>';
+        '<button class="btn ghost full" data-action="ov-cancel">Abbrechen</button>' +
+        (coWahl >= 0 ? '<p class="te-hint">1/2/3 direkt &nbsp;&nbsp; ← → · wählen &nbsp;&nbsp; Enter · bestätigen</p>' : '');
     } else if (o.type === 'leg-done' || o.type === 'match-done') {
       /* Die laufende Partie kann unter dem Overlay wegfallen: im geteilten
          Turnier traegt ein anderes Geraet vielleicht gerade dasselbe
@@ -4763,6 +4773,7 @@
     if (!m) { render(); return; }
     S.current = id;
     UI.input = ''; UI.darts = []; UI.mult = 1; UI.modeOverride = null; UI.error = ''; UI.overlay = null;
+    UI.bullWahl = 0;
     /* Am Board-iPad (Turnier-Modus gemerkt) startet jedes Liga-Einzel
        direkt in der Riesenanzeige. In normalen Turnieren bleibt einfach
        an, was der Spieler zuletzt gewaehlt hat. */
@@ -5049,11 +5060,6 @@
         S.screen = 'setup';
         save(); render();
         break;
-      case 'next-match': {
-        var nm = nextOpenMatch();
-        if (nm) openMatch(nm.id);
-        break;
-      }
       case 'open-match':
         openMatch(el.getAttribute('data-id'));
         break;
@@ -5554,7 +5560,7 @@
     }
 
     var mult = ev.target.closest('.mult-row button');
-    if (mult) { UI.mult = Number(mult.getAttribute('data-mult')); pomp(); render(); return; }
+    if (mult) { UI.mult = Number(mult.getAttribute('data-mult')); render(); return; }
 
     var bull = ev.target.closest('[data-bull]');
     if (bull) { pushDart(2, 25); return; }
@@ -5633,6 +5639,30 @@
        nur per Tastatur: Punkte -> Einzel-Darts -> Turnier -> Punkte (der
        Turnier-Modus haengt nur mit im Kreis, wo es ihn gibt). Ein offener
        Dialog geht vor. */
+    /* Ausbullen am Board: Pfeile/Tab wechseln den Kandidaten, Enter
+       bestaetigt den Anwerfer. */
+    if (S.screen === 'bulloff' && UI.turnier && turnierErlaubt() && !UI.overlay) {
+      var bKnoepfe = document.querySelectorAll('#bulloff-buttons [data-action="pick-starter"]');
+      if (bKnoepfe.length) {
+        if (ev.key === 'ArrowLeft' || ev.key === 'ArrowUp' ||
+            ev.key === 'ArrowRight' || ev.key === 'ArrowDown' || ev.key === 'Tab') {
+          ev.preventDefault();
+          var bAlt = UI.bullWahl || 0;
+          UI.bullWahl = ev.key === 'ArrowLeft' || ev.key === 'ArrowUp'
+            ? Math.max(0, bAlt - 1)
+            : ev.key === 'Tab' ? (bAlt + 1) % bKnoepfe.length
+            : Math.min(bKnoepfe.length - 1, bAlt + 1);
+          render();
+          return;
+        }
+        if (ev.key === 'Enter') {
+          ev.preventDefault();
+          var bZiel = bKnoepfe[Math.min(UI.bullWahl || 0, bKnoepfe.length - 1)];
+          if (bZiel) handleAction('pick-starter', bZiel);
+          return;
+        }
+      }
+    }
     if (ev.key === 'Tab' && !UI.overlay && S.screen === 'game') {
       ev.preventDefault();
       var mFolge = ['total', 'darts'];
@@ -5698,7 +5728,10 @@
       }
       ev.preventDefault();
     } else if (ev.key === 'Enter') {
-      if (UI.input !== '') { UI.error = ''; submitTotal(); }
+      /* Markieren: DIESES Enter hat die Aufnahme gebucht - der Overlay-
+         Listener weiter unten darf es nicht gleich noch als Bestaetigung
+         der frisch geoeffneten Checkout-Frage verstehen. */
+      if (UI.input !== '') { UI.error = ''; ev.eingabeGebucht = true; submitTotal(); }
       ev.preventDefault();
     } else if (ev.key === 'Backspace') {
       /* Erst Ziffern löschen, im leeren Zustand die letzte Aufnahme – so
@@ -5745,6 +5778,21 @@
           UI.overlay = null;
           commitVisit(coScore, anz, true, false);
         }
+      } else if (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight' ||
+                 ev.key === 'ArrowUp' || ev.key === 'ArrowDown' || ev.key === 'Tab') {
+        ev.preventDefault();
+        var coAlt = ov.wahl || 0;
+        ov.wahl = ev.key === 'ArrowLeft' || ev.key === 'ArrowUp'
+          ? Math.max(0, coAlt - 1)
+          : ev.key === 'Tab' ? (coAlt + 1) % ov.options.length
+          : Math.min(ov.options.length - 1, coAlt + 1);
+        render();
+      } else if (ev.key === 'Enter' && !ev.eingabeGebucht) {
+        ev.preventDefault();
+        var coAnz = ov.options[Math.min(ov.wahl || 0, ov.options.length - 1)];
+        var coSc = ov.score;
+        UI.overlay = null;
+        commitVisit(coSc, coAnz, true, false);
       } else if (ev.key === 'Backspace') {
         undo(); ev.preventDefault();
       }
