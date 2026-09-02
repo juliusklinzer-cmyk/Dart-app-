@@ -1886,6 +1886,19 @@
       if (vorhanden[s.id] || !s.payload) return;
       var eintrag = s.payload;
       eintrag.id = s.id;
+      /* Fremde Gastspieler bekommen ein verstecktes Gastprofil - sonst
+         stuende in Verlauf und Bericht "Unbekannt". In Aufstellung,
+         Spielerliste und Rangliste tauchen sie nicht auf (gast + hidden). */
+      if (eintrag.namen) {
+        Object.keys(eintrag.namen).forEach(function (fid) {
+          if (S.profiles.some(function (p) { return p.id === fid; })) return;
+          S.profiles.push({
+            id: fid, name: String(eintrag.namen[fid]).slice(0, 30),
+            avatar: null, hue: freeHue(), created: Date.now(),
+            gast: true, hidden: true
+          });
+        });
+      }
       // Wer es eingetragen hat, bleibt sichtbar – bei fremden Einträgen ist
       // das die einzige Möglichkeit nachzuvollziehen, wo sie herkommen.
       if (s.eingetragenVonName) eintrag.von = s.eingetragenVonName;
@@ -2846,29 +2859,42 @@
         UI.bullReihe = [];
       }
       var reihe = UI.bullReihe;
-      var offen = ids.filter(function (id) { return reihe.indexOf(id) < 0; });
+      var fertig = reihe.length === ids.length;
       $('bulloff-sub').textContent = 'Alle werfen auf Bull \ud83c\udfaf - dann in Wurf-Reihenfolge antippen: Wer am nächsten dran war, zuerst.';
       $('bulloff-buttons').className = 'bulloff-order';
+      /* Nichts springt beim Antippen: links bleibt der Platz eines
+         Gewaehlten einfach leer (gleiche Groesse, unsichtbar), rechts
+         stehen alle Slots von Anfang an, und der Startknopf reserviert
+         seinen Platz, bis er gebraucht wird. */
       $('bulloff-buttons').innerHTML =
         '<div class="bo-spalten">' +
-          '<div class="bo-wahl">' + (offen.map(function (pid) {
-            return '<button data-action="order-pick" data-id="' + pid + '">' +
-              avatarHTML(profile(pid), 'sm') +
-              '<span class="bo-name">' + esc(pname(pid)) + '</span></button>';
-          }).join('') || '<p class="hint">Alle eingereiht.</p>') + '</div>' +
-          '<div class="bo-reihe">' + (reihe.map(function (pid, i) {
+          '<div class="bo-wahl">' + ids.map(function (pid) {
+            var gewaehlt = reihe.indexOf(pid) >= 0;
+            return gewaehlt
+              ? '<button class="bo-weg" disabled aria-hidden="true">' +
+                avatarHTML(profile(pid), 'sm') +
+                '<span class="bo-name">' + esc(pname(pid)) + '</span></button>'
+              : '<button data-action="order-pick" data-id="' + pid + '">' +
+                avatarHTML(profile(pid), 'sm') +
+                '<span class="bo-name">' + esc(pname(pid)) + '</span></button>';
+          }).join('') + '</div>' +
+          '<div class="bo-reihe">' + ids.map(function (_, i) {
+            var pid = reihe[i];
+            if (!pid) {
+              return '<div class="bo-slot"><span class="bo-pos">' + (i + 1) + '.</span>' +
+                '<span class="bo-frei">–</span></div>';
+            }
             var nm = esc(pname(pid));
             return '<button class="bo-row" data-action="order-unpick" data-id="' + pid + '" ' +
               'aria-label="' + nm + ' wieder herausnehmen">' +
               '<span class="bo-pos">' + (i + 1) + '.</span>' +
               avatarHTML(profile(pid), 'sm') +
               '<span class="bo-name">' + nm + '</span></button>';
-          }).join('') || '<p class="hint">Wer war am nächsten am Bull? Zuerst antippen.</p>') + '</div>' +
+          }).join('') + '</div>' +
         '</div>' +
-        (offen.length === 0
-          ? '<button class="btn primary full" data-action="start-order">' +
-            esc(pname(reihe[0])) + ' beginnt · Los geht\'s</button>'
-          : '');
+        '<button class="btn primary full' + (fertig ? '' : ' unsichtbar') + '" ' +
+          'data-action="start-order"' + (fertig ? '' : ' disabled') + '>' +
+          (fertig ? esc(pname(reihe[0])) + ' beginnt · Los geht\'s' : '·') + '</button>';
       return;
     }
 
@@ -3539,9 +3565,15 @@
         var klassen = ['pcard'];
         if (fertig) klassen.push('fertig');
         else if (id === aktiv && !rd.stechen && !g.done) klassen.push('active');
+        /* Je Zielpunkt eine Pille - jedes Finish zuendet eine im blauen
+           Laserlicht. Leuchten alle, ist das Spiel gewonnen. */
+        var pillen = '';
+        for (var fp = 0; fp < g.ziel; fp++) {
+          pillen += '<span class="fin-pille' + (fp < (st.punkte[id] || 0) ? ' an' : '') + '"></span>';
+        }
         return '<div class="' + klassen.join(' ') + '">' +
           '<div class="pname">' + avatarHTML(profile(id), 'sm') + esc(pname(id)) + '</div>' +
-          '<div class="legs">Punkte ' + (st.punkte[id] || 0) + ' von ' + g.ziel + '</div>' +
+          '<div class="fin-pillen" role="img" aria-label="' + (st.punkte[id] || 0) + ' von ' + g.ziel + ' Finishes">' + pillen + '</div>' +
           '<div class="rest">' + (fertig ? '✓' : st.rest[id]) + '</div>' +
           '<div class="meta"><span>Darts <b>' + st.darts[id] + '</b></span>' +
             '<span>Aufnahmen <b>' + st.aufnahmen[id] + '</b></span></div>' +
@@ -3593,25 +3625,19 @@
     /* Beim Stechen sagt schon die gelbe Karte, worum es geht. */
     $('fin-hint').classList.toggle('hidden', !!rd.stechen);
 
-    /* Der Verlauf als eine Liste mit Namen – wie im Schnellen Spiel ab drei
-       Spielern. Ältere Runden bleiben mit Trenner darunter stehen. */
-    var rows = [];
-    for (var ri = g.rounds.length - 1; ri >= 0; ri--) {
-      var runde = g.rounds[ri];
-      var eintraege = finisherAufnahmen(g, runde);
-      if (!eintraege.length && ri !== g.rounds.length - 1) continue;
-      if (g.rounds.length > 1) {
-        rows.push('<div class="leg-sep">Runde ' + (ri + 1) + ' · ' + runde.zahl +
-          (runde.sieger ? ' · ' + esc(pname(runde.sieger)) : ' · läuft') + '</div>');
-      }
-      eintraege.reverse().forEach(function (e) {
-        rows.push('<div class="v ' + (e.b ? 'bust' : e.c ? 'co' : '') + '">' +
-          '<span class="wer">' + esc(pname(e.p)) + '</span>' +
-          '<span class="s">' + e.s + '</span>' +
-          '<span class="r">' + (e.b ? 'Bust' : e.c ? 'Finish' : 'Rest ' + e.rest) + '</span></div>');
-      });
+    /* Kein langer Verlauf - die letzte Eingabe reicht: die Pillen in den
+       Karten erzaehlen den Stand, mehr braucht der Abend nicht. */
+    var letzte = null;
+    for (var ri = g.rounds.length - 1; ri >= 0 && !letzte; ri--) {
+      var eintraege = finisherAufnahmen(g, g.rounds[ri]);
+      if (eintraege.length) letzte = eintraege[eintraege.length - 1];
     }
-    $('fin-history').innerHTML = '<div class="col">' + rows.join('') + '</div>';
+    $('fin-history').innerHTML = letzte
+      ? '<div class="col"><div class="v ' + (letzte.b ? 'bust' : letzte.c ? 'co' : '') + '">' +
+        '<span class="wer">' + esc(pname(letzte.p)) + '</span>' +
+        '<span class="s">' + letzte.s + '</span>' +
+        '<span class="r">' + (letzte.b ? 'Bust' : letzte.c ? 'Finish' : 'Rest ' + letzte.rest) + '</span></div></div>'
+      : '';
 
 
     // Zahlenfeld: derselbe Aufbau wie im Finish-Bereich des X01.
@@ -4137,18 +4163,19 @@
         /* Die naechsten Begegnungen, gross - Enter startet die erste. */
         var offene = S.matches.filter(function (x) { return !x.done && !x.void; }).slice(0, 4);
         var liga = S.tour && S.tour.liga;
+        var wahl = Math.min(o.wahl || 0, Math.max(0, offene.length - 1));
         if (offene.length) {
           html = '<h3>Nächste Einzel</h3>' +
             '<div class="te-next">' + offene.map(function (x, i) {
               var paar = liga && x.posPaar
                 ? 'H' + (x.posPaar[0] + 1) + ' ' + esc(teName(x.p[0])) + ' – G' + (x.posPaar[1] + 1) + ' ' + esc(teName(x.p[1]))
                 : esc(teName(x.p[0])) + ' – ' + esc(teName(x.p[1]));
-              return '<div class="te-zeile' + (i === 0 ? ' dran' : '') + '">' +
+              return '<button class="te-zeile' + (i === wahl ? ' dran' : '') + '" ' +
+                'data-action="open-match" data-id="' + x.id + '">' +
                 (x.scheibe ? '<span class="te-scheibe">' + x.scheibe + '</span>' : '') +
-                '<span>' + paar + '</span></div>';
+                '<span>' + paar + '</span></button>';
             }).join('') + '</div>' +
-            '<button class="btn primary full" data-action="ov-next-match">Nächstes Einzel starten</button>' +
-            '<p class="te-hint">Enter · starten &nbsp;&nbsp; Löschen · letzter Dart zurück</p>';
+            '<p class="te-hint">↑ ↓ · wählen &nbsp;&nbsp; Enter · starten &nbsp;&nbsp; Löschen · letzter Dart zurück</p>';
         } else {
           var teD = liga ? ligaStandDaten() : null;
           html = '<h3>' + (liga ? 'Ligaspiel beendet' : 'Alle Spiele beendet') + '</h3>' +
@@ -5706,10 +5733,23 @@
         undo(); ev.preventDefault();
       }
     } else if (ov.type === 'turnier-ende') {
+      var teOffene = S.matches.filter(function (x) { return !x.done && !x.void; }).slice(0, 4);
       if (ev.key === 'Enter') {
         ev.preventDefault();
-        if (ov.phase === 'stat') { ov.phase = 'weiter'; render(); }
-        else { handleAction('ov-next-match', ev.target); }
+        if (ov.phase === 'stat') { ov.phase = 'weiter'; ov.wahl = 0; render(); }
+        else if (teOffene.length) {
+          var teWahl = Math.min(ov.wahl || 0, teOffene.length - 1);
+          UI.overlay = null;
+          openMatch(teOffene[teWahl].id);
+        } else {
+          handleAction('ov-next-match', ev.target);
+        }
+      } else if ((ev.key === 'ArrowDown' || ev.key === 'ArrowRight') && ov.phase === 'weiter') {
+        ov.wahl = Math.min((ov.wahl || 0) + 1, Math.max(0, teOffene.length - 1));
+        render(); ev.preventDefault();
+      } else if ((ev.key === 'ArrowUp' || ev.key === 'ArrowLeft') && ov.phase === 'weiter') {
+        ov.wahl = Math.max((ov.wahl || 0) - 1, 0);
+        render(); ev.preventDefault();
       } else if (ev.key === 'Backspace') {
         undo(); ev.preventDefault();
       }

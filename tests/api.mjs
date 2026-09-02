@@ -265,10 +265,10 @@ async function main() {
     });
     gleich(r.status, 400, 'unbekannter Mitspieler wird abgewiesen');
 
-    console.log('\nSpiel kommt beim Mitspieler an');
+    console.log('\nAlle sehen alle Spiele der Mannschaft');
     r = await tobi.ruf('GET', '/api/games?since=0');
-    gleich(r.status, 200, 'Tobi kann seine Spiele abrufen');
-    gleich(r.daten.spiele.length, 1, 'Tobi sieht genau das Spiel, in dem er mitgespielt hat');
+    gleich(r.status, 200, 'Tobi kann die Spiele abrufen');
+    gleich(r.daten.spiele.length, 2, 'Tobi sieht auch das Gastspiel, in dem er nicht stand');
     gleich(r.daten.spiele[0].id, spiel.id, 'es ist das richtige Spiel');
     gleich(r.daten.spiele[0].eingetragenVonName, 'Julius', 'Tobi sieht, wer es eingetragen hat');
     ok(r.daten.spiele[0].payload.throws.length === 1, 'der Spielinhalt kommt unveraendert an');
@@ -276,7 +276,9 @@ async function main() {
     r = await julius.ruf('GET', '/api/games?since=0');
     gleich(r.daten.spiele.length, 2, 'Julius sieht beide von ihm eingetragenen Spiele');
 
-    r = await tobi.ruf('GET', '/api/games?since=' + ersteSeq);
+    r = await tobi.ruf('GET', '/api/games?since=0');
+    const tobiCursor = r.daten.cursor;
+    r = await tobi.ruf('GET', '/api/games?since=' + tobiCursor);
     gleich(r.daten.spiele.length, 0, 'mit gesetztem Cursor kommt nichts doppelt');
 
     console.log('\nLoeschen');
@@ -286,7 +288,7 @@ async function main() {
     r = await julius.ruf('DELETE', '/api/games/' + spiel.id);
     gleich(r.status, 200, 'Julius darf sein eigenes Spiel zurueckziehen');
 
-    r = await tobi.ruf('GET', '/api/games?since=' + ersteSeq);
+    r = await tobi.ruf('GET', '/api/games?since=' + tobiCursor);
     gleich(r.daten.spiele.length, 1, 'die Loeschung erreicht Tobis Geraet');
     ok(r.daten.spiele[0].geloescht === true, 'sie kommt als Grabstein an');
 

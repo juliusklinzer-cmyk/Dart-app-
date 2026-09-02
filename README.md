@@ -19,8 +19,9 @@ Teilen-Menü „Zum Home-Bildschirm“ hinzufügen. Danach startet sie ohne Brow
 wie eine native App und funktioniert auch ohne Internet.
 
 **iPad:** Hoch- und Querformat werden unterstützt. Im Querformat steht der Spielstand
-links und das Eingabefeld rechts, sodass nichts gescrollt werden muss und die Tasten
-mit dem Daumen erreichbar bleiben; im Hochformat liegt die Eingabe unten. Tasten und
+links und das Eingabefeld rechts; das Spielbild ist **fest im Rahmen** – nichts
+scrollt aus dem Bild, nur der Wurfverlauf scrollt in seinem eigenen Kasten, und
+die getippte Zahl leuchtet groß über den Tasten. Im Hochformat liegt die Eingabe unten. Tasten und
 Schrift werden auf Tablets automatisch größer, Doppeltipp-Zoom ist auf Buttons
 deaktiviert. Split View funktioniert ebenfalls – bei schmaler Spalte schaltet die App
 auf das Handy-Layout um.
@@ -116,6 +117,10 @@ und der Verlauf der Aufnahmen mit Rundentrennern. Wer durch ist, trägt einen Ha
 statt einer Zahl. Das Zahlenfeld ist das des X01 – inklusive **„Weiter ▸"**, das eine
 Aufnahme mit Fehlwürfen auffüllt. Der ↺-Button nimmt Dart für Dart zurück – und über
 eine Rundengrenze hinweg auch eine schon entschiedene Runde samt gezogener Zahl.
+
+Statt einer Punktezeile trägt jede Spielerkarte **Laserpillen**: je Zielpunkt
+eine, jedes Finish zündet eine im blauen Licht – leuchten alle, ist gewonnen.
+Der lange Verlauf ist einer einzigen Zeile mit der letzten Eingabe gewichen.
 
 In der Rangliste zählt der Modus **gewonnene Runden**, **Ø Darts je Finish**, das
 schnellste Finish und die höchste weggemachte Zahl.
@@ -241,11 +246,12 @@ nächsten Modus weiter (aus dem Turnier-Modus also zurück zu Punkte), **Esc**
 alle Anzeigen sind auf die Distanz vom Oche (~3 m) ausgelegt: Spielername,
 Legs und Ø stehen groß in der Karte, die Dialoge sprechen Plakatgröße.
 Nach einem Leg: **Enter** startet das nächste, **Löschen** nimmt die Eingabe
-zurück. Nach dem Einzel erscheint **8 Sekunden groß die Kurzstatistik**
+zurück. Alle Dialoge füllen dabei den **ganzen Bildschirm** in maximaler
+Schrift. Nach dem Einzel erscheint **8 Sekunden groß die Kurzstatistik**
 (Ø, 180er, höchstes Finish beider Spieler) – Enter überspringt –, danach die
-**nächsten Begegnungen in groß** (die anstehende leuchtet); Enter startet
-sie direkt wieder in der Riesenanzeige. Eine eigene Statistik-Seite gibt es
-im Turnier-Modus nicht. Auf einem Gerät ohne Tastatur zeigt ein Tipp irgendwo
+**nächsten Begegnungen in groß**: mit den **Pfeiltasten** wird gewählt (die
+gewählte leuchtet), **Enter** startet sie direkt wieder in der Riesenanzeige.
+Eine eigene Statistik-Seite gibt es im Turnier-Modus nicht. Auf einem Gerät ohne Tastatur zeigt ein Tipp irgendwo
 ins Bild für ein paar Sekunden den Knopf **„Turnier-Modus beenden"** – der
 Notausgang, damit niemand ohne Tab und Esc gefangen sitzt.
 
@@ -387,8 +393,13 @@ Statistik.
 ## Anmelden und gemeinsam spielen
 
 Wird die App von einem Server mit Kontoschicht ausgeliefert (siehe
-[DEPLOY.md](DEPLOY.md), Variante B), erscheint der Reiter **Konto**. Dann hat jeder
-seine eigene Karriere, egal auf wessen Gerät mitgeschrieben wurde.
+[DEPLOY.md](DEPLOY.md), Variante B), erscheint der Reiter **Profil**. Dann hat jeder
+seine eigene Karriere, egal auf wessen Gerät mitgeschrieben wurde – und **alle
+Angemeldeten sehen alle Spiele der Mannschaft**: auch das Solo-Training eines
+Kollegen zählt auf jedem Gerät in Statistik und Rangliste gleich (die Namen
+fremder Gastspieler reisen mit; solche Gäste erscheinen nur im Verlauf, nicht
+in Aufstellung oder Rangliste). Ältere Geräte holen beim nächsten Öffnen einmal
+alles nach.
 
 **Anmelden ist ein Angebot, keine Hürde.** Ohne Account läuft alles wie bisher, nur
 eben nur auf diesem Gerät. Ohne Server – Datei per Doppelklick, Einzeldatei-Bündel,

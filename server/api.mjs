@@ -300,6 +300,9 @@ export function createApi(db, config) {
     const u = verlangeNutzer(req);
     const since = Math.max(0, Number(url.searchParams.get('since')) || 0);
 
+    /* Alle Spiele der Mannschaft, nicht nur die eigenen: Rangliste und
+       Statistik muessen auf jedem Geraet dasselbe zeigen - sonst fehlt
+       bei Lenas das Spiel, das Wuidara allein geschrieben hat. */
     const zeilen = db
       .prepare(
         'SELECT g.id, g.seq, g.kind, g.payload, g.client_at, g.deleted_at,' +
@@ -307,12 +310,10 @@ export function createApi(db, config) {
           '  FROM games g' +
           '  JOIN users r ON r.id = g.recorded_by' +
           ' WHERE g.seq > ?' +
-          '   AND (g.recorded_by = ? OR EXISTS (' +
-          '         SELECT 1 FROM game_players p WHERE p.game_id = g.id AND p.user_id = ?))' +
           ' ORDER BY g.seq' +
           ' LIMIT ?'
       )
-      .all(since, u.id, u.id, SEITE + 1);
+      .all(since, SEITE + 1);
 
     const mehr = zeilen.length > SEITE;
     const seite = mehr ? zeilen.slice(0, SEITE) : zeilen;

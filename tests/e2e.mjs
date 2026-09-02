@@ -895,13 +895,21 @@ await page.locator('[data-action="start-game"]').click();
 check('Bull-Off zeigt links alle vier zur Wahl - ohne Nummern',
   (await page.locator('.bo-wahl [data-action="order-pick"]').count()) === 4 &&
   (await page.locator('.bo-wahl .bo-pos').count()) === 0);
-check('rechts ist die Reihenfolge noch leer', (await page.locator('.bo-reihe .bo-row').count()) === 0);
+check('rechts warten vier leere nummerierte Slots',
+  (await page.locator('.bo-reihe .bo-row').count()) === 0 &&
+  (await page.locator('.bo-reihe .bo-slot').count()) === 4);
 const alleIds = await page.evaluate(() => window.__dart.game().players.slice());
 /* Der Naechste am Bull wird zuerst angetippt: hier der Vierte, dann der
    Zweite - danach zwei Erstbeste. Der letzte rueckt von selbst nach. */
+const wahlHoehe = await page.locator('.bo-wahl').evaluate((e) => e.getBoundingClientRect().height);
 await page.locator(`[data-action="order-pick"][data-id="${alleIds[3]}"]`).click();
 check('der Angetippte steht rechts als 1.', await page.evaluate((id) =>
   window.__dart.ui().bullReihe[0] === id, alleIds[3]));
+check('links bleibt sein Platz leer - nichts rueckt nach', await page.evaluate((h) => {
+  const w = document.querySelector('.bo-wahl');
+  return Math.abs(w.getBoundingClientRect().height - h) < 2 &&
+    w.querySelectorAll('.bo-weg').length === 1;
+}, wahlHoehe));
 await page.locator(`[data-action="order-pick"][data-id="${alleIds[1]}"]`).click();
 check('der zweite Tipp reiht als 2. ein', await page.evaluate((id) =>
   window.__dart.ui().bullReihe[1] === id, alleIds[1]));
@@ -1055,6 +1063,12 @@ const [fA, fB] = await page.evaluate(() => window.__dart.game().players);
 check('Zahl liegt zwischen 6 und 120', fst.zahl >= 6 && fst.zahl <= 120, String(fst.zahl));
 check('beide starten auf derselben Zahl', fst.rest[fA] === fst.zahl && fst.rest[fB] === fst.zahl);
 check('Zahl steht groß auf der Tafel', (await text('#fin-board')).includes(String(fst.zahl)));
+check('je Zielpunkt eine Pille in der Karte, anfangs keine an', await page.evaluate(() => {
+  const karten = document.querySelectorAll('#fin-board .pcard');
+  const ziel = window.__dart.game().ziel;
+  return [...karten].every((k) => k.querySelectorAll('.fin-pille').length === ziel) &&
+    document.querySelectorAll('#fin-board .fin-pille.an').length === 0;
+}));
 check('noch keine Punkte', fst.punkte[fA] === 0 && fst.punkte[fB] === 0);
 
 /*
@@ -1092,6 +1106,11 @@ check('B darf gleichziehen', fst.turn === 1);
 await finMiss(3);
 fst = await finState();
 check('Runde vorbei, sobald alle gleich oft dran waren', fst.punkte[fA] === 1);
+check('das Finish zuendet eine Laserpille beim Sieger', await page.evaluate((id) => {
+  const karten = [...document.querySelectorAll('#fin-board .pcard')];
+  const meine = karten[window.__dart.game().players.indexOf(id)];
+  return meine.querySelectorAll('.fin-pille.an').length === 1;
+}, fA));
 check('neue Runde mit neuer Zahl', fst.runde === 1 && fst.zahl >= 6 && fst.zahl <= 120);
 check('alle wieder auf Anfang', fst.rest[fA] === fst.zahl && fst.rest[fB] === fst.zahl);
 
@@ -1661,6 +1680,20 @@ check('Enter blendet die naechsten Einzel gross ein', await page.evaluate(() => 
 }));
 check('die erste Begegnung leuchtet als naechste',
   (await page.locator('.te-zeile.dran').count()) === 1);
+check('der Dialog fuellt den ganzen Bildschirm', await page.evaluate(() => {
+  const r = document.getElementById('overlay-card').getBoundingClientRect();
+  return r.width >= window.innerWidth - 2 && r.height >= window.innerHeight - 2;
+}), await page.evaluate(() => {
+  const r = document.getElementById('overlay-card').getBoundingClientRect();
+  return JSON.stringify({ w: r.width, h: r.height, vw: window.innerWidth, vh: window.innerHeight });
+}));
+/* Mit den Pfeiltasten laesst sich eine andere Partie waehlen. */
+await page.keyboard.press('ArrowDown');
+check('Pfeil runter waehlt die zweite Begegnung', await page.evaluate(() =>
+  document.querySelectorAll('.te-zeile')[1].classList.contains('dran')));
+await page.keyboard.press('ArrowUp');
+check('Pfeil hoch fuehrt zurueck zur ersten', await page.evaluate(() =>
+  document.querySelectorAll('.te-zeile')[0].classList.contains('dran')));
 await page.keyboard.press('Enter');
 check('Enter startet das naechste Einzel direkt in der Riesenanzeige',
   (await visible('#pad-key')) && await page.evaluate(() => {

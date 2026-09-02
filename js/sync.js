@@ -27,7 +27,7 @@
    * Warteschlange, und bei jeder Anmeldung würde die komplette Historie erneut
    * angeboten.
    */
-  var zustand = { userId: null, cursor: 0, outbox: [], hoch: [] };
+  var zustand = { userId: null, cursor: 0, outbox: [], hoch: [], alle: true };
 
   /* ================= eigener kleiner Speicher ================= */
 
@@ -41,6 +41,11 @@
         zustand.cursor = Number(z.cursor) || 0;
         zustand.outbox = Array.isArray(z.outbox) ? z.outbox : [];
         zustand.hoch = Array.isArray(z.hoch) ? z.hoch : [];
+        /* Frueher lieferte der Server nur die eigenen Spiele. Ein Geraet
+           von damals holt einmal alles von vorn - Vorhandenes wird beim
+           Einmischen ohnehin uebersprungen. */
+        if (z.alle !== true) zustand.cursor = 0;
+        zustand.alle = true;
       }
     } catch (e) { /* kaputt oder nicht da: wir fangen bei null an */ }
   }
@@ -89,6 +94,20 @@
     // Die Liste darf nicht unbegrenzt wachsen; die Historie ist ohnehin
     // gedeckelt, also reicht dieselbe Größenordnung.
     if (zustand.hoch.length > 600) zustand.hoch.splice(0, zustand.hoch.length - 600);
+  }
+
+  /* Die Namen der Beteiligten reisen im Spielinhalt mit: andere Geraete
+     kennen fremde Gastspieler nicht und zeigten sonst "Unbekannt". */
+  function mitNamen(h) {
+    var namen = {};
+    beteiligte(h).forEach(function (id) {
+      var p = D.profile(id);
+      if (p && p.name && p.name !== 'Unbekannt') namen[id] = p.name;
+    });
+    var kopie = {};
+    Object.keys(h).forEach(function (k) { kopie[k] = h[k]; });
+    kopie.namen = namen;
+    return kopie;
   }
 
   function spielerListe(h) {
@@ -149,7 +168,7 @@
           id: h.id,
           kind: art(h),
           at: h.at || Date.now(),
-          payload: h,
+          payload: mitNamen(h),
           players: spielerListe(h)
         }).then(function () {
           geschafft++;
