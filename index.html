@@ -300,15 +300,32 @@
             aria-label="Alle Termine in den Kalender">📅</button>
   </header>
 
-  <div class="konto-tabs drei" id="liga-tabs">
+  <div class="konto-tabs fuenf" id="liga-tabs">
     <button data-action="liga-tab" data-tab="plan" class="active">Spielplan</button>
+    <button data-action="liga-tab" data-tab="training">Training</button>
     <button data-action="liga-tab" data-tab="tabelle">Tabelle</button>
+    <button data-action="liga-tab" data-tab="kasse">Kasse</button>
     <button data-action="liga-tab" data-tab="regeln">Regeln</button>
   </div>
 
   <div id="liga-plan">
     <p class="hint hidden" id="liga-hinweis"></p>
     <div id="liga-liste"></div>
+  </div>
+
+  <!-- DiensDarts: das Dienstags-Training in der Sehnsucht - mit Umfrage,
+       wer kommt, und darunter dem Uebungs-Ligaspiel (zwei eigene Teams
+       oder Bots), das ablaeuft wie ein echtes: 16 Einzel, zwei Scheiben,
+       Spielbericht - nur ohne Liga-Wertung. -->
+  <div id="liga-training" class="hidden">
+    <div class="card" id="dienstdarts-karte"></div>
+    <div class="card">
+      <h2>Übungs-Ligaspiel</h2>
+      <p class="hint">Der komplette Liga-Ablauf zum Üben: 16 Einzel in Bogen-Reihenfolge,
+        zwei Scheiben, Team-Stand und Spielbericht – gegen ein zweites eigenes Team oder
+        gegen Bots in drei Stärken. Zählt nirgends in die Liga-Wertung.</p>
+      <button class="btn primary full" data-action="uebung-start">Übungsspiel aufstellen</button>
+    </div>
   </div>
 
   <!-- Die Ligatabelle: von Hand gepflegt (die Liga veröffentlicht die
@@ -322,6 +339,12 @@
     </div>
     <button class="btn primary full hidden" id="lt-speichern" data-action="liga-tabelle-speichern">Tabelle speichern</button>
     <p class="hint" id="lt-stand"></p>
+  </div>
+
+  <!-- Die Vereinskasse: ein Kassenbuch fuer alle - Einzahlung oder
+       Ausgabe erfassen, der Bestand rechnet sich von selbst. -->
+  <div id="liga-kasse" class="hidden">
+    <div class="card" id="kasse-karte"></div>
   </div>
 
   <!-- Regeln und FAQ: fest im HTML, verständlich zusammengefasst aus der

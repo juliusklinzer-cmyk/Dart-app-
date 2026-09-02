@@ -141,6 +141,25 @@ vorbefüllt, jede Zelle (Team, Spiele, Punkte, Legs) antippbar; **„Tabelle
 speichern"** legt den Stand auf dem Server ab, sodass alle Angemeldeten
 dieselbe Tabelle sehen (`PUT /api/liga/tabelle`).
 
+Der Reiter **Training** ist das Dienstagszuhause: **DiensDarts** – Dart-Training
+jeden Dienstag in der Bar Sehnsucht (mit Logo). Eine Umfrage fragt je Termin
+**Bin dabei / Unsicher / Kann nicht** ab (serverweit, mit Bild und Namen aller,
+die kommen). Darunter startet das **Übungs-Ligaspiel**: der komplette
+Liga-Ablauf – 16 Einzel in Bogen-Reihenfolge, zwei Scheiben, Team-Stand,
+Spielbericht – gegen ein zweites eigenes Team **oder gegen Bots** in drei
+Stärken (leicht ≈ 38er-Aufnahmen, mittel ≈ 52, schwer ≈ 72; Bots stellen sich
+auf Doppel, busten nie und werfen nach kurzer Denkpause von selbst – und nur
+im Übungsspiel, nirgendwo sonst). Übungsspiele zählen in **keine** Wertung,
+weder Liga noch Classic – Siege gegen leichte Bots wären sonst farmbar; die
+Bots sind versteckte Gastprofile und erscheinen in keiner Aufstellung oder
+Rangliste. Im Training darf der Löwe übrigens brüllen – nur das echte
+Ligaspiel bleibt feierfrei.
+
+Der Reiter **Kasse** ist die **Vereinskasse**: ein simples Kassenbuch für alle
+Angemeldeten – Einzahlung oder Ausgabe mit Betrag und Text erfassen, der
+Bestand rechnet sich von selbst, jede Buchung zeigt Urheber und Datum, eigene
+Buchungen lassen sich löschen (`/api/kasse`).
+
 ## Ligaspiel (SDM-Spielberichtsbogen)
 
 Von jedem Spieltag im Liga-Reiter lässt sich mit **„Ligaspiel starten"** der

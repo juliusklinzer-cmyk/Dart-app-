@@ -2476,8 +2476,60 @@ button, input, select, textarea { font-family: inherit; }
   border: 1px solid var(--line); font-weight: 500;
 }
 
-/* Drei Reiter statt zwei (Liga: Spielplan | Tabelle | Regeln). */
+/* Drei bzw. vier Reiter (Liga: Spielplan | Training | Tabelle | Regeln). */
 .konto-tabs.drei { grid-template-columns: 1fr 1fr 1fr; }
+.konto-tabs.vier { grid-template-columns: repeat(4, 1fr); }
+.konto-tabs.fuenf { grid-template-columns: repeat(5, 1fr); }
+.konto-tabs.vier button, .konto-tabs.fuenf button { padding-left: 4px; padding-right: 4px; }
+
+/* Vereinskasse: der Bestand gross, darunter das Formular und die Liste. */
+.kasse-saldo { text-align: center; margin: 6px 0 14px; }
+.kasse-saldo b {
+  display: block; font-size: 2.6rem; font-family: var(--font-cond);
+  font-variant-numeric: tabular-nums;
+}
+.kasse-saldo b.plus { color: #4ade80; }
+.kasse-saldo b.minus { color: var(--red); }
+.kasse-form { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.kasse-form .zeile { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.kasse-form input {
+  background: var(--bg-3); border: 1px solid var(--line); color: var(--text);
+  border-radius: 10px; padding: 12px; font-size: 1rem; min-height: var(--tap);
+}
+.kasse-eintrag {
+  display: flex; align-items: center; gap: 10px; padding: 9px 0;
+  border-top: 1px solid var(--line);
+}
+.kasse-eintrag .was { flex: 1; min-width: 0; }
+.kasse-eintrag .txt { font-weight: 600; }
+.kasse-eintrag .wer { font-size: 0.76rem; color: var(--muted); }
+.kasse-eintrag .betrag { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.kasse-eintrag .betrag.plus { color: #4ade80; }
+.kasse-eintrag .betrag.minus { color: var(--red); }
+.kasse-eintrag .weg {
+  background: none; border: none; color: var(--muted); font-size: 1.1rem;
+  cursor: pointer; padding: 8px;
+}
+
+/* Das Vereinsheim: Sehnsucht-Logo ueber der Trainingskarte - liegt als
+   CSS-Hintergrund vor, damit das Einzeldatei-Buendel es einbetten kann. */
+.sehnsucht-logo {
+  width: 132px; height: 132px; margin: 0 auto 6px;
+  background: #000 url('../icons/sehnsucht.webp') center / contain no-repeat;
+  border-radius: 16px;
+}
+
+/* DiensDarts: drei Antworten nebeneinander, darunter die Listen. */
+.dd-antworten { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0 4px; }
+.dd-antworten button.aktiv {
+  border-color: var(--aktiv-linie); background: var(--aktiv-flaeche);
+  box-shadow: 0 0 14px var(--schein);
+}
+.dd-liste { margin-top: 10px; }
+.dd-titel { font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin: 10px 0 6px; }
+.dd-reihe { display: flex; align-items: center; gap: 10px; padding: 5px 0; }
+.dd-reihe .nm { font-weight: 600; }
+.dd-reihe.leise { opacity: 0.55; }
 
 /* Bürgerlicher Name im Profil – gleiche Optik wie das Namensfeld,
    nur eine Stufe kleiner, weil es das Nebenfeld ist. */

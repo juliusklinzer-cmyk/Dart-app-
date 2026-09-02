@@ -594,14 +594,14 @@ export function createApi(db, config) {
 
   function ligaAlleZusagen() {
     const zeilen = db.prepare(
-      'SELECT z.termin_id, u.id, u.display_name, u.avatar, u.hue' +
+      'SELECT z.termin_id, z.status, u.id, u.display_name, u.avatar, u.hue' +
       '  FROM liga_zusagen z JOIN users u ON u.id = z.user_id' +
       ' ORDER BY z.created_at'
     ).all();
     const je = {};
     for (const z of zeilen) {
       if (!je[z.termin_id]) je[z.termin_id] = [];
-      je[z.termin_id].push({ id: z.id, name: z.display_name, avatar: z.avatar, hue: z.hue });
+      je[z.termin_id].push({ id: z.id, name: z.display_name, avatar: z.avatar, hue: z.hue, status: z.status || 'dabei' });
     }
     return je;
   }
@@ -616,11 +616,23 @@ export function createApi(db, config) {
     const u = verlangeNutzer(req);
     const termin = ligaTerminId(id);
     const daten = await leseJson(req);
-    if (daten.dabei) {
+    /* Zwei Formen: das alte { dabei: bool } der Spieltage (false loescht)
+       und { status: 'dabei'|'unsicher'|'absage' } des Trainings - dort ist
+       auch die Absage eine Antwort, die alle sehen sollen. */
+    let status = null;
+    if (typeof daten.status === 'string') {
+      if (['dabei', 'unsicher', 'absage'].indexOf(daten.status) < 0) {
+        throw new HttpFehler(400, 'Unbekannter Zusage-Status.');
+      }
+      status = daten.status;
+    } else if (daten.dabei) {
+      status = 'dabei';
+    }
+    if (status) {
       db.prepare(
-        'INSERT INTO liga_zusagen (termin_id, user_id, created_at) VALUES (?, ?, ?) ' +
-        'ON CONFLICT (termin_id, user_id) DO NOTHING'
-      ).run(termin, u.id, new Date().toISOString());
+        'INSERT INTO liga_zusagen (termin_id, user_id, created_at, status) VALUES (?, ?, ?, ?) ' +
+        'ON CONFLICT (termin_id, user_id) DO UPDATE SET status = excluded.status'
+      ).run(termin, u.id, new Date().toISOString(), status);
     } else {
       db.prepare('DELETE FROM liga_zusagen WHERE termin_id = ? AND user_id = ?').run(termin, u.id);
     }
@@ -658,6 +670,53 @@ export function createApi(db, config) {
     sendJson(res, 200, { ok: true });
   }
 
+  /* ---------- Vereinskasse ---------- */
+  /* Ein Kassenbuch fuer alle: jede Buchung traegt Betrag (Cent, positiv =
+     Einzahlung), Text und Urheber. Loeschen darf nur, wer gebucht hat. */
+
+  async function kasseHolen(req, res) {
+    const u = verlangeNutzer(req);
+    const zeilen = db.prepare(
+      'SELECT k.id, k.betrag, k.text, k.created_at, k.user_id, u.display_name, u.avatar, u.hue' +
+      '  FROM kasse k JOIN users u ON u.id = k.user_id' +
+      ' ORDER BY k.id DESC LIMIT 200'
+    ).all();
+    const saldo = db.prepare('SELECT COALESCE(SUM(betrag), 0) s FROM kasse').get().s;
+    sendJson(res, 200, {
+      saldo,
+      eintraege: zeilen.map((z) => ({
+        id: z.id, betrag: z.betrag, text: z.text, at: z.created_at,
+        name: z.display_name, avatar: z.avatar, hue: z.hue,
+        meins: z.user_id === u.id
+      }))
+    });
+  }
+
+  async function kasseBuchen(req, res) {
+    pruefeHerkunft(req);
+    const u = verlangeNutzer(req);
+    const body = await leseJson(req);
+    const betrag = Math.trunc(Number(body.betrag));
+    if (!Number.isFinite(betrag) || betrag === 0 || Math.abs(betrag) > 1000000) {
+      throw new HttpFehler(400, 'Der Betrag ist unbrauchbar.');
+    }
+    const text = String(body.text || '').trim().slice(0, 80);
+    if (!text) throw new HttpFehler(400, 'Wofuer war das? Bitte einen Text angeben.');
+    db.prepare('INSERT INTO kasse (user_id, betrag, text, created_at) VALUES (?, ?, ?, ?)')
+      .run(u.id, betrag, text, new Date().toISOString());
+    return kasseHolen(req, res);
+  }
+
+  async function kasseLoeschen(req, res, id) {
+    pruefeHerkunft(req);
+    const u = verlangeNutzer(req);
+    const z = db.prepare('SELECT user_id FROM kasse WHERE id = ?').get(Number(id));
+    if (!z) throw new HttpFehler(404, 'Diese Buchung gibt es nicht.');
+    if (z.user_id !== u.id) throw new HttpFehler(403, 'Nur eigene Buchungen lassen sich loeschen.');
+    db.prepare('DELETE FROM kasse WHERE id = ?').run(Number(id));
+    return kasseHolen(req, res);
+  }
+
   /* ---------- Verteiler ---------- */
 
   const TID = '([A-Za-z0-9_-]{4,64})';
@@ -675,6 +734,9 @@ export function createApi(db, config) {
     ['DELETE', /^\/api\/games\/([A-Za-z0-9_-]{4,64})$/, spielLoeschen],
 
     ['GET', /^\/api\/liga\/zusagen$/, ligaZusagen],
+    ['GET', /^\/api\/kasse$/, kasseHolen],
+    ['POST', /^\/api\/kasse$/, kasseBuchen],
+    ['DELETE', /^\/api\/kasse\/(\d{1,12})$/, kasseLoeschen],
     ['GET', /^\/api\/liga\/tabelle$/, ligaTabelleHolen],
     ['PUT', /^\/api\/liga\/tabelle$/, ligaTabelleSpeichern],
     ['PUT', /^\/api\/liga\/zusagen\/([a-z0-9-]{2,40})$/, ligaZusageSetzen],

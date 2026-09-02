@@ -490,6 +490,42 @@ async function main() {
     r = await fremd.ruf('PUT', '/api/liga/tabelle', { tabelle: {} });
     gleich(r.status, 401, 'ohne Anmeldung speichert niemand');
 
+    console.log('\nTrainings-Zusagen mit Status');
+    r = await julius.ruf('PUT', '/api/liga/zusagen/tr20260908', { status: 'unsicher' });
+    gleich(r.status, 200, 'Julius meldet sich unsicher zum Training');
+    gleich(r.daten.zusagen.tr20260908[0].status, 'unsicher', 'der Status kommt in der Liste an');
+    r = await julius.ruf('PUT', '/api/liga/zusagen/tr20260908', { status: 'dabei' });
+    gleich(r.daten.zusagen.tr20260908[0].status, 'dabei', 'umentscheiden ueberschreibt den Status');
+    r = await tobi.ruf('PUT', '/api/liga/zusagen/tr20260908', { status: 'absage' });
+    gleich(r.daten.zusagen.tr20260908.length, 2, 'auch eine Absage ist eine sichtbare Antwort');
+    r = await julius.ruf('PUT', '/api/liga/zusagen/tr20260908', { status: 'vielleicht-spaeter' });
+    gleich(r.status, 400, 'erfundene Status werden abgewiesen');
+    r = await julius.ruf('GET', '/api/liga/zusagen');
+    ok(r.daten.zusagen.st01.every((z) => z.status === 'dabei'),
+      'alte Spieltag-Zusagen gelten weiter als dabei');
+
+    console.log('\nVereinskasse');
+    r = await fremd.ruf('GET', '/api/kasse');
+    gleich(r.status, 401, 'ohne Anmeldung bleibt die Kasse zu');
+    r = await julius.ruf('GET', '/api/kasse');
+    gleich(r.daten.saldo, 0, 'die Kasse beginnt bei null');
+    r = await julius.ruf('POST', '/api/kasse', { betrag: 5000, text: 'Startgeld Julius' });
+    gleich(r.status, 200, 'Julius zahlt 50 Euro ein');
+    gleich(r.daten.saldo, 5000, 'der Bestand rechnet mit');
+    r = await tobi.ruf('POST', '/api/kasse', { betrag: -1250, text: 'Neue Flights' });
+    gleich(r.daten.saldo, 3750, 'Tobis Ausgabe zieht ab');
+    const kasseEintrag = r.daten.eintraege[0];
+    ok(kasseEintrag.meins === true && kasseEintrag.betrag === -1250, 'die eigene Buchung ist als meins markiert');
+    r = await julius.ruf('POST', '/api/kasse', { betrag: 0, text: 'nix' });
+    gleich(r.status, 400, 'null Euro sind keine Buchung');
+    r = await julius.ruf('POST', '/api/kasse', { betrag: 100 });
+    gleich(r.status, 400, 'ohne Text keine Buchung');
+    r = await julius.ruf('DELETE', '/api/kasse/' + kasseEintrag.id);
+    gleich(r.status, 403, 'fremde Buchungen loescht niemand');
+    r = await tobi.ruf('DELETE', '/api/kasse/' + kasseEintrag.id);
+    gleich(r.status, 200, 'die eigene schon');
+    gleich(r.daten.saldo, 5000, 'der Bestand stimmt danach wieder');
+
     console.log('\nRate-Limit');
     let gesperrt = false;
     for (let i = 0; i < 8; i++) {

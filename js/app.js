@@ -804,7 +804,7 @@
     /* Im Ligaspiel wird nicht gefeiert - der Schreiber ist Schiedsrichter,
        und ein Vollbild-Loewe mitten im Einzel gegen ein fremdes Team waere
        genau die Zwischenaktion, die die SWO dem Schreiber verbietet. */
-    var ligaMatch = m.kind !== 'quick' && S.tour && S.tour.liga;
+    var ligaMatch = m.kind !== 'quick' && S.tour && S.tour.liga && !S.tour.liga.uebung;
     // Höher geht es mit drei Darts nicht.
     if (!isBust && score === 180 && !ligaMatch) feiere180(pid);
     // Die 60 gehört dem Löwen – bei jeder geworfenen 60 (siehe feiere60).
@@ -1142,13 +1142,20 @@
   function career() {
     /* Turniere und Schnelle Spiele liefern beide Match-Listen und fließen
        damit in dieselbe Classic-Auswertung. */
-    var lists = S.history.filter(function (h) { return (h.kind || '501') === '501' || h.kind === 'quick'; })
-      .map(function (h) { return { matches: h.matches, start: (h.settings && h.settings.start) || 501 }; });
-    if (S.matches.length) lists.push({ matches: S.matches, start: tourStart() });
+    /* Uebungsspiele (Training gegen Bots oder Team B) zaehlen in keine
+       Wertung - Siege gegen leichte Bots waeren sonst beliebig farmbar. */
+    var lists = S.history.filter(function (h) {
+      if (h.liga && h.liga.uebung) return false;
+      return (h.kind || '501') === '501' || h.kind === 'quick';
+    }).map(function (h) { return { matches: h.matches, start: (h.settings && h.settings.start) || 501 }; });
+    if (S.matches.length && !(S.tour && S.tour.liga && S.tour.liga.uebung)) {
+      lists.push({ matches: S.matches, start: tourStart() });
+    }
     var ids = S.profiles.map(function (p) { return p.id; });
     var map = collectStats(lists, ids);
     var open = S.game && S.game.done ? [S.game] : [];
     S.history.concat(open).forEach(function (h) {
+      if (h.liga && h.liga.uebung) return;
       var kind = h.kind || '501';
       if (kind === '501') {
         // Nur wer in diesem Turnier auch gespielt hat, bekommt eine Teilnahme.
@@ -1206,9 +1213,10 @@
   /* Karriere-Statistik nur über Ligaspiele – für den Liga-Reiter der
      Rangliste. Gleiche Rechnung wie career(), andere Auswahl. */
   function careerLiga() {
-    var lists = S.history.filter(function (h) { return h.liga && h.matches; })
+    /* Uebungsspiele (DiensDarts) zaehlen nicht in die Liga-Rangliste. */
+    var lists = S.history.filter(function (h) { return h.liga && !h.liga.uebung && h.matches; })
       .map(function (h) { return { matches: h.matches, start: (h.settings && h.settings.start) || 501 }; });
-    if (S.matches.length && S.tour && S.tour.liga) lists.push({ matches: S.matches, start: tourStart() });
+    if (S.matches.length && S.tour && S.tour.liga && !S.tour.liga.uebung) lists.push({ matches: S.matches, start: tourStart() });
     var map = collectStats(lists, S.profiles.map(function (p) { return p.id; }));
     Object.keys(map).forEach(function (k) {
       map[k].name = pname(k);
@@ -1221,13 +1229,13 @@
   /* Alle fertigen Liga-Einzel, neueste zuerst – fürs Liga-Verlaufsdiagramm. */
   function alleLigaMatches() {
     var out = [];
-    if (S.matches.length && S.tour && S.tour.liga) {
+    if (S.matches.length && S.tour && S.tour.liga && !S.tour.liga.uebung) {
       S.matches.forEach(function (m) {
         if (m.done && knownPlayers(m.p)) out.push({ m: m, at: m.at, live: true });
       });
     }
     S.history.forEach(function (h) {
-      if (!h.liga || !h.matches) return;
+      if (!h.liga || h.liga.uebung || !h.matches) return;
       h.matches.forEach(function (m) {
         if (m.done && knownPlayers(m.p)) out.push({ m: m, at: h.at });
       });
@@ -1296,7 +1304,7 @@
     var known = {};
     S.profiles.forEach(function (p) { known[p.id] = p; });
     var rows = Object.keys(map).map(function (k) { return map[k]; }).filter(function (s) {
-      return def.min(s) && known[s.id] && !known[s.id].hidden;
+      return def.min(s) && known[s.id] && !known[s.id].hidden && !known[s.id].bot;
     });
     rows.sort(function (a, b) {
       var d = def.asc ? def.get(a) - def.get(b) : def.get(b) - def.get(a);
@@ -1315,11 +1323,13 @@
 
   function allMatches() {
     var out = [];
-    if (S.matches.length) {
+    if (S.matches.length && !(S.tour && S.tour.liga && S.tour.liga.uebung)) {
       S.matches.forEach(function (m) { if (m.done && knownPlayers(m.p)) out.push({ m: m, start: tourStart(), live: true }); });
     }
     S.history.forEach(function (h) {
-      // Cricket, RTW und Finisher haben keine Match-Liste.
+      // Cricket, RTW und Finisher haben keine Match-Liste - und
+      // Uebungsspiele zaehlen nirgends.
+      if (h.liga && h.liga.uebung) return;
       if ((h.kind || '501') !== '501' && h.kind !== 'quick') return;
       h.matches.forEach(function (m) {
         if (m.done && knownPlayers(m.p)) out.push({ m: m, start: (h.settings && h.settings.start) || 501, at: h.at });
@@ -1971,6 +1981,7 @@
       show('konto');
       if (window.DartKonto) window.DartKonto.render();
       renderOverlay();
+      planeBotZug();
       return;
     }
     show(S.screen);
@@ -1989,7 +2000,7 @@
     if (S.screen === 'setup' && letzterScreen !== 'setup') beitretbareHolen();
     // Zusagen frisch holen, wenn man die Liga-Seite betritt – nicht bei
     // jedem Zeichnen, das wäre eine Anfrage je Tastendruck.
-    if (S.screen === 'liga' && letzterScreen !== 'liga') { ligaZusagenLaden(); ligaTabelleLaden(); }
+    if (S.screen === 'liga' && letzterScreen !== 'liga') { ligaZusagenLaden(); ligaTabelleLaden(); kasseLaden(); }
     letzterScreen = S.screen;
     if (S.screen === 'tournament') renderTournament();
     if (S.screen === 'boards') renderBoards();
@@ -2007,6 +2018,7 @@
     if (S.screen === 'konto' && window.DartKonto) window.DartKonto.render();
     renderSyncStatus();
     renderOverlay();
+    planeBotZug();
   }
 
   /* Schmale Zeile über der Navigation: was noch nicht beim Server ist.
@@ -2221,8 +2233,8 @@
 
     var table = standings();
     $('tournament-format').textContent = liga
-      ? liga.nr + '. Spieltag · ' + (liga.heim ? 'Heim' : 'Auswärts') + ' gegen ' + liga.gegner +
-        ' · Best of ' + tour().bestOf
+      ? (liga.uebung ? 'Übungsspiel' : liga.nr + '. Spieltag · ' + (liga.heim ? 'Heim' : 'Auswärts')) +
+        ' gegen ' + liga.gegner + ' · Best of ' + tour().bestOf
       : tourStart() + ' Double Out · ' +
         (tour().bestOf === 1 ? 'ein Leg' : 'Best of ' + tour().bestOf) + ' · ' +
         plural(tourPlayers().length, 'Spieler', 'Spieler');
@@ -2419,7 +2431,7 @@
       b.classList.toggle('active', b.getAttribute('data-value') === mode);
     });
 
-    var ligaSpieltage = S.history.filter(function (h) { return h.liga && h.matches; });
+    var ligaSpieltage = S.history.filter(function (h) { return h.liga && !h.liga.uebung && h.matches; });
     var log = allGamesLog().filter(function (row) { return row.kind === mode; });
     var modeName = mode === '501' ? 'Classic' : mode === 'liga' ? 'Liga' : kindName(mode);
     $('boards-sub').textContent = mode === 'liga'
@@ -2687,6 +2699,120 @@
     });
   }
 
+  /* DiensDarts: das Dienstags-Training. Der naechste Dienstag ist der
+     Termin - am Dienstag selbst gilt noch der heutige Abend. */
+  function naechsterDienstag() {
+    var d = new Date();
+    d.setDate(d.getDate() + ((2 - d.getDay() + 7) % 7));
+    return d;
+  }
+  function trainingsTerminId(d) {
+    var m = String(d.getMonth() + 1), t = String(d.getDate());
+    return 'tr' + d.getFullYear() + (m.length < 2 ? '0' : '') + m + (t.length < 2 ? '0' : '') + t;
+  }
+
+  /* ---------- Vereinskasse ---------- */
+  var kasseDaten = null;
+
+  function kasseLaden() {
+    if (!(window.DartSync && window.DartSync.kasse)) return;
+    window.DartSync.kasse.holen().then(function (d) {
+      if (!d) return;
+      kasseDaten = d;
+      if (S.screen === 'liga') render();
+    }).catch(function () { /* offline: alter Stand bleibt stehen */ });
+  }
+
+  function euro(cent) {
+    var v = (cent / 100).toFixed(2).replace('.', ',');
+    return v + ' €';
+  }
+
+  function renderLigaKasse() {
+    var online = !!(window.DartSync && window.DartSync.kasse && window.DartKonto && window.DartKonto.nutzer());
+    /* Waehrend jemand mitten in einer Buchung steckt (Fokus im Formular
+       ODER schon etwas eingetragen), wird nicht neu gebaut - sonst wischte
+       ein Hintergrund-Abgleich Betrag und Auswahl weg. */
+    var fokus = document.activeElement;
+    if (fokus && fokus.closest && fokus.closest('#kasse-karte')) return;
+    var kbAlt = $('kasse-betrag'), ktAlt = $('kasse-text');
+    if ((kbAlt && kbAlt.value) || (ktAlt && ktAlt.value)) return;
+    var d = kasseDaten;
+    var saldo = d ? d.saldo : 0;
+    $('kasse-karte').innerHTML =
+      '<h2>Vereinskasse</h2>' +
+      '<div class="kasse-saldo"><span class="hint">Bestand</span>' +
+        '<b class="' + (saldo < 0 ? 'minus' : 'plus') + '">' + euro(saldo) + '</b></div>' +
+      (online
+        ? '<div class="kasse-form">' +
+            '<div class="options" id="kasse-art">' +
+              '<button data-action="kasse-art" data-value="ein" class="' + (UI.kasseArt === 'aus' ? '' : 'active') + '">Einzahlung</button>' +
+              '<button data-action="kasse-art" data-value="aus" class="' + (UI.kasseArt === 'aus' ? 'active' : '') + '">Ausgabe</button>' +
+            '</div>' +
+            '<div class="zeile">' +
+              '<input id="kasse-betrag" type="text" inputmode="decimal" placeholder="Betrag in €">' +
+              '<input id="kasse-text" type="text" maxlength="80" placeholder="Wofür?">' +
+            '</div>' +
+            '<button class="btn primary full" data-action="kasse-buchen">Buchen</button>' +
+            '<p class="hint" id="kasse-meldung"></p>' +
+          '</div>'
+        : '<p class="hint">Zum Buchen bitte anmelden.</p>') +
+      ((d && d.eintraege && d.eintraege.length)
+        ? d.eintraege.map(function (e) {
+            return '<div class="kasse-eintrag">' +
+              avatarHTML({ id: 'k' + e.id, name: e.name, avatar: e.avatar, hue: e.hue }, 'sm') +
+              '<div class="was"><div class="txt">' + esc(e.text) + '</div>' +
+                '<div class="wer">' + esc(e.name) + ' · ' + fmtDate(Date.parse(e.at)) + '</div></div>' +
+              '<span class="betrag ' + (e.betrag < 0 ? 'minus' : 'plus') + '">' +
+                (e.betrag > 0 ? '+' : '') + euro(e.betrag) + '</span>' +
+              (e.meins ? '<button class="weg" data-action="kasse-weg" data-id="' + e.id + '" aria-label="Buchung löschen">✕</button>' : '') +
+              '</div>';
+          }).join('')
+        : '<p class="hint">Noch keine Buchung.</p>');
+  }
+
+  function renderLigaTraining() {
+    var d = naechsterDienstag();
+    var tid = trainingsTerminId(d);
+    var online = !!(window.DartSync && window.DartSync.liga && window.DartKonto && window.DartKonto.nutzer());
+    var ich = online ? window.DartKonto.nutzer().id : null;
+    var antworten = (ligaZusagen && ligaZusagen[tid]) || [];
+    var meine = null;
+    antworten.forEach(function (a) { if (a.id === ich) meine = a.status || 'dabei'; });
+    var dabei = antworten.filter(function (a) { return (a.status || 'dabei') === 'dabei'; });
+    var unsicher = antworten.filter(function (a) { return a.status === 'unsicher'; });
+    var absagen = antworten.filter(function (a) { return a.status === 'absage'; });
+
+    var knopf = function (status, text) {
+      return '<button class="btn ghost' + (meine === status ? ' aktiv' : '') + '" ' +
+        'data-action="training-zusage" data-tid="' + tid + '" data-status="' + status + '">' + text + '</button>';
+    };
+    var reihe = function (a, leise) {
+      return '<div class="dd-reihe' + (leise ? ' leise' : '') + '">' +
+        avatarHTML({ id: a.id, name: a.name, avatar: a.avatar, hue: a.hue }, 'sm') +
+        '<span class="nm">' + esc(a.name) + '</span></div>';
+    };
+
+    $('dienstdarts-karte').innerHTML =
+      '<div class="sehnsucht-logo" role="img" aria-label="Sehnsucht Divebar Munich"></div>' +
+      '<h2>DiensDarts</h2>' +
+      '<p class="hint">Dienstags ist Dart-Training in der Bar Sehnsucht. Nächster Termin: <b>' +
+        ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'][d.getDay()] + ', ' + fmtDate(d.getTime()) + '</b></p>' +
+      (online
+        ? '<div class="dd-antworten">' +
+            knopf('dabei', 'Bin dabei') +
+            knopf('unsicher', 'Unsicher') +
+            knopf('absage', 'Kann nicht') +
+          '</div>'
+        : '<p class="hint">Zum Abstimmen bitte anmelden.</p>') +
+      '<div class="dd-liste">' +
+        '<div class="dd-titel">' + plural(dabei.length, 'Spieler kommt', 'Spieler kommen') + '</div>' +
+        (dabei.map(function (a) { return reihe(a); }).join('') || '<p class="hint">Noch keine Zusage.</p>') +
+        (unsicher.length ? '<div class="dd-titel">Unsicher</div>' + unsicher.map(function (a) { return reihe(a, true); }).join('') : '') +
+        (absagen.length ? '<div class="dd-titel">Abgesagt</div>' + absagen.map(function (a) { return reihe(a, true); }).join('') : '') +
+      '</div>';
+  }
+
   function renderLigaTabelle() {
     var online = !!(window.DartSync && window.DartSync.liga && window.DartKonto && window.DartKonto.nutzer());
     $('lt-speichern').classList.toggle('hidden', !online);
@@ -2746,8 +2872,12 @@
       b.classList.toggle('active', b.getAttribute('data-tab') === tab);
     });
     $('liga-plan').classList.toggle('hidden', tab !== 'plan');
+    $('liga-training').classList.toggle('hidden', tab !== 'training');
     $('liga-tabelle').classList.toggle('hidden', tab !== 'tabelle');
+    $('liga-kasse').classList.toggle('hidden', tab !== 'kasse');
     $('liga-regeln').classList.toggle('hidden', tab !== 'regeln');
+    if (tab === 'training') { renderLigaTraining(); return; }
+    if (tab === 'kasse') { renderLigaKasse(); return; }
     if (tab === 'tabelle') { renderLigaTabelle(); return; }
     if (tab !== 'plan') return;
 
@@ -2774,7 +2904,9 @@
       }
       var daheim = t.heim === LIGA.team;
       var vorbei = t.tag < heuteIso;
-      var leute = (ligaZusagen && ligaZusagen[t.id]) || [];
+      var leute = ((ligaZusagen && ligaZusagen[t.id]) || []).filter(function (z) {
+        return (z.status || 'dabei') === 'dabei';
+      });
       var binDabei = ich ? leute.some(function (p) { return p.id === ich; }) : false;
       var fehlt = LIGA.sollSpieler - leute.length;
 
@@ -2931,7 +3063,7 @@
         (i === bWahl ? ' class="wahl"' : '') + '>' +
         avatarHTML(profile(pid), 'md') + '<span>' + esc(ligaName && S.tour && S.tour.liga ? ligaName(pid) : pname(pid)) + '</span></button>';
     }).join('') +
-      (amBoard ? '<p class="te-hint">← → · wählen &nbsp;&nbsp; Enter · der beginnt</p>' : '');
+      (amBoard ? '<p class="te-hint">← → / Tab · wählen &nbsp;&nbsp; Enter · der beginnt</p>' : '');
   }
 
   function renderGame() {
@@ -4160,7 +4292,7 @@
           return '<button class="' + coKl + '" data-action="co-darts" data-n="' + n + '">' + n + '</button>';
         }).join('') + '</div>' +
         '<button class="btn ghost full" data-action="ov-cancel">Abbrechen</button>' +
-        (coWahl >= 0 ? '<p class="te-hint">1/2/3 direkt &nbsp;&nbsp; ← → · wählen &nbsp;&nbsp; Enter · bestätigen</p>' : '');
+        (coWahl >= 0 ? '<p class="te-hint">1/2/3 direkt &nbsp;&nbsp; ← → / Tab · wählen &nbsp;&nbsp; Enter · bestätigen</p>' : '');
     } else if (o.type === 'leg-done' || o.type === 'match-done') {
       /* Die laufende Partie kann unter dem Overlay wegfallen: im geteilten
          Turnier traegt ein anderes Geraet vielleicht gerade dasselbe
@@ -4207,7 +4339,7 @@
                 (x.scheibe ? '<span class="te-scheibe">' + x.scheibe + '</span>' : '') +
                 '<span>' + paar + '</span></button>';
             }).join('') + '</div>' +
-            '<p class="te-hint">↑ ↓ · wählen &nbsp;&nbsp; Enter · starten &nbsp;&nbsp; Löschen · letzter Dart zurück</p>';
+            '<p class="te-hint">↑ ↓ / Tab · wählen &nbsp;&nbsp; Enter · starten &nbsp;&nbsp; Löschen · letzter Dart zurück</p>';
         } else {
           var teD = liga ? ligaStandDaten() : null;
           html = '<h3>' + (liga ? 'Ligaspiel beendet' : 'Alle Spiele beendet') + '</h3>' +
@@ -4219,10 +4351,18 @@
       }
     } else if (o.type === 'leg-done') {
       var m1 = currentMatch();
+      /* Am Board waehlen die Pfeile zwischen Weiter und Ruecknahme - nur
+         die Wahl ist hell und traegt den Ring. */
+      var ldWahl = UI.turnier && turnierErlaubt() ? (o.wahl || 0) : -1;
+      var ldKl = function (i, sonst) {
+        if (ldWahl < 0) return sonst;
+        return i === ldWahl ? 'btn primary full wahl' : 'btn ghost full';
+      };
       html = '<div class="big-emoji">🎯</div><h3>Leg an ' + esc(pname(o.pid)) + '</h3>' +
         '<p>Stand: ' + legsWon(m1, m1.p[0]) + ':' + legsWon(m1, m1.p[1]) + '</p>' +
-        '<button class="btn primary full" data-action="ov-next-leg">Nächstes Leg</button>' +
-        '<button class="btn ghost full" data-action="undo">Eingabe rückgängig</button>';
+        '<button class="' + ldKl(0, 'btn primary full') + '" data-action="ov-next-leg">Nächstes Leg</button>' +
+        '<button class="' + ldKl(1, 'btn ghost full') + '" data-action="undo">Eingabe rückgängig</button>' +
+        (ldWahl >= 0 ? '<p class="te-hint">↑ ↓ / Tab · wählen &nbsp;&nbsp; Enter · bestätigen &nbsp;&nbsp; Löschen · direkt zurück</p>' : '');
     } else if (o.type === 'match-done') {
       var m2 = currentMatch();
       var last = !nextOpenMatch();
@@ -4308,6 +4448,56 @@
         '<div class="row-btns two">' +
         '<button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
         '<button class="btn primary" data-action="liga-los">Los geht\'s</button></div>';
+    } else if (o.type === 'uebung-start') {
+      var ud = o.draft;
+      var uProfile = activeProfiles();
+      var uKannTeilen = !!(window.DartSync && window.DartSync.turnier && window.DartKonto && window.DartKonto.nutzer());
+      var uSelect = function (rolle, liste, i) {
+        return '<label class="ls-zeile"><span>' + (i + 1) + '</span>' +
+          '<select data-role="' + rolle + '" data-i="' + i + '">' +
+          uProfile.map(function (p) {
+            return '<option value="' + p.id + '"' + (liste[i] === p.id ? ' selected' : '') + '>' +
+              esc(p.name) + '</option>';
+          }).join('') + '</select></label>';
+      };
+      html = '<h3>Übungs-Ligaspiel</h3>' +
+        (o.fehler ? '<p class="edit-error">' + esc(o.fehler) + '</p>' : '') +
+        '<div class="liga-start">' +
+          '<div class="ls-titel">Gegner</div>' +
+          '<div class="options">' +
+            ['team', 'leicht', 'mittel', 'schwer'].map(function (g) {
+              var txt = g === 'team' ? 'Team B' : 'Bots ' + g;
+              return '<button data-action="uebung-gegner" data-value="' + g + '" class="' +
+                (ud.gegner === g ? 'active' : '') + '">' + txt + '</button>';
+            }).join('') +
+          '</div>' +
+          '<div class="ls-titel">Team A</div>' +
+          [0, 1, 2, 3].map(function (i) { return uSelect('liga-pos', ud.wir, i); }).join('') +
+          (ud.gegner === 'team'
+            ? '<div class="ls-titel">Team B</div>' +
+              [0, 1, 2, 3].map(function (i) { return uSelect('uebung-sie', ud.sie, i); }).join('')
+            : '<p class="hint">Vier Bots treten an – sie werfen von selbst, wenn sie dran sind.</p>') +
+          '<div class="ls-titel">Legs je Einzel</div>' +
+          '<div class="options">' +
+            '<button data-action="liga-bestof" data-value="3" class="' + (ud.bestOf === 3 ? 'active' : '') + '">Best of 3</button>' +
+            '<button data-action="liga-bestof" data-value="5" class="' + (ud.bestOf === 5 ? 'active' : '') + '">Best of 5</button>' +
+          '</div>' +
+          '<div class="ls-titel">Finish-Anzeigen</div>' +
+          '<div class="options">' +
+            '<button data-action="liga-finish" data-value="0" class="' + (ud.finish ? '' : 'active') + '">ohne</button>' +
+            '<button data-action="liga-finish" data-value="1" class="' + (ud.finish ? 'active' : '') + '">mit</button>' +
+          '</div>' +
+          (uKannTeilen && ud.gegner === 'team'
+            ? '<div class="ls-titel">An zwei Scheiben</div>' +
+              '<div class="options">' +
+                '<button data-action="liga-geteilt" data-value="0" class="' + (ud.geteilt ? '' : 'active') + '">ein Gerät</button>' +
+                '<button data-action="liga-geteilt" data-value="1" class="' + (ud.geteilt ? 'active' : '') + '">geteilt</button>' +
+              '</div>'
+            : '') +
+        '</div>' +
+        '<div class="row-btns two">' +
+        '<button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
+        '<button class="btn primary" data-action="uebung-los">Training an!</button></div>';
     } else if (o.type === 'liga-kampflos') {
       /* Tritt eine Position nicht an (nur 3 gemeldet, jemand fehlt), wird
          das Einzel kampflos gewertet: volle Legs und Punkte fuer den
@@ -4456,7 +4646,7 @@
         '<p>' + (S.game ? kindName(S.game.kind) : '') + '</p>' +
         '<button class="' + gdKl(0, 'btn primary full') + '" data-action="open-summary" data-kind="' + (S.game ? S.game.kind : 'cricket') + '" data-id="current">Weiter zur Spielstatistik</button>' +
         '<button class="' + gdKl(1, 'btn ghost full') + '" data-action="undo-game">Letzten Dart zurück</button>' +
-        (gdWahl >= 0 ? '<p class="te-hint">↑ ↓ · wählen &nbsp;&nbsp; Enter · bestätigen</p>' : '');
+        (gdWahl >= 0 ? '<p class="te-hint">↑ ↓ / Tab · wählen &nbsp;&nbsp; Enter · bestätigen</p>' : '');
     } else if (o.type === 'roster-change') {
       var inTour = tourPlayers();
       html = '<h3>Spieler im Turnier</h3>' +
@@ -4517,6 +4707,101 @@
    * Leg beginnt der Heimspieler, danach wechselt der Anwurf, SWO §8), und
    * die Übersicht zeigt den Team-Stand statt einer Einzeltabelle.
    */
+  /* Das Uebungs-Ligaspiel: derselbe Aufbau wie ein echtes (16 Einzel,
+     Scheiben, Bogen), aber terminId 'uebung' und uebung: true - damit
+     zaehlt es nirgends in die Liga-Wertung. Gegner sind entweder vier
+     eigene Leute (Team B) oder vier Bots einer Staerke. */
+  function uebungStarten() {
+    var o = UI.overlay;
+    if (!o || o.type !== 'uebung-start') return;
+    var d = o.draft;
+    var wir = d.wir.slice(0, 4);
+    if (wir.length < 4 || wir.some(function (id, i) { return wir.indexOf(id) !== i; })) {
+      o.fehler = 'Bitte vier verschiedene Spieler für Team A aufstellen.';
+      render(); return;
+    }
+    var sie, gegnerName;
+    if (d.gegner === 'team') {
+      sie = d.sie.slice(0, 4);
+      var alle = wir.concat(sie);
+      if (sie.length < 4 || alle.some(function (id, i) { return alle.indexOf(id) !== i; })) {
+        o.fehler = 'Bitte vier verschiedene Spieler für Team B – niemand spielt in beiden Teams.';
+        render(); return;
+      }
+      gegnerName = 'Team B';
+    } else {
+      /* Bots sind versteckte Gaeste: sie tauchen in keiner Aufstellung,
+         Spielerliste oder Rangliste auf und werden je Staerke
+         wiederverwendet statt jedes Training neu angelegt. */
+      sie = BOT_NAMEN.map(function (nm) {
+        var da = null;
+        S.profiles.forEach(function (p) {
+          if (!da && p.bot === d.gegner && p.name === nm) da = p;
+        });
+        if (da) return da.id;
+        var p = { id: uid(), name: nm, voll: nm, avatar: null, hue: freeHue(), created: Date.now(), gast: true, hidden: true, bot: d.gegner };
+        S.profiles.push(p);
+        return p.id;
+      });
+      gegnerName = 'Bots (' + d.gegner + ')';
+    }
+
+    if (S.matches.length) archiveTournament();
+    if (S.game && S.game.done) archiveGame(S.game);
+    S.game = null;
+    S.tour = {
+      start: 501, bestOf: d.bestOf, players: wir.concat(sie),
+      liga: {
+        terminId: 'uebung', nr: 0, gegner: gegnerName, heim: true, uebung: true,
+        wir: wir, sie: sie,
+        heimSpieler: wir.slice(), gastSpieler: sie.slice(),
+        posH: wir.slice(0, 4), posG: sie.slice(0, 4),
+        ort: 'Bar Sehnsucht', tag: '',
+        finish: !!d.finish, zeitVon: Date.now(), zeitBis: null
+      }
+    };
+    S.matches = LIGA_EINZEL.map(function (paar, i) {
+      var h = wir[paar[0]], g = sie[paar[1]];
+      return {
+        id: uid(), round: Math.floor(i / 4) + 1, p: [h, g],
+        starter: h, posPaar: paar.slice(),
+        scheibe: i % 2 === 0 ? 'S1' : 'S2',
+        legs: [], done: false, winner: null, at: null
+      };
+    });
+    S.current = null;
+    S.lineup = wir.slice();
+    UI.overlay = null;
+    S.screen = 'tournament';
+    /* Geteilt an zwei Geraeten wie das echte Ligaspiel - nur sinnvoll mit
+       zwei echten Teams (Bots werfen auf dem einen Geraet von selbst). */
+    if (d.geteilt && d.gegner === 'team' && window.DartSync && window.DartSync.turnier &&
+        window.DartKonto && window.DartKonto.nutzer()) {
+      var usid = uid();
+      var uGaeste = {};
+      S.tour.players.forEach(function (id) {
+        if (String(id).indexOf('u_') !== 0) uGaeste[id] = pname(id);
+      });
+      var uPlan = {
+        start: S.tour.start, bestOf: S.tour.bestOf, players: S.tour.players.slice(),
+        gaeste: uGaeste, liga: S.tour.liga,
+        matches: S.matches.map(function (m) {
+          return { id: m.id, round: m.round, p: m.p.slice(), starter: m.starter, posPaar: m.posPaar, scheibe: m.scheibe };
+        })
+      };
+      S.tour.geteilt = true;
+      S.tour.sid = usid;
+      S.tour.cursor = 0;
+      var uKonten = S.tour.players.filter(function (id) { return String(id).indexOf('u_') === 0; });
+      window.DartSync.turnier.anlegen(usid, uPlan, uKonten).catch(function () {
+        S.tour.geteilt = false;
+        delete S.tour.sid;
+        save(); render();
+      });
+    }
+    save(); render();
+  }
+
   function ligaSpielStarten() {
     var o = UI.overlay;
     if (!o || o.type !== 'liga-start') return;
@@ -4642,6 +4927,84 @@
     var neu = { id: uid(), name: name.slice(0, 30), voll: name, avatar: null, hue: freeHue(), created: Date.now(), gast: true };
     S.profiles.push(neu);
     return neu.id;
+  }
+
+  /* ---------- Bots fuers Uebungs-Ligaspiel ----------
+   * Drei Staerken, modelliert ueber Aufnahme-Mittelwert und eine
+   * Checkout-Wahrscheinlichkeit je Besuch. Bots busten nie - sie stellen
+   * sich, wie es ein besonnener Spieler auch taete. */
+  var BOT_STAERKEN = {
+    leicht:  { mittel: 38, streuung: 13, finish: 0.12, finishNah: 0.30 },
+    mittel:  { mittel: 52, streuung: 15, finish: 0.22, finishNah: 0.45 },
+    schwer:  { mittel: 72, streuung: 18, finish: 0.38, finishNah: 0.62 }
+  };
+  var BOT_NAMEN = ['Robo Rita', 'Blechbert', 'Dart Vader', 'C-3-Pfeil'];
+
+  function botWurfNormal(mittel, streuung) {
+    // Box-Muller reicht fuer Trainingszwecke voellig.
+    var u1 = Math.random() || 0.0001, u2 = Math.random();
+    return Math.round(mittel + streuung * Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2));
+  }
+
+  /* Ein gueltiger Aufnahmewert: 0..180, kein unmoeglicher Wert, kein Bust
+     (hoechstens rest-2 stehen lassen oder exakt finishen). */
+  function botAufnahme(rest, staerke) {
+    var s = BOT_STAERKEN[staerke] || BOT_STAERKEN.mittel;
+    // Finish-Versuch, wenn einer moeglich ist.
+    if (rest <= 170 && Checkout.possible(rest, 3)) {
+      var p = rest <= 50 ? s.finishNah : s.finish;
+      if (Math.random() < p) {
+        var darts = 3;
+        for (var nd = 1; nd <= 3; nd++) { if (Checkout.possible(rest, nd)) { darts = nd; break; } }
+        return { score: rest, darts: darts, checkout: true };
+      }
+      // Kein Finish: auf ein schoenes Doppel stellen.
+      var ziele = [40, 32, 36, 24, 20, 16];
+      var ziel = ziele[Math.floor(Math.random() * ziele.length)] + Math.round((Math.random() - 0.5) * 8);
+      var stell = rest - Math.max(2, ziel);
+      if (stell < 0) stell = 0;
+      if (stell > rest - 2) stell = Math.max(0, rest - 2);
+      while (stell > 0 && IMPOSSIBLE[stell]) stell--;
+      return { score: stell, darts: 3, checkout: false };
+    }
+    // Scoring: Normalverteilung, gedeckelt, nie in den Bust.
+    var wert = botWurfNormal(s.mittel, s.streuung);
+    if (wert < 0) wert = 0;
+    if (wert > 180) wert = 180;
+    if (wert > rest - 2) wert = Math.max(0, rest - 50);
+    while (wert > 0 && IMPOSSIBLE[wert]) wert--;
+    return { score: wert, darts: 3, checkout: false };
+  }
+
+  /* Der Takt: ist im laufenden Einzel ein Bot am Wurf, wirft er nach einer
+     kurzen Denkpause von selbst. Geplant wird nach jedem render() - der
+     Timer prueft vor dem Wurf, ob die Lage noch dieselbe ist. */
+  var botTimer = null;
+  function planeBotZug() {
+    if (botTimer) return;
+    var m = currentMatch();
+    if (!m || m.done || S.screen !== 'game' || UI.overlay) return;
+    var leg = activeLeg(m);
+    if (!leg) return;
+    var pid = activePlayer(leg, m);
+    var prof = profile(pid);
+    if (!prof.bot) return;
+    /* Bots werfen ausschliesslich im Uebungsspiel - sollte je einer in
+       einem echten Spiel landen, bleibt er stumm. */
+    if (!(S.tour && S.tour.liga && S.tour.liga.uebung)) return;
+    var kennung = m.id + ':' + leg.visits.length;
+    botTimer = setTimeout(function () {
+      botTimer = null;
+      var m2 = currentMatch();
+      if (!m2 || m2.id !== m.id || m2.done || S.screen !== 'game' || UI.overlay) return;
+      var leg2 = activeLeg(m2);
+      if (!leg2 || m2.id + ':' + leg2.visits.length !== kennung) return;
+      var pid2 = activePlayer(leg2, m2);
+      if (!profile(pid2).bot) return;
+      var rest = remainingIn(leg2, pid2);
+      var wurf = botAufnahme(rest, profile(pid2).bot);
+      commitVisit(wurf.score, wurf.darts, wurf.checkout, false);
+    }, 1200);
   }
 
   /* ---------- Spielerwechsel im Ligaspiel ----------
@@ -5209,6 +5572,7 @@
            die Auswahl einen ganz anderen Namen anzeigt. */
         var lsAktive = activeProfiles();
         var lsVorschlag = ((ligaZusagen && ligaZusagen[lsTermin.id]) || [])
+          .filter(function (p) { return (p.status || 'dabei') === 'dabei'; })
           .map(function (p) { return p.id; })
           .filter(function (id) { return lsAktive.some(function (p) { return p.id === id; }); });
         lsAktive.forEach(function (p) {
@@ -5224,19 +5588,19 @@
         break;
       }
       case 'liga-bestof':
-        if (UI.overlay && UI.overlay.type === 'liga-start') {
+        if (UI.overlay && (UI.overlay.type === 'liga-start' || UI.overlay.type === 'uebung-start')) {
           UI.overlay.draft.bestOf = Number(el.getAttribute('data-value'));
           render();
         }
         break;
       case 'liga-geteilt':
-        if (UI.overlay && UI.overlay.type === 'liga-start') {
+        if (UI.overlay && (UI.overlay.type === 'liga-start' || UI.overlay.type === 'uebung-start')) {
           UI.overlay.draft.geteilt = el.getAttribute('data-value') === '1';
           render();
         }
         break;
       case 'liga-finish':
-        if (UI.overlay && UI.overlay.type === 'liga-start') {
+        if (UI.overlay && (UI.overlay.type === 'liga-start' || UI.overlay.type === 'uebung-start')) {
           UI.overlay.draft.finish = el.getAttribute('data-value') === '1';
           render();
         }
@@ -5244,6 +5608,96 @@
       case 'liga-los':
         ligaSpielStarten();
         break;
+      case 'uebung-start': {
+        /* Aufstellung vorbelegen: erst die DiensDarts-Zusagen, dann der
+           Rest der aktiven Profile - Team B bekommt die naechsten vier. */
+        var utAktive = activeProfiles().filter(function (p) { return !p.bot; });
+        var utTid = trainingsTerminId(naechsterDienstag());
+        var utVorschlag = ((ligaZusagen && ligaZusagen[utTid]) || [])
+          .filter(function (a) { return (a.status || 'dabei') === 'dabei'; })
+          .map(function (a) { return a.id; })
+          .filter(function (id) { return utAktive.some(function (p) { return p.id === id; }); });
+        utAktive.forEach(function (p) {
+          if (utVorschlag.indexOf(p.id) < 0) utVorschlag.push(p.id);
+        });
+        while (utVorschlag.length < 8) utVorschlag.push(utAktive.length ? utAktive[utVorschlag.length % utAktive.length].id : null);
+        UI.overlay = {
+          type: 'uebung-start',
+          draft: {
+            gegner: 'mittel', bestOf: 3, finish: true, geteilt: false,
+            wir: utVorschlag.slice(0, 4),
+            sie: utVorschlag.slice(4, 8)
+          }
+        };
+        render();
+        break;
+      }
+      case 'uebung-gegner':
+        if (UI.overlay && UI.overlay.type === 'uebung-start') {
+          UI.overlay.draft.gegner = el.getAttribute('data-value');
+          /* Geteilt braucht zwei echte Teams - Bots werfen auf dem einen
+             Geraet von selbst. */
+          if (UI.overlay.draft.gegner !== 'team') UI.overlay.draft.geteilt = false;
+          render();
+        }
+        break;
+      case 'uebung-los':
+        uebungStarten();
+        break;
+      case 'kasse-art': {
+        /* Die Wahl lebt in UI, nicht nur im DOM - ein Hintergrund-Render
+           darf sie nicht auf Einzahlung zuruecksetzen. */
+        UI.kasseArt = el.getAttribute('data-value');
+        document.querySelectorAll('#kasse-art button').forEach(function (b) {
+          b.classList.toggle('active', b === el);
+        });
+        break;
+      }
+      case 'kasse-buchen': {
+        if (!(window.DartSync && window.DartSync.kasse)) break;
+        var kbRoh = String(($('kasse-betrag') || {}).value || '').trim();
+        /* Deutsche Schreibweisen: 1.250 und 1.234,56 sind Tausenderpunkte,
+           12,50 ist ein Komma-Betrag - nichts davon darf still schrumpfen. */
+        if (/^\d{1,3}(\.\d{3})+(,\d{1,2})?$/.test(kbRoh)) kbRoh = kbRoh.replace(/\./g, '').replace(',', '.');
+        else kbRoh = kbRoh.replace(',', '.');
+        var kbEuro = parseFloat(kbRoh);
+        var kbText = String(($('kasse-text') || {}).value || '').trim();
+        var kbMeld = $('kasse-meldung');
+        if (!isFinite(kbEuro) || kbEuro <= 0) { if (kbMeld) kbMeld.textContent = 'Bitte einen Betrag über 0 eintragen.'; break; }
+        if (!kbText) { if (kbMeld) kbMeld.textContent = 'Wofür war das? Bitte kurz dazuschreiben.'; break; }
+        var kbAus = UI.kasseArt === 'aus';
+        var kbCent = Math.round(kbEuro * 100) * (kbAus ? -1 : 1);
+        window.DartSync.kasse.buchen(kbCent, kbText).then(function (d) {
+          kasseDaten = d;
+          UI.kasseArt = 'ein';
+          if ($('kasse-betrag')) $('kasse-betrag').value = '';
+          if ($('kasse-text')) $('kasse-text').value = '';
+          if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+          render();
+        }).catch(function (e) {
+          if (kbMeld) kbMeld.textContent = 'Buchen hat nicht geklappt: ' + e.message;
+        });
+        break;
+      }
+      case 'kasse-weg': {
+        if (!(window.DartSync && window.DartSync.kasse)) break;
+        window.DartSync.kasse.loeschen(el.getAttribute('data-id')).then(function (d) {
+          kasseDaten = d;
+          render();
+        }).catch(function () { /* bleibt stehen */ });
+        break;
+      }
+      case 'training-zusage': {
+        if (!(window.DartSync && window.DartSync.liga && window.DartKonto && window.DartKonto.nutzer())) return;
+        var tzTid = el.getAttribute('data-tid');
+        /* Nochmal auf die eigene Antwort tippen traegt sie wieder aus. */
+        var tzStatus = el.classList.contains('aktiv') ? null : el.getAttribute('data-status');
+        window.DartSync.liga.zusage(tzTid, tzStatus).then(function (z) {
+          ligaZusagen = z;
+          render();
+        }).catch(function () { /* naechstes Betreten holt den Stand */ });
+        break;
+      }
       case 'liga-tabelle-speichern': {
         if (!(window.DartSync && window.DartSync.liga && window.DartSync.liga.tabelleSpeichern)) break;
         var ltZeilen = [];
@@ -5626,6 +6080,9 @@
     if (ev.target.getAttribute('data-role') === 'liga-pos' && UI.overlay && UI.overlay.draft) {
       UI.overlay.draft.wir[Number(ev.target.getAttribute('data-i'))] = ev.target.value;
     }
+    if (ev.target.getAttribute('data-role') === 'uebung-sie' && UI.overlay && UI.overlay.draft) {
+      UI.overlay.draft.sie[Number(ev.target.getAttribute('data-i'))] = ev.target.value;
+    }
     if (ev.target.getAttribute('data-role') === 'liga-neu' && UI.overlay && UI.overlay.draft) {
       UI.overlay.draft.neu = ev.target.value;
     }
@@ -5825,8 +6282,10 @@
         } else {
           handleAction('ov-next-match', ev.target);
         }
-      } else if ((ev.key === 'ArrowDown' || ev.key === 'ArrowRight') && ov.phase === 'weiter') {
-        ov.wahl = Math.min((ov.wahl || 0) + 1, Math.max(0, teOffene.length - 1));
+      } else if ((ev.key === 'ArrowDown' || ev.key === 'ArrowRight' || ev.key === 'Tab') && ov.phase === 'weiter') {
+        ov.wahl = ev.key === 'Tab'
+          ? ((ov.wahl || 0) + 1) % Math.max(1, teOffene.length)
+          : Math.min((ov.wahl || 0) + 1, Math.max(0, teOffene.length - 1));
         render(); ev.preventDefault();
       } else if ((ev.key === 'ArrowUp' || ev.key === 'ArrowLeft') && ov.phase === 'weiter') {
         ov.wahl = Math.max((ov.wahl || 0) - 1, 0);
@@ -5835,8 +6294,9 @@
         undo(); ev.preventDefault();
       }
     } else if (ov.type === 'game-done' && UI.turnier && turnierErlaubt()) {
-      if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp' || ev.key === 'ArrowRight' || ev.key === 'ArrowLeft') {
-        ov.wahl = (ev.key === 'ArrowDown' || ev.key === 'ArrowRight') ? 1 : 0;
+      if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp' || ev.key === 'ArrowRight' || ev.key === 'ArrowLeft' || ev.key === 'Tab') {
+        ov.wahl = ev.key === 'Tab' ? 1 - (ov.wahl || 0)
+          : (ev.key === 'ArrowDown' || ev.key === 'ArrowRight') ? 1 : 0;
         render(); ev.preventDefault();
       } else if (ev.key === 'Enter') {
         ev.preventDefault();
@@ -5854,8 +6314,19 @@
          bestätigen, während „Eingabe rückgängig" unter dem Finger liegt. */
       var fokus = document.activeElement;
       var imDialog = fokus && fokus.closest && fokus.closest('#overlay');
-      if (ev.key === 'Enter' && !imDialog) { UI.overlay = null; render(); ev.preventDefault(); }
-      else if (ev.key === 'Backspace' && !imDialog) { undo(); ev.preventDefault(); }
+      var ldTastatur = UI.turnier && turnierErlaubt();
+      if (ldTastatur && (ev.key === 'ArrowDown' || ev.key === 'ArrowUp' ||
+          ev.key === 'ArrowRight' || ev.key === 'ArrowLeft' || ev.key === 'Tab')) {
+        ov.wahl = ev.key === 'Tab' ? 1 - (ov.wahl || 0)
+          : (ev.key === 'ArrowDown' || ev.key === 'ArrowRight') ? 1 : 0;
+        render(); ev.preventDefault();
+      } else if (ev.key === 'Enter' && !imDialog) {
+        ev.preventDefault();
+        if (ldTastatur && (ov.wahl || 0) === 1) { undo(); }
+        else { UI.overlay = null; render(); }
+      } else if (ev.key === 'Backspace' && !imDialog) {
+        undo(); ev.preventDefault();
+      }
     }
   });
 

@@ -448,8 +448,27 @@
 
   function ligaZusageSetzen(terminId, dabei) {
     if (!window.DartKonto || !nutzer) return Promise.reject(new Error('Nicht angemeldet.'));
-    return window.DartKonto.ruf('PUT', '/api/liga/zusagen/' + encodeURIComponent(terminId), { dabei: !!dabei })
+    /* dabei: bool (Spieltage) oder Status-String (Training: dabei /
+       unsicher / absage; null traegt aus). */
+    var body = typeof dabei === 'string' ? { status: dabei }
+      : dabei === null ? { dabei: false }
+      : { dabei: !!dabei };
+    return window.DartKonto.ruf('PUT', '/api/liga/zusagen/' + encodeURIComponent(terminId), body)
       .then(function (d) { return d.zusagen || {}; });
+  }
+
+  /* Die Vereinskasse: Kassenbuch mit Bestand, fuer alle dasselbe. */
+  function kasseHolen() {
+    if (!window.DartKonto || !nutzer) return Promise.resolve(null);
+    return window.DartKonto.ruf('GET', '/api/kasse');
+  }
+  function kasseBuchen(betrag, text) {
+    if (!window.DartKonto || !nutzer) return Promise.reject(new Error('Nicht angemeldet.'));
+    return window.DartKonto.ruf('POST', '/api/kasse', { betrag: betrag, text: text });
+  }
+  function kasseLoeschen(id) {
+    if (!window.DartKonto || !nutzer) return Promise.reject(new Error('Nicht angemeldet.'));
+    return window.DartKonto.ruf('DELETE', '/api/kasse/' + id);
   }
 
   /* Die manuell gepflegte Ligatabelle: ein Blob auf dem Server. */
@@ -486,6 +505,11 @@
         zusage: ligaZusageSetzen,
         tabelle: ligaTabelleHolen,
         tabelleSpeichern: ligaTabelleSpeichern
+      },
+      kasse: {
+        holen: kasseHolen,
+        buchen: kasseBuchen,
+        loeschen: kasseLoeschen
       },
       turnier: {
         offen: turniereOffen,

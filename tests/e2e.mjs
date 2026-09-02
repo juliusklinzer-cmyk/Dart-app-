@@ -1689,6 +1689,14 @@ check('das Leg-Ende steht in Plakatgroesse', await page.evaluate(() => {
   return ov.classList.contains('gross') &&
     document.getElementById('overlay-card').textContent.includes('Leg an');
 }));
+check('Naechstes Leg ist als Wahl markiert', await page.evaluate(() =>
+  document.querySelector('#overlay-card .btn.wahl').textContent.includes('Nächstes Leg')));
+await page.keyboard.press('ArrowDown');
+check('Pfeil runter waehlt die Ruecknahme', await page.evaluate(() =>
+  document.querySelector('#overlay-card .btn.wahl').textContent.includes('rückgängig')));
+await page.keyboard.press('ArrowUp');
+check('Pfeil hoch fuehrt zurueck zu Naechstes Leg', await page.evaluate(() =>
+  document.querySelector('#overlay-card .btn.wahl').textContent.includes('Nächstes Leg')));
 await page.keyboard.press('Enter');
 check('Enter startet das naechste Leg', await page.evaluate(() =>
   !window.__dart.ui().overlay && window.__dart.currentMatch().legs.length === 2));
@@ -2116,6 +2124,78 @@ check('und die Regelwerke sind verlinkt',
   (await page.locator('#liga-regeln .regel-links a').count()) === 3);
 await page.locator('#liga-tabs button[data-tab="plan"]').click();
 check('zurueck zum Spielplan', await visible('#liga-plan'));
+
+group('DiensDarts und Uebungs-Ligaspiel gegen Bots');
+await page.locator('#liga-tabs button[data-tab="training"]').click();
+check('der Trainings-Reiter oeffnet sich',
+  (await visible('#liga-training')) && !(await visible('#liga-plan')));
+check('DiensDarts nennt Dienstag und die Sehnsucht', await page.evaluate(() => {
+  const t = document.getElementById('dienstdarts-karte').textContent;
+  return t.includes('DiensDarts') && t.includes('Dienstag') && t.includes('Sehnsucht');
+}));
+check('das Sehnsucht-Logo haengt an der Karte',
+  (await page.locator('#dienstdarts-karte .sehnsucht-logo').count()) === 1);
+check('ohne Konto verweist die Umfrage auf die Anmeldung',
+  (await text('#dienstdarts-karte')).includes('anmelden'));
+
+/* Das Uebungsspiel gegen Bots: kompletter Liga-Ablauf, aber ohne Wertung. */
+await page.locator('[data-action="uebung-start"]').click();
+check('der Aufstellungs-Dialog oeffnet sich', (await text('#overlay-card')).includes('Übungs-Ligaspiel'));
+check('Bots mittel sind vorgewaehlt', await page.evaluate(() =>
+  document.querySelector('[data-action="uebung-gegner"][data-value="mittel"]').classList.contains('active')));
+await page.locator('[data-action="uebung-los"]').click();
+check('das Uebungsspiel steht wie ein Ligaspiel', (await visible('#screen-tournament')) &&
+  await page.evaluate(() => {
+    const S = window.__dart.state();
+    return S.tour.liga && S.tour.liga.uebung && S.matches.length === 16 &&
+      S.matches[0].scheibe === 'S1' && S.matches[1].scheibe === 'S2';
+  }));
+check('vier Bots stehen als Gegner bereit', await page.evaluate(() =>
+  window.__dart.state().profiles.filter((p) => p.bot === 'mittel').length === 4));
+check('der Team-Stand ist da wie im echten Ligaspiel', await visible('#liga-stand'));
+
+/* Erstes Einzel: der Mensch wirft, dann wirft der Bot von selbst. */
+await page.locator('#schedule .match-row .go:not(.wo)').first().click();
+await page.evaluate(() => { window.__dart.ui().input = '60'; window.__dart.submitTotal(); });
+check('nach dem Menschen ist der Bot dran', await page.evaluate(() => {
+  const D = window.__dart, m = D.currentMatch();
+  return D.profile(D.activePlayer(D.activeLeg(m), m)).bot === 'mittel';
+}));
+await page.waitForFunction(() => {
+  const D = window.__dart, m = D.currentMatch();
+  return D.activeLeg(m).visits.length >= 2;
+}, null, { timeout: 5000 });
+check('der Bot hat eine gueltige Aufnahme gebucht', await page.evaluate(() => {
+  const D = window.__dart, m = D.currentMatch();
+  const v = D.activeLeg(m).visits[1];
+  return v.s >= 0 && v.s <= 180 && !v.b;
+}));
+check('und der Mensch ist wieder am Wurf', await page.evaluate(() => {
+  const D = window.__dart, m = D.currentMatch();
+  return !D.profile(D.activePlayer(D.activeLeg(m), m)).bot;
+}));
+
+/* Abbrechen: das Uebungsspiel landet im Archiv, zaehlt aber nirgends
+   in der Liga-Wertung. */
+await page.locator('#screen-game [data-action="to-tournament"]').click();
+await page.locator('[data-action="reset"]').click();
+await page.locator('[data-action="ov-reset"]').click();
+check('das Uebungsspiel liegt als solches im Archiv', await page.evaluate(() =>
+  window.__dart.state().history.some((h) => h.liga && h.liga.uebung)));
+await page.locator('#nav [data-screen="boards"]').click();
+await page.locator('[data-action="board-mode"][data-value="liga"]').click();
+check('die Liga-Rangliste zaehlt das Uebungsspiel nicht',
+  (await text('#boards-sub')).includes('noch kein Spieltag'));
+/* Aufraeumen: Archiv-Eintrag und Bots weg. */
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  S.history = S.history.filter((h) => !(h.liga && h.liga.uebung));
+  S.profiles = S.profiles.filter((p) => !p.bot);
+  S.lineup = D.activeProfiles().filter((p) => !p.gast).slice(0, 4).map((p) => p.id);
+  D.ui().boardMode = '501';
+  D.setScreen('liga');
+});
+await page.locator('#liga-tabs button[data-tab="plan"]').click();
 
 group('Liga-Tabelle: eigener Reiter, von Hand gepflegt');
 await page.locator('#liga-tabs button[data-tab="tabelle"]').click();
