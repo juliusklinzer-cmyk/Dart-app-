@@ -1522,6 +1522,19 @@ check('die Fortsetzen-Box bietet es an', await visible('#resume-box'));
 await page.locator('[data-action="resume"]').click();
 check('Fortsetzen fuehrt zurueck ins Spiel mit dem alten Stand',
   (await visible('#screen-game')) && (await rest(0)) === '441', await rest(0));
+/* OK auf leerem Feld bucht die No-Score-Aufnahme. */
+{
+  const visitsVorher = await page.evaluate(() => {
+    const D = window.__dart; return D.activeLeg(D.currentMatch()).visits.length;
+  });
+  await page.locator('.keypad button[data-key="ok"]').click();
+  check('leeres OK bucht 0 Punkte mit drei Darts', await page.evaluate((n) => {
+    const D = window.__dart, leg = D.activeLeg(D.currentMatch());
+    const v = leg.visits[leg.visits.length - 1];
+    return leg.visits.length === n + 1 && v.s === 0 && v.d === 3;
+  }, visitsVorher));
+  check('der Rest bleibt unveraendert', (await rest(0)) === '441');
+}
 await page.evaluate(() => {
   const D = window.__dart, S = D.state();
   S.game = null;

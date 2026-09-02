@@ -531,9 +531,21 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 
 /* ---------- Statistik ---------- */
 .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.stat-card { background: var(--bg-3); border-radius: 10px; padding: 10px 12px; }
-.stat-card .who { font-weight: 700; margin-bottom: 6px; }
+.stat-card { background: var(--bg-3); border-radius: 10px; padding: 12px; }
+/* Bild oben, Name darunter, feste Kopfhoehe: die Zeilen aller Spalten
+   liegen dadurch auf einer Linie - lange Namen verschieben nichts mehr. */
+.stat-card .who {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  font-weight: 700; margin-bottom: 8px; min-height: 74px;
+  justify-content: flex-start; text-align: center;
+}
+.stat-card .who .wer-name {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;
+}
 .stat-card .line { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--muted); padding: 2px 0; }
+/* Kein Zeilenumbruch in den Beschriftungen - ein umgebrochenes Etikett
+   wuerde die Vergleichszeilen der Nachbarspalten wieder versetzen. */
+.stat-card .line span { white-space: nowrap; }
 .stat-card .line b { color: var(--text); font-variant-numeric: tabular-nums; }
 
 /* ---------- Bull-Off ---------- */
@@ -4634,7 +4646,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   function pressKey(k) {
     UI.error = '';
     if (k === 'del') { klick(); UI.input = UI.input.slice(0, -1); render(); return; }
-    if (k === 'ok') { submitTotal(); return; }
+    if (k === 'ok') {
+      /* OK auf leerem Feld ist die No-Score-Aufnahme: 0 Punkte, drei
+         Darts - in jedem Modus mit Punkte-Eingabe. */
+      if (UI.input === '') UI.input = '0';
+      submitTotal(); return;
+    }
     var next = UI.input + k;
     if (next.length > 3) return;
     var val = parseInt(next, 10);
@@ -6048,13 +6065,17 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var map = stats();
     $('stats-grid').innerHTML = tourPlayers().map(function (id) {
       var st = map[id];
+      /* Kopf mit fester Hoehe: Bild oben, Name darunter - so stehen die
+         Statistikzeilen aller Spalten auf gleicher Hoehe und lassen sich
+         nebeneinander vergleichen, egal wie lang ein Name ist. */
       return '<div class="stat-card">' +
-        '<div class="who">' + avatarHTML(profile(id), 'sm') + esc(st.name) + '</div>' +
+        '<div class="who">' + avatarHTML(profile(id), 'md') +
+          '<span class="wer-name">' + esc(st.name) + '</span></div>' +
         '<div class="line"><span>Ø 3 Darts</span><b>' + (st.avg ? st.avg.toFixed(1) : '–') + '</b></div>' +
         '<div class="line"><span>First 9</span><b>' + (st.first9 ? st.first9.toFixed(1) : '–') + '</b></div>' +
         '<div class="line"><span>180er</span><b>' + st.s180 + '</b></div>' +
         '<div class="line"><span>100+</span><b>' + st.tons + '</b></div>' +
-        '<div class="line"><span>Höchstes Finish</span><b>' + (st.highCO || '–') + '</b></div>' +
+        '<div class="line"><span>Finish</span><b>' + (st.highCO || '–') + '</b></div>' +
         '<div class="line"><span>Doppelquote</span><b>' + (st.doubleAttempts ? st.doubleQuote.toFixed(0) + ' %' : '–') + '</b></div>' +
         '<div class="line"><span>Bestes Leg</span><b>' + (st.bestLeg ? st.bestLeg + ' Darts' : '–') + '</b></div>' +
         '</div>';

@@ -884,7 +884,12 @@
   function pressKey(k) {
     UI.error = '';
     if (k === 'del') { klick(); UI.input = UI.input.slice(0, -1); render(); return; }
-    if (k === 'ok') { submitTotal(); return; }
+    if (k === 'ok') {
+      /* OK auf leerem Feld ist die No-Score-Aufnahme: 0 Punkte, drei
+         Darts - in jedem Modus mit Punkte-Eingabe. */
+      if (UI.input === '') UI.input = '0';
+      submitTotal(); return;
+    }
     var next = UI.input + k;
     if (next.length > 3) return;
     var val = parseInt(next, 10);
@@ -2298,13 +2303,17 @@
     var map = stats();
     $('stats-grid').innerHTML = tourPlayers().map(function (id) {
       var st = map[id];
+      /* Kopf mit fester Hoehe: Bild oben, Name darunter - so stehen die
+         Statistikzeilen aller Spalten auf gleicher Hoehe und lassen sich
+         nebeneinander vergleichen, egal wie lang ein Name ist. */
       return '<div class="stat-card">' +
-        '<div class="who">' + avatarHTML(profile(id), 'sm') + esc(st.name) + '</div>' +
+        '<div class="who">' + avatarHTML(profile(id), 'md') +
+          '<span class="wer-name">' + esc(st.name) + '</span></div>' +
         '<div class="line"><span>Ø 3 Darts</span><b>' + (st.avg ? st.avg.toFixed(1) : '–') + '</b></div>' +
         '<div class="line"><span>First 9</span><b>' + (st.first9 ? st.first9.toFixed(1) : '–') + '</b></div>' +
         '<div class="line"><span>180er</span><b>' + st.s180 + '</b></div>' +
         '<div class="line"><span>100+</span><b>' + st.tons + '</b></div>' +
-        '<div class="line"><span>Höchstes Finish</span><b>' + (st.highCO || '–') + '</b></div>' +
+        '<div class="line"><span>Finish</span><b>' + (st.highCO || '–') + '</b></div>' +
         '<div class="line"><span>Doppelquote</span><b>' + (st.doubleAttempts ? st.doubleQuote.toFixed(0) + ' %' : '–') + '</b></div>' +
         '<div class="line"><span>Bestes Leg</span><b>' + (st.bestLeg ? st.bestLeg + ' Darts' : '–') + '</b></div>' +
         '</div>';

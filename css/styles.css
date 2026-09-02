@@ -528,9 +528,21 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 
 /* ---------- Statistik ---------- */
 .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.stat-card { background: var(--bg-3); border-radius: 10px; padding: 10px 12px; }
-.stat-card .who { font-weight: 700; margin-bottom: 6px; }
+.stat-card { background: var(--bg-3); border-radius: 10px; padding: 12px; }
+/* Bild oben, Name darunter, feste Kopfhoehe: die Zeilen aller Spalten
+   liegen dadurch auf einer Linie - lange Namen verschieben nichts mehr. */
+.stat-card .who {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  font-weight: 700; margin-bottom: 8px; min-height: 74px;
+  justify-content: flex-start; text-align: center;
+}
+.stat-card .who .wer-name {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%;
+}
 .stat-card .line { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--muted); padding: 2px 0; }
+/* Kein Zeilenumbruch in den Beschriftungen - ein umgebrochenes Etikett
+   wuerde die Vergleichszeilen der Nachbarspalten wieder versetzen. */
+.stat-card .line span { white-space: nowrap; }
 .stat-card .line b { color: var(--text); font-variant-numeric: tabular-nums; }
 
 /* ---------- Bull-Off ---------- */
