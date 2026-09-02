@@ -22,13 +22,14 @@
 
 <div id="sync-status" class="sync-status hidden"></div>
 
+<!-- Kurze Namen, damit die Leiste am Handy einzeilig bleibt. -->
 <nav id="nav" class="nav hidden">
-  <button data-action="nav" data-screen="setup">Game on!</button>
+  <button data-action="nav" data-screen="setup">Game</button>
   <button data-action="nav" data-screen="liga">Liga</button>
-  <button data-action="nav" data-screen="boards">Rangliste</button>
-  <button data-action="nav" data-screen="players">Spieler</button>
+  <button data-action="nav" data-screen="boards">Rang</button>
+  <button data-action="nav" data-screen="players">Player</button>
   <!-- Erscheint nur, wenn die Seite von einem Server kommt (siehe js/auth.js). -->
-  <button id="nav-konto" class="hidden" data-action="nav" data-screen="konto">Konto</button>
+  <button id="nav-konto" class="hidden" data-action="nav" data-screen="konto">Profil</button>
 </nav>
 
 <!-- ============ SETUP ============ -->
@@ -512,6 +513,7 @@
 <!-- ============ BULL-OFF ============ -->
 <section id="screen-bulloff" class="screen center">
   <header class="app-header">
+    <div class="big-emoji" aria-hidden="true">🎯</div>
     <h1>Bull werfen</h1>
     <p class="sub" id="bulloff-sub">Wer war näher am Bull und darf anfangen?</p>
   </header>
@@ -536,6 +538,10 @@
     <div id="scoreboard" class="scoreboard"></div>
 
     <div id="checkout-bar" class="checkout-bar"></div>
+    <!-- Einzel-Darts: drei grosse Kacheln wie im Finisher - leer zu Beginn
+         der Aufnahme, jede fuellt sich mit dem eingetragenen Dart; in
+         Finish-Naehe zeigen sie rot den Vorschlag und gruen den Treffer. -->
+    <div id="game-kacheln" class="fin-kacheln gross hidden"></div>
 
     <div id="history" class="history"></div>
   </div>

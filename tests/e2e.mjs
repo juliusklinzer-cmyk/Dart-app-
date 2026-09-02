@@ -122,7 +122,12 @@ check('Gegner 381', (await rest(1)) === '381');
 check('Auto-Umschaltung auf Einzel-Darts bei Rest <= 170', await visible('#pad-darts'));
 const hist0 = (await page.locator('#history .col').first().innerText()).replace(/\s+/g, ' ');
 check('Wurfverlauf zeigt die eigenen Reste', hist0.includes('Rest 141') && hist0.includes('Rest 321'), hist0);
-check('Finish-Vorschlag T20 T19 D12', (await text('#checkout-bar')).replace(/\s+/g, ' ').includes('T20 T19 D12'));
+check('Finish-Vorschlag T20 T19 D12 steht in den grossen Kacheln',
+  (await text('#game-kacheln')).replace(/\s+/g, ' ').includes('T20 T19 D12'));
+check('die Leiste darueber entfaellt - die Kacheln tragen den Weg',
+  !(await visible('#checkout-bar')));
+check('der naechste Wurf leuchtet rot', await page.evaluate(() =>
+  document.querySelector('#game-kacheln .fk.jetzt').textContent.trim() === 'T20'));
 
 group('Tastenbeschriftung im Einzel-Dart-Modus');
 await page.locator('#mult-row button[data-mult="2"]').click();
@@ -142,9 +147,18 @@ check('Gegner 321', (await rest(1)) === '321');
 
 group('Einzel-Darts & Checkout');
 check('wieder Einzel-Darts aktiv', await visible('#pad-darts'));
+/* Die Kacheln beginnen leer und fuellen sich Dart fuer Dart. */
+check('drei leere Kacheln vor dem ersten Dart',
+  (await page.locator('#game-kacheln .fk.leer').count()) +
+  (await page.locator('#game-kacheln .fk.jetzt').count()) +
+  (await page.locator('#game-kacheln .fk:not(.leer):not(.jetzt)').count()) === 3);
 await dart('T20');
 check('nach T20 Rest 81', (await rest(0)) === '81');
-check('Restvorschlag T19 D12 mit 2 Darts', (await text('#checkout-bar')).replace(/\s+/g, ' ').includes('T19 D12'));
+check('der getroffene Vorschlag fuellt die erste Kachel gruen', await page.evaluate(() => {
+  const k = document.querySelectorAll('#game-kacheln .fk');
+  return k[0].classList.contains('gut') && k[0].textContent.trim() === 'T20';
+}));
+check('Restvorschlag T19 D12 in den Kacheln', (await text('#game-kacheln')).replace(/\s+/g, ' ').includes('T19 D12'));
 await dart('T19');
 check('nach T19 Rest 24', (await rest(0)) === '24');
 await dart('S12'); // dritter Dart, kein Finish: Rest 12
@@ -160,7 +174,7 @@ await typeScore(60);
 await dart('T20'); // Überwurf
 check('Überwurf ist Bust, Rest bleibt 12', (await rest(0)) === '12');
 await typeScore(60);
-check('Finish-Vorschlag D6', (await text('#checkout-bar')).replace(/\s+/g, ' ').includes('D6'));
+check('Finish-Vorschlag D6 in den Kacheln', (await text('#game-kacheln')).replace(/\s+/g, ' ').includes('D6'));
 await dart('D6');
 check('Match-Ende-Overlay mit Glückwunsch', (await visible('#overlay')) && (await text('#overlay-card')).includes('Glückwunsch'));
 
@@ -318,7 +332,12 @@ async function rDart(label) {
    Tipp auf den Anfänger, bei mehr über die Reihenfolge-Liste. */
 async function bullOffGo() {
   if (!(await visible('#screen-bulloff'))) return;   // allein wird nicht ausgebullt
-  if (await page.locator('[data-action="start-order"]').count()) {
+  /* Ab drei Spielern: Namen links in Wurf-Reihenfolge antippen (der letzte
+     rueckt von selbst nach), dann starten. Bei zweien: direkter Tipp. */
+  if (await page.locator('.bo-spalten').count()) {
+    while (await page.locator('[data-action="order-pick"]').count()) {
+      await page.locator('[data-action="order-pick"]').first().click();
+    }
     await page.locator('[data-action="start-order"]').click();
   } else {
     await page.locator('#bulloff-buttons button').first().click();
@@ -670,7 +689,8 @@ await page.locator('[data-action="start-game"]').click();
 await page.locator('[data-action="next-match"]').click();
 await page.locator('#bulloff-buttons button').first().click();
 await typeScore(100); await typeScore(60); await typeScore(140);
-check('Wer am Wurf ist, steht im Klartext', (await text('#game-turn')).includes('Am Wurf'));
+check('keine doppelte Am-Wurf-Zeile - die leuchtende Kachel sagt es selbst',
+  await page.locator('#game-turn').isHidden());
 
 // Aufnahme nachträglich korrigieren
 await page.locator('#history .col').first().locator('.v').last().click();
@@ -823,8 +843,8 @@ await page.locator('[data-action="next-match"]').click();
 await page.locator('#bulloff-buttons button').first().click();
 await typeScore(180); await typeScore(60); await typeScore(180); await typeScore(60);
 check('Einzel-Darts aktiv', await visible('#pad-darts'));
-check('Knopf heißt 0 Punkte, solange nichts geworfen ist',
-  (await page.locator('[data-action="end-visit"]').innerText()).includes('0 Punkte'));
+check('Knopf heißt immer Weiter - auch ohne geworfenen Dart',
+  (await page.locator('[data-action="end-visit"]').innerText()).includes('Weiter'));
 await page.locator('[data-action="end-visit"]').click();
 check('drei Fehlwürfe in einem Tipp', (await rest(0)) === '141', await rest(0));
 check('Aufnahme zählt drei Darts',
@@ -872,27 +892,35 @@ await page.reload();
 check('vier Spieler in der Aufstellung', (await page.evaluate(() => window.__dart.state().lineup.length)) === 4);
 await page.locator('[data-action="set-mode"][data-value="cricket"]').click();
 await page.locator('[data-action="start-game"]').click();
-check('Bull-Off zeigt die ganze Reihenfolge', (await page.locator('.bo-row').count()) === 4,
-  String(await page.locator('.bo-row').count()));
-const orderBefore = await page.evaluate(() => window.__dart.game().players.slice());
-await page.locator('.bo-row').nth(3).locator('[data-action="order-up"]').click();
-const orderAfter = await page.evaluate(() => window.__dart.game().players.slice());
-check('Hoch-Button schiebt einen Spieler nach vorn',
-  orderAfter[2] === orderBefore[3] && orderAfter[3] === orderBefore[2], orderAfter.join(','));
-await page.locator('.bo-row').first().locator('[data-action="order-down"]').click();
-const orderAfter2 = await page.evaluate(() => window.__dart.game().players.slice());
-check('Runter-Button schiebt einen Spieler zurück', orderAfter2[1] === orderBefore[0], orderAfter2.join(','));
-check('erste Reihe kann nicht weiter nach oben',
-  await page.locator('.bo-row').first().locator('[data-action="order-up"]').isDisabled());
-check('letzte Reihe kann nicht weiter nach unten',
-  await page.locator('.bo-row').last().locator('[data-action="order-down"]').isDisabled());
+check('Bull-Off zeigt links alle vier zur Wahl - ohne Nummern',
+  (await page.locator('.bo-wahl [data-action="order-pick"]').count()) === 4 &&
+  (await page.locator('.bo-wahl .bo-pos').count()) === 0);
+check('rechts ist die Reihenfolge noch leer', (await page.locator('.bo-reihe .bo-row').count()) === 0);
+const alleIds = await page.evaluate(() => window.__dart.game().players.slice());
+/* Der Naechste am Bull wird zuerst angetippt: hier der Vierte, dann der
+   Zweite - danach zwei Erstbeste. Der letzte rueckt von selbst nach. */
+await page.locator(`[data-action="order-pick"][data-id="${alleIds[3]}"]`).click();
+check('der Angetippte steht rechts als 1.', await page.evaluate((id) =>
+  window.__dart.ui().bullReihe[0] === id, alleIds[3]));
+await page.locator(`[data-action="order-pick"][data-id="${alleIds[1]}"]`).click();
+check('der zweite Tipp reiht als 2. ein', await page.evaluate((id) =>
+  window.__dart.ui().bullReihe[1] === id, alleIds[1]));
+/* Ein Fehltipp laesst sich rechts wieder herausnehmen. */
+await page.locator(`.bo-reihe [data-action="order-unpick"][data-id="${alleIds[1]}"]`).click();
+check('ein Tipp rechts nimmt den Spieler wieder heraus', await page.evaluate(() =>
+  window.__dart.ui().bullReihe.length === 1));
+await page.locator(`[data-action="order-pick"][data-id="${alleIds[1]}"]`).click();
+await page.locator(`[data-action="order-pick"][data-id="${alleIds[0]}"]`).click();
+check('der letzte Spieler rueckt von selbst nach', await page.evaluate(() =>
+  window.__dart.ui().bullReihe.length === 4));
+const cOrder = await page.evaluate(() => window.__dart.ui().bullReihe.slice());
 check('Startknopf nennt den ersten Spieler',
   (await text('[data-action="start-order"]')).toLowerCase()
-    .includes((await page.evaluate((id) => window.__dart.state().profiles.find((p) => p.id === id).name, orderAfter2[0])).toLowerCase()));
+    .includes((await page.evaluate((id) => window.__dart.state().profiles.find((p) => p.id === id).name, cOrder[0])).toLowerCase()));
 await page.locator('[data-action="start-order"]').click();
-check('Cricket startet in der eingestellten Reihenfolge',
+check('Cricket startet in der angetippten Reihenfolge',
   (await visible('#screen-cricket')) &&
-  (await page.evaluate(() => window.__dart.gameTurnPlayer())) === orderAfter2[0]);
+  (await page.evaluate(() => window.__dart.gameTurnPlayer())) === cOrder[0]);
 
 // Aufnahme abkürzen: ein Tipp statt dreimal Miss
 const throwsBefore = await page.evaluate(() => window.__dart.game().throws.length);
@@ -900,7 +928,7 @@ await page.locator('#cricket-grid [data-action="end-cricket-visit"]').click();
 check('Weiter-Knopf füllt die Aufnahme mit drei Fehlwürfen',
   (await page.evaluate(() => window.__dart.game().throws.length)) === throwsBefore + 3);
 check('danach ist der nächste Spieler am Wurf',
-  (await page.evaluate(() => window.__dart.gameTurnPlayer())) === orderAfter2[1]);
+  (await page.evaluate(() => window.__dart.gameTurnPlayer())) === cOrder[1]);
 await cDart('T20');
 const throwsMid = await page.evaluate(() => window.__dart.game().throws.length);
 await page.locator('#cricket-grid [data-action="end-cricket-visit"]').click();
@@ -1272,9 +1300,12 @@ await page.locator('[data-action="start-game"]').click();
    hinterher auch im Match (p und starter) – nicht nur in der Bull-Off-Liste.
    Genau das war kaputt: die Wahl wurde angezeigt, aber es begann trotzdem
    immer der Erste der Aufstellung. */
-await page.locator('.bo-row').nth(2).locator('[data-action="order-up"]').click();
-await page.locator('.bo-row').nth(1).locator('[data-action="order-up"]').click();
-const qOrder = await page.evaluate(() => window.__dart.game().players.slice());
+{
+  const qIds0 = await page.evaluate(() => window.__dart.game().players.slice());
+  await page.locator(`[data-action="order-pick"][data-id="${qIds0[2]}"]`).click();
+  await page.locator(`[data-action="order-pick"][data-id="${qIds0[0]}"]`).click();
+}
+const qOrder = await page.evaluate(() => window.__dart.ui().bullReihe.slice());
 await bullOffGo();
 check('läuft auf dem X01-Bildschirm', await visible('#screen-game'));
 check('die ausgebullte Reihenfolge gilt im Spiel', await page.evaluate((order) => {
@@ -1595,6 +1626,47 @@ check('Taste 1 bucht den Checkout mit einem Dart', await page.evaluate(() => {
   const co = m.legs[0].visits.filter((x) => x.c)[0];
   return !m.done && co && co.d === 1;
 }));
+
+group('Turnier-Modus: das ganze Einzel per Tastatur zu Ende');
+check('das Leg-Ende steht in Plakatgroesse', await page.evaluate(() => {
+  const ov = document.getElementById('overlay');
+  return ov.classList.contains('gross') &&
+    document.getElementById('overlay-card').textContent.includes('Leg an');
+}));
+await page.keyboard.press('Enter');
+check('Enter startet das naechste Leg', await page.evaluate(() =>
+  !window.__dart.ui().overlay && window.__dart.currentMatch().legs.length === 2));
+/* Leg 2 wirft der Gast an - der Heimspieler gewinnt es und damit das Match. */
+await tippe('60');    // Gast
+await tippe('180');   // Heim -> 321
+await tippe('60');    // Gast
+await tippe('180');   // Heim -> 141
+await tippe('60');    // Gast
+await tippe('141');   // Heim checkt - Dart-Frage
+await page.keyboard.press('3');
+check('das Einzel ist entschieden - erst kommt gross die Statistik', await page.evaluate(() => {
+  const o = window.__dart.ui().overlay;
+  return window.__dart.currentMatch().done &&
+    o && o.type === 'turnier-ende' && o.phase === 'stat';
+}));
+check('mit Namen, Average und 180ern beider Spieler', await page.evaluate(() => {
+  const t = document.getElementById('overlay-card').textContent;
+  return t.includes('Spiel an') && t.includes('180er') && t.includes('Ø');
+}));
+await page.keyboard.press('Enter');
+check('Enter blendet die naechsten Einzel gross ein', await page.evaluate(() => {
+  const o = window.__dart.ui().overlay;
+  const t = document.getElementById('overlay-card').textContent;
+  return o && o.phase === 'weiter' && t.includes('Nächste Einzel') && t.includes('H2');
+}));
+check('die erste Begegnung leuchtet als naechste',
+  (await page.locator('.te-zeile.dran').count()) === 1);
+await page.keyboard.press('Enter');
+check('Enter startet das naechste Einzel direkt in der Riesenanzeige',
+  (await visible('#pad-key')) && await page.evaluate(() => {
+    const m = window.__dart.currentMatch();
+    return m && !m.done && m.legs.length === 1;
+  }));
 
 /* Aufraeumen fuer die naechsten Gruppen: das Probe-Ligaspiel restlos weg. */
 await page.evaluate(() => {

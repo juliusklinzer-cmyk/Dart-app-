@@ -98,6 +98,15 @@
   --schein-stark: rgba(70, 170, 215, 0.35);
   --schein-weich: rgba(70, 170, 215, 0.22);
 
+  /* Kraeftige Easing-Kurven - die eingebauten CSS-Easings sind zu lasch,
+     um Absicht zu vermitteln (ease-out startet schnell = fuehlt sich
+     sofort beantwortet an). */
+  --ease-out-stark: cubic-bezier(0.23, 1, 0.32, 1);
+  /* Der Druck-Blitz: dieselbe Sprache wie "Ausgewaehlt = weisse Kante" -
+     eine kurz aufleuchtende helle Flaeche. */
+  --tasten-blitz: rgba(242, 238, 238, 0.30);
+  --tasten-halt: rgba(242, 238, 238, 0.16);
+
   --font-display: 'Anton', 'Barlow Condensed', 'Arial Narrow', sans-serif;
   --font-cond: 'Barlow Condensed', 'Arial Narrow', sans-serif;
   --font-body: 'Barlow', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -128,13 +137,16 @@ html, body {
  * Sie liegen fest am Fenster, nicht am Inhalt – sonst würde der Schein beim
  * Scrollen mitwandern und wirkte wie ein Fleck statt wie Licht im Raum.
  */
-body {
+/* Der Schein liegt auf html, nicht auf body: body ist auf --maxw begrenzt
+   und wuerde das Licht am grossen iPad seitlich hart abschneiden. */
+html {
   background-image:
     radial-gradient(1000px 560px at 72% -5%, rgba(64, 150, 195, 0.16), transparent 62%),
     radial-gradient(800px 500px at 15% 105%, rgba(64, 150, 195, 0.08), transparent 60%);
   background-attachment: fixed;
   background-repeat: no-repeat;
 }
+body { background: transparent; }
 
 body {
   max-width: var(--maxw, 620px);
@@ -218,6 +230,15 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   background: var(--bg-3); border: 1px solid var(--line); color: var(--text);
   width: 44px; height: 44px; flex: none; border-radius: 12px; font-size: 1.4rem; line-height: 1; cursor: pointer;
 }
+/* Im Spiel duerfen Verlassen und Ruecknahme groesser sein - die Haende
+   sind voll, der Blick ist am Board. */
+.game-header .icon-btn { width: 52px; height: 52px; font-size: 1.6rem; }
+@media (min-width: 820px) {
+  .game-header .icon-btn { width: 60px; height: 60px; font-size: 1.8rem; }
+}
+
+/* "Am Wurf X - Rest Y" sagt die leuchtende Spielerkachel laengst selbst. */
+#screen-game .game-turn { display: none; }
 
 /* ---------- Navigation ---------- */
 .nav {
@@ -528,6 +549,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .bulloff-order { display: flex; flex-direction: column; gap: 14px; }
 .bo-list { display: flex; flex-direction: column; gap: 8px; }
 .bo-row {
+  color: var(--text); font: inherit; font-size: 1rem;
   display: flex; align-items: center; gap: 10px; text-align: left;
   background: var(--bg-2); border: 1px solid var(--line);
   border-radius: var(--radius); padding: 8px 10px;
@@ -537,12 +559,20 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   font-variant-numeric: tabular-nums;
 }
 .bo-name { flex: 1; font-weight: 700; font-size: 1.05rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.bo-mv {
-  background: var(--bg-3); border: 1px solid var(--line); color: var(--text);
-  border-radius: 10px; min-width: 48px; min-height: 48px; font-size: 1rem; cursor: pointer;
+.bo-spalten { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; text-align: left; }
+.bo-wahl, .bo-reihe { display: flex; flex-direction: column; gap: 8px; }
+.bo-wahl button {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px;
+  padding: 10px 12px; min-height: var(--tap); color: var(--text);
+  font-size: 1rem; text-align: left; cursor: pointer;
 }
-.bo-mv:active { border-color: var(--accent); }
-.bo-mv[disabled] { color: var(--dead); background: var(--dead-bg); border-color: var(--dead-bg); cursor: default; }
+.bo-wahl button:active { border-color: var(--accent); }
+.bo-reihe .bo-row {
+  width: 100%; min-height: var(--tap); cursor: pointer;
+  border-color: var(--aktiv-linie); background: var(--aktiv-flaeche);
+}
+.bo-spalten .hint { margin: 8px 2px; }
 @media (orientation: landscape) and (min-width: 700px) {
   .bo-row { padding: 12px 14px; }
   .bo-name { font-size: 1.25rem; }
@@ -570,6 +600,11 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   padding: 12px 10px; text-align: center; position: relative;
 }
 .pcard.active { border-color: var(--accent); background: var(--accent-faint); }
+/* Wer dran ist, leuchtet - wer wartet, tritt zurueck. Exakt die Sprache
+   des Turnier-Modus, auch im Punkte- und Einzel-Dart-Bild. */
+#screen-game .pcard:not(.active) { opacity: 0.55; }
+#screen-game .pcard.active { box-shadow: 0 0 26px var(--schein); }
+#screen-game .pcard.active .rest { text-shadow: 0 0 24px var(--schein-stark); }
 .pcard .pname { font-size: 0.95rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px; }
 .pcard .legs { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
 .pcard .rest { font-size: 3.4rem; font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; margin: 4px 0 2px; }
@@ -590,12 +625,9 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 }
 .checkout-bar .chip.first { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 .checkout-bar .none { color: var(--muted); font-size: 0.85rem; }
-/* Schnelles Spiel ab drei Spielern am Handy: die Leiste erscheint erst,
-   wenn beim Aktiven ein Finish ansteht (Klasse kommt aus renderGame).
-   Am iPad und am grossen Schirm bleibt sie immer stehen. */
-@media (max-width: 699px) and (orientation: portrait) {
-  .checkout-bar.fern { display: none; }
-}
+/* Die Leiste erscheint erst, wenn ein Finish ansteht (Klasse aus
+   renderGame) - vorher gibt es schlicht nichts anzusagen. */
+.checkout-bar.fern { display: none; }
 @media (orientation: landscape) and (max-height: 560px) {
   .checkout-bar.fern { display: none; }
 }
@@ -789,6 +821,13 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   .pad { flex: 1; display: flex; flex-direction: column; gap: 8px; }
   .pad .keypad, .pad .num-grid { flex: 1; grid-auto-rows: 1fr; }
   .quick-row, .mult-row, .display-row { margin-bottom: 0; }
+  /* Die Tasten ruecken ans untere Ende (naeher an der Hand), der frei
+     werdende Platz gehoert der getippten Zahl: gross und hell wie der
+     Spieler am Wurf. */
+  .pad .keypad, .pad .num-grid { margin-top: auto; }
+  #pad-total .display-row { flex: 1 1 auto; align-items: center; }
+  .score-display { font-size: clamp(3.4rem, 11vh, 6rem); }
+  .score-display:not(.empty) { color: #fff; text-shadow: 0 0 26px var(--schein-stark); }
   .app-header { padding: 14px 4px 10px; }
   .screen.center.active { min-height: calc(100dvh - 24px); }
   /* Der Reststand ist die Zahl, die aus zwei Metern lesbar sein muss. */
@@ -1527,6 +1566,13 @@ button, input, select, textarea { font-family: inherit; }
 .scoreboard.viele .pcard .pname { font-size: 0.85rem; }
 .scoreboard.viele .pcard .legs { display: none; }
 .scoreboard.viele .pcard .meta { font-size: 0.66rem; gap: 8px; }
+/* Am iPad haben vier Kacheln Platz: hoeher, Reste in Plakatnaehe. */
+@media (min-width: 700px) {
+  .scoreboard.viele .pcard { min-height: clamp(120px, 21vh, 220px); padding: 10px; }
+  .scoreboard.viele .pcard .rest { font-size: clamp(2.6rem, 9vh, 4.4rem); }
+  .scoreboard.viele .pcard .pname { font-size: 1.05rem; }
+  .scoreboard.viele .pcard .meta { font-size: 0.82rem; gap: 10px; }
+}
 
 /* Gäste sind keine Kollegen mit Account: sie gehören diesem Gerät, stehen
    in der Aufstellung unten und tragen ein Abzeichen. */
@@ -1978,11 +2024,11 @@ button, input, select, textarea { font-family: inherit; }
   font-size: clamp(2.6rem, min(16vw, 18vh), 8rem);
 }
 /* Auch Name und Dartzahl müssen von der Abwurflinie aus lesbar sein. */
-#screen-game.turnier .pcard .pname { font-size: 1.3rem; }
-#screen-game.turnier .pcard .legs { font-size: 1.05rem; }
+#screen-game.turnier .pcard .pname { font-size: 2.1rem; }
+#screen-game.turnier .pcard .legs { font-size: 1.5rem; }
 /* Der Average unter dem Rest: groß genug für zwei Meter, aber leicht
    zurückgenommen – er soll die große Zahl nicht anschreien. */
-#screen-game.turnier .pcard .meta { font-size: 1.6rem; opacity: 0.55; }
+#screen-game.turnier .pcard .meta { font-size: 2.2rem; opacity: 0.85; }
 
 /* Wer dran ist, steht sichtbar im Licht – der normale Schein ist auf
    2,40 m kaum noch als Leuchten zu erkennen. Wer nicht dran ist, tritt
@@ -2229,6 +2275,12 @@ button, input, select, textarea { font-family: inherit; }
 @media (min-width: 820px) {
   .fin-kacheln .fk { min-height: 66px; font-size: 2.1rem; }
 }
+/* Die grosse Fassung fuer den Einzel-Dart-Modus im X01: gut lesbar von
+   der Abwurflinie, jede Kachel ein Dart der laufenden Aufnahme. */
+.fin-kacheln.gross .fk { min-height: 64px; font-size: 2rem; }
+@media (min-width: 820px) {
+  .fin-kacheln.gross .fk { min-height: 88px; font-size: 2.7rem; }
+}
 
 /* ---------- Liga: Kalender-Icons, Fusszeile, Regelecke ---------- */
 
@@ -2368,6 +2420,8 @@ button, input, select, textarea { font-family: inherit; }
 
 /* Beim Drucken erscheint nur das Blatt – ohne App-Rahmen, ohne Dunkelmodus. */
 @media print {
+  /* html traegt den dunklen Grund samt Schein - beim Druck beides weg. */
+  html { background: #fff !important; background-image: none !important; }
   body { background: #fff !important; max-width: none; padding: 0; }
   body::before, .nav, .bericht-kopfzeile, .bericht-hinweis, #sync-status, #save-warning { display: none !important; }
   .screen { display: none !important; }
@@ -2439,6 +2493,100 @@ button, input, select, textarea { font-family: inherit; }
 
 #screen-game:not(.turnier) .turnier-exit { display: none; }
 
+
+/* ================= Tastgefuehl =================
+ * Jede wirklich gedrueckte Taste leuchtet kurz auf - als Animation, nicht
+ * nur als :active-Zustand: ein 30-ms-Tipp am Board waere sonst unsichtbar,
+ * und genau da braucht man die Gewissheit "der Tipp ist angekommen".
+ * Die Animation startet auf der Blitz-Farbe und laeuft von selbst auf den
+ * normalen Hintergrund der jeweiligen Taste zurueck (nur ein from-Frame).
+ */
+@keyframes tastenblitz {
+  from { background-color: var(--tasten-blitz); transform: scale(0.96); }
+}
+/* Auf hellen Flaechen (Hauptaktion, OK, aktive Umschalter) blitzt hell
+   nicht - dort dunkelt der Druck kurz ab. */
+@keyframes tastenblitz-dunkel {
+  from { background-color: rgba(13, 10, 11, 0.35); transform: scale(0.96); }
+}
+button.blitzt { animation: tastenblitz 240ms var(--ease-out-stark); }
+.btn.primary.blitzt, .keypad button.ok.blitzt,
+.segmented button.active.blitzt, .options button.active.blitzt,
+.chips .chip.active.blitzt, .modes button.active.blitzt,
+.konto-tabs button.active.blitzt, .board-mode button.active.blitzt {
+  animation-name: tastenblitz-dunkel;
+}
+
+/* Wer die Taste gedrueckt HAELT, sieht sie auch nach dem Blitz erhellt -
+   Dinge im echten Leben springen nicht zurueck, solange man sie drueckt. */
+.keypad button:active, .num-grid button:active, .quick-row button:active,
+.mult-row button:active, .cg-block button:active, .rtw-key:active {
+  background: var(--tasten-halt);
+}
+
+/* ================= Dialog-Einblendung =================
+ * Dialoge tauchen nicht aus dem Nichts auf: der Schleier blendet kurz ein,
+ * die Karte waechst aus 0.97 heran (nie aus 0 - nichts im echten Leben
+ * erscheint aus dem Nichts). Bewusst sehr schnell (unter 200 ms), weil die
+ * Dialoge am Spielabend zigmal erscheinen - Checkout-Frage, Leg-Ende. */
+@keyframes schleier-ein { from { opacity: 0; } }
+@keyframes dialog-ein { from { opacity: 0; transform: scale(0.97) translateY(6px); } }
+.overlay { animation: schleier-ein 120ms ease-out; }
+.overlay-card {
+  animation: dialog-ein 160ms var(--ease-out-stark);
+  transform-origin: center;   /* Modale skalieren aus der Mitte, nicht vom Ausloeser */
+}
+.overlay.hidden, .overlay.hidden .overlay-card { animation: none; }
+
+/* Weniger Bewegung heisst weniger Bewegung, nicht kein Feedback: der
+   Farbwechsel bleibt, nur Skalierung und Verschiebung entfallen. */
+@media (prefers-reduced-motion: reduce) {
+  @keyframes tastenblitz { from { background-color: var(--tasten-blitz); } }
+  @keyframes tastenblitz-dunkel { from { background-color: rgba(13, 10, 11, 0.35); } }
+  @keyframes dialog-ein { from { opacity: 0; } }
+}
+
+
+/* ================= Turnier-Modus: Dialoge in Plakatgroesse =================
+ * Der Schreiber steht vorn an der Scheibe, gelesen wird vom Oche (~3 m):
+ * Leg-Ende, Checkout-Frage, Spielstatistik und die naechsten Begegnungen
+ * muessen aus der Distanz erkennbar sein - und alles laeuft ueber Enter,
+ * Loeschen und die Ziffern der Tastatur. */
+.overlay.gross .overlay-card { max-width: 820px; padding: 36px; }
+.overlay.gross h3 { font-size: clamp(2.2rem, 6vh, 3.2rem); margin-bottom: 12px; }
+.overlay.gross p { font-size: 1.5rem; }
+.overlay.gross .btn { min-height: 78px; font-size: 1.5rem; }
+.overlay.gross .row-btns .btn { min-height: 92px; font-size: 2rem; }
+.overlay.gross .big-emoji { font-size: 4.5rem; }
+
+/* Die Kurzstatistik des Einzels: zwei Spalten, der Sieger traegt Licht. */
+.te-stand { font-size: 1.6rem; }
+.te-stand b { font-size: 2.2rem; font-variant-numeric: tabular-nums; }
+.te-stat { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0 6px; }
+.te-spalte {
+  background: var(--bg-3); border: 1px solid var(--line); border-radius: 14px;
+  padding: 16px 12px;
+}
+.te-spalte.sieger { border-color: var(--aktiv-linie); box-shadow: 0 0 26px var(--schein); }
+.te-name { font-size: 1.6rem; font-weight: 800; margin-bottom: 8px; }
+.te-wert { display: flex; justify-content: space-between; align-items: baseline; padding: 4px 6px; }
+.te-wert span { color: var(--muted); font-size: 1.1rem; }
+.te-wert b { font-size: 1.9rem; font-variant-numeric: tabular-nums; }
+
+/* Die naechsten Begegnungen: grosse Zeilen, die erste leuchtet. */
+.te-next { display: flex; flex-direction: column; gap: 10px; margin: 14px 0; text-align: left; }
+.te-zeile {
+  display: flex; align-items: center; gap: 14px;
+  background: var(--bg-3); border: 1px solid var(--line); border-radius: 14px;
+  padding: 16px 18px; font-size: 1.6rem; font-weight: 700;
+}
+.te-zeile.dran { border-color: var(--aktiv-linie); background: var(--aktiv-flaeche); box-shadow: 0 0 26px var(--schein); }
+.te-scheibe {
+  flex: none; font-size: 1rem; font-weight: 700; color: var(--muted);
+  border: 1px solid var(--line); border-radius: 8px; padding: 4px 8px;
+}
+.te-hint { color: var(--muted); font-size: 1.15rem; margin: 14px 0 0; }
+
 </style>
 <div id="save-warning" class="save-warning hidden">
   ⚠️ Der Spielstand kann gerade nicht gespeichert werden – bitte Speicherplatz prüfen
@@ -2447,12 +2595,13 @@ button, input, select, textarea { font-family: inherit; }
 
 <div id="sync-status" class="sync-status hidden"></div>
 
+<!-- Kurze Namen, damit die Leiste am Handy einzeilig bleibt. -->
 <nav id="nav" class="nav hidden">
-  <button data-action="nav" data-screen="setup">Game on!</button>
+  <button data-action="nav" data-screen="setup">Game</button>
   <button data-action="nav" data-screen="liga">Liga</button>
-  <button data-action="nav" data-screen="boards">Rangliste</button>
-  <button data-action="nav" data-screen="players">Spieler</button>
-  <button id="nav-konto" class="hidden" data-action="nav" data-screen="konto">Konto</button>
+  <button data-action="nav" data-screen="boards">Rang</button>
+  <button data-action="nav" data-screen="players">Player</button>
+  <button id="nav-konto" class="hidden" data-action="nav" data-screen="konto">Profil</button>
 </nav>
 
 <!-- ============ SETUP ============ -->
@@ -2936,6 +3085,7 @@ button, input, select, textarea { font-family: inherit; }
 <!-- ============ BULL-OFF ============ -->
 <section id="screen-bulloff" class="screen center">
   <header class="app-header">
+    <div class="big-emoji" aria-hidden="true">🎯</div>
     <h1>Bull werfen</h1>
     <p class="sub" id="bulloff-sub">Wer war näher am Bull und darf anfangen?</p>
   </header>
@@ -2960,6 +3110,10 @@ button, input, select, textarea { font-family: inherit; }
     <div id="scoreboard" class="scoreboard"></div>
 
     <div id="checkout-bar" class="checkout-bar"></div>
+    <!-- Einzel-Darts: drei grosse Kacheln wie im Finisher - leer zu Beginn
+         der Aufnahme, jede fuellt sich mit dem eingetragenen Dart; in
+         Finish-Naehe zeigen sie rot den Vorschlag und gruen den Treffer. -->
+    <div id="game-kacheln" class="fin-kacheln gross hidden"></div>
 
     <div id="history" class="history"></div>
   </div>
@@ -3469,6 +3623,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
      anderes Bedienelement. Ein Nachtipp dorthin ist ein Fehltipp – aber nur
      an genau dieser Stelle, damit bewusste schnelle Bedienung frei bleibt. */
   var ghostTapUntil = 0;
+  var turnierEndeTimer = null;
   function armGhostTapGuard() { ghostTapUntil = Date.now() + 400; }
   function isGhostTap(ev) {
     /* `detail >= 2` ist die Doppelklick-Zählung des Browsers: zweite
@@ -4184,7 +4339,23 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         m.at = Date.now();
         /* Das Schnelle Spiel ist mit dem Checkout vorbei – danach geht es in
            die Auswertung, nicht zum nächsten Spiel eines Spielplans. */
-        UI.overlay = { type: m.kind === 'quick' ? 'game-done' : 'match-done', pid: pid };
+        if (m.kind !== 'quick' && UI.turnier && turnierErlaubt()) {
+          /* Am Board: 8 Sekunden gross die Statistik des Einzels, dann die
+             naechsten Begegnungen - Enter ueberspringt jederzeit. Ein
+             frueherer Timer (Undo + neuer Checkout) wird weggeraeumt,
+             sonst verkuerzte er die neue Statistik-Anzeige. */
+          UI.overlay = { type: 'turnier-ende', pid: pid, id: m.id, phase: 'stat' };
+          if (turnierEndeTimer) clearTimeout(turnierEndeTimer);
+          turnierEndeTimer = setTimeout(function () {
+            turnierEndeTimer = null;
+            if (UI.overlay && UI.overlay.type === 'turnier-ende' && UI.overlay.phase === 'stat') {
+              UI.overlay.phase = 'weiter';
+              render();
+            }
+          }, 8000);
+        } else {
+          UI.overlay = { type: m.kind === 'quick' ? 'game-done' : 'match-done', pid: pid };
+        }
         /* Im geteilten Turnier steht die Partie sofort bei allen anderen –
            nicht erst, wenn der ganze Abend vorbei ist. */
         if (geteiltesTurnier() && m.kind !== 'quick' && window.DartSync && window.DartSync.turnier) {
@@ -5069,6 +5240,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       S.game.started = true;
       S.screen = kind === 'cricket' ? 'cricket' : kind === 'rtw' ? 'rtw' : kind === 'finisher' ? 'finisher' : 'game';
     } else {
+      UI.bullReihe = [];
       S.screen = 'bulloff';
     }
     save(); render();
@@ -6187,27 +6359,38 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var ids = forGame ? S.game.players : (currentMatch() ? currentMatch().p : null);
     if (!ids) { S.screen = 'tournament'; render(); return; }
 
-    /* Bei mehr als zwei Spielern gibt der Bull-Wurf nicht nur den Anfänger vor,
-       sondern die ganze Reihenfolge – deshalb hier eine Liste, die sich mit
-       Hoch/Runter in Sekunden sortieren lässt. */
+    /* Bei mehr als zwei Spielern gibt der Bull-Wurf nicht nur den Anfänger
+       vor, sondern die ganze Reihenfolge. Links stehen alle Namen, rechts
+       wächst die Reihenfolge: einfach in Wurf-Reihenfolge antippen - wer
+       am nächsten am Bull war, zuerst. Kein Hoch- und Runterschieben. */
     if (forGame && ids.length > 2) {
-      $('bulloff-sub').textContent = 'Bull werfen und danach sortieren: Wer am nächsten dran war, steht oben.';
+      if (!UI.bullReihe || UI.bullReihe.some(function (id) { return ids.indexOf(id) < 0; })) {
+        UI.bullReihe = [];
+      }
+      var reihe = UI.bullReihe;
+      var offen = ids.filter(function (id) { return reihe.indexOf(id) < 0; });
+      $('bulloff-sub').textContent = 'Alle werfen auf Bull \ud83c\udfaf - dann in Wurf-Reihenfolge antippen: Wer am nächsten dran war, zuerst.';
       $('bulloff-buttons').className = 'bulloff-order';
       $('bulloff-buttons').innerHTML =
-        '<div class="bo-list">' + ids.map(function (pid, i) {
-          var nm = esc(pname(pid));
-          return '<div class="bo-row">' +
-            '<span class="bo-pos">' + (i + 1) + '.</span>' +
-            avatarHTML(profile(pid), 'sm') +
-            '<span class="bo-name">' + nm + '</span>' +
-            '<button class="bo-mv" data-action="order-up" data-id="' + pid + '"' +
-              (i === 0 ? ' disabled' : '') + ' aria-label="' + nm + ' nach oben">▲</button>' +
-            '<button class="bo-mv" data-action="order-down" data-id="' + pid + '"' +
-              (i === ids.length - 1 ? ' disabled' : '') + ' aria-label="' + nm + ' nach unten">▼</button>' +
-            '</div>';
-        }).join('') + '</div>' +
-        '<button class="btn primary full" data-action="start-order">' +
-          esc(pname(ids[0])) + ' beginnt · Los geht\'s</button>';
+        '<div class="bo-spalten">' +
+          '<div class="bo-wahl">' + (offen.map(function (pid) {
+            return '<button data-action="order-pick" data-id="' + pid + '">' +
+              avatarHTML(profile(pid), 'sm') +
+              '<span class="bo-name">' + esc(pname(pid)) + '</span></button>';
+          }).join('') || '<p class="hint">Alle eingereiht.</p>') + '</div>' +
+          '<div class="bo-reihe">' + (reihe.map(function (pid, i) {
+            var nm = esc(pname(pid));
+            return '<button class="bo-row" data-action="order-unpick" data-id="' + pid + '" ' +
+              'aria-label="' + nm + ' wieder herausnehmen">' +
+              '<span class="bo-pos">' + (i + 1) + '.</span>' +
+              avatarHTML(profile(pid), 'sm') +
+              '<span class="bo-name">' + nm + '</span></button>';
+          }).join('') || '<p class="hint">Wer war am nächsten am Bull? Zuerst antippen.</p>') + '</div>' +
+        '</div>' +
+        (offen.length === 0
+          ? '<button class="btn primary full" data-action="start-order">' +
+            esc(pname(reihe[0])) + ' beginnt · Los geht\'s</button>'
+          : '');
       return;
     }
 
@@ -6296,11 +6479,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var dartsLeft = mode === 'darts' ? 3 - UI.darts.length : 3;
     var route = ohneFinish ? null : Checkout.suggest(restActive, dartsLeft, lieblingsDoppel(active));
 
-    /* Ab drei Spielern am Handy: solange der Aktive nicht in Finish-Nähe
-       ist, sagt die Leiste nur „noch kein Finish möglich" und stiehlt dem
-       Verlauf die einzige Zeile – dort verschwindet sie dann (per CSS nur
-       am Handy, am iPad bleibt sie stehen). */
-    $('checkout-bar').classList.toggle('fern', m.p.length > 2 && restActive > 170 && !m.done);
+    /* Die Finish-Leiste erscheint erst, wenn beim Aktiven wirklich ein
+       Finish ansteht - vorher ist "noch kein Finish möglich" nur Rauschen
+       und stiehlt dem Verlauf die Zeile. */
+    $('checkout-bar').classList.toggle('fern', !route && !ohneFinish && !m.done);
     $('checkout-bar').classList.toggle('aus', !!ohneFinish);
 
     var whose = esc(spielerName(active));
@@ -6312,6 +6494,43 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       $('checkout-bar').innerHTML = restActive > 170
         ? '<span class="none">' + whose + ': noch kein Finish möglich</span>'
         : '<span class="none">' + whose + ': kein Finish mit ' + plural(dartsLeft, 'Dart', 'Darts') + '</span>';
+    }
+
+    /* Einzel-Darts: drei grosse Kacheln wie im Finisher tragen die laufende
+       Aufnahme - leer zu Beginn, jeder eingetragene Dart fuellt eine (gruen,
+       wenn er den Vorschlag trifft). In Finish-Naehe stehen die restlichen
+       Wuerfe rot bzw. als Weg darin; die Leiste darueber entfaellt dann. */
+    var kBox = $('game-kacheln');
+    if (mode === 'darts' && !m.done) {
+      var kacheln = ['', '', ''];
+      var kDbl = ohneFinish ? null : lieblingsDoppel(active);
+      var kRest = remainingIn(leg, active);
+      UI.darts.forEach(function (d, ki) {
+        var soll = null;
+        if (!ohneFinish) {
+          var kEmpf = Checkout.suggest(kRest, 3 - ki, kDbl);
+          /* suggest liefert Labels ('T20') - fuer den Vergleich in
+             Mult/Zahl zerlegen, wie es auch der Finisher macht. */
+          if (kEmpf && kEmpf.length) soll = labelDart(kEmpf[0]);
+        }
+        var traf = soll && d.n === soll.n && d.m === soll.m;
+        kacheln[ki] = '<span class="fk ' + (traf ? 'gut' : 'anders') + '">' +
+          (d.n === 0 ? '–' : dartLabel(d)) + '</span>';
+        kRest -= d.v;
+      });
+      if (route) {
+        for (var kr = 0; kr < route.length && UI.darts.length + kr < 3; kr++) {
+          kacheln[UI.darts.length + kr] = '<span class="fk' + (kr === 0 ? ' jetzt' : '') + '">' +
+            Checkout.pretty(route[kr]) + '</span>';
+        }
+      }
+      for (var kx = 0; kx < 3; kx++) if (!kacheln[kx]) kacheln[kx] = '<span class="fk leer">–</span>';
+      kBox.innerHTML = kacheln.join('');
+      kBox.classList.remove('hidden');
+      /* Die Kacheln tragen den Weg selbst - die Leiste waere doppelt. */
+      $('checkout-bar').classList.add('fern');
+    } else {
+      kBox.classList.add('hidden');
     }
 
     /*
@@ -6460,13 +6679,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           (prefix ? '<span class="mx">' + prefix + '</span>' : '') + n + '</button>';
       }
       nums += '<button class="miss" data-num="0">Miss</button>';
-      nums += '<button data-num="25" class="' + (hl === '25' ? 'hl' : '') + '">25</button>';
-      nums += '<button class="bull ' + (hl === 'BULL' ? 'hl' : '') + '" data-bull="1">Bull</button>';
+      nums += '<button class="bull ' + (hl === '25' ? 'hl' : '') + '" data-num="25">Bull</button>';
+      nums += '<button class="bull ' + (hl === 'BULL' ? 'hl' : '') + '" data-bull="1">Bull ×2</button>';
       /* Dreimal am Doppel vorbei muss nicht dreimal getippt werden: dieser
          Knopf schließt die Aufnahme ab und füllt die fehlenden Darts als
          Fehlwürfe auf. */
-      nums += '<button class="end-visit wide" data-action="end-visit">' +
-        (UI.darts.length ? 'Weiter ▸' : '0 Punkte ▸') + '</button>';
+      nums += '<button class="end-visit wide" data-action="end-visit">Weiter ▸</button>';
       $('num-grid').innerHTML = nums;
     }
   }
@@ -6935,12 +7153,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           (prefix ? '<span class="mx">' + prefix + '</span>' : '') + n + '</button>';
       }
       nums += '<button class="miss" data-num="0" data-mult="1">Miss</button>';
-      nums += '<button data-num="25" class="' + (hl === '25' ? 'hl' : '') + '" data-mult="1">25</button>';
-      nums += '<button class="bull ' + (hl === 'BULL' ? 'hl' : '') + '" data-num="25" data-mult="2">Bull</button>';
+      nums += '<button class="bull ' + (hl === '25' ? 'hl' : '') + '" data-num="25" data-mult="1">Bull</button>';
+      nums += '<button class="bull ' + (hl === 'BULL' ? 'hl' : '') + '" data-num="25" data-mult="2">Bull ×2</button>';
       /* Wie im X01: dreimal am Doppel vorbei muss nicht dreimal getippt
          werden – dieser Knopf füllt die Aufnahme mit Fehlwürfen auf. */
-      nums += '<button class="end-visit wide" data-action="fin-end-visit">' +
-        (st.inVisit ? 'Weiter ▸' : '0 Punkte ▸') + '</button>';
+      nums += '<button class="end-visit wide" data-action="fin-end-visit">Weiter ▸</button>';
       $('fin-pad').innerHTML =
         '<div class="mult-row">' +
           '<button data-mult="1" class="' + (UI.mult === 1 ? 'active' : '') + '">Single</button>' +
@@ -7394,8 +7611,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
   function renderOverlay() {
     var ov = $('overlay');
-    if (!UI.overlay) { ov.classList.add('hidden'); return; }
+    if (!UI.overlay) { ov.classList.add('hidden'); ov.classList.remove('gross'); return; }
     ov.classList.remove('hidden');
+    /* Im Turnier-Modus sprechen auch die Dialoge Plakatsprache - der
+       Schreiber steht vorn an der Scheibe, gelesen wird vom Oche aus. */
+    ov.classList.toggle('gross', UI.turnier && turnierErlaubt() && S.screen === 'game');
     var o = UI.overlay;
     var html = '';
 
@@ -7413,7 +7633,54 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       if (!currentMatch()) { UI.overlay = null; ov.classList.add('hidden'); return; }
     }
 
-    if (o.type === 'leg-done') {
+    if (o.type === 'turnier-ende') {
+      var tm = matchById(o.id) || currentMatch();
+      if (!tm) { UI.overlay = null; ov.classList.add('hidden'); return; }
+      /* Im Ligaspiel sprechen auch die Dialoge mit buergerlichen Namen. */
+      var teName = S.tour && S.tour.liga ? ligaName : pname;
+      if (o.phase === 'stat') {
+        /* Die Kurzstatistik des Einzels - nur das, was am Abend zaehlt. */
+        var teSt = collectStats([{ matches: [tm], start: matchStart(tm) }], tm.p);
+        tm.p.forEach(function (id) { finalize(teSt[id]); });
+        html = '<h3>Spiel an ' + esc(teName(o.pid)) + '</h3>' +
+          '<p class="te-stand">' + esc(teName(tm.p[0])) + ' <b>' + legsWon(tm, tm.p[0]) + ':' +
+            legsWon(tm, tm.p[1]) + '</b> ' + esc(teName(tm.p[1])) + '</p>' +
+          '<div class="te-stat">' + tm.p.map(function (id) {
+            var s = teSt[id];
+            return '<div class="te-spalte' + (id === o.pid ? ' sieger' : '') + '">' +
+              '<div class="te-name">' + esc(teName(id)) + '</div>' +
+              '<div class="te-wert"><span>Ø</span><b>' + (s.darts ? s.avg.toFixed(1) : '–') + '</b></div>' +
+              '<div class="te-wert"><span>180er</span><b>' + s.s180 + '</b></div>' +
+              '<div class="te-wert"><span>Finish</span><b>' + (s.highCO || '–') + '</b></div>' +
+              '</div>';
+          }).join('') + '</div>' +
+          '<p class="te-hint">Enter · weiter</p>';
+      } else {
+        /* Die naechsten Begegnungen, gross - Enter startet die erste. */
+        var offene = S.matches.filter(function (x) { return !x.done && !x.void; }).slice(0, 4);
+        var liga = S.tour && S.tour.liga;
+        if (offene.length) {
+          html = '<h3>Nächste Einzel</h3>' +
+            '<div class="te-next">' + offene.map(function (x, i) {
+              var paar = liga && x.posPaar
+                ? 'H' + (x.posPaar[0] + 1) + ' ' + esc(teName(x.p[0])) + ' – G' + (x.posPaar[1] + 1) + ' ' + esc(teName(x.p[1]))
+                : esc(teName(x.p[0])) + ' – ' + esc(teName(x.p[1]));
+              return '<div class="te-zeile' + (i === 0 ? ' dran' : '') + '">' +
+                (x.scheibe ? '<span class="te-scheibe">' + x.scheibe + '</span>' : '') +
+                '<span>' + paar + '</span></div>';
+            }).join('') + '</div>' +
+            '<button class="btn primary full" data-action="ov-next-match">Nächstes Einzel starten</button>' +
+            '<p class="te-hint">Enter · starten &nbsp;&nbsp; Löschen · letzter Dart zurück</p>';
+        } else {
+          var teD = liga ? ligaStandDaten() : null;
+          html = '<h3>' + (liga ? 'Ligaspiel beendet' : 'Alle Spiele beendet') + '</h3>' +
+            (teD ? '<p class="te-stand">' + esc(LIGA.team) + ' <b>' + teD.wirP + ':' + teD.sieP + '</b> ' +
+              esc(S.tour.liga.gegner) + '</p>' : '') +
+            '<button class="btn primary full" data-action="ov-next-match">Zum Endstand</button>' +
+            '<p class="te-hint">Enter · Endstand</p>';
+        }
+      }
+    } else if (o.type === 'leg-done') {
       var m1 = currentMatch();
       html = '<div class="big-emoji">🎯</div><h3>Leg an ' + esc(pname(o.pid)) + '</h3>' +
         '<p>Stand: ' + legsWon(m1, m1.p[0]) + ':' + legsWon(m1, m1.p[1]) + '</p>' +
@@ -8333,20 +8600,33 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         save(); render();
         break;
       }
-      case 'order-up':
-      case 'order-down': {
-        var og = S.game;
-        if (!og || og.started) return;
-        var oi = og.players.indexOf(el.getAttribute('data-id'));
-        var oj = oi + (action === 'order-up' ? -1 : 1);
-        if (oi < 0 || oj < 0 || oj >= og.players.length) return;
-        var swap = og.players[oi]; og.players[oi] = og.players[oj]; og.players[oj] = swap;
-        save(); render();
+      /* Ausbullen ab drei Spielern: antippen reiht ein, der Letzte rueckt
+         von selbst nach (ihn anzutippen waere ein Tipp ohne Entscheidung).
+         Ein Tipp rechts nimmt einen wieder heraus. */
+      case 'order-pick': {
+        var opG = S.game;
+        if (!opG || opG.started) return;
+        var opId = el.getAttribute('data-id');
+        if (!UI.bullReihe) UI.bullReihe = [];
+        if (UI.bullReihe.indexOf(opId) >= 0) return;
+        UI.bullReihe.push(opId);
+        var opRest = opG.players.filter(function (id) { return UI.bullReihe.indexOf(id) < 0; });
+        if (opRest.length === 1) UI.bullReihe.push(opRest[0]);
+        render();
+        break;
+      }
+      case 'order-unpick': {
+        var ouId = el.getAttribute('data-id');
+        if (!UI.bullReihe) return;
+        UI.bullReihe = UI.bullReihe.filter(function (id) { return id !== ouId; });
+        render();
         break;
       }
       case 'start-order': {
         var sg = S.game;
         if (!sg || sg.started) return;
+        if (!UI.bullReihe || UI.bullReihe.length !== sg.players.length) return;
+        sg.players = UI.bullReihe.slice();
         // Siehe pick-starter: die sortierte Reihenfolge muss ins Match.
         if (sg.kind === 'quick') {
           sg.p = sg.players.slice();
@@ -8647,7 +8927,29 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   /* ================= Events ================= */
   /* Ein Tipp neben den Dialog schließt ihn – außer dort, wo eine Antwort
      nötig ist (Checkout-Abfrage, Spielende). */
-  var STICKY_OVERLAYS = { 'checkout-darts': 1, 'leg-done': 1, 'match-done': 1, 'game-done': 1 };
+  var STICKY_OVERLAYS = { 'checkout-darts': 1, 'leg-done': 1, 'match-done': 1, 'game-done': 1, 'turnier-ende': 1 };
+  /* Druck-Blitz: jede wirklich gedrueckte Taste leuchtet kurz auf. Als
+     neu gestartete Animation, nicht nur :active - ein 30-ms-Tipp waere
+     sonst unsichtbar, und am Board braucht man die Gewissheit, dass der
+     Tipp angekommen ist. Nur fuer Zeigereingaben; Tastatur-Aktionen
+     (Turnier-Modus) animieren nie. */
+  document.addEventListener('pointerdown', function (ev) {
+    if (!ev.target || !ev.target.closest) return;
+    /* Was der Ghost-Tap-Schutz gleich verwerfen wird, darf auch nicht
+       blitzen - sonst suggeriert das Licht eine Eingabe, die nie zaehlt. */
+    if (Date.now() <= ghostTapUntil && ev.detail >= 2) return;
+    var taste = ev.target.closest('button');
+    if (!taste || taste.disabled) return;
+    taste.classList.remove('blitzt');
+    void taste.offsetWidth;               // Animation von vorn starten
+    taste.classList.add('blitzt');
+  }, { capture: true, passive: true });
+  document.addEventListener('animationend', function (ev) {
+    if (String(ev.animationName).indexOf('tastenblitz') === 0) {
+      ev.target.classList.remove('blitzt');
+    }
+  });
+
   /* Einen Eingabemodus waehlen - per Knopf oder Tab-Taste. Der Turnier-Modus
      überlebt einen Neustart: der Bildschirm hängt am Board und soll nach dem
      Wiederöffnen nicht neu eingestellt werden. Die Einstellung aendert sich
@@ -8744,7 +9046,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       if (S.screen === 'rtw') { rtwDart(own ? Number(own) : UI.mult, n2); return; }
       if (S.screen === 'finisher') { finisherDart(own ? Number(own) : UI.mult, n2); return; }
       if (n2 === 0) pushDart(1, 0);
-      else if (n2 === 25) pushDart(1, 25);
+      /* Bull kennt nur einfach (25) und doppelt (50) - steht Double oder
+         Triple an, ist das grosse Bull gemeint, nichts wird still verworfen. */
+      else if (n2 === 25) pushDart(UI.mult >= 2 ? 2 : 1, 25);
       else pushDart(UI.mult, n2);
       return;
     }
@@ -8920,6 +9224,14 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           UI.overlay = null;
           commitVisit(coScore, anz, true, false);
         }
+      } else if (ev.key === 'Backspace') {
+        undo(); ev.preventDefault();
+      }
+    } else if (ov.type === 'turnier-ende') {
+      if (ev.key === 'Enter') {
+        ev.preventDefault();
+        if (ov.phase === 'stat') { ov.phase = 'weiter'; render(); }
+        else { handleAction('ov-next-match', ev.target); }
       } else if (ev.key === 'Backspace') {
         undo(); ev.preventDefault();
       }

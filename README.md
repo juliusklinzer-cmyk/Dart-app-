@@ -213,10 +213,14 @@ geht jederzeit von Hand über die drei Knöpfe über der Eingabe:
 **Tab-Taste** schaltet die Tastatur durch dieselben drei Modi im Kreis.
 Der Turnier-Knopf verschwindet nur, wenn jemand allein spielt.
 
-Rechts unten sitzt **„0 Punkte ▸"**: Wer dreimal am Doppel vorbeiwirft, schließt die
-Aufnahme mit einem Tipp ab, statt dreimal „Miss" zu tippen. Steht schon ein Dart, heißt
-der Knopf **„Weiter ▸"** und übernimmt das Geworfene – die fehlenden Darts werden als
-Fehlwürfe ergänzt, damit die Dart-Zahl und damit der Average stimmen.
+Rechts unten sitzt **„Weiter ▸"**: Er schließt die Aufnahme mit einem Tipp ab und
+füllt die fehlenden Darts als Fehlwürfe auf – wer dreimal am Doppel vorbeiwirft,
+tippt einmal statt dreimal „Miss", und die Dart-Zahl (und damit der Average) stimmt.
+Die laufende Aufnahme steht dabei in **drei großen Kacheln** wie im Finisher: leer zu
+Beginn, jeder eingetragene Dart füllt eine (grün, wenn er den Finish-Vorschlag
+trifft); in Finish-Nähe zeigen die restlichen Kacheln rot den Weg – die
+Finish-Leiste entfällt dort. Unten heißen die Bull-Tasten einheitlich **Bull**
+(25) und **Bull ×2** (50), gelb wie überall.
 
 **Turnier-Modus:** Die Riesenanzeige für den Bildschirm, der vorn am Board hängt.
 In **Liga-Einzeln** öffnet er sich am Board-iPad (das ihn einmal an hatte) von
@@ -233,9 +237,28 @@ beantworten **1/2/3**, das nächste Leg startet **Enter**, und **Shift** gedrüc
 halten zeigt die große Wurfliste (bis 13 Zeilen je Seite). **Tab** schaltet zum
 nächsten Modus weiter (aus dem Turnier-Modus also zurück zu Punkte), **Esc**
 (am Magic Keyboard ohne Esc-Taste auch **⌘+.**) beendet ihn direkt – und er
-überlebt einen Neustart. Auf einem Gerät ohne Tastatur zeigt ein Tipp irgendwo
+überlebt einen Neustart. Das **ganze Einzel läuft über die Tastatur**, und
+alle Anzeigen sind auf die Distanz vom Oche (~3 m) ausgelegt: Spielername,
+Legs und Ø stehen groß in der Karte, die Dialoge sprechen Plakatgröße.
+Nach einem Leg: **Enter** startet das nächste, **Löschen** nimmt die Eingabe
+zurück. Nach dem Einzel erscheint **8 Sekunden groß die Kurzstatistik**
+(Ø, 180er, höchstes Finish beider Spieler) – Enter überspringt –, danach die
+**nächsten Begegnungen in groß** (die anstehende leuchtet); Enter startet
+sie direkt wieder in der Riesenanzeige. Eine eigene Statistik-Seite gibt es
+im Turnier-Modus nicht. Auf einem Gerät ohne Tastatur zeigt ein Tipp irgendwo
 ins Bild für ein paar Sekunden den Knopf **„Turnier-Modus beenden"** – der
 Notausgang, damit niemand ohne Tab und Esc gefangen sitzt.
+
+**Tastgefühl:** Jede gedrückte Taste **blitzt kurz hell auf** – auch bei
+einem 30-Millisekunden-Tipp. So ist am Board immer klar, ob die Eingabe
+angekommen ist; wer eine Taste hält, sieht sie erhellt stehen. Dialoge
+blenden sanft ein statt aufzupoppen (unter 200 ms, bei reduzierter
+Bewegung nur als Farbwechsel).
+
+**Ausbullen ab drei Spielern:** Links stehen alle Namen 🎯, rechts wächst
+die Wurf-Reihenfolge – einfach in der Reihenfolge antippen, in der geworfen
+wird (wer am nächsten am Bull war, zuerst). Der letzte rückt von selbst
+nach, ein Tipp rechts nimmt einen wieder heraus.
 
 **Die Sechzig:** Wirft jemand genau **60**, kommt der Löwe – das 1860-Wappen vor
 blauen Strahlen, darunter „SECHZIG!". In jedem Eingabemodus; fällt die Feier mit

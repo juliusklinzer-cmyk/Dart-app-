@@ -101,6 +101,7 @@
      anderes Bedienelement. Ein Nachtipp dorthin ist ein Fehltipp – aber nur
      an genau dieser Stelle, damit bewusste schnelle Bedienung frei bleibt. */
   var ghostTapUntil = 0;
+  var turnierEndeTimer = null;
   function armGhostTapGuard() { ghostTapUntil = Date.now() + 400; }
   function isGhostTap(ev) {
     /* `detail >= 2` ist die Doppelklick-Zählung des Browsers: zweite
@@ -816,7 +817,23 @@
         m.at = Date.now();
         /* Das Schnelle Spiel ist mit dem Checkout vorbei – danach geht es in
            die Auswertung, nicht zum nächsten Spiel eines Spielplans. */
-        UI.overlay = { type: m.kind === 'quick' ? 'game-done' : 'match-done', pid: pid };
+        if (m.kind !== 'quick' && UI.turnier && turnierErlaubt()) {
+          /* Am Board: 8 Sekunden gross die Statistik des Einzels, dann die
+             naechsten Begegnungen - Enter ueberspringt jederzeit. Ein
+             frueherer Timer (Undo + neuer Checkout) wird weggeraeumt,
+             sonst verkuerzte er die neue Statistik-Anzeige. */
+          UI.overlay = { type: 'turnier-ende', pid: pid, id: m.id, phase: 'stat' };
+          if (turnierEndeTimer) clearTimeout(turnierEndeTimer);
+          turnierEndeTimer = setTimeout(function () {
+            turnierEndeTimer = null;
+            if (UI.overlay && UI.overlay.type === 'turnier-ende' && UI.overlay.phase === 'stat') {
+              UI.overlay.phase = 'weiter';
+              render();
+            }
+          }, 8000);
+        } else {
+          UI.overlay = { type: m.kind === 'quick' ? 'game-done' : 'match-done', pid: pid };
+        }
         /* Im geteilten Turnier steht die Partie sofort bei allen anderen –
            nicht erst, wenn der ganze Abend vorbei ist. */
         if (geteiltesTurnier() && m.kind !== 'quick' && window.DartSync && window.DartSync.turnier) {
@@ -1701,6 +1718,7 @@
       S.game.started = true;
       S.screen = kind === 'cricket' ? 'cricket' : kind === 'rtw' ? 'rtw' : kind === 'finisher' ? 'finisher' : 'game';
     } else {
+      UI.bullReihe = [];
       S.screen = 'bulloff';
     }
     save(); render();
@@ -2819,27 +2837,38 @@
     var ids = forGame ? S.game.players : (currentMatch() ? currentMatch().p : null);
     if (!ids) { S.screen = 'tournament'; render(); return; }
 
-    /* Bei mehr als zwei Spielern gibt der Bull-Wurf nicht nur den Anfänger vor,
-       sondern die ganze Reihenfolge – deshalb hier eine Liste, die sich mit
-       Hoch/Runter in Sekunden sortieren lässt. */
+    /* Bei mehr als zwei Spielern gibt der Bull-Wurf nicht nur den Anfänger
+       vor, sondern die ganze Reihenfolge. Links stehen alle Namen, rechts
+       wächst die Reihenfolge: einfach in Wurf-Reihenfolge antippen - wer
+       am nächsten am Bull war, zuerst. Kein Hoch- und Runterschieben. */
     if (forGame && ids.length > 2) {
-      $('bulloff-sub').textContent = 'Bull werfen und danach sortieren: Wer am nächsten dran war, steht oben.';
+      if (!UI.bullReihe || UI.bullReihe.some(function (id) { return ids.indexOf(id) < 0; })) {
+        UI.bullReihe = [];
+      }
+      var reihe = UI.bullReihe;
+      var offen = ids.filter(function (id) { return reihe.indexOf(id) < 0; });
+      $('bulloff-sub').textContent = 'Alle werfen auf Bull \ud83c\udfaf - dann in Wurf-Reihenfolge antippen: Wer am nächsten dran war, zuerst.';
       $('bulloff-buttons').className = 'bulloff-order';
       $('bulloff-buttons').innerHTML =
-        '<div class="bo-list">' + ids.map(function (pid, i) {
-          var nm = esc(pname(pid));
-          return '<div class="bo-row">' +
-            '<span class="bo-pos">' + (i + 1) + '.</span>' +
-            avatarHTML(profile(pid), 'sm') +
-            '<span class="bo-name">' + nm + '</span>' +
-            '<button class="bo-mv" data-action="order-up" data-id="' + pid + '"' +
-              (i === 0 ? ' disabled' : '') + ' aria-label="' + nm + ' nach oben">▲</button>' +
-            '<button class="bo-mv" data-action="order-down" data-id="' + pid + '"' +
-              (i === ids.length - 1 ? ' disabled' : '') + ' aria-label="' + nm + ' nach unten">▼</button>' +
-            '</div>';
-        }).join('') + '</div>' +
-        '<button class="btn primary full" data-action="start-order">' +
-          esc(pname(ids[0])) + ' beginnt · Los geht\'s</button>';
+        '<div class="bo-spalten">' +
+          '<div class="bo-wahl">' + (offen.map(function (pid) {
+            return '<button data-action="order-pick" data-id="' + pid + '">' +
+              avatarHTML(profile(pid), 'sm') +
+              '<span class="bo-name">' + esc(pname(pid)) + '</span></button>';
+          }).join('') || '<p class="hint">Alle eingereiht.</p>') + '</div>' +
+          '<div class="bo-reihe">' + (reihe.map(function (pid, i) {
+            var nm = esc(pname(pid));
+            return '<button class="bo-row" data-action="order-unpick" data-id="' + pid + '" ' +
+              'aria-label="' + nm + ' wieder herausnehmen">' +
+              '<span class="bo-pos">' + (i + 1) + '.</span>' +
+              avatarHTML(profile(pid), 'sm') +
+              '<span class="bo-name">' + nm + '</span></button>';
+          }).join('') || '<p class="hint">Wer war am nächsten am Bull? Zuerst antippen.</p>') + '</div>' +
+        '</div>' +
+        (offen.length === 0
+          ? '<button class="btn primary full" data-action="start-order">' +
+            esc(pname(reihe[0])) + ' beginnt · Los geht\'s</button>'
+          : '');
       return;
     }
 
@@ -2928,11 +2957,10 @@
     var dartsLeft = mode === 'darts' ? 3 - UI.darts.length : 3;
     var route = ohneFinish ? null : Checkout.suggest(restActive, dartsLeft, lieblingsDoppel(active));
 
-    /* Ab drei Spielern am Handy: solange der Aktive nicht in Finish-Nähe
-       ist, sagt die Leiste nur „noch kein Finish möglich" und stiehlt dem
-       Verlauf die einzige Zeile – dort verschwindet sie dann (per CSS nur
-       am Handy, am iPad bleibt sie stehen). */
-    $('checkout-bar').classList.toggle('fern', m.p.length > 2 && restActive > 170 && !m.done);
+    /* Die Finish-Leiste erscheint erst, wenn beim Aktiven wirklich ein
+       Finish ansteht - vorher ist "noch kein Finish möglich" nur Rauschen
+       und stiehlt dem Verlauf die Zeile. */
+    $('checkout-bar').classList.toggle('fern', !route && !ohneFinish && !m.done);
     $('checkout-bar').classList.toggle('aus', !!ohneFinish);
 
     var whose = esc(spielerName(active));
@@ -2944,6 +2972,43 @@
       $('checkout-bar').innerHTML = restActive > 170
         ? '<span class="none">' + whose + ': noch kein Finish möglich</span>'
         : '<span class="none">' + whose + ': kein Finish mit ' + plural(dartsLeft, 'Dart', 'Darts') + '</span>';
+    }
+
+    /* Einzel-Darts: drei grosse Kacheln wie im Finisher tragen die laufende
+       Aufnahme - leer zu Beginn, jeder eingetragene Dart fuellt eine (gruen,
+       wenn er den Vorschlag trifft). In Finish-Naehe stehen die restlichen
+       Wuerfe rot bzw. als Weg darin; die Leiste darueber entfaellt dann. */
+    var kBox = $('game-kacheln');
+    if (mode === 'darts' && !m.done) {
+      var kacheln = ['', '', ''];
+      var kDbl = ohneFinish ? null : lieblingsDoppel(active);
+      var kRest = remainingIn(leg, active);
+      UI.darts.forEach(function (d, ki) {
+        var soll = null;
+        if (!ohneFinish) {
+          var kEmpf = Checkout.suggest(kRest, 3 - ki, kDbl);
+          /* suggest liefert Labels ('T20') - fuer den Vergleich in
+             Mult/Zahl zerlegen, wie es auch der Finisher macht. */
+          if (kEmpf && kEmpf.length) soll = labelDart(kEmpf[0]);
+        }
+        var traf = soll && d.n === soll.n && d.m === soll.m;
+        kacheln[ki] = '<span class="fk ' + (traf ? 'gut' : 'anders') + '">' +
+          (d.n === 0 ? '–' : dartLabel(d)) + '</span>';
+        kRest -= d.v;
+      });
+      if (route) {
+        for (var kr = 0; kr < route.length && UI.darts.length + kr < 3; kr++) {
+          kacheln[UI.darts.length + kr] = '<span class="fk' + (kr === 0 ? ' jetzt' : '') + '">' +
+            Checkout.pretty(route[kr]) + '</span>';
+        }
+      }
+      for (var kx = 0; kx < 3; kx++) if (!kacheln[kx]) kacheln[kx] = '<span class="fk leer">–</span>';
+      kBox.innerHTML = kacheln.join('');
+      kBox.classList.remove('hidden');
+      /* Die Kacheln tragen den Weg selbst - die Leiste waere doppelt. */
+      $('checkout-bar').classList.add('fern');
+    } else {
+      kBox.classList.add('hidden');
     }
 
     /*
@@ -3092,13 +3157,12 @@
           (prefix ? '<span class="mx">' + prefix + '</span>' : '') + n + '</button>';
       }
       nums += '<button class="miss" data-num="0">Miss</button>';
-      nums += '<button data-num="25" class="' + (hl === '25' ? 'hl' : '') + '">25</button>';
-      nums += '<button class="bull ' + (hl === 'BULL' ? 'hl' : '') + '" data-bull="1">Bull</button>';
+      nums += '<button class="bull ' + (hl === '25' ? 'hl' : '') + '" data-num="25">Bull</button>';
+      nums += '<button class="bull ' + (hl === 'BULL' ? 'hl' : '') + '" data-bull="1">Bull ×2</button>';
       /* Dreimal am Doppel vorbei muss nicht dreimal getippt werden: dieser
          Knopf schließt die Aufnahme ab und füllt die fehlenden Darts als
          Fehlwürfe auf. */
-      nums += '<button class="end-visit wide" data-action="end-visit">' +
-        (UI.darts.length ? 'Weiter ▸' : '0 Punkte ▸') + '</button>';
+      nums += '<button class="end-visit wide" data-action="end-visit">Weiter ▸</button>';
       $('num-grid').innerHTML = nums;
     }
   }
@@ -3567,12 +3631,11 @@
           (prefix ? '<span class="mx">' + prefix + '</span>' : '') + n + '</button>';
       }
       nums += '<button class="miss" data-num="0" data-mult="1">Miss</button>';
-      nums += '<button data-num="25" class="' + (hl === '25' ? 'hl' : '') + '" data-mult="1">25</button>';
-      nums += '<button class="bull ' + (hl === 'BULL' ? 'hl' : '') + '" data-num="25" data-mult="2">Bull</button>';
+      nums += '<button class="bull ' + (hl === '25' ? 'hl' : '') + '" data-num="25" data-mult="1">Bull</button>';
+      nums += '<button class="bull ' + (hl === 'BULL' ? 'hl' : '') + '" data-num="25" data-mult="2">Bull ×2</button>';
       /* Wie im X01: dreimal am Doppel vorbei muss nicht dreimal getippt
          werden – dieser Knopf füllt die Aufnahme mit Fehlwürfen auf. */
-      nums += '<button class="end-visit wide" data-action="fin-end-visit">' +
-        (st.inVisit ? 'Weiter ▸' : '0 Punkte ▸') + '</button>';
+      nums += '<button class="end-visit wide" data-action="fin-end-visit">Weiter ▸</button>';
       $('fin-pad').innerHTML =
         '<div class="mult-row">' +
           '<button data-mult="1" class="' + (UI.mult === 1 ? 'active' : '') + '">Single</button>' +
@@ -4026,8 +4089,11 @@
 
   function renderOverlay() {
     var ov = $('overlay');
-    if (!UI.overlay) { ov.classList.add('hidden'); return; }
+    if (!UI.overlay) { ov.classList.add('hidden'); ov.classList.remove('gross'); return; }
     ov.classList.remove('hidden');
+    /* Im Turnier-Modus sprechen auch die Dialoge Plakatsprache - der
+       Schreiber steht vorn an der Scheibe, gelesen wird vom Oche aus. */
+    ov.classList.toggle('gross', UI.turnier && turnierErlaubt() && S.screen === 'game');
     var o = UI.overlay;
     var html = '';
 
@@ -4045,7 +4111,54 @@
       if (!currentMatch()) { UI.overlay = null; ov.classList.add('hidden'); return; }
     }
 
-    if (o.type === 'leg-done') {
+    if (o.type === 'turnier-ende') {
+      var tm = matchById(o.id) || currentMatch();
+      if (!tm) { UI.overlay = null; ov.classList.add('hidden'); return; }
+      /* Im Ligaspiel sprechen auch die Dialoge mit buergerlichen Namen. */
+      var teName = S.tour && S.tour.liga ? ligaName : pname;
+      if (o.phase === 'stat') {
+        /* Die Kurzstatistik des Einzels - nur das, was am Abend zaehlt. */
+        var teSt = collectStats([{ matches: [tm], start: matchStart(tm) }], tm.p);
+        tm.p.forEach(function (id) { finalize(teSt[id]); });
+        html = '<h3>Spiel an ' + esc(teName(o.pid)) + '</h3>' +
+          '<p class="te-stand">' + esc(teName(tm.p[0])) + ' <b>' + legsWon(tm, tm.p[0]) + ':' +
+            legsWon(tm, tm.p[1]) + '</b> ' + esc(teName(tm.p[1])) + '</p>' +
+          '<div class="te-stat">' + tm.p.map(function (id) {
+            var s = teSt[id];
+            return '<div class="te-spalte' + (id === o.pid ? ' sieger' : '') + '">' +
+              '<div class="te-name">' + esc(teName(id)) + '</div>' +
+              '<div class="te-wert"><span>Ø</span><b>' + (s.darts ? s.avg.toFixed(1) : '–') + '</b></div>' +
+              '<div class="te-wert"><span>180er</span><b>' + s.s180 + '</b></div>' +
+              '<div class="te-wert"><span>Finish</span><b>' + (s.highCO || '–') + '</b></div>' +
+              '</div>';
+          }).join('') + '</div>' +
+          '<p class="te-hint">Enter · weiter</p>';
+      } else {
+        /* Die naechsten Begegnungen, gross - Enter startet die erste. */
+        var offene = S.matches.filter(function (x) { return !x.done && !x.void; }).slice(0, 4);
+        var liga = S.tour && S.tour.liga;
+        if (offene.length) {
+          html = '<h3>Nächste Einzel</h3>' +
+            '<div class="te-next">' + offene.map(function (x, i) {
+              var paar = liga && x.posPaar
+                ? 'H' + (x.posPaar[0] + 1) + ' ' + esc(teName(x.p[0])) + ' – G' + (x.posPaar[1] + 1) + ' ' + esc(teName(x.p[1]))
+                : esc(teName(x.p[0])) + ' – ' + esc(teName(x.p[1]));
+              return '<div class="te-zeile' + (i === 0 ? ' dran' : '') + '">' +
+                (x.scheibe ? '<span class="te-scheibe">' + x.scheibe + '</span>' : '') +
+                '<span>' + paar + '</span></div>';
+            }).join('') + '</div>' +
+            '<button class="btn primary full" data-action="ov-next-match">Nächstes Einzel starten</button>' +
+            '<p class="te-hint">Enter · starten &nbsp;&nbsp; Löschen · letzter Dart zurück</p>';
+        } else {
+          var teD = liga ? ligaStandDaten() : null;
+          html = '<h3>' + (liga ? 'Ligaspiel beendet' : 'Alle Spiele beendet') + '</h3>' +
+            (teD ? '<p class="te-stand">' + esc(LIGA.team) + ' <b>' + teD.wirP + ':' + teD.sieP + '</b> ' +
+              esc(S.tour.liga.gegner) + '</p>' : '') +
+            '<button class="btn primary full" data-action="ov-next-match">Zum Endstand</button>' +
+            '<p class="te-hint">Enter · Endstand</p>';
+        }
+      }
+    } else if (o.type === 'leg-done') {
       var m1 = currentMatch();
       html = '<div class="big-emoji">🎯</div><h3>Leg an ' + esc(pname(o.pid)) + '</h3>' +
         '<p>Stand: ' + legsWon(m1, m1.p[0]) + ':' + legsWon(m1, m1.p[1]) + '</p>' +
@@ -4965,20 +5078,33 @@
         save(); render();
         break;
       }
-      case 'order-up':
-      case 'order-down': {
-        var og = S.game;
-        if (!og || og.started) return;
-        var oi = og.players.indexOf(el.getAttribute('data-id'));
-        var oj = oi + (action === 'order-up' ? -1 : 1);
-        if (oi < 0 || oj < 0 || oj >= og.players.length) return;
-        var swap = og.players[oi]; og.players[oi] = og.players[oj]; og.players[oj] = swap;
-        save(); render();
+      /* Ausbullen ab drei Spielern: antippen reiht ein, der Letzte rueckt
+         von selbst nach (ihn anzutippen waere ein Tipp ohne Entscheidung).
+         Ein Tipp rechts nimmt einen wieder heraus. */
+      case 'order-pick': {
+        var opG = S.game;
+        if (!opG || opG.started) return;
+        var opId = el.getAttribute('data-id');
+        if (!UI.bullReihe) UI.bullReihe = [];
+        if (UI.bullReihe.indexOf(opId) >= 0) return;
+        UI.bullReihe.push(opId);
+        var opRest = opG.players.filter(function (id) { return UI.bullReihe.indexOf(id) < 0; });
+        if (opRest.length === 1) UI.bullReihe.push(opRest[0]);
+        render();
+        break;
+      }
+      case 'order-unpick': {
+        var ouId = el.getAttribute('data-id');
+        if (!UI.bullReihe) return;
+        UI.bullReihe = UI.bullReihe.filter(function (id) { return id !== ouId; });
+        render();
         break;
       }
       case 'start-order': {
         var sg = S.game;
         if (!sg || sg.started) return;
+        if (!UI.bullReihe || UI.bullReihe.length !== sg.players.length) return;
+        sg.players = UI.bullReihe.slice();
         // Siehe pick-starter: die sortierte Reihenfolge muss ins Match.
         if (sg.kind === 'quick') {
           sg.p = sg.players.slice();
@@ -5279,7 +5405,29 @@
   /* ================= Events ================= */
   /* Ein Tipp neben den Dialog schließt ihn – außer dort, wo eine Antwort
      nötig ist (Checkout-Abfrage, Spielende). */
-  var STICKY_OVERLAYS = { 'checkout-darts': 1, 'leg-done': 1, 'match-done': 1, 'game-done': 1 };
+  var STICKY_OVERLAYS = { 'checkout-darts': 1, 'leg-done': 1, 'match-done': 1, 'game-done': 1, 'turnier-ende': 1 };
+  /* Druck-Blitz: jede wirklich gedrueckte Taste leuchtet kurz auf. Als
+     neu gestartete Animation, nicht nur :active - ein 30-ms-Tipp waere
+     sonst unsichtbar, und am Board braucht man die Gewissheit, dass der
+     Tipp angekommen ist. Nur fuer Zeigereingaben; Tastatur-Aktionen
+     (Turnier-Modus) animieren nie. */
+  document.addEventListener('pointerdown', function (ev) {
+    if (!ev.target || !ev.target.closest) return;
+    /* Was der Ghost-Tap-Schutz gleich verwerfen wird, darf auch nicht
+       blitzen - sonst suggeriert das Licht eine Eingabe, die nie zaehlt. */
+    if (Date.now() <= ghostTapUntil && ev.detail >= 2) return;
+    var taste = ev.target.closest('button');
+    if (!taste || taste.disabled) return;
+    taste.classList.remove('blitzt');
+    void taste.offsetWidth;               // Animation von vorn starten
+    taste.classList.add('blitzt');
+  }, { capture: true, passive: true });
+  document.addEventListener('animationend', function (ev) {
+    if (String(ev.animationName).indexOf('tastenblitz') === 0) {
+      ev.target.classList.remove('blitzt');
+    }
+  });
+
   /* Einen Eingabemodus waehlen - per Knopf oder Tab-Taste. Der Turnier-Modus
      überlebt einen Neustart: der Bildschirm hängt am Board und soll nach dem
      Wiederöffnen nicht neu eingestellt werden. Die Einstellung aendert sich
@@ -5376,7 +5524,9 @@
       if (S.screen === 'rtw') { rtwDart(own ? Number(own) : UI.mult, n2); return; }
       if (S.screen === 'finisher') { finisherDart(own ? Number(own) : UI.mult, n2); return; }
       if (n2 === 0) pushDart(1, 0);
-      else if (n2 === 25) pushDart(1, 25);
+      /* Bull kennt nur einfach (25) und doppelt (50) - steht Double oder
+         Triple an, ist das grosse Bull gemeint, nichts wird still verworfen. */
+      else if (n2 === 25) pushDart(UI.mult >= 2 ? 2 : 1, 25);
       else pushDart(UI.mult, n2);
       return;
     }
@@ -5552,6 +5702,14 @@
           UI.overlay = null;
           commitVisit(coScore, anz, true, false);
         }
+      } else if (ev.key === 'Backspace') {
+        undo(); ev.preventDefault();
+      }
+    } else if (ov.type === 'turnier-ende') {
+      if (ev.key === 'Enter') {
+        ev.preventDefault();
+        if (ov.phase === 'stat') { ov.phase = 'weiter'; render(); }
+        else { handleAction('ov-next-match', ev.target); }
       } else if (ev.key === 'Backspace') {
         undo(); ev.preventDefault();
       }
