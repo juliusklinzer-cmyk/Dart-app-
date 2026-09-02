@@ -2627,11 +2627,14 @@ button.blitzt { animation: tastenblitz 240ms var(--ease-out-stark); }
   border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px;
 }
 .te-hint { color: var(--muted); font-size: clamp(1.1rem, 2.8vh, 1.5rem); margin: 2vh 0 0; }
-/* Die per Pfeiltaste gewaehlte Option traegt dasselbe Licht wie die
-   gewaehlte Begegnung. */
-.overlay.gross .btn.wahl {
-  border: 1px solid var(--aktiv-linie);
-  box-shadow: 0 0 26px var(--schein);
+/* Die per Pfeiltaste gewaehlte Option traegt einen blauen Laser-Ring -
+   der ist auf hellen wie dunklen Knoepfen unuebersehbar. */
+.overlay.gross .btn.wahl,
+#screen-bulloff.turnier .bulloff button.wahl,
+.overlay.gross .te-zeile.dran {
+  outline: 3px solid var(--laser);
+  outline-offset: 3px;
+  box-shadow: 0 0 30px var(--schein-stark);
 }
 
 /* Ausbullen ohne Springen: gewaehlte Namen lassen links eine leere

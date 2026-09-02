@@ -4153,7 +4153,11 @@
       var coWahl = UI.turnier && turnierErlaubt() ? Math.min(o.wahl || 0, o.options.length - 1) : -1;
       html = '<h3>Checkout!</h3><p>Mit wie vielen Darts wurde ' + o.score + ' beendet?</p>' +
         '<div class="row-btns">' + o.options.map(function (n, i) {
-          return '<button class="btn primary' + (i === coWahl ? ' wahl' : '') + '" data-action="co-darts" data-n="' + n + '">' + n + '</button>';
+          /* Bei Tastatursteuerung ist NUR der gewaehlte Knopf hell - alle
+             gleich weiss liesse die Wahl unsichtbar. */
+          var coKl = coWahl < 0 ? 'btn primary'
+            : i === coWahl ? 'btn primary wahl' : 'btn ghost';
+          return '<button class="' + coKl + '" data-action="co-darts" data-n="' + n + '">' + n + '</button>';
         }).join('') + '</div>' +
         '<button class="btn ghost full" data-action="ov-cancel">Abbrechen</button>' +
         (coWahl >= 0 ? '<p class="te-hint">1/2/3 direkt &nbsp;&nbsp; ← → · wählen &nbsp;&nbsp; Enter · bestätigen</p>' : '');
@@ -4444,10 +4448,14 @@
       /* Am Board laeuft auch das Spielende ueber die Tastatur: die Pfeile
          waehlen zwischen Statistik und Ruecknahme, Enter bestaetigt. */
       var gdWahl = UI.turnier && turnierErlaubt() ? (o.wahl || 0) : -1;
+      var gdKl = function (i, sonst) {
+        if (gdWahl < 0) return sonst;
+        return i === gdWahl ? 'btn primary full wahl' : 'btn ghost full';
+      };
       html = '<div class="big-emoji">🏆</div><h3>Glückwunsch, ' + esc(pname(o.pid)) + '!</h3>' +
         '<p>' + (S.game ? kindName(S.game.kind) : '') + '</p>' +
-        '<button class="btn primary full' + (gdWahl === 0 ? ' wahl' : '') + '" data-action="open-summary" data-kind="' + (S.game ? S.game.kind : 'cricket') + '" data-id="current">Weiter zur Spielstatistik</button>' +
-        '<button class="btn ghost full' + (gdWahl === 1 ? ' wahl' : '') + '" data-action="undo-game">Letzten Dart zurück</button>' +
+        '<button class="' + gdKl(0, 'btn primary full') + '" data-action="open-summary" data-kind="' + (S.game ? S.game.kind : 'cricket') + '" data-id="current">Weiter zur Spielstatistik</button>' +
+        '<button class="' + gdKl(1, 'btn ghost full') + '" data-action="undo-game">Letzten Dart zurück</button>' +
         (gdWahl >= 0 ? '<p class="te-hint">↑ ↓ · wählen &nbsp;&nbsp; Enter · bestätigen</p>' : '');
     } else if (o.type === 'roster-change') {
       var inTour = tourPlayers();
