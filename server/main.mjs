@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { openDb } from './lib/db.mjs';
 import { sweepExpired } from './lib/session.mjs';
 import { aufraeumen } from './lib/ratelimit.mjs';
+import { aufraeumen as relayAufraeumen } from './lib/relay.mjs';
 import { createApi } from './api.mjs';
 
 const SERVER_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -52,13 +53,18 @@ const TYPEN = {
   '.png': 'image/png',
   '.webp': 'image/webp',
   '.woff2': 'font/woff2',
-  '.ico': 'image/x-icon'
+  '.ico': 'image/x-icon',
+  '.onnx': 'application/octet-stream',
+  '.wasm': 'application/wasm',
+  '.bin': 'application/octet-stream'
 };
 
 /* Was ausgeliefert werden darf. Alles andere im Repo (server/, tests/, .git)
    geht niemanden etwas an. */
 const ERLAUBT = new Set(['index.html', 'manifest.webmanifest', 'sw.js', 'dart-turnier.html']);
-const ERLAUBTE_ORDNER = new Set(['css', 'js', 'icons', 'fonts']);
+// 'modell': CV-Modelle fuer die Kamera-Erkennung -- laedt nur das iPhone
+// als Linse, deshalb nimmt der Service Worker sie ausdruecklich nicht mit.
+const ERLAUBTE_ORDNER = new Set(['css', 'js', 'icons', 'fonts', 'modell']);
 
 function statischerPfad(pfad) {
   const rein = decodeURIComponent(pfad).replace(/\/+$/, '') || '/index.html';
@@ -145,6 +151,7 @@ const putzen = setInterval(function () {
   try {
     sweepExpired(db);
     aufraeumen();
+    relayAufraeumen();
   } catch (e) {
     console.error('Aufraeumen fehlgeschlagen:', e);
   }

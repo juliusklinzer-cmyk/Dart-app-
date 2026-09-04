@@ -11,6 +11,7 @@ import { nextSeq, transaktion, zaehler } from './lib/db.mjs';
 import { hashPassword, verifyPassword, checkPassword } from './lib/password.mjs';
 import * as sess from './lib/session.mjs';
 import * as limit from './lib/ratelimit.mjs';
+import * as relay from './lib/relay.mjs';
 import { sendJson, sendFehler, leseCookies, leseJson, clientIp, HttpFehler } from './lib/http.mjs';
 
 const KINDS = new Set(['501', 'cricket', 'rtw', 'finisher', 'tournament']);
@@ -717,6 +718,90 @@ export function createApi(db, config) {
     return kasseHolen(req, res);
   }
 
+  /* ---------- Kamera-Relay ----------
+     Vermittelt Ereignisse zwischen iPad ("tisch") und iPhone ("linse").
+     Wie ueberall gilt: der Server kennt keine Dart-Regeln. Er prueft nur,
+     dass hier ein plausibles Ereignis steht, und reicht es weiter. */
+
+  const KAMERA_TYPEN = {
+    linse: new Set(['hallo', 'status', 'dart', 'aufnahmeEnde', 'korrektur']),
+    tisch: new Set(['spielstand', 'abgelehnt'])
+  };
+
+  function pruefeRaumCode(code) {
+    if (!/^[A-Z2-9]{6}$/.test(String(code || ''))) {
+      throw new HttpFehler(400, 'Der Raumcode besteht aus 6 Zeichen.');
+    }
+    return code;
+  }
+
+  /* Wer Codes durchprobiert, laeuft ins Limit -- der Code ist das Geheimnis
+     des Raums, also darf Raten nicht billig sein. Ereignisse brauchen dagegen
+     Luft: der Tisch schickt alle 5 s einen Spielstand, dazu jeder Dart --
+     ein Spielabend darf daran nie scheitern. */
+  const KAMERA_LIMITS = { raum: 60, strom: 120, ereignis: 2400 };
+  function kameraLimit(req, was) {
+    const ip = clientIp(req, config.trustProxy);
+    const s = 'kamera-' + was + ':' + ip;
+    const warte = limit.pruefe(s, KAMERA_LIMITS[was], 600e3);
+    if (warte) throw new HttpFehler(429, 'Zu viele Versuche. Bitte ' + warte + ' s warten.');
+    limit.zaehle(s, KAMERA_LIMITS[was], 600e3);
+  }
+
+  async function kameraRaum(req, res) {
+    pruefeHerkunft(req);
+    kameraLimit(req, 'raum');
+    const body = await leseJson(req);
+    const code = pruefeRaumCode(body.code);
+    const token = String(body.token || '');
+    if (!/^[A-Za-z0-9_-]{16,64}$/.test(token)) {
+      throw new HttpFehler(400, 'Das Raum-Token ist unbrauchbar.');
+    }
+    if (!relay.raumAnlegen(code, token)) {
+      throw new HttpFehler(409, 'Dieser Code gehoert schon einem anderen Geraet.');
+    }
+    /* seq: aktueller Stand des Raums, damit der Client sein Wasserzeichen
+       nach einem Server-Neustart zuruecksetzen kann. */
+    sendJson(res, 200, { ok: true, code, seq: relay.raumSeq(code) });
+  }
+
+  /* SSE: ein EventSource kann keine eigenen Header setzen, deshalb hier ohne
+     pruefeHerkunft -- der Raumcode in der URL ist die Eintrittskarte. */
+  async function kameraStrom(req, res, code, url) {
+    kameraLimit(req, 'strom');
+    const rolle = url.searchParams.get('rolle');
+    if (rolle !== 'tisch' && rolle !== 'linse') {
+      throw new HttpFehler(400, 'Die Rolle fehlt (tisch oder linse).');
+    }
+    if (!relay.anhoeren(code, rolle, req, res, url.searchParams.get('ab'))) {
+      throw new HttpFehler(404, 'Diesen Raum gibt es nicht (mehr).');
+    }
+  }
+
+  async function kameraEreignis(req, res, code) {
+    pruefeHerkunft(req);
+    kameraLimit(req, 'ereignis');
+    if (!relay.raumOffen(code)) throw new HttpFehler(404, 'Diesen Raum gibt es nicht (mehr).');
+    const body = await leseJson(req);
+    const von = body.von;
+    if (von !== 'tisch' && von !== 'linse') throw new HttpFehler(400, 'Der Absender fehlt.');
+    const typ = String(body.typ || '');
+    if (!KAMERA_TYPEN[von].has(typ)) throw new HttpFehler(400, 'Dieses Ereignis kennt der Raum nicht.');
+    const daten = body.daten && typeof body.daten === 'object' ? body.daten : {};
+    if (JSON.stringify(daten).length > 4000) throw new HttpFehler(413, 'Das Ereignis ist zu gross.');
+    if (typ === 'dart' || typ === 'korrektur') {
+      const mult = Number(daten.mult), num = Number(daten.num);
+      if (!Number.isInteger(mult) || mult < 1 || mult > 3 ||
+          !Number.isInteger(num) || num < 0 || num > 25 || (num > 20 && num !== 25) ||
+          (num === 25 && mult > 2)) {   // Triple-Bull gibt es nicht
+        throw new HttpFehler(400, 'So einen Dart gibt es nicht.');
+      }
+    }
+    const seq = relay.ereignis(code, von, typ, daten);
+    if (!seq) throw new HttpFehler(404, 'Diesen Raum gibt es nicht (mehr).');
+    sendJson(res, 200, { ok: true, seq });
+  }
+
   /* ---------- Verteiler ---------- */
 
   const TID = '([A-Za-z0-9_-]{4,64})';
@@ -732,6 +817,10 @@ export function createApi(db, config) {
     ['POST', /^\/api\/games$/, spielHochladen],
     ['GET', /^\/api\/games$/, spieleHolen],
     ['DELETE', /^\/api\/games\/([A-Za-z0-9_-]{4,64})$/, spielLoeschen],
+
+    ['POST', /^\/api\/kamera\/raum$/, kameraRaum],
+    ['GET', /^\/api\/kamera\/raum\/([A-Z2-9]{6})\/strom$/, kameraStrom],
+    ['POST', /^\/api\/kamera\/raum\/([A-Z2-9]{6})\/ereignis$/, kameraEreignis],
 
     ['GET', /^\/api\/liga\/zusagen$/, ligaZusagen],
     ['GET', /^\/api\/kasse$/, kasseHolen],

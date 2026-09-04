@@ -537,6 +537,95 @@ async function main() {
     }
     ok(gesperrt, 'nach mehreren Fehlversuchen wird der Login gesperrt');
 
+    console.log('\nKamera-Relay');
+    const RAUM = 'TESTQ2';
+    const TOKEN = 'testtoken12345678';
+    r = await julius.ruf('POST', '/api/kamera/raum', { code: RAUM, token: TOKEN });
+    gleich(r.status, 200, 'das iPad registriert seinen Raum');
+    ok(typeof r.daten.seq === 'number', 'die Antwort traegt den Zaehlerstand des Raums');
+    r = await julius.ruf('POST', '/api/kamera/raum', { code: RAUM, token: TOKEN });
+    gleich(r.status, 200, 'derselbe Raum laesst sich mit dem eigenen Token wiederbeleben');
+    r = await tobi.ruf('POST', '/api/kamera/raum', { code: RAUM, token: 'fremdesToken1234' });
+    gleich(r.status, 409, 'ein fremdes Geraet bekommt den Code nicht');
+    r = await julius.rufOhneHeader('POST', '/api/kamera/raum', { code: RAUM, token: TOKEN });
+    gleich(r.status, 403, 'ohne App-Header wird kein Raum angelegt');
+    r = await julius.ruf('POST', '/api/kamera/raum', { code: 'klein1', token: TOKEN });
+    gleich(r.status, 400, 'Kleinbuchstaben sind kein Raumcode');
+    r = await julius.ruf('POST', '/api/kamera/raum/' + RAUM + '/ereignis',
+      { von: 'linse', typ: 'dart', daten: { mult: 5, num: 20 } });
+    gleich(r.status, 400, 'eine fuenffache 20 gibt es nicht');
+    r = await julius.ruf('POST', '/api/kamera/raum/' + RAUM + '/ereignis',
+      { von: 'linse', typ: 'dart', daten: { mult: 3, num: 25 } });
+    gleich(r.status, 400, 'Triple-Bull gibt es auch nicht');
+    r = await julius.ruf('POST', '/api/kamera/raum/' + RAUM + '/ereignis',
+      { von: 'linse', typ: 'spielstand', daten: {} });
+    gleich(r.status, 400, 'die Linse darf keinen Spielstand melden');
+    r = await julius.ruf('POST', '/api/kamera/raum/FEHLTX/ereignis',
+      { von: 'linse', typ: 'dart', daten: { mult: 3, num: 20 } });
+    gleich(r.status, 404, 'ein unbekannter Raum nimmt nichts an');
+
+    /* SSE: der Tisch lauscht, die Linse meldet eine T20. Gelesen wird ueber
+       den rohen Body-Strom -- genau das tut auch der EventSource im Browser. */
+    const sseLeser = (antwort) => {
+      const leser = antwort.body.getReader();
+      const dec = new TextDecoder();
+      let puffer = '';
+      let leseVorgang = null;
+      return {
+        async bis(muster, ms) {
+          const ende = Date.now() + ms;
+          while (!puffer.includes(muster) && Date.now() < ende) {
+            if (!leseVorgang) leseVorgang = leser.read().catch(() => ({ done: true }));
+            const erg = await Promise.race([
+              leseVorgang,
+              new Promise((res) => setTimeout(() => res(undefined), 200))
+            ]);
+            if (erg === undefined) continue;   // nur der Wecker: weiter warten
+            leseVorgang = null;
+            if (erg.done) break;
+            puffer += dec.decode(erg.value, { stream: true });
+          }
+          return puffer.includes(muster);
+        },
+        get text() { return puffer; }
+      };
+    };
+
+    const ac1 = new AbortController();
+    const strom1 = await fetch(BASIS + '/api/kamera/raum/' + RAUM + '/strom?rolle=tisch', { signal: ac1.signal });
+    gleich(strom1.status, 200, 'der Ereignis-Strom oeffnet');
+    const tisch1 = sseLeser(strom1);
+    ok(await tisch1.bis(': verbunden', 3000), 'und meldet sich');
+    r = await tobi.ruf('POST', '/api/kamera/raum/' + RAUM + '/ereignis',
+      { von: 'linse', typ: 'dart', daten: { mult: 3, num: 20, konfidenz: 1 } });
+    gleich(r.status, 200, 'die Linse meldet eine T20');
+    ok(await tisch1.bis('"typ":"dart"', 3000), 'der Tisch bekommt sie zugestellt');
+    ok(tisch1.text.includes('"mult":3') && tisch1.text.includes('"num":20'),
+      'mit Multiplikator und Feld');
+    ac1.abort();
+
+    /* Neuverbinden nach WLAN-Schluckauf: mit Last-Event-ID kommt Verpasstes
+       aus dem Ringpuffer nach. */
+    const ac2 = new AbortController();
+    const strom2 = await fetch(BASIS + '/api/kamera/raum/' + RAUM + '/strom?rolle=tisch', {
+      headers: { 'Last-Event-ID': '0' }, signal: ac2.signal
+    });
+    const tisch2 = sseLeser(strom2);
+    ok(await tisch2.bis('"typ":"dart"', 3000), 'nach dem Neuverbinden kommt der Dart aus dem Puffer');
+    ac2.abort();
+
+    /* Mit ?ab= (Wasserzeichen des Clients) bleibt schon Verarbeitetes im
+       Puffer - genau der Riegel gegen Doppelbuchung nach einem iPad-Reload. */
+    const ac3 = new AbortController();
+    const strom3 = await fetch(BASIS + '/api/kamera/raum/' + RAUM + '/strom?rolle=tisch&ab=999', { signal: ac3.signal });
+    const tisch3 = sseLeser(strom3);
+    ok(await tisch3.bis(': verbunden', 3000), 'der Strom mit Wasserzeichen oeffnet');
+    ok(!(await tisch3.bis('"typ":"dart"', 1200)), 'liefert den alten Dart aber nicht noch einmal');
+    ac3.abort();
+
+    r = await fetch(BASIS + '/api/kamera/raum/' + RAUM + '/strom');
+    gleich(r.status, 400, 'ohne Rolle gibt es keinen Strom');
+
     console.log('\nStatische Dateien');
     let res = await fetch(BASIS + '/');
     gleich(res.status, 200, 'die App-Seite wird ausgeliefert');
