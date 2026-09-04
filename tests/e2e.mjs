@@ -2604,6 +2604,44 @@ await page.evaluate(() => {
   D.setScreen('setup');
 });
 
+group('GAME-Tab findet zurueck ins Schnelle Spiel');
+/* Der Nav-Handler sprang frueher auf S.game.kind - beim Schnellen Spiel
+   heisst der aber 'quick', diesen Bildschirm gibt es nicht, und die Seite
+   blieb schwarz (gespeichert sogar ueber den Neustart hinweg). */
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  S.game = null; S.matches = []; S.tour = null; S.current = null;
+  S.lineup = D.activeProfiles().filter((p) => !p.gast).slice(0, 2).map((p) => p.id);
+  D.setScreen('setup');
+});
+await page.locator('[data-action="set-mode"][data-value="quick"]').click();
+await page.locator('[data-action="start-game"]').click();
+await bullOffGo();
+check('das Schnelle Spiel laeuft', await visible('#screen-game'));
+await page.evaluate(() => window.__dart.setScreen('players'));
+await page.locator('#players-list .player-card').first().click();
+check('das Profil ist offen', await visible('#screen-profile'));
+await page.locator('#nav [data-screen="setup"]').click();
+check('der GAME-Tab fuehrt zurueck aufs Board', await visible('#screen-game'));
+check('und kein Bildschirm bleibt schwarz', await page.evaluate(() =>
+  !!document.querySelector('.screen.active')));
+/* Selbstheilung: ein kaputt gespeicherter Bildschirmname darf die App nach
+   dem Neustart nicht schwarz lassen. */
+await page.evaluate(() => {
+  window.__dart.state().screen = 'kaputt';
+  window.__dart.save();
+});
+await page.reload();
+check('nach Neustart mit kaputtem Bildschirm laeuft das Spiel weiter',
+  await visible('#screen-game'),
+  await page.evaluate(() => window.__dart.state().screen));
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  S.game = null; S.mode = '501';
+  S.lineup = D.activeProfiles().filter((p) => !p.gast).slice(0, 4).map((p) => p.id);
+  D.setScreen('setup');
+});
+
 group('Ohne Server bleibt es die lokale App');
 /* Aus dem laufenden Cricket zurück ins Setup – dort ist die Navigation
    sichtbar, im Spiel wird sie bewusst ausgeblendet. */

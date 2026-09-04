@@ -5232,7 +5232,9 @@
         var target = el.getAttribute('data-screen');
         // Ein laufendes Spiel führt zurück aufs Board; ein beendetes, noch
         // nicht gespeichertes zeigt sich im Setup als Hinweis-Box.
-        if (target === 'setup' && S.game && !S.game.done) target = S.game.kind;
+        // spielScreen: das Schnelle Spiel heisst 'quick', sein Bildschirm
+        // aber 'game' - der rohe kind-Name liesse die Seite schwarz.
+        if (target === 'setup' && S.game && !S.game.done) target = spielScreen(S.game.kind);
         else if (target === 'setup' && S.matches.length) target = 'tournament';
         S.screen = target;
         save(); render();
@@ -6410,6 +6412,13 @@
   if (!S.matches.length && S.screen === 'tournament') S.screen = 'setup';
   if (S.screen === 'profile' && !UI.profile) S.screen = 'players';
   if (S.screen === 'summary' && !UI.summary) S.screen = S.matches.length ? 'tournament' : 'setup';
+  /* Selbstheilung: steht im gespeicherten Stand ein Bildschirm, den es
+     nicht (mehr) gibt, bliebe die Seite komplett schwarz - dann lieber
+     zurueck auf einen Bildschirm, der sicher existiert. */
+  if (SCREENS.indexOf(S.screen) < 0) {
+    S.screen = S.game && !S.game.done ? spielScreen(S.game.kind) : 'setup';
+    if (SCREENS.indexOf(S.screen) < 0) S.screen = 'setup';
+  }
   render();
 
   if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
