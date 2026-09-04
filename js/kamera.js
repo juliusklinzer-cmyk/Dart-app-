@@ -465,8 +465,11 @@
     '#kamera-linse h2{margin:0 0 4px;font-size:18px}' +
     '#kamera-linse .status{font-size:13px;color:#8fa3b5;margin-bottom:10px}' +
     '#kamera-linse .cam{margin-bottom:12px}' +
-    '#kamera-linse .cam video{width:100%;max-height:48vh;border-radius:12px;background:#000;display:block;' +
-    'object-fit:contain}' +
+    /* Quadratisch in voller Breite: das Hochformat-Bild wird oben und unten
+       beschnitten (nur die Anzeige - die Erkennung sieht weiter alles),
+       so fuellt die Scheibe die Vorschau statt Decke und Boden. */
+    '#kamera-linse .cam video{width:100%;aspect-ratio:1/1;border-radius:12px;background:#000;display:block;' +
+    'object-fit:cover}' +
     '#kamera-linse .zoom{display:flex;align-items:center;gap:10px;margin-top:8px;color:#9fb4c6;font-size:14px}' +
     '#kamera-linse .zoom input{flex:1;accent-color:#2f74c0}' +
     '#kamera-linse .cam .cam-an{width:100%;padding:12px 0;font-size:16px;border-radius:10px;' +
