@@ -115,8 +115,10 @@
   }
   /* turnier: der Turnier-Modus des X01-Bildschirms – Riesenanzeige, Eingabe
      über eine echte Tastatur. Er bleibt über Aufnahmen und Spiele hinweg an,
-     bis jemand zurückschaltet (anders als modeOverride, der je Aufnahme gilt). */
-  var UI = { input: '', darts: [], mult: 1, modeOverride: null, turnier: false, overlay: null, error: '', board: 'won', boardMode: '501', profile: null, summary: null, ligaTab: 'plan', bericht: null };
+     bis jemand zurückschaltet (anders als modeOverride, der je Aufnahme gilt).
+     kamera: ebenso klebrig – die Darts kommen vom gekoppelten iPhone
+     (js/kamera.js), angezeigt wird die Einzel-Darts-Ansicht. */
+  var UI = { input: '', darts: [], mult: 1, modeOverride: null, turnier: false, kamera: false, overlay: null, error: '', board: 'won', boardMode: '501', profile: null, summary: null, ligaTab: 'plan', bericht: null };
 
   /* ================= Helfer ================= */
   function $(id) { return document.getElementById(id); }
@@ -917,7 +919,7 @@
   function pushDart(mult, num) {
     UI.error = '';
     var m = currentMatch();
-    if (!m || m.done || settling()) return;   // beendet oder gerade erst geöffnet
+    if (!m || m.done || settling()) return false;   // beendet oder gerade erst geöffnet
     var leg = activeLeg(m);
     var pid = activePlayer(leg, m);
     var rest = remainingIn(leg, pid) - sum(UI.darts, function (d) { return d.v; });
@@ -933,11 +935,12 @@
 
     if (after < 0 || after === 1 || (after === 0 && mult !== 2)) {
       commitVisit(total, thrown, false, true, UI.darts);
-      return;
+      return true;
     }
-    if (after === 0) { commitVisit(total, thrown, true, false, UI.darts); return; }
-    if (thrown === 3) { commitVisit(total, 3, false, false, UI.darts); return; }
+    if (after === 0) { commitVisit(total, thrown, true, false, UI.darts); return true; }
+    if (thrown === 3) { commitVisit(total, 3, false, false, UI.darts); return true; }
     render();
+    return true;
   }
 
   /* ================= Aufnahme korrigieren =================
@@ -1404,7 +1407,7 @@
 
   function cricketDart(mult, num) {
     var g = S.game;
-    if (!g || g.done || settling()) return;
+    if (!g || g.done || settling()) return false;
     pomp();
     // Bull: 25 zählt eine Marke, Doppel-Bull zwei.
     var m = num === 25 ? (mult === 2 ? 2 : 1) : mult;
@@ -1413,6 +1416,7 @@
     var st = cricketState(g);
     if (st.winner) { g.done = true; g.winner = st.winner; g.at = Date.now(); UI.overlay = { type: 'game-done', pid: st.winner }; }
     save(); render();
+    return true;
   }
 
   /* ================= Round the World ================= */
@@ -1500,9 +1504,9 @@
 
   function rtwDart(mult, num) {
     var g = S.game;
-    if (!g || g.done || settling()) return;
+    if (!g || g.done || settling()) return false;
     // Im Stechen wird nicht mehr eingetragen, sondern entschieden.
-    if (rtwState(g).stechen) return;
+    if (rtwState(g).stechen) return false;
     pomp();
     var m = num === 25 ? (mult === 2 ? 2 : 1) : mult;
     g.throws.push({ n: num, m: num === 0 ? 0 : m });
@@ -1510,6 +1514,7 @@
     var st = rtwState(g);
     if (st.winner) { g.done = true; g.winner = st.winner; g.at = Date.now(); UI.overlay = { type: 'game-done', pid: st.winner }; }
     save(); render();
+    return true;
   }
 
   /* ================= Gemeinsames für beide Modi ================= */
@@ -1649,14 +1654,15 @@
 
   function finisherDart(mult, num) {
     var g = S.game;
-    if (!g || g.kind !== 'finisher' || g.done || settling()) return;
+    if (!g || g.kind !== 'finisher' || g.done || settling()) return false;
     var rd = finisherRunde(g);
-    if (rd.stechen) return;          // erst das Stechen entscheiden
+    if (rd.stechen) return false;    // erst das Stechen entscheiden
     pomp();
     rd.throws.push({ n: num, m: num === 0 ? 0 : mult });
     UI.mult = 1;
     pruefeFinisherRunde(g);
     save(); render();
+    return true;
   }
 
   function pruefeFinisherRunde(g) {
@@ -3153,7 +3159,11 @@
 
     var restActive = remainingIn(leg, active) - pendingSum;
     var mode = effectiveMode(restActive);
-    var dartsLeft = mode === 'darts' ? 3 - UI.darts.length : 3;
+    /* Der Kamera-Modus zeigt die Einzel-Darts-Ansicht: die vom iPhone
+       gemeldeten Darts fuellen dieselben Kacheln, das Tastenfeld bleibt
+       als Handbetrieb sichtbar. Nur der Umschalter markiert "Kamera". */
+    var anzeige = mode === 'kamera' ? 'darts' : mode;
+    var dartsLeft = anzeige === 'darts' ? 3 - UI.darts.length : 3;
     var route = ohneFinish ? null : Checkout.suggest(restActive, dartsLeft, lieblingsDoppel(active));
 
     /* Die Finish-Leiste erscheint erst, wenn beim Aktiven wirklich ein
@@ -3178,7 +3188,7 @@
        wenn er den Vorschlag trifft). In Finish-Naehe stehen die restlichen
        Wuerfe rot bzw. als Weg darin; die Leiste darueber entfaellt dann. */
     var kBox = $('game-kacheln');
-    if (mode === 'darts' && !m.done) {
+    if (anzeige === 'darts' && !m.done) {
       var kacheln = ['', '', ''];
       var kDbl = ohneFinish ? null : lieblingsDoppel(active);
       var kRest = remainingIn(leg, active);
@@ -3282,7 +3292,7 @@
       }).join('');
     }
 
-    $('visit-darts').classList.toggle('hidden', mode !== 'darts');
+    $('visit-darts').classList.toggle('hidden', anzeige !== 'darts');
     $('visit-darts').innerHTML = [0, 1, 2].map(function (i) {
       var d = UI.darts[i];
       return '<div class="d ' + (d ? '' : 'empty') + '">' + (d ? dartLabel(d) : '–') + '</div>';
@@ -3293,17 +3303,19 @@
       var bm = b.getAttribute('data-mode');
       b.classList.toggle('active', bm === mode);
       if (bm === 'turnier') b.classList.toggle('hidden', !turnierErlaubt());
+      /* Kamera gibt es nur, wenn die optionale Schicht (js/kamera.js) da ist. */
+      if (bm === 'kamera') b.classList.toggle('hidden', !window.DartKamera);
     });
-    $('pad-total').classList.toggle('hidden', mode !== 'total');
-    $('pad-darts').classList.toggle('hidden', mode !== 'darts');
-    $('pad-key').classList.toggle('hidden', mode !== 'turnier');
+    $('pad-total').classList.toggle('hidden', anzeige !== 'total');
+    $('pad-darts').classList.toggle('hidden', anzeige !== 'darts');
+    $('pad-key').classList.toggle('hidden', anzeige !== 'turnier');
     /* Der Turnier-Modus stellt den ganzen Bildschirm um: Reste in
        Plakatgröße, kein Verlauf – das regelt das CSS über diese Klasse.
        Beim Verlassen klappt auch eine offene Wurflisten-Ansicht zu. */
     $('screen-game').classList.toggle('turnier', mode === 'turnier');
     if (mode !== 'turnier') $('screen-game').classList.remove('verlauf');
 
-    if (mode === 'turnier') {
+    if (anzeige === 'turnier') {
       /* Links und rechts der Eingabe stehen die Aufnahmen des laufenden Legs
          je Spieler auf seiner Seite, neueste oben – die letzte auch noch mal
          direkt in der Spielerkarte. */
@@ -3329,7 +3341,7 @@
          und sobald Ziffern da sind, stehen nur die Ziffern. */
       $('key-display').innerHTML = UI.input === ''
         ? '<span class="cursor"></span>' : esc(UI.input);
-    } else if (mode === 'total') {
+    } else if (anzeige === 'total') {
       $('quick-row').innerHTML = '<button class="miss" data-quick="0">0 Pkt</button>' +
         QUICK_SCORES.map(function (q) { return '<button data-quick="' + q + '">' + q + '</button>'; }).join('');
       var disp = $('score-display');
@@ -3374,6 +3386,7 @@
 
   function effectiveMode(rest) {
     if (UI.turnier && turnierErlaubt()) return 'turnier';
+    if (UI.kamera && window.DartKamera) return 'kamera';
     if (UI.modeOverride) return UI.modeOverride;
     var t = S.settings.dartModeFrom;
     return (t > 0 && rest <= t) ? 'darts' : 'total';
@@ -5978,13 +5991,34 @@
      zwischen Punkte und Einzel-Darts laesst das Board-Gedaechtnis in Ruhe. */
   function waehleEingabemodus(neuerModus) {
     if (neuerModus === 'turnier' && !turnierErlaubt()) return;
+    if (neuerModus === 'kamera' && !window.DartKamera) return;
     var turnierVorher = UI.turnier;
+    var kameraVorher = UI.kamera;
     UI.turnier = neuerModus === 'turnier';
-    UI.modeOverride = UI.turnier ? null : neuerModus;
+    UI.kamera = neuerModus === 'kamera';
+    UI.modeOverride = UI.turnier || UI.kamera ? null : neuerModus;
     if (UI.turnier) S.settings.turnierModus = 1;
     else if (turnierVorher) { S.settings.turnierModus = 0; UI.input = ''; }
+    /* Die Kamera-Schicht koppelt bzw. trennt sich, wenn ihr Modus kommt
+       oder geht - app.js kennt nur den Schalter. */
+    if (window.DartKamera && UI.kamera !== kameraVorher) window.DartKamera.modus(UI.kamera);
     UI.error = '';
     save(); render();
+  }
+
+  /* Ein einzelner Dart, egal woher (Board-Tastenfeld, Tastatur, künftig
+     Kamera): je nach Bildschirm die passende Buchung. Bull kennt nur einfach
+     (25) und doppelt (50) - steht Double oder Triple an, ist das grosse Bull
+     gemeint, nichts wird still verworfen. Gibt zurueck, ob gebucht wurde -
+     falsch heisst: falscher Bildschirm, Spiel vorbei oder Schonfrist. */
+  function spielDart(mult, num) {
+    if (S.screen === 'cricket') return cricketDart(mult, num);
+    if (S.screen === 'rtw') return rtwDart(mult, num);
+    if (S.screen === 'finisher') return finisherDart(mult, num);
+    if (S.screen !== 'game') return false;
+    if (num === 0) return pushDart(1, 0);
+    if (num === 25) return pushDart(mult >= 2 ? 2 : 1, 25);
+    return pushDart(mult, num);
   }
 
   /* Turnier-Modus ohne Hardware-Tastatur: ein Tipp irgendwo ins Bild zeigt
@@ -6057,20 +6091,13 @@
     if (mult) { UI.mult = Number(mult.getAttribute('data-mult')); render(); return; }
 
     var bull = ev.target.closest('[data-bull]');
-    if (bull) { pushDart(2, 25); return; }
+    if (bull) { spielDart(2, 25); return; }
 
     var num = ev.target.closest('[data-num]');
     if (num) {
       var n2 = Number(num.getAttribute('data-num'));
       var own = num.getAttribute('data-mult');
-      if (S.screen === 'cricket') { cricketDart(own ? Number(own) : UI.mult, n2); return; }
-      if (S.screen === 'rtw') { rtwDart(own ? Number(own) : UI.mult, n2); return; }
-      if (S.screen === 'finisher') { finisherDart(own ? Number(own) : UI.mult, n2); return; }
-      if (n2 === 0) pushDart(1, 0);
-      /* Bull kennt nur einfach (25) und doppelt (50) - steht Double oder
-         Triple an, ist das grosse Bull gemeint, nichts wird still verworfen. */
-      else if (n2 === 25) pushDart(UI.mult >= 2 ? 2 : 1, 25);
-      else pushDart(UI.mult, n2);
+      spielDart(own ? Number(own) : UI.mult, n2);
       return;
     }
   });
@@ -6164,6 +6191,7 @@
       ev.preventDefault();
       var mFolge = ['total', 'darts'];
       if (turnierErlaubt()) mFolge.push('turnier');
+      if (window.DartKamera) mFolge.push('kamera');
       var mJetzt = mFolge.indexOf(UI.letzterModus) >= 0 ? UI.letzterModus : 'total';
       waehleEingabemodus(mFolge[(mFolge.indexOf(mJetzt) + 1) % mFolge.length]);
       return;
@@ -6416,6 +6444,7 @@
       cricketDart: cricketDart,
       rtwDart: rtwDart,
       finisherDart: finisherDart,
+      spielDart: spielDart,
       pressKey: pressKey,
       submitTotal: submitTotal,
       undo: undo,

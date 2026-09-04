@@ -174,7 +174,13 @@ async function main() {
 
   try {
     await warteAufServer(proc);
-    browser = await chromium.launch(fs.existsSync(preinstalled) ? { executablePath: preinstalled } : {});
+    /* Die Fake-Kamera von Chromium liefert ein Testbild - so laesst sich die
+       Kamera-Vorschau der Linse ohne echte Hardware pruefen. */
+    const start = {
+      args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream']
+    };
+    if (fs.existsSync(preinstalled)) start.executablePath = preinstalled;
+    browser = await chromium.launch(start);
 
     const julius = await geraet(browser, 'Julius');
     const tobi = await geraet(browser, 'Tobi');
@@ -851,6 +857,152 @@ async function main() {
     check('und es zaehlt in seiner Karriere',
       tobiCar2[tobiId] && tobiCar2[tobiId].cricketGames === 3,
       String(tobiCar2[tobiId] && tobiCar2[tobiId].cricketGames));
+
+    /*
+     * Kamera-Kopplung: Julius' iPad schaltet in den Kamera-Modus, Tobis
+     * Geraet spielt das iPhone am Stativ (Fern-Eingabe, spaeter echte
+     * Kamera-Erkennung). Zwei echte Browser-Kontexte, echter Server,
+     * echtes SSE -- genau der Weg eines Spielabends.
+     */
+    group('Kamera-Kopplung: iPhone als Fern-Eingabe');
+    await julius.page.evaluate(() => {
+      const D = window.__dart, S = D.state();
+      S.game = null; S.matches = []; S.tour = null; S.current = null;
+      S.lineup = D.activeProfiles().slice(0, 2).map((p) => p.id);
+      S.mode = '501'; S.settings.start = 501; S.settings.bestOf = 1;
+      D.setScreen('setup');
+    });
+    await julius.page.locator('[data-action="start-game"]').click();
+    await julius.page.locator('#schedule .match-row .go:not(.wo)').first().click();
+    await julius.page.locator('#bulloff-buttons [data-action="pick-starter"]').first().click();
+    check('der Kamera-Knopf ist mit Server sichtbar',
+      await julius.page.locator('#mode-toggle [data-mode="kamera"]').isVisible());
+    await julius.page.locator('#mode-toggle [data-mode="kamera"]').click();
+    await julius.page.waitForSelector('#kamera-dialog .code', { timeout: 10000 });
+    const kameraCode = (await julius.page.locator('#kamera-dialog .code').innerText()).trim();
+    check('der Koppel-Dialog zeigt einen 6er-Code', /^[A-Z2-9]{6}$/.test(kameraCode), kameraCode);
+    await julius.page.locator('[data-kamera="dialog-zu"]').click();
+
+    await tobi.page.evaluate(() => window.DartKamera.linse(''));
+    await tobi.page.locator('#kamera-code').fill(kameraCode);
+    await tobi.page.locator('[data-kamera="verbinden"]').click();
+    await tobi.page.waitForSelector('#kamera-linse .grid', { timeout: 10000 });
+    check('das iPhone zeigt die Fern-Eingabe', true);
+
+    await tobi.page.locator('[data-kamera="mult"][data-m="3"]').click();
+    await tobi.page.locator('[data-kamera="dart"][data-n="20"]').click();
+    let dartKam = true;
+    await julius.page.waitForFunction(() => {
+      const u = window.__dart.ui();
+      return u.darts.length === 1 && u.darts[0].v === 60;
+    }, null, { timeout: 10000 }).catch(() => { dartKam = false; });
+    check('die T20 vom iPhone steht auf dem iPad', dartKam);
+
+    let standKam = true;
+    await tobi.page.waitForFunction(() => {
+      const el = document.querySelector('#kamera-linse .rest');
+      return el && el.textContent === '441';
+    }, null, { timeout: 10000 }).catch(() => { standKam = false; });
+    check('das iPhone zeigt den neuen Rest 441', standKam);
+
+    /* Der Chip auf dem iPad weiss, dass die Linse dran ist. */
+    check('der Status-Chip meldet das iPhone verbunden',
+      (await julius.page.locator('#kamera-chip').innerText()).includes('verbunden'));
+
+    /* Ein offener Dialog blockiert Kamera-Darts genauso wie Fingertipps -
+       sonst wuerde ein Phantom-Dart ins gerade gewonnene Leg gebucht. */
+    await julius.page.evaluate(() => { window.__dart.ui().overlay = { type: 'test-riegel' }; });
+    await tobi.page.locator('[data-kamera="dart"][data-n="5"]').click();
+    let abgelehnt = true;
+    await tobi.page.waitForFunction(() => {
+      const n = document.querySelector('#kamera-linse .notiz');
+      return n && n.textContent.length > 0;
+    }, null, { timeout: 10000 }).catch(() => { abgelehnt = false; });
+    check('bei offenem Dialog lehnt das iPad ab und die Linse erfaehrt es', abgelehnt);
+    check('gebucht wurde dabei nichts',
+      (await julius.page.evaluate(() => window.__dart.ui().darts.length)) === 1);
+    await julius.page.evaluate(() => { window.__dart.ui().overlay = null; });
+
+    /* Unsichere Erkennung (niedrige oder fehlende Konfidenz) bucht nie. */
+    await tobi.page.evaluate((code) => fetch('/api/kamera/raum/' + code + '/ereignis', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Darts-App': '1' },
+      body: JSON.stringify({ von: 'linse', typ: 'dart', daten: { mult: 3, num: 19, konfidenz: 0.4 } })
+    }), kameraCode);
+    await tobi.page.evaluate((code) => fetch('/api/kamera/raum/' + code + '/ereignis', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Darts-App': '1' },
+      body: JSON.stringify({ von: 'linse', typ: 'dart', daten: { mult: 3, num: 19 } })
+    }), kameraCode);
+    await julius.page.waitForTimeout(1200);
+    check('niedrige und fehlende Konfidenz werden nicht gebucht',
+      (await julius.page.evaluate(() => window.__dart.ui().darts.length)) === 1);
+
+    /* Kamera-Modus aus und wieder an: die Ringpuffer-Nachlieferung darf den
+       laengst gebuchten Dart nicht noch einmal buchen (Wasserzeichen). */
+    await julius.page.locator('#mode-toggle [data-mode="darts"]').click();
+    await julius.page.locator('#mode-toggle [data-mode="kamera"]').click();
+    await julius.page.waitForSelector('#kamera-dialog .code', { timeout: 10000 });
+    await julius.page.locator('[data-kamera="dialog-zu"]').click();
+    await julius.page.waitForTimeout(1500);
+    check('nach Aus- und Einschalten wird nichts doppelt gebucht',
+      (await julius.page.evaluate(() => window.__dart.ui().darts.length)) === 1);
+
+    /* Kamera-Vorschau: die Fake-Kamera des Browsers liefert ein Testbild. */
+    await tobi.page.locator('[data-kamera="kamera-an"]').click();
+    let bildDa = true;
+    await tobi.page.waitForFunction(() => {
+      const v = document.getElementById('kamera-video');
+      return v && v.videoWidth > 0;
+    }, null, { timeout: 10000 }).catch(() => { bildDa = false; });
+    check('die Kamera-Vorschau zeigt ein Bild', bildDa);
+
+    /* Erkennung: laedt lazy nach und verlangt zuerst eine Kalibrierung. Die
+       Fake-Kamera liefert nur ein Testbild - Darts erkennen kann sie nicht,
+       aber Homographie und Wertung lassen sich exakt pruefen. */
+    await tobi.page.locator('[data-kamera="cv-an"]').click();
+    let cvDa = true;
+    await tobi.page.waitForFunction(() => !!window.DartLinse, null, { timeout: 10000 })
+      .catch(() => { cvDa = false; });
+    check('die Erkennung (linse-cv.js) laedt nach', cvDa);
+    let kalibDa = true;
+    await tobi.page.waitForSelector('#linse-kalib', { timeout: 10000 }).catch(() => { kalibDa = false; });
+    check('ohne gemerkte Kalibrierung oeffnet die Kalibrier-Ansicht', kalibDa);
+
+    const mathe = await tobi.page.evaluate(() => {
+      const I = window.DartLinse._intern;
+      /* Synthetische Kamera: verschoben, skaliert, leicht verzerrt. Die
+         Homographie muss das exakt zurueckrechnen. */
+      const px = (p) => ({ x: 400 + 1.5 * p.x + 0.2 * p.y, y: 300 - 1.4 * p.y + 0.1 * p.x });
+      const H = I.homographie(I.KALIB.map(px), I.KALIB);
+      const w = (mm) => { const b = px(mm); return I.wertung(I.anwenden(H, b.x, b.y)); };
+      return {
+        t20: w({ x: 0, y: 103 }),
+        d3: w({ x: 0, y: -166 }),
+        bull: w({ x: 1, y: -2 }),
+        s11: w({ x: -120, y: 0 }),
+        miss: w({ x: 0, y: 195 })
+      };
+    });
+    check('T20 oben wird als Triple 20 gewertet', mathe.t20.mult === 3 && mathe.t20.num === 20,
+      JSON.stringify(mathe.t20));
+    check('unten aussen ist Doppel 3', mathe.d3.mult === 2 && mathe.d3.num === 3, JSON.stringify(mathe.d3));
+    check('die Mitte ist Doppel-Bull', mathe.bull.mult === 2 && mathe.bull.num === 25);
+    check('links auf Bull-Hoehe liegt die 11', mathe.s11.mult === 1 && mathe.s11.num === 11,
+      JSON.stringify(mathe.s11));
+    check('weit draussen ist Miss', mathe.miss.num === 0);
+    await tobi.page.evaluate(() => window.DartLinse.stop());
+
+    /* Trennen und aufraeumen -- die App bleibt danach die normale App. */
+    await tobi.page.locator('[data-kamera="linse-zu"]').click();
+    await julius.page.locator('#mode-toggle [data-mode="darts"]').click();
+    check('der Chip verschwindet mit dem Kamera-Modus',
+      await julius.page.locator('#kamera-chip').isHidden());
+    await julius.page.evaluate(() => {
+      const D = window.__dart, S = D.state();
+      S.game = null; S.matches = []; S.tour = null; S.current = null;
+      D.setScreen('setup');
+    });
 
     group('Fehlerfreiheit');
     const alleFehler = julius.fehlerLog.concat(tobi.fehlerLog, lenas.fehlerLog);

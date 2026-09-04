@@ -2536,6 +2536,74 @@ await page.evaluate(() => {
   D.setScreen('setup');
 });
 
+group('spielDart bucht in jedem Modus');
+/* Die zentrale Weiche fuer alle Dart-Quellen (Board-Tasten, Tastatur,
+   kuenftig Kamera): je Bildschirm die passende Buchung, die Rueckgabe sagt,
+   ob gebucht wurde. */
+check('auf dem Setup-Bildschirm wird nichts gebucht',
+  (await page.evaluate(() => window.__dart.spielDart(3, 20))) === false);
+/* X01 */
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  S.game = null; S.matches = []; S.tour = null; S.current = null;
+  S.lineup = D.activeProfiles().filter((p) => !p.gast).slice(0, 2).map((p) => p.id);
+  S.mode = '501'; S.settings.start = 501; S.settings.bestOf = 1;
+  D.setScreen('setup');
+});
+await page.locator('[data-action="start-game"]').click();
+await page.locator('#schedule .match-row .go:not(.wo)').first().click();
+await page.locator('#bulloff-buttons [data-action="pick-starter"]').first().click();
+await page.waitForTimeout(200);   // Schonfrist nach dem Start verstreichen lassen
+check('spielDart bucht die T20 im X01', await page.evaluate(() =>
+  window.__dart.spielDart(3, 20) === true &&
+  window.__dart.ui().darts.length === 1 && window.__dart.ui().darts[0].v === 60));
+check('Triple aufs Bull heisst grosses Bull (50)', await page.evaluate(() =>
+  window.__dart.spielDart(3, 25) === true && window.__dart.ui().darts[1].v === 50));
+/* Cricket */
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  S.game = null; S.matches = []; S.tour = null; S.current = null;
+  D.setScreen('setup');
+});
+await page.locator('[data-action="set-mode"][data-value="cricket"]').click();
+await page.locator('[data-action="start-game"]').click();
+await bullOffGo();
+await page.waitForTimeout(200);
+check('spielDart bucht im Cricket', await page.evaluate(() =>
+  window.__dart.spielDart(3, 20) === true &&
+  window.__dart.game().throws.length === 1 && window.__dart.game().throws[0].m === 3));
+/* Round the World */
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  S.game = null; D.setScreen('setup');
+});
+await page.locator('[data-action="set-mode"][data-value="rtw"]').click();
+await page.locator('[data-action="start-game"]').click();
+await bullOffGo();
+await page.waitForTimeout(200);
+check('spielDart bucht im Round the World', await page.evaluate(() =>
+  window.__dart.spielDart(1, 1) === true && window.__dart.game().throws.length === 1));
+/* Finisher */
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  S.game = null; D.setScreen('setup');
+});
+await page.locator('[data-action="set-mode"][data-value="finisher"]').click();
+await page.locator('[data-action="start-game"]').click();
+await bullOffGo();
+await page.waitForTimeout(200);
+check('spielDart bucht im Finisher', await page.evaluate(() =>
+  window.__dart.spielDart(1, 0) === true &&
+  window.__dart.finisherRunde().throws.length === 1));
+/* Aufraeumen: die folgenden Gruppen rechnen mit vier Spielern im 501. */
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  S.game = null; S.matches = []; S.tour = null; S.current = null;
+  S.mode = '501';
+  S.lineup = D.activeProfiles().filter((p) => !p.gast).slice(0, 4).map((p) => p.id);
+  D.setScreen('setup');
+});
+
 group('Ohne Server bleibt es die lokale App');
 /* Aus dem laufenden Cricket zurück ins Setup – dort ist die Navigation
    sichtbar, im Spiel wird sie bewusst ausgeblendet. */

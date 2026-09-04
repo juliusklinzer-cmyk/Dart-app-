@@ -30,6 +30,8 @@ const css = read('css/styles.css')
   // angezeigt wird.
   .replace(/url\('\.\.\/icons\/([^']+)'\)/g,
     (_, datei) => "url('" + einbetten('icons/' + datei, 'image/webp') + "')");
+// js/kamera.js bleibt bewusst draussen: die Kamera-Kopplung braucht den
+// Server als Vermittler - in der Einzeldatei gaebe es nur einen toten Knopf.
 const js = [read('js/sound.js'), read('js/checkout.js'), read('js/app.js')]
   // Ohne Nachbardateien gibt es keinen Service Worker zu registrieren.
   .join('\n')

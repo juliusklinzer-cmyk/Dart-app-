@@ -1,5 +1,5 @@
 /* Offline-Cache für die App-Shell. Bei Änderungen CACHE hochzählen. */
-var CACHE = 'dart-turnier-v60';
+var CACHE = 'dart-turnier-v61';
 var ASSETS = [
   './',
   './index.html',
@@ -9,6 +9,7 @@ var ASSETS = [
   './js/sound.js',
   './js/auth.js',
   './js/sync.js',
+  './js/kamera.js',
   './manifest.webmanifest',
   './icons/icon-192.webp',
   './icons/sehnsucht.webp',
@@ -41,7 +42,12 @@ self.addEventListener('fetch', function (e) {
      Abmelden die alte Antwort von /api/me zurück und der Spielabgleich
      bekäme veraltete Daten – abgesehen davon, dass fremde Spielstände
      nichts im Offline-Cache verloren haben. */
-  if (new URL(e.request.url).pathname.indexOf('/api/') === 0) return;
+  var pfad = new URL(e.request.url).pathname;
+  if (pfad.indexOf('/api/') === 0) return;
+  /* Die CV-Modelle (mehrere MB, nur fuers iPhone als Linse) gehoeren nicht
+     in den Offline-Cache jedes iPads - und die Erkennung selbst auch nicht:
+     der Catch-all wuerde ihr offline sonst index.html als "Skript" liefern. */
+  if (pfad.indexOf('/modell/') === 0 || pfad.indexOf('linse-cv.js') >= 0) return;
 
   e.respondWith(
     caches.match(e.request).then(function (hit) {
