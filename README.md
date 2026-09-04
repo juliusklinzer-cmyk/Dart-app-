@@ -353,15 +353,20 @@ im Spiel wie am iPad selbst, inklusive aller Prüfungen und Undo. Läuft in alle
 Modi (X01, Cricket, Round the World, Finisher).
 
 **Kamera-Erkennung (erste Stufe):** Auf dem iPhone **Kamera einschalten** (der
-Bildschirm bleibt per Wake Lock an – Ladekabel empfohlen), dann **Erkennung
-starten**. Beim ersten Mal werden die vier Doppel-Außenkanten (20/1, 6/10, 3/19,
-11/14) angetippt; ein grünes Gitter zeigt sofort, ob die Kalibrierung sitzt.
-Danach erkennt die Linse Einschläge per Differenzbild: Kamera fest ausrichten
-(frontal, leicht seitlich versetzt, ~1 m, gleichmäßiges Licht – Ringlicht ideal)
-und das Board beim Start frei lassen. Unsicher Erkanntes (nah am Draht, seltsamer
-Fleck) bucht das iPad **nicht** automatisch, sondern meldet es ans iPhone – dann
-von Hand nachtragen. Nach dem Ziehen der Darts erkennt die Linse das leere Board
-und meldet das Aufnahme-Ende. Wandert das Stativ, **Neu kalibrieren** antippen.
+Bildschirm bleibt per Wake Lock an – Ladekabel empfohlen). Bietet das Gerät
+echten Kamera-Zoom an, erscheint unter dem Bild ein **Zoom-Regler** – so füllt
+das Board auch aus größerem Abstand das Bild. Dann **Erkennung starten**: Die
+Linse sucht die Scheibe **selbst** – die rot/grünen Ringe verraten Umriss und
+Drehung – und legt ein grünes Gitter darüber; ein Tipp auf **Passt** genügt.
+Nur wenn Licht oder Winkel nicht mitspielen, fällt sie auf das Antippen der vier
+Doppel-Außenkanten zurück. Danach erkennt sie Einschläge per Differenzbild:
+Kamera fest ausrichten (frontal, leicht seitlich versetzt, ~1 m, gleichmäßiges
+Licht – Ringlicht ideal) und das Board beim Start frei lassen. Unsicher
+Erkanntes (nah am Draht, seltsamer Fleck) bucht das iPad **nicht** automatisch,
+sondern meldet es ans iPhone – dann von Hand nachtragen. Nach dem Ziehen der
+Darts erkennt die Linse das leere Board und meldet das Aufnahme-Ende. Wandert
+das Stativ oder ändert sich der Zoom, kalibriert sie sich neu – ein
+„Passt"-Tipp, fertig.
 
 Diese Stufe ist bewusst ohne Maschinenlernen gebaut (null Zusatz-Download); an
 den 8-mm-Ringen wird sie sich irren. Der ↺-Button und die Zeilen-Korrektur

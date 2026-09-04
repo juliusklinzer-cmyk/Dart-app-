@@ -991,6 +991,76 @@ async function main() {
     check('links auf Bull-Hoehe liegt die 11', mathe.s11.mult === 1 && mathe.s11.num === 11,
       JSON.stringify(mathe.s11));
     check('weit draussen ist Miss', mathe.miss.num === 0);
+
+    /* Automatische Board-Erkennung: der Ellipsen-Fit muss eine bekannte
+       Ellipse exakt zurueckrechnen - Grundlage der Auto-Kalibrierung. */
+    const auto = await tobi.page.evaluate(() => {
+      const I = window.DartLinse._intern;
+      // gedrehte Ellipse: Mitte (400,300), Halbachsen 210/180, 20 Grad
+      const a = 210, b = 180, w = 20 * Math.PI / 180;
+      const pts = [];
+      for (let i = 0; i < 60; i++) {
+        const t = i / 60 * 2 * Math.PI;
+        const ex = a * Math.cos(t), ey = b * Math.sin(t);
+        pts.push({
+          x: 400 + ex * Math.cos(w) - ey * Math.sin(w),
+          y: 300 + ex * Math.sin(w) + ey * Math.cos(w)
+        });
+      }
+      const ell = I.passeEllipse(pts);
+      if (!ell) return null;
+      // Probe: ein Boardpunkt am Doppelring (170 mm) muss wieder auf der
+      // Ellipse landen - Abstand des rueckgerechneten Punkts zur Punktwolke.
+      const p = I.boardZuBild(ell, 0, 9, 170);
+      const nah = Math.min(...pts.map((q) => Math.hypot(q.x - p.x, q.y - p.y)));
+      return { cx: ell.cx, cy: ell.cy, rMin: ell.rMin, rMax: ell.rMax, nah };
+    });
+    check('der Ellipsen-Fit findet Mittelpunkt und Achsen',
+      auto && Math.abs(auto.cx - 400) < 1 && Math.abs(auto.cy - 300) < 1 &&
+      Math.abs(auto.rMax - 210) < 2 && Math.abs(auto.rMin - 180) < 2,
+      JSON.stringify(auto));
+    check('ein Boardpunkt landet wieder auf der Ellipse', auto && auto.nah < 12,
+      auto && String(auto.nah));
+
+    /* Die ganze Auto-Kalibrierung an einer kuenstlichen Scheibe: rot/gruene
+       Ringe, 10 Grad geneigt (Ellipse), Board 4 Grad verdreht - die
+       Erkennung muss alle vier Kalibrierpunkte samt Drehung wiederfinden. */
+    const autoVoll = await tobi.page.evaluate(() => {
+      const I = window.DartLinse._intern;
+      const b = 800, h = 600;
+      const maske = new Uint8Array(b * h);
+      const cx = 400, cy = 290, phi = 4 * Math.PI / 180, neig = 10 * Math.PI / 180;
+      const M = [[Math.cos(neig) * 230, -Math.sin(neig) * 200],
+                 [Math.sin(neig) * 230, Math.cos(neig) * 200]];
+      const bildpunkt = (grad, rMm) => {
+        const t = grad * Math.PI / 180 + phi;
+        const u = [Math.sin(t), -Math.cos(t)];
+        const s = rMm / 170;
+        return {
+          x: cx + s * (M[0][0] * u[0] + M[0][1] * u[1]),
+          y: cy + s * (M[1][0] * u[0] + M[1][1] * u[1])
+        };
+      };
+      for (let th = 0; th < 360; th += 0.1) {
+        const farbe = Math.floor(((th + 9) % 360) / 18) % 2 === 0 ? 1 : 2;
+        for (const [von, bis] of [[162, 170], [99, 107]]) {
+          for (let r = von; r <= bis; r += 0.5) {
+            const p = bildpunkt(th, r);
+            const x = Math.round(p.x), y = Math.round(p.y);
+            if (x >= 0 && y >= 0 && x < b && y < h) maske[y * b + x] = farbe;
+          }
+        }
+      }
+      const erg = I.autoAusMaske({ maske, b, h });
+      if (!erg) return null;
+      const fehler = [9, 99, 189, 279].map((g, i) => {
+        const soll = bildpunkt(g, 170);
+        return Math.hypot(erg.punkte[i].x - soll.x, erg.punkte[i].y - soll.y);
+      });
+      return { fehler: fehler.map((f) => Math.round(f * 10) / 10), guete: erg.guete };
+    });
+    check('die Auto-Erkennung findet die Scheibe samt Drehung',
+      autoVoll && Math.max(...autoVoll.fehler) < 8, JSON.stringify(autoVoll));
     await tobi.page.evaluate(() => window.DartLinse.stop());
 
     /* Trennen und aufraeumen -- die App bleibt danach die normale App. */

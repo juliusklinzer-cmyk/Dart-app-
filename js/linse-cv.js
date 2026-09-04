@@ -357,15 +357,207 @@
     if (cb && cb.status) cb.status(text);
   }
 
+  /* ================= Automatische Board-Erkennung =================
+     Statt vier Punkte muehsam anzutippen, findet die Linse das Board selbst:
+     Doppel- und Triple-Ring sind rot/gruen - alle farbigen Pixel zusammen
+     zeichnen den Umriss des Doppelrings nach. Daran wird eine Ellipse
+     gepasst (Mittelpunkt + Form), und der Rot/Gruen-Wechsel alle 18 Grad
+     verraet die Drehung. Einzige Annahme: die 20 haengt oben und die Kamera
+     ist nicht staerker als ~18 Grad verdreht - auf dem Stativ immer wahr.
+     Das Antippen bleibt als Ausweg, wenn Licht oder Board nicht mitspielen. */
+
+  function farbBild() {
+    var b = ANALYSE_BREIT;
+    var h = Math.round(b * video.videoHeight / video.videoWidth) || 1;
+    aCanvas.width = b; aCanvas.height = h;
+    aCtx.drawImage(video, 0, 0, b, h);
+    var d = aCtx.getImageData(0, 0, b, h).data;
+    var maske = new Uint8Array(b * h);   // 0 nichts, 1 rot, 2 gruen
+    for (var i = 0, j = 0; j < maske.length; i += 4, j++) {
+      var r = d[i], g = d[i + 1], bl = d[i + 2];
+      if (r > 70 && r > 1.35 * g && r > 1.35 * bl) maske[j] = 1;
+      else if (g > 50 && g > 1.2 * r && g > 1.2 * bl) maske[j] = 2;
+    }
+    return { maske: maske, b: b, h: h };
+  }
+
+  /* Ellipse durch Punkte, kleinste Quadrate ueber die Kegelschnittform
+     Ax^2+Bxy+Cy^2+Dx+Ey=1. Vorher auf Schwerpunkt/Streuung normiert, sonst
+     ist das Gleichungssystem bei Pixelkoordinaten schlecht konditioniert.
+     Ergebnis: Mittelpunkt + symmetrische 2x2-Matrix M, die den Einheitskreis
+     auf die Ellipse abbildet. */
+  function passeEllipse(pts) {
+    var n = pts.length, i;
+    if (n < 12) return null;
+    var cx0 = 0, cy0 = 0;
+    for (i = 0; i < n; i++) { cx0 += pts[i].x; cy0 += pts[i].y; }
+    cx0 /= n; cy0 /= n;
+    var s0 = 0;
+    for (i = 0; i < n; i++) s0 += Math.sqrt((pts[i].x - cx0) * (pts[i].x - cx0) + (pts[i].y - cy0) * (pts[i].y - cy0));
+    s0 = s0 / n || 1;
+
+    var NTN = [], NTb = [0, 0, 0, 0, 0], zi, zj;
+    for (i = 0; i < 5; i++) NTN.push([0, 0, 0, 0, 0]);
+    for (i = 0; i < n; i++) {
+      var x = (pts[i].x - cx0) / s0, y = (pts[i].y - cy0) / s0;
+      var zeile = [x * x, x * y, y * y, x, y];
+      for (zi = 0; zi < 5; zi++) {
+        NTb[zi] += zeile[zi];
+        for (zj = 0; zj < 5; zj++) NTN[zi][zj] += zeile[zi] * zeile[zj];
+      }
+    }
+    var v = loese(NTN, NTb);
+    if (!v) return null;
+    var A = v[0], B = v[1], C = v[2], Dk = v[3], E = v[4], F = -1;
+    var det = 4 * A * C - B * B;
+    if (det <= 1e-9) return null;                       // kein geschlossener Kegelschnitt
+    var mx = (B * E - 2 * C * Dk) / det;
+    var my = (B * Dk - 2 * A * E) / det;
+    var Fc = F + (Dk * mx + E * my) / 2;
+    if (-Fc <= 0) return null;
+    var N00 = A / -Fc, N01 = B / 2 / -Fc, N11 = C / -Fc;
+    var tr2 = (N00 + N11) / 2;
+    var dd = Math.sqrt((N00 - N11) * (N00 - N11) / 4 + N01 * N01);
+    var l1 = tr2 + dd, l2 = tr2 - dd;
+    if (l2 <= 1e-12) return null;
+    var a1 = 1 / Math.sqrt(l1), a2 = 1 / Math.sqrt(l2);   // Halbachsen (normiert)
+    var ex = N01, ey = l1 - N00;                          // Eigenvektor zu l1
+    var el = Math.sqrt(ex * ex + ey * ey);
+    if (el < 1e-9) { ex = 1; ey = 0; } else { ex /= el; ey /= el; }
+    /* M = V diag(a1,a2) V^T, dann zurueck in Pixel skalieren. */
+    var m00 = (ex * ex * a1 + ey * ey * a2) * s0;
+    var m01 = (ex * ey * (a1 - a2)) * s0;
+    var m11 = (ey * ey * a1 + ex * ex * a2) * s0;
+    var rMin = Math.min(a1, a2) * s0, rMax = Math.max(a1, a2) * s0;
+    return {
+      cx: cx0 + mx * s0, cy: cy0 + my * s0,
+      m00: m00, m01: m01, m10: m01, m11: m11,
+      rMin: rMin, rMax: rMax
+    };
+  }
+
+  /* Board-Koordinate (Winkel ab 12 Uhr, Radius in mm) -> Bildpunkt, ueber
+     die gepasste Ellipse plus Drehung phi. Das y-Minus ist der Wechsel von
+     Board-y (nach oben) zu Bild-y (nach unten). */
+  function boardZuBild(ell, phiGrad, thetaGrad, rMm) {
+    var t = (thetaGrad + phiGrad) * Math.PI / 180;
+    var ux = Math.sin(t), uy = -Math.cos(t);
+    var s = rMm / RINGE.doubleOut;
+    return {
+      x: ell.cx + s * (ell.m00 * ux + ell.m01 * uy),
+      y: ell.cy + s * (ell.m10 * ux + ell.m11 * uy)
+    };
+  }
+
+  /* Drehung finden: rund um Doppel- und Triple-Ring muss rot/gruen im
+     18-Grad-Takt zum Sektormuster passen (20er-Sektor = rot). */
+  function phaseFinden(fb, ell) {
+    var beste = null, besteWert = 0;
+    for (var phi = -18; phi < 18; phi += 0.5) {
+      var passt = 0, gesamt = 0;
+      for (var theta = 0; theta < 360; theta += 2) {
+        var erwartet = (Math.floor(((theta + 9) % 360) / 18) % 2 === 0) ? 1 : 2;
+        for (var ri = 0; ri < 2; ri++) {
+          var p = boardZuBild(ell, phi, theta, ri === 0 ? 103 : 166);
+          var px = p.x | 0, py = p.y | 0;
+          if (px < 0 || py < 0 || px >= fb.b || py >= fb.h) continue;
+          var wert = fb.maske[py * fb.b + px];
+          if (!wert) continue;
+          gesamt++;
+          passt += wert === erwartet ? 1 : -1;
+        }
+      }
+      if (gesamt < 120) continue;                        // Ringe kaum getroffen
+      var quote = passt / gesamt;
+      if (beste === null || quote > besteWert) { beste = phi; besteWert = quote; }
+    }
+    /* 0.5 heisst: klar mehr Treffer als Fehltreffer - darunter ist es
+       geraten, und geraten kalibrieren wir nicht. */
+    if (beste === null || besteWert < 0.5) return null;
+    return { phi: beste, guete: besteWert };
+  }
+
+  function autoErkennen() {
+    if (!video || !video.videoWidth) return null;
+    return autoAusMaske(farbBild());
+  }
+
+  /* Vom Kamerabild getrennt, damit die Pipeline auch mit einer kuenstlich
+     gezeichneten Scheibe pruefbar ist (tests/konto.mjs). */
+  function autoAusMaske(fb) {
+    var xs = [], ys = [], i, x, y;
+    for (y = 0; y < fb.h; y += 2) {
+      for (x = 0; x < fb.b; x += 2) if (fb.maske[y * fb.b + x]) { xs.push(x); ys.push(y); }
+    }
+    if (xs.length < 400) return null;                    // kaum Farbe im Bild
+
+    /* Ausreisser (rotes Plakat, Kleidung) abschuetteln: den Schwerpunkt
+       suchen und alles weit Draussenliegende zweimal wegschneiden. */
+    var cx = 0, cy = 0;
+    for (var runde = 0; runde < 3; runde++) {
+      cx = 0; cy = 0;
+      for (i = 0; i < xs.length; i++) { cx += xs[i]; cy += ys[i]; }
+      cx /= xs.length; cy /= xs.length;
+      if (runde === 2) break;
+      var radien = [];
+      for (i = 0; i < xs.length; i++) radien.push(Math.sqrt((xs[i] - cx) * (xs[i] - cx) + (ys[i] - cy) * (ys[i] - cy)));
+      var sortiert = radien.slice().sort(function (a, b) { return a - b; });
+      var grenze = sortiert[Math.floor(sortiert.length * 0.88)] * 1.35;
+      var nx = [], ny = [];
+      for (i = 0; i < xs.length; i++) if (radien[i] <= grenze) { nx.push(xs[i]); ny.push(ys[i]); }
+      xs = nx; ys = ny;
+      if (xs.length < 400) return null;
+    }
+
+    /* Je Winkel-Fach der aeusserste farbige Pixel = Aussenkante Doppelring. */
+    var F = 72;
+    var randR = new Array(F).fill(0), randP = new Array(F).fill(null);
+    for (i = 0; i < xs.length; i++) {
+      var w = Math.atan2(ys[i] - cy, xs[i] - cx);
+      var fach = (Math.floor((w / (2 * Math.PI)) * F) % F + F) % F;
+      var r = Math.sqrt((xs[i] - cx) * (xs[i] - cx) + (ys[i] - cy) * (ys[i] - cy));
+      if (r > randR[fach]) { randR[fach] = r; randP[fach] = { x: xs[i], y: ys[i] }; }
+    }
+    /* Faecher, die deutlich aus der Reihe tanzen (uebersehener Ausreisser
+       oder Luecke), fliegen raus - der Median der Nachbarn entscheidet. */
+    var kanten = [];
+    for (i = 0; i < F; i++) {
+      if (!randP[i]) continue;
+      var nachbarn = [];
+      for (var o = -3; o <= 3; o++) { var idx = (i + o + F) % F; if (randR[idx]) nachbarn.push(randR[idx]); }
+      nachbarn.sort(function (a, b) { return a - b; });
+      var median = nachbarn[nachbarn.length >> 1];
+      if (Math.abs(randR[i] - median) <= median * 0.2) kanten.push(randP[i]);
+    }
+    if (kanten.length < 44) return null;
+
+    var ell = passeEllipse(kanten);
+    if (!ell) return null;
+    if (ell.rMin < 60 || ell.rMin / ell.rMax < 0.5) return null;   // zu klein oder zu schraeg
+    if (ell.cx < 0 || ell.cy < 0 || ell.cx > fb.b || ell.cy > fb.h) return null;
+
+    var phase = phaseFinden(fb, ell);
+    if (!phase) return null;
+
+    var punkte4 = [9, 99, 189, 279].map(function (g) {
+      return boardZuBild(ell, phase.phi, g, RINGE.doubleOut);
+    });
+    return { punkte: punkte4, guete: phase.guete };
+  }
+
   /* ================= Kalibrier-Ansicht ================= */
 
   var kalibDiv = null;
   var kalibVideo = null;
   var kalibCanvas = null;
-  var kalibPunkte = [];   // in Videopixeln
+  var kalibPunkte = [];      // in Videopixeln
+  var kalibModus = 'auto';   // 'auto' erkennt selbst, 'hand' laesst tippen
+  var kalibHinweis = '';
 
   function kalibrierUi() {
     kalibPunkte = [];
+    kalibModus = 'auto';
+    kalibHinweis = '';
     if (!kalibDiv) {
       kalibDiv = document.createElement('div');
       kalibDiv.id = 'linse-kalib';
@@ -382,8 +574,10 @@
         '<canvas id="linse-kalib-canvas" style="position:absolute;inset:0;width:100%;height:100%"></canvas>' +
       '</div>' +
       '<div style="display:flex;gap:10px;padding:12px 14px">' +
+        '<button id="linse-kalib-modus" style="flex:1;padding:12px;border-radius:10px;border:1px solid #33475c;' +
+          'background:#1a2632;color:#dfe9f2;font-size:15px"></button>' +
         '<button id="linse-kalib-zurueck" style="flex:1;padding:12px;border-radius:10px;border:1px solid #33475c;' +
-          'background:#1a2632;color:#dfe9f2;font-size:15px">Punkt zur&uuml;ck</button>' +
+          'background:#1a2632;color:#dfe9f2;font-size:15px"></button>' +
         '<button id="linse-kalib-ok" style="flex:1;padding:12px;border-radius:10px;border:0;' +
           'background:#2f74c0;color:#fff;font-size:15px" disabled>Passt</button>' +
       '</div>';
@@ -393,18 +587,43 @@
     if (abspielen && abspielen.catch) abspielen.catch(function () { /* ok */ });
     kalibCanvas = document.getElementById('linse-kalib-canvas');
     kalibCanvas.addEventListener('click', kalibTipp);
+    document.getElementById('linse-kalib-modus').addEventListener('click', function () {
+      if (kalibModus === 'hand') { kalibModus = 'auto'; autoVersuch(); }
+      else { kalibModus = 'hand'; kalibPunkte = []; kalibHinweis = ''; kalibZeichnen(); }
+    });
     document.getElementById('linse-kalib-zurueck').addEventListener('click', function () {
-      kalibPunkte.pop();
-      kalibZeichnen();
+      if (kalibModus === 'hand') { kalibPunkte.pop(); kalibZeichnen(); }
+      else autoVersuch();
     });
     document.getElementById('linse-kalib-ok').addEventListener('click', kalibFertig);
+    kalibZeichnen();
+    /* Kurz warten, bis das Vorschaubild steht, dann selbst suchen. */
+    setTimeout(autoVersuch, 400);
+  }
+
+  /* Automatisch erkennen; klappt es nicht, bleibt das Tippen. Die gefundenen
+     Punkte gehen durch exakt denselben Weg wie von Hand getippte - das
+     Gitter zur Kontrolle und der "Passt"-Knopf sind dieselben. */
+  function autoVersuch() {
+    if (kalibModus !== 'auto') return;
+    kalibHinweis = '';
+    var erg = null;
+    try { erg = autoErkennen(); } catch (e) { erg = null; }
+    if (erg && video.videoWidth) {
+      var f = video.videoWidth / ANALYSE_BREIT;
+      kalibPunkte = erg.punkte.map(function (p) { return { x: p.x * f, y: p.y * f }; });
+    } else {
+      kalibPunkte = [];
+      kalibModus = 'hand';
+      kalibHinweis = 'Board nicht sicher erkannt (Licht? Abstand?) - bitte die 4 Punkte antippen.';
+    }
     kalibZeichnen();
   }
 
   /* Tipp auf das Bild -> Videopixel. Das Video liegt mit object-fit:contain
      im Rahmen, also erst den schwarzen Rand herausrechnen. */
   function kalibTipp(ev) {
-    if (kalibPunkte.length >= 4) return;
+    if (kalibModus !== 'hand' || kalibPunkte.length >= 4) return;
     var r = kalibCanvas.getBoundingClientRect();
     var vw = kalibVideo.videoWidth, vh = kalibVideo.videoHeight;
     if (!vw || !vh) return;
@@ -413,17 +632,28 @@
     var x = (ev.clientX - r.left - dx) / skala;
     var y = (ev.clientY - r.top - dy) / skala;
     if (x < 0 || y < 0 || x > vw || y > vh) return;
+    kalibHinweis = '';
     kalibPunkte.push({ x: x, y: y });
     kalibZeichnen();
   }
 
   function kalibZeichnen() {
     var text = document.getElementById('linse-kalib-text');
-    if (kalibPunkte.length < 4) {
+    if (kalibHinweis) {
+      text.textContent = kalibHinweis;
+    } else if (kalibModus === 'auto') {
+      text.textContent = kalibPunkte.length === 4
+        ? 'Board erkannt - sitzt das gruene Gitter? Dann "Passt".'
+        : 'Board wird gesucht...';
+    } else if (kalibPunkte.length < 4) {
       text.textContent = 'Tippe Punkt ' + (kalibPunkte.length + 1) + ' von 4: ' + KALIB_TEXT[kalibPunkte.length];
     } else {
       text.textContent = 'Sitzt das Gitter auf dem Board? Sonst "Punkt zurueck".';
     }
+    var modusKnopf = document.getElementById('linse-kalib-modus');
+    var zurueckKnopf = document.getElementById('linse-kalib-zurueck');
+    if (modusKnopf) modusKnopf.textContent = kalibModus === 'hand' ? 'Automatisch' : 'Von Hand';
+    if (zurueckKnopf) zurueckKnopf.textContent = kalibModus === 'hand' ? 'Punkt zurueck' : 'Nochmal suchen';
     document.getElementById('linse-kalib-ok').disabled = kalibPunkte.length < 4;
 
     var r = kalibCanvas.getBoundingClientRect();
@@ -559,6 +789,9 @@
       kalibrierUi();
     },
     /* Fuer Tests und die spaetere Modell-Stufe. */
-    _intern: { homographie: homographie, anwenden: anwenden, wertung: wertung, KALIB: KALIB }
+    _intern: {
+      homographie: homographie, anwenden: anwenden, wertung: wertung, KALIB: KALIB,
+      passeEllipse: passeEllipse, boardZuBild: boardZuBild, autoAusMaske: autoAusMaske
+    }
   };
 })();

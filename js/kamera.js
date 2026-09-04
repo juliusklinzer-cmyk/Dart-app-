@@ -176,6 +176,7 @@
       medien = s;
       kameraFehler = '';
       wachhalten();
+      zoomEinrichten();
       zeichne();
     }).catch(function (e) {
       kameraFehler = e && e.name === 'NotAllowedError'
@@ -190,10 +191,57 @@
       medien.getTracks().forEach(function (t) { t.stop(); });
       medien = null;
     }
+    zoomInfo = null;
     if (wach) {
       try { wach.release(); } catch (e) { /* war schon frei */ }
       wach = null;
     }
+  }
+
+  /* ================= Zoom =================
+     Neuere iPhones stehen mit der Standardlinse recht weit weg vom Board -
+     wo der Browser echten Kamera-Zoom anbietet, gibt es einen Regler. Nach
+     einer Zoom-Aenderung stimmt die Kalibrierung nicht mehr; sie wird
+     verworfen und (laeuft die Erkennung) gleich neu angestossen - dank
+     automatischer Board-Erkennung ist das nur ein "Passt"-Tipp. */
+
+  var zoomInfo = null;
+  var zoomWert = 1;
+
+  function zoomEinrichten() {
+    zoomInfo = null;
+    var spur = medien && medien.getVideoTracks()[0];
+    if (!spur || !spur.getCapabilities) return;
+    var kann = spur.getCapabilities();
+    if (!kann.zoom || !(kann.zoom.max > kann.zoom.min)) return;
+    zoomInfo = {
+      min: kann.zoom.min,
+      max: Math.min(kann.zoom.max, 6),
+      schritt: kann.zoom.step || 0.1
+    };
+    var gemerkt = NaN;
+    try { gemerkt = Number(localStorage.getItem(SCHLUESSEL + '-zoom')); } catch (e) { /* egal */ }
+    if (gemerkt >= zoomInfo.min && gemerkt <= zoomInfo.max) {
+      zoomWert = gemerkt;
+      zoomAnwenden(gemerkt);
+    } else {
+      var stand = spur.getSettings ? spur.getSettings() : {};
+      zoomWert = typeof stand.zoom === 'number' ? stand.zoom : zoomInfo.min;
+    }
+  }
+
+  function zoomAnwenden(wert) {
+    zoomWert = wert;
+    var spur = medien && medien.getVideoTracks()[0];
+    if (!spur) return;
+    spur.applyConstraints({ advanced: [{ zoom: wert }] }).catch(function () { /* Linse mag nicht */ });
+    try { localStorage.setItem(SCHLUESSEL + '-zoom', String(wert)); } catch (e) { /* egal */ }
+  }
+
+  function zoomFertig() {
+    /* Regler losgelassen: alte Kalibrierung passt nicht mehr zum Bild. */
+    try { localStorage.removeItem('dart-turnier-linse-v1'); } catch (e) { /* egal */ }
+    if (cvAktiv && window.DartLinse) window.DartLinse.kalibrieren();
   }
 
   function wachhalten() {
@@ -417,7 +465,10 @@
     '#kamera-linse h2{margin:0 0 4px;font-size:18px}' +
     '#kamera-linse .status{font-size:13px;color:#8fa3b5;margin-bottom:10px}' +
     '#kamera-linse .cam{margin-bottom:12px}' +
-    '#kamera-linse .cam video{width:100%;max-height:32vh;border-radius:12px;background:#000;display:block}' +
+    '#kamera-linse .cam video{width:100%;max-height:48vh;border-radius:12px;background:#000;display:block;' +
+    'object-fit:contain}' +
+    '#kamera-linse .zoom{display:flex;align-items:center;gap:10px;margin-top:8px;color:#9fb4c6;font-size:14px}' +
+    '#kamera-linse .zoom input{flex:1;accent-color:#2f74c0}' +
     '#kamera-linse .cam .cam-an{width:100%;padding:12px 0;font-size:16px;border-radius:10px;' +
     'border:1px dashed #33475c;background:#121b25;color:#9fb4c6}' +
     '#kamera-linse .cam-hinweis{font-size:12px;color:#7d93a8;margin-top:4px}' +
@@ -552,6 +603,20 @@
         var abspielen = v.play();
         if (abspielen && abspielen.catch) abspielen.catch(function () { /* Autoplay-Zicken */ });
       }
+      /* Der Zoom-Regler lebt ausserhalb des Klick-Handlers: waehrend des
+         Ziehens nur anwenden und Anzeige nachfuehren (kein zeichne(), sonst
+         springt der Regler unterm Finger weg), erst beim Loslassen die
+         Kalibrierung erneuern. */
+      var z = document.getElementById('kamera-zoom');
+      if (z) {
+        z.oninput = function () {
+          var wert = Number(this.value);
+          zoomAnwenden(wert);
+          var anzeige = document.getElementById('kamera-zoom-wert');
+          if (anzeige) anzeige.innerHTML = wert.toFixed(1) + '&times;';
+        };
+        z.onchange = zoomFertig;
+      }
     } else {
       linse.classList.add('hidden');
       linse.innerHTML = '';
@@ -614,6 +679,11 @@
         (kameraFehler ? '<div class="cam-hinweis warn">' + esc(kameraFehler) + '</div>' : '');
     } else {
       cam = '<video id="kamera-video" playsinline muted autoplay></video>' +
+        (zoomInfo
+          ? '<div class="zoom">🔍 <input id="kamera-zoom" type="range" min="' + zoomInfo.min +
+            '" max="' + zoomInfo.max + '" step="' + zoomInfo.schritt + '" value="' + zoomWert + '">' +
+            '<span id="kamera-zoom-wert">' + zoomWert.toFixed(1) + '&times;</span></div>'
+          : '') +
         '<div class="cam-zeile">' +
           (cvAktiv
             ? '<button data-kamera="cv-kalib">Neu kalibrieren</button>' +
