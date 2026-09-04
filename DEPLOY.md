@@ -111,6 +111,14 @@ Belegt sind derzeit: `app`, `caddy` (Wirtschaftln) · `api`, `web`, `fg-api`,
 Bei einem Syntaxfehler behält Caddy die alte Konfiguration – trotzdem vorher
 `caddy validate` laufen lassen, das kostet zwei Sekunden.
 
+**SSE (Kamera-Kopplung)**: `/api/kamera/.../strom` ist ein Dauerstrom
+(Server-Sent Events). Caddy puffert `text/event-stream` von Haus aus nicht,
+und der Server schickt alle 25 s ein Lebenszeichen gegen Idle-Timeouts.
+Sollte die Kopplung hinter dem Proxy trotzdem abreißen, im Site-Block
+`reverse_proxy` ein `flush_interval -1` ergänzen. Beim nächsten Deploy einmal
+real prüfen: iPhone koppeln und ~2 Minuten warten – die Verbindung muss
+stehen bleiben.
+
 **Speicher**: Wirtschaftln hat in seiner Compose-Datei **kein** Limit gesetzt,
 läuft also unbegrenzt. Darts ist auf 200 MB gedeckelt und kann folglich nicht
 derjenige sein, der die Kiste vollmacht. Zusammen mit dem Firmengolf-Staging

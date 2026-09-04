@@ -238,10 +238,11 @@ liegt (Standard: ab 170, in den Einstellungen auf 100/180/nie änderbar). Dann w
 Dart für Dart eingegeben: Single/Double/Triple wählen, Zahl tippen – plus `25`,
 `Bull` und `Miss`. Die Tasten behalten dabei die Feldzahl (18 bleibt 18) und
 bekommen ein kleines D bzw. T davor, damit das Zielfeld erkennbar bleibt. Umschalten
-geht jederzeit von Hand über die drei Knöpfe über der Eingabe:
-**Punkte / Einzel-Darts / Turnier** – direkt anklickbar, und mit der
-**Tab-Taste** schaltet die Tastatur durch dieselben drei Modi im Kreis.
-Der Turnier-Knopf verschwindet nur, wenn jemand allein spielt.
+geht jederzeit von Hand über die Knöpfe über der Eingabe:
+**Punkte / Einzel-Darts / Turnier / Kamera** – direkt anklickbar, und mit der
+**Tab-Taste** schaltet die Tastatur durch dieselben Modi im Kreis.
+Der Turnier-Knopf verschwindet nur, wenn jemand allein spielt; der
+Kamera-Knopf erscheint nur mit Server (siehe [Kamera-Kopplung](#kamera-kopplung-linse)).
 
 Rechts unten sitzt **„Weiter ▸"**: Er schließt die Aufnahme mit einem Tipp ab und
 füllt die fehlenden Darts als Fehlwürfe auf – wer dreimal am Doppel vorbeiwirft,
@@ -331,6 +332,41 @@ betroffene Zeile: Der Wert lässt sich direkt korrigieren, solange das Leg damit
 schlüssig bleibt.
 
 **Tastatur (am Laptop):** Ziffern, `Enter` = OK, `Backspace` = löschen, `z` = Undo.
+
+## Kamera-Kopplung (Linse)
+
+Der vierte Eingabemodus: ein **iPhone auf dem Stativ vor dem Board** meldet die
+Würfe, das iPad bucht sie. Es fließen nur winzige JSON-Ereignisse über den eigenen
+Server (nie Video), deshalb gibt es den Kamera-Knopf nur, wenn die App vom Server
+läuft – die Einzeldatei und GitHub Pages bleiben unverändert.
+
+**Koppeln:** Im Spiel den Modus **Kamera** wählen – das iPad zeigt einen
+6-stelligen Code. Auf dem iPhone dieselbe Adresse im Safari öffnen (nicht als
+Homescreen-App – dort ist der Kamerazugriff auf iOS wackelig), unten im Setup
+**„Dieses Gerät als Kamera / Fern-Eingabe koppeln"** antippen und den Code
+eintippen. Die Kopplung überlebt Server-Neustarts und WLAN-Schluckauf: verpasste
+Würfe kommen aus einem Puffer nach, doppelt zugestellte werden aussortiert.
+
+**Fern-Eingabe (heute):** Das iPhone zeigt groß, wer dran ist, den Rest und die
+laufende Aufnahme – und ein Dart-Tastenfeld. Jeder Tipp landet über denselben Weg
+im Spiel wie am iPad selbst, inklusive aller Prüfungen und Undo. Läuft in allen
+Modi (X01, Cricket, Round the World, Finisher).
+
+**Kamera-Erkennung (erste Stufe):** Auf dem iPhone **Kamera einschalten** (der
+Bildschirm bleibt per Wake Lock an – Ladekabel empfohlen), dann **Erkennung
+starten**. Beim ersten Mal werden die vier Doppel-Außenkanten (20/1, 6/10, 3/19,
+11/14) angetippt; ein grünes Gitter zeigt sofort, ob die Kalibrierung sitzt.
+Danach erkennt die Linse Einschläge per Differenzbild: Kamera fest ausrichten
+(frontal, leicht seitlich versetzt, ~1 m, gleichmäßiges Licht – Ringlicht ideal)
+und das Board beim Start frei lassen. Unsicher Erkanntes (nah am Draht, seltsamer
+Fleck) bucht das iPad **nicht** automatisch, sondern meldet es ans iPhone – dann
+von Hand nachtragen. Nach dem Ziehen der Darts erkennt die Linse das leere Board
+und meldet das Aufnahme-Ende. Wandert das Stativ, **Neu kalibrieren** antippen.
+
+Diese Stufe ist bewusst ohne Maschinenlernen gebaut (null Zusatz-Download); an
+den 8-mm-Ringen wird sie sich irren. Der ↺-Button und die Zeilen-Korrektur
+bleiben deshalb Teil des Spiels – und liefern nebenbei die Trainingsdaten für
+die spätere Modell-Stufe.
 
 ## Spielabschluss
 
@@ -487,7 +523,9 @@ Datenmodell gehoben.
 | `js/app.js` | Turnier-, Cricket- und RTW-Logik, Statistik, Rendering, Persistenz |
 | `js/auth.js` | *optional:* Anmelden, Roster, Zuordnung alter Profile |
 | `js/sync.js` | *optional:* Warteschlange, Hoch- und Runterladen von Spielen |
-| `server/` | *optional:* Node + SQLite – Accounts und geteilte Historie |
+| `js/kamera.js` | *optional:* Kamera-Kopplung – iPhone als Linse, iPad bucht (SSE) |
+| `js/linse-cv.js` | *optional:* die Erkennung selbst – Kalibrierung, Differenzbild, Wertung |
+| `server/` | *optional:* Node + SQLite – Accounts, geteilte Historie, Kamera-Relay |
 | `sw.js`, `manifest.webmanifest` | Offline-Betrieb und Installation als App |
 | `icons/` | App-Icons aus dem Mannschaftslogo (WebP, dazu ein PNG für iOS) |
 | `assets/blink180.jpeg` | das Logo im Original – Quelle für die Icons |
@@ -496,10 +534,10 @@ Datenmodell gehoben.
 | `tests/e2e.mjs` | Browser-Tests des kompletten Turnierablaufs |
 | `tests/api.mjs`, `tests/konto.mjs` | Tests der Kontoschicht |
 
-Die beiden `optional`-Zeilen heißen genau das: `js/auth.js` und `js/sync.js` docken
-über `window.__dart` an und melden sich gar nicht erst an, wenn kein Server
-antwortet. `js/app.js` ruft sie nur über `window.DartKonto` / `window.DartSync` auf,
-falls vorhanden. Deshalb funktionieren `index.html` per Doppelklick und das
+Die `optional`-Zeilen heißen genau das: `js/auth.js`, `js/sync.js` und
+`js/kamera.js` docken über `window.__dart` an und melden sich gar nicht erst an,
+wenn kein Server antwortet. `js/app.js` ruft sie nur über `window.DartKonto` /
+`window.DartSync` / `window.DartKamera` auf, falls vorhanden. Deshalb funktionieren `index.html` per Doppelklick und das
 Einzeldatei-Bündel unverändert weiter – ohne Konto, ohne Netz, ohne Fehlermeldung.
 
 Der Server bringt **keine** npm-Abhängigkeit mit: SQLite steckt seit Node 22.5 in
