@@ -309,7 +309,7 @@
           feld('konto-invite', 'Einladungscode', 'text') +
           feld('konto-name', 'Anzeigename', 'text', 'wie dich alle nennen') +
           feld('konto-email', 'E-Mail', 'email') +
-          feld('konto-pass', 'Passwort', 'password', 'mindestens 10 Zeichen') +
+          feld('konto-pass', 'Passwort', 'password', 'mindestens 6 Zeichen') +
           '<button class="btn primary full" data-action="konto-register">Account anlegen</button>'
         : feld('konto-email', 'E-Mail', 'email') +
           feld('konto-pass', 'Passwort', 'password') +
@@ -372,7 +372,7 @@
     return '<div class="card konto-karte">' +
       '<h2>Passwort ändern</h2>' +
       feld('konto-pass-alt', 'Bisheriges Passwort', 'password') +
-      feld('konto-pass-neu', 'Neues Passwort', 'password', 'mindestens 10 Zeichen') +
+      feld('konto-pass-neu', 'Neues Passwort', 'password', 'mindestens 6 Zeichen') +
       '<p class="hint">Deine anderen Geräte werden dabei abgemeldet.</p>' +
       '<button class="btn primary full" data-action="konto-passwort-speichern">Speichern</button>' +
       '<button class="btn ghost full" data-action="konto-zurueck">Zurück</button>' +
