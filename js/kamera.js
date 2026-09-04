@@ -519,6 +519,7 @@
 
   var dialogOffen = false;
   var linseOffen = false;
+  var linseSchluessel = '';   // Bauplan der Linsen-Ansicht, gegen Neubau-Flackern
 
   function klick(ev) {
     var t = ev.target.closest('[data-kamera]');
@@ -591,35 +592,44 @@
       dialog.innerHTML = '';
     }
 
-    /* --- Linse: Vollbild --- */
+    /* --- Linse: Vollbild ---
+       Das Geruest wird NUR neu gebaut, wenn sich der Aufbau wirklich aendert
+       (Kamera an/aus, Zoom da/nicht da, Erkennung an/aus). Jedes Ereignis
+       laesst sonst nur Texte wandern - wuerde das <video> jedes Mal neu
+       erzeugt, flackerte die Vorschau im Takt des Spielstands. */
     if (linseOffen) {
       linse.classList.remove('hidden');
-      linse.innerHTML = rolle === 'linse' ? linseSpielHtml() : linseKoppelHtml();
-      /* zeichne() baut das Markup jedes Mal neu - der laufende Kamerastrom
-         muss danach wieder ans frische <video>. */
-      var v = document.getElementById('kamera-video');
-      if (v && medien) {
-        v.srcObject = medien;
-        var abspielen = v.play();
-        if (abspielen && abspielen.catch) abspielen.catch(function () { /* Autoplay-Zicken */ });
+      var ansicht = rolle === 'linse' ? 'spiel' : 'koppeln';
+      var schluessel = ansicht + ':' + (medien ? 1 : 0) + ':' + (zoomInfo ? 1 : 0) + ':' +
+        (cvAktiv ? 1 : 0) + ':' + (kameraFehler ? 1 : 0);
+      if (schluessel !== linseSchluessel) {
+        linseSchluessel = schluessel;
+        linse.innerHTML = ansicht === 'spiel' ? linseSpielHtml() : linseKoppelHtml();
+        var v = document.getElementById('kamera-video');
+        if (v && medien) {
+          v.srcObject = medien;
+          var abspielen = v.play();
+          if (abspielen && abspielen.catch) abspielen.catch(function () { /* Autoplay-Zicken */ });
+        }
+        /* Der Zoom-Regler lebt ausserhalb des Klick-Handlers: waehrend des
+           Ziehens nur anwenden und Anzeige nachfuehren (kein zeichne(), sonst
+           springt der Regler unterm Finger weg), erst beim Loslassen die
+           Kalibrierung erneuern. */
+        var z = document.getElementById('kamera-zoom');
+        if (z) {
+          z.oninput = function () {
+            var wert = Number(this.value);
+            zoomAnwenden(wert);
+            var anzeige = document.getElementById('kamera-zoom-wert');
+            if (anzeige) anzeige.innerHTML = wert.toFixed(1) + '&times;';
+          };
+          z.onchange = zoomFertig;
+        }
       }
-      /* Der Zoom-Regler lebt ausserhalb des Klick-Handlers: waehrend des
-         Ziehens nur anwenden und Anzeige nachfuehren (kein zeichne(), sonst
-         springt der Regler unterm Finger weg), erst beim Loslassen die
-         Kalibrierung erneuern. */
-      var z = document.getElementById('kamera-zoom');
-      if (z) {
-        z.oninput = function () {
-          var wert = Number(this.value);
-          zoomAnwenden(wert);
-          var anzeige = document.getElementById('kamera-zoom-wert');
-          if (anzeige) anzeige.innerHTML = wert.toFixed(1) + '&times;';
-        };
-        z.onchange = zoomFertig;
-      }
+      if (ansicht === 'spiel') linseFelder();
     } else {
       linse.classList.add('hidden');
-      linse.innerHTML = '';
+      if (linseSchluessel) { linse.innerHTML = ''; linseSchluessel = ''; }
     }
   }
 
@@ -633,39 +643,18 @@
       '<div class="fuss"><button data-kamera="linse-zu">Zur&uuml;ck zur App</button></div>';
   }
 
+  /* Das stabile Geruest der Linsen-Ansicht. Alles, was sich im Betrieb
+     aendert (Status, Spielstand, Notiz, Tastenbeschriftung), bekommt eine
+     Kennung und wird von linseFelder() an Ort und Stelle aktualisiert. */
   function linseSpielHtml() {
-    var st = linseStand;
-    var stand;
-    if (!verbunden) {
-      stand = '<div class="wer">Verbindung wird aufgebaut&hellip;</div>';
-    } else if (!st) {
-      stand = '<div class="wer">Verbunden &ndash; wartet auf den Spielstand&hellip;</div>';
-    } else if (st.screen === 'game') {
-      /* Zahlen erzwingen: der Spielstand kommt uebers Netz und geht in
-         innerHTML - hier darf nie ein String durchrutschen. */
-      var darts = (st.aufnahme || []).map(function (d) {
-        var n = Number(d.n) || 0, m = Number(d.m) || 1;
-        return n === 0 ? '&ndash;' : (m === 3 ? 'T' : m === 2 ? 'D' : '') + (n === 25 && m === 2 ? 'Bull' : n);
-      }).join(' &middot; ');
-      stand = '<div class="wer">' + esc(st.name || '') + (st.fertig ? ' &middot; Spiel vorbei' : ' ist dran') + '</div>' +
-        '<div class="rest">' + esc(String(st.rest != null ? st.rest : '')) + '</div>' +
-        '<div class="darts">' + (darts || 'Aufnahme: noch kein Dart') + '</div>';
-    } else if (st.screen === 'cricket' || st.screen === 'rtw' || st.screen === 'finisher') {
-      stand = '<div class="wer">' + esc(st.name || '') + (st.fertig ? ' &middot; Spiel vorbei' : ' ist dran') + '</div>' +
-        '<div class="darts">' + (st.screen === 'cricket' ? 'Cricket' : st.screen === 'rtw' ? 'Round the World' : 'Finisher') + '</div>';
-    } else {
-      stand = '<div class="wer">Auf dem iPad l&auml;uft gerade kein Spiel.</div>';
-    }
-
     var multRow = [1, 2, 3].map(function (m) {
-      return '<button data-kamera="mult" data-m="' + m + '" class="' + (linseMult === m ? 'an' : '') + '">' +
+      return '<button data-kamera="mult" data-m="' + m + '">' +
         (m === 1 ? 'Single' : m === 2 ? 'Double' : 'Triple') + '</button>';
     }).join('');
 
     var tasten = '';
     for (var n = 1; n <= 20; n++) {
-      tasten += '<button data-kamera="dart" data-n="' + n + '">' +
-        (linseMult === 3 ? 'T' : linseMult === 2 ? 'D' : '') + n + '</button>';
+      tasten += '<button data-kamera="dart" data-n="' + n + '">' + n + '</button>';
     }
     tasten += '<button data-kamera="dart" data-n="25" data-m="1">25</button>';
     tasten += '<button data-kamera="dart" data-n="25" data-m="2" class="breit">Bull</button>';
@@ -690,18 +679,69 @@
               '<button data-kamera="cv-aus">Erkennung aus</button>'
             : '<button data-kamera="cv-an">🎯 Erkennung starten</button>') +
         '</div>' +
-        (cvStatus ? '<div class="cam-hinweis cv">' + esc(cvStatus) + '</div>' : '') +
+        '<div class="cam-hinweis cv" id="linse-cv-status"></div>' +
         '<div class="cam-hinweis">Bildschirm bleibt an &ndash; Ladekabel empfohlen.</div>';
     }
 
     return '<h2>Fern-Eingabe &middot; Raum ' + esc(raum.code) + '</h2>' +
-      '<div class="status">' + (verbunden ? 'Verbunden mit dem iPad' : 'Getrennt &ndash; verbindet neu&hellip;') + '</div>' +
+      '<div class="status" id="linse-status"></div>' +
       '<div class="cam">' + cam + '</div>' +
-      '<div class="stand">' + stand + '</div>' +
-      '<div class="notiz">' + esc(linseNotiz) + '</div>' +
+      '<div class="stand" id="linse-stand"></div>' +
+      '<div class="notiz" id="linse-notiz"></div>' +
       '<div class="mrow">' + multRow + '</div>' +
       '<div class="grid">' + tasten + '</div>' +
       '<div class="fuss"><button data-kamera="linse-zu">Trennen und zur&uuml;ck</button></div>';
+  }
+
+  function linseFelder() {
+    var statusEl = document.getElementById('linse-status');
+    if (statusEl) statusEl.textContent = verbunden ? 'Verbunden mit dem iPad' : 'Getrennt - verbindet neu...';
+
+    var cvEl = document.getElementById('linse-cv-status');
+    if (cvEl) cvEl.textContent = cvStatus;
+
+    var notizEl = document.getElementById('linse-notiz');
+    if (notizEl) notizEl.textContent = linseNotiz;
+
+    var standEl = document.getElementById('linse-stand');
+    if (standEl) {
+      var st = linseStand, stand;
+      if (!verbunden) {
+        stand = '<div class="wer">Verbindung wird aufgebaut&hellip;</div>';
+      } else if (!st) {
+        stand = '<div class="wer">Verbunden &ndash; wartet auf den Spielstand&hellip;</div>';
+      } else if (st.screen === 'game') {
+        /* Zahlen erzwingen: der Spielstand kommt uebers Netz und geht in
+           innerHTML - hier darf nie ein String durchrutschen. */
+        var darts = (st.aufnahme || []).map(function (d) {
+          var n = Number(d.n) || 0, m = Number(d.m) || 1;
+          return n === 0 ? '&ndash;' : (m === 3 ? 'T' : m === 2 ? 'D' : '') + (n === 25 && m === 2 ? 'Bull' : n);
+        }).join(' &middot; ');
+        stand = '<div class="wer">' + esc(st.name || '') + (st.fertig ? ' &middot; Spiel vorbei' : ' ist dran') + '</div>' +
+          '<div class="rest">' + esc(String(st.rest != null ? st.rest : '')) + '</div>' +
+          '<div class="darts">' + (darts || 'Aufnahme: noch kein Dart') + '</div>';
+      } else if (st.screen === 'cricket' || st.screen === 'rtw' || st.screen === 'finisher') {
+        stand = '<div class="wer">' + esc(st.name || '') + (st.fertig ? ' &middot; Spiel vorbei' : ' ist dran') + '</div>' +
+          '<div class="darts">' + (st.screen === 'cricket' ? 'Cricket' : st.screen === 'rtw' ? 'Round the World' : 'Finisher') + '</div>';
+      } else {
+        stand = '<div class="wer">Auf dem iPad l&auml;uft gerade kein Spiel.</div>';
+      }
+      if (standEl.getAttribute('data-stand') !== stand) {
+        standEl.setAttribute('data-stand', stand);
+        standEl.innerHTML = stand;
+      }
+    }
+
+    var wurzelEl = document.getElementById('kamera-linse');
+    var multKnoepfe = wurzelEl.querySelectorAll('[data-kamera="mult"]');
+    for (var i = 0; i < multKnoepfe.length; i++) {
+      multKnoepfe[i].classList.toggle('an', Number(multKnoepfe[i].getAttribute('data-m')) === linseMult);
+    }
+    var praefix = linseMult === 3 ? 'T' : linseMult === 2 ? 'D' : '';
+    var zahlKnoepfe = wurzelEl.querySelectorAll('[data-kamera="dart"]:not([data-m])');
+    for (var k = 0; k < zahlKnoepfe.length; k++) {
+      zahlKnoepfe[k].textContent = praefix + zahlKnoepfe[k].getAttribute('data-n');
+    }
   }
 
   function esc(s) {

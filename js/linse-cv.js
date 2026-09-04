@@ -249,24 +249,43 @@
 
   /* ================= Zustandsmaschine ================= */
 
+  var bewegtSeit = 0;
+  var wacheRef = null;     // Wache-Bild vom Stand der letzten Analyse
+  var stillAnders = 0;     // Ticks, in denen still etwas Neues im Bild steckt
   function tick() {
     if (!laeuft || !video || video.readyState < 2) return;
     var klein = schnappschussWache();
     if (!klein) return;
-    if (!vorher) { vorher = klein; return; }
+    if (!vorher) { vorher = klein; wacheRef = klein; return; }
     var bewegung = bewegungsWert(vorher, klein);
     vorher = klein;
 
     if (zustand === 'ruhe') {
-      if (bewegung > 4) { zustand = 'bewegt'; ruhigSeit = 0; }
+      /* Schon eine Handvoll wirklich veraenderter Pixel ist ein Ereignis -
+         ein Dart ist im Wache-Bild nur ein duenner Strich. */
+      if (bewegung > 5) { zustand = 'bewegt'; bewegtSeit = Date.now(); ruhigSeit = 0; return; }
+      /* Sicherheitsnetz: entgeht der Wache der kurze Einschlag-Moment,
+         steht der Dart trotzdem im Bild - der Vergleich mit dem Stand der
+         letzten Analyse findet ihn ein paar Ticks spaeter. Die Analyse
+         setzt wacheRef neu, ein Schatten loest also keine Schleife aus. */
+      if (wacheRef && bewegungsWert(wacheRef, klein) > 4) {
+        stillAnders++;
+        if (stillAnders >= 3) { stillAnders = 0; wacheRef = klein; analysiere(); }
+      } else {
+        stillAnders = 0;
+      }
       return;
     }
-    /* bewegt: warten bis das Bild wieder steht (Board schwingt kurz nach). */
-    if (bewegung > 2) { ruhigSeit = 0; return; }
+    /* bewegt: warten bis das Bild wieder steht (Board schwingt kurz nach).
+       Kommt es minutenlang nicht zur Ruhe (Rauschen, zuckende Belichtung),
+       analysieren wir trotzdem, statt stumm zu haengen. */
+    if (bewegung > 3 && Date.now() - bewegtSeit < 8000) { ruhigSeit = 0; return; }
     ruhigSeit++;
     if (ruhigSeit < RUHE_BILDER) return;
     zustand = 'ruhe';
     ruhigSeit = 0;
+    stillAnders = 0;
+    wacheRef = klein;
     analysiere();
   }
 
@@ -280,15 +299,30 @@
     }
     return s;
   }
+  /* Wie viele Pixel im Board-Ausschnitt sich WIRKLICH geaendert haben.
+     Der Mittelwert taugt hier nichts: ein steckender Dart aendert nur einen
+     duennen Strich und ginge im Durchschnitt unter. Vorher wird die
+     Belichtungsdrift (iPhone regelt staendig nach) herausgerechnet, sonst
+     zaehlt jede Blendenkorrektur als Grossbewegung. */
   function bewegungsWert(alt, neu) {
-    var s = 0, n = 0;
-    for (var y = wachRoi.y0; y < wachRoi.y1; y++) {
-      for (var x = wachRoi.x0; x < wachRoi.x1; x++) {
-        var i = y * neu.b + x;
-        s += Math.abs(neu.g[i] - alt.g[i]); n++;
+    var s = 0, n = 0, x, y, i;
+    for (y = wachRoi.y0; y < wachRoi.y1; y++) {
+      for (x = wachRoi.x0; x < wachRoi.x1; x++) {
+        i = y * neu.b + x;
+        s += neu.g[i] - alt.g[i]; n++;
       }
     }
-    return n ? s / n : 0;
+    if (!n) return 0;
+    var drift = s / n;
+    var anders = 0;
+    for (y = wachRoi.y0; y < wachRoi.y1; y++) {
+      for (x = wachRoi.x0; x < wachRoi.x1; x++) {
+        i = y * neu.b + x;
+        var d = neu.g[i] - alt.g[i] - drift;
+        if (d > 18 || d < -18) anders++;
+      }
+    }
+    return anders;
   }
 
   function analysiere() {
@@ -604,8 +638,17 @@
   /* Automatisch erkennen; klappt es nicht, bleibt das Tippen. Die gefundenen
      Punkte gehen durch exakt denselben Weg wie von Hand getippte - das
      Gitter zur Kontrolle und der "Passt"-Knopf sind dieselben. */
+  var autoWarte = 0;
   function autoVersuch() {
     if (kalibModus !== 'auto') return;
+    /* Direkt nach dem Einschalten liefert die Kamera noch kein Bild -
+       kurz warten statt gleich aufzugeben. */
+    if ((!video || !video.videoWidth) && autoWarte < 15) {
+      autoWarte++;
+      setTimeout(autoVersuch, 300);
+      return;
+    }
+    autoWarte = 0;
     kalibHinweis = '';
     var erg = null;
     try { erg = autoErkennen(); } catch (e) { erg = null; }
