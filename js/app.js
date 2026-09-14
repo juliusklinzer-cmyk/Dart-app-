@@ -364,11 +364,20 @@
   }
 
   var GAST_FRIST = 12 * 3600 * 1000;   // ein Abend
+  /* Laeuft beim Start der App und jedes Mal, wenn das Setup gezeichnet wird:
+     ein Tablet, das tagelang offen bleibt, wuerde sonst nie aufraeumen, und
+     der Gast von vorgestern staende weiter in der Aufstellung. Wer mitten
+     im laufenden Turnier oder Spiel steht, bleibt -- sonst zeigte der
+     Spielplan "Unbekannt". */
   function gaesteAufraeumen() {
     var jetzt = Date.now();
     var geaendert = false;
+    var imSpiel = {};
+    if (S.matches.length) tourPlayers().forEach(function (id) { imSpiel[id] = 1; });
+    if (S.game && S.game.players) S.game.players.forEach(function (id) { imSpiel[id] = 1; });
     S.profiles = S.profiles.filter(function (p) {
       if (!p.gast || p.hidden) return true;
+      if (imSpiel[p.id]) return true;
       var zuletzt = letztesSpielAm(p.id);
       if (jetzt - (zuletzt || p.created || jetzt) < GAST_FRIST) return true;
       geaendert = true;
@@ -2394,7 +2403,7 @@
     /* Das X01-Spielbild ist auf jeder Bildschirmgroesse fest im Rahmen
        (siehe body.fix-spiel) - nichts scrollt, weder Seite noch Spielbild. */
     document.body.classList.toggle('fix-spiel', S.screen === 'game');
-    if (S.screen === 'setup') renderSetup();
+    if (S.screen === 'setup') { gaesteAufraeumen(); renderSetup(); }
     /* Der Hintergrundtakt laeuft nur da, wo man ihn auch sieht: im
        Turnierbildschirm. Sonst fragt die App den ganzen Abend nach Daten,
        die niemand anschaut. */
@@ -2827,9 +2836,13 @@
   /* Je Spieler eine Reihe mit einem Wert pro Spiel, älteste zuerst. */
   function chartSeries(mode) {
     var per = {};
-    function push(id, value) {
+    /* Je Spiel der Wert fuer die Linie, dazu Zaehler und Nenner (Punkte
+       bzw. Marken und Darts), damit die Legende den echten Durchschnitt
+       ueber die gezeigten Spiele rechnen kann -- nicht den Mittelwert der
+       Mittelwerte und nicht bloss das letzte Spiel. */
+    function push(id, value, z, n) {
       if (!per[id]) per[id] = [];
-      per[id].push(value);
+      per[id].push({ v: value, z: z, n: n });
     }
 
     if (mode === '501' || mode === 'liga') {
@@ -2840,7 +2853,7 @@
           e.m.legs.forEach(function (leg) {
             leg.visits.forEach(function (v) { if (v.p === id) { darts += v.d; if (!v.b) points += v.s; } });
           });
-          if (darts) push(id, (points / darts) * 3);
+          if (darts) push(id, (points / darts) * 3, points, darts);
         });
       });
     } else if (mode === 'cricket') {
@@ -2849,13 +2862,19 @@
       games.forEach(function (h) {
         var cs = cricketState({ players: h.players, throws: h.throws, scoring: h.scoring });
         h.players.forEach(function (id) {
-          if (cs.darts[id]) push(id, (cs.allMarks[id] / cs.darts[id]) * 3);
+          if (cs.darts[id]) push(id, (cs.allMarks[id] / cs.darts[id]) * 3, cs.allMarks[id], cs.darts[id]);
         });
       });
     }
 
     return Object.keys(per).filter(function (id) { return !profile(id).hidden; }).map(function (id) {
-      return { id: id, name: pname(id), color: playerColor(id), points: per[id].slice(-CHART_GAMES) };
+      var letzte = per[id].slice(-CHART_GAMES);
+      var z = sum(letzte, function (x) { return x.z; }), n = sum(letzte, function (x) { return x.n; });
+      return {
+        id: id, name: pname(id), color: playerColor(id),
+        points: letzte.map(function (x) { return x.v; }),
+        mittel: n ? (z / n) * 3 : 0
+      };
     }).filter(function (r) { return r.points.length > 0; });
   }
 
@@ -2901,9 +2920,10 @@
     return '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(label) + '">' +
       grid + lines + axis + '</svg>' +
       '<div class="chart-legend">' + series.map(function (r) {
-        var last = r.points[r.points.length - 1];
+        /* Unter der Linie steht der Durchschnitt ueber genau diese Spiele --
+           frueher stand hier nur das letzte, das las sich wie der Schnitt. */
         return '<span class="cl"><i style="background:' + r.color + '"></i>' + esc(r.name) +
-          ' <b>' + last.toFixed(1) + '</b></span>';
+          ' <b>Ø ' + r.mittel.toFixed(1) + '</b><span class="cl-n">' + plural(r.points.length, 'Spiel', 'Spiele') + '</span></span>';
       }).join('') + '</div>';
   }
 
@@ -5226,7 +5246,8 @@
              Spielplan geht das nicht. */
           if (imSpielplan) {
             return '<p class="hint">' + esc(vor.name) + ' steht im laufenden Spielplan – ' +
-              'löschen geht erst, wenn das Spiel beendet ist.</p>';
+              'löschen geht erst, wenn das Turnier beendet ist (unter „Turnier“ den Endstand ' +
+              'abschließen). Danach verschwindet der Gast nach dem Abend von selbst.</p>';
           }
           return '<button class="btn danger ghost full" data-action="' +
             (vor.gast ? (loeschbar ? 'delete-profile' : 'delete-guest') : 'hide-profile') + '">' +
@@ -7099,6 +7120,7 @@
       activeLeg: activeLeg,
       activePlayer: activePlayer,
       satzStand: satzStand,
+      chartSeries: chartSeries,
       currentMatch: currentMatch,
       game: function () { return S.game; },
       cricketState: function () { return cricketState(S.game); },

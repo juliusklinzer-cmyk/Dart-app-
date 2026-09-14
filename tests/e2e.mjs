@@ -3025,6 +3025,66 @@ group('Spielbild passt auf jedes Format ohne Scrollen');
   await page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; D.save(); D.setScreen('setup'); });
 }
 
+/* ---------- Gaeste raeumen sich auch im laufenden Betrieb weg ---------- */
+group('Gaeste: weg nach dem Abend, aber nie mitten im Turnier');
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  S.game = null; S.matches = []; S.tour = null;
+  const alt = Date.now() - 13 * 3600 * 1000;
+  S.profiles.push({ id: 'gast_alt', name: 'Laura', gast: true, avatar: null, hue: 3, created: alt });
+  S.lineup = [D.activeProfiles()[0].id, 'gast_alt'];
+  D.save(); D.setScreen('boards');
+});
+await page.evaluate(() => window.__dart.setScreen('setup'));
+check('ein Gast von gestern ohne Spiel verschwindet beim Betreten des Setups', await page.evaluate(() => {
+  const S = window.__dart.state();
+  return !S.profiles.some((p) => p.id === 'gast_alt') && S.lineup.indexOf('gast_alt') < 0;
+}));
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  const alt = Date.now() - 13 * 3600 * 1000;
+  /* Der Gast kommt frisch an den Abend, das Turnier laeuft dann ueber die Frist hinaus. */
+  S.profiles.push({ id: 'gast_turnier', name: 'Laura', gast: true, avatar: null, hue: 3, created: Date.now() });
+  S.lineup = [D.activeProfiles()[0].id, D.activeProfiles()[1].id, 'gast_turnier'];
+  S.mode = '501';
+  D.save(); D.setScreen('setup');
+});
+await page.locator('[data-action="start-game"]').click();
+check('Turnier mit dem Gast laeuft', await page.evaluate(() => window.__dart.state().matches.length > 0));
+await page.evaluate(() => {
+  const p = window.__dart.state().profiles.find((x) => x.id === 'gast_turnier');
+  p.created = Date.now() - 13 * 3600 * 1000;
+  window.__dart.save();
+});
+await page.evaluate(() => window.__dart.setScreen('setup'));
+check('im laufenden Turnier bleibt der alte Gast sichtbar', await page.evaluate(() => {
+  const p = window.__dart.state().profiles.find((x) => x.id === 'gast_turnier');
+  return !!p && !p.hidden;
+}));
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  S.matches = []; S.tour = null; S.current = null;
+  S.profiles = S.profiles.filter((p) => p.id !== 'gast_turnier');
+  S.lineup = S.lineup.filter((id) => id !== 'gast_turnier');
+  D.save(); D.setScreen('setup');
+});
+
+group('Diagramm-Legende: Durchschnitt der gezeigten Spiele');
+await page.evaluate(() => { window.__dart.ui().boardMode = '501'; window.__dart.setScreen('boards'); });
+check('unter dem Diagramm steht ein Ø mit Spielzahl', await page.evaluate(() => {
+  const l = document.querySelector('#board-chart .chart-legend');
+  return !!l && /Ø\s*\d/.test(l.textContent) && /Spiel/.test(l.textContent);
+}));
+check('der Ø ist der Durchschnitt ueber die Spiele, nicht der letzte Wert', await page.evaluate(() => {
+  const D = window.__dart;
+  const s = D.chartSeries ? D.chartSeries('501') : null;
+  if (!s || !s.length) return true;
+  const r = s.find((x) => x.points.length >= 2) || s[0];
+  const last = r.points[r.points.length - 1];
+  const legende = document.querySelector('#board-chart .chart-legend').textContent;
+  return legende.indexOf('Ø ' + r.mittel.toFixed(1)) >= 0 && (r.points.length < 2 || Math.abs(r.mittel - last) < 0.05 || legende.indexOf('Ø ' + last.toFixed(1)) < 0 || r.mittel.toFixed(1) === last.toFixed(1));
+}));
+
 group('Fehlerfreiheit');
 check('keine JS-Fehler', errors.length === 0, errors.join(' | '));
 

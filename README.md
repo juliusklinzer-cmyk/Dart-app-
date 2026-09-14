@@ -440,7 +440,12 @@ er aus der Aufstellung, seine Ergebnisse bleiben aber in Statistik, Ranglisten u
 Spielverlauf erhalten. **Gäste** lassen sich dagegen jederzeit direkt
 **löschen**: ohne Spiele spurlos, mit Spielen verschwinden sie sofort aus
 Spielerliste, Aufstellung und Rangliste – die Partien der Mitspieler bleiben
-in der Historie.
+in der Historie. Von selbst räumen sich Gäste **nach dem Abend** weg (zwölf
+Stunden nach ihrem letzten Spiel): Wer nie geworfen hat, verschwindet ganz, wer
+gespielt hat, wird ausgeblendet. Das passiert beim Öffnen der App und jedes Mal,
+wenn das Setup gezeigt wird – auch auf einem Tablet, das tagelang offen bleibt.
+Steht der Gast noch in einem laufenden Turnier, bleibt er, bis das Turnier
+beendet ist; solange lässt er sich auch nicht löschen.
 
 ## Statistik und Ranglisten
 
@@ -482,6 +487,8 @@ Spielverlauf:
 Über den Listen zeichnet ein **Verlaufsdiagramm** die Entwicklung über die letzten bis
 zu 40 Spiele – eine Linie je Spieler in seiner Farbe, links die Skala, unten die
 Spiele. Bei Classic ist es der 3-Dart-Average je Spiel, bei Cricket die MPR je Spiel.
+Unter dem Diagramm steht je Spieler der **Durchschnitt über genau diese Spiele**
+(Punkte durch Darts, nicht der Mittelwert der Einzelwerte) samt Spielzahl.
 Jeder Spieler hat eine feste Farbe, die auch sein Avatar trägt.
 
 **Die Modi werden strikt getrennt gerechnet.** Average, First 9, Doppelquote, Finishes,
