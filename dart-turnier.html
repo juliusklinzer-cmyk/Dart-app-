@@ -1042,7 +1042,6 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .chart-legend .cl { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; color: var(--muted); }
 .chart-legend .cl i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
 .chart-legend .cl b { color: var(--text); font-variant-numeric: tabular-nums; }
-.chart-legend .cl .cl-n { color: var(--muted); font-size: 0.7rem; margin-left: 2px; }
 #board-mode { margin-bottom: 12px; }
 #board-mode button { font-size: 0.9rem; }
 
@@ -7120,10 +7119,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(label) + '">' +
       grid + lines + axis + '</svg>' +
       '<div class="chart-legend">' + series.map(function (r) {
-        /* Unter der Linie steht der Durchschnitt ueber genau diese Spiele --
-           frueher stand hier nur das letzte, das las sich wie der Schnitt. */
+        /* Unter der Linie steht der Durchschnitt ueber genau diese Spiele (bei
+           weniger als zehn eben ueber die vorhandenen) -- frueher stand hier
+           nur das letzte, das las sich wie der Schnitt. */
         return '<span class="cl"><i style="background:' + r.color + '"></i>' + esc(r.name) +
-          ' <b>Ø ' + r.mittel.toFixed(1) + '</b><span class="cl-n">' + plural(r.points.length, 'Spiel', 'Spiele') + '</span></span>';
+          ' <b>Ø ' + r.mittel.toFixed(1) + '</b></span>';
       }).join('') + '</div>';
   }
 

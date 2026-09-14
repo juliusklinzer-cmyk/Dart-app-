@@ -3071,9 +3071,9 @@ await page.evaluate(() => {
 
 group('Diagramm-Legende: Durchschnitt der gezeigten Spiele');
 await page.evaluate(() => { window.__dart.ui().boardMode = '501'; window.__dart.setScreen('boards'); });
-check('unter dem Diagramm steht ein Ø mit Spielzahl', await page.evaluate(() => {
+check('unter dem Diagramm steht ein Ø ohne Spielzahl', await page.evaluate(() => {
   const l = document.querySelector('#board-chart .chart-legend');
-  return !!l && /Ø\s*\d/.test(l.textContent) && /Spiel/.test(l.textContent);
+  return !!l && /Ø\s*\d/.test(l.textContent) && !/Spiel/.test(l.textContent);
 }));
 check('der Ø ist der Durchschnitt ueber die Spiele, nicht der letzte Wert', await page.evaluate(() => {
   const D = window.__dart;

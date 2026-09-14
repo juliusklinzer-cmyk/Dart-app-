@@ -2920,10 +2920,11 @@
     return '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(label) + '">' +
       grid + lines + axis + '</svg>' +
       '<div class="chart-legend">' + series.map(function (r) {
-        /* Unter der Linie steht der Durchschnitt ueber genau diese Spiele --
-           frueher stand hier nur das letzte, das las sich wie der Schnitt. */
+        /* Unter der Linie steht der Durchschnitt ueber genau diese Spiele (bei
+           weniger als zehn eben ueber die vorhandenen) -- frueher stand hier
+           nur das letzte, das las sich wie der Schnitt. */
         return '<span class="cl"><i style="background:' + r.color + '"></i>' + esc(r.name) +
-          ' <b>Ø ' + r.mittel.toFixed(1) + '</b><span class="cl-n">' + plural(r.points.length, 'Spiel', 'Spiele') + '</span></span>';
+          ' <b>Ø ' + r.mittel.toFixed(1) + '</b></span>';
       }).join('') + '</div>';
   }
 

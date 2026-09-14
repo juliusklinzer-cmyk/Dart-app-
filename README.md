@@ -488,7 +488,8 @@ Spielverlauf:
 zu 40 Spiele – eine Linie je Spieler in seiner Farbe, links die Skala, unten die
 Spiele. Bei Classic ist es der 3-Dart-Average je Spiel, bei Cricket die MPR je Spiel.
 Unter dem Diagramm steht je Spieler der **Durchschnitt über genau diese Spiele**
-(Punkte durch Darts, nicht der Mittelwert der Einzelwerte) samt Spielzahl.
+(Punkte durch Darts, nicht der Mittelwert der Einzelwerte) – bei weniger als
+zehn Spielen über die vorhandenen.
 Jeder Spieler hat eine feste Farbe, die auch sein Avatar trägt.
 
 **Die Modi werden strikt getrennt gerechnet.** Average, First 9, Doppelquote, Finishes,
