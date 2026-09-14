@@ -1412,7 +1412,7 @@
     st.legDiff = st.legsWon - st.legsLost;
     st.legs = st.legsWon + st.legsLost;
     st.winPct = st.matches ? (st.won / st.matches) * 100 : 0;
-    st.dartsPerLeg = st.legsWon ? st.dartsInWonLegs / st.legsWon : 0;
+    st.dartsPerLeg = st.legsWon501 ? st.dartsInWonLegs / st.legsWon501 : 0;
     st.tons = st.s100 + st.s140 + st.s180;
     st.mpr = st.cricketDarts ? (st.cricketMarks / st.cricketDarts) * 3 : 0;
     st.finAvgDarts = st.finRounds ? st.finDarts / st.finRounds : 0;
@@ -1422,9 +1422,9 @@
   /* Wertet eine Liste von Spielen aus – für ein Turnier genauso wie für die Karriere. */
   function collectStats(matchLists, ids) {
     var map = {};
-    ids.forEach(function (id) { map[id] = emptyStat(id); map[id].dartsInWonLegs = 0; });
+    ids.forEach(function (id) { map[id] = emptyStat(id); map[id].dartsInWonLegs = 0; map[id].legsWon501 = 0; });
     function stat(id) {
-      if (!map[id]) { map[id] = emptyStat(id); map[id].dartsInWonLegs = 0; }
+      if (!map[id]) { map[id] = emptyStat(id); map[id].dartsInWonLegs = 0; map[id].legsWon501 = 0; }
       return map[id];
     }
 
@@ -1449,7 +1449,12 @@
         m.legs.forEach(function (leg) {
           var rest = {};
           var visitNo = {};
-          m.p.forEach(function (pid) { rest[pid] = leg && typeof leg.start === 'number' ? leg.start : start; visitNo[pid] = 0; });
+          var legVon = leg && typeof leg.start === 'number' ? leg.start : start;
+          /* Bestes Leg und Darts je gewonnenem Leg nur aus 501er-Legs: ein
+             301er in sechs Darts ist kein Rekord neben einem 501er in neun.
+             Average, 180er, Finishes und die Leg-Bilanz zaehlen weiter fuer alle. */
+          var ist501 = legVon === 501;
+          m.p.forEach(function (pid) { rest[pid] = legVon; visitNo[pid] = 0; });
 
           leg.visits.forEach(function (v) {
             var st = stat(v.p);
@@ -1501,11 +1506,11 @@
             var used = dartsInLeg(leg, leg.winner);
             /* Das beste Leg ist eine persoenliche Bestmarke und zaehlt auch
                allein - die Leg-Bilanz braucht einen Gegner. */
-            if (w.bestLeg === null || used < w.bestLeg) w.bestLeg = used;
+            if (ist501 && (w.bestLeg === null || used < w.bestLeg)) w.bestLeg = used;
             if (!solo) {
               w.legsWon++;
               m.p.forEach(function (pid) { if (pid !== leg.winner) stat(pid).legsLost++; });
-              w.dartsInWonLegs += used;
+              if (ist501) { w.dartsInWonLegs += used; w.legsWon501++; }
             }
           }
         });
@@ -1655,7 +1660,7 @@
     { mode: '501', key: 'highCO', label: 'Höchstes Finish', get: function (s) { return s.highCO; }, fmt: function (v) { return String(v); }, min: function (s) { return s.highCO > 0; }, hint: 'Der höchste je ausgecheckte Rest.' },
     { mode: '501', key: 's180', label: '180er', get: function (s) { return s.s180; }, fmt: function (v) { return String(v); }, min: function (s) { return s.s180 > 0; }, hint: 'Maximum – alle drei Darts in die Triple 20.' },
     { mode: '501', key: 'highScore', label: 'Höchste Aufnahme', get: function (s) { return s.highScore; }, fmt: function (v) { return String(v); }, min: function (s) { return s.highScore > 0; }, hint: 'Die beste einzelne Aufnahme aus 3 Darts.' },
-    { mode: '501', key: 'bestLeg', label: 'Bestes Leg', get: function (s) { return s.bestLeg; }, fmt: function (v) { return v + ' Darts'; }, min: function (s) { return s.bestLeg !== null; }, asc: true, hint: 'Wenigste Darts für ein gewonnenes Leg.' },
+    { mode: '501', key: 'bestLeg', label: 'Bestes Leg', get: function (s) { return s.bestLeg; }, fmt: function (v) { return v + ' Darts'; }, min: function (s) { return s.bestLeg !== null; }, asc: true, hint: 'Wenigste Darts für ein gewonnenes 501er-Leg – 301 und 701 zählen hier nicht.' },
     { mode: '501', key: 'tons', label: '100+ Aufnahmen', get: function (s) { return s.tons; }, fmt: function (v) { return String(v); }, min: function (s) { return s.tons > 0; }, hint: 'Alle Aufnahmen ab 100 Punkten (inkl. 140+ und 180).' },
     { mode: '501', key: 'winPct', label: 'Siegquote', get: function (s) { return s.winPct; }, fmt: function (v) { return v.toFixed(0) + ' %'; }, min: function (s) { return s.matches >= 3; }, hint: 'Anteil gewonnener Spiele. Zählt ab 3 Spielen.' },
     { mode: '501', key: 'legsWon', label: 'Legs', get: function (s) { return s.legsWon; }, fmt: function (v) { return String(v); }, min: function (s) { return s.legsWon > 0; }, hint: 'Gewonnene Legs insgesamt.' },
@@ -3161,7 +3166,7 @@
         line('Höchstes Finish', st.highCO || '–') +
         line('Finishes ab 100', st.highFinishes) +
         line('Bestes Leg', st.bestLeg ? st.bestLeg + ' Darts' : '–') +
-        line('Ø Darts je gewonnenem Leg', st.dartsPerLeg ? st.dartsPerLeg.toFixed(1) : '–') +
+        line('Ø Darts je gewonnenem Leg (501)', st.dartsPerLeg ? st.dartsPerLeg.toFixed(1) : '–') +
       '</div>' +
 
       '<div class="card"><h2>Bilanz</h2>' +

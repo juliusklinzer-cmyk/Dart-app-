@@ -1306,6 +1306,10 @@ const wonVorher = await page.evaluate(() => {
   const c = window.__dart.career();
   return Object.keys(c).reduce((s, k) => s + c[k].won, 0);
 });
+const bestVorher = await page.evaluate(() => {
+  const c = window.__dart.career();
+  return Object.keys(c).map((k) => c[k].bestLeg);
+});
 await page.evaluate(() => window.__dart.setScreen('setup'));
 await page.evaluate(() => {
   const S = window.__dart.state();
@@ -1405,6 +1409,10 @@ check('genau ein Sieg dazugekommen', wonNachher === wonVorher + 1,
   wonVorher + ' -> ' + wonNachher);
 check('der Sieger hat ihn', qCar[qIds[0]].won >= 1);
 check('Average wurde gerechnet', qCar[qIds[0]].avg > 0);
+check('ein 301er-Leg aendert das beste Leg nicht', await page.evaluate((vorher) => {
+  const c = window.__dart.career();
+  return Object.keys(c).every((k, i) => c[k].bestLeg === vorher[i]);
+}, bestVorher));
 
 /* ---------- Schnelles Spiel über Sätze und Legs ---------- */
 

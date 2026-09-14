@@ -465,7 +465,7 @@ die Statistik der Mannschaft zu berühren (siehe [DEPLOY.md](DEPLOY.md#testkonte
 | Bereich | Werte |
 |---|---|
 | Scoring | 3-Dart-Average, First-9-Average, höchste Aufnahme, 180er, 140–179, 100–139, 60–99, Aufnahmen, geworfene Darts |
-| Finishing | Doppelquote, Doppelversuche, Checkouts, höchstes Finish, Finishes ab 100, bestes Leg, Ø Darts je gewonnenem Leg |
+| Finishing | Doppelquote, Doppelversuche, Checkouts, höchstes Finish, Finishes ab 100, bestes Leg, Ø Darts je gewonnenem Leg (beide nur aus 501er-Legs – ein 301er in sechs Darts ist kein Rekord) |
 | Bilanz | Spiele, Siege/Niederlagen, Siegquote, Legs, Turniere, Turniersiege, Form der letzten Spiele |
 
 Dazu die letzten Spiele mit Gegner, Ergebnis und Datum.
