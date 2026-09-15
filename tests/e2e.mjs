@@ -3093,6 +3093,98 @@ check('der Ø ist der Durchschnitt ueber die Spiele, nicht der letzte Wert', awa
   return legende.indexOf('Ø ' + r.mittel.toFixed(1)) >= 0 && (r.points.length < 2 || Math.abs(r.mittel - last) < 0.05 || legende.indexOf('Ø ' + last.toFixed(1)) < 0 || r.mittel.toFixed(1) === last.toFixed(1));
 }));
 
+/* ---------- Turnier-Auswertung und keine Doppelzaehlung ---------- */
+group('Turnier: Endstand nachschauen, geteiltes Turnier zaehlt nur einmal');
+const tVor = await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  S.game = null; S.matches = []; S.tour = null;
+  const ids = D.activeProfiles().slice(0, 3).map((p) => p.id);
+  const v = (p, s, c) => ({ p, s, d: 3, b: false, c: !!c, o: 0 });
+  const leg = (a, b, sieger) => sieger === a
+    ? { starter: a, visits: [v(a, 180), v(b, 60), v(a, 180), v(b, 60), v(a, 141, true)], winner: a, start: 501 }
+    : { starter: a, visits: [v(a, 60), v(b, 180), v(a, 60), v(b, 180), v(a, 60), v(b, 141, true)], winner: b, start: 501 };
+  const mk = (id, a, b, sieger) => ({ id, round: 1, p: [a, b], starter: a, legs: [leg(a, b, sieger)], done: true, winner: sieger, at: Date.now() - 3600e3 });
+  const matches = [mk('tm1', ids[0], ids[1], ids[0]), mk('tm2', ids[1], ids[2], ids[1]), mk('tm3', ids[0], ids[2], ids[0])];
+  S.history.unshift({ id: 'turnier_x', at: Date.now() - 3600e3, lineup: ids, settings: { start: 501, bestOf: 1 }, matches, winner: ids[0] });
+  D.save();
+  const c = D.career();
+  return { ids, won: ids.map((id) => c[id].won), avg: ids.map((id) => +c[id].avg.toFixed(2)) };
+});
+await page.evaluate(() => { window.__dart.ui().boardMode = '501'; window.__dart.setScreen('boards'); });
+check('in der Spieleliste steht eine Turnierzeile', (await page.locator('#match-log .turnier-row').count()) >= 1);
+await page.locator('#match-log .turnier-row[data-id="turnier_x"]').click();
+check('Turnier-Endstand oeffnet sich', await visible('#screen-summary') && (await textKlein('#summary-box')).includes('turnier'));
+check('drei Plaetze mit Siegen und Ø', (await page.locator('#summary-box .podium .p').count()) === 3 &&
+  (await page.locator('#summary-box .podium .p').first().innerText()).includes('2 Siege'));
+check('Ø des Siegers stimmt mit der Karte ueberein', await page.evaluate(() => {
+  const p = document.querySelector('#summary-box .podium .p .pv').textContent;
+  const karte = document.querySelector('#summary-box .sum-card .pline b').textContent;
+  return p.includes('Ø ' + (+karte).toFixed(1));
+}));
+check('die einzelnen Spiele sind aufgelistet', (await page.locator('#summary-box .pline.tap').count()) === 3);
+await page.locator('#summary-box .pline.tap').first().click();
+check('ein Spiel daraus laesst sich oeffnen', (await textKlein('#summary-box')).includes('3-dart-average') && !(await textKlein('#summary-box')).includes('endstand'));
+
+/* Dasselbe Turnier laeuft hier noch als geteilte Kopie (anderes Geraet hat
+   abgeschlossen): es darf nicht doppelt zaehlen -- und das Abschliessen hier
+   legt keinen zweiten Eintrag an. */
+const tDoppel = await page.evaluate((vor) => {
+  const D = window.__dart, S = D.state();
+  const h = S.history.find((x) => x.id === 'turnier_x');
+  S.tour = { start: 501, bestOf: 1, players: vor.ids.slice(), geteilt: true, sid: 'turnier_x', cursor: 5, beendet: true };
+  S.matches = JSON.parse(JSON.stringify(h.matches));
+  D.save();
+  const c = D.career();
+  const won = vor.ids.map((id) => c[id].won);
+  D.action('finish-tournament');
+  const c2 = D.career();
+  return { won, wonNach: vor.ids.map((id) => c2[id].won), eintraege: S.history.filter((x) => x.id === 'turnier_x').length, tour: S.tour, matches: S.matches.length };
+}, tVor);
+check('laufende Kopie eines archivierten Turniers zaehlt nicht doppelt', JSON.stringify(tDoppel.won) === JSON.stringify(tVor.won), JSON.stringify(tDoppel));
+check('Abschliessen legt keinen zweiten Eintrag an und raeumt auf', tDoppel.eintraege === 1 && tDoppel.tour === null && tDoppel.matches === 0 &&
+  JSON.stringify(tDoppel.wonNach) === JSON.stringify(tVor.won), JSON.stringify(tDoppel));
+
+/* Ein Turnier, in dem nichts gespielt wurde, hinterlaesst keinen Eintrag. */
+const tLeer = await page.evaluate((vor) => {
+  const D = window.__dart, S = D.state();
+  const n = S.history.length;
+  S.lineup = vor.ids.slice(); S.mode = '501'; D.save(); D.setScreen('setup');
+  D.action('start-game');
+  const laeuft = S.matches.length;
+  D.action('finish-tournament');
+  return { laeuft, n, nach: S.history.length };
+}, tVor);
+check('leeres Turnier wird nicht archiviert', tLeer.laeuft === 3 && tLeer.nach === tLeer.n, JSON.stringify(tLeer));
+await page.evaluate(() => { const D = window.__dart, S = D.state(); S.history = S.history.filter((x) => x.id !== 'turnier_x'); D.save(); D.setScreen('setup'); });
+
+/* ---------- Geist in der Aufstellung ---------- */
+group('Aufstellung: ausgeblendeter Gast kann nicht mitspielen');
+{
+  const g = await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    S.game = null; S.matches = []; S.tour = null;
+    const ids = D.activeProfiles().slice(0, 2).map((p) => p.id);
+    /* Ausgeblendeter Gast, dessen Kennung in der Aufstellung haengen blieb -- doppelt. */
+    S.profiles.push({ id: 'geist', name: 'Laura', gast: true, hidden: true, avatar: null, hue: 2, created: Date.now() });
+    S.lineup = [ids[0], 'geist', ids[1], 'geist'];
+    S.mode = 'quick'; S.settings.quickSaetze = 1; S.settings.quickLegs = 1;
+    D.save(); D.setScreen('setup');
+    return { ids, lineup: S.lineup.slice() };
+  });
+  check('beim Betreten des Setups ist der Geist aus der Aufstellung', g.lineup.length === 2 && g.lineup.indexOf('geist') < 0, JSON.stringify(g.lineup));
+  await page.evaluate(() => { const S = window.__dart.state(); S.lineup.push('geist'); window.__dart.save(); });
+  await page.locator('[data-action="start-game"]').click();
+  await bullOffGo();
+  check('auch beim Start eines Spiels bleibt er draussen', await page.evaluate(() => {
+    const g2 = window.__dart.game();
+    return !!g2 && g2.players.length === 2 && g2.players.indexOf('geist') < 0;
+  }));
+  await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    S.game = null; S.profiles = S.profiles.filter((p) => p.id !== 'geist'); D.save(); D.setScreen('setup');
+  });
+}
+
 group('Fehlerfreiheit');
 check('keine JS-Fehler', errors.length === 0, errors.join(' | '));
 

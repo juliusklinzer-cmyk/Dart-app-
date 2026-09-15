@@ -754,6 +754,11 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 
 /* ---------- Sieger ---------- */
 .podium { display: flex; flex-direction: column; gap: 8px; margin: 16px 0; }
+/* Turnierzeile in der Spieleliste: leicht abgesetzt, damit man sie zwischen
+   den einzelnen Partien sofort findet. */
+.log-row.turnier-row { border-color: var(--accent-dark); }
+.pline.tap { cursor: pointer; }
+.pline.tap:active { background: var(--bg-3); }
 .podium .p {
   display: flex; align-items: center; gap: 12px; background: var(--bg-2);
   border: 1px solid var(--line); border-radius: 12px; padding: 14px;
@@ -4461,6 +4466,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   }
   function wertbareHistorie() { return S.history.filter(function (h) { return !testSpiel(h); }); }
   function turnierWertbar() { return !tourPlayers().some(istTest); }
+  /* Ein geteiltes Turnier, das ein anderes Geraet schon abgeschlossen hat,
+     liegt hier bereits als Archiv-Eintrag (gleiche Kennung) -- die noch
+     offene Kopie darf dann nicht ein zweites Mal in die Statistik. */
+  function turnierSchonArchiviert() {
+    return !!(S.tour && S.tour.sid && S.history.some(function (h) { return h.id === S.tour.sid; }));
+  }
 
   /* Ein Ort für die Namen der Spielarten – sie tauchen an einem halben Dutzend
      Stellen auf, und eine vergessene wäre sofort sichtbar. */
@@ -4552,6 +4563,23 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return weg.length;
   }
 
+  /* Die Aufstellung darf nur enthalten, was auch in der Liste steht: kein
+     ausgeblendeter oder geloeschter Spieler, keiner doppelt. Ein Geist in
+     der Aufstellung (Gast ausgeblendet, Kennung blieb stehen) waere sonst
+     in jedem neuen Spiel dabei, ohne dass man ihn abwaehlen koennte. */
+  function bereinigeAufstellung() {
+    var gesehen = {};
+    var vorher = S.lineup.length;
+    S.lineup = S.lineup.filter(function (id) {
+      if (gesehen[id]) return false;
+      gesehen[id] = 1;
+      var p = null;
+      for (var i = 0; i < S.profiles.length; i++) if (S.profiles[i].id === id) p = S.profiles[i];
+      return !!p && !p.hidden;
+    });
+    return S.lineup.length !== vorher;
+  }
+
   var GAST_FRIST = 12 * 3600 * 1000;   // ein Abend
   /* Laeuft beim Start der App und jedes Mal, wenn das Setup gezeichnet wird:
      ein Tablet, das tagelang offen bleibt, wuerde sonst nie aufraeumen, und
@@ -4574,14 +4602,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       p.hidden = true;
       return true;
     });
-    if (geaendert) {
-      S.lineup = S.lineup.filter(function (id) {
-        var p = null;
-        for (var i = 0; i < S.profiles.length; i++) if (S.profiles[i].id === id) p = S.profiles[i];
-        return p && !p.hidden;
-      });
-      save();
-    }
+    if (bereinigeAufstellung()) geaendert = true;
+    if (geaendert) save();
   }
 
   /* Auswahlliste fürs Lieblingsdoppel. Oben die, auf die man üblicherweise
@@ -4836,6 +4858,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       S.tour.cursor = daten.cursor;
     }
     if (daten.status === 'beendet') S.tour.beendet = true;
+    /* Frische Ergebnisse des anderen Geraets sofort ins Bild -- sonst zeigt
+       die Tabelle rechts alte Averages, bis irgendetwas anderes neu zeichnet. */
+    if (neu) setTimeout(render, 0);
     /* Kam das letzte Einzel des Ligaspiels vom anderen Gerät, stempelt auch
        dieses Gerät die Endzeit für den Spielberichtsbogen. */
     if (neu && S.tour.liga && !S.tour.liga.zeitBis && S.matches.length && !nextOpenMatch()) {
@@ -5731,7 +5756,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       if (h.liga && h.liga.uebung) return false;
       return (h.kind || '501') === '501' || h.kind === 'quick';
     }).map(function (h) { return { matches: h.matches, start: (h.settings && h.settings.start) || 501 }; });
-    if (S.matches.length && !(S.tour && S.tour.liga && S.tour.liga.uebung) && turnierWertbar()) {
+    if (S.matches.length && !(S.tour && S.tour.liga && S.tour.liga.uebung) && turnierWertbar() && !turnierSchonArchiviert()) {
       lists.push({ matches: S.matches, start: tourStart() });
     }
     var ids = S.profiles.map(function (p) { return p.id; });
@@ -5799,7 +5824,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     /* Uebungsspiele (DiensDarts) zaehlen nicht in die Liga-Rangliste. */
     var lists = wertbareHistorie().filter(function (h) { return h.liga && !h.liga.uebung && h.matches; })
       .map(function (h) { return { matches: h.matches, start: (h.settings && h.settings.start) || 501 }; });
-    if (S.matches.length && S.tour && S.tour.liga && !S.tour.liga.uebung) lists.push({ matches: S.matches, start: tourStart() });
+    if (S.matches.length && S.tour && S.tour.liga && !S.tour.liga.uebung && !turnierSchonArchiviert()) lists.push({ matches: S.matches, start: tourStart() });
     var map = collectStats(lists, S.profiles.map(function (p) { return p.id; }));
     Object.keys(map).forEach(function (k) {
       map[k].name = pname(k);
@@ -5812,7 +5837,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   /* Alle fertigen Liga-Einzel, neueste zuerst – fürs Liga-Verlaufsdiagramm. */
   function alleLigaMatches() {
     var out = [];
-    if (S.matches.length && S.tour && S.tour.liga && !S.tour.liga.uebung) {
+    if (S.matches.length && S.tour && S.tour.liga && !S.tour.liga.uebung && !turnierSchonArchiviert()) {
       S.matches.forEach(function (m) {
         if (m.done && knownPlayers(m.p)) out.push({ m: m, at: m.at, live: true });
       });
@@ -5827,14 +5852,28 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return out;
   }
 
+  function standingsSort(a, b) {
+    if (b.won !== a.won) return b.won - a.won;
+    if (b.legDiff !== a.legDiff) return b.legDiff - a.legDiff;
+    if (b.avg !== a.avg) return b.avg - a.avg;
+    return a.name.localeCompare(b.name);
+  }
   function standings() {
     var map = stats();
-    return tourPlayers().map(function (id) { return map[id]; }).sort(function (a, b) {
-      if (b.won !== a.won) return b.won - a.won;
-      if (b.legDiff !== a.legDiff) return b.legDiff - a.legDiff;
-      if (b.avg !== a.avg) return b.avg - a.avg;
-      return a.name.localeCompare(b.name);
+    return tourPlayers().map(function (id) { return map[id]; }).sort(standingsSort);
+  }
+  /* Tabelle eines archivierten Turniers -- dieselbe Rechnung wie die
+     laufende Tabelle, nur aus dem Archiv-Eintrag. */
+  function turnierTabelle(h) {
+    var start = (h.settings && h.settings.start) || 501;
+    var ids = (h.lineup || []).slice();
+    var map = collectStats([{ matches: h.matches, start: start }], ids);
+    ids.forEach(function (id) {
+      finalize(map[id]);
+      map[id].name = pname(id);
+      if (typeof map[id].legDiff !== 'number') map[id].legDiff = map[id].legsWon - map[id].legsLost;
     });
+    return ids.map(function (id) { return map[id]; }).sort(standingsSort);
   }
 
   /* ================= Ranglisten ================= */
@@ -5908,7 +5947,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
   function allMatches() {
     var out = [];
-    if (S.matches.length && !(S.tour && S.tour.liga && S.tour.liga.uebung) && turnierWertbar()) {
+    if (S.matches.length && !(S.tour && S.tour.liga && S.tour.liga.uebung) && turnierWertbar() && !turnierSchonArchiviert()) {
       S.matches.forEach(function (m) { if (m.done && knownPlayers(m.p)) out.push({ m: m, start: tourStart(), live: true }); });
     }
     wertbareHistorie().forEach(function (h) {
@@ -6289,6 +6328,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   }
 
   function startGame(kind) {
+    bereinigeAufstellung();
     // Ein beendetes, noch nicht gespeichertes Spiel zuerst sichern.
     if (S.game && S.game.done) archiveGame(S.game);
     /* Cricket, Round the World und Finisher gehen auch allein – als Training
@@ -6419,22 +6459,32 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
      * einmal an, und das andere Gerät erkennt sie beim Abgleich wieder.
      */
     if (geteilt && window.DartSync && window.DartSync.turnier) window.DartSync.turnier.ende();
-    var table = standings();
-    S.history.unshift({
-      id: geteilt && geteilt.sid ? geteilt.sid : uid(), at: Date.now(),
-      lineup: tourPlayers().slice(),
-      settings: { start: tourStart(), bestOf: tour().bestOf },
-      matches: S.matches,
-      /* Ein Ligaspiel hat keinen Einzelsieger – sonst bekäme der individuell
-         beste der acht (womöglich ein Gegner) einen erfundenen Turniersieg
-         in Karriere und Rangliste. */
-      winner: allMatchesDone() && table[0] && !(S.tour && S.tour.liga) ? table[0].id : null
+    /* Nichts gespielt (Turnier angelegt und gleich wieder verlassen): kein
+       Archiv-Eintrag -- der stuende sonst als leeres Turnier in der Liste.
+       Schon archiviert (das andere Geraet war schneller, der Eintrag kam per
+       Abgleich): ebenfalls keinen zweiten anlegen. */
+    var gespielt = S.matches.some(function (m) {
+      return m.done || m.kampflos || m.legs.some(function (l) { return l.visits.length > 0; });
     });
-    if (S.history.length > MAX_HISTORY) S.history.length = MAX_HISTORY;
-    // Ligaspiele behalten ihre Team-Daten – die Auswertung soll später noch
-    // wissen, gegen wen und an welchem Spieltag das war.
-    if (S.tour && S.tour.liga) S.history[0].liga = S.tour.liga;
-    meldeNeuesSpiel(S.history[0]);
+    var schonDa = !!(geteilt && geteilt.sid && S.history.some(function (h) { return h.id === geteilt.sid; }));
+    if (gespielt && !schonDa) {
+      var table = standings();
+      S.history.unshift({
+        id: geteilt && geteilt.sid ? geteilt.sid : uid(), at: Date.now(),
+        lineup: tourPlayers().slice(),
+        settings: { start: tourStart(), bestOf: tour().bestOf },
+        matches: S.matches,
+        /* Ein Ligaspiel hat keinen Einzelsieger – sonst bekäme der individuell
+           beste der acht (womöglich ein Gegner) einen erfundenen Turniersieg
+           in Karriere und Rangliste. */
+        winner: allMatchesDone() && table[0] && !(S.tour && S.tour.liga) ? table[0].id : null
+      });
+      if (S.history.length > MAX_HISTORY) S.history.length = MAX_HISTORY;
+      // Ligaspiele behalten ihre Team-Daten – die Auswertung soll später noch
+      // wissen, gegen wen und an welchem Spieltag das war.
+      if (S.tour && S.tour.liga) S.history[0].liga = S.tour.liga;
+      meldeNeuesSpiel(S.history[0]);
+    }
     S.matches = [];
     S.current = null;
     S.tour = null;
@@ -6602,7 +6652,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
        Turnierbildschirm. Sonst fragt die App den ganzen Abend nach Daten,
        die niemand anschaut. */
     if (window.DartSync && window.DartSync.turnier) {
-      window.DartSync.turnier.takt(S.screen === 'tournament' && !!geteiltesTurnier());
+      window.DartSync.turnier.takt(!!geteiltesTurnier() &&
+        (S.screen === 'tournament' || S.screen === 'winner' || S.screen === 'summary' ||
+         S.screen === 'game' || S.screen === 'bulloff'));
     }
     /* Das Online-Spiel taktet, solange man es anschaut -- auch im Bull-Off
        und in der Auswertung, denn dort wartet man auf den anderen. */
@@ -7239,7 +7291,28 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       return;
     }
 
-    $('match-log').innerHTML = log.slice(0, 30).map(function (row) {
+    /* Bei Classic steht zu jedem gespielten Turnier eine eigene Zeile: ein
+       Tipp oeffnet den Endstand mit allen Averages, wie am Abend am Bildschirm. */
+    var logMit = log.slice();
+    if (mode === '501') {
+      wertbareHistorie().forEach(function (h) {
+        if (!h.matches || !h.lineup || h.liga || (h.kind && h.kind !== '501')) return;
+        if (!h.matches.some(function (x) { return x.done; })) return;
+        logMit.push({ kind: 'turnier', at: h.at, h: h });
+      });
+      logMit.sort(function (a, b) { return (b.at || 0) - (a.at || 0); });
+    }
+    $('match-log').innerHTML = logMit.slice(0, 40).map(function (row) {
+      if (row.kind === 'turnier') {
+        var th = row.h;
+        var thFertig = th.matches.filter(function (x) { return x.done; }).length;
+        return '<div class="log-row tap turnier-row" data-action="open-summary" data-kind="turnier" data-id="' + th.id + '" role="button" tabindex="0">' +
+          '<div class="lp w">' + (th.winner ? esc(pname(th.winner)) : 'Turnier') + '<span class="a">' + (th.winner ? 'Turniersieg' : 'kein Sieger') + '</span></div>' +
+          '<div class="ls">🏆</div>' +
+          '<div class="lp right">' + plural(th.lineup.length, 'Spieler', 'Spieler') + '<span class="a">' + plural(thFertig, 'Spiel', 'Spiele') + ' · Endstand ansehen</span></div>' +
+          '<div class="ld">' + fmtDate(th.at) + '</div>' +
+          '</div>';
+      }
       if (row.kind !== '501') {
         var h = row.h;
         var title = h.kind === 'cricket' ? 'Cricket' + (h.scoring ? '' : ' (ohne Punkte)') : kindName(h.kind);
@@ -8401,6 +8474,13 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   /* ================= Spielstatistik nach dem Spiel ================= */
   /* Findet ein Spiel im laufenden Turnier oder im Archiv wieder. */
   function findGame(kind, id) {
+    if (kind === 'turnier') {
+      for (var t = 0; t < S.history.length; t++) {
+        var te = S.history[t];
+        if (te.id === id && te.matches && te.lineup) return { h: te, live: false };
+      }
+      return null;
+    }
     if (kind === '501') {
       for (var i = 0; i < S.matches.length; i++) {
         if (S.matches[i].id === id) return { m: S.matches[i], start: tourStart(), live: true };
@@ -8843,7 +8923,50 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var actions = '';
     var note = '<p class="hint center">Diese Werte fließen in Karriere-Statistik und Ranglisten ein.</p>';
 
-    if (s.kind === '501') {
+    if (s.kind === 'turnier') {
+      /* Der Endstand eines gespielten Turniers, so wie er am Abend auf dem
+         Bildschirm stand -- zum Nachschauen aus der Spieleliste. */
+      var th = found.h;
+      var tStart = (th.settings && th.settings.start) || 501;
+      var tTab = turnierTabelle(th);
+      var tMedals = ['🥇', '🥈', '🥉'];
+      var tFertig = th.matches.filter(function (x) { return x.done; });
+      box = '<div class="sum-head"><div class="big-emoji">🏆</div>' +
+        '<h2 class="sum-title">' + (th.winner ? esc(pname(th.winner)) + ' gewinnt' : 'Turnier') + '</h2>' +
+        '<div class="muted">Turnier · ' + fmtDate(th.at) + ' · ' + plural((th.lineup || []).length, 'Spieler', 'Spieler') +
+          ' · ' + tStart + ' Double Out' + (th.settings && th.settings.bestOf > 1 ? ' · Best of ' + th.settings.bestOf : ' · ein Leg') +
+          ' · ' + plural(tFertig.length, 'Spiel', 'Spiele') + '</div></div>' +
+        '<div class="podium">' + tTab.map(function (st, i) {
+          return '<div class="p ' + (i === 0 && st.won > 0 ? 'first' : '') + '">' +
+            '<div class="medal">' + (tMedals[i] || (i + 1) + '.') + '</div>' +
+            avatarHTML(profile(st.id), 'sm') +
+            '<div class="pn">' + esc(st.name) + '</div>' +
+            '<div class="pv">' + plural(st.won, 'Sieg', 'Siege') + ' · Legs ' + st.legsWon + ':' + st.legsLost + ' · Ø ' + (st.avg ? st.avg.toFixed(1) : '–') + '</div>' +
+            '</div>';
+        }).join('') + '</div>' +
+        '<div class="sum-cards">' + tTab.map(function (st) {
+          return '<div class="card sum-card ' + (th.winner === st.id ? 'win' : '') + '">' +
+            '<div class="sum-who">' + avatarHTML(profile(st.id), 'md') +
+              '<div><div class="nm">' + esc(st.name) + '</div>' +
+              '<div class="muted">' + st.won + ' von ' + st.matches + ' gewonnen</div></div></div>' +
+            statRow('3-Dart-Average', st.darts ? st.avg.toFixed(2) : '–') +
+            statRow('First 9', st.first9Darts ? st.first9.toFixed(2) : '–') +
+            statRow('Höchste Aufnahme', st.highScore || '–') +
+            statRow('180 / 140+ / 100+', st.s180 + ' / ' + st.s140 + ' / ' + st.s100) +
+            statRow('Höchstes Finish', st.highCO || '–') +
+            statRow('Bestes Leg', st.bestLeg ? st.bestLeg + ' Darts' : '–') +
+            statRow('Darts geworfen', st.darts) +
+            '</div>';
+        }).join('') + '</div>' +
+        '<div class="card"><h2>Spiele</h2>' + tFertig.map(function (x) {
+          return '<div class="pline tap" data-action="open-summary" data-kind="501" data-id="' + x.id + '" role="button" tabindex="0">' +
+            '<span>' + (x.winner === x.p[0] ? '<b>' + esc(pname(x.p[0])) + '</b>' : esc(pname(x.p[0]))) + ' – ' +
+            (x.winner === x.p[1] ? '<b>' + esc(pname(x.p[1])) + '</b>' : esc(pname(x.p[1]))) + '</span>' +
+            '<b>' + legsWon(x, x.p[0]) + ':' + legsWon(x, x.p[1]) + '</b></div>';
+        }).join('') + '</div>' + note;
+      actions = '<button class="btn ghost full" data-action="summary-back">Zurück</button>';
+
+    } else if (s.kind === '501') {
       var m = found.m;
       var map = collectStats([{ matches: [m], start: found.start }], m.p);
       m.p.forEach(function (id) { finalize(map[id]); });
@@ -9434,7 +9557,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
              Ausblenden: sonst stünde im Archiv „Unbekannt". */
           var loeschbar = vor.gast && !letztesSpielAm(o.id);
           var imSpielplan = vor.gast && S.tour &&
-            S.matches.some(function (m) { return m.p.indexOf(o.id) >= 0; });
+            S.matches.some(function (m) { return !m.done && !m.void && m.p.indexOf(o.id) >= 0; });
           /* Gaeste lassen sich direkt loeschen: ohne Spiele spurlos, mit
              Spielen verschwinden sie aus allen Listen – die Ergebnisse der
              Mitspieler bleiben unangetastet. Nur mitten im laufenden
@@ -9899,6 +10022,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   }
 
   function startTournament(confirmed) {
+    bereinigeAufstellung();
     if (S.lineup.length < 2) { UI.overlay = { type: 'need-players' }; render(); return; }
     // Ein Turnier mit Ergebnissen wird nie kommentarlos ersetzt.
     var played = sum(S.matches, function (m) { return m.done ? 1 : 0; });
@@ -10113,9 +10237,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         if (!dg.gast) return;
         /* Steht der Gast im laufenden Spielplan, wuerde das Loeschen offene
            Einzel verwaisen lassen - erst das Turnier beenden. */
-        if (S.tour && S.matches.some(function (m) { return m.p.indexOf(dg.id) >= 0; })) return;
+        if (S.tour && S.matches.some(function (m) { return !m.done && !m.void && m.p.indexOf(dg.id) >= 0; })) return;
         dg.hidden = true;
         S.lineup = S.lineup.filter(function (x) { return x !== dg.id; });
+        /* Steht er noch im (fertigen) Spielplan, bleibt er dort als Kennung --
+           aus der Aufstellung eines neuen Turniers ist er raus. */
+        if (S.tour && S.tour.players) S.tour.players = S.tour.players.filter(function (x) { return x !== dg.id; });
         UI.overlay = null;
         if (S.screen === 'profile' && UI.profile === dg.id) S.screen = 'players';
         save(); render();

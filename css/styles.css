@@ -751,6 +751,11 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 
 /* ---------- Sieger ---------- */
 .podium { display: flex; flex-direction: column; gap: 8px; margin: 16px 0; }
+/* Turnierzeile in der Spieleliste: leicht abgesetzt, damit man sie zwischen
+   den einzelnen Partien sofort findet. */
+.log-row.turnier-row { border-color: var(--accent-dark); }
+.pline.tap { cursor: pointer; }
+.pline.tap:active { background: var(--bg-3); }
 .podium .p {
   display: flex; align-items: center; gap: 12px; background: var(--bg-2);
   border: 1px solid var(--line); border-radius: 12px; padding: 14px;

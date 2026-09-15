@@ -470,6 +470,15 @@ die Statistik der Mannschaft zu berühren (siehe [DEPLOY.md](DEPLOY.md#testkonte
 
 Dazu die letzten Spiele mit Gegner, Ergebnis und Datum.
 
+**Turniere nachschauen:** In der Spieleliste unter Classic steht zu jedem gespielten
+Turnier eine eigene Zeile (🏆). Ein Tipp öffnet den **Endstand** wie am Abend auf dem
+Bildschirm: Plätze mit Siegen, Legs und Ø, je Spieler die Turnierwerte (Average,
+First 9, höchste Aufnahme, 180/140+/100+, höchstes Finish, bestes Leg), darunter
+alle Spiele zum Anklicken. Jedes Spiel eines Turniers zählt als Sieg bzw. Niederlage
+für die Beteiligten und fließt mit allen Würfen in Average und Rekorde ein. Ein
+geteiltes Turnier („An zwei Scheiben“) zählt dabei genau einmal – auch wenn ein
+anderes Gerät es abgeschlossen hat und die eigene Kopie noch offen ist.
+
 Für Cricket kommt die **MPR** (Marks per Round – getroffene Marken je 3 Darts, das
 übliche Cricket-Maß) samt Siegen dazu, für Round the World die Bestleistung in Darts
 und die Siege.
