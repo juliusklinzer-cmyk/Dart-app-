@@ -168,6 +168,7 @@ async function main() {
     });
     gleich(r.status, 201, 'Registrierung mit richtigem Code klappt');
     const julius_id = r.daten.nutzer.id;
+    const julius_hue = r.daten.nutzer.hue;
     gleich(r.daten.nutzer.email, 'julius@example.de', 'E-Mail wird kleingeschrieben gespeichert');
     ok(!('password_hash' in r.daten.nutzer), 'der Passwort-Hash wird nie herausgegeben');
 
@@ -187,6 +188,8 @@ async function main() {
     });
     gleich(r.status, 201, 'zweiter Kollege kann sich registrieren');
     const tobi_id = r.daten.nutzer.id;
+    ok(typeof r.daten.nutzer.hue === 'number' && r.daten.nutzer.hue !== julius_hue,
+      'der zweite Kollege bekommt eine andere Farbe als der erste (' + julius_hue + ' / ' + r.daten.nutzer.hue + ')');
 
     console.log('\nSession');
     r = await julius.ruf('GET', '/api/me');

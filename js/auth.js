@@ -100,7 +100,7 @@
         if (profilOffen && nutzer && r.id === nutzer.id) return;
         p.name = r.name;
         p.avatar = r.avatar;
-        if (typeof r.hue === 'number' && r.hue) p.hue = r.hue;
+        if (typeof r.hue === 'number' && r.hue >= 0) p.hue = r.hue;
         // Das Lieblingsdoppel gehoert dem Account, nicht dem Geraet: so gilt
         // es auch, wenn ein Kollege den Abend auf seinem iPad mitschreibt.
         p.dbl = r.dbl || null;
@@ -113,7 +113,7 @@
       } else {
         S.profiles.push({
           id: r.id, name: r.name, avatar: r.avatar,
-          hue: typeof r.hue === 'number' && r.hue ? r.hue : D.freeHue(),
+          hue: typeof r.hue === 'number' && r.hue >= 0 ? r.hue : D.freeHue(),
           dbl: r.dbl || null,
           voll: r.voll || null,
           test: !!r.test,

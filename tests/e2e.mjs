@@ -3077,6 +3077,19 @@ await page.evaluate(() => {
   D.save(); D.setScreen('setup');
 });
 
+group('Diagramm: jede Linie eine eigene Farbe, auch wenn alle Profile denselben Ton haben');
+{
+  const farben = await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    const alt = S.profiles.map((p) => p.hue);
+    S.profiles.forEach((p) => { p.hue = 145; });
+    const reihen = D.chartSeries('501');
+    S.profiles.forEach((p, i) => { p.hue = alt[i]; });
+    return reihen.map((r) => r.color);
+  });
+  check('Linien unterscheiden sich trotz gleicher Profilfarbe', farben.length < 2 || new Set(farben).size === farben.length, JSON.stringify(farben));
+}
+
 group('Diagramm-Legende: Durchschnitt der gezeigten Spiele');
 await page.evaluate(() => { window.__dart.ui().boardMode = '501'; window.__dart.setScreen('boards'); });
 check('unter dem Diagramm steht ein Ø ohne Spielzahl', await page.evaluate(() => {

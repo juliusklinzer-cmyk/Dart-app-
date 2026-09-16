@@ -4641,7 +4641,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   }
   /* Feste, gut unterscheidbare Farbtöne – dieselbe Farbe für Avatar,
      Diagramm und Legende, damit ein Spieler überall gleich aussieht. */
-  var HUES = [145, 210, 40, 0, 275, 175, 320, 90, 25, 250, 120, 300];
+  var HUES = [145, 210, 40, 355, 275, 175, 320, 90, 25, 250, 120, 300];
   function hue(id) {
     var p = profile(id);
     if (typeof p.hue === 'number') return p.hue;
@@ -7123,7 +7123,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       });
     }
 
-    return Object.keys(per).filter(function (id) { return !profile(id).hidden; }).map(function (id) {
+    var reihen = Object.keys(per).filter(function (id) { return !profile(id).hidden; }).map(function (id) {
       var letzte = per[id].slice(-CHART_GAMES);
       var z = sum(letzte, function (x) { return x.z; }), n = sum(letzte, function (x) { return x.n; });
       return {
@@ -7132,6 +7132,15 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         mittel: n ? (z / n) * 3 : 0
       };
     }).filter(function (r) { return r.points.length > 0; });
+    /* Haben zwei Linien denselben Farbton (aeltere Konten kamen alle mit
+       derselben Farbe vom Server), bekommt jede Linie im Diagramm eine
+       eigene Palettenfarbe -- Linie und Legende bleiben dabei zusammen. */
+    var gesehen = {}, doppelt = false;
+    reihen.forEach(function (r) { var h = hue(r.id); if (gesehen[h]) doppelt = true; gesehen[h] = 1; });
+    if (doppelt) {
+      reihen.forEach(function (r, i) { r.color = 'hsl(' + HUES[i % HUES.length] + ',70%,58%)'; });
+    }
+    return reihen;
   }
 
   /* Schlichtes SVG-Liniendiagramm: links die Skala, unten die Spiele. */

@@ -117,6 +117,21 @@ export function createApi(db, config) {
     return Number.isFinite(h) ? ((Math.round(h) % 360) + 360) % 360 : 0;
   }
 
+  /* Farbe fuer ein neues Konto: der Wunsch des Geraets zaehlt nur, wenn ihn
+     noch niemand hat -- sonst der erste freie Ton der Palette, und wenn alle
+     vergeben sind, der am seltensten benutzte. Vorher bekam jeder den
+     ersten Ton der leeren Geraeteliste, und alle Linien im Diagramm waren gruen. */
+  const FARBEN = [145, 210, 40, 355, 275, 175, 320, 90, 25, 250, 120, 300];
+  function freieFarbe(wunsch) {
+    const zaehl = new Map();
+    for (const r of db.prepare("SELECT hue FROM users WHERE status = 'aktiv'").all()) {
+      zaehl.set(r.hue, (zaehl.get(r.hue) || 0) + 1);
+    }
+    if (wunsch && !zaehl.has(wunsch)) return wunsch;
+    for (const h of FARBEN) if (!zaehl.has(h)) return h;
+    return FARBEN.slice().sort((a, b) => (zaehl.get(a) || 0) - (zaehl.get(b) || 0))[0];
+  }
+
   /* ---------- Konto ---------- */
 
   async function register(req, res) {
@@ -145,7 +160,7 @@ export function createApi(db, config) {
     db.prepare(
       'INSERT INTO users (id, email, display_name, password_hash, avatar, hue, status, created_at)' +
         " VALUES (?, ?, ?, ?, NULL, ?, 'aktiv', ?)"
-    ).run(id, email, name, hashPassword(body.password), pruefeHue(body.hue), new Date().toISOString());
+    ).run(id, email, name, hashPassword(body.password), freieFarbe(pruefeHue(body.hue)), new Date().toISOString());
 
     const token = sess.createSession(db, id);
     limit.loesche('reg:' + ip);
