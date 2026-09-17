@@ -2567,6 +2567,8 @@ button, input, select, textarea { font-family: inherit; }
   border-radius: 10px; padding: 10px 12px; font-size: 1rem; font-family: inherit;
 }
 .kasse-konfig { margin-top: 6px; }
+.kasse-form.bearbeiten { border: 1px solid var(--accent-dark); border-radius: 12px; padding: 10px; }
+.kasse-eintrag .weg.edit { color: var(--muted); }
 .kasse-konfig summary { cursor: pointer; font-size: 0.85rem; color: var(--muted); padding: 6px 0; }
 .kasse-konfig .zeile { margin: 8px 0; }
 .kasse-liste { margin-top: 12px; }

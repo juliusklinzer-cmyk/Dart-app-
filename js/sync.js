@@ -591,6 +591,10 @@
     if (!window.DartKonto || !nutzer) return Promise.reject(new Error('Nicht angemeldet.'));
     return window.DartKonto.ruf('POST', '/api/kasse', daten);
   }
+  function kasseAendern(id, daten) {
+    if (!window.DartKonto || !nutzer) return Promise.reject(new Error('Nicht angemeldet.'));
+    return window.DartKonto.ruf('PATCH', '/api/kasse/' + id, daten);
+  }
   function kasseEinstellen(daten) {
     if (!window.DartKonto || !nutzer) return Promise.reject(new Error('Nicht angemeldet.'));
     return window.DartKonto.ruf('PATCH', '/api/kasse/konfig', daten);
@@ -638,6 +642,7 @@
       kasse: {
         holen: kasseHolen,
         buchen: kasseBuchen,
+        aendern: kasseAendern,
         einstellen: kasseEinstellen,
         loeschen: kasseLoeschen
       },

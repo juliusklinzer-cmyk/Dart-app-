@@ -702,8 +702,11 @@ export function createApi(db, config) {
   /* ---------- Vereinskasse ---------- */
   /* Das Kassenbuch wie die Excel-Vorlage der Kassenwartin: jede Buchung mit
      Datum, Beschreibung, Kategorie und Betrag (Cent, positiv = Einnahme),
-     dazu Kassenjahr und Anfangsbestand. Lesen duerfen alle Angemeldeten,
-     buchen, loeschen und einstellen nur Kassenwarte (users.kassenwart). */
+     dazu Kassenjahr und Anfangsbestand. Alle Angemeldeten sehen das Buch und
+     tragen Einzahlungen und Ausgaben direkt ein; eigene Buchungen darf jeder
+     wieder loeschen. Der Kassenwart (users.kassenwart) aendert und loescht
+     jede Buchung, stellt Kassenjahr und Anfangsbestand ein und bucht
+     Beitraege fuer andere. */
   const KASSE_EIN = ['Mitgliedsbeiträge', 'Startgelder Turniere', 'Spenden', 'Sponsoring', 'Sonstige Einnahmen'];
   const KASSE_AUS = ['Turnierkosten', 'Ausrüstung/Dartpfeile', 'Getränke/Verpflegung', 'Raummiete', 'Verbandsgebühren', 'Sonstige Ausgaben'];
 
@@ -753,7 +756,8 @@ export function createApi(db, config) {
       summe,
       konfig,
       kassenwarte,
-      darfBuchen: !!u.kassenwart,
+      darfBuchen: true,
+      kassenwart: !!u.kassenwart,
       kategorien: { ein: KASSE_EIN, aus: KASSE_AUS },
       mitglieder,
       eintraege: zeilen.map((z) => ({
@@ -771,11 +775,8 @@ export function createApi(db, config) {
     return Number.isNaN(d.getTime()) ? null : s;
   }
 
-  async function kasseBuchen(req, res) {
-    pruefeHerkunft(req);
-    const u = verlangeNutzer(req);
-    verlangeKassenwart(u);
-    const body = await leseJson(req);
+  /* Eine Buchung pruefen -- fuer Anlegen und Aendern dieselben Regeln. */
+  function pruefeBuchung(body, u) {
     const betrag = Math.trunc(Number(body.betrag));
     if (!Number.isFinite(betrag) || betrag === 0 || Math.abs(betrag) > 1000000) {
       throw new HttpFehler(400, 'Der Betrag ist unbrauchbar.');
@@ -790,19 +791,42 @@ export function createApi(db, config) {
     if (body.mitglied) {
       const m = db.prepare("SELECT id FROM users WHERE id = ? AND status = 'aktiv'").get(String(body.mitglied));
       if (!m) throw new HttpFehler(400, 'Dieses Mitglied gibt es nicht.');
+      /* Den Beitrag eines anderen bucht nur der Kassenwart -- den eigenen jeder. */
+      if (m.id !== u.id && !u.kassenwart) throw new HttpFehler(403, 'Den Beitrag eines anderen traegt nur der Kassenwart ein.');
       mitglied = m.id;
     }
+    return { betrag, text, kategorie, datum, mitglied };
+  }
+
+  async function kasseBuchen(req, res) {
+    pruefeHerkunft(req);
+    const u = verlangeNutzer(req);
+    const b = pruefeBuchung(await leseJson(req), u);
     db.prepare('INSERT INTO kasse (user_id, betrag, text, datum, kategorie, mitglied, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
-      .run(u.id, betrag, text, datum, kategorie, mitglied, new Date().toISOString());
+      .run(u.id, b.betrag, b.text, b.datum, b.kategorie, b.mitglied, new Date().toISOString());
     return kasseHolen(req, res);
   }
 
-  async function kasseLoeschen(req, res, id) {
+  /* Aendern darf nur der Kassenwart -- er verwaltet das Buch. */
+  async function kasseAendern(req, res, id) {
     pruefeHerkunft(req);
     const u = verlangeNutzer(req);
     verlangeKassenwart(u);
     const z = db.prepare('SELECT id FROM kasse WHERE id = ?').get(Number(id));
     if (!z) throw new HttpFehler(404, 'Diese Buchung gibt es nicht.');
+    const b = pruefeBuchung(await leseJson(req), u);
+    db.prepare('UPDATE kasse SET betrag = ?, text = ?, datum = ?, kategorie = ?, mitglied = ? WHERE id = ?')
+      .run(b.betrag, b.text, b.datum, b.kategorie, b.mitglied, Number(id));
+    return kasseHolen(req, res);
+  }
+
+  /* Loeschen: die eigene Buchung jeder, jede Buchung der Kassenwart. */
+  async function kasseLoeschen(req, res, id) {
+    pruefeHerkunft(req);
+    const u = verlangeNutzer(req);
+    const z = db.prepare('SELECT id, user_id FROM kasse WHERE id = ?').get(Number(id));
+    if (!z) throw new HttpFehler(404, 'Diese Buchung gibt es nicht.');
+    if (z.user_id !== u.id && !u.kassenwart) throw new HttpFehler(403, 'Fremde Buchungen loescht nur der Kassenwart.');
     db.prepare('DELETE FROM kasse WHERE id = ?').run(Number(id));
     return kasseHolen(req, res);
   }
@@ -1132,6 +1156,7 @@ export function createApi(db, config) {
     ['POST', /^\/api\/kasse$/, kasseBuchen],
     ['DELETE', /^\/api\/kasse\/(\d{1,12})$/, kasseLoeschen],
     ['PATCH', /^\/api\/kasse\/konfig$/, kasseEinstellen],
+    ['PATCH', /^\/api\/kasse\/(\d{1,12})$/, kasseAendern],
     ['GET', /^\/api\/liga\/tabelle$/, ligaTabelleHolen],
     ['PUT', /^\/api\/liga\/tabelle$/, ligaTabelleSpeichern],
     ['PUT', /^\/api\/liga\/zusagen\/([a-z0-9-]{2,40})$/, ligaZusageSetzen],

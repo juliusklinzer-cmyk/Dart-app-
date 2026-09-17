@@ -2578,6 +2578,8 @@ button, input, select, textarea { font-family: inherit; }
   border-radius: 10px; padding: 10px 12px; font-size: 1rem; font-family: inherit;
 }
 .kasse-konfig { margin-top: 6px; }
+.kasse-form.bearbeiten { border: 1px solid var(--accent-dark); border-radius: 12px; padding: 10px; }
+.kasse-eintrag .weg.edit { color: var(--muted); }
 .kasse-konfig summary { cursor: pointer; font-size: 0.85rem; color: var(--muted); padding: 6px 0; }
 .kasse-konfig .zeile { margin: 8px 0; }
 .kasse-liste { margin-top: 12px; }
@@ -7625,8 +7627,13 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var d = kasseDaten;
     var konfig = d && d.konfig ? d.konfig : { jahr: new Date().getFullYear(), anfangsbestand: 0, beitrag: 5000, paypal: '' };
     var saldo = d ? d.saldo : konfig.anfangsbestand;
-    var darf = !!(online && d && d.darfBuchen);
-    var art = UI.kasseArt === 'aus' ? 'aus' : 'ein';
+    /* Eintragen darf jeder Angemeldete; der Kassenwart verwaltet alles. */
+    var darf = online;
+    var wart = !!(online && d && d.kassenwart);
+    var ich = online ? window.DartKonto.nutzer().id : null;
+    var bearbeite = UI.kasseEdit || null;
+    var art = bearbeite ? (bearbeite.betrag < 0 ? 'aus' : 'ein') : (UI.kasseArt === 'aus' ? 'aus' : 'ein');
+    var katWahl = bearbeite ? bearbeite.kategorie : UI.kasseKategorie;
     var eintraege = (d && d.eintraege) || [];
     var summeEin = sum(eintraege, function (e) { return e.betrag > 0 ? e.betrag : 0; });
     var summeAus = sum(eintraege, function (e) { return e.betrag < 0 ? -e.betrag : 0; });
@@ -7643,7 +7650,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '<div class="zahlen"><span class="betrag ' + (e.betrag < 0 ? 'minus' : 'plus') + '">' +
           (e.betrag > 0 ? '+' : '−') + euro(Math.abs(e.betrag)) + '</span>' +
           '<span class="saldo">Saldo ' + euro(lauf) + '</span></div>' +
-        (darf ? '<button class="weg" data-action="kasse-weg" data-id="' + e.id + '" aria-label="Buchung löschen">✕</button>' : '') +
+        (wart ? '<button class="weg edit" data-action="kasse-edit" data-id="' + e.id + '" aria-label="Buchung ändern">✎</button>' : '') +
+        (wart || e.meins ? '<button class="weg" data-action="kasse-weg" data-id="' + e.id + '" aria-label="Buchung löschen">✕</button>' : '') +
         '</div>';
     });
 
@@ -7656,7 +7664,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           avatarHTML({ id: m.id, name: m.name, avatar: m.avatar, hue: m.hue }, 'sm') +
           '<span class="kb-name">' + esc(m.name) + '</span>' +
           '<span class="kb-status">' + (voll ? '✓ bezahlt' + (m.am ? ' · ' + datumDE(m.am) : '') : m.gezahlt > 0 ? euro(m.gezahlt) + ' von ' + euro(konfig.beitrag) : 'offen') + '</span>' +
-          (darf && !voll ? '<button class="btn ghost small" data-action="kasse-beitrag" data-id="' + m.id + '" data-name="' + esc(m.name) + '">Bezahlt</button>' : '') +
+          (!voll && (wart || m.id === ich) ? '<button class="btn ghost small" data-action="kasse-beitrag" data-id="' + m.id + '" data-name="' + esc(m.name) + '">' + (m.id === ich && !wart ? 'Ich habe eingezahlt' : 'Bezahlt') + '</button>' : '') +
           '</div>';
       }).join('') + '</div>' : '';
 
@@ -7672,40 +7680,44 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '<span class="hint">Einnahmen ' + euro(summeEin) + ' · Ausgaben ' + euro(summeAus) + '</span></div>' +
       (konfig.paypal
         ? '<a class="btn primary full kasse-paypal" href="' + esc(konfig.paypal) + '" target="_blank" rel="noopener">Per PayPal ins Vereinskonto einzahlen</a>' +
-          '<p class="hint center">Der Kassenwart trägt die Einzahlung danach hier ein.</p>'
+          '<p class="hint center">Danach die Einzahlung unten eintragen – sie steht sofort im Kassenbuch.</p>'
         : '') +
       beitragHtml +
       (darf
-        ? '<div class="kasse-form">' +
-            '<h3>Buchung eintragen</h3>' +
+        ? '<div class="kasse-form' + (bearbeite ? ' bearbeiten' : '') + '">' +
+            '<h3>' + (bearbeite ? 'Buchung Nr. ' + (eintraege.indexOf(bearbeite) + 1) + ' ändern' : 'Eintragen: Einzahlung oder Ausgabe') + '</h3>' +
+            (bearbeite ? '' : '<p class="hint">Jede Einzahlung und jede Ausgabe hier eintragen – sie steht sofort im Kassenbuch. ' +
+              (((d && d.kassenwarte) || []).join(', ') || 'Der Kassenwart') + ' prüft und verwaltet die Buchungen.</p>') +
             '<div class="options" id="kasse-art">' +
               '<button data-action="kasse-art" data-value="ein" class="' + (art === 'ein' ? 'active' : '') + '">Einnahme</button>' +
               '<button data-action="kasse-art" data-value="aus" class="' + (art === 'aus' ? 'active' : '') + '">Ausgabe</button>' +
             '</div>' +
             '<div class="zeile">' +
-              '<input id="kasse-datum" type="date" value="' + heuteISO() + '" aria-label="Datum">' +
-              kasseKategorieWahl(art, UI.kasseKategorie) +
+              '<input id="kasse-datum" type="date" value="' + (bearbeite ? bearbeite.datum : heuteISO()) + '" aria-label="Datum">' +
+              kasseKategorieWahl(art, katWahl) +
             '</div>' +
             '<div class="zeile">' +
-              '<input id="kasse-betrag" type="text" inputmode="decimal" placeholder="Betrag in €">' +
-              '<input id="kasse-text" type="text" maxlength="80" placeholder="Beschreibung">' +
+              '<input id="kasse-betrag" type="text" inputmode="decimal" placeholder="Betrag in €"' + (bearbeite ? ' value="' + (Math.abs(bearbeite.betrag) / 100).toFixed(2).replace('.', ',') + '"' : '') + '>' +
+              '<input id="kasse-text" type="text" maxlength="80" placeholder="Beschreibung"' + (bearbeite ? ' value="' + esc(bearbeite.text) + '"' : '') + '>' +
             '</div>' +
-            '<div id="kasse-mitglied-zeile" class="' + (art === 'ein' && (UI.kasseKategorie || kasseKategorien('ein')[0]) === 'Mitgliedsbeiträge' ? '' : 'hidden') + '">' +
-              '<select id="kasse-mitglied"><option value="">Mitglied (für den Beitrag)</option>' +
-                mitglieder.map(function (m) { return '<option value="' + m.id + '">' + esc(m.name) + '</option>'; }).join('') +
+            '<div id="kasse-mitglied-zeile" class="' + (art === 'ein' && (katWahl || kasseKategorien('ein')[0]) === 'Mitgliedsbeiträge' ? '' : 'hidden') + '">' +
+              '<select id="kasse-mitglied"><option value="">Mitglied (für wen ist der Beitrag?)</option>' +
+                mitglieder.filter(function (m) { return wart || m.id === ich; }).map(function (m) {
+                  return '<option value="' + m.id + '"' + (bearbeite && bearbeite.mitglied === m.id ? ' selected' : (!bearbeite && m.id === ich ? ' selected' : '')) + '>' + esc(m.name) + '</option>';
+                }).join('') +
               '</select></div>' +
-            '<button class="btn primary full" data-action="kasse-buchen">Buchen</button>' +
+            '<button class="btn primary full" data-action="kasse-buchen">' + (bearbeite ? 'Änderung speichern' : 'Buchen') + '</button>' +
+            (bearbeite ? '<button class="btn ghost full" data-action="kasse-edit-abbruch">Abbrechen</button>' : '') +
             '<p class="hint" id="kasse-meldung"></p>' +
-            '<details class="kasse-konfig"><summary>Kassenjahr und Anfangsbestand</summary>' +
+            (wart ? '<details class="kasse-konfig"><summary>Kassenjahr und Anfangsbestand (Kassenwart)</summary>' +
               '<div class="zeile">' +
                 '<input id="kasse-jahr" type="number" min="2000" max="2100" value="' + konfig.jahr + '" aria-label="Kassenjahr">' +
                 '<input id="kasse-anfang" type="text" inputmode="decimal" value="' + (konfig.anfangsbestand / 100).toFixed(2).replace('.', ',') + '" aria-label="Anfangsbestand in Euro">' +
               '</div>' +
               '<button class="btn ghost full" data-action="kasse-konfig">Speichern</button>' +
-            '</details>' +
+            '</details>' : '') +
           '</div>'
-        : (online ? '<p class="hint">Buchen kann nur der Kassenwart – alle anderen sehen hier das Kassenbuch.</p>'
-                  : '<p class="hint">Zum Ansehen des Kassenbuchs bitte anmelden.</p>')) +
+        : '<p class="hint">Zum Ansehen und Eintragen bitte anmelden.</p>') +
       '<div class="kasse-liste">' +
         '<div class="kasse-kopfzeile"><span>Nr</span><span>Beschreibung · Datum · Kategorie</span><span>Betrag · Saldo</span></div>' +
         (zeilen.length ? zeilen.join('') : '<p class="hint">Noch keine Buchung.</p>') +
@@ -10786,6 +10798,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
            wechselt mit, das Mitglied-Feld gibt es nur bei Beitraegen. */
         UI.kasseArt = el.getAttribute('data-value');
         UI.kasseKategorie = null;
+        if (UI.kasseEdit) UI.kasseEdit = Object.assign({}, UI.kasseEdit, { betrag: Math.abs(UI.kasseEdit.betrag) * (UI.kasseArt === 'aus' ? -1 : 1) });
         document.querySelectorAll('#kasse-art button').forEach(function (b) {
           b.classList.toggle('active', b === el);
         });
@@ -10806,12 +10819,13 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         var kbKat = ($('kasse-kategorie') || {}).value || kasseKategorien(kbAus ? 'aus' : 'ein')[0];
         var kbMitglied = ($('kasse-mitglied') || {}).value || null;
         var kbDatum = ($('kasse-datum') || {}).value || heuteISO();
-        window.DartSync.kasse.buchen({
+        var kbDaten = {
           betrag: kbCent * (kbAus ? -1 : 1), text: kbText, kategorie: kbKat, datum: kbDatum,
           mitglied: kbKat === 'Mitgliedsbeiträge' ? kbMitglied : null
-        }).then(function (d) {
+        };
+        (UI.kasseEdit ? window.DartSync.kasse.aendern(UI.kasseEdit.id, kbDaten) : window.DartSync.kasse.buchen(kbDaten)).then(function (d) {
           kasseDaten = d;
-          UI.kasseArt = 'ein'; UI.kasseKategorie = null;
+          UI.kasseArt = 'ein'; UI.kasseKategorie = null; UI.kasseEdit = null;
           if ($('kasse-betrag')) $('kasse-betrag').value = '';
           if ($('kasse-text')) $('kasse-text').value = '';
           if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
@@ -10833,6 +10847,31 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           datum: heuteISO(), mitglied: kbtId
         }).then(function (d) { kasseDaten = d; render(); })
           .catch(function () { el.disabled = false; });
+        break;
+      }
+      /* Kassenwart: eine Buchung ins Formular holen und aendern. */
+      case 'kasse-edit': {
+        if (!kasseDaten) break;
+        var keId = Number(el.getAttribute('data-id'));
+        var keE = (kasseDaten.eintraege || []).filter(function (e) { return e.id === keId; })[0];
+        if (!keE) break;
+        UI.kasseEdit = keE;
+        UI.kasseArt = keE.betrag < 0 ? 'aus' : 'ein';
+        UI.kasseKategorie = keE.kategorie;
+        if ($('kasse-betrag')) $('kasse-betrag').value = '';
+        if ($('kasse-text')) $('kasse-text').value = '';
+        if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+        render();
+        var keForm = document.querySelector('.kasse-form');
+        if (keForm && keForm.scrollIntoView) keForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        break;
+      }
+      case 'kasse-edit-abbruch': {
+        UI.kasseEdit = null; UI.kasseArt = 'ein'; UI.kasseKategorie = null;
+        if ($('kasse-betrag')) $('kasse-betrag').value = '';
+        if ($('kasse-text')) $('kasse-text').value = '';
+        if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+        render();
         break;
       }
       case 'kasse-konfig': {

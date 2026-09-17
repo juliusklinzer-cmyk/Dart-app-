@@ -176,12 +176,14 @@ mit Nr., Datum, Beschreibung, Kategorie (die Kategorienliste der Vorlage: Mitgli
 beiträge, Startgelder, Spenden, Sponsoring, Sonstige Einnahmen bzw. Turnierkosten,
 Ausrüstung/Dartpfeile, Getränke/Verpflegung, Raummiete, Verbandsgebühren, Sonstige
 Ausgaben), Betrag und laufendem Saldo, unten die Summen und der Endbestand.
-**Buchen, löschen und einstellen darf nur der Kassenwart** (Rolle auf dem Server,
-siehe DEPLOY.md), alle anderen Angemeldeten sehen das Buch. Für alle steht der
-Knopf **„Per PayPal ins Vereinskonto einzahlen“** (der PayPal-Pool des Vereins) da,
-der Kassenwart trägt die Einzahlung danach ein. Die Liste **Gründungsbeitrag**
-zeigt je Mitglied, ob der Beitrag (50 €) bezahlt ist; ein Tipp auf „Bezahlt“
-bucht ihn mit Datum als Mitgliedsbeitrag (`/api/kasse`).
+**Jeder Angemeldete trägt Einzahlungen und Ausgaben direkt ein** – sie stehen sofort
+im Kassenbuch, eigene Buchungen darf man wieder löschen. **Der Kassenwart** (Rolle
+auf dem Server, siehe DEPLOY.md) **verwaltet alles**: jede Buchung ändern (✎) oder
+löschen, Kassenjahr und Anfangsbestand einstellen, Beiträge für andere buchen. Für
+alle steht der Knopf **„Per PayPal ins Vereinskonto einzahlen“** (der PayPal-Pool
+des Vereins) da. Die Liste **Gründungsbeitrag** zeigt je Mitglied, ob der Beitrag
+(50 €) bezahlt ist; „Ich habe eingezahlt“ bzw. beim Kassenwart „Bezahlt“ bucht ihn
+mit Datum als Mitgliedsbeitrag (`/api/kasse`).
 
 ## Ligaspiel (SDM-Spielberichtsbogen)
 

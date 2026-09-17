@@ -513,17 +513,26 @@ async function main() {
     gleich(r.status, 401, 'ohne Anmeldung bleibt die Kasse zu');
     r = await julius.ruf('GET', '/api/kasse');
     gleich(r.daten.saldo, 0, 'die Kasse beginnt bei null');
-    ok(r.daten.darfBuchen === false && r.daten.konfig && r.daten.konfig.paypal.indexOf('paypal.com') > 0,
-      'ohne Kassenwart-Rolle nur lesen -- der PayPal-Link ist trotzdem da');
-    r = await julius.ruf('POST', '/api/kasse', { betrag: 5000, text: 'Startgeld', kategorie: 'Startgelder Turniere', datum: '2026-09-01' });
-    gleich(r.status, 403, 'wer nicht Kassenwart ist, bucht nicht');
+    ok(r.daten.kassenwart === false && r.daten.konfig && r.daten.konfig.paypal.indexOf('paypal.com') > 0,
+      'Julius ist (noch) kein Kassenwart -- der PayPal-Link ist fuer alle da');
+    r = await tobi.ruf('POST', '/api/kasse', { betrag: 1000, text: 'Startgeld Tobi', kategorie: 'Startgelder Turniere', datum: '2026-08-30' });
+    gleich(r.status, 200, 'jeder Angemeldete traegt eine Einzahlung ein');
+    gleich(r.daten.saldo, 1000, 'sie steht sofort im Kassenbuch');
+    const tobisBuchung = r.daten.eintraege[0];
+    r = await tobi.ruf('POST', '/api/kasse', { betrag: 5000, text: 'Beitrag Julius', kategorie: 'Mitgliedsbeiträge', datum: '2026-08-30', mitglied: julius_id });
+    gleich(r.status, 403, 'den Beitrag eines anderen bucht nur der Kassenwart');
+    r = await tobi.ruf('PATCH', '/api/kasse/' + tobisBuchung.id, { betrag: 2000, text: 'Startgeld Tobi', kategorie: 'Startgelder Turniere', datum: '2026-08-30' });
+    gleich(r.status, 403, 'aendern darf nur der Kassenwart');
+    r = await tobi.ruf('DELETE', '/api/kasse/' + tobisBuchung.id);
+    gleich(r.status, 200, 'die eigene Buchung darf jeder wieder loeschen');
+    gleich(r.daten.saldo, 0, 'und der Bestand stimmt wieder');
     {
       const direkt = new DatabaseSync(dbDatei);
       direkt.exec("UPDATE users SET kassenwart = 1 WHERE email = 'julius@example.de'");
       direkt.close();
     }
     r = await julius.ruf('GET', '/api/kasse');
-    ok(r.daten.darfBuchen === true && r.daten.kassenwarte.some((n) => n.indexOf('Julius') === 0), 'als Kassenwart darf Julius buchen und steht im Kopf');
+    ok(r.daten.kassenwart === true && r.daten.kassenwarte.some((n) => n.indexOf('Julius') === 0), 'als Kassenwart steht Julius im Kopf des Buchs');
     r = await julius.ruf('POST', '/api/kasse', { betrag: 5000, text: 'Gründungsbeitrag Tobi', kategorie: 'Mitgliedsbeiträge', datum: '2026-09-01', mitglied: tobi_id });
     gleich(r.status, 200, 'Julius bucht Tobis Gruendungsbeitrag');
     gleich(r.daten.saldo, 5000, 'der Bestand rechnet mit');
@@ -544,8 +553,12 @@ async function main() {
     gleich(r.daten.saldo, 13750, 'der Kassenstand rechnet den Anfangsbestand mit');
     r = await tobi.ruf('PATCH', '/api/kasse/konfig', { anfangsbestand: 0 });
     gleich(r.status, 403, 'sonst niemand');
+    r = await julius.ruf('PATCH', '/api/kasse/' + kasseEintrag.id, { betrag: -1500, text: 'Neue Flights (Rechnung)', kategorie: 'Ausrüstung/Dartpfeile', datum: '2026-09-03' });
+    gleich(r.status, 200, 'der Kassenwart aendert eine Buchung');
+    gleich(r.daten.saldo, 13500, 'der neue Betrag zaehlt');
+    ok(r.daten.eintraege.some((e) => e.id === kasseEintrag.id && e.datum === '2026-09-03' && e.text === 'Neue Flights (Rechnung)'), 'Datum und Text sind geaendert');
     r = await tobi.ruf('DELETE', '/api/kasse/' + kasseEintrag.id);
-    gleich(r.status, 403, 'loeschen darf nur der Kassenwart');
+    gleich(r.status, 403, 'fremde Buchungen loescht nur der Kassenwart');
     r = await julius.ruf('DELETE', '/api/kasse/' + kasseEintrag.id);
     gleich(r.status, 200, 'der Kassenwart loescht auch fremde Buchungen');
     gleich(r.daten.saldo, 15000, 'der Bestand stimmt danach wieder');

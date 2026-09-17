@@ -262,8 +262,9 @@ Bedarf `server/scripts/spiel-zurueckziehen.mjs` zurück.
 
 ## Kassenwart
 
-Buchen im Kassenbuch darf nur, wer die Rolle `kassenwart` hat (Migration 011
-setzt sie für Lenas und Julius). Weitere Kassenwarte oder Entzug der Rolle:
+Eintragen darf im Kassenbuch jeder Angemeldete; ändern, fremde Buchungen löschen
+und einstellen darf nur, wer die Rolle `kassenwart` hat (Migration 011 setzt sie
+für Lenas und Julius). Weitere Kassenwarte oder Entzug der Rolle:
 
 ```bash
 ssh root@178.105.234.52 "cd /opt/dart-turnier && docker compose -f compose.yml exec darts \
