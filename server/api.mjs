@@ -42,7 +42,7 @@ export function createApi(db, config) {
     return { id: u.id, name: u.display_name, avatar: u.avatar, hue: u.hue, dbl: u.dbl, voll: u.real_name || null, test: u.test ? true : false };
   }
   function eigenesProfil(u) {
-    return { id: u.id, name: u.display_name, email: u.email, avatar: u.avatar, hue: u.hue, dbl: u.dbl, voll: u.real_name || null, seit: u.created_at };
+    return { id: u.id, name: u.display_name, email: u.email, avatar: u.avatar, hue: u.hue, dbl: u.dbl, voll: u.real_name || null, seit: u.created_at, kassenwart: u.kassenwart ? true : false };
   }
 
   function uid(praefix) {
@@ -700,49 +700,130 @@ export function createApi(db, config) {
   }
 
   /* ---------- Vereinskasse ---------- */
-  /* Ein Kassenbuch fuer alle: jede Buchung traegt Betrag (Cent, positiv =
-     Einzahlung), Text und Urheber. Loeschen darf nur, wer gebucht hat. */
+  /* Das Kassenbuch wie die Excel-Vorlage der Kassenwartin: jede Buchung mit
+     Datum, Beschreibung, Kategorie und Betrag (Cent, positiv = Einnahme),
+     dazu Kassenjahr und Anfangsbestand. Lesen duerfen alle Angemeldeten,
+     buchen, loeschen und einstellen nur Kassenwarte (users.kassenwart). */
+  const KASSE_EIN = ['Mitgliedsbeiträge', 'Startgelder Turniere', 'Spenden', 'Sponsoring', 'Sonstige Einnahmen'];
+  const KASSE_AUS = ['Turnierkosten', 'Ausrüstung/Dartpfeile', 'Getränke/Verpflegung', 'Raummiete', 'Verbandsgebühren', 'Sonstige Ausgaben'];
+
+  function kasseKonfig() {
+    const k = {};
+    for (const r of db.prepare('SELECT name, wert FROM kasse_konfig').all()) k[r.name] = r.wert;
+    return {
+      jahr: Number(k.jahr) || new Date().getFullYear(),
+      anfangsbestand: Math.trunc(Number(k.anfangsbestand)) || 0,
+      beitrag: Math.trunc(Number(k.beitrag)) || 5000,
+      paypal: k.paypal || ''
+    };
+  }
+  function verlangeKassenwart(u) {
+    if (!u.kassenwart) throw new HttpFehler(403, 'Nur der Kassenwart darf im Kassenbuch schreiben.');
+  }
 
   async function kasseHolen(req, res) {
     const u = verlangeNutzer(req);
+    const konfig = kasseKonfig();
     const zeilen = db.prepare(
-      'SELECT k.id, k.betrag, k.text, k.created_at, k.user_id, u.display_name, u.avatar, u.hue' +
+      'SELECT k.id, k.betrag, k.text, k.datum, k.kategorie, k.mitglied, k.created_at, k.user_id,' +
+      '       u.display_name AS von, m.display_name AS mitglied_name' +
       '  FROM kasse k JOIN users u ON u.id = k.user_id' +
-      ' ORDER BY k.id DESC LIMIT 200'
+      '  LEFT JOIN users m ON m.id = k.mitglied' +
+      ' ORDER BY k.datum, k.id'
     ).all();
-    const saldo = db.prepare('SELECT COALESCE(SUM(betrag), 0) s FROM kasse').get().s;
+    const summe = db.prepare('SELECT COALESCE(SUM(betrag), 0) s FROM kasse').get().s;
+    /* Gruendungsbeitrag: wer von den aktiven Mitgliedern hat ihn schon
+       bezahlt? Summe der Mitgliedsbeitraege je Mitglied. Testkonten
+       zaehlen als Mitglieder nicht -- und sehen tut sie ohnehin nur der Tester. */
+    const bezahlt = new Map();
+    for (const r of db.prepare("SELECT mitglied, SUM(betrag) s, MAX(datum) d FROM kasse WHERE kategorie = 'Mitgliedsbeiträge' AND mitglied IS NOT NULL GROUP BY mitglied").all()) {
+      bezahlt.set(r.mitglied, { summe: r.s, datum: r.d });
+    }
+    const mitglieder = db.prepare(
+      "SELECT id, display_name, avatar, hue FROM users WHERE status = 'aktiv' AND test = 0 ORDER BY display_name COLLATE NOCASE"
+    ).all().map((m) => ({
+      id: m.id, name: m.display_name, avatar: m.avatar, hue: m.hue,
+      gezahlt: (bezahlt.get(m.id) || {}).summe || 0,
+      am: (bezahlt.get(m.id) || {}).datum || null
+    }));
+    const kassenwarte = db.prepare("SELECT display_name FROM users WHERE kassenwart = 1 AND status = 'aktiv' ORDER BY display_name COLLATE NOCASE")
+      .all().map((r) => r.display_name);
     sendJson(res, 200, {
-      saldo,
+      saldo: konfig.anfangsbestand + summe,
+      summe,
+      konfig,
+      kassenwarte,
+      darfBuchen: !!u.kassenwart,
+      kategorien: { ein: KASSE_EIN, aus: KASSE_AUS },
+      mitglieder,
       eintraege: zeilen.map((z) => ({
-        id: z.id, betrag: z.betrag, text: z.text, at: z.created_at,
-        name: z.display_name, avatar: z.avatar, hue: z.hue,
-        meins: z.user_id === u.id
+        id: z.id, betrag: z.betrag, text: z.text, datum: z.datum, kategorie: z.kategorie,
+        mitglied: z.mitglied, mitgliedName: z.mitglied_name || null,
+        at: z.created_at, von: z.von, meins: z.user_id === u.id
       }))
     });
+  }
+
+  function pruefeDatum(wert) {
+    const s = String(wert || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+    const d = new Date(s + 'T12:00:00Z');
+    return Number.isNaN(d.getTime()) ? null : s;
   }
 
   async function kasseBuchen(req, res) {
     pruefeHerkunft(req);
     const u = verlangeNutzer(req);
+    verlangeKassenwart(u);
     const body = await leseJson(req);
     const betrag = Math.trunc(Number(body.betrag));
     if (!Number.isFinite(betrag) || betrag === 0 || Math.abs(betrag) > 1000000) {
       throw new HttpFehler(400, 'Der Betrag ist unbrauchbar.');
     }
     const text = String(body.text || '').trim().slice(0, 80);
-    if (!text) throw new HttpFehler(400, 'Wofuer war das? Bitte einen Text angeben.');
-    db.prepare('INSERT INTO kasse (user_id, betrag, text, created_at) VALUES (?, ?, ?, ?)')
-      .run(u.id, betrag, text, new Date().toISOString());
+    if (!text) throw new HttpFehler(400, 'Wofuer war das? Bitte eine Beschreibung angeben.');
+    const kategorie = String(body.kategorie || '').trim();
+    const liste = betrag > 0 ? KASSE_EIN : KASSE_AUS;
+    if (!liste.includes(kategorie)) throw new HttpFehler(400, 'Bitte eine Kategorie aus der Liste waehlen.');
+    const datum = pruefeDatum(body.datum) || new Date().toISOString().slice(0, 10);
+    let mitglied = null;
+    if (body.mitglied) {
+      const m = db.prepare("SELECT id FROM users WHERE id = ? AND status = 'aktiv'").get(String(body.mitglied));
+      if (!m) throw new HttpFehler(400, 'Dieses Mitglied gibt es nicht.');
+      mitglied = m.id;
+    }
+    db.prepare('INSERT INTO kasse (user_id, betrag, text, datum, kategorie, mitglied, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .run(u.id, betrag, text, datum, kategorie, mitglied, new Date().toISOString());
     return kasseHolen(req, res);
   }
 
   async function kasseLoeschen(req, res, id) {
     pruefeHerkunft(req);
     const u = verlangeNutzer(req);
-    const z = db.prepare('SELECT user_id FROM kasse WHERE id = ?').get(Number(id));
+    verlangeKassenwart(u);
+    const z = db.prepare('SELECT id FROM kasse WHERE id = ?').get(Number(id));
     if (!z) throw new HttpFehler(404, 'Diese Buchung gibt es nicht.');
-    if (z.user_id !== u.id) throw new HttpFehler(403, 'Nur eigene Buchungen lassen sich loeschen.');
     db.prepare('DELETE FROM kasse WHERE id = ?').run(Number(id));
+    return kasseHolen(req, res);
+  }
+
+  /* Kassenjahr und Anfangsbestand -- die gelben Felder der Vorlage. */
+  async function kasseEinstellen(req, res) {
+    pruefeHerkunft(req);
+    const u = verlangeNutzer(req);
+    verlangeKassenwart(u);
+    const body = await leseJson(req);
+    const setze = db.prepare('INSERT INTO kasse_konfig (name, wert) VALUES (?, ?) ON CONFLICT(name) DO UPDATE SET wert = excluded.wert');
+    if (body.jahr !== undefined) {
+      const jahr = Math.trunc(Number(body.jahr));
+      if (jahr < 2000 || jahr > 2100) throw new HttpFehler(400, 'Das Kassenjahr ist unbrauchbar.');
+      setze.run('jahr', String(jahr));
+    }
+    if (body.anfangsbestand !== undefined) {
+      const ab = Math.trunc(Number(body.anfangsbestand));
+      if (!Number.isFinite(ab) || Math.abs(ab) > 100000000) throw new HttpFehler(400, 'Der Anfangsbestand ist unbrauchbar.');
+      setze.run('anfangsbestand', String(ab));
+    }
     return kasseHolen(req, res);
   }
 
@@ -1050,6 +1131,7 @@ export function createApi(db, config) {
     ['GET', /^\/api\/kasse$/, kasseHolen],
     ['POST', /^\/api\/kasse$/, kasseBuchen],
     ['DELETE', /^\/api\/kasse\/(\d{1,12})$/, kasseLoeschen],
+    ['PATCH', /^\/api\/kasse\/konfig$/, kasseEinstellen],
     ['GET', /^\/api\/liga\/tabelle$/, ligaTabelleHolen],
     ['PUT', /^\/api\/liga\/tabelle$/, ligaTabelleSpeichern],
     ['PUT', /^\/api\/liga\/zusagen\/([a-z0-9-]{2,40})$/, ligaZusageSetzen],

@@ -2550,6 +2550,33 @@ button, input, select, textarea { font-family: inherit; }
 .konto-tabs.fuenf { grid-template-columns: repeat(5, 1fr); }
 .konto-tabs.vier button, .konto-tabs.fuenf button { padding-left: 4px; padding-right: 4px; }
 
+/* Kassenbuch: Kopf wie die Vorlage, Bestand gross, Beitragsliste, Formular, Buch. */
+.kasse-kopf { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.82rem; color: var(--muted); margin-bottom: 8px; }
+.kasse-kopf b { color: var(--text); }
+.kasse-saldo .hint { display: block; }
+.kasse-paypal { margin: 6px 0 2px; text-decoration: none; display: flex; align-items: center; justify-content: center; }
+.kasse-beitraege { margin: 14px 0; }
+.kasse-beitraege h3, .kasse-form h3 { font-size: 0.95rem; margin: 0 0 8px; }
+.kb-zeile { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); }
+.kb-zeile .kb-name { flex: 1; font-weight: 600; }
+.kb-zeile .kb-status { font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.kb-zeile.voll .kb-status { color: #4ade80; }
+.kb-zeile .btn.small { min-height: 36px; padding: 6px 12px; font-size: 0.85rem; }
+.kasse-form select, .kasse-form input[type="date"], .kasse-form input[type="number"] {
+  width: 100%; min-height: 48px; background: var(--bg-3); border: 1px solid var(--line); color: var(--text);
+  border-radius: 10px; padding: 10px 12px; font-size: 1rem; font-family: inherit;
+}
+.kasse-konfig { margin-top: 6px; }
+.kasse-konfig summary { cursor: pointer; font-size: 0.85rem; color: var(--muted); padding: 6px 0; }
+.kasse-konfig .zeile { margin: 8px 0; }
+.kasse-liste { margin-top: 12px; }
+.kasse-kopfzeile { display: flex; gap: 10px; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); padding: 0 0 6px; border-bottom: 1px solid var(--line); }
+.kasse-kopfzeile span:nth-child(2) { flex: 1; }
+.kasse-eintrag .nr { width: 22px; font-size: 0.78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.kasse-eintrag .zahlen { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.kasse-eintrag .saldo { font-size: 0.72rem; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.kasse-summen { display: flex; flex-wrap: wrap; gap: 6px 16px; padding-top: 10px; margin-top: 6px; border-top: 2px solid var(--line); font-size: 0.85rem; color: var(--muted); }
+.kasse-summen b { color: var(--text); font-variant-numeric: tabular-nums; }
 /* Vereinskasse: der Bestand gross, darunter das Formular und die Liste. */
 .kasse-saldo { text-align: center; margin: 6px 0 14px; }
 .kasse-saldo b {

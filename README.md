@@ -169,10 +169,19 @@ Bots sind versteckte Gastprofile und erscheinen in keiner Aufstellung oder
 Rangliste. Im Training darf der Löwe übrigens brüllen – nur das echte
 Ligaspiel bleibt feierfrei.
 
-Der Reiter **Kasse** ist die **Vereinskasse**: ein simples Kassenbuch für alle
-Angemeldeten – Einzahlung oder Ausgabe mit Betrag und Text erfassen, der
-Bestand rechnet sich von selbst, jede Buchung zeigt Urheber und Datum, eigene
-Buchungen lassen sich löschen (`/api/kasse`).
+Der Reiter **Kasse** ist das **Kassenbuch des Vereins**, aufgebaut wie die
+Excel-Vorlage der Kassenwartin: Kassenjahr, Kassenwart/in und Anfangsbestand im
+Kopf, darunter der Kassenstand mit Summe Einnahmen und Ausgaben, dann jede Buchung
+mit Nr., Datum, Beschreibung, Kategorie (die Kategorienliste der Vorlage: Mitglieds-
+beiträge, Startgelder, Spenden, Sponsoring, Sonstige Einnahmen bzw. Turnierkosten,
+Ausrüstung/Dartpfeile, Getränke/Verpflegung, Raummiete, Verbandsgebühren, Sonstige
+Ausgaben), Betrag und laufendem Saldo, unten die Summen und der Endbestand.
+**Buchen, löschen und einstellen darf nur der Kassenwart** (Rolle auf dem Server,
+siehe DEPLOY.md), alle anderen Angemeldeten sehen das Buch. Für alle steht der
+Knopf **„Per PayPal ins Vereinskonto einzahlen“** (der PayPal-Pool des Vereins) da,
+der Kassenwart trägt die Einzahlung danach ein. Die Liste **Gründungsbeitrag**
+zeigt je Mitglied, ob der Beitrag (50 €) bezahlt ist; ein Tipp auf „Bezahlt“
+bucht ihn mit Datum als Mitgliedsbeitrag (`/api/kasse`).
 
 ## Ligaspiel (SDM-Spielberichtsbogen)
 

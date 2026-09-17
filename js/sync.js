@@ -586,9 +586,14 @@
     if (!window.DartKonto || !nutzer) return Promise.resolve(null);
     return window.DartKonto.ruf('GET', '/api/kasse');
   }
-  function kasseBuchen(betrag, text) {
+  /* daten: { betrag (Cent), text, kategorie, datum (YYYY-MM-DD), mitglied? } */
+  function kasseBuchen(daten) {
     if (!window.DartKonto || !nutzer) return Promise.reject(new Error('Nicht angemeldet.'));
-    return window.DartKonto.ruf('POST', '/api/kasse', { betrag: betrag, text: text });
+    return window.DartKonto.ruf('POST', '/api/kasse', daten);
+  }
+  function kasseEinstellen(daten) {
+    if (!window.DartKonto || !nutzer) return Promise.reject(new Error('Nicht angemeldet.'));
+    return window.DartKonto.ruf('PATCH', '/api/kasse/konfig', daten);
   }
   function kasseLoeschen(id) {
     if (!window.DartKonto || !nutzer) return Promise.reject(new Error('Nicht angemeldet.'));
@@ -633,6 +638,7 @@
       kasse: {
         holen: kasseHolen,
         buchen: kasseBuchen,
+        einstellen: kasseEinstellen,
         loeschen: kasseLoeschen
       },
       turnier: {

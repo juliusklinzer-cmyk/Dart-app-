@@ -508,27 +508,47 @@ async function main() {
     ok(r.daten.zusagen.st01.every((z) => z.status === 'dabei'),
       'alte Spieltag-Zusagen gelten weiter als dabei');
 
-    console.log('\nVereinskasse');
+    console.log('\nVereinskasse (Kassenbuch)');
     r = await fremd.ruf('GET', '/api/kasse');
     gleich(r.status, 401, 'ohne Anmeldung bleibt die Kasse zu');
     r = await julius.ruf('GET', '/api/kasse');
     gleich(r.daten.saldo, 0, 'die Kasse beginnt bei null');
-    r = await julius.ruf('POST', '/api/kasse', { betrag: 5000, text: 'Startgeld Julius' });
-    gleich(r.status, 200, 'Julius zahlt 50 Euro ein');
+    ok(r.daten.darfBuchen === false && r.daten.konfig && r.daten.konfig.paypal.indexOf('paypal.com') > 0,
+      'ohne Kassenwart-Rolle nur lesen -- der PayPal-Link ist trotzdem da');
+    r = await julius.ruf('POST', '/api/kasse', { betrag: 5000, text: 'Startgeld', kategorie: 'Startgelder Turniere', datum: '2026-09-01' });
+    gleich(r.status, 403, 'wer nicht Kassenwart ist, bucht nicht');
+    {
+      const direkt = new DatabaseSync(dbDatei);
+      direkt.exec("UPDATE users SET kassenwart = 1 WHERE email = 'julius@example.de'");
+      direkt.close();
+    }
+    r = await julius.ruf('GET', '/api/kasse');
+    ok(r.daten.darfBuchen === true && r.daten.kassenwarte.some((n) => n.indexOf('Julius') === 0), 'als Kassenwart darf Julius buchen und steht im Kopf');
+    r = await julius.ruf('POST', '/api/kasse', { betrag: 5000, text: 'Gründungsbeitrag Tobi', kategorie: 'Mitgliedsbeiträge', datum: '2026-09-01', mitglied: tobi_id });
+    gleich(r.status, 200, 'Julius bucht Tobis Gruendungsbeitrag');
     gleich(r.daten.saldo, 5000, 'der Bestand rechnet mit');
-    r = await tobi.ruf('POST', '/api/kasse', { betrag: -1250, text: 'Neue Flights' });
-    gleich(r.daten.saldo, 3750, 'Tobis Ausgabe zieht ab');
-    const kasseEintrag = r.daten.eintraege[0];
-    ok(kasseEintrag.meins === true && kasseEintrag.betrag === -1250, 'die eigene Buchung ist als meins markiert');
-    r = await julius.ruf('POST', '/api/kasse', { betrag: 0, text: 'nix' });
+    ok(r.daten.mitglieder.find((m) => m.id === tobi_id).gezahlt === 5000 && r.daten.mitglieder.find((m) => m.id === julius_id).gezahlt === 0,
+      'Tobi gilt als bezahlt, Julius als offen');
+    r = await julius.ruf('POST', '/api/kasse', { betrag: -1250, text: 'Neue Flights', kategorie: 'Ausrüstung/Dartpfeile', datum: '2026-09-02' });
+    gleich(r.daten.saldo, 3750, 'eine Ausgabe zieht ab');
+    const kasseEintrag = r.daten.eintraege[r.daten.eintraege.length - 1];
+    ok(kasseEintrag.betrag === -1250 && kasseEintrag.kategorie === 'Ausrüstung/Dartpfeile' && kasseEintrag.datum === '2026-09-02', 'die Buchung traegt Kategorie und Datum');
+    r = await julius.ruf('POST', '/api/kasse', { betrag: -500, text: 'Bier', kategorie: 'Spenden', datum: '2026-09-02' });
+    gleich(r.status, 400, 'eine Einnahme-Kategorie passt nicht zu einer Ausgabe');
+    r = await julius.ruf('POST', '/api/kasse', { betrag: 0, text: 'nix', kategorie: 'Spenden' });
     gleich(r.status, 400, 'null Euro sind keine Buchung');
-    r = await julius.ruf('POST', '/api/kasse', { betrag: 100 });
+    r = await julius.ruf('POST', '/api/kasse', { betrag: 100, kategorie: 'Spenden' });
     gleich(r.status, 400, 'ohne Text keine Buchung');
-    r = await julius.ruf('DELETE', '/api/kasse/' + kasseEintrag.id);
-    gleich(r.status, 403, 'fremde Buchungen loescht niemand');
+    r = await julius.ruf('PATCH', '/api/kasse/konfig', { anfangsbestand: 10000, jahr: 2026 });
+    gleich(r.status, 200, 'der Kassenwart setzt den Anfangsbestand');
+    gleich(r.daten.saldo, 13750, 'der Kassenstand rechnet den Anfangsbestand mit');
+    r = await tobi.ruf('PATCH', '/api/kasse/konfig', { anfangsbestand: 0 });
+    gleich(r.status, 403, 'sonst niemand');
     r = await tobi.ruf('DELETE', '/api/kasse/' + kasseEintrag.id);
-    gleich(r.status, 200, 'die eigene schon');
-    gleich(r.daten.saldo, 5000, 'der Bestand stimmt danach wieder');
+    gleich(r.status, 403, 'loeschen darf nur der Kassenwart');
+    r = await julius.ruf('DELETE', '/api/kasse/' + kasseEintrag.id);
+    gleich(r.status, 200, 'der Kassenwart loescht auch fremde Buchungen');
+    gleich(r.daten.saldo, 15000, 'der Bestand stimmt danach wieder');
 
     console.log('\nRate-Limit');
     let gesperrt = false;

@@ -2561,6 +2561,33 @@ button, input, select, textarea { font-family: inherit; }
 .konto-tabs.fuenf { grid-template-columns: repeat(5, 1fr); }
 .konto-tabs.vier button, .konto-tabs.fuenf button { padding-left: 4px; padding-right: 4px; }
 
+/* Kassenbuch: Kopf wie die Vorlage, Bestand gross, Beitragsliste, Formular, Buch. */
+.kasse-kopf { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.82rem; color: var(--muted); margin-bottom: 8px; }
+.kasse-kopf b { color: var(--text); }
+.kasse-saldo .hint { display: block; }
+.kasse-paypal { margin: 6px 0 2px; text-decoration: none; display: flex; align-items: center; justify-content: center; }
+.kasse-beitraege { margin: 14px 0; }
+.kasse-beitraege h3, .kasse-form h3 { font-size: 0.95rem; margin: 0 0 8px; }
+.kb-zeile { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); }
+.kb-zeile .kb-name { flex: 1; font-weight: 600; }
+.kb-zeile .kb-status { font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.kb-zeile.voll .kb-status { color: #4ade80; }
+.kb-zeile .btn.small { min-height: 36px; padding: 6px 12px; font-size: 0.85rem; }
+.kasse-form select, .kasse-form input[type="date"], .kasse-form input[type="number"] {
+  width: 100%; min-height: 48px; background: var(--bg-3); border: 1px solid var(--line); color: var(--text);
+  border-radius: 10px; padding: 10px 12px; font-size: 1rem; font-family: inherit;
+}
+.kasse-konfig { margin-top: 6px; }
+.kasse-konfig summary { cursor: pointer; font-size: 0.85rem; color: var(--muted); padding: 6px 0; }
+.kasse-konfig .zeile { margin: 8px 0; }
+.kasse-liste { margin-top: 12px; }
+.kasse-kopfzeile { display: flex; gap: 10px; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); padding: 0 0 6px; border-bottom: 1px solid var(--line); }
+.kasse-kopfzeile span:nth-child(2) { flex: 1; }
+.kasse-eintrag .nr { width: 22px; font-size: 0.78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.kasse-eintrag .zahlen { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.kasse-eintrag .saldo { font-size: 0.72rem; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.kasse-summen { display: flex; flex-wrap: wrap; gap: 6px 16px; padding-top: 10px; margin-top: 6px; border-top: 2px solid var(--line); font-size: 0.85rem; color: var(--muted); }
+.kasse-summen b { color: var(--text); font-variant-numeric: tabular-nums; }
 /* Vereinskasse: der Bestand gross, darunter das Formular und die Liste. */
 .kasse-saldo { text-align: center; margin: 6px 0 14px; }
 .kasse-saldo b {
@@ -7544,7 +7571,48 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var v = (cent / 100).toFixed(2).replace('.', ',');
     return v + ' €';
   }
+  /* '2026-09-17' -> '17.09.2026' */
+  function datumDE(s) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || ''));
+    return m ? m[3] + '.' + m[2] + '.' + m[1] : String(s || '');
+  }
+  function heuteISO() {
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  /* Kategorien wie im Tabellenblatt "Kategorien" der Vorlage. Der Server
+     prueft dieselben Listen; hier stehen sie fuer die Auswahl, solange die
+     Antwort noch nicht da ist. */
+  var KASSE_KAT = {
+    ein: ['Mitgliedsbeiträge', 'Startgelder Turniere', 'Spenden', 'Sponsoring', 'Sonstige Einnahmen'],
+    aus: ['Turnierkosten', 'Ausrüstung/Dartpfeile', 'Getränke/Verpflegung', 'Raummiete', 'Verbandsgebühren', 'Sonstige Ausgaben']
+  };
+  /* Deutsche Betragsschreibweise (12,50 / 1.250 / 1.234,56) in Cent. */
+  function centAus(roh) {
+    roh = String(roh || '').trim();
+    if (/^-?\d{1,3}(\.\d{3})+(,\d{1,2})?$/.test(roh)) roh = roh.replace(/\./g, '').replace(',', '.');
+    else roh = roh.replace(',', '.');
+    var e = parseFloat(roh);
+    return isFinite(e) ? Math.round(e * 100) : NaN;
+  }
 
+  /* Die Kategorienliste zur gewaehlten Art (Einnahme/Ausgabe). */
+  function kasseKategorien(art) {
+    var d = kasseDaten;
+    var k = d && d.kategorien ? d.kategorien : KASSE_KAT;
+    return art === 'aus' ? k.aus : k.ein;
+  }
+  function kasseKategorieWahl(art, gewaehlt) {
+    return '<select id="kasse-kategorie">' + kasseKategorien(art).map(function (k) {
+      return '<option value="' + esc(k) + '"' + (k === gewaehlt ? ' selected' : '') + '>' + esc(k) + '</option>';
+    }).join('') + '</select>';
+  }
+
+  /* Das Kassenbuch -- aufgebaut wie die Excel-Vorlage der Kassenwartin:
+     Kassenjahr, Kassenwart, Anfangsbestand, dann Nr / Datum / Beschreibung /
+     Kategorie / Einnahme / Ausgabe / Saldo und unten die Summen. Buchen
+     darf nur der Kassenwart; alle anderen sehen das Buch und den
+     PayPal-Knopf fuers Vereinskonto. */
   function renderLigaKasse() {
     var online = !!(window.DartSync && window.DartSync.kasse && window.DartKonto && window.DartKonto.nutzer());
     /* Waehrend jemand mitten in einer Buchung steckt (Fokus im Formular
@@ -7555,37 +7623,97 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var kbAlt = $('kasse-betrag'), ktAlt = $('kasse-text');
     if ((kbAlt && kbAlt.value) || (ktAlt && ktAlt.value)) return;
     var d = kasseDaten;
-    var saldo = d ? d.saldo : 0;
+    var konfig = d && d.konfig ? d.konfig : { jahr: new Date().getFullYear(), anfangsbestand: 0, beitrag: 5000, paypal: '' };
+    var saldo = d ? d.saldo : konfig.anfangsbestand;
+    var darf = !!(online && d && d.darfBuchen);
+    var art = UI.kasseArt === 'aus' ? 'aus' : 'ein';
+    var eintraege = (d && d.eintraege) || [];
+    var summeEin = sum(eintraege, function (e) { return e.betrag > 0 ? e.betrag : 0; });
+    var summeAus = sum(eintraege, function (e) { return e.betrag < 0 ? -e.betrag : 0; });
+
+    /* Laufender Saldo wie Spalte G der Vorlage: Anfangsbestand + Einnahmen - Ausgaben. */
+    var lauf = konfig.anfangsbestand;
+    var zeilen = eintraege.map(function (e, i) {
+      lauf += e.betrag;
+      return '<div class="kasse-eintrag">' +
+        '<div class="nr">' + (i + 1) + '</div>' +
+        '<div class="was"><div class="txt">' + esc(e.text) +
+          (e.mitgliedName && e.kategorie === 'Mitgliedsbeiträge' && e.text.indexOf(e.mitgliedName) < 0 ? ' <span class="muted">(' + esc(e.mitgliedName) + ')</span>' : '') + '</div>' +
+          '<div class="wer">' + datumDE(e.datum) + ' · ' + esc(e.kategorie || '') + (e.von ? ' · gebucht von ' + esc(e.von) : '') + '</div></div>' +
+        '<div class="zahlen"><span class="betrag ' + (e.betrag < 0 ? 'minus' : 'plus') + '">' +
+          (e.betrag > 0 ? '+' : '−') + euro(Math.abs(e.betrag)) + '</span>' +
+          '<span class="saldo">Saldo ' + euro(lauf) + '</span></div>' +
+        (darf ? '<button class="weg" data-action="kasse-weg" data-id="' + e.id + '" aria-label="Buchung löschen">✕</button>' : '') +
+        '</div>';
+    });
+
+    /* Gruendungsbeitrag je Mitglied: bezahlt oder offen. */
+    var mitglieder = (d && d.mitglieder) || [];
+    var beitragHtml = mitglieder.length ? '<div class="kasse-beitraege"><h3>Gründungsbeitrag ' + euro(konfig.beitrag) + ' pro Kopf</h3>' +
+      mitglieder.map(function (m) {
+        var voll = m.gezahlt >= konfig.beitrag;
+        return '<div class="kb-zeile ' + (voll ? 'voll' : '') + '">' +
+          avatarHTML({ id: m.id, name: m.name, avatar: m.avatar, hue: m.hue }, 'sm') +
+          '<span class="kb-name">' + esc(m.name) + '</span>' +
+          '<span class="kb-status">' + (voll ? '✓ bezahlt' + (m.am ? ' · ' + datumDE(m.am) : '') : m.gezahlt > 0 ? euro(m.gezahlt) + ' von ' + euro(konfig.beitrag) : 'offen') + '</span>' +
+          (darf && !voll ? '<button class="btn ghost small" data-action="kasse-beitrag" data-id="' + m.id + '" data-name="' + esc(m.name) + '">Bezahlt</button>' : '') +
+          '</div>';
+      }).join('') + '</div>' : '';
+
     $('kasse-karte').innerHTML =
-      '<h2>Vereinskasse</h2>' +
-      '<div class="kasse-saldo"><span class="hint">Bestand</span>' +
-        '<b class="' + (saldo < 0 ? 'minus' : 'plus') + '">' + euro(saldo) + '</b></div>' +
-      (online
+      '<h2>Kassenbuch</h2>' +
+      '<div class="kasse-kopf">' +
+        '<span>Kassenjahr <b>' + konfig.jahr + '</b></span>' +
+        '<span>Kassenwart/in <b>' + esc(((d && d.kassenwarte) || []).join(', ') || '–') + '</b></span>' +
+        '<span>Anfangsbestand <b>' + euro(konfig.anfangsbestand) + '</b></span>' +
+      '</div>' +
+      '<div class="kasse-saldo"><span class="hint">Kassenstand</span>' +
+        '<b class="' + (saldo < 0 ? 'minus' : 'plus') + '">' + euro(saldo) + '</b>' +
+        '<span class="hint">Einnahmen ' + euro(summeEin) + ' · Ausgaben ' + euro(summeAus) + '</span></div>' +
+      (konfig.paypal
+        ? '<a class="btn primary full kasse-paypal" href="' + esc(konfig.paypal) + '" target="_blank" rel="noopener">Per PayPal ins Vereinskonto einzahlen</a>' +
+          '<p class="hint center">Der Kassenwart trägt die Einzahlung danach hier ein.</p>'
+        : '') +
+      beitragHtml +
+      (darf
         ? '<div class="kasse-form">' +
+            '<h3>Buchung eintragen</h3>' +
             '<div class="options" id="kasse-art">' +
-              '<button data-action="kasse-art" data-value="ein" class="' + (UI.kasseArt === 'aus' ? '' : 'active') + '">Einzahlung</button>' +
-              '<button data-action="kasse-art" data-value="aus" class="' + (UI.kasseArt === 'aus' ? 'active' : '') + '">Ausgabe</button>' +
+              '<button data-action="kasse-art" data-value="ein" class="' + (art === 'ein' ? 'active' : '') + '">Einnahme</button>' +
+              '<button data-action="kasse-art" data-value="aus" class="' + (art === 'aus' ? 'active' : '') + '">Ausgabe</button>' +
+            '</div>' +
+            '<div class="zeile">' +
+              '<input id="kasse-datum" type="date" value="' + heuteISO() + '" aria-label="Datum">' +
+              kasseKategorieWahl(art, UI.kasseKategorie) +
             '</div>' +
             '<div class="zeile">' +
               '<input id="kasse-betrag" type="text" inputmode="decimal" placeholder="Betrag in €">' +
-              '<input id="kasse-text" type="text" maxlength="80" placeholder="Wofür?">' +
+              '<input id="kasse-text" type="text" maxlength="80" placeholder="Beschreibung">' +
             '</div>' +
+            '<div id="kasse-mitglied-zeile" class="' + (art === 'ein' && (UI.kasseKategorie || kasseKategorien('ein')[0]) === 'Mitgliedsbeiträge' ? '' : 'hidden') + '">' +
+              '<select id="kasse-mitglied"><option value="">Mitglied (für den Beitrag)</option>' +
+                mitglieder.map(function (m) { return '<option value="' + m.id + '">' + esc(m.name) + '</option>'; }).join('') +
+              '</select></div>' +
             '<button class="btn primary full" data-action="kasse-buchen">Buchen</button>' +
             '<p class="hint" id="kasse-meldung"></p>' +
+            '<details class="kasse-konfig"><summary>Kassenjahr und Anfangsbestand</summary>' +
+              '<div class="zeile">' +
+                '<input id="kasse-jahr" type="number" min="2000" max="2100" value="' + konfig.jahr + '" aria-label="Kassenjahr">' +
+                '<input id="kasse-anfang" type="text" inputmode="decimal" value="' + (konfig.anfangsbestand / 100).toFixed(2).replace('.', ',') + '" aria-label="Anfangsbestand in Euro">' +
+              '</div>' +
+              '<button class="btn ghost full" data-action="kasse-konfig">Speichern</button>' +
+            '</details>' +
           '</div>'
-        : '<p class="hint">Zum Buchen bitte anmelden.</p>') +
-      ((d && d.eintraege && d.eintraege.length)
-        ? d.eintraege.map(function (e) {
-            return '<div class="kasse-eintrag">' +
-              avatarHTML({ id: 'k' + e.id, name: e.name, avatar: e.avatar, hue: e.hue }, 'sm') +
-              '<div class="was"><div class="txt">' + esc(e.text) + '</div>' +
-                '<div class="wer">' + esc(e.name) + ' · ' + fmtDate(Date.parse(e.at)) + '</div></div>' +
-              '<span class="betrag ' + (e.betrag < 0 ? 'minus' : 'plus') + '">' +
-                (e.betrag > 0 ? '+' : '') + euro(e.betrag) + '</span>' +
-              (e.meins ? '<button class="weg" data-action="kasse-weg" data-id="' + e.id + '" aria-label="Buchung löschen">✕</button>' : '') +
-              '</div>';
-          }).join('')
-        : '<p class="hint">Noch keine Buchung.</p>');
+        : (online ? '<p class="hint">Buchen kann nur der Kassenwart – alle anderen sehen hier das Kassenbuch.</p>'
+                  : '<p class="hint">Zum Ansehen des Kassenbuchs bitte anmelden.</p>')) +
+      '<div class="kasse-liste">' +
+        '<div class="kasse-kopfzeile"><span>Nr</span><span>Beschreibung · Datum · Kategorie</span><span>Betrag · Saldo</span></div>' +
+        (zeilen.length ? zeilen.join('') : '<p class="hint">Noch keine Buchung.</p>') +
+        (zeilen.length ? '<div class="kasse-summen">' +
+          '<span>Summe Einnahmen <b>' + euro(summeEin) + '</b></span>' +
+          '<span>Summe Ausgaben <b>' + euro(summeAus) + '</b></span>' +
+          '<span>Endbestand <b>' + euro(saldo) + '</b></span></div>' : '') +
+      '</div>';
   }
 
   function renderLigaTraining() {
@@ -10654,30 +10782,36 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         break;
       case 'kasse-art': {
         /* Die Wahl lebt in UI, nicht nur im DOM - ein Hintergrund-Render
-           darf sie nicht auf Einzahlung zuruecksetzen. */
+           darf sie nicht auf Einnahme zuruecksetzen. Die Kategorienliste
+           wechselt mit, das Mitglied-Feld gibt es nur bei Beitraegen. */
         UI.kasseArt = el.getAttribute('data-value');
+        UI.kasseKategorie = null;
         document.querySelectorAll('#kasse-art button').forEach(function (b) {
           b.classList.toggle('active', b === el);
         });
+        var kkSel = $('kasse-kategorie');
+        if (kkSel) kkSel.outerHTML = kasseKategorieWahl(UI.kasseArt, null);
+        var kmZ = $('kasse-mitglied-zeile');
+        if (kmZ) kmZ.classList.toggle('hidden', !(UI.kasseArt !== 'aus' && kasseKategorien('ein')[0] === 'Mitgliedsbeiträge'));
         break;
       }
       case 'kasse-buchen': {
         if (!(window.DartSync && window.DartSync.kasse)) break;
-        var kbRoh = String(($('kasse-betrag') || {}).value || '').trim();
-        /* Deutsche Schreibweisen: 1.250 und 1.234,56 sind Tausenderpunkte,
-           12,50 ist ein Komma-Betrag - nichts davon darf still schrumpfen. */
-        if (/^\d{1,3}(\.\d{3})+(,\d{1,2})?$/.test(kbRoh)) kbRoh = kbRoh.replace(/\./g, '').replace(',', '.');
-        else kbRoh = kbRoh.replace(',', '.');
-        var kbEuro = parseFloat(kbRoh);
+        var kbCent = centAus(($('kasse-betrag') || {}).value);
         var kbText = String(($('kasse-text') || {}).value || '').trim();
         var kbMeld = $('kasse-meldung');
-        if (!isFinite(kbEuro) || kbEuro <= 0) { if (kbMeld) kbMeld.textContent = 'Bitte einen Betrag über 0 eintragen.'; break; }
-        if (!kbText) { if (kbMeld) kbMeld.textContent = 'Wofür war das? Bitte kurz dazuschreiben.'; break; }
+        if (!isFinite(kbCent) || kbCent <= 0) { if (kbMeld) kbMeld.textContent = 'Bitte einen Betrag über 0 eintragen.'; break; }
+        if (!kbText) { if (kbMeld) kbMeld.textContent = 'Bitte eine Beschreibung dazuschreiben.'; break; }
         var kbAus = UI.kasseArt === 'aus';
-        var kbCent = Math.round(kbEuro * 100) * (kbAus ? -1 : 1);
-        window.DartSync.kasse.buchen(kbCent, kbText).then(function (d) {
+        var kbKat = ($('kasse-kategorie') || {}).value || kasseKategorien(kbAus ? 'aus' : 'ein')[0];
+        var kbMitglied = ($('kasse-mitglied') || {}).value || null;
+        var kbDatum = ($('kasse-datum') || {}).value || heuteISO();
+        window.DartSync.kasse.buchen({
+          betrag: kbCent * (kbAus ? -1 : 1), text: kbText, kategorie: kbKat, datum: kbDatum,
+          mitglied: kbKat === 'Mitgliedsbeiträge' ? kbMitglied : null
+        }).then(function (d) {
           kasseDaten = d;
-          UI.kasseArt = 'ein';
+          UI.kasseArt = 'ein'; UI.kasseKategorie = null;
           if ($('kasse-betrag')) $('kasse-betrag').value = '';
           if ($('kasse-text')) $('kasse-text').value = '';
           if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
@@ -10685,6 +10819,33 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         }).catch(function (e) {
           if (kbMeld) kbMeld.textContent = 'Buchen hat nicht geklappt: ' + e.message;
         });
+        break;
+      }
+      /* Ein Tipp neben dem Namen: der Gruendungsbeitrag ist bezahlt. */
+      case 'kasse-beitrag': {
+        if (!(window.DartSync && window.DartSync.kasse) || !kasseDaten) break;
+        var kbtId = el.getAttribute('data-id');
+        var kbtName = el.getAttribute('data-name') || '';
+        var kbtBetrag = (kasseDaten.konfig && kasseDaten.konfig.beitrag) || 5000;
+        el.disabled = true;
+        window.DartSync.kasse.buchen({
+          betrag: kbtBetrag, text: 'Gründungsbeitrag ' + kbtName, kategorie: 'Mitgliedsbeiträge',
+          datum: heuteISO(), mitglied: kbtId
+        }).then(function (d) { kasseDaten = d; render(); })
+          .catch(function () { el.disabled = false; });
+        break;
+      }
+      case 'kasse-konfig': {
+        if (!(window.DartSync && window.DartSync.kasse)) break;
+        var kkJahr = parseInt(($('kasse-jahr') || {}).value, 10);
+        var kkAnfang = centAus(($('kasse-anfang') || {}).value);
+        var kkMeld = $('kasse-meldung');
+        if (!isFinite(kkAnfang)) { if (kkMeld) kkMeld.textContent = 'Der Anfangsbestand ist unbrauchbar.'; break; }
+        window.DartSync.kasse.einstellen({ jahr: kkJahr, anfangsbestand: kkAnfang }).then(function (d) {
+          kasseDaten = d;
+          if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+          render();
+        }).catch(function (e) { if (kkMeld) kkMeld.textContent = 'Speichern hat nicht geklappt: ' + e.message; });
         break;
       }
       case 'kasse-weg': {
@@ -11027,6 +11188,15 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var t = ev.target.closest('[data-action]');
     if (t) { handleAction(t.getAttribute('data-action'), t); return; }
 
+    /* Kassenbuch: die Kategorie merken (Hintergrund-Render) und das
+       Mitglied-Feld nur bei Mitgliedsbeitraegen zeigen. */
+    var kkat = ev.target.closest('#kasse-kategorie');
+    if (kkat) {
+      UI.kasseKategorie = kkat.value;
+      var kmz = $('kasse-mitglied-zeile');
+      if (kmz) kmz.classList.toggle('hidden', kkat.value !== 'Mitgliedsbeiträge');
+      return;
+    }
     var seg = ev.target.closest('[data-setting] button');
     if (seg) {
       var key = seg.parentElement.getAttribute('data-setting');
