@@ -297,13 +297,12 @@ check('neues Profil ist für das nächste Turnier ausgewählt', await page.evalu
 }));
 
 group('Turnier abschließen & Archiv');
+/* Ein fertig gespieltes Turnier darf den Game-Tab nicht in der alten
+   Tabelle festhalten: der Tipp auf "Game" archiviert es und zeigt das Setup. */
 await page.locator('#nav [data-screen="boards"]').click();
 await page.locator('#nav [data-screen="setup"]').click();
-check('Turnierscreen des laufenden Turniers', await visible('#screen-tournament'));
-await page.locator('[data-action="to-winner"]').click();
-await page.locator('[data-action="finish-tournament"]').click();
-check('nach Abschluss zurück im Setup', await visible('#screen-setup'));
-check('Turnier archiviert', await page.evaluate(() => window.__dart.state().history.length) === 1);
+check('Game-Tab bei fertigem Turnier: Setup statt alter Tabelle', await visible('#screen-setup'));
+check('fertiges Turnier beim Verlassen archiviert', await page.evaluate(() => window.__dart.state().history.length) === 1);
 check('kein laufendes Turnier mehr', await page.evaluate(() => window.__dart.state().matches.length) === 0);
 const c2 = await carr();
 check('Karriere-Werte bleiben nach Archivierung erhalten',

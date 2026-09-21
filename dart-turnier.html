@@ -10309,6 +10309,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         // spielScreen: das Schnelle Spiel heisst 'quick', sein Bildschirm
         // aber 'game' - der rohe kind-Name liesse die Seite schwarz.
         if (target === 'setup' && S.game && !S.game.done) target = spielScreen(S.game.kind);
+        /* Ein fertig gespieltes Turnier, das nie über „Turnier abschließen"
+           gegangen ist, hielt den Game-Tab sonst wochenlang in der alten
+           Tabelle fest. Es wird jetzt wie beim Abschließen archiviert (der
+           Endstand bleibt in der Spieleliste nachschlagbar), und es geht ins
+           Setup. Nur ein noch offenes Turnier führt zurück auf den Spielplan. */
+        else if (target === 'setup' && S.matches.length && allMatchesDone()) archiveTournament();
         else if (target === 'setup' && S.matches.length) target = 'tournament';
         S.screen = target;
         save(); render();
