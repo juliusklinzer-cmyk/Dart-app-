@@ -115,7 +115,8 @@
   }
   /* turnier: der Turnier-Modus des X01-Bildschirms – Riesenanzeige, Eingabe
      über eine echte Tastatur. Er bleibt über Aufnahmen und Spiele hinweg an,
-     bis jemand zurückschaltet (anders als modeOverride, der je Aufnahme gilt).
+     bis jemand zurückschaltet. modeOverride: "Punkte" von Hand gilt je
+     Aufnahme, "Einzel-Darts" von Hand bis zum Ende der Partie.
      kamera: ebenso klebrig – die Darts kommen vom gekoppelten iPhone
      (js/kamera.js), angezeigt wird die Einzel-Darts-Ansicht. */
   var UI = { input: '', darts: [], mult: 1, modeOverride: null, turnier: false, kamera: false, overlay: null, error: '', board: 'won', boardMode: '501', profile: null, summary: null, ligaTab: 'plan', bericht: null };
@@ -164,7 +165,40 @@
   }
 
   var saveBroken = false;
+  /* Was nur im Bildschirm lebt, aber einen Neustart ueberstehen soll: die
+     angefangene Aufnahme in Einzel-Darts und die offene Checkout- bzw.
+     Leg-Ende-Frage. Gilt nur fuer die Partie, zu der es gehoert. */
+  function uiKennung() {
+    if (S.game && S.game.kind === 'quick') return 'g:' + S.game.id;
+    return S.current ? 'm:' + S.current : null;
+  }
+  function uiMerken() {
+    var ov = UI.overlay && (UI.overlay.type === 'checkout-darts' || UI.overlay.type === 'leg-done') ? UI.overlay : null;
+    S.ui = (UI.darts.length || ov) && uiKennung()
+      ? { k: uiKennung(), darts: UI.darts.map(function (d) { return { m: d.m, n: d.n, v: d.v }; }), overlay: ov }
+      : null;
+  }
+  function uiWiederherstellen() {
+    var u = S.ui;
+    S.ui = null;
+    if (!u || u.k !== uiKennung() || S.screen !== 'game') return;
+    var m = currentMatch();
+    if (!m || m.done) return;
+    if (Array.isArray(u.darts) && u.darts.length < 3) UI.darts = u.darts;
+    if (u.overlay && u.overlay.type === 'checkout-darts' && !UI.darts.length) UI.overlay = u.overlay;
+    /* Der Leg-Dialog gilt nur, solange das naechste Leg noch nicht begonnen hat. */
+    if (u.overlay && u.overlay.type === 'leg-done') {
+      var fertig = m.legs.filter(function (l) { return l.winner; });
+      var letzt = fertig[fertig.length - 1];
+      var offen = m.legs[m.legs.length - 1];
+      if (letzt && letzt.winner === u.overlay.pid && (!offen || offen === letzt || !offen.visits.length)) UI.overlay = u.overlay;
+    }
+  }
+
   function save() {
+    /* Neuerer Stand im Speicher: nicht drueberschreiben (siehe load). */
+    if (ladeSperre) { liveAnstossen(); return; }
+    uiMerken();
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(S));
       if (saveBroken) { saveBroken = false; renderSaveWarning(); }
@@ -182,12 +216,50 @@
     bar.classList.toggle('hidden', !saveBroken);
   }
 
+  /*
+   * Ein Stand, der sich nicht lesen laesst (kaputt oder von einer neueren
+   * App-Version), wird nicht stillschweigend ueberschrieben: der Rohtext
+   * wandert unter STORAGE_KEY + '.kaputt', und oben steht ein Hinweis. Ein
+   * Stand aus einer NEUEREN Version wird gar nicht angeruehrt - sonst waeren
+   * nach einem Zurueckrollen Profile, Archiv und Turnier weg.
+   */
+  var ladeProblem = null;   // null | 'kaputt' | 'neuer'
+  var ladeSperre = false;   // true: den Speicher nicht ueberschreiben
   function load() {
+    var raw = null;
+    try { raw = localStorage.getItem(STORAGE_KEY); } catch (e) { return null; }
+    if (!raw) return null;
+    var s = ladeStand(raw);
+    if (s) return s;
+    if (ladeProblem === 'neuer') { ladeSperre = true; return null; }
+    ladeProblem = 'kaputt';
     try {
-      var raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return null;
+      if (!localStorage.getItem(STORAGE_KEY + '.kaputt')) localStorage.setItem(STORAGE_KEY + '.kaputt', raw);
+    } catch (e) { ladeSperre = true; /* keine Sicherung moeglich: dann wenigstens nicht ueberschreiben */ }
+    return null;
+  }
+
+  function renderLadeHinweis() {
+    if (!ladeProblem) return;
+    var bar = $('lade-hinweis');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.id = 'lade-hinweis';
+      bar.className = 'save-warning';
+      document.body.insertBefore(bar, document.body.firstChild);
+    }
+    bar.textContent = ladeProblem === 'neuer'
+      ? '⚠️ Der gespeicherte Stand stammt von einer neueren App-Version und bleibt unangetastet. Bitte die Seite neu laden bzw. die App aktualisieren – bis dahin wird nichts gespeichert.'
+      : ladeSperre
+        ? '⚠️ Der gespeicherte Stand war beschädigt und ließ sich nicht lesen. Für eine Sicherung fehlt der Platz, deshalb wird er nicht überschrieben – bis dahin wird nichts gespeichert.'
+        : '⚠️ Der gespeicherte Stand war beschädigt und ließ sich nicht lesen. Er ist als Sicherung aufgehoben (dart-turnier-v1.kaputt), die App startet frisch.';
+  }
+
+  function ladeStand(raw) {
+    try {
       var s = JSON.parse(raw);
       if (!s) return null;
+      if (typeof s.v === 'number' && s.v > 2) { ladeProblem = 'neuer'; return null; }
       if (s.v === 1) s = migrate1to2(s);
       if (s.v !== 2 || !Array.isArray(s.profiles)) return null;
       if (!Array.isArray(s.history)) s.history = [];
@@ -643,6 +715,10 @@
            hier gerade offen aussieht. Wer sie beansprucht hatte, hat sie
            gespielt; alles andere wäre ein zweiter Datenstand derselben
            Partie, und genau den soll es nicht geben. */
+        /* Ausnahme: dieses Geraet hat die eigene, schon gemeldete Partie per
+           Zuruecknehmen wieder geoeffnet und korrigiert sie gerade. Dann
+           kommt das neue Ergebnis beim naechsten Checkout ohnehin hoch. */
+        if (m.korrektur && !m.done) return;
         if (!m.done || m.at !== p.result.at) {
           S.matches[S.matches.indexOf(m)] = p.result;
           if (S.current === m.id) S.current = null;
@@ -1199,7 +1275,11 @@
     // Die 60 gehört dem Löwen – bei jeder geworfenen 60 (siehe feiere60).
     else if (!isBust && score === 60 && !ligaMatch) feiere60(pid);
 
-    UI.input = ''; UI.darts = []; UI.mult = 1; UI.modeOverride = null; UI.error = '';
+    UI.input = ''; UI.darts = []; UI.mult = 1; UI.error = '';
+    /* "Punkte" von Hand gilt nur fuer diese Aufnahme, danach entscheidet
+       wieder "Einzel-Darts ab Rest". Wer dagegen Einzel-Darts waehlt, will
+       Dart fuer Dart mitschreiben - das bleibt bis zum Ende der Partie. */
+    if (UI.modeOverride !== 'darts') UI.modeOverride = null;
 
     if (isCheckout) {
       leg.winner = pid;
@@ -1230,6 +1310,7 @@
         /* Im geteilten Turnier steht die Partie sofort bei allen anderen –
            nicht erst, wenn der ganze Abend vorbei ist. */
         if (geteiltesTurnier() && m.kind !== 'quick' && window.DartSync && window.DartSync.turnier) {
+          delete m.korrektur;
           window.DartSync.turnier.ergebnis(m);
         }
       } else {
@@ -1257,6 +1338,9 @@
 
     if (v > 180) { UI.error = 'Maximal 180'; UI.input = ''; render(); return; }
     if (IMPOSSIBLE[v]) { UI.error = v + ' ist mit 3 Darts nicht möglich'; UI.input = ''; render(); return; }
+    /* Einzeldarts dieser Aufnahme stehen schon: eine Gesamtzahl daneben
+       wuerde sie verwerfen (auch beim Mitspieler im Online-Spiel). */
+    if (UI.darts.length) { UI.error = 'Die Aufnahme läuft in Einzel-Darts – bitte dort weiter eintragen.'; UI.input = ''; render(); return; }
 
     pomp();
     var after = rest - v;
@@ -1266,6 +1350,7 @@
       for (var n = 1; n <= 3; n++) if (Checkout.possible(rest, n)) opts.push(n);
       if (!opts.length) { UI.error = 'Kein gültiges Finish auf Doppel'; UI.input = ''; render(); return; }
       UI.overlay = { type: 'checkout-darts', score: v, options: opts };
+      save();   // die offene Frage uebersteht einen Neustart
       render();
       return;
     }
@@ -1318,13 +1403,16 @@
     var total = sum(UI.darts, function (d) { return d.v; });
 
     if (after < 0 || after === 1 || (after === 0 && mult !== 2)) {
-      commitVisit(total, thrown, false, true, UI.darts);
+      /* Ein Bust beendet die Aufnahme: sie zaehlt immer drei Darts - genau
+         wie bei der Punkte-Eingabe, sonst haengen Average und Bestes Leg
+         vom Eingabeweg ab. */
+      commitVisit(total, 3, false, true, UI.darts);
       return true;
     }
     if (after === 0) { commitVisit(total, thrown, true, false, UI.darts); return true; }
     if (thrown === 3) { commitVisit(total, 3, false, false, UI.darts); return true; }
+    save();            // uebersteht einen Neustart; schickt den Dart sofort zum anderen Tablet
     render();
-    liveAnstossen();   // der einzelne Dart geht sofort zum anderen Tablet
     return true;
   }
 
@@ -1357,17 +1445,18 @@
     if (value > 180) return 'Maximal 180.';
     if (IMPOSSIBLE[value]) return value + ' ist mit 3 Darts nicht möglich.';
 
-    var backup = { s: v.s, b: v.b, o: v.o, k: v.k };
+    var backup = { s: v.s, b: v.b, o: v.o, k: v.k, d: v.d };
     var rest = legStart(leg);
     leg.visits.forEach(function (x, i) { if (x.p === v.p && i < idx && !x.b) rest -= x.s; });
     var after = rest - value;
     delete v.k;                       // Einzeldarts passen nach der Korrektur nicht mehr
+    v.d = 3;                          // eine korrigierte Aufnahme ist eine volle Aufnahme
     if (after < 0 || after === 1) { v.s = 0; v.b = true; v.o = value; }
-    else if (after === 0) { v.s = backup.s; v.b = backup.b; v.o = backup.o; v.k = backup.k; return 'Ein Finish bitte über den Wurf eingeben.'; }
+    else if (after === 0) { v.s = backup.s; v.b = backup.b; v.o = backup.o; v.k = backup.k; v.d = backup.d; return 'Ein Finish bitte über den Wurf eingeben.'; }
     else { v.s = value; v.b = false; v.o = 0; }
 
     if (!visitFits(leg, v.p)) {
-      v.s = backup.s; v.b = backup.b; v.o = backup.o; if (backup.k) v.k = backup.k;
+      v.s = backup.s; v.b = backup.b; v.o = backup.o; v.d = backup.d; if (backup.k) v.k = backup.k;
       return 'Mit diesem Wert passen die späteren Aufnahmen nicht mehr.';
     }
     save();
@@ -1378,7 +1467,7 @@
   function undo() {
     klick();
     if (UI.overlay && UI.overlay.type === 'checkout-darts') { UI.overlay = null; UI.input = ''; render(); return; }
-    if (UI.darts.length) { UI.darts.pop(); UI.mult = 1; render(); liveAnstossen(); return; }
+    if (UI.darts.length) { UI.darts.pop(); UI.mult = 1; save(); render(); return; }
 
     var m = currentMatch();
     if (!m) return;
@@ -1388,6 +1477,9 @@
     var leg = m.legs[m.legs.length - 1];
     leg.visits.pop();
     leg.winner = null;
+    /* Im geteilten Turnier ist das Ergebnis schon beim Server: merken, dass
+       hier korrigiert wird, sonst holt der Abgleich das alte zurueck. */
+    if (m.done && m.kind !== 'quick' && geteiltesTurnier()) m.korrektur = true;
     m.done = false;
     m.winner = null;
     m.at = null;
@@ -1590,7 +1682,7 @@
           map[id].cricketDarts += cs.darts[id];
           map[id].cricketMarks += cs.allMarks[id];
         });
-        if (h.winner && map[h.winner]) map[h.winner].cricketWins++;
+        if (h.winner && map[h.winner] && h.players.length > 1) map[h.winner].cricketWins++;   // allein gibt es keinen Sieg
       } else if (kind === 'rtw') {
         var rs = rtwState({ players: h.players, throws: h.throws, boost: h.boost !== false });
         h.players.forEach(function (id) {
@@ -1600,7 +1692,7 @@
           var fin = rs.finished[id];
           if (fin && (map[id].rtwBest === null || fin.darts < map[id].rtwBest)) map[id].rtwBest = fin.darts;
         });
-        if (h.winner && map[h.winner]) map[h.winner].rtwWins++;
+        if (h.winner && map[h.winner] && h.players.length > 1) map[h.winner].rtwWins++;   // allein gibt es keinen Sieg
       } else if (kind === 'finisher') {
         h.players.forEach(function (id) { if (map[id]) map[id].finGames++; });
         // Gezählt wird je gewonnener Runde – da steckt die Leistung drin,
@@ -1613,7 +1705,7 @@
           if (s.finBest === null || rd.darts < s.finBest) s.finBest = rd.darts;
           if (rd.zahl > s.finHigh) s.finHigh = rd.zahl;
         });
-        if (h.winner && map[h.winner]) map[h.winner].finWins++;
+        if (h.winner && map[h.winner] && h.players.length > 1) map[h.winner].finWins++;   // allein gibt es keinen Sieg
       }
     });
     Object.keys(map).forEach(function (k) {
@@ -2169,6 +2261,7 @@
       S.game.legs = [];
     }
     UI.mult = 1;
+    UI.modeOverride = null;   // neue Partie, neue Handwahl
     UI.overlay = null;
     UI.turnier = false;
     // Wie im Turnier wird auch hier ausgeworfen, wer anfängt - ausser
@@ -2192,13 +2285,17 @@
     save(); render();
   }
 
-  function archiveGame(g) {
-    if (!g || !g.done) return;
+  /* abgebrochen: ein Schnelles Spiel ueber mehrere Legs, das vor dem Ende
+     verlassen wurde - die gespielten Legs zaehlen (Average, 180er, Finishes),
+     einen Sieger gibt es nicht. */
+  function archiveGame(g, abgebrochen) {
+    if (!g || (!g.done && !abgebrochen)) return;
     for (var i = 0; i < S.history.length; i++) if (S.history[i].id === g.id) return;  // nicht doppelt
     var eintrag = {
       id: g.id || uid(), kind: g.kind, at: g.at || Date.now(),
-      players: g.players.slice(), winner: g.winner
+      players: g.players.slice(), winner: abgebrochen ? null : g.winner
     };
+    if (abgebrochen) eintrag.abgebrochen = true;
     // Finisher speichert Runden statt einer flachen Wurfliste – jede Runde
     // hat ihre eigene Zielzahl, die sich sonst nicht rekonstruieren liesse.
     if (g.kind === 'finisher') {
@@ -2212,8 +2309,9 @@
       eintrag.lineup = g.p.slice();
       eintrag.settings = { start: g.start, bestOf: g.bestOf || 1 };
       eintrag.matches = [{
-        id: g.id, p: g.p.slice(), starter: g.starter, legs: g.legs,
-        done: true, winner: g.winner, at: eintrag.at, start: g.start,
+        id: g.id, p: g.p.slice(), starter: g.starter,
+        legs: abgebrochen ? g.legs.filter(function (l) { return l.winner; }) : g.legs,
+        done: !abgebrochen, winner: eintrag.winner, at: eintrag.at, start: g.start,
         bestOf: g.bestOf || 1, saetzeBestOf: g.saetzeBestOf || 1, spieldauer: g.spieldauer || null
       }];
     } else {
@@ -2233,6 +2331,12 @@
      Bündel, per Doppelklick geöffnet – passiert hier schlicht nichts. */
   function meldeNeuesSpiel(eintrag) {
     if (window.DartSync && eintrag) window.DartSync.neuesSpiel(eintrag);
+  }
+
+  /* Wie viele Legs eines laufenden Schnellen Spiels schon entschieden sind. */
+  function entschiedeneLegs(g) {
+    if (!g || g.kind !== 'quick' || !Array.isArray(g.legs)) return 0;
+    return g.legs.filter(function (l) { return l.winner; }).length;
   }
 
   function finishGame() {
@@ -2255,6 +2359,17 @@
   }
 
   /* ================= Turnier abschließen ================= */
+  /* Alle, die mit dem Ersten exakt gleichauf liegen (Siege, Leg-Differenz,
+     Average). Mehr als einer = geteilter Sieg, dann gibt es keinen
+     Turniersieger in der Karriere. */
+  function geteilteSpitze(table) {
+    if (!table.length) return [];
+    return table.filter(function (st) {
+      return st.won === table[0].won && st.legDiff === table[0].legDiff &&
+        Math.abs(st.avg - table[0].avg) < 0.005;
+    });
+  }
+
   function archiveTournament() {
     if (!S.matches.length) return;
     var geteilt = geteiltesTurnier();
@@ -2283,7 +2398,7 @@
         /* Ein Ligaspiel hat keinen Einzelsieger – sonst bekäme der individuell
            beste der acht (womöglich ein Gegner) einen erfundenen Turniersieg
            in Karriere und Rangliste. */
-        winner: allMatchesDone() && table[0] && !(S.tour && S.tour.liga) ? table[0].id : null
+        winner: allMatchesDone() && table[0] && !(S.tour && S.tour.liga) && geteilteSpitze(table).length === 1 ? table[0].id : null
       });
       if (S.history.length > MAX_HISTORY) S.history.length = MAX_HISTORY;
       // Ligaspiele behalten ihre Team-Daten – die Auswertung soll später noch
@@ -3159,6 +3274,17 @@
           '<div class="ld">' + fmtDate(m.at || e.at) + '</div>' +
           '</div>';
       }
+      if (m.p.length > 2) {
+        /* Schnelles Spiel zu dritt oder mehr: Sieger vorn, die anderen
+           rechts - eine Zeile "A 1:0 B" wuerde den Rest unterschlagen. */
+        var andere = m.p.filter(function (pid) { return pid !== m.winner; });
+        return '<div class="log-row tap" data-action="open-summary" data-kind="501" data-id="' + esc(m.id) + '" role="button" tabindex="0">' +
+          '<div class="lp w">' + esc(pname(m.winner)) + '<span class="a">Ø ' + avgOf(m.winner) + '</span></div>' +
+          '<div class="ls">🏆</div>' +
+          '<div class="lp right">' + plural(m.p.length, 'Spieler', 'Spieler') + '<span class="a">' + andere.map(pname).map(esc).join(', ') + '</span></div>' +
+          '<div class="ld">' + fmtDate(m.at || e.at) + (e.live ? ' · aktuelles Turnier' : '') + '</div>' +
+          '</div>';
+      }
       return '<div class="log-row tap" data-action="open-summary" data-kind="501" data-id="' + m.id + '" role="button" tabindex="0">' +
         '<div class="lp ' + (m.winner === m.p[0] ? 'w' : '') + '">' + esc(pname(m.p[0])) + '<span class="a">Ø ' + avgOf(m.p[0]) + '</span></div>' +
         '<div class="ls">' + la + ':' + lb + '</div>' +
@@ -3933,7 +4059,10 @@
        wenn er den Vorschlag trifft). In Finish-Naehe stehen die restlichen
        Wuerfe rot bzw. als Weg darin; die Leiste darueber entfaellt dann. */
     var kBox = $('game-kacheln');
-    if (anzeige === 'darts' && !m.done) {
+    /* Im Turnier-Modus stehen die Kacheln nur, solange Einzeldarts laufen
+       (z. B. vom Mitspieler im Online-Spiel) - ohne Vorschlagsknoepfe. */
+    var nurAnzeige = anzeige === 'turnier';
+    if ((anzeige === 'darts' || (nurAnzeige && UI.darts.length)) && !m.done) {
       var kacheln = ['', '', ''];
       var kDbl = ohneFinish ? null : lieblingsDoppel(active);
       var kRest = remainingIn(leg, active);
@@ -3950,7 +4079,7 @@
           (d.n === 0 ? '–' : dartLabel(d)) + '</span>';
         kRest -= d.v;
       });
-      if (route) {
+      if (route && !nurAnzeige) {
         for (var kr = 0; kr < route.length && UI.darts.length + kr < 3; kr++) {
           /* Die vorgeschlagene Kachel ist zugleich der Bestaetigungsknopf:
              wer die 14 trifft, tippt auf die 14 statt sie im Zahlenfeld zu
@@ -3961,7 +4090,7 @@
             ' data-num="' + kSoll.n + '" data-mult="' + kSoll.m + '" aria-label="' + Checkout.pretty(route[kr]) + ' getroffen">' +
             Checkout.pretty(route[kr]) + '</button>';
         }
-      } else if (UI.darts.length < 3 && !ohneFinish) {
+      } else if (UI.darts.length < 3 && !ohneFinish && !nurAnzeige) {
         /* Kein Finish mehr mit den restlichen Darts: wie im Finisher steht
            dann der Stellwurf da (42 Rest -> 10, damit 32 bleibt) -- gestrichelt,
            und ebenfalls antippbar. */
@@ -4152,6 +4281,9 @@
   function effectiveMode(rest) {
     if (UI.turnier && turnierErlaubt()) return 'turnier';
     if (UI.kamera && window.DartKamera) return 'kamera';
+    /* Stehen Darts der laufenden Aufnahme an, zeigt jedes Geraet sie -
+       auch das des Mitspielers im Online-Spiel, egal wie es eingestellt ist. */
+    if (UI.darts.length) return 'darts';
     if (UI.modeOverride) return UI.modeOverride;
     var t = S.settings.dartModeFrom;
     return (t > 0 && rest <= t) ? 'darts' : 'total';
@@ -4212,7 +4344,7 @@
       (g.players.length > 1 ? '<span>Vorn: <b>' + esc(pname(lead)) + '</b></span>' : '');
 
     $('cricket-turn').innerHTML = g.done
-      ? '<b>' + esc(pname(g.winner)) + '</b> gewinnt'
+      ? '<b>' + esc(pname(g.winner)) + '</b> ' + (g.players.length < 2 ? 'hat alles zu' : 'gewinnt')
       : '<span class="muted">Am Wurf</span> <b>' + esc(pname(active)) + '</b>';
 
     /* Nach einer vollen Aufnahme zeigen die Chips noch die Darts des
@@ -4288,7 +4420,7 @@
     }).join('');
 
     $('rtw-turn').innerHTML = g.done
-      ? '<b>' + esc(pname(g.winner)) + '</b> gewinnt'
+      ? '<b>' + esc(pname(g.winner)) + '</b> ' + (g.players.length < 2 ? 'ist durch' : 'gewinnt')
       : st.stechen
         ? '<b>Stechen</b> <span class="muted">– der Bull entscheidet</span>'
         : (st.closing ? '<span class="muted">Runde wird zu Ende gespielt · </span>' : '') +
@@ -4413,7 +4545,9 @@
       }
       for (var h = 0; h < S.history.length; h++) {
         var e = S.history[h];
-        if ((e.kind || '501') !== '501') continue;
+        // Schnelle Spiele liegen mit ihren Partien genauso im Archiv.
+        if ((e.kind || '501') !== '501' && e.kind !== 'quick') continue;
+        if (!Array.isArray(e.matches)) continue;
         for (var j = 0; j < e.matches.length; j++) {
           if (e.matches[j].id === id) return { m: e.matches[j], start: (e.settings && e.settings.start) || 501, live: false };
         }
@@ -4512,7 +4646,7 @@
     $('fin-runde').textContent = 'Runde ' + (st.runde + 1) + ' · auf ' + g.ziel + ' Punkte';
 
     $('fin-turn').innerHTML = g.done
-      ? '<b>' + esc(pname(g.winner)) + '</b> hat gewonnen'
+      ? '<b>' + esc(pname(g.winner)) + '</b> ' + (g.players.length < 2 ? 'hat ausgemacht' : 'hat gewonnen')
       : rd.stechen
         ? '<b>Stechen</b><span class="muted"> – der Bull entscheidet</span>'
         : '<span class="muted">Am Wurf</span> <b>' + esc(pname(aktiv)) + '</b>' +
@@ -4903,6 +5037,10 @@
         '<h2 class="sum-title">' + esc(pname(m.winner)) + (mSolo ? ' hat ausgemacht' : ' gewinnt') + '</h2>' +
         (mSolo
           ? '<div class="muted">Schnelles Spiel · ' + found.start + ' Double Out · Solo</div>'
+          : m.p.length > 2
+          ? '<div class="sum-score">' + m.p.map(function (pid) {
+              return '<span class="' + (m.winner === pid ? 'w' : '') + '">' + esc(pname(pid)) + ' <b>' + legsWon(m, pid) + '</b></span>';
+            }).join(' · ') + '</div>'
           : '<div class="sum-score">' +
             '<span class="' + (m.winner === m.p[0] ? 'w' : '') + '">' + esc(pname(m.p[0])) + '</span>' +
             '<b>' + legsWon(m, m.p[0]) + ':' + legsWon(m, m.p[1]) + '</b>' +
@@ -4951,7 +5089,7 @@
       var g = found.g;
       var cst = cricketState(g);
       box = '<div class="sum-head"><div class="big-emoji">🏆</div>' +
-        '<h2 class="sum-title">' + esc(pname(g.winner)) + ' gewinnt</h2>' +
+        '<h2 class="sum-title">' + esc(pname(g.winner)) + (g.players.length < 2 ? ' hat alles zu' : ' gewinnt') + '</h2>' +
         '<div class="muted">Cricket ' + (g.scoring ? 'mit Punkten' : 'ohne Punkte') + '</div></div>' +
         '<div class="sum-cards">' + g.players.map(function (id) {
           var closed = CRICKET_NUMBERS.filter(function (n) { return cst.marks[id][n] >= 3; }).length;
@@ -4983,7 +5121,7 @@
       var qSolo = qm.p.length < 2;
       var qSSt = mehrereLegs(qm) ? satzStand(qm) : null;
       box = '<div class="sum-head"><div class="big-emoji">' + (qSolo ? '🎯' : '🏆') + '</div>' +
-        '<h2 class="sum-title">' + esc(pname(qm.winner)) + (qSolo ? ' hat ausgemacht' : ' gewinnt') + '</h2>' +
+        '<h2 class="sum-title">' + (qm.winner ? esc(pname(qm.winner)) + (qSolo ? ' hat ausgemacht' : ' gewinnt') : 'Abgebrochen – ohne Sieger') + '</h2>' +
         '<div class="muted">Schnelles Spiel · ' + qStart + ' Double Out · ' +
           (qSolo ? 'Solo' : plural(qm.p.length, 'Spieler', 'Spieler')) +
           (qSSt ? ' · ' + dauerText(qm) : '') + '</div>' +
@@ -5023,7 +5161,7 @@
       var gespielt = (fg2.rounds || []).filter(function (rd) { return rd.sieger; }).length;
 
       box = '<div class="sum-head"><div class="big-emoji">🏆</div>' +
-        '<h2 class="sum-title">' + esc(pname(fg2.winner)) + ' gewinnt</h2>' +
+        '<h2 class="sum-title">' + esc(pname(fg2.winner)) + (fg2.players.length < 2 ? ' hat ausgemacht' : ' gewinnt') + '</h2>' +
         '<div class="muted">Finisher · ' + plural(gespielt, 'Runde', 'Runden') + ' · auf ' + fg2.ziel + ' Punkte</div></div>' +
         '<div class="sum-cards">' + fg2.players.map(function (id) {
           return '<div class="card sum-card ' + (fg2.winner === id ? 'win' : '') + '">' +
@@ -5050,7 +5188,7 @@
       var rg = found.g;
       var rst = rtwState(rg);
       box = '<div class="sum-head"><div class="big-emoji">🏆</div>' +
-        '<h2 class="sum-title">' + esc(pname(rg.winner)) + ' gewinnt</h2>' +
+        '<h2 class="sum-title">' + esc(pname(rg.winner)) + (rg.players.length < 2 ? ' ist durch' : ' gewinnt') + '</h2>' +
         '<div class="muted">Round the World · ' + rst.darts[rg.winner] + ' Darts bis Bull</div></div>' +
         '<div class="sum-cards">' + rg.players.map(function (id) {
           var t = rst.target[id];
@@ -5104,17 +5242,19 @@
     if (!table.length) { S.screen = 'setup'; render(); return; }
     var medals = ['🥇', '🥈', '🥉'];
     /* Bei exaktem Gleichstand gibt es keinen alphabetischen Sieger. */
-    var tied = table.filter(function (st) {
-      return st.won === table[0].won && st.legDiff === table[0].legDiff &&
-        Math.abs(st.avg - table[0].avg) < 0.005;
-    });
+    var tied = geteilteSpitze(table);
+    /* Gespielt hat der Sieger so viele Partien, wie tatsaechlich im Plan
+       stehen - nach Nachtragen oder Abmelden sind das nicht (Spieler - 1). */
+    var seinePartien = S.matches.filter(function (m) {
+      return m.p.indexOf(table[0].id) >= 0 && (m.done || m.kampflos);
+    }).length;
     var title = tied.length > 1
       ? 'Geteilter Sieg: ' + tied.map(function (st) { return esc(st.name); }).join(' und ')
       : esc(table[0].name) + ' gewinnt!';
     $('winner-box').innerHTML =
       '<div style="text-align:center"><div class="big-emoji">🏆</div>' +
       '<h1>' + title + '</h1>' +
-      '<p class="muted">' + plural(table[0].won, 'Spiel', 'Spiele') + ' von ' + (tourPlayers().length - 1) + ' gewonnen</p></div>' +
+      '<p class="muted">' + plural(table[0].won, 'Spiel', 'Spiele') + ' von ' + seinePartien + ' gewonnen</p></div>' +
       '<div class="podium">' + table.map(function (st, i) {
         return '<div class="p ' + (i === 0 ? 'first' : '') + '">' +
           '<div class="medal">' + (medals[i] || (i + 1) + '.') + '</div>' +
@@ -5229,12 +5369,20 @@
         (last ? '' : '<button class="btn ghost full" data-action="ov-next-match">Direkt zum nächsten Spiel</button>') +
         '<button class="btn ghost full" data-action="undo">Eingabe rückgängig</button>';
     } else if (o.type === 'confirm-discard-game') {
+      var dgLegs = entschiedeneLegs(S.game);
       html = '<h3>' + kindName(S.game ? S.game.kind : '') + ' abbrechen?</h3>' +
-        '<p>Das Spiel ist noch nicht entschieden – es gibt also nichts, was in die ' +
-        'Statistik gehören würde. Der bisherige Verlauf geht verloren.</p>' +
-        '<div class="row-btns two">' +
-        '<button class="btn ghost" data-action="ov-cancel">Nein, weiterspielen</button>' +
-        '<button class="btn danger" data-action="ov-discard-game">Ja, verwerfen</button></div>';
+        (dgLegs
+          ? '<p>Das Spiel ist noch nicht entschieden. ' + plural(dgLegs, 'Leg ist', 'Legs sind') + ' schon gespielt – ' +
+            'die kannst du ohne Sieger in die Statistik übernehmen (Average, 180er, Finishes) oder verwerfen.</p>' +
+            '<button class="btn primary full" data-action="ov-keep-legs">Gespielte Legs behalten</button>' +
+            '<div class="row-btns two">' +
+            '<button class="btn ghost" data-action="ov-cancel">Weiterspielen</button>' +
+            '<button class="btn danger" data-action="ov-discard-game">Alles verwerfen</button></div>'
+          : '<p>Das Spiel ist noch nicht entschieden – es gibt also nichts, was in die ' +
+            'Statistik gehören würde. Der bisherige Verlauf geht verloren.</p>' +
+            '<div class="row-btns two">' +
+            '<button class="btn ghost" data-action="ov-cancel">Weiterspielen</button>' +
+            '<button class="btn danger" data-action="ov-discard-game">Ja, verwerfen</button></div>');
     } else if (o.type === 'warte') {
       html = '<p>' + esc(o.text) + '</p>';
     } else if (o.type === 'hinweis') {
@@ -5511,7 +5659,8 @@
         if (gdWahl < 0) return sonst;
         return i === gdWahl ? 'btn primary full wahl' : 'btn ghost full';
       };
-      var gdSolo = S.game && S.game.kind === 'quick' && S.game.p && S.game.p.length < 2;
+      /* Allein gespielt (in jeder Spielart): kein "gewinnt", sondern ausgemacht. */
+      var gdSolo = !!S.game && (S.game.p || S.game.players || []).length < 2;
       html = '<div class="big-emoji">' + (gdSolo ? '🎯' : '🏆') + '</div><h3>' +
         (gdSolo ? 'Ausgemacht, ' : 'Glückwunsch, ') + esc(pname(o.pid)) + '!</h3>' +
         '<p>' + (S.game ? kindName(S.game.kind) : '') +
@@ -6317,7 +6466,13 @@
       }
       case 'fin-stechen': {
         var fg = S.game;
-        if (fg && fg.kind === 'finisher') { finisherRundeAn(fg, el.getAttribute('data-id')); save(); render(); }
+        if (!fg || fg.kind !== 'finisher' || fg.done) break;
+        /* Nur wer im Stechen steht, kann es gewinnen - ein alter Knopf
+           (Doppeltipp, zweites Geraet) darf keine Runde vergeben. */
+        var fsRd = finisherRunde(fg);
+        var fsWer = el.getAttribute('data-id');
+        if (!fsRd.stechen || fsRd.stechen.spieler.indexOf(fsWer) < 0) break;
+        finisherRundeAn(fg, fsWer); save(); render();
         break;
       }
       case 'undo-game':
@@ -6406,6 +6561,7 @@
       case 'end-rtw-visit': {
         var rwg = S.game;
         if (!rwg || rwg.kind !== 'rtw' || rwg.done || settling()) return;
+        if (rtwState(rwg).stechen) return;   // im Stechen gibt es keine Aufnahme aufzufuellen
         var offen = 3 - rtwState(rwg).inVisit;
         for (var ri = 0; ri < offen; ri++) rwg.throws.push({ n: 0, m: 0 });
         UI.mult = 1;
@@ -6897,6 +7053,14 @@
         break;
       /* Ein abgebrochenes freies Spiel hat keinen Sieger und damit nichts,
          was in die Statistik gehören würde – es wird verworfen. */
+      case 'ov-keep-legs':
+        liveEnde(S.game);
+        archiveGame(S.game, true);
+        S.game = null;
+        UI.overlay = null;
+        S.screen = 'setup';
+        save(); render();
+        break;
       case 'ov-discard-game':
         liveEnde(S.game);
         S.game = null;
@@ -6947,6 +7111,14 @@
   function waehleEingabemodus(neuerModus) {
     if (neuerModus === 'turnier' && !turnierErlaubt()) return;
     if (neuerModus === 'kamera' && !window.DartKamera) return;
+    /* Angefangene Aufnahme in Einzel-Darts: ein Wechsel auf Punkte wuerde
+       die gebuchten Darts still verwerfen (Rest 170, S20, dann "100" ->
+       70 statt 50). Erst fertig werfen oder zuruecknehmen. */
+    if (UI.darts.length && neuerModus !== 'darts' && neuerModus !== 'kamera') {
+      UI.error = 'Erst die angefangene Aufnahme fertig werfen oder zurücknehmen.';
+      render();
+      return;
+    }
     var turnierVorher = UI.turnier;
     var kameraVorher = UI.kamera;
     UI.turnier = neuerModus === 'turnier';
@@ -6967,6 +7139,13 @@
      gemeint, nichts wird still verworfen. Gibt zurueck, ob gebucht wurde -
      falsch heisst: falscher Bildschirm, Spiel vorbei oder Schonfrist. */
   function spielDart(mult, num) {
+    /* Fuer jede Spielart gleich geprueft und normalisiert: nur echte Felder
+       (0-20, 25), Faktor 1-3, und Bull hoechstens doppelt. */
+    mult = Number(mult); num = Number(num);
+    if (!(num === 25 || (num >= 0 && num <= 20 && num % 1 === 0))) return false;
+    if (!(mult === 1 || mult === 2 || mult === 3)) return false;
+    if (num === 25 && mult > 2) mult = 2;
+    if (num === 0) mult = 1;
     if (S.screen === 'cricket') return cricketDart(mult, num);
     if (S.screen === 'rtw') return rtwDart(mult, num);
     if (S.screen === 'finisher') return finisherDart(mult, num);
@@ -7356,6 +7535,7 @@
 
   /* ================= Start ================= */
   S = load() || newState();
+  renderLadeHinweis();
   /* Die gemerkte Board-Einstellung zieht beim Start nur mitten im
      Ligaspiel - ein normales Spiel beginnt immer im normalen Bild. */
   UI.turnier = !!(S.settings && S.settings.turnierModus === 1 && S.tour && S.tour.liga);
@@ -7379,6 +7559,7 @@
     S.screen = 'summary';
   }
   if (S.screen === 'game' && !currentMatch()) S.screen = 'tournament';
+  uiWiederherstellen();
   if (S.screen === 'bulloff' && !currentMatch() && !S.game) S.screen = 'tournament';
   if (!S.matches.length && S.screen === 'tournament') S.screen = 'setup';
   if (S.screen === 'profile' && !UI.profile) S.screen = 'players';

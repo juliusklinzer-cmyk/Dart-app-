@@ -97,7 +97,8 @@ eigene aktuelle Zahl:
 Wer über die 20 hinausspringt, landet auf Bull. Mit dem Bull-Treffer ist die eigene
 Aufnahme beendet, die angefangene Runde wird aber zu Ende gespielt – so ist der
 spätere Startplatz nicht benachteiligt. Es gewinnt, wer den Bull mit den wenigsten
-Darts getroffen hat, bei Gleichstand der frühere Treffer.
+Darts getroffen hat. Brauchen mehrere gleich wenige Darts, entscheidet ein Stechen:
+jeder wirft einen Dart auf den Bull, wer am nächsten dran ist, gewinnt.
 Jeder Spieler hat seinen eigenen Fortschritt, die Anzeige zeigt Ziel, Darts und
 Treffer.
 
@@ -505,7 +506,7 @@ Spielverlauf:
 | Round the World | Bestes Ergebnis (Darts), Siege |
 
 Über den Listen zeichnet ein **Verlaufsdiagramm** die Entwicklung über die letzten bis
-zu 40 Spiele – eine Linie je Spieler in seiner Farbe, links die Skala, unten die
+zu 10 Spiele – eine Linie je Spieler in seiner Farbe, links die Skala, unten die
 Spiele. Bei Classic ist es der 3-Dart-Average je Spiel, bei Cricket die MPR je Spiel.
 Unter dem Diagramm steht je Spieler der **Durchschnitt über genau diese Spiele**
 (Punkte durch Darts, nicht der Mittelwert der Einzelwerte) – bei weniger als
@@ -533,9 +534,10 @@ Zwei Definitionen, damit die Zahlen einordbar sind:
 Damit Zufallswerte die Listen nicht verzerren, erscheinen Spieler in den
 Durchschnitts-Ranglisten erst ab 9 geworfenen Darts bzw. 3 Doppelversuchen.
 
-Ein Turnier wandert per **„Turnier abschließen"** ins Archiv (die letzten 200 bleiben
+Ein Turnier wandert per **„Turnier abschließen"** ins Archiv (die letzten 500 Spiele und Turniere bleiben
 gespeichert); abgebrochene Turniere behalten ihre bereits gespielten Spiele in der
-Statistik.
+Statistik. Ein Schnelles Spiel über mehrere Legs lässt sich beim Abbrechen mit
+„Gespielte Legs behalten“ ohne Sieger übernehmen (Average, 180er, Finishes zählen).
 
 ## Anmelden und gemeinsam spielen
 
