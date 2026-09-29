@@ -2159,6 +2159,10 @@ check('ohne Vorliebe bleibt alles wie bisher', (await weg(140, null)) === 'T20 T
 check('mit D16 wird auf D16 gestellt', (await weg(140, 16)) === 'T20 T16 D16', await weg(140, 16));
 check('auch beim kleinen Rest (41)', (await weg(41, 16)) === 'S9 D16', await weg(41, 16));
 check('Bull-Liebhaber bekommen den Bull', (await weg(60, 25)) === 'S10 BULL', await weg(60, 25));
+/* Gleich gute Wege aufs selbe Doppel: lieber T19 und eine grosse Zahl als
+   T20 und ein Stellwurf auf die kleinen Felder unten. */
+check('99 auf D16: T19 10 D16 statt T20 7 D16', (await weg(99, 16)) === 'T19 S10 D16', await weg(99, 16));
+check('das Doppel bleibt dabei das Lieblingsdoppel (108 auf D20)', (await weg(108, 20)).endsWith('D20'), await weg(108, 20));
 /* Die Grenze: mehr Darts darf es nie kosten, und ein krummer Stellwurf
    wie T7 oder die 25 wird nicht angesagt, nur um das Doppel zu erreichen. */
 check('nie ein Dart mehr', await page.evaluate(() => {
@@ -3348,6 +3352,64 @@ group('Zurueck-Taste verlaesst die App nicht aus Versehen');
   await page.goBack();
   await page.waitForTimeout(150);
   check('Zurueck schliesst zuerst einen offenen Dialog', await page.evaluate(() => !window.__dart.ui().overlay));
+}
+
+/* ---------- Kein Spiel laeuft laenger als 12 Stunden ---------- */
+group('Altes Spiel: nach 12 Stunden beendet, nicht gespeichert');
+{
+  await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    S.game = null; S.matches = []; S.tour = null;
+    S.lineup = D.activeProfiles().slice(0, 2).map((p) => p.id);
+    S.mode = 'quick'; S.settings.quickSaetze = 1; S.settings.quickLegs = 1;
+    D.save(); D.setScreen('setup');
+  });
+  await page.locator('[data-action="start-game"]').click();
+  await bullOffGo();
+  await typeScore(100);
+  const vorher = await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    const hatUhr = typeof S.game.seit === 'number';
+    S.game.seit = Date.now() - 13 * 3600 * 1000;
+    D.save();
+    return { hatUhr, archiv: S.history.length };
+  });
+  check('ein neues Spiel bekommt seinen Startzeitpunkt', vorher.hatUhr);
+  await page.reload();
+  await page.waitForTimeout(300);
+  const nachher = await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    const o = D.ui().overlay;
+    return { game: S.game, screen: S.screen, archiv: S.history.length, hinweis: !!o && o.type === 'hinweis' };
+  });
+  check('nach 13 Stunden ist das angefangene Spiel weg', nachher.game === null && nachher.screen === 'setup', JSON.stringify(nachher));
+  check('und es wurde nicht gespeichert', nachher.archiv === vorher.archiv);
+  check('ein Hinweis sagt, was passiert ist', nachher.hinweis && (await text('#overlay-card')).includes('12 Stunden'));
+  await page.locator('[data-action="ov-hinweis-zu"]').click();
+
+  /* Ein frisches Spiel bleibt natuerlich stehen. */
+  await page.locator('[data-action="start-game"]').click();
+  await bullOffGo();
+  await typeScore(60);
+  await page.reload();
+  await page.waitForTimeout(300);
+  check('ein Spiel von eben ueberlebt das Neuladen', await page.evaluate(() => !!window.__dart.state().game));
+  await page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; D.ui().overlay = null; D.save(); D.setScreen('setup'); });
+}
+
+group('Erster Start: Willkommen-Karte');
+{
+  await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    window.__archivMerker = S.history; S.history = []; S.game = null; S.matches = []; S.tour = null;
+    delete S.settings.willkommenWeg;
+    D.save(); D.setScreen('setup');
+  });
+  check('ohne ein einziges Spiel erklaert eine Karte die drei Schritte', await visible('#willkommen'));
+  await page.locator('[data-action="willkommen-weg"]').click();
+  check('Verstanden blendet sie fuer immer aus', !(await visible('#willkommen')) &&
+    await page.evaluate(() => window.__dart.state().settings.willkommenWeg === 1));
+  await page.evaluate(() => { const D = window.__dart, S = D.state(); S.history = window.__archivMerker; D.save(); D.setScreen('setup'); });
 }
 
 group('Fehlerfreiheit');

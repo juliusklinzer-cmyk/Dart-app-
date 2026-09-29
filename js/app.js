@@ -202,6 +202,7 @@
     /* Neuerer Stand im Speicher: nicht drueberschreiben (siehe load). */
     if (ladeSperre) { liveAnstossen(); return; }
     uiMerken();
+    spielUhrStellen();
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(S));
       if (saveBroken) { saveBroken = false; renderSaveWarning(); }
@@ -212,6 +213,52 @@
     }
     liveAnstossen();
   }
+
+  /*
+   * Kein Spiel laeuft ewig: wer die App oeffnet, soll nicht jedes Mal ein
+   * altes, halbfertiges Spiel vom letzten Abend vorfinden. Spiel und Turnier
+   * bekommen beim ersten Speichern ihren Startzeitpunkt; nach 12 Stunden ist
+   * Schluss (siehe altesSpielBeenden).
+   */
+  var SPIEL_MAX_MS = 12 * 3600 * 1000;
+  function spielUhrStellen() {
+    if (S.game && !S.game.seit) S.game.seit = Date.now();
+    if (S.tour && S.matches.length && !S.tour.seit) S.tour.seit = Date.now();
+  }
+  function altesSpielBeenden() {
+    var jetzt = Date.now();
+    var weg = [];
+    if (S.game && S.game.seit && jetzt - S.game.seit > SPIEL_MAX_MS) {
+      var art = kindName(S.game.kind);
+      if (S.game.done) {
+        /* Entschieden, nur nie gespeichert: das Ergebnis ist echt und kommt
+           ins Archiv. */
+        liveEnde(S.game);
+        archiveGame(S.game);
+        weg.push(art + ' (entschieden) wurde gespeichert');
+      } else {
+        /* Angefangen und liegen geblieben: verworfen, nichts gespeichert. */
+        liveEnde(S.game);
+        weg.push('das angefangene ' + art + ' wurde beendet und nicht gespeichert');
+      }
+      S.game = null;
+    }
+    if (S.tour && S.tour.seit && S.matches.length && jetzt - S.tour.seit > SPIEL_MAX_MS) {
+      /* Wie "Turnier beenden": fertige Partien bleiben in der Statistik, die
+         offenen entfallen. */
+      archiveTournament();
+      weg.push('das Turnier wurde abgeschlossen (fertige Partien bleiben in der Statistik)');
+    }
+    if (!weg.length) return false;
+    if (S.screen !== 'boards' && S.screen !== 'players' && S.screen !== 'profile' && S.screen !== 'liga') S.screen = 'setup';
+    UI.darts = []; UI.input = '';
+    UI.overlay = { type: 'hinweis', titel: 'Altes Spiel beendet', text: 'Älter als 12 Stunden: ' + weg.join(', ') + '.' };
+    save();
+    return true;
+  }
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden && S && altesSpielBeenden()) render();
+  });
 
   function renderSaveWarning() {
     var bar = $('save-warning');
@@ -538,7 +585,7 @@
   function avatarSicher(a) { return typeof a === 'string' && a.length < 400000 && AVATAR_OK.test(a); }
   function avatarHTML(p, cls) {
     var c = 'av ' + (cls || '');
-    if (p.avatar && avatarSicher(p.avatar)) return '<span class="' + esc(c) + '" style="background-image:url(&quot;' + p.avatar + '&quot;)"></span>';
+    if (p.avatar && avatarSicher(p.avatar)) return '<span class="' + esc(c) + '" style="background-image:url(' + p.avatar + ')"></span>';
     return '<span class="' + c + ' init" style="background:hsl(' + hue(p.id) + ',40%,28%)">' + esc(initials(p.name)) + '</span>';
   }
 
@@ -2976,8 +3023,34 @@
      nicht bei jedem Zeichnen, das waere eine Anfrage je Tastendruck. */
   var letzterScreen = null;
 
+  /* Erster Start (noch nie gespielt): eine kleine Karte oben erklaert die
+     drei Schritte. Sie blockiert nichts und verschwindet mit "Verstanden"
+     fuer immer - wer schon spielt, sieht sie nie. */
+  function renderWillkommen() {
+    var links = document.querySelector('#screen-setup .setup-links');
+    if (!links) return;
+    var karte = $('willkommen');
+    var zeigen = !S.settings.willkommenWeg && !S.history.length && !S.game && !S.matches.length && !liveNutzer();
+    if (!zeigen) { if (karte) karte.remove(); return; }
+    if (!karte) {
+      karte = document.createElement('div');
+      karte.id = 'willkommen';
+      karte.className = 'card';
+      karte.innerHTML =
+        '<h2>Willkommen am Board</h2>' +
+        '<ol class="hint">' +
+          '<li><b>Wer spielt mit?</b> Spieler antippen – die vier Beispielnamen änderst du unter „Spieler“, neue legst du hier unten an.</li>' +
+          '<li><b>Spielmodus</b> wählen: Schnelles Spiel, Turnier jeder gegen jeden, Cricket, Round the World oder Finisher.</li>' +
+          '<li><b>Spiel starten</b> – ausbullen, dann trägt jeder seine Aufnahme ein. Alles bleibt auf diesem Gerät gespeichert, auch ohne Netz.</li>' +
+        '</ol>' +
+        '<button class="btn ghost full" data-action="willkommen-weg">Verstanden</button>';
+      links.insertBefore(karte, links.firstChild);
+    }
+  }
+
   function renderSetup() {
     renderBeitreten();
+    renderWillkommen();
     /* Ohne Konto ist jeder neue Spieler ein ganz normales Profil - "Gast"
        gibt es nur angemeldet (dort haben die Kollegen Konten). */
     var npKnopf = document.querySelector('#karte-spieler [data-action="new-profile"]');
@@ -7255,6 +7328,10 @@
       case 'ov-next-leg':
         UI.overlay = null; save(); render();
         break;
+      case 'willkommen-weg':
+        S.settings.willkommenWeg = 1;
+        save(); render();
+        break;
       case 'ton-an':
         /* Der Tipp hat den Ton schon geweckt (pointerdown in sound.js). */
         setTimeout(function () { tonKnopf(!!liveSpiel()); }, 250);
@@ -7883,6 +7960,8 @@
   /* ================= Start ================= */
   S = load() || newState();
   renderLadeHinweis();
+  spielUhrStellen();          // Altbestand ohne Startzeit: ab jetzt zaehlen
+  altesSpielBeenden();
 
   /*
    * Die Zurueck-Taste (Android, Browser) verliess frueher die ganze App.
@@ -7952,6 +8031,24 @@
 
   if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
     navigator.serviceWorker.register('sw.js').catch(function () { /* offline-Cache optional */ });
+    /* Eine neue App-Version ist da (sw.js meldet das nur bei einem echten
+       Update): nicht still wechseln, sondern Bescheid sagen - mitten im
+       Spiel entscheidet man selbst, wann neu geladen wird. */
+    navigator.serviceWorker.addEventListener('message', function (ev) {
+      if (!ev.data || ev.data.typ !== 'sw-neue-version' || $('neue-version')) return;
+      var bar = document.createElement('div');
+      bar.id = 'neue-version';
+      bar.className = 'save-warning';
+      bar.setAttribute('role', 'status');
+      bar.appendChild(document.createTextNode('✨ Neue Version der App ist da. '));
+      var knopf = document.createElement('button');
+      knopf.type = 'button';
+      knopf.className = 'btn small';
+      knopf.textContent = 'Neu laden';
+      knopf.addEventListener('click', function () { save(); location.reload(); });
+      bar.appendChild(knopf);
+      document.body.insertBefore(bar, document.body.firstChild);
+    });
   }
 
   // Für Tests unter Node/Headless – und als einzige Andockstelle für die

@@ -66,11 +66,33 @@
     if (candidate.darts.length !== current.darts.length) {
       return candidate.darts.length < current.darts.length;
     }
+    /* Gleich lang, gleiches Schlussdoppel, fast gleich gut: dann lieber
+       kein Stellwurf auf eine kleine Zahl (99 auf D16: T19 S10 statt T20 S7)
+       - die grossen Felder oben trifft man sicherer. Nur als Feinschliff,
+       die Wahl des Doppels bleibt davon unberuehrt. */
+    var obenAn = function (r) {
+      return r.darts.slice(0, -1).some(function (x) { return x === 'T20' || x === 'T19'; });
+    };
+    if (candidate.darts[candidate.darts.length - 1] === current.darts[current.darts.length - 1] &&
+        obenAn(candidate) && obenAn(current) &&
+        Math.abs(candidate.cost - current.cost) < 1) {
+      var candKlein = kleinerStellwurf(candidate.darts), curKlein = kleinerStellwurf(current.darts);
+      if (candKlein !== curKlein) return !candKlein;
+    }
     if (Math.abs(candidate.cost - current.cost) > 1e-9) return candidate.cost < current.cost;
     var candFinish = finishCostOf(candidate.darts[candidate.darts.length - 1], lieblings);
     var curFinish = finishCostOf(current.darts[current.darts.length - 1], lieblings);
     if (candFinish !== curFinish) return candFinish < curFinish;
     return fieldValue(candidate.darts[0]) > fieldValue(current.darts[0]);
+  }
+
+  /* Steht vor dem Doppel ein Single unter 10? */
+  function kleinerStellwurf(darts) {
+    for (var i = 0; i < darts.length - 1; i++) {
+      var m = /^S(\d+)$/.exec(darts[i]);
+      if (m && Number(m[1]) < 10) return true;
+    }
+    return false;
   }
 
   function finishCostOf(label, lieblings) {

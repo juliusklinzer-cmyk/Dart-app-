@@ -963,11 +963,15 @@ async function main() {
     /* Wer gegen einen alten Stand schreibt, verliert nichts Fremdes: Tobi
        tippt mit einer veralteten Version, der Server sagt "Julius war
        schneller", und Tobi uebernimmt den gueltigen Stand. */
+    /* Tobis Stand von VOR Julius' naechster Aufnahme festhalten -- die
+       Live-Verbindung wuerde ihn sonst sofort auffrischen. */
+    await tobi.page.evaluate(() => { window.__alterStand = JSON.parse(JSON.stringify(window.__dart.state().game)); });
     await typeScoreAuf(julius.page, 41);            // Julius: 241 -> 200
     await julius.page.waitForTimeout(700);
     await tobi.page.evaluate(() => {
       // Tobi hat den letzten Stand noch nicht geholt und traegt trotzdem ein.
       const D = window.__dart, S = D.state();
+      S.game = window.__alterStand;
       S.game.legs[0].visits.push({ p: S.game.p[1], s: 26, d: 3, b: false, c: false, o: 0 });
       D.save();
     });
