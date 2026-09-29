@@ -1319,7 +1319,9 @@ await page.locator('[data-action="set-mode"][data-value="quick"]').click();
 check('teilt sich die Einstellungen mit dem Turnier', await visible('#settings-501'));
 /* Ohne Server gibt es kein Konto und damit niemanden, mit dem man online
    spielen koennte -- die Karte bleibt weg. */
-check('ohne Server keine Online-Einstellung', !(await visible('#settings-online')));
+check('ohne Server keine Online-Umschalter, nur ein Hinweis auf die Funktion',
+  !(await visible('#settings-online [data-setting="online"]')) &&
+  (!(await visible('#settings-online')) || (await text('#online-hint')).includes('Konto')));
 check('kein Legs-Feld – es gibt nur eines', !(await visible('#setting-bestof')));
 await page.locator('#settings-501 [data-setting="start"] button[data-value="301"]').click();
 /* Für diesen Durchlauf bleibt die Punkte-Eingabe an: sonst schaltet die App
@@ -2615,6 +2617,32 @@ check('das Lieblingsdoppel wird weiter abgefragt',
   (await page.locator('[data-role="profile-double"]').count()) === 1);
 await page.locator('[data-action="ov-cancel"]').click();
 
+group('Neuer Spieler: kein leerer, doppelter Name nur mit Bestaetigung');
+{
+  const anzahl = await page.evaluate(() => window.__dart.state().profiles.length);
+  await page.locator('#screen-setup [data-action="new-profile"]').click();
+  await page.locator('[data-role="profile-name"]').fill('   ');
+  await page.locator('[data-action="save-profile"]').click();
+  check('leerer Name wird nicht gespeichert, der Dialog sagt warum',
+    (await text('#overlay-card')).includes('Bitte einen Namen eingeben') &&
+    (await page.evaluate(() => window.__dart.state().profiles.length)) === anzahl);
+  const vorhanden = await page.evaluate(() => window.__dart.activeProfiles()[0].name);
+  await page.locator('[data-role="profile-name"]').fill(vorhanden);
+  await page.locator('[data-action="save-profile"]').click();
+  check('doppelter Name: erst ein Hinweis', (await text('#overlay-card')).includes('gibt es schon') &&
+    (await page.evaluate(() => window.__dart.state().profiles.length)) === anzahl);
+  await page.locator('[data-action="save-profile"]').click();
+  check('beim zweiten Speichern gilt es', (await page.evaluate(() => window.__dart.state().profiles.length)) === anzahl + 1);
+  /* Den eben angelegten Doppelgaenger gleich wieder loswerden. */
+  await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    const neu = S.profiles[S.profiles.length - 1];
+    S.profiles = S.profiles.filter((x) => x.id !== neu.id);
+    S.lineup = S.lineup.filter((x) => x !== neu.id);
+    D.save(); D.setScreen('setup');
+  });
+}
+
 group('Gast direkt loeschen');
 await page.evaluate(() => window.__dart.setScreen('players'));
 check('der Dachauer Gast steht in der Spielerliste', (await text('#players-list')).includes('Dachau 1'));
@@ -2622,6 +2650,8 @@ await page.locator('#players-list .player-card:has-text("Dachau 1")').click();
 await page.locator('[data-action="edit-current-profile"]').click();
 check('der Dialog bietet direktes Loeschen an',
   (await page.locator('[data-action="delete-guest"]').count()) === 1);
+await page.locator('[data-action="delete-guest"]').click();
+check('Loeschen fragt einmal nach', (await text('#overlay-card')).includes('Ja, Gast löschen'));
 await page.locator('[data-action="delete-guest"]').click();
 check('der Gast ist sofort aus der Spielerliste verschwunden',
   !(await text('#players-list')).includes('Dachau 1'));
@@ -3274,6 +3304,44 @@ group('Aufstellung: ausgeblendeter Gast kann nicht mitspielen');
     const D = window.__dart, S = D.state();
     S.game = null; S.profiles = S.profiles.filter((p) => p.id !== 'geist'); D.save(); D.setScreen('setup');
   });
+}
+
+/* ---------- Ton & Feiern abschaltbar ---------- */
+group('Ton & Feiern: Feiern lassen sich abschalten');
+{
+  await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    S.game = null; S.matches = []; S.tour = null;
+    S.lineup = D.activeProfiles().slice(0, 2).map((p) => p.id);
+    S.mode = 'quick'; S.settings.quickSaetze = 1; S.settings.quickLegs = 1; S.settings.dartModeFrom = 170;
+    D.save(); D.setScreen('setup');
+  });
+  check('die Karte Ton & Feiern steht im Setup', await visible('#settings-ton'));
+  await page.locator('#settings-ton [data-setting="feiern"] [data-value="0"]').click();
+  check('Feiern aus ist gespeichert', await page.evaluate(() => window.__dart.state().settings.feiern === 0));
+  await page.locator('[data-action="start-game"]').click();
+  await bullOffGo();
+  await page.evaluate(() => { document.getElementById('feier').innerHTML = ''; });
+  await typeScore(60);
+  check('mit Feiern aus bleibt die 60 ohne Loewe', !(await text('#feier')).includes('SECHZIG'));
+  await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    S.settings.feiern = 1; S.game = null; D.save(); D.setScreen('setup');
+  });
+}
+
+/* ---------- Zurueck-Taste ---------- */
+group('Zurueck-Taste verlaesst die App nicht aus Versehen');
+{
+  await page.locator('#nav [data-screen="boards"]').click();
+  await page.goBack();
+  await page.waitForTimeout(150);
+  check('Zurueck aus der Rangliste fuehrt ins Setup', await page.evaluate(() => window.__dart.state().screen === 'setup'));
+  check('die Seite ist noch da', page.url().startsWith('http'));
+  await page.locator('#screen-setup [data-action="new-profile"]').click();
+  await page.goBack();
+  await page.waitForTimeout(150);
+  check('Zurueck schliesst zuerst einen offenen Dialog', await page.evaluate(() => !window.__dart.ui().overlay));
 }
 
 group('Fehlerfreiheit');

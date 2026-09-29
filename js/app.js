@@ -124,20 +124,23 @@
   /* ================= Helfer ================= */
   function $(id) { return document.getElementById(id); }
   /* Klaenge sind optional - ohne js/sound.js bleibt alles stumm. */
-  function pomp() { if (window.DartSound) window.DartSound.pomp(); }
-  function klick() { if (window.DartSound) window.DartSound.klick(); }
+  /* "Ton & Feiern" im Setup: beides laesst sich abschalten. */
+  function tonAn() { return !(S && S.settings && S.settings.ton === 0); }
+  function feiernAn() { return !(S && S.settings && S.settings.feiern === 0); }
+  function pomp() { if (window.DartSound && tonAn()) window.DartSound.pomp(); }
+  function klick() { if (window.DartSound && tonAn()) window.DartSound.klick(); }
   /* Leiser Tastenton fuer Ziffern und Umschalter - Buchungen haben den Pomp. */
-  function tipp() { if (window.DartSound && window.DartSound.tipp) window.DartSound.tipp(); }
+  function tipp() { if (window.DartSound && window.DartSound.tipp && tonAn()) window.DartSound.tipp(); }
   /* Zwei Schlaege: im Online-Spiel hat der andere gerade eingetragen. */
   function klopfen() {
     UI.klopfen = Date.now();
-    if (!window.DartSound) return;
+    if (!window.DartSound || !tonAn()) return;
     /* Pomp fuer die Buchung des anderen, dann das Klopfen -- jede Eingabe
        ist auf beiden Tablets zu hoeren, nur die Tastentoene bleiben lokal. */
     if (window.DartSound.fremdeEingabe) window.DartSound.fremdeEingabe();
     else if (window.DartSound.klopfen) window.DartSound.klopfen();
   }
-  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
   function uid() { return Math.random().toString(36).slice(2, 9); }
   function sum(arr, f) { var t = 0; for (var i = 0; i < arr.length; i++) t += f(arr[i]); return t; }
   function plural(n, one, many) { return n + ' ' + (n === 1 ? one : many); }
@@ -151,7 +154,7 @@
     return {
       v: 2,
       screen: 'setup',
-      settings: { start: 501, bestOf: 1, dartModeFrom: 170, cricketScoring: 1, finisherTo: 5, rtwBoost: 1, turnierModus: 0, quickModus: 0, quickSaetze: 1, quickLegs: 1 },
+      settings: { start: 501, bestOf: 1, dartModeFrom: 170, cricketScoring: 1, finisherTo: 5, rtwBoost: 1, turnierModus: 0, quickModus: 0, quickSaetze: 1, quickLegs: 1, ton: 1, feiern: 1 },
       mode: '501',
       game: null,
       profiles: DEFAULT_PLAYERS.map(function (n, i) {
@@ -276,6 +279,8 @@
       if (s.settings.rtwBoost === undefined) s.settings.rtwBoost = 1;
       if (FIN_TARGETS.indexOf(s.settings.finisherTo) < 0) s.settings.finisherTo = 5;
       if (s.settings.online === undefined) s.settings.online = 0;
+      if (s.settings.ton !== 0) s.settings.ton = 1;
+      if (s.settings.feiern !== 0) s.settings.feiern = 1;
       /* Spieldauer des Schnellen Spiels (Saetze/Legs) kam spaeter dazu --
          Altbestand spielt weiter ein Leg. */
       if (s.settings.quickModus !== 1) s.settings.quickModus = 0;
@@ -525,9 +530,15 @@
     for (var i = 0; i < HUES.length; i++) if (!used[HUES[i]]) return HUES[i];
     return HUES[S.profiles.length % HUES.length];
   }
+  /* Profilbilder kommen auch vom Server (Bilder der Kollegen). Ins HTML darf
+     nur, was garantiert ein Bild ist: ein data:-URL aus reinem Base64 --
+     darin gibt es weder Anfuehrungszeichen noch Klammern, mit denen jemand
+     aus dem style-Attribut ausbrechen koennte. Alles andere: Initialen. */
+  var AVATAR_OK = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+\/]+=*$/;
+  function avatarSicher(a) { return typeof a === 'string' && a.length < 400000 && AVATAR_OK.test(a); }
   function avatarHTML(p, cls) {
     var c = 'av ' + (cls || '');
-    if (p.avatar) return '<span class="' + c + '" style="background-image:url(' + p.avatar + ')"></span>';
+    if (p.avatar && avatarSicher(p.avatar)) return '<span class="' + esc(c) + '" style="background-image:url(&quot;' + p.avatar + '&quot;)"></span>';
     return '<span class="' + c + ' init" style="background:hsl(' + hue(p.id) + ',40%,28%)">' + esc(initials(p.name)) + '</span>';
   }
 
@@ -710,6 +721,7 @@
     (daten.partien || []).forEach(function (p) {
       var m = matchById(p.matchId);
       if (!m) return;
+      if (p.result && !partieGueltig(p.result)) return;   // kaputtes Ergebnis nicht uebernehmen
       if (p.result) {
         /* Ein fertiges Ergebnis gewinnt immer – auch gegen eine Partie, die
            hier gerade offen aussieht. Wer sie beansprucht hatte, hat sie
@@ -936,6 +948,7 @@
     var g = liveSpiel();
     if (!g || !spiel || spiel.id !== g.online.sid) return false;
     if (!spiel.state || spiel.seq <= (g.online.seq || 0)) return false;
+    if (!spielGueltig(spiel.state)) return false;   // kaputter Stand: lieber den eigenen behalten
     var alt = g;
     var neu = spiel.state;
     var text = JSON.stringify(neu);
@@ -1073,7 +1086,7 @@
      vergeblich auf das Klopfen. Der Tipp selbst gibt den Ton frei. */
   function tonKnopf(an) {
     var b = $('ton-an');
-    var zeigen = an && window.DartSound && window.DartSound.status && !window.DartSound.status();
+    var zeigen = an && tonAn() && window.DartSound && window.DartSound.status && !window.DartSound.status();
     if (!zeigen) { if (b) b.classList.add('hidden'); return; }
     if (!b) {
       b = document.createElement('button');
@@ -1188,7 +1201,7 @@
   /* Einem Online-Spiel beitreten. Ein fertiges eigenes Spiel wird vorher
      gesichert; ein angefangenes fragt vorher nach. */
   function liveBeitreten(spiel) {
-    if (!spiel || !spiel.state) return;
+    if (!spiel || !spiel.state || !spielGueltig(spiel.state)) return;
     if (S.game && S.game.done) archiveGame(S.game);
     else if (S.game) liveEnde(S.game);   // ein eigenes Online-Spiel wird sauber geschlossen
     var neu = spiel.state;
@@ -1371,7 +1384,7 @@
 
   function feiere180(pid) {
     var box = $('feier');
-    if (!box) return;
+    if (!box || !feiernAn()) return;
     var ruhig = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     var teile = '';
@@ -1421,7 +1434,7 @@
    */
   function feiere60(pid) {
     var box = $('feier');
-    if (!box) return;
+    if (!box || !feiernAn()) return;
     var ruhig = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     var strahlen = '';
     if (!ruhig) for (var s = 0; s < 8; s++) strahlen += '<i style="--dreh:' + (s * 22.5) + 'deg"></i>';
@@ -2673,6 +2686,37 @@
    * wortgleich das, was archiveGame()/archiveTournament() erzeugt haben –
    * deshalb rechnet career() damit ohne jede Sonderbehandlung weiter.
    */
+  /*
+   * Ein Spielstand von aussen (Server, anderes Geraet) wird vor der
+   * Uebernahme grob geprueft: stimmt die Form nicht (z. B. matches: null),
+   * bleibt er draussen. Frueher legte ein einziger kaputter Eintrag das
+   * Zeichnen auf allen Geraeten dauerhaft lahm.
+   */
+  var ID_OK = /^[^<>"'&\s\\]{1,80}$/;   // keine Zeichen, mit denen man aus HTML ausbricht
+  function istListe(x) { return Array.isArray(x); }
+  function partieGueltig(m) {
+    return !!m && typeof m === 'object' && istListe(m.p) && m.p.length >= 1 &&
+      m.p.every(function (id) { return typeof id === 'string' && ID_OK.test(id); }) &&
+      istListe(m.legs) && m.legs.every(function (l) {
+        return !!l && istListe(l.visits) && l.visits.every(function (v) {
+          return !!v && typeof v.s === 'number' && typeof v.d === 'number' && typeof v.p === 'string';
+        });
+      });
+  }
+  function spielGueltig(g) {
+    if (!g || typeof g !== 'object') return false;
+    var kind = g.kind || '501';
+    if (kind === 'quick' && istListe(g.legs)) return partieGueltig(g);   // laufendes Schnelles Spiel
+    if (kind === '501' || kind === 'quick') {
+      return istListe(g.matches) && g.matches.every(partieGueltig) && (g.lineup === undefined || istListe(g.lineup));
+    }
+    var spieler = istListe(g.players) && g.players.length >= 1 &&
+      g.players.every(function (id) { return typeof id === 'string' && ID_OK.test(id); });
+    if (kind === 'cricket' || kind === 'rtw') return spieler && istListe(g.throws);
+    if (kind === 'finisher') return spieler && istListe(g.rounds) && g.rounds.every(function (rd) { return !!rd && istListe(rd.throws); });
+    return false;
+  }
+
   function uebernehmeSpiele(liste) {
     if (!liste || !liste.length) return 0;
     var vorhanden = {};
@@ -2688,6 +2732,7 @@
         return;
       }
       if (vorhanden[s.id] || !s.payload) return;
+      if (typeof s.id !== 'string' || !ID_OK.test(s.id) || !spielGueltig(s.payload)) return;   // kaputt: draussen lassen
       var eintrag = s.payload;
       eintrag.id = s.id;
       /* Fremde Gastspieler bekommen ein verstecktes Gastprofil - sonst
@@ -2754,7 +2799,25 @@
     }
   }
 
+  /* Wirft das Zeichnen einmal (kaputter Stand, unerwarteter Eintrag), bleibt
+     die App bedienbar: eine Leiste sagt Bescheid, der Fehler landet trotzdem
+     in der Konsole (und in den Tests). */
   function render() {
+    try { renderInnen(); }
+    catch (e) {
+      var bar = $('render-fehler');
+      if (!bar) {
+        bar = document.createElement('div');
+        bar.id = 'render-fehler';
+        bar.className = 'save-warning';
+        bar.textContent = '⚠️ Hier ist etwas schiefgelaufen. Bitte die Seite neu laden – deine Daten bleiben erhalten.';
+        document.body.insertBefore(bar, document.body.firstChild);
+      }
+      setTimeout(function () { throw e; }, 0);
+    }
+  }
+
+  function renderInnen() {
     /* Vor der Anmeldung gibt es nur den Anmeldebildschirm – kein Blick auf
        Spieler, Ranglisten oder ein laufendes Turnier. */
     if (gesperrt()) {
@@ -2800,7 +2863,7 @@
          Bildschirm bleibt an (sonst kein Abgleich, kein Klopfen, keine
          Feier), und die Audio-Sitzung wird offen gehalten. */
       wachHalten(liveSichtbar);
-      if (window.DartSound && window.DartSound.halten) window.DartSound.halten(liveSichtbar);
+      if (window.DartSound && window.DartSound.halten) window.DartSound.halten(liveSichtbar && tonAn());
       tonKnopf(liveSichtbar);
       var lst = window.DartSync.live.status();
       verbindungsHinweis(liveSichtbar && lst && lst.stoerung);
@@ -2914,11 +2977,15 @@
 
   function renderSetup() {
     renderBeitreten();
+    /* Ohne Konto ist jeder neue Spieler ein ganz normales Profil - "Gast"
+       gibt es nur angemeldet (dort haben die Kollegen Konten). */
+    var npKnopf = document.querySelector('#karte-spieler [data-action="new-profile"]');
+    if (npKnopf) npKnopf.textContent = liveNutzer() ? '+ Gastspieler hinzufügen' : '+ Spieler hinzufügen';
     var map = career();
     $('roster').innerHTML = rosterReihenfolge().map(function (p) {
       var st = map[p.id];
       var sel = S.lineup.indexOf(p.id) >= 0;
-      return '<div class="roster-item ' + (sel ? 'selected' : '') + '" data-action="toggle-lineup" data-id="' + p.id + '" role="button" tabindex="0">' +
+      return '<div class="roster-item ' + (sel ? 'selected' : '') + '" data-action="toggle-lineup" data-id="' + esc(p.id) + '" role="button" tabindex="0">' +
         avatarHTML(p, 'md') +
         '<div class="who"><div class="nm">' + esc(p.name) +
         (p.gast ? ' <span class="gast-marke">Gast</span>' : p.test ? ' <span class="gast-marke">Test</span>' : '') + '</div>' +
@@ -2952,8 +3019,16 @@
     var onlineKarte = $('settings-online');
     if (onlineKarte) {
       var kannOnline = !!liveNutzer() && !!(window.DartSync && window.DartSync.live) && !!LIVE_KINDS[S.mode];
-      onlineKarte.classList.toggle('hidden', !kannOnline);
+      /* Ohne Konto (reine Offline-App) gibt es die Funktion nicht - aber ein
+         Hinweis, dass es sie gibt, statt dass die Karte spurlos fehlt. */
+      var nurHinweis = !liveNutzer() && !!LIVE_KINDS[S.mode];
+      onlineKarte.classList.toggle('hidden', !kannOnline && !nurHinweis);
+      var onlineOpt = onlineKarte.querySelector('[data-setting="online"]');
+      if (onlineOpt) onlineOpt.classList.toggle('hidden', !kannOnline);
       var onlineHint = $('online-hint');
+      if (nurHinweis && onlineHint) {
+        onlineHint.textContent = 'Mit einem Konto könnt ihr an zwei Scheiben spielen: jeder sieht jeden Wurf auf seinem Handy und trägt selbst ein. Dafür die App über den Vereins-Server öffnen und anmelden.';
+      }
       if (kannOnline && onlineHint) {
         var mitKonto = liveMitspieler(S.lineup);
         onlineHint.textContent = S.settings.online !== 1
@@ -3179,13 +3254,13 @@
         '<div class="res">' + (m.void ? (m.started ? 'abgebrochen ' + score : 'entfällt') : score) + '</div>' +
         (m.done || m.void
           ? (liga && m.kampflos
-            ? '<button class="go wo" data-action="liga-kampflos" data-id="' + m.id + '">ändern</button>'
+            ? '<button class="go wo" data-action="liga-kampflos" data-id="' + esc(m.id) + '">ändern</button>'
             : '')
           : m.belegtVon ? '<span class="belegt">läuft bei ' + esc(m.belegtVon) + '</span>'
-          : '<button class="go" data-action="open-match" data-id="' + m.id + '">' +
+          : '<button class="go" data-action="open-match" data-id="' + esc(m.id) + '">' +
             (m.legs.length ? 'Weiter' : 'Start') + '</button>' +
             (liga && !m.legs.some(function (l) { return l.visits.length > 0; })
-              ? '<button class="go wo" data-action="liga-kampflos" data-id="' + m.id + '" ' +
+              ? '<button class="go wo" data-action="liga-kampflos" data-id="' + esc(m.id) + '" ' +
                 'title="Kampflos werten" aria-label="Kampflos werten">w.o.</button>'
               : '')) +
         '</div>';
@@ -3365,7 +3440,7 @@
     var rows = ranking(def, map);
     var medals = ['🥇', '🥈', '🥉'];
     $('board-list').innerHTML = rows.length ? rows.map(function (st, i) {
-      return '<div class="board-row ' + (i === 0 ? 'top' : '') + '" data-action="open-profile" data-id="' + st.id + '" role="button" tabindex="0">' +
+      return '<div class="board-row ' + (i === 0 ? 'top' : '') + '" data-action="open-profile" data-id="' + esc(st.id) + '" role="button" tabindex="0">' +
         '<div class="pos">' + (medals[i] || (i + 1) + '.') + '</div>' +
         avatarHTML(profile(st.id), 'sm') +
         '<div class="nm">' + esc(st.name) + '</div>' +
@@ -3456,7 +3531,7 @@
       if (row.kind === 'turnier') {
         var th = row.h;
         var thFertig = th.matches.filter(function (x) { return x.done; }).length;
-        return '<div class="log-row tap turnier-row" data-action="open-summary" data-kind="turnier" data-id="' + th.id + '" role="button" tabindex="0">' +
+        return '<div class="log-row tap turnier-row" data-action="open-summary" data-kind="turnier" data-id="' + esc(th.id) + '" role="button" tabindex="0">' +
           '<div class="lp w">' + (th.winner ? esc(pname(th.winner)) : 'Turnier') + '<span class="a">' + (th.winner ? 'Turniersieg' : 'kein Sieger') + '</span></div>' +
           '<div class="ls">🏆</div>' +
           '<div class="lp right">' + plural(th.lineup.length, 'Spieler', 'Spieler') + '<span class="a">' + plural(thFertig, 'Spiel', 'Spiele') + ' · Endstand ansehen</span></div>' +
@@ -3466,7 +3541,7 @@
       if (row.kind !== '501') {
         var h = row.h;
         var title = h.kind === 'cricket' ? 'Cricket' + (h.scoring ? '' : ' (ohne Punkte)') : kindName(h.kind);
-        return '<div class="log-row tap" data-action="open-summary" data-kind="' + h.kind + '" data-id="' + (h.id || 'current') + '" role="button" tabindex="0">' +
+        return '<div class="log-row tap" data-action="open-summary" data-kind="' + esc(h.kind) + '" data-id="' + esc((h.id || 'current')) + '" role="button" tabindex="0">' +
           '<div class="lp w">' + esc(pname(h.winner)) + '<span class="a">' + title + '</span></div>' +
           '<div class="ls">🏆</div>' +
           '<div class="lp right">' + h.players.length + ' Spieler<span class="a">' +
@@ -3487,7 +3562,7 @@
       if (m.p.length < 2) {
         /* Solo-Spiel: niemand hat gewonnen, es gibt nur die Darts bis zum Finish. */
         var soloD = sum(m.legs, function (l) { return dartsInLeg(l, m.p[0]); });
-        return '<div class="log-row tap" data-action="open-summary" data-kind="501" data-id="' + m.id + '" role="button" tabindex="0">' +
+        return '<div class="log-row tap" data-action="open-summary" data-kind="501" data-id="' + esc(m.id) + '" role="button" tabindex="0">' +
           '<div class="lp">' + esc(pname(m.p[0])) + '<span class="a">Ø ' + avgOf(m.p[0]) + '</span></div>' +
           '<div class="ls">' + soloD + '</div>' +
           '<div class="lp right muted">Solo<span class="a">' + plural(soloD, 'Dart', 'Darts') + '</span></div>' +
@@ -3505,7 +3580,7 @@
           '<div class="ld">' + fmtDate(m.at || e.at) + (e.live ? ' · aktuelles Turnier' : '') + '</div>' +
           '</div>';
       }
-      return '<div class="log-row tap" data-action="open-summary" data-kind="501" data-id="' + m.id + '" role="button" tabindex="0">' +
+      return '<div class="log-row tap" data-action="open-summary" data-kind="501" data-id="' + esc(m.id) + '" role="button" tabindex="0">' +
         '<div class="lp ' + (m.winner === m.p[0] ? 'w' : '') + '">' + esc(pname(m.p[0])) + '<span class="a">Ø ' + avgOf(m.p[0]) + '</span></div>' +
         '<div class="ls">' + la + ':' + lb + '</div>' +
         '<div class="lp right ' + (m.winner === m.p[1] ? 'w' : '') + '">' + esc(pname(m.p[1])) + '<span class="a">Ø ' + avgOf(m.p[1]) + '</span></div>' +
@@ -3523,7 +3598,7 @@
       return !(p.gast && p.hidden);
     }).map(function (p) {
       var st = map[p.id];
-      return '<div class="card player-card ' + (p.hidden ? 'hidden-profile' : '') + '" data-action="open-profile" data-id="' + p.id + '" role="button" tabindex="0">' +
+      return '<div class="card player-card ' + (p.hidden ? 'hidden-profile' : '') + '" data-action="open-profile" data-id="' + esc(p.id) + '" role="button" tabindex="0">' +
         avatarHTML(p, 'lg') +
         '<div class="pc-main">' +
           '<div class="pc-name">' + esc(p.name) +
@@ -3561,6 +3636,7 @@
     $('profile-detail').innerHTML =
       '<div class="profile-head">' + avatarHTML(p, 'xl') +
         '<div><h1>' + esc(p.name) + '</h1>' +
+        (p.hidden ? '<div class="muted">Ausgeblendet – taucht nicht in der Aufstellung auf</div>' : '') +
         (p.voll ? '<div class="muted">' + esc(p.voll) + ' \u00b7 echter Name f\u00fcr die Liga</div>' : '') +
         '<div class="muted">' + (st.matches
           ? plural(st.won, 'Sieg', 'Siege') + ' · ' + plural(st.lost, 'Niederlage', 'Niederlagen') +
@@ -3763,8 +3839,8 @@
         '<div class="zahlen"><span class="betrag ' + (e.betrag < 0 ? 'minus' : 'plus') + '">' +
           (e.betrag > 0 ? '+' : '−') + euro(Math.abs(e.betrag)) + '</span>' +
           '<span class="saldo">Saldo ' + euro(lauf) + '</span></div>' +
-        (wart ? '<button class="weg edit" data-action="kasse-edit" data-id="' + e.id + '" aria-label="Buchung ändern">✎</button>' : '') +
-        (wart || e.meins ? '<button class="weg" data-action="kasse-weg" data-id="' + e.id + '" aria-label="Buchung löschen">✕</button>' : '') +
+        (wart ? '<button class="weg edit" data-action="kasse-edit" data-id="' + esc(e.id) + '" aria-label="Buchung ändern">✎</button>' : '') +
+        (wart || e.meins ? '<button class="weg" data-action="kasse-weg" data-id="' + esc(e.id) + '" aria-label="Buchung löschen">✕</button>' : '') +
         '</div>';
     });
 
@@ -3777,7 +3853,7 @@
           avatarHTML({ id: m.id, name: m.name, avatar: m.avatar, hue: m.hue }, 'sm') +
           '<span class="kb-name">' + esc(m.name) + '</span>' +
           '<span class="kb-status">' + (voll ? '✓ bezahlt' + (m.am ? ' · ' + datumDE(m.am) : '') : m.gezahlt > 0 ? euro(m.gezahlt) + ' von ' + euro(konfig.beitrag) : 'offen') + '</span>' +
-          (!voll && (wart || m.id === ich) ? '<button class="btn ghost small" data-action="kasse-beitrag" data-id="' + m.id + '" data-name="' + esc(m.name) + '">' + (m.id === ich && !wart ? 'Ich habe eingezahlt' : 'Bezahlt') + '</button>' : '') +
+          (!voll && (wart || m.id === ich) ? '<button class="btn ghost small" data-action="kasse-beitrag" data-id="' + esc(m.id) + '" data-name="' + esc(m.name) + '">' + (m.id === ich && !wart ? 'Ich habe eingezahlt' : 'Bezahlt') + '</button>' : '') +
           '</div>';
       }).join('') + '</div>' : '';
 
@@ -3855,7 +3931,7 @@
 
     var knopf = function (status, text) {
       return '<button class="btn ghost' + (meine === status ? ' aktiv' : '') + '" ' +
-        'data-action="training-zusage" data-tid="' + tid + '" data-status="' + status + '">' + text + '</button>';
+        'data-action="training-zusage" data-tid="' + esc(tid) + '" data-status="' + esc(status) + '">' + text + '</button>';
     };
     var reihe = function (a, leise) {
       return '<div class="dd-reihe' + (leise ? ' leise' : '') + '">' +
@@ -3989,7 +4065,7 @@
           '<span class="lt-datum">' + ligaDatum(t.tag) + '</span>' +
           '<span class="lt-rechts">' +
             '<span class="lt-nr">' + t.nr + '. Spieltag · ' + (daheim ? 'Heim' : 'Auswärts') + '</span>' +
-            '<button class="icon-btn rund lt-cal" data-action="liga-ical" data-id="' + t.id + '" ' +
+            '<button class="icon-btn rund lt-cal" data-action="liga-ical" data-id="' + esc(t.id) + '" ' +
               'title="Diesen Termin in den Kalender" aria-label="Diesen Termin in den Kalender">📅</button>' +
           '</span>' +
         '</div>' +
@@ -4014,13 +4090,13 @@
             '<span class="lt-knoepfe">' +
               (online
                 ? '<button class="btn ghost small" data-action="liga-zusage" ' +
-                  'data-id="' + t.id + '" data-dabei="' + (binDabei ? '0' : '1') + '">' +
+                  'data-id="' + esc(t.id) + '" data-dabei="' + (binDabei ? '0' : '1') + '">' +
                   (binDabei ? 'Bin raus' : 'Ich bin dabei') + '</button>'
                 : '') +
               (S.history.some(function (h) { return h.liga && h.liga.terminId === t.id && h.matches; })
-                ? '<button class="btn ghost small" data-action="liga-bericht" data-termin="' + t.id + '">Spielbericht</button>'
+                ? '<button class="btn ghost small" data-action="liga-bericht" data-termin="' + esc(t.id) + '">Spielbericht</button>'
                 : '') +
-              '<button class="btn ghost small" data-action="liga-spiel" data-id="' + t.id + '">Ligaspiel starten</button>' +
+              '<button class="btn ghost small" data-action="liga-spiel" data-id="' + esc(t.id) + '">Ligaspiel starten</button>' +
             '</span>' +
           '</div>') +
         '</div>';
@@ -4095,7 +4171,7 @@
               ? '<button class="bo-weg" disabled aria-hidden="true">' +
                 avatarHTML(profile(pid), 'sm') +
                 '<span class="bo-name">' + esc(pname(pid)) + '</span></button>'
-              : '<button data-action="order-pick" data-id="' + pid + '">' +
+              : '<button data-action="order-pick" data-id="' + esc(pid) + '">' +
                 avatarHTML(profile(pid), 'sm') +
                 '<span class="bo-name">' + esc(pname(pid)) + '</span></button>';
           }).join('') + '</div>' +
@@ -4106,7 +4182,7 @@
                 '<span class="bo-frei">–</span></div>';
             }
             var nm = esc(pname(pid));
-            return '<button class="bo-row" data-action="order-unpick" data-id="' + pid + '" ' +
+            return '<button class="bo-row" data-action="order-unpick" data-id="' + esc(pid) + '" ' +
               'aria-label="' + nm + ' wieder herausnehmen">' +
               '<span class="bo-pos">' + (i + 1) + '.</span>' +
               avatarHTML(profile(pid), 'sm') +
@@ -4126,10 +4202,12 @@
        wechseln, Enter bestaetigt - und die Felder fuellen den Bildschirm. */
     var amBoard = UI.turnier && turnierErlaubt();
     $('screen-bulloff').classList.toggle('turnier', amBoard);
-    var bWahl = amBoard ? Math.min(UI.bullWahl || 0, ids.length - 1) : -1;
+    /* Auch ohne Turnier-Modus: wer die Pfeiltasten nimmt, sieht die Wahl
+       und bestaetigt mit Enter. */
+    var bWahl = amBoard || UI.bullTastatur ? Math.min(UI.bullWahl || 0, ids.length - 1) : -1;
     $('bulloff-buttons').className = 'bulloff';
     $('bulloff-buttons').innerHTML = ids.map(function (pid, i) {
-      return '<button data-action="pick-starter" data-id="' + pid + '"' +
+      return '<button data-action="pick-starter" data-id="' + esc(pid) + '"' +
         (i === bWahl ? ' class="wahl"' : '') + '>' +
         avatarHTML(profile(pid), 'md') + '<span>' + esc(ligaName && S.tour && S.tour.liga ? ligaName(pid) : pname(pid)) + '</span></button>';
     }).join('') +
@@ -4714,7 +4792,7 @@
         ' sind mit <b>' + plural(st.finished[st.stechen[0]].darts, 'Dart', 'Darts') +
         '</b> gleichauf. Jeder wirft einen Dart auf den Bull – wer am nächsten dran ist, gewinnt.</p>' +
         st.stechen.map(function (id) {
-          return '<button class="btn full" data-action="rtw-stechen" data-id="' + id + '">' +
+          return '<button class="btn full" data-action="rtw-stechen" data-id="' + esc(id) + '">' +
             esc(pname(id)) + ' war näher</button>';
         }).join('') + '</div>';
       return;
@@ -4902,7 +4980,7 @@
           '<p class="hint">' + rd.stechen.spieler.map(function (id) { return esc(pname(id)); }).join(' und ') +
           ' haben beide gefinished. Einmal auf Bull werfen – wer war näher dran?</p>' +
           rd.stechen.spieler.map(function (id) {
-            return '<button class="btn full" data-action="fin-stechen" data-id="' + id + '">' +
+            return '<button class="btn full" data-action="fin-stechen" data-id="' + esc(id) + '">' +
               esc(pname(id)) + '</button>';
           }).join('') + '</div>'
         : '');
@@ -5239,7 +5317,7 @@
             '</div>';
         }).join('') + '</div>' +
         '<div class="card"><h2>Spiele</h2>' + tFertig.map(function (x) {
-          return '<div class="pline tap" data-action="open-summary" data-kind="501" data-id="' + x.id + '" role="button" tabindex="0">' +
+          return '<div class="pline tap" data-action="open-summary" data-kind="501" data-id="' + esc(x.id) + '" role="button" tabindex="0">' +
             '<span>' + (x.winner === x.p[0] ? '<b>' + esc(pname(x.p[0])) + '</b>' : esc(pname(x.p[0]))) + ' – ' +
             (x.winner === x.p[1] ? '<b>' + esc(pname(x.p[1])) + '</b>' : esc(pname(x.p[1]))) + '</span>' +
             '<b>' + legsWon(x, x.p[0]) + ':' + legsWon(x, x.p[1]) + '</b></div>';
@@ -5293,7 +5371,7 @@
         }).join('') + '</div>' + note;
 
       var fixBtn = m.done
-        ? '<button class="btn ghost full" data-action="reopen-match" data-id="' + m.id + '">Letzte Aufnahme zurücknehmen</button>'
+        ? '<button class="btn ghost full" data-action="reopen-match" data-id="' + esc(m.id) + '">Letzte Aufnahme zurücknehmen</button>'
         : '';
       if (found.live && !allMatchesDone()) {
         actions = '<button class="btn primary full big" data-action="ov-next-match">Nächstes Spiel</button>' +
@@ -5549,7 +5627,7 @@
                 ? 'H' + (x.posPaar[0] + 1) + ' ' + esc(teName(x.p[0])) + ' – G' + (x.posPaar[1] + 1) + ' ' + esc(teName(x.p[1]))
                 : esc(teName(x.p[0])) + ' – ' + esc(teName(x.p[1]));
               return '<button class="te-zeile' + (i === wahl ? ' dran' : '') + '" ' +
-                'data-action="open-match" data-id="' + x.id + '">' +
+                'data-action="open-match" data-id="' + esc(x.id) + '">' +
                 (x.scheibe ? '<span class="te-scheibe">' + x.scheibe + '</span>' : '') +
                 '<span>' + paar + '</span></button>';
             }).join('') + '</div>' +
@@ -5585,7 +5663,7 @@
       var last = !nextOpenMatch();
       html = '<div class="big-emoji">🏅</div><h3>Glückwunsch, ' + esc(pname(o.pid)) + '!</h3>' +
         '<p>' + esc(pname(m2.p[0])) + ' ' + legsWon(m2, m2.p[0]) + ':' + legsWon(m2, m2.p[1]) + ' ' + esc(pname(m2.p[1])) + '</p>' +
-        '<button class="btn primary full" data-action="open-summary" data-kind="501" data-id="' + m2.id + '">Weiter zur Spielstatistik</button>' +
+        '<button class="btn primary full" data-action="open-summary" data-kind="501" data-id="' + esc(m2.id) + '">Weiter zur Spielstatistik</button>' +
         (last ? '' : '<button class="btn ghost full" data-action="ov-next-match">Direkt zum nächsten Spiel</button>') +
         '<button class="btn ghost full" data-action="undo">Eingabe rückgängig</button>';
     } else if (o.type === 'confirm-discard-game') {
@@ -5745,9 +5823,9 @@
               : '<button class="btn ghost full" data-action="liga-kampflos-zurueck">Wertung zurücknehmen</button>')
           : '<p>Wer tritt zu diesem Einzel <b>nicht</b> an? Der andere gewinnt ' +
             legsToWin() + ':0 ohne Würfe (SWO: nicht gestellter Spieler).</p>' +
-            '<button class="btn full" data-action="liga-kampflos-wer" data-wer="' + kfMatch.p[0] + '">' +
+            '<button class="btn full" data-action="liga-kampflos-wer" data-wer="' + esc(kfMatch.p[0]) + '">' +
               esc(ligaName(kfMatch.p[0])) + ' fehlt</button>' +
-            '<button class="btn full" data-action="liga-kampflos-wer" data-wer="' + kfMatch.p[1] + '">' +
+            '<button class="btn full" data-action="liga-kampflos-wer" data-wer="' + esc(kfMatch.p[1]) + '">' +
               esc(ligaName(kfMatch.p[1])) + ' fehlt</button>') +
         '<button class="btn ghost full" data-action="ov-cancel">Abbrechen</button>';
     } else if (o.type === 'liga-wechsel') {
@@ -5804,10 +5882,13 @@
       var offeneSpiele = sum(S.matches, function (m) { return m.done || m.void ? 0 : 1; });
       var fertige = sum(S.matches, function (m) { return m.done ? 1 : 0; });
       html = '<h3>' + (S.tour && S.tour.liga ? 'Ligaspiel' : 'Turnier') + ' vorzeitig beenden?</h3>' +
-        '<p><b>' + plural(fertige, 'gespieltes Spiel', 'gespielte Spiele') + '</b> ' +
-        (fertige === 1 ? 'bleibt' : 'bleiben') + ' in Statistik und Rangliste. ' +
-        'Die <b>' + plural(offeneSpiele, 'offene Partie', 'offenen Partien') + '</b> ' +
-        (offeneSpiele === 1 ? 'entfällt' : 'entfallen') + '.</p>' +
+        '<p>' + (fertige
+          ? '<b>' + plural(fertige, 'gespieltes Spiel', 'gespielte Spiele') + '</b> ' +
+            (fertige === 1 ? 'bleibt' : 'bleiben') + ' in Statistik und Rangliste. '
+          : 'Es ist noch kein Spiel fertig, in die Statistik kommt also nichts. ') +
+        (offeneSpiele
+          ? (offeneSpiele === 1 ? 'Die <b>eine offene Partie</b> wird' : 'Die <b>' + offeneSpiele + ' offenen Partien</b> werden') + ' nicht mehr gespielt.'
+          : '') + '</p>' +
         '<div class="row-btns two">' +
         '<button class="btn ghost" data-action="ov-cancel">Nein, weiterspielen</button>' +
         '<button class="btn danger" data-action="ov-reset">Ja, beenden</button></div>';
@@ -5815,11 +5896,12 @@
       var p = o.draft;
       var isNew = !o.id;
       html = '<h3>' + (isNew ? 'Neuer Spieler' : 'Spieler bearbeiten') + '</h3>' +
+        (o.fehler ? '<p class="hint fehler" role="alert">' + esc(o.fehler) + '</p>' : '') +
         '<div class="avatar-edit" data-action="pick-avatar">' +
           avatarHTML({ id: o.id || 'neu', name: p.name || '?', avatar: p.avatar }, 'xl') +
           '<span class="cam">Foto wählen</span>' +
         '</div>' +
-        '<input class="name-input" type="text" data-role="profile-name" value="' + esc(p.name) + '" placeholder="Anzeigename" maxlength="16">' +
+        '<input class="name-input" type="text" data-role="profile-name" value="' + esc(p.name) + '" placeholder="Anzeigename (bis 16 Zeichen)" maxlength="16" aria-label="Anzeigename, bis 16 Zeichen">' +
         /* Der buergerliche Name steht auf dem Liga-Spielbericht - die SWO
            will Vor- und Nachnamen, keine Kuenstlernamen. Gaeste eines
            Abends brauchen das nicht: Foto aus Spass, Name, Lieblingsdoppel
@@ -5849,8 +5931,11 @@
           /* Ein Gast, der nie geworfen hat, hängt an nichts – der lässt sich
              wirklich löschen. Sobald Spiele dranhängen, bleibt nur das
              Ausblenden: sonst stünde im Archiv „Unbekannt". */
-          var loeschbar = vor.gast && !letztesSpielAm(o.id);
-          var imSpielplan = vor.gast && S.tour &&
+          /* Ohne Konto und ohne Spiel haengt ein Profil an nichts - auch ein
+             offline angelegter Spieler laesst sich dann wieder loeschen. */
+          var ohneKonto = String(o.id).indexOf('u_') !== 0;
+          var loeschbar = (vor.gast || ohneKonto) && !letztesSpielAm(o.id);
+          var imSpielplan = S.tour && !vor.hidden &&
             S.matches.some(function (m) { return !m.done && !m.void && m.p.indexOf(o.id) >= 0; });
           /* Gaeste lassen sich direkt loeschen: ohne Spiele spurlos, mit
              Spielen verschwinden sie aus allen Listen – die Ergebnisse der
@@ -5858,14 +5943,17 @@
              Spielplan geht das nicht. */
           if (imSpielplan) {
             return '<p class="hint">' + esc(vor.name) + ' steht im laufenden Spielplan – ' +
-              'löschen geht erst, wenn das Turnier beendet ist (unter „Turnier“ den Endstand ' +
-              'abschließen). Danach verschwindet der Gast nach dem Abend von selbst.</p>';
+              (vor.gast ? 'löschen' : 'ausblenden') + ' geht erst, wenn das Turnier beendet ist (unter „Turnier“ den Endstand ' +
+              'abschließen, oder ' + esc(vor.name) + ' dort über „Spieler im Turnier“ abmelden).' +
+              (vor.gast ? ' Danach verschwindet der Gast nach dem Abend von selbst.' : '') + '</p>';
           }
           return '<button class="btn danger ghost full" data-action="' +
-            (vor.gast ? (loeschbar ? 'delete-profile' : 'delete-guest') : 'hide-profile') + '">' +
-            (vor.gast ? 'Gast löschen' : vor.hidden ? 'Wieder einblenden' : 'Spieler ausblenden') + '</button>' +
+            (loeschbar ? 'delete-profile' : vor.gast ? 'delete-guest' : 'hide-profile') + '">' +
+            (vor.gast ? (o.loeschenOk ? 'Ja, Gast löschen' : 'Gast löschen')
+              : loeschbar ? (o.loeschenOk ? 'Ja, Spieler löschen' : 'Spieler löschen')
+              : vor.hidden ? 'Wieder einblenden' : o.hideOk ? 'Ja, ausblenden' : 'Spieler ausblenden') + '</button>' +
             '<p class="hint">' + (loeschbar
-              ? 'Der Gast hat noch kein Spiel – er verschwindet spurlos.'
+              ? (vor.gast ? 'Der Gast' : esc(vor.name)) + ' hat noch kein Spiel – ' + (vor.gast ? 'er verschwindet' : 'das Profil verschwindet') + ' spurlos.'
               : (vor.gast
                 ? 'Der Gast verschwindet sofort aus Aufstellung, Spielerliste und Rangliste. Die gespielten Partien bleiben in der Historie der anderen erhalten.'
                 : 'Ausgeblendete Spieler tauchen nicht mehr in der Aufstellung auf, ihre Ergebnisse bleiben aber in Statistik und Rangliste erhalten.')) +
@@ -5885,7 +5973,7 @@
         (gdSolo ? 'Ausgemacht, ' : 'Glückwunsch, ') + esc(pname(o.pid)) + '!</h3>' +
         '<p>' + (S.game ? kindName(S.game.kind) : '') +
           (S.game && S.game.kind === 'quick' && !gdSolo && mehrereLegs(S.game) ? ' · ' + standZeile(S.game) : '') + '</p>' +
-        '<button class="' + gdKl(0, 'btn primary full') + '" data-action="open-summary" data-kind="' + (S.game ? S.game.kind : 'cricket') + '" data-id="current">Weiter zur Spielstatistik</button>' +
+        '<button class="' + gdKl(0, 'btn primary full') + '" data-action="open-summary" data-kind="' + esc((S.game ? S.game.kind : 'cricket')) + '" data-id="current">Weiter zur Spielstatistik</button>' +
         '<button class="' + gdKl(1, 'btn ghost full') + '" data-action="undo-game">Letzten Dart zurück</button>' +
         (gdWahl >= 0 ? '<p class="te-hint">↑ ↓ / Tab · wählen &nbsp;&nbsp; Enter · bestätigen</p>' : '');
     } else if (o.type === 'roster-change') {
@@ -5898,13 +5986,13 @@
           return '<div class="rc-row">' + avatarHTML(profile(id), 'sm') +
             '<span class="rc-name">' + esc(pname(id)) + '</span>' +
             (out ? '<span class="muted">keine offenen Spiele</span>'
-                 : '<button class="btn danger ghost small" data-action="withdraw-player" data-id="' + id + '">Abmelden</button>') +
+                 : '<button class="btn danger ghost small" data-action="withdraw-player" data-id="' + esc(id) + '">Abmelden</button>') +
             '</div>';
         }).join('') +
         activeProfiles().filter(function (p) { return inTour.indexOf(p.id) < 0; }).map(function (p) {
           return '<div class="rc-row">' + avatarHTML(p, 'sm') +
             '<span class="rc-name">' + esc(p.name) + '</span>' +
-            '<button class="btn small" data-action="add-player" data-id="' + p.id + '">Nachtragen</button>' +
+            '<button class="btn small" data-action="add-player" data-id="' + esc(p.id) + '">Nachtragen</button>' +
             '</div>';
         }).join('') +
         '</div>' +
@@ -6492,7 +6580,19 @@
       case 'save-profile': {
         var draft = UI.overlay.draft;
         var name = (draft.name || '').trim();
-        if (!name) name = 'Spieler ' + (S.profiles.length + 1);
+        /* Ohne Namen kein Profil - frueher entstand still "Spieler 7". */
+        if (!name) { UI.overlay.fehler = 'Bitte einen Namen eingeben.'; render(); return; }
+        /* Gleicher Name wie ein anderer sichtbarer Spieler: einmal warnen,
+           beim zweiten Speichern gilt es (z. B. zwei Tobis). */
+        var doppelt = S.profiles.some(function (x) {
+          return x.id !== UI.overlay.id && !x.hidden && String(x.name).trim().toLowerCase() === name.toLowerCase();
+        });
+        if (doppelt && UI.overlay.doppeltOk !== name) {
+          UI.overlay.doppeltOk = name;
+          UI.overlay.fehler = '„' + name + '“ gibt es schon. Nochmal auf Speichern tippen, wenn es wirklich ein zweiter Spieler ist.';
+          render();
+          return;
+        }
         if (UI.overlay.id) {
           var ex = profile(UI.overlay.id);
           ex.name = name;
@@ -6523,7 +6623,9 @@
          Archiv-Einträgen, die dann ins Leere zeigen würden. */
       case 'delete-profile': {
         var dp = profile(UI.overlay.id);
-        if (!dp.gast || letztesSpielAm(dp.id)) return;
+        if ((!dp.gast && String(dp.id).indexOf('u_') === 0) || letztesSpielAm(dp.id)) return;
+        /* Loeschen fragt einmal nach - der Knopf sitzt direkt unter Speichern. */
+        if (!UI.overlay.loeschenOk) { UI.overlay.loeschenOk = true; render(); return; }
         S.profiles = S.profiles.filter(function (x) { return x.id !== dp.id; });
         S.lineup = S.lineup.filter(function (x) { return x !== dp.id; });
         UI.overlay = null;
@@ -6536,6 +6638,7 @@
       case 'delete-guest': {
         var dg = profile(UI.overlay.id);
         if (!dg.gast) return;
+        if (!UI.overlay.loeschenOk) { UI.overlay.loeschenOk = true; render(); return; }
         /* Steht der Gast im laufenden Spielplan, wuerde das Loeschen offene
            Einzel verwaisen lassen - erst das Turnier beenden. */
         if (S.tour && S.matches.some(function (m) { return !m.done && !m.void && m.p.indexOf(dg.id) >= 0; })) return;
@@ -6551,6 +6654,9 @@
       }
       case 'hide-profile': {
         var hp = profile(UI.overlay.id);
+        /* Wer im laufenden Spielplan steht, bliebe dort als Geist stehen. */
+        if (!hp.hidden && S.tour && S.matches.some(function (m) { return !m.done && !m.void && m.p.indexOf(hp.id) >= 0; })) return;
+        if (!hp.hidden && !UI.overlay.hideOk) { UI.overlay.hideOk = true; render(); return; }
         hp.hidden = !hp.hidden;
         if (hp.hidden) {
           var li = S.lineup.indexOf(hp.id);
@@ -7541,12 +7647,13 @@
        Dialog geht vor. */
     /* Ausbullen am Board: Pfeile/Tab wechseln den Kandidaten, Enter
        bestaetigt den Anwerfer. */
-    if (S.screen === 'bulloff' && UI.turnier && turnierErlaubt() && !UI.overlay) {
+    var bPfeil = ev.key === 'ArrowLeft' || ev.key === 'ArrowUp' || ev.key === 'ArrowRight' || ev.key === 'ArrowDown';
+    if (S.screen === 'bulloff' && !UI.overlay && (UI.turnier && turnierErlaubt() || UI.bullTastatur || bPfeil)) {
       var bKnoepfe = document.querySelectorAll('#bulloff-buttons [data-action="pick-starter"]');
       if (bKnoepfe.length) {
-        if (ev.key === 'ArrowLeft' || ev.key === 'ArrowUp' ||
-            ev.key === 'ArrowRight' || ev.key === 'ArrowDown' || ev.key === 'Tab') {
+        if (bPfeil || (ev.key === 'Tab' && (UI.bullTastatur || UI.turnier))) {
           ev.preventDefault();
+          UI.bullTastatur = true;
           var bAlt = UI.bullWahl || 0;
           UI.bullWahl = ev.key === 'ArrowLeft' || ev.key === 'ArrowUp'
             ? Math.max(0, bAlt - 1)
@@ -7555,7 +7662,7 @@
           render();
           return;
         }
-        if (ev.key === 'Enter') {
+        if (ev.key === 'Enter' && !(document.activeElement && document.activeElement.closest && document.activeElement.closest('#bulloff-buttons'))) {
           ev.preventDefault();
           var bZiel = bKnoepfe[Math.min(UI.bullWahl || 0, bKnoepfe.length - 1)];
           if (bZiel) handleAction('pick-starter', bZiel);
@@ -7583,6 +7690,16 @@
       UI.input = '';
       save(); render();
       return;
+    }
+    /* Auswertung nach dem Spiel: Enter nimmt die Hauptaktion (Weiter bzw.
+       Speichern), Esc den Weg zurueck - am Board ohne Maus. */
+    if (S.screen === 'summary' && !UI.overlay && (ev.key === 'Enter' || ev.key === 'Escape') &&
+        !(ev.target && ev.target.closest && ev.target.closest('button, a, input, select, [role="button"]'))) {
+      var saKnoepfe = document.querySelectorAll('#summary-actions [data-action]');
+      var saZiel = null;
+      if (ev.key === 'Escape') saZiel = document.querySelector('#summary-actions [data-action="summary-back"]');
+      if (!saZiel) saZiel = document.querySelector('#summary-actions .btn.primary[data-action]') || saKnoepfe[0];
+      if (saZiel) { ev.preventDefault(); handleAction(saZiel.getAttribute('data-action'), saZiel); return; }
     }
     if (ev.key !== 'Enter' && ev.key !== ' ') return;
     var t = ev.target.closest('[role="button"][data-action]');
@@ -7760,6 +7877,36 @@
   /* ================= Start ================= */
   S = load() || newState();
   renderLadeHinweis();
+
+  /*
+   * Die Zurueck-Taste (Android, Browser) verliess frueher die ganze App.
+   * Jetzt steht immer ein Eintrag im Verlauf bereit: Zurueck schliesst
+   * zuerst einen Dialog, fuehrt dann aus Unterseiten zurueck und bleibt im
+   * laufenden Spiel stehen. Erst im Setup ohne Dialog geht es hinaus.
+   */
+  function zurueckFalle() {
+    try { history.pushState({ dart: 1 }, ''); } catch (e) { /* egal */ }
+  }
+  window.addEventListener('popstate', function () {
+    if (UI.overlay && !STICKY_OVERLAYS[UI.overlay.type]) {
+      UI.overlay = null; UI.input = ''; render(); zurueckFalle(); return;
+    }
+    if (UI.overlay) { zurueckFalle(); return; }
+    if (S.screen === 'summary') {
+      var sb = document.querySelector('#summary-actions [data-action="summary-back"]');
+      if (sb) handleAction('summary-back', sb);
+      zurueckFalle(); return;
+    }
+    if (S.screen === 'profile') { S.screen = 'players'; save(); render(); zurueckFalle(); return; }
+    /* Im Spiel verlaesst ein versehentliches Zurueck nichts. */
+    if (S.screen === 'game' || S.screen === 'bulloff' || S.screen === 'cricket' ||
+        S.screen === 'rtw' || S.screen === 'finisher') { zurueckFalle(); return; }
+    if (S.screen !== 'setup') { S.screen = 'setup'; save(); render(); zurueckFalle(); return; }
+    /* Setup ohne Dialog: das naechste Zurueck darf die App verlassen. */
+  });
+  try {
+    if (!history.state || !history.state.dart) zurueckFalle();
+  } catch (e) { /* egal */ }
   /* Die gemerkte Board-Einstellung zieht beim Start nur mitten im
      Ligaspiel - ein normales Spiel beginnt immer im normalen Bild. */
   UI.turnier = !!(S.settings && S.settings.turnierModus === 1 && S.tour && S.tour.liga);
