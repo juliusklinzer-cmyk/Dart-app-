@@ -2139,8 +2139,12 @@ const chipFarbe = await page.evaluate(() => {
   probe.remove();
   return f;
 });
-check('der erste Dart im Finish-Vorschlag bleibt rot', chipFarbe === farben.akzent,
-  chipFarbe + ' vs ' + farben.akzent);
+/* Rot bleibt er – als etwas dunkleres Rot, damit die weisse Schrift auf dem
+   kleinen Chip 4,5:1 Kontrast erreicht (Design-Audit D-C2). */
+check('der erste Dart im Finish-Vorschlag bleibt rot', (() => {
+  const [r, g, b] = chipFarbe.match(/\d+/g).map(Number);
+  return r >= 150 && r > 2.5 * g && r > 2.5 * b;
+})(), chipFarbe + ' vs ' + farben.akzent);
 await page.locator('#mult-row button[data-mult="1"]').click();
 
 /* ---------- Lieblingsdoppel ---------- */
