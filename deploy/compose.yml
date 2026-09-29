@@ -34,7 +34,9 @@ services:
     volumes:
       - darts-data:/data
     networks: [edge]
-    mem_limit: 200m
+    # 320 MB: ein Passwort-Hash (scrypt, N = 2^17) braucht fuer einen
+    # Augenblick 128 MB -- mit 200 MB waere das beim Anmelden zu knapp.
+    mem_limit: 320m
     cpu_shares: 512
 
 volumes:

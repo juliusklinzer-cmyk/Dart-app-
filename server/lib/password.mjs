@@ -4,21 +4,41 @@
  */
 import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 
-const N = 16384;
+/*
+ * Arbeitsfaktor. 2^17 ist die OWASP-Empfehlung fuer scrypt (r = 8, p = 1).
+ * Das braucht pro Rechnung 128 * N * r = 128 MB Arbeitsspeicher -- Node
+ * erlaubt von sich aus nur 32 MB, deshalb `maxmem`. scryptSync blockiert
+ * den einen Prozess, es laeuft also nie mehr als eine Rechnung gleichzeitig;
+ * der Container braucht trotzdem genug Luft (compose.yml: mem_limit).
+ *
+ * Alte Hashes (N = 16384) gelten weiter und werden beim naechsten
+ * erfolgreichen Login still neu berechnet (braucheNeuHash).
+ */
+const N = 2 ** 17;
 const KEYLEN = 64;
+const N_MAX = 2 ** 20;
+const MAXMEM = 192 * 1024 * 1024;
 
 export function hashPassword(password) {
   const salt = randomBytes(16).toString('hex');
-  const hash = scryptSync(password, salt, KEYLEN, { N }).toString('hex');
+  const hash = scryptSync(password, salt, KEYLEN, { N, maxmem: MAXMEM }).toString('hex');
   return `scrypt$${N}$${salt}$${hash}`;
 }
 
 export function verifyPassword(password, stored) {
   const [algo, nStr, salt, hash] = String(stored || '').split('$');
   if (algo !== 'scrypt' || !nStr || !salt || !hash) return false;
-  const candidate = scryptSync(password, salt, KEYLEN, { N: Number(nStr) });
+  const n = Number(nStr);
+  if (!Number.isInteger(n) || n < 2 || n > N_MAX) return false;
+  const candidate = scryptSync(password, salt, KEYLEN, { N: n, maxmem: MAXMEM });
   const expected = Buffer.from(hash, 'hex');
   return candidate.length === expected.length && timingSafeEqual(candidate, expected);
+}
+
+/* Stammt der Hash noch aus der Zeit mit kleinerem Arbeitsfaktor? */
+export function braucheNeuHash(stored) {
+  const [algo, nStr] = String(stored || '').split('$');
+  return algo !== 'scrypt' || Number(nStr) < N;
 }
 
 /* Die Handvoll Passwoerter, die in jeder Leak-Liste ganz oben stehen. */

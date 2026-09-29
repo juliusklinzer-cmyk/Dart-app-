@@ -6,6 +6,29 @@
  */
 const eimer = new Map();
 
+/* Obergrenze fuer die Zahl der Eintraege. Ohne sie koennte jemand mit lauter
+   verschiedenen Schluesseln (erfundene E-Mails, wechselnde IPs) den Speicher
+   des Containers vollschreiben. Die Map merkt sich die Einfuege-Reihenfolge,
+   also fliegen die aeltesten zuerst. */
+export const MAX_EINTRAEGE = 20000;
+
+function neuerEimer(schluessel, fensterMs, jetzt) {
+  if (!eimer.has(schluessel) && eimer.size >= MAX_EINTRAEGE) {
+    aufraeumen();
+    for (const k of eimer.keys()) {
+      if (eimer.size < MAX_EINTRAEGE) break;
+      eimer.delete(k);
+    }
+  }
+  const e = { zaehler: 0, bis: jetzt + fensterMs };
+  eimer.set(schluessel, e);
+  return e;
+}
+
+export function anzahl() {
+  return eimer.size;
+}
+
 /*
  * Erlaubt `limit` Versuche pro `fensterMs`. Gibt die Wartezeit in Sekunden
  * zurueck, wenn gesperrt, sonst 0.
@@ -13,10 +36,7 @@ const eimer = new Map();
 export function pruefe(schluessel, limit, fensterMs) {
   const jetzt = Date.now();
   let e = eimer.get(schluessel);
-  if (!e || jetzt > e.bis) {
-    e = { zaehler: 0, bis: jetzt + fensterMs };
-    eimer.set(schluessel, e);
-  }
+  if (!e || jetzt > e.bis) e = neuerEimer(schluessel, fensterMs, jetzt);
   if (e.zaehler >= limit) return Math.max(1, Math.ceil((e.bis - jetzt) / 1000));
   return 0;
 }
@@ -24,10 +44,7 @@ export function pruefe(schluessel, limit, fensterMs) {
 export function zaehle(schluessel, limit, fensterMs) {
   const jetzt = Date.now();
   let e = eimer.get(schluessel);
-  if (!e || jetzt > e.bis) {
-    e = { zaehler: 0, bis: jetzt + fensterMs };
-    eimer.set(schluessel, e);
-  }
+  if (!e || jetzt > e.bis) e = neuerEimer(schluessel, fensterMs, jetzt);
   e.zaehler += 1;
 }
 

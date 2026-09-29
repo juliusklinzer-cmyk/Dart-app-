@@ -7,6 +7,8 @@
  * Kein Browser noetig -- das hier prueft die API, nicht die Oberflaeche.
  */
 import { spawn } from 'node:child_process';
+import { scryptSync } from 'node:crypto';
+import http from 'node:http';
 import { hashPassword } from '../server/lib/password.mjs';
 import { DatabaseSync } from 'node:sqlite';
 import fs from 'node:fs';
@@ -62,7 +64,7 @@ function geraet(name) {
       } catch (e) {
         /* manche Antworten haben keinen Koerper */
       }
-      return { status: res.status, daten };
+      return { status: res.status, daten, kopf: res.headers };
     },
     /* Absichtlich ohne den App-Header -- so sieht eine Anfrage von fremder Seite aus. */
     async rufOhneHeader(methode, pfad, body) {
@@ -78,15 +80,53 @@ function geraet(name) {
     },
     setzeCookie(wert) {
       cookie = wert;
+    },
+    cookie() {
+      return cookie;
     }
   };
 }
 
-async function warteAufServer(proc) {
+/*
+ * Ein PUT, dessen Koerper langsam ankommt -- wie ueber schlechten Mobilfunk.
+ * Die erste Haelfte geht sofort raus, der Rest erst mit fertig().
+ */
+function langsamerPut(pfad, cookie, body) {
+  const text = JSON.stringify(body);
+  const halb = Math.floor(text.length / 2);
+  let antwort;
+  const req = http.request({
+    host: '127.0.0.1', port: PORT, path: pfad, method: 'PUT',
+    headers: { 'X-Darts-App': '1', Cookie: cookie, 'Content-Type': 'application/json' }
+  });
+  const fertigAntwort = new Promise((resolve, reject) => {
+    req.on('response', (res) => {
+      let d = '';
+      res.setEncoding('utf8');
+      res.on('data', (c) => { d += c; });
+      res.on('end', () => {
+        let daten = null;
+        try { daten = JSON.parse(d); } catch (e) { /* leer */ }
+        resolve({ status: res.statusCode, daten });
+      });
+    });
+    req.on('error', reject);
+  });
+  req.write(text.slice(0, halb));
+  return {
+    fertig() {
+      req.end(text.slice(halb));
+      antwort = antwort || fertigAntwort;
+      return antwort;
+    }
+  };
+}
+
+async function warteAufServer(proc, basis) {
   for (let i = 0; i < 100; i++) {
     if (proc.exitCode !== null) throw new Error('Server ist beim Start abgestuerzt.');
     try {
-      const res = await fetch(BASIS + '/api/ping');
+      const res = await fetch((basis || BASIS) + '/api/ping');
       if (res.ok) return;
     } catch (e) {
       /* noch nicht da */
@@ -121,6 +161,13 @@ async function main() {
       DARTS_DB: dbDatei,
       DARTS_INVITE_HASH: hashPassword(CODE),
       DARTS_SECURE_COOKIES: '0',
+      // Das Kamera-Relay ist in Betrieb abgeschaltet; hier wird es mitgeprueft.
+      DARTS_KAMERA: '1',
+      // Kleine Tagesgrenze fuer Online-Spiele, damit der Test nicht 5000
+      // Schreibvorgaenge braucht. Die Spiele-Grenze bleibt bei 200.
+      DARTS_KONTINGENT_LIVE: '60',
+      // Lebenszeichen im Live-Strom alle 300 ms statt alle 25 s.
+      DARTS_SSE_PULS_MS: '300',
       NODE_ENV: 'test'
     },
     stdio: ['ignore', 'pipe', 'pipe']
@@ -246,7 +293,7 @@ async function main() {
       id: 'gastspiel',
       kind: 'cricket',
       at: Date.now(),
-      payload: { egal: true },
+      payload: { id: 'gastspiel', kind: 'cricket', players: [julius_id, 'gast1'], scoring: 1, throws: [], winner: julius_id },
       players: [{ userId: julius_id }, { guestName: 'Zufallsgast' }]
     });
     gleich(r.status, 201, 'Spiel mit einem Gastspieler klappt');
@@ -608,6 +655,7 @@ async function main() {
       const dec = new TextDecoder();
       let puffer = '';
       let leseVorgang = null;
+      let zu = false;
       return {
         async bis(muster, ms) {
           const ende = Date.now() + ms;
@@ -619,10 +667,15 @@ async function main() {
             ]);
             if (erg === undefined) continue;   // nur der Wecker: weiter warten
             leseVorgang = null;
-            if (erg.done) break;
+            if (erg.done) { zu = true; break; }
             puffer += dec.decode(erg.value, { stream: true });
           }
           return puffer.includes(muster);
+        },
+        /* Wartet, bis der Server den Strom schliesst. */
+        async bisZu(ms) {
+          await this.bis('\u0000nie-gesendet\u0000', ms);
+          return zu;
         },
         get text() { return puffer; }
       };
@@ -781,6 +834,313 @@ async function main() {
     ok(r.daten.spiele.some((s) => s.id === testspiel.id && s.geloescht === true),
       'der Grabstein erreicht trotzdem alle -- frueher verteilte Testspiele verschwinden so');
 
+    /* ================= Haertung (Audit 28.09.2026) ================= */
+
+    console.log('\nProfilbild: nur echte Bilder (S1)');
+    const XSS_BILD = 'data:image/png;base64,x")"></span><img src=x onerror=alert(1)>';
+    r = await tobi.ruf('PATCH', '/api/me', { avatar: XSS_BILD });
+    gleich(r.status, 400, 'ein Bild mit eingeschmuggeltem HTML wird abgewiesen');
+    r = await tobi.ruf('PATCH', '/api/me', { avatar: 'data:image/png;base64,iVBORw0KGgo=")' });
+    gleich(r.status, 400, 'auch Anfuehrungszeichen und Klammern nach dem Base64 fliegen raus');
+    r = await tobi.ruf('PATCH', '/api/me', { avatar: 'data:image/svg+xml;base64,PHN2Zz4=' });
+    gleich(r.status, 400, 'SVG (kann Skript enthalten) ist kein erlaubtes Bildformat');
+    r = await tobi.ruf('PATCH', '/api/me', { avatar: 'data:image/png;base64,' + 'A'.repeat(400001) });
+    gleich(r.status, 400, 'ueberlange Bilder werden abgewiesen');
+    r = await tobi.ruf('PATCH', '/api/me', { avatar: 'data:image/webp;base64,UklGRhIAAABXRUJQVlA4TAYAAAAvAAAAAAfQ//73v/+BiOh/AAA=' });
+    gleich(r.status, 200, 'ein echtes kleines WebP geht durch');
+    r = await julius.ruf('GET', '/api/users');
+    ok(r.daten.nutzer.every((n) => n.avatar === null || /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/.test(n.avatar)),
+      'im Kader stehen nur saubere Bilder');
+
+    console.log('\nAnmeldung: kleine Pakete, gedeckeltes Rate-Limit (S2)');
+    r = await fremd.ruf('POST', '/api/login', { email: 'x'.repeat(5000) + '@example.de', password: 'egal123' });
+    gleich(r.status, 400, 'eine riesige E-Mail beim Login wird sofort abgewiesen');
+    r = await fremd.ruf('POST', '/api/login', { email: 'a@example.de', password: 'p'.repeat(20000) });
+    gleich(r.status, 413, 'ein Login-Paket ueber 16 KB wird abgewiesen');
+    r = await fremd.ruf('POST', '/api/register', { invite: CODE, email: 'b@example.de', name: 'Bert', password: 'p'.repeat(20000) });
+    gleich(r.status, 413, 'eine Registrierung ueber 16 KB ebenso');
+    r = await julius.ruf('POST', '/api/password', { alt: 'x', neu: 'p'.repeat(20000) });
+    gleich(r.status, 413, 'und ein Passwortwechsel ueber 16 KB auch');
+    {
+      const rl = await import('../server/lib/ratelimit.mjs');
+      for (let i = 0; i < rl.MAX_EINTRAEGE + 500; i++) rl.zaehle('flut:' + i, 5, 60e3);
+      ok(rl.anzahl() <= rl.MAX_EINTRAEGE, 'die Rate-Limit-Tabelle waechst nie ueber ' + rl.MAX_EINTRAEGE + ' Eintraege');
+      ok(rl.pruefe('flut:' + (rl.MAX_EINTRAEGE + 499), 1, 60e3) > 0, 'die juengsten Eintraege bleiben dabei erhalten');
+    }
+
+    console.log('\nKaputtes Cookie (S-N4)');
+    fremd.setzeCookie('darts_session=%E0%A4%A');
+    r = await fremd.ruf('GET', '/api/users');
+    gleich(r.status, 401, 'ein kaputt kodiertes Cookie ergibt 401 statt 500');
+    r = await fremd.ruf('GET', '/api/me');
+    ok(r.status === 200 && r.daten.nutzer === null, 'und /api/me sagt schlicht: niemand angemeldet');
+    fremd.setzeCookie('');
+
+    console.log('\nPasswort-Hashes: staerker, alte werden still erneuert (S-N3)');
+    {
+      const pw = await import('../server/lib/password.mjs');
+      const h = pw.hashPassword('einhundertachtzig');
+      ok(h.startsWith('scrypt$131072$'), 'neue Hashes rechnen mit N = 2^17');
+      ok(pw.verifyPassword('einhundertachtzig', h) && !pw.verifyPassword('falsch', h), 'und lassen sich pruefen');
+      ok(pw.braucheNeuHash('scrypt$16384$aa$bb') && !pw.braucheNeuHash(h), 'alte Hashes werden als veraltet erkannt');
+    }
+    const altkonto = geraet('Altkonto');
+    r = await altkonto.ruf('POST', '/api/register', { invite: CODE, email: 'alt@example.de', name: 'Alt Konto', password: 'altespasswort26' });
+    gleich(r.status, 201, 'ein weiteres Konto fuer die Hash-Pruefung');
+    {
+      const salz = 'a1b2c3d4e5f6a7b8';
+      const alt = 'scrypt$16384$' + salz + '$' + scryptSync('altespasswort26', salz, 64, { N: 16384 }).toString('hex');
+      const direkt = new DatabaseSync(dbDatei);
+      direkt.prepare('UPDATE users SET password_hash = ? WHERE email = ?').run(alt, 'alt@example.de');
+      direkt.close();
+    }
+    r = await altkonto.ruf('POST', '/api/login', { email: 'alt@example.de', password: 'altespasswort26' });
+    gleich(r.status, 200, 'mit einem alten Hash klappt der Login weiterhin');
+    {
+      const direkt = new DatabaseSync(dbDatei);
+      const neu = direkt.prepare('SELECT password_hash FROM users WHERE email = ?').get('alt@example.de').password_hash;
+      direkt.close();
+      ok(neu.startsWith('scrypt$131072$'), 'und danach liegt ein neuer, staerkerer Hash in der Datenbank');
+    }
+    r = await altkonto.ruf('POST', '/api/logout');
+    r = await altkonto.ruf('POST', '/api/login', { email: 'alt@example.de', password: 'altespasswort26' });
+    gleich(r.status, 200, 'mit dem neuen Hash geht es genauso');
+
+    console.log('\nGleitende Sessions (S-N2)');
+    {
+      const token = altkonto.cookie().split('=')[1];
+      const bald = new Date(Date.now() + 10 * 864e5).toISOString();
+      const direkt = new DatabaseSync(dbDatei);
+      direkt.prepare('UPDATE sessions SET expires_at = ? WHERE token = ?').run(bald, token);
+      direkt.close();
+      r = await altkonto.ruf('GET', '/api/me');
+      const gesetzt = r.kopf.getSetCookie ? r.kopf.getSetCookie() : [];
+      ok(gesetzt.some((c) => c.startsWith('darts_session=' + token) && c.includes('Max-Age=' + 90 * 86400)),
+        'eine Session, die bald ablaeuft, bekommt bei Benutzung ein frisches Cookie');
+      const direkt2 = new DatabaseSync(dbDatei);
+      const ablauf = direkt2.prepare('SELECT expires_at FROM sessions WHERE token = ?').get(token).expires_at;
+      direkt2.close();
+      ok(Date.parse(ablauf) > Date.now() + 89 * 864e5, 'und laeuft wieder volle 90 Tage ab jetzt');
+      r = await altkonto.ruf('GET', '/api/me');
+      const nochmal = r.kopf.getSetCookie ? r.kopf.getSetCookie() : [];
+      ok(!nochmal.length, 'gleich danach wird nicht schon wieder geschrieben (hoechstens einmal am Tag)');
+      const alt = new Date(Date.now() - 1000).toISOString();
+      const direkt3 = new DatabaseSync(dbDatei);
+      direkt3.prepare('UPDATE sessions SET expires_at = ? WHERE token = ?').run(alt, token);
+      direkt3.close();
+      r = await altkonto.ruf('GET', '/api/users');
+      gleich(r.status, 401, 'eine abgelaufene Session wird nicht wiederbelebt');
+    }
+
+    console.log('\nTurnier: "schon da" nur fuer Mitspieler (S-M1)');
+    r = await tester.ruf('POST', '/api/tournaments', { id: 'turnier1', plan, players: [tester_id] });
+    gleich(r.status, 403, 'wer nicht mitspielt, bekommt den fremden Turnierstand nicht');
+    ok(!r.daten.turnier, 'auch nicht als Beigabe zur Fehlermeldung');
+
+    console.log('\nMindestform der Spielinhalte (S-M2)');
+    const spielMit = (id, kind, payload) => julius.ruf('POST', '/api/games', {
+      id, kind, at: Date.now(), payload, players: [{ userId: julius_id }, { userId: tobi_id }]
+    });
+    r = await spielMit('kaputt3', 'tournament', { id: 'kaputt3', lineup: [julius_id, tobi_id], matches: null });
+    gleich(r.status, 400, 'ein Turnier mit "matches": null wird abgewiesen');
+    r = await spielMit('kaputt4', 'tournament', { lineup: [julius_id, tobi_id], matches: [{ id: 'm1"><img src=x onerror=alert(1)>', p: [julius_id, tobi_id], legs: [] }] });
+    gleich(r.status, 400, 'eine Partie-Kennung mit HTML darin wird abgewiesen');
+    r = await spielMit('kaputt5', 'cricket', { kind: 'cricket" onmouseover="x', players: [julius_id, tobi_id], throws: [] });
+    gleich(r.status, 400, 'eine Spielart mit HTML darin wird abgewiesen');
+    r = await spielMit('kaputt6', 'cricket', { kind: 'cricket', players: [julius_id, tobi_id] });
+    gleich(r.status, 400, 'Cricket ohne Wurfliste wird abgewiesen');
+    r = await spielMit('kaputt7', 'finisher', { kind: 'finisher', players: [julius_id], rounds: 'viele' });
+    gleich(r.status, 400, 'Finisher ohne Rundenliste wird abgewiesen');
+    r = await spielMit('kaputt8', '501', { players: 'Julius', throws: [] });
+    gleich(r.status, 400, 'eine Spielerliste, die keine Liste ist, wird abgewiesen');
+    r = await spielMit('kaputt9', 'rtw', { kind: 'rtw', players: [julius_id], throws: [], namen: { '"><b>': 'x' } });
+    gleich(r.status, 400, 'fremde Namen mit kaputter Kennung werden abgewiesen');
+    r = await spielMit('schnell1', 'tournament', {
+      id: 'schnell1', kind: 'quick', at: Date.now(), players: [julius_id, tobi_id], winner: julius_id,
+      lineup: [julius_id, tobi_id], settings: { start: 501, bestOf: 1 },
+      matches: [{ id: 'schnell1', p: [julius_id, tobi_id], starter: julius_id, legs: [{ visits: [] }], done: true, winner: julius_id }],
+      namen: { [julius_id]: 'Julius K.', [tobi_id]: 'Tobi' }
+    });
+    gleich(r.status, 201, 'ein Schnelles Spiel, wie die App es ablegt, geht durch');
+    r = await spielMit('finish1', 'finisher', { id: 'finish1', kind: 'finisher', players: [julius_id], rounds: [], ziel: 60, winner: julius_id });
+    gleich(r.status, 201, 'ein Finisher, wie die App ihn ablegt, geht durch');
+    r = await julius.ruf('POST', '/api/tournaments', { id: 'turnier9', plan: { players: [julius_id, tobi_id], matches: null }, players: [tobi_id] });
+    gleich(r.status, 400, 'ein Spielplan ohne Partienliste wird abgewiesen');
+    r = await julius.ruf('POST', '/api/tournaments', {
+      id: 'turnier2', players: [tobi_id],
+      plan: { start: 501, bestOf: 1, players: [julius_id, tobi_id], matches: [{ id: 'a1a1', round: 1, p: [julius_id, tobi_id] }], gaeste: {} }
+    });
+    gleich(r.status, 201, 'ein ordentlicher Spielplan geht durch');
+    r = await julius.ruf('PUT', '/api/tournaments/turnier2/matches/a1a1', { result: { id: 'b2b2', p: [julius_id, tobi_id], legs: [] } });
+    gleich(r.status, 400, 'ein Ergebnis fuer eine andere Partie wird abgewiesen');
+    r = await julius.ruf('PUT', '/api/tournaments/turnier2/matches/a1a1', { result: { id: 'a1a1', p: [julius_id, tobi_id], legs: null } });
+    gleich(r.status, 400, 'ein Ergebnis ohne Legs auch');
+    r = await julius.ruf('PUT', '/api/tournaments/turnier2/matches/a1a1', { result: { id: 'a1a1', p: [julius_id, tobi_id], legs: [], done: true, winner: julius_id } });
+    gleich(r.status, 200, 'ein ordentliches Ergebnis geht durch');
+    r = await julius.ruf('POST', '/api/live', { id: 'live6', kind: 'quick', state: { id: 'live6', kind: 'quick', p: [julius_id, '<b>'], legs: [] }, players: [tobi_id] });
+    gleich(r.status, 400, 'ein Online-Stand mit kaputter Spieler-Kennung wird abgewiesen');
+    r = await julius.ruf('POST', '/api/live', { id: 'live6', kind: 'cricket', state: { id: 'live6', kind: 'cricket', players: [julius_id, tobi_id] }, players: [tobi_id] });
+    gleich(r.status, 400, 'ein Cricket-Stand ohne Wurfliste auch');
+
+    console.log('\nTestkonten bleiben ueberall unsichtbar (S-M5)');
+    r = await tester.ruf('PUT', '/api/liga/zusagen/st02', { dabei: true });
+    gleich(r.status, 200, 'das Testkonto sagt fuer einen Spieltag zu');
+    r = await tobi.ruf('GET', '/api/liga/zusagen');
+    ok(!(r.daten.zusagen.st02 || []).length, 'Tobi sieht die Zusage des Testkontos nicht');
+    r = await julius.ruf('GET', '/api/liga/zusagen');
+    ok((r.daten.zusagen.st02 || []).some((z) => z.id === tester_id), 'Julius (darf Testkonten sehen) schon');
+    r = await tobi.ruf('GET', '/api/kasse');
+    const saldoVorher = r.daten.saldo;
+    r = await tester.ruf('POST', '/api/kasse', { betrag: 777, text: 'Testbuchung', kategorie: 'Spenden', datum: '2026-09-10' });
+    gleich(r.status, 200, 'das Testkonto bucht etwas in die Kasse');
+    r = await tobi.ruf('GET', '/api/kasse');
+    ok(!r.daten.eintraege.some((e) => e.text === 'Testbuchung'), 'Tobi sieht die Testbuchung nicht');
+    gleich(r.daten.saldo, saldoVorher, 'und sein Kassenstand bleibt unberuehrt');
+    r = await julius.ruf('GET', '/api/kasse');
+    ok(r.daten.eintraege.some((e) => e.text === 'Testbuchung'), 'Julius sieht sie');
+    r = await tester.ruf('POST', '/api/tournaments', {
+      id: 'testturnier', players: [tobi_id],
+      plan: { players: [tester_id, tobi_id], matches: [{ id: 't1', round: 1, p: [tester_id, tobi_id] }] }
+    });
+    gleich(r.status, 201, 'das Testkonto legt ein Turnier mit Tobi an');
+    r = await tobi.ruf('GET', '/api/tournaments/testturnier');
+    gleich(r.daten.turnier.angelegtVonName, null, 'Tobi bekommt den Namen des Testkontos nicht geliefert');
+
+    console.log('\nMengen je Konto (S-M7)');
+    const viel = geraet('Vielspieler');
+    r = await viel.ruf('POST', '/api/register', { invite: CODE, email: 'viel@example.de', name: 'Vielspieler', password: 'jedentagzweihundert' });
+    gleich(r.status, 201, 'ein Konto fuer die Mengenpruefung');
+    const viel_id = r.daten.nutzer.id;
+    const gross = spielPayload([viel_id, tobi_id]);
+    gross.id = 'riesig';
+    gross.throws = [{ p: 0, darts: [60, 60, 60], notiz: 'x'.repeat(310 * 1024) }];
+    r = await viel.ruf('POST', '/api/games', { id: 'riesig', kind: '501', at: Date.now(), payload: gross, players: [{ userId: viel_id }] });
+    gleich(r.status, 413, 'ein Spiel ueber 300 KB wird abgewiesen');
+    {
+      /* Ein grosser Turnierabend: 45 Partien mit Einzeldarts, rund 400 KB. */
+      const visite = { p: viel_id, s: 60, d: 3, b: false, c: false, o: 0, k: [{ m: 1, n: 20 }, { m: 1, n: 20 }, { m: 1, n: 20 }] };
+      const partien = [];
+      for (let i = 0; i < 45; i++) {
+        partien.push({ id: 'gm' + i, p: [viel_id, tobi_id], legs: [0, 1, 2].map(() => ({ visits: Array(30).fill(visite) })), done: true, winner: viel_id });
+      }
+      const abend = { id: 'grossabend', at: Date.now(), lineup: [viel_id, tobi_id], settings: { start: 501, bestOf: 3 }, matches: partien, winner: viel_id };
+      ok(JSON.stringify(abend).length > 300 * 1024, 'der Turnierabend ist tatsaechlich groesser als 300 KB');
+      r = await viel.ruf('POST', '/api/games', { id: 'grossabend', kind: 'tournament', at: Date.now(), payload: abend, players: [{ userId: viel_id }, { userId: tobi_id }] });
+      gleich(r.status, 201, 'das Archiv eines grossen Turnierabends passt trotzdem (Grenze dort 1 MB)');
+    }
+    let angenommen = 0;
+    let letzter = 0;
+    for (let i = 0; i < 201; i++) {
+      const p = spielPayload([viel_id, tobi_id]);
+      p.id = 'viel' + i;
+      const a = await viel.ruf('POST', '/api/games', { id: p.id, kind: '501', at: Date.now(), payload: p, players: [{ userId: viel_id }] });
+      if (a.status === 201) angenommen++;
+      letzter = a.status;
+    }
+    gleich(angenommen, 199, 'zusammen mit dem Turnierabend nimmt der Server 200 Spiele an einem Tag an');
+    gleich(letzter, 429, 'das 201. nicht mehr');
+    r = await viel.ruf('POST', '/api/games', { id: 'viel0', kind: '501', at: Date.now(), payload: spielPayload([viel_id]), players: [{ userId: viel_id }] });
+    gleich(r.status, 200, 'eine Wiederholung eines schon angenommenen Spiels meckert trotzdem nicht');
+    r = await viel.ruf('POST', '/api/tournaments', { id: 'vielturnier', plan: { matches: [] }, players: [tobi_id] });
+    gleich(r.status, 429, 'auch ein Turnier zaehlt in dieselbe Tagesgrenze');
+    r = await tobi.ruf('POST', '/api/live', { id: 'vielonline', kind: 'quick', state: { id: 'vielonline', kind: 'quick', p: [tobi_id, viel_id], legs: [] }, players: [viel_id] });
+    gleich(r.status, 201, 'Tobi legt ein Online-Spiel mit dem Vielspieler an');
+    let liveSeq = r.daten.spiel.seq;
+    let liveOk = 0;
+    let liveLetzter = 0;
+    for (let i = 0; i < 61; i++) {
+      const a = await viel.ruf('PUT', '/api/live/vielonline', { state: { id: 'vielonline', kind: 'quick', p: [tobi_id, viel_id], legs: [], n: i }, seq: liveSeq });
+      liveLetzter = a.status;
+      if (a.status !== 200) break;
+      liveOk++;
+      liveSeq = a.daten.spiel.seq;
+    }
+    gleich(liveOk, 60, 'Online-Zuege laufen bis zur (im Test kleinen) Tagesgrenze durch');
+    gleich(liveLetzter, 429, 'danach ist fuer heute Schluss');
+    r = await tobi.ruf('PUT', '/api/live/vielonline', { state: { id: 'vielonline', kind: 'quick', p: [tobi_id, viel_id], legs: [], notiz: 'x'.repeat(260 * 1024) }, seq: liveSeq });
+    gleich(r.status, 413, 'ein Online-Stand ueber 256 KB wird abgewiesen');
+    r = await tobi.ruf('POST', '/api/live/vielonline/ende');
+
+    console.log('\nOnline-Spiel: kein stilles Ueberschreiben (O1)');
+    const standA = { id: 'live5', kind: 'quick', p: [julius_id, tobi_id], legs: [], started: true };
+    r = await julius.ruf('POST', '/api/live', { id: 'live5', kind: 'quick', state: standA, players: [tobi_id] });
+    gleich(r.status, 201, 'Julius legt ein neues Online-Spiel an');
+    const basis5 = r.daten.spiel.seq;
+
+    /* Live-Strom von Tobi schon jetzt oeffnen: er soll alles mitbekommen. */
+    const acT = new AbortController();
+    const stromT = await fetch(BASIS + '/api/live/live5/strom', { headers: { Cookie: tobi.cookie() }, signal: acT.signal });
+    gleich(stromT.status, 200, 'Tobis Live-Strom oeffnet');
+    ok(String(stromT.headers.get('content-type')).startsWith('text/event-stream'), 'als Server-Sent Events');
+    const leserT = sseLeser(stromT);
+    ok(await leserT.bis('event: stand\ndata: {"seq":' + basis5 + ',"status":"offen"}\n\n', 3000),
+      'gleich zu Beginn kommt der aktuelle Stand (seq ' + basis5 + ', offen)');
+
+    /* Julius' PUT kommt langsam an (Mobilfunk): der Koerper tropft. In der
+       Zwischenzeit schreibt Tobi gegen dieselbe Version -- und ist fertig. */
+    const langsam = langsamerPut('/api/live/live5', julius.cookie(),
+      { state: Object.assign({}, standA, { legs: [{ visits: [{ p: julius_id, s: 100, d: 3 }] }] }), seq: basis5 });
+    await new Promise((res) => setTimeout(res, 150));
+    r = await tobi.ruf('PUT', '/api/live/live5', { state: Object.assign({}, standA, { legs: [{ visits: [{ p: tobi_id, s: 45, d: 3 }] }] }), seq: basis5 });
+    gleich(r.status, 200, 'Tobi schreibt gegen die Version ' + basis5 + ' und ist zuerst fertig');
+    const seqTobi = r.daten.spiel.seq;
+    ok(await leserT.bis('event: stand\ndata: {"seq":' + seqTobi + ',"status":"offen"}\n\n', 3000),
+      'der Live-Strom meldet die neue Version sofort');
+    const a5 = await langsam.fertig();
+    gleich(a5.status, 409, 'Julius\' langsamer PUT gegen dieselbe alte Version bekommt 409 statt still zu ueberschreiben');
+    ok(String(a5.daten.fehler).includes('Tobi'), 'mit dem Namen dessen, der schneller war');
+    ok(a5.daten.spiel && a5.daten.spiel.seq === seqTobi && a5.daten.spiel.state.legs[0].visits[0].p === tobi_id,
+      'und mit Tobis Stand -- dieselbe Form wie beim bisherigen Konflikt');
+    r = await tobi.ruf('GET', '/api/live/live5');
+    gleich(r.daten.spiel.state.legs[0].visits[0].s, 45, 'auf dem Server steht Tobis Aufnahme, nichts ist verloren');
+    gleich(r.daten.spiel.seq, seqTobi, 'und die Version ist genau einmal gestiegen');
+
+    console.log('\nLive-Strom (O9)');
+    ok(await leserT.bis(': ping', 2000), 'der Strom schickt regelmaessig ein Lebenszeichen');
+    r = await fetch(BASIS + '/api/live/live5/strom');
+    gleich(r.status, 401, 'ohne Anmeldung gibt es keinen Strom');
+    r = await fetch(BASIS + '/api/live/live5/strom', { headers: { Cookie: tester.cookie() } });
+    gleich(r.status, 403, 'wer nicht mitspielt, bekommt keinen Strom');
+    r = await fetch(BASIS + '/api/live/gibtsnicht/strom', { headers: { Cookie: tobi.cookie() } });
+    gleich(r.status, 404, 'fuer ein unbekanntes Spiel auch nicht');
+
+    /* Obergrenze: 8 Hoerer je Spiel. Der neunte verdraengt den aeltesten. */
+    const weitere = [];
+    for (let i = 0; i < 8; i++) {
+      const ac = new AbortController();
+      const st = await fetch(BASIS + '/api/live/live5/strom', { headers: { Cookie: julius.cookie() }, signal: ac.signal });
+      weitere.push({ ac, leser: sseLeser(st), status: st.status });
+    }
+    ok(weitere.every((w) => w.status === 200), 'acht weitere Hoerer duerfen sich verbinden');
+    ok(await leserT.bisZu(3000), 'der aelteste (Tobis erster) wird dabei sauber geschlossen');
+
+    const standEnde = Object.assign({}, standA, { done: true, winner: tobi_id, legs: [{ visits: [{ p: tobi_id, s: 45, d: 3 }] }] });
+    r = await tobi.ruf('POST', '/api/live/live5/ende', { state: standEnde });
+    gleich(r.status, 200, 'Tobi beendet das Spiel mit Schlussstand');
+    const seqEnde = r.daten.spiel.seq;
+    ok(await weitere[7].leser.bis('event: stand\ndata: {"seq":' + seqEnde + ',"status":"zu"}\n\n', 3000),
+      'alle Hoerer erfahren vom Ende (status zu)');
+    r = await julius.ruf('POST', '/api/live/live5/ende', { state: Object.assign({}, standA, { done: true, winner: julius_id }) });
+    gleich(r.status, 200, 'ein zweites Ende (Julius war langsamer) ist kein Fehler');
+    gleich(r.daten.spiel.state.winner, tobi_id, 'ueberschreibt aber Tobis Schlussstand nicht');
+    gleich(r.daten.spiel.seq, seqEnde, 'und die Version bleibt stehen');
+    for (const w of weitere) w.ac.abort();
+    acT.abort();
+
+    /* Ende mit Version: der Schlussstand darf eine juengere Eingabe des
+       anderen nicht ueberschreiben (Undo des Checkouts kurz vor "Speichern"). */
+    r = await julius.ruf('POST', '/api/live', { id: 'live7', kind: 'quick', state: Object.assign({}, standA, { id: 'live7' }), players: [tobi_id] });
+    const basis7 = r.daten.spiel.seq;
+    r = await tobi.ruf('PUT', '/api/live/live7', { state: Object.assign({}, standA, { id: 'live7', undo: true }), seq: basis7 });
+    gleich(r.status, 200, 'Tobi nimmt etwas zurueck (neue Version)');
+    const seq7 = r.daten.spiel.seq;
+    r = await julius.ruf('POST', '/api/live/live7/ende', { state: Object.assign({}, standA, { id: 'live7', done: true, winner: julius_id }), seq: basis7 });
+    gleich(r.status, 409, 'Julius\' Speichern gegen die alte Version wird abgewiesen');
+    ok(r.daten.spiel && r.daten.spiel.seq === seq7 && r.daten.spiel.state.undo === true && r.daten.spiel.status === 'offen',
+      'mit Tobis Stand in der gewohnten Konflikt-Form -- das Spiel bleibt offen');
+    r = await julius.ruf('POST', '/api/live/live7/ende', { state: Object.assign({}, standA, { id: 'live7', done: true, winner: julius_id }), seq: seq7 });
+    gleich(r.status, 200, 'gegen die aktuelle Version klappt das Ende');
+
     console.log('\nStatische Dateien');
     let res = await fetch(BASIS + '/');
     gleich(res.status, 200, 'die App-Seite wird ausgeliefert');
@@ -790,6 +1150,54 @@ async function main() {
     ok(res.status === 404, 'der Server-Code wird NICHT ausgeliefert');
     res = await fetch(BASIS + '/../package.json');
     ok(res.status === 404 || res.status === 400, 'Ausbruch aus dem Verzeichnis geht nicht');
+
+    console.log('\nSicherheits-Header (S-M3)');
+    res = await fetch(BASIS + '/');
+    {
+      const csp = String(res.headers.get('content-security-policy'));
+      ok(/script-src 'self';/.test(csp), 'die App-Seite erlaubt nur eigene Skripte, keine Inline-Skripte');
+      ok(csp.includes("frame-ancestors 'none'") && csp.includes("default-src 'self'"), 'und laesst sich nicht in fremde Seiten einbetten');
+      gleich(res.headers.get('x-frame-options'), 'DENY', 'X-Frame-Options steht auf DENY');
+      gleich(res.headers.get('x-content-type-options'), 'nosniff', 'X-Content-Type-Options steht auf nosniff');
+      gleich(res.headers.get('referrer-policy'), 'same-origin', 'Referrer-Policy steht auf same-origin');
+    }
+    res = await fetch(BASIS + '/api/ping');
+    ok(String(res.headers.get('content-security-policy')).includes("default-src 'self'"), 'auch API-Antworten tragen die Header');
+    res = await fetch(BASIS + '/dart-turnier.html');
+    if (res.status === 200) {
+      ok(/script-src 'self' 'unsafe-inline'/.test(String(res.headers.get('content-security-policy'))),
+        'das Einzeldatei-Buendel darf sein eingebettetes Skript ausfuehren');
+    }
+    const html = await (await fetch(BASIS + '/')).text();
+    ok(!/<script(?![^>]*\ssrc=)[^>]*>/i.test(html.replace(/<!--[\s\S]*?-->/g, '')), 'index.html enthaelt kein Inline-Skript, das die CSP blockieren wuerde');
+    ok(!/\son[a-z]+\s*=/i.test(html.replace(/<!--[\s\S]*?-->/g, '')), 'und keine Inline-Event-Handler');
+
+    console.log('\nKamera-Relay nur mit Schalter (S-N1)');
+    {
+      const PORT2 = PORT + 50;
+      const basis2 = 'http://127.0.0.1:' + PORT2;
+      const tmp2 = fs.mkdtempSync(path.join(os.tmpdir(), 'darts-test2-'));
+      const proc2 = spawn(process.execPath, [path.join(ROOT, 'server', 'main.mjs')], {
+        env: { ...process.env, PORT: String(PORT2), HOST: '127.0.0.1', DARTS_DB: path.join(tmp2, 't.db'),
+          DARTS_INVITE_HASH: hashPassword(CODE), DARTS_KAMERA: '', NODE_ENV: 'test' },
+        stdio: ['ignore', 'ignore', 'ignore']
+      });
+      try {
+        await warteAufServer(proc2, basis2);
+        const a = await fetch(basis2 + '/api/kamera/raum', {
+          method: 'POST', headers: { 'X-Darts-App': '1', 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: 'TESTQ2', token: 'testtoken12345678' })
+        });
+        gleich(a.status, 404, 'ohne DARTS_KAMERA=1 gibt es keinen Kamera-Raum');
+        const b = await fetch(basis2 + '/api/kamera/raum/TESTQ2/strom?rolle=tisch');
+        gleich(b.status, 404, 'und keinen Kamera-Strom');
+      } finally {
+        proc2.kill('SIGTERM');
+        await new Promise((r2) => setTimeout(r2, 300));
+        if (proc2.exitCode === null) proc2.kill('SIGKILL');
+        try { fs.rmSync(tmp2, { recursive: true, force: true }); } catch (e) { /* egal */ }
+      }
+    }
   } finally {
     proc.kill('SIGTERM');
     await new Promise((r) => setTimeout(r, 300));

@@ -10,7 +10,13 @@
 import { randomBytes } from 'node:crypto';
 
 export const COOKIE = 'darts_session';
-const MAX_AGE_DAYS = 90;
+/* 90 Tage -- gerechnet ab der letzten Nutzung, nicht ab dem Login: wer die
+   App regelmaessig oeffnet, bleibt angemeldet; wer 90 Tage nicht da war,
+   meldet sich neu an. */
+export const MAX_AGE_DAYS = 90;
+/* Aufgefrischt wird hoechstens einmal am Tag -- sonst schriebe jeder
+   Poll-Takt in die Datenbank. */
+const AUFFRISCHEN_AB_MS = 864e5;
 
 export function createSession(db, userId) {
   const token = randomBytes(32).toString('hex');
@@ -59,6 +65,24 @@ export function currentUser(db, token) {
   }
   if (row.status !== 'aktiv') return null;
   return row;
+}
+
+/*
+ * Gleitender Ablauf: ist die Session gueltig und ihr letztes Auffrischen
+ * laenger als einen Tag her, bekommt sie wieder volle 90 Tage. Gibt true
+ * zurueck, wenn aufgefrischt wurde -- dann soll auch der Browser ein
+ * frisches Cookie mit neuer Max-Age bekommen.
+ */
+export function auffrischen(db, token) {
+  if (!token) return false;
+  const jetzt = Date.now();
+  const neu = new Date(jetzt + MAX_AGE_DAYS * 864e5).toISOString();
+  const grenze = new Date(jetzt + MAX_AGE_DAYS * 864e5 - AUFFRISCHEN_AB_MS).toISOString();
+  const r = db
+    .prepare('UPDATE sessions SET expires_at = ? WHERE token = ? AND expires_at < ? AND expires_at > ?' +
+      " AND user_id IN (SELECT id FROM users WHERE status = 'aktiv')")
+    .run(neu, token, grenze, new Date(jetzt).toISOString());
+  return r.changes > 0;
 }
 
 export function destroySession(db, token) {
