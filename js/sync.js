@@ -500,7 +500,10 @@
     if (liveSchreibt) { liveDran = true; return liveSchreibt; }
     var stand = D.liveStand();
     if (!stand) return Promise.resolve(false);
-    liveSchreibt = liveRuf('PUT', '/' + g.online.sid, { state: stand.state, seq: stand.seq }, eilig ? { keepalive: true } : undefined)
+    /* keepalive erlauben Browser nur bis 64 KB Body - ein langes Spiel
+       geht dann als normale Anfrage raus (und notfalls beim Aufwecken). */
+    var mitKeepalive = eilig && stand.text.length < 60000;
+    liveSchreibt = liveRuf('PUT', '/' + g.online.sid, { state: stand.state, seq: stand.seq }, mitKeepalive ? { keepalive: true } : undefined)
       .then(function (d) {
         stoerung(false);
         D.liveGeschrieben(d.spiel, stand.text);
@@ -736,6 +739,9 @@
         freigeben: turnierFreigeben,
         ergebnis: turnierErgebnis,
         ende: turnierEnde,
+        /* Ein Turnier per Kennung schliessen, das lokal schon weg ist
+           (12-Stunden-Grenze beim App-Start). */
+        endeId: function (sid) { return turnierRuf('POST', '/' + sid + '/ende').catch(function () {}); },
         takt: turnierTakt
       },
       live: {

@@ -2653,6 +2653,24 @@ group('Neuer Spieler: kein leerer, doppelter Name nur mit Bestaetigung');
   });
 }
 
+group('Wer gerade spielt, laesst sich nicht loeschen');
+{
+  const erg = await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    S.profiles.push({ id: 'offline_neu', name: 'Neuling', avatar: null, hue: 4, created: Date.now() });
+    S.game = { id: 'lauf1', kind: 'cricket', players: ['offline_neu', D.activeProfiles()[0].id], throws: [], scoring: true, done: false, winner: null, started: true, at: null };
+    D.save();
+    D.ui().overlay = { type: 'profile', id: 'offline_neu', draft: { name: 'Neuling', avatar: null, dbl: null, vor: '', nach: '' } };
+    D.render();
+    const knopf = document.querySelector('#overlay-card [data-action="delete-profile"]');
+    S.game = null;
+    S.profiles = S.profiles.filter((p) => p.id !== 'offline_neu');
+    D.ui().overlay = null; D.save(); D.setScreen('setup');
+    return !!knopf;
+  });
+  check('kein Loeschen-Knopf fuer einen Spieler im laufenden Spiel', erg === false);
+}
+
 group('Gast direkt loeschen');
 await page.evaluate(() => window.__dart.setScreen('players'));
 check('der Dachauer Gast steht in der Spielerliste', (await text('#players-list')).includes('Dachau 1'));
@@ -3094,6 +3112,44 @@ check('Konflikt mit abweichender Aufnahme: Hinweis erscheint',
   });
   check('eigener Stand aus der Abfrage loescht die laufende Eingabe nicht', erg.input === '4' && erg.seq === 9 && erg.visits, JSON.stringify(erg));
 }
+/* Dasselbe Konto auf einem zweiten Geraet hat eingetragen: der Stand bringt
+   etwas mit, das hier fehlt - dann wird er uebernommen (sonst schoeben sich
+   zwei Geraete die Aufnahme endlos gegenseitig weg). */
+{
+  const erg = await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    const echt = window.DartKonto;
+    window.DartKonto = Object.assign({}, echt || {}, { nutzer: () => ({ id: 'u_ich' }) });
+    const zweit = JSON.parse(JSON.stringify(S.game));
+    delete zweit.online;
+    const p = D.activePlayer(D.activeLeg(S.game), S.game);
+    zweit.legs[zweit.legs.length - 1].visits.push({ p, s: 100, d: 3, b: false, c: false, o: 0 });
+    const vorher = S.game.legs[S.game.legs.length - 1].visits.length;
+    D.liveUebernehmen({ id: S.game.id, seq: 9.5, state: zweit, geaendertVon: 'u_ich', geaendertVonName: 'Ich' });
+    const nachher = D.state().game.legs[D.state().game.legs.length - 1].visits.length;
+    window.DartKonto = echt;
+    return { vorher, nachher };
+  });
+  check('Eintrag vom zweiten eigenen Geraet wird uebernommen', erg.nachher === erg.vorher + 1, JSON.stringify(erg));
+}
+/* Der andere korrigiert eine fruehere Aufnahme; eine spaetere 60 steht
+   schon im Leg - sie wird nicht ein zweites Mal gefeiert. */
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  const leg = S.game.legs[S.game.legs.length - 1];
+  const p = D.activePlayer(leg, S.game);
+  leg.visits.push({ p, s: 45, d: 3, b: false, c: false, o: 0 });
+  leg.visits.push({ p: S.game.p.find((x) => x !== p), s: 60, d: 3, b: false, c: false, o: 0 });
+  D.save();
+  document.getElementById('feier').innerHTML = '';
+  const fremd = JSON.parse(JSON.stringify(S.game));
+  delete fremd.online;
+  const fl = fremd.legs[fremd.legs.length - 1];
+  fl.visits[fl.visits.length - 2].s = 41;
+  D.liveUebernehmen({ id: S.game.id, seq: 9.7, state: fremd, geaendertVon: 'u_fremd', geaendertVonName: 'Tobi' });
+  D.render();
+});
+check('eine Korrektur weiter vorn feiert die spaetere 60 nicht nochmal', !(await text('#feier')).includes('SECHZIG'));
 
 /* Spielende beim anderen ersetzt jeden offenen Dialog. */
 await page.evaluate(() => {
@@ -3369,8 +3425,8 @@ group('Altes Spiel: nach 12 Stunden beendet, nicht gespeichert');
   await typeScore(100);
   const vorher = await page.evaluate(() => {
     const D = window.__dart, S = D.state();
-    const hatUhr = typeof S.game.seit === 'number';
-    S.game.seit = Date.now() - 13 * 3600 * 1000;
+    const hatUhr = !!S.gameSeit && S.gameSeit.id === S.game.id && typeof S.gameSeit.seit === 'number' && !('seit' in S.game);
+    S.gameSeit.seit = Date.now() - 13 * 3600 * 1000;
     D.save();
     return { hatUhr, archiv: S.history.length };
   });

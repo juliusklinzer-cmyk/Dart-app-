@@ -4961,29 +4961,41 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
    * Schluss (siehe altesSpielBeenden).
    */
   var SPIEL_MAX_MS = 12 * 3600 * 1000;
+  /* Die Startzeit merkt sich jedes Geraet selbst (nicht im Spielstand, der
+     im Online-Spiel mitreist) - so kann eine falsch gehende Uhr beim
+     Mitspieler kein Spiel beenden. */
   function spielUhrStellen() {
-    if (S.game && !S.game.seit) S.game.seit = Date.now();
+    if (S.game && (!S.gameSeit || S.gameSeit.id !== S.game.id)) S.gameSeit = { id: S.game.id, seit: Date.now() };
+    if (!S.game && S.gameSeit) S.gameSeit = null;
     if (S.tour && S.matches.length && !S.tour.seit) S.tour.seit = Date.now();
   }
   function altesSpielBeenden() {
     var jetzt = Date.now();
     var weg = [];
-    if (S.game && S.game.seit && jetzt - S.game.seit > SPIEL_MAX_MS) {
+    if (!Array.isArray(S.offeneEnden)) S.offeneEnden = [];
+    if (S.game && S.gameSeit && S.gameSeit.id === S.game.id && jetzt - S.gameSeit.seit > SPIEL_MAX_MS) {
       var art = kindName(S.game.kind);
+      /* Beim App-Start steht die Online-Schicht noch nicht: dann merken und
+         die Meldung an Server und Mitspieler nachreichen (offeneEndenSenden). */
+      if (S.game.online && !S.game.online.wartet) {
+        if (window.DartSync && window.DartSync.live && liveNutzer()) liveEnde(S.game);
+        else S.offeneEnden.push({ typ: 'live', sid: S.game.online.sid });
+      }
       if (S.game.done) {
         /* Entschieden, nur nie gespeichert: das Ergebnis ist echt und kommt
            ins Archiv. */
-        liveEnde(S.game);
         archiveGame(S.game);
         weg.push(art + ' (entschieden) wurde gespeichert');
       } else {
         /* Angefangen und liegen geblieben: verworfen, nichts gespeichert. */
-        liveEnde(S.game);
         weg.push('das angefangene ' + art + ' wurde beendet und nicht gespeichert');
       }
       S.game = null;
     }
     if (S.tour && S.tour.seit && S.matches.length && jetzt - S.tour.seit > SPIEL_MAX_MS) {
+      if (S.tour.geteilt && S.tour.sid && !(window.DartSync && window.DartSync.turnier && liveNutzer())) {
+        S.offeneEnden.push({ typ: 'turnier', sid: S.tour.sid });
+      }
       /* Wie "Turnier beenden": fertige Partien bleiben in der Statistik, die
          offenen entfallen. */
       archiveTournament();
@@ -4995,6 +5007,18 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     UI.overlay = { type: 'hinweis', titel: 'Altes Spiel beendet', text: 'Älter als 12 Stunden: ' + weg.join(', ') + '.' };
     save();
     return true;
+  }
+  /* Nachgereichte Schluss-Meldungen, sobald man angemeldet und online ist. */
+  function offeneEndenSenden() {
+    if (!Array.isArray(S.offeneEnden) || !S.offeneEnden.length) return;
+    if (!window.DartSync || !liveNutzer()) return;
+    var liste = S.offeneEnden;
+    S.offeneEnden = [];
+    liste.forEach(function (e) {
+      if (e.typ === 'live' && window.DartSync.live) window.DartSync.live.ende(e.sid, null);
+      if (e.typ === 'turnier' && window.DartSync.turnier && window.DartSync.turnier.endeId) window.DartSync.turnier.endeId(e.sid);
+    });
+    save();
   }
   document.addEventListener('visibilitychange', function () {
     if (!document.hidden && S && altesSpielBeenden()) render();
@@ -5024,7 +5048,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (ladeProblem === 'neuer') { ladeSperre = true; return null; }
     ladeProblem = 'kaputt';
     try {
+      /* Der erste kaputte Stand bleibt unter .kaputt, jeder spaetere landet
+         unter .kaputt-neu - so geht auch ein zweiter nicht verloren. */
       if (!localStorage.getItem(STORAGE_KEY + '.kaputt')) localStorage.setItem(STORAGE_KEY + '.kaputt', raw);
+      else if (localStorage.getItem(STORAGE_KEY + '.kaputt') !== raw) localStorage.setItem(STORAGE_KEY + '.kaputt-neu', raw);
     } catch (e) { ladeSperre = true; /* keine Sicherung moeglich: dann wenigstens nicht ueberschreiben */ }
     return null;
   }
@@ -5517,7 +5544,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         /* Ausnahme: dieses Geraet hat die eigene, schon gemeldete Partie per
            Zuruecknehmen wieder geoeffnet und korrigiert sie gerade. Dann
            kommt das neue Ergebnis beim naechsten Checkout ohnehin hoch. */
-        if (m.korrektur && !m.done) return;
+        if (m.korrektur && !m.done && Date.now() - m.korrektur < 15 * 60 * 1000) return;
         if (!m.done || m.at !== p.result.at) {
           S.matches[S.matches.indexOf(m)] = p.result;
           if (S.current === m.id) S.current = null;
@@ -5744,9 +5771,17 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var fremd = !!(spiel.geaendertVon && spiel.geaendertVon !== ich);
 
     /* Mein eigener Stand kommt zurueck (die Abfrage war schneller als die
-       Antwort auf meinen PUT): nur Version merken. Was ich inzwischen weiter
-       getippt habe, bleibt stehen und geht mit dem naechsten PUT hoch. */
-    if (eigen && !konflikt && spiel.status !== 'zu') {
+       Antwort auf meinen PUT, oder die PUT-Antwort ging im Funkloch verloren
+       und der naechste PUT bekam 409): nur Version merken. Was ich
+       inzwischen weiter getippt habe, bleibt stehen und geht mit dem
+       naechsten PUT hoch. Das gilt aber nur, wenn der Stand NICHTS enthaelt,
+       was hier fehlt - spielt dasselbe Konto auf einem zweiten Geraet, hat
+       das vielleicht gerade eingetragen, und dann wird uebernommen (sonst
+       schoeben sich zwei Geraete die Aufnahme endlos gegenseitig weg). */
+    var eigenVgl = eigen ? verlaufNeu(alt, neu) : null;
+    var eigenOffen = Array.isArray(neu.offen) ? neu.offen.length : 0;
+    if (eigen && spiel.status !== 'zu' && !eigenVgl.neu.length && eigenOffen <= UI.darts.length &&
+        !(neu.done && !alt.done)) {
       g.online.seq = spiel.seq;
       g.online.hash = liveHash(text);
       save();   // schickt, falls sich lokal inzwischen etwas geaendert hat
@@ -5772,7 +5807,13 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
        mehreren gewinnt die hoechste. */
     if (fremd && Array.isArray(neu.legs)) {
       var beste = null;
+      /* Nach einer Korrektur weiter vorn im Leg stehen alle spaeteren
+         Aufnahmen wieder in vgl.neu - gefeiert wird nur, was es vorher
+         wirklich noch nicht gab. */
+      var schonDa = {};
+      vgl.verloren.forEach(function (e) { schonDa[e.key] = (schonDa[e.key] || 0) + 1; });
       vgl.neu.forEach(function (e) {
+        if (schonDa[e.key]) { schonDa[e.key]--; return; }
         var v = e.v;
         if (!v || v.b || (v.s !== 180 && v.s !== 60)) return;
         if (!beste || v.s > beste.s) beste = v;
@@ -6489,7 +6530,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     leg.winner = null;
     /* Im geteilten Turnier ist das Ergebnis schon beim Server: merken, dass
        hier korrigiert wird, sonst holt der Abgleich das alte zurueck. */
-    if (m.done && m.kind !== 'quick' && geteiltesTurnier()) m.korrektur = true;
+    if (m.done && m.kind !== 'quick' && geteiltesTurnier()) m.korrektur = Date.now();
     m.done = false;
     m.winner = null;
     m.at = null;
@@ -7343,6 +7384,15 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (window.DartSync && eintrag) window.DartSync.neuesSpiel(eintrag);
   }
 
+  /* Steht jemand im laufenden Spiel oder im laufenden Turnier (auch mit
+     schon fertigen Partien)? Dann darf sein Profil nicht weg - im Spiel
+     stuende sonst "Unbekannt", im Archiv eine Kennung ohne Profil. */
+  function profilImEinsatz(id) {
+    var imSpiel = S.game && (S.game.p || S.game.players || []).indexOf(id) >= 0;
+    var imTurnier = S.matches.some(function (m) { return m.p.indexOf(id) >= 0; });
+    return !!(imSpiel || imTurnier);
+  }
+
   /* Wie viele Legs eines laufenden Schnellen Spiels schon entschieden sind. */
   function entschiedeneLegs(g) {
     if (!g || g.kind !== 'quick' || !Array.isArray(g.legs)) return 0;
@@ -7656,6 +7706,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       var lst = window.DartSync.live.status();
       verbindungsHinweis(liveSichtbar && lst && lst.stoerung);
     }
+    offeneEndenSenden();
     if (S.screen === 'setup' && letzterScreen !== 'setup') beitretbareHolen();
     setupTakt(S.screen === 'setup');
     // Zusagen frisch holen, wenn man die Liga-Seite betritt – nicht bei
@@ -10753,7 +10804,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           /* Ohne Konto und ohne Spiel haengt ein Profil an nichts - auch ein
              offline angelegter Spieler laesst sich dann wieder loeschen. */
           var ohneKonto = String(o.id).indexOf('u_') !== 0;
-          var loeschbar = (vor.gast || ohneKonto) && !letztesSpielAm(o.id);
+          var loeschbar = (vor.gast || ohneKonto) && !letztesSpielAm(o.id) && !profilImEinsatz(o.id);
           var imSpielplan = S.tour && !vor.hidden &&
             S.matches.some(function (m) { return !m.done && !m.void && m.p.indexOf(o.id) >= 0; });
           /* Gaeste lassen sich direkt loeschen: ohne Spiele spurlos, mit
@@ -11442,7 +11493,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
          Archiv-Einträgen, die dann ins Leere zeigen würden. */
       case 'delete-profile': {
         var dp = profile(UI.overlay.id);
-        if ((!dp.gast && String(dp.id).indexOf('u_') === 0) || letztesSpielAm(dp.id)) return;
+        if ((!dp.gast && String(dp.id).indexOf('u_') === 0) || letztesSpielAm(dp.id) || profilImEinsatz(dp.id)) return;
         /* Loeschen fragt einmal nach - der Knopf sitzt direkt unter Speichern. */
         if (!UI.overlay.loeschenOk) { UI.overlay.loeschenOk = true; render(); return; }
         S.profiles = S.profiles.filter(function (x) { return x.id !== dp.id; });
