@@ -261,6 +261,8 @@ check('100+ Aufnahmen gezählt', champ.tons >= champ.s180);
 group('Ranglisten');
 await page.locator('#screen-winner [data-action="to-tournament"]').click();
 check('Navigation außerhalb des Spiels sichtbar', await visible('#nav'));
+check('Navigation durchgehend deutsch: Spiel · Liga · Rang · Spieler', (await page.locator('#nav button:not(.hidden)').allInnerTexts())
+  .map((t) => t.trim().toLowerCase()).join('|') === 'spiel|liga|rang|spieler');
 await page.locator('#nav [data-screen="boards"]').click();
 check('Rangliste sichtbar', await visible('#screen-boards'));
 check('Average-Rangliste hat Einträge', (await page.locator('.board-row').count()) > 0);
@@ -297,11 +299,11 @@ check('neues Profil ist für das nächste Turnier ausgewählt', await page.evalu
 }));
 
 group('Turnier abschließen & Archiv');
-/* Ein fertig gespieltes Turnier darf den Game-Tab nicht in der alten
-   Tabelle festhalten: der Tipp auf "Game" archiviert es und zeigt das Setup. */
+/* Ein fertig gespieltes Turnier darf den Spiel-Reiter nicht in der alten
+   Tabelle festhalten: der Tipp auf "Spiel" archiviert es und zeigt das Setup. */
 await page.locator('#nav [data-screen="boards"]').click();
 await page.locator('#nav [data-screen="setup"]').click();
-check('Game-Tab bei fertigem Turnier: Setup statt alter Tabelle', await visible('#screen-setup'));
+check('Spiel-Reiter bei fertigem Turnier: Setup statt alter Tabelle', await visible('#screen-setup'));
 check('fertiges Turnier beim Verlassen archiviert', await page.evaluate(() => window.__dart.state().history.length) === 1);
 check('kein laufendes Turnier mehr', await page.evaluate(() => window.__dart.state().matches.length) === 0);
 const c2 = await carr();
@@ -2770,7 +2772,7 @@ await page.evaluate(() => {
   D.setScreen('setup');
 });
 
-group('GAME-Tab findet zurueck ins Schnelle Spiel');
+group('Spiel-Reiter findet zurueck ins Schnelle Spiel');
 /* Der Nav-Handler sprang frueher auf S.game.kind - beim Schnellen Spiel
    heisst der aber 'quick', diesen Bildschirm gibt es nicht, und die Seite
    blieb schwarz (gespeichert sogar ueber den Neustart hinweg). */
@@ -2788,7 +2790,7 @@ await page.evaluate(() => window.__dart.setScreen('players'));
 await page.locator('#players-list .player-card').first().click();
 check('das Profil ist offen', await visible('#screen-profile'));
 await page.locator('#nav [data-screen="setup"]').click();
-check('der GAME-Tab fuehrt zurueck aufs Board', await visible('#screen-game'));
+check('der Spiel-Reiter fuehrt zurueck aufs Board', await visible('#screen-game'));
 check('und kein Bildschirm bleibt schwarz', await page.evaluate(() =>
   !!document.querySelector('.screen.active')));
 /* Selbstheilung: ein kaputt gespeicherter Bildschirmname darf die App nach
