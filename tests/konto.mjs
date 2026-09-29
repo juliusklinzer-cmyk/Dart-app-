@@ -136,7 +136,7 @@ async function profilOeffnen(g) {
 /* Punktzahl ueber das Zahlenfeld eintippen -- so wie am Board auch. */
 async function typeScoreAuf(page, n) {
   for (const c of String(n)) await page.locator('.keypad button[data-key="' + c + '"]').click();
-  if (n <= 18) await page.locator('.keypad button[data-key="ok"]').click();
+  await page.locator('.keypad button[data-key="ok"]').click();
 }
 
 /* Wartet, bis die Warteschlange leer ist (oder gibt auf). */
