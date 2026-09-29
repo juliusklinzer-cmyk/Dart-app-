@@ -619,6 +619,15 @@ automatisch auf das aktuelle Datenmodell gehoben. Ein beschädigter Stand wird
 nicht überschrieben, sondern unter `dart-turnier-v1.kaputt` gesichert (mit
 Hinweis oben); ein Stand einer neueren App-Version bleibt unangetastet.
 
+**Kein Spiel läuft ewig:** Ein angefangenes Spiel ist höchstens **12 Stunden**
+aktiv. Danach wird es beim nächsten Öffnen beendet und **nicht gespeichert**
+(ein Hinweis sagt das). Ein schon entschiedenes, nur nie gespeichertes Spiel
+kommt dagegen ins Archiv, und ein Turnier wird wie mit „Turnier beenden"
+abgeschlossen: fertige Partien bleiben in der Statistik, offene entfallen.
+
+Gibt es eine **neue Version** der App, erscheint oben „Neue Version der App ist
+da – Neu laden"; gewechselt wird erst, wenn man tippt.
+
 Die **Zurück-Taste** (Android, Browser) schließt zuerst einen offenen Dialog und
 führt aus Unterseiten zurück ins Setup; im laufenden Spiel bleibt sie ohne
 Wirkung. Erst im Setup verlässt ein weiteres Zurück die App.
