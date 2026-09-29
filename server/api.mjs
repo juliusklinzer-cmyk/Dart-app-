@@ -8,11 +8,12 @@
  */
 import { randomBytes } from 'node:crypto';
 import { nextSeq, transaktion, zaehler } from './lib/db.mjs';
-import { hashPassword, verifyPassword, checkPassword } from './lib/password.mjs';
+import { hashPassword, verifyPassword, checkPassword, braucheNeuHash } from './lib/password.mjs';
 import * as sess from './lib/session.mjs';
 import * as limit from './lib/ratelimit.mjs';
 import * as relay from './lib/relay.mjs';
-import { sendJson, sendFehler, leseCookies, leseJson, clientIp, HttpFehler } from './lib/http.mjs';
+import * as livestrom from './lib/livestrom.mjs';
+import { sendJson, sendFehler, leseCookies, leseJson, clientIp, HttpFehler, MAX_BODY_KLEIN } from './lib/http.mjs';
 
 const KINDS = new Set(['501', 'cricket', 'rtw', 'finisher', 'tournament']);
 const MAX_SPIELER = 16;
@@ -81,13 +82,19 @@ export function createApi(db, config) {
 
   /* Avatare sind Data-URLs wie im Client. Fremde URLs waeren ein Weg, die
      IP-Adressen aller Mitspieler abzugreifen -- deshalb nur data:image. */
+  /* Streng von vorne bis hinten: nach dem Komma nur Base64-Zeichen. Das
+     Bild landet bei allen Kollegen in einem style-Attribut -- ein
+     Anfuehrungszeichen oder eine Klammer darin waere ein Einfallstor fuer
+     fremdes Skript auf jedem Geraet. */
+  const AVATAR_MUSTER = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/;
+  const AVATAR_MAX = 400000;
   function pruefeAvatar(wert) {
     if (wert == null || wert === '') return null;
     const a = String(wert);
-    if (!/^data:image\/(png|jpeg|webp);base64,/.test(a)) {
+    if (a.length > AVATAR_MAX) throw new HttpFehler(400, 'Das Bild ist zu gross.');
+    if (!AVATAR_MUSTER.test(a)) {
       throw new HttpFehler(400, 'Das Bild hat ein unerwartetes Format.');
     }
-    if (a.length > 400000) throw new HttpFehler(400, 'Das Bild ist zu gross.');
     return a;
   }
 
@@ -143,7 +150,7 @@ export function createApi(db, config) {
     }
     limit.zaehle('reg:' + ip, 5, 3600e3);
 
-    const body = await leseJson(req);
+    const body = await leseJson(req, MAX_BODY_KLEIN);
     if (!config.inviteHash || !verifyPassword(String(body.invite || ''), config.inviteHash)) {
       throw new HttpFehler(403, 'Der Einladungscode stimmt nicht.');
     }
@@ -171,8 +178,11 @@ export function createApi(db, config) {
   async function login(req, res) {
     pruefeHerkunft(req);
     const ip = clientIp(req, config.trustProxy);
-    const body = await leseJson(req);
+    const body = await leseJson(req, MAX_BODY_KLEIN);
     const email = String(body.email || '').trim().toLowerCase();
+    // Laenger als jede echte Adresse (Registrierung erlaubt 200): gar nicht
+    // erst als Schluessel ins Rate-Limit, sonst waere das ein Speicherfresser.
+    if (email.length > 200) throw new HttpFehler(400, 'Bitte eine E-Mail-Adresse angeben.');
 
     const eimer = [
       ['login-ip:' + ip, 10, 900e3],
@@ -196,6 +206,11 @@ export function createApi(db, config) {
     }
 
     for (const [schluessel] of eimer) limit.loesche(schluessel);
+    // Hash aus der Zeit mit kleinerem Arbeitsfaktor: jetzt, wo das Passwort
+    // im Klartext vorliegt, still auf den aktuellen Stand bringen.
+    if (braucheNeuHash(u.password_hash)) {
+      db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hashPassword(String(body.password)), u.id);
+    }
     db.prepare('UPDATE users SET last_login_at = ? WHERE id = ?').run(new Date().toISOString(), u.id);
     const token = sess.createSession(db, u.id);
     sendJson(res, 200, { nutzer: eigenesProfil(u) }, { 'Set-Cookie': sess.cookieHeader(token, secure) });
@@ -231,7 +246,7 @@ export function createApi(db, config) {
   async function passwortAendern(req, res) {
     pruefeHerkunft(req);
     const u = verlangeNutzer(req);
-    const body = await leseJson(req);
+    const body = await leseJson(req, MAX_BODY_KLEIN);
     const voll = db.prepare('SELECT * FROM users WHERE id = ?').get(u.id);
     if (!verifyPassword(String(body.alt || ''), voll.password_hash)) {
       throw new HttpFehler(403, 'Das bisherige Passwort stimmt nicht.');
@@ -247,6 +262,105 @@ export function createApi(db, config) {
   /* Testkonten sieht, wer sieht_test hat -- und ein Testkonto selbst, sonst
      verloere es beim Anmelden sein eigenes Profil und seine eigenen Spiele. */
   function siehtTest(u) { return u.sieht_test || u.test ? 1 : 0; }
+
+  /* ---------- Mindestform der Spielinhalte ----------
+     Der Server rechnet nicht mit, aber er nimmt nur an, was die App auch
+     wirklich zeichnen kann. Ein einziger kaputter Eintrag (z. B.
+     "matches": null) laege sonst auf jedem Geraet und legte die App dort
+     lahm. Kennungen landen im Client in HTML-Attributen -- deshalb duerfen
+     sie nur aus harmlosen Zeichen bestehen. */
+  const ID_MUSTER = /^[A-Za-z0-9_-]{1,40}$/;
+  const KIND_MUSTER = /^[a-z0-9]{1,20}$/;
+  const MAX_EINTRAEGE_LISTE = 2000;
+  function istId(x) { return typeof x === 'string' && ID_MUSTER.test(x); }
+  function istObjekt(x) { return !!x && typeof x === 'object' && !Array.isArray(x); }
+  function kaputt(was) { return new HttpFehler(400, 'Der Spielinhalt ist unbrauchbar (' + was + ').'); }
+  function idListe(x, was, nullErlaubt) {
+    if (!Array.isArray(x) || x.length > 64 || !x.every((v) => istId(v) || (nullErlaubt && v === null))) {
+      throw kaputt(was);
+    }
+  }
+  function liste(x, was) {
+    if (!Array.isArray(x) || x.length > MAX_EINTRAEGE_LISTE) throw kaputt(was);
+  }
+  function namensListe(x, was) {
+    if (x === undefined || x === null) return;
+    if (!istObjekt(x)) throw kaputt(was);
+    for (const [k, v] of Object.entries(x)) {
+      if (!istId(k) || typeof v !== 'string' || v.length > 60) throw kaputt(was);
+    }
+  }
+  function pruefePartie(m, was) {
+    if (!istObjekt(m) || !istId(m.id)) throw kaputt(was + ': Kennung');
+    if (m.p !== undefined) idListe(m.p, was + ': Spieler', true);
+    if (m.legs !== undefined) liste(m.legs, was + ': Legs');
+    if (m.winner !== undefined && m.winner !== null && !istId(m.winner)) throw kaputt(was + ': Sieger');
+  }
+
+  /* Ein Archiv-Eintrag, wie archiveGame()/archiveTournament() ihn bauen. */
+  function pruefeSpielInhalt(art, p) {
+    if (!istObjekt(p)) throw kaputt('kein Objekt');
+    if (p.kind !== undefined && (typeof p.kind !== 'string' || !KIND_MUSTER.test(p.kind))) throw kaputt('Spielart');
+    if (p.winner !== undefined && p.winner !== null && !istId(p.winner)) throw kaputt('Sieger');
+    namensListe(p.namen, 'Namen');
+    if (art === 'tournament') {
+      idListe(p.lineup, 'Aufstellung');
+      liste(p.matches, 'Partien');
+      p.matches.forEach((m) => pruefePartie(m, 'Partie'));
+      if (p.settings !== undefined && !istObjekt(p.settings)) throw kaputt('Einstellungen');
+      return;
+    }
+    idListe(p.players, 'Spieler');
+    if (p.lineup !== undefined) idListe(p.lineup, 'Aufstellung');
+    if (art === 'finisher') liste(p.rounds, 'Runden');
+    else if (art === 'cricket' || art === 'rtw') liste(p.throws, 'Wuerfe');
+    else if (p.throws !== undefined) liste(p.throws, 'Wuerfe');
+  }
+
+  /* Spielplan eines geteilten Turniers (planZuMatches im Client). */
+  function pruefePlan(plan) {
+    if (!istObjekt(plan)) throw new HttpFehler(400, 'Der Spielplan fehlt.');
+    if (plan.players !== undefined) idListe(plan.players, 'Spielplan: Spieler');
+    liste(plan.matches, 'Spielplan: Partien');
+    plan.matches.forEach((m) => pruefePartie(m, 'Spielplan'));
+    namensListe(plan.gaeste, 'Spielplan: Gaeste');
+  }
+
+  /* Laufender Spielstand (S.game im Client). */
+  function pruefeLiveForm(st, kind) {
+    if (kind === 'quick') {
+      idListe(st.p, 'Spieler');
+      liste(st.legs, 'Legs');
+    } else {
+      idListe(st.players, 'Spieler');
+      if (kind === 'finisher') liste(st.rounds, 'Runden');
+      else liste(st.throws, 'Wuerfe');
+    }
+    if (st.winner !== undefined && st.winner !== null && !istId(st.winner)) throw kaputt('Sieger');
+  }
+
+  /* ---------- Mengen je Konto ----------
+     Niemand spielt 200 Spiele am Tag. Die Grenze schuetzt die Datenbank
+     (und damit alle Geraete, die sie abgleichen) vor einem Konto, das
+     amok laeuft -- ob aus Bosheit oder wegen eines Fehlers im Client. */
+  const MAX_INHALT = 300 * 1024;
+  /* Ausnahme: das Archiv eines ganzen Turnierabends. Zehn Spieler jeder gegen
+     jeden sind 45 Partien; mit Einzeldarts kommen da gut 350 KB zusammen.
+     Das darf nicht an der Grenze fuer ein einzelnes Spiel scheitern. */
+  const MAX_TURNIER_ARCHIV = 1024 * 1024;
+  const TAG = 864e5;
+  const KONTINGENT = {
+    spiele: Number(config.kontingentSpiele) || 200,
+    live: Number(config.kontingentLive) || 5000
+  };
+  function kontingentPruefen(u, art) {
+    if (limit.pruefe('tag-' + art + ':' + u.id, KONTINGENT[art], TAG)) {
+      throw new HttpFehler(429, 'Fuer heute hat dieses Konto genug geschrieben. Morgen geht es weiter.');
+    }
+  }
+  function kontingentZaehlen(u, art) {
+    limit.zaehle('tag-' + art + ':' + u.id, KONTINGENT[art], TAG);
+  }
 
   /* Roster: alle aktiven Accounts, damit man Kollegen ins Turnier waehlen kann.
      Testkonten (test = 1) sieht nur, wer sieht_test hat -- fuer alle anderen
@@ -268,7 +382,7 @@ export function createApi(db, config) {
   async function spielHochladen(req, res) {
     pruefeHerkunft(req);
     const u = verlangeNutzer(req);
-    const body = await leseJson(req);
+    const body = await leseJson(req, MAX_TURNIER_ARCHIV + 64 * 1024);
 
     const id = String(body.id || '');
     if (!/^[A-Za-z0-9_-]{4,64}$/.test(id)) throw new HttpFehler(400, 'Die Spiel-Kennung ist unbrauchbar.');
@@ -287,6 +401,13 @@ export function createApi(db, config) {
     const da = db.prepare('SELECT seq FROM games WHERE id = ?').get(id);
     if (da) return sendJson(res, 200, { ok: true, seq: da.seq, schonDa: true });
 
+    pruefeSpielInhalt(String(body.kind), body.payload);
+    const inhalt = JSON.stringify(body.payload);
+    if (inhalt.length > (String(body.kind) === 'tournament' ? MAX_TURNIER_ARCHIV : MAX_INHALT)) {
+      throw new HttpFehler(413, 'Das Spiel ist zu gross.');
+    }
+    kontingentPruefen(u, 'spiele');
+
     const zeilen = spieler.map(function (p, i) {
       if (p && p.userId) {
         const treffer = db.prepare("SELECT id FROM users WHERE id = ? AND status = 'aktiv'").get(String(p.userId));
@@ -298,8 +419,6 @@ export function createApi(db, config) {
       return { pos: i, user_id: null, guest_name: gast };
     });
 
-    const inhalt = JSON.stringify(body.payload);
-
     const seq = transaktion(db, function () {
       const s = nextSeq(db);
       db.prepare(
@@ -310,6 +429,7 @@ export function createApi(db, config) {
       for (const z of zeilen) einfuegen.run(id, z.pos, z.user_id, z.guest_name);
       return s;
     });
+    kontingentZaehlen(u, 'spiele');
 
     sendJson(res, 201, { ok: true, seq });
   }
@@ -433,13 +553,17 @@ export function createApi(db, config) {
   /* Kleiner Namens-Cache: die Partien-Liste braucht zu jedem Anspruch einen
      Namen, und das sind immer dieselben zehn Leute. */
   const namen = new Map();
-  function namenLaden() {
+  /* Testkonten haben fuer alle, die sie nicht sehen duerfen, keinen Namen --
+     wie ueberall sonst auch. */
+  function namenLaden(u) {
     namen.clear();
-    for (const r of db.prepare('SELECT id, display_name FROM users').all()) namen.set(r.id, r.display_name);
+    for (const r of db.prepare('SELECT id, display_name FROM users WHERE test = 0 OR ? = 1').all(u ? siehtTest(u) : 0)) {
+      namen.set(r.id, r.display_name);
+    }
   }
 
-  function turnierAntwort(t, seit) {
-    namenLaden();
+  function turnierAntwort(t, seit, u) {
+    namenLaden(u);
     const zeilen = db
       .prepare('SELECT * FROM tournament_matches WHERE tournament_id = ? AND seq > ? ORDER BY seq')
       .all(t.id, Number(seit) || 0);
@@ -460,13 +584,21 @@ export function createApi(db, config) {
   async function turnierAnlegen(req, res) {
     pruefeHerkunft(req);
     const u = verlangeNutzer(req);
-    const body = await leseJson(req);
+    const body = await leseJson(req, MAX_INHALT + 64 * 1024);
     const id = turnierId(body.id);
     if (!body.plan || typeof body.plan !== 'object') throw new HttpFehler(400, 'Der Spielplan fehlt.');
 
-    // Schon da? Dann war das ein zweiter Versuch aus der Warteschlange.
+    // Schon da? Dann war das ein zweiter Versuch aus der Warteschlange --
+    // den Stand bekommt aber nur, wer auch mitspielt.
     const da = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(id);
-    if (da) return sendJson(res, 200, { turnier: turnierAntwort(da, 0), schonDa: true });
+    if (da) {
+      verlangeTeilnahme(da, u);
+      return sendJson(res, 200, { turnier: turnierAntwort(da, 0, u), schonDa: true });
+    }
+    pruefePlan(body.plan);
+    const planText = JSON.stringify(body.plan);
+    if (planText.length > MAX_INHALT) throw new HttpFehler(413, 'Der Spielplan ist zu gross.');
+    kontingentPruefen(u, 'spiele');
 
     const mitspieler = Array.isArray(body.players) ? body.players : [];
     const konten = [];
@@ -480,11 +612,12 @@ export function createApi(db, config) {
 
     transaktion(db, function () {
       db.prepare('INSERT INTO tournaments (id, plan, created_by, created_at) VALUES (?, ?, ?, ?)')
-        .run(id, JSON.stringify(body.plan), u.id, new Date().toISOString());
+        .run(id, planText, u.id, new Date().toISOString());
       const ins = db.prepare('INSERT INTO tournament_players (tournament_id, user_id) VALUES (?, ?)');
       for (const k of konten) ins.run(id, k);
     });
-    sendJson(res, 201, { turnier: turnierAntwort(verlangeTurnier(id), 0) });
+    kontingentZaehlen(u, 'spiele');
+    sendJson(res, 201, { turnier: turnierAntwort(verlangeTurnier(id), 0, u) });
   }
 
   /* Alle offenen Turniere, an denen ich beteiligt bin. */
@@ -496,14 +629,14 @@ export function createApi(db, config) {
           " WHERE p.user_id = ? AND t.status = 'offen' ORDER BY t.created_at DESC LIMIT 10"
       )
       .all(u.id);
-    sendJson(res, 200, { turniere: zeilen.map((t) => turnierAntwort(t, 0)) });
+    sendJson(res, 200, { turniere: zeilen.map((t) => turnierAntwort(t, 0, u)) });
   }
 
   function turnierHolen(req, res, id, url) {
     const u = verlangeNutzer(req);
     const t = verlangeTurnier(turnierId(id));
     verlangeTeilnahme(t, u);
-    sendJson(res, 200, { turnier: turnierAntwort(t, url.searchParams.get('since')) });
+    sendJson(res, 200, { turnier: turnierAntwort(t, url.searchParams.get('since'), u) });
   }
 
   /*
@@ -524,7 +657,7 @@ export function createApi(db, config) {
       .get(t.id, mid);
     if (da && da.result) throw new HttpFehler(409, 'Diese Partie ist schon gespielt.');
     if (da && da.claimed_by && da.claimed_by !== u.id && jetzt - (da.claimed_at || 0) < CLAIM_FRIST) {
-      namenLaden();
+      namenLaden(u);
       throw new HttpFehler(409, (namen.get(da.claimed_by) || 'Jemand') + ' schreibt diese Partie gerade mit.');
     }
 
@@ -538,7 +671,7 @@ export function createApi(db, config) {
           ' seq = excluded.seq, updated_at = excluded.updated_at'
       ).run(t.id, mid, u.id, jetzt, s, new Date().toISOString());
     });
-    sendJson(res, 200, { turnier: turnierAntwort(t, 0) });
+    sendJson(res, 200, { turnier: turnierAntwort(t, 0, u) });
   }
 
   /* Anspruch zurueckgeben, ohne gespielt zu haben (zurueck aus der Partie). */
@@ -560,7 +693,7 @@ export function createApi(db, config) {
         ).run(s, new Date().toISOString(), t.id, mid);
       });
     }
-    sendJson(res, 200, { turnier: turnierAntwort(t, 0) });
+    sendJson(res, 200, { turnier: turnierAntwort(t, 0, u) });
   }
 
   /* Ergebnis eintragen. Wortgleich das, was der Client als Partie fuehrt. */
@@ -570,7 +703,7 @@ export function createApi(db, config) {
     const t = verlangeTurnier(turnierId(treffer[0]));
     verlangeTeilnahme(t, u);
     const mid = turnierId(treffer[1]);
-    const body = await leseJson(req);
+    const body = await leseJson(req, MAX_INHALT + 64 * 1024);
     if (!body.result || typeof body.result !== 'object') throw new HttpFehler(400, 'Das Ergebnis fehlt.');
 
     const da = db.prepare('SELECT * FROM tournament_matches WHERE tournament_id = ? AND match_id = ?')
@@ -578,9 +711,17 @@ export function createApi(db, config) {
     // Fremdes Ergebnis ueberschreiben waere der eine Fall, in dem wirklich
     // etwas verlorenginge -- also nur der, der die Partie beansprucht hat.
     if (da && da.claimed_by && da.claimed_by !== u.id) {
-      namenLaden();
+      namenLaden(u);
       throw new HttpFehler(409, (namen.get(da.claimed_by) || 'Jemand') + ' schreibt diese Partie mit.');
     }
+    // Das Ergebnis ersetzt im Client die Partie als Ganzes: also muss es
+    // auch eine sein -- und zwar genau diese.
+    pruefePartie(body.result, 'Ergebnis');
+    if (body.result.id !== mid) throw kaputt('Ergebnis gehoert zu einer anderen Partie');
+    if (!Array.isArray(body.result.legs)) throw kaputt('Ergebnis ohne Legs');
+    const ergebnisText = JSON.stringify(body.result);
+    if (ergebnisText.length > MAX_INHALT) throw new HttpFehler(413, 'Das Ergebnis ist zu gross.');
+    kontingentPruefen(u, 'spiele');
 
     transaktion(db, function () {
       const s = zaehler(db, 'tournament_seq');
@@ -590,9 +731,10 @@ export function createApi(db, config) {
           ' ON CONFLICT(tournament_id, match_id) DO UPDATE SET' +
           ' claimed_by = excluded.claimed_by, result = excluded.result,' +
           ' seq = excluded.seq, updated_at = excluded.updated_at'
-      ).run(t.id, mid, u.id, Date.now(), JSON.stringify(body.result), s, new Date().toISOString());
+      ).run(t.id, mid, u.id, Date.now(), ergebnisText, s, new Date().toISOString());
     });
-    sendJson(res, 200, { turnier: turnierAntwort(t, 0) });
+    kontingentZaehlen(u, 'spiele');
+    sendJson(res, 200, { turnier: turnierAntwort(t, 0, u) });
   }
 
   async function turnierBeenden(req, res, id) {
@@ -604,7 +746,7 @@ export function createApi(db, config) {
       db.prepare("UPDATE tournaments SET status = 'beendet', ended_at = ? WHERE id = ?")
         .run(new Date().toISOString(), t.id);
     }
-    sendJson(res, 200, { turnier: turnierAntwort(verlangeTurnier(t.id), 0) });
+    sendJson(res, 200, { turnier: turnierAntwort(verlangeTurnier(t.id), 0, u) });
   }
 
   /* ---------- Liga-Zusagen ---------- */
@@ -621,12 +763,13 @@ export function createApi(db, config) {
     return id;
   }
 
-  function ligaAlleZusagen() {
+  function ligaAlleZusagen(ich) {
     const zeilen = db.prepare(
       'SELECT z.termin_id, z.status, u.id, u.display_name, u.avatar, u.hue' +
       '  FROM liga_zusagen z JOIN users u ON u.id = z.user_id' +
+      ' WHERE (u.test = 0 OR ? = 1)' +
       ' ORDER BY z.created_at'
-    ).all();
+    ).all(siehtTest(ich));
     const je = {};
     for (const z of zeilen) {
       if (!je[z.termin_id]) je[z.termin_id] = [];
@@ -636,8 +779,8 @@ export function createApi(db, config) {
   }
 
   async function ligaZusagen(req, res) {
-    verlangeNutzer(req);
-    sendJson(res, 200, { zusagen: ligaAlleZusagen() });
+    const u = verlangeNutzer(req);
+    sendJson(res, 200, { zusagen: ligaAlleZusagen(u) });
   }
 
   async function ligaZusageSetzen(req, res, id) {
@@ -665,7 +808,7 @@ export function createApi(db, config) {
     } else {
       db.prepare('DELETE FROM liga_zusagen WHERE termin_id = ? AND user_id = ?').run(termin, u.id);
     }
-    sendJson(res, 200, { zusagen: ligaAlleZusagen() });
+    sendJson(res, 200, { zusagen: ligaAlleZusagen(u) });
   }
 
   /* ---------- Ligatabelle ---------- */
@@ -727,14 +870,20 @@ export function createApi(db, config) {
   async function kasseHolen(req, res) {
     const u = verlangeNutzer(req);
     const konfig = kasseKonfig();
+    /* Buchungen von oder fuer Testkonten sieht (und zaehlt) nur, wer
+       Testkonten sehen darf. */
+    const st = siehtTest(u);
+    const OHNE_TEST = ' (? = 1 OR (NOT EXISTS (SELECT 1 FROM users tu WHERE tu.id = k.user_id AND tu.test = 1)' +
+      ' AND NOT EXISTS (SELECT 1 FROM users tm WHERE tm.id = k.mitglied AND tm.test = 1)))';
     const zeilen = db.prepare(
       'SELECT k.id, k.betrag, k.text, k.datum, k.kategorie, k.mitglied, k.created_at, k.user_id,' +
       '       u.display_name AS von, m.display_name AS mitglied_name' +
       '  FROM kasse k JOIN users u ON u.id = k.user_id' +
       '  LEFT JOIN users m ON m.id = k.mitglied' +
+      ' WHERE' + OHNE_TEST +
       ' ORDER BY k.datum, k.id'
-    ).all();
-    const summe = db.prepare('SELECT COALESCE(SUM(betrag), 0) s FROM kasse').get().s;
+    ).all(st);
+    const summe = db.prepare('SELECT COALESCE(SUM(betrag), 0) s FROM kasse k WHERE' + OHNE_TEST).get(st).s;
     /* Gruendungsbeitrag: wer von den aktiven Mitgliedern hat ihn schon
        bezahlt? Summe der Mitgliedsbeitraege je Mitglied. Testkonten
        zaehlen als Mitglieder nicht -- und sehen tut sie ohnehin nur der Tester. */
@@ -749,8 +898,8 @@ export function createApi(db, config) {
       gezahlt: (bezahlt.get(m.id) || {}).summe || 0,
       am: (bezahlt.get(m.id) || {}).datum || null
     }));
-    const kassenwarte = db.prepare("SELECT display_name FROM users WHERE kassenwart = 1 AND status = 'aktiv' ORDER BY display_name COLLATE NOCASE")
-      .all().map((r) => r.display_name);
+    const kassenwarte = db.prepare("SELECT display_name FROM users WHERE kassenwart = 1 AND status = 'aktiv' AND (test = 0 OR ? = 1) ORDER BY display_name COLLATE NOCASE")
+      .all(st).map((r) => r.display_name);
     sendJson(res, 200, {
       saldo: konfig.anfangsbestand + summe,
       summe,
@@ -947,6 +1096,9 @@ export function createApi(db, config) {
    * fuehrt. Der Server prueft nur Groesse, Mitgliedschaft und Version.
    */
   const LIVE_KINDS = new Set(['quick', 'finisher', 'cricket', 'rtw']);
+  /* Ein Online-Spiel mit Einzeldarts braucht rund 120 Byte je Aufnahme;
+     "First to 9" mit vier Spielern kommt weit ueber 128 KB. 256 KB wie
+     bisher -- ein Stand, der hier abgewiesen wird, legt das Spiel lahm. */
   const LIVE_MAX_STATE = 256 * 1024;
   const LIVE_FRIST = 24 * 3600e3;
 
@@ -966,30 +1118,33 @@ export function createApi(db, config) {
     // Der Stand muss zu diesem Spiel gehoeren -- sonst koennte ein Mitspieler
     // dem anderen ein anderes Spiel (oder eine andere Spielart) unterschieben.
     if (wert.id !== id || wert.kind !== kind) throw new HttpFehler(400, 'Der Spielstand passt nicht zu diesem Spiel.');
+    pruefeLiveForm(wert, kind);
     const text = JSON.stringify(wert);
     if (text.length > LIVE_MAX_STATE) throw new HttpFehler(413, 'Der Spielstand ist zu gross.');
     return text;
   }
 
   /* Ein Spiel schliessen -- mit Versionssprung, damit jedes Geraet das Ende
-     beim naechsten Nachfragen auch bekommt. Optional mit Schlussstand. */
+     beim naechsten Nachfragen auch bekommt. Optional mit Schlussstand.
+     Nur ein noch offenes Spiel: gibt die neue Version zurueck, oder 0, wenn
+     es schon zu war (dann bleibt alles, wie es ist). Muss in einer
+     Transaktion laufen -- bei 0 rollt der Aufrufer den Zaehler zurueck. */
   function liveSchliessen(id, userId, state) {
     const s = zaehler(db, 'live_seq');
     const jetzt = new Date().toISOString();
-    if (state) {
-      db.prepare("UPDATE live_games SET state = ?, status = 'zu', seq = ?, updated_by = ?, ended_at = ?, updated_at = ? WHERE id = ?")
-        .run(state, s, userId, jetzt, jetzt, id);
-    } else {
-      db.prepare("UPDATE live_games SET status = 'zu', seq = ?, updated_by = ?, ended_at = ?, updated_at = ? WHERE id = ?")
+    const r = state
+      ? db.prepare("UPDATE live_games SET state = ?, status = 'zu', seq = ?, updated_by = ?, ended_at = ?, updated_at = ? WHERE id = ? AND status = 'offen'")
+        .run(state, s, userId, jetzt, jetzt, id)
+      : db.prepare("UPDATE live_games SET status = 'zu', seq = ?, updated_by = ?, ended_at = ?, updated_at = ? WHERE id = ? AND status = 'offen'")
         .run(s, userId, jetzt, jetzt, id);
-    }
+    return r.changes ? s : 0;
   }
 
   /* Antwort. Der Stand selbst kommt nur mit, wenn er neuer ist als das, was
      der Client schon kennt -- der Takt fragt alle paar Sekunden, und meistens
      hat sich nichts getan. */
-  function liveAntwort(g, seit) {
-    namenLaden();
+  function liveAntwort(g, seit, u) {
+    namenLaden(u);
     const spieler = db.prepare('SELECT user_id FROM live_game_players WHERE game_id = ?').all(g.id)
       .map((r) => r.user_id);
     const neu = g.seq > (Number(seit) || 0);
@@ -1010,20 +1165,34 @@ export function createApi(db, config) {
     return antwort;
   }
 
+  /* Der Konflikt-Pfad: "der andere war schneller", samt dem Stand, der
+     jetzt gilt. Genau diese Form erwartet js/sync.js beim 409. */
+  function liveKonflikt(res, g, u) {
+    namenLaden(u);
+    return sendJson(res, 409, {
+      fehler: (namen.get(g.updated_by) || 'Jemand') + ' war schneller.',
+      spiel: liveAntwort(g, 0, u)
+    });
+  }
+
+  /* Rollback-Signal innerhalb einer Transaktion: nichts geaendert. */
+  const NICHTS = Symbol('nichts');
+
   async function liveAnlegen(req, res) {
     pruefeHerkunft(req);
     const u = verlangeNutzer(req);
-    const body = await leseJson(req);
+    const body = await leseJson(req, LIVE_MAX_STATE + 16 * 1024);
     const id = turnierId(body.id);
     if (!LIVE_KINDS.has(body.kind)) throw new HttpFehler(400, 'Diese Spielart geht nicht online.');
-    const state = liveState(body.state, id, body.kind);
 
     // Schon da? Dann war das ein zweiter Versuch (Neuladen, Warteschlange).
     const da = db.prepare('SELECT * FROM live_games WHERE id = ?').get(id);
     if (da) {
       verlangeLiveTeilnahme(da, u);
-      return sendJson(res, 200, { spiel: liveAntwort(da, 0), schonDa: true });
+      return sendJson(res, 200, { spiel: liveAntwort(da, 0, u), schonDa: true });
     }
+    const state = liveState(body.state, id, body.kind);
+    kontingentPruefen(u, 'live');
 
     const mitspieler = Array.isArray(body.players) ? body.players : [];
     const konten = [];
@@ -1035,11 +1204,13 @@ export function createApi(db, config) {
     if (konten.length < 2) throw new HttpFehler(400, 'Online braucht mindestens einen Mitspieler mit Konto.');
 
     const jetzt = new Date().toISOString();
+    const geschlossen = [];
     transaktion(db, function () {
       // Ein Mensch spielt ein Online-Spiel zur Zeit: was er selbst noch offen
       // hat, ist damit vorbei (liegengeblieben oder "Nochmal spielen").
       for (const alt of db.prepare("SELECT id FROM live_games WHERE created_by = ? AND status = 'offen'").all(u.id)) {
-        liveSchliessen(alt.id, u.id, null);
+        const s = liveSchliessen(alt.id, u.id, null);
+        if (s) geschlossen.push([alt.id, s]);
       }
       const s = zaehler(db, 'live_seq');
       db.prepare(
@@ -1049,7 +1220,9 @@ export function createApi(db, config) {
       const ins = db.prepare('INSERT INTO live_game_players (game_id, user_id) VALUES (?, ?)');
       for (const k of konten) ins.run(id, k);
     });
-    sendJson(res, 201, { spiel: liveAntwort(verlangeLive(id), 0) });
+    kontingentZaehlen(u, 'live');
+    for (const [gid, s] of geschlossen) livestrom.melden(gid, s, 'zu');
+    sendJson(res, 201, { spiel: liveAntwort(verlangeLive(id), 0, u) });
   }
 
   /* Alle offenen Online-Spiele, an denen ich beteiligt bin. */
@@ -1063,45 +1236,82 @@ export function createApi(db, config) {
       .all(u.id);
     // Ohne Stand: die Liste wird im Setup alle paar Sekunden geholt, der
     // Stand kommt erst beim Mitspielen (GET /api/live/:id).
-    sendJson(res, 200, { spiele: zeilen.map((g) => liveAntwort(g, g.seq)) });
+    sendJson(res, 200, { spiele: zeilen.map((g) => liveAntwort(g, g.seq, u)) });
   }
 
   function liveHolen(req, res, id, url) {
     const u = verlangeNutzer(req);
     const g = verlangeLive(turnierId(id));
     verlangeLiveTeilnahme(g, u);
-    sendJson(res, 200, { spiel: liveAntwort(g, url.searchParams.get('since')) });
+    sendJson(res, 200, { spiel: liveAntwort(g, url.searchParams.get('since'), u) });
+  }
+
+  /*
+   * Live-Strom (Server-Sent Events): "es gibt Version N". Anmeldung und
+   * Teilnahme wie beim GET oben. Ein EventSource schickt das Session-Cookie
+   * mit, kann aber keine eigenen Header setzen -- deshalb wie jeder GET
+   * ohne pruefeHerkunft. Vertrag: siehe lib/livestrom.mjs.
+   */
+  function liveStrom(req, res, id) {
+    const u = verlangeNutzer(req);
+    const g = verlangeLive(turnierId(id));
+    verlangeLiveTeilnahme(g, u);
+    const schluessel = 'live-strom:' + u.id;
+    // Grosszuegig: EventSource verbindet sich nach jedem Funkloch neu, und
+    // ein 429 hier beendet den Strom fuer immer (dann bleibt nur Polling).
+    const warte = limit.pruefe(schluessel, 300, 600e3);
+    if (warte) throw new HttpFehler(429, 'Zu viele Verbindungen. Bitte ' + warte + ' s warten.');
+    limit.zaehle(schluessel, 300, 600e3);
+    livestrom.anhoeren(g.id, req, res, g.seq, g.status);
   }
 
   /* Neuer Stand. Nur gegen die bekannte Version -- sonst 409 mit dem Stand,
-     der inzwischen gilt. */
+     der inzwischen gilt.
+
+     Wichtig: waehrend der Koerper ankommt (await), kann ein zweiter PUT
+     komplett durchlaufen. Deshalb entscheidet nicht ein vorher gelesener
+     Stand, sondern das UPDATE selbst: es greift nur, wenn `seq` in der
+     Datenbank noch die Version ist, gegen die geschrieben wurde. */
   async function liveSchreiben(req, res, id) {
     pruefeHerkunft(req);
     const u = verlangeNutzer(req);
     const g = verlangeLive(turnierId(id));
     verlangeLiveTeilnahme(g, u);
     if (g.status !== 'offen') throw new HttpFehler(409, 'Dieses Spiel ist beendet.');
-    const body = await leseJson(req);
+    const body = await leseJson(req, LIVE_MAX_STATE + 16 * 1024);
     const state = liveState(body.state, g.id, g.kind);
     const basis = Number(body.seq);
     if (!Number.isFinite(basis)) throw new HttpFehler(400, 'Die Version fehlt.');
-    if (basis !== g.seq) {
-      namenLaden();
-      return sendJson(res, 409, {
-        fehler: (namen.get(g.updated_by) || 'Jemand') + ' war schneller.',
-        spiel: liveAntwort(g, 0)
+    kontingentPruefen(u, 'live');
+
+    let neu = 0;
+    try {
+      neu = transaktion(db, function () {
+        const s = zaehler(db, 'live_seq');
+        const r = db.prepare(
+          "UPDATE live_games SET state = ?, seq = ?, updated_by = ?, updated_at = ? WHERE id = ? AND seq = ? AND status = 'offen'"
+        ).run(state, s, u.id, new Date().toISOString(), g.id, basis);
+        if (!r.changes) throw NICHTS;   // Zaehler zurueckrollen
+        return s;
       });
+    } catch (e) {
+      if (e !== NICHTS) throw e;
     }
-    transaktion(db, function () {
-      const s = zaehler(db, 'live_seq');
-      db.prepare('UPDATE live_games SET state = ?, seq = ?, updated_by = ?, updated_at = ? WHERE id = ?')
-        .run(state, s, u.id, new Date().toISOString(), g.id);
-    });
-    sendJson(res, 200, { spiel: liveAntwort(verlangeLive(g.id), 0) });
+
+    const frisch = verlangeLive(g.id);
+    if (!neu) {
+      if (frisch.status !== 'offen') throw new HttpFehler(409, 'Dieses Spiel ist beendet.');
+      return liveKonflikt(res, frisch, u);
+    }
+    kontingentZaehlen(u, 'live');
+    livestrom.melden(g.id, neu, 'offen');
+    sendJson(res, 200, { spiel: liveAntwort(frisch, 0, u) });
   }
 
   /* Zu -- gespeichert oder abgebrochen. Der letzte Stand bleibt abrufbar,
-     damit das andere Geraet das Ende noch mitbekommt. */
+     damit das andere Geraet das Ende noch mitbekommt. War das Spiel schon
+     zu (der andere war schneller), bleibt dessen Schlussstand stehen, und
+     die Antwort zeigt ihn -- ein zweites "Ende" ist kein Fehler. */
   async function liveEnde(req, res, id) {
     pruefeHerkunft(req);
     const u = verlangeNutzer(req);
@@ -1109,26 +1319,51 @@ export function createApi(db, config) {
     verlangeLiveTeilnahme(g, u);
     // Der Schlussstand darf mitkommen -- in einem Rutsch, damit "Speichern"
     // nicht mit dem letzten PUT um die Wette laeuft.
-    const body = req.headers['content-length'] && req.headers['content-length'] !== '0' ? await leseJson(req) : {};
+    const body = req.headers['content-length'] && req.headers['content-length'] !== '0'
+      ? await leseJson(req, LIVE_MAX_STATE + 16 * 1024) : {};
     const state = body && body.state ? liveState(body.state, g.id, g.kind) : null;
-    if (g.status === 'offen') {
-      transaktion(db, function () { liveSchliessen(g.id, u.id, state); });
+    /* Schickt der Client die Version mit, gegen die sein Schlussstand
+       gerechnet ist, gilt dieselbe Regel wie beim PUT: hat der andere
+       inzwischen etwas eingetragen (z. B. den Checkout zurueckgenommen),
+       wird nicht ueberschrieben, sondern 409 mit dem geltenden Stand.
+       Ohne `seq` (aeltere App-Staende) wie bisher. */
+    const basis = body && body.seq !== undefined && body.seq !== null ? Number(body.seq) : null;
+    if (basis !== null && !Number.isFinite(basis)) throw new HttpFehler(400, 'Die Version fehlt.');
+    let neu = 0;
+    let konflikt = false;
+    try {
+      neu = transaktion(db, function () {
+        if (state && basis !== null) {
+          const jetzt = db.prepare('SELECT seq, status FROM live_games WHERE id = ?').get(g.id);
+          if (jetzt.status === 'offen' && jetzt.seq !== basis) { konflikt = true; throw NICHTS; }
+        }
+        const s = liveSchliessen(g.id, u.id, state);
+        if (!s) throw NICHTS;
+        return s;
+      });
+    } catch (e) {
+      if (e !== NICHTS) throw e;
     }
-    sendJson(res, 200, { spiel: liveAntwort(verlangeLive(g.id), 0) });
+    if (konflikt) return liveKonflikt(res, verlangeLive(g.id), u);
+    if (neu) livestrom.melden(g.id, neu, 'zu');
+    sendJson(res, 200, { spiel: liveAntwort(verlangeLive(g.id), 0, u) });
   }
 
   /* Vergessene Online-Spiele schliessen sich nach einem Tag von selbst. */
   function liveAufraeumen() {
     const grenze = new Date(Date.now() - LIVE_FRIST).toISOString();
+    const geschlossen = [];
     transaktion(db, function () {
       for (const g of db.prepare("SELECT id, created_by FROM live_games WHERE status = 'offen' AND updated_at < ?").all(grenze)) {
-        liveSchliessen(g.id, g.created_by, null);
+        const s = liveSchliessen(g.id, g.created_by, null);
+        if (s) geschlossen.push([g.id, s]);
       }
       // Geschlossene Spiele braucht nach einer Woche niemand mehr: der
       // Archiv-Eintrag liegt laengst unter /api/games.
       const weg = new Date(Date.now() - 7 * LIVE_FRIST).toISOString();
       db.prepare("DELETE FROM live_games WHERE status = 'zu' AND updated_at < ?").run(weg);
     });
+    for (const [gid, s] of geschlossen) livestrom.melden(gid, s, 'zu');
   }
 
   /* ---------- Verteiler ---------- */
@@ -1146,10 +1381,6 @@ export function createApi(db, config) {
     ['POST', /^\/api\/games$/, spielHochladen],
     ['GET', /^\/api\/games$/, spieleHolen],
     ['DELETE', /^\/api\/games\/([A-Za-z0-9_-]{4,64})$/, spielLoeschen],
-
-    ['POST', /^\/api\/kamera\/raum$/, kameraRaum],
-    ['GET', /^\/api\/kamera\/raum\/([A-Z2-9]{6})\/strom$/, kameraStrom],
-    ['POST', /^\/api\/kamera\/raum\/([A-Z2-9]{6})\/ereignis$/, kameraEreignis],
 
     ['GET', /^\/api\/liga\/zusagen$/, ligaZusagen],
     ['GET', /^\/api\/kasse$/, kasseHolen],
@@ -1173,11 +1404,32 @@ export function createApi(db, config) {
     ['GET', /^\/api\/live$/, liveListe],
     ['GET', new RegExp('^\\/api\\/live\\/' + TID + '$'), liveHolen],
     ['PUT', new RegExp('^\\/api\\/live\\/' + TID + '$'), liveSchreiben],
+    ['GET', new RegExp('^\\/api\\/live\\/' + TID + '\\/strom$'), liveStrom],
     ['POST', new RegExp('^\\/api\\/live\\/' + TID + '\\/ende$'), liveEnde]
   ];
 
+  /* Die Kamera-Kopplung ist abgeschaltet (js/kamera.js wird nicht geladen).
+     Ihre Routen brauchen keine Anmeldung -- also gibt es sie nur, wenn
+     jemand sie ausdruecklich einschaltet: DARTS_KAMERA=1. */
+  if (config.kamera) {
+    routen.push(
+      ['POST', /^\/api\/kamera\/raum$/, kameraRaum],
+      ['GET', /^\/api\/kamera\/raum\/([A-Z2-9]{6})\/strom$/, kameraStrom],
+      ['POST', /^\/api\/kamera\/raum\/([A-Z2-9]{6})\/ereignis$/, kameraEreignis]
+    );
+  }
+
   async function handleApi(req, res, url) {
     if (url.pathname === '/api/ping') return sendJson(res, 200, { ok: true });
+
+    /* Gleitende Session: wer die App benutzt, bleibt angemeldet. Hoechstens
+       einmal am Tag gibt es dafuer ein frisches Cookie (und einen
+       Schreibvorgang). Login/Logout setzen ihr eigenes Cookie und
+       ueberschreiben dieses. */
+    const token = leseCookies(req)[sess.COOKIE];
+    if (token && sess.auffrischen(db, token)) {
+      res.setHeader('Set-Cookie', sess.cookieHeader(token, secure));
+    }
 
     let pfadPasst = false;
     for (const [methode, muster, fn] of routen) {

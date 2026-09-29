@@ -44,7 +44,11 @@ const body = html.slice(html.indexOf('<body>') + 6, html.lastIndexOf('</body>'))
   // liegen, er verwiese auch auf ein Logo, das neben der Einzeldatei nicht
   // existiert – das gibt beim Öffnen eine Fehlermeldung in der Konsole.
   .replace(/\n\s*<!-- =+ KONTO =+ -->[\s\S]*?<\/section>/, '')
-  .replace(/\n\s*<!--[^>]*js\/auth\.js[\s\S]*?-->/, '')
+  // Die Kommentare zu den weggelassenen Skripten (Online-Schicht, Kamera)
+  // gehoeren mit raus -- sie beschreiben Dateien, die es im Buendel nicht gibt.
+  .replace(/\n\s*<!-- Optionale Online-Schicht[\s\S]*?-->/, '')
+  .replace(/\n\s*<!-- Kamera-Kopplung \("Linse"\)[\s\S]*?-->/, '')
+  .replace(/\n\s*<!-- <script src="js\/kamera\.js"><\/script> -->/, '')
   // Die Wortmarke behält ihr Logo – als eingebettetes Bild.
   .replace(/src="icons\/icon-192\.webp"/g, 'src="' + einbetten('icons/icon-192.webp', 'image/webp') + '"');
 

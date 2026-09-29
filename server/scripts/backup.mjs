@@ -6,8 +6,14 @@
  * das schreibt eine in sich geschlossene, konsistente Kopie, auch waehrend
  * gerade jemand ein Turnier hochlaedt.
  *
- * Aufruf auf dem Server (per Cron):
- *   docker compose exec -T app node server/scripts/backup.mjs
+ * Laeuft IM Container. Auf dem Server nicht direkt per Cron aufrufen,
+ * sondern ueber deploy/backup.sh (liegt nach dem Deploy unter
+ * /opt/dart-turnier/backup.sh): das ruft dieses Skript auf, kopiert die
+ * Staende aus dem Container heraus und schiebt sie auf Wunsch per rsync auf
+ * einen zweiten Rechner (DARTS_BACKUP_OFFSITE). Im Container selbst gibt es
+ * weder rsync noch ssh -- deshalb liegt dieser Teil beim Host.
+ *
+ *   docker compose -f compose.yml exec -T darts node server/scripts/backup.mjs
  *
  * Es bleiben die letzten 14 Staende unter /data/backups liegen.
  */

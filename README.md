@@ -384,6 +384,10 @@ Würfe, das iPad bucht sie. Es fließen nur winzige JSON-Ereignisse über den ei
 Server (nie Video), deshalb gibt es den Kamera-Knopf nur, wenn die App vom Server
 läuft – die Einzeldatei und GitHub Pages bleiben unverändert.
 
+> **Zurzeit abgeschaltet** (seit 07.09.2026): `js/kamera.js` wird in `index.html`
+> nicht geladen, und die Relay-Routen des Servers gibt es nur mit der
+> Umgebungsvariable `DARTS_KAMERA=1`. Zum Wiedereinschalten beides zurückdrehen.
+
 **Koppeln:** Im Spiel den Modus **Kamera** wählen – das iPad zeigt einen
 6-stelligen Code. Auf dem iPhone dieselbe Adresse im Safari öffnen (nicht als
 Homescreen-App – dort ist der Kamerazugriff auf iOS wackelig), unten im Setup

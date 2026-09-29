@@ -29,7 +29,13 @@ const config = {
   secureCookies: process.env.DARTS_SECURE_COOKIES === '1' || process.env.NODE_ENV === 'production',
   // Nur hinter Caddy dem X-Forwarded-For trauen -- sonst haengt sich jeder
   // einen erfundenen Header ans Rate-Limit vorbei.
-  trustProxy: process.env.DARTS_TRUST_PROXY === '1' || process.env.NODE_ENV === 'production'
+  trustProxy: process.env.DARTS_TRUST_PROXY === '1' || process.env.NODE_ENV === 'production',
+  // Kamera-Relay (Projekt Linse) ist abgeschaltet; seine Routen gibt es nur
+  // mit DARTS_KAMERA=1.
+  kamera: process.env.DARTS_KAMERA === '1',
+  // Tagesgrenzen je Konto. Nur fuer Tests gedacht -- die Vorgaben passen.
+  kontingentSpiele: Number(process.env.DARTS_KONTINGENT_SPIELE) || 0,
+  kontingentLive: Number(process.env.DARTS_KONTINGENT_LIVE) || 0
 };
 
 if (!config.inviteHash) {
@@ -111,6 +117,33 @@ function liefereDatei(req, res, datei) {
   fs.createReadStream(datei).pipe(res);
 }
 
+/* ---------- Sicherheits-Header ----------
+   Auf jede Antwort, Seite wie API. Die CSP erlaubt nur Eigenes: keine
+   fremden Skripte, keine Inline-Skripte, keine Einbettung in fremde Seiten.
+   Inline-Styles bleiben erlaubt (die App setzt Farben und Profilbilder per
+   style-Attribut), Bilder auch als data:/blob: (Profilbilder, iCal-Export),
+   Ton auch als blob:/data: (stumme Spur, die iOS die Audio-Sitzung offen haelt).
+
+   Ausnahme dart-turnier.html: das Einzeldatei-Buendel hat Skript, Stil und
+   Schriften bewusst inline eingebettet -- es soll auch per AirDrop ohne
+   Server laufen. Liefert der Server es aus, bekommt es eine CSP, die genau
+   das zulaesst, aber weiterhin nichts von fremden Servern laedt. */
+const CSP =
+  "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; " +
+  "img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self'; font-src 'self'; " +
+  "frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
+const CSP_BUENDEL =
+  "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; " +
+  "img-src 'self' data: blob:; connect-src 'self'; font-src 'self' data:; media-src 'self' blob: data:; " +
+  "frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
+
+function sicherheitsHeader(res, pfad) {
+  res.setHeader('Content-Security-Policy', pfad === '/dart-turnier.html' ? CSP_BUENDEL : CSP);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'same-origin');
+  res.setHeader('X-Frame-Options', 'DENY');
+}
+
 /* ---------- Server ---------- */
 
 const server = http.createServer(function (req, res) {
@@ -121,6 +154,7 @@ const server = http.createServer(function (req, res) {
     res.writeHead(400);
     return res.end();
   }
+  sicherheitsHeader(res, url.pathname);
 
   if (url.pathname.startsWith('/api/')) {
     handleApi(req, res, url).catch(function (e) {

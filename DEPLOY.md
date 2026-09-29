@@ -67,12 +67,21 @@ Der Konto-Knopf bleibt dabei unsichtbar – dort steht kein Server dahinter.
 
 # Variante B: mit Server (darts.wirtschaftln.de)
 
-Läuft auf demselben Hetzner-VPS wie Wirtschaftln (CPX12, `178.105.234.52`),
-nach demselben Muster wie das Firmengolf-Staging: eigener Container am
+Läuft auf demselben Hetzner-VPS wie Wirtschaftln (CPX12), nach demselben
+Muster wie das Firmengolf-Staging: eigener Container am
 gemeinsamen `edge`-Netz, **kein veröffentlichter Port**, der Wirtschaftln-Caddy
 ist der einzige Eingang.
 
 Harte Regel wie dort: **Wirtschaftln darf nichts merken.**
+
+**Server-Adresse:** Die IP steht bewusst nicht im Repo. Sie liegt lokal in
+`.env` im Repo-Wurzelverzeichnis (Vorlage: [`.env.example`](.env.example)),
+`deploy/deploy.sh` liest sie von dort. Für die Befehle in dieser Anleitung
+einmal pro Terminal setzen:
+
+```bash
+export DARTS_SERVER="$(grep '^DARTS_SERVER=' .env | cut -d= -f2-)"   # z. B. root@<server-ip>
+```
 
 ### Wo Darts und Wirtschaftln sich berühren – und wo nicht
 
@@ -84,7 +93,7 @@ Harte Regel wie dort: **Wirtschaftln darf nichts merken.**
 | Aufräumen nach dem Deploy | ja | `deploy.sh` löscht nur eigene verwaiste Images, kein hostweites `image prune` |
 | **Caddy-Konfiguration** | **nein** | ein Site-Block im Wirtschaftln-Caddyfile – deshalb von Hand (Schritt 4) |
 | **DNS-Namen im `edge`-Netz** | **nein** | Docker vergibt den *Dienstnamen* als Alias – siehe Warnung unten |
-| **Arbeitsspeicher** | **nein** | 2 GB für alles; darum `mem_limit: 200m` und `cpu_shares: 512` |
+| **Arbeitsspeicher** | **nein** | 2 GB für alles; darum `mem_limit: 320m` und `cpu_shares: 512` |
 
 Die drei unteren Zeilen sind die, auf die es ankommt.
 
@@ -99,9 +108,9 @@ Der Dienst heißt jetzt `darts`. **Vor jedem neuen Dienst am `edge`-Netz prüfen
 welche Namen schon belegt sind:**
 
 ```bash
-ssh root@178.105.234.52 "docker network inspect edge --format '{{range .Containers}}{{.Name}} {{end}}'"
+ssh "$DARTS_SERVER" "docker network inspect edge --format '{{range .Containers}}{{.Name}} {{end}}'"
 # und gegenprüfen, wohin ein Name aus Caddys Sicht zeigt:
-ssh root@178.105.234.52 "docker exec wirtschaftln-caddy-1 getent hosts app"
+ssh "$DARTS_SERVER" "docker exec wirtschaftln-caddy-1 getent hosts app"
 ```
 
 Belegt sind derzeit: `app`, `caddy` (Wirtschaftln) · `api`, `web`, `fg-api`,
@@ -111,23 +120,27 @@ Belegt sind derzeit: `app`, `caddy` (Wirtschaftln) · `api`, `web`, `fg-api`,
 Bei einem Syntaxfehler behält Caddy die alte Konfiguration – trotzdem vorher
 `caddy validate` laufen lassen, das kostet zwei Sekunden.
 
-**SSE (Kamera-Kopplung)**: `/api/kamera/.../strom` ist ein Dauerstrom
+**SSE (Online-Spiel, Kamera-Kopplung)**: `/api/live/<id>/strom` (Online-Spiel)
+und – nur mit `DARTS_KAMERA=1` – `/api/kamera/.../strom` sind Dauerströme
 (Server-Sent Events). Caddy puffert `text/event-stream` von Haus aus nicht,
 und der Server schickt alle 25 s ein Lebenszeichen gegen Idle-Timeouts.
-Sollte die Kopplung hinter dem Proxy trotzdem abreißen, im Site-Block
-`reverse_proxy` ein `flush_interval -1` ergänzen. Beim nächsten Deploy einmal
-real prüfen: iPhone koppeln und ~2 Minuten warten – die Verbindung muss
-stehen bleiben.
+Sollte der Strom hinter dem Proxy trotzdem abreißen oder verzögert ankommen
+(`encode gzip zstd` im Site-Block), im Site-Block `reverse_proxy` ein
+`flush_interval -1` ergänzen. Beim nächsten Deploy einmal real prüfen: ein
+Online-Spiel auf zwei Handys, eine Aufnahme eintragen – sie muss beim anderen
+sofort erscheinen, nicht erst nach Sekunden.
 
 **Speicher**: Wirtschaftln hat in seiner Compose-Datei **kein** Limit gesetzt,
-läuft also unbegrenzt. Darts ist auf 200 MB gedeckelt und kann folglich nicht
-derjenige sein, der die Kiste vollmacht. Zusammen mit dem Firmengolf-Staging
-(900 MB an Limits) sind rund 1,1 GB gebunden, der Rest bleibt Wirtschaftln und
+läuft also unbegrenzt. Darts ist auf 320 MB gedeckelt und kann folglich nicht
+derjenige sein, der die Kiste vollmacht. (320 statt früher 200 MB: seit dem
+28.09.2026 rechnen Passwort-Hashes mit scrypt N = 2^17, das braucht beim
+Anmelden für einen Augenblick 128 MB.) Zusammen mit dem Firmengolf-Staging
+(900 MB an Limits) sind rund 1,2 GB gebunden, der Rest bleibt Wirtschaftln und
 dem Betriebssystem. Das passt, ist aber die Stelle, die man nach dem ersten
 Deploy anschaut:
 
 ```bash
-ssh root@178.105.234.52 "docker stats --no-stream; free -m"
+ssh "$DARTS_SERVER" "docker stats --no-stream; free -m"
 ```
 
 Wird es eng, ist der erste Hebel das Firmengolf-Staging – das ist Wegwerf-Testware,
@@ -151,8 +164,8 @@ unter **robot.hetzner.com → DNS** oder in der **DNS-Console (dns.hetzner.com)*
 
 | Typ | Name | Wert |
 |---|---|---|
-| `A` | `darts` | `178.105.234.52` |
-| `AAAA` *(optional)* | `darts` | `2a01:4f8:1c18:c092::1` |
+| `A` | `darts` | `<server-ip>` (IPv4 des VPS, siehe Hetzner-Konsole) |
+| `AAAA` *(optional)* | `darts` | `<server-ipv6>` |
 
 Nur `darts` ins Namensfeld, nicht `darts.wirtschaftln.de` — die Maske hängt die
 Zone selbst an, sonst entsteht `darts.wirtschaftln.de.wirtschaftln.de`.
@@ -160,7 +173,7 @@ Zone selbst an, sonst entsteht `darts.wirtschaftln.de.wirtschaftln.de`.
 Prüfen, bevor es weitergeht:
 
 ```bash
-nslookup darts.wirtschaftln.de 8.8.8.8   # muss 178.105.234.52 zeigen
+nslookup darts.wirtschaftln.de 8.8.8.8   # muss die Server-IP zeigen
 ```
 
 Caddy holt das Zertifikat danach selbst. Ein Wildcard-Eintrag existiert nicht
@@ -176,13 +189,20 @@ npm run invite -- dartabend26   # oder einen eigenen
 Der Code geht an die Kollegen, der ausgegebene Hash auf den Server:
 
 ```bash
-ssh root@178.105.234.52 "mkdir -p /opt/dart-turnier"
+ssh "$DARTS_SERVER" "mkdir -p /opt/dart-turnier"
 # deploy/env.example als Vorlage, dann:
-ssh root@178.105.234.52 "nano /opt/dart-turnier/.env"
+ssh "$DARTS_SERVER" "nano /opt/dart-turnier/.env"
 ```
 
 Den Klartext-Code irgendwo notieren – aus dem Hash lässt er sich nicht
 zurückrechnen.
+
+Weitere Schalter in derselben Datei (alle optional, Vorlage `deploy/env.example`):
+
+| Variable | Wirkung |
+|---|---|
+| `DARTS_KAMERA=1` | schaltet das Kamera-Relay (Projekt Linse) ein. Standard: aus – die Routen brauchen keine Anmeldung und sind abgeschaltet, solange `js/kamera.js` nicht geladen wird. |
+| `DARTS_BACKUP_OFFSITE` | rsync-Ziel für die zweite Kopie der Sicherung, gelesen von `backup.sh` auf dem Host (siehe Backup). |
 
 **3. Deployen.**
 
@@ -207,14 +227,14 @@ Den Block ans Ende von `Wirtschaftln/deploy/Caddyfile` anfügen, hochladen — u
 ```bash
 cd ~/projects/Wirtschaftln
 rsync -az --exclude node_modules --exclude .next --exclude 'app/data' \
-  --exclude .git --exclude 'deploy/.env' ./ root@178.105.234.52:/opt/wirtschaftln/
+  --exclude .git --exclude 'deploy/.env' ./ "$DARTS_SERVER":/opt/wirtschaftln/
 
 # Erst validieren …
-ssh root@178.105.234.52 "cd /opt/wirtschaftln && \
+ssh "$DARTS_SERVER" "cd /opt/wirtschaftln && \
   docker compose exec caddy caddy validate --config /etc/caddy/Caddyfile"
 
 # … und nur bei "Valid configuration" neu laden:
-ssh root@178.105.234.52 "cd /opt/wirtschaftln && \
+ssh "$DARTS_SERVER" "cd /opt/wirtschaftln && \
   docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile"
 ```
 
@@ -252,9 +272,9 @@ Testers zählen Testspiele in keine Statistik (Marke „Test“ in der Spielerli
 
 ```bash
 # weiteres Testkonto markieren / Marke entfernen
-ssh root@178.105.234.52 "cd /opt/dart-turnier && docker compose -f compose.yml exec darts    node server/scripts/testkonto.mjs test3@blink180.de"          # --aus nimmt sie zurück
+ssh "$DARTS_SERVER" "cd /opt/dart-turnier && docker compose -f compose.yml exec darts    node server/scripts/testkonto.mjs test3@blink180.de"          # --aus nimmt sie zurück
 # jemandem die Testkonten zeigen
-ssh root@178.105.234.52 "cd /opt/dart-turnier && docker compose -f compose.yml exec darts    node server/scripts/testkonto.mjs --sieht kollege@example.de"
+ssh "$DARTS_SERVER" "cd /opt/dart-turnier && docker compose -f compose.yml exec darts    node server/scripts/testkonto.mjs --sieht kollege@example.de"
 ```
 
 Bisherige Spiele eines frisch markierten Kontos bleiben stehen – die zieht bei
@@ -267,7 +287,7 @@ und einstellen darf nur, wer die Rolle `kassenwart` hat (Migration 011 setzt sie
 für Lenas und Julius). Weitere Kassenwarte oder Entzug der Rolle:
 
 ```bash
-ssh root@178.105.234.52 "cd /opt/dart-turnier && docker compose -f compose.yml exec darts \
+ssh "$DARTS_SERVER" "cd /opt/dart-turnier && docker compose -f compose.yml exec darts \
    node server/scripts/kassenwart.mjs kollege@example.de"          # --aus nimmt die Rolle
 ```
 
@@ -279,28 +299,84 @@ Kassenjahr, Anfangsbestand, Beitragshöhe und PayPal-Link liegen in der Tabelle
 Es werden keine Mails verschickt – das läuft über dich:
 
 ```bash
-ssh root@178.105.234.52 \
+ssh "$DARTS_SERVER" \
   "cd /opt/dart-turnier && docker compose -f compose.yml exec darts \
    node server/scripts/reset-password.mjs kollege@example.de neuesPasswort2026"
 ```
 
 Alle Geräte dieses Kontos werden dabei abgemeldet.
 
-## Backup (einrichten!)
+## Backup
 
 Die SQLite-Datei läuft im WAL-Modus – **nie** roh kopieren.
 `server/scripts/backup.mjs` nutzt `VACUUM INTO` und behält die letzten 14
-Stände unter `/data/backups`.
+Stände unter `/data/backups` im Volume. Profilbilder liegen als Data-URLs mit in
+der Datenbank, sind also automatisch mitgesichert.
 
-Host-Crontab (`crontab -e`), täglich 04:30 plus Kopie aus dem Container:
+Das Volume allein ist keine Sicherung: stirbt der Server, ist beides weg.
+Deshalb gibt es [`deploy/backup.sh`](deploy/backup.sh) für den **Host** (das
+Deploy legt es nach `/opt/dart-turnier/backup.sh`). Es
 
-```cron
-30 4 * * * cd /opt/dart-turnier && docker compose -f compose.yml exec -T darts node server/scripts/backup.mjs && docker cp darts-app:/data/backups ./backups-offsite >> backup.log 2>&1
+1. lässt `backup.mjs` im Container laufen,
+2. spiegelt die Stände nach `/opt/dart-turnier/backups-lokal`,
+3. kopiert sie per `rsync` auf einen **zweiten Rechner**, wenn in
+   `/opt/dart-turnier/.env` `DARTS_BACKUP_OFFSITE` steht (z. B.
+   `backup@nas.example.de:/volume1/darts/`). Der Server braucht dafür einen
+   SSH-Schlüssel ohne Passphrase, der auf dem Ziel eingetragen ist.
+
+Einrichten, einmalig auf dem Server:
+
+```bash
+ssh "$DARTS_SERVER"
+crontab -e
+# Zeile ergänzen – täglich 04:30:
+30 4 * * * /opt/dart-turnier/backup.sh >> /opt/dart-turnier/backup.log 2>&1
+# einmal von Hand laufen lassen und das Log ansehen:
+/opt/dart-turnier/backup.sh && tail /opt/dart-turnier/backup.log
 ```
 
-Idealerweise `./backups-offsite` zusätzlich per rsync auf einen anderen Rechner
-spiegeln. Profilbilder liegen als Data-URLs mit in der Datenbank, sind also
-automatisch mitgesichert.
+Eine alte Crontab-Zeile mit `docker cp darts-app:/data/backups ./backups-offsite`
+bitte ersetzen – sie legte bei jedem Lauf einen weiteren Unterordner an.
+
+### Wiederherstellen
+
+Ein Stand ist eine vollständige SQLite-Datei (`darts-JJJJ-MM-TTTHH-MM-SS.db`).
+Zurückspielen, auf dem Server:
+
+```bash
+cd /opt/dart-turnier
+ls backups-lokal/                          # gewünschten Stand aussuchen
+STAND=darts-2026-09-28T04-30-00.db         # ← anpassen
+
+# 1. Anhalten – nur Darts, Wirtschaftln läuft weiter.
+docker compose -f compose.yml down
+
+# 2. Im Volume: aktuellen Stand beiseitelegen, WAL-Reste weg, Sicherung rein.
+#    Der Wegwerf-Container sieht das Volume unter /data und die Sicherung unter /b.
+docker run --rm -v dart-turnier_darts-data:/data -v "$PWD/backups-lokal":/b:ro alpine sh -c "
+  cp /data/darts.db /data/darts.db.vor-restore-\$(date +%Y%m%d%H%M) &&
+  rm -f /data/darts.db-wal /data/darts.db-shm &&
+  cp /b/$STAND /data/darts.db &&
+  chown 1000:1000 /data/darts.db"
+
+# 3. Wieder starten und prüfen.
+docker compose -f compose.yml up -d
+sleep 4 && docker exec darts-app node -e "fetch('http://127.0.0.1:3002/api/ping').then(r=>console.log('ping', r.status))"
+```
+
+Danach in der App anmelden und „Jetzt abgleichen" antippen. Geräte, die nach
+dem Sicherungszeitpunkt noch Spiele hochgeladen hatten, schicken sie **nicht**
+von selbst noch einmal – die stehen dort als „oben" markiert. Die Spiele sind
+auf den Geräten aber vorhanden; im Zweifel ist der Stand vom Vorabend das
+kleinere Übel.
+
+**Einmal üben**, ohne den Server anzufassen – einen Stand lokal öffnen:
+
+```bash
+scp "$DARTS_SERVER":/opt/dart-turnier/backups-lokal/darts-*.db /tmp/probe.db   # einen Stand holen
+DARTS_DB=/tmp/probe.db DARTS_INVITE_HASH=x npm run server
+# http://localhost:3002 → mit dem eigenen Konto anmelden, Spiele und Kasse ansehen
+```
 
 ## Nach jedem Deploy kurz prüfen
 
@@ -318,10 +394,10 @@ Wirtschaftln merkt davon nichts:
 
 ```bash
 # 1. Container stoppen. Das Volume mit der Datenbank bleibt.
-ssh root@178.105.234.52 "cd /opt/dart-turnier && docker compose -f compose.yml down"
+ssh "$DARTS_SERVER" "cd /opt/dart-turnier && docker compose -f compose.yml down"
 
 # 2. Site-Block aus Wirtschaftln/deploy/Caddyfile entfernen, hochladen, prüfen, neu laden
-ssh root@178.105.234.52 "cd /opt/wirtschaftln && \
+ssh "$DARTS_SERVER" "cd /opt/wirtschaftln && \
   docker compose exec caddy caddy validate --config /etc/caddy/Caddyfile && \
   docker compose exec caddy caddy reload --config /etc/caddy/Caddyfile"
 ```

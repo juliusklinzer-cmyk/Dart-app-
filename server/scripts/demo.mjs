@@ -6,10 +6,12 @@
  *
  * Auf dem Server:
  *   docker compose -f compose.yml exec darts node server/scripts/demo.mjs
+ *   docker compose -f compose.yml exec -e DARTS_DEMO_PASSWORT=... darts node server/scripts/demo.mjs
  *
  * Die Konten laufen alle auf @demo.blink180 – daran erkennt das Aufräumen
  * sie wieder, und niemand verwechselt sie mit einem echten Kollegen.
- * Passwort ist bei allen "demoabend2026".
+ * Das Passwort (für alle gleich) kommt aus DARTS_DEMO_PASSWORT; ohne die
+ * Variable würfelt das Skript eins und zeigt es einmal an.
  *
  * Angelegt wird direkt in der Datenbank, nicht über /api/register: die
  * Registrierung ist auf fünf pro Stunde gebremst, und diese Bremse ist
@@ -23,7 +25,7 @@ import { hashPassword } from '../lib/password.mjs';
 
 const SERVER_DIR = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const DOMAIN = '@demo.blink180';
-const PASSWORT = 'demoabend2026';
+const PASSWORT = process.env.DARTS_DEMO_PASSWORT || randomBytes(9).toString('base64url');
 
 /* Farbtöne aus HUES in js/app.js, damit sie sich im Diagramm unterscheiden. */
 const SPIELER = [

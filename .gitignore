@@ -8,6 +8,8 @@ package-lock.json
 # Laufzeitdaten des Servers (SQLite) – gehören nie ins Repo
 server/data/
 deploy/.env
+# Lokale Deploy-Einstellungen (Server-Adresse usw.) – Vorlage: .env.example
+.env
 
 # Werkzeug-Skills aus anderen Projekten – Arbeitsmittel, nicht Teil der App.
 # Der projekteigene Prüf-Agent und /abschluss bleiben dagegen im Repo.
