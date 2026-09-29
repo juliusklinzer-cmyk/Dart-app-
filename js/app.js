@@ -1369,8 +1369,9 @@
    */
   var FEIER_MS = 4600;
   /* Die Sechzig ist kurz: ein Puls („SECH-ZIG", bum-bum), dann wieder weg –
-     sie kommt ja auch deutlich öfter als die 180. */
-  var SECHZIG_MS = 1200;
+     sie kommt ja auch deutlich öfter als die 180. 650 ms, damit das
+     Tastenfeld nach der häufigsten Aufnahme des Abends sofort wieder frei ist. */
+  var SECHZIG_MS = 650;
 
   /* Feier anwerfen. Kein display-Umschalten und kein Klassen-Neustart-Trick:
      die Kinder werden je Feier frisch eingesetzt und starten ihre Animationen
@@ -3861,7 +3862,7 @@
       '<h2>Kassenbuch</h2>' +
       '<div class="kasse-kopf">' +
         '<span>Kassenjahr <b>' + konfig.jahr + '</b></span>' +
-        '<span>Kassenwart/in <b>' + esc(((d && d.kassenwarte) || []).join(', ') || '–') + '</b></span>' +
+        '<span>Kassenwart/in <b>' + esc(((d && d.kassenwarte) || []).join(', ') || 'noch nicht festgelegt') + '</b></span>' +
         '<span>Anfangsbestand <b>' + euro(konfig.anfangsbestand) + '</b></span>' +
       '</div>' +
       '<div class="kasse-saldo"><span class="hint">Kassenstand</span>' +
@@ -4009,6 +4010,11 @@
     return WOCHENTAGE[d.getDay()] + ' ' + iso.slice(8, 10) + '.' + iso.slice(5, 7) + '.' + iso.slice(0, 4);
   }
 
+  /* Kalender-Symbol als SVG statt Emoji (auf manchen Android-Geraeten Tofu). */
+  var KALENDER_SVG = '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+    'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/>' +
+    '<path d="M3 10h18M8 3v4M16 3v4"/></svg>';
+
   function renderLiga() {
     $('liga-sub').textContent = 'Spielplan ' + LIGA.team + ' · ' + LIGA.saison;
 
@@ -4066,7 +4072,7 @@
           '<span class="lt-rechts">' +
             '<span class="lt-nr">' + t.nr + '. Spieltag · ' + (daheim ? 'Heim' : 'Auswärts') + '</span>' +
             '<button class="icon-btn rund lt-cal" data-action="liga-ical" data-id="' + esc(t.id) + '" ' +
-              'title="Diesen Termin in den Kalender" aria-label="Diesen Termin in den Kalender">📅</button>' +
+              'title="Diesen Termin in den Kalender" aria-label="Diesen Termin in den Kalender">' + KALENDER_SVG + '</button>' +
           '</span>' +
         '</div>' +
         '<div class="lt-paarung">' +
@@ -4191,7 +4197,7 @@
         '</div>' +
         '<button class="btn primary full' + (fertig ? '' : ' unsichtbar') + '" ' +
           'data-action="start-order"' + (fertig ? '' : ' disabled') + '>' +
-          (fertig ? esc(pname(reihe[0])) + ' beginnt · Los geht\'s' : '·') + '</button>';
+          (fertig ? 'Spiel starten · ' + esc(pname(reihe[0])) + ' beginnt' : '·') + '</button>';
       return;
     }
 
@@ -4683,7 +4689,7 @@
         /* Nichts getroffen? Ein Tipp beendet die Aufnahme und füllt die
            fehlenden Darts als Fehlwürfe auf. */
         '<button class="skip" data-action="end-cricket-visit">' +
-          (g.throws.length % 3 ? 'Weiter ▸' : 'Nichts ▸') + '</button>' +
+          'Weiter ▸</button>' +
       '</div>';
   }
 
@@ -4746,7 +4752,7 @@
      */
     var target = st.target[active];
     var weiter = '<button class="rtw-key skip" data-action="end-rtw-visit">' +
-      '<span class="k">' + (st.inVisit ? 'Weiter ▸' : 'Nichts ▸') + '</span>' +
+      '<span class="k">Weiter ▸</span>' +
       '<span class="sub">' + plural(3 - st.inVisit, 'Dart', 'Darts') + ' daneben</span></button>';
     var miss = '<button class="rtw-key miss" data-num="0" data-mult="1">' +
       '<span class="k">Miss</span><span class="sub">ein Dart daneben</span></button>';
@@ -5757,7 +5763,7 @@
         '</div>' +
         '<div class="row-btns two">' +
         '<button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
-        '<button class="btn primary" data-action="liga-los">Los geht\'s</button></div>';
+        '<button class="btn primary" data-action="liga-los">Ligaspiel starten</button></div>';
     } else if (o.type === 'uebung-start') {
       var ud = o.draft;
       var uProfile = activeProfiles();
@@ -5807,7 +5813,7 @@
         '</div>' +
         '<div class="row-btns two">' +
         '<button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
-        '<button class="btn primary" data-action="uebung-los">Training an!</button></div>';
+        '<button class="btn primary" data-action="uebung-los">Übungsspiel starten</button></div>';
     } else if (o.type === 'liga-kampflos') {
       /* Tritt eine Position nicht an (nur 3 gemeldet, jemand fehlt), wird
          das Einzel kampflos gewertet: volle Legs und Punkte fuer den
@@ -5890,7 +5896,7 @@
           ? (offeneSpiele === 1 ? 'Die <b>eine offene Partie</b> wird' : 'Die <b>' + offeneSpiele + ' offenen Partien</b> werden') + ' nicht mehr gespielt.'
           : '') + '</p>' +
         '<div class="row-btns two">' +
-        '<button class="btn ghost" data-action="ov-cancel">Nein, weiterspielen</button>' +
+        '<button class="btn ghost" data-action="ov-cancel">Weiterspielen</button>' +
         '<button class="btn danger" data-action="ov-reset">Ja, beenden</button></div>';
     } else if (o.type === 'profile') {
       var p = o.draft;
@@ -6022,7 +6028,7 @@
           ? 'Ein Turnier braucht mindestens zwei Spieler – jeder gegen jeden. '
             + 'Zum Üben allein nimm Cricket, Round the World oder Finisher.'
           : 'Wähle mindestens einen Spieler aus.') + '</p>' +
-        '<button class="btn primary full" data-action="ov-cancel">Alles klar</button>';
+        '<button class="btn primary full" data-action="ov-cancel">Zurück zur Auswahl</button>';
     }
     $('overlay-card').innerHTML = html;
   }

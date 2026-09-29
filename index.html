@@ -24,10 +24,10 @@
 
 <!-- Kurze Namen, damit die Leiste am Handy einzeilig bleibt. -->
 <nav id="nav" class="nav hidden">
-  <button data-action="nav" data-screen="setup">Game</button>
+  <button data-action="nav" data-screen="setup">Spiel</button>
   <button data-action="nav" data-screen="liga">Liga</button>
   <button data-action="nav" data-screen="boards">Rang</button>
-  <button data-action="nav" data-screen="players">Player</button>
+  <button data-action="nav" data-screen="players">Spieler</button>
   <!-- Erscheint nur, wenn die Seite von einem Server kommt (siehe js/auth.js). -->
   <button id="nav-konto" class="hidden" data-action="nav" data-screen="konto">Profil</button>
 </nav>
@@ -255,7 +255,7 @@
         <p class="sub" id="tournament-format"></p>
       </div>
     </div>
-    <button class="btn ghost small" data-action="to-setup">Turnier verlassen</button>
+    <button class="btn ghost small" data-action="to-setup">Verlassen</button>
   </header>
 
   <!-- Links die naechsten Spiele (gestartet wird direkt an der Partie),
@@ -349,7 +349,7 @@
     <!-- Alle Termine auf einmal in den Kalender; je Termin gibt es das
          gleiche Icon noch einmal einzeln. -->
     <button class="icon-btn rund" data-action="liga-ical" title="Alle Termine in den Kalender"
-            aria-label="Alle Termine in den Kalender">📅</button>
+            aria-label="Alle Termine in den Kalender"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></button>
   </header>
 
   <div class="konto-tabs fuenf" id="liga-tabs">

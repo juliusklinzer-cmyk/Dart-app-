@@ -85,8 +85,29 @@
   --amber: #ffc14d;
   --radius: 16px;
   --tap: 56px;
-  /* Ausgegraut: Zahl ist bei allen zu und bringt nichts mehr. */
-  --dead: #6f6465;
+
+  /* ---- Abstaende und Rundungen --------------------------------------
+     Ein 4er-Raster statt 34 einzeln gewaehlter Pixelwerte. Knoepfe, die
+     nebeneinander stehen, bekommen mindestens --space-2 (8 px) Fuge, damit
+     der Daumen nicht den Nachbarn trifft. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  /* Fuge in allen Tastenfeldern (Ziffern, Einzel-Darts, Cricket, Schnellwahl). */
+  --gap-keys: 8px;
+  --r-xs: 6px;
+  --r-s: 8px;
+  --r-m: 12px;
+  --r-l: 16px;
+  --r-pill: 999px;
+
+  /* Ausgegraut: Zahl ist bei allen zu und bringt nichts mehr. Hell genug
+     fuer 4,5:1 auf dem dunklen Grund – das Grau allein traegt die Aussage
+     nicht, deshalb kommt an den Tasten eine gestrichelte Kante dazu. */
+  --dead: #857a7b;
   --dead-bg: #120e0f;
 
   /* Das Barlicht der Location: ein kalter blauer Schein, der die warme
@@ -185,9 +206,9 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 #screen-setup.active { padding-top: 8px; }
 .screen.active { display: block; }
 .screen.center { min-height: 88vh; display: none; }
-.screen.center.active { display: flex; flex-direction: column; justify-content: center; gap: 16px; }
+.screen.center.active { display: flex; flex-direction: column; justify-content: center; gap: var(--space-4); }
 
-.app-header { padding: 18px 4px 14px; }
+.app-header { padding: 18px var(--space-1) 14px; }
 .app-header.row { display: flex; align-items: center; justify-content: space-between; }
 .app-header .sub { margin: 4px 0 0; color: var(--muted); font-size: 0.9rem; }
 .footer-note { text-align: center; color: var(--muted); font-size: 0.78rem; margin: 14px 0 0; }
@@ -201,7 +222,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   margin-bottom: 12px;
 }
 .card.no-pad { padding: 0; overflow: hidden; }
-.card.resume { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-color: var(--accent-dark); }
+.card.resume { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); border-color: var(--accent-dark); }
 .card.resume span { display: block; font-size: 0.8rem; margin-top: 2px; }
 
 /* ---------- Buttons ---------- */
@@ -209,8 +230,8 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   border: 1px solid var(--line);
   background: var(--bg-3);
   color: var(--text);
-  border-radius: 12px;
-  padding: 12px 16px;
+  border-radius: var(--r-m);
+  padding: var(--space-3) var(--space-4);
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
@@ -219,13 +240,12 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .btn:active { transform: scale(0.98); }
 .btn.full { width: 100%; }
 .btn.big { min-height: 62px; font-size: 1.1rem; }
-.btn.small { min-height: 44px; padding: 8px 14px; font-size: 0.85rem; }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.small { min-height: 44px; padding: var(--space-2) 14px; font-size: 0.85rem; }
 .btn.ghost { background: transparent; }
 .btn.danger { color: var(--red); border-color: #4a2530; }
 .icon-btn {
   background: var(--bg-3); border: 1px solid var(--line); color: var(--text);
-  width: 44px; height: 44px; flex: none; border-radius: 12px; font-size: 1.4rem; line-height: 1; cursor: pointer;
+  width: 44px; height: 44px; flex: none; border-radius: var(--r-m); font-size: 1.4rem; line-height: 1; cursor: pointer;
 }
 /* Im Spiel duerfen Verlassen und Ruecknahme groesser sein - die Haende
    sind voll, der Blick ist am Board. */
@@ -244,12 +264,12 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
      Apples Uhr und Batterie, und das regelt der Schleier am body::before. */
   /* Automatische Spalten: der Konto-Knopf kommt nur dazu, wenn die Seite von
      einem Server geladen wurde – dann rückt die Leiste von 3 auf 4. */
-  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px;
-  padding: 8px 0; margin: 0 0 4px;
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: var(--space-2);
+  padding: var(--space-2) 0; margin: 0 0 4px;
 }
 .nav button {
   background: var(--bg-2); border: 1px solid var(--line); color: var(--muted);
-  border-radius: 10px; padding: 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer; min-height: 44px;
+  border-radius: var(--r-m); padding: 10px; font-size: 0.85rem; font-weight: 600; cursor: pointer; min-height: 44px;
 }
 .nav button.active { color: var(--text); border-color: var(--accent-dark); background: var(--accent-soft); }
 
@@ -260,17 +280,17 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   color: var(--text); font-weight: 700; text-align: center; overflow: hidden;
 }
 .av.init { display: inline-flex; align-items: center; justify-content: center; }
-.av.sm { width: 26px; height: 26px; font-size: 0.68rem; }
+.av.sm { width: 26px; height: 26px; font-size: 0.7rem; }
 .av.md { width: 46px; height: 46px; font-size: 1rem; }
 .av.lg { width: 60px; height: 60px; font-size: 1.2rem; }
 .av.xl { width: 96px; height: 96px; font-size: 1.9rem; }
-.standings td .cell { display: inline-flex; align-items: center; gap: 8px; }
+.standings td .cell { display: inline-flex; align-items: center; gap: var(--space-2); }
 
 /* ---------- Aufstellung ---------- */
-.roster { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.roster { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: 10px; }
 .roster-item {
-  display: flex; align-items: center; gap: 12px; cursor: pointer;
-  background: var(--bg-3); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px;
+  display: flex; align-items: center; gap: var(--space-3); cursor: pointer;
+  background: var(--bg-3); border: 1px solid var(--line); border-radius: var(--r-m); padding: 10px var(--space-3);
 }
 .roster-item.selected { border-color: var(--accent); background: var(--accent-faint); }
 .roster-item .who { flex: 1; min-width: 0; }
@@ -284,11 +304,11 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .roster-item.selected .check { opacity: 1; }
 
 /* ---------- Modusauswahl ---------- */
-.modes { display: flex; flex-direction: column; gap: 8px; }
+.modes { display: flex; flex-direction: column; gap: var(--space-2); }
 .modes button {
   display: flex; flex-direction: column; gap: 2px; text-align: left; cursor: pointer;
   background: var(--bg-3); border: 1px solid var(--line); color: var(--text);
-  border-radius: 12px; padding: 12px 14px; min-height: 58px;
+  border-radius: var(--r-m); padding: var(--space-3) 14px; min-height: 58px;
 }
 .modes button.active { border-color: var(--accent); background: var(--accent-faint); }
 .modes .mt { font-weight: 700; font-size: 1rem; }
@@ -299,10 +319,10 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .cr-grid { display: grid; gap: 3px; min-width: min-content; }
 .cr-cell {
   display: flex; align-items: center; justify-content: center; gap: 5px;
-  padding: 8px 4px; border-radius: 8px; background: var(--bg-2); font-variant-numeric: tabular-nums;
+  padding: var(--space-2) var(--space-1); border-radius: var(--r-s); background: var(--bg-2); font-variant-numeric: tabular-nums;
 }
 .cr-corner { background: none; }
-.cr-head { flex-direction: column; font-size: 0.72rem; font-weight: 600; gap: 4px; padding: 8px 2px; }
+.cr-head { flex-direction: column; font-size: 0.75rem; font-weight: 600; gap: var(--space-1); padding: var(--space-2) 2px; }
 .cr-head span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cr-head.act { background: var(--accent-soft); color: var(--accent); }
 .cr-num { background: var(--bg-3); font-weight: 700; font-size: 0.9rem; }
@@ -323,15 +343,15 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .num-grid button.dim { color: var(--dead); border-style: dashed; }
 
 /* ---------- Round the World ---------- */
-.rtw-board { display: flex; flex-direction: column; gap: 8px; }
+.rtw-board { display: flex; flex-direction: column; gap: var(--space-2); }
 .rtw-row {
-  display: flex; align-items: center; gap: 12px;
-  background: var(--bg-2); border: 2px solid var(--line); border-radius: var(--radius); padding: 10px 12px;
+  display: flex; align-items: center; gap: var(--space-3);
+  background: var(--bg-2); border: 2px solid var(--line); border-radius: var(--radius); padding: 10px var(--space-3);
 }
 .rtw-row.act { border-color: var(--accent); background: var(--accent-faint); }
 .rtw-row .rw-main { flex: 1; min-width: 0; }
 .rtw-row .rw-name { font-weight: 700; }
-.rtw-row .rw-sub { font-size: 0.74rem; color: var(--muted); margin-top: 3px; }
+.rtw-row .rw-sub { font-size: 0.75rem; color: var(--muted); margin-top: 3px; }
 .rtw-row .rw-bar { height: 6px; background: var(--bg-3); border-radius: 3px; overflow: hidden; margin-top: 6px; }
 .rtw-row .rw-bar span { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
 .rtw-row .rw-target {
@@ -345,7 +365,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 /* ---------- Ranglisten ---------- */
 /* Eine wischbare Zeile statt vier Reihen Kategorien. */
 .chips {
-  display: flex; gap: 6px; margin-bottom: 12px;
+  display: flex; gap: var(--space-2); margin-bottom: 12px;
   overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
   padding-bottom: 2px;
 }
@@ -360,12 +380,12 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .chips .chip { flex: none; white-space: nowrap; }
 .chips .chip {
   background: var(--bg-2); border: 1px solid var(--line); color: var(--muted);
-  border-radius: 999px; padding: 8px 14px; font-size: 0.85rem; font-weight: 600; cursor: pointer; min-height: 46px;
+  border-radius: var(--r-pill); padding: var(--space-2) 14px; font-size: 0.85rem; font-weight: 600; cursor: pointer; min-height: 46px;
 }
 .chips .chip.active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .board-list { display: flex; flex-direction: column; }
 .board-row {
-  display: flex; align-items: center; gap: 10px; padding: 12px 14px;
+  display: flex; align-items: center; gap: 10px; padding: var(--space-3) 14px;
   border-top: 1px solid var(--line); cursor: pointer;
 }
 .board-row:first-child { border-top: none; }
@@ -374,9 +394,9 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .board-row .val { font-weight: 800; font-variant-numeric: tabular-nums; }
 .board-empty { padding: 18px; text-align: center; color: var(--muted); font-size: 0.9rem; }
 
-.records { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.rec { background: var(--bg-3); border-radius: 10px; padding: 10px; text-align: center; }
-.rec .rt { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+.records { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
+.rec { background: var(--bg-3); border-radius: var(--r-m); padding: 10px; text-align: center; }
+.rec .rt { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
 .rec .rv { font-size: 1.3rem; font-weight: 800; margin: 3px 0 1px; font-variant-numeric: tabular-nums; }
 .rec .rn { font-size: 0.75rem; color: var(--muted); }
 
@@ -384,17 +404,17 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .sum-head { text-align: center; padding: 6px 0 14px; }
 .sum-title { font-size: 1.4rem; margin: 0 0 6px; text-transform: none; letter-spacing: 0; color: var(--text); }
 .sum-score {
-  display: flex; align-items: center; justify-content: center; gap: 12px;
+  display: flex; align-items: center; justify-content: center; gap: var(--space-3);
   font-size: 1rem; color: var(--muted);
 }
 .sum-score b { font-size: 1.6rem; color: var(--text); font-variant-numeric: tabular-nums; }
 .sum-score .w { color: var(--accent); font-weight: 700; }
-.sum-cards { display: grid; grid-template-columns: 1fr; gap: 12px; }
+.sum-cards { display: grid; grid-template-columns: 1fr; gap: var(--space-3); }
 .sum-card.win { border-color: var(--accent-dark); }
 .sum-who { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
 .sum-who .nm { font-weight: 700; font-size: 1.05rem; }
 .hint.center { text-align: center; }
-#summary-actions { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+#summary-actions { margin-top: 16px; display: flex; flex-direction: column; gap: var(--space-2); }
 @media (min-width: 700px) {
   .sum-cards { grid-template-columns: 1fr 1fr; }
   /* Solo-Statistik: die eine Karte steht mittig ueber die volle Zeile,
@@ -407,8 +427,8 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 
 /* ---------- Spiel-Log ---------- */
 .log-row {
-  display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center;
-  padding: 10px 4px; border-top: 1px solid var(--line); font-size: 0.9rem;
+  display: grid; grid-template-columns: 1fr auto 1fr; gap: var(--space-2); align-items: center;
+  padding: 10px var(--space-1); border-top: 1px solid var(--line); font-size: 0.9rem;
 }
 .log-row:first-child { border-top: none; }
 .log-row.tap { cursor: pointer; }
@@ -416,9 +436,9 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .log-row .lp { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .log-row .lp.right { text-align: right; }
 .log-row .lp.w { color: var(--accent); font-weight: 700; }
-.log-row .lp .a { font-size: 0.72rem; color: var(--muted); font-weight: 500; }
+.log-row .lp .a { font-size: 0.75rem; color: var(--muted); font-weight: 500; }
 .log-row .ls { font-weight: 800; font-variant-numeric: tabular-nums; }
-.log-row .ld { grid-column: 1 / -1; font-size: 0.7rem; color: var(--muted); }
+.log-row .ld { grid-column: 1 / -1; font-size: 0.75rem; color: var(--muted); }
 
 /* ---------- Spielerkarten & Profil ---------- */
 .player-card { display: flex; align-items: center; gap: 14px; cursor: pointer; }
@@ -429,36 +449,36 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .player-card .pc-stats b { color: var(--text); font-variant-numeric: tabular-nums; }
 .player-card .chev { color: var(--muted); font-size: 1.4rem; }
 
-.profile-head { display: flex; align-items: center; gap: 16px; margin: 8px 0 16px; }
+.profile-head { display: flex; align-items: center; gap: var(--space-4); margin: 8px 0 16px; }
 .profile-head h1 { font-size: 1.5rem; margin: 0 0 4px; }
-.form-row { display: flex; gap: 4px; margin-top: 8px; }
+.form-row { display: flex; gap: var(--space-1); margin-top: 8px; }
 .form {
-  width: 22px; height: 22px; border-radius: 6px; font-size: 0.7rem; font-weight: 700;
+  width: 22px; height: 22px; border-radius: var(--r-xs); font-size: 0.75rem; font-weight: 700;
   display: inline-grid; place-items: center;
 }
 .form.w { background: rgba(74, 222, 128, 0.14); color: #4ade80; }
 .form.l { background: rgba(255, 90, 90, 0.15); color: var(--red); }
 .pline {
-  display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+  display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-3);
   padding: 9px 0; border-top: 1px solid var(--line); font-size: 0.92rem;
 }
 .pline:first-of-type { border-top: none; }
 .pline span { color: var(--muted); }
-.pline span i { display: block; font-style: normal; font-size: 0.72rem; color: var(--muted); }
+.pline span i { display: block; font-style: normal; font-size: 0.75rem; color: var(--muted); }
 .pline b { font-variant-numeric: tabular-nums; font-size: 1.05rem; }
 
 /* ---------- Profil-Dialog ---------- */
-.avatar-edit { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 6px 0 14px; cursor: pointer; }
+.avatar-edit { display: flex; flex-direction: column; align-items: center; gap: var(--space-2); margin: 6px 0 14px; cursor: pointer; }
 .avatar-edit .cam { font-size: 0.8rem; color: var(--accent); }
 .name-input {
   width: 100%; background: var(--bg-3); border: 1px solid var(--line); color: var(--text);
-  border-radius: 10px; padding: 14px; font-size: 1.05rem; text-align: center; margin-bottom: 12px;
+  border-radius: var(--r-m); padding: 14px; font-size: 1.05rem; text-align: center; margin-bottom: 12px;
 }
 .name-input:focus { outline: 2px solid var(--accent-dark); }
 
 /* ---------- Spielerliste ---------- */
-.player-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
-.player-row { display: flex; align-items: center; gap: 8px; }
+.player-list { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: 10px; }
+.player-row { display: flex; align-items: center; gap: var(--space-2); }
 .player-row .idx {
   width: 28px; height: 28px; flex: none; border-radius: 50%;
   background: var(--bg-3); color: var(--muted);
@@ -466,7 +486,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 }
 .player-row input {
   flex: 1; background: var(--bg-3); border: 1px solid var(--line); color: var(--text);
-  border-radius: 10px; padding: 12px; font-size: 1rem; min-height: 48px;
+  border-radius: var(--r-m); padding: var(--space-3); font-size: 1rem; min-height: 48px;
 }
 .player-row input:focus { outline: 2px solid var(--accent-dark); }
 .player-row .rm {
@@ -475,26 +495,26 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 }
 
 /* ---------- Einstellungen ---------- */
-.setting { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.setting { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: 14px; }
 .setting label { font-size: 0.92rem; color: var(--muted); }
 /* Auswahlkacheln im selben Stil wie die Modusauswahl */
-.options { display: flex; flex-wrap: wrap; gap: 8px; }
+.options { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .options button {
   flex: 1 1 0; min-width: 76px; min-height: 50px;
   background: var(--bg-3); border: 1px solid var(--line); color: var(--text);
-  border-radius: 12px; padding: 12px 10px; font-size: 1rem; font-weight: 700; cursor: pointer;
+  border-radius: var(--r-m); padding: var(--space-3) 10px; font-size: 1rem; font-weight: 700; cursor: pointer;
 }
 .options button.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
-.segmented { display: flex; background: var(--bg-3); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.segmented { display: flex; background: var(--bg-3); border: 1px solid var(--line); border-radius: var(--r-m); overflow: hidden; }
 .segmented button {
-  background: none; border: none; color: var(--muted); padding: 10px 12px;
+  background: none; border: none; color: var(--muted); padding: 10px var(--space-3);
   font-size: 0.85rem; font-weight: 600; cursor: pointer; min-height: 42px;
 }
 .segmented button.active { background: var(--accent); color: var(--on-accent); }
-.segmented.small button { padding: 8px 14px; min-height: 44px; font-size: 0.82rem; }
-.hint { font-size: 0.78rem; color: var(--muted); margin: 6px 0 0; line-height: 1.45; }
+.segmented.small button { padding: var(--space-2) 14px; min-height: 44px; font-size: 0.82rem; }
+.hint { font-size: 0.875rem; color: var(--muted); margin: 6px 0 0; line-height: 1.45; }
 /* Sätze/Legs im Schnellen Spiel: − Wert + in einer Zeile */
-.stepper { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.stepper { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .stepper span { flex: 1; text-align: center; font-size: 1.05rem; font-weight: 700; }
 .stepper button {
   width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--line);
@@ -505,10 +525,10 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 /* ---------- Tabelle ---------- */
 .standings { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
 .standings th {
-  font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted);
+  font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted);
   font-weight: 600; padding: 10px 6px; background: var(--bg-3);
 }
-.standings td { padding: 12px 6px; text-align: center; border-top: 1px solid var(--line); }
+.standings td { padding: var(--space-3) 6px; text-align: center; border-top: 1px solid var(--line); }
 .standings .left, .standings td.left { text-align: left; padding-left: 12px; }
 .standings tr.leader td { background: var(--accent-faint); }
 .standings .rank { color: var(--muted); font-size: 0.8rem; }
@@ -518,7 +538,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 /* ---------- Spielplan ---------- */
 .match-row {
   display: flex; align-items: center; gap: 10px;
-  padding: 12px 10px; border-radius: 10px; background: var(--bg-3); margin-bottom: 8px;
+  padding: var(--space-3) 10px; border-radius: var(--r-m); background: var(--bg-3); margin-bottom: 8px;
   border: 1px solid transparent;
 }
 .match-row.done { background: var(--bg-2); }
@@ -528,15 +548,15 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .match-row .pair b { font-weight: 700; }
 .match-row .res { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--muted); }
 .match-row .go {
-  background: var(--accent); color: var(--on-accent); border: none; border-radius: 9px;
-  padding: 9px 16px; font-weight: 700; cursor: pointer; min-height: 44px;
+  background: var(--accent); color: var(--on-accent); border: none; border-radius: var(--r-s);
+  padding: 9px var(--space-4); font-weight: 700; cursor: pointer; min-height: 44px;
 }
-.round-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 12px 0 6px; }
+.round-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 12px 0 6px; }
 .round-label:first-child { margin-top: 0; }
 
 /* ---------- Statistik ---------- */
-.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.stat-card { background: var(--bg-3); border-radius: 10px; padding: 12px; }
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+.stat-card { background: var(--bg-3); border-radius: var(--r-m); padding: var(--space-3); }
 /* Bild oben, Name darunter, feste Kopfhoehe: die Zeilen aller Spalten
    liegen dadurch auf einer Linie - lange Namen verschieben nichts mehr. */
 .stat-card .who {
@@ -554,22 +574,22 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .stat-card .line b { color: var(--text); font-variant-numeric: tabular-nums; }
 
 /* ---------- Bull-Off ---------- */
-.bulloff { display: grid; gap: 12px; }
+.bulloff { display: grid; gap: var(--space-3); }
 .bulloff button {
   background: var(--bg-2); border: 1px solid var(--line); color: var(--text);
   border-radius: var(--radius); padding: 26px; font-size: 1.35rem; font-weight: 700; cursor: pointer;
-  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  display: flex; flex-direction: column; align-items: center; gap: var(--space-3);
 }
 .bulloff button:active { border-color: var(--accent); }
 
 /* Bull-Out mit mehr als zwei Spielern: die ganze Reihenfolge festlegen. */
 .bulloff-order { display: flex; flex-direction: column; gap: 14px; }
-.bo-list { display: flex; flex-direction: column; gap: 8px; }
+.bo-list { display: flex; flex-direction: column; gap: var(--space-2); }
 .bo-row {
   color: var(--text); font: inherit; font-size: 1rem;
   display: flex; align-items: center; gap: 10px; text-align: left;
   background: var(--bg-2); border: 1px solid var(--line);
-  border-radius: var(--radius); padding: 8px 10px;
+  border-radius: var(--radius); padding: var(--space-2) 10px;
 }
 .bo-pos {
   min-width: 28px; font-weight: 800; font-size: 1.05rem; color: var(--accent);
@@ -577,11 +597,11 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 }
 .bo-name { flex: 1; font-weight: 700; font-size: 1.05rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bo-spalten { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; text-align: left; }
-.bo-wahl, .bo-reihe { display: flex; flex-direction: column; gap: 8px; }
+.bo-wahl, .bo-reihe { display: flex; flex-direction: column; gap: var(--space-2); }
 .bo-wahl button {
   display: flex; align-items: center; gap: 10px;
-  background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px;
-  padding: 10px 12px; min-height: var(--tap); color: var(--text);
+  background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--r-m);
+  padding: 10px var(--space-3); min-height: var(--tap); color: var(--text);
   font-size: 1rem; text-align: left; cursor: pointer;
 }
 .bo-wahl button:active { border-color: var(--accent); }
@@ -591,14 +611,14 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 }
 .bo-spalten .hint { margin: 8px 2px; }
 @media (orientation: landscape) and (min-width: 700px) {
-  .bo-row { padding: 12px 14px; }
+  .bo-row { padding: var(--space-3) 14px; }
   .bo-name { font-size: 1.25rem; }
   .bo-mv { min-width: 56px; min-height: 56px; font-size: 1.15rem; }
 }
 @media (orientation: landscape) and (max-height: 560px) {
-  .bulloff-order { gap: 8px; }
+  .bulloff-order { gap: var(--space-2); }
   .bo-list { gap: 6px; }
-  .bo-row { padding: 4px 8px; }
+  .bo-row { padding: var(--space-1) var(--space-2); }
   .bo-mv { min-height: 44px; min-width: 44px; }
 }
 
@@ -611,10 +631,10 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .game-title { text-align: center; display: flex; flex-direction: column; gap: 2px; font-size: 0.9rem; font-weight: 600; }
 .game-title .muted { font-size: 0.75rem; font-weight: 500; }
 
-.scoreboard { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.scoreboard { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); margin-bottom: 8px; }
 .pcard {
   background: var(--bg-2); border: 2px solid var(--line); border-radius: var(--radius);
-  padding: 12px 10px; text-align: center; position: relative;
+  padding: var(--space-3) 10px; text-align: center; position: relative;
 }
 .pcard.active { border-color: var(--accent); background: var(--accent-faint); }
 /* Wer dran ist, leuchtet - wer wartet, tritt zurueck. Exakt die Sprache
@@ -623,25 +643,25 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 #screen-game .pcard.active { box-shadow: 0 0 26px var(--schein); }
 #screen-game .pcard.active .rest { text-shadow: 0 0 24px var(--schein-stark); }
 .pcard .pname { font-size: 0.95rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px; }
-.pcard .legs { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+.pcard .legs { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
 .pcard .rest-zeile {
   display: flex; align-items: center; justify-content: center; gap: 0.16em;
   font-size: 3.4rem; font-weight: 800; line-height: 1.05; margin: 4px 0 2px; min-width: 0;
 }
 .pcard .rest { font-variant-numeric: tabular-nums; }
 .pcard.active .rest { color: var(--accent); }
-.pcard .meta { display: flex; justify-content: center; gap: 12px; font-size: 0.72rem; color: var(--muted); }
+.pcard .meta { display: flex; justify-content: center; gap: var(--space-3); font-size: 0.75rem; color: var(--muted); }
 .pcard .meta b { color: var(--text); font-variant-numeric: tabular-nums; }
 .pcard .arrow { color: var(--accent); }
 
 .checkout-bar {
   min-height: 46px; display: flex; align-items: center; justify-content: center; gap: 6px;
-  background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px;
-  padding: 8px; margin-bottom: 8px; flex-wrap: wrap;
+  background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--r-m);
+  padding: var(--space-2); margin-bottom: 8px; flex-wrap: wrap;
 }
-.checkout-bar .label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
+.checkout-bar .label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); }
 .checkout-bar .chip {
-  background: var(--bg-3); border: 1px solid var(--line); border-radius: 8px;
+  background: var(--bg-3); border: 1px solid var(--line); border-radius: var(--r-s);
   padding: 5px 10px; font-weight: 700; font-size: 0.95rem;
 }
 .checkout-bar .chip.first { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
@@ -654,13 +674,13 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 }
 
 .history {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2);
   flex: 1; min-height: 0; overflow-y: auto; margin-bottom: 8px;
 }
-.history .col { display: flex; flex-direction: column; gap: 4px; }
+.history .col { display: flex; flex-direction: column; gap: var(--space-1); }
 .history .v {
-  display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
-  background: var(--bg-2); border-radius: 8px; padding: 6px 10px; font-size: 0.85rem;
+  display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2);
+  background: var(--bg-2); border-radius: var(--r-s); padding: 6px 10px; font-size: 0.85rem;
   font-variant-numeric: tabular-nums;
 }
 .history .v .s { font-weight: 700; }
@@ -669,26 +689,26 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .history .v.co .s { color: var(--accent); }
 
 .input-area { margin-top: auto; }
-.mode-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.mode-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); margin-bottom: 8px; }
 .visit-darts { display: flex; gap: 5px; }
 .visit-darts .d {
   min-width: 42px; text-align: center; background: var(--bg-3); border: 1px solid var(--line);
-  border-radius: 8px; padding: 6px 8px; font-size: 0.82rem; font-weight: 700; font-variant-numeric: tabular-nums;
+  border-radius: var(--r-s); padding: 6px var(--space-2); font-size: 0.82rem; font-weight: 700; font-variant-numeric: tabular-nums;
 }
 .visit-darts .d.empty { color: var(--muted); font-weight: 500; }
 /* Fertige Aufnahme des Vorgängers (Cricket, RTW): gedimmt und beschriftet,
    damit sie neben „Am Wurf" nicht wie die Würfe des Nächsten aussieht. */
 .visit-darts .d.alt { opacity: 0.5; }
 .visit-darts .d-vorher {
-  align-self: center; font-size: 0.62rem; letter-spacing: 0.08em;
+  align-self: center; font-size: 0.75rem; letter-spacing: 0.08em;
   text-transform: uppercase; color: var(--muted);
 }
 
 .pad { display: block; }
-.quick-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 8px; }
+.quick-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--gap-keys); margin-bottom: var(--gap-keys); }
 .quick-row button {
   background: var(--bg-3); border: 1px solid var(--line); color: var(--text);
-  border-radius: 10px; padding: 10px 0; font-size: 0.92rem; font-weight: 600; cursor: pointer; min-height: 44px;
+  border-radius: var(--r-m); padding: 10px 0; font-size: 0.92rem; font-weight: 600; cursor: pointer; min-height: 44px;
 }
 .quick-row button.miss { color: var(--red); }
 
@@ -699,26 +719,26 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .score-display.empty { color: var(--muted); }
 .input-error { color: var(--red); font-size: 0.82rem; }
 
-.keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--gap-keys); }
 .keypad button {
   background: var(--bg-2); border: 1px solid var(--line); color: var(--text);
-  border-radius: 12px; font-size: 1.5rem; font-weight: 700; min-height: 60px; cursor: pointer;
+  border-radius: var(--r-m); font-size: 1.5rem; font-weight: 700; min-height: 60px; cursor: pointer;
 }
 .keypad button.fn { font-size: 1.3rem; color: var(--muted); }
 .keypad button.ok { background: var(--accent); border-color: var(--accent); color: var(--on-accent); font-size: 1.1rem; }
 .keypad button:active { background: var(--bg-3); }
 .keypad button.ok:active { background: var(--accent-dark); }
 
-.mult-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 6px; }
+.mult-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--gap-keys); margin-bottom: var(--gap-keys); }
 .mult-row button {
   background: var(--bg-2); border: 1px solid var(--line); color: var(--text);
-  border-radius: 10px; min-height: 48px; font-weight: 700; font-size: 0.95rem; cursor: pointer;
+  border-radius: var(--r-m); min-height: 48px; font-weight: 700; font-size: 0.95rem; cursor: pointer;
 }
 .mult-row button.active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
-.num-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.num-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: var(--gap-keys); }
 .num-grid button {
   background: var(--bg-2); border: 1px solid var(--line); color: var(--text);
-  border-radius: 10px; min-height: 52px; font-size: 1.15rem; font-weight: 700; cursor: pointer;
+  border-radius: var(--r-m); min-height: 52px; font-size: 1.15rem; font-weight: 700; cursor: pointer;
   font-variant-numeric: tabular-nums;
 }
 .num-grid button:active { background: var(--bg-3); }
@@ -733,7 +753,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 /* ---------- Overlay ---------- */
 .overlay {
   position: fixed; inset: 0; background: rgba(6, 9, 13, 0.86);
-  display: grid; place-items: start center; padding: 16px 16px 40px; z-index: 50;
+  display: grid; place-items: start center; padding: var(--space-4) var(--space-4) 40px; z-index: 50;
   overflow-y: auto; -webkit-overflow-scrolling: touch;
 }
 /* Auf hohen Schirmen mittig, auf flachen von oben – sonst ragt der Dialog raus. */
@@ -745,20 +765,20 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .overlay-card h3 { margin: 0 0 6px; font-size: 1.4rem; }
 .overlay-card p { color: var(--muted); margin: 0 0 16px; font-size: 0.9rem; }
 .overlay-card .btn { margin-top: 8px; }
-.overlay-card .row-btns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.overlay-card .row-btns { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); }
 .overlay-card .row-btns.two { grid-template-columns: repeat(2, 1fr); }
 .big-emoji { font-size: 3rem; margin-bottom: 6px; }
 
 /* ---------- Sieger ---------- */
-.podium { display: flex; flex-direction: column; gap: 8px; margin: 16px 0; }
+.podium { display: flex; flex-direction: column; gap: var(--space-2); margin: 16px 0; }
 /* Turnierzeile in der Spieleliste: leicht abgesetzt, damit man sie zwischen
    den einzelnen Partien sofort findet. */
 .log-row.turnier-row { border-color: var(--accent-dark); }
 .pline.tap { cursor: pointer; }
 .pline.tap:active { background: var(--bg-3); }
 .podium .p {
-  display: flex; align-items: center; gap: 12px; background: var(--bg-2);
-  border: 1px solid var(--line); border-radius: 12px; padding: 14px;
+  display: flex; align-items: center; gap: var(--space-3); background: var(--bg-2);
+  border: 1px solid var(--line); border-radius: var(--r-m); padding: 14px;
 }
 .podium .p.first { border-color: var(--accent); background: var(--accent-soft); }
 .podium .medal { font-size: 1.5rem; width: 34px; text-align: center; }
@@ -792,7 +812,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   /* Etwas flacheres Tastenfeld, damit der Verlauf zwei Zeilen behält. */
   .keypad button { min-height: 52px; }
   .display-row { min-height: 36px; margin-bottom: 6px; }
-  .quick-row { gap: 5px; }
+  .quick-row { gap: var(--gap-keys); }
   .quick-row button { min-height: 44px; }
   .num-grid button { min-height: 48px; }
 }
@@ -800,7 +820,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
    das Tastenfeld bleibt vollständig sichtbar. */
 @media (max-height: 820px) and (max-width: 699px) and (orientation: portrait) {
   .pcard .rest-zeile { font-size: 2.4rem; }
-  .pcard { padding: 8px; }
+  .pcard { padding: var(--space-2); }
   .keypad button { min-height: 46px; font-size: 1.25rem; }
   .num-grid button { min-height: 44px; }
   .quick-row button { min-height: 44px; }
@@ -810,10 +830,10 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
    auch vier Spielerkarten ueber der Eingabe Platz haben. Der Verlauf faellt
    dann weg -- Spielstand oben und Eingabe unten sind wichtiger. */
 @media (max-height: 700px) and (max-width: 699px) and (orientation: portrait) {
-  .game-header { padding: 4px 0; }
+  .game-header { padding: var(--space-1) 0; }
   .game-header .icon-btn { width: 44px; height: 44px; }
   .mode-row { margin-bottom: 4px; }
-  .checkout-bar { min-height: 38px; padding: 5px 8px; margin-bottom: 6px; }
+  .checkout-bar { min-height: 38px; padding: 5px var(--space-2); margin-bottom: 6px; }
   .fin-kacheln { margin-bottom: 6px; }
   .fin-kacheln .fk { min-height: 44px; font-size: 1.4rem; }
   .scoreboard { margin-bottom: 6px; }
@@ -822,11 +842,11 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   .quick-row button { min-height: 38px; padding: 6px 0; }
   .display-row { min-height: 30px; margin-bottom: 4px; }
   .score-display { font-size: 1.8rem; }
-  .keypad { gap: 5px; }
+  .keypad { gap: var(--gap-keys); }
   .keypad button { min-height: 42px; font-size: 1.2rem; }
   .mult-row { margin-bottom: 5px; }
   .mult-row button { min-height: 40px; }
-  .num-grid { gap: 5px; }
+  .num-grid { gap: var(--gap-keys); }
   .num-grid button { min-height: 42px; font-size: 1.05rem; }
   .cg-block button { min-height: 46px; }
 }
@@ -839,16 +859,16 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   .card { padding: 18px; margin-bottom: 16px; }
   .btn.big { min-height: 70px; font-size: 1.2rem; }
   .standings { font-size: 1.05rem; }
-  .standings td { padding: 15px 8px; }
+  .standings td { padding: 15px var(--space-2); }
   .stats-grid { grid-template-columns: repeat(4, 1fr); }
   .setting label { font-size: 1rem; }
-  .segmented button { padding: 12px 18px; min-height: 50px; font-size: 0.95rem; }
+  .segmented button { padding: var(--space-3) 18px; min-height: 50px; font-size: 0.95rem; }
   .player-row input { min-height: 54px; font-size: 1.05rem; }
   .bulloff { grid-template-columns: repeat(2, 1fr); }
-  .bulloff button { padding: 48px 20px; font-size: 1.6rem; }
+  .bulloff button { padding: 48px var(--space-5); font-size: 1.6rem; }
   .match-row { padding: 15px 14px; }
   .match-row .pair { font-size: 1.05rem; }
-  .match-row .go { padding: 12px 20px; min-height: 48px; }
+  .match-row .go { padding: var(--space-3) var(--space-5); min-height: 48px; }
   .overlay-card { max-width: 460px; padding: 28px; }
 
   .pcard { min-height: 200px; display: flex; flex-direction: column; justify-content: center; }
@@ -865,8 +885,8 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   .pcard .pname { font-size: 1.25rem; }
   .pcard .legs, .pcard .meta { font-size: 0.85rem; }
   .checkout-bar { min-height: 60px; }
-  .checkout-bar .chip { font-size: 1.15rem; padding: 8px 14px; }
-  .history .v { font-size: 1rem; padding: 9px 12px; }
+  .checkout-bar .chip { font-size: 1.15rem; padding: var(--space-2) 14px; }
+  .history .v { font-size: 1rem; padding: 9px var(--space-3); }
   .quick-row button { min-height: 54px; font-size: 1.05rem; }
   .keypad button { min-height: 74px; font-size: 1.8rem; }
   .keypad button.ok { font-size: 1.3rem; }
@@ -880,15 +900,15 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
    Nichts muss gescrollt werden, die Tasten füllen die Höhe. */
 @media (orientation: landscape) and (min-width: 700px) {
   :root { --maxw: 1320px; }
-  .game-body { flex-direction: row; align-items: stretch; gap: 16px; }
+  .game-body { flex-direction: row; align-items: stretch; gap: var(--space-4); }
   .game-main { flex: 1 1 50%; min-width: 0; }
   .input-area { flex: 1 1 50%; min-width: 0; margin-top: 0; display: flex; flex-direction: column; }
-  .pad { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+  .pad { flex: 1; display: flex; flex-direction: column; gap: var(--space-2); }
   .pad .keypad, .pad .num-grid { flex: 1; grid-auto-rows: 1fr; }
   /* Single/Double/Triple exakt so hoch wie eine Zahlenreihe: sechs
      gleiche Reihen, abzueglich Pad-Gap (8px) und der vier Gaps im
      Zahlenfeld (24px). */
-  #pad-darts .mult-row { flex: none; height: calc((100% - 32px) / 6); min-height: 0; }
+  #pad-darts .mult-row { flex: none; height: calc((100% - 8px - 4 * var(--gap-keys)) / 6); min-height: 0; }
   #pad-darts .mult-row button { min-height: 0; height: 100%; font-size: 1.25rem; }
   #pad-darts .num-grid { flex: 1 1 0; }
   .num-grid button { font-size: 1.6rem; }
@@ -907,16 +927,16 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   .display-row { min-height: 72px; }
   .score-display { font-size: clamp(3rem, 8vh, 4.6rem); }
   .score-display:not(.empty) { color: #fff; text-shadow: 0 0 26px var(--schein-stark); }
-  .app-header { padding: 14px 4px 10px; }
+  .app-header { padding: 14px var(--space-1) 10px; }
   .screen.center.active { min-height: calc(100dvh - 24px); }
   /* Der Reststand ist die Zahl, die aus zwei Metern lesbar sein muss. */
   .pcard { min-height: 0; }
   .pcard .rest-zeile { font-size: clamp(3.6rem, 9vh, 6.5rem); }
-  .checkout-bar .chip { font-size: clamp(1.15rem, 2.6vh, 1.9rem); padding: 8px 16px; }
+  .checkout-bar .chip { font-size: clamp(1.15rem, 2.6vh, 1.9rem); padding: var(--space-2) var(--space-4); }
   .checkout-bar .label { font-size: 0.95rem; }
   .pad .num-grid, .pad .keypad { max-height: min(560px, 100%); }
   /* Turnierseite ebenfalls zweispaltig, sonst scrollt sie über Bildschirme. */
-  #screen-tournament.active { display: grid; grid-template-columns: 1.1fr 1fr; gap: 0 16px; align-items: start; }
+  #screen-tournament.active { display: grid; grid-template-columns: 1.1fr 1fr; gap: 0 var(--space-4); align-items: start; }
   #screen-tournament.active > .app-header { grid-column: 1 / -1; }
   #screen-tournament.active .turnier-links  { grid-column: 1; }
   #screen-tournament.active .turnier-rechts { grid-column: 2; grid-row: 2; }
@@ -933,7 +953,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   .turn-label { font-size: 1.25rem; }
   .pad .rtw-pad-grid { flex: 1; grid-auto-rows: 1fr; }
   /* Setup und Rangliste zweispaltig, damit nichts unter die Falz rutscht. */
-  #screen-setup.active { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; align-items: start; }
+  #screen-setup.active { display: grid; grid-template-columns: 1fr 1fr; gap: 0 var(--space-4); align-items: start; }
   #screen-setup.active > #resume-box,
   #screen-setup.active > [data-action="start-game"],
   #screen-setup.active > .footer-note { grid-column: 1 / -1; }
@@ -941,7 +961,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
      Liste und rechts Verlauf plus Rekorde – keine leeren Felder. */
   #screen-boards.active {
     display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-    gap: 0 16px; align-items: start; grid-auto-flow: row dense;
+    gap: 0 var(--space-4); align-items: start; grid-auto-flow: row dense;
   }
   #screen-boards.active > .app-header,
   #screen-boards.active > #board-mode,
@@ -964,17 +984,17 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   .game-header { padding: 2px 0; }
   .icon-btn { width: 44px; height: 44px; font-size: 1.2rem; }
   .game-title { font-size: 0.8rem; }
-  .pcard { padding: 4px 8px; }
+  .pcard { padding: var(--space-1) var(--space-2); }
   .pcard .rest-zeile { font-size: clamp(1.9rem, 9vh, 2.6rem); margin: 0; }
   .pcard .legs { display: none; }
-  .pcard .meta { font-size: 0.68rem; }
-  .checkout-bar { min-height: 34px; padding: 4px; margin-bottom: 5px; }
-  .checkout-bar .chip { padding: 3px 8px; font-size: 0.85rem; }
+  .pcard .meta { font-size: 0.75rem; }
+  .checkout-bar { min-height: 34px; padding: var(--space-1); margin-bottom: 5px; }
+  .checkout-bar .chip { padding: 3px var(--space-2); font-size: 0.85rem; }
   .history { display: none; }
   .mode-row { margin-bottom: 4px; }
   .display-row { min-height: 30px; margin-bottom: 4px; }
   .score-display { font-size: 1.5rem; }
-  .pad { display: flex; flex-direction: column; gap: 5px; height: 100%; }
+  .pad { display: flex; flex-direction: column; gap: var(--gap-keys); height: 100%; }
   .pad .keypad, .pad .num-grid, .pad .rtw-pad-grid { flex: 1; min-height: 0; grid-auto-rows: 1fr; }
   .keypad button { min-height: 44px; font-size: 1.2rem; }
   .num-grid button { min-height: 44px; font-size: 1rem; }
@@ -982,46 +1002,46 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   /* Schnellwahl als eine wischbare Zeile statt zweier Reihen – das sind
      44 px, die dem Zahlenfeld fehlen würden. */
   .quick-row {
-    display: flex; gap: 4px; margin-bottom: 0; overflow-x: auto;
+    display: flex; gap: var(--gap-keys); margin-bottom: 0; overflow-x: auto;
     scrollbar-width: none; -webkit-mask-image: linear-gradient(90deg, #000 92%, transparent);
   }
   .quick-row::-webkit-scrollbar { display: none; }
   .quick-row button { min-height: 44px; font-size: 0.85rem; flex: 0 0 62px; }
   .turn-label { font-size: 0.9rem; }
-  .rtw-row .av.md { width: 26px; height: 26px; font-size: 0.6rem; }
+  .rtw-row .av.md { width: 26px; height: 26px; font-size: 0.7rem; }
   .rtw-row .rw-bar { margin-top: 3px; }
   .rtw-row .rw-sub { margin-top: 1px; }
   .rtw-key { min-height: 44px; padding: 6px; }
   .rtw-key .k { font-size: 1rem; }
-  .rtw-key .sub { font-size: 0.65rem; }
-  .rtw-row { padding: 5px 8px; gap: 8px; }
+  .rtw-key .sub { font-size: 0.75rem; }
+  .rtw-row { padding: 5px var(--space-2); gap: var(--space-2); }
   .rtw-row .rw-target { font-size: 1.5rem; min-width: 3.5ch; }
   .rtw-row .av.md { width: 32px; height: 32px; font-size: 0.75rem; }
   .rtw-board { overflow-y: auto; }
   /* Cricket: die Punktezeile muss sichtbar bleiben. */
   .cr-cell { padding: 2px 3px; }
-  .cr-head { font-size: 0.62rem; padding: 2px; gap: 2px; }
-  .cr-head .av.sm { width: 18px; height: 18px; font-size: 0.5rem; }
+  .cr-head { font-size: 0.75rem; padding: 2px; gap: 2px; }
+  .cr-head .av.sm { width: 20px; height: 20px; font-size: 0.62rem; }
   .cr-mark { min-height: 26px; font-size: 0.95rem; }
   .cr-num { font-size: 0.8rem; }
   .cr-score { font-size: 0.9rem; }
   .cricket-board { flex: 1; min-height: 0; overflow: auto; }
-  .bulloff button { padding: 12px; font-size: 1.1rem; gap: 6px; }
+  .bulloff button { padding: var(--space-3); font-size: 1.1rem; gap: 6px; }
   .bulloff .av.md { width: 34px; height: 34px; }
-  .visit-darts .d { padding: 4px 6px; min-width: 34px; }
+  .visit-darts .d { padding: var(--space-1) 6px; min-width: 34px; }
 }
 
 /* ---------- Round the World: Eingabe nur für die aktuelle Zahl ---------- */
-.rtw-pad-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.rtw-pad-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
 .rtw-pad-grid.bull { grid-template-columns: 1fr 1fr; }
 .rtw-key {
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-1);
   background: var(--bg-2); border: 1px solid var(--line); color: var(--text);
-  border-radius: 14px; padding: 18px 10px; min-height: 84px; cursor: pointer;
+  border-radius: var(--r-l); padding: 18px 10px; min-height: 84px; cursor: pointer;
 }
 .rtw-key:active { background: var(--bg-3); }
 .rtw-key .k { font-size: 1.25rem; font-weight: 800; }
-.rtw-key .sub { font-size: 0.74rem; color: var(--muted); }
+.rtw-key .sub { font-size: 0.75rem; color: var(--muted); }
 .rtw-key.miss .k { color: var(--red); }
 .rtw-key.bull { border-color: var(--amber); }
 .rtw-key.bull .k { color: var(--amber); }
@@ -1044,7 +1064,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   /* Wie die Navigation: unterhalb der iPhone-Statusleiste bleiben. */
   position: sticky; top: env(safe-area-inset-top, 0px); z-index: 40;
   background: #4a2530; border: 1px solid var(--red); color: var(--text);
-  border-radius: 10px; padding: 10px 12px; margin: 8px 0; font-size: 0.85rem; line-height: 1.4;
+  border-radius: var(--r-m); padding: 10px var(--space-3); margin: 8px 0; font-size: 0.85rem; line-height: 1.4;
 }
 
 /* ---------- Aufnahme korrigieren ---------- */
@@ -1060,8 +1080,8 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .edit-pad button.ok { font-size: 0.95rem; }
 
 /* ---------- Spieler im Turnier ändern ---------- */
-.roster-change { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; text-align: left; }
-.rc-row { display: flex; align-items: center; gap: 10px; background: var(--bg-3); border-radius: 10px; padding: 8px 10px; }
+.roster-change { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: 14px; text-align: left; }
+.rc-row { display: flex; align-items: center; gap: 10px; background: var(--bg-3); border-radius: var(--r-m); padding: var(--space-2) 10px; }
 .rc-row .rc-name { flex: 1; font-weight: 600; }
 .rc-row .muted { font-size: 0.75rem; }
 .match-row.void .pair, .match-row.void .res { color: var(--dead); }
@@ -1072,27 +1092,27 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 /* ---------- Kontext: wer wirft, was bedeuten die Zeichen ---------- */
 .game-turn { margin-bottom: 6px; }
 .cricket-legend {
-  display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px;
+  display: flex; flex-wrap: wrap; gap: 6px var(--space-4); margin-top: 8px;
   font-size: 0.75rem; color: var(--muted);
 }
 .cricket-legend b { color: var(--text); }
-.form-label { font-size: 0.72rem; color: var(--muted); margin-top: 8px; }
+.form-label { font-size: 0.75rem; color: var(--muted); margin-top: 8px; }
 @media (orientation: landscape) and (max-height: 560px) {
   .game-turn, .cricket-legend { display: none; }
 }
 
 /* ---------- Cricket-Eingabe: Single, Double, Triple auf einen Blick ---------- */
-.cricket-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
+.cricket-grid { display: grid; grid-template-columns: 1fr; gap: var(--gap-keys); }
 .cg-block {
-  display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; align-items: stretch;
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--gap-keys); align-items: stretch;
 }
 .cg-block .cg-label {
-  grid-column: 1 / -1; font-size: 0.7rem; text-transform: uppercase;
+  grid-column: 1 / -1; font-size: 0.75rem; text-transform: uppercase;
   letter-spacing: 0.06em; color: var(--muted); margin-bottom: -2px;
 }
 .cg-block button {
   background: var(--bg-2); border: 1px solid var(--line); color: var(--text);
-  border-radius: 10px; min-height: 64px; font-size: 1.45rem; font-weight: 700; cursor: pointer;
+  border-radius: var(--r-m); min-height: 64px; font-size: 1.45rem; font-weight: 700; cursor: pointer;
   font-variant-numeric: tabular-nums;
 }
 /* Am iPad duerfen die Cricket-Tasten richtig gross sein. */
@@ -1108,7 +1128,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .cg-block button.skip { color: var(--accent); font-size: 1rem; }
 .cg-block .mx { color: var(--accent); font-size: 0.72em; margin-right: 2px; vertical-align: 2px; }
 .cg-extra { grid-template-columns: repeat(4, 1fr); }
-.cr-mpr { font-size: 0.62rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.cr-mpr { font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .cr-head.act .cr-mpr { color: var(--accent); }
 .num-grid button.end-visit { color: var(--text); }
 
@@ -1120,8 +1140,8 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   .cr-mpr { font-size: 0.8rem; }
 }
 @media (orientation: landscape) and (max-height: 560px) {
-  .cricket-grid { gap: 4px; }
-  .cg-block { gap: 3px; }
+  .cricket-grid { gap: var(--gap-keys); }
+  .cg-block { gap: var(--gap-keys); }
   .cg-block button { min-height: 46px; font-size: 0.95rem; }
   .cg-block button.skip { font-size: 0.8rem; }
   .cg-block .cg-label { display: none; }
@@ -1131,23 +1151,23 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 @media (max-width: 699px) and (orientation: portrait) {
   #screen-cricket .game-main { min-height: 0; }
   .cricket-board { flex: 1 1 auto; min-height: 0; overflow: auto; }
-  .cr-cell { padding: 4px 3px; }
-  .cr-head { font-size: 0.66rem; padding: 4px 2px; gap: 2px; }
-  .cr-head .av.sm { width: 20px; height: 20px; font-size: 0.55rem; }
+  .cr-cell { padding: var(--space-1) 3px; }
+  .cr-head { font-size: 0.75rem; padding: var(--space-1) 2px; gap: 2px; }
+  .cr-head .av.sm { width: 22px; height: 22px; font-size: 0.62rem; }
   .cr-mark { min-height: 30px; font-size: 1rem; }
   .cr-num { font-size: 0.8rem; }
   .cr-score { font-size: 0.95rem; }
-  .cricket-legend { font-size: 0.68rem; gap: 2px 10px; margin-top: 4px; }
-  .cricket-grid { gap: 5px; }
-  .cg-block { gap: 4px; }
+  .cricket-legend { font-size: 0.75rem; gap: 2px 10px; margin-top: 4px; }
+  .cricket-grid { gap: var(--gap-keys); }
+  .cg-block { gap: var(--gap-keys); }
   .cg-block button { min-height: 52px; font-size: 1.05rem; }
   .cg-block button.skip { font-size: 0.85rem; }
-  .cg-block .cg-label { font-size: 0.62rem; }
+  .cg-block .cg-label { font-size: 0.75rem; }
 }
 
 /* ---------- Verlauf über das ganze Match ---------- */
 .history .leg-sep {
-  font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.06em;
+  font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em;
   color: var(--muted); padding: 6px 2px 2px; border-top: 1px solid var(--line); margin-top: 4px;
 }
 .history .col > .leg-sep:first-child { border-top: none; margin-top: 0; padding-top: 0; }
@@ -1159,30 +1179,30 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .sync-status {
   position: sticky; top: env(safe-area-inset-top, 0px); z-index: 30;
   background: var(--bg-2); border: 1px solid var(--line); color: var(--muted);
-  border-radius: 10px; padding: 7px 12px; margin: 8px 0 0;
+  border-radius: var(--r-m); padding: 7px var(--space-3); margin: 8px 0 0;
   font-size: 0.78rem; line-height: 1.4;
 }
 
 .konto-karte { display: flex; flex-direction: column; gap: 10px; }
 
-.konto-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.konto-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
 .konto-tabs button {
   background: var(--bg-3); border: 1px solid var(--line); color: var(--muted);
-  border-radius: 10px; padding: 10px; font-weight: 600; cursor: pointer; min-height: 44px;
+  border-radius: var(--r-m); padding: 10px; font-weight: 600; cursor: pointer; min-height: 44px;
 }
 .konto-tabs button.active { color: var(--text); border-color: var(--accent-dark); background: var(--accent-soft); }
 
-.konto-feld { display: flex; flex-direction: column; gap: 4px; }
+.konto-feld { display: flex; flex-direction: column; gap: var(--space-1); }
 .konto-feld span { font-size: 0.78rem; color: var(--muted); }
 .konto-feld input {
   background: var(--bg-3); border: 1px solid var(--line); color: var(--text);
-  border-radius: 10px; padding: 12px; font-size: 1rem; font-family: inherit;
+  border-radius: var(--r-m); padding: var(--space-3); font-size: 1rem; font-family: inherit;
   /* 16 px verhindert, dass iOS beim Antippen ins Feld hineinzoomt. */
   min-height: var(--tap);
 }
 
 .konto-meldung {
-  border-radius: 10px; padding: 10px 12px; font-size: 0.85rem; line-height: 1.4; margin: 0 0 10px;
+  border-radius: var(--r-m); padding: 10px var(--space-3); font-size: 0.85rem; line-height: 1.4; margin: 0 0 10px;
 }
 .konto-meldung.fehler { background: #4a2530; border: 1px solid var(--red); color: var(--text); }
 /* Erfolg darf nicht aussehen wie ein Fehler. Seit der Akzent rot ist, wäre
@@ -1193,21 +1213,21 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   color: var(--text);
 }
 
-.konto-kopf { display: flex; align-items: center; gap: 12px; }
+.konto-kopf { display: flex; align-items: center; gap: var(--space-3); }
 .konto-kopf .who { min-width: 0; }
 .konto-kopf .nm { font-weight: 700; font-size: 1.05rem; }
 .konto-kopf .sm { font-size: 0.78rem; color: var(--muted); }
 
 .zuordnung-zeile {
   display: flex; align-items: center; gap: 10px;
-  background: var(--bg-3); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px;
+  background: var(--bg-3); border: 1px solid var(--line); border-radius: var(--r-m); padding: 10px var(--space-3);
 }
 .zuordnung-zeile .who { flex: 1; min-width: 0; }
 .zuordnung-zeile .nm { font-weight: 600; }
 .zuordnung-zeile .sm { font-size: 0.76rem; color: var(--muted); }
 .zuordnung-zeile select {
   background: var(--bg-2); border: 1px solid var(--line); color: var(--text);
-  border-radius: 10px; padding: 10px; font-size: 0.9rem; font-family: inherit;
+  border-radius: var(--r-m); padding: 10px; font-size: 0.9rem; font-family: inherit;
   min-height: 44px; max-width: 55%;
 }
 
@@ -1356,7 +1376,7 @@ h2 {
 
 /* Kompakt und nur im Setup: eine dauerhafte Kopfleiste auf jedem Screen
    würde am Handy senkrecht zu viel kosten. */
-.marke { display: flex; align-items: center; gap: 12px; padding: 14px 4px 6px; }
+.marke { display: flex; align-items: center; gap: var(--space-3); padding: 14px var(--space-1) 6px; }
 .marke .blink-logo { width: 46px; height: 46px; }
 .marke .wort {
   font-family: var(--font-display);
@@ -1480,7 +1500,7 @@ button, input, select, textarea { font-family: inherit; }
 .blink-logo.sm { width: 40px; height: 40px; }
 .blink-logo.lg { width: 46px; height: 46px; }
 
-.kopf-mit-logo { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.kopf-mit-logo { display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
 .kopf-mit-logo h1 { line-height: 1.05; }
 
 @media (min-width: 820px) {
@@ -1553,7 +1573,7 @@ button, input, select, textarea { font-family: inherit; }
   #screen-setup.active {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 0 16px;
+    gap: 0 var(--space-4);
     align-items: start;
   }
   /* Feste Plätze statt automatischer Verteilung: die Fortsetzen-Box ist
@@ -1579,7 +1599,7 @@ button, input, select, textarea { font-family: inherit; }
 }
 
 /* Zwei Knöpfe in der Fortsetzen-Box: beenden und fortsetzen. */
-.resume-btns { display: flex; align-items: center; gap: 8px; flex: none; }
+.resume-btns { display: flex; align-items: center; gap: var(--space-2); flex: none; }
 
 /* Schnelles Spiel: ab drei Spielern wird der Verlauf eine einzige Liste,
    in der jede Aufnahme ihren Werfer beim Namen nennt. */
@@ -1593,16 +1613,16 @@ button, input, select, textarea { font-family: inherit; }
 /* Round the World: die drei moeglichen Treffer stehen in einer Reihe --
    die Zahl breit und gross, Doppel und Triple daneben als gleichwertige
    Tasten. Darunter Miss und Weiter. */
-.rtw-pad-grid.ziel { display: flex; flex-direction: column; gap: 8px; grid-template-columns: none; }
+.rtw-pad-grid.ziel { display: flex; flex-direction: column; gap: var(--space-2); grid-template-columns: none; }
 .rtw-treffer {
-  display: grid; grid-template-columns: 1.6fr 1fr 1fr; gap: 8px;
+  display: grid; grid-template-columns: 1.6fr 1fr 1fr; gap: var(--space-2);
   flex: 1 1 auto; min-height: 132px;
 }
 /* Einfach und Bull: es gibt nur eine Antwort, die nimmt die ganze Breite. */
 .rtw-treffer.nur-zahl,
 .rtw-treffer.nur-bull { grid-template-columns: 1fr; }
-.rtw-reihe { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; flex: none; }
-.rtw-key.gross, .rtw-key.mult { padding: 8px; gap: 2px; }
+.rtw-reihe { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); flex: none; }
+.rtw-key.gross, .rtw-key.mult { padding: var(--space-2); gap: 2px; }
 .rtw-key.gross .z, .rtw-key.mult .k {
   font-family: var(--font-display, inherit);
   line-height: 1; font-weight: 800; letter-spacing: 0.02em;
@@ -1624,7 +1644,7 @@ button, input, select, textarea { font-family: inherit; }
 .rtw-fortschritt .pfad span.jetzt { background: var(--primary); box-shadow: 0 0 0 2px var(--schein); }
 .rtw-fortschritt .pfad span.bull { flex: 0 0 14px; }
 .rtw-fortschritt .txt {
-  margin-top: 5px; font-size: 0.74rem; color: var(--muted);
+  margin-top: 5px; font-size: 0.75rem; color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
 .rtw-fortschritt { flex: none; }
@@ -1643,11 +1663,11 @@ button, input, select, textarea { font-family: inherit; }
    Platz für den Verlauf bleibt. Und der Verlauf wird sauber abgeschnitten,
    statt hinter die Eingabe zu rutschen. */
 .game-main { overflow: hidden; }
-.scoreboard.viele .pcard { padding: 6px 8px; min-height: 0; }
+.scoreboard.viele .pcard { padding: 6px var(--space-2); min-height: 0; }
 .scoreboard.viele .pcard .rest-zeile { font-size: clamp(1.9rem, 5vh, 3.2rem); margin: 1px 0 0; }
 .scoreboard.viele .pcard .pname { font-size: 0.85rem; }
 .scoreboard.viele .pcard .legs { display: none; }
-.scoreboard.viele .pcard .meta { font-size: 0.66rem; gap: 8px; }
+.scoreboard.viele .pcard .meta { font-size: 0.75rem; gap: var(--space-2); }
 /* Am iPad haben vier Kacheln Platz: hoeher, Reste in Plakatnaehe. */
 @media (min-width: 700px) {
   .scoreboard.viele .pcard { min-height: clamp(120px, 21vh, 220px); padding: 10px; }
@@ -1660,10 +1680,10 @@ button, input, select, textarea { font-family: inherit; }
    in der Aufstellung unten und tragen ein Abzeichen. */
 .gast-marke {
   display: inline-block; vertical-align: 2px; margin-left: 6px;
-  font-family: var(--font-cond); font-size: 0.66rem; font-weight: 600;
+  font-family: var(--font-cond); font-size: 0.75rem; font-weight: 600;
   letter-spacing: 0.08em; text-transform: uppercase;
   color: var(--muted); border: 1px solid var(--line);
-  border-radius: 999px; padding: 1px 7px; line-height: 1.5;
+  border-radius: var(--r-pill); padding: 1px 7px; line-height: 1.5;
 }
 .roster-item.selected .gast-marke { border-color: var(--aktiv-linie); }
 
@@ -1692,12 +1712,12 @@ button, input, select, textarea { font-family: inherit; }
 /* Der Griff: schmale, dunkle Rinne. Sichtbar bleibt, was darueber
    hinausleuchtet -- deshalb kein overflow: hidden mehr. */
 .rtw-row .rw-bar {
-  height: 7px; background: #0b0809; border-radius: 999px;
+  height: 7px; background: #0b0809; border-radius: var(--r-pill);
   overflow: visible; position: relative;
   border: 1px solid rgba(255, 255, 255, 0.04);
 }
 .rtw-row .rw-bar .klinge {
-  position: relative; height: 100%; border-radius: 999px;
+  position: relative; height: 100%; border-radius: var(--r-pill);
   background: linear-gradient(90deg, var(--laser) 0%, var(--laser-hell) 55%, #fff 100%);
   box-shadow: 0 0 5px var(--laser-weich), 0 0 12px var(--laser-weich);
   transition: width 0.25s ease-out;
@@ -1716,7 +1736,7 @@ button, input, select, textarea { font-family: inherit; }
 /* Die Blitze: ein steiler Streifenverlauf, der die Klinge entlangwandert.
    screen legt ihn additiv aufs Licht, statt es zu uebermalen. */
 .rtw-row .rw-bar .klinge::before {
-  content: ''; position: absolute; inset: -1px 0; border-radius: 999px;
+  content: ''; position: absolute; inset: -1px 0; border-radius: var(--r-pill);
   background: repeating-linear-gradient(74deg,
     transparent 0 5px, rgba(255, 255, 255, 0.9) 5px 6px,
     transparent 6px 9px, rgba(169, 228, 255, 0.7) 9px 10px, transparent 10px 16px);
@@ -1841,7 +1861,7 @@ button, input, select, textarea { font-family: inherit; }
 }
 .cr-score.fuehrt::after {
   content: ''; position: absolute; left: 9px; right: 9px; bottom: 4px; height: 3px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: linear-gradient(90deg, var(--laser), var(--laser-hell) 55%, #fff);
   box-shadow: 0 0 5px var(--laser), 0 0 13px var(--laser-weich);
 }
@@ -2017,17 +2037,17 @@ button, input, select, textarea { font-family: inherit; }
 }
 
 /* Lieblingsdoppel im Profil-Dialog. */
-.dbl-wahl { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; }
+.dbl-wahl { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-top: 10px; }
 .dbl-wahl > span { font-size: 0.9rem; color: var(--muted); }
 .dbl-wahl select {
   background: var(--bg-3); border: 1px solid var(--line); color: var(--text);
-  border-radius: 10px; padding: 10px 12px; min-height: 44px; font-size: 0.95rem;
+  border-radius: var(--r-m); padding: 10px var(--space-3); min-height: 44px; font-size: 0.95rem;
   font-variant-numeric: tabular-nums; min-width: 7.5rem;
 }
 
 /* Geteiltes Turnier: Beitreten-Liste und der Hinweis im Spielplan. */
 .beitreten-zeile {
-  display: flex; align-items: center; gap: 12px; padding: 8px 0;
+  display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) 0;
   border-top: 1px solid var(--line);
 }
 .beitreten-zeile:first-child { border-top: none; }
@@ -2091,14 +2111,14 @@ button, input, select, textarea { font-family: inherit; }
 /* Die beiden Kopf-Knöpfe (Spiel verlassen, zurücknehmen) sind am Board
    weg – zurückgenommen wird mit Löschen, raus geht es über Esc bzw. ⌘+. */
 #screen-game.turnier .game-header .icon-btn { display: none; }
-#screen-game.turnier .game-header { justify-content: center; padding: 4px 0; }
+#screen-game.turnier .game-header { justify-content: center; padding: var(--space-1) 0; }
 #screen-game.turnier .game-main {
   flex: 1; min-height: 0;
   /* Der Schein des Aktiven leuchtet ueber die Karte hinaus: overflow
      auf - der Verlauf ist hier ohnehin ausgeblendet, nichts kann
      herausrutschen - und etwas Innenabstand, damit das Licht auch am
      Bildschirmrand nicht hart abgeschnitten wird. */
-  overflow: visible; padding: 10px 14px 4px;
+  overflow: visible; padding: 10px 14px var(--space-1);
 }
 #screen-game.turnier .scoreboard { flex: 1; min-height: 0; grid-auto-rows: 1fr; }
 #screen-game.turnier .pcard {
@@ -2138,7 +2158,7 @@ button, input, select, textarea { font-family: inherit; }
   opacity: 0.7;
 }
 #screen-game.turnier .pcard .pfinish .chip {
-  background: var(--bg-3); border: 1px solid var(--line-hell); border-radius: 12px;
+  background: var(--bg-3); border: 1px solid var(--line-hell); border-radius: var(--r-m);
   padding: 6px 18px; font-family: var(--font-cond); font-weight: 700;
   font-size: clamp(1.6rem, 4.4vh, 2.6rem); line-height: 1.2;
 }
@@ -2156,15 +2176,15 @@ button, input, select, textarea { font-family: inherit; }
   align-items: start;
 }
 .key-hist {
-  display: flex; flex-direction: column; gap: 4px;
+  display: flex; flex-direction: column; gap: var(--space-1);
   /* Fünf Aufnahmen passen hinein (mehr rendert renderGame gar nicht erst). */
   max-height: min(32vh, 250px); overflow-y: auto;
   overscroll-behavior: contain; scrollbar-width: none;
 }
 .key-hist::-webkit-scrollbar { display: none; }
 .key-hist .v {
-  display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
-  background: var(--bg-2); border-radius: 8px; padding: 6px 12px;
+  display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2);
+  background: var(--bg-2); border-radius: var(--r-s); padding: 6px var(--space-3);
   font-size: 1.05rem; font-variant-numeric: tabular-nums;
 }
 .key-hist .v .s { font-weight: 700; font-family: var(--font-cond); font-size: 1.2rem; }
@@ -2180,7 +2200,7 @@ button, input, select, textarea { font-family: inherit; }
   /* Ruhig wie die Karte des Wartenden – dunkle Fläche, dezente Kante,
      kein leuchtender Rahmen. Nur der Strich und die Ziffern sind hell. */
   background: var(--bg-2); border: 2px solid var(--line); color: var(--text);
-  border-radius: var(--radius); padding: 8px 16px; min-height: 150px;
+  border-radius: var(--radius); padding: var(--space-2) var(--space-4); min-height: 150px;
   display: flex; align-items: center; justify-content: center;
   font-size: clamp(4rem, 15vh, 7.5rem); line-height: 1;
   font-family: var(--font-cond); font-weight: 700; font-variant-numeric: tabular-nums;
@@ -2205,14 +2225,14 @@ button, input, select, textarea { font-family: inherit; }
    Die Karten schrumpfen zu Kopfzeilen über ihren Spalten. */
 #screen-game.turnier.verlauf #history { display: grid; flex: 1 1 auto; min-height: 88px; }
 #screen-game.turnier.verlauf .scoreboard { flex: 0 0 auto; }
-#screen-game.turnier.verlauf .pcard { padding: 8px 10px; }
+#screen-game.turnier.verlauf .pcard { padding: var(--space-2) 10px; }
 #screen-game.turnier.verlauf .pcard .rest-zeile { font-size: 2.4rem; }
 #screen-game.turnier.verlauf .pcard .meta { display: none; }
 #screen-game.turnier.verlauf .pcard .pfinish { display: none; }
 #screen-game.turnier.verlauf .input-area { display: none; }
 /* Deutlich größer als der normale Verlauf – und höchstens 13 Zeilen je
    Seite, mehr passt ohne Scrollen nicht ins Bild. */
-#screen-game.turnier.verlauf .history .v { font-size: 1.35rem; padding: 8px 14px; }
+#screen-game.turnier.verlauf .history .v { font-size: 1.35rem; padding: var(--space-2) 14px; }
 #screen-game.turnier.verlauf .history .leg-sep { font-size: 0.9rem; }
 #screen-game.turnier.verlauf .history .col > :nth-child(n+14) { display: none; }
 
@@ -2227,7 +2247,7 @@ button, input, select, textarea { font-family: inherit; }
 }
 /* Auch am flachen Handy quer zählt im Turnier-Modus nur die Anzeige. */
 @media (orientation: landscape) and (max-height: 560px) {
-  #screen-game.turnier .pcard { padding: 4px 8px; }
+  #screen-game.turnier .pcard { padding: var(--space-1) var(--space-2); }
   #screen-game.turnier .pcard .pfinish { min-height: 34px; gap: 6px; }
   #screen-game.turnier .pcard .pfinish .chip { font-size: 1.1rem; padding: 3px 10px; }
   #screen-game.turnier .pcard .meta { font-size: 1rem; }
@@ -2309,7 +2329,7 @@ button, input, select, textarea { font-family: inherit; }
 .liga-spieltag .lt-kopf { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
 .lt-datum { font-family: var(--font-cond); font-weight: 700; font-size: 1.1rem; }
 .lt-nr {
-  font-size: 0.72rem; color: var(--muted);
+  font-size: 0.75rem; color: var(--muted);
   text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap;
 }
 .lt-paarung { margin-top: 6px; font-size: 1.05rem; }
@@ -2318,8 +2338,8 @@ button, input, select, textarea { font-family: inherit; }
 .lt-leute { display: flex; flex-wrap: wrap; gap: 6px 10px; margin-top: 10px; }
 .lt-person {
   display: inline-flex; align-items: center; gap: 7px;
-  background: var(--bg-3); border: 1px solid var(--line); border-radius: 999px;
-  padding: 4px 12px 4px 5px; font-size: 0.85rem; font-weight: 600;
+  background: var(--bg-3); border: 1px solid var(--line); border-radius: var(--r-pill);
+  padding: var(--space-1) var(--space-3) var(--space-1) 5px; font-size: 0.85rem; font-weight: 600;
 }
 .lt-status { margin-top: 8px; font-size: 0.85rem; }
 .lt-status.offen { color: var(--amber); }
@@ -2331,7 +2351,7 @@ button, input, select, textarea { font-family: inherit; }
 @media (min-width: 820px) {
   /* Zwei Spalten am Tablet – 18 Spieltage untereinander wären ein Turm. */
   #screen-liga.active #liga-liste {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: start;
+    display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); align-items: start;
   }
   #screen-liga.active #liga-liste .card { margin-bottom: 0; }
 }
@@ -2344,12 +2364,12 @@ button, input, select, textarea { font-family: inherit; }
  * „–" = noch offen.
  */
 .fin-kacheln {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2);
   margin-bottom: 8px;
 }
 .fin-kacheln .fk {
   display: flex; align-items: center; justify-content: center;
-  min-height: 54px; border-radius: 12px;
+  min-height: 54px; border-radius: var(--r-m);
   background: var(--bg-2); border: 1px solid var(--line);
   font-family: var(--font-cond); font-weight: 700; font-size: 1.7rem;
   font-variant-numeric: tabular-nums;
@@ -2382,8 +2402,12 @@ button, input, select, textarea { font-family: inherit; }
 /* ---------- Liga: Kalender-Icons, Fusszeile, Regelecke ---------- */
 
 .icon-btn.rund { border-radius: 50%; font-size: 1.1rem; }
-.lt-rechts { display: inline-flex; align-items: center; gap: 8px; }
-.lt-cal { width: 34px; height: 34px; font-size: 0.9rem; opacity: 0.8; }
+.lt-rechts { display: inline-flex; align-items: center; gap: var(--space-2); }
+.lt-cal { width: 44px; height: 44px; font-size: 0.9rem; }
+/* Kalender-Symbol als Linienzeichnung: ein Emoji wird je nach Android-Schrift
+   zum leeren Kaestchen. currentColor, damit es der Knopffarbe folgt. */
+.icon-btn .ico { width: 20px; height: 20px; display: block; margin: auto; }
+.icon-btn.lt-cal .ico { width: 18px; height: 18px; }
 
 /* Status links, die Zusage als leiser kleiner Knopf rechts – die eine
    Aktion des Abends muss hier nichts anschreien. */
@@ -2413,7 +2437,7 @@ button, input, select, textarea { font-family: inherit; }
 #liga-stand { text-align: center; }
 .lg-teams {
   display: grid; grid-template-columns: 1fr auto 1fr;
-  align-items: center; gap: 12px; margin: 4px 0 6px;
+  align-items: center; gap: var(--space-3); margin: 4px 0 6px;
 }
 .lg-team .lg-name {
   font-family: var(--font-cond); font-weight: 700; font-size: 1rem;
@@ -2441,21 +2465,23 @@ button, input, select, textarea { font-family: inherit; }
   text-transform: uppercase; color: var(--muted); margin: 12px 0 6px;
 }
 .liga-start .ls-zeile {
-  display: flex; align-items: center; gap: 10px; margin-bottom: 6px;
+  display: flex; align-items: center; gap: 10px; margin-bottom: var(--space-2);
 }
-.liga-start .ls-zeile > span {
-  width: 22px; text-align: center; font-weight: 700; color: var(--muted);
+/* Nur die Positionsnummer ist schmal – nicht der Wrapper der beiden
+   Namensfelder (.namen-paar), sonst schrumpfen Vor- und Nachname auf 22 px. */
+.liga-start .ls-zeile > span:not(.namen-paar) {
+  width: 22px; flex: none; text-align: center; font-weight: 700; color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
 .liga-start select, .liga-start input {
   flex: 1; min-width: 0; background: var(--bg-3); border: 1px solid var(--line);
-  color: var(--text); border-radius: 10px; padding: 10px 12px;
+  color: var(--text); border-radius: var(--r-m); padding: 10px var(--space-3);
   font-size: 1rem; font-family: inherit; min-height: 46px;
 }
 .liga-start input:focus, .liga-start select:focus { outline: 2px solid var(--line-hell); }
 
 /* Zwei kleine Knoepfe nebeneinander am Spieltag. */
-.lt-knoepfe { display: flex; gap: 6px; flex: none; }
+.lt-knoepfe { display: flex; gap: var(--space-2); flex: none; }
 
 #liga-regeln h2 { margin: 18px 0 10px; }
 #liga-regeln h2:first-child { margin-top: 4px; }
@@ -2508,8 +2534,8 @@ button, input, select, textarea { font-family: inherit; }
 
 /* Die Scheibe des Einzels im Spielplan (S1/S2 laufen parallel). */
 .match-row .scheibe {
-  flex: none; font-family: var(--font-cond); font-weight: 700; font-size: 0.72rem;
-  color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px;
+  flex: none; font-family: var(--font-cond); font-weight: 700; font-size: 0.75rem;
+  color: var(--muted); border: 1px solid var(--line); border-radius: var(--r-xs); padding: 2px 6px;
 }
 
 /* Nichts anzeigen, wenn Finish-Hilfen fürs Ligaspiel abgeschaltet sind. */
@@ -2531,9 +2557,9 @@ button, input, select, textarea { font-family: inherit; }
    gedeckt, damit der Name das Bild bestimmt. */
 .posmark {
   display: inline-block; min-width: 22px; text-align: center;
-  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.4px;
+  font-size: 0.75rem; font-weight: 700; letter-spacing: 0.4px;
   color: var(--muted); background: var(--accent-faint);
-  border: 1px solid var(--line); border-radius: 6px;
+  border: 1px solid var(--line); border-radius: var(--r-xs);
   padding: 1px 3px; vertical-align: 1px;
 }
 
@@ -2548,10 +2574,26 @@ button, input, select, textarea { font-family: inherit; }
 .konto-tabs.drei { grid-template-columns: 1fr 1fr 1fr; }
 .konto-tabs.vier { grid-template-columns: repeat(4, 1fr); }
 .konto-tabs.fuenf { grid-template-columns: repeat(5, 1fr); }
-.konto-tabs.vier button, .konto-tabs.fuenf button { padding-left: 4px; padding-right: 4px; }
+.konto-tabs.vier button, .konto-tabs.fuenf button { padding-left: 6px; padding-right: 6px; }
+.konto-tabs { gap: var(--space-2); }
+/* Am schmalen Handy passen fuenf Reiter nicht mit Innenluft nebeneinander
+   ("Spielplan" fuellte seinen Knopf randvoll). Dort wird die Leiste eine
+   wischbare Chip-Zeile wie die Ranglisten-Filter; die weiche Kante rechts
+   zeigt, dass es weitergeht. */
+@media (max-width: 479px) {
+  .konto-tabs.fuenf {
+    display: flex; gap: var(--space-2); overflow-x: auto; scrollbar-width: none;
+    -webkit-overflow-scrolling: touch; padding-bottom: 2px;
+    -webkit-mask-image: linear-gradient(90deg, #000 90%, transparent);
+    mask-image: linear-gradient(90deg, #000 90%, transparent);
+  }
+  .konto-tabs.fuenf::-webkit-scrollbar { display: none; }
+  .konto-tabs.fuenf button { flex: none; padding: 10px 14px; white-space: nowrap; }
+  .konto-tabs.fuenf button:last-child { margin-right: 24px; }
+}
 
 /* Kassenbuch: Kopf wie die Vorlage, Bestand gross, Beitragsliste, Formular, Buch. */
-.kasse-kopf { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.82rem; color: var(--muted); margin-bottom: 8px; }
+.kasse-kopf { display: flex; flex-wrap: wrap; gap: 6px var(--space-4); font-size: 0.82rem; color: var(--muted); margin-bottom: 8px; }
 .kasse-kopf b { color: var(--text); }
 .kasse-saldo .hint { display: block; }
 .kasse-paypal { margin: 6px 0 2px; text-decoration: none; display: flex; align-items: center; justify-content: center; }
@@ -2561,23 +2603,23 @@ button, input, select, textarea { font-family: inherit; }
 .kb-zeile .kb-name { flex: 1; font-weight: 600; }
 .kb-zeile .kb-status { font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .kb-zeile.voll .kb-status { color: #4ade80; }
-.kb-zeile .btn.small { min-height: 36px; padding: 6px 12px; font-size: 0.85rem; }
+.kb-zeile .btn.small { min-height: 36px; padding: 6px var(--space-3); font-size: 0.85rem; }
 .kasse-form select, .kasse-form input[type="date"], .kasse-form input[type="number"] {
   width: 100%; min-height: 48px; background: var(--bg-3); border: 1px solid var(--line); color: var(--text);
-  border-radius: 10px; padding: 10px 12px; font-size: 1rem; font-family: inherit;
+  border-radius: var(--r-m); padding: 10px var(--space-3); font-size: 1rem; font-family: inherit;
 }
 .kasse-konfig { margin-top: 6px; }
-.kasse-form.bearbeiten { border: 1px solid var(--accent-dark); border-radius: 12px; padding: 10px; }
+.kasse-form.bearbeiten { border: 1px solid var(--accent-dark); border-radius: var(--r-m); padding: 10px; }
 .kasse-eintrag .weg.edit { color: var(--muted); }
 .kasse-konfig summary { cursor: pointer; font-size: 0.85rem; color: var(--muted); padding: 6px 0; }
 .kasse-konfig .zeile { margin: 8px 0; }
 .kasse-liste { margin-top: 12px; }
-.kasse-kopfzeile { display: flex; gap: 10px; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); padding: 0 0 6px; border-bottom: 1px solid var(--line); }
+.kasse-kopfzeile { display: flex; gap: 10px; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); padding: 0 0 6px; border-bottom: 1px solid var(--line); }
 .kasse-kopfzeile span:nth-child(2) { flex: 1; }
 .kasse-eintrag .nr { width: 22px; font-size: 0.78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .kasse-eintrag .zahlen { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
-.kasse-eintrag .saldo { font-size: 0.72rem; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.kasse-summen { display: flex; flex-wrap: wrap; gap: 6px 16px; padding-top: 10px; margin-top: 6px; border-top: 2px solid var(--line); font-size: 0.85rem; color: var(--muted); }
+.kasse-eintrag .saldo { font-size: 0.75rem; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.kasse-summen { display: flex; flex-wrap: wrap; gap: 6px var(--space-4); padding-top: 10px; margin-top: 6px; border-top: 2px solid var(--line); font-size: 0.85rem; color: var(--muted); }
 .kasse-summen b { color: var(--text); font-variant-numeric: tabular-nums; }
 /* Vereinskasse: der Bestand gross, darunter das Formular und die Liste. */
 .kasse-saldo { text-align: center; margin: 6px 0 14px; }
@@ -2587,11 +2629,11 @@ button, input, select, textarea { font-family: inherit; }
 }
 .kasse-saldo b.plus { color: #4ade80; }
 .kasse-saldo b.minus { color: var(--red); }
-.kasse-form { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
-.kasse-form .zeile { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.kasse-form { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: 14px; }
+.kasse-form .zeile { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
 .kasse-form input {
   background: var(--bg-3); border: 1px solid var(--line); color: var(--text);
-  border-radius: 10px; padding: 12px; font-size: 1rem; min-height: var(--tap);
+  border-radius: var(--r-m); padding: var(--space-3); font-size: 1rem; min-height: var(--tap);
 }
 .kasse-eintrag {
   display: flex; align-items: center; gap: 10px; padding: 9px 0;
@@ -2605,7 +2647,7 @@ button, input, select, textarea { font-family: inherit; }
 .kasse-eintrag .betrag.minus { color: var(--red); }
 .kasse-eintrag .weg {
   background: none; border: none; color: var(--muted); font-size: 1.1rem;
-  cursor: pointer; padding: 8px;
+  cursor: pointer; padding: var(--space-2);
 }
 
 /* Das Vereinsheim: Sehnsucht-Logo ueber der Trainingskarte - liegt als
@@ -2613,11 +2655,11 @@ button, input, select, textarea { font-family: inherit; }
 .sehnsucht-logo {
   width: 132px; height: 132px; margin: 0 auto 6px;
   background: #000 url('../icons/sehnsucht.webp') center / contain no-repeat;
-  border-radius: 16px;
+  border-radius: var(--r-l);
 }
 
 /* DiensDarts: drei Antworten nebeneinander, darunter die Listen. */
-.dd-antworten { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0 4px; }
+.dd-antworten { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-2); margin: 10px 0 4px; }
 .dd-antworten button.aktiv {
   border-color: var(--aktiv-linie); background: var(--aktiv-flaeche);
   box-shadow: 0 0 14px var(--schein);
@@ -2644,8 +2686,10 @@ button, input, select, textarea { font-family: inherit; }
 
 /* Echte Namen fuer die Liga: Vor- und Nachname je zur Haelfte nebeneinander. */
 .namen-titel { font-size: 0.78rem; color: var(--muted); margin: 10px 0 4px; text-align: left; }
-.namen-paar { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.namen-paar { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
 .namen-paar .name-input { margin: 0; }
+.liga-start .ls-zeile > .namen-paar { flex: 1; min-width: 0; }
+.liga-start .namen-paar input { width: 100%; }
 
 /* Solo-Spiel (ein Spieler): eine grosse Karte statt einer halb leeren
    Zweierreihe, darunter Finish-Kaestchen und der Verlauf mittig. */
@@ -2664,8 +2708,8 @@ button, input, select, textarea { font-family: inherit; }
      Knopf beim Druecken zur Seite und der Finger traefe ins Leere. */
   position: fixed; left: 0; right: 0; bottom: 18px;
   margin: 0 auto; width: fit-content;
-  z-index: 45; padding: 12px 22px;
-  background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px;
+  z-index: 45; padding: var(--space-3) 22px;
+  background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--r-m);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
 }
 
@@ -2750,22 +2794,22 @@ button.blitzt { animation: tastenblitz 240ms var(--ease-out-stark); }
 /* Die Kurzstatistik des Einzels: zwei Spalten, der Sieger traegt Licht. */
 .te-stand { font-size: clamp(1.6rem, 4vh, 2.4rem); }
 .te-stand b { font-size: clamp(2.2rem, 6vh, 3.4rem); font-variant-numeric: tabular-nums; }
-.te-stat { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0 6px; }
+.te-stat { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); margin: 14px 0 6px; }
 .te-spalte {
-  background: var(--bg-3); border: 1px solid var(--line); border-radius: 14px;
-  padding: 16px 12px;
+  background: var(--bg-3); border: 1px solid var(--line); border-radius: var(--r-l);
+  padding: var(--space-4) var(--space-3);
 }
 .te-spalte.sieger { border-color: var(--aktiv-linie); box-shadow: 0 0 26px var(--schein); }
 .te-name { font-size: clamp(1.6rem, 4.4vh, 2.6rem); font-weight: 800; margin-bottom: 8px; }
-.te-wert { display: flex; justify-content: space-between; align-items: baseline; padding: 4px 8px; }
+.te-wert { display: flex; justify-content: space-between; align-items: baseline; padding: var(--space-1) var(--space-2); }
 .te-wert span { color: var(--muted); font-size: clamp(1.1rem, 2.8vh, 1.6rem); }
 .te-wert b { font-size: clamp(1.9rem, 5.5vh, 3.2rem); font-variant-numeric: tabular-nums; }
 
 /* Die naechsten Begegnungen: grosse Zeilen, die erste leuchtet. */
 .te-next { display: flex; flex-direction: column; gap: 10px; margin: 14px 0; text-align: left; }
 .te-zeile {
-  display: flex; align-items: center; gap: 16px; width: 100%;
-  background: var(--bg-3); border: 1px solid var(--line); border-radius: 16px;
+  display: flex; align-items: center; gap: var(--space-4); width: 100%;
+  background: var(--bg-3); border: 1px solid var(--line); border-radius: var(--r-l);
   padding: clamp(14px, 2.6vh, 24px) 22px;
   font: inherit; font-size: clamp(1.6rem, 4.8vh, 2.8rem); font-weight: 700;
   color: var(--text); text-align: left; cursor: pointer;
@@ -2773,7 +2817,7 @@ button.blitzt { animation: tastenblitz 240ms var(--ease-out-stark); }
 .te-zeile.dran { border-color: var(--aktiv-linie); background: var(--aktiv-flaeche); box-shadow: 0 0 26px var(--schein); }
 .te-scheibe {
   flex: none; font-size: clamp(1rem, 2.6vh, 1.5rem); font-weight: 700; color: var(--muted);
-  border: 1px solid var(--line); border-radius: 8px; padding: 4px 10px;
+  border: 1px solid var(--line); border-radius: var(--r-s); padding: var(--space-1) 10px;
 }
 .te-hint { color: var(--muted); font-size: clamp(1.1rem, 2.8vh, 1.5rem); margin: 2vh 0 0; }
 /* Die per Pfeiltaste gewaehlte Option traegt einen blauen Laser-Ring -
@@ -2793,16 +2837,16 @@ button.blitzt { animation: tastenblitz 240ms var(--ease-out-stark); }
 .bo-slot {
   display: flex; align-items: center; gap: 10px; min-height: var(--tap);
   border: 1px dashed var(--line); border-radius: var(--radius);
-  padding: 8px 10px; color: var(--dead);
+  padding: var(--space-2) 10px; color: var(--dead);
 }
 .bo-slot .bo-frei { flex: 1; text-align: left; }
 .bulloff-order .btn.unsichtbar { visibility: hidden; }
 
 /* Finisher: je Zielpunkt eine Pille in der Spielerkarte - jedes Finish
    zuendet eine im Laserlicht. Leuchten alle, ist gewonnen. */
-.fin-pillen { display: flex; justify-content: center; gap: 8px; margin: 4px 0 2px; flex-wrap: wrap; }
+.fin-pillen { display: flex; justify-content: center; gap: var(--space-2); margin: 4px 0 2px; flex-wrap: wrap; }
 .fin-pille {
-  width: 16px; height: 16px; border-radius: 999px;
+  width: 16px; height: 16px; border-radius: var(--r-pill);
   border: 1px solid var(--line-hell); background: var(--bg-3);
 }
 .fin-pille.an {
@@ -2836,7 +2880,7 @@ button.blitzt { animation: tastenblitz 240ms var(--ease-out-stark); }
 }
 .spielplan-aktionen {
   margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line);
-  display: flex; flex-direction: column; gap: 8px;
+  display: flex; flex-direction: column; gap: var(--space-2);
 }
 #turnier-endstand { margin-top: 14px; }
 
@@ -2850,10 +2894,10 @@ button.blitzt { animation: tastenblitz 240ms var(--ease-out-stark); }
 }
 #screen-bulloff.turnier .bulloff {
   flex: 1; min-height: 0;
-  grid-template-columns: 1fr 1fr; gap: 20px; align-items: stretch;
+  grid-template-columns: 1fr 1fr; gap: var(--space-5); align-items: stretch;
 }
 #screen-bulloff.turnier .bulloff button {
-  height: 100%; min-height: 0; padding: 20px;
+  height: 100%; min-height: 0; padding: var(--space-5);
   font-size: clamp(2rem, 7vh, 3.6rem); font-family: var(--font-cond); font-weight: 700;
 }
 #screen-bulloff.turnier .bulloff button.wahl {
@@ -2930,7 +2974,7 @@ body.am-board #screen-bulloff.turnier.active {
 }
 /* Nichts hier hat eine feste Mindesthoehe: auf einem kurzen Tablet oder
    Handy werden die Tasten flacher, statt unten aus dem Bild zu rutschen. */
-#screen-game:not(.turnier) .pad:not(.hidden) { flex: 1 1 auto; display: flex; flex-direction: column; gap: 8px; min-height: 0; overflow: hidden; }
+#screen-game:not(.turnier) .pad:not(.hidden) { flex: 1 1 auto; display: flex; flex-direction: column; gap: var(--space-2); min-height: 0; overflow: hidden; }
 #screen-game:not(.turnier) #pad-total .keypad,
 #screen-game:not(.turnier) #pad-darts .num-grid { flex: 1 1 auto; min-height: 0; grid-auto-rows: minmax(0, 1fr); max-height: none; }
 #screen-game:not(.turnier) .fin-kacheln.gross .fk { min-height: 0; height: clamp(40px, 8vh, 88px); }
@@ -2950,7 +2994,7 @@ body.am-board #screen-bulloff.turnier.active {
 #screen-game:not(.turnier) .mult-row { margin-bottom: 0; }
 /* Schnellwahl als eine Zeile ueber die ganze Breite, sobald Platz ist. */
 @media (min-width: 700px) {
-  #screen-game:not(.turnier) .quick-row { display: flex; gap: 6px; }
+  #screen-game:not(.turnier) .quick-row { display: flex; gap: var(--gap-keys); }
   #screen-game:not(.turnier) .quick-row button { flex: 1 1 0; min-width: 0; }
 }
 /* Auch quer (iPad): Spieler oben, Tasten unten -- nicht mehr nebeneinander. */
@@ -3003,9 +3047,9 @@ body.fix-spiel #screen-game .game-body { flex: 1 1 auto; min-height: 0; }
 /* Am Handy: drei oder vier Spieler bleiben in einer Reihe, aber kompakt. */
 @media (max-width: 699px) {
   .scoreboard.viele .pcard .rest-zeile { font-size: clamp(1.5rem, 6.5vw, 2.4rem); }
-  .scoreboard.viele .pcard .pname { font-size: 0.72rem; }
+  .scoreboard.viele .pcard .pname { font-size: 0.75rem; }
   .scoreboard.viele .pcard .pname .av.sm { display: none; }
-  .scoreboard.viele .pcard .legs { display: block; font-size: 0.62rem; }
+  .scoreboard.viele .pcard .legs { display: block; font-size: 0.75rem; }
 }
 
 /* Handy quer (sehr flach): untereinander bleibt fuer fuenf Tastenreihen
@@ -3017,8 +3061,391 @@ body.fix-spiel #screen-game .game-body { flex: 1 1 auto; min-height: 0; }
   #screen-game:not(.turnier) .game-main { flex: 1 1 42%; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
   #screen-game:not(.turnier) .input-area { flex: 1 1 58%; min-width: 0; }
   #screen-game:not(.turnier) .scoreboard { flex: 1 1 auto; grid-auto-rows: minmax(0, 1fr); margin-bottom: 4px; min-height: 0; }
-  #screen-game:not(.turnier) .pcard { min-height: 0; padding: 4px 6px; }
+  #screen-game:not(.turnier) .pcard { min-height: 0; padding: var(--space-1) 6px; }
   #screen-game:not(.turnier) .pcard .rest-zeile { font-size: clamp(1.8rem, 12vh, 3rem); }
   #screen-game:not(.turnier) .fin-kacheln.gross .fk { height: clamp(32px, 11vh, 44px); }
   #screen-game:not(.turnier) .quick-row button { height: clamp(30px, 9vh, 40px); }
+}
+
+
+/* ================= Design-Audit 28.09.2026 =================
+ * Befunde D-A bis D-F aus audit-2026-09-28/AUDIT.md. Steht am Ende, damit
+ * es die gewachsenen Schichten darueber sicher ueberstimmt – und damit
+ * man an einer Stelle sieht, was die Runde geaendert hat.
+============================================================ */
+
+/* ---------- Grundschrift waechst am Tablet mit (D-C5) ----------
+ * An der kurzen Bildschirmseite gemessen (vmin), damit das quergedrehte
+ * iPhone nicht mitwaechst: iPhone hoch und quer 16 px, kleines Tablet ~17 px,
+ * iPad ~18 px, grosse Schirme bis 19 px.
+ * Alles in rem (Navigation, Hinweise, Reiter) waechst dadurch mit. */
+html { font-size: clamp(16px, 0.49vmin + 14.1px, 19px); }
+body { font-size: 1rem; }
+
+/* ---------- Ein Aktivstil fuer jede Auswahl (D-D2) ----------
+ * Frueher gab es drei: Nav rot durchscheinend, Optionen roter Rahmen,
+ * Reiter/Chips/Umschalter weiss gefuellt. Weiss gefuellte Auswahl sah aus
+ * wie ein Hauptknopf ("mit" neben "Training starten"). Jetzt gilt ueberall:
+ * Ausgewaehlt = weisse Kante, dunkle Flaeche, blauer Schein. Weiss
+ * gefuellt sind nur noch Hauptaktionen (.btn.primary, OK-Taste, Spielen). */
+.nav button.active,
+.options button.active,
+[data-setting] button.active,
+#board-mode button.active,
+.chips .chip.active,
+.konto-tabs button.active,
+.dd-antworten button.aktiv,
+.mult-row button.active {
+  background: var(--aktiv-flaeche);
+  border-color: var(--aktiv-linie);
+  color: var(--text);
+  box-shadow: 0 0 14px var(--schein);
+}
+/* Der Umschalter hat keine Einzelrahmen – die Kante kommt als Innenlinie. */
+.segmented button.active {
+  background: var(--aktiv-flaeche);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1.5px var(--aktiv-linie), 0 0 14px var(--schein);
+  border-radius: var(--r-s);
+}
+/* Auf der dunklen Auswahl blitzt der Druck hell wie auf jeder Taste. */
+.segmented button.active.blitzt, .options button.active.blitzt,
+.chips .chip.active.blitzt, .konto-tabs button.active.blitzt,
+#board-mode button.active.blitzt { animation-name: tastenblitz; }
+
+/* ---------- Dialoge: Optionen oben, Aktionen klar abgesetzt (D-A4, D-B7) ---------- */
+/* Die Aktionszeile steht 20 px unter dem letzten Auswahlblock, damit
+   "ohne | mit" und "Abbrechen | Starten" nicht zu einem 2x2-Raster
+   verschmelzen. */
+.overlay-card > .row-btns:not(:first-child) { margin-top: var(--space-5); }
+/* Hohe Dialoge (Ligaspiel-Aufstellung) scrollen – die Aktionen bleiben
+   dabei unten stehen, statt erst nach dem Scrollen aufzutauchen. */
+.overlay-card > .row-btns:last-child {
+  position: sticky; bottom: calc(-40px + env(safe-area-inset-bottom, 0px));
+  z-index: 1;
+  background: var(--bg-2);
+  padding: var(--space-3) 0 var(--space-1);
+  box-shadow: 0 -14px 14px -6px var(--bg-2);
+}
+.overlay.gross .overlay-card > .row-btns:last-child { position: static; box-shadow: none; background: none; }
+.overlay-card .row-btns > .btn { margin-top: 0; }
+/* Vier Gegner-Optionen: 2x2 statt 3+1 (Bots schwer stand allein). */
+.liga-start .options:has(> button:nth-child(4):last-child) {
+  display: grid; grid-template-columns: 1fr 1fr;
+}
+/* Checkout-Frage mit nur ein oder zwei moeglichen Dartzahlen: die Kacheln
+   fuellen die Zeile, statt links in einem Dreier-Raster zu haengen (D-B9). */
+.overlay-card .row-btns > :only-child { grid-column: 1 / -1; }
+.overlay-card .row-btns:not(.two):has(> :nth-child(2):last-child) { grid-template-columns: 1fr 1fr; }
+
+/* Profil: "Spieler ausblenden" / "Gast loeschen" ist keine zweite
+   Hauptaktion unter "Speichern" – ein leiser Textlink mit Abstand (D-A5). */
+.overlay-card .row-btns ~ .btn.danger.ghost {
+  display: block; width: auto; min-height: 44px;
+  margin: var(--space-5) auto 0; padding: var(--space-2) var(--space-4);
+  border-color: transparent; background: none;
+  font-size: 0.95rem; font-weight: 600;
+  text-decoration: underline; text-underline-offset: 3px;
+}
+/* Fehlerhinweis direkt unter der Dialog-Ueberschrift: rot und gut lesbar. */
+.hint.fehler {
+  color: var(--red); font-size: 0.95rem; font-weight: 600; line-height: 1.4;
+  background: rgba(255, 90, 90, 0.08); border: 1px solid #4a2530;
+  border-radius: var(--r-m); padding: var(--space-2) var(--space-3); margin: var(--space-2) 0 var(--space-3);
+}
+
+/* ---------- Tastenfelder (D-A6, D-A7) ---------- */
+/* Handy quer ist extrem flach: dort 6 statt 8 px Fuge, sonst fehlt den
+   fuenf Tastenreihen die Hoehe. */
+@media (orientation: landscape) and (max-height: 560px) {
+  :root { --gap-keys: 6px; }
+  /* Schnellwahl: Chips so hoch wie die Zeile, rechts Luft, damit "180"
+     nicht unter der weichen Kante verschwindet. */
+  .quick-row { align-items: stretch; padding-right: var(--space-6); }
+  #screen-game:not(.turnier) .quick-row button { height: 44px; flex: 0 0 64px; }
+}
+/* Ausgegraute Tasten (bei allen zu): gestrichelte Kante statt nur Grau (D-C1). */
+.cg-block button.dim { border-style: dashed; border-color: var(--line-hell); }
+
+/* ---------- Kontrast und Schriftgroessen (D-C2, D-C4) ---------- */
+/* Weiss auf dem Akzentrot erreicht nur 3,9:1 – fuer den kleinen Finish-Chip
+   ein dunkleres Rot (5,6:1). Grosse Kacheln behalten das helle Rot. */
+.checkout-bar .chip.first { background: #b8363b; border-color: #b8363b; }
+.input-error { font-size: 0.9rem; }
+.display-row .input-error:empty { display: none; }
+
+/* ---------- Kopfzeilen (D-B3, D-B6, D-F3) ---------- */
+@media (max-width: 699px) {
+  /* Der Modus-Umschalter im Spielkopf war 6 px breiter als ein iPhone 14. */
+  .segmented.small button { padding: var(--space-2) 10px; }
+  /* Lange Untertitel (Round the World) brechen auf zwei Zeilen um, statt
+     mit "..." abgeschnitten zu werden. */
+  .game-header .game-title span.muted {
+    white-space: normal; display: -webkit-box; -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2; line-clamp: 2; line-height: 1.25;
+  }
+}
+.app-header .btn.small { white-space: nowrap; flex: none; }
+.app-header.row { gap: var(--space-3); }
+/* Die Durchschnittsspalte klebte am Kartenrand. */
+.standings th:last-child, .standings td:last-child { padding-right: var(--space-3); }
+/* Fortsetzen-Box am Handy: Text oben, beide Knoepfe als eigene Zeile. */
+@media (max-width: 479px) {
+  .card.resume { flex-wrap: wrap; }
+  .card.resume > div:first-child { flex: 1 1 100%; }
+  .resume-btns { flex: 1 1 100%; }
+  .resume-btns .btn { flex: 1 1 0; }
+}
+
+/* ---------- Rangliste: fuenf Modi ohne verwaisten Knopf (D-B5) ---------- */
+@media (max-width: 699px) {
+  #board-mode { display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--space-2); }
+  #board-mode button { min-width: 0; grid-column: span 2; }
+  #board-mode button:nth-child(n+4) { grid-column: span 3; }
+}
+
+/* ---------- Liga-Spielplan (D-B8, D-E4) ---------- */
+/* Ohne Zusagen-Block (offline) steht der Knopf links unter dem Ort, statt
+   rechts neben einem leeren Platzhalter. */
+.lt-fuss:has(> span:empty:first-child) { justify-content: flex-start; }
+.lt-fuss > span:empty:first-child { display: none; }
+/* Leere Tabellenzellen zeigen einen Strich – sonst sieht die Tabelle kaputt aus. */
+#lt-tabelle td:empty::before { content: '–'; color: var(--muted); }
+
+/* ---------- Konto ohne Server (D-E3) ---------- */
+#konto-inhalt:empty::before {
+  content: 'Verbindung zum Server wird aufgebaut … Ohne Internet laeuft die App wie gewohnt lokal weiter.';
+  display: block; text-align: center; color: var(--muted); font-size: 0.95rem; line-height: 1.5;
+}
+
+/* ---------- Emoji-Symbole (D-F4) ---------- */
+/* Pokal und Dartscheibe in den Endstaenden: ausdruecklich aus der
+   Emoji-Schrift, damit Android sie nicht als leeres Kaestchen zeigt. */
+.big-emoji, .ls, .podium .medal {
+  font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Twemoji Mozilla', sans-serif;
+}
+
+/* ---------- Round the World (D-B4) ---------- */
+/* Handy hochkant: die Spielerzeilen bleiben so hoch wie ihr Inhalt, den
+   freien Platz bekommen die Treffer-Tasten – sie haengen weiter unten am
+   Daumen, sind aber groesser statt einer halb leeren Karte darueber. */
+@media (max-width: 699px) and (orientation: portrait) {
+  #screen-rtw .game-main { flex: 0 1 auto; }
+  #screen-rtw .rtw-board { flex: 0 1 auto; }
+  #screen-rtw .rtw-row { flex: 1 1 auto; min-height: 72px; max-height: 150px; }
+  #screen-rtw .input-area { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: flex-end; }
+  #screen-rtw .pad { flex: 1 1 auto; display: flex; flex-direction: column; justify-content: flex-end; }
+  #screen-rtw .rtw-pad-grid.ziel { flex: 1 1 auto; justify-content: flex-end; }
+  #screen-rtw .rtw-treffer { flex: 1 1 auto; max-height: 42vh; }
+}
+/* iPad quer: die Treffer-Tasten waren 850 px hohe Tuerme. Gedeckelt und
+   unten am Rand; die Spielerzeilen links duerfen dafuer wachsen. */
+@media (orientation: landscape) and (min-width: 700px) and (min-height: 561px) {
+  #screen-rtw .rtw-treffer { flex: 0 1 auto; height: clamp(160px, 34vh, 320px); }
+  #screen-rtw .rtw-pad-grid.ziel { justify-content: flex-end; }
+  #screen-rtw .rtw-row { min-height: clamp(84px, 14vh, 150px); }
+  #screen-rtw .rtw-row .rw-name { font-size: 1.2rem; }
+  #screen-rtw .rtw-row .rw-sub { font-size: 0.9rem; }
+}
+
+/* ---------- Turnier-Modus: Restzahl passt in jede Karte (D-B1) ----------
+ * Die Groesse haengt an der Kartenbreite (Container-Query), nicht mehr an
+ * der Fensterbreite – vorher lief "321 | 180" auf vier von fuenf Geraeten
+ * aus der Karte. Ohne Container-Query-Unterstuetzung (iOS < 16) greift die
+ * vorsichtigere vw-Groesse davor. */
+#screen-game.turnier .pcard { container-type: inline-size; container-name: karte; }
+#screen-game.turnier .pcard .rest-zeile {
+  font-size: clamp(3rem, min(16vw, 34vh), 16rem);
+  font-size: clamp(2.6rem, min(36cqw, 34vh), 16rem);
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+}
+#screen-game.turnier .pcard .letzte-box {
+  margin-left: 0.1em; padding: 0 0 0 0.12em; min-width: 44px;
+}
+#screen-game.turnier .pcard .pname { min-width: 0; max-width: 100%; }
+#screen-game.turnier .pcard .pname { flex: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (orientation: landscape) and (min-width: 700px) {
+  #screen-game.turnier .pcard .rest-zeile {
+    font-size: clamp(4rem, min(20vw, 38vh), 18rem);
+    font-size: clamp(3rem, min(36cqw, 34vh), 18rem);
+  }
+}
+#screen-game.turnier .scoreboard.viele .pcard .rest-zeile {
+  font-size: clamp(1.8rem, min(28cqw, 18vh), 8rem);
+}
+/* Kleine Tablets quer (bis 700 px hoch): Karten ~300 px hoch. Schnitt,
+   Name und Finish-Zeile eine Stufe kleiner, damit der Rest Platz hat. */
+@media (orientation: landscape) and (min-width: 700px) and (max-height: 700px) {
+  #screen-game.turnier .pcard .rest-zeile { font-size: clamp(3rem, min(36cqw, 22vh), 12rem); }
+  #screen-game.turnier .pcard .meta { font-size: 1.4rem; }
+  #screen-game.turnier .pcard .pname { font-size: 1.6rem; }
+  #screen-game.turnier .pcard .legs { font-size: 1.1rem; }
+  #screen-game.turnier .pcard .pfinish { min-height: 44px; margin-top: 6px; }
+  #screen-game.turnier .pcard .pfinish .chip { font-size: clamp(1.2rem, 3.6vh, 1.8rem); }
+}
+/* Handy quer: die Karte ist nur ~190 px hoch – Rest, Name und Schnitt
+   muessen trotzdem alle hineinpassen. */
+@media (orientation: landscape) and (max-height: 560px) {
+  #screen-game.turnier .pcard .rest-zeile { font-size: clamp(2.6rem, min(36cqw, 22vh), 10rem); }
+  #screen-game.turnier .pcard .pname { font-size: 1.3rem; }
+  #screen-game.turnier .scoreboard.viele .pcard .rest-zeile { font-size: clamp(1.6rem, min(28cqw, 12vh), 5rem); }
+}
+/* Schmale Karten (iPhone hochkant): die letzte Aufnahme rutscht unter den
+   Rest – so darf die grosse Zahl fast die ganze Kartenbreite nutzen. */
+@container karte (max-width: 260px) {
+  #screen-game.turnier .pcard .rest-zeile {
+    grid-template-columns: minmax(0, 1fr);
+    font-size: clamp(2.4rem, min(58cqw, 30vh), 10rem);
+  }
+  #screen-game.turnier .pcard .rest { grid-column: 1; }
+  #screen-game.turnier .pcard .letzte-box {
+    grid-column: 1; justify-self: center; margin: 0.04em 0 0; padding: 0.04em 0 0;
+    border-left: none; border-top: 0.02em solid var(--line);
+  }
+  #screen-game.turnier .pcard .letzte-box { min-height: 44px; min-width: 44px; justify-items: center; }
+  #screen-game.turnier .pcard .letzte, #screen-game.turnier .pcard .letzte-alt { font-size: 0.3em; }
+  #screen-game.turnier .pcard .pname { font-size: 1.6rem; }
+  #screen-game.turnier .pcard .meta { font-size: 1.5rem; }
+  #screen-game.turnier .pcard .legs { font-size: 1.2rem; }
+}
+@container karte (max-width: 140px) {
+  #screen-game.turnier .pcard .pname { font-size: 1.1rem; }
+  #screen-game.turnier .pcard .meta { font-size: 1.1rem; }
+  #screen-game.turnier .pcard .pname .av { display: none; }
+}
+
+/* ---------- Turnier-Modus am Touch-Geraet: sichtbarer Rueckweg (D-E2) ----------
+ * Ohne Tastatur gibt es weder Tab noch Esc. Auf Geraeten ohne Maus steht
+ * der Ausgang deshalb dauerhaft klein oben rechts – leise, aber da. */
+@media (hover: none) {
+  #screen-game.turnier #turnier-exit,
+  #screen-game.turnier #turnier-exit.hidden {
+    display: inline-flex !important; align-items: center;
+    position: fixed; top: calc(env(safe-area-inset-top, 0px) + 6px); left: max(10px, env(safe-area-inset-left, 0px));
+    right: auto; bottom: auto; margin: 0; width: auto;
+    min-height: 44px; padding: var(--space-2) var(--space-3);
+    font-size: 0.85rem; opacity: 0.75; box-shadow: none;
+  }
+}
+
+/* ---------- Die Sechzig: kurz, klein, durchsichtig (D-E1) ----------
+ * Jede 60 bekommt weiter den Loewen und "SECHZIG!" – in jedem Modus. Aber
+ * die 60 ist die haeufigste Aufnahme des Abends: Die Feier dauert jetzt
+ * 650 ms statt 1,2 s, blurt nichts, der Loewe ist kleiner, und durch die
+ * Ebene hindurch bleibt das Tastenfeld sichtbar und bedienbar. */
+.feier.sechzig { pointer-events: none; }
+.feier.sechzig.an::before { content: none; display: none; }
+.feier.sechzig .feier-blitz { animation-duration: 0.65s; opacity: 0.55; }
+.feier.sechzig .feier-strahlen { animation-duration: 0.65s; }
+.feier.sechzig .feier-strahlen i { opacity: 0.4; }
+.feier.sechzig .feier-mitte { animation-duration: 0.65s; top: 36%; }
+.feier.sechzig .feier-logo {
+  width: clamp(96px, min(30vw, 22vh), 240px);
+  animation:
+    sechzig-schlag 0.2s cubic-bezier(0.2, 1.7, 0.4, 1) both,
+    feier-puls 0.45s ease-in-out 0.2s 1 both;
+}
+.feier.sechzig .feier-name {
+  font-size: clamp(1.6rem, 7vw, 2.8rem);
+  animation: feier-puls 0.45s ease-in-out 0.2s 1 both;
+}
+.feier.sechzig .feier-gruss { font-size: clamp(0.9rem, 3.6vw, 1.3rem); margin-top: 4px; }
+@media (prefers-reduced-motion: reduce) {
+  .feier.sechzig .feier-logo, .feier.sechzig .feier-name, .feier.sechzig .feier-mitte { animation: none; }
+}
+
+/* Drei, vier Spieler nebeneinander (Schnelles Spiel): auch hier richtet
+   sich der Rest nach der Kartenbreite – am iPad hochkant lief "276 | 180"
+   sonst ueber den Kartenrand. */
+#screen-game .pcard { container-type: inline-size; }
+#screen-game:not(.turnier) .scoreboard.viele .pcard .rest-zeile {
+  font-size: clamp(1.5rem, min(9vh, 30cqw), 4.4rem);
+}
+/* Ganz schmale Karten (vier Spieler am Handy hochkant): die letzte
+   Aufnahme steht unter dem Rest statt daneben – so behaelt sie ihr
+   44-px-Fingerziel, ohne die Karte zu sprengen. */
+@container (max-width: 120px) {
+  #screen-game:not(.turnier) .pcard .rest-zeile { flex-direction: column; gap: 0; }
+  #screen-game:not(.turnier) .scoreboard.viele .pcard .rest-zeile { font-size: clamp(1.5rem, min(9vh, 40cqw), 3rem); }
+  #screen-game:not(.turnier) .pcard .letzte-box {
+    margin: 0; padding: 0; border-left: none; justify-items: center; min-height: 44px;
+  }
+}
+
+/* ---------- Kleine Querformat-Geraete: Spieler untereinander ----------
+ * Julius' Wunsch: Auf flachen Querformat-Schirmen (Handy quer, kleine
+ * Android-Tablets bis 700 px Hoehe) steht das Tastenfeld rechts und die
+ * Spieler links. Nebeneinander wurden die Karten dort schmal und hoch;
+ * jetzt steht jeder Spieler als kompakte Zeile untereinander: Name und
+ * Werte links, der Rest mit der letzten Aufnahme rechts. Das iPad (ab
+ * 701 px Hoehe, also iPad mini quer 744 px und groesser) bleibt, wie es ist. */
+@media (orientation: landscape) and (max-height: 700px) and (min-width: 600px) {
+  #screen-game:not(.turnier) .game-body { flex-direction: row; gap: var(--space-3); align-items: stretch; }
+  #screen-game:not(.turnier) .game-main {
+    flex: 1 1 42%; min-width: 0; display: flex; flex-direction: column; overflow: hidden;
+  }
+  #screen-game:not(.turnier) .input-area { flex: 1 1 58%; min-width: 0; }
+  #screen-game:not(.turnier) .quick-row button { height: 44px; }
+  #screen-game:not(.turnier) .scoreboard {
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: minmax(0, 1fr);
+    flex: 1 1 auto; min-height: 0; margin-bottom: var(--space-2);
+  }
+  #screen-game:not(.turnier) .pcard,
+  #screen-game:not(.turnier) .scoreboard.viele .pcard {
+    display: grid; min-height: 0;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "name rest" "legs rest" "meta rest";
+    align-content: center; align-items: center;
+    column-gap: var(--space-3); row-gap: 2px;
+    padding: var(--space-1) var(--space-3);
+    text-align: left;
+  }
+  #screen-game:not(.turnier) .pcard .pname {
+    grid-area: name; justify-content: flex-start; min-width: 0;
+    font-size: 1.05rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #screen-game:not(.turnier) .pcard .legs,
+  #screen-game:not(.turnier) .scoreboard.viele .pcard .legs { grid-area: legs; display: block; font-size: 0.8rem; margin: 0; }
+  #screen-game:not(.turnier) .pcard .meta { grid-area: meta; justify-content: flex-start; font-size: 0.8rem; }
+  #screen-game:not(.turnier) .pcard .rest-zeile,
+  #screen-game:not(.turnier) .scoreboard.viele .pcard .rest-zeile,
+  #scoreboard.solo .pcard .rest-zeile {
+    grid-area: rest; margin: 0; justify-content: flex-end;
+    font-size: clamp(2rem, min(16vh, 24cqw), 6rem);
+  }
+  /* Vier Spieler auf 390 px Hoehe: nur Name und Rest, der Rest ist ohnehin
+     die Zahl, die zaehlt. */
+  #screen-game:not(.turnier) .scoreboard.viele .pcard .rest-zeile { font-size: clamp(1.6rem, 8vh, 3.2rem); }
+  #screen-game:not(.turnier) .scoreboard.viele .pcard { grid-template-areas: "name rest" "legs rest"; }
+  #screen-game:not(.turnier) .scoreboard.viele .pcard .meta { display: none; }
+}
+@media (orientation: landscape) and (max-height: 460px) and (min-width: 600px) {
+  #screen-game:not(.turnier) .pcard { grid-template-areas: "name rest" "legs rest"; }
+  #screen-game:not(.turnier) .pcard .meta { display: none; }
+  #screen-game:not(.turnier) .scoreboard.viele .pcard { grid-template-areas: "name rest"; }
+  #screen-game:not(.turnier) .scoreboard.viele .pcard .legs { display: none; }
+}
+
+/* Handy hochkant: neben Zurueck, drei Modus-Knoepfen und Ruecknahme bleibt
+   fuer den Spieltitel nur ein "S…" – der Titel faellt dort weg, die
+   Modus-Knoepfe teilen sich die Breite (D-B3). Im Turnier-Modus sind die
+   Knoepfe weg, dort bleibt der Titel. */
+@media (max-width: 419px) {
+  #screen-game:not(.turnier) .game-header .game-title { display: none; }
+  #screen-game:not(.turnier) .game-header #mode-toggle { flex: 1 1 auto; }
+  #screen-game:not(.turnier) .game-header #mode-toggle button { flex: 1 1 auto; padding-left: 6px; padding-right: 6px; }
+}
+
+/* Schnellwahl am Tablet quer: mindestens 44 px hoch (war 38 bis 41 px). */
+@media (orientation: landscape) and (min-width: 700px) and (min-height: 701px) {
+  #screen-game:not(.turnier) .quick-row button { height: clamp(44px, 5.5vh, 54px); }
+}
+
+/* Handy quer im Turnier-Modus: die schmalen Karten (Container-Regel oben)
+   duerfen Schnitt und Name nicht wieder hochsetzen – die Karte ist hier
+   nur ~190 px hoch. Steht deshalb hinter den Container-Regeln. */
+@media (orientation: landscape) and (max-height: 560px) {
+  #screen-game.turnier .pcard .meta { font-size: 1rem; }
+  #screen-game.turnier .pcard .pname { font-size: 1.3rem; }
 }
