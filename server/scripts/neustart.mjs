@@ -1,7 +1,7 @@
 /*
  * Sauberer Start vor dem ersten echten Abend.
  *
- *   node server/scripts/neustart.mjs --behalte julius.klinzer@outlook.de
+ *   node server/scripts/neustart.mjs --behalte deine-adresse@example.de
  *   node server/scripts/neustart.mjs --behalte <mail> --wirklich
  *
  * Ohne --wirklich wird nur gezeigt, was passieren wuerde. Loeschen ist nicht

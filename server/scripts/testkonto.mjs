@@ -5,7 +5,7 @@
  * keine Statistik (Rangliste, Rekorde, Diagramm, Spieleliste).
  *
  *   docker compose exec darts node server/scripts/testkonto.mjs test3@blink180.de
- *   docker compose exec darts node server/scripts/testkonto.mjs --sieht julius.klinzer@outlook.de
+ *   docker compose exec darts node server/scripts/testkonto.mjs --sieht kollege@example.de
  *   docker compose exec darts node server/scripts/testkonto.mjs --aus test3@blink180.de
  *
  * Bisherige Spiele des Kontos werden dabei NICHT zurueckgezogen -- dafuer

@@ -8,7 +8,7 @@
 # ---------------------------------------------------------------------------
 # REIHENFOLGE (wichtig)
 # ---------------------------------------------------------------------------
-# 1. DNS setzen: A-Record darts.wirtschaftln.de -> 178.105.234.52.
+# 1. DNS setzen: A-Record darts.wirtschaftln.de -> <server-ip>.
 #    Vorher eingefügt, versucht Caddy vergeblich ein Zertifikat zu holen und
 #    protokolliert im Minutentakt ACME-Fehler. Wirtschaftln läuft dabei
 #    weiter -- Caddy behandelt Zertifikate je Site getrennt -- aber die Logs
@@ -18,7 +18,7 @@
 # 3. Erst dann diesen Block ans Ende von Wirtschaftln/deploy/Caddyfile
 #    anfügen und prüfen, BEVOR neu geladen wird:
 #
-#       ssh root@178.105.234.52 \
+#       ssh "$DARTS_SERVER" \
 #         "docker compose -f /opt/wirtschaftln/docker-compose.yml exec caddy \
 #          caddy validate --config /etc/caddy/Caddyfile"
 #

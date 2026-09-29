@@ -2,7 +2,8 @@
  * Passwort eines Kollegen zuruecksetzen. Wir verschicken keine Mails, deshalb
  * laeuft "Passwort vergessen" ueber dich:
  *
- *   docker compose exec darts-app node scripts/reset-password.mjs mail@example.de neuesPasswort
+ *   cd /opt/dart-turnier && docker compose -f compose.yml exec darts \\
+ *     node server/scripts/reset-password.mjs mail@example.de neuesPasswort
  *
  * Alle Geraete dieses Kontos werden dabei abgemeldet.
  */
@@ -15,7 +16,7 @@ const SERVER_DIR = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const [email, passwort] = process.argv.slice(2);
 
 if (!email || !passwort) {
-  console.error('Aufruf: node scripts/reset-password.mjs <e-mail> <neues-passwort>');
+  console.error('Aufruf: node server/scripts/reset-password.mjs <e-mail> <neues-passwort>');
   process.exit(1);
 }
 
