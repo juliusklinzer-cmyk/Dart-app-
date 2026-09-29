@@ -332,7 +332,25 @@ wieder auf. Im Online-Spiel geht außerdem **jeder einzelne Dart** der
 Einzel-Dart-Eingabe sofort an die anderen Geräte: Rest und Kacheln laufen dort
 live mit, und wer als Nächster tippt, tippt auf derselben Aufnahme weiter. Eine
 **180 oder 60 des anderen wird auf allen Geräten gefeiert**, nicht nur auf dem,
-das eintippt. Der Ton startet
+das eintippt – auch wenn zwischen zwei Abfragen mehrere Aufnahmen lagen, beim
+60er-Checkout und am Matchende. Geklopft wird **einmal je gebuchter Aufnahme**;
+ein einzelner Dart des anderen gibt nur den leisen Einschlag. Die Einzeldarts
+des anderen stehen **immer** in den drei Kacheln, egal ob das eigene Gerät auf
+Punkte, Einzel-Darts oder Turnier steht – und solange er selbst einträgt,
+kann hier niemand seine Darts versehentlich zurücknehmen.
+
+Damit der Wartende nichts verpasst, hält die App im Online-Spiel den
+**Bildschirm an** und die Audio-Sitzung offen; beim Aufwecken wird sofort
+abgeglichen. Ist der Ton trotzdem gesperrt (iOS nach Neuladen), steht unten
+der Knopf **„🔇 Ton an – einmal antippen"**. Fehlt die Verbindung, sagt es eine
+Leiste oben, statt nur klein im Kopf. Der Server meldet jede Änderung sofort
+über eine Live-Verbindung; nur wenn die nicht steht, fragt die App alle 2,5 s
+nach. Haben beide gleichzeitig dieselbe Aufnahme getippt, bleibt sie einmal
+stehen – ein „bitte nochmal eintragen" kommt nur, wenn die eigene Eingabe
+wirklich fehlt.
+
+**Ton & Feiern** lassen sich im Setup abschalten (Klänge und die Feiern für
+180 und SECHZIG!, Standard: beides an). Der Ton startet
 nach der ersten Berührung (iOS gibt Audio erst nach einer Geste frei);
 Browser ohne AAC bekommen einen synthetischen Ersatzschlag.
 
@@ -453,7 +471,12 @@ die SWO verlangt bürgerliche Namen auf dem Bogen.
 
 Wer nicht mehr mitspielt, lässt sich **ausblenden** statt löschen — dann verschwindet
 er aus der Aufstellung, seine Ergebnisse bleiben aber in Statistik, Ranglisten und
-Spielverlauf erhalten. **Gäste** lassen sich dagegen jederzeit direkt
+Spielverlauf erhalten. Ausblenden und Löschen fragen einmal nach; wer im
+laufenden Spielplan steht, lässt sich erst nach dem Turnier (oder nach dem
+Abmelden über „Spieler im Turnier") ausblenden. Ein neuer Spieler braucht einen
+Namen (bis 16 Zeichen); gibt es den Namen schon, fragt die App einmal nach.
+Ohne Konto heißt der Knopf „+ Spieler hinzufügen", und ein solches Profil ohne
+Spiel lässt sich auch wieder löschen. **Gäste** lassen sich dagegen jederzeit direkt
 **löschen**: ohne Spiele spurlos, mit Spielen verschwinden sie sofort aus
 Spielerliste, Aufstellung und Rangliste – die Partien der Mitspieler bleiben
 in der Historie. Von selbst räumen sich Gäste **nach dem Abend** weg (zwölf
@@ -590,8 +613,15 @@ Zwei Dinge, die man wissen sollte:
 
 Reines HTML/CSS/JavaScript, kein Build-Schritt, keine Abhängigkeiten zur Laufzeit.
 Profile, laufendes Turnier und Archiv liegen in `localStorage` und überstehen Reload
-und App-Neustart. Ältere Stände werden beim Laden automatisch auf das aktuelle
-Datenmodell gehoben.
+und App-Neustart – auch eine angefangene Aufnahme in Einzel-Darts und eine
+offene Checkout- oder Leg-Ende-Frage. Ältere Stände werden beim Laden
+automatisch auf das aktuelle Datenmodell gehoben. Ein beschädigter Stand wird
+nicht überschrieben, sondern unter `dart-turnier-v1.kaputt` gesichert (mit
+Hinweis oben); ein Stand einer neueren App-Version bleibt unangetastet.
+
+Die **Zurück-Taste** (Android, Browser) schließt zuerst einen offenen Dialog und
+führt aus Unterseiten zurück ins Setup; im laufenden Spiel bleibt sie ohne
+Wirkung. Erst im Setup verlässt ein weiteres Zurück die App.
 
 | Datei | Inhalt |
 |---|---|
