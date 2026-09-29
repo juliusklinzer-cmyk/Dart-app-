@@ -85,6 +85,16 @@
     });
   }
 
+  /* Profilbilder landen in einem style-Attribut (avatarHTML). Nur was
+     wirklich wie ein Bild aussieht, kommt durch – ein Anführungszeichen oder
+     eine Klammer darin wäre ein Weg, fremdes Skript einzuschleusen. Dieselbe
+     Regel prüft der Server; hier fängt sie Altbestand ab, der vor der
+     Prüfung gespeichert wurde. */
+  var BILD_MUSTER = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+\/]+=*$/;
+  function sauberesBild(a) {
+    return typeof a === 'string' && a.length <= 400000 && BILD_MUSTER.test(a) ? a : null;
+  }
+
   /* Jeder Account braucht ein Profil, sonst taucht er in Aufstellung und
      Rangliste nicht auf – career() zählt nur über S.profiles. */
   function rosterInProfile() {
@@ -99,7 +109,7 @@
         // Stand ist der neuere und darf nicht plattgemacht werden.
         if (profilOffen && nutzer && r.id === nutzer.id) return;
         p.name = r.name;
-        p.avatar = r.avatar;
+        p.avatar = sauberesBild(r.avatar);
         if (typeof r.hue === 'number' && r.hue >= 0) p.hue = r.hue;
         // Das Lieblingsdoppel gehoert dem Account, nicht dem Geraet: so gilt
         // es auch, wenn ein Kollege den Abend auf seinem iPad mitschreibt.
@@ -112,7 +122,7 @@
         p.test = !!r.test;
       } else {
         S.profiles.push({
-          id: r.id, name: r.name, avatar: r.avatar,
+          id: r.id, name: r.name, avatar: sauberesBild(r.avatar),
           hue: typeof r.hue === 'number' && r.hue >= 0 ? r.hue : D.freeHue(),
           dbl: r.dbl || null,
           voll: r.voll || null,
