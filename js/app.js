@@ -870,6 +870,64 @@
   }
 
   /*
+   * Der Verlauf eines Spiels als Liste vergleichbarer Eintraege -- jede
+   * gebuchte Aufnahme (X01, mit Leg-Nummer) bzw. jeder Wurf (Cricket, RTW,
+   * Finisher mit Runden-Nummer). Positionsweise verglichen zeigt das genau,
+   * was beim anderen dazugekommen ist, auch ueber Leg-Grenzen, nach einem
+   * Undo oder wenn zwischen zwei Abfragen mehrere Aufnahmen lagen.
+   */
+  function spielVerlauf(g) {
+    var out = [];
+    if (!g) return out;
+    if (Array.isArray(g.legs)) {
+      g.legs.forEach(function (l, li) {
+        (l.visits || []).forEach(function (v) {
+          out.push({ key: li + '|' + v.p + '|' + v.s + '|' + (v.b ? 1 : 0) + '|' + v.d + '|' + (v.c ? 1 : 0) + '|' + (v.o || 0), v: v });
+        });
+      });
+    } else if (Array.isArray(g.rounds)) {
+      g.rounds.forEach(function (rd, ri) {
+        (rd.throws || []).forEach(function (t) { out.push({ key: ri + '|' + JSON.stringify(t) }); });
+        if (rd.sieger) out.push({ key: ri + '|sieger|' + rd.sieger });
+      });
+    } else if (Array.isArray(g.throws)) {
+      g.throws.forEach(function (t) { out.push({ key: JSON.stringify(t) }); });
+    }
+    return out;
+  }
+  /* Was im neuen Verlauf nach der ersten Abweichung vom alten steht. */
+  function verlaufNeu(alt, neu) {
+    var a = spielVerlauf(alt), n = spielVerlauf(neu);
+    var i = 0;
+    while (i < a.length && i < n.length && a[i].key === n[i].key) i++;
+    return { neu: n.slice(i), verloren: a.slice(i), gleich: i === a.length && i === n.length };
+  }
+
+  /* Wer ist gerade am Wurf (nur X01-Spiele im Online-Modus)? */
+  function liveAmWurf(g) {
+    if (!g || !Array.isArray(g.legs) || g.done || !g.legs.length) return null;
+    var leg = g.legs[g.legs.length - 1];
+    if (leg.winner) return null;
+    return activePlayer(leg, g);
+  }
+
+  /* Die Darts, die gerade vom Mitspieler kommen: solange er am Wurf ist und
+     sie frisch sind, tippt hier niemand dazwischen (Zurueck loeschte sonst
+     seine Darts). Nach 45 s ohne Nachricht gibt die Sperre nach, damit ein
+     abgestuerztes Handy niemanden festhaelt. */
+  function fremdeDartsSperre() {
+    var g = liveSpiel();
+    if (!g || !UI.darts.length || !UI.dartsFremd) return false;
+    if (Date.now() - (UI.dartsFremdZeit || 0) > 45000) return false;
+    var am = liveAmWurf(g);
+    return !!am && am !== liveNutzer() && String(am).indexOf('u_') === 0;
+  }
+
+  /* Protokollstand des Online-Formats. Kommt ein hoeherer herein, laeuft
+     beim anderen eine neuere App -- dann lieber Bescheid sagen. */
+  var LIVE_VERSION = 1;
+
+  /*
    * Fremder Stand vom Server. Ersetzt das Spiel als Ganzes; halb getippte
    * Eingaben sind danach hinfaellig, denn der andere hat gerade geworfen.
    * Gibt zurueck, ob sich etwas geaendert hat.
@@ -881,31 +939,66 @@
     var alt = g;
     var neu = spiel.state;
     var text = JSON.stringify(neu);
+    var ich = liveNutzer();
+    var eigen = !!(spiel.geaendertVon && spiel.geaendertVon === ich);
+    var fremd = !!(spiel.geaendertVon && spiel.geaendertVon !== ich);
+
+    /* Mein eigener Stand kommt zurueck (die Abfrage war schneller als die
+       Antwort auf meinen PUT): nur Version merken. Was ich inzwischen weiter
+       getippt habe, bleibt stehen und geht mit dem naechsten PUT hoch. */
+    if (eigen && !konflikt && spiel.status !== 'zu') {
+      g.online.seq = spiel.seq;
+      g.online.hash = liveHash(text);
+      save();   // schickt, falls sich lokal inzwischen etwas geaendert hat
+      return false;
+    }
+
     neu.online = liveMeta(spiel, text);
     liveNamenUebernehmen(neu);
+    if (typeof neu.lv === 'number' && neu.lv > LIVE_VERSION && !UI.liveVersionGemeldet) {
+      UI.liveVersionGemeldet = true;
+      UI.overlay = { type: 'hinweis', titel: 'Neuere App beim Mitspieler', text: 'Dein Mitspieler nutzt eine neuere Version der App. Bitte lade die Seite neu, damit ihr beide dasselbe seht.' };
+    }
     /* Wer gerade wirft, dessen halbfertige Aufnahme uebernehmen wir mit --
        wer als Naechster tippt, tippt auf derselben Aufnahme weiter. */
     var offen = Array.isArray(neu.offen) ? neu.offen.map(function (d) { return { m: d.m, n: d.n, v: d.v }; }) : [];
     delete neu.offen;
-    var fremd = spiel.geaendertVon && spiel.geaendertVon !== liveNutzer();
+    var vgl = verlaufNeu(alt, neu);
+    var gebucht = vgl.neu.length > 0 || vgl.verloren.length > 0;
+
     /* Der andere hat eine 180 oder 60 geworfen: auch hier feiern -- die
-       Feier gehoert zum Spiel, nicht zum Geraet, das eintippt. */
-    if (fremd && neu.kind === 'quick' && !neu.done) {
-      var altN = zaehleAufnahmen(alt), neuN = zaehleAufnahmen(neu);
-      var lv = neuN > altN ? letzteAufnahme(neu) : null;
-      if (lv && !lv.b && lv.s === 180) feiere180(lv.p);
-      else if (lv && !lv.b && lv.s === 60) feiere60(lv.p);
+       Feier gehoert zum Spiel, nicht zum Geraet, das eintippt. Jede neue
+       Aufnahme zaehlt (auch das 60er-Checkout am Leg- oder Matchende), bei
+       mehreren gewinnt die hoechste. */
+    if (fremd && Array.isArray(neu.legs)) {
+      var beste = null;
+      vgl.neu.forEach(function (e) {
+        var v = e.v;
+        if (!v || v.b || (v.s !== 180 && v.s !== 60)) return;
+        if (!beste || v.s > beste.s) beste = v;
+      });
+      if (beste && beste.s === 180) feiere180(beste.p);
+      else if (beste) feiere60(beste.p);
     }
+
     S.game = neu;
+    var dartsVorher = UI.darts.length;
     UI.darts = offen; UI.input = ''; UI.error = '';
-    UI.aufnahmeZeit = Date.now();
+    UI.dartsFremd = fremd && offen.length > 0;
+    UI.dartsFremdZeit = Date.now();
+    /* Das Drehrad der letzten Aufnahme laeuft nur bei einer neuen Buchung,
+       nicht bei jedem einzelnen Dart des anderen. */
+    if (gebucht) UI.aufnahmeZeit = Date.now();
     /* Halbfertige Dialoge beziehen sich auf den alten Stand. */
     if (UI.overlay && (UI.overlay.type === 'checkout-darts' || UI.overlay.type === 'edit-visit')) UI.overlay = null;
     var wer = spiel.geaendertVonName || 'Dein Mitspieler';
-    /* Der andere hat eingetragen: klopfen, damit man vom Board zum Handy
-       schaut. Eigene Staende (Konflikt-Antwort auf den eigenen PUT, zweites
-       eigenes Geraet) klopfen nicht. */
-    if (spiel.geaendertVon && spiel.geaendertVon !== liveNutzer()) klopfen();
+    /* Der andere hat gebucht: klopfen, damit man vom Board zum Handy
+       schaut. Ein einzelner Dart mitten in der Aufnahme bekommt nur den
+       leisen Einschlag -- sonst klopft es bis zu viermal pro Aufnahme. */
+    if (fremd) {
+      if (gebucht) klopfen();
+      else if (offen.length !== dartsVorher && offen.length) pomp();
+    }
 
     if (spiel.status === 'zu') {
       /* Der andere hat gespeichert oder abgebrochen. Gespeichert wird hier
@@ -914,34 +1007,119 @@
       if (neu.done) { archiveGame(neu); UI.overlay = { type: 'hinweis', titel: 'Spiel gespeichert', text: wer + ' hat das Spiel abgeschlossen. Es steht jetzt in der Statistik.' }; }
       else UI.overlay = { type: 'hinweis', titel: 'Spiel abgebrochen', text: wer + ' hat das Online-Spiel abgebrochen.' };
       S.game = null;
-      S.screen = 'setup';
+      /* Wer gerade die Auswertung anschaut, bleibt dort -- sie zeigt jetzt
+         den archivierten Eintrag statt des laufenden Spiels. */
+      if (S.screen === 'summary' && neu.done) UI.summary = { kind: neu.kind, id: neu.id };
+      else S.screen = 'setup';
+      /* "Nochmal spielen" beim anderen legt gleich ein neues Spiel an --
+         kurz danach nachsehen, damit der Mitspielen-Knopf sofort da ist. */
+      liveNeuesSpielErwarten();
       save();
       return true;
     }
 
-    if (neu.done && !alt.done && (!UI.overlay || UI.overlay.type === 'hinweis')) UI.overlay = { type: 'game-done', pid: neu.winner };
+    /* Spielende: der Glueckwunsch ersetzt jeden anderen Dialog. */
+    if (neu.done && !alt.done) UI.overlay = { type: 'game-done', pid: neu.winner };
     if (!neu.done && alt.done && UI.overlay && UI.overlay.type === 'game-done') UI.overlay = null;
+    /* Leg- oder Satzende beim anderen: hier denselben Dialog zeigen, statt
+       kommentarlos auf 501 zu springen. */
+    if (!neu.done && Array.isArray(neu.legs) && fremd && neu.kind === 'quick') {
+      var wonAlt = (alt.legs || []).filter(function (l) { return l.winner; }).length;
+      var wonNeu = neu.legs.filter(function (l) { return l.winner; }).length;
+      if (wonNeu > wonAlt && (!UI.overlay || UI.overlay.type === 'hinweis' || UI.overlay.type === 'leg-done')) {
+        var lz = neu.legs.filter(function (l) { return l.winner; }).pop();
+        UI.overlay = { type: 'leg-done', pid: lz.winner, satz: satzStand(neu).satzZu, fremd: true };
+      }
+    }
     if (S.screen === 'bulloff' && neu.started) S.screen = spielScreen(neu.kind);
-    if (konflikt && !UI.overlay) {
-      UI.overlay = { type: 'hinweis', titel: 'Der andere war schneller', text: wer + ' hat gerade eingetragen. Deine letzte Eingabe wurde nicht übernommen – bitte nochmal eintragen.' };
+    /* Konflikt: der andere war schneller. Steht meine Eingabe schon in
+       seinem Stand (beide haben dieselbe Aufnahme getippt), ist nichts
+       verloren -- dann kein "bitte nochmal eintragen", sonst bucht, wer
+       folgt, doppelt. */
+    if (konflikt && !UI.overlay && vgl.verloren.length) {
+      UI.overlay = { type: 'hinweis', titel: 'Der andere war schneller', text: wer + ' hat gerade eingetragen. Deine letzte Eingabe wurde nicht übernommen – bitte prüfen und ggf. nochmal eintragen.' };
     }
     save();
     return true;
   }
 
-  function zaehleAufnahmen(g) {
-    return sum(g && g.legs ? g.legs : [], function (l) { return l.visits.length; });
+  /* Bildschirm wach halten (Screen Wake Lock), solange ein Online-Spiel
+     im Bild ist. Der Browser gibt die Sperre beim Wegschalten selbst frei;
+     beim Zurueckkommen wird sie neu angefordert. */
+  var wachSperre = null, wachSoll = false, wachAnfrage = false;
+  function wachHalten(an) {
+    wachSoll = !!an;
+    if (!navigator.wakeLock || !navigator.wakeLock.request) return;
+    if (wachSoll && !wachSperre && !wachAnfrage && !document.hidden) {
+      wachAnfrage = true;
+      navigator.wakeLock.request('screen').then(function (l) {
+        wachAnfrage = false;
+        wachSperre = l;
+        l.addEventListener('release', function () { if (wachSperre === l) wachSperre = null; });
+        if (!wachSoll) { wachSperre = null; l.release().catch(function () {}); }
+      }).catch(function () { wachAnfrage = false; });
+    } else if (!wachSoll && wachSperre) {
+      var l = wachSperre;
+      wachSperre = null;
+      l.release().catch(function () {});
+    }
   }
-  function letzteAufnahme(g) {
-    var leg = g && g.legs ? g.legs[g.legs.length - 1] : null;
-    return leg && leg.visits.length ? leg.visits[leg.visits.length - 1] : null;
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden && wachSoll) wachHalten(true);
+  });
+
+  /* Ist der Ton gesperrt (iOS nach Neuladen oder dunklem Bildschirm), steht
+     im Online-Spiel ein kleiner Knopf "Ton an" -- sonst wartet man
+     vergeblich auf das Klopfen. Der Tipp selbst gibt den Ton frei. */
+  function tonKnopf(an) {
+    var b = $('ton-an');
+    var zeigen = an && window.DartSound && window.DartSound.status && !window.DartSound.status();
+    if (!zeigen) { if (b) b.classList.add('hidden'); return; }
+    if (!b) {
+      b = document.createElement('button');
+      b.id = 'ton-an';
+      b.type = 'button';
+      b.className = 'btn small ton-an';
+      b.setAttribute('data-action', 'ton-an');
+      b.textContent = '🔇 Ton an – einmal antippen';
+      b.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:calc(12px + env(safe-area-inset-bottom,0px));z-index:60;min-height:44px;';
+      document.body.appendChild(b);
+    }
+    b.classList.remove('hidden');
+  }
+  document.addEventListener('dart-ton', function () { if (liveSpiel()) tonKnopf(true); });
+
+  /* Keine Verbindung im Online-Spiel: nicht nur klein im Kopf, sondern als
+     Leiste oben -- sonst wartet man auf einen Mitspieler, der nichts sieht. */
+  function verbindungsHinweis(an) {
+    var b = $('live-stoerung');
+    if (!an) { if (b) b.classList.add('hidden'); return; }
+    if (!b) {
+      b = document.createElement('div');
+      b.id = 'live-stoerung';
+      b.className = 'save-warning';
+      b.setAttribute('role', 'status');
+      b.textContent = '📶 Keine Verbindung zum Server – deine Eingaben bleiben hier und werden nachgeschickt, sobald wieder Netz da ist.';
+      document.body.insertBefore(b, document.body.firstChild);
+    }
+    b.classList.remove('hidden');
   }
 
-  /* Spiel beim Server weg: lokal weiterspielen, nicht mehr nachfragen. */
+  /* Nach "zu": in den naechsten Sekunden zweimal nach einem neuen Spiel
+     fragen (der andere drueckt oft gleich "Nochmal spielen"). */
+  function liveNeuesSpielErwarten() {
+    [1500, 4000].forEach(function (ms) {
+      setTimeout(function () { if (!liveSpiel()) liveBeitretbareHolen(); }, ms);
+    });
+  }
+
+  /* Spiel beim Server weg: lokal weiterspielen, nicht mehr nachfragen --
+     aber Bescheid sagen, sonst wartet man ewig auf den anderen. */
   function liveGetrennt() {
     var g = liveSpiel();
     if (!g) return;
     delete g.online;
+    if (!UI.overlay) UI.overlay = { type: 'hinweis', titel: 'Online-Verbindung beendet', text: 'Dieses Spiel liegt nicht mehr beim Server. Es läuft hier lokal weiter, dein Mitspieler sieht es aber nicht mehr.' };
     save();
   }
 
@@ -964,14 +1142,22 @@
   /* Neues Spiel online anmelden. Klappt es nicht (kein Netz, Server weg),
      laeuft es still lokal weiter -- wie beim geteilten Turnier. */
   var liveAnmeldungLaeuft = false;
+  /* Ohne Netz nicht bei jedem Zeichnen neu anfragen: 5 s Pause zwischen
+     den Versuchen, nach dem dritten Fehlschlag ein Hinweis. */
+  var liveAnlegenFehler = 0, liveAnlegenNaechster = 0, liveAnlegenTimer = null;
   function liveAnlegen(g) {
     if (liveAnmeldungLaeuft) return Promise.resolve();
+    if (Date.now() < liveAnlegenNaechster) return Promise.resolve();
     liveAnmeldungLaeuft = true;
     var konten = liveMitspieler(g.players);
     g.namen = liveNamen(g.players);
+    /* Die Formatversion steht im Spiel selbst (nicht erst beim Senden
+       angehaengt) -- so bilden alte und neue App denselben Hash. */
+    g.lv = LIVE_VERSION;
     var text = liveText(g);
     return window.DartSync.live.anlegen(g.id, g.kind, JSON.parse(text), konten).then(function (spiel) {
       liveAnmeldungLaeuft = false;
+      liveAnlegenFehler = 0; liveAnlegenNaechster = 0;
       if (S.game !== g) return;
       g.online = liveMeta(spiel, text);
       save(); render();
@@ -986,6 +1172,14 @@
       if (e && e.status && e.status !== 429 && e.status < 500) {
         delete g.online;
         UI.overlay = { type: 'hinweis', titel: 'Nur hier am Gerät', text: 'Das Online-Spiel konnte nicht angelegt werden: ' + (e.message || '') + ' Das Spiel läuft jetzt nur auf diesem Gerät.' };
+      } else {
+        liveAnlegenFehler++;
+        liveAnlegenNaechster = Date.now() + 5000;
+        if (liveAnlegenTimer) clearTimeout(liveAnlegenTimer);
+        liveAnlegenTimer = setTimeout(function () { liveAnlegenTimer = null; if (liveSpiel() === g) render(); }, 5100);
+        if (liveAnlegenFehler === 3 && !UI.overlay) {
+          UI.overlay = { type: 'hinweis', titel: 'Noch keine Verbindung', text: 'Das Online-Spiel kommt gerade nicht beim Server an. Ihr könnt schon spielen – sobald wieder Netz da ist, wird es angelegt und dein Mitspieler sieht den Stand.' };
+        }
       }
       save(); render();
     });
@@ -1389,6 +1583,12 @@
     UI.error = '';
     var m = currentMatch();
     if (!m || m.done || settling()) return false;   // beendet oder gerade erst geöffnet
+    if (fremdeDartsSperre()) {
+      UI.error = spielerName(liveAmWurf(liveSpiel())) + ' trägt gerade selbst ein – warte, bis die Aufnahme gebucht ist.';
+      render();
+      return false;
+    }
+    UI.dartsFremd = false;   // ab jetzt ist es meine Aufnahme
     var leg = activeLeg(m);
     var pid = activePlayer(leg, m);
     var rest = remainingIn(leg, pid) - sum(UI.darts, function (d) { return d.v; });
@@ -1467,7 +1667,16 @@
   function undo() {
     klick();
     if (UI.overlay && UI.overlay.type === 'checkout-darts') { UI.overlay = null; UI.input = ''; render(); return; }
-    if (UI.darts.length) { UI.darts.pop(); UI.mult = 1; save(); render(); return; }
+    if (UI.darts.length) {
+      /* Die Darts des Mitspielers, der gerade selbst eintraegt, loescht
+         hier niemand versehentlich. */
+      if (fremdeDartsSperre()) {
+        UI.error = spielerName(liveAmWurf(liveSpiel())) + ' trägt gerade selbst ein.';
+        render();
+        return;
+      }
+      UI.darts.pop(); UI.mult = 1; save(); render(); return;
+    }
 
     var m = currentMatch();
     if (!m) return;
@@ -2584,8 +2793,17 @@
       /* Neu geladen, waehrend das Spiel noch angemeldet wurde: nachholen.
          Der Server kennt die Kennung vielleicht schon -- dann sagt er das. */
       if (lg && lg.online.wartet && !liveAnmeldungLaeuft && liveNutzer()) liveAnlegen(lg);
-      window.DartSync.live.takt(!!lg && !lg.online.wartet &&
-        (S.screen === spielScreen(lg.kind) || S.screen === 'bulloff' || S.screen === 'summary'));
+      var liveSichtbar = !!lg && !lg.online.wartet &&
+        (S.screen === spielScreen(lg.kind) || S.screen === 'bulloff' || S.screen === 'summary');
+      window.DartSync.live.takt(liveSichtbar);
+      /* Wer im Online-Spiel auf den anderen wartet, legt das Handy weg: der
+         Bildschirm bleibt an (sonst kein Abgleich, kein Klopfen, keine
+         Feier), und die Audio-Sitzung wird offen gehalten. */
+      wachHalten(liveSichtbar);
+      if (window.DartSound && window.DartSound.halten) window.DartSound.halten(liveSichtbar);
+      tonKnopf(liveSichtbar);
+      var lst = window.DartSync.live.status();
+      verbindungsHinweis(liveSichtbar && lst && lst.stoerung);
     }
     if (S.screen === 'setup' && letzterScreen !== 'setup') beitretbareHolen();
     setupTakt(S.screen === 'setup');
@@ -2657,8 +2875,10 @@
   var SETUP_TAKT = 6000;
   var setupTimer = null;
   function setupTakt(an) {
+    an = !!(an && window.DartSync && window.DartSync.live && liveNutzer());
+    if (an === !!setupTimer) return;   // nur bei Zustandswechsel neu starten
     if (setupTimer) { clearInterval(setupTimer); setupTimer = null; }
-    if (!an || !window.DartSync || !window.DartSync.live || !liveNutzer()) return;
+    if (!an) return;
     setupTimer = setInterval(function () { if (!document.hidden) liveBeitretbareHolen(); }, SETUP_TAKT);
   }
 
@@ -6921,7 +7141,11 @@
         startTournament(true);
         break;
       case 'ov-next-leg':
-        UI.overlay = null; render();
+        UI.overlay = null; save(); render();
+        break;
+      case 'ton-an':
+        /* Der Tipp hat den Ton schon geweckt (pointerdown in sound.js). */
+        setTimeout(function () { tonKnopf(!!liveSpiel()); }, 250);
         break;
       case 'quick-step': {
         var qk = el.getAttribute('data-key');

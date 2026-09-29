@@ -425,8 +425,13 @@
     return turnierRuf('POST', '/' + t.sid + '/ende').catch(function () {});
   }
 
-  /* Nur takten, solange man auch hinschaut: im Turnierbildschirm. */
+  /* Nur takten, solange man auch hinschaut: im Turnierbildschirm. Wie beim
+     Online-Spiel nur neu starten, wenn sich der Zustand aendert. */
+  var turnierTaktAn = false;
   function turnierTakt(an) {
+    an = !!an;
+    if (an === turnierTaktAn && (turnierTimer || !an)) return;
+    turnierTaktAn = an;
     if (turnierTimer) { clearInterval(turnierTimer); turnierTimer = null; }
     if (!an) return;
     turnierTimer = setInterval(function () {
@@ -446,15 +451,26 @@
    * app.js dann, statt ihn zu ueberschreiben. Gerechnet wird weiterhin nur
    * im Client, der Server verwahrt bloss.
    */
-  var LIVE_TAKT = 2500;
+  var LIVE_TAKT = 2500;          // ohne Live-Verbindung: so oft nachfragen
+  var LIVE_TAKT_STROM = 10000;   // mit Live-Verbindung nur noch als Rueckfall
   var liveTimer = null;
+  var liveTaktAn = null;         // sid, fuer die gerade getaktet wird (oder null)
+  var liveStrom = null;          // EventSource auf /api/live/:id/strom
+  var liveStromOffen = false;    // Verbindung steht und liefert
   var liveSchreibt = null;   // laufender PUT, damit nicht zwei ueberholen
   var liveDran = false;      // waehrend des PUT kam schon die naechste Aenderung
   var liveStoerung = false;  // letzter Ruf ging schief (kein Netz, Server weg)
+  /* Wechsel sofort zeigen: app.js blendet dann "keine Verbindung" gut
+     sichtbar ein bzw. wieder aus. */
+  function stoerung(wert) {
+    if (liveStoerung === wert) return;
+    liveStoerung = wert;
+    if (D && D.render) setTimeout(D.render, 0);
+  }
 
-  function liveRuf(methode, pfad, body) {
+  function liveRuf(methode, pfad, body, extra) {
     if (!window.DartKonto || !nutzer) return Promise.reject(new Error('Nicht angemeldet.'));
-    return window.DartKonto.ruf(methode, '/api/live' + pfad, body);
+    return window.DartKonto.ruf(methode, '/api/live' + pfad, body, extra);
   }
 
   /* Offene Online-Spiele, an denen ich beteiligt bin – für das Setup. */
@@ -478,30 +494,34 @@
    * wird nur dafuer gesorgt, dass immer genau ein PUT unterwegs ist und der
    * juengste Stand als letzter ankommt.
    */
-  function liveSchreiben() {
+  function liveSchreiben(eilig) {
     var g = D.state().game;
     if (!g || !g.online || !nutzer) return Promise.resolve(false);
     if (liveSchreibt) { liveDran = true; return liveSchreibt; }
     var stand = D.liveStand();
     if (!stand) return Promise.resolve(false);
-    liveSchreibt = liveRuf('PUT', '/' + g.online.sid, { state: stand.state, seq: stand.seq })
+    liveSchreibt = liveRuf('PUT', '/' + g.online.sid, { state: stand.state, seq: stand.seq }, eilig ? { keepalive: true } : undefined)
       .then(function (d) {
-        liveStoerung = false;
+        stoerung(false);
         D.liveGeschrieben(d.spiel, stand.text);
         return true;
       }, function (e) {
         if (e && e.status === 409 && e.daten && e.daten.spiel) {
           // Der andere war schneller: sein Stand gilt, meiner ist hinfaellig.
-          liveStoerung = false;
+          stoerung(false);
           if (D.liveUebernehmen(e.daten.spiel, true)) D.render();
           return false;
         }
         if (e && e.status === 409) {
-          // Beendet: der naechste Takt holt den Schlussstand.
-          liveStoerung = false;
+          // Beendet: den Schlussstand sofort holen, statt still zu warten --
+          // liveUebernehmen zeigt dann, wer gespeichert oder abgebrochen hat.
+          stoerung(false);
+          setTimeout(function () {
+            liveAbgleich().then(function (neu) { if (neu) D.render(); });
+          }, 0);
           return false;
         }
-        liveStoerung = true;
+        stoerung(true);
         return false;
       })
       .then(function (erg) {
@@ -518,13 +538,13 @@
     if (!g || !g.online || !nutzer) return Promise.resolve(false);
     if (liveSchreibt) return Promise.resolve(false);
     return liveHolen(g.online.sid, g.online.seq || 0).then(function (spiel) {
-      liveStoerung = false;
+      stoerung(false);
       return D.liveUebernehmen(spiel, false);
     }).catch(function (e) {
       // 404/403: das Spiel ist weg oder ich gehoere nicht mehr dazu -- lokal
       // weiterspielen, aber nicht mehr nachfragen.
       if (e && (e.status === 404 || e.status === 403)) { D.liveGetrennt(); return true; }
-      liveStoerung = true;
+      stoerung(true);
       return false;
     });
   }
@@ -539,23 +559,85 @@
     }).catch(function () {});
   }
 
-  /* Nur takten, solange ein Online-Spiel laeuft und man es anschaut. */
+  /* Ein Durchgang: erst Eigenes loswerden, dann nachsehen, was der andere
+     gemacht hat. */
+  function liveRunde() {
+    var g = D.state().game;
+    if (!g || !g.online || g.online.wartet) return Promise.resolve(false);
+    var p = D.liveStand() ? liveSchreiben() : Promise.resolve(false);
+    return p.then(function () { return liveAbgleich(); })
+      .then(function (neu) { if (neu) D.render(); return neu; });
+  }
+
+  /*
+   * Nur takten, solange ein Online-Spiel laeuft und man es anschaut.
+   * render() ruft das bei jedem Zeichnen -- neu gestartet wird aber nur,
+   * wenn sich wirklich etwas aendert. Frueher setzte jeder Tastendruck den
+   * Takt auf null, und waehrend einer laengeren Eingabe kam nichts herein.
+   *
+   * Der Server meldet jede Aenderung ueber eine Live-Verbindung
+   * (Server-Sent Events). Steht sie, reicht ein langsamer Rueckfall-Takt;
+   * ohne sie (alter Server, Funkloch) wird wie bisher alle 2,5 s gefragt.
+   */
   function liveTakt(an) {
+    var g = D.state().game;
+    var sid = an && g && g.online ? g.online.sid : null;
+    if (sid === liveTaktAn) return;
+    liveTaktAn = sid;
     if (liveTimer) { clearInterval(liveTimer); liveTimer = null; }
-    if (!an) return;
+    liveStromZu();
+    if (!sid) return;
+    liveStromAuf(sid);
+    liveTaktStellen();
+  }
+
+  function liveTaktStellen() {
+    if (liveTimer) clearInterval(liveTimer);
     liveTimer = setInterval(function () {
       if (document.hidden) return;
+      liveRunde();
+    }, liveStromOffen ? LIVE_TAKT_STROM : LIVE_TAKT);
+  }
+
+  function liveStromAuf(sid) {
+    if (typeof EventSource === 'undefined') return;
+    try {
+      liveStrom = new EventSource('/api/live/' + encodeURIComponent(sid) + '/strom', { withCredentials: true });
+    } catch (e) { liveStrom = null; return; }
+    var quelle = liveStrom;
+    quelle.addEventListener('open', function () {
+      if (quelle !== liveStrom) return;
+      if (!liveStromOffen) { liveStromOffen = true; liveTaktStellen(); }
+      // Was waehrend des Verbindungsaufbaus geschah, gleich nachholen.
+      liveRunde();
+    });
+    quelle.addEventListener('stand', function (ev) {
+      if (quelle !== liveStrom) return;
+      var d = null;
+      try { d = JSON.parse(ev.data); } catch (e) { return; }
       var g = D.state().game;
-      if (!g || !g.online) return;
-      // Erst Eigenes loswerden, dann nachsehen, was der andere gemacht hat.
-      var p = D.liveStand() ? liveSchreiben() : Promise.resolve(false);
-      p.then(function () { return liveAbgleich(); })
-        .then(function (neu) { if (neu) D.render(); });
-    }, LIVE_TAKT);
+      if (!g || !g.online || !d) return;
+      if (typeof d.seq === 'number' && d.seq <= (g.online.seq || 0) && d.status !== 'zu') return;
+      liveRunde();
+    });
+    quelle.addEventListener('error', function () {
+      if (quelle !== liveStrom) return;
+      /* Der Browser versucht es selbst erneut. Bis dahin wieder schnell
+         fragen; ist die Verbindung endgueltig zu (404/403, alter Server
+         ohne Route), bleibt es beim Takt. */
+      if (liveStromOffen) { liveStromOffen = false; liveTaktStellen(); }
+      if (quelle.readyState === 2) liveStrom = null;
+    });
+  }
+
+  function liveStromZu() {
+    if (liveStrom) { try { liveStrom.close(); } catch (e) { /* egal */ } }
+    liveStrom = null;
+    liveStromOffen = false;
   }
 
   function liveStatus() {
-    return { stoerung: liveStoerung, schreibt: !!liveSchreibt };
+    return { stoerung: liveStoerung, schreibt: !!liveSchreibt, strom: liveStromOffen };
   }
 
   /* ================= Liga-Zusagen ================= */
@@ -664,6 +746,7 @@
         abgleich: liveAbgleich,
         ende: liveEnde,
         takt: liveTakt,
+        runde: liveRunde,
         status: liveStatus
       }
     };
@@ -671,7 +754,18 @@
     // Wieder online, App wieder im Vordergrund, oder einfach nach einer Weile.
     window.addEventListener('online', function () { jetzt(); });
     document.addEventListener('visibilitychange', function () {
-      if (!document.hidden) jetzt();
+      var g = D.state().game;
+      var online = g && g.online && !g.online.wartet;
+      if (document.hidden) {
+        /* Gleich wird gesperrt: was noch nicht oben ist, jetzt losschicken
+           (keepalive ueberlebt das Einfrieren der Seite), sonst laege die
+           Buchung bis zum Aufwecken nur hier. */
+        if (online && D.liveStand()) liveSchreiben(true);
+        return;
+      }
+      jetzt();
+      /* Zurueck am Handy: sofort nachsehen, nicht erst auf den Takt warten. */
+      if (online && liveTaktAn) liveRunde();
     });
     setInterval(function () {
       if (nutzer && (zustand.outbox.length || !document.hidden)) jetzt();

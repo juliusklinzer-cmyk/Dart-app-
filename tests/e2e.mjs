@@ -2990,7 +2990,86 @@ await page.evaluate(() => {
   D.render();
 });
 check('die 180 des anderen wird auch hier gefeiert', (await text('#feier')).includes('180'));
-await page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; D.save(); D.setScreen('setup'); });
+
+/* Zwei Aufnahmen zwischen zwei Abfragen: die 60 steckt nicht in der
+   allerletzten, wird aber trotzdem gefeiert (positionsweiser Vergleich). */
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  document.getElementById('feier').innerHTML = '';
+  const fremd = JSON.parse(JSON.stringify(S.game));
+  delete fremd.online;
+  const leg = fremd.legs[fremd.legs.length - 1];
+  const p = D.activePlayer(D.activeLeg(S.game), S.game);
+  const q = fremd.p.find((x) => x !== p);
+  leg.visits.push({ p, s: 60, d: 3, b: false, c: false, o: 0 });
+  leg.visits.push({ p: q, s: 45, d: 3, b: false, c: false, o: 0 });
+  D.liveUebernehmen({ id: S.game.id, seq: 6, state: fremd, geaendertVon: 'u_fremd', geaendertVonName: 'Tobi' });
+  D.render();
+});
+check('eine 60 vor der letzten Aufnahme wird auch gefeiert', (await text('#feier')).includes('SECHZIG'));
+
+/* Konflikt, bei dem der andere genau dieselbe Aufnahme eingetragen hat:
+   kein "bitte nochmal eintragen" (das waere eine Doppelbuchung). */
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  D.ui().overlay = null;
+  const p = D.activePlayer(D.activeLeg(S.game), S.game);
+  S.game.legs[S.game.legs.length - 1].visits.push({ p, s: 26, d: 3, b: false, c: false, o: 0 });
+  const fremd = JSON.parse(JSON.stringify(S.game));
+  delete fremd.online;
+  D.liveUebernehmen({ id: S.game.id, seq: 7, state: fremd, geaendertVon: 'u_fremd', geaendertVonName: 'Tobi' }, true);
+  D.render();
+});
+check('Konflikt mit derselben Aufnahme: kein Nochmal-eintragen-Dialog',
+  await page.evaluate(() => !window.__dart.ui().overlay));
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  const fremd = JSON.parse(JSON.stringify(S.game));
+  delete fremd.online;
+  const p = D.activePlayer(D.activeLeg(S.game), S.game);
+  S.game.legs[S.game.legs.length - 1].visits.push({ p, s: 41, d: 3, b: false, c: false, o: 0 });
+  fremd.legs[fremd.legs.length - 1].visits.push({ p, s: 85, d: 3, b: false, c: false, o: 0 });
+  D.liveUebernehmen({ id: S.game.id, seq: 8, state: fremd, geaendertVon: 'u_fremd', geaendertVonName: 'Tobi' }, true);
+  D.render();
+});
+check('Konflikt mit abweichender Aufnahme: Hinweis erscheint',
+  await page.evaluate(() => { const o = window.__dart.ui().overlay; return !!o && o.type === 'hinweis'; }));
+
+/* Der eigene Stand kommt per Abfrage zurueck, waehrend hier schon weiter
+   getippt wird: die laufende Eingabe bleibt stehen. */
+{
+  const erg = await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    D.ui().overlay = null;
+    const echt = window.DartKonto;
+    window.DartKonto = Object.assign({}, echt || {}, { nutzer: () => ({ id: 'u_ich' }) });
+    const eigen = JSON.parse(JSON.stringify(S.game));
+    delete eigen.online;
+    D.ui().input = '4';
+    const visits = S.game.legs[S.game.legs.length - 1].visits.length;
+    D.liveUebernehmen({ id: S.game.id, seq: 9, state: eigen, geaendertVon: 'u_ich', geaendertVonName: 'Ich' });
+    const out = { input: D.ui().input, seq: S.game.online.seq, visits: S.game.legs[S.game.legs.length - 1].visits.length === visits };
+    window.DartKonto = echt;
+    return out;
+  });
+  check('eigener Stand aus der Abfrage loescht die laufende Eingabe nicht', erg.input === '4' && erg.seq === 9 && erg.visits, JSON.stringify(erg));
+}
+
+/* Spielende beim anderen ersetzt jeden offenen Dialog. */
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  D.ui().input = '';
+  D.ui().overlay = { type: 'hinweis', titel: 'x', text: 'y' };
+  const fremd = JSON.parse(JSON.stringify(S.game));
+  delete fremd.online;
+  const leg = fremd.legs[fremd.legs.length - 1];
+  leg.winner = fremd.p[0]; fremd.done = true; fremd.winner = fremd.p[0]; fremd.at = Date.now();
+  D.liveUebernehmen({ id: S.game.id, seq: 10, state: fremd, geaendertVon: 'u_fremd', geaendertVonName: 'Tobi' });
+  D.render();
+});
+check('Spielende beim anderen zeigt den Glueckwunsch, auch ueber einem Hinweis',
+  await page.evaluate(() => { const o = window.__dart.ui().overlay; return !!o && o.type === 'game-done'; }));
+await page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; D.ui().overlay = null; D.save(); D.setScreen('setup'); });
 
 /* ---------- Jedes Format: Tastenfeld ganz im Bild, nichts scrollt ---------- */
 group('Spielbild passt auf jedes Format ohne Scrollen');

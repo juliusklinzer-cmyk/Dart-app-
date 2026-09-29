@@ -23,7 +23,9 @@
     if (!ctx) {
       try { ctx = new AC(); } catch (e) { return; }
       lade();
+      ctx.onstatechange = meldeStatus;
     }
+    if (haltenAn) halterStarten();
     /* iOS kennt neben 'suspended' auch 'interrupted' (Bildschirm war dunkel,
        App im Hintergrund, Anruf). Beides wieder anwerfen -- sonst blieb ein
        Tablet, das im Online-Spiel nur zuschaut, den ganzen Abend stumm. */
@@ -33,6 +35,10 @@
   /* Ein Ton, der ohne eigenen Tipp kommt (der andere hat online eingetragen):
      schlaeft der Kontext, erst wecken und den Ton nach dem Aufwachen spielen. */
   function nachAufwachen(spiele) {
+    /* Noch nie getippt (z. B. nach Neuladen mitten im Online-Spiel): einen
+       Kontext zumindest anlegen -- manche Browser lassen ihn ohne Geste an,
+       sonst zeigt app.js den "Ton an"-Knopf (siehe status). */
+    if (!ctx) weckauf();
     if (!ctx) return;
     if (ctx.state === 'running') { spiele(); return; }
     try {
@@ -176,12 +182,65 @@
     });
   }
 
+  /*
+   * Die Audio-Sitzung offen halten (Online-Spiel): iOS schickt den
+   * WebAudio-Kontext nach dunklem Bildschirm in 'interrupted' und laesst ihn
+   * ohne Tipp nicht wieder an -- dann hoert der Wartende das Klopfen nicht.
+   * Ein stummes, endlos laufendes <audio>-Element, einmal per Tipp
+   * gestartet, haelt die Sitzung am Leben (und ist nicht vom Stumm-Schalter
+   * abhaengig wie WebAudio allein).
+   */
+  var haltenAn = false;
+  var halter = null;
+  function stilleUrl() {
+    // 0,5 s Stille, 8 kHz, 8 Bit mono als WAV.
+    var n = 4000, b = new Uint8Array(44 + n), dv = new DataView(b.buffer);
+    function str(o, t) { for (var i = 0; i < t.length; i++) b[o + i] = t.charCodeAt(i); }
+    str(0, 'RIFF'); dv.setUint32(4, 36 + n, true); str(8, 'WAVE'); str(12, 'fmt ');
+    dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+    dv.setUint32(24, 8000, true); dv.setUint32(28, 8000, true); dv.setUint16(32, 1, true); dv.setUint16(34, 8, true);
+    str(36, 'data'); dv.setUint32(40, n, true);
+    for (var i = 0; i < n; i++) b[44 + i] = 128;
+    try { return URL.createObjectURL(new Blob([b], { type: 'audio/wav' })); } catch (e) { return null; }
+  }
+  function halterStarten() {
+    try {
+      if (!halter) {
+        var url = stilleUrl();
+        if (!url) return;
+        halter = document.createElement('audio');
+        halter.src = url;
+        halter.loop = true;
+        halter.setAttribute('playsinline', '');
+        halter.volume = 0.01;
+      }
+      if (halter.paused) {
+        var p = halter.play();
+        if (p && p.catch) p.catch(function () { /* ohne Geste abgelehnt: naechster Tipp */ });
+      }
+    } catch (e) { /* egal */ }
+  }
+  function halten(an) {
+    an = !!an;
+    if (an === haltenAn) return;
+    haltenAn = an;
+    if (!an && halter) { try { halter.pause(); } catch (e) { /* egal */ } }
+  }
+
+  /* Laeuft der Ton? app.js zeigt sonst im Online-Spiel "Ton an". */
+  function status() { return !!(ctx && ctx.state === 'running'); }
+  function meldeStatus() {
+    try { document.dispatchEvent(new CustomEvent('dart-ton')); } catch (e) { /* egal */ }
+  }
+
   document.addEventListener('pointerdown', weckauf, { capture: true, passive: true });
   document.addEventListener('keydown', weckauf, true);
   /* Zurueck aus dem Hintergrund: den Kontext gleich wieder anwerfen, damit
      die naechste Buchung des anderen nicht ins Leere klingt. */
-  document.addEventListener('visibilitychange', function () { if (!document.hidden && ctx) weckauf(); });
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden && ctx) { weckauf(); setTimeout(meldeStatus, 300); }
+  });
   window.addEventListener('focus', function () { if (ctx) weckauf(); });
 
-  window.DartSound = { pomp: spielePomp, klick: spieleKlick, tipp: spieleTipp, klopfen: spieleKlopfen, fremdeEingabe: spieleFremdeEingabe };
+  window.DartSound = { pomp: spielePomp, klick: spieleKlick, tipp: spieleTipp, klopfen: spieleKlopfen, fremdeEingabe: spieleFremdeEingabe, halten: halten, status: status };
 })();

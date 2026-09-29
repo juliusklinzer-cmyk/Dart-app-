@@ -27,7 +27,7 @@
 
   /* ================= Server ================= */
 
-  function ruf(methode, pfad, body) {
+  function ruf(methode, pfad, body, extra) {
     var opt = {
       method: methode,
       headers: { 'X-Darts-App': '1' },
@@ -35,6 +35,8 @@
       // wenn die Seite von einer anderen Herkunft geladen wurde.
       credentials: 'same-origin'
     };
+    // keepalive: die Anfrage ueberlebt das Wegschalten/Sperren der Seite.
+    if (extra && extra.keepalive) opt.keepalive = true;
     if (body !== undefined) {
       opt.headers['Content-Type'] = 'application/json';
       opt.body = JSON.stringify(body);
