@@ -754,7 +754,8 @@
     return (plan.matches || []).map(function (m) {
       return {
         id: m.id, round: m.round, p: m.p.slice(),
-        // Ligaspiele bringen ihren Anwerfer mit (kein Ausbullen), Turniere nicht.
+        // Ein schon ausgebulltes Einzel bringt seinen Anwerfer mit; sonst wird
+        // auf diesem Geraet ausgebullt (seit der SWO 10/2026 auch im Ligaspiel).
         starter: m.starter || null,
         posPaar: m.posPaar || null, scheibe: m.scheibe || null,
         legs: [], done: false, winner: null, at: null
@@ -6162,9 +6163,10 @@
    * Der SDM-Spielberichtsbogen als Spielmodus: 16 Einzel (501 Double Out,
    * Best of 3 oder 5) zwischen unseren vier Positionen und den vier des
    * Gegners. Läuft komplett auf dem Turnier-Unterbau – nur der Spielplan
-   * ist vorgegeben statt ausgelost, es wird nicht ausgebullt (das erste
-   * Leg beginnt der Heimspieler, danach wechselt der Anwurf, SWO §8), und
-   * die Übersicht zeigt den Team-Stand statt einer Einzeltabelle.
+   * ist vorgegeben statt ausgelost, jedes Einzel beginnt mit dem Ausbullen
+   * (der Gewinner wirft Leg 1 an, danach wechselt der Anwurf - SWO Punkt 8,
+   * Fassung Oktober 2026), und die Übersicht zeigt den Team-Stand statt
+   * einer Einzeltabelle.
    */
   /* Das Uebungs-Ligaspiel: derselbe Aufbau wie ein echtes (16 Einzel,
      Scheiben, Bogen), aber terminId 'uebung' und uebung: true - damit
@@ -6223,7 +6225,9 @@
       var h = wir[paar[0]], g = sie[paar[1]];
       return {
         id: uid(), round: Math.floor(i / 4) + 1, p: [h, g],
-        starter: h, posPaar: paar.slice(),
+        /* Gegen Bots wird nicht ausgebullt (die werfen keinen Bull) - der
+           eigene Spieler wirft an. Gegen echte Leute wie im Ligaspiel. */
+        starter: d.gegner === 'team' ? null : h, posPaar: paar.slice(),
         scheibe: i % 2 === 0 ? 'S1' : 'S2',
         legs: [], done: false, winner: null, at: null
       };
@@ -6323,9 +6327,11 @@
       var h = heimListe[paar[0]], g = gastListe[paar[1]];
       return {
         id: uid(), round: Math.floor(i / 4) + 1, p: [h, g],
-        /* Kein Ausbullen im Ligaspiel: der Heimspieler wirft das erste Leg
-           an, jedes weitere Leg wechselt (macht ensureLeg von selbst). */
-        starter: h,
+        /* SWO Punkt 8 (Fassung Oktober 2026): „Jedes Spiel beginnt mit dem
+           Ausbullen. Der Spieler, der das Ausbullen gewinnt, beginnt das
+           erste Leg." Ohne Anwerfer oeffnet die Partie im Bull-Off; jedes
+           weitere Leg wechselt (macht ensureLeg von selbst). */
+        starter: null,
         /* Welche Bogen-Positionen hier spielen und auf welcher Scheibe die
            Partie im Doppelbetrieb läuft (zwei nebeneinander je Durchgang). */
         posPaar: paar.slice(),
@@ -6527,8 +6533,11 @@
       if (!m.posPaar || m.posPaar[idx] !== pos) return;
       var begonnen = m.done || m.legs.some(function (l) { return l.visits.length > 0; });
       if (begonnen) return;
+      var raus = m.p[idx];
       m.p[idx] = neueId;
-      if (idx === 0) m.starter = neueId;   // der Heimspieler wirft an
+      /* War der Ausgewechselte schon als Anwerfer ausgebullt, uebernimmt
+         der Neue diesen Platz - geworfen ist ja noch nichts. */
+      if (m.starter === raus) m.starter = neueId;
     });
     save();
     return null;

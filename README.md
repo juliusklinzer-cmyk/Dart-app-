@@ -198,9 +198,10 @@ Der Spielplan sind die **16 Einzel in vier Durchgängen, exakt in der
 Reihenfolge des Spielberichtsbogens** (`LIGA_EINZEL`); jede Begegnung steht
 als **H1 Name – G1 Name** da, und im Liga-Kontext erscheint der
 **bürgerliche Name** aus dem Profil statt des Spitznamens (die SWO will keine
-Künstlernamen). Jedes Einzel trägt seine Scheibe (S1/S2). Es wird **nicht
-ausgebullt**: das erste Leg beginnt der Heimspieler, danach wechselt der
-Anwurf (SWO §8). Die Übersicht zeigt den **Team-Stand** – groß die **Punkte
+Künstlernamen). Jedes Einzel trägt seine Scheibe (S1/S2). Jedes Einzel
+**beginnt mit dem Ausbullen** (SWO Punkt 8, Fassung Oktober 2026): der
+Gewinner wirft Leg 1 an, danach wechselt der Anwurf. Im Übungs-Ligaspiel gegen
+Bots wirft der eigene Spieler ohne Ausbullen an. Die Übersicht zeigt den **Team-Stand** – groß die **Punkte
 nach SWO-Staffel** (Best of 3: 2:0 = 4:0 und 2:1 = 3:1; Best of 5: 6:0 / 5:1
 / 4:2), darunter Einzel und Legs – und die **Highlights** für den Bogen
 (180er, High-Finishes ab 100, Shortlegs bis 21 Darts). Die 60er- und

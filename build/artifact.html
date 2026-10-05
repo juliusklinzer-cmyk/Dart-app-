@@ -3849,23 +3849,50 @@ body { font-size: 1rem; }
       <summary>Wie läuft ein Ligaspieltag ab?</summary>
       <p>Spielbeginn ist generell <b>20:00 Uhr</b>. Das Auswärtsteam hat vorher mindestens
         <b>15 Minuten zum Einwerfen</b>. Gespielt werden <b>16 Einzel</b>, jedes davon
-        <b>501 Double Out</b> – in Liga 1 und 2 als Best of 5 (drei Gewinnlegs), ab Liga 3
-        als Best of 3 (zwei Gewinnlegs).</p>
+        <b>501 Double Out</b> – in Liga 1 bis 3 als Best of 5 (drei Gewinnlegs), ab Liga 4
+        als Best of 3 (zwei Gewinnlegs). Blink 180 spielt in der 5. Liga, also
+        <b>Best of 3</b>.</p>
+      <p>Wer nicht rechtzeitig am Board ist: Verzögert sich ein Spiel um mehr als
+        <b>5 Minuten</b>, weil ein Spieler fehlt, ist dieses Einzel <b>„zu Null“
+        verloren</b>.</p>
       <p>Vor dem ersten Einzel tragen beide Teamcaptains die Aufstellung in den
         Spielberichtsbogen ein: jeder Spieler bekommt eine <b>Position 1 bis 4</b>, und die
         ist verbindlich. Gespielt wird in der Reihenfolge des Bogens (die TCs dürfen sie
         einvernehmlich ändern). Es muss auf <b>zwei Boards</b> gespielt werden, und
         <b>beide Teams schreiben</b>.</p>
       <p>Nach dem Abend trägt das Heimteam alle Ergebnisse gut leserlich ein, beide TCs
-        unterschreiben, und der Bogen muss <b>innerhalb von 3 Werktagen</b> an die
-        Ligaleitung – sonst wird das Spiel für das Heimteam als verloren gewertet.</p>
+        unterschreiben, und der Bogen geht <b>per E-Mail innerhalb von 3 Werktagen
+        (Montag bis Samstag)</b> an die Ligaleitung – sonst wird das Spiel für das Heimteam
+        „zu Null“ als verloren gewertet. Proteste müssen <b>vor</b> der Unterschrift auf den
+        Bogen; danach sind sie unwirksam.</p>
     </details>
 
     <details class="card regel">
       <summary>Wer wirft zuerst an? Wird ausgebullt?</summary>
-      <p>Im Ligaspiel wird <b>nicht ausgebullt</b>: Laut SWO beginnt der (Heim-)Spieler das
-        erste Leg, <b>jedes weitere Leg wird abwechselnd begonnen</b>. Wer also Leg 1
-        anwirft, schaut bei Leg 2 zu – auch beim Entscheidungsleg gibt es kein Bull-Off.</p>
+      <p><b>Ja – seit der SWO vom Oktober 2026.</b> Dort steht unter Punkt 8: <i>„Jedes Spiel
+        beginnt mit dem ‚Ausbullen‘. Der Spieler, der das ‚Ausbullen‘ gewinnt, beginnt das
+        erste Leg. Jedes weitere Leg wird abwechselnd begonnen.“</i> Wer Leg 1 anwirft,
+        schaut also bei Leg 2 zu. Ausgebullt wird nur einmal vor dem Einzel, nicht vor dem
+        Entscheidungsleg. (Bis zur alten Fassung begann der Heimspieler ohne Ausbullen.)</p>
+      <p>Die App fragt vor jedem Liga-Einzel, wer näher am Bull war.</p>
+    </details>
+
+    <details class="card regel">
+      <summary>Wie muss gezählt werden – Tafel oder App (N01)?</summary>
+      <p>Eine bestimmte App ist <b>nicht vorgeschrieben</b> – weder N01 noch eine andere. Die SWO
+        sagt unter Punkt 8 nur: <i>„Es muss auf 2 Boards gespielt werden und beide Teams
+        schreiben.“</i> und <i>„Ansonsten gelten die allgemeinen Dartspielregeln des
+        DDV e.V.“</i></p>
+      <p>Der DDV regelt das Zählen in § 6 seiner Sport- und Wettkampfordnung: Der Punktestand
+        muss <i>„klar und leserlich in Sichtweite vor dem Spieler und Schiedsrichter auf einem
+        Punktezettel oder einer Punktetafel notiert werden“</i> (§ 6 Abs. 6). Elektronische
+        Hilfsmittel sind <b>erlaubt</b>, wenn die letzten 6 Scores beider Spieler sichtbar sind,
+        Fehleingaben korrigiert werden können und der Rest deutlich angezeigt wird
+        (§ 6 Abs. 9). Aber: <i>„Schreibtafeln müssen einsatzbereit und vorschriftsmäßig
+        vorhanden sein. Sollte ein Schreiber die elektronischen Hilfsmittel ablehnen, so muss
+        auf Schreibtafeln geschrieben werden.“</i></p>
+      <p>Heißt: App ja, wenn beide einverstanden sind – Pflicht ist sie nie, und die Tafel
+        muss immer bereitliegen.</p>
     </details>
 
     <details class="card regel">
@@ -3910,6 +3937,8 @@ body { font-size: 1rem; }
         Gewechselt wird nur <b>auf derselben Position</b> – wer auf Position 2 gespielt
         hat, kann später nur wieder auf Position 2 ran; auf einer Position dürfen aber
         mehrere Spieler eingesetzt werden.</p>
+      <p>Pro Spieler und Saison ist <b>nur ein Teamwechsel</b> erlaubt. Wer bei der SDM in einem
+        Team gemeldet ist, darf in keinem anderen Team mehr als Gast spielen.</p>
       <p><b>Gastspieler</b> (nicht gemeldete): höchstens einer pro Mannschaft und
         Ligaspiel, höchstens zwei Einsätze pro Saison – beim dritten muss nachgemeldet
         werden (vor Spielbeginn auf der Bogen-Rückseite). Wer während der Saison in ein
@@ -5494,7 +5523,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return (plan.matches || []).map(function (m) {
       return {
         id: m.id, round: m.round, p: m.p.slice(),
-        // Ligaspiele bringen ihren Anwerfer mit (kein Ausbullen), Turniere nicht.
+        // Ein schon ausgebulltes Einzel bringt seinen Anwerfer mit; sonst wird
+        // auf diesem Geraet ausgebullt (seit der SWO 10/2026 auch im Ligaspiel).
         starter: m.starter || null,
         posPaar: m.posPaar || null, scheibe: m.scheibe || null,
         legs: [], done: false, winner: null, at: null
@@ -10902,9 +10932,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
    * Der SDM-Spielberichtsbogen als Spielmodus: 16 Einzel (501 Double Out,
    * Best of 3 oder 5) zwischen unseren vier Positionen und den vier des
    * Gegners. Läuft komplett auf dem Turnier-Unterbau – nur der Spielplan
-   * ist vorgegeben statt ausgelost, es wird nicht ausgebullt (das erste
-   * Leg beginnt der Heimspieler, danach wechselt der Anwurf, SWO §8), und
-   * die Übersicht zeigt den Team-Stand statt einer Einzeltabelle.
+   * ist vorgegeben statt ausgelost, jedes Einzel beginnt mit dem Ausbullen
+   * (der Gewinner wirft Leg 1 an, danach wechselt der Anwurf - SWO Punkt 8,
+   * Fassung Oktober 2026), und die Übersicht zeigt den Team-Stand statt
+   * einer Einzeltabelle.
    */
   /* Das Uebungs-Ligaspiel: derselbe Aufbau wie ein echtes (16 Einzel,
      Scheiben, Bogen), aber terminId 'uebung' und uebung: true - damit
@@ -10963,7 +10994,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       var h = wir[paar[0]], g = sie[paar[1]];
       return {
         id: uid(), round: Math.floor(i / 4) + 1, p: [h, g],
-        starter: h, posPaar: paar.slice(),
+        /* Gegen Bots wird nicht ausgebullt (die werfen keinen Bull) - der
+           eigene Spieler wirft an. Gegen echte Leute wie im Ligaspiel. */
+        starter: d.gegner === 'team' ? null : h, posPaar: paar.slice(),
         scheibe: i % 2 === 0 ? 'S1' : 'S2',
         legs: [], done: false, winner: null, at: null
       };
@@ -11063,9 +11096,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       var h = heimListe[paar[0]], g = gastListe[paar[1]];
       return {
         id: uid(), round: Math.floor(i / 4) + 1, p: [h, g],
-        /* Kein Ausbullen im Ligaspiel: der Heimspieler wirft das erste Leg
-           an, jedes weitere Leg wechselt (macht ensureLeg von selbst). */
-        starter: h,
+        /* SWO Punkt 8 (Fassung Oktober 2026): „Jedes Spiel beginnt mit dem
+           Ausbullen. Der Spieler, der das Ausbullen gewinnt, beginnt das
+           erste Leg." Ohne Anwerfer oeffnet die Partie im Bull-Off; jedes
+           weitere Leg wechselt (macht ensureLeg von selbst). */
+        starter: null,
         /* Welche Bogen-Positionen hier spielen und auf welcher Scheibe die
            Partie im Doppelbetrieb läuft (zwei nebeneinander je Durchgang). */
         posPaar: paar.slice(),
@@ -11267,8 +11302,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       if (!m.posPaar || m.posPaar[idx] !== pos) return;
       var begonnen = m.done || m.legs.some(function (l) { return l.visits.length > 0; });
       if (begonnen) return;
+      var raus = m.p[idx];
       m.p[idx] = neueId;
-      if (idx === 0) m.starter = neueId;   // der Heimspieler wirft an
+      /* War der Ausgewechselte schon als Anwerfer ausgebullt, uebernimmt
+         der Neue diesen Platz - geworfen ist ja noch nichts. */
+      if (m.starter === raus) m.starter = neueId;
     });
     save();
     return null;

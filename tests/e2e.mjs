@@ -332,6 +332,15 @@ async function rDart(label) {
 }
 /* Bull-Off eines Trainings-/Cricket-Spiels bestätigen: bei zwei Spielern per
    Tipp auf den Anfänger, bei mehr über die Reihenfolge-Liste. */
+/* Liga-Einzel: seit der SWO 10/2026 wird ausgebullt. In den Tests gewinnt
+   der Heimspieler (erster Knopf), damit die Pruefungen dahinter gleich bleiben. */
+async function ligaAusbullen() {
+  if (!(await visible('#screen-bulloff'))) return false;
+  await page.locator('#bulloff-buttons [data-action="pick-starter"]').first().click();
+  await page.waitForTimeout(150);
+  return true;
+}
+
 async function bullOffGo() {
   if (!(await visible('#screen-bulloff'))) return;   // allein wird nicht ausgebullt
   /* Ab drei Spielern: Namen links in Wurf-Reihenfolge antippen (der letzte
@@ -1729,6 +1738,8 @@ await page.locator('[data-action="liga-finish"][data-value="1"]').click();
 await page.locator('[data-action="liga-los"]').click();
 check('das Ligaspiel steht', await visible('#screen-tournament'));
 await page.locator('#schedule .match-row .go:not(.wo)').first().click();
+check('das Liga-Einzel beginnt mit dem Ausbullen (SWO 10/2026)', await visible('#screen-bulloff'));
+await ligaAusbullen();
 check('das Einzel oeffnet mit drei Umschaltern', await visible('#mode-toggle'));
 await page.locator('#mode-toggle button[data-mode="turnier"]').click();
 check('Tastatur-Feld sichtbar', await visible('#pad-key'));
@@ -1821,7 +1832,8 @@ check('und die Eingabe-Anzeige steht wieder bereit', await visible('#key-display
    ein Liga-Einzel direkt in der Riesenanzeige. */
 await page.evaluate(() => window.__dart.setScreen('tournament'));
 await page.locator('#schedule .match-row .go:not(.wo)').first().click();
-check('das Liga-Einzel oeffnet direkt im Turnier-Modus', await visible('#pad-key'));
+await ligaAusbullen();
+check('das Liga-Einzel oeffnet nach dem Ausbullen im Turnier-Modus', await visible('#pad-key'));
 
 /* Checkout am Board: die Dart-Frage wird mit 1/2/3 beantwortet - und eine
    verirrte Ziffer darf die Eingabe nicht veraendern, sonst wuerde aus der
@@ -1910,6 +1922,11 @@ await page.keyboard.press('ArrowUp');
 check('Pfeil hoch fuehrt zurueck zur ersten', await page.evaluate(() =>
   document.querySelectorAll('.te-zeile')[0].classList.contains('dran')));
 await page.keyboard.press('Enter');
+/* Seit der SWO 10/2026 kommt vor jedem Einzel das Ausbullen - am Board
+   ebenfalls per Enter bestaetigt. */
+check('Enter oeffnet das naechste Einzel mit dem Ausbullen', await visible('#screen-bulloff'));
+await page.keyboard.press('Enter');
+await page.waitForTimeout(150);
 check('Enter startet das naechste Einzel direkt in der Riesenanzeige',
   (await visible('#pad-key')) && await page.evaluate(() => {
     const m = window.__dart.currentMatch();
@@ -2286,11 +2303,11 @@ check('und enthaelt genau einen Eintrag',
 await page.locator('#liga-tabs button[data-tab="regeln"]').click();
 check('der Regeln-Reiter zeigt die Regelecke',
   (await visible('#liga-regeln')) && !(await visible('#liga-plan')));
-check('mit FAQ und Regelecke zum Aufklappen', (await page.locator('#liga-regeln details').count()) === 13,
+check('mit FAQ und Regelecke zum Aufklappen', (await page.locator('#liga-regeln details').count()) === 14,
   String(await page.locator('#liga-regeln details').count()));
 check('das FAQ beantwortet die Grundfragen', await page.evaluate(() => {
   const t = document.getElementById('liga-regeln').textContent;
-  return t.includes('16 Einzel') && t.includes('nicht ausgebullt') &&
+  return t.includes('16 Einzel') && t.replace(/\s+/g, ' ').includes('Jedes Spiel beginnt mit dem') && t.includes('N01') &&
     t.includes('Schiedsrichter') && t.includes('Bust') && t.includes('Gastspieler');
 }));
 check('darunter der Schreiber und das Score-Nachfragen', await page.evaluate(() => {
@@ -2438,10 +2455,14 @@ check('jede Begegnung traegt ihre H/G-Kennungen',
 check('im Liga-Kontext steht der buergerliche Name statt des Spitznamens',
   (await text('#schedule')).includes('Lena Musterfrau'));
 
-/* Erstes Einzel: kein Ausbullen – der Heimspieler wirft an. */
+/* Erstes Einzel: es wird ausgebullt (SWO Punkt 8, Oktober 2026) -
+   hier gewinnt der Heimspieler das Ausbullen und wirft an. */
 await page.locator('#schedule .match-row .go:not(.wo)').first().click();
-check('direkt auf dem Spielbildschirm, ohne Bull-Off', await visible('#screen-game'));
-check('der Heimspieler wirft das erste Leg an', await page.evaluate(() => {
+check('erst das Ausbullen, noch kein Anwerfer', (await visible('#screen-bulloff')) &&
+  await page.evaluate(() => !window.__dart.currentMatch().starter));
+await ligaAusbullen();
+check('danach auf dem Spielbildschirm', await visible('#screen-game'));
+check('der Gewinner des Ausbullens wirft das erste Leg an', await page.evaluate(() => {
   const D = window.__dart, m = D.currentMatch();
   return m.starter === m.p[0] && D.activePlayer(D.activeLeg(m), m) === m.p[0];
 }));
@@ -2522,6 +2543,7 @@ await page.locator('[data-action="liga-kampflos-wer"]').nth(1).click();
 /* Ohne Finish-Hilfen (Voreinstellung): im Einzel gibt es keine Finish-Leiste –
    der Schreiber darf das Doppel ja nicht ansagen (WDF 3.08). */
 await page.locator('#schedule .match-row .go:not(.wo)').first().click();
+await ligaAusbullen();
 check('Liga-konform: keine Finish-Leiste im Einzel', !(await visible('#checkout-bar')));
 await page.locator('#screen-game [data-action="to-tournament"]').click();
 /* Das Oeffnen hat ein leeres Leg angelegt - der w.o.-Knopf muss bleiben,
