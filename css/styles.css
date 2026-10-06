@@ -3521,3 +3521,14 @@ body { font-size: 1rem; }
 .b-nur-schirm { margin-bottom: 10px; }
 @media print { .b-nur-schirm { display: none !important; } }
 .b-nach td img { display: block; max-width: 100%; max-height: 34px; margin: 0 auto; }
+
+/* Ergebnisse nach dem letzten Liga-Einzel: je Team ein Man of the Day und
+   die Highlights - nebeneinander am iPad, untereinander am Handy. */
+.motd-paar { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); margin: var(--space-4) 0; }
+@media (max-width: 599px) { .motd-paar { grid-template-columns: 1fr; } }
+.motd { text-align: left; margin: 0; }
+.motd-team { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-size: 0.85rem; }
+.motd-titel { color: var(--accent); font-weight: 700; margin: 6px 0 8px; }
+.motd-person { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3); }
+.motd-name { font-size: 1.25rem; font-weight: 700; }
+.motd-leer { margin-top: 4px; }

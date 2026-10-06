@@ -542,6 +542,10 @@ check('Verlaufsdiagramm für Classic', (await page.locator('#board-chart .chart'
 const lines = await page.locator('#board-chart .chart polyline').count();
 check('eine Linie je Spieler', lines >= 2, `${lines} Linien`);
 const legend = await page.locator('#board-chart .chart-legend .cl').count();
+check('unter dem Diagramm steht der beste Schnitt zuerst, der schwaechste zuletzt', await page.evaluate(() => {
+  const w = [...document.querySelectorAll('#board-chart .chart-legend .cl b')].map((e) => parseFloat(e.textContent.replace('Ø', '')));
+  return w.length > 0 && w.every((v, i) => i === 0 || w[i - 1] >= v);
+}));
 check('Legende mit Spielerfarben', legend === lines);
 const colors = await page.locator('#board-chart .chart polyline').evaluateAll((els) => els.map((e) => e.getAttribute('stroke')));
 check('jeder Spieler eine eigene Farbe', new Set(colors).size === colors.length, colors.join(' '));
@@ -3582,6 +3586,63 @@ group('Erster Start: Willkommen-Karte');
   check('Verstanden blendet sie fuer immer aus', !(await visible('#willkommen')) &&
     await page.evaluate(() => window.__dart.state().settings.willkommenWeg === 1));
   await page.evaluate(() => { const D = window.__dart, S = D.state(); S.history = window.__archivMerker; D.save(); D.setScreen('setup'); });
+}
+
+/* ---------- Ligaspiel: Ergebnisse, Bericht, erst dann abgeschlossen ---------- */
+group('Ligaspiel endet erst mit dem unterschriebenen Bericht');
+{
+  await page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; S.matches = []; S.tour = null; S.current = null; D.ui().overlay = null; D.save(); D.setScreen('liga'); });
+  await page.locator('#liga-liste [data-action="liga-spiel"]').first().click();
+  for (let i = 0; i < 4; i++) {
+    await page.locator(`[data-role="liga-gegner"][data-i="${i}"]`).fill('Abschluss' + i);
+    await page.locator(`[data-role="liga-gegner-nach"][data-i="${i}"]`).fill('Test' + i);
+  }
+  await page.locator('[data-action="liga-los"]').click();
+  const termin = await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    S.matches.forEach((m) => {
+      m.starter = m.p[0];
+      m.legs = [{ starter: m.p[0], visits: [], winner: m.p[0] }, { starter: m.p[1], visits: [], winner: m.p[0] }];
+      m.done = true; m.winner = m.p[0]; m.at = Date.now();
+    });
+    D.save(); D.setScreen('tournament');
+    return S.tour.liga.terminId;
+  });
+  check('alle Einzel gespielt: der Weg geht zu Ergebnissen und Bericht',
+    await visible('#liga-stand [data-action="to-winner"]'));
+  await page.locator('#nav [data-screen="setup"]').click();
+  check('der Spiel-Tab beendet das Ligaspiel nicht, sondern zeigt die Ergebnisse',
+    (await visible('#screen-winner')) && await page.evaluate(() => window.__dart.state().matches.length === 16));
+  check('Man of the Day fuer beide Teams', (await page.locator('#winner-box .motd .motd-titel').count()) === 2);
+  check('kein "Ligaspiel abschliessen" ohne Bericht', !(await visible('#screen-winner [data-action="finish-tournament"]')));
+  await page.locator('#winner-box [data-action="liga-bericht"]').click();
+  check('weiter zum Spielbericht', await visible('#screen-bericht'));
+  await page.evaluate(() => {
+    const D = window.__dart;
+    D.ui().overlay = { type: 'bericht-versand', adressen: ['spielbericht@steeldart-muenchen.de', '', ''] };
+    D.render();
+  });
+  await page.locator('[data-action="bericht-ohne-senden"]').click();
+  const nach = await page.evaluate((t) => {
+    const S = window.__dart.state();
+    const h = S.history.find((x) => x.liga && x.liga.terminId === t);
+    return { laeuft: S.matches.length, archiv: !!h, zu: !!(h && h.liga.abgeschlossen) };
+  }, termin);
+  check('danach ist das Ligaspiel abgeschlossen und archiviert', nach.laeuft === 0 && nach.archiv && nach.zu, JSON.stringify(nach));
+  check('der Bericht bleibt sichtbar', await visible('#screen-bericht'));
+  await page.locator('#overlay-card [data-action="ov-hinweis-zu"]').click();
+  await page.evaluate(() => window.__dart.setScreen('liga'));
+  const karte = page.locator('#liga-liste .liga-spieltag').first();
+  check('im Spielplan steht der Spieltag als abgeschlossen', (await karte.innerText()).includes('Abgeschlossen'));
+  check('und laesst sich nicht nochmal starten', (await karte.locator('[data-action="liga-spiel"]').count()) === 0);
+  check('Ergebnisse und Bericht bleiben einsehbar',
+    (await karte.locator('[data-action="open-summary"]').count()) === 1 && (await karte.locator('[data-action="liga-bericht"]').count()) === 1);
+  await page.evaluate((t) => {
+    const D = window.__dart, S = D.state();
+    S.history = S.history.filter((x) => !(x.liga && x.liga.terminId === t));
+    S.profiles = S.profiles.filter((p) => !(p.voll || '').startsWith('Abschluss'));
+    D.save(); D.setScreen('setup');
+  }, termin);
 }
 
 group('Fehlerfreiheit');

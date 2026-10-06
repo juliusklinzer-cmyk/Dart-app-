@@ -3525,6 +3525,17 @@ body { font-size: 1rem; }
 @media print { .b-nur-schirm { display: none !important; } }
 .b-nach td img { display: block; max-width: 100%; max-height: 34px; margin: 0 auto; }
 
+/* Ergebnisse nach dem letzten Liga-Einzel: je Team ein Man of the Day und
+   die Highlights - nebeneinander am iPad, untereinander am Handy. */
+.motd-paar { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); margin: var(--space-4) 0; }
+@media (max-width: 599px) { .motd-paar { grid-template-columns: 1fr; } }
+.motd { text-align: left; margin: 0; }
+.motd-team { font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-size: 0.85rem; }
+.motd-titel { color: var(--accent); font-weight: 700; margin: 6px 0 8px; }
+.motd-person { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3); }
+.motd-name { font-size: 1.25rem; font-weight: 700; }
+.motd-leer { margin-top: 4px; }
+
 </style>
 <div id="save-warning" class="save-warning hidden">
   ⚠️ Der Spielstand kann gerade nicht gespeichert werden – bitte Speicherplatz prüfen
@@ -8101,6 +8112,58 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
   /* Team-Stand und Spielbericht-Highlights eines Ligaspiels – gebraucht in
      der Übersicht und auf dem Endstand-Bildschirm. */
+  /* Ein echtes Ligaspiel (kein Uebungsspiel), dessen Bericht noch nicht
+     unterschrieben und verschickt ist: es wird nirgends still archiviert -
+     erst mit dem Abschluss des Spielberichts ist es fertig. */
+  function ligaNochOffen() {
+    var lg = S.tour && S.tour.liga;
+    return !!(lg && !lg.uebung && !lg.abgeschlossen && S.matches.length);
+  }
+
+  /* Man of the Day je Team: die meisten gewonnenen Einzel, bei Gleichstand
+     der hoehere 3-Dart-Average. */
+  function manOfTheDay(ids, stMap) {
+    var bester = null;
+    ids.forEach(function (id) {
+      var st = stMap[id];
+      if (!st || !st.matches) return;
+      if (!bester || st.won > bester.won || (st.won === bester.won && st.avg > bester.avg)) bester = st;
+    });
+    return bester;
+  }
+
+  /* Die Highlights eines Teams (180er, High-Finishes ab 100, Shortlegs bis
+     21 Darts) als Zeilen. */
+  function teamHighlights(ids, stMap) {
+    var hl180 = [], hlFin = [], hlLeg = [], zeilen = [];
+    ids.forEach(function (id) {
+      var st = stMap[id];
+      if (!st) return;
+      var nm = esc(ligaName(id));
+      if (st.s180 > 0) hl180.push(nm + (st.s180 > 1 ? ' ×' + st.s180 : ''));
+      if (st.highCO >= 100) hlFin.push(st.highCO + ' ' + nm);
+      if (st.bestLeg && st.bestLeg <= 21) hlLeg.push(st.bestLeg + ' Darts ' + nm);
+    });
+    if (hl180.length) zeilen.push('<b>180er:</b> ' + hl180.join(' · '));
+    if (hlFin.length) zeilen.push('<b>High-Finishes:</b> ' + hlFin.join(' · '));
+    if (hlLeg.length) zeilen.push('<b>Shortlegs:</b> ' + hlLeg.join(' · '));
+    return zeilen;
+  }
+
+  /* Punkte nach SWO-Staffel fuer ein archiviertes Ligaspiel. */
+  function ligaErgebnisAus(h) {
+    var lg = h.liga, gewinnLegs = Math.floor(((h.settings && h.settings.bestOf) || 3) / 2) + 1;
+    var e = { wirP: 0, sieP: 0, wirS: 0, sieS: 0 };
+    (h.matches || []).forEach(function (m) {
+      if (!m.done) return;
+      var unsere = lg.wir.indexOf(m.p[0]) >= 0 ? m.p[0] : m.p[1];
+      var pkt = ligaPunkte(m, gewinnLegs);
+      if (m.winner === unsere) { e.wirS++; e.wirP += pkt[0]; e.sieP += pkt[1]; }
+      else { e.sieS++; e.sieP += pkt[0]; e.wirP += pkt[1]; }
+    });
+    return e;
+  }
+
   function ligaStandDaten() {
     var lg = S.tour && S.tour.liga;
     if (!lg) return null;
@@ -8192,6 +8255,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           lsd.wirL + ':' + lsd.sieL + ' · ' +
           lsd.fertige + ' von ' + S.matches.length + ' gespielt</div>' +
         ligaHighlightsHtml(lsd) +
+        (lsd.fertige === S.matches.length && ligaNochOffen()
+          ? '<button class="btn primary start full" data-action="to-winner">Ergebnisse &amp; Spielbericht</button>' : '') +
         '<button class="btn ghost full" data-action="liga-nachmelden">Spieler nachmelden</button>' +
         '<button class="btn ghost full" data-action="liga-bericht">Spielbericht ansehen &amp; unterschreiben</button>';
     }
@@ -8370,7 +8435,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
     return '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(label) + '">' +
       grid + lines + axis + '</svg>' +
-      '<div class="chart-legend">' + series.map(function (r) {
+      /* Bester Schnitt zuerst, schwaechster zuletzt (Average wie MPR: hoeher
+         ist besser). */
+      '<div class="chart-legend">' + series.slice().sort(function (a, b) { return b.mittel - a.mittel; }).map(function (r) {
         /* Unter der Linie steht der Durchschnitt ueber genau diese Spiele (bei
            weniger als zehn eben ueber die vorhandenen) -- frueher stand hier
            nur das letzte, das las sich wie der Schnitt. */
@@ -9063,7 +9130,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         (ligaZusagen
           ? '<div class="lt-leute">' + (koepfe || '<span class="muted">Noch niemand eingetragen.</span>') + '</div>'
           : '') +
-        (vorbei ? '' :
+        ligaTerminStatus(t, vorbei) +
+        (vorbei || ligaTerminBelegt(t) ? '' :
           '<div class="lt-fuss">' +
             (ligaZusagen
               ? '<span class="lt-status ' + (fehlt > 0 ? 'offen' : 'voll') + '">' +
@@ -9078,14 +9146,45 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
                   'data-id="' + esc(t.id) + '" data-dabei="' + (binDabei ? '0' : '1') + '">' +
                   (binDabei ? 'Bin raus' : 'Ich bin dabei') + '</button>'
                 : '') +
-              (S.history.some(function (h) { return h.liga && h.liga.terminId === t.id && h.matches; })
-                ? '<button class="btn ghost small" data-action="liga-bericht" data-termin="' + esc(t.id) + '">Spielbericht</button>'
-                : '') +
               '<button class="btn ghost small" data-action="liga-spiel" data-id="' + esc(t.id) + '">Ligaspiel starten</button>' +
             '</span>' +
           '</div>') +
         '</div>';
     }).join('');
+  }
+
+  /* Was zu einem Spieltag schon da ist: das laufende Ligaspiel oder ein
+     archiviertes (abgeschlossen oder mit offenem Bericht). */
+  function ligaTerminEintrag(t) {
+    for (var i = 0; i < S.history.length; i++) {
+      var h = S.history[i];
+      if (h.liga && !h.liga.uebung && h.liga.terminId === t.id && h.matches) return h;
+    }
+    return null;
+  }
+  function ligaTerminBelegt(t) {
+    return !!(S.tour && S.tour.liga && !S.tour.liga.uebung && S.tour.liga.terminId === t.id) || !!ligaTerminEintrag(t);
+  }
+  /* Laeuft oder lief der Spieltag schon, gibt es keinen Start-Knopf mehr,
+     sondern den Stand: laeuft / Bericht offen / abgeschlossen. */
+  function ligaTerminStatus(t) {
+    if (S.tour && S.tour.liga && !S.tour.liga.uebung && S.tour.liga.terminId === t.id) {
+      var d = ligaStandDaten();
+      return '<div class="lt-fuss"><span class="lt-status offen">Läuft · ' + d.wirP + ':' + d.sieP +
+        ' · ' + d.fertige + ' von ' + S.matches.length + ' Einzeln</span>' +
+        '<span class="lt-knoepfe"><button class="btn primary start small" data-action="liga-zum-spiel">Zum Ligaspiel</button></span></div>';
+    }
+    var h = ligaTerminEintrag(t);
+    if (!h) return '';
+    var e = ligaErgebnisAus(h);
+    var zu = !!h.liga.abgeschlossen;
+    return '<div class="lt-fuss"><span class="lt-status ' + (zu ? 'voll' : 'offen') + '">' +
+        (zu ? '✓ Abgeschlossen · ' : 'Bericht offen · ') + esc(LIGA.team) + ' ' + e.wirP + ':' + e.sieP + '</span>' +
+      '<span class="lt-knoepfe">' +
+        '<button class="btn ghost small" data-action="open-summary" data-kind="turnier" data-id="' + esc(h.id) + '">Ergebnisse</button>' +
+        '<button class="btn ' + (zu ? 'ghost' : 'primary start') + ' small" data-action="liga-bericht" data-termin="' + esc(t.id) + '">' +
+          (zu ? 'Spielbericht' : 'Bericht abschließen') + '</button>' +
+      '</span></div>';
   }
 
   /* Alle Termine als iCal-Datei – ganztägige Einträge, die Anwurfzeit steht
@@ -10588,6 +10687,28 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return pdfAusSeiten(seiten);
   }
 
+  /* Bericht fertig, beide unterschrieben, verschickt: das Ligaspiel ist
+     abgeschlossen. Laeuft es noch, wandert es jetzt ins Archiv (mit
+     Unterschriften und Nachmeldungen); der Bericht bleibt offen sichtbar. */
+  function ligaAbschliessen(lg) {
+    lg.abgeschlossen = Date.now();
+    if (S.tour && S.tour.liga === lg) {
+      UI.bericht = lg.terminId;
+      berichtStand = null;
+      archiveTournament();
+    }
+    save();
+  }
+
+  function berichtOhneSendenAbschliessen() {
+    var q = ligaBerichtQuelle();
+    if (!q) return;
+    ligaAbschliessen(q.liga);
+    UI.overlay = { type: 'hinweis', titel: 'Ligaspiel abgeschlossen',
+      text: 'Der Bericht ist unterschrieben, aber noch nicht verschickt – bitte selbst an die Ligaleitung schicken (Drucken → PDF). Im Spielplan steht der Spieltag als abgeschlossen.' };
+    render();
+  }
+
   function berichtSenden() {
     var o = UI.overlay;
     var q = ligaBerichtQuelle();
@@ -10616,9 +10737,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     try { datei = new File([pdf], name, { type: 'application/pdf' }); } catch (e) { datei = null; }
     var fertig = function (wie) {
       lg.berichtVersandt = Date.now();
-      save();
-      UI.overlay = { type: 'hinweis', titel: 'Spielbericht ist unterwegs',
-        text: wie + ' Empfänger: ' + liste + '.' };
+      ligaAbschliessen(lg);
+      UI.overlay = { type: 'hinweis', titel: 'Ligaspiel abgeschlossen',
+        text: wie + ' Empfänger: ' + liste + '. Im Spielplan steht der Spieltag jetzt als abgeschlossen – mit Ergebnissen und Bericht.' };
       render();
     };
     if (datei && navigator.canShare && navigator.canShare({ files: [datei] }) && navigator.share) {
@@ -10884,7 +11005,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   function renderWinner() {
     var abschluss = document.querySelector('#screen-winner [data-action="finish-tournament"]');
     if (abschluss) {
-      abschluss.textContent = S.tour && S.tour.liga ? 'Ligaspiel abschließen' : 'Turnier abschließen';
+      abschluss.textContent = S.tour && S.tour.liga ? 'Übungsspiel abschließen' : 'Turnier abschließen';
+      abschluss.classList.remove('hidden');
     }
     /* Ligaspiel: hier gewinnt ein Team, kein Einzelner. Die Highlights
        stehen auch hier – der Bogen wird oft erst nach dem letzten Einzel
@@ -10896,14 +11018,38 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         : lwd.wirP < lwd.sieP ? esc(lw.gegner) + ' gewinnt'
         : 'Unentschieden';
       var emoji = lwd.wirP > lwd.sieP ? '🏆' : lwd.wirP === lwd.sieP ? '🤝' : '🎯';
+      /* Ergebnisse mit Highlights beider Teams und je einem Man of the Day.
+         Danach geht es zum Spielbericht - abgeschlossen ist das Ligaspiel
+         erst, wenn er unterschrieben und verschickt ist. */
+      var wStats = stats();
+      var motd = function (ids, team) {
+        var b = manOfTheDay(ids, wStats);
+        var hl = teamHighlights(ids, wStats);
+        return '<div class="card motd">' +
+          '<div class="motd-team">' + esc(team) + '</div>' +
+          (b ? '<div class="motd-titel">Man of the Day</div>' +
+            '<div class="motd-person">' + avatarHTML(profile(b.id), 'md') +
+              '<div><div class="motd-name">' + esc(ligaName(b.id)) + '</div>' +
+              '<div class="muted">' + plural(b.won, 'Sieg', 'Siege') + ' aus ' + plural(b.matches, 'Einzel', 'Einzeln') +
+                ' · Ø ' + (b.darts ? b.avg.toFixed(1) : '–') + '</div></div></div>' : '') +
+          (hl.length ? '<div class="lg-hl">' + hl.map(function (z) { return '<div>' + z + '</div>'; }).join('') + '</div>'
+            : '<div class="muted motd-leer">Keine Highlights</div>') +
+          '</div>';
+      };
+      var offenBericht = !lw.uebung && !lw.abgeschlossen;
       $('winner-box').innerHTML =
         '<div style="text-align:center"><div class="big-emoji">' + emoji + '</div>' +
         '<h1>' + titel + '</h1>' +
         '<p class="muted">' + lw.nr + '. Spieltag · ' + esc(LIGA.team) + ' gegen ' + esc(lw.gegner) + '</p>' +
         ligaTeamsHtml(lwd) +
         '<p class="muted">Einzel ' + lwd.wirS + ':' + lwd.sieS + ' · Legs ' + lwd.wirL + ':' + lwd.sieL + '</p></div>' +
-        (ligaHighlightsHtml(lwd) ? '<div class="card">' + ligaHighlightsHtml(lwd) + '</div>' : '') +
-        '<button class="btn ghost full" data-action="liga-bericht">Spielbericht ansehen &amp; drucken</button>';
+        '<div class="motd-paar">' + motd(lw.wir, LIGA.team) + motd(lw.sie, lw.gegner) + '</div>' +
+        (offenBericht
+          ? '<button class="btn primary start full big" data-action="liga-bericht">Weiter zum Spielbericht</button>' +
+            '<p class="hint" style="text-align:center">Abgeschlossen ist das Ligaspiel, sobald der Bericht ' +
+              'fertig ausgefüllt, von beiden TCs unterschrieben und verschickt ist.</p>'
+          : '<button class="btn ghost full" data-action="liga-bericht">Spielbericht ansehen</button>');
+      if (abschluss) abschluss.classList.toggle('hidden', offenBericht);
       return;
     }
 
@@ -11019,11 +11165,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
             '<p class="te-hint">↑ ↓ · wählen &nbsp;&nbsp; Enter · starten &nbsp;&nbsp; Löschen · letzter Dart zurück</p>';
         } else {
           var teD = liga ? ligaStandDaten() : null;
-          html = '<h3>' + (liga ? 'Ligaspiel beendet' : 'Alle Spiele beendet') + '</h3>' +
+          html = '<h3>' + (liga ? 'Alle Einzel gespielt' : 'Alle Spiele beendet') + '</h3>' +
             (teD ? '<p class="te-stand">' + esc(LIGA.team) + ' <b>' + teD.wirP + ':' + teD.sieP + '</b> ' +
               esc(S.tour.liga.gegner) + '</p>' : '') +
-            '<button class="btn primary full" data-action="ov-next-match">Zum Endstand</button>' +
-            '<p class="te-hint">Enter · Endstand</p>';
+            '<button class="btn primary full" data-action="ov-next-match">' +
+              (liga ? 'Ergebnisse &amp; Man of the Day' : 'Zum Endstand') + '</button>' +
+            '<p class="te-hint">Enter · ' + (liga ? 'Ergebnisse' : 'Endstand') + '</p>';
         }
       }
     } else if (o.type === 'leg-done') {
@@ -11049,7 +11196,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       html = '<div class="big-emoji">🏅</div><h3>Glückwunsch, ' + esc(pname(o.pid)) + '!</h3>' +
         '<p>' + esc(pname(m2.p[0])) + ' ' + legsWon(m2, m2.p[0]) + ':' + legsWon(m2, m2.p[1]) + ' ' + esc(pname(m2.p[1])) + '</p>' +
         '<button class="btn primary full" data-action="open-summary" data-kind="501" data-id="' + esc(m2.id) + '">Weiter zur Spielstatistik</button>' +
-        (last ? '' : '<button class="btn ghost full" data-action="ov-next-match">Direkt zum nächsten Spiel</button>') +
+        (last ? (S.tour && S.tour.liga ? '<button class="btn primary start full" data-action="ov-next-match">Ergebnisse &amp; Man of the Day</button>' : '')
+          : '<button class="btn ghost full" data-action="ov-next-match">Direkt zum nächsten Spiel</button>') +
         '<button class="btn ghost full" data-action="undo">Eingabe rückgängig</button>';
     } else if (o.type === 'unterschrift') {
       var uq = ligaBerichtQuelle();
@@ -11111,7 +11259,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '<div class="row-btns two">' +
           '<button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
           '<button class="btn primary start" data-action="bericht-senden">Senden</button>' +
-        '</div>';
+        '</div>' +
+        '<button class="btn ghost full" data-action="bericht-ohne-senden">Abschließen ohne Senden</button>';
     } else if (o.type === 'confirm-discard-game') {
       var dgLegs = entschiedeneLegs(S.game);
       html = '<h3>' + kindName(S.game ? S.game.kind : '') + ' abbrechen?</h3>' +
@@ -11993,6 +12142,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
            Tabelle fest. Es wird jetzt wie beim Abschließen archiviert (der
            Endstand bleibt in der Spieleliste nachschlagbar), und es geht ins
            Setup. Nur ein noch offenes Turnier führt zurück auf den Spielplan. */
+        else if (target === 'setup' && S.matches.length && allMatchesDone() && ligaNochOffen()) target = 'winner';
         else if (target === 'setup' && S.matches.length && allMatchesDone()) archiveTournament();
         else if (target === 'setup' && S.matches.length) target = 'tournament';
         S.screen = target;
@@ -12293,6 +12443,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         S.screen = 'winner'; save(); render();
         break;
       case 'finish-tournament':
+        /* Ein echtes Ligaspiel schliesst nur der Spielbericht ab. */
+        if (ligaNochOffen()) { UI.bericht = null; UI.berichtVon = 'winner'; S.screen = 'bericht'; save(); render(); break; }
         archiveTournament();
         S.screen = 'setup';
         save(); render();
@@ -12678,6 +12830,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         break;
       case 'bericht-senden':
         berichtSenden();
+        break;
+      case 'bericht-ohne-senden':
+        berichtOhneSendenAbschliessen();
+        break;
+      case 'liga-zum-spiel':
+        S.screen = 'tournament'; save(); render();
         break;
       case 'liga-zusage': {
         if (!(window.DartSync && window.DartSync.liga && window.DartKonto && window.DartKonto.nutzer())) return;
