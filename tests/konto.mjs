@@ -1327,6 +1327,96 @@ async function main() {
     });
     }
 
+    group('Geteiltes Ligaspiel: Spielerwechsel an zwei iPads');
+    {
+      await julius.page.evaluate(() => {
+        const D = window.__dart, S = D.state();
+        S.game = null; S.matches = []; S.tour = null; S.current = null; D.ui().overlay = null;
+        D.save(); D.setScreen('liga');
+      });
+      await julius.page.locator('#liga-liste [data-action="liga-spiel"]').first().click();
+      for (let i = 0; i < 4; i++) {
+        await julius.page.locator(`[data-role="liga-gegner"][data-i="${i}"]`).fill('Geteilt' + i);
+        await julius.page.locator(`[data-role="liga-gegner-nach"][data-i="${i}"]`).fill('Gegner' + i);
+      }
+      await julius.page.locator('[data-action="liga-geteilt"][data-value="1"]').click();
+      await julius.page.locator('[data-action="liga-los"]').click();
+      await julius.page.waitForTimeout(1200);
+      const lsid = await julius.page.evaluate(() => window.__dart.state().tour.sid);
+      check('Julius spielt das Ligaspiel geteilt', !!lsid);
+      await tobi.page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; S.matches = []; S.tour = null; S.current = null; D.save(); D.setScreen('setup'); });
+      await tobi.page.evaluate(() => window.__dart.turnierListeAktualisieren());
+      await tobi.page.waitForTimeout(900);
+      await tobi.page.locator('[data-action="turnier-beitreten"]').first().click();
+      await tobi.page.waitForTimeout(800);
+      check('Tobi ist im selben Ligaspiel', await tobi.page.evaluate((id) => window.__dart.state().tour.sid === id, lsid));
+
+      /* Tobi nimmt H2 - G2 und bullt aus (laeuft also bei ihm). */
+      const tobiMatch = await tobi.page.evaluate(() => window.__dart.state().matches.find((m) => m.posPaar[0] === 1 && m.posPaar[1] === 1).id);
+      await tobi.page.locator('#schedule [data-action="open-match"][data-id="' + tobiMatch + '"]').click();
+      await tobi.page.waitForTimeout(800);
+      await tobi.page.locator('#bulloff-buttons [data-action="pick-starter"]').first().click();
+      await tobi.page.waitForTimeout(400);
+      const tobiVorher = await tobi.page.evaluate((id) => JSON.stringify(window.__dart.state().matches.find((m) => m.id === id).p), tobiMatch);
+
+      /* Julius wechselt auf G2 (Tobis laufendes Einzel ist auch G2) und auf G1. */
+      await julius.page.evaluate(() => window.DartSync.turnier.abgleich());
+      await julius.page.waitForTimeout(600);
+      for (const [pos, name, nach] of [[0, 'Ersatz', 'Eins'], [1, 'Ersatz', 'Zwei']]) {
+        await julius.page.evaluate(([p, n, z]) => {
+          const D = window.__dart;
+          D.ui().overlay = { type: 'liga-wechsel-zu', seite: D.state().tour.liga.heim ? 'G' : 'H', pos: p, eigene: false, draft: { name: n, nach: z } };
+          D.render();
+        }, [pos, name, nach]);
+        await julius.page.locator('[data-action="liga-wechsel-ok"]').click();
+        await julius.page.waitForTimeout(900);
+      }
+      check('Julius: kein Fehler beim Wechsel im geteilten Spiel', await julius.page.evaluate(() => {
+        const o = window.__dart.ui().overlay; return !o || o.type === 'liga-wechsel';
+      }), await julius.page.evaluate(() => JSON.stringify(window.__dart.ui().overlay)));
+      check('der Plan beim Server hat den Wechsel', await julius.page.evaluate(() => (window.__dart.state().tour.planStand || 0) >= 2));
+
+      await tobi.page.evaluate(() => window.DartSync.turnier.abgleich());
+      await tobi.page.waitForTimeout(800);
+      const beiTobi = await tobi.page.evaluate((id) => {
+        const D = window.__dart, S = D.state();
+        const lg = S.tour.liga, seiteIdx = lg.heim ? 1 : 0;
+        const namen = (m) => (D.profile(m.p[seiteIdx]) || {}).voll || '';
+        const g1 = S.matches.filter((m) => m.posPaar[seiteIdx] === 0 && !m.done);
+        const g2 = S.matches.filter((m) => m.posPaar[seiteIdx] === 1 && !m.done && m.id !== id);
+        return {
+          g1: g1.every((m) => namen(m) === 'Ersatz Eins'),
+          g2: g2.every((m) => namen(m) === 'Ersatz Zwei'),
+          eigenes: JSON.stringify(S.matches.find((m) => m.id === id).p),
+          stand: S.tour.planStand
+        };
+      }, tobiMatch);
+      check('Tobi uebernimmt den Wechsel auf G1 in allen offenen Einzeln', beiTobi.g1, JSON.stringify(beiTobi));
+      check('und auf G2 - ausser in seinem laufenden Einzel', beiTobi.g2, JSON.stringify(beiTobi));
+      check('sein laufendes Einzel bleibt unangetastet', beiTobi.eigenes === tobiVorher, beiTobi.eigenes + ' vs ' + tobiVorher);
+      check('Tobi kennt den neuen Planstand', beiTobi.stand >= 2);
+
+      /* Und umgekehrt: Tobi wechselt, Julius bekommt es. */
+      await tobi.page.locator('#screen-game [data-action="to-tournament"]').click().catch(() => {});
+      await tobi.page.evaluate(() => {
+        const D = window.__dart;
+        D.ui().overlay = { type: 'liga-wechsel-zu', seite: D.state().tour.liga.heim ? 'G' : 'H', pos: 3, eigene: false, draft: { name: 'Ersatz', nach: 'Vier' } };
+        D.render();
+      });
+      await tobi.page.locator('[data-action="liga-wechsel-ok"]').click();
+      await tobi.page.waitForTimeout(900);
+      await julius.page.evaluate(() => window.DartSync.turnier.abgleich());
+      await julius.page.waitForTimeout(800);
+      check('Tobis Wechsel kommt bei Julius an', await julius.page.evaluate(() => {
+        const D = window.__dart, S = D.state(), idx = S.tour.liga.heim ? 1 : 0;
+        return S.matches.filter((m) => m.posPaar[idx] === 3 && !m.done).every((m) => (D.profile(m.p[idx]) || {}).voll === 'Ersatz Vier');
+      }));
+
+      for (const g of [julius, tobi]) {
+        await g.page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; S.matches = []; S.tour = null; S.current = null; D.ui().overlay = null; D.save(); D.setScreen('setup'); });
+      }
+    }
+
     group('Fehlerfreiheit');
     const alleFehler = julius.fehlerLog.concat(tobi.fehlerLog, lenas.fehlerLog);
     check('keine JS-Fehler', alleFehler.length === 0, alleFehler.join(' | '));

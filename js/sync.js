@@ -742,6 +742,12 @@
         /* Ein Turnier per Kennung schliessen, das lokal schon weg ist
            (12-Stunden-Grenze beim App-Start). */
         endeId: function (sid) { return turnierRuf('POST', '/' + sid + '/ende').catch(function () {}); },
+        /* Geaenderten Plan schicken (Spielerwechsel im geteilten Ligaspiel). */
+        planAendern: function (plan, basis) {
+          var t = D.state().tour;
+          if (!t || !t.geteilt || !t.sid) return Promise.reject(new Error('Kein geteiltes Turnier.'));
+          return turnierRuf('POST', '/' + t.sid + '/plan', { plan: plan, basis: basis });
+        },
         takt: turnierTakt
       },
       live: {

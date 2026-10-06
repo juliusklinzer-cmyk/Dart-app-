@@ -737,6 +737,42 @@ export function createApi(db, config) {
     sendJson(res, 200, { turnier: turnierAntwort(t, 0, u) });
   }
 
+  /* Spielplan eines laufenden geteilten Turniers aendern - fuer den
+     Spielerwechsel im Ligaspiel an zwei iPads. Der Plan traegt einen Zaehler
+     (planStand): wer gegen einen veralteten Plan schreibt, bekommt 409 mit
+     dem aktuellen Stand, statt den Wechsel des anderen Geraets zu
+     ueberschreiben. Die Partien selbst (Kennungen, Ergebnisse) bleiben. */
+  async function turnierPlanAendern(req, res, id) {
+    pruefeHerkunft(req);
+    const u = verlangeNutzer(req);
+    const t = verlangeTurnier(turnierId(id));
+    verlangeTeilnahme(t, u);
+    if (t.status !== 'offen') throw new HttpFehler(409, 'Das Turnier ist schon beendet.');
+    const body = await leseJson(req, MAX_INHALT + 64 * 1024);
+    pruefePlan(body.plan);
+    const alt = JSON.parse(t.plan);
+    const altStand = Number(alt.planStand) || 0;
+    if ((Number(body.basis) || 0) !== altStand) {
+      return sendJson(res, 409, { fehler: 'Der Spielplan wurde gerade auf dem anderen Gerät geändert.', turnier: turnierAntwort(t, 0, u) });
+    }
+    const altIds = (alt.matches || []).map((m) => m.id).sort().join(',');
+    const neuIds = body.plan.matches.map((m) => m.id).sort().join(',');
+    if (altIds !== neuIds) throw new HttpFehler(400, 'Die Partien des Spielplans duerfen sich nicht aendern.');
+    const neu = Object.assign({}, body.plan, { planStand: altStand + 1 });
+    const planText = JSON.stringify(neu);
+    if (planText.length > MAX_INHALT) throw new HttpFehler(413, 'Der Spielplan ist zu gross.');
+    transaktion(db, function () {
+      db.prepare('UPDATE tournaments SET plan = ? WHERE id = ?').run(planText, t.id);
+      /* Wer neu im Plan steht und ein Konto hat, sieht das Turnier jetzt auch. */
+      const ins = db.prepare('INSERT OR IGNORE INTO tournament_players (tournament_id, user_id) VALUES (?, ?)');
+      for (const p of Array.isArray(neu.players) ? neu.players : []) {
+        const k = db.prepare("SELECT id FROM users WHERE id = ? AND status = 'aktiv'").get(String(p));
+        if (k) ins.run(t.id, k.id);
+      }
+    });
+    sendJson(res, 200, { turnier: turnierAntwort(verlangeTurnier(t.id), 0, u) });
+  }
+
   async function turnierBeenden(req, res, id) {
     pruefeHerkunft(req);
     const u = verlangeNutzer(req);
@@ -1396,6 +1432,7 @@ export function createApi(db, config) {
     ['GET', /^\/api\/tournaments$/, turniereListe],
     ['GET', new RegExp('^\\/api\\/tournaments\\/' + TID + '$'), turnierHolen],
     ['POST', new RegExp('^\\/api\\/tournaments\\/' + TID + '\\/ende$'), turnierBeenden],
+    ['POST', new RegExp('^\\/api\\/tournaments\\/' + TID + '\\/plan$'), turnierPlanAendern],
     ['POST', new RegExp('^\\/api\\/tournaments\\/' + TID + '\\/matches\\/' + TID + '\\/claim$'), partieBeanspruchen],
     ['POST', new RegExp('^\\/api\\/tournaments\\/' + TID + '\\/matches\\/' + TID + '\\/frei$'), partieFreigeben],
     ['PUT', new RegExp('^\\/api\\/tournaments\\/' + TID + '\\/matches\\/' + TID + '$'), partieErgebnis],

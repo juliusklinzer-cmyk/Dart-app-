@@ -468,8 +468,30 @@ async function main() {
     r = await julius.ruf('POST', '/api/tournaments/turnier1/matches/m2r1/claim');
     gleich(r.status, 200, 'danach ist die Partie wieder frei');
 
+    /* Spielerwechsel an zwei Geraeten: der Plan aendert sich mit Zaehler. */
+    const plan2 = JSON.parse(JSON.stringify(plan));
+    plan2.matches[1].p = [tobi_id, 'gastx'];
+    plan2.gaeste = { gastx: 'Ersatz Mann' };
+    r = await fremd.ruf('POST', '/api/tournaments/turnier1/plan', { plan: plan2, basis: 0 });
+    gleich(r.status, 401, 'Plan aendern geht nur angemeldet');
+    r = await tobi.ruf('POST', '/api/tournaments/turnier1/plan', { plan: plan2, basis: 0 });
+    gleich(r.status, 200, 'ein Mitspieler darf den Plan aendern (Wechsel)');
+    gleich(r.daten.turnier.plan.planStand, 1, 'der Plan zaehlt dabei hoch');
+    gleich(r.daten.turnier.plan.matches[1].p[1], 'gastx', 'und traegt den neuen Spieler');
+    r = await julius.ruf('POST', '/api/tournaments/turnier1/plan', { plan: plan2, basis: 0 });
+    gleich(r.status, 409, 'wer gegen einen alten Plan schreibt, bekommt 409');
+    ok(r.daten.turnier && r.daten.turnier.plan.planStand === 1, 'samt dem aktuellen Plan');
+    const plan3 = JSON.parse(JSON.stringify(plan2));
+    plan3.matches = [plan3.matches[0]];
+    r = await julius.ruf('POST', '/api/tournaments/turnier1/plan', { plan: plan3, basis: 1 });
+    gleich(r.status, 400, 'Partien duerfen dabei nicht verschwinden');
+    r = await julius.ruf('GET', '/api/tournaments/turnier1');
+    ok(r.daten.turnier.partien.find((p) => p.matchId === 'm1r1').result.winner === julius_id, 'das fertige Ergebnis bleibt unberuehrt');
+
     r = await julius.ruf('POST', '/api/tournaments/turnier1/ende');
     gleich(r.daten.turnier.status, 'beendet', 'das Turnier laesst sich beenden');
+    r = await julius.ruf('POST', '/api/tournaments/turnier1/plan', { plan: plan2, basis: 1 });
+    gleich(r.status, 409, 'ein beendetes Turnier aendert keinen Plan mehr');
     r = await tobi.ruf('GET', '/api/tournaments');
     gleich(r.daten.turniere.length, 0, 'danach steht es nicht mehr zum Beitreten');
     r = await julius.ruf('POST', '/api/tournaments/turnier1/matches/m2r1/claim');

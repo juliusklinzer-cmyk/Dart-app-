@@ -2514,9 +2514,9 @@ check('die 180er stehen fuer den Spielbericht bereit', await page.evaluate(() =>
   const el = document.getElementById('liga-stand');
   return el.innerText.includes('180er');
 }));
-check('gross stehen die SWO-Punkte: 2:1 gewonnen = 3:1', await page.evaluate(() => {
+check('gross stehen die Punkte: ein gewonnenes Einzel = 1:0', await page.evaluate(() => {
   const z = [...document.querySelectorAll('#liga-stand .lg-zahl')].map((e) => e.textContent.trim());
-  return z.join(':') === '3:1';
+  return z.join(':') === '1:0';
 }));
 check('jedes Einzel traegt seine Scheibe', await page.evaluate(() => {
   const M = window.__dart.state().matches;
@@ -2535,18 +2535,18 @@ check('das Einzel ist ohne einen einzigen Wurf gewertet', await page.evaluate(()
   const m = window.__dart.state().matches.find((x) => x.kampflos);
   return !!m && m.done && m.legs.length === 0;
 }));
-check('der Stand zaehlt es voll: 7:1 Punkte und Legs 4:1', await page.evaluate(() => {
+check('der Stand zaehlt es voll: 2:0 Punkte und Legs 4:1', await page.evaluate(() => {
   const z = [...document.querySelectorAll('#liga-stand .lg-zahl')].map((e) => e.textContent.trim());
   const t = document.getElementById('liga-stand').innerText.replace(/\s+/g, ' ');
-  return z.join(':') === '7:1' && t.includes('Legs 4:1');
+  return z.join(':') === '2:0' && t.includes('Legs 4:1');
 }));
 check('am gewerteten Einzel steht jetzt aendern', (await text('#schedule')).includes('ändern'));
 /* Und die Wertung laesst sich zuruecknehmen ... */
 await page.locator('#schedule .go.wo').first().click();
 await page.locator('[data-action="liga-kampflos-zurueck"]').click();
-check('zurueckgenommen: wieder 3:1 Punkte und das Einzel offen', await page.evaluate(() => {
+check('zurueckgenommen: wieder 1:0 Punkte und das Einzel offen', await page.evaluate(() => {
   const z = [...document.querySelectorAll('#liga-stand .lg-zahl')].map((e) => e.textContent.trim());
-  return z.join(':') === '3:1' && !window.__dart.state().matches.some((x) => x.kampflos);
+  return z.join(':') === '1:0' && !window.__dart.state().matches.some((x) => x.kampflos);
 }));
 /* ... und fuer den Spielbericht gleich wieder eintragen. */
 await page.locator('#schedule .go.wo').first().click();
@@ -2591,9 +2591,9 @@ check('mit den 16 Einzeln in Bogen-Reihenfolge', await page.evaluate(() => {
   const t = document.getElementById('bericht-blatt').textContent;
   return t.includes('H1 – G1') && t.includes('H3 – G1') && t.includes('H2 – G4');
 }));
-check('Legs und kumulierte SWO-Punkte stehen drin', await page.evaluate(() => {
+check('Legs und kumulierte Punkte (1 je Einzel) stehen drin', await page.evaluate(() => {
   const t = document.getElementById('bericht-blatt').textContent.replace(/\s+/g, ' ');
-  return t.includes('2 : 1') && t.includes('3 : 1') && t.includes('7 : 1');
+  return t.includes('2 : 1') && t.includes('1 : 0') && t.includes('2 : 0');
 }));
 check('das kampflose Einzel traegt den w.o.-Vermerk', await page.evaluate(() => {
   const t = document.getElementById('bericht-blatt').textContent.replace(/\s+/g, ' ');
