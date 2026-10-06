@@ -1838,6 +1838,12 @@ await page.evaluate(() => window.__dart.setScreen('tournament'));
 await page.locator('#schedule .match-row .go:not(.wo)').first().click();
 await ligaAusbullen();
 check('das Liga-Einzel oeffnet nach dem Ausbullen im Turnier-Modus', await visible('#pad-key'));
+/* Ziffernblock tippt Zahlen - auch mit NumLock aus (Playwright simuliert
+   genau das: Numpad6 meldet dann "Pfeil rechts"). */
+await page.keyboard.press('Numpad6'); await page.keyboard.press('Numpad0');
+check('der Ziffernblock tippt im Turnier-Modus Zahlen, auch ohne NumLock',
+  await page.evaluate(() => window.__dart.ui().input === '60'), await page.evaluate(() => window.__dart.ui().input));
+await page.keyboard.press('Backspace'); await page.keyboard.press('Backspace');
 
 /* Checkout am Board: die Dart-Frage wird mit 1/2/3 beantwortet - und eine
    verirrte Ziffer darf die Eingabe nicht veraendern, sonst wuerde aus der
@@ -2616,6 +2622,11 @@ group('Spielbericht: beide TCs unterschreiben am iPad, dann Versand als PDF');
   check('oben steht Unterschreiben statt Drucken',
     await visible('#screen-bericht [data-action="bericht-unterschreiben"]'));
   await page.locator('#screen-bericht [data-action="bericht-unterschreiben"]').click();
+  check('mit offenen Einzeln wird noch nicht unterschrieben', (await text('#overlay-card')).includes('Noch nicht fertig'));
+  await page.locator('#overlay-card [data-action="ov-hinweis-zu"]').click();
+  /* Fuer den Rest des Tests: die offenen Einzel als entfallen markieren. */
+  await page.evaluate(() => { window.__dart.state().matches.forEach((m) => { if (!m.done) m.void = 'test'; }); });
+  await page.locator('#screen-bericht [data-action="bericht-unterschreiben"]').click();
   check('ganzer Bildschirm fuer TC Heim mit Unterschriftsfeld',
     (await text('#overlay-card h3')).includes('TC Heim') && await visible('#signatur') &&
     await page.evaluate(() => document.getElementById('overlay').classList.contains('vollbild')));
@@ -2673,6 +2684,8 @@ group('Spielbericht: beide TCs unterschreiben am iPad, dann Versand als PDF');
      einen Stand ohne Gaeste. */
   await page.evaluate(() => {
     const D = window.__dart, S = D.state(), lg = S.tour.liga;
+    S.matches.forEach((m) => { if (m.void === 'test') delete m.void; });
+    delete lg.unterschriften; delete lg.berichtKorrekturen;
     const nora = S.profiles.filter((p) => p.voll === 'Nora Neumann').map((p) => p.id);
     ['heimSpieler', 'gastSpieler', 'wir', 'sie'].forEach((k) => { lg[k] = lg[k].filter((id) => nora.indexOf(id) < 0); });
     S.tour.players = S.tour.players.filter((id) => nora.indexOf(id) < 0);
@@ -3617,6 +3630,8 @@ group('Ligaspiel endet erst mit dem unterschriebenen Bericht');
   check('kein "Ligaspiel abschliessen" ohne Bericht', !(await visible('#screen-winner [data-action="finish-tournament"]')));
   await page.locator('#winner-box [data-action="liga-bericht"]').click();
   check('weiter zum Spielbericht', await visible('#screen-bericht'));
+  await page.locator('#bericht-blatt td[contenteditable]').nth(2).click();
+  await page.keyboard.type('Handkorrektur');
   await page.evaluate(() => {
     const D = window.__dart;
     D.ui().overlay = { type: 'bericht-versand', adressen: ['spielbericht@steeldart-muenchen.de', '', ''] };
@@ -3630,11 +3645,13 @@ group('Ligaspiel endet erst mit dem unterschriebenen Bericht');
   }, termin);
   check('danach ist das Ligaspiel abgeschlossen und archiviert', nach.laeuft === 0 && nach.archiv && nach.zu, JSON.stringify(nach));
   check('der Bericht bleibt sichtbar', await visible('#screen-bericht'));
+  check('Handkorrekturen im Bogen ueberstehen den Abschluss', (await text('#bericht-blatt')).includes('Handkorrektur'));
   await page.locator('#overlay-card [data-action="ov-hinweis-zu"]').click();
   await page.evaluate(() => window.__dart.setScreen('liga'));
   const karte = page.locator('#liga-liste .liga-spieltag').first();
   check('im Spielplan steht der Spieltag als abgeschlossen', (await karte.innerText()).includes('Abgeschlossen'));
   check('und laesst sich nicht nochmal starten', (await karte.locator('[data-action="liga-spiel"]').count()) === 0);
+  await page.evaluate(() => { window.__dart.ui().bericht = null; });
   check('Ergebnisse und Bericht bleiben einsehbar',
     (await karte.locator('[data-action="open-summary"]').count()) === 1 && (await karte.locator('[data-action="liga-bericht"]').count()) === 1);
   /* Ein alter Eintrag ohne gespieltes Einzel sperrt den Spieltag nicht. */

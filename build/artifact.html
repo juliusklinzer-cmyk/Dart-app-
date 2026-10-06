@@ -5086,6 +5086,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   function altesSpielBeenden() {
     var jetzt = Date.now();
     var weg = [];
+    var ligaWeg = false;
     if (!Array.isArray(S.offeneEnden)) S.offeneEnden = [];
     if (S.game && S.gameSeit && S.gameSeit.id === S.game.id && jetzt - S.gameSeit.seit > SPIEL_MAX_MS) {
       var art = kindName(S.game.kind);
@@ -5106,19 +5107,27 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       }
       S.game = null;
     }
-    if (S.tour && S.tour.seit && S.matches.length && jetzt - S.tour.seit > SPIEL_MAX_MS) {
+    /* Ein echtes Ligaspiel mit noch offenem Bericht bekommt 36 Stunden - der
+       Bogen wird oft erst am naechsten Tag fertig. */
+    var tourMax = S.tour && S.tour.liga && !S.tour.liga.uebung ? 36 * 3600 * 1000 : SPIEL_MAX_MS;
+    if (S.tour && S.tour.seit && S.matches.length && jetzt - S.tour.seit > tourMax) {
+      var warLiga = !!(S.tour.liga && !S.tour.liga.uebung);
+      ligaWeg = warLiga;
       if (S.tour.geteilt && S.tour.sid && !(window.DartSync && window.DartSync.turnier && liveNutzer())) {
         S.offeneEnden.push({ typ: 'turnier', sid: S.tour.sid });
       }
       /* Wie "Turnier beenden": fertige Partien bleiben in der Statistik, die
          offenen entfallen. */
       archiveTournament();
-      weg.push('das Turnier wurde abgeschlossen (fertige Partien bleiben in der Statistik)');
+      weg.push(warLiga
+        ? 'das Ligaspiel liegt jetzt im Archiv (alle Ergebnisse bleiben, der Bericht lässt sich im Spielplan über „Bericht abschließen“ fertigstellen)'
+        : 'das Turnier wurde abgeschlossen (fertige Partien bleiben in der Statistik)');
     }
     if (!weg.length) return false;
     if (S.screen !== 'boards' && S.screen !== 'players' && S.screen !== 'profile' && S.screen !== 'liga') S.screen = 'setup';
     UI.darts = []; UI.input = '';
-    UI.overlay = { type: 'hinweis', titel: 'Altes Spiel beendet', text: 'Älter als 12 Stunden: ' + weg.join(', ') + '.' };
+    UI.overlay = { type: 'hinweis', titel: 'Altes Spiel beendet',
+      text: (ligaWeg && weg.length === 1 ? 'Länger als 36 Stunden offen: ' : 'Älter als 12 Stunden: ') + weg.join(', ') + '.' };
     save();
     return true;
   }
@@ -6638,7 +6647,17 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var m = currentMatch();
     if (!m) return;
     while (m.legs.length && m.legs[m.legs.length - 1].visits.length === 0) m.legs.pop();
-    if (!m.legs.length) { UI.overlay = null; render(); return; }
+    if (!m.legs.length) {
+      /* Noch nichts geworfen: Zurueck fuehrt wieder ins Ausbullen - ein
+         falsch angetippter Ausbull-Sieger laesst sich so korrigieren. */
+      if (m.kind !== 'quick' && m.starter && !m.done && S.screen === 'game') {
+        m.starter = null;
+        UI.bullWahl = 0;
+        S.screen = 'bulloff';
+        save();
+      }
+      UI.overlay = null; render(); return;
+    }
 
     var leg = m.legs[m.legs.length - 1];
     leg.visits.pop();
@@ -8117,7 +8136,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
      erst mit dem Abschluss des Spielberichts ist es fertig. */
   function ligaNochOffen() {
     var lg = S.tour && S.tour.liga;
-    return !!(lg && !lg.uebung && !lg.abgeschlossen && S.matches.length);
+    return !!(lg && !lg.uebung && !lg.abgeschlossen && !S.tour.beendet && S.matches.length);
   }
 
   /* Man of the Day je Team: die meisten gewonnenen Einzel, bei Gleichstand
@@ -8258,7 +8277,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         (lsd.fertige === S.matches.length && ligaNochOffen()
           ? '<button class="btn primary start full" data-action="to-winner">Ergebnisse &amp; Spielbericht</button>' : '') +
         '<button class="btn ghost full" data-action="liga-nachmelden">Spieler nachmelden</button>' +
-        '<button class="btn ghost full" data-action="liga-bericht">Spielbericht ansehen &amp; unterschreiben</button>';
+        '<button class="btn ghost full" data-action="liga-bericht">Spielbericht ansehen</button>';
     }
 
     $('standings-body').innerHTML = table.map(function (st, i) {
@@ -10362,8 +10381,34 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '<div class="b-protest" contenteditable></div>' +
         '<div class="b-fuss">Seite 2/2</div>' +
       '</div>';
+    berichtKorrekturenEinsetzen();
     berichtUnterschriftenEinsetzen();
     berichtNachmeldungenEinsetzen();
+  }
+
+  /* Handkorrekturen im Bogen bleiben erhalten: jedes geaenderte Feld wird
+     (nach seiner Stelle im Bogen) im Ligaspiel gemerkt und beim naechsten
+     Aufbau wieder eingesetzt - nach Abschluss, Neuladen oder am naechsten Tag. */
+  function berichtFelder() {
+    return Array.prototype.slice.call(document.querySelectorAll('#bericht-blatt [contenteditable]'));
+  }
+  function berichtKorrekturenEinsetzen() {
+    var q = ligaBerichtQuelle();
+    var k = q && q.liga.berichtKorrekturen;
+    if (!k) return;
+    var felder = berichtFelder();
+    Object.keys(k).forEach(function (i) {
+      if (felder[i] && felder[i].getAttribute('contenteditable') !== 'false') felder[i].textContent = k[i];
+    });
+  }
+  function berichtKorrekturMerken(el) {
+    var q = ligaBerichtQuelle();
+    if (!q) return;
+    var i = berichtFelder().indexOf(el);
+    if (i < 0) return;
+    if (!q.liga.berichtKorrekturen) q.liga.berichtKorrekturen = {};
+    q.liga.berichtKorrekturen[i] = el.textContent;
+    save();
   }
 
   /* ================= Spielbericht unterschreiben und versenden =================
@@ -10385,7 +10430,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       var f = felder[i];
       if (!f || !u[wer] || !SIGNATUR_OK.test(u[wer])) return;
       f.innerHTML = '<img alt="Unterschrift TC ' + (wer === 'heim' ? 'Heim' : 'Gast') + '" src="' + u[wer] + '">';
-      f.removeAttribute('contenteditable');
+      /* false statt entfernen: die Reihenfolge der Bogenfelder (fuer die
+         gemerkten Korrekturen) bleibt so dieselbe. */
+      f.setAttribute('contenteditable', 'false');
     });
   }
 
@@ -10405,6 +10452,13 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     d.nach = String(d.nach || '').trim(); d.vor = String(d.vor || '').trim();
     if (!d.team || !d.nach || !d.vor || !d.u18 || !d.g) {
       o.fehler = 'Bitte alle Felder ausfüllen: Team, Nachname, Vorname, U18 und Geschlecht.';
+      render();
+      return;
+    }
+    var nq = ligaBerichtQuelle();
+    var nListe = nq ? (d.team === 'H' ? nq.liga.heimSpieler : nq.liga.gastSpieler) || [] : [];
+    if (nListe.length >= 8) {
+      o.fehler = 'Dieses Team hat schon 8 Spieler auf dem Bogen – mehr erlaubt die SWO pro Ligaspiel nicht.';
       render();
       return;
     }
@@ -10430,7 +10484,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     save();
     berichtNachmeldungenEinsetzen();
     UI.overlay = { type: 'hinweis', titel: voll + ' ist nachgemeldet',
-      text: 'Steht jetzt auf Seite 2 des Spielberichts (mit Unterschrift) und im Team – über „Spieler wechseln“ einsetzbar. Gebühr nicht vergessen: ' + (person.u18 === 'ja' ? '2 €' : '10 €') + ' innerhalb von 14 Tagen.' };
+      text: 'Steht jetzt auf Seite 2 des Spielberichts (mit Unterschrift) und im Team' +
+        (geteiltesTurnier() ? '.' : ' – über „Spieler wechseln“ einsetzbar.') +
+        ' Gebühr nicht vergessen: ' + (person.u18 === 'ja' ? '2 €' : '10 €') + ' innerhalb von 14 Tagen.' };
     render();
   }
   /* Die Nachmeldungen in den schon gezeichneten Bogen eintragen - ohne ihn
@@ -10547,9 +10603,21 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return c.toDataURL('image/png');
   }
 
+  /* Unterschrieben wird erst, wenn alle Einzel gespielt sind - sonst
+     schloesse der Abschluss das laufende Ligaspiel mitten im Abend ab. */
+  function ligaAllesGespielt(q) {
+    return q.matches.every(function (m) { return m.done || m.void; });
+  }
   function berichtUnterschreibenStarten() {
     var q = ligaBerichtQuelle();
     if (!q) return;
+    if (!ligaAllesGespielt(q)) {
+      var offen = q.matches.filter(function (m) { return !m.done && !m.void; }).length;
+      UI.overlay = { type: 'hinweis', titel: 'Noch nicht fertig',
+        text: 'Unterschrieben wird erst, wenn alle Einzel gespielt sind – es ' + (offen === 1 ? 'fehlt noch 1 Einzel' : 'fehlen noch ' + offen + ' Einzel') + '. Den Bogen kannst du schon ausfüllen, Korrekturen bleiben gespeichert.' };
+      render();
+      return;
+    }
     var aktiv = document.activeElement;
     if (aktiv && aktiv.blur) aktiv.blur();
     UI.overlay = { type: 'unterschrift', wer: 'heim', striche: [] };
@@ -10695,6 +10763,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
      abgeschlossen. Laeuft es noch, wandert es jetzt ins Archiv (mit
      Unterschriften und Nachmeldungen); der Bericht bleibt offen sichtbar. */
   function ligaAbschliessen(lg) {
+    var q = ligaBerichtQuelle();
+    if (q && q.liga === lg && !ligaAllesGespielt(q)) return;   // nie mitten im Abend
     lg.abgeschlossen = Date.now();
     if (S.tour && S.tour.liga === lg) {
       UI.bericht = lg.terminId;
@@ -12007,6 +12077,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       /* War der Ausgewechselte schon als Anwerfer ausgebullt, uebernimmt
          der Neue diesen Platz - geworfen ist ja noch nichts. */
       if (m.starter === raus) m.starter = neueId;
+      /* Ist nach dem Ausbullen schon das (leere) erste Leg angelegt, wirft
+         dort ebenfalls der Neue an. */
+      m.legs.forEach(function (l) { if (l.starter === raus) l.starter = neueId; });
     });
     save();
     return null;
@@ -13236,6 +13309,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   /* Name im Profil-Dialog: nur den Entwurf pflegen, nicht neu rendern –
      sonst verliert das Feld beim Tippen den Fokus. */
   document.addEventListener('input', function (ev) {
+    if (ev.target && ev.target.closest && ev.target.closest('#bericht-blatt [contenteditable]')) {
+      berichtKorrekturMerken(ev.target.closest('#bericht-blatt [contenteditable]'));
+    }
     if ((ev.target.getAttribute('data-role') === 'nm-nach' || ev.target.getAttribute('data-role') === 'nm-vor') &&
         UI.overlay && UI.overlay.type === 'nachmeldung') {
       UI.overlay.draft[ev.target.getAttribute('data-role') === 'nm-nach' ? 'nach' : 'vor'] = ev.target.value;
@@ -13300,15 +13376,28 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
    * Checkout-Frage (1/2/3 Darts) bleiben Ziffern Ziffern. Uebersetzt wird
    * vor allen anderen Tasten-Lauschern, die dann einen echten Pfeil sehen.
    */
+  /* Welche Ziffer meint die Taste? Der Ziffernblock zaehlt immer als Ziffer -
+     auch wenn NumLock aus ist und der Browser "Ende", "Pfeil hoch" usw.
+     meldet (dann waere am Board sonst keine Zahl angekommen). */
+  function tasteZiffer(ev) {
+    var m = /^Numpad([0-9])$/.exec(ev.code || '');
+    if (m) return m[1];
+    return ev.key && ev.key.length === 1 && ev.key >= '0' && ev.key <= '9' ? ev.key : null;
+  }
+
   var ZIFFERN_PFEILE = { Numpad2: 'ArrowUp', Numpad8: 'ArrowDown', Numpad4: 'ArrowLeft', Numpad6: 'ArrowRight' };
   var PFEIL_DIALOGE = { 'leg-done': 1, 'game-done': 1, 'turnier-ende': 1 };
+  var ZIFFERN_BLEIBEN = { 'checkout-darts': 1, 'edit-visit': 1, 'leg-done': 1, 'match-done': 1, 'game-done': 1 };
   window.addEventListener('keydown', function (ev) {
     var pfeil = ZIFFERN_PFEILE[ev.code];
     if (!pfeil || ev.metaKey || ev.ctrlKey || ev.altKey) return;
     var ziel = ev.target;
     if (ziel && ziel.closest && ziel.closest('input, select, textarea')) return;
+    /* Nicht in den Dialogen nach Leg und Spiel: dort tippt der Schreiber oft
+       gleich die naechste Aufnahme - eine 6 als Pfeil haette "Eingabe
+       rueckgaengig" markiert und Enter den Checkout geloescht. */
     var passt = UI.overlay
-      ? UI.overlay.type !== 'checkout-darts' && UI.overlay.type !== 'edit-visit'
+      ? !ZIFFERN_BLEIBEN[UI.overlay.type]
       : S.screen === 'bulloff';
     if (!passt) return;
     ev.preventDefault();
@@ -13317,7 +13406,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   }, true);
 
   document.addEventListener('keydown', function (ev) {
-    if (ev.key === 'Escape' && UI.overlay && !STICKY_OVERLAYS[UI.overlay.type]) {
+    if (ev.key === 'Escape' && UI.overlay && !STICKY_OVERLAYS[UI.overlay.type] && !VOLLBILD_DIALOGE[UI.overlay.type]) {
       UI.overlay = null; UI.input = ''; render();
       return;
     }
@@ -13434,7 +13523,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (ev.key.toLowerCase() === 'z' && !UI.turnier) { undo(); ev.preventDefault(); return; }
     var rest = remainingIn(leg, activePlayer(leg, m)) - sum(UI.darts, function (d) { return d.v; });
     if (effectiveMode(rest) !== 'total') return;
-    if (ev.key >= '0' && ev.key <= '9') { pressKey(ev.key); ev.preventDefault(); }
+    var zTotal = tasteZiffer(ev);
+    if (zTotal !== null) { pressKey(zTotal); ev.preventDefault(); }
     else if (ev.key === 'Enter') { pressKey('ok'); ev.preventDefault(); }
     else if (ev.key === 'Backspace') { pressKey('del'); ev.preventDefault(); }
   });
@@ -13449,9 +13539,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
     var tm = currentMatch();
     if (!tm || tm.done) return;
-    if (ev.key >= '0' && ev.key <= '9') {
+    var zTurnier = tasteZiffer(ev);
+    if (zTurnier !== null) {
       if (UI.input.length < 3) {
-        UI.input = UI.input === '0' ? ev.key : UI.input + ev.key;
+        UI.input = UI.input === '0' ? zTurnier : UI.input + zTurnier;
         UI.error = '';
         render();
       }
@@ -13495,13 +13586,28 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   document.addEventListener('keydown', function (ev) {
     if (S.screen !== 'game' || !UI.overlay) return;
     var ov = UI.overlay;
+    /* Ziffer im Leg-Ende-Dialog: weiter zum naechsten Leg, und die Ziffer
+       beginnt dort gleich die Aufnahme (Turnier-Modus). Nach Spielende wird
+       eine Ziffer nur geschluckt - nie zu einer Ruecknahme. */
+    var zDialog = tasteZiffer(ev);
+    if (zDialog !== null && !(ev.target && ev.target.closest && ev.target.closest('input, select, textarea'))) {
+      if (ov.type === 'leg-done') {
+        ev.preventDefault();
+        UI.overlay = null;
+        if (UI.turnier && turnierErlaubt()) UI.input = zDialog === '0' ? '0' : zDialog;
+        save(); render();
+        return;
+      }
+      if (ov.type === 'match-done' || ov.type === 'game-done') { ev.preventDefault(); return; }
+    }
     if (ov.type === 'checkout-darts') {
-      if (ev.key >= '0' && ev.key <= '9') {
+      var zCo = tasteZiffer(ev);
+      if (zCo !== null) {
         /* Jede Ziffer wird geschluckt – auch eine falsche. Sonst landet sie
            im weiterhin fokussierten Eingabefeld und klebt vor der nächsten
            Aufnahme (aus einer getippten 5 würde still eine 95). */
         ev.preventDefault();
-        var anz = parseInt(ev.key, 10);
+        var anz = parseInt(zCo, 10);
         if (anz >= 1 && anz <= 3 && ov.options.indexOf(anz) >= 0) {
           var coScore = ov.score;
           UI.overlay = null;
@@ -13604,7 +13710,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     try { history.pushState({ dart: 1 }, ''); } catch (e) { /* egal */ }
   }
   window.addEventListener('popstate', function () {
-    if (UI.overlay && !STICKY_OVERLAYS[UI.overlay.type]) {
+    if (UI.overlay && !STICKY_OVERLAYS[UI.overlay.type] && !VOLLBILD_DIALOGE[UI.overlay.type]) {
       UI.overlay = null; UI.input = ''; render(); zurueckFalle(); return;
     }
     if (UI.overlay) { zurueckFalle(); return; }
