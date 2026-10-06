@@ -9158,7 +9158,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   function ligaTerminEintrag(t) {
     for (var i = 0; i < S.history.length; i++) {
       var h = S.history[i];
-      if (h.liga && !h.liga.uebung && h.liga.terminId === t.id && h.matches) return h;
+      /* Ein Eintrag ohne ein einziges gespieltes Einzel (angelegt und wieder
+         verlassen, alte Testlaeufe) ist kein stattgefundenes Ligaspiel - der
+         Spieltag bleibt startbar. */
+      if (h.liga && !h.liga.uebung && h.liga.terminId === t.id && Array.isArray(h.matches) &&
+          h.matches.some(function (m) { return m.done || m.kampflos; })) return h;
     }
     return null;
   }

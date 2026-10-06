@@ -3637,6 +3637,15 @@ group('Ligaspiel endet erst mit dem unterschriebenen Bericht');
   check('und laesst sich nicht nochmal starten', (await karte.locator('[data-action="liga-spiel"]').count()) === 0);
   check('Ergebnisse und Bericht bleiben einsehbar',
     (await karte.locator('[data-action="open-summary"]').count()) === 1 && (await karte.locator('[data-action="liga-bericht"]').count()) === 1);
+  /* Ein alter Eintrag ohne gespieltes Einzel sperrt den Spieltag nicht. */
+  const startbar = await page.evaluate((t) => {
+    const D = window.__dart, S = D.state();
+    const h = S.history.find((x) => x.liga && x.liga.terminId === t);
+    h.matches.forEach((m) => { m.done = false; m.winner = null; m.legs = []; });
+    D.save(); D.setScreen('liga');
+    return !!document.querySelector('#liga-liste .liga-spieltag [data-action="liga-spiel"]');
+  }, termin);
+  check('ein Eintrag ohne gespieltes Einzel laesst den Spieltag startbar', startbar);
   await page.evaluate((t) => {
     const D = window.__dart, S = D.state();
     S.history = S.history.filter((x) => !(x.liga && x.liga.terminId === t));
