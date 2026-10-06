@@ -2654,6 +2654,16 @@
     return !!(imSpiel || imTurnier);
   }
 
+  /* Die Auswahl nach einem Einzel am Board: alle offenen Partien des
+     aktuellen und des naechsten Durchgangs (hoechstens 8). Danach kommt in
+     Dialog und Tastatursteuerung noch "Zurueck ins Menue". */
+  function naechsteEinzel() {
+    var offen = S.matches.filter(function (x) { return !x.done && !x.void; });
+    if (!offen.length) return [];
+    var ab = Math.min.apply(null, offen.map(function (x) { return x.round || 1; }));
+    return offen.filter(function (x) { return (x.round || 1) <= ab + 1; }).slice(0, 8);
+  }
+
   /* Wie viele Legs eines laufenden Schnellen Spiels schon entschieden sind. */
   function entschiedeneLegs(g) {
     if (!g || g.kind !== 'quick' || !Array.isArray(g.legs)) return 0;
@@ -4335,7 +4345,10 @@
     $('screen-bulloff').classList.toggle('turnier', amBoard);
     /* Auch ohne Turnier-Modus: wer die Pfeiltasten nimmt, sieht die Wahl
        und bestaetigt mit Enter. */
-    var bWahl = amBoard || UI.bullTastatur ? Math.min(UI.bullWahl || 0, ids.length - 1) : -1;
+    var bWahl = amBoard || UI.bullTastatur ? Math.min(UI.bullWahl || 0, ids.length) : -1;
+    /* Index hinter den Kandidaten = der Zurueck-Knopf ist markiert. */
+    var bZk = document.querySelector('#screen-bulloff > [data-action="to-tournament"]');
+    if (bZk) bZk.classList.toggle('wahl', bWahl === ids.length);
     $('bulloff-buttons').className = 'bulloff';
     $('bulloff-buttons').innerHTML = ids.map(function (pid, i) {
       return '<button data-action="pick-starter" data-id="' + esc(pid) + '"' +
@@ -5751,21 +5764,32 @@
           '<p class="te-hint">Enter · weiter</p>';
       } else {
         /* Die naechsten Begegnungen, gross - Enter startet die erste. */
-        var offene = S.matches.filter(function (x) { return !x.done && !x.void; }).slice(0, 4);
+        var offene = naechsteEinzel();
         var liga = S.tour && S.tour.liga;
-        var wahl = Math.min(o.wahl || 0, Math.max(0, offene.length - 1));
+        /* Index hinter den Partien = "Zurueck ins Menue". */
+        var wahl = Math.min(o.wahl || 0, offene.length);
+        var mehrereDurchgaenge = offene.some(function (x) { return x.round !== offene[0].round; });
         if (offene.length) {
+          var teRunde = null;
           html = '<h3>Nächste Einzel</h3>' +
-            '<div class="te-next">' + offene.map(function (x, i) {
+            '<div class="te-next' + (offene.length > 4 ? ' viele' : '') + '">' + offene.map(function (x, i) {
               var paar = liga && x.posPaar
                 ? 'H' + (x.posPaar[0] + 1) + ' ' + esc(teName(x.p[0])) + ' – G' + (x.posPaar[1] + 1) + ' ' + esc(teName(x.p[1]))
                 : esc(teName(x.p[0])) + ' – ' + esc(teName(x.p[1]));
-              return '<button class="te-zeile' + (i === wahl ? ' dran' : '') + '" ' +
+              var kopf = '';
+              if (mehrereDurchgaenge && x.round !== teRunde) {
+                teRunde = x.round;
+                kopf = '<div class="te-durchgang">Durchgang ' + x.round + '</div>';
+              }
+              return kopf + '<button class="te-zeile' + (i === wahl ? ' dran' : '') + '" ' +
                 'data-action="open-match" data-id="' + esc(x.id) + '">' +
                 (x.scheibe ? '<span class="te-scheibe">' + x.scheibe + '</span>' : '') +
                 '<span>' + paar + '</span></button>';
-            }).join('') + '</div>' +
-            '<p class="te-hint">↑ ↓ / Tab · wählen &nbsp;&nbsp; Enter · starten &nbsp;&nbsp; Löschen · letzter Dart zurück</p>';
+            }).join('') +
+            '<button class="te-zeile te-menue' + (wahl === offene.length ? ' dran' : '') + '" data-action="to-tournament">' +
+              '<span>Zurück ins Menü</span></button>' +
+            '</div>' +
+            '<p class="te-hint">↑ ↓ · wählen &nbsp;&nbsp; Enter · starten &nbsp;&nbsp; Löschen · letzter Dart zurück</p>';
         } else {
           var teD = liga ? ligaStandDaten() : null;
           html = '<h3>' + (liga ? 'Ligaspiel beendet' : 'Alle Spiele beendet') + '</h3>' +
@@ -7797,7 +7821,9 @@
     if (!pfeil || ev.metaKey || ev.ctrlKey || ev.altKey) return;
     var ziel = ev.target;
     if (ziel && ziel.closest && ziel.closest('input, select, textarea')) return;
-    var passt = UI.overlay ? !!PFEIL_DIALOGE[UI.overlay.type] : S.screen === 'bulloff';
+    var passt = UI.overlay
+      ? UI.overlay.type !== 'checkout-darts' && UI.overlay.type !== 'edit-visit'
+      : S.screen === 'bulloff';
     if (!passt) return;
     ev.preventDefault();
     ev.stopImmediatePropagation();
@@ -7819,23 +7845,54 @@
     if (S.screen === 'bulloff' && !UI.overlay && (UI.turnier && turnierErlaubt() || UI.bullTastatur || bPfeil)) {
       var bKnoepfe = document.querySelectorAll('#bulloff-buttons [data-action="pick-starter"]');
       if (bKnoepfe.length) {
+        /* Hinter den Kandidaten steht als letzte Wahl "Zurueck" (Index n):
+           runter fuehrt dorthin, hoch wieder zum Kandidaten. Stehen die
+           Kandidaten untereinander (Handy), laufen hoch/runter durch sie. */
+        var bN = bKnoepfe.length;
+        var bZurueck = document.querySelector('#screen-bulloff > [data-action="to-tournament"]');
+        var bMax = bZurueck && bZurueck.offsetParent ? bN : bN - 1;
+        var bUnter = bN > 1 && bKnoepfe[1].getBoundingClientRect().top > bKnoepfe[0].getBoundingClientRect().top + 5;
         if (bPfeil || (ev.key === 'Tab' && (UI.bullTastatur || UI.turnier))) {
           ev.preventDefault();
           UI.bullTastatur = true;
-          var bAlt = UI.bullWahl || 0;
-          UI.bullWahl = ev.key === 'ArrowLeft' || ev.key === 'ArrowUp'
-            ? Math.max(0, bAlt - 1)
-            : ev.key === 'Tab' ? (bAlt + 1) % bKnoepfe.length
-            : Math.min(bKnoepfe.length - 1, bAlt + 1);
+          var bAlt = Math.min(UI.bullWahl || 0, bMax);
+          var bNeu = bAlt;
+          if (ev.key === 'Tab') bNeu = (bAlt + 1) % (bMax + 1);
+          else if (ev.key === 'ArrowLeft') bNeu = bAlt < bN ? Math.max(0, bAlt - 1) : bAlt;
+          else if (ev.key === 'ArrowRight') bNeu = bAlt < bN ? Math.min(bN - 1, bAlt + 1) : bAlt;
+          else if (ev.key === 'ArrowDown') bNeu = bUnter ? Math.min(bMax, bAlt + 1) : (bAlt < bN ? bMax : bAlt);
+          else if (ev.key === 'ArrowUp') bNeu = bUnter ? Math.max(0, bAlt - 1) : (bAlt >= bN ? (UI.bullWahlVor || 0) : bAlt);
+          if (bNeu < bN) UI.bullWahlVor = bNeu;
+          UI.bullWahl = bNeu;
           render();
           return;
         }
-        if (ev.key === 'Enter' && !(document.activeElement && document.activeElement.closest && document.activeElement.closest('#bulloff-buttons'))) {
+        if (ev.key === 'Enter' && !(document.activeElement && document.activeElement.closest && document.activeElement.closest('#screen-bulloff button'))) {
           ev.preventDefault();
-          var bZiel = bKnoepfe[Math.min(UI.bullWahl || 0, bKnoepfe.length - 1)];
+          if ((UI.bullWahl || 0) >= bN && bZurueck) { handleAction('to-tournament', bZurueck); return; }
+          var bZiel = bKnoepfe[Math.min(UI.bullWahl || 0, bN - 1)];
           if (bZiel) handleAction('pick-starter', bZiel);
           return;
         }
+      }
+    }
+    /* In allen anderen Dialogen: Pfeile (und der Ziffernblock) wandern von
+       Knopf zu Knopf - auch zu "Abbrechen" -, Enter drueckt den markierten.
+       Dialoge mit eigener Pfeil-Wahl und Felder/Listen bleiben aussen vor. */
+    if (UI.overlay && !PFEIL_DIALOGE[UI.overlay.type] && UI.overlay.type !== 'checkout-darts' &&
+        (ev.key === 'ArrowDown' || ev.key === 'ArrowUp' || ev.key === 'ArrowLeft' || ev.key === 'ArrowRight') &&
+        !(ev.target && ev.target.closest && ev.target.closest('input, select, textarea'))) {
+      var oKnoepfe = Array.prototype.filter.call(
+        document.querySelectorAll('#overlay-card button:not([disabled]), #overlay-card [role="button"]'),
+        function (b) { return b.offsetParent !== null; });
+      if (oKnoepfe.length) {
+        ev.preventDefault();
+        var oJetzt = oKnoepfe.indexOf(document.activeElement);
+        var oVor = ev.key === 'ArrowDown' || ev.key === 'ArrowRight';
+        var oNeu = oJetzt < 0 ? (oVor ? 0 : oKnoepfe.length - 1)
+          : (oJetzt + (oVor ? 1 : -1) + oKnoepfe.length) % oKnoepfe.length;
+        oKnoepfe[oNeu].focus();
+        return;
       }
     }
     if (ev.key === 'Tab' && !UI.overlay && S.screen === 'game') {
@@ -7983,12 +8040,15 @@
         undo(); ev.preventDefault();
       }
     } else if (ov.type === 'turnier-ende') {
-      var teOffene = S.matches.filter(function (x) { return !x.done && !x.void; }).slice(0, 4);
+      var teOffene = naechsteEinzel();
+      /* Waehlbar: die Partien und dahinter "Zurueck ins Menue". */
+      var teMax = teOffene.length ? teOffene.length : 0;
       if (ev.key === 'Enter') {
         ev.preventDefault();
         if (ov.phase === 'stat') { ov.phase = 'weiter'; ov.wahl = 0; render(); }
         else if (teOffene.length) {
-          var teWahl = Math.min(ov.wahl || 0, teOffene.length - 1);
+          var teWahl = Math.min(ov.wahl || 0, teMax);
+          if (teWahl === teOffene.length) { handleAction('to-tournament', ev.target); return; }
           UI.overlay = null;
           openMatch(teOffene[teWahl].id);
         } else {
@@ -7996,8 +8056,8 @@
         }
       } else if ((ev.key === 'ArrowDown' || ev.key === 'ArrowRight' || ev.key === 'Tab') && ov.phase === 'weiter') {
         ov.wahl = ev.key === 'Tab'
-          ? ((ov.wahl || 0) + 1) % Math.max(1, teOffene.length)
-          : Math.min((ov.wahl || 0) + 1, Math.max(0, teOffene.length - 1));
+          ? ((ov.wahl || 0) + 1) % (teMax + 1)
+          : Math.min((ov.wahl || 0) + 1, teMax);
         render(); ev.preventDefault();
       } else if ((ev.key === 'ArrowUp' || ev.key === 'ArrowLeft') && ov.phase === 'weiter') {
         ov.wahl = Math.max((ov.wahl || 0) - 1, 0);

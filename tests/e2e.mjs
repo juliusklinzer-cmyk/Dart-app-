@@ -1921,6 +1921,8 @@ check('Pfeil runter waehlt die zweite Begegnung', await page.evaluate(() =>
 await page.keyboard.press('ArrowUp');
 check('Pfeil hoch fuehrt zurueck zur ersten', await page.evaluate(() =>
   document.querySelectorAll('.te-zeile')[0].classList.contains('dran')));
+check('unten steht "Zurück ins Menü"', await page.evaluate(() =>
+  !!document.querySelector('#overlay-card .te-zeile.te-menue[data-action="to-tournament"]')));
 await page.keyboard.press('Enter');
 /* Seit der SWO 10/2026 kommt vor jedem Einzel das Ausbullen - am Board
    ebenfalls per Enter bestaetigt. */
@@ -2748,6 +2750,13 @@ check('Ziffernblock 4 wirkt wie Pfeil links', await page.evaluate(() =>
 await page.keyboard.press('Numpad6');
 check('Ziffernblock 6 wirkt wie Pfeil rechts', await page.evaluate(() =>
   document.querySelectorAll('#bulloff-buttons button')[1].classList.contains('wahl')));
+await page.keyboard.press('ArrowDown');
+check('Pfeil runter markiert "Zurück" unter den Namen', await page.evaluate(() =>
+  document.querySelector('#screen-bulloff > [data-action="to-tournament"]').classList.contains('wahl')));
+await page.keyboard.press('ArrowUp');
+check('Pfeil hoch fuehrt wieder zum Namen', await page.evaluate(() =>
+  document.querySelectorAll('#bulloff-buttons button')[1].classList.contains('wahl') &&
+  !document.querySelector('#screen-bulloff > [data-action="to-tournament"]').classList.contains('wahl')));
 await page.keyboard.press('Enter');
 check('Enter setzt den Anwerfer und startet in der Riesenanzeige',
   (await visible('#pad-key')) && await page.evaluate(() => {

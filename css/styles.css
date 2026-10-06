@@ -2825,6 +2825,19 @@ button.blitzt { animation: tastenblitz 240ms var(--ease-out-stark); }
   color: var(--text); text-align: left; cursor: pointer;
 }
 .te-zeile.dran { border-color: var(--aktiv-linie); background: var(--aktiv-flaeche); box-shadow: 0 0 26px var(--schein); }
+/* Mehr als vier Partien (zwei Durchgaenge): kleinere Zeilen, damit alles
+   ins Bild passt; Ueberschrift je Durchgang; "Zurueck ins Menue" leiser. */
+.te-next.viele { gap: 6px; }
+.te-next.viele .te-zeile { font-size: clamp(1.15rem, 3.2vh, 2rem); padding: clamp(8px, 1.6vh, 16px) 18px; }
+.te-durchgang {
+  font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--muted); font-size: clamp(0.85rem, 2vh, 1.15rem); margin: 6px 0 0;
+}
+.te-zeile.te-menue {
+  margin-top: 6px; justify-content: center; color: var(--muted);
+  font-size: clamp(1.05rem, 2.8vh, 1.6rem); background: transparent;
+}
+.te-zeile.te-menue.dran { color: var(--text); }
 .te-scheibe {
   flex: none; font-size: clamp(1rem, 2.6vh, 1.5rem); font-weight: 700; color: var(--muted);
   border: 1px solid var(--line); border-radius: var(--r-s); padding: var(--space-1) 10px;
@@ -2904,10 +2917,13 @@ button.blitzt { animation: tastenblitz 240ms var(--ease-out-stark); }
 }
 #screen-bulloff.turnier .bulloff {
   flex: 1; min-height: 0;
-  grid-template-columns: 1fr 1fr; gap: var(--space-5); align-items: stretch;
+  /* Untereinander: am Board waehlt man mit hoch/runter (bzw. 2/8 auf dem
+     Ziffernblock), darunter folgt "Zurueck". */
+  grid-template-columns: 1fr; gap: var(--space-4); align-items: stretch;
 }
 #screen-bulloff.turnier .bulloff button {
   height: 100%; min-height: 0; padding: var(--space-5);
+  justify-content: center; text-align: center;   /* Name mittig im Kasten */
   font-size: clamp(2rem, 7vh, 3.6rem); font-family: var(--font-cond); font-weight: 700;
 }
 #screen-bulloff.turnier .bulloff button.wahl {
@@ -3474,4 +3490,15 @@ body { font-size: 1rem; }
 @media (orientation: landscape) and (max-height: 560px) {
   #screen-game.turnier .pcard .meta { font-size: 1rem; }
   #screen-game.turnier .pcard .pname { font-size: 1.3rem; }
+}
+
+/* Per Tastatur markierter Zurueck-Knopf beim Ausbullen und Knoepfe, die im
+   Dialog per Pfeil angesteuert werden: dieselbe Markierung wie jede Wahl. */
+#screen-bulloff > .btn.wahl {
+  border-color: var(--aktiv-linie); background: var(--aktiv-flaeche);
+  box-shadow: 0 0 30px var(--schein);
+}
+#overlay-card .btn:focus-visible {
+  outline: 3px solid var(--aktiv-linie); outline-offset: 3px;
+  box-shadow: 0 0 30px var(--schein);
 }
