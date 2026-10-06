@@ -4320,7 +4320,7 @@
               '<span class="bo-name">' + nm + '</span></button>';
           }).join('') + '</div>' +
         '</div>' +
-        '<button class="btn primary full' + (fertig ? '' : ' unsichtbar') + '" ' +
+        '<button class="btn primary start full' + (fertig ? '' : ' unsichtbar') + '" ' +
           'data-action="start-order"' + (fertig ? '' : ' disabled') + '>' +
           (fertig ? 'Spiel starten · ' + esc(pname(reihe[0])) + ' beginnt' : '·') + '</button>';
       return;
@@ -5888,7 +5888,7 @@
         '</div>' +
         '<div class="row-btns two">' +
         '<button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
-        '<button class="btn primary" data-action="liga-los">Ligaspiel starten</button></div>';
+        '<button class="btn primary start" data-action="liga-los">Ligaspiel starten</button></div>';
     } else if (o.type === 'uebung-start') {
       var ud = o.draft;
       var uProfile = activeProfiles();
@@ -5938,7 +5938,7 @@
         '</div>' +
         '<div class="row-btns two">' +
         '<button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
-        '<button class="btn primary" data-action="uebung-los">Übungsspiel starten</button></div>';
+        '<button class="btn primary start" data-action="uebung-los">Übungsspiel starten</button></div>';
     } else if (o.type === 'liga-kampflos') {
       /* Tritt eine Position nicht an (nur 3 gemeldet, jemand fehlt), wird
          das Einzel kampflos gewertet: volle Legs und Punkte fuer den

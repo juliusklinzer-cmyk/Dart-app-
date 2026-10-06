@@ -1473,6 +1473,16 @@ h2 {
 
 .btn.primary { box-shadow: 0 0 30px var(--schein-weich); }
 .btn.primary:active { box-shadow: 0 0 18px var(--schein-weich); }
+/* Los geht's: die Start-Knoepfe (Spiel, Ligaspiel, Uebungsspiel, nach dem
+   Ausbullen) leuchten rot mit unserem blauen Schein - der eine Knopf, der
+   den Abend anwirft. Weiss bleibt allen anderen Hauptaktionen. */
+.btn.primary.start {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  box-shadow: 0 0 40px var(--schein-stark), 0 0 14px var(--schein), 0 0 0 1px rgba(70, 170, 215, 0.5);
+}
+.btn.primary.start:active { background: #f05a5f; box-shadow: 0 0 20px var(--schein-stark); }
 .konto-logo img { box-shadow: 0 0 0 1px var(--line), 0 0 34px var(--schein); }
 
 /* ---------- Fließtext ---------- */

@@ -1476,6 +1476,16 @@ h2 {
 
 .btn.primary { box-shadow: 0 0 30px var(--schein-weich); }
 .btn.primary:active { box-shadow: 0 0 18px var(--schein-weich); }
+/* Los geht's: die Start-Knoepfe (Spiel, Ligaspiel, Uebungsspiel, nach dem
+   Ausbullen) leuchten rot mit unserem blauen Schein - der eine Knopf, der
+   den Abend anwirft. Weiss bleibt allen anderen Hauptaktionen. */
+.btn.primary.start {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  box-shadow: 0 0 40px var(--schein-stark), 0 0 14px var(--schein), 0 0 0 1px rgba(70, 170, 215, 0.5);
+}
+.btn.primary.start:active { background: #f05a5f; box-shadow: 0 0 20px var(--schein-stark); }
 .konto-logo img { box-shadow: 0 0 0 1px var(--line), 0 0 34px var(--schein); }
 
 /* ---------- Fließtext ---------- */
@@ -3680,7 +3690,7 @@ body { font-size: 1rem; }
     </div>
   </div>
 
-  <button class="btn primary full big" data-action="start-game">Spiel starten</button>
+  <button class="btn primary start full big" data-action="start-game">Spiel starten</button>
   </div>
 </section>
 
@@ -9089,7 +9099,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
               '<span class="bo-name">' + nm + '</span></button>';
           }).join('') + '</div>' +
         '</div>' +
-        '<button class="btn primary full' + (fertig ? '' : ' unsichtbar') + '" ' +
+        '<button class="btn primary start full' + (fertig ? '' : ' unsichtbar') + '" ' +
           'data-action="start-order"' + (fertig ? '' : ' disabled') + '>' +
           (fertig ? 'Spiel starten · ' + esc(pname(reihe[0])) + ' beginnt' : '·') + '</button>';
       return;
@@ -10657,7 +10667,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '</div>' +
         '<div class="row-btns two">' +
         '<button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
-        '<button class="btn primary" data-action="liga-los">Ligaspiel starten</button></div>';
+        '<button class="btn primary start" data-action="liga-los">Ligaspiel starten</button></div>';
     } else if (o.type === 'uebung-start') {
       var ud = o.draft;
       var uProfile = activeProfiles();
@@ -10707,7 +10717,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '</div>' +
         '<div class="row-btns two">' +
         '<button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
-        '<button class="btn primary" data-action="uebung-los">Übungsspiel starten</button></div>';
+        '<button class="btn primary start" data-action="uebung-los">Übungsspiel starten</button></div>';
     } else if (o.type === 'liga-kampflos') {
       /* Tritt eine Position nicht an (nur 3 gemeldet, jemand fehlt), wird
          das Einzel kampflos gewertet: volle Legs und Punkte fuer den
