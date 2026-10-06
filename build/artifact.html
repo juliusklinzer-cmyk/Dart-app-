@@ -12577,6 +12577,28 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   });
 
   /* Als Schaltfläche angesagte Elemente müssen auch per Tastatur gehen. */
+  /*
+   * Ziffernblock als Pfeiltasten (Julius' Belegung am Board): 2 = hoch,
+   * 8 = runter, 4 = links, 6 = rechts. Das gilt nur dort, wo mit Pfeilen
+   * gewaehlt wird und Ziffern sonst nichts bedeuten - beim Ausbullen und in
+   * den Dialogen nach Leg, Spiel und Einzel. Bei der Punkte-Eingabe und der
+   * Checkout-Frage (1/2/3 Darts) bleiben Ziffern Ziffern. Uebersetzt wird
+   * vor allen anderen Tasten-Lauschern, die dann einen echten Pfeil sehen.
+   */
+  var ZIFFERN_PFEILE = { Numpad2: 'ArrowUp', Numpad8: 'ArrowDown', Numpad4: 'ArrowLeft', Numpad6: 'ArrowRight' };
+  var PFEIL_DIALOGE = { 'leg-done': 1, 'game-done': 1, 'turnier-ende': 1 };
+  window.addEventListener('keydown', function (ev) {
+    var pfeil = ZIFFERN_PFEILE[ev.code];
+    if (!pfeil || ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    var ziel = ev.target;
+    if (ziel && ziel.closest && ziel.closest('input, select, textarea')) return;
+    var passt = UI.overlay ? !!PFEIL_DIALOGE[UI.overlay.type] : S.screen === 'bulloff';
+    if (!passt) return;
+    ev.preventDefault();
+    ev.stopImmediatePropagation();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: pfeil, code: pfeil, bubbles: true, cancelable: true }));
+  }, true);
+
   document.addEventListener('keydown', function (ev) {
     if (ev.key === 'Escape' && UI.overlay && !STICKY_OVERLAYS[UI.overlay.type]) {
       UI.overlay = null; UI.input = ''; render();

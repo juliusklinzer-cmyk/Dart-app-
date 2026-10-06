@@ -306,7 +306,7 @@ alle Anzeigen sind auf die Distanz vom Oche (~3 m) ausgelegt: Spielername,
 Legs und Ø stehen groß in der Karte, die Dialoge sprechen Plakatgröße.
 Nach einem Leg: **Enter** startet das nächste, **Löschen** nimmt die Eingabe
 zurück; auch am Spielende wählen die **Pfeiltasten** zwischen Statistik und
-„Letzten Dart zurück", Enter bestätigt. Das **Ausbullen** füllt am Board den
+„Letzten Dart zurück", Enter bestätigt. Auf dem **Ziffernblock** wirken dort, wo mit Pfeilen gewählt wird (Ausbullen, Leg-, Spiel- und Einzel-Ende), **2 = hoch, 8 = runter, 4 = links, 6 = rechts**; bei der Punkte-Eingabe und der Checkout-Frage bleiben es Ziffern. Das **Ausbullen** füllt am Board den
 ganzen Bildschirm (Pfeile wählen, Enter bestimmt den Anwerfer), die
 **Checkout-Frage** geht mit 1/2/3 oder Pfeilen + Enter, und die App nimmt am
 Board die volle Gerätebreite ein – kein schwarzer Rand, der den Schein

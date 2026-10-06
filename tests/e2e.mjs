@@ -2741,6 +2741,13 @@ check('die erste Wahl leuchtet', await page.evaluate(() =>
 await page.keyboard.press('ArrowRight');
 check('Pfeil rechts wechselt den Kandidaten', await page.evaluate(() =>
   document.querySelectorAll('#bulloff-buttons button')[1].classList.contains('wahl')));
+/* Ziffernblock als Pfeile (Belegung am Board): 4 = links, 6 = rechts. */
+await page.keyboard.press('Numpad4');
+check('Ziffernblock 4 wirkt wie Pfeil links', await page.evaluate(() =>
+  document.querySelectorAll('#bulloff-buttons button')[0].classList.contains('wahl')));
+await page.keyboard.press('Numpad6');
+check('Ziffernblock 6 wirkt wie Pfeil rechts', await page.evaluate(() =>
+  document.querySelectorAll('#bulloff-buttons button')[1].classList.contains('wahl')));
 await page.keyboard.press('Enter');
 check('Enter setzt den Anwerfer und startet in der Riesenanzeige',
   (await visible('#pad-key')) && await page.evaluate(() => {
