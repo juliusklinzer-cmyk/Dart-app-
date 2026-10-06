@@ -371,7 +371,7 @@ check('Cricket-Einstellungen sichtbar', await visible('#settings-cricket'));
 check('501-Einstellungen ausgeblendet', !(await visible('#settings-501')));
 /* Der Knopf heisst in jedem Modus gleich – welcher Modus laeuft, sagt die
    Auswahl darueber, nicht der Knopf. */
-check('Startknopf heisst überall gleich', (await textKlein('[data-action="start-game"]')).includes('spiel starten'));
+check('Startknopf heisst überall gleich', (await textKlein('[data-action="start-game"]')).includes('game on!'));
 await page.locator('[data-action="start-game"]').click();
 check('Bull-Off auch im Cricket', await visible('#screen-bulloff'));
 await page.locator('#bulloff-buttons button').first().click();
@@ -1068,7 +1068,7 @@ await reduceLineupToTwo();
 await page.locator('[data-action="set-mode"][data-value="finisher"]').click();
 check('Finisher-Einstellungen sichtbar', await visible('#settings-finisher'));
 check('X01-Einstellungen ausgeblendet', !(await visible('#settings-501')));
-check('Startknopf unverändert', (await textKlein('[data-action="start-game"]')).includes('spiel starten'));
+check('Startknopf unverändert', (await textKlein('[data-action="start-game"]')).includes('game on!'));
 await page.locator('[data-setting="finisherTo"] button[data-value="3"]').click();
 await page.locator('[data-action="start-game"]').click();
 await bullOffGo();

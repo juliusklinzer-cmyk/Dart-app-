@@ -3093,7 +3093,7 @@
         '<ol class="hint">' +
           '<li><b>Wer spielt mit?</b> Spieler antippen – die vier Beispielnamen änderst du unter „Spieler“, neue legst du hier unten an.</li>' +
           '<li><b>Spielmodus</b> wählen: Schnelles Spiel, Turnier jeder gegen jeden, Cricket, Round the World oder Finisher.</li>' +
-          '<li><b>Spiel starten</b> – ausbullen, dann trägt jeder seine Aufnahme ein. Alles bleibt auf diesem Gerät gespeichert, auch ohne Netz.</li>' +
+          '<li><b>GAME ON!</b> tippen – ausbullen, dann trägt jeder seine Aufnahme ein. Alles bleibt auf diesem Gerät gespeichert, auch ohne Netz.</li>' +
         '</ol>' +
         '<button class="btn ghost full" data-action="willkommen-weg">Verstanden</button>';
       links.insertBefore(karte, links.firstChild);
@@ -3174,7 +3174,7 @@
     $('setting-bestof').classList.toggle('hidden', S.mode !== '501');
     $('setting-quick-dauer').classList.toggle('hidden', S.mode !== 'quick');
     if (S.mode === 'quick') renderQuickDauer();
-    document.querySelector('[data-action="start-game"]').textContent = 'Spiel starten';
+    document.querySelector('[data-action="start-game"]').textContent = 'GAME ON!';
 
     var runningGame = !!S.game;
     var running = runningGame || (S.matches.length > 0 && !allMatchesDone());
@@ -4322,7 +4322,7 @@
         '</div>' +
         '<button class="btn primary start full' + (fertig ? '' : ' unsichtbar') + '" ' +
           'data-action="start-order"' + (fertig ? '' : ' disabled') + '>' +
-          (fertig ? 'Spiel starten · ' + esc(pname(reihe[0])) + ' beginnt' : '·') + '</button>';
+          (fertig ? 'GAME ON! · ' + esc(pname(reihe[0])) + ' beginnt' : '·') + '</button>';
       return;
     }
 
@@ -5696,11 +5696,14 @@
 
   function renderOverlay() {
     var ov = $('overlay');
-    if (!UI.overlay) { ov.classList.add('hidden'); ov.classList.remove('gross'); return; }
+    if (!UI.overlay) { ov.classList.add('hidden'); ov.classList.remove('gross', 'vollbild'); return; }
     ov.classList.remove('hidden');
     /* Im Turnier-Modus sprechen auch die Dialoge Plakatsprache - der
        Schreiber steht vorn an der Scheibe, gelesen wird vom Oche aus. */
     ov.classList.toggle('gross', UI.turnier && turnierErlaubt() && S.screen === 'game');
+    /* Der Start eines Ligaspiels oder Uebungsspiels ist kein Zwischendialog,
+       sondern ein eigener Bildschirm: Vollbild im App-Hintergrund. */
+    ov.classList.toggle('vollbild', UI.overlay.type === 'liga-start' || UI.overlay.type === 'uebung-start');
     var o = UI.overlay;
     var html = '';
 
@@ -5888,7 +5891,7 @@
         '</div>' +
         '<div class="row-btns two">' +
         '<button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
-        '<button class="btn primary start" data-action="liga-los">Ligaspiel starten</button></div>';
+        '<button class="btn primary start" data-action="liga-los">GAME ON!</button></div>';
     } else if (o.type === 'uebung-start') {
       var ud = o.draft;
       var uProfile = activeProfiles();
@@ -5938,7 +5941,7 @@
         '</div>' +
         '<div class="row-btns two">' +
         '<button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
-        '<button class="btn primary start" data-action="uebung-los">Übungsspiel starten</button></div>';
+        '<button class="btn primary start" data-action="uebung-los">GAME ON!</button></div>';
     } else if (o.type === 'liga-kampflos') {
       /* Tritt eine Position nicht an (nur 3 gemeldet, jemand fehlt), wird
          das Einzel kampflos gewertet: volle Legs und Punkte fuer den

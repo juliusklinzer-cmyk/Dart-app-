@@ -3131,16 +3131,32 @@ body { font-size: 1rem; }
    "ohne | mit" und "Abbrechen | Starten" nicht zu einem 2x2-Raster
    verschmelzen. */
 .overlay-card > .row-btns:not(:first-child) { margin-top: var(--space-5); }
-/* Hohe Dialoge (Ligaspiel-Aufstellung) scrollen – die Aktionen bleiben
-   dabei unten stehen, statt erst nach dem Scrollen aufzutauchen. */
-.overlay-card > .row-btns:last-child {
-  position: sticky; bottom: calc(-40px + env(safe-area-inset-bottom, 0px));
-  z-index: 1;
-  background: var(--bg-2);
-  padding: var(--space-3) 0 var(--space-1);
-  box-shadow: 0 -14px 14px -6px var(--bg-2);
+/* Start von Ligaspiel und Uebungsspiel: Vollbild im normalen App-Hintergrund
+   mit dem blauen Schein (wie html), keine schwebende Karte - und so dicht,
+   dass am iPhone alles in einem Bild steht. */
+.overlay.vollbild {
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(1000px 560px at 72% -5%, rgba(64, 150, 195, 0.16), transparent 62%),
+    radial-gradient(800px 500px at 15% 105%, rgba(64, 150, 195, 0.08), transparent 60%);
+  place-items: start center;
+  padding: max(10px, env(safe-area-inset-top, 0px)) var(--space-4) max(12px, env(safe-area-inset-bottom, 0px));
 }
-.overlay.gross .overlay-card > .row-btns:last-child { position: static; box-shadow: none; background: none; }
+.overlay.vollbild .overlay-card {
+  background: transparent; border: 0; border-radius: 0;
+  max-width: 560px; padding: 0;
+}
+.overlay.vollbild .overlay-card h3 { margin-bottom: 2px; }
+.overlay.vollbild .overlay-card p { margin-bottom: var(--space-2); font-size: 0.85rem; }
+.overlay.vollbild .liga-start .ls-titel { margin: var(--space-2) 0 4px; }
+.overlay.vollbild .liga-start .ls-zeile { margin-bottom: 6px; }
+.overlay.vollbild .liga-start select,
+.overlay.vollbild .liga-start input {
+  min-height: 42px; padding-top: 8px; padding-bottom: 8px;
+  background: rgba(255, 255, 255, 0.04); border-color: rgba(70, 170, 215, 0.18);
+}
+.overlay.vollbild .liga-start .options button { min-height: 44px; padding-top: 8px; padding-bottom: 8px; }
+.overlay.vollbild .overlay-card > .row-btns:not(:first-child) { margin-top: var(--space-4); }
 .overlay-card .row-btns > .btn { margin-top: 0; }
 /* Vier Gegner-Optionen: 2x2 statt 3+1 (Bots schwer stand allein). */
 .liga-start .options:has(> button:nth-child(4):last-child) {
@@ -3690,7 +3706,7 @@ body { font-size: 1rem; }
     </div>
   </div>
 
-  <button class="btn primary start full big" data-action="start-game">Spiel starten</button>
+  <button class="btn primary start full big" data-action="start-game">GAME ON!</button>
   </div>
 </section>
 
@@ -7872,7 +7888,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '<ol class="hint">' +
           '<li><b>Wer spielt mit?</b> Spieler antippen – die vier Beispielnamen änderst du unter „Spieler“, neue legst du hier unten an.</li>' +
           '<li><b>Spielmodus</b> wählen: Schnelles Spiel, Turnier jeder gegen jeden, Cricket, Round the World oder Finisher.</li>' +
-          '<li><b>Spiel starten</b> – ausbullen, dann trägt jeder seine Aufnahme ein. Alles bleibt auf diesem Gerät gespeichert, auch ohne Netz.</li>' +
+          '<li><b>GAME ON!</b> tippen – ausbullen, dann trägt jeder seine Aufnahme ein. Alles bleibt auf diesem Gerät gespeichert, auch ohne Netz.</li>' +
         '</ol>' +
         '<button class="btn ghost full" data-action="willkommen-weg">Verstanden</button>';
       links.insertBefore(karte, links.firstChild);
@@ -7953,7 +7969,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     $('setting-bestof').classList.toggle('hidden', S.mode !== '501');
     $('setting-quick-dauer').classList.toggle('hidden', S.mode !== 'quick');
     if (S.mode === 'quick') renderQuickDauer();
-    document.querySelector('[data-action="start-game"]').textContent = 'Spiel starten';
+    document.querySelector('[data-action="start-game"]').textContent = 'GAME ON!';
 
     var runningGame = !!S.game;
     var running = runningGame || (S.matches.length > 0 && !allMatchesDone());
@@ -9101,7 +9117,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '</div>' +
         '<button class="btn primary start full' + (fertig ? '' : ' unsichtbar') + '" ' +
           'data-action="start-order"' + (fertig ? '' : ' disabled') + '>' +
-          (fertig ? 'Spiel starten · ' + esc(pname(reihe[0])) + ' beginnt' : '·') + '</button>';
+          (fertig ? 'GAME ON! · ' + esc(pname(reihe[0])) + ' beginnt' : '·') + '</button>';
       return;
     }
 
@@ -10475,11 +10491,14 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
   function renderOverlay() {
     var ov = $('overlay');
-    if (!UI.overlay) { ov.classList.add('hidden'); ov.classList.remove('gross'); return; }
+    if (!UI.overlay) { ov.classList.add('hidden'); ov.classList.remove('gross', 'vollbild'); return; }
     ov.classList.remove('hidden');
     /* Im Turnier-Modus sprechen auch die Dialoge Plakatsprache - der
        Schreiber steht vorn an der Scheibe, gelesen wird vom Oche aus. */
     ov.classList.toggle('gross', UI.turnier && turnierErlaubt() && S.screen === 'game');
+    /* Der Start eines Ligaspiels oder Uebungsspiels ist kein Zwischendialog,
+       sondern ein eigener Bildschirm: Vollbild im App-Hintergrund. */
+    ov.classList.toggle('vollbild', UI.overlay.type === 'liga-start' || UI.overlay.type === 'uebung-start');
     var o = UI.overlay;
     var html = '';
 
@@ -10667,7 +10686,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '</div>' +
         '<div class="row-btns two">' +
         '<button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
-        '<button class="btn primary start" data-action="liga-los">Ligaspiel starten</button></div>';
+        '<button class="btn primary start" data-action="liga-los">GAME ON!</button></div>';
     } else if (o.type === 'uebung-start') {
       var ud = o.draft;
       var uProfile = activeProfiles();
@@ -10717,7 +10736,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '</div>' +
         '<div class="row-btns two">' +
         '<button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
-        '<button class="btn primary start" data-action="uebung-los">Übungsspiel starten</button></div>';
+        '<button class="btn primary start" data-action="uebung-los">GAME ON!</button></div>';
     } else if (o.type === 'liga-kampflos') {
       /* Tritt eine Position nicht an (nur 3 gemeldet, jemand fehlt), wird
          das Einzel kampflos gewertet: volle Legs und Punkte fuer den

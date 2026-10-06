@@ -3128,16 +3128,32 @@ body { font-size: 1rem; }
    "ohne | mit" und "Abbrechen | Starten" nicht zu einem 2x2-Raster
    verschmelzen. */
 .overlay-card > .row-btns:not(:first-child) { margin-top: var(--space-5); }
-/* Hohe Dialoge (Ligaspiel-Aufstellung) scrollen – die Aktionen bleiben
-   dabei unten stehen, statt erst nach dem Scrollen aufzutauchen. */
-.overlay-card > .row-btns:last-child {
-  position: sticky; bottom: calc(-40px + env(safe-area-inset-bottom, 0px));
-  z-index: 1;
-  background: var(--bg-2);
-  padding: var(--space-3) 0 var(--space-1);
-  box-shadow: 0 -14px 14px -6px var(--bg-2);
+/* Start von Ligaspiel und Uebungsspiel: Vollbild im normalen App-Hintergrund
+   mit dem blauen Schein (wie html), keine schwebende Karte - und so dicht,
+   dass am iPhone alles in einem Bild steht. */
+.overlay.vollbild {
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(1000px 560px at 72% -5%, rgba(64, 150, 195, 0.16), transparent 62%),
+    radial-gradient(800px 500px at 15% 105%, rgba(64, 150, 195, 0.08), transparent 60%);
+  place-items: start center;
+  padding: max(10px, env(safe-area-inset-top, 0px)) var(--space-4) max(12px, env(safe-area-inset-bottom, 0px));
 }
-.overlay.gross .overlay-card > .row-btns:last-child { position: static; box-shadow: none; background: none; }
+.overlay.vollbild .overlay-card {
+  background: transparent; border: 0; border-radius: 0;
+  max-width: 560px; padding: 0;
+}
+.overlay.vollbild .overlay-card h3 { margin-bottom: 2px; }
+.overlay.vollbild .overlay-card p { margin-bottom: var(--space-2); font-size: 0.85rem; }
+.overlay.vollbild .liga-start .ls-titel { margin: var(--space-2) 0 4px; }
+.overlay.vollbild .liga-start .ls-zeile { margin-bottom: 6px; }
+.overlay.vollbild .liga-start select,
+.overlay.vollbild .liga-start input {
+  min-height: 42px; padding-top: 8px; padding-bottom: 8px;
+  background: rgba(255, 255, 255, 0.04); border-color: rgba(70, 170, 215, 0.18);
+}
+.overlay.vollbild .liga-start .options button { min-height: 44px; padding-top: 8px; padding-bottom: 8px; }
+.overlay.vollbild .overlay-card > .row-btns:not(:first-child) { margin-top: var(--space-4); }
 .overlay-card .row-btns > .btn { margin-top: 0; }
 /* Vier Gegner-Optionen: 2x2 statt 3+1 (Bots schwer stand allein). */
 .liga-start .options:has(> button:nth-child(4):last-child) {
