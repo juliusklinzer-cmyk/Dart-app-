@@ -828,6 +828,7 @@
         }
         var fertig = matchById(p.matchId);
         if (fertig && fertig.belegtVon) delete fertig.belegtVon;
+        if (fertig) fertig.gemeldet = true;   // liegt beim Server - nichts nachzureichen
         return;
       }
       // Fremder Anspruch: kein Start-Knopf, dafür der Name daneben.

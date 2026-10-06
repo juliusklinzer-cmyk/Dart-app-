@@ -1412,6 +1412,23 @@ async function main() {
         return S.matches.filter((m) => m.posPaar[idx] === 3 && !m.done).every((m) => (D.profile(m.p[idx]) || {}).voll === 'Ersatz Vier');
       }));
 
+      /* Funkloch beim Checkout: Tobis Einzel ist bei ihm fertig, das Ergebnis
+         kam aber nie beim Server an. Der naechste Abgleich reicht es nach. */
+      await tobi.page.evaluate((id) => {
+        const D = window.__dart, S = D.state();
+        const m = S.matches.find((x) => x.id === id);
+        m.legs = [{ starter: m.p[0], visits: [], winner: m.p[0] }, { starter: m.p[1], visits: [], winner: m.p[0] }];
+        m.done = true; m.winner = m.p[0]; m.at = Date.now();
+        delete m.gemeldet;
+        D.save();
+      }, tobiMatch);
+      await tobi.page.evaluate(() => window.DartSync.turnier.abgleich());
+      await tobi.page.waitForTimeout(1500);
+      await julius.page.evaluate(() => window.DartSync.turnier.abgleich());
+      await julius.page.waitForTimeout(800);
+      check('ein nie angekommenes Ergebnis wird beim naechsten Abgleich nachgereicht',
+        await julius.page.evaluate((id) => !!(window.__dart.state().matches.find((m) => m.id === id) || {}).done, tobiMatch));
+
       for (const g of [julius, tobi]) {
         await g.page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; S.matches = []; S.tour = null; S.current = null; D.ui().overlay = null; D.save(); D.setScreen('setup'); });
       }

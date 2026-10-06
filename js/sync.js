@@ -384,7 +384,9 @@
     if (!t || !t.geteilt || !t.sid || !nutzer) return Promise.resolve(false);
     var seit = t.cursor || 0;
     return turnierRuf('GET', '/' + t.sid + '?since=' + seit).then(function (d) {
-      return D.uebernehmeTurnier(d.turnier);
+      var neu = D.uebernehmeTurnier(d.turnier);
+      ergebnisseNachreichen();
+      return neu;
     }).catch(function () {
       // Kein Netz oder Server weg: der Abend geht lokal weiter, der nächste
       // Takt holt auf. Nur nicht laut sein – das passiert im Hintergrund.
@@ -413,10 +415,27 @@
     var t = D.state().tour;
     if (!t || !t.geteilt || !t.sid) return Promise.resolve();
     return turnierRuf('PUT', '/' + t.sid + '/matches/' + match.id, { result: match })
-      .then(function (d) { D.uebernehmeTurnier(d.turnier); })
-      .catch(function () {
-        // Ergebnis liegt lokal, der Takt schiebt es gleich nochmal hoch.
+      .then(function (d) { match.gemeldet = true; D.uebernehmeTurnier(d.turnier); D.save(); })
+      .catch(function (e) {
+        /* 409: die Partie gehoert dem anderen Geraet - dessen Ergebnis gilt,
+           hier nicht immer wieder anklopfen. Sonst (kein Netz, Server weg)
+           reicht der naechste Takt es nach (ergebnisseNachreichen). */
+        if (e && e.status === 409) { match.gemeldet = 'abgelehnt'; D.save(); }
       });
+  }
+
+  /* Fertige Einzel, die beim Server nie angekommen sind (Funkloch beim
+     Checkout), werden bei jedem Abgleich nachgereicht - hoechstens vier auf
+     einmal, eins nach dem anderen. */
+  var nachreichenLaeuft = false;
+  function ergebnisseNachreichen() {
+    var t = D.state().tour;
+    if (nachreichenLaeuft || !t || !t.geteilt || !t.sid || !nutzer) return;
+    var offen = D.state().matches.filter(function (m) { return m.done && !m.gemeldet && !m.void; }).slice(0, 4);
+    if (!offen.length) return;
+    nachreichenLaeuft = true;
+    offen.reduce(function (p, m) { return p.then(function () { return turnierErgebnis(m); }); }, Promise.resolve())
+      .then(function () { nachreichenLaeuft = false; }, function () { nachreichenLaeuft = false; });
   }
 
   function turnierEnde() {

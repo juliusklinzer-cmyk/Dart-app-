@@ -4058,10 +4058,9 @@ body { font-size: 1rem; }
 
     <details class="card regel">
       <summary>Wie wird gewertet?</summary>
-      <p>Für die Tabelle zählen <b>Punkte, Spiele- und Legverhältnis</b>. Die SWO
-        staffelt die Punkte nach dem Endergebnis: in Best-of-3-Ligen 2:0 = 4 Punkte,
-        2:1 = 3, 1:2 = 1 – in Best-of-5-Ligen 3:0 = 6, 3:1 = 5, 3:2 = 4, 2:3 = 2,
-        1:3 = 1. Eine gewonnene Partie bringt 2 Punkte in der Ligatabelle.</p>
+      <p>Für die Tabelle zählen <b>Punkte, Spiele- und Legverhältnis</b>. Jedes
+        gewonnene Einzel bringt dem Sieger <b>einen Punkt</b> – egal ob 2:0 oder 2:1.
+        Eine gewonnene Partie (das ganze Ligaspiel) bringt 2 Punkte in der Ligatabelle.</p>
     </details>
 
     <h2>Aus der Regelecke (von Udo)</h2>
@@ -5648,7 +5647,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         players: (daten.plan.players || []).slice(),
         geteilt: true, sid: daten.id, cursor: 0,
         angelegtVon: daten.angelegtVonName || null,
-        liga: daten.plan.liga || null
+        liga: daten.plan.liga || null,
+        planStand: daten.plan.planStand || 0
       };
       S.matches = planZuMatches(daten.plan);
       S.current = null;
@@ -5663,6 +5663,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         });
       });
       neu = true;
+    }
+
+    /* Spielerwechsel auf dem anderen iPad: neuerer Plan. */
+    if (S.tour && S.tour.sid === daten.id && (daten.plan.planStand || 0) > (S.tour.planStand || 0)) {
+      if (planAnwenden(daten.plan)) neu = true;
     }
 
     var ich = window.DartKonto && window.DartKonto.nutzer() ? window.DartKonto.nutzer().id : null;
@@ -5686,6 +5691,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         }
         var fertig = matchById(p.matchId);
         if (fertig && fertig.belegtVon) delete fertig.belegtVon;
+        if (fertig) fertig.gemeldet = true;   // liegt beim Server - nichts nachzureichen
         return;
       }
       // Fremder Anspruch: kein Start-Knopf, dafür der Name daneben.
@@ -8127,16 +8133,14 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return p && p.voll ? p.voll : pname(pid);
   }
 
-  /* Die Punktestaffel der SWO je Einzel: Best of 3: 2:0 = 4:0, 2:1 = 3:1 -
-     Best of 5: 3:0 = 6:0, 3:1 = 5:1, 3:2 = 4:2. Kampflos zaehlt wie ein
-     glattes Ergebnis. Rueckgabe [Punkte Sieger, Punkte Verlierer]. */
+  /* Punkte je Einzel: der Sieger bekommt einen Punkt (auch kampflos).
+     Rueckgabe [Punkte Sieger, Punkte Verlierer]. */
   function ligaPunkte(m, gewinnLegs) {
+    /* So wird in unserer Liga gezaehlt (Ansage am 1. Spieltag): jedes
+       gewonnene Einzel bringt dem Sieger EINEN Punkt - egal ob 2:0 oder 2:1.
+       (Die Staffel 4:0/3:1 aus der SWO-Wertungstabelle gilt nicht.) */
     if (!m.done) return [0, 0];
-    var not = gewinnLegs || legsToWin();
-    var verliererLegs = m.kampflos ? 0
-      : legsWon(m, m.winner === m.p[0] ? m.p[1] : m.p[0]);
-    if (not === 2) return verliererLegs === 0 ? [4, 0] : [3, 1];
-    return verliererLegs === 0 ? [6, 0] : verliererLegs === 1 ? [5, 1] : [4, 2];
+    return [1, 0];
   }
 
   /* Team-Stand und Spielbericht-Highlights eines Ligaspiels – gebraucht in
@@ -12039,14 +12043,76 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return posn;
   }
 
+  /* Der Spielplan, wie ihn das geteilte Turnier auf dem Server fuehrt. */
+  function planAusStand() {
+    var gaeste = {};
+    S.tour.players.forEach(function (id) {
+      if (String(id).indexOf('u_') !== 0) gaeste[id] = pname(id);
+    });
+    return {
+      start: S.tour.start, bestOf: S.tour.bestOf, players: S.tour.players.slice(),
+      gaeste: gaeste, liga: S.tour.liga, planStand: S.tour.planStand || 0,
+      matches: S.matches.map(function (m) {
+        return { id: m.id, round: m.round, p: m.p.slice(), starter: m.starter, posPaar: m.posPaar, scheibe: m.scheibe };
+      })
+    };
+  }
+  function geteiltenPlanSenden() {
+    var t = geteiltesTurnier();
+    if (!t || !window.DartSync || !window.DartSync.turnier || !window.DartSync.turnier.planAendern) return;
+    window.DartSync.turnier.planAendern(planAusStand(), S.tour.planStand || 0).then(function (d) {
+      if (d && d.turnier && d.turnier.plan) { S.tour.planStand = d.turnier.plan.planStand || 0; save(); }
+    }).catch(function (e) {
+      /* Das andere iPad war schneller: dessen Plan gilt, der Wechsel hier
+         muss neu gemacht werden. */
+      if (e && e.status === 409 && e.daten && e.daten.turnier) {
+        uebernehmeTurnier(e.daten.turnier);
+        UI.overlay = { type: 'hinweis', titel: 'Wechsel nicht übernommen',
+          text: 'Auf dem anderen iPad wurde gerade auch gewechselt. Bitte den Wechsel hier noch einmal prüfen und ggf. wiederholen.' };
+      } else {
+        UI.overlay = { type: 'hinweis', titel: 'Wechsel nur hier',
+          text: 'Der Wechsel kam nicht beim Server an (' + (e && e.message ? e.message : 'kein Netz') + '). Das andere iPad kennt ihn noch nicht – bitte dort ebenfalls wechseln oder gleich nochmal versuchen.' };
+      }
+      render();
+    });
+  }
+  /* Einen geaenderten Plan vom anderen iPad uebernehmen: Aufstellung und
+     Spielerlisten, und die Paarungen der Einzel, die hier noch nicht
+     begonnen sind und gerade nicht hier gespielt werden. */
+  function planAnwenden(plan) {
+    if (!S.tour || !plan) return false;
+    var lgNeu = plan.liga, lg = S.tour.liga;
+    if (lg && lgNeu) {
+      ['posH', 'posG', 'heimSpieler', 'gastSpieler', 'wir', 'sie'].forEach(function (k) {
+        if (Array.isArray(lgNeu[k])) lg[k] = lgNeu[k].slice();
+      });
+    }
+    if (Array.isArray(plan.players)) S.tour.players = plan.players.slice();
+    var g = plan.gaeste || {};
+    Object.keys(g).forEach(function (gid) {
+      if (S.profiles.some(function (p) { return p.id === gid; })) return;
+      S.profiles.push({ id: gid, name: String(g[gid]).slice(0, 30), voll: g[gid], avatar: null, hue: freeHue(), created: Date.now(), gast: true });
+    });
+    (plan.matches || []).forEach(function (pm) {
+      var m = matchById(pm.id);
+      if (!m || m.done || S.current === m.id) return;
+      if (m.legs.some(function (l) { return l.visits.length > 0; })) return;
+      m.p = pm.p.slice();
+      m.starter = pm.starter || null;
+      m.legs = [];
+    });
+    S.tour.planStand = plan.planStand || 0;
+    return true;
+  }
+
   function ligaWechseln(seite, pos, neueId) {
     var lg = S.tour && S.tour.liga;
     if (!lg) return 'Kein Ligaspiel.';
-    /* Im geteilten Spiel kennt das andere Gerät nur den alten Plan und
-       würde das Einzel mit dem alten Spieler mitschreiben – die Stände
-       liefen auseinander. Bis der Plan-Abgleich das kann: gesperrt. */
-    if (geteiltesTurnier()) {
-      return 'Im geteilten Ligaspiel geht der Wechsel noch nicht – bitte auf einem Gerät spielen.';
+    /* Im geteilten Spiel (zwei iPads) geht der Wechsel als geaenderter
+       Spielplan an den Server; das andere Geraet uebernimmt ihn beim
+       naechsten Abgleich (planAnwenden). Ohne Netz geht das nicht. */
+    if (geteiltesTurnier() && !(window.DartSync && window.DartSync.turnier && window.DartSync.turnier.planAendern && navigator.onLine !== false)) {
+      return 'Im geteilten Ligaspiel braucht der Wechsel Netz – bitte gleich nochmal versuchen.';
     }
     var posListe = seite === 'H' ? lg.posH : lg.posG;
     var teamListe = seite === 'H' ? lg.heimSpieler : lg.gastSpieler;
@@ -12082,6 +12148,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       if (!m.posPaar || m.posPaar[idx] !== pos) return;
       var begonnen = m.done || m.legs.some(function (l) { return l.visits.length > 0; });
       if (begonnen) return;
+      /* Spielt das andere iPad dieses Einzel gerade, bleibt es unangetastet. */
+      if (m.belegtVon) return;
       var raus = m.p[idx];
       m.p[idx] = neueId;
       /* War der Ausgewechselte schon als Anwerfer ausgebullt, uebernimmt
@@ -12092,6 +12160,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       m.legs.forEach(function (l) { if (l.starter === raus) l.starter = neueId; });
     });
     save();
+    if (geteiltesTurnier()) geteiltenPlanSenden();
     return null;
   }
 
