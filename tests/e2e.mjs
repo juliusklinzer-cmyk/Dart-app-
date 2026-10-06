@@ -2599,6 +2599,47 @@ check('die Highlights stehen in Udos Form', await page.evaluate(() => {
 }));
 check('das Blatt laesst sich Feld fuer Feld korrigieren',
   (await page.locator('#bericht-blatt [contenteditable]').count()) > 40);
+
+group('Spielbericht: beide TCs unterschreiben am iPad, dann Versand als PDF');
+{
+  const malen = async () => {
+    const box = await page.locator('#signatur').boundingBox();
+    await page.mouse.move(box.x + box.width * 0.15, box.y + box.height * 0.6);
+    await page.mouse.down();
+    for (let i = 1; i <= 12; i++) await page.mouse.move(box.x + box.width * (0.15 + i * 0.05), box.y + box.height * (0.6 - Math.sin(i) * 0.2));
+    await page.mouse.up();
+  };
+  check('oben steht Unterschreiben statt Drucken',
+    await visible('#screen-bericht [data-action="bericht-unterschreiben"]'));
+  await page.locator('#screen-bericht [data-action="bericht-unterschreiben"]').click();
+  check('ganzer Bildschirm fuer TC Heim mit Unterschriftsfeld',
+    (await text('#overlay-card h3')).includes('TC Heim') && await visible('#signatur') &&
+    await page.evaluate(() => document.getElementById('overlay').classList.contains('vollbild')));
+  await page.locator('[data-action="signatur-weiter"]').click();
+  check('ohne Unterschrift geht es nicht weiter', (await text('#overlay-card')).includes('Bitte erst im Feld unterschreiben'));
+  await malen();
+  await page.locator('[data-action="signatur-nochmal"]').click();
+  check('Nochmal leert das Feld', await page.evaluate(() => window.__dart.ui().overlay.striche.length === 0));
+  await malen();
+  await page.locator('[data-action="signatur-weiter"]').click();
+  check('danach TC Gast', (await text('#overlay-card h3')).includes('TC Gast'));
+  await malen();
+  await page.locator('[data-action="signatur-weiter"]').click();
+  check('dann die Mailadressen, die Ligaleitung ist vorbelegt', await page.evaluate(() =>
+    document.querySelector('[data-role="bericht-mail"][data-i="0"]').value === 'spielbericht@steeldart-muenchen.de'));
+  check('beide Unterschriften stehen im Bericht',
+    (await page.locator('#bericht-blatt .b-unterschrift img').count()) === 2);
+  await page.locator('[data-role="bericht-mail"][data-i="1"]').fill('kein-mail');
+  await page.locator('[data-action="bericht-senden"]').click();
+  check('eine falsche Adresse wird abgefangen', (await text('#overlay-card')).includes('nicht nach einer Mailadresse'));
+  await page.locator('#overlay-card [data-action="ov-cancel"]').click();
+  const pdf = await page.evaluate(async () => {
+    const b = window.__dart.berichtPdf();
+    const t = new TextDecoder('latin1').decode(new Uint8Array(await b.arrayBuffer()));
+    return { start: t.slice(0, 5), seiten: (t.match(/\/Type \/Page\b/g) || []).length, groesse: b.size, ende: t.trim().endsWith('%%EOF') };
+  });
+  check('das PDF hat beide Seiten des Bogens', pdf.start === '%PDF-' && pdf.seiten === 2 && pdf.ende && pdf.groesse > 20000, JSON.stringify(pdf));
+}
 await page.locator('[data-action="bericht-zurueck"]').click();
 check('zurueck im Ligaspiel', await visible('#screen-tournament'));
 

@@ -5414,6 +5414,300 @@
         '<div class="b-protest" contenteditable></div>' +
         '<div class="b-fuss">Seite 2/2</div>' +
       '</div>';
+    berichtUnterschriftenEinsetzen();
+  }
+
+  /* ================= Spielbericht unterschreiben und versenden =================
+   * Sind alle Einzel durch, unterschreiben beide Teamcaptains am iPad mit dem
+   * Finger (erst Heim, dann Gast, je ein ganzer Bildschirm). Danach werden
+   * die Adressen eingetragen, und der Bericht geht als PDF ueber das
+   * Teilen-Menue raus (Mail-App, eigenes Konto - kein Mailserver noetig).
+   * Das PDF zeigt genau das Blatt auf dem Bildschirm, samt Handkorrekturen.
+   */
+  var SIGNATUR_OK = /^data:image\/png;base64,[A-Za-z0-9+\/]+=*$/;
+  var LIGALEITUNG_MAIL = 'spielbericht@steeldart-muenchen.de';
+
+  function berichtUnterschriftenEinsetzen() {
+    var q = ligaBerichtQuelle();
+    if (!q) return;
+    var u = q.liga.unterschriften || {};
+    var felder = document.querySelectorAll('#bericht-blatt .b-unterschrift');
+    ['heim', 'gast'].forEach(function (wer, i) {
+      var f = felder[i];
+      if (!f || !u[wer] || !SIGNATUR_OK.test(u[wer])) return;
+      f.innerHTML = '<img alt="Unterschrift TC ' + (wer === 'heim' ? 'Heim' : 'Gast') + '" src="' + u[wer] + '">';
+      f.removeAttribute('contenteditable');
+    });
+  }
+
+  /* Die Unterschriftsflaeche. Jeder Strich wird als Liste von Punkten (0..1)
+     im Dialog gemerkt - zeichnet die App zwischendurch neu, steht die
+     Unterschrift sofort wieder da. */
+  var SIGNATUR_TINTE = '#13235b';
+  function signaturZeichnen(ctx, striche, w, h, breite) {
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.strokeStyle = SIGNATUR_TINTE; ctx.lineWidth = breite;
+    striche.forEach(function (st) {
+      if (!st.length) return;
+      ctx.beginPath();
+      ctx.moveTo(st[0][0] * w, st[0][1] * h);
+      if (st.length === 1) ctx.lineTo(st[0][0] * w + 0.1, st[0][1] * h + 0.1);
+      for (var i = 1; i < st.length; i++) ctx.lineTo(st[i][0] * w, st[i][1] * h);
+      ctx.stroke();
+    });
+  }
+  function signaturVorbereiten() {
+    var c = $('signatur');
+    var o = UI.overlay;
+    if (!c || !o) return;
+    if (!o.striche) o.striche = [];
+    var r = c.getBoundingClientRect();
+    var dpr = window.devicePixelRatio || 1;
+    c.width = Math.round(r.width * dpr); c.height = Math.round(r.height * dpr);
+    o.ratio = r.height / r.width;
+    var ctx = c.getContext('2d');
+    ctx.scale(dpr, dpr);
+    signaturZeichnen(ctx, o.striche, r.width, r.height, 3);
+    var strich = null;
+    var punkt = function (ev) {
+      var rr = c.getBoundingClientRect();
+      return [Math.max(0, Math.min(1, (ev.clientX - rr.left) / rr.width)), Math.max(0, Math.min(1, (ev.clientY - rr.top) / rr.height))];
+    };
+    c.addEventListener('pointerdown', function (ev) {
+      ev.preventDefault();
+      try { c.setPointerCapture(ev.pointerId); } catch (e) { /* egal */ }
+      strich = [punkt(ev)];
+      o.striche.push(strich);
+      if (o.fehler) { o.fehler = ''; var fe = document.querySelector('#overlay-card .fehler'); if (fe) fe.remove(); }
+      signaturZeichnen(ctx, [strich], r.width, r.height, 3);
+    });
+    c.addEventListener('pointermove', function (ev) {
+      if (!strich) return;
+      ev.preventDefault();
+      var p = punkt(ev);
+      var vor = strich[strich.length - 1];
+      strich.push(p);
+      signaturZeichnen(ctx, [[vor, p]], r.width, r.height, 3);
+    });
+    var ende = function () { strich = null; };
+    c.addEventListener('pointerup', ende);
+    c.addEventListener('pointercancel', ende);
+  }
+  /* Die Unterschrift als PNG fuer den Bericht: dunkle Tinte auf durchsichtigem
+     Grund, auf die Strichbreite zugeschnitten. */
+  function signaturBild(o) {
+    var w = 900, h = Math.round(w * (o.ratio || 0.4));
+    /* Auf die Striche zuschneiden (mit etwas Rand), damit die Unterschrift
+       das TC-Feld im Bericht fuellt statt als Kringel in der Ecke zu stehen. */
+    var x0 = 1, y0 = 1, x1 = 0, y1 = 0;
+    o.striche.forEach(function (st) { st.forEach(function (p) {
+      x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]);
+    }); });
+    var rand = 14;
+    var bx = Math.max(0, Math.floor(x0 * w) - rand), by = Math.max(0, Math.floor(y0 * h) - rand);
+    var bw = Math.min(w, Math.ceil(x1 * w) + rand) - bx, bh = Math.min(h, Math.ceil(y1 * h) + rand) - by;
+    var c = document.createElement('canvas');
+    c.width = Math.max(20, bw); c.height = Math.max(20, bh);
+    var ctx = c.getContext('2d');
+    ctx.translate(-bx, -by);
+    signaturZeichnen(ctx, o.striche, w, h, 6);
+    return c.toDataURL('image/png');
+  }
+
+  function berichtUnterschreibenStarten() {
+    var q = ligaBerichtQuelle();
+    if (!q) return;
+    var aktiv = document.activeElement;
+    if (aktiv && aktiv.blur) aktiv.blur();
+    UI.overlay = { type: 'unterschrift', wer: 'heim', striche: [] };
+    render();
+  }
+
+  function signaturWeiter() {
+    var o = UI.overlay;
+    var q = ligaBerichtQuelle();
+    if (!o || o.type !== 'unterschrift' || !q) return;
+    var punkte = o.striche.reduce(function (n, st) { return n + st.length; }, 0);
+    if (punkte < 4) { o.fehler = 'Bitte erst im Feld unterschreiben.'; render(); return; }
+    if (!q.liga.unterschriften) q.liga.unterschriften = {};
+    q.liga.unterschriften[o.wer] = signaturBild(o);
+    save();
+    berichtUnterschriftenEinsetzen();
+    if (o.wer === 'heim') {
+      UI.overlay = { type: 'unterschrift', wer: 'gast', striche: [] };
+    } else {
+      var gemerkt = Array.isArray(S.settings.berichtMails) ? S.settings.berichtMails.slice(0, 3) : [];
+      while (gemerkt.length < 3) gemerkt.push('');
+      if (!gemerkt[0]) gemerkt[0] = LIGALEITUNG_MAIL;
+      UI.overlay = { type: 'bericht-versand', adressen: gemerkt };
+    }
+    render();
+  }
+
+  /* --- Das PDF: die Blaetter vom Bildschirm abgezeichnet ---
+     Kein Zusatz-Werkzeug: Kaesten, Linien, Bilder und jedes Wort werden an
+     ihrer Bildschirmposition auf eine Leinwand uebertragen, die Leinwand
+     wird ein JPEG, die JPEGs werden Seiten eines A4-PDFs. */
+  function blattAufLeinwand(blatt) {
+    var r0 = blatt.getBoundingClientRect();
+    var scale = Math.min(3, 1700 / Math.max(1, r0.width));
+    var c = document.createElement('canvas');
+    c.width = Math.round(r0.width * scale); c.height = Math.round(r0.height * scale);
+    var ctx = c.getContext('2d');
+    ctx.scale(scale, scale);
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, r0.width, r0.height);
+    var leer = /rgba\(0, 0, 0, 0\)|transparent/;
+    var els = Array.prototype.slice.call(blatt.querySelectorAll('*'));
+    els.forEach(function (el) {
+      var cs = getComputedStyle(el);
+      if (cs.display === 'none' || cs.visibility === 'hidden') return;
+      var r = el.getBoundingClientRect();
+      var x = r.left - r0.left, y = r.top - r0.top;
+      if (cs.backgroundColor && !leer.test(cs.backgroundColor)) {
+        ctx.fillStyle = cs.backgroundColor; ctx.fillRect(x, y, r.width, r.height);
+      }
+      [['Top', x, y, x + r.width, y], ['Bottom', x, y + r.height, x + r.width, y + r.height],
+       ['Left', x, y, x, y + r.height], ['Right', x + r.width, y, x + r.width, y + r.height]].forEach(function (b) {
+        var bw = parseFloat(cs['border' + b[0] + 'Width']);
+        if (!bw || cs['border' + b[0] + 'Style'] === 'none' || leer.test(cs['border' + b[0] + 'Color'])) return;
+        var halb = bw / 2 * (b[0] === 'Top' || b[0] === 'Left' ? 1 : -1);
+        ctx.strokeStyle = cs['border' + b[0] + 'Color']; ctx.lineWidth = bw;
+        ctx.beginPath();
+        if (b[0] === 'Top' || b[0] === 'Bottom') { ctx.moveTo(b[1], b[2] + halb); ctx.lineTo(b[3], b[4] + halb); }
+        else { ctx.moveTo(b[1] + halb, b[2]); ctx.lineTo(b[3] + halb, b[4]); }
+        ctx.stroke();
+      });
+      if (el.tagName === 'IMG' && el.complete && el.naturalWidth) {
+        try { ctx.drawImage(el, x, y, r.width, r.height); } catch (e) { /* egal */ }
+      }
+    });
+    var tw = document.createTreeWalker(blatt, NodeFilter.SHOW_TEXT, null, false);
+    var range = document.createRange();
+    var node;
+    while ((node = tw.nextNode())) {
+      var t = node.nodeValue;
+      if (!t || !t.trim()) continue;
+      var pcs = getComputedStyle(node.parentElement);
+      if (pcs.display === 'none' || pcs.visibility === 'hidden') continue;
+      ctx.font = pcs.fontStyle + ' ' + pcs.fontWeight + ' ' + pcs.fontSize + ' ' + pcs.fontFamily;
+      ctx.fillStyle = pcs.color;
+      ctx.textBaseline = 'alphabetic';
+      var groesse = parseFloat(pcs.fontSize) || 12;
+      var re = /\S+/g, m;
+      while ((m = re.exec(t))) {
+        range.setStart(node, m.index); range.setEnd(node, m.index + m[0].length);
+        var rects = range.getClientRects();
+        if (!rects.length) continue;
+        var rr = rects[0];
+        var wort = pcs.textTransform === 'uppercase' ? m[0].toUpperCase() : m[0];
+        var met = ctx.measureText(wort);
+        var asc = met.fontBoundingBoxAscent || groesse * 0.8;
+        var desc = met.fontBoundingBoxDescent || groesse * 0.2;
+        ctx.fillText(wort, rr.left - r0.left, rr.top - r0.top + (rr.height + asc - desc) / 2);
+      }
+    }
+    return c;
+  }
+
+  function pdfAusSeiten(seiten) {
+    var teile = [], offs = [], laenge = 0;
+    var bytes = function (str) { var b = new Uint8Array(str.length); for (var i = 0; i < str.length; i++) b[i] = str.charCodeAt(i) & 255; return b; };
+    var add = function (x) { var b = typeof x === 'string' ? bytes(x) : x; teile.push(b); laenge += b.length; };
+    var obj = function (n, inhalt) { offs[n] = laenge; add(n + ' 0 obj\n'); inhalt.forEach(add); add('\nendobj\n'); };
+    add('%PDF-1.4\n%\u00e2\u00e3\u00cf\u00d3\n');
+    var n = seiten.length;
+    obj(1, ['<< /Type /Catalog /Pages 2 0 R >>']);
+    obj(2, ['<< /Type /Pages /Kids [' + seiten.map(function (_, i) { return (3 + 3 * i) + ' 0 R'; }).join(' ') + '] /Count ' + n + ' >>']);
+    seiten.forEach(function (sd, i) {
+      var pid = 3 + 3 * i, cid = pid + 1, iid = pid + 2;
+      var PW = 595.28, PH = 841.89, rand = 24;
+      var f = Math.min((PW - 2 * rand) / sd.w, (PH - 2 * rand) / sd.h);
+      var w = sd.w * f, h = sd.h * f, x = (PW - w) / 2, y = PH - rand - h;
+      obj(pid, ['<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /XObject << /Im' + i + ' ' + iid + ' 0 R >> >> /Contents ' + cid + ' 0 R >>']);
+      var strom = 'q ' + w.toFixed(2) + ' 0 0 ' + h.toFixed(2) + ' ' + x.toFixed(2) + ' ' + y.toFixed(2) + ' cm /Im' + i + ' Do Q';
+      obj(cid, ['<< /Length ' + strom.length + ' >>\nstream\n' + strom + '\nendstream']);
+      obj(iid, ['<< /Type /XObject /Subtype /Image /Width ' + sd.w + ' /Height ' + sd.h +
+        ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + sd.jpeg.length + ' >>\nstream\n', sd.jpeg, '\nendstream']);
+    });
+    var xref = laenge, gesamt = 3 + 3 * n;
+    add('xref\n0 ' + gesamt + '\n0000000000 65535 f \n');
+    for (var k = 1; k < gesamt; k++) add(('0000000000' + offs[k]).slice(-10) + ' 00000 n \n');
+    add('trailer\n<< /Size ' + gesamt + ' /Root 1 0 R >>\nstartxref\n' + xref + '\n%%EOF');
+    return new Blob(teile, { type: 'application/pdf' });
+  }
+
+  function berichtPdf() {
+    var box = $('bericht-blatt');
+    var aktiv = document.activeElement;
+    if (aktiv && aktiv.blur) aktiv.blur();
+    /* Immer in voller Blattbreite abzeichnen - am Handy waere das Blatt
+       sonst schmal und die Schrift im PDF winzig. */
+    var alteBreite = box.style.width;
+    box.style.width = '820px';
+    var seiten = Array.prototype.map.call(box.querySelectorAll('.blatt'), function (blatt) {
+      var c = blattAufLeinwand(blatt);
+      var roh = atob(c.toDataURL('image/jpeg', 0.88).split(',')[1]);
+      var jpeg = new Uint8Array(roh.length);
+      for (var i = 0; i < roh.length; i++) jpeg[i] = roh.charCodeAt(i);
+      return { w: c.width, h: c.height, jpeg: jpeg };
+    });
+    box.style.width = alteBreite;
+    return pdfAusSeiten(seiten);
+  }
+
+  function berichtSenden() {
+    var o = UI.overlay;
+    var q = ligaBerichtQuelle();
+    if (!o || o.type !== 'bericht-versand' || !q) return;
+    var adressen = o.adressen.map(function (a) { return String(a || '').trim(); })
+      .filter(function (a) { return a; });
+    var falsch = adressen.filter(function (a) { return !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a); });
+    if (!adressen.length || falsch.length) {
+      o.fehler = !adressen.length ? 'Bitte mindestens eine Adresse eintragen.' : 'Das sieht nicht nach einer Mailadresse aus: ' + falsch[0];
+      render();
+      return;
+    }
+    S.settings.berichtMails = o.adressen.slice(0, 3);
+    var lg = q.liga;
+    var heimTeam = lg.heim ? LIGA.team : lg.gegner;
+    var gastTeam = lg.heim ? lg.gegner : LIGA.team;
+    var datum = lg.tag ? ligaDatum(lg.tag) : fmtDate(q.at || Date.now());
+    var betreff = 'Spielbericht ' + (lg.nr ? lg.nr + '. Spieltag: ' : '') + heimTeam + ' – ' + gastTeam + ' (' + datum + ')';
+    var text = 'Hallo,\n\nanbei der unterschriebene Spielbericht: ' + betreff + '.\n\nViele Grüße\n' + LIGA.team;
+    var name = ('Spielbericht_' + (lg.nr ? 'Spieltag' + lg.nr + '_' : '') + heimTeam + '_' + gastTeam)
+      .replace(/[^A-Za-z0-9ÄÖÜäöüß_-]+/g, '_').replace(/_+/g, '_') + '.pdf';
+    var pdf = berichtPdf();
+    var liste = adressen.join(', ');
+    try { if (navigator.clipboard) navigator.clipboard.writeText(liste).catch(function () {}); } catch (e) { /* egal */ }
+    var datei = null;
+    try { datei = new File([pdf], name, { type: 'application/pdf' }); } catch (e) { datei = null; }
+    var fertig = function (wie) {
+      lg.berichtVersandt = Date.now();
+      save();
+      UI.overlay = { type: 'hinweis', titel: 'Spielbericht ist unterwegs',
+        text: wie + ' Empfänger: ' + liste + '.' };
+      render();
+    };
+    if (datei && navigator.canShare && navigator.canShare({ files: [datei] }) && navigator.share) {
+      navigator.share({ files: [datei], title: betreff, text: text }).then(function () {
+        fertig('Das PDF ist an die Mail übergeben.');
+      }).catch(function (e) {
+        if (e && e.name === 'AbortError') return;   // im Teilen-Menue abgebrochen: Dialog bleibt
+        o.fehler = 'Teilen hat nicht geklappt: ' + (e && e.message ? e.message : 'unbekannter Fehler');
+        render();
+      });
+      return;
+    }
+    /* Ohne Teilen-Menue (Computer): PDF herunterladen und die Mail mit
+       Empfaengern und Betreff oeffnen - das PDF dort anhaengen. */
+    var url = URL.createObjectURL(pdf);
+    var a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+    window.location.href = 'mailto:' + adressen.map(encodeURIComponent).join(',') +
+      '?subject=' + encodeURIComponent(betreff) + '&body=' + encodeURIComponent(text + '\n\n(PDF liegt in den Downloads: ' + name + ')');
+    fertig('Das PDF ist heruntergeladen (' + name + ') und die Mail ist geöffnet – bitte dort anhängen.');
   }
 
   function renderSummary() {
@@ -5716,7 +6010,7 @@
     ov.classList.toggle('gross', UI.turnier && turnierErlaubt() && S.screen === 'game');
     /* Der Start eines Ligaspiels oder Uebungsspiels ist kein Zwischendialog,
        sondern ein eigener Bildschirm: Vollbild im App-Hintergrund. */
-    ov.classList.toggle('vollbild', UI.overlay.type === 'liga-start' || UI.overlay.type === 'uebung-start');
+    ov.classList.toggle('vollbild', !!VOLLBILD_DIALOGE[UI.overlay.type]);
     var o = UI.overlay;
     var html = '';
 
@@ -5824,6 +6118,35 @@
         '<button class="btn primary full" data-action="open-summary" data-kind="501" data-id="' + esc(m2.id) + '">Weiter zur Spielstatistik</button>' +
         (last ? '' : '<button class="btn ghost full" data-action="ov-next-match">Direkt zum nächsten Spiel</button>') +
         '<button class="btn ghost full" data-action="undo">Eingabe rückgängig</button>';
+    } else if (o.type === 'unterschrift') {
+      var uq = ligaBerichtQuelle();
+      var uTeam = '';
+      if (uq) uTeam = (o.wer === 'heim') === !!uq.liga.heim ? LIGA.team : uq.liga.gegner;
+      html = '<h3>Unterschrift TC ' + (o.wer === 'heim' ? 'Heim' : 'Gast') + '</h3>' +
+        '<p>' + esc(uTeam) + ' · mit dem Finger im Feld unterschreiben</p>' +
+        (o.fehler ? '<p class="hint fehler" role="alert">' + esc(o.fehler) + '</p>' : '') +
+        '<canvas id="signatur" class="signatur" aria-label="Unterschriftsfeld"></canvas>' +
+        '<div class="row-btns">' +
+          '<button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
+          '<button class="btn ghost" data-action="signatur-nochmal">Nochmal</button>' +
+          '<button class="btn primary" data-action="signatur-weiter">Weiter</button>' +
+        '</div>';
+    } else if (o.type === 'bericht-versand') {
+      html = '<h3>Spielbericht versenden</h3>' +
+        '<p>Beide Unterschriften sind drin. An wen geht der Bericht?</p>' +
+        (o.fehler ? '<p class="hint fehler" role="alert">' + esc(o.fehler) + '</p>' : '') +
+        '<div class="liga-start">' + o.adressen.map(function (a, i) {
+          return '<label class="ls-zeile"><span>' + (i + 1) + '</span>' +
+            '<input type="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" ' +
+            'data-role="bericht-mail" data-i="' + i + '" value="' + esc(a) + '" ' +
+            'placeholder="' + (i === 0 ? 'Ligaleitung' : i === 1 ? 'TC Gast' : 'weitere Adresse') + '"></label>';
+        }).join('') + '</div>' +
+        '<p class="hint">Beim Senden öffnet sich das Teilen-Menü mit dem PDF. Dort <b>Mail</b> wählen. ' +
+          'Die Adressen sind dann schon kopiert: ins Feld „An“ tippen und <b>Einfügen</b>.</p>' +
+        '<div class="row-btns two">' +
+          '<button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
+          '<button class="btn primary start" data-action="bericht-senden">Senden</button>' +
+        '</div>';
     } else if (o.type === 'confirm-discard-game') {
       var dgLegs = entschiedeneLegs(S.game);
       html = '<h3>' + kindName(S.game ? S.game.kind : '') + ' abbrechen?</h3>' +
@@ -6183,6 +6506,7 @@
         '<button class="btn primary full" data-action="ov-cancel">Zurück zur Auswahl</button>';
     }
     $('overlay-card').innerHTML = html;
+    if (o.type === 'unterschrift') signaturVorbereiten();
   }
 
   /* ================= Aktionen ================= */
@@ -7365,6 +7689,18 @@
       case 'bericht-drucken':
         window.print();
         break;
+      case 'bericht-unterschreiben':
+        berichtUnterschreibenStarten();
+        break;
+      case 'signatur-nochmal':
+        if (UI.overlay && UI.overlay.type === 'unterschrift') { UI.overlay.striche = []; UI.overlay.fehler = ''; render(); }
+        break;
+      case 'signatur-weiter':
+        signaturWeiter();
+        break;
+      case 'bericht-senden':
+        berichtSenden();
+        break;
       case 'liga-zusage': {
         if (!(window.DartSync && window.DartSync.liga && window.DartKonto && window.DartKonto.nutzer())) return;
         var lgTermin = el.getAttribute('data-id');
@@ -7581,6 +7917,9 @@
   /* Ein Tipp neben den Dialog schließt ihn – außer dort, wo eine Antwort
      nötig ist (Checkout-Abfrage, Spielende). */
   var STICKY_OVERLAYS = { 'checkout-darts': 1, 'leg-done': 1, 'match-done': 1, 'game-done': 1, 'turnier-ende': 1 };
+  /* Vollbild-Dialoge haben keinen "Rand daneben" - ein Tipp auf leere Flaeche
+     (oder beim Unterschreiben knapp neben das Feld) schliesst sie nicht. */
+  var VOLLBILD_DIALOGE = { 'liga-start': 1, 'uebung-start': 1, 'unterschrift': 1, 'bericht-versand': 1 };
   /* Druck-Blitz: jede wirklich gedrueckte Taste leuchtet kurz auf. Als
      neu gestartete Animation, nicht nur :active - ein 30-ms-Tipp waere
      sonst unsichtbar, und am Board braucht man die Gewissheit, dass der
@@ -7669,7 +8008,7 @@
 
   document.addEventListener('click', function (ev) {
     if (isGhostTap(ev)) return;
-    if (ev.target.id === 'overlay' && UI.overlay && !STICKY_OVERLAYS[UI.overlay.type]) {
+    if (ev.target.id === 'overlay' && UI.overlay && !STICKY_OVERLAYS[UI.overlay.type] && !VOLLBILD_DIALOGE[UI.overlay.type]) {
       UI.overlay = null; UI.input = ''; render(); return;
     }
     if (UI.turnier && turnierErlaubt() && S.screen === 'game' && !UI.overlay &&
@@ -7757,6 +8096,9 @@
   /* Name im Profil-Dialog: nur den Entwurf pflegen, nicht neu rendern –
      sonst verliert das Feld beim Tippen den Fokus. */
   document.addEventListener('input', function (ev) {
+    if (ev.target.getAttribute('data-role') === 'bericht-mail' && UI.overlay && UI.overlay.type === 'bericht-versand') {
+      UI.overlay.adressen[Number(ev.target.getAttribute('data-i'))] = ev.target.value;
+    }
     if (ev.target.getAttribute('data-role') === 'profile-name' && UI.overlay) {
       UI.overlay.draft.name = ev.target.value;
     }
@@ -8214,6 +8556,7 @@
       setScreen: function (name) { S.screen = name; save(); render(); },
       ersetzeSpielerIds: ersetzeSpielerIds,
       uebernehmeSpiele: uebernehmeSpiele,
+      berichtPdf: berichtPdf,
       uebernehmeTurnier: uebernehmeTurnier,
       turnierListeAktualisieren: beitretbareHolen,
       turnierBeitreten: turnierBeitreten,
