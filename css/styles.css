@@ -3516,3 +3516,8 @@ body { font-size: 1rem; }
 .b-unterschrift img { display: block; max-width: 100%; max-height: 64px; margin: 0 auto; }
 .bericht-drucken { max-width: 820px; margin: 0 auto 24px; display: block; }
 @media print { .bericht-drucken { display: none !important; } }
+
+/* Nur am Bildschirm, nie im PDF oder Ausdruck: der Nachmelden-Knopf im Bogen. */
+.b-nur-schirm { margin-bottom: 10px; }
+@media print { .b-nur-schirm { display: none !important; } }
+.b-nach td img { display: block; max-width: 100%; max-height: 34px; margin: 0 auto; }

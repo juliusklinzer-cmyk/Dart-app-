@@ -2633,12 +2633,49 @@ group('Spielbericht: beide TCs unterschreiben am iPad, dann Versand als PDF');
   await page.locator('[data-action="bericht-senden"]').click();
   check('eine falsche Adresse wird abgefangen', (await text('#overlay-card')).includes('nicht nach einer Mailadresse'));
   await page.locator('#overlay-card [data-action="ov-cancel"]').click();
+
+  /* Nachmeldung: Formular, Unterschrift, dann steht sie auf Seite 2 und im Team. */
+  await page.locator('#bericht-blatt [data-action="liga-nachmelden"]').click();
+  check('Nachmelden oeffnet ein ganzes Formular', (await text('#overlay-card h3')).includes('Spieler nachmelden') &&
+    await page.evaluate(() => document.getElementById('overlay').classList.contains('vollbild')));
+  await page.locator('[data-action="nm-weiter"]').click();
+  check('unvollstaendig geht es nicht weiter', (await text('#overlay-card')).includes('Bitte alle Felder'));
+  await page.locator('[data-role="nm-nach"]').fill('Neumann');
+  await page.locator('[data-role="nm-vor"]').fill('Nora');
+  await page.locator('[data-action="nm-wahl"][data-feld="u18"][data-value="nein"]').click();
+  await page.locator('[data-action="nm-wahl"][data-feld="g"][data-value="w"]').click();
+  await page.locator('[data-action="nm-weiter"]').click();
+  check('danach unterschreibt die nachgemeldete Person', (await text('#overlay-card h3')).includes('Nora Neumann'));
+  await malen();
+  await page.locator('[data-action="signatur-weiter"]').click();
+  check('die Nachmeldung steht mit Unterschrift auf Seite 2', await page.evaluate(() => {
+    const t = document.querySelector('#bericht-blatt .b-nach').textContent;
+    return t.includes('Neumann') && t.includes('Nora') && !!document.querySelector('#bericht-blatt .b-nach td img');
+  }));
+  check('und "Nachmeldungen: ja" ist angekreuzt', (await text('#bericht-blatt [data-feld="nachmeldungen"]')).includes('ja X'));
+  check('und sie gehoert jetzt zum Team', await page.evaluate(() => {
+    const D = window.__dart, S = D.state(), lg = S.tour.liga;
+    const liste = lg.heim ? lg.heimSpieler : lg.gastSpieler;
+    return liste.some((id) => (D.profile(id) || {}).voll === 'Nora Neumann');
+  }));
+  await page.locator('#overlay-card [data-action="ov-hinweis-zu"]').click();
   const pdf = await page.evaluate(async () => {
     const b = window.__dart.berichtPdf();
     const t = new TextDecoder('latin1').decode(new Uint8Array(await b.arrayBuffer()));
     return { start: t.slice(0, 5), seiten: (t.match(/\/Type \/Page\b/g) || []).length, groesse: b.size, ende: t.trim().endsWith('%%EOF') };
   });
   check('das PDF hat beide Seiten des Bogens', pdf.start === '%PDF-' && pdf.seiten === 2 && pdf.ende && pdf.groesse > 20000, JSON.stringify(pdf));
+  /* Die Test-Nachmeldung wieder wegraeumen - spaetere Pruefungen erwarten
+     einen Stand ohne Gaeste. */
+  await page.evaluate(() => {
+    const D = window.__dart, S = D.state(), lg = S.tour.liga;
+    const nora = S.profiles.filter((p) => p.voll === 'Nora Neumann').map((p) => p.id);
+    ['heimSpieler', 'gastSpieler', 'wir', 'sie'].forEach((k) => { lg[k] = lg[k].filter((id) => nora.indexOf(id) < 0); });
+    S.tour.players = S.tour.players.filter((id) => nora.indexOf(id) < 0);
+    S.profiles = S.profiles.filter((p) => nora.indexOf(p.id) < 0);
+    delete lg.nachmeldungen;
+    D.save();
+  });
 }
 await page.locator('[data-action="bericht-zurueck"]').click();
 check('zurueck im Ligaspiel', await visible('#screen-tournament'));

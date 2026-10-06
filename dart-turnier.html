@@ -3528,6 +3528,11 @@ body { font-size: 1rem; }
 .bericht-drucken { max-width: 820px; margin: 0 auto 24px; display: block; }
 @media print { .bericht-drucken { display: none !important; } }
 
+/* Nur am Bildschirm, nie im PDF oder Ausdruck: der Nachmelden-Knopf im Bogen. */
+.b-nur-schirm { margin-bottom: 10px; }
+@media print { .b-nur-schirm { display: none !important; } }
+.b-nach td img { display: block; max-width: 100%; max-height: 34px; margin: 0 auto; }
+
 </style>
 </head>
 <body>
@@ -8197,7 +8202,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           lsd.wirL + ':' + lsd.sieL + ' · ' +
           lsd.fertige + ' von ' + S.matches.length + ' gespielt</div>' +
         ligaHighlightsHtml(lsd) +
-        '<button class="btn ghost full" data-action="liga-bericht">Spielbericht ansehen &amp; drucken</button>';
+        '<button class="btn ghost full" data-action="liga-nachmelden">Spieler nachmelden</button>' +
+        '<button class="btn ghost full" data-action="liga-bericht">Spielbericht ansehen &amp; unterschreiben</button>';
     }
 
     $('standings-body').innerHTML = table.map(function (st, i) {
@@ -10225,7 +10231,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
             '<table class="b-tab b-ende"><tr><th>Endergebnis:</th>' +
               '<td contenteditable>' + heimLegs + ' : ' + gastLegs + '</td>' +
               '<td contenteditable>' + hp + ' : ' + gp + '</td></tr></table>' +
-            '<table class="b-tab b-ende"><tr><td contenteditable>Nachmeldungen: ja O&nbsp;&nbsp;nein O</td>' +
+            '<table class="b-tab b-ende"><tr><td contenteditable data-feld="nachmeldungen">Nachmeldungen: ja O&nbsp;&nbsp;nein O</td>' +
               '<td contenteditable>Proteste: ja O&nbsp;&nbsp;nein O</td></tr></table>' +
           '</div>' +
           '<div>' +
@@ -10247,6 +10253,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
       /* Seite 2: Nachmeldungen und Proteste, als Leerformular. */
       '<div class="blatt b-seite2">' +
+        '<button class="btn ghost small b-nur-schirm" data-action="liga-nachmelden">+ Spieler nachmelden (mit Unterschrift)</button>' +
         '<div class="b-titel">Nachmeldungen:</div>' +
         '<table class="b-tab b-nach"><tr><th>Team</th><th>Nachname</th><th>Vorname</th><th>U18?</th><th>w/m/d</th><th>Unterschrift</th></tr>' +
           '<tr><td contenteditable></td><td contenteditable></td><td contenteditable></td><td contenteditable></td><td contenteditable></td><td></td></tr>'.repeat(6) +
@@ -10263,6 +10270,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '<div class="b-fuss">Seite 2/2</div>' +
       '</div>';
     berichtUnterschriftenEinsetzen();
+    berichtNachmeldungenEinsetzen();
   }
 
   /* ================= Spielbericht unterschreiben und versenden =================
@@ -10285,6 +10293,90 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       if (!f || !u[wer] || !SIGNATUR_OK.test(u[wer])) return;
       f.innerHTML = '<img alt="Unterschrift TC ' + (wer === 'heim' ? 'Heim' : 'Gast') + '" src="' + u[wer] + '">';
       f.removeAttribute('contenteditable');
+    });
+  }
+
+  /* ---- Nachmeldung: Person anlegen, unterschreiben lassen, in den Bogen ---- */
+  function nachmeldungStarten() {
+    var q = ligaBerichtQuelle();
+    if (!q) return;
+    var aktiv = document.activeElement;
+    if (aktiv && aktiv.blur) aktiv.blur();
+    UI.overlay = { type: 'nachmeldung', draft: { team: q.liga.heim ? 'H' : 'G', nach: '', vor: '', u18: null, g: null } };
+    render();
+  }
+  function nachmeldungWeiter() {
+    var o = UI.overlay;
+    if (!o || o.type !== 'nachmeldung') return;
+    var d = o.draft;
+    d.nach = String(d.nach || '').trim(); d.vor = String(d.vor || '').trim();
+    if (!d.team || !d.nach || !d.vor || !d.u18 || !d.g) {
+      o.fehler = 'Bitte alle Felder ausfüllen: Team, Nachname, Vorname, U18 und Geschlecht.';
+      render();
+      return;
+    }
+    UI.overlay = { type: 'unterschrift', wer: 'nachmeldung', person: { team: d.team, nach: d.nach, vor: d.vor, u18: d.u18, g: d.g }, striche: [] };
+    render();
+  }
+  function nachmeldungAbschliessen(q, person, bild) {
+    var lg = q.liga;
+    if (!Array.isArray(lg.nachmeldungen)) lg.nachmeldungen = [];
+    var voll = (person.vor + ' ' + person.nach).replace(/\s+/g, ' ').trim();
+    /* Als Spieler im Team: im Bogen unter H5-H8 bzw. G5-G8 und beim
+       Positionswechsel waehlbar (wird am Namen wiedererkannt). */
+    var teamListe = person.team === 'H' ? lg.heimSpieler : lg.gastSpieler;
+    var id = ligaGastId(voll, []);
+    var prof = profile(id);
+    if (prof) { prof.voll = voll; if (prof.name === voll) prof.name = person.vor.slice(0, 16); }
+    if (teamListe && teamListe.indexOf(id) < 0) teamListe.push(id);
+    var unsere = (person.team === 'H') === !!lg.heim;
+    var seite = unsere ? lg.wir : lg.sie;
+    if (seite && seite.indexOf(id) < 0) seite.push(id);
+    if (S.tour && S.tour.liga === lg && S.tour.players && S.tour.players.indexOf(id) < 0) S.tour.players.push(id);
+    lg.nachmeldungen.push({ team: person.team, nach: person.nach, vor: person.vor, u18: person.u18, g: person.g, unterschrift: bild, id: id });
+    save();
+    berichtNachmeldungenEinsetzen();
+    UI.overlay = { type: 'hinweis', titel: voll + ' ist nachgemeldet',
+      text: 'Steht jetzt auf Seite 2 des Spielberichts (mit Unterschrift) und im Team – über „Spieler wechseln“ einsetzbar. Gebühr nicht vergessen: ' + (person.u18 === 'ja' ? '2 €' : '10 €') + ' innerhalb von 14 Tagen.' };
+    render();
+  }
+  /* Die Nachmeldungen in den schon gezeichneten Bogen eintragen - ohne ihn
+     neu zu zeichnen (sonst waeren Handkorrekturen weg). */
+  function berichtNachmeldungenEinsetzen() {
+    var q = ligaBerichtQuelle();
+    var tab = document.querySelector('#bericht-blatt .b-nach');
+    if (!q || !tab) return;
+    var lg = q.liga;
+    var liste = Array.isArray(lg.nachmeldungen) ? lg.nachmeldungen : [];
+    var zeilen = tab.querySelectorAll('tr');
+    liste.forEach(function (n, i) {
+      var tr = zeilen[i + 1];
+      if (!tr || tr.getAttribute('data-nm') === String(i)) return;
+      tr.setAttribute('data-nm', String(i));
+      var heimTeam = lg.heim ? LIGA.team : lg.gegner, gastTeam = lg.heim ? lg.gegner : LIGA.team;
+      var td = tr.querySelectorAll('td');
+      var werte = [n.team === 'H' ? heimTeam : gastTeam, n.nach, n.vor, n.u18 === 'ja' ? 'ja' : 'nein', n.g];
+      werte.forEach(function (w, k) { if (td[k]) td[k].textContent = w; });
+      if (td[5] && n.unterschrift && SIGNATUR_OK.test(n.unterschrift)) {
+        td[5].innerHTML = '<img alt="Unterschrift ' + esc(n.vor + ' ' + n.nach) + '" src="' + n.unterschrift + '">';
+      }
+    });
+    var kasten = document.querySelector('#bericht-blatt [data-feld="nachmeldungen"]');
+    if (kasten && liste.length) kasten.innerHTML = 'Nachmeldungen: ja <b>X</b>&nbsp;&nbsp;nein O';
+    /* Spielerzeilen H5-H8 / G5-G8: leere Plaetze mit den neuen Namen fuellen. */
+    var tabs = document.querySelectorAll('#bericht-blatt .b-spieler');
+    [['H', lg.heimSpieler || [], tabs[0]], ['G', lg.gastSpieler || [], tabs[1]]].forEach(function (t) {
+      if (!t[2]) return;
+      var rows = t[2].querySelectorAll('tr');
+      t[1].forEach(function (pid, i) {
+        var tr = rows[i + 1];
+        if (!tr) return;
+        var cells = tr.querySelectorAll('td');
+        if (cells.length < 2 || cells[0].textContent.trim() || cells[1].textContent.trim()) return;
+        var nm = liste.filter(function (n) { return n.id === pid; })[0];
+        if (!nm) return;
+        cells[0].textContent = nm.vor; cells[1].textContent = nm.nach;
+      });
     });
   }
 
@@ -10377,6 +10469,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (!o || o.type !== 'unterschrift' || !q) return;
     var punkte = o.striche.reduce(function (n, st) { return n + st.length; }, 0);
     if (punkte < 4) { o.fehler = 'Bitte erst im Feld unterschreiben.'; render(); return; }
+    if (o.wer === 'nachmeldung') { nachmeldungAbschliessen(q, o.person, signaturBild(o)); return; }
     if (!q.liga.unterschriften) q.liga.unterschriften = {};
     q.liga.unterschriften[o.wer] = signaturBild(o);
     save();
@@ -10405,8 +10498,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     ctx.scale(scale, scale);
     ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, r0.width, r0.height);
     var leer = /rgba\(0, 0, 0, 0\)|transparent/;
+    var nurSchirm = function (el) { return el && el.closest && el.closest('.b-nur-schirm'); };
     var els = Array.prototype.slice.call(blatt.querySelectorAll('*'));
     els.forEach(function (el) {
+      if (nurSchirm(el)) return;
       var cs = getComputedStyle(el);
       if (cs.display === 'none' || cs.visibility === 'hidden') return;
       var r = el.getBoundingClientRect();
@@ -10434,7 +10529,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var node;
     while ((node = tw.nextNode())) {
       var t = node.nodeValue;
-      if (!t || !t.trim()) continue;
+      if (!t || !t.trim() || nurSchirm(node.parentElement)) continue;
       var pcs = getComputedStyle(node.parentElement);
       if (pcs.display === 'none' || pcs.visibility === 'hidden') continue;
       ctx.font = pcs.fontStyle + ' ' + pcs.fontWeight + ' ' + pcs.fontSize + ' ' + pcs.fontFamily;
@@ -10969,15 +11064,47 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     } else if (o.type === 'unterschrift') {
       var uq = ligaBerichtQuelle();
       var uTeam = '';
-      if (uq) uTeam = (o.wer === 'heim') === !!uq.liga.heim ? LIGA.team : uq.liga.gegner;
-      html = '<h3>Unterschrift TC ' + (o.wer === 'heim' ? 'Heim' : 'Gast') + '</h3>' +
-        '<p>' + esc(uTeam) + ' · mit dem Finger im Feld unterschreiben</p>' +
+      var uHeim = o.wer === 'nachmeldung' ? o.person.team === 'H' : o.wer === 'heim';
+      if (uq) uTeam = uHeim === !!uq.liga.heim ? LIGA.team : uq.liga.gegner;
+      html = '<h3>' + (o.wer === 'nachmeldung'
+          ? 'Unterschrift ' + esc(o.person.vor + ' ' + o.person.nach)
+          : 'Unterschrift TC ' + (o.wer === 'heim' ? 'Heim' : 'Gast')) + '</h3>' +
+        '<p>' + esc(uTeam) + ' · ' + (o.wer === 'nachmeldung'
+          ? 'mit der Unterschrift erkennt die Person die SWO und das Datenschutz-Merkblatt der SDM an'
+          : 'mit dem Finger im Feld unterschreiben') + '</p>' +
         (o.fehler ? '<p class="hint fehler" role="alert">' + esc(o.fehler) + '</p>' : '') +
         '<canvas id="signatur" class="signatur" aria-label="Unterschriftsfeld"></canvas>' +
         '<div class="row-btns">' +
           '<button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
           '<button class="btn ghost" data-action="signatur-nochmal">Nochmal</button>' +
           '<button class="btn primary" data-action="signatur-weiter">Weiter</button>' +
+        '</div>';
+    } else if (o.type === 'nachmeldung') {
+      var nq = ligaBerichtQuelle();
+      var nHeimTeam = nq ? (nq.liga.heim ? LIGA.team : nq.liga.gegner) : 'Heim';
+      var nGastTeam = nq ? (nq.liga.heim ? nq.liga.gegner : LIGA.team) : 'Gast';
+      var nd = o.draft;
+      var nWahl = function (feld, wert, text) {
+        return '<button data-action="nm-wahl" data-feld="' + feld + '" data-value="' + wert + '" class="' +
+          (nd[feld] === wert ? 'active' : '') + '">' + text + '</button>';
+      };
+      html = '<h3>Spieler nachmelden</h3>' +
+        '<p>Alle Felder ausfüllen, danach unterschreibt die Person. Gebühr: 10 € (U18: 2 €) innerhalb von 14 Tagen.</p>' +
+        (o.fehler ? '<p class="hint fehler" role="alert">' + esc(o.fehler) + '</p>' : '') +
+        '<div class="liga-start">' +
+          '<div class="ls-titel">Team</div>' +
+          '<div class="options">' + nWahl('team', 'H', esc(nHeimTeam) + ' (Heim)') + nWahl('team', 'G', esc(nGastTeam) + ' (Gast)') + '</div>' +
+          '<div class="ls-titel">Name</div>' +
+          '<label class="ls-zeile"><input data-role="nm-nach" maxlength="30" autocomplete="off" value="' + esc(nd.nach) + '" placeholder="Nachname"></label>' +
+          '<label class="ls-zeile"><input data-role="nm-vor" maxlength="30" autocomplete="off" value="' + esc(nd.vor) + '" placeholder="Vorname"></label>' +
+          '<div class="ls-titel">Unter 18?</div>' +
+          '<div class="options">' + nWahl('u18', 'ja', 'ja') + nWahl('u18', 'nein', 'nein') + '</div>' +
+          '<div class="ls-titel">Geschlecht</div>' +
+          '<div class="options">' + nWahl('g', 'w', 'w') + nWahl('g', 'm', 'm') + nWahl('g', 'd', 'd') + '</div>' +
+        '</div>' +
+        '<div class="row-btns two">' +
+          '<button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
+          '<button class="btn primary" data-action="nm-weiter">Weiter zur Unterschrift</button>' +
         '</div>';
     } else if (o.type === 'bericht-versand') {
       html = '<h3>Spielbericht versenden</h3>' +
@@ -12537,6 +12664,19 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       case 'bericht-drucken':
         window.print();
         break;
+      case 'liga-nachmelden':
+        nachmeldungStarten();
+        break;
+      case 'nm-wahl':
+        if (UI.overlay && UI.overlay.type === 'nachmeldung') {
+          UI.overlay.draft[el.getAttribute('data-feld')] = el.getAttribute('data-value');
+          UI.overlay.fehler = '';
+          render();
+        }
+        break;
+      case 'nm-weiter':
+        nachmeldungWeiter();
+        break;
       case 'bericht-unterschreiben':
         berichtUnterschreibenStarten();
         break;
@@ -12767,7 +12907,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   var STICKY_OVERLAYS = { 'checkout-darts': 1, 'leg-done': 1, 'match-done': 1, 'game-done': 1, 'turnier-ende': 1 };
   /* Vollbild-Dialoge haben keinen "Rand daneben" - ein Tipp auf leere Flaeche
      (oder beim Unterschreiben knapp neben das Feld) schliesst sie nicht. */
-  var VOLLBILD_DIALOGE = { 'liga-start': 1, 'uebung-start': 1, 'unterschrift': 1, 'bericht-versand': 1 };
+  var VOLLBILD_DIALOGE = { 'liga-start': 1, 'uebung-start': 1, 'unterschrift': 1, 'bericht-versand': 1, 'nachmeldung': 1 };
   /* Druck-Blitz: jede wirklich gedrueckte Taste leuchtet kurz auf. Als
      neu gestartete Animation, nicht nur :active - ein 30-ms-Tipp waere
      sonst unsichtbar, und am Board braucht man die Gewissheit, dass der
@@ -12944,6 +13084,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   /* Name im Profil-Dialog: nur den Entwurf pflegen, nicht neu rendern –
      sonst verliert das Feld beim Tippen den Fokus. */
   document.addEventListener('input', function (ev) {
+    if ((ev.target.getAttribute('data-role') === 'nm-nach' || ev.target.getAttribute('data-role') === 'nm-vor') &&
+        UI.overlay && UI.overlay.type === 'nachmeldung') {
+      UI.overlay.draft[ev.target.getAttribute('data-role') === 'nm-nach' ? 'nach' : 'vor'] = ev.target.value;
+    }
     if (ev.target.getAttribute('data-role') === 'bericht-mail' && UI.overlay && UI.overlay.type === 'bericht-versand') {
       UI.overlay.adressen[Number(ev.target.getAttribute('data-i'))] = ev.target.value;
     }
