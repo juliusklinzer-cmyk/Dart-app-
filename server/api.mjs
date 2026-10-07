@@ -657,16 +657,19 @@ export function createApi(db, config) {
     const u = verlangeNutzer(req);
     const t = verlangeTurnier(turnierId(treffer[0]));
     verlangeTeilnahme(t, u);
-    if (t.status !== 'offen') throw new HttpFehler(409, 'Dieses Turnier ist beendet.');
+    /* 409 immer mit Grund, damit das Geraet richtig reagiert: 'beendet'
+       (Turnier zu), 'gespielt' (Ergebnis liegt vor), 'belegt' (anderes
+       Geraet spielt die Partie). */
+    if (t.status !== 'offen') return sendJson(res, 409, { fehler: 'Dieses Turnier ist beendet.', grund: 'beendet' });
     const mid = turnierId(treffer[1]);
 
     const jetzt = Date.now();
     const da = db.prepare('SELECT * FROM tournament_matches WHERE tournament_id = ? AND match_id = ?')
       .get(t.id, mid);
-    if (da && da.result) throw new HttpFehler(409, 'Diese Partie ist schon gespielt.');
+    if (da && da.result) return sendJson(res, 409, { fehler: 'Diese Partie ist schon gespielt.', grund: 'gespielt', turnier: turnierAntwort(t, 0, u) });
     if (da && da.claimed_by && da.claimed_by !== u.id && jetzt - (da.claimed_at || 0) < CLAIM_FRIST) {
       namenLaden(u);
-      throw new HttpFehler(409, (namen.get(da.claimed_by) || 'Jemand') + ' schreibt diese Partie gerade mit.');
+      return sendJson(res, 409, { fehler: (namen.get(da.claimed_by) || 'Jemand') + ' schreibt diese Partie gerade mit.', grund: 'belegt', turnier: turnierAntwort(t, 0, u) });
     }
 
     transaktion(db, function () {
@@ -716,11 +719,14 @@ export function createApi(db, config) {
 
     const da = db.prepare('SELECT * FROM tournament_matches WHERE tournament_id = ? AND match_id = ?')
       .get(t.id, mid);
-    // Fremdes Ergebnis ueberschreiben waere der eine Fall, in dem wirklich
-    // etwas verlorenginge -- also nur der, der die Partie beansprucht hat.
-    if (da && da.claimed_by && da.claimed_by !== u.id) {
+    /* Ein Ergebnis ist das Wertvollste, was es gibt: Liegt fuer die Partie
+       noch keins vor, wird es angenommen - egal, wer sie gerade beansprucht
+       (der Anspruch regelt nur, wer spielt). Ein schon vorliegendes
+       Ergebnis darf nur sein Schreiber ersetzen (Korrektur nach Undo). */
+    if (da && da.result && da.claimed_by && da.claimed_by !== u.id) {
       namenLaden(u);
-      throw new HttpFehler(409, (namen.get(da.claimed_by) || 'Jemand') + ' schreibt diese Partie mit.');
+      return sendJson(res, 409, { fehler: (namen.get(da.claimed_by) || 'Jemand') + ' hat diese Partie schon eingetragen.',
+        grund: 'gespielt', turnier: turnierAntwort(t, 0, u) });
     }
     // Das Ergebnis ersetzt im Client die Partie als Ganzes: also muss es
     // auch eine sein -- und zwar genau diese.
@@ -740,6 +746,23 @@ export function createApi(db, config) {
           ' claimed_by = excluded.claimed_by, result = excluded.result,' +
           ' seq = excluded.seq, updated_at = excluded.updated_at'
       ).run(t.id, mid, u.id, Date.now(), ergebnisText, s, new Date().toISOString());
+      /* Kommt ein Ergebnis erst nach dem Ende (Funkloch beim Checkout), wird
+         es auch ins Archiv des Turniers nachgetragen; die Geraete holen den
+         geaenderten Archiv-Eintrag beim naechsten Abgleich (stand steigt). */
+      if (t.status !== 'offen') {
+        const archiv = db.prepare('SELECT id, payload FROM games WHERE id = ? AND deleted_at IS NULL').get(t.id);
+        if (archiv) {
+          const pl = JSON.parse(archiv.payload);
+          if (Array.isArray(pl.matches)) {
+            const i = pl.matches.findIndex((m) => m && m.id === mid);
+            if (i >= 0) {
+              pl.matches[i] = body.result;
+              pl.stand = (Number(pl.stand) || 0) + 1;
+              db.prepare('UPDATE games SET payload = ?, seq = ? WHERE id = ?').run(JSON.stringify(pl), nextSeq(db), archiv.id);
+            }
+          }
+        }
+      }
     });
     kontingentZaehlen(u, 'spiele');
     sendJson(res, 200, { turnier: turnierAntwort(t, 0, u) });

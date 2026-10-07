@@ -788,6 +788,11 @@
       return !a || !a.done;
     });
     if (fehlt) return false;
+    /* Nie mitten in einem angefangenen Einzel oder einer Korrektur. */
+    var laeuft = S.matches.some(function (m) {
+      return !m.done && (m.korrektur || m.legs.some(function (l) { return l.visits.length > 0; }));
+    });
+    if (laeuft) return false;
     var war = S.tour.liga ? 'Das Ligaspiel' : 'Das Turnier';
     S.tour = null; S.matches = []; S.current = null;
     if (['tournament', 'game', 'bulloff', 'winner', 'summary', 'bericht'].indexOf(S.screen) >= 0) {
@@ -802,8 +807,14 @@
 
   /* Der Herzschlag sagt: dieses Einzel hat das andere Geraet uebernommen
      (hier kam zehn Minuten lang nichts). */
-  function einzelVerloren(matchId, text) {
+  function einzelVerloren(matchId, text, grund) {
     if (S.current !== matchId) return;
+    if (grund === 'beendet') {
+      /* Turnier woanders beendet: hier zu Ende spielen, das Ergebnis wird
+         nachgetragen (auch ins Archiv). Nur Bescheid sagen. */
+      if (S.tour) S.tour.beendet = true;
+      return;
+    }
     S.current = null;
     if (S.screen === 'game' || S.screen === 'bulloff') S.screen = 'tournament';
     UI.overlay = { type: 'hinweis', titel: 'Einzel übernommen',
@@ -811,9 +822,13 @@
     save(); render();
   }
 
-  function uebernehmeTurnier(daten) {
+  function uebernehmeTurnier(daten, beitritt) {
     if (!daten || !daten.plan) return false;
     var neu = false;
+    /* Neu angelegt wird ein Turnier nur beim Beitreten. Eine verspaetete
+       Server-Antwort zu einem schon beendeten oder fremden Turnier darf den
+       Stand hier nicht ueberschreiben. */
+    if (!beitritt && (!S.tour || S.tour.sid !== daten.id)) return false;
 
     // Noch nicht dabei: Plan übernehmen. Ein laufendes eigenes Turnier ist an
     // dieser Stelle schon weggeräumt – siehe turnierBeitreten().
@@ -865,7 +880,12 @@
         /* Ausnahme: dieses Geraet hat die eigene, schon gemeldete Partie per
            Zuruecknehmen wieder geoeffnet und korrigiert sie gerade. Dann
            kommt das neue Ergebnis beim naechsten Checkout ohnehin hoch. */
-        if (m.korrektur && !m.done && Date.now() - m.korrektur < 15 * 60 * 1000) return;
+        if (m.korrektur && !m.done && Date.now() - m.korrektur < 15 * 60 * 1000) return neu;
+        /* Ein hier fertiges, noch nicht beim Server angekommenes Ergebnis
+           (gemeldet false/fehlt) gewinnt, bis es oben ist oder der Server
+           es ausdruecklich ablehnt ('abgelehnt') - sonst ueberschriebe der
+           volle Abgleich eine Korrektur mit dem alten Stand. */
+        if (m.done && m.gemeldet !== true && m.gemeldet !== 'abgelehnt' && m.at !== p.result.at) return neu;
         if (!m.done || m.at !== p.result.at) {
           S.matches[S.matches.indexOf(m)] = p.result;
           if (S.current === m.id) S.current = null;
@@ -913,7 +933,7 @@
     if (S.matches.length) archiveTournament();
     S.tour = null;
     S.matches = [];
-    uebernehmeTurnier(daten);
+    uebernehmeTurnier(daten, true);
     S.screen = 'tournament';
     save();
     render();
@@ -1869,7 +1889,7 @@
     leg.winner = null;
     /* Im geteilten Turnier ist das Ergebnis schon beim Server: merken, dass
        hier korrigiert wird, sonst holt der Abgleich das alte zurueck. */
-    if (m.done && m.kind !== 'quick' && geteiltesTurnier()) m.korrektur = Date.now();
+    if (m.done && m.kind !== 'quick' && geteiltesTurnier()) { m.korrektur = Date.now(); m.gemeldet = false; }
     m.done = false;
     m.winner = null;
     m.at = null;
@@ -2942,6 +2962,15 @@
         if (!vorhanden[s.id]) return;
         S.history = S.history.filter(function (h) { return h.id !== s.id; });
         delete vorhanden[s.id];
+        geaendert++;
+        return;
+      }
+      /* Der Server hat ein Archiv nachgetragen (Ergebnis kam nach dem Ende):
+         die Partien des vorhandenen Eintrags aktualisieren. */
+      if (vorhanden[s.id] && s.payload && (Number(s.payload.stand) || 0) > (Number(vorhanden[s.id].stand) || 0) &&
+          Array.isArray(s.payload.matches) && spielGueltig(s.payload)) {
+        vorhanden[s.id].matches = s.payload.matches;
+        vorhanden[s.id].stand = Number(s.payload.stand) || 0;
         geaendert++;
         return;
       }
@@ -7355,19 +7384,32 @@
       })
     };
   }
+  /* Immer nur ein Plan unterwegs: ein zweiter Wechsel kurz danach wartet
+     und geht mit dem dann aktuellen Planstand raus. Ohne Netz bleibt
+     "planOffen" stehen und der naechste Abgleich schickt ihn nach. */
+  var planUnterwegs = false, planNochmal = false;
   function geteiltenPlanSenden() {
     var t = geteiltesTurnier();
     if (!t || !window.DartSync || !window.DartSync.turnier || !window.DartSync.turnier.planAendern) return;
+    S.tour.planOffen = true; save();
+    if (planUnterwegs) { planNochmal = true; return; }
+    planUnterwegs = true;
     window.DartSync.turnier.planAendern(planAusStand(), S.tour.planStand || 0).then(function (d) {
-      if (d && d.turnier && d.turnier.plan) { S.tour.planStand = d.turnier.plan.planStand || 0; save(); }
+      planUnterwegs = false;
+      if (d && d.turnier && d.turnier.plan) { S.tour.planStand = d.turnier.plan.planStand || 0; }
+      if (planNochmal) { planNochmal = false; save(); geteiltenPlanSenden(); return; }
+      delete S.tour.planOffen; save();
     }).catch(function (e) {
+      planUnterwegs = false; planNochmal = false;
+      if (!e || !e.status) return;   // kein Netz: planOffen bleibt, der Abgleich schickt nach
+      delete S.tour.planOffen;
       /* Das andere iPad war schneller: dessen Plan gilt, der Wechsel hier
          muss neu gemacht werden. */
       if (e && e.status === 409 && e.daten && e.daten.turnier) {
         uebernehmeTurnier(e.daten.turnier);
         UI.overlay = { type: 'hinweis', titel: 'Wechsel nicht übernommen',
           text: 'Auf dem anderen iPad wurde gerade auch gewechselt. Bitte den Wechsel hier noch einmal prüfen und ggf. wiederholen.' };
-      } else {
+      } else if (e && e.status) {
         UI.overlay = { type: 'hinweis', titel: 'Wechsel nur hier',
           text: 'Der Wechsel kam nicht beim Server an (' + (e && e.message ? e.message : 'kein Netz') + '). Das andere iPad kennt ihn noch nicht – bitte dort ebenfalls wechseln oder gleich nochmal versuchen.' };
       }
@@ -7377,6 +7419,9 @@
   /* Einen geaenderten Plan vom anderen iPad uebernehmen: Aufstellung und
      Spielerlisten, und die Paarungen der Einzel, die hier noch nicht
      begonnen sind und gerade nicht hier gespielt werden. */
+  function planNachreichen() {
+    if (S.tour && S.tour.planOffen && !planUnterwegs) geteiltenPlanSenden();
+  }
   function planAnwenden(plan) {
     if (!S.tour || !plan) return false;
     var lgNeu = plan.liga, lg = S.tour.liga;
@@ -7409,8 +7454,10 @@
     /* Im geteilten Spiel (zwei iPads) geht der Wechsel als geaenderter
        Spielplan an den Server; das andere Geraet uebernimmt ihn beim
        naechsten Abgleich (planAnwenden). Ohne Netz geht das nicht. */
-    if (geteiltesTurnier() && !(window.DartSync && window.DartSync.turnier && window.DartSync.turnier.planAendern && navigator.onLine !== false)) {
-      return 'Im geteilten Ligaspiel braucht der Wechsel Netz – bitte gleich nochmal versuchen.';
+    /* Ohne Netz geht der Wechsel trotzdem: er gilt hier sofort und wird
+       nachgereicht, sobald wieder Netz da ist (planOffen). */
+    if (geteiltesTurnier() && !(window.DartSync && window.DartSync.turnier && window.DartSync.turnier.planAendern)) {
+      return 'Diese App-Version kann im geteilten Ligaspiel nicht wechseln – bitte neu laden.';
     }
     var posListe = seite === 'H' ? lg.posH : lg.posG;
     var teamListe = seite === 'H' ? lg.heimSpieler : lg.gastSpieler;
@@ -7522,12 +7569,25 @@
      * für nichts gewesen.
      */
     if (geteiltesTurnier() && window.DartSync && window.DartSync.turnier) {
+      var angefangen = m.legs.some(function (l) { return l.visits.length > 0; });
+      /* Eine eigene Korrektur (Undo nach Checkout) oder ein hier schon
+         angefangenes Einzel im beendeten Turnier: ohne Anspruch weiter. */
+      if (m.korrektur || (S.tour.beendet && angefangen)) { oeffneJetzt(id); return; }
+      if (S.tour.beendet) {
+        UI.overlay = { type: 'hinweis', titel: 'Turnier beendet', text: 'Dieses Turnier wurde auf dem anderen Gerät beendet – neue Einzel lassen sich nicht mehr starten.' };
+        render();
+        return;
+      }
       UI.overlay = { type: 'warte', text: 'Partie wird übernommen …' };
       render();
       window.DartSync.turnier.beanspruchen(id).then(function () {
         UI.overlay = null;
         oeffneJetzt(id);
       }).catch(function (e) {
+        /* Kein Netz: trotzdem spielen. Der Anspruch kommt mit dem naechsten
+           Herzschlag, das Ergebnis wird nachgereicht. */
+        if (!e || !e.status) { UI.overlay = null; oeffneJetzt(id); return; }
+        if (e.daten && e.daten.turnier) uebernehmeTurnier(e.daten.turnier);
         UI.overlay = { type: 'hinweis', text: e && e.message ? e.message : 'Das hat nicht geklappt.' };
         render();
       });
@@ -9197,6 +9257,7 @@
       uebernehmeSpiele: uebernehmeSpiele,
       berichtPdf: berichtPdf,
       einzelVerloren: einzelVerloren,
+      planNachreichen: planNachreichen,
       berichtNeu: function () { berichtStand = null; },   // nur fuer Tests
       uebernehmeTurnier: uebernehmeTurnier,
       turnierListeAktualisieren: beitretbareHolen,

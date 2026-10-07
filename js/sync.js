@@ -391,6 +391,7 @@
     return turnierRuf('GET', '/' + t.sid + '?since=' + seit).then(function (d) {
       var neu = D.uebernehmeTurnier(d.turnier);
       ergebnisseNachreichen();
+      if (D.planNachreichen) D.planNachreichen();
       return neu;
     }).catch(function () {
       // Kein Netz oder Server weg: der Abend geht lokal weiter, der nächste
@@ -425,7 +426,11 @@
         /* 409: die Partie gehoert dem anderen Geraet - dessen Ergebnis gilt,
            hier nicht immer wieder anklopfen. Sonst (kein Netz, Server weg)
            reicht der naechste Takt es nach (ergebnisseNachreichen). */
-        if (e && e.status === 409) { match.gemeldet = 'abgelehnt'; D.save(); }
+        if (e && e.status === 409) {
+          match.gemeldet = 'abgelehnt';
+          if (e.daten && e.daten.turnier) D.uebernehmeTurnier(e.daten.turnier);   // das gueltige Ergebnis
+          D.save();
+        }
       });
   }
 
@@ -472,14 +477,21 @@
      Minuten nichts kam), sagt app.js Bescheid. */
   function turnierHerzschlag() {
     var S = D.state(), t = S.tour;
-    if (!t || !t.geteilt || !t.sid || !nutzer || !S.current) return;
-    if (S.screen !== 'game' && S.screen !== 'bulloff') return;
+    if (!t || !t.geteilt || !t.sid || !nutzer || !S.current || t.beendet) return;
     var m = S.matches.filter(function (x) { return x.id === S.current; })[0];
-    if (!m || m.done) return;
+    if (!m || m.done || m.korrektur) return;
+    /* Lebenszeichen, solange das Einzel hier laeuft: im Spiel, beim
+       Ausbullen - oder wenn schon geworfen wurde, auch von einem anderen
+       Bildschirm aus. */
+    var angefangen = m.legs.some(function (l) { return l.visits.length > 0; });
+    if (S.screen !== 'game' && S.screen !== 'bulloff' && !angefangen) return;
     turnierRuf('POST', '/' + t.sid + '/matches/' + m.id + '/claim').then(function (d) {
       D.uebernehmeTurnier(d.turnier);
     }).catch(function (e) {
-      if (e && e.status === 409 && D.einzelVerloren) D.einzelVerloren(m.id, e.message);
+      if (!e || e.status !== 409) return;
+      var grund = e.daten && e.daten.grund;
+      if (e.daten && e.daten.turnier) D.uebernehmeTurnier(e.daten.turnier);
+      if (D.einzelVerloren) D.einzelVerloren(m.id, e.message, grund);
     });
   }
 
@@ -489,6 +501,7 @@
     var t = D.state().tour;
     if (!t || !t.geteilt || !t.sid || !nutzer) return;
     turnierAbgleich(true).then(function (neu) { if (neu) D.render(); });
+    turnierHerzschlag();   // gleich melden, ob dieses Einzel noch hier laeuft
   }
 
   /* ================= Online-Spiel ================= */

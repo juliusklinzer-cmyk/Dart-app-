@@ -430,6 +430,7 @@ async function main() {
     gleich(r.status, 200, 'Julius beansprucht die erste Partie');
     r = await tobi.ruf('POST', '/api/tournaments/turnier1/matches/m1r1/claim');
     gleich(r.status, 409, 'Tobi kann dieselbe Partie nicht auch beanspruchen');
+    gleich(r.daten.grund, 'belegt', 'Grund: belegt');
     ok(String(r.daten.fehler).includes('Julius'), 'und erfaehrt, wer sie hat');
 
     r = await julius.ruf('POST', '/api/tournaments/turnier1/matches/m1r1/claim');
@@ -440,15 +441,17 @@ async function main() {
     const beideDa = r.daten.turnier.partien;
     gleich(beideDa.length, 2, 'beide Partien sind vergeben');
 
-    r = await tobi.ruf('PUT', '/api/tournaments/turnier1/matches/m1r1', {
-      result: { winner: tobi_id, legs: [] }
-    });
-    gleich(r.status, 409, 'ein fremdes Ergebnis wird nicht angenommen');
-
     r = await julius.ruf('PUT', '/api/tournaments/turnier1/matches/m1r1', {
-      result: { id: 'm1r1', winner: julius_id, legs: [{ winner: julius_id, visits: [] }], done: true }
+      result: { id: 'm1r1', p: [julius_id, tobi_id], winner: julius_id, legs: [{ winner: julius_id, visits: [] }], done: true }
     });
-    gleich(r.status, 200, 'sein eigenes schon');
+    gleich(r.status, 200, 'Julius traegt sein Ergebnis ein');
+
+    r = await tobi.ruf('PUT', '/api/tournaments/turnier1/matches/m1r1', {
+      result: { id: 'm1r1', p: [julius_id, tobi_id], winner: tobi_id, legs: [{ winner: tobi_id, visits: [] }], done: true }
+    });
+    gleich(r.status, 409, 'ein vorhandenes Ergebnis eines anderen wird nicht ueberschrieben');
+    gleich(r.daten.grund, 'gespielt', 'mit dem Grund "schon gespielt"');
+    ok(r.daten.turnier && r.daten.turnier.partien.find((p) => p.matchId === 'm1r1').result.winner === julius_id, 'und dem gueltigen Stand');
 
     r = await tobi.ruf('GET', '/api/tournaments/turnier1');
     const m1 = r.daten.turnier.partien.find((p) => p.matchId === 'm1r1');
@@ -488,10 +491,31 @@ async function main() {
     r = await julius.ruf('GET', '/api/tournaments/turnier1');
     ok(r.daten.turnier.partien.find((p) => p.matchId === 'm1r1').result.winner === julius_id, 'das fertige Ergebnis bleibt unberuehrt');
 
+    /* Ergebnis nach dem Ende (Funkloch beim Checkout): es landet auch im
+       Archiv des Turniers, und das Archiv bekommt einen hoeheren Stand. */
+    r = await julius.ruf('POST', '/api/games', {
+      id: 'turnier1', kind: 'tournament', at: Date.now(),
+      payload: { id: 'turnier1', kind: '501', at: Date.now(), lineup: [julius_id, tobi_id], settings: { start: 501, bestOf: 1 },
+        matches: [
+          { id: 'm1r1', p: [julius_id, tobi_id], legs: [{ winner: julius_id, visits: [] }], done: true, winner: julius_id },
+          { id: 'm2r1', p: [tobi_id, julius_id], legs: [], done: false }
+        ], winner: null },
+      players: [{ userId: julius_id }, { userId: tobi_id }]
+    });
+    ok(r.status === 200 || r.status === 201, 'das Archiv des Turniers liegt beim Server');
+
     r = await julius.ruf('POST', '/api/tournaments/turnier1/ende');
     gleich(r.daten.turnier.status, 'beendet', 'das Turnier laesst sich beenden');
     r = await julius.ruf('POST', '/api/tournaments/turnier1/plan', { plan: plan2, basis: 1 });
     gleich(r.status, 409, 'ein beendetes Turnier aendert keinen Plan mehr');
+    r = await tobi.ruf('PUT', '/api/tournaments/turnier1/matches/m2r1', {
+      result: { id: 'm2r1', p: [tobi_id, julius_id], winner: tobi_id, legs: [{ winner: tobi_id, visits: [] }], done: true }
+    });
+    gleich(r.status, 200, 'ein spaetes Ergebnis wird nach dem Ende noch angenommen');
+    r = await tobi.ruf('GET', '/api/games?since=0');
+    const archiv1 = (r.daten.spiele || r.daten.games || []).find((g) => g.id === 'turnier1');
+    ok(archiv1 && archiv1.payload.stand === 1 && archiv1.payload.matches[1].done === true && archiv1.payload.matches[1].winner === tobi_id,
+      'und im Archiv nachgetragen (stand 1, Partie fertig)');
     r = await tobi.ruf('GET', '/api/tournaments');
     gleich(r.daten.turniere.length, 0, 'danach steht es nicht mehr zum Beitreten');
     r = await julius.ruf('POST', '/api/tournaments/turnier1/matches/m2r1/claim');
