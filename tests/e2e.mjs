@@ -235,6 +235,12 @@ check('Statistik zeigt Sieger und Legs', sumText.includes('gewinnt') && sumText.
 check('Statistik zeigt Average je Spieler', (await page.locator('#summary-box .sum-card').count()) === 2 && sumText.includes('3-Dart-Average'));
 check('Statistik zeigt Doppelquote und bestes Leg', sumText.includes('Doppelquote') && sumText.includes('Bestes Leg'));
 check('Hinweis auf Gesamtstatistik', (await text('#summary-box')).includes('Karriere-Statistik'));
+check('das Ergebnis steht genau mittig, auch bei ungleich langen Namen', await page.evaluate(() => {
+  const z = document.querySelector('#summary-box .sum-score.zwei');
+  z.firstElementChild.textContent = 'Vincent von Frankenberg';
+  const b = z.querySelector('b').getBoundingClientRect(), r = z.getBoundingClientRect();
+  return Math.abs((b.left + b.width / 2) - (r.left + r.width / 2)) < 2;
+}));
 await page.locator('#summary-actions [data-action="to-winner"]').click();
 check('Sieger-Screen', await visible('#screen-winner'));
 check('Podium mit 4 Plätzen', (await page.locator('.podium .p').count()) === 4);

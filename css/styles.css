@@ -3595,3 +3595,11 @@ body.tastatur #screen-bulloff button:focus {
 @media (orientation: landscape) and (max-height: 560px) {
   .key-display { height: max(56px, calc(1em + 2 * var(--space-2) + 4px)); }
 }
+
+/* Spielstatistik, zwei Spieler: das Ergebnis steht immer genau in der
+   Mitte - links der eine Name rechtsbuendig, rechts der andere
+   linksbuendig. Vorher war die Zeile als Ganzes zentriert, und ein langer
+   Name ("Vincent von Frankenberg") schob das 2:0 zur Seite. */
+.sum-score.zwei { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+.sum-score.zwei > span:first-child { text-align: right; }
+.sum-score.zwei > span:last-child { text-align: left; }

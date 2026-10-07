@@ -3607,6 +3607,14 @@ body.tastatur #screen-bulloff button:focus {
   .key-display { height: max(56px, calc(1em + 2 * var(--space-2) + 4px)); }
 }
 
+/* Spielstatistik, zwei Spieler: das Ergebnis steht immer genau in der
+   Mitte - links der eine Name rechtsbuendig, rechts der andere
+   linksbuendig. Vorher war die Zeile als Ganzes zentriert, und ein langer
+   Name ("Vincent von Frankenberg") schob das 2:0 zur Seite. */
+.sum-score.zwei { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+.sum-score.zwei > span:first-child { text-align: right; }
+.sum-score.zwei > span:last-child { text-align: left; }
+
 </style>
 </head>
 <body>
@@ -11202,7 +11210,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           ? '<div class="sum-score">' + m.p.map(function (pid) {
               return '<span class="' + (m.winner === pid ? 'w' : '') + '">' + esc(pname(pid)) + ' <b>' + legsWon(m, pid) + '</b></span>';
             }).join(' · ') + '</div>'
-          : '<div class="sum-score">' +
+          : '<div class="sum-score zwei">' +
             '<span class="' + (m.winner === m.p[0] ? 'w' : '') + '">' + esc(pname(m.p[0])) + '</span>' +
             '<b>' + legsWon(m, m.p[0]) + ':' + legsWon(m, m.p[1]) + '</b>' +
             '<span class="' + (m.winner === m.p[1] ? 'w' : '') + '">' + esc(pname(m.p[1])) + '</span>' +

@@ -6276,7 +6276,7 @@
           ? '<div class="sum-score">' + m.p.map(function (pid) {
               return '<span class="' + (m.winner === pid ? 'w' : '') + '">' + esc(pname(pid)) + ' <b>' + legsWon(m, pid) + '</b></span>';
             }).join(' · ') + '</div>'
-          : '<div class="sum-score">' +
+          : '<div class="sum-score zwei">' +
             '<span class="' + (m.winner === m.p[0] ? 'w' : '') + '">' + esc(pname(m.p[0])) + '</span>' +
             '<b>' + legsWon(m, m.p[0]) + ':' + legsWon(m, m.p[1]) + '</b>' +
             '<span class="' + (m.winner === m.p[1] ? 'w' : '') + '">' + esc(pname(m.p[1])) + '</span>' +
