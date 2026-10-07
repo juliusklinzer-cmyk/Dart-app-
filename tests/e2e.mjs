@@ -3018,10 +3018,10 @@ check('und laesst sich zuruecknehmen', await page.evaluate(() =>
   window.__dart.activeLeg(window.__dart.currentMatch()).visits.length === 0));
 await page.keyboard.press('NumpadMultiply');
 check('"*" ausserhalb der Liga tut nichts', await page.evaluate(() => !window.__dart.ui().overlay));
-await page.keyboard.press('NumpadAdd');
-check('"+" blendet die Liste aller Wuerfe ein', await page.evaluate(() => document.getElementById('screen-game').classList.contains('verlauf')));
-await page.keyboard.press('NumpadAdd');
-check('und wieder aus', await page.evaluate(() => !document.getElementById('screen-game').classList.contains('verlauf')));
+await page.keyboard.down('NumpadAdd');
+check('"+" gedrueckt halten zeigt die Liste aller Wuerfe', await page.evaluate(() => document.getElementById('screen-game').classList.contains('verlauf')));
+await page.keyboard.up('NumpadAdd');
+check('Loslassen fuehrt zurueck', await page.evaluate(() => !document.getElementById('screen-game').classList.contains('verlauf')));
 /* Auf Rest 40 spielen, dann die Dart-Frage mit Pfeilen beantworten. */
 {
   const tp = async (z) => { await page.keyboard.type(z); await page.keyboard.press('Enter'); };

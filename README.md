@@ -302,8 +302,7 @@ nächsten Modus weiter (aus dem Turnier-Modus also zurück zu Punkte), **Esc**
 (am Magic Keyboard ohne Esc-Taste auch **⌘+.**) beendet ihn direkt – und er
 überlebt einen Neustart. **Ziffernblock ohne Pfeiltasten** (z. B. Satechi):
 **8/2/4/6** = hoch/runter/links/rechts überall dort, wo Ziffern nichts zählen
-(Dialoge, Ausbullen, nächstes Einzel), **/** = Tab, **+** = Liste aller Würfe
-ein/aus, **clear** = Rest buchen (Rest 50, „8“ + clear = 42 geworfen),
+(Dialoge, Ausbullen, nächstes Einzel), **/** = Tab, **+** gedrückt halten = Liste aller Würfe, **clear** = Rest buchen (Rest 50, „8“ + clear = 42 geworfen),
 **-** = überworfen, **\*** = Team-Zwischenstand groß ein/aus (nur Ligaspiel); die
 gewählte Schaltfläche ist bei Tastaturbedienung immer markiert. Das **ganze Einzel läuft über die Tastatur**, und
 alle Anzeigen sind auf die Distanz vom Oche (~3 m) ausgelegt: Spielername,

@@ -9245,17 +9245,18 @@
   });
 
   document.addEventListener('keydown', function (ev) {
-    /* "+" am Ziffernblock blendet die Liste aller Wuerfe ein und aus. */
+    /* "+" am Ziffernblock zeigt die Liste aller Wuerfe, solange er
+       gedrueckt bleibt (wie Shift) - Loslassen fuehrt zurueck. */
     if ((ev.key === '+' || ev.code === 'NumpadAdd') && S.screen === 'game' && UI.turnier && !UI.overlay) {
       ev.preventDefault();
-      $('screen-game').classList.toggle('verlauf');
+      $('screen-game').classList.add('verlauf');
       return;
     }
     if (ev.key !== 'Shift' || S.screen !== 'game' || !UI.turnier) return;
     $('screen-game').classList.add('verlauf');
   });
   document.addEventListener('keyup', function (ev) {
-    if (ev.key !== 'Shift') return;
+    if (ev.key !== 'Shift' && ev.key !== '+' && ev.code !== 'NumpadAdd') return;
     var sgEl = $('screen-game');
     if (sgEl) sgEl.classList.remove('verlauf');
   });
