@@ -3728,6 +3728,16 @@ group('Einmalige Korrektur: Spielbericht 1. Spieltag');
     einmal: !!window.__dart.state().history.find((h) => h.id === 'vdmmbu0').liga.korrekturSt01
   }));
   check('im unterschriebenen Bericht steht jetzt H5 – G1', k.zeile === 'H5 – G1', JSON.stringify(k));
+  /* Ein Gast, den dieses Geraet nur mit ganzem Namen kennt (kam vom anderen
+     iPad), steht trotzdem getrennt in Vorname und Name. */
+  const gastZeile = await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    const p = S.profiles.find((x) => x.id === 'k_g1'); delete p.voll; p.name = 'Vincent von Frankenberg';
+    D.berichtNeu(); D.setScreen('bericht');
+    const zellen = document.querySelectorAll('#bericht-blatt .b-spieler')[1].querySelectorAll('tr')[1].querySelectorAll('td');
+    return [zellen[0].textContent, zellen[1].textContent];
+  });
+  check('Gastnamen stehen getrennt in Vorname und Name (auch mit "von")', gastZeile[0] === 'Vincent' && gastZeile[1] === 'von Frankenberg', JSON.stringify(gastZeile));
   check('Nachmeldungen und Proteste: nein angekreuzt', k.nach.includes('nein X') && k.prot.includes('nein X'), JSON.stringify(k));
   check('der Bericht bleibt final und die Korrektur laeuft nur einmal', k.final && k.einmal, JSON.stringify(k));
   await page.evaluate(() => {

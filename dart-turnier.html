@@ -5827,7 +5827,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     Object.keys(g.namen).forEach(function (fid) {
       if (S.profiles.some(function (p) { return p.id === fid; })) return;
       S.profiles.push({
-        id: fid, name: String(g.namen[fid]).slice(0, 30),
+        id: fid, name: String(g.namen[fid]).slice(0, 30), voll: String(g.namen[fid]).slice(0, 60),
         avatar: null, hue: freeHue(), created: Date.now(),
         gast: true, hidden: true
       });
@@ -7774,7 +7774,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         Object.keys(eintrag.namen).forEach(function (fid) {
           if (S.profiles.some(function (p) { return p.id === fid; })) return;
           S.profiles.push({
-            id: fid, name: String(eintrag.namen[fid]).slice(0, 30),
+            id: fid, name: String(eintrag.namen[fid]).slice(0, 30), voll: String(eintrag.namen[fid]).slice(0, 60),
             avatar: null, hue: freeHue(), created: Date.now(),
             gast: true, hidden: true
           });
@@ -10297,13 +10297,22 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         var vor = '', nach = '';
         if (ids[i]) {
           var prof = profile(ids[i]);
-          if (prof && prof.voll) {
-            /* Buergerlicher Name: das letzte Wort ist der Nachname. */
-            var teile = prof.voll.trim().split(' ');
-            nach = teile.length > 1 ? teile.pop() : '';
+          /* Buergerlicher Name: das letzte Wort ist der Nachname. Kennt
+             dieses Geraet einen Gast nur mit ganzem Namen (er kam vom
+             anderen iPad oder aus dem Archiv), wird der genauso getrennt -
+             sonst stuende "Max Mustermann" komplett unter Vorname. */
+          var ganz = prof && prof.voll ? prof.voll : (prof && prof.gast ? prof.name : '');
+          if (ganz && String(ganz).trim().indexOf(' ') > 0) {
+            var teile = String(ganz).trim().split(/\s+/);
+            var nachTeile = [teile.pop()];
+            /* Namenszusaetze gehoeren zum Nachnamen: "Vincent von Frankenberg". */
+            while (teile.length > 1 && /^(von|van|vom|zu|zum|zur|de|del|der|den|di|da|la|le|ten|ter)$/i.test(teile[teile.length - 1])) {
+              nachTeile.unshift(teile.pop());
+            }
+            nach = nachTeile.join(' ');
             vor = teile.join(' ');
           } else {
-            vor = pname(ids[i]);
+            vor = ganz || pname(ids[i]);
           }
         }
         zeilen += '<tr' + (i === 3 ? ' class="b-trenn"' : '') + '>' +
