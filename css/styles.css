@@ -3580,3 +3580,18 @@ body.tastatur #screen-bulloff button:focus {
   box-shadow: 0 0 26px var(--schein-stark);
   border-radius: var(--r-s);
 }
+
+/* Am Board darf beim Tippen nichts wackeln:
+   - Die Aufnahmen-Spalten neben der Eingabe bestimmen die Hoehe NICHT mit
+     (contain: size) - sie fuellen nur die Hoehe, die das Eingabefeld vorgibt,
+     und schneiden aeltere Aufnahmen unten ab. Vorher wuchsen sie bis zur
+     ~6. Runde mit und schoben die Spielerkarten Stueck fuer Stueck hoch.
+   - Das Eingabefeld hat eine feste Hoehe: Ziffern sind hoeher als der
+     Strich, mit der ersten Ziffer wuchs es sonst um ein paar Pixel. */
+.pad-key { align-items: stretch; }
+.pad-key .key-hist { contain: size; max-height: none; overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, #000 78%, transparent); mask-image: linear-gradient(to bottom, #000 78%, transparent); }
+.key-display { height: max(150px, calc(1em + 2 * var(--space-2) + 4px)); min-height: 0; overflow: hidden; }
+@media (orientation: landscape) and (max-height: 560px) {
+  .key-display { height: max(56px, calc(1em + 2 * var(--space-2) + 4px)); }
+}

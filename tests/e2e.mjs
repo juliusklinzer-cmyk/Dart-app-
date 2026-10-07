@@ -2990,6 +2990,15 @@ check('Enter setzt den Anwerfer und startet in der Riesenanzeige',
     const m = window.__dart.currentMatch();
     return m.starter === m.p[1];
   }));
+/* Beim Tippen wackelt nichts: Eingabefeld und Karten behalten ihre Hoehe. */
+{
+  const masse = () => page.evaluate(() => ['#key-display', '#screen-game .pcard', '#screen-game .input-area']
+    .map((s) => Math.round(document.querySelector(s).getBoundingClientRect().height)).join(','));
+  const vorher = await masse();
+  await page.keyboard.type('41');
+  check('die erste Ziffer aendert keine Hoehe (Eingabefeld, Karten)', (await masse()) === vorher, vorher + ' -> ' + (await masse()));
+  await page.keyboard.press('Backspace'); await page.keyboard.press('Backspace');
+}
 /* "clear" bucht den REST: 501 Rest, "321" + clear = 180 geworfen. */
 await page.keyboard.type('321'); await page.keyboard.press('NumLock');
 check('"clear" bucht das Getippte als Rest (321 Rest = 180 geworfen)', await page.evaluate(() => {
