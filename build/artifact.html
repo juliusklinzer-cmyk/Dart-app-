@@ -11510,7 +11510,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       var m1 = currentMatch();
       /* Am Board waehlen die Pfeile zwischen Weiter und Ruecknahme - nur
          die Wahl ist hell und traegt den Ring. */
-      var ldWahl = UI.turnier && turnierErlaubt() ? (o.wahl || 0) : -1;
+      var ldWahl = (UI.turnier && turnierErlaubt()) || tastaturBetrieb() ? (o.wahl || 0) : -1;
+      var ldUeb = legDoneUebersicht();
       var ldKl = function (i, sonst) {
         if (ldWahl < 0) return sonst;
         return i === ldWahl ? 'btn primary full wahl' : 'btn ghost full';
@@ -11522,7 +11523,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '<p>Stand: ' + ldStand + '</p>' +
         '<button class="' + ldKl(0, 'btn primary full') + '" data-action="ov-next-leg">' + (o.satz ? 'Nächster Satz' : 'Nächstes Leg') + '</button>' +
         '<button class="' + ldKl(1, 'btn ghost full') + '" data-action="undo">Eingabe rückgängig</button>' +
-        (ldWahl >= 0 ? '<p class="te-hint">↑ ↓ / Tab · wählen &nbsp;&nbsp; Enter · bestätigen &nbsp;&nbsp; Löschen · direkt zurück</p>' : '');
+        (ldUeb ? '<button class="' + ldKl(2, 'btn ghost full') + '" data-action="to-tournament">' +
+          (S.tour && S.tour.liga ? 'Zur Ligaspiel-Übersicht' : 'Zur Turnierübersicht') + '</button>' : '') +
+        (ldWahl >= 0 ? '<p class="te-hint">8 / 2 · wählen &nbsp;&nbsp; Enter · bestätigen &nbsp;&nbsp; Löschen · direkt zurück</p>' : '');
     } else if (o.type === 'match-done') {
       var m2 = currentMatch();
       var last = !nextOpenMatch();
@@ -13836,6 +13839,14 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     commitVisit(0, 3, false, true);
   }
 
+  /* Leg-Ende im Turnier/Ligaspiel: dritte Wahl "zur Uebersicht" (das Einzel
+     bleibt offen und geht dort mit "Weiter" weiter). Im Schnellen Spiel
+     gibt es keinen Spielplan. */
+  function legDoneUebersicht() {
+    var m = currentMatch();
+    return !!(m && m.kind !== 'quick' && !S.game && S.matches.indexOf(m) >= 0);
+  }
+
   /* Welche Ziffer meint die Taste? Der Ziffernblock zaehlt immer als Ziffer -
      auch wenn NumLock aus ist und der Browser "Ende", "Pfeil hoch" usw.
      meldet (dann waere am Board sonst keine Zahl angekommen). */
@@ -13852,7 +13863,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   var ZIFFERN_PFEILE = { Numpad8: 'ArrowUp', Numpad2: 'ArrowDown', Numpad4: 'ArrowLeft', Numpad6: 'ArrowRight' };
   var ZIFFER_RICHTUNG = { '8': 'ArrowUp', '2': 'ArrowDown', '4': 'ArrowLeft', '6': 'ArrowRight' };
   var PFEIL_DIALOGE = { 'leg-done': 1, 'game-done': 1, 'turnier-ende': 1 };
-  var ZIFFERN_BLEIBEN = { 'checkout-darts': 1, 'edit-visit': 1, 'leg-done': 1, 'match-done': 1, 'game-done': 1 };
+  /* Nach dem Leg (leg-done) sind 8/2/4/6 Pfeile: dort wird gewaehlt
+     (naechstes Leg, Eingabe rueckgaengig, Turnieruebersicht). */
+  var ZIFFERN_BLEIBEN = { 'checkout-darts': 1, 'edit-visit': 1, 'match-done': 1, 'game-done': 1 };
   /* Wird mit der Tastatur gearbeitet, ist der gewaehlte Knopf immer
      deutlich markiert (keine Maus, kein Finger am Board). */
   window.addEventListener('keydown', function () { document.body.classList.add('tastatur'); }, true);
@@ -14109,14 +14122,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
        eine Ziffer nur geschluckt - nie zu einer Ruecknahme. */
     var zDialog = tasteZiffer(ev);
     if (zDialog !== null && !(ev.target && ev.target.closest && ev.target.closest('input, select, textarea'))) {
-      if (ov.type === 'leg-done') {
-        ev.preventDefault();
-        UI.overlay = null;
-        if (UI.turnier && turnierErlaubt()) UI.input = zDialog === '0' ? '0' : zDialog;
-        save(); render();
-        return;
-      }
-      if (ov.type === 'match-done' || ov.type === 'game-done') { ev.preventDefault(); return; }
+      /* Nach Leg- und Spielende wird eine Ziffer nur geschluckt (8/2/4/6
+         kommen im Leg-Ende-Dialog schon als Pfeile an) - nie zu einer
+         Ruecknahme oder einem stillen Weiter. */
+      if (ov.type === 'leg-done' || ov.type === 'match-done' || ov.type === 'game-done') { ev.preventDefault(); return; }
     }
     if (ov.type === 'checkout-darts') {
       var zCo = tasteZiffer(ev);
@@ -14196,15 +14205,17 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
          bestätigen, während „Eingabe rückgängig" unter dem Finger liegt. */
       var fokus = document.activeElement;
       var imDialog = fokus && fokus.closest && fokus.closest('#overlay');
-      var ldTastatur = UI.turnier && turnierErlaubt();
-      if (ldTastatur && (ev.key === 'ArrowDown' || ev.key === 'ArrowUp' ||
-          ev.key === 'ArrowRight' || ev.key === 'ArrowLeft' || ev.key === 'Tab')) {
-        ov.wahl = ev.key === 'Tab' ? 1 - (ov.wahl || 0)
-          : (ev.key === 'ArrowDown' || ev.key === 'ArrowRight') ? 1 : 0;
+      var ldN = legDoneUebersicht() ? 3 : 2;
+      var ldW = Math.min(ov.wahl || 0, ldN - 1);
+      if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp' ||
+          ev.key === 'ArrowRight' || ev.key === 'ArrowLeft' || ev.key === 'Tab') {
+        ov.wahl = ev.key === 'Tab' ? (ldW + 1) % ldN
+          : (ev.key === 'ArrowDown' || ev.key === 'ArrowRight') ? Math.min(ldN - 1, ldW + 1) : Math.max(0, ldW - 1);
         render(); ev.preventDefault();
       } else if (ev.key === 'Enter' && !imDialog) {
         ev.preventDefault();
-        if (ldTastatur && (ov.wahl || 0) === 1) { undo(); }
+        if (ldW === 1) { undo(); }
+        else if (ldW === 2) { handleAction('to-tournament', ev.target); }
         else { UI.overlay = null; render(); }
       } else if (ev.key === 'Backspace' && !imDialog) {
         undo(); ev.preventDefault();

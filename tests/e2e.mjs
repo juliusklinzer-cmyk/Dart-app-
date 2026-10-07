@@ -1892,6 +1892,20 @@ check('Pfeil runter waehlt die Ruecknahme', await page.evaluate(() =>
 await page.keyboard.press('ArrowUp');
 check('Pfeil hoch fuehrt zurueck zu Naechstes Leg', await page.evaluate(() =>
   document.querySelector('#overlay-card .btn.wahl').textContent.includes('Nächstes Leg')));
+await page.keyboard.press('Numpad2');
+check('Ziffernblock 2 waehlt nach dem Leg die Ruecknahme (statt still weiterzumachen)', await page.evaluate(() =>
+  window.__dart.ui().overlay && window.__dart.ui().overlay.type === 'leg-done' &&
+  document.querySelector('#overlay-card .btn.wahl').textContent.includes('rückgängig')));
+await page.keyboard.press('Numpad2');
+check('noch einmal 2: "Zur Ligaspiel-Übersicht" bzw. Turnieruebersicht', await page.evaluate(() =>
+  /bersicht/.test(document.querySelector('#overlay-card .btn.wahl').textContent)));
+await page.keyboard.press('5');
+check('andere Ziffern werden geschluckt', await page.evaluate(() =>
+  window.__dart.ui().overlay && window.__dart.ui().overlay.type === 'leg-done' && window.__dart.ui().input === ''));
+await page.keyboard.press('Numpad8');
+await page.keyboard.press('Numpad8');
+check('8 fuehrt wieder hoch zu Naechstes Leg', await page.evaluate(() =>
+  document.querySelector('#overlay-card .btn.wahl').textContent.includes('Nächstes Leg')));
 await page.keyboard.press('Enter');
 check('Enter startet das naechste Leg', await page.evaluate(() =>
   !window.__dart.ui().overlay && window.__dart.currentMatch().legs.length === 2));
