@@ -35,6 +35,8 @@ const config = {
   kamera: process.env.DARTS_KAMERA === '1',
   // Tagesgrenzen je Konto. Nur fuer Tests gedacht -- die Vorgaben passen.
   kontingentSpiele: Number(process.env.DARTS_KONTINGENT_SPIELE) || 0,
+  /* Nur fuer Tests: Frist, nach der ein Anspruch ohne Lebenszeichen verfaellt. */
+  claimFristMs: Number(process.env.DARTS_CLAIM_FRIST_MS) || 0,
   kontingentLive: Number(process.env.DARTS_KONTINGENT_LIVE) || 0
 };
 

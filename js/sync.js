@@ -379,10 +379,15 @@
    * die Spiellogik bleibt dort. Gibt zurück, ob sich etwas geändert hat,
    * damit der Aufrufer nur dann neu zeichnet.
    */
-  function turnierAbgleich() {
+  /* Jeder achte Abgleich (etwa einmal pro Minute) holt den GANZEN Stand
+     statt nur der Neuigkeiten seit dem Cursor - so heilt sich jede Luecke,
+     die ein Funkloch gerissen haben koennte. */
+  var turnierRunde = 0;
+  function turnierAbgleich(voll) {
     var t = D.state().tour;
     if (!t || !t.geteilt || !t.sid || !nutzer) return Promise.resolve(false);
-    var seit = t.cursor || 0;
+    turnierRunde++;
+    var seit = voll || turnierRunde % 8 === 0 ? 0 : (t.cursor || 0);
     return turnierRuf('GET', '/' + t.sid + '?since=' + seit).then(function (d) {
       var neu = D.uebernehmeTurnier(d.turnier);
       ergebnisseNachreichen();
@@ -447,6 +452,7 @@
   /* Nur takten, solange man auch hinschaut: im Turnierbildschirm. Wie beim
      Online-Spiel nur neu starten, wenn sich der Zustand aendert. */
   var turnierTaktAn = false;
+  var herzRunde = 0;
   function turnierTakt(an) {
     an = !!an;
     if (an === turnierTaktAn && (turnierTimer || !an)) return;
@@ -454,8 +460,35 @@
     if (turnierTimer) { clearInterval(turnierTimer); turnierTimer = null; }
     if (!an) return;
     turnierTimer = setInterval(function () {
+      if (document.hidden) return;
       turnierAbgleich().then(function (neu) { if (neu) D.render(); });
+      herzRunde++;
+      if (herzRunde % 11 === 0) turnierHerzschlag();
     }, TURNIER_TAKT);
+  }
+
+  /* Herzschlag: wer ein Einzel gerade spielt, erneuert seinen Anspruch.
+     Hat das andere Geraet die Partie inzwischen uebernommen (weil hier zehn
+     Minuten nichts kam), sagt app.js Bescheid. */
+  function turnierHerzschlag() {
+    var S = D.state(), t = S.tour;
+    if (!t || !t.geteilt || !t.sid || !nutzer || !S.current) return;
+    if (S.screen !== 'game' && S.screen !== 'bulloff') return;
+    var m = S.matches.filter(function (x) { return x.id === S.current; })[0];
+    if (!m || m.done) return;
+    turnierRuf('POST', '/' + t.sid + '/matches/' + m.id + '/claim').then(function (d) {
+      D.uebernehmeTurnier(d.turnier);
+    }).catch(function (e) {
+      if (e && e.status === 409 && D.einzelVerloren) D.einzelVerloren(m.id, e.message);
+    });
+  }
+
+  /* Sofort abgleichen, wenn das Geraet wieder Netz hat oder aufgeweckt
+     wird - nicht erst auf den naechsten Takt warten. */
+  function turnierSofort() {
+    var t = D.state().tour;
+    if (!t || !t.geteilt || !t.sid || !nutzer) return;
+    turnierAbgleich(true).then(function (neu) { if (neu) D.render(); });
   }
 
   /* ================= Online-Spiel ================= */
@@ -767,7 +800,8 @@
           if (!t || !t.geteilt || !t.sid) return Promise.reject(new Error('Kein geteiltes Turnier.'));
           return turnierRuf('POST', '/' + t.sid + '/plan', { plan: plan, basis: basis });
         },
-        takt: turnierTakt
+        takt: turnierTakt,
+        herzschlag: turnierHerzschlag
       },
       live: {
         offen: liveOffen,
@@ -783,7 +817,7 @@
     };
 
     // Wieder online, App wieder im Vordergrund, oder einfach nach einer Weile.
-    window.addEventListener('online', function () { jetzt(); });
+    window.addEventListener('online', function () { jetzt(); turnierSofort(); });
     document.addEventListener('visibilitychange', function () {
       var g = D.state().game;
       var online = g && g.online && !g.online.wartet;
@@ -795,6 +829,7 @@
         return;
       }
       jetzt();
+      turnierSofort();
       /* Zurueck am Handy: sofort nachsehen, nicht erst auf den Takt warten. */
       if (online && liveTaktAn) liveRunde();
     });

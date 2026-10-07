@@ -160,6 +160,7 @@ async function main() {
       DARTS_DB: path.join(tmp, 'test.db'),
       DARTS_INVITE_HASH: hashPassword(CODE),
       DARTS_SECURE_COOKIES: '0',
+      DARTS_CLAIM_FRIST_MS: '15000',   // haengengebliebene Einzel: im Test nach 15 s statt 10 min
       NODE_ENV: 'test'
     },
     stdio: ['ignore', 'pipe', 'pipe']
@@ -1433,6 +1434,110 @@ async function main() {
       for (const g of [julius, tobi]) {
         await g.page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; S.matches = []; S.tour = null; S.current = null; D.ui().overlay = null; D.save(); D.setScreen('setup'); });
       }
+    }
+
+    group('Geteiltes Ligaspiel: gleicher Stand auf beiden iPads, auch nach Funkloch');
+    {
+      const leeren = (g) => g.page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; S.matches = []; S.tour = null; S.current = null; D.ui().overlay = null; D.save(); D.setScreen('setup'); });
+      await leeren(julius); await leeren(tobi);
+      await julius.page.evaluate(() => window.__dart.setScreen('liga'));
+      await julius.page.locator('#liga-liste [data-action="liga-spiel"]').first().click();
+      for (let i = 0; i < 4; i++) {
+        await julius.page.locator(`[data-role="liga-gegner"][data-i="${i}"]`).fill('Funk' + i);
+        await julius.page.locator(`[data-role="liga-gegner-nach"][data-i="${i}"]`).fill('Loch' + i);
+      }
+      await julius.page.locator('[data-action="liga-geteilt"][data-value="1"]').click();
+      await julius.page.locator('[data-action="liga-los"]').click();
+      await julius.page.waitForTimeout(1200);
+      const fsid = await julius.page.evaluate(() => window.__dart.state().tour.sid);
+      await tobi.page.evaluate(() => window.__dart.turnierListeAktualisieren());
+      await tobi.page.waitForTimeout(900);
+      await tobi.page.locator('[data-action="turnier-beitreten"]').first().click();
+      await tobi.page.waitForTimeout(800);
+      check('beide iPads sind im selben Ligaspiel', await tobi.page.evaluate((id) => window.__dart.state().tour.sid === id, fsid));
+      const ids = await julius.page.evaluate(() => window.__dart.state().matches.map((m) => m.id));
+      const fertigHier = (g, id) => g.page.evaluate((id) => {
+        const D = window.__dart, S = D.state(), m = S.matches.find((x) => x.id === id);
+        m.legs = [{ starter: m.p[0], visits: [], winner: m.p[0] }, { starter: m.p[1], visits: [], winner: m.p[0] }];
+        m.done = true; m.winner = m.p[0]; m.at = Date.now(); delete m.gemeldet; D.save();
+        return window.DartSync.turnier.ergebnis(m).then(() => true, () => false);
+      }, id);
+      const istFertig = (g, id) => g.page.evaluate((id) => !!(window.__dart.state().matches.find((m) => m.id === id) || {}).done, id);
+
+      /* 1) Tobi steht im Spielbericht. Julius beendet ein Einzel OHNE Netz. */
+      await tobi.page.evaluate(() => { const D = window.__dart; D.ui().bericht = null; D.setScreen('bericht'); });
+      await julius.page.context().setOffline(true);
+      await fertigHier(julius, ids[0]);
+      await julius.page.waitForTimeout(300);
+      check('ohne Netz kommt das Ergebnis nicht an', !(await istFertig(tobi, ids[0])));
+      await julius.page.context().setOffline(false);   // "online" -> sofort abgleichen und nachreichen
+      await julius.page.waitForTimeout(2500);
+      await tobi.page.waitForTimeout(9000);             // ein Takt bei Tobi - im Spielbericht!
+      check('sobald Julius wieder Netz hat, steht es bei Tobi - auch im Spielbericht', await istFertig(tobi, ids[0]));
+
+      /* 2) Tobi faellt mitten im Einzel aus: Julius kann es nach der Frist uebernehmen. */
+      await tobi.page.evaluate(() => window.__dart.setScreen('tournament'));
+      await tobi.page.locator('#schedule [data-action="open-match"][data-id="' + ids[1] + '"]').click();
+      await tobi.page.waitForTimeout(800);
+      check('Tobi spielt das zweite Einzel', await tobi.page.evaluate((id) => window.__dart.state().current === id, ids[1]));
+      await tobi.page.context().setOffline(true);
+      await julius.page.evaluate(() => { window.__dart.setScreen('tournament'); return window.DartSync.turnier.abgleich(true); });
+      await julius.page.waitForTimeout(500);
+      await julius.page.evaluate(() => window.__dart.render());
+      check('waehrend Tobi spielt: "laeuft bei Tobi", kein Start-Knopf',
+        (await julius.page.locator('#schedule').innerText()).includes('läuft bei Tobi'));
+      await julius.page.waitForTimeout(16000);           // Frist im Test: 15 s ohne Lebenszeichen
+      await julius.page.evaluate(() => window.DartSync.turnier.abgleich(true));
+      await julius.page.waitForTimeout(500);
+      await julius.page.evaluate(() => window.__dart.render());
+      check('nach der Frist: "haengengeblieben?" mit Uebernehmen',
+        (await julius.page.locator('#schedule').innerText()).includes('hängengeblieben'));
+      await julius.page.locator('#schedule [data-action="open-match"][data-id="' + ids[1] + '"]').click();
+      await julius.page.waitForTimeout(900);
+      check('Julius uebernimmt das Einzel', await julius.page.evaluate((id) => window.__dart.state().current === id, ids[1]));
+      await tobi.page.context().setOffline(false);
+      await tobi.page.waitForTimeout(800);
+      await tobi.page.evaluate(() => window.DartSync.turnier.herzschlag());
+      await tobi.page.waitForTimeout(1200);
+      check('Tobi erfaehrt beim naechsten Lebenszeichen, dass Julius uebernommen hat', await tobi.page.evaluate(() => {
+        const o = window.__dart.ui().overlay; return !!o && o.titel === 'Einzel übernommen' && window.__dart.state().current === null;
+      }));
+      await tobi.page.evaluate(() => { window.__dart.ui().overlay = null; window.__dart.render(); });
+
+      /* 3) Eine Luecke im Abgleich heilt der volle Abgleich. */
+      await tobi.page.evaluate(() => { window.__dart.state().tour.cursor = 99999999; });
+      await fertigHier(julius, ids[2]);
+      await tobi.page.evaluate(() => window.DartSync.turnier.abgleich());
+      check('mit kaputtem Cursor fehlt das Ergebnis erst', !(await istFertig(tobi, ids[2])));
+      await tobi.page.evaluate(() => window.DartSync.turnier.abgleich(true));
+      await tobi.page.waitForTimeout(300);
+      check('der volle Abgleich holt es nach', await istFertig(tobi, ids[2]));
+
+      /* 4) Tobi schliesst das Ligaspiel ab - Julius' Kopie raeumt sich auf. */
+      for (const id of ids.slice(1)) await fertigHier(julius, id);
+      await tobi.page.evaluate(() => window.DartSync.turnier.abgleich(true));
+      await tobi.page.waitForTimeout(500);
+      check('bei Tobi sind alle 16 Einzel fertig', await tobi.page.evaluate(() => window.__dart.state().matches.every((m) => m.done)));
+      await tobi.page.evaluate(() => {
+        const D = window.__dart, lg = D.state().tour.liga;
+        const c = document.createElement('canvas'); c.width = 10; c.height = 5; const b = c.toDataURL('image/png');
+        lg.unterschriften = { heim: b, gast: b }; D.ui().bericht = null; D.save(); D.setScreen('bericht');
+        D.ui().overlay = { type: 'bericht-versand', adressen: ['spielbericht@steeldart-muenchen.de', '', ''] }; D.render();
+      });
+      await tobi.page.locator('[data-action="bericht-ohne-senden"]').click();
+      await tobi.page.waitForTimeout(1500);
+      check('bei Tobi ist das Ligaspiel abgeschlossen', await tobi.page.evaluate((id) => {
+        const S = window.__dart.state(); return S.tour === null && S.history.some((h) => h.id === id && h.liga && h.liga.abgeschlossen);
+      }, fsid));
+      await julius.page.evaluate(() => window.DartSync.jetzt());
+      await julius.page.waitForTimeout(2000);
+      await julius.page.evaluate(() => window.DartSync.turnier.abgleich(true));
+      await julius.page.waitForTimeout(800);
+      check('Julius\' Kopie raeumt sich auf und sagt Bescheid', await julius.page.evaluate((id) => {
+        const S = window.__dart.state(), o = window.__dart.ui().overlay;
+        return (S.tour === null || !S.tour || S.tour.sid !== id) && S.history.some((h) => h.id === id) && !!o && /abgeschlossen/.test(o.titel || '');
+      }, fsid), await julius.page.evaluate(() => JSON.stringify({ tour: !!window.__dart.state().tour, ov: window.__dart.ui().overlay })));
+      await leeren(julius); await leeren(tobi);
     }
 
     group('Fehlerfreiheit');

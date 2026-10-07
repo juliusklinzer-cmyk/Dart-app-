@@ -772,6 +772,45 @@
     });
   }
 
+  /* Hat das andere Geraet das geteilte Turnier abgeschlossen und liegt sein
+     Archiv-Eintrag schon hier, ist die eigene Kopie erledigt: aufraeumen und
+     Bescheid sagen - sonst liefe sie hier als "offen" weiter. */
+  function geteiltesTurnierAufraeumen() {
+    if (!S.tour || !S.tour.geteilt || !S.tour.sid || !S.tour.beendet) return false;
+    var archiv = null;
+    S.history.forEach(function (h) { if (h.id === S.tour.sid) archiv = h; });
+    if (!archiv) return false;
+    /* Nie etwas wegraeumen, das nur hier liegt: hat dieses Geraet ein
+       fertiges Einzel, das im Archiv fehlt, bleibt die Kopie stehen. */
+    var fehlt = S.matches.some(function (m) {
+      if (!m.done) return false;
+      var a = (archiv.matches || []).filter(function (x) { return x.id === m.id; })[0];
+      return !a || !a.done;
+    });
+    if (fehlt) return false;
+    var war = S.tour.liga ? 'Das Ligaspiel' : 'Das Turnier';
+    S.tour = null; S.matches = []; S.current = null;
+    if (['tournament', 'game', 'bulloff', 'winner', 'summary', 'bericht'].indexOf(S.screen) >= 0) {
+      S.screen = 'setup';
+    }
+    UI.overlay = { type: 'hinweis', titel: war + ' ist abgeschlossen',
+      text: war + ' wurde auf dem anderen Gerät abgeschlossen. Alle Ergebnisse stehen im Archiv' +
+        ' (im Liga-Spielplan unter „Ergebnisse“ und „Spielbericht“).' };
+    save();
+    return true;
+  }
+
+  /* Der Herzschlag sagt: dieses Einzel hat das andere Geraet uebernommen
+     (hier kam zehn Minuten lang nichts). */
+  function einzelVerloren(matchId, text) {
+    if (S.current !== matchId) return;
+    S.current = null;
+    if (S.screen === 'game' || S.screen === 'bulloff') S.screen = 'tournament';
+    UI.overlay = { type: 'hinweis', titel: 'Einzel übernommen',
+      text: (text || 'Das andere Gerät hat dieses Einzel übernommen.') + ' Das Ergebnis kommt von dort.' };
+    save(); render();
+  }
+
   function uebernehmeTurnier(daten) {
     if (!daten || !daten.plan) return false;
     var neu = false;
@@ -809,8 +848,14 @@
 
     var ich = window.DartKonto && window.DartKonto.nutzer() ? window.DartKonto.nutzer().id : null;
     (daten.partien || []).forEach(function (p) {
+      /* Jede Partie fuer sich: ein unlesbarer Eintrag darf die anderen
+         nicht aufhalten. */
+      try { if (partieUebernehmen(p)) neu = true; } catch (e) { /* naechster Abgleich */ }
+    });
+    function partieUebernehmen(p) {
+      var neu = false;
       var m = matchById(p.matchId);
-      if (!m) return;
+      if (!m) return false;
       if (p.result && !partieGueltig(p.result)) return;   // kaputtes Ergebnis nicht uebernehmen
       if (p.result) {
         /* Ein fertiges Ergebnis gewinnt immer – auch gegen eine Partie, die
@@ -827,9 +872,9 @@
           neu = true;
         }
         var fertig = matchById(p.matchId);
-        if (fertig && fertig.belegtVon) delete fertig.belegtVon;
+        if (fertig && fertig.belegtVon) { delete fertig.belegtVon; delete fertig.belegtSeit; }
         if (fertig) fertig.gemeldet = true;   // liegt beim Server - nichts nachzureichen
-        return;
+        return neu;
       }
       // Fremder Anspruch: kein Start-Knopf, dafür der Name daneben.
       var von = p.claimedBy && p.claimedBy !== ich ? (p.claimedByName || 'jemandem') : null;
@@ -837,12 +882,19 @@
         if (von) m.belegtVon = von; else delete m.belegtVon;
         neu = true;
       }
-    });
+      /* Seit wann (nach Server-Uhr) - ein Anspruch ohne Lebenszeichen gilt
+         nach zehn Minuten als haengengeblieben und darf uebernommen werden. */
+      if (von) m.belegtSeit = Date.now() - (typeof p.claimAlter === 'number' ? p.claimAlter : 0);
+      else delete m.belegtSeit;
+      return neu;
+    }
 
     if (typeof daten.cursor === 'number' && daten.cursor > (S.tour.cursor || 0)) {
       S.tour.cursor = daten.cursor;
     }
+    if (typeof daten.claimFrist === 'number') S.tour.claimFrist = daten.claimFrist;
     if (daten.status === 'beendet') S.tour.beendet = true;
+    if (geteiltesTurnierAufraeumen()) neu = true;
     /* Frische Ergebnisse des anderen Geraets sofort ins Bild -- sonst zeigt
        die Tabelle rechts alte Averages, bis irgendetwas anderes neu zeichnet. */
     if (neu) setTimeout(render, 0);
@@ -2920,6 +2972,7 @@
 
     if (geaendert) {
       einmaligeBerichtKorrekturen();
+      if (geteiltesTurnierAufraeumen()) setTimeout(render, 0);
       S.history.sort(function (a, b) { return (b.at || 0) - (a.at || 0); });
       if (S.history.length > MAX_HISTORY) S.history.length = MAX_HISTORY;
       save();
@@ -3008,9 +3061,9 @@
        Turnierbildschirm. Sonst fragt die App den ganzen Abend nach Daten,
        die niemand anschaut. */
     if (window.DartSync && window.DartSync.turnier) {
-      window.DartSync.turnier.takt(!!geteiltesTurnier() &&
-        (S.screen === 'tournament' || S.screen === 'winner' || S.screen === 'summary' ||
-         S.screen === 'game' || S.screen === 'bulloff'));
+      /* Ein geteiltes Turnier gleicht sich IMMER ab, egal welcher
+         Bildschirm offen ist - auch im Spielbericht oder im Liga-Reiter. */
+      window.DartSync.turnier.takt(!!geteiltesTurnier());
     }
     /* Das Online-Spiel taktet, solange man es anschaut -- auch im Bull-Off
        und in der Auswertung, denn dort wartet man auf den anderen. */
@@ -3499,6 +3552,9 @@
           ? (liga && m.kampflos
             ? '<button class="go wo" data-action="liga-kampflos" data-id="' + esc(m.id) + '">ändern</button>'
             : '')
+          : m.belegtVon && Date.now() - (m.belegtSeit || Date.now()) > ((S.tour && S.tour.claimFrist) || 10 * 60000)
+            ? '<span class="belegt">bei ' + esc(m.belegtVon) + ' hängengeblieben?</span>' +
+              '<button class="go" data-action="open-match" data-id="' + esc(m.id) + '">Übernehmen</button>'
           : m.belegtVon ? '<span class="belegt">läuft bei ' + esc(m.belegtVon) + '</span>'
           : '<button class="go" data-action="open-match" data-id="' + esc(m.id) + '">' +
             (m.legs.length ? 'Weiter' : 'Start') + '</button>' +
@@ -9140,6 +9196,7 @@
       ersetzeSpielerIds: ersetzeSpielerIds,
       uebernehmeSpiele: uebernehmeSpiele,
       berichtPdf: berichtPdf,
+      einzelVerloren: einzelVerloren,
       berichtNeu: function () { berichtStand = null; },   // nur fuer Tests
       uebernehmeTurnier: uebernehmeTurnier,
       turnierListeAktualisieren: beitretbareHolen,

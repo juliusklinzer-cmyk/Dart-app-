@@ -518,7 +518,11 @@ export function createApi(db, config) {
      das Turnier nicht blockieren. Nach dieser Frist darf sie ein anderer
      uebernehmen -- lang genug fuer eine echte Partie, kurz genug, dass ein
      leergelaufener Akku den Abend nicht aufhaelt. */
-  const CLAIM_FRIST = 45 * 60000;
+  /* Wie lange ein Anspruch ohne Lebenszeichen gilt. Das spielende Geraet
+     erneuert ihn alle anderthalb Minuten (Herzschlag); bleibt der zehn
+     Minuten aus, ist es weg (geschlossen, abgestuerzt) und das andere
+     Geraet darf die Partie uebernehmen. */
+  const CLAIM_FRIST = Number(config.claimFristMs) || 10 * 60000;
 
   function turnierId(wert) {
     const id = String(wert || '');
@@ -545,6 +549,9 @@ export function createApi(db, config) {
       claimedBy: r.claimed_by,
       claimedByName: r.claimed_by ? (namen.get(r.claimed_by) || null) : null,
       claimedAt: r.claimed_at,
+      /* Alter des Anspruchs nach der Uhr des Servers - die Geraete-Uhren
+         gehen nicht gleich. */
+      claimAlter: r.claimed_at ? Math.max(0, Date.now() - r.claimed_at) : null,
       result: r.result ? JSON.parse(r.result) : null,
       seq: r.seq
     };
@@ -577,7 +584,8 @@ export function createApi(db, config) {
       angelegtVon: t.created_by,
       angelegtVonName: namen.get(t.created_by) || null,
       partien: zeilen.map(partieZeile),
-      cursor: hoechste
+      cursor: hoechste,
+      claimFrist: CLAIM_FRIST
     };
   }
 
