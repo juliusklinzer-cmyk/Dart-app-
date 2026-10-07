@@ -3620,6 +3620,11 @@
         '</div>';
     });
     $('schedule').innerHTML = html;
+    /* Per Tastatur gewaehltes Einzel (8/2 bzw. Pfeile, Enter startet). */
+    if (UI.planTastatur) {
+      var pwKnopf = UI.planWahlId ? document.querySelector('#schedule [data-action="open-match"][data-id="' + UI.planWahlId + '"]') : null;
+      if (pwKnopf) pwKnopf.closest('.match-row').classList.add('wahl');
+    }
 
     /* Gestartet wird direkt an der Partie - einen "Naechstes Spiel"-Knopf
        gibt es nicht mehr. Nur wenn alles gespielt ist, fuehrt ein Knopf
@@ -8979,13 +8984,18 @@
   /* Wird gerade mit der Tastatur gearbeitet (letzte Eingabe war eine Taste,
      kein Tipp)? Dann zeigt das naechste Ausbullen die Markierung gleich. */
   function tastaturBetrieb() { return document.body.classList.contains('tastatur'); }
+  /* Das gewaehlte Einzel im Turnier-Menue in den sichtbaren Bereich holen. */
+  function planWahlZeigen() {
+    var z = document.querySelector('#schedule .match-row.wahl');
+    if (z && z.scrollIntoView) z.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
   /* Touch beim Ausbullen: die Tastatur-Markierung verschwindet (nicht auf
      einem Knopf - der wird ja gerade angetippt und darf nicht neu gezeichnet
      werden, sonst ginge der Tipp verloren). */
   window.addEventListener('pointerdown', function (ev) {
-    if (S.screen !== 'bulloff' || !UI.bullTastatur) return;
     if (ev.target && ev.target.closest && ev.target.closest('button')) return;
-    UI.bullTastatur = false; render();
+    if (S.screen === 'bulloff' && UI.bullTastatur) { UI.bullTastatur = false; render(); }
+    else if (S.screen === 'tournament' && UI.planTastatur) { UI.planTastatur = false; render(); }
   }, true);
   window.addEventListener('pointerdown', function () { document.body.classList.remove('tastatur'); }, true);
   /* "/" am Ziffernblock ist Tab: im Spiel Wechsel der Ansicht, in Dialogen
@@ -9007,7 +9017,7 @@
        rueckgaengig" markiert und Enter den Checkout geloescht. */
     var passt = UI.overlay
       ? !ZIFFERN_BLEIBEN[UI.overlay.type]
-      : S.screen === 'bulloff';
+      : S.screen === 'bulloff' || S.screen === 'tournament';
     if (!passt) return;
     ev.preventDefault();
     ev.stopImmediatePropagation();
@@ -9026,6 +9036,38 @@
     /* Ausbullen am Board: Pfeile/Tab wechseln den Kandidaten, Enter
        bestaetigt den Anwerfer. */
     var bPfeil = ev.key === 'ArrowLeft' || ev.key === 'ArrowUp' || ev.key === 'ArrowRight' || ev.key === 'ArrowDown';
+    /* Turnier-Menue: hoch/runter (8/2) waehlt das naechste Einzel, Enter
+       startet es. Die Markierung erscheint erst mit der ersten Taste. */
+    if (S.screen === 'tournament' && !UI.overlay && (bPfeil || ev.key === 'Tab' || ev.key === 'Enter') &&
+        !(ev.target && ev.target.closest && ev.target.closest('input, select, textarea, [contenteditable="true"], [contenteditable=""]'))) {
+      var pKnoepfe = Array.prototype.slice.call(document.querySelectorAll('#schedule [data-action="open-match"]'));
+      var pFokus = document.activeElement && document.activeElement !== document.body && document.activeElement.closest &&
+        document.activeElement.closest('button, a');
+      if (pKnoepfe.length && !(ev.key === 'Enter' && pFokus && !UI.planTastatur)) {
+        var pIds = pKnoepfe.map(function (k) { return k.getAttribute('data-id'); });
+        var pAlt = pIds.indexOf(UI.planWahlId);
+        if (!UI.planTastatur || pAlt < 0) {
+          var pNext = nextOpenMatch();
+          pAlt = pNext && pIds.indexOf(pNext.id) >= 0 ? pIds.indexOf(pNext.id) : 0;
+          ev.preventDefault(); ev.stopImmediatePropagation();
+          /* Erster Druck (oder die Wahl ist inzwischen vergeben): nur zeigen. */
+          UI.planTastatur = true; UI.planWahlId = pIds[pAlt];
+          render(); planWahlZeigen();
+          return;
+        }
+        ev.preventDefault(); ev.stopImmediatePropagation();
+        if (ev.key === 'Enter') {
+          UI.planTastatur = tastaturBetrieb();
+          handleAction('open-match', pKnoepfe[pAlt]);
+          return;
+        }
+        var pNeu = ev.key === 'Tab' ? (pAlt + 1) % pIds.length
+          : (ev.key === 'ArrowDown' || ev.key === 'ArrowRight') ? Math.min(pIds.length - 1, pAlt + 1) : Math.max(0, pAlt - 1);
+        UI.planWahlId = pIds[pNeu];
+        render(); planWahlZeigen();
+        return;
+      }
+    }
     if (S.screen === 'bulloff' && !UI.overlay && (UI.turnier && turnierErlaubt() || UI.bullTastatur || bPfeil || ev.key === 'Tab')) {
       var bKnoepfe = document.querySelectorAll('#bulloff-buttons [data-action="pick-starter"]');
       if (bKnoepfe.length) {

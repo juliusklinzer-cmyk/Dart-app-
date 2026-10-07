@@ -3572,3 +3572,11 @@ body.tastatur #screen-bulloff button:focus {
   background: var(--aktiv-flaeche);
   box-shadow: 0 0 30px var(--schein-stark);
 }
+
+/* Turnier-Menue per Tastatur: das gewaehlte Einzel traegt den Laser-Ring. */
+#schedule .match-row.wahl {
+  outline: 3px solid var(--laser, #4fb3e0);
+  outline-offset: 2px;
+  box-shadow: 0 0 26px var(--schein-stark);
+  border-radius: var(--r-s);
+}

@@ -2900,6 +2900,35 @@ check('Spieler 2 gewinnt das Bullen und ist dran - ohne geschenkte 0-Aufnahme', 
     D.state().matches[0].legs[0].starter === m.p[1];
 }));
 
+group('Turnier-Menue: naechstes Einzel per Tastatur waehlen und starten');
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  S.game = null; S.matches = []; S.tour = null; S.current = null;
+  S.lineup = D.activeProfiles().filter((p) => !p.gast).slice(0, 3).map((p) => p.id);
+  S.mode = '501'; S.settings.start = 501; S.settings.bestOf = 1;
+  D.setScreen('setup');
+});
+await page.locator('[data-action="start-game"]').click();
+check('ohne Tastendruck ist im Spielplan nichts markiert', await page.evaluate(() => !document.querySelector('#schedule .match-row.wahl')));
+await page.keyboard.press('Numpad2');
+const planWahl = () => page.evaluate(() => {
+  const z = document.querySelector('#schedule .match-row.wahl');
+  return z ? [...document.querySelectorAll('#schedule .match-row')].indexOf(z) : -1;
+});
+check('erster Druck markiert das naechste offene Einzel', (await planWahl()) === 0);
+await page.keyboard.press('Numpad2');
+check('2 geht ein Einzel weiter runter', (await planWahl()) === 1);
+await page.keyboard.press('ArrowDown'); await page.keyboard.press('ArrowDown');
+check('am Ende bleibt die Wahl stehen', (await planWahl()) === 2);
+await page.keyboard.press('Numpad8');
+check('8 geht wieder hoch', (await planWahl()) === 1);
+await page.keyboard.press('NumpadEnter');
+check('Enter startet das gewaehlte Einzel (Ausbullen)', await page.evaluate(() => {
+  const S = window.__dart.state(); return S.screen === 'bulloff' && S.current === S.matches[1].id;
+}));
+await page.locator('#screen-bulloff > [data-action="to-tournament"]').click();
+check('zurueck im Spielplan', await page.evaluate(() => window.__dart.state().screen === 'tournament'));
+
 group('Ausbullen und Checkout am Board per Tastatur');
 await page.evaluate(() => {
   const D = window.__dart, S = D.state();
