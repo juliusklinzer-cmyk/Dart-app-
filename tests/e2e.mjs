@@ -3697,6 +3697,47 @@ group('Ligaspiel endet erst mit dem unterschriebenen Bericht');
   }, termin);
 }
 
+group('Einmalige Korrektur: Spielbericht 1. Spieltag');
+{
+  await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    S.game = null; S.matches = []; S.tour = null; S.current = null; D.ui().overlay = null;
+    const ids = D.activeProfiles().slice(0, 4).map((p) => p.id);
+    S.profiles.push({ id: 'k_g1', name: 'Gast Eins', voll: 'Gast Eins', gast: true, avatar: null, hue: 5, created: Date.now() });
+    const matches = [];
+    for (let i = 0; i < 16; i++) {
+      const id = i === 12 ? 'yn2rfle' : 'k' + i;
+      matches.push({ id, round: Math.floor(i / 4) + 1, p: [ids[i % 4], 'k_g1'], posPaar: i === 12 ? [3, 0] : [i % 4, 0], starter: ids[i % 4],
+        legs: [{ starter: ids[i % 4], visits: [], winner: ids[i % 4] }, { starter: 'k_g1', visits: [], winner: ids[i % 4] }], done: true, winner: ids[i % 4], at: Date.now() - 1000 * (16 - i) });
+    }
+    const sig = document.createElement('canvas'); sig.width = 20; sig.height = 10;
+    const bild = sig.toDataURL('image/png');
+    S.history.unshift({ id: 'vdmmbu0', at: Date.now(), lineup: ids.concat(['k_g1']), settings: { start: 501, bestOf: 3 }, matches, winner: null,
+      liga: { terminId: 'st01', nr: 1, gegner: 'TSV Dachau 1865 4', heim: true, wir: ids, sie: ['k_g1'], heimSpieler: ids, gastSpieler: ['k_g1'],
+        posH: ids, posG: ['k_g1'], ort: 'Bar Sehnsucht', tag: '2026-10-06', abgeschlossen: Date.now(), unterschriften: { heim: bild, gast: bild } } });
+    D.save();
+  });
+  await page.reload();
+  await page.waitForTimeout(400);
+  await page.evaluate(() => { const D = window.__dart; D.ui().bericht = 'st01'; D.berichtNeu(); D.setScreen('bericht'); });
+  const k = await page.evaluate(() => ({
+    zeile: (document.querySelector('#bericht-blatt [data-kf="einzel-12"]') || {}).textContent,
+    nach: document.querySelector('#bericht-blatt td[data-feld="nachmeldungen"]').textContent.replace(/\s+/g, ' '),
+    prot: document.querySelector('#bericht-blatt td[data-feld="proteste"]').textContent.replace(/\s+/g, ' '),
+    final: document.getElementById('bericht-blatt').classList.contains('final'),
+    einmal: !!window.__dart.state().history.find((h) => h.id === 'vdmmbu0').liga.korrekturSt01
+  }));
+  check('im unterschriebenen Bericht steht jetzt H5 – G1', k.zeile === 'H5 – G1', JSON.stringify(k));
+  check('Nachmeldungen und Proteste: nein angekreuzt', k.nach.includes('nein X') && k.prot.includes('nein X'), JSON.stringify(k));
+  check('der Bericht bleibt final und die Korrektur laeuft nur einmal', k.final && k.einmal, JSON.stringify(k));
+  await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    S.history = S.history.filter((h) => h.id !== 'vdmmbu0');
+    S.profiles = S.profiles.filter((p) => p.id !== 'k_g1');
+    D.ui().bericht = null; D.save(); D.setScreen('setup');
+  });
+}
+
 group('Fehlerfreiheit');
 check('keine JS-Fehler', errors.length === 0, errors.join(' | '));
 

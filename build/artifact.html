@@ -7712,6 +7712,33 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return false;
   }
 
+  /*
+   * Einmalige Korrekturen an schon unterschriebenen Berichten (auf Julius'
+   * ausdruecklichen Wunsch). 1. Spieltag 06.10.2026: das letzte Einzel
+   * H4 - G1 spielte der eingewechselte H5 (der Wechsel ging an zwei iPads
+   * noch nicht), und Nachmeldungen/Proteste sind "nein". Jede Korrektur
+   * laeuft genau einmal je Bericht (Merker im Bericht selbst).
+   */
+  function einmaligeBerichtKorrekturen() {
+    var geaendert = false;
+    var liste = S.history.slice();
+    if (S.tour && S.tour.liga) liste.push({ liga: S.tour.liga, matches: S.matches });
+    liste.forEach(function (h) {
+      var lg = h.liga;
+      if (!lg || lg.terminId !== 'st01' || lg.korrekturSt01 || !Array.isArray(h.matches)) return;
+      var i = -1;
+      h.matches.forEach(function (m, k) { if (m.id === 'yn2rfle') i = k; });
+      if (i < 0) return;
+      if (!lg.berichtFelderKf) lg.berichtFelderKf = {};
+      lg.berichtFelderKf['einzel-' + i] = 'H5 – G1';
+      lg.berichtKreuze = { nachmeldungen: 'nein', proteste: 'nein' };
+      lg.korrekturSt01 = Date.now();
+      geaendert = true;
+    });
+    if (geaendert) { berichtStand = null; save(); }
+    return geaendert;
+  }
+
   function uebernehmeSpiele(liste) {
     if (!liste || !liste.length) return 0;
     var vorhanden = {};
@@ -7752,6 +7779,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     });
 
     if (geaendert) {
+      einmaligeBerichtKorrekturen();
       S.history.sort(function (a, b) { return (b.at || 0) - (a.at || 0); });
       if (S.history.length > MAX_HISTORY) S.history.length = MAX_HISTORY;
       save();
@@ -13854,6 +13882,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   renderLadeHinweis();
   spielUhrStellen();          // Altbestand ohne Startzeit: ab jetzt zaehlen
   altesSpielBeenden();
+  einmaligeBerichtKorrekturen();
 
   /*
    * Die Zurueck-Taste (Android, Browser) verliess frueher die ganze App.
