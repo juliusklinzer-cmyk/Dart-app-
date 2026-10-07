@@ -4260,9 +4260,10 @@
 
     var ich = online ? window.DartKonto.nutzer().id : null;
     var heute = new Date();
-    var heuteIso = heute.getFullYear() + '-' +
+    /* window.__ligaHeute: nur fuer die Tests (fester Stichtag), sonst nie gesetzt. */
+    var heuteIso = window.__ligaHeute || (heute.getFullYear() + '-' +
       String(heute.getMonth() + 1).padStart(2, '0') + '-' +
-      String(heute.getDate()).padStart(2, '0');
+      String(heute.getDate()).padStart(2, '0'));
 
     $('liga-liste').innerHTML = LIGA.termine.map(function (t) {
       if (!t.tag) {
@@ -5443,7 +5444,11 @@
       }
       heimLegs += lh; gastLegs += lgs;
       return '<tr' + (i % 4 === 3 ? ' class="b-trenn"' : '') + '>' +
-        '<th>H' + (paar[0] + 1) + ' – G' + (paar[1] + 1) + '</th>' +
+        /* Die Bogennummer des Spielers, der das Einzel wirklich spielt: nach
+           einem Wechsel steht hier H5 statt H4. Antippbar fuer Korrekturen
+           von Hand (eigener Schluessel, damit die Zaehlung der uebrigen
+           Felder gleich bleibt). */
+        '<th contenteditable data-kf="einzel-' + i + '">H' + berichtNr(heimIds, m.p[0], paar[0]) + ' – G' + berichtNr(gastIds, m.p[1], paar[1]) + '</th>' +
         '<td contenteditable>' + (m.done || m.legs.length
           ? lh + ' : ' + lgs + (m.kampflos ? ' w.o.' : '') : ' : ') + '</td>' +
         '<td contenteditable>' + (m.done && lauf[m.id] ? lauf[m.id] : ' : ') + '</td></tr>';
@@ -5494,8 +5499,8 @@
             '<table class="b-tab b-ende"><tr><th>Endergebnis:</th>' +
               '<td contenteditable>' + heimLegs + ' : ' + gastLegs + '</td>' +
               '<td contenteditable>' + hp + ' : ' + gp + '</td></tr></table>' +
-            '<table class="b-tab b-ende"><tr><td contenteditable data-feld="nachmeldungen">Nachmeldungen: ja O&nbsp;&nbsp;nein O</td>' +
-              '<td contenteditable>Proteste: ja O&nbsp;&nbsp;nein O</td></tr></table>' +
+            '<table class="b-tab b-ende"><tr><td contenteditable="false" data-feld="nachmeldungen">' + berichtKreuzHtml(lg, 'nachmeldungen') + '</td>' +
+              '<td contenteditable="false" data-feld="proteste">' + berichtKreuzHtml(lg, 'proteste') + '</td></tr></table>' +
           '</div>' +
           '<div>' +
             '<div class="b-titel">Highlights Heim:</div>' +
@@ -5535,26 +5540,73 @@
     berichtKorrekturenEinsetzen();
     berichtUnterschriftenEinsetzen();
     berichtNachmeldungenEinsetzen();
+    berichtFinalisieren();
   }
 
   /* Handkorrekturen im Bogen bleiben erhalten: jedes geaenderte Feld wird
      (nach seiner Stelle im Bogen) im Ligaspiel gemerkt und beim naechsten
      Aufbau wieder eingesetzt - nach Abschluss, Neuladen oder am naechsten Tag. */
   function berichtFelder() {
-    return Array.prototype.slice.call(document.querySelectorAll('#bericht-blatt [contenteditable]'));
+    return Array.prototype.slice.call(document.querySelectorAll('#bericht-blatt [contenteditable]:not([data-kf])'));
   }
   function berichtKorrekturenEinsetzen() {
     var q = ligaBerichtQuelle();
-    var k = q && q.liga.berichtKorrekturen;
-    if (!k) return;
-    var felder = berichtFelder();
-    Object.keys(k).forEach(function (i) {
-      if (felder[i] && felder[i].getAttribute('contenteditable') !== 'false') felder[i].textContent = k[i];
+    if (!q) return;
+    var k = q.liga.berichtKorrekturen;
+    if (k) {
+      var felder = berichtFelder();
+      Object.keys(k).forEach(function (i) {
+        if (felder[i] && felder[i].getAttribute('contenteditable') !== 'false') felder[i].textContent = k[i];
+      });
+    }
+    var kf = q.liga.berichtFelderKf || {};
+    Object.keys(kf).forEach(function (name) {
+      var el = document.querySelector('#bericht-blatt [data-kf="' + name + '"]');
+      if (el) el.textContent = kf[name];
+    });
+  }
+  /* Bogennummer (H1-H8 / G1-G8) eines Spielers: seine Stelle in der
+     Bogenliste, sonst die geplante Position. */
+  function berichtNr(liste, id, pos) {
+    var i = (liste || []).indexOf(id);
+    return (i >= 0 ? i : pos) + 1;
+  }
+  /* Ja/Nein zum Antippen (Nachmeldungen, Proteste). */
+  function berichtKreuzHtml(lg, feld) {
+    var wahl = (lg.berichtKreuze || {})[feld] || null;
+    var box = function (wert) {
+      return '<span class="b-kreuz" data-action="bericht-kreuz" data-feld="' + feld + '" data-wert="' + wert + '" role="button" tabindex="0">' +
+        wert + ' <span class="b-box">' + (wahl === wert ? 'X' : '&nbsp;') + '</span></span>';
+    };
+    return (feld === 'nachmeldungen' ? 'Nachmeldungen:' : 'Proteste:') + ' ' + box('ja') + ' ' + box('nein');
+  }
+  /* Beide TCs haben unterschrieben: der Bericht ist final - nichts laesst
+     sich mehr aendern, nur noch versenden. */
+  function berichtIstFinal(lg) {
+    return !!(lg && lg.unterschriften && lg.unterschriften.heim && lg.unterschriften.gast);
+  }
+  function berichtFinalisieren() {
+    var q = ligaBerichtQuelle();
+    var final = !!(q && berichtIstFinal(q.liga));
+    var blatt = $('bericht-blatt');
+    if (blatt) blatt.classList.toggle('final', final);
+    var knopf = document.querySelector('#screen-bericht [data-action="bericht-unterschreiben"]');
+    if (knopf) knopf.textContent = final ? 'Versenden' : 'Unterschreiben';
+    if (!final) return;
+    document.querySelectorAll('#bericht-blatt [contenteditable]').forEach(function (el) {
+      el.setAttribute('contenteditable', 'false');
     });
   }
   function berichtKorrekturMerken(el) {
     var q = ligaBerichtQuelle();
-    if (!q) return;
+    if (!q || berichtIstFinal(q.liga)) return;
+    var name = el.getAttribute('data-kf');
+    if (name) {
+      if (!q.liga.berichtFelderKf) q.liga.berichtFelderKf = {};
+      q.liga.berichtFelderKf[name] = el.textContent;
+      save();
+      return;
+    }
     var i = berichtFelder().indexOf(el);
     if (i < 0) return;
     if (!q.liga.berichtKorrekturen) q.liga.berichtKorrekturen = {};
@@ -5591,6 +5643,11 @@
   function nachmeldungStarten() {
     var q = ligaBerichtQuelle();
     if (!q) return;
+    if (berichtIstFinal(q.liga)) {
+      UI.overlay = { type: 'hinweis', titel: 'Bericht ist final', text: 'Beide Teamcaptains haben unterschrieben – Nachmeldungen gehen jetzt nicht mehr.' };
+      render();
+      return;
+    }
     var aktiv = document.activeElement;
     if (aktiv && aktiv.blur) aktiv.blur();
     UI.overlay = { type: 'nachmeldung', draft: { team: q.liga.heim ? 'H' : 'G', nach: '', vor: '', u18: null, g: null } };
@@ -5661,8 +5718,12 @@
         td[5].innerHTML = '<img alt="Unterschrift ' + esc(n.vor + ' ' + n.nach) + '" src="' + n.unterschrift + '">';
       }
     });
-    var kasten = document.querySelector('#bericht-blatt [data-feld="nachmeldungen"]');
-    if (kasten && liste.length) kasten.innerHTML = 'Nachmeldungen: ja <b>X</b>&nbsp;&nbsp;nein O';
+    var kasten = document.querySelector('#bericht-blatt td[data-feld="nachmeldungen"]');
+    if (liste.length) {
+      if (!lg.berichtKreuze) lg.berichtKreuze = {};
+      lg.berichtKreuze.nachmeldungen = 'ja';
+      if (kasten) kasten.innerHTML = berichtKreuzHtml(lg, 'nachmeldungen');
+    }
     /* Spielerzeilen H5-H8 / G5-G8: leere Plaetze mit den neuen Namen fuellen. */
     var tabs = document.querySelectorAll('#bericht-blatt .b-spieler');
     [['H', lg.heimSpieler || [], tabs[0]], ['G', lg.gastSpieler || [], tabs[1]]].forEach(function (t) {
@@ -5759,9 +5820,17 @@
   function ligaAllesGespielt(q) {
     return q.matches.every(function (m) { return m.done || m.void; });
   }
+  function berichtVersandOeffnen() {
+    var gemerkt = Array.isArray(S.settings.berichtMails) ? S.settings.berichtMails.slice(0, 3) : [];
+    while (gemerkt.length < 3) gemerkt.push('');
+    if (!gemerkt[0]) gemerkt[0] = LIGALEITUNG_MAIL;
+    UI.overlay = { type: 'bericht-versand', adressen: gemerkt };
+    render();
+  }
   function berichtUnterschreibenStarten() {
     var q = ligaBerichtQuelle();
     if (!q) return;
+    if (berichtIstFinal(q.liga)) { berichtVersandOeffnen(); return; }
     if (!ligaAllesGespielt(q)) {
       var offen = q.matches.filter(function (m) { return !m.done && !m.void; }).length;
       UI.overlay = { type: 'hinweis', titel: 'Noch nicht fertig',
@@ -5786,13 +5855,12 @@
     q.liga.unterschriften[o.wer] = signaturBild(o);
     save();
     berichtUnterschriftenEinsetzen();
+    berichtFinalisieren();
     if (o.wer === 'heim') {
       UI.overlay = { type: 'unterschrift', wer: 'gast', striche: [] };
     } else {
-      var gemerkt = Array.isArray(S.settings.berichtMails) ? S.settings.berichtMails.slice(0, 3) : [];
-      while (gemerkt.length < 3) gemerkt.push('');
-      if (!gemerkt[0]) gemerkt[0] = LIGALEITUNG_MAIL;
-      UI.overlay = { type: 'bericht-versand', adressen: gemerkt };
+      berichtVersandOeffnen();
+      return;
     }
     render();
   }
@@ -8099,6 +8167,17 @@
       case 'bericht-drucken':
         window.print();
         break;
+      case 'bericht-kreuz': {
+        var kq = ligaBerichtQuelle();
+        if (!kq || berichtIstFinal(kq.liga)) break;
+        var kFeld = el.getAttribute('data-feld');
+        if (!kq.liga.berichtKreuze) kq.liga.berichtKreuze = {};
+        kq.liga.berichtKreuze[kFeld] = el.getAttribute('data-wert');
+        save();
+        var kZelle = el.closest('td[data-feld]');
+        if (kZelle) kZelle.innerHTML = berichtKreuzHtml(kq.liga, kFeld);
+        break;
+      }
       case 'liga-nachmelden':
         nachmeldungStarten();
         break;
@@ -9023,6 +9102,7 @@
       ersetzeSpielerIds: ersetzeSpielerIds,
       uebernehmeSpiele: uebernehmeSpiele,
       berichtPdf: berichtPdf,
+      berichtNeu: function () { berichtStand = null; },   // nur fuer Tests
       uebernehmeTurnier: uebernehmeTurnier,
       turnierListeAktualisieren: beitretbareHolen,
       turnierBeitreten: turnierBeitreten,

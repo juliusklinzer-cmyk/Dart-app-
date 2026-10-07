@@ -3532,3 +3532,10 @@ body { font-size: 1rem; }
 .motd-person { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-3); }
 .motd-name { font-size: 1.25rem; font-weight: 700; }
 .motd-leer { margin-top: 4px; }
+
+/* Ja/Nein-Kaestchen im Bogen: antippen kreuzt an. */
+.b-kreuz { cursor: pointer; margin-left: 8px; white-space: nowrap; }
+.b-box { display: inline-block; width: 1.15em; height: 1.15em; line-height: 1.15em; border: 1px solid #000; text-align: center; font-weight: 700; vertical-align: middle; }
+/* Final (beide unterschrieben): nichts mehr antippbar, kein Nachmelde-Knopf. */
+#bericht-blatt.final .b-kreuz { cursor: default; pointer-events: none; }
+#bericht-blatt.final .b-nur-schirm { display: none; }

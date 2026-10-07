@@ -57,6 +57,7 @@ async function warteAufServer(proc) {
  */
 async function geraet(browser, name, altbestand) {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  await ctx.addInitScript(() => { window.__ligaHeute = "2026-10-01"; });   // fester Stichtag fuer den Spielplan
   if (altbestand) {
     await ctx.addInitScript((stand) => {
       localStorage.setItem('dart-turnier-v1', JSON.stringify(stand));

@@ -78,6 +78,9 @@ async function dart(label) {
 const rest = (i) => page.locator('.pcard').nth(i).locator('.rest').innerText();
 const st = () => page.evaluate(() => window.__dart.standings());
 
+/* Fester Stichtag fuer den Liga-Spielplan: der 1. Spieltag (Heim gegen Dachau)
+   ist in den Tests immer der naechste - egal, wann sie laufen. */
+await page.addInitScript(() => { window.__ligaHeute = "2026-10-01"; });
 await page.goto(BASE);
 
 group('Setup');
@@ -2587,6 +2590,8 @@ await page.locator('#overlay-card [data-action="ov-cancel"]').click();
 /* Der Spielbericht: Udos Bogen, automatisch befuellt und korrigierbar. */
 await page.locator('[data-action="liga-bericht"]').click();
 check('der Spielbericht oeffnet sich', await visible('#screen-bericht'));
+check('nach einem Wechsel steht die echte Bogennummer im Einzel (G5 statt G2)', await page.evaluate(() =>
+  document.getElementById('bericht-blatt').textContent.includes('– G5')));
 check('mit den 16 Einzeln in Bogen-Reihenfolge', await page.evaluate(() => {
   const t = document.getElementById('bericht-blatt').textContent;
   return t.includes('H1 – G1') && t.includes('H3 – G1') && t.includes('H2 – G4');
@@ -2649,6 +2654,27 @@ group('Spielbericht: beide TCs unterschreiben am iPad, dann Versand als PDF');
   check('eine falsche Adresse wird abgefangen', (await text('#overlay-card')).includes('nicht nach einer Mailadresse'));
   await page.locator('#overlay-card [data-action="ov-cancel"]').click();
 
+  /* Nach beiden Unterschriften ist der Bericht final. */
+  check('nach beiden Unterschriften ist der Bericht final: kein Feld mehr aenderbar', await page.evaluate(() =>
+    document.getElementById('bericht-blatt').classList.contains('final') &&
+    document.querySelectorAll('#bericht-blatt [contenteditable="true"], #bericht-blatt [contenteditable=""]').length === 0));
+  check('oben steht jetzt "Versenden"', (await textKlein('#screen-bericht [data-action="bericht-unterschreiben"]')).includes('versenden'));
+  check('kein Nachmelden mehr im finalen Bericht', !(await visible('#bericht-blatt [data-action="liga-nachmelden"]')));
+  /* Fuer die naechsten Pruefungen: Unterschriften zuruecksetzen. */
+  await page.evaluate(() => {
+    const D = window.__dart; delete D.state().tour.liga.unterschriften; D.berichtNeu(); D.save(); D.setScreen('bericht');
+  });
+  check('ohne Unterschriften ist wieder jedes Feld aenderbar', await page.evaluate(() =>
+    !document.getElementById('bericht-blatt').classList.contains('final') &&
+    document.querySelectorAll('#bericht-blatt th[contenteditable][data-kf]').length === 16));
+  await page.locator('#bericht-blatt [data-kf="einzel-15"]').click();
+  await page.keyboard.press('End'); await page.keyboard.type(' (H5)');
+  await page.locator('#bericht-blatt [data-action="bericht-kreuz"][data-feld="proteste"][data-wert="nein"]').click();
+  check('Ja/Nein laesst sich ankreuzen', (await text('#bericht-blatt td[data-feld="proteste"]')).replace(/\s+/g, ' ').includes('nein X'));
+  await page.evaluate(() => { const D = window.__dart; D.berichtNeu(); D.setScreen('bericht'); });
+  check('Einzel-Bezeichnung und Kreuz bleiben nach dem Neuaufbau', (await text('#bericht-blatt [data-kf="einzel-15"]')).includes('(H5)') &&
+    (await text('#bericht-blatt td[data-feld="proteste"]')).replace(/\s+/g, ' ').includes('nein X'));
+
   /* Nachmeldung: Formular, Unterschrift, dann steht sie auf Seite 2 und im Team. */
   await page.locator('#bericht-blatt [data-action="liga-nachmelden"]').click();
   check('Nachmelden oeffnet ein ganzes Formular', (await text('#overlay-card h3')).includes('Spieler nachmelden') &&
@@ -2667,7 +2693,7 @@ group('Spielbericht: beide TCs unterschreiben am iPad, dann Versand als PDF');
     const t = document.querySelector('#bericht-blatt .b-nach').textContent;
     return t.includes('Neumann') && t.includes('Nora') && !!document.querySelector('#bericht-blatt .b-nach td img');
   }));
-  check('und "Nachmeldungen: ja" ist angekreuzt', (await text('#bericht-blatt [data-feld="nachmeldungen"]')).includes('ja X'));
+  check('und "Nachmeldungen: ja" ist angekreuzt', (await text('#bericht-blatt td[data-feld="nachmeldungen"]')).replace(/\s+/g, ' ').includes('ja X'));
   check('und sie gehoert jetzt zum Team', await page.evaluate(() => {
     const D = window.__dart, S = D.state(), lg = S.tour.liga;
     const liste = lg.heim ? lg.heimSpieler : lg.gastSpieler;
@@ -2685,7 +2711,7 @@ group('Spielbericht: beide TCs unterschreiben am iPad, dann Versand als PDF');
   await page.evaluate(() => {
     const D = window.__dart, S = D.state(), lg = S.tour.liga;
     S.matches.forEach((m) => { if (m.void === 'test') delete m.void; });
-    delete lg.unterschriften; delete lg.berichtKorrekturen;
+    delete lg.unterschriften; delete lg.berichtKorrekturen; delete lg.berichtFelderKf; delete lg.berichtKreuze;
     const nora = S.profiles.filter((p) => p.voll === 'Nora Neumann').map((p) => p.id);
     ['heimSpieler', 'gastSpieler', 'wir', 'sie'].forEach((k) => { lg[k] = lg[k].filter((id) => nora.indexOf(id) < 0); });
     S.tour.players = S.tour.players.filter((id) => nora.indexOf(id) < 0);
