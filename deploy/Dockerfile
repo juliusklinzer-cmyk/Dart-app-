@@ -14,7 +14,7 @@ WORKDIR /app
 # Nur was zur Laufzeit gebraucht wird. Tests, .git und der Design-Kram
 # bleiben draussen (siehe .dockerignore).
 COPY server ./server
-COPY index.html manifest.webmanifest sw.js ./
+COPY index.html live.html manifest.webmanifest sw.js ./
 COPY css ./css
 COPY js ./js
 COPY icons ./icons
