@@ -6655,6 +6655,22 @@
           '<button class="btn ghost" data-action="signatur-nochmal">Nochmal</button>' +
           '<button class="btn primary" data-action="signatur-weiter">Weiter</button>' +
         '</div>';
+    } else if (o.type === 'team-stand') {
+      /* "*" am Ziffernblock: der Zwischenstand gross, dazu was gerade laeuft. */
+      var tsd = ligaStandDaten();
+      var laufend = S.matches.filter(function (m) {
+        return !m.done && !m.void && (m.id === S.current || m.belegtVon ||
+          m.legs.some(function (l) { return l.visits.length > 0; }));
+      });
+      html = '<h3>Zwischenstand</h3>' + (tsd ? '<div class="ts-gross">' + ligaTeamsHtml(tsd) + '</div>' +
+        '<div class="lg-legs">Einzel ' + tsd.wirS + ':' + tsd.sieS + ' · Legs ' + tsd.wirL + ':' + tsd.sieL +
+          ' · ' + tsd.fertige + ' von ' + S.matches.length + ' gespielt</div>' +
+        (laufend.length ? '<div class="ts-laeuft"><div class="lg-hl-titel">Läuft gerade</div>' +
+          laufend.map(function (m) {
+            return '<div>' + esc(ligaName(m.p[0])) + ' – ' + esc(ligaName(m.p[1])) +
+              (m.scheibe ? ' · ' + m.scheibe : '') + ' · ' + legsWon(m, m.p[0]) + ':' + legsWon(m, m.p[1]) + '</div>';
+          }).join('') + '</div>' : '') : '') +
+        '<button class="btn primary full" data-action="ov-cancel">Weiter (* oder Enter)</button>';
     } else if (o.type === 'live-ticker') {
       var lt = S.tour && S.tour.zuschauer;
       var link = lt ? location.origin + '/live.html#' + lt : '';
@@ -8911,6 +8927,20 @@
     submitTotal();
   }
 
+  /* "-" am Ziffernblock: die Aufnahme ist ueberworfen - zaehlt nicht, der
+     Rest bleibt. Was schon getippt war, verfaellt. */
+  function istUeberworfenTaste(ev) {
+    return ev.key === '-' || ev.code === 'NumpadSubtract';
+  }
+  function ueberworfenBuchen() {
+    var m = currentMatch();
+    if (!m || m.done) return;
+    if (UI.darts.length) { UI.error = 'Die Aufnahme läuft in Einzel-Darts – bitte dort weiter eintragen.'; render(); return; }
+    UI.input = ''; UI.error = '';
+    pomp();
+    commitVisit(0, 3, false, true);
+  }
+
   /* Welche Ziffer meint die Taste? Der Ziffernblock zaehlt immer als Ziffer -
      auch wenn NumLock aus ist und der Browser "Ende", "Pfeil hoch" usw.
      meldet (dann waere am Board sonst keine Zahl angekommen). */
@@ -9078,6 +9108,7 @@
     if (effectiveMode(rest) !== 'total') return;
     var zTotal = tasteZiffer(ev);
     if (istRestTaste(ev)) { restBuchen(); ev.preventDefault(); return; }
+    if (istUeberworfenTaste(ev)) { ueberworfenBuchen(); ev.preventDefault(); return; }
     if (zTotal !== null) { pressKey(zTotal); ev.preventDefault(); }
     else if (ev.key === 'Enter') { pressKey('ok'); ev.preventDefault(); }
     else if (ev.key === 'Backspace') { pressKey('del'); ev.preventDefault(); }
@@ -9095,6 +9126,7 @@
     if (!tm || tm.done) return;
     var zTurnier = tasteZiffer(ev);
     if (istRestTaste(ev)) { restBuchen(); ev.preventDefault(); return; }
+    if (istUeberworfenTaste(ev)) { ueberworfenBuchen(); ev.preventDefault(); return; }
     if (zTurnier !== null) {
       if (UI.input.length < 3) {
         UI.input = UI.input === '0' ? zTurnier : UI.input + zTurnier;
@@ -9121,6 +9153,18 @@
      seiner Seite, alle Legs mit Trennern. Loslassen führt zurück in die
      Spielansicht; verliert das Fenster den Fokus (Alt-Tab), klappt die
      Ansicht ebenfalls zu, sonst bliebe sie hängen. */
+  /* "*" am Ziffernblock: Team-Zwischenstand gross ein- und wieder ausblenden. */
+  document.addEventListener('keydown', function (ev) {
+    if (!(ev.key === '*' || ev.code === 'NumpadMultiply')) return;
+    if (!S.tour || !S.tour.liga || (S.screen !== 'game' && S.screen !== 'tournament')) return;
+    var at = document.activeElement;
+    if (at && (at.tagName === 'INPUT' || at.tagName === 'TEXTAREA' || at.isContentEditable)) return;
+    if (UI.overlay && UI.overlay.type === 'team-stand') { UI.overlay = null; render(); }
+    else if (!UI.overlay) { UI.overlay = { type: 'team-stand' }; render(); }
+    else return;
+    ev.preventDefault();
+  });
+
   document.addEventListener('keydown', function (ev) {
     /* "+" am Ziffernblock blendet die Liste aller Wuerfe ein und aus. */
     if ((ev.key === '+' || ev.code === 'NumpadAdd') && S.screen === 'game' && UI.turnier && !UI.overlay) {

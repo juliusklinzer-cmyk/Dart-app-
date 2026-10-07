@@ -3553,3 +3553,11 @@ body.tastatur #screen-bulloff button:focus {
   outline: 3px solid var(--laser, #4fb3e0); outline-offset: 3px;
   box-shadow: 0 0 30px var(--schein-stark);
 }
+
+/* "*" am Ziffernblock: Zwischenstand, vom Oche aus lesbar. */
+.ts-gross .lg-teams { margin: 8px 0 4px; }
+.ts-gross .lg-team .lg-zahl { font-size: clamp(4.5rem, 13vw, 8.5rem); line-height: 1; text-shadow: 0 0 30px rgba(70, 170, 215, 0.35); }
+.ts-gross .lg-name { font-size: 1.25rem; }
+.ts-laeuft { margin: 12px 0 4px; text-align: left; }
+.ts-laeuft > div:not(.lg-hl-titel) { padding: 3px 0; }
+#overlay-card .ts-laeuft + .btn, #overlay-card .lg-legs + .btn { margin-top: 16px; }

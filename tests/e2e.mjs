@@ -2521,6 +2521,13 @@ check('gross stehen die Punkte: ein gewonnenes Einzel = 1:0', await page.evaluat
   const z = [...document.querySelectorAll('#liga-stand .lg-zahl')].map((e) => e.textContent.trim());
   return z.join(':') === '1:0';
 }));
+await page.keyboard.press('NumpadMultiply');
+check('"*" zeigt im Ligaspiel den Zwischenstand gross', await page.evaluate(() => {
+  const o = window.__dart.ui().overlay; const t = document.getElementById('overlay-card').textContent;
+  return !!o && o.type === 'team-stand' && t.includes('Zwischenstand') && t.includes('1 von 16 gespielt');
+}));
+await page.keyboard.press('NumpadMultiply');
+check('nochmal "*" blendet ihn aus', await page.evaluate(() => !window.__dart.ui().overlay));
 check('jedes Einzel traegt seine Scheibe', await page.evaluate(() => {
   const M = window.__dart.state().matches;
   return M[0].scheibe === 'S1' && M[1].scheibe === 'S2';
@@ -2919,6 +2926,16 @@ check('"clear" bucht das Getippte als Rest (321 Rest = 180 geworfen)', await pag
 await page.keyboard.press('Backspace');   // leeres Feld: Aufnahme zurueck
 check('und laesst sich wie jede Aufnahme zuruecknehmen', await page.evaluate(() =>
   window.__dart.activeLeg(window.__dart.currentMatch()).visits.length === 0));
+await page.keyboard.type('45'); await page.keyboard.press('NumpadSubtract');
+check('"-" bucht ueberworfen: zaehlt nicht, Rest bleibt, Getipptes verfaellt', await page.evaluate(() => {
+  const D = window.__dart, l = D.activeLeg(D.currentMatch());
+  return l.visits.length === 1 && l.visits[0].b === true && l.visits[0].s === 0 && D.ui().input === '';
+}));
+await page.keyboard.press('Backspace');
+check('und laesst sich zuruecknehmen', await page.evaluate(() =>
+  window.__dart.activeLeg(window.__dart.currentMatch()).visits.length === 0));
+await page.keyboard.press('NumpadMultiply');
+check('"*" ausserhalb der Liga tut nichts', await page.evaluate(() => !window.__dart.ui().overlay));
 await page.keyboard.press('NumpadAdd');
 check('"+" blendet die Liste aller Wuerfe ein', await page.evaluate(() => document.getElementById('screen-game').classList.contains('verlauf')));
 await page.keyboard.press('NumpadAdd');
