@@ -198,9 +198,28 @@
     }
   }
 
+  /* Live-Ticker: das spielende Geraet meldet den Stand des laufenden
+     Einzels (nach jeder Aufnahme, gebuendelt auf hoechstens einmal pro
+     Sekunde). Nur im geteilten Turnier - nur das liegt beim Server. */
+  var tickerTimer = null;
+  function liveTickerAnstossen() {
+    if (tickerTimer || !window.DartSync || !window.DartSync.turnier || !window.DartSync.turnier.liveStand) return;
+    if (!S.tour || !S.tour.geteilt || !S.current) return;
+    tickerTimer = setTimeout(function () {
+      tickerTimer = null;
+      var m = S.current ? matchById(S.current) : null;
+      if (!m || !geteiltesTurnier()) return;
+      window.DartSync.turnier.liveStand(m.id, m.done ? null : {
+        p: m.p.slice(), starter: m.starter || null, start: matchStart(m), legs: m.legs,
+        darts: UI.darts.map(function (d) { return { m: d.m, n: d.n, v: d.v }; })
+      });
+    }, 900);
+  }
+
   function save() {
     /* Neuerer Stand im Speicher: nicht drueberschreiben (siehe load). */
     if (ladeSperre) { liveAnstossen(); return; }
+    liveTickerAnstossen();
     uiMerken();
     spielUhrStellen();
     try {
@@ -913,6 +932,7 @@
       S.tour.cursor = daten.cursor;
     }
     if (typeof daten.claimFrist === 'number') S.tour.claimFrist = daten.claimFrist;
+    if (daten.zuschauer && S.tour.zuschauer !== daten.zuschauer) { S.tour.zuschauer = daten.zuschauer; neu = true; }
     if (daten.status === 'beendet') S.tour.beendet = true;
     if (geteiltesTurnierAufraeumen()) neu = true;
     /* Frische Ergebnisse des anderen Geraets sofort ins Bild -- sonst zeigt
@@ -3537,6 +3557,7 @@
         ligaHighlightsHtml(lsd) +
         (lsd.fertige === S.matches.length && ligaNochOffen()
           ? '<button class="btn primary start full" data-action="to-winner">Ergebnisse &amp; Spielbericht</button>' : '') +
+        '<button class="btn ghost full" data-action="liga-ticker">Live-Ticker für Zuschauer</button>' +
         '<button class="btn ghost full" data-action="liga-nachmelden">Spieler nachmelden</button>' +
         '<button class="btn ghost full" data-action="liga-bericht">Spielbericht ansehen</button>';
     }
@@ -4576,7 +4597,7 @@
     $('screen-bulloff').classList.toggle('turnier', amBoard);
     /* Auch ohne Turnier-Modus: wer die Pfeiltasten nimmt, sieht die Wahl
        und bestaetigt mit Enter. */
-    var bWahl = amBoard || UI.bullTastatur ? Math.min(UI.bullWahl || 0, ids.length) : -1;
+    var bWahl = amBoard || UI.bullTastatur || (S.tour && S.tour.liga) ? Math.min(UI.bullWahl || 0, ids.length) : -1;
     /* Index hinter den Kandidaten = der Zurueck-Knopf ist markiert. */
     var bZk = document.querySelector('#screen-bulloff > [data-action="to-tournament"]');
     if (bZk) bZk.classList.toggle('wahl', bWahl === ids.length);
@@ -4586,7 +4607,7 @@
         (i === bWahl ? ' class="wahl"' : '') + '>' +
         avatarHTML(profile(pid), 'md') + '<span>' + esc(ligaName && S.tour && S.tour.liga ? ligaName(pid) : pname(pid)) + '</span></button>';
     }).join('') +
-      (amBoard ? '<p class="te-hint">← → / Tab · wählen &nbsp;&nbsp; Enter · der beginnt</p>' : '');
+      (amBoard || (S.tour && S.tour.liga) ? '<p class="te-hint">8 / 2 · wählen &nbsp;&nbsp; Enter · der beginnt</p>' : '');
   }
 
   function renderGame() {
@@ -6632,6 +6653,21 @@
           '<button class="btn ghost" data-action="signatur-nochmal">Nochmal</button>' +
           '<button class="btn primary" data-action="signatur-weiter">Weiter</button>' +
         '</div>';
+    } else if (o.type === 'live-ticker') {
+      var lt = S.tour && S.tour.zuschauer;
+      var link = lt ? location.origin + '/live.html#' + lt : '';
+      html = '<h3>Live-Ticker für Zuschauer</h3>' +
+        (lt
+          ? '<p>Mit diesem Link sieht jeder den Spielstand live – ohne Konto, nur zum Anschauen: Team-Stand, laufende Einzel, Ergebnisse und Statistik.</p>' +
+            '<div class="ticker-link" data-role="ticker-link">' + esc(link) + '</div>' +
+            '<div class="row-btns two">' +
+              '<button class="btn ghost" data-action="ticker-kopieren">Link kopieren</button>' +
+              '<button class="btn primary" data-action="ticker-teilen">Teilen</button>' +
+            '</div>'
+          : '<p>' + (S.tour && S.tour.geteilt
+              ? 'Der Link kommt gleich vom Server – bitte in ein paar Sekunden nochmal öffnen.'
+              : 'Den Live-Ticker gibt es für Ligaspiele im Modus „geteilt“ (beim Start des Ligaspiels wählen) – dann liegt der Stand beim Server.') + '</p>') +
+        '<button class="btn ghost full" data-action="ov-cancel">Schließen</button>';
     } else if (o.type === 'nachmeldung') {
       var nq = ligaBerichtQuelle();
       var nHeimTeam = nq ? (nq.liga.heim ? LIGA.team : nq.liga.gegner) : 'Heim';
@@ -7036,6 +7072,14 @@
     }
     $('overlay-card').innerHTML = html;
     if (o.type === 'unterschrift') signaturVorbereiten();
+    /* Mit Tastatur: in Dialogen ohne eigene Pfeil-Wahl gleich den
+       Hauptknopf markieren, damit immer etwas sichtbar gewaehlt ist. */
+    var karte = $('overlay-card');
+    if (document.body.classList.contains('tastatur') && !PFEIL_DIALOGE[o.type] && o.type !== 'checkout-darts' &&
+        !karte.contains(document.activeElement) && !karte.querySelector('input, select, textarea, canvas')) {
+      var erster = karte.querySelector('.btn.primary') || karte.querySelector('button');
+      if (erster) erster.focus({ preventScroll: true });
+    }
   }
 
   /* ================= Aktionen ================= */
@@ -8331,6 +8375,26 @@
         if (kZelle) kZelle.innerHTML = berichtKreuzHtml(kq.liga, kFeld);
         break;
       }
+      case 'liga-ticker':
+        if (S.tour && S.tour.geteilt && !S.tour.zuschauer && window.DartSync && window.DartSync.turnier) {
+          window.DartSync.turnier.abgleich(true).then(function () { render(); });
+        }
+        UI.overlay = { type: 'live-ticker' };
+        render();
+        break;
+      case 'ticker-kopieren': {
+        var tl = S.tour && S.tour.zuschauer ? location.origin + '/live.html#' + S.tour.zuschauer : '';
+        if (tl && navigator.clipboard) navigator.clipboard.writeText(tl).then(function () { el.textContent = 'Kopiert ✓'; }, function () {});
+        break;
+      }
+      case 'ticker-teilen': {
+        var tl2 = S.tour && S.tour.zuschauer ? location.origin + '/live.html#' + S.tour.zuschauer : '';
+        if (!tl2) break;
+        var tTitel = S.tour.liga ? 'Live: ' + LIGA.team + ' – ' + S.tour.liga.gegner : 'Live-Ticker';
+        if (navigator.share) navigator.share({ title: tTitel, text: tTitel, url: tl2 }).catch(function () {});
+        else if (navigator.clipboard) navigator.clipboard.writeText(tl2).then(function () { el.textContent = 'Kopiert ✓'; }, function () {});
+        break;
+      }
       case 'liga-nachmelden':
         nachmeldungStarten();
         break;
@@ -8824,6 +8888,27 @@
    * Checkout-Frage (1/2/3 Darts) bleiben Ziffern Ziffern. Uebersetzt wird
    * vor allen anderen Tasten-Lauschern, die dann einen echten Pfeil sehen.
    */
+  /* "clear" am Ziffernblock: das Getippte ist der neue REST, nicht die
+     Punktzahl - bei 50 Rest "8" + clear bucht 42 (so zaehlen viele im
+     Finish-Bereich). 0 + clear ist das Checkout; Rest 1 oder weniger als 0
+     ist wie immer Bust. */
+  function istRestTaste(ev) {
+    return ev.key === 'Clear' || ev.code === 'NumLock' || ev.code === 'NumpadClear';
+  }
+  function restBuchen() {
+    var m = currentMatch();
+    if (!m || m.done) return;
+    if (UI.input === '') { UI.error = 'Erst den Rest eintippen, dann clear.'; render(); return; }
+    var leg = activeLeg(m);
+    var rest = remainingIn(leg, activePlayer(leg, m)) - sum(UI.darts, function (d) { return d.v; });
+    var neu = parseInt(UI.input, 10);
+    if (neu > rest) { UI.error = 'Rest ' + neu + ' ist mehr als vorher (' + rest + ').'; UI.input = ''; render(); return; }
+    var wurf = rest - neu;
+    if (wurf > 180) { UI.error = 'Das wären ' + wurf + ' Punkte – mehr als 180.'; UI.input = ''; render(); return; }
+    UI.input = String(wurf);
+    submitTotal();
+  }
+
   /* Welche Ziffer meint die Taste? Der Ziffernblock zaehlt immer als Ziffer -
      auch wenn NumLock aus ist und der Browser "Ende", "Pfeil hoch" usw.
      meldet (dann waere am Board sonst keine Zahl angekommen). */
@@ -8833,11 +8918,29 @@
     return ev.key && ev.key.length === 1 && ev.key >= '0' && ev.key <= '9' ? ev.key : null;
   }
 
-  var ZIFFERN_PFEILE = { Numpad2: 'ArrowUp', Numpad8: 'ArrowDown', Numpad4: 'ArrowLeft', Numpad6: 'ArrowRight' };
+  /* Wie auf dem Ziffernblock am Board (Satechi): 8 oben, 2 unten. Neben den
+     Ziffernblock-Codes gelten dort, wo Ziffern nichts bedeuten (Ausbullen,
+     Dialoge), auch die Tasten "8/2/4/6" selbst - manche Bluetooth-Bloecke
+     melden sich wie die normale Zahlenreihe. */
+  var ZIFFERN_PFEILE = { Numpad8: 'ArrowUp', Numpad2: 'ArrowDown', Numpad4: 'ArrowLeft', Numpad6: 'ArrowRight' };
+  var ZIFFER_RICHTUNG = { '8': 'ArrowUp', '2': 'ArrowDown', '4': 'ArrowLeft', '6': 'ArrowRight' };
   var PFEIL_DIALOGE = { 'leg-done': 1, 'game-done': 1, 'turnier-ende': 1 };
   var ZIFFERN_BLEIBEN = { 'checkout-darts': 1, 'edit-visit': 1, 'leg-done': 1, 'match-done': 1, 'game-done': 1 };
+  /* Wird mit der Tastatur gearbeitet, ist der gewaehlte Knopf immer
+     deutlich markiert (keine Maus, kein Finger am Board). */
+  window.addEventListener('keydown', function () { document.body.classList.add('tastatur'); }, true);
+  window.addEventListener('pointerdown', function () { document.body.classList.remove('tastatur'); }, true);
+  /* "/" am Ziffernblock ist Tab: im Spiel Wechsel der Ansicht, in Dialogen
+     und beim Ausbullen die naechste Wahl. */
   window.addEventListener('keydown', function (ev) {
-    var pfeil = ZIFFERN_PFEILE[ev.code];
+    if (!(ev.key === '/' || ev.code === 'NumpadDivide') || ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    if (ev.target && ev.target.closest && ev.target.closest('input, select, textarea, [contenteditable="true"], [contenteditable=""]')) return;
+    ev.preventDefault();
+    ev.stopImmediatePropagation();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', code: 'Tab', bubbles: true, cancelable: true }));
+  }, true);
+  window.addEventListener('keydown', function (ev) {
+    var pfeil = ZIFFERN_PFEILE[ev.code] || ZIFFER_RICHTUNG[ev.key];
     if (!pfeil || ev.metaKey || ev.ctrlKey || ev.altKey) return;
     var ziel = ev.target;
     if (ziel && ziel.closest && ziel.closest('input, select, textarea')) return;
@@ -8903,7 +9006,7 @@
        Knopf zu Knopf - auch zu "Abbrechen" -, Enter drueckt den markierten.
        Dialoge mit eigener Pfeil-Wahl und Felder/Listen bleiben aussen vor. */
     if (UI.overlay && !PFEIL_DIALOGE[UI.overlay.type] && UI.overlay.type !== 'checkout-darts' &&
-        (ev.key === 'ArrowDown' || ev.key === 'ArrowUp' || ev.key === 'ArrowLeft' || ev.key === 'ArrowRight') &&
+        (ev.key === 'ArrowDown' || ev.key === 'ArrowUp' || ev.key === 'ArrowLeft' || ev.key === 'ArrowRight' || (ev.key === 'Tab' && !ev.isTrusted)) &&
         !(ev.target && ev.target.closest && ev.target.closest('input, select, textarea'))) {
       var oKnoepfe = Array.prototype.filter.call(
         document.querySelectorAll('#overlay-card button:not([disabled]), #overlay-card [role="button"]'),
@@ -8911,7 +9014,7 @@
       if (oKnoepfe.length) {
         ev.preventDefault();
         var oJetzt = oKnoepfe.indexOf(document.activeElement);
-        var oVor = ev.key === 'ArrowDown' || ev.key === 'ArrowRight';
+        var oVor = ev.key === 'ArrowDown' || ev.key === 'ArrowRight' || ev.key === 'Tab';
         var oNeu = oJetzt < 0 ? (oVor ? 0 : oKnoepfe.length - 1)
           : (oJetzt + (oVor ? 1 : -1) + oKnoepfe.length) % oKnoepfe.length;
         oKnoepfe[oNeu].focus();
@@ -8972,6 +9075,7 @@
     var rest = remainingIn(leg, activePlayer(leg, m)) - sum(UI.darts, function (d) { return d.v; });
     if (effectiveMode(rest) !== 'total') return;
     var zTotal = tasteZiffer(ev);
+    if (istRestTaste(ev)) { restBuchen(); ev.preventDefault(); return; }
     if (zTotal !== null) { pressKey(zTotal); ev.preventDefault(); }
     else if (ev.key === 'Enter') { pressKey('ok'); ev.preventDefault(); }
     else if (ev.key === 'Backspace') { pressKey('del'); ev.preventDefault(); }
@@ -8988,6 +9092,7 @@
     var tm = currentMatch();
     if (!tm || tm.done) return;
     var zTurnier = tasteZiffer(ev);
+    if (istRestTaste(ev)) { restBuchen(); ev.preventDefault(); return; }
     if (zTurnier !== null) {
       if (UI.input.length < 3) {
         UI.input = UI.input === '0' ? zTurnier : UI.input + zTurnier;
@@ -9015,6 +9120,12 @@
      Spielansicht; verliert das Fenster den Fokus (Alt-Tab), klappt die
      Ansicht ebenfalls zu, sonst bliebe sie hängen. */
   document.addEventListener('keydown', function (ev) {
+    /* "+" am Ziffernblock blendet die Liste aller Wuerfe ein und aus. */
+    if ((ev.key === '+' || ev.code === 'NumpadAdd') && S.screen === 'game' && UI.turnier && !UI.overlay) {
+      ev.preventDefault();
+      $('screen-game').classList.toggle('verlauf');
+      return;
+    }
     if (ev.key !== 'Shift' || S.screen !== 'game' || !UI.turnier) return;
     $('screen-game').classList.add('verlauf');
   });

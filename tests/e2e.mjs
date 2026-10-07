@@ -2878,12 +2878,37 @@ await page.keyboard.press('ArrowUp');
 check('Pfeil hoch fuehrt wieder zum Namen', await page.evaluate(() =>
   document.querySelectorAll('#bulloff-buttons button')[1].classList.contains('wahl') &&
   !document.querySelector('#screen-bulloff > [data-action="to-tournament"]').classList.contains('wahl')));
+/* Satechi-Ziffernblock: 8 = hoch, 2 = runter, "/" = Tab. */
+await page.keyboard.press('Numpad2');
+check('Ziffernblock 2 fuehrt runter auf "Zurück"', await page.evaluate(() =>
+  document.querySelector('#screen-bulloff > [data-action="to-tournament"]').classList.contains('wahl')));
+await page.keyboard.press('Numpad8');
+check('Ziffernblock 8 fuehrt wieder hoch zum Namen', await page.evaluate(() =>
+  document.querySelectorAll('#bulloff-buttons button')[1].classList.contains('wahl')));
+await page.keyboard.press('NumpadDivide');
+await page.keyboard.press('NumpadDivide');
+await page.keyboard.press('NumpadDivide');
+check('"/" springt wie Tab weiter (3x: Zurueck, erster, zweiter Name)', await page.evaluate(() =>
+  document.querySelectorAll('#bulloff-buttons button')[1].classList.contains('wahl')));
 await page.keyboard.press('Enter');
 check('Enter setzt den Anwerfer und startet in der Riesenanzeige',
   (await visible('#pad-key')) && await page.evaluate(() => {
     const m = window.__dart.currentMatch();
     return m.starter === m.p[1];
   }));
+/* "clear" bucht den REST: 501 Rest, "321" + clear = 180 geworfen. */
+await page.keyboard.type('321'); await page.keyboard.press('NumLock');
+check('"clear" bucht das Getippte als Rest (321 Rest = 180 geworfen)', await page.evaluate(() => {
+  const D = window.__dart, m = D.currentMatch(), l = D.activeLeg(m);
+  return l.visits.length === 1 && l.visits[0].s === 180;
+}));
+await page.keyboard.press('Backspace');   // leeres Feld: Aufnahme zurueck
+check('und laesst sich wie jede Aufnahme zuruecknehmen', await page.evaluate(() =>
+  window.__dart.activeLeg(window.__dart.currentMatch()).visits.length === 0));
+await page.keyboard.press('NumpadAdd');
+check('"+" blendet die Liste aller Wuerfe ein', await page.evaluate(() => document.getElementById('screen-game').classList.contains('verlauf')));
+await page.keyboard.press('NumpadAdd');
+check('und wieder aus', await page.evaluate(() => !document.getElementById('screen-game').classList.contains('verlauf')));
 /* Auf Rest 40 spielen, dann die Dart-Frage mit Pfeilen beantworten. */
 {
   const tp = async (z) => { await page.keyboard.type(z); await page.keyboard.press('Enter'); };

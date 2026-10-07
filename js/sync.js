@@ -814,7 +814,14 @@
           return turnierRuf('POST', '/' + t.sid + '/plan', { plan: plan, basis: basis });
         },
         takt: turnierTakt,
-        herzschlag: turnierHerzschlag
+        herzschlag: turnierHerzschlag,
+        /* Live-Ticker: laufender Stand des gespielten Einzels (Fehler egal -
+           der naechste Wurf schickt ihn wieder). */
+        liveStand: function (mid, stand) {
+          var t = D.state().tour;
+          if (!t || !t.geteilt || !t.sid || !nutzer) return Promise.resolve();
+          return turnierRuf('PUT', '/' + t.sid + '/matches/' + mid + '/live', { stand: stand }).catch(function () {});
+        }
       },
       live: {
         offen: liveOffen,

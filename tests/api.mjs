@@ -471,6 +471,22 @@ async function main() {
     r = await julius.ruf('POST', '/api/tournaments/turnier1/matches/m2r1/claim');
     gleich(r.status, 200, 'danach ist die Partie wieder frei');
 
+    /* Live-Ticker fuer Zuschauer: Schluessel, Livestand, oeffentliche Ansicht. */
+    r = await julius.ruf('GET', '/api/tournaments/turnier1');
+    const zs = r.daten.turnier.zuschauer;
+    ok(/^[A-Za-z0-9_-]{12,}$/.test(String(zs)), 'Teilnehmer bekommen den Zuschauer-Schluessel');
+    r = await tobi.ruf('PUT', '/api/tournaments/turnier1/matches/m2r1/live', {
+      stand: { p: [tobi_id, julius_id], starter: tobi_id, start: 501, legs: [{ starter: tobi_id, visits: [{ p: tobi_id, s: 100, d: 3, b: false, c: false }], winner: null }], darts: [] }
+    });
+    gleich(r.status, 200, 'das spielende Geraet meldet den Livestand');
+    r = await fremd.ruf('GET', '/api/zuschauer/' + zs);
+    gleich(r.status, 200, 'der Live-Ticker geht ohne Konto');
+    ok(r.daten.turnier.live.some((l) => l.matchId === 'm2r1' && l.stand.legs[0].visits[0].s === 100), 'und zeigt das laufende Einzel mit Stand');
+    ok(r.daten.turnier.ergebnisse.m1r1 && r.daten.turnier.ergebnisse.m1r1.winner === julius_id, 'und die fertigen Ergebnisse');
+    ok(/^Julius/.test(r.daten.turnier.namen[julius_id]) && r.daten.turnier.namen[tobi_id] === 'Tobi', 'mit Namen');
+    r = await fremd.ruf('GET', '/api/zuschauer/falsch1234567');
+    gleich(r.status, 404, 'ein falscher Schluessel zeigt nichts');
+
     /* Spielerwechsel an zwei Geraeten: der Plan aendert sich mit Zaehler. */
     const plan2 = JSON.parse(JSON.stringify(plan));
     plan2.matches[1].p = [tobi_id, 'gastx'];
@@ -512,6 +528,9 @@ async function main() {
       result: { id: 'm2r1', p: [tobi_id, julius_id], winner: tobi_id, legs: [{ winner: tobi_id, visits: [] }], done: true }
     });
     gleich(r.status, 200, 'ein spaetes Ergebnis wird nach dem Ende noch angenommen');
+    r = await fremd.ruf('GET', '/api/zuschauer/' + zs);
+    ok(r.daten.turnier.status === 'beendet' && !r.daten.turnier.live.length && r.daten.turnier.ergebnisse.m2r1,
+      'nach dem Ende zeigt der Ticker den Endstand, nichts mehr live');
     r = await tobi.ruf('GET', '/api/games?since=0');
     const archiv1 = (r.daten.spiele || r.daten.games || []).find((g) => g.id === 'turnier1');
     ok(archiv1 && archiv1.payload.stand === 1 && archiv1.payload.matches[1].done === true && archiv1.payload.matches[1].winner === tobi_id,

@@ -69,7 +69,7 @@ const TYPEN = {
 
 /* Was ausgeliefert werden darf. Alles andere im Repo (server/, tests/, .git)
    geht niemanden etwas an. */
-const ERLAUBT = new Set(['index.html', 'manifest.webmanifest', 'sw.js', 'dart-turnier.html']);
+const ERLAUBT = new Set(['index.html', 'manifest.webmanifest', 'sw.js', 'dart-turnier.html', 'live.html']);
 // 'modell': CV-Modelle fuer die Kamera-Erkennung -- laedt nur das iPhone
 // als Linse, deshalb nimmt der Service Worker sie ausdruecklich nicht mit.
 const ERLAUBTE_ORDNER = new Set(['css', 'js', 'icons', 'fonts', 'modell']);

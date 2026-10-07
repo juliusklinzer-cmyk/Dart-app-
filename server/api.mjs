@@ -569,6 +569,27 @@ export function createApi(db, config) {
     }
   }
 
+  /* Zuschauer-Schluessel: wird beim ersten Bedarf vergeben (auch fuer
+     Turniere von vor dem Live-Ticker). */
+  function zuschauerSchluessel(t) {
+    if (t.zuschauer) return t.zuschauer;
+    const k = randomBytes(12).toString('base64url');
+    db.prepare('UPDATE tournaments SET zuschauer = ? WHERE id = ? AND zuschauer IS NULL').run(k, t.id);
+    t.zuschauer = db.prepare('SELECT zuschauer FROM tournaments WHERE id = ?').get(t.id).zuschauer;
+    return t.zuschauer;
+  }
+
+  /* Laufende Einzel fuer den Live-Ticker: nur im Arbeitsspeicher (kostet
+     nichts, ein Neustart verliert hoechstens ein paar Sekunden Livestand).
+     Schluessel Turnier -> Partie -> { stand, at, von }. */
+  const liveEinzel = new Map();
+  function liveEinzelSetzen(tid, mid, wert) {
+    let t = liveEinzel.get(tid);
+    if (!t) { t = new Map(); liveEinzel.set(tid, t); }
+    if (wert) t.set(mid, wert); else t.delete(mid);
+    if (!t.size) liveEinzel.delete(tid);
+  }
+
   function turnierAntwort(t, seit, u) {
     namenLaden(u);
     const zeilen = db
@@ -585,7 +606,8 @@ export function createApi(db, config) {
       angelegtVonName: namen.get(t.created_by) || null,
       partien: zeilen.map(partieZeile),
       cursor: hoechste,
-      claimFrist: CLAIM_FRIST
+      claimFrist: CLAIM_FRIST,
+      zuschauer: zuschauerSchluessel(t)
     };
   }
 
@@ -746,6 +768,7 @@ export function createApi(db, config) {
           ' claimed_by = excluded.claimed_by, result = excluded.result,' +
           ' seq = excluded.seq, updated_at = excluded.updated_at'
       ).run(t.id, mid, u.id, Date.now(), ergebnisText, s, new Date().toISOString());
+      liveEinzelSetzen(t.id, mid, null);   // fertig: nicht mehr live
       /* Kommt ein Ergebnis erst nach dem Ende (Funkloch beim Checkout), wird
          es auch ins Archiv des Turniers nachgetragen; die Geraete holen den
          geaenderten Archiv-Eintrag beim naechsten Abgleich (stand steigt). */
@@ -802,6 +825,80 @@ export function createApi(db, config) {
       }
     });
     sendJson(res, 200, { turnier: turnierAntwort(verlangeTurnier(t.id), 0, u) });
+  }
+
+  /* Laufender Stand eines Einzels fuer die Zuschauer (vom spielenden
+     Geraet nach jeder Aufnahme, gedrosselt). */
+  async function partieLive(req, res, treffer) {
+    pruefeHerkunft(req);
+    const u = verlangeNutzer(req);
+    const t = verlangeTurnier(turnierId(treffer[0]));
+    verlangeTeilnahme(t, u);
+    const mid = turnierId(treffer[1]);
+    const body = await leseJson(req, 96 * 1024);
+    const schluessel = 'live-einzel:' + u.id;
+    const warte = limit.pruefe(schluessel, 3000, 600e3);
+    if (warte) throw new HttpFehler(429, 'Zu viele Live-Meldungen.');
+    limit.zaehle(schluessel, 3000, 600e3);
+    const da = db.prepare('SELECT result FROM tournament_matches WHERE tournament_id = ? AND match_id = ?').get(t.id, mid);
+    if (t.status !== 'offen' || (da && da.result) || !body.stand) {
+      liveEinzelSetzen(t.id, mid, null);
+      return sendJson(res, 200, { ok: true });
+    }
+    const st = body.stand;
+    if (!istObjekt(st) || !Array.isArray(st.legs) || !Array.isArray(st.p)) throw kaputt('Live-Stand');
+    liveEinzelSetzen(t.id, mid, { stand: st, at: Date.now(), von: u.id });
+    sendJson(res, 200, { ok: true });
+  }
+
+  /* Der Live-Ticker: alles zu einem Turnier, ohne Konto, nur lesend - wer
+     den geheimen Schluessel kennt. Bericht-Daten (Unterschriften,
+     Nachmeldungen, Korrekturen) gehen hier bewusst nicht raus. */
+  function zuschauerAnsicht(req, res, treffer) {
+    const ip = clientIp(req, config.trustProxy);
+    const warte = limit.pruefe('zuschauer:' + ip, 1200, 600e3);
+    if (warte) throw new HttpFehler(429, 'Bitte etwas langsamer.');
+    limit.zaehle('zuschauer:' + ip, 1200, 600e3);
+    const k = String(Array.isArray(treffer) ? treffer[0] : treffer || '');
+    if (!/^[A-Za-z0-9_-]{8,40}$/.test(k)) throw new HttpFehler(404, 'Diesen Live-Ticker gibt es nicht.');
+    const t = db.prepare('SELECT * FROM tournaments WHERE zuschauer = ?').get(k);
+    if (!t) throw new HttpFehler(404, 'Diesen Live-Ticker gibt es nicht.');
+    const plan = JSON.parse(t.plan);
+    const lg = plan.liga || null;
+    const liga = lg ? {
+      terminId: lg.terminId, nr: lg.nr, gegner: lg.gegner, heim: !!lg.heim, ort: lg.ort || '', tag: lg.tag || '',
+      uebung: !!lg.uebung, wir: lg.wir || [], sie: lg.sie || [],
+      heimSpieler: lg.heimSpieler || [], gastSpieler: lg.gastSpieler || [], zeitVon: lg.zeitVon || null
+    } : null;
+    /* Namen: Konten mit Anzeigenamen, Gaeste wie eingetragen. */
+    const namenListe = {};
+    for (const id of Array.isArray(plan.players) ? plan.players : []) {
+      if (String(id).indexOf('u_') === 0) {
+        const n = db.prepare('SELECT display_name FROM users WHERE id = ?').get(String(id));
+        namenListe[id] = (n && n.display_name) || 'Spieler';
+      }
+      else namenListe[id] = (plan.gaeste && plan.gaeste[id]) || 'Gast';
+    }
+    const zeilen = db.prepare('SELECT match_id, result FROM tournament_matches WHERE tournament_id = ?').all(t.id);
+    const ergebnisse = {};
+    for (const z of zeilen) if (z.result) ergebnisse[z.match_id] = JSON.parse(z.result);
+    const jetzt = Date.now();
+    const live = [];
+    const lt = liveEinzel.get(t.id);
+    if (lt && t.status === 'offen') {
+      for (const [mid, w] of lt) {
+        if (ergebnisse[mid] || jetzt - w.at > 15 * 60000) continue;   // fertig oder seit 15 min still
+        live.push({ matchId: mid, stand: w.stand, alter: jetzt - w.at });
+      }
+    }
+    res.setHeader('Cache-Control', 'no-store');
+    sendJson(res, 200, {
+      turnier: {
+        status: t.status, start: plan.start || 501, bestOf: plan.bestOf || 3, liga, namen: namenListe,
+        matches: (plan.matches || []).map((m) => ({ id: m.id, round: m.round, p: m.p, posPaar: m.posPaar || null, scheibe: m.scheibe || null })),
+        ergebnisse, live, stand: jetzt
+      }
+    });
   }
 
   async function turnierBeenden(req, res, id) {
@@ -1464,6 +1561,8 @@ export function createApi(db, config) {
     ['GET', new RegExp('^\\/api\\/tournaments\\/' + TID + '$'), turnierHolen],
     ['POST', new RegExp('^\\/api\\/tournaments\\/' + TID + '\\/ende$'), turnierBeenden],
     ['POST', new RegExp('^\\/api\\/tournaments\\/' + TID + '\\/plan$'), turnierPlanAendern],
+    ['PUT', new RegExp('^\\/api\\/tournaments\\/' + TID + '\\/matches\\/' + TID + '\\/live$'), partieLive],
+    ['GET', /^\/api\/zuschauer\/([A-Za-z0-9_-]{1,64})$/, zuschauerAnsicht],
     ['POST', new RegExp('^\\/api\\/tournaments\\/' + TID + '\\/matches\\/' + TID + '\\/claim$'), partieBeanspruchen],
     ['POST', new RegExp('^\\/api\\/tournaments\\/' + TID + '\\/matches\\/' + TID + '\\/frei$'), partieFreigeben],
     ['PUT', new RegExp('^\\/api\\/tournaments\\/' + TID + '\\/matches\\/' + TID + '$'), partieErgebnis],

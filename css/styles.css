@@ -3539,3 +3539,17 @@ body { font-size: 1rem; }
 /* Final (beide unterschrieben): nichts mehr antippbar, kein Nachmelde-Knopf. */
 #bericht-blatt.final .b-kreuz { cursor: default; pointer-events: none; }
 #bericht-blatt.final .b-nur-schirm { display: none; }
+
+/* Live-Ticker-Link zum Teilen */
+.ticker-link { font-family: ui-monospace, Menlo, monospace; font-size: 0.85rem; word-break: break-all;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(70,170,215,0.3); border-radius: var(--r-m);
+  padding: 10px 12px; margin: 6px 0 12px; user-select: all; text-align: left; }
+
+/* Tastatur-Bedienung am Board: der gewaehlte Knopf ist immer markiert. */
+body.tastatur #overlay-card .btn:focus,
+body.tastatur #overlay-card [role="button"]:focus,
+body.tastatur #overlay-card .te-zeile:focus,
+body.tastatur #screen-bulloff button:focus {
+  outline: 3px solid var(--laser, #4fb3e0); outline-offset: 3px;
+  box-shadow: 0 0 30px var(--schein-stark);
+}

@@ -1495,6 +1495,31 @@ async function main() {
       await julius.page.locator('#schedule [data-action="open-match"][data-id="' + ids[1] + '"]').click();
       await julius.page.waitForTimeout(900);
       check('Julius uebernimmt das Einzel', await julius.page.evaluate((id) => window.__dart.state().current === id, ids[1]));
+      /* Zuschauer-Link: ohne Konto, sieht das laufende Einzel mit LIVE und Rest. */
+      {
+        await julius.page.evaluate((id) => {
+          const D = window.__dart, S = D.state(), m = S.matches.find((x) => x.id === id);
+          m.starter = m.starter || m.p[0];
+          if (!m.legs.length) m.legs.push({ starter: m.starter, visits: [] });
+          m.legs[m.legs.length - 1].visits.push({ p: m.starter, s: 100, d: 3, b: false, c: false, o: 0 });
+          D.save();
+        }, ids[1]);
+        await julius.page.waitForTimeout(2500);
+        const token = await julius.page.evaluate(() => window.__dart.state().tour.zuschauer);
+        check('das Ligaspiel hat einen Zuschauer-Link', /^[A-Za-z0-9_-]{10,}$/.test(token || ''));
+        const zctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+        const zp = await zctx.newPage();
+        await zp.goto(BASIS + '/live.html#' + token);
+        await zp.waitForSelector('.stand', { timeout: 10000 });
+        const ztext = await zp.locator('#ticker').innerText();
+        check('Zuschauer sieht ohne Login das Einzel als LIVE', /live/i.test(ztext) && (await zp.locator('.live-einzel').count()) === 1, ztext.slice(0, 300));
+        check('mit dem Rest nach der Aufnahme (401)', (await zp.locator('.live-einzel .le-rest').allInnerTexts()).includes('401'));
+        check('und den Gastnamen', ztext.includes('Funk'));
+        await zp.goto(BASIS + '/live.html#falsch123456');
+        await zp.waitForTimeout(1500);
+        check('falscher Link: freundlicher Hinweis statt Daten', (await zp.locator('.fehler-seite').count()) === 1);
+        await zctx.close();
+      }
       await tobi.page.context().setOffline(false);
       await tobi.page.waitForTimeout(800);
       await tobi.page.evaluate(() => window.DartSync.turnier.herzschlag());
