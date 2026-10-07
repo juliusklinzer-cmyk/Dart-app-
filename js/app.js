@@ -64,6 +64,11 @@
     [2, 0], [3, 1], [1, 2], [0, 3],
     [3, 0], [2, 1], [0, 2], [1, 3]
   ];
+  /* Scheibe je Einzel (Index wie LIGA_EINZEL): je zwei Einzel laufen
+     gleichzeitig an S1 und S2, und jeder Spieler beider Teams spielt genau
+     zweimal an S1 und zweimal an S2. */
+  var LIGA_SCHEIBEN = ['S1', 'S2', 'S1', 'S2', 'S1', 'S2', 'S1', 'S2',
+    'S2', 'S1', 'S1', 'S2', 'S1', 'S2', 'S2', 'S1'];
   /* Die Tabelle der allerersten Fassung (Durchgang 3/4 anders) – nur noch
      für die Migration alter Stände und Berichte aus dem Alt-Archiv. */
   var LIGA_EINZEL_ALT = [
@@ -5559,20 +5564,17 @@
       return zeilen;
     };
 
-    /* Die 16 Einzel in Bogen-Reihenfolge. Links die Legs, rechts die nach
-       der SWO-Staffel kumulierten PUNKTE (Best of 3: 2:0 = 4:0, 2:1 = 3:1;
-       Best of 5: 6:0 / 5:1 / 4:2) – kumuliert in der Reihenfolge, in der
-       die Einzel tatsächlich fertig wurden, wie auf dem handgeführten Bogen. */
+    /* Die 16 Einzel in Bogen-Reihenfolge. Links die Legs, rechts das
+       Ergebnis des Einzels wie auf dem Bogen: 1 : 0 fuer den Heimsieg,
+       0 : 1 fuer den Gastsieg. Unten im Endergebnis stehen die Summen. */
     var gewinnLegs = Math.floor((q.bestOf || 3) / 2) + 1;
-    var lauf = {}, hp = 0, gp = 0;
-    q.matches.filter(function (m) { return m.done; })
-      .slice().sort(function (a, b) { return (a.at || 0) - (b.at || 0); })
-      .forEach(function (m) {
-        var pkt = ligaPunkte(m, gewinnLegs);
-        if (m.winner === m.p[0]) { hp += pkt[0]; gp += pkt[1]; }
-        else { gp += pkt[0]; hp += pkt[1]; }
-        lauf[m.id] = hp + ' : ' + gp;
-      });
+    var hp = 0, gp = 0;
+    var einzelPunkte = function (m) {
+      if (!m.done || !m.winner) return ' : ';
+      var heimSieg = m.winner === m.p[0];
+      if (heimSieg) hp++; else gp++;
+      return heimSieg ? '1 : 0' : '0 : 1';
+    };
     var heimLegs = 0, gastLegs = 0;
     var einzelZeilen = q.matches.map(function (m, i) {
       // Alt-Archiv ohne posPaar: die Matches entstanden nach der alten Tabelle.
@@ -5594,7 +5596,7 @@
         '<th contenteditable data-kf="einzel-' + i + '">H' + berichtNr(heimIds, m.p[0], paar[0]) + ' – G' + berichtNr(gastIds, m.p[1], paar[1]) + '</th>' +
         '<td contenteditable>' + (m.done || m.legs.length
           ? lh + ' : ' + lgs + (m.kampflos ? ' w.o.' : '') : ' : ') + '</td>' +
-        '<td contenteditable>' + (m.done && lauf[m.id] ? lauf[m.id] : ' : ') + '</td></tr>';
+        '<td contenteditable>' + einzelPunkte(m) + '</td></tr>';
     }).join('');
 
     var hlHeim = berichtHighlights(heimIds, stM);
@@ -7152,7 +7154,7 @@
         /* Gegen Bots wird nicht ausgebullt (die werfen keinen Bull) - der
            eigene Spieler wirft an. Gegen echte Leute wie im Ligaspiel. */
         starter: d.gegner === 'team' ? null : h, posPaar: paar.slice(),
-        scheibe: i % 2 === 0 ? 'S1' : 'S2',
+        scheibe: LIGA_SCHEIBEN[i],
         legs: [], done: false, winner: null, at: null
       };
     });
@@ -7259,7 +7261,7 @@
         /* Welche Bogen-Positionen hier spielen und auf welcher Scheibe die
            Partie im Doppelbetrieb läuft (zwei nebeneinander je Durchgang). */
         posPaar: paar.slice(),
-        scheibe: i % 2 === 0 ? 'S1' : 'S2',
+        scheibe: LIGA_SCHEIBEN[i],
         legs: [], done: false, winner: null, at: null
       };
     });

@@ -2596,9 +2596,23 @@ check('mit den 16 Einzeln in Bogen-Reihenfolge', await page.evaluate(() => {
   const t = document.getElementById('bericht-blatt').textContent;
   return t.includes('H1 – G1') && t.includes('H3 – G1') && t.includes('H2 – G4');
 }));
-check('Legs und kumulierte Punkte (1 je Einzel) stehen drin', await page.evaluate(() => {
-  const t = document.getElementById('bericht-blatt').textContent.replace(/\s+/g, ' ');
-  return t.includes('2 : 1') && t.includes('1 : 0') && t.includes('2 : 0');
+check('Ergebnis je Einzel wie auf dem Bogen: 1 : 0 / 0 : 1, Summe im Endergebnis', await page.evaluate(() => {
+  const D = window.__dart, M = D.state().matches;
+  const zeilen = [...document.querySelectorAll('.b-einzel tr')].slice(1);
+  const ok = M.every((m, i) => {
+    const erg = zeilen[i].querySelectorAll('td')[1].textContent.trim();
+    if (!m.done) return erg === ':';
+    return erg === (m.winner === m.p[0] ? '1 : 0' : '0 : 1');
+  });
+  const h = M.filter((m) => m.done && m.winner === m.p[0]).length, g = M.filter((m) => m.done && m.winner === m.p[1]).length;
+  const ende = document.querySelectorAll('.b-ende td')[1].textContent.trim();
+  return ok && ende === h + ' : ' + g && M.some((m) => m.done);
+}));
+check('jeder Spieler beider Teams spielt 2x an S1 und 2x an S2', await page.evaluate(() => {
+  const M = window.__dart.state().matches;
+  return [0, 1].every((s) => [0, 1, 2, 3].every((p) =>
+    M.filter((m) => m.posPaar[s] === p && m.scheibe === 'S1').length === 2 &&
+    M.filter((m) => m.posPaar[s] === p && m.scheibe === 'S2').length === 2));
 }));
 check('das kampflose Einzel traegt den w.o.-Vermerk', await page.evaluate(() => {
   const t = document.getElementById('bericht-blatt').textContent.replace(/\s+/g, ' ');
