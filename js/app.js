@@ -9057,6 +9057,10 @@
         }
         if (ev.key === 'Enter' && !(document.activeElement && document.activeElement.closest && document.activeElement.closest('#screen-bulloff button'))) {
           ev.preventDefault();
+          /* Dieses Enter ist verbraucht: sonst kaeme es gleich danach im
+             frisch geoeffneten Spielfeld an und buchte dort fuer den
+             Bull-Sieger eine 0 - dann waere sofort der andere dran. */
+          ev.stopImmediatePropagation();
           /* Ohne sichtbare Markierung waehlt Enter niemanden blind aus -
              es zeigt erst, wer markiert ist. */
           if (!UI.bullTastatur) { UI.bullTastatur = true; UI.bullWahl = 0; render(); return; }

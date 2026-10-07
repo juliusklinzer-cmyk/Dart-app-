@@ -2881,6 +2881,25 @@ await page.evaluate(() => {
   D.setScreen('setup');
 });
 
+group('Ausbullen per Tastatur OHNE Turnier-Modus: der Bull-Sieger beginnt');
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  S.game = null; S.matches = []; S.tour = null; S.current = null;
+  S.lineup = D.activeProfiles().filter((p) => !p.gast).slice(0, 2).map((p) => p.id);
+  S.mode = '501'; S.settings.start = 501; S.settings.bestOf = 3;
+  D.setScreen('setup');
+});
+await page.locator('[data-action="start-game"]').click();
+await page.evaluate(() => { window.__dart.ui().turnier = false; window.__dart.render(); });
+await page.locator('#schedule .match-row .go:not(.wo)').first().click();
+await page.keyboard.press('Numpad6');
+await page.keyboard.press('NumpadEnter');
+check('Spieler 2 gewinnt das Bullen und ist dran - ohne geschenkte 0-Aufnahme', await page.evaluate(() => {
+  const D = window.__dart, m = D.currentMatch(), l = D.activeLeg(m);
+  return D.state().screen === 'game' && m.starter === m.p[1] && l.visits.length === 0 &&
+    D.state().matches[0].legs[0].starter === m.p[1];
+}));
+
 group('Ausbullen und Checkout am Board per Tastatur');
 await page.evaluate(() => {
   const D = window.__dart, S = D.state();
