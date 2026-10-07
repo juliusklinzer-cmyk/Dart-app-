@@ -8921,7 +8921,7 @@
      Finish-Bereich). 0 + clear ist das Checkout; Rest 1 oder weniger als 0
      ist wie immer Bust. */
   function istRestTaste(ev) {
-    return ev.key === 'Clear' || ev.code === 'NumLock' || ev.code === 'NumpadClear';
+    return ev.key === 'Clear' || ev.key === 'NumLock' || ev.code === 'NumLock' || ev.code === 'NumpadClear';
   }
   function restBuchen() {
     var m = currentMatch();
