@@ -1902,7 +1902,7 @@
          falsch angetippter Ausbull-Sieger laesst sich so korrigieren. */
       if (m.kind !== 'quick' && m.starter && !m.done && S.screen === 'game') {
         m.starter = null;
-        UI.bullWahl = 0;
+        UI.bullWahl = 0; UI.bullTastatur = tastaturBetrieb();
         S.screen = 'bulloff';
         save();
       }
@@ -4602,7 +4602,9 @@
     $('screen-bulloff').classList.toggle('turnier', amBoard);
     /* Auch ohne Turnier-Modus: wer die Pfeiltasten nimmt, sieht die Wahl
        und bestaetigt mit Enter. */
-    var bWahl = amBoard || UI.bullTastatur || (S.tour && S.tour.liga) ? Math.min(UI.bullWahl || 0, ids.length) : -1;
+    /* Markiert ist erst, wenn mit der Tastatur gewaehlt wird - beim
+       Antippen bleibt der Bildschirm ohne Markierung. */
+    var bWahl = UI.bullTastatur ? Math.min(UI.bullWahl || 0, ids.length) : -1;
     /* Index hinter den Kandidaten = der Zurueck-Knopf ist markiert. */
     var bZk = document.querySelector('#screen-bulloff > [data-action="to-tournament"]');
     if (bZk) bZk.classList.toggle('wahl', bWahl === ids.length);
@@ -7663,7 +7665,7 @@
     if (!m) { render(); return; }
     S.current = id;
     UI.input = ''; UI.darts = []; UI.mult = 1; UI.modeOverride = null; UI.error = ''; UI.overlay = null;
-    UI.bullWahl = 0;
+    UI.bullWahl = 0; UI.bullTastatur = tastaturBetrieb();
     /* Am Board-iPad (Turnier-Modus gemerkt) startet jedes Liga-Einzel
        direkt in der Riesenanzeige. In normalen Turnieren bleibt einfach
        an, was der Spieler zuletzt gewaehlt hat. */
@@ -8961,6 +8963,17 @@
   /* Wird mit der Tastatur gearbeitet, ist der gewaehlte Knopf immer
      deutlich markiert (keine Maus, kein Finger am Board). */
   window.addEventListener('keydown', function () { document.body.classList.add('tastatur'); }, true);
+  /* Wird gerade mit der Tastatur gearbeitet (letzte Eingabe war eine Taste,
+     kein Tipp)? Dann zeigt das naechste Ausbullen die Markierung gleich. */
+  function tastaturBetrieb() { return document.body.classList.contains('tastatur'); }
+  /* Touch beim Ausbullen: die Tastatur-Markierung verschwindet (nicht auf
+     einem Knopf - der wird ja gerade angetippt und darf nicht neu gezeichnet
+     werden, sonst ginge der Tipp verloren). */
+  window.addEventListener('pointerdown', function (ev) {
+    if (S.screen !== 'bulloff' || !UI.bullTastatur) return;
+    if (ev.target && ev.target.closest && ev.target.closest('button')) return;
+    UI.bullTastatur = false; render();
+  }, true);
   window.addEventListener('pointerdown', function () { document.body.classList.remove('tastatur'); }, true);
   /* "/" am Ziffernblock ist Tab: im Spiel Wechsel der Ansicht, in Dialogen
      und beim Ausbullen die naechste Wahl. */
@@ -9000,7 +9013,7 @@
     /* Ausbullen am Board: Pfeile/Tab wechseln den Kandidaten, Enter
        bestaetigt den Anwerfer. */
     var bPfeil = ev.key === 'ArrowLeft' || ev.key === 'ArrowUp' || ev.key === 'ArrowRight' || ev.key === 'ArrowDown';
-    if (S.screen === 'bulloff' && !UI.overlay && (UI.turnier && turnierErlaubt() || UI.bullTastatur || bPfeil)) {
+    if (S.screen === 'bulloff' && !UI.overlay && (UI.turnier && turnierErlaubt() || UI.bullTastatur || bPfeil || ev.key === 'Tab')) {
       var bKnoepfe = document.querySelectorAll('#bulloff-buttons [data-action="pick-starter"]');
       if (bKnoepfe.length) {
         /* Hinter den Kandidaten steht als letzte Wahl "Zurueck" (Index n):
@@ -9010,10 +9023,14 @@
         var bZurueck = document.querySelector('#screen-bulloff > [data-action="to-tournament"]');
         var bMax = bZurueck && bZurueck.offsetParent ? bN : bN - 1;
         var bUnter = bN > 1 && bKnoepfe[1].getBoundingClientRect().top > bKnoepfe[0].getBoundingClientRect().top + 5;
-        if (bPfeil || (ev.key === 'Tab' && (UI.bullTastatur || UI.turnier))) {
+        if (bPfeil || ev.key === 'Tab') {
           ev.preventDefault();
+          /* Erster Tastendruck: nur die Markierung zeigen (auf dem ersten
+             Namen bzw. mit "rechts"/"runter" gleich auf dem naechsten). */
+          var bErst = !UI.bullTastatur;
           UI.bullTastatur = true;
-          var bAlt = Math.min(UI.bullWahl || 0, bMax);
+          var bAlt = bErst ? 0 : Math.min(UI.bullWahl || 0, bMax);
+          if (bErst && (ev.key === 'ArrowUp' || ev.key === 'ArrowLeft')) { UI.bullWahl = 0; render(); return; }
           var bNeu = bAlt;
           if (ev.key === 'Tab') bNeu = (bAlt + 1) % (bMax + 1);
           else if (ev.key === 'ArrowLeft') bNeu = bAlt < bN ? Math.max(0, bAlt - 1) : bAlt;
@@ -9027,6 +9044,9 @@
         }
         if (ev.key === 'Enter' && !(document.activeElement && document.activeElement.closest && document.activeElement.closest('#screen-bulloff button'))) {
           ev.preventDefault();
+          /* Ohne sichtbare Markierung waehlt Enter niemanden blind aus -
+             es zeigt erst, wer markiert ist. */
+          if (!UI.bullTastatur) { UI.bullTastatur = true; UI.bullWahl = 0; render(); return; }
           if ((UI.bullWahl || 0) >= bN && bZurueck) { handleAction('to-tournament', bZurueck); return; }
           var bZiel = bKnoepfe[Math.min(UI.bullWahl || 0, bN - 1)];
           if (bZiel) handleAction('pick-starter', bZiel);

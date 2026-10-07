@@ -3561,3 +3561,14 @@ body.tastatur #screen-bulloff button:focus {
 .ts-laeuft { margin: 12px 0 4px; text-align: left; }
 .ts-laeuft > div:not(.lg-hl-titel) { padding: 3px 0; }
 #overlay-card .ts-laeuft + .btn, #overlay-card .lg-legs + .btn { margin-top: 16px; }
+
+/* Ausbullen per Pfeil-/Zifferntasten auch AUSSERHALB des Turnier-Modus:
+   die gewaehlte Person (bzw. "Zurueck") traegt denselben Laser-Ring. */
+#screen-bulloff .bulloff button.wahl,
+#screen-bulloff > .btn.wahl {
+  outline: 3px solid var(--laser, #4fb3e0);
+  outline-offset: 3px;
+  border-color: var(--aktiv-linie);
+  background: var(--aktiv-flaeche);
+  box-shadow: 0 0 30px var(--schein-stark);
+}

@@ -2880,8 +2880,19 @@ await page.evaluate(() => { window.__dart.ui().turnier = true; window.__dart.ren
 await page.locator('#schedule .match-row .go:not(.wo)').first().click();
 check('das Ausbullen traegt den Board-Zuschnitt', await page.evaluate(() =>
   document.getElementById('screen-bulloff').classList.contains('turnier')));
-check('die erste Wahl leuchtet', await page.evaluate(() =>
-  document.querySelectorAll('#bulloff-buttons button')[0].classList.contains('wahl')));
+check('ohne Tastendruck ist niemand markiert (Touch-Betrieb)', await page.evaluate(() =>
+  !document.querySelector('#screen-bulloff .wahl')));
+check('die Wahl ist auch ohne Turnier-Modus SICHTBAR markiert (Rahmen)', await page.evaluate(() => {
+  const D = window.__dart; D.ui().turnier = false; D.ui().bullTastatur = true; D.render();
+  const el = document.querySelector('#bulloff-buttons button.wahl');
+  const st = el && getComputedStyle(el);
+  const ok = !!st && st.outlineStyle === 'solid' && parseFloat(st.outlineWidth) >= 2;
+  D.ui().turnier = true; D.render();
+  return ok;
+}));
+await page.locator('#bulloff-sub').click();
+check('Antippen neben die Knoepfe nimmt die Markierung wieder weg', await page.evaluate(() =>
+  !document.querySelector('#screen-bulloff .wahl')));
 await page.keyboard.press('ArrowRight');
 check('Pfeil rechts wechselt den Kandidaten', await page.evaluate(() =>
   document.querySelectorAll('#bulloff-buttons button')[1].classList.contains('wahl')));
