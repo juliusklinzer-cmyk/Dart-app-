@@ -2439,7 +2439,9 @@ check('Blink 180 ist hervorgehoben', await page.evaluate(() => {
   return !!tr && tr.textContent.includes('Blink 180');
 }));
 check('jede Zeile laesst sich Feld fuer Feld ausfuellen',
-  (await page.locator('#lt-tabelle td[contenteditable]').count()) === 36);
+  (await page.locator('#lt-tabelle td[contenteditable]').count()) === 72);
+check('mit den Spalten der Ligaleitung (Sp, g, u, v, Legs, Spiele, Pkt)', await page.evaluate(() =>
+  [...document.querySelectorAll('#lt-tabelle thead th')].map((th) => th.textContent).join(',') === '#,Mannschaft,Sp,g,u,v,Legs,Spiele,Pkt'));
 check('ohne Konto gibt es keinen Speichern-Knopf', await page.locator('#lt-speichern').isHidden());
 check('dafuer den Hinweis, sich anzumelden', (await text('#lt-stand')).includes('anmelden'));
 await page.locator('#liga-tabs button[data-tab="plan"]').click();

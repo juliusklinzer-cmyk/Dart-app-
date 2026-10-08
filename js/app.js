@@ -4337,21 +4337,24 @@
        Serverstand (sonst blieben Handkorrekturen nicht stehen). */
     var zeilen = (ligaTabelle && Array.isArray(ligaTabelle.zeilen) && ligaTabelle.zeilen.length)
       ? ligaTabelle.zeilen
-      : LIGA_TEAMS.map(function (t) { return { team: t, spiele: '', punkte: '', legs: '' }; });
+      : LIGA_TEAMS.map(function (t) { return { team: t }; });
     var kennung = JSON.stringify(zeilen);
     if (ligaTabelleKennung === kennung && $('lt-tabelle').innerHTML) return;
     ligaTabelleKennung = kennung;
 
+    /* Spalten wie die Tabelle der Ligaleitung: Spiele, gewonnen /
+       unentschieden / verloren, Legs, Einzel ("Spiele" 9:7), Punkte. */
+    var zelle = function (v) { return '<td contenteditable>' + esc(v === undefined || v === null ? '' : String(v)) + '</td>'; };
     $('lt-tabelle').innerHTML =
-      '<thead><tr><th>#</th><th class="left">Team</th><th>Spiele</th><th>Punkte</th><th>Legs</th></tr></thead>' +
+      '<thead><tr><th>#</th><th class="left">Mannschaft</th><th>Sp</th><th>g</th><th>u</th><th>v</th>' +
+        '<th>Legs</th><th title="Einzel">Spiele</th><th>Pkt</th></tr></thead>' +
       '<tbody>' + zeilen.map(function (z, i) {
         var wir = z.team === LIGA.team;
         return '<tr' + (wir ? ' class="leader"' : '') + '>' +
           '<td class="rank">' + (i + 1) + '</td>' +
           '<td class="left name" contenteditable>' + esc(z.team || '') + '</td>' +
-          '<td contenteditable>' + esc(String(z.spiele || '')) + '</td>' +
-          '<td contenteditable>' + esc(String(z.punkte || '')) + '</td>' +
-          '<td contenteditable>' + esc(String(z.legs || '')) + '</td></tr>';
+          zelle(z.spiele) + zelle(z.g) + zelle(z.u) + zelle(z.v) + zelle(z.legs) + zelle(z.einzel) + zelle(z.punkte) +
+          '</tr>';
       }).join('') + '</tbody>';
   }
 
@@ -8359,11 +8362,10 @@
         var ltZeilen = [];
         document.querySelectorAll('#lt-tabelle tbody tr').forEach(function (tr) {
           var z = tr.querySelectorAll('td');
+          var w = function (i) { return z[i].textContent.trim().slice(0, 12); };
           ltZeilen.push({
             team: z[1].textContent.trim().slice(0, 60),
-            spiele: z[2].textContent.trim().slice(0, 12),
-            punkte: z[3].textContent.trim().slice(0, 12),
-            legs: z[4].textContent.trim().slice(0, 12)
+            spiele: w(2), g: w(3), u: w(4), v: w(5), legs: w(6), einzel: w(7), punkte: w(8)
           });
         });
         window.DartSync.liga.tabelleSpeichern({ zeilen: ltZeilen }).then(function () {
