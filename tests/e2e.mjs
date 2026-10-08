@@ -2621,6 +2621,17 @@ await page.locator('[data-action="liga-bericht"]').click();
 check('der Spielbericht oeffnet sich', await visible('#screen-bericht'));
 check('nach einem Wechsel steht die echte Bogennummer im Einzel (G5 statt G2)', await page.evaluate(() =>
   document.getElementById('bericht-blatt').textContent.includes('– G5')));
+check('die eingewechselte Nummer ist eingekreist (Wunsch Ligaleitung), die anderen nicht', await page.evaluate(() => {
+  const k = [...document.querySelectorAll('#bericht-blatt th[data-plan] .b-wechsel')].map((e) => e.textContent);
+  return k.length > 0 && k.every((t) => t === 'G5') && !!document.querySelector('#bericht-blatt .b-klein .b-wechsel');
+}));
+check('auch eine Handkorrektur der Einzel-Bezeichnung wird eingekreist', await page.evaluate(() => {
+  const th = document.querySelector('#bericht-blatt th[data-plan="1|1"]');
+  th.focus(); th.textContent = 'H5 – G1'; th.dispatchEvent(new Event('input', { bubbles: true })); th.blur();
+  const ok = th.querySelectorAll('.b-wechsel').length === 1 && th.querySelector('.b-wechsel').textContent === 'H5';
+  th.focus(); th.textContent = 'H1 – G1'; th.dispatchEvent(new Event('input', { bubbles: true })); th.blur();
+  return ok && !th.querySelector('.b-wechsel');
+}));
 check('mit den 16 Einzeln in Bogen-Reihenfolge', await page.evaluate(() => {
   const t = document.getElementById('bericht-blatt').textContent;
   return t.includes('H1 – G1') && t.includes('H3 – G1') && t.includes('H2 – G4');

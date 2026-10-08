@@ -3615,3 +3615,9 @@ body.tastatur #screen-bulloff button:focus {
   #lt-tabelle th { font-size: 0.68rem; letter-spacing: 0; }
   #lt-tabelle th, #lt-tabelle td { padding-left: 3px; padding-right: 3px; }
 }
+
+/* Spielbericht: eingewechselte Bogennummer eingekreist (Wunsch Ligaleitung). */
+.b-wechsel {
+  display: inline-block; border: 1.5px solid currentColor; border-radius: 999px;
+  padding: 0 4px; line-height: 1.25; font-weight: 700;
+}

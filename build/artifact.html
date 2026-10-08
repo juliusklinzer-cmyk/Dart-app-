@@ -3619,6 +3619,12 @@ body.tastatur #screen-bulloff button:focus {
   #lt-tabelle th, #lt-tabelle td { padding-left: 3px; padding-right: 3px; }
 }
 
+/* Spielbericht: eingewechselte Bogennummer eingekreist (Wunsch Ligaleitung). */
+.b-wechsel {
+  display: inline-block; border: 1.5px solid currentColor; border-radius: 999px;
+  padding: 0 4px; line-height: 1.25; font-weight: 700;
+}
+
 </style>
 <div id="save-warning" class="save-warning hidden">
   ⚠️ Der Spielstand kann gerade nicht gespeichert werden – bitte Speicherplatz prüfen
@@ -10539,7 +10545,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
            einem Wechsel steht hier H5 statt H4. Antippbar fuer Korrekturen
            von Hand (eigener Schluessel, damit die Zaehlung der uebrigen
            Felder gleich bleibt). */
-        '<th contenteditable data-kf="einzel-' + i + '">H' + berichtNr(heimIds, m.p[0], paar[0]) + ' – G' + berichtNr(gastIds, m.p[1], paar[1]) + '</th>' +
+        '<th contenteditable data-kf="einzel-' + i + '" data-plan="' + (paar[0] + 1) + '|' + (paar[1] + 1) + '">H' +
+          berichtNr(heimIds, m.p[0], paar[0]) + ' – G' + berichtNr(gastIds, m.p[1], paar[1]) + '</th>' +
         '<td contenteditable>' + (m.done || m.legs.length
           ? lh + ' : ' + lgs + (m.kampflos ? ' w.o.' : '') : ' : ') + '</td>' +
         '<td contenteditable>' + einzelPunkte(m) + '</td></tr>';
@@ -10598,6 +10605,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
             '<table class="b-tab b-hl">' + hlZeilen('H', hlHeim) + '</table>' +
             '<div class="b-titel">Highlights Gast:</div>' +
             '<table class="b-tab b-hl">' + hlZeilen('G', hlGast) + '</table>' +
+            '<p class="b-klein"><span class="b-wechsel">H5</span> = eingewechselter Spieler (statt der geplanten Position).</p>' +
             '<p class="b-klein">Eingetragene Spielpositionen sind verbindlich! Ausgewechselte ' +
               'Spieler:innen dürfen nur auf derselben Position wieder eingewechselt werden, jedoch ' +
               'können auf einer Position auch mehrere Spieler:innen eingesetzt werden!</p>' +
@@ -10629,6 +10637,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '<div class="b-fuss">Seite 2/2</div>' +
       '</div>';
     berichtKorrekturenEinsetzen();
+    berichtWechselMarkieren();
     berichtUnterschriftenEinsetzen();
     berichtNachmeldungenEinsetzen();
     berichtFinalisieren();
@@ -10654,6 +10663,20 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     Object.keys(kf).forEach(function (name) {
       var el = document.querySelector('#bericht-blatt [data-kf="' + name + '"]');
       if (el) el.textContent = kf[name];
+    });
+  }
+  /* Wunsch der Ligaleitung: eingewechselte Spieler im Einzel kenntlich
+     machen. Weicht die Bogennummer (auch eine von Hand korrigierte) von der
+     geplanten Position ab, wird sie eingekreist - "H5 – G1" statt "H4 – G1". */
+  function berichtWechselMarkieren() {
+    document.querySelectorAll('#bericht-blatt th[data-plan]').forEach(function (th) {
+      var plan = th.getAttribute('data-plan').split('|');
+      var t = /^\s*H(\d+)\s*[–-]\s*G(\d+)\s*$/.exec(th.textContent);
+      if (!t) return;
+      var teil = function (b, nr, soll) {
+        return nr === soll ? b + nr : '<span class="b-wechsel">' + b + nr + '</span>';
+      };
+      th.innerHTML = teil('H', t[1], plan[0]) + ' – ' + teil('G', t[2], plan[1]);
     });
   }
   /* Bogennummer (H1-H8 / G1-G8) eines Spielers: seine Stelle in der
@@ -10979,6 +11002,13 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       var x = r.left - r0.left, y = r.top - r0.top;
       if (cs.backgroundColor && !leer.test(cs.backgroundColor)) {
         ctx.fillStyle = cs.backgroundColor; ctx.fillRect(x, y, r.width, r.height);
+      }
+      /* Eingekreiste Bogennummer (Wechsel): im PDF auch rund, nicht eckig. */
+      if (el.classList.contains('b-wechsel') && ctx.roundRect) {
+        var kw = parseFloat(cs.borderTopWidth) || 1.5;
+        ctx.strokeStyle = cs.borderTopColor; ctx.lineWidth = kw;
+        ctx.beginPath(); ctx.roundRect(x + kw / 2, y + kw / 2, r.width - kw, r.height - kw, r.height / 2); ctx.stroke();
+        return;
       }
       [['Top', x, y, x + r.width, y], ['Bottom', x, y + r.height, x + r.width, y + r.height],
        ['Left', x, y, x, y + r.height], ['Right', x + r.width, y, x + r.width, y + r.height]].forEach(function (b) {
@@ -13786,6 +13816,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
   /* Name im Profil-Dialog: nur den Entwurf pflegen, nicht neu rendern –
      sonst verliert das Feld beim Tippen den Fokus. */
+  /* Nach einer Handkorrektur der Einzel-Bezeichnung neu einkreisen. */
+  document.addEventListener('focusout', function (ev) {
+    if (ev.target && ev.target.closest && ev.target.closest('#bericht-blatt th[data-plan]')) berichtWechselMarkieren();
+  });
   document.addEventListener('input', function (ev) {
     if (ev.target && ev.target.closest && ev.target.closest('#bericht-blatt [contenteditable]')) {
       berichtKorrekturMerken(ev.target.closest('#bericht-blatt [contenteditable]'));
