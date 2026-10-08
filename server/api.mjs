@@ -40,10 +40,10 @@ export function createApi(db, config) {
 
   /* Nach aussen geben wir nie den Passwort-Hash oder fremde E-Mails heraus. */
   function oeffentlich(u) {
-    return { id: u.id, name: u.display_name, avatar: u.avatar, hue: u.hue, dbl: u.dbl, voll: u.real_name || null, test: u.test ? true : false };
+    return { id: u.id, name: u.display_name, avatar: u.avatar, hue: u.hue, dbl: u.dbl, voll: u.real_name || null, test: u.test ? true : false, gastKonto: u.gast_konto ? true : false };
   }
   function eigenesProfil(u) {
-    return { id: u.id, name: u.display_name, email: u.email, avatar: u.avatar, hue: u.hue, dbl: u.dbl, voll: u.real_name || null, seit: u.created_at, kassenwart: u.kassenwart ? true : false };
+    return { id: u.id, name: u.display_name, email: u.email, avatar: u.avatar, hue: u.hue, dbl: u.dbl, voll: u.real_name || null, seit: u.created_at, kassenwart: u.kassenwart ? true : false, gastKonto: u.gast_konto ? true : false };
   }
 
   function uid(praefix) {
@@ -151,8 +151,15 @@ export function createApi(db, config) {
     limit.zaehle('reg:' + ip, 5, 3600e3);
 
     const body = await leseJson(req, MAX_BODY_KLEIN);
-    if (!config.inviteHash || !verifyPassword(String(body.invite || ''), config.inviteHash)) {
-      throw new HttpFehler(403, 'Der Einladungscode stimmt nicht.');
+    /* Zwei Codes: der Mannschafts-Code und der Gast-Code. Wer mit dem
+       Gast-Code kommt, bekommt ein Gast-Konto (kein Ligaspieler). */
+    const code = String(body.invite || '');
+    let gastKonto = 0;
+    if (!(config.inviteHash && verifyPassword(code, config.inviteHash))) {
+      /* Der Gast-Code wird gern klein abgetippt ("blink182") - beides gilt. */
+      if (config.gastInviteHash && (verifyPassword(code, config.gastInviteHash) ||
+          verifyPassword(code.trim().toUpperCase(), config.gastInviteHash))) gastKonto = 1;
+      else throw new HttpFehler(403, 'Der Einladungscode stimmt nicht.');
     }
     const email = pruefeEmail(body.email);
     const name = pruefeName(body.name);
@@ -165,9 +172,9 @@ export function createApi(db, config) {
 
     const id = uid('u_');
     db.prepare(
-      'INSERT INTO users (id, email, display_name, password_hash, avatar, hue, status, created_at)' +
-        " VALUES (?, ?, ?, ?, NULL, ?, 'aktiv', ?)"
-    ).run(id, email, name, hashPassword(body.password), freieFarbe(pruefeHue(body.hue)), new Date().toISOString());
+      'INSERT INTO users (id, email, display_name, password_hash, avatar, hue, status, created_at, gast_konto)' +
+        " VALUES (?, ?, ?, ?, NULL, ?, 'aktiv', ?, ?)"
+    ).run(id, email, name, hashPassword(body.password), freieFarbe(pruefeHue(body.hue)), new Date().toISOString(), gastKonto);
 
     const token = sess.createSession(db, id);
     limit.loesche('reg:' + ip);
@@ -369,7 +376,7 @@ export function createApi(db, config) {
     const u = verlangeNutzer(req);
     const alle = db
       .prepare(
-        "SELECT id, display_name, real_name, avatar, hue, dbl, test FROM users WHERE status = 'aktiv'" +
+        "SELECT id, display_name, real_name, avatar, hue, dbl, test, gast_konto FROM users WHERE status = 'aktiv'" +
           ' AND (test = 0 OR ? = 1)' +
           ' ORDER BY display_name COLLATE NOCASE'
       )
@@ -388,6 +395,9 @@ export function createApi(db, config) {
     if (!/^[A-Za-z0-9_-]{4,64}$/.test(id)) throw new HttpFehler(400, 'Die Spiel-Kennung ist unbrauchbar.');
     if (!KINDS.has(String(body.kind))) throw new HttpFehler(400, 'Unbekannte Spielart.');
     if (!body.payload || typeof body.payload !== 'object') throw new HttpFehler(400, 'Der Spielinhalt fehlt.');
+    if (u.gast_konto && body.payload.liga && !body.payload.liga.uebung) {
+      throw new HttpFehler(403, 'Mit einem Gast-Konto kannst du Ligaspiele verfolgen, aber nicht eintragen.');
+    }
     const at = Number(body.at);
     if (!Number.isFinite(at) || at <= 0) throw new HttpFehler(400, 'Der Zeitstempel fehlt.');
 
@@ -626,6 +636,9 @@ export function createApi(db, config) {
       return sendJson(res, 200, { turnier: turnierAntwort(da, 0, u), schonDa: true });
     }
     pruefePlan(body.plan);
+    if (u.gast_konto && body.plan.liga && !body.plan.liga.uebung) {
+      throw new HttpFehler(403, 'Mit einem Gast-Konto kannst du Ligaspiele verfolgen, aber nicht anlegen.');
+    }
     const planText = JSON.stringify(body.plan);
     if (planText.length > MAX_INHALT) throw new HttpFehler(413, 'Der Spielplan ist zu gross.');
     kontingentPruefen(u, 'spiele');
@@ -804,6 +817,9 @@ export function createApi(db, config) {
     if (t.status !== 'offen') throw new HttpFehler(409, 'Das Turnier ist schon beendet.');
     const body = await leseJson(req, MAX_INHALT + 64 * 1024);
     pruefePlan(body.plan);
+    if (u.gast_konto && body.plan.liga && !body.plan.liga.uebung) {
+      throw new HttpFehler(403, 'Mit einem Gast-Konto kannst du Ligaspiele verfolgen, aber nicht aendern.');
+    }
     const alt = JSON.parse(t.plan);
     const altStand = Number(alt.planStand) || 0;
     if ((Number(body.basis) || 0) !== altStand) {
@@ -951,6 +967,11 @@ export function createApi(db, config) {
     pruefeHerkunft(req);
     const u = verlangeNutzer(req);
     const termin = ligaTerminId(id);
+    /* Spieltage (st01 ...) sind Sache der Ligaspieler; Gast-Konten sagen
+       nur zum Training zu. */
+    if (u.gast_konto && /^st\d+$/.test(termin)) {
+      throw new HttpFehler(403, 'Mit einem Gast-Konto kannst du Ligaspiele verfolgen, aber nicht mitspielen.');
+    }
     const daten = await leseJson(req);
     /* Zwei Formen: das alte { dabei: bool } der Spieltage (false loescht)
        und { status: 'dabei'|'unsicher'|'absage' } des Trainings - dort ist

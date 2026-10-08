@@ -2800,6 +2800,96 @@ check('das Ligaspiel steht im Spieltag-Log', await page.evaluate(() => {
 }));
 check('die Rekorde kommen aus dem Ligaspiel', (await text('#records')).includes('141'));
 
+check('Team-Auswahl: unsere Mannschaft, Gesamte Liga und der Gegner', await page.evaluate(() => {
+  const t = [...document.querySelectorAll('.liga-team-wahl [data-action="liga-team"]')].map((b) => b.textContent);
+  return t[0] === 'Blink 180' && t[1] === 'Gesamte Liga' && t.some((x) => x.includes('TSV Dachau'));
+}));
+await page.locator('.liga-team-wahl [data-team="alle"]').click();
+check('Gesamte Liga: Gegner stehen mit ihrem Team in der Rangliste (auch ausgeblendete Gaeste)', await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  const h = S.history.find((x) => x.liga && !x.liga.uebung);
+  const gegnerNamen = h.liga.sie.map((id) => { const p = S.profiles.find((x) => x.id === id); return p && (p.voll || p.name); }).filter(Boolean);
+  const rows = [...document.querySelectorAll('#board-list .board-row')].map((r) => r.innerText);
+  return gegnerNamen.length > 0 && rows.some((r) => gegnerNamen.some((n) => r.includes(n)) && r.includes('TSV Dachau'));
+}));
+check('der Verlauf (unsere Spieler) ist dabei ausgeblendet', await page.evaluate(() => document.getElementById('board-chart').classList.contains('hidden')));
+await page.locator('.liga-team-wahl [data-team="TSV Dachau 1865 4"]').click().catch(() => {});
+check('nur der Gegner: keine eigenen Spieler in der Liste', await page.evaluate(() => {
+  const rows = [...document.querySelectorAll('#board-list .board-row')];
+  return rows.length > 0 && rows.every((r) => !r.getAttribute('data-action'));
+}));
+await page.locator('.liga-team-wahl [data-team="wir"]').click();
+
+group('Gaeste: temporaer, dauerhaft, Gast-Konto');
+{
+  const r = await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    const echt = window.DartKonto;
+    window.DartKonto = new Proxy({ nutzer: () => ({ id: 'u_ich' }) }, { get: (t, k) => (k in t ? t[k] : () => null) });
+    D.setScreen('setup');
+    D.action('new-profile');
+    const t = document.getElementById('overlay-card').innerText;
+    const wahl = document.querySelectorAll('[data-action="gast-art"]').length === 2 && t.includes('Temporär') && t.includes('Dauerhaft');
+    D.ui().overlay.draft.name = 'Dauergast';
+    D.ui().overlay.draft.dauer = true;
+    D.action('save-profile');
+    D.action('new-profile');
+    D.ui().overlay.draft.name = 'Kurzgast';
+    D.action('save-profile');
+    window.DartKonto = echt;
+    const dg = S.profiles.find((p) => p.name === 'Dauergast'), kg = S.profiles.find((p) => p.name === 'Kurzgast');
+    // 13 Stunden spaeter
+    dg.created = kg.created = Date.now() - 13 * 3600e3;
+    D.gaesteAufraeumen();
+    /* Dauerhaft -> temporaer: die 12 Stunden laufen ab jetzt. */
+    D.ui().overlay = { type: 'profile', id: dg.id, draft: { name: dg.name, avatar: null, dbl: null, dauer: false } };
+    D.action('save-profile');
+    D.gaesteAufraeumen();
+    const nochDa = S.profiles.some((p) => p.id === dg.id && !p.hidden);
+    dg.dauer = true;
+    return { nochDa, wahl, dauer: !!(dg && dg.gast && dg.dauer), dgDa: S.profiles.some((p) => p.name === 'Dauergast' && !p.hidden), kgWeg: !S.profiles.some((p) => p.name === 'Kurzgast') };
+  });
+  check('angemeldet fragt der Dialog: temporaer oder dauerhaft', r.wahl);
+  check('der dauerhafte Gast wird so gespeichert', r.dauer);
+  check('nach 12 Stunden bleibt der dauerhafte Gast', r.dgDa);
+  check('der temporaere Gast (ohne Spiel) ist weg', r.kgWeg);
+  check('wieder auf temporaer gestellt: bleibt noch 12 Stunden', r.nochDa);
+}
+{
+  const r = await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    S.profiles.push({ id: 'u_gastkonto', name: 'Besuchskonto', avatar: null, hue: 30, created: Date.now(), gastKonto: true });
+    const echt = window.DartKonto;
+    window.DartKonto = new Proxy({ nutzer: () => ({ id: 'u_gastkonto', gastKonto: true }) }, { get: (t, k) => (k in t ? t[k] : () => null) });
+    D.setScreen('liga'); D.ui().ligaTab = 'plan'; D.render();
+    const plan = document.getElementById('liga-plan').innerHTML;
+    const keinStart = !plan.includes('data-action="liga-spiel"') && plan.includes('Live-Ticker');
+    window.DartKonto = echt; D.render();
+    return { keinStart };
+  });
+  check('ein Gast-Konto sieht keinen "Ligaspiel starten"-Knopf, sondern den Hinweis auf den Live-Ticker', r.keinStart);
+  const imKader = await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    const alt = { game: S.game, matches: S.matches, tour: S.tour, current: S.current };
+    S.game = null; S.matches = []; S.tour = null; S.current = null;
+    D.setScreen('liga'); D.ui().ligaTab = 'plan'; D.render();
+    const knopf = document.querySelector('#liga-plan [data-action="liga-spiel"]');
+    D.action('liga-spiel', knopf);
+    const o = D.ui().overlay;
+    const html = document.getElementById('overlay-card').innerHTML;
+    D.ui().overlay = null;
+    Object.assign(S, alt); D.render();
+    return !!o && o.type === 'liga-start' && !html.includes('Besuchskonto') && html.includes('Lenas');
+  });
+  check('in der Ligaspiel-Aufstellung steht kein Gast-Konto zur Wahl', imKader);
+  await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    S.profiles = S.profiles.filter((p) => p.name !== 'Dauergast' && p.name !== 'Besuchskonto');
+    S.lineup = S.lineup.filter((id) => S.profiles.some((p) => p.id === id));
+    D.save(); D.setScreen('setup');
+  });
+}
+
 group('Rangliste nur mit Stammspielern, Aufstellung nach Nutzung');
 await page.evaluate(() => { window.__dart.ui().boardMode = '501'; window.__dart.setScreen('boards'); });
 check('kein Gast steht in der Rangliste', await page.evaluate(() => {

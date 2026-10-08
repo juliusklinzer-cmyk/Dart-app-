@@ -20,6 +20,7 @@ const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const PORT = Number(process.env.TEST_PORT) || 3199;
 const BASIS = 'http://127.0.0.1:' + PORT;
 const CODE = 'turnier-einladung';
+const GAST_CODE = 'gast-einladung';
 
 let fehler = 0;
 let geprueft = 0;
@@ -160,6 +161,7 @@ async function main() {
       HOST: '127.0.0.1',
       DARTS_DB: dbDatei,
       DARTS_INVITE_HASH: hashPassword(CODE),
+      DARTS_GAST_INVITE_HASH: hashPassword(GAST_CODE),
       DARTS_SECURE_COOKIES: '0',
       // Das Kamera-Relay ist in Betrieb abgeschaltet; hier wird es mitgeprueft.
       DARTS_KAMERA: '1',
@@ -568,6 +570,33 @@ async function main() {
     gleich(r.status, 401, 'ohne Anmeldung traegt sich niemand ein');
     r = await julius.ruf('PUT', '/api/liga/zusagen/BOESE!!', { dabei: true });
     ok(r.status === 400 || r.status === 404, 'kaputte Termin-Kennungen werden abgewiesen');
+
+    console.log('\nGast-Konto (eigener Code)');
+    {
+      const gast = geraet('Gast');
+      r = await gast.ruf('POST', '/api/register', { invite: GAST_CODE, email: 'gast@example.de', name: 'Besuch', password: 'turnierabend2026' });
+      gleich(r.status, 201, 'mit dem Gast-Code entsteht ein Konto');
+      gleich(r.daten.nutzer.gastKonto, true, 'und es ist als Gast-Konto markiert');
+      const gastId = r.daten.nutzer.id;
+      r = await tobi.ruf('GET', '/api/users');
+      {
+        const g = r.daten.nutzer.find((n) => n.id === gastId);
+        ok(g && g.gastKonto === true, 'alle sehen den Gast in der Liste - mit Gast-Kennzeichen');
+        const t = r.daten.nutzer.find((n) => n.name === 'Tobi');
+        ok(t && t.gastKonto === false, 'Stammspieler sind keine Gast-Konten');
+      }
+      r = await gast.ruf('PUT', '/api/liga/zusagen/st02', { dabei: true });
+      gleich(r.status, 403, 'zum Spieltag kann sich ein Gast-Konto nicht eintragen');
+      r = await gast.ruf('PUT', '/api/liga/zusagen/tr20261013', { status: 'dabei' });
+      gleich(r.status, 200, 'zum Training schon');
+      r = await gast.ruf('POST', '/api/tournaments', { id: 'gastliga1', plan: { start: 501, bestOf: 3, players: [], matches: [], liga: { terminId: 'st02', nr: 2 } }, players: [] });
+      gleich(r.status, 403, 'ein echtes Ligaspiel kann ein Gast-Konto nicht anlegen');
+      r = await gast.ruf('POST', '/api/games', { id: 'gastliga-archiv', kind: '501', at: Date.now(), players: [gastId], payload: { liga: { terminId: 'st02' }, matches: [] } });
+      gleich(r.status, 403, 'auch kein Ligaspiel-Archiv hochladen');
+      r = await gast.ruf('GET', '/api/liga/zusagen');
+      gleich(r.status, 200, 'mitlesen darf es');
+      r = await gast.ruf('PUT', '/api/liga/zusagen/tr20261013', { status: 'absage' });
+    }
 
     console.log('\nBürgerlicher Name');
     r = await julius.ruf('PATCH', '/api/me', { voll: '  Julius Klinzer  ' });

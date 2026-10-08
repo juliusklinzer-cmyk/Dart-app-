@@ -24,6 +24,8 @@ const DB_DATEI = process.env.DARTS_DB || path.join(SERVER_DIR, 'data', 'darts.db
 
 const config = {
   inviteHash: process.env.DARTS_INVITE_HASH || '',
+  // Zweiter Code fuer Gast-Konten (kein Ligaspieler), siehe 013_gast_konto.sql.
+  gastInviteHash: process.env.DARTS_GAST_INVITE_HASH || '',
   // Secure-Cookies gehen nur ueber HTTPS. Lokal (http://localhost) muessen sie
   // aus bleiben, sonst kommt die Session nie beim Browser an.
   secureCookies: process.env.DARTS_SECURE_COOKIES === '1' || process.env.NODE_ENV === 'production',

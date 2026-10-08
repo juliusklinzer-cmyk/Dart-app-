@@ -122,6 +122,9 @@
         // Testkonto: kommt nur bei dem an, der es sehen darf -- und zaehlt
         // dort in keine Statistik.
         p.test = !!r.test;
+        // Gast-Konto (eigener Gast-Code): sichtbar und mit Statistik, aber
+        // kein Ligaspieler.
+        p.gastKonto = !!r.gastKonto;
       } else {
         S.profiles.push({
           id: r.id, name: r.name, avatar: sauberesBild(r.avatar),
@@ -129,6 +132,7 @@
           dbl: r.dbl || null,
           voll: r.voll || null,
           test: !!r.test,
+          gastKonto: !!r.gastKonto,
           created: Date.now()
         });
       }

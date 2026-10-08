@@ -3625,6 +3625,16 @@ body.tastatur #screen-bulloff button:focus {
   padding: 0 4px; line-height: 1.25; font-weight: 700;
 }
 
+/* Gast-Dialog: Temporaer / Dauerhaft mit kleiner Erklaerzeile. */
+.gast-art { margin-bottom: 6px; }
+.gast-art button { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.gast-art button small { font-size: 0.72rem; font-weight: 500; opacity: 0.75; }
+
+
+/* Rang -> Liga: Auswahl des Teams als eigene Zeile ueber den Werte-Chips. */
+.liga-team-wahl { display: flex; flex-wrap: wrap; gap: 8px; flex-basis: 100%; width: 100%; margin-bottom: 4px; }
+.board-row .nm .board-team { display: block; font-size: 0.72rem; color: var(--muted); font-weight: 500; }
+
 </style>
 <div id="save-warning" class="save-warning hidden">
   ⚠️ Der Spielstand kann gerade nicht gespeichert werden – bitte Speicherplatz prüfen
@@ -5419,6 +5429,20 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return 'X01';
   }
   function activeProfiles() { return S.profiles.filter(function (p) { return !p.hidden; }); }
+  /* Wer fuer UNS im Ligaspiel aufgestellt werden darf: keine Gast-Konten
+     (die verfolgen nur) und keine Bots. */
+  function ligaKader() { return activeProfiles().filter(function (p) { return !p.gastKonto && !p.bot; }); }
+  /* Ein Gegner aus einem Ligaspiel (steht dort auf der anderen Seite)? Der
+     wird nicht zum dauerhaften Gast dieses Geraets. */
+  function istLigaGegner(id) {
+    var listen = S.history.concat(S.tour && S.tour.liga ? [{ liga: S.tour.liga }] : []);
+    return listen.some(function (h) { return h.liga && (h.liga.sie || []).indexOf(id) >= 0; });
+  }
+  /* Ist der angemeldete Nutzer ein Gast-Konto? */
+  function ichBinGastKonto() {
+    var n = window.DartKonto && window.DartKonto.nutzer && window.DartKonto.nutzer();
+    return !!(n && n.gastKonto);
+  }
 
   /* Gastspieler gehören dem Gerät, Accounts ihrem Besitzer. Fremde Accounts
      hier zu ändern hätte keinen Bestand – der nächste Abgleich holt Name und
@@ -5525,10 +5549,13 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (S.matches.length) tourPlayers().forEach(function (id) { imSpiel[id] = 1; });
     if (S.game && S.game.players) S.game.players.forEach(function (id) { imSpiel[id] = 1; });
     S.profiles = S.profiles.filter(function (p) {
-      if (!p.gast || p.hidden) return true;
+      if (!p.gast || p.hidden || p.dauer) return true;   // dauerhafter Gast bleibt
       if (imSpiel[p.id]) return true;
       var zuletzt = letztesSpielAm(p.id);
-      if (jetzt - (zuletzt || p.created || jetzt) < GAST_FRIST) return true;
+      /* fristAb: vom dauerhaften wieder zum temporaeren Gast gemacht - die
+         12 Stunden laufen ab da, nicht ab seinem letzten Spiel. */
+      var ab = Math.max(zuletzt || 0, p.created || 0, p.fristAb || 0) || jetzt;
+      if (jetzt - ab < GAST_FRIST) return true;
       geaendert = true;
       if (!zuletzt) return false;          // nie gespielt: ersatzlos weg
       p.hidden = true;
@@ -7109,6 +7136,63 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return map;
   }
 
+  /*
+   * Liga-Auswertung ueber alle Teams (nur aus den Spielen, die wir erfasst
+   * haben). Unsere Spieler behalten ihre Kennung; jeder Gegner wird
+   * automatisch seinem Team zugeordnet und ueber alle Spieltage und Geraete
+   * hinweg am Namen wiedererkannt (Schluessel "lg|Team|name"), auch wenn
+   * sein Gast-Profil laengst ausgeblendet ist oder auf einem anderen iPad
+   * eine andere Kennung hatte.
+   */
+  function ligaTeamDaten() {
+    var quellen = wertbareHistorie().filter(function (h) { return h.liga && !h.liga.uebung && h.matches; })
+      .map(function (h) { return { liga: h.liga, matches: h.matches, start: (h.settings && h.settings.start) || 501, namen: h.namen || {} }; });
+    if (S.matches.length && S.tour && S.tour.liga && !S.tour.liga.uebung && !turnierSchonArchiviert()) {
+      quellen.push({ liga: S.tour.liga, matches: S.matches, start: tourStart(), namen: {} });
+    }
+    var info = {};       // Schluessel -> { team, name }
+    var lists = quellen.map(function (q) {
+      var lg = q.liga;
+      var unsere = {};
+      (lg.wir || []).concat((lg.heim ? lg.heimSpieler : lg.gastSpieler) || []).forEach(function (id) { unsere[id] = 1; });
+      var team = lg.gegner || 'Gegner';
+      var schluessel = {};
+      var key = function (id) {
+        if (!id || unsere[id]) return id;
+        if (schluessel[id]) return schluessel[id];
+        var pr = S.profiles.filter(function (x) { return x.id === id; })[0];
+        var nm = String((pr && (pr.voll || pr.name)) || q.namen[id] || 'Unbekannt').trim();
+        /* Andere Geraete kennen den Namen nur auf 30 Zeichen gekuerzt (Sync):
+           verglichen wird deshalb ueber die ersten 30. */
+        var k = 'lg|' + team + '|' + nm.toLowerCase().replace(/\s+/g, ' ').slice(0, 30);
+        if (!info[k]) info[k] = { team: team, name: nm };
+        schluessel[id] = k;
+        return k;
+      };
+      var matches = q.matches.map(function (m) {
+        return {
+          p: m.p.map(key), starter: key(m.starter), winner: key(m.winner), done: m.done, at: m.at, kampflos: m.kampflos,
+          legs: m.legs.map(function (l) {
+            return { starter: key(l.starter), winner: key(l.winner), start: l.start, visits: l.visits.map(function (v) {
+              var c = {}; for (var f in v) c[f] = v[f]; c.p = key(v.p); return c;
+            }) };
+          })
+        };
+      });
+      return { matches: matches, start: q.start };
+    });
+    var map = collectStats(lists, []);
+    Object.keys(map).forEach(function (k) {
+      map[k].name = info[k] ? info[k].name : pname(k);
+      map[k].team = info[k] ? info[k].team : LIGA.team;
+      finalize(map[k]);
+    });
+    var teams = [];
+    Object.keys(info).forEach(function (k) { if (teams.indexOf(info[k].team) < 0) teams.push(info[k].team); });
+    teams.sort(function (a, b) { return a.localeCompare(b); });
+    return { map: map, teams: teams };
+  }
+
   /* Alle fertigen Liga-Einzel, neueste zuerst – fürs Liga-Verlaufsdiagramm. */
   function alleLigaMatches() {
     var out = [];
@@ -7197,13 +7281,18 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return BOARDS.filter(function (b) { return b.mode === mode; });
   }
 
-  function ranking(def, map) {
+  function ranking(def, map, modus) {
+    var ligaModus = (modus || def.mode) === 'liga';
     var known = {};
     S.profiles.forEach(function (p) { known[p.id] = p; });
     var rows = Object.keys(map).map(function (k) { return map[k]; }).filter(function (s) {
       /* Nur Stammspieler: Gaeste eines Abends (und Bots) gehoeren nicht
          in die Rangliste der Mannschaft - ihre Spiele bleiben im Verlauf. */
-      return def.min(s) && known[s.id] && !known[s.id].hidden && !known[s.id].bot && !known[s.id].gast && !known[s.id].test;
+      var kp = known[s.id];
+      /* Dauerhafte Gaeste (nur dieses Geraet) zaehlen mit; Gast-Konten in
+         allen Ranglisten ausser der Liga. */
+      return def.min(s) && kp && !kp.hidden && !kp.bot && (!kp.gast || (kp.dauer && !ligaModus)) && !kp.test &&
+        !(ligaModus && kp.gastKonto);
     });
     rows.sort(function (a, b) {
       var d = def.asc ? def.get(a) - def.get(b) : def.get(b) - def.get(a);
@@ -8227,7 +8316,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       return '<div class="roster-item ' + (sel ? 'selected' : '') + '" data-action="toggle-lineup" data-id="' + esc(p.id) + '" role="button" tabindex="0">' +
         avatarHTML(p, 'md') +
         '<div class="who"><div class="nm">' + esc(p.name) +
-        (p.gast ? ' <span class="gast-marke">Gast</span>' : p.test ? ' <span class="gast-marke">Test</span>' : '') + '</div>' +
+        (p.gast || p.gastKonto ? ' <span class="gast-marke">Gast</span>' : p.test ? ' <span class="gast-marke">Test</span>' : '') + '</div>' +
         '<div class="sm">' + (st && st.matches ? 'Ø ' + st.avg.toFixed(1) + ' · ' + plural(st.won, 'Sieg', 'Siege') : 'noch kein Spiel') + '</div></div>' +
         /* Hier wird nur ausgewaehlt. Das eigene Profil pflegt man im Konto,
            und Gaeste bearbeitet man unter Spieler -- ein Stift neben jedem
@@ -8630,7 +8719,13 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       });
     }
 
-    var reihen = Object.keys(per).filter(function (id) { return !profile(id).hidden; }).map(function (id) {
+    /* Dieselben Leute wie in der Rangliste: keine Abend-Gaeste, Bots oder
+       Testkonten; in der Liga nur unsere Spieler (keine Gegner, keine
+       Gast-Konten). */
+    var reihen = Object.keys(per).filter(function (id) {
+      var p = profile(id);
+      return p && !p.hidden && !p.bot && !p.test && (!p.gast || (p.dauer && mode !== 'liga')) && !(mode === 'liga' && p.gastKonto);
+    }).map(function (id) {
       var letzte = per[id].slice(-CHART_GAMES);
       var z = sum(letzte, function (x) { return x.z; }), n = sum(letzte, function (x) { return x.n; });
       return {
@@ -8707,6 +8802,14 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     /* Der Liga-Reiter rechnet dieselben Classic-Werte, aber nur über
        Ligaspiele – eigene Karriere-Karte statt der großen. */
     var map = mode === 'liga' ? careerLiga() : career();
+    /* Liga: Auswertung je Team - unsere Mannschaft (Voreinstellung), die
+       ganze Liga oder ein Gegner, aus allen Spieltagen, die wir erfasst haben. */
+    var ligaTeam = mode === 'liga' ? (UI.ligaTeam || 'wir') : 'wir';
+    var teamDaten = null;
+    if (mode === 'liga') {
+      teamDaten = ligaTeamDaten();
+      if (!teamDaten.teams.length || (ligaTeam !== 'alle' && ligaTeam !== 'wir' && teamDaten.teams.indexOf(ligaTeam) < 0)) ligaTeam = UI.ligaTeam = 'wir';
+    }
     var defs = boardsFor(mode);
     if (!defs.some(function (b) { return b.key === UI.board; })) UI.board = defs[0].key;
     var def = boardDef(UI.board);
@@ -8730,23 +8833,47 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     /* Verlauf: eine farbige Linie je Spieler. */
     var chartLabel = (mode === '501' || mode === 'liga' ? '3-Dart-Average' : 'MPR') + ' – je Spieler die letzten ' + CHART_GAMES + ' Spiele';
     var chart = mode === 'rtw' ? null : lineChart(chartSeries(mode), chartLabel);
-    $('board-chart').classList.toggle('hidden', mode === 'rtw' || mode === 'finisher');
+    /* Der Verlauf zeigt unsere Spieler - bei einer anderen Team-Auswahl weg. */
+    $('board-chart').classList.toggle('hidden', mode === 'rtw' || mode === 'finisher' || ligaTeam !== 'wir');
     if (mode !== 'rtw') {
       $('board-chart').innerHTML = '<h2>' + chartLabel + '</h2>' +
         (chart || '<p class="hint">Ab dem zweiten Spiel wird hier der Verlauf gezeichnet.</p>');
     }
 
-    $('board-chips').innerHTML = defs.map(function (b) {
+    $('board-chips').innerHTML = (teamDaten && teamDaten.teams.length
+      ? '<div class="liga-team-wahl">' + [['wir', LIGA.team], ['alle', 'Gesamte Liga']].concat(teamDaten.teams.map(function (t) { return [t, t]; }))
+          .map(function (t) {
+            return '<button class="chip ' + (t[0] === ligaTeam ? 'active' : '') + '" data-action="liga-team" data-team="' + esc(t[0]) + '">' + esc(t[1]) + '</button>';
+          }).join('') + '</div>'
+      : '') + defs.map(function (b) {
       return '<button class="chip ' + (b.key === UI.board ? 'active' : '') + '" data-action="board" data-key="' + b.key + '">' + b.label + '</button>';
     }).join('');
 
-    var rows = ranking(def, map);
+    /* Ranglisten-Zeilen: bei "Gesamte Liga" oder einem Gegner aus der
+       Team-Auswertung (Gegner sind dort keine Profile, nur Namen). */
+    var teamRanking = function (d) {
+      if (ligaTeam === 'wir') return ranking(d, map, mode);
+      var unsere = ligaTeam === 'alle' ? ranking(d, teamDaten.map, 'liga').filter(function (st) { return st.team === LIGA.team; }) : [];
+      var andere = Object.keys(teamDaten.map).map(function (k) { return teamDaten.map[k]; }).filter(function (st) {
+        return st.team !== LIGA.team && (ligaTeam === 'alle' || st.team === ligaTeam) && d.min(st);
+      });
+      var alle = unsere.concat(andere);
+      alle.sort(function (a, b) {
+        var x = d.asc ? d.get(a) - d.get(b) : d.get(b) - d.get(a);
+        return x !== 0 ? x : a.name.localeCompare(b.name);
+      });
+      return alle;
+    };
+    var rows = teamRanking(def);
     var medals = ['🥇', '🥈', '🥉'];
     $('board-list').innerHTML = rows.length ? rows.map(function (st, i) {
-      return '<div class="board-row ' + (i === 0 ? 'top' : '') + '" data-action="open-profile" data-id="' + esc(st.id) + '" role="button" tabindex="0">' +
+      var gegner = String(st.id).indexOf('lg|') === 0;
+      return '<div class="board-row ' + (i === 0 ? 'top' : '') + '"' +
+        (gegner ? '' : ' data-action="open-profile" data-id="' + esc(st.id) + '" role="button" tabindex="0"') + '>' +
         '<div class="pos">' + (medals[i] || (i + 1) + '.') + '</div>' +
-        avatarHTML(profile(st.id), 'sm') +
-        '<div class="nm">' + esc(st.name) + '</div>' +
+        avatarHTML(gegner ? { id: st.id, name: st.name, hue: 210 } : profile(st.id), 'sm') +
+        '<div class="nm">' + esc(st.name) +
+          (ligaTeam === 'alle' && st.team ? '<span class="board-team">' + esc(st.team) + '</span>' : '') + '</div>' +
         '<div class="val">' + def.fmt(def.get(st)) + '</div>' +
         '</div>';
     }).join('') : '<div class="board-empty">Dafür fehlen noch Daten.</div>';
@@ -8776,7 +8903,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     ];
     $('records').innerHTML = recs.map(function (r) {
       var d = boardDef(r.k);
-      var top = ranking(d, map)[0];
+      var top = teamRanking(d)[0];
       return '<div class="rec">' +
         '<div class="rt">' + r.t + '</div>' +
         '<div class="rv">' + (top ? d.fmt(d.get(top)) : '–') + '</div>' +
@@ -8791,8 +8918,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
     /* Ligaspiele: eine Zeile je Spieltag mit dem Team-Ergebnis. */
     if (mode === 'liga') {
-      var ligaLog = ligaSpieltage.slice();
-      if (S.tour && S.tour.liga && S.matches.length) {
+      /* Bei einem gewaehlten Gegner nur die Spieltage gegen ihn. */
+      var ligaLog = ligaSpieltage.filter(function (h) { return ligaTeam === 'wir' || ligaTeam === 'alle' || h.liga.gegner === ligaTeam; });
+      if (S.tour && S.tour.liga && S.matches.length && (ligaTeam === 'wir' || ligaTeam === 'alle' || S.tour.liga.gegner === ligaTeam)) {
         ligaLog.unshift({ liga: S.tour.liga, matches: S.matches, at: Date.now(), live: true });
       }
       $('match-log').innerHTML = ligaLog.map(function (h) {
@@ -8905,7 +9033,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         avatarHTML(p, 'lg') +
         '<div class="pc-main">' +
           '<div class="pc-name">' + esc(p.name) +
-            (p.gast ? ' <span class="gast-marke">Gast</span>' : p.test ? ' <span class="gast-marke">Test</span>' : '') +
+            (p.gast ? ' <span class="gast-marke">' + (p.dauer ? 'Gast' : 'Gast · heute') + '</span>'
+              : p.gastKonto ? ' <span class="gast-marke">Gast-Konto</span>'
+              : p.test ? ' <span class="gast-marke">Test</span>' : '') +
             (p.hidden ? ' <span class="muted">(ausgeblendet)</span>' : '') + '</div>' +
           '<div class="pc-stats">' +
             '<span>Ø <b>' + (st.darts ? st.avg.toFixed(1) : '–') + '</b></span>' +
@@ -9401,12 +9531,14 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
                 '</span>'
               : '<span></span>') +
             '<span class="lt-knoepfe">' +
-              (online
+              (online && !ichBinGastKonto()
                 ? '<button class="btn ghost small" data-action="liga-zusage" ' +
                   'data-id="' + esc(t.id) + '" data-dabei="' + (binDabei ? '0' : '1') + '">' +
                   (binDabei ? 'Bin raus' : 'Ich bin dabei') + '</button>'
                 : '') +
-              '<button class="btn ghost small" data-action="liga-spiel" data-id="' + esc(t.id) + '">Ligaspiel starten</button>' +
+              (ichBinGastKonto()
+                ? '<span class="muted">Als Gast: verfolgen über den Live-Ticker</span>'
+                : '<button class="btn ghost small" data-action="liga-spiel" data-id="' + esc(t.id) + '">Ligaspiel starten</button>') +
             '</span>' +
           '</div>') +
         '</div>';
@@ -11751,7 +11883,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       var lt = o.termin, ld = o.draft;
       var ltDaheim = lt.heim === LIGA.team;
       var ltGegner = ltDaheim ? lt.gast : lt.heim;
-      var ltProfile = activeProfiles();
+      var ltProfile = ligaKader();
       var kannTeilenLiga = !!(window.DartKonto && window.DartKonto.nutzer() &&
         window.DartSync && window.DartSync.turnier);
       html = '<h3>Ligaspiel</h3>' +
@@ -11907,7 +12039,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         (wz.eigene
           ? '<label class="ls-zeile liga-start"><span>Neu</span>' +
             '<select data-role="liga-neu">' +
-            activeProfiles().map(function (p) {
+            ligaKader().map(function (p) {
               return '<option value="' + p.id + '"' + (wz.draft.neu === p.id ? ' selected' : '') + '>' +
                 esc(p.name) + '</option>';
             }).join('') + '</select></label>'
@@ -11938,8 +12070,22 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     } else if (o.type === 'profile') {
       var p = o.draft;
       var isNew = !o.id;
-      html = '<h3>' + (isNew ? 'Neuer Spieler' : 'Spieler bearbeiten') + '</h3>' +
+      /* Angemeldet ist jeder neu angelegte Spieler ein Gast (Kollegen haben
+         Konten). Zwei Arten: fuer heute Abend (nach 12 Stunden weg) oder
+         dauerhaft auf diesem Geraet. Wer ueberall dabei sein soll, legt sich
+         mit dem Gast-Code ein eigenes Konto an. */
+      var gastWahl = (isNew && window.DartKonto && window.DartKonto.nutzer()) ||
+        (!isNew && profile(o.id).gast && !profile(o.id).hidden && !istLigaGegner(o.id));
+      html = '<h3>' + (isNew ? (gastWahl ? 'Gast hinzufügen' : 'Neuer Spieler') : 'Spieler bearbeiten') + '</h3>' +
         (o.fehler ? '<p class="hint fehler" role="alert">' + esc(o.fehler) + '</p>' : '') +
+        (gastWahl
+          ? '<div class="options gast-art">' +
+              '<button data-action="gast-art" data-value="0" class="' + (p.dauer ? '' : 'active') + '">Temporär<small>nach 12 Std. weg</small></button>' +
+              '<button data-action="gast-art" data-value="1" class="' + (p.dauer ? 'active' : '') + '">Dauerhaft<small>nur dieses Gerät</small></button>' +
+            '</div>' +
+            '<p class="hint">Soll der Gast auf allen Geräten dabei sein, mit eigener Statistik und Training? ' +
+              'Dann registriert er sich selbst mit dem Gast-Code – Ligaspiele kann er damit verfolgen, aber nicht mitspielen.</p>'
+          : '') +
         '<div class="avatar-edit" data-action="pick-avatar">' +
           avatarHTML({ id: o.id || 'neu', name: p.name || '?', avatar: p.avatar }, 'xl') +
           '<span class="cam">Foto wählen</span>' +
@@ -12301,7 +12447,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   function ligaGastId(name, ausschluss) {
     var da = null;
     S.profiles.forEach(function (p) {
-      if (!da && p.gast && (p.name === name || p.voll === name) && ausschluss.indexOf(p.id) < 0) da = p;
+      if (!da && p.gast && !p.dauer && (p.name === name || p.voll === name) && ausschluss.indexOf(p.id) < 0) da = p;
     });
     if (da) {
       da.hidden = false;
@@ -12719,19 +12865,22 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       case 'edit-profile': {
         var p = profile(el.getAttribute('data-id'));
         var pTeile = vollSplit(p.voll);
-        UI.overlay = { type: 'profile', id: p.id, draft: { name: p.name, avatar: p.avatar, dbl: p.dbl || null, vor: pTeile.vor, nach: pTeile.nach } };
+        UI.overlay = { type: 'profile', id: p.id, draft: { name: p.name, avatar: p.avatar, dbl: p.dbl || null, vor: pTeile.vor, nach: pTeile.nach, dauer: !!p.dauer } };
         render();
         break;
       }
       case 'edit-current-profile': {
         var cp = profile(UI.profile);
         var cpTeile = vollSplit(cp.voll);
-        UI.overlay = { type: 'profile', id: cp.id, draft: { name: cp.name, avatar: cp.avatar, dbl: cp.dbl || null, vor: cpTeile.vor, nach: cpTeile.nach } };
+        UI.overlay = { type: 'profile', id: cp.id, draft: { name: cp.name, avatar: cp.avatar, dbl: cp.dbl || null, vor: cpTeile.vor, nach: cpTeile.nach, dauer: !!cp.dauer } };
         render();
         break;
       }
       case 'pick-avatar':
         $('avatar-input').click();
+        break;
+      case 'gast-art':
+        if (UI.overlay && UI.overlay.type === 'profile') { UI.overlay.draft.dauer = el.getAttribute('data-value') === '1'; render(); }
         break;
       case 'clear-avatar':
         UI.overlay.draft.avatar = null;
@@ -12758,6 +12907,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           ex.name = name;
           ex.avatar = draft.avatar;
           ex.dbl = draft.dbl || null;
+          if (ex.gast) {
+            /* Wird ein dauerhafter Gast wieder temporaer, zaehlt die Frist ab jetzt. */
+            if (ex.dauer && !draft.dauer) ex.fristAb = Date.now();
+            ex.dauer = !!draft.dauer;
+          }
           /* Der Gast-Dialog fragt keine Liga-Namen ab - dann bleibt, was
              da ist (z. B. der Name aus einer Ligaspiel-Aufstellung). */
           if (draft.vor !== undefined || draft.nach !== undefined) {
@@ -12771,7 +12925,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           var np = { id: uid(), name: name, avatar: draft.avatar, created: Date.now(), hue: freeHue(), dbl: draft.dbl || null, voll: vollAusTeilen(draft.vor, draft.nach) };
           /* Angemeldet legt man hier keine Kollegen an – die haben Accounts.
              Wer von Hand dazukommt, ist der Besuch von heute Abend. */
-          if (window.DartKonto && window.DartKonto.nutzer()) np.gast = true;
+          if (window.DartKonto && window.DartKonto.nutzer()) { np.gast = true; np.dauer = !!draft.dauer; }
           S.profiles.push(np);
           if (S.lineup.length < 12) S.lineup.push(np.id);
         }
@@ -12857,6 +13011,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       }
       case 'board':
         UI.board = el.getAttribute('data-key');
+        render();
+        break;
+      case 'liga-team':
+        UI.ligaTeam = el.getAttribute('data-team');
         render();
         break;
       case 'board-mode':
@@ -13120,6 +13278,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         render();
         break;
       case 'liga-spiel': {
+        if (ichBinGastKonto()) {
+          UI.overlay = { type: 'hinweis', titel: 'Gast-Konto', text: 'Mit einem Gast-Konto kannst du Ligaspiele über den Live-Ticker verfolgen, aber nicht anlegen oder mitspielen. Training und alle anderen Spiele gehen ganz normal.' };
+          render(); break;
+        }
         /* Ein laufendes Turnier oder Spiel wird nicht kommentarlos ersetzt –
            ein fertiges, nur noch nicht gespeichertes darf aber weichen, das
            archiviert ligaSpielStarten() von selbst. */
@@ -13135,7 +13297,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
            übrigen Profile, bis vier Positionen stehen. Nur aktive Profile –
            eine versteckte Kennung stünde sonst unsichtbar im Entwurf, während
            die Auswahl einen ganz anderen Namen anzeigt. */
-        var lsAktive = activeProfiles();
+        var lsAktive = ligaKader();
         var lsVorschlag = ((ligaZusagen && ligaZusagen[lsTermin.id]) || [])
           .filter(function (p) { return (p.status || 'dabei') === 'dabei'; })
           .map(function (p) { return p.id; })
@@ -13553,7 +13715,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         if (!lwLg) break;
         var unsere = lwLg.heim ? 'H' : 'G';
         var lwEigene = lwSeite === unsere;
-        var lwErste = lwEigene ? (activeProfiles()[0] || {}).id || '' : '';
+        var lwErste = lwEigene ? (ligaKader()[0] || {}).id || '' : '';
         UI.overlay = {
           type: 'liga-wechsel-zu', seite: lwSeite, pos: lwPos,
           eigene: lwEigene,

@@ -1,0 +1,17 @@
+import { chromium } from 'playwright';
+import fs from 'node:fs';
+const games = JSON.parse(fs.readFileSync(process.env.SP + '/games.json', 'utf8')).games;
+const b = await chromium.launch();
+const p = await b.newPage({ viewport: { width: 1180, height: 1300 } });
+p.on('pageerror', e => console.log('ERR', e.message));
+await p.goto('file://' + process.cwd() + '/index.html'); await p.waitForFunction(() => !!window.__dart);
+await p.evaluate((g) => { const D = window.__dart, S = D.state();
+  g.forEach(x => { Object.entries(x.namen || {}).forEach(([id, nm]) => { if (!S.profiles.some(p => p.id === id)) S.profiles.push({ id, name: nm, avatar: null, hue: 10, created: 1, gast: id.indexOf('u_') !== 0, hidden: id.indexOf('u_') !== 0 }); }); S.history.push(x); });
+  S.history.sort((a, b) => b.at - a.at); D.save(); D.setScreen('boards'); }, games);
+await p.locator('[data-action="board-mode"][data-value="liga"]').click(); await p.waitForTimeout(200);
+await p.screenshot({ path: process.env.SP + '/liga-wir.png' });
+await p.locator('[data-action="liga-team"][data-team="alle"]').click(); await p.waitForTimeout(200);
+await p.locator('[data-action="board"][data-key="lavg"], [data-action="board"]:has-text("Average")').first().click().catch(()=>{}); await p.waitForTimeout(200);
+await p.screenshot({ path: process.env.SP + '/liga-alle.png' });
+console.log(await p.locator('.liga-team-wahl').innerText());
+await b.close();
