@@ -3618,10 +3618,14 @@ body.tastatur #screen-bulloff button:focus {
 /* Ligatabelle mit allen Spalten der Ligaleitung: kompakt, am Handy
    seitlich wischbar statt gequetscht. */
 #liga-tabelle .card.no-pad { overflow-x: auto; }
-#lt-tabelle { min-width: 520px; }
-#lt-tabelle th, #lt-tabelle td { padding-left: 6px; padding-right: 6px; white-space: nowrap; font-variant-numeric: tabular-nums; }
-#lt-tabelle td[contenteditable] { min-width: 28px; }
-#lt-tabelle td.name { white-space: normal; min-width: 130px; }
+#lt-tabelle th, #lt-tabelle td { padding-left: 5px; padding-right: 5px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+#lt-tabelle td[contenteditable] { min-width: 18px; }
+#lt-tabelle td.name { white-space: normal; min-width: 90px; }
+@media (max-width: 480px) {
+  #lt-tabelle { font-size: 0.82rem; }
+  #lt-tabelle th { font-size: 0.68rem; letter-spacing: 0; }
+  #lt-tabelle th, #lt-tabelle td { padding-left: 3px; padding-right: 3px; }
+}
 
 </style>
 </head>
