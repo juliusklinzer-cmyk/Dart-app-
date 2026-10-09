@@ -2890,6 +2890,38 @@ group('Gaeste: temporaer, dauerhaft, Gast-Konto');
   });
 }
 
+group('Archiv-Nachtrag vom Server: Einzel und Besetzung (nachgetragener Wechsel)');
+{
+  const r = await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    const h = S.history.find((x) => x.liga && !x.liga.uebung);
+    const alt = JSON.parse(JSON.stringify(h));
+    const m = h.matches.find((x) => x.done && !x.kampflos);
+    const ersatz = { id: 'u_ersatz', name: 'Ersatz', avatar: null, hue: 50, created: Date.now() };
+    S.profiles.push(ersatz);
+    const raus = m.p.find((id) => h.liga.wir.indexOf(id) >= 0);
+    const payload = JSON.parse(JSON.stringify(h));
+    const tausch = (id) => (id === raus ? ersatz.id : id);
+    const pm = payload.matches.find((x) => x.id === m.id);
+    pm.p = pm.p.map(tausch); pm.starter = tausch(pm.starter); pm.winner = tausch(pm.winner);
+    pm.legs.forEach((l) => { l.starter = tausch(l.starter); l.winner = tausch(l.winner); l.visits.forEach((v) => { v.p = tausch(v.p); }); });
+    payload.liga.wir = payload.liga.wir.concat([ersatz.id]);
+    payload.liga.heimSpieler = (payload.liga.heimSpieler || payload.liga.wir).concat([ersatz.id]);
+    payload.liga.berichtFelderKf = { kaputt: 'vom Server' };
+    payload.stand = (h.stand || 0) + 1;
+    h.liga.berichtFelderKf = { lokal: 'bleibt' };
+    D.uebernehmeSpiele([{ id: h.id, payload }]);
+    const neu = S.history.find((x) => x.id === h.id);
+    const nm = neu.matches.find((x) => x.id === m.id);
+    const ok = nm.p.indexOf(ersatz.id) >= 0 && nm.p.indexOf(raus) < 0 && neu.liga.wir.indexOf(ersatz.id) >= 0 &&
+      neu.liga.berichtFelderKf.lokal === 'bleibt' && !neu.liga.berichtFelderKf.kaputt;
+    S.history[S.history.indexOf(neu)] = alt;
+    S.profiles = S.profiles.filter((p) => p.id !== 'u_ersatz'); D.save();
+    return ok;
+  });
+  check('das Einzel haengt am eingewechselten Spieler, Bericht-Korrekturen bleiben lokal', r);
+}
+
 group('Rangliste nur mit Stammspielern, Aufstellung nach Nutzung');
 await page.evaluate(() => { window.__dart.ui().boardMode = '501'; window.__dart.setScreen('boards'); });
 check('kein Gast steht in der Rangliste', await page.evaluate(() => {

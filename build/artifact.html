@@ -8027,6 +8027,24 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           Array.isArray(s.payload.matches) && spielGueltig(s.payload)) {
         vorhanden[s.id].matches = s.payload.matches;
         vorhanden[s.id].stand = Number(s.payload.stand) || 0;
+        /* Nachtraeglich korrigierte Besetzung (z. B. ein Wechsel, der damals
+           nicht eingetragen wurde): Aufstellung und Bogen-Listen mitnehmen.
+           Bericht-Korrekturen, Unterschriften usw. bleiben die lokalen. */
+        if (Array.isArray(s.payload.lineup)) vorhanden[s.id].lineup = s.payload.lineup.slice();
+        var lgNeu = s.payload.liga, lgAlt = vorhanden[s.id].liga;
+        if (lgNeu && lgAlt) {
+          ['wir', 'sie', 'heimSpieler', 'gastSpieler'].forEach(function (k) {
+            if (Array.isArray(lgNeu[k])) lgAlt[k] = lgNeu[k].slice();
+          });
+        }
+        if (s.payload.namen) {
+          vorhanden[s.id].namen = s.payload.namen;
+          Object.keys(s.payload.namen).forEach(function (fid) {
+            if (S.profiles.some(function (p) { return p.id === fid; })) return;
+            S.profiles.push({ id: fid, name: String(s.payload.namen[fid]).slice(0, 30), voll: String(s.payload.namen[fid]).slice(0, 60),
+              avatar: null, hue: freeHue(), created: Date.now(), gast: true, hidden: true });
+          });
+        }
         geaendert++;
         return;
       }
