@@ -492,7 +492,7 @@ check('alle starten auf der 1', await page.evaluate(() => {
 }));
 const [rA] = await page.evaluate(() => window.__dart.game().players);
 const misses = async () => { for (const _ of [1, 2, 3]) await rDart('MISS'); };
-const weiter = () => page.locator('#rtw-pad [data-action="end-rtw-visit"]').click();
+const weiter = () => page.locator('#screen-rtw [data-action="end-rtw-visit"]').click();   // "Bust" oben rechts
 const rTarget = async () => (await page.evaluate(() => window.__dart.rtwState())).target[rA];
 
 const rGross = () => text('#rtw-pad .rtw-key.gross .z');

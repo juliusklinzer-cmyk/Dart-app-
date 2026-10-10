@@ -4348,3 +4348,166 @@ body.fix-spiel #screen-cricket.active { flex: 1 1 auto; height: auto; min-height
   #screen-cricket.active .cr-key.bull, #screen-cricket.active .cr-key.miss { font-size: clamp(11px, 2vh, 16px); }
   #screen-cricket.active .cr-key.zurueck svg { width: 22px; height: 22px; }
 }
+
+
+/* ================= Round the World (Entwurf 10/2026) =================
+ * Nach "Dart App Redesign Responsiv / RTW Spiel.dc.html": dieselbe Sprache
+ * wie Cricket, ohne Kopfleiste. Links je Spieler eine Zeile mit Laser-
+ * Fortschritt und grosser Zielzahl, beim Spieler am Wurf die drei Darts der
+ * Aufnahme. Rechts oben Menue, Info, Runde, Zurueck und Bust, darunter nur
+ * die Zahl, die gerade dran ist, mit dem Hinweis, wohin der Treffer fuehrt.
+ * ======================================================================= */
+#screen-rtw.active {
+  padding: clamp(10px, 2.4vh, 30px) clamp(6px, 1vw, 14px) clamp(6px, 1.8vh, 22px);
+  gap: 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column;
+  height: calc(100vh - 12px); height: calc(100dvh - 12px);
+}
+body.fix-spiel #screen-rtw.active { flex: 1 1 auto; height: auto; min-height: 0; overflow: hidden; padding-bottom: clamp(6px, 1.8vh, 22px); }
+#screen-rtw.active .game-body {
+  flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) clamp(260px, 36vw, 520px);
+  gap: clamp(8px, 1.6vw, 24px); overflow: visible;
+}
+
+/* Spielerzeilen */
+#screen-rtw.active .rtw-board {
+  min-height: 0; min-width: 0; display: grid; grid-template-rows: repeat(var(--zeilen, 3), minmax(0, 1fr));
+  gap: clamp(4px, 1vh, 12px); overflow: visible; margin: 0; flex: none;
+}
+#screen-rtw.active .rtw-row {
+  min-height: 0; min-width: 0; overflow: hidden; display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center; column-gap: clamp(8px, 1.4vw, 22px); padding: 0 clamp(10px, 1.6vw, 26px); margin: 0;
+  border-radius: clamp(12px, 1.8vh, 20px); border: 2px solid var(--line); background: var(--bg-2); opacity: 0.62;
+}
+#screen-rtw.active .rtw-row.act {
+  opacity: 1; border-color: var(--aktiv-linie); background: var(--aktiv-flaeche);
+  box-shadow: 0 0 26px var(--laser-weich), 0 0 60px 8px var(--schein-stark);
+}
+#screen-rtw.active .rtw-row .av.md { width: clamp(22px, 6.4vh, 66px); height: clamp(22px, 6.4vh, 66px); font-size: clamp(9px, 1.6vh, 18px); display: inline-flex; }
+#screen-rtw.active .rtw-board.viele .rtw-row .av.md { width: clamp(20px, 5vh, 54px); height: clamp(20px, 5vh, 54px); }
+#screen-rtw.active .rtw-row .rw-main { min-width: 0; display: flex; flex-direction: column; gap: clamp(3px, 0.7vh, 8px); flex: none; }
+#screen-rtw.active .rtw-row .rw-name {
+  font-family: var(--font-cond); font-weight: 700; font-size: clamp(16px, 4.4vh, 48px); letter-spacing: 0.03em;
+  text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.05; color: var(--text);
+}
+#screen-rtw.active .rtw-board.viele .rtw-row .rw-name { font-size: clamp(15px, 3.6vh, 40px); }
+#screen-rtw.active .rtw-row.act .rw-name { color: #fff; }
+/* Der Laser-Fortschritt: 21 Stationen, die Spitze glueht. */
+#screen-rtw.active .rtw-row .rw-bar {
+  position: relative; height: clamp(5px, 0.9vh, 10px); background: #0b0809; border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 999px; overflow: visible; margin: 0;
+}
+#screen-rtw.active .rtw-row .rw-bar .klinge {
+  position: absolute; left: 0; top: 0; bottom: 0; height: auto; display: block; border-radius: 999px;
+  background: linear-gradient(90deg, var(--laser) 0%, var(--laser-hell) 55%, #fff 100%); box-shadow: 0 0 5px var(--laser-weich);
+}
+#screen-rtw.active .rtw-row.act .rw-bar .klinge { box-shadow: 0 0 7px var(--laser), 0 0 18px var(--laser-weich); }
+#screen-rtw.active .rtw-row .rw-bar .klinge.aus { box-shadow: none; }
+#screen-rtw.active .rtw-row .rw-sub {
+  font-family: var(--font-cond); font-weight: 600; font-size: clamp(12px, 2.5vh, 27px); letter-spacing: 0.04em;
+  color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0;
+}
+#screen-rtw.active .rtw-board.viele .rtw-row .rw-sub { font-size: clamp(11px, 2.1vh, 23px); }
+/* Die drei Darts der laufenden Aufnahme - nur beim Spieler am Wurf (und
+   gedimmt beim Vorgaenger), bei den anderen bleibt der Platz leer. */
+#screen-rtw.active .rtw-row .rw-tiles { display: flex; gap: clamp(3px, 0.5vw, 8px); min-width: calc(3 * clamp(28px, 8vh, 84px) + 2 * clamp(3px, 0.5vw, 8px)); }
+#screen-rtw.active .rtw-row .rw-tiles .ct {
+  width: clamp(28px, 8vh, 84px); height: clamp(28px, 8vh, 84px); display: flex; align-items: center; justify-content: center;
+  border-radius: clamp(8px, 1.2vh, 12px); background: var(--bg-3); border: 1px solid var(--line-hell); color: var(--text);
+  font-family: var(--font-cond); font-weight: 700; font-size: clamp(14px, 3.2vh, 34px); white-space: nowrap; overflow: hidden;
+}
+#screen-rtw.active .rtw-row .rw-tiles .ct.leer { background: var(--bg-2); border-color: var(--line); }
+#screen-rtw.active .rtw-row .rw-tiles .ct.miss { color: var(--red); }
+#screen-rtw.active .rtw-row .rw-tiles .ct.alt { color: var(--muted); }
+#screen-rtw.active .rtw-board.viele .rtw-row .rw-tiles { min-width: calc(3 * clamp(24px, 6vh, 64px) + 2 * clamp(3px, 0.5vw, 8px)); }
+#screen-rtw.active .rtw-board.viele .rtw-row .rw-tiles .ct { width: clamp(24px, 6vh, 64px); height: clamp(24px, 6vh, 64px); font-size: clamp(12px, 2.6vh, 28px); }
+#screen-rtw.active .rtw-row .rw-target {
+  min-width: 2.1ch; text-align: right; font-family: var(--font-cond); font-weight: 700; font-size: clamp(36px, 15vh, 160px);
+  line-height: 0.9; font-variant-numeric: tabular-nums; color: var(--text); opacity: 0.75; text-shadow: none;
+}
+#screen-rtw.active .rtw-board.viele .rtw-row .rw-target { font-size: clamp(30px, 11vh, 120px); }
+#screen-rtw.active .rtw-row .rw-target.bull { font-size: clamp(22px, 9vh, 96px); }
+#screen-rtw.active .rtw-board.viele .rtw-row .rw-target.bull { font-size: clamp(18px, 6.6vh, 72px); }
+#screen-rtw.active .rtw-row.act .rw-target { color: #fff; opacity: 1; text-shadow: 0 0 26px rgba(70, 170, 215, 0.45); }
+#screen-rtw.active .rtw-row.fin .rw-target { color: var(--laser-hell); }
+
+/* Rechte Spalte: Menue, Info, Zurueck und Bust, darunter die Tasten */
+#screen-rtw.active .rtw-rechts { position: relative; z-index: 1; min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: clamp(5px, 1vh, 12px); }
+#screen-rtw.active .rtw-kopf { flex: none; display: flex; gap: clamp(8px, 1vw, 14px); align-items: flex-start; }
+#screen-rtw.active .rtw-menu {
+  flex: none; width: clamp(44px, 7vh, 74px); aspect-ratio: 1.2; min-height: 44px; border-radius: clamp(10px, 1.6vh, 16px);
+  background: var(--bg-2); border: 1px solid var(--line); color: var(--muted); padding: 0; display: flex; align-items: center;
+  justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+#screen-rtw.active .rtw-menu svg { width: clamp(20px, 4vh, 42px); height: clamp(20px, 4vh, 42px); }
+#screen-rtw.active .rtw-info { min-width: 0; display: flex; flex-direction: column; gap: clamp(2px, 0.5vh, 6px); }
+#screen-rtw.active .rtw-h { font-family: var(--font-display); font-size: clamp(15px, 3.4vh, 36px); letter-spacing: 0.05em; text-transform: uppercase; line-height: 1; }
+#screen-rtw.active .rtw-sub { color: var(--muted); font-family: var(--font-cond); font-weight: 600; font-size: clamp(11px, 2.2vh, 24px); letter-spacing: 0.04em; line-height: 1.2; }
+#screen-rtw.active .rtw-runde { font-family: var(--font-cond); font-weight: 700; font-size: clamp(12px, 2.6vh, 28px); letter-spacing: 0.06em; text-transform: uppercase; line-height: 1.1; }
+#screen-rtw.active .rtw-key {
+  min-height: 0; padding: 0; border-radius: clamp(12px, 1.8vh, 18px); background: var(--bg-2); border: 1px solid var(--line);
+  color: var(--text); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(2px, 0.6vh, 8px);
+  font-family: var(--font-cond); font-weight: 700; cursor: pointer; -webkit-tap-highlight-color: transparent; box-shadow: none;
+}
+#screen-rtw.active .rtw-key:active { background: var(--bg-3); }
+#screen-rtw.active .rtw-top { flex: none; height: clamp(40px, 9.5vh, 104px); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(5px, 0.9vh, 10px); }
+#screen-rtw.active .rtw-top .rtw-key { border-radius: clamp(10px, 1.6vh, 16px); }
+#screen-rtw.active .rtw-top .zurueck svg { width: clamp(22px, 4.6vh, 50px); height: clamp(22px, 4.6vh, 50px); }
+#screen-rtw.active .rtw-top .bust { grid-column: span 2; font-size: clamp(18px, 4.2vh, 46px); }
+#screen-rtw.active #rtw-pad { flex: 1 1 auto; min-height: 0; display: grid; grid-template-rows: minmax(0, 3.5fr) minmax(0, 0.9fr); gap: clamp(5px, 0.9vh, 10px); margin: 0; }
+#screen-rtw.active .rtw-treffer {
+  min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: minmax(0, 2.2fr) minmax(0, 1.3fr);
+  gap: clamp(5px, 0.9vh, 10px); flex: none;
+}
+#screen-rtw.active .rtw-treffer.nur-zahl, #screen-rtw.active .rtw-treffer.nur-bull { grid-template-rows: minmax(0, 1fr); }
+/* Die Zahl, die dran ist: hell umrandet mit blauem Schein. */
+#screen-rtw.active .rtw-treffer .rtw-key.gross { grid-column: span 2; background: var(--aktiv-flaeche); border-color: var(--aktiv-linie); box-shadow: 0 0 26px var(--schein-weich); padding: 0; }
+#screen-rtw.active .rtw-key.gross .z { font-family: var(--font-cond); font-weight: 700; font-size: clamp(48px, 17vh, 190px); line-height: 0.95; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+#screen-rtw.active .rtw-treffer.nur-zahl .rtw-key.gross .z { font-size: clamp(56px, 22vh, 240px); }
+#screen-rtw.active .rtw-treffer.nur-bull .rtw-key.gross .z { font-size: clamp(40px, 13vh, 140px); color: var(--amber); }
+#screen-rtw.active .rtw-key.gross.bull { border-color: var(--aktiv-linie); }
+#screen-rtw.active .rtw-key.mult { padding: 0; }
+#screen-rtw.active .rtw-key.mult .k { font-family: var(--font-cond); font-weight: 700; font-size: clamp(26px, 7.5vh, 82px); line-height: 0.95; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+#screen-rtw.active .rtw-key .mx { color: var(--laser-hell); font-size: 0.62em; }
+#screen-rtw.active .rtw-key .sub { font-family: var(--font-cond); font-weight: 600; font-size: clamp(11px, 2.2vh, 24px); letter-spacing: 0.04em; color: var(--muted); white-space: nowrap; }
+#screen-rtw.active .rtw-reihe { display: grid; grid-template-columns: minmax(0, 1fr); min-height: 0; gap: 0; }
+#screen-rtw.active .rtw-key.miss .k { color: var(--red); font-family: var(--font-cond); font-weight: 700; font-size: clamp(20px, 4.6vh, 50px); line-height: 1; }
+#screen-rtw.active #rtw-pad .rtw-stechen { grid-row: span 2; min-height: 0; overflow: auto; margin: 0; }
+/* Altlasten aus dem frueheren Layout (Tasten unten rechts, gedeckelte Hoehen) ausser Kraft. */
+#screen-rtw.active #rtw-pad { justify-content: stretch; align-content: stretch; justify-items: stretch; align-items: stretch; }
+#screen-rtw.active .rtw-treffer, #screen-rtw.active .rtw-reihe { height: auto; max-height: none; align-self: stretch; }
+#screen-rtw.active .rtw-row { max-height: none; min-height: 0; }
+
+/* Handy quer: Zielzahl eine Stufe kleiner. */
+@media (orientation: landscape) and (max-height: 560px) {
+  #screen-rtw.active .rtw-board.viele .rtw-row .rw-target { font-size: clamp(26px, 9vh, 100px); }
+  #screen-rtw.active .rtw-row .rw-tiles .ct, #screen-rtw.active .rtw-board.viele .rtw-row .rw-tiles .ct { width: clamp(22px, 7vh, 40px); height: clamp(22px, 7vh, 40px); font-size: 11px; }
+  #screen-rtw.active .rtw-row .rw-tiles, #screen-rtw.active .rtw-board.viele .rtw-row .rw-tiles { min-width: 0; }
+  #screen-rtw.active .rtw-sub { display: none; }
+}
+
+/* Hochkant (Handy): Spieler oben, rechte Spalte darunter. */
+@media (orientation: portrait) {
+  #screen-rtw.active .game-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1.1fr); gap: 8px; }
+  #screen-rtw.active .rtw-board { gap: 6px; }
+  #screen-rtw.active .rtw-row { padding: 0 10px; column-gap: 8px; border-radius: var(--r-m); }
+  #screen-rtw.active .rtw-row .av.md, #screen-rtw.active .rtw-board.viele .rtw-row .av.md { width: 28px; height: 28px; font-size: 0.65rem; }
+  #screen-rtw.active .rtw-row .rw-name, #screen-rtw.active .rtw-board.viele .rtw-row .rw-name { font-size: 1rem; }
+  #screen-rtw.active .rtw-row .rw-sub, #screen-rtw.active .rtw-board.viele .rtw-row .rw-sub { font-size: 0.7rem; }
+  #screen-rtw.active .rtw-row .rw-bar { height: 5px; }
+  #screen-rtw.active .rtw-row .rw-tiles, #screen-rtw.active .rtw-board.viele .rtw-row .rw-tiles { min-width: 0; gap: 3px; }
+  #screen-rtw.active .rtw-row .rw-tiles .ct, #screen-rtw.active .rtw-board.viele .rtw-row .rw-tiles .ct { width: 26px; height: 26px; font-size: 0.7rem; }
+  #screen-rtw.active .rtw-row .rw-target, #screen-rtw.active .rtw-board.viele .rtw-row .rw-target { font-size: clamp(24px, 5vh, 44px); }
+  #screen-rtw.active .rtw-row .rw-target.bull, #screen-rtw.active .rtw-board.viele .rtw-row .rw-target.bull { font-size: 1.2rem; }
+  #screen-rtw.active .rtw-rechts { gap: 6px; }
+  #screen-rtw.active .rtw-menu { width: 52px; }
+  #screen-rtw.active .rtw-h { font-size: 1rem; }
+  #screen-rtw.active .rtw-sub { font-size: 0.7rem; }
+  #screen-rtw.active .rtw-runde { font-size: 0.75rem; }
+  #screen-rtw.active .rtw-top { height: 44px; gap: 6px; }
+  #screen-rtw.active .rtw-top .bust { font-size: 1rem; }
+  #screen-rtw.active .rtw-key.gross .z, #screen-rtw.active .rtw-treffer.nur-zahl .rtw-key.gross .z { font-size: clamp(40px, 8vh, 80px); }
+  #screen-rtw.active .rtw-treffer.nur-bull .rtw-key.gross .z { font-size: 2rem; }
+  #screen-rtw.active .rtw-key.mult .k { font-size: 1.6rem; }
+  #screen-rtw.active .rtw-key .sub { font-size: 0.72rem; }
+  #screen-rtw.active .rtw-key.miss .k { font-size: 1.1rem; }
+}

@@ -3253,9 +3253,9 @@
       S.screen === 'game' || S.screen === 'cricket' || S.screen === 'rtw' || S.screen === 'finisher');
     /* Das X01-Spielbild ist auf jeder Bildschirmgroesse fest im Rahmen
        (siehe body.fix-spiel) - nichts scrollt, weder Seite noch Spielbild. */
-    document.body.classList.toggle('fix-spiel', S.screen === 'game' || S.screen === 'cricket');
+    document.body.classList.toggle('fix-spiel', S.screen === 'game' || S.screen === 'cricket' || S.screen === 'rtw');
     /* Cricket nutzt die ganze Breite - kein Seitenrand, keine Maximalbreite. */
-    document.body.classList.toggle('rand-aus', S.screen === 'cricket' || S.screen === 'game');
+    document.body.classList.toggle('rand-aus', S.screen === 'cricket' || S.screen === 'game' || S.screen === 'rtw');
     if (S.screen === 'setup') { gaesteAufraeumen(); renderSetup(); }
     /* Der Hintergrundtakt laeuft nur da, wo man ihn auch sieht: im
        Turnierbildschirm. Sonst fragt die App den ganzen Abend nach Daten,
@@ -5341,96 +5341,64 @@
     var st = rtwState(g);
     var active = g.done ? g.winner : gameTurnPlayer(g);
     var visit = gameVisitDarts(g);
+    var n = g.players.length;
 
-    $('rtw-sub').textContent = (g.boost
-      ? 'Boost · Doppel überspringt 1 · Triple überspringt 2'
-      : 'Einfach · jeder Treffer rückt ein Feld weiter') + liveLabel(g);
+    $('rtw-sub').textContent = (g.boost ? 'Boost · Double +2, Triple +3' : 'Einfach · jeder Treffer +1') +
+      ' · ' + plural(n, 'Spieler', 'Spieler') + liveLabel(g);
+    $('rtw-runde').textContent = 'Runde ' + (Math.floor(g.throws.length / (3 * n)) + 1);
+    $('rtw-board').style.setProperty('--zeilen', Math.max(n, 3));
+    $('rtw-board').classList.toggle('viele', n > 3);
 
-    $('rtw-board').innerHTML = g.players.map(function (id) {
+    /* Wie im Cricket: die fertige Aufnahme des Vorgaengers bleibt gedimmt in
+       seiner Zeile stehen, bis er wieder dran ist. */
+    var vorherIdx = !g.done && st.inVisit === 0 && g.throws.length > 0 && n > 1 ? -1 : null;
+    $('rtw-board').innerHTML = g.players.map(function (id, i) {
       var t = st.target[id];
       var fin = st.finished[id];
+      var istAkt = id === active;
       /* 21 Stationen: die 20 Zahlen und der Bull. */
       var doneSteps = fin ? 21 : (t === 25 ? 20 : t - 1);
-      return '<div class="rtw-row ' + (id === active ? 'act' : '') + (fin ? ' fin' : '') + '">' +
+      var darts = istAkt && !(st.inVisit === 0 && !g.done) ? visit : [];
+      var istVorher = false;
+      if (st.inVisit === 0 && !g.done && g.throws.length > 0 && g.players[(g.players.indexOf(active) - 1 + n) % n] === id && n > 1) {
+        darts = g.throws.slice(-3); istVorher = true;
+      }
+      if (istAkt && g.done) darts = visit;
+      var kacheln = istAkt || istVorher ? [0, 1, 2].map(function (k) {
+        var d = darts[k];
+        return '<span class="ct' + (d ? (istVorher ? ' alt' : '') + (d.n === 0 ? ' miss' : '') : ' leer') + '">' +
+          (d ? (d.n === 0 ? '–' : throwLabel(d)) : '') + '</span>';
+      }).join('') : '';
+      var meta = plural(st.darts[id], 'Dart', 'Darts') + ' · ' + plural(st.hits[id], 'Treffer', 'Treffer');
+      if (istAkt) meta = '<span id="rtw-fortschritt-txt">Station ' + Math.min(doneSteps + 1, 21) + ' von 21 · ' + meta + '</span>';
+      return '<div class="rtw-row' + (istAkt ? ' act' : '') + (fin ? ' fin' : '') + (istVorher ? ' vorher' : '') + '">' +
         avatarHTML(profile(id), 'md') +
         '<div class="rw-main">' +
           '<div class="rw-name">' + esc(pname(id)) + '</div>' +
-          /* Die Klinge glüht an ihrer Spitze – bei null Stationen gibt es
-             keine Spitze, sonst säße der Lichtpunkt am linken Rand. */
+          /* Die Klinge glueht an ihrer Spitze - bei null Stationen gibt es
+             keine Spitze, sonst saesse der Lichtpunkt am linken Rand. */
           '<div class="rw-bar"><span class="klinge' + (doneSteps ? '' : ' aus') +
             '" style="width:' + (doneSteps / 21 * 100) + '%"></span></div>' +
-          '<div class="rw-sub">' + plural(st.darts[id], 'Dart', 'Darts') + ' · ' + plural(st.hits[id], 'Treffer', 'Treffer') + '</div>' +
+          '<div class="rw-sub">' + meta + '</div>' +
         '</div>' +
-        '<div class="rw-target">' + (fin ? '✓' : t === 25 ? 'Bull' : t) + '</div>' +
+        '<div class="rw-tiles">' + kacheln + '</div>' +
+        '<div class="rw-target' + (t === 25 && !fin ? ' bull' : '') + '">' + (fin ? '✓' : t === 25 ? 'Bull' : t) + '</div>' +
         '</div>';
     }).join('');
 
     $('rtw-turn').innerHTML = g.done
-      ? '<b>' + esc(pname(g.winner)) + '</b> ' + (g.players.length < 2 ? 'ist durch' : 'gewinnt')
+      ? '<b>' + esc(pname(g.winner)) + '</b> ' + (n < 2 ? 'ist durch' : 'gewinnt')
       : st.stechen
         ? '<b>Stechen</b> <span class="muted">– der Bull entscheidet</span>'
         : (st.closing ? '<span class="muted">Runde wird zu Ende gespielt · </span>' : '') +
           '<span class="muted">Am Wurf</span> <b>' + esc(pname(active)) + '</b> <span class="muted">auf</span> <b>' +
           (st.target[active] === 25 ? 'Bull' : st.target[active]) + '</b>';
-
-    // Wie im Cricket: die fertige Aufnahme des Vorgängers gedimmt kennzeichnen.
-    var rwVorher = !g.done && st.inVisit === 0 && g.throws.length > 0;
-    $('rtw-darts').innerHTML = (rwVorher ? '<div class="d-vorher">zuletzt</div>' : '') +
-      [0, 1, 2].map(function (i) {
-        var d = visit[i];
-        return '<div class="d ' + (d ? (rwVorher ? 'alt' : '') : 'empty') + '">' + (d ? throwLabel(d) : '–') + '</div>';
-      }).join('');
-
-    /*
-     * Es wird immer nur auf die eigene Zahl geworfen. Die drei Treffer, die
-     * es dafür gibt, stehen deshalb nebeneinander in einer Reihe: die Zahl
-     * breit und groß, Doppel und Triple daneben als gleichwertige Tasten.
-     * Untereinander wäre die Zahl ein Plakat und D/T zwei Fußnoten – dabei
-     * ist es dieselbe Frage, nur mit drei Antworten.
-     *
-     * Darunter Miss und „Weiter", das die restlichen Darts der Aufnahme als
-     * Fehlwürfe verbucht: getroffen wird meist höchstens einmal, dreimal
-     * Miss zu tippen wäre sonst die häufigste Eingabe des Spiels.
-     */
-    var target = st.target[active];
-    var weiter = '<button class="rtw-key skip" data-action="end-rtw-visit">' +
-      '<span class="k">Weiter ▸</span>' +
-      '<span class="sub">' + plural(3 - st.inVisit, 'Dart', 'Darts') + ' daneben</span></button>';
-    var miss = '<button class="rtw-key miss" data-num="0" data-mult="1">' +
-      '<span class="k">Miss</span><span class="sub">ein Dart daneben</span></button>';
-
-    var treffer;
-    if (target === 25) {
-      treffer = '<div class="rtw-treffer nur-bull">' +
-        '<button class="rtw-key gross bull" data-num="25" data-mult="1">' +
-          '<span class="z">Bull</span><span class="sub">Spiel gewonnen</span></button>' +
-        '</div>';
-    } else if (!g.boost) {
-      /* Einfach: es gibt nur eine Antwort – getroffen oder nicht. Dann
-         braucht die Zahl auch keine Nachbarn und nimmt die Breite allein. */
-      treffer = '<div class="rtw-treffer nur-zahl">' +
-        '<button class="rtw-key gross" data-num="' + target + '" data-mult="1">' +
-          '<span class="z">' + target + '</span>' +
-          '<span class="sub">' + (target === 20 ? 'dann Bull' : 'dann ' + (target + 1)) + '</span></button>' +
-        '</div>';
-    } else {
-      var jump = function (mult) {
-        var next = target + mult;
-        return next > 20 ? 'dann Bull' : 'dann ' + next;
-      };
-      treffer = '<div class="rtw-treffer">' +
-        '<button class="rtw-key gross" data-num="' + target + '" data-mult="1">' +
-          '<span class="z">' + target + '</span><span class="sub">' + jump(1) + '</span></button>' +
-        '<button class="rtw-key mult" data-num="' + target + '" data-mult="2">' +
-          '<span class="k">D' + target + '</span><span class="sub">' + jump(2) + '</span></button>' +
-        '<button class="rtw-key mult" data-num="' + target + '" data-mult="3">' +
-          '<span class="k">T' + target + '</span><span class="sub">' + jump(3) + '</span></button>' +
-        '</div>';
-    }
+    $('rtw-menu-overlay').classList.toggle('hidden', !UI.menu);
+    if (UI.menu) document.querySelector('#rtw-menu-overlay .game-menu-sub').textContent = $('rtw-sub').textContent;
 
     /*
      * Gleich viele Darts – jetzt wirft jeder der Gleichauf einen Dart auf
-     * den Bull, und wer am nächsten dran war, wird angetippt. Wie beim
+     * den Bull, und wer am naechsten dran war, wird angetippt. Wie beim
      * Finisher wird das Ergebnis eingetragen, nicht gerechnet: die App sieht
      * das Board nicht.
      */
@@ -5446,10 +5414,41 @@
       return;
     }
 
-    $('rtw-pad').innerHTML = rtwFortschritt(st, active) +
-      '<div class="rtw-pad-grid ziel">' + treffer +
-      '<div class="rtw-reihe">' + miss + weiter + '</div>' +
-      '</div>';
+    /*
+     * Es wird immer nur auf die eigene Zahl geworfen: die Zahl gross, im
+     * Boost darunter Double und Triple als gleichwertige Tasten, jede mit
+     * dem Hinweis, wohin der Treffer fuehrt. Unten Miss; "Bust" oben rechts
+     * verbucht die restlichen Darts der Aufnahme als Fehlwuerfe.
+     */
+    var target = st.target[active];
+    var jump = function (mult) {
+      var next = target + mult;
+      return next > 20 ? 'dann Bull' : 'dann ' + next;
+    };
+    var miss = '<div class="rtw-reihe"><button class="rtw-key miss" data-num="0" data-mult="1">' +
+      '<span class="k">Miss</span><span class="sub">ein Dart daneben</span></button></div>';
+    var treffer;
+    if (target === 25) {
+      treffer = '<div class="rtw-treffer nur-bull">' +
+        '<button class="rtw-key gross bull" data-num="25" data-mult="1">' +
+          '<span class="z">Bull</span><span class="sub">Spiel gewonnen</span></button>' +
+        '</div>';
+    } else if (!g.boost) {
+      treffer = '<div class="rtw-treffer nur-zahl">' +
+        '<button class="rtw-key gross" data-num="' + target + '" data-mult="1">' +
+          '<span class="z">' + target + '</span><span class="sub">' + jump(1) + '</span></button>' +
+        '</div>';
+    } else {
+      treffer = '<div class="rtw-treffer">' +
+        '<button class="rtw-key gross" data-num="' + target + '" data-mult="1">' +
+          '<span class="z">' + target + '</span><span class="sub">' + jump(1) + '</span></button>' +
+        '<button class="rtw-key mult" data-num="' + target + '" data-mult="2">' +
+          '<span class="k"><span class="mx">D</span>' + target + '</span><span class="sub">' + jump(2) + '</span></button>' +
+        '<button class="rtw-key mult" data-num="' + target + '" data-mult="3">' +
+          '<span class="k"><span class="mx">T</span>' + target + '</span><span class="sub">' + jump(3) + '</span></button>' +
+        '</div>';
+    }
+    $('rtw-pad').innerHTML = treffer + miss;
   }
 
   /* Wie weit ist der, der gerade wirft? Die Reihe zeigt alle 21 Stationen –
@@ -9080,7 +9079,7 @@
       UI.overlay = null; UI.input = ''; render(); return;
     }
     /* Menue (•••): ein Tipp neben die Karte schliesst es. */
-    if (ev.target.id === 'game-menu-overlay' || ev.target.id === 'cricket-menu-overlay') { UI.menu = false; render(); return; }
+    if (ev.target.id === 'game-menu-overlay' || ev.target.id === 'cricket-menu-overlay' || ev.target.id === 'rtw-menu-overlay') { UI.menu = false; render(); return; }
     /* Ein Tipp ins Bild tut in der Fernsteuerung nichts (Julius): das Menue
        oeffnet nur •••, zurueck geht es ueber den ⌨-Knopf oben rechts. */
     var t = ev.target.closest('[data-action]');
@@ -9497,7 +9496,7 @@
        Turnier-Modus direkt. */
     var istAusstieg = ev.key === 'Escape' ||
       (ev.key === '.' && (ev.metaKey || ev.ctrlKey));
-    if (istAusstieg && !UI.overlay && (S.screen === 'game' || S.screen === 'cricket') && UI.menu) {
+    if (istAusstieg && !UI.overlay && (S.screen === 'game' || S.screen === 'cricket' || S.screen === 'rtw') && UI.menu) {
       ev.preventDefault();
       UI.menu = false; render();
       return;

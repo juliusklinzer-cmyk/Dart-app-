@@ -114,14 +114,18 @@ Aufnahme beendet, die angefangene Runde wird aber zu Ende gespielt – so ist de
 spätere Startplatz nicht benachteiligt. Es gewinnt, wer den Bull mit den wenigsten
 Darts getroffen hat. Brauchen mehrere gleich wenige Darts, entscheidet ein Stechen:
 jeder wirft einen Dart auf den Bull, wer am nächsten dran ist, gewinnt.
-Jeder Spieler hat seinen eigenen Fortschritt, die Anzeige zeigt Ziel, Darts und
-Treffer.
+Das Spielbild (Entwurf „Round the World“, Oktober 2026, dieselbe Sprache wie Cricket):
+links je Spieler eine Zeile mit Avatar, Name, **Laser-Fortschritt** über die 21
+Stationen, Darts und Treffern, beim Spieler am Wurf die drei Darts der Aufnahme, und
+rechts groß die **Zielzahl**. Rechts oben ••• (Menü: Spiel verlassen / Weiterspielen),
+Spielart, Spielerzahl und Runde, darunter **←** (letzter Dart zurück) und **Bust**
+(die restlichen Darts der Aufnahme als Fehlwürfe verbuchen).
 
 Auch hier wird vorher der Anwerfer ausgeworfen. Die Eingabe zeigt immer nur die Zahl,
-die gerade dran ist – als vier große Tasten
-(Single, Double, Triple, Miss), jeweils mit dem Hinweis, wohin der Treffer führt
-(„weiter auf 7"). Nach jedem Dart springt die Anzeige auf die neue Zahl, nach drei
-Darts auf den nächsten Spieler. Auf Bull bleiben nur noch „Bull" und „Miss".
+die gerade dran ist: groß und hell umrandet die Zahl selbst, im Boost darunter Double
+und Triple, unten Miss – jede Taste mit dem Hinweis, wohin der Treffer führt („dann 7“).
+Nach jedem Dart springt die Anzeige auf die neue Zahl, nach drei Darts auf den nächsten
+Spieler. Auf Bull bleiben nur noch „Bull“ und „Miss“.
 
 ### Finisher (Finish-Training)
 

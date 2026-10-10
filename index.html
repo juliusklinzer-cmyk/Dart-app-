@@ -756,25 +756,44 @@
 
 <!-- ============ ROUND THE WORLD ============ -->
 <section id="screen-rtw" class="screen game">
-  <header class="game-header">
-    <button class="icon-btn" data-action="leave-game" aria-label="Training verlassen">‹</button>
-    <div class="game-title">
-      <span>Round the World</span>
-      <span id="rtw-sub" class="muted"></span>
-    </div>
-    <button class="icon-btn" data-action="undo-game" aria-label="Letzten Dart zurücknehmen">↺</button>
-  </header>
-
+  <!-- Round the World (Entwurf 10/2026): links je Spieler eine Zeile mit
+       Laser-Fortschritt und grosser Zielzahl (beim Spieler am Wurf die drei
+       Darts der Aufnahme), rechts oben Menue, Info, Runde, Zurueck und Bust,
+       darunter nur die Zahl, die gerade dran ist. Zeichnet renderRtw. -->
   <div class="game-body">
-    <div class="game-main">
-      <div id="rtw-board" class="rtw-board"></div>
-    </div>
-    <div class="input-area">
-      <div class="mode-row">
-        <div id="rtw-turn" class="turn-label"></div>
-        <div id="rtw-darts" class="visit-darts"></div>
+    <div id="rtw-board" class="rtw-board"></div>
+    <div class="rtw-rechts">
+      <div class="rtw-kopf">
+        <button class="xk-btn rtw-menu" data-action="game-menu" aria-label="Menü">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><g opacity="0.8"><circle cx="3.5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="20.5" cy="12" r="1.8"></circle></g></svg>
+        </button>
+        <div class="rtw-info">
+          <span class="rtw-h">Round the World</span>
+          <span class="rtw-sub" id="rtw-sub"></span>
+          <span class="rtw-runde" id="rtw-runde"></span>
+        </div>
+      </div>
+      <div class="rtw-top">
+        <button class="rtw-key zurueck" data-action="undo-game" aria-label="Letzten Dart zurücknehmen">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 12H7M11.5 6.5L6 12l5.5 5.5"></path></svg>
+        </button>
+        <button class="rtw-key bust" data-action="end-rtw-visit">Bust</button>
       </div>
       <div class="pad" id="rtw-pad"></div>
+    </div>
+  </div>
+  <!-- Fuer die Tests und Dialoge: wer am Wurf ist. -->
+  <div id="rtw-turn" class="turn-label hidden"></div>
+  <div id="rtw-menu-overlay" class="game-menu hidden" role="dialog" aria-modal="true" aria-labelledby="rtw-menu-titel">
+    <div class="game-menu-karte">
+      <div class="game-menu-kopf">
+        <span class="game-menu-titel" id="rtw-menu-titel">Round the World</span>
+        <span class="game-menu-sub"></span>
+      </div>
+      <div class="game-menu-zeile">
+        <button class="btn ghost game-menu-raus" data-action="leave-game">Spiel verlassen</button>
+        <button class="btn primary" data-action="game-menu-zu">Weiterspielen</button>
+      </div>
     </div>
   </div>
 </section>
