@@ -821,29 +821,49 @@
      der Zufalls-Finish-Zahl, dann Spielerkarten, Checkout-Leiste, Verlauf und
      das gleiche Zahlenfeld. Wer das eine kennt, kennt das andere. -->
 <section id="screen-finisher" class="screen game">
-  <header class="game-header">
-    <button class="icon-btn" data-action="leave-game" aria-label="Spiel verlassen">‹</button>
-    <div class="game-title">
-      <span>Finisher</span>
-      <span id="fin-sub" class="muted"></span>
-    </div>
-    <button class="icon-btn" data-action="undo-game" aria-label="Letzten Dart zurücknehmen">↺</button>
-  </header>
-
+  <!-- Finisher (Entwurf 10/2026): wie das X01 in Einzel-Darts, ohne Kopfleiste.
+       Links die Spielerkarten (grosser Rest, Laserpillen fuer die Punkte, die
+       drei Wurffelder), rechts oben Menue, Info, Runde und die gezogene Zahl,
+       darunter das Einzel-Darts-Feld mit Double/Triple-Schaltern. -->
   <div class="game-body">
-    <div class="game-main">
-      <div id="fin-turn" class="turn-label game-turn"></div>
-      <div id="fin-board"></div>
-      <!-- Drei Kacheln, eine je Dart der Aufnahme: grün = getroffen wie
-           vorgegeben, rot = der nächste Wurf, grau = Stellwurf. -->
-      <div id="fin-hint" class="fin-kacheln"></div>
-      <div id="fin-history" class="history einspaltig"></div>
-    </div>
-    <div class="input-area">
-      <div class="mode-row">
-        <div id="fin-runde" class="turn-label muted"></div>
+    <div id="fin-board" class="scoreboard fin-board"></div>
+    <div class="fin-rechts">
+      <div class="fin-kopf">
+        <button class="xk-btn fin-menu" data-action="game-menu" aria-label="Menü">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><g opacity="0.8"><circle cx="3.5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="20.5" cy="12" r="1.8"></circle></g></svg>
+        </button>
+        <div class="fin-info">
+          <span class="fin-h">Finisher</span>
+          <span class="fin-sub" id="fin-sub"></span>
+          <span class="fin-runde" id="fin-runde"></span>
+        </div>
+        <div class="fin-zahl" aria-live="polite">
+          <span class="fz-label">Zahl</span>
+          <span class="fz-wert" id="fin-zahl"></span>
+        </div>
       </div>
       <div class="pad" id="fin-pad"></div>
+    </div>
+  </div>
+  <!-- Nach jedem Finish rollt hier die neue Zahl aus und fliegt in ihr Feld. -->
+  <div id="fin-roller" class="fin-roller" aria-hidden="true">
+    <div class="fin-roller-wrap">
+      <span class="fin-roller-label">Neue Zahl …</span>
+      <div class="fin-wuerfel"><span class="fin-wuerfel-zahl"></span></div>
+    </div>
+  </div>
+  <!-- Fuer Tests und Dialoge: wer am Wurf ist. -->
+  <div id="fin-turn" class="turn-label hidden"></div>
+  <div id="fin-menu-overlay" class="game-menu hidden" role="dialog" aria-modal="true" aria-labelledby="fin-menu-titel">
+    <div class="game-menu-karte">
+      <div class="game-menu-kopf">
+        <span class="game-menu-titel" id="fin-menu-titel">Finisher</span>
+        <span class="game-menu-sub"></span>
+      </div>
+      <div class="game-menu-zeile">
+        <button class="btn ghost game-menu-raus" data-action="leave-game">Spiel verlassen</button>
+        <button class="btn primary" data-action="game-menu-zu">Weiterspielen</button>
+      </div>
     </div>
   </div>
 </section>

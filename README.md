@@ -144,17 +144,18 @@ im X01. Kein Scoring-Teil, nur Finishen.
   Board sieht man es sofort).
 - Gespielt wird auf 3, 5 oder 10 Punkte.
 
-Der Bildschirm ist derselbe Aufbau wie im Schnellen Spiel: oben im Kopf steht die
-gezogene Finish-Zahl (dort, wo sonst die Startpunktzahl steht), darunter die
-Spielerkarten mit großem Rest, Punktestand, Darts und Aufnahmen, dann Finish-Leiste
-und der Verlauf der Aufnahmen mit Rundentrennern. Wer durch ist, trägt einen Haken
-statt einer Zahl. Das Zahlenfeld ist das des X01 – inklusive **„Weiter ▸"**, das eine
-Aufnahme mit Fehlwürfen auffüllt. Der ↺-Button nimmt Dart für Dart zurück – und über
-eine Rundengrenze hinweg auch eine schon entschiedene Runde samt gezogener Zahl.
-
-Statt einer Punktezeile trägt jede Spielerkarte **Laserpillen**: je Zielpunkt
-eine, jedes Finish zündet eine im blauen Licht – leuchten alle, ist gewonnen.
-Der lange Verlauf ist einer einzigen Zeile mit der letzten Eingabe gewichen.
+Der Bildschirm ist der des X01 in Einzel-Darts (Entwurf „Finisher“, Oktober 2026),
+ohne Kopfleiste: links die Spielerkarten mit großem Rest, Darts und Aufnahmen, oben
+rechts in der Karte die **Laserpillen** (je Zielpunkt eine, jedes Finish zündet eine im
+blauen Licht – leuchten alle, ist gewonnen) und darunter die drei Felder der laufenden
+Aufnahme (Treffer grün, der nächste Wurf hell umrandet, ohne Finish der Stellwurf mit
+„auf …“). Wer durch ist, trägt einen Haken statt einer Zahl. Rechts oben ••• (Menü:
+Spiel verlassen / Weiterspielen), Spielerzahl, Zielpunkte und Runde, daneben im
+Kasten die **gezogene Zahl** – nach jedem Finish **rollt die neue Zahl** in der Mitte
+des Bildes aus und fliegt in ihr Feld; darunter das Einzel-Darts-Feld des X01 mit Double/Triple
+als Schalter, Bull, Bull ×2, 1 bis 20, **←** (Dart für Dart zurück – über eine
+Rundengrenze hinweg auch eine schon entschiedene Runde samt gezogener Zahl), **0**
+und **OK** (füllt die Aufnahme mit Fehlwürfen auf).
 
 In der Rangliste zählt der Modus **gewonnene Runden**, **Ø Darts je Finish**, das
 schnellste Finish und die höchste weggemachte Zahl.

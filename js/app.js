@@ -1617,9 +1617,11 @@
    */
   var FEIER_MS = 4600;
   /* Die Sechzig ist kurz: ein Puls („SECH-ZIG", bum-bum), dann wieder weg –
-     sie kommt ja auch deutlich öfter als die 180. 650 ms, damit das
-     Tastenfeld nach der häufigsten Aufnahme des Abends sofort wieder frei ist. */
-  var SECHZIG_MS = 650;
+     sie kommt ja auch deutlich öfter als die 180. Genau so lang wie ihre
+     Animation (1,2 s): kuerzer abgeraeumt wirkte der Loewe abgehackt und
+     klein (Julius, 10.10.2026). Die Feier liegt ohne Klickfang ueber dem
+     Bild, das Tastenfeld bleibt die ganze Zeit bedienbar. */
+  var SECHZIG_MS = 1200;
 
   /* Feier anwerfen. Kein display-Umschalten und kein Klassen-Neustart-Trick:
      die Kinder werden je Feier frisch eingesetzt und starten ihre Animationen
@@ -2798,6 +2800,7 @@
     };
     if (kind === 'rtw') S.game.boost = S.settings.rtwBoost === 1;
     UI.cricketSpalten = null;   // die Cricket-Tafel faengt ohne Einschiebe-Animation an
+    UI.finRunde = undefined; UI.finSpiel = null;   // der Finisher wuerfelt die erste Zahl nicht vor
     if (kind === 'finisher') {
       S.game.ziel = S.settings.finisherTo;
       S.game.rounds = [];
@@ -3253,9 +3256,9 @@
       S.screen === 'game' || S.screen === 'cricket' || S.screen === 'rtw' || S.screen === 'finisher');
     /* Das X01-Spielbild ist auf jeder Bildschirmgroesse fest im Rahmen
        (siehe body.fix-spiel) - nichts scrollt, weder Seite noch Spielbild. */
-    document.body.classList.toggle('fix-spiel', S.screen === 'game' || S.screen === 'cricket' || S.screen === 'rtw');
+    document.body.classList.toggle('fix-spiel', S.screen === 'game' || S.screen === 'cricket' || S.screen === 'rtw' || S.screen === 'finisher');
     /* Cricket nutzt die ganze Breite - kein Seitenrand, keine Maximalbreite. */
-    document.body.classList.toggle('rand-aus', S.screen === 'cricket' || S.screen === 'game' || S.screen === 'rtw');
+    document.body.classList.toggle('rand-aus', S.screen === 'cricket' || S.screen === 'game' || S.screen === 'rtw' || S.screen === 'finisher');
     if (S.screen === 'setup') { gaesteAufraeumen(); renderSetup(); }
     /* Der Hintergrundtakt laeuft nur da, wo man ihn auch sieht: im
        Turnierbildschirm. Sonst fragt die App den ganzen Abend nach Daten,
@@ -5577,65 +5580,71 @@
     return null;
   }
 
+  /* Die neue Zahl wuerfeln: anderthalb Sekunden rollen Zufallszahlen immer
+     langsamer durch, dann landet die echte, kurz darauf fliegt sie in das
+     Zahl-Feld oben rechts. Rein Anzeige - der Stand steht laengst fest. */
+  var finWuerfelTimer = [];
+  function finisherWuerfeln(zahl) {
+    var box = $('fin-roller');
+    if (!box || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+    finWuerfelTimer.forEach(clearTimeout); finWuerfelTimer = [];
+    var zahlEl = box.querySelector('.fin-wuerfel-zahl');
+    var label = box.querySelector('.fin-roller-label');
+    var zufall = function () { return 6 + Math.floor(Math.random() * 115); };
+    box.className = 'fin-roller an roll';
+    label.textContent = 'Neue Zahl …';
+    zahlEl.textContent = zufall();
+    var at = function (ms, fn) { finWuerfelTimer.push(setTimeout(fn, ms)); };
+    var t = 0, schritt = 45;
+    while (t < 1500) { t += schritt; schritt *= 1.12; at(t, function () { zahlEl.textContent = zufall(); }); }
+    at(t + 60, function () { zahlEl.textContent = zahl; label.textContent = 'Neue Zahl'; box.className = 'fin-roller an land'; });
+    at(t + 760, function () {
+      /* Flugziel: das Zahl-Feld, relativ zur Bildmitte. */
+      var ziel = $('fin-zahl'), wrap = box.querySelector('.fin-roller-wrap');
+      if (ziel && wrap) {
+        var z = ziel.getBoundingClientRect(), w = wrap.getBoundingClientRect();
+        wrap.style.setProperty('--fx', Math.round(z.left + z.width / 2 - (w.left + w.width / 2)) + 'px');
+        wrap.style.setProperty('--fy', Math.round(z.top + z.height / 2 - (w.top + w.height / 2)) + 'px');
+      }
+      box.className = 'fin-roller an fly';
+    });
+    at(t + 1360, function () {
+      box.className = 'fin-roller';
+      var feld = $('fin-zahl') && $('fin-zahl').parentElement;
+      if (feld) { feld.classList.remove('ping'); void feld.offsetWidth; feld.classList.add('ping'); }
+    });
+  }
+
   function renderFinisher() {
     var g = S.game;
     if (!g || g.kind !== 'finisher') { S.screen = 'setup'; render(); return; }
     var st = finisherState(g);
     var rd = finisherRunde(g);
     var aktiv = g.players[st.turn];
+    var n = g.players.length;
 
-    /* Oben im Kopf steht die Zufalls-Finish-Zahl – genau da, wo das Schnelle
-       Spiel seine Startpunktzahl zeigt. Der Rundenstand wandert nach unten
-       neben die Eingabe. */
-    $('fin-sub').textContent = plural(g.players.length, 'Spieler', 'Spieler') + ' · ' + st.zahl + ' Double Out' + liveLabel(g);
-    $('fin-runde').textContent = 'Runde ' + (st.runde + 1) + ' · auf ' + g.ziel + ' Punkte';
+    $('fin-sub').textContent = plural(n, 'Spieler', 'Spieler') + ' · Double Out · auf ' + g.ziel + ' Punkte' + liveLabel(g);
+    $('fin-runde').textContent = 'Runde ' + (st.runde + 1);
+    $('fin-zahl').textContent = st.zahl;
+    /* Neue Runde nach einem Finish: die Zahl rollt aus und fliegt in ihr
+       Feld. Nicht beim ersten Zeichnen, nicht nach Zurueck, nicht am Ende. */
+    if (UI.finRunde !== undefined && UI.finSpiel === g.id && g.rounds.length > UI.finRunde && !g.done) finisherWuerfeln(st.zahl);
+    UI.finRunde = g.rounds.length; UI.finSpiel = g.id;
 
     $('fin-turn').innerHTML = g.done
-      ? '<b>' + esc(pname(g.winner)) + '</b> ' + (g.players.length < 2 ? 'hat ausgemacht' : 'hat gewonnen')
+      ? '<b>' + esc(pname(g.winner)) + '</b> ' + (n < 2 ? 'hat ausgemacht' : 'hat gewonnen')
       : rd.stechen
         ? '<b>Stechen</b><span class="muted"> – der Bull entscheidet</span>'
         : '<span class="muted">Am Wurf</span> <b>' + esc(pname(aktiv)) + '</b>' +
           '<span class="muted"> · Rest ' + st.rest[aktiv] + '</span>';
+    $('fin-menu-overlay').classList.toggle('hidden', !UI.menu);
+    if (UI.menu) document.querySelector('#fin-menu-overlay .game-menu-sub').textContent = $('fin-sub').textContent;
 
-    /* Dieselben Spielerkarten wie im X01: großer Rest, darunter Darts und
-       Aufnahmen. Wer durch ist, trägt den Haken statt einer Zahl. */
-    $('fin-board').innerHTML = '<div class="scoreboard' + (g.players.length > 2 ? ' viele' : '') + '">' +
-      g.players.map(function (id) {
-        var fertig = st.fertig[id];
-        var klassen = ['pcard'];
-        if (fertig) klassen.push('fertig');
-        else if (id === aktiv && !rd.stechen && !g.done) klassen.push('active');
-        /* Je Zielpunkt eine Pille - jedes Finish zuendet eine im blauen
-           Laserlicht. Leuchten alle, ist das Spiel gewonnen. */
-        var pillen = '';
-        for (var fp = 0; fp < g.ziel; fp++) {
-          pillen += '<span class="fin-pille' + (fp < (st.punkte[id] || 0) ? ' an' : '') + '"></span>';
-        }
-        return '<div class="' + klassen.join(' ') + '">' +
-          '<div class="pname">' + avatarHTML(profile(id), 'sm') + esc(pname(id)) + '</div>' +
-          '<div class="fin-pillen" role="img" aria-label="' + (st.punkte[id] || 0) + ' von ' + g.ziel + ' Finishes">' + pillen + '</div>' +
-          '<div class="rest">' + (fertig ? '✓' : st.rest[id]) + '</div>' +
-          '<div class="meta"><span>Darts <b>' + st.darts[id] + '</b></span>' +
-            '<span>Aufnahmen <b>' + st.aufnahmen[id] + '</b></span></div>' +
-          '</div>';
-      }).join('') + '</div>' +
-      /* Stechen: gleichgezogen, jetzt entscheidet der Bull. Wie beim Anwurf
-         wird von Hand getippt, wer näher dran war – messen kann die App das
-         nicht, und am Board sieht man es sofort. */
-      (rd.stechen
-        ? '<div class="card fin-stechen"><h2>Stechen auf Bull</h2>' +
-          '<p class="hint">' + rd.stechen.spieler.map(function (id) { return esc(pname(id)); }).join(' und ') +
-          ' haben beide gefinished. Einmal auf Bull werfen – wer war näher dran?</p>' +
-          rd.stechen.spieler.map(function (id) {
-            return '<button class="btn full" data-action="fin-stechen" data-id="' + esc(id) + '">' +
-              esc(pname(id)) + '</button>';
-          }).join('') + '</div>'
-        : '');
-
-    /* Unten immer drei Kacheln – eine je Dart der Aufnahme, ohne Etikett
-       (wer dran ist, leuchtet ja). Geworfen und getroffen wie vorgegeben →
-       grün; daneben geworfen → die geworfene Zahl; der nächste Wurf → rot;
-       geht kein Finish mehr, steht grau der Stellwurf; der Rest ist „–". */
+    /* Die drei Felder des Spielers am Wurf: geworfen und getroffen wie
+       vorgegeben -> gruen; daneben geworfen -> die geworfene Zahl; der
+       naechste Wurf hell umrandet; geht kein Finish mehr, steht der
+       Stellwurf mit dem Ziel, auf das er stellt. */
+    var route = null;
     var kacheln = ['', '', ''];
     if (!g.done && !rd.stechen && !st.fertig[aktiv]) {
       var dbl = lieblingsDoppel(aktiv);
@@ -5649,7 +5658,7 @@
           (wurf.n === 0 ? '–' : dartLabel(wurf)) + '</span>';
         restLauf -= wurf.n * wurf.m;
       }
-      var route = Checkout.suggest(st.rest[aktiv], 3 - st.inVisit, dbl);
+      route = Checkout.suggest(st.rest[aktiv], 3 - st.inVisit, dbl);
       if (route) {
         for (var ri = 0; ri < route.length && st.inVisit + ri < 3; ri++) {
           kacheln[st.inVisit + ri] = '<span class="fk' + (ri === 0 ? ' jetzt' : '') + '">' +
@@ -5657,57 +5666,77 @@
         }
       } else if (st.inVisit < 3) {
         var stell = finisherStellwurf(st.rest[aktiv], dbl);
-        if (stell) kacheln[st.inVisit] = '<span class="fk stellen">' + stell + '</span>';
+        if (stell) {
+          var stellSoll = labelDart(stell);
+          kacheln[st.inVisit] = '<span class="fk stellen">' + stell +
+            '<span class="fk-auf">auf ' + (st.rest[aktiv] - stellSoll.n * stellSoll.m) + '</span></span>';
+        }
       }
     }
     for (var kl = 0; kl < 3; kl++) if (!kacheln[kl]) kacheln[kl] = '<span class="fk leer">–</span>';
-    $('fin-hint').innerHTML = kacheln.join('');
-    /* Beim Stechen sagt schon die gelbe Karte, worum es geht. */
-    $('fin-hint').classList.toggle('hidden', !!rd.stechen);
 
-    /* Kein langer Verlauf - die letzte Eingabe reicht: die Pillen in den
-       Karten erzaehlen den Stand, mehr braucht der Abend nicht. */
-    var letzte = null;
-    for (var ri = g.rounds.length - 1; ri >= 0 && !letzte; ri--) {
-      var eintraege = finisherAufnahmen(g, g.rounds[ri]);
-      if (eintraege.length) letzte = eintraege[eintraege.length - 1];
-    }
-    $('fin-history').innerHTML = letzte
-      ? '<div class="col"><div class="v ' + (letzte.b ? 'bust' : letzte.c ? 'co' : '') + '">' +
-        '<span class="wer">' + esc(pname(letzte.p)) + '</span>' +
-        '<span class="s">' + letzte.s + '</span>' +
-        '<span class="r">' + (letzte.b ? 'Bust' : letzte.c ? 'Finish' : 'Rest ' + letzte.rest) + '</span></div></div>'
-      : '';
+    /* Spielerkarten wie im X01: Name, Darts und Aufnahmen, rechts die
+       Laserpillen (je Zielpunkt eine, jedes Finish zuendet eine), gross der
+       Rest, darunter die drei Felder. Wer durch ist, traegt den Haken. */
+    $('fin-board').classList.toggle('viele', n > 2);
+    $('fin-board').style.setProperty('--n', n);
+    $('fin-board').innerHTML = g.players.map(function (id) {
+      var fertig = st.fertig[id];
+      var istAkt = id === aktiv && !rd.stechen && !g.done;
+      var klassen = ['pcard'];
+      if (fertig) klassen.push('fertig');
+      else if (istAkt) klassen.push('active');
+      var pillen = '';
+      for (var fp = 0; fp < g.ziel; fp++) {
+        pillen += '<span class="fin-pille' + (fp < (st.punkte[id] || 0) ? ' an' : '') + '"></span>';
+      }
+      var felder = istAkt && !fertig
+        ? '<div class="pfelder" id="fin-hint">' + kacheln.join('') + '</div>'
+        : '<div class="pfelder"><span class="fk still"></span><span class="fk still"></span><span class="fk still"></span></div>';
+      return '<div class="' + klassen.join(' ') + '">' +
+        '<div class="pkopf">' + avatarHTML(profile(id), 'sm') +
+          '<div class="pblock"><span class="pname">' + esc(pname(id)) + '</span>' +
+          '<span class="pmeta">Darts ' + st.darts[id] + ' · Aufnahmen ' + st.aufnahmen[id] + '</span></div>' +
+          '<div class="fin-pillen" role="img" aria-label="' + (st.punkte[id] || 0) + ' von ' + g.ziel + ' Finishes">' + pillen + '</div></div>' +
+        '<div class="rest-zeile"><span class="rest">' + (fertig ? '✓' : st.rest[id]) + '</span></div>' +
+        felder +
+        '</div>';
+    }).join('') +
+      /* Stechen: gleichgezogen, jetzt entscheidet der Bull. Wie beim Anwurf
+         wird von Hand getippt, wer naeher dran war – messen kann die App das
+         nicht, und am Board sieht man es sofort. */
+      (rd.stechen
+        ? '<div class="card fin-stechen"><h2>Stechen auf Bull</h2>' +
+          '<p class="hint">' + rd.stechen.spieler.map(function (id) { return esc(pname(id)); }).join(' und ') +
+          ' haben beide gefinished. Einmal auf Bull werfen – wer war näher dran?</p>' +
+          rd.stechen.spieler.map(function (id) {
+            return '<button class="btn full" data-action="fin-stechen" data-id="' + esc(id) + '">' +
+              esc(pname(id)) + '</button>';
+          }).join('') + '</div>'
+        : '');
 
-
-    // Zahlenfeld: derselbe Aufbau wie im Finish-Bereich des X01.
+    /* Zahlenfeld wie im X01: Double/Triple als Schalter, Bull, Bull x2,
+       1 bis 20, Zurueck, 0 und OK (fuellt die Aufnahme mit Fehlwuerfen auf). */
     if (rd.stechen) {
       $('fin-pad').innerHTML = '<p class="hint center">Erst das Stechen entscheiden.</p>';
     } else {
-      /* Das vorgeschlagene Feld wird im Zahlenfeld markiert – aber nur, wenn
-         die eingestellte Multiplikatorreihe dazu passt. Sonst zeigte die
-         Markierung auf D20, obwohl T20 gemeint ist. */
       var hl = route ? route[0] : null;
       var hlMult = hl ? (hl.charAt(0) === 'T' ? 3 : hl.charAt(0) === 'D' || hl === 'BULL' ? 2 : 1) : 0;
       var hlNum = hl && hl !== 'BULL' && hl !== '25' && UI.mult === hlMult ? parseInt(hl.slice(1), 10) : null;
       var prefix = UI.mult === 3 ? 'T' : UI.mult === 2 ? 'D' : '';
-      var nums = '';
-      for (var n = 1; n <= 20; n++) {
-        nums += '<button data-num="' + n + '" class="' + (n === hlNum ? 'hl' : '') + '">' +
-          (prefix ? '<span class="mx">' + prefix + '</span>' : '') + n + '</button>';
+      var nums = '<button class="mult' + (UI.mult === 2 ? ' active' : '') + '" data-mult="2" aria-pressed="' + (UI.mult === 2) + '">Double</button>' +
+        '<button class="mult' + (UI.mult === 3 ? ' active' : '') + '" data-mult="3" aria-pressed="' + (UI.mult === 3) + '">Triple</button>' +
+        '<button class="bull ' + (hl === '25' ? 'hl' : '') + '" data-num="25" data-mult="1">Bull</button>' +
+        '<button class="bull ' + (hl === 'BULL' ? 'hl' : '') + '" data-num="25" data-mult="2">Bull ×2</button>';
+      for (var nn = 1; nn <= 20; nn++) {
+        nums += '<button data-num="' + nn + '" class="' + (nn === hlNum ? 'hl' : '') + '">' +
+          (prefix ? '<span class="mx">' + prefix + '</span>' : '') + nn + '</button>';
       }
-      nums += '<button class="miss" data-num="0" data-mult="1">Miss</button>';
-      nums += '<button class="bull ' + (hl === '25' ? 'hl' : '') + '" data-num="25" data-mult="1">Bull</button>';
-      nums += '<button class="bull ' + (hl === 'BULL' ? 'hl' : '') + '" data-num="25" data-mult="2">Bull ×2</button>';
-      /* Wie im X01: dreimal am Doppel vorbei muss nicht dreimal getippt
-         werden – dieser Knopf füllt die Aufnahme mit Fehlwürfen auf. */
-      nums += '<button class="end-visit wide" data-action="fin-end-visit">Weiter ▸</button>';
-      $('fin-pad').innerHTML =
-        '<div class="mult-row">' +
-          '<button data-mult="1" class="' + (UI.mult === 1 ? 'active' : '') + '">Single</button>' +
-          '<button data-mult="2" class="' + (UI.mult === 2 ? 'active' : '') + '">Double</button>' +
-          '<button data-mult="3" class="' + (UI.mult === 3 ? 'active' : '') + '">Triple</button>' +
-        '</div><div class="num-grid">' + nums + '</div>';
+      nums += '<button class="zurueck" data-action="undo-game" aria-label="Letzten Dart zurücknehmen">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 12H7M11.5 6.5L6 12l5.5 5.5"></path></svg></button>';
+      nums += '<button class="miss" data-num="0" data-mult="1" aria-label="Fehlwurf">0</button>';
+      nums += '<button class="end-visit" data-action="fin-end-visit">OK</button>';
+      $('fin-pad').innerHTML = '<div class="num-grid">' + nums + '</div>';
     }
   }
 
@@ -9079,7 +9108,7 @@
       UI.overlay = null; UI.input = ''; render(); return;
     }
     /* Menue (•••): ein Tipp neben die Karte schliesst es. */
-    if (ev.target.id === 'game-menu-overlay' || ev.target.id === 'cricket-menu-overlay' || ev.target.id === 'rtw-menu-overlay') { UI.menu = false; render(); return; }
+    if (/^(game|cricket|rtw|fin)-menu-overlay$/.test(ev.target.id || '')) { UI.menu = false; render(); return; }
     /* Ein Tipp ins Bild tut in der Fernsteuerung nichts (Julius): das Menue
        oeffnet nur •••, zurueck geht es ueber den ⌨-Knopf oben rechts. */
     var t = ev.target.closest('[data-action]');
@@ -9149,7 +9178,7 @@
     if (mult) { tipp(); UI.mult = Number(mult.getAttribute('data-mult')); render(); return; }
     /* Double/Triple im X01-Zahlenfeld sind Schalter: Tipp an, nochmal Tipp
        aus (keiner an heisst Single); sie schliessen sich gegenseitig aus. */
-    var schalter = ev.target.closest('#num-grid button.mult');
+    var schalter = ev.target.closest('.num-grid button.mult');
     if (schalter) {
       tipp();
       var sm = Number(schalter.getAttribute('data-mult'));
@@ -9496,7 +9525,7 @@
        Turnier-Modus direkt. */
     var istAusstieg = ev.key === 'Escape' ||
       (ev.key === '.' && (ev.metaKey || ev.ctrlKey));
-    if (istAusstieg && !UI.overlay && (S.screen === 'game' || S.screen === 'cricket' || S.screen === 'rtw') && UI.menu) {
+    if (istAusstieg && !UI.overlay && (S.screen === 'game' || S.screen === 'cricket' || S.screen === 'rtw' || S.screen === 'finisher') && UI.menu) {
       ev.preventDefault();
       UI.menu = false; render();
       return;

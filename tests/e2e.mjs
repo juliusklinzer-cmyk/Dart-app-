@@ -1063,12 +1063,19 @@ await page.setViewportSize({ width: 390, height: 844 });
 
 /* Ein Dart im Finisher. Die Zahlen 1–20 richten sich nach der eingestellten
    Multiplikatorreihe, 25 und Bull haben sie fest am Knopf. */
+/* Double und Triple sind auch hier Schalter (Tipp an, nochmal Tipp aus). */
+async function finSetMult(mult) {
+  const ist = await page.evaluate(() => window.__dart.ui().mult);
+  if (ist === mult) return;
+  if (mult === 1) await page.locator(`#fin-pad .num-grid button.mult[data-mult="${ist}"]`).click();
+  else await page.locator(`#fin-pad .num-grid button.mult[data-mult="${mult}"]`).click();
+}
 async function finDart(label) {
   if (label === 'BULL') return page.locator('#fin-pad button[data-num="25"][data-mult="2"]').click();
   if (label === '25') return page.locator('#fin-pad button[data-num="25"][data-mult="1"]').click();
   const mult = label[0] === 'T' ? 3 : label[0] === 'D' ? 2 : 1;
   const num = parseInt(label.slice(1), 10);
-  await page.locator(`#fin-pad .mult-row button[data-mult="${mult}"]`).click();
+  await finSetMult(mult);
   return page.locator(`#fin-pad .num-grid button[data-num="${num}"]`).click();
 }
 
@@ -1126,7 +1133,8 @@ let fst = await finState();
 const [fA, fB] = await page.evaluate(() => window.__dart.game().players);
 check('Zahl liegt zwischen 6 und 120', fst.zahl >= 6 && fst.zahl <= 120, String(fst.zahl));
 check('beide starten auf derselben Zahl', fst.rest[fA] === fst.zahl && fst.rest[fB] === fst.zahl);
-check('Zahl steht groß auf der Tafel', (await text('#fin-board')).includes(String(fst.zahl)));
+check('Zahl steht groß im Kasten und als Rest auf den Karten', (await text('#fin-zahl')).trim() === String(fst.zahl) && (await text('#fin-board')).includes(String(fst.zahl)));
+check('Menue, Info und Runde stehen rechts oben', (await visible('#screen-finisher .fin-menu')) && (await textKlein('#fin-runde')).includes('runde 1'));
 check('je Zielpunkt eine Pille in der Karte, anfangs keine an', await page.evaluate(() => {
   const karten = document.querySelectorAll('#fin-board .pcard');
   const ziel = window.__dart.game().ziel;
@@ -1145,7 +1153,7 @@ check('noch keine Punkte', fst.punkte[fA] === 0 && fst.punkte[fB] === 0);
  * bei großen Zielzahlen nicht und der Test ging nur mit Glück durch.)
  */
 async function t20() {
-  await page.locator('#fin-pad .mult-row button[data-mult="3"]').click();
+  await finSetMult(3);
   await page.locator('#fin-pad .num-grid button[data-num="20"]').click();
 }
 const zielzahl = fst.zahl;
@@ -1176,6 +1184,10 @@ check('das Finish zuendet eine Laserpille beim Sieger', await page.evaluate((id)
   return meine.querySelectorAll('.fin-pille.an').length === 1;
 }, fA));
 check('neue Runde mit neuer Zahl', fst.runde === 1 && fst.zahl >= 6 && fst.zahl <= 120);
+check('die neue Zahl rollt in der Mitte aus', await page.evaluate(() => document.getElementById('fin-roller').classList.contains('an')));
+await page.waitForTimeout(3200);
+check('und ist danach wieder weg - das Zahl-Feld hat sie', await page.evaluate(() =>
+  !document.getElementById('fin-roller').classList.contains('an') && document.getElementById('fin-zahl').textContent === String(window.__dart.finisherState().zahl)));
 check('alle wieder auf Anfang', fst.rest[fA] === fst.zahl && fst.rest[fB] === fst.zahl);
 
 group('Finisher: Stechen, wenn beide gleichziehen');
@@ -1290,7 +1302,7 @@ check('Fehlwürfe stehen als – in den Kacheln',
   (await page.locator('#fin-hint .fk.anders').count()) === 2 &&
   (await page.locator('#fin-hint .fk.anders').first().innerText()).trim() === '–');
 check('der letzte Dart kann nicht finishen: grauer Stellwurf 7 (auf D16)',
-  (await page.locator('#fin-hint .fk.stellen').innerText()).trim() === '7');
+  /^7\s+auf \d+$/.test((await page.locator('#fin-hint .fk.stellen').innerText()).trim()));
 await page.evaluate(() => {
   const D = window.__dart, S = D.state();
   S.game = null;
@@ -1419,7 +1431,7 @@ check('kein Turnier-Zaehler in der Kopfzeile',
   (await textKlein('#game-match-label')).includes('schnelles spiel'));
 /* Ab drei Spielern am Handy erscheint die Finish-Leiste erst, wenn beim
    Aktiven ein Finish ansteht – vorher stiehlt sie dem Verlauf die Zeile. */
-check('ohne Finish bleiben die Felder des Spielers am Wurf leer', (await page.locator('.pcard.active .pfelder .fk').count()) === 0);
+check('ohne Finish bleiben die Felder des Spielers am Wurf leer', (await page.locator('#scoreboard .pcard.active .pfelder .fk').count()) === 0);
 
 /* Reihum: nach drei Darts ist der Naechste dran, nicht wieder der Erste. */
 const amWurf = () => page.evaluate(() => {
@@ -2738,7 +2750,7 @@ await page.locator('[data-action="liga-kampflos-wer"]').nth(1).click();
    der Schreiber darf das Doppel ja nicht ansagen (WDF 3.08). */
 await page.locator('#schedule .match-row .go:not(.wo)').first().click();
 await ligaAusbullen();
-check('Liga-konform: keine Finish-Felder im Einzel', (await page.locator('.pcard .pfelder .fk').count()) === 0);
+check('Liga-konform: keine Finish-Felder im Einzel', (await page.locator('#scoreboard .pcard .pfelder .fk').count()) === 0);
 await spielVerlassen();
 /* Das Oeffnen hat ein leeres Leg angelegt - der w.o.-Knopf muss bleiben,
    solange kein echter Wurf gefallen ist (15 = 14 offene + 1x aendern). */
