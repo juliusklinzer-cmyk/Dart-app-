@@ -406,7 +406,9 @@ await page.locator('[data-action="start-game"]').click();
 check('Bull-Off auch im Cricket', await visible('#screen-bulloff'));
 await page.locator('#bulloff-buttons button').first().click();
 check('Cricket-Screen', await visible('#screen-cricket'));
-check('Board hat 7 Zahlen (20–15 und Bull)', (await page.locator('.cr-num').count()) === 8, 'inkl. Punktezeile');
+check('Board hat 7 Zahlen (20–15 und Bull)', (await page.locator('.cr-num').count()) === 7, String(await page.locator('.cr-num').count()));
+check('Menue, Zurueck und Bust stehen in der Kopfzeile der Tafel',
+  (await visible('#cricket-grid .cr-menu')) && (await visible('#cricket-grid [data-action="undo-game"]')) && (await textKlein('#cricket-grid .bust')) === 'bust');
 
 await cDart('T20');
 let cs = await page.evaluate(() => window.__dart.cricketState());
@@ -422,14 +424,21 @@ check('19 ebenfalls zu', cs.marks[pA][19] === 3);
 /* Wer vorn liegt, wird an der Punktzahl markiert – aber nur einer, und nur
    wenn ueberhaupt schon Punkte da sind. */
 const fuehrend = () => page.evaluate(() => {
-  const zellen = [...document.querySelectorAll('#cricket-board .cr-score')];
+  const zellen = [...document.querySelectorAll('#cricket-board .cr-pts')];
   return zellen.map((z) => z.classList.contains('fuehrt'));
 });
 check('genau einer ist vorn', (await fuehrend()).filter(Boolean).length === 1,
   JSON.stringify(await fuehrend()));
 check('und zwar der mit den Punkten', (await fuehrend())[0] === true);
-check('nach 3 Darts ist der Gegner am Wurf',
-  (await text('#cricket-turn')).includes(await page.evaluate((id) => window.__dart.state().profiles.find((p) => p.id === id).name, pB)));
+check('nach 3 Darts ist der Gegner am Wurf - seine Karte leuchtet',
+  (await textKlein('#cricket-grid .cr-card.act .pname')).includes((await page.evaluate((id) => window.__dart.state().profiles.find((p) => p.id === id).name, pB)).toLowerCase()));
+check('die Aufnahme des Vorgaengers bleibt gedimmt in seiner Karte stehen',
+  (await text('#cricket-grid .cr-card.vorher .cr-tiles')).replace(/\s+/g, ' ').trim() === 'T20 20 T19');
+check('Punkte stehen gross in der Karte', (await text('#cricket-grid .cr-card.vorher .cr-pts')).trim() === '20');
+check('der Spieler am Wurf hat noch leere Kacheln - nicht die Darts des Vorgaengers',
+  (await text('#cricket-grid .cr-card.act .cr-tiles')).trim() === '' && (await page.locator('#cricket-grid .cr-card.act .ct.leer').count()) === 3);
+check('Zurueck-Taste auch hochkant mindestens 44 px breit',
+  (await page.locator('#cricket-grid .cr-top .zurueck').boundingBox()).width >= 44);
 
 for (const _ of [1, 2, 3]) await cDart('MISS');
 await cDart('T18'); await cDart('T17'); await cDart('T16');
@@ -694,8 +703,8 @@ await page.reload();
 await page.locator('[data-action="set-mode"][data-value="cricket"]').click();
 await page.locator('[data-action="start-game"]').click();
 await bullOffGo();
-check('Single-, Double- und Triple-Block vorhanden',
-  (await page.locator('#cricket-grid .cg-block').count()) === 4);
+check('je Zahl drei Tasten: Single, Double, Triple - direkt neben der Zeile',
+  (await page.locator('#cricket-grid .cr-key[data-mult="1"]').count()) === 8 && (await page.locator('#cricket-grid .cr-key[data-mult="2"]').count()) === 7);   // Single: 6 Zahlen, Bull, Miss
 check('alle sechs Zahlen je Block', (await page.locator('#cricket-grid button[data-mult="3"]').count()) === 6);
 await cDart('T20');
 await cDart('S19');
@@ -1041,8 +1050,13 @@ await page.setViewportSize({ width: 1194, height: 834 });
 await page.waitForTimeout(120);
 check('Eingabefelder am iPad deutlich größer',
   (await cgKey.boundingBox()).height >= 70, String((await cgKey.boundingBox()).height));
-check('Weiter-Knopf steht neben Miss',
-  (await page.locator('#cricket-grid .cg-extra button').count()) === 4);
+check('Bull-Zeile: Bull, Bull x2, Miss',
+  (await page.locator('#cricket-grid button[data-num="25"], #cricket-grid button[data-num="0"]').count()) === 3);
+/* Menue (•••): Spiel verlassen oder weiterspielen. */
+await page.locator('#cricket-grid .cr-menu').click();
+check('••• oeffnet das Cricket-Menue', (await visible('#cricket-menu-overlay')) && (await textKlein('#cricket-menu-overlay')).includes('spiel verlassen'));
+await page.keyboard.press('Escape');
+check('Esc schliesst es', !(await visible('#cricket-menu-overlay')));
 await page.setViewportSize({ width: 390, height: 844 });
 
 /* ---------- Finisher ---------- */
@@ -1910,21 +1924,20 @@ check('die Anzeige zeigt gross, was getippt wurde', (await text('#key-display'))
 check('und der Strich ist beim Tippen weg',
   (await page.locator('#key-display .cursor').count()) === 0);
 await page.keyboard.press('Enter');
-/* Nach der Aufnahme steht der Heimspieler rechts (Karte 2) - links wirft jetzt der Gast. */
-check('Aufnahme gebucht: 501 - 60 = 441', (await rest(1)) === '441', await rest(1));
+check('Aufnahme gebucht: 501 - 60 = 441', (await rest(0)) === '441', await rest(0));
 check('die Karte zeigt Schnitt, Siege und Darts', await page.evaluate(() => {
   const t = document.getElementById('scoreboard').innerText;
   return t.includes('\u00d8') && t.includes('Siege') && t.includes('Darts');
 }));
-/* Fernsteuerung: links steht, wer am Wurf ist - jetzt der Gast; der
-   Heimspieler steht rechts, seine 60 klein neben dem Rest. Die Liste
-   darunter zeigt nur die Aufnahmen davor - noch keine. */
-check('links wirft jetzt der Gast, rechts wartet der Heimspieler mit seiner 60', await page.evaluate(() => {
+/* Fernsteuerung: die Karten bleiben stehen - links der Heimspieler mit
+   seiner 60 neben dem Rest, die Markierung wandert zum Gast rechts. Die
+   Liste unter dem Heimspieler zeigt nur die Aufnahmen davor - noch keine. */
+check('die Karten bleiben stehen: links Heim mit seiner 60, rechts wirft jetzt der Gast', await page.evaluate(() => {
   const k = document.querySelectorAll('#scoreboard .pcard');
-  return k.length === 2 && k[0].classList.contains('active') && k[1].classList.contains('naechster') &&
-    k[1].querySelector('.letzte').textContent.trim() === '60';
+  return k.length === 2 && !k[0].classList.contains('active') && k[1].classList.contains('active') &&
+    k[0].querySelector('.letzte').textContent.trim() === '60';
 }));
-check('die Liste neben der Eingabe zeigt die Aufnahmen vor der letzten', (await text('#key-hist-r')).trim() === '');
+check('die Liste neben der Eingabe zeigt die Aufnahmen vor der letzten', (await text('#key-hist-l')).trim() === '');
 check('keine Sechzig-Feier im Ligaspiel - auch nicht am Board', await page.evaluate(() =>
   !document.getElementById('feier').classList.contains('an')));
 
@@ -1940,7 +1953,7 @@ check('unmoegliche Zahl wird abgewiesen', (await text('#key-error')).includes('n
 await page.keyboard.type('45');
 await page.keyboard.press('Enter');
 check('der Modus bleibt nach der Aufnahme an', await visible('#pad-key'));
-check('45 gebucht', (await rest(1)) === '456', await rest(1));
+check('45 gebucht', (await rest(0)) === '456', await rest(0));
 
 /* Shift gedrueckt halten: die Wurfliste, je Spieler auf seiner Seite. */
 await page.keyboard.down('Shift');

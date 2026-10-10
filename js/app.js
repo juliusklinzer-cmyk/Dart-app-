@@ -2785,6 +2785,7 @@
       done: false, winner: null, started: false
     };
     if (kind === 'rtw') S.game.boost = S.settings.rtwBoost === 1;
+    UI.cricketSpalten = null;   // die Cricket-Tafel faengt ohne Einschiebe-Animation an
     if (kind === 'finisher') {
       S.game.ziel = S.settings.finisherTo;
       S.game.rounds = [];
@@ -4883,9 +4884,10 @@
       document.querySelector('#game-menu-overlay .game-menu-sub').textContent = $('game-leg-label').textContent;
     }
 
-    /* Fernsteuerung: immer genau zwei Karten - links wer wirft, rechts wer
-       als Naechstes dran ist. Sonst alle Spieler (ab dreien als 2x2). */
-    var karten = fern && m.p.length > 1 ? [active, danach[0]] : m.p;
+    /* Die Karten bleiben an ihrem Platz - auch in der Fernsteuerung wandert
+       nur die Markierung zum Naechsten (Julius: die Eingabe springt zum
+       naechsten Spieler, nicht die Karten). Ab drei Spielern als 2x2. */
+    var karten = m.p;
     $('scoreboard').classList.toggle('viele', karten.length > 2);
     $('scoreboard').classList.toggle('solo', m.p.length === 1);
     $('screen-game').classList.toggle('solo', m.p.length === 1);
@@ -5019,7 +5021,7 @@
         /* Ohne Aufnahme bleibt der Platz leer - der Rest steht trotzdem fest. */
         letzte = '<span class="letzte-box ohne"></span>';
       }
-      return '<div class="pcard ' + (istAktiv ? 'active' : '') + (fern && ki === 1 ? ' naechster' : '') + '">' +
+      return '<div class="pcard ' + (istAktiv ? 'active' : '') + (fern && pid === danach[0] ? ' naechster' : '') + '">' +
         '<div class="pkopf">' + avatarHTML(profile(pid), 'sm') +
           '<div class="pblock"><span class="pname">' + esc(spielerName(pid)) + '</span>' +
           '<span class="pmeta">' + meta.join(' · ') + '</span></div>' +
@@ -5110,9 +5112,10 @@
     if (mode !== 'turnier') $('screen-game').classList.remove('verlauf');
 
     if (fern) {
-      /* Links und rechts der Eingabe die Aufnahmen des laufenden Legs der
-         beiden Spieler auf dem Bild, neueste oben - ohne die allerletzte,
-         die steht schon neben dem Rest. */
+      /* Links und rechts der Eingabe die Aufnahmen des laufenden Legs,
+         neueste oben - ohne die allerletzte, die steht schon neben dem Rest.
+         Zu zweit links der erste, rechts der zweite Spieler (fest wie die
+         Karten); ab dreien links wer wirft, rechts wer als Naechstes kommt. */
       var histSpalte = function (pid) {
         if (!pid) return '';
         var restLauf = legStart(leg);
@@ -5128,8 +5131,8 @@
            am Board nie scrollen. */
         return zeilen.slice(0, -1).slice(-5).reverse().join('');
       };
-      $('key-hist-l').innerHTML = histSpalte(karten[0]);
-      $('key-hist-r').innerHTML = histSpalte(karten[1]);
+      $('key-hist-l').innerHTML = histSpalte(m.p.length === 2 ? m.p[0] : active);
+      $('key-hist-r').innerHTML = histSpalte(m.p.length === 2 ? m.p[1] : danach[0]);
       $('key-error').textContent = UI.error;
       /* Kein Platzhaltertext – leer steht nur der blaue Eingabestrich,
          und sobald Ziffern da sind, stehen nur die Ziffern. */
@@ -5198,29 +5201,32 @@
     var st = cricketState(g);
     var active = g.done ? g.winner : gameTurnPlayer(g);
     var visit = gameVisitDarts(g);
+    var n = g.players.length;
+    var aktIdx = g.players.indexOf(active);
+    /* Wer gerade geworfen hat - seine Aufnahme bleibt zum Nachpruefen in
+       seiner Karte stehen (gedimmt), bis er wieder dran ist. */
+    var vorherId = !g.done && g.throws.length > 0 && g.throws.length % 3 === 0 && n > 1
+      ? g.players[(aktIdx - 1 + n) % n] : null;
+    /* Ab fuenf Spielern passen nicht alle Spalten aufs Bild: es stehen
+       der, der gerade geworfen hat, der am Wurf und die zwei naechsten;
+       die uebrigen nennt die Kopfzeile. */
+    var spalten = g.players;
+    var wartend = [];
+    if (n > 4) {
+      spalten = [];
+      for (var k = -1; k <= 2; k++) spalten.push(g.players[(aktIdx + k + n) % n]);
+      for (var w = 3; w < n - 1; w++) wartend.push(g.players[(aktIdx + w) % n]);
+    }
+    /* Neue Spalte von rechts hereinschieben, wenn die Tafel weiterrueckt. */
+    var neuRechts = n > 4 && UI.cricketSpalten && UI.cricketSpalten.indexOf(spalten[spalten.length - 1]) < 0;
+    UI.cricketSpalten = spalten.slice();
 
-    $('cricket-sub').textContent = (g.scoring ? 'mit Punkten' : 'ohne Punkte') + ' · ' + g.players.length + ' Spieler' + liveLabel(g);
-
-    var head = '<div class="cr-cell cr-corner"></div>' + g.players.map(function (id) {
-      var mpr = st.darts[id] ? (st.allMarks[id] / st.darts[id]) * 3 : 0;
-      return '<div class="cr-cell cr-head ' + (id === active ? 'act' : '') + '">' +
-        avatarHTML(profile(id), 'sm') + '<span>' + esc(pname(id)) + '</span>' +
-        '<span class="cr-mpr">MPR ' + (st.darts[id] ? mpr.toFixed(2) : '–') + '</span></div>';
-    }).join('');
-
-    var rows = CRICKET_NUMBERS.map(function (n) {
-      var allClosed = g.players.every(function (id) { return st.marks[id][n] >= 3; });
-      return '<div class="cr-cell cr-num ' + (allClosed ? 'dead' : '') + '">' + cricketLabel(n) + '</div>' +
-        g.players.map(function (id) {
-          var m = st.marks[id][n];
-          return '<div class="cr-cell cr-mark ' + (allClosed ? 'dead ' : '') +
-            (id === active ? 'act' : '') + ' m' + m + '">' +
-            (m === 0 ? '' : m === 1 ? '/' : m === 2 ? '✕' : '⊗') + '</div>';
-        }).join('');
-    }).join('');
+    var sub = (g.scoring ? 'mit Punkten' : 'ohne Punkte') + ' · ' + n + ' Spieler' +
+      (wartend.length ? ' · danach ' + wartend.map(function (id) { return esc(pname(id)); }).join(', ') : '') + esc(liveLabel(g));
+    var runde = Math.floor(g.throws.length / (3 * n)) + 1;
 
     var zu = function (id) {
-      return CRICKET_NUMBERS.filter(function (n) { return st.marks[id][n] >= 3; }).length;
+      return CRICKET_NUMBERS.filter(function (x) { return st.marks[id][x] >= 3; }).length;
     };
     var lead = g.players.slice().sort(function (a, b) {
       return g.scoring ? (st.score[b] - st.score[a]) || (zu(b) - zu(a)) : (zu(b) - zu(a));
@@ -5228,68 +5234,89 @@
     /* „Vorn" heisst nur etwas, wenn ueberhaupt schon etwas passiert ist –
        am Anfang stehen alle auf null, und dann waere der Erste in der Liste
        willkuerlich der Anfuehrer. Und allein fuehrt man nicht. */
-    var fuehrt = g.players.length > 1 && (g.scoring ? st.score[lead] > 0 : zu(lead) > 0)
-      ? lead : null;
+    var fuehrt = n > 1 && (g.scoring ? st.score[lead] > 0 : zu(lead) > 0) ? lead : null;
 
-    var foot = '<div class="cr-cell cr-num">' + (g.scoring ? 'Pkt' : 'Zu') + '</div>' +
-      g.players.map(function (id) {
-        var val = g.scoring ? st.score[id] : zu(id) + '/7';
-        return '<div class="cr-cell cr-score ' + (id === active ? 'act ' : '') +
-          (id === fuehrt ? 'fuehrt' : '') + '">' + val + '</div>';
+    var dead = {};
+    CRICKET_NUMBERS.forEach(function (x) {
+      dead[x] = g.players.every(function (id) { return st.marks[id][x] >= 3; });
+    });
+    var reinKl = function (i) { return neuRechts && i === spalten.length - 1 ? ' rein' : ''; };
+
+    /* Kopfzeile: Menue, je Spieler eine Karte, Luecke, Titel mit Zurueck und Bust. */
+    var html = '<button class="xk-btn cr-menu" data-action="game-menu" aria-label="Menü">' + '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><g opacity="0.8"><circle cx="3.5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="20.5" cy="12" r="1.8"></circle></g></svg>' + '</button>';
+    html += spalten.map(function (id, i) {
+      var istAkt = id === active;
+      var istVorher = id === vorherId;
+      var mpr = st.darts[id] ? (st.allMarks[id] / st.darts[id]) * 3 : 0;
+      var wert = g.scoring ? st.score[id] : zu(id) + '/7';
+      /* An der Aufnahmegrenze (3, 6, 9 ... Darts) liefert gameVisitDarts die
+         letzten drei - die gehoeren dem Vorgaenger, nicht dem Aktiven. Nach
+         dem Sieg bleibt die Aufnahme des Siegers stehen. */
+      var grenze = g.throws.length > 0 && g.throws.length % 3 === 0 && !g.done;
+      var darts = istAkt ? (grenze ? [] : visit) : istVorher ? g.throws.slice(-3) : [];
+      var kacheln = [0, 1, 2].map(function (k) {
+        var d = darts[k];
+        return '<span class="ct' + (d ? (istVorher ? ' alt' : '') : ' leer') + '">' + (d ? (d.n === 0 ? '–' : throwLabel(d)) : '') + '</span>';
       }).join('');
+      return '<div class="cr-card' + (istAkt ? ' act' : '') + (istVorher ? ' vorher' : '') + reinKl(i) + '">' +
+        '<div class="pkopf">' + avatarHTML(profile(id), 'sm') +
+          '<div class="pblock"><span class="pname">' + esc(pname(id)) + '</span>' +
+          '<span class="pmeta">MPR <b class="cr-mpr">' + (st.darts[id] ? mpr.toFixed(2) : '–') + '</b></span></div></div>' +
+        '<div class="cr-pts' + (id === fuehrt ? ' fuehrt' : '') + '">' + wert + '</div>' +
+        '<div class="cr-tiles">' + kacheln + '</div></div>';
+    }).join('');
+    html += '<div class="cr-gap"></div>' +
+      '<div class="cr-titel">' +
+        '<div class="cr-kopf"><span class="cr-h">Cricket</span>' +
+        '<span class="cr-sub" id="cricket-sub">' + sub + '</span>' +
+        '<span class="cr-runde">Runde ' + runde + '</span></div>' +
+        '<div class="cr-top">' +
+          '<button class="cr-key zurueck" data-action="undo-game" aria-label="Letzten Dart zurücknehmen">' + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 12H7M11.5 6.5L6 12l5.5 5.5"></path></svg>' + '</button>' +
+          /* Nichts getroffen? Ein Tipp beendet die Aufnahme und fuellt die
+             fehlenden Darts als Fehlwuerfe auf. */
+          '<button class="cr-key bust" data-action="end-cricket-visit">Bust</button>' +
+        '</div></div>';
 
-    $('cricket-board').innerHTML =
-      '<div class="cr-grid" style="grid-template-columns:44px repeat(' + g.players.length + ',minmax(52px,1fr))">' +
-      head + rows + foot + '</div>';
-    $('cricket-legend').innerHTML =
-      '<span>/ = 1 · ✕ = 2 · ⊗ = zu</span>' +
-      '<span>Grau = bei allen zu, bringt keine Punkte mehr</span>' +
-      (g.players.length > 1 ? '<span>Vorn: <b>' + esc(pname(lead)) + '</b></span>' : '');
+    /* Die Zeilen: Zahl, je Spieler die Marken, Luecke, drei Tasten. */
+    /* Hochkant stellt das CSS die Tasten als Block unter die Tafel - dafuer
+       tragen sie Spalte (--c) und Reihe (--m) als Variablen mit. */
+    html += CRICKET_NUMBERS.map(function (x, xi) {
+      var tot = dead[x];
+      var pos = function (m) { return ' style="--c:' + (xi + 1) + ';--m:' + m + '"'; };
+      var zeile = '<div class="cr-num' + (tot ? ' dead' : '') + '">' + (x === 25 ? 'Bull' : x) + '</div>';
+      zeile += spalten.map(function (id, i) {
+        var m = st.marks[id][x];
+        return '<div class="cr-mark' + (tot ? ' dead' : '') + (id === active ? ' act' : '') + ' m' + m + reinKl(i) + '">' +
+          (m === 0 ? '' : m === 1 ? '/' : m === 2 ? '✕' : '⊗') + '</div>';
+      }).join('');
+      zeile += '<div class="cr-gap"></div>';
+      var dim = tot ? ' dim' : '';
+      if (x === 25) {
+        zeile += '<button class="cr-key bull' + dim + '" data-num="25" data-mult="1"' + pos(1) + '>Bull</button>' +
+          '<button class="cr-key bull' + dim + '" data-num="25" data-mult="2"' + pos(2) + '>Bull ×2</button>' +
+          '<button class="cr-key miss" data-num="0" data-mult="1"' + pos(3) + '>Miss</button>';
+      } else {
+        zeile += [1, 2, 3].map(function (mult) {
+          return '<button class="cr-key' + dim + '" data-num="' + x + '" data-mult="' + mult + '"' + pos(mult) + '>' +
+            (mult > 1 ? '<span class="mx">' + (mult === 3 ? 'T' : 'D') + '</span>' : '') + x + '</button>';
+        }).join('');
+      }
+      return zeile;
+    }).join('');
+
+    var grid = $('cricket-grid');
+    grid.style.setProperty('--spalten', spalten.length);
+    /* Hochkant: jede Spielerspalte darf mehrere Rasterspalten breit sein. */
+    grid.style.setProperty('--span', Math.min(4, Math.max(1, Math.floor(5 / spalten.length))));
+    grid.classList.toggle('eng', spalten.length >= 4);
+    grid.classList.toggle('viele', spalten.length > 2);
+    grid.innerHTML = html;
 
     $('cricket-turn').innerHTML = g.done
-      ? '<b>' + esc(pname(g.winner)) + '</b> ' + (g.players.length < 2 ? 'hat alles zu' : 'gewinnt')
+      ? '<b>' + esc(pname(g.winner)) + '</b> ' + (n < 2 ? 'hat alles zu' : 'gewinnt')
       : '<span class="muted">Am Wurf</span> <b>' + esc(pname(active)) + '</b>';
-
-    /* Nach einer vollen Aufnahme zeigen die Chips noch die Darts des
-       Vorgängers (zum Nachprüfen – einen Verlauf gibt es hier nicht).
-       Damit sie neben „Am Wurf <Nächster>" nicht wie dessen Würfe aussehen,
-       stehen sie gedimmt hinter einem „zuletzt". */
-    var crVorher = !g.done && g.throws.length > 0 && g.throws.length % 3 === 0;
-    $('cricket-darts').innerHTML = (crVorher ? '<div class="d-vorher">zuletzt</div>' : '') +
-      [0, 1, 2].map(function (i) {
-        var d = visit[i];
-        return '<div class="d ' + (d ? (crVorher ? 'alt' : '') : 'empty') + '">' + (d ? throwLabel(d) : '–') + '</div>';
-      }).join('');
-
-    /* Alle Felder auf einen Blick: je ein Block für Single, Double und
-       Triple – ein Tipp je Dart, kein Umschalten. */
-    var CN = [20, 19, 18, 17, 16, 15];
-    var dead = {};
-    /* Auch der Bull: er stand bisher nicht in dieser Liste und blieb im
-       Eingabefeld hell, obwohl er bei allen zu war und nichts mehr bringt. */
-    CRICKET_NUMBERS.forEach(function (n) {
-      dead[n] = g.players.every(function (id) { return st.marks[id][n] >= 3; });
-    });
-    function block(label, mult) {
-      return '<div class="cg-block">' +
-        '<div class="cg-label">' + label + '</div>' +
-        CN.map(function (n) {
-          return '<button data-num="' + n + '" data-mult="' + mult + '" class="' + (dead[n] ? 'dim' : '') + '">' +
-            (mult > 1 ? '<span class="mx">' + (mult === 3 ? 'T' : 'D') + '</span>' : '') + n + '</button>';
-        }).join('') + '</div>';
-    }
-    $('cricket-grid').innerHTML =
-      block('Single', 1) + block('Double', 2) + block('Triple', 3) +
-      '<div class="cg-block cg-extra">' +
-        '<div class="cg-label">Bull &amp; Rest</div>' +
-        '<button class="bull' + (dead[25] ? ' dim' : '') + '" data-num="25" data-mult="1">Bull</button>' +
-        '<button class="bull' + (dead[25] ? ' dim' : '') + '" data-num="25" data-mult="2">Bull ×2</button>' +
-        '<button class="miss" data-num="0" data-mult="1">Miss</button>' +
-        /* Nichts getroffen? Ein Tipp beendet die Aufnahme und füllt die
-           fehlenden Darts als Fehlwürfe auf. */
-        '<button class="skip" data-action="end-cricket-visit">' +
-          'Weiter ▸</button>' +
-      '</div>';
+    $('cricket-menu-overlay').classList.toggle('hidden', !UI.menu);
+    if (UI.menu) document.querySelector('#cricket-menu-overlay .game-menu-sub').textContent = $('cricket-sub').textContent;
   }
 
   function renderRtw() {
@@ -8157,6 +8184,7 @@
         else startGame(S.mode);
         break;
       case 'leave-game':
+        UI.menu = false;
         if (S.game && S.game.done) finishGame();
         else { S.screen = 'setup'; UI.overlay = null; save(); render(); }
         break;
@@ -9036,7 +9064,7 @@
       UI.overlay = null; UI.input = ''; render(); return;
     }
     /* Menue (•••): ein Tipp neben die Karte schliesst es. */
-    if (ev.target.id === 'game-menu-overlay') { UI.menu = false; render(); return; }
+    if (ev.target.id === 'game-menu-overlay' || ev.target.id === 'cricket-menu-overlay') { UI.menu = false; render(); return; }
     /* Fernsteuerung ohne Tastatur: ein Tipp irgendwo ins Bild oeffnet das
        Menue - der einzige Weg zurueck, wenn Tab und Esc fehlen. */
     if (UI.turnier && turnierErlaubt() && S.screen === 'game' && !UI.overlay && !UI.menu &&
@@ -9457,7 +9485,7 @@
        Turnier-Modus direkt. */
     var istAusstieg = ev.key === 'Escape' ||
       (ev.key === '.' && (ev.metaKey || ev.ctrlKey));
-    if (istAusstieg && !UI.overlay && S.screen === 'game' && UI.menu) {
+    if (istAusstieg && !UI.overlay && (S.screen === 'game' || S.screen === 'cricket') && UI.menu) {
       ev.preventDefault();
       UI.menu = false; render();
       return;

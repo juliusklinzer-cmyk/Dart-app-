@@ -728,27 +728,27 @@
 
 <!-- ============ CRICKET ============ -->
 <section id="screen-cricket" class="screen game">
-  <header class="game-header">
-    <button class="icon-btn" data-action="leave-game" aria-label="Cricket verlassen">‹</button>
-    <div class="game-title">
-      <span>Cricket</span>
-      <span id="cricket-sub" class="muted"></span>
-    </div>
-    <button class="icon-btn" data-action="undo-game" aria-label="Letzten Dart zurücknehmen">↺</button>
-  </header>
-
+  <!-- Cricket (Entwurf 10/2026): eine Tafel - links die Zahlen, je Spieler
+       eine Spalte mit Karte (Punkte, MPR, laufende Aufnahme) und Marken,
+       rechts neben jeder Zeile die Tasten Single/Double/Triple (Bull-Zeile:
+       Bull, Bull x2, Miss). Oben links das Menue, oben rechts Zurueck und
+       Bust. Alles zeichnet renderCricket in #cricket-grid. -->
   <div class="game-body">
-    <div class="game-main">
-      <div id="cricket-board" class="cricket-board"></div>
-      <div id="cricket-legend" class="cricket-legend"></div>
+    <div id="cricket-board" class="cricket-board">
+      <div id="cricket-grid" class="cr-grid"></div>
     </div>
-    <div class="input-area">
-      <div class="mode-row">
-        <div id="cricket-turn" class="turn-label"></div>
-        <div id="cricket-darts" class="visit-darts"></div>
+  </div>
+  <!-- Fuer die Tests und die Kopfzeile: Spiel-Untertitel und wer am Wurf ist. -->
+  <div id="cricket-turn" class="turn-label hidden"></div>
+  <div id="cricket-menu-overlay" class="game-menu hidden" role="dialog" aria-modal="true" aria-labelledby="cricket-menu-titel">
+    <div class="game-menu-karte">
+      <div class="game-menu-kopf">
+        <span class="game-menu-titel" id="cricket-menu-titel">Cricket</span>
+        <span class="game-menu-sub"></span>
       </div>
-      <div class="pad">
-        <div class="cricket-grid" id="cricket-grid"></div>
+      <div class="game-menu-zeile">
+        <button class="btn ghost game-menu-raus" data-action="leave-game">Spiel verlassen</button>
+        <button class="btn primary" data-action="game-menu-zu">Weiterspielen</button>
       </div>
     </div>
   </div>

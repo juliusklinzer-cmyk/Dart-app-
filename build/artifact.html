@@ -4076,6 +4076,226 @@ body.tastatur #screen-bulloff button:focus {
   #screen-game.active.turnier.verlauf .input-area { display: none; }
 }
 
+
+/* Fernsteuerung mit drei oder vier Spielern: alle Karten im 2x2-Raster,
+   der Rest eine Stufe kleiner als zu zweit. */
+@media (orientation: landscape) {
+  #screen-game.active.turnier #scoreboard.viele .pcard .rest-zeile {
+    font-size: clamp(40px, 24vh, 240px);
+    font-size: clamp(40px, min(24vh, 40cqi), 240px);
+  }
+  #screen-game.active.turnier #scoreboard.viele .pcard .pname, #screen-game.active.turnier #scoreboard.viele .pcard .pavg { font-size: clamp(15px, 3.4vh, 38px); }
+  #screen-game.active.turnier #scoreboard.viele .pcard .pmeta { font-size: clamp(11px, 2.2vh, 24px); }
+  #screen-game.active.turnier #scoreboard.viele .pcard .pfelder { height: clamp(32px, 8vh, 90px); }
+  #screen-game.active.turnier #scoreboard.viele .pcard .pfelder .fk { font-size: clamp(18px, 5vh, 56px); }
+}
+
+/* ================= Cricket: eine Tafel mit Tasten (Entwurf 10/2026) =================
+ * Nach "Dart App Redesign Responsiv / Cricket Spiel.dc.html": dieselbe Sprache
+ * wie das X01, ohne Fernsteuerung. Links die Zahlen, je Spieler eine Spalte
+ * (oben die Karte mit Punkten, MPR und der laufenden Aufnahme, darunter die
+ * Marken), rechts neben jeder Zeile die Tasten Single, Double, Triple -
+ * die Eingabe sitzt direkt neben der Zeile, die sie fuellt. Oben links das
+ * Menue, oben rechts Zurueck und Bust. Bei allen zu = grau und gestrichelt.
+ * ======================================================================= */
+#screen-cricket.active {
+  padding: clamp(6px, 1.8vh, 22px) clamp(8px, 1.6vw, 26px); gap: 0;
+  /* In jeder Lage genau bildschirmhoch - auch am iPad hochkant, wo die
+     Seite sonst nur eine Mindesthoehe hat und die Tafel halb leer liesse. */
+  height: calc(100dvh - 12px); min-height: 0; overflow: hidden; display: flex; flex-direction: column;
+}
+/* Am Handy (bis 699 px) ist der body selbst bildschirmhoch und flex - dort fuellt der Bildschirm ihn aus. */
+@media (max-width: 699px) {
+  body.im-spiel #screen-cricket.active { padding-bottom: clamp(6px, 1.8vh, 22px); height: auto; flex: 1 1 auto; }
+}
+#screen-cricket.active .game-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+#screen-cricket.active .cricket-board { flex: 1 1 auto; min-height: 0; min-width: 0; overflow: hidden; }
+#screen-cricket.active .cr-grid {
+  height: 100%; min-width: 0; display: grid;
+  grid-template-columns: clamp(48px, 7vw, 100px) repeat(var(--spalten, 2), minmax(0, 1fr)) clamp(4px, 1vw, 16px) repeat(3, 10vw);
+  grid-template-rows: minmax(0, 2.4fr) repeat(7, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr); gap: clamp(3px, 0.6vh, 7px);
+}
+#screen-cricket.active .cr-grid.viele { grid-template-rows: minmax(0, 2.9fr) repeat(7, minmax(0, 1fr)); }
+#screen-cricket.active .cr-gap { min-width: 0; }
+
+/* Menue-Knopf oben links */
+#screen-cricket.active .cr-menu {
+  min-height: 0; min-width: 0; border-radius: clamp(10px, 1.6vh, 16px); background: var(--bg-2); border: 1px solid var(--line);
+  color: var(--muted); padding: 0; display: flex; align-items: center; justify-content: center; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+#screen-cricket.active .cr-menu svg { width: clamp(20px, 4vh, 42px); height: clamp(20px, 4vh, 42px); }
+#screen-cricket.active .cr-menu:active { background: var(--bg-3); }
+
+/* Spielerkarte */
+#screen-cricket.active .cr-card {
+  min-width: 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between;
+  gap: clamp(2px, 0.6vh, 8px); padding: clamp(6px, 1.4vh, 18px) clamp(8px, 1.2vw, 20px);
+  border-radius: clamp(12px, 1.8vh, 20px); border: 2px solid var(--line); background: var(--bg-2); opacity: 0.62;
+}
+#screen-cricket.active .cr-card.act {
+  opacity: 1; border-color: var(--aktiv-linie); background: var(--aktiv-flaeche);
+  box-shadow: 0 0 26px var(--laser-weich), 0 0 60px 8px var(--schein-stark);
+}
+#screen-cricket.active .cr-card .pkopf { display: flex; align-items: center; gap: clamp(6px, 0.7vw, 10px); min-width: 0; flex: none; }
+#screen-cricket.active .cr-card .pkopf .av.sm {
+  flex: none; width: clamp(18px, 3.6vh, 42px); height: clamp(18px, 3.6vh, 42px); font-size: clamp(9px, 1.5vh, 18px); display: inline-flex;
+}
+#screen-cricket.active .cr-card .pblock { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: clamp(1px, 0.3vh, 4px); }
+#screen-cricket.active .cr-card .pname {
+  display: block; min-width: 0; font-family: var(--font-cond); font-weight: 700; font-size: clamp(15px, 3.2vh, 36px);
+  letter-spacing: 0.03em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: var(--text); line-height: 1.05;
+}
+#screen-cricket.active .cr-card.act .pname { color: #fff; }
+#screen-cricket.active .cr-card .pmeta {
+  font-family: var(--font-cond); font-weight: 600; font-size: clamp(12px, 2.3vh, 26px); letter-spacing: 0.04em;
+  color: var(--muted); white-space: nowrap; line-height: 1.05;
+}
+#screen-cricket.active .cr-card .pmeta .cr-mpr { color: var(--text); font-weight: 700; font-size: inherit; font-variant-numeric: tabular-nums; }
+#screen-cricket.active .cr-card .cr-pts {
+  text-align: center; font-family: var(--font-cond); font-weight: 700; font-size: clamp(32px, 8.4vh, 92px); line-height: 0.9;
+  font-variant-numeric: tabular-nums; color: var(--text); opacity: 0.85; min-width: 0; overflow: hidden;
+}
+#screen-cricket.active .cr-card.act .cr-pts { opacity: 1; color: #fff; text-shadow: 0 0 26px rgba(70, 170, 215, 0.45); }
+/* Wer vorn liegt: ein kleines Dreieck an den Punkten. */
+#screen-cricket.active .cr-card .cr-pts.fuehrt::after { content: ' ▲'; font-size: 0.3em; vertical-align: 0.9em; color: var(--laser-hell); }
+#screen-cricket.active .cr-card .cr-tiles {
+  flex: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); height: clamp(26px, 5.6vh, 60px); gap: clamp(3px, 0.5vw, 8px);
+}
+#screen-cricket.active .cr-card .ct {
+  display: flex; align-items: center; justify-content: center; min-width: 0; overflow: hidden;
+  border-radius: clamp(8px, 1.2vh, 12px); background: var(--bg-3); border: 1px solid var(--line-hell); color: var(--text);
+  font-family: var(--font-cond); font-weight: 700; font-size: clamp(13px, 3.2vh, 36px); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+#screen-cricket.active .cr-card .ct.leer { background: var(--bg-2); border-color: var(--line); }
+#screen-cricket.active .cr-card .ct.alt { color: var(--muted); }
+/* Drei oder vier Spalten: eine Stufe kleiner. */
+#screen-cricket.active .viele .cr-card .pname { font-size: clamp(13px, 2.4vh, 28px); }
+#screen-cricket.active .viele .cr-card .pmeta { font-size: clamp(11px, 1.8vh, 20px); }
+#screen-cricket.active .viele .cr-card .cr-pts { font-size: clamp(26px, 6.4vh, 70px); }
+#screen-cricket.active .viele .cr-card .cr-tiles { height: clamp(20px, 3.8vh, 40px); }
+#screen-cricket.active .viele .cr-card .ct { font-size: clamp(11px, 2vh, 22px); }
+
+/* Titel, Zurueck und Bust */
+#screen-cricket.active .cr-titel {
+  grid-column: span 3; min-width: 0; min-height: 0; display: flex; flex-direction: column; justify-content: space-between; gap: clamp(4px, 1vh, 12px);
+}
+#screen-cricket.active .cr-kopf {
+  display: flex; flex-direction: column; gap: clamp(2px, 0.5vh, 6px); min-width: 0; min-height: 0; overflow: hidden;
+  padding: clamp(2px, 0.6vh, 8px) clamp(2px, 0.4vw, 6px) 0;
+}
+#screen-cricket.active .cr-h {
+  flex: none; font-family: var(--font-display); font-size: clamp(15px, 3.4vh, 36px); letter-spacing: 0.05em; text-transform: uppercase; line-height: 1;
+}
+#screen-cricket.active .cr-sub {
+  min-width: 0; color: var(--muted); font-family: var(--font-cond); font-weight: 600; font-size: clamp(11px, 2.2vh, 24px);
+  letter-spacing: 0.04em; line-height: 1.2; overflow: hidden;
+}
+#screen-cricket.active .cr-runde {
+  font-family: var(--font-cond); font-weight: 700; font-size: clamp(12px, 2.6vh, 28px); letter-spacing: 0.06em;
+  text-transform: uppercase; line-height: 1.1;
+}
+#screen-cricket.active .cr-top {
+  flex: none; height: clamp(40px, 9.5vh, 104px); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(3px, 0.6vh, 7px);
+}
+#screen-cricket.active .cr-top .bust { grid-column: span 2; font-size: clamp(18px, 4.2vh, 46px); }
+
+/* Zahlen und Marken */
+#screen-cricket.active .cr-num {
+  min-height: 0; min-width: 0; display: flex; align-items: center; justify-content: center; padding: 0;
+  border-radius: clamp(8px, 1.2vh, 12px); background: var(--bg-3); color: var(--text); box-shadow: none;
+  font-family: var(--font-cond); font-weight: 700; font-size: clamp(16px, 4.4vh, 48px); letter-spacing: 0.02em;
+}
+#screen-cricket.active .cr-num.dead { background: var(--dead-bg); color: var(--dead); }
+#screen-cricket.active .cr-mark {
+  min-height: 0; min-width: 0; display: flex; align-items: center; justify-content: center; padding: 0; outline: none;
+  border-radius: clamp(8px, 1.2vh, 12px); background: var(--bg-2); color: var(--text); opacity: 0.62;
+  font-family: var(--font-cond); font-weight: 700; font-size: clamp(20px, 5.6vh, 62px); line-height: 1; text-shadow: none; box-shadow: none;
+}
+#screen-cricket.active .cr-mark.act { opacity: 1; background: var(--aktiv-flaeche); box-shadow: inset 0 0 0 1px rgba(242, 238, 238, 0.55); }
+#screen-cricket.active .cr-mark.m1 { color: var(--text); text-shadow: 0 0 6px var(--schein); }
+#screen-cricket.active .cr-mark.m2 { color: var(--laser-hell); text-shadow: 0 0 7px var(--laser-weich); }
+#screen-cricket.active .cr-mark.m3 {
+  color: #fff; background: rgba(70, 170, 215, 0.10); text-shadow: 0 0 6px var(--laser), 0 0 16px var(--laser-weich);
+  box-shadow: inset 0 0 0 1px rgba(70, 170, 215, 0.55), 0 0 14px var(--schein);
+}
+#screen-cricket.active .cr-mark.m3.act { box-shadow: inset 0 0 0 1px rgba(242, 238, 238, 0.55), 0 0 14px var(--schein); }
+#screen-cricket.active .cr-mark.dead, #screen-cricket.active .cr-mark.dead.act {
+  opacity: 1; background: var(--dead-bg); color: var(--dead); text-shadow: none; box-shadow: none;
+}
+
+/* Tasten */
+#screen-cricket.active .cr-key {
+  min-height: 0; min-width: 0; padding: 0; border-radius: clamp(10px, 1.6vh, 16px); background: var(--bg-2); border: 1px solid var(--line);
+  color: var(--text); font-family: var(--font-cond); font-weight: 700; font-size: clamp(18px, 5vh, 54px); font-variant-numeric: tabular-nums;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.06em; white-space: nowrap;
+  -webkit-tap-highlight-color: transparent; appearance: none; -webkit-appearance: none;
+}
+#screen-cricket.active .cr-key:active { background: var(--bg-3); }
+#screen-cricket.active .cr-key .mx { color: var(--laser-hell); font-size: 0.62em; margin: 0; vertical-align: baseline; }
+#screen-cricket.active .cr-key.bull { color: var(--amber); font-size: clamp(15px, 3.6vh, 38px); }
+#screen-cricket.active .cr-key.miss { color: var(--red); font-size: clamp(15px, 3.6vh, 38px); }
+#screen-cricket.active .cr-key.dim { background: var(--dead-bg); border: 1px dashed var(--line-hell); color: var(--dead); }
+#screen-cricket.active .cr-key.dim .mx { color: var(--dead); }
+#screen-cricket.active .cr-key.zurueck svg { width: clamp(22px, 4.6vh, 50px); height: clamp(22px, 4.6vh, 50px); }
+
+/* Ab fuenf Spielern rueckt die Tafel weiter: die neue Spalte kommt von rechts. */
+@keyframes crColIn { from { transform: translateX(60%); opacity: 0; } to { transform: none; } }
+#screen-cricket.active .cr-card.rein, #screen-cricket.active .cr-mark.rein { animation: crColIn 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  #screen-cricket.active .cr-card.rein, #screen-cricket.active .cr-mark.rein { animation: none; }
+}
+
+/* Handy quer: Karte und Kacheln flacher. */
+@media (orientation: landscape) and (max-height: 560px) {
+  #screen-cricket.active .cr-grid, #screen-cricket.active .cr-grid.viele { grid-template-rows: minmax(0, 3fr) repeat(7, minmax(0, 1fr)); }
+  #screen-cricket.active .cr-card .cr-tiles { height: clamp(20px, 5vh, 40px); }
+  #screen-cricket.active .cr-card { padding: 4px 8px; gap: 2px; }
+  #screen-cricket.active .cr-sub { display: none; }
+}
+
+/* Hochkant (Handy): oben die Tafel (Zahl und Spieler), darunter die Tasten
+   als Block - drei Reihen (Single, Double, Triple) mal sieben Zahlen. Die
+   Tasten werden ueber --c/--m aus dem Markup fest in das Raster gesetzt,
+   die Zahl jeder Zeile sitzt fest in Spalte 1. */
+@media (orientation: portrait) {
+  #screen-cricket.active .cr-grid, #screen-cricket.active .cr-grid.viele {
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-template-rows: minmax(0, 2.2fr) repeat(7, minmax(0, 1fr)) repeat(3, minmax(44px, 1fr));
+    gap: 4px;
+  }
+  #screen-cricket.active .cr-gap { display: none; }
+  #screen-cricket.active .cr-menu { grid-column: 1; grid-row: 1; }
+  #screen-cricket.active .cr-titel { grid-row: 1; grid-column: calc(2 + var(--spalten, 2) * var(--span, 1)) / 8; }
+  #screen-cricket.active .cr-card, #screen-cricket.active .cr-mark { grid-column: span var(--span, 1); }
+  #screen-cricket.active .cr-num { grid-column: 1; }
+  #screen-cricket.active .cr-key { grid-column: var(--c); grid-row: calc(8 + var(--m)); }
+  #screen-cricket.active .cr-card { padding: 6px 6px; gap: 3px; border-radius: var(--r-m); }
+  #screen-cricket.active .cr-card .pkopf .av.sm { width: 20px; height: 20px; font-size: 0.6rem; }
+  #screen-cricket.active .viele .cr-card .pkopf .av.sm { display: none; }
+  #screen-cricket.active .cr-card .pname, #screen-cricket.active .viele .cr-card .pname { font-size: 0.8rem; }
+  #screen-cricket.active .cr-card .pmeta, #screen-cricket.active .viele .cr-card .pmeta { font-size: 0.65rem; }
+  #screen-cricket.active .cr-card .cr-pts, #screen-cricket.active .viele .cr-card .cr-pts { font-size: clamp(22px, 4vh, 40px); }
+  #screen-cricket.active .cr-card .cr-tiles, #screen-cricket.active .viele .cr-card .cr-tiles { height: 26px; gap: 3px; }
+  #screen-cricket.active .cr-card .ct, #screen-cricket.active .viele .cr-card .ct { font-size: 0.75rem; }
+  #screen-cricket.active .cr-h { font-size: 1rem; }
+  #screen-cricket.active .cr-sub { font-size: 0.65rem; }
+  #screen-cricket.active .cr-runde { font-size: 0.75rem; }
+  #screen-cricket.active .cr-top { height: 44px; gap: 4px; grid-template-columns: minmax(44px, 1fr) 2fr; }
+  #screen-cricket.active .cr-top .bust { grid-column: auto; }
+  /* Vier Spalten (vier und mehr Spieler): die Kacheln waeren 15 px breit - weg damit. */
+  #screen-cricket.active .cr-grid.eng .cr-card .cr-tiles { display: none; }
+  #screen-cricket.active .cr-top .bust { font-size: 1rem; }
+  #screen-cricket.active .cr-menu svg { width: 22px; height: 22px; }
+  #screen-cricket.active .cr-num { font-size: clamp(13px, 2.4vh, 22px); }
+  #screen-cricket.active .cr-mark { font-size: clamp(16px, 3vh, 30px); }
+  #screen-cricket.active .cr-key { font-size: clamp(14px, 2.6vh, 24px); }
+  #screen-cricket.active .cr-key.bull, #screen-cricket.active .cr-key.miss { font-size: clamp(11px, 2vh, 16px); }
+  #screen-cricket.active .cr-key.zurueck svg { width: 22px; height: 22px; }
+}
+
 </style>
 <div id="save-warning" class="save-warning hidden">
   ⚠️ Der Spielstand kann gerade nicht gespeichert werden – bitte Speicherplatz prüfen
@@ -4790,27 +5010,27 @@ body.tastatur #screen-bulloff button:focus {
 
 <!-- ============ CRICKET ============ -->
 <section id="screen-cricket" class="screen game">
-  <header class="game-header">
-    <button class="icon-btn" data-action="leave-game" aria-label="Cricket verlassen">‹</button>
-    <div class="game-title">
-      <span>Cricket</span>
-      <span id="cricket-sub" class="muted"></span>
-    </div>
-    <button class="icon-btn" data-action="undo-game" aria-label="Letzten Dart zurücknehmen">↺</button>
-  </header>
-
+  <!-- Cricket (Entwurf 10/2026): eine Tafel - links die Zahlen, je Spieler
+       eine Spalte mit Karte (Punkte, MPR, laufende Aufnahme) und Marken,
+       rechts neben jeder Zeile die Tasten Single/Double/Triple (Bull-Zeile:
+       Bull, Bull x2, Miss). Oben links das Menue, oben rechts Zurueck und
+       Bust. Alles zeichnet renderCricket in #cricket-grid. -->
   <div class="game-body">
-    <div class="game-main">
-      <div id="cricket-board" class="cricket-board"></div>
-      <div id="cricket-legend" class="cricket-legend"></div>
+    <div id="cricket-board" class="cricket-board">
+      <div id="cricket-grid" class="cr-grid"></div>
     </div>
-    <div class="input-area">
-      <div class="mode-row">
-        <div id="cricket-turn" class="turn-label"></div>
-        <div id="cricket-darts" class="visit-darts"></div>
+  </div>
+  <!-- Fuer die Tests und die Kopfzeile: Spiel-Untertitel und wer am Wurf ist. -->
+  <div id="cricket-turn" class="turn-label hidden"></div>
+  <div id="cricket-menu-overlay" class="game-menu hidden" role="dialog" aria-modal="true" aria-labelledby="cricket-menu-titel">
+    <div class="game-menu-karte">
+      <div class="game-menu-kopf">
+        <span class="game-menu-titel" id="cricket-menu-titel">Cricket</span>
+        <span class="game-menu-sub"></span>
       </div>
-      <div class="pad">
-        <div class="cricket-grid" id="cricket-grid"></div>
+      <div class="game-menu-zeile">
+        <button class="btn ghost game-menu-raus" data-action="leave-game">Spiel verlassen</button>
+        <button class="btn primary" data-action="game-menu-zu">Weiterspielen</button>
       </div>
     </div>
   </div>
@@ -8176,6 +8396,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       done: false, winner: null, started: false
     };
     if (kind === 'rtw') S.game.boost = S.settings.rtwBoost === 1;
+    UI.cricketSpalten = null;   // die Cricket-Tafel faengt ohne Einschiebe-Animation an
     if (kind === 'finisher') {
       S.game.ziel = S.settings.finisherTo;
       S.game.rounds = [];
@@ -10274,9 +10495,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       document.querySelector('#game-menu-overlay .game-menu-sub').textContent = $('game-leg-label').textContent;
     }
 
-    /* Fernsteuerung: immer genau zwei Karten - links wer wirft, rechts wer
-       als Naechstes dran ist. Sonst alle Spieler (ab dreien als 2x2). */
-    var karten = fern && m.p.length > 1 ? [active, danach[0]] : m.p;
+    /* Die Karten bleiben an ihrem Platz - auch in der Fernsteuerung wandert
+       nur die Markierung zum Naechsten (Julius: die Eingabe springt zum
+       naechsten Spieler, nicht die Karten). Ab drei Spielern als 2x2. */
+    var karten = m.p;
     $('scoreboard').classList.toggle('viele', karten.length > 2);
     $('scoreboard').classList.toggle('solo', m.p.length === 1);
     $('screen-game').classList.toggle('solo', m.p.length === 1);
@@ -10410,7 +10632,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         /* Ohne Aufnahme bleibt der Platz leer - der Rest steht trotzdem fest. */
         letzte = '<span class="letzte-box ohne"></span>';
       }
-      return '<div class="pcard ' + (istAktiv ? 'active' : '') + (fern && ki === 1 ? ' naechster' : '') + '">' +
+      return '<div class="pcard ' + (istAktiv ? 'active' : '') + (fern && pid === danach[0] ? ' naechster' : '') + '">' +
         '<div class="pkopf">' + avatarHTML(profile(pid), 'sm') +
           '<div class="pblock"><span class="pname">' + esc(spielerName(pid)) + '</span>' +
           '<span class="pmeta">' + meta.join(' · ') + '</span></div>' +
@@ -10501,9 +10723,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (mode !== 'turnier') $('screen-game').classList.remove('verlauf');
 
     if (fern) {
-      /* Links und rechts der Eingabe die Aufnahmen des laufenden Legs der
-         beiden Spieler auf dem Bild, neueste oben - ohne die allerletzte,
-         die steht schon neben dem Rest. */
+      /* Links und rechts der Eingabe die Aufnahmen des laufenden Legs,
+         neueste oben - ohne die allerletzte, die steht schon neben dem Rest.
+         Zu zweit links der erste, rechts der zweite Spieler (fest wie die
+         Karten); ab dreien links wer wirft, rechts wer als Naechstes kommt. */
       var histSpalte = function (pid) {
         if (!pid) return '';
         var restLauf = legStart(leg);
@@ -10519,8 +10742,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
            am Board nie scrollen. */
         return zeilen.slice(0, -1).slice(-5).reverse().join('');
       };
-      $('key-hist-l').innerHTML = histSpalte(karten[0]);
-      $('key-hist-r').innerHTML = histSpalte(karten[1]);
+      $('key-hist-l').innerHTML = histSpalte(m.p.length === 2 ? m.p[0] : active);
+      $('key-hist-r').innerHTML = histSpalte(m.p.length === 2 ? m.p[1] : danach[0]);
       $('key-error').textContent = UI.error;
       /* Kein Platzhaltertext – leer steht nur der blaue Eingabestrich,
          und sobald Ziffern da sind, stehen nur die Ziffern. */
@@ -10589,29 +10812,32 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var st = cricketState(g);
     var active = g.done ? g.winner : gameTurnPlayer(g);
     var visit = gameVisitDarts(g);
+    var n = g.players.length;
+    var aktIdx = g.players.indexOf(active);
+    /* Wer gerade geworfen hat - seine Aufnahme bleibt zum Nachpruefen in
+       seiner Karte stehen (gedimmt), bis er wieder dran ist. */
+    var vorherId = !g.done && g.throws.length > 0 && g.throws.length % 3 === 0 && n > 1
+      ? g.players[(aktIdx - 1 + n) % n] : null;
+    /* Ab fuenf Spielern passen nicht alle Spalten aufs Bild: es stehen
+       der, der gerade geworfen hat, der am Wurf und die zwei naechsten;
+       die uebrigen nennt die Kopfzeile. */
+    var spalten = g.players;
+    var wartend = [];
+    if (n > 4) {
+      spalten = [];
+      for (var k = -1; k <= 2; k++) spalten.push(g.players[(aktIdx + k + n) % n]);
+      for (var w = 3; w < n - 1; w++) wartend.push(g.players[(aktIdx + w) % n]);
+    }
+    /* Neue Spalte von rechts hereinschieben, wenn die Tafel weiterrueckt. */
+    var neuRechts = n > 4 && UI.cricketSpalten && UI.cricketSpalten.indexOf(spalten[spalten.length - 1]) < 0;
+    UI.cricketSpalten = spalten.slice();
 
-    $('cricket-sub').textContent = (g.scoring ? 'mit Punkten' : 'ohne Punkte') + ' · ' + g.players.length + ' Spieler' + liveLabel(g);
-
-    var head = '<div class="cr-cell cr-corner"></div>' + g.players.map(function (id) {
-      var mpr = st.darts[id] ? (st.allMarks[id] / st.darts[id]) * 3 : 0;
-      return '<div class="cr-cell cr-head ' + (id === active ? 'act' : '') + '">' +
-        avatarHTML(profile(id), 'sm') + '<span>' + esc(pname(id)) + '</span>' +
-        '<span class="cr-mpr">MPR ' + (st.darts[id] ? mpr.toFixed(2) : '–') + '</span></div>';
-    }).join('');
-
-    var rows = CRICKET_NUMBERS.map(function (n) {
-      var allClosed = g.players.every(function (id) { return st.marks[id][n] >= 3; });
-      return '<div class="cr-cell cr-num ' + (allClosed ? 'dead' : '') + '">' + cricketLabel(n) + '</div>' +
-        g.players.map(function (id) {
-          var m = st.marks[id][n];
-          return '<div class="cr-cell cr-mark ' + (allClosed ? 'dead ' : '') +
-            (id === active ? 'act' : '') + ' m' + m + '">' +
-            (m === 0 ? '' : m === 1 ? '/' : m === 2 ? '✕' : '⊗') + '</div>';
-        }).join('');
-    }).join('');
+    var sub = (g.scoring ? 'mit Punkten' : 'ohne Punkte') + ' · ' + n + ' Spieler' +
+      (wartend.length ? ' · danach ' + wartend.map(function (id) { return esc(pname(id)); }).join(', ') : '') + esc(liveLabel(g));
+    var runde = Math.floor(g.throws.length / (3 * n)) + 1;
 
     var zu = function (id) {
-      return CRICKET_NUMBERS.filter(function (n) { return st.marks[id][n] >= 3; }).length;
+      return CRICKET_NUMBERS.filter(function (x) { return st.marks[id][x] >= 3; }).length;
     };
     var lead = g.players.slice().sort(function (a, b) {
       return g.scoring ? (st.score[b] - st.score[a]) || (zu(b) - zu(a)) : (zu(b) - zu(a));
@@ -10619,68 +10845,89 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     /* „Vorn" heisst nur etwas, wenn ueberhaupt schon etwas passiert ist –
        am Anfang stehen alle auf null, und dann waere der Erste in der Liste
        willkuerlich der Anfuehrer. Und allein fuehrt man nicht. */
-    var fuehrt = g.players.length > 1 && (g.scoring ? st.score[lead] > 0 : zu(lead) > 0)
-      ? lead : null;
+    var fuehrt = n > 1 && (g.scoring ? st.score[lead] > 0 : zu(lead) > 0) ? lead : null;
 
-    var foot = '<div class="cr-cell cr-num">' + (g.scoring ? 'Pkt' : 'Zu') + '</div>' +
-      g.players.map(function (id) {
-        var val = g.scoring ? st.score[id] : zu(id) + '/7';
-        return '<div class="cr-cell cr-score ' + (id === active ? 'act ' : '') +
-          (id === fuehrt ? 'fuehrt' : '') + '">' + val + '</div>';
+    var dead = {};
+    CRICKET_NUMBERS.forEach(function (x) {
+      dead[x] = g.players.every(function (id) { return st.marks[id][x] >= 3; });
+    });
+    var reinKl = function (i) { return neuRechts && i === spalten.length - 1 ? ' rein' : ''; };
+
+    /* Kopfzeile: Menue, je Spieler eine Karte, Luecke, Titel mit Zurueck und Bust. */
+    var html = '<button class="xk-btn cr-menu" data-action="game-menu" aria-label="Menü">' + '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><g opacity="0.8"><circle cx="3.5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="20.5" cy="12" r="1.8"></circle></g></svg>' + '</button>';
+    html += spalten.map(function (id, i) {
+      var istAkt = id === active;
+      var istVorher = id === vorherId;
+      var mpr = st.darts[id] ? (st.allMarks[id] / st.darts[id]) * 3 : 0;
+      var wert = g.scoring ? st.score[id] : zu(id) + '/7';
+      /* An der Aufnahmegrenze (3, 6, 9 ... Darts) liefert gameVisitDarts die
+         letzten drei - die gehoeren dem Vorgaenger, nicht dem Aktiven. Nach
+         dem Sieg bleibt die Aufnahme des Siegers stehen. */
+      var grenze = g.throws.length > 0 && g.throws.length % 3 === 0 && !g.done;
+      var darts = istAkt ? (grenze ? [] : visit) : istVorher ? g.throws.slice(-3) : [];
+      var kacheln = [0, 1, 2].map(function (k) {
+        var d = darts[k];
+        return '<span class="ct' + (d ? (istVorher ? ' alt' : '') : ' leer') + '">' + (d ? (d.n === 0 ? '–' : throwLabel(d)) : '') + '</span>';
       }).join('');
+      return '<div class="cr-card' + (istAkt ? ' act' : '') + (istVorher ? ' vorher' : '') + reinKl(i) + '">' +
+        '<div class="pkopf">' + avatarHTML(profile(id), 'sm') +
+          '<div class="pblock"><span class="pname">' + esc(pname(id)) + '</span>' +
+          '<span class="pmeta">MPR <b class="cr-mpr">' + (st.darts[id] ? mpr.toFixed(2) : '–') + '</b></span></div></div>' +
+        '<div class="cr-pts' + (id === fuehrt ? ' fuehrt' : '') + '">' + wert + '</div>' +
+        '<div class="cr-tiles">' + kacheln + '</div></div>';
+    }).join('');
+    html += '<div class="cr-gap"></div>' +
+      '<div class="cr-titel">' +
+        '<div class="cr-kopf"><span class="cr-h">Cricket</span>' +
+        '<span class="cr-sub" id="cricket-sub">' + sub + '</span>' +
+        '<span class="cr-runde">Runde ' + runde + '</span></div>' +
+        '<div class="cr-top">' +
+          '<button class="cr-key zurueck" data-action="undo-game" aria-label="Letzten Dart zurücknehmen">' + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 12H7M11.5 6.5L6 12l5.5 5.5"></path></svg>' + '</button>' +
+          /* Nichts getroffen? Ein Tipp beendet die Aufnahme und fuellt die
+             fehlenden Darts als Fehlwuerfe auf. */
+          '<button class="cr-key bust" data-action="end-cricket-visit">Bust</button>' +
+        '</div></div>';
 
-    $('cricket-board').innerHTML =
-      '<div class="cr-grid" style="grid-template-columns:44px repeat(' + g.players.length + ',minmax(52px,1fr))">' +
-      head + rows + foot + '</div>';
-    $('cricket-legend').innerHTML =
-      '<span>/ = 1 · ✕ = 2 · ⊗ = zu</span>' +
-      '<span>Grau = bei allen zu, bringt keine Punkte mehr</span>' +
-      (g.players.length > 1 ? '<span>Vorn: <b>' + esc(pname(lead)) + '</b></span>' : '');
+    /* Die Zeilen: Zahl, je Spieler die Marken, Luecke, drei Tasten. */
+    /* Hochkant stellt das CSS die Tasten als Block unter die Tafel - dafuer
+       tragen sie Spalte (--c) und Reihe (--m) als Variablen mit. */
+    html += CRICKET_NUMBERS.map(function (x, xi) {
+      var tot = dead[x];
+      var pos = function (m) { return ' style="--c:' + (xi + 1) + ';--m:' + m + '"'; };
+      var zeile = '<div class="cr-num' + (tot ? ' dead' : '') + '">' + (x === 25 ? 'Bull' : x) + '</div>';
+      zeile += spalten.map(function (id, i) {
+        var m = st.marks[id][x];
+        return '<div class="cr-mark' + (tot ? ' dead' : '') + (id === active ? ' act' : '') + ' m' + m + reinKl(i) + '">' +
+          (m === 0 ? '' : m === 1 ? '/' : m === 2 ? '✕' : '⊗') + '</div>';
+      }).join('');
+      zeile += '<div class="cr-gap"></div>';
+      var dim = tot ? ' dim' : '';
+      if (x === 25) {
+        zeile += '<button class="cr-key bull' + dim + '" data-num="25" data-mult="1"' + pos(1) + '>Bull</button>' +
+          '<button class="cr-key bull' + dim + '" data-num="25" data-mult="2"' + pos(2) + '>Bull ×2</button>' +
+          '<button class="cr-key miss" data-num="0" data-mult="1"' + pos(3) + '>Miss</button>';
+      } else {
+        zeile += [1, 2, 3].map(function (mult) {
+          return '<button class="cr-key' + dim + '" data-num="' + x + '" data-mult="' + mult + '"' + pos(mult) + '>' +
+            (mult > 1 ? '<span class="mx">' + (mult === 3 ? 'T' : 'D') + '</span>' : '') + x + '</button>';
+        }).join('');
+      }
+      return zeile;
+    }).join('');
+
+    var grid = $('cricket-grid');
+    grid.style.setProperty('--spalten', spalten.length);
+    /* Hochkant: jede Spielerspalte darf mehrere Rasterspalten breit sein. */
+    grid.style.setProperty('--span', Math.min(4, Math.max(1, Math.floor(5 / spalten.length))));
+    grid.classList.toggle('eng', spalten.length >= 4);
+    grid.classList.toggle('viele', spalten.length > 2);
+    grid.innerHTML = html;
 
     $('cricket-turn').innerHTML = g.done
-      ? '<b>' + esc(pname(g.winner)) + '</b> ' + (g.players.length < 2 ? 'hat alles zu' : 'gewinnt')
+      ? '<b>' + esc(pname(g.winner)) + '</b> ' + (n < 2 ? 'hat alles zu' : 'gewinnt')
       : '<span class="muted">Am Wurf</span> <b>' + esc(pname(active)) + '</b>';
-
-    /* Nach einer vollen Aufnahme zeigen die Chips noch die Darts des
-       Vorgängers (zum Nachprüfen – einen Verlauf gibt es hier nicht).
-       Damit sie neben „Am Wurf <Nächster>" nicht wie dessen Würfe aussehen,
-       stehen sie gedimmt hinter einem „zuletzt". */
-    var crVorher = !g.done && g.throws.length > 0 && g.throws.length % 3 === 0;
-    $('cricket-darts').innerHTML = (crVorher ? '<div class="d-vorher">zuletzt</div>' : '') +
-      [0, 1, 2].map(function (i) {
-        var d = visit[i];
-        return '<div class="d ' + (d ? (crVorher ? 'alt' : '') : 'empty') + '">' + (d ? throwLabel(d) : '–') + '</div>';
-      }).join('');
-
-    /* Alle Felder auf einen Blick: je ein Block für Single, Double und
-       Triple – ein Tipp je Dart, kein Umschalten. */
-    var CN = [20, 19, 18, 17, 16, 15];
-    var dead = {};
-    /* Auch der Bull: er stand bisher nicht in dieser Liste und blieb im
-       Eingabefeld hell, obwohl er bei allen zu war und nichts mehr bringt. */
-    CRICKET_NUMBERS.forEach(function (n) {
-      dead[n] = g.players.every(function (id) { return st.marks[id][n] >= 3; });
-    });
-    function block(label, mult) {
-      return '<div class="cg-block">' +
-        '<div class="cg-label">' + label + '</div>' +
-        CN.map(function (n) {
-          return '<button data-num="' + n + '" data-mult="' + mult + '" class="' + (dead[n] ? 'dim' : '') + '">' +
-            (mult > 1 ? '<span class="mx">' + (mult === 3 ? 'T' : 'D') + '</span>' : '') + n + '</button>';
-        }).join('') + '</div>';
-    }
-    $('cricket-grid').innerHTML =
-      block('Single', 1) + block('Double', 2) + block('Triple', 3) +
-      '<div class="cg-block cg-extra">' +
-        '<div class="cg-label">Bull &amp; Rest</div>' +
-        '<button class="bull' + (dead[25] ? ' dim' : '') + '" data-num="25" data-mult="1">Bull</button>' +
-        '<button class="bull' + (dead[25] ? ' dim' : '') + '" data-num="25" data-mult="2">Bull ×2</button>' +
-        '<button class="miss" data-num="0" data-mult="1">Miss</button>' +
-        /* Nichts getroffen? Ein Tipp beendet die Aufnahme und füllt die
-           fehlenden Darts als Fehlwürfe auf. */
-        '<button class="skip" data-action="end-cricket-visit">' +
-          'Weiter ▸</button>' +
-      '</div>';
+    $('cricket-menu-overlay').classList.toggle('hidden', !UI.menu);
+    if (UI.menu) document.querySelector('#cricket-menu-overlay .game-menu-sub').textContent = $('cricket-sub').textContent;
   }
 
   function renderRtw() {
@@ -13548,6 +13795,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         else startGame(S.mode);
         break;
       case 'leave-game':
+        UI.menu = false;
         if (S.game && S.game.done) finishGame();
         else { S.screen = 'setup'; UI.overlay = null; save(); render(); }
         break;
@@ -14427,7 +14675,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       UI.overlay = null; UI.input = ''; render(); return;
     }
     /* Menue (•••): ein Tipp neben die Karte schliesst es. */
-    if (ev.target.id === 'game-menu-overlay') { UI.menu = false; render(); return; }
+    if (ev.target.id === 'game-menu-overlay' || ev.target.id === 'cricket-menu-overlay') { UI.menu = false; render(); return; }
     /* Fernsteuerung ohne Tastatur: ein Tipp irgendwo ins Bild oeffnet das
        Menue - der einzige Weg zurueck, wenn Tab und Esc fehlen. */
     if (UI.turnier && turnierErlaubt() && S.screen === 'game' && !UI.overlay && !UI.menu &&
@@ -14848,7 +15096,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
        Turnier-Modus direkt. */
     var istAusstieg = ev.key === 'Escape' ||
       (ev.key === '.' && (ev.metaKey || ev.ctrlKey));
-    if (istAusstieg && !UI.overlay && S.screen === 'game' && UI.menu) {
+    if (istAusstieg && !UI.overlay && (S.screen === 'game' || S.screen === 'cricket') && UI.menu) {
       ev.preventDefault();
       UI.menu = false; render();
       return;

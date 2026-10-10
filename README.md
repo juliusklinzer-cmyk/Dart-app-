@@ -83,13 +83,21 @@ den Anfänger; ab drei Spielern legt der Bull-Wurf die **ganze Reihenfolge** fes
 dafür steht jeder Teilnehmer in einer Zeile und lässt sich mit ▲/▼ verschieben, dann
 startet das Spiel mit einem Tipp.
 
-Die Eingabe zeigt **alle Felder gleichzeitig**: je ein Block für Single, Double und
-Triple mit den Zahlen 20 bis 15, dazu Bull, Doppel-Bull, Miss und ein
-**Weiter ▸**-Knopf, der die Aufnahme sofort beendet und die fehlenden Darts als
-Fehlwürfe verbucht – praktisch, wenn jemand gar nichts getroffen hat. Ein Tipp je Dart,
-kein Umschalten. Eine Zahl, die bei **allen** Spielern zu ist, bringt nichts mehr und
-wird deshalb auf der Tafel und in den Eingabeblöcken grau ausgegraut. Über jeder Spalte
-der Tafel steht die aktuelle **MPR**, der ↺-Button nimmt Dart für Dart zurück.
+Das Spielbild ist **eine Tafel** (Entwurf „Cricket Redesign“, Oktober 2026, dieselbe
+Sprache wie das X01): links die Zahlen 20 bis 15 und Bull, je Spieler eine Spalte –
+oben seine Karte mit **Punkten** (ohne Punkte-Modus: zugemachte Felder), **MPR** und den
+drei Darts der laufenden Aufnahme (die Aufnahme des Vorgängers bleibt gedimmt in seiner
+Karte stehen), darunter die Marken (/, ✕, ⊗; zu = blau leuchtend) –, und **rechts neben
+jeder Zeile die Tasten** Single, Double und Triple für genau diese Zahl, in der Bull-Zeile
+Bull, Bull ×2 und Miss. Ein Tipp je Dart, kein Umschalten. Oben links öffnet **•••** das
+Menü (Spiel verlassen / Weiterspielen), oben rechts nehmen **←** den letzten Dart zurück
+und **Bust** beendet die Aufnahme sofort und verbucht die fehlenden Darts als Fehlwürfe –
+praktisch, wenn jemand gar nichts getroffen hat. Dazwischen stehen Spielart, Spielerzahl
+und die Runde. Eine Zahl, die bei **allen** Spielern zu ist, bringt nichts mehr und wird
+auf der Tafel grau, ihre Tasten grau und gestrichelt. Wer vorn liegt, trägt ein kleines
+Dreieck an den Punkten. Ab **fünf Spielern** stehen vier Spalten auf der Tafel – wer
+gerade geworfen hat, wer am Wurf ist und die zwei nächsten –, die neue Spalte schiebt
+von rechts herein, und die Kopfzeile nennt, wer danach kommt.
 
 ### Round the World (Training)
 
@@ -304,15 +312,16 @@ Bull-Tasten heißen einheitlich **Bull** (25) und **Bull ×2** (50), gelb wie ü
 **Fernsteuerung (Turnier-Modus):** Die Riesenanzeige für den Bildschirm, der vorn
 am Board hängt. In **Liga-Einzeln** öffnet sie sich am Board-iPad (das sie einmal an
 hatte) von selbst; im X01-Turnier und im Schnellen Spiel schaltet sie der ⌨-Knopf
-bewusst dazu – automatisch startet dort nichts. Allein gibt es sie nicht. Es stehen
-**immer genau zwei Karten**: links, wer am Wurf ist, rechts, wer als Nächstes dran
-ist – ab drei Spielern rotieren die Karten nach jeder Aufnahme, und die Kopfzeile
-nennt die übrige Reihenfolge („Danach: Toni · Sepp“). Die Reste stehen in
-Plakatgröße (wer nicht dran ist, tritt leicht zurück), der Finish-Weg erscheint groß
-in den Feldern des Spielers am Wurf, sobald einer möglich ist (der Wartende sieht
-seinen abgedunkelt), und unten stehen links und rechts die **fünf Aufnahmen davor**
-(die letzte steht ja schon neben dem Rest; am Handy quer drei) neben einer großen
-Eingabe-Anzeige. Es gibt kein Eingabefeld und keine Tasten – deshalb blendet das iPad auch keine
+bewusst dazu – automatisch startet dort nichts. Allein gibt es sie nicht. Die
+Karten **bleiben an ihrem Platz** (zu zweit nebeneinander, ab drei Spielern im
+2×2-Raster) – nach jeder Aufnahme wandert nur die Markierung zum Nächsten, und ab
+drei Spielern nennt die Kopfzeile, wer danach kommt („Danach: Toni · Sepp“). Die
+Reste stehen in Plakatgröße (wer nicht dran ist, tritt leicht zurück), der
+Finish-Weg erscheint groß in den Feldern des Spielers am Wurf, sobald einer möglich
+ist (der Wartende sieht seinen abgedunkelt), und unten stehen links und rechts die
+**fünf Aufnahmen davor** je Spieler (zu zweit fest links der erste, rechts der
+zweite; ab dreien links wer wirft, rechts der Nächste; die letzte Aufnahme steht ja
+schon neben dem Rest; am Handy quer drei) neben einer großen Eingabe-Anzeige. Es gibt kein Eingabefeld und keine Tasten – deshalb blendet das iPad auch keine
 Tastatur-Systemleiste ein, und die Seite scrollt nie. Alles läuft über die Tastatur:
 **Ziffern** tippen, **Enter** bucht, **Löschen** nimmt erst Ziffern und dann
 Aufnahmen zurück (auch über den Spielerwechsel hinweg), die Checkout-Abfrage
