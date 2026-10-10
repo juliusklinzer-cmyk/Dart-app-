@@ -3654,6 +3654,436 @@ body.tastatur #screen-bulloff button:focus {
 .liga-team-wahl { display: flex; flex-wrap: wrap; gap: 8px; flex-basis: 100%; width: 100%; margin-bottom: 4px; }
 .board-row .nm .board-team { display: block; font-size: 0.72rem; color: var(--muted); font-weight: 500; }
 
+
+/* ================= X01-Spielbild: Querformat zuerst (Entwurf 10/2026) =================
+ * Nach "Dart App Redesign Responsiv / X01 Redesign.dc.html" und dem Handoff
+ * dazu. Kopfleiste mit Menue (•••), Fernsteuerung (⌨) und Wechsel (⇄); im
+ * Querformat links die Spieler, rechts die Eingabe, beides in voller Hoehe.
+ * Alle Masse haengen an der Hoehe des Spielbilds (vh entspricht hier der
+ * Containerhoehe), die Restzahl zusaetzlich an der Kartenbreite (cqi; ohne
+ * Container-Query-Unterstuetzung greift die vh-Zeile davor). Hochformat am
+ * Handy behaelt seine Anordnung (Spieler oben, Tasten unten), nur die Karten
+ * und Tastenfelder sind die neuen. Steht am Ende, damit es die gewachsenen
+ * Schichten darueber sicher ueberstimmt.
+ * ======================================================================= */
+
+/* ---------- Kopfleiste ---------- */
+#screen-game.active .game-header {
+  display: flex; align-items: stretch; justify-content: flex-start; flex: none;
+  gap: clamp(6px, 0.9vw, 14px); padding: 0; height: clamp(44px, 7.4vh, 78px);
+}
+#screen-game.active .xk-btn {
+  flex: none; height: 100%; aspect-ratio: 1.2; min-width: 44px;
+  border-radius: clamp(10px, 1.6vh, 16px); background: var(--bg-2); border: 1px solid var(--line);
+  color: var(--muted); padding: 0; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+#screen-game.active .xk-btn.hidden { display: none; }
+#screen-game.active .xk-btn svg { width: clamp(20px, 4vh, 42px); height: clamp(20px, 4vh, 42px); }
+#screen-game.active .xk-btn:active { background: var(--bg-3); }
+/* Fernsteuerung an: nur das Zeichen leuchtet, die Flaeche bleibt. */
+#screen-game.active .xk-btn.an { color: var(--laser-hell); }
+#screen-game.active .game-header .game-title,
+#screen-game.active:not(.turnier) .game-header .game-title {
+  display: flex; flex-direction: row; align-items: baseline; flex: 1 1 auto; min-width: 0;
+  gap: clamp(8px, 1.4vw, 22px); align-self: center; padding-left: clamp(2px, 0.6vw, 10px);
+  text-align: left; font-size: inherit;
+}
+#screen-game.active .game-title #game-match-label {
+  font-family: var(--font-display); font-weight: 400; font-size: clamp(16px, 3.4vh, 36px);
+  letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; flex: none;
+}
+#screen-game.active .game-title #game-leg-label {
+  font-family: var(--font-cond); font-weight: 600; font-size: clamp(13px, 2.5vh, 27px);
+  letter-spacing: 0.04em; color: var(--muted); white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; min-width: 0; max-width: 100%;
+}
+
+/* ---------- Spielerkarte ---------- */
+#screen-game.active #scoreboard .pcard {
+  display: flex; flex-direction: column; justify-content: space-between; min-height: 0; min-width: 0;
+  gap: clamp(2px, 0.8vh, 10px); padding: clamp(6px, 1.8vh, 22px) clamp(10px, 1.6vw, 26px);
+  border-radius: clamp(12px, 1.8vh, 20px); border: 2px solid var(--line); background: var(--bg-2);
+  text-align: left; overflow: hidden; position: relative; container-type: inline-size; opacity: 1;
+  align-items: stretch; align-content: normal;
+}
+#screen-game.active #scoreboard .pcard.active {
+  border-color: var(--aktiv-linie); background: var(--aktiv-flaeche); box-shadow: 0 0 36px var(--schein);
+}
+#screen-game.active #scoreboard .pcard .pkopf { display: flex; align-items: center; gap: clamp(6px, 0.8vw, 12px); min-width: 0; flex: none; }
+#screen-game.active #scoreboard .pcard .pkopf .av.sm {
+  flex: none; width: clamp(20px, 4.8vh, 52px); height: clamp(20px, 4.8vh, 52px); font-size: clamp(9px, 1.6vh, 18px); display: inline-flex;
+}
+#screen-game.active #scoreboard .pcard .pblock {
+  flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: clamp(1px, 0.3vh, 4px); line-height: 1.05;
+}
+/* Name eine Zeile, bei Ueberlaenge Ellipse - nie verkleinern. */
+#screen-game.active #scoreboard .pcard .pname {
+  display: block; min-width: 0; font-family: var(--font-cond); font-weight: 700; font-size: clamp(15px, 3.8vh, 42px);
+  letter-spacing: 0.03em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: var(--text); justify-content: flex-start; margin: 0;
+}
+#screen-game.active #scoreboard .pcard.active .pname { color: #fff; }
+#screen-game.active #scoreboard .pcard .pmeta {
+  display: block; font-family: var(--font-cond); font-weight: 600; font-size: clamp(11px, 2.3vh, 24px);
+  letter-spacing: 0.04em; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#screen-game.active #scoreboard .pcard .pavg {
+  flex: none; align-self: flex-start; font-family: var(--font-cond); font-weight: 700;
+  font-size: clamp(15px, 3.8vh, 42px); line-height: 1.05; white-space: nowrap; color: var(--muted);
+}
+#screen-game.active #scoreboard .pcard .pavg b { color: var(--text); font-variant-numeric: tabular-nums; }
+
+/* Der Rest steht fest in der mittleren Spalte - er wandert nicht, wenn die
+   letzte Aufnahme rechts daneben zwei- oder dreistellig ist. */
+#screen-game.active #scoreboard .pcard .rest-zeile {
+  flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 0.55fr) auto minmax(0, 1.45fr);
+  align-items: center; justify-content: normal; gap: 0; margin: 0;
+  font-family: var(--font-cond); font-weight: 700; line-height: 0.86; font-variant-numeric: tabular-nums;
+  font-size: clamp(40px, 27vh, 260px);
+  font-size: clamp(40px, min(27vh, 30cqi), 260px);
+}
+#screen-game.active #scoreboard .pcard .rest { grid-column: 2; color: var(--text); opacity: 0.75; text-shadow: none; }
+#screen-game.active #scoreboard .pcard.active .rest { color: #fff; opacity: 1; text-shadow: 0 0 30px rgba(70, 170, 215, 0.45); }
+#screen-game.active #scoreboard .pcard .letzte-box {
+  grid-column: 3; justify-self: start; align-self: center; display: inline-grid; align-content: center; justify-items: start;
+  margin: 0 0 0 0.14em; padding: 0 0 0 0.14em; border-left: 0.035em solid var(--line-hell); border-top: none;
+  line-height: 1; min-height: 44px; min-width: 44px;
+}
+#screen-game.active #scoreboard .pcard .letzte-box > * { grid-area: 1 / 1; }
+#screen-game.active #scoreboard .pcard.active .letzte-box { border-left-color: var(--accent); }
+#screen-game.active #scoreboard .pcard .letzte-box.ohne { border-left-color: transparent; }
+#screen-game.active #scoreboard .pcard .letzte-box.tap { cursor: pointer; }
+#screen-game.active #scoreboard .pcard .letzte, #screen-game.active #scoreboard .pcard .letzte-alt {
+  display: block; font-size: 0.3em; font-weight: 700; color: var(--muted); line-height: 1; white-space: nowrap;
+}
+#screen-game.active #scoreboard .pcard.active .letzte { color: var(--text); opacity: 0.85; }
+#screen-game.active #scoreboard .pcard .letzte.bust, #screen-game.active #scoreboard .pcard .letzte-alt.bust { color: var(--red); text-decoration: line-through; }
+/* Drehrad: die neue Zahl kommt von oben, die alte rutscht im selben Tempo
+   nach unten und verblasst - beide beruehren sich nie. */
+#screen-game.active #scoreboard .pcard .letzte.neu { animation: drumIn 0.504s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+#screen-game.active #scoreboard .pcard .letzte-alt { animation: drumOut 1.4s linear both; pointer-events: none; }
+@keyframes drumIn { from { transform: translateY(-130%); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes drumOut {
+  0% { transform: none; opacity: 1; animation-timing-function: cubic-bezier(0.2, 0.7, 0.2, 1); }
+  36% { transform: translateY(130%); opacity: 0.45; animation-timing-function: ease-out; }
+  100% { transform: translateY(160%); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #screen-game.active #scoreboard .pcard .letzte.neu { animation: none; }
+  #screen-game.active #scoreboard .pcard .letzte-alt { display: none; }
+}
+
+/* Die drei Felder unter dem Rest: Finish-Weg (Punkte, Fernsteuerung) oder
+   die laufende Aufnahme (Einzel-Darts). Die Zeile behaelt ihre Hoehe. */
+#screen-game.active #scoreboard .pcard .pfelder {
+  flex: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(5px, 0.8vw, 12px); height: clamp(40px, 10vh, 110px); margin: 0; opacity: 1;
+}
+#screen-game.active #scoreboard .pcard .pfelder .fk {
+  display: flex; align-items: center; justify-content: center; min-height: 0; height: auto; padding: 0;
+  border-radius: clamp(10px, 1.6vh, 16px); background: var(--bg-3); border: 1px solid var(--line-hell);
+  color: var(--text); font-family: var(--font-cond); font-weight: 700; font-size: clamp(22px, 6vh, 66px);
+  font-variant-numeric: tabular-nums; line-height: 1; box-shadow: none; appearance: none; -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+#screen-game.active #scoreboard .pcard .pfelder .fk.still,
+#screen-game.active #scoreboard .pcard .pfelder .fk.leer { background: var(--bg-2); border-color: var(--line); color: var(--dead); }
+#screen-game.active #scoreboard .pcard .pfelder .fk.weg.wartet { color: var(--muted); }
+#screen-game.active #scoreboard .pcard .pfelder .fk.gut { background: rgba(63, 191, 127, 0.14); border-color: #2c7d54; color: #6fe0a8; }
+#screen-game.active #scoreboard .pcard .pfelder .fk.anders { border-color: var(--line-hell); }
+#screen-game.active #scoreboard .pcard .pfelder .fk.stellen { color: var(--muted); border-style: dashed; }
+#screen-game.active #scoreboard .pcard .pfelder .fk.tipp { cursor: pointer; }
+#screen-game.active #scoreboard .pcard .pfelder .fk.tipp:active { transform: scale(0.96); filter: brightness(1.15); }
+/* "Naechstes Ziel" spricht die Auswahl-Sprache, nicht Rot. */
+#screen-game.active #scoreboard .pcard .pfelder .fk.jetzt {
+  background: var(--aktiv-flaeche); border-color: var(--aktiv-linie); color: #fff;
+  box-shadow: 0 0 26px var(--schein-stark), inset 0 0 0 1px var(--aktiv-linie);
+}
+
+/* Fernsteuerung: wer nicht dran ist, tritt leicht zurueck (hoechstens 20 Prozent) - in jeder Lage. */
+#screen-game.active.turnier #scoreboard .pcard:not(.active) { opacity: 0.8; }
+
+/* ---------- Eingabe: Punkte ---------- */
+#screen-game.active #pad-total .display-row {
+  display: flex; align-items: center; justify-content: center; position: relative; min-height: 0; margin: 0; gap: 0;
+  background: var(--bg-2); border: 1px solid var(--line); border-radius: clamp(12px, 1.8vh, 18px);
+}
+#screen-game.active #pad-total .score-display {
+  font-family: var(--font-cond); font-weight: 700; line-height: 1; letter-spacing: 0; color: #fff;
+  text-shadow: 0 0 26px var(--schein-stark); font-variant-numeric: tabular-nums;
+}
+#screen-game.active #pad-total .score-display.empty { color: var(--muted); text-shadow: none; }
+#screen-game.active #pad-total .input-error {
+  position: absolute; left: 6px; right: 6px; bottom: 3px; text-align: center; line-height: 1.1;
+  max-height: 2.3em; overflow: hidden;
+}
+#screen-game.active #pad-darts #darts-error { flex: none; text-align: center; line-height: 1.1; margin: 0; }
+#screen-game.active #pad-darts #darts-error:empty { display: none; }
+#screen-game.active #pad-total .quick-row { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); margin: 0; }
+#screen-game.active #pad-total .quick-row button {
+  min-height: 0; padding: 0; border-radius: clamp(10px, 1.6vh, 16px);
+  background: var(--bg-3); border: 1px solid var(--line-hell); color: var(--text);
+  font-family: var(--font-cond); font-weight: 700;
+}
+#screen-game.active #pad-total .keypad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); max-height: none; }
+#screen-game.active #pad-total .keypad button {
+  min-height: 0; padding: 0; border-radius: clamp(10px, 1.6vh, 16px);
+  background: var(--bg-2); border: 1px solid var(--line); color: var(--text); letter-spacing: 0.04em;
+  display: flex; align-items: center; justify-content: center; font-family: var(--font-cond); font-weight: 700;
+}
+#screen-game.active #pad-total .keypad button.fn { color: var(--text); }
+#screen-game.active #pad-total .keypad button.fn svg { width: clamp(22px, 5.2vh, 56px); height: clamp(22px, 5.2vh, 56px); }
+/* OK bleibt hell (Julius: weiss, nicht rot). */
+#screen-game.active #pad-total .keypad button.ok { background: #bfb9b9; border-color: #bfb9b9; color: var(--on-primary); }
+#screen-game.active #pad-total .keypad button.ok:active { background: #dcd6d6; }
+#screen-game.active #pad-total .keypad button:active { background: var(--bg-3); }
+
+/* ---------- Eingabe: Einzel-Darts ---------- */
+#screen-game.active #pad-darts .num-grid {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); max-height: none;
+}
+#screen-game.active #pad-darts .num-grid button {
+  min-height: 0; padding: 0; border-radius: clamp(10px, 1.6vh, 16px);
+  background: var(--bg-2); border: 1px solid var(--line); color: var(--text); outline: none; outline-offset: -2px;
+  font-family: var(--font-cond); font-weight: 700; font-variant-numeric: tabular-nums;
+  display: flex; align-items: center; justify-content: center; gap: 0.08em; white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+#screen-game.active #pad-darts .num-grid button:active { background: var(--bg-3); }
+#screen-game.active #pad-darts .num-grid .mx { color: var(--laser-hell); font-size: 0.62em; margin: 0; vertical-align: baseline; }
+#screen-game.active #pad-darts .num-grid button.mult { border-color: var(--line-hell); letter-spacing: 0.03em; }
+/* Double/Triple an: hell, dunkle Schrift, blauer Schein. */
+#screen-game.active #pad-darts .num-grid button.mult.active {
+  background: var(--primary); border-color: var(--primary); color: var(--on-primary); box-shadow: 0 0 24px var(--schein);
+}
+#screen-game.active #pad-darts .num-grid button.bull { color: var(--amber); }
+#screen-game.active #pad-darts .num-grid button.miss { color: var(--red); }
+#screen-game.active #pad-darts .num-grid button.zurueck { color: var(--text); }
+#screen-game.active #pad-darts .num-grid button.zurueck svg { width: clamp(22px, 4.8vh, 52px); height: clamp(22px, 4.8vh, 52px); }
+#screen-game.active #pad-darts .num-grid button.end-visit {
+  grid-column: span 2; background: #bfb9b9; border-color: #bfb9b9; color: var(--on-primary);
+}
+#screen-game.active #pad-darts .num-grid button.end-visit:active { background: #dcd6d6; }
+#screen-game.active #pad-darts .num-grid button.hl {
+  background: var(--aktiv-flaeche); border-color: var(--aktiv-linie); outline: 2px solid var(--aktiv-linie);
+  box-shadow: 0 0 26px var(--schein-stark), inset 0 0 0 1px var(--aktiv-linie);
+}
+
+/* ---------- Menue (•••) ---------- */
+.game-menu {
+  position: fixed; inset: 0; z-index: 45; background: rgba(7, 5, 6, 0.72);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center; padding: 3vh 3vw;
+}
+.game-menu-karte {
+  width: min(100%, 560px); max-height: 100%; display: flex; flex-direction: column; gap: clamp(10px, 2.2vh, 24px);
+  background: var(--bg-2); border: 1px solid var(--line-hell); border-radius: 20px; padding: clamp(14px, 3vh, 32px);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+}
+.game-menu-kopf { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.game-menu-titel {
+  font-family: var(--font-display); font-size: clamp(20px, 3.4vh, 34px); letter-spacing: 0.05em; text-transform: uppercase;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.game-menu-sub { color: var(--muted); font-size: clamp(13px, 1.9vh, 18px); }
+.game-menu-zeile { display: flex; gap: 10px; padding-top: clamp(6px, 1.4vh, 14px); border-top: 1px solid var(--line); }
+.game-menu-zeile .btn { flex: 1; min-height: clamp(44px, 7vh, 64px); border-radius: 12px; font-size: clamp(14px, 2vh, 19px); }
+.game-menu-zeile .btn.game-menu-raus { color: var(--red); border-color: #4a2530; background: transparent; }
+
+/* ---------- Hochformat (Handy): Spieler oben, Tasten unten, in Handgroesse ---------- */
+@media (orientation: portrait) {
+  #screen-game.active .game-header { height: 48px; }
+  #screen-game.active .game-title #game-match-label { font-size: 1rem; }
+  #screen-game.active .game-title #game-leg-label { font-size: 0.78rem; }
+  #screen-game.active #scoreboard { grid-template-columns: repeat(var(--n, 2), minmax(0, 1fr)); gap: var(--space-2); margin-bottom: 6px; }
+  #screen-game.active #scoreboard .pcard { padding: 8px 10px; gap: 2px; border-radius: var(--radius); }
+  #screen-game.active #scoreboard .pcard .pkopf .av.sm { width: 24px; height: 24px; font-size: 0.65rem; }
+  #screen-game.active #scoreboard .pcard .pname, #screen-game.active #scoreboard .pcard .pavg { font-size: 0.95rem; }
+  #screen-game.active #scoreboard .pcard .pmeta { font-size: 0.72rem; }
+  #screen-game.active #scoreboard .pcard .rest-zeile {
+    font-size: clamp(2rem, 9vh, 3.6rem);
+    font-size: clamp(2rem, min(9vh, 34cqi), 3.6rem);
+    min-height: 1.2em;
+  }
+  #screen-game.active #scoreboard .pcard .letzte-box { min-height: 44px; min-width: 44px; }
+  #screen-game.active #scoreboard .pcard .pfelder { height: clamp(36px, 6vh, 56px); gap: 5px; }
+  #screen-game.active #scoreboard .pcard .pfelder .fk { font-size: clamp(1rem, 3vh, 1.6rem); }
+  /* Ohne Inhalt faellt die Zeile am Handy weg - der Platz ist knapp. */
+  #screen-game.active #scoreboard .pcard .pfelder:empty { display: none; }
+  /* Drei oder vier Spieler nebeneinander: kompakt. */
+  #screen-game.active #scoreboard.viele .pcard { padding: 6px 6px; }
+  #screen-game.active #scoreboard.viele .pcard .pkopf .av.sm { display: none; }
+  #screen-game.active #scoreboard.viele .pcard .pname, #screen-game.active #scoreboard.viele .pcard .pavg { font-size: 0.75rem; }
+  #screen-game.active #scoreboard.viele .pcard .pmeta { font-size: 0.65rem; }
+  #screen-game.active #scoreboard.viele .pcard .rest-zeile {
+    grid-template-columns: minmax(0, 1fr); font-size: clamp(1.4rem, 6.5vw, 2.4rem);
+  }
+  #screen-game.active #scoreboard.viele .pcard .rest { grid-column: 1; justify-self: center; }
+  #screen-game.active #scoreboard.viele .pcard .letzte-box {
+    grid-column: 1; justify-self: center; margin: 0; padding: 0; border-left: none; min-height: 36px;
+  }
+  #screen-game.active #scoreboard.viele .pcard .pfelder { gap: 3px; height: 34px; }
+  #screen-game.active #scoreboard.viele .pcard .pfelder .fk { font-size: 0.9rem; }
+  #screen-game.active #pad-total .display-row { height: 48px; margin-bottom: 6px; }
+  #screen-game.active #pad-total .score-display { font-size: 2rem; }
+  #screen-game.active #pad-total .quick-row { gap: var(--gap-keys); margin-bottom: 6px; }
+  #screen-game.active #pad-total .quick-row button { height: 42px; font-size: 1rem; }
+  #screen-game.active #pad-total .keypad button { font-size: 1.5rem; }
+  #screen-game.active #pad-total .keypad button.ok { font-size: 1.1rem; }
+  #screen-game.active #pad-darts .num-grid button { font-size: 1.15rem; }
+  #screen-game.active #pad-darts .num-grid button.mult, #screen-game.active #pad-darts .num-grid button.bull { font-size: 0.9rem; }
+  #screen-game.active #pad-darts .num-grid button.end-visit { font-size: 1rem; }
+  /* Fernsteuerung hochkant: zwei Karten, der Rest so gross wie die Karte erlaubt. */
+  #screen-game.active.turnier #scoreboard .pcard .rest-zeile {
+    font-size: clamp(2.4rem, 30vh, 10rem);
+    font-size: clamp(2.4rem, min(30vh, 46cqi), 10rem);
+  }
+  #screen-game.active.turnier #scoreboard .pcard .pname, #screen-game.active.turnier #scoreboard .pcard .pavg { font-size: 1.3rem; }
+  #screen-game.active.turnier #scoreboard .pcard .pmeta { font-size: 0.9rem; }
+}
+
+/* ---------- Querformat: links die Spieler, rechts die Eingabe ---------- */
+@media (orientation: landscape) {
+  #screen-game.active {
+    gap: clamp(6px, 1.6vh, 18px);
+    padding: clamp(6px, 1.8vh, 22px) clamp(8px, 1.6vw, 26px);
+  }
+  body.fix-spiel #screen-game.active { padding-bottom: clamp(6px, 1.8vh, 22px); }
+  /* Am Board bleibt oben Platz fuer Apples Uhrzeit und Batterie. */
+  #screen-game.active.turnier { padding-top: max(clamp(6px, 1.8vh, 22px), 28px - env(safe-area-inset-top, 0px)); }
+  #screen-game.active:not(.turnier) .game-body {
+    display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr); gap: clamp(8px, 1.6vw, 24px);
+    flex: 1 1 auto; min-height: 0; align-items: stretch;
+  }
+  /* Bei drei oder vier Spielern bekommt die Spielerseite mehr Breite. */
+  #screen-game.active:not(.turnier).viele .game-body { grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); }
+  #screen-game.active:not(.turnier) .game-main {
+    display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; min-width: 0; overflow: visible; padding: 0;
+  }
+  #screen-game.active:not(.turnier) .game-main > #game-turn,
+  #screen-game.active:not(.turnier) .game-main > #history { display: none; }
+  #screen-game.active:not(.turnier) #scoreboard {
+    flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: minmax(0, 1fr); gap: clamp(6px, 1.4vh, 16px); margin: 0;
+  }
+  #screen-game.active:not(.turnier) #scoreboard.viele { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* Die Eingabe-Spalte liegt ueber dem Schein der aktiven Karte. */
+  #screen-game.active:not(.turnier) .input-area {
+    position: relative; z-index: 1; min-height: 0; min-width: 0; display: flex; flex-direction: column; flex: 1 1 auto; margin: 0;
+  }
+  #screen-game.active:not(.turnier) .pad:not(.hidden) {
+    flex: 1 1 auto; display: flex; flex-direction: column; gap: clamp(5px, 1.2vh, 14px); min-height: 0; overflow: hidden;
+  }
+  #screen-game.active #pad-total .display-row { flex: none; height: clamp(46px, 13vh, 140px); }
+  #screen-game.active #pad-total .score-display { font-size: clamp(36px, 10vh, 110px); }
+  #screen-game.active #pad-total .input-error { font-size: clamp(11px, 1.8vh, 16px); }
+  #screen-game.active #pad-total .quick-row { flex: none; height: clamp(40px, 9vh, 96px); gap: clamp(5px, 0.9vh, 10px); }
+  #screen-game.active #pad-total .quick-row button { height: auto; font-size: clamp(18px, 4vh, 44px); }
+  #screen-game.active #pad-total .keypad {
+    flex: 1 1 auto; min-height: 0; grid-template-rows: repeat(4, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); gap: clamp(5px, 0.9vh, 10px);
+  }
+  #screen-game.active #pad-total .keypad button { font-size: clamp(26px, 6.4vh, 68px); }
+  #screen-game.active #pad-total .keypad button.ok { font-size: clamp(22px, 4.8vh, 50px); }
+  #screen-game.active #pad-darts .num-grid {
+    flex: 1 1 auto; min-height: 0; grid-template-rows: repeat(7, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); gap: clamp(5px, 0.9vh, 10px);
+  }
+  #screen-game.active #pad-darts .num-grid button { font-size: clamp(20px, 5vh, 54px); }
+  #screen-game.active #pad-darts .num-grid button.mult, #screen-game.active #pad-darts .num-grid button.bull { font-size: clamp(15px, 3vh, 32px); }
+  #screen-game.active #pad-darts .num-grid button.end-visit { font-size: clamp(20px, 4.4vh, 46px); }
+
+  /* Vier Spieler im 2x2-Raster: alles eine Stufe kleiner. */
+  #screen-game.active #scoreboard.viele .pcard .pkopf .av.sm { width: clamp(18px, 3.6vh, 40px); height: clamp(18px, 3.6vh, 40px); }
+  #screen-game.active #scoreboard.viele .pcard .pname, #screen-game.active #scoreboard.viele .pcard .pavg { font-size: clamp(13px, 2.8vh, 32px); }
+  #screen-game.active #scoreboard.viele .pcard .pmeta { font-size: clamp(10px, 1.7vh, 18px); }
+  #screen-game.active #scoreboard.viele .pcard .rest-zeile {
+    grid-template-columns: minmax(0, 0.3fr) auto minmax(0, 1.7fr);
+    font-size: clamp(32px, 24vh, 220px);
+    font-size: clamp(32px, min(24vh, 40cqi), 220px);
+  }
+  #screen-game.active #scoreboard.viele .pcard .pfelder { height: clamp(32px, 7.5vh, 84px); }
+  #screen-game.active #scoreboard.viele .pcard .pfelder .fk { font-size: clamp(16px, 4.6vh, 50px); }
+
+  /* Handy quer: dieselbe Anordnung, alles eine Stufe kleiner, damit Kopf,
+     Rest und Felder in eine 150 px hohe Karte passen. */
+  @media (max-height: 560px) {
+    #screen-game.active #scoreboard .pcard { padding: 5px 10px; gap: 2px; }
+    #screen-game.active #scoreboard .pcard .pkopf .av.sm { width: 18px; height: 18px; font-size: 8px; }
+    #screen-game.active #scoreboard .pcard .pname, #screen-game.active #scoreboard .pcard .pavg { font-size: 14px; }
+    #screen-game.active #scoreboard .pcard .pmeta { font-size: 10px; }
+    #screen-game.active #scoreboard .pcard .rest-zeile {
+      font-size: clamp(30px, 16vh, 100px);
+      font-size: clamp(30px, min(16vh, 28cqi), 100px);
+    }
+    #screen-game.active #scoreboard .pcard .letzte-box { min-height: 44px; min-width: 44px; }
+    #screen-game.active #scoreboard .pcard .pfelder { height: clamp(30px, 10vh, 60px); gap: 5px; }
+    #screen-game.active #scoreboard .pcard .pfelder .fk { font-size: clamp(16px, 5vh, 40px); }
+  }
+
+  /* ---------- Fernsteuerung: zwei Karten, unten die Aufnahmen und die Eingabe ---------- */
+  #screen-game.active.turnier .game-header { justify-content: flex-start; padding: 0; }
+  #screen-game.active.turnier .game-body { display: flex; flex-direction: column; gap: clamp(6px, 1.6vh, 18px); flex: 1 1 auto; min-height: 0; }
+  #screen-game.active.turnier .game-main { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: visible; padding: 0; }
+  #screen-game.active.turnier #scoreboard {
+    flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: minmax(0, 1fr); gap: clamp(8px, 1.6vw, 24px); margin: 0;
+  }
+  #screen-game.active.turnier #scoreboard .pcard {
+    padding: clamp(8px, 2vh, 24px) clamp(10px, 1.8vw, 28px); border-radius: clamp(14px, 2.2vh, 24px); gap: clamp(4px, 1.2vh, 14px);
+  }
+  #screen-game.active.turnier #scoreboard .pcard.active { box-shadow: 0 0 26px var(--laser-weich), 0 0 90px 14px var(--schein-stark); }
+  #screen-game.active.turnier #scoreboard .pcard:not(.active) { opacity: 0.8; }
+  #screen-game.active.turnier #scoreboard .pcard .pkopf { gap: clamp(8px, 1vw, 16px); }
+  #screen-game.active.turnier #scoreboard .pcard .pkopf .av.sm { width: clamp(24px, 5.8vh, 62px); height: clamp(24px, 5.8vh, 62px); font-size: clamp(10px, 2vh, 22px); }
+  #screen-game.active.turnier #scoreboard .pcard .pname, #screen-game.active.turnier #scoreboard .pcard .pavg { font-size: clamp(18px, 5.4vh, 58px); }
+  #screen-game.active.turnier #scoreboard .pcard .pmeta { font-size: clamp(13px, 3vh, 34px); }
+  #screen-game.active.turnier #scoreboard .pcard .rest-zeile {
+    grid-template-columns: minmax(0, 0.35fr) auto minmax(0, 1.65fr); line-height: 0.8;
+    font-size: clamp(56px, 46vh, 480px);
+    font-size: clamp(56px, min(46vh, 39cqi), 480px);
+  }
+  #screen-game.active.turnier #scoreboard .pcard.active .rest { text-shadow: 0 0 34px var(--laser-weich); }
+  #screen-game.active.turnier #scoreboard .pcard .pfelder { height: clamp(40px, 11vh, 120px); gap: clamp(6px, 0.9vw, 14px); }
+  #screen-game.active.turnier #scoreboard .pcard .pfelder .fk { font-size: clamp(22px, 7vh, 76px); }
+  #screen-game.active.turnier .input-area { flex: none; height: clamp(80px, 20vh, 210px); min-height: 0; display: block; margin: 0; }
+  #screen-game.active.turnier .pad-key {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1fr);
+    gap: clamp(8px, 1.6vw, 24px); height: 100%; align-items: stretch;
+  }
+  #screen-game.active.turnier .key-hist {
+    display: grid; grid-template-rows: repeat(5, minmax(0, 1fr)); gap: clamp(2px, 0.6vh, 6px);
+    max-height: none; min-height: 0; overflow: hidden;
+  }
+  #screen-game.active.turnier .key-hist .v {
+    display: flex; align-items: center; justify-content: space-between; min-height: 0; overflow: hidden; line-height: 1;
+    padding: 0 clamp(8px, 1.2vw, 18px); background: var(--bg-2); border-radius: 8px; font-size: clamp(11px, 2.1vh, 22px);
+  }
+  #screen-game.active.turnier .key-hist .v:not(:first-child) { opacity: 0.75; }
+  #screen-game.active.turnier .key-hist .v .s { font-size: clamp(14px, 2.8vh, 30px); line-height: 1; }
+  #screen-game.active.turnier .key-hist .v .r { font-size: clamp(11px, 2vh, 21px); line-height: 1; }
+  #screen-game.active.turnier .key-mitte { display: flex; flex-direction: column; min-height: 0; gap: 0; position: relative; }
+  #screen-game.active.turnier .key-display {
+    flex: 1 1 auto; min-height: 0; height: 100%; padding: 0; border-radius: clamp(14px, 2.2vh, 24px); font-size: clamp(44px, 15vh, 160px);
+  }
+  #screen-game.active.turnier .key-display .cursor { width: clamp(3px, 0.5vh, 6px); height: 0.8em; }
+  #screen-game.active.turnier .pad-key .input-error {
+    position: absolute; left: 0; right: 0; bottom: 2px; text-align: center; min-height: 0; font-size: clamp(11px, 1.8vh, 16px);
+  }
+  /* Handy quer: drei statt fuenf Aufnahmen je Seite. */
+  @media (max-height: 560px) {
+    #screen-game.active.turnier .key-hist { grid-template-rows: repeat(3, minmax(0, 1fr)); }
+    #screen-game.active.turnier .key-hist .v:nth-child(n+4) { display: none; }
+  }
+  /* Shift gedrueckt: die Wurfliste des Matches statt Eingabe und Karten. */
+  #screen-game.active.turnier.verlauf #history { display: grid; flex: 1 1 auto; min-height: 88px; }
+  #screen-game.active.turnier.verlauf #scoreboard { flex: 0 0 auto; grid-auto-rows: auto; }
+  #screen-game.active.turnier.verlauf #scoreboard .pcard { padding: var(--space-2) 10px; }
+  #screen-game.active.turnier.verlauf #scoreboard .pcard .rest-zeile { font-size: 2.4rem; flex: none; }
+  #screen-game.active.turnier.verlauf #scoreboard .pcard .pfelder { display: none; }
+  #screen-game.active.turnier.verlauf .input-area { display: none; }
+}
+
 </style>
 </head>
 <body>
@@ -4276,86 +4706,71 @@ body.tastatur #screen-bulloff button:focus {
 
 <!-- ============ SPIEL ============ -->
 <section id="screen-game" class="screen game">
+  <!-- Kopfleiste (Entwurf "X01 Redesign", 10/2026): links das Menue (Spiel
+       verlassen), in der Mitte Spiel und Stand, rechts die Fernsteuerung
+       (Board-Anzeige, Eingabe ueber Tastatur) und der Wechsel zwischen
+       Punkten und Einzel-Darts. Zurueckgenommen wird ueber den Pfeil im
+       Tastenfeld. -->
   <header class="game-header">
-    <button class="icon-btn" data-action="to-tournament" aria-label="Spiel verlassen, Stand bleibt erhalten">‹</button>
-    <!-- Drei direkt klickbare Eingabemodi, oben neben dem Zurück-Knopf.
-         "Turnier" (Riesenanzeige am Board) gibt es nur mit mindestens zwei
-         Spielern - allein wird der Knopf ausgeblendet. -->
-    <div class="segmented small" id="mode-toggle">
-      <button data-mode="total">Punkte</button>
-      <button data-mode="darts">Einzel-Darts</button>
-      <button data-mode="turnier">Turnier</button>
-      <!-- Nur mit optionaler Kamera-Schicht (js/kamera.js) sichtbar. -->
-      <button data-mode="kamera" class="hidden">Kamera</button>
-    </div>
+    <button class="xk-btn" id="game-menu" data-action="game-menu" aria-label="Menü">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><g opacity="0.8"><circle cx="3.5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="20.5" cy="12" r="1.8"></circle></g></svg>
+    </button>
     <div class="game-title">
       <span id="game-match-label"></span>
       <span id="game-leg-label" class="muted"></span>
     </div>
-    <button class="icon-btn" data-action="undo" aria-label="Letzte Eingabe zurücknehmen">↺</button>
+    <button class="xk-btn" id="game-fern" data-action="game-fern" aria-label="Fernsteuerung: Board-Anzeige, Eingabe über Tastatur" aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2.2"></rect><path d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M6.5 14h11"></path></svg>
+    </button>
+    <button class="xk-btn" id="game-swap" data-action="game-swap" aria-label="Punkte / Einzel-Darts wechseln">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h14M14.5 4.5L18 8l-3.5 3.5M20 16H6M9.5 12.5L6 16l3.5 3.5"></path></svg>
+    </button>
   </header>
 
   <div class="game-body">
   <div class="game-main">
     <div id="game-turn" class="turn-label game-turn"></div>
+    <!-- Je Spieler eine Karte: Name und Stand, der Rest mit der letzten
+         Aufnahme daneben, darunter die Felder (Finish-Weg bzw. die drei
+         Darts der laufenden Aufnahme). Gezeichnet von renderGame. -->
     <div id="scoreboard" class="scoreboard"></div>
-
-    <div id="checkout-bar" class="checkout-bar"></div>
-    <!-- Einzel-Darts: drei grosse Kacheln wie im Finisher - leer zu Beginn
-         der Aufnahme, jede fuellt sich mit dem eingetragenen Dart; in
-         Finish-Naehe zeigen sie rot den Vorschlag und gruen den Treffer. -->
-    <div id="game-kacheln" class="fin-kacheln gross hidden"></div>
-
     <div id="history" class="history"></div>
   </div>
 
   <div class="input-area">
-    <!-- Die laufende Aufnahme im Einzel-Dart-Modus; der Modus-Umschalter
-         selbst steht oben im Kopf. -->
-    <div class="mode-row">
-      <div id="visit-darts" class="visit-darts"></div>
-    </div>
-
-    <!-- Punkte-Eingabe -->
+    <!-- Punkte-Eingabe: Anzeige, Schnellwahl, Zahlenfeld -->
     <div id="pad-total" class="pad">
-      <div class="quick-row" id="quick-row"></div>
       <div class="display-row">
         <div id="score-display" class="score-display">0</div>
         <div id="input-error" class="input-error"></div>
       </div>
+      <div class="quick-row" id="quick-row"></div>
       <div class="keypad">
         <button data-key="1">1</button><button data-key="2">2</button><button data-key="3">3</button>
         <button data-key="4">4</button><button data-key="5">5</button><button data-key="6">6</button>
         <button data-key="7">7</button><button data-key="8">8</button><button data-key="9">9</button>
-        <button data-key="del" class="fn">←</button>
+        <button data-key="del" class="fn" aria-label="Zurück"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 12H7M11.5 6.5L6 12l5.5 5.5"></path></svg></button>
         <button data-key="0">0</button>
         <button data-key="ok" class="ok">OK</button>
       </div>
     </div>
 
-    <!-- Einzel-Dart-Eingabe -->
+    <!-- Einzel-Dart-Eingabe: ein Raster - oben Double/Triple (Schalter)
+         und Bull, dann 1 bis 20, unten Zurueck, 0 und OK. -->
     <div id="pad-darts" class="pad hidden">
-      <div class="mult-row" id="mult-row">
-        <button data-mult="1" class="active">Single</button>
-        <button data-mult="2">Double</button>
-        <button data-mult="3">Triple</button>
-      </div>
+      <div id="darts-error" class="input-error"></div>
       <div class="num-grid" id="num-grid"></div>
     </div>
 
-    <!-- Turnier-Modus: für den Liga-Abend mit Bildschirm am Board.
-         Drei Spalten: links die Aufnahmen des einen Spielers, in der Mitte
-         groß die Eingabe, rechts die des anderen. Das Feld steht fest im
-         HTML, damit es beim Neuzeichnen den Fokus behält – Eingabe über
-         eine echte Tastatur: Enter bucht, Löschen nimmt Ziffern und dann
-         Aufnahmen zurück, Esc beendet den Modus, Shift zeigt die Wurfliste. -->
+    <!-- Fernsteuerung (Board-Anzeige): unten links und rechts die
+         Aufnahmen der beiden Spieler, in der Mitte gross die Eingabe. Kein
+         echtes Eingabefeld - ein fokussiertes Feld ruft am iPad die
+         System-Tastaturleiste auf. Enter bucht, Loeschen nimmt Ziffern und
+         dann Aufnahmen zurueck, Tab/Esc beenden den Modus, Shift zeigt
+         die Wurfliste. -->
     <div id="pad-key" class="pad pad-key hidden">
       <div id="key-hist-l" class="key-hist"></div>
       <div class="key-mitte">
-        <!-- Kein echtes Eingabefeld: ein fokussiertes Feld ruft am iPad die
-             System-Tastaturleiste (DE/EN, Pfeile) auf den Schirm. Die Ziffern
-             kommen als Tastendrücke direkt an der Seite an, das hier ist nur
-             die Anzeige. Tab schaltet den Turnier-Modus an und aus. -->
         <div id="key-display" class="key-display" aria-live="polite"></div>
         <div id="key-error" class="input-error"></div>
       </div>
@@ -4364,10 +4779,23 @@ body.tastatur #screen-bulloff button:focus {
   </div>
   </div>
 
-  <!-- Notausgang fuer Geraete ohne Tastatur: erscheint kurz nach einem
-       Tipp irgendwo im Bild - sonst saesse man im Turnier-Modus ohne
-       Tab/Esc fest. -->
-  <button id="turnier-exit" class="btn ghost turnier-exit hidden" data-action="turnier-exit">Turnier-Modus beenden</button>
+  <!-- Menue (•••): Spiel verlassen oder weiterspielen. In der
+       Fernsteuerung oeffnet es auch ein Tipp irgendwo ins Bild - der Weg
+       zurueck ohne Tastatur. -->
+  <div id="game-menu-overlay" class="game-menu hidden" role="dialog" aria-modal="true" aria-labelledby="game-menu-titel">
+    <div class="game-menu-karte">
+      <div class="game-menu-kopf">
+        <span class="game-menu-titel" id="game-menu-titel"></span>
+        <span class="game-menu-sub"></span>
+      </div>
+      <!-- Nur mit optionaler Kamera-Schicht (js/kamera.js) sichtbar. -->
+      <button class="btn ghost full hidden" id="game-menu-kamera" data-action="game-kamera">Kamera</button>
+      <div class="game-menu-zeile">
+        <button class="btn ghost game-menu-raus" data-action="to-tournament">Spiel verlassen</button>
+        <button class="btn primary" data-action="game-menu-zu">Weiterspielen</button>
+      </div>
+    </div>
+  </div>
 </section>
 
 <!-- ============ CRICKET ============ -->
@@ -4993,7 +5421,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
      das steht so in jedem archivierten Spiel und darf sich nicht ändern. */
   var START_SCORES = [301, 501, 701];
   var FIN_TARGETS = [3, 5, 10];   // Punkte zum Sieg im Finisher
-  var QUICK_SCORES = [26, 41, 45, 60, 81, 85, 100, 140, 180];
+  var QUICK_SCORES = [26, 41, 45, 60, 81, 85];
 
   /* ================= Liga =================
    * Der Spielplan der Saison 2026/27, fest im Client – er ändert sich nur,
@@ -5097,7 +5525,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
      Aufnahme, "Einzel-Darts" von Hand bis zum Ende der Partie.
      kamera: ebenso klebrig – die Darts kommen vom gekoppelten iPhone
      (js/kamera.js), angezeigt wird die Einzel-Darts-Ansicht. */
-  var UI = { input: '', darts: [], mult: 1, modeOverride: null, turnier: false, kamera: false, overlay: null, error: '', board: 'won', boardMode: '501', profile: null, summary: null, ligaTab: 'plan', bericht: null };
+  var UI = { input: '', darts: [], mult: 1, modeOverride: null, turnier: false, kamera: false, menu: false, overlay: null, error: '', board: 'won', boardMode: '501', profile: null, summary: null, ligaTab: 'plan', bericht: null };
 
   /* ================= Helfer ================= */
   function $(id) { return document.getElementById(id); }
@@ -6406,7 +6834,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
        hier dieselben Leute wieder online zusammenbringen. */
     S.lineup = (neu.players || []).slice();
     S.settings.online = 1;
-    UI.overlay = null; UI.darts = []; UI.input = ''; UI.error = ''; UI.mult = 1;
+    UI.overlay = null; UI.darts = []; UI.input = ''; UI.error = ''; UI.mult = 1; UI.menu = false;
     UI.turnier = false; UI.bullReihe = [];
     S.screen = neu.started ? spielScreen(neu.kind) : 'bulloff';
     save(); render();
@@ -6904,6 +7332,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   /* ================= Undo ================= */
   function undo() {
     klick();
+    UI.error = '';   // ein alter Hinweis (z. B. zum Moduswechsel) ist mit der Ruecknahme erledigt
     if (UI.overlay && UI.overlay.type === 'checkout-darts') { UI.overlay = null; UI.input = ''; render(); return; }
     if (UI.darts.length) {
       /* Die Darts des Mitspielers, der gerade selbst eintraegt, loescht
@@ -9776,6 +10205,15 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       (amBoard || (S.tour && S.tour.liga) ? '<p class="te-hint">8 / 2 · wählen &nbsp;&nbsp; Enter · der beginnt</p>' : '');
   }
 
+  /* Wer nach dem Aktiven dran ist - fuer die Fernsteuerung (rechts der
+     Naechste) und die Kopfzeile ab drei Spielern ("Danach: ..."). */
+  function spielerDanach(m, aktiv) {
+    var i = m.p.indexOf(aktiv);
+    var folge = [];
+    for (var k = 1; k < m.p.length; k++) folge.push(m.p[(i + k) % m.p.length]);
+    return folge;
+  }
+
   function renderGame() {
     var m = currentMatch();
     if (!m) { S.screen = 'tournament'; render(); return; }
@@ -9793,37 +10231,72 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     /* Ueber mehrere Legs oder Saetze zaehlt der Kopf Satz und Leg mit,
        und die Karten zeigen den Stand statt der Dartzahl. */
     var qSt = schnell && mehrereLegs(m) ? satzStand(m) : null;
+
+    var pendingSum = sum(UI.darts, function (d) { return d.v; });
+    var restActive = remainingIn(leg, active) - pendingSum;
+    var mode = effectiveMode(restActive);
+    /* Der Kamera-Modus zeigt die Einzel-Darts-Ansicht: die vom iPhone
+       gemeldeten Darts fuellen dieselben Kacheln, das Tastenfeld bleibt
+       als Handbetrieb sichtbar. */
+    var anzeige = mode === 'kamera' ? 'darts' : mode;
+    var fern = anzeige === 'turnier';
+    var dartsLeft = anzeige === 'darts' || UI.darts.length ? 3 - UI.darts.length : 3;
+    var route = ohneFinish ? null : Checkout.suggest(restActive, dartsLeft, lieblingsDoppel(active));
+    var danach = spielerDanach(m, active);
+
+    /* Kopf: Spiel und Stand. In der Fernsteuerung ab drei Spielern steht
+       rechts, wer nach dem Naechsten kommt. */
+    var subText;
     if (schnell) {
       $('game-match-label').textContent = 'Schnelles Spiel' + liveLabel(m);
-      $('game-leg-label').textContent = qSt
+      subText = qSt
         ? (qSt.gewinnSaetze > 1 ? 'Satz ' + qSt.satzNr + ' · ' : '') + 'Leg ' + (m.done ? qSt.legNr - 1 : qSt.legNr) +
           ' · ' + dauerText(m) + ' · ' + matchStart(m)
         : plural(m.p.length, 'Spieler', 'Spieler') + ' · ' + matchStart(m) + ' Double Out';
     } else {
       var idx = S.matches.indexOf(m);
       $('game-match-label').textContent = 'Spiel ' + (idx + 1) + ' von ' + S.matches.length;
-      $('game-leg-label').textContent = tour().bestOf > 1
+      subText = tour().bestOf > 1
         ? 'Leg ' + m.legs.length + ' · Stand ' + legsWon(m, m.p[0]) + ':' + legsWon(m, m.p[1]) + ' · ' + plural(legsToWin(), 'Leg', 'Legs') + ' zum Sieg'
         : 'Ein Leg · ' + tourStart() + ' Double Out';
     }
-
-    var pendingSum = sum(UI.darts, function (d) { return d.v; });
+    if (fern && danach.length > 1 && !m.done) {
+      subText = 'Danach: ' + danach.slice(1).map(function (id) { return esc(spielerName(id)); }).join(' · ');
+      $('game-leg-label').innerHTML = subText;
+    } else {
+      $('game-leg-label').textContent = subText;
+    }
     $('game-turn').innerHTML = m.done
       ? '<b>' + esc(spielerName(m.winner)) + '</b> ' + (m.p.length < 2 ? 'hat ausgemacht' : 'hat gewonnen')
       : '<span class="muted">Am Wurf</span> <b>' + esc(spielerName(active)) + '</b>' +
-        '<span class="muted"> · Rest ' + (remainingIn(leg, active) - pendingSum) + '</span>';
-    /* Vier Karten in Turniergröße füllen ein Handydisplay allein aus und
-       drängen den Verlauf hinter das Zahlenfeld – ab drei Spielern werden
-       sie deshalb kompakter. */
-    $('scoreboard').classList.toggle('viele', m.p.length > 2);
+        '<span class="muted"> · Rest ' + restActive + '</span>';
+
+    /* Kopf-Knoepfe: Fernsteuerung nur mit Gegner, der Wechsel Punkte/
+       Einzel-Darts nicht in der Fernsteuerung. */
+    $('game-fern').classList.toggle('hidden', !turnierErlaubt());
+    $('game-fern').classList.toggle('an', fern);
+    $('game-fern').setAttribute('aria-pressed', fern ? 'true' : 'false');
+    $('game-swap').classList.toggle('hidden', fern);
+    $('game-menu-kamera').classList.toggle('hidden', !window.DartKamera);
+    $('game-menu-overlay').classList.toggle('hidden', !UI.menu);
+    if (UI.menu) {
+      $('game-menu-titel').textContent = $('game-match-label').textContent;
+      document.querySelector('#game-menu-overlay .game-menu-sub').textContent = $('game-leg-label').textContent;
+    }
+
+    /* Fernsteuerung: immer genau zwei Karten - links wer wirft, rechts wer
+       als Naechstes dran ist. Sonst alle Spieler (ab dreien als 2x2). */
+    var karten = fern && m.p.length > 1 ? [active, danach[0]] : m.p;
+    $('scoreboard').classList.toggle('viele', karten.length > 2);
     $('scoreboard').classList.toggle('solo', m.p.length === 1);
     $('screen-game').classList.toggle('solo', m.p.length === 1);
-    /* Alle Spieler nebeneinander in einer Reihe -- wie ein Scorer am Board. */
-    $('scoreboard').style.setProperty('--n', m.p.length);
+    $('screen-game').classList.toggle('viele', m.p.length > 2);
+    $('scoreboard').style.setProperty('--n', karten.length);
+
     /* Die letzte Aufnahme jedes Spielers steht klein neben seinem Rest
        ("345 | 60") und bleibt stehen, bis er wieder wirft. Kommt eine neue,
-       rutscht die alte wie in einem Drehrad nach oben und verblasst, die
-       neue schiebt von unten nach. Weil jeder Tastendruck neu zeichnet,
+       rutscht die alte wie in einem Drehrad nach unten und verblasst, die
+       neue kommt von oben nach. Weil jeder Tastendruck neu zeichnet,
        laeuft die Animation mit negativer Verzoegerung an der Stelle weiter,
        an der sie gerade ist -- sonst finge sie jedes Mal von vorn an. */
     var letzteIdx = {}, vorletzteIdx = {};
@@ -9834,33 +10307,98 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var neuesteVisit = leg.visits.length - 1;
     var seitAufnahme = Date.now() - (UI.aufnahmeZeit || 0);
     var DREH_MS = 1400;
-    $('scoreboard').innerHTML = m.p.map(function (pid) {
-      var rest = remainingIn(leg, pid) - (pid === active ? pendingSum : 0);
-      var darts = dartsIn(leg, pid) + (pid === active ? UI.darts.length : 0);
-      var scored = matchStart(m) - remainingIn(leg, pid) + (pid === active ? pendingSum : 0);
-      var avg = darts ? (scored / darts * 3).toFixed(1) : '–';
-      var zeile, meta, pfinish = '';
-      if (UI.turnier && turnierErlaubt()) {
-        /* Was geworfen wurde, steht in den Wurflisten unten links und
-           rechts – in der Karte bleibt nur der Leg-Stand. */
-        zeile = schnell ? (qSt ? kurzStand(qSt, pid) : '') : 'Legs ' + legsWon(m, pid);
-        meta = '<span>Ø <b>' + avg + '</b></span>';
-        /* Der Finish-Weg erscheint, sobald einer ansteht – bei jedem Spieler
-           im eigenen Kasten, auch während der andere wirft: so kann man sich
-           auf seine Aufnahme vorbereiten. Abgedunkelt, kein Signalrot. */
-        var fRoute = !ohneFinish && !m.done && rest >= 2
-          ? Checkout.suggest(rest, 3, lieblingsDoppel(pid)) : null;
-        pfinish = '<div class="pfinish">' + (fRoute ? fRoute.map(function (d) {
-          return '<span class="chip">' + Checkout.pretty(d) + '</span>';
-        }).join('') : '') + '</div>';
-      } else {
-        /* Im Schnellen Spiel gibt es keine Legs zu zählen – dort steht die
-           geworfene Dartzahl, die sagt in dem Moment mehr. */
-        zeile = schnell ? (qSt ? kurzStand(qSt, pid) : plural(darts, 'Dart', 'Darts')) : 'Legs ' + legsWon(m, pid);
-        /* Oben im Feld steht nur der Average -- die Dartzahl steht in der
-           Zeile unter dem Namen, solange es keine Legs zu zaehlen gibt. */
-        meta = '<span>Ø <b>' + avg + '</b></span>';
+
+    /* Die drei Felder unter dem Rest: in der Punkte-Eingabe und in der
+       Fernsteuerung der Finish-Weg (nur, wenn einer ansteht), in Einzel-
+       Darts die laufende Aufnahme des Aktiven - leer zu Beginn, jeder
+       eingetragene Dart fuellt eine (gruen, wenn er den Vorschlag trifft),
+       in Finish-Naehe stehen die restlichen Wuerfe als antippbarer Weg
+       darin. Die Zeile behaelt ihre Hoehe, damit nichts springt. */
+    function felderHTML(pid, istAktiv) {
+      if (m.done) return '<div class="pfelder"></div>';
+      /* In der Fernsteuerung stehen die Kacheln nur, solange Einzeldarts
+         laufen (z. B. vom Mitspieler im Online-Spiel) - ohne Vorschlagsknoepfe. */
+      var nurAnzeige = fern && UI.darts.length > 0;
+      if ((anzeige === 'darts' || nurAnzeige) && istAktiv) {
+        var kacheln = ['', '', ''];
+        var kDbl = ohneFinish ? null : lieblingsDoppel(active);
+        var kRest = remainingIn(leg, active);
+        UI.darts.forEach(function (d, ki) {
+          var soll = null;
+          if (!ohneFinish) {
+            var kEmpf = Checkout.suggest(kRest, 3 - ki, kDbl);
+            /* suggest liefert Labels ('T20') - fuer den Vergleich in
+               Mult/Zahl zerlegen, wie es auch der Finisher macht. */
+            if (kEmpf && kEmpf.length) soll = labelDart(kEmpf[0]);
+          }
+          var traf = soll && d.n === soll.n && d.m === soll.m;
+          kacheln[ki] = '<span class="fk ' + (traf ? 'gut' : 'anders') + '">' +
+            (d.n === 0 ? '–' : dartLabel(d)) + '</span>';
+          kRest -= d.v;
+        });
+        if (route && !nurAnzeige) {
+          for (var kr = 0; kr < route.length && UI.darts.length + kr < 3; kr++) {
+            /* Die vorgeschlagene Kachel ist zugleich der Bestaetigungsknopf:
+               wer die 14 trifft, tippt auf die 14 statt sie im Zahlenfeld zu
+               suchen. data-num/data-mult nimmt derselbe Handler wie die
+               Zahlentasten. */
+            var kSoll = labelDart(route[kr]);
+            kacheln[UI.darts.length + kr] = '<button type="button" class="fk tipp' + (kr === 0 ? ' jetzt' : '') + '"' +
+              ' data-num="' + kSoll.n + '" data-mult="' + kSoll.m + '" aria-label="' + Checkout.pretty(route[kr]) + ' getroffen">' +
+              Checkout.pretty(route[kr]) + '</button>';
+          }
+        } else if (UI.darts.length < 3 && !ohneFinish && !nurAnzeige) {
+          /* Kein Finish mehr mit den restlichen Darts: wie im Finisher steht
+             dann der Stellwurf da (42 Rest -> 10, damit 32 bleibt) -- gestrichelt,
+             und ebenfalls antippbar. */
+          var kStell = finisherStellwurf(kRest, kDbl);
+          if (kStell) {
+            var kStellSoll = labelDart(kStell);
+            kacheln[UI.darts.length] = '<button type="button" class="fk tipp stellen"' +
+              ' data-num="' + kStellSoll.n + '" data-mult="' + kStellSoll.m + '" aria-label="Stellwurf ' + kStell + ' getroffen">' +
+              kStell + '</button>';
+          }
+        }
+        for (var kx = 0; kx < 3; kx++) if (!kacheln[kx]) kacheln[kx] = '<span class="fk leer">–</span>';
+        return '<div class="pfelder fin-kacheln" id="game-kacheln">' + kacheln.join('') + '</div>';
       }
+      if (anzeige === 'darts') {
+        /* Wartende: drei leere Felder, damit alle Karten gleich aufgebaut sind. */
+        return '<div class="pfelder"><span class="fk still"></span><span class="fk still"></span><span class="fk still"></span></div>';
+      }
+      /* Punkte und Fernsteuerung: der Finish-Weg, neutral, keins markiert.
+         In der Fernsteuerung sieht auch der Wartende seinen Weg (abgedunkelt),
+         so kann er sich auf seine Aufnahme vorbereiten. */
+      var weg = null;
+      if (!ohneFinish) {
+        if (istAktiv) weg = route;
+        else if (fern) {
+          var wRest = remainingIn(leg, pid);
+          weg = wRest >= 2 ? Checkout.suggest(wRest, 3, lieblingsDoppel(pid)) : null;
+        }
+      }
+      return '<div class="pfelder pfinish">' + (weg ? weg.map(function (d) {
+        return '<span class="fk weg' + (istAktiv ? '' : ' wartet') + '">' + Checkout.pretty(d) + '</span>';
+      }).join('') : '') + '</div>';
+    }
+
+    $('scoreboard').innerHTML = karten.map(function (pid, ki) {
+      var istAktiv = pid === active;
+      var rest = remainingIn(leg, pid) - (istAktiv ? pendingSum : 0);
+      var darts = dartsIn(leg, pid) + (istAktiv ? UI.darts.length : 0);
+      var scored = matchStart(m) - remainingIn(leg, pid) + (istAktiv ? pendingSum : 0);
+      var avg = darts ? (scored / darts * 3).toFixed(1) : '–';
+      /* Unter dem Namen: gewonnene Legs (Siege), bei Saetzen der Satzstand,
+         und die Darts der laufenden Aufnahme. */
+      var meta = [];
+      if (schnell && qSt) {
+        meta.push('Siege ' + qSt.legs[pid]);
+        if (qSt.gewinnSaetze > 1) meta.push('Sätze ' + qSt.saetze[pid]);
+      } else if (!schnell) {
+        meta.push('Siege ' + legsWon(m, pid));
+      }
+      meta.push(plural(darts, 'Dart', 'Darts'));
+
       var letzte = '';
       var li = letzteIdx[pid];
       if (li !== undefined) {
@@ -9873,109 +10411,29 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           var av = leg.visits[vorletzteIdx[pid]];
           alt = '<span class="letzte-alt' + (av.b ? ' bust' : '') + '"' + verz + '>' + (av.b ? av.o : av.s) + '</span>';
         }
-        /* Ein Tipp auf die Zahl korrigiert die Aufnahme -- das war frueher
-           die Aufgabe des Wurfverlaufs. */
+        /* Ein Tipp auf die Zahl korrigiert die Aufnahme. */
         letzte = '<span class="letzte-box' + (aenderbar ? ' tap' : '') + '"' +
           (aenderbar ? ' data-action="edit-visit" data-i="' + li + '" role="button" tabindex="0" aria-label="Letzte Aufnahme korrigieren"' : '') + '>' +
           alt + '<span class="letzte' + (lv.b ? ' bust' : '') + (frisch ? ' neu' : '') + '"' + verz + '>' +
           (lv.b ? lv.o : lv.s) + '</span></span>';
+      } else {
+        /* Ohne Aufnahme bleibt der Platz leer - der Rest steht trotzdem fest. */
+        letzte = '<span class="letzte-box ohne"></span>';
       }
-      return '<div class="pcard ' + (pid === active ? 'active' : '') + '">' +
-        '<div class="meta">' + meta + '</div>' +
+      return '<div class="pcard ' + (istAktiv ? 'active' : '') + (fern && ki === 1 ? ' naechster' : '') + '">' +
+        '<div class="pkopf">' + avatarHTML(profile(pid), 'sm') +
+          '<div class="pblock"><span class="pname">' + esc(spielerName(pid)) + '</span>' +
+          '<span class="pmeta">' + meta.join(' · ') + '</span></div>' +
+          '<span class="pavg">Ø <b>' + avg + '</b></span></div>' +
         '<div class="rest-zeile"><span class="rest">' + rest + '</span>' + letzte + '</div>' +
-        '<div class="pname">' + avatarHTML(profile(pid), 'sm') + esc(spielerName(pid)) + '</div>' +
-        '<div class="legs">' + zeile + '</div>' + pfinish +
+        felderHTML(pid, istAktiv || m.p.length === 1) +
         '</div>';
     }).join('');
 
-    var restActive = remainingIn(leg, active) - pendingSum;
-    var mode = effectiveMode(restActive);
-    /* Der Kamera-Modus zeigt die Einzel-Darts-Ansicht: die vom iPhone
-       gemeldeten Darts fuellen dieselben Kacheln, das Tastenfeld bleibt
-       als Handbetrieb sichtbar. Nur der Umschalter markiert "Kamera". */
-    var anzeige = mode === 'kamera' ? 'darts' : mode;
-    var dartsLeft = anzeige === 'darts' ? 3 - UI.darts.length : 3;
-    var route = ohneFinish ? null : Checkout.suggest(restActive, dartsLeft, lieblingsDoppel(active));
-
-    /* Die Finish-Leiste erscheint erst, wenn beim Aktiven wirklich ein
-       Finish ansteht - vorher ist "noch kein Finish möglich" nur Rauschen
-       und stiehlt dem Verlauf die Zeile. */
-    $('checkout-bar').classList.toggle('fern', !route && !ohneFinish && !m.done);
-    $('checkout-bar').classList.toggle('aus', !!ohneFinish);
-
-    var whose = esc(spielerName(active));
-    if (route) {
-      $('checkout-bar').innerHTML = '<span class="label">Finish ' + whose + '</span>' + route.map(function (d, i) {
-        return '<span class="chip ' + (i === 0 ? 'first' : '') + '">' + Checkout.pretty(d) + '</span>';
-      }).join('');
-    } else {
-      $('checkout-bar').innerHTML = restActive > 170
-        ? '<span class="none">' + whose + ': noch kein Finish möglich</span>'
-        : '<span class="none">' + whose + ': kein Finish mit ' + plural(dartsLeft, 'Dart', 'Darts') + '</span>';
-    }
-
-    /* Einzel-Darts: drei grosse Kacheln wie im Finisher tragen die laufende
-       Aufnahme - leer zu Beginn, jeder eingetragene Dart fuellt eine (gruen,
-       wenn er den Vorschlag trifft). In Finish-Naehe stehen die restlichen
-       Wuerfe rot bzw. als Weg darin; die Leiste darueber entfaellt dann. */
-    var kBox = $('game-kacheln');
-    /* Im Turnier-Modus stehen die Kacheln nur, solange Einzeldarts laufen
-       (z. B. vom Mitspieler im Online-Spiel) - ohne Vorschlagsknoepfe. */
-    var nurAnzeige = anzeige === 'turnier';
-    if ((anzeige === 'darts' || (nurAnzeige && UI.darts.length)) && !m.done) {
-      var kacheln = ['', '', ''];
-      var kDbl = ohneFinish ? null : lieblingsDoppel(active);
-      var kRest = remainingIn(leg, active);
-      UI.darts.forEach(function (d, ki) {
-        var soll = null;
-        if (!ohneFinish) {
-          var kEmpf = Checkout.suggest(kRest, 3 - ki, kDbl);
-          /* suggest liefert Labels ('T20') - fuer den Vergleich in
-             Mult/Zahl zerlegen, wie es auch der Finisher macht. */
-          if (kEmpf && kEmpf.length) soll = labelDart(kEmpf[0]);
-        }
-        var traf = soll && d.n === soll.n && d.m === soll.m;
-        kacheln[ki] = '<span class="fk ' + (traf ? 'gut' : 'anders') + '">' +
-          (d.n === 0 ? '–' : dartLabel(d)) + '</span>';
-        kRest -= d.v;
-      });
-      if (route && !nurAnzeige) {
-        for (var kr = 0; kr < route.length && UI.darts.length + kr < 3; kr++) {
-          /* Die vorgeschlagene Kachel ist zugleich der Bestaetigungsknopf:
-             wer die 14 trifft, tippt auf die 14 statt sie im Zahlenfeld zu
-             suchen. data-num/data-mult nimmt derselbe Handler wie die
-             Zahlentasten. */
-          var kSoll = labelDart(route[kr]);
-          kacheln[UI.darts.length + kr] = '<button type="button" class="fk tipp' + (kr === 0 ? ' jetzt' : '') + '"' +
-            ' data-num="' + kSoll.n + '" data-mult="' + kSoll.m + '" aria-label="' + Checkout.pretty(route[kr]) + ' getroffen">' +
-            Checkout.pretty(route[kr]) + '</button>';
-        }
-      } else if (UI.darts.length < 3 && !ohneFinish && !nurAnzeige) {
-        /* Kein Finish mehr mit den restlichen Darts: wie im Finisher steht
-           dann der Stellwurf da (42 Rest -> 10, damit 32 bleibt) -- gestrichelt,
-           und ebenfalls antippbar. */
-        var kStell = finisherStellwurf(kRest, kDbl);
-        if (kStell) {
-          var kStellSoll = labelDart(kStell);
-          kacheln[UI.darts.length] = '<button type="button" class="fk tipp stellen"' +
-            ' data-num="' + kStellSoll.n + '" data-mult="' + kStellSoll.m + '" aria-label="Stellwurf ' + kStell + ' getroffen">' +
-            kStell + '</button>';
-        }
-      }
-      for (var kx = 0; kx < 3; kx++) if (!kacheln[kx]) kacheln[kx] = '<span class="fk leer">–</span>';
-      kBox.innerHTML = kacheln.join('');
-      kBox.classList.remove('hidden');
-      /* Die Kacheln tragen den Weg selbst - die Leiste waere doppelt. */
-      $('checkout-bar').classList.add('fern');
-    } else {
-      kBox.classList.add('hidden');
-    }
-
     /*
-     * Ab drei Spielern (Schnelles Spiel) wird der Verlauf zu einer einzigen
-     * Liste, neueste Aufnahme oben, mit dem Namen davor. Vier schmale
-     * Spalten nebeneinander wären nur noch Zahlenkolonnen, denen man nicht
-     * ansieht, wer sie geworfen hat.
+     * Wurfverlauf (unsichtbar im Spielbild, sichtbar in der Fernsteuerung
+     * bei gedruecktem Shift). Ab drei Spielern eine einzige Liste, neueste
+     * Aufnahme oben, mit dem Namen davor.
      */
     var vieleSpieler = m.p.length > 2;
     $('history').classList.toggle('einspaltig', vieleSpieler || m.p.length === 1);
@@ -9992,8 +10450,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         var v = e.v;
         var grund = '';
         if (v.b) {
-          var danach = e.before - v.o;
-          grund = danach < 0 ? ' · überworfen' : danach === 1 ? ' · Rest 1' : danach === 0 ? ' · kein Doppel' : '';
+          var danachRest = e.before - v.o;
+          grund = danachRest < 0 ? ' · überworfen' : danachRest === 1 ? ' · Rest 1' : danachRest === 0 ? ' · kein Doppel' : '';
         }
         var aenderbar = !v.c && !m.done;
         return '<div class="v ' + (v.b ? 'bust' : v.c ? 'co' : '') + (aenderbar ? ' tap' : '') + '"' +
@@ -10003,7 +10461,6 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           '<span class="r">' + (v.b ? 'Bust' + grund : 'Rest ' + e.rest) + '</span></div>';
       }).join('') + '</div>';
     } else {
-
       /* Kompletter Match-Verlauf, neueste Aufnahme oben, mit Leg-Trennern.
          Korrigieren lässt sich nur das laufende Leg – abgeschlossene Legs
          stehen als Beleg da und würden sonst ihr Finish verlieren. */
@@ -10043,33 +10500,20 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       }).join('');
     }
 
-    $('visit-darts').classList.toggle('hidden', anzeige !== 'darts');
-    $('visit-darts').innerHTML = [0, 1, 2].map(function (i) {
-      var d = UI.darts[i];
-      return '<div class="d ' + (d ? '' : 'empty') + '">' + (d ? dartLabel(d) : '–') + '</div>';
-    }).join('');
-
     UI.letzterModus = mode;
-    $('mode-toggle').querySelectorAll('button').forEach(function (b) {
-      var bm = b.getAttribute('data-mode');
-      b.classList.toggle('active', bm === mode);
-      if (bm === 'turnier') b.classList.toggle('hidden', !turnierErlaubt());
-      /* Kamera gibt es nur, wenn die optionale Schicht (js/kamera.js) da ist. */
-      if (bm === 'kamera') b.classList.toggle('hidden', !window.DartKamera);
-    });
     $('pad-total').classList.toggle('hidden', anzeige !== 'total');
     $('pad-darts').classList.toggle('hidden', anzeige !== 'darts');
-    $('pad-key').classList.toggle('hidden', anzeige !== 'turnier');
-    /* Der Turnier-Modus stellt den ganzen Bildschirm um: Reste in
-       Plakatgröße, kein Verlauf – das regelt das CSS über diese Klasse.
-       Beim Verlassen klappt auch eine offene Wurflisten-Ansicht zu. */
+    $('pad-key').classList.toggle('hidden', !fern);
+    /* Die Fernsteuerung stellt den ganzen Bildschirm um: Reste in
+       Plakatgroesse, unten die Aufnahmen - das regelt das CSS ueber diese
+       Klasse. Beim Verlassen klappt auch eine offene Wurfliste zu. */
     $('screen-game').classList.toggle('turnier', mode === 'turnier');
     if (mode !== 'turnier') $('screen-game').classList.remove('verlauf');
 
-    if (anzeige === 'turnier') {
-      /* Links und rechts der Eingabe stehen die Aufnahmen des laufenden Legs
-         je Spieler auf seiner Seite, neueste oben – die letzte auch noch mal
-         direkt in der Spielerkarte. */
+    if (fern) {
+      /* Links und rechts der Eingabe die Aufnahmen des laufenden Legs der
+         beiden Spieler auf dem Bild, neueste oben - ohne die allerletzte,
+         die steht schon neben dem Rest. */
       var histSpalte = function (pid) {
         if (!pid) return '';
         var restLauf = legStart(leg);
@@ -10081,28 +10525,24 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
             '<span class="s">' + (v.b ? v.o : v.s) + '</span>' +
             '<span class="r">' + (v.b ? 'Bust' : 'Rest ' + restLauf) + '</span></div>');
         });
-        // Die letzten fünf Aufnahmen, neueste oben – mehr passt nicht ins
-        // Bild, und die Seite soll am Board nie scrollen.
-        return zeilen.slice(-5).reverse().join('');
+        /* Hoechstens fuenf - mehr passt nicht ins Bild, und die Seite soll
+           am Board nie scrollen. */
+        return zeilen.slice(0, -1).slice(-5).reverse().join('');
       };
-      $('key-hist-l').innerHTML = histSpalte(m.p[0]);
-      $('key-hist-r').innerHTML = histSpalte(m.p[1]);
+      $('key-hist-l').innerHTML = histSpalte(karten[0]);
+      $('key-hist-r').innerHTML = histSpalte(karten[1]);
       $('key-error').textContent = UI.error;
       /* Kein Platzhaltertext – leer steht nur der blaue Eingabestrich,
          und sobald Ziffern da sind, stehen nur die Ziffern. */
       $('key-display').innerHTML = UI.input === ''
         ? '<span class="cursor"></span>' : esc(UI.input);
     } else if (anzeige === 'total') {
-      $('quick-row').innerHTML = '<button class="miss" data-quick="0">0 Pkt</button>' +
-        QUICK_SCORES.map(function (q) { return '<button data-quick="' + q + '">' + q + '</button>'; }).join('');
+      $('quick-row').innerHTML = QUICK_SCORES.map(function (q) { return '<button data-quick="' + q + '">' + q + '</button>'; }).join('');
       var disp = $('score-display');
       disp.textContent = UI.input === '' ? '0' : UI.input;
       disp.classList.toggle('empty', UI.input === '');
       $('input-error').textContent = UI.error;
     } else {
-      $('mult-row').querySelectorAll('button').forEach(function (b) {
-        b.classList.toggle('active', Number(b.getAttribute('data-mult')) === UI.mult);
-      });
       /* Nur markieren, wenn der eingestellte Multiplikator auch zum
          vorgeschlagenen Feld passt – sonst zeigt die Markierung auf D20,
          obwohl T20 gemeint ist. */
@@ -10113,22 +10553,26 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
          kleines D/T – sonst ist im Finish nicht auf einen Blick klar,
          welches Feld man gerade trifft. */
       var prefix = UI.mult === 3 ? 'T' : UI.mult === 2 ? 'D' : '';
-      var nums = '';
+      /* Oberste Reihe: Double und Triple als Schalter (keiner an = Single),
+         Bull und Bull x2. */
+      var nums = '<button class="mult' + (UI.mult === 2 ? ' active' : '') + '" data-mult="2" aria-pressed="' + (UI.mult === 2) + '">Double</button>' +
+        '<button class="mult' + (UI.mult === 3 ? ' active' : '') + '" data-mult="3" aria-pressed="' + (UI.mult === 3) + '">Triple</button>' +
+        '<button class="bull ' + (hl === '25' ? 'hl' : '') + '" data-num="25">Bull</button>' +
+        '<button class="bull ' + (hl === 'BULL' ? 'hl' : '') + '" data-bull="1">Bull ×2</button>';
       for (var n = 1; n <= 20; n++) {
         nums += '<button data-num="' + n + '" class="' + (n === hlNum ? 'hl' : '') + '">' +
           (prefix ? '<span class="mx">' + prefix + '</span>' : '') + n + '</button>';
       }
-      /* Unterste Reihe: links Zurueck (letzter Dart bzw. letzte Aufnahme),
-         dann Miss, Bull, Bull x2, rechts Weiter. */
-      nums += '<button class="zurueck" data-action="undo" aria-label="Letzten Dart zurücknehmen">‹ Zurück</button>';
-      nums += '<button class="miss" data-num="0">Miss</button>';
-      nums += '<button class="bull ' + (hl === '25' ? 'hl' : '') + '" data-num="25">Bull</button>';
-      nums += '<button class="bull ' + (hl === 'BULL' ? 'hl' : '') + '" data-bull="1">Bull ×2</button>';
-      /* Dreimal am Doppel vorbei muss nicht dreimal getippt werden: dieser
-         Knopf schließt die Aufnahme ab und füllt die fehlenden Darts als
-         Fehlwürfe auf. */
-      nums += '<button class="end-visit" data-action="end-visit">Weiter ▸</button>';
+      /* Unterste Reihe: Zurueck (letzter Dart bzw. letzte Aufnahme), 0 fuer
+         den Fehlwurf, OK schliesst die Aufnahme ab und fuellt die fehlenden
+         Darts als Fehlwuerfe auf - dreimal am Doppel vorbei muss nicht
+         dreimal getippt werden. */
+      nums += '<button class="zurueck" data-action="undo" aria-label="Letzten Dart zurücknehmen">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 12H7M11.5 6.5L6 12l5.5 5.5"></path></svg></button>';
+      nums += '<button class="miss" data-num="0" aria-label="Fehlwurf">0</button>';
+      nums += '<button class="end-visit" data-action="end-visit">OK</button>';
       $('num-grid').innerHTML = nums;
+      $('darts-error').textContent = UI.error;
     }
   }
 
@@ -12870,7 +13314,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var m = matchById(id);
     if (!m) { render(); return; }
     S.current = id;
-    UI.input = ''; UI.darts = []; UI.mult = 1; UI.modeOverride = null; UI.error = ''; UI.overlay = null;
+    UI.input = ''; UI.darts = []; UI.mult = 1; UI.modeOverride = null; UI.error = ''; UI.overlay = null; UI.menu = false;
     UI.bullWahl = 0; UI.bullTastatur = tastaturBetrieb();
     /* Am Board-iPad (Turnier-Modus gemerkt) startet jedes Liga-Einzel
        direkt in der Riesenanzeige. In normalen Turnieren bleibt einfach
@@ -13227,6 +13671,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         S.screen = 'setup'; save(); render();
         break;
       case 'to-tournament':
+        UI.menu = false;
         // Aus dem Bull-Off eines Trainingsspiels führt der Weg ins Setup zurück.
         if (S.game && !S.game.started) { liveEnde(S.game); S.game = null; S.screen = 'setup'; }
         // Ein Schnelles Spiel gehört zu keinem Spielplan – zurück ins Setup,
@@ -13744,14 +14189,28 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         UI.overlay = S.tour && S.tour.liga ? { type: 'liga-wechsel' } : { type: 'roster-change' };
         render();
         break;
-      case 'turnier-exit': {
-        UI.turnier = false;
-        S.settings.turnierModus = 0;
-        UI.input = '';
-        $('turnier-exit').classList.add('hidden');
-        save(); render();
+      case 'game-menu':
+        UI.menu = true; render();
+        break;
+      case 'game-menu-zu':
+        UI.menu = false; render();
+        break;
+      case 'game-fern':
+        tipp();
+        UI.menu = false;
+        fernsteuerung(!UI.turnier);
+        break;
+      case 'game-swap': {
+        tipp();
+        /* Ein Tipp wechselt zwischen Punkten und Einzel-Darts. */
+        var gsJetzt = UI.letzterModus === 'kamera' ? 'darts' : UI.letzterModus;
+        waehleEingabemodus(gsJetzt === 'darts' ? 'total' : 'darts');
         break;
       }
+      case 'game-kamera':
+        UI.menu = false;
+        waehleEingabemodus('kamera');
+        break;
       case 'liga-kampflos': {
         var kfM = matchById(el.getAttribute('data-id'));
         if (!kfM || !(S.tour && S.tour.liga)) break;
@@ -13960,16 +14419,16 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return pushDart(mult, num);
   }
 
-  /* Turnier-Modus ohne Hardware-Tastatur: ein Tipp irgendwo ins Bild zeigt
-     fuer ein paar Sekunden den Beenden-Knopf - der einzige Weg zurueck,
-     wenn Tab und Esc fehlen (iPad ohne Tastatur). */
-  var turnierExitTimer = null;
-  function zeigeTurnierExit() {
-    var b = $('turnier-exit');
-    if (!b) return;
-    b.classList.remove('hidden');
-    if (turnierExitTimer) clearTimeout(turnierExitTimer);
-    turnierExitTimer = setTimeout(function () { b.classList.add('hidden'); }, 4000);
+  /* Fernsteuerung (Board-Anzeige, Eingabe ueber Tastatur) ein- oder
+     ausschalten. Beim Ausschalten entscheidet wieder die Einzel-Dart-Grenze,
+     welches Tastenfeld steht - kein Modus wird festgenagelt. */
+  function fernsteuerung(an) {
+    if (an) { waehleEingabemodus('turnier'); return; }
+    if (!UI.turnier) return;
+    UI.turnier = false;
+    S.settings.turnierModus = 0;
+    UI.input = ''; UI.error = ''; UI.modeOverride = null;
+    save(); render();
   }
 
   document.addEventListener('click', function (ev) {
@@ -13977,9 +14436,13 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (ev.target.id === 'overlay' && UI.overlay && !STICKY_OVERLAYS[UI.overlay.type] && !VOLLBILD_DIALOGE[UI.overlay.type]) {
       UI.overlay = null; UI.input = ''; render(); return;
     }
-    if (UI.turnier && turnierErlaubt() && S.screen === 'game' && !UI.overlay &&
-        !ev.target.closest('#turnier-exit')) {
-      zeigeTurnierExit();
+    /* Menue (•••): ein Tipp neben die Karte schliesst es. */
+    if (ev.target.id === 'game-menu-overlay') { UI.menu = false; render(); return; }
+    /* Fernsteuerung ohne Tastatur: ein Tipp irgendwo ins Bild oeffnet das
+       Menue - der einzige Weg zurueck, wenn Tab und Esc fehlen. */
+    if (UI.turnier && turnierErlaubt() && S.screen === 'game' && !UI.overlay && !UI.menu &&
+        !ev.target.closest('[data-action], button, a, input, select')) {
+      UI.menu = true; armGhostTapGuard(); render(); return;
     }
     var t = ev.target.closest('[data-action]');
     if (t) { handleAction(t.getAttribute('data-action'), t); return; }
@@ -14046,6 +14509,15 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
     var mult = ev.target.closest('.mult-row button');
     if (mult) { tipp(); UI.mult = Number(mult.getAttribute('data-mult')); render(); return; }
+    /* Double/Triple im X01-Zahlenfeld sind Schalter: Tipp an, nochmal Tipp
+       aus (keiner an heisst Single); sie schliessen sich gegenseitig aus. */
+    var schalter = ev.target.closest('#num-grid button.mult');
+    if (schalter) {
+      tipp();
+      var sm = Number(schalter.getAttribute('data-mult'));
+      UI.mult = UI.mult === sm ? 1 : sm;
+      render(); return;
+    }
 
     var bull = ev.target.closest('[data-bull]');
     if (bull) { spielDart(2, 25); return; }
@@ -14369,25 +14841,31 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         return;
       }
     }
-    if (ev.key === 'Tab' && !UI.overlay && S.screen === 'game') {
+    if (ev.key === 'Tab' && !UI.overlay && !UI.menu && S.screen === 'game') {
       ev.preventDefault();
       var mFolge = ['total', 'darts'];
       if (turnierErlaubt()) mFolge.push('turnier');
       if (window.DartKamera) mFolge.push('kamera');
       var mJetzt = mFolge.indexOf(UI.letzterModus) >= 0 ? UI.letzterModus : 'total';
-      waehleEingabemodus(mFolge[(mFolge.indexOf(mJetzt) + 1) % mFolge.length]);
+      var mNeu = mFolge[(mFolge.indexOf(mJetzt) + 1) % mFolge.length];
+      /* Aus der Fernsteuerung heraus wie der ⌨-Knopf: kein Modus wird
+         festgenagelt, die Einzel-Dart-Grenze entscheidet wieder. */
+      if (mJetzt === 'turnier' && mNeu === 'total') fernsteuerung(false);
+      else waehleEingabemodus(mNeu);
       return;
     }
     /* Esc (bzw. ⌘+. am Magic Keyboard ohne Esc-Taste) beendet den
        Turnier-Modus direkt. */
     var istAusstieg = ev.key === 'Escape' ||
       (ev.key === '.' && (ev.metaKey || ev.ctrlKey));
+    if (istAusstieg && !UI.overlay && S.screen === 'game' && UI.menu) {
+      ev.preventDefault();
+      UI.menu = false; render();
+      return;
+    }
     if (istAusstieg && !UI.overlay && S.screen === 'game' && UI.turnier) {
       ev.preventDefault();
-      UI.turnier = false;
-      S.settings.turnierModus = 0;
-      UI.input = '';
-      save(); render();
+      fernsteuerung(false);
       return;
     }
     /* Auswertung nach dem Spiel: Enter nimmt die Hauptaktion (Weiter bzw.
@@ -14410,7 +14888,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   });
 
   document.addEventListener('keydown', function (ev) {
-    if (S.screen !== 'game' || UI.overlay) return;
+    if (S.screen !== 'game' || UI.overlay || UI.menu) return;
     if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
     var m = currentMatch();
     if (!m) return;
@@ -14436,7 +14914,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
      als Tastendrücke direkt an der Seite an und landen in UI.input – dieselbe
      Ablage, aus der auch submitTotal() liest. */
   document.addEventListener('keydown', function (ev) {
-    if (S.screen !== 'game' || !UI.turnier || UI.overlay) return;
+    if (S.screen !== 'game' || !UI.turnier || UI.overlay || UI.menu) return;
     if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
     var tm = currentMatch();
     if (!tm || tm.done) return;

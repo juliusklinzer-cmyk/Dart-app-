@@ -20,7 +20,7 @@
      das steht so in jedem archivierten Spiel und darf sich nicht ändern. */
   var START_SCORES = [301, 501, 701];
   var FIN_TARGETS = [3, 5, 10];   // Punkte zum Sieg im Finisher
-  var QUICK_SCORES = [26, 41, 45, 60, 81, 85, 100, 140, 180];
+  var QUICK_SCORES = [26, 41, 45, 60, 81, 85];
 
   /* ================= Liga =================
    * Der Spielplan der Saison 2026/27, fest im Client – er ändert sich nur,
@@ -124,7 +124,7 @@
      Aufnahme, "Einzel-Darts" von Hand bis zum Ende der Partie.
      kamera: ebenso klebrig – die Darts kommen vom gekoppelten iPhone
      (js/kamera.js), angezeigt wird die Einzel-Darts-Ansicht. */
-  var UI = { input: '', darts: [], mult: 1, modeOverride: null, turnier: false, kamera: false, overlay: null, error: '', board: 'won', boardMode: '501', profile: null, summary: null, ligaTab: 'plan', bericht: null };
+  var UI = { input: '', darts: [], mult: 1, modeOverride: null, turnier: false, kamera: false, menu: false, overlay: null, error: '', board: 'won', boardMode: '501', profile: null, summary: null, ligaTab: 'plan', bericht: null };
 
   /* ================= Helfer ================= */
   function $(id) { return document.getElementById(id); }
@@ -1433,7 +1433,7 @@
        hier dieselben Leute wieder online zusammenbringen. */
     S.lineup = (neu.players || []).slice();
     S.settings.online = 1;
-    UI.overlay = null; UI.darts = []; UI.input = ''; UI.error = ''; UI.mult = 1;
+    UI.overlay = null; UI.darts = []; UI.input = ''; UI.error = ''; UI.mult = 1; UI.menu = false;
     UI.turnier = false; UI.bullReihe = [];
     S.screen = neu.started ? spielScreen(neu.kind) : 'bulloff';
     save(); render();
@@ -1931,6 +1931,7 @@
   /* ================= Undo ================= */
   function undo() {
     klick();
+    UI.error = '';   // ein alter Hinweis (z. B. zum Moduswechsel) ist mit der Ruecknahme erledigt
     if (UI.overlay && UI.overlay.type === 'checkout-darts') { UI.overlay = null; UI.input = ''; render(); return; }
     if (UI.darts.length) {
       /* Die Darts des Mitspielers, der gerade selbst eintraegt, loescht
@@ -4803,6 +4804,15 @@
       (amBoard || (S.tour && S.tour.liga) ? '<p class="te-hint">8 / 2 · wählen &nbsp;&nbsp; Enter · der beginnt</p>' : '');
   }
 
+  /* Wer nach dem Aktiven dran ist - fuer die Fernsteuerung (rechts der
+     Naechste) und die Kopfzeile ab drei Spielern ("Danach: ..."). */
+  function spielerDanach(m, aktiv) {
+    var i = m.p.indexOf(aktiv);
+    var folge = [];
+    for (var k = 1; k < m.p.length; k++) folge.push(m.p[(i + k) % m.p.length]);
+    return folge;
+  }
+
   function renderGame() {
     var m = currentMatch();
     if (!m) { S.screen = 'tournament'; render(); return; }
@@ -4820,37 +4830,72 @@
     /* Ueber mehrere Legs oder Saetze zaehlt der Kopf Satz und Leg mit,
        und die Karten zeigen den Stand statt der Dartzahl. */
     var qSt = schnell && mehrereLegs(m) ? satzStand(m) : null;
+
+    var pendingSum = sum(UI.darts, function (d) { return d.v; });
+    var restActive = remainingIn(leg, active) - pendingSum;
+    var mode = effectiveMode(restActive);
+    /* Der Kamera-Modus zeigt die Einzel-Darts-Ansicht: die vom iPhone
+       gemeldeten Darts fuellen dieselben Kacheln, das Tastenfeld bleibt
+       als Handbetrieb sichtbar. */
+    var anzeige = mode === 'kamera' ? 'darts' : mode;
+    var fern = anzeige === 'turnier';
+    var dartsLeft = anzeige === 'darts' || UI.darts.length ? 3 - UI.darts.length : 3;
+    var route = ohneFinish ? null : Checkout.suggest(restActive, dartsLeft, lieblingsDoppel(active));
+    var danach = spielerDanach(m, active);
+
+    /* Kopf: Spiel und Stand. In der Fernsteuerung ab drei Spielern steht
+       rechts, wer nach dem Naechsten kommt. */
+    var subText;
     if (schnell) {
       $('game-match-label').textContent = 'Schnelles Spiel' + liveLabel(m);
-      $('game-leg-label').textContent = qSt
+      subText = qSt
         ? (qSt.gewinnSaetze > 1 ? 'Satz ' + qSt.satzNr + ' · ' : '') + 'Leg ' + (m.done ? qSt.legNr - 1 : qSt.legNr) +
           ' · ' + dauerText(m) + ' · ' + matchStart(m)
         : plural(m.p.length, 'Spieler', 'Spieler') + ' · ' + matchStart(m) + ' Double Out';
     } else {
       var idx = S.matches.indexOf(m);
       $('game-match-label').textContent = 'Spiel ' + (idx + 1) + ' von ' + S.matches.length;
-      $('game-leg-label').textContent = tour().bestOf > 1
+      subText = tour().bestOf > 1
         ? 'Leg ' + m.legs.length + ' · Stand ' + legsWon(m, m.p[0]) + ':' + legsWon(m, m.p[1]) + ' · ' + plural(legsToWin(), 'Leg', 'Legs') + ' zum Sieg'
         : 'Ein Leg · ' + tourStart() + ' Double Out';
     }
-
-    var pendingSum = sum(UI.darts, function (d) { return d.v; });
+    if (fern && danach.length > 1 && !m.done) {
+      subText = 'Danach: ' + danach.slice(1).map(function (id) { return esc(spielerName(id)); }).join(' · ');
+      $('game-leg-label').innerHTML = subText;
+    } else {
+      $('game-leg-label').textContent = subText;
+    }
     $('game-turn').innerHTML = m.done
       ? '<b>' + esc(spielerName(m.winner)) + '</b> ' + (m.p.length < 2 ? 'hat ausgemacht' : 'hat gewonnen')
       : '<span class="muted">Am Wurf</span> <b>' + esc(spielerName(active)) + '</b>' +
-        '<span class="muted"> · Rest ' + (remainingIn(leg, active) - pendingSum) + '</span>';
-    /* Vier Karten in Turniergröße füllen ein Handydisplay allein aus und
-       drängen den Verlauf hinter das Zahlenfeld – ab drei Spielern werden
-       sie deshalb kompakter. */
-    $('scoreboard').classList.toggle('viele', m.p.length > 2);
+        '<span class="muted"> · Rest ' + restActive + '</span>';
+
+    /* Kopf-Knoepfe: Fernsteuerung nur mit Gegner, der Wechsel Punkte/
+       Einzel-Darts nicht in der Fernsteuerung. */
+    $('game-fern').classList.toggle('hidden', !turnierErlaubt());
+    $('game-fern').classList.toggle('an', fern);
+    $('game-fern').setAttribute('aria-pressed', fern ? 'true' : 'false');
+    $('game-swap').classList.toggle('hidden', fern);
+    $('game-menu-kamera').classList.toggle('hidden', !window.DartKamera);
+    $('game-menu-overlay').classList.toggle('hidden', !UI.menu);
+    if (UI.menu) {
+      $('game-menu-titel').textContent = $('game-match-label').textContent;
+      document.querySelector('#game-menu-overlay .game-menu-sub').textContent = $('game-leg-label').textContent;
+    }
+
+    /* Fernsteuerung: immer genau zwei Karten - links wer wirft, rechts wer
+       als Naechstes dran ist. Sonst alle Spieler (ab dreien als 2x2). */
+    var karten = fern && m.p.length > 1 ? [active, danach[0]] : m.p;
+    $('scoreboard').classList.toggle('viele', karten.length > 2);
     $('scoreboard').classList.toggle('solo', m.p.length === 1);
     $('screen-game').classList.toggle('solo', m.p.length === 1);
-    /* Alle Spieler nebeneinander in einer Reihe -- wie ein Scorer am Board. */
-    $('scoreboard').style.setProperty('--n', m.p.length);
+    $('screen-game').classList.toggle('viele', m.p.length > 2);
+    $('scoreboard').style.setProperty('--n', karten.length);
+
     /* Die letzte Aufnahme jedes Spielers steht klein neben seinem Rest
        ("345 | 60") und bleibt stehen, bis er wieder wirft. Kommt eine neue,
-       rutscht die alte wie in einem Drehrad nach oben und verblasst, die
-       neue schiebt von unten nach. Weil jeder Tastendruck neu zeichnet,
+       rutscht die alte wie in einem Drehrad nach unten und verblasst, die
+       neue kommt von oben nach. Weil jeder Tastendruck neu zeichnet,
        laeuft die Animation mit negativer Verzoegerung an der Stelle weiter,
        an der sie gerade ist -- sonst finge sie jedes Mal von vorn an. */
     var letzteIdx = {}, vorletzteIdx = {};
@@ -4861,33 +4906,98 @@
     var neuesteVisit = leg.visits.length - 1;
     var seitAufnahme = Date.now() - (UI.aufnahmeZeit || 0);
     var DREH_MS = 1400;
-    $('scoreboard').innerHTML = m.p.map(function (pid) {
-      var rest = remainingIn(leg, pid) - (pid === active ? pendingSum : 0);
-      var darts = dartsIn(leg, pid) + (pid === active ? UI.darts.length : 0);
-      var scored = matchStart(m) - remainingIn(leg, pid) + (pid === active ? pendingSum : 0);
-      var avg = darts ? (scored / darts * 3).toFixed(1) : '–';
-      var zeile, meta, pfinish = '';
-      if (UI.turnier && turnierErlaubt()) {
-        /* Was geworfen wurde, steht in den Wurflisten unten links und
-           rechts – in der Karte bleibt nur der Leg-Stand. */
-        zeile = schnell ? (qSt ? kurzStand(qSt, pid) : '') : 'Legs ' + legsWon(m, pid);
-        meta = '<span>Ø <b>' + avg + '</b></span>';
-        /* Der Finish-Weg erscheint, sobald einer ansteht – bei jedem Spieler
-           im eigenen Kasten, auch während der andere wirft: so kann man sich
-           auf seine Aufnahme vorbereiten. Abgedunkelt, kein Signalrot. */
-        var fRoute = !ohneFinish && !m.done && rest >= 2
-          ? Checkout.suggest(rest, 3, lieblingsDoppel(pid)) : null;
-        pfinish = '<div class="pfinish">' + (fRoute ? fRoute.map(function (d) {
-          return '<span class="chip">' + Checkout.pretty(d) + '</span>';
-        }).join('') : '') + '</div>';
-      } else {
-        /* Im Schnellen Spiel gibt es keine Legs zu zählen – dort steht die
-           geworfene Dartzahl, die sagt in dem Moment mehr. */
-        zeile = schnell ? (qSt ? kurzStand(qSt, pid) : plural(darts, 'Dart', 'Darts')) : 'Legs ' + legsWon(m, pid);
-        /* Oben im Feld steht nur der Average -- die Dartzahl steht in der
-           Zeile unter dem Namen, solange es keine Legs zu zaehlen gibt. */
-        meta = '<span>Ø <b>' + avg + '</b></span>';
+
+    /* Die drei Felder unter dem Rest: in der Punkte-Eingabe und in der
+       Fernsteuerung der Finish-Weg (nur, wenn einer ansteht), in Einzel-
+       Darts die laufende Aufnahme des Aktiven - leer zu Beginn, jeder
+       eingetragene Dart fuellt eine (gruen, wenn er den Vorschlag trifft),
+       in Finish-Naehe stehen die restlichen Wuerfe als antippbarer Weg
+       darin. Die Zeile behaelt ihre Hoehe, damit nichts springt. */
+    function felderHTML(pid, istAktiv) {
+      if (m.done) return '<div class="pfelder"></div>';
+      /* In der Fernsteuerung stehen die Kacheln nur, solange Einzeldarts
+         laufen (z. B. vom Mitspieler im Online-Spiel) - ohne Vorschlagsknoepfe. */
+      var nurAnzeige = fern && UI.darts.length > 0;
+      if ((anzeige === 'darts' || nurAnzeige) && istAktiv) {
+        var kacheln = ['', '', ''];
+        var kDbl = ohneFinish ? null : lieblingsDoppel(active);
+        var kRest = remainingIn(leg, active);
+        UI.darts.forEach(function (d, ki) {
+          var soll = null;
+          if (!ohneFinish) {
+            var kEmpf = Checkout.suggest(kRest, 3 - ki, kDbl);
+            /* suggest liefert Labels ('T20') - fuer den Vergleich in
+               Mult/Zahl zerlegen, wie es auch der Finisher macht. */
+            if (kEmpf && kEmpf.length) soll = labelDart(kEmpf[0]);
+          }
+          var traf = soll && d.n === soll.n && d.m === soll.m;
+          kacheln[ki] = '<span class="fk ' + (traf ? 'gut' : 'anders') + '">' +
+            (d.n === 0 ? '–' : dartLabel(d)) + '</span>';
+          kRest -= d.v;
+        });
+        if (route && !nurAnzeige) {
+          for (var kr = 0; kr < route.length && UI.darts.length + kr < 3; kr++) {
+            /* Die vorgeschlagene Kachel ist zugleich der Bestaetigungsknopf:
+               wer die 14 trifft, tippt auf die 14 statt sie im Zahlenfeld zu
+               suchen. data-num/data-mult nimmt derselbe Handler wie die
+               Zahlentasten. */
+            var kSoll = labelDart(route[kr]);
+            kacheln[UI.darts.length + kr] = '<button type="button" class="fk tipp' + (kr === 0 ? ' jetzt' : '') + '"' +
+              ' data-num="' + kSoll.n + '" data-mult="' + kSoll.m + '" aria-label="' + Checkout.pretty(route[kr]) + ' getroffen">' +
+              Checkout.pretty(route[kr]) + '</button>';
+          }
+        } else if (UI.darts.length < 3 && !ohneFinish && !nurAnzeige) {
+          /* Kein Finish mehr mit den restlichen Darts: wie im Finisher steht
+             dann der Stellwurf da (42 Rest -> 10, damit 32 bleibt) -- gestrichelt,
+             und ebenfalls antippbar. */
+          var kStell = finisherStellwurf(kRest, kDbl);
+          if (kStell) {
+            var kStellSoll = labelDart(kStell);
+            kacheln[UI.darts.length] = '<button type="button" class="fk tipp stellen"' +
+              ' data-num="' + kStellSoll.n + '" data-mult="' + kStellSoll.m + '" aria-label="Stellwurf ' + kStell + ' getroffen">' +
+              kStell + '</button>';
+          }
+        }
+        for (var kx = 0; kx < 3; kx++) if (!kacheln[kx]) kacheln[kx] = '<span class="fk leer">–</span>';
+        return '<div class="pfelder fin-kacheln" id="game-kacheln">' + kacheln.join('') + '</div>';
       }
+      if (anzeige === 'darts') {
+        /* Wartende: drei leere Felder, damit alle Karten gleich aufgebaut sind. */
+        return '<div class="pfelder"><span class="fk still"></span><span class="fk still"></span><span class="fk still"></span></div>';
+      }
+      /* Punkte und Fernsteuerung: der Finish-Weg, neutral, keins markiert.
+         In der Fernsteuerung sieht auch der Wartende seinen Weg (abgedunkelt),
+         so kann er sich auf seine Aufnahme vorbereiten. */
+      var weg = null;
+      if (!ohneFinish) {
+        if (istAktiv) weg = route;
+        else if (fern) {
+          var wRest = remainingIn(leg, pid);
+          weg = wRest >= 2 ? Checkout.suggest(wRest, 3, lieblingsDoppel(pid)) : null;
+        }
+      }
+      return '<div class="pfelder pfinish">' + (weg ? weg.map(function (d) {
+        return '<span class="fk weg' + (istAktiv ? '' : ' wartet') + '">' + Checkout.pretty(d) + '</span>';
+      }).join('') : '') + '</div>';
+    }
+
+    $('scoreboard').innerHTML = karten.map(function (pid, ki) {
+      var istAktiv = pid === active;
+      var rest = remainingIn(leg, pid) - (istAktiv ? pendingSum : 0);
+      var darts = dartsIn(leg, pid) + (istAktiv ? UI.darts.length : 0);
+      var scored = matchStart(m) - remainingIn(leg, pid) + (istAktiv ? pendingSum : 0);
+      var avg = darts ? (scored / darts * 3).toFixed(1) : '–';
+      /* Unter dem Namen: gewonnene Legs (Siege), bei Saetzen der Satzstand,
+         und die Darts der laufenden Aufnahme. */
+      var meta = [];
+      if (schnell && qSt) {
+        meta.push('Siege ' + qSt.legs[pid]);
+        if (qSt.gewinnSaetze > 1) meta.push('Sätze ' + qSt.saetze[pid]);
+      } else if (!schnell) {
+        meta.push('Siege ' + legsWon(m, pid));
+      }
+      meta.push(plural(darts, 'Dart', 'Darts'));
+
       var letzte = '';
       var li = letzteIdx[pid];
       if (li !== undefined) {
@@ -4900,109 +5010,29 @@
           var av = leg.visits[vorletzteIdx[pid]];
           alt = '<span class="letzte-alt' + (av.b ? ' bust' : '') + '"' + verz + '>' + (av.b ? av.o : av.s) + '</span>';
         }
-        /* Ein Tipp auf die Zahl korrigiert die Aufnahme -- das war frueher
-           die Aufgabe des Wurfverlaufs. */
+        /* Ein Tipp auf die Zahl korrigiert die Aufnahme. */
         letzte = '<span class="letzte-box' + (aenderbar ? ' tap' : '') + '"' +
           (aenderbar ? ' data-action="edit-visit" data-i="' + li + '" role="button" tabindex="0" aria-label="Letzte Aufnahme korrigieren"' : '') + '>' +
           alt + '<span class="letzte' + (lv.b ? ' bust' : '') + (frisch ? ' neu' : '') + '"' + verz + '>' +
           (lv.b ? lv.o : lv.s) + '</span></span>';
+      } else {
+        /* Ohne Aufnahme bleibt der Platz leer - der Rest steht trotzdem fest. */
+        letzte = '<span class="letzte-box ohne"></span>';
       }
-      return '<div class="pcard ' + (pid === active ? 'active' : '') + '">' +
-        '<div class="meta">' + meta + '</div>' +
+      return '<div class="pcard ' + (istAktiv ? 'active' : '') + (fern && ki === 1 ? ' naechster' : '') + '">' +
+        '<div class="pkopf">' + avatarHTML(profile(pid), 'sm') +
+          '<div class="pblock"><span class="pname">' + esc(spielerName(pid)) + '</span>' +
+          '<span class="pmeta">' + meta.join(' · ') + '</span></div>' +
+          '<span class="pavg">Ø <b>' + avg + '</b></span></div>' +
         '<div class="rest-zeile"><span class="rest">' + rest + '</span>' + letzte + '</div>' +
-        '<div class="pname">' + avatarHTML(profile(pid), 'sm') + esc(spielerName(pid)) + '</div>' +
-        '<div class="legs">' + zeile + '</div>' + pfinish +
+        felderHTML(pid, istAktiv || m.p.length === 1) +
         '</div>';
     }).join('');
 
-    var restActive = remainingIn(leg, active) - pendingSum;
-    var mode = effectiveMode(restActive);
-    /* Der Kamera-Modus zeigt die Einzel-Darts-Ansicht: die vom iPhone
-       gemeldeten Darts fuellen dieselben Kacheln, das Tastenfeld bleibt
-       als Handbetrieb sichtbar. Nur der Umschalter markiert "Kamera". */
-    var anzeige = mode === 'kamera' ? 'darts' : mode;
-    var dartsLeft = anzeige === 'darts' ? 3 - UI.darts.length : 3;
-    var route = ohneFinish ? null : Checkout.suggest(restActive, dartsLeft, lieblingsDoppel(active));
-
-    /* Die Finish-Leiste erscheint erst, wenn beim Aktiven wirklich ein
-       Finish ansteht - vorher ist "noch kein Finish möglich" nur Rauschen
-       und stiehlt dem Verlauf die Zeile. */
-    $('checkout-bar').classList.toggle('fern', !route && !ohneFinish && !m.done);
-    $('checkout-bar').classList.toggle('aus', !!ohneFinish);
-
-    var whose = esc(spielerName(active));
-    if (route) {
-      $('checkout-bar').innerHTML = '<span class="label">Finish ' + whose + '</span>' + route.map(function (d, i) {
-        return '<span class="chip ' + (i === 0 ? 'first' : '') + '">' + Checkout.pretty(d) + '</span>';
-      }).join('');
-    } else {
-      $('checkout-bar').innerHTML = restActive > 170
-        ? '<span class="none">' + whose + ': noch kein Finish möglich</span>'
-        : '<span class="none">' + whose + ': kein Finish mit ' + plural(dartsLeft, 'Dart', 'Darts') + '</span>';
-    }
-
-    /* Einzel-Darts: drei grosse Kacheln wie im Finisher tragen die laufende
-       Aufnahme - leer zu Beginn, jeder eingetragene Dart fuellt eine (gruen,
-       wenn er den Vorschlag trifft). In Finish-Naehe stehen die restlichen
-       Wuerfe rot bzw. als Weg darin; die Leiste darueber entfaellt dann. */
-    var kBox = $('game-kacheln');
-    /* Im Turnier-Modus stehen die Kacheln nur, solange Einzeldarts laufen
-       (z. B. vom Mitspieler im Online-Spiel) - ohne Vorschlagsknoepfe. */
-    var nurAnzeige = anzeige === 'turnier';
-    if ((anzeige === 'darts' || (nurAnzeige && UI.darts.length)) && !m.done) {
-      var kacheln = ['', '', ''];
-      var kDbl = ohneFinish ? null : lieblingsDoppel(active);
-      var kRest = remainingIn(leg, active);
-      UI.darts.forEach(function (d, ki) {
-        var soll = null;
-        if (!ohneFinish) {
-          var kEmpf = Checkout.suggest(kRest, 3 - ki, kDbl);
-          /* suggest liefert Labels ('T20') - fuer den Vergleich in
-             Mult/Zahl zerlegen, wie es auch der Finisher macht. */
-          if (kEmpf && kEmpf.length) soll = labelDart(kEmpf[0]);
-        }
-        var traf = soll && d.n === soll.n && d.m === soll.m;
-        kacheln[ki] = '<span class="fk ' + (traf ? 'gut' : 'anders') + '">' +
-          (d.n === 0 ? '–' : dartLabel(d)) + '</span>';
-        kRest -= d.v;
-      });
-      if (route && !nurAnzeige) {
-        for (var kr = 0; kr < route.length && UI.darts.length + kr < 3; kr++) {
-          /* Die vorgeschlagene Kachel ist zugleich der Bestaetigungsknopf:
-             wer die 14 trifft, tippt auf die 14 statt sie im Zahlenfeld zu
-             suchen. data-num/data-mult nimmt derselbe Handler wie die
-             Zahlentasten. */
-          var kSoll = labelDart(route[kr]);
-          kacheln[UI.darts.length + kr] = '<button type="button" class="fk tipp' + (kr === 0 ? ' jetzt' : '') + '"' +
-            ' data-num="' + kSoll.n + '" data-mult="' + kSoll.m + '" aria-label="' + Checkout.pretty(route[kr]) + ' getroffen">' +
-            Checkout.pretty(route[kr]) + '</button>';
-        }
-      } else if (UI.darts.length < 3 && !ohneFinish && !nurAnzeige) {
-        /* Kein Finish mehr mit den restlichen Darts: wie im Finisher steht
-           dann der Stellwurf da (42 Rest -> 10, damit 32 bleibt) -- gestrichelt,
-           und ebenfalls antippbar. */
-        var kStell = finisherStellwurf(kRest, kDbl);
-        if (kStell) {
-          var kStellSoll = labelDart(kStell);
-          kacheln[UI.darts.length] = '<button type="button" class="fk tipp stellen"' +
-            ' data-num="' + kStellSoll.n + '" data-mult="' + kStellSoll.m + '" aria-label="Stellwurf ' + kStell + ' getroffen">' +
-            kStell + '</button>';
-        }
-      }
-      for (var kx = 0; kx < 3; kx++) if (!kacheln[kx]) kacheln[kx] = '<span class="fk leer">–</span>';
-      kBox.innerHTML = kacheln.join('');
-      kBox.classList.remove('hidden');
-      /* Die Kacheln tragen den Weg selbst - die Leiste waere doppelt. */
-      $('checkout-bar').classList.add('fern');
-    } else {
-      kBox.classList.add('hidden');
-    }
-
     /*
-     * Ab drei Spielern (Schnelles Spiel) wird der Verlauf zu einer einzigen
-     * Liste, neueste Aufnahme oben, mit dem Namen davor. Vier schmale
-     * Spalten nebeneinander wären nur noch Zahlenkolonnen, denen man nicht
-     * ansieht, wer sie geworfen hat.
+     * Wurfverlauf (unsichtbar im Spielbild, sichtbar in der Fernsteuerung
+     * bei gedruecktem Shift). Ab drei Spielern eine einzige Liste, neueste
+     * Aufnahme oben, mit dem Namen davor.
      */
     var vieleSpieler = m.p.length > 2;
     $('history').classList.toggle('einspaltig', vieleSpieler || m.p.length === 1);
@@ -5019,8 +5049,8 @@
         var v = e.v;
         var grund = '';
         if (v.b) {
-          var danach = e.before - v.o;
-          grund = danach < 0 ? ' · überworfen' : danach === 1 ? ' · Rest 1' : danach === 0 ? ' · kein Doppel' : '';
+          var danachRest = e.before - v.o;
+          grund = danachRest < 0 ? ' · überworfen' : danachRest === 1 ? ' · Rest 1' : danachRest === 0 ? ' · kein Doppel' : '';
         }
         var aenderbar = !v.c && !m.done;
         return '<div class="v ' + (v.b ? 'bust' : v.c ? 'co' : '') + (aenderbar ? ' tap' : '') + '"' +
@@ -5030,7 +5060,6 @@
           '<span class="r">' + (v.b ? 'Bust' + grund : 'Rest ' + e.rest) + '</span></div>';
       }).join('') + '</div>';
     } else {
-
       /* Kompletter Match-Verlauf, neueste Aufnahme oben, mit Leg-Trennern.
          Korrigieren lässt sich nur das laufende Leg – abgeschlossene Legs
          stehen als Beleg da und würden sonst ihr Finish verlieren. */
@@ -5070,33 +5099,20 @@
       }).join('');
     }
 
-    $('visit-darts').classList.toggle('hidden', anzeige !== 'darts');
-    $('visit-darts').innerHTML = [0, 1, 2].map(function (i) {
-      var d = UI.darts[i];
-      return '<div class="d ' + (d ? '' : 'empty') + '">' + (d ? dartLabel(d) : '–') + '</div>';
-    }).join('');
-
     UI.letzterModus = mode;
-    $('mode-toggle').querySelectorAll('button').forEach(function (b) {
-      var bm = b.getAttribute('data-mode');
-      b.classList.toggle('active', bm === mode);
-      if (bm === 'turnier') b.classList.toggle('hidden', !turnierErlaubt());
-      /* Kamera gibt es nur, wenn die optionale Schicht (js/kamera.js) da ist. */
-      if (bm === 'kamera') b.classList.toggle('hidden', !window.DartKamera);
-    });
     $('pad-total').classList.toggle('hidden', anzeige !== 'total');
     $('pad-darts').classList.toggle('hidden', anzeige !== 'darts');
-    $('pad-key').classList.toggle('hidden', anzeige !== 'turnier');
-    /* Der Turnier-Modus stellt den ganzen Bildschirm um: Reste in
-       Plakatgröße, kein Verlauf – das regelt das CSS über diese Klasse.
-       Beim Verlassen klappt auch eine offene Wurflisten-Ansicht zu. */
+    $('pad-key').classList.toggle('hidden', !fern);
+    /* Die Fernsteuerung stellt den ganzen Bildschirm um: Reste in
+       Plakatgroesse, unten die Aufnahmen - das regelt das CSS ueber diese
+       Klasse. Beim Verlassen klappt auch eine offene Wurfliste zu. */
     $('screen-game').classList.toggle('turnier', mode === 'turnier');
     if (mode !== 'turnier') $('screen-game').classList.remove('verlauf');
 
-    if (anzeige === 'turnier') {
-      /* Links und rechts der Eingabe stehen die Aufnahmen des laufenden Legs
-         je Spieler auf seiner Seite, neueste oben – die letzte auch noch mal
-         direkt in der Spielerkarte. */
+    if (fern) {
+      /* Links und rechts der Eingabe die Aufnahmen des laufenden Legs der
+         beiden Spieler auf dem Bild, neueste oben - ohne die allerletzte,
+         die steht schon neben dem Rest. */
       var histSpalte = function (pid) {
         if (!pid) return '';
         var restLauf = legStart(leg);
@@ -5108,28 +5124,24 @@
             '<span class="s">' + (v.b ? v.o : v.s) + '</span>' +
             '<span class="r">' + (v.b ? 'Bust' : 'Rest ' + restLauf) + '</span></div>');
         });
-        // Die letzten fünf Aufnahmen, neueste oben – mehr passt nicht ins
-        // Bild, und die Seite soll am Board nie scrollen.
-        return zeilen.slice(-5).reverse().join('');
+        /* Hoechstens fuenf - mehr passt nicht ins Bild, und die Seite soll
+           am Board nie scrollen. */
+        return zeilen.slice(0, -1).slice(-5).reverse().join('');
       };
-      $('key-hist-l').innerHTML = histSpalte(m.p[0]);
-      $('key-hist-r').innerHTML = histSpalte(m.p[1]);
+      $('key-hist-l').innerHTML = histSpalte(karten[0]);
+      $('key-hist-r').innerHTML = histSpalte(karten[1]);
       $('key-error').textContent = UI.error;
       /* Kein Platzhaltertext – leer steht nur der blaue Eingabestrich,
          und sobald Ziffern da sind, stehen nur die Ziffern. */
       $('key-display').innerHTML = UI.input === ''
         ? '<span class="cursor"></span>' : esc(UI.input);
     } else if (anzeige === 'total') {
-      $('quick-row').innerHTML = '<button class="miss" data-quick="0">0 Pkt</button>' +
-        QUICK_SCORES.map(function (q) { return '<button data-quick="' + q + '">' + q + '</button>'; }).join('');
+      $('quick-row').innerHTML = QUICK_SCORES.map(function (q) { return '<button data-quick="' + q + '">' + q + '</button>'; }).join('');
       var disp = $('score-display');
       disp.textContent = UI.input === '' ? '0' : UI.input;
       disp.classList.toggle('empty', UI.input === '');
       $('input-error').textContent = UI.error;
     } else {
-      $('mult-row').querySelectorAll('button').forEach(function (b) {
-        b.classList.toggle('active', Number(b.getAttribute('data-mult')) === UI.mult);
-      });
       /* Nur markieren, wenn der eingestellte Multiplikator auch zum
          vorgeschlagenen Feld passt – sonst zeigt die Markierung auf D20,
          obwohl T20 gemeint ist. */
@@ -5140,22 +5152,26 @@
          kleines D/T – sonst ist im Finish nicht auf einen Blick klar,
          welches Feld man gerade trifft. */
       var prefix = UI.mult === 3 ? 'T' : UI.mult === 2 ? 'D' : '';
-      var nums = '';
+      /* Oberste Reihe: Double und Triple als Schalter (keiner an = Single),
+         Bull und Bull x2. */
+      var nums = '<button class="mult' + (UI.mult === 2 ? ' active' : '') + '" data-mult="2" aria-pressed="' + (UI.mult === 2) + '">Double</button>' +
+        '<button class="mult' + (UI.mult === 3 ? ' active' : '') + '" data-mult="3" aria-pressed="' + (UI.mult === 3) + '">Triple</button>' +
+        '<button class="bull ' + (hl === '25' ? 'hl' : '') + '" data-num="25">Bull</button>' +
+        '<button class="bull ' + (hl === 'BULL' ? 'hl' : '') + '" data-bull="1">Bull ×2</button>';
       for (var n = 1; n <= 20; n++) {
         nums += '<button data-num="' + n + '" class="' + (n === hlNum ? 'hl' : '') + '">' +
           (prefix ? '<span class="mx">' + prefix + '</span>' : '') + n + '</button>';
       }
-      /* Unterste Reihe: links Zurueck (letzter Dart bzw. letzte Aufnahme),
-         dann Miss, Bull, Bull x2, rechts Weiter. */
-      nums += '<button class="zurueck" data-action="undo" aria-label="Letzten Dart zurücknehmen">‹ Zurück</button>';
-      nums += '<button class="miss" data-num="0">Miss</button>';
-      nums += '<button class="bull ' + (hl === '25' ? 'hl' : '') + '" data-num="25">Bull</button>';
-      nums += '<button class="bull ' + (hl === 'BULL' ? 'hl' : '') + '" data-bull="1">Bull ×2</button>';
-      /* Dreimal am Doppel vorbei muss nicht dreimal getippt werden: dieser
-         Knopf schließt die Aufnahme ab und füllt die fehlenden Darts als
-         Fehlwürfe auf. */
-      nums += '<button class="end-visit" data-action="end-visit">Weiter ▸</button>';
+      /* Unterste Reihe: Zurueck (letzter Dart bzw. letzte Aufnahme), 0 fuer
+         den Fehlwurf, OK schliesst die Aufnahme ab und fuellt die fehlenden
+         Darts als Fehlwuerfe auf - dreimal am Doppel vorbei muss nicht
+         dreimal getippt werden. */
+      nums += '<button class="zurueck" data-action="undo" aria-label="Letzten Dart zurücknehmen">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 12H7M11.5 6.5L6 12l5.5 5.5"></path></svg></button>';
+      nums += '<button class="miss" data-num="0" aria-label="Fehlwurf">0</button>';
+      nums += '<button class="end-visit" data-action="end-visit">OK</button>';
       $('num-grid').innerHTML = nums;
+      $('darts-error').textContent = UI.error;
     }
   }
 
@@ -7897,7 +7913,7 @@
     var m = matchById(id);
     if (!m) { render(); return; }
     S.current = id;
-    UI.input = ''; UI.darts = []; UI.mult = 1; UI.modeOverride = null; UI.error = ''; UI.overlay = null;
+    UI.input = ''; UI.darts = []; UI.mult = 1; UI.modeOverride = null; UI.error = ''; UI.overlay = null; UI.menu = false;
     UI.bullWahl = 0; UI.bullTastatur = tastaturBetrieb();
     /* Am Board-iPad (Turnier-Modus gemerkt) startet jedes Liga-Einzel
        direkt in der Riesenanzeige. In normalen Turnieren bleibt einfach
@@ -8254,6 +8270,7 @@
         S.screen = 'setup'; save(); render();
         break;
       case 'to-tournament':
+        UI.menu = false;
         // Aus dem Bull-Off eines Trainingsspiels führt der Weg ins Setup zurück.
         if (S.game && !S.game.started) { liveEnde(S.game); S.game = null; S.screen = 'setup'; }
         // Ein Schnelles Spiel gehört zu keinem Spielplan – zurück ins Setup,
@@ -8771,14 +8788,28 @@
         UI.overlay = S.tour && S.tour.liga ? { type: 'liga-wechsel' } : { type: 'roster-change' };
         render();
         break;
-      case 'turnier-exit': {
-        UI.turnier = false;
-        S.settings.turnierModus = 0;
-        UI.input = '';
-        $('turnier-exit').classList.add('hidden');
-        save(); render();
+      case 'game-menu':
+        UI.menu = true; render();
+        break;
+      case 'game-menu-zu':
+        UI.menu = false; render();
+        break;
+      case 'game-fern':
+        tipp();
+        UI.menu = false;
+        fernsteuerung(!UI.turnier);
+        break;
+      case 'game-swap': {
+        tipp();
+        /* Ein Tipp wechselt zwischen Punkten und Einzel-Darts. */
+        var gsJetzt = UI.letzterModus === 'kamera' ? 'darts' : UI.letzterModus;
+        waehleEingabemodus(gsJetzt === 'darts' ? 'total' : 'darts');
         break;
       }
+      case 'game-kamera':
+        UI.menu = false;
+        waehleEingabemodus('kamera');
+        break;
       case 'liga-kampflos': {
         var kfM = matchById(el.getAttribute('data-id'));
         if (!kfM || !(S.tour && S.tour.liga)) break;
@@ -8987,16 +9018,16 @@
     return pushDart(mult, num);
   }
 
-  /* Turnier-Modus ohne Hardware-Tastatur: ein Tipp irgendwo ins Bild zeigt
-     fuer ein paar Sekunden den Beenden-Knopf - der einzige Weg zurueck,
-     wenn Tab und Esc fehlen (iPad ohne Tastatur). */
-  var turnierExitTimer = null;
-  function zeigeTurnierExit() {
-    var b = $('turnier-exit');
-    if (!b) return;
-    b.classList.remove('hidden');
-    if (turnierExitTimer) clearTimeout(turnierExitTimer);
-    turnierExitTimer = setTimeout(function () { b.classList.add('hidden'); }, 4000);
+  /* Fernsteuerung (Board-Anzeige, Eingabe ueber Tastatur) ein- oder
+     ausschalten. Beim Ausschalten entscheidet wieder die Einzel-Dart-Grenze,
+     welches Tastenfeld steht - kein Modus wird festgenagelt. */
+  function fernsteuerung(an) {
+    if (an) { waehleEingabemodus('turnier'); return; }
+    if (!UI.turnier) return;
+    UI.turnier = false;
+    S.settings.turnierModus = 0;
+    UI.input = ''; UI.error = ''; UI.modeOverride = null;
+    save(); render();
   }
 
   document.addEventListener('click', function (ev) {
@@ -9004,9 +9035,13 @@
     if (ev.target.id === 'overlay' && UI.overlay && !STICKY_OVERLAYS[UI.overlay.type] && !VOLLBILD_DIALOGE[UI.overlay.type]) {
       UI.overlay = null; UI.input = ''; render(); return;
     }
-    if (UI.turnier && turnierErlaubt() && S.screen === 'game' && !UI.overlay &&
-        !ev.target.closest('#turnier-exit')) {
-      zeigeTurnierExit();
+    /* Menue (•••): ein Tipp neben die Karte schliesst es. */
+    if (ev.target.id === 'game-menu-overlay') { UI.menu = false; render(); return; }
+    /* Fernsteuerung ohne Tastatur: ein Tipp irgendwo ins Bild oeffnet das
+       Menue - der einzige Weg zurueck, wenn Tab und Esc fehlen. */
+    if (UI.turnier && turnierErlaubt() && S.screen === 'game' && !UI.overlay && !UI.menu &&
+        !ev.target.closest('[data-action], button, a, input, select')) {
+      UI.menu = true; armGhostTapGuard(); render(); return;
     }
     var t = ev.target.closest('[data-action]');
     if (t) { handleAction(t.getAttribute('data-action'), t); return; }
@@ -9073,6 +9108,15 @@
 
     var mult = ev.target.closest('.mult-row button');
     if (mult) { tipp(); UI.mult = Number(mult.getAttribute('data-mult')); render(); return; }
+    /* Double/Triple im X01-Zahlenfeld sind Schalter: Tipp an, nochmal Tipp
+       aus (keiner an heisst Single); sie schliessen sich gegenseitig aus. */
+    var schalter = ev.target.closest('#num-grid button.mult');
+    if (schalter) {
+      tipp();
+      var sm = Number(schalter.getAttribute('data-mult'));
+      UI.mult = UI.mult === sm ? 1 : sm;
+      render(); return;
+    }
 
     var bull = ev.target.closest('[data-bull]');
     if (bull) { spielDart(2, 25); return; }
@@ -9396,25 +9440,31 @@
         return;
       }
     }
-    if (ev.key === 'Tab' && !UI.overlay && S.screen === 'game') {
+    if (ev.key === 'Tab' && !UI.overlay && !UI.menu && S.screen === 'game') {
       ev.preventDefault();
       var mFolge = ['total', 'darts'];
       if (turnierErlaubt()) mFolge.push('turnier');
       if (window.DartKamera) mFolge.push('kamera');
       var mJetzt = mFolge.indexOf(UI.letzterModus) >= 0 ? UI.letzterModus : 'total';
-      waehleEingabemodus(mFolge[(mFolge.indexOf(mJetzt) + 1) % mFolge.length]);
+      var mNeu = mFolge[(mFolge.indexOf(mJetzt) + 1) % mFolge.length];
+      /* Aus der Fernsteuerung heraus wie der ⌨-Knopf: kein Modus wird
+         festgenagelt, die Einzel-Dart-Grenze entscheidet wieder. */
+      if (mJetzt === 'turnier' && mNeu === 'total') fernsteuerung(false);
+      else waehleEingabemodus(mNeu);
       return;
     }
     /* Esc (bzw. ⌘+. am Magic Keyboard ohne Esc-Taste) beendet den
        Turnier-Modus direkt. */
     var istAusstieg = ev.key === 'Escape' ||
       (ev.key === '.' && (ev.metaKey || ev.ctrlKey));
+    if (istAusstieg && !UI.overlay && S.screen === 'game' && UI.menu) {
+      ev.preventDefault();
+      UI.menu = false; render();
+      return;
+    }
     if (istAusstieg && !UI.overlay && S.screen === 'game' && UI.turnier) {
       ev.preventDefault();
-      UI.turnier = false;
-      S.settings.turnierModus = 0;
-      UI.input = '';
-      save(); render();
+      fernsteuerung(false);
       return;
     }
     /* Auswertung nach dem Spiel: Enter nimmt die Hauptaktion (Weiter bzw.
@@ -9437,7 +9487,7 @@
   });
 
   document.addEventListener('keydown', function (ev) {
-    if (S.screen !== 'game' || UI.overlay) return;
+    if (S.screen !== 'game' || UI.overlay || UI.menu) return;
     if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
     var m = currentMatch();
     if (!m) return;
@@ -9463,7 +9513,7 @@
      als Tastendrücke direkt an der Seite an und landen in UI.input – dieselbe
      Ablage, aus der auch submitTotal() liest. */
   document.addEventListener('keydown', function (ev) {
-    if (S.screen !== 'game' || !UI.turnier || UI.overlay) return;
+    if (S.screen !== 'game' || !UI.turnier || UI.overlay || UI.menu) return;
     if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
     var tm = currentMatch();
     if (!tm || tm.done) return;

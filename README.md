@@ -18,12 +18,13 @@ Repo-Einstellungen → Pages → Branch auswählen), Seite im Browser öffnen un
 Teilen-Menü „Zum Home-Bildschirm“ hinzufügen. Danach startet sie ohne Browserleiste
 wie eine native App und funktioniert auch ohne Internet.
 
-**iPad:** Hoch- und Querformat werden unterstützt. Das X01-Spielbild ist wie ein
-Scorer am Board aufgebaut: oben die Spieler nebeneinander in voller Breite, darunter
-Schnellwahl, getippte Zahl und das große Zahlenfeld, das den Rest der Höhe füllt; das
-Spielbild ist **fest im Rahmen** – auf jedem Format, nichts scrollt aus dem Bild,
-im Notfall werden die Tasten flacher. Nur am Handy quer stehen Spieler links und
-Tasten rechts, weil untereinander die Höhe fehlt. Tasten und
+**iPad:** Hoch- und Querformat werden unterstützt. Das X01-Spielbild ist
+**Querformat zuerst** gebaut (Entwurf „X01 Redesign“, Oktober 2026): links die
+Spieler untereinander (ab drei Spielern im 2×2-Raster), rechts die Eingabe, beides in
+voller Höhe – auf dem iPad Pro, dem iPad mini und am Handy quer dieselbe Anordnung,
+alle Maße wachsen mit der Höhe des Bildschirms. Hochkant am Handy stehen die Spieler
+oben und das Zahlenfeld darunter. Das Spielbild ist **fest im Rahmen** – auf jedem
+Format, nichts scrollt aus dem Bild, im Notfall werden die Tasten flacher. Tasten und
 Schrift werden auf Tablets automatisch größer, Doppeltipp-Zoom ist auf Buttons
 deaktiviert. Split View funktioniert ebenfalls – bei schmaler Spalte schaltet die App
 auf das Handy-Layout um.
@@ -262,42 +263,56 @@ Spielplan-Kasten.
 **Punkte-Modus (Standard):** Die geworfene Gesamtpunktzahl der Aufnahme eintippen
 (0–180) und mit `OK` bestätigen – immer, es wird nichts automatisch übernommen.
 `←` löscht die letzte Ziffer; bei leerem Feld nimmt es die letzte Aufnahme zurück,
-also zum Wurf davor und zum vorigen Spieler. Darüber liegt eine Schnellwahl mit den
-häufigsten Werten (26, 41, 45, 60, 81, 85, 100, 140, 180), die sofort bucht.
+also zum Wurf davor und zum vorigen Spieler. Oben steht groß die getippte Zahl,
+darunter eine Schnellwahl mit den häufigsten Werten (26, 41, 45, 60, 81, 85), die
+sofort bucht. Steht beim Spieler am Wurf ein Finish an, zeigen die **drei Felder in
+seiner Karte** den Weg (z. B. T20 T19 D12) – neutral, keins ist markiert; ohne
+Finish bleiben die Felder leer.
 
 **Einzel-Dart-Modus:** Schaltet automatisch um, sobald der Rest im Finish-Bereich
 liegt (Standard: ab 170, in den Einstellungen auf 100/180/nie änderbar). Dann wird
-Dart für Dart eingegeben: Single/Double/Triple wählen, Zahl tippen – plus `25`,
-`Bull` und `Miss`. Die Tasten behalten dabei die Feldzahl (18 bleibt 18) und
+Dart für Dart eingegeben: **Double** oder **Triple** sind Schalter oben im Zahlenfeld
+(Tipp an, nochmal Tipp aus – keiner an heißt Single, sie schließen sich gegenseitig
+aus), dann die Zahl tippen – plus `Bull`, `Bull ×2` und `0` für den Fehlwurf. Die
+Tasten behalten dabei die Feldzahl (18 bleibt 18) und
 bekommen ein kleines D bzw. T davor, damit das Zielfeld erkennbar bleibt. Die
 vorgeschlagenen Kacheln sind zugleich Tasten: Wer die angesagte 14 trifft, tippt
 einfach auf die Kachel „14“, statt sie im Zahlenfeld zu suchen. Geht mit den
 restlichen Darts kein Finish mehr, steht in der nächsten Kachel gestrichelt der
-**Stellwurf** wie im Finisher (42 Rest → „10“, damit 32 bleibt) – auch antippbar. Umschalten
-geht jederzeit von Hand über die Knöpfe oben im Kopf neben dem Zurück-Pfeil:
-**Punkte / Einzel-Darts / Turnier / Kamera** – direkt anklickbar, und mit der
-**Tab-Taste** schaltet die Tastatur durch dieselben Modi im Kreis.
-Der Turnier-Knopf verschwindet nur, wenn jemand allein spielt; der
-Kamera-Knopf erscheint nur mit Server (siehe [Kamera-Kopplung](#kamera-kopplung-linse)).
+**Stellwurf** wie im Finisher (42 Rest → „10“, damit 32 bleibt) – auch antippbar.
 
-Links unten sitzt **„‹ Zurück"** (letzter Dart bzw. letzte Aufnahme zurück), rechts
-unten **„Weiter ▸"**: Er schließt die Aufnahme mit einem Tipp ab und
-füllt die fehlenden Darts als Fehlwürfe auf – wer dreimal am Doppel vorbeiwirft,
-tippt einmal statt dreimal „Miss", und die Dart-Zahl (und damit der Average) stimmt.
-Die laufende Aufnahme steht dabei in **drei großen Kacheln** wie im Finisher: leer zu
-Beginn, jeder eingetragene Dart füllt eine (grün, wenn er den Finish-Vorschlag
-trifft); in Finish-Nähe zeigen die restlichen Kacheln rot den Weg – die
-Finish-Leiste entfällt dort. Unten heißen die Bull-Tasten einheitlich **Bull**
-(25) und **Bull ×2** (50), gelb wie überall.
+**Kopfleiste:** Links **•••** öffnet das Menü (Spiel und Stand, **Spiel verlassen**
+oder **Weiterspielen** – ein Tipp daneben oder Esc schließt es). In der Mitte stehen
+Spiel und Stand. Rechts **⌨** schaltet die Fernsteuerung (Board-Anzeige, siehe
+unten) ein und aus – das Zeichen leuchtet blau, solange sie läuft –, und **⇄**
+wechselt mit einem Tipp zwischen Punkten und Einzel-Darts. Die **Tab-Taste**
+schaltet dieselben Modi im Kreis durch. Der ⌨-Knopf fehlt, wenn jemand allein
+spielt; die Kamera erscheint im Menü nur mit Server (siehe
+[Kamera-Kopplung](#kamera-kopplung-linse)). Einen Rücknahme-Knopf im Kopf gibt es
+nicht mehr – zurück geht es über **←** im Tastenfeld.
 
-**Turnier-Modus:** Die Riesenanzeige für den Bildschirm, der vorn am Board hängt.
-In **Liga-Einzeln** öffnet er sich am Board-iPad (das ihn einmal an hatte) von
-selbst; im X01-Turnier und im Schnellen Spiel schaltet ihn der dritte Knopf bewusst
-dazu – automatisch startet dort nichts. Allein gibt es ihn nicht. Die Reste beider Spieler stehen
-in Plakatgröße (wer nicht dran ist, tritt leicht zurück), der Finish-Weg erscheint
-groß im Feld des Spielers am Wurf, sobald einer möglich ist, und unten stehen die
-letzten fünf Aufnahmen je Spieler neben einer großen Eingabe-Anzeige. Es gibt kein
-Eingabefeld und keine Knöpfe – deshalb blendet das iPad auch keine
+Links unten im Zahlenfeld sitzt **←** (letzter Dart bzw. letzte Aufnahme zurück),
+daneben **0** (Fehlwurf, rot) und rechts das helle **OK**: Es schließt die Aufnahme
+mit einem Tipp ab und füllt die fehlenden Darts als Fehlwürfe auf – wer dreimal am
+Doppel vorbeiwirft, tippt einmal statt dreimal „0", und die Dart-Zahl (und damit der
+Average) stimmt. Die laufende Aufnahme steht dabei in den **drei Feldern der Karte**
+des Spielers am Wurf: leer zu Beginn, jeder eingetragene Dart füllt eines (grün, wenn
+er den Finish-Vorschlag trifft); in Finish-Nähe zeigen die restlichen Felder den Weg,
+das nächste Ziel hell umrandet – die Wartenden haben drei leere Felder. Die
+Bull-Tasten heißen einheitlich **Bull** (25) und **Bull ×2** (50), gelb wie überall.
+
+**Fernsteuerung (Turnier-Modus):** Die Riesenanzeige für den Bildschirm, der vorn
+am Board hängt. In **Liga-Einzeln** öffnet sie sich am Board-iPad (das sie einmal an
+hatte) von selbst; im X01-Turnier und im Schnellen Spiel schaltet sie der ⌨-Knopf
+bewusst dazu – automatisch startet dort nichts. Allein gibt es sie nicht. Es stehen
+**immer genau zwei Karten**: links, wer am Wurf ist, rechts, wer als Nächstes dran
+ist – ab drei Spielern rotieren die Karten nach jeder Aufnahme, und die Kopfzeile
+nennt die übrige Reihenfolge („Danach: Toni · Sepp“). Die Reste stehen in
+Plakatgröße (wer nicht dran ist, tritt leicht zurück), der Finish-Weg erscheint groß
+in den Feldern des Spielers am Wurf, sobald einer möglich ist (der Wartende sieht
+seinen abgedunkelt), und unten stehen links und rechts die **fünf Aufnahmen davor**
+(die letzte steht ja schon neben dem Rest; am Handy quer drei) neben einer großen
+Eingabe-Anzeige. Es gibt kein Eingabefeld und keine Tasten – deshalb blendet das iPad auch keine
 Tastatur-Systemleiste ein, und die Seite scrollt nie. Alles läuft über die Tastatur:
 **Ziffern** tippen, **Enter** bucht, **Löschen** nimmt erst Ziffern und dann
 Aufnahmen zurück (auch über den Spielerwechsel hinweg), die Checkout-Abfrage
@@ -323,16 +338,16 @@ Schrift. Nach dem Einzel erscheint **8 Sekunden groß die Kurzstatistik**
 (Ø, 180er, höchstes Finish beider Spieler) – Enter überspringt –, danach die
 **nächsten Begegnungen in groß**: mit den **Pfeiltasten** wird gewählt (die
 gewählte leuchtet), **Enter** startet sie direkt wieder in der Riesenanzeige.
-Eine eigene Statistik-Seite gibt es im Turnier-Modus nicht. Auf einem Gerät ohne Tastatur zeigt ein Tipp irgendwo
-ins Bild für ein paar Sekunden den Knopf **„Turnier-Modus beenden"** – der
-Notausgang, damit niemand ohne Tab und Esc gefangen sitzt.
+Eine eigene Statistik-Seite gibt es in der Fernsteuerung nicht. Auf einem Gerät ohne
+Tastatur öffnet ein Tipp irgendwo ins Bild das Menü (•••), und der ⌨-Knopf oben
+rechts beendet die Fernsteuerung – damit niemand ohne Tab und Esc gefangen sitzt.
 
 **Klang:** Jede gebuchte Eingabe klingt wie ein Pfeil, der ins Board schlägt –
 **„Pomp"** (Julius' eigene Aufnahme, eingebettet in `js/sound.js`): beim
 Einzel-Dart je gesetztem Pfeil (auch Double/Triple-Wahl), bei der
 Punkte-Eingabe je Buchung (OK, Schnellwahl, Enter am Board),
 im Cricket, Round the World und Finisher je Feld, und einmal beim
-„Weiter ▸". Jeder Tipp auf eine Ziffer, den Umschalter oder Single/Double/Triple
+„OK" der Einzel-Darts. Jeder Tipp auf eine Ziffer, den Umschalter oder Double/Triple
 gibt einen **ganz leisen, weichen Tastenton**; jede **Rücknahme gleitet** sanft
 nach unten statt zu klicken. Im Online-Spiel klingt die Buchung des anderen auf
 dem eigenen Tablet ebenfalls als Pomp, gefolgt vom Klopfen – die Tastentöne
@@ -392,12 +407,14 @@ markiert, im Einzel-Dart-Modus ist die passende Zahl zusätzlich umrandet.
 - Mit 3 Darts unmögliche Summen (179, 178, 176, 175, 173, 172, 169, 166, 163) werden
   abgelehnt.
 
-**Spielerfeld, Undo & Korrektur:** Jeder Spieler hat ein Feld: oben der Average,
-groß der Rest und rechts daneben **klein die letzte Aufnahme** („345 | 60“, Bust rot
-durchgestrichen), darunter Name und Legs. Wirft er wieder, rutscht die alte Zahl wie
-in einem Drehrad nach oben und verblasst, die neue schiebt von unten nach. Einen
-Wurfverlauf gibt es im Spielbild nicht mehr – im Turnier-Modus zeigt ihn weiterhin
-Shift. Der ↺-Button oben rechts nimmt Dart für Dart bzw. Aufnahme für Aufnahme
+**Spielerfeld, Undo & Korrektur:** Jeder Spieler hat eine Karte: oben Avatar, Name
+(eine Zeile, bei Überlänge mit Ellipse) und darunter klein **Siege · Sätze · Darts**
+(gewonnene Legs, Satzstand nur im Satz-Modus, Darts im laufenden Leg), rechts oben
+der Ø. Darunter groß der **Rest**, fest in der Mitte, und rechts daneben **klein die
+letzte Aufnahme** („345 | 60“, Bust rot durchgestrichen). Wirft er wieder, rutscht die
+alte Zahl wie in einem Drehrad nach unten und verblasst, die neue kommt von oben nach.
+Einen Wurfverlauf gibt es im Spielbild nicht mehr – in der Fernsteuerung zeigt ihn
+weiterhin Shift. **←** im Tastenfeld nimmt Dart für Dart bzw. Aufnahme für Aufnahme
 zurück – auch über ein bereits gewonnenes Leg hinweg. Fällt ein Tippfehler an der
 letzten Aufnahme erst später auf, genügt ein Tipp auf die kleine Zahl: Der Wert lässt
 sich direkt korrigieren, solange das Leg damit schlüssig bleibt.

@@ -634,86 +634,71 @@
 
 <!-- ============ SPIEL ============ -->
 <section id="screen-game" class="screen game">
+  <!-- Kopfleiste (Entwurf "X01 Redesign", 10/2026): links das Menue (Spiel
+       verlassen), in der Mitte Spiel und Stand, rechts die Fernsteuerung
+       (Board-Anzeige, Eingabe ueber Tastatur) und der Wechsel zwischen
+       Punkten und Einzel-Darts. Zurueckgenommen wird ueber den Pfeil im
+       Tastenfeld. -->
   <header class="game-header">
-    <button class="icon-btn" data-action="to-tournament" aria-label="Spiel verlassen, Stand bleibt erhalten">‹</button>
-    <!-- Drei direkt klickbare Eingabemodi, oben neben dem Zurück-Knopf.
-         "Turnier" (Riesenanzeige am Board) gibt es nur mit mindestens zwei
-         Spielern - allein wird der Knopf ausgeblendet. -->
-    <div class="segmented small" id="mode-toggle">
-      <button data-mode="total">Punkte</button>
-      <button data-mode="darts">Einzel-Darts</button>
-      <button data-mode="turnier">Turnier</button>
-      <!-- Nur mit optionaler Kamera-Schicht (js/kamera.js) sichtbar. -->
-      <button data-mode="kamera" class="hidden">Kamera</button>
-    </div>
+    <button class="xk-btn" id="game-menu" data-action="game-menu" aria-label="Menü">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><g opacity="0.8"><circle cx="3.5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="20.5" cy="12" r="1.8"></circle></g></svg>
+    </button>
     <div class="game-title">
       <span id="game-match-label"></span>
       <span id="game-leg-label" class="muted"></span>
     </div>
-    <button class="icon-btn" data-action="undo" aria-label="Letzte Eingabe zurücknehmen">↺</button>
+    <button class="xk-btn" id="game-fern" data-action="game-fern" aria-label="Fernsteuerung: Board-Anzeige, Eingabe über Tastatur" aria-pressed="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2.2"></rect><path d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M6.5 14h11"></path></svg>
+    </button>
+    <button class="xk-btn" id="game-swap" data-action="game-swap" aria-label="Punkte / Einzel-Darts wechseln">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h14M14.5 4.5L18 8l-3.5 3.5M20 16H6M9.5 12.5L6 16l3.5 3.5"></path></svg>
+    </button>
   </header>
 
   <div class="game-body">
   <div class="game-main">
     <div id="game-turn" class="turn-label game-turn"></div>
+    <!-- Je Spieler eine Karte: Name und Stand, der Rest mit der letzten
+         Aufnahme daneben, darunter die Felder (Finish-Weg bzw. die drei
+         Darts der laufenden Aufnahme). Gezeichnet von renderGame. -->
     <div id="scoreboard" class="scoreboard"></div>
-
-    <div id="checkout-bar" class="checkout-bar"></div>
-    <!-- Einzel-Darts: drei grosse Kacheln wie im Finisher - leer zu Beginn
-         der Aufnahme, jede fuellt sich mit dem eingetragenen Dart; in
-         Finish-Naehe zeigen sie rot den Vorschlag und gruen den Treffer. -->
-    <div id="game-kacheln" class="fin-kacheln gross hidden"></div>
-
     <div id="history" class="history"></div>
   </div>
 
   <div class="input-area">
-    <!-- Die laufende Aufnahme im Einzel-Dart-Modus; der Modus-Umschalter
-         selbst steht oben im Kopf. -->
-    <div class="mode-row">
-      <div id="visit-darts" class="visit-darts"></div>
-    </div>
-
-    <!-- Punkte-Eingabe -->
+    <!-- Punkte-Eingabe: Anzeige, Schnellwahl, Zahlenfeld -->
     <div id="pad-total" class="pad">
-      <div class="quick-row" id="quick-row"></div>
       <div class="display-row">
         <div id="score-display" class="score-display">0</div>
         <div id="input-error" class="input-error"></div>
       </div>
+      <div class="quick-row" id="quick-row"></div>
       <div class="keypad">
         <button data-key="1">1</button><button data-key="2">2</button><button data-key="3">3</button>
         <button data-key="4">4</button><button data-key="5">5</button><button data-key="6">6</button>
         <button data-key="7">7</button><button data-key="8">8</button><button data-key="9">9</button>
-        <button data-key="del" class="fn">←</button>
+        <button data-key="del" class="fn" aria-label="Zurück"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 12H7M11.5 6.5L6 12l5.5 5.5"></path></svg></button>
         <button data-key="0">0</button>
         <button data-key="ok" class="ok">OK</button>
       </div>
     </div>
 
-    <!-- Einzel-Dart-Eingabe -->
+    <!-- Einzel-Dart-Eingabe: ein Raster - oben Double/Triple (Schalter)
+         und Bull, dann 1 bis 20, unten Zurueck, 0 und OK. -->
     <div id="pad-darts" class="pad hidden">
-      <div class="mult-row" id="mult-row">
-        <button data-mult="1" class="active">Single</button>
-        <button data-mult="2">Double</button>
-        <button data-mult="3">Triple</button>
-      </div>
+      <div id="darts-error" class="input-error"></div>
       <div class="num-grid" id="num-grid"></div>
     </div>
 
-    <!-- Turnier-Modus: für den Liga-Abend mit Bildschirm am Board.
-         Drei Spalten: links die Aufnahmen des einen Spielers, in der Mitte
-         groß die Eingabe, rechts die des anderen. Das Feld steht fest im
-         HTML, damit es beim Neuzeichnen den Fokus behält – Eingabe über
-         eine echte Tastatur: Enter bucht, Löschen nimmt Ziffern und dann
-         Aufnahmen zurück, Esc beendet den Modus, Shift zeigt die Wurfliste. -->
+    <!-- Fernsteuerung (Board-Anzeige): unten links und rechts die
+         Aufnahmen der beiden Spieler, in der Mitte gross die Eingabe. Kein
+         echtes Eingabefeld - ein fokussiertes Feld ruft am iPad die
+         System-Tastaturleiste auf. Enter bucht, Loeschen nimmt Ziffern und
+         dann Aufnahmen zurueck, Tab/Esc beenden den Modus, Shift zeigt
+         die Wurfliste. -->
     <div id="pad-key" class="pad pad-key hidden">
       <div id="key-hist-l" class="key-hist"></div>
       <div class="key-mitte">
-        <!-- Kein echtes Eingabefeld: ein fokussiertes Feld ruft am iPad die
-             System-Tastaturleiste (DE/EN, Pfeile) auf den Schirm. Die Ziffern
-             kommen als Tastendrücke direkt an der Seite an, das hier ist nur
-             die Anzeige. Tab schaltet den Turnier-Modus an und aus. -->
         <div id="key-display" class="key-display" aria-live="polite"></div>
         <div id="key-error" class="input-error"></div>
       </div>
@@ -722,10 +707,23 @@
   </div>
   </div>
 
-  <!-- Notausgang fuer Geraete ohne Tastatur: erscheint kurz nach einem
-       Tipp irgendwo im Bild - sonst saesse man im Turnier-Modus ohne
-       Tab/Esc fest. -->
-  <button id="turnier-exit" class="btn ghost turnier-exit hidden" data-action="turnier-exit">Turnier-Modus beenden</button>
+  <!-- Menue (•••): Spiel verlassen oder weiterspielen. In der
+       Fernsteuerung oeffnet es auch ein Tipp irgendwo ins Bild - der Weg
+       zurueck ohne Tastatur. -->
+  <div id="game-menu-overlay" class="game-menu hidden" role="dialog" aria-modal="true" aria-labelledby="game-menu-titel">
+    <div class="game-menu-karte">
+      <div class="game-menu-kopf">
+        <span class="game-menu-titel" id="game-menu-titel"></span>
+        <span class="game-menu-sub"></span>
+      </div>
+      <!-- Nur mit optionaler Kamera-Schicht (js/kamera.js) sichtbar. -->
+      <button class="btn ghost full hidden" id="game-menu-kamera" data-action="game-kamera">Kamera</button>
+      <div class="game-menu-zeile">
+        <button class="btn ghost game-menu-raus" data-action="to-tournament">Spiel verlassen</button>
+        <button class="btn primary" data-action="game-menu-zu">Weiterspielen</button>
+      </div>
+    </div>
+  </div>
 </section>
 
 <!-- ============ CRICKET ============ -->

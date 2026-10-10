@@ -3642,3 +3642,433 @@ body.tastatur #screen-bulloff button:focus {
 /* Rang -> Liga: Auswahl des Teams als eigene Zeile ueber den Werte-Chips. */
 .liga-team-wahl { display: flex; flex-wrap: wrap; gap: 8px; flex-basis: 100%; width: 100%; margin-bottom: 4px; }
 .board-row .nm .board-team { display: block; font-size: 0.72rem; color: var(--muted); font-weight: 500; }
+
+
+/* ================= X01-Spielbild: Querformat zuerst (Entwurf 10/2026) =================
+ * Nach "Dart App Redesign Responsiv / X01 Redesign.dc.html" und dem Handoff
+ * dazu. Kopfleiste mit Menue (•••), Fernsteuerung (⌨) und Wechsel (⇄); im
+ * Querformat links die Spieler, rechts die Eingabe, beides in voller Hoehe.
+ * Alle Masse haengen an der Hoehe des Spielbilds (vh entspricht hier der
+ * Containerhoehe), die Restzahl zusaetzlich an der Kartenbreite (cqi; ohne
+ * Container-Query-Unterstuetzung greift die vh-Zeile davor). Hochformat am
+ * Handy behaelt seine Anordnung (Spieler oben, Tasten unten), nur die Karten
+ * und Tastenfelder sind die neuen. Steht am Ende, damit es die gewachsenen
+ * Schichten darueber sicher ueberstimmt.
+ * ======================================================================= */
+
+/* ---------- Kopfleiste ---------- */
+#screen-game.active .game-header {
+  display: flex; align-items: stretch; justify-content: flex-start; flex: none;
+  gap: clamp(6px, 0.9vw, 14px); padding: 0; height: clamp(44px, 7.4vh, 78px);
+}
+#screen-game.active .xk-btn {
+  flex: none; height: 100%; aspect-ratio: 1.2; min-width: 44px;
+  border-radius: clamp(10px, 1.6vh, 16px); background: var(--bg-2); border: 1px solid var(--line);
+  color: var(--muted); padding: 0; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+#screen-game.active .xk-btn.hidden { display: none; }
+#screen-game.active .xk-btn svg { width: clamp(20px, 4vh, 42px); height: clamp(20px, 4vh, 42px); }
+#screen-game.active .xk-btn:active { background: var(--bg-3); }
+/* Fernsteuerung an: nur das Zeichen leuchtet, die Flaeche bleibt. */
+#screen-game.active .xk-btn.an { color: var(--laser-hell); }
+#screen-game.active .game-header .game-title,
+#screen-game.active:not(.turnier) .game-header .game-title {
+  display: flex; flex-direction: row; align-items: baseline; flex: 1 1 auto; min-width: 0;
+  gap: clamp(8px, 1.4vw, 22px); align-self: center; padding-left: clamp(2px, 0.6vw, 10px);
+  text-align: left; font-size: inherit;
+}
+#screen-game.active .game-title #game-match-label {
+  font-family: var(--font-display); font-weight: 400; font-size: clamp(16px, 3.4vh, 36px);
+  letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; flex: none;
+}
+#screen-game.active .game-title #game-leg-label {
+  font-family: var(--font-cond); font-weight: 600; font-size: clamp(13px, 2.5vh, 27px);
+  letter-spacing: 0.04em; color: var(--muted); white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; min-width: 0; max-width: 100%;
+}
+
+/* ---------- Spielerkarte ---------- */
+#screen-game.active #scoreboard .pcard {
+  display: flex; flex-direction: column; justify-content: space-between; min-height: 0; min-width: 0;
+  gap: clamp(2px, 0.8vh, 10px); padding: clamp(6px, 1.8vh, 22px) clamp(10px, 1.6vw, 26px);
+  border-radius: clamp(12px, 1.8vh, 20px); border: 2px solid var(--line); background: var(--bg-2);
+  text-align: left; overflow: hidden; position: relative; container-type: inline-size; opacity: 1;
+  align-items: stretch; align-content: normal;
+}
+#screen-game.active #scoreboard .pcard.active {
+  border-color: var(--aktiv-linie); background: var(--aktiv-flaeche); box-shadow: 0 0 36px var(--schein);
+}
+#screen-game.active #scoreboard .pcard .pkopf { display: flex; align-items: center; gap: clamp(6px, 0.8vw, 12px); min-width: 0; flex: none; }
+#screen-game.active #scoreboard .pcard .pkopf .av.sm {
+  flex: none; width: clamp(20px, 4.8vh, 52px); height: clamp(20px, 4.8vh, 52px); font-size: clamp(9px, 1.6vh, 18px); display: inline-flex;
+}
+#screen-game.active #scoreboard .pcard .pblock {
+  flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: clamp(1px, 0.3vh, 4px); line-height: 1.05;
+}
+/* Name eine Zeile, bei Ueberlaenge Ellipse - nie verkleinern. */
+#screen-game.active #scoreboard .pcard .pname {
+  display: block; min-width: 0; font-family: var(--font-cond); font-weight: 700; font-size: clamp(15px, 3.8vh, 42px);
+  letter-spacing: 0.03em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: var(--text); justify-content: flex-start; margin: 0;
+}
+#screen-game.active #scoreboard .pcard.active .pname { color: #fff; }
+#screen-game.active #scoreboard .pcard .pmeta {
+  display: block; font-family: var(--font-cond); font-weight: 600; font-size: clamp(11px, 2.3vh, 24px);
+  letter-spacing: 0.04em; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#screen-game.active #scoreboard .pcard .pavg {
+  flex: none; align-self: flex-start; font-family: var(--font-cond); font-weight: 700;
+  font-size: clamp(15px, 3.8vh, 42px); line-height: 1.05; white-space: nowrap; color: var(--muted);
+}
+#screen-game.active #scoreboard .pcard .pavg b { color: var(--text); font-variant-numeric: tabular-nums; }
+
+/* Der Rest steht fest in der mittleren Spalte - er wandert nicht, wenn die
+   letzte Aufnahme rechts daneben zwei- oder dreistellig ist. */
+#screen-game.active #scoreboard .pcard .rest-zeile {
+  flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 0.55fr) auto minmax(0, 1.45fr);
+  align-items: center; justify-content: normal; gap: 0; margin: 0;
+  font-family: var(--font-cond); font-weight: 700; line-height: 0.86; font-variant-numeric: tabular-nums;
+  font-size: clamp(40px, 27vh, 260px);
+  font-size: clamp(40px, min(27vh, 30cqi), 260px);
+}
+#screen-game.active #scoreboard .pcard .rest { grid-column: 2; color: var(--text); opacity: 0.75; text-shadow: none; }
+#screen-game.active #scoreboard .pcard.active .rest { color: #fff; opacity: 1; text-shadow: 0 0 30px rgba(70, 170, 215, 0.45); }
+#screen-game.active #scoreboard .pcard .letzte-box {
+  grid-column: 3; justify-self: start; align-self: center; display: inline-grid; align-content: center; justify-items: start;
+  margin: 0 0 0 0.14em; padding: 0 0 0 0.14em; border-left: 0.035em solid var(--line-hell); border-top: none;
+  line-height: 1; min-height: 44px; min-width: 44px;
+}
+#screen-game.active #scoreboard .pcard .letzte-box > * { grid-area: 1 / 1; }
+#screen-game.active #scoreboard .pcard.active .letzte-box { border-left-color: var(--accent); }
+#screen-game.active #scoreboard .pcard .letzte-box.ohne { border-left-color: transparent; }
+#screen-game.active #scoreboard .pcard .letzte-box.tap { cursor: pointer; }
+#screen-game.active #scoreboard .pcard .letzte, #screen-game.active #scoreboard .pcard .letzte-alt {
+  display: block; font-size: 0.3em; font-weight: 700; color: var(--muted); line-height: 1; white-space: nowrap;
+}
+#screen-game.active #scoreboard .pcard.active .letzte { color: var(--text); opacity: 0.85; }
+#screen-game.active #scoreboard .pcard .letzte.bust, #screen-game.active #scoreboard .pcard .letzte-alt.bust { color: var(--red); text-decoration: line-through; }
+/* Drehrad: die neue Zahl kommt von oben, die alte rutscht im selben Tempo
+   nach unten und verblasst - beide beruehren sich nie. */
+#screen-game.active #scoreboard .pcard .letzte.neu { animation: drumIn 0.504s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+#screen-game.active #scoreboard .pcard .letzte-alt { animation: drumOut 1.4s linear both; pointer-events: none; }
+@keyframes drumIn { from { transform: translateY(-130%); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes drumOut {
+  0% { transform: none; opacity: 1; animation-timing-function: cubic-bezier(0.2, 0.7, 0.2, 1); }
+  36% { transform: translateY(130%); opacity: 0.45; animation-timing-function: ease-out; }
+  100% { transform: translateY(160%); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #screen-game.active #scoreboard .pcard .letzte.neu { animation: none; }
+  #screen-game.active #scoreboard .pcard .letzte-alt { display: none; }
+}
+
+/* Die drei Felder unter dem Rest: Finish-Weg (Punkte, Fernsteuerung) oder
+   die laufende Aufnahme (Einzel-Darts). Die Zeile behaelt ihre Hoehe. */
+#screen-game.active #scoreboard .pcard .pfelder {
+  flex: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(5px, 0.8vw, 12px); height: clamp(40px, 10vh, 110px); margin: 0; opacity: 1;
+}
+#screen-game.active #scoreboard .pcard .pfelder .fk {
+  display: flex; align-items: center; justify-content: center; min-height: 0; height: auto; padding: 0;
+  border-radius: clamp(10px, 1.6vh, 16px); background: var(--bg-3); border: 1px solid var(--line-hell);
+  color: var(--text); font-family: var(--font-cond); font-weight: 700; font-size: clamp(22px, 6vh, 66px);
+  font-variant-numeric: tabular-nums; line-height: 1; box-shadow: none; appearance: none; -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+#screen-game.active #scoreboard .pcard .pfelder .fk.still,
+#screen-game.active #scoreboard .pcard .pfelder .fk.leer { background: var(--bg-2); border-color: var(--line); color: var(--dead); }
+#screen-game.active #scoreboard .pcard .pfelder .fk.weg.wartet { color: var(--muted); }
+#screen-game.active #scoreboard .pcard .pfelder .fk.gut { background: rgba(63, 191, 127, 0.14); border-color: #2c7d54; color: #6fe0a8; }
+#screen-game.active #scoreboard .pcard .pfelder .fk.anders { border-color: var(--line-hell); }
+#screen-game.active #scoreboard .pcard .pfelder .fk.stellen { color: var(--muted); border-style: dashed; }
+#screen-game.active #scoreboard .pcard .pfelder .fk.tipp { cursor: pointer; }
+#screen-game.active #scoreboard .pcard .pfelder .fk.tipp:active { transform: scale(0.96); filter: brightness(1.15); }
+/* "Naechstes Ziel" spricht die Auswahl-Sprache, nicht Rot. */
+#screen-game.active #scoreboard .pcard .pfelder .fk.jetzt {
+  background: var(--aktiv-flaeche); border-color: var(--aktiv-linie); color: #fff;
+  box-shadow: 0 0 26px var(--schein-stark), inset 0 0 0 1px var(--aktiv-linie);
+}
+
+/* Fernsteuerung: wer nicht dran ist, tritt leicht zurueck (hoechstens 20 Prozent) - in jeder Lage. */
+#screen-game.active.turnier #scoreboard .pcard:not(.active) { opacity: 0.8; }
+
+/* ---------- Eingabe: Punkte ---------- */
+#screen-game.active #pad-total .display-row {
+  display: flex; align-items: center; justify-content: center; position: relative; min-height: 0; margin: 0; gap: 0;
+  background: var(--bg-2); border: 1px solid var(--line); border-radius: clamp(12px, 1.8vh, 18px);
+}
+#screen-game.active #pad-total .score-display {
+  font-family: var(--font-cond); font-weight: 700; line-height: 1; letter-spacing: 0; color: #fff;
+  text-shadow: 0 0 26px var(--schein-stark); font-variant-numeric: tabular-nums;
+}
+#screen-game.active #pad-total .score-display.empty { color: var(--muted); text-shadow: none; }
+#screen-game.active #pad-total .input-error {
+  position: absolute; left: 6px; right: 6px; bottom: 3px; text-align: center; line-height: 1.1;
+  max-height: 2.3em; overflow: hidden;
+}
+#screen-game.active #pad-darts #darts-error { flex: none; text-align: center; line-height: 1.1; margin: 0; }
+#screen-game.active #pad-darts #darts-error:empty { display: none; }
+#screen-game.active #pad-total .quick-row { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); margin: 0; }
+#screen-game.active #pad-total .quick-row button {
+  min-height: 0; padding: 0; border-radius: clamp(10px, 1.6vh, 16px);
+  background: var(--bg-3); border: 1px solid var(--line-hell); color: var(--text);
+  font-family: var(--font-cond); font-weight: 700;
+}
+#screen-game.active #pad-total .keypad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); max-height: none; }
+#screen-game.active #pad-total .keypad button {
+  min-height: 0; padding: 0; border-radius: clamp(10px, 1.6vh, 16px);
+  background: var(--bg-2); border: 1px solid var(--line); color: var(--text); letter-spacing: 0.04em;
+  display: flex; align-items: center; justify-content: center; font-family: var(--font-cond); font-weight: 700;
+}
+#screen-game.active #pad-total .keypad button.fn { color: var(--text); }
+#screen-game.active #pad-total .keypad button.fn svg { width: clamp(22px, 5.2vh, 56px); height: clamp(22px, 5.2vh, 56px); }
+/* OK bleibt hell (Julius: weiss, nicht rot). */
+#screen-game.active #pad-total .keypad button.ok { background: #bfb9b9; border-color: #bfb9b9; color: var(--on-primary); }
+#screen-game.active #pad-total .keypad button.ok:active { background: #dcd6d6; }
+#screen-game.active #pad-total .keypad button:active { background: var(--bg-3); }
+
+/* ---------- Eingabe: Einzel-Darts ---------- */
+#screen-game.active #pad-darts .num-grid {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); max-height: none;
+}
+#screen-game.active #pad-darts .num-grid button {
+  min-height: 0; padding: 0; border-radius: clamp(10px, 1.6vh, 16px);
+  background: var(--bg-2); border: 1px solid var(--line); color: var(--text); outline: none; outline-offset: -2px;
+  font-family: var(--font-cond); font-weight: 700; font-variant-numeric: tabular-nums;
+  display: flex; align-items: center; justify-content: center; gap: 0.08em; white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+#screen-game.active #pad-darts .num-grid button:active { background: var(--bg-3); }
+#screen-game.active #pad-darts .num-grid .mx { color: var(--laser-hell); font-size: 0.62em; margin: 0; vertical-align: baseline; }
+#screen-game.active #pad-darts .num-grid button.mult { border-color: var(--line-hell); letter-spacing: 0.03em; }
+/* Double/Triple an: hell, dunkle Schrift, blauer Schein. */
+#screen-game.active #pad-darts .num-grid button.mult.active {
+  background: var(--primary); border-color: var(--primary); color: var(--on-primary); box-shadow: 0 0 24px var(--schein);
+}
+#screen-game.active #pad-darts .num-grid button.bull { color: var(--amber); }
+#screen-game.active #pad-darts .num-grid button.miss { color: var(--red); }
+#screen-game.active #pad-darts .num-grid button.zurueck { color: var(--text); }
+#screen-game.active #pad-darts .num-grid button.zurueck svg { width: clamp(22px, 4.8vh, 52px); height: clamp(22px, 4.8vh, 52px); }
+#screen-game.active #pad-darts .num-grid button.end-visit {
+  grid-column: span 2; background: #bfb9b9; border-color: #bfb9b9; color: var(--on-primary);
+}
+#screen-game.active #pad-darts .num-grid button.end-visit:active { background: #dcd6d6; }
+#screen-game.active #pad-darts .num-grid button.hl {
+  background: var(--aktiv-flaeche); border-color: var(--aktiv-linie); outline: 2px solid var(--aktiv-linie);
+  box-shadow: 0 0 26px var(--schein-stark), inset 0 0 0 1px var(--aktiv-linie);
+}
+
+/* ---------- Menue (•••) ---------- */
+.game-menu {
+  position: fixed; inset: 0; z-index: 45; background: rgba(7, 5, 6, 0.72);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center; padding: 3vh 3vw;
+}
+.game-menu-karte {
+  width: min(100%, 560px); max-height: 100%; display: flex; flex-direction: column; gap: clamp(10px, 2.2vh, 24px);
+  background: var(--bg-2); border: 1px solid var(--line-hell); border-radius: 20px; padding: clamp(14px, 3vh, 32px);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+}
+.game-menu-kopf { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.game-menu-titel {
+  font-family: var(--font-display); font-size: clamp(20px, 3.4vh, 34px); letter-spacing: 0.05em; text-transform: uppercase;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.game-menu-sub { color: var(--muted); font-size: clamp(13px, 1.9vh, 18px); }
+.game-menu-zeile { display: flex; gap: 10px; padding-top: clamp(6px, 1.4vh, 14px); border-top: 1px solid var(--line); }
+.game-menu-zeile .btn { flex: 1; min-height: clamp(44px, 7vh, 64px); border-radius: 12px; font-size: clamp(14px, 2vh, 19px); }
+.game-menu-zeile .btn.game-menu-raus { color: var(--red); border-color: #4a2530; background: transparent; }
+
+/* ---------- Hochformat (Handy): Spieler oben, Tasten unten, in Handgroesse ---------- */
+@media (orientation: portrait) {
+  #screen-game.active .game-header { height: 48px; }
+  #screen-game.active .game-title #game-match-label { font-size: 1rem; }
+  #screen-game.active .game-title #game-leg-label { font-size: 0.78rem; }
+  #screen-game.active #scoreboard { grid-template-columns: repeat(var(--n, 2), minmax(0, 1fr)); gap: var(--space-2); margin-bottom: 6px; }
+  #screen-game.active #scoreboard .pcard { padding: 8px 10px; gap: 2px; border-radius: var(--radius); }
+  #screen-game.active #scoreboard .pcard .pkopf .av.sm { width: 24px; height: 24px; font-size: 0.65rem; }
+  #screen-game.active #scoreboard .pcard .pname, #screen-game.active #scoreboard .pcard .pavg { font-size: 0.95rem; }
+  #screen-game.active #scoreboard .pcard .pmeta { font-size: 0.72rem; }
+  #screen-game.active #scoreboard .pcard .rest-zeile {
+    font-size: clamp(2rem, 9vh, 3.6rem);
+    font-size: clamp(2rem, min(9vh, 34cqi), 3.6rem);
+    min-height: 1.2em;
+  }
+  #screen-game.active #scoreboard .pcard .letzte-box { min-height: 44px; min-width: 44px; }
+  #screen-game.active #scoreboard .pcard .pfelder { height: clamp(36px, 6vh, 56px); gap: 5px; }
+  #screen-game.active #scoreboard .pcard .pfelder .fk { font-size: clamp(1rem, 3vh, 1.6rem); }
+  /* Ohne Inhalt faellt die Zeile am Handy weg - der Platz ist knapp. */
+  #screen-game.active #scoreboard .pcard .pfelder:empty { display: none; }
+  /* Drei oder vier Spieler nebeneinander: kompakt. */
+  #screen-game.active #scoreboard.viele .pcard { padding: 6px 6px; }
+  #screen-game.active #scoreboard.viele .pcard .pkopf .av.sm { display: none; }
+  #screen-game.active #scoreboard.viele .pcard .pname, #screen-game.active #scoreboard.viele .pcard .pavg { font-size: 0.75rem; }
+  #screen-game.active #scoreboard.viele .pcard .pmeta { font-size: 0.65rem; }
+  #screen-game.active #scoreboard.viele .pcard .rest-zeile {
+    grid-template-columns: minmax(0, 1fr); font-size: clamp(1.4rem, 6.5vw, 2.4rem);
+  }
+  #screen-game.active #scoreboard.viele .pcard .rest { grid-column: 1; justify-self: center; }
+  #screen-game.active #scoreboard.viele .pcard .letzte-box {
+    grid-column: 1; justify-self: center; margin: 0; padding: 0; border-left: none; min-height: 36px;
+  }
+  #screen-game.active #scoreboard.viele .pcard .pfelder { gap: 3px; height: 34px; }
+  #screen-game.active #scoreboard.viele .pcard .pfelder .fk { font-size: 0.9rem; }
+  #screen-game.active #pad-total .display-row { height: 48px; margin-bottom: 6px; }
+  #screen-game.active #pad-total .score-display { font-size: 2rem; }
+  #screen-game.active #pad-total .quick-row { gap: var(--gap-keys); margin-bottom: 6px; }
+  #screen-game.active #pad-total .quick-row button { height: 42px; font-size: 1rem; }
+  #screen-game.active #pad-total .keypad button { font-size: 1.5rem; }
+  #screen-game.active #pad-total .keypad button.ok { font-size: 1.1rem; }
+  #screen-game.active #pad-darts .num-grid button { font-size: 1.15rem; }
+  #screen-game.active #pad-darts .num-grid button.mult, #screen-game.active #pad-darts .num-grid button.bull { font-size: 0.9rem; }
+  #screen-game.active #pad-darts .num-grid button.end-visit { font-size: 1rem; }
+  /* Fernsteuerung hochkant: zwei Karten, der Rest so gross wie die Karte erlaubt. */
+  #screen-game.active.turnier #scoreboard .pcard .rest-zeile {
+    font-size: clamp(2.4rem, 30vh, 10rem);
+    font-size: clamp(2.4rem, min(30vh, 46cqi), 10rem);
+  }
+  #screen-game.active.turnier #scoreboard .pcard .pname, #screen-game.active.turnier #scoreboard .pcard .pavg { font-size: 1.3rem; }
+  #screen-game.active.turnier #scoreboard .pcard .pmeta { font-size: 0.9rem; }
+}
+
+/* ---------- Querformat: links die Spieler, rechts die Eingabe ---------- */
+@media (orientation: landscape) {
+  #screen-game.active {
+    gap: clamp(6px, 1.6vh, 18px);
+    padding: clamp(6px, 1.8vh, 22px) clamp(8px, 1.6vw, 26px);
+  }
+  body.fix-spiel #screen-game.active { padding-bottom: clamp(6px, 1.8vh, 22px); }
+  /* Am Board bleibt oben Platz fuer Apples Uhrzeit und Batterie. */
+  #screen-game.active.turnier { padding-top: max(clamp(6px, 1.8vh, 22px), 28px - env(safe-area-inset-top, 0px)); }
+  #screen-game.active:not(.turnier) .game-body {
+    display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr); gap: clamp(8px, 1.6vw, 24px);
+    flex: 1 1 auto; min-height: 0; align-items: stretch;
+  }
+  /* Bei drei oder vier Spielern bekommt die Spielerseite mehr Breite. */
+  #screen-game.active:not(.turnier).viele .game-body { grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); }
+  #screen-game.active:not(.turnier) .game-main {
+    display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; min-width: 0; overflow: visible; padding: 0;
+  }
+  #screen-game.active:not(.turnier) .game-main > #game-turn,
+  #screen-game.active:not(.turnier) .game-main > #history { display: none; }
+  #screen-game.active:not(.turnier) #scoreboard {
+    flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: minmax(0, 1fr); gap: clamp(6px, 1.4vh, 16px); margin: 0;
+  }
+  #screen-game.active:not(.turnier) #scoreboard.viele { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  /* Die Eingabe-Spalte liegt ueber dem Schein der aktiven Karte. */
+  #screen-game.active:not(.turnier) .input-area {
+    position: relative; z-index: 1; min-height: 0; min-width: 0; display: flex; flex-direction: column; flex: 1 1 auto; margin: 0;
+  }
+  #screen-game.active:not(.turnier) .pad:not(.hidden) {
+    flex: 1 1 auto; display: flex; flex-direction: column; gap: clamp(5px, 1.2vh, 14px); min-height: 0; overflow: hidden;
+  }
+  #screen-game.active #pad-total .display-row { flex: none; height: clamp(46px, 13vh, 140px); }
+  #screen-game.active #pad-total .score-display { font-size: clamp(36px, 10vh, 110px); }
+  #screen-game.active #pad-total .input-error { font-size: clamp(11px, 1.8vh, 16px); }
+  #screen-game.active #pad-total .quick-row { flex: none; height: clamp(40px, 9vh, 96px); gap: clamp(5px, 0.9vh, 10px); }
+  #screen-game.active #pad-total .quick-row button { height: auto; font-size: clamp(18px, 4vh, 44px); }
+  #screen-game.active #pad-total .keypad {
+    flex: 1 1 auto; min-height: 0; grid-template-rows: repeat(4, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); gap: clamp(5px, 0.9vh, 10px);
+  }
+  #screen-game.active #pad-total .keypad button { font-size: clamp(26px, 6.4vh, 68px); }
+  #screen-game.active #pad-total .keypad button.ok { font-size: clamp(22px, 4.8vh, 50px); }
+  #screen-game.active #pad-darts .num-grid {
+    flex: 1 1 auto; min-height: 0; grid-template-rows: repeat(7, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); gap: clamp(5px, 0.9vh, 10px);
+  }
+  #screen-game.active #pad-darts .num-grid button { font-size: clamp(20px, 5vh, 54px); }
+  #screen-game.active #pad-darts .num-grid button.mult, #screen-game.active #pad-darts .num-grid button.bull { font-size: clamp(15px, 3vh, 32px); }
+  #screen-game.active #pad-darts .num-grid button.end-visit { font-size: clamp(20px, 4.4vh, 46px); }
+
+  /* Vier Spieler im 2x2-Raster: alles eine Stufe kleiner. */
+  #screen-game.active #scoreboard.viele .pcard .pkopf .av.sm { width: clamp(18px, 3.6vh, 40px); height: clamp(18px, 3.6vh, 40px); }
+  #screen-game.active #scoreboard.viele .pcard .pname, #screen-game.active #scoreboard.viele .pcard .pavg { font-size: clamp(13px, 2.8vh, 32px); }
+  #screen-game.active #scoreboard.viele .pcard .pmeta { font-size: clamp(10px, 1.7vh, 18px); }
+  #screen-game.active #scoreboard.viele .pcard .rest-zeile {
+    grid-template-columns: minmax(0, 0.3fr) auto minmax(0, 1.7fr);
+    font-size: clamp(32px, 24vh, 220px);
+    font-size: clamp(32px, min(24vh, 40cqi), 220px);
+  }
+  #screen-game.active #scoreboard.viele .pcard .pfelder { height: clamp(32px, 7.5vh, 84px); }
+  #screen-game.active #scoreboard.viele .pcard .pfelder .fk { font-size: clamp(16px, 4.6vh, 50px); }
+
+  /* Handy quer: dieselbe Anordnung, alles eine Stufe kleiner, damit Kopf,
+     Rest und Felder in eine 150 px hohe Karte passen. */
+  @media (max-height: 560px) {
+    #screen-game.active #scoreboard .pcard { padding: 5px 10px; gap: 2px; }
+    #screen-game.active #scoreboard .pcard .pkopf .av.sm { width: 18px; height: 18px; font-size: 8px; }
+    #screen-game.active #scoreboard .pcard .pname, #screen-game.active #scoreboard .pcard .pavg { font-size: 14px; }
+    #screen-game.active #scoreboard .pcard .pmeta { font-size: 10px; }
+    #screen-game.active #scoreboard .pcard .rest-zeile {
+      font-size: clamp(30px, 16vh, 100px);
+      font-size: clamp(30px, min(16vh, 28cqi), 100px);
+    }
+    #screen-game.active #scoreboard .pcard .letzte-box { min-height: 44px; min-width: 44px; }
+    #screen-game.active #scoreboard .pcard .pfelder { height: clamp(30px, 10vh, 60px); gap: 5px; }
+    #screen-game.active #scoreboard .pcard .pfelder .fk { font-size: clamp(16px, 5vh, 40px); }
+  }
+
+  /* ---------- Fernsteuerung: zwei Karten, unten die Aufnahmen und die Eingabe ---------- */
+  #screen-game.active.turnier .game-header { justify-content: flex-start; padding: 0; }
+  #screen-game.active.turnier .game-body { display: flex; flex-direction: column; gap: clamp(6px, 1.6vh, 18px); flex: 1 1 auto; min-height: 0; }
+  #screen-game.active.turnier .game-main { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: visible; padding: 0; }
+  #screen-game.active.turnier #scoreboard {
+    flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: minmax(0, 1fr); gap: clamp(8px, 1.6vw, 24px); margin: 0;
+  }
+  #screen-game.active.turnier #scoreboard .pcard {
+    padding: clamp(8px, 2vh, 24px) clamp(10px, 1.8vw, 28px); border-radius: clamp(14px, 2.2vh, 24px); gap: clamp(4px, 1.2vh, 14px);
+  }
+  #screen-game.active.turnier #scoreboard .pcard.active { box-shadow: 0 0 26px var(--laser-weich), 0 0 90px 14px var(--schein-stark); }
+  #screen-game.active.turnier #scoreboard .pcard:not(.active) { opacity: 0.8; }
+  #screen-game.active.turnier #scoreboard .pcard .pkopf { gap: clamp(8px, 1vw, 16px); }
+  #screen-game.active.turnier #scoreboard .pcard .pkopf .av.sm { width: clamp(24px, 5.8vh, 62px); height: clamp(24px, 5.8vh, 62px); font-size: clamp(10px, 2vh, 22px); }
+  #screen-game.active.turnier #scoreboard .pcard .pname, #screen-game.active.turnier #scoreboard .pcard .pavg { font-size: clamp(18px, 5.4vh, 58px); }
+  #screen-game.active.turnier #scoreboard .pcard .pmeta { font-size: clamp(13px, 3vh, 34px); }
+  #screen-game.active.turnier #scoreboard .pcard .rest-zeile {
+    grid-template-columns: minmax(0, 0.35fr) auto minmax(0, 1.65fr); line-height: 0.8;
+    font-size: clamp(56px, 46vh, 480px);
+    font-size: clamp(56px, min(46vh, 39cqi), 480px);
+  }
+  #screen-game.active.turnier #scoreboard .pcard.active .rest { text-shadow: 0 0 34px var(--laser-weich); }
+  #screen-game.active.turnier #scoreboard .pcard .pfelder { height: clamp(40px, 11vh, 120px); gap: clamp(6px, 0.9vw, 14px); }
+  #screen-game.active.turnier #scoreboard .pcard .pfelder .fk { font-size: clamp(22px, 7vh, 76px); }
+  #screen-game.active.turnier .input-area { flex: none; height: clamp(80px, 20vh, 210px); min-height: 0; display: block; margin: 0; }
+  #screen-game.active.turnier .pad-key {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1fr);
+    gap: clamp(8px, 1.6vw, 24px); height: 100%; align-items: stretch;
+  }
+  #screen-game.active.turnier .key-hist {
+    display: grid; grid-template-rows: repeat(5, minmax(0, 1fr)); gap: clamp(2px, 0.6vh, 6px);
+    max-height: none; min-height: 0; overflow: hidden;
+  }
+  #screen-game.active.turnier .key-hist .v {
+    display: flex; align-items: center; justify-content: space-between; min-height: 0; overflow: hidden; line-height: 1;
+    padding: 0 clamp(8px, 1.2vw, 18px); background: var(--bg-2); border-radius: 8px; font-size: clamp(11px, 2.1vh, 22px);
+  }
+  #screen-game.active.turnier .key-hist .v:not(:first-child) { opacity: 0.75; }
+  #screen-game.active.turnier .key-hist .v .s { font-size: clamp(14px, 2.8vh, 30px); line-height: 1; }
+  #screen-game.active.turnier .key-hist .v .r { font-size: clamp(11px, 2vh, 21px); line-height: 1; }
+  #screen-game.active.turnier .key-mitte { display: flex; flex-direction: column; min-height: 0; gap: 0; position: relative; }
+  #screen-game.active.turnier .key-display {
+    flex: 1 1 auto; min-height: 0; height: 100%; padding: 0; border-radius: clamp(14px, 2.2vh, 24px); font-size: clamp(44px, 15vh, 160px);
+  }
+  #screen-game.active.turnier .key-display .cursor { width: clamp(3px, 0.5vh, 6px); height: 0.8em; }
+  #screen-game.active.turnier .pad-key .input-error {
+    position: absolute; left: 0; right: 0; bottom: 2px; text-align: center; min-height: 0; font-size: clamp(11px, 1.8vh, 16px);
+  }
+  /* Handy quer: drei statt fuenf Aufnahmen je Seite. */
+  @media (max-height: 560px) {
+    #screen-game.active.turnier .key-hist { grid-template-rows: repeat(3, minmax(0, 1fr)); }
+    #screen-game.active.turnier .key-hist .v:nth-child(n+4) { display: none; }
+  }
+  /* Shift gedrueckt: die Wurfliste des Matches statt Eingabe und Karten. */
+  #screen-game.active.turnier.verlauf #history { display: grid; flex: 1 1 auto; min-height: 88px; }
+  #screen-game.active.turnier.verlauf #scoreboard { flex: 0 0 auto; grid-auto-rows: auto; }
+  #screen-game.active.turnier.verlauf #scoreboard .pcard { padding: var(--space-2) 10px; }
+  #screen-game.active.turnier.verlauf #scoreboard .pcard .rest-zeile { font-size: 2.4rem; flex: none; }
+  #screen-game.active.turnier.verlauf #scoreboard .pcard .pfelder { display: none; }
+  #screen-game.active.turnier.verlauf .input-area { display: none; }
+}
