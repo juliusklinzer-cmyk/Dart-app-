@@ -3561,6 +3561,17 @@ body.tastatur #screen-bulloff button:focus {
 .ts-laeuft { margin: 12px 0 4px; text-align: left; }
 .ts-laeuft > div:not(.lg-hl-titel) { padding: 3px 0; }
 #overlay-card .ts-laeuft + .btn, #overlay-card .lg-legs + .btn { margin-top: 16px; }
+/* Kurzstatistik des Legs im Dialog nach dem Leg: eine Spalte je Spieler,
+   der Leg-Sieger hell. Skaliert am Board (vh) mit, bleibt am Handy kompakt. */
+.leg-stat { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-variant-numeric: tabular-nums; }
+.leg-stat th, .leg-stat td { padding: 3px 6px; text-align: center; color: var(--muted); }
+.leg-stat thead th { font-weight: 800; font-size: clamp(0.95rem, 2.4vh, 1.5rem); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 9em; }
+.leg-stat tbody th { text-align: left; font-weight: 500; font-size: clamp(0.85rem, 2vh, 1.3rem); }
+.leg-stat td { font-weight: 700; font-size: clamp(1.05rem, 2.8vh, 1.9rem); }
+.leg-stat .sieger { color: var(--aktiv-linie); }
+.leg-stat.viele th, .leg-stat.viele td { padding: 3px 3px; }
+.leg-stat.viele td { font-size: clamp(0.95rem, 2.4vh, 1.6rem); }
+.leg-stat.viele thead th { font-size: clamp(0.8rem, 2vh, 1.2rem); max-width: 6em; }
 
 /* Ausbullen per Pfeil-/Zifferntasten auch AUSSERHALB des Turnier-Modus:
    die gewaehlte Person (bzw. "Zurueck") traegt denselben Laser-Ring. */

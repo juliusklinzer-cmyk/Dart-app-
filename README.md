@@ -48,10 +48,15 @@ Alle ausgewählten Spieler an einem Board, reihum, 501 (oder 301/701) Double Out
 ohne Spielplan. Startpunkte und Einzel-Dart-Grenze teilt es sich mit dem Turnier.
 Dazu kommt die **Spieldauer** wie bei einem kleinen Turnier: **First to** oder
 **Best of**, und je ein Zähler für **Sätze** und **Legs** (Best of zählt in
-Zweierschritten, 1 Satz / 1 Leg ist das alte „wer zuerst auscheckt“). Ein Satz geht
-an den, der zuerst die Legs hat, das Spiel an den, der zuerst die Sätze hat. Der
-Anwurf wandert Leg für Leg weiter, der Kopf zählt Satz und Leg mit, die Spielerfelder
-zeigen den Stand, und am Ende eines Satzes sagt der Dialog „Satz an …“. In der
+Zweierschritten, 1 Satz / 1 Leg ist das alte „wer zuerst auscheckt“). **First to:** Ein
+Satz geht an den, der zuerst die Legs hat, das Spiel an den, der zuerst die Sätze hat.
+**Best of:** Alle Legs werden gespielt, der Satz geht an den mit den meisten Legs, das
+Spiel an den mit den meisten Sätzen – bei Gleichstand (ab drei Spielern) geht es weiter,
+bis einer vorne liegt. Der Anwurf wandert Leg für Leg weiter, der Kopf zählt Satz und
+Leg mit, die Spielerfelder zeigen den Stand, und am Ende eines Satzes sagt der Dialog
+„Satz an …“. Nach jedem Leg zeigt der Dialog eine **Kurzstatistik des Legs** (Average,
+Darts, höchste Aufnahme, Finish je Spieler) direkt über „Nächstes Leg“ – ebenso nach
+dem letzten Leg beim Glückwunsch. In der
 Statistik zählt das ganze Spiel als ein Sieg, jedes Leg fließt in Average und
 Rekorde ein. Die Einstellung bleibt gespeichert, bis sie geändert wird.
 

@@ -1557,6 +1557,112 @@ await page.evaluate(() => {
   S.settings.quickSaetze = 1; S.settings.quickLegs = 1; D.save();
 });
 
+/* ---------- Best of: alle Legs werden gespielt, Kurzstatistik nach jedem Leg ---------- */
+
+group('Schnelles Spiel: Best of 3 Legs spielt alle drei Legs');
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  S.game = null;
+  S.lineup = D.activeProfiles().slice(0, 2).map((p) => p.id);
+  S.settings.quickModus = 1; S.settings.quickSaetze = 1; S.settings.quickLegs = 3;
+  D.save(); D.setScreen('setup');
+});
+check('Hinweis: alle 3 Legs werden gespielt', (await textKlein('#quick-dauer-hint')).includes('alle 3 legs'));
+await page.locator('[data-action="start-game"]').click();
+await bullOffGo();
+const [bA, bB] = await page.evaluate(() => window.__dart.currentMatch().p);
+check('Spiel traegt Best of 3 mit Merkmal "alle Legs"', await page.evaluate(() => {
+  const m = window.__dart.currentMatch();
+  return m.bestOf === 3 && m.spieldauer.modus === 1 && m.spieldauer.alle === true;
+}));
+check('altes Best-of-Spiel ohne Merkmal rechnet wie damals: 2:0 ist entschieden', await page.evaluate(() => {
+  const D = window.__dart, m = D.currentMatch();
+  const alt = { p: m.p, bestOf: 3, saetzeBestOf: 1, spieldauer: { modus: 1, saetze: 1, legs: 3 },
+    legs: [{ winner: m.p[0], visits: [] }, { winner: m.p[0], visits: [] }] };
+  return D.satzStand(alt).sieger === m.p[0];
+}));
+await legFuer(bA);
+check('Dialog nach Leg 1 zeigt die Kurzstatistik des Legs', (await page.locator('#overlay-card .leg-stat').count()) === 1 &&
+  (await textKlein('#overlay-card .leg-stat')).includes('finish') && (await textKlein('#overlay-card .leg-stat')).includes('121'));
+check('Leg-Sieger ist markiert', (await page.locator('#overlay-card .leg-stat thead th.sieger').innerText()) ===
+  (await page.evaluate((id) => window.__dart.pname(id), bA)));
+check('Statistik steht ueber den Knoepfen', await page.evaluate(() => {
+  const st = document.querySelector('#overlay-card .leg-stat'), btn = document.querySelector('#overlay-card [data-action="ov-next-leg"]');
+  return !!st && !!btn && (st.compareDocumentPosition(btn) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
+}));
+await page.locator('#overlay-card [data-action="ov-next-leg"]').click();
+await legFuer(bA);
+check('2:0 beendet Best of 3 NICHT - das dritte Leg wird gespielt', await page.evaluate(() => !window.__dart.currentMatch().done) &&
+  (await textKlein('#overlay-card')).includes('leg an'), await textKlein('#overlay-card'));
+await page.locator('#overlay-card [data-action="ov-next-leg"]').click();
+check('Kopfzeile: Leg 3', (await textKlein('#game-leg-label')).includes('leg 3'));
+await legFuer(bB);
+check('nach drei Legs entschieden: 2:1 fuer A', await page.evaluate((a) => {
+  const m = window.__dart.currentMatch(); return m.done && m.winner === a && m.legs.length === 3;
+}, bA));
+check('Glückwunsch an A mit Kurzstatistik des letzten Legs', (await textKlein('#overlay-card')).includes('glückwunsch, ' +
+  (await page.evaluate((id) => window.__dart.pname(id), bA)).toLowerCase()) && (await page.locator('#overlay-card .leg-stat').count()) === 1);
+await page.locator('#overlay-card [data-action="open-summary"]').click();
+await page.locator('#summary-actions [data-action="finish-game"]').click();
+
+group('Best of mit drei Spielern: Gleichstand nach allen Legs -> noch ein Leg, Sieger ist der Fuehrende');
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  S.game = null;
+  S.lineup = D.activeProfiles().slice(0, 3).map((p) => p.id);
+  S.settings.quickModus = 1; S.settings.quickSaetze = 1; S.settings.quickLegs = 3;
+  D.save(); D.setScreen('setup');
+});
+await page.locator('[data-action="start-game"]').click();
+await bullOffGo();
+const drei = await page.evaluate(() => window.__dart.currentMatch().p);
+check('drei Spieler am Board', drei.length === 3);
+/* Ein Leg (301) fuer einen bestimmten der drei: die anderen werfen 26. */
+async function legFuerDrei(ziel) {
+  while ((await dranId()) !== ziel) await typeScore(26);
+  await typeScore(180); await typeScore(26); await typeScore(26); await typeScore(121);
+  await page.locator('#overlay-card [data-action="co-darts"]').first().click();
+}
+await legFuerDrei(drei[0]); await page.locator('#overlay-card [data-action="ov-next-leg"]').click();
+await legFuerDrei(drei[1]); await page.locator('#overlay-card [data-action="ov-next-leg"]').click();
+await legFuerDrei(drei[2]);
+check('1:1:1 nach drei Legs: noch nicht entschieden', await page.evaluate(() => !window.__dart.currentMatch().done));
+check('Statistik mit drei Spalten', (await page.locator('#overlay-card .leg-stat.viele thead th').count()) === 4);
+await page.locator('#overlay-card [data-action="ov-next-leg"]').click();
+await legFuerDrei(drei[1]);
+check('viertes Leg entscheidet: Sieger ist der Fuehrende', await page.evaluate((b) => {
+  const m = window.__dart.currentMatch(); return m.done && m.winner === b && m.legs.length === 4;
+}, drei[1]));
+await page.locator('#overlay-card [data-action="open-summary"]').click();
+await page.locator('#summary-actions [data-action="finish-game"]').click();
+
+group('Best of ab drei Spielern: das letzte Leg macht nicht automatisch den Sieger');
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  S.game = null;
+  S.lineup = D.activeProfiles().slice(0, 3).map((p) => p.id);
+  S.settings.quickModus = 1; S.settings.quickSaetze = 1; S.settings.quickLegs = 3;
+  D.save(); D.setScreen('setup');
+});
+await page.locator('[data-action="start-game"]').click();
+await bullOffGo();
+const drei2 = await page.evaluate(() => window.__dart.currentMatch().p);
+await legFuerDrei(drei2[0]); await page.locator('#overlay-card [data-action="ov-next-leg"]').click();
+await legFuerDrei(drei2[0]); await page.locator('#overlay-card [data-action="ov-next-leg"]').click();
+await legFuerDrei(drei2[2]);
+check('A 2, C 1: Spiel vorbei, Sieger A - obwohl C das letzte Leg ausgemacht hat', await page.evaluate((a) => {
+  const m = window.__dart.currentMatch(); return m.done && m.winner === a;
+}, drei2[0]) && (await textKlein('#overlay-card')).includes('glückwunsch, ' + (await page.evaluate((id) => window.__dart.pname(id), drei2[0])).toLowerCase()));
+await page.locator('#overlay-card [data-action="open-summary"]').click();
+await page.locator('#summary-actions [data-action="finish-game"]').click();
+
+/* Zurueck auf First to / ein Leg -- die folgenden Gruppen spielen das
+   Schnelle Spiel wie bisher, und die Einstellung bleibt sonst im Speicher. */
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  S.settings.quickModus = 0; S.settings.quickSaetze = 1; S.settings.quickLegs = 1; D.save();
+});
+
 /* ---------- Turnier-Modus: nur im Ligaspiel, Umschalten per Zyklus-Taste ---------- */
 
 group('Modus-Knoepfe: Punkte, Einzel-Darts und Turnier direkt klickbar');

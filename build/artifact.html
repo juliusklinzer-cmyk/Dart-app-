@@ -3564,6 +3564,17 @@ body.tastatur #screen-bulloff button:focus {
 .ts-laeuft { margin: 12px 0 4px; text-align: left; }
 .ts-laeuft > div:not(.lg-hl-titel) { padding: 3px 0; }
 #overlay-card .ts-laeuft + .btn, #overlay-card .lg-legs + .btn { margin-top: 16px; }
+/* Kurzstatistik des Legs im Dialog nach dem Leg: eine Spalte je Spieler,
+   der Leg-Sieger hell. Skaliert am Board (vh) mit, bleibt am Handy kompakt. */
+.leg-stat { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-variant-numeric: tabular-nums; }
+.leg-stat th, .leg-stat td { padding: 3px 6px; text-align: center; color: var(--muted); }
+.leg-stat thead th { font-weight: 800; font-size: clamp(0.95rem, 2.4vh, 1.5rem); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 9em; }
+.leg-stat tbody th { text-align: left; font-weight: 500; font-size: clamp(0.85rem, 2vh, 1.3rem); }
+.leg-stat td { font-weight: 700; font-size: clamp(1.05rem, 2.8vh, 1.9rem); }
+.leg-stat .sieger { color: var(--aktiv-linie); }
+.leg-stat.viele th, .leg-stat.viele td { padding: 3px 3px; }
+.leg-stat.viele td { font-size: clamp(0.95rem, 2.4vh, 1.6rem); }
+.leg-stat.viele thead th { font-size: clamp(0.8rem, 2vh, 1.2rem); max-width: 6em; }
 
 /* Ausbullen per Pfeil-/Zifferntasten auch AUSSERHALB des Turnier-Modus:
    die gewaehlte Person (bzw. "Zurueck") traegt denselben Laser-Ring. */
@@ -6440,9 +6451,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
      bleiben dabei eine flache Liste -- Undo, Statistik und Online-Abgleich
      kennen nichts anderes. Welcher Satz gerade laeuft, wird daraus
      nachgerechnet: sobald einer die Legs fuer den Satz hat, beginnt der
-     naechste. "First to N" und "Best of 2N-1" sind dasselbe Ziel; gespeichert
-     wird die Best-of-Zahl (bestOf fuer Legs je Satz, saetzeBestOf fuer die
-     Saetze), die Schreibweise (spieldauer) nur fuer die Anzeige. */
+     naechste. "First to N": wer zuerst N Legs hat, hat den Satz. "Best of N"
+     (Julius' Wunsch, 10.10.2026): alle N Legs werden gespielt, der mit den
+     meisten hat den Satz - bei Gleichstand (ab drei Spielern moeglich) geht
+     es weiter, bis einer vorne liegt. Gespeichert wird bestOf (Legs je Satz)
+     und saetzeBestOf (Saetze); spieldauer traegt Zaehlweise und Zahlen, wie
+     sie eingestellt wurden. */
   var QUICK_MAX = 9;   // hoechstens "First to 9" bzw. "Best of 17"
   function bestOfAus(modus, n) { return modus === 1 ? n : 2 * n - 1; }
   function matchSaetzeZuGewinnen(match) {
@@ -6452,9 +6466,27 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   function mehrereLegs(match) {
     return !!match && ((match.bestOf || 1) > 1 || (match.saetzeBestOf || 1) > 1);
   }
+  /* Best of im Schnellen Spiel: feste Zahl, alle werden gespielt. Das
+     Merkmal `alle` tragen nur Spiele seit dieser Regel - aeltere Best-of-
+     Spiele im Archiv rechnen weiter nach "wer zuerst", wie sie gespielt
+     wurden, sonst zeigte ihre Auswertung einen anderen Stand als damals. */
+  function festeDauer(match) {
+    return !!(match && match.spieldauer && match.spieldauer.modus === 1 && match.spieldauer.alle);
+  }
+  /* Wer allein vorne liegt - bei Gleichstand niemand. */
+  function fuehrender(zaehler, ids) {
+    var best = null, doppelt = false;
+    ids.forEach(function (id) {
+      if (best === null || zaehler[id] > zaehler[best]) { best = id; doppelt = false; }
+      else if (zaehler[id] === zaehler[best]) doppelt = true;
+    });
+    return doppelt ? null : best;
+  }
   function satzStand(match) {
+    var fest = festeDauer(match);
     var gewinnLegs = matchLegsToWin(match);
     var gewinnSaetze = matchSaetzeZuGewinnen(match);
+    var legsJeSatz = match.bestOf || 1, saetzeGesamt = match.saetzeBestOf || 1;
     var saetze = {}, legs = {};
     match.p.forEach(function (id) { saetze[id] = 0; legs[id] = 0; });
     var satzNr = 1, legNr = 1, satzZu = false, sieger = null;
@@ -6462,10 +6494,18 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       if (!l.winner || sieger) return;
       satzZu = false;
       legs[l.winner]++; legNr++;
-      if (legs[l.winner] >= gewinnLegs) {
-        saetze[l.winner]++;
+      /* First to: wer die Legs hat. Best of: nach der festen Zahl Legs der
+         mit den meisten - sonst noch ein Leg. */
+      var satzSieger = fest
+        ? (legNr - 1 >= legsJeSatz ? fuehrender(legs, match.p) : null)
+        : (legs[l.winner] >= gewinnLegs ? l.winner : null);
+      if (satzSieger) {
+        saetze[satzSieger]++;
         satzZu = true;
-        if (saetze[l.winner] >= gewinnSaetze) sieger = l.winner;
+        var spielSieger = fest
+          ? (satzNr >= saetzeGesamt ? fuehrender(saetze, match.p) : null)
+          : (saetze[satzSieger] >= gewinnSaetze ? satzSieger : null);
+        if (spielSieger) sieger = spielSieger;
         else {
           match.p.forEach(function (id) { legs[id] = 0; });
           satzNr++; legNr = 1;
@@ -6663,7 +6703,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (isCheckout) {
       leg.winner = pid;
       var st = satzStand(m);
-      if (st.sieger === pid) {
+      if (st.sieger) {
+        /* Best of ab drei Spielern: das Spiel gewinnt, wer nach allen Legs
+           vorne liegt - nicht zwingend, wer das letzte Leg ausgemacht hat. */
+        pid = st.sieger;
         m.done = true;
         m.winner = pid;
         m.at = Date.now();
@@ -7720,6 +7763,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       S.game.p = S.lineup.slice();
       S.game.start = S.settings.start;
       var qd = { modus: S.settings.quickModus === 1 ? 1 : 0, saetze: S.settings.quickSaetze || 1, legs: S.settings.quickLegs || 1 };
+      if (qd.modus === 1) qd.alle = true;   // Best of: alle Legs werden gespielt (siehe festeDauer)
       S.game.spieldauer = qd;
       S.game.bestOf = bestOfAus(qd.modus, qd.legs);
       S.game.saetzeBestOf = bestOfAus(qd.modus, qd.saetze);
@@ -8440,11 +8484,16 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     });
     var gewinnLegs = Math.floor(bestOfAus(best ? 1 : 0, lg) / 2) + 1;
     var gewinnSaetze = Math.floor(bestOfAus(best ? 1 : 0, sz) / 2) + 1;
+    /* Best of: alle Legs werden gespielt. First to: wer zuerst die Legs hat. */
     $('quick-dauer-hint').textContent = sz === 1 && lg === 1
       ? 'Ein Leg – wer zuerst auscheckt, gewinnt.'
-      : sz === 1
-        ? 'Gewonnen hat, wer zuerst ' + gewinnLegs + ' Legs hat.'
-        : 'Ein Satz geht an den, der zuerst ' + plural(gewinnLegs, 'Leg', 'Legs') + ' hat – das Spiel an den, der zuerst ' + plural(gewinnSaetze, 'Satz', 'Sätze') + ' hat.';
+      : best
+        ? (sz === 1
+          ? 'Alle ' + lg + ' Legs werden gespielt – wer die meisten hat, gewinnt.'
+          : 'Jeder Satz hat ' + lg + ' Legs, das Spiel ' + sz + ' Sätze – alles wird gespielt, die meisten gewinnen.')
+        : sz === 1
+          ? 'Gewonnen hat, wer zuerst ' + gewinnLegs + ' Legs hat.'
+          : 'Ein Satz geht an den, der zuerst ' + plural(gewinnLegs, 'Leg', 'Legs') + ' hat – das Spiel an den, der zuerst ' + plural(gewinnSaetze, 'Satz', 'Sätze') + ' hat.';
   }
 
   /* Im Liga-Betrieb zaehlt der buergerliche Name (SWO: keine Kuenstlernamen).
@@ -11750,8 +11799,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       var ldStand = m1.kind === 'quick'
         ? standZeile(m1, null, !!o.satz)
         : legsWon(m1, m1.p[0]) + ':' + legsWon(m1, m1.p[1]);
+      /* Das eben beendete Leg: das letzte mit Sieger. */
+      var ldLeg = m1.legs.filter(function (l) { return l.winner; }).pop();
       html = '<div class="big-emoji">🎯</div><h3>' + (o.satz ? 'Satz' : 'Leg') + ' an ' + esc(pname(o.pid)) + '</h3>' +
         '<p>Stand: ' + ldStand + '</p>' +
+        legStatHTML(m1, ldLeg) +
         '<button class="' + ldKl(0, 'btn primary full') + '" data-action="ov-next-leg">' + (o.satz ? 'Nächster Satz' : 'Nächstes Leg') + '</button>' +
         '<button class="' + ldKl(1, 'btn ghost full') + '" data-action="undo">Eingabe rückgängig</button>' +
         (ldUeb ? '<button class="' + ldKl(2, 'btn ghost full') + '" data-action="to-tournament">' +
@@ -11762,6 +11814,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       var last = !nextOpenMatch();
       html = '<div class="big-emoji">🏅</div><h3>Glückwunsch, ' + esc(pname(o.pid)) + '!</h3>' +
         '<p>' + esc(pname(m2.p[0])) + ' ' + legsWon(m2, m2.p[0]) + ':' + legsWon(m2, m2.p[1]) + ' ' + esc(pname(m2.p[1])) + '</p>' +
+        legStatHTML(m2, m2.legs.filter(function (l) { return l.winner; }).pop()) +
         '<button class="btn primary full" data-action="open-summary" data-kind="501" data-id="' + esc(m2.id) + '">Weiter zur Spielstatistik</button>' +
         (last ? (S.tour && S.tour.liga ? '<button class="btn primary start full" data-action="ov-next-match">Ergebnisse &amp; Man of the Day</button>' : '')
           : '<button class="btn ghost full" data-action="ov-next-match">Direkt zum nächsten Spiel</button>') +
@@ -12180,6 +12233,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         (gdSolo ? 'Ausgemacht, ' : 'Glückwunsch, ') + esc(pname(o.pid)) + '!</h3>' +
         '<p>' + (S.game ? kindName(S.game.kind) : '') +
           (S.game && S.game.kind === 'quick' && !gdSolo && mehrereLegs(S.game) ? ' · ' + standZeile(S.game) : '') + '</p>' +
+        (S.game && S.game.kind === 'quick' && Array.isArray(S.game.legs)
+          ? legStatHTML(S.game, S.game.legs.filter(function (l) { return l.winner; }).pop()) : '') +
         '<button class="' + gdKl(0, 'btn primary full') + '" data-action="open-summary" data-kind="' + esc((S.game ? S.game.kind : 'cricket')) + '" data-id="current">Weiter zur Spielstatistik</button>' +
         '<button class="' + gdKl(1, 'btn ghost full') + '" data-action="undo-game">Letzten Dart zurück</button>' +
         (gdWahl >= 0 ? '<p class="te-hint">↑ ↓ / Tab · wählen &nbsp;&nbsp; Enter · bestätigen</p>' : '');
@@ -14106,6 +14161,26 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   /* Leg-Ende im Turnier/Ligaspiel: dritte Wahl "zur Uebersicht" (das Einzel
      bleibt offen und geht dort mit "Weiter" weiter). Im Schnellen Spiel
      gibt es keinen Spielplan. */
+  /* Kurzstatistik eines Legs fuer die Dialoge nach dem Leg: je Spieler
+     Average, Darts, hoechste Aufnahme und Finish - der Leg-Sieger hell. */
+  function legStatHTML(m, leg) {
+    if (!m || !leg || !leg.visits || !leg.visits.length) return '';
+    var st = collectStats([{ matches: [{ p: m.p, legs: [leg] }], start: matchStart(m) }], m.p);
+    m.p.forEach(function (id) { finalize(st[id]); });
+    var zeilen = [
+      ['Ø', function (s) { return s.darts ? s.avg.toFixed(1) : '–'; }],
+      ['Darts', function (s) { return s.darts || '–'; }],
+      ['Höchste', function (s) { return s.highScore || '–'; }],
+      ['Finish', function (s) { return s.highCO || '–'; }]
+    ];
+    var kl = function (id) { return id === leg.winner ? ' class="sieger"' : ''; };
+    return '<table class="leg-stat' + (m.p.length > 2 ? ' viele' : '') + '"><thead><tr><th></th>' +
+      m.p.map(function (id) { return '<th' + kl(id) + '>' + esc(pname(id)) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      zeilen.map(function (z) {
+        return '<tr><th>' + z[0] + '</th>' + m.p.map(function (id) { return '<td' + kl(id) + '>' + z[1](st[id]) + '</td>'; }).join('') + '</tr>';
+      }).join('') + '</tbody></table>';
+  }
+
   function legDoneUebersicht() {
     var m = currentMatch();
     return !!(m && m.kind !== 'quick' && !S.game && S.matches.indexOf(m) >= 0);
@@ -14653,6 +14728,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       activeLeg: activeLeg,
       activePlayer: activePlayer,
       satzStand: satzStand,
+      pname: pname,
       chartSeries: chartSeries,
       currentMatch: currentMatch,
       game: function () { return S.game; },
