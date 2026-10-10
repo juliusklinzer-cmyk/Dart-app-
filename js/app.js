@@ -1822,7 +1822,18 @@
        Aufnahme zurueck: so kommt man mit derselben Taste zum Wurf davor
        und zum vorigen Spieler. */
     if (k === 'del') {
-      if (UI.input === '') { undo(); return; }
+      if (UI.input === '') {
+        /* Die zurueckgenommene Aufnahme steht wieder im Feld (Julius):
+           weiteres Zurueck loescht sie Ziffer fuer Ziffer, und erst bei
+           leerem Feld geht es die naechste Aufnahme zurueck. Nur fuer
+           Aufnahmen, die als Punkte getippt wurden - nicht im Board-Modus. */
+        var weg = undo();
+        if (weg && !weg.k && !UI.turnier && !UI.darts.length) {
+          UI.input = String(weg.b ? weg.o : weg.s);
+          render();
+        }
+        return;
+      }
       klick(); UI.input = UI.input.slice(0, -1); render(); return;
     }
     if (k === 'ok') {
@@ -1960,7 +1971,7 @@
     }
 
     var leg = m.legs[m.legs.length - 1];
-    leg.visits.pop();
+    var weg = leg.visits.pop();
     leg.winner = null;
     /* Im geteilten Turnier ist das Ergebnis schon beim Server: merken, dass
        hier korrigiert wird, sonst holt der Abgleich das alte zurueck. */
@@ -1977,6 +1988,7 @@
     UI.input = '';
     save();
     render();
+    return weg;
   }
 
   /* ================= Statistik ================= */
@@ -3241,7 +3253,9 @@
       S.screen === 'game' || S.screen === 'cricket' || S.screen === 'rtw' || S.screen === 'finisher');
     /* Das X01-Spielbild ist auf jeder Bildschirmgroesse fest im Rahmen
        (siehe body.fix-spiel) - nichts scrollt, weder Seite noch Spielbild. */
-    document.body.classList.toggle('fix-spiel', S.screen === 'game');
+    document.body.classList.toggle('fix-spiel', S.screen === 'game' || S.screen === 'cricket');
+    /* Cricket nutzt die ganze Breite - kein Seitenrand, keine Maximalbreite. */
+    document.body.classList.toggle('rand-aus', S.screen === 'cricket' || S.screen === 'game');
     if (S.screen === 'setup') { gaesteAufraeumen(); renderSetup(); }
     /* Der Hintergrundtakt laeuft nur da, wo man ihn auch sieht: im
        Turnierbildschirm. Sonst fragt die App den ganzen Abend nach Daten,
@@ -4955,9 +4969,11 @@
           var kStell = finisherStellwurf(kRest, kDbl);
           if (kStell) {
             var kStellSoll = labelDart(kStell);
+            /* Dazu, worauf der Stellwurf stellt (42 Rest, "10" -> auf 32). */
+            var kAuf = kRest - kStellSoll.n * kStellSoll.m;
             kacheln[UI.darts.length] = '<button type="button" class="fk tipp stellen"' +
-              ' data-num="' + kStellSoll.n + '" data-mult="' + kStellSoll.m + '" aria-label="Stellwurf ' + kStell + ' getroffen">' +
-              kStell + '</button>';
+              ' data-num="' + kStellSoll.n + '" data-mult="' + kStellSoll.m + '" aria-label="Stellwurf ' + kStell + ' getroffen, stellt auf ' + kAuf + '">' +
+              kStell + '<span class="fk-auf">auf ' + kAuf + '</span></button>';
           }
         }
         for (var kx = 0; kx < 3; kx++) if (!kacheln[kx]) kacheln[kx] = '<span class="fk leer">–</span>';
@@ -5248,7 +5264,9 @@
       var istAkt = id === active;
       var istVorher = id === vorherId;
       var mpr = st.darts[id] ? (st.allMarks[id] / st.darts[id]) * 3 : 0;
-      var wert = g.scoring ? st.score[id] : zu(id) + '/7';
+      /* Ohne Punkte zaehlt nur der Fortschritt: die Marken in Prozent (21 = alles zu), klein. */
+      var marken = CRICKET_NUMBERS.reduce(function (sum, x) { return sum + Math.min(3, st.marks[id][x]); }, 0);
+      var wert = g.scoring ? st.score[id] : Math.round(marken / 21 * 100) + ' %';
       /* An der Aufnahmegrenze (3, 6, 9 ... Darts) liefert gameVisitDarts die
          letzten drei - die gehoeren dem Vorgaenger, nicht dem Aktiven. Nach
          dem Sieg bleibt die Aufnahme des Siegers stehen. */
@@ -5262,7 +5280,7 @@
         '<div class="pkopf">' + avatarHTML(profile(id), 'sm') +
           '<div class="pblock"><span class="pname">' + esc(pname(id)) + '</span>' +
           '<span class="pmeta">MPR <b class="cr-mpr">' + (st.darts[id] ? mpr.toFixed(2) : '–') + '</b></span></div></div>' +
-        '<div class="cr-pts' + (id === fuehrt ? ' fuehrt' : '') + '">' + wert + '</div>' +
+        '<div class="cr-pts' + (g.scoring ? '' : ' klein') + (id === fuehrt ? ' fuehrt' : '') + '">' + wert + '</div>' +
         '<div class="cr-tiles">' + kacheln + '</div></div>';
     }).join('');
     html += '<div class="cr-gap"></div>' +

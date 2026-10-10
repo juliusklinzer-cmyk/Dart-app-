@@ -3521,6 +3521,11 @@ await typeScore(60);
 check('Spieler 2 hat 441', (await rest(1)) === '441');
 await page.locator('.keypad button[data-key="del"]').click();
 check('Zurueck bei leerem Feld nimmt die letzte Aufnahme zurueck', (await rest(1)) === '501');
+check('die zurueckgenommene 60 steht wieder im Feld', (await text('#score-display')) === '60');
+await page.locator('.keypad button[data-key="del"]').click();
+check('weiteres Zurueck loescht Ziffer fuer Ziffer', (await text('#score-display')) === '6' && (await rest(1)) === '501');
+await page.locator('.keypad button[data-key="del"]').click();
+check('Feld leer, Stand unveraendert', (await text('#score-display')) === '0' && (await rest(1)) === '501');
 check('und Spieler 2 ist wieder am Wurf', await page.evaluate(() => {
   const D = window.__dart, m = D.currentMatch();
   return D.activePlayer(D.activeLeg(m), m) === m.p[1];
@@ -3547,18 +3552,31 @@ check('Tipp auf die Kachel bucht den Dart', await page.evaluate(() => {
   return d.length === 1 && d[0].m === 3 && d[0].n === 20;
 }));
 check('Rest laeuft mit: 81', (await rest(0)) === '81');
-check('Kachel-Taste ist nicht blau, sondern erbt die Textfarbe', await page.evaluate(() => {
+check('Kachel-Taste ist nicht blau, sondern im ruhigen Weiss der Felder', await page.evaluate(() => {
   const b = document.querySelector('#game-kacheln .fk.tipp:not(.jetzt)');
-  return getComputedStyle(b).color === getComputedStyle(b.parentElement).color && getComputedStyle(b).fontWeight === '700';
+  const probe = document.createElement('span'); probe.style.color = getComputedStyle(document.getElementById('screen-game')).getPropertyValue('--ruhig').trim();
+  document.body.appendChild(probe); const ruhig = getComputedStyle(probe).color; probe.remove();
+  return getComputedStyle(b).color === ruhig && getComputedStyle(b).fontWeight === '700';
 }));
 /* 81 mit zwei Darts geht (T19 D12); nach einer T20 bleiben 21 mit einem Dart --
    kein Finish, also steht der Stellwurf da: die 1 laesst 20. Ein Single ohne
    Buchstaben davor -- genau der Fall, der frueher NaN buchte. */
 await dart('T20');
-check('kein Finish mehr: Stellwurf in der letzten Kachel',
+check('kein Finish mehr: Stellwurf in der letzten Kachel - mit dem Ziel, auf das er stellt',
   (await page.locator('#game-kacheln .fk.stellen').count()) === 1 &&
-  (await page.locator('#game-kacheln .fk.stellen').innerText()).trim() === '1',
+  /^1\s+auf 20$/.test((await page.locator('#game-kacheln .fk.stellen').innerText()).trim()),
   await text('#game-kacheln'));
+check('Double, Triple und Zurueck heben sich von den Zahlentasten ab', await page.evaluate(() => {
+  const z = getComputedStyle(document.querySelector('#num-grid button[data-num="5"]')).backgroundColor;
+  const d = getComputedStyle(document.querySelector('#num-grid button.mult[data-mult="2"]')).backgroundColor;
+  const r = getComputedStyle(document.querySelector('#num-grid button.zurueck')).backgroundColor;
+  return z !== d && d === r;
+}));
+check('nur der Rest am Wurf leuchtet weiss, Name und Tasten sind ruhiger', await page.evaluate(() => {
+  const hell = (sel) => getComputedStyle(document.querySelector(sel)).color.match(/\d+/g).map(Number);
+  const rest = hell('.pcard.active .rest'), name = hell('.pcard.active .pname'), taste = hell('#num-grid button[data-num="5"]');
+  return rest[0] === 255 && name[0] < 240 && taste[0] < 240;
+}));
 await page.locator('#game-kacheln .fk.stellen').click();
 check('Tipp auf den Stellwurf bucht eine saubere 1 (kein NaN), Aufnahme zu Ende',
   (await rest(0)) === '20' && !(await text('#scoreboard')).includes('NaN'), await rest(0));

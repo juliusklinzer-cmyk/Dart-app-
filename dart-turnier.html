@@ -3946,9 +3946,11 @@ body.tastatur #screen-bulloff button:focus {
 
 /* ---------- Querformat: links die Spieler, rechts die Eingabe ---------- */
 @media (orientation: landscape) {
+  /* Volle Breite, schmaler Rand (Julius): der body hat im Spiel keine
+     Maximalbreite und keinen Seitenrand mehr (body.rand-aus). */
   #screen-game.active {
-    gap: clamp(6px, 1.6vh, 18px);
-    padding: clamp(6px, 1.8vh, 22px) clamp(8px, 1.6vw, 26px);
+    gap: clamp(6px, 1.4vh, 16px);
+    padding: clamp(6px, 1.2vh, 14px) clamp(6px, 1vw, 14px);
   }
   body.fix-spiel #screen-game.active { padding-bottom: clamp(6px, 1.8vh, 22px); }
   /* Am Board bleibt oben Platz fuer Apples Uhrzeit und Batterie. */
@@ -4085,6 +4087,47 @@ body.tastatur #screen-bulloff button:focus {
 }
 
 
+/* ---------- Leuchthierarchie (Julius, 10.10.2026) ----------
+ * Nur der Rest des Spielers am Wurf leuchtet weiss. Alles andere - Name,
+ * Average, Kopfzeile, Tasten, getippte Zahl, Finish-Felder - steht in einem
+ * etwas dunkleren Weiss, damit die grosse Zahl am meisten leuchtet. */
+#screen-game.active { --ruhig: #d4cccd; }
+#screen-game.active .game-title #game-match-label { color: var(--ruhig); }
+#screen-game.active #scoreboard .pcard .pname, #screen-game.active #scoreboard .pcard.active .pname { color: var(--ruhig); }
+#screen-game.active #scoreboard .pcard .pavg b { color: var(--ruhig); }
+#screen-game.active #scoreboard .pcard.active .letzte { color: var(--ruhig); opacity: 1; }
+#screen-game.active #scoreboard .pcard .pfelder .fk { color: var(--ruhig); }
+#screen-game.active #scoreboard .pcard .pfelder .fk.jetzt { color: #fff; }
+#screen-game.active #pad-total .keypad button, #screen-game.active #pad-total .quick-row button { color: var(--ruhig); }
+#screen-game.active #pad-total .keypad button.ok { color: var(--on-primary); }
+#screen-game.active #pad-total .score-display { color: var(--ruhig); text-shadow: 0 0 22px var(--schein); }
+#screen-game.active #pad-total .score-display.empty { color: var(--muted); text-shadow: none; }
+#screen-game.active #pad-darts .num-grid button { color: var(--ruhig); }
+#screen-game.active #pad-darts .num-grid button.end-visit { color: var(--on-primary); }
+#screen-game.active #pad-darts .num-grid button.bull { color: var(--amber); }
+#screen-game.active #pad-darts .num-grid button.miss { color: var(--red); }
+#screen-game.active.turnier .key-display { color: var(--ruhig); }
+#screen-game.active.turnier .key-hist .v .s { color: var(--ruhig); }
+
+/* Double, Triple und Zurueck heben sich von den Zahlentasten ab: dunklere
+   Flaeche, hellere Kante, leicht erhaben. Aktiv bleiben Double/Triple hell. */
+#screen-game.active #pad-darts .num-grid button.mult,
+#screen-game.active #pad-darts .num-grid button.zurueck {
+  background: var(--bg-3); border-color: var(--line-hell); color: var(--muted);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 2px 0 rgba(0, 0, 0, 0.45);
+}
+#screen-game.active #pad-darts .num-grid button.mult:active,
+#screen-game.active #pad-darts .num-grid button.zurueck:active { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04); }
+#screen-game.active #pad-darts .num-grid button.mult.active {
+  background: var(--primary); border-color: var(--primary); color: var(--on-primary); box-shadow: 0 0 24px var(--schein);
+}
+
+/* Stellwurf-Feld: die Zahl und darunter klein, worauf sie stellt. */
+#screen-game.active #scoreboard .pcard .pfelder .fk.stellen { flex-direction: column; gap: 0; line-height: 0.95; }
+#screen-game.active #scoreboard .pcard .pfelder .fk .fk-auf {
+  font-size: 0.42em; color: var(--muted); font-weight: 600; letter-spacing: 0.03em; line-height: 1; white-space: nowrap;
+}
+
 /* Fernsteuerung mit drei oder vier Spielern: alle Karten im 2x2-Raster,
    der Rest eine Stufe kleiner als zu zweit. */
 @media (orientation: landscape) {
@@ -4106,18 +4149,19 @@ body.tastatur #screen-bulloff button:focus {
  * die Eingabe sitzt direkt neben der Zeile, die sie fuellt. Oben links das
  * Menue, oben rechts Zurueck und Bust. Bei allen zu = grau und gestrichelt.
  * ======================================================================= */
+/* Fest im Rahmen wie das X01 (body.fix-spiel: der body ist genau
+   bildschirmhoch, nichts scrollt) und ueber die ganze Breite (body.rand-aus:
+   kein Seitenrand, keine Maximalbreite). Oben etwas mehr Luft, damit der
+   Schein der aktiven Karte nicht an der Kante abgeschnitten wird. */
+body.rand-aus { max-width: none; padding-left: 0; padding-right: 0; }
 #screen-cricket.active {
-  padding: clamp(6px, 1.8vh, 22px) clamp(8px, 1.6vw, 26px); gap: 0;
-  /* In jeder Lage genau bildschirmhoch - auch am iPad hochkant, wo die
-     Seite sonst nur eine Mindesthoehe hat und die Tafel halb leer liesse. */
-  height: calc(100dvh - 12px); min-height: 0; overflow: hidden; display: flex; flex-direction: column;
+  padding: clamp(10px, 2.4vh, 30px) clamp(6px, 1vw, 14px) clamp(6px, 1.8vh, 22px);
+  gap: 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column;
+  height: calc(100vh - 12px); height: calc(100dvh - 12px);
 }
-/* Am Handy (bis 699 px) ist der body selbst bildschirmhoch und flex - dort fuellt der Bildschirm ihn aus. */
-@media (max-width: 699px) {
-  body.im-spiel #screen-cricket.active { padding-bottom: clamp(6px, 1.8vh, 22px); height: auto; flex: 1 1 auto; }
-}
-#screen-cricket.active .game-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
-#screen-cricket.active .cricket-board { flex: 1 1 auto; min-height: 0; min-width: 0; overflow: hidden; }
+body.fix-spiel #screen-cricket.active { flex: 1 1 auto; height: auto; min-height: 0; overflow: hidden; padding-bottom: clamp(6px, 1.8vh, 22px); }
+#screen-cricket.active .game-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: visible; }
+#screen-cricket.active .cricket-board { flex: 1 1 auto; min-height: 0; min-width: 0; overflow: visible; }
 #screen-cricket.active .cr-grid {
   height: 100%; min-width: 0; display: grid;
   grid-template-columns: clamp(48px, 7vw, 100px) repeat(var(--spalten, 2), minmax(0, 1fr)) clamp(4px, 1vw, 16px) repeat(3, 10vw);
@@ -4165,7 +4209,12 @@ body.tastatur #screen-bulloff button:focus {
 #screen-cricket.active .cr-card .cr-pts {
   text-align: center; font-family: var(--font-cond); font-weight: 700; font-size: clamp(32px, 8.4vh, 92px); line-height: 0.9;
   font-variant-numeric: tabular-nums; color: var(--text); opacity: 0.85; min-width: 0; overflow: hidden;
+  /* Luft zwischen den Punkten und den geworfenen Pfeilen darunter. */
+  margin: clamp(2px, 0.8vh, 10px) 0 clamp(6px, 1.6vh, 18px);
 }
+/* Ohne Punkte: nur der Fortschritt in Prozent, klein und ruhig. */
+#screen-cricket.active .cr-card .cr-pts.klein { font-size: clamp(16px, 3.4vh, 36px); color: var(--muted); opacity: 1; letter-spacing: 0.04em; }
+#screen-cricket.active .cr-card.act .cr-pts.klein { color: var(--text); text-shadow: none; }
 #screen-cricket.active .cr-card.act .cr-pts { opacity: 1; color: #fff; text-shadow: 0 0 26px rgba(70, 170, 215, 0.45); }
 /* Wer vorn liegt: ein kleines Dreieck an den Punkten. */
 #screen-cricket.active .cr-card .cr-pts.fuehrt::after { content: ' ▲'; font-size: 0.3em; vertical-align: 0.9em; color: var(--laser-hell); }
@@ -4285,7 +4334,8 @@ body.tastatur #screen-bulloff button:focus {
   #screen-cricket.active .viele .cr-card .pkopf .av.sm { display: none; }
   #screen-cricket.active .cr-card .pname, #screen-cricket.active .viele .cr-card .pname { font-size: 0.8rem; }
   #screen-cricket.active .cr-card .pmeta, #screen-cricket.active .viele .cr-card .pmeta { font-size: 0.65rem; }
-  #screen-cricket.active .cr-card .cr-pts, #screen-cricket.active .viele .cr-card .cr-pts { font-size: clamp(22px, 4vh, 40px); }
+  #screen-cricket.active .cr-card .cr-pts, #screen-cricket.active .viele .cr-card .cr-pts { font-size: clamp(22px, 4vh, 40px); margin: 2px 0 4px; }
+  #screen-cricket.active .cr-card .cr-pts.klein, #screen-cricket.active .viele .cr-card .cr-pts.klein { font-size: 0.9rem; }
   #screen-cricket.active .cr-card .cr-tiles, #screen-cricket.active .viele .cr-card .cr-tiles { height: 26px; gap: 3px; }
   #screen-cricket.active .cr-card .ct, #screen-cricket.active .viele .cr-card .ct { font-size: 0.75rem; }
   #screen-cricket.active .cr-h { font-size: 1rem; }
@@ -7443,7 +7493,18 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
        Aufnahme zurueck: so kommt man mit derselben Taste zum Wurf davor
        und zum vorigen Spieler. */
     if (k === 'del') {
-      if (UI.input === '') { undo(); return; }
+      if (UI.input === '') {
+        /* Die zurueckgenommene Aufnahme steht wieder im Feld (Julius):
+           weiteres Zurueck loescht sie Ziffer fuer Ziffer, und erst bei
+           leerem Feld geht es die naechste Aufnahme zurueck. Nur fuer
+           Aufnahmen, die als Punkte getippt wurden - nicht im Board-Modus. */
+        var weg = undo();
+        if (weg && !weg.k && !UI.turnier && !UI.darts.length) {
+          UI.input = String(weg.b ? weg.o : weg.s);
+          render();
+        }
+        return;
+      }
       klick(); UI.input = UI.input.slice(0, -1); render(); return;
     }
     if (k === 'ok') {
@@ -7581,7 +7642,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     }
 
     var leg = m.legs[m.legs.length - 1];
-    leg.visits.pop();
+    var weg = leg.visits.pop();
     leg.winner = null;
     /* Im geteilten Turnier ist das Ergebnis schon beim Server: merken, dass
        hier korrigiert wird, sonst holt der Abgleich das alte zurueck. */
@@ -7598,6 +7659,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     UI.input = '';
     save();
     render();
+    return weg;
   }
 
   /* ================= Statistik ================= */
@@ -8862,7 +8924,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       S.screen === 'game' || S.screen === 'cricket' || S.screen === 'rtw' || S.screen === 'finisher');
     /* Das X01-Spielbild ist auf jeder Bildschirmgroesse fest im Rahmen
        (siehe body.fix-spiel) - nichts scrollt, weder Seite noch Spielbild. */
-    document.body.classList.toggle('fix-spiel', S.screen === 'game');
+    document.body.classList.toggle('fix-spiel', S.screen === 'game' || S.screen === 'cricket');
+    /* Cricket nutzt die ganze Breite - kein Seitenrand, keine Maximalbreite. */
+    document.body.classList.toggle('rand-aus', S.screen === 'cricket' || S.screen === 'game');
     if (S.screen === 'setup') { gaesteAufraeumen(); renderSetup(); }
     /* Der Hintergrundtakt laeuft nur da, wo man ihn auch sieht: im
        Turnierbildschirm. Sonst fragt die App den ganzen Abend nach Daten,
@@ -10576,9 +10640,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           var kStell = finisherStellwurf(kRest, kDbl);
           if (kStell) {
             var kStellSoll = labelDart(kStell);
+            /* Dazu, worauf der Stellwurf stellt (42 Rest, "10" -> auf 32). */
+            var kAuf = kRest - kStellSoll.n * kStellSoll.m;
             kacheln[UI.darts.length] = '<button type="button" class="fk tipp stellen"' +
-              ' data-num="' + kStellSoll.n + '" data-mult="' + kStellSoll.m + '" aria-label="Stellwurf ' + kStell + ' getroffen">' +
-              kStell + '</button>';
+              ' data-num="' + kStellSoll.n + '" data-mult="' + kStellSoll.m + '" aria-label="Stellwurf ' + kStell + ' getroffen, stellt auf ' + kAuf + '">' +
+              kStell + '<span class="fk-auf">auf ' + kAuf + '</span></button>';
           }
         }
         for (var kx = 0; kx < 3; kx++) if (!kacheln[kx]) kacheln[kx] = '<span class="fk leer">–</span>';
@@ -10869,7 +10935,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       var istAkt = id === active;
       var istVorher = id === vorherId;
       var mpr = st.darts[id] ? (st.allMarks[id] / st.darts[id]) * 3 : 0;
-      var wert = g.scoring ? st.score[id] : zu(id) + '/7';
+      /* Ohne Punkte zaehlt nur der Fortschritt: die Marken in Prozent (21 = alles zu), klein. */
+      var marken = CRICKET_NUMBERS.reduce(function (sum, x) { return sum + Math.min(3, st.marks[id][x]); }, 0);
+      var wert = g.scoring ? st.score[id] : Math.round(marken / 21 * 100) + ' %';
       /* An der Aufnahmegrenze (3, 6, 9 ... Darts) liefert gameVisitDarts die
          letzten drei - die gehoeren dem Vorgaenger, nicht dem Aktiven. Nach
          dem Sieg bleibt die Aufnahme des Siegers stehen. */
@@ -10883,7 +10951,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '<div class="pkopf">' + avatarHTML(profile(id), 'sm') +
           '<div class="pblock"><span class="pname">' + esc(pname(id)) + '</span>' +
           '<span class="pmeta">MPR <b class="cr-mpr">' + (st.darts[id] ? mpr.toFixed(2) : '–') + '</b></span></div></div>' +
-        '<div class="cr-pts' + (id === fuehrt ? ' fuehrt' : '') + '">' + wert + '</div>' +
+        '<div class="cr-pts' + (g.scoring ? '' : ' klein') + (id === fuehrt ? ' fuehrt' : '') + '">' + wert + '</div>' +
         '<div class="cr-tiles">' + kacheln + '</div></div>';
     }).join('');
     html += '<div class="cr-gap"></div>' +

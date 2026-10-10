@@ -85,7 +85,8 @@ startet das Spiel mit einem Tipp.
 
 Das Spielbild ist **eine Tafel** (Entwurf „Cricket Redesign“, Oktober 2026, dieselbe
 Sprache wie das X01): links die Zahlen 20 bis 15 und Bull, je Spieler eine Spalte –
-oben seine Karte mit **Punkten** (ohne Punkte-Modus: zugemachte Felder), **MPR** und den
+oben seine Karte mit **Punkten** (ohne Punkte-Modus stattdessen klein der Fortschritt in
+Prozent der 21 Marken), **MPR** und den
 drei Darts der laufenden Aufnahme (die Aufnahme des Vorgängers bleibt gedimmt in seiner
 Karte stehen), darunter die Marken (/, ✕, ⊗; zu = blau leuchtend) –, und **rechts neben
 jeder Zeile die Tasten** Single, Double und Triple für genau diese Zahl, in der Bull-Zeile
