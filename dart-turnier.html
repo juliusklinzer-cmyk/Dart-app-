@@ -963,11 +963,6 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   .rtw-row .rw-target { font-size: clamp(2rem, 6vh, 3.8rem); min-width: 4.5ch; }
   .turn-label { font-size: 1.25rem; }
   .pad .rtw-pad-grid { flex: 1; grid-auto-rows: 1fr; }
-  /* Setup und Rangliste zweispaltig, damit nichts unter die Falz rutscht. */
-  #screen-setup.active { display: grid; grid-template-columns: 1fr 1fr; gap: 0 var(--space-4); align-items: start; }
-  #screen-setup.active > #resume-box,
-  #screen-setup.active > [data-action="start-game"],
-  #screen-setup.active > .footer-note { grid-column: 1 / -1; }
   /* Rangliste: Modus und Unterfilter volle Breite, darunter links die
      Liste und rechts Verlauf plus Rekorde – keine leeren Felder. */
   #screen-boards.active {
@@ -1563,61 +1558,7 @@ button, input, select, textarea { font-family: inherit; }
 
 }
 
-/* ---------- Aufbau des Startbildschirms ---------- */
-
-/*
- * Am Handy bleibt alles untereinander wie bisher: `display: contents` löst
- * die beiden Spalten-Container auf, als gäbe es sie nicht. Erst am Tablet
- * werden sie zu echten Spalten.
- */
-.setup-links, .setup-rechts { display: contents; }
-
-/* Die Teilnehmer stehen in einem festen Kasten und scrollen darin – sonst
-   schiebt eine Mannschaft mit zehn Leuten alles andere aus dem Bild. */
-#roster {
-  max-height: 42vh;
-  overflow-y: auto;
-  /* Beim Scrollen soll die Liste nicht die ganze Seite mitziehen. */
-  overscroll-behavior: contain;
-  /* Ohne sichtbare Leiste: am Finger scrollt man ohnehin direkt, und ein
-     Balken mitten in der Aufstellung stört nur. */
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-#roster::-webkit-scrollbar { width: 0; height: 0; display: none; }
-
-/* Der Startknopf klebt nur am großen Schirm unten. Am iPhone steht er wie
-   jeder andere Knopf am Ende der Seite – klebend verdeckte er dort beim
-   Scrollen die halbe Einstellungskarte. Die Mindesthöhe hält auch das
-   quergedrehte Handy heraus, das breiter als manches Tablet ist. */
-@media (min-width: 820px) {
-  #screen-setup.active {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0 var(--space-4);
-    align-items: start;
-  }
-  /* Feste Plätze statt automatischer Verteilung: die Fortsetzen-Box ist
-     meistens ausgeblendet, und dann würde alles eine Reihe hochrutschen.
-     Der Startknopf steht in der rechten Spalte unter den Einstellungen
-     (nicht mehr unten festgeklebt), die Marke über beiden Spalten. */
-  #screen-setup.active > #resume-box     { grid-area: 1 / 1 / 2 / -1; }
-  #screen-setup.active > #beitreten-box  { grid-area: 2 / 1 / 3 / -1; }
-  #screen-setup.active > .marke          { grid-area: 3 / 1 / 4 / -1; }
-  .setup-links  { grid-area: 4 / 1 / 5 / 2; }
-  .setup-rechts { grid-area: 4 / 2 / 5 / 3; }
-
-  .setup-links, .setup-rechts { display: block; }
-  /* Die linke Spalte waechst hoechstens auf die Hoehe der rechten:
-     height 0 haelt sie aus der Zeilenrechnung heraus, min-height 100%
-     streckt sie auf die Zeile - innen scrollt dann die Teilnehmerliste. */
-  .setup-links { height: 0; min-height: 100%; }
-  #karte-spieler {
-    height: 100%; box-sizing: border-box;
-    display: flex; flex-direction: column;
-  }
-  #karte-spieler #roster { flex: 1 1 auto; min-height: 0; max-height: none; }
-}
+/* Der Aufbau des Startbildschirms steht am Ende der Datei (Setup nach Entwurf). */
 
 /* Zwei Knöpfe in der Fortsetzen-Box: beenden und fortsetzen. */
 .resume-btns { display: flex; align-items: center; gap: var(--space-2); flex: none; }
@@ -4772,6 +4713,198 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
   #screen-finisher.active.fern #ff-karten.viele .pcard .pfelder .fk { font-size: clamp(16px, 4vh, 44px); }
 }
 
+
+/* ======================================================================
+   Setup: das Startbild nach dem Entwurf "Setup Redesign" (Okt. 2026).
+   Kopfzeile mit Marke und Navigation, darunter drei Spalten: Wer spielt
+   mit (die Zahl im Kreis ist die Reihenfolge der Auswahl), Spielmodus,
+   Einstellungen mit GAME ON. Am Tablet und quergedrehten Handy steht
+   alles fest im Rahmen (body.fix-setup), innen scrollen nur Spielerliste
+   und Einstellungen. Am Handy hochkant bleibt alles untereinander.
+   ====================================================================== */
+
+#screen-setup.active { display: flex; flex-direction: column; gap: 12px; padding: 8px 0 24px; }
+#screen-setup .card { margin: 0; }
+
+/* Kopfzeile: Marke links, die Navigation (per JS hierher verschoben) rechts. */
+.setup-kopf { display: flex; align-items: center; flex-wrap: wrap; gap: 10px clamp(10px, 1.4vw, 22px); }
+.setup-kopf .marke { padding: 0; flex: none; gap: clamp(8px, 1vw, 14px); }
+.setup-kopf .marke .blink-logo { width: 46px; height: 46px; box-shadow: 0 0 20px var(--schein-stark); border: 2px solid var(--line); border-radius: 50%; }
+.setup-kopf .marke .wort { font-size: 1.5rem; }
+.setup-kopf #nav { flex: 1 1 100%; margin: 0; padding: 0; gap: clamp(5px, 0.7vw, 10px); }
+.setup-kopf #nav button { min-height: 44px; padding: 8px 2px; min-width: 0; }
+
+/* Karten-Kopf: Titel links, Zaehler rechts. */
+.karte-kopf { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; column-gap: 10px; margin-bottom: 10px; }
+.karte-kopf h2 { margin: 0; }
+.karte-kopf .anzahl { font-family: var(--font-cond); font-weight: 700; font-size: 0.95rem; color: var(--muted); white-space: nowrap; }
+
+/* Teilnehmer: Avatar, Name mit Statistik, rechts die Nummer der Auswahl. */
+#screen-setup .roster { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; margin: 0 0 10px; }
+#screen-setup .roster-item {
+  min-width: 0; display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+  background: var(--bg-3); border: 1px solid var(--line); border-radius: 12px; box-shadow: none;
+}
+#screen-setup .roster-item.selected { background: var(--aktiv-flaeche); border-color: var(--aktiv-linie); box-shadow: 0 0 24px var(--schein-weich); }
+#screen-setup .roster-item .av { flex: none; }
+#screen-setup .roster-item .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#screen-setup .roster-item .sm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#screen-setup .roster-item .check {
+  flex: none; width: 26px; height: 26px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--font-cond); font-weight: 700; font-size: 1rem;
+  background: var(--primary); color: var(--on-primary); opacity: 0;
+}
+#screen-setup .roster-item.selected .check { opacity: 1; color: var(--on-primary); }
+
+/* Spielmodus: Titel und eine Zeile Beschreibung je Knopf. */
+#screen-setup .modes { gap: 6px; }
+#screen-setup .modes button { border-radius: 12px; gap: 3px; box-shadow: none; }
+#screen-setup .modes button.active { background: var(--aktiv-flaeche); border-color: var(--aktiv-linie); box-shadow: 0 0 36px var(--schein); }
+#screen-setup .modes .mt { font-family: var(--font-cond); font-weight: 700; letter-spacing: 0.03em; line-height: 1; white-space: nowrap; }
+#screen-setup .modes .md { line-height: 1.2; }
+
+/* Einstellungen: ein Abschnitt je Modus in einer Karte, dazu Ton & Feiern. */
+#karte-einstellungen .einst > h2 { margin-bottom: 10px; }
+#karte-einstellungen .einst.ton { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 4px; }
+#karte-einstellungen .einst.ton > h2 { color: var(--muted); font-size: 0.85rem; }
+#karte-einstellungen .setting { margin-bottom: 12px; gap: 6px; }
+#karte-einstellungen .setting > label { color: var(--muted); }
+#karte-einstellungen .setting > label small { display: block; font-size: 0.78em; color: var(--muted); opacity: 0.85; }
+#karte-einstellungen .options { flex-wrap: nowrap; gap: 6px; }
+#karte-einstellungen .options button {
+  flex: 1 1 0; min-width: 0; padding: 0 4px; min-height: 44px; border-radius: 12px;
+  font-family: var(--font-cond); font-weight: 600; letter-spacing: 0.04em; font-size: 1rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: none;
+}
+#karte-einstellungen .options button.active { background: var(--aktiv-flaeche); border-color: var(--aktiv-linie); color: var(--text); box-shadow: 0 0 0 1px var(--aktiv-linie) inset, 0 0 24px var(--schein-weich); }
+#karte-einstellungen .options.eingabe button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+#karte-einstellungen .options.eingabe button { letter-spacing: 0; padding: 0 2px; gap: 4px; }
+#karte-einstellungen .options.eingabe button:first-child { flex-grow: 1.25; }
+#karte-einstellungen .options.eingabe svg { width: 22px; height: 22px; flex: none; }
+#karte-einstellungen .stepper span { white-space: nowrap; }
+/* Ton & Feiern: Beschriftung links, zwei kleine Knoepfe rechts. */
+#karte-einstellungen .setting.zeile { flex-direction: row; align-items: center; justify-content: space-between; gap: 10px; }
+#karte-einstellungen .setting.zeile > label { min-width: 0; }
+#karte-einstellungen .setting.zeile .options { flex: none; }
+#karte-einstellungen .setting.zeile .options button { flex: none; width: 60px; min-height: 40px; border-radius: 10px; }
+#karte-einstellungen .hint { margin: 0; line-height: 1.45; text-wrap: pretty; }
+.stepper-reihe { display: flex; gap: 8px; }
+.stepper-reihe .stepper { flex: 1 1 0; min-width: 0; }
+#screen-setup .btn.start:disabled { opacity: 0.45; box-shadow: none; cursor: default; }
+
+/* Am Handy hochkant: die Spielerliste scrollt in einem festen Kasten,
+   damit eine Mannschaft mit zehn Leuten nicht alles aus dem Bild schiebt. */
+@media (max-width: 699px) {
+  #screen-setup .roster { max-height: 42vh; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+  #screen-setup .roster::-webkit-scrollbar { width: 0; height: 0; display: none; }
+  .setup-spalten { display: flex; flex-direction: column; gap: 12px; }
+  .setup-links, .setup-mitte, .setup-rechts { display: flex; flex-direction: column; gap: 12px; }
+}
+
+/* Tablet und quergedrehtes Handy: alles fest im Rahmen, drei Spalten. */
+@media (min-width: 700px) {
+  body.fix-setup {
+    height: 100vh; height: 100dvh; min-height: 0; overflow: hidden;
+    display: flex; flex-direction: column;
+    max-width: none;
+    padding: env(safe-area-inset-top) clamp(8px, 1.6vw, 26px) calc(clamp(6px, 1.8vh, 22px) + env(safe-area-inset-bottom));
+  }
+  body.fix-setup > * { flex: none; }
+  body.fix-setup #screen-setup.active { flex: 1 1 auto; min-height: 0; padding: clamp(6px, 1.8vh, 22px) 0 0; gap: clamp(6px, 1.4vh, 16px); }
+  body.fix-setup #screen-setup > * { flex: none; }
+  body.fix-setup #screen-setup > .setup-spalten { flex: 1 1 auto; min-height: 0; }
+
+  .setup-kopf { flex-wrap: nowrap; height: clamp(44px, 7.4vh, 78px); }
+  .setup-kopf .marke .blink-logo { width: clamp(44px, 7.4vh, 78px); height: clamp(44px, 7.4vh, 78px); }
+  .setup-kopf .marke .wort { font-size: clamp(16px, 3.4vh, 36px); }
+  .setup-kopf .marke .sub { font-size: clamp(9px, 1.4vh, 15px); margin-top: 2px; }
+  .setup-kopf #nav { flex: 1 1 auto; min-width: 0; height: 100%; max-width: 760px; margin-left: auto; }
+  .setup-kopf #nav button { height: 100%; min-height: 0; padding: 0; border-radius: clamp(10px, 1.6vh, 16px); font-size: clamp(12px, 2.3vh, 24px); }
+
+  #screen-setup .card { padding: clamp(10px, 1.8vh, 20px); }
+  #screen-setup .card > h2, .karte-kopf { margin-bottom: clamp(6px, 1.2vh, 14px); }
+  #screen-setup h2 { font-size: clamp(13px, 2.4vh, 26px); }
+  .karte-kopf .anzahl { font-size: clamp(12px, 2.2vh, 24px); }
+
+  .setup-spalten {
+    flex: 1 1 auto; min-height: 0;
+    display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 0.85fr) minmax(0, 1fr);
+    /* 1fr statt auto: eine auto-Zeile wuechse auf den Inhalt und schoebe
+       GAME ON aus dem Bild - so bleibt die Zeile genau bildschirmhoch. */
+    grid-template-rows: minmax(0, 1fr);
+    gap: clamp(8px, 1.4vw, 22px);
+  }
+  .setup-links, .setup-mitte, .setup-rechts { min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: clamp(6px, 1.4vh, 16px); }
+  .setup-links > *, .setup-mitte > *, .setup-rechts > * { flex: none; }
+
+  /* Links: die Spielerliste fuellt die Karte und scrollt innen. */
+  #karte-spieler { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+  #karte-spieler > * { flex: none; }
+  #karte-spieler .roster {
+    flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain;
+    scrollbar-width: none; grid-auto-rows: clamp(48px, 9.5vh, 100px); gap: clamp(5px, 0.9vh, 10px); align-content: start;
+    margin-bottom: clamp(6px, 1.2vh, 14px);
+  }
+  #karte-spieler .roster::-webkit-scrollbar { width: 0; height: 0; display: none; }
+  #screen-setup .roster-item { padding: 0 clamp(8px, 1vw, 14px); gap: clamp(8px, 0.9vw, 14px); }
+  #screen-setup .roster-item .av { width: clamp(28px, 4.4vh, 48px); height: clamp(28px, 4.4vh, 48px); font-size: clamp(10px, 1.8vh, 19px); }
+  #screen-setup .roster-item .nm { font-size: clamp(13px, 2vh, 21px); }
+  #screen-setup .roster-item .sm { font-size: clamp(11px, 1.55vh, 16px); }
+  #screen-setup .roster-item .gast-marke { font-size: clamp(9px, 1.4vh, 14px); }
+  #screen-setup .roster-item .check { width: clamp(20px, 3vh, 32px); height: clamp(20px, 3vh, 32px); font-size: clamp(12px, 2.2vh, 22px); }
+  #karte-spieler .btn { min-height: clamp(42px, 7vh, 66px); font-size: clamp(13px, 2.1vh, 20px); border-radius: 12px; }
+
+  /* Mitte: sieben Modus-Knoepfe teilen sich die Hoehe. */
+  #karte-modus { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+  #karte-modus > h2 { flex: none; }
+  #screen-setup .modes { flex: 1 1 auto; min-height: 0; display: grid; grid-template-rows: repeat(7, minmax(0, 1fr)); gap: clamp(4px, 0.8vh, 9px); }
+  #screen-setup .modes button { min-height: 0; padding: 0 clamp(10px, 1.2vw, 18px); overflow: hidden; justify-content: center; gap: clamp(2px, 0.4vh, 5px); }
+  #screen-setup .modes .mt { font-size: clamp(14px, 2.6vh, 28px); }
+  #screen-setup .modes .md { font-size: clamp(10px, 1.5vh, 16px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+
+  /* Rechts: die Einstellungen scrollen innen, GAME ON steht fest darunter. */
+  #karte-einstellungen { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; scrollbar-width: none; }
+  #karte-einstellungen::-webkit-scrollbar { width: 0; height: 0; display: none; }
+  #karte-einstellungen .setting { margin-bottom: clamp(6px, 1.6vh, 18px); gap: clamp(4px, 0.8vh, 8px); }
+  #karte-einstellungen .setting > label { font-size: clamp(12px, 1.9vh, 19px); }
+  #karte-einstellungen .options button { height: clamp(36px, 6.6vh, 64px); min-height: 0; font-size: clamp(13px, 2.3vh, 24px); }
+  #karte-einstellungen .options.eingabe button { font-size: clamp(13px, 2vh, 20px); }
+  #karte-einstellungen .options.eingabe svg { width: clamp(18px, 3vh, 30px); height: clamp(18px, 3vh, 30px); }
+  #karte-einstellungen .setting.zeile .options button { width: clamp(48px, 6vw, 84px); height: clamp(32px, 5.2vh, 54px); font-size: clamp(13px, 2.1vh, 22px); }
+  #karte-einstellungen .einst.ton > h2 { font-size: clamp(12px, 2vh, 22px); }
+  #karte-einstellungen .hint { font-size: clamp(11px, 1.7vh, 16px); }
+  #karte-einstellungen .stepper button { width: clamp(36px, 6vh, 56px); height: clamp(36px, 6vh, 56px); min-height: 0; }
+  #karte-einstellungen .stepper span { font-size: clamp(14px, 2.3vh, 24px); }
+  #screen-setup .btn.start { height: clamp(46px, 8vh, 84px); min-height: 0; font-size: clamp(17px, 3vh, 32px); border-radius: 12px; }
+
+  /* Fortsetzen-Box im neuen Mass. */
+  #screen-setup .card.resume { padding: clamp(8px, 1.4vh, 16px) clamp(12px, 1.6vw, 22px); }
+  #screen-setup .card.resume strong { font-size: clamp(14px, 2.4vh, 24px); }
+  #screen-setup .card.resume span { font-size: clamp(12px, 1.9vh, 19px); }
+  #screen-setup .resume-btns .btn { min-height: clamp(40px, 6.4vh, 60px); }
+}
+
+/* Schmaler als ein iPad quer: die Tastatur-Wahl zeigt nur ihr Sinnbild. */
+@media (min-width: 700px) and (max-width: 1099px) {
+  #karte-einstellungen .options button { font-size: clamp(13px, 1.9vh, 20px); }
+  #karte-einstellungen .options.eingabe span { display: none; }
+  #karte-einstellungen .options.eingabe button:first-child { flex-grow: 0.7; }
+}
+
+/* Breit genug fuer zwei Spalten in der Spielerliste (iPad quer). */
+@media (min-width: 1100px) {
+  #karte-spieler .roster { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Flach (quergedrehtes Handy): ohne Modus-Beschreibungen und Hinweise,
+   damit die sieben Modi und die Einstellungen in die Hoehe passen. */
+@media (min-width: 700px) and (max-height: 500px) {
+  #screen-setup .modes .md { display: none; }
+  #karte-einstellungen .hint:not(#online-hint):not(#quick-dauer-hint) { display: none; }
+  #karte-einstellungen .setting > label small { display: none; }
+}
+
 </style>
 </head>
 <body>
@@ -4794,6 +4927,19 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
 
 <!-- ============ SETUP ============ -->
 <section id="screen-setup" class="screen">
+  <!-- Kopfzeile: Marke links, Navigation rechts (die Leiste #nav wandert
+       im Setup per JS hier hinein - auf allen anderen Screens steht sie
+       wie gehabt ueber dem Inhalt). -->
+  <div class="setup-kopf" id="setup-kopf">
+    <div class="marke">
+      <span class="blink-logo" role="img" aria-label="Blink 180"></span>
+      <div>
+        <div class="wort">Blink <span class="rot">180</span></div>
+        <div class="sub">Dart Turnier · est. 2026</div>
+      </div>
+    </div>
+  </div>
+
   <div id="resume-box" class="card resume hidden">
     <div>
       <strong>Laufendes Turnier</strong>
@@ -4812,28 +4958,20 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
     <div id="beitreten-liste"></div>
   </div>
 
-  <!-- Die Wortmarke steht ueber beiden Spalten - so beginnen "Wer spielt
-       mit?" und "Spielmodus" auf derselben Hoehe. -->
-  <div class="marke">
-    <span class="blink-logo" role="img" aria-label="Blink 180"></span>
-    <div>
-      <div class="wort">Blink <span class="rot">180</span></div>
-      <div class="sub">Dart Turnier · est. 2026</div>
-    </div>
-  </div>
-
-  <!-- Linke Spalte: die Teilnehmer. -->
+  <div class="setup-spalten">
+  <!-- Linke Spalte: die Teilnehmer. Die Zahl im Kreis ist die Reihenfolge
+       der Auswahl - so steht fest, wer zuerst wirft. -->
   <div class="setup-links">
     <div class="card" id="karte-spieler">
-      <h2>Wer spielt mit?</h2>
+      <div class="karte-kopf"><h2>Wer spielt mit?</h2><span class="anzahl" id="roster-anzahl"></span></div>
       <div id="roster" class="roster"></div>
       <button class="btn ghost full" data-action="new-profile">+ Gastspieler hinzufügen</button>
     </div>
   </div>
 
-  <!-- Rechte Spalte: Modus und Einstellungen. -->
-  <div class="setup-rechts">
-    <div class="card">
+  <!-- Mittlere Spalte: der Spielmodus. -->
+  <div class="setup-mitte">
+    <div class="card" id="karte-modus">
     <h2>Spielmodus</h2>
     <div class="modes" id="mode-select">
       <button data-action="set-mode" data-value="quick">
@@ -4856,10 +4994,27 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
         <span class="mt">Finisher</span>
         <span class="md">Alle auf derselben Zahl – nur Finishen</span>
       </button>
+      <!-- Zwei neue Spielarten aus dem Entwurf - die Regeln stehen noch
+           nicht fest, darum laesst sich hier noch nichts starten. -->
+      <button data-action="set-mode" data-value="kaiwen">
+        <span class="mt">Kaiwen</span>
+        <span class="md">Im Team in 9 Darts finishen – Erfolg +1, Fehlschlag −1</span>
+      </button>
+      <button data-action="set-mode" data-value="hunter">
+        <span class="mt">Hunter</span>
+        <span class="md">Die Jagd: ihr fangt euch gegenseitig</span>
+      </button>
+    </div>
     </div>
   </div>
 
-    <div class="card" id="settings-501">
+  <!-- Rechte Spalte: die Einstellungen des gewaehlten Modus, darunter
+       Ton & Feiern, ganz unten GAME ON. Die Abschnitte behalten ihre Ids;
+       sichtbar ist immer nur der zum Modus passende. -->
+  <div class="setup-rechts">
+    <div class="card" id="karte-einstellungen">
+
+    <div class="einst" id="settings-501">
     <h2>Einstellungen</h2>
     <div class="setting">
       <label>Startpunkte</label>
@@ -4869,7 +5024,7 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
         <button data-value="701">701</button>
       </div>
     </div>
-    <!-- Nur im Turnier: das Schnelle Spiel hat genau ein Leg. -->
+    <!-- Nur im Turnier: das Schnelle Spiel hat seine eigene Spieldauer. -->
     <div class="setting" id="setting-bestof">
       <label>Legs pro Spiel</label>
       <div class="options" data-setting="bestOf">
@@ -4885,6 +5040,7 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
         <button data-value="0">First to</button>
         <button data-value="1">Best of</button>
       </div>
+      <div class="stepper-reihe">
       <div class="stepper">
         <button type="button" data-action="quick-step" data-key="quickSaetze" data-dir="-1" aria-label="weniger Sätze">−</button>
         <span id="quick-saetze">1 Satz</span>
@@ -4894,6 +5050,7 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
         <button type="button" data-action="quick-step" data-key="quickLegs" data-dir="-1" aria-label="weniger Legs">−</button>
         <span id="quick-legs">1 Leg</span>
         <button type="button" data-action="quick-step" data-key="quickLegs" data-dir="1" aria-label="mehr Legs">+</button>
+      </div>
       </div>
       <p class="hint" id="quick-dauer-hint"></p>
     </div>
@@ -4908,20 +5065,30 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
         eine offene Partie übernehmen. Wer eine Partie mitschreibt, hat sie für sich – die anderen
         sehen so lange „läuft bei …“. Ergebnisse stehen sofort in der Tabelle.</p>
     </div>
-    <div class="setting">
+    <!-- Wie wird eingetragen? Tastatur = Fernsteuerung vom Board-iPad aus,
+         Standard = immer die Aufnahme als Zahl, Gemischt = im Finish-Bereich
+         Dart fuer Dart. Im Spiel laesst sich jederzeit wechseln. -->
+    <div class="setting" id="setting-eingabe">
+      <label>Eingabe?</label>
+      <div class="options eingabe" id="eingabe-wahl">
+        <button data-action="eingabe" data-value="2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2.2"></rect><path d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M6.5 14h11"></path></svg><span>Tastatur</span></button>
+        <button data-action="eingabe" data-value="0">Standard</button>
+        <button data-action="eingabe" data-value="1">Gemischt</button>
+      </div>
+    </div>
+    <div class="setting" id="setting-dartmode">
       <label>Einzel-Darts ab Rest</label>
       <div class="options" data-setting="dartModeFrom">
         <button data-value="100">100</button>
+        <button data-value="140">140</button>
         <button data-value="170">170</button>
         <button data-value="180">180</button>
-        <button data-value="0">nie</button>
       </div>
+      <p class="hint">Darüber tippst du die Aufnahme als Zahl, darunter Dart für Dart mit Finish-Vorschlag.</p>
     </div>
-    <p class="hint">Über diesem Rest tippst du die geworfene Gesamtpunktzahl (bis 180), darunter
-      schaltet die App automatisch auf Einzel-Darts (Single/Double/Triple) mit Finish-Vorschlag um.</p>
-  </div>
+    </div>
 
-    <div class="card hidden" id="settings-cricket">
+    <div class="einst hidden" id="settings-cricket">
     <h2>Cricket</h2>
     <div class="setting">
       <label>Punkte zählen</label>
@@ -4935,24 +5102,9 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
       weiteren Treffern Punkte, solange sie bei mindestens einem Mitspieler offen ist – gewonnen
       hat, wer alles zu hat und dabei vorne liegt. <b>Ohne Punkte:</b> Wer zuerst alles zumacht,
       gewinnt.</p>
-  </div>
-
-    <!-- Nur angemeldet und nur bei freien Spielen (Schnelles Spiel,
-         Cricket, Round the World, Finisher): der Stand wandert als Ganzes
-         zum Server, Mitspieler mit Konto sehen ihn und tragen mit ein. -->
-    <div class="card hidden" id="settings-online">
-    <h2>Online spielen</h2>
-    <div class="setting">
-      <label>Zwei Orte, ein Spiel</label>
-      <div class="options" data-setting="online">
-        <button data-value="0">hier am Gerät</button>
-        <button data-value="1">online</button>
-      </div>
-      <p class="hint" id="online-hint"></p>
     </div>
-  </div>
 
-    <div class="card hidden" id="settings-finisher">
+    <div class="einst hidden" id="settings-finisher">
     <h2>Finisher</h2>
     <div class="setting">
       <label>Punkte zum Sieg</label>
@@ -4962,13 +5114,20 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
         <button data-value="10">10</button>
       </div>
     </div>
+    <div class="setting">
+      <label>Eingabe?</label>
+      <div class="options eingabe" id="eingabe-wahl-fin">
+        <button data-action="eingabe" data-value="2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2.2"></rect><path d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M6.5 14h11"></path></svg><span>Tastatur</span></button>
+        <button data-action="eingabe" data-value="0">Standard</button>
+      </div>
+    </div>
     <p class="hint">Die App zieht jede Runde eine Zahl zwischen 6 und 120. <b>Alle starten
       auf derselben Zahl</b> und spielen sie ganz normal herunter, Double Out – kein
       Scoring, nur das Finishen. Wer zuerst auscheckt, gewinnt die Runde; wer noch nicht
       dran war, darf gleichziehen. Schaffen es mehrere, entscheidet ein Stechen auf Bull.</p>
-  </div>
+    </div>
 
-    <div class="card hidden" id="settings-rtw">
+    <div class="einst hidden" id="settings-rtw">
     <h2>Round the World</h2>
     <div class="setting">
       <label>Spielart</label>
@@ -4981,27 +5140,57 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
       auf Bull – und wer den Bull trifft, hat gewonnen. <b>Einfach:</b> Nur die Zahl zählt,
       jeder Treffer rückt ein Feld weiter – egal ob Single, Double oder Triple.
       <b>Boost:</b> Ein <b>Double überspringt eine Zahl</b>, ein <b>Triple überspringt zwei</b>.</p>
-  </div>
+    </div>
 
-  <div class="card" id="settings-ton">
-    <h2>Ton &amp; Feiern</h2>
+    <!-- Nur angemeldet und nur bei freien Spielen (Schnelles Spiel,
+         Cricket, Round the World, Finisher): der Stand wandert als Ganzes
+         zum Server, Mitspieler mit Konto sehen ihn und tragen mit ein. -->
+    <div class="einst hidden" id="settings-online">
+    <h2>Online spielen</h2>
     <div class="setting">
-      <label>Klänge (Einschlag, Tastenton, Klopfen)</label>
+      <label>Zwei Orte, ein Spiel</label>
+      <div class="options" data-setting="online">
+        <button data-value="0">hier am Gerät</button>
+        <button data-value="1">online</button>
+      </div>
+      <p class="hint" id="online-hint"></p>
+    </div>
+    </div>
+
+    <!-- Kaiwen und Hunter: Beschreibung aus dem Entwurf, Regeln folgen. -->
+    <div class="einst hidden" id="settings-kaiwen">
+    <h2>Kaiwen</h2>
+    <p class="hint">Teamspiel ab 2 Spielern, auch online. Gemeinsam in 9 Darts finishen: Erfolg +1,
+      Fehlschlag −1. Zusammen den Rekord knacken. Einstellungen folgen, sobald die Regeln feststehen.</p>
+    </div>
+    <div class="einst hidden" id="settings-hunter">
+    <h2>Hunter</h2>
+    <p class="hint">Die Jagd, ähnlich wie Round the World: ihr fangt euch gegenseitig.
+      Einstellungen folgen, sobald die Regeln feststehen.</p>
+    </div>
+
+    <div class="einst ton" id="settings-ton">
+    <h2>Ton &amp; Feiern</h2>
+    <div class="setting zeile">
+      <label>Klänge <small>Einschlag, Tastenton, Klopfen</small></label>
       <div class="options" data-setting="ton">
         <button data-value="1">an</button>
         <button data-value="0">aus</button>
       </div>
     </div>
-    <div class="setting">
-      <label>Feiern (180 und SECHZIG!)</label>
+    <div class="setting zeile" id="setting-feiern">
+      <label>Feiern <small>180 und SECHZIG!</small></label>
       <div class="options" data-setting="feiern">
         <button data-value="1">an</button>
         <button data-value="0">aus</button>
       </div>
     </div>
-  </div>
+    </div>
 
-  <button class="btn primary start full big" data-action="start-game">GAME ON!</button>
+    </div>
+
+    <button class="btn primary start full big" data-action="start-game">GAME ON!</button>
+  </div>
   </div>
 </section>
 
@@ -6319,7 +6508,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return {
       v: 2,
       screen: 'setup',
-      settings: { start: 501, bestOf: 1, dartModeFrom: 170, cricketScoring: 1, finisherTo: 5, rtwBoost: 1, turnierModus: 0, quickModus: 0, quickSaetze: 1, quickLegs: 1, ton: 1, feiern: 1 },
+      settings: { start: 501, bestOf: 1, dartModeFrom: 170, cricketScoring: 1, finisherTo: 5, rtwBoost: 1, turnierModus: 0, quickModus: 0, quickSaetze: 1, quickLegs: 1, ton: 1, feiern: 1, tastatur: 0, dartModeMerk: 170 },
       mode: '501',
       game: null,
       profiles: DEFAULT_PLAYERS.map(function (n, i) {
@@ -6552,6 +6741,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
          Altbestand spielt weiter ein Leg. */
       if (s.settings.quickModus !== 1) s.settings.quickModus = 0;
       if (!(s.settings.quickSaetze >= 1)) s.settings.quickSaetze = 1;
+      /* Eingabe-Wahl im Setup: Tastatur (Fernsteuerung ab Start) kam mit
+         dem neuen Startbild; der Merkwert haelt die Einzel-Dart-Grenze fest,
+         solange "Standard" (immer die Aufnahme als Zahl) gewaehlt ist. */
+      if (s.settings.tastatur !== 1) s.settings.tastatur = 0;
+      if (!(s.settings.dartModeMerk > 0)) s.settings.dartModeMerk = s.settings.dartModeFrom > 0 ? s.settings.dartModeFrom : 170;
       if (!(s.settings.quickLegs >= 1)) s.settings.quickLegs = 1;
       s.profiles.forEach(function (p, i) { if (typeof p.hue !== 'number') p.hue = HUES[i % HUES.length]; });
       /* Liga-Stände aus der ersten Fassung (vor dem Bogen-Ausbau) kennen
@@ -6634,6 +6828,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (kind === 'rtw') return 'Round the World';
     if (kind === 'finisher') return 'Finisher';
     if (kind === 'quick') return 'Schnelles Spiel';
+    if (kind === 'kaiwen') return 'Kaiwen';
+    if (kind === 'hunter') return 'Hunter';
     return 'X01';
   }
   function activeProfiles() { return S.profiles.filter(function (p) { return !p.hidden; }); }
@@ -8988,7 +9184,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     UI.mult = 1;
     UI.modeOverride = null;   // neue Partie, neue Handwahl
     UI.overlay = null;
-    UI.turnier = false;
+    /* "Tastatur" im Setup: Schnelles Spiel und Finisher starten gleich in
+       der Fernsteuerung (zu zweit oder mehr - allein gibt es sie nicht). */
+    UI.turnier = kind === 'quick' && S.settings.tastatur === 1 && S.lineup.length > 1;
+    if (kind === 'finisher') UI.finFern = S.settings.tastatur === 1;
     // Wie im Turnier wird auch hier ausgeworfen, wer anfängt - ausser
     // allein: gegen sich selbst bullt niemand aus. Das Spiel gilt dann
     // sofort als begonnen, sonst raeumte der Zurueck-Knopf es weg und
@@ -9369,6 +9568,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var kontoBtn = $('nav-konto');
     if (kontoBtn) kontoBtn.classList.toggle('hidden', !window.DartKonto);
     var navFor = gesperrt() ? null : NAV_SCREENS[screen];
+    /* Im Setup steht die Navigation in der Kopfzeile neben der Marke,
+       ueberall sonst wie gehabt ueber dem Inhalt. */
+    var navEl = $('nav'), kopf = $('setup-kopf');
+    if (kopf && screen === 'setup' && navEl.parentElement !== kopf) kopf.appendChild(navEl);
+    else if (kopf && screen !== 'setup' && navEl.parentElement === kopf) document.body.insertBefore(navEl, $('screen-setup'));
     $('nav').classList.toggle('hidden', !navFor);
     if (navFor) {
       $('nav').querySelectorAll('button').forEach(function (b) {
@@ -9420,6 +9624,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     document.body.classList.toggle('fix-spiel', S.screen === 'game' || S.screen === 'cricket' || S.screen === 'rtw' || S.screen === 'finisher');
     /* Cricket nutzt die ganze Breite - kein Seitenrand, keine Maximalbreite. */
     document.body.classList.toggle('rand-aus', S.screen === 'cricket' || S.screen === 'game' || S.screen === 'rtw' || S.screen === 'finisher');
+    /* Das Startbild steht am Tablet und quergedrehten Handy fest im Rahmen,
+       innen scrollen nur Spielerliste und Einstellungen (body.fix-setup). */
+    document.body.classList.toggle('fix-setup', S.screen === 'setup');
     if (S.screen === 'setup') { gaesteAufraeumen(); renderSetup(); }
     /* Der Hintergrundtakt laeuft nur da, wo man ihn auch sieht: im
        Turnierbildschirm. Sonst fragt die App den ganzen Abend nach Daten,
@@ -9602,9 +9809,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
            Namen laedt sonst dazu ein, mitten in der Aufstellung an fremden
            Daten zu drehen. */
 
-        '<span class="check">✓</span>' +
+        '<span class="check">' + (sel ? S.lineup.indexOf(p.id) + 1 : '') + '</span>' +
         '</div>';
     }).join('') || '<p class="hint">Noch keine Spieler angelegt.</p>';
+    var anzahlEl = $('roster-anzahl');
+    if (anzahlEl) anzahlEl.textContent = S.lineup.length + ' ausgewählt';
 
     document.querySelectorAll('[data-setting]').forEach(function (seg) {
       var key = seg.getAttribute('data-setting');
@@ -9648,6 +9857,22 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     $('settings-cricket').classList.toggle('hidden', S.mode !== 'cricket');
     $('settings-rtw').classList.toggle('hidden', S.mode !== 'rtw');
     $('settings-finisher').classList.toggle('hidden', S.mode !== 'finisher');
+    var bald = S.mode === 'kaiwen' || S.mode === 'hunter';
+    var sk = $('settings-kaiwen'), sh = $('settings-hunter');
+    if (sk) sk.classList.toggle('hidden', S.mode !== 'kaiwen');
+    if (sh) sh.classList.toggle('hidden', S.mode !== 'hunter');
+    /* Eingabe-Wahl: Tastatur (Fernsteuerung ab Start), Standard (immer die
+       Aufnahme als Zahl, Grenze 0) oder Gemischt (ab der Grenze Dart fuer
+       Dart). Die Grenze selbst erscheint nur bei Gemischt. */
+    var eingabe = S.settings.tastatur === 1 ? 2 : S.settings.dartModeFrom > 0 ? 1 : 0;
+    document.querySelectorAll('#screen-setup [data-action="eingabe"]').forEach(function (b) {
+      b.classList.toggle('active', Number(b.getAttribute('data-value')) === eingabe);
+    });
+    var dartmode = $('setting-dartmode');
+    if (dartmode) dartmode.classList.toggle('hidden', eingabe !== 1);
+    /* Feiern (180 und SECHZIG!) gibt es nur im X01. */
+    var feiernEl = $('setting-feiern');
+    if (feiernEl) feiernEl.classList.toggle('hidden', S.mode !== '501' && S.mode !== 'quick');
     /* Turnier und Schnelles Spiel teilen sich die Einstellungen – Startpunkte
        und Einzel-Dart-Grenze gelten für beide. Nur die Legs sind Turniersache;
        zwei getrennte Karten wären zwei Bedienelemente für dieselbe Einstellung. */
@@ -9655,7 +9880,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     $('setting-bestof').classList.toggle('hidden', S.mode !== '501');
     $('setting-quick-dauer').classList.toggle('hidden', S.mode !== 'quick');
     if (S.mode === 'quick') renderQuickDauer();
-    document.querySelector('[data-action="start-game"]').textContent = 'GAME ON!';
+    var startKnopf = document.querySelector('[data-action="start-game"]');
+    startKnopf.textContent = bald ? 'Regeln folgen' : 'GAME ON!';
+    startKnopf.disabled = bald;
 
     var runningGame = !!S.game;
     var running = runningGame || (S.matches.length > 0 && !allMatchesDone());
@@ -14184,7 +14411,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       return;
     }
     if (S.matches.length) archiveTournament();
-    UI.turnier = false;
+    /* "Tastatur" im Setup: das Turnier beginnt gleich in der Fernsteuerung. */
+    UI.turnier = S.settings.tastatur === 1;
     S.tour = { start: S.settings.start, bestOf: S.settings.bestOf, players: S.lineup.slice() };
     S.matches = buildSchedule(S.lineup.slice());
     S.current = null;
@@ -14504,9 +14732,21 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         save(); render();
         break;
       case 'start-game':
+        if (S.mode === 'kaiwen' || S.mode === 'hunter') break;   // Regeln folgen
         if (S.mode === '501') startTournament();
         else startGame(S.mode);
         break;
+      /* Eingabe-Wahl im Setup (siehe renderSetup): 2 = Tastatur, 0 =
+         Standard, 1 = Gemischt. Standard merkt sich die Grenze, damit
+         Gemischt sie wiederfindet. */
+      case 'eingabe': {
+        var ew = Number(el.getAttribute('data-value'));
+        S.settings.tastatur = ew === 2 ? 1 : 0;
+        if (ew === 0 && S.settings.dartModeFrom > 0) { S.settings.dartModeMerk = S.settings.dartModeFrom; S.settings.dartModeFrom = 0; }
+        if (ew === 1 && !(S.settings.dartModeFrom > 0)) S.settings.dartModeFrom = S.settings.dartModeMerk > 0 ? S.settings.dartModeMerk : 170;
+        save(); render();
+        break;
+      }
       case 'leave-game':
         UI.menu = false;
         if (S.game && S.game.done) finishGame();

@@ -111,6 +111,28 @@ check('4 Profile vorbelegt', JSON.stringify(names) === '["Lenas","Tobi","Domi","
 check('alle vier für das Turnier ausgewählt', (await page.locator('.roster-item.selected').count()) === 4);
 check('501 vorausgewählt', await page.locator('[data-setting="start"] button[data-value="501"]').evaluate((e) => e.classList.contains('active')));
 
+group('Setup: Startbild nach Entwurf');
+check('Navigation steht in der Kopfzeile neben der Marke', (await page.locator('#setup-kopf #nav').count()) === 1);
+check('die Nummer im Kreis ist die Reihenfolge der Auswahl',
+  (await page.locator('.roster-item.selected .check').allInnerTexts()).map((t) => t.trim()).join('') === '1234');
+check('Zaehler: 4 ausgewählt', (await text('#roster-anzahl')).trim() === '4 ausgewählt');
+check('Eingabe: Gemischt ist voreingestellt, mit Grenze 170',
+  (await page.locator('#eingabe-wahl button[data-value="1"]').evaluate((e) => e.classList.contains('active'))) &&
+  (await visible('#setting-dartmode')));
+await page.locator('#eingabe-wahl button[data-value="0"]').click();
+check('Standard: keine Grenze mehr, Einzel-Darts-Zeile weg',
+  (await page.evaluate(() => window.__dart.state().settings.dartModeFrom)) === 0 && !(await visible('#setting-dartmode')));
+await page.locator('#eingabe-wahl button[data-value="1"]').click();
+check('Gemischt findet die Grenze wieder', (await page.evaluate(() => window.__dart.state().settings.dartModeFrom)) === 170);
+await page.locator('#eingabe-wahl button[data-value="2"]').click();
+check('Tastatur gemerkt', (await page.evaluate(() => window.__dart.state().settings.tastatur)) === 1);
+await page.locator('#eingabe-wahl button[data-value="1"]').click();
+await page.locator('[data-action="set-mode"][data-value="kaiwen"]').click();
+check('Kaiwen: Regeln folgen, kein Start', (await page.locator('[data-action="start-game"]').isDisabled()) &&
+  (await textKlein('[data-action="start-game"]')).includes('regeln folgen') && (await visible('#settings-kaiwen')));
+await page.locator('[data-action="set-mode"][data-value="501"]').click();
+check('zurueck im X01: GAME ON!', !(await page.locator('[data-action="start-game"]').isDisabled()));
+
 group('Turnierplan');
 await page.locator('[data-action="start-game"]').click();
 check('Tabelle sichtbar', await visible('#screen-tournament'));
@@ -1426,7 +1448,7 @@ await page.locator('#settings-501 [data-setting="start"] button[data-value="301"
 /* Für diesen Durchlauf bleibt die Punkte-Eingabe an: sonst schaltet die App
    im Finish-Bereich auf Einzel-Darts um und das Zahlenfeld ist weg. Der
    Umschaltpunkt selbst wird oben im X01-Teil geprüft. */
-await page.locator('#settings-501 [data-setting="dartModeFrom"] button[data-value="0"]').click();
+await page.locator('#settings-501 [data-action="eingabe"][data-value="0"]').click();
 await page.locator('[data-action="start-game"]').click();
 /* Das Ausbullen muss im Spiel ankommen: die sortierte Reihenfolge steht
    hinterher auch im Match (p und starter) – nicht nur in der Bull-Off-Liste.
@@ -1527,7 +1549,7 @@ await page.evaluate(() => {
 await page.locator('[data-action="set-mode"][data-value="quick"]').click();
 check('Spieldauer-Einstellung nur im Schnellen Spiel sichtbar', await visible('#setting-quick-dauer'));
 await page.locator('#settings-501 [data-setting="start"] button[data-value="301"]').click();
-await page.locator('#settings-501 [data-setting="dartModeFrom"] button[data-value="0"]').click();
+await page.locator('#settings-501 [data-action="eingabe"][data-value="0"]').click();
 await page.locator('[data-setting="quickModus"] button[data-value="0"]').click();
 /* Auf 1 Satz / 1 Leg zurueck, egal was vorher stand. */
 while (!(await page.locator('[data-action="quick-step"][data-key="quickLegs"][data-dir="-1"]').isDisabled())) {
@@ -2271,7 +2293,7 @@ await page.evaluate(() => {
 });
 await page.locator('[data-action="set-mode"][data-value="quick"]').click();
 await page.locator('#settings-501 [data-setting="start"] button[data-value="501"]').click();
-await page.locator('#settings-501 [data-setting="dartModeFrom"] button[data-value="0"]').click();
+await page.locator('#settings-501 [data-action="eingabe"][data-value="0"]').click();
 await page.locator('[data-action="start-game"]').click();
 await bullOffGo();
 check('vor der 180 ist es still', !(await page.evaluate(() =>
@@ -2464,7 +2486,7 @@ await page.evaluate((id) => {
 }, dblId);
 await page.locator('[data-action="set-mode"][data-value="quick"]').click();
 await page.locator('#settings-501 [data-setting="start"] button[data-value="301"]').click();
-await page.locator('#settings-501 [data-setting="dartModeFrom"] button[data-value="0"]').click();
+await page.locator('#settings-501 [data-action="eingabe"][data-value="0"]').click();
 await page.locator('[data-action="start-game"]').click();
 await bullOffGo();
 await typeScore(161);   // 301 - 161 = 140

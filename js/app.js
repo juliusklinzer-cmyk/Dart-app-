@@ -159,7 +159,7 @@
     return {
       v: 2,
       screen: 'setup',
-      settings: { start: 501, bestOf: 1, dartModeFrom: 170, cricketScoring: 1, finisherTo: 5, rtwBoost: 1, turnierModus: 0, quickModus: 0, quickSaetze: 1, quickLegs: 1, ton: 1, feiern: 1 },
+      settings: { start: 501, bestOf: 1, dartModeFrom: 170, cricketScoring: 1, finisherTo: 5, rtwBoost: 1, turnierModus: 0, quickModus: 0, quickSaetze: 1, quickLegs: 1, ton: 1, feiern: 1, tastatur: 0, dartModeMerk: 170 },
       mode: '501',
       game: null,
       profiles: DEFAULT_PLAYERS.map(function (n, i) {
@@ -392,6 +392,11 @@
          Altbestand spielt weiter ein Leg. */
       if (s.settings.quickModus !== 1) s.settings.quickModus = 0;
       if (!(s.settings.quickSaetze >= 1)) s.settings.quickSaetze = 1;
+      /* Eingabe-Wahl im Setup: Tastatur (Fernsteuerung ab Start) kam mit
+         dem neuen Startbild; der Merkwert haelt die Einzel-Dart-Grenze fest,
+         solange "Standard" (immer die Aufnahme als Zahl) gewaehlt ist. */
+      if (s.settings.tastatur !== 1) s.settings.tastatur = 0;
+      if (!(s.settings.dartModeMerk > 0)) s.settings.dartModeMerk = s.settings.dartModeFrom > 0 ? s.settings.dartModeFrom : 170;
       if (!(s.settings.quickLegs >= 1)) s.settings.quickLegs = 1;
       s.profiles.forEach(function (p, i) { if (typeof p.hue !== 'number') p.hue = HUES[i % HUES.length]; });
       /* Liga-Stände aus der ersten Fassung (vor dem Bogen-Ausbau) kennen
@@ -474,6 +479,8 @@
     if (kind === 'rtw') return 'Round the World';
     if (kind === 'finisher') return 'Finisher';
     if (kind === 'quick') return 'Schnelles Spiel';
+    if (kind === 'kaiwen') return 'Kaiwen';
+    if (kind === 'hunter') return 'Hunter';
     return 'X01';
   }
   function activeProfiles() { return S.profiles.filter(function (p) { return !p.hidden; }); }
@@ -2828,7 +2835,10 @@
     UI.mult = 1;
     UI.modeOverride = null;   // neue Partie, neue Handwahl
     UI.overlay = null;
-    UI.turnier = false;
+    /* "Tastatur" im Setup: Schnelles Spiel und Finisher starten gleich in
+       der Fernsteuerung (zu zweit oder mehr - allein gibt es sie nicht). */
+    UI.turnier = kind === 'quick' && S.settings.tastatur === 1 && S.lineup.length > 1;
+    if (kind === 'finisher') UI.finFern = S.settings.tastatur === 1;
     // Wie im Turnier wird auch hier ausgeworfen, wer anfängt - ausser
     // allein: gegen sich selbst bullt niemand aus. Das Spiel gilt dann
     // sofort als begonnen, sonst raeumte der Zurueck-Knopf es weg und
@@ -3209,6 +3219,11 @@
     var kontoBtn = $('nav-konto');
     if (kontoBtn) kontoBtn.classList.toggle('hidden', !window.DartKonto);
     var navFor = gesperrt() ? null : NAV_SCREENS[screen];
+    /* Im Setup steht die Navigation in der Kopfzeile neben der Marke,
+       ueberall sonst wie gehabt ueber dem Inhalt. */
+    var navEl = $('nav'), kopf = $('setup-kopf');
+    if (kopf && screen === 'setup' && navEl.parentElement !== kopf) kopf.appendChild(navEl);
+    else if (kopf && screen !== 'setup' && navEl.parentElement === kopf) document.body.insertBefore(navEl, $('screen-setup'));
     $('nav').classList.toggle('hidden', !navFor);
     if (navFor) {
       $('nav').querySelectorAll('button').forEach(function (b) {
@@ -3260,6 +3275,9 @@
     document.body.classList.toggle('fix-spiel', S.screen === 'game' || S.screen === 'cricket' || S.screen === 'rtw' || S.screen === 'finisher');
     /* Cricket nutzt die ganze Breite - kein Seitenrand, keine Maximalbreite. */
     document.body.classList.toggle('rand-aus', S.screen === 'cricket' || S.screen === 'game' || S.screen === 'rtw' || S.screen === 'finisher');
+    /* Das Startbild steht am Tablet und quergedrehten Handy fest im Rahmen,
+       innen scrollen nur Spielerliste und Einstellungen (body.fix-setup). */
+    document.body.classList.toggle('fix-setup', S.screen === 'setup');
     if (S.screen === 'setup') { gaesteAufraeumen(); renderSetup(); }
     /* Der Hintergrundtakt laeuft nur da, wo man ihn auch sieht: im
        Turnierbildschirm. Sonst fragt die App den ganzen Abend nach Daten,
@@ -3442,9 +3460,11 @@
            Namen laedt sonst dazu ein, mitten in der Aufstellung an fremden
            Daten zu drehen. */
 
-        '<span class="check">✓</span>' +
+        '<span class="check">' + (sel ? S.lineup.indexOf(p.id) + 1 : '') + '</span>' +
         '</div>';
     }).join('') || '<p class="hint">Noch keine Spieler angelegt.</p>';
+    var anzahlEl = $('roster-anzahl');
+    if (anzahlEl) anzahlEl.textContent = S.lineup.length + ' ausgewählt';
 
     document.querySelectorAll('[data-setting]').forEach(function (seg) {
       var key = seg.getAttribute('data-setting');
@@ -3488,6 +3508,22 @@
     $('settings-cricket').classList.toggle('hidden', S.mode !== 'cricket');
     $('settings-rtw').classList.toggle('hidden', S.mode !== 'rtw');
     $('settings-finisher').classList.toggle('hidden', S.mode !== 'finisher');
+    var bald = S.mode === 'kaiwen' || S.mode === 'hunter';
+    var sk = $('settings-kaiwen'), sh = $('settings-hunter');
+    if (sk) sk.classList.toggle('hidden', S.mode !== 'kaiwen');
+    if (sh) sh.classList.toggle('hidden', S.mode !== 'hunter');
+    /* Eingabe-Wahl: Tastatur (Fernsteuerung ab Start), Standard (immer die
+       Aufnahme als Zahl, Grenze 0) oder Gemischt (ab der Grenze Dart fuer
+       Dart). Die Grenze selbst erscheint nur bei Gemischt. */
+    var eingabe = S.settings.tastatur === 1 ? 2 : S.settings.dartModeFrom > 0 ? 1 : 0;
+    document.querySelectorAll('#screen-setup [data-action="eingabe"]').forEach(function (b) {
+      b.classList.toggle('active', Number(b.getAttribute('data-value')) === eingabe);
+    });
+    var dartmode = $('setting-dartmode');
+    if (dartmode) dartmode.classList.toggle('hidden', eingabe !== 1);
+    /* Feiern (180 und SECHZIG!) gibt es nur im X01. */
+    var feiernEl = $('setting-feiern');
+    if (feiernEl) feiernEl.classList.toggle('hidden', S.mode !== '501' && S.mode !== 'quick');
     /* Turnier und Schnelles Spiel teilen sich die Einstellungen – Startpunkte
        und Einzel-Dart-Grenze gelten für beide. Nur die Legs sind Turniersache;
        zwei getrennte Karten wären zwei Bedienelemente für dieselbe Einstellung. */
@@ -3495,7 +3531,9 @@
     $('setting-bestof').classList.toggle('hidden', S.mode !== '501');
     $('setting-quick-dauer').classList.toggle('hidden', S.mode !== 'quick');
     if (S.mode === 'quick') renderQuickDauer();
-    document.querySelector('[data-action="start-game"]').textContent = 'GAME ON!';
+    var startKnopf = document.querySelector('[data-action="start-game"]');
+    startKnopf.textContent = bald ? 'Regeln folgen' : 'GAME ON!';
+    startKnopf.disabled = bald;
 
     var runningGame = !!S.game;
     var running = runningGame || (S.matches.length > 0 && !allMatchesDone());
@@ -8024,7 +8062,8 @@
       return;
     }
     if (S.matches.length) archiveTournament();
-    UI.turnier = false;
+    /* "Tastatur" im Setup: das Turnier beginnt gleich in der Fernsteuerung. */
+    UI.turnier = S.settings.tastatur === 1;
     S.tour = { start: S.settings.start, bestOf: S.settings.bestOf, players: S.lineup.slice() };
     S.matches = buildSchedule(S.lineup.slice());
     S.current = null;
@@ -8344,9 +8383,21 @@
         save(); render();
         break;
       case 'start-game':
+        if (S.mode === 'kaiwen' || S.mode === 'hunter') break;   // Regeln folgen
         if (S.mode === '501') startTournament();
         else startGame(S.mode);
         break;
+      /* Eingabe-Wahl im Setup (siehe renderSetup): 2 = Tastatur, 0 =
+         Standard, 1 = Gemischt. Standard merkt sich die Grenze, damit
+         Gemischt sie wiederfindet. */
+      case 'eingabe': {
+        var ew = Number(el.getAttribute('data-value'));
+        S.settings.tastatur = ew === 2 ? 1 : 0;
+        if (ew === 0 && S.settings.dartModeFrom > 0) { S.settings.dartModeMerk = S.settings.dartModeFrom; S.settings.dartModeFrom = 0; }
+        if (ew === 1 && !(S.settings.dartModeFrom > 0)) S.settings.dartModeFrom = S.settings.dartModeMerk > 0 ? S.settings.dartModeMerk : 170;
+        save(); render();
+        break;
+      }
       case 'leave-game':
         UI.menu = false;
         if (S.game && S.game.done) finishGame();

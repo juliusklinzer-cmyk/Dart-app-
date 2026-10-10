@@ -38,6 +38,19 @@ mit HTTPS, „Zum Home-Bildschirm“ auf jedem Gerät, Updates per `git pull`.
 
 Der Modus wird im Setup gewählt, die Aufstellung gilt für alle vier gleich.
 
+**Das Startbild** (Entwurf „Setup Redesign“, Oktober 2026) zeigt alles auf einen
+Blick, ohne Scrollen: oben die Marke und die Navigation in einer Leiste, darunter
+drei Spalten – **Wer spielt mit?** (die Zahl im Kreis ist die Reihenfolge der
+Auswahl, also die Wurf-Reihenfolge), **Spielmodus** und die **Einstellungen** des
+gewählten Modus mit GAME ON. Am Tablet und am quergedrehten Handy steht das Bild
+fest im Rahmen, innen scrollen nur Spielerliste und Einstellungen; hochkant am Handy
+steht alles untereinander. Bei X01, Schnellem Spiel und Finisher fragt **„Eingabe?“**:
+*Tastatur* startet gleich in der Fernsteuerung (Board-iPad), *Standard* nimmt immer
+die Aufnahme als Zahl, *Gemischt* schaltet ab der gewählten Restpunktzahl auf
+Einzel-Darts um. Im Spiel lässt sich jederzeit wechseln. **Kaiwen** und **Hunter**
+stehen schon im Modus-Kasten – ihre Regeln folgen, bis dahin lässt sich dort nichts
+starten.
+
 Cricket, Round the World, Finisher und das Schnelle Spiel gehen auch **allein** –
 als Training gegen sich selbst. Allein wird nicht ausgebullt, es geht direkt los,
 und der Spielbildschirm zeigt eine große Karte mit Finish-Vorschlag. Nur das
