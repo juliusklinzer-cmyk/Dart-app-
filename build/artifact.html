@@ -14744,12 +14744,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     }
     /* Menue (•••): ein Tipp neben die Karte schliesst es. */
     if (ev.target.id === 'game-menu-overlay' || ev.target.id === 'cricket-menu-overlay') { UI.menu = false; render(); return; }
-    /* Fernsteuerung ohne Tastatur: ein Tipp irgendwo ins Bild oeffnet das
-       Menue - der einzige Weg zurueck, wenn Tab und Esc fehlen. */
-    if (UI.turnier && turnierErlaubt() && S.screen === 'game' && !UI.overlay && !UI.menu &&
-        !ev.target.closest('[data-action], button, a, input, select')) {
-      UI.menu = true; armGhostTapGuard(); render(); return;
-    }
+    /* Ein Tipp ins Bild tut in der Fernsteuerung nichts (Julius): das Menue
+       oeffnet nur •••, zurueck geht es ueber den ⌨-Knopf oben rechts. */
     var t = ev.target.closest('[data-action]');
     if (t) { handleAction(t.getAttribute('data-action'), t); return; }
 

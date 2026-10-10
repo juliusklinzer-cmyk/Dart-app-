@@ -1972,10 +1972,12 @@ check('Cmd+. beendet den Turnier-Modus ebenfalls', await visible('#pad-total'));
 await modus('turnier');
 check('und der Weg zurueck steht wieder', await visible('#pad-key'));
 
-/* Ohne Hardware-Tastatur gaebe es weder Tab noch Esc - ein Tipp irgendwo
-   ins Bild oeffnet deshalb das Menue, und der ⌨-Knopf im Kopf fuehrt zurueck. */
+/* Ein Tipp ins Bild tut nichts - das Menue oeffnet nur •••; ohne Tastatur
+   fuehrt der ⌨-Knopf im Kopf zurueck. */
 await page.locator('#scoreboard').click({ position: { x: 60, y: 60 } });
-check('ein Tipp ins Bild oeffnet das Menue', await visible('#game-menu-overlay'));
+check('ein Tipp ins Bild oeffnet KEIN Menue', !(await visible('#game-menu-overlay')) && (await visible('#pad-key')));
+await page.locator('#game-menu').click();
+check('••• oeffnet es', await visible('#game-menu-overlay'));
 await page.locator('#game-menu-overlay [data-action="game-menu-zu"]').click();
 check('Weiterspielen schliesst es wieder', !(await visible('#game-menu-overlay')));
 await page.locator('#game-fern').click();
@@ -3636,8 +3638,8 @@ check('z (Ruecknahme) tut hinter dem offenen Menue nichts',
   (await page.evaluate(() => window.__dart.activeLeg(window.__dart.currentMatch()).visits.length)) === vorMenu && (await visible('#game-menu-overlay')));
 await page.keyboard.press('Escape');
 await modus('turnier');
-await page.locator('#scoreboard').click({ position: { x: 60, y: 60 } });
-check('Tipp ins Bild oeffnet das Menue in der Fernsteuerung', await visible('#game-menu-overlay'));
+await page.locator('#game-menu').click();
+check('••• oeffnet das Menue in der Fernsteuerung', await visible('#game-menu-overlay'));
 await page.keyboard.type('41'); await page.keyboard.press('Enter');
 check('auch die Fernsteuerung bucht hinter dem Menue nichts',
   (await page.evaluate(() => window.__dart.activeLeg(window.__dart.currentMatch()).visits.length)) === vorMenu &&

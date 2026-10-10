@@ -348,9 +348,9 @@ Schrift. Nach dem Einzel erscheint **8 Sekunden groß die Kurzstatistik**
 (Ø, 180er, höchstes Finish beider Spieler) – Enter überspringt –, danach die
 **nächsten Begegnungen in groß**: mit den **Pfeiltasten** wird gewählt (die
 gewählte leuchtet), **Enter** startet sie direkt wieder in der Riesenanzeige.
-Eine eigene Statistik-Seite gibt es in der Fernsteuerung nicht. Auf einem Gerät ohne
-Tastatur öffnet ein Tipp irgendwo ins Bild das Menü (•••), und der ⌨-Knopf oben
-rechts beendet die Fernsteuerung – damit niemand ohne Tab und Esc gefangen sitzt.
+Eine eigene Statistik-Seite gibt es in der Fernsteuerung nicht. Ein Tipp ins Bild tut
+nichts; das Menü öffnet nur •••, und der ⌨-Knopf oben rechts beendet die
+Fernsteuerung – damit niemand ohne Tab und Esc gefangen sitzt.
 
 **Klang:** Jede gebuchte Eingabe klingt wie ein Pfeil, der ins Board schlägt –
 **„Pomp"** (Julius' eigene Aufnahme, eingebettet in `js/sound.js`): beim
