@@ -4032,21 +4032,24 @@ body.tastatur #screen-bulloff button:focus {
   #screen-game.active.turnier #scoreboard .pcard .pkopf .av.sm { width: clamp(24px, 5.8vh, 62px); height: clamp(24px, 5.8vh, 62px); font-size: clamp(10px, 2vh, 22px); }
   #screen-game.active.turnier #scoreboard .pcard .pname, #screen-game.active.turnier #scoreboard .pcard .pavg { font-size: clamp(18px, 5.4vh, 58px); }
   #screen-game.active.turnier #scoreboard .pcard .pmeta { font-size: clamp(13px, 3vh, 34px); }
+  /* Der Rest steht allein und mittig - die letzte Aufnahme steht unten in
+     der Liste (Julius: Ziel aus der Distanz besser sehen). */
   #screen-game.active.turnier #scoreboard .pcard .rest-zeile {
-    grid-template-columns: minmax(0, 0.35fr) auto minmax(0, 1.65fr); line-height: 0.8;
-    font-size: clamp(56px, 46vh, 480px);
-    font-size: clamp(56px, min(46vh, 39cqi), 480px);
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); line-height: 0.8;
+    font-size: clamp(56px, 50vh, 560px);
+    font-size: clamp(56px, min(50vh, 60cqi), 560px);
   }
+  #screen-game.active.turnier #scoreboard .pcard .letzte-box { display: none; }
   #screen-game.active.turnier #scoreboard .pcard.active .rest { text-shadow: 0 0 34px var(--laser-weich); }
   #screen-game.active.turnier #scoreboard .pcard .pfelder { height: clamp(40px, 11vh, 120px); gap: clamp(6px, 0.9vw, 14px); }
   #screen-game.active.turnier #scoreboard .pcard .pfelder .fk { font-size: clamp(22px, 7vh, 76px); }
-  #screen-game.active.turnier .input-area { flex: none; height: clamp(80px, 20vh, 210px); min-height: 0; display: block; margin: 0; }
+  #screen-game.active.turnier .input-area { flex: none; height: clamp(96px, 23vh, 250px); min-height: 0; display: block; margin: 0; }
   #screen-game.active.turnier .pad-key {
     display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1fr);
     gap: clamp(8px, 1.6vw, 24px); height: 100%; align-items: stretch;
   }
   #screen-game.active.turnier .key-hist {
-    display: grid; grid-template-rows: repeat(5, minmax(0, 1fr)); gap: clamp(2px, 0.6vh, 6px);
+    display: grid; grid-template-rows: repeat(6, minmax(0, 1fr)); gap: clamp(2px, 0.4vh, 4px);
     max-height: none; min-height: 0; overflow: hidden;
   }
   #screen-game.active.turnier .key-hist .v {
@@ -4054,8 +4057,8 @@ body.tastatur #screen-bulloff button:focus {
     padding: 0 clamp(8px, 1.2vw, 18px); background: var(--bg-2); border-radius: 8px; font-size: clamp(11px, 2.1vh, 22px);
   }
   #screen-game.active.turnier .key-hist .v:not(:first-child) { opacity: 0.75; }
-  #screen-game.active.turnier .key-hist .v .s { font-size: clamp(14px, 2.8vh, 30px); line-height: 1; }
-  #screen-game.active.turnier .key-hist .v .r { font-size: clamp(11px, 2vh, 21px); line-height: 1; }
+  #screen-game.active.turnier .key-hist .v .s { font-size: clamp(13px, 2.5vh, 26px); line-height: 1; }
+  #screen-game.active.turnier .key-hist .v .r { font-size: clamp(10px, 1.9vh, 19px); line-height: 1; }
   #screen-game.active.turnier .key-mitte { display: flex; flex-direction: column; min-height: 0; gap: 0; position: relative; }
   #screen-game.active.turnier .key-display {
     flex: 1 1 auto; min-height: 0; height: 100%; padding: 0; border-radius: clamp(14px, 2.2vh, 24px); font-size: clamp(44px, 15vh, 160px);
@@ -4064,10 +4067,11 @@ body.tastatur #screen-bulloff button:focus {
   #screen-game.active.turnier .pad-key .input-error {
     position: absolute; left: 0; right: 0; bottom: 2px; text-align: center; min-height: 0; font-size: clamp(11px, 1.8vh, 16px);
   }
-  /* Handy quer: drei statt fuenf Aufnahmen je Seite. */
+  /* Handy quer: auch sechs Aufnahmen (Liga), nur kleiner. */
   @media (max-height: 560px) {
-    #screen-game.active.turnier .key-hist { grid-template-rows: repeat(3, minmax(0, 1fr)); }
-    #screen-game.active.turnier .key-hist .v:nth-child(n+4) { display: none; }
+    #screen-game.active.turnier .input-area { height: clamp(96px, 30vh, 150px); }
+    #screen-game.active.turnier .key-hist .v .s { font-size: clamp(10px, 2.4vh, 16px); }
+    #screen-game.active.turnier .key-hist .v .r { font-size: clamp(9px, 2vh, 13px); }
   }
   /* Shift gedrueckt: die Wurfliste des Matches statt Eingabe und Karten. */
   #screen-game.active.turnier.verlauf #history { display: grid; flex: 1 1 auto; min-height: 88px; }
@@ -4124,8 +4128,8 @@ body.tastatur #screen-bulloff button:focus {
    der Rest eine Stufe kleiner als zu zweit. */
 @media (orientation: landscape) {
   #screen-game.active.turnier #scoreboard.viele .pcard .rest-zeile {
-    font-size: clamp(40px, 24vh, 240px);
-    font-size: clamp(40px, min(24vh, 40cqi), 240px);
+    font-size: clamp(40px, 26vh, 260px);
+    font-size: clamp(40px, min(26vh, 55cqi), 260px);
   }
   #screen-game.active.turnier #scoreboard.viele .pcard .pname, #screen-game.active.turnier #scoreboard.viele .pcard .pavg { font-size: clamp(15px, 3.4vh, 38px); }
   #screen-game.active.turnier #scoreboard.viele .pcard .pmeta { font-size: clamp(11px, 2.2vh, 24px); }
@@ -4153,14 +4157,16 @@ body.rand-aus { max-width: none; padding-left: 0; padding-right: 0; }
 }
 body.fix-spiel #screen-cricket.active { flex: 1 1 auto; height: auto; min-height: 0; overflow: hidden; padding-bottom: clamp(6px, 1.8vh, 22px); }
 #screen-cricket.active .game-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; overflow: visible; }
-#screen-cricket.active .cricket-board { flex: 1 1 auto; min-height: 0; min-width: 0; overflow: visible; }
+#screen-cricket.active .cricket-board { flex: 1 1 auto; min-height: 0; min-width: 0; overflow: visible; display: flex; flex-direction: column; }
+/* Die Tafel ist selbst Flex-Kind und bekommt ihre Hoehe aus der Kette - keine
+   Prozenthoehe, die Safari in verschachtelten Flex-Boxen gern verschluckt. */
 #screen-cricket.active .cr-grid {
-  height: 100%; min-width: 0; display: grid;
+  flex: 1 1 auto; height: auto; min-height: 0; min-width: 0; display: grid;
   grid-template-columns: clamp(48px, 7vw, 100px) repeat(var(--spalten, 2), minmax(0, 1fr)) clamp(4px, 1vw, 16px) repeat(3, 10vw);
-  grid-template-rows: minmax(0, 2.4fr) repeat(7, minmax(0, 1fr));
+  grid-template-rows: minmax(min-content, 2.4fr) repeat(7, minmax(0, 1fr));
   grid-auto-rows: minmax(0, 1fr); gap: clamp(3px, 0.6vh, 7px);
 }
-#screen-cricket.active .cr-grid.viele { grid-template-rows: minmax(0, 2.9fr) repeat(7, minmax(0, 1fr)); }
+#screen-cricket.active .cr-grid.viele { grid-template-rows: minmax(min-content, 2.9fr) repeat(7, minmax(0, 1fr)); }
 #screen-cricket.active .cr-gap { min-width: 0; }
 
 /* Menue-Knopf oben links */
@@ -4174,7 +4180,7 @@ body.fix-spiel #screen-cricket.active { flex: 1 1 auto; height: auto; min-height
 
 /* Spielerkarte */
 #screen-cricket.active .cr-card {
-  min-width: 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between;
+  min-width: 0; min-height: 0; overflow: visible; display: flex; flex-direction: column; justify-content: space-between;
   gap: clamp(2px, 0.6vh, 8px); padding: clamp(6px, 1.4vh, 18px) clamp(8px, 1.2vw, 20px);
   border-radius: clamp(12px, 1.8vh, 20px); border: 2px solid var(--line); background: var(--bg-2); opacity: 0.62;
 }
@@ -4200,7 +4206,7 @@ body.fix-spiel #screen-cricket.active { flex: 1 1 auto; height: auto; min-height
 #screen-cricket.active .cr-card .pmeta .cr-mpr { color: var(--text); font-weight: 700; font-size: inherit; font-variant-numeric: tabular-nums; }
 #screen-cricket.active .cr-card .cr-pts {
   text-align: center; font-family: var(--font-cond); font-weight: 700; font-size: clamp(32px, 8.4vh, 92px); line-height: 0.9;
-  font-variant-numeric: tabular-nums; color: var(--text); opacity: 0.85; min-width: 0; overflow: hidden;
+  font-variant-numeric: tabular-nums; color: var(--text); opacity: 0.85; min-width: 0; overflow: visible; flex: none;
   /* Luft zwischen den Punkten und den geworfenen Pfeilen darunter. */
   margin: clamp(2px, 0.8vh, 10px) 0 clamp(6px, 1.6vh, 18px);
 }
@@ -4299,7 +4305,7 @@ body.fix-spiel #screen-cricket.active { flex: 1 1 auto; height: auto; min-height
 
 /* Handy quer: Karte und Kacheln flacher. */
 @media (orientation: landscape) and (max-height: 560px) {
-  #screen-cricket.active .cr-grid, #screen-cricket.active .cr-grid.viele { grid-template-rows: minmax(0, 3fr) repeat(7, minmax(0, 1fr)); }
+  #screen-cricket.active .cr-grid, #screen-cricket.active .cr-grid.viele { grid-template-rows: minmax(min-content, 3fr) repeat(7, minmax(0, 1fr)); }
   #screen-cricket.active .cr-card .cr-tiles { height: clamp(20px, 5vh, 40px); }
   #screen-cricket.active .cr-card { padding: 4px 8px; gap: 2px; }
   #screen-cricket.active .cr-sub { display: none; }
@@ -4312,7 +4318,7 @@ body.fix-spiel #screen-cricket.active { flex: 1 1 auto; height: auto; min-height
 @media (orientation: portrait) {
   #screen-cricket.active .cr-grid, #screen-cricket.active .cr-grid.viele {
     grid-template-columns: repeat(7, minmax(0, 1fr));
-    grid-template-rows: minmax(0, 2.2fr) repeat(7, minmax(0, 1fr)) repeat(3, minmax(44px, 1fr));
+    grid-template-rows: minmax(min-content, 2.2fr) repeat(7, minmax(0, 1fr)) repeat(3, minmax(44px, 1fr));
     gap: 4px;
   }
   #screen-cricket.active .cr-gap { display: none; }
@@ -10678,7 +10684,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       meta.push(plural(darts, 'Dart', 'Darts'));
 
       var letzte = '';
-      var li = letzteIdx[pid];
+      var li = fern ? undefined : letzteIdx[pid];
       if (li !== undefined) {
         var lv = leg.visits[li];
         var frisch = li === neuesteVisit && seitAufnahme >= 0 && seitAufnahme < DREH_MS;
@@ -10789,10 +10795,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (mode !== 'turnier') $('screen-game').classList.remove('verlauf');
 
     if (fern) {
-      /* Links und rechts der Eingabe die Aufnahmen des laufenden Legs,
-         neueste oben - ohne die allerletzte, die steht schon neben dem Rest.
-         Zu zweit links der erste, rechts der zweite Spieler (fest wie die
-         Karten); ab dreien links wer wirft, rechts wer als Naechstes kommt. */
+      /* Links und rechts der Eingabe die letzten sechs Aufnahmen des
+         laufenden Legs (Liga-Vorschrift), neueste oben. Zu zweit links der
+         erste, rechts der zweite Spieler (fest wie die Karten); ab dreien
+         links wer wirft, rechts wer als Naechstes kommt. */
       var histSpalte = function (pid) {
         if (!pid) return '';
         var restLauf = legStart(leg);
@@ -10804,9 +10810,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
             '<span class="s">' + (v.b ? v.o : v.s) + '</span>' +
             '<span class="r">' + (v.b ? 'Bust' : 'Rest ' + restLauf) + '</span></div>');
         });
-        /* Hoechstens fuenf - mehr passt nicht ins Bild, und die Seite soll
-           am Board nie scrollen. */
-        return zeilen.slice(0, -1).slice(-5).reverse().join('');
+        return zeilen.slice(-6).reverse().join('');
       };
       $('key-hist-l').innerHTML = histSpalte(m.p.length === 2 ? m.p[0] : active);
       $('key-hist-r').innerHTML = histSpalte(m.p.length === 2 ? m.p[1] : danach[0]);

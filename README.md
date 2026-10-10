@@ -319,10 +319,11 @@ Karten **bleiben an ihrem Platz** (zu zweit nebeneinander, ab drei Spielern im
 drei Spielern nennt die Kopfzeile, wer danach kommt („Danach: Toni · Sepp“). Die
 Reste stehen in Plakatgröße (wer nicht dran ist, tritt leicht zurück), der
 Finish-Weg erscheint groß in den Feldern des Spielers am Wurf, sobald einer möglich
-ist (der Wartende sieht seinen abgedunkelt), und unten stehen links und rechts die
-**fünf Aufnahmen davor** je Spieler (zu zweit fest links der erste, rechts der
-zweite; ab dreien links wer wirft, rechts der Nächste; die letzte Aufnahme steht ja
-schon neben dem Rest; am Handy quer drei) neben einer großen Eingabe-Anzeige. Es gibt kein Eingabefeld und keine Tasten – deshalb blendet das iPad auch keine
+ist (der Wartende sieht seinen abgedunkelt). Der Rest steht allein und mittig in der
+Karte – ohne die kleine letzte Aufnahme daneben –, und unten stehen links und rechts
+die **letzten sechs Aufnahmen** je Spieler (Liga-Vorschrift; zu zweit fest links der
+erste, rechts der zweite; ab dreien links wer wirft, rechts der Nächste) neben einer
+großen Eingabe-Anzeige. Es gibt kein Eingabefeld und keine Tasten – deshalb blendet das iPad auch keine
 Tastatur-Systemleiste ein, und die Seite scrollt nie. Alles läuft über die Tastatur:
 **Ziffern** tippen, **Enter** bucht, **Löschen** nimmt erst Ziffern und dann
 Aufnahmen zurück (auch über den Spielerwechsel hinweg), die Checkout-Abfrage

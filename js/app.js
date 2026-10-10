@@ -5017,7 +5017,7 @@
       meta.push(plural(darts, 'Dart', 'Darts'));
 
       var letzte = '';
-      var li = letzteIdx[pid];
+      var li = fern ? undefined : letzteIdx[pid];
       if (li !== undefined) {
         var lv = leg.visits[li];
         var frisch = li === neuesteVisit && seitAufnahme >= 0 && seitAufnahme < DREH_MS;
@@ -5128,10 +5128,10 @@
     if (mode !== 'turnier') $('screen-game').classList.remove('verlauf');
 
     if (fern) {
-      /* Links und rechts der Eingabe die Aufnahmen des laufenden Legs,
-         neueste oben - ohne die allerletzte, die steht schon neben dem Rest.
-         Zu zweit links der erste, rechts der zweite Spieler (fest wie die
-         Karten); ab dreien links wer wirft, rechts wer als Naechstes kommt. */
+      /* Links und rechts der Eingabe die letzten sechs Aufnahmen des
+         laufenden Legs (Liga-Vorschrift), neueste oben. Zu zweit links der
+         erste, rechts der zweite Spieler (fest wie die Karten); ab dreien
+         links wer wirft, rechts wer als Naechstes kommt. */
       var histSpalte = function (pid) {
         if (!pid) return '';
         var restLauf = legStart(leg);
@@ -5143,9 +5143,7 @@
             '<span class="s">' + (v.b ? v.o : v.s) + '</span>' +
             '<span class="r">' + (v.b ? 'Bust' : 'Rest ' + restLauf) + '</span></div>');
         });
-        /* Hoechstens fuenf - mehr passt nicht ins Bild, und die Seite soll
-           am Board nie scrollen. */
-        return zeilen.slice(0, -1).slice(-5).reverse().join('');
+        return zeilen.slice(-6).reverse().join('');
       };
       $('key-hist-l').innerHTML = histSpalte(m.p.length === 2 ? m.p[0] : active);
       $('key-hist-r').innerHTML = histSpalte(m.p.length === 2 ? m.p[1] : danach[0]);

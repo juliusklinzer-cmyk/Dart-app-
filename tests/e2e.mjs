@@ -1932,12 +1932,13 @@ check('die Karte zeigt Schnitt, Siege und Darts', await page.evaluate(() => {
 /* Fernsteuerung: die Karten bleiben stehen - links der Heimspieler mit
    seiner 60 neben dem Rest, die Markierung wandert zum Gast rechts. Die
    Liste unter dem Heimspieler zeigt nur die Aufnahmen davor - noch keine. */
-check('die Karten bleiben stehen: links Heim mit seiner 60, rechts wirft jetzt der Gast', await page.evaluate(() => {
+check('die Karten bleiben stehen: links Heim, rechts wirft jetzt der Gast - kein Drehrad neben dem Rest', await page.evaluate(() => {
   const k = document.querySelectorAll('#scoreboard .pcard');
   return k.length === 2 && !k[0].classList.contains('active') && k[1].classList.contains('active') &&
-    k[0].querySelector('.letzte').textContent.trim() === '60';
+    !k[0].querySelector('.letzte') && !k[1].querySelector('.letzte');
 }));
-check('die Liste neben der Eingabe zeigt die Aufnahmen vor der letzten', (await text('#key-hist-l')).trim() === '');
+check('die Liste unter dem Heimspieler zeigt seine 60 (die letzten sechs, inklusive der letzten)',
+  (await text('#key-hist-l')).includes('60') && (await text('#key-hist-l')).includes('Rest 441'));
 check('keine Sechzig-Feier im Ligaspiel - auch nicht am Board', await page.evaluate(() =>
   !document.getElementById('feier').classList.contains('an')));
 
