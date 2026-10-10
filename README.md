@@ -182,17 +182,39 @@ schnellste Finish und die höchste weggemachte Zahl.
 
 ## Liga-Spielplan
 
-Der Reiter **Liga** zeigt den Spielplan der Saison (fest im Client, `LIGA` in
-`js/app.js`): je Spieltag Datum, Paarung mit Heim-/Auswärts-Kennung und Lokal,
-Spielfrei-Runden inklusive. **„In den Kalender"** lädt alle Termine als
-iCal-Datei (ganztägig – eine Anwurfzeit steht nicht im Plan). Angemeldete
-Spieler können sich je Spieltag **eintragen**: Wer zugesagt hat, steht mit Bild
-und Namen am Termin, darunter steht, wie viele noch fehlen, bis die Aufstellung
-vollständig ist (`LIGA.sollSpieler`, derzeit 4). Die Zusagen liegen auf dem
-Server und sind für alle gleich; ohne Server bleibt der Spielplan lesbar, nur
-das Eintragen entfällt. Vergangene Spieltage rücken gedimmt nach hinten.
+Der Reiter **Liga** (Entwurf „Liga · Spielplan“, Oktober 2026) trägt denselben
+Kopf wie die Rangliste: Logo-Menü, Titel, die Reiter Spielplan · Training ·
+Tabelle · Statistik · Kasse · Regeln als eigene Felder. Der Spielplan der Saison
+steht fest im Client (`LIGA` in `js/app.js`). **Links groß der nächste Spieltag**
+(oder der angetippte): Datum, Spieltag, Heim/Auswärts, 20:00 Uhr, Lokal mit Pin,
+oben rechts Route in Maps und „in den Kalender“, darunter Heim gegen Gast mit Logo
+bzw. Team-Kürzel, dann **Team · n / 4** mit allen, die zugesagt haben, und unten
+„Ich bin dabei“ / „Bin raus“ neben **GAME ON!** (startet das Ligaspiel). Die
+Zusagen färben die Karte: unter 4 rot, genau 4 gelb, ab 5 grün. **Läuft das
+Ligaspiel**, wird die Karte zum LIVE-Schild mit Punktestand, Legs, „Zum Ligaspiel“
+und „Live zuschauen“ (Ticker). Gespielte Spieltage zeigen Ergebnis, „Ergebnisse“
+und „Spielbericht“. **Rechts alle Spieltage** kompakt: Nummer, Datum, Gegner, Lokal,
+rechts das Ergebnis (gespielt), die Zusagen (2 / 4) oder LIVE; ein Tipp zeigt den
+Spieltag links groß, Spielfrei-Runden gedimmt. **„Alle in den Kalender“** lädt alle
+Termine als iCal-Datei (ganztägig). Die Zusagen liegen auf dem Server und sind für
+alle gleich; ohne Server bleibt der Spielplan lesbar, nur das Eintragen entfällt.
+Am Tablet steht das Bild fest im Rahmen, die Liste scrollt innen; am Handy quer
+bleibt nur die große Karte. Die übrigen Reiter folgen demselben Aufbau (links groß,
+rechts die Liste, am Handy untereinander): **Training** zeigt links DiensDarts
+(nächster Dienstag, Bar Sehnsucht mit Maps und Kalender, Abstimmung „Bin dabei /
+Unsicher / Kann nicht“ und wer kommt) und rechts das Übungs-Ligaspiel mit Vorwahl
+„Zweites eigenes Team“ oder „Gegen Bots“ samt Bot-Stärke. **Tabelle** zeigt links die
+Ligatabelle, rechts groß unseren Platz mit Punkten, Legs und Abstand zur Spitze sowie
+„Tabelle speichern“. **Statistik** ist die Liga-Auswertung (dieselben Kategorien und
+das Spieltag-Log wie früher der Liga-Knopf der Rangliste, nur über Ligaspiele
+gerechnet) mit der Team-Auswahl als Chips oben und rechts den **Highlights der
+Saison** (180er, High-Finishes ab 100, Shortlegs bis 21 Darts, je mit Spieltag und
+Einzel) – in der Rangliste gibt es den Liga-Knopf nicht mehr. **Kasse** zeigt links
+den Kassenstand (Anfang, Einnahmen, Ausgaben) und „Buchung erfassen“, rechts das
+Kassenbuch und die Gründungsbeiträge als Chips. **Regeln** stehen in zwei Spalten
+(FAQ für Neue, Udos Regelecke) als aufklappbare Karten.
 Der Reiter **Tabelle** ist die von Hand gepflegte Ligatabelle: alle neun Teams
-vorbefüllt, jede Zelle (Team, Spiele, Punkte, Legs) antippbar; **„Tabelle
+vorbefüllt (Stand der Ligaleitung nach dem 1. Spieltag, `LIGA_TABELLE_START`), jede Zelle (Team, Spiele, Punkte, Legs) antippbar; **„Tabelle
 speichern"** legt den Stand auf dem Server ab, sodass alle Angemeldeten
 dieselbe Tabelle sehen (`PUT /api/liga/tabelle`).
 
@@ -269,11 +291,25 @@ bleibt der Bericht über den Spieltag im Liga-Reiter abrufbar. In der
 Spieltag-Log und Rekorden. Im Regeln-Reiter der Liga-Seite stehen dazu ein
 FAQ für Neue und Udos Regelecke.
 
-Die **Turnier-Übersicht** zeigt links den Spielplan (gestartet wird direkt an
-der Partie – einen „Nächstes Spiel"-Knopf gibt es nicht mehr; erst wenn alles
-gespielt ist, erscheint „Endstand ansehen"), rechts Tabelle und
-Turnier-Statistik. Spielerwechsel und vorzeitiges Beenden wohnen unten im
-Spielplan-Kasten.
+Die **Turnier-Übersicht** (Entwurf „Turnier Redesign“, Oktober 2026) trägt
+dieselbe Kopfleiste wie das Setup, darunter die Titelzeile mit Format und
+„Turnier verlassen“. Links der Spielplan nach Runden: die laufende Partie leuchtet
+mit weißem „Weiter“, offene haben „Start“, fertige treten zurück (Sieger fett,
+Ergebnis rot, „fertig“). Gestartet wird direkt an der Partie – einen „Nächstes
+Spiel“-Knopf gibt es nicht; erst wenn alles gespielt ist, erscheint „Endstand
+ansehen“. Rechts oben die Tabelle (Siege rot), darunter die Turnier-Statistik je
+Spieler. Spielerwechsel und vorzeitiges Beenden wohnen unten im Spielplan-Kasten.
+Am Tablet steht alles fest im Rahmen, der Spielplan scrollt innen; am Handy quer
+entfällt die Turnier-Statistik.
+
+Das **Ausbullen** (Entwurf „Ausbullen“, Oktober 2026) ist auf allen Spielarten
+gleich: „Zurück“ oben links, Zielscheibe und Titel mittig, rechts oben der
+Zusammenhang („Spiel 3 von 6“, „Cricket · 4 Spieler“). Zu zweit stehen zwei große
+Karten – antippen, der wirft an (weißer Rahmen, blauer Schein, „wirft an“). Ab drei
+Spielern links alle Namen in Wurf-Reihenfolge antippen, rechts füllt sich die
+Reihenfolge, ein Tipp rechts nimmt wieder heraus; der Erste leuchtet, der Startknopf
+zählt mit („Noch 2 antippen“) und wird rot, sobald alle stehen. In der Fernsteuerung
+dieselben Karten in Plakatgröße, Auswahl per 4/6 und Enter.
 
 ## Ablauf (X01 Turnier)
 
@@ -584,9 +620,18 @@ Für Cricket kommt die **MPR** (Marks per Round – getroffene Marken je 3 Darts
 übliche Cricket-Maß) samt Siegen dazu, für Round the World die Bestleistung in Darts
 und die Siege.
 
-**Im Reiter „Rangliste"** sind die Werte nach Spielmodus getrennt – Classic, Cricket
-und Round the World haben je eigene Bestenlisten, eigene Rekordtafel und einen eigenen
-Spielverlauf:
+**Im Reiter „Rangliste"** (Entwurf „Rangliste Redesign“, Oktober 2026) steht
+alles in einer Kopfzeile: Das Logo oben links öffnet das Menü (Spiel, Liga, Rang,
+Spieler, Profil), daneben Titel und Spielart, rechts der Spielart-Umschalter –
+Classic, Cricket, RTW, Finisher sowie Kaiwen und Hunter („Coming soon“, bis die
+Spiele da sind); die Liga-Auswertung steht im Reiter „Statistik“ der Liga-Seite. Darunter drei Spalten: links alle Kategorien untereinander, in der
+Mitte die Rangliste (Platz 1 bis 3 in Gold, Silber und Bronze, der Beste leuchtet),
+rechts der Verlauf der letzten 10 Spiele und die Rekorde. „Alle Spiele ›“ öffnet den
+Spielverlauf anstelle der Spalten, „‹ Rangliste“ führt zurück. Am Tablet steht das
+Bild fest im Rahmen, Kategorien und Liste scrollen innen; am Handy quer entfallen
+Verlauf und Rekorde, hochkant steht alles untereinander. Die Werte sind nach
+Spielmodus getrennt – Classic, Cricket und Round the World haben je eigene
+Bestenlisten, eigene Rekordtafel und einen eigenen Spielverlauf:
 
 | Modus | Bestenlisten |
 |---|---|

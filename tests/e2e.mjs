@@ -60,6 +60,19 @@ const text = (sel) => $(sel).innerText();
 /* Knöpfe und Überschriften stehen per CSS in Versalien – innerText gibt sie
    auch so zurück. Für Textprüfungen deshalb kleinschreiben. */
 const textKlein = async (sel) => (await $(sel).innerText()).toLowerCase();
+/* Navigation: in der Rangliste steckt sie hinter dem Logo - erst das
+   Menue oeffnen, dann den Reiter antippen. */
+/* Die Liga-Auswertung wohnt im Statistik-Reiter der Liga-Seite. */
+async function ligaStatistik() {
+  await navTo('liga');
+  await page.locator('#liga-tabs button[data-tab="statistik"]').click();
+}
+async function navTo(screen) {
+  if ((await page.locator('.screen.active [data-action="logo-menu"]').count()) && !(await visible('#logo-menu-overlay'))) {
+    await page.locator('.screen.active [data-action="logo-menu"]').click();
+  }
+  await page.locator('#nav [data-screen="' + screen + '"]').click();
+}
 const tapText = async (t, scope = 'body') => { await page.locator(`${scope} >> text="${t}"`).first().click(); };
 
 /* Punkte über das Zahlenfeld eingeben (wie am Handy getippt). */
@@ -136,6 +149,7 @@ check('zurueck im X01: GAME ON!', !(await page.locator('[data-action="start-game
 group('Turnierplan');
 await page.locator('[data-action="start-game"]').click();
 check('Tabelle sichtbar', await visible('#screen-tournament'));
+check('Navigation steht in der Kopfzeile des Turniers', (await page.locator('#turnier-kopf #nav').count()) === 1);
 const matchCount = await page.locator('.match-row').count();
 check('6 Spiele bei 4 Spielern (jeder gegen jeden)', matchCount === 6, `war ${matchCount}`);
 const rounds = await page.locator('.round-label').count();
@@ -146,6 +160,8 @@ check('keine Paarung doppelt', new Set(pairs).size === 6);
 group('Bull-Off & Spielstart');
 await page.locator('#schedule .match-row .go:not(.wo)').first().click();
 check('Bull-Off-Screen', await visible('#screen-bulloff'));
+check('rechts oben der Zusammenhang: Spiel 1 von 6', (await text('#bulloff-ctx')).trim() === 'Spiel 1 von 6');
+check('beide Karten tragen ihr Etikett', (await page.locator('#bulloff-buttons button .bo-tag').count()) === 2);
 /* Der Button enthält Avatar und Name – nur den Namen lesen. */
 const firstName = await page.locator('#bulloff-buttons button').first().locator('span:not(.av)').innerText();
 await page.locator('#bulloff-buttons button').first().click();
@@ -315,8 +331,19 @@ await page.locator('#screen-winner [data-action="to-tournament"]').click();
 check('Navigation außerhalb des Spiels sichtbar', await visible('#nav'));
 check('Navigation durchgehend deutsch: Spiel · Liga · Rang · Spieler', (await page.locator('#nav button:not(.hidden)').allInnerTexts())
   .map((t) => t.trim().toLowerCase()).join('|') === 'spiel|liga|rang|spieler');
-await page.locator('#nav [data-screen="boards"]').click();
+await navTo('boards');
 check('Rangliste sichtbar', await visible('#screen-boards'));
+check('die Navigation steckt hinter dem Logo - zu, bis man tippt', (await page.locator('#logo-menu-panel #nav').count()) === 1 && !(await visible('#logo-menu-overlay')));
+await page.locator('.screen.active [data-action="logo-menu"]').click();
+check('ein Tipp aufs Logo oeffnet das Menue', await visible('#logo-menu-overlay'));
+await page.mouse.click(page.viewportSize().width - 8, page.viewportSize().height - 8);
+check('ein Tipp daneben schliesst es wieder', !(await visible('#logo-menu-overlay')));
+check('Platz 1 bis 3 tragen Medaillenfarbe', (await page.locator('#board-list .board-row .pos.m1').count()) === 1);
+check('der Spielverlauf ist zu, bis man ihn oeffnet', !(await visible('#match-log')));
+await page.locator('#board-log-knopf').click();
+check('Alle Spiele oeffnet den Verlauf anstelle der Spalten', (await visible('#match-log')) && !(await visible('#board-list')));
+await page.locator('[data-action="board-log-zu"]').click();
+check('zurueck zur Rangliste', await visible('#board-list'));
 check('Average-Rangliste hat Einträge', (await page.locator('.board-row').count()) > 0);
 const avgBoard = await board('avg');
 check('Rangliste absteigend sortiert', avgBoard.every((s, i) => i === 0 || avgBoard[i - 1].avg >= s.avg));
@@ -329,7 +356,7 @@ check('Rekord-Kacheln gefüllt', (await page.locator('.records .rec').count()) =
 check('Alle Spiele dokumentiert', (await page.locator('#match-log .log-row').count()) === 6);
 
 group('Spielerprofile');
-await page.locator('#nav [data-screen="players"]').click();
+await navTo('players');
 check('Spielerliste sichtbar', (await page.locator('.player-card').count()) === 4);
 await page.locator('.player-card').first().click();
 check('Profil-Detail offen', await visible('#screen-profile'));
@@ -339,7 +366,7 @@ check('Profil zeigt Finishing-Werte', detail.includes('Doppelquote') && detail.i
 check('Profil listet gespielte Spiele', (await page.locator('#profile-detail .log-row').count()) === 3);
 
 group('Neues Profil anlegen');
-await page.locator('#nav [data-screen="players"]').click();
+await navTo('players');
 await page.locator('#screen-players [data-action="new-profile"]').click();
 await page.locator('[data-role="profile-name"]').fill('Testspieler');
 await page.locator('[data-action="save-profile"]').click();
@@ -353,8 +380,8 @@ check('neues Profil ist für das nächste Turnier ausgewählt', await page.evalu
 group('Turnier abschließen & Archiv');
 /* Ein fertig gespieltes Turnier darf den Spiel-Reiter nicht in der alten
    Tabelle festhalten: der Tipp auf "Spiel" archiviert es und zeigt das Setup. */
-await page.locator('#nav [data-screen="boards"]').click();
-await page.locator('#nav [data-screen="setup"]').click();
+await navTo('boards');
+await navTo('setup');
 check('Spiel-Reiter bei fertigem Turnier: Setup statt alter Tabelle', await visible('#screen-setup'));
 check('fertiges Turnier beim Verlassen archiviert', await page.evaluate(() => window.__dart.state().history.length) === 1);
 check('kein laufendes Turnier mehr', await page.evaluate(() => window.__dart.state().matches.length) === 0);
@@ -415,7 +442,7 @@ async function reduceLineupToTwo() {
 }
 
 group('Cricket');
-await page.locator('#nav [data-screen="setup"]').click();
+await navTo('setup');
 await reduceLineupToTwo();
 check('zwei Spieler in der Aufstellung', (await page.evaluate(() => window.__dart.state().lineup.length)) === 2);
 await page.locator('[data-action="set-mode"][data-value="cricket"]').click();
@@ -580,7 +607,7 @@ check('RTW verändert Doppelquote und 501-Bilanz nicht',
 check('RTW zählt auch nicht in die Cricket-Werte', rWin.cricketDarts === rBefore.cricketDarts);
 
 group('Statistik nach Spielmodus');
-await page.locator('#nav [data-screen="boards"]').click();
+await navTo('boards');
 check('Classic ist voreingestellt', await page.locator('[data-action="board-mode"][data-value="501"]').evaluate((e) => e.classList.contains('active')));
 check('Classic-Kategorien sichtbar', (await page.locator('[data-action="board"][data-key="avg"]').count()) === 1);
 /* In jedem Modus stehen Siege vorn, dann der Average -- und was vorn steht,
@@ -625,12 +652,13 @@ check('kein Diagramm für Round the World', !(await visible('#board-chart')));
 check('RTW-Verlauf getrennt', (await text('#match-log')).includes('Round the World'));
 
 await page.locator('[data-action="board-mode"][data-value="501"]').click();
+await page.locator('#board-log-knopf').click();
 await page.locator('#match-log .log-row').first().click();
 check('Spielstatistik aus dem Verlauf abrufbar', await visible('#screen-summary'));
 await page.locator('#summary-actions [data-action="summary-back"]').click();
 check('Zurück aus der Statistik', await visible('#screen-boards'));
 
-await page.locator('#nav [data-screen="players"]').click();
+await navTo('players');
 await page.locator('.player-card').first().click();
 /* Überschriften werden per CSS groß gesetzt, daher ohne Groß-/Kleinschreibung prüfen. */
 const det = (await text('#profile-detail')).toLowerCase();
@@ -673,7 +701,7 @@ await spielVerlassen();
 await page.locator('[data-action="to-setup"]').click();
 await page.locator('[data-setting="start"] button[data-value="301"]').click();
 await page.locator('[data-setting="bestOf"] button[data-value="5"]').click();
-await page.locator('#nav [data-screen="setup"]').click();
+await navTo('setup');
 await page.locator('.match-row .go').first().click();
 check('Startpunkte-Wechsel verschiebt das laufende Leg nicht', (await rest(0)) === restBefore, `${restBefore} -> ${await rest(0)}`);
 check('Legs pro Spiel bleibt für das laufende Turnier gültig',
@@ -707,7 +735,7 @@ check('Rückfrage vor dem Verwerfen eines laufenden Turniers',
 await page.locator('#overlay-card [data-action="ov-cancel"]').click();
 
 // (5) Doppeltipp auf die Schnellwahl bucht nur eine Aufnahme
-await page.locator('#nav [data-screen="setup"]').click();
+await navTo('setup');
 await page.locator('.match-row .go').first().click();
 await page.waitForTimeout(400);
 const visitsBefore = await page.evaluate(() => window.__dart.activeLeg(window.__dart.currentMatch()).visits.length);
@@ -806,11 +834,11 @@ await page.locator('[data-action="roster-change"]').click();
 const addable = await page.locator('#overlay-card [data-action="add-player"]').count();
 if (addable === 0) {
   await page.locator('#overlay-card [data-action="ov-cancel"]').click();
-  await page.locator('#nav [data-screen="players"]').click();
+  await navTo('players');
   await page.locator('#screen-players [data-action="new-profile"]').click();
   await page.locator('[data-role="profile-name"]').fill('Nachzügler');
   await page.locator('[data-action="save-profile"]').click();
-  await page.locator('#nav [data-screen="setup"]').click();
+  await navTo('setup');
   await page.locator('[data-action="roster-change"]').click();
 }
 await page.locator('#overlay-card [data-action="add-player"]').first().click();
@@ -838,7 +866,7 @@ check('zwei gleiche Aufnahmen hintereinander zählen beide',
 await spielVerlassen();
 await page.locator('[data-action="to-setup"]').click();
 await page.locator('[data-setting="bestOf"] button[data-value="5"]').click();
-await page.locator('#nav [data-screen="setup"]').click();
+await navTo('setup');
 await page.locator('.match-row .go').first().click();
 check('Legzeile zeigt weiter die Turnierregel',
   (await text('#game-leg-label')).includes('Ein Leg'), await text('#game-leg-label'));
@@ -986,6 +1014,8 @@ const wahlHoehe = await page.locator('.bo-wahl').evaluate((e) => e.getBoundingCl
 await page.locator(`[data-action="order-pick"][data-id="${alleIds[3]}"]`).click();
 check('der Angetippte steht rechts als 1.', await page.evaluate((id) =>
   window.__dart.ui().bullReihe[0] === id, alleIds[3]));
+check('der Erste leuchtet mit „wirft an“', (await page.locator('.bo-reihe .bo-row.erster .bo-tag').count()) === 1);
+check('der Startknopf zaehlt: Noch 3 antippen', (await textKlein('[data-action="start-order"]')).includes('noch 3'));
 check('links bleibt sein Platz leer - nichts rueckt nach', await page.evaluate((h) => {
   const w = document.querySelector('.bo-wahl');
   return Math.abs(w.getBoundingClientRect().height - h) < 2 &&
@@ -1279,7 +1309,7 @@ check('auch der Verlierer hat seine Runde', finCar[fB].finRounds === 1, String(f
 check('zusammen sind es vier Runden', finCar[fA].finRounds + finCar[fB].finRounds === 4);
 check('schnellstes Finish ist gesetzt', finCar[fA].finBest > 0);
 
-await page.locator('#nav [data-screen="boards"]').click();
+await navTo('boards');
 await page.locator('[data-action="board-mode"][data-value="finisher"]').click();
 check('Finisher-Rangliste da', (await text('#board-list')).length > 0);
 check('kein Diagramm im Finisher', !(await visible('#board-chart')));
@@ -1942,8 +1972,8 @@ await page.evaluate(() => {
 });
 
 group('Turnier-Modus: Anzeige am Board, Eingabe per Tastatur - im Liga-Einzel');
-await page.locator('#nav [data-screen="liga"]').click();
-await page.locator('#liga-liste [data-action="liga-spiel"]').first().click();
+await navTo('liga');
+await page.locator('#liga-plan [data-action="liga-spiel"]').first().click();
 for (let i = 0; i < 4; i++) {
   await page.locator(`[data-role="liga-gegner"][data-i="${i}"]`).fill('Probe');
   await page.locator(`[data-role="liga-gegner-nach"][data-i="${i}"]`).fill('Gegner' + (i + 1));
@@ -2505,7 +2535,7 @@ await page.evaluate(() => {
   S.game = null;
   D.setScreen('setup');
 });
-await page.locator('#nav [data-screen="liga"]').click();
+await navTo('liga');
 check('Liga-Seite oeffnet sich', await visible('#screen-liga'));
 check('Kopf nennt Team und Saison', (await text('#liga-sub')).includes('Blink 180'));
 check('18 Spieltage stehen im Plan', (await page.locator('.liga-spieltag').count()) === 18,
@@ -2516,10 +2546,19 @@ check('der erste Spieltag traegt Datum, Gegner und Ort',
   ersterSpieltag.includes('06.10.2026') && ersterSpieltag.includes('TSV Dachau') &&
   ersterSpieltag.includes('Bar Sehnsucht'), ersterSpieltag.replace(/\s+/g, ' ').slice(0, 80));
 check('Heimspiele sind als Heim markiert', ersterSpieltag.toLowerCase().includes('heim'));
-check('das runde Kalender-Icon sitzt oben im Kopf',
-  (await page.locator('#screen-liga .app-header [data-action="liga-ical"]').count()) === 1);
-check('und jeder Termin hat sein eigenes Kalender-Icon',
-  (await page.locator('#liga-liste [data-action="liga-ical"]').count()) === 16);
+check('der Kalender-Knopf fuer alle Termine sitzt ueber der Liste',
+  (await page.locator('#screen-liga [data-action="liga-ical"]:not([data-id])').count()) === 1);
+check('der gewaehlte Spieltag hat sein eigenes Kalender-Icon',
+  (await page.locator('#liga-karte [data-action="liga-ical"][data-id]').count()) === 1);
+check('links steht gross der naechste Spieltag mit Datum, Gegner und Team',
+  (await textKlein('#liga-karte')).includes('nächster spieltag') && (await textKlein('#liga-karte')).includes('spieltag ·') &&
+  (await page.locator('#liga-karte .lk-teams .blink-logo').count()) === 1);
+await page.locator('#liga-tabs button[data-tab="training"]').click();
+check('Training: DiensDarts links, Uebungsspiel mit Gegner-Vorwahl rechts',
+  (await textKlein('#dienstdarts-karte')).includes('diensdarts') && (await page.locator('#uebung-karte [data-action="uebung-vorwahl"][data-value="mittel"].active').count()) === 1);
+await page.locator('#liga-tabs button[data-tab="tabelle"]').click();
+check('Tabelle: rechts unser Platz', (await textKlein('#lt-platz')).includes('unser platz') && (await text('#lt-platz')).includes('.'));
+await page.locator('#liga-tabs button[data-tab="plan"]').click();
 /* Ohne Server gibt es keine Konten – der Plan bleibt lesbar, das
    Eintragen erklaert sich per Hinweis. */
 check('ohne Konto gibt es keinen Eintragen-Knopf',
@@ -2527,7 +2566,7 @@ check('ohne Konto gibt es keinen Eintragen-Knopf',
 /* Die iCal-Datei selbst: das Kopf-Icon laedt alle Termine. */
 const [ical] = await Promise.all([
   page.waitForEvent('download'),
-  page.locator('#screen-liga .app-header [data-action="liga-ical"]').click()
+  page.locator('#screen-liga [data-action="liga-ical"]:not([data-id])').click()
 ]);
 check('die iCal-Datei heisst nach dem Team',
   ical.suggestedFilename() === 'blink180-spielplan.ics');
@@ -2536,10 +2575,14 @@ const icalInhalt = fs.readFileSync(icalPfad, 'utf8');
 check('sie enthaelt 16 Termine', (icalInhalt.match(/BEGIN:VEVENT/g) || []).length === 16);
 check('mit Datum und Ort des ersten Spieltags',
   icalInhalt.includes('DTSTART;VALUE=DATE:20261006') && icalInhalt.includes('Bar Sehnsucht'));
-/* Das Icon am einzelnen Termin laedt nur diesen einen. */
+/* Das Icon am einzelnen Termin laedt nur diesen einen - ein Tipp rechts
+   zeigt den Spieltag links gross. */
+await page.locator('#liga-liste [data-action="liga-wahl"][data-id="st02"]').click();
+check('ein Tipp auf einen Spieltag zeigt ihn links gross', (await text('#liga-karte')).includes('Germering'));
+await page.locator('#liga-liste [data-action="liga-wahl"][data-id="st01"]').click();
 const [einzel] = await Promise.all([
   page.waitForEvent('download'),
-  page.locator('#liga-liste [data-action="liga-ical"]').first().click()
+  page.locator('#liga-karte [data-action="liga-ical"][data-id="st01"]').click()
 ]);
 check('ein Termin allein heisst nach seinem Spieltag',
   einzel.suggestedFilename() === 'blink180-spieltag-1.ics');
@@ -2624,8 +2667,7 @@ await page.locator('[data-action="reset"]').click();
 await page.locator('[data-action="ov-reset"]').click();
 check('das Uebungsspiel liegt als solches im Archiv', await page.evaluate(() =>
   window.__dart.state().history.some((h) => h.liga && h.liga.uebung)));
-await page.locator('#nav [data-screen="boards"]').click();
-await page.locator('[data-action="board-mode"][data-value="liga"]').click();
+await ligaStatistik();
 check('die Liga-Rangliste zaehlt das Uebungsspiel nicht',
   (await text('#boards-sub')).includes('noch kein Spieltag'));
 /* Aufraeumen: Archiv-Eintrag und Bots weg. */
@@ -2659,7 +2701,7 @@ check('dafuer den Hinweis, sich anzumelden', (await text('#lt-stand')).includes(
 await page.locator('#liga-tabs button[data-tab="plan"]').click();
 
 group('Buergerlicher Name im Profil');
-await page.locator('#nav [data-screen="players"]').click();
+await navTo('players');
 await page.locator('#players-list .player-card:has-text("Lenas")').click();
 await page.locator('[data-action="edit-current-profile"]').click();
 check('das Profil hat je ein Feld fuer Vor- und Nachnamen',
@@ -2670,12 +2712,12 @@ await page.locator('[data-role="profile-nach"]').fill('Musterfrau');
 await page.locator('[data-action="save-profile"]').click();
 check('der volle Name ist gespeichert', await page.evaluate(() =>
   window.__dart.state().profiles.find((p) => p.name === 'Lenas').voll === 'Lena Musterfrau'));
-await page.locator('#nav [data-screen="liga"]').click();
+await navTo('liga');
 
 /* ---------- Ligaspiel-Modus: der Spielberichtsbogen als Spielplan ---------- */
 
 group('Ligaspiel: 16 Einzel nach Spielberichtsbogen');
-await page.locator('#liga-liste [data-action="liga-spiel"]').first().click();
+await page.locator('#liga-plan [data-action="liga-spiel"]').first().click();
 check('die Aufstellung oeffnet sich', (await text('#overlay-card')).includes('Ligaspiel'));
 check('unsere vier Positionen sind vorbelegt',
   (await page.locator('[data-role="liga-pos"]').count()) === 4);
@@ -2996,8 +3038,7 @@ check('das Ligaspiel liegt im Archiv', await page.evaluate(() =>
   window.__dart.state().history.filter((h) => h.liga).length === 1));
 
 group('Liga-Rangliste: Classic-Werte nur aus Ligaspielen');
-await page.locator('#nav [data-screen="boards"]').click();
-await page.locator('[data-action="board-mode"][data-value="liga"]').click();
+await ligaStatistik();
 check('der Liga-Reiter steht in der Rangliste', (await text('#boards-sub')).includes('Spieltag'));
 check('mit den Classic-Kategorien, aber ohne Turniersiege', await page.evaluate(() => {
   const t = document.getElementById('board-chips').innerText;
@@ -3220,7 +3261,7 @@ check('seine Einzel bleiben in der Historie erhalten', await page.evaluate(() =>
   const h = window.__dart.state().history.find((x) => x.liga);
   return !!h && h.matches.some((m) => m.done);
 }));
-await page.locator('#nav [data-screen="boards"]').click();
+await navTo('boards');
 check('aus der Rangliste ist er ebenfalls raus', !(await text('#board-list')).includes('Dachau 1'));
 
 /* Aufraeumen fuer die folgenden Gruppen – Liga-Archiv und Dachauer Gaeste
@@ -3495,7 +3536,7 @@ check('das Schnelle Spiel laeuft', await visible('#screen-game'));
 await page.evaluate(() => window.__dart.setScreen('players'));
 await page.locator('#players-list .player-card').first().click();
 check('das Profil ist offen', await visible('#screen-profile'));
-await page.locator('#nav [data-screen="setup"]').click();
+await navTo('setup');
 check('der Spiel-Reiter fuehrt zurueck aufs Board', await visible('#screen-game'));
 check('und kein Bildschirm bleibt schwarz', await page.evaluate(() =>
   !!document.querySelector('.screen.active')));
@@ -4031,6 +4072,7 @@ const tVor = await page.evaluate(() => {
 });
 await page.evaluate(() => { window.__dart.ui().boardMode = '501'; window.__dart.setScreen('boards'); });
 check('in der Spieleliste steht eine Turnierzeile', (await page.locator('#match-log .turnier-row').count()) >= 1);
+await page.locator('#board-log-knopf').click();
 await page.locator('#match-log .turnier-row[data-id="turnier_x"]').click();
 check('Turnier-Endstand oeffnet sich', await visible('#screen-summary') && (await textKlein('#summary-box')).includes('turnier'));
 check('drei Plaetze mit Siegen und Ø', (await page.locator('#summary-box .podium .p').count()) === 3 &&
@@ -4131,7 +4173,7 @@ group('Ton & Feiern: Feiern lassen sich abschalten');
 /* ---------- Zurueck-Taste ---------- */
 group('Zurueck-Taste verlaesst die App nicht aus Versehen');
 {
-  await page.locator('#nav [data-screen="boards"]').click();
+  await navTo('boards');
   await page.goBack();
   await page.waitForTimeout(150);
   check('Zurueck aus der Rangliste fuehrt ins Setup', await page.evaluate(() => window.__dart.state().screen === 'setup'));
@@ -4204,7 +4246,7 @@ group('Erster Start: Willkommen-Karte');
 group('Ligaspiel endet erst mit dem unterschriebenen Bericht');
 {
   await page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; S.matches = []; S.tour = null; S.current = null; D.ui().overlay = null; D.save(); D.setScreen('liga'); });
-  await page.locator('#liga-liste [data-action="liga-spiel"]').first().click();
+  await page.locator('#liga-plan [data-action="liga-spiel"]').first().click();
   for (let i = 0; i < 4; i++) {
     await page.locator(`[data-role="liga-gegner"][data-i="${i}"]`).fill('Abschluss' + i);
     await page.locator(`[data-role="liga-gegner-nach"][data-i="${i}"]`).fill('Test' + i);
@@ -4222,7 +4264,7 @@ group('Ligaspiel endet erst mit dem unterschriebenen Bericht');
   });
   check('alle Einzel gespielt: der Weg geht zu Ergebnissen und Bericht',
     await visible('#liga-stand [data-action="to-winner"]'));
-  await page.locator('#nav [data-screen="setup"]').click();
+  await navTo('setup');
   check('der Spiel-Tab beendet das Ligaspiel nicht, sondern zeigt die Ergebnisse',
     (await visible('#screen-winner')) && await page.evaluate(() => window.__dart.state().matches.length === 16));
   check('Man of the Day fuer beide Teams', (await page.locator('#winner-box .motd .motd-titel').count()) === 2);
@@ -4247,8 +4289,11 @@ group('Ligaspiel endet erst mit dem unterschriebenen Bericht');
   check('Handkorrekturen im Bogen ueberstehen den Abschluss', (await text('#bericht-blatt')).includes('Handkorrektur'));
   await page.locator('#overlay-card [data-action="ov-hinweis-zu"]').click();
   await page.evaluate(() => window.__dart.setScreen('liga'));
-  const karte = page.locator('#liga-liste .liga-spieltag').first();
-  check('im Spielplan steht der Spieltag als abgeschlossen', (await karte.innerText()).includes('Abgeschlossen'));
+  check('rechts in der Liste steht der Spieltag als abgeschlossen',
+    (await page.locator('#liga-liste .liga-spieltag').first().innerText()).includes('Abgeschlossen'));
+  await page.locator('#liga-liste [data-action="liga-wahl"][data-id="' + termin + '"]').click();
+  const karte = page.locator('#liga-karte');
+  check('links steht der Spieltag als abgeschlossen', (await karte.innerText()).includes('Abgeschlossen'));
   check('und laesst sich nicht nochmal starten', (await karte.locator('[data-action="liga-spiel"]').count()) === 0);
   await page.evaluate(() => { window.__dart.ui().bericht = null; });
   check('Ergebnisse und Bericht bleiben einsehbar',
@@ -4259,7 +4304,7 @@ group('Ligaspiel endet erst mit dem unterschriebenen Bericht');
     const h = S.history.find((x) => x.liga && x.liga.terminId === t);
     h.matches.forEach((m) => { m.done = false; m.winner = null; m.legs = []; });
     D.save(); D.setScreen('liga');
-    return !!document.querySelector('#liga-liste .liga-spieltag [data-action="liga-spiel"]');
+    return !!document.querySelector('#liga-plan [data-action="liga-spiel"]');
   }, termin);
   check('ein Eintrag ohne gespieltes Einzel laesst den Spieltag startbar', startbar);
   await page.evaluate((t) => {

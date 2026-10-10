@@ -32,6 +32,20 @@
   <button id="nav-konto" class="hidden" data-action="nav" data-screen="konto">Profil</button>
 </nav>
 
+<!-- Das Menue hinter dem Logo (Rangliste, Liga): Marke und die
+     Navigation untereinander - #nav wandert per JS hier hinein. -->
+<div id="logo-menu-overlay" class="boards-menu-overlay hidden">
+  <div class="boards-menu" id="logo-menu-panel">
+    <div class="marke">
+      <span class="blink-logo" role="img" aria-label="Blink 180"></span>
+      <div>
+        <div class="wort">Blink <span class="rot">180</span></div>
+        <div class="sub">Dart Turnier · est. 2026</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ============ SETUP ============ -->
 <section id="screen-setup" class="screen">
   <!-- Kopfzeile: Marke links, Navigation rechts (die Leiste #nav wandert
@@ -303,16 +317,25 @@
 
 <!-- ============ TURNIER-ÜBERSICHT ============ -->
 <section id="screen-tournament" class="screen">
-  <header class="app-header row">
-    <div class="kopf-mit-logo">
-      <span class="blink-logo sm" role="img" aria-label="Blink 180"></span>
+  <!-- Dieselbe Kopfleiste wie im Setup: Marke links, Navigation rechts
+       (die Leiste #nav wandert per JS hierher). -->
+  <div class="setup-kopf" id="turnier-kopf">
+    <div class="marke">
+      <span class="blink-logo" role="img" aria-label="Blink 180"></span>
       <div>
-        <h1>Turnier</h1>
-        <p class="sub" id="tournament-format"></p>
+        <div class="wort">Blink <span class="rot">180</span></div>
+        <div class="sub">Dart Turnier · est. 2026</div>
       </div>
+    </div>
+  </div>
+  <header class="app-header row turnier-titel">
+    <div class="titel-zeile">
+      <h1>Turnier</h1>
+      <p class="sub" id="tournament-format"></p>
     </div>
     <button class="btn ghost small" data-action="to-setup">Verlassen</button>
   </header>
+  <div class="turnier-spalten">
 
   <!-- Links die naechsten Spiele (gestartet wird direkt an der Partie),
        rechts Tabelle und Statistik - am Handy alles untereinander,
@@ -344,48 +367,70 @@
       </table>
     </div>
 
-    <div class="card">
+    <div class="card" id="karte-turnier-statistik">
       <h2>Turnier-Statistik</h2>
       <div id="stats-grid" class="stats-grid"></div>
     </div>
   </div>
+  </div>
 </section>
 
 <!-- ============ RANGLISTE ============ -->
-<section id="screen-boards" class="screen">
-  <header class="app-header kopf-mit-logo">
-    <span class="blink-logo sm" role="img" aria-label="Blink 180"></span>
-    <div>
+<section id="screen-boards" class="screen boards-host">
+  <!-- Entwurf "Rangliste Redesign" (Okt. 2026): eine Kopfzeile - das Logo
+       oeffnet das Menue (die Leiste #nav wandert per JS in den Ausklapp-
+       Kasten), daneben Titel und Spielart, rechts der Spielart-Umschalter.
+       Darunter drei Spalten: Kategorien, Rangliste, Verlauf und Rekorde. -->
+  <div class="boards-kopf">
+    <button class="boards-logo" data-action="logo-menu" aria-label="Menü öffnen">
+      <span class="blink-logo sm" role="img" aria-label="Blink 180"></span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
+    </button>
+    <div class="titel-zeile">
       <h1>Rangliste</h1>
       <p class="sub" id="boards-sub"></p>
     </div>
-  </header>
-
-  <div class="options" id="board-mode">
-    <button data-action="board-mode" data-value="501">Classic</button>
-    <button data-action="board-mode" data-value="liga">Liga</button>
-    <button data-action="board-mode" data-value="cricket">Cricket</button>
-    <button data-action="board-mode" data-value="rtw">Round the World</button>
-    <button data-action="board-mode" data-value="finisher">Finisher</button>
+    <div class="options kopf-reiter" id="board-mode">
+      <button data-action="board-mode" data-value="501">Classic</button>
+      <button data-action="board-mode" data-value="cricket">Cricket</button>
+      <button data-action="board-mode" data-value="rtw">RTW</button>
+      <button data-action="board-mode" data-value="finisher">Finisher</button>
+      <button data-action="board-mode" data-value="kaiwen">Kaiwen</button>
+      <button data-action="board-mode" data-value="hunter">Hunter</button>
+    </div>
   </div>
 
-  <!-- Reihenfolge bewusst: erst die Unterfilter (volle Breite), dann die
-       Liste – am iPad rueckt der Verlauf per Grid daneben. -->
-  <div class="chips" id="board-chips"></div>
-  <div class="card no-pad"><div id="board-list" class="board-list"></div></div>
-  <p class="hint" id="board-hint"></p>
+  <div class="boards-koerper">
+    <!-- Links alle Kategorien untereinander (am Handy hochkant als Chips). -->
+    <div class="chips boards-kats" id="board-chips"></div>
 
-  <div class="card" id="board-chart"></div>
+    <div class="card boards-liste">
+      <div class="karte-kopf"><h2 id="board-titel">Rangliste</h2><span class="hint" id="board-hint"></span><button class="btn ghost small nur-flach" data-action="board-log">Alle Spiele ›</button></div>
+      <div id="board-list" class="board-list"></div>
+    </div>
 
-  <div class="card" id="board-rekorde">
-    <h2>Rekorde</h2>
-    <div id="records" class="records"></div>
+    <div class="boards-seite">
+      <div class="card" id="board-chart"></div>
+      <div class="card hidden" id="liga-highlights"></div>
+      <div class="card" id="board-rekorde">
+        <div class="karte-kopf"><h2>Rekorde</h2><button class="btn ghost small" data-action="board-log" id="board-log-knopf">Alle Spiele ›</button></div>
+        <div id="records" class="records"></div>
+      </div>
+    </div>
   </div>
 
+  <!-- Kaiwen und Hunter: die Auswertung kommt mit dem Spiel. -->
+  <div class="card boards-bald hidden" id="board-bald">
+    <span class="bald-titel">Coming soon</span>
+    <span class="bald-text" id="board-bald-text"></span>
+  </div>
+
+  <!-- Der Spielverlauf: "Alle Spiele" oeffnet ihn anstelle der Spalten. -->
   <div class="card" id="board-log">
-    <h2 id="log-title">Alle Spiele</h2>
+    <div class="karte-kopf"><h2 id="log-title">Alle Spiele</h2><button class="btn ghost small" data-action="board-log-zu">‹ Rangliste</button></div>
     <div id="match-log"></div>
   </div>
+
 </section>
 
 <!-- ============ LIGA ============ -->
@@ -394,73 +439,95 @@
      die Zusagen liegen auf dem Server – ohne Server bleibt der Spielplan
      lesbar, nur das Eintragen entfällt. -->
 <section id="screen-liga" class="screen">
-  <header class="app-header row">
-    <div class="kopf-mit-logo">
+  <!-- Entwurf "Liga · Spielplan" (Okt. 2026): Kopf wie in der Rangliste
+       (Logo-Menue, Titel, Reiter als Felder), links gross der naechste bzw.
+       gewaehlte Spieltag, rechts alle Spieltage kompakt. -->
+  <div class="boards-kopf liga-kopf">
+    <button class="boards-logo" data-action="logo-menu" aria-label="Menü öffnen">
       <span class="blink-logo sm" role="img" aria-label="Blink 180"></span>
-      <div>
-        <h1>Liga</h1>
-        <p class="sub" id="liga-sub"></p>
-      </div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
+    </button>
+    <div class="titel-zeile">
+      <h1>Liga</h1>
+      <p class="sub" id="liga-sub"></p>
     </div>
-    <!-- Alle Termine auf einmal in den Kalender; je Termin gibt es das
-         gleiche Icon noch einmal einzeln. -->
-    <button class="icon-btn rund" data-action="liga-ical" title="Alle Termine in den Kalender"
-            aria-label="Alle Termine in den Kalender"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></button>
-  </header>
-
-  <div class="konto-tabs fuenf" id="liga-tabs">
-    <button data-action="liga-tab" data-tab="plan" class="active">Spielplan</button>
-    <button data-action="liga-tab" data-tab="training">Training</button>
-    <button data-action="liga-tab" data-tab="tabelle">Tabelle</button>
-    <button data-action="liga-tab" data-tab="kasse">Kasse</button>
-    <button data-action="liga-tab" data-tab="regeln">Regeln</button>
+    <div class="options kopf-reiter" id="liga-tabs">
+      <button data-action="liga-tab" data-tab="plan" class="active">Spielplan</button>
+      <button data-action="liga-tab" data-tab="training">Training</button>
+      <button data-action="liga-tab" data-tab="tabelle">Tabelle</button>
+      <button data-action="liga-tab" data-tab="statistik">Statistik</button>
+      <button data-action="liga-tab" data-tab="kasse">Kasse</button>
+      <button data-action="liga-tab" data-tab="regeln">Regeln</button>
+    </div>
   </div>
 
   <div id="liga-plan">
     <p class="hint hidden" id="liga-hinweis"></p>
-    <div id="liga-liste"></div>
+    <div class="liga-spalten">
+      <!-- Links: der gewaehlte Spieltag gross (Datum, Gegner, Ort, Team,
+           Zusage und Start) - oder das LIVE-Schild, solange gespielt wird. -->
+      <div class="liga-karte" id="liga-karte"></div>
+      <!-- Rechts: alle Spieltage, ein Tipp zeigt ihn links gross. -->
+      <div class="card liga-liste-karte">
+        <div class="karte-kopf"><h2>Alle Spieltage</h2>
+          <button class="btn ghost small" data-action="liga-ical" title="Alle Termine in den Kalender"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span>Alle in den Kalender</span></button>
+        </div>
+        <div id="liga-liste"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistik: die Liga-Auswertung der Rangliste (Kategorien, Liste,
+       Verlauf, Rekorde) wandert per JS hierher, solange der Reiter offen ist. -->
+  <div id="liga-statistik" class="boards-host hidden">
+    <!-- Team-Auswahl (unsere, ganze Liga, Gegner) als Chips ueber den Spalten. -->
+    <div id="liga-team-chips" class="chips"></div>
   </div>
 
   <!-- DiensDarts: das Dienstags-Training in der Sehnsucht - mit Umfrage,
        wer kommt, und darunter dem Uebungs-Ligaspiel (zwei eigene Teams
        oder Bots), das ablaeuft wie ein echtes: 16 Einzel, zwei Scheiben,
        Spielbericht - nur ohne Liga-Wertung. -->
-  <div id="liga-training" class="hidden">
-    <div class="card" id="dienstdarts-karte"></div>
-    <div class="card">
-      <h2>Übungs-Ligaspiel</h2>
-      <p class="hint">Der komplette Liga-Ablauf zum Üben: 16 Einzel in Bogen-Reihenfolge,
-        zwei Scheiben, Team-Stand und Spielbericht – gegen ein zweites eigenes Team oder
-        gegen Bots in drei Stärken. Zählt nirgends in die Liga-Wertung.</p>
-      <button class="btn primary full" data-action="uebung-start">Übungsspiel aufstellen</button>
-    </div>
+  <div id="liga-training" class="hidden liga-zwei">
+    <div class="liga-karte weiss" id="dienstdarts-karte"></div>
+    <div class="card liga-uebung" id="uebung-karte"></div>
   </div>
 
   <!-- Die Ligatabelle: von Hand gepflegt (die Liga veröffentlicht die
        Ergebnisse, wir tragen sie ab), für alle Angemeldeten derselbe Stand. -->
-  <div id="liga-tabelle" class="hidden">
-    <p class="hint">Die Tabelle pflegen wir von Hand nach den Veröffentlichungen der
-      Ligaleitung: Zellen antippen, Werte eintragen, speichern – dann sehen alle
-      denselben Stand.</p>
-    <div class="card no-pad">
-      <table class="standings" id="lt-tabelle"></table>
+  <div id="liga-tabelle" class="hidden liga-zwei breit">
+    <div class="card lt-karte">
+      <div class="karte-kopf"><h2>Ligatabelle</h2><span class="hint">Zelle antippen zum Ändern</span></div>
+      <div class="lt-scroll"><table class="standings" id="lt-tabelle"></table></div>
     </div>
-    <button class="btn primary full hidden" id="lt-speichern" data-action="liga-tabelle-speichern">Tabelle speichern</button>
-    <p class="hint" id="lt-stand"></p>
+    <div class="liga-rechts">
+      <div class="liga-karte weiss" id="lt-platz"></div>
+      <div class="card lt-stand-karte">
+        <span class="lk-crew-titel">Stand</span>
+        <p class="hint">Von Hand gepflegt nach den Veröffentlichungen der Ligaleitung.
+          Gespeichert sehen alle denselben Stand.</p>
+        <p class="hint" id="lt-stand"></p>
+        <div class="luft"></div>
+        <button class="btn hell full hidden" id="lt-speichern" data-action="liga-tabelle-speichern">Tabelle speichern</button>
+      </div>
+    </div>
   </div>
 
   <!-- Die Vereinskasse: ein Kassenbuch fuer alle - Einzahlung oder
        Ausgabe erfassen, der Bestand rechnet sich von selbst. -->
-  <div id="liga-kasse" class="hidden">
-    <div class="card" id="kasse-karte"></div>
+  <div id="liga-kasse" class="hidden liga-zwei">
+    <div class="liga-links" id="kasse-karte"></div>
+    <div class="liga-rechts" id="kasse-buch"></div>
   </div>
 
   <!-- Regeln und FAQ: fest im HTML, verständlich zusammengefasst aus der
        SDM-SWO (Stand 22.01.2026) und den WDF Playing & Tournament Rules –
        die Originale sind ganz unten verlinkt. Aufklappbar, damit die Seite
        nicht zur Tapete wird. -->
-  <div id="liga-regeln" class="hidden">
+  <div id="liga-regeln" class="hidden liga-zwei">
+    <div class="card regel-spalte">
     <h2>Für Neue: die wichtigsten Fragen</h2>
+    <div class="regel-liste">
 
     <details class="card regel">
       <summary>Wie läuft ein Ligaspieltag ab?</summary>
@@ -587,7 +654,11 @@
         Eine gewonnene Partie (das ganze Ligaspiel) bringt 2 Punkte in der Ligatabelle.</p>
     </details>
 
+    </div>
+    </div>
+    <div class="card regel-spalte">
     <h2>Aus der Regelecke (von Udo)</h2>
+    <div class="regel-liste">
 
     <details class="card regel">
       <summary>Wurf: keine wurffertige Haltung, solange der Gegner vorn ist</summary>
@@ -653,6 +724,8 @@
         <li><a href="https://dartswdf.com/storage/uploads/fb05b306-c92c-4f08-b512-affb092a1b3d/2018-02-28_WDF_Playing_and_Tournament_Rules_rev20.pdf" target="_blank" rel="noopener">WDF Playing &amp; Tournament Rules</a> (PDF, englisch)</li>
       </ul>
     </details>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -679,13 +752,20 @@
 
 <!-- ============ BULL-OFF ============ -->
 <section id="screen-bulloff" class="screen center">
-  <header class="app-header">
-    <div class="bull-ring" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="32" cy="32" r="28"></circle><circle cx="32" cy="32" r="19"></circle><circle cx="32" cy="32" r="10"></circle><circle cx="32" cy="32" r="3" fill="currentColor"></circle></svg></div>
-    <h1>Bull werfen</h1>
-    <p class="sub" id="bulloff-sub">Wer war näher am Bull und darf anfangen?</p>
+  <!-- Entwurf "Ausbullen" (Okt. 2026): Zurueck oben links, Zielscheibe und
+       Titel mittig, rechts der Zusammenhang (Spiel 3 von 6). Der
+       Zurueck-Knopf bleibt direktes Kind des Screens - Tastatur und Tests
+       finden ihn so. -->
+  <header class="app-header bo-kopf">
+    <div class="bo-titelzeile">
+      <div class="bull-ring" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="32" cy="32" r="28"></circle><circle cx="32" cy="32" r="19"></circle><circle cx="32" cy="32" r="10"></circle><circle cx="32" cy="32" r="3" fill="currentColor"></circle></svg></div>
+      <h1>Ausbullen</h1>
+    </div>
+    <p class="sub" id="bulloff-sub">Wer war näher am Bull? Antippen – der wirft an.</p>
   </header>
+  <span class="bo-ctx" id="bulloff-ctx"></span>
   <div id="bulloff-buttons" class="bulloff"></div>
-  <button class="btn ghost full" data-action="to-tournament">Zurück</button>
+  <button class="btn ghost bo-zurueck" data-action="to-tournament"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 12H7M11.5 6.5L6 12l5.5 5.5"></path></svg><span>Zurück</span></button>
 </section>
 
 <!-- ============ SPIEL ============ -->

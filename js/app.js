@@ -46,7 +46,7 @@
       { id: 'st11', nr: 11, tag: '2027-03-16', heim: 'Blink 180', gast: 'Dart Artists Germering II', ort: 'Bar Sehnsucht' },
       { id: 'st12', nr: 12, tag: '2027-04-06', heim: 'Blink 180', gast: 'Voodoo Darters', ort: 'Bar Sehnsucht' },
       { id: 'st13', nr: 13, tag: '2027-04-20', heim: 'd`Haberer 2', gast: 'Blink 180', ort: 'Heuboden' },
-      { id: 'st14', nr: 14, tag: '2027-04-30', heim: 'DCO', gast: 'Blink 180', ort: 'Poseidon Baldham' },
+      { id: 'st14', nr: 14, tag: '2027-04-30', heim: 'DCO', gast: 'Blink 180', ort: 'Gasthof Gut Keferloh' },
       { id: 'st15', nr: 15, tag: '2027-05-11', heim: 'Blink 180', gast: 'Treff ma nix', ort: 'Bar Sehnsucht' },
       { id: 'st16', nr: 16, tag: '2027-06-04', heim: 'TSV Oberpframmern', gast: 'Blink 180', ort: 'Gaststätte Anstoss' },
       { id: 'st17', nr: 17, tag: '2027-06-08', heim: 'Blink 180', gast: 'FT Gern Darts II', ort: 'Bar Sehnsucht' },
@@ -3221,9 +3221,27 @@
     var navFor = gesperrt() ? null : NAV_SCREENS[screen];
     /* Im Setup steht die Navigation in der Kopfzeile neben der Marke,
        ueberall sonst wie gehabt ueber dem Inhalt. */
-    var navEl = $('nav'), kopf = $('setup-kopf');
-    if (kopf && screen === 'setup' && navEl.parentElement !== kopf) kopf.appendChild(navEl);
-    else if (kopf && screen !== 'setup' && navEl.parentElement === kopf) document.body.insertBefore(navEl, $('screen-setup'));
+    var navEl = $('nav');
+    var kopf = screen === 'setup' ? $('setup-kopf') : screen === 'tournament' ? $('turnier-kopf')
+      : screen === 'boards' || screen === 'liga' ? $('logo-menu-panel') : null;
+    if (kopf && navEl.parentElement !== kopf) kopf.appendChild(navEl);
+    else if (!kopf && navEl.parentElement !== document.body) document.body.insertBefore(navEl, $('screen-setup'));
+    /* Das Logo-Menue gibt es nur auf Rangliste und Liga, das •••-Menue nur in
+       den Spielbildern - ueberall sonst wird ein haengengebliebenes Menue
+       (Zurueck-Taste aus dem offenen Menue) zugeklappt. */
+    var mitMenue = screen === 'boards' || screen === 'liga' || screen === 'game' || screen === 'cricket' || screen === 'rtw' || screen === 'finisher';
+    if (!mitMenue) UI.menu = false;
+    $('logo-menu-overlay').classList.toggle('hidden', !(UI.menu && (screen === 'boards' || screen === 'liga')));
+    /* Die Liga-Auswertung wohnt im Statistik-Reiter der Liga; ueberall
+       sonst steht der Ranglisten-Koerper in seinem eigenen Screen. */
+    var boardsHost = screen === 'liga' && (UI.ligaTab || 'plan') === 'statistik' ? $('liga-statistik') : $('screen-boards');
+    var koerper = document.querySelector('.boards-koerper');
+    if (koerper && koerper.parentElement !== boardsHost) {
+      if (boardsHost.id === 'screen-boards') { boardsHost.insertBefore(koerper, $('board-bald')); boardsHost.insertBefore($('board-log'), $('board-bald')); }
+      else { boardsHost.appendChild(koerper); boardsHost.appendChild($('board-log')); }
+    }
+    /* Beim Betreten der Liga zeigt der Spielplan wieder den naechsten Spieltag. */
+    if (screen !== 'liga') UI.ligaWahl = null;
     $('nav').classList.toggle('hidden', !navFor);
     if (navFor) {
       $('nav').querySelectorAll('button').forEach(function (b) {
@@ -3277,7 +3295,8 @@
     document.body.classList.toggle('rand-aus', S.screen === 'cricket' || S.screen === 'game' || S.screen === 'rtw' || S.screen === 'finisher');
     /* Das Startbild steht am Tablet und quergedrehten Handy fest im Rahmen,
        innen scrollen nur Spielerliste und Einstellungen (body.fix-setup). */
-    document.body.classList.toggle('fix-setup', S.screen === 'setup');
+    document.body.classList.toggle('fix-setup', S.screen === 'setup' || S.screen === 'tournament' || S.screen === 'bulloff' || S.screen === 'boards' ||
+      S.screen === 'liga');
     if (S.screen === 'setup') { gaesteAufraeumen(); renderSetup(); }
     /* Der Hintergrundtakt laeuft nur da, wo man ihn auch sieht: im
        Turnierbildschirm. Sonst fragt die App den ganzen Abend nach Daten,
@@ -3517,7 +3536,9 @@
        Dart). Die Grenze selbst erscheint nur bei Gemischt. */
     var eingabe = S.settings.tastatur === 1 ? 2 : S.settings.dartModeFrom > 0 ? 1 : 0;
     document.querySelectorAll('#screen-setup [data-action="eingabe"]').forEach(function (b) {
-      b.classList.toggle('active', Number(b.getAttribute('data-value')) === eingabe);
+      /* Der Finisher kennt kein Gemischt - dort heisst alles ohne Tastatur Standard. */
+      var ziel = b.closest('#eingabe-wahl-fin') ? (eingabe === 2 ? 2 : 0) : eingabe;
+      b.classList.toggle('active', Number(b.getAttribute('data-value')) === ziel);
     });
     var dartmode = $('setting-dartmode');
     if (dartmode) dartmode.classList.toggle('hidden', eingabe !== 1);
@@ -3799,7 +3820,7 @@
         (m.done || m.void
           ? (liga && m.kampflos
             ? '<button class="go wo" data-action="liga-kampflos" data-id="' + esc(m.id) + '">ändern</button>'
-            : '')
+            : m.done && !m.void ? '<span class="fertig">fertig</span>' : '')
           : m.belegtVon && Date.now() - (m.belegtSeit || Date.now()) > ((S.tour && S.tour.claimFrist) || 10 * 60000)
             ? '<span class="belegt">bei ' + esc(m.belegtVon) + ' hängengeblieben?</span>' +
               '<button class="go" data-action="open-match" data-id="' + esc(m.id) + '">Übernehmen</button>'
@@ -3961,6 +3982,12 @@
 
   function renderBoards() {
     var mode = UI.boardMode;
+    /* Die Liga-Auswertung gibt es nur im Statistik-Reiter der Liga-Seite -
+       die Rangliste selbst faellt auf Classic zurueck. Das muss vor allem
+       anderen feststehen, sonst rechnet ein Zeichnen mit dem falschen Modus. */
+    var imLiga = S.screen === 'liga';
+    if (imLiga) mode = UI.boardMode = 'liga';
+    else if (mode === 'liga') mode = UI.boardMode = '501';
     /* Der Liga-Reiter rechnet dieselben Classic-Werte, aber nur über
        Ligaspiele – eigene Karriere-Karte statt der großen. */
     var map = mode === 'liga' ? careerLiga() : career();
@@ -3972,13 +3999,26 @@
       teamDaten = ligaTeamDaten();
       if (!teamDaten.teams.length || (ligaTeam !== 'alle' && ligaTeam !== 'wir' && teamDaten.teams.indexOf(ligaTeam) < 0)) ligaTeam = UI.ligaTeam = 'wir';
     }
-    var defs = boardsFor(mode);
-    if (!defs.some(function (b) { return b.key === UI.board; })) UI.board = defs[0].key;
-    var def = boardDef(UI.board);
-
     $('board-mode').querySelectorAll('button').forEach(function (b) {
       b.classList.toggle('active', b.getAttribute('data-value') === mode);
     });
+    /* Spielverlauf anstelle der Spalten - im jeweiligen Wirt. */
+    var host = document.querySelector('.boards-koerper').parentElement;
+    host.classList.toggle('log', !!UI.boardLog);
+    /* Kaiwen und Hunter: noch kein Spiel, noch keine Auswertung. */
+    var bald = mode === 'kaiwen' || mode === 'hunter';
+    $('board-bald').classList.toggle('hidden', !bald);
+    document.querySelector('.boards-koerper').classList.toggle('hidden', bald);
+    if (bald) {
+      $('boards-sub').textContent = kindName(mode);
+      $('board-bald-text').textContent = 'Die ' + kindName(mode) + '-Auswertung kommt mit dem Spiel.';
+      host.classList.remove('log');
+      return;
+    }
+    var defs = boardsFor(mode);
+    if (!defs.some(function (b) { return b.key === UI.board; })) UI.board = defs[0].key;
+    var def = boardDef(UI.board);
+    $('board-titel').textContent = def.label;
 
     var ligaSpieltage = wertbareHistorie().filter(function (h) { return h.liga && !h.liga.uebung && h.matches; });
     var log = allGamesLog().filter(function (row) { return row.kind === mode; });
@@ -3993,21 +4033,29 @@
         : modeName + ' · noch keine Spiele';
 
     /* Verlauf: eine farbige Linie je Spieler. */
-    var chartLabel = (mode === '501' || mode === 'liga' ? '3-Dart-Average' : 'MPR') + ' – je Spieler die letzten ' + CHART_GAMES + ' Spiele';
+    var chartLabel = (mode === '501' || mode === 'liga' ? '3-Dart-Average' : 'MPR') + ' – letzte ' + CHART_GAMES + ' Spiele';
     var chart = mode === 'rtw' ? null : lineChart(chartSeries(mode), chartLabel);
     /* Der Verlauf zeigt unsere Spieler - bei einer anderen Team-Auswahl weg. */
-    $('board-chart').classList.toggle('hidden', mode === 'rtw' || mode === 'finisher' || ligaTeam !== 'wir');
+    $('board-chart').classList.toggle('hidden', mode === 'rtw' || mode === 'finisher' || ligaTeam !== 'wir' || imLiga);
     if (mode !== 'rtw') {
       $('board-chart').innerHTML = '<h2>' + chartLabel + '</h2>' +
         (chart || '<p class="hint">Ab dem zweiten Spiel wird hier der Verlauf gezeichnet.</p>');
     }
 
-    $('board-chips').innerHTML = (teamDaten && teamDaten.teams.length
+    /* Im Liga-Reiter stehen die Team-Chips ueber den Spalten, rechts die
+       Highlights der Saison statt Verlauf und Rekorde. */
+    var teamChips = teamDaten && teamDaten.teams.length
       ? '<div class="liga-team-wahl">' + [['wir', LIGA.team], ['alle', 'Gesamte Liga']].concat(teamDaten.teams.map(function (t) { return [t, t]; }))
           .map(function (t) {
             return '<button class="chip ' + (t[0] === ligaTeam ? 'active' : '') + '" data-action="liga-team" data-team="' + esc(t[0]) + '">' + esc(t[1]) + '</button>';
           }).join('') + '</div>'
-      : '') + defs.map(function (b) {
+      : '';
+    var chipsOben = $('liga-team-chips');
+    if (chipsOben) { chipsOben.innerHTML = imLiga ? teamChips : ''; chipsOben.classList.toggle('hidden', !imLiga || !teamChips); }
+    $('board-rekorde').classList.toggle('hidden', imLiga);
+    $('liga-highlights').classList.toggle('hidden', !imLiga);
+    if (imLiga) $('liga-highlights').innerHTML = ligaHighlightsSaisonHtml();
+    $('board-chips').innerHTML = (imLiga ? '' : teamChips) + defs.map(function (b) {
       return '<button class="chip ' + (b.key === UI.board ? 'active' : '') + '" data-action="board" data-key="' + b.key + '">' + b.label + '</button>';
     }).join('');
 
@@ -4027,12 +4075,12 @@
       return alle;
     };
     var rows = teamRanking(def);
-    var medals = ['🥇', '🥈', '🥉'];
+    /* Platz 1 bis 3 in Medaillenfarbe (Gold, Silber, Bronze), der Beste leuchtet. */
     $('board-list').innerHTML = rows.length ? rows.map(function (st, i) {
       var gegner = String(st.id).indexOf('lg|') === 0;
       return '<div class="board-row ' + (i === 0 ? 'top' : '') + '"' +
         (gegner ? '' : ' data-action="open-profile" data-id="' + esc(st.id) + '" role="button" tabindex="0"') + '>' +
-        '<div class="pos">' + (medals[i] || (i + 1) + '.') + '</div>' +
+        '<div class="pos' + (i < 3 ? ' m' + (i + 1) : '') + '">' + (i + 1) + '</div>' +
         avatarHTML(gegner ? { id: st.id, name: st.name, hue: 210 } : profile(st.id), 'sm') +
         '<div class="nm">' + esc(st.name) +
           (ligaTeam === 'alle' && st.team ? '<span class="board-team">' + esc(st.team) + '</span>' : '') + '</div>' +
@@ -4077,6 +4125,7 @@
       : mode === 'liga' ? 'Alle Ligaspiele'
       : mode === 'cricket' ? 'Alle Cricket-Spiele'
       : mode === 'finisher' ? 'Alle Finisher-Spiele' : 'Alle Trainings';
+    $('board-log-knopf').textContent = $('log-title').textContent + ' ›';
 
     /* Ligaspiele: eine Zeile je Spieltag mit dem Team-Ergebnis. */
     if (mode === 'liga') {
@@ -4319,6 +4368,19 @@
   var LIGA_TEAMS = ['Blink 180', 'TSV Dachau 1865 4', 'Dart Artists Germering II',
     'Voodoo Darters', 'd`Haberer 2', 'DCO', 'Treff ma nix', 'TSV Oberpframmern',
     'FT Gern Darts II'];
+  /* Vorbelegung der Tabelle, solange noch niemand auf dem Server gespeichert
+     hat: Stand der Ligaleitung nach dem 1. Spieltag (Oktober 2026). */
+  var LIGA_TABELLE_START = [
+    { team: 'TSV Dachau 1865 4', spiele: 1, g: 1, u: 0, v: 0, legs: '20:15', einzel: '9:7', punkte: 2 },
+    { team: 'Treff ma nix', spiele: 1, g: 1, u: 0, v: 0, legs: '21:17', einzel: '9:7', punkte: 2 },
+    { team: 'd`Haberer 2', spiele: 1, g: 0, u: 1, v: 0, legs: '20:20', einzel: '8:8', punkte: 1 },
+    { team: 'Voodoo Darters', spiele: 1, g: 0, u: 1, v: 0, legs: '20:20', einzel: '8:8', punkte: 1 },
+    { team: 'DCO', spiele: 1, g: 0, u: 0, v: 1, legs: '17:21', einzel: '7:9', punkte: 0 },
+    { team: 'Blink 180', spiele: 1, g: 0, u: 0, v: 1, legs: '15:20', einzel: '7:9', punkte: 0 },
+    { team: 'Dart Artists Germering II', spiele: 0, g: 0, u: 0, v: 0, legs: '0:0', einzel: '0:0', punkte: 0 },
+    { team: 'TSV Oberpframmern', spiele: 0, g: 0, u: 0, v: 0, legs: '0:0', einzel: '0:0', punkte: 0 },
+    { team: 'FT Gern Darts II', spiele: 0, g: 0, u: 0, v: 0, legs: '0:0', einzel: '0:0', punkte: 0 }
+  ];
 
   function ligaTabelleLaden() {
     if (!window.DartSync || !window.DartSync.liga || !window.DartSync.liga.tabelle) return;
@@ -4441,32 +4503,31 @@
 
     /* Gruendungsbeitrag je Mitglied: bezahlt oder offen. */
     var mitglieder = (d && d.mitglieder) || [];
-    var beitragHtml = mitglieder.length ? '<div class="kasse-beitraege"><h3>Gründungsbeitrag ' + euro(konfig.beitrag) + ' pro Kopf</h3>' +
-      mitglieder.map(function (m) {
+    var offen = mitglieder.filter(function (m) { return m.gezahlt < konfig.beitrag; }).length;
+    var beitragHtml = mitglieder.length ? '<div class="kasse-beitraege"><div class="karte-kopf"><span class="lk-crew-titel">Gründungsbeitrag ' + euro(konfig.beitrag) + ' pro Kopf</span>' +
+      '<span class="kb-offen ' + (offen ? 'gelb' : 'gruen') + '">' + (offen ? offen + ' offen' : 'alle bezahlt') + '</span></div>' +
+      '<div class="lt-leute">' + mitglieder.map(function (m) {
         var voll = m.gezahlt >= konfig.beitrag;
-        return '<div class="kb-zeile ' + (voll ? 'voll' : '') + '">' +
+        return '<span class="lt-person kb-zeile ' + (voll ? 'voll' : 'offen') + '">' +
           avatarHTML({ id: m.id, name: m.name, avatar: m.avatar, hue: m.hue }, 'sm') +
           '<span class="kb-name">' + esc(m.name) + '</span>' +
-          '<span class="kb-status">' + (voll ? '✓ bezahlt' + (m.am ? ' · ' + datumDE(m.am) : '') : m.gezahlt > 0 ? euro(m.gezahlt) + ' von ' + euro(konfig.beitrag) : 'offen') + '</span>' +
-          (!voll && (wart || m.id === ich) ? '<button class="btn ghost small" data-action="kasse-beitrag" data-id="' + esc(m.id) + '" data-name="' + esc(m.name) + '">' + (m.id === ich && !wart ? 'Ich habe eingezahlt' : 'Bezahlt') + '</button>' : '') +
-          '</div>';
-      }).join('') + '</div>' : '';
+          '<span class="kb-status">' + (voll ? '✓' : m.gezahlt > 0 ? euro(m.gezahlt) : 'offen') + '</span>' +
+          (!voll && (wart || m.id === ich) ? '<button class="btn ghost small" data-action="kasse-beitrag" data-id="' + esc(m.id) + '" data-name="' + esc(m.name) + '">' + (m.id === ich && !wart ? 'Eingezahlt' : 'Bezahlt') + '</button>' : '') +
+          '</span>';
+      }).join('') + '</div></div>' : '';
 
     $('kasse-karte').innerHTML =
-      '<h2>Kassenbuch</h2>' +
-      '<div class="kasse-kopf">' +
-        '<span>Kassenjahr <b>' + konfig.jahr + '</b></span>' +
-        '<span>Kassenwart/in <b>' + esc(((d && d.kassenwarte) || []).join(', ') || 'noch nicht festgelegt') + '</b></span>' +
-        '<span>Anfangsbestand <b>' + euro(konfig.anfangsbestand) + '</b></span>' +
+      '<div class="liga-karte weiss kasse-stand">' +
+        '<div class="lk-kopf"><span class="lk-crew-titel">Kassenstand · Kassenjahr ' + konfig.jahr + '</span>' +
+          '<span class="hint">Kassenwart/in: ' + esc(((d && d.kassenwarte) || []).join(', ') || 'noch nicht festgelegt') + '</span></div>' +
+        '<span class="ks-saldo ' + (saldo < 0 ? 'minus' : 'plus') + '">' + euro(saldo) + '</span>' +
+        '<div class="ks-drei">' +
+          '<div><span class="lk-crew-titel">Anfang</span><b>' + euro(konfig.anfangsbestand) + '</b></div>' +
+          '<div><span class="lk-crew-titel">Einnahmen</span><b class="plus">+ ' + euro(summeEin) + '</b></div>' +
+          '<div><span class="lk-crew-titel">Ausgaben</span><b class="minus">− ' + euro(summeAus) + '</b></div>' +
+        '</div>' +
       '</div>' +
-      '<div class="kasse-saldo"><span class="hint">Kassenstand</span>' +
-        '<b class="' + (saldo < 0 ? 'minus' : 'plus') + '">' + euro(saldo) + '</b>' +
-        '<span class="hint">Einnahmen ' + euro(summeEin) + ' · Ausgaben ' + euro(summeAus) + '</span></div>' +
-      (konfig.paypal
-        ? '<a class="btn primary full kasse-paypal" href="' + esc(konfig.paypal) + '" target="_blank" rel="noopener">Per PayPal ins Vereinskonto einzahlen</a>' +
-          '<p class="hint center">Danach die Einzahlung unten eintragen – sie steht sofort im Kassenbuch.</p>'
-        : '') +
-      beitragHtml +
+      '<div class="card kasse-erfassen">' +
       (darf
         ? '<div class="kasse-form' + (bearbeite ? ' bearbeiten' : '') + '">' +
             '<h3>' + (bearbeite ? 'Buchung Nr. ' + (eintraege.indexOf(bearbeite) + 1) + ' ändern' : 'Eintragen: Einzahlung oder Ausgabe') + '</h3>' +
@@ -4490,8 +4551,14 @@
                   return '<option value="' + m.id + '"' + (bearbeite && bearbeite.mitglied === m.id ? ' selected' : (!bearbeite && m.id === ich ? ' selected' : '')) + '>' + esc(m.name) + '</option>';
                 }).join('') +
               '</select></div>' +
-            '<button class="btn primary full" data-action="kasse-buchen">' + (bearbeite ? 'Änderung speichern' : 'Buchen') + '</button>' +
-            (bearbeite ? '<button class="btn ghost full" data-action="kasse-edit-abbruch">Abbrechen</button>' : '') +
+            '<div class="kasse-knoepfe">' +
+              '<button class="btn hell" data-action="kasse-buchen">' + (bearbeite ? 'Änderung speichern' : 'Buchen') + '</button>' +
+              (bearbeite
+                ? '<button class="btn ghost" data-action="kasse-edit-abbruch">Abbrechen</button>'
+                : konfig.paypal
+                  ? '<a class="btn ghost kasse-paypal" href="' + esc(konfig.paypal) + '" target="_blank" rel="noopener">Per PayPal einzahlen</a>'
+                  : '<span></span>') +
+            '</div>' +
             '<p class="hint" id="kasse-meldung"></p>' +
             (wart ? '<details class="kasse-konfig"><summary>Kassenjahr und Anfangsbestand (Kassenwart)</summary>' +
               '<div class="zeile">' +
@@ -4501,16 +4568,77 @@
               '<button class="btn ghost full" data-action="kasse-konfig">Speichern</button>' +
             '</details>' : '') +
           '</div>'
-        : '<p class="hint">Zum Ansehen und Eintragen bitte anmelden.</p>') +
-      '<div class="kasse-liste">' +
-        '<div class="kasse-kopfzeile"><span>Nr</span><span>Beschreibung · Datum · Kategorie</span><span>Betrag · Saldo</span></div>' +
-        (zeilen.length ? zeilen.join('') : '<p class="hint">Noch keine Buchung.</p>') +
-        (zeilen.length ? '<div class="kasse-summen">' +
-          '<span>Summe Einnahmen <b>' + euro(summeEin) + '</b></span>' +
-          '<span>Summe Ausgaben <b>' + euro(summeAus) + '</b></span>' +
-          '<span>Endbestand <b>' + euro(saldo) + '</b></span></div>' : '') +
+        : '<h2>Buchung erfassen</h2><p class="hint">Zum Ansehen und Eintragen bitte anmelden.</p>' +
+          (konfig.paypal ? '<a class="btn ghost full kasse-paypal" href="' + esc(konfig.paypal) + '" target="_blank" rel="noopener">Per PayPal einzahlen</a>' : '')) +
       '</div>';
+    $('kasse-buch').innerHTML =
+      '<div class="card kasse-liste">' +
+        '<div class="karte-kopf"><h2>Kassenbuch</h2><span class="hint">' + plural(zeilen.length, 'Buchung', 'Buchungen') + '</span></div>' +
+        '<div class="kasse-zeilen">' + (zeilen.length ? zeilen.slice().reverse().join('') : '<p class="hint">Noch keine Buchung.</p>') + '</div>' +
+      '</div>' +
+      (beitragHtml ? '<div class="card kasse-beitraege-karte">' + beitragHtml + '</div>' : '');
   }
+
+  /* Highlights der ganzen Saison (nur unsere Spieler, nur echte Spieltage):
+     180er, High-Finishes ab 100 und Shortlegs bis 21 Darts - je mit
+     Spieltag und Einzel, wie sie der Bogen abfragt. */
+  function ligaHighlightsSaisonHtml() {
+    var spiele = wertbareHistorie().filter(function (h) { return h.liga && !h.liga.uebung && h.matches; }).slice().reverse();
+    if (S.tour && S.tour.liga && !S.tour.liga.uebung && S.matches.length) spiele.push({ liga: S.tour.liga, matches: S.matches });
+    var h180 = [], hFin = [], hLeg = [];
+    spiele.forEach(function (h) {
+      h.matches.forEach(function (m, mi) {
+        if (!m.legs) return;
+        var wo = h.liga.nr + '. Spieltag · Einzel ' + (mi + 1);
+        m.legs.forEach(function (leg) {
+          (leg.visits || []).forEach(function (v) {
+            if (v.s === 180 && !v.b && h.liga.wir.indexOf(v.p) >= 0) h180.push({ n: pname(v.p), d: wo, v: '180' });
+          });
+          if (leg.winner && h.liga.wir.indexOf(leg.winner) >= 0) {
+            var eigene = (leg.visits || []).filter(function (v) { return v.p === leg.winner; });
+            var letzte = eigene[eigene.length - 1];
+            if (letzte && letzte.s >= 100) hFin.push({ n: pname(leg.winner), d: wo, v: String(letzte.s) });
+            var darts = dartsInLeg(leg, leg.winner);
+            if (darts > 0 && darts <= 21) hLeg.push({ n: pname(leg.winner), d: wo, v: darts + ' Darts' });
+          }
+        });
+      });
+    });
+    hFin.sort(function (a, b) { return parseInt(b.v, 10) - parseInt(a.v, 10); });
+    hLeg.sort(function (a, b) { return parseInt(a.v, 10) - parseInt(b.v, 10); });
+    var gruppe = function (titel, liste) {
+      if (!liste.length) return '';
+      return '<div class="hl-gruppe"><span class="hl-titel">' + titel + '</span>' +
+        liste.slice(0, 6).map(function (i) {
+          return '<div class="hl-zeile"><span class="hl-wer"><b>' + esc(i.n) + '</b><small>' + esc(i.d) + '</small></span><span class="hl-wert">' + esc(i.v) + '</span></div>';
+        }).join('') + '</div>';
+    };
+    var inhalt = gruppe('180er', h180) + gruppe('High-Finishes ab 100', hFin) + gruppe('Shortlegs bis 21 Darts', hLeg);
+    return '<div class="karte-kopf"><h2>Highlights der Saison</h2>' +
+      '<button class="btn ghost small" data-action="board-log">Alle Ligaspiele ›</button></div>' +
+      '<div class="hl-liste">' + (inhalt || '<p class="hint">Noch keine Highlights – sie kommen mit dem ersten Spieltag.</p>') + '</div>';
+  }
+
+  /* DiensDarts als iCal: ein ganztaegiger Eintrag fuer den naechsten Dienstag. */
+  function trainingKalender() {
+    var d = naechsterDienstag();
+    var iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    var e = new Date(d.getTime()); e.setDate(e.getDate() + 1);
+    var ende = e.getFullYear() + String(e.getMonth() + 1).padStart(2, '0') + String(e.getDate()).padStart(2, '0');
+    var zeilen = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Blink 180//Dart Turnier//DE', 'CALSCALE:GREGORIAN',
+      'BEGIN:VEVENT', 'UID:blink180-' + trainingsTerminId(d) + '@darts.wirtschaftln.de',
+      'DTSTAMP:' + iso.replace(/-/g, '') + 'T000000Z', 'DTSTART;VALUE=DATE:' + iso.replace(/-/g, ''), 'DTEND;VALUE=DATE:' + ende,
+      'SUMMARY:' + icsText('DiensDarts – Training Blink 180'), 'LOCATION:' + icsText('Bar Sehnsucht'), 'END:VEVENT', 'END:VCALENDAR'];
+    var blob = new Blob([zeilen.join('\r\n') + '\r\n'], { type: 'text/calendar;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = 'blink180-diensdarts.ics';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+  }
+
+  var PIN_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"></path><circle cx="12" cy="9.5" r="2.5"></circle></svg>';
+  var MAPS_SVG = '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"></path><path d="M9 4v14M15 6v14"></path></svg>';
 
   function renderLigaTraining() {
     var d = naechsterDienstag();
@@ -4534,24 +4662,59 @@
         '<span class="nm">' + esc(a.name) + '</span></div>';
     };
 
+    var MONATE_K = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+    var heute0 = new Date(); heute0.setHours(12, 0, 0, 0);
+    var d12 = new Date(d.getTime()); d12.setHours(12, 0, 0, 0);
+    var tage = Math.round((d12 - heute0) / 86400000);
+    var wann = tage <= 0 ? 'heute' : tage === 1 ? 'morgen' : 'in ' + tage + ' Tagen';
+    var knopf = function (status, text) {
+      return '<button class="btn' + (meine === status ? ' hell aktiv' : ' ghost') + '" ' +
+        'data-action="training-zusage" data-tid="' + esc(tid) + '" data-status="' + esc(status) + '">' + text + '</button>';
+    };
+    var gruppe = function (titel, liste, klasse) {
+      if (!liste.length && klasse !== 'gruen') return '';
+      return '<div class="dd-gruppe ' + klasse + '"><span class="lk-crew-titel">' + titel + ' · <b class="' + klasse + '">' + liste.length + '</b></span>' +
+        '<div class="lt-leute">' + (liste.map(function (a) {
+          return '<span class="lt-person">' + avatarHTML({ id: a.id, name: a.name, avatar: a.avatar, hue: a.hue }, 'sm') + esc(a.name) + '</span>';
+        }).join('') || '<span class="muted">Noch keine Zusage.</span>') + '</div></div>';
+    };
     $('dienstdarts-karte').innerHTML =
-      '<div class="sehnsucht-logo" role="img" aria-label="Sehnsucht Divebar Munich"></div>' +
-      '<h2>DiensDarts</h2>' +
-      '<p class="hint">Dienstags ist Dart-Training in der Bar Sehnsucht. Nächster Termin: <b>' +
-        ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'][d.getDay()] + ', ' + fmtDate(d.getTime()) + '</b></p>' +
+      '<div class="lk-kopf"><span class="lk-etikett">Nächstes Training · ' + wann + '</span>' +
+        '<span class="lk-icons">' +
+          '<a class="icon-btn rund" href="https://maps.apple.com/?q=' + encodeURIComponent('Bar Sehnsucht München') + '" target="_blank" rel="noopener" title="Route in Maps" aria-label="Route in Maps">' + MAPS_SVG + '</a>' +
+          '<button class="icon-btn rund" data-action="training-ical" title="In den Kalender" aria-label="In den Kalender">' + KALENDER_SVG + '</button>' +
+        '</span></div>' +
+      '<div class="dd-kopf"><div class="sehnsucht-logo" role="img" aria-label="Sehnsucht Divebar Munich"></div>' +
+        '<div class="dd-titel-block"><span class="dd-name">DiensDarts</span>' +
+          '<span class="dd-datum">' + ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'][d.getDay()] + ' ' + d.getDate() + '. ' + MONATE_K[d.getMonth()] + '</span>' +
+          '<span class="lk-ort">' + PIN_SVG + 'Bar Sehnsucht · jeden Dienstag</span></div></div>' +
       (online
-        ? '<div class="dd-antworten">' +
-            knopf('dabei', 'Bin dabei') +
-            knopf('unsicher', 'Unsicher') +
-            knopf('absage', 'Kann nicht') +
-          '</div>'
-        : '<p class="hint">Zum Abstimmen bitte anmelden.</p>') +
+        ? '<div class="dd-antworten">' + knopf('dabei', 'Bin dabei') + knopf('unsicher', 'Unsicher') + knopf('absage', 'Kann nicht') + '</div>'
+        : '<p class="hint">Dienstags ist Dart-Training in der Bar Sehnsucht. Zum Abstimmen bitte anmelden.</p>') +
       '<div class="dd-liste">' +
-        '<div class="dd-titel">' + plural(dabei.length, 'Spieler kommt', 'Spieler kommen') + '</div>' +
-        (dabei.map(function (a) { return reihe(a); }).join('') || '<p class="hint">Noch keine Zusage.</p>') +
-        (unsicher.length ? '<div class="dd-titel">Unsicher</div>' + unsicher.map(function (a) { return reihe(a, true); }).join('') : '') +
-        (absagen.length ? '<div class="dd-titel">Abgesagt</div>' + absagen.map(function (a) { return reihe(a, true); }).join('') : '') +
+        gruppe('Kommen', dabei, 'gruen') + gruppe('Unsicher', unsicher, 'gelb') + gruppe('Kann nicht', absagen, 'rot') +
       '</div>';
+
+    /* Rechts: das Uebungs-Ligaspiel mit Vorwahl von Gegner und Bot-Staerke. */
+    var ug = UI.uebungGegner || 'mittel';
+    var wahl = function (aktion, wert, text, klein) {
+      return '<button class="' + (ug === wert ? 'active' : '') + '" data-action="' + aktion + '" data-value="' + wert + '">' +
+        '<span>' + text + '</span>' + (klein ? '<small>' + klein + '</small>' : '') + '</button>';
+    };
+    $('uebung-karte').innerHTML =
+      '<h2 class="gross">Übungs-Ligaspiel</h2>' +
+      '<p class="hint">Der komplette Liga-Ablauf zum Üben: 16 Einzel in Bogen-Reihenfolge, zwei Scheiben, Team-Stand und Spielbericht. Zählt nirgends in die Liga-Wertung.</p>' +
+      '<div class="setting"><label>Gegner</label><div class="options">' +
+        wahl('uebung-vorwahl', 'team', 'Zweites eigenes Team') +
+        '<button class="' + (ug !== 'team' ? 'active' : '') + '" data-action="uebung-vorwahl" data-value="bots"><span>Gegen Bots</span></button>' +
+      '</div></div>' +
+      (ug !== 'team'
+        ? '<div class="setting"><label>Bot-Stärke</label><div class="options drei">' +
+            wahl('uebung-vorwahl', 'leicht', 'Leicht', '≈ 38er-Aufnahmen') + wahl('uebung-vorwahl', 'mittel', 'Mittel', '≈ 52') + wahl('uebung-vorwahl', 'schwer', 'Schwer', '≈ 72') +
+          '</div></div>'
+        : '') +
+      '<div class="luft"></div>' +
+      '<button class="btn primary start full" data-action="uebung-start">Übungsspiel aufstellen</button>';
   }
 
   function renderLigaTabelle() {
@@ -4571,7 +4734,18 @@
        Serverstand (sonst blieben Handkorrekturen nicht stehen). */
     var zeilen = (ligaTabelle && Array.isArray(ligaTabelle.zeilen) && ligaTabelle.zeilen.length)
       ? ligaTabelle.zeilen
-      : LIGA_TEAMS.map(function (t) { return { team: t }; });
+      : LIGA_TABELLE_START.map(function (z) { return Object.assign({}, z); });
+    /* Rechts: unser Platz, Punkte und Legs, Abstand zur Spitze. */
+    var platz = -1;
+    zeilen.forEach(function (z, i) { if (platz < 0 && z.team === LIGA.team) platz = i; });
+    var pz = platz >= 0 ? zeilen[platz] : null;
+    var spitze = zeilen[0] ? Number(zeilen[0].punkte) || 0 : 0;
+    var abstand = pz ? spitze - (Number(pz.punkte) || 0) : 0;
+    $('lt-platz').innerHTML = pz
+      ? '<span class="lk-crew-titel">Unser Platz</span><span class="lt-platz-zahl">' + (platz + 1) + '.</span>' +
+        '<span class="lt-platz-info">' + plural(Number(pz.punkte) || 0, 'Punkt', 'Punkte') + ' · Legs ' + esc(String(pz.legs || '0:0')).replace(':', ' : ') + '</span>' +
+        '<span class="lt-platz-sub">' + (platz === 0 ? 'Tabellenführer' : plural(abstand, 'Punkt', 'Punkte') + ' hinter Platz 1') + '</span>'
+      : '';
     var kennung = JSON.stringify(zeilen);
     if (ligaTabelleKennung === kennung && $('lt-tabelle').innerHTML) return;
     ligaTabelleKennung = kennung;
@@ -4613,9 +4787,8 @@
     '<path d="M3 10h18M8 3v4M16 3v4"/></svg>';
 
   function renderLiga() {
-    $('liga-sub').textContent = 'Spielplan ' + LIGA.team + ' · ' + LIGA.saison;
+    $('liga-sub').textContent = LIGA.team + ' · 5. Liga · ' + LIGA.saison;
 
-    /* Zwei Reiter: der Spielplan und die Regelecke (steht fest im HTML). */
     var tab = UI.ligaTab || 'plan';
     $('liga-tabs').querySelectorAll('button').forEach(function (b) {
       b.classList.toggle('active', b.getAttribute('data-tab') === tab);
@@ -4623,11 +4796,15 @@
     $('liga-plan').classList.toggle('hidden', tab !== 'plan');
     $('liga-training').classList.toggle('hidden', tab !== 'training');
     $('liga-tabelle').classList.toggle('hidden', tab !== 'tabelle');
+    $('liga-statistik').classList.toggle('hidden', tab !== 'statistik');
     $('liga-kasse').classList.toggle('hidden', tab !== 'kasse');
     $('liga-regeln').classList.toggle('hidden', tab !== 'regeln');
     if (tab === 'training') { renderLigaTraining(); return; }
     if (tab === 'kasse') { renderLigaKasse(); return; }
     if (tab === 'tabelle') { renderLigaTabelle(); return; }
+    /* Statistik: die Liga-Auswertung der Rangliste, hierher verschoben
+       (siehe show()). Die Unterzeile nennt Spieltage und Saison. */
+    if (tab === 'statistik') { renderBoards(); $('liga-sub').textContent = $('boards-sub').textContent; return; }
     if (tab !== 'plan') return;
 
     /* Ohne Server (Einzeldatei) oder ohne Anmeldung bleibt der Spielplan
@@ -4645,66 +4822,135 @@
     var heuteIso = window.__ligaHeute || (heute.getFullYear() + '-' +
       String(heute.getMonth() + 1).padStart(2, '0') + '-' +
       String(heute.getDate()).padStart(2, '0'));
+    var laeuftId = S.tour && S.tour.liga && !S.tour.liga.uebung ? S.tour.liga.terminId : null;
 
-    $('liga-liste').innerHTML = LIGA.termine.map(function (t) {
+    /* Zusagen je Termin: wer "dabei" ist. Ohne Server bleibt die Zahl weg. */
+    var zusagen = function (t) {
+      return ((ligaZusagen && ligaZusagen[t.id]) || []).filter(function (z) { return (z.status || 'dabei') === 'dabei'; });
+    };
+    /* Farbe der Zusagen: unter vier rot, genau vier gelb, ab fuenf gruen. */
+    var ton = function (n) { return n >= 5 ? 'gruen' : n === 4 ? 'gelb' : 'rot'; };
+
+    /* Gewaehlt ist, was angetippt wurde - sonst das laufende Spiel, sonst der
+       naechste noch offene Spieltag, sonst der naechste ueberhaupt. */
+    var termine = LIGA.termine;
+    var wahl = null;
+    if (UI.ligaWahl) termine.forEach(function (t) { if (t.id === UI.ligaWahl) wahl = t; });
+    if (!wahl && laeuftId) termine.forEach(function (t) { if (!wahl && t.id === laeuftId) wahl = t; });
+    if (!wahl) termine.forEach(function (t) { if (!wahl && t.tag && t.tag >= heuteIso && !ligaTerminBelegt(t)) wahl = t; });
+    if (!wahl) termine.forEach(function (t) { if (!wahl && t.tag && t.tag >= heuteIso) wahl = t; });
+    if (!wahl) termine.slice().reverse().forEach(function (t) { if (!wahl && t.tag) wahl = t; });
+    var naechster = null;
+    termine.forEach(function (t) { if (!naechster && t.tag && t.tag >= heuteIso && !ligaTerminBelegt(t)) naechster = t; });
+
+    /* ---- Rechts: alle Spieltage kompakt ---- */
+    $('liga-liste').innerHTML = termine.map(function (t) {
       if (!t.tag) {
-        return '<div class="card liga-spieltag frei">' +
-          '<div class="lt-kopf"><span class="lt-datum muted">' + t.nr + '. Spieltag</span>' +
-          '<span class="lt-nr">Spielfrei</span></div></div>';
+        return '<div class="liga-spieltag frei"><span class="lt-nr">' + t.nr + '</span>' +
+          '<span class="lt-datum"><b>–</b></span><span class="lt-wer"><span class="lt-gegner">Spielfrei</span></span><span class="lt-rechts"></span></div>';
       }
       var daheim = t.heim === LIGA.team;
+      var gegner = daheim ? t.gast : t.heim;
       var vorbei = t.tag < heuteIso;
-      var leute = ((ligaZusagen && ligaZusagen[t.id]) || []).filter(function (z) {
-        return (z.status || 'dabei') === 'dabei';
-      });
-      var binDabei = ich ? leute.some(function (p) { return p.id === ich; }) : false;
-      var fehlt = LIGA.sollSpieler - leute.length;
-
-      var koepfe = leute.map(function (p) {
-        return '<span class="lt-person">' + avatarHTML(p, 'sm') + esc(p.name) + '</span>';
-      }).join('');
-
-      return '<div class="card liga-spieltag' + (vorbei ? ' vorbei' : '') + '">' +
-        '<div class="lt-kopf">' +
-          '<span class="lt-datum">' + ligaDatum(t.tag) + '</span>' +
-          '<span class="lt-rechts">' +
-            '<span class="lt-nr">' + t.nr + '. Spieltag · ' + (daheim ? 'Heim' : 'Auswärts') + '</span>' +
-            '<button class="icon-btn rund lt-cal" data-action="liga-ical" data-id="' + esc(t.id) + '" ' +
-              'title="Diesen Termin in den Kalender" aria-label="Diesen Termin in den Kalender">' + KALENDER_SVG + '</button>' +
-          '</span>' +
-        '</div>' +
-        '<div class="lt-paarung">' +
-          (daheim ? '<b>' + esc(t.heim) + '</b>' : esc(t.heim)) +
-          ' <span class="muted">vs</span> ' +
-          (daheim ? esc(t.gast) : '<b>' + esc(t.gast) + '</b>') +
-        '</div>' +
-        '<div class="lt-ort">' + esc(t.ort) + '</div>' +
-        (ligaZusagen
-          ? '<div class="lt-leute">' + (koepfe || '<span class="muted">Noch niemand eingetragen.</span>') + '</div>'
-          : '') +
-        ligaTerminStatus(t, vorbei) +
-        (vorbei || ligaTerminBelegt(t) ? '' :
-          '<div class="lt-fuss">' +
-            (ligaZusagen
-              ? '<span class="lt-status ' + (fehlt > 0 ? 'offen' : 'voll') + '">' +
-                (fehlt > 0
-                  ? 'Noch ' + plural(fehlt, 'Spieler', 'Spieler') + ' bis wir vollständig sind'
-                  : 'Vollständig – ' + plural(leute.length, 'Spieler', 'Spieler') + ' dabei') +
-                '</span>'
-              : '<span></span>') +
-            '<span class="lt-knoepfe">' +
-              (online && !ichBinGastKonto()
-                ? '<button class="btn ghost small" data-action="liga-zusage" ' +
-                  'data-id="' + esc(t.id) + '" data-dabei="' + (binDabei ? '0' : '1') + '">' +
-                  (binDabei ? 'Bin raus' : 'Ich bin dabei') + '</button>'
-                : '') +
-              (ichBinGastKonto()
-                ? '<span class="muted">Als Gast: verfolgen über den Live-Ticker</span>'
-                : '<button class="btn ghost small" data-action="liga-spiel" data-id="' + esc(t.id) + '">Ligaspiel starten</button>') +
-            '</span>' +
-          '</div>') +
+      var h = ligaTerminEintrag(t);
+      var live = t.id === laeuftId;
+      var rechts = '', rechtsKlasse = '', unten = esc(t.ort);
+      if (live) {
+        var ld = ligaStandDaten();
+        rechts = '● LIVE ' + ld.wirP + ' : ' + ld.sieP; rechtsKlasse = 'live';
+        unten = 'Läuft · ' + ld.fertige + ' von ' + S.matches.length + ' Einzeln';
+      } else if (h) {
+        var e = ligaErgebnisAus(h);
+        rechts = e.wirP + ' : ' + e.sieP + ' ✓'; rechtsKlasse = 'fertig';
+        unten = (h.liga.abgeschlossen ? '✓ Abgeschlossen' : 'Bericht offen') + ' · ' + esc(t.ort);
+      } else if (!vorbei && ligaZusagen) {
+        var n = zusagen(t).length;
+        rechts = n + ' / ' + LIGA.sollSpieler; rechtsKlasse = ton(n);
+      }
+      return '<div class="liga-spieltag' + (vorbei && !h ? ' vorbei' : '') + (h ? ' gespielt' : '') + (wahl && t.id === wahl.id ? ' wahl' : '') +
+        '" data-action="liga-wahl" data-id="' + esc(t.id) + '" role="button" tabindex="0">' +
+        '<span class="lt-nr">' + t.nr + '</span>' +
+        '<span class="lt-datum"><b>' + t.tag.slice(8, 10) + '.' + t.tag.slice(5, 7) + '.' + t.tag.slice(0, 4) + '</b><small>' + WOCHENTAGE[new Date(t.tag + 'T12:00:00').getDay()].replace('.', '') + '</small></span>' +
+        '<span class="lt-wer"><span class="lt-gegner"><span class="lt-ha">' + (daheim ? 'Heim' : 'Ausw.') + '</span>' + esc(gegner) + '</span>' +
+          '<span class="lt-unten">' + unten + '</span></span>' +
+        '<span class="lt-rechts ' + rechtsKlasse + '">' + rechts + '</span>' +
         '</div>';
     }).join('');
+
+    /* ---- Links: der gewaehlte Spieltag gross ---- */
+    var karte = $('liga-karte');
+    if (!wahl) { karte.innerHTML = ''; karte.className = 'liga-karte'; return; }
+    var t = wahl;
+    var daheim = t.heim === LIGA.team;
+    var vorbei = t.tag < heuteIso;
+    var live = t.id === laeuftId;
+    var h = ligaTerminEintrag(t);
+    var leute = zusagen(t);
+    var binDabei = ich ? leute.some(function (p) { return p.id === ich; }) : false;
+    var d = new Date(t.tag + 'T12:00:00');
+    var MONATE = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+    var datumGross = WOCHENTAGE[d.getDay()].replace('.', '') + ' ' + d.getDate() + '. ' + MONATE[d.getMonth()];
+    var tage = Math.round((new Date(t.tag + 'T12:00:00') - new Date(heuteIso + 'T12:00:00')) / 86400000);
+    var etikett = live ? '' : h ? t.nr + '. Spieltag · gespielt'
+      : naechster && naechster.id === t.id ? 'Nächster Spieltag · ' + (tage === 0 ? 'heute' : tage === 1 ? 'morgen' : 'in ' + tage + ' Tagen')
+      : vorbei ? t.nr + '. Spieltag · vorbei' : t.nr + '. Spieltag';
+    var initialen = function (name) {
+      return name.replace(/[`'’]/g, ' ').replace(/[^A-Za-zÄÖÜäöü ]/g, '').split(' ').filter(Boolean).slice(0, 2).map(function (w) { return w[0]; }).join('').toUpperCase();
+    };
+    var teamBlock = function (name, rolle) {
+      var wir = name === LIGA.team;
+      return '<div class="lk-team">' +
+        (wir ? '<span class="blink-logo" role="img" aria-label="Blink 180"></span>' : '<span class="lk-ini">' + esc(initialen(name)) + '</span>') +
+        '<span class="lk-teamname">' + esc(name) + '</span><span class="lk-rolle">' + rolle + '</span></div>';
+    };
+    var tonKlasse = live ? 'live' : (!h && !vorbei && ligaZusagen ? ton(leute.length) : 'neutral');
+    karte.className = 'liga-karte ' + tonKlasse;
+    var ld2 = live ? ligaStandDaten() : null;
+    var kopfLinks = live
+      ? '<span class="lk-live"><i></i>LIVE</span><span class="lk-einzel">Einzel ' + Math.min(ld2.fertige + 1, S.matches.length) + ' von ' + S.matches.length + '</span>'
+      : '<span class="lk-etikett">' + etikett + '</span>';
+    var mitte = live
+      ? '<div class="lk-stand"><span class="lk-punkte">' + ld2.wirP + ' : ' + ld2.sieP + '</span>' +
+        '<span class="lk-legs">Punkte · Legs ' + ld2.wirL + ' : ' + ld2.sieL + '</span></div>'
+      : '<span class="lk-datum">' + datumGross + '</span>';
+    var fuss = '';
+    if (live) {
+      fuss = '<div class="lk-knoepfe"><button class="btn primary start" data-action="liga-zum-spiel">Zum Ligaspiel</button>' +
+        '<button class="btn ghost lk-zuschauen" data-action="liga-ticker"><i></i>Live zuschauen</button></div>';
+    } else if (h) {
+      var e2 = ligaErgebnisAus(h), zu = !!h.liga.abgeschlossen;
+      fuss = '<div class="lk-status ' + (zu ? 'voll' : 'offen') + '">' + (zu ? '✓ Abgeschlossen · ' : 'Bericht offen · ') + esc(LIGA.team) + ' ' + e2.wirP + ':' + e2.sieP + '</div>' +
+        '<div class="lk-knoepfe">' +
+          '<button class="btn ghost" data-action="open-summary" data-kind="turnier" data-id="' + esc(h.id) + '">Ergebnisse</button>' +
+          '<button class="btn ' + (zu ? 'ghost' : 'primary start') + '" data-action="liga-bericht" data-termin="' + esc(t.id) + '">' + (zu ? 'Spielbericht' : 'Bericht abschließen') + '</button>' +
+        '</div>';
+    } else if (!vorbei) {
+      fuss = '<div class="lk-knoepfe">' +
+        (online && !ichBinGastKonto()
+          ? '<button class="btn ' + (binDabei ? 'ghost' : 'hell') + '" data-action="liga-zusage" data-id="' + esc(t.id) + '" data-dabei="' + (binDabei ? '0' : '1') + '">' + (binDabei ? 'Bin raus' : 'Ich bin dabei') + '</button>'
+          : '') +
+        (ichBinGastKonto()
+          ? '<span class="lk-gast">Als Gast: verfolgen über den Live-Ticker</span>'
+          : '<button class="btn primary start" data-action="liga-spiel" data-id="' + esc(t.id) + '">Game On!</button>') +
+        '</div>';
+    }
+    karte.innerHTML =
+      '<div class="lk-kopf">' + kopfLinks +
+        '<span class="lk-icons">' +
+          '<a class="icon-btn rund" href="https://maps.apple.com/?q=' + encodeURIComponent(t.ort) + '" target="_blank" rel="noopener" title="Route in Maps" aria-label="Route in Maps">' +
+            '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"></path><path d="M9 4v14M15 6v14"></path></svg></a>' +
+          '<button class="icon-btn rund" data-action="liga-ical" data-id="' + esc(t.id) + '" title="Diesen Termin in den Kalender" aria-label="Diesen Termin in den Kalender">' + KALENDER_SVG + '</button>' +
+        '</span></div>' +
+      mitte +
+      '<div class="lk-info"><span class="lk-zeile">' + t.nr + '. Spieltag · ' + (daheim ? 'Heim' : 'Auswärts') + ' · 20:00 Uhr</span>' +
+        '<span class="lk-ort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"></path><circle cx="12" cy="9.5" r="2.5"></circle></svg>' + esc(t.ort) + '</span></div>' +
+      '<div class="lk-teams">' + teamBlock(t.heim, 'Heim') + '<span class="lk-vs">VS</span>' + teamBlock(t.gast, 'Gast') + '</div>' +
+      '<div class="lk-kurz">' + esc(t.heim) + ' <span>vs</span> ' + esc(t.gast) + '</div>' +
+      (ligaZusagen
+        ? '<div class="lk-crew"><span class="lk-crew-titel">Team · <b class="' + ton(leute.length) + '">' + leute.length + ' / ' + LIGA.sollSpieler + '</b></span>' +
+          '<div class="lt-leute">' + (leute.map(function (p) { return '<span class="lt-person">' + avatarHTML(p, 'sm') + esc(p.name) + '</span>'; }).join('') || '<span class="muted">Noch niemand eingetragen.</span>') + '</div></div>'
+        : '<div class="lk-crew"></div>') +
+      fuss;
   }
 
   /* Was zu einem Spieltag schon da ist: das laufende Ligaspiel oder ein
@@ -4723,28 +4969,6 @@
   function ligaTerminBelegt(t) {
     return !!(S.tour && S.tour.liga && !S.tour.liga.uebung && S.tour.liga.terminId === t.id) || !!ligaTerminEintrag(t);
   }
-  /* Laeuft oder lief der Spieltag schon, gibt es keinen Start-Knopf mehr,
-     sondern den Stand: laeuft / Bericht offen / abgeschlossen. */
-  function ligaTerminStatus(t) {
-    if (S.tour && S.tour.liga && !S.tour.liga.uebung && S.tour.liga.terminId === t.id) {
-      var d = ligaStandDaten();
-      return '<div class="lt-fuss"><span class="lt-status offen">Läuft · ' + d.wirP + ':' + d.sieP +
-        ' · ' + d.fertige + ' von ' + S.matches.length + ' Einzeln</span>' +
-        '<span class="lt-knoepfe"><button class="btn primary start small" data-action="liga-zum-spiel">Zum Ligaspiel</button></span></div>';
-    }
-    var h = ligaTerminEintrag(t);
-    if (!h) return '';
-    var e = ligaErgebnisAus(h);
-    var zu = !!h.liga.abgeschlossen;
-    return '<div class="lt-fuss"><span class="lt-status ' + (zu ? 'voll' : 'offen') + '">' +
-        (zu ? '✓ Abgeschlossen · ' : 'Bericht offen · ') + esc(LIGA.team) + ' ' + e.wirP + ':' + e.sieP + '</span>' +
-      '<span class="lt-knoepfe">' +
-        '<button class="btn ghost small" data-action="open-summary" data-kind="turnier" data-id="' + esc(h.id) + '">Ergebnisse</button>' +
-        '<button class="btn ' + (zu ? 'ghost' : 'primary start') + ' small" data-action="liga-bericht" data-termin="' + esc(t.id) + '">' +
-          (zu ? 'Spielbericht' : 'Bericht abschließen') + '</button>' +
-      '</span></div>';
-  }
-
   /* Alle Termine als iCal-Datei – ganztägige Einträge, die Anwurfzeit steht
      ja nicht im Spielplan. Rein im Browser gebaut, kein Server nötig. */
   function icsText(s) {
@@ -4799,7 +5023,9 @@
       }
       var reihe = UI.bullReihe;
       var fertig = reihe.length === ids.length;
-      $('bulloff-sub').textContent = 'Alle werfen auf Bull - dann in Wurf-Reihenfolge antippen: Wer am nächsten dran war, zuerst.';
+      $('bulloff-sub').textContent = 'Alle werfen auf Bull. Wer am nächsten dran war, zuerst antippen.';
+      $('bulloff-ctx').textContent = kindName(S.game.kind) + ' · ' + plural(ids.length, 'Spieler', 'Spieler');
+      $('screen-bulloff').classList.remove('turnier');
       $('bulloff-buttons').className = 'bulloff-order';
       /* Nichts springt beim Antippen: links bleibt der Platz eines
          Gewaehlten einfach leer (gleiche Groesse, unsichtbar), rechts
@@ -4807,6 +5033,7 @@
          seinen Platz, bis er gebraucht wird. */
       $('bulloff-buttons').innerHTML =
         '<div class="bo-spalten">' +
+          '<div class="bo-spalte"><span class="bo-label">Antippen in Wurf-Reihenfolge</span>' +
           '<div class="bo-wahl">' + ids.map(function (pid) {
             var gewaehlt = reihe.indexOf(pid) >= 0;
             return gewaehlt
@@ -4816,30 +5043,39 @@
               : '<button data-action="order-pick" data-id="' + esc(pid) + '">' +
                 avatarHTML(profile(pid), 'sm') +
                 '<span class="bo-name">' + esc(pname(pid)) + '</span></button>';
-          }).join('') + '</div>' +
+          }).join('') + '</div></div>' +
+          '<div class="bo-spalte"><span class="bo-label">Reihenfolge</span>' +
           '<div class="bo-reihe">' + ids.map(function (_, i) {
             var pid = reihe[i];
             if (!pid) {
-              return '<div class="bo-slot"><span class="bo-pos">' + (i + 1) + '.</span>' +
+              return '<div class="bo-slot"><span class="bo-pos">' + (i + 1) + '</span>' +
                 '<span class="bo-frei">–</span></div>';
             }
             var nm = esc(pname(pid));
-            return '<button class="bo-row" data-action="order-unpick" data-id="' + esc(pid) + '" ' +
+            return '<button class="bo-row' + (i === 0 ? ' erster' : '') + '" data-action="order-unpick" data-id="' + esc(pid) + '" ' +
               'aria-label="' + nm + ' wieder herausnehmen">' +
-              '<span class="bo-pos">' + (i + 1) + '.</span>' +
+              '<span class="bo-pos">' + (i + 1) + '</span>' +
               avatarHTML(profile(pid), 'sm') +
-              '<span class="bo-name">' + nm + '</span></button>';
-          }).join('') + '</div>' +
+              '<span class="bo-name">' + nm + '</span>' +
+              (i === 0 ? '<em class="bo-tag">wirft an</em>' : '') + '</button>';
+          }).join('') + '</div></div>' +
         '</div>' +
-        '<button class="btn primary start full' + (fertig ? '' : ' unsichtbar') + '" ' +
+        /* Der Startknopf steht von Anfang an da: solange noch jemand fehlt,
+           sagt er, wie viele - rot wird er erst, wenn alle gewaehlt sind. */
+        '<button class="btn primary start full' + (fertig ? '' : ' offen') + '" ' +
           'data-action="start-order"' + (fertig ? '' : ' disabled') + '>' +
-          (fertig ? 'GAME ON! · ' + esc(pname(reihe[0])) + ' beginnt' : '·') + '</button>';
+          (fertig ? 'GAME ON! · ' + esc(pname(reihe[0])) + ' beginnt' : 'Noch ' + (ids.length - reihe.length) + ' antippen') + '</button>';
       return;
     }
 
     $('bulloff-sub').textContent = ids.length > 2
       ? 'Wer war am nächsten am Bull? Er beginnt, danach geht es reihum weiter.'
-      : 'Wer war näher am Bull und darf anfangen?';
+      : 'Wer war näher am Bull? Antippen – der wirft an.';
+    /* Rechts oben der Zusammenhang: welches Spiel, welche Spielart. */
+    var boM = forGame ? null : currentMatch();
+    $('bulloff-ctx').textContent = forGame
+      ? kindName(S.game.kind) + ' · ' + plural(ids.length, 'Spieler', 'Spieler')
+      : boM ? (S.tour && S.tour.liga ? 'Einzel ' : 'Spiel ') + (S.matches.indexOf(boM) + 1) + ' von ' + S.matches.length : '';
     /* Am Board laeuft auch das Bullen ueber die Tastatur: Pfeile oder Tab
        wechseln, Enter bestaetigt - und die Felder fuellen den Bildschirm. */
     var amBoard = UI.turnier && turnierErlaubt();
@@ -4853,12 +5089,15 @@
     var bZk = document.querySelector('#screen-bulloff > [data-action="to-tournament"]');
     if (bZk) bZk.classList.toggle('wahl', bWahl === ids.length);
     $('bulloff-buttons').className = 'bulloff';
+    /* Das Etikett unter dem Namen ist ein <em>, kein <span>: Tests und
+       Tastatur lesen den Namen als einzigen span neben dem Avatar. */
     $('bulloff-buttons').innerHTML = ids.map(function (pid, i) {
       return '<button data-action="pick-starter" data-id="' + esc(pid) + '"' +
         (i === bWahl ? ' class="wahl"' : '') + '>' +
-        avatarHTML(profile(pid), 'md') + '<span>' + esc(ligaName && S.tour && S.tour.liga ? ligaName(pid) : pname(pid)) + '</span></button>';
+        avatarHTML(profile(pid), 'md') + '<span>' + esc(ligaName && S.tour && S.tour.liga ? ligaName(pid) : pname(pid)) + '</span>' +
+        '<em class="bo-tag">' + (i === bWahl ? 'wirft an' : 'antippen, wenn näher') + '</em></button>';
     }).join('') +
-      (amBoard || (S.tour && S.tour.liga) ? '<p class="te-hint">8 / 2 · wählen &nbsp;&nbsp; Enter · der beginnt</p>' : '');
+      (amBoard || (S.tour && S.tour.liga) ? '<p class="te-hint"><b>4 / 6</b> wählen &nbsp;&nbsp; <b>Enter</b> der beginnt</p>' : '');
   }
 
   /* Wer nach dem Aktiven dran ist - fuer die Fernsteuerung (rechts der
@@ -8189,6 +8428,8 @@
     switch (action) {
       case 'nav': {
         var target = el.getAttribute('data-screen');
+        UI.menu = false;   // das Menue der Rangliste schliesst mit der Wahl
+        UI.boardLog = false;
         // Ein laufendes Spiel führt zurück aufs Board; ein beendetes, noch
         // nicht gespeichertes zeigt sich im Setup als Hinweis-Box.
         // spielScreen: das Schnelle Spiel heisst 'quick', sein Bildschirm
@@ -8359,7 +8600,7 @@
       case 'summary-back': {
         var from = UI.summary && UI.summary.from;
         UI.summary = null;
-        S.screen = from === 'boards' || from === 'players' ? from
+        S.screen = from === 'boards' || from === 'players' || from === 'liga' ? from
           : S.game && !S.game.done ? S.game.kind
           : S.matches.length ? 'tournament' : 'boards';
         save(); render();
@@ -8375,9 +8616,15 @@
         break;
       case 'board-mode':
         UI.boardMode = el.getAttribute('data-value');
-        UI.board = boardsFor(UI.boardMode)[0].key;
+        UI.board = (boardsFor(UI.boardMode)[0] || { key: 'won' }).key;
+        UI.boardLog = false;
         render();
         break;
+      /* Rangliste: Spielverlauf auf und zu, Menue hinter dem Logo. */
+      case 'board-log': UI.boardLog = true; render(); break;
+      case 'board-log-zu': UI.boardLog = false; render(); break;
+      case 'logo-menu': UI.menu = true; render(); break;
+      case 'liga-wahl': UI.ligaWahl = el.getAttribute('data-id'); render(); break;
       case 'set-mode':
         S.mode = el.getAttribute('data-value');
         save(); render();
@@ -8393,6 +8640,9 @@
       case 'eingabe': {
         var ew = Number(el.getAttribute('data-value'));
         S.settings.tastatur = ew === 2 ? 1 : 0;
+        /* Im Finisher gibt es nur Tastatur oder nicht - die Einzel-Dart-Grenze
+           des X01 bleibt davon unberuehrt. */
+        if (el.closest('#eingabe-wahl-fin')) { save(); render(); break; }
         if (ew === 0 && S.settings.dartModeFrom > 0) { S.settings.dartModeMerk = S.settings.dartModeFrom; S.settings.dartModeFrom = 0; }
         if (ew === 1 && !(S.settings.dartModeFrom > 0)) S.settings.dartModeFrom = S.settings.dartModeMerk > 0 ? S.settings.dartModeMerk : 170;
         save(); render();
@@ -8645,6 +8895,7 @@
         break;
       case 'liga-tab':
         UI.ligaTab = el.getAttribute('data-tab');
+        UI.boardLog = false;
         render();
         break;
       case 'liga-spiel': {
@@ -8721,7 +8972,7 @@
         UI.overlay = {
           type: 'uebung-start',
           draft: {
-            gegner: 'mittel', bestOf: 3, finish: true, geteilt: false,
+            gegner: UI.uebungGegner || 'mittel', bestOf: 3, finish: true, geteilt: false,
             wir: utVorschlag.slice(0, 4),
             sie: utVorschlag.slice(4, 8)
           }
@@ -8729,6 +8980,11 @@
         render();
         break;
       }
+      case 'uebung-vorwahl':
+        UI.uebungGegner = el.getAttribute('data-value') === 'bots' ? (UI.uebungGegner === 'team' || !UI.uebungGegner ? 'mittel' : UI.uebungGegner) : el.getAttribute('data-value');
+        render();
+        break;
+      case 'training-ical': trainingKalender(); break;
       case 'uebung-gegner':
         if (UI.overlay && UI.overlay.type === 'uebung-start') {
           UI.overlay.draft.gegner = el.getAttribute('data-value');
@@ -9282,13 +9538,18 @@
     save(); render();
   }
 
+  /* Escape klappt das Logo-Menue (Rangliste, Liga) wieder zu. */
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Escape' && UI.menu && (S.screen === 'boards' || S.screen === 'liga')) { UI.menu = false; render(); ev.preventDefault(); }
+  });
+
   document.addEventListener('click', function (ev) {
     if (isGhostTap(ev)) return;
     if (ev.target.id === 'overlay' && UI.overlay && !STICKY_OVERLAYS[UI.overlay.type] && !VOLLBILD_DIALOGE[UI.overlay.type]) {
       UI.overlay = null; UI.input = ''; render(); return;
     }
     /* Menue (•••): ein Tipp neben die Karte schliesst es. */
-    if (/^(game|cricket|rtw|fin)-menu-overlay$/.test(ev.target.id || '')) { UI.menu = false; render(); return; }
+    if (/^(game|cricket|rtw|fin|logo)-menu-overlay$/.test(ev.target.id || '')) { UI.menu = false; render(); return; }
     /* Ein Tipp ins Bild tut in der Fernsteuerung nichts (Julius): das Menue
        oeffnet nur •••, zurueck geht es ueber den ⌨-Knopf oben rechts. */
     var t = ev.target.closest('[data-action]');
@@ -10004,7 +10265,11 @@
   } catch (e) { /* egal */ }
   /* Die gemerkte Board-Einstellung zieht beim Start nur mitten im
      Ligaspiel - ein normales Spiel beginnt immer im normalen Bild. */
-  UI.turnier = !!(S.settings && S.settings.turnierModus === 1 && S.tour && S.tour.liga);
+  UI.turnier = !!(S.settings && S.settings.turnierModus === 1 && S.tour && S.tour.liga) ||
+    /* "Tastatur" im Setup: ein laufendes Schnelles Spiel oder Turnier kommt
+       nach dem Neustart wieder in der Fernsteuerung hoch. */
+    !!(S.settings && S.settings.tastatur === 1 && ((S.game && S.game.kind === 'quick' && S.game.p && S.game.p.length > 1) || (!S.game && S.tour && !S.tour.liga)));
+  UI.finFern = !!(S.settings && S.settings.tastatur === 1 && S.game && S.game.kind === 'finisher');
   if (!S.lineup.length) S.lineup = activeProfiles().slice(0, 4).map(function (p) { return p.id; });
   if ((S.screen === 'cricket' || S.screen === 'rtw' || S.screen === 'finisher') && !S.game) S.screen = 'setup';
   /* Ein angefangenes Schnelles Spiel liegt in S.game, nicht im Spielplan –

@@ -946,11 +946,6 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   .checkout-bar .chip { font-size: clamp(1.15rem, 2.6vh, 1.9rem); padding: var(--space-2) var(--space-4); }
   .checkout-bar .label { font-size: 0.95rem; }
   .pad .num-grid, .pad .keypad { max-height: min(560px, 100%); }
-  /* Turnierseite ebenfalls zweispaltig, sonst scrollt sie über Bildschirme. */
-  #screen-tournament.active { display: grid; grid-template-columns: 1.1fr 1fr; gap: 0 var(--space-4); align-items: start; }
-  #screen-tournament.active > .app-header { grid-column: 1 / -1; }
-  #screen-tournament.active .turnier-links  { grid-column: 1; }
-  #screen-tournament.active .turnier-rechts { grid-column: 2; grid-row: 2; }
 
   /* Cricket-Tafel und Trainingsliste dürfen die freie Höhe nutzen. */
   .cricket-board { flex: 1; min-height: 0; }
@@ -963,22 +958,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   .rtw-row .rw-target { font-size: clamp(2rem, 6vh, 3.8rem); min-width: 4.5ch; }
   .turn-label { font-size: 1.25rem; }
   .pad .rtw-pad-grid { flex: 1; grid-auto-rows: 1fr; }
-  /* Rangliste: Modus und Unterfilter volle Breite, darunter links die
-     Liste und rechts Verlauf plus Rekorde – keine leeren Felder. */
-  #screen-boards.active {
-    display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-    gap: 0 var(--space-4); align-items: start; grid-auto-flow: row dense;
-  }
-  #screen-boards.active > .app-header,
-  #screen-boards.active > #board-mode,
-  #screen-boards.active > #board-chips,
-  #screen-boards.active > #board-log { grid-column: 1 / -1; }
-  #screen-boards.active > .card.no-pad,
-  #screen-boards.active > #board-hint,
-  #screen-boards.active > #board-rekorde { grid-column: 1; }
-  #screen-boards.active > #board-chart { grid-column: 2; }
-  #screen-boards.active .board-row .pos { width: 50px; }
-  #board-chart .chart { max-height: 42vh; }
+  /* Rangliste: siehe den Entwurfs-Block am Ende der Datei. */
 
 }
 
@@ -2282,41 +2262,7 @@ button, input, select, textarea { font-family: inherit; }
   .feier.sechzig .feier-name { animation: none; }
 }
 
-/* ================= Liga-Spielplan ================= */
-/*
- * Ein Kärtchen je Spieltag: Datum und Runde oben, die Paarung mit dem
- * eigenen Team fett, darunter der Ort, die Eingetragenen mit Bild und
- * der Stand bis zur vollen Aufstellung.
- */
-.liga-spieltag .lt-kopf { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
-.lt-datum { font-family: var(--font-cond); font-weight: 700; font-size: 1.1rem; }
-.lt-nr {
-  font-size: 0.75rem; color: var(--muted);
-  text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap;
-}
-.lt-paarung { margin-top: 6px; font-size: 1.05rem; }
-.lt-paarung b { font-weight: 700; }
-.lt-ort { font-size: 0.85rem; color: var(--muted); margin-top: 2px; }
-.lt-leute { display: flex; flex-wrap: wrap; gap: 6px 10px; margin-top: 10px; }
-.lt-person {
-  display: inline-flex; align-items: center; gap: 7px;
-  background: var(--bg-3); border: 1px solid var(--line); border-radius: var(--r-pill);
-  padding: var(--space-1) var(--space-3) var(--space-1) 5px; font-size: 0.85rem; font-weight: 600;
-}
-.lt-status { margin-top: 8px; font-size: 0.85rem; }
-.lt-status.offen { color: var(--amber); }
-.lt-status.voll { color: var(--laser-hell); text-shadow: 0 0 8px var(--laser-weich); }
-.liga-spieltag .btn { margin-top: 10px; }
-.liga-spieltag.vorbei { opacity: 0.55; }
-.liga-spieltag.frei { opacity: 0.65; }
-
-@media (min-width: 820px) {
-  /* Zwei Spalten am Tablet – 18 Spieltage untereinander wären ein Turm. */
-  #screen-liga.active #liga-liste {
-    display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); align-items: start;
-  }
-  #screen-liga.active #liga-liste .card { margin-bottom: 0; }
-}
+/* Liga-Spielplan: siehe den Entwurfs-Block am Ende der Datei. */
 
 /* ================= Finisher: die drei Kacheln ================= */
 /*
@@ -2846,46 +2792,7 @@ button.blitzt { animation: tastenblitz 240ms var(--ease-out-stark); }
 #visit-darts { display: none; }
 
 
-/* Turnier-Uebersicht: am Handy loesen sich die Spalten auf (Spielplan
-   zuerst), am iPad stehen sie nebeneinander. Verwalten wohnt unten im
-   Spielplan-Kasten, leise abgesetzt. */
-.turnier-links, .turnier-rechts { display: contents; }
-@media (orientation: landscape) and (min-width: 700px) {
-  .turnier-links, .turnier-rechts { display: block; }
-}
-.spielplan-aktionen {
-  margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line);
-  display: flex; flex-direction: column; gap: var(--space-2);
-}
-#turnier-endstand { margin-top: 14px; }
-
-/* ================= Ausbullen am Board ================= */
-/* Zwei Felder, die den Bildschirm fuellen - vom Oche erkennbar, mit der
-   Tastatur waehlbar. Die Wahl traegt das bekannte Licht. */
-#screen-bulloff.turnier.active {
-  height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 12px);
-  min-height: 0; overflow: hidden;
-  display: flex; flex-direction: column; justify-content: center;
-}
-#screen-bulloff.turnier .bulloff {
-  flex: 1; min-height: 0;
-  /* Untereinander: am Board waehlt man mit hoch/runter (bzw. 2/8 auf dem
-     Ziffernblock), darunter folgt "Zurueck". */
-  grid-template-columns: 1fr; gap: var(--space-4); align-items: stretch;
-}
-#screen-bulloff.turnier .bulloff button {
-  height: 100%; min-height: 0; padding: var(--space-5);
-  justify-content: center; text-align: center;   /* Name mittig im Kasten */
-  font-size: clamp(2rem, 7vh, 3.6rem); font-family: var(--font-cond); font-weight: 700;
-}
-#screen-bulloff.turnier .bulloff button.wahl {
-  border-color: var(--aktiv-linie); background: var(--aktiv-flaeche);
-  box-shadow: 0 0 34px var(--schein);
-}
-#screen-bulloff.turnier .app-header h1 { font-size: clamp(2rem, 6vh, 3rem); }
-#screen-bulloff.turnier .app-header .sub { font-size: clamp(1.1rem, 3vh, 1.6rem); }
-#screen-bulloff.turnier .bulloff .te-hint { grid-column: 1 / -1; text-align: center; margin: 0; }
-#screen-bulloff.turnier > [data-action="to-tournament"] { flex: none; }
+/* Turnier-Uebersicht und Ausbullen: siehe die Entwurfs-Bloecke am Ende der Datei. */
 
 /* Am Board: volle Breite bis an die Geraetekante - kein schwarzer
    Randstreifen, der das Licht des aktiven Spielers unterbricht. Das
@@ -4589,54 +4496,6 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
 }
 
 
-/* ================= Ausbullen (Oktober 2026) =================
- * Dieselbe Sprache wie die Spielbilder: Zielscheibe als Zeichnung, Titel in
- * Anton, die Kandidaten als grosse Karten mit Avatar und Namen, mittig im
- * Bild. Ab drei Spielern links die Namen, rechts die Reihenfolge. */
-#screen-bulloff.active:not(.turnier) {
-  display: flex; flex-direction: column; justify-content: center; align-items: center;
-  gap: clamp(12px, 2.4vh, 28px); padding: clamp(12px, 3vh, 36px) clamp(10px, 2vw, 28px);
-}
-#screen-bulloff .app-header { text-align: center; display: flex; flex-direction: column; align-items: center; gap: clamp(4px, 1vh, 10px); padding: 0; }
-#screen-bulloff .bull-ring { color: var(--laser-hell); filter: drop-shadow(0 0 10px var(--laser)) drop-shadow(0 0 28px var(--laser-weich)); }
-#screen-bulloff .bull-ring svg { width: clamp(44px, 9vh, 96px); height: clamp(44px, 9vh, 96px); }
-#screen-bulloff .app-header h1 { font-family: var(--font-display); font-size: clamp(26px, 5.6vh, 56px); letter-spacing: 0.05em; margin: 0; }
-#screen-bulloff .app-header .sub { font-family: var(--font-cond); font-weight: 600; font-size: clamp(14px, 2.4vh, 24px); letter-spacing: 0.04em; color: var(--muted); margin: 0; max-width: 60ch; }
-#screen-bulloff .bulloff, #screen-bulloff .bulloff-order { width: min(100%, 1100px); }
-#screen-bulloff:not(.turnier) .bulloff { gap: clamp(10px, 1.6vw, 24px); grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
-#screen-bulloff:not(.turnier) .bulloff button {
-  min-height: clamp(150px, 34vh, 360px); padding: clamp(14px, 3vh, 32px); gap: clamp(8px, 1.6vh, 18px);
-  background: var(--bg-2); border: 2px solid var(--line); border-radius: clamp(14px, 2.2vh, 24px);
-  font-family: var(--font-cond); font-weight: 700; font-size: clamp(20px, 4.4vh, 46px); letter-spacing: 0.03em; text-transform: uppercase;
-  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
-}
-#screen-bulloff:not(.turnier) .bulloff button .av.md { width: clamp(48px, 9vh, 96px); height: clamp(48px, 9vh, 96px); font-size: clamp(16px, 3vh, 32px); }
-#screen-bulloff:not(.turnier) .bulloff button span:not(.av) { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#screen-bulloff:not(.turnier) .bulloff button:active,
-#screen-bulloff:not(.turnier) .bulloff button.wahl { border-color: var(--aktiv-linie); background: var(--aktiv-flaeche); box-shadow: 0 0 36px var(--schein); }
-#screen-bulloff .bulloff .te-hint { grid-column: 1 / -1; text-align: center; margin: 0; }
-#screen-bulloff > [data-action="to-tournament"] { width: min(100%, 1100px); }
-/* Ab drei Spielern */
-#screen-bulloff .bulloff-order { gap: clamp(10px, 2vh, 20px); }
-#screen-bulloff .bo-spalten { gap: clamp(10px, 1.6vw, 24px); }
-#screen-bulloff .bo-wahl, #screen-bulloff .bo-reihe { gap: clamp(6px, 1.2vh, 12px); }
-#screen-bulloff .bo-wahl button, #screen-bulloff .bo-reihe .bo-row, #screen-bulloff .bo-slot {
-  min-height: clamp(52px, 9vh, 88px); padding: 0 clamp(12px, 1.6vw, 22px); gap: clamp(8px, 1vw, 14px);
-  border-radius: clamp(12px, 1.8vh, 18px); font-family: var(--font-cond); font-weight: 700; font-size: clamp(16px, 3vh, 30px); letter-spacing: 0.03em; text-transform: uppercase;
-}
-#screen-bulloff .bo-wahl button { border: 2px solid var(--line); background: var(--bg-2); }
-#screen-bulloff .bo-wahl button:active { border-color: var(--aktiv-linie); background: var(--aktiv-flaeche); box-shadow: 0 0 24px var(--schein); }
-#screen-bulloff .bo-reihe .bo-row { border: 2px solid var(--aktiv-linie); background: var(--aktiv-flaeche); box-shadow: 0 0 24px var(--schein-weich); }
-#screen-bulloff .bo-slot { border: 2px dashed var(--line-hell); color: var(--dead); }
-#screen-bulloff .bo-name { font-size: inherit; }
-#screen-bulloff .bo-pos { min-width: 1.6em; font-size: inherit; }
-#screen-bulloff .bo-wahl .av.sm, #screen-bulloff .bo-reihe .av.sm { width: clamp(24px, 4.4vh, 44px); height: clamp(24px, 4.4vh, 44px); font-size: clamp(10px, 1.6vh, 16px); }
-#screen-bulloff .bulloff-order .btn.start { min-height: clamp(52px, 9vh, 84px); font-size: clamp(16px, 3vh, 28px); }
-@media (orientation: portrait) and (max-width: 699px) {
-  #screen-bulloff:not(.turnier) .bulloff { grid-template-columns: 1fr; }
-  #screen-bulloff:not(.turnier) .bulloff button { min-height: clamp(110px, 20vh, 180px); }
-}
-
 /* ---------- Finisher: Haken, Stechen-Dialog, Fernsteuerung ---------- */
 #screen-finisher .rest .haken { width: 0.9em; height: 0.9em; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; vertical-align: -0.05em; }
 #screen-finisher .fin-stechen-wahl { flex-wrap: wrap; }
@@ -4905,6 +4764,694 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
   #karte-einstellungen .setting > label small { display: none; }
 }
 
+
+/* ======================================================================
+   Turnier-Uebersicht nach dem Entwurf "Turnier Redesign" (Okt. 2026).
+   Dieselbe Kopfleiste wie das Setup, darunter die Titelzeile, dann zwei
+   Spalten: links der Spielplan nach Runden (die laufende Partie leuchtet
+   mit weissem "Weiter", offene haben "Start", fertige treten zurueck,
+   Sieger fett), rechts die Tabelle und die Turnier-Statistik.
+   ====================================================================== */
+
+#screen-tournament.active { display: flex; flex-direction: column; gap: 12px; padding: 8px 0 24px; }
+#screen-tournament .card { margin: 0; }
+.turnier-titel { padding: 0; display: flex; align-items: center; justify-content: space-between; gap: 16px; min-width: 0; }
+.turnier-titel .titel-zeile { min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
+.turnier-titel h1 { font-family: var(--font-display); font-weight: 400; font-size: 1.6rem; letter-spacing: 0.05em; text-transform: uppercase; line-height: 1; margin: 0; }
+.turnier-titel .sub { margin: 0; font-family: var(--font-cond); font-weight: 600; font-size: 0.95rem; letter-spacing: 0.04em; color: var(--muted); min-width: 0; }
+.turnier-titel .btn { flex: none; white-space: nowrap; }
+.turnier-spalten { display: flex; flex-direction: column; gap: 12px; }
+.turnier-links, .turnier-rechts { display: contents; }
+
+/* Spielplan */
+#screen-tournament .round-label { font-family: var(--font-cond); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin: 10px 0 6px; }
+#screen-tournament .round-label:first-child { margin-top: 0; }
+#screen-tournament .match-row {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 6px; min-height: 48px;
+  padding: 6px 8px 6px 12px; border-radius: 12px; background: var(--bg-3); border: 1px solid var(--line); box-shadow: none;
+}
+#screen-tournament .match-row .pair { flex: 1 1 auto; min-width: 0; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#screen-tournament .match-row .pair .muted { font-size: 0.8em; }
+#screen-tournament .match-row .res { flex: none; font-family: var(--font-cond); font-weight: 700; font-size: 1.25rem; font-variant-numeric: tabular-nums; color: var(--dead); }
+#screen-tournament .match-row.next .res { color: var(--text); }
+#screen-tournament .match-row.done { background: var(--bg-2); opacity: 0.72; }
+#screen-tournament .match-row.done .res { color: var(--accent); }
+#screen-tournament .match-row.done .pair { color: var(--muted); }
+#screen-tournament .match-row.done .pair b { color: var(--text); }
+#screen-tournament .match-row.next { background: var(--aktiv-flaeche); border-color: var(--aktiv-linie); box-shadow: 0 0 30px var(--schein); opacity: 1; }
+#screen-tournament .match-row .go {
+  flex: none; min-height: 40px; min-width: 70px; padding: 0 12px; border-radius: 10px;
+  background: var(--bg-2); border: 1px solid var(--line-hell); color: var(--text);
+  font-family: var(--font-cond); font-weight: 700; font-size: 1rem; letter-spacing: 0.06em; text-transform: uppercase;
+}
+#screen-tournament .match-row.next .go:not(.wo) { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+#screen-tournament .match-row .go.wo { min-width: 0; color: var(--muted); font-weight: 600; text-transform: none; letter-spacing: 0; }
+#screen-tournament .match-row .fertig { flex: none; min-width: 70px; text-align: center; font-family: var(--font-cond); font-weight: 600; font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+#screen-tournament .spielplan-aktionen { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+#screen-tournament .spielplan-aktionen .btn { min-height: 44px; padding: 0 8px; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#screen-tournament #turnier-endstand { margin-top: 10px; }
+
+/* Tabelle */
+#screen-tournament .standings th { background: transparent; font-family: var(--font-cond); font-weight: 600; font-size: 0.75rem; letter-spacing: 0.12em; color: var(--muted); padding: 10px 6px 6px; }
+#screen-tournament .standings td { font-family: var(--font-cond); font-weight: 700; font-size: 1.15rem; padding: 8px 6px; }
+#screen-tournament .standings td.name { font-family: var(--font-body, inherit); font-weight: 600; font-size: 1rem; }
+#screen-tournament .standings td.name .cell { max-width: 100%; }
+#screen-tournament .standings .rank { color: var(--muted); font-size: 1.05rem; }
+#screen-tournament .standings .wins { color: var(--accent); }
+#screen-tournament .standings tr.leader td { background: transparent; box-shadow: none; text-shadow: none; }
+#screen-tournament .standings tr.leader td.name { color: #fff; }
+
+/* Statistik je Spieler: Avatar und Name in einer Zeile, darunter die Werte. */
+#screen-tournament .stat-card { padding: 10px; border: 1px solid var(--line); border-radius: 12px; }
+#screen-tournament .stat-card .who { flex-direction: row; justify-content: flex-start; text-align: left; min-height: 0; gap: 8px; margin-bottom: 6px; }
+#screen-tournament .stat-card .who .av.md { width: 30px; height: 30px; font-size: 0.75rem; }
+#screen-tournament .stat-card .who .wer-name { font-family: var(--font-cond); font-weight: 700; font-size: 1rem; text-transform: uppercase; letter-spacing: 0.03em; }
+#screen-tournament .stat-card .line b { font-family: var(--font-cond); font-weight: 700; font-size: 1.05rem; }
+
+@media (min-width: 700px) {
+  body.fix-setup #screen-tournament.active { flex: 1 1 auto; min-height: 0; padding: clamp(6px, 1.8vh, 22px) 0 0; gap: clamp(6px, 1.4vh, 16px); }
+  body.fix-setup #screen-tournament > * { flex: none; }
+  body.fix-setup #screen-tournament > .turnier-spalten { flex: 1 1 auto; min-height: 0; }
+  #screen-tournament .card { padding: clamp(10px, 1.8vh, 20px); }
+  #screen-tournament h2 { font-size: clamp(13px, 2.4vh, 26px); margin-bottom: clamp(6px, 1.2vh, 14px); }
+  .turnier-titel h1 { font-size: clamp(20px, 4.4vh, 46px); }
+  .turnier-titel .sub { font-size: clamp(12px, 2.4vh, 26px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .turnier-titel .btn { height: clamp(44px, 6vh, 60px); padding: 0 clamp(14px, 1.8vw, 26px); font-size: clamp(13px, 2vh, 19px); border-radius: 12px; }
+
+  .turnier-spalten { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); grid-template-rows: minmax(0, 1fr); gap: clamp(8px, 1.4vw, 22px); }
+  .turnier-links, .turnier-rechts { display: flex; flex-direction: column; gap: clamp(8px, 1.4vh, 16px); min-height: 0; min-width: 0; }
+  .turnier-links > .card { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+  .turnier-links > .card > * { flex: none; }
+  .turnier-links > .card > #schedule { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+  .turnier-links > .card > #schedule::-webkit-scrollbar { width: 0; height: 0; display: none; }
+  /* Rechts scrollt die ganze Spalte, falls Tabelle und Statistik nicht passen. */
+  .turnier-rechts { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+  .turnier-rechts::-webkit-scrollbar { width: 0; height: 0; display: none; }
+  .turnier-rechts > * { flex: none; }
+  .turnier-rechts > #karte-turnier-statistik { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+  #karte-turnier-statistik > h2 { flex: none; }
+  #karte-turnier-statistik > .stats-grid { flex: 1 1 auto; min-height: 0; overflow-y: auto; align-content: start; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(5px, 0.8vw, 10px); scrollbar-width: none; }
+
+  #screen-tournament .round-label { font-size: clamp(11px, 1.9vh, 20px); margin: clamp(4px, 1vh, 12px) 0 clamp(4px, 0.8vh, 9px); }
+  #screen-tournament .match-row { min-height: clamp(40px, 7.6vh, 84px); margin-bottom: clamp(4px, 0.8vh, 9px); gap: clamp(8px, 1vw, 16px); padding: 4px clamp(8px, 1vw, 14px) 4px clamp(12px, 1.4vw, 20px); }
+  #screen-tournament .match-row .pair { font-size: clamp(13px, 2.3vh, 24px); }
+  #screen-tournament .match-row .res { font-size: clamp(16px, 3.2vh, 34px); }
+  #screen-tournament .match-row .go { height: clamp(34px, 6vh, 62px); min-width: clamp(70px, 7.5vw, 112px); font-size: clamp(13px, 2.4vh, 26px); }
+  #screen-tournament .match-row .fertig { min-width: clamp(70px, 7.5vw, 112px); font-size: clamp(11px, 1.8vh, 19px); }
+  #screen-tournament .spielplan-aktionen .btn { height: clamp(38px, 6.4vh, 62px); font-size: clamp(12px, 1.9vh, 18px); }
+
+  #screen-tournament .standings th { font-size: clamp(10px, 1.6vh, 17px); }
+  #screen-tournament .standings td { font-size: clamp(15px, 2.8vh, 30px); height: clamp(36px, 6.6vh, 70px); padding: 0 6px; }
+  #screen-tournament .standings td.name { font-size: clamp(13px, 2.3vh, 24px); }
+  #screen-tournament .standings td .av.sm { width: clamp(22px, 4vh, 42px); height: clamp(22px, 4vh, 42px); font-size: clamp(9px, 1.4vh, 15px); }
+  #screen-tournament .standings .rank { font-size: clamp(14px, 2.8vh, 30px); }
+
+  #screen-tournament .stat-card { padding: clamp(8px, 1.2vh, 14px) clamp(8px, 0.9vw, 14px); }
+  #screen-tournament .stat-card .who .av.md { width: clamp(20px, 3.4vh, 36px); height: clamp(20px, 3.4vh, 36px); font-size: clamp(9px, 1.3vh, 14px); }
+  #screen-tournament .stat-card .who .wer-name { font-size: clamp(13px, 2.2vh, 23px); }
+  #screen-tournament .stat-card .line { font-size: clamp(10px, 1.6vh, 16px); padding: clamp(1px, 0.3vh, 4px) 0; }
+  #screen-tournament .stat-card .line b { font-size: clamp(13px, 2.2vh, 23px); }
+}
+@media (min-width: 1100px) {
+  #karte-turnier-statistik > .stats-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+/* Flach (Handy quer): ohne Turnier-Statistik, die Tabelle reicht. */
+@media (min-width: 700px) and (max-height: 500px) {
+  #karte-turnier-statistik { display: none; }
+}
+
+/* ======================================================================
+   Ausbullen nach dem Entwurf "Ausbullen" (Okt. 2026). Zurueck oben links,
+   Zielscheibe und Titel mittig, rechts der Zusammenhang. Zu zweit: zwei
+   grosse Karten, antippen - der wirft an. Ab drei Spielern links alle
+   Namen in Wurf-Reihenfolge antippen, rechts waechst die Reihenfolge;
+   der Erste leuchtet mit "wirft an". Am Board (Fernsteuerung) alles
+   groesser, die Wahl im Licht.
+   ====================================================================== */
+
+#screen-bulloff.active { position: relative; gap: clamp(8px, 2vh, 24px); }
+#screen-bulloff .bo-kopf { padding: 0; text-align: center; display: flex; flex-direction: column; align-items: center; gap: clamp(4px, 0.8vh, 10px); }
+#screen-bulloff .bo-titelzeile { display: flex; align-items: center; justify-content: center; gap: clamp(10px, 1.4vw, 20px); }
+#screen-bulloff .bull-ring { color: var(--laser-hell); filter: drop-shadow(0 0 10px var(--laser)) drop-shadow(0 0 26px var(--laser-weich)); display: flex; }
+#screen-bulloff .bull-ring svg { width: clamp(28px, 6vh, 64px); height: clamp(28px, 6vh, 64px); }
+#screen-bulloff .bo-kopf h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(22px, 5.6vh, 60px); letter-spacing: 0.05em; text-transform: uppercase; line-height: 1; margin: 0; }
+#screen-bulloff .bo-kopf .sub { margin: 0; font-family: var(--font-cond); font-weight: 600; font-size: clamp(12px, 2.4vh, 26px); letter-spacing: 0.04em; color: var(--muted); text-wrap: pretty; max-width: 60ch; }
+#screen-bulloff .bo-ctx { text-align: center; font-family: var(--font-cond); font-weight: 600; font-size: clamp(12px, 2.2vh, 24px); letter-spacing: 0.04em; color: var(--muted); white-space: nowrap; }
+#screen-bulloff .bo-ctx:empty { display: none; }
+#screen-bulloff > .bo-zurueck { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 48px; border-radius: 12px; font-weight: 600; }
+#screen-bulloff > .bo-zurueck svg { width: clamp(16px, 2.6vh, 26px); height: clamp(16px, 2.6vh, 26px); }
+
+/* Zu zweit: zwei Karten. */
+#screen-bulloff .bulloff { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); grid-template-rows: minmax(0, 1fr); grid-auto-rows: auto; gap: clamp(10px, 2vw, 32px); width: 100%; }
+#screen-bulloff .bulloff button[data-action="pick-starter"] {
+  min-height: clamp(150px, 34vh, 360px); min-width: 0; padding: clamp(10px, 2vh, 24px);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(8px, 2.4vh, 30px);
+  background: var(--bg-2); border: 2px solid var(--line); border-radius: clamp(16px, 2.6vh, 28px); color: var(--text); box-shadow: none;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+#screen-bulloff .bulloff button .av.md { width: clamp(50px, 16vh, 170px); height: clamp(50px, 16vh, 170px); font-size: clamp(16px, 4.4vh, 46px); flex: none; }
+#screen-bulloff .bulloff button span:not(.av) { max-width: 100%; font-family: var(--font-display); font-weight: 400; font-size: clamp(20px, 6vh, 64px); letter-spacing: 0.04em; text-transform: uppercase; line-height: 1.05; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#screen-bulloff .bo-tag { font-style: normal; font-family: var(--font-cond); font-weight: 700; font-size: clamp(12px, 2.4vh, 26px); letter-spacing: 0.14em; text-transform: uppercase; color: var(--dead); }
+#screen-bulloff .bulloff button:active,
+#screen-bulloff .bulloff button.wahl { background: var(--aktiv-flaeche); border-color: var(--aktiv-linie); box-shadow: 0 0 26px rgba(70, 170, 215, 0.55), 0 0 90px 14px rgba(70, 170, 215, 0.3); }
+#screen-bulloff .bulloff button.wahl .av { box-shadow: 0 0 30px rgba(70, 170, 215, 0.45); }
+#screen-bulloff .bulloff button.wahl .bo-tag { color: var(--laser-hell); }
+#screen-bulloff .bulloff .te-hint { grid-column: 1 / -1; text-align: center; margin: 0; display: flex; justify-content: center; gap: clamp(16px, 3vw, 48px); font-family: var(--font-cond); font-weight: 700; font-size: clamp(16px, 3.4vh, 38px); letter-spacing: 0.08em; color: var(--muted); }
+#screen-bulloff .bulloff .te-hint b { color: var(--text); font-weight: 700; }
+
+/* Ab drei Spielern: Reihenfolge. */
+#screen-bulloff .bulloff-order { display: flex; flex-direction: column; gap: clamp(10px, 2vh, 20px); width: 100%; }
+#screen-bulloff .bo-spalten { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(10px, 2vw, 32px); align-items: stretch; text-align: left; }
+#screen-bulloff .bo-spalte { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: clamp(6px, 1.2vh, 14px); }
+#screen-bulloff .bo-label { flex: none; font-family: var(--font-cond); font-weight: 700; font-size: clamp(12px, 2.2vh, 24px); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#screen-bulloff .bo-wahl, #screen-bulloff .bo-reihe { display: grid; grid-auto-rows: minmax(0, 1fr); gap: clamp(5px, 1vh, 12px); }
+#screen-bulloff .bo-wahl button, #screen-bulloff .bo-reihe .bo-row, #screen-bulloff .bo-slot {
+  min-height: clamp(48px, 9vh, 88px); min-width: 0; padding: 0 clamp(12px, 1.6vw, 24px); display: flex; align-items: center; gap: clamp(10px, 1.2vw, 18px);
+  border-radius: 14px; background: var(--bg-3); border: 1px solid var(--line-hell); color: var(--text); box-shadow: none;
+  font-family: var(--font-cond); font-weight: 700; font-size: clamp(16px, 3.6vh, 40px); letter-spacing: 0.03em; text-transform: uppercase; text-align: left;
+}
+#screen-bulloff .bo-wahl button:active { background: var(--aktiv-flaeche); border-color: var(--aktiv-linie); box-shadow: 0 0 24px var(--schein); }
+#screen-bulloff .bo-wahl .bo-weg { visibility: hidden; }
+#screen-bulloff .bo-name { flex: 1 1 auto; min-width: 0; font-size: inherit; font-weight: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#screen-bulloff .bo-wahl .av.sm, #screen-bulloff .bo-reihe .av.sm { flex: none; width: clamp(28px, 6vh, 64px); height: clamp(28px, 6vh, 64px); font-size: clamp(10px, 2vh, 22px); }
+#screen-bulloff .bo-reihe .bo-row .av.sm { width: clamp(24px, 4.6vh, 50px); height: clamp(24px, 4.6vh, 50px); font-size: clamp(9px, 1.7vh, 18px); }
+#screen-bulloff .bo-pos { flex: none; width: clamp(28px, 6vh, 64px); height: clamp(28px, 6vh, 64px); min-width: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-cond); font-weight: 700; font-size: clamp(16px, 3.6vh, 40px); background: var(--line-hell); color: var(--text); font-variant-numeric: tabular-nums; }
+#screen-bulloff .bo-slot { background: transparent; border: 1px dashed var(--line-hell); color: var(--dead); }
+#screen-bulloff .bo-slot .bo-pos { background: var(--bg-3); color: var(--dead); }
+#screen-bulloff .bo-slot .bo-frei { flex: 1; text-align: left; }
+#screen-bulloff .bo-reihe .bo-row.erster { background: var(--aktiv-flaeche); border-color: var(--aktiv-linie); box-shadow: 0 0 30px var(--schein); }
+#screen-bulloff .bo-reihe .bo-row.erster .bo-pos { background: var(--primary); color: var(--on-primary); box-shadow: 0 0 16px rgba(70, 170, 215, 0.45); }
+#screen-bulloff .bo-reihe .bo-tag { flex: none; font-size: clamp(10px, 1.7vh, 18px); color: var(--laser-hell); }
+#screen-bulloff .bulloff-order .btn.start { width: 100%; min-height: clamp(46px, 8vh, 84px); font-size: clamp(17px, 3vh, 32px); border-radius: 12px; }
+#screen-bulloff .bulloff-order .btn.start.offen { background: transparent; border: 1px solid var(--line-hell); color: var(--dead); box-shadow: none; opacity: 1; }
+
+/* Handy hochkant: fuer das Etikett "wirft an" ist in der Reihe kein Platz. */
+@media (max-width: 699px) {
+  #screen-bulloff .bo-reihe .bo-tag { display: none; }
+}
+
+/* Tablet und Handy quer: fest im Rahmen, Zurueck oben links, Zusammenhang
+   oben rechts, die Karten fuellen die Hoehe. */
+@media (min-width: 700px) {
+  body.fix-setup #screen-bulloff.active {
+    flex: 1 1 auto; min-height: 0; justify-content: flex-start; overflow: hidden;
+    padding: clamp(8px, 2.4vh, 30px) clamp(10px, 2.4vw, 40px); gap: clamp(8px, 2vh, 24px);
+  }
+  body.fix-setup #screen-bulloff > * { flex: none; }
+  #screen-bulloff .bo-kopf { padding: 0 clamp(120px, 14vw, 200px); }
+  #screen-bulloff > .bo-zurueck { position: absolute; left: clamp(10px, 2.4vw, 40px); top: clamp(8px, 2.4vh, 30px); width: auto; height: clamp(44px, 6.4vh, 64px); min-height: 0; padding: 0 clamp(14px, 1.8vw, 26px); font-size: clamp(13px, 2vh, 20px); }
+  #screen-bulloff .bo-ctx { position: absolute; right: clamp(10px, 2.4vw, 40px); top: clamp(8px, 2.4vh, 30px); height: clamp(38px, 6.4vh, 64px); display: flex; align-items: center; }
+  body.fix-setup #screen-bulloff > .bulloff, body.fix-setup #screen-bulloff > .bulloff-order { flex: 1 1 auto; min-height: 0; }
+  #screen-bulloff .bulloff button[data-action="pick-starter"] { min-height: 0; height: 100%; }
+  #screen-bulloff .bo-spalten { flex: 1 1 auto; min-height: 0; }
+  #screen-bulloff .bo-wahl, #screen-bulloff .bo-reihe { flex: 1 1 auto; min-height: 0; }
+  #screen-bulloff .bo-wahl button, #screen-bulloff .bo-reihe .bo-row, #screen-bulloff .bo-slot { min-height: 0; }
+}
+/* Am Board (Fernsteuerung): groesser, vom Oche lesbar. */
+#screen-bulloff.turnier .bull-ring svg { width: clamp(34px, 8vh, 90px); height: clamp(34px, 8vh, 90px); }
+#screen-bulloff.turnier .bo-kopf h1 { font-size: clamp(28px, 8vh, 90px); }
+#screen-bulloff.turnier .bo-kopf .sub { font-size: clamp(14px, 3vh, 34px); }
+#screen-bulloff.turnier .bulloff button .av.md { width: clamp(60px, 22vh, 240px); height: clamp(60px, 22vh, 240px); font-size: clamp(18px, 6vh, 64px); }
+#screen-bulloff.turnier .bulloff button span:not(.av) { font-size: clamp(24px, 9vh, 100px); }
+#screen-bulloff.turnier .bo-tag { font-size: clamp(14px, 3.4vh, 38px); }
+
+
+/* ======================================================================
+   Rangliste nach dem Entwurf "Rangliste Redesign" (Okt. 2026). Eine
+   Kopfzeile: das Logo oeffnet das Menue, daneben Titel und Spielart,
+   rechts der Spielart-Umschalter. Darunter drei Spalten: links alle
+   Kategorien untereinander, in der Mitte die Rangliste (Platz 1 bis 3 in
+   Medaillenfarbe, der Beste leuchtet), rechts Verlauf und Rekorde.
+   "Alle Spiele" oeffnet den Spielverlauf anstelle der Spalten.
+   ====================================================================== */
+
+#screen-boards.active { display: flex; flex-direction: column; gap: 12px; padding: 8px 0 24px; }
+.boards-host .card { margin: 0; }
+.boards-host .karte-kopf { align-items: center; }
+.boards-host .karte-kopf h2 { margin: 0; }
+.boards-host .karte-kopf .hint { margin: 0; font-size: 0.8rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.boards-host .karte-kopf .btn.small { min-height: 44px; padding: 0 12px; white-space: nowrap; }
+.nur-flach { display: none; }
+
+/* Kopfzeile */
+.boards-kopf { display: flex; flex-wrap: wrap; align-items: center; gap: 10px clamp(10px, 1.4vw, 22px); min-width: 0; }
+.boards-logo {
+  flex: none; display: flex; align-items: center; gap: 8px; height: 48px; padding: 0 12px 0 4px;
+  border-radius: 999px; background: var(--bg-2); border: 1px solid var(--line); color: var(--muted); cursor: pointer;
+}
+.boards-logo .blink-logo { width: 40px; height: 40px; box-shadow: 0 0 16px var(--schein-stark); border-radius: 50%; }
+.boards-logo svg { width: 20px; height: 20px; }
+.boards-kopf .titel-zeile { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.boards-kopf h1 { font-family: var(--font-display); font-weight: 400; font-size: 1.6rem; letter-spacing: 0.05em; text-transform: uppercase; line-height: 1; margin: 0; }
+.boards-kopf .sub { margin: 0; font-family: var(--font-cond); font-weight: 600; font-size: 0.85rem; letter-spacing: 0.04em; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kopf-reiter { flex: 1 1 100%; margin: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.kopf-reiter button {
+  flex: 1 1 auto; min-height: 44px; padding: 0 10px; border-radius: 10px;
+  background: var(--bg-2); border: 1px solid var(--line); color: var(--muted);
+  font-family: var(--font-cond); font-weight: 700; font-size: 0.9rem; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; box-shadow: none;
+}
+.kopf-reiter button.active { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+
+/* Koerper */
+.boards-koerper { display: flex; flex-direction: column; gap: 12px; }
+.boards-host .boards-kats { margin: 0; }
+.boards-host .boards-kats .chip.active { background: var(--aktiv-flaeche); border-color: var(--aktiv-linie); color: var(--text); box-shadow: 0 0 24px var(--schein-weich); }
+.boards-host .board-list { gap: 5px; }
+.boards-host .board-row {
+  min-height: 48px; gap: 10px; padding: 6px 12px; border-top: none; border-radius: 12px;
+  background: var(--bg-3); border: 1px solid var(--line);
+}
+.boards-host .board-row .pos {
+  flex: none; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--font-cond); font-weight: 700; font-size: 0.95rem; color: var(--muted); background: transparent;
+}
+.boards-host .board-row .pos.m1 { background: #d9b45a; color: var(--on-primary); box-shadow: 0 0 10px rgba(0, 0, 0, 0.3); }
+.boards-host .board-row .pos.m2 { background: #b9c0c8; color: var(--on-primary); box-shadow: 0 0 10px rgba(0, 0, 0, 0.3); }
+.boards-host .board-row .pos.m3 { background: #b07a4c; color: var(--on-primary); box-shadow: 0 0 10px rgba(0, 0, 0, 0.3); }
+.boards-host .board-row .nm { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.boards-host .board-row .val { font-family: var(--font-cond); font-weight: 700; font-size: 1.3rem; }
+.boards-host .board-row.top { background: var(--aktiv-flaeche); border-color: var(--aktiv-linie); box-shadow: 0 0 30px var(--schein); }
+.boards-host .board-empty { padding: 14px; }
+.boards-seite { display: flex; flex-direction: column; gap: 12px; }
+#board-chart h2 { margin-bottom: 8px; }
+.boards-host .records { gap: 6px; }
+.boards-host .rec { text-align: left; border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.boards-host .rec .rt { text-transform: none; letter-spacing: 0; font-size: 0.75rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.boards-host .rec .rv { font-family: var(--font-cond); font-weight: 700; font-size: 1.4rem; line-height: 1; color: var(--accent); margin: 0; text-shadow: none; }
+.boards-host .rec .rn { font-size: 0.75rem; color: #c9c0c0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Spielverlauf nur, wenn er geoeffnet ist - dann anstelle der Spalten. */
+body .boards-host #board-log { display: none; }
+body .boards-host.log #board-log { display: block; }
+.boards-host.log .boards-koerper, .boards-host.log #board-bald { display: none; }
+#board-log .karte-kopf { margin-bottom: 8px; }
+/* Kaiwen und Hunter */
+.boards-bald { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 24px; border-style: dashed; border-color: var(--line-hell); min-height: 200px; }
+.boards-bald .bald-titel { font-family: var(--font-display); font-size: clamp(26px, 6vh, 64px); letter-spacing: 0.06em; text-transform: uppercase; line-height: 1.1; white-space: nowrap; }
+.boards-bald .bald-text { color: var(--muted); font-family: var(--font-cond); font-weight: 600; font-size: clamp(13px, 2.4vh, 26px); letter-spacing: 0.04em; }
+
+/* Das Menue hinter dem Logo. */
+.boards-menu-overlay { position: fixed; inset: 0; z-index: 60; background: rgba(7, 5, 6, 0.6); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.boards-menu {
+  position: absolute; top: clamp(6px, 1.8vh, 22px); left: clamp(8px, 1.6vw, 26px); width: min(calc(100vw - 16px), clamp(240px, 26vw, 360px));
+  display: flex; flex-direction: column; gap: clamp(5px, 0.9vh, 10px); padding: clamp(10px, 1.8vh, 20px);
+  background: var(--bg-2); border: 1px solid var(--line-hell); border-radius: 20px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+}
+.boards-menu .marke { padding: 0 0 clamp(4px, 1vh, 12px); }
+.boards-menu .marke .blink-logo { width: clamp(40px, 6.4vh, 64px); height: clamp(40px, 6.4vh, 64px); border: 2px solid var(--line); border-radius: 50%; box-shadow: 0 0 20px var(--schein-stark); }
+.boards-menu .marke .wort { font-size: clamp(16px, 3vh, 32px); }
+.boards-menu #nav { display: flex; flex-direction: column; gap: clamp(5px, 0.9vh, 10px); margin: 0; padding: 0; }
+.boards-menu #nav button { height: clamp(44px, 7.4vh, 72px); min-height: 44px; border-radius: 12px; text-align: left; padding: 0 clamp(14px, 1.6vw, 22px); font-size: clamp(14px, 2.6vh, 28px); }
+
+@media (min-width: 700px) {
+  body.fix-setup #screen-boards.active { flex: 1 1 auto; min-height: 0; padding: clamp(6px, 1.8vh, 22px) 0 0; gap: clamp(6px, 1.4vh, 16px); }
+  body.fix-setup #screen-boards > * { flex: none; }
+  body.fix-setup #screen-boards > .boards-koerper, body.fix-setup #liga-statistik > .boards-koerper,
+  body.fix-setup #screen-boards.log > #board-log, body.fix-setup #liga-statistik.log > #board-log,
+  body.fix-setup #screen-boards > #board-bald { flex: 1 1 auto; min-height: 0; }
+  .boards-host .card { padding: clamp(10px, 1.8vh, 20px); }
+  .boards-host h2 { font-size: clamp(13px, 2.4vh, 26px); }
+  .boards-host .karte-kopf { margin-bottom: clamp(6px, 1.2vh, 14px); }
+  .boards-host .karte-kopf .hint { font-size: clamp(11px, 1.7vh, 17px); }
+  .boards-host .karte-kopf .btn.small { height: clamp(40px, 4.6vh, 46px); min-height: 0; font-size: clamp(11px, 1.7vh, 17px); border-radius: 10px; }
+
+  .boards-kopf { flex-wrap: nowrap; height: clamp(44px, 7.4vh, 78px); }
+  .boards-logo { height: 100%; gap: clamp(6px, 0.8vw, 12px); padding: 0 clamp(10px, 1vw, 16px) 0 4px; }
+  .boards-logo .blink-logo { width: calc(clamp(44px, 7.4vh, 78px) - 10px); height: calc(clamp(44px, 7.4vh, 78px) - 10px); }
+  .boards-logo svg { width: clamp(16px, 2.6vh, 26px); height: clamp(16px, 2.6vh, 26px); }
+  .boards-kopf h1 { font-size: clamp(20px, 4.4vh, 46px); }
+  .boards-kopf .sub { font-size: clamp(11px, 2vh, 22px); }
+  .kopf-reiter { flex: none; margin-left: auto; height: 100%; flex-wrap: nowrap; gap: clamp(5px, 0.6vw, 9px); min-width: 0; }
+  .kopf-reiter button { flex: none; height: 100%; min-height: 0; padding: 0 clamp(8px, 1.2vw, 20px); border-radius: clamp(10px, 1.6vh, 16px); font-size: clamp(12px, 2.2vh, 23px); }
+
+  .boards-koerper { display: grid; grid-template-columns: clamp(170px, 16vw, 240px) minmax(0, 1fr) minmax(0, 1.05fr); grid-template-rows: minmax(0, 1fr); gap: clamp(8px, 1.4vw, 22px); }
+  .boards-host .boards-kats {
+    min-height: 0; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; flex-wrap: nowrap; gap: clamp(3px, 0.6vh, 7px);
+    -webkit-mask-image: none; mask-image: none; padding: 0; scrollbar-width: none;
+  }
+  .boards-host .boards-kats .chip {
+    flex: 1 1 0; min-height: 40px; max-height: clamp(40px, 7.4vh, 72px); padding: 0 clamp(10px, 1.2vw, 18px); text-align: left; border-radius: 10px;
+    font-family: var(--font-cond); font-weight: 600; font-size: clamp(13px, 2.2vh, 23px); letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .boards-host .boards-kats .liga-team-wahl { flex: none; gap: 4px; margin-bottom: clamp(4px, 1vh, 10px); }
+  .boards-host .boards-kats .liga-team-wahl .chip { flex: 1 1 auto; min-height: 30px; max-height: none; font-size: clamp(12px, 1.8vh, 18px); }
+  .boards-liste { min-height: 0; display: flex; flex-direction: column; }
+  .boards-liste > .karte-kopf { flex: none; }
+  .boards-liste > .board-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; gap: clamp(4px, 0.7vh, 8px); }
+  .boards-host .board-row { min-height: clamp(42px, 7.4vh, 78px); gap: clamp(8px, 1vw, 16px); padding: 4px clamp(10px, 1.2vw, 18px); }
+  .boards-host .board-row .pos { width: clamp(26px, 4.4vh, 46px); height: clamp(26px, 4.4vh, 46px); font-size: clamp(13px, 2.4vh, 26px); }
+  .boards-host .board-row .av.sm { width: clamp(24px, 4vh, 42px); height: clamp(24px, 4vh, 42px); font-size: clamp(9px, 1.5vh, 16px); }
+  .boards-host .board-row .nm { font-size: clamp(14px, 2.4vh, 25px); }
+  .boards-host .board-row .val { font-size: clamp(18px, 3.8vh, 42px); }
+  .boards-seite { min-height: 0; gap: clamp(8px, 1.4vh, 16px); }
+  .boards-seite > #board-chart { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: clamp(4px, 0.8vh, 10px); }
+  #board-chart h2 { flex: none; margin: 0; font-size: clamp(12px, 2.2vh, 24px); }
+  #board-chart .chart { flex: 1 1 auto; min-height: 0; max-height: none; height: 100%; width: 100%; }
+  #board-chart .chart-legend { flex: none; margin-top: 0; }
+  #board-chart .chart-legend .cl { font-size: clamp(11px, 1.7vh, 17px); }
+  #board-chart > .hint { margin: 0; }
+  .boards-seite > #board-rekorde { flex: none; }
+  .boards-host .records { gap: clamp(5px, 0.8vw, 10px); }
+  .boards-host .rec { padding: clamp(6px, 1.1vh, 12px) clamp(8px, 0.9vw, 14px); }
+  .boards-host .rec .rt, .boards-host .rec .rn { font-size: clamp(10px, 1.5vh, 15px); }
+  .boards-host .rec .rv { font-size: clamp(18px, 3.6vh, 40px); }
+  body .boards-host.log #board-log { display: flex; flex-direction: column; }
+  #board-log > #match-log { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
+}
+/* Flach (Handy quer): zwei Spalten, ohne Verlauf und Rekorde - der Weg
+   zum Spielverlauf sitzt dann im Kopf der Liste. */
+@media (min-width: 700px) and (max-height: 500px) {
+  .boards-koerper { grid-template-columns: clamp(110px, 18vw, 170px) minmax(0, 1fr); }
+  .boards-seite { display: none; }
+  .boards-host .karte-kopf .nur-flach { display: inline-flex; align-items: center; }
+}
+
+
+/* ======================================================================
+   Liga · Spielplan nach dem Entwurf "Liga Redesign" (Okt. 2026). Kopf wie
+   in der Rangliste (Logo-Menue, Titel, Reiter als Felder, neu: Statistik).
+   Links gross der naechste bzw. gewaehlte Spieltag - Datum, Gegner, Ort
+   mit Pin, Maps und Kalender, Team mit Zusagen (unter 4 rot, 4 gelb, ab 5
+   gruen), "Ich bin dabei" und GAME ON. Laeuft das Spiel, wird die Karte
+   zum LIVE-Schild mit Stand. Rechts alle Spieltage kompakt.
+   ====================================================================== */
+
+#screen-liga.active { display: flex; flex-direction: column; gap: 12px; padding: 8px 0 24px; }
+#screen-liga .card { margin: 0; }
+#screen-liga .karte-kopf { align-items: center; margin-bottom: 10px; }
+#screen-liga .karte-kopf h2 { margin: 0; }
+#screen-liga .karte-kopf .btn.small { min-height: 44px; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+#screen-liga .karte-kopf .btn.small .ico { width: 16px; height: 16px; }
+#screen-liga #liga-hinweis { margin: 0; }
+#liga-plan { display: flex; flex-direction: column; gap: 12px; }
+.liga-spalten { display: flex; flex-direction: column; gap: 12px; }
+/* Die anderen Reiter: am Handy untereinander, am Tablet zwei Spalten. */
+.liga-zwei { display: flex; flex-direction: column; gap: 12px; }
+.liga-zwei.hidden { display: none; }
+.liga-links, .liga-rechts { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.liga-karte.weiss { border-color: var(--aktiv-linie); }
+.luft { flex: 1 1 auto; }
+#screen-liga .btn.hell { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+#screen-liga .lk-crew-titel b.rot, #screen-liga .kb-offen.rot { color: var(--accent); }
+#screen-liga .lk-crew-titel b.gelb, #screen-liga .kb-offen.gelb { color: var(--amber); }
+#screen-liga .lk-crew-titel b.gruen, #screen-liga .kb-offen.gruen { color: #3fbf7f; }
+
+/* Training: DiensDarts links, Uebungsspiel rechts. */
+#dienstdarts-karte .dd-kopf { display: flex; align-items: center; gap: 14px; }
+#dienstdarts-karte .sehnsucht-logo { flex: none; width: 72px; height: 72px; margin: 0; border-radius: 14px; }
+#dienstdarts-karte .dd-titel-block { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+#dienstdarts-karte .dd-name { font-family: var(--font-display); font-size: clamp(26px, 7vw, 40px); letter-spacing: 0.03em; text-transform: uppercase; line-height: 1; }
+#dienstdarts-karte .dd-datum { font-family: var(--font-cond); font-weight: 700; font-size: 1.15rem; letter-spacing: 0.02em; }
+#dienstdarts-karte .dd-antworten { margin: 0; }
+#dienstdarts-karte .dd-antworten .btn { min-height: 46px; border-radius: 12px; font-family: var(--font-cond); font-weight: 700; font-size: 1rem; letter-spacing: 0.06em; text-transform: uppercase; box-shadow: none; }
+#dienstdarts-karte .dd-liste { margin: 0; display: flex; flex-direction: column; gap: 10px; padding-top: 10px; border-top: 1px solid var(--line-hell); }
+#dienstdarts-karte .dd-gruppe { display: flex; flex-direction: column; gap: 6px; }
+#dienstdarts-karte .dd-gruppe.gelb { opacity: 0.8; }
+#dienstdarts-karte .dd-gruppe.rot { opacity: 0.6; }
+#dienstdarts-karte .lt-leute { margin: 0; }
+.liga-uebung { display: flex; flex-direction: column; gap: 10px; }
+.liga-uebung h2.gross { font-size: 1.4rem; margin: 0; }
+.liga-uebung .hint { margin: 0; }
+.liga-uebung .setting { margin: 0; gap: 6px; }
+.liga-uebung .setting > label { color: var(--muted); }
+.liga-uebung .options { flex-wrap: nowrap; gap: 6px; }
+.liga-uebung .options button { flex: 1 1 0; min-width: 0; min-height: 44px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 4px; font-family: var(--font-cond); font-weight: 600; font-size: 1rem; letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; box-shadow: none; }
+.liga-uebung .options button small { font-size: 0.72rem; color: var(--muted); font-weight: 600; }
+.liga-uebung .options button.active { background: var(--aktiv-flaeche); border-color: var(--aktiv-linie); color: var(--text); box-shadow: 0 0 0 1px var(--aktiv-linie) inset, 0 0 24px var(--schein-weich); }
+.liga-uebung .options.drei button span:first-child { text-transform: uppercase; font-weight: 700; }
+.liga-uebung .btn.start { min-height: 48px; }
+
+/* Tabelle: links die Tabelle, rechts unser Platz und der Stand. */
+.lt-karte { display: flex; flex-direction: column; }
+.lt-karte .karte-kopf { margin-bottom: 8px; }
+.lt-karte .lt-scroll { overflow: auto; }
+#liga-tabelle .standings th { background: transparent; font-family: var(--font-cond); font-weight: 600; font-size: 0.75rem; letter-spacing: 0.12em; color: var(--muted); padding: 6px 5px; }
+#liga-tabelle .standings td { font-family: var(--font-cond); font-weight: 700; font-size: 1.05rem; padding: 8px 5px; }
+#liga-tabelle .standings td.name { font-family: var(--font-body); font-weight: 600; font-size: 0.95rem; }
+#liga-tabelle .standings .rank { color: var(--muted); }
+#liga-tabelle .standings tr.leader td { background: var(--aktiv-flaeche); box-shadow: none; text-shadow: none; }
+#liga-tabelle .standings tr.leader td.name { color: #fff; }
+#liga-tabelle .standings tr.leader td:last-child { color: var(--accent); }
+#lt-platz { align-items: center; text-align: center; gap: 6px; }
+#lt-platz .lt-platz-zahl { font-family: var(--font-display); font-size: clamp(56px, 16vw, 110px); line-height: 1; color: #fff; }
+#lt-platz .lt-platz-info { font-family: var(--font-cond); font-weight: 600; font-size: 1.1rem; color: #c9c0c0; }
+#lt-platz .lt-platz-sub { font-family: var(--font-cond); font-weight: 600; font-size: 0.95rem; color: var(--muted); }
+.lt-stand-karte { display: flex; flex-direction: column; gap: 8px; }
+.lt-stand-karte .hint { margin: 0; }
+.lt-stand-karte .btn { min-height: 48px; font-family: var(--font-cond); font-weight: 700; font-size: 1rem; letter-spacing: 0.06em; text-transform: uppercase; }
+
+/* Statistik: Team-Chips oben, Highlights rechts. */
+#liga-team-chips { margin: 0; }
+#liga-team-chips.hidden { display: none; }
+#liga-team-chips .liga-team-wahl { display: flex; flex-wrap: nowrap; gap: 6px; margin: 0; overflow-x: auto; scrollbar-width: none; }
+#liga-team-chips .chip { flex: none; min-height: 44px; padding: 0 14px; font-family: var(--font-cond); font-weight: 600; font-size: 0.95rem; letter-spacing: 0.04em; }
+#liga-team-chips .chip.active { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+#liga-highlights { display: flex; flex-direction: column; }
+#liga-highlights .hl-liste { display: flex; flex-direction: column; gap: 10px; }
+#liga-highlights .hl-gruppe { display: flex; flex-direction: column; gap: 5px; }
+#liga-highlights .hl-titel { font-family: var(--font-cond); font-weight: 600; font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+#liga-highlights .hl-zeile { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 10px; background: var(--bg-3); border: 1px solid var(--line); border-radius: 10px; }
+#liga-highlights .hl-wer { min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
+#liga-highlights .hl-wer b { font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#liga-highlights .hl-wer small { font-size: 0.75rem; color: var(--muted); }
+#liga-highlights .hl-wert { flex: none; font-family: var(--font-cond); font-weight: 700; font-size: 1.25rem; color: var(--accent); }
+#liga-highlights .hint { margin: 0; }
+
+/* Kasse: links Stand und Erfassen, rechts Kassenbuch und Beitraege. */
+.kasse-stand { gap: 8px; }
+.kasse-stand .lk-kopf .hint { margin: 0; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kasse-stand .ks-saldo { font-family: var(--font-cond); font-weight: 700; font-size: clamp(40px, 12vw, 64px); line-height: 1; color: #fff; }
+.kasse-stand .ks-saldo.minus { color: var(--red); }
+.kasse-stand .ks-drei { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.kasse-stand .ks-drei > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.kasse-stand .ks-drei b { font-family: var(--font-cond); font-weight: 700; font-size: 1.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kasse-stand .ks-drei b.plus { color: #6fe0a8; }
+.kasse-stand .ks-drei b.minus { color: var(--red); }
+.kasse-erfassen { display: flex; flex-direction: column; gap: 8px; }
+.kasse-erfassen .kasse-form { margin: 0; }
+.kasse-erfassen .kasse-knoepfe { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.kasse-erfassen .kasse-knoepfe .btn { min-height: 46px; border-radius: 12px; font-family: var(--font-cond); font-weight: 700; font-size: 1rem; letter-spacing: 0.06em; text-transform: uppercase; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+.kasse-erfassen .kasse-paypal { margin: 0; }
+.kasse-liste { display: flex; flex-direction: column; margin: 0; }
+.kasse-liste .kasse-zeilen { display: flex; flex-direction: column; gap: 5px; }
+.kasse-liste .kasse-eintrag { background: var(--bg-3); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; margin: 0; }
+.kasse-beitraege-karte .kasse-beitraege { margin: 0; }
+.kasse-beitraege .karte-kopf { margin-bottom: 8px; }
+.kasse-beitraege .kb-offen { font-family: var(--font-cond); font-weight: 700; font-size: 0.95rem; }
+.kasse-beitraege .lt-leute { display: flex; flex-wrap: wrap; gap: 6px; }
+.kasse-beitraege .kb-zeile { gap: 8px; min-height: 36px; padding: 0 10px 0 4px; }
+.kasse-beitraege .kb-zeile.voll { border-color: #2c7d54; }
+.kasse-beitraege .kb-zeile.offen { border-color: rgba(255, 193, 77, 0.45); }
+.kasse-beitraege .kb-status { font-family: var(--font-cond); font-weight: 700; font-size: 0.9rem; color: var(--amber); }
+.kasse-beitraege .kb-zeile.voll .kb-status { color: #6fe0a8; }
+.kasse-beitraege .kb-zeile .btn.small { min-height: 28px; padding: 0 8px; font-size: 0.8rem; }
+
+/* Regeln: zwei Spalten mit aufklappbaren Karten (+ / −). */
+.regel-spalte { display: flex; flex-direction: column; }
+.regel-spalte > h2 { margin: 0 0 10px; }
+.regel-spalte .regel-liste { display: flex; flex-direction: column; gap: 6px; }
+.regel-spalte .regel { margin: 0; background: var(--bg-3); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.regel-spalte .regel[open] { background: var(--aktiv-flaeche); border-color: var(--aktiv-linie); box-shadow: 0 0 24px var(--schein-weich); }
+.regel-spalte .regel summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; font-family: var(--font-cond); font-weight: 700; font-size: 1.05rem; letter-spacing: 0.02em; cursor: pointer; }
+.regel-spalte .regel summary::-webkit-details-marker { display: none; }
+.regel-spalte .regel summary::after { content: '+'; flex: none; font-family: var(--font-cond); font-weight: 700; font-size: 1.3rem; color: var(--muted); }
+.regel-spalte .regel[open] summary::after { content: '−'; }
+.regel-spalte .regel p { color: #c9c0c0; }
+
+/* Die grosse Karte */
+.liga-karte {
+  display: flex; flex-direction: column; gap: 10px; padding: 16px;
+  background: var(--aktiv-flaeche); border: 2px solid var(--line-hell); border-radius: 20px;
+}
+.liga-karte.rot { border-color: rgba(229, 72, 77, 0.55); box-shadow: 0 0 36px rgba(229, 72, 77, 0.3); }
+.liga-karte.gelb { border-color: rgba(255, 193, 77, 0.6); box-shadow: 0 0 36px rgba(255, 193, 77, 0.28); }
+.liga-karte.gruen { border-color: rgba(63, 191, 127, 0.6); box-shadow: 0 0 36px rgba(63, 191, 127, 0.3); }
+.liga-karte.live { border-color: var(--accent); box-shadow: 0 0 36px rgba(229, 72, 77, 0.25); }
+.liga-karte .lk-kopf { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.liga-karte .lk-kopf > :first-child { min-width: 0; display: flex; align-items: center; gap: 10px; }
+.liga-karte .lk-etikett { font-family: var(--font-cond); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--laser-hell); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.liga-karte .lk-live { display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px; border-radius: 8px; background: var(--accent); color: #fff; font-family: var(--font-cond); font-weight: 700; font-size: 0.9rem; letter-spacing: 0.16em; line-height: 1; box-shadow: 0 0 22px rgba(229, 72, 77, 0.45); }
+.liga-karte .lk-live i { width: 0.55em; height: 0.55em; border-radius: 50%; background: #fff; animation: livePulse 1.4s ease-in-out infinite; }
+.liga-karte .lk-einzel { font-family: var(--font-cond); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+.liga-karte .lk-icons { flex: none; display: flex; gap: 8px; }
+.liga-karte .lk-icons .icon-btn { width: 44px; height: 44px; border-radius: 50%; background: var(--bg-2); border: 1px solid var(--line-hell); color: var(--text); display: inline-flex; align-items: center; justify-content: center; padding: 0; }
+.liga-karte .lk-icons .icon-btn .ico { width: 48%; height: 48%; }
+.liga-karte .lk-datum { font-family: var(--font-display); font-size: clamp(30px, 10vw, 56px); letter-spacing: 0.03em; text-transform: uppercase; line-height: 1; }
+.liga-karte .lk-stand { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px 14px; }
+.liga-karte .lk-punkte { font-family: var(--font-cond); font-weight: 700; font-size: clamp(40px, 14vw, 80px); line-height: 0.9; font-variant-numeric: tabular-nums; color: #fff; text-shadow: 0 0 30px rgba(70, 170, 215, 0.45); }
+.liga-karte .lk-legs { font-family: var(--font-cond); font-weight: 600; font-size: 0.95rem; color: var(--muted); letter-spacing: 0.04em; white-space: nowrap; }
+.liga-karte .lk-info { display: flex; flex-direction: column; gap: 4px; }
+.liga-karte .lk-zeile { font-family: var(--font-cond); font-weight: 600; font-size: 1rem; letter-spacing: 0.04em; color: var(--muted); }
+.liga-karte .lk-ort { display: flex; align-items: center; gap: 8px; color: #c9c0c0; font-size: 0.95rem; }
+.liga-karte .lk-ort svg { flex: none; width: 16px; height: 16px; color: var(--accent); }
+.liga-karte .lk-teams { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line-hell); border-bottom: 1px solid var(--line-hell); }
+.liga-karte .lk-team { min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+.liga-karte .lk-team .blink-logo, .liga-karte .lk-ini { width: 56px; height: 56px; border-radius: 50%; flex: none; }
+.liga-karte .lk-team .blink-logo { border: 2px solid var(--line); box-shadow: 0 0 20px var(--schein-stark); }
+.liga-karte .lk-ini { background: var(--bg-3); border: 1px solid var(--line-hell); display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-size: 1.2rem; color: var(--muted); }
+.liga-karte .lk-teamname { max-width: 100%; font-family: var(--font-cond); font-weight: 700; font-size: 1.05rem; letter-spacing: 0.02em; line-height: 1.1; text-wrap: balance; }
+.liga-karte .lk-rolle { font-family: var(--font-cond); font-weight: 600; font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.liga-karte .lk-vs { font-family: var(--font-display); font-size: 1.2rem; color: var(--dead); }
+.liga-karte .lk-kurz { display: none; font-family: var(--font-cond); font-weight: 700; font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.liga-karte .lk-kurz span { color: var(--dead); }
+.liga-karte .lk-crew { display: flex; flex-direction: column; gap: 8px; }
+.liga-karte .lk-crew:empty { display: none; }
+.liga-karte .lk-crew-titel { font-family: var(--font-cond); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.liga-karte .lk-crew-titel b.rot { color: var(--accent); }
+.liga-karte .lk-crew-titel b.gelb { color: var(--amber); }
+.liga-karte .lk-crew-titel b.gruen { color: #3fbf7f; }
+.liga-karte .lt-leute { display: flex; flex-wrap: wrap; gap: 6px 8px; margin: 0; }
+.liga-karte .lt-person { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 12px 0 5px; border-radius: 999px; background: var(--bg-3); border: 1px solid var(--line-hell); font-weight: 600; font-size: 0.9rem; white-space: nowrap; }
+.liga-karte .lk-status { font-family: var(--font-cond); font-weight: 600; font-size: 0.95rem; }
+.liga-karte .lk-status.offen { color: var(--amber); }
+.liga-karte .lk-status.voll { color: var(--laser-hell); text-shadow: 0 0 8px var(--laser-weich); }
+.liga-karte .lk-knoepfe { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; align-items: center; }
+.liga-karte .lk-knoepfe > :only-child { grid-column: 1 / -1; }
+.liga-karte .lk-knoepfe .btn { min-height: 48px; border-radius: 12px; font-family: var(--font-cond); font-weight: 700; font-size: 1rem; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.liga-karte .lk-knoepfe .btn.start { font-family: var(--font-display); font-weight: 400; letter-spacing: 0.08em; }
+.liga-karte .lk-knoepfe .btn.hell { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+.liga-karte .lk-knoepfe .lk-zuschauen { display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
+.liga-karte .lk-knoepfe .lk-zuschauen i { width: 0.5em; height: 0.5em; border-radius: 50%; background: var(--accent); animation: livePulse 1.4s ease-in-out infinite; }
+.liga-karte .lk-gast { color: var(--muted); font-size: 0.9rem; text-align: center; }
+@keyframes livePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+@media (prefers-reduced-motion: reduce) { .liga-karte .lk-live i, .liga-karte .lk-zuschauen i { animation: none; } }
+
+/* Die Liste rechts */
+.liga-liste-karte { display: flex; flex-direction: column; }
+#liga-liste { display: flex; flex-direction: column; gap: 5px; }
+.liga-spieltag {
+  display: grid; grid-template-columns: 30px 92px minmax(0, 1fr) auto; align-items: center; gap: 8px;
+  min-height: 48px; padding: 5px 10px; border-radius: 12px; background: var(--bg-3); border: 1px solid var(--line); cursor: pointer;
+}
+.liga-spieltag.wahl { background: var(--aktiv-flaeche); border-color: var(--aktiv-linie); }
+.liga-spieltag.vorbei, .liga-spieltag.gespielt, .liga-spieltag.frei { opacity: 0.6; cursor: default; }
+.liga-spieltag.gespielt { cursor: pointer; }
+.liga-spieltag.wahl.gespielt { opacity: 0.85; }
+.liga-spieltag .lt-nr { font-family: var(--font-cond); font-weight: 700; font-size: 1rem; color: var(--muted); }
+.liga-spieltag .lt-datum { display: flex; flex-direction: column; line-height: 1.05; }
+.liga-spieltag .lt-datum b { font-family: var(--font-cond); font-weight: 700; font-size: 1rem; }
+.liga-spieltag .lt-datum small { font-size: 0.72rem; color: var(--muted); }
+.liga-spieltag .lt-wer { min-width: 0; display: flex; flex-direction: column; line-height: 1.15; }
+.liga-spieltag .lt-gegner { min-width: 0; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.liga-spieltag .lt-ha { color: var(--muted); font-family: var(--font-cond); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-right: 6px; font-size: 0.85em; }
+.liga-spieltag .lt-unten { font-size: 0.72rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.liga-spieltag .lt-rechts { justify-self: end; font-family: var(--font-cond); font-weight: 700; font-size: 0.95rem; letter-spacing: 0.04em; white-space: nowrap; color: var(--muted); }
+.liga-spieltag .lt-rechts.fertig, .liga-spieltag .lt-rechts.live, .liga-spieltag .lt-rechts.rot { color: var(--accent); }
+.liga-spieltag .lt-rechts.fertig { font-size: 1.15rem; }
+.liga-spieltag .lt-rechts.gelb { color: var(--amber); }
+.liga-spieltag .lt-rechts.gruen { color: #3fbf7f; }
+
+@media (min-width: 700px) {
+  body.fix-setup #screen-liga.active { flex: 1 1 auto; min-height: 0; padding: clamp(6px, 1.8vh, 22px) 0 0; gap: clamp(6px, 1.4vh, 16px); }
+  body.fix-setup #screen-liga > * { flex: none; }
+  body.fix-setup #screen-liga > #liga-plan, body.fix-setup #screen-liga > #liga-statistik { flex: 1 1 auto; min-height: 0; }
+  #liga-plan { gap: clamp(6px, 1.4vh, 16px); }
+  body.fix-setup #liga-plan > .liga-spalten { flex: 1 1 auto; min-height: 0; }
+  .liga-spalten { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); grid-template-rows: minmax(0, 1fr); gap: clamp(8px, 1.4vw, 22px); }
+  #liga-statistik { display: flex; flex-direction: column; gap: clamp(6px, 1.4vh, 16px); }
+  #liga-statistik.hidden { display: none; }
+  #liga-statistik > #liga-team-chips { flex: none; }
+  body.fix-setup #screen-liga > .liga-zwei { flex: 1 1 auto; min-height: 0; }
+  .liga-zwei { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); grid-template-rows: minmax(0, 1fr); gap: clamp(8px, 1.4vw, 22px); }
+  .liga-zwei.hidden { display: none; }
+  .liga-zwei.breit { grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); }
+  .liga-zwei > * { min-height: 0; }
+  .liga-links, .liga-rechts { gap: clamp(8px, 1.4vh, 16px); }
+  #screen-liga .card { padding: clamp(10px, 1.8vh, 20px); }
+  /* Training */
+  #dienstdarts-karte .sehnsucht-logo { width: clamp(64px, 15vh, 160px); height: clamp(64px, 15vh, 160px); }
+  #dienstdarts-karte .dd-name { font-size: clamp(26px, 7vh, 76px); }
+  #dienstdarts-karte .dd-datum { font-size: clamp(16px, 3.6vh, 38px); }
+  #dienstdarts-karte .dd-antworten .btn { height: clamp(44px, 7.4vh, 76px); font-size: clamp(14px, 2.6vh, 28px); }
+  #dienstdarts-karte .dd-liste { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
+  .liga-uebung h2.gross { font-size: clamp(20px, 4.6vh, 50px); }
+  .liga-uebung .hint { font-size: clamp(12px, 2vh, 20px); }
+  .liga-uebung .setting > label { font-size: clamp(12px, 1.9vh, 19px); }
+  .liga-uebung .options button { height: clamp(40px, 7vh, 70px); font-size: clamp(13px, 2.4vh, 25px); }
+  .liga-uebung .options.drei button { height: clamp(52px, 9vh, 92px); }
+  .liga-uebung .options button small { font-size: clamp(10px, 1.6vh, 17px); }
+  .liga-uebung .btn.start { height: clamp(46px, 8vh, 84px); font-size: clamp(16px, 3vh, 32px); }
+  /* Tabelle */
+  .lt-karte .lt-scroll { flex: 1 1 auto; min-height: 0; overflow: auto; scrollbar-width: none; }
+  #liga-tabelle .standings th { font-size: clamp(10px, 1.6vh, 17px); }
+  #liga-tabelle .standings td { font-size: clamp(14px, 2.6vh, 28px); height: clamp(36px, 6.6vh, 70px); padding: 0 6px; }
+  #liga-tabelle .standings td.name { font-size: clamp(13px, 2.3vh, 24px); }
+  #lt-platz .lt-platz-zahl { font-size: clamp(56px, 16vh, 170px); }
+  #lt-platz .lt-platz-info { font-size: clamp(14px, 2.6vh, 28px); }
+  #lt-platz .lt-platz-sub { font-size: clamp(12px, 2vh, 21px); }
+  .lt-stand-karte { flex: 1 1 auto; }
+  .lt-stand-karte .btn { height: clamp(44px, 7.4vh, 76px); font-size: clamp(14px, 2.6vh, 28px); }
+  /* Statistik */
+  #liga-team-chips .chip { height: clamp(40px, 5.4vh, 56px); font-size: clamp(12px, 2.1vh, 22px); }
+  #liga-highlights { flex: 1 1 auto; min-height: 0; }
+  #liga-highlights .hl-liste { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
+  #liga-highlights .hl-titel { font-size: clamp(10px, 1.6vh, 17px); }
+  #liga-highlights .hl-wer b { font-size: clamp(12px, 2vh, 21px); }
+  #liga-highlights .hl-wer small { font-size: clamp(10px, 1.5vh, 15px); }
+  #liga-highlights .hl-wert { font-size: clamp(16px, 3.2vh, 34px); }
+  /* Kasse */
+  .kasse-stand .ks-saldo { font-size: clamp(44px, 12vh, 130px); }
+  .kasse-stand .ks-drei b { font-size: clamp(15px, 2.8vh, 30px); }
+  .kasse-erfassen { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
+  .kasse-liste { flex: 1 1 auto; min-height: 0; }
+  .kasse-liste .kasse-zeilen { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
+  /* Regeln */
+  .regel-spalte .regel-liste { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
+  .regel-spalte .regel summary { font-size: clamp(14px, 2.5vh, 26px); }
+  .regel-spalte .regel p { font-size: clamp(12px, 2vh, 20px); }
+
+  .liga-karte { min-height: 0; gap: clamp(8px, 1.6vh, 18px); padding: clamp(14px, 2.6vh, 30px) clamp(14px, 2vw, 32px); overflow: hidden; }
+  .liga-karte > * { flex: none; }
+  .liga-karte .lk-crew { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; padding-top: clamp(8px, 1.6vh, 18px); border-top: 1px solid var(--line-hell); gap: clamp(6px, 1vh, 12px); }
+  .liga-karte .lk-crew:empty { display: block; padding: 0; border: 0; }
+  .liga-karte .lk-etikett { font-size: clamp(11px, 2vh, 22px); }
+  .liga-karte .lk-live { font-size: clamp(13px, 2.4vh, 26px); padding: clamp(4px, 0.7vh, 8px) clamp(10px, 1.2vw, 16px); }
+  .liga-karte .lk-einzel { font-size: clamp(11px, 2vh, 22px); }
+  .liga-karte .lk-icons .icon-btn { width: clamp(44px, 6.4vh, 64px); height: clamp(44px, 6.4vh, 64px); }
+  .liga-karte .lk-datum { font-size: clamp(30px, 8.4vh, 92px); }
+  .liga-karte .lk-punkte { font-size: clamp(40px, 12vh, 130px); }
+  .liga-karte .lk-legs { font-size: clamp(12px, 2.3vh, 24px); }
+  .liga-karte .lk-zeile { font-size: clamp(13px, 2.4vh, 26px); }
+  .liga-karte .lk-ort { font-size: clamp(13px, 2.2vh, 22px); }
+  .liga-karte .lk-ort svg { width: clamp(14px, 2.4vh, 24px); height: clamp(14px, 2.4vh, 24px); }
+  .liga-karte .lk-teams { gap: clamp(8px, 1.4vw, 22px); padding: clamp(8px, 1.6vh, 18px) 0; }
+  .liga-karte .lk-team { gap: clamp(4px, 1vh, 12px); }
+  .liga-karte .lk-team .blink-logo, .liga-karte .lk-ini { width: clamp(44px, 10vh, 110px); height: clamp(44px, 10vh, 110px); }
+  .liga-karte .lk-ini { font-size: clamp(14px, 3.4vh, 36px); }
+  .liga-karte .lk-teamname { font-size: clamp(14px, 3vh, 32px); }
+  .liga-karte .lk-rolle { font-size: clamp(10px, 1.7vh, 18px); }
+  .liga-karte .lk-vs { font-size: clamp(16px, 3.6vh, 38px); }
+  .liga-karte .lk-crew-titel { font-size: clamp(11px, 1.9vh, 20px); }
+  .liga-karte .lt-person { height: clamp(40px, 7vh, 72px); padding: 0 clamp(12px, 1.4vw, 20px) 0 clamp(6px, 0.6vw, 10px); font-size: clamp(13px, 2.3vh, 24px); }
+  .liga-karte .lt-person .av.sm { width: clamp(28px, 5vh, 52px); height: clamp(28px, 5vh, 52px); font-size: clamp(10px, 1.7vh, 18px); }
+  .liga-karte .lk-status { font-size: clamp(13px, 2.2vh, 22px); }
+  .liga-karte .lk-knoepfe .btn { height: clamp(44px, 7.4vh, 76px); font-size: clamp(14px, 2.6vh, 28px); }
+
+  .liga-liste-karte { min-height: 0; padding: clamp(10px, 1.8vh, 20px); }
+  .liga-liste-karte > .karte-kopf { flex: none; margin-bottom: clamp(6px, 1.2vh, 14px); }
+  #screen-liga h2 { font-size: clamp(13px, 2.4vh, 26px); }
+  #screen-liga .karte-kopf .btn.small { height: clamp(40px, 5vh, 50px); min-height: 0; font-size: clamp(11px, 1.7vh, 17px); border-radius: 10px; }
+  #screen-liga .karte-kopf .btn.small .ico { width: clamp(12px, 2vh, 20px); height: clamp(12px, 2vh, 20px); }
+  #liga-liste { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; gap: clamp(4px, 0.7vh, 8px); }
+  .liga-spieltag { min-height: clamp(44px, 7.6vh, 78px); grid-template-columns: clamp(30px, 4vw, 52px) clamp(80px, 8vw, 116px) minmax(0, 1fr) auto; gap: clamp(6px, 0.8vw, 12px); padding: 0 clamp(10px, 1.2vw, 16px); }
+  .liga-spieltag .lt-nr { font-size: clamp(13px, 2.4vh, 26px); }
+  .liga-spieltag .lt-datum b { font-size: clamp(13px, 2.3vh, 24px); }
+  .liga-spieltag .lt-datum small { font-size: clamp(10px, 1.5vh, 15px); }
+  .liga-spieltag .lt-gegner { font-size: clamp(12px, 2.1vh, 21px); }
+  .liga-spieltag .lt-unten { font-size: clamp(10px, 1.5vh, 15px); }
+  .liga-spieltag .lt-rechts { font-size: clamp(12px, 2.1vh, 22px); }
+  .liga-spieltag .lt-rechts.fertig { font-size: clamp(16px, 3vh, 32px); }
+}
+/* Flach (Handy quer): nur der naechste Spieltag, in Kurzform; in den
+   anderen Reitern nur die linke Haelfte. */
+@media (min-width: 700px) and (max-height: 500px) {
+  .liga-spalten { grid-template-columns: minmax(0, 1fr); }
+  .liga-zwei, .liga-zwei.breit { grid-template-columns: minmax(0, 1fr); }
+  .liga-zwei > :nth-child(2) { display: none; }
+  .liga-liste-karte { display: none; }
+  .liga-karte .lk-teams { display: none; }
+  .liga-karte .lk-kurz { display: block; font-size: clamp(15px, 4.4vh, 26px); }
+}
+
 </style>
 </head>
 <body>
@@ -4924,6 +5471,20 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
   <!-- Erscheint nur, wenn die Seite von einem Server kommt (siehe js/auth.js). -->
   <button id="nav-konto" class="hidden" data-action="nav" data-screen="konto">Profil</button>
 </nav>
+
+<!-- Das Menue hinter dem Logo (Rangliste, Liga): Marke und die
+     Navigation untereinander - #nav wandert per JS hier hinein. -->
+<div id="logo-menu-overlay" class="boards-menu-overlay hidden">
+  <div class="boards-menu" id="logo-menu-panel">
+    <div class="marke">
+      <span class="blink-logo" role="img" aria-label="Blink 180"></span>
+      <div>
+        <div class="wort">Blink <span class="rot">180</span></div>
+        <div class="sub">Dart Turnier · est. 2026</div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ============ SETUP ============ -->
 <section id="screen-setup" class="screen">
@@ -5196,16 +5757,25 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
 
 <!-- ============ TURNIER-ÜBERSICHT ============ -->
 <section id="screen-tournament" class="screen">
-  <header class="app-header row">
-    <div class="kopf-mit-logo">
-      <span class="blink-logo sm" role="img" aria-label="Blink 180"></span>
+  <!-- Dieselbe Kopfleiste wie im Setup: Marke links, Navigation rechts
+       (die Leiste #nav wandert per JS hierher). -->
+  <div class="setup-kopf" id="turnier-kopf">
+    <div class="marke">
+      <span class="blink-logo" role="img" aria-label="Blink 180"></span>
       <div>
-        <h1>Turnier</h1>
-        <p class="sub" id="tournament-format"></p>
+        <div class="wort">Blink <span class="rot">180</span></div>
+        <div class="sub">Dart Turnier · est. 2026</div>
       </div>
+    </div>
+  </div>
+  <header class="app-header row turnier-titel">
+    <div class="titel-zeile">
+      <h1>Turnier</h1>
+      <p class="sub" id="tournament-format"></p>
     </div>
     <button class="btn ghost small" data-action="to-setup">Verlassen</button>
   </header>
+  <div class="turnier-spalten">
 
   <!-- Links die naechsten Spiele (gestartet wird direkt an der Partie),
        rechts Tabelle und Statistik - am Handy alles untereinander,
@@ -5237,48 +5807,70 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
       </table>
     </div>
 
-    <div class="card">
+    <div class="card" id="karte-turnier-statistik">
       <h2>Turnier-Statistik</h2>
       <div id="stats-grid" class="stats-grid"></div>
     </div>
   </div>
+  </div>
 </section>
 
 <!-- ============ RANGLISTE ============ -->
-<section id="screen-boards" class="screen">
-  <header class="app-header kopf-mit-logo">
-    <span class="blink-logo sm" role="img" aria-label="Blink 180"></span>
-    <div>
+<section id="screen-boards" class="screen boards-host">
+  <!-- Entwurf "Rangliste Redesign" (Okt. 2026): eine Kopfzeile - das Logo
+       oeffnet das Menue (die Leiste #nav wandert per JS in den Ausklapp-
+       Kasten), daneben Titel und Spielart, rechts der Spielart-Umschalter.
+       Darunter drei Spalten: Kategorien, Rangliste, Verlauf und Rekorde. -->
+  <div class="boards-kopf">
+    <button class="boards-logo" data-action="logo-menu" aria-label="Menü öffnen">
+      <span class="blink-logo sm" role="img" aria-label="Blink 180"></span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
+    </button>
+    <div class="titel-zeile">
       <h1>Rangliste</h1>
       <p class="sub" id="boards-sub"></p>
     </div>
-  </header>
-
-  <div class="options" id="board-mode">
-    <button data-action="board-mode" data-value="501">Classic</button>
-    <button data-action="board-mode" data-value="liga">Liga</button>
-    <button data-action="board-mode" data-value="cricket">Cricket</button>
-    <button data-action="board-mode" data-value="rtw">Round the World</button>
-    <button data-action="board-mode" data-value="finisher">Finisher</button>
+    <div class="options kopf-reiter" id="board-mode">
+      <button data-action="board-mode" data-value="501">Classic</button>
+      <button data-action="board-mode" data-value="cricket">Cricket</button>
+      <button data-action="board-mode" data-value="rtw">RTW</button>
+      <button data-action="board-mode" data-value="finisher">Finisher</button>
+      <button data-action="board-mode" data-value="kaiwen">Kaiwen</button>
+      <button data-action="board-mode" data-value="hunter">Hunter</button>
+    </div>
   </div>
 
-  <!-- Reihenfolge bewusst: erst die Unterfilter (volle Breite), dann die
-       Liste – am iPad rueckt der Verlauf per Grid daneben. -->
-  <div class="chips" id="board-chips"></div>
-  <div class="card no-pad"><div id="board-list" class="board-list"></div></div>
-  <p class="hint" id="board-hint"></p>
+  <div class="boards-koerper">
+    <!-- Links alle Kategorien untereinander (am Handy hochkant als Chips). -->
+    <div class="chips boards-kats" id="board-chips"></div>
 
-  <div class="card" id="board-chart"></div>
+    <div class="card boards-liste">
+      <div class="karte-kopf"><h2 id="board-titel">Rangliste</h2><span class="hint" id="board-hint"></span><button class="btn ghost small nur-flach" data-action="board-log">Alle Spiele ›</button></div>
+      <div id="board-list" class="board-list"></div>
+    </div>
 
-  <div class="card" id="board-rekorde">
-    <h2>Rekorde</h2>
-    <div id="records" class="records"></div>
+    <div class="boards-seite">
+      <div class="card" id="board-chart"></div>
+      <div class="card hidden" id="liga-highlights"></div>
+      <div class="card" id="board-rekorde">
+        <div class="karte-kopf"><h2>Rekorde</h2><button class="btn ghost small" data-action="board-log" id="board-log-knopf">Alle Spiele ›</button></div>
+        <div id="records" class="records"></div>
+      </div>
+    </div>
   </div>
 
+  <!-- Kaiwen und Hunter: die Auswertung kommt mit dem Spiel. -->
+  <div class="card boards-bald hidden" id="board-bald">
+    <span class="bald-titel">Coming soon</span>
+    <span class="bald-text" id="board-bald-text"></span>
+  </div>
+
+  <!-- Der Spielverlauf: "Alle Spiele" oeffnet ihn anstelle der Spalten. -->
   <div class="card" id="board-log">
-    <h2 id="log-title">Alle Spiele</h2>
+    <div class="karte-kopf"><h2 id="log-title">Alle Spiele</h2><button class="btn ghost small" data-action="board-log-zu">‹ Rangliste</button></div>
     <div id="match-log"></div>
   </div>
+
 </section>
 
 <!-- ============ LIGA ============ -->
@@ -5287,73 +5879,95 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
      die Zusagen liegen auf dem Server – ohne Server bleibt der Spielplan
      lesbar, nur das Eintragen entfällt. -->
 <section id="screen-liga" class="screen">
-  <header class="app-header row">
-    <div class="kopf-mit-logo">
+  <!-- Entwurf "Liga · Spielplan" (Okt. 2026): Kopf wie in der Rangliste
+       (Logo-Menue, Titel, Reiter als Felder), links gross der naechste bzw.
+       gewaehlte Spieltag, rechts alle Spieltage kompakt. -->
+  <div class="boards-kopf liga-kopf">
+    <button class="boards-logo" data-action="logo-menu" aria-label="Menü öffnen">
       <span class="blink-logo sm" role="img" aria-label="Blink 180"></span>
-      <div>
-        <h1>Liga</h1>
-        <p class="sub" id="liga-sub"></p>
-      </div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
+    </button>
+    <div class="titel-zeile">
+      <h1>Liga</h1>
+      <p class="sub" id="liga-sub"></p>
     </div>
-    <!-- Alle Termine auf einmal in den Kalender; je Termin gibt es das
-         gleiche Icon noch einmal einzeln. -->
-    <button class="icon-btn rund" data-action="liga-ical" title="Alle Termine in den Kalender"
-            aria-label="Alle Termine in den Kalender"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></button>
-  </header>
-
-  <div class="konto-tabs fuenf" id="liga-tabs">
-    <button data-action="liga-tab" data-tab="plan" class="active">Spielplan</button>
-    <button data-action="liga-tab" data-tab="training">Training</button>
-    <button data-action="liga-tab" data-tab="tabelle">Tabelle</button>
-    <button data-action="liga-tab" data-tab="kasse">Kasse</button>
-    <button data-action="liga-tab" data-tab="regeln">Regeln</button>
+    <div class="options kopf-reiter" id="liga-tabs">
+      <button data-action="liga-tab" data-tab="plan" class="active">Spielplan</button>
+      <button data-action="liga-tab" data-tab="training">Training</button>
+      <button data-action="liga-tab" data-tab="tabelle">Tabelle</button>
+      <button data-action="liga-tab" data-tab="statistik">Statistik</button>
+      <button data-action="liga-tab" data-tab="kasse">Kasse</button>
+      <button data-action="liga-tab" data-tab="regeln">Regeln</button>
+    </div>
   </div>
 
   <div id="liga-plan">
     <p class="hint hidden" id="liga-hinweis"></p>
-    <div id="liga-liste"></div>
+    <div class="liga-spalten">
+      <!-- Links: der gewaehlte Spieltag gross (Datum, Gegner, Ort, Team,
+           Zusage und Start) - oder das LIVE-Schild, solange gespielt wird. -->
+      <div class="liga-karte" id="liga-karte"></div>
+      <!-- Rechts: alle Spieltage, ein Tipp zeigt ihn links gross. -->
+      <div class="card liga-liste-karte">
+        <div class="karte-kopf"><h2>Alle Spieltage</h2>
+          <button class="btn ghost small" data-action="liga-ical" title="Alle Termine in den Kalender"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span>Alle in den Kalender</span></button>
+        </div>
+        <div id="liga-liste"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistik: die Liga-Auswertung der Rangliste (Kategorien, Liste,
+       Verlauf, Rekorde) wandert per JS hierher, solange der Reiter offen ist. -->
+  <div id="liga-statistik" class="boards-host hidden">
+    <!-- Team-Auswahl (unsere, ganze Liga, Gegner) als Chips ueber den Spalten. -->
+    <div id="liga-team-chips" class="chips"></div>
   </div>
 
   <!-- DiensDarts: das Dienstags-Training in der Sehnsucht - mit Umfrage,
        wer kommt, und darunter dem Uebungs-Ligaspiel (zwei eigene Teams
        oder Bots), das ablaeuft wie ein echtes: 16 Einzel, zwei Scheiben,
        Spielbericht - nur ohne Liga-Wertung. -->
-  <div id="liga-training" class="hidden">
-    <div class="card" id="dienstdarts-karte"></div>
-    <div class="card">
-      <h2>Übungs-Ligaspiel</h2>
-      <p class="hint">Der komplette Liga-Ablauf zum Üben: 16 Einzel in Bogen-Reihenfolge,
-        zwei Scheiben, Team-Stand und Spielbericht – gegen ein zweites eigenes Team oder
-        gegen Bots in drei Stärken. Zählt nirgends in die Liga-Wertung.</p>
-      <button class="btn primary full" data-action="uebung-start">Übungsspiel aufstellen</button>
-    </div>
+  <div id="liga-training" class="hidden liga-zwei">
+    <div class="liga-karte weiss" id="dienstdarts-karte"></div>
+    <div class="card liga-uebung" id="uebung-karte"></div>
   </div>
 
   <!-- Die Ligatabelle: von Hand gepflegt (die Liga veröffentlicht die
        Ergebnisse, wir tragen sie ab), für alle Angemeldeten derselbe Stand. -->
-  <div id="liga-tabelle" class="hidden">
-    <p class="hint">Die Tabelle pflegen wir von Hand nach den Veröffentlichungen der
-      Ligaleitung: Zellen antippen, Werte eintragen, speichern – dann sehen alle
-      denselben Stand.</p>
-    <div class="card no-pad">
-      <table class="standings" id="lt-tabelle"></table>
+  <div id="liga-tabelle" class="hidden liga-zwei breit">
+    <div class="card lt-karte">
+      <div class="karte-kopf"><h2>Ligatabelle</h2><span class="hint">Zelle antippen zum Ändern</span></div>
+      <div class="lt-scroll"><table class="standings" id="lt-tabelle"></table></div>
     </div>
-    <button class="btn primary full hidden" id="lt-speichern" data-action="liga-tabelle-speichern">Tabelle speichern</button>
-    <p class="hint" id="lt-stand"></p>
+    <div class="liga-rechts">
+      <div class="liga-karte weiss" id="lt-platz"></div>
+      <div class="card lt-stand-karte">
+        <span class="lk-crew-titel">Stand</span>
+        <p class="hint">Von Hand gepflegt nach den Veröffentlichungen der Ligaleitung.
+          Gespeichert sehen alle denselben Stand.</p>
+        <p class="hint" id="lt-stand"></p>
+        <div class="luft"></div>
+        <button class="btn hell full hidden" id="lt-speichern" data-action="liga-tabelle-speichern">Tabelle speichern</button>
+      </div>
+    </div>
   </div>
 
   <!-- Die Vereinskasse: ein Kassenbuch fuer alle - Einzahlung oder
        Ausgabe erfassen, der Bestand rechnet sich von selbst. -->
-  <div id="liga-kasse" class="hidden">
-    <div class="card" id="kasse-karte"></div>
+  <div id="liga-kasse" class="hidden liga-zwei">
+    <div class="liga-links" id="kasse-karte"></div>
+    <div class="liga-rechts" id="kasse-buch"></div>
   </div>
 
   <!-- Regeln und FAQ: fest im HTML, verständlich zusammengefasst aus der
        SDM-SWO (Stand 22.01.2026) und den WDF Playing & Tournament Rules –
        die Originale sind ganz unten verlinkt. Aufklappbar, damit die Seite
        nicht zur Tapete wird. -->
-  <div id="liga-regeln" class="hidden">
+  <div id="liga-regeln" class="hidden liga-zwei">
+    <div class="card regel-spalte">
     <h2>Für Neue: die wichtigsten Fragen</h2>
+    <div class="regel-liste">
 
     <details class="card regel">
       <summary>Wie läuft ein Ligaspieltag ab?</summary>
@@ -5480,7 +6094,11 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
         Eine gewonnene Partie (das ganze Ligaspiel) bringt 2 Punkte in der Ligatabelle.</p>
     </details>
 
+    </div>
+    </div>
+    <div class="card regel-spalte">
     <h2>Aus der Regelecke (von Udo)</h2>
+    <div class="regel-liste">
 
     <details class="card regel">
       <summary>Wurf: keine wurffertige Haltung, solange der Gegner vorn ist</summary>
@@ -5546,6 +6164,8 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
         <li><a href="https://dartswdf.com/storage/uploads/fb05b306-c92c-4f08-b512-affb092a1b3d/2018-02-28_WDF_Playing_and_Tournament_Rules_rev20.pdf" target="_blank" rel="noopener">WDF Playing &amp; Tournament Rules</a> (PDF, englisch)</li>
       </ul>
     </details>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -5572,13 +6192,20 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
 
 <!-- ============ BULL-OFF ============ -->
 <section id="screen-bulloff" class="screen center">
-  <header class="app-header">
-    <div class="bull-ring" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="32" cy="32" r="28"></circle><circle cx="32" cy="32" r="19"></circle><circle cx="32" cy="32" r="10"></circle><circle cx="32" cy="32" r="3" fill="currentColor"></circle></svg></div>
-    <h1>Bull werfen</h1>
-    <p class="sub" id="bulloff-sub">Wer war näher am Bull und darf anfangen?</p>
+  <!-- Entwurf "Ausbullen" (Okt. 2026): Zurueck oben links, Zielscheibe und
+       Titel mittig, rechts der Zusammenhang (Spiel 3 von 6). Der
+       Zurueck-Knopf bleibt direktes Kind des Screens - Tastatur und Tests
+       finden ihn so. -->
+  <header class="app-header bo-kopf">
+    <div class="bo-titelzeile">
+      <div class="bull-ring" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="32" cy="32" r="28"></circle><circle cx="32" cy="32" r="19"></circle><circle cx="32" cy="32" r="10"></circle><circle cx="32" cy="32" r="3" fill="currentColor"></circle></svg></div>
+      <h1>Ausbullen</h1>
+    </div>
+    <p class="sub" id="bulloff-sub">Wer war näher am Bull? Antippen – der wirft an.</p>
   </header>
+  <span class="bo-ctx" id="bulloff-ctx"></span>
   <div id="bulloff-buttons" class="bulloff"></div>
-  <button class="btn ghost full" data-action="to-tournament">Zurück</button>
+  <button class="btn ghost bo-zurueck" data-action="to-tournament"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 12H7M11.5 6.5L6 12l5.5 5.5"></path></svg><span>Zurück</span></button>
 </section>
 
 <!-- ============ SPIEL ============ -->
@@ -6395,7 +7022,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       { id: 'st11', nr: 11, tag: '2027-03-16', heim: 'Blink 180', gast: 'Dart Artists Germering II', ort: 'Bar Sehnsucht' },
       { id: 'st12', nr: 12, tag: '2027-04-06', heim: 'Blink 180', gast: 'Voodoo Darters', ort: 'Bar Sehnsucht' },
       { id: 'st13', nr: 13, tag: '2027-04-20', heim: 'd`Haberer 2', gast: 'Blink 180', ort: 'Heuboden' },
-      { id: 'st14', nr: 14, tag: '2027-04-30', heim: 'DCO', gast: 'Blink 180', ort: 'Poseidon Baldham' },
+      { id: 'st14', nr: 14, tag: '2027-04-30', heim: 'DCO', gast: 'Blink 180', ort: 'Gasthof Gut Keferloh' },
       { id: 'st15', nr: 15, tag: '2027-05-11', heim: 'Blink 180', gast: 'Treff ma nix', ort: 'Bar Sehnsucht' },
       { id: 'st16', nr: 16, tag: '2027-06-04', heim: 'TSV Oberpframmern', gast: 'Blink 180', ort: 'Gaststätte Anstoss' },
       { id: 'st17', nr: 17, tag: '2027-06-08', heim: 'Blink 180', gast: 'FT Gern Darts II', ort: 'Bar Sehnsucht' },
@@ -9570,9 +10197,27 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var navFor = gesperrt() ? null : NAV_SCREENS[screen];
     /* Im Setup steht die Navigation in der Kopfzeile neben der Marke,
        ueberall sonst wie gehabt ueber dem Inhalt. */
-    var navEl = $('nav'), kopf = $('setup-kopf');
-    if (kopf && screen === 'setup' && navEl.parentElement !== kopf) kopf.appendChild(navEl);
-    else if (kopf && screen !== 'setup' && navEl.parentElement === kopf) document.body.insertBefore(navEl, $('screen-setup'));
+    var navEl = $('nav');
+    var kopf = screen === 'setup' ? $('setup-kopf') : screen === 'tournament' ? $('turnier-kopf')
+      : screen === 'boards' || screen === 'liga' ? $('logo-menu-panel') : null;
+    if (kopf && navEl.parentElement !== kopf) kopf.appendChild(navEl);
+    else if (!kopf && navEl.parentElement !== document.body) document.body.insertBefore(navEl, $('screen-setup'));
+    /* Das Logo-Menue gibt es nur auf Rangliste und Liga, das •••-Menue nur in
+       den Spielbildern - ueberall sonst wird ein haengengebliebenes Menue
+       (Zurueck-Taste aus dem offenen Menue) zugeklappt. */
+    var mitMenue = screen === 'boards' || screen === 'liga' || screen === 'game' || screen === 'cricket' || screen === 'rtw' || screen === 'finisher';
+    if (!mitMenue) UI.menu = false;
+    $('logo-menu-overlay').classList.toggle('hidden', !(UI.menu && (screen === 'boards' || screen === 'liga')));
+    /* Die Liga-Auswertung wohnt im Statistik-Reiter der Liga; ueberall
+       sonst steht der Ranglisten-Koerper in seinem eigenen Screen. */
+    var boardsHost = screen === 'liga' && (UI.ligaTab || 'plan') === 'statistik' ? $('liga-statistik') : $('screen-boards');
+    var koerper = document.querySelector('.boards-koerper');
+    if (koerper && koerper.parentElement !== boardsHost) {
+      if (boardsHost.id === 'screen-boards') { boardsHost.insertBefore(koerper, $('board-bald')); boardsHost.insertBefore($('board-log'), $('board-bald')); }
+      else { boardsHost.appendChild(koerper); boardsHost.appendChild($('board-log')); }
+    }
+    /* Beim Betreten der Liga zeigt der Spielplan wieder den naechsten Spieltag. */
+    if (screen !== 'liga') UI.ligaWahl = null;
     $('nav').classList.toggle('hidden', !navFor);
     if (navFor) {
       $('nav').querySelectorAll('button').forEach(function (b) {
@@ -9626,7 +10271,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     document.body.classList.toggle('rand-aus', S.screen === 'cricket' || S.screen === 'game' || S.screen === 'rtw' || S.screen === 'finisher');
     /* Das Startbild steht am Tablet und quergedrehten Handy fest im Rahmen,
        innen scrollen nur Spielerliste und Einstellungen (body.fix-setup). */
-    document.body.classList.toggle('fix-setup', S.screen === 'setup');
+    document.body.classList.toggle('fix-setup', S.screen === 'setup' || S.screen === 'tournament' || S.screen === 'bulloff' || S.screen === 'boards' ||
+      S.screen === 'liga');
     if (S.screen === 'setup') { gaesteAufraeumen(); renderSetup(); }
     /* Der Hintergrundtakt laeuft nur da, wo man ihn auch sieht: im
        Turnierbildschirm. Sonst fragt die App den ganzen Abend nach Daten,
@@ -9866,7 +10512,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
        Dart). Die Grenze selbst erscheint nur bei Gemischt. */
     var eingabe = S.settings.tastatur === 1 ? 2 : S.settings.dartModeFrom > 0 ? 1 : 0;
     document.querySelectorAll('#screen-setup [data-action="eingabe"]').forEach(function (b) {
-      b.classList.toggle('active', Number(b.getAttribute('data-value')) === eingabe);
+      /* Der Finisher kennt kein Gemischt - dort heisst alles ohne Tastatur Standard. */
+      var ziel = b.closest('#eingabe-wahl-fin') ? (eingabe === 2 ? 2 : 0) : eingabe;
+      b.classList.toggle('active', Number(b.getAttribute('data-value')) === ziel);
     });
     var dartmode = $('setting-dartmode');
     if (dartmode) dartmode.classList.toggle('hidden', eingabe !== 1);
@@ -10148,7 +10796,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         (m.done || m.void
           ? (liga && m.kampflos
             ? '<button class="go wo" data-action="liga-kampflos" data-id="' + esc(m.id) + '">ändern</button>'
-            : '')
+            : m.done && !m.void ? '<span class="fertig">fertig</span>' : '')
           : m.belegtVon && Date.now() - (m.belegtSeit || Date.now()) > ((S.tour && S.tour.claimFrist) || 10 * 60000)
             ? '<span class="belegt">bei ' + esc(m.belegtVon) + ' hängengeblieben?</span>' +
               '<button class="go" data-action="open-match" data-id="' + esc(m.id) + '">Übernehmen</button>'
@@ -10310,6 +10958,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
   function renderBoards() {
     var mode = UI.boardMode;
+    /* Die Liga-Auswertung gibt es nur im Statistik-Reiter der Liga-Seite -
+       die Rangliste selbst faellt auf Classic zurueck. Das muss vor allem
+       anderen feststehen, sonst rechnet ein Zeichnen mit dem falschen Modus. */
+    var imLiga = S.screen === 'liga';
+    if (imLiga) mode = UI.boardMode = 'liga';
+    else if (mode === 'liga') mode = UI.boardMode = '501';
     /* Der Liga-Reiter rechnet dieselben Classic-Werte, aber nur über
        Ligaspiele – eigene Karriere-Karte statt der großen. */
     var map = mode === 'liga' ? careerLiga() : career();
@@ -10321,13 +10975,26 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       teamDaten = ligaTeamDaten();
       if (!teamDaten.teams.length || (ligaTeam !== 'alle' && ligaTeam !== 'wir' && teamDaten.teams.indexOf(ligaTeam) < 0)) ligaTeam = UI.ligaTeam = 'wir';
     }
-    var defs = boardsFor(mode);
-    if (!defs.some(function (b) { return b.key === UI.board; })) UI.board = defs[0].key;
-    var def = boardDef(UI.board);
-
     $('board-mode').querySelectorAll('button').forEach(function (b) {
       b.classList.toggle('active', b.getAttribute('data-value') === mode);
     });
+    /* Spielverlauf anstelle der Spalten - im jeweiligen Wirt. */
+    var host = document.querySelector('.boards-koerper').parentElement;
+    host.classList.toggle('log', !!UI.boardLog);
+    /* Kaiwen und Hunter: noch kein Spiel, noch keine Auswertung. */
+    var bald = mode === 'kaiwen' || mode === 'hunter';
+    $('board-bald').classList.toggle('hidden', !bald);
+    document.querySelector('.boards-koerper').classList.toggle('hidden', bald);
+    if (bald) {
+      $('boards-sub').textContent = kindName(mode);
+      $('board-bald-text').textContent = 'Die ' + kindName(mode) + '-Auswertung kommt mit dem Spiel.';
+      host.classList.remove('log');
+      return;
+    }
+    var defs = boardsFor(mode);
+    if (!defs.some(function (b) { return b.key === UI.board; })) UI.board = defs[0].key;
+    var def = boardDef(UI.board);
+    $('board-titel').textContent = def.label;
 
     var ligaSpieltage = wertbareHistorie().filter(function (h) { return h.liga && !h.liga.uebung && h.matches; });
     var log = allGamesLog().filter(function (row) { return row.kind === mode; });
@@ -10342,21 +11009,29 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         : modeName + ' · noch keine Spiele';
 
     /* Verlauf: eine farbige Linie je Spieler. */
-    var chartLabel = (mode === '501' || mode === 'liga' ? '3-Dart-Average' : 'MPR') + ' – je Spieler die letzten ' + CHART_GAMES + ' Spiele';
+    var chartLabel = (mode === '501' || mode === 'liga' ? '3-Dart-Average' : 'MPR') + ' – letzte ' + CHART_GAMES + ' Spiele';
     var chart = mode === 'rtw' ? null : lineChart(chartSeries(mode), chartLabel);
     /* Der Verlauf zeigt unsere Spieler - bei einer anderen Team-Auswahl weg. */
-    $('board-chart').classList.toggle('hidden', mode === 'rtw' || mode === 'finisher' || ligaTeam !== 'wir');
+    $('board-chart').classList.toggle('hidden', mode === 'rtw' || mode === 'finisher' || ligaTeam !== 'wir' || imLiga);
     if (mode !== 'rtw') {
       $('board-chart').innerHTML = '<h2>' + chartLabel + '</h2>' +
         (chart || '<p class="hint">Ab dem zweiten Spiel wird hier der Verlauf gezeichnet.</p>');
     }
 
-    $('board-chips').innerHTML = (teamDaten && teamDaten.teams.length
+    /* Im Liga-Reiter stehen die Team-Chips ueber den Spalten, rechts die
+       Highlights der Saison statt Verlauf und Rekorde. */
+    var teamChips = teamDaten && teamDaten.teams.length
       ? '<div class="liga-team-wahl">' + [['wir', LIGA.team], ['alle', 'Gesamte Liga']].concat(teamDaten.teams.map(function (t) { return [t, t]; }))
           .map(function (t) {
             return '<button class="chip ' + (t[0] === ligaTeam ? 'active' : '') + '" data-action="liga-team" data-team="' + esc(t[0]) + '">' + esc(t[1]) + '</button>';
           }).join('') + '</div>'
-      : '') + defs.map(function (b) {
+      : '';
+    var chipsOben = $('liga-team-chips');
+    if (chipsOben) { chipsOben.innerHTML = imLiga ? teamChips : ''; chipsOben.classList.toggle('hidden', !imLiga || !teamChips); }
+    $('board-rekorde').classList.toggle('hidden', imLiga);
+    $('liga-highlights').classList.toggle('hidden', !imLiga);
+    if (imLiga) $('liga-highlights').innerHTML = ligaHighlightsSaisonHtml();
+    $('board-chips').innerHTML = (imLiga ? '' : teamChips) + defs.map(function (b) {
       return '<button class="chip ' + (b.key === UI.board ? 'active' : '') + '" data-action="board" data-key="' + b.key + '">' + b.label + '</button>';
     }).join('');
 
@@ -10376,12 +11051,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       return alle;
     };
     var rows = teamRanking(def);
-    var medals = ['🥇', '🥈', '🥉'];
+    /* Platz 1 bis 3 in Medaillenfarbe (Gold, Silber, Bronze), der Beste leuchtet. */
     $('board-list').innerHTML = rows.length ? rows.map(function (st, i) {
       var gegner = String(st.id).indexOf('lg|') === 0;
       return '<div class="board-row ' + (i === 0 ? 'top' : '') + '"' +
         (gegner ? '' : ' data-action="open-profile" data-id="' + esc(st.id) + '" role="button" tabindex="0"') + '>' +
-        '<div class="pos">' + (medals[i] || (i + 1) + '.') + '</div>' +
+        '<div class="pos' + (i < 3 ? ' m' + (i + 1) : '') + '">' + (i + 1) + '</div>' +
         avatarHTML(gegner ? { id: st.id, name: st.name, hue: 210 } : profile(st.id), 'sm') +
         '<div class="nm">' + esc(st.name) +
           (ligaTeam === 'alle' && st.team ? '<span class="board-team">' + esc(st.team) + '</span>' : '') + '</div>' +
@@ -10426,6 +11101,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       : mode === 'liga' ? 'Alle Ligaspiele'
       : mode === 'cricket' ? 'Alle Cricket-Spiele'
       : mode === 'finisher' ? 'Alle Finisher-Spiele' : 'Alle Trainings';
+    $('board-log-knopf').textContent = $('log-title').textContent + ' ›';
 
     /* Ligaspiele: eine Zeile je Spieltag mit dem Team-Ergebnis. */
     if (mode === 'liga') {
@@ -10668,6 +11344,19 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   var LIGA_TEAMS = ['Blink 180', 'TSV Dachau 1865 4', 'Dart Artists Germering II',
     'Voodoo Darters', 'd`Haberer 2', 'DCO', 'Treff ma nix', 'TSV Oberpframmern',
     'FT Gern Darts II'];
+  /* Vorbelegung der Tabelle, solange noch niemand auf dem Server gespeichert
+     hat: Stand der Ligaleitung nach dem 1. Spieltag (Oktober 2026). */
+  var LIGA_TABELLE_START = [
+    { team: 'TSV Dachau 1865 4', spiele: 1, g: 1, u: 0, v: 0, legs: '20:15', einzel: '9:7', punkte: 2 },
+    { team: 'Treff ma nix', spiele: 1, g: 1, u: 0, v: 0, legs: '21:17', einzel: '9:7', punkte: 2 },
+    { team: 'd`Haberer 2', spiele: 1, g: 0, u: 1, v: 0, legs: '20:20', einzel: '8:8', punkte: 1 },
+    { team: 'Voodoo Darters', spiele: 1, g: 0, u: 1, v: 0, legs: '20:20', einzel: '8:8', punkte: 1 },
+    { team: 'DCO', spiele: 1, g: 0, u: 0, v: 1, legs: '17:21', einzel: '7:9', punkte: 0 },
+    { team: 'Blink 180', spiele: 1, g: 0, u: 0, v: 1, legs: '15:20', einzel: '7:9', punkte: 0 },
+    { team: 'Dart Artists Germering II', spiele: 0, g: 0, u: 0, v: 0, legs: '0:0', einzel: '0:0', punkte: 0 },
+    { team: 'TSV Oberpframmern', spiele: 0, g: 0, u: 0, v: 0, legs: '0:0', einzel: '0:0', punkte: 0 },
+    { team: 'FT Gern Darts II', spiele: 0, g: 0, u: 0, v: 0, legs: '0:0', einzel: '0:0', punkte: 0 }
+  ];
 
   function ligaTabelleLaden() {
     if (!window.DartSync || !window.DartSync.liga || !window.DartSync.liga.tabelle) return;
@@ -10790,32 +11479,31 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
     /* Gruendungsbeitrag je Mitglied: bezahlt oder offen. */
     var mitglieder = (d && d.mitglieder) || [];
-    var beitragHtml = mitglieder.length ? '<div class="kasse-beitraege"><h3>Gründungsbeitrag ' + euro(konfig.beitrag) + ' pro Kopf</h3>' +
-      mitglieder.map(function (m) {
+    var offen = mitglieder.filter(function (m) { return m.gezahlt < konfig.beitrag; }).length;
+    var beitragHtml = mitglieder.length ? '<div class="kasse-beitraege"><div class="karte-kopf"><span class="lk-crew-titel">Gründungsbeitrag ' + euro(konfig.beitrag) + ' pro Kopf</span>' +
+      '<span class="kb-offen ' + (offen ? 'gelb' : 'gruen') + '">' + (offen ? offen + ' offen' : 'alle bezahlt') + '</span></div>' +
+      '<div class="lt-leute">' + mitglieder.map(function (m) {
         var voll = m.gezahlt >= konfig.beitrag;
-        return '<div class="kb-zeile ' + (voll ? 'voll' : '') + '">' +
+        return '<span class="lt-person kb-zeile ' + (voll ? 'voll' : 'offen') + '">' +
           avatarHTML({ id: m.id, name: m.name, avatar: m.avatar, hue: m.hue }, 'sm') +
           '<span class="kb-name">' + esc(m.name) + '</span>' +
-          '<span class="kb-status">' + (voll ? '✓ bezahlt' + (m.am ? ' · ' + datumDE(m.am) : '') : m.gezahlt > 0 ? euro(m.gezahlt) + ' von ' + euro(konfig.beitrag) : 'offen') + '</span>' +
-          (!voll && (wart || m.id === ich) ? '<button class="btn ghost small" data-action="kasse-beitrag" data-id="' + esc(m.id) + '" data-name="' + esc(m.name) + '">' + (m.id === ich && !wart ? 'Ich habe eingezahlt' : 'Bezahlt') + '</button>' : '') +
-          '</div>';
-      }).join('') + '</div>' : '';
+          '<span class="kb-status">' + (voll ? '✓' : m.gezahlt > 0 ? euro(m.gezahlt) : 'offen') + '</span>' +
+          (!voll && (wart || m.id === ich) ? '<button class="btn ghost small" data-action="kasse-beitrag" data-id="' + esc(m.id) + '" data-name="' + esc(m.name) + '">' + (m.id === ich && !wart ? 'Eingezahlt' : 'Bezahlt') + '</button>' : '') +
+          '</span>';
+      }).join('') + '</div></div>' : '';
 
     $('kasse-karte').innerHTML =
-      '<h2>Kassenbuch</h2>' +
-      '<div class="kasse-kopf">' +
-        '<span>Kassenjahr <b>' + konfig.jahr + '</b></span>' +
-        '<span>Kassenwart/in <b>' + esc(((d && d.kassenwarte) || []).join(', ') || 'noch nicht festgelegt') + '</b></span>' +
-        '<span>Anfangsbestand <b>' + euro(konfig.anfangsbestand) + '</b></span>' +
+      '<div class="liga-karte weiss kasse-stand">' +
+        '<div class="lk-kopf"><span class="lk-crew-titel">Kassenstand · Kassenjahr ' + konfig.jahr + '</span>' +
+          '<span class="hint">Kassenwart/in: ' + esc(((d && d.kassenwarte) || []).join(', ') || 'noch nicht festgelegt') + '</span></div>' +
+        '<span class="ks-saldo ' + (saldo < 0 ? 'minus' : 'plus') + '">' + euro(saldo) + '</span>' +
+        '<div class="ks-drei">' +
+          '<div><span class="lk-crew-titel">Anfang</span><b>' + euro(konfig.anfangsbestand) + '</b></div>' +
+          '<div><span class="lk-crew-titel">Einnahmen</span><b class="plus">+ ' + euro(summeEin) + '</b></div>' +
+          '<div><span class="lk-crew-titel">Ausgaben</span><b class="minus">− ' + euro(summeAus) + '</b></div>' +
+        '</div>' +
       '</div>' +
-      '<div class="kasse-saldo"><span class="hint">Kassenstand</span>' +
-        '<b class="' + (saldo < 0 ? 'minus' : 'plus') + '">' + euro(saldo) + '</b>' +
-        '<span class="hint">Einnahmen ' + euro(summeEin) + ' · Ausgaben ' + euro(summeAus) + '</span></div>' +
-      (konfig.paypal
-        ? '<a class="btn primary full kasse-paypal" href="' + esc(konfig.paypal) + '" target="_blank" rel="noopener">Per PayPal ins Vereinskonto einzahlen</a>' +
-          '<p class="hint center">Danach die Einzahlung unten eintragen – sie steht sofort im Kassenbuch.</p>'
-        : '') +
-      beitragHtml +
+      '<div class="card kasse-erfassen">' +
       (darf
         ? '<div class="kasse-form' + (bearbeite ? ' bearbeiten' : '') + '">' +
             '<h3>' + (bearbeite ? 'Buchung Nr. ' + (eintraege.indexOf(bearbeite) + 1) + ' ändern' : 'Eintragen: Einzahlung oder Ausgabe') + '</h3>' +
@@ -10839,8 +11527,14 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
                   return '<option value="' + m.id + '"' + (bearbeite && bearbeite.mitglied === m.id ? ' selected' : (!bearbeite && m.id === ich ? ' selected' : '')) + '>' + esc(m.name) + '</option>';
                 }).join('') +
               '</select></div>' +
-            '<button class="btn primary full" data-action="kasse-buchen">' + (bearbeite ? 'Änderung speichern' : 'Buchen') + '</button>' +
-            (bearbeite ? '<button class="btn ghost full" data-action="kasse-edit-abbruch">Abbrechen</button>' : '') +
+            '<div class="kasse-knoepfe">' +
+              '<button class="btn hell" data-action="kasse-buchen">' + (bearbeite ? 'Änderung speichern' : 'Buchen') + '</button>' +
+              (bearbeite
+                ? '<button class="btn ghost" data-action="kasse-edit-abbruch">Abbrechen</button>'
+                : konfig.paypal
+                  ? '<a class="btn ghost kasse-paypal" href="' + esc(konfig.paypal) + '" target="_blank" rel="noopener">Per PayPal einzahlen</a>'
+                  : '<span></span>') +
+            '</div>' +
             '<p class="hint" id="kasse-meldung"></p>' +
             (wart ? '<details class="kasse-konfig"><summary>Kassenjahr und Anfangsbestand (Kassenwart)</summary>' +
               '<div class="zeile">' +
@@ -10850,16 +11544,77 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
               '<button class="btn ghost full" data-action="kasse-konfig">Speichern</button>' +
             '</details>' : '') +
           '</div>'
-        : '<p class="hint">Zum Ansehen und Eintragen bitte anmelden.</p>') +
-      '<div class="kasse-liste">' +
-        '<div class="kasse-kopfzeile"><span>Nr</span><span>Beschreibung · Datum · Kategorie</span><span>Betrag · Saldo</span></div>' +
-        (zeilen.length ? zeilen.join('') : '<p class="hint">Noch keine Buchung.</p>') +
-        (zeilen.length ? '<div class="kasse-summen">' +
-          '<span>Summe Einnahmen <b>' + euro(summeEin) + '</b></span>' +
-          '<span>Summe Ausgaben <b>' + euro(summeAus) + '</b></span>' +
-          '<span>Endbestand <b>' + euro(saldo) + '</b></span></div>' : '') +
+        : '<h2>Buchung erfassen</h2><p class="hint">Zum Ansehen und Eintragen bitte anmelden.</p>' +
+          (konfig.paypal ? '<a class="btn ghost full kasse-paypal" href="' + esc(konfig.paypal) + '" target="_blank" rel="noopener">Per PayPal einzahlen</a>' : '')) +
       '</div>';
+    $('kasse-buch').innerHTML =
+      '<div class="card kasse-liste">' +
+        '<div class="karte-kopf"><h2>Kassenbuch</h2><span class="hint">' + plural(zeilen.length, 'Buchung', 'Buchungen') + '</span></div>' +
+        '<div class="kasse-zeilen">' + (zeilen.length ? zeilen.slice().reverse().join('') : '<p class="hint">Noch keine Buchung.</p>') + '</div>' +
+      '</div>' +
+      (beitragHtml ? '<div class="card kasse-beitraege-karte">' + beitragHtml + '</div>' : '');
   }
+
+  /* Highlights der ganzen Saison (nur unsere Spieler, nur echte Spieltage):
+     180er, High-Finishes ab 100 und Shortlegs bis 21 Darts - je mit
+     Spieltag und Einzel, wie sie der Bogen abfragt. */
+  function ligaHighlightsSaisonHtml() {
+    var spiele = wertbareHistorie().filter(function (h) { return h.liga && !h.liga.uebung && h.matches; }).slice().reverse();
+    if (S.tour && S.tour.liga && !S.tour.liga.uebung && S.matches.length) spiele.push({ liga: S.tour.liga, matches: S.matches });
+    var h180 = [], hFin = [], hLeg = [];
+    spiele.forEach(function (h) {
+      h.matches.forEach(function (m, mi) {
+        if (!m.legs) return;
+        var wo = h.liga.nr + '. Spieltag · Einzel ' + (mi + 1);
+        m.legs.forEach(function (leg) {
+          (leg.visits || []).forEach(function (v) {
+            if (v.s === 180 && !v.b && h.liga.wir.indexOf(v.p) >= 0) h180.push({ n: pname(v.p), d: wo, v: '180' });
+          });
+          if (leg.winner && h.liga.wir.indexOf(leg.winner) >= 0) {
+            var eigene = (leg.visits || []).filter(function (v) { return v.p === leg.winner; });
+            var letzte = eigene[eigene.length - 1];
+            if (letzte && letzte.s >= 100) hFin.push({ n: pname(leg.winner), d: wo, v: String(letzte.s) });
+            var darts = dartsInLeg(leg, leg.winner);
+            if (darts > 0 && darts <= 21) hLeg.push({ n: pname(leg.winner), d: wo, v: darts + ' Darts' });
+          }
+        });
+      });
+    });
+    hFin.sort(function (a, b) { return parseInt(b.v, 10) - parseInt(a.v, 10); });
+    hLeg.sort(function (a, b) { return parseInt(a.v, 10) - parseInt(b.v, 10); });
+    var gruppe = function (titel, liste) {
+      if (!liste.length) return '';
+      return '<div class="hl-gruppe"><span class="hl-titel">' + titel + '</span>' +
+        liste.slice(0, 6).map(function (i) {
+          return '<div class="hl-zeile"><span class="hl-wer"><b>' + esc(i.n) + '</b><small>' + esc(i.d) + '</small></span><span class="hl-wert">' + esc(i.v) + '</span></div>';
+        }).join('') + '</div>';
+    };
+    var inhalt = gruppe('180er', h180) + gruppe('High-Finishes ab 100', hFin) + gruppe('Shortlegs bis 21 Darts', hLeg);
+    return '<div class="karte-kopf"><h2>Highlights der Saison</h2>' +
+      '<button class="btn ghost small" data-action="board-log">Alle Ligaspiele ›</button></div>' +
+      '<div class="hl-liste">' + (inhalt || '<p class="hint">Noch keine Highlights – sie kommen mit dem ersten Spieltag.</p>') + '</div>';
+  }
+
+  /* DiensDarts als iCal: ein ganztaegiger Eintrag fuer den naechsten Dienstag. */
+  function trainingKalender() {
+    var d = naechsterDienstag();
+    var iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    var e = new Date(d.getTime()); e.setDate(e.getDate() + 1);
+    var ende = e.getFullYear() + String(e.getMonth() + 1).padStart(2, '0') + String(e.getDate()).padStart(2, '0');
+    var zeilen = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Blink 180//Dart Turnier//DE', 'CALSCALE:GREGORIAN',
+      'BEGIN:VEVENT', 'UID:blink180-' + trainingsTerminId(d) + '@darts.wirtschaftln.de',
+      'DTSTAMP:' + iso.replace(/-/g, '') + 'T000000Z', 'DTSTART;VALUE=DATE:' + iso.replace(/-/g, ''), 'DTEND;VALUE=DATE:' + ende,
+      'SUMMARY:' + icsText('DiensDarts – Training Blink 180'), 'LOCATION:' + icsText('Bar Sehnsucht'), 'END:VEVENT', 'END:VCALENDAR'];
+    var blob = new Blob([zeilen.join('\r\n') + '\r\n'], { type: 'text/calendar;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = 'blink180-diensdarts.ics';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+  }
+
+  var PIN_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"></path><circle cx="12" cy="9.5" r="2.5"></circle></svg>';
+  var MAPS_SVG = '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"></path><path d="M9 4v14M15 6v14"></path></svg>';
 
   function renderLigaTraining() {
     var d = naechsterDienstag();
@@ -10883,24 +11638,59 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '<span class="nm">' + esc(a.name) + '</span></div>';
     };
 
+    var MONATE_K = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+    var heute0 = new Date(); heute0.setHours(12, 0, 0, 0);
+    var d12 = new Date(d.getTime()); d12.setHours(12, 0, 0, 0);
+    var tage = Math.round((d12 - heute0) / 86400000);
+    var wann = tage <= 0 ? 'heute' : tage === 1 ? 'morgen' : 'in ' + tage + ' Tagen';
+    var knopf = function (status, text) {
+      return '<button class="btn' + (meine === status ? ' hell aktiv' : ' ghost') + '" ' +
+        'data-action="training-zusage" data-tid="' + esc(tid) + '" data-status="' + esc(status) + '">' + text + '</button>';
+    };
+    var gruppe = function (titel, liste, klasse) {
+      if (!liste.length && klasse !== 'gruen') return '';
+      return '<div class="dd-gruppe ' + klasse + '"><span class="lk-crew-titel">' + titel + ' · <b class="' + klasse + '">' + liste.length + '</b></span>' +
+        '<div class="lt-leute">' + (liste.map(function (a) {
+          return '<span class="lt-person">' + avatarHTML({ id: a.id, name: a.name, avatar: a.avatar, hue: a.hue }, 'sm') + esc(a.name) + '</span>';
+        }).join('') || '<span class="muted">Noch keine Zusage.</span>') + '</div></div>';
+    };
     $('dienstdarts-karte').innerHTML =
-      '<div class="sehnsucht-logo" role="img" aria-label="Sehnsucht Divebar Munich"></div>' +
-      '<h2>DiensDarts</h2>' +
-      '<p class="hint">Dienstags ist Dart-Training in der Bar Sehnsucht. Nächster Termin: <b>' +
-        ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'][d.getDay()] + ', ' + fmtDate(d.getTime()) + '</b></p>' +
+      '<div class="lk-kopf"><span class="lk-etikett">Nächstes Training · ' + wann + '</span>' +
+        '<span class="lk-icons">' +
+          '<a class="icon-btn rund" href="https://maps.apple.com/?q=' + encodeURIComponent('Bar Sehnsucht München') + '" target="_blank" rel="noopener" title="Route in Maps" aria-label="Route in Maps">' + MAPS_SVG + '</a>' +
+          '<button class="icon-btn rund" data-action="training-ical" title="In den Kalender" aria-label="In den Kalender">' + KALENDER_SVG + '</button>' +
+        '</span></div>' +
+      '<div class="dd-kopf"><div class="sehnsucht-logo" role="img" aria-label="Sehnsucht Divebar Munich"></div>' +
+        '<div class="dd-titel-block"><span class="dd-name">DiensDarts</span>' +
+          '<span class="dd-datum">' + ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'][d.getDay()] + ' ' + d.getDate() + '. ' + MONATE_K[d.getMonth()] + '</span>' +
+          '<span class="lk-ort">' + PIN_SVG + 'Bar Sehnsucht · jeden Dienstag</span></div></div>' +
       (online
-        ? '<div class="dd-antworten">' +
-            knopf('dabei', 'Bin dabei') +
-            knopf('unsicher', 'Unsicher') +
-            knopf('absage', 'Kann nicht') +
-          '</div>'
-        : '<p class="hint">Zum Abstimmen bitte anmelden.</p>') +
+        ? '<div class="dd-antworten">' + knopf('dabei', 'Bin dabei') + knopf('unsicher', 'Unsicher') + knopf('absage', 'Kann nicht') + '</div>'
+        : '<p class="hint">Dienstags ist Dart-Training in der Bar Sehnsucht. Zum Abstimmen bitte anmelden.</p>') +
       '<div class="dd-liste">' +
-        '<div class="dd-titel">' + plural(dabei.length, 'Spieler kommt', 'Spieler kommen') + '</div>' +
-        (dabei.map(function (a) { return reihe(a); }).join('') || '<p class="hint">Noch keine Zusage.</p>') +
-        (unsicher.length ? '<div class="dd-titel">Unsicher</div>' + unsicher.map(function (a) { return reihe(a, true); }).join('') : '') +
-        (absagen.length ? '<div class="dd-titel">Abgesagt</div>' + absagen.map(function (a) { return reihe(a, true); }).join('') : '') +
+        gruppe('Kommen', dabei, 'gruen') + gruppe('Unsicher', unsicher, 'gelb') + gruppe('Kann nicht', absagen, 'rot') +
       '</div>';
+
+    /* Rechts: das Uebungs-Ligaspiel mit Vorwahl von Gegner und Bot-Staerke. */
+    var ug = UI.uebungGegner || 'mittel';
+    var wahl = function (aktion, wert, text, klein) {
+      return '<button class="' + (ug === wert ? 'active' : '') + '" data-action="' + aktion + '" data-value="' + wert + '">' +
+        '<span>' + text + '</span>' + (klein ? '<small>' + klein + '</small>' : '') + '</button>';
+    };
+    $('uebung-karte').innerHTML =
+      '<h2 class="gross">Übungs-Ligaspiel</h2>' +
+      '<p class="hint">Der komplette Liga-Ablauf zum Üben: 16 Einzel in Bogen-Reihenfolge, zwei Scheiben, Team-Stand und Spielbericht. Zählt nirgends in die Liga-Wertung.</p>' +
+      '<div class="setting"><label>Gegner</label><div class="options">' +
+        wahl('uebung-vorwahl', 'team', 'Zweites eigenes Team') +
+        '<button class="' + (ug !== 'team' ? 'active' : '') + '" data-action="uebung-vorwahl" data-value="bots"><span>Gegen Bots</span></button>' +
+      '</div></div>' +
+      (ug !== 'team'
+        ? '<div class="setting"><label>Bot-Stärke</label><div class="options drei">' +
+            wahl('uebung-vorwahl', 'leicht', 'Leicht', '≈ 38er-Aufnahmen') + wahl('uebung-vorwahl', 'mittel', 'Mittel', '≈ 52') + wahl('uebung-vorwahl', 'schwer', 'Schwer', '≈ 72') +
+          '</div></div>'
+        : '') +
+      '<div class="luft"></div>' +
+      '<button class="btn primary start full" data-action="uebung-start">Übungsspiel aufstellen</button>';
   }
 
   function renderLigaTabelle() {
@@ -10920,7 +11710,18 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
        Serverstand (sonst blieben Handkorrekturen nicht stehen). */
     var zeilen = (ligaTabelle && Array.isArray(ligaTabelle.zeilen) && ligaTabelle.zeilen.length)
       ? ligaTabelle.zeilen
-      : LIGA_TEAMS.map(function (t) { return { team: t }; });
+      : LIGA_TABELLE_START.map(function (z) { return Object.assign({}, z); });
+    /* Rechts: unser Platz, Punkte und Legs, Abstand zur Spitze. */
+    var platz = -1;
+    zeilen.forEach(function (z, i) { if (platz < 0 && z.team === LIGA.team) platz = i; });
+    var pz = platz >= 0 ? zeilen[platz] : null;
+    var spitze = zeilen[0] ? Number(zeilen[0].punkte) || 0 : 0;
+    var abstand = pz ? spitze - (Number(pz.punkte) || 0) : 0;
+    $('lt-platz').innerHTML = pz
+      ? '<span class="lk-crew-titel">Unser Platz</span><span class="lt-platz-zahl">' + (platz + 1) + '.</span>' +
+        '<span class="lt-platz-info">' + plural(Number(pz.punkte) || 0, 'Punkt', 'Punkte') + ' · Legs ' + esc(String(pz.legs || '0:0')).replace(':', ' : ') + '</span>' +
+        '<span class="lt-platz-sub">' + (platz === 0 ? 'Tabellenführer' : plural(abstand, 'Punkt', 'Punkte') + ' hinter Platz 1') + '</span>'
+      : '';
     var kennung = JSON.stringify(zeilen);
     if (ligaTabelleKennung === kennung && $('lt-tabelle').innerHTML) return;
     ligaTabelleKennung = kennung;
@@ -10962,9 +11763,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     '<path d="M3 10h18M8 3v4M16 3v4"/></svg>';
 
   function renderLiga() {
-    $('liga-sub').textContent = 'Spielplan ' + LIGA.team + ' · ' + LIGA.saison;
+    $('liga-sub').textContent = LIGA.team + ' · 5. Liga · ' + LIGA.saison;
 
-    /* Zwei Reiter: der Spielplan und die Regelecke (steht fest im HTML). */
     var tab = UI.ligaTab || 'plan';
     $('liga-tabs').querySelectorAll('button').forEach(function (b) {
       b.classList.toggle('active', b.getAttribute('data-tab') === tab);
@@ -10972,11 +11772,15 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     $('liga-plan').classList.toggle('hidden', tab !== 'plan');
     $('liga-training').classList.toggle('hidden', tab !== 'training');
     $('liga-tabelle').classList.toggle('hidden', tab !== 'tabelle');
+    $('liga-statistik').classList.toggle('hidden', tab !== 'statistik');
     $('liga-kasse').classList.toggle('hidden', tab !== 'kasse');
     $('liga-regeln').classList.toggle('hidden', tab !== 'regeln');
     if (tab === 'training') { renderLigaTraining(); return; }
     if (tab === 'kasse') { renderLigaKasse(); return; }
     if (tab === 'tabelle') { renderLigaTabelle(); return; }
+    /* Statistik: die Liga-Auswertung der Rangliste, hierher verschoben
+       (siehe show()). Die Unterzeile nennt Spieltage und Saison. */
+    if (tab === 'statistik') { renderBoards(); $('liga-sub').textContent = $('boards-sub').textContent; return; }
     if (tab !== 'plan') return;
 
     /* Ohne Server (Einzeldatei) oder ohne Anmeldung bleibt der Spielplan
@@ -10994,66 +11798,135 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var heuteIso = window.__ligaHeute || (heute.getFullYear() + '-' +
       String(heute.getMonth() + 1).padStart(2, '0') + '-' +
       String(heute.getDate()).padStart(2, '0'));
+    var laeuftId = S.tour && S.tour.liga && !S.tour.liga.uebung ? S.tour.liga.terminId : null;
 
-    $('liga-liste').innerHTML = LIGA.termine.map(function (t) {
+    /* Zusagen je Termin: wer "dabei" ist. Ohne Server bleibt die Zahl weg. */
+    var zusagen = function (t) {
+      return ((ligaZusagen && ligaZusagen[t.id]) || []).filter(function (z) { return (z.status || 'dabei') === 'dabei'; });
+    };
+    /* Farbe der Zusagen: unter vier rot, genau vier gelb, ab fuenf gruen. */
+    var ton = function (n) { return n >= 5 ? 'gruen' : n === 4 ? 'gelb' : 'rot'; };
+
+    /* Gewaehlt ist, was angetippt wurde - sonst das laufende Spiel, sonst der
+       naechste noch offene Spieltag, sonst der naechste ueberhaupt. */
+    var termine = LIGA.termine;
+    var wahl = null;
+    if (UI.ligaWahl) termine.forEach(function (t) { if (t.id === UI.ligaWahl) wahl = t; });
+    if (!wahl && laeuftId) termine.forEach(function (t) { if (!wahl && t.id === laeuftId) wahl = t; });
+    if (!wahl) termine.forEach(function (t) { if (!wahl && t.tag && t.tag >= heuteIso && !ligaTerminBelegt(t)) wahl = t; });
+    if (!wahl) termine.forEach(function (t) { if (!wahl && t.tag && t.tag >= heuteIso) wahl = t; });
+    if (!wahl) termine.slice().reverse().forEach(function (t) { if (!wahl && t.tag) wahl = t; });
+    var naechster = null;
+    termine.forEach(function (t) { if (!naechster && t.tag && t.tag >= heuteIso && !ligaTerminBelegt(t)) naechster = t; });
+
+    /* ---- Rechts: alle Spieltage kompakt ---- */
+    $('liga-liste').innerHTML = termine.map(function (t) {
       if (!t.tag) {
-        return '<div class="card liga-spieltag frei">' +
-          '<div class="lt-kopf"><span class="lt-datum muted">' + t.nr + '. Spieltag</span>' +
-          '<span class="lt-nr">Spielfrei</span></div></div>';
+        return '<div class="liga-spieltag frei"><span class="lt-nr">' + t.nr + '</span>' +
+          '<span class="lt-datum"><b>–</b></span><span class="lt-wer"><span class="lt-gegner">Spielfrei</span></span><span class="lt-rechts"></span></div>';
       }
       var daheim = t.heim === LIGA.team;
+      var gegner = daheim ? t.gast : t.heim;
       var vorbei = t.tag < heuteIso;
-      var leute = ((ligaZusagen && ligaZusagen[t.id]) || []).filter(function (z) {
-        return (z.status || 'dabei') === 'dabei';
-      });
-      var binDabei = ich ? leute.some(function (p) { return p.id === ich; }) : false;
-      var fehlt = LIGA.sollSpieler - leute.length;
-
-      var koepfe = leute.map(function (p) {
-        return '<span class="lt-person">' + avatarHTML(p, 'sm') + esc(p.name) + '</span>';
-      }).join('');
-
-      return '<div class="card liga-spieltag' + (vorbei ? ' vorbei' : '') + '">' +
-        '<div class="lt-kopf">' +
-          '<span class="lt-datum">' + ligaDatum(t.tag) + '</span>' +
-          '<span class="lt-rechts">' +
-            '<span class="lt-nr">' + t.nr + '. Spieltag · ' + (daheim ? 'Heim' : 'Auswärts') + '</span>' +
-            '<button class="icon-btn rund lt-cal" data-action="liga-ical" data-id="' + esc(t.id) + '" ' +
-              'title="Diesen Termin in den Kalender" aria-label="Diesen Termin in den Kalender">' + KALENDER_SVG + '</button>' +
-          '</span>' +
-        '</div>' +
-        '<div class="lt-paarung">' +
-          (daheim ? '<b>' + esc(t.heim) + '</b>' : esc(t.heim)) +
-          ' <span class="muted">vs</span> ' +
-          (daheim ? esc(t.gast) : '<b>' + esc(t.gast) + '</b>') +
-        '</div>' +
-        '<div class="lt-ort">' + esc(t.ort) + '</div>' +
-        (ligaZusagen
-          ? '<div class="lt-leute">' + (koepfe || '<span class="muted">Noch niemand eingetragen.</span>') + '</div>'
-          : '') +
-        ligaTerminStatus(t, vorbei) +
-        (vorbei || ligaTerminBelegt(t) ? '' :
-          '<div class="lt-fuss">' +
-            (ligaZusagen
-              ? '<span class="lt-status ' + (fehlt > 0 ? 'offen' : 'voll') + '">' +
-                (fehlt > 0
-                  ? 'Noch ' + plural(fehlt, 'Spieler', 'Spieler') + ' bis wir vollständig sind'
-                  : 'Vollständig – ' + plural(leute.length, 'Spieler', 'Spieler') + ' dabei') +
-                '</span>'
-              : '<span></span>') +
-            '<span class="lt-knoepfe">' +
-              (online && !ichBinGastKonto()
-                ? '<button class="btn ghost small" data-action="liga-zusage" ' +
-                  'data-id="' + esc(t.id) + '" data-dabei="' + (binDabei ? '0' : '1') + '">' +
-                  (binDabei ? 'Bin raus' : 'Ich bin dabei') + '</button>'
-                : '') +
-              (ichBinGastKonto()
-                ? '<span class="muted">Als Gast: verfolgen über den Live-Ticker</span>'
-                : '<button class="btn ghost small" data-action="liga-spiel" data-id="' + esc(t.id) + '">Ligaspiel starten</button>') +
-            '</span>' +
-          '</div>') +
+      var h = ligaTerminEintrag(t);
+      var live = t.id === laeuftId;
+      var rechts = '', rechtsKlasse = '', unten = esc(t.ort);
+      if (live) {
+        var ld = ligaStandDaten();
+        rechts = '● LIVE ' + ld.wirP + ' : ' + ld.sieP; rechtsKlasse = 'live';
+        unten = 'Läuft · ' + ld.fertige + ' von ' + S.matches.length + ' Einzeln';
+      } else if (h) {
+        var e = ligaErgebnisAus(h);
+        rechts = e.wirP + ' : ' + e.sieP + ' ✓'; rechtsKlasse = 'fertig';
+        unten = (h.liga.abgeschlossen ? '✓ Abgeschlossen' : 'Bericht offen') + ' · ' + esc(t.ort);
+      } else if (!vorbei && ligaZusagen) {
+        var n = zusagen(t).length;
+        rechts = n + ' / ' + LIGA.sollSpieler; rechtsKlasse = ton(n);
+      }
+      return '<div class="liga-spieltag' + (vorbei && !h ? ' vorbei' : '') + (h ? ' gespielt' : '') + (wahl && t.id === wahl.id ? ' wahl' : '') +
+        '" data-action="liga-wahl" data-id="' + esc(t.id) + '" role="button" tabindex="0">' +
+        '<span class="lt-nr">' + t.nr + '</span>' +
+        '<span class="lt-datum"><b>' + t.tag.slice(8, 10) + '.' + t.tag.slice(5, 7) + '.' + t.tag.slice(0, 4) + '</b><small>' + WOCHENTAGE[new Date(t.tag + 'T12:00:00').getDay()].replace('.', '') + '</small></span>' +
+        '<span class="lt-wer"><span class="lt-gegner"><span class="lt-ha">' + (daheim ? 'Heim' : 'Ausw.') + '</span>' + esc(gegner) + '</span>' +
+          '<span class="lt-unten">' + unten + '</span></span>' +
+        '<span class="lt-rechts ' + rechtsKlasse + '">' + rechts + '</span>' +
         '</div>';
     }).join('');
+
+    /* ---- Links: der gewaehlte Spieltag gross ---- */
+    var karte = $('liga-karte');
+    if (!wahl) { karte.innerHTML = ''; karte.className = 'liga-karte'; return; }
+    var t = wahl;
+    var daheim = t.heim === LIGA.team;
+    var vorbei = t.tag < heuteIso;
+    var live = t.id === laeuftId;
+    var h = ligaTerminEintrag(t);
+    var leute = zusagen(t);
+    var binDabei = ich ? leute.some(function (p) { return p.id === ich; }) : false;
+    var d = new Date(t.tag + 'T12:00:00');
+    var MONATE = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+    var datumGross = WOCHENTAGE[d.getDay()].replace('.', '') + ' ' + d.getDate() + '. ' + MONATE[d.getMonth()];
+    var tage = Math.round((new Date(t.tag + 'T12:00:00') - new Date(heuteIso + 'T12:00:00')) / 86400000);
+    var etikett = live ? '' : h ? t.nr + '. Spieltag · gespielt'
+      : naechster && naechster.id === t.id ? 'Nächster Spieltag · ' + (tage === 0 ? 'heute' : tage === 1 ? 'morgen' : 'in ' + tage + ' Tagen')
+      : vorbei ? t.nr + '. Spieltag · vorbei' : t.nr + '. Spieltag';
+    var initialen = function (name) {
+      return name.replace(/[`'’]/g, ' ').replace(/[^A-Za-zÄÖÜäöü ]/g, '').split(' ').filter(Boolean).slice(0, 2).map(function (w) { return w[0]; }).join('').toUpperCase();
+    };
+    var teamBlock = function (name, rolle) {
+      var wir = name === LIGA.team;
+      return '<div class="lk-team">' +
+        (wir ? '<span class="blink-logo" role="img" aria-label="Blink 180"></span>' : '<span class="lk-ini">' + esc(initialen(name)) + '</span>') +
+        '<span class="lk-teamname">' + esc(name) + '</span><span class="lk-rolle">' + rolle + '</span></div>';
+    };
+    var tonKlasse = live ? 'live' : (!h && !vorbei && ligaZusagen ? ton(leute.length) : 'neutral');
+    karte.className = 'liga-karte ' + tonKlasse;
+    var ld2 = live ? ligaStandDaten() : null;
+    var kopfLinks = live
+      ? '<span class="lk-live"><i></i>LIVE</span><span class="lk-einzel">Einzel ' + Math.min(ld2.fertige + 1, S.matches.length) + ' von ' + S.matches.length + '</span>'
+      : '<span class="lk-etikett">' + etikett + '</span>';
+    var mitte = live
+      ? '<div class="lk-stand"><span class="lk-punkte">' + ld2.wirP + ' : ' + ld2.sieP + '</span>' +
+        '<span class="lk-legs">Punkte · Legs ' + ld2.wirL + ' : ' + ld2.sieL + '</span></div>'
+      : '<span class="lk-datum">' + datumGross + '</span>';
+    var fuss = '';
+    if (live) {
+      fuss = '<div class="lk-knoepfe"><button class="btn primary start" data-action="liga-zum-spiel">Zum Ligaspiel</button>' +
+        '<button class="btn ghost lk-zuschauen" data-action="liga-ticker"><i></i>Live zuschauen</button></div>';
+    } else if (h) {
+      var e2 = ligaErgebnisAus(h), zu = !!h.liga.abgeschlossen;
+      fuss = '<div class="lk-status ' + (zu ? 'voll' : 'offen') + '">' + (zu ? '✓ Abgeschlossen · ' : 'Bericht offen · ') + esc(LIGA.team) + ' ' + e2.wirP + ':' + e2.sieP + '</div>' +
+        '<div class="lk-knoepfe">' +
+          '<button class="btn ghost" data-action="open-summary" data-kind="turnier" data-id="' + esc(h.id) + '">Ergebnisse</button>' +
+          '<button class="btn ' + (zu ? 'ghost' : 'primary start') + '" data-action="liga-bericht" data-termin="' + esc(t.id) + '">' + (zu ? 'Spielbericht' : 'Bericht abschließen') + '</button>' +
+        '</div>';
+    } else if (!vorbei) {
+      fuss = '<div class="lk-knoepfe">' +
+        (online && !ichBinGastKonto()
+          ? '<button class="btn ' + (binDabei ? 'ghost' : 'hell') + '" data-action="liga-zusage" data-id="' + esc(t.id) + '" data-dabei="' + (binDabei ? '0' : '1') + '">' + (binDabei ? 'Bin raus' : 'Ich bin dabei') + '</button>'
+          : '') +
+        (ichBinGastKonto()
+          ? '<span class="lk-gast">Als Gast: verfolgen über den Live-Ticker</span>'
+          : '<button class="btn primary start" data-action="liga-spiel" data-id="' + esc(t.id) + '">Game On!</button>') +
+        '</div>';
+    }
+    karte.innerHTML =
+      '<div class="lk-kopf">' + kopfLinks +
+        '<span class="lk-icons">' +
+          '<a class="icon-btn rund" href="https://maps.apple.com/?q=' + encodeURIComponent(t.ort) + '" target="_blank" rel="noopener" title="Route in Maps" aria-label="Route in Maps">' +
+            '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"></path><path d="M9 4v14M15 6v14"></path></svg></a>' +
+          '<button class="icon-btn rund" data-action="liga-ical" data-id="' + esc(t.id) + '" title="Diesen Termin in den Kalender" aria-label="Diesen Termin in den Kalender">' + KALENDER_SVG + '</button>' +
+        '</span></div>' +
+      mitte +
+      '<div class="lk-info"><span class="lk-zeile">' + t.nr + '. Spieltag · ' + (daheim ? 'Heim' : 'Auswärts') + ' · 20:00 Uhr</span>' +
+        '<span class="lk-ort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"></path><circle cx="12" cy="9.5" r="2.5"></circle></svg>' + esc(t.ort) + '</span></div>' +
+      '<div class="lk-teams">' + teamBlock(t.heim, 'Heim') + '<span class="lk-vs">VS</span>' + teamBlock(t.gast, 'Gast') + '</div>' +
+      '<div class="lk-kurz">' + esc(t.heim) + ' <span>vs</span> ' + esc(t.gast) + '</div>' +
+      (ligaZusagen
+        ? '<div class="lk-crew"><span class="lk-crew-titel">Team · <b class="' + ton(leute.length) + '">' + leute.length + ' / ' + LIGA.sollSpieler + '</b></span>' +
+          '<div class="lt-leute">' + (leute.map(function (p) { return '<span class="lt-person">' + avatarHTML(p, 'sm') + esc(p.name) + '</span>'; }).join('') || '<span class="muted">Noch niemand eingetragen.</span>') + '</div></div>'
+        : '<div class="lk-crew"></div>') +
+      fuss;
   }
 
   /* Was zu einem Spieltag schon da ist: das laufende Ligaspiel oder ein
@@ -11072,28 +11945,6 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   function ligaTerminBelegt(t) {
     return !!(S.tour && S.tour.liga && !S.tour.liga.uebung && S.tour.liga.terminId === t.id) || !!ligaTerminEintrag(t);
   }
-  /* Laeuft oder lief der Spieltag schon, gibt es keinen Start-Knopf mehr,
-     sondern den Stand: laeuft / Bericht offen / abgeschlossen. */
-  function ligaTerminStatus(t) {
-    if (S.tour && S.tour.liga && !S.tour.liga.uebung && S.tour.liga.terminId === t.id) {
-      var d = ligaStandDaten();
-      return '<div class="lt-fuss"><span class="lt-status offen">Läuft · ' + d.wirP + ':' + d.sieP +
-        ' · ' + d.fertige + ' von ' + S.matches.length + ' Einzeln</span>' +
-        '<span class="lt-knoepfe"><button class="btn primary start small" data-action="liga-zum-spiel">Zum Ligaspiel</button></span></div>';
-    }
-    var h = ligaTerminEintrag(t);
-    if (!h) return '';
-    var e = ligaErgebnisAus(h);
-    var zu = !!h.liga.abgeschlossen;
-    return '<div class="lt-fuss"><span class="lt-status ' + (zu ? 'voll' : 'offen') + '">' +
-        (zu ? '✓ Abgeschlossen · ' : 'Bericht offen · ') + esc(LIGA.team) + ' ' + e.wirP + ':' + e.sieP + '</span>' +
-      '<span class="lt-knoepfe">' +
-        '<button class="btn ghost small" data-action="open-summary" data-kind="turnier" data-id="' + esc(h.id) + '">Ergebnisse</button>' +
-        '<button class="btn ' + (zu ? 'ghost' : 'primary start') + ' small" data-action="liga-bericht" data-termin="' + esc(t.id) + '">' +
-          (zu ? 'Spielbericht' : 'Bericht abschließen') + '</button>' +
-      '</span></div>';
-  }
-
   /* Alle Termine als iCal-Datei – ganztägige Einträge, die Anwurfzeit steht
      ja nicht im Spielplan. Rein im Browser gebaut, kein Server nötig. */
   function icsText(s) {
@@ -11148,7 +11999,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       }
       var reihe = UI.bullReihe;
       var fertig = reihe.length === ids.length;
-      $('bulloff-sub').textContent = 'Alle werfen auf Bull - dann in Wurf-Reihenfolge antippen: Wer am nächsten dran war, zuerst.';
+      $('bulloff-sub').textContent = 'Alle werfen auf Bull. Wer am nächsten dran war, zuerst antippen.';
+      $('bulloff-ctx').textContent = kindName(S.game.kind) + ' · ' + plural(ids.length, 'Spieler', 'Spieler');
+      $('screen-bulloff').classList.remove('turnier');
       $('bulloff-buttons').className = 'bulloff-order';
       /* Nichts springt beim Antippen: links bleibt der Platz eines
          Gewaehlten einfach leer (gleiche Groesse, unsichtbar), rechts
@@ -11156,6 +12009,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
          seinen Platz, bis er gebraucht wird. */
       $('bulloff-buttons').innerHTML =
         '<div class="bo-spalten">' +
+          '<div class="bo-spalte"><span class="bo-label">Antippen in Wurf-Reihenfolge</span>' +
           '<div class="bo-wahl">' + ids.map(function (pid) {
             var gewaehlt = reihe.indexOf(pid) >= 0;
             return gewaehlt
@@ -11165,30 +12019,39 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
               : '<button data-action="order-pick" data-id="' + esc(pid) + '">' +
                 avatarHTML(profile(pid), 'sm') +
                 '<span class="bo-name">' + esc(pname(pid)) + '</span></button>';
-          }).join('') + '</div>' +
+          }).join('') + '</div></div>' +
+          '<div class="bo-spalte"><span class="bo-label">Reihenfolge</span>' +
           '<div class="bo-reihe">' + ids.map(function (_, i) {
             var pid = reihe[i];
             if (!pid) {
-              return '<div class="bo-slot"><span class="bo-pos">' + (i + 1) + '.</span>' +
+              return '<div class="bo-slot"><span class="bo-pos">' + (i + 1) + '</span>' +
                 '<span class="bo-frei">–</span></div>';
             }
             var nm = esc(pname(pid));
-            return '<button class="bo-row" data-action="order-unpick" data-id="' + esc(pid) + '" ' +
+            return '<button class="bo-row' + (i === 0 ? ' erster' : '') + '" data-action="order-unpick" data-id="' + esc(pid) + '" ' +
               'aria-label="' + nm + ' wieder herausnehmen">' +
-              '<span class="bo-pos">' + (i + 1) + '.</span>' +
+              '<span class="bo-pos">' + (i + 1) + '</span>' +
               avatarHTML(profile(pid), 'sm') +
-              '<span class="bo-name">' + nm + '</span></button>';
-          }).join('') + '</div>' +
+              '<span class="bo-name">' + nm + '</span>' +
+              (i === 0 ? '<em class="bo-tag">wirft an</em>' : '') + '</button>';
+          }).join('') + '</div></div>' +
         '</div>' +
-        '<button class="btn primary start full' + (fertig ? '' : ' unsichtbar') + '" ' +
+        /* Der Startknopf steht von Anfang an da: solange noch jemand fehlt,
+           sagt er, wie viele - rot wird er erst, wenn alle gewaehlt sind. */
+        '<button class="btn primary start full' + (fertig ? '' : ' offen') + '" ' +
           'data-action="start-order"' + (fertig ? '' : ' disabled') + '>' +
-          (fertig ? 'GAME ON! · ' + esc(pname(reihe[0])) + ' beginnt' : '·') + '</button>';
+          (fertig ? 'GAME ON! · ' + esc(pname(reihe[0])) + ' beginnt' : 'Noch ' + (ids.length - reihe.length) + ' antippen') + '</button>';
       return;
     }
 
     $('bulloff-sub').textContent = ids.length > 2
       ? 'Wer war am nächsten am Bull? Er beginnt, danach geht es reihum weiter.'
-      : 'Wer war näher am Bull und darf anfangen?';
+      : 'Wer war näher am Bull? Antippen – der wirft an.';
+    /* Rechts oben der Zusammenhang: welches Spiel, welche Spielart. */
+    var boM = forGame ? null : currentMatch();
+    $('bulloff-ctx').textContent = forGame
+      ? kindName(S.game.kind) + ' · ' + plural(ids.length, 'Spieler', 'Spieler')
+      : boM ? (S.tour && S.tour.liga ? 'Einzel ' : 'Spiel ') + (S.matches.indexOf(boM) + 1) + ' von ' + S.matches.length : '';
     /* Am Board laeuft auch das Bullen ueber die Tastatur: Pfeile oder Tab
        wechseln, Enter bestaetigt - und die Felder fuellen den Bildschirm. */
     var amBoard = UI.turnier && turnierErlaubt();
@@ -11202,12 +12065,15 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var bZk = document.querySelector('#screen-bulloff > [data-action="to-tournament"]');
     if (bZk) bZk.classList.toggle('wahl', bWahl === ids.length);
     $('bulloff-buttons').className = 'bulloff';
+    /* Das Etikett unter dem Namen ist ein <em>, kein <span>: Tests und
+       Tastatur lesen den Namen als einzigen span neben dem Avatar. */
     $('bulloff-buttons').innerHTML = ids.map(function (pid, i) {
       return '<button data-action="pick-starter" data-id="' + esc(pid) + '"' +
         (i === bWahl ? ' class="wahl"' : '') + '>' +
-        avatarHTML(profile(pid), 'md') + '<span>' + esc(ligaName && S.tour && S.tour.liga ? ligaName(pid) : pname(pid)) + '</span></button>';
+        avatarHTML(profile(pid), 'md') + '<span>' + esc(ligaName && S.tour && S.tour.liga ? ligaName(pid) : pname(pid)) + '</span>' +
+        '<em class="bo-tag">' + (i === bWahl ? 'wirft an' : 'antippen, wenn näher') + '</em></button>';
     }).join('') +
-      (amBoard || (S.tour && S.tour.liga) ? '<p class="te-hint">8 / 2 · wählen &nbsp;&nbsp; Enter · der beginnt</p>' : '');
+      (amBoard || (S.tour && S.tour.liga) ? '<p class="te-hint"><b>4 / 6</b> wählen &nbsp;&nbsp; <b>Enter</b> der beginnt</p>' : '');
   }
 
   /* Wer nach dem Aktiven dran ist - fuer die Fernsteuerung (rechts der
@@ -14538,6 +15404,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     switch (action) {
       case 'nav': {
         var target = el.getAttribute('data-screen');
+        UI.menu = false;   // das Menue der Rangliste schliesst mit der Wahl
+        UI.boardLog = false;
         // Ein laufendes Spiel führt zurück aufs Board; ein beendetes, noch
         // nicht gespeichertes zeigt sich im Setup als Hinweis-Box.
         // spielScreen: das Schnelle Spiel heisst 'quick', sein Bildschirm
@@ -14708,7 +15576,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       case 'summary-back': {
         var from = UI.summary && UI.summary.from;
         UI.summary = null;
-        S.screen = from === 'boards' || from === 'players' ? from
+        S.screen = from === 'boards' || from === 'players' || from === 'liga' ? from
           : S.game && !S.game.done ? S.game.kind
           : S.matches.length ? 'tournament' : 'boards';
         save(); render();
@@ -14724,9 +15592,15 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         break;
       case 'board-mode':
         UI.boardMode = el.getAttribute('data-value');
-        UI.board = boardsFor(UI.boardMode)[0].key;
+        UI.board = (boardsFor(UI.boardMode)[0] || { key: 'won' }).key;
+        UI.boardLog = false;
         render();
         break;
+      /* Rangliste: Spielverlauf auf und zu, Menue hinter dem Logo. */
+      case 'board-log': UI.boardLog = true; render(); break;
+      case 'board-log-zu': UI.boardLog = false; render(); break;
+      case 'logo-menu': UI.menu = true; render(); break;
+      case 'liga-wahl': UI.ligaWahl = el.getAttribute('data-id'); render(); break;
       case 'set-mode':
         S.mode = el.getAttribute('data-value');
         save(); render();
@@ -14742,6 +15616,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       case 'eingabe': {
         var ew = Number(el.getAttribute('data-value'));
         S.settings.tastatur = ew === 2 ? 1 : 0;
+        /* Im Finisher gibt es nur Tastatur oder nicht - die Einzel-Dart-Grenze
+           des X01 bleibt davon unberuehrt. */
+        if (el.closest('#eingabe-wahl-fin')) { save(); render(); break; }
         if (ew === 0 && S.settings.dartModeFrom > 0) { S.settings.dartModeMerk = S.settings.dartModeFrom; S.settings.dartModeFrom = 0; }
         if (ew === 1 && !(S.settings.dartModeFrom > 0)) S.settings.dartModeFrom = S.settings.dartModeMerk > 0 ? S.settings.dartModeMerk : 170;
         save(); render();
@@ -14994,6 +15871,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         break;
       case 'liga-tab':
         UI.ligaTab = el.getAttribute('data-tab');
+        UI.boardLog = false;
         render();
         break;
       case 'liga-spiel': {
@@ -15070,7 +15948,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         UI.overlay = {
           type: 'uebung-start',
           draft: {
-            gegner: 'mittel', bestOf: 3, finish: true, geteilt: false,
+            gegner: UI.uebungGegner || 'mittel', bestOf: 3, finish: true, geteilt: false,
             wir: utVorschlag.slice(0, 4),
             sie: utVorschlag.slice(4, 8)
           }
@@ -15078,6 +15956,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         render();
         break;
       }
+      case 'uebung-vorwahl':
+        UI.uebungGegner = el.getAttribute('data-value') === 'bots' ? (UI.uebungGegner === 'team' || !UI.uebungGegner ? 'mittel' : UI.uebungGegner) : el.getAttribute('data-value');
+        render();
+        break;
+      case 'training-ical': trainingKalender(); break;
       case 'uebung-gegner':
         if (UI.overlay && UI.overlay.type === 'uebung-start') {
           UI.overlay.draft.gegner = el.getAttribute('data-value');
@@ -15631,13 +16514,18 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     save(); render();
   }
 
+  /* Escape klappt das Logo-Menue (Rangliste, Liga) wieder zu. */
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Escape' && UI.menu && (S.screen === 'boards' || S.screen === 'liga')) { UI.menu = false; render(); ev.preventDefault(); }
+  });
+
   document.addEventListener('click', function (ev) {
     if (isGhostTap(ev)) return;
     if (ev.target.id === 'overlay' && UI.overlay && !STICKY_OVERLAYS[UI.overlay.type] && !VOLLBILD_DIALOGE[UI.overlay.type]) {
       UI.overlay = null; UI.input = ''; render(); return;
     }
     /* Menue (•••): ein Tipp neben die Karte schliesst es. */
-    if (/^(game|cricket|rtw|fin)-menu-overlay$/.test(ev.target.id || '')) { UI.menu = false; render(); return; }
+    if (/^(game|cricket|rtw|fin|logo)-menu-overlay$/.test(ev.target.id || '')) { UI.menu = false; render(); return; }
     /* Ein Tipp ins Bild tut in der Fernsteuerung nichts (Julius): das Menue
        oeffnet nur •••, zurueck geht es ueber den ⌨-Knopf oben rechts. */
     var t = ev.target.closest('[data-action]');
@@ -16353,7 +17241,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   } catch (e) { /* egal */ }
   /* Die gemerkte Board-Einstellung zieht beim Start nur mitten im
      Ligaspiel - ein normales Spiel beginnt immer im normalen Bild. */
-  UI.turnier = !!(S.settings && S.settings.turnierModus === 1 && S.tour && S.tour.liga);
+  UI.turnier = !!(S.settings && S.settings.turnierModus === 1 && S.tour && S.tour.liga) ||
+    /* "Tastatur" im Setup: ein laufendes Schnelles Spiel oder Turnier kommt
+       nach dem Neustart wieder in der Fernsteuerung hoch. */
+    !!(S.settings && S.settings.tastatur === 1 && ((S.game && S.game.kind === 'quick' && S.game.p && S.game.p.length > 1) || (!S.game && S.tour && !S.tour.liga)));
+  UI.finFern = !!(S.settings && S.settings.tastatur === 1 && S.game && S.game.kind === 'finisher');
   if (!S.lineup.length) S.lineup = activeProfiles().slice(0, 4).map(function (p) { return p.id; });
   if ((S.screen === 'cricket' || S.screen === 'rtw' || S.screen === 'finisher') && !S.game) S.screen = 'setup';
   /* Ein angefangenes Schnelles Spiel liegt in S.game, nicht im Spielplan –
