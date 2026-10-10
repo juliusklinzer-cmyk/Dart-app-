@@ -2801,6 +2801,7 @@
     if (kind === 'rtw') S.game.boost = S.settings.rtwBoost === 1;
     UI.cricketSpalten = null;   // die Cricket-Tafel faengt ohne Einschiebe-Animation an
     UI.finRunde = undefined; UI.finSpiel = null;   // der Finisher wuerfelt die erste Zahl nicht vor
+    UI.finFern = false;
     if (kind === 'finisher') {
       S.game.ziel = S.settings.finisherTo;
       S.game.rounds = [];
@@ -4760,7 +4761,7 @@
       }
       var reihe = UI.bullReihe;
       var fertig = reihe.length === ids.length;
-      $('bulloff-sub').textContent = 'Alle werfen auf Bull \ud83c\udfaf - dann in Wurf-Reihenfolge antippen: Wer am nächsten dran war, zuerst.';
+      $('bulloff-sub').textContent = 'Alle werfen auf Bull - dann in Wurf-Reihenfolge antippen: Wer am nächsten dran war, zuerst.';
       $('bulloff-buttons').className = 'bulloff-order';
       /* Nichts springt beim Antippen: links bleibt der Platz eines
          Gewaehlten einfach leer (gleiche Groesse, unsichtbar), rechts
@@ -5580,6 +5581,83 @@
     return null;
   }
 
+  var HAKEN = '<svg class="haken" viewBox="0 0 24 24" aria-label="durch"><path d="M4 12.5l5 5L20 7"></path></svg>';
+
+  /* Eine Aufnahme als Zahl (Fernsteuerung): die Punkte in hoechstens k
+     einzelne Darts zerlegen - grosse Felder zuerst, damit der Weg so
+     aussieht, wie man ihn wirklich wirft. null, wenn es nicht geht. */
+  var DART_WERTE = (function () {
+    var w = {};
+    for (var n = 1; n <= 20; n++) { w[n] = { n: n, m: 1 }; w[2 * n] = w[2 * n] || { n: n, m: 2 }; w[3 * n] = w[3 * n] || { n: n, m: 3 }; }
+    w[25] = { n: 25, m: 1 }; w[50] = { n: 25, m: 2 };
+    /* Lieber T20 als D30: fuer jeden Wert das "natuerlichste" Feld. */
+    for (var t = 20; t >= 1; t--) { w[3 * t] = { n: t, m: 3 }; }
+    /* Bis 20 bleibt es das Single-Feld (3 ist S3, nicht T1). */
+    for (var s1 = 1; s1 <= 20; s1++) w[s1] = { n: s1, m: 1 };
+    return w;
+  })();
+  function dartsFuerPunkte(total, k) {
+    if (total === 0) return [];
+    if (k <= 0) return null;
+    var werte = Object.keys(DART_WERTE).map(Number).filter(function (v) { return v <= total; }).sort(function (a, b) { return b - a; });
+    for (var i = 0; i < werte.length; i++) {
+      var v = werte[i];
+      if (v === total) return [DART_WERTE[v]];
+      var rest = dartsFuerPunkte(total - v, k - 1);
+      if (rest) return [DART_WERTE[v]].concat(rest);
+    }
+    return null;
+  }
+
+  /* Fernsteuerung: die getippte Aufnahme buchen. Kein Finish: die Darts
+     werden eingetragen und die Aufnahme mit Fehlwuerfen aufgefuellt. Bust:
+     bis zum Dart, der ueberwirft. Finish: wie im X01 die Frage nach der
+     Dartzahl. */
+  function finisherAufnahmeTippen(total) {
+    var g = S.game;
+    if (!g || g.kind !== 'finisher' || g.done) return;
+    var rd = finisherRunde(g);
+    if (rd.stechen) return;
+    var st = finisherState(g);
+    var pid = g.players[st.turn];
+    var rest = st.rest[pid], frei = 3 - st.inVisit;
+    if (total > 180 || IMPOSSIBLE[total] || !dartsFuerPunkte(total, frei)) {
+      UI.error = total + ' ist mit ' + plural(frei, 'Dart', 'Darts') + ' nicht möglich'; UI.input = ''; render(); return;
+    }
+    var nach = rest - total;
+    if (nach === 0) {
+      var opts = [];
+      for (var k = 1; k <= frei; k++) if (Checkout.possible(rest, k)) opts.push(k);
+      if (opts.length) { UI.overlay = { type: 'checkout-darts', score: total, options: opts, fin: true }; save(); render(); return; }
+    }
+    pomp();
+    var darts = dartsFuerPunkte(total, frei);
+    var bust = nach < 0 || nach === 1 || nach === 0;
+    for (var i = 0; i < darts.length; i++) {
+      rd.throws.push({ n: darts[i].n, m: darts[i].m });
+      if (bust && finisherState(g).inVisit === 0) break;   // der Dart hat ueberworfen - Schluss
+    }
+    if (!bust) { var offen = frei - darts.length; for (var o = 0; o < offen; o++) rd.throws.push({ n: 0, m: 0 }); }
+    UI.input = ''; UI.error = ''; UI.mult = 1;
+    pruefeFinisherRunde(g);
+    save(); render();
+  }
+  function finisherFinishBuchen(anz) {
+    var g = S.game;
+    if (!g || g.kind !== 'finisher' || g.done) return;
+    var rd = finisherRunde(g);
+    var st = finisherState(g);
+    var rest = st.rest[g.players[st.turn]];
+    var route = Checkout.suggest(rest, anz);
+    if (!route) return;
+    pomp();
+    for (var m = route.length; m < anz; m++) rd.throws.push({ n: 0, m: 0 });
+    route.forEach(function (label) { var d = labelDart(label); rd.throws.push({ n: d.n, m: d.m }); });
+    UI.input = ''; UI.error = ''; UI.mult = 1;
+    pruefeFinisherRunde(g);
+    save(); render();
+  }
+
   /* Die neue Zahl wuerfeln: anderthalb Sekunden rollen Zufallszahlen immer
      langsamer durch, dann landet die echte, kurz darauf fliegt sie in das
      Zahl-Feld oben rechts. Rein Anzeige - der Stand steht laengst fest. */
@@ -5639,6 +5717,18 @@
           '<span class="muted"> · Rest ' + st.rest[aktiv] + '</span>';
     $('fin-menu-overlay').classList.toggle('hidden', !UI.menu);
     if (UI.menu) document.querySelector('#fin-menu-overlay .game-menu-sub').textContent = $('fin-sub').textContent;
+    /* Stechen: gleichgezogen, jetzt entscheidet der Bull. Wie beim Anwurf
+       wird von Hand getippt, wer naeher dran war – messen kann die App das
+       nicht, und am Board sieht man es sofort. */
+    $('fin-stechen-overlay').classList.toggle('hidden', !rd.stechen);
+    if (rd.stechen) {
+      $('fin-stechen-text').textContent = rd.stechen.spieler.map(function (id) { return pname(id); }).join(' und ') +
+        ' haben beide gefinished. Einmal auf Bull werfen – wer war näher dran?';
+      $('fin-stechen-wahl').innerHTML = rd.stechen.spieler.map(function (id) {
+        return '<button class="btn primary" data-action="fin-stechen" data-id="' + esc(id) + '">' + esc(pname(id)) + '</button>';
+      }).join('');
+    }
+    $('screen-finisher').classList.toggle('fern', !!UI.finFern);
 
     /* Die drei Felder des Spielers am Wurf: geworfen und getroffen wie
        vorgegeben -> gruen; daneben geworfen -> die geworfene Zahl; der
@@ -5698,22 +5788,52 @@
           '<div class="pblock"><span class="pname">' + esc(pname(id)) + '</span>' +
           '<span class="pmeta">Darts ' + st.darts[id] + ' · Aufnahmen ' + st.aufnahmen[id] + '</span></div>' +
           '<div class="fin-pillen" role="img" aria-label="' + (st.punkte[id] || 0) + ' von ' + g.ziel + ' Finishes">' + pillen + '</div></div>' +
-        '<div class="rest-zeile"><span class="rest">' + (fertig ? '✓' : st.rest[id]) + '</span></div>' +
+        '<div class="rest-zeile"><span class="rest">' + (fertig ? HAKEN : st.rest[id]) + '</span></div>' +
         felder +
         '</div>';
-    }).join('') +
-      /* Stechen: gleichgezogen, jetzt entscheidet der Bull. Wie beim Anwurf
-         wird von Hand getippt, wer naeher dran war – messen kann die App das
-         nicht, und am Board sieht man es sofort. */
-      (rd.stechen
-        ? '<div class="card fin-stechen"><h2>Stechen auf Bull</h2>' +
-          '<p class="hint">' + rd.stechen.spieler.map(function (id) { return esc(pname(id)); }).join(' und ') +
-          ' haben beide gefinished. Einmal auf Bull werfen – wer war näher dran?</p>' +
-          rd.stechen.spieler.map(function (id) {
-            return '<button class="btn full" data-action="fin-stechen" data-id="' + esc(id) + '">' +
-              esc(pname(id)) + '</button>';
-          }).join('') + '</div>'
-        : '');
+    }).join('');
+
+    /* Fernsteuerung: dieselben Karten in Plakatgroesse (fest an ihrem
+       Platz), je Spieler der Finish-Weg als Felder, unten die letzten
+       Aufnahmen und die Eingabe-Anzeige. */
+    if (UI.finFern) {
+      $('ff-runde').textContent = 'Runde ' + (st.runde + 1);
+      $('ff-sub').textContent = $('fin-sub').textContent;
+      $('ff-zahl').textContent = st.zahl;
+      $('ff-karten').classList.toggle('viele', n > 2);
+      $('ff-karten').innerHTML = g.players.map(function (id) {
+        var fertig = st.fertig[id];
+        var istAkt = id === aktiv && !rd.stechen && !g.done;
+        var pillen = '';
+        for (var fp = 0; fp < g.ziel; fp++) pillen += '<span class="fin-pille' + (fp < (st.punkte[id] || 0) ? ' an' : '') + '"></span>';
+        var weg = fertig || rd.stechen || g.done ? null
+          : Checkout.suggest(st.rest[id], istAkt ? 3 - st.inVisit : 3, lieblingsDoppel(id));
+        return '<div class="pcard' + (fertig ? ' fertig' : istAkt ? ' active' : '') + '">' +
+          '<div class="pkopf">' + avatarHTML(profile(id), 'sm') +
+            '<div class="pblock"><span class="pname">' + esc(pname(id)) + '</span>' +
+            '<span class="pmeta">Darts ' + st.darts[id] + ' · Aufnahmen ' + st.aufnahmen[id] + '</span></div>' +
+            '<div class="fin-pillen">' + pillen + '</div></div>' +
+          '<div class="rest-zeile"><span class="rest">' + (fertig ? HAKEN : st.rest[id]) + '</span></div>' +
+          '<div class="pfelder pfinish">' + (weg ? weg.map(function (d) {
+            return '<span class="fk weg' + (istAkt ? '' : ' wartet') + '">' + Checkout.pretty(d) + '</span>';
+          }).join('') : '') + '</div></div>';
+      }).join('');
+      /* Unten links und rechts die letzten drei Aufnahmen: zu zweit fest
+         je Spieler, ab dreien der am Wurf und der Naechste. */
+      var aufnahmen = finisherAufnahmen(g, rd);
+      var ffListe = function (pid) {
+        if (!pid) return '';
+        return aufnahmen.filter(function (v) { return v.p === pid; }).slice(-3).reverse().map(function (v) {
+          return '<div class="v ' + (v.b ? 'bust' : v.c ? 'co' : '') + '"><span class="s">' +
+            (v.c ? 'Finish' : v.b ? 'Bust' : (v.rest + v.s) + ' → ' + v.rest) + '</span><span class="r">' + (v.c || v.b ? '' : v.s) + '</span></div>';
+        }).join('');
+      };
+      var ffNaechster = g.players[(st.turn + 1) % n];
+      $('ff-hist-l').innerHTML = ffListe(n === 2 ? g.players[0] : aktiv);
+      $('ff-hist-r').innerHTML = ffListe(n === 2 ? g.players[1] : (n > 1 ? ffNaechster : null));
+      $('ff-display').innerHTML = UI.input === '' ? '<span class="cursor"></span>' : esc(UI.input);
+      $('ff-error').textContent = UI.error;
+    }
 
     /* Zahlenfeld wie im X01: Double/Triple als Schalter, Bull, Bull x2,
        1 bis 20, Zurueck, 0 und OK (fuellt die Aufnahme mit Fehlwuerfen auf). */
@@ -8819,10 +8939,19 @@
       case 'co-darts': {
         var n = Number(el.getAttribute('data-n'));
         var score = UI.overlay.score;
+        var coFin = !!UI.overlay.fin;
         UI.overlay = null;
-        commitVisit(score, n, true, false);
+        if (coFin) finisherFinishBuchen(n); else commitVisit(score, n, true, false);
         break;
       }
+      case 'fin-fern':
+        UI.menu = false; UI.finFern = true; UI.input = ''; UI.error = '';
+        save(); render();
+        break;
+      case 'fin-fern-aus':
+        UI.finFern = false; UI.input = ''; UI.error = '';
+        save(); render();
+        break;
       case 'ov-cancel':
         UI.overlay = null; UI.input = ''; render();
         break;
@@ -9610,6 +9739,30 @@
     }
   });
 
+  /* Finisher-Fernsteuerung: Ziffern in die Anzeige, Enter bucht die
+     Aufnahme, Loeschen nimmt erst Ziffern und dann den letzten Dart zurueck,
+     Esc fuehrt zur Eingabe zurueck. */
+  document.addEventListener('keydown', function (ev) {
+    if (S.screen !== 'finisher' || !UI.finFern || UI.overlay || UI.menu) return;
+    if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    var fg = S.game;
+    if (!fg || fg.kind !== 'finisher') return;
+    if (ev.key === 'Escape') { UI.finFern = false; UI.input = ''; save(); render(); ev.preventDefault(); return; }
+    if (fg.done) return;
+    var zFin = tasteZiffer(ev);
+    if (zFin !== null) {
+      if (UI.input.length < 3) { UI.input = UI.input === '0' ? zFin : UI.input + zFin; UI.error = ''; render(); }
+      ev.preventDefault();
+    } else if (ev.key === 'Enter') {
+      if (UI.input !== '') { ev.eingabeGebucht = true; finisherAufnahmeTippen(parseInt(UI.input, 10)); }
+      ev.preventDefault();
+    } else if (ev.key === 'Backspace') {
+      if (UI.input) { klick(); UI.input = UI.input.slice(0, -1); UI.error = ''; render(); }
+      else undoFinisher(fg);
+      ev.preventDefault();
+    }
+  });
+
   /* Shift gedrückt halten zeigt die Wurfliste des Matches – je Spieler auf
      seiner Seite, alle Legs mit Trennern. Loslassen führt zurück in die
      Spielansicht; verliert das Fenster den Fokus (Alt-Tab), klappt die
@@ -9651,7 +9804,10 @@
      beantworten die Dart-Frage beim Checkout, Enter startet das nächste Leg,
      Löschen nimmt die Eingabe zurück. */
   document.addEventListener('keydown', function (ev) {
-    if (S.screen !== 'game' || !UI.overlay) return;
+    if (!UI.overlay) return;
+    /* Im Finisher gilt nur die Finish-Frage der Fernsteuerung - alles
+       andere gehoert dem X01-Spielbild. */
+    if (S.screen !== 'game' && !(S.screen === 'finisher' && UI.overlay.fin)) return;
     var ov = UI.overlay;
     /* Ziffer im Leg-Ende-Dialog: weiter zum naechsten Leg, und die Ziffer
        beginnt dort gleich die Aufnahme (Turnier-Modus). Nach Spielende wird
@@ -9672,9 +9828,9 @@
         ev.preventDefault();
         var anz = parseInt(zCo, 10);
         if (anz >= 1 && anz <= 3 && ov.options.indexOf(anz) >= 0) {
-          var coScore = ov.score;
+          var coScore = ov.score, coFin = !!ov.fin;
           UI.overlay = null;
-          commitVisit(coScore, anz, true, false);
+          if (coFin) finisherFinishBuchen(anz); else commitVisit(coScore, anz, true, false);
         }
       } else if (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight' ||
                  ev.key === 'ArrowUp' || ev.key === 'ArrowDown' || ev.key === 'Tab') {
@@ -9690,7 +9846,7 @@
         var coAnz = ov.options[Math.min(ov.wahl || 0, ov.options.length - 1)];
         var coSc = ov.score;
         UI.overlay = null;
-        commitVisit(coSc, coAnz, true, false);
+        if (ov.fin) finisherFinishBuchen(coAnz); else commitVisit(coSc, coAnz, true, false);
       } else if (ev.key === 'Backspace') {
         undo(); ev.preventDefault();
       }

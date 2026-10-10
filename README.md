@@ -155,7 +155,14 @@ Kasten die **gezogene Zahl** – nach jedem Finish **rollt die neue Zahl** in de
 des Bildes aus und fliegt in ihr Feld; darunter das Einzel-Darts-Feld des X01 mit Double/Triple
 als Schalter, Bull, Bull ×2, 1 bis 20, **←** (Dart für Dart zurück – über eine
 Rundengrenze hinweg auch eine schon entschiedene Runde samt gezogener Zahl), **0**
-und **OK** (füllt die Aufnahme mit Fehlwürfen auf).
+und **OK** (füllt die Aufnahme mit Fehlwürfen auf). Unter ••• schaltet **Fernsteuerung**
+auf die Board-Anzeige: die Karten in Plakatgröße mit dem Finish-Weg jedes Spielers,
+unten die letzten Aufnahmen und eine große Eingabe-Anzeige. Getippt wird wie im X01
+die **Aufnahme als Zahl** (85, Enter) – die App trägt die passenden Darts ein und
+füllt mit Fehlwürfen auf; wer bustet, bustet; beim Finish fragt sie nach der Dartzahl
+(1/2/3). Löschen nimmt Ziffern und dann Darts zurück, **⇄** oben rechts oder Esc
+führen zur Eingabe zurück. Checken mehrere in derselben Runde aus, fragt ein Dialog,
+wer beim Stechen näher am Bull war.
 
 In der Rangliste zählt der Modus **gewonnene Runden**, **Ø Darts je Finish**, das
 schnellste Finish und die höchste weggemachte Zahl.

@@ -204,7 +204,7 @@ await dart('D6');
 check('Match-Ende-Overlay mit Glückwunsch', (await visible('#overlay')) && (await text('#overlay-card')).includes('Glückwunsch'));
 
 const table1 = await st();
-const winner = table1.find((p) => p.name === firstName);
+const winner = table1.find((p) => p.name.toLowerCase() === firstName.toLowerCase());   // die Ausbull-Knoepfe stehen in Versalien
 check('Sieger hat 1 Sieg', winner.won === 1, JSON.stringify(winner));
 check('180er gezählt', winner.s180 === 2, String(winner.s180));
 check('höchstes Finish 12', winner.highCO === 12, String(winner.highCO));
@@ -280,7 +280,7 @@ const board = (key) => page.evaluate((k) => window.__dart.ranking(k), key);
 
 group('Karriere-Statistik');
 const c1 = await carr();
-const champ = Object.values(c1).find((s) => s.name === firstName);
+const champ = Object.values(c1).find((s) => s.name.toLowerCase() === firstName.toLowerCase());
 check('Karriere zählt alle Spiele des Turniers', Object.values(c1).reduce((a, s) => a + s.matches, 0) === 12, 'Summe Spielteilnahmen');
 check('Average über alle Spiele vorhanden', champ.avg > 0 && champ.darts > 0);
 check('First-9-Average berechnet', champ.first9 > 0, String(champ.first9));
@@ -485,7 +485,7 @@ check('Bull-Off auch im Training', await visible('#screen-bulloff'));
 const rtwStarter = await page.locator('#bulloff-buttons button').first().locator('span:not(.av)').innerText();
 await page.locator('#bulloff-buttons button').first().click();
 check('RTW-Screen', await visible('#screen-rtw'));
-check('der Bull-Sieger beginnt', (await text('#rtw-turn')).includes(rtwStarter), await text('#rtw-turn'));
+check('der Bull-Sieger beginnt', (await textKlein('#rtw-turn')).includes(rtwStarter.toLowerCase()), await text('#rtw-turn'));
 check('alle starten auf der 1', await page.evaluate(() => {
   const s = window.__dart.rtwState();
   return Object.values(s.target).every((t) => t === 1);
@@ -1134,7 +1134,7 @@ const [fA, fB] = await page.evaluate(() => window.__dart.game().players);
 check('Zahl liegt zwischen 6 und 120', fst.zahl >= 6 && fst.zahl <= 120, String(fst.zahl));
 check('beide starten auf derselben Zahl', fst.rest[fA] === fst.zahl && fst.rest[fB] === fst.zahl);
 check('Zahl steht groß im Kasten und als Rest auf den Karten', (await text('#fin-zahl')).trim() === String(fst.zahl) && (await text('#fin-board')).includes(String(fst.zahl)));
-check('Menue, Info und Runde stehen rechts oben', (await visible('#screen-finisher .fin-menu')) && (await textKlein('#fin-runde')).includes('runde 1'));
+check('Menue, Info und Runde stehen rechts oben', (await visible('#screen-finisher .fin-kopf .fin-menu')) && (await textKlein('#fin-runde')).includes('runde 1'));
 check('je Zielpunkt eine Pille in der Karte, anfangs keine an', await page.evaluate(() => {
   const karten = document.querySelectorAll('#fin-board .pcard');
   const ziel = window.__dart.game().ziel;
@@ -1199,7 +1199,7 @@ fst = await finState();
 const stechenDa = await page.evaluate(() => !!window.__dart.finisherRunde().stechen);
 check('beide gefinished, also Stechen', stechenDa);
 check('Punkte noch unverändert', fst.punkte[fA] === 1 && fst.punkte[fB] === 0);
-check('Stechen steht sichtbar auf dem Schirm', await page.locator('.fin-stechen').isVisible());
+check('Stechen steht sichtbar als Dialog auf dem Schirm', await page.locator('.fin-stechen').isVisible());
 /* innerText liefert Überschriften so, wie sie dastehen – und h2 ist per CSS
    in Großbuchstaben. Deshalb ohne Rücksicht auf die Schreibweise prüfen. */
 check('mit beiden Namen darin', await page.evaluate((ids) => {
@@ -1303,6 +1303,34 @@ check('Fehlwürfe stehen als – in den Kacheln',
   (await page.locator('#fin-hint .fk.anders').first().innerText()).trim() === '–');
 check('der letzte Dart kann nicht finishen: grauer Stellwurf 7 (auf D16)',
   /^7\s+auf \d+$/.test((await page.locator('#fin-hint .fk.stellen').innerText()).trim()));
+
+group('Finisher: Fernsteuerung - die Aufnahme als Zahl, Weg und Finish-Frage');
+await page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; S.lineup = D.activeProfiles().slice(0, 2).map((p) => p.id); S.mode = 'finisher'; D.save(); D.setScreen('setup'); });
+await page.locator('[data-action="start-game"]').click();
+await bullOffGo();
+await page.evaluate(() => { window.__dart.finisherRunde().zahl = 100; window.__dart.render(); });
+const [ffA] = await page.evaluate(() => window.__dart.game().players);
+await page.locator('#screen-finisher .fin-menu').first().click();
+await page.locator('#fin-menu-overlay [data-action="fin-fern"]').click();
+check('die Fernsteuerung steht: Karten, Zahl, Eingabe-Anzeige', (await visible('#fin-fern')) && (await text('#ff-zahl')).trim() === '100' &&
+  (await page.locator('#ff-display .cursor').count()) === 1 && !(await visible('#fin-pad')));
+check('der Finish-Weg steht in der Karte am Wurf', (await text('#ff-karten .pcard.active .pfinish')).includes('T20'));
+await page.keyboard.type('60'); await page.keyboard.press('Enter');
+check('60 getippt: Rest 40, die Aufnahme ist durch', await page.evaluate((id) => {
+  const st = window.__dart.finisherState(); return st.rest[id] === 40 && st.aufnahmen[id] === 1;
+}, ffA));
+check('die Liste unten zeigt 100 → 40', (await text('#ff-hist-l')).includes('100 → 40'));
+await page.keyboard.type('90'); await page.keyboard.press('Enter');   // Gegner: 100 -> 10
+await page.keyboard.type('40'); await page.keyboard.press('Enter');
+check('Finish getippt: die Frage nach der Dartzahl', (await text('#overlay-card')).includes('wie vielen Darts'));
+await page.keyboard.press('1');
+check('ein Dart: D20, Spieler A ist durch', await page.evaluate((id) => !!window.__dart.finisherState().fertig[id], ffA));
+await page.keyboard.type('5'); await page.keyboard.press('Enter');     // Gegner: 10 -> 5 = Bust? nein: Rest 5 bleibt (ohne Doppel kein Finish, 5 ist regulaer)
+check('nach der Runde rollt die neue Zahl', await page.evaluate(() => window.__dart.finisherState().runde === 1));
+await page.keyboard.press('Escape');
+check('Esc fuehrt zur Eingabe zurueck', !(await visible('#fin-fern')) && (await visible('#fin-pad')));
+await page.waitForTimeout(3200);
+await page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; D.save(); D.setScreen('setup'); });
 await page.evaluate(() => {
   const D = window.__dart, S = D.state();
   S.game = null;

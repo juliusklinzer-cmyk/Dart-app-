@@ -624,7 +624,7 @@
 <!-- ============ BULL-OFF ============ -->
 <section id="screen-bulloff" class="screen center">
   <header class="app-header">
-    <div class="big-emoji" aria-hidden="true">🎯</div>
+    <div class="bull-ring" aria-hidden="true"><svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="32" cy="32" r="28"></circle><circle cx="32" cy="32" r="19"></circle><circle cx="32" cy="32" r="10"></circle><circle cx="32" cy="32" r="3" fill="currentColor"></circle></svg></div>
     <h1>Bull werfen</h1>
     <p class="sub" id="bulloff-sub">Wer war näher am Bull und darf anfangen?</p>
   </header>
@@ -845,6 +845,37 @@
       <div class="pad" id="fin-pad"></div>
     </div>
   </div>
+  <!-- Fernsteuerung (Board-Anzeige): oben Menue, Titel, Zahl und ⇄ zurueck,
+       die Karten aller Spieler, unten die letzten Aufnahmen und die Eingabe-
+       Anzeige. Getippt wird die Aufnahme als Zahl (Enter), beim Finish fragt
+       die App nach der Dartzahl - wie im X01. -->
+  <div id="fin-fern" class="fin-fern">
+    <div class="ff-kopf">
+      <button class="xk-btn fin-menu" data-action="game-menu" aria-label="Menü"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><g opacity="0.8"><circle cx="3.5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="20.5" cy="12" r="1.8"></circle></g></svg></button>
+      <div class="ff-info">
+        <div class="ff-titel"><span class="fin-h">Finisher</span><span class="fin-runde" id="ff-runde"></span></div>
+        <span class="fin-sub" id="ff-sub"></span>
+      </div>
+      <div class="fin-zahl ff-zahl"><span class="fz-label">Zahl</span><span class="fz-wert" id="ff-zahl"></span></div>
+      <button class="xk-btn ff-zurueck" data-action="fin-fern-aus" aria-label="Zur Eingabe"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h14M14.5 4.5L18 8l-3.5 3.5M20 16H6M9.5 12.5L6 16l3.5 3.5"></path></svg></button>
+    </div>
+    <div class="scoreboard ff-karten" id="ff-karten"></div>
+    <div class="ff-unten">
+      <div id="ff-hist-l" class="key-hist"></div>
+      <div class="key-mitte"><div id="ff-display" class="key-display" aria-live="polite"></div><div id="ff-error" class="input-error"></div></div>
+      <div id="ff-hist-r" class="key-hist"></div>
+    </div>
+  </div>
+  <!-- Stechen: gleichgezogen, der Bull entscheidet - als Dialog ueber dem Bild. -->
+  <div id="fin-stechen-overlay" class="game-menu hidden" role="dialog" aria-modal="true" aria-labelledby="fin-stechen-titel">
+    <div class="game-menu-karte fin-stechen">
+      <div class="game-menu-kopf">
+        <span class="game-menu-titel" id="fin-stechen-titel">Stechen auf Bull</span>
+        <span class="game-menu-sub" id="fin-stechen-text"></span>
+      </div>
+      <div class="game-menu-zeile fin-stechen-wahl" id="fin-stechen-wahl"></div>
+    </div>
+  </div>
   <!-- Nach jedem Finish rollt hier die neue Zahl aus und fliegt in ihr Feld. -->
   <div id="fin-roller" class="fin-roller" aria-hidden="true">
     <div class="fin-roller-wrap">
@@ -860,6 +891,7 @@
         <span class="game-menu-titel" id="fin-menu-titel">Finisher</span>
         <span class="game-menu-sub"></span>
       </div>
+      <button class="btn ghost full" data-action="fin-fern">Fernsteuerung · Board-Anzeige, Eingabe über Tastatur</button>
       <div class="game-menu-zeile">
         <button class="btn ghost game-menu-raus" data-action="leave-game">Spiel verlassen</button>
         <button class="btn primary" data-action="game-menu-zu">Weiterspielen</button>
