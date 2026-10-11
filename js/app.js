@@ -151,7 +151,7 @@
      angefangene Aufnahme in Einzel-Darts und die offene Checkout- bzw.
      Leg-Ende-Frage. Gilt nur fuer die Partie, zu der es gehoert. */
   function uiKennung() {
-    if (S.game && S.game.kind === 'quick') return 'g:' + S.game.id;
+    if (S.game && (S.game.kind === 'quick' || S.game.kind === 'kaiwen')) return 'g:' + S.game.id;
     return S.current ? 'm:' + S.current : null;
   }
   function uiMerken() {
@@ -177,7 +177,12 @@
   function uiWiederherstellen() {
     var u = S.ui;
     S.ui = null;
-    if (!u || u.k !== uiKennung() || S.screen !== 'game') return;
+    if (!u || u.k !== uiKennung()) return;
+    if (S.screen === 'kaiwen') {
+      if (u.overlay && u.overlay.type === 'checkout-darts' && u.overlay.kw) UI.overlay = u.overlay;
+      return;
+    }
+    if (S.screen !== 'game') return;
     var m = currentMatch();
     if (!m || m.done) return;
     if (Array.isArray(u.darts) && u.darts.length < 3) UI.darts = u.darts;
@@ -369,6 +374,7 @@
          Stand käme aus einer kaputten Speicherung und würde beim Zeichnen
          auffliegen. Lieber verwerfen als abstürzen. */
       if (s.game && s.game.kind === 'finisher' && !Array.isArray(s.game.rounds)) s.game = null;
+      if (s.game && s.game.kind === 'kaiwen' && !(Array.isArray(s.game.versuche) && s.game.versuche.length)) s.game = null;
       if (s.settings.cricketScoring === undefined) s.settings.cricketScoring = 1;
       /* Vor der Wahl gab es nur Boost -- wer von damals kommt, behaelt das. */
       if (s.settings.rtwBoost === undefined) s.settings.rtwBoost = 1;
@@ -2014,6 +2020,7 @@
       cricketGames: 0, cricketWins: 0, cricketMarks: 0, cricketDarts: 0,
       rtwGames: 0, rtwWins: 0, rtwBest: null,
       finGames: 0, finWins: 0, finRounds: 0, finDarts: 0, finBest: null, finHigh: 0,
+      kwGames: 0, kwVersuche: 0, kwChecks: 0, kwBestSolo: null, kwBestTeam: null,
       lastResults: []
     };
   }
@@ -2029,6 +2036,7 @@
     st.tons = st.s100 + st.s140 + st.s180;
     st.mpr = st.cricketDarts ? (st.cricketMarks / st.cricketDarts) * 3 : 0;
     st.finAvgDarts = st.finRounds ? st.finDarts / st.finRounds : 0;
+    st.kwQuote = st.kwVersuche ? (st.kwChecks / st.kwVersuche) * 100 : 0;
     return st;
   }
 
@@ -2207,6 +2215,18 @@
           if (rd.zahl > s.finHigh) s.finHigh = rd.zahl;
         });
         if (h.winner && map[h.winner] && h.players.length > 1) map[h.winner].finWins++;   // allein gibt es keinen Sieg
+      } else if (kind === 'kaiwen') {
+        var kwSt = kaiwenState({ players: h.players, versuche: h.versuche || [] });
+        var kwHoch = kaiwenHoechste(h);
+        h.players.forEach(function (id) {
+          var s = map[id];
+          if (!s) return;
+          s.kwGames++;
+          s.kwVersuche += kwSt.versuche;
+          s.kwChecks += kwSt.checksJe[id] || 0;
+          if (h.players.length === 1) { if (s.kwBestSolo === null || kwHoch > s.kwBestSolo) s.kwBestSolo = kwHoch; }
+          else if (s.kwBestTeam === null || kwHoch > s.kwBestTeam) s.kwBestTeam = kwHoch;
+        });
       }
     });
     Object.keys(map).forEach(function (k) {
@@ -2356,7 +2376,12 @@
     { mode: 'finisher', key: 'finAvgDarts', label: 'Ø Darts je Finish', get: function (s) { return s.finAvgDarts; }, fmt: function (v) { return v.toFixed(1); }, min: function (s) { return s.finRounds >= 3; }, asc: true, hint: 'Wie viele Darts du im Schnitt für ein gewonnenes Finish brauchst. Zählt ab 3 gewonnenen Runden.' },
     { mode: 'finisher', key: 'finRounds', label: 'Gewonnene Runden', get: function (s) { return s.finRounds; }, fmt: function (v) { return String(v); }, min: function (s) { return s.finGames > 0; }, hint: 'Jede Runde, in der du als Erster ausgecheckt hast.' },
     { mode: 'finisher', key: 'finBest', label: 'Schnellstes Finish', get: function (s) { return s.finBest; }, fmt: function (v) { return plural(v, 'Dart', 'Darts'); }, min: function (s) { return s.finBest !== null; }, asc: true, hint: 'Wenigste Darts für ein gewonnenes Finish.' },
-    { mode: 'finisher', key: 'finHigh', label: 'Höchste Zahl', get: function (s) { return s.finHigh; }, fmt: function (v) { return String(v); }, min: function (s) { return s.finHigh > 0; }, hint: 'Die höchste Zahl, die du in einer Runde als Erster weggemacht hast.' }
+    { mode: 'finisher', key: 'finHigh', label: 'Höchste Zahl', get: function (s) { return s.finHigh; }, fmt: function (v) { return String(v); }, min: function (s) { return s.finHigh > 0; }, hint: 'Die höchste Zahl, die du in einer Runde als Erster weggemacht hast.' },
+    { mode: 'kaiwen', key: 'kwBestTeam', label: 'PB Team', get: function (s) { return s.kwBestTeam; }, fmt: function (v) { return String(v); }, min: function (s) { return s.kwBestTeam !== null; }, hint: 'Die höchste Zahl, die du im Team als Startzahl eines Versuchs erreicht hast.' },
+    { mode: 'kaiwen', key: 'kwBestSolo', label: 'PB Solo', get: function (s) { return s.kwBestSolo; }, fmt: function (v) { return String(v); }, min: function (s) { return s.kwBestSolo !== null; }, hint: 'Die höchste Zahl, die du allein erreicht hast.' },
+    { mode: 'kaiwen', key: 'kwChecks', label: 'Checks', get: function (s) { return s.kwChecks; }, fmt: function (v) { return String(v); }, min: function (s) { return s.kwGames > 0; }, hint: 'Von dir gecheckte Versuche.' },
+    { mode: 'kaiwen', key: 'kwQuote', label: 'Check-Quote', get: function (s) { return s.kwQuote; }, fmt: function (v) { return v.toFixed(0) + ' %'; }, min: function (s) { return s.kwVersuche >= 5; }, hint: 'Deine Checks je gespieltem Versuch. Zählt ab 5 Versuchen.' },
+    { mode: 'kaiwen', key: 'kwVersuche', label: 'Versuche', get: function (s) { return s.kwVersuche; }, fmt: function (v) { return String(v); }, min: function (s) { return s.kwGames > 0; }, hint: 'Alle Versuche, an denen du beteiligt warst.' }
   ];
 
   /* Die Liga-Rangliste: dieselben Classic-Kategorien, aber nur über
@@ -2602,6 +2627,7 @@
   function undoGame() {
     var g = S.game;
     if (g && g.kind === 'finisher') return undoFinisher(g);
+    if (g && g.kind === 'kaiwen') return undoKaiwen(g);
     // Das Schnelle Spiel benutzt die Aufnahmen-Logik des X01, also auch
     // deren Undo – Dart für Dart und über Aufnahmen hinweg.
     if (g && g.kind === 'quick') return undo();
@@ -2808,6 +2834,14 @@
       S.game.rounds = [];
       neueFinisherRunde(S.game);
     }
+    /* Kaiwen: Startzahl 120, die Reihenfolge der Auswahl ist die
+       Wurfreihenfolge (kein Ausbullen). */
+    if (kind === 'kaiwen') {
+      S.game.versuche = [];
+      neuerKaiwenVersuch(S.game, KAIWEN_START);
+      UI.kwFern = S.settings.tastatur === 1;
+      UI.kwDelta = null; UI.kwBanner = null; UI.kwBlitz = null;
+    }
     /*
      * Schnelles Spiel: kein Turnier, alle an einem Board, ein Leg, wer zuerst
      * auscheckt gewinnt. Es bekommt dieselben Felder wie eine Turnierpartie
@@ -2838,9 +2872,9 @@
     // allein: gegen sich selbst bullt niemand aus. Das Spiel gilt dann
     // sofort als begonnen, sonst raeumte der Zurueck-Knopf es weg und
     // ein Neustart landete auf dem Bull-Off.
-    if (S.lineup.length === 1) {
+    if (S.lineup.length === 1 || kind === 'kaiwen') {
       S.game.started = true;
-      S.screen = kind === 'cricket' ? 'cricket' : kind === 'rtw' ? 'rtw' : kind === 'finisher' ? 'finisher' : 'game';
+      S.screen = spielScreen(kind);
     } else {
       UI.bullReihe = [];
       S.screen = 'bulloff';
@@ -2871,6 +2905,12 @@
     if (g.kind === 'finisher') {
       eintrag.rounds = g.rounds;
       eintrag.ziel = g.ziel;
+    } else if (g.kind === 'kaiwen') {
+      /* Die Versuche (je Startzahl und Aufnahmen) - daraus rechnet sich
+         alles: Checks, Quote, Rekorde. Offene Darts gehen nicht mit. */
+      eintrag.versuche = g.versuche.map(function (v) { return { zahl: v.zahl, visits: v.visits }; });
+      if (g.rekordNeu) eintrag.rekordNeu = g.rekordNeu;
+      if (g.pbNeu) eintrag.pbNeu = g.pbNeu;
     } else if (g.kind === 'quick') {
       /* Das Schnelle Spiel wird wie eine Turnierpartie abgelegt – eine
          Match-Liste mit genau einem Eintrag. Dadurch rechnet collectStats()
@@ -3081,6 +3121,7 @@
       g.players.every(function (id) { return typeof id === 'string' && ID_OK.test(id); });
     if (kind === 'cricket' || kind === 'rtw') return spieler && istListe(g.throws);
     if (kind === 'finisher') return spieler && istListe(g.rounds) && g.rounds.every(function (rd) { return !!rd && istListe(rd.throws); });
+    if (kind === 'kaiwen') return spieler && istListe(g.versuche) && g.versuche.every(function (v) { return !!v && typeof v.zahl === 'number' && istListe(v.visits); });
     return false;
   }
 
@@ -3189,7 +3230,7 @@
   }
 
   /* ================= Rendering ================= */
-  var SCREENS = ['setup', 'tournament', 'boards', 'players', 'profile', 'bulloff', 'game', 'cricket', 'rtw', 'finisher', 'summary', 'winner', 'liga', 'bericht', 'konto'];
+  var SCREENS = ['setup', 'tournament', 'boards', 'players', 'profile', 'bulloff', 'game', 'cricket', 'rtw', 'finisher', 'kaiwen', 'summary', 'winner', 'liga', 'bericht', 'konto'];
   var NAV_SCREENS = { setup: 'setup', tournament: 'setup', boards: 'boards', players: 'players', profile: 'players', summary: 'setup', liga: 'liga', konto: 'konto', winner: 'setup' };
 
   /* Solange die Anmeldung aussteht, ist die App zu. Ohne Server (Doppelklick,
@@ -3227,7 +3268,7 @@
     /* Das •••-Menue gibt es nur in den Spielbildern - ueberall sonst wird
        ein haengengebliebenes Menue (Zurueck-Taste aus dem offenen Menue)
        zugeklappt. */
-    var mitMenue = screen === 'game' || screen === 'cricket' || screen === 'rtw' || screen === 'finisher';
+    var mitMenue = screen === 'game' || screen === 'cricket' || screen === 'rtw' || screen === 'finisher' || screen === 'kaiwen';
     if (!mitMenue) UI.menu = false;
     /* Die Liga-Auswertung wohnt im Statistik-Reiter der Liga; ueberall
        sonst steht der Ranglisten-Koerper in seinem eigenen Screen. */
@@ -3287,9 +3328,9 @@
       S.screen === 'game' || S.screen === 'cricket' || S.screen === 'rtw' || S.screen === 'finisher');
     /* Das X01-Spielbild ist auf jeder Bildschirmgroesse fest im Rahmen
        (siehe body.fix-spiel) - nichts scrollt, weder Seite noch Spielbild. */
-    document.body.classList.toggle('fix-spiel', S.screen === 'game' || S.screen === 'cricket' || S.screen === 'rtw' || S.screen === 'finisher');
+    document.body.classList.toggle('fix-spiel', S.screen === 'game' || S.screen === 'cricket' || S.screen === 'rtw' || S.screen === 'finisher' || S.screen === 'kaiwen');
     /* Cricket nutzt die ganze Breite - kein Seitenrand, keine Maximalbreite. */
-    document.body.classList.toggle('rand-aus', S.screen === 'cricket' || S.screen === 'game' || S.screen === 'rtw' || S.screen === 'finisher');
+    document.body.classList.toggle('rand-aus', S.screen === 'cricket' || S.screen === 'game' || S.screen === 'rtw' || S.screen === 'finisher' || S.screen === 'kaiwen');
     /* Das Startbild steht am Tablet und quergedrehten Handy fest im Rahmen,
        innen scrollen nur Spielerliste und Einstellungen (body.fix-setup). */
     document.body.classList.toggle('fix-setup', S.screen === 'setup' || S.screen === 'tournament' || S.screen === 'bulloff' || S.screen === 'boards' ||
@@ -3338,6 +3379,12 @@
     if (S.screen === 'cricket') renderCricket();
     if (S.screen === 'rtw') renderRtw();
     if (S.screen === 'finisher') renderFinisher();
+    if (S.screen === 'kaiwen') renderKaiwen();
+    else if ($('kw-team') && $('kw-team').innerHTML) {
+      /* Beim Verlassen den Kaiwen-Bildschirm leeren: seine Felder und
+         Kacheln sollen nirgends sonst mitgezaehlt werden. */
+      ['kw-team', 'kw-ziel', 'kw-verlauf', 'kw-pad-darts'].forEach(function (id) { $(id).innerHTML = ''; });
+    }
     if (S.screen === 'summary') renderSummary();
     if (S.screen === 'winner') renderWinner();
     if (S.screen === 'liga') renderLiga();
@@ -3531,7 +3578,7 @@
     cricket: ['Cricket', 'Jede Zahl von 20 bis 15 und Bull dreimal treffen.'],
     rtw: ['Round the World', 'Reihum von 1 bis 20, danach Bull.'],
     finisher: ['Finisher', 'Alle auf derselben Zahl zwischen 6 und 120, Double Out.'],
-    kaiwen: ['Kaiwen', 'Im Team in 9 Darts finishen: Erfolg +1, Fehlschlag −1. Regeln folgen.'],
+    kaiwen: ['Kaiwen', 'Allein oder zu zweit: die Zahl in 9 Darts finishen. Check: plus 10, daneben: eins runter.'],
     hunter: ['Hunter', 'Die Jagd: ihr fangt euch gegenseitig. Regeln folgen.']
   };
 
@@ -3603,14 +3650,15 @@
     $('settings-cricket').classList.toggle('hidden', S.mode !== 'cricket');
     $('settings-rtw').classList.toggle('hidden', S.mode !== 'rtw');
     $('settings-finisher').classList.toggle('hidden', S.mode !== 'finisher');
-    var bald = S.mode === 'kaiwen' || S.mode === 'hunter';
+    $('settings-kaiwen').classList.toggle('hidden', S.mode !== 'kaiwen');
+    var bald = S.mode === 'hunter';
     /* Eingabe-Wahl: Tastatur (Fernsteuerung ab Start), Standard (immer die
        Aufnahme als Zahl, Grenze 0) oder Gemischt (ab der Grenze Dart fuer
        Dart). Die Grenze selbst erscheint nur bei Gemischt. */
     var eingabe = S.settings.tastatur === 1 ? 2 : S.settings.dartModeFrom > 0 ? 1 : 0;
     document.querySelectorAll('#screen-setup [data-action="eingabe"]').forEach(function (b) {
       /* Der Finisher kennt kein Gemischt - dort heisst alles ohne Tastatur Standard. */
-      var ziel = b.closest('#eingabe-wahl-fin') ? (eingabe === 2 ? 2 : 0) : eingabe;
+      var ziel = b.closest('#eingabe-wahl-fin, #eingabe-wahl-kw') ? (eingabe === 2 ? 2 : 0) : eingabe;
       b.classList.toggle('active', Number(b.getAttribute('data-value')) === ziel);
     });
     var dartmode = $('setting-dartmode');
@@ -4160,7 +4208,7 @@
     var host = document.querySelector('.boards-koerper').parentElement;
     host.classList.toggle('log', !!UI.boardLog);
     /* Kaiwen und Hunter: noch kein Spiel, noch keine Auswertung. */
-    var bald = mode === 'kaiwen' || mode === 'hunter';
+    var bald = mode === 'hunter';
     $('board-bald').classList.toggle('hidden', !bald);
     document.querySelector('.boards-koerper').classList.toggle('hidden', bald);
     if (bald) {
@@ -4270,11 +4318,19 @@
       { k: 'finBest', t: 'Schnellstes Finish' },
       { k: 'finHigh', t: 'Höchste Zahl' },
       { k: 'finWins', t: 'Meiste Siege' }
+    ] : mode === 'kaiwen' ? [
+      { k: 'kwBestTeam', t: 'PB Team' },
+      { k: 'kwBestSolo', t: 'PB Solo' },
+      { k: 'kwChecks', t: 'Meiste Checks' }
     ] : [
       { k: 'rtwBest', t: 'Wenigste Darts' },
       { k: 'rtwWins', t: 'Meiste Siege' }
     ];
-    $('records').innerHTML = recs.map(function (r) {
+    /* Kaiwen: zuerst der Rekord der ganzen App (mit Namen), dann die Kacheln. */
+    var kwRek = mode === 'kaiwen' ? kaiwenRekord() : null;
+    $('records').innerHTML = (kwRek ? '<div class="rec"><div class="rt">Rekord</div><div class="rv">' + kwRek.zahl + '</div>' +
+        '<div class="rn">' + (kwRek.namen.length ? esc(kwRek.namen.join(' & ')) : 'Ausgangswert') + '</div></div>' : '') +
+      recs.map(function (r) {
       var d = boardDef(r.k);
       var top = teamRanking(d)[0];
       return '<div class="rec">' +
@@ -4287,7 +4343,7 @@
     $('log-title').textContent = mode === '501' ? 'Alle Classic-Spiele'
       : mode === 'liga' ? 'Alle Ligaspiele'
       : mode === 'cricket' ? 'Alle Cricket-Spiele'
-      : mode === 'finisher' ? 'Alle Finisher-Spiele' : 'Alle Trainings';
+      : mode === 'finisher' ? 'Alle Finisher-Spiele' : mode === 'kaiwen' ? 'Alle Kaiwen-Spiele' : 'Alle Trainings';
     $('board-log-knopf').textContent = $('log-title').textContent + ' ›';
 
     /* Ligaspiele: eine Zeile je Spieltag mit dem Team-Ergebnis. */
@@ -4341,6 +4397,16 @@
           '<div class="ls">🏆</div>' +
           '<div class="lp right">' + plural(th.lineup.length, 'Spieler', 'Spieler') + '<span class="a">' + plural(thFertig, 'Spiel', 'Spiele') + ' · Endstand ansehen</span></div>' +
           '<div class="ld">' + fmtDate(th.at) + '</div>' +
+          '</div>';
+      }
+      if (row.kind === 'kaiwen') {
+        var kh = row.h;
+        var kwLog = kaiwenState({ players: kh.players, versuche: kh.versuche || [] });
+        return '<div class="log-row tap" data-action="open-summary" data-kind="kaiwen" data-id="' + esc((kh.id || 'current')) + '" role="button" tabindex="0">' +
+          '<div class="lp w">' + kwLog.hoechste + '<span class="a">Kaiwen · höchste Zahl</span></div>' +
+          '<div class="ls">' + (kh.rekordNeu ? '🏆' : '🎯') + '</div>' +
+          '<div class="lp right">' + kwLog.checks + ' von ' + kwLog.versuche + ' gecheckt<span class="a">' + kh.players.map(pname).map(esc).join(', ') + '</span></div>' +
+          '<div class="ld">' + fmtDate(row.at) + (row.live ? ' · noch nicht gespeichert' : '') + '</div>' +
           '</div>';
       }
       if (row.kind !== '501') {
@@ -6414,6 +6480,421 @@
     }
   }
 
+  /* ================= Kaiwen (Team-Checkout) =================
+   * Solo oder zu zweit: die Zahl (Score) in einem Versuch von 9 Darts
+   * finishen, Aufnahmen zu je 3 Darts abwechselnd. Check: Zahl +10, Fehl-
+   * versuch: Zahl -1. Kein Ende, man hoert auf, wann man will.
+   *
+   * Ein Versuch ist technisch ein X01-Leg: Start = Zahl, hoechstens drei
+   * Aufnahmen im Visit-Format {p, s, d, b, c, o, k}. Bust und Double Out
+   * gelten wie im X01. Darts der laufenden Aufnahme stehen in `offen`
+   * (ueberstehen einen Neustart). Alles Weitere - Rest, Werfer, Verlauf,
+   * Rekorde - wird aus den Versuchen gerechnet; Undo ist ein Wurf weniger.
+   * Nach jedem beendeten Versuch wird der naechste gleich angelegt (wie die
+   * Finisher-Runde), darum ist der letzte Versuch nie fertig.
+   */
+  var KAIWEN_START = 120, KAIWEN_MIN = 2;
+  function neuerKaiwenVersuch(g, zahl) { g.versuche.push({ zahl: zahl, visits: [], offen: [] }); }
+  function kaiwenVersuch(g) { return g.versuche[g.versuche.length - 1]; }
+
+  function kaiwenState(g) {
+    var n = g.players.length;
+    var st = {
+      zahl: KAIWEN_START, rest: KAIWEN_START, restVorVisit: KAIWEN_START, offen: [], visitNr: 0, dartsVersuch: 0,
+      turn: 0, startTurn: 0, werfer: g.players[0], naechster: g.players[1 % n],
+      versuche: 0, checks: 0, fehl: 0, checksJe: {}, dartsJe: {}, hoechste: KAIWEN_START, verlauf: [], letzte: {}, gruppen: []
+    };
+    g.players.forEach(function (id) { st.checksJe[id] = 0; st.dartsJe[id] = 0; });
+    var zaehler = 0;
+    g.versuche.forEach(function (v, vi) {
+      var rest = v.zahl, check = false;
+      if (v.zahl > st.hoechste) st.hoechste = v.zahl;
+      var startTurn = zaehler % n;
+      v.visits.forEach(function (vis) {
+        zaehler++;
+        st.dartsJe[vis.p] += vis.d;
+        st.letzte[vis.p] = vis.b ? 'Bust' : vis.c ? vis.s + ' ✓' : String(vis.s);
+        if (vis.b) return;
+        rest -= vis.s;
+        if (vis.c) { check = true; st.checksJe[vis.p]++; }
+      });
+      var letzter = vi === g.versuche.length - 1;
+      if (!letzter) {
+        st.versuche++;
+        if (check) st.checks++; else st.fehl++;
+        st.verlauf.push({ zahl: v.zahl, check: check });
+      } else {
+        st.zahl = v.zahl;
+        st.restVorVisit = rest;
+        st.offen = v.offen || [];
+        st.rest = rest - sum(st.offen, function (d) { return d.v; });
+        st.visitNr = v.visits.length;
+        st.dartsVersuch = sum(v.visits, function (x) { return x.d; }) + st.offen.length;
+        st.startTurn = startTurn;
+        for (var gi = 0; gi < 3; gi++) {
+          var vis2 = v.visits[gi];
+          st.gruppen.push({ pid: g.players[(startTurn + gi) % n], darts: vis2 ? vis2.d : (gi === v.visits.length ? st.offen.length : 0), fertig: !!vis2, laeuft: gi === v.visits.length });
+        }
+      }
+    });
+    st.turn = zaehler % n;
+    st.werfer = g.players[st.turn];
+    st.naechster = g.players[(st.turn + 1) % n];
+    st.quote = st.versuche ? (st.checks / st.versuche) * 100 : 0;
+    return st;
+  }
+
+  /* Hoechste erreichte Zahl eines Spiels. */
+  function kaiwenHoechste(g) {
+    var h = 0;
+    (g.versuche || []).forEach(function (v) { if (v.zahl > h) h = v.zahl; });
+    return h;
+  }
+  /* Alle Kaiwen-Spiele, die zaehlen: Archiv plus das laufende. */
+  function kaiwenSpiele() {
+    var liste = wertbareHistorie().filter(function (h) { return h.kind === 'kaiwen' && Array.isArray(h.versuche); });
+    if (S.game && S.game.kind === 'kaiwen' && !testSpiel(S.game)) liste = liste.concat([S.game]);
+    return liste;
+  }
+  /* Persoenlicher Rekord: hoechste Startzahl eines Versuchs, solo und im
+     Team getrennt. null, wenn noch nie gespielt. */
+  function kaiwenPB(pid, solo) {
+    var best = null;
+    kaiwenSpiele().forEach(function (g) {
+      if (g.players.indexOf(pid) < 0 || (g.players.length === 1) !== !!solo) return;
+      var h = kaiwenHoechste(g);
+      if (best === null || h > best) best = h;
+    });
+    return best;
+  }
+  /* Der Rekord der ganzen App: aus den Spielen gerechnet, dazu der Merker
+     in S.rekorde (ueberlebt das Archiv-Limit). */
+  function kaiwenRekord() {
+    var r = { zahl: KAIWEN_START, namen: [], at: null, id: null };
+    var merk = S.rekorde && S.rekorde.kaiwen;
+    if (merk && merk.zahl > r.zahl) r = { zahl: merk.zahl, namen: merk.namen || [], at: merk.at || null, id: merk.id || null };
+    kaiwenSpiele().forEach(function (g) {
+      var h = kaiwenHoechste(g);
+      if (h > r.zahl) r = { zahl: h, namen: g.players.map(pname), at: g.at || Date.now(), id: g.id };
+    });
+    return r;
+  }
+  /* Nach jedem Versuch (und nach Undo): Rekord-Merker nachziehen. Beim
+     ersten Ueberbieten im Spiel das Banner, danach nur ein Aufleuchten. */
+  function kaiwenRekordPruefen(g, vorher) {
+    if (testSpiel(g)) return;   // Testspieler zaehlen nirgends, auch nicht hier
+    var h = kaiwenHoechste(g);
+    var merk = S.rekorde && S.rekorde.kaiwen;
+    if (merk && merk.id === g.id && h < merk.zahl) {
+      /* Undo: der Merker zeigte auf dieses Spiel, die Zahl ist weg. */
+      delete S.rekorde.kaiwen;
+      var neu = kaiwenRekord();
+      if (neu.id) S.rekorde.kaiwen = neu;
+      merk = S.rekorde.kaiwen;
+    }
+    if (vorher && h > vorher.rekord) {
+      if (!S.rekorde) S.rekorde = {};
+      S.rekorde.kaiwen = { zahl: h, namen: g.players.map(pname), at: Date.now(), id: g.id };
+      if (!g.rekordGefeiert) { g.rekordGefeiert = true; UI.kwBanner = { id: g.id, zahl: h, at: Date.now() }; }
+      else UI.kwBlitz = { was: 'rekord', at: Date.now() };
+      g.rekordNeu = h;
+      g.players.forEach(function (pid) { var pbR = vorher.pb[pid]; if (pbR === null || h > pbR) { g.pbNeu = g.pbNeu || {}; g.pbNeu[pid] = h; } });
+      setTimeout(function () { if (S.game === g) render(); }, 4300);
+      return;
+    }
+    if (vorher) {
+      var solo = g.players.length === 1;
+      g.players.forEach(function (pid) {
+        var pb = vorher.pb[pid];
+        if (pb !== null && h > pb) { UI.kwBlitz = { was: 'pb', pid: pid, at: Date.now() }; g.pbNeu = g.pbNeu || {}; g.pbNeu[pid] = h; }
+        else if (pb === null && !solo && h > KAIWEN_START) { g.pbNeu = g.pbNeu || {}; g.pbNeu[pid] = h; }
+      });
+      if (UI.kwBlitz) setTimeout(function () { if (S.game === g) render(); }, 1600);
+    }
+  }
+  function kaiwenVorher(g) {
+    var solo = g.players.length === 1, pb = {};
+    g.players.forEach(function (pid) { pb[pid] = kaiwenPB(pid, solo); });
+    return { rekord: kaiwenRekord().zahl, pb: pb };
+  }
+
+  /* Eine Aufnahme buchen - aus Punkten (3 Darts) oder aus Einzeldarts (k). */
+  function kaiwenVisit(g, score, darts, isCheckout, isBust, k) {
+    var v = kaiwenVersuch(g);
+    var st = kaiwenState(g);
+    var vorher = kaiwenVorher(g);
+    var vis = { p: st.werfer, s: isBust ? 0 : score, d: darts, b: !!isBust, c: !!isCheckout, o: isBust ? score : 0 };
+    if (k && k.length) vis.k = k.map(function (x) { return { m: x.m, n: x.n }; });
+    v.visits.push(vis);
+    v.offen = [];
+    UI.aufnahmeZeit = Date.now();
+    if (!isBust && score === 180) feiere180(st.werfer);
+    else if (!isBust && score === 60) feiere60(st.werfer);
+    var fertig = isCheckout || v.visits.length >= 3;
+    if (fertig) {
+      neuerKaiwenVersuch(g, Math.max(KAIWEN_MIN, v.zahl + (isCheckout ? 10 : -1)));
+      UI.kwDelta = { wert: isCheckout ? 10 : -1, at: Date.now() };
+      kaiwenRekordPruefen(g, vorher);
+    }
+    UI.input = ''; UI.mult = 1; UI.error = '';
+    save(); render();
+  }
+  /* Punkte-Eingabe: die Aufnahme als Zahl (wie submitTotal im X01). */
+  function kaiwenAufnahme() {
+    var g = S.game;
+    if (!g || g.kind !== 'kaiwen' || g.done || UI.input === '' || settling()) return;
+    var v = parseInt(UI.input, 10);
+    var st = kaiwenState(g);
+    if (v > 180) { UI.error = 'Maximal 180'; UI.input = ''; render(); return; }
+    if (IMPOSSIBLE[v]) { UI.error = v + ' ist mit 3 Darts nicht möglich'; UI.input = ''; render(); return; }
+    if (st.offen.length) { UI.error = 'Die Aufnahme läuft in Einzel-Darts, bitte dort weiter eintragen.'; UI.input = ''; render(); return; }
+    pomp();
+    var after = st.rest - v;
+    if (after < 0 || after === 1) { kaiwenVisit(g, v, 3, false, true); return; }
+    if (after === 0) {
+      var opts = [];
+      for (var n = 1; n <= 3; n++) if (Checkout.possible(st.rest, n)) opts.push(n);
+      if (!opts.length) { UI.error = 'Kein gültiges Finish auf Doppel'; UI.input = ''; render(); return; }
+      UI.overlay = { type: 'checkout-darts', score: v, options: opts, kw: true };
+      save(); render();
+      return;
+    }
+    kaiwenVisit(g, v, 3, false, false);
+  }
+  function kaiwenKey(k) {
+    UI.error = '';
+    if (k === 'del') {
+      if (UI.input === '') {
+        var weg = undoKaiwen(S.game);
+        if (weg && !weg.k && kaiwenModus() === 'total') { UI.input = String(weg.b ? weg.o : weg.s); render(); }
+        return;
+      }
+      klick(); UI.input = UI.input.slice(0, -1); render(); return;
+    }
+    if (k === 'ok') { if (UI.input === '') UI.input = '0'; kaiwenAufnahme(); return; }
+    var next = UI.input + k;
+    if (next.length > 3) return;
+    var val = parseInt(next, 10);
+    if (val > 180) { UI.error = 'Maximal 180'; render(); return; }
+    tipp();
+    UI.input = String(val);
+    render();
+  }
+  /* Einzeldart (Board-Tastenfeld oder Tastatur), wie pushDart im X01. */
+  function kaiwenDart(mult, num) {
+    var g = S.game;
+    if (!g || g.kind !== 'kaiwen' || g.done || settling()) return false;
+    if (UI.overlay && UI.overlay.type === 'checkout-darts') return false;
+    var v = kaiwenVersuch(g);
+    var st = kaiwenState(g);
+    var value = mult * num;
+    v.offen.push({ m: mult, n: num, v: value });
+    UI.mult = 1; UI.input = '';
+    pomp();
+    var after = st.rest - value;
+    var thrown = v.offen.length;
+    var total = sum(v.offen, function (d) { return d.v; });
+    if (after < 0 || after === 1 || (after === 0 && mult !== 2)) { kaiwenVisit(g, total, 3, false, true, v.offen); return true; }
+    if (after === 0) { kaiwenVisit(g, total, thrown, true, false, v.offen); return true; }
+    if (thrown === 3) { kaiwenVisit(g, total, 3, false, false, v.offen); return true; }
+    save(); render();
+    return true;
+  }
+  /* OK in Einzel-Darts: die Aufnahme mit Fehlwuerfen auffuellen. */
+  function kaiwenAufnahmeEnde() {
+    var g = S.game;
+    if (!g || g.kind !== 'kaiwen' || g.done) return;
+    var v = kaiwenVersuch(g);
+    if (!v.offen.length) { kaiwenDart(1, 0); kaiwenDart(1, 0); kaiwenDart(1, 0); return; }
+    while (S.game === g && kaiwenVersuch(g) === v && v.offen.length && v.offen.length < 3) kaiwenDart(1, 0);
+  }
+  /* Undo: erst ein offener Dart, dann die letzte Aufnahme - auch ueber
+     das Ende eines Versuchs hinweg (der leere neue Versuch geht mit weg). */
+  function undoKaiwen(g) {
+    klick();
+    UI.error = '';
+    if (UI.overlay && UI.overlay.type === 'checkout-darts') { UI.overlay = null; UI.input = ''; render(); return null; }
+    var v = kaiwenVersuch(g);
+    if (v.offen.length) { v.offen.pop(); UI.mult = 1; save(); render(); return null; }
+    if (!v.visits.length) {
+      if (g.versuche.length < 2) { render(); return null; }
+      g.versuche.pop();
+      v = kaiwenVersuch(g);
+    }
+    var weg = v.visits.pop();
+    g.done = false; g.winner = null; g.at = null;
+    UI.kwDelta = null; UI.kwBanner = null; UI.overlay = null; UI.input = ''; UI.mult = 1;
+    kaiwenRekordPruefen(g, null);
+    if (g.rekordNeu && kaiwenHoechste(g) < g.rekordNeu) { delete g.rekordNeu; delete g.rekordGefeiert; }
+    if (g.pbNeu) Object.keys(g.pbNeu).forEach(function (pid) { if (kaiwenHoechste(g) < g.pbNeu[pid]) delete g.pbNeu[pid]; });
+    save(); render();
+    return weg;
+  }
+  /* Punkte oder Einzel-Darts: Punkte als Vorgabe, der Wechsel-Knopf
+     schaltet fuer dieses Spiel um; angefangene Darts bleiben Darts. */
+  function kaiwenModus() {
+    var g = S.game;
+    if (!g || g.kind !== 'kaiwen') return 'total';
+    if (kaiwenVersuch(g).offen.length) return 'darts';
+    return g.eingabe || 'total';
+  }
+  function kaiwenBeenden() {
+    var g = S.game;
+    if (!g || g.kind !== 'kaiwen') return;
+    g.done = true; g.winner = null; g.at = Date.now();
+    UI.menu = false; UI.overlay = null;
+    UI.summary = { kind: 'kaiwen', id: 'current' };
+    S.screen = 'summary';
+    save(); render();
+  }
+
+  var KW_MENU_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><g opacity="0.8"><circle cx="3.5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="20.5" cy="12" r="1.8"></circle></g></svg>';
+  var KW_FERN_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2"></rect><path d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M8 14h8"></path></svg>';
+  var KW_SWAP_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h14l-3-3M20 16H6l3 3"></path></svg>';
+  var KW_DEL_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 12H7M11.5 6.5L6 12l5.5 5.5"></path></svg>';
+
+  function renderKaiwen() {
+    var g = S.game;
+    if (!g || g.kind !== 'kaiwen') { S.screen = 'setup'; render(); return; }
+    var st = kaiwenState(g);
+    var n = g.players.length, solo = n === 1;
+    var modus = kaiwenModus();
+    var fern = !!UI.kwFern;
+    var dbl = lieblingsDoppel(st.werfer);
+    var dartsLeft = 3 - st.offen.length;
+    var jetzt = Date.now();
+    var rekord = kaiwenRekord();
+    var banner = UI.kwBanner && UI.kwBanner.id === g.id && jetzt - UI.kwBanner.at < 4200 ? UI.kwBanner : null;
+    var blitz = UI.kwBlitz && jetzt - UI.kwBlitz.at < 1500 ? UI.kwBlitz : null;
+    var delta = UI.kwDelta && jetzt - UI.kwDelta.at < 1800 ? UI.kwDelta : null;
+    var screen = $('screen-kaiwen');
+    screen.classList.toggle('fern', fern);
+    screen.classList.toggle('solo', solo);
+    screen.classList.toggle('rekord', !!banner);
+
+    /* Kopf: Titel, Untertitel, Rekord. */
+    $('kw-sub').textContent = (solo ? 'Solo' : 'Team · ' + n + ' Spieler') + ' · Double Out · 9 Darts je Versuch';
+    $('kw-rekord').innerHTML = '<span class="kw-pokal' + (banner ? ' wackelt' : '') + '" aria-hidden="true">🏆</span>' +
+      '<span class="kw-rek-text"><span class="kt">Rekord' + (rekord.namen.length ? ' · ' + esc(rekord.namen.join(' & ')) : '') + '</span>' +
+      '<span class="kw-rek-zahl' + (blitz && blitz.was === 'rekord' ? ' blitz' : '') + '">' + rekord.zahl + '</span></span>';
+
+    /* Ziel: Score, grosser Rest, 9 Darts in drei Gruppen mit Werfer, Info. */
+    var punkte = '';
+    st.gruppen.forEach(function (gr, gi) {
+      punkte += '<span class="kw-gruppe' + (gr.laeuft ? ' laeuft' : gr.fertig ? ' fertig' : '') + '">';
+      for (var d = 0; d < 3; d++) {
+        var benutzt = gr.fertig || d < gr.darts;
+        var naechster = gr.laeuft && d === gr.darts;
+        punkte += '<span class="kw-dot' + (benutzt ? ' weg' : '') + (naechster ? ' jetzt' : '') + '"></span>';
+      }
+      punkte += '<span class="kw-gruppe-name">' + esc(pname(gr.pid)) + '</span></span>';
+    });
+    var dartNr = st.dartsVersuch + 1;
+    $('kw-ziel').innerHTML =
+      (banner ? '<span class="kw-banner">🏆 Neuer Rekord · ' + banner.zahl + '</span>' : '') +
+      '<div class="kw-score"><span class="kt">Score</span><span class="kw-score-zahl' + (banner ? ' gold' : '') + '">' + st.zahl + '</span>' +
+        (delta ? '<span class="kw-delta ' + (delta.wert > 0 ? 'plus' : 'minus') + '">' + (delta.wert > 0 ? '+10' : '−1') + '</span>' : '') + '</div>' +
+      '<span class="kw-rest">' + st.rest + '</span>' +
+      '<div class="kw-darts">' + punkte + '</div>' +
+      '<span class="kw-info">' + (g.done ? 'Spiel beendet'
+        : st.dartsVersuch === 0 ? 'Neuer Versuch · 9 Darts · ' + esc(pname(st.werfer)) + ' beginnt'
+        : 'Dart ' + dartNr + ' von 9 · ' + esc(pname(st.werfer)) + ' ist dran') +
+        (!solo && !g.done ? ' <small>· danach ' + esc(pname(st.naechster)) + '</small>' : '') + '</span>';
+
+    /* Finish-Weg fuer die laufende Aufnahme des Werfers (wie im Finisher):
+       Plan-Folgen ueber die offenen Darts, Stellwurf nur, wenn im Versuch
+       danach noch Darts kommen. Ueber 170 kein Hinweis. */
+    var kacheln = ['', '', ''];
+    var route = null;
+    if (!g.done && st.restVorVisit <= 170) {
+      var plan = planFuer(st.restVorVisit, 3, dbl);
+      var planGilt = !!plan;
+      var restLauf = st.restVorVisit;
+      for (var ki = 0; ki < st.offen.length; ki++) {
+        var wurf = st.offen[ki];
+        var empf = planGilt && plan.darts[ki] ? [plan.darts[ki]]
+          : (Checkout.suggest(restLauf, 3 - ki, dbl) || (stellwurfFuer(restLauf, 3 - ki, dbl) || {}).darts);
+        var soll = empf && empf.length ? labelDart(empf[0]) : null;
+        var getroffen = soll && wurf.n === soll.n && wurf.m === soll.m;
+        if (!getroffen) planGilt = false;
+        kacheln[ki] = '<span class="fk ' + (getroffen ? 'gut' : 'anders') + '">' + (wurf.n === 0 ? '–' : dartLabel(wurf)) + '</span>';
+        restLauf -= wurf.n * wurf.m;
+      }
+      var planRest = planGilt && st.offen.length > 0 && plan.darts.length > st.offen.length
+        ? { darts: plan.darts.slice(st.offen.length), auf: plan.auf } : null;
+      route = planRest ? (planRest.auf === null ? planRest.darts : null) : Checkout.suggest(st.rest, dartsLeft, dbl);
+      if (route) {
+        for (var ri = 0; ri < route.length && st.offen.length + ri < 3; ri++) {
+          kacheln[st.offen.length + ri] = '<span class="fk' + (ri === 0 ? ' jetzt' : '') + '">' + Checkout.pretty(route[ri]) + '</span>';
+        }
+      } else if (st.offen.length < 3 && st.visitNr < 2) {
+        var stw = planRest && planRest.auf !== null ? planRest : stellwurfFuer(st.rest, dartsLeft, dbl);
+        if (stw) {
+          for (var si = 0; si < stw.darts.length && st.offen.length + si < 3; si++) {
+            kacheln[st.offen.length + si] = '<span class="fk stellen' + (si === 0 ? ' jetzt' : '') + '">' + Checkout.pretty(stw.darts[si]) +
+              (si === stw.darts.length - 1 ? '<span class="fk-auf">auf ' + stw.auf + '</span>' : '') + '</span>';
+          }
+        }
+      }
+    }
+    for (var kl = 0; kl < 3; kl++) if (!kacheln[kl]) kacheln[kl] = '<span class="fk leer">–</span>';
+
+    /* Team: je Spieler Avatar, Name, PB, letzte Aufnahme, drei Felder. */
+    var teamHtml = g.players.map(function (id) {
+      var aktiv = id === st.werfer && !g.done;
+      var pb = kaiwenPB(id, solo);
+      var pbBlitz = blitz && blitz.was === 'pb' && blitz.pid === id;
+      return '<div class="kw-spieler' + (aktiv ? ' aktiv' : '') + '">' +
+        '<div class="kw-sp-kopf">' + avatarHTML(profile(id), 'sm') +
+          '<span class="kw-sp-name">' + esc(pname(id)) + '</span>' +
+          '<span class="kw-sp-pb' + (pbBlitz ? ' blitz' : '') + '"><span class="kt">PB ' + (solo ? 'Solo' : 'Team') + '</span><b>' + (pb === null ? '–' : pb) + '</b></span>' +
+          '<span class="kw-sp-letzte"><span class="kt">zuletzt</span><b>' + esc(st.letzte[id] || '–') + '</b></span></div>' +
+        '<div class="pfelder">' + (aktiv ? kacheln.join('') : '<span class="fk still"></span><span class="fk still"></span><span class="fk still"></span>') + '</div>' +
+        '</div>';
+    }).join('');
+    $('kw-team').innerHTML = teamHtml;
+    $('kw-team').classList.toggle('zwei', n > 1);
+
+    /* Verlauf: die letzten Versuche als Chips. */
+    var chips = st.verlauf.slice(-8).map(function (v) {
+      return '<span class="kw-chip ' + (v.check ? 'ok' : 'nein') + '">' + (v.check ? '✓' : '✗') + ' ' + v.zahl + '</span>';
+    }).join('');
+    $('kw-verlauf').innerHTML = '<span class="kt">Verlauf</span>' + (chips || '<span class="kw-chip leer">noch kein Versuch</span>') +
+      (st.versuche ? '<span class="kw-chip summe">' + st.checks + ' von ' + st.versuche + '</span>' : '');
+
+    /* Rechts: Eingabe. Punkte (Tastenfeld) oder Einzel-Darts (Zahlenfeld). */
+    $('kw-swap').classList.toggle('an', modus === 'darts');
+    $('kw-swap').setAttribute('aria-label', modus === 'darts' ? 'Zur Punkte-Eingabe' : 'Zu Einzel-Darts');
+    $('kw-pad-total').classList.toggle('hidden', modus !== 'total');
+    $('kw-pad-darts').classList.toggle('hidden', modus !== 'darts');
+    $('kw-display').textContent = UI.input === '' ? '0' : UI.input;
+    $('kw-error').textContent = UI.error;
+    $('kw-quick').innerHTML = QUICK_SCORES.map(function (q) {
+      return '<button data-action="kw-quick" data-value="' + q + '">' + q + '</button>';
+    }).join('');
+    if (modus === 'darts') {
+      var hl = route ? route[0] : null;
+      var hlMult = hl ? (hl.charAt(0) === 'T' ? 3 : hl.charAt(0) === 'D' || hl === 'BULL' ? 2 : 1) : 0;
+      var hlNum = hl && hl !== 'BULL' && hl !== '25' && UI.mult === hlMult ? parseInt(hl.slice(1), 10) : null;
+      var prefix = UI.mult === 3 ? 'T' : UI.mult === 2 ? 'D' : '';
+      var nums = '<button class="mult' + (UI.mult === 2 ? ' active' : '') + '" data-mult="2" aria-pressed="' + (UI.mult === 2) + '">Double</button>' +
+        '<button class="mult' + (UI.mult === 3 ? ' active' : '') + '" data-mult="3" aria-pressed="' + (UI.mult === 3) + '">Triple</button>' +
+        '<button class="bull ' + (hl === '25' ? 'hl' : '') + '" data-num="25" data-mult="1">Bull</button>' +
+        '<button class="bull ' + (hl === 'BULL' ? 'hl' : '') + '" data-num="25" data-mult="2">Bull ×2</button>';
+      for (var nn = 1; nn <= 20; nn++) {
+        nums += '<button data-num="' + nn + '" class="' + (nn === hlNum ? 'hl' : '') + '">' + (prefix ? '<span class="mx">' + prefix + '</span>' : '') + nn + '</button>';
+      }
+      nums += '<button class="zurueck" data-action="undo-game" aria-label="Letzten Dart zurücknehmen">' + KW_DEL_SVG + '</button>';
+      nums += '<button class="miss" data-num="0" data-mult="1" aria-label="Fehlwurf">0</button>';
+      nums += '<button class="end-visit" data-action="kw-end-visit">OK</button>';
+      $('kw-pad-darts').innerHTML = '<div class="num-grid">' + nums + '</div>';
+    }
+    $('kw-ff-display').innerHTML = UI.input === '' ? '<span class="cursor"></span>' : esc(UI.input);
+    $('kw-ff-error').textContent = UI.error;
+    $('kw-menu-overlay').classList.toggle('hidden', !UI.menu);
+    if (UI.menu) document.querySelector('#kw-menu-overlay .game-menu-sub').textContent = $('kw-sub').textContent;
+  }
+
   /* ================= Spielbericht (SDM-Bogen) ================= */
 
   /* Woher kommt der Bericht: aus dem laufenden Ligaspiel oder – über den
@@ -7408,6 +7889,37 @@
           '<button class="btn ghost full" data-action="finish-game">Speichern &amp; beenden</button>'
         : '<button class="btn ghost full" data-action="summary-back">Zurück</button>';
 
+    } else if (s.kind === 'kaiwen') {
+      var kg = found.g;
+      var kst = kaiwenState({ players: kg.players, versuche: kg.versuche || [] });
+      var kSolo = kg.players.length < 2;
+      box = '<div class="sum-head"><div class="big-emoji">' + (kg.rekordNeu ? '🏆' : '🎯') + '</div>' +
+        '<h2 class="sum-title">' + (kg.rekordNeu ? 'Neuer Rekord: ' + kg.rekordNeu : 'Höchste Zahl ' + kst.hoechste) + '</h2>' +
+        '<div class="muted">Kaiwen · ' + (kSolo ? 'Solo' : 'Team · ' + kg.players.map(pname).map(esc).join(' und ')) + ' · ' + fmtDate(kg.at) + '</div></div>' +
+        '<div class="card">' +
+          statRow('Höchste Zahl', kst.hoechste) +
+          statRow('Versuche', kst.versuche) +
+          statRow('Checks', kst.checks + (kst.versuche ? ' (' + Math.round(kst.quote) + ' %)' : '')) +
+          (kg.rekordNeu ? statRow('Rekord', 'gefallen: ' + kg.rekordNeu + ' 🏆') : '') +
+        '</div>' +
+        '<div class="sum-cards">' + kg.players.map(function (id) {
+          var pbNeu = kg.pbNeu && kg.pbNeu[id];
+          return '<div class="card sum-card ' + (pbNeu ? 'win' : '') + '">' +
+            '<div class="sum-who">' + avatarHTML(profile(id), 'md') +
+              '<div><div class="nm">' + esc(pname(id)) + '</div>' +
+              '<div class="muted">' + (pbNeu ? 'Neuer PB ' + (kSolo ? 'Solo' : 'Team') + ': ' + pbNeu : 'PB ' + (kSolo ? 'Solo' : 'Team') + ': ' + (kaiwenPB(id, kSolo) === null ? '–' : kaiwenPB(id, kSolo))) + '</div></div></div>' +
+            statRow('Checks', kst.checksJe[id] || 0) +
+            statRow('Darts geworfen', kst.dartsJe[id] || 0) +
+            '</div>';
+        }).join('') + '</div>' +
+        (kst.verlauf.length ? '<div class="card"><h2>Versuche</h2>' + kst.verlauf.map(function (v, i) {
+          return statRow('Versuch ' + (i + 1) + ' · ' + v.zahl, v.check ? 'Check ✓' : 'daneben');
+        }).join('') + '</div>' : '') + note;
+      actions = found.live
+        ? '<button class="btn primary full big" data-action="restart-game">Nochmal spielen</button>' +
+          '<button class="btn ghost full" data-action="finish-game">Speichern &amp; beenden</button>'
+        : '<button class="btn ghost full" data-action="summary-back">Zurück</button>';
+
     } else if (s.kind === 'finisher') {
       var fg2 = found.g;
       var gewonnen = {}, dartsSum = {}, best = {}, hoch = {};
@@ -7606,7 +8118,7 @@
     var html = '';
 
     if (o.type === 'checkout-darts') {
-      var coWahl = UI.turnier && turnierErlaubt() ? Math.min(o.wahl || 0, o.options.length - 1) : -1;
+      var coWahl = (UI.turnier && turnierErlaubt()) || (o.kw && UI.kwFern) ? Math.min(o.wahl || 0, o.options.length - 1) : -1;
       html = '<h3>Checkout!</h3><p>Mit wie vielen Darts wurde ' + o.score + ' beendet?</p>' +
         '<div class="row-btns">' + o.options.map(function (n, i) {
           /* Bei Tastatursteuerung ist NUR der gewaehlte Knopf hell - alle
@@ -9166,7 +9678,11 @@
         save(); render();
         break;
       case 'start-game':
-        if (S.mode === 'kaiwen' || S.mode === 'hunter') break;   // Regeln folgen
+        if (S.mode === 'hunter') break;   // Regeln folgen
+        if (S.mode === 'kaiwen' && S.lineup.length > 2) {
+          UI.overlay = { type: 'hinweis', titel: 'Kaiwen spielen höchstens zwei', text: 'Bitte in der Aufstellung einen oder zwei Spieler wählen. Die Reihenfolge der Auswahl ist die Wurfreihenfolge.' };
+          render(); break;
+        }
         if (S.mode === '501') startTournament();
         else startGame(S.mode);
         break;
@@ -9178,7 +9694,7 @@
         S.settings.tastatur = ew === 2 ? 1 : 0;
         /* Im Finisher gibt es nur Tastatur oder nicht - die Einzel-Dart-Grenze
            des X01 bleibt davon unberuehrt. */
-        if (el.closest('#eingabe-wahl-fin')) { save(); render(); break; }
+        if (el.closest('#eingabe-wahl-fin, #eingabe-wahl-kw')) { save(); render(); break; }
         if (ew === 0 && S.settings.dartModeFrom > 0) { S.settings.dartModeMerk = S.settings.dartModeFrom; S.settings.dartModeFrom = 0; }
         if (ew === 1 && !(S.settings.dartModeFrom > 0)) S.settings.dartModeFrom = S.settings.dartModeMerk > 0 ? S.settings.dartModeMerk : 170;
         save(); render();
@@ -9791,11 +10307,15 @@
         break;
       }
       case 'co-darts': {
+        if (!UI.overlay || UI.overlay.type !== 'checkout-darts') break;
         var n = Number(el.getAttribute('data-n'));
         var score = UI.overlay.score;
-        var coFin = !!UI.overlay.fin;
+        if (el.blur) el.blur();   // sonst "klickt" ein spaeteres Enter den versteckten Knopf
+        var coFin = !!UI.overlay.fin, coKw = !!UI.overlay.kw;
         UI.overlay = null;
-        if (coFin) finisherFinishBuchen(n); else commitVisit(score, n, true, false);
+        if (coFin) finisherFinishBuchen(n);
+        else if (coKw) kaiwenVisit(S.game, score, n, true, false);
+        else commitVisit(score, n, true, false);
         break;
       }
       case 'fin-fern':
@@ -9805,6 +10325,34 @@
       case 'fin-fern-aus':
         UI.finFern = false; UI.input = ''; UI.error = '';
         save(); render();
+        break;
+      case 'kw-fern':
+        UI.menu = false; UI.kwFern = true; UI.input = ''; UI.error = '';
+        save(); render();
+        break;
+      case 'kw-fern-aus':
+        UI.kwFern = false; UI.input = ''; UI.error = '';
+        save(); render();
+        break;
+      case 'kw-swap': {
+        tipp();
+        var kwSt = S.game && S.game.kind === 'kaiwen' ? kaiwenState(S.game) : null;
+        if (kwSt && kwSt.offen.length) { UI.error = 'Erst die angefangene Aufnahme fertig werfen oder zurücknehmen.'; render(); break; }
+        S.game.eingabe = kaiwenModus() === 'darts' ? 'total' : 'darts';
+        UI.input = ''; UI.error = '';
+        save(); render();
+        break;
+      }
+      case 'kw-quick':
+        if (settling()) break;
+        UI.error = ''; UI.input = el.getAttribute('data-value');
+        kaiwenAufnahme();
+        break;
+      case 'kw-end-visit':
+        kaiwenAufnahmeEnde();
+        break;
+      case 'kw-ende':
+        kaiwenBeenden();
         break;
       case 'ov-cancel':
         UI.overlay = null; UI.input = ''; render();
@@ -10126,6 +10674,7 @@
     if (S.screen === 'cricket') return cricketDart(mult, num);
     if (S.screen === 'rtw') return rtwDart(mult, num);
     if (S.screen === 'finisher') return finisherDart(mult, num);
+    if (S.screen === 'kaiwen') return kaiwenDart(mult, num);
     if (S.screen !== 'game') return false;
     if (num === 0) return pushDart(1, 0);
     if (num === 25) return pushDart(mult >= 2 ? 2 : 1, 25);
@@ -10150,11 +10699,17 @@
       UI.overlay = null; UI.input = ''; render(); return;
     }
     /* Menue (•••): ein Tipp neben die Karte schliesst es. */
-    if (/^(game|cricket|rtw|fin)-menu-overlay$/.test(ev.target.id || '')) { UI.menu = false; render(); return; }
+    if (/^(game|cricket|rtw|fin|kw)-menu-overlay$/.test(ev.target.id || '')) { UI.menu = false; render(); return; }
     /* Ein Tipp ins Bild tut in der Fernsteuerung nichts (Julius): das Menue
        oeffnet nur •••, zurueck geht es ueber den ⌨-Knopf oben rechts. */
     var t = ev.target.closest('[data-action]');
-    if (t) { handleAction(t.getAttribute('data-action'), t); return; }
+    if (t) {
+      /* Im Spielbild behaelt kein Knopf den Fokus: ein spaeteres Enter an
+         der Tastatur wuerde ihn sonst noch einmal druecken (Wechsel-Knopf,
+         versteckte Finish-Frage). */
+      if (SPIEL_SCREENS[S.screen] && t.blur && !t.closest('input, select, textarea')) t.blur();
+      handleAction(t.getAttribute('data-action'), t); return;
+    }
 
     /* Kassenbuch: die Kategorie merken (Hintergrund-Render) und das
        Mitglied-Feld nur bei Mitgliedsbeitraegen zeigen. */
@@ -10197,8 +10752,8 @@
       return;
     }
 
-    var key2 = ev.target.closest('.keypad button');
-    if (key2) { pressKey(key2.getAttribute('data-key')); return; }
+    var key2 = ev.target.closest('.keypad button, .kw-keys button');
+    if (key2) { if (S.screen === 'kaiwen') kaiwenKey(key2.getAttribute('data-key')); else pressKey(key2.getAttribute('data-key')); return; }
 
     var quick = ev.target.closest('[data-quick]');
     if (quick) {
@@ -10671,6 +11226,25 @@
     }
   });
 
+  /* Kaiwen: Ziffern tippen die Aufnahme, Enter bucht sie, Backspace
+     loescht bzw. nimmt zurueck, Escape beendet die Fernsteuerung. */
+  document.addEventListener('keydown', function (ev) {
+    if (S.screen !== 'kaiwen' || UI.overlay || UI.menu) return;
+    if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    var kg = S.game;
+    if (!kg || kg.kind !== 'kaiwen') return;
+    var at = document.activeElement;
+    if (at && (at.tagName === 'INPUT' || at.tagName === 'TEXTAREA' || at.isContentEditable)) return;
+    if (ev.key === 'Escape' && UI.kwFern) { UI.kwFern = false; UI.input = ''; save(); render(); ev.preventDefault(); return; }
+    if (kg.done) return;
+    if (ev.key.toLowerCase() === 'z' && !UI.kwFern) { undoKaiwen(kg); ev.preventDefault(); return; }
+    if (kaiwenModus() !== 'total') return;
+    var zKw = tasteZiffer(ev);
+    if (zKw !== null) { kaiwenKey(zKw); ev.preventDefault(); }
+    else if (ev.key === 'Enter') { kaiwenKey('ok'); ev.preventDefault(); }
+    else if (ev.key === 'Backspace') { kaiwenKey('del'); ev.preventDefault(); }
+  });
+
   /* Shift gedrückt halten zeigt die Wurfliste des Matches – je Spieler auf
      seiner Seite, alle Legs mit Trennern. Loslassen führt zurück in die
      Spielansicht; verliert das Fenster den Fokus (Alt-Tab), klappt die
@@ -10715,7 +11289,7 @@
     if (!UI.overlay) return;
     /* Im Finisher gilt nur die Finish-Frage der Fernsteuerung - alles
        andere gehoert dem X01-Spielbild. */
-    if (S.screen !== 'game' && !(S.screen === 'finisher' && UI.overlay.fin)) return;
+    if (S.screen !== 'game' && !(S.screen === 'finisher' && UI.overlay.fin) && !(S.screen === 'kaiwen' && UI.overlay.kw)) return;
     var ov = UI.overlay;
     /* Ziffer im Leg-Ende-Dialog: weiter zum naechsten Leg, und die Ziffer
        beginnt dort gleich die Aufnahme (Turnier-Modus). Nach Spielende wird
@@ -10736,9 +11310,9 @@
         ev.preventDefault();
         var anz = parseInt(zCo, 10);
         if (anz >= 1 && anz <= 3 && ov.options.indexOf(anz) >= 0) {
-          var coScore = ov.score, coFin = !!ov.fin;
+          var coScore = ov.score, coFin = !!ov.fin, coKw = !!ov.kw;
           UI.overlay = null;
-          if (coFin) finisherFinishBuchen(anz); else commitVisit(coScore, anz, true, false);
+          if (coFin) finisherFinishBuchen(anz); else if (coKw) kaiwenVisit(S.game, coScore, anz, true, false); else commitVisit(coScore, anz, true, false);
         }
       } else if (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight' ||
                  ev.key === 'ArrowUp' || ev.key === 'ArrowDown' || ev.key === 'Tab') {
@@ -10754,9 +11328,10 @@
         var coAnz = ov.options[Math.min(ov.wahl || 0, ov.options.length - 1)];
         var coSc = ov.score;
         UI.overlay = null;
-        if (ov.fin) finisherFinishBuchen(coAnz); else commitVisit(coSc, coAnz, true, false);
+        if (ov.fin) finisherFinishBuchen(coAnz); else if (ov.kw) kaiwenVisit(S.game, coSc, coAnz, true, false); else commitVisit(coSc, coAnz, true, false);
       } else if (ev.key === 'Backspace') {
-        undo(); ev.preventDefault();
+        if (ov.kw) undoKaiwen(S.game); else undo();
+        ev.preventDefault();
       }
     } else if (ov.type === 'turnier-ende') {
       var teOffene = naechsteEinzel();
@@ -10834,7 +11409,7 @@
    * Backspace nichts loescht) geht eine Stufe zurueck: Menue zu, Dialog zu,
    * Reiter zurueck, Bildschirm zurueck, zuletzt ins Setup.
    */
-  var SPIEL_SCREENS = { game: 1, cricket: 1, rtw: 1, finisher: 1 };
+  var SPIEL_SCREENS = { game: 1, cricket: 1, rtw: 1, finisher: 1, kaiwen: 1 };
   var PFEIL_SCREENS = { setup: 1, tournament: 1, boards: 1, players: 1, profile: 1, liga: 1, konto: 1, summary: 1, winner: 1, bericht: 1 };
 
   /* In welchem Bereich wandern die Pfeile gerade? Ein offener Dialog oder
@@ -11025,6 +11600,7 @@
        nach dem Neustart wieder in der Fernsteuerung hoch. */
     !!(S.settings && S.settings.tastatur === 1 && ((S.game && S.game.kind === 'quick' && S.game.p && S.game.p.length > 1) || (!S.game && S.tour && !S.tour.liga)));
   UI.finFern = !!(S.settings && S.settings.tastatur === 1 && S.game && S.game.kind === 'finisher');
+  UI.kwFern = !!(S.settings && S.settings.tastatur === 1 && S.game && S.game.kind === 'kaiwen');
   if (!S.lineup.length) S.lineup = activeProfiles().slice(0, 4).map(function (p) { return p.id; });
   if ((S.screen === 'cricket' || S.screen === 'rtw' || S.screen === 'finisher') && !S.game) S.screen = 'setup';
   /* Ein angefangenes Schnelles Spiel liegt in S.game, nicht im Spielplan –
@@ -11141,6 +11717,9 @@
       cricketState: function () { return cricketState(S.game); },
       finisherState: function () { return finisherState(S.game); },
       finisherRunde: function () { return finisherRunde(S.game); },
+      kaiwenState: function () { return kaiwenState(S.game); },
+      kaiwenPB: kaiwenPB,
+      kaiwenRekord: kaiwenRekord,
       rtwState: function () { return rtwState(S.game); },
       gameTurnPlayer: function () { return S.game ? gameTurnPlayer(S.game) : null; },
       render: render,

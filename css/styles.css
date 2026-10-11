@@ -5916,3 +5916,208 @@ body .boards-host.log #board-log { display: block; }
   .sg-stand b { font-size: 44px; }
   #winner-box .motd-paar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
+/* ================= Kaiwen (Entwurf 10/2026) ================= */
+#screen-kaiwen.active {
+  position: relative; padding: clamp(6px, 1.8vh, 22px) clamp(8px, 1.6vw, 26px); gap: 0; min-height: 0; overflow: hidden;
+  display: flex; flex-direction: column; height: calc(100vh - 12px); height: calc(100dvh - 12px);
+}
+body.fix-spiel #screen-kaiwen.active { flex: 1 1 auto; height: auto; min-height: 0; }
+#screen-kaiwen .kw-body { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: clamp(8px, 1.6vw, 24px); }
+#screen-kaiwen.fern .kw-body { grid-template-columns: minmax(0, 1fr); }
+#screen-kaiwen .nur-fern { display: none; }
+#screen-kaiwen.fern .nur-fern { display: flex; }
+#screen-kaiwen.fern .nur-pad { display: none; }
+#screen-kaiwen .kw-links { min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: clamp(6px, 1.4vh, 16px); }
+#screen-kaiwen .kw-rechts { min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: clamp(5px, 1vh, 12px); }
+
+/* Kopfzeile: Titel, Untertitel, Rekord. */
+#screen-kaiwen .kw-kopf { flex: none; display: flex; align-items: stretch; gap: clamp(8px, 1.2vw, 18px); }
+#screen-kaiwen .kw-kopf .xk-btn { width: clamp(40px, 7vh, 74px); height: auto; aspect-ratio: 1.2; }
+#screen-kaiwen .kw-info { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+#screen-kaiwen .kw-h { font-family: var(--font-display); font-size: clamp(15px, 3.4vh, 36px); letter-spacing: 0.05em; text-transform: uppercase; line-height: 1.15; }
+#screen-kaiwen .kw-sub { font-family: var(--font-cond); font-weight: 700; font-size: clamp(11px, 2vh, 22px); letter-spacing: 0.04em; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#screen-kaiwen .kw-rekord { flex: none; display: flex; align-items: center; gap: 8px; padding: 0 clamp(10px, 1.2vw, 16px); border-radius: 12px; background: #141011; }
+#screen-kaiwen .kw-pokal { font-size: clamp(14px, 2.6vh, 28px); }
+#screen-kaiwen .kw-pokal.wackelt { animation: kwTrophy 1.6s ease-in-out infinite; }
+#screen-kaiwen .kw-rek-text { display: flex; flex-direction: column; align-items: flex-end; }
+#screen-kaiwen .kw-rek-text .kt { font-size: clamp(10px, 1.6vh, 16px); color: #857a7b; }
+#screen-kaiwen .kw-rek-zahl { font-family: var(--font-cond); font-weight: 700; font-size: clamp(14px, 2.8vh, 30px); line-height: 1.1; color: #ffc14d; }
+#screen-kaiwen .kw-rek-zahl.blitz, #screen-kaiwen .kw-sp-pb.blitz b { animation: kwBlitz 1.4s ease-out both; }
+
+/* Ziel: Score, Rest, 9 Darts. */
+#screen-kaiwen .kw-ziel {
+  flex: 1 1 auto; min-height: 0; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: clamp(4px, 1vh, 12px);
+  padding: clamp(10px, 2vh, 24px); border-radius: clamp(16px, 2.4vh, 26px);
+  background: radial-gradient(70% 80% at 50% 40%, rgba(70, 170, 215, 0.10), transparent 70%), #141011;
+}
+#screen-kaiwen.rekord .kw-ziel { box-shadow: inset 0 0 0 1.5px rgba(255, 193, 77, 0.6), 0 0 50px rgba(255, 190, 60, 0.25); }
+#screen-kaiwen .kw-banner {
+  position: absolute; top: clamp(10px, 2vh, 22px); left: 50%; transform: translateX(-50%); white-space: nowrap; padding: 6px 18px; border-radius: 999px;
+  background: linear-gradient(90deg, #3a2a0e, #5a3f10, #3a2a0e); color: #ffd27a; font-family: var(--font-cond); font-weight: 700;
+  font-size: clamp(12px, 2.2vh, 24px); letter-spacing: 0.18em; text-transform: uppercase;
+  animation: kwPop 0.7s ease-out both, kwGlow 1.8s ease-in-out 0.7s infinite;
+}
+#screen-kaiwen .kw-score { display: flex; align-items: baseline; gap: clamp(8px, 1vw, 16px); position: relative; }
+#screen-kaiwen .kw-score .kt { font-size: clamp(12px, 2.4vh, 26px); }
+#screen-kaiwen .kw-score-zahl { font-family: var(--font-cond); font-weight: 700; font-size: clamp(18px, 4.4vh, 48px); line-height: 1; color: #fff; }
+#screen-kaiwen .kw-score-zahl.gold { color: #ffc14d; }
+#screen-kaiwen .kw-delta { position: absolute; left: 100%; margin-left: 10px; font-family: var(--font-cond); font-weight: 700; font-size: clamp(16px, 3.4vh, 38px); animation: kwDelta 1.8s ease-out both; white-space: nowrap; }
+#screen-kaiwen .kw-delta.plus { color: #6fe0a8; }
+#screen-kaiwen .kw-delta.minus { color: #ff8a8a; }
+#screen-kaiwen .kw-rest { font-family: var(--font-cond); font-weight: 700; font-size: clamp(90px, 30vh, 340px); line-height: 0.92; font-variant-numeric: tabular-nums; color: #fff; text-shadow: 0 0 40px rgba(70, 170, 215, 0.45); }
+#screen-kaiwen.fern .kw-rest { font-size: clamp(110px, 36vh, 400px); }
+#screen-kaiwen .kw-darts { display: flex; align-items: flex-start; gap: clamp(6px, 1vw, 16px); }
+#screen-kaiwen .kw-gruppe { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: clamp(4px, 0.6vw, 9px); width: calc(3 * clamp(12px, 2.4vh, 26px) + 2 * clamp(4px, 0.6vw, 9px)); }
+#screen-kaiwen .kw-dot { width: clamp(12px, 2.4vh, 26px); height: clamp(12px, 2.4vh, 26px); border-radius: 50%; background: #241d1f; transition: background 0.25s, box-shadow 0.25s; }
+#screen-kaiwen .kw-dot.weg { background: #46aad7; box-shadow: 0 0 10px rgba(70, 170, 215, 0.7); }
+#screen-kaiwen .kw-dot.jetzt { background: #2a2224; box-shadow: inset 0 0 0 1.5px #f2eeee; }
+#screen-kaiwen .kw-gruppe-name { flex: 1 0 100%; text-align: center; font-family: var(--font-cond); font-weight: 700; font-size: clamp(9px, 1.5vh, 15px); letter-spacing: 0.1em; text-transform: uppercase; color: #857a7b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#screen-kaiwen .kw-gruppe.laeuft .kw-gruppe-name { color: var(--text); }
+#screen-kaiwen .kw-info-zeile, #screen-kaiwen .kw-info { }
+#screen-kaiwen .kw-ziel .kw-info { font-family: var(--font-cond); font-weight: 700; font-size: clamp(12px, 2.2vh, 24px); letter-spacing: 0.08em; text-transform: uppercase; color: #9a8f90; text-align: center; }
+#screen-kaiwen .kw-ziel .kw-info small { font-size: 0.8em; color: #857a7b; }
+
+/* Team-Karten. */
+#screen-kaiwen .kw-team { flex: none; display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(6px, 1vw, 16px); }
+#screen-kaiwen .kw-team.zwei { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#screen-kaiwen .kw-spieler { min-width: 0; display: flex; flex-direction: column; gap: clamp(6px, 1vh, 12px); padding: clamp(10px, 1.8vh, 20px) clamp(10px, 1.4vw, 22px); border-radius: clamp(14px, 2vh, 20px); background: #141011; opacity: 0.6; transition: opacity 0.2s, box-shadow 0.2s; }
+#screen-kaiwen .kw-spieler.aktiv { opacity: 1; background: #221b1c; box-shadow: inset 0 0 0 2px #f2eeee, 0 0 28px rgba(70, 170, 215, 0.55), 0 0 60px 6px rgba(70, 170, 215, 0.25); }
+#screen-kaiwen .kw-sp-kopf { display: flex; align-items: center; gap: clamp(8px, 1vw, 14px); min-width: 0; }
+#screen-kaiwen .kw-sp-kopf .avatar { flex: none; width: clamp(26px, 5vh, 52px); height: clamp(26px, 5vh, 52px); }
+#screen-kaiwen .kw-sp-name { flex: 1 1 auto; min-width: 0; font-family: var(--font-cond); font-weight: 700; font-size: clamp(15px, 3.4vh, 36px); letter-spacing: 0.03em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #c9c0c0; }
+#screen-kaiwen .kw-spieler.aktiv .kw-sp-name { color: #fff; }
+#screen-kaiwen .kw-sp-pb, #screen-kaiwen .kw-sp-letzte { flex: none; display: flex; flex-direction: column; align-items: flex-end; line-height: 1.05; }
+#screen-kaiwen .kw-sp-pb .kt, #screen-kaiwen .kw-sp-letzte .kt { font-size: clamp(9px, 1.5vh, 15px); color: #857a7b; }
+#screen-kaiwen .kw-sp-pb b, #screen-kaiwen .kw-sp-letzte b { font-family: var(--font-cond); font-weight: 700; font-size: clamp(16px, 3.6vh, 38px); font-variant-numeric: tabular-nums; color: #9a8f90; }
+#screen-kaiwen .kw-spieler.aktiv .kw-sp-letzte b { color: var(--text); }
+#screen-kaiwen .kw-sp-pb b { color: #c9c0c0; }
+#screen-kaiwen .kw-spieler .pfelder { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(4px, 0.5vw, 8px); height: clamp(36px, 7vh, 76px); margin: 0; }
+#screen-kaiwen .kw-spieler .fk { min-width: 0; display: flex; align-items: center; justify-content: center; border-radius: clamp(8px, 1.2vh, 12px); background: #1c1718; color: var(--laser-hell); font-family: var(--font-cond); font-weight: 700; font-size: clamp(15px, 3.2vh, 34px); }
+#screen-kaiwen .kw-spieler .fk.jetzt { background: #2a2224; box-shadow: inset 0 0 0 1.5px #f2eeee; }
+#screen-kaiwen .kw-spieler .fk.gut { color: #6fe0a8; }
+#screen-kaiwen .kw-spieler .fk.anders { color: var(--text); }
+#screen-kaiwen .kw-spieler .fk.leer, #screen-kaiwen .kw-spieler .fk.still { background: transparent; color: transparent; }
+#screen-kaiwen .kw-spieler .fk.stellen { color: var(--muted); flex-direction: column; line-height: 1; }
+#screen-kaiwen .kw-spieler .fk-auf { font-size: 0.5em; color: #857a7b; }
+
+/* Verlauf. */
+#screen-kaiwen .kw-verlauf { flex: none; display: flex; align-items: center; gap: clamp(4px, 0.6vw, 8px); min-width: 0; overflow: hidden; }
+#screen-kaiwen .kw-verlauf .kt { flex: none; font-size: clamp(10px, 1.6vh, 16px); color: #857a7b; }
+#screen-kaiwen .kw-chip { flex: none; display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 8px; font-family: var(--font-cond); font-weight: 700; font-size: clamp(11px, 1.8vh, 19px); white-space: nowrap; }
+#screen-kaiwen .kw-chip.ok { background: rgba(111, 224, 168, 0.12); color: #6fe0a8; }
+#screen-kaiwen .kw-chip.nein { background: rgba(255, 90, 90, 0.10); color: #ff8a8a; }
+#screen-kaiwen .kw-chip.leer, #screen-kaiwen .kw-chip.summe { background: #141011; color: #9a8f90; }
+
+/* Eingabe rechts. */
+#screen-kaiwen .kw-pad-kopf { flex: none; height: clamp(40px, 7vh, 74px); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(5px, 0.9vh, 10px); }
+#screen-kaiwen .kw-pad-kopf .xk-btn { width: auto; height: 100%; border-radius: clamp(10px, 1.6vh, 16px); background: #241d1f; color: #9a8f90; }
+#screen-kaiwen .kw-pad-kopf .xk-btn.an { color: #fff; box-shadow: 0 0 24px rgba(70, 170, 215, 0.35); }
+#screen-kaiwen .kw-pad-kopf svg { width: clamp(20px, 4vh, 42px); height: clamp(20px, 4vh, 42px); }
+#screen-kaiwen .kw-pad { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: clamp(5px, 0.9vh, 10px); margin: 0; }
+#screen-kaiwen .kw-pad .display-row { flex: none; height: clamp(46px, 13vh, 140px); display: flex; flex-direction: column; align-items: center; justify-content: center; background: #141011; border: 1px solid #241c1e; border-radius: clamp(12px, 1.8vh, 18px); }
+#screen-kaiwen .kw-pad .score-display { font-family: var(--font-cond); font-weight: 700; font-size: clamp(36px, 10vh, 110px); line-height: 1; color: #fff; text-shadow: 0 0 26px rgba(70, 170, 215, 0.35); font-variant-numeric: tabular-nums; background: none; border: none; padding: 0; min-height: 0; }
+#screen-kaiwen .kw-pad .input-error { min-height: 1em; font-size: clamp(11px, 1.8vh, 18px); }
+#screen-kaiwen .kw-pad .quick-row { flex: none; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); height: clamp(40px, 9vh, 96px); gap: clamp(5px, 0.9vh, 10px); margin: 0; }
+#screen-kaiwen .kw-pad .quick-row button { height: 100%; min-height: 0; border-radius: clamp(10px, 1.6vh, 16px); background: #171213; border: 1px solid #2b2224; color: var(--text); font-family: var(--font-cond); font-weight: 700; font-size: clamp(18px, 4vh, 44px); padding: 0; }
+#screen-kaiwen .kw-pad .kw-keys { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(4, minmax(0, 1fr)); gap: clamp(5px, 0.9vh, 10px); }
+#screen-kaiwen .kw-pad .kw-keys button { height: auto; min-height: 0; border-radius: clamp(10px, 1.6vh, 16px); font-family: var(--font-cond); font-weight: 700; font-size: clamp(26px, 6.4vh, 68px); letter-spacing: 0.04em; padding: 0; }
+#screen-kaiwen .kw-pad .kw-keys button.fn svg { width: clamp(26px, 5.2vh, 56px); height: clamp(26px, 5.2vh, 56px); }
+#screen-kaiwen .kw-pad .kw-keys button.ok { font-size: clamp(20px, 4.4vh, 46px); }
+#screen-kaiwen #kw-pad-darts .num-grid { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(7, minmax(0, 1fr)); gap: clamp(5px, 0.9vh, 10px); }
+#screen-kaiwen #kw-pad-darts .num-grid button { height: auto; min-height: 0; font-family: var(--font-cond); font-weight: 700; font-size: clamp(20px, 5vh, 54px); border-radius: clamp(10px, 1.6vh, 16px); padding: 0; }
+#screen-kaiwen #kw-pad-darts .num-grid button.mult, #screen-kaiwen #kw-pad-darts .num-grid button.bull { font-size: clamp(15px, 3vh, 32px); }
+#screen-kaiwen #kw-pad-darts .num-grid button.end-visit { grid-column: span 2; }
+#screen-kaiwen .kw-ff-unten { flex: none; height: clamp(80px, 20vh, 210px); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1fr); }
+#screen-kaiwen .kw-ff-unten .key-mitte { grid-column: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #141011; border: 2px solid #241c1e; border-radius: clamp(14px, 2.2vh, 24px); }
+#screen-kaiwen .kw-ff-unten .key-display { font-family: var(--font-cond); font-weight: 700; font-size: clamp(44px, 15vh, 160px); line-height: 1; background: none; border: none; }
+
+@keyframes kwPop { 0% { transform: translateX(-50%) scale(0.6); opacity: 0; } 60% { transform: translateX(-50%) scale(1.08); opacity: 1; } 100% { transform: translateX(-50%) scale(1); } }
+@keyframes kwGlow { 0%, 100% { box-shadow: inset 0 0 0 1.5px rgba(255, 193, 77, 0.9), 0 0 24px rgba(255, 190, 60, 0.35); } 50% { box-shadow: inset 0 0 0 1.5px #ffd27a, 0 0 46px rgba(255, 190, 60, 0.7); } }
+@keyframes kwTrophy { 0%, 100% { transform: rotate(0deg) scale(1); } 50% { transform: rotate(-8deg) scale(1.12); } }
+@keyframes kwBlitz { 0% { color: #fff; text-shadow: 0 0 18px #ffd27a; transform: scale(1.25); } 100% { transform: scale(1); } }
+@keyframes kwDelta { 0% { opacity: 0; transform: translateY(8px); } 15% { opacity: 1; transform: translateY(0); } 70% { opacity: 1; } 100% { opacity: 0; transform: translateY(-10px); } }
+@media (prefers-reduced-motion: reduce) { #screen-kaiwen * { animation: none !important; } }
+
+/* Hochkant (Handy): alles untereinander, Eingabe unten. */
+@media (orientation: portrait) {
+  #screen-kaiwen .kw-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); gap: 8px; }
+  #screen-kaiwen .kw-links { gap: 6px; }
+  #screen-kaiwen .kw-ziel { flex: none; padding: 8px 10px; gap: 2px; }
+  #screen-kaiwen .kw-rest { font-size: clamp(56px, 14vh, 120px); }
+  #screen-kaiwen .kw-h { font-size: 1rem; }
+  #screen-kaiwen .kw-sub { font-size: 0.7rem; }
+  #screen-kaiwen .kw-spieler { padding: 6px 10px; gap: 4px; }
+  #screen-kaiwen .kw-spieler .pfelder { height: 30px; }
+  #screen-kaiwen .kw-spieler .fk { font-size: 15px; }
+  #screen-kaiwen .kw-sp-name { font-size: 15px; }
+  #screen-kaiwen .kw-sp-pb b, #screen-kaiwen .kw-sp-letzte b { font-size: 16px; }
+  #screen-kaiwen .kw-verlauf { display: none; }
+  #screen-kaiwen .kw-pad .display-row { height: 46px; }
+  #screen-kaiwen .kw-pad .quick-row { height: 40px; }
+}
+/* Handy quer: kompakter. */
+@media (orientation: landscape) and (max-height: 420px) {
+  #screen-kaiwen .kw-rest { font-size: 96px; }
+  #screen-kaiwen .kw-spieler .pfelder { height: 30px; }
+  #screen-kaiwen .kw-spieler .fk { font-size: 15px; }
+  #screen-kaiwen .kw-verlauf { display: none; }
+}
+
+/* Kaiwen: Fernsteuerung als Raster (Ziel links, Team rechts, unten Verlauf
+   und Eingabe-Anzeige); die Fern-Elemente bleiben sonst unsichtbar. */
+#screen-kaiwen:not(.fern) .nur-fern { display: none !important; }
+#screen-kaiwen.fern .kw-links { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; gap: clamp(8px, 1.6vw, 24px) clamp(8px, 1.6vw, 24px); }
+#screen-kaiwen.fern .kw-kopf { grid-column: 1 / -1; }
+#screen-kaiwen.fern .kw-ziel { grid-column: 1; grid-row: 2; overflow: hidden; }
+#screen-kaiwen.fern .kw-team { grid-column: 2; grid-row: 2; min-height: 0; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); padding: clamp(8px, 1.4vh, 16px); border-radius: clamp(16px, 2.4vh, 26px); background: #141011; }
+#screen-kaiwen.fern .kw-team.zwei { grid-template-rows: repeat(2, minmax(0, 1fr)); }
+#screen-kaiwen.fern .kw-spieler { min-height: 0; overflow: hidden; justify-content: center; }
+#screen-kaiwen.fern .kw-sp-name { font-size: clamp(20px, 5.4vh, 58px); }
+#screen-kaiwen.fern .kw-sp-pb b, #screen-kaiwen.fern .kw-sp-letzte b { font-size: clamp(24px, 6vh, 64px); }
+#screen-kaiwen.fern .kw-spieler .pfelder { height: clamp(40px, 9vh, 100px); }
+#screen-kaiwen.fern .kw-spieler .fk { font-size: clamp(18px, 4.4vh, 50px); }
+#screen-kaiwen.fern .kw-verlauf { grid-column: 1; grid-row: 3; align-self: center; flex-wrap: wrap; overflow: visible; }
+#screen-kaiwen.fern .kw-ff-unten { grid-column: 2; grid-row: 3; display: flex; justify-content: center; }
+#screen-kaiwen.fern .kw-ff-unten .key-mitte { width: min(100%, 420px); }
+#screen-kaiwen.fern .kw-rest { font-size: clamp(90px, 30vh, 340px); }
+#screen-kaiwen.fern .kw-kopf .kw-menu { display: flex; }
+
+/* Hochkant: feste Tastenhoehen, die Seite scrollt. */
+@media (orientation: portrait) {
+  #screen-kaiwen.active { height: auto; min-height: calc(100dvh - 12px); overflow: auto; }
+  body.fix-spiel #screen-kaiwen.active { overflow: auto; }
+  #screen-kaiwen .kw-body { grid-template-rows: auto auto; }
+  #screen-kaiwen .kw-pad { flex: none; }
+  #screen-kaiwen .kw-pad .kw-keys { grid-template-rows: repeat(4, 52px); }
+  #screen-kaiwen #kw-pad-darts .num-grid { grid-template-rows: repeat(7, 44px); }
+  #screen-kaiwen .kw-pad-kopf { height: 44px; }
+}
+
+/* Kaiwen: Tasten wie das X01-Tastenfeld (eigene Klasse, damit die Tests
+   das X01-Feld eindeutig finden), OK hell; Rekord-Banner im Fluss. */
+#screen-kaiwen .kw-keys button { background: #141011; border: 1px solid #241c1e; color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+#screen-kaiwen .kw-keys button.fn { color: var(--muted); }
+#screen-kaiwen .kw-keys button.ok { background: #f2eeee; border-color: #f2eeee; color: #0d0a0b; }
+#screen-kaiwen .kw-keys button:active { background: #241d1f; }
+#screen-kaiwen .kw-keys button.ok:active { background: #dcd6d6; }
+#screen-kaiwen .kw-banner { position: static; transform: none; margin-bottom: clamp(2px, 0.6vh, 8px); animation: kwPopFluss 0.7s ease-out both, kwGlow 1.8s ease-in-out 0.7s infinite; }
+@keyframes kwPopFluss { 0% { transform: scale(0.6); opacity: 0; } 60% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); } }
+
+/* Kaiwen am Handy quer: alles eine Nummer kleiner, damit die unterste
+   Tastenreihe nicht abgeschnitten wird. */
+@media (orientation: landscape) and (max-height: 420px) {
+  #screen-kaiwen.active { padding: 4px 8px; }
+  #screen-kaiwen .kw-body { gap: 8px; }
+  #screen-kaiwen .kw-rechts, #screen-kaiwen .kw-pad { gap: 4px; }
+  #screen-kaiwen .kw-pad-kopf { height: 34px; gap: 4px; }
+  #screen-kaiwen .kw-pad .display-row { height: 40px; }
+  #screen-kaiwen .kw-pad .quick-row { height: 34px; gap: 4px; }
+  #screen-kaiwen .kw-pad .kw-keys { gap: 4px; }
+  #screen-kaiwen #kw-pad-darts .num-grid { gap: 4px; }
+  #screen-kaiwen #kw-pad-darts .num-grid button { font-size: 18px; }
+  #screen-kaiwen .kw-links { gap: 4px; }
+  #screen-kaiwen .kw-ziel { padding: 6px 10px; gap: 2px; }
+  #screen-kaiwen .kw-rest { font-size: 84px; }
+  #screen-kaiwen .kw-spieler { padding: 6px 10px; gap: 4px; }
+}

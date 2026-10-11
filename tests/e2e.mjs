@@ -165,8 +165,8 @@ check('Gemischt findet die Grenze wieder', (await page.evaluate(() => window.__d
 await page.locator('#eingabe-wahl button[data-value="2"]').click();
 check('Tastatur gemerkt', (await page.evaluate(() => window.__dart.state().settings.tastatur)) === 1);
 await page.locator('#eingabe-wahl button[data-value="1"]').click();
-await page.locator('[data-action="set-mode"][data-value="kaiwen"]').click();
-check('Kaiwen: Regeln folgen, kein Start', (await page.locator('[data-action="start-game"]').isDisabled()) &&
+await page.locator('[data-action="set-mode"][data-value="hunter"]').click();
+check('Hunter: Regeln folgen, kein Start', (await page.locator('[data-action="start-game"]').isDisabled()) &&
   (await textKlein('[data-action="start-game"]')).includes('regeln folgen') && (await text('#einst-hint')).includes('Regeln folgen'));
 await page.locator('[data-action="set-mode"][data-value="501"]').click();
 check('zurueck im X01: GAME ON!', !(await page.locator('[data-action="start-game"]').isDisabled()));
@@ -4683,6 +4683,163 @@ group('Einmalige Korrektur: Spielbericht 1. Spieltag');
     S.profiles = S.profiles.filter((p) => p.id !== 'k_g1');
     D.ui().bericht = null; D.save(); D.setScreen('setup');
   });
+}
+
+group('Kaiwen: Team-Checkout, Regeln, Rekord und PB');
+{
+  const vpKw = page.viewportSize();
+  await page.setViewportSize({ width: 1133, height: 744 });
+  await page.evaluate(() => { const D = window.__dart; D.ui().overlay = null; D.setScreen('setup'); });
+  await page.locator('[data-action="set-mode"][data-value="kaiwen"]').click();
+  check('Kaiwen laesst sich starten und hat seine Einstellungen', !(await page.locator('[data-action="start-game"]').isDisabled()) && (await visible('#settings-kaiwen')) &&
+    (await textKlein('[data-action="start-game"]')).includes('game on'));
+  /* Drei in der Aufstellung: Start mit Hinweis gesperrt. */
+  for (let i = 0; i < 5 && (await page.locator('.roster-item.selected').count()) < 3; i++) await page.locator('.roster-item:not(.selected)').first().click();
+  await page.locator('[data-action="start-game"]').click();
+  check('mit drei Spielern erklaert ein Hinweis: hoechstens zwei', (await text('#overlay-card')).includes('höchstens zwei') && (await page.evaluate(() => window.__dart.state().screen)) === 'setup');
+  await page.locator('#overlay-card [data-action="ov-hinweis-zu"]').click();
+  await reduceLineupToTwo();
+  await page.locator('[data-action="start-game"]').click();
+  await page.waitForTimeout(150);
+  check('zu zweit startet Kaiwen ohne Ausbullen, Reihenfolge wie gewaehlt', (await page.evaluate(() => window.__dart.state().screen)) === 'kaiwen' && (await visible('#screen-kaiwen')));
+  const kst = () => page.evaluate(() => window.__dart.kaiwenState());
+  const [kA, kB] = await page.evaluate(() => window.__dart.game().players);
+  const kwKey = async (txt) => { for (const c of txt) await page.locator(`#kw-pad-total .kw-keys button[data-key="${c}"]`).click(); await page.locator('#kw-pad-total .kw-keys button[data-key="ok"]').click(); };
+  /* Nach der Finish-Frage gilt kurz die Eingabesperre gegen Doppeltipps (settling). */
+  const kwCo = async (n) => { await page.locator(`[data-action="co-darts"][data-n="${n}"]`).click(); await page.waitForTimeout(200); };
+  let ks = await kst();
+  check('Start: Score 120, Rest 120, A wirft, 9 Darts frei', ks.zahl === 120 && ks.rest === 120 && ks.werfer === kA && ks.dartsVersuch === 0);
+  check('die 9 Darts stehen als drei Gruppen mit Werfernamen', (await page.locator('#kw-ziel .kw-gruppe').count()) === 3 && (await page.locator('#kw-ziel .kw-dot').count()) === 9 &&
+    (await textKlein('#kw-ziel .kw-gruppe >> nth=1')).includes((await page.evaluate((id) => window.__dart.profile(id).name, kB)).toLowerCase()));
+  check('Rekord steht klein am Rand (120 zum Start)', (await text('#kw-rekord')).includes('120'));
+  await kwKey('60'); ks = await kst();
+  check('A wirft 60: Rest 60, jetzt B, 6 Darts uebrig', ks.rest === 60 && ks.werfer === kB && ks.dartsVersuch === 3);
+  await kwKey('20'); await kwKey('40');
+  check('40 auf Rest 40: die Frage nach der Dartzahl wie im X01', (await page.locator('[data-action="co-darts"]').count()) === 3);
+  await kwCo(2); ks = await kst();
+  check('120 gecheckt: weiter mit 130, der Naechste (B) beginnt, Verlauf merkt den Check', ks.zahl === 130 && ks.rest === 130 && ks.werfer === kB && ks.verlauf.length === 1 && ks.verlauf[0].check && ks.verlauf[0].zahl === 120);
+  check('ein +10 steht kurz am Score und der erste Rekord des Spiels bekommt das Banner', (await text('#kw-ziel')).includes('+10') && (await page.locator('#kw-ziel .kw-banner').count()) === 1 &&
+    (await text('#kw-rekord')).includes('130'));
+  await kwKey('0'); await kwKey('0'); await kwKey('0'); ks = await kst();
+  check('Fehlversuch: 129, A beginnt (die Reihenfolge laeuft durch)', ks.zahl === 129 && ks.werfer === kA && !ks.verlauf[1].check);
+  await kwKey('89'); await kwKey('40'); await kwCo(2); ks = await kst();
+  check('129 gecheckt: weiter mit 139', ks.zahl === 139 && ks.verlauf.length === 3 && ks.verlauf[2].check);
+  /* Bust in Aufnahme 1 */
+  await kwKey('180'); ks = await kst();
+  check('Bust in Aufnahme 1: Rest bleibt 139, der Partner macht weiter, 6 Darts uebrig', ks.rest === 139 && ks.zahl === 139 && ks.werfer === kB && ks.dartsVersuch === 3 && ks.visitNr === 1);
+  await kwKey('100'); await kwKey('20'); ks = await kst();
+  check('nach 9 Darts ohne Finish (mit Bust in der ersten Aufnahme): 138', ks.zahl === 138 && ks.werfer === kB);
+  /* Bust in Aufnahme 3 */
+  await kwKey('100'); await kwKey('20'); ks = await kst();
+  check('Rest 18 vor der dritten Aufnahme', ks.rest === 18 && ks.visitNr === 2);
+  await kwKey('20'); ks = await kst();
+  check('Bust in Aufnahme 3: Versuch verloren, 137', ks.zahl === 137 && ks.rest === 137 && ks.verlauf[ks.verlauf.length - 1].zahl === 138 && !ks.verlauf[ks.verlauf.length - 1].check);
+  /* Check in Aufnahme 1 */
+  check('A beginnt den Versuch auf 137', ks.werfer === kA);
+  await kwKey('137'); await kwCo(3); ks = await kst();
+  check('Check in Aufnahme 1: 147, der Naechste (B) startet die neue Zahl mit 9 Darts', ks.zahl === 147 && ks.werfer === kB && ks.dartsVersuch === 0);
+  const rek1 = await page.evaluate(() => window.__dart.kaiwenRekord());
+  check('Rekord und PB stehen sofort auf 147', rek1.zahl === 147 && (await page.evaluate((id) => window.__dart.kaiwenPB(id, false), kA)) === 147 && (await text('#kw-team')).includes('147'));
+  /* Undo ueber das Versuchsende hinweg */
+  await page.locator('#kw-pad-total .kw-keys button[data-key="del"]').click(); ks = await kst();
+  check('Undo nimmt den Check zurueck: wieder 137, A am Wurf, die Aufnahme steht im Feld', ks.zahl === 137 && ks.rest === 137 && ks.werfer === kA && (await text('#kw-display')).trim() === '137');
+  check('Rekord und PB gehen mit zurueck', (await page.evaluate(() => window.__dart.kaiwenRekord().zahl)) === 139 && (await page.evaluate((id) => window.__dart.kaiwenPB(id, false), kA)) === 139);
+  await page.locator('#kw-pad-total .kw-keys button[data-key="ok"]').click(); await kwCo(3); ks = await kst();
+  check('nochmal gecheckt: 147 und Rekord 147', ks.zahl === 147 && (await page.evaluate(() => window.__dart.kaiwenRekord().zahl)) === 147);
+  /* Neuladen: der Stand bleibt */
+  await page.reload(); await page.waitForFunction(() => window.__dart);
+  ks = await kst();
+  check('nach dem Neuladen geht es auf dem Kaiwen-Bildschirm mit 147 weiter', (await page.evaluate(() => window.__dart.state().screen)) === 'kaiwen' && ks.zahl === 147 && ks.werfer === kB);
+  /* Einzel-Darts */
+  await page.locator('[data-action="kw-swap"]').click();
+  check('der Wechsel zeigt das Einzel-Darts-Feld', await visible('#kw-pad-darts') && !(await visible('#kw-pad-total')));
+  await page.locator('#kw-pad-darts .num-grid button.mult[data-mult="3"]').click();
+  await page.locator('#kw-pad-darts .num-grid button[data-num="20"]').click(); ks = await kst();
+  check('T20 als Einzeldart: Rest 87, ein Dart der Aufnahme offen', ks.rest === 87 && ks.offen.length === 1 && ks.dartsVersuch === 1);
+  await page.locator('#kw-pad-darts [data-action="undo-game"]').click(); ks = await kst();
+  check('Undo nimmt den einzelnen Dart zurueck', ks.rest === 147 && ks.offen.length === 0);
+  await page.locator('#kw-pad-darts .num-grid button.mult[data-mult="3"]').click();
+  await page.locator('#kw-pad-darts .num-grid button[data-num="20"]').click();
+  await page.locator('#kw-pad-darts [data-action="kw-end-visit"]').click(); ks = await kst();
+  check('OK fuellt die Aufnahme mit Fehlwuerfen auf: 60 gebucht, jetzt A', ks.rest === 87 && ks.offen.length === 0 && ks.werfer === kA && ks.dartsVersuch === 3);
+  await page.locator('[data-action="kw-swap"]').click();
+  /* Fernsteuerung: Tastatur */
+  await page.locator('.kw-pad-kopf [data-action="kw-fern"]').click();
+  check('Fernsteuerung: Board-Anzeige ohne Tastenfeld', await page.evaluate(() => document.getElementById('screen-kaiwen').classList.contains('fern')) && !(await visible('#kw-pad-total')));
+  await page.keyboard.type('45'); await page.keyboard.press('Enter'); ks = await kst();
+  check('45 per Tastatur gebucht: Rest 42', ks.rest === 42 && ks.werfer === kB);
+  await page.keyboard.press('Escape');
+  check('Escape beendet die Fernsteuerung', !(await page.evaluate(() => document.getElementById('screen-kaiwen').classList.contains('fern'))));
+  /* Finish-Frage per Tastatur in der Fernsteuerung: Rest 42, "42" Enter, dann "2". */
+  await page.locator('.kw-pad-kopf [data-action="kw-fern"]').click();
+  await page.keyboard.type('42'); await page.keyboard.press('Enter');
+  check('die Finish-Frage erscheint auch in der Fernsteuerung', (await page.locator('[data-action="co-darts"]').count()) >= 2);
+  await page.keyboard.press('2'); ks = await kst();
+  check('die Ziffer 2 bucht den Check mit zwei Darts: 157, naechster Versuch', ks.zahl === 157 && ks.dartsVersuch === 0 && (await page.evaluate(() => !window.__dart.ui().overlay)));
+  await page.keyboard.press('Escape');
+  /* Frage per Tipp beantworten, dann im Einzel-Darts-Modus Enter druecken: kein Absturz. */
+  await kwKey('117'); ks = await kst();
+  check('117 auf 157: Rest 40', ks.rest === 40);
+  await kwKey('40'); await kwCo(2); ks = await kst();
+  check('40 gecheckt per Tipp auf die Frage: 167', ks.zahl === 167 && ks.dartsVersuch === 0);
+  await page.locator('[data-action="kw-swap"]').click();
+  await page.keyboard.press('Enter'); await page.waitForTimeout(150);
+  check('Enter danach im Einzel-Darts-Modus tut nichts und wirft keinen Fehler', !(await visible('#save-warning')) && errors.length === 0 && (await kst()).zahl === 167 && (await kst()).offen.length === 0, errors.join(' | '));
+  /* Bull-Kanten per Einzeldart: Bull (25) auf 40 bustet nicht (Rest 15), D-Bull auf 50 ist ein Check. */
+  await page.evaluate(() => { const g = window.__dart.game(); const v = g.versuche[g.versuche.length - 1]; v.zahl = 50; v.visits = []; v.offen = []; window.__dart.save(); window.__dart.render(); });
+  await page.locator('#kw-pad-darts .num-grid button[data-num="25"][data-mult="2"]').click(); ks = await kst();
+  check('Doppel-Bull auf 50 ist ein Check mit einem Dart: 60', ks.zahl === 60 && ks.verlauf[ks.verlauf.length - 1].check);
+  await page.locator('#kw-pad-darts .num-grid button[data-num="25"][data-mult="1"]').click();
+  await page.locator('#kw-pad-darts .num-grid button[data-num="25"][data-mult="1"]').click(); ks = await kst();
+  check('zweimal Bull auf 60: Rest 10, zwei Darts offen', ks.rest === 10 && ks.offen.length === 2);
+  await page.locator('#kw-pad-darts .num-grid button[data-num="10"]').click(); ks = await kst();
+  check('Single 10 auf 10 ist Rest 0 ohne Doppel: Bust, Rest wieder 60', ks.rest === 60 && ks.offen.length === 0 && ks.visitNr === 1);
+  await page.locator('[data-action="kw-swap"]').click();
+  /* Untergrenze: auf 2 geht es nach einem Fehlversuch nicht tiefer. */
+  await page.evaluate(() => { const g = window.__dart.game(); const v = g.versuche[g.versuche.length - 1]; v.zahl = 2; v.visits = []; v.offen = []; window.__dart.save(); window.__dart.render(); });
+  await kwKey('0'); await kwKey('0'); await kwKey('0'); ks = await kst();
+  check('Untergrenze 2: nach dem Fehlversuch bleibt es bei 2', ks.zahl === 2);
+  /* Testspieler setzen keinen Rekord. */
+  const kwRekVor = await page.evaluate(() => window.__dart.kaiwenRekord().zahl);
+  await page.evaluate((id) => { const S = window.__dart.state(); const p = S.profiles.find((x) => x.id === id); p.test = true; const g = window.__dart.game(); const v = g.versuche[g.versuche.length - 1]; v.zahl = 300; v.visits = []; v.offen = []; window.__dart.save(); window.__dart.render(); }, kA);
+  await kwKey('170'); await kwKey('130'); await kwCo(3); ks = await kst();
+  check('ein Testspieler erreicht 310, der Rekord der App bleibt davon unberuehrt', ks.zahl === 310 && (await page.evaluate(() => window.__dart.kaiwenRekord().zahl)) === kwRekVor &&
+    (await page.evaluate(() => !(window.__dart.state().rekorde && window.__dart.state().rekorde.kaiwen && window.__dart.state().rekorde.kaiwen.zahl > 200))));
+  await page.evaluate((id) => { const p = window.__dart.state().profiles.find((x) => x.id === id); delete p.test; const g = window.__dart.game(); g.versuche.splice(-2, 2); g.versuche.push({ zahl: 167, visits: [], offen: [] }); window.__dart.save(); window.__dart.render(); }, kA);
+  /* Beenden und Auswertung */
+  await page.locator('.kw-pad-kopf [data-action="game-menu"]').click();
+  await page.locator('[data-action="kw-ende"]').click();
+  const kwSum = await text('#summary-box');
+  check('Spiel beenden zeigt die Zusammenfassung: hoechste Zahl, Versuche, Checks, Rekord', kwSum.includes('167') && kwSum.includes('Versuche') && kwSum.includes('Checks') && kwSum.includes('Rekord'));
+  await page.locator('#summary-actions [data-action="finish-game"]').click();
+  check('Kaiwen gespeichert', (await page.evaluate(() => window.__dart.state().history.filter((h) => h.kind === 'kaiwen').length)) === 1);
+  const kwCar = await carr();
+  check('Karriere: PB Team 167 fuer beide, sechs Checks verteilt', kwCar[kA].kwBestTeam === 167 && kwCar[kB].kwBestTeam === 167 && kwCar[kA].kwChecks + kwCar[kB].kwChecks === 6, JSON.stringify([kwCar[kA].kwChecks, kwCar[kB].kwChecks]));
+  await navTo('boards');
+  await page.locator('[data-action="board-mode"][data-value="kaiwen"]').click();
+  check('die Rangliste hat eine Kaiwen-Auswertung statt "Coming soon"', !(await visible('#board-bald')) && (await text('#screen-boards')).includes('167'));
+  check('die Rekorde-Karte zeigt den Kaiwen-Rekord mit Namen, keine RTW-Werte', (await text('#records')).includes('Rekord') && (await text('#records')).includes('PB Team') && !(await text('#records')).includes('Wenigste Darts'));
+  await page.locator('#board-log-knopf').scrollIntoViewIfNeeded();
+  await page.locator('#board-log-knopf').click();
+  check('die Spiele-Liste nennt hoechste Zahl und Checks statt eines Siegers', (await text('#board-log')).includes('höchste Zahl') && !(await text('#board-log')).includes('Unbekannt'));
+  await page.locator('[data-action="board-log-zu"]').click();
+  /* Solo */
+  await page.evaluate(() => window.__dart.setScreen('setup'));
+  for (let i = 0; i < 5 && (await page.locator('.roster-item.selected').count()) > 1; i++) await page.locator('.roster-item.selected').nth(1).click();
+  await page.locator('[data-action="start-game"]').click(); await page.waitForTimeout(150);
+  ks = await kst();
+  check('Solo: einer wirft alle drei Aufnahmen', ks.werfer === kA && ks.zahl === 120);
+  await kwKey('0'); await kwKey('0'); ks = await kst();
+  check('nach zwei Aufnahmen immer noch derselbe am Wurf', ks.werfer === kA && ks.dartsVersuch === 6);
+  await kwKey('0'); ks = await kst();
+  check('Solo-Fehlversuch: 119, wieder derselbe', ks.zahl === 119 && ks.werfer === kA);
+  check('PB Solo ist getrennt vom Team-PB', (await page.evaluate((id) => window.__dart.kaiwenPB(id, true), kA)) === 120 && (await text('#kw-team')).includes('PB Solo'));
+  await page.locator('.kw-pad-kopf [data-action="game-menu"]').click();
+  await page.locator('[data-action="kw-ende"]').click();
+  await page.locator('#summary-actions [data-action="finish-game"]').click();
+  check('zwei Kaiwen-Spiele im Archiv, der Rekord bleibt 167', (await page.evaluate(() => window.__dart.state().history.filter((h) => h.kind === 'kaiwen').length)) === 2 &&
+    (await page.evaluate(() => window.__dart.kaiwenRekord().zahl)) === 167);
+  await page.setViewportSize(vpKw);
 }
 
 group('Oeffentliche Webseite (webseite.html): Spieltag, Termine, Ergebnisse, Tabelle, Anmelden');

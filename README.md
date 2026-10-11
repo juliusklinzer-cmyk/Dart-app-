@@ -367,6 +367,42 @@ Reihenfolge, ein Tipp rechts nimmt wieder heraus; der Erste leuchtet, der Startk
 zählt mit („Noch 2 antippen“) und wird rot, sobald alle stehen. In der Fernsteuerung
 dieselben Karten in Plakatgröße, Auswahl per 4/6 und Enter.
 
+### Kaiwen (Team-Checkout)
+
+Allein oder zu zweit (Entwurf „Kaiwen“, Oktober 2026): die **Zahl** (zum Start 120)
+in einem **Versuch von 9 Darts** finishen, Aufnahmen zu je 3 Darts abwechselnd, solo
+wirft einer alle drei. Double Out und Bust wie im X01: Rest unter 0, Rest 1 oder Rest 0
+ohne Doppel ist ein Bust, der Rest geht auf den Stand vor der Aufnahme zurück, die
+Darts der Aufnahme sind verbraucht, der Nächste macht weiter. **Check: Zahl plus 10**
+(übrige Darts verfallen), **nach 9 Darts ohne Finish: Zahl eins runter** (Untergrenze
+2). Die Reihenfolge läuft über alle Versuche durch: wirft A, B, A, beginnt B den nächsten
+Versuch, und nach einem frühen Check von A startet B die neue Zahl. Mehr als zwei in
+der Aufstellung sperrt den Start mit Hinweis. Das Spiel hat kein Ende; „Spiel beenden
+und auswerten“ im Menü zeigt die Zusammenfassung (höchste Zahl, Versuche, Checks und
+Quote, Checks je Spieler, ob PB oder Rekord gefallen sind) und speichert.
+
+Der Bildschirm zeigt Score und groß den Rest, die 9 Darts des Versuchs als drei
+Gruppen mit dem Namen des jeweiligen Werfers, das Team mit PB, letzter Aufnahme und
+dem Finish-Weg beim Werfer (Lieblingsdoppel, Darts in der Aufnahme, bis 170; der
+Stellwurf nur, wenn im Versuch noch Darts folgen), den Verlauf als Chips und rechts die
+Eingabe: Punkte (Tastenfeld, Schnellwahl, Finish-Frage nach der Dartzahl, auch per
+Tasten 1/2/3) oder Einzel-Darts (Wechsel-Knopf, die Wahl bleibt fürs Spiel), dazu die
+Fernsteuerung mit Tastatureingabe. Testspieler setzen weder Rekord noch PB. In der
+Rangliste steht der App-Rekord mit Namen in der Rekorde-Karte, die Spiele-Liste nennt
+höchste Zahl und Checks. Nach jedem
+Versuch steht kurz „+10“ oder „−1“ am Score. Undo wie im X01, auch über das
+Versuchsende hinweg; der Stand übersteht ein Neuladen.
+
+**Rekord und PB:** Der Rekord der ganzen App ist die höchste Startzahl, die je ein
+Versuch erreicht hat (Ausgangswert 120), mit Namen und Datum; er wird aus allen
+gespeicherten Kaiwen-Spielen (also auf allen Geräten mit Konto) und dem laufenden
+Spiel gerechnet, ein Merker in `S.rekorde.kaiwen` überlebt das Archiv-Limit. Beim
+ersten Überbieten im Spiel gibt es Banner und wackelnden Pokal, danach nur ein
+Aufleuchten der Rekordzahl. Jeder Spieler hat einen PB solo und einen im Team (steht
+in seiner Karte, leuchtet beim Überbieten; fällt zugleich der Rekord, läuft nur die
+Rekord-Animation). Undo nimmt Rekord und PB mit zurück. In der Rangliste gibt es die
+Kacheln PB Team, PB Solo, Checks, Check-Quote (ab 5 Versuchen) und Versuche.
+
 ## Ablauf (X01 Turnier)
 
 1. **Setup** – Antippen, wer heute mitspielt (2 bis 12 Spieler), Startpunkte (301/501/701) und Legs
