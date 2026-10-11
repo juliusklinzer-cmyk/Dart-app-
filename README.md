@@ -38,18 +38,27 @@ mit HTTPS, „Zum Home-Bildschirm“ auf jedem Gerät, Updates per `git pull`.
 
 Der Modus wird im Setup gewählt, die Aufstellung gilt für alle vier gleich.
 
-**Das Startbild** (Entwurf „Setup Redesign“, Oktober 2026) zeigt alles auf einen
-Blick, ohne Scrollen: oben die Marke und die Navigation in einer Leiste, darunter
-drei Spalten – **Wer spielt mit?** (die Zahl im Kreis ist die Reihenfolge der
-Auswahl, also die Wurf-Reihenfolge), **Spielmodus** und die **Einstellungen** des
-gewählten Modus mit GAME ON. Am Tablet und am quergedrehten Handy steht das Bild
-fest im Rahmen, innen scrollen nur Spielerliste und Einstellungen; hochkant am Handy
-steht alles untereinander. Bei X01, Schnellem Spiel und Finisher fragt **„Eingabe?“**:
-*Tastatur* startet gleich in der Fernsteuerung (Board-iPad), *Standard* nimmt immer
-die Aufnahme als Zahl, *Gemischt* schaltet ab der gewählten Restpunktzahl auf
-Einzel-Darts um. Im Spiel lässt sich jederzeit wechseln. **Kaiwen** und **Hunter**
-stehen schon im Modus-Kasten – ihre Regeln folgen, bis dahin lässt sich dort nichts
-starten.
+**Das Startbild** (Entwurf „Setup Redesign“, zweite Fassung Oktober 2026) ist
+aufgeräumt: eine Schrift für Inhalte, kleine graue Überschriften, Flächen ohne
+Rahmen, keine Leuchteffekte und keine Statistikzeilen. Oben die Marke, rechts die
+Navigation als schlanke Text-Reiter (der aktive mit rotem Strich); darunter drei
+Spalten – **Spieler** (zwei Spalten, die Zahl im Kreis ist die Reihenfolge der
+Auswahl, also die Wurf-Reihenfolge; „N gewählt“ zählt mit), **Spielart** (nur die
+Namen) und rechts die **Einstellungen**: oben der Name der Spielart mit einem
+Satz dazu, dann die Zeilen, ganz unten GAME ON (dunkel mit rotem Rand). Ausgewählt
+heißt überall dasselbe: weißer Rand bei Spielern und Spielart, hellere Fläche mit
+weißem Ring bei Optionen. Angemeldet kommt im Turnier die Zeile **Boards** (1 oder
+2 Boards = geteiltes Turnier) dazu, bei den freien Spielen **Spielort** (Lokal /
+Online); ohne Konto fehlen beide. **Ton** sind zwei Schalter: Klänge und Feiern.
+Am Tablet und am quergedrehten Handy steht das Bild fest im Rahmen, innen scrollen
+nur Spielerliste und Einstellungen; am quergedrehten Handy rücken die
+Beschriftungen neben die Optionen und werden kurz (Start, Bo3, Std., Mix); hochkant
+am Handy steht alles untereinander. Bei X01, Schnellem Spiel und Finisher fragt
+**„Eingabe“**: *Tastatur* (Sinnbild) startet gleich in der Fernsteuerung
+(Board-iPad), *Standard* nimmt immer die Aufnahme als Zahl, *Gemischt* schaltet ab
+der gewählten Restpunktzahl auf Einzel-Darts um. Im Spiel lässt sich jederzeit
+wechseln. **Kaiwen** und **Hunter** stehen schon in der Spielart-Liste – ihre Regeln
+folgen, bis dahin lässt sich dort nichts starten.
 
 Cricket, Round the World, Finisher und das Schnelle Spiel gehen auch **allein** –
 als Training gegen sich selbst. Allein wird nicht ausgebullt, es geht direkt los,
@@ -184,7 +193,7 @@ schnellste Finish und die höchste weggemachte Zahl.
 
 Der Reiter **Liga** (Entwurf „Liga · Spielplan“, Oktober 2026) trägt denselben
 Kopf wie die Rangliste: Logo-Menü, Titel, die Reiter Spielplan · Training ·
-Tabelle · Statistik · Kasse · Regeln als eigene Felder. Der Spielplan der Saison
+Tabelle · Statistik · Kasse · Regeln als Reiter; der Kopf ist seit Oktober 2026 der des Setups (Marke, Navigation als Text-Reiter), darunter die Liga-Zeile mit Saison und Reitern. Der Spielplan der Saison
 steht fest im Client (`LIGA` in `js/app.js`). **Links groß der nächste Spieltag**
 (oder der angetippte): Datum, Spieltag, Heim/Auswärts, 20:00 Uhr, Lokal mit Pin,
 oben rechts Route in Maps und „in den Kalender“, darunter Heim gegen Gast mit Logo
@@ -217,6 +226,15 @@ Der Reiter **Tabelle** ist die von Hand gepflegte Ligatabelle: alle neun Teams
 vorbefüllt (Stand der Ligaleitung nach dem 1. Spieltag, `LIGA_TABELLE_START`), jede Zelle (Team, Spiele, Punkte, Legs) antippbar; **„Tabelle
 speichern"** legt den Stand auf dem Server ab, sodass alle Angemeldeten
 dieselbe Tabelle sehen (`PUT /api/liga/tabelle`).
+
+**Alle Spiele des Spieltags:** In der großen Spieltag-Karte stehen unter dem Team
+die Paarungen aller Teams dieser Runde mit Ergebnis (Einzel, dahinter Legs),
+Spielfrei gedimmt, Verschobenes mit neuem Datum; unser eigenes Spiel ist
+umrandet und führt zu den Ergebnissen. Ein Tipp auf ein fremdes Spiel öffnet die
+16 Einzel wie auf dem Spielberichtsbogen (Gastspieler gekennzeichnet, Sieger
+hervorgehoben) samt Highlights. Die Daten kommen von der Ligaleitung und stehen
+als Vorbelegung im Code (`LIGA_SPIELTAGE` in `js/app.js`), gepflegt nach jedem
+Spieltag.
 
 Der Reiter **Training** ist das Dienstagszuhause: **DiensDarts** – Dart-Training
 jeden Dienstag in der Bar Sehnsucht (mit Logo). Eine Umfrage fragt je Termin
@@ -584,6 +602,18 @@ wenn das Setup gezeigt wird – auch auf einem Tablet, das tagelang offen bleibt
 Steht der Gast noch in einem laufenden Turnier, bleibt er, bis das Turnier
 beendet ist; solange lässt er sich auch nicht löschen.
 
+**Gast einladen** (nur angemeldet, nicht mit Gast-Konto): „+ Gastspieler“ fragt
+*Temporär* (nach 12 Stunden weg), *Dauerhaft* (nur dieses Gerät) oder **Einladen**.
+Einladen holt vom Server einen Link, der als **QR-Code** im Dialog steht und sich
+über **Link teilen** verschicken lässt (Teilen-Menü des Geräts, am Computer in die
+Zwischenablage). Zur Wahl steht **Gast** (eigenes Konto auf allen Geräten, spielt
+mit und hat seine Statistik, aber keine Liga) oder **Vereinsmitglied** (voller
+Zugang). Wer den Code scannt oder den Link öffnet, landet direkt beim Registrieren
+– „Einladung von … als Gast“ –, der Einladungscode ist schon drin, es fehlen nur
+Name, E-Mail und Passwort. Ein Link gilt **sieben Tage und für genau ein Konto**;
+der eigentliche Einladungscode wandert dabei nie mit (siehe
+`server/migrations/014_einladungen.sql`, `POST /api/einladungen`).
+
 ## Statistik und Ranglisten
 
 Jedes gespielte Spiel wird vollständig gespeichert — mit allen Aufnahmen und, im
@@ -688,9 +718,10 @@ alles nach.
 eben nur auf diesem Gerät. Ohne Server – Datei per Doppelklick, Einzeldatei-Bündel,
 GitHub Pages – ist der Reiter gar nicht erst da.
 
-- **Registrieren** geht mit einem Einladungscode, den du in die Gruppe schickst.
-  Keine Bestätigungsmail, kein fremder Dienst. Wer sein Passwort vergisst, wendet
-  sich an dich (siehe DEPLOY.md).
+- **Registrieren** geht mit einem Einladungscode, den du in die Gruppe schickst –
+  oder über einen **Einladungs-Link** aus dem Gast-Dialog (QR-Code oder Teilen),
+  dann ist der Code schon eingetragen. Keine Bestätigungsmail, kein fremder
+  Dienst. Wer sein Passwort vergisst, wendet sich an dich (siehe DEPLOY.md).
 - **Beim ersten Anmelden** fragt die App einmalig, wer wer ist: die Spieler, die es
   auf dem Gerät schon gab, lassen sich den Accounts zuordnen. Ihre bisherigen Spiele
   zählen dann dort weiter. Wer keinen Account hat, bleibt **Gastspieler** – das geht
@@ -739,13 +770,29 @@ Die **Zurück-Taste** (Android, Browser) schließt zuerst einen offenen Dialog u
 führt aus Unterseiten zurück ins Setup; im laufenden Spiel bleibt sie ohne
 Wirkung. Erst im Setup verlässt ein weiteres Zurück die App.
 
+**Die ganze App geht mit Pfeiltasten, Enter und Zurück** – auch in den Menüs.
+Außerhalb der Spielbilder (Setup, Rangliste, Spieler, Profil, Liga mit allen
+Reitern, Konto, Auswertung) und in jedem Dialog und Menü springen die **Pfeile**
+zum nächsten Knopf in Pfeilrichtung, wie am Fernseher; der markierte Knopf
+leuchtet, sobald eine Taste gedrückt wurde. **Enter** drückt ihn, und die
+Markierung bleibt nach dem Neuzeichnen auf demselben Knopf (Spieler nacheinander
+anwählen geht also mit Enter, Enter, Enter). **Escape** geht eine Stufe zurück:
+Menü zu, Dialog zu, Liga-Reiter zurück zum Spielplan, Profil zurück zur Liste,
+sonst ins Setup – im Setup passiert nichts mehr. **Backspace** tut dasselbe,
+außer in den Spielbildern (dort bleibt es das Löschen) und in Textfeldern (dort
+löscht es ein Zeichen; Escape verlässt dort erst das Feld). Auf Rangliste und
+Liga öffnet Enter auf dem Logo das Menü und markiert gleich den ersten Eintrag.
+Auf dem **Ziffernblock** gelten dort **8/2/4/6** als Pfeile. Turnierplan,
+Ausbullen und die Dialoge nach Leg und Spiel behalten ihre eigene Pfeil-Wahl.
+
 | Datei | Inhalt |
 |---|---|
 | `index.html` | Aufbau aller Screens |
 | `css/styles.css` | Styling (Dark, Touch-Ziele ≥ 44 px) |
 | `js/checkout.js` | Finish-Solver (Double-Out-Wege für Rest 2–170) |
 | `js/app.js` | Turnier-, Cricket- und RTW-Logik, Statistik, Rendering, Persistenz |
-| `js/auth.js` | *optional:* Anmelden, Roster, Zuordnung alter Profile |
+| `js/auth.js` | *optional:* Anmelden, Roster, Zuordnung alter Profile, Einladungs-Link |
+| `js/qr.js` | *optional:* QR-Code für den Einladungs-Link (qrcode-generator, MIT) |
 | `js/sync.js` | *optional:* Warteschlange, Hoch- und Runterladen von Spielen |
 | `js/kamera.js` | *optional:* Kamera-Kopplung – iPhone als Linse, iPad bucht (SSE) |
 | `js/linse-cv.js` | *optional:* die Erkennung selbst – Kalibrierung, Differenzbild, Wertung |

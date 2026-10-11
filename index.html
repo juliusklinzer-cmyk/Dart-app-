@@ -48,9 +48,10 @@
 
 <!-- ============ SETUP ============ -->
 <section id="screen-setup" class="screen">
-  <!-- Kopfzeile: Marke links, Navigation rechts (die Leiste #nav wandert
-       im Setup per JS hier hinein - auf allen anderen Screens steht sie
-       wie gehabt ueber dem Inhalt). -->
+  <!-- Kopfzeile: Marke links, die Navigation als Text-Reiter rechts (die
+       Leiste #nav wandert im Setup per JS hier hinein - auf Rangliste und
+       Liga steckt sie im Logo-Menue). Entwurf "Setup Redesign", zweite
+       Fassung (Okt. 2026): aufgeraeumt, ohne Rahmen, ohne Leuchten. -->
   <div class="setup-kopf" id="setup-kopf">
     <div class="marke">
       <span class="blink-logo" role="img" aria-label="Blink 180"></span>
@@ -62,7 +63,8 @@
   </div>
 
   <div id="resume-box" class="card resume hidden">
-    <div>
+    <span class="punkt" aria-hidden="true"></span>
+    <div class="resume-text">
       <strong>Laufendes Turnier</strong>
       <span class="muted" id="resume-info"></span>
     </div>
@@ -80,65 +82,69 @@
   </div>
 
   <div class="setup-spalten">
-  <!-- Linke Spalte: die Teilnehmer. Die Zahl im Kreis ist die Reihenfolge
+  <!-- Linke Spalte: die Spieler. Die Zahl im Kreis ist die Reihenfolge
        der Auswahl - so steht fest, wer zuerst wirft. -->
   <div class="setup-links">
     <div class="card" id="karte-spieler">
-      <div class="karte-kopf"><h2>Wer spielt mit?</h2><span class="anzahl" id="roster-anzahl"></span></div>
+      <div class="karte-kopf"><span class="kt">Spieler</span><span class="kt anzahl" id="roster-anzahl"></span></div>
       <div id="roster" class="roster"></div>
-      <button class="btn ghost full" data-action="new-profile">+ Gastspieler hinzufügen</button>
+      <button class="btn full gast-knopf" data-action="new-profile">+ Gastspieler</button>
     </div>
   </div>
 
-  <!-- Mittlere Spalte: der Spielmodus. -->
+  <!-- Mittlere Spalte: die Spielart, nur der Name. Was sie bedeutet, steht
+       als ein Satz ueber den Einstellungen. -->
   <div class="setup-mitte">
     <div class="card" id="karte-modus">
-    <h2>Spielmodus</h2>
+    <span class="kt">Spielart</span>
     <div class="modes" id="mode-select">
-      <button data-action="set-mode" data-value="quick">
-        <span class="mt">Schnelles Spiel</span>
-        <span class="md">Alle gleichzeitig, ein Leg, wer zuerst auscheckt</span>
-      </button>
-      <button data-action="set-mode" data-value="501">
-        <span class="mt">X01 Turnier</span>
-        <span class="md">Jeder gegen jeden, Double Out</span>
-      </button>
-      <button data-action="set-mode" data-value="cricket">
-        <span class="mt">Cricket</span>
-        <span class="md">Alle gegen alle, 20 bis 15 und Bull</span>
-      </button>
-      <button data-action="set-mode" data-value="rtw">
-        <span class="mt">Round the World</span>
-        <span class="md">Training: 1 bis 20, dann Bull</span>
-      </button>
-      <button data-action="set-mode" data-value="finisher">
-        <span class="mt">Finisher</span>
-        <span class="md">Alle auf derselben Zahl – nur Finishen</span>
-      </button>
+      <button data-action="set-mode" data-value="quick">Schnelles Spiel</button>
+      <button data-action="set-mode" data-value="501">X01 Turnier</button>
+      <button data-action="set-mode" data-value="cricket">Cricket</button>
+      <button data-action="set-mode" data-value="rtw">Round the World</button>
+      <button data-action="set-mode" data-value="finisher">Finisher</button>
       <!-- Zwei neue Spielarten aus dem Entwurf - die Regeln stehen noch
            nicht fest, darum laesst sich hier noch nichts starten. -->
-      <button data-action="set-mode" data-value="kaiwen">
-        <span class="mt">Kaiwen</span>
-        <span class="md">Im Team in 9 Darts finishen – Erfolg +1, Fehlschlag −1</span>
-      </button>
-      <button data-action="set-mode" data-value="hunter">
-        <span class="mt">Hunter</span>
-        <span class="md">Die Jagd: ihr fangt euch gegenseitig</span>
-      </button>
+      <button data-action="set-mode" data-value="kaiwen">Kaiwen</button>
+      <button data-action="set-mode" data-value="hunter">Hunter</button>
     </div>
     </div>
   </div>
 
-  <!-- Rechte Spalte: die Einstellungen des gewaehlten Modus, darunter
-       Ton & Feiern, ganz unten GAME ON. Die Abschnitte behalten ihre Ids;
-       sichtbar ist immer nur der zum Modus passende. -->
+  <!-- Rechte Spalte: Titel und ein Satz zur Spielart, darunter die
+       Einstellungen als Zeilen, ganz unten GAME ON. Die Abschnitte behalten
+       ihre Ids; sichtbar ist immer nur, was zur Spielart gehoert. -->
   <div class="setup-rechts">
     <div class="card" id="karte-einstellungen">
+    <div class="einst-kopf">
+      <span class="kt" id="einst-titel">X01 Turnier</span>
+      <span class="hint" id="einst-hint">Jeder gegen jeden, Double Out.</span>
+    </div>
+
+    <!-- Nur angemeldet und nur im Turnier: ein oder zwei Boards (geteiltes Turnier). -->
+    <div class="setting hidden" id="setting-geteilt">
+      <label>Boards</label>
+      <div class="options" data-setting="turnierGeteilt">
+        <button data-value="0">1 Board</button>
+        <button data-value="1">2 Boards</button>
+      </div>
+      <span class="note" id="geteilt-note"></span>
+    </div>
+    <!-- Nur angemeldet und nur bei freien Spielen (Schnelles Spiel, Cricket,
+         Round the World, Finisher): der Stand wandert als Ganzes zum Server,
+         Mitspieler mit Konto sehen ihn und tragen mit ein. -->
+    <div class="setting hidden" id="settings-online">
+      <label>Spielort</label>
+      <div class="options" data-setting="online">
+        <button data-value="0">Lokal</button>
+        <button data-value="1">Online</button>
+      </div>
+      <span class="note" id="online-hint"></span>
+    </div>
 
     <div class="einst" id="settings-501">
-    <h2>Einstellungen</h2>
     <div class="setting">
-      <label>Startpunkte</label>
+      <label><span class="lang">Startpunkte</span><span class="kurz">Start</span></label>
       <div class="options" data-setting="start">
         <button data-value="301">301</button>
         <button data-value="501">501</button>
@@ -147,14 +153,14 @@
     </div>
     <!-- Nur im Turnier: das Schnelle Spiel hat seine eigene Spieldauer. -->
     <div class="setting" id="setting-bestof">
-      <label>Legs pro Spiel</label>
+      <label>Legs</label>
       <div class="options" data-setting="bestOf">
         <button data-value="1">1 Leg</button>
-        <button data-value="3">Best of 3</button>
-        <button data-value="5">Best of 5</button>
+        <button data-value="3"><span class="lang">Best of 3</span><span class="kurz">Bo3</span></button>
+        <button data-value="5"><span class="lang">Best of 5</span><span class="kurz">Bo5</span></button>
       </div>
     </div>
-    <!-- Nur im Schnellen Spiel: Sätze und Legs wie bei einem kleinen Turnier. -->
+    <!-- Nur im Schnellen Spiel: Saetze und Legs wie bei einem kleinen Turnier. -->
     <div class="setting hidden" id="setting-quick-dauer">
       <label>Spieldauer</label>
       <div class="options" data-setting="quickModus">
@@ -173,62 +179,43 @@
         <button type="button" data-action="quick-step" data-key="quickLegs" data-dir="1" aria-label="mehr Legs">+</button>
       </div>
       </div>
-      <p class="hint" id="quick-dauer-hint"></p>
-    </div>
-    <!-- Nur angemeldet sichtbar: ohne Konto gibt es niemanden zum Teilen. -->
-    <div class="setting hidden" id="setting-geteilt">
-      <label>An zwei Scheiben</label>
-      <div class="options" data-setting="turnierGeteilt">
-        <button data-value="0">ein Gerät</button>
-        <button data-value="1">geteilt</button>
-      </div>
-      <p class="hint">Geteilt heißt: alle Mitspieler sehen das Turnier auf ihrem Gerät und können
-        eine offene Partie übernehmen. Wer eine Partie mitschreibt, hat sie für sich – die anderen
-        sehen so lange „läuft bei …“. Ergebnisse stehen sofort in der Tabelle.</p>
+      <span class="note" id="quick-dauer-hint"></span>
     </div>
     <!-- Wie wird eingetragen? Tastatur = Fernsteuerung vom Board-iPad aus,
          Standard = immer die Aufnahme als Zahl, Gemischt = im Finish-Bereich
          Dart fuer Dart. Im Spiel laesst sich jederzeit wechseln. -->
     <div class="setting" id="setting-eingabe">
-      <label>Eingabe?</label>
+      <label>Eingabe</label>
       <div class="options eingabe" id="eingabe-wahl">
-        <button data-action="eingabe" data-value="2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2.2"></rect><path d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M6.5 14h11"></path></svg><span>Tastatur</span></button>
-        <button data-action="eingabe" data-value="0">Standard</button>
-        <button data-action="eingabe" data-value="1">Gemischt</button>
+        <button data-action="eingabe" data-value="2" aria-label="Tastatur"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2.2"></rect><path d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M6.5 14h11"></path></svg></button>
+        <button data-action="eingabe" data-value="0"><span class="lang">Standard</span><span class="kurz">Std.</span></button>
+        <button data-action="eingabe" data-value="1"><span class="lang">Gemischt</span><span class="kurz">Mix</span></button>
       </div>
     </div>
     <div class="setting" id="setting-dartmode">
-      <label>Einzel-Darts ab Rest</label>
+      <label><span class="lang">Einzel-Darts ab Rest</span><span class="kurz">Einzel ab</span></label>
       <div class="options" data-setting="dartModeFrom">
         <button data-value="100">100</button>
         <button data-value="140">140</button>
         <button data-value="170">170</button>
         <button data-value="180">180</button>
       </div>
-      <p class="hint">Darüber tippst du die Aufnahme als Zahl, darunter Dart für Dart mit Finish-Vorschlag.</p>
     </div>
     </div>
 
     <div class="einst hidden" id="settings-cricket">
-    <h2>Cricket</h2>
     <div class="setting">
-      <label>Punkte zählen</label>
+      <label>Punkte</label>
       <div class="options" data-setting="cricketScoring">
-        <button data-value="1">mit Punkten</button>
-        <button data-value="0">ohne Punkte</button>
+        <button data-value="1"><span class="lang">mit Punkten</span><span class="kurz">Punkte</span></button>
+        <button data-value="0"><span class="lang">ohne Punkte</span><span class="kurz">ohne</span></button>
       </div>
     </div>
-    <p class="hint">Jede Zahl von 20 bis 15 und Bull muss dreimal getroffen werden (Double zählt
-      zweifach, Triple dreifach). <b>Mit Punkten:</b> Wer eine Zahl zugemacht hat, sammelt mit
-      weiteren Treffern Punkte, solange sie bei mindestens einem Mitspieler offen ist – gewonnen
-      hat, wer alles zu hat und dabei vorne liegt. <b>Ohne Punkte:</b> Wer zuerst alles zumacht,
-      gewinnt.</p>
     </div>
 
     <div class="einst hidden" id="settings-finisher">
-    <h2>Finisher</h2>
     <div class="setting">
-      <label>Punkte zum Sieg</label>
+      <label><span class="lang">Punkte zum Sieg</span><span class="kurz">Sieg bei</span></label>
       <div class="options" data-setting="finisherTo">
         <button data-value="3">3</button>
         <button data-value="5">5</button>
@@ -236,20 +223,15 @@
       </div>
     </div>
     <div class="setting">
-      <label>Eingabe?</label>
+      <label>Eingabe</label>
       <div class="options eingabe" id="eingabe-wahl-fin">
-        <button data-action="eingabe" data-value="2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2.2"></rect><path d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M6.5 14h11"></path></svg><span>Tastatur</span></button>
-        <button data-action="eingabe" data-value="0">Standard</button>
+        <button data-action="eingabe" data-value="2" aria-label="Tastatur"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2.2"></rect><path d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M6.5 14h11"></path></svg></button>
+        <button data-action="eingabe" data-value="0"><span class="lang">Standard</span><span class="kurz">Std.</span></button>
       </div>
     </div>
-    <p class="hint">Die App zieht jede Runde eine Zahl zwischen 6 und 120. <b>Alle starten
-      auf derselben Zahl</b> und spielen sie ganz normal herunter, Double Out – kein
-      Scoring, nur das Finishen. Wer zuerst auscheckt, gewinnt die Runde; wer noch nicht
-      dran war, darf gleichziehen. Schaffen es mehrere, entscheidet ein Stechen auf Bull.</p>
     </div>
 
     <div class="einst hidden" id="settings-rtw">
-    <h2>Round the World</h2>
     <div class="setting">
       <label>Spielart</label>
       <div class="options" data-setting="rtwBoost">
@@ -257,53 +239,16 @@
         <button data-value="1">Boost</button>
       </div>
     </div>
-    <p class="hint">Reihum von der 1 bis zur 20, danach Bull. Über die 20 hinaus geht es immer
-      auf Bull – und wer den Bull trifft, hat gewonnen. <b>Einfach:</b> Nur die Zahl zählt,
-      jeder Treffer rückt ein Feld weiter – egal ob Single, Double oder Triple.
-      <b>Boost:</b> Ein <b>Double überspringt eine Zahl</b>, ein <b>Triple überspringt zwei</b>.</p>
     </div>
 
-    <!-- Nur angemeldet und nur bei freien Spielen (Schnelles Spiel,
-         Cricket, Round the World, Finisher): der Stand wandert als Ganzes
-         zum Server, Mitspieler mit Konto sehen ihn und tragen mit ein. -->
-    <div class="einst hidden" id="settings-online">
-    <h2>Online spielen</h2>
-    <div class="setting">
-      <label>Zwei Orte, ein Spiel</label>
-      <div class="options" data-setting="online">
-        <button data-value="0">hier am Gerät</button>
-        <button data-value="1">online</button>
-      </div>
-      <p class="hint" id="online-hint"></p>
-    </div>
-    </div>
-
-    <!-- Kaiwen und Hunter: Beschreibung aus dem Entwurf, Regeln folgen. -->
-    <div class="einst hidden" id="settings-kaiwen">
-    <h2>Kaiwen</h2>
-    <p class="hint">Teamspiel ab 2 Spielern, auch online. Gemeinsam in 9 Darts finishen: Erfolg +1,
-      Fehlschlag −1. Zusammen den Rekord knacken. Einstellungen folgen, sobald die Regeln feststehen.</p>
-    </div>
-    <div class="einst hidden" id="settings-hunter">
-    <h2>Hunter</h2>
-    <p class="hint">Die Jagd, ähnlich wie Round the World: ihr fangt euch gegenseitig.
-      Einstellungen folgen, sobald die Regeln feststehen.</p>
-    </div>
-
+    <!-- Ton: Klaenge (Einschlag, Tastenton, Klopfen) und die Feiern
+         (180 und SECHZIG!, nur im X01) als Schalter. -->
     <div class="einst ton" id="settings-ton">
-    <h2>Ton &amp; Feiern</h2>
-    <div class="setting zeile">
-      <label>Klänge <small>Einschlag, Tastenton, Klopfen</small></label>
-      <div class="options" data-setting="ton">
-        <button data-value="1">an</button>
-        <button data-value="0">aus</button>
-      </div>
-    </div>
-    <div class="setting zeile" id="setting-feiern">
-      <label>Feiern <small>180 und SECHZIG!</small></label>
-      <div class="options" data-setting="feiern">
-        <button data-value="1">an</button>
-        <button data-value="0">aus</button>
+    <div class="setting">
+      <label>Ton</label>
+      <div class="options schalter">
+        <button data-action="schalter" data-key="ton" aria-pressed="true">Klänge</button>
+        <button data-action="schalter" data-key="feiern" id="setting-feiern" aria-pressed="true">Feiern</button>
       </div>
     </div>
     </div>
@@ -439,18 +384,21 @@
      die Zusagen liegen auf dem Server – ohne Server bleibt der Spielplan
      lesbar, nur das Eintragen entfällt. -->
 <section id="screen-liga" class="screen">
-  <!-- Entwurf "Liga · Spielplan" (Okt. 2026): Kopf wie in der Rangliste
-       (Logo-Menue, Titel, Reiter als Felder), links gross der naechste bzw.
-       gewaehlte Spieltag, rechts alle Spieltage kompakt. -->
-  <div class="boards-kopf liga-kopf">
-    <button class="boards-logo" data-action="logo-menu" aria-label="Menü öffnen">
-      <span class="blink-logo sm" role="img" aria-label="Blink 180"></span>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
-    </button>
-    <div class="titel-zeile">
-      <h1>Liga</h1>
-      <p class="sub" id="liga-sub"></p>
+  <!-- Entwurf "Liga" (Okt. 2026, Fassung mit dem neuen Menue): Kopf wie
+       im Setup (Marke, Navigation als Text-Reiter - #nav wandert per JS
+       hierher), darunter die Liga-Zeile mit den Reitern, dann links gross
+       der naechste bzw. gewaehlte Spieltag, rechts alle Spieltage kompakt. -->
+  <div class="setup-kopf" id="liga-kopf">
+    <div class="marke">
+      <span class="blink-logo" role="img" aria-label="Blink 180"></span>
+      <div>
+        <div class="wort">Blink <span class="rot">180</span></div>
+        <div class="sub">Dart Turnier · est. 2026</div>
+      </div>
     </div>
+  </div>
+  <div class="liga-reiter-zeile">
+    <span class="kt" id="liga-sub"></span>
     <div class="options kopf-reiter" id="liga-tabs">
       <button data-action="liga-tab" data-tab="plan" class="active">Spielplan</button>
       <button data-action="liga-tab" data-tab="training">Training</button>
@@ -1086,6 +1034,7 @@
      kurz auf, obwohl niemand angemeldet ist. An window.__dart hängt sie sich
      erst später (DOMContentLoaded). Fehlen die Dateien, etwa im
      Einzeldatei-Bündel, bleibt die App rein lokal. -->
+<script src="js/qr.js"></script>
 <script src="js/auth.js"></script>
 <script src="js/sync.js"></script>
 <!-- Kamera-Kopplung ("Linse") ist vorerst abgeschaltet: der Code bleibt in

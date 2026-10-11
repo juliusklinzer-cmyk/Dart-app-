@@ -197,6 +197,13 @@ ssh "$DARTS_SERVER" "nano /opt/dart-turnier/.env"
 Den Klartext-Code irgendwo notieren – aus dem Hash lässt er sich nicht
 zurückrechnen.
 
+Seit Oktober 2026 braucht den Code im Alltag kaum noch jemand abzutippen:
+Mitglieder laden aus dem Gast-Dialog heraus per **Einladungs-Link** ein (QR-Code
+oder Teilen). Der Link trägt ein einmaliges Token (Tabelle `einladungen`,
+Migration 014, läuft beim Start automatisch), gilt sieben Tage und legt je nach
+Wahl ein Gast-Konto oder ein Vereinsmitglied an – der Code selbst bleibt auf dem
+Server.
+
 Weitere Schalter in derselben Datei (alle optional, Vorlage `deploy/env.example`):
 
 | Variable | Wirkung |

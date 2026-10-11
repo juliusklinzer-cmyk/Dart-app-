@@ -596,6 +596,50 @@ async function main() {
       r = await gast.ruf('GET', '/api/liga/zusagen');
       gleich(r.status, 200, 'mitlesen darf es');
       r = await gast.ruf('PUT', '/api/liga/zusagen/tr20261013', { status: 'absage' });
+
+      console.log('\nEinladungs-Links (Gast dauerhaft einladen, neues Vereinsmitglied)');
+      r = await fremd.ruf('POST', '/api/einladungen', { art: 'gast' });
+      gleich(r.status, 401, 'ohne Anmeldung gibt es keinen Einladungs-Link');
+      r = await gast.ruf('POST', '/api/einladungen', { art: 'gast' });
+      gleich(r.status, 403, 'ein Gast-Konto kann niemanden einladen');
+      r = await julius.ruf('POST', '/api/einladungen', { art: 'gast' });
+      gleich(r.status, 201, 'ein Mitglied bekommt einen Link fuer einen Gast');
+      const gastToken = r.daten.token;
+      ok(/^e_[A-Za-z0-9_-]{8,}$/.test(gastToken || ''), 'das Token sieht aus wie e_...');
+      gleich(r.daten.art, 'gast', 'Art: Gast');
+      r = await julius.ruf('POST', '/api/einladungen', { art: 'mitglied' });
+      gleich(r.status, 201, 'und einen fuer ein neues Vereinsmitglied');
+      const mitgliedToken = r.daten.token;
+      gleich(r.daten.art, 'mitglied', 'Art: Mitglied');
+      r = await fremd.ruf('GET', '/api/einladungen/' + gastToken);
+      gleich(r.status, 200, 'der Eingeladene darf ohne Anmeldung nachsehen, was der Link ist');
+      ok(typeof r.daten.von === 'string' && r.daten.von.indexOf('Julius') === 0, 'er sieht, wer eingeladen hat');
+      gleich(r.daten.art, 'gast', 'und wozu');
+      gleich(r.daten.gueltig, true, 'der Link gilt');
+      r = await fremd.ruf('GET', '/api/einladungen/e_gibtsnicht123');
+      gleich(r.status, 404, 'ein erfundenes Token gibt es nicht');
+
+      const neuerGast = geraet('Neuer Gast');
+      r = await neuerGast.ruf('POST', '/api/register', { invite: gastToken, email: 'linkgast@example.de', name: 'Linkgast', password: 'turnierabend2026' });
+      gleich(r.status, 201, 'mit dem Gast-Link entsteht ein Konto');
+      gleich(r.daten.nutzer.gastKonto, true, 'als Gast-Konto');
+      r = await fremd.ruf('GET', '/api/einladungen/' + gastToken);
+      gleich(r.daten.gueltig, false, 'danach ist der Link verbraucht');
+      const nochEiner = geraet('Noch einer');
+      r = await nochEiner.ruf('POST', '/api/register', { invite: gastToken, email: 'zweiter@example.de', name: 'Zweiter', password: 'turnierabend2026' });
+      gleich(r.status, 403, 'ein zweites Konto gibt es mit demselben Link nicht');
+
+      const neuesMitglied = geraet('Neues Mitglied');
+      r = await neuesMitglied.ruf('POST', '/api/register', { invite: mitgliedToken, email: 'neu@example.de', name: 'Neuling', password: 'turnierabend2026' });
+      gleich(r.status, 201, 'mit dem Mitglieds-Link entsteht ein Konto');
+      gleich(r.daten.nutzer.gastKonto, false, 'als vollwertiges Mitglied');
+      r = await neuesMitglied.ruf('PUT', '/api/liga/zusagen/st02', { dabei: true });
+      gleich(r.status, 200, 'das darf sich zum Spieltag eintragen');
+      r = await neuesMitglied.ruf('PUT', '/api/liga/zusagen/st02', { dabei: false });
+
+      const falscher = geraet('Falscher');
+      r = await falscher.ruf('POST', '/api/register', { invite: 'e_gibtsnicht123', email: 'falsch@example.de', name: 'Falsch', password: 'turnierabend2026' });
+      gleich(r.status, 403, 'ein erfundenes Token registriert niemanden');
     }
 
     console.log('\nBürgerlicher Name');

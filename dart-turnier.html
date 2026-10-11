@@ -2337,7 +2337,7 @@ button, input, select, textarea { font-family: inherit; }
 .regel p:last-child { margin-bottom: 0; }
 .regel-links { margin: 0; padding-left: 18px; font-size: 0.9rem; line-height: 1.8; }
 .regel-links a { color: var(--laser-hell); }
-#liga-tabs { margin-bottom: 12px; }
+#liga-tabs { margin: 0; }
 
 /* ---------- Ligaspiel ---------- */
 
@@ -3412,6 +3412,15 @@ body.tastatur #screen-bulloff button:focus {
   outline: 3px solid var(--laser, #4fb3e0); outline-offset: 3px;
   box-shadow: 0 0 30px var(--schein-stark);
 }
+/* Pfeiltasten ueberall: auf den Menue-Bildschirmen und in den Menues ist
+   der markierte Knopf ebenso deutlich - innen liegend, damit die Marke in
+   scrollenden Listen nicht abgeschnitten wird. */
+body.tastatur :is(#screen-setup, #screen-boards, #screen-players, #screen-profile, #screen-liga, #screen-konto, #screen-summary, #screen-winner, #screen-bericht, #logo-menu-panel, .game-menu-karte) :is(button, [role="button"], a[href], summary, select, input):focus {
+  outline: 3px solid var(--laser, #4fb3e0); outline-offset: -3px;
+  box-shadow: 0 0 30px var(--schein-stark);
+}
+body.tastatur #overlay-card :is(button, select, input):focus { outline: 3px solid var(--laser, #4fb3e0); outline-offset: -3px; box-shadow: 0 0 30px var(--schein-stark); }
+
 
 /* "*" am Ziffernblock: Zwischenstand, vom Oche aus lesbar. */
 .ts-gross .lg-teams { margin: 8px 0 4px; }
@@ -3496,6 +3505,16 @@ body.tastatur #screen-bulloff button:focus {
 .gast-art { margin-bottom: 6px; }
 .gast-art button { display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .gast-art button small { font-size: 0.72rem; font-weight: 500; opacity: 0.75; }
+.gast-art button, .einladung-art button { min-width: 0; padding-left: 4px; padding-right: 4px; white-space: nowrap; }
+/* Einladen: Gast oder Vereinsmitglied, darunter der QR-Code zum Scannen
+   und der Link zum Teilen. */
+.einladung-art { margin: 6px 0; }
+.einladung-art button { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.einladung-art button small { font-size: 0.72rem; font-weight: 500; opacity: 0.75; }
+.einladung-qr { display: flex; align-items: center; justify-content: center; min-height: 120px; margin: 8px 0; }
+.einladung-qr svg { width: min(58vw, 220px); height: auto; background: #fff; padding: 10px; border-radius: 12px; display: block; }
+.einladung-qr .muted { color: var(--muted); }
+#overlay-card .konto-einladung b { color: var(--text); }
 
 
 /* Rang -> Liga: Auswahl des Teams als eigene Zeile ueber den Werte-Chips. */
@@ -4574,83 +4593,110 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
 
 
 /* ======================================================================
-   Setup: das Startbild nach dem Entwurf "Setup Redesign" (Okt. 2026).
-   Kopfzeile mit Marke und Navigation, darunter drei Spalten: Wer spielt
-   mit (die Zahl im Kreis ist die Reihenfolge der Auswahl), Spielmodus,
-   Einstellungen mit GAME ON. Am Tablet und quergedrehten Handy steht
-   alles fest im Rahmen (body.fix-setup), innen scrollen nur Spielerliste
-   und Einstellungen. Am Handy hochkant bleibt alles untereinander.
+   Setup: das Startbild nach dem Entwurf "Setup Redesign" (Okt. 2026),
+   zweite Fassung - aufgeraeumt. Eine Schrift fuer Inhalte (Barlow), kleine
+   graue Ueberschriften (Barlow Condensed), Anton nur fuer Marke und GAME ON.
+   Flaechen ohne Rahmen, keine Leuchteffekte, keine Statistikzeilen.
+   Auswahl heisst ueberall dasselbe: weisser Rand bei Listen (Spieler,
+   Spielart), hellere Flaeche mit weissem Ring bei Optionen. Die Navigation
+   sind schlanke Text-Reiter oben rechts. Ab 700px Breite steht alles fest
+   im Rahmen (body.fix-setup), innen scrollen nur Spielerliste und
+   Einstellungen; am Handy hochkant bleibt alles untereinander.
    ====================================================================== */
 
 #screen-setup.active { display: flex; flex-direction: column; gap: 12px; padding: 8px 0 24px; }
-#screen-setup .card { margin: 0; }
+#screen-setup .card { margin: 0; border: none; background: var(--bg-2); border-radius: 18px; box-shadow: none; }
+/* Kleine Ueberschrift der Karten: Barlow Condensed, grau, gesperrt. */
+#screen-setup .kt { font-family: var(--font-cond); font-weight: 700; font-size: 0.95rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
 
-/* Kopfzeile: Marke links, die Navigation (per JS hierher verschoben) rechts. */
+/* Kopfzeile: Marke links, die Reiter rechts (per JS hierher verschoben).
+   Reiter = Text mit Strich darunter, der aktive rot und weiss. */
 .setup-kopf { display: flex; align-items: center; flex-wrap: wrap; gap: 10px clamp(10px, 1.4vw, 22px); }
 .setup-kopf .marke { padding: 0; flex: none; gap: clamp(8px, 1vw, 14px); }
-.setup-kopf .marke .blink-logo { width: 46px; height: 46px; box-shadow: 0 0 20px var(--schein-stark); border: 2px solid var(--line); border-radius: 50%; }
+.setup-kopf .marke .blink-logo { width: 46px; height: 46px; box-shadow: 0 0 20px var(--schein-stark); border: none; border-radius: 50%; }
 .setup-kopf .marke .wort { font-size: 1.5rem; }
-.setup-kopf #nav { flex: 1 1 100%; margin: 0; padding: 0; gap: clamp(5px, 0.7vw, 10px); }
-.setup-kopf #nav button { min-height: 44px; padding: 8px 2px; min-width: 0; }
+.setup-kopf #nav { flex: 1 1 100%; margin: 0; padding: 0; gap: clamp(2px, 0.4vw, 6px); display: flex; }
+.setup-kopf #nav button {
+  flex: 1 1 0; min-width: 0; min-height: 44px; padding: 8px 2px;
+  background: transparent; border: none; border-bottom: 3px solid transparent; border-radius: 0;
+  color: var(--muted); font-family: var(--font-cond); font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; font-size: 0.95rem;
+}
+.setup-kopf #nav button.active { background: transparent; border-color: var(--accent); color: #fff; }
+.setup-kopf #nav button, .setup-kopf #nav button.active { box-shadow: none; }
+/* Kurze Beschriftungen gibt es nur, wo es eng wird (schmal oder flach). */
+#karte-einstellungen .kurz { display: none; }
+/* GAME ON wie im Entwurf: dunkle Flaeche, roter Rand, Anton. */
+#screen-setup .btn.primary.start {
+  background: linear-gradient(180deg, #2a1416, #1a0d0e); border: 1.5px solid var(--accent); color: #fff;
+  box-shadow: 0 0 22px rgba(229, 72, 77, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  font-family: var(--font-display); font-weight: 400; letter-spacing: 0.14em; text-transform: uppercase;
+}
+#screen-setup .btn.primary.start:active { background: linear-gradient(180deg, #3a1a1d, #22100f); }
 
 /* Karten-Kopf: Titel links, Zaehler rechts. */
-.karte-kopf { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; column-gap: 10px; margin-bottom: 10px; }
-.karte-kopf h2 { margin: 0; }
-.karte-kopf .anzahl { font-family: var(--font-cond); font-weight: 700; font-size: 0.95rem; color: var(--muted); white-space: nowrap; }
+.karte-kopf { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
 
-/* Teilnehmer: Avatar, Name mit Statistik, rechts die Nummer der Auswahl. */
+/* Spieler: Avatar, Name, bei Gaesten das Wort Gast, rechts die Nummer der
+   Auswahl. Nicht gewaehlt = grau und blasser Avatar, gewaehlt = weisser Rand. */
 #screen-setup .roster { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; margin: 0 0 10px; }
 #screen-setup .roster-item {
-  min-width: 0; display: flex; align-items: center; gap: 10px; padding: 8px 12px;
-  background: var(--bg-3); border: 1px solid var(--line); border-radius: 12px; box-shadow: none;
+  min-width: 0; min-height: 52px; display: flex; align-items: center; gap: 10px; padding: 6px 12px;
+  background: var(--bg-3); border: 2px solid transparent; border-radius: 12px; box-shadow: none; color: var(--muted);
 }
-#screen-setup .roster-item.selected { background: var(--aktiv-flaeche); border-color: var(--aktiv-linie); box-shadow: 0 0 24px var(--schein-weich); }
-#screen-setup .roster-item .av { flex: none; }
-#screen-setup .roster-item .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#screen-setup .roster-item .sm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#screen-setup .roster-item .av { flex: none; opacity: 0.55; }
+#screen-setup .roster-item .who { flex: 1 1 auto; min-width: 0; }
+#screen-setup .roster-item .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+#screen-setup .roster-item .gast-marke { border: none; padding: 0; margin-left: 6px; font-family: var(--font-body); font-weight: 400; letter-spacing: 0; text-transform: none; font-size: 0.85em; vertical-align: 0; }
+#screen-setup .roster-item.selected { border-color: var(--aktiv-linie); color: var(--text); background: var(--bg-3); box-shadow: none; }
+#screen-setup .roster-item.selected .av { opacity: 1; }
 #screen-setup .roster-item .check {
   flex: none; width: 26px; height: 26px; border-radius: 50%;
   display: inline-flex; align-items: center; justify-content: center;
-  font-family: var(--font-cond); font-weight: 700; font-size: 1rem;
-  background: var(--primary); color: var(--on-primary); opacity: 0;
+  font-weight: 600; font-size: 0.95rem; background: var(--primary); color: var(--on-primary); visibility: hidden;
 }
-#screen-setup .roster-item.selected .check { opacity: 1; color: var(--on-primary); }
+#screen-setup .roster-item.selected .check { visibility: visible; }
+#karte-spieler .gast-knopf { border: 2px dashed var(--line-hell); background: transparent; color: var(--muted); font-weight: 600; min-height: 48px; border-radius: 12px; }
 
-/* Spielmodus: Titel und eine Zeile Beschreibung je Knopf. */
-#screen-setup .modes { gap: 6px; }
-#screen-setup .modes button { border-radius: 12px; gap: 3px; box-shadow: none; }
-#screen-setup .modes button.active { background: var(--aktiv-flaeche); border-color: var(--aktiv-linie); box-shadow: 0 0 36px var(--schein); }
-#screen-setup .modes .mt { font-family: var(--font-cond); font-weight: 700; letter-spacing: 0.03em; line-height: 1; white-space: nowrap; }
-#screen-setup .modes .md { line-height: 1.2; }
+/* Spielart: sieben Knoepfe, nur der Name, linksbuendig. */
+#screen-setup .modes { display: grid; gap: 6px; }
+#screen-setup .modes button {
+  min-height: 48px; padding: 0 14px; text-align: left; border-radius: 12px; background: var(--bg-3); border: 2px solid transparent;
+  color: #c9c0c0; font-family: var(--font-body); font-weight: 600; font-size: 1.05rem; letter-spacing: 0; text-transform: none;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: none; display: block;
+}
+#screen-setup .modes button.active { border-color: var(--aktiv-linie); color: var(--text); background: var(--bg-3); box-shadow: none; }
 
-/* Einstellungen: ein Abschnitt je Modus in einer Karte, dazu Ton & Feiern. */
-#karte-einstellungen .einst > h2 { margin-bottom: 10px; }
-#karte-einstellungen .einst.ton { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 4px; }
-#karte-einstellungen .einst.ton > h2 { color: var(--muted); font-size: 0.85rem; }
-#karte-einstellungen .setting { margin-bottom: 12px; gap: 6px; }
-#karte-einstellungen .setting > label { color: var(--muted); }
-#karte-einstellungen .setting > label small { display: block; font-size: 0.78em; color: var(--muted); opacity: 0.85; }
-#karte-einstellungen .options { flex-wrap: nowrap; gap: 6px; }
+/* Einstellungen: Name der Spielart, ein Satz dazu, darunter die Zeilen -
+   Beschriftung ueber den Optionen. Die Abschnitte (.einst) sind nur
+   Gruppen, ihre Zeilen stehen im selben Fluss (display: contents). */
+#karte-einstellungen { display: flex; flex-direction: column; gap: 14px; }
+#karte-einstellungen .einst-kopf { display: flex; flex-direction: column; gap: 3px; }
+#karte-einstellungen .einst-kopf .hint { margin: 0; font-size: 0.9rem; line-height: 1.45; text-wrap: pretty; }
+#karte-einstellungen .einst { display: contents; }
+#karte-einstellungen .setting { display: flex; flex-direction: column; gap: 6px; margin: 0; }
+#karte-einstellungen .setting > label { color: var(--muted); font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#karte-einstellungen .options { display: flex; flex-wrap: nowrap; gap: 6px; }
 #karte-einstellungen .options button {
-  flex: 1 1 0; min-width: 0; padding: 0 4px; min-height: 44px; border-radius: 12px;
-  font-family: var(--font-cond); font-weight: 600; letter-spacing: 0.04em; font-size: 1rem;
+  flex: 1 1 0; min-width: 0; padding: 0 4px; min-height: 44px; border-radius: 12px; border: none;
+  background: var(--bg-3); color: var(--muted); font-family: var(--font-body); font-weight: 600; letter-spacing: 0; font-size: 1rem;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: none;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
 }
-#karte-einstellungen .options button.active { background: var(--aktiv-flaeche); border-color: var(--aktiv-linie); color: var(--text); box-shadow: 0 0 0 1px var(--aktiv-linie) inset, 0 0 24px var(--schein-weich); }
-#karte-einstellungen .options.eingabe button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
-#karte-einstellungen .options.eingabe button { letter-spacing: 0; padding: 0 2px; gap: 4px; }
-#karte-einstellungen .options.eingabe button:first-child { flex-grow: 1.25; }
-#karte-einstellungen .options.eingabe svg { width: 22px; height: 22px; flex: none; }
-#karte-einstellungen .stepper span { white-space: nowrap; }
-/* Ton & Feiern: Beschriftung links, zwei kleine Knoepfe rechts. */
-#karte-einstellungen .setting.zeile { flex-direction: row; align-items: center; justify-content: space-between; gap: 10px; }
-#karte-einstellungen .setting.zeile > label { min-width: 0; }
-#karte-einstellungen .setting.zeile .options { flex: none; }
-#karte-einstellungen .setting.zeile .options button { flex: none; width: 60px; min-height: 40px; border-radius: 10px; }
-#karte-einstellungen .hint { margin: 0; line-height: 1.45; text-wrap: pretty; }
+#karte-einstellungen .options button.active { background: #2a2224; color: #fff; border: none; box-shadow: inset 0 0 0 1.5px var(--aktiv-linie); }
+#karte-einstellungen .options.eingabe svg { width: 24px; height: 24px; flex: none; }
+#karte-einstellungen .note { font-size: 0.85rem; color: var(--muted); line-height: 1.4; }
+#karte-einstellungen .note:empty { display: none; }
 .stepper-reihe { display: flex; gap: 8px; }
 .stepper-reihe .stepper { flex: 1 1 0; min-width: 0; }
+#karte-einstellungen .stepper span { white-space: nowrap; }
+#karte-einstellungen .stepper button { border: none; }
 #screen-setup .btn.start:disabled { opacity: 0.45; box-shadow: none; cursor: default; }
+
+/* Fortsetzen-Box: roter Punkt, Text, zwei Knoepfe. */
+#screen-setup .card.resume { border: none; gap: 12px; }
+#screen-setup .card.resume .punkt { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+#screen-setup .card.resume .resume-text { flex: 1 1 auto; min-width: 0; }
+#screen-setup .card.resume .resume-btns { flex: none; }
 
 /* Am Handy hochkant: die Spielerliste scrollt in einem festen Kasten,
    damit eine Mannschaft mit zehn Leuten nicht alles aus dem Bild schiebt. */
@@ -4659,6 +4705,10 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
   #screen-setup .roster::-webkit-scrollbar { width: 0; height: 0; display: none; }
   .setup-spalten { display: flex; flex-direction: column; gap: 12px; }
   .setup-links, .setup-mitte, .setup-rechts { display: flex; flex-direction: column; gap: 12px; }
+  #karte-modus .kt { display: block; margin-bottom: 8px; }
+  #screen-setup .card.resume { flex-wrap: wrap; }
+  #screen-setup .card.resume .resume-text { flex-basis: calc(100% - 22px); }
+  #screen-setup .card.resume .resume-btns { flex: 1 1 100%; }
 }
 
 /* Tablet und quergedrehtes Handy: alles fest im Rahmen, drei Spalten. */
@@ -4670,98 +4720,113 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
     padding: env(safe-area-inset-top) clamp(8px, 1.6vw, 26px) calc(clamp(6px, 1.8vh, 22px) + env(safe-area-inset-bottom));
   }
   body.fix-setup > * { flex: none; }
-  body.fix-setup #screen-setup.active { flex: 1 1 auto; min-height: 0; padding: clamp(6px, 1.8vh, 22px) 0 0; gap: clamp(6px, 1.4vh, 16px); }
+  body.fix-setup #screen-setup.active { flex: 1 1 auto; min-height: 0; padding: clamp(6px, 1.8vh, 22px) 0 0; gap: clamp(8px, 1.8vh, 22px); }
   body.fix-setup #screen-setup > * { flex: none; }
   body.fix-setup #screen-setup > .setup-spalten { flex: 1 1 auto; min-height: 0; }
 
-  .setup-kopf { flex-wrap: nowrap; height: clamp(44px, 7.4vh, 78px); }
-  .setup-kopf .marke .blink-logo { width: clamp(44px, 7.4vh, 78px); height: clamp(44px, 7.4vh, 78px); }
-  .setup-kopf .marke .wort { font-size: clamp(16px, 3.4vh, 36px); }
+  .setup-kopf { flex-wrap: nowrap; height: clamp(44px, 5.4vh, 58px); }
+  .setup-kopf .marke .blink-logo { width: clamp(44px, 5.4vh, 58px); height: clamp(44px, 5.4vh, 58px); }
+  .setup-kopf .marke .wort { font-size: clamp(14px, 3vh, 32px); }
   .setup-kopf .marke .sub { font-size: clamp(9px, 1.4vh, 15px); margin-top: 2px; }
-  .setup-kopf #nav { flex: 1 1 auto; min-width: 0; height: 100%; max-width: 760px; margin-left: auto; }
-  .setup-kopf #nav button { height: 100%; min-height: 0; padding: 0; border-radius: clamp(10px, 1.6vh, 16px); font-size: clamp(12px, 2.3vh, 24px); }
+  .setup-kopf #nav { flex: none; height: 100%; margin-left: auto; }
+  .setup-kopf #nav button { flex: none; height: 100%; min-height: 0; padding: 0 clamp(8px, 1.4vw, 22px); font-size: clamp(12px, 2.2vh, 23px); }
 
-  #screen-setup .card { padding: clamp(10px, 1.8vh, 20px); }
-  #screen-setup .card > h2, .karte-kopf { margin-bottom: clamp(6px, 1.2vh, 14px); }
-  #screen-setup h2 { font-size: clamp(13px, 2.4vh, 26px); }
-  .karte-kopf .anzahl { font-size: clamp(12px, 2.2vh, 24px); }
+  #screen-setup .card { padding: clamp(10px, 2vh, 22px); }
+  #screen-setup .kt { font-size: clamp(11px, 1.9vh, 20px); }
+  .karte-kopf { margin-bottom: clamp(8px, 1.4vh, 16px); }
 
   .setup-spalten {
     flex: 1 1 auto; min-height: 0;
-    display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 0.85fr) minmax(0, 1fr);
+    display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 0.8fr) minmax(0, 1.05fr);
     /* 1fr statt auto: eine auto-Zeile wuechse auf den Inhalt und schoebe
        GAME ON aus dem Bild - so bleibt die Zeile genau bildschirmhoch. */
     grid-template-rows: minmax(0, 1fr);
     gap: clamp(8px, 1.4vw, 22px);
   }
-  .setup-links, .setup-mitte, .setup-rechts { min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: clamp(6px, 1.4vh, 16px); }
+  .setup-links, .setup-mitte, .setup-rechts { min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: clamp(8px, 1.4vh, 16px); }
   .setup-links > *, .setup-mitte > *, .setup-rechts > * { flex: none; }
 
-  /* Links: die Spielerliste fuellt die Karte und scrollt innen. */
+  /* Links: zwei Spalten Spieler, die Liste fuellt die Karte und scrollt innen. */
   #karte-spieler { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
   #karte-spieler > * { flex: none; }
   #karte-spieler .roster {
     flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain;
-    scrollbar-width: none; grid-auto-rows: clamp(48px, 9.5vh, 100px); gap: clamp(5px, 0.9vh, 10px); align-content: start;
-    margin-bottom: clamp(6px, 1.2vh, 14px);
+    scrollbar-width: none; grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: clamp(44px, 8.6vh, 92px); gap: clamp(6px, 1vh, 10px); align-content: start;
+    margin-bottom: clamp(8px, 1.4vh, 16px);
   }
   #karte-spieler .roster::-webkit-scrollbar { width: 0; height: 0; display: none; }
-  #screen-setup .roster-item { padding: 0 clamp(8px, 1vw, 14px); gap: clamp(8px, 0.9vw, 14px); }
-  #screen-setup .roster-item .av { width: clamp(28px, 4.4vh, 48px); height: clamp(28px, 4.4vh, 48px); font-size: clamp(10px, 1.8vh, 19px); }
-  #screen-setup .roster-item .nm { font-size: clamp(13px, 2vh, 21px); }
-  #screen-setup .roster-item .sm { font-size: clamp(11px, 1.55vh, 16px); }
-  #screen-setup .roster-item .gast-marke { font-size: clamp(9px, 1.4vh, 14px); }
-  #screen-setup .roster-item .check { width: clamp(20px, 3vh, 32px); height: clamp(20px, 3vh, 32px); font-size: clamp(12px, 2.2vh, 22px); }
-  #karte-spieler .btn { min-height: clamp(42px, 7vh, 66px); font-size: clamp(13px, 2.1vh, 20px); border-radius: 12px; }
+  #screen-setup .roster-item { min-height: 0; padding: 0 clamp(10px, 1.2vw, 16px); gap: clamp(8px, 1vw, 14px); }
+  #screen-setup .roster-item .av { width: clamp(28px, 5vh, 52px); height: clamp(28px, 5vh, 52px); font-size: clamp(10px, 1.8vh, 18px); }
+  #screen-setup .roster-item .nm { font-size: clamp(14px, 2.3vh, 24px); }
+  #screen-setup .roster-item .gast-marke { font-size: clamp(12px, 1.8vh, 18px); }
+  #screen-setup .roster-item .check { width: clamp(22px, 3.6vh, 38px); height: clamp(22px, 3.6vh, 38px); font-size: clamp(12px, 2vh, 20px); }
+  #karte-spieler .gast-knopf { min-height: clamp(40px, 7vh, 72px); font-size: clamp(13px, 2.1vh, 21px); }
 
-  /* Mitte: sieben Modus-Knoepfe teilen sich die Hoehe. */
-  #karte-modus { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
-  #karte-modus > h2 { flex: none; }
-  #screen-setup .modes { flex: 1 1 auto; min-height: 0; display: grid; grid-template-rows: repeat(7, minmax(0, 1fr)); gap: clamp(4px, 0.8vh, 9px); }
-  #screen-setup .modes button { min-height: 0; padding: 0 clamp(10px, 1.2vw, 18px); overflow: hidden; justify-content: center; gap: clamp(2px, 0.4vh, 5px); }
-  #screen-setup .modes .mt { font-size: clamp(14px, 2.6vh, 28px); }
-  #screen-setup .modes .md { font-size: clamp(10px, 1.5vh, 16px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  /* Mitte: sieben Knoepfe teilen sich die Hoehe. */
+  #karte-modus { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: clamp(8px, 1.4vh, 16px); }
+  #karte-modus > .kt { flex: none; }
+  #screen-setup .modes { flex: 1 1 auto; min-height: 0; grid-template-rows: repeat(7, minmax(0, 1fr)); gap: clamp(6px, 1vh, 10px); }
+  #screen-setup .modes button { min-height: 0; padding: 0 clamp(10px, 1.2vw, 18px); font-size: clamp(14px, 2.3vh, 24px); }
 
   /* Rechts: die Einstellungen scrollen innen, GAME ON steht fest darunter. */
-  #karte-einstellungen { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; scrollbar-width: none; }
+  #karte-einstellungen { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; scrollbar-width: none; gap: clamp(10px, 2vh, 22px); }
   #karte-einstellungen::-webkit-scrollbar { width: 0; height: 0; display: none; }
-  #karte-einstellungen .setting { margin-bottom: clamp(6px, 1.6vh, 18px); gap: clamp(4px, 0.8vh, 8px); }
+  #karte-einstellungen .setting { gap: clamp(4px, 0.8vh, 8px); }
+  #karte-einstellungen .einst-kopf .hint { font-size: clamp(12px, 1.9vh, 19px); }
   #karte-einstellungen .setting > label { font-size: clamp(12px, 1.9vh, 19px); }
-  #karte-einstellungen .options button { height: clamp(36px, 6.6vh, 64px); min-height: 0; font-size: clamp(13px, 2.3vh, 24px); }
-  #karte-einstellungen .options.eingabe button { font-size: clamp(13px, 2vh, 20px); }
-  #karte-einstellungen .options.eingabe svg { width: clamp(18px, 3vh, 30px); height: clamp(18px, 3vh, 30px); }
-  #karte-einstellungen .setting.zeile .options button { width: clamp(48px, 6vw, 84px); height: clamp(32px, 5.2vh, 54px); font-size: clamp(13px, 2.1vh, 22px); }
-  #karte-einstellungen .einst.ton > h2 { font-size: clamp(12px, 2vh, 22px); }
-  #karte-einstellungen .hint { font-size: clamp(11px, 1.7vh, 16px); }
+  #karte-einstellungen .options { gap: clamp(5px, 0.6vw, 8px); }
+  #karte-einstellungen .options button { height: clamp(38px, 6.6vh, 66px); min-height: 0; font-size: clamp(13px, 2.1vh, 22px); }
+  #karte-einstellungen .options.eingabe svg { width: clamp(20px, 3.4vh, 36px); height: clamp(20px, 3.4vh, 36px); }
+  #karte-einstellungen .note { font-size: clamp(11px, 1.7vh, 17px); }
   #karte-einstellungen .stepper button { width: clamp(36px, 6vh, 56px); height: clamp(36px, 6vh, 56px); min-height: 0; }
   #karte-einstellungen .stepper span { font-size: clamp(14px, 2.3vh, 24px); }
-  #screen-setup .btn.start { height: clamp(46px, 8vh, 84px); min-height: 0; font-size: clamp(17px, 3vh, 32px); border-radius: 12px; }
+  #screen-setup .btn.start { height: clamp(46px, 8.4vh, 88px); min-height: 0; font-size: clamp(17px, 3.2vh, 34px); border-radius: 14px; }
 
   /* Fortsetzen-Box im neuen Mass. */
   #screen-setup .card.resume { padding: clamp(8px, 1.4vh, 16px) clamp(12px, 1.6vw, 22px); }
-  #screen-setup .card.resume strong { font-size: clamp(14px, 2.4vh, 24px); }
-  #screen-setup .card.resume span { font-size: clamp(12px, 1.9vh, 19px); }
-  #screen-setup .resume-btns .btn { min-height: clamp(40px, 6.4vh, 60px); }
+  #screen-setup .card.resume strong { font-size: clamp(14px, 2.3vh, 24px); }
+  #screen-setup .card.resume span.muted { font-size: clamp(12px, 1.9vh, 19px); }
+  #screen-setup .resume-btns .btn { min-height: clamp(38px, 6.4vh, 62px); }
 }
 
-/* Schmaler als ein iPad quer: die Tastatur-Wahl zeigt nur ihr Sinnbild. */
+/* Schmaler als ein iPad quer (iPad hochkant, grosses Handy quer): eine
+   Spalte Spieler, kuerzere Woerter, kleinere Schrift in den Optionen. */
 @media (min-width: 700px) and (max-width: 1099px) {
-  #karte-einstellungen .options button { font-size: clamp(13px, 1.9vh, 20px); }
-  #karte-einstellungen .options.eingabe span { display: none; }
-  #karte-einstellungen .options.eingabe button:first-child { flex-grow: 0.7; }
+  .setup-spalten { grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.9fr) minmax(0, 1.15fr); }
+  #karte-spieler .roster { grid-template-columns: minmax(0, 1fr); }
+  #karte-einstellungen .lang { display: none; }
+  #karte-einstellungen .kurz { display: inline; }
+  #karte-einstellungen .options button { font-size: clamp(12px, 1.7vw, 20px); padding: 0 2px; }
+  #screen-setup .modes button { font-size: clamp(13px, 2vw, 22px); }
 }
 
-/* Breit genug fuer zwei Spalten in der Spielerliste (iPad quer). */
-@media (min-width: 1100px) {
-  #karte-spieler .roster { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* Knapp in der Hoehe (iPad mini quer): engere Zeilen in den Einstellungen. */
+@media (min-width: 700px) and (max-height: 800px) {
+  #karte-einstellungen { gap: clamp(8px, 1.4vh, 14px); }
+  #karte-einstellungen .options button { height: clamp(34px, 6vh, 60px); }
 }
 
-/* Flach (quergedrehtes Handy): ohne Modus-Beschreibungen und Hinweise,
-   damit die sieben Modi und die Einstellungen in die Hoehe passen. */
+/* Flach (quergedrehtes Handy): Beschriftung links neben den Optionen,
+   flache Knoepfe, kein Satz zur Spielart - sieben Spielarten und die
+   Einstellungen muessen in 390px Hoehe passen. */
 @media (min-width: 700px) and (max-height: 500px) {
-  #screen-setup .modes .md { display: none; }
-  #karte-einstellungen .hint:not(#online-hint):not(#quick-dauer-hint) { display: none; }
-  #karte-einstellungen .setting > label small { display: none; }
+  #karte-spieler .roster { grid-template-columns: minmax(0, 1fr); }
+  #karte-einstellungen { gap: 6px; }
+  #karte-einstellungen .einst-kopf .hint { display: none; }
+  #karte-einstellungen .setting { flex-direction: row; align-items: center; gap: 10px; }
+  #karte-einstellungen .setting > label { flex: none; width: 52px; }
+  #karte-einstellungen .setting > .options { flex: 1 1 auto; min-width: 0; }
+  #karte-einstellungen .setting > .stepper-reihe { flex: 1 1 auto; min-width: 0; }
+  #karte-einstellungen .setting > .note { flex: 1 1 100%; }
+  #karte-einstellungen .options button { height: 44px; font-size: 13px; }
+  #karte-einstellungen .stepper button { width: 44px; height: 44px; }
+  /* Sieben Spielarten zu je 44px passen nicht in 390px Hoehe: die Liste scrollt. */
+  #screen-setup .modes { gap: 4px; grid-template-rows: none; grid-auto-rows: minmax(44px, 1fr); overflow-y: auto; scrollbar-width: none; }
+  #karte-spieler .gast-knopf { min-height: 44px; }
+  #karte-einstellungen .options.eingabe svg { width: 20px; height: 20px; }
+  #karte-einstellungen .lang { display: none; }
+  #karte-einstellungen .kurz { display: inline; }
 }
 
 
@@ -5399,7 +5464,7 @@ body .boards-host.log #board-log { display: block; }
   .regel-spalte .regel summary { font-size: clamp(14px, 2.5vh, 26px); }
   .regel-spalte .regel p { font-size: clamp(12px, 2vh, 20px); }
 
-  .liga-karte { min-height: 0; gap: clamp(8px, 1.6vh, 18px); padding: clamp(14px, 2.6vh, 30px) clamp(14px, 2vw, 32px); overflow: hidden; }
+  .liga-karte { min-height: 0; gap: clamp(8px, 1.6vh, 18px); padding: clamp(14px, 2.6vh, 30px) clamp(14px, 2vw, 32px); overflow-y: auto; overflow-x: hidden; scrollbar-width: none; }
   .liga-karte > * { flex: none; }
   .liga-karte .lk-crew { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; padding-top: clamp(8px, 1.6vh, 18px); border-top: 1px solid var(--line-hell); gap: clamp(6px, 1vh, 12px); }
   .liga-karte .lk-crew:empty { display: block; padding: 0; border: 0; }
@@ -5452,6 +5517,55 @@ body .boards-host.log #board-log { display: block; }
   .liga-karte .lk-kurz { display: block; font-size: clamp(15px, 4.4vh, 26px); }
 }
 
+/* ======================================================================
+   Liga, Fassung mit dem neuen Menue (Okt. 2026): der Kopf ist der des
+   Setups (Marke, Text-Reiter), darunter die Liga-Zeile - Saison links,
+   die sechs Reiter rechts. Dazu "Alle Spiele des Spieltags" in der grossen
+   Karte und der Dialog mit den 16 Einzeln eines fremden Spiels.
+   ====================================================================== */
+.liga-reiter-zeile { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; min-width: 0; }
+.liga-reiter-zeile .kt { font-family: var(--font-cond); font-weight: 700; font-size: 0.9rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+#liga-tabs button.active { background: #2a2224; border-color: transparent; color: #fff; box-shadow: inset 0 0 0 1.5px var(--aktiv-linie); }
+@media (min-width: 700px) {
+  .liga-reiter-zeile { flex-wrap: nowrap; height: clamp(44px, 5.4vh, 56px); }
+  .liga-reiter-zeile .kopf-reiter { height: 100%; }
+  .liga-reiter-zeile .kt { font-size: clamp(11px, 1.9vh, 20px); }
+}
+
+/* Alle Spiele des Spieltags: eine Zeile je Paarung, rechts das Ergebnis. */
+.liga-karte .lk-runde { display: flex; flex-direction: column; gap: 5px; margin-top: 4px; }
+.liga-karte .lr-zeile { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; padding: 4px 10px; border-radius: 10px; background: var(--bg-3); font-size: 0.95rem; }
+.liga-karte .lr-zeile.tap { cursor: pointer; }
+.liga-karte .lr-zeile.wir { box-shadow: inset 0 0 0 1px var(--aktiv-linie); }
+.liga-karte .lr-zeile.frei { opacity: 0.5; }
+.liga-karte .lr-teams { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.liga-karte .lr-teams i { font-style: normal; color: var(--muted); margin: 0 4px; }
+.liga-karte .lr-erg { flex: none; display: flex; align-items: baseline; gap: 6px; font-variant-numeric: tabular-nums; color: var(--muted); }
+.liga-karte .lr-erg b { font-family: var(--font-cond); font-size: 1.15em; color: var(--text); }
+.liga-karte .lr-erg.verschoben { color: var(--amber); font-size: 0.85rem; }
+@media (min-width: 700px) {
+  .liga-karte .lr-zeile { min-height: clamp(36px, 5.6vh, 56px); font-size: clamp(12px, 2vh, 20px); padding: 0 clamp(8px, 1vw, 14px); }
+  .liga-karte .lr-erg.verschoben { font-size: clamp(11px, 1.7vh, 17px); }
+  .liga-karte .lk-runde { gap: clamp(4px, 0.7vh, 8px); }
+}
+
+/* Dialog: die 16 Einzel eines fremden Spiels. */
+.lp-titel span { color: var(--muted); font-weight: 400; }
+#overlay-card .lp-sub { margin: -6px 0 8px; color: var(--muted); font-size: 0.9rem; }
+.lp-stand { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+.lp-stand b { font-family: var(--font-cond); font-size: 1.8rem; line-height: 1; }
+.lp-stand span { color: var(--muted); font-size: 0.9rem; }
+.lp-tab { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin-bottom: 10px; }
+.lp-tab th { font-family: var(--font-cond); font-weight: 700; font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); padding: 2px 4px 6px; text-align: left; }
+.lp-tab th:last-child, .lp-tab td:last-child { text-align: right; }
+.lp-tab td { padding: 5px 4px; border-top: 1px solid var(--line); color: var(--muted); }
+.lp-tab td.sieg { color: var(--text); font-weight: 600; }
+.lp-tab td.lp-erg { text-align: center; white-space: nowrap; font-family: var(--font-cond); font-weight: 700; color: var(--text); }
+.lp-tab .gast-marke { font-size: 0.62rem; margin-left: 4px; }
+.lp-hl { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+.lp-hl-zeile { display: flex; justify-content: space-between; gap: 10px; }
+.lp-hl-zeile small { color: var(--muted); }
+
 </style>
 </head>
 <body>
@@ -5488,9 +5602,10 @@ body .boards-host.log #board-log { display: block; }
 
 <!-- ============ SETUP ============ -->
 <section id="screen-setup" class="screen">
-  <!-- Kopfzeile: Marke links, Navigation rechts (die Leiste #nav wandert
-       im Setup per JS hier hinein - auf allen anderen Screens steht sie
-       wie gehabt ueber dem Inhalt). -->
+  <!-- Kopfzeile: Marke links, die Navigation als Text-Reiter rechts (die
+       Leiste #nav wandert im Setup per JS hier hinein - auf Rangliste und
+       Liga steckt sie im Logo-Menue). Entwurf "Setup Redesign", zweite
+       Fassung (Okt. 2026): aufgeraeumt, ohne Rahmen, ohne Leuchten. -->
   <div class="setup-kopf" id="setup-kopf">
     <div class="marke">
       <span class="blink-logo" role="img" aria-label="Blink 180"></span>
@@ -5502,7 +5617,8 @@ body .boards-host.log #board-log { display: block; }
   </div>
 
   <div id="resume-box" class="card resume hidden">
-    <div>
+    <span class="punkt" aria-hidden="true"></span>
+    <div class="resume-text">
       <strong>Laufendes Turnier</strong>
       <span class="muted" id="resume-info"></span>
     </div>
@@ -5520,65 +5636,69 @@ body .boards-host.log #board-log { display: block; }
   </div>
 
   <div class="setup-spalten">
-  <!-- Linke Spalte: die Teilnehmer. Die Zahl im Kreis ist die Reihenfolge
+  <!-- Linke Spalte: die Spieler. Die Zahl im Kreis ist die Reihenfolge
        der Auswahl - so steht fest, wer zuerst wirft. -->
   <div class="setup-links">
     <div class="card" id="karte-spieler">
-      <div class="karte-kopf"><h2>Wer spielt mit?</h2><span class="anzahl" id="roster-anzahl"></span></div>
+      <div class="karte-kopf"><span class="kt">Spieler</span><span class="kt anzahl" id="roster-anzahl"></span></div>
       <div id="roster" class="roster"></div>
-      <button class="btn ghost full" data-action="new-profile">+ Gastspieler hinzufügen</button>
+      <button class="btn full gast-knopf" data-action="new-profile">+ Gastspieler</button>
     </div>
   </div>
 
-  <!-- Mittlere Spalte: der Spielmodus. -->
+  <!-- Mittlere Spalte: die Spielart, nur der Name. Was sie bedeutet, steht
+       als ein Satz ueber den Einstellungen. -->
   <div class="setup-mitte">
     <div class="card" id="karte-modus">
-    <h2>Spielmodus</h2>
+    <span class="kt">Spielart</span>
     <div class="modes" id="mode-select">
-      <button data-action="set-mode" data-value="quick">
-        <span class="mt">Schnelles Spiel</span>
-        <span class="md">Alle gleichzeitig, ein Leg, wer zuerst auscheckt</span>
-      </button>
-      <button data-action="set-mode" data-value="501">
-        <span class="mt">X01 Turnier</span>
-        <span class="md">Jeder gegen jeden, Double Out</span>
-      </button>
-      <button data-action="set-mode" data-value="cricket">
-        <span class="mt">Cricket</span>
-        <span class="md">Alle gegen alle, 20 bis 15 und Bull</span>
-      </button>
-      <button data-action="set-mode" data-value="rtw">
-        <span class="mt">Round the World</span>
-        <span class="md">Training: 1 bis 20, dann Bull</span>
-      </button>
-      <button data-action="set-mode" data-value="finisher">
-        <span class="mt">Finisher</span>
-        <span class="md">Alle auf derselben Zahl – nur Finishen</span>
-      </button>
+      <button data-action="set-mode" data-value="quick">Schnelles Spiel</button>
+      <button data-action="set-mode" data-value="501">X01 Turnier</button>
+      <button data-action="set-mode" data-value="cricket">Cricket</button>
+      <button data-action="set-mode" data-value="rtw">Round the World</button>
+      <button data-action="set-mode" data-value="finisher">Finisher</button>
       <!-- Zwei neue Spielarten aus dem Entwurf - die Regeln stehen noch
            nicht fest, darum laesst sich hier noch nichts starten. -->
-      <button data-action="set-mode" data-value="kaiwen">
-        <span class="mt">Kaiwen</span>
-        <span class="md">Im Team in 9 Darts finishen – Erfolg +1, Fehlschlag −1</span>
-      </button>
-      <button data-action="set-mode" data-value="hunter">
-        <span class="mt">Hunter</span>
-        <span class="md">Die Jagd: ihr fangt euch gegenseitig</span>
-      </button>
+      <button data-action="set-mode" data-value="kaiwen">Kaiwen</button>
+      <button data-action="set-mode" data-value="hunter">Hunter</button>
     </div>
     </div>
   </div>
 
-  <!-- Rechte Spalte: die Einstellungen des gewaehlten Modus, darunter
-       Ton & Feiern, ganz unten GAME ON. Die Abschnitte behalten ihre Ids;
-       sichtbar ist immer nur der zum Modus passende. -->
+  <!-- Rechte Spalte: Titel und ein Satz zur Spielart, darunter die
+       Einstellungen als Zeilen, ganz unten GAME ON. Die Abschnitte behalten
+       ihre Ids; sichtbar ist immer nur, was zur Spielart gehoert. -->
   <div class="setup-rechts">
     <div class="card" id="karte-einstellungen">
+    <div class="einst-kopf">
+      <span class="kt" id="einst-titel">X01 Turnier</span>
+      <span class="hint" id="einst-hint">Jeder gegen jeden, Double Out.</span>
+    </div>
+
+    <!-- Nur angemeldet und nur im Turnier: ein oder zwei Boards (geteiltes Turnier). -->
+    <div class="setting hidden" id="setting-geteilt">
+      <label>Boards</label>
+      <div class="options" data-setting="turnierGeteilt">
+        <button data-value="0">1 Board</button>
+        <button data-value="1">2 Boards</button>
+      </div>
+      <span class="note" id="geteilt-note"></span>
+    </div>
+    <!-- Nur angemeldet und nur bei freien Spielen (Schnelles Spiel, Cricket,
+         Round the World, Finisher): der Stand wandert als Ganzes zum Server,
+         Mitspieler mit Konto sehen ihn und tragen mit ein. -->
+    <div class="setting hidden" id="settings-online">
+      <label>Spielort</label>
+      <div class="options" data-setting="online">
+        <button data-value="0">Lokal</button>
+        <button data-value="1">Online</button>
+      </div>
+      <span class="note" id="online-hint"></span>
+    </div>
 
     <div class="einst" id="settings-501">
-    <h2>Einstellungen</h2>
     <div class="setting">
-      <label>Startpunkte</label>
+      <label><span class="lang">Startpunkte</span><span class="kurz">Start</span></label>
       <div class="options" data-setting="start">
         <button data-value="301">301</button>
         <button data-value="501">501</button>
@@ -5587,14 +5707,14 @@ body .boards-host.log #board-log { display: block; }
     </div>
     <!-- Nur im Turnier: das Schnelle Spiel hat seine eigene Spieldauer. -->
     <div class="setting" id="setting-bestof">
-      <label>Legs pro Spiel</label>
+      <label>Legs</label>
       <div class="options" data-setting="bestOf">
         <button data-value="1">1 Leg</button>
-        <button data-value="3">Best of 3</button>
-        <button data-value="5">Best of 5</button>
+        <button data-value="3"><span class="lang">Best of 3</span><span class="kurz">Bo3</span></button>
+        <button data-value="5"><span class="lang">Best of 5</span><span class="kurz">Bo5</span></button>
       </div>
     </div>
-    <!-- Nur im Schnellen Spiel: Sätze und Legs wie bei einem kleinen Turnier. -->
+    <!-- Nur im Schnellen Spiel: Saetze und Legs wie bei einem kleinen Turnier. -->
     <div class="setting hidden" id="setting-quick-dauer">
       <label>Spieldauer</label>
       <div class="options" data-setting="quickModus">
@@ -5613,62 +5733,43 @@ body .boards-host.log #board-log { display: block; }
         <button type="button" data-action="quick-step" data-key="quickLegs" data-dir="1" aria-label="mehr Legs">+</button>
       </div>
       </div>
-      <p class="hint" id="quick-dauer-hint"></p>
-    </div>
-    <!-- Nur angemeldet sichtbar: ohne Konto gibt es niemanden zum Teilen. -->
-    <div class="setting hidden" id="setting-geteilt">
-      <label>An zwei Scheiben</label>
-      <div class="options" data-setting="turnierGeteilt">
-        <button data-value="0">ein Gerät</button>
-        <button data-value="1">geteilt</button>
-      </div>
-      <p class="hint">Geteilt heißt: alle Mitspieler sehen das Turnier auf ihrem Gerät und können
-        eine offene Partie übernehmen. Wer eine Partie mitschreibt, hat sie für sich – die anderen
-        sehen so lange „läuft bei …“. Ergebnisse stehen sofort in der Tabelle.</p>
+      <span class="note" id="quick-dauer-hint"></span>
     </div>
     <!-- Wie wird eingetragen? Tastatur = Fernsteuerung vom Board-iPad aus,
          Standard = immer die Aufnahme als Zahl, Gemischt = im Finish-Bereich
          Dart fuer Dart. Im Spiel laesst sich jederzeit wechseln. -->
     <div class="setting" id="setting-eingabe">
-      <label>Eingabe?</label>
+      <label>Eingabe</label>
       <div class="options eingabe" id="eingabe-wahl">
-        <button data-action="eingabe" data-value="2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2.2"></rect><path d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M6.5 14h11"></path></svg><span>Tastatur</span></button>
-        <button data-action="eingabe" data-value="0">Standard</button>
-        <button data-action="eingabe" data-value="1">Gemischt</button>
+        <button data-action="eingabe" data-value="2" aria-label="Tastatur"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2.2"></rect><path d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M6.5 14h11"></path></svg></button>
+        <button data-action="eingabe" data-value="0"><span class="lang">Standard</span><span class="kurz">Std.</span></button>
+        <button data-action="eingabe" data-value="1"><span class="lang">Gemischt</span><span class="kurz">Mix</span></button>
       </div>
     </div>
     <div class="setting" id="setting-dartmode">
-      <label>Einzel-Darts ab Rest</label>
+      <label><span class="lang">Einzel-Darts ab Rest</span><span class="kurz">Einzel ab</span></label>
       <div class="options" data-setting="dartModeFrom">
         <button data-value="100">100</button>
         <button data-value="140">140</button>
         <button data-value="170">170</button>
         <button data-value="180">180</button>
       </div>
-      <p class="hint">Darüber tippst du die Aufnahme als Zahl, darunter Dart für Dart mit Finish-Vorschlag.</p>
     </div>
     </div>
 
     <div class="einst hidden" id="settings-cricket">
-    <h2>Cricket</h2>
     <div class="setting">
-      <label>Punkte zählen</label>
+      <label>Punkte</label>
       <div class="options" data-setting="cricketScoring">
-        <button data-value="1">mit Punkten</button>
-        <button data-value="0">ohne Punkte</button>
+        <button data-value="1"><span class="lang">mit Punkten</span><span class="kurz">Punkte</span></button>
+        <button data-value="0"><span class="lang">ohne Punkte</span><span class="kurz">ohne</span></button>
       </div>
     </div>
-    <p class="hint">Jede Zahl von 20 bis 15 und Bull muss dreimal getroffen werden (Double zählt
-      zweifach, Triple dreifach). <b>Mit Punkten:</b> Wer eine Zahl zugemacht hat, sammelt mit
-      weiteren Treffern Punkte, solange sie bei mindestens einem Mitspieler offen ist – gewonnen
-      hat, wer alles zu hat und dabei vorne liegt. <b>Ohne Punkte:</b> Wer zuerst alles zumacht,
-      gewinnt.</p>
     </div>
 
     <div class="einst hidden" id="settings-finisher">
-    <h2>Finisher</h2>
     <div class="setting">
-      <label>Punkte zum Sieg</label>
+      <label><span class="lang">Punkte zum Sieg</span><span class="kurz">Sieg bei</span></label>
       <div class="options" data-setting="finisherTo">
         <button data-value="3">3</button>
         <button data-value="5">5</button>
@@ -5676,20 +5777,15 @@ body .boards-host.log #board-log { display: block; }
       </div>
     </div>
     <div class="setting">
-      <label>Eingabe?</label>
+      <label>Eingabe</label>
       <div class="options eingabe" id="eingabe-wahl-fin">
-        <button data-action="eingabe" data-value="2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2.2"></rect><path d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M6.5 14h11"></path></svg><span>Tastatur</span></button>
-        <button data-action="eingabe" data-value="0">Standard</button>
+        <button data-action="eingabe" data-value="2" aria-label="Tastatur"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2.2"></rect><path d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M6.5 14h11"></path></svg></button>
+        <button data-action="eingabe" data-value="0"><span class="lang">Standard</span><span class="kurz">Std.</span></button>
       </div>
     </div>
-    <p class="hint">Die App zieht jede Runde eine Zahl zwischen 6 und 120. <b>Alle starten
-      auf derselben Zahl</b> und spielen sie ganz normal herunter, Double Out – kein
-      Scoring, nur das Finishen. Wer zuerst auscheckt, gewinnt die Runde; wer noch nicht
-      dran war, darf gleichziehen. Schaffen es mehrere, entscheidet ein Stechen auf Bull.</p>
     </div>
 
     <div class="einst hidden" id="settings-rtw">
-    <h2>Round the World</h2>
     <div class="setting">
       <label>Spielart</label>
       <div class="options" data-setting="rtwBoost">
@@ -5697,53 +5793,16 @@ body .boards-host.log #board-log { display: block; }
         <button data-value="1">Boost</button>
       </div>
     </div>
-    <p class="hint">Reihum von der 1 bis zur 20, danach Bull. Über die 20 hinaus geht es immer
-      auf Bull – und wer den Bull trifft, hat gewonnen. <b>Einfach:</b> Nur die Zahl zählt,
-      jeder Treffer rückt ein Feld weiter – egal ob Single, Double oder Triple.
-      <b>Boost:</b> Ein <b>Double überspringt eine Zahl</b>, ein <b>Triple überspringt zwei</b>.</p>
     </div>
 
-    <!-- Nur angemeldet und nur bei freien Spielen (Schnelles Spiel,
-         Cricket, Round the World, Finisher): der Stand wandert als Ganzes
-         zum Server, Mitspieler mit Konto sehen ihn und tragen mit ein. -->
-    <div class="einst hidden" id="settings-online">
-    <h2>Online spielen</h2>
-    <div class="setting">
-      <label>Zwei Orte, ein Spiel</label>
-      <div class="options" data-setting="online">
-        <button data-value="0">hier am Gerät</button>
-        <button data-value="1">online</button>
-      </div>
-      <p class="hint" id="online-hint"></p>
-    </div>
-    </div>
-
-    <!-- Kaiwen und Hunter: Beschreibung aus dem Entwurf, Regeln folgen. -->
-    <div class="einst hidden" id="settings-kaiwen">
-    <h2>Kaiwen</h2>
-    <p class="hint">Teamspiel ab 2 Spielern, auch online. Gemeinsam in 9 Darts finishen: Erfolg +1,
-      Fehlschlag −1. Zusammen den Rekord knacken. Einstellungen folgen, sobald die Regeln feststehen.</p>
-    </div>
-    <div class="einst hidden" id="settings-hunter">
-    <h2>Hunter</h2>
-    <p class="hint">Die Jagd, ähnlich wie Round the World: ihr fangt euch gegenseitig.
-      Einstellungen folgen, sobald die Regeln feststehen.</p>
-    </div>
-
+    <!-- Ton: Klaenge (Einschlag, Tastenton, Klopfen) und die Feiern
+         (180 und SECHZIG!, nur im X01) als Schalter. -->
     <div class="einst ton" id="settings-ton">
-    <h2>Ton &amp; Feiern</h2>
-    <div class="setting zeile">
-      <label>Klänge <small>Einschlag, Tastenton, Klopfen</small></label>
-      <div class="options" data-setting="ton">
-        <button data-value="1">an</button>
-        <button data-value="0">aus</button>
-      </div>
-    </div>
-    <div class="setting zeile" id="setting-feiern">
-      <label>Feiern <small>180 und SECHZIG!</small></label>
-      <div class="options" data-setting="feiern">
-        <button data-value="1">an</button>
-        <button data-value="0">aus</button>
+    <div class="setting">
+      <label>Ton</label>
+      <div class="options schalter">
+        <button data-action="schalter" data-key="ton" aria-pressed="true">Klänge</button>
+        <button data-action="schalter" data-key="feiern" id="setting-feiern" aria-pressed="true">Feiern</button>
       </div>
     </div>
     </div>
@@ -5879,18 +5938,21 @@ body .boards-host.log #board-log { display: block; }
      die Zusagen liegen auf dem Server – ohne Server bleibt der Spielplan
      lesbar, nur das Eintragen entfällt. -->
 <section id="screen-liga" class="screen">
-  <!-- Entwurf "Liga · Spielplan" (Okt. 2026): Kopf wie in der Rangliste
-       (Logo-Menue, Titel, Reiter als Felder), links gross der naechste bzw.
-       gewaehlte Spieltag, rechts alle Spieltage kompakt. -->
-  <div class="boards-kopf liga-kopf">
-    <button class="boards-logo" data-action="logo-menu" aria-label="Menü öffnen">
-      <span class="blink-logo sm" role="img" aria-label="Blink 180"></span>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
-    </button>
-    <div class="titel-zeile">
-      <h1>Liga</h1>
-      <p class="sub" id="liga-sub"></p>
+  <!-- Entwurf "Liga" (Okt. 2026, Fassung mit dem neuen Menue): Kopf wie
+       im Setup (Marke, Navigation als Text-Reiter - #nav wandert per JS
+       hierher), darunter die Liga-Zeile mit den Reitern, dann links gross
+       der naechste bzw. gewaehlte Spieltag, rechts alle Spieltage kompakt. -->
+  <div class="setup-kopf" id="liga-kopf">
+    <div class="marke">
+      <span class="blink-logo" role="img" aria-label="Blink 180"></span>
+      <div>
+        <div class="wort">Blink <span class="rot">180</span></div>
+        <div class="sub">Dart Turnier · est. 2026</div>
+      </div>
     </div>
+  </div>
+  <div class="liga-reiter-zeile">
+    <span class="kt" id="liga-sub"></span>
     <div class="options kopf-reiter" id="liga-tabs">
       <button data-action="liga-tab" data-tab="plan" class="active">Spielplan</button>
       <button data-action="liga-tab" data-tab="training">Training</button>
@@ -7027,6 +7089,31 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       { id: 'st16', nr: 16, tag: '2027-06-04', heim: 'TSV Oberpframmern', gast: 'Blink 180', ort: 'Gaststätte Anstoss' },
       { id: 'st17', nr: 17, tag: '2027-06-08', heim: 'Blink 180', gast: 'FT Gern Darts II', ort: 'Bar Sehnsucht' },
       { id: 'st18', nr: 18, tag: null }
+    ]
+  };
+
+  /* Alle Spiele eines Spieltags (Ergebnisse der Ligaleitung), von Julius
+     nach jedem Spieltag geliefert. Je Spiel: Datum, Heim, Gast, Lokal,
+     Einzel und Legs; "partien" sind die 16 Einzel [Heim, Gast, hLegs, gLegs],
+     ein * vor dem Namen heisst Gastspieler. Ohne gast = spielfrei,
+     verschoben = neuer Termin in tag. */
+  var LIGA_SPIELTAGE = {
+    st01: [
+      { heim: 'Dart Artists Germering II', gast: null },
+      { tag: '2026-10-06', heim: 'd`Haberer 2', gast: 'Voodoo Darters', ort: 'Heuboden', einzel: '8:8', legs: '20:20', partien: [
+        ['Stefan Hügel', 'Marlene Czapka', 2, 1], ['Reinhart Boehm', 'Kevin Bauer', 0, 2], ['Rolf Neeb', 'Josef Stahl', 1, 2], ['Walter Majewski', 'Matthias Steinacher', 0, 2],
+        ['Stefan Hügel', 'Kevin Bauer', 0, 2], ['Reinhart Boehm', 'Marlene Czapka', 2, 0], ['Rolf Neeb', 'Matthias Steinacher', 2, 1], ['Walter Majewski', 'Josef Stahl', 1, 2],
+        ['Rolf Neeb', 'Marlene Czapka', 2, 0], ['Walter Majewski', 'Kevin Bauer', 0, 2], ['Reinhart Boehm', 'Josef Stahl', 2, 0], ['Stefan Hügel', 'Martin Goerlich', 2, 1],
+        ['Mani Burgmair', 'Jan Strelow', 1, 2], ['Rolf Neeb', 'Kevin Bauer', 1, 2], ['Stefan Hügel', 'Josef Stahl', 2, 0], ['Reinhart Boehm', 'Martin Goerlich', 2, 1]
+      ] },
+      { tag: '2026-10-06', heim: 'Blink 180', gast: 'TSV Dachau 1865 4', ort: 'Bar Sehnsucht', einzel: '7:9', legs: '15:20' },
+      { tag: '2026-10-07', heim: 'Treff ma nix', gast: 'DCO', ort: 'Fiakerstüberl', einzel: '9:7', legs: '21:17', partien: [
+        ['Franz Freinberger', 'Naser Sharifi', 0, 2], ['Ralf Kilian', 'Christos Heuwald', 2, 0], ['Bernhard Hoffmann', 'Luck Heuwald', 2, 0], ['Christian Matejka', '*Michael Rogge', 1, 2],
+        ['Franz Freinberger', 'Christos Heuwald', 2, 0], ['Ralf Kilian', 'Naser Sharifi', 0, 2], ['Bernhard Hoffmann', '*Michael Rogge', 2, 0], ['Christian Matejka', 'Luck Heuwald', 2, 0],
+        ['Bernhard Hoffmann', 'Naser Sharifi', 2, 1], ['Christian Matejka', 'Christos Heuwald', 2, 1], ['Linda Maier', 'Alex Heuwald', 2, 1], ['Franz Freinberger', '*Michael Rogge', 1, 2],
+        ['Sven Albrecht', 'Naser Sharifi', 1, 2], ['Yves Scherer', 'Christos Heuwald', 0, 2], ['Stephan Brunner', 'Alex Heuwald', 2, 0], ['Linda Maier', '*Michael Rogge', 0, 2]
+      ], highlights: [{ wer: 'Alex Heuwald', team: 'DCO', was: '1× 180' }] },
+      { tag: '2026-10-16', heim: 'TSV Oberpframmern', gast: 'FT Gern Darts II', ort: 'Gaststätte Anstoss', verschoben: true }
     ]
   };
 
@@ -10199,15 +10286,15 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
        ueberall sonst wie gehabt ueber dem Inhalt. */
     var navEl = $('nav');
     var kopf = screen === 'setup' ? $('setup-kopf') : screen === 'tournament' ? $('turnier-kopf')
-      : screen === 'boards' || screen === 'liga' ? $('logo-menu-panel') : null;
+      : screen === 'liga' ? $('liga-kopf') : screen === 'boards' ? $('logo-menu-panel') : null;
     if (kopf && navEl.parentElement !== kopf) kopf.appendChild(navEl);
     else if (!kopf && navEl.parentElement !== document.body) document.body.insertBefore(navEl, $('screen-setup'));
     /* Das Logo-Menue gibt es nur auf Rangliste und Liga, das •••-Menue nur in
        den Spielbildern - ueberall sonst wird ein haengengebliebenes Menue
        (Zurueck-Taste aus dem offenen Menue) zugeklappt. */
-    var mitMenue = screen === 'boards' || screen === 'liga' || screen === 'game' || screen === 'cricket' || screen === 'rtw' || screen === 'finisher';
+    var mitMenue = screen === 'boards' || screen === 'game' || screen === 'cricket' || screen === 'rtw' || screen === 'finisher';
     if (!mitMenue) UI.menu = false;
-    $('logo-menu-overlay').classList.toggle('hidden', !(UI.menu && (screen === 'boards' || screen === 'liga')));
+    $('logo-menu-overlay').classList.toggle('hidden', !(UI.menu && screen === 'boards'));
     /* Die Liga-Auswertung wohnt im Statistik-Reiter der Liga; ueberall
        sonst steht der Ranglisten-Koerper in seinem eigenen Screen. */
     var boardsHost = screen === 'liga' && (UI.ligaTab || 'plan') === 'statistik' ? $('liga-statistik') : $('screen-boards');
@@ -10230,7 +10317,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
      die App bedienbar: eine Leiste sagt Bescheid, der Fehler landet trotzdem
      in der Konsole (und in den Tests). */
   function render() {
-    try { renderInnen(); }
+    try { renderInnen(); fokusWiederherstellen(); }
     catch (e) {
       var bar = $('render-fehler');
       if (!bar) {
@@ -10423,16 +10510,96 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       karte.id = 'willkommen';
       karte.className = 'card';
       karte.innerHTML =
-        '<h2>Willkommen am Board</h2>' +
+        '<span class="kt">Willkommen am Board</span>' +
         '<ol class="hint">' +
-          '<li><b>Wer spielt mit?</b> Spieler antippen – die vier Beispielnamen änderst du unter „Spieler“, neue legst du hier unten an.</li>' +
-          '<li><b>Spielmodus</b> wählen: Schnelles Spiel, Turnier jeder gegen jeden, Cricket, Round the World oder Finisher.</li>' +
-          '<li><b>GAME ON!</b> tippen – ausbullen, dann trägt jeder seine Aufnahme ein. Alles bleibt auf diesem Gerät gespeichert, auch ohne Netz.</li>' +
+          '<li><b>Spieler</b> antippen – die Beispielnamen änderst du unter „Spieler“.</li>' +
+          '<li><b>Spielart</b> wählen.</li>' +
+          '<li><b>GAME ON!</b> – alles bleibt auf diesem Gerät, auch ohne Netz.</li>' +
         '</ol>' +
         '<button class="btn ghost full" data-action="willkommen-weg">Verstanden</button>';
       links.insertBefore(karte, links.firstChild);
     }
   }
+
+  /* ---------- Gast-Dialog: Art des Gastes und Einladung ---------- */
+
+  /* Die Wahl im Gast-Dialog: fuer heute, dauerhaft auf diesem Geraet oder
+     (nur fuer Mitglieder) einladen. */
+  function gastArtHtml(p, kannEinladen) {
+    var wahl = p.einladen && kannEinladen ? 2 : p.dauer ? 1 : 0;
+    return '<div class="options gast-art' + (kannEinladen ? ' drei' : '') + '">' +
+      '<button data-action="gast-art" data-value="0" class="' + (wahl === 0 ? 'active' : '') + '">Temporär<small>nach 12 Std. weg</small></button>' +
+      '<button data-action="gast-art" data-value="1" class="' + (wahl === 1 ? 'active' : '') + '">Dauerhaft<small>nur dieses Gerät</small></button>' +
+      (kannEinladen ? '<button data-action="gast-art" data-value="2" class="' + (wahl === 2 ? 'active' : '') + '">Einladen<small>eigenes Konto</small></button>' : '') +
+      '</div>';
+  }
+
+  /* Der Link zu einem Einladungs-Token: dieselbe Seite mit ?einladung=... -
+     js/auth.js liest das beim Start und traegt den Code ein. */
+  function einladungLink(token) {
+    return location.origin + location.pathname + '?einladung=' + encodeURIComponent(token);
+  }
+
+  function einladungAktuell(o) {
+    var art = o.einladungArt || 'gast';
+    return o.einladungen && o.einladungen[art] ? o.einladungen[art] : null;
+  }
+
+  /* QR-Code und Link fuer die gewaehlte Art; ohne Token steht dort "hole". */
+  function einladungHtml(o) {
+    var art = o.einladungArt || 'gast';
+    var e = einladungAktuell(o);
+    var qr = '';
+    if (e && window.qrcode) {
+      try {
+        var q = window.qrcode(0, 'M');
+        q.addData(e.link);
+        q.make();
+        qr = q.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
+      } catch (err) { qr = ''; }
+    }
+    return '<div class="options einladung-art">' +
+        '<button data-action="einladung-art" data-value="gast" class="' + (art === 'gast' ? 'active' : '') + '">Gast<small>spielt mit, keine Liga</small></button>' +
+        '<button data-action="einladung-art" data-value="mitglied" class="' + (art === 'mitglied' ? 'active' : '') + '">Vereinsmitglied<small>voller Zugang</small></button>' +
+      '</div>' +
+      (o.einladungFehler ? '<p class="hint fehler" role="alert">' + esc(o.einladungFehler) + '</p>' : '') +
+      '<div class="einladung-qr" id="einladung-qr">' + (qr || '<span class="muted">' + (o.einladungFehler ? '–' : 'Hole den Link …') + '</span>') + '</div>' +
+      (e ? '<div class="ticker-link" id="einladung-link">' + esc(e.link) + '</div>' : '') +
+      '<p class="hint">' + (o.einladungMeldung ? esc(o.einladungMeldung) + ' ' : '') +
+        'Mit dem Handy scannen oder den Link schicken – der Einladungscode ist dann schon eingetragen. Gilt 7 Tage, für ein Konto.</p>';
+  }
+
+  /* Holt das Token fuer die gewaehlte Art vom Server, einmal je Art. */
+  function einladungHolen(o) {
+    var art = o.einladungArt || 'gast';
+    if (!o.einladungen) o.einladungen = {};
+    if (o.einladungen[art] || o.einladungLaedt === art) return;
+    if (!(window.DartKonto && window.DartKonto.ruf)) return;
+    o.einladungLaedt = art;
+    o.einladungFehler = '';
+    window.DartKonto.ruf('POST', '/api/einladungen', { art: art }).then(function (d) {
+      if (UI.overlay !== o) return;
+      o.einladungLaedt = null;
+      o.einladungen[art] = { token: d.token, link: einladungLink(d.token) };
+      render();
+    }).catch(function (e) {
+      if (UI.overlay !== o) return;
+      o.einladungLaedt = null;
+      o.einladungFehler = e && e.message ? e.message : 'Keine Verbindung zum Server.';
+      render();
+    });
+  }
+
+  /* Name und ein Satz je Spielart - steht ueber den Einstellungen. */
+  var SPIELART_TEXT = {
+    quick: ['Schnelles Spiel', 'Alle gleichzeitig, wer zuerst auscheckt.'],
+    '501': ['X01 Turnier', 'Jeder gegen jeden, Double Out.'],
+    cricket: ['Cricket', 'Jede Zahl von 20 bis 15 und Bull dreimal treffen.'],
+    rtw: ['Round the World', 'Reihum von 1 bis 20, danach Bull.'],
+    finisher: ['Finisher', 'Alle auf derselben Zahl zwischen 6 und 120, Double Out.'],
+    kaiwen: ['Kaiwen', 'Im Team in 9 Darts finishen: Erfolg +1, Fehlschlag −1. Regeln folgen.'],
+    hunter: ['Hunter', 'Die Jagd: ihr fangt euch gegenseitig. Regeln folgen.']
+  };
 
   function renderSetup() {
     renderBeitreten();
@@ -10440,16 +10607,15 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     /* Ohne Konto ist jeder neue Spieler ein ganz normales Profil - "Gast"
        gibt es nur angemeldet (dort haben die Kollegen Konten). */
     var npKnopf = document.querySelector('#karte-spieler [data-action="new-profile"]');
-    if (npKnopf) npKnopf.textContent = liveNutzer() ? '+ Gastspieler hinzufügen' : '+ Spieler hinzufügen';
-    var map = career();
+    if (npKnopf) npKnopf.textContent = liveNutzer() ? '+ Gastspieler' : '+ Spieler';
+    /* Nur Name und Nummer - die Statistik steht in der Rangliste, nicht in
+       der Aufstellung (Entwurf: keine Statistikzeilen). */
     $('roster').innerHTML = rosterReihenfolge().map(function (p) {
-      var st = map[p.id];
       var sel = S.lineup.indexOf(p.id) >= 0;
       return '<div class="roster-item ' + (sel ? 'selected' : '') + '" data-action="toggle-lineup" data-id="' + esc(p.id) + '" role="button" tabindex="0">' +
         avatarHTML(p, 'md') +
         '<div class="who"><div class="nm">' + esc(p.name) +
-        (p.gast || p.gastKonto ? ' <span class="gast-marke">Gast</span>' : p.test ? ' <span class="gast-marke">Test</span>' : '') + '</div>' +
-        '<div class="sm">' + (st && st.matches ? 'Ø ' + st.avg.toFixed(1) + ' · ' + plural(st.won, 'Sieg', 'Siege') : 'noch kein Spiel') + '</div></div>' +
+        (p.gast || p.gastKonto ? ' <span class="gast-marke">Gast</span>' : p.test ? ' <span class="gast-marke">Test</span>' : '') + '</div></div>' +
         /* Hier wird nur ausgewaehlt. Das eigene Profil pflegt man im Konto,
            und Gaeste bearbeitet man unter Spieler -- ein Stift neben jedem
            Namen laedt sonst dazu ein, mitten in der Aufstellung an fremden
@@ -10459,7 +10625,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '</div>';
     }).join('') || '<p class="hint">Noch keine Spieler angelegt.</p>';
     var anzahlEl = $('roster-anzahl');
-    if (anzahlEl) anzahlEl.textContent = S.lineup.length + ' ausgewählt';
+    if (anzahlEl) anzahlEl.textContent = S.lineup.length + ' gewählt';
 
     document.querySelectorAll('[data-setting]').forEach(function (seg) {
       var key = seg.getAttribute('data-setting');
@@ -10471,42 +10637,39 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     $('mode-select').querySelectorAll('button').forEach(function (b) {
       b.classList.toggle('active', b.getAttribute('data-value') === S.mode);
     });
-    /* Ohne Konto gibt es niemanden, mit dem man teilen könnte – und im
-       Schnellen Spiel gibt es keinen Spielplan zum Aufteilen. */
+    /* Ueber den Einstellungen: der Name der Spielart und ein Satz dazu. */
+    var art = SPIELART_TEXT[S.mode] || SPIELART_TEXT['501'];
+    var einstTitel = $('einst-titel'), einstHint = $('einst-hint');
+    if (einstTitel) einstTitel.textContent = art[0];
+    if (einstHint) einstHint.textContent = art[1];
+
+    /* Boards: nur angemeldet und nur im Turnier - ohne Konto gibt es
+       niemanden, mit dem man teilen könnte, und im Schnellen Spiel keinen
+       Spielplan zum Aufteilen. */
     var kannTeilen = !!(window.DartKonto && window.DartKonto.nutzer()) && S.mode === '501';
     $('setting-geteilt').classList.toggle('hidden', !kannTeilen);
+    var geteiltNote = $('geteilt-note');
+    if (geteiltNote) geteiltNote.textContent = kannTeilen && S.settings.turnierGeteilt === 1 ? 'Zwei Geräte erfassen parallel – jedes Tablet an seinem Board.' : '';
 
-    /* Online spielen: nur angemeldet und nur bei freien Spielen -- das
-       Turnier hat seinen eigenen, geteilten Weg. */
+    /* Spielort: nur angemeldet und nur bei freien Spielen -- das Turnier
+       hat seinen eigenen, geteilten Weg. Ohne Konto fehlt die Zeile. */
     var onlineKarte = $('settings-online');
     if (onlineKarte) {
       var kannOnline = !!liveNutzer() && !!(window.DartSync && window.DartSync.live) && !!LIVE_KINDS[S.mode];
-      /* Ohne Konto (reine Offline-App) gibt es die Funktion nicht - aber ein
-         Hinweis, dass es sie gibt, statt dass die Karte spurlos fehlt. */
-      var nurHinweis = !liveNutzer() && !!LIVE_KINDS[S.mode];
-      onlineKarte.classList.toggle('hidden', !kannOnline && !nurHinweis);
-      var onlineOpt = onlineKarte.querySelector('[data-setting="online"]');
-      if (onlineOpt) onlineOpt.classList.toggle('hidden', !kannOnline);
+      onlineKarte.classList.toggle('hidden', !kannOnline);
       var onlineHint = $('online-hint');
-      if (nurHinweis && onlineHint) {
-        onlineHint.textContent = 'Mit einem Konto könnt ihr an zwei Scheiben spielen: jeder sieht jeden Wurf auf seinem Handy und trägt selbst ein. Dafür die App über den Vereins-Server öffnen und anmelden.';
-      }
-      if (kannOnline && onlineHint) {
-        var mitKonto = liveMitspieler(S.lineup);
-        onlineHint.textContent = S.settings.online !== 1
-          ? 'Online heißt: Mitspieler mit Konto sehen das Spiel auf ihrem Handy unter „Mitspielen“, sehen jeden Wurf sofort und können selbst eintragen – fürs Spiel am Telefon an zwei Scheiben.'
+      if (onlineHint) {
+        var mitKonto = kannOnline ? liveMitspieler(S.lineup) : [];
+        onlineHint.textContent = !kannOnline || S.settings.online !== 1 ? ''
           : mitKonto.length
-            ? 'Sobald du startest, erscheint das Spiel bei ' + mitKonto.map(pname).join(', ') + ' im Setup unter „Mitspielen“.'
-            : 'Dafür braucht es mindestens einen Mitspieler mit Konto in der Aufstellung – sonst läuft das Spiel nur hier.';
+            ? 'Erscheint bei ' + mitKonto.map(pname).join(', ') + ' unter „Mitspielen“.'
+            : 'Dafür braucht es einen Mitspieler mit Konto in der Aufstellung.';
       }
     }
     $('settings-cricket').classList.toggle('hidden', S.mode !== 'cricket');
     $('settings-rtw').classList.toggle('hidden', S.mode !== 'rtw');
     $('settings-finisher').classList.toggle('hidden', S.mode !== 'finisher');
     var bald = S.mode === 'kaiwen' || S.mode === 'hunter';
-    var sk = $('settings-kaiwen'), sh = $('settings-hunter');
-    if (sk) sk.classList.toggle('hidden', S.mode !== 'kaiwen');
-    if (sh) sh.classList.toggle('hidden', S.mode !== 'hunter');
     /* Eingabe-Wahl: Tastatur (Fernsteuerung ab Start), Standard (immer die
        Aufnahme als Zahl, Grenze 0) oder Gemischt (ab der Grenze Dart fuer
        Dart). Die Grenze selbst erscheint nur bei Gemischt. */
@@ -10518,9 +10681,14 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     });
     var dartmode = $('setting-dartmode');
     if (dartmode) dartmode.classList.toggle('hidden', eingabe !== 1);
-    /* Feiern (180 und SECHZIG!) gibt es nur im X01. */
+    /* Ton: zwei Schalter. Feiern (180 und SECHZIG!) gibt es nur im X01. */
+    document.querySelectorAll('#settings-ton [data-action="schalter"]').forEach(function (b) {
+      var an = S.settings[b.getAttribute('data-key')] !== 0;
+      b.classList.toggle('active', an);
+      b.setAttribute('aria-pressed', an ? 'true' : 'false');
+    });
     var feiernEl = $('setting-feiern');
-    if (feiernEl) feiernEl.classList.toggle('hidden', S.mode !== '501' && S.mode !== 'quick');
+    if (feiernEl) feiernEl.classList.toggle('hidden', S.mode !== '501' && S.mode !== 'quick' && S.mode !== 'kaiwen');
     /* Turnier und Schnelles Spiel teilen sich die Einstellungen – Startpunkte
        und Einzel-Dart-Grenze gelten für beide. Nur die Legs sind Turniersache;
        zwei getrennte Karten wären zwei Bedienelemente für dieselbe Einstellung. */
@@ -11763,7 +11931,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     '<path d="M3 10h18M8 3v4M16 3v4"/></svg>';
 
   function renderLiga() {
-    $('liga-sub').textContent = LIGA.team + ' · 5. Liga · ' + LIGA.saison;
+    $('liga-sub').textContent = '5. Liga · ' + LIGA.saison;
 
     var tab = UI.ligaTab || 'plan';
     $('liga-tabs').querySelectorAll('button').forEach(function (b) {
@@ -11926,7 +12094,28 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         ? '<div class="lk-crew"><span class="lk-crew-titel">Team · <b class="' + ton(leute.length) + '">' + leute.length + ' / ' + LIGA.sollSpieler + '</b></span>' +
           '<div class="lt-leute">' + (leute.map(function (p) { return '<span class="lt-person">' + avatarHTML(p, 'sm') + esc(p.name) + '</span>'; }).join('') || '<span class="muted">Noch niemand eingetragen.</span>') + '</div></div>'
         : '<div class="lk-crew"></div>') +
+      ligaRundeHtml(t, h) +
       fuss;
+  }
+
+  /* Alle Spiele des Spieltags (auch die der anderen Teams): Paarung und
+     Ergebnis, Spielfrei gedimmt, Verschobenes mit neuem Datum. Ein Tipp
+     zeigt die 16 Einzel; unser eigenes Spiel fuehrt zu den Ergebnissen. */
+  function ligaRundeHtml(t, h) {
+    var runde = LIGA_SPIELTAGE[t.id];
+    if (!runde || !runde.length) return '';
+    return '<div class="lk-runde"><span class="lk-crew-titel">Alle Spiele · ' + t.nr + '. Spieltag</span>' +
+      runde.map(function (sp, i) {
+        if (!sp.gast) return '<div class="lr-zeile frei"><span class="lr-teams">' + esc(sp.heim) + ' <i>·</i> Spielfrei</span><span class="lr-erg">–</span></div>';
+        var wir = sp.heim === LIGA.team || sp.gast === LIGA.team;
+        var rechts = sp.verschoben
+          ? '<span class="lr-erg verschoben">verschoben' + (sp.tag ? ' · ' + fmtDate(new Date(sp.tag + 'T12:00:00').getTime()).slice(0, 6) : '') + '</span>'
+          : sp.einzel ? '<span class="lr-erg"><b>' + esc(sp.einzel) + '</b><small>' + esc(sp.legs || '') + '</small></span>' : '<span class="lr-erg">–</span>';
+        var tipp = wir && h ? ' data-action="open-summary" data-kind="turnier" data-id="' + esc(h.id) + '"'
+          : sp.partien && sp.partien.length ? ' data-action="liga-partien" data-termin="' + esc(t.id) + '" data-i="' + i + '"' : '';
+        return '<div class="lr-zeile' + (wir ? ' wir' : '') + (tipp ? ' tap' : '') + '"' + (tipp ? tipp + ' role="button" tabindex="0"' : '') + '>' +
+          '<span class="lr-teams">' + esc(sp.heim) + ' <i>–</i> ' + esc(sp.gast) + '</span>' + rechts + '</div>';
+      }).join('') + '</div>';
   }
 
   /* Was zu einem Spieltag schon da ist: das laufende Ligaspiel oder ein
@@ -14426,6 +14615,27 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
             '<button class="btn danger" data-action="ov-discard-game">Ja, verwerfen</button></div>');
     } else if (o.type === 'warte') {
       html = '<p>' + esc(o.text) + '</p>';
+    } else if (o.type === 'liga-partien') {
+      var lpSp = (LIGA_SPIELTAGE[o.termin] || [])[o.i];
+      var lpT = LIGA.termine.filter(function (x) { return x.id === o.termin; })[0];
+      var lpName = function (n) {
+        return String(n).charAt(0) === '*' ? esc(n.slice(1)) + ' <small class="gast-marke">Gast</small>' : esc(n);
+      };
+      html = !lpSp ? '<p>Dazu liegt nichts vor.</p>' :
+        '<h3 class="lp-titel">' + esc(lpSp.heim) + ' <span>–</span> ' + esc(lpSp.gast) + '</h3>' +
+        '<p class="lp-sub">' + (lpT ? lpT.nr + '. Spieltag · ' : '') + (lpSp.tag ? fmtDate(new Date(lpSp.tag + 'T12:00:00').getTime()) : '') + (lpSp.ort ? ' · ' + esc(lpSp.ort) : '') + '</p>' +
+        '<div class="lp-stand"><b>' + esc(lpSp.einzel || '–') + '</b><span>Einzel · Legs ' + esc(lpSp.legs || '–') + '</span></div>' +
+        '<table class="lp-tab"><thead><tr><th>' + esc(lpSp.heim) + '</th><th></th><th>' + esc(lpSp.gast) + '</th></tr></thead><tbody>' +
+          (lpSp.partien || []).map(function (p) {
+            return '<tr><td class="' + (p[2] > p[3] ? 'sieg' : '') + '">' + lpName(p[0]) + '</td>' +
+              '<td class="lp-erg">' + p[2] + ' : ' + p[3] + '</td>' +
+              '<td class="' + (p[3] > p[2] ? 'sieg' : '') + '">' + lpName(p[1]) + '</td></tr>';
+          }).join('') + '</tbody></table>' +
+        (lpSp.highlights && lpSp.highlights.length
+          ? '<div class="lp-hl"><span class="lk-crew-titel">Highlights</span>' +
+            lpSp.highlights.map(function (x) { return '<div class="lp-hl-zeile"><span>' + esc(x.wer) + ' <small>' + esc(x.team) + '</small></span><b>' + esc(x.was) + '</b></div>'; }).join('') + '</div>'
+          : '') +
+        '<button class="btn primary full" data-action="ov-cancel">Schließen</button>';
     } else if (o.type === 'hinweis') {
       html = '<h3>' + esc(o.titel || 'Geht gerade nicht') + '</h3><p>' + esc(o.text) + '</p>' +
         '<button class="btn primary full" data-action="ov-hinweis-zu">Verstanden</button>';
@@ -14644,16 +14854,20 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
          mit dem Gast-Code ein eigenes Konto an. */
       var gastWahl = (isNew && window.DartKonto && window.DartKonto.nutzer()) ||
         (!isNew && profile(o.id).gast && !profile(o.id).hidden && !istLigaGegner(o.id));
+      /* Dritte Wahl: einladen. Ein Mitglied (kein Gast-Konto) holt einen
+         Link vom Server - als QR-Code zum Scannen oder zum Teilen. Der
+         Eingeladene bekommt ein eigenes Konto auf allen Geraeten: als Gast
+         (ohne Liga) oder als neues Vereinsmitglied. */
+      var kannEinladen = isNew && gastWahl && !ichBinGastKonto() && !!(window.DartKonto && window.DartKonto.ruf);
+      var einladen = kannEinladen && !!p.einladen;
+      if (einladen) {
+        html = '<h3>Einladen</h3>' + gastArtHtml(p, kannEinladen) + einladungHtml(o) +
+          '<div class="row-btns two"><button class="btn ghost" data-action="ov-cancel">Schließen</button>' +
+          '<button class="btn primary" data-action="einladung-teilen"' + (einladungAktuell(o) ? '' : ' disabled') + '>Link teilen</button></div>';
+      } else
       html = '<h3>' + (isNew ? (gastWahl ? 'Gast hinzufügen' : 'Neuer Spieler') : 'Spieler bearbeiten') + '</h3>' +
         (o.fehler ? '<p class="hint fehler" role="alert">' + esc(o.fehler) + '</p>' : '') +
-        (gastWahl
-          ? '<div class="options gast-art">' +
-              '<button data-action="gast-art" data-value="0" class="' + (p.dauer ? '' : 'active') + '">Temporär<small>nach 12 Std. weg</small></button>' +
-              '<button data-action="gast-art" data-value="1" class="' + (p.dauer ? 'active' : '') + '">Dauerhaft<small>nur dieses Gerät</small></button>' +
-            '</div>' +
-            '<p class="hint">Soll der Gast auf allen Geräten dabei sein, mit eigener Statistik und Training? ' +
-              'Dann registriert er sich selbst mit dem Gast-Code – Ligaspiele kann er damit verfolgen, aber nicht mitspielen.</p>'
-          : '') +
+        (gastWahl ? gastArtHtml(p, kannEinladen) : '') +
         '<div class="avatar-edit" data-action="pick-avatar">' +
           avatarHTML({ id: o.id || 'neu', name: p.name || '?', avatar: p.avatar }, 'xl') +
           '<span class="cam">Foto wählen</span>' +
@@ -15453,8 +15667,38 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         $('avatar-input').click();
         break;
       case 'gast-art':
-        if (UI.overlay && UI.overlay.type === 'profile') { UI.overlay.draft.dauer = el.getAttribute('data-value') === '1'; render(); }
+        if (UI.overlay && UI.overlay.type === 'profile') {
+          var gaWert = el.getAttribute('data-value');
+          UI.overlay.draft.dauer = gaWert === '1';
+          UI.overlay.draft.einladen = gaWert === '2';
+          if (gaWert === '2') einladungHolen(UI.overlay);
+          render();
+        }
         break;
+      case 'einladung-art':
+        if (UI.overlay && UI.overlay.type === 'profile') {
+          UI.overlay.einladungArt = el.getAttribute('data-value') === 'mitglied' ? 'mitglied' : 'gast';
+          UI.overlay.einladungMeldung = '';
+          einladungHolen(UI.overlay);
+          render();
+        }
+        break;
+      case 'einladung-teilen': {
+        /* Teilen-Menue des Geraets; ohne eines (Computer) landet der Link
+           in der Zwischenablage. */
+        var et = UI.overlay && UI.overlay.type === 'profile' ? einladungAktuell(UI.overlay) : null;
+        if (!et) break;
+        var etOv = UI.overlay;
+        var etText = (UI.overlay.einladungArt === 'mitglied' ? 'Einladung zu Blink 180' : 'Einladung zu Blink 180 als Gast') + ': ' + et.link;
+        if (navigator.share) {
+          navigator.share({ title: 'Blink 180', text: etText, url: et.link }).catch(function () {});
+        } else if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(et.link).then(function () {
+            if (UI.overlay === etOv) { etOv.einladungMeldung = 'Link kopiert.'; render(); }
+          }).catch(function () {});
+        }
+        break;
+      }
       case 'clear-avatar':
         UI.overlay.draft.avatar = null;
         render();
@@ -15599,8 +15843,17 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       /* Rangliste: Spielverlauf auf und zu, Menue hinter dem Logo. */
       case 'board-log': UI.boardLog = true; render(); break;
       case 'board-log-zu': UI.boardLog = false; render(); break;
-      case 'logo-menu': UI.menu = true; render(); break;
+      case 'logo-menu': {
+        UI.menu = true; render();
+        var lmErster = tastaturBetrieb() ? document.querySelector('#logo-menu-panel #nav button:not(.hidden)') : null;
+        if (lmErster) lmErster.focus();
+        break;
+      }
       case 'liga-wahl': UI.ligaWahl = el.getAttribute('data-id'); render(); break;
+      case 'liga-partien':
+        UI.overlay = { type: 'liga-partien', termin: el.getAttribute('data-termin'), i: Number(el.getAttribute('data-i')) };
+        render();
+        break;
       case 'set-mode':
         S.mode = el.getAttribute('data-value');
         save(); render();
@@ -16245,6 +16498,13 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       case 'ov-next-leg':
         UI.overlay = null; save(); render();
         break;
+      case 'schalter': {
+        /* Klaenge und Feiern: an oder aus, nichts dazwischen. */
+        var sKey = el.getAttribute('data-key');
+        S.settings[sKey] = S.settings[sKey] === 0 ? 1 : 0;
+        save(); render();
+        break;
+      }
       case 'willkommen-weg':
         S.settings.willkommenWeg = 1;
         save(); render();
@@ -16516,7 +16776,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
   /* Escape klappt das Logo-Menue (Rangliste, Liga) wieder zu. */
   document.addEventListener('keydown', function (ev) {
-    if (ev.key === 'Escape' && UI.menu && (S.screen === 'boards' || S.screen === 'liga')) { UI.menu = false; render(); ev.preventDefault(); }
+    if (ev.key === 'Escape' && UI.menu && S.screen === 'boards') { UI.menu = false; render(); ev.preventDefault(); }
   });
 
   document.addEventListener('click', function (ev) {
@@ -16810,7 +17070,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
        rueckgaengig" markiert und Enter den Checkout geloescht. */
     var passt = UI.overlay
       ? !ZIFFERN_BLEIBEN[UI.overlay.type]
-      : S.screen === 'bulloff' || S.screen === 'tournament';
+      /* Nicht in den Spielbildern - auch nicht hinter dem offenen Menue:
+         wer dort aus Gewohnheit eine Aufnahme tippt, soll nichts ausloesen. */
+      : S.screen === 'bulloff' || S.screen === 'tournament' || (!!PFEIL_SCREENS[S.screen] && !SPIEL_SCREENS[S.screen]);
     if (!passt) return;
     ev.preventDefault();
     ev.stopImmediatePropagation();
@@ -17202,6 +17464,167 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       }
     }
   });
+
+  /* ================= Tastatur ueberall: Pfeile, Enter, Zurueck =================
+   *
+   * Die Spielbilder haben ihre eigene Tastatur (Ziffern, Enter = OK,
+   * Backspace = loeschen), Ausbullen, Turnierplan und die Dialoge nach dem
+   * Leg ihre eigene Pfeil-Wahl. Ueberall sonst - Setup, Rangliste, Spieler,
+   * Profil, Liga, Konto, Auswertung, und in den Menues - gilt ein
+   * gemeinsames Muster wie am Fernseher: die Pfeile springen zum naechsten
+   * Knopf in Pfeilrichtung, Enter drueckt ihn, Escape (und Backspace, wo
+   * Backspace nichts loescht) geht eine Stufe zurueck: Menue zu, Dialog zu,
+   * Reiter zurueck, Bildschirm zurueck, zuletzt ins Setup.
+   */
+  var SPIEL_SCREENS = { game: 1, cricket: 1, rtw: 1, finisher: 1 };
+  var PFEIL_SCREENS = { setup: 1, tournament: 1, boards: 1, players: 1, profile: 1, liga: 1, konto: 1, summary: 1, winner: 1, bericht: 1 };
+
+  /* In welchem Bereich wandern die Pfeile gerade? Ein offener Dialog oder
+     ein offenes Menue schliesst den Rest aus. */
+  function pfeilBereich() {
+    if (UI.overlay) return $('overlay-card');
+    if (UI.menu && S.screen === 'boards') return $('logo-menu-panel');
+    if (UI.menu && SPIEL_SCREENS[S.screen]) return document.querySelector('.game-menu:not(.hidden) .game-menu-karte');
+    if (PFEIL_SCREENS[S.screen] && S.screen !== 'tournament') return document.querySelector('.screen.active');
+    return null;
+  }
+  function pfeilSichtbar(el) {
+    if (el.disabled || el.closest('.hidden') || el.getAttribute('aria-hidden') === 'true') return false;
+    var r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0;
+  }
+  function pfeilZiele(bereich) {
+    var liste = bereich.querySelectorAll('button, [role="button"], a[href], input:not([type="hidden"]), select, textarea, summary, [tabindex="0"]');
+    return Array.prototype.filter.call(liste, pfeilSichtbar);
+  }
+  /* Der naechste Knopf in Pfeilrichtung: zuerst zaehlt der Abstand in der
+     Richtung, dann der seitliche Versatz (dreifach), zuletzt die Mitte. */
+  function pfeilNaechstes(ziele, von, richtung) {
+    if (!von || ziele.indexOf(von) < 0) {
+      /* Ohne Ausgangspunkt: der erste bzw. letzte Knopf - aber nie gleich
+         ein roter oder "Spiel verlassen" (ein Enter zu viel waere fatal). */
+      var harmlos = ziele.filter(function (el) { return !el.classList.contains('danger') && !el.classList.contains('game-menu-raus'); });
+      var liste = harmlos.length ? harmlos : ziele;
+      return richtung === 'ArrowUp' || richtung === 'ArrowLeft' ? liste[liste.length - 1] : liste[0];
+    }
+    var a = von.getBoundingClientRect(), ax = (a.left + a.right) / 2, ay = (a.top + a.bottom) / 2;
+    var senkrecht = richtung === 'ArrowUp' || richtung === 'ArrowDown';
+    var best = null, bestWert = Infinity;
+    ziele.forEach(function (el) {
+      if (el === von) return;
+      var b = el.getBoundingClientRect(), bx = (b.left + b.right) / 2, by = (b.top + b.bottom) / 2;
+      var prim, sec;
+      if (richtung === 'ArrowDown') { if (by <= ay + 1) return; prim = Math.max(0, b.top - a.bottom); }
+      else if (richtung === 'ArrowUp') { if (by >= ay - 1) return; prim = Math.max(0, a.top - b.bottom); }
+      else if (richtung === 'ArrowRight') { if (bx <= ax + 1) return; prim = Math.max(0, b.left - a.right); }
+      else { if (bx >= ax - 1) return; prim = Math.max(0, a.left - b.right); }
+      sec = senkrecht
+        ? Math.max(0, Math.max(a.left, b.left) - Math.min(a.right, b.right))
+        : Math.max(0, Math.max(a.top, b.top) - Math.min(a.bottom, b.bottom));
+      var wert = prim + sec * 3 + (senkrecht ? Math.abs(bx - ax) : Math.abs(by - ay)) * 0.15;
+      if (wert < bestWert) { bestWert = wert; best = el; }
+    });
+    return best;
+  }
+  /* Woran erkennt man denselben Knopf nach dem Neuzeichnen? An Aktion und
+     Daten - zur Not am Text. */
+  function fokusSchluessel(el) {
+    if (!el || el === document.body || !el.getAttribute) return null;
+    var teile = ['data-action', 'data-id', 'data-value', 'data-key', 'data-screen', 'data-kind', 'data-tab', 'data-role', 'data-i'].map(function (a) { return el.getAttribute(a) || ''; });
+    teile.push(el.id || '');
+    teile.push(el.parentElement && el.parentElement.getAttribute ? el.parentElement.getAttribute('data-setting') || '' : '');
+    var kern = teile.join('|');
+    if (!kern.replace(/\|/g, '')) kern = (el.textContent || '').trim().slice(0, 40);
+    return el.tagName + '|' + kern;
+  }
+  /* Nach dem Zeichnen: war der markierte Knopf gerade ersetzt worden
+     (Spieler angetippt, Einstellung gewechselt), kommt die Markierung auf
+     seinen Nachfolger - sonst finge man nach jedem Enter wieder vorn an. */
+  function fokusWiederherstellen() {
+    if (!UI.fokusMerk || !tastaturBetrieb()) return;
+    var akt = document.activeElement;
+    if (akt && akt !== document.body && akt.isConnected && pfeilSichtbar(akt)) return;
+    var bereich = pfeilBereich();
+    if (!bereich) return;
+    var ziele = pfeilZiele(bereich);
+    for (var i = 0; i < ziele.length; i++) {
+      if (fokusSchluessel(ziele[i]) === UI.fokusMerk) { ziele[i].focus({ preventScroll: true }); return; }
+    }
+    UI.fokusMerk = null;
+  }
+  /* Eine Stufe zurueck. Liefert true, wenn etwas passiert ist. */
+  function tastaturZurueck() {
+    if (UI.overlay) {
+      if (STICKY_OVERLAYS[UI.overlay.type] || VOLLBILD_DIALOGE[UI.overlay.type]) return false;
+      UI.overlay = null; UI.input = ''; render(); return true;
+    }
+    if (UI.menu && S.screen === 'boards') { UI.menu = false; render(); return true; }
+    if (SPIEL_SCREENS[S.screen] || S.screen === 'bulloff') return false;
+    if (S.screen === 'summary') {
+      var sb = document.querySelector('#summary-actions [data-action="summary-back"]');
+      if (sb) { handleAction('summary-back', sb); return true; }
+      return false;
+    }
+    if (S.screen === 'boards' && UI.boardLog) { UI.boardLog = false; render(); return true; }
+    if (S.screen === 'liga' && (UI.ligaTab || 'plan') !== 'plan') { UI.ligaTab = 'plan'; UI.boardLog = false; render(); return true; }
+    if (S.screen === 'liga' && UI.ligaWahl) { UI.ligaWahl = null; render(); return true; }
+    if (S.screen === 'profile') { S.screen = 'players'; save(); render(); return true; }
+    if (S.screen === 'konto' && gesperrt()) return false;
+    if (S.screen === 'winner' || S.screen === 'bericht' || S.screen === 'setup') return false;
+    if (PFEIL_SCREENS[S.screen]) { S.screen = 'setup'; save(); render(); return true; }
+    return false;
+  }
+  window.addEventListener('keydown', function (ev) {
+    if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    var ziel = ev.target;
+    var imFeld = ziel && ziel.closest && ziel.closest('input, select, textarea, [contenteditable="true"], [contenteditable=""]');
+    var istPfeil = ev.key === 'ArrowLeft' || ev.key === 'ArrowUp' || ev.key === 'ArrowRight' || ev.key === 'ArrowDown';
+    var istZurueck = ev.key === 'Escape' || ev.key === 'Backspace';
+    if (!istPfeil && !istZurueck && ev.key !== 'Enter' && ev.key !== ' ') return;
+    var bereich = pfeilBereich();
+    /* Den markierten Knopf merken - fuer die Zeit nach dem Neuzeichnen. */
+    if (bereich && document.activeElement && bereich.contains(document.activeElement)) UI.fokusMerk = fokusSchluessel(document.activeElement);
+
+    if (istZurueck) {
+      /* In einem Feld: Backspace loescht, Escape verlaesst das Feld. */
+      if (imFeld) {
+        if (ev.key === 'Escape') { ziel.blur(); ev.preventDefault(); ev.stopImmediatePropagation(); }
+        return;
+      }
+      /* Backspace ist in den Spielbildern das Loeschen und bleibt es;
+         Escape dort regeln die Spielbilder selbst (Fernsteuerung, Menue). */
+      if (ev.key === 'Backspace' && (SPIEL_SCREENS[S.screen] || S.screen === 'bulloff')) return;
+      if (ev.key === 'Escape' && SPIEL_SCREENS[S.screen] && !UI.overlay) return;
+      /* Dialoge mit eigener Esc-Regel (Spielbilder) bleiben beim alten Weg. */
+      if (tastaturZurueck()) { ev.preventDefault(); ev.stopImmediatePropagation(); }
+      return;
+    }
+    if (!bereich) return;
+    /* Dialoge nach Leg und Spiel waehlen selbst; die Spielbilder ebenso. */
+    if (UI.overlay && (PFEIL_DIALOGE[UI.overlay.type] || UI.overlay.type === 'checkout-darts')) return;
+    if (istPfeil) {
+      if (imFeld) {
+        /* Im Textfeld bewegen links/rechts die Schreibmarke, in einer
+           Auswahl alle Pfeile den Wert - nur hoch/runter im Textfeld wandern. */
+        var feldArt = ziel.tagName === 'INPUT' ? (ziel.type || 'text') : ziel.tagName.toLowerCase();
+        if (feldArt === 'select' || feldArt === 'textarea' || feldArt === 'range' || feldArt === 'number') return;
+        if (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight') return;
+      }
+      var ziele = pfeilZiele(bereich);
+      if (!ziele.length) return;
+      var von = document.activeElement && bereich.contains(document.activeElement) ? document.activeElement : null;
+      var naechstes = pfeilNaechstes(ziele, von, ev.key);
+      ev.preventDefault();
+      ev.stopImmediatePropagation();
+      if (!naechstes) return;
+      naechstes.focus({ preventScroll: true });
+      if (naechstes.scrollIntoView) naechstes.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      UI.fokusMerk = fokusSchluessel(naechstes);
+      return;
+    }
+    /* Enter und Leertaste: der Browser drueckt Knoepfe selbst; hier nur
+       sicherstellen, dass ohne Markierung nichts Unerwartetes passiert. */
+  }, true);
 
   /* ================= Start ================= */
   S = load() || newState();

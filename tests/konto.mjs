@@ -269,7 +269,7 @@ async function main() {
 
     group('X01 mit 301, 501 und 701');
     check('Modus heisst X01',
-      (await julius.page.locator('#mode-select button[data-value="501"] .mt').textContent()).trim() === 'X01 Turnier');
+      (await julius.page.locator('#mode-select button[data-value="501"]').textContent()).trim() === 'X01 Turnier');
     check('drei Startpunkte zur Wahl',
       (await julius.page.locator('[data-setting="start"] button').count()) === 3);
     await julius.page.locator('[data-setting="start"] button[data-value="701"]').click();
@@ -571,7 +571,7 @@ async function main() {
       D.save(); D.render();
     });
     /* Rest 40: die App ist auf Einzel-Darts umgeschaltet, also D20 tippen. */
-    await tobi.page.locator('#mult-row button[data-mult="2"]').click();
+    await tobi.page.locator('#num-grid button.mult[data-mult="2"]').click();
     await tobi.page.locator('#num-grid button[data-num="20"]').click();
     if (await tobi.page.locator('#overlay-card [data-action="co-darts"]').count()) {
       await tobi.page.locator('#overlay-card [data-action="co-darts"]').first().click();
@@ -924,7 +924,7 @@ async function main() {
     check('Tobi landet im Spiel, sobald Julius den Anwurf gewaehlt hat',
       await tobi.page.locator('#screen-game').isVisible());
     check('die Kopfzeile sagt, mit wem es online laeuft',
-      (await tobi.page.locator('#game-match-label').innerText()).includes('online'),
+      (await tobi.page.locator('#game-match-label').innerText()).toLowerCase().includes('online'),
       await tobi.page.locator('#game-match-label').innerText());
 
     /* Beide tippen Gesamtpunkte -- von frueheren Gruppen kann noch die

@@ -153,12 +153,19 @@ export function createApi(db, config) {
     const body = await leseJson(req, MAX_BODY_KLEIN);
     /* Zwei Codes: der Mannschafts-Code und der Gast-Code. Wer mit dem
        Gast-Code kommt, bekommt ein Gast-Konto (kein Ligaspieler). */
-    const code = String(body.invite || '');
+    const code = String(body.invite || '').trim();
     let gastKonto = 0;
-    if (!(config.inviteHash && verifyPassword(code, config.inviteHash))) {
+    /* Dritter Weg: ein Einladungs-Link (Token "e_..."), den ein Mitglied aus
+       der App heraus verschickt hat. Er legt fest, ob ein Gast-Konto oder
+       ein Vereinsmitglied entsteht, und ist danach verbraucht. */
+    const einladung = einladungHolen(code);
+    if (einladung) {
+      if (!einladung.gueltig) throw new HttpFehler(403, 'Dieser Einladungs-Link ist abgelaufen oder schon benutzt.');
+      gastKonto = einladung.art === 'gast' ? 1 : 0;
+    } else if (!(config.inviteHash && verifyPassword(code, config.inviteHash))) {
       /* Der Gast-Code wird gern klein abgetippt ("blink182") - beides gilt. */
       if (config.gastInviteHash && (verifyPassword(code, config.gastInviteHash) ||
-          verifyPassword(code.trim().toUpperCase(), config.gastInviteHash))) gastKonto = 1;
+          verifyPassword(code.toUpperCase(), config.gastInviteHash))) gastKonto = 1;
       else throw new HttpFehler(403, 'Der Einladungscode stimmt nicht.');
     }
     const email = pruefeEmail(body.email);
@@ -175,11 +182,58 @@ export function createApi(db, config) {
       'INSERT INTO users (id, email, display_name, password_hash, avatar, hue, status, created_at, gast_konto)' +
         " VALUES (?, ?, ?, ?, NULL, ?, 'aktiv', ?, ?)"
     ).run(id, email, name, hashPassword(body.password), freieFarbe(pruefeHue(body.hue)), new Date().toISOString(), gastKonto);
+    if (einladung) {
+      db.prepare('UPDATE einladungen SET used_by = ?, used_at = ? WHERE token = ?').run(id, new Date().toISOString(), einladung.token);
+    }
 
     const token = sess.createSession(db, id);
     limit.loesche('reg:' + ip);
     const u = db.prepare('SELECT * FROM users WHERE id = ?').get(id);
     sendJson(res, 201, { nutzer: eigenesProfil(u) }, { 'Set-Cookie': sess.cookieHeader(token, secure) });
+  }
+
+  /* ---------- Einladungs-Links ---------- */
+
+  const EINLADUNG_FRIST_MS = 7 * 24 * 3600e3;
+
+  /* Ein Token aus der Tabelle, mit dem Urteil, ob es noch gilt. Alles, was
+     nicht wie ein Token aussieht, ist keins (dann greifen die Codes). */
+  function einladungHolen(token) {
+    if (!/^e_[A-Za-z0-9_-]{8,40}$/.test(token)) return null;
+    const e = db.prepare('SELECT e.token, e.art, e.created_by, e.expires_at, e.used_by, u.display_name AS von FROM einladungen e JOIN users u ON u.id = e.created_by WHERE e.token = ?').get(token);
+    if (!e) return null;
+    e.gueltig = !e.used_by && Date.parse(e.expires_at) > Date.now();
+    return e;
+  }
+
+  /* Ein Mitglied (kein Gast-Konto) erzeugt einen Link: art 'gast' fuer ein
+     Gast-Konto, 'mitglied' fuer ein neues Vereinsmitglied. */
+  async function einladungAnlegen(req, res) {
+    pruefeHerkunft(req);
+    const u = verlangeNutzer(req);
+    if (u.gast_konto) throw new HttpFehler(403, 'Mit einem Gast-Konto kannst du niemanden einladen.');
+    const warte = limit.pruefe('einladung:' + u.id, 30, 24 * 3600e3);
+    if (warte) throw new HttpFehler(429, 'Genug Einladungen fuer heute. Bitte morgen nochmal.');
+    const body = await leseJson(req, MAX_BODY_KLEIN);
+    const art = body.art === 'mitglied' ? 'mitglied' : 'gast';
+    limit.zaehle('einladung:' + u.id, 30, 24 * 3600e3);
+    const token = uid('e_');
+    const jetzt = Date.now();
+    db.prepare('INSERT INTO einladungen (token, art, created_by, created_at, expires_at) VALUES (?, ?, ?, ?, ?)')
+      .run(token, art, u.id, new Date(jetzt).toISOString(), new Date(jetzt + EINLADUNG_FRIST_MS).toISOString());
+    sendJson(res, 201, { token, art, gueltigBis: new Date(jetzt + EINLADUNG_FRIST_MS).toISOString() });
+  }
+
+  /* Oeffentlich (der Eingeladene ist ja noch nicht angemeldet): wer laedt
+     ein, wozu, und gilt der Link noch. Mehr nicht. */
+  async function einladungAnsehen(req, res, token) {
+    const ip = clientIp(req, config.trustProxy);
+    const warte = limit.pruefe('einladung-sehen:' + ip, 60, 3600e3);
+    if (warte) throw new HttpFehler(429, 'Zu viele Anfragen. Bitte spaeter nochmal.');
+    limit.zaehle('einladung-sehen:' + ip, 60, 3600e3);
+    const e = einladungHolen(String(token || ''));
+    if (!e) throw new HttpFehler(404, 'Diesen Einladungs-Link gibt es nicht.');
+    sendJson(res, 200, { art: e.art, von: e.von, gueltig: e.gueltig });
   }
 
   async function login(req, res) {
@@ -1547,6 +1601,8 @@ export function createApi(db, config) {
       // Archiv-Eintrag liegt laengst unter /api/games.
       const weg = new Date(Date.now() - 7 * LIVE_FRIST).toISOString();
       db.prepare("DELETE FROM live_games WHERE status = 'zu' AND updated_at < ?").run(weg);
+      // Einladungs-Links, die seit einem Monat abgelaufen sind, braucht niemand mehr.
+      db.prepare('DELETE FROM einladungen WHERE expires_at < ?').run(new Date(Date.now() - 30 * 86400e3).toISOString());
     });
     for (const [gid, s] of geschlossen) livestrom.melden(gid, s, 'zu');
   }
@@ -1562,6 +1618,8 @@ export function createApi(db, config) {
     ['GET', /^\/api\/me$/, me],
     ['PATCH', /^\/api\/me$/, profilAendern],
     ['POST', /^\/api\/password$/, passwortAendern],
+    ['POST', /^\/api\/einladungen$/, einladungAnlegen],
+    ['GET', /^\/api\/einladungen\/([A-Za-z0-9_-]{4,64})$/, einladungAnsehen],
     ['GET', /^\/api\/users$/, nutzerListe],
     ['POST', /^\/api\/games$/, spielHochladen],
     ['GET', /^\/api\/games$/, spieleHolen],

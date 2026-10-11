@@ -128,7 +128,20 @@ group('Setup: Startbild nach Entwurf');
 check('Navigation steht in der Kopfzeile neben der Marke', (await page.locator('#setup-kopf #nav').count()) === 1);
 check('die Nummer im Kreis ist die Reihenfolge der Auswahl',
   (await page.locator('.roster-item.selected .check').allInnerTexts()).map((t) => t.trim()).join('') === '1234');
-check('Zaehler: 4 ausgewählt', (await text('#roster-anzahl')).trim() === '4 ausgewählt');
+check('Zaehler: 4 gewählt', (await textKlein('#roster-anzahl')).trim() === '4 gewählt');
+check('keine Statistikzeile in der Aufstellung, nur Name und Nummer', (await page.locator('#roster .sm').count()) === 0);
+check('Spielart-Knoepfe tragen nur den Namen', (await page.locator('#mode-select .md').count()) === 0 &&
+  (await textKlein('#mode-select button[data-value="cricket"]')).trim() === 'cricket');
+check('ueber den Einstellungen steht die Spielart mit einem Satz',
+  (await textKlein('#einst-titel')).trim() === 'x01 turnier' && (await text('#einst-hint')).includes('Jeder gegen jeden'));
+check('Navigation als Text-Reiter: der aktive Reiter hat den roten Strich', await page.locator('#setup-kopf #nav button.active').evaluate((e) =>
+  getComputedStyle(e).borderBottomColor === 'rgb(229, 72, 77)' && getComputedStyle(e).backgroundColor === 'rgba(0, 0, 0, 0)'));
+check('Ton: Klaenge und Feiern sind Schalter, beide an', (await page.locator('#settings-ton [data-action="schalter"].active').count()) === 2);
+await page.locator('#settings-ton [data-key="ton"]').click();
+check('Klaenge aus nach einem Tipp', (await page.evaluate(() => window.__dart.state().settings.ton)) === 0 &&
+  !(await page.locator('#settings-ton [data-key="ton"]').evaluate((e) => e.classList.contains('active'))));
+await page.locator('#settings-ton [data-key="ton"]').click();
+check('und wieder an', (await page.evaluate(() => window.__dart.state().settings.ton)) === 1);
 check('Eingabe: Gemischt ist voreingestellt, mit Grenze 170',
   (await page.locator('#eingabe-wahl button[data-value="1"]').evaluate((e) => e.classList.contains('active'))) &&
   (await visible('#setting-dartmode')));
@@ -142,9 +155,113 @@ check('Tastatur gemerkt', (await page.evaluate(() => window.__dart.state().setti
 await page.locator('#eingabe-wahl button[data-value="1"]').click();
 await page.locator('[data-action="set-mode"][data-value="kaiwen"]').click();
 check('Kaiwen: Regeln folgen, kein Start', (await page.locator('[data-action="start-game"]').isDisabled()) &&
-  (await textKlein('[data-action="start-game"]')).includes('regeln folgen') && (await visible('#settings-kaiwen')));
+  (await textKlein('[data-action="start-game"]')).includes('regeln folgen') && (await text('#einst-hint')).includes('Regeln folgen'));
 await page.locator('[data-action="set-mode"][data-value="501"]').click();
 check('zurueck im X01: GAME ON!', !(await page.locator('[data-action="start-game"]').isDisabled()));
+
+group('Tastatur ueberall: Pfeile, Enter, Zurueck');
+{
+  const fokus = async () => page.evaluate(() => {
+    const a = document.activeElement;
+    return a && a !== document.body ? (a.getAttribute('data-action') || '') + ':' + (a.getAttribute('data-id') || a.getAttribute('data-value') || a.getAttribute('data-screen') || a.getAttribute('data-tab') || a.id || (a.textContent || '').trim().slice(0, 20)) : '-';
+  });
+  /* Am iPad quer: zwei Spalten Spieler, drei Spalten Setup - dort haben
+     links/rechts eine Bedeutung. */
+  const vpVorher = page.viewportSize();
+  await page.setViewportSize({ width: 1133, height: 744 });
+  const pid = await page.locator('#roster .roster-item').evaluateAll((els) => els.map((e) => e.getAttribute('data-id')));
+  await page.evaluate(() => document.activeElement && document.activeElement.blur());
+  await page.keyboard.press('ArrowDown');
+  check('erster Pfeil markiert einen Knopf im Setup', (await fokus()) !== '-' &&
+    await page.evaluate(() => document.body.classList.contains('tastatur') && document.querySelector('#screen-setup').contains(document.activeElement)));
+  /* Von der Aufstellung aus: rechts der Nachbar, runter die naechste Zeile. */
+  await page.focus('#roster .roster-item[data-id="' + pid[0] + '"]');
+  await page.keyboard.press('ArrowRight');
+  check('rechts: der Spieler daneben', (await fokus()) === 'toggle-lineup:' + pid[1], await fokus());
+  await page.keyboard.press('ArrowDown');
+  check('runter: die Zeile darunter', (await fokus()) === 'toggle-lineup:' + pid[3], await fokus());
+  await page.keyboard.press('ArrowLeft');
+  check('links: wieder die linke Spalte', (await fokus()) === 'toggle-lineup:' + pid[2], await fokus());
+  await page.keyboard.press('Enter');
+  check('Enter waehlt den Spieler ab', (await page.locator('#roster .roster-item[data-id="' + pid[2] + '"]').evaluate((e) => e.classList.contains('selected'))) === false);
+  check('und die Markierung bleibt auf demselben Spieler', (await fokus()) === 'toggle-lineup:' + pid[2], await fokus());
+  await page.keyboard.press('Enter');
+  check('noch ein Enter waehlt ihn wieder an', await page.locator('#roster .roster-item[data-id="' + pid[2] + '"]').evaluate((e) => e.classList.contains('selected')));
+  /* Rechts bis zu den Spielarten, Enter wechselt die Spielart. */
+  await page.focus('#roster .roster-item[data-id="' + pid[1] + '"]');
+  await page.keyboard.press('ArrowRight');
+  check('von der Aufstellung rechts in die Spielart', (await fokus()).startsWith('set-mode:'), await fokus());
+  await page.focus('#mode-select button[data-value="cricket"]');
+  await page.keyboard.press('Enter');
+  check('Enter stellt Cricket ein', (await page.evaluate(() => window.__dart.state().mode)) === 'cricket');
+  check('Markierung bleibt auf Cricket', (await fokus()) === 'set-mode:cricket', await fokus());
+  await page.keyboard.press('ArrowRight');
+  check('rechts weiter in die Einstellungen', await page.evaluate(() => !!document.activeElement.closest('#karte-einstellungen')), await fokus());
+  await page.focus('#mode-select button[data-value="501"]');
+  await page.keyboard.press('Enter');
+  /* Ziffernblock ohne Pfeile: 2 ist runter. */
+  await page.focus('#mode-select button[data-value="quick"]');
+  await page.keyboard.press('2');
+  check('Ziffer 2 wirkt im Setup als Pfeil runter', (await fokus()) === 'set-mode:501', await fokus());
+  /* Navigation per Tastatur: Spieler-Reiter, Enter. */
+  await page.focus('#setup-kopf #nav [data-screen="players"]');
+  await page.keyboard.press('Enter');
+  check('Enter auf dem Reiter wechselt zu Spieler', await visible('#screen-players'));
+  await page.keyboard.press('ArrowDown');
+  check('Pfeile wandern auch in der Spielerliste', await page.evaluate(() => document.querySelector('#screen-players').contains(document.activeElement)));
+  await page.focus('#players-list [data-action="open-profile"]');
+  await page.keyboard.press('Enter');
+  check('Enter oeffnet das Profil', await visible('#screen-profile'));
+  await page.keyboard.press('Escape');
+  check('Escape: vom Profil zurueck zur Spielerliste', await visible('#screen-players'));
+  await page.keyboard.press('Backspace');
+  check('Backspace: von der Spielerliste ins Setup', await visible('#screen-setup'));
+  await page.keyboard.press('Escape');
+  check('im Setup passiert bei Zurueck nichts mehr', await visible('#screen-setup'));
+  /* Rangliste: das Menue hinter dem Logo per Tastatur. */
+  await navTo('boards');
+  check('nach dem Wechsel ist das Logo-Menue zu', (await visible('#screen-boards')) && !(await visible('#logo-menu-overlay')));
+  await page.focus('#screen-boards [data-action="logo-menu"]');
+  await page.keyboard.press('Enter');
+  check('Enter auf dem Logo oeffnet das Menue und markiert den ersten Eintrag',
+    (await visible('#logo-menu-overlay')) && (await fokus()) === 'nav:setup', await fokus());
+  await page.keyboard.press('ArrowDown');
+  check('runter: der naechste Eintrag', (await fokus()) === 'nav:liga', await fokus());
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('ArrowUp');
+  check('ueber dem ersten Eintrag bleibt die Markierung stehen', (await fokus()) === 'nav:setup', await fokus());
+  await page.keyboard.press('Escape');
+  check('Escape schliesst das Menue', !(await visible('#logo-menu-overlay')) && await visible('#screen-boards'));
+  await page.focus('#screen-boards [data-action="logo-menu"]');
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  check('Enter im Menue wechselt zur Liga', await visible('#screen-liga') && !(await visible('#logo-menu-overlay')));
+  await page.focus('#liga-tabs [data-tab="training"]');
+  await page.keyboard.press('Enter');
+  check('Enter auf dem Reiter oeffnet Training', await page.evaluate(() => window.__dart.ui().ligaTab === 'training'));
+  await page.keyboard.press('Escape');
+  check('Escape in der Liga: vom Reiter zurueck zum Spielplan', await page.evaluate(() => (window.__dart.ui().ligaTab || 'plan') === 'plan'));
+  await page.keyboard.press('Escape');
+  check('noch ein Escape: aus der Liga ins Setup', await visible('#screen-setup'));
+  /* Dialoge: Pfeile wandern, Escape schliesst - auch mit Backspace. */
+  await page.locator('#screen-setup [data-action="new-profile"]').click();
+  check('Dialog offen', await visible('#overlay-card'));
+  await page.keyboard.press('Backspace');
+  check('Backspace schliesst den Dialog (kein Feld hatte den Fokus)', !(await visible('#overlay-card')));
+  await page.locator('#screen-setup [data-action="new-profile"]').click();
+  await page.focus('#overlay-card [data-role="profile-name"]');
+  await page.keyboard.type('Ab');
+  await page.keyboard.press('Backspace');
+  check('im Textfeld loescht Backspace nur ein Zeichen', (await page.inputValue('#overlay-card [data-role="profile-name"]')) === 'A' && await visible('#overlay-card'));
+  await page.keyboard.press('Escape');
+  check('Escape im Feld verlaesst nur das Feld', await visible('#overlay-card') && await page.evaluate(() => document.activeElement === document.body));
+  await page.keyboard.press('Escape');
+  check('das naechste Escape schliesst den Dialog', !(await visible('#overlay-card')));
+  await page.evaluate(() => { const D = window.__dart, S = D.state(); S.mode = '501'; S.lineup = D.activeProfiles().slice(0, 4).map((p) => p.id); D.save(); D.setScreen('setup'); });
+  await page.setViewportSize(vpVorher);
+  await page.mouse.click(5, 5);
+}
 
 group('Turnierplan');
 await page.locator('[data-action="start-game"]').click();
@@ -2537,7 +2654,7 @@ await page.evaluate(() => {
 });
 await navTo('liga');
 check('Liga-Seite oeffnet sich', await visible('#screen-liga'));
-check('Kopf nennt Team und Saison', (await text('#liga-sub')).includes('Blink 180'));
+check('Liga-Zeile nennt Liga und Saison', (await textKlein('#liga-sub')).includes('5. liga') && (await textKlein('#liga-sub')).includes('saison'));
 check('18 Spieltage stehen im Plan', (await page.locator('.liga-spieltag').count()) === 18,
   String(await page.locator('.liga-spieltag').count()));
 check('zwei davon sind spielfrei', (await page.locator('.liga-spieltag.frei').count()) === 2);
@@ -2680,6 +2797,35 @@ await page.evaluate(() => {
   D.setScreen('liga');
 });
 await page.locator('#liga-tabs button[data-tab="plan"]').click();
+
+group('Liga: alle Spiele des Spieltags');
+{
+  await navTo('liga');
+  await page.evaluate(() => { const D = window.__dart; D.ui().ligaTab = 'plan'; D.ui().ligaWahl = 'st01'; D.render(); });
+  check('der Liga-Kopf ist der des Setups: Navigation als Text-Reiter, kein Logo-Menue',
+    (await page.locator('#liga-kopf #nav').count()) === 1 && (await page.locator('#screen-liga [data-action="logo-menu"]').count()) === 0);
+  check('die Liga-Zeile nennt Liga und Saison und traegt die sechs Reiter',
+    (await textKlein('#liga-sub')).includes('5. liga') && (await page.locator('#liga-tabs button').count()) === 6);
+  const zeilen = await page.locator('#liga-karte .lr-zeile').count();
+  check('1. Spieltag: fuenf Zeilen - Spielfrei, drei Spiele, ein verschobenes', zeilen === 5, String(zeilen));
+  const rt = await textKlein('#liga-karte .lk-runde');
+  check('Spielfrei, Ergebnisse mit Einzel und Legs, verschoben mit neuem Datum',
+    rt.includes('spielfrei') && rt.includes('8:8') && rt.includes('20:20') && rt.includes('9:7') && rt.includes('verschoben') && rt.includes('16.10.'));
+  check('unser Spiel ist markiert, Spielfrei gedimmt',
+    (await page.locator('#liga-karte .lr-zeile.wir').count()) === 1 && (await page.locator('#liga-karte .lr-zeile.frei').count()) === 1);
+  await page.locator('#liga-karte [data-action="liga-partien"]').nth(1).click();
+  check('ein Tipp auf Treff ma nix - DCO zeigt die 16 Einzel', (await visible('#overlay-card')) && (await page.locator('#overlay-card .lp-tab tbody tr').count()) === 16);
+  const lp = await textKlein('#overlay-card');
+  check('mit Gast-Kennzeichen, Spieltag, Lokal und Highlights',
+    lp.includes('michael rogge') && lp.includes('gast') && lp.includes('1. spieltag') && lp.includes('fiakerstüberl') && lp.includes('alex heuwald') && lp.includes('180'));
+  check('Sieger je Einzel hervorgehoben: 9 Heim-, 7 Gast-Siege',
+    (await page.locator('#overlay-card .lp-tab td:first-child.sieg').count()) === 9 && (await page.locator('#overlay-card .lp-tab td:last-child.sieg').count()) === 7);
+  await page.keyboard.press('Escape');
+  check('Escape schliesst den Dialog', !(await visible('#overlay-card')));
+  await page.evaluate(() => { const D = window.__dart; D.ui().ligaWahl = 'st02'; D.render(); });
+  check('ein Spieltag ohne Ergebnisse zeigt keinen Block', (await page.locator('#liga-karte .lk-runde').count()) === 0);
+  await page.evaluate(() => { const D = window.__dart; D.ui().ligaWahl = null; D.render(); });
+}
 
 group('Liga-Tabelle: eigener Reiter, von Hand gepflegt');
 await page.locator('#liga-tabs button[data-tab="tabelle"]').click();
@@ -3082,7 +3228,8 @@ group('Gaeste: temporaer, dauerhaft, Gast-Konto');
     D.setScreen('setup');
     D.action('new-profile');
     const t = document.getElementById('overlay-card').innerText;
-    const wahl = document.querySelectorAll('[data-action="gast-art"]').length === 2 && t.includes('Temporär') && t.includes('Dauerhaft');
+    /* Drei Wege: temporaer, dauerhaft - und einladen (das nachgestellte Konto ist ein Mitglied). */
+    const wahl = document.querySelectorAll('[data-action="gast-art"]').length === 3 && t.includes('Temporär') && t.includes('Dauerhaft');
     D.ui().overlay.draft.name = 'Dauergast';
     D.ui().overlay.draft.dauer = true;
     D.action('save-profile');
@@ -3103,6 +3250,44 @@ group('Gaeste: temporaer, dauerhaft, Gast-Konto');
     return { nochDa, wahl, dauer: !!(dg && dg.gast && dg.dauer), dgDa: S.profiles.some((p) => p.name === 'Dauergast' && !p.hidden), kgWeg: !S.profiles.some((p) => p.name === 'Kurzgast') };
   });
   check('angemeldet fragt der Dialog: temporaer oder dauerhaft', r.wahl);
+  /* Einladen: ein Mitglied holt einen Link (hier vom nachgestellten Server). */
+  {
+    const e = await page.evaluate(async () => {
+      const D = window.__dart;
+      const echt = window.DartKonto;
+      let gerufen = null;
+      window.DartKonto = new Proxy({
+        nutzer: () => ({ id: 'u_ich' }),
+        ruf: (m, p, b) => { gerufen = [m, p, b && b.art]; return Promise.resolve({ token: 'e_testtoken1234', art: b.art }); }
+      }, { get: (t, k) => (k in t ? t[k] : () => null) });
+      D.action('new-profile');
+      const drei = document.querySelectorAll('#overlay-card .gast-art button').length;
+      D.action('gast-art', { getAttribute: () => '2' });
+      await new Promise((r2) => setTimeout(r2, 50));
+      const svg = document.querySelectorAll('#einladung-qr svg').length;
+      const link = (document.getElementById('einladung-link') || {}).textContent || '';
+      const teilen = !!document.querySelector('#overlay-card [data-action="einladung-teilen"]:not([disabled])');
+      const speichern = !!document.querySelector('#overlay-card [data-action="save-profile"]');
+      D.action('einladung-art', { getAttribute: () => 'mitglied' });
+      await new Promise((r2) => setTimeout(r2, 50));
+      const art2 = gerufen && gerufen[2];
+      D.ui().overlay = null;
+      /* Ein Gast-Konto darf nicht einladen: die dritte Wahl fehlt. */
+      window.DartKonto = new Proxy({ nutzer: () => ({ id: 'u_gast', gastKonto: true }) }, { get: (t, k) => (k in t ? t[k] : () => null) });
+      D.action('new-profile');
+      const zweiBeimGast = document.querySelectorAll('#overlay-card .gast-art button').length;
+      D.ui().overlay = null;
+      window.DartKonto = echt; D.render();
+      return { drei, svg, link, teilen, speichern, art2, zweiBeimGast, hatQr: !!window.qrcode };
+    });
+    check('der Gast-Dialog bietet drei Wege: temporaer, dauerhaft, einladen', e.drei === 3, String(e.drei));
+    /* Im Einzeldatei-Buendel gibt es kein js/qr.js - dann steht dort kein Bild, aber der Link. */
+    check('Einladen zeigt einen QR-Code (mit js/qr.js)', e.svg === (e.hatQr ? 1 : 0), String(e.svg));
+    check('und den Link mit ?einladung=TOKEN', e.link.includes('?einladung=e_testtoken1234'), e.link);
+    check('Link teilen ist bereit, Speichern gibt es hier nicht', e.teilen && !e.speichern);
+    check('Vereinsmitglied holt einen eigenen Link', e.art2 === 'mitglied', String(e.art2));
+    check('ein Gast-Konto kann nicht einladen', e.zweiBeimGast === 2, String(e.zweiBeimGast));
+  }
   check('der dauerhafte Gast wird so gespeichert', r.dauer);
   check('nach 12 Stunden bleibt der dauerhafte Gast', r.dgDa);
   check('der temporaere Gast (ohne Spiel) ist weg', r.kgWeg);
@@ -4157,7 +4342,7 @@ group('Ton & Feiern: Feiern lassen sich abschalten');
     D.save(); D.setScreen('setup');
   });
   check('die Karte Ton & Feiern steht im Setup', await visible('#settings-ton'));
-  await page.locator('#settings-ton [data-setting="feiern"] [data-value="0"]').click();
+  await page.locator('#settings-ton [data-key="feiern"]').click();
   check('Feiern aus ist gespeichert', await page.evaluate(() => window.__dart.state().settings.feiern === 0));
   await page.locator('[data-action="start-game"]').click();
   await bullOffGo();
@@ -4297,7 +4482,7 @@ group('Ligaspiel endet erst mit dem unterschriebenen Bericht');
   check('und laesst sich nicht nochmal starten', (await karte.locator('[data-action="liga-spiel"]').count()) === 0);
   await page.evaluate(() => { window.__dart.ui().bericht = null; });
   check('Ergebnisse und Bericht bleiben einsehbar',
-    (await karte.locator('[data-action="open-summary"]').count()) === 1 && (await karte.locator('[data-action="liga-bericht"]').count()) === 1);
+    (await karte.locator('.lk-knoepfe [data-action="open-summary"]').count()) === 1 && (await karte.locator('[data-action="liga-bericht"]').count()) === 1);
   /* Ein alter Eintrag ohne gespieltes Einzel sperrt den Spieltag nicht. */
   const startbar = await page.evaluate((t) => {
     const D = window.__dart, S = D.state();

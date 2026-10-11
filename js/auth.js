@@ -22,6 +22,7 @@
   var beschaeftigt = false;
   var profilOffen = false;         // eigenes Profil geaendert, aber noch nicht hochgeladen
   var gesperrtFlag = false;        // Anmeldung noetig, bevor die App benutzbar ist
+  var einladung = null;            // { token, art, von, gueltig } aus ?einladung=... im Link
 
   var SICHERUNG = 'dart-turnier-vor-anmeldung';
 
@@ -305,10 +306,11 @@
    */
   function ansichtSchluessel() {
     var eigen = nutzer && D ? D.profile(nutzer.id) : null;
+    var einl = einladung ? '|e:' + einladung.token + ':' + (einladung.art || '') + ':' + (einladung.gueltig === undefined ? '?' : einladung.gueltig ? 1 : 0) : '';
     var kader = roster.map(function (r) {
       return r.id + ':' + (r.avatar ? r.avatar.length : 0) + ':' + (r.name || '') + ':' + (r.dbl || 0);
     }).join(',');
-    return ansicht + '|' + (nutzer ? nutzer.id : '-') + '|' + kader +
+    return ansicht + einl + '|' + (nutzer ? nutzer.id : '-') + '|' + kader +
       '|' + (eigen ? eigen.name : '') + '|' + (eigen ? eigen.dbl || 0 : 0) +
       '|' + (eigen && eigen.avatar ? eigen.avatar : '');
   }
@@ -326,8 +328,17 @@
         '<button class="' + (ansicht === 'register' ? 'active' : '') + '" data-action="konto-tab-register">Neu hier</button>' +
       '</div>' +
       (ansicht === 'register'
-        ? '<p class="hint">Du brauchst den Einladungscode aus der Gruppe.</p>' +
-          feld('konto-invite', 'Einladungscode', 'text') +
+        ? (einladung && einladung.gueltig
+          /* Per Link gekommen: der Code steckt im Token, nichts abzutippen. */
+          ? '<p class="hint konto-einladung">' + (einladung.unsicher
+              ? 'Du bist eingeladen – leg dir ein Konto an.'
+              : 'Einladung von <b>' + esc(einladung.von || 'der Mannschaft') + '</b> – ' +
+                (einladung.art === 'mitglied' ? 'als Vereinsmitglied' : 'als Gast (mitspielen und Statistik, keine Liga)') + '. Leg dir ein Konto an.') + '</p>' +
+            '<input id="konto-invite" type="hidden" value="' + esc(einladung.token) + '">'
+          : (einladung && einladung.gueltig === false
+              ? '<p class="hint fehler">Dieser Einladungs-Link ist abgelaufen oder schon benutzt. Lass dir einen neuen schicken – oder nimm den Einladungscode aus der Gruppe.</p>'
+              : '<p class="hint">Du brauchst den Einladungscode aus der Gruppe.</p>') +
+            feld('konto-invite', 'Einladungscode', 'text')) +
           feld('konto-name', 'Anzeigename', 'text', 'wie dich alle nennen') +
           feld('konto-email', 'E-Mail', 'email') +
           feld('konto-pass', 'Passwort', 'password', 'mindestens 6 Zeichen') +
@@ -592,20 +603,49 @@
 
   /* ================= Start ================= */
 
+  /* ?einladung=TOKEN im Link (QR-Code oder geteilter Link aus dem
+     Gast-Dialog): merken, aus der Adresse nehmen, nachsehen, was es ist. */
+  function einladungLesen() {
+    var m = /[?&]einladung=([A-Za-z0-9_.~%-]+)/.exec(location.search || '');
+    if (!m) return;
+    var token;
+    try { token = decodeURIComponent(m[1]); } catch (e) { token = ''; }
+    /* Kaputt kodiert oder kein Token: dann ist es keine Einladung. */
+    einladung = /^e_[A-Za-z0-9_-]{8,40}$/.test(token) ? { token: token, art: '', von: '', gueltig: undefined } : null;
+    try { history.replaceState(history.state, '', location.pathname + (location.hash || '')); } catch (e) { /* egal */ }
+  }
+
+  function einladungNachsehen() {
+    if (!einladung) return Promise.resolve();
+    return ruf('GET', '/api/einladungen/' + encodeURIComponent(einladung.token)).then(function (d) {
+      einladung.art = d.art; einladung.von = d.von; einladung.gueltig = !!d.gueltig;
+    }).catch(function (e) {
+      /* Nur ein klares Nein vom Server heisst "abgelaufen" - bei Funkloch
+         oder zu vielen Anfragen bleibt der Link eingetragen, der Server
+         prueft ihn beim Anlegen des Kontos ohnehin noch einmal. */
+      if (e && (e.status === 404 || e.status === 403 || e.status === 410)) einladung.gueltig = false;
+      else { einladung.gueltig = true; einladung.unsicher = true; }
+    });
+  }
+
   function start() {
     D = window.__dart;
     if (!D) return;
+    einladungLesen();
 
     ruf('GET', '/api/me').then(function (daten) {
       anmelden();
       merkeServer(daten.nutzer);
       if (daten.nutzer) {
         setzeSchranke(false);
+        einladung = null;   // schon angemeldet: der Link ist fuer neue Konten
         nachAnmeldung(daten.nutzer);
       } else {
         setzeSchranke(true);
-        ansicht = 'login';
+        /* Per Einladung gekommen: gleich das Registrieren zeigen. */
+        ansicht = einladung ? 'register' : 'login';
         window.__dart.render();
+        einladungNachsehen().then(function () { if (einladung) neuZeichnen(true); });
       }
     }).catch(function (e) {
       if (e && e.status) {
