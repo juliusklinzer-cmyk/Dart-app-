@@ -189,8 +189,11 @@ schnellste Finish und die höchste weggemachte Zahl.
 ## Liga-Spielplan
 
 Der Reiter **Liga** (Entwurf „Liga · Spielplan“, Oktober 2026) trägt denselben
-Kopf wie die Rangliste: Logo-Menü, Titel, die Reiter Spielplan · Training ·
-Tabelle · Statistik · Kasse · Regeln als Reiter; der Kopf ist seit Oktober 2026 der des Setups (Marke, Navigation als Text-Reiter), darunter die Liga-Zeile mit Saison und Reitern. Der Spielplan der Saison
+Kopf wie überall: der des Setups (Marke, Navigation als Text-Reiter), darunter
+die Liga-Zeile mit Saison und den Reitern Spielplan · Training · Tabelle ·
+Statistik · Kasse · Regeln. Die große Spieltag-Karte zeigt alles ohne Scrollen –
+„Mannschaft gegen Mannschaft“ ist bewusst klein gehalten, damit mindestens zwei
+Reihen Teilnehmer Platz haben (Julius, Oktober 2026). Der Spielplan der Saison
 steht fest im Client (`LIGA` in `js/app.js`). **Links groß der nächste Spieltag**
 (oder der angetippte): Datum, Spieltag, Heim/Auswärts, 20:00 Uhr, Lokal mit Pin,
 oben rechts Route in Maps und „in den Kalender“, darunter Heim gegen Gast mit Logo
@@ -301,9 +304,12 @@ Endergebnis als Summe der Legs und Punkte, Spielzeit, Highlights je Seite), jede
 Zelle lässt sich antippen und korrigieren, und **„Drucken"** gibt Seite 1
 plus das Nachmelde-/Protest-Leerformular als Seite 2 aus. Nach dem Abschluss
 bleibt der Bericht über den Spieltag im Liga-Reiter abrufbar. In der
-**Rangliste** gibt es den Reiter **„Liga"**: dieselben Classic-Kategorien
-(Average, First 9, Doppelquote, …), gerechnet nur über Ligaspiele, mit
-Spieltag-Log und Rekorden. Im Regeln-Reiter der Liga-Seite stehen dazu ein
+Liga-Seite gibt es den Reiter **„Statistik"** (Entwurf „Liga“, Oktober 2026):
+Team-Auswahl (Blink 180, Gesamte Liga, jeder Gegner), dann wie in der Rangliste
+die Bestwert-Karten und die Liste aller Spieler („nur Ligaspiele“) – dieselben
+Classic-Kategorien, gerechnet nur über Ligaspiele – und rechts die **Highlights
+der Saison** mit Pokal: 180er, High-Finishes ab 100 und Shortlegs bis 21 Darts
+als Kacheln zu zweit (Wert, Name, Spieltag und Einzel), dazu das Spieltag-Log. Im Regeln-Reiter der Liga-Seite stehen dazu ein
 FAQ für Neue und Udos Regelecke.
 
 Die **Turnier-Übersicht** (Entwurf „Turnier Redesign“, Oktober 2026) trägt
@@ -569,6 +575,15 @@ den Spielverlauf in der Rangliste wieder öffnen.
 
 ## Spielerprofile
 
+**Der Reiter „Spieler"** (Entwurf „Crew Redesign“, Oktober 2026) trägt den Kopf des
+Setups; darunter steht „N im Team · M Gäste“ mit den Filtern **Alle · Team ·
+Gäste** und „+ Spieler“. Links alle Spieler als ruhige Karten mit Ø, Siegen und
+180ern (Gäste, Gast-Konten, Test und Ausgeblendete tragen eine kleine Marke),
+am Tablet rechts die **Schnellansicht** des angetippten Spielers: Bilanz, die
+letzten Spiele als S/N, sechs Kennzahlen (Average, First 9, Höchstes Finish,
+180er, Doppelquote, Bestes Leg) sowie „Bearbeiten“ und „Ganzes Profil ›“. Am
+Handy (hochkant wie quer) gibt es nur die Liste, ein Tipp öffnet das Profil.
+
 Spieler sind dauerhaft: Name und Foto werden einmal angelegt und gelten für jedes
 weitere Turnier. Das Foto kommt aus der Fotomediathek oder direkt von der Kamera und
 wird auf 220 × 220 Pixel zugeschnitten, damit der Speicher nicht vollläuft; ohne Foto
@@ -647,16 +662,23 @@ Für Cricket kommt die **MPR** (Marks per Round – getroffene Marken je 3 Darts
 übliche Cricket-Maß) samt Siegen dazu, für Round the World die Bestleistung in Darts
 und die Siege.
 
-**Im Reiter „Rangliste"** (Entwurf „Rangliste Redesign“, Oktober 2026) steht
-alles in einer Kopfzeile: Das Logo oben links öffnet das Menü (Spiel, Liga, Rang,
-Spieler, Profil), daneben Titel und Spielart, rechts der Spielart-Umschalter –
-Classic, Cricket, RTW, Finisher sowie Kaiwen und Hunter („Coming soon“, bis die
-Spiele da sind); die Liga-Auswertung steht im Reiter „Statistik“ der Liga-Seite. Darunter drei Spalten: links alle Kategorien untereinander, in der
-Mitte die Rangliste (Platz 1 bis 3 in Gold, Silber und Bronze, der Beste leuchtet),
-rechts der Verlauf der letzten 10 Spiele und die Rekorde. „Alle Spiele ›“ öffnet den
-Spielverlauf anstelle der Spalten, „‹ Rangliste“ führt zurück. Am Tablet steht das
-Bild fest im Rahmen, Kategorien und Liste scrollen innen; am Handy quer entfallen
-Verlauf und Rekorde, hochkant steht alles untereinander. Die Werte sind nach
+**Im Reiter „Rang"** (Entwurf „Rangliste Redesign“, zweite Fassung, Oktober 2026)
+trägt die Seite den Kopf des Setups: Marke links, die Navigation als Text-Reiter
+rechts (das frühere Logo-Menü gibt es nicht mehr). Darunter die Spielart mit
+Spielzahl und die Spielart-Reiter – Classic, Cricket, RTW, Finisher sowie Kaiwen
+und Hunter („Coming soon“, bis die Spiele da sind); die Liga-Auswertung steht im
+Reiter „Statistik“ der Liga-Seite. Links die **Bestwert-Karten**: je Kennzahl der
+beste Wert und wer ihn hält; ein Tipp auf eine Karte zeigt darunter die Liste
+aller Spieler zu dieser Kennzahl (Platz 1 bis 3 in Gold, Silber und Bronze, der
+Beste leuchtet). Rechts **der Verlauf der letzten 10 Spiele zur gewählten
+Kennzahl** – Siege, 180er, 100+ Aufnahmen, Legs und Turniersiege laufen dabei
+auf („… gesamt“), Averages stehen je Spiel (die Legende nennt den Schnitt über
+die gezeigten Spiele), Bestmarken je Spiel, bei „weniger ist besser“ (Bestes Leg,
+RTW, Finisher) steht der kleine Wert oben – und die **Rekorde** mit Pokal.
+„Alle Spiele ›“ öffnet den Spielverlauf anstelle der Spalten, „‹ Rangliste“ führt
+zurück. Am Tablet steht das Bild fest im Rahmen, die Liste scrollt innen; am Handy
+wischen die Bestwert-Karten seitlich, quer entfallen Verlauf und Rekorde, hochkant
+steht alles untereinander. Die Werte sind nach
 Spielmodus getrennt – Classic, Cricket und Round the World haben je eigene
 Bestenlisten, eigene Rekordtafel und einen eigenen Spielverlauf:
 
@@ -777,8 +799,8 @@ anwählen geht also mit Enter, Enter, Enter). **Escape** geht eine Stufe zurück
 Menü zu, Dialog zu, Liga-Reiter zurück zum Spielplan, Profil zurück zur Liste,
 sonst ins Setup – im Setup passiert nichts mehr. **Backspace** tut dasselbe,
 außer in den Spielbildern (dort bleibt es das Löschen) und in Textfeldern (dort
-löscht es ein Zeichen; Escape verlässt dort erst das Feld). Auf Rangliste und
-Liga öffnet Enter auf dem Logo das Menü und markiert gleich den ersten Eintrag.
+löscht es ein Zeichen; Escape verlässt dort erst das Feld). Die Navigation
+steht auf jeder Seite als Text-Reiter im Kopf und ist mit den Pfeilen erreichbar.
 Auf dem **Ziffernblock** gelten dort **8/2/4/6** als Pfeile. Turnierplan,
 Ausbullen und die Dialoge nach Leg und Spiel behalten ihre eigene Pfeil-Wahl.
 

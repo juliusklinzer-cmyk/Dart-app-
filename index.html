@@ -32,25 +32,11 @@
   <button id="nav-konto" class="hidden" data-action="nav" data-screen="konto">Profil</button>
 </nav>
 
-<!-- Das Menue hinter dem Logo (Rangliste, Liga): Marke und die
-     Navigation untereinander - #nav wandert per JS hier hinein. -->
-<div id="logo-menu-overlay" class="boards-menu-overlay hidden">
-  <div class="boards-menu" id="logo-menu-panel">
-    <div class="marke">
-      <span class="blink-logo" role="img" aria-label="Blink 180"></span>
-      <div>
-        <div class="wort">Blink <span class="rot">180</span></div>
-        <div class="sub">Dart Turnier · est. 2026</div>
-      </div>
-    </div>
-  </div>
-</div>
-
 <!-- ============ SETUP ============ -->
 <section id="screen-setup" class="screen">
   <!-- Kopfzeile: Marke links, die Navigation als Text-Reiter rechts (die
-       Leiste #nav wandert im Setup per JS hier hinein - auf Rangliste und
-       Liga steckt sie im Logo-Menue). Entwurf "Setup Redesign", zweite
+       Leiste #nav wandert per JS in den Kopf der jeweiligen Seite - Setup,
+       Turnier, Rangliste, Liga, Spieler). Entwurf "Setup Redesign", zweite
        Fassung (Okt. 2026): aufgeraeumt, ohne Rahmen, ohne Leuchten. -->
   <div class="setup-kopf" id="setup-kopf">
     <div class="marke">
@@ -302,19 +288,23 @@
 
 <!-- ============ RANGLISTE ============ -->
 <section id="screen-boards" class="screen boards-host">
-  <!-- Entwurf "Rangliste Redesign" (Okt. 2026): eine Kopfzeile - das Logo
-       oeffnet das Menue (die Leiste #nav wandert per JS in den Ausklapp-
-       Kasten), daneben Titel und Spielart, rechts der Spielart-Umschalter.
-       Darunter drei Spalten: Kategorien, Rangliste, Verlauf und Rekorde. -->
-  <div class="boards-kopf">
-    <button class="boards-logo" data-action="logo-menu" aria-label="Menü öffnen">
-      <span class="blink-logo sm" role="img" aria-label="Blink 180"></span>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
-    </button>
-    <div class="titel-zeile">
-      <h1>Rangliste</h1>
-      <p class="sub" id="boards-sub"></p>
+  <!-- Entwurf "Rangliste Redesign" (2. Fassung, Okt. 2026): oben der
+       Setup-Kopf (Marke, Navigation als Text-Reiter - #nav wandert per JS
+       hierher), darunter die Spielart mit Spielzahl und die Spielart-Reiter.
+       Links die Bestwert-Karten (Wert und wer ihn haelt; antippen waehlt
+       die Kennzahl) und die Liste aller Spieler, rechts der Verlauf zur
+       gewaehlten Kennzahl und die Rekorde. -->
+  <div class="setup-kopf" id="boards-kopf">
+    <div class="marke">
+      <span class="blink-logo" role="img" aria-label="Blink 180"></span>
+      <div>
+        <div class="wort">Blink <span class="rot">180</span></div>
+        <div class="sub">Dart Turnier · est. 2026</div>
+      </div>
     </div>
+  </div>
+  <div class="reiter-zeile">
+    <span class="kt" id="boards-sub"></span>
     <div class="options kopf-reiter" id="board-mode">
       <button data-action="board-mode" data-value="501">Classic</button>
       <button data-action="board-mode" data-value="cricket">Cricket</button>
@@ -326,19 +316,20 @@
   </div>
 
   <div class="boards-koerper">
-    <!-- Links alle Kategorien untereinander (am Handy hochkant als Chips). -->
-    <div class="chips boards-kats" id="board-chips"></div>
-
-    <div class="card boards-liste">
-      <div class="karte-kopf"><h2 id="board-titel">Rangliste</h2><span class="hint" id="board-hint"></span><button class="btn ghost small nur-flach" data-action="board-log">Alle Spiele ›</button></div>
-      <div id="board-list" class="board-list"></div>
+    <div class="boards-links">
+      <!-- Bestwert-Karten: je Kennzahl der beste Wert und wer ihn haelt. -->
+      <div class="board-kacheln" id="board-kacheln"></div>
+      <div class="card boards-liste">
+        <div class="karte-kopf"><h2 id="board-titel">Rangliste</h2><span class="hint" id="board-hint"></span><button class="btn ghost small nur-flach" data-action="board-log">Alle Spiele ›</button></div>
+        <div id="board-list" class="board-list"></div>
+      </div>
     </div>
 
     <div class="boards-seite">
       <div class="card" id="board-chart"></div>
       <div class="card hidden" id="liga-highlights"></div>
       <div class="card" id="board-rekorde">
-        <div class="karte-kopf"><h2>Rekorde</h2><button class="btn ghost small" data-action="board-log" id="board-log-knopf">Alle Spiele ›</button></div>
+        <div class="karte-kopf"><h2 class="rekorde-titel"><span class="pokal" aria-hidden="true">🏆</span>Rekorde</h2><button class="btn ghost small" data-action="board-log" id="board-log-knopf">Alle Spiele ›</button></div>
         <div id="records" class="records"></div>
       </div>
     </div>
@@ -377,7 +368,7 @@
       </div>
     </div>
   </div>
-  <div class="liga-reiter-zeile">
+  <div class="reiter-zeile">
     <span class="kt" id="liga-sub"></span>
     <div class="options kopf-reiter" id="liga-tabs">
       <button data-action="liga-tab" data-tab="plan" class="active">Spielplan</button>
@@ -659,14 +650,34 @@
 
 <!-- ============ SPIELER ============ -->
 <section id="screen-players" class="screen">
-  <header class="app-header row">
-    <div class="kopf-mit-logo">
-      <span class="blink-logo sm" role="img" aria-label="Blink 180"></span>
-      <h1>Spieler</h1>
+  <!-- Entwurf "Crew Redesign" (Okt. 2026): Setup-Kopf (#nav wandert per JS
+       hierher), darunter "N im Team · M Gaeste" mit den Filtern Alle ·
+       Team · Gaeste und "+ Spieler". Links alle Spieler als Karten mit
+       Average, Siegen und 180ern, rechts die Schnellansicht des
+       angetippten Spielers; am Handy nur die Liste, Antippen oeffnet das
+       Profil. -->
+  <div class="setup-kopf" id="players-kopf">
+    <div class="marke">
+      <span class="blink-logo" role="img" aria-label="Blink 180"></span>
+      <div>
+        <div class="wort">Blink <span class="rot">180</span></div>
+        <div class="sub">Dart Turnier · est. 2026</div>
+      </div>
     </div>
-    <button class="btn ghost small" data-action="new-profile">+ Neu</button>
-  </header>
-  <div id="players-list"></div>
+  </div>
+  <div class="reiter-zeile">
+    <span class="kt" id="players-sub"></span>
+    <div class="options kopf-reiter" id="players-filter">
+      <button data-action="players-filter" data-value="alle" class="active">Alle</button>
+      <button data-action="players-filter" data-value="team">Team</button>
+      <button data-action="players-filter" data-value="gast">Gäste</button>
+      <button class="neu" data-action="new-profile">+ Spieler</button>
+    </div>
+  </div>
+  <div class="players-koerper">
+    <div id="players-list"></div>
+    <div class="card players-schnell" id="players-schnell"></div>
+  </div>
 </section>
 
 <!-- ============ SPIELER-DETAIL ============ -->

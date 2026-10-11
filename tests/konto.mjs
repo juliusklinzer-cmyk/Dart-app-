@@ -740,6 +740,7 @@ async function main() {
     /* Gaeste bearbeitet man unter Spieler -- dort steht die ganze Liste. */
     await julius.page.locator('#nav [data-screen="players"]').click();
     await julius.page.locator('.player-card[data-id="' + gastId + '"]').click();
+    if (await julius.page.locator('#players-schnell').isVisible()) await julius.page.locator('#players-schnell [data-action="open-profile"]').click();
     await julius.page.locator('[data-action="edit-current-profile"]').click();
     check('ein Gast ohne Spiel lässt sich richtig löschen',
       (await julius.page.locator('[data-action="delete-profile"]').count()) === 1);

@@ -60,18 +60,20 @@ const text = (sel) => $(sel).innerText();
 /* Knöpfe und Überschriften stehen per CSS in Versalien – innerText gibt sie
    auch so zurück. Für Textprüfungen deshalb kleinschreiben. */
 const textKlein = async (sel) => (await $(sel).innerText()).toLowerCase();
-/* Navigation: in der Rangliste steckt sie hinter dem Logo - erst das
-   Menue oeffnen, dann den Reiter antippen. */
 /* Die Liga-Auswertung wohnt im Statistik-Reiter der Liga-Seite. */
 async function ligaStatistik() {
   await navTo('liga');
   await page.locator('#liga-tabs button[data-tab="statistik"]').click();
 }
+/* Navigation: die Reiter stehen in jedem Kopf (Setup, Turnier, Rangliste, Liga, Spieler). */
 async function navTo(screen) {
-  if ((await page.locator('.screen.active [data-action="logo-menu"]').count()) && !(await visible('#logo-menu-overlay'))) {
-    await page.locator('.screen.active [data-action="logo-menu"]').click();
-  }
   await page.locator('#nav [data-screen="' + screen + '"]').click();
+}
+/* Spielerliste: am Handy oeffnet der Tipp auf die Karte das Profil, am
+   Tablet erst die Schnellansicht - dort fuehrt "Ganzes Profil" weiter. */
+async function profilOeffnen(sel) {
+  await page.locator(sel).first().click();
+  if (await visible('#players-schnell')) await page.locator('#players-schnell [data-action="open-profile"]').click();
 }
 const tapText = async (t, scope = 'body') => { await page.locator(`${scope} >> text="${t}"`).first().click(); };
 
@@ -209,34 +211,31 @@ group('Tastatur ueberall: Pfeile, Enter, Zurueck');
   check('Enter auf dem Reiter wechselt zu Spieler', await visible('#screen-players'));
   await page.keyboard.press('ArrowDown');
   check('Pfeile wandern auch in der Spielerliste', await page.evaluate(() => document.querySelector('#screen-players').contains(document.activeElement)));
-  await page.focus('#players-list [data-action="open-profile"]');
+  await page.focus('#players-list .player-card');
   await page.keyboard.press('Enter');
-  check('Enter oeffnet das Profil', await visible('#screen-profile'));
+  check('Enter waehlt den Spieler fuer die Schnellansicht, die Markierung bleibt', (await visible('#players-schnell')) && (await fokus()).startsWith('spieler-wahl:'), await fokus());
+  await page.focus('#players-schnell [data-action="open-profile"]');
+  await page.keyboard.press('Enter');
+  check('Enter auf "Ganzes Profil" oeffnet das Profil', await visible('#screen-profile'));
   await page.keyboard.press('Escape');
   check('Escape: vom Profil zurueck zur Spielerliste', await visible('#screen-players'));
   await page.keyboard.press('Backspace');
   check('Backspace: von der Spielerliste ins Setup', await visible('#screen-setup'));
   await page.keyboard.press('Escape');
   check('im Setup passiert bei Zurueck nichts mehr', await visible('#screen-setup'));
-  /* Rangliste: das Menue hinter dem Logo per Tastatur. */
+  /* Rangliste: Bestwert-Karten und Navigation per Tastatur. */
   await navTo('boards');
-  check('nach dem Wechsel ist das Logo-Menue zu', (await visible('#screen-boards')) && !(await visible('#logo-menu-overlay')));
-  await page.focus('#screen-boards [data-action="logo-menu"]');
+  check('die Rangliste traegt die Navigation im Kopf', (await visible('#screen-boards')) && (await page.locator('#boards-kopf #nav').count()) === 1);
+  await page.focus('#board-kacheln .bk-kachel[data-key="won"]');
+  await page.keyboard.press('ArrowRight');
+  const kachelFokus = async () => page.evaluate(() => { const a = document.activeElement; return a ? (a.getAttribute('data-action') || '') + ':' + (a.getAttribute('data-key') || '') : '-'; });
+  check('rechts: die naechste Bestwert-Karte', (await kachelFokus()) === 'board:avg', await kachelFokus());
   await page.keyboard.press('Enter');
-  check('Enter auf dem Logo oeffnet das Menue und markiert den ersten Eintrag',
-    (await visible('#logo-menu-overlay')) && (await fokus()) === 'nav:setup', await fokus());
-  await page.keyboard.press('ArrowDown');
-  check('runter: der naechste Eintrag', (await fokus()) === 'nav:liga', await fokus());
-  await page.keyboard.press('ArrowUp');
-  await page.keyboard.press('ArrowUp');
-  check('ueber dem ersten Eintrag bleibt die Markierung stehen', (await fokus()) === 'nav:setup', await fokus());
-  await page.keyboard.press('Escape');
-  check('Escape schliesst das Menue', !(await visible('#logo-menu-overlay')) && await visible('#screen-boards'));
-  await page.focus('#screen-boards [data-action="logo-menu"]');
+  check('Enter waehlt die Kennzahl - die Markierung bleibt auf der Karte',
+    (await textKlein('#board-titel')).includes('average') && (await kachelFokus()) === 'board:avg', await kachelFokus());
+  await page.focus('#boards-kopf #nav [data-screen="liga"]');
   await page.keyboard.press('Enter');
-  await page.keyboard.press('ArrowDown');
-  await page.keyboard.press('Enter');
-  check('Enter im Menue wechselt zur Liga', await visible('#screen-liga') && !(await visible('#logo-menu-overlay')));
+  check('Enter auf dem Reiter wechselt zur Liga', await visible('#screen-liga'));
   await page.focus('#liga-tabs [data-tab="training"]');
   await page.keyboard.press('Enter');
   check('Enter auf dem Reiter oeffnet Training', await page.evaluate(() => window.__dart.ui().ligaTab === 'training'));
@@ -450,11 +449,22 @@ check('Navigation durchgehend deutsch: Spiel · Liga · Rang · Spieler', (await
   .map((t) => t.trim().toLowerCase()).join('|') === 'spiel|liga|rang|spieler');
 await navTo('boards');
 check('Rangliste sichtbar', await visible('#screen-boards'));
-check('die Navigation steckt hinter dem Logo - zu, bis man tippt', (await page.locator('#logo-menu-panel #nav').count()) === 1 && !(await visible('#logo-menu-overlay')));
-await page.locator('.screen.active [data-action="logo-menu"]').click();
-check('ein Tipp aufs Logo oeffnet das Menue', await visible('#logo-menu-overlay'));
-await page.mouse.click(page.viewportSize().width - 8, page.viewportSize().height - 8);
-check('ein Tipp daneben schliesst es wieder', !(await visible('#logo-menu-overlay')));
+check('der Kopf ist der des Setups: Marke und Navigation als Text-Reiter, kein Logo-Menue mehr',
+  (await page.locator('#boards-kopf #nav').count()) === 1 && (await page.locator('#logo-menu-overlay').count()) === 0);
+check('die Spielart-Zeile nennt Classic mit Spielzahl', /classic .* spiele/i.test(await text('#boards-sub')), await text('#boards-sub'));
+check('je Kennzahl eine Bestwert-Karte mit Wert und Namen', await page.evaluate(() => {
+  const k = [...document.querySelectorAll('#board-kacheln .bk-kachel')];
+  return k.length === 12 && k.every((x) => x.querySelector('.bk-t') && x.querySelector('.bk-v') && x.querySelector('.bk-n')) &&
+    k.filter((x) => x.classList.contains('active')).length === 1;
+}));
+check('die Siege-Karte nennt den Besten mit seinen Siegen', await page.evaluate(() => {
+  const k = document.querySelector('#board-kacheln .bk-kachel[data-key="won"]');
+  const erste = document.querySelector('#board-list .board-row');
+  return !!k && !!erste && erste.textContent.includes(k.querySelector('.bk-n').textContent) && erste.querySelector('.val').textContent === k.querySelector('.bk-v').textContent;
+}));
+check('die Liste heisst nach der Kennzahl: "… · alle Spieler"', (await textKlein('#board-titel')).endsWith('· alle spieler'), await text('#board-titel'));
+check('der Verlauf folgt der Kennzahl (Siege laufen auf)', (await textKlein('#board-chart h2')).startsWith('siege gesamt'), await text('#board-chart h2'));
+check('die Rekorde tragen den Pokal', (await page.locator('#board-rekorde .rekorde-titel .pokal').count()) === 1);
 check('Platz 1 bis 3 tragen Medaillenfarbe', (await page.locator('#board-list .board-row .pos.m1').count()) === 1);
 check('der Spielverlauf ist zu, bis man ihn oeffnet', !(await visible('#match-log')));
 await page.locator('#board-log-knopf').click();
@@ -466,6 +476,13 @@ const avgBoard = await board('avg');
 check('Rangliste absteigend sortiert', avgBoard.every((s, i) => i === 0 || avgBoard[i - 1].avg >= s.avg));
 await page.locator('[data-action="board"][data-key="s180"]').click();
 check('Kategorie 180er wechselbar', (await text('#board-hint')).includes('Triple 20'));
+check('der Verlauf wechselt mit: 180er gesamt', (await textKlein('#board-chart h2')).startsWith('180er gesamt'), await text('#board-chart h2'));
+await page.locator('[data-action="board"][data-key="highCO"]').click();
+check('Hoechstes Finish: der Verlauf zeigt die Finishes je Spiel, die Legende das hoechste', await page.evaluate(() => {
+  const t = document.querySelector('#board-chart h2').textContent;
+  const l = document.querySelector('#board-chart .chart-legend');
+  return /^höchstes finish –/i.test(t) && (!l || !/Ø/.test(l.textContent));
+}));
 await page.locator('[data-action="board"][data-key="bestLeg"]').click();
 const legBoard = await board('bestLeg');
 check('Bestes Leg aufsteigend (wenigste Darts zuerst)', legBoard.every((s, i) => i === 0 || legBoard[i - 1].bestLeg <= s.bestLeg));
@@ -475,6 +492,15 @@ check('Alle Spiele dokumentiert', (await page.locator('#match-log .log-row').cou
 group('Spielerprofile');
 await navTo('players');
 check('Spielerliste sichtbar', (await page.locator('.player-card').count()) === 4);
+check('der Kopf ist der des Setups, darunter Filter Alle · Team · Gaeste und "+ Spieler"',
+  (await page.locator('#players-kopf #nav').count()) === 1 &&
+  (await page.locator('#players-filter [data-action="players-filter"]').allInnerTexts()).map((t) => t.trim().toLowerCase()).join('|') === 'alle|team|gäste' &&
+  (await page.locator('#players-filter [data-action="new-profile"]').count()) === 1);
+check('die Zeile zaehlt Team und Gaeste', /4 im team · 0 gäste/i.test(await text('#players-sub')), await text('#players-sub'));
+check('jede Karte nennt Average, Siege und 180er', await page.evaluate(() =>
+  [...document.querySelectorAll('.player-card')].every((c) => /Ø.*Siege.*180er/s.test(c.textContent))));
+check('am Handy keine Schnellansicht - der Tipp oeffnet das Profil', !(await visible('#players-schnell')) &&
+  (await page.locator('.player-card').first().getAttribute('data-action')) === 'open-profile');
 await page.locator('.player-card').first().click();
 check('Profil-Detail offen', await visible('#screen-profile'));
 const detail = await text('#profile-detail');
@@ -730,7 +756,7 @@ check('Classic-Kategorien sichtbar', (await page.locator('[data-action="board"][
 /* In jedem Modus stehen Siege vorn, dann der Average -- und was vorn steht,
    ist auch das, was beim Moduswechsel als Erstes gezeigt wird. */
 const kategorien = async () => page.evaluate(() =>
-  [...document.querySelectorAll('#board-chips .chip')].map((c) => c.textContent.trim()));
+  [...document.querySelectorAll('#board-kacheln .bk-kachel .bk-t')].map((c) => c.textContent.trim()));
 check('Siege stehen an erster Stelle', (await kategorien())[0] === 'Siege', (await kategorien()).join(' | '));
 check('danach der Average', (await kategorien())[1] === 'Average');
 check('und Siege ist voreingestellt',
@@ -743,7 +769,8 @@ check('nur der Erste leuchtet - Name und Zahl, keine Klinge mehr', await page.ev
     getComputedStyle(erste.querySelector('.nm')).textShadow !== 'none';
 }));
 check('Cricket-Kategorien nicht in Classic', (await page.locator('[data-action="board"][data-key="mpr"]').count()) === 0);
-check('Verlaufsdiagramm für Classic', (await page.locator('#board-chart .chart').count()) === 1);
+await page.locator('[data-action="board"][data-key="avg"]').click();
+check('Verlaufsdiagramm für Classic (Average)', (await page.locator('#board-chart .chart').count()) === 1 && (await textKlein('#board-chart h2')).startsWith('average –'), await text('#board-chart h2'));
 const lines = await page.locator('#board-chart .chart polyline').count();
 check('eine Linie je Spieler', lines >= 2, `${lines} Linien`);
 const legend = await page.locator('#board-chart .chart-legend .cl').count();
@@ -765,7 +792,13 @@ check('Cricket-Verlauf getrennt', (await text('#match-log')).includes('Cricket')
 await page.locator('[data-action="board-mode"][data-value="rtw"]').click();
 await page.locator('[data-action="board"][data-key="rtwBest"]').click();
 check('RTW-Rangliste gefüllt', (await page.locator('.board-row').count()) > 0);
-check('kein Diagramm für Round the World', !(await visible('#board-chart')));
+check('auch Round the World hat seinen Verlauf: Bestes Ergebnis je Training', (await visible('#board-chart')) && (await textKlein('#board-chart h2')).startsWith('bestes ergebnis'), await text('#board-chart h2'));
+check('bei "weniger ist besser" steht der kleine Wert oben', await page.evaluate(() => {
+  const svg = document.querySelector('#board-chart .chart');
+  if (!svg) return true;                              // noch zu wenige Trainings fuer eine Linie
+  const t = [...svg.querySelectorAll('text')].filter((e) => e.getAttribute('text-anchor') === 'end').map((e) => ({ y: +e.getAttribute('y'), v: parseFloat(e.textContent) }));
+  return t.length >= 2 && t.every((x, i) => i === 0 || (t[i - 1].y < x.y && t[i - 1].v <= x.v));
+}));
 check('RTW-Verlauf getrennt', (await text('#match-log')).includes('Round the World'));
 
 await page.locator('[data-action="board-mode"][data-value="501"]').click();
@@ -1429,7 +1462,7 @@ check('schnellstes Finish ist gesetzt', finCar[fA].finBest > 0);
 await navTo('boards');
 await page.locator('[data-action="board-mode"][data-value="finisher"]').click();
 check('Finisher-Rangliste da', (await text('#board-list')).length > 0);
-check('kein Diagramm im Finisher', !(await visible('#board-chart')));
+check('auch der Finisher hat seinen Verlauf', (await visible('#board-chart')) && (await textKlein('#board-chart h2')).includes('letzte 10 spiele'), await text('#board-chart h2'));
 
 /* ---------- Finisher: die drei Kacheln ---------- */
 
@@ -2015,7 +2048,7 @@ check('Solo bringt kein gewonnenes Leg', soloNachher.legsWon === soloVorher.legs
 check('Solo taucht nicht in der Form auf', soloNachher.form === soloVorher.form);
 check('die Darts zaehlen aber fuer den Average', soloNachher.darts > soloVorher.darts);
 await page.evaluate((id) => { window.__dart.setScreen('players'); }, soloId);
-await page.locator(`#players-list [data-id="${soloId}"]`).first().click();
+await profilOeffnen(`#players-list [data-id="${soloId}"]`);
 const soloProfil = await text('#profile-detail');
 check('das Profil listet das Solo-Spiel ohne Sieg und ohne Gegner',
   soloProfil.includes('Solo') && !soloProfil.includes('gegen undefined'), soloProfil.slice(0, 200));
@@ -2554,7 +2587,7 @@ const dblId = await page.evaluate(() => window.__dart.activeProfiles()[0].id);
 /* Ohne Server gibt es kein Konto -- den Profil-Dialog erreicht man hier
    ueber die Spielerliste. */
 await page.evaluate(() => window.__dart.setScreen('players'));
-await page.locator('.player-card[data-id="' + dblId + '"]').click();
+await profilOeffnen('.player-card[data-id="' + dblId + '"]');
 await page.locator('[data-action="edit-current-profile"]').click();
 check('das Profil bietet ein Lieblingsdoppel an',
   (await page.locator('[data-role="profile-double"]').count()) === 1);
@@ -2792,7 +2825,7 @@ await page.locator('#liga-tabs button[data-tab="plan"]').click();
 
 group('Buergerlicher Name im Profil');
 await navTo('players');
-await page.locator('#players-list .player-card:has-text("Lenas")').click();
+await profilOeffnen('#players-list .player-card:has-text("Lenas")');
 await page.locator('[data-action="edit-current-profile"]').click();
 check('das Profil hat je ein Feld fuer Vor- und Nachnamen',
   (await page.locator('[data-role="profile-vor"]').count()) === 1 &&
@@ -3131,8 +3164,8 @@ group('Liga-Rangliste: Classic-Werte nur aus Ligaspielen');
 await ligaStatistik();
 check('der Liga-Reiter steht in der Rangliste', (await text('#boards-sub')).includes('Spieltag'));
 check('mit den Classic-Kategorien, aber ohne Turniersiege', await page.evaluate(() => {
-  const t = document.getElementById('board-chips').innerText;
-  return t.includes('Siege') && t.includes('Average') && !t.includes('Turniersiege');
+  const t = document.getElementById('board-kacheln').innerText.toLowerCase();
+  return t.includes('siege') && t.includes('average') && !t.includes('turniersiege');
 }));
 check('Lenas fuehrt mit ihrem Liga-Sieg',
   (await page.locator('#board-list .board-row').first().innerText()).includes('Lenas'));
@@ -3142,6 +3175,9 @@ check('das Ligaspiel steht im Spieltag-Log', await page.evaluate(() => {
   return t.includes('2:0') && t.includes('TSV Dachau');
 }));
 check('die Rekorde kommen aus dem Ligaspiel', (await text('#records')).includes('141'));
+check('die Liste sagt "nur Ligaspiele", rechts die Highlights der Saison mit Pokal und Kacheln',
+  (await text('#board-hint')) === 'nur Ligaspiele' && (await page.locator('#liga-highlights .rekorde-titel .pokal').count()) === 1 &&
+  (await page.locator('#liga-highlights .hl-kachel').count()) > 0);
 
 check('Team-Auswahl: unsere Mannschaft, Gesamte Liga und der Gegner', await page.evaluate(() => {
   const t = [...document.querySelectorAll('.liga-team-wahl [data-action="liga-team"]')].map((b) => b.textContent);
@@ -3377,7 +3413,7 @@ group('Wer gerade spielt, laesst sich nicht loeschen');
 group('Gast direkt loeschen');
 await page.evaluate(() => window.__dart.setScreen('players'));
 check('der Dachauer Gast steht in der Spielerliste', (await text('#players-list')).includes('Dachau 1'));
-await page.locator('#players-list .player-card:has-text("Dachau 1")').click();
+await profilOeffnen('#players-list .player-card:has-text("Dachau 1")');
 await page.locator('[data-action="edit-current-profile"]').click();
 check('der Dialog bietet direktes Loeschen an',
   (await page.locator('[data-action="delete-guest"]').count()) === 1);
@@ -3663,7 +3699,42 @@ await page.locator('[data-action="start-game"]').click();
 await bullOffGo();
 check('das Schnelle Spiel laeuft', await visible('#screen-game'));
 await page.evaluate(() => window.__dart.setScreen('players'));
-await page.locator('#players-list .player-card').first().click();
+group('Spieler am Tablet: Schnellansicht und Filter');
+/* Hier laeuft die Suite im Handy-Format - fuer die Schnellansicht kurz aufs Tablet. */
+const vpTablet = page.viewportSize();
+await page.setViewportSize({ width: 1133, height: 744 });
+await page.waitForFunction(() => matchMedia('(min-width: 700px) and (min-height: 501px)').matches);
+await page.evaluate(() => window.__dart.setScreen('players'));
+check('am Tablet steht rechts die Schnellansicht des ersten Spielers', await page.evaluate(() => {
+  const s = document.getElementById('players-schnell'), erste = document.querySelector('#players-list .player-card');
+  return !!s && !s.classList.contains('hidden') && erste.classList.contains('active') &&
+    s.querySelector('.ps-name').textContent === erste.querySelector('.pc-nm').textContent &&
+    s.querySelectorAll('.ps-kachel').length === 6 && s.querySelector('.form-row') !== null;
+}));
+await page.locator('#players-list .player-card').nth(1).click();
+check('ein Tipp auf eine andere Karte wechselt die Schnellansicht', await page.evaluate(() => {
+  const s = document.getElementById('players-schnell'), zweite = document.querySelectorAll('#players-list .player-card')[1];
+  return zweite.classList.contains('active') && s.querySelector('.ps-name').textContent === zweite.querySelector('.pc-nm').textContent;
+}));
+await page.locator('#players-filter [data-value="gast"]').click();
+check('Filter Gaeste: nur Gaeste und Gast-Konten', await page.evaluate(() => {
+  const S = window.__dart.state();
+  const ids = [...document.querySelectorAll('#players-list .player-card')].map((c) => c.getAttribute('data-id'));
+  /* Zu diesem Zeitpunkt kann die Liste auch leer sein - dann steht 'Niemand in dieser Auswahl'. */
+  return ids.every((id) => { const p = S.profiles.find((x) => x.id === id); return p && (p.gast || p.gastKonto); }) && (ids.length > 0 || /Niemand/.test(document.getElementById('players-list').textContent));
+}));
+await page.locator('#players-filter [data-value="team"]').click();
+check('Filter Team: keine Gaeste', await page.evaluate(() => {
+  const S = window.__dart.state();
+  const ids = [...document.querySelectorAll('#players-list .player-card')].map((c) => c.getAttribute('data-id'));
+  return ids.length > 0 && ids.every((id) => { const p = S.profiles.find((x) => x.id === id); return p && !p.gast && !p.gastKonto; });
+}));
+await page.locator('#players-filter [data-value="alle"]').click();
+await page.setViewportSize(vpTablet);
+await page.waitForFunction(() => !matchMedia('(min-width: 700px) and (min-height: 501px)').matches);
+await page.evaluate(() => window.__dart.setScreen('players'));
+check('zurueck am Handy: der Tipp auf die Karte oeffnet wieder das Profil', (await page.locator('#players-list .player-card').first().getAttribute('data-action')) === 'open-profile');
+await profilOeffnen('#players-list .player-card');
 check('das Profil ist offen', await visible('#screen-profile'));
 await navTo('setup');
 check('der Spiel-Reiter fuehrt zurueck aufs Board', await visible('#screen-game'));
@@ -4167,7 +4238,7 @@ group('Diagramm: jede Linie eine eigene Farbe, auch wenn alle Profile denselben 
 }
 
 group('Diagramm-Legende: Durchschnitt der gezeigten Spiele');
-await page.evaluate(() => { window.__dart.ui().boardMode = '501'; window.__dart.setScreen('boards'); });
+await page.evaluate(() => { window.__dart.ui().boardMode = '501'; window.__dart.ui().board = 'avg'; window.__dart.setScreen('boards'); });
 check('unter dem Diagramm steht ein Ø ohne Spielzahl', await page.evaluate(() => {
   const l = document.querySelector('#board-chart .chart-legend');
   return !!l && /Ø\s*\d/.test(l.textContent) && !/Spiel/.test(l.textContent);

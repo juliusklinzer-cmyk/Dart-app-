@@ -3244,19 +3244,19 @@
     var kontoBtn = $('nav-konto');
     if (kontoBtn) kontoBtn.classList.toggle('hidden', !window.DartKonto);
     var navFor = gesperrt() ? null : NAV_SCREENS[screen];
-    /* Im Setup steht die Navigation in der Kopfzeile neben der Marke,
-       ueberall sonst wie gehabt ueber dem Inhalt. */
+    /* In Setup, Turnier, Rangliste und Liga steht die Navigation als
+       Text-Reiter in der Kopfzeile neben der Marke, ueberall sonst wie
+       gehabt ueber dem Inhalt. */
     var navEl = $('nav');
     var kopf = screen === 'setup' ? $('setup-kopf') : screen === 'tournament' ? $('turnier-kopf')
-      : screen === 'liga' ? $('liga-kopf') : screen === 'boards' ? $('logo-menu-panel') : null;
+      : screen === 'liga' ? $('liga-kopf') : screen === 'boards' ? $('boards-kopf') : screen === 'players' ? $('players-kopf') : null;
     if (kopf && navEl.parentElement !== kopf) kopf.appendChild(navEl);
     else if (!kopf && navEl.parentElement !== document.body) document.body.insertBefore(navEl, $('screen-setup'));
-    /* Das Logo-Menue gibt es nur auf Rangliste und Liga, das •••-Menue nur in
-       den Spielbildern - ueberall sonst wird ein haengengebliebenes Menue
-       (Zurueck-Taste aus dem offenen Menue) zugeklappt. */
-    var mitMenue = screen === 'boards' || screen === 'game' || screen === 'cricket' || screen === 'rtw' || screen === 'finisher';
+    /* Das •••-Menue gibt es nur in den Spielbildern - ueberall sonst wird
+       ein haengengebliebenes Menue (Zurueck-Taste aus dem offenen Menue)
+       zugeklappt. */
+    var mitMenue = screen === 'game' || screen === 'cricket' || screen === 'rtw' || screen === 'finisher';
     if (!mitMenue) UI.menu = false;
-    $('logo-menu-overlay').classList.toggle('hidden', !(UI.menu && screen === 'boards'));
     /* Die Liga-Auswertung wohnt im Statistik-Reiter der Liga; ueberall
        sonst steht der Ranglisten-Koerper in seinem eigenen Screen. */
     var boardsHost = screen === 'liga' && (UI.ligaTab || 'plan') === 'statistik' ? $('liga-statistik') : $('screen-boards');
@@ -3321,7 +3321,7 @@
     /* Das Startbild steht am Tablet und quergedrehten Handy fest im Rahmen,
        innen scrollen nur Spielerliste und Einstellungen (body.fix-setup). */
     document.body.classList.toggle('fix-setup', S.screen === 'setup' || S.screen === 'tournament' || S.screen === 'bulloff' || S.screen === 'boards' ||
-      S.screen === 'liga');
+      S.screen === 'liga' || S.screen === 'players');
     if (S.screen === 'setup') { gaesteAufraeumen(); renderSetup(); }
     /* Der Hintergrundtakt laeuft nur da, wo man ihn auch sieht: im
        Turnierbildschirm. Sonst fragt die App den ganzen Abend nach Daten,
@@ -3950,40 +3950,73 @@
   /* ================= Verlaufsdiagramm ================= */
   var CHART_GAMES = 10;
 
-  /* Je Spieler eine Reihe mit einem Wert pro Spiel, älteste zuerst. */
-  function chartSeries(mode) {
-    var per = {};
-    /* Je Spiel der Wert fuer die Linie, dazu Zaehler und Nenner (Punkte
-       bzw. Marken und Darts), damit die Legende den echten Durchschnitt
-       ueber die gezeigten Spiele rechnen kann -- nicht den Mittelwert der
-       Mittelwerte und nicht bloss das letzte Spiel. */
-    function push(id, value, z, n) {
-      if (!per[id]) per[id] = [];
-      per[id].push({ v: value, z: z, n: n });
-    }
+  /* Wie eine Kennzahl verlaeuft: Summen (Siege, 180er, ...) laufen ueber
+     die Spiele auf, Schnitte (Average, MPR, ...) stehen je Spiel - die
+     Legende rechnet sie ueber die gezeigten Spiele -, die Siegquote laeuft
+     mit, Bestmarken (Hoechstes Finish, Bestes Leg, ...) stehen je Spiel. */
+  var VERLAUF_SUMME = { won: 1, s180: 1, tons: 1, legsWon: 1, tourWins: 1, cricketWins: 1, rtwWins: 1, finWins: 1, finRounds: 1 };
+  var VERLAUF_SCHNITT = { avg: ['points', 'darts', 3], first9: ['first9Points', 'first9Darts', 3], doubleQuote: ['doubleHits', 'doubleAttempts', 100], mpr: ['cricketMarks', 'cricketDarts', 3], finAvgDarts: ['finDarts', 'finRounds', 1] };
+  var VERLAUF_LAUFEND = { winPct: ['won', 'matches', 100] };
 
+  /* Je Spieler die Statistik jedes einzelnen Spiels, aelteste zuerst. */
+  function spielStatistiken(mode, key) {
+    var per = {};
+    function push(id, st) { if (!per[id]) per[id] = []; per[id].push(st); }
     if (mode === '501' || mode === 'liga') {
+      if (key === 'tourWins') {
+        /* Turniersiege zaehlen je Turnier, nicht je Spiel. */
+        wertbareHistorie().filter(function (h) { return (h.kind || '501') === '501' && !(h.liga && h.liga.uebung) && h.matches; })
+          .slice().sort(function (a, b) { return (a.at || 0) - (b.at || 0); })
+          .forEach(function (h) {
+            var dabei = {};
+            h.matches.forEach(function (m) { if (m.done) { dabei[m.p[0]] = 1; dabei[m.p[1]] = 1; } });
+            Object.keys(dabei).forEach(function (id) { push(id, { tourWins: h.winner === id ? 1 : 0 }); });
+          });
+        return per;
+      }
       var quelle = mode === 'liga' ? alleLigaMatches() : allMatches();
       quelle.slice().reverse().forEach(function (e) {
-        e.m.p.forEach(function (id) {
-          var darts = 0, points = 0;
-          e.m.legs.forEach(function (leg) {
-            leg.visits.forEach(function (v) { if (v.p === id) { darts += v.d; if (!v.b) points += v.s; } });
-          });
-          if (darts) push(id, (points / darts) * 3, points, darts);
-        });
+        if (e.m.kampflos) return;
+        /* Allein am Board gibt es weder Sieg noch Leg-Bilanz - das Spiel
+           bekommt in diesen Verlaeufen keinen Punkt. */
+        if (e.m.p.length < 2 && (key === 'won' || key === 'legsWon' || key === 'winPct')) return;
+        var map = collectStats([{ matches: [e.m], start: e.start }], e.m.p);
+        e.m.p.forEach(function (id) { push(id, finalize(map[id])); });
       });
-    } else if (mode === 'cricket') {
-      var games = wertbareHistorie().filter(function (h) { return h.kind === 'cricket'; }).slice().reverse();
-      if (S.game && S.game.kind === 'cricket' && S.game.done && !testSpiel(S.game)) games.push(S.game);
-      games.forEach(function (h) {
-        var cs = cricketState({ players: h.players, throws: h.throws, scoring: h.scoring });
-        h.players.forEach(function (id) {
-          if (cs.darts[id]) push(id, (cs.allMarks[id] / cs.darts[id]) * 3, cs.allMarks[id], cs.darts[id]);
-        });
-      });
+      return per;
     }
+    var games = wertbareHistorie().filter(function (h) { return h.kind === mode; }).slice().reverse();
+    if (S.game && S.game.kind === mode && S.game.done && !testSpiel(S.game)) games.push(S.game);
+    games.forEach(function (h) {
+      var sieg = function (id) { return h.players.length > 1 && h.winner === id ? 1 : 0; };   // allein gibt es keinen Sieg
+      if (mode === 'cricket') {
+        var cs = cricketState({ players: h.players, throws: h.throws, scoring: h.scoring });
+        h.players.forEach(function (id) { push(id, { cricketMarks: cs.allMarks[id], cricketDarts: cs.darts[id], cricketWins: sieg(id) }); });
+      } else if (mode === 'rtw') {
+        var rs = rtwState({ players: h.players, throws: h.throws, boost: h.boost !== false });
+        h.players.forEach(function (id) { var fin = rs.finished[id]; push(id, { rtwBest: fin ? fin.darts : null, rtwWins: sieg(id) }); });
+      } else if (mode === 'finisher') {
+        var st = {};
+        h.players.forEach(function (id) { st[id] = { finWins: sieg(id), finRounds: 0, finDarts: 0, finBest: null, finHigh: 0 }; });
+        (h.rounds || []).forEach(function (rd) {
+          var w = rd.sieger && st[rd.sieger];
+          if (!w || !rd.darts) return;
+          w.finRounds++; w.finDarts += rd.darts;
+          if (w.finBest === null || rd.darts < w.finBest) w.finBest = rd.darts;
+          if (rd.zahl > w.finHigh) w.finHigh = rd.zahl;
+        });
+        h.players.forEach(function (id) { push(id, st[id]); });
+      }
+    });
+    return per;
+  }
 
+  /* Je Spieler eine Reihe mit einem Wert pro Spiel zur Kennzahl, älteste
+     zuerst; dazu der Wert fuer die Legende ueber die gezeigten Spiele. */
+  function verlaufReihen(mode, def) {
+    var key = def.key;
+    var per = spielStatistiken(mode, key);
+    var summe = VERLAUF_SUMME[key], schnitt = VERLAUF_SCHNITT[key], laufend = VERLAUF_LAUFEND[key];
     /* Dieselben Leute wie in der Rangliste: keine Abend-Gaeste, Bots oder
        Testkonten; in der Liga nur unsere Spieler (keine Gegner, keine
        Gast-Konten). */
@@ -3991,14 +4024,29 @@
       var p = profile(id);
       return p && !p.hidden && !p.bot && !p.test && (!p.gast || (p.dauer && mode !== 'liga')) && !(mode === 'liga' && p.gastKonto);
     }).map(function (id) {
-      var letzte = per[id].slice(-CHART_GAMES);
-      var z = sum(letzte, function (x) { return x.z; }), n = sum(letzte, function (x) { return x.n; });
-      return {
-        id: id, name: pname(id), color: playerColor(id),
-        points: letzte.map(function (x) { return x.v; }),
-        mittel: n ? (z / n) * 3 : 0
-      };
-    }).filter(function (r) { return r.points.length > 0; });
+      var punkte = [], z = 0, n = 0;
+      per[id].forEach(function (st) {
+        if (summe) { z += st[key] || 0; punkte.push({ v: z }); }
+        else if (laufend) { z += st[laufend[0]] || 0; n += st[laufend[1]] || 0; if (n) punkte.push({ v: (z / n) * laufend[2] }); }
+        else if (schnitt) { if (st[schnitt[1]]) punkte.push({ v: (st[schnitt[0]] / st[schnitt[1]]) * schnitt[2], z: st[schnitt[0]], n: st[schnitt[1]] }); }
+        else if (st[key] !== null && st[key] !== undefined && (def.asc || st[key] > 0)) punkte.push({ v: st[key] });
+      });
+      var letzte = punkte.slice(-CHART_GAMES);
+      if (!letzte.length) return null;
+      var mittel, legende;
+      if (summe || laufend) { mittel = letzte[letzte.length - 1].v; legende = def.fmt(mittel); }
+      else if (schnitt) {
+        /* Der echte Durchschnitt ueber die gezeigten Spiele - nicht der
+           Mittelwert der Mittelwerte und nicht bloss das letzte Spiel. */
+        var zz = sum(letzte, function (x) { return x.z; }), nn = sum(letzte, function (x) { return x.n; });
+        mittel = nn ? (zz / nn) * schnitt[2] : 0;
+        legende = 'Ø ' + (key === 'doubleQuote' ? def.fmt(mittel) : mittel.toFixed(1));
+      } else {
+        mittel = letzte.reduce(function (b, x) { return b === null ? x.v : def.asc ? Math.min(b, x.v) : Math.max(b, x.v); }, null);
+        legende = def.fmt(mittel);
+      }
+      return { id: id, name: pname(id), color: playerColor(id), points: letzte.map(function (x) { return x.v; }), mittel: mittel, legende: legende };
+    }).filter(Boolean);
     /* Haben zwei Linien denselben Farbton (aeltere Konten kamen alle mit
        derselben Farbe vom Server), bekommt jede Linie im Diagramm eine
        eigene Palettenfarbe -- Linie und Legende bleiben dabei zusammen. */
@@ -4009,9 +4057,13 @@
     }
     return reihen;
   }
+  /* Der Average-Verlauf (Cricket: MPR) - fuer die Tests. */
+  function chartSeries(mode) { return verlaufReihen(mode, boardDef(mode === 'cricket' ? 'mpr' : 'avg')); }
 
-  /* Schlichtes SVG-Liniendiagramm: links die Skala, unten die Spiele. */
-  function lineChart(series, label) {
+  /* Schlichtes SVG-Liniendiagramm: links die Skala, unten die Spiele. Bei
+     "weniger ist besser" (def.asc) steht der kleine Wert oben. */
+  function lineChart(series, label, def) {
+    var asc = !!(def && def.asc);
     var maxN = 0, min = Infinity, max = -Infinity;
     series.forEach(function (r) {
       maxN = Math.max(maxN, r.points.length);
@@ -4024,14 +4076,16 @@
     var W = 340, H = 190, L = 36, R = 10, T = 12, B = 26;
     var pw = W - L - R, ph = H - T - B;
     var x = function (i, n) { return L + pw - (n - 1 - i) * (pw / (maxN - 1)); };
-    var y = function (v) { return T + ph - ((v - lo) / (hi - lo)) * ph; };
+    var y = function (v) { var a = ((v - lo) / (hi - lo)) * ph; return asc ? T + a : T + ph - a; };
+    var ganz = series.every(function (r) { return r.points.every(function (v) { return v % 1 === 0; }); });
+    var skala = function (v) { return !ganz && hi - lo < 10 ? v.toFixed(1) : v.toFixed(0); };
 
     var grid = '';
     for (var g = 0; g <= 3; g++) {
       var val = lo + ((hi - lo) * g) / 3;
       var gy = y(val);
       grid += '<line x1="' + L + '" y1="' + gy.toFixed(1) + '" x2="' + (W - R) + '" y2="' + gy.toFixed(1) + '" stroke="#2a3340" stroke-width="1"/>' +
-        '<text x="' + (L - 6) + '" y="' + (gy + 3.5).toFixed(1) + '" text-anchor="end" font-size="9" fill="#8d9aab">' + val.toFixed(0) + '</text>';
+        '<text x="' + (L - 6) + '" y="' + (gy + 3.5).toFixed(1) + '" text-anchor="end" font-size="9" fill="#8d9aab">' + skala(val) + '</text>';
     }
 
     var lines = series.map(function (r) {
@@ -4053,12 +4107,12 @@
       grid + lines + axis + '</svg>' +
       /* Bester Schnitt zuerst, schwaechster zuletzt (Average wie MPR: hoeher
          ist besser). */
-      '<div class="chart-legend">' + series.slice().sort(function (a, b) { return b.mittel - a.mittel; }).map(function (r) {
+      '<div class="chart-legend">' + series.slice().sort(function (a, b) { return asc ? a.mittel - b.mittel : b.mittel - a.mittel; }).map(function (r) {
         /* Unter der Linie steht der Durchschnitt ueber genau diese Spiele (bei
            weniger als zehn eben ueber die vorhandenen) -- frueher stand hier
            nur das letzte, das las sich wie der Schnitt. */
         return '<span class="cl"><i style="background:' + r.color + '"></i>' + esc(r.name) +
-          ' <b>Ø ' + r.mittel.toFixed(1) + '</b></span>';
+          ' <b>' + (r.legende || 'Ø ' + r.mittel.toFixed(1)) + '</b></span>';
       }).join('') + '</div>';
   }
 
@@ -4100,7 +4154,7 @@
     var defs = boardsFor(mode);
     if (!defs.some(function (b) { return b.key === UI.board; })) UI.board = defs[0].key;
     var def = boardDef(UI.board);
-    $('board-titel').textContent = def.label;
+    $('board-titel').textContent = def.label + ' · ' + (ligaTeam === 'wir' || ligaTeam === 'alle' ? 'alle Spieler' : ligaTeam);
 
     var ligaSpieltage = wertbareHistorie().filter(function (h) { return h.liga && !h.liga.uebung && h.matches; });
     var log = allGamesLog().filter(function (row) { return row.kind === mode; });
@@ -4114,12 +4168,12 @@
           (mode === '501' ? ' · ' + plural(wertbareHistorie().filter(function (h) { return (h.kind || '501') === '501'; }).length, 'Turnier', 'Turniere') : '')
         : modeName + ' · noch keine Spiele';
 
-    /* Verlauf: eine farbige Linie je Spieler. */
-    var chartLabel = (mode === '501' || mode === 'liga' ? '3-Dart-Average' : 'MPR') + ' – letzte ' + CHART_GAMES + ' Spiele';
-    var chart = mode === 'rtw' ? null : lineChart(chartSeries(mode), chartLabel);
-    /* Der Verlauf zeigt unsere Spieler - bei einer anderen Team-Auswahl weg. */
-    $('board-chart').classList.toggle('hidden', mode === 'rtw' || mode === 'finisher' || ligaTeam !== 'wir' || imLiga);
-    if (mode !== 'rtw') {
+    /* Verlauf: folgt der gewaehlten Kennzahl - eine farbige Linie je
+       Spieler. Im Liga-Reiter stehen stattdessen die Highlights. */
+    var chartLabel = def.label + (VERLAUF_SUMME[def.key] ? ' gesamt' : '') + ' – letzte ' + CHART_GAMES + (def.key === 'tourWins' ? ' Turniere' : ' Spiele');
+    $('board-chart').classList.toggle('hidden', ligaTeam !== 'wir' || imLiga);
+    if (ligaTeam === 'wir' && !imLiga) {
+      var chart = lineChart(verlaufReihen(mode, def), chartLabel, def);
       $('board-chart').innerHTML = '<h2>' + chartLabel + '</h2>' +
         (chart || '<p class="hint">Ab dem zweiten Spiel wird hier der Verlauf gezeichnet.</p>');
     }
@@ -4137,9 +4191,6 @@
     $('board-rekorde').classList.toggle('hidden', imLiga);
     $('liga-highlights').classList.toggle('hidden', !imLiga);
     if (imLiga) $('liga-highlights').innerHTML = ligaHighlightsSaisonHtml();
-    $('board-chips').innerHTML = (imLiga ? '' : teamChips) + defs.map(function (b) {
-      return '<button class="chip ' + (b.key === UI.board ? 'active' : '') + '" data-action="board" data-key="' + b.key + '">' + b.label + '</button>';
-    }).join('');
 
     /* Ranglisten-Zeilen: bei "Gesamte Liga" oder einem Gegner aus der
        Team-Auswertung (Gegner sind dort keine Profile, nur Namen). */
@@ -4157,6 +4208,17 @@
       return alle;
     };
     var rows = teamRanking(def);
+    /* Bestwert-Karten: je Kennzahl der beste Wert und wer ihn haelt; die
+       angetippte Karte bestimmt Liste und Verlauf. Hoechstens vier nebeneinander. */
+    var kacheln = $('board-kacheln');
+    kacheln.style.setProperty('--kn', Math.min(4, defs.length));
+    kacheln.innerHTML = defs.map(function (b) {
+      var top = teamRanking(b)[0];
+      return '<button class="bk-kachel' + (b.key === UI.board ? ' active' : '') + '" data-action="board" data-key="' + b.key + '">' +
+        '<span class="bk-t">' + b.label + '</span>' +
+        '<span class="bk-v">' + (top ? b.fmt(b.get(top)) : '–') + '</span>' +
+        '<span class="bk-n">' + (top ? esc(top.name) : 'noch offen') + '</span></button>';
+    }).join('');
     /* Platz 1 bis 3 in Medaillenfarbe (Gold, Silber, Bronze), der Beste leuchtet. */
     $('board-list').innerHTML = rows.length ? rows.map(function (st, i) {
       var gegner = String(st.id).indexOf('lg|') === 0;
@@ -4169,8 +4231,9 @@
         '<div class="val">' + def.fmt(def.get(st)) + '</div>' +
         '</div>';
     }).join('') : '<div class="board-empty">Dafür fehlen noch Daten.</div>';
-    $('board-hint').textContent = def.hint;
-    $('board-hint').classList.toggle('hidden', !def.hint);
+    /* Im Liga-Reiter reicht der Hinweis, dass nur Ligaspiele zaehlen. */
+    $('board-hint').textContent = imLiga ? 'nur Ligaspiele' : def.hint;
+    $('board-hint').classList.toggle('hidden', !(imLiga || def.hint));
 
     /* Rekorde des jeweiligen Modus. */
     var recs = mode === '501' || mode === 'liga' ? [
@@ -4313,33 +4376,90 @@
     }).join('') || '<p class="hint">Noch keine Spiele.</p>';
   }
 
+  /* Am Tablet steht rechts die Schnellansicht des angetippten Spielers;
+     am Handy (hochkant wie quer) gibt es nur die Liste, ein Tipp oeffnet
+     das Profil. */
+  function spielerSchnellansicht() {
+    return window.matchMedia('(min-width: 700px) and (min-height: 501px)').matches;
+  }
+  function istGastProfil(p) { return !!(p.gast || p.gastKonto); }
+  /* Split View oder Drehen: wechselt das Geraet zwischen Handy- und
+     Tablet-Layout, muss die Liste neu entscheiden, was ein Tipp tut. */
+  if (window.matchMedia) {
+    window.matchMedia('(min-width: 700px) and (min-height: 501px)').addEventListener('change', function () {
+      if (S.screen === 'players') render();
+    });
+  }
+
   function renderPlayers() {
     var map = career();
     /* Geloeschte bzw. abgeraeumte Gaeste tauchen hier gar nicht mehr auf –
        ausgeblendete Team-Profile bleiben (ausgegraut) sichtbar, damit man
        sie wieder einblenden kann. */
-    $('players-list').innerHTML = S.profiles.filter(function (p) {
-      return !(p.gast && p.hidden);
-    }).map(function (p) {
+    var alle = S.profiles.filter(function (p) { return !(p.gast && p.hidden); });
+    var filter = UI.spielerFilter || 'alle';
+    var liste = alle.filter(function (p) {
+      return filter === 'alle' || (filter === 'team' ? !istGastProfil(p) : istGastProfil(p));
+    });
+    var team = alle.filter(function (p) { return !istGastProfil(p); }).length;
+    $('players-sub').textContent = plural(team, 'im Team', 'im Team') + ' · ' + plural(alle.length - team, 'Gast', 'Gäste');
+    $('players-filter').querySelectorAll('[data-action="players-filter"]').forEach(function (b) {
+      b.classList.toggle('active', b.getAttribute('data-value') === filter);
+    });
+    var schnell = spielerSchnellansicht();
+    /* Die Schnellansicht zeigt den angetippten Spieler, sonst den ersten
+       der Liste. */
+    if (!liste.some(function (p) { return p.id === UI.spielerWahl; })) UI.spielerWahl = liste.length ? liste[0].id : null;
+    var marke = function (p) {
+      return (p.gast ? '<span class="pc-tag">' + (p.dauer ? 'Gast' : 'Gast · heute') + '</span>'
+        : p.gastKonto ? '<span class="pc-tag">Gast-Konto</span>'
+        : p.test ? '<span class="pc-tag">Test</span>' : '') +
+        (p.hidden ? '<span class="pc-tag">ausgeblendet</span>' : '');
+    };
+    $('players-list').innerHTML = liste.map(function (p) {
       var st = map[p.id];
-      return '<div class="card player-card ' + (p.hidden ? 'hidden-profile' : '') + '" data-action="open-profile" data-id="' + esc(p.id) + '" role="button" tabindex="0">' +
+      return '<div class="player-card' + (p.hidden ? ' hidden-profile' : '') + (schnell && p.id === UI.spielerWahl ? ' active' : '') +
+        '" data-action="' + (schnell ? 'spieler-wahl' : 'open-profile') + '" data-id="' + esc(p.id) + '" role="button" tabindex="0">' +
         avatarHTML(p, 'lg') +
         '<div class="pc-main">' +
-          '<div class="pc-name">' + esc(p.name) +
-            (p.gast ? ' <span class="gast-marke">' + (p.dauer ? 'Gast' : 'Gast · heute') + '</span>'
-              : p.gastKonto ? ' <span class="gast-marke">Gast-Konto</span>'
-              : p.test ? ' <span class="gast-marke">Test</span>' : '') +
-            (p.hidden ? ' <span class="muted">(ausgeblendet)</span>' : '') + '</div>' +
+          '<div class="pc-name"><span class="pc-nm">' + esc(p.name) + '</span>' + marke(p) + '</div>' +
           '<div class="pc-stats">' +
             '<span>Ø <b>' + (st.darts ? st.avg.toFixed(1) : '–') + '</b></span>' +
             '<span>Siege <b>' + st.won + '</b></span>' +
             '<span>180er <b>' + st.s180 + '</b></span>' +
-            '<span>Höchstes Finish <b>' + (st.highCO || '–') + '</b></span>' +
           '</div>' +
         '</div>' +
-        '<span class="chev">›</span>' +
         '</div>';
+    }).join('') || '<div class="board-empty">Niemand in dieser Auswahl.</div>';
+    $('players-schnell').innerHTML = schnell && UI.spielerWahl ? spielerSchnellHtml(profile(UI.spielerWahl), map[UI.spielerWahl]) : '';
+    $('players-schnell').classList.toggle('hidden', !(schnell && UI.spielerWahl));
+  }
+
+  /* Schnellansicht: Bilanz, letzte Spiele als S/N, sechs Kennzahlen,
+     Bearbeiten und Ganzes Profil. */
+  function spielerSchnellHtml(p, st) {
+    var form = st.lastResults.slice(0, 8).reverse().map(function (r) {
+      return '<span class="form ' + (r.win ? 'w' : 'l') + '">' + (r.win ? 'S' : 'N') + '</span>';
     }).join('');
+    var kachel = function (k, v) { return '<div class="ps-kachel"><span class="ps-k">' + k + '</span><span class="ps-v">' + v + '</span></div>'; };
+    return '<div class="ps-kopf">' + avatarHTML(p, 'xl') +
+      '<div class="ps-titel"><span class="ps-name">' + esc(p.name) + '</span>' +
+        '<span class="ps-bilanz">' + (st.matches
+          ? plural(st.won, 'Sieg', 'Siege') + ' · ' + plural(st.lost, 'Niederlage', 'Niederlagen') + ' · ' + st.winPct.toFixed(0) + ' %'
+          : 'Noch kein Spiel gespielt') + '</span></div></div>' +
+      (form ? '<div class="ps-form"><span class="kt">Letzte Spiele</span><div class="form-row">' + form + '</div></div>' : '') +
+      '<div class="ps-raster">' +
+        kachel('Average', st.darts ? st.avg.toFixed(1) : '–') +
+        kachel('First 9', st.first9Darts ? st.first9.toFixed(1) : '–') +
+        kachel('Höchstes Finish', st.highCO || '–') +
+        kachel('180er', st.s180) +
+        kachel('Doppelquote', st.doubleAttempts ? st.doubleQuote.toFixed(0) + ' %' : '–') +
+        kachel('Bestes Leg', st.bestLeg ? st.bestLeg + ' Darts' : '–') +
+      '</div>' +
+      '<div class="ps-knoepfe">' +
+        (bearbeitbar(p.id) ? '<button class="btn ghost" data-action="edit-profile" data-id="' + esc(p.id) + '">Bearbeiten</button>' : '<span></span>') +
+        '<button class="btn hell" data-action="open-profile" data-id="' + esc(p.id) + '">Ganzes Profil ›</button>' +
+      '</div>';
   }
 
   function renderProfile() {
@@ -4688,15 +4808,16 @@
     });
     hFin.sort(function (a, b) { return parseInt(b.v, 10) - parseInt(a.v, 10); });
     hLeg.sort(function (a, b) { return parseInt(a.v, 10) - parseInt(b.v, 10); });
+    /* Je Gruppe Kacheln zu zweit nebeneinander: Wert gross, Name, wo. */
     var gruppe = function (titel, liste) {
       if (!liste.length) return '';
-      return '<div class="hl-gruppe"><span class="hl-titel">' + titel + '</span>' +
+      return '<div class="hl-gruppe"><span class="hl-titel">' + titel + '</span><div class="hl-raster">' +
         liste.slice(0, 6).map(function (i) {
-          return '<div class="hl-zeile"><span class="hl-wer"><b>' + esc(i.n) + '</b><small>' + esc(i.d) + '</small></span><span class="hl-wert">' + esc(i.v) + '</span></div>';
-        }).join('') + '</div>';
+          return '<div class="hl-kachel"><span class="hl-wert">' + esc(i.v) + '</span><span class="hl-wer">' + esc(i.n) + '</span><small>' + esc(i.d) + '</small></div>';
+        }).join('') + '</div></div>';
     };
     var inhalt = gruppe('180er', h180) + gruppe('High-Finishes ab 100', hFin) + gruppe('Shortlegs bis 21 Darts', hLeg);
-    return '<div class="karte-kopf"><h2>Highlights der Saison</h2>' +
+    return '<div class="karte-kopf"><h2 class="rekorde-titel"><span class="pokal" aria-hidden="true">🏆</span>Highlights der Saison</h2>' +
       '<button class="btn ghost small" data-action="board-log">Alle Ligaspiele ›</button></div>' +
       '<div class="hl-liste">' + (inhalt || '<p class="hint">Noch keine Highlights – sie kommen mit dem ersten Spieltag.</p>') + '</div>';
   }
@@ -8556,7 +8677,6 @@
     switch (action) {
       case 'nav': {
         var target = el.getAttribute('data-screen');
-        UI.menu = false;   // das Menue der Rangliste schliesst mit der Wahl
         UI.boardLog = false;
         // Ein laufendes Spiel führt zurück aufs Board; ein beendetes, noch
         // nicht gespeichertes zeigt sich im Setup als Hinweis-Box.
@@ -8740,6 +8860,9 @@
         S.screen = 'profile';
         save(); render();
         break;
+      /* Spielerliste: Filter und Schnellansicht. */
+      case 'players-filter': UI.spielerFilter = el.getAttribute('data-value'); render(); break;
+      case 'spieler-wahl': UI.spielerWahl = el.getAttribute('data-id'); render(); break;
       case 'open-summary':
         UI.summary = { kind: el.getAttribute('data-kind'), id: el.getAttribute('data-id'), from: S.screen };
         UI.overlay = null;
@@ -8778,15 +8901,9 @@
         UI.boardLog = false;
         render();
         break;
-      /* Rangliste: Spielverlauf auf und zu, Menue hinter dem Logo. */
+      /* Rangliste: Spielverlauf auf und zu. */
       case 'board-log': UI.boardLog = true; render(); break;
       case 'board-log-zu': UI.boardLog = false; render(); break;
-      case 'logo-menu': {
-        UI.menu = true; render();
-        var lmErster = tastaturBetrieb() ? document.querySelector('#logo-menu-panel #nav button:not(.hidden)') : null;
-        if (lmErster) lmErster.focus();
-        break;
-      }
       case 'liga-wahl': UI.ligaWahl = el.getAttribute('data-id'); render(); break;
       case 'liga-partien':
         UI.overlay = { type: 'liga-partien', termin: el.getAttribute('data-termin'), i: Number(el.getAttribute('data-i')) };
@@ -9703,18 +9820,13 @@
     save(); render();
   }
 
-  /* Escape klappt das Logo-Menue (Rangliste, Liga) wieder zu. */
-  document.addEventListener('keydown', function (ev) {
-    if (ev.key === 'Escape' && UI.menu && S.screen === 'boards') { UI.menu = false; render(); ev.preventDefault(); }
-  });
-
   document.addEventListener('click', function (ev) {
     if (isGhostTap(ev)) return;
     if (ev.target.id === 'overlay' && UI.overlay && !STICKY_OVERLAYS[UI.overlay.type] && !VOLLBILD_DIALOGE[UI.overlay.type]) {
       UI.overlay = null; UI.input = ''; render(); return;
     }
     /* Menue (•••): ein Tipp neben die Karte schliesst es. */
-    if (/^(game|cricket|rtw|fin|logo)-menu-overlay$/.test(ev.target.id || '')) { UI.menu = false; render(); return; }
+    if (/^(game|cricket|rtw|fin)-menu-overlay$/.test(ev.target.id || '')) { UI.menu = false; render(); return; }
     /* Ein Tipp ins Bild tut in der Fernsteuerung nichts (Julius): das Menue
        oeffnet nur •••, zurueck geht es ueber den ⌨-Knopf oben rechts. */
     var t = ev.target.closest('[data-action]');
@@ -10405,7 +10517,6 @@
      ein offenes Menue schliesst den Rest aus. */
   function pfeilBereich() {
     if (UI.overlay) return $('overlay-card');
-    if (UI.menu && S.screen === 'boards') return $('logo-menu-panel');
     if (UI.menu && SPIEL_SCREENS[S.screen]) return document.querySelector('.game-menu:not(.hidden) .game-menu-karte');
     if (PFEIL_SCREENS[S.screen] && S.screen !== 'tournament') return document.querySelector('.screen.active');
     return null;
@@ -10480,7 +10591,6 @@
       if (STICKY_OVERLAYS[UI.overlay.type] || VOLLBILD_DIALOGE[UI.overlay.type]) return false;
       UI.overlay = null; UI.input = ''; render(); return true;
     }
-    if (UI.menu && S.screen === 'boards') { UI.menu = false; render(); return true; }
     if (SPIEL_SCREENS[S.screen] || S.screen === 'bulloff') return false;
     if (S.screen === 'summary') {
       var sb = document.querySelector('#summary-actions [data-action="summary-back"]');
