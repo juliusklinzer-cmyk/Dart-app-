@@ -2546,40 +2546,48 @@ const weg = (rest, dbl) => page.evaluate(([r, d]) => window.Checkout.suggest(r, 
 check('ohne Vorliebe bleibt alles wie bisher', (await weg(140, null)) === 'T20 T20 D10', await weg(140, null));
 check('mit D16 wird auf D16 gestellt', (await weg(140, 16)) === 'T20 T16 D16', await weg(140, 16));
 check('auch beim kleinen Rest (41)', (await weg(41, 16)) === 'S9 D16', await weg(41, 16));
-check('Bull-Liebhaber bekommen den Bull', (await weg(60, 25)) === 'S10 BULL', await weg(60, 25));
+check('Bull ist kein Favorit mehr: wer Bull eingestellt hatte, bekommt den Standardweg', (await weg(60, 25)) === 'S20 D20', await weg(60, 25));
+check('D18-Fan: 96 bleibt T20 D18, 63 wird T9 D18', (await weg(96, 18)) === 'T20 D18' && (await weg(63, 18)) === 'T9 D18', (await weg(63, 18)));
+check('D20-Fan: 61 wird T7 D20 (Tabelle), 108 endet auf D20', (await weg(61, 20)) === 'T7 D20' && (await weg(108, 20)) === 'T19 S11 D20', (await weg(61, 20)) + ' / ' + (await weg(108, 20)));
+check('ohne Favorit: 84 geht ueber Bull D17, 170 ueber T20 T20 Bull', (await weg(84, null)) === 'BULL D17' && (await weg(170, null)) === 'T20 T20 BULL');
 /* Gleich gute Wege aufs selbe Doppel: lieber T19 und eine grosse Zahl als
    T20 und ein Stellwurf auf die kleinen Felder unten. */
 check('99 auf D16: T19 10 D16 statt T20 7 D16', (await weg(99, 16)) === 'T19 S10 D16', await weg(99, 16));
 check('das Doppel bleibt dabei das Lieblingsdoppel (108 auf D20)', (await weg(108, 20)).endsWith('D20'), await weg(108, 20));
-/* Die Grenze: mehr Darts darf es nie kosten, und ein krummer Stellwurf
-   wie T7 oder die 25 wird nicht angesagt, nur um das Doppel zu erreichen. */
-check('nie ein Dart mehr', await page.evaluate(() => {
-  for (let r = 2; r <= 170; r++) {
-    const a = window.Checkout.suggest(r, 3);
-    if (!a) continue;
-    for (const d of [20, 18, 16, 12, 10, 8, 25]) {
-      const b = window.Checkout.suggest(r, 3, d);
-      if (b.length !== a.length) return false;
-    }
-  }
-  return true;
-}));
-/* Nur die Wege, die WEGEN des Lieblingsdoppels abweichen, muessen sich an
-   die Stellwurf-Regel halten. Der allgemeine Weg darf weiter T14 oder T13
-   ansagen (62 und 63 gehen nun mal so) – daran aendert eine Vorliebe nichts. */
-check('kein krummer Stellwurf, nur um das Doppel zu erreichen', await page.evaluate(() => {
-  const schlecht = (w) => w === '25' || w[0] === 'D' || (w[0] === 'T' && Number(w.slice(1)) < 15);
-  for (let r = 2; r <= 170; r++) {
-    const a = window.Checkout.suggest(r, 3);
-    if (!a) continue;
-    for (const d of [20, 18, 16, 12, 10, 8, 25]) {
-      const b = window.Checkout.suggest(r, 3, d);
-      if (b.join() === a.join()) continue;          // unveraendert: nicht unser Fall
-      if (b.slice(0, -1).some(schlecht)) return r + ' D' + d + ': ' + b.join(' ');
+/* Die Tabellen muessen in sich stimmen: jeder Weg addiert sich zum Rest,
+   endet auf einem Doppel und braucht nie mehr Darts als der Standardweg;
+   ein Stellwurf stellt auf eine Zahl, die mit drei Darts zu finishen ist. */
+check('alle Tabellenwege stimmen (Summe, Doppel am Ende, Dartzahl, Stellwurf-Ziel)', await page.evaluate(() => {
+  const C = window.Checkout;
+  const wert = (l) => l === 'BULL' ? 50 : l === '25' ? 25 : (l[0] === 'T' ? 3 : l[0] === 'D' ? 2 : 1) * Number(l.slice(1));
+  const doppel = (l) => l === 'BULL' || l[0] === 'D';
+  const stell = []; for (let i = 1; i <= 20; i++) { stell.push(i); stell.push(3 * i); } stell.push(25);
+  const dOhne = (x) => x % 2 === 0 && x >= 2 && x <= 40;
+  const minOhneBull = (x) => dOhne(x) ? 1 : stell.some((a) => dOhne(x - a)) ? 2 : stell.some((a) => stell.some((b) => dOhne(x - a - b))) ? 3 : null;
+  for (const d of [null, 20, 16, 18, 12, 10, 14, 8, 6, 4]) {
+    for (let r = 2; r <= 170; r++) {
+      for (let n = 1; n <= 3; n++) {
+        const w = C.suggest(r, n, d), st = C.stellwurf(r, n, d);
+        if (!w && !st) return 'nichts fuer ' + r + ' mit ' + n + ' Darts (D' + d + ')';
+        if (w) {
+          if (w.length > n || w.reduce((a, l) => a + wert(l), 0) !== r || !doppel(w[w.length - 1])) return r + '/' + n + ' D' + d + ': ' + w.join(' ');
+          /* Wenigste Darts - aber ohne Bull gerechnet: die Tabelle nimmt das Bull nur,
+             wenn es den letzten Dart spart (101 mit zwei Darts T17 Bull, mit dreien T19 12 D16). */
+          const mo = minOhneBull(r);
+          if (mo !== null && n >= mo && w.length !== mo && !(w[w.length - 1] === 'BULL' && w.length < mo)) return r + '/' + n + ' D' + d + ' braucht ' + w.length + ' statt ' + mo;
+        } else {
+          if (st.darts.length !== n || st.darts.reduce((a, l) => a + wert(l), 0) + st.auf !== r || !C.possible(st.auf, 3)) return r + '/' + n + ' D' + d + ': Stellwurf ' + st.darts.join(' ') + ' auf ' + st.auf;
+          if (C.possible(r, n)) return r + '/' + n + ' D' + d + ': Stellwurf, obwohl ein Finish geht';
+        }
+      }
     }
   }
   return true;
 }) === true);
+check('Stellwurf aus der Tabelle: 99 mit zwei Darts T19 10 auf 32, 159 mit dreien auf 32', await page.evaluate(() => {
+  const a = window.Checkout.stellwurf(99, 2, null), b = window.Checkout.stellwurf(159, 3, null);
+  return a.darts.join(' ') === 'T19 S10' && a.auf === 32 && b.darts.join(' ') === 'T20 T19 S10' && b.auf === 32;
+}));
 
 // Und jetzt durch die Oberflaeche: einstellen, speichern, im Spiel sehen.
 await page.evaluate(() => window.__dart.setScreen('setup'));
@@ -2949,10 +2957,10 @@ await page.locator('#overlay-card [data-action="open-summary"]').click();
 await page.locator('[data-action="summary-back"]').click();
 check('der Team-Stand zaehlt 1:0 und Legs 2:1', await page.evaluate(() => {
   const t = document.getElementById('liga-stand').innerText.replace(/\s+/g, ' ');
-  return t.includes('Legs 2:1') && t.includes('1 von 16');
+  return t.includes('Legs 2:1') && document.getElementById('spielplan-titel').textContent.includes('1 von 16');
 }));
 check('die 180er stehen fuer den Spielbericht bereit', await page.evaluate(() => {
-  const el = document.getElementById('liga-stand');
+  const el = document.getElementById('liga-bericht-karte');
   return el.innerText.includes('180er');
 }));
 check('gross stehen die Punkte: ein gewonnenes Einzel = 1:0', await page.evaluate(() => {
@@ -3904,12 +3912,12 @@ check('Kachel-Taste ist nicht blau, sondern im ruhigen Weiss der Felder', await 
   return getComputedStyle(b).color === ruhig && getComputedStyle(b).fontWeight === '700';
 }));
 /* 81 mit zwei Darts geht (T19 D12); nach einer T20 bleiben 21 mit einem Dart --
-   kein Finish, also steht der Stellwurf da: die 1 laesst 20. Ein Single ohne
-   Buchstaben davor -- genau der Fall, der frueher NaN buchte. */
+   kein Finish, also steht der Stellwurf aus der Tabelle da: die 5 laesst 16.
+   Ein Single ohne Buchstaben davor -- genau der Fall, der frueher NaN buchte. */
 await dart('T20');
 check('kein Finish mehr: Stellwurf in der letzten Kachel - mit dem Ziel, auf das er stellt',
   (await page.locator('#game-kacheln .fk.stellen').count()) === 1 &&
-  /^1\s+auf 20$/.test((await page.locator('#game-kacheln .fk.stellen').innerText()).trim()),
+  /^5\s+auf 16$/.test((await page.locator('#game-kacheln .fk.stellen').innerText()).trim()),
   await text('#game-kacheln'));
 check('Double, Triple und Zurueck heben sich von den Zahlentasten ab', await page.evaluate(() => {
   const z = getComputedStyle(document.querySelector('#num-grid button[data-num="5"]')).backgroundColor;
@@ -3923,10 +3931,10 @@ check('nur der Rest am Wurf leuchtet weiss, Name und Tasten sind ruhiger', await
   return rest[0] === 255 && name[0] < 240 && taste[0] < 240;
 }));
 await page.locator('#game-kacheln .fk.stellen').click();
-check('Tipp auf den Stellwurf bucht eine saubere 1 (kein NaN), Aufnahme zu Ende',
-  (await rest(0)) === '20' && !(await text('#scoreboard')).includes('NaN'), await rest(0));
-check('die letzte Aufnahme steht als 121 am Spieler',
-  (await page.locator('.pcard').first().locator('.letzte').innerText()) === '121');
+check('Tipp auf den Stellwurf bucht eine saubere 5 (kein NaN), Aufnahme zu Ende',
+  (await rest(0)) === '16' && !(await text('#scoreboard')).includes('NaN'), await rest(0));
+check('die letzte Aufnahme steht als 125 am Spieler',
+  (await page.locator('.pcard').first().locator('.letzte').innerText()) === '125');
 await modus('darts');
 await page.locator('#num-grid button.zurueck').click();
 check('Zurueck links im Zahlenfeld nimmt die ganze Aufnahme zurueck',
@@ -4502,7 +4510,7 @@ group('Ligaspiel endet erst mit dem unterschriebenen Bericht');
     return S.tour.liga.terminId;
   });
   check('alle Einzel gespielt: der Weg geht zu Ergebnissen und Bericht',
-    await visible('#liga-stand [data-action="to-winner"]'));
+    await visible('#liga-bericht-karte [data-action="to-winner"]'));
   await navTo('setup');
   check('der Spiel-Tab beendet das Ligaspiel nicht, sondern zeigt die Ergebnisse',
     (await visible('#screen-winner')) && await page.evaluate(() => window.__dart.state().matches.length === 16));

@@ -651,10 +651,14 @@
 
   /* Auswahlliste fürs Lieblingsdoppel. Oben die, auf die man üblicherweise
      stellt, darunter der Rest – gesucht wird fast immer eines der ersten. */
-  var DOPPEL_WAHL = [20, 16, 18, 12, 10, 14, 8, 6, 4, 2, 19, 17, 15, 13, 11, 9, 7, 5, 3, 1];
+  /* Waehlbare Lieblingsdoppel: die geraden von D20 bis D4 - fuer jedes gibt
+     es eine Finish-Tabelle (docs/finishwege/). Ungerade Doppel und Bull sind
+     keine Favoriten: ein Single dort laesst immer eine ungerade Zahl. Ein
+     altes Profil mit so einem Wert rechnet wie "egal". */
+  var DOPPEL_WAHL = [20, 16, 18, 12, 10, 14, 8, 6, 4];
   function doppelOptionen(gewaehlt) {
-    var html = '<option value="0"' + (gewaehlt ? '' : ' selected') + '>egal</option>' +
-      '<option value="25"' + (gewaehlt === 25 ? ' selected' : '') + '>Bull</option>';
+    if (DOPPEL_WAHL.indexOf(gewaehlt) < 0) gewaehlt = 0;
+    var html = '<option value="0"' + (gewaehlt ? '' : ' selected') + '>egal</option>';
     DOPPEL_WAHL.forEach(function (n) {
       html += '<option value="' + n + '"' + (gewaehlt === n ? ' selected' : '') + '>D' + n + '</option>';
     });
@@ -3848,11 +3852,11 @@
     /* Gross stehen die PUNKTE nach SWO-Staffel - das ist die Wertung, die
        in die Ligatabelle geht. Einzel und Legs stehen darunter. */
     return '<div class="lg-teams">' +
-      '<div class="lg-team"><div class="lg-name">' + esc(LIGA.team) + '</div>' +
-        '<div class="lg-zahl">' + d.wirP + '</div></div>' +
+      '<div class="lg-team wir"><div class="lg-zahl">' + d.wirP + '</div>' +
+        '<div class="lg-name">' + esc(LIGA.team) + '</div></div>' +
       '<div class="lg-doppel">:</div>' +
-      '<div class="lg-team"><div class="lg-name">' + esc(S.tour.liga.gegner) + '</div>' +
-        '<div class="lg-zahl">' + d.sieP + '</div></div>' +
+      '<div class="lg-team sie"><div class="lg-zahl">' + d.sieP + '</div>' +
+        '<div class="lg-name">' + esc(S.tour.liga.gegner) + '</div></div>' +
       '</div>';
   }
 
@@ -3877,7 +3881,8 @@
         ' gegen ' + liga.gegner + ' · Best of ' + tour().bestOf
       : tourStart() + ' Double Out · ' +
         (tour().bestOf === 1 ? 'ein Leg' : 'Best of ' + tour().bestOf) + ' · ' +
-        plural(tourPlayers().length, 'Spieler', 'Spieler');
+        plural(tourPlayers().length, 'Spieler', 'Spieler') + ' · ' +
+        S.matches.filter(function (m) { return m.done || m.void; }).length + ' von ' + S.matches.length + ' gespielt';
 
     /* Im Ligaspiel zählt der Team-Stand, keine Einzeltabelle – und statt
        Nachzüglern gibt es den Positionswechsel nach SWO. */
@@ -3885,26 +3890,38 @@
     var rosterBtn = document.querySelector('[data-action="roster-change"]');
     rosterBtn.textContent = liga ? 'Spieler wechseln (gleiche Position)' : 'Spieler nachtragen oder abmelden';
     $('liga-stand').classList.toggle('hidden', !liga);
+    $('liga-bericht-karte').classList.toggle('hidden', !liga);
+    $('karte-turnier-statistik').classList.toggle('hidden', !!liga);
+    $('spielplan-titel').textContent = liga
+      ? 'Spielplan · ' + S.matches.filter(function (m) { return m.done || m.void; }).length + ' von ' + S.matches.length + ' gespielt'
+      : 'Spielplan';
     if (liga) {
+      /* Entwurf "Ligaspiel" (Okt. 2026): rechts gross der Punktestand mit
+         dem Live-Ticker, darunter die Highlights fuer den Spielbericht. */
       var lsd = ligaStandDaten();
       $('liga-stand').innerHTML =
+        '<div class="karte-kopf lg-kopf"><h2>Stand · Punkte</h2>' +
+          '<button class="btn ghost small lg-ticker" data-action="liga-ticker"><span class="lg-live"><i></i>Live</span>Ticker für Zuschauer</button></div>' +
         ligaTeamsHtml(lsd) +
-        '<div class="lg-legs">Einzel ' + lsd.wirS + ':' + lsd.sieS + ' · Legs ' +
-          lsd.wirL + ':' + lsd.sieL + ' · ' +
-          lsd.fertige + ' von ' + S.matches.length + ' gespielt</div>' +
-        ligaHighlightsHtml(lsd) +
+        '<div class="lg-legs">Einzel ' + lsd.wirS + ':' + lsd.sieS + ' · Legs ' + lsd.wirL + ':' + lsd.sieL + '</div>';
+      $('liga-bericht-karte').innerHTML =
+        '<h2>Für den Spielbericht</h2>' +
+        '<div class="lg-hl-liste">' + (lsd.hl.length ? lsd.hl.map(function (z) {
+          var m = /^<b>(.*?):<\/b>\s*(.*)$/.exec(z);
+          return '<div class="lg-hl-zeile"><span class="lg-hl-k">' + (m ? m[1] : '') + '</span><span class="lg-hl-v">' + (m ? m[2] : z) + '</span></div>';
+        }).join('') : '<p class="hint">Noch nichts: 180er, High-Finishes ab 100 und Shortlegs bis 21 Darts landen hier.</p>') + '</div>' +
         (lsd.fertige === S.matches.length && ligaNochOffen()
           ? '<button class="btn primary start full" data-action="to-winner">Ergebnisse &amp; Spielbericht</button>' : '') +
-        '<button class="btn ghost full" data-action="liga-ticker">Live-Ticker für Zuschauer</button>' +
-        '<button class="btn ghost full" data-action="liga-nachmelden">Spieler nachmelden</button>' +
-        '<button class="btn ghost full" data-action="liga-bericht">Spielbericht ansehen</button>';
+        '<div class="lg-knoepfe">' +
+          '<button class="btn ghost" data-action="liga-nachmelden">Spieler nachmelden</button>' +
+          '<button class="btn ghost" data-action="liga-bericht">Spielbericht ansehen</button></div>';
     }
 
     $('standings-body').innerHTML = table.map(function (st, i) {
       return '<tr class="' + (i === 0 && st.won > 0 ? 'leader' : '') + '">' +
         '<td class="rank">' + (i + 1) + '</td>' +
         '<td class="left name"><span class="cell">' + avatarHTML(profile(st.id), 'sm') + esc(st.name) + '</span></td>' +
-        '<td class="wins">' + st.won + '</td>' +
+        '<td class="wins' + (st.won > 0 ? '' : ' null') + '">' + st.won + '</td>' +
         '<td>' + st.lost + '</td>' +
         '<td>' + st.legsWon + ':' + st.legsLost + '</td>' +
         '<td>' + (st.avg ? st.avg.toFixed(1) : '–') + '</td>' +
@@ -3923,8 +3940,8 @@
          Name, mit buergerlichen Namen, wenn gepflegt. */
       var a = liga ? ligaName(m.p[0]) : pname(m.p[0]);
       var b = liga ? ligaName(m.p[1]) : pname(m.p[1]);
-      var posA = liga && m.posPaar ? '<span class="posmark">H' + (m.posPaar[0] + 1) + '</span> ' : '';
-      var posB = liga && m.posPaar ? '<span class="posmark">G' + (m.posPaar[1] + 1) + '</span> ' : '';
+      var posA = liga && m.posPaar ? '<span class="posmark h">H' + (m.posPaar[0] + 1) + '</span> ' : '';
+      var posB = liga && m.posPaar ? '<span class="posmark g">G' + (m.posPaar[1] + 1) + '</span> ' : '';
       var isNext = next && next.id === m.id;
       var score = m.kampflos
         ? (m.winner === m.p[0] ? legsToWin() + ':0' : '0:' + legsToWin()) + ' w.o.'
@@ -5492,42 +5509,52 @@
         var kacheln = ['', '', ''];
         var kDbl = ohneFinish ? null : lieblingsDoppel(active);
         var kRest = remainingIn(leg, active);
+        var kPlan = ohneFinish ? null : planFuer(kRest, 3, kDbl);
+        var kPlanGilt = !!kPlan;
         UI.darts.forEach(function (d, ki) {
           var soll = null;
           if (!ohneFinish) {
-            var kEmpf = Checkout.suggest(kRest, 3 - ki, kDbl);
+            var kEmpf = kPlanGilt && kPlan.darts[ki] ? [kPlan.darts[ki]]
+              : (Checkout.suggest(kRest, 3 - ki, kDbl) || (stellwurfFuer(kRest, 3 - ki, kDbl) || {}).darts);
             /* suggest liefert Labels ('T20') - fuer den Vergleich in
                Mult/Zahl zerlegen, wie es auch der Finisher macht. */
             if (kEmpf && kEmpf.length) soll = labelDart(kEmpf[0]);
           }
           var traf = soll && d.n === soll.n && d.m === soll.m;
+          if (!traf) kPlanGilt = false;
           kacheln[ki] = '<span class="fk ' + (traf ? 'gut' : 'anders') + '">' +
             (d.n === 0 ? '–' : dartLabel(d)) + '</span>';
           kRest -= d.v;
         });
-        if (route && !nurAnzeige) {
-          for (var kr = 0; kr < route.length && UI.darts.length + kr < 3; kr++) {
+        /* Was noch zu werfen ist: der Rest des Plans, solange er gilt. */
+        var planRest = kPlanGilt && UI.darts.length > 0 && kPlan.darts.length > UI.darts.length
+          ? { darts: kPlan.darts.slice(UI.darts.length), auf: kPlan.auf } : null;
+        var zeigRoute = planRest ? (planRest.auf === null ? planRest.darts : null) : route;
+        if (zeigRoute && !nurAnzeige) {
+          for (var kr = 0; kr < zeigRoute.length && UI.darts.length + kr < 3; kr++) {
             /* Die vorgeschlagene Kachel ist zugleich der Bestaetigungsknopf:
                wer die 14 trifft, tippt auf die 14 statt sie im Zahlenfeld zu
                suchen. data-num/data-mult nimmt derselbe Handler wie die
                Zahlentasten. */
-            var kSoll = labelDart(route[kr]);
+            var kSoll = labelDart(zeigRoute[kr]);
             kacheln[UI.darts.length + kr] = '<button type="button" class="fk tipp' + (kr === 0 ? ' jetzt' : '') + '"' +
-              ' data-num="' + kSoll.n + '" data-mult="' + kSoll.m + '" aria-label="' + Checkout.pretty(route[kr]) + ' getroffen">' +
-              Checkout.pretty(route[kr]) + '</button>';
+              ' data-num="' + kSoll.n + '" data-mult="' + kSoll.m + '" aria-label="' + Checkout.pretty(zeigRoute[kr]) + ' getroffen">' +
+              Checkout.pretty(zeigRoute[kr]) + '</button>';
           }
         } else if (UI.darts.length < 3 && !ohneFinish && !nurAnzeige) {
-          /* Kein Finish mehr mit den restlichen Darts: wie im Finisher steht
-             dann der Stellwurf da (42 Rest -> 10, damit 32 bleibt) -- gestrichelt,
-             und ebenfalls antippbar. */
-          var kStell = finisherStellwurf(kRest, kDbl);
-          if (kStell) {
-            var kStellSoll = labelDart(kStell);
-            /* Dazu, worauf der Stellwurf stellt (42 Rest, "10" -> auf 32). */
-            var kAuf = kRest - kStellSoll.n * kStellSoll.m;
-            kacheln[UI.darts.length] = '<button type="button" class="fk tipp stellen"' +
-              ' data-num="' + kStellSoll.n + '" data-mult="' + kStellSoll.m + '" aria-label="Stellwurf ' + kStell + ' getroffen, stellt auf ' + kAuf + '">' +
-              kStell + '<span class="fk-auf">auf ' + kAuf + '</span></button>';
+          /* Kein Finish mehr mit den restlichen Darts: dann steht der
+             Stellwurf aus der Tabelle da (99 mit zwei Darts: T19 10, damit
+             32 bleibt) -- gestrichelt, jeder Dart antippbar, am letzten die
+             Zahl, auf die er stellt. */
+          var kSt = planRest && planRest.auf !== null ? planRest : stellwurfFuer(kRest, 3 - UI.darts.length, kDbl);
+          if (kSt) {
+            for (var ks = 0; ks < kSt.darts.length && UI.darts.length + ks < 3; ks++) {
+              var kStellSoll = labelDart(kSt.darts[ks]);
+              var letzter = ks === kSt.darts.length - 1;
+              kacheln[UI.darts.length + ks] = '<button type="button" class="fk tipp stellen' + (ks === 0 ? ' jetzt' : '') + '"' +
+                ' data-num="' + kStellSoll.n + '" data-mult="' + kStellSoll.m + '" aria-label="Stellwurf ' + Checkout.pretty(kSt.darts[ks]) + ' getroffen' + (letzter ? ', stellt auf ' + kSt.auf : '') + '">' +
+                Checkout.pretty(kSt.darts[ks]) + (letzter ? '<span class="fk-auf">auf ' + kSt.auf + '</span>' : '') + '</button>';
+            }
           }
         }
         for (var kx = 0; kx < 3; kx++) if (!kacheln[kx]) kacheln[kx] = '<span class="fk leer">–</span>';
@@ -6114,6 +6141,27 @@
   /* Kein Finish mehr mit den restlichen Darts: welcher eine Wurf stellt am
      besten? Bevorzugt aufs Lieblingsdoppel, sonst D16, D20, … – und nur
      Würfe, die man absichtlich wirft: Singles zuerst, dann hohe Triple. */
+  /* Stellwurf fuer Rest und Darts in der Hand: aus der Finish-Tabelle
+     (bis 170), darueber der alte Rechenweg mit einem Dart auf ein gutes
+     Doppel. Liefert { darts: ['T19','S10'], auf: 32 } oder null. */
+  /* Der Weg zu Beginn einer Aufnahme ist ein Plan: Finish ({ darts, auf: null })
+     oder Stellwurf ({ darts, auf }). Solange die Darts wie geplant fallen,
+     bleibt der Rest des Plans stehen (128: T20 T16 D10 - nach der T20 nicht
+     ploetzlich T20 D4); erst nach einem Fehlwurf wird fuer den neuen Rest
+     nachgeschlagen. */
+  function planFuer(rest, dartsLeft, dbl) {
+    var w = Checkout.suggest(rest, dartsLeft, dbl);
+    if (w) return { darts: w, auf: null };
+    return stellwurfFuer(rest, dartsLeft, dbl);
+  }
+  function stellwurfFuer(rest, dartsLeft, dbl) {
+    var aus = Checkout.stellwurf(rest, dartsLeft, dbl);
+    if (aus) return aus;
+    var einer = finisherStellwurf(rest, dbl);
+    if (!einer) return null;
+    var d = labelDart(einer);
+    return { darts: [einer], auf: rest - d.n * d.m };
+  }
   function finisherStellwurf(rest, dbl) {
     var ziele = [];
     if (dbl) ziele.push(2 * dbl);
@@ -6289,27 +6337,34 @@
     if (!g.done && !rd.stechen && !st.fertig[aktiv]) {
       var dbl = lieblingsDoppel(aktiv);
       var restLauf = st.restVorVisit;
+      var fPlan = planFuer(st.restVorVisit, 3, dbl);
+      var fPlanGilt = !!fPlan;
       for (var ki = 0; ki < st.inVisit; ki++) {
         var wurf = st.visit[ki];
-        var empf = Checkout.suggest(restLauf, 3 - ki, dbl);
+        var empf = fPlanGilt && fPlan.darts[ki] ? [fPlan.darts[ki]]
+          : (Checkout.suggest(restLauf, 3 - ki, dbl) || (stellwurfFuer(restLauf, 3 - ki, dbl) || {}).darts);
         var soll = empf && empf.length ? labelDart(empf[0]) : null;
         var getroffen = soll && wurf.n === soll.n && wurf.m === soll.m;
+        if (!getroffen) fPlanGilt = false;
         kacheln[ki] = '<span class="fk ' + (getroffen ? 'gut' : 'anders') + '">' +
           (wurf.n === 0 ? '–' : dartLabel(wurf)) + '</span>';
         restLauf -= wurf.n * wurf.m;
       }
-      route = Checkout.suggest(st.rest[aktiv], 3 - st.inVisit, dbl);
+      var fPlanRest = fPlanGilt && st.inVisit > 0 && fPlan.darts.length > st.inVisit
+        ? { darts: fPlan.darts.slice(st.inVisit), auf: fPlan.auf } : null;
+      route = fPlanRest ? (fPlanRest.auf === null ? fPlanRest.darts : null) : Checkout.suggest(st.rest[aktiv], 3 - st.inVisit, dbl);
       if (route) {
         for (var ri = 0; ri < route.length && st.inVisit + ri < 3; ri++) {
           kacheln[st.inVisit + ri] = '<span class="fk' + (ri === 0 ? ' jetzt' : '') + '">' +
             Checkout.pretty(route[ri]) + '</span>';
         }
       } else if (st.inVisit < 3) {
-        var stell = finisherStellwurf(st.rest[aktiv], dbl);
-        if (stell) {
-          var stellSoll = labelDart(stell);
-          kacheln[st.inVisit] = '<span class="fk stellen">' + stell +
-            '<span class="fk-auf">auf ' + (st.rest[aktiv] - stellSoll.n * stellSoll.m) + '</span></span>';
+        var stw = fPlanRest && fPlanRest.auf !== null ? fPlanRest : stellwurfFuer(st.rest[aktiv], 3 - st.inVisit, dbl);
+        if (stw) {
+          for (var si = 0; si < stw.darts.length && st.inVisit + si < 3; si++) {
+            kacheln[st.inVisit + si] = '<span class="fk stellen' + (si === 0 ? ' jetzt' : '') + '">' + Checkout.pretty(stw.darts[si]) +
+              (si === stw.darts.length - 1 ? '<span class="fk-auf">auf ' + stw.auf + '</span>' : '') + '</span>';
+          }
         }
       }
     }
@@ -8767,14 +8822,14 @@
       case 'edit-profile': {
         var p = profile(el.getAttribute('data-id'));
         var pTeile = vollSplit(p.voll);
-        UI.overlay = { type: 'profile', id: p.id, draft: { name: p.name, avatar: p.avatar, dbl: p.dbl || null, vor: pTeile.vor, nach: pTeile.nach, dauer: !!p.dauer } };
+        UI.overlay = { type: 'profile', id: p.id, draft: { name: p.name, avatar: p.avatar, dbl: DOPPEL_WAHL.indexOf(p.dbl) >= 0 ? p.dbl : null, vor: pTeile.vor, nach: pTeile.nach, dauer: !!p.dauer } };
         render();
         break;
       }
       case 'edit-current-profile': {
         var cp = profile(UI.profile);
         var cpTeile = vollSplit(cp.voll);
-        UI.overlay = { type: 'profile', id: cp.id, draft: { name: cp.name, avatar: cp.avatar, dbl: cp.dbl || null, vor: cpTeile.vor, nach: cpTeile.nach, dauer: !!cp.dauer } };
+        UI.overlay = { type: 'profile', id: cp.id, draft: { name: cp.name, avatar: cp.avatar, dbl: DOPPEL_WAHL.indexOf(cp.dbl) >= 0 ? cp.dbl : null, vor: cpTeile.vor, nach: cpTeile.nach, dauer: !!cp.dauer } };
         render();
         break;
       }

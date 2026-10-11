@@ -4832,27 +4832,59 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
 /* Spielplan */
 #screen-tournament .round-label { font-family: var(--font-cond); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin: 10px 0 6px; }
 #screen-tournament .round-label:first-child { margin-top: 0; }
+/* Entwurf "Turnier" (ueberarbeitet, Okt. 2026): flache Zeilen ohne Rahmen,
+   die naechste Partie hell umrandet mit rotem Start-Knopf, Gespieltes
+   gedimmt mit "fertig". */
 #screen-tournament .match-row {
   display: flex; align-items: center; gap: 10px; margin-bottom: 6px; min-height: 48px;
-  padding: 6px 8px 6px 12px; border-radius: 12px; background: var(--bg-3); border: 1px solid var(--line); box-shadow: none;
+  padding: 6px 8px 6px 12px; border-radius: 12px; background: #1c1718; border: 1px solid transparent; box-shadow: none;
 }
 #screen-tournament .match-row .pair { flex: 1 1 auto; min-width: 0; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #screen-tournament .match-row .pair .muted { font-size: 0.8em; }
 #screen-tournament .match-row .res { flex: none; font-family: var(--font-cond); font-weight: 700; font-size: 1.25rem; font-variant-numeric: tabular-nums; color: var(--dead); }
 #screen-tournament .match-row.next .res { color: var(--text); }
-#screen-tournament .match-row.done { background: var(--bg-2); opacity: 0.72; }
-#screen-tournament .match-row.done .res { color: var(--accent); }
+#screen-tournament .match-row.done { background: #1c1718; opacity: 0.7; }
+#screen-tournament .match-row.done .res { color: #c9c0c0; }
 #screen-tournament .match-row.done .pair { color: var(--muted); }
 #screen-tournament .match-row.done .pair b { color: var(--text); }
-#screen-tournament .match-row.next { background: var(--aktiv-flaeche); border-color: var(--aktiv-linie); box-shadow: 0 0 30px var(--schein); opacity: 1; }
+#screen-tournament .match-row.next { background: #2a2224; border-color: transparent; box-shadow: inset 0 0 0 1.5px var(--aktiv-linie), 0 0 26px var(--schein-weich); opacity: 1; }
 #screen-tournament .match-row .go {
   flex: none; min-height: 40px; min-width: 70px; padding: 0 12px; border-radius: 10px;
-  background: var(--bg-2); border: 1px solid var(--line-hell); color: var(--text);
+  background: #241d1f; border: 1px solid transparent; color: var(--text);
   font-family: var(--font-cond); font-weight: 700; font-size: 1rem; letter-spacing: 0.06em; text-transform: uppercase;
 }
-#screen-tournament .match-row.next .go:not(.wo) { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+#screen-tournament .match-row.next .go:not(.wo) { background: linear-gradient(180deg, #2a1416, #1a0d0e); border: 1.5px solid var(--accent); color: #fff; box-shadow: 0 0 22px rgba(229, 72, 77, 0.22); }
 #screen-tournament .match-row .go.wo { min-width: 0; color: var(--muted); font-weight: 600; text-transform: none; letter-spacing: 0; }
 #screen-tournament .match-row .fertig { flex: none; min-width: 70px; text-align: center; font-family: var(--font-cond); font-weight: 600; font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+/* Ligaspiel (Entwurf Okt. 2026): Positionen H hell, G gedeckt, Scheibe als
+   Schild, "laeuft" fuer Partien am anderen Geraet, w.o. als leiser Knopf. */
+#screen-tournament .posmark { background: transparent; border: none; padding: 0; min-width: 0; font-family: var(--font-cond); font-size: 0.8em; letter-spacing: 0.02em; margin-right: 2px; }
+#screen-tournament .posmark.h { color: var(--laser-hell); }
+#screen-tournament .posmark.g { color: var(--muted); }
+#screen-tournament .match-row .scheibe { background: #241d1f; border: none; border-radius: 6px; padding: 2px 8px; font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: #c9c0c0; }
+#screen-tournament .match-row .belegt { font-family: var(--font-cond); font-weight: 700; font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; text-shadow: none; }
+#screen-tournament .match-row .go.wo { background: transparent; border: none; box-shadow: inset 0 0 0 1.5px #3a2e30; color: var(--muted); font-weight: 700; font-size: 0.85rem; min-width: 0; padding: 0 10px; }
+#screen-tournament .lg-kopf { margin-bottom: 6px; }
+#screen-tournament .lg-kopf h2 { margin: 0; }
+#screen-tournament .lg-ticker { display: inline-flex; align-items: center; gap: 8px; background: #241d1f; border-color: transparent; color: var(--text); font-family: var(--font-cond); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; font-size: 0.78rem; }
+#screen-tournament .lg-live { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 6px; background: var(--accent); color: #fff; font-size: 1.1em; box-shadow: 0 0 14px rgba(229, 72, 77, 0.45); }
+#screen-tournament .lg-live i { width: 8px; height: 8px; border-radius: 50%; background: #fff; animation: livePulse 1.4s ease-in-out infinite; }
+#screen-tournament #liga-stand { background: radial-gradient(80% 100% at 50% 0%, rgba(70, 170, 215, 0.14), transparent 70%), var(--bg-2); }
+#screen-tournament .lg-teams { margin: 6px 0 4px; }
+#screen-tournament .lg-team .lg-zahl { font-family: var(--font-display); font-weight: 400; font-size: clamp(44px, 12vw, 72px); }
+#screen-tournament .lg-team.wir .lg-zahl { color: #fff; text-shadow: 0 0 30px rgba(70, 170, 215, 0.5); }
+#screen-tournament .lg-team.sie .lg-zahl { color: #c9c0c0; }
+#screen-tournament .lg-team .lg-name { font-size: 0.85rem; letter-spacing: 0.08em; text-transform: uppercase; margin: 2px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#screen-tournament .lg-team.sie .lg-name { color: var(--muted); }
+#screen-tournament .lg-doppel { font-family: var(--font-display); color: #5a5052; }
+#screen-tournament .lg-hl-liste { display: flex; flex-direction: column; }
+#screen-tournament .lg-hl-zeile { display: flex; align-items: baseline; gap: 12px; padding: 7px 0; border-bottom: 1px solid #1f191b; }
+#screen-tournament .lg-hl-k { flex: none; width: 90px; font-size: 0.85rem; color: var(--muted); }
+#screen-tournament .lg-hl-v { min-width: 0; font-weight: 600; font-size: 0.9rem; }
+#screen-tournament .lg-hl-liste .hint { margin: 0; }
+#screen-tournament .lg-knoepfe { margin-top: 10px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+#screen-tournament .lg-knoepfe .btn { min-height: 44px; padding: 0 8px; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: #241d1f; border-color: transparent; color: var(--text); }
+#screen-tournament #liga-bericht-karte > .btn.primary { margin-top: 10px; }
 #screen-tournament .spielplan-aktionen { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 #screen-tournament .spielplan-aktionen .btn { min-height: 44px; padding: 0 8px; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #screen-tournament #turnier-endstand { margin-top: 10px; }
@@ -4863,12 +4895,13 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
 #screen-tournament .standings td.name { font-family: var(--font-body, inherit); font-weight: 600; font-size: 1rem; }
 #screen-tournament .standings td.name .cell { max-width: 100%; }
 #screen-tournament .standings .rank { color: var(--muted); font-size: 1.05rem; }
-#screen-tournament .standings .wins { color: var(--accent); }
+#screen-tournament .standings .wins { color: #fff; text-shadow: 0 0 8px var(--aktiv-linie), 0 0 18px var(--schein-stark); }
+#screen-tournament .standings .wins.null { color: #857a7b; text-shadow: none; }
 #screen-tournament .standings tr.leader td { background: transparent; box-shadow: none; text-shadow: none; }
 #screen-tournament .standings tr.leader td.name { color: #fff; }
 
 /* Statistik je Spieler: Avatar und Name in einer Zeile, darunter die Werte. */
-#screen-tournament .stat-card { padding: 10px; border: 1px solid var(--line); border-radius: 12px; }
+#screen-tournament .stat-card { padding: 10px; background: #1c1718; border: none; border-radius: 12px; }
 #screen-tournament .stat-card .who { flex-direction: row; justify-content: flex-start; text-align: left; min-height: 0; gap: 8px; margin-bottom: 6px; }
 #screen-tournament .stat-card .who .av.md { width: 30px; height: 30px; font-size: 0.75rem; }
 #screen-tournament .stat-card .who .wer-name { font-family: var(--font-cond); font-weight: 700; font-size: 1rem; text-transform: uppercase; letter-spacing: 0.03em; }
@@ -4895,8 +4928,18 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
   .turnier-rechts::-webkit-scrollbar { width: 0; height: 0; display: none; }
   .turnier-rechts > * { flex: none; }
   .turnier-rechts > #karte-turnier-statistik { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+  .turnier-rechts > #liga-bericht-karte { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+  #liga-bericht-karte > h2 { flex: none; }
+  #liga-bericht-karte > .lg-hl-liste { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
+  #liga-bericht-karte > .btn, #liga-bericht-karte > .lg-knoepfe { flex: none; }
+  #screen-tournament .lg-team .lg-zahl { font-size: clamp(56px, 13vh, 150px); }
+  #screen-tournament .lg-team .lg-name { font-size: clamp(12px, 2.2vh, 24px); }
+  #screen-tournament .lg-legs { font-size: clamp(12px, 1.9vh, 19px); }
+  #screen-tournament .lg-hl-k { width: clamp(90px, 10vw, 150px); font-size: clamp(12px, 1.8vh, 18px); }
+  #screen-tournament .lg-hl-v { font-size: clamp(12px, 1.9vh, 19px); }
+  #screen-tournament .lg-knoepfe .btn { height: clamp(36px, 6vh, 60px); font-size: clamp(12px, 1.9vh, 18px); }
   #karte-turnier-statistik > h2 { flex: none; }
-  #karte-turnier-statistik > .stats-grid { flex: 1 1 auto; min-height: 0; overflow-y: auto; align-content: start; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(5px, 0.8vw, 10px); scrollbar-width: none; }
+  #karte-turnier-statistik > .stats-grid { flex: 1 1 auto; min-height: 0; overflow-y: auto; align-content: start; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(5px, 0.8vw, 10px); scrollbar-width: none; }
 
   #screen-tournament .round-label { font-size: clamp(11px, 1.9vh, 20px); margin: clamp(4px, 1vh, 12px) 0 clamp(4px, 0.8vh, 9px); }
   #screen-tournament .match-row { min-height: clamp(40px, 7.6vh, 84px); margin-bottom: clamp(4px, 0.8vh, 9px); gap: clamp(8px, 1vw, 16px); padding: 4px clamp(8px, 1vw, 14px) 4px clamp(12px, 1.4vw, 20px); }

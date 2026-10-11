@@ -319,14 +319,21 @@ der Saison** mit Pokal: 180er, High-Finishes ab 100 und Shortlegs bis 21 Darts
 als Kacheln zu zweit (Wert, Name, Spieltag und Einzel), dazu das Spieltag-Log. Im Regeln-Reiter der Liga-Seite stehen dazu ein
 FAQ für Neue und Udos Regelecke.
 
-Die **Turnier-Übersicht** (Entwurf „Turnier Redesign“, Oktober 2026) trägt
-dieselbe Kopfleiste wie das Setup, darunter die Titelzeile mit Format und
-„Turnier verlassen“. Links der Spielplan nach Runden: die laufende Partie leuchtet
-mit weißem „Weiter“, offene haben „Start“, fertige treten zurück (Sieger fett,
-Ergebnis rot, „fertig“). Gestartet wird direkt an der Partie – einen „Nächstes
-Spiel“-Knopf gibt es nicht; erst wenn alles gespielt ist, erscheint „Endstand
-ansehen“. Rechts oben die Tabelle (Siege rot), darunter die Turnier-Statistik je
-Spieler. Spielerwechsel und vorzeitiges Beenden wohnen unten im Spielplan-Kasten.
+Die **Turnier-Übersicht** (Entwurf „Turnier Redesign“, überarbeitet Oktober 2026)
+trägt dieselbe Kopfleiste wie das Setup, darunter die Titelzeile mit Format,
+Spielerzahl und „N von M gespielt“ sowie „Turnier verlassen“. Links der Spielplan
+nach Runden in flachen Zeilen: die nächste Partie ist hell umrandet und hat den
+roten „Start“- bzw. „Weiter“-Knopf, offene haben dunkle „Start“-Knöpfe, fertige
+treten zurück (Sieger fett, „fertig“). Gestartet wird direkt an der Partie – einen
+„Nächstes Spiel“-Knopf gibt es nicht; erst wenn alles gespielt ist, erscheint
+„Endstand ansehen“. Rechts oben die Tabelle (Siege weiß leuchtend, 0 gedimmt),
+darunter die Turnier-Statistik je Spieler in drei Spalten. Im **Ligaspiel** (Entwurf „Ligaspiel“, Oktober 2026)
+heißt die Spielplan-Karte „Spielplan · N von 16 gespielt“, die Zeilen tragen H1 bis
+H4 (hell) gegen G1 bis G4 (gedeckt), die Scheibe als Schild, „läuft bei …“ für Partien
+am anderen Gerät und einen leisen w.o.-Knopf; rechts steht groß der Punktestand der
+Teams mit dem Live-Ticker-Knopf (rotes LIVE-Schild), darunter „Für den Spielbericht“
+mit 180ern, High-Finishes und Shortlegs als Zeilen sowie „Spieler nachmelden“ und
+„Spielbericht ansehen“ (die Turnier-Statistik entfällt dort). Spielerwechsel und vorzeitiges Beenden wohnen unten im Spielplan-Kasten.
 Am Tablet steht alles fest im Rahmen, der Spielplan scrollt innen; am Handy quer
 entfällt die Turnier-Statistik.
 
@@ -815,7 +822,8 @@ Ausbullen und die Dialoge nach Leg und Spiel behalten ihre eigene Pfeil-Wahl.
 |---|---|
 | `index.html` | Aufbau aller Screens |
 | `css/styles.css` | Styling (Dark, Touch-Ziele ≥ 44 px) |
-| `js/checkout.js` | Finish-Solver (Double-Out-Wege für Rest 2–170) |
+| `js/checkout.js` | Finish-Wege aus Tabellen (Rest 2–170 je Lieblingsdoppel, Stellwürfe) plus Rechenkern „ist ein Finish möglich“ |
+| `docs/finishwege/`, `tools/finishwege-bauen.mjs` | Quelle der Finish-Tabellen und der Generator, der sie in checkout.js schreibt |
 | `js/app.js` | Turnier-, Cricket- und RTW-Logik, Statistik, Rendering, Persistenz |
 | `js/auth.js` | *optional:* Anmelden, Roster, Zuordnung alter Profile, Einladungs-Link |
 | `js/qr.js` | *optional:* QR-Code für den Einladungs-Link (qrcode-generator, MIT) |
@@ -881,10 +889,25 @@ Offline-Betrieb brechen und bei jedem Start die IP jedes Mitspielers an Google
 schicken. Nur die Latin-Teilmenge, zusammen 128 KB. Neu holen mit
 `node tools/fetch-fonts.mjs`, danach `CACHE` in `sw.js` hochzählen.
 
-Der Finish-Solver sucht zuerst den Weg mit den wenigsten Darts und bewertet danach die
-Wurfqualität (T20/T19 zuerst, gute Schluss-Doppel wie D20/D16/D12, D2 und Bull nur wenn
-nötig). Die Ergebnisse entsprechen der gängigen Checkout-Tabelle, z. B. 170 → T20 T20
-Bull, 141 → T20 T19 D12, 121 → T20 T15 D8, 99 → T20 19 D10.
+**Finish-Wege** kommen seit Oktober 2026 aus festen Tabellen (`docs/finishwege/`,
+Beschreibung in `docs/finishwege.md`): je Lieblingsdoppel (D16, D20, D18, D12, D8,
+D10, D14, D6, D4) und ohne Favorit steht für jeden Rest von 2 bis 170 der beste Weg mit
+3, 2 und 1 Dart in der Hand – gerechnet mit einem Treffermodell (Streuung um den
+Zielpunkt, Profil „Fortgeschritten“): wenigste Darts zuerst (ohne Bull gerechnet, ein
+kürzerer Bull-Weg ist nur Kandidat), keine Bogey-Reste, das
+Lieblingsdoppel gewinnt, wenn sein Weg höchstens 0,02 Aufnahmen schlechter ist (so
+wird 80 → T16 D16, 92 → T20 D16, 99 → T19 10 D16), Bull nur, wo es klar besser ist
+(84 → Bull D17). Nach jedem Dart wird mit dem neuen Rest nachgeschlagen. Geht kein
+Finish mehr, steht aus derselben Tabelle der **Stellwurf** mit der Zahl, auf die er
+stellt (99 mit zwei Darts: T19 10 auf 32; 21 mit einem Dart: 5 auf 16). Der Weg zu
+Beginn der Aufnahme ist ein Plan: solange die Darts wie angesagt fallen, bleibt der
+Rest des Plans stehen (128: T20 T16 D10 auch nach der T20), erst ein Fehlwurf lässt
+für den neuen Rest nachschlagen.
+`node tools/finishwege-bauen.mjs` prüft die Tabellen (Summe, Doppel am Ende,
+Stellwurf-Ziel) und schreibt sie in `js/checkout.js`; der alte Rechenkern dort
+beantwortet nur noch, ob ein Rest mit n Darts überhaupt zu finishen ist. Wählbare
+Lieblingsdoppel sind die geraden von D20 bis D4; Bull und ungerade Doppel gibt es
+nicht mehr zur Wahl (ein Single dort lässt immer eine ungerade Zahl).
 
 ## Tests
 
