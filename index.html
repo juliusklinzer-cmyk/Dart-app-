@@ -98,7 +98,7 @@
     <div class="card" id="karte-modus">
     <span class="kt">Spielart</span>
     <div class="modes" id="mode-select">
-      <button data-action="set-mode" data-value="quick">Schnelles Spiel</button>
+      <button data-action="set-mode" data-value="quick">Schnelles X01</button>
       <button data-action="set-mode" data-value="501">X01 Turnier</button>
       <button data-action="set-mode" data-value="cricket">Cricket</button>
       <button data-action="set-mode" data-value="rtw">Round the World</button>
@@ -151,7 +151,7 @@
         <button data-value="701">701</button>
       </div>
     </div>
-    <!-- Nur im Turnier: das Schnelle Spiel hat seine eigene Spieldauer. -->
+    <!-- Turnier und Schnelles X01: alle Legs werden gespielt. -->
     <div class="setting" id="setting-bestof">
       <label>Legs</label>
       <div class="options" data-setting="bestOf">
@@ -159,27 +159,6 @@
         <button data-value="3"><span class="lang">Best of 3</span><span class="kurz">Bo3</span></button>
         <button data-value="5"><span class="lang">Best of 5</span><span class="kurz">Bo5</span></button>
       </div>
-    </div>
-    <!-- Nur im Schnellen Spiel: Saetze und Legs wie bei einem kleinen Turnier. -->
-    <div class="setting hidden" id="setting-quick-dauer">
-      <label>Spieldauer</label>
-      <div class="options" data-setting="quickModus">
-        <button data-value="0">First to</button>
-        <button data-value="1">Best of</button>
-      </div>
-      <div class="stepper-reihe">
-      <div class="stepper">
-        <button type="button" data-action="quick-step" data-key="quickSaetze" data-dir="-1" aria-label="weniger Sätze">−</button>
-        <span id="quick-saetze">1 Satz</span>
-        <button type="button" data-action="quick-step" data-key="quickSaetze" data-dir="1" aria-label="mehr Sätze">+</button>
-      </div>
-      <div class="stepper">
-        <button type="button" data-action="quick-step" data-key="quickLegs" data-dir="-1" aria-label="weniger Legs">−</button>
-        <span id="quick-legs">1 Leg</span>
-        <button type="button" data-action="quick-step" data-key="quickLegs" data-dir="1" aria-label="mehr Legs">+</button>
-      </div>
-      </div>
-      <span class="note" id="quick-dauer-hint"></span>
     </div>
     <!-- Wie wird eingetragen? Tastatur = Fernsteuerung vom Board-iPad aus,
          Standard = immer die Aufnahme als Zahl, Gemischt = im Finish-Bereich
@@ -238,6 +217,7 @@
         <button data-value="0">Einfach</button>
         <button data-value="1">Boost</button>
       </div>
+      <span class="note" id="rtw-note"></span>
     </div>
     </div>
 

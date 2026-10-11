@@ -1566,7 +1566,7 @@ check('die offenen nicht', nachher !== vorher + 12);
 
 /* ---------- Schnelles Spiel ---------- */
 
-group('Schnelles Spiel: alle gleichzeitig, ein Leg');
+group('Schnelles X01: alle gleichzeitig, ein Leg');
 /* Vorher merken: in der Karriere stehen schon Siege aus den Tests davor,
    also zaehlt hier die Differenz und nicht der absolute Stand. */
 const wonVorher = await page.evaluate(() => {
@@ -1590,7 +1590,7 @@ check('teilt sich die Einstellungen mit dem Turnier', await visible('#settings-5
 check('ohne Server keine Online-Umschalter, nur ein Hinweis auf die Funktion',
   !(await visible('#settings-online [data-setting="online"]')) &&
   (!(await visible('#settings-online')) || (await text('#online-hint')).includes('Konto')));
-check('kein Legs-Feld – es gibt nur eines', !(await visible('#setting-bestof')));
+check('die Legs-Zeile gilt wie im Turnier', await visible('#setting-bestof'));
 await page.locator('#settings-501 [data-setting="start"] button[data-value="301"]').click();
 /* Für diesen Durchlauf bleibt die Punkte-Eingabe an: sonst schaltet die App
    im Finish-Bereich auf Einzel-Darts um und das Zahlenfeld ist weg. Der
@@ -1625,7 +1625,7 @@ check('alle starten auf 301', await page.evaluate(() => {
   return m.p.every((id) => D.remainingIn(leg, id) === 301);
 }));
 check('kein Turnier-Zaehler in der Kopfzeile',
-  (await textKlein('#game-match-label')).includes('schnelles spiel'));
+  (await textKlein('#game-match-label')).includes('schnelles x01'));
 /* Ab drei Spielern am Handy erscheint die Finish-Leiste erst, wenn beim
    Aktiven ein Finish ansteht – vorher stiehlt sie dem Verlauf die Zeile. */
 check('ohne Finish bleiben die Felder des Spielers am Wurf leer', (await page.locator('#scoreboard .pcard.active .pfelder .fk').count()) === 0);
@@ -1667,7 +1667,7 @@ check('Glückwunsch-Overlay', (await textKlein('#overlay-card')).includes('glüc
 await page.locator('#overlay-card [data-action="open-summary"]').click();
 const qSum = await text('#summary-box');
 check('Auswertung nennt alle drei', qIds.every((id) => qSum.includes('Darts geworfen')));
-check('Auswertung nennt den Modus', (await textKlein('#summary-box')).includes('schnelles spiel'));
+check('Auswertung nennt den Modus', (await textKlein('#summary-box')).includes('schnelles x01'));
 await page.locator('#summary-actions [data-action="finish-game"]').click();
 check('im Archiv gelandet',
   (await page.evaluate(() => window.__dart.state().history.filter((h) => h.kind === 'quick').length)) === 1);
@@ -1684,9 +1684,9 @@ check('ein 301er-Leg aendert das beste Leg nicht', await page.evaluate((vorher) 
   return Object.keys(c).every((k, i) => c[k].bestLeg === vorher[i]);
 }, bestVorher));
 
-/* ---------- Schnelles Spiel über Sätze und Legs ---------- */
+/* ---------- Schnelles X01: Legs wie im Turnier ---------- */
 
-group('Schnelles Spiel: First to 2 Sätze à 2 Legs');
+group('Schnelles X01: Legs wie im Turnier (1 Leg, Best of 3, Best of 5)');
 await page.evaluate(() => {
   const D = window.__dart, S = D.state();
   S.game = null;
@@ -1694,42 +1694,20 @@ await page.evaluate(() => {
   D.setScreen('setup');
 });
 await page.locator('[data-action="set-mode"][data-value="quick"]').click();
-check('Spieldauer-Einstellung nur im Schnellen Spiel sichtbar', await visible('#setting-quick-dauer'));
+check('die Legs-Zeile des Turniers gilt auch hier, keine eigene Spieldauer mehr',
+  (await visible('#setting-bestof')) && (await page.locator('#setting-quick-dauer').count()) === 0);
 await page.locator('#settings-501 [data-setting="start"] button[data-value="301"]').click();
 await page.locator('#settings-501 [data-action="eingabe"][data-value="0"]').click();
-await page.locator('[data-setting="quickModus"] button[data-value="0"]').click();
-/* Auf 1 Satz / 1 Leg zurueck, egal was vorher stand. */
-while (!(await page.locator('[data-action="quick-step"][data-key="quickLegs"][data-dir="-1"]').isDisabled())) {
-  await page.locator('[data-action="quick-step"][data-key="quickLegs"][data-dir="-1"]').click();
-}
-while (!(await page.locator('[data-action="quick-step"][data-key="quickSaetze"][data-dir="-1"]').isDisabled())) {
-  await page.locator('[data-action="quick-step"][data-key="quickSaetze"][data-dir="-1"]').click();
-}
-check('Grundstellung: 1 Satz, 1 Leg', (await text('#quick-saetze')) === '1 Satz' && (await text('#quick-legs')) === '1 Leg');
-await page.locator('[data-action="quick-step"][data-key="quickLegs"][data-dir="1"]').click();
-await page.locator('[data-action="quick-step"][data-key="quickSaetze"][data-dir="1"]').click();
-check('Zaehler: 2 Sätze, 2 Legs', (await text('#quick-saetze')) === '2 Sätze' && (await text('#quick-legs')) === '2 Legs');
-check('Hinweis erklärt Satz und Spiel', (await textKlein('#quick-dauer-hint')).includes('satz'));
-/* Best of rechnet dasselbe Ziel um: First to 2 = Best of 3 -- und zurueck. */
-await page.locator('[data-setting="quickModus"] button[data-value="1"]').click();
-check('Best of: aus First to 2 wird Best of 3', (await text('#quick-legs')) === '3 Legs' && (await text('#quick-saetze')) === '3 Sätze');
-await page.locator('[data-action="quick-step"][data-key="quickLegs"][data-dir="1"]').click();
-check('Best of zaehlt in Zweierschritten', (await text('#quick-legs')) === '5 Legs');
-await page.locator('[data-setting="quickModus"] button[data-value="0"]').click();
-check('zurueck zu First to: 3 Legs, 2 Sätze', (await text('#quick-legs')) === '3 Legs' && (await text('#quick-saetze')) === '2 Sätze');
-await page.locator('[data-action="quick-step"][data-key="quickLegs"][data-dir="-1"]').click();
-check('wieder 2 Legs', (await text('#quick-legs')) === '2 Legs');
-
+await page.locator('[data-setting="bestOf"] button[data-value="3"]').click();
 await page.locator('[data-action="start-game"]').click();
 await bullOffGo();
 check('läuft auf dem X01-Bildschirm', await visible('#screen-game'));
 const [sA, sB] = await page.evaluate(() => window.__dart.currentMatch().p);
-check('Spiel kennt sein Ziel: Best-of-3-Legs je Satz, Best-of-3-Sätze', await page.evaluate(() => {
+check('Spiel kennt sein Ziel: Best of 3 Legs, ein Satz, alle Legs werden gespielt', await page.evaluate(() => {
   const m = window.__dart.currentMatch();
-  return m.bestOf === 3 && m.saetzeBestOf === 3 && m.spieldauer.modus === 0;
+  return m.bestOf === 3 && m.saetzeBestOf === 1 && m.spieldauer.modus === 1 && m.spieldauer.alle === true;
 }));
-check('Kopfzeile zaehlt Satz und Leg', (await textKlein('#game-leg-label')).includes('satz 1') &&
-  (await textKlein('#game-leg-label')).includes('leg 1') && (await textKlein('#game-leg-label')).includes('first to 2 sätze'));
+check('Kopfzeile nennt Best of 3', (await textKlein('#game-leg-label')).includes('best of 3'));
 
 /* Ein Leg auf 301 fuer einen bestimmten Spieler: 180, (Gegner 60), 121. */
 const dranId = () => page.evaluate(() => {
@@ -1747,72 +1725,38 @@ await legFuer(sA);
 check('Leg 1 an A: Dialog sagt Leg, nicht Satz', (await textKlein('#overlay-card')).includes('leg an') &&
   (await textKlein('#overlay-card')).includes('legs 1:0'));
 await page.locator('#overlay-card [data-action="ov-next-leg"]').click();
-check('Karte von A zeigt Siege 1', (await page.locator('.pcard').first().locator('.pmeta').innerText()).includes('Siege 1'));
-check('Kopfzeile: Leg 2', (await textKlein('#game-leg-label')).includes('leg 2'));
 check('der Anwurf wechselt', (await dranId()) === sB);
-
-await legFuer(sA);
-check('Satz 1 an A', (await textKlein('#overlay-card')).includes('satz an') &&
-  (await textKlein('#overlay-card')).includes('sätze 1:0'), await textKlein('#overlay-card'));
-check('Knopf heisst Nächster Satz', (await textKlein('#overlay-card [data-action="ov-next-leg"]')).includes('satz'));
-check('Spiel läuft weiter', await page.evaluate(() => !window.__dart.currentMatch().done));
-await page.locator('#overlay-card [data-action="ov-next-leg"]').click();
-check('Kopfzeile: Satz 2, Leg 1', (await textKlein('#game-leg-label')).includes('satz 2') &&
-  (await textKlein('#game-leg-label')).includes('leg 1'));
-{
-  const s2 = await stand();
-  check('Legs im neuen Satz bei 0:0', s2.legs[sA] === 0 && s2.legs[sB] === 0 && s2.saetze[sA] === 1);
-}
-
 await legFuer(sB);
-check('Leg an B: Sätze 1:0 · Legs 0:1', (await textKlein('#overlay-card')).includes('sätze 1:0') &&
-  (await textKlein('#overlay-card')).includes('legs 0:1'), await textKlein('#overlay-card'));
-await page.locator('#overlay-card [data-action="ov-next-leg"]').click();
-await legFuer(sA);
-await page.locator('#overlay-card [data-action="ov-next-leg"]').click();
-await legFuer(sA);
-check('zweiter Satz entscheidet das Spiel', await page.evaluate(() => window.__dart.currentMatch().done));
-check('Glückwunsch mit Satzstand', (await textKlein('#overlay-card')).includes('glückwunsch') &&
-  (await textKlein('#overlay-card')).includes('sätze 2:0'), await textKlein('#overlay-card'));
-check('fünf Legs gespielt', (await page.evaluate(() => window.__dart.currentMatch().legs.length)) === 5);
-
-/* Zurücknehmen oeffnet das Spiel wieder -- der Satzstand rechnet sich neu. */
-await page.locator('#overlay-card [data-action="undo-game"]').click();
-check('nach Rücknahme wieder offen', await page.evaluate(() => !window.__dart.currentMatch().done));
+check('1:1 - weiter', await page.evaluate(() => !window.__dart.currentMatch().done));
 {
-  const s3 = await stand();
-  check('Satzstand nach Rücknahme 1:0, Legs 1:1', s3.saetze[sA] === 1 && s3.legs[sA] === 1 && s3.legs[sB] === 1);
+  const s1 = await stand();
+  check('Legs 1:1', s1.legs[sA] === 1 && s1.legs[sB] === 1);
 }
-await typeScore(121);
-await page.locator('#overlay-card [data-action="co-darts"]').first().click();
-check('Checkout erneut: Spiel entschieden', await page.evaluate(() => window.__dart.currentMatch().done));
-
+await page.locator('#overlay-card [data-action="ov-next-leg"]').click();
+await legFuer(sA);
+check('drittes Leg entscheidet', await page.evaluate(() => window.__dart.currentMatch().done));
 await page.locator('#overlay-card [data-action="open-summary"]').click();
-check('Auswertung nennt die Spieldauer und den Stand', (await textKlein('#summary-box')).includes('first to 2 sätze') &&
-  (await textKlein('#summary-box')).includes('sätze 2:0'));
 await page.locator('#summary-actions [data-action="finish-game"]').click();
-check('im Archiv mit Satzregel', await page.evaluate(() => {
-  const h = window.__dart.state().history.find((x) => x.kind === 'quick' && x.matches[0].saetzeBestOf === 3);
-  return !!h && h.matches[0].legs.length === 5 && h.matches[0].bestOf === 3;
+check('im Archiv mit Best of 3', await page.evaluate(() => {
+  const h = window.__dart.state().history.find((x) => x.kind === 'quick' && x.matches[0].bestOf === 3);
+  return !!h && h.matches[0].legs.length === 3;
 }));
-/* Zurueck auf ein Leg -- die folgenden Gruppen spielen das Schnelle Spiel
-   wie bisher, und die Einstellung bleibt sonst im Speicher haengen. */
+/* Zurueck auf ein Leg -- die folgenden Gruppen spielen das Schnelle X01 wie bisher. */
 await page.evaluate(() => {
   const D = window.__dart, S = D.state();
-  S.settings.quickSaetze = 1; S.settings.quickLegs = 1; D.save();
+  S.settings.bestOf = 1; D.save();
 });
 
 /* ---------- Best of: alle Legs werden gespielt, Kurzstatistik nach jedem Leg ---------- */
 
-group('Schnelles Spiel: Best of 3 Legs spielt alle drei Legs');
+group('Schnelles X01: Best of 3 Legs spielt alle drei Legs');
 await page.evaluate(() => {
   const D = window.__dart, S = D.state();
   S.game = null;
   S.lineup = D.activeProfiles().slice(0, 2).map((p) => p.id);
-  S.settings.quickModus = 1; S.settings.quickSaetze = 1; S.settings.quickLegs = 3;
+  S.settings.bestOf = 3;
   D.save(); D.setScreen('setup');
 });
-check('Hinweis: alle 3 Legs werden gespielt', (await textKlein('#quick-dauer-hint')).includes('alle 3 legs'));
 await page.locator('[data-action="start-game"]').click();
 await bullOffGo();
 const [bA, bB] = await page.evaluate(() => window.__dart.currentMatch().p);
@@ -1855,7 +1799,7 @@ await page.evaluate(() => {
   const D = window.__dart, S = D.state();
   S.game = null;
   S.lineup = D.activeProfiles().slice(0, 3).map((p) => p.id);
-  S.settings.quickModus = 1; S.settings.quickSaetze = 1; S.settings.quickLegs = 3;
+  S.settings.bestOf = 3;
   D.save(); D.setScreen('setup');
 });
 await page.locator('[data-action="start-game"]').click();
@@ -1886,7 +1830,7 @@ await page.evaluate(() => {
   const D = window.__dart, S = D.state();
   S.game = null;
   S.lineup = D.activeProfiles().slice(0, 3).map((p) => p.id);
-  S.settings.quickModus = 1; S.settings.quickSaetze = 1; S.settings.quickLegs = 3;
+  S.settings.bestOf = 3;
   D.save(); D.setScreen('setup');
 });
 await page.locator('[data-action="start-game"]').click();
@@ -1905,7 +1849,7 @@ await page.locator('#summary-actions [data-action="finish-game"]').click();
    Schnelle Spiel wie bisher, und die Einstellung bleibt sonst im Speicher. */
 await page.evaluate(() => {
   const D = window.__dart, S = D.state();
-  S.settings.quickModus = 0; S.settings.quickSaetze = 1; S.settings.quickLegs = 1; D.save();
+  S.settings.bestOf = 1; D.save();
 });
 
 /* ---------- Turnier-Modus: nur im Ligaspiel, Umschalten per Zyklus-Taste ---------- */
@@ -3795,7 +3739,7 @@ await page.evaluate(() => {
   S.lineup = D.activeProfiles().slice(0, 2).map((p) => p.id);
   S.mode = 'quick';
   S.settings.start = 501; S.settings.dartModeFrom = 170;
-  S.settings.quickSaetze = 1; S.settings.quickLegs = 1;
+  S.settings.bestOf = 1;
   D.save(); D.setScreen('setup');
 });
 await page.locator('[data-action="start-game"]').click();
@@ -3900,7 +3844,7 @@ check('OK-Tasten sind hell, nicht rot', await page.evaluate(() => {
 /* Menue (•••): Spiel verlassen oder weiterspielen, Esc und ein Tipp daneben schliessen. */
 await page.locator('#game-menu').click();
 check('••• oeffnet das Menue mit Spiel und Stand', (await visible('#game-menu-overlay')) &&
-  (await textKlein('#game-menu-overlay')).includes('schnelles spiel') && (await textKlein('#game-menu-overlay')).includes('spiel verlassen'));
+  (await textKlein('#game-menu-overlay')).includes('schnelles x01') && (await textKlein('#game-menu-overlay')).includes('spiel verlassen'));
 await page.keyboard.press('Escape');
 check('Esc schliesst das Menue', !(await visible('#game-menu-overlay')));
 await page.locator('#game-menu').click();
@@ -3959,7 +3903,7 @@ await page.evaluate(() => {
   S.lineup = D.activeProfiles().slice(0, 2).map((p) => p.id);
   S.mode = 'quick';
   S.settings.start = 501; S.settings.dartModeFrom = 170;
-  S.settings.quickSaetze = 1; S.settings.quickLegs = 1;
+  S.settings.bestOf = 1;
   D.ui().modeOverride = null;
   D.save(); D.setScreen('setup');
 });
@@ -4313,7 +4257,7 @@ group('Aufstellung: ausgeblendeter Gast kann nicht mitspielen');
     /* Ausgeblendeter Gast, dessen Kennung in der Aufstellung haengen blieb -- doppelt. */
     S.profiles.push({ id: 'geist', name: 'Laura', gast: true, hidden: true, avatar: null, hue: 2, created: Date.now() });
     S.lineup = [ids[0], 'geist', ids[1], 'geist'];
-    S.mode = 'quick'; S.settings.quickSaetze = 1; S.settings.quickLegs = 1;
+    S.mode = 'quick'; S.settings.bestOf = 1;
     D.save(); D.setScreen('setup');
     return { ids, lineup: S.lineup.slice() };
   });
@@ -4338,7 +4282,7 @@ group('Ton & Feiern: Feiern lassen sich abschalten');
     const D = window.__dart, S = D.state();
     S.game = null; S.matches = []; S.tour = null;
     S.lineup = D.activeProfiles().slice(0, 2).map((p) => p.id);
-    S.mode = 'quick'; S.settings.quickSaetze = 1; S.settings.quickLegs = 1; S.settings.dartModeFrom = 170;
+    S.mode = 'quick'; S.settings.bestOf = 1; S.settings.dartModeFrom = 170;
     D.save(); D.setScreen('setup');
   });
   check('die Karte Ton & Feiern steht im Setup', await visible('#settings-ton'));
@@ -4376,7 +4320,7 @@ group('Altes Spiel: nach 12 Stunden beendet, nicht gespeichert');
     const D = window.__dart, S = D.state();
     S.game = null; S.matches = []; S.tour = null;
     S.lineup = D.activeProfiles().slice(0, 2).map((p) => p.id);
-    S.mode = 'quick'; S.settings.quickSaetze = 1; S.settings.quickLegs = 1;
+    S.mode = 'quick'; S.settings.bestOf = 1;
     D.save(); D.setScreen('setup');
   });
   await page.locator('[data-action="start-game"]').click();

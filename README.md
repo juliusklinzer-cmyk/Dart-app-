@@ -53,29 +53,26 @@ Online); ohne Konto fehlen beide. **Ton** sind zwei Schalter: Klänge und Feiern
 Am Tablet und am quergedrehten Handy steht das Bild fest im Rahmen, innen scrollen
 nur Spielerliste und Einstellungen; am quergedrehten Handy rücken die
 Beschriftungen neben die Optionen und werden kurz (Start, Bo3, Std., Mix); hochkant
-am Handy steht alles untereinander. Bei X01, Schnellem Spiel und Finisher fragt
+am Handy steht alles untereinander. Bei X01, Schnellem X01 und Finisher fragt
 **„Eingabe“**: *Tastatur* (Sinnbild) startet gleich in der Fernsteuerung
 (Board-iPad), *Standard* nimmt immer die Aufnahme als Zahl, *Gemischt* schaltet ab
 der gewählten Restpunktzahl auf Einzel-Darts um. Im Spiel lässt sich jederzeit
 wechseln. **Kaiwen** und **Hunter** stehen schon in der Spielart-Liste – ihre Regeln
 folgen, bis dahin lässt sich dort nichts starten.
 
-Cricket, Round the World, Finisher und das Schnelle Spiel gehen auch **allein** –
+Cricket, Round the World, Finisher und das Schnelle X01 gehen auch **allein** –
 als Training gegen sich selbst. Allein wird nicht ausgebullt, es geht direkt los,
 und der Spielbildschirm zeigt eine große Karte mit Finish-Vorschlag. Nur das
 X01-Turnier braucht mindestens zwei Spieler, es ist ja jeder gegen jeden.
 
-### Schnelles Spiel
+### Schnelles X01
 
 Alle ausgewählten Spieler an einem Board, reihum, 501 (oder 301/701) Double Out –
 ohne Spielplan. Startpunkte und Einzel-Dart-Grenze teilt es sich mit dem Turnier.
-Dazu kommt die **Spieldauer** wie bei einem kleinen Turnier: **First to** oder
-**Best of**, und je ein Zähler für **Sätze** und **Legs** (Best of zählt in
-Zweierschritten, 1 Satz / 1 Leg ist das alte „wer zuerst auscheckt“). **First to:** Ein
-Satz geht an den, der zuerst die Legs hat, das Spiel an den, der zuerst die Sätze hat.
-**Best of:** Alle Legs werden gespielt, der Satz geht an den mit den meisten Legs, das
-Spiel an den mit den meisten Sätzen – bei Gleichstand (ab drei Spielern) geht es weiter,
-bis einer vorne liegt. Der Anwurf wandert Leg für Leg weiter, der Kopf zählt Satz und
+**Legs** wählt man wie im Turnier: **1 Leg**, **Best of 3** oder **Best of 5** –
+alle Legs werden gespielt, gewonnen hat, wer die meisten hat (bei Gleichstand ab drei
+Spielern geht es weiter, bis einer vorne liegt). Ältere Spiele mit Sätzen aus der
+früheren Spieldauer-Einstellung bleiben im Archiv lesbar. Der Anwurf wandert Leg für Leg weiter, der Kopf zählt Satz und
 Leg mit, die Spielerfelder zeigen den Stand, und am Ende eines Satzes sagt der Dialog
 „Satz an …“. Nach jedem Leg zeigt der Dialog eine **Kurzstatistik des Legs** (Average,
 Darts, höchste Aufnahme, Finish je Spieler) direkt über „Nächstes Leg“ – ebenso nach
@@ -391,7 +388,7 @@ Bull-Tasten heißen einheitlich **Bull** (25) und **Bull ×2** (50), gelb wie ü
 
 **Fernsteuerung (Turnier-Modus):** Die Riesenanzeige für den Bildschirm, der vorn
 am Board hängt. In **Liga-Einzeln** öffnet sie sich am Board-iPad (das sie einmal an
-hatte) von selbst; im X01-Turnier und im Schnellen Spiel schaltet sie der ⌨-Knopf
+hatte) von selbst; im X01-Turnier und im Schnellen X01 schaltet sie der ⌨-Knopf
 bewusst dazu – automatisch startet dort nichts. Allein gibt es sie nicht. Die
 Karten **bleiben an ihrem Platz** (zu zweit nebeneinander, ab drei Spielern im
 2×2-Raster) – nach jeder Aufnahme wandert nur die Markierung zum Nächsten, und ab
@@ -700,7 +697,7 @@ Durchschnitts-Ranglisten erst ab 9 geworfenen Darts bzw. 3 Doppelversuchen.
 
 Ein Turnier wandert per **„Turnier abschließen"** ins Archiv (die letzten 500 Spiele und Turniere bleiben
 gespeichert); abgebrochene Turniere behalten ihre bereits gespielten Spiele in der
-Statistik. Ein Schnelles Spiel über mehrere Legs lässt sich beim Abbrechen mit
+Statistik. Ein Schnelles X01 über mehrere Legs lässt sich beim Abbrechen mit
 „Gespielte Legs behalten“ ohne Sieger übernehmen (Average, 180er, Finishes zählen).
 
 ## Anmelden und gemeinsam spielen

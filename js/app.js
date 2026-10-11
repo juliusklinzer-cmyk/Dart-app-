@@ -503,7 +503,7 @@
     if (kind === 'cricket') return 'Cricket';
     if (kind === 'rtw') return 'Round the World';
     if (kind === 'finisher') return 'Finisher';
-    if (kind === 'quick') return 'Schnelles Spiel';
+    if (kind === 'quick') return 'Schnelles X01';
     if (kind === 'kaiwen') return 'Kaiwen';
     if (kind === 'hunter') return 'Hunter';
     return 'X01';
@@ -1526,7 +1526,6 @@
      es weiter, bis einer vorne liegt. Gespeichert wird bestOf (Legs je Satz)
      und saetzeBestOf (Saetze); spieldauer traegt Zaehlweise und Zahlen, wie
      sie eingestellt wurden. */
-  var QUICK_MAX = 9;   // hoechstens "First to 9" bzw. "Best of 17"
   function bestOfAus(modus, n) { return modus === 1 ? n : 2 * n - 1; }
   function matchSaetzeZuGewinnen(match) {
     return match && match.saetzeBestOf ? Math.floor(match.saetzeBestOf / 2) + 1 : 1;
@@ -2849,8 +2848,9 @@
     if (kind === 'quick') {
       S.game.p = S.lineup.slice();
       S.game.start = S.settings.start;
-      var qd = { modus: S.settings.quickModus === 1 ? 1 : 0, saetze: S.settings.quickSaetze || 1, legs: S.settings.quickLegs || 1 };
-      if (qd.modus === 1) qd.alle = true;   // Best of: alle Legs werden gespielt (siehe festeDauer)
+      /* Dieselbe Legs-Wahl wie im Turnier (1 Leg, Best of 3, Best of 5),
+         ein Satz; Best of heisst: alle Legs werden gespielt (festeDauer). */
+      var qd = { modus: 1, saetze: 1, legs: S.settings.bestOf || 1, alle: true };
       S.game.spieldauer = qd;
       S.game.bestOf = bestOfAus(qd.modus, qd.legs);
       S.game.saetzeBestOf = bestOfAus(qd.modus, qd.saetze);
@@ -3554,7 +3554,7 @@
 
   /* Name und ein Satz je Spielart - steht ueber den Einstellungen. */
   var SPIELART_TEXT = {
-    quick: ['Schnelles Spiel', 'Alle gleichzeitig, wer zuerst auscheckt.'],
+    quick: ['Schnelles X01', 'Alle gleichzeitig, wer zuerst auscheckt.'],
     '501': ['X01 Turnier', 'Jeder gegen jeden, Double Out.'],
     cricket: ['Cricket', 'Jede Zahl von 20 bis 15 und Bull dreimal treffen.'],
     rtw: ['Round the World', 'Reihum von 1 bis 20, danach Bull.'],
@@ -3655,9 +3655,11 @@
        und Einzel-Dart-Grenze gelten für beide. Nur die Legs sind Turniersache;
        zwei getrennte Karten wären zwei Bedienelemente für dieselbe Einstellung. */
     $('settings-501').classList.toggle('hidden', S.mode !== '501' && S.mode !== 'quick');
-    $('setting-bestof').classList.toggle('hidden', S.mode !== '501');
-    $('setting-quick-dauer').classList.toggle('hidden', S.mode !== 'quick');
-    if (S.mode === 'quick') renderQuickDauer();
+    /* Legs gelten fuer Turnier und Schnelles X01 gleichermassen. */
+    $('setting-bestof').classList.toggle('hidden', S.mode !== '501' && S.mode !== 'quick');
+    /* Round the World mit Boost: ein Satz dazu, was Boost heisst. */
+    var rtwNote = $('rtw-note');
+    if (rtwNote) rtwNote.textContent = S.mode === 'rtw' && S.settings.rtwBoost === 1 ? 'Boost: ein Double überspringt eine Zahl, ein Triple zwei.' : '';
     var startKnopf = document.querySelector('[data-action="start-game"]');
     startKnopf.textContent = bald ? 'Regeln folgen' : 'GAME ON!';
     startKnopf.disabled = bald;
@@ -3691,32 +3693,6 @@
     }
   }
 
-  /* Spieldauer im Setup: First to / Best of, dazu je ein Zaehler fuer
-     Saetze und Legs. Bei Best of sind nur ungerade Zahlen sinnvoll, darum
-     springt der Zaehler dort in Zweierschritten. */
-  function renderQuickDauer() {
-    var best = S.settings.quickModus === 1;
-    var sz = S.settings.quickSaetze, lg = S.settings.quickLegs;
-    $('quick-saetze').textContent = sz === 1 ? '1 Satz' : sz + ' Sätze';
-    $('quick-legs').textContent = lg === 1 ? '1 Leg' : lg + ' Legs';
-    var max = best ? 2 * QUICK_MAX - 1 : QUICK_MAX;
-    document.querySelectorAll('#setting-quick-dauer [data-action="quick-step"]').forEach(function (b) {
-      var wert = S.settings[b.getAttribute('data-key')];
-      b.disabled = Number(b.getAttribute('data-dir')) < 0 ? wert <= 1 : wert >= max;
-    });
-    var gewinnLegs = Math.floor(bestOfAus(best ? 1 : 0, lg) / 2) + 1;
-    var gewinnSaetze = Math.floor(bestOfAus(best ? 1 : 0, sz) / 2) + 1;
-    /* Best of: alle Legs werden gespielt. First to: wer zuerst die Legs hat. */
-    $('quick-dauer-hint').textContent = sz === 1 && lg === 1
-      ? 'Ein Leg – wer zuerst auscheckt, gewinnt.'
-      : best
-        ? (sz === 1
-          ? 'Alle ' + lg + ' Legs werden gespielt – wer die meisten hat, gewinnt.'
-          : 'Jeder Satz hat ' + lg + ' Legs, das Spiel ' + sz + ' Sätze – alles wird gespielt, die meisten gewinnen.')
-        : sz === 1
-          ? 'Gewonnen hat, wer zuerst ' + gewinnLegs + ' Legs hat.'
-          : 'Ein Satz geht an den, der zuerst ' + plural(gewinnLegs, 'Leg', 'Legs') + ' hat – das Spiel an den, der zuerst ' + plural(gewinnSaetze, 'Satz', 'Sätze') + ' hat.';
-  }
 
   /* Im Liga-Betrieb zaehlt der buergerliche Name (SWO: keine Kuenstlernamen).
      Wer keinen gepflegt hat, steht mit dem Anzeigenamen da. */
@@ -5270,7 +5246,7 @@
        rechts, wer nach dem Naechsten kommt. */
     var subText;
     if (schnell) {
-      $('game-match-label').textContent = 'Schnelles Spiel' + liveLabel(m);
+      $('game-match-label').textContent = 'Schnelles X01' + liveLabel(m);
       subText = qSt
         ? (qSt.gewinnSaetze > 1 ? 'Satz ' + qSt.satzNr + ' · ' : '') + 'Leg ' + (m.done ? qSt.legNr - 1 : qSt.legNr) +
           ' · ' + dauerText(m) + ' · ' + matchStart(m)
@@ -7087,7 +7063,7 @@
         '<div class="big-emoji">' + (mSolo ? '🎯' : '🏆') + '</div>' +
         '<h2 class="sum-title">' + esc(pname(m.winner)) + (mSolo ? ' hat ausgemacht' : ' gewinnt') + '</h2>' +
         (mSolo
-          ? '<div class="muted">Schnelles Spiel · ' + found.start + ' Double Out · Solo</div>'
+          ? '<div class="muted">Schnelles X01 · ' + found.start + ' Double Out · Solo</div>'
           : m.p.length > 2
           ? '<div class="sum-score">' + m.p.map(function (pid) {
               return '<span class="' + (m.winner === pid ? 'w' : '') + '">' + esc(pname(pid)) + ' <b>' + legsWon(m, pid) + '</b></span>';
@@ -7173,7 +7149,7 @@
       var qSSt = mehrereLegs(qm) ? satzStand(qm) : null;
       box = '<div class="sum-head"><div class="big-emoji">' + (qSolo ? '🎯' : '🏆') + '</div>' +
         '<h2 class="sum-title">' + (qm.winner ? esc(pname(qm.winner)) + (qSolo ? ' hat ausgemacht' : ' gewinnt') : 'Abgebrochen – ohne Sieger') + '</h2>' +
-        '<div class="muted">Schnelles Spiel · ' + qStart + ' Double Out · ' +
+        '<div class="muted">Schnelles X01 · ' + qStart + ' Double Out · ' +
           (qSolo ? 'Solo' : plural(qm.p.length, 'Spieler', 'Spieler')) +
           (qSSt ? ' · ' + dauerText(qm) : '') + '</div>' +
         (qSSt && !qSolo ? '<div class="muted sum-stand">' + standZeile(qm, qSSt) + '</div>' : '') + '</div>' +
@@ -9475,15 +9451,6 @@
         /* Der Tipp hat den Ton schon geweckt (pointerdown in sound.js). */
         setTimeout(function () { tonKnopf(!!liveSpiel()); }, 250);
         break;
-      case 'quick-step': {
-        var qk = el.getAttribute('data-key');
-        var qBest = S.settings.quickModus === 1;
-        var qSchritt = (qBest ? 2 : 1) * Number(el.getAttribute('data-dir'));
-        var qMax = qBest ? 2 * QUICK_MAX - 1 : QUICK_MAX;
-        S.settings[qk] = Math.max(1, Math.min(qMax, (S.settings[qk] || 1) + qSchritt));
-        save(); render();
-        break;
-      }
       case 'ov-next-match': {
         UI.overlay = null;
         var next = nextOpenMatch();
@@ -9766,13 +9733,6 @@
     if (seg) {
       var key = seg.parentElement.getAttribute('data-setting');
       var wert = Number(seg.getAttribute('data-value'));
-      /* Schreibweise der Spieldauer gewechselt: dasselbe Ziel in der anderen
-         Zaehlung -- First to 2 ist Best of 3. */
-      if (key === 'quickModus' && wert !== S.settings.quickModus) {
-        ['quickSaetze', 'quickLegs'].forEach(function (k) {
-          S.settings[k] = wert === 1 ? 2 * S.settings[k] - 1 : Math.floor(S.settings[k] / 2) + 1;
-        });
-      }
       S.settings[key] = wert;
       save(); render();
       return;
