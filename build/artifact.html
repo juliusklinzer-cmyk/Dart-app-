@@ -765,7 +765,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 .overlay-card .row-btns.two { grid-template-columns: repeat(2, 1fr); }
 .big-emoji { font-size: 3rem; margin-bottom: 6px; }
 
-/* ---------- Sieger ---------- */
+/* ---------- Sieger (Endstand in der Spieleliste) ---------- */
 .podium { display: flex; flex-direction: column; gap: var(--space-2); margin: 16px 0; }
 /* Turnierzeile in der Spieleliste: leicht abgesetzt, damit man sie zwischen
    den einzelnen Partien sofort findet. */
@@ -5701,6 +5701,225 @@ body .boards-host.log #board-log { display: block; }
   .player-card .av.lg { width: 34px; height: 34px; font-size: 11px; }
 }
 
+
+/* ======================================================================
+   Dialoge des Ligaspiels (Entwurf "Ligaspiel", Okt. 2026): breite Bogen,
+   linksbuendig - Spieler wechseln (zwei Spalten Heim/Gast, Wechsel auf
+   Position mit Kader-Kacheln und spontaner Nachmeldung), Nachmelden (zwei
+   Spalten plus Unterschrift im Bogen), Vorzeitig beenden (drei Wege) und
+   der Spielbericht (Einzel, Summe, Highlights).
+   ====================================================================== */
+.overlay.bogen .overlay-card { max-width: 820px; text-align: left; padding: clamp(14px, 2.8vh, 32px) clamp(16px, 2.2vw, 36px); border-radius: 22px; border: none; box-shadow: 0 0 0 1.5px #2a2224, 0 24px 70px rgba(0, 0, 0, 0.7), 0 0 60px rgba(70, 170, 215, 0.1); display: flex; flex-direction: column; gap: clamp(10px, 2vh, 22px); max-height: 100%; overflow-y: auto; scrollbar-width: none; }
+.overlay.bogen.bogen-breit .overlay-card { max-width: 1100px; }
+.overlay.bogen .overlay-card h3 { font-family: var(--font-display); font-weight: 400; font-size: clamp(20px, 4.2vh, 44px); letter-spacing: 0.03em; text-transform: uppercase; line-height: 1.15; margin: 0; }
+.overlay.bogen .overlay-card p { margin: 0; }
+.overlay.bogen .dl-kopf { display: flex; flex-direction: column; gap: 6px; }
+.overlay.bogen .dl-kopf p { font-size: clamp(12px, 1.8vh, 18px); color: var(--muted); line-height: 1.45; text-wrap: pretty; }
+.overlay.bogen .kt { font-family: var(--font-cond); font-weight: 700; font-size: clamp(11px, 1.9vh, 20px); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.overlay.bogen .dl-spalten { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(10px, 1.6vw, 26px); }
+.overlay.bogen .dl-spalte { min-width: 0; display: flex; flex-direction: column; gap: clamp(4px, 0.7vh, 8px); }
+.overlay.bogen .dl-spalte > .kt:not(:first-child) { margin-top: clamp(4px, 0.8vh, 10px); }
+.overlay.bogen .dl-pos { display: grid; grid-template-columns: 2.4em minmax(0, 1fr) auto; align-items: center; gap: clamp(8px, 0.9vw, 12px); min-height: clamp(44px, 7.4vh, 76px); padding: 4px clamp(6px, 0.6vw, 10px) 4px clamp(10px, 1vw, 14px); border-radius: 12px; background: #1c1718; }
+.overlay.bogen .dl-k { font-family: var(--font-cond); font-weight: 700; font-size: clamp(14px, 2.4vh, 25px); }
+.overlay.bogen .dl-k.h { color: var(--laser-hell); }
+.overlay.bogen .dl-k.g { color: #c9c0c0; }
+.overlay.bogen .dl-wer { min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
+.overlay.bogen .dl-wer b { font-weight: 600; font-size: clamp(13px, 2.1vh, 21px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.overlay.bogen .dl-wer small { font-size: clamp(10px, 1.6vh, 16px); color: #857a7b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.overlay.bogen .dl-wer small.hell { color: var(--laser-hell); }
+.overlay.bogen .dl-pos .btn.small { margin: 0; min-height: 0; height: clamp(44px, 5.4vh, 54px); padding: 0 clamp(10px, 1.1vw, 16px); border-radius: 10px; background: #241d1f; border-color: transparent; color: var(--text); font-weight: 600; font-size: clamp(12px, 1.9vh, 19px); }
+.overlay.bogen .dl-raster { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(6px, 0.8vw, 12px); }
+.overlay.bogen .dl-liste { display: grid; grid-template-columns: minmax(0, 1fr); gap: clamp(6px, 0.8vw, 12px); }
+.overlay.bogen .dl-wahl { min-width: 0; min-height: clamp(48px, 8vh, 84px); display: flex; align-items: center; gap: clamp(8px, 1vw, 14px); padding: 6px clamp(10px, 1.2vw, 18px); border-radius: 12px; background: #1c1718; border: none; box-shadow: none; color: var(--text); cursor: pointer; text-align: left; font-family: var(--font-body); }
+.overlay.bogen .dl-wahl .dl-k { font-size: clamp(13px, 2.2vh, 23px); flex: none; }
+.overlay.bogen .dl-wahl .dl-k:empty { display: none; }
+.overlay.bogen .dl-wahl.active { background: #2a2224; box-shadow: inset 0 0 0 1.5px var(--aktiv-linie), 0 0 18px var(--schein-weich); color: #fff; }
+.overlay.bogen .dl-wahl .dl-wer b { font-size: clamp(13px, 2.2vh, 22px); }
+.overlay.bogen .dl-input { min-width: 0; width: 100%; height: clamp(42px, 7vh, 70px); padding: 0 clamp(12px, 1.2vw, 18px); border-radius: 12px; background: #1c1718; border: none; box-shadow: inset 0 0 0 1.5px #2a2224; color: var(--text); font-family: var(--font-body); font-weight: 600; font-size: clamp(14px, 2.3vh, 23px); outline: none; }
+.overlay.bogen .dl-input:focus { box-shadow: inset 0 0 0 1.5px var(--aktiv-linie); }
+.overlay.bogen .dl-note { font-size: clamp(11px, 1.7vh, 17px); color: #857a7b; }
+.overlay.bogen .dl-info { font-size: clamp(12px, 1.9vh, 19px); color: #c9c0c0; margin-top: 4px; }
+.overlay.bogen .dl-segment { display: flex; gap: 4px; padding: 3px; border-radius: 12px; background: #1c1718; }
+.overlay.bogen .dl-segment button { flex: 1 1 0; min-width: 0; height: clamp(44px, 5.8vh, 58px); padding: 0 clamp(10px, 1.1vw, 16px); border-radius: 9px; background: transparent; border: none; box-shadow: none; color: var(--text); font-family: var(--font-body); font-weight: 600; font-size: clamp(12px, 2vh, 20px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.overlay.bogen .dl-segment button:disabled { opacity: 1; cursor: default; }
+.overlay.bogen .dl-segment button.active { background: #2a2224; box-shadow: inset 0 0 0 1.5px var(--aktiv-linie), 0 0 18px var(--schein-weich); color: #fff; }
+.overlay.bogen .dl-sig { display: flex; flex-direction: column; gap: clamp(6px, 1vh, 12px); }
+.overlay.bogen .dl-sig-kopf { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.overlay.bogen .dl-link { background: transparent; border: none; color: var(--muted); font-family: var(--font-body); font-weight: 600; font-size: clamp(11px, 1.7vh, 17px); cursor: pointer; padding: 0 8px; margin: 0; min-height: 44px; }
+.overlay.bogen .signatur { margin: 0; height: clamp(90px, 18vh, 200px); background: #1c1718; border: none; border-radius: 14px; box-shadow: inset 0 0 0 1.5px #2a2224, inset 0 -46px 0 -45px #3a2e30; }
+.overlay.bogen .dl-fuss { display: flex; justify-content: flex-end; gap: clamp(6px, 0.8vw, 12px); flex-wrap: wrap; }
+.overlay.bogen .dl-fuss .btn { margin: 0; min-height: 0; height: clamp(44px, 6.6vh, 66px); padding: 0 clamp(14px, 1.6vw, 24px); border-radius: 12px; font-family: var(--font-body); font-weight: 600; font-size: clamp(13px, 2.1vh, 21px); white-space: nowrap; }
+.overlay.bogen .dl-fuss .btn.ghost { background: #241d1f; border-color: transparent; color: var(--text); }
+.overlay.bogen .dl-fuss .btn.hell { background: #f2eeee; border-color: transparent; color: #0d0a0b; font-family: var(--font-cond); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.overlay.bogen .dl-fuss .btn.rot { background: linear-gradient(180deg, #2a1416, #1a0d0e); border-color: transparent; box-shadow: inset 0 0 0 1.5px var(--accent), 0 0 22px rgba(229, 72, 77, 0.22); color: #fff; font-family: var(--font-cond); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.overlay.bogen .hint.fehler { margin: 0; }
+/* Spielbericht-Bogen */
+.overlay.bogen .dl-bericht-kopf { flex-direction: row; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.overlay.bogen .dl-bericht-kopf > div:first-child { display: flex; flex-direction: column; gap: 4px; }
+.overlay.bogen .dl-stand { flex: none; display: flex; align-items: center; gap: clamp(8px, 1vw, 16px); }
+.overlay.bogen .dl-stand span { font-family: var(--font-cond); font-weight: 700; font-size: clamp(13px, 2.2vh, 23px); text-transform: uppercase; }
+.overlay.bogen .dl-stand span.g { color: var(--muted); }
+.overlay.bogen .dl-stand b { font-family: var(--font-display); font-weight: 400; font-size: clamp(26px, 6vh, 64px); line-height: 1.1; text-shadow: 0 0 24px rgba(70, 170, 215, 0.45); }
+.overlay.bogen .dl-bericht-spalten { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr); gap: clamp(10px, 1.6vw, 26px); }
+.overlay.bogen .dl-einzel-liste { min-width: 0; display: flex; flex-direction: column; }
+.overlay.bogen .dl-einzel-liste > .kt { padding-bottom: 6px; }
+.overlay.bogen .dl-einzel { display: grid; grid-template-columns: 2.6em minmax(0, 1fr) auto minmax(0, 1fr) 2.6em; align-items: center; gap: 8px; padding: clamp(3px, 0.6vh, 7px) 0; border-bottom: 1px solid #1f191b; font-size: clamp(11px, 1.8vh, 18px); }
+.overlay.bogen .dl-einzel .dl-k { font-size: 1em; }
+.overlay.bogen .dl-einzel .dl-k.r { text-align: right; }
+.overlay.bogen .dl-einzel .n { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.overlay.bogen .dl-einzel .n.r { text-align: right; }
+.overlay.bogen .dl-einzel .n.sieg { font-weight: 700; }
+.overlay.bogen .dl-einzel .n.verlor { color: var(--muted); }
+.overlay.bogen .dl-einzel.void .n { color: var(--dead); text-decoration: line-through; }
+.overlay.bogen .dl-einzel b { font-family: var(--font-cond); font-weight: 700; font-size: 1.15em; font-variant-numeric: tabular-nums; color: #c9c0c0; white-space: nowrap; }
+.overlay.bogen .dl-bericht-rechts { min-width: 0; display: flex; flex-direction: column; gap: clamp(4px, 0.8vh, 10px); }
+.overlay.bogen .dl-summe { display: flex; justify-content: space-between; gap: 10px; font-size: clamp(12px, 1.9vh, 19px); }
+.overlay.bogen .dl-summe span { color: var(--muted); }
+.overlay.bogen .dl-summe b { font-family: var(--font-cond); font-weight: 700; font-size: 1.15em; }
+.overlay.bogen .dl-abstand { padding-top: clamp(6px, 1.2vh, 14px); }
+.overlay.bogen .dl-hl { display: flex; flex-direction: column; font-size: clamp(12px, 1.8vh, 18px); }
+.overlay.bogen .dl-hl span { color: var(--muted); }
+.overlay.bogen .dl-hl b { font-weight: 600; }
+/* Handy: eine Spalte */
+@media (max-width: 699px) {
+  .overlay.bogen .dl-spalten, .overlay.bogen .dl-raster, .overlay.bogen .dl-bericht-spalten { grid-template-columns: minmax(0, 1fr); }
+  .overlay.bogen .dl-fuss .btn { flex: 1 1 auto; }
+}
+
+
+/* ======================================================================
+   Sieger-Bildschirm nach dem Entwurf "Sieger" (Okt. 2026): Setup-Kopf,
+   Pokal und Titel, dann im Turnier das Podest (Zweiter, Erster hoeher,
+   Dritter) neben Endstand und Highlights; im Ligaspiel der Punktestand
+   gross und je Team der Man of the Day mit Highlights. Unten die Knoepfe.
+   ====================================================================== */
+#screen-winner.active { display: flex; flex-direction: column; gap: 12px; padding: 8px 0 24px; background: radial-gradient(55% 50% at 50% 18%, rgba(255, 190, 70, 0.1), transparent 70%); }
+#winner-box { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.sg-titel { display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; }
+.sg-pokal { display: inline-block; font-size: 2.6rem; line-height: 1.1; font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Twemoji Mozilla', sans-serif; animation: pokal-sieg 3.2s ease-in-out infinite; }
+@keyframes pokal-sieg { 0%, 100% { filter: drop-shadow(0 0 10px rgba(255, 200, 80, 0.35)); transform: rotate(0deg) scale(1); } 50% { filter: drop-shadow(0 0 26px rgba(255, 190, 60, 0.7)); transform: rotate(-4deg) scale(1.05); } }
+@media (prefers-reduced-motion: reduce) { .sg-pokal { animation: none; } }
+.sg-titel h1 { max-width: 100%; font-family: var(--font-display); font-weight: 400; font-size: 2rem; letter-spacing: 0.02em; text-transform: uppercase; line-height: 1.2; margin: 0; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow-wrap: anywhere; text-wrap: balance; text-shadow: 0 0 40px rgba(70, 170, 215, 0.35); }
+.sg-titel p { margin: 0; font-size: 0.9rem; color: var(--muted); }
+.sg-koerper { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.sg-podest { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; gap: 8px; min-height: 240px; }
+.sg-podest.n2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.sg-stufe { box-sizing: border-box; min-width: 0; overflow: hidden; height: var(--h, 70%); display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 6px 0; border-radius: 18px 18px 6px 6px; background: var(--bg-2); text-align: center; }
+.sg-stufe.erster { background: linear-gradient(180deg, #2a2224, #1a1516); box-shadow: inset 0 0 0 1.5px var(--aktiv-linie), 0 0 34px rgba(70, 170, 215, 0.3); }
+.sg-av { position: relative; flex: none; margin-bottom: 14px; }
+.sg-av .av { width: 52px; height: 52px; font-size: 1rem; box-shadow: 0 0 0 3px var(--bg-2); }
+.sg-stufe.erster .sg-av .av { width: 64px; height: 64px; font-size: 1.2rem; box-shadow: 0 0 0 3px #2a2224, 0 0 30px rgba(70, 170, 215, 0.45); }
+.sg-medal { position: absolute; left: 50%; bottom: 0; transform: translate(-50%, 45%); font-size: 1.6rem; line-height: 1; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.6)); font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji', 'Twemoji Mozilla', sans-serif; }
+.sg-stufe.erster .sg-medal { font-size: 2rem; }
+.sg-name { max-width: 100%; font-family: var(--font-cond); font-weight: 700; font-size: 1rem; letter-spacing: 0.03em; text-transform: uppercase; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sg-stufe.erster .sg-name { font-size: 1.2rem; }
+.sg-zeile { font-size: 0.75rem; color: var(--muted); white-space: nowrap; }
+.sg-key { font-family: var(--font-cond); font-weight: 700; font-size: 1rem; color: #c9c0c0; white-space: nowrap; }
+.sg-stufe.erster .sg-key { color: #fff; }
+.sg-endstand { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.sg-endstand .kt, .motd .kt { font-family: var(--font-cond); font-weight: 700; font-size: 0.85rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin: 0; }
+.sg-liste { display: flex; flex-direction: column; }
+.sg-row { display: grid; grid-template-columns: 1.6em minmax(0, 1fr) auto auto; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid #1f191b; }
+.sg-rang { font-family: var(--font-cond); font-weight: 700; font-size: 1rem; color: #857a7b; }
+.sg-nm { min-width: 0; font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sg-sub { font-size: 0.78rem; color: var(--muted); white-space: nowrap; }
+.sg-row b { min-width: 3.4ch; text-align: right; font-family: var(--font-cond); font-weight: 700; font-size: 1rem; }
+.sg-abstand { padding-top: 8px; }
+.sg-hl-liste { display: flex; flex-direction: column; }
+.sg-hl { display: flex; gap: 12px; align-items: baseline; padding: 6px 0; border-bottom: 1px solid #1f191b; font-size: 0.9rem; }
+.sg-hl span { flex: none; width: 7.5em; color: var(--muted); }
+.sg-hl b { min-width: 0; font-weight: 600; }
+.sg-hl-liste .hint { margin: 4px 0; }
+.sg-aktionen { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.sg-knoepfe { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.sg-knoepfe .btn { margin: 0; min-height: 44px; height: 48px; padding: 0 18px; border-radius: 12px; font-size: 0.95rem; white-space: nowrap; }
+.sg-knoepfe .btn.ghost { background: #241d1f; border-color: transparent; color: var(--text); }
+.sg-knoepfe .btn.start-rot { background: linear-gradient(180deg, #2a1416, #1a0d0e); border: 1.5px solid var(--accent); color: #fff; font-family: var(--font-display); font-weight: 400; letter-spacing: 0.1em; text-transform: uppercase; padding: 0 24px; box-shadow: 0 0 22px rgba(229, 72, 77, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.06); }
+.sg-hinweis { margin: 0; font-size: 0.8rem; color: #857a7b; text-align: center; }
+/* Ligaspiel */
+.sg-stand { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px; }
+.sg-stand span { font-family: var(--font-cond); font-weight: 700; font-size: 1rem; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sg-stand .wir { text-align: right; }
+.sg-stand .sie { color: var(--muted); }
+.sg-stand b { font-family: var(--font-display); font-weight: 400; font-size: 2.8rem; line-height: 1.1; text-shadow: 0 0 34px rgba(70, 170, 215, 0.5); }
+#winner-box .motd-paar { margin: 0; gap: 12px; }
+#winner-box .motd { margin: 0; display: flex; flex-direction: column; gap: 10px; overflow: hidden; }
+#winner-box .motd-team.kt { color: var(--muted); font-family: var(--font-cond); font-size: 0.85rem; letter-spacing: 0.14em; }
+#winner-box .motd-titel { color: var(--muted); font-weight: 700; margin: 0; }
+#winner-box .motd-person { display: flex; align-items: center; gap: 12px; margin: 0; }
+#winner-box .motd-person .av.lg { width: 52px; height: 52px; font-size: 1rem; }
+#winner-box .motd.wir .motd-person .av { box-shadow: 0 0 26px rgba(70, 170, 215, 0.45); }
+#winner-box .motd-wer { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+#winner-box .motd-name { font-family: var(--font-cond); font-weight: 700; font-size: 1.3rem; text-transform: uppercase; letter-spacing: 0.03em; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#winner-box .motd-zeile { font-size: 0.85rem; color: var(--muted); }
+
+@media (min-width: 700px) {
+  body.fix-setup #screen-winner.active { flex: 1 1 auto; min-height: 0; padding: clamp(6px, 1.8vh, 22px) 0 0; gap: clamp(8px, 1.8vh, 22px); }
+  body.fix-setup #screen-winner > * { flex: none; }
+  body.fix-setup #screen-winner > #winner-box { flex: 1 1 auto; min-height: 0; gap: clamp(8px, 1.8vh, 22px); }
+  #winner-box > .sg-titel, #winner-box > .sg-aktionen { flex: none; }
+  #winner-box > .sg-koerper { flex: 1 1 auto; min-height: 0; }
+  .sg-pokal { font-size: clamp(40px, 11vh, 120px); }
+  .sg-titel h1 { font-size: clamp(36px, 9vh, 100px); }
+  .sg-titel p { font-size: clamp(12px, 2.2vh, 24px); }
+  .sg-koerper { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: clamp(8px, 1.4vw, 22px); }
+  .sg-koerper.liga { display: flex; flex-direction: column; }
+  .sg-podest { min-height: 0; gap: clamp(6px, 1vw, 16px); }
+  .sg-stufe { gap: clamp(4px, 0.8vh, 10px); padding: clamp(10px, 2vh, 24px) clamp(6px, 0.8vw, 12px) 0; }
+  .sg-av { margin-bottom: clamp(11px, 2.2vh, 24px); }
+  .sg-stufe.erster .sg-av { margin-bottom: clamp(14px, 2.8vh, 30px); }
+  .sg-av .av { width: clamp(44px, 9.4vh, 100px); height: clamp(44px, 9.4vh, 100px); font-size: clamp(12px, 2.6vh, 28px); }
+  .sg-stufe.erster .sg-av .av { width: clamp(56px, 13vh, 140px); height: clamp(56px, 13vh, 140px); }
+  .sg-medal { font-size: clamp(24px, 4.6vh, 50px); }
+  .sg-stufe.erster .sg-medal { font-size: clamp(30px, 6vh, 64px); }
+  .sg-name { font-size: clamp(14px, 2.8vh, 30px); }
+  .sg-stufe.erster .sg-name { font-size: clamp(16px, 3.6vh, 40px); }
+  .sg-zeile { font-size: clamp(11px, 1.8vh, 18px); }
+  .sg-key { font-size: clamp(14px, 2.6vh, 28px); }
+  .sg-endstand { min-height: 0; padding: clamp(12px, 2vh, 24px) clamp(12px, 1.4vw, 22px); gap: clamp(6px, 1.2vh, 14px); }
+  .sg-endstand .kt, #winner-box .motd .kt { font-size: clamp(11px, 1.9vh, 20px); }
+  .sg-liste { flex: 0 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
+  .sg-row { gap: clamp(8px, 1vw, 14px); padding: clamp(6px, 1.2vh, 12px) 0; }
+  .sg-rang, .sg-row b { font-size: clamp(14px, 2.4vh, 25px); }
+  .sg-nm { font-size: clamp(12px, 2vh, 20px); }
+  .sg-sub { font-size: clamp(11px, 1.7vh, 17px); }
+  .sg-abstand { padding-top: clamp(6px, 1.4vh, 16px); }
+  .sg-hl { padding: clamp(5px, 1vh, 11px) 0; font-size: clamp(12px, 1.9vh, 19px); }
+  .sg-knoepfe { gap: clamp(6px, 0.8vw, 12px); }
+  .sg-knoepfe .btn { height: clamp(42px, 7vh, 72px); padding: 0 clamp(16px, 2vw, 30px); font-size: clamp(13px, 2.1vh, 21px); }
+  .sg-knoepfe .btn.start-rot { padding: 0 clamp(20px, 2.6vw, 40px); font-size: clamp(15px, 2.6vh, 28px); }
+  .sg-hinweis { font-size: clamp(11px, 1.7vh, 17px); }
+  .sg-stand { gap: clamp(10px, 2vw, 36px); }
+  .sg-stand span { font-size: clamp(14px, 3vh, 32px); }
+  .sg-stand b { font-size: clamp(56px, 14vh, 160px); }
+  #winner-box .motd-paar { flex: 1 1 auto; min-height: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(8px, 1.4vw, 22px); }
+  #winner-box .motd { min-height: 0; padding: clamp(12px, 2.2vh, 26px) clamp(12px, 1.6vw, 26px); gap: clamp(8px, 1.4vh, 16px); }
+  #winner-box .motd-person { gap: clamp(10px, 1.2vw, 18px); }
+  #winner-box .motd-person .av.lg { width: clamp(48px, 9vh, 96px); height: clamp(48px, 9vh, 96px); font-size: clamp(14px, 3vh, 32px); }
+  #winner-box .motd-name { font-size: clamp(16px, 3.4vh, 36px); }
+  #winner-box .motd-zeile { font-size: clamp(11px, 1.8vh, 18px); }
+  #winner-box .motd .sg-hl-liste { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
+}
+/* Handy quer: ohne Endstand-Karte, nur Podest bzw. Stand */
+@media (min-width: 700px) and (max-height: 500px) {
+  .sg-koerper { grid-template-columns: minmax(0, 1fr); }
+  .sg-endstand { display: none; }
+  .sg-pokal { font-size: 30px; }
+  .sg-titel h1 { font-size: 30px; }
+  .sg-av .av { width: 36px; height: 36px; font-size: 11px; }
+  .sg-stufe.erster .sg-av .av { width: 44px; height: 44px; font-size: 13px; }
+  .sg-medal { font-size: 20px; }
+  .sg-stufe.erster .sg-medal { font-size: 26px; }
+  .sg-av { margin-bottom: 9px; }
+  .sg-stufe.erster .sg-av { margin-bottom: 12px; }
+  .sg-name, .sg-stufe.erster .sg-name { font-size: 14px; }
+  .sg-zeile { font-size: 11px; }
+  .sg-key { font-size: 14px; }
+  .sg-stufe { padding-top: 8px; gap: 2px; }
+  .sg-stand b { font-size: 44px; }
+  #winner-box .motd-paar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 </style>
 <div id="save-warning" class="save-warning hidden">
   ⚠️ Der Spielstand kann gerade nicht gespeichert werden – bitte Speicherplatz prüfen
@@ -6580,10 +6799,20 @@ body .boards-host.log #board-log { display: block; }
 </section>
 
 <!-- ============ SIEGER ============ -->
-<section id="screen-winner" class="screen center">
+<section id="screen-winner" class="screen">
+  <!-- Entwurf "Sieger" (Okt. 2026): Setup-Kopf, Pokal und Titel, dann
+       Podest mit Endstand und Highlights (Turnier) bzw. Punktestand und
+       Man of the Day beider Teams (Ligaspiel); unten die Knoepfe. -->
+  <div class="setup-kopf" id="winner-kopf">
+    <div class="marke">
+      <span class="blink-logo" role="img" aria-label="Blink 180"></span>
+      <div>
+        <div class="wort">Blink <span class="rot">180</span></div>
+        <div class="sub">Dart Turnier · est. 2026</div>
+      </div>
+    </div>
+  </div>
   <div id="winner-box"></div>
-  <button class="btn primary full big" data-action="finish-tournament">Turnier abschließen</button>
-  <button class="btn ghost full" data-action="to-tournament">Zurück zum Turnier</button>
 </section>
 
 <!-- ============ FINISHER ============ -->
@@ -6699,6 +6928,93 @@ body .boards-host.log #board-log { display: block; }
 
 <input type="file" id="avatar-input" accept="image/*" class="hidden">
 <script>
+/*
+ * Liga-Daten der Saison 2026/27: Spielplan, Ergebnisse der Ligaleitung,
+ * Teams und der Tabellenstand zum Start. Gemeinsame Quelle fuer die App
+ * (js/app.js) und die oeffentliche Webseite (js/webseite.js).
+ *
+ * Neue Ergebnisse nach jedem Spieltag: in LIGA_SPIELTAGE eintragen.
+ */
+(function () {
+  'use strict';
+  /* ================= Liga =================
+   * Der Spielplan der Saison 2026/27, fest im Client – er ändert sich nur,
+   * wenn der Verband ihn ändert, und dann hier. Die Zusagen („ich bin
+   * dabei") liegen auf dem Server, je Termin-Kennung.
+   * sollSpieler: so viele braucht ein Spieltag, damit die Aufstellung als
+   * vollständig gilt – bei Bedarf hier anpassen. */
+  var LIGA = {
+    team: 'Blink 180',
+    saison: 'Saison 2026/27',
+    sollSpieler: 4,
+    termine: [
+      { id: 'st01', nr: 1, tag: '2026-10-06', heim: 'Blink 180', gast: 'TSV Dachau 1865 4', ort: 'Bar Sehnsucht' },
+      { id: 'st02', nr: 2, tag: '2026-10-23', heim: 'Dart Artists Germering II', gast: 'Blink 180', ort: 'Cobblers Irish Pub' },
+      { id: 'st03', nr: 3, tag: '2026-10-26', heim: 'Voodoo Darters', gast: 'Blink 180', ort: 'Heuboden' },
+      { id: 'st04', nr: 4, tag: '2026-11-10', heim: 'Blink 180', gast: 'd`Haberer 2', ort: 'Bar Sehnsucht' },
+      { id: 'st05', nr: 5, tag: '2026-11-24', heim: 'Blink 180', gast: 'DCO', ort: 'Bar Sehnsucht' },
+      { id: 'st06', nr: 6, tag: '2026-12-09', heim: 'Treff ma nix', gast: 'Blink 180', ort: 'Fiakerstüberl' },
+      { id: 'st07', nr: 7, tag: '2027-01-12', heim: 'Blink 180', gast: 'TSV Oberpframmern', ort: 'Bar Sehnsucht' },
+      { id: 'st08', nr: 8, tag: '2027-01-25', heim: 'FT Gern Darts II', gast: 'Blink 180', ort: 'Vereinsheim FT Gern' },
+      { id: 'st09', nr: 9, tag: null },
+      { id: 'st10', nr: 10, tag: '2027-03-03', heim: 'TSV Dachau 1865 4', gast: 'Blink 180', ort: 'TSV 1865 Dachau' },
+      { id: 'st11', nr: 11, tag: '2027-03-16', heim: 'Blink 180', gast: 'Dart Artists Germering II', ort: 'Bar Sehnsucht' },
+      { id: 'st12', nr: 12, tag: '2027-04-06', heim: 'Blink 180', gast: 'Voodoo Darters', ort: 'Bar Sehnsucht' },
+      { id: 'st13', nr: 13, tag: '2027-04-20', heim: 'd`Haberer 2', gast: 'Blink 180', ort: 'Heuboden' },
+      { id: 'st14', nr: 14, tag: '2027-04-30', heim: 'DCO', gast: 'Blink 180', ort: 'Gasthof Gut Keferloh' },
+      { id: 'st15', nr: 15, tag: '2027-05-11', heim: 'Blink 180', gast: 'Treff ma nix', ort: 'Bar Sehnsucht' },
+      { id: 'st16', nr: 16, tag: '2027-06-04', heim: 'TSV Oberpframmern', gast: 'Blink 180', ort: 'Gaststätte Anstoss' },
+      { id: 'st17', nr: 17, tag: '2027-06-08', heim: 'Blink 180', gast: 'FT Gern Darts II', ort: 'Bar Sehnsucht' },
+      { id: 'st18', nr: 18, tag: null }
+    ]
+  };
+
+  /* Alle Spiele eines Spieltags (Ergebnisse der Ligaleitung), von Julius
+     nach jedem Spieltag geliefert. Je Spiel: Datum, Heim, Gast, Lokal,
+     Einzel und Legs; "partien" sind die 16 Einzel [Heim, Gast, hLegs, gLegs],
+     ein * vor dem Namen heisst Gastspieler. Ohne gast = spielfrei,
+     verschoben = neuer Termin in tag. */
+  var LIGA_SPIELTAGE = {
+    st01: [
+      { heim: 'Dart Artists Germering II', gast: null },
+      { tag: '2026-10-06', heim: 'd`Haberer 2', gast: 'Voodoo Darters', ort: 'Heuboden', einzel: '8:8', legs: '20:20', partien: [
+        ['Stefan Hügel', 'Marlene Czapka', 2, 1], ['Reinhart Boehm', 'Kevin Bauer', 0, 2], ['Rolf Neeb', 'Josef Stahl', 1, 2], ['Walter Majewski', 'Matthias Steinacher', 0, 2],
+        ['Stefan Hügel', 'Kevin Bauer', 0, 2], ['Reinhart Boehm', 'Marlene Czapka', 2, 0], ['Rolf Neeb', 'Matthias Steinacher', 2, 1], ['Walter Majewski', 'Josef Stahl', 1, 2],
+        ['Rolf Neeb', 'Marlene Czapka', 2, 0], ['Walter Majewski', 'Kevin Bauer', 0, 2], ['Reinhart Boehm', 'Josef Stahl', 2, 0], ['Stefan Hügel', 'Martin Goerlich', 2, 1],
+        ['Mani Burgmair', 'Jan Strelow', 1, 2], ['Rolf Neeb', 'Kevin Bauer', 1, 2], ['Stefan Hügel', 'Josef Stahl', 2, 0], ['Reinhart Boehm', 'Martin Goerlich', 2, 1]
+      ] },
+      { tag: '2026-10-06', heim: 'Blink 180', gast: 'TSV Dachau 1865 4', ort: 'Bar Sehnsucht', einzel: '7:9', legs: '15:20' },
+      { tag: '2026-10-07', heim: 'Treff ma nix', gast: 'DCO', ort: 'Fiakerstüberl', einzel: '9:7', legs: '21:17', partien: [
+        ['Franz Freinberger', 'Naser Sharifi', 0, 2], ['Ralf Kilian', 'Christos Heuwald', 2, 0], ['Bernhard Hoffmann', 'Luck Heuwald', 2, 0], ['Christian Matejka', '*Michael Rogge', 1, 2],
+        ['Franz Freinberger', 'Christos Heuwald', 2, 0], ['Ralf Kilian', 'Naser Sharifi', 0, 2], ['Bernhard Hoffmann', '*Michael Rogge', 2, 0], ['Christian Matejka', 'Luck Heuwald', 2, 0],
+        ['Bernhard Hoffmann', 'Naser Sharifi', 2, 1], ['Christian Matejka', 'Christos Heuwald', 2, 1], ['Linda Maier', 'Alex Heuwald', 2, 1], ['Franz Freinberger', '*Michael Rogge', 1, 2],
+        ['Sven Albrecht', 'Naser Sharifi', 1, 2], ['Yves Scherer', 'Christos Heuwald', 0, 2], ['Stephan Brunner', 'Alex Heuwald', 2, 0], ['Linda Maier', '*Michael Rogge', 0, 2]
+      ], highlights: [{ wer: 'Alex Heuwald', team: 'DCO', was: '1× 180' }] },
+      { tag: '2026-10-16', heim: 'TSV Oberpframmern', gast: 'FT Gern Darts II', ort: 'Gaststätte Anstoss', verschoben: true }
+    ]
+  };
+
+  /* Alle Teams unserer Liga - fuer die leere Tabelle vorbefuellt. */
+  var LIGA_TEAMS = ['Blink 180', 'TSV Dachau 1865 4', 'Dart Artists Germering II',
+    'Voodoo Darters', 'd`Haberer 2', 'DCO', 'Treff ma nix', 'TSV Oberpframmern',
+    'FT Gern Darts II'];
+  /* Vorbelegung der Tabelle, solange noch niemand auf dem Server gespeichert
+     hat: Stand der Ligaleitung nach dem 1. Spieltag (Oktober 2026). */
+  var LIGA_TABELLE_START = [
+    { team: 'TSV Dachau 1865 4', spiele: 1, g: 1, u: 0, v: 0, legs: '20:15', einzel: '9:7', punkte: 2 },
+    { team: 'Treff ma nix', spiele: 1, g: 1, u: 0, v: 0, legs: '21:17', einzel: '9:7', punkte: 2 },
+    { team: 'd`Haberer 2', spiele: 1, g: 0, u: 1, v: 0, legs: '20:20', einzel: '8:8', punkte: 1 },
+    { team: 'Voodoo Darters', spiele: 1, g: 0, u: 1, v: 0, legs: '20:20', einzel: '8:8', punkte: 1 },
+    { team: 'DCO', spiele: 1, g: 0, u: 0, v: 1, legs: '17:21', einzel: '7:9', punkte: 0 },
+    { team: 'Blink 180', spiele: 1, g: 0, u: 0, v: 1, legs: '15:20', einzel: '7:9', punkte: 0 },
+    { team: 'Dart Artists Germering II', spiele: 0, g: 0, u: 0, v: 0, legs: '0:0', einzel: '0:0', punkte: 0 },
+    { team: 'TSV Oberpframmern', spiele: 0, g: 0, u: 0, v: 0, legs: '0:0', einzel: '0:0', punkte: 0 },
+    { team: 'FT Gern Darts II', spiele: 0, g: 0, u: 0, v: 0, legs: '0:0', einzel: '0:0', punkte: 0 }
+  ];
+
+  window.LIGA_DATEN = { liga: LIGA, spieltage: LIGA_SPIELTAGE, teams: LIGA_TEAMS, tabelleStart: LIGA_TABELLE_START };
+})();
+
 /*
  * Die Klangschicht: der Pfeil-Einschlag ("Pomp") fuer jede gebuchte
  * Eingabe, ein ganz leiser weicher Tastenton fuer jeden Tipp aufs Feld
@@ -7207,61 +7523,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   var QUICK_SCORES = [26, 41, 45, 60, 81, 85];
 
   /* ================= Liga =================
-   * Der Spielplan der Saison 2026/27, fest im Client – er ändert sich nur,
-   * wenn der Verband ihn ändert, und dann hier. Die Zusagen („ich bin
-   * dabei") liegen auf dem Server, je Termin-Kennung.
-   * sollSpieler: so viele braucht ein Spieltag, damit die Aufstellung als
-   * vollständig gilt – bei Bedarf hier anpassen. */
-  var LIGA = {
-    team: 'Blink 180',
-    saison: 'Saison 2026/27',
-    sollSpieler: 4,
-    termine: [
-      { id: 'st01', nr: 1, tag: '2026-10-06', heim: 'Blink 180', gast: 'TSV Dachau 1865 4', ort: 'Bar Sehnsucht' },
-      { id: 'st02', nr: 2, tag: '2026-10-23', heim: 'Dart Artists Germering II', gast: 'Blink 180', ort: 'Cobblers Irish Pub' },
-      { id: 'st03', nr: 3, tag: '2026-10-26', heim: 'Voodoo Darters', gast: 'Blink 180', ort: 'Heuboden' },
-      { id: 'st04', nr: 4, tag: '2026-11-10', heim: 'Blink 180', gast: 'd`Haberer 2', ort: 'Bar Sehnsucht' },
-      { id: 'st05', nr: 5, tag: '2026-11-24', heim: 'Blink 180', gast: 'DCO', ort: 'Bar Sehnsucht' },
-      { id: 'st06', nr: 6, tag: '2026-12-09', heim: 'Treff ma nix', gast: 'Blink 180', ort: 'Fiakerstüberl' },
-      { id: 'st07', nr: 7, tag: '2027-01-12', heim: 'Blink 180', gast: 'TSV Oberpframmern', ort: 'Bar Sehnsucht' },
-      { id: 'st08', nr: 8, tag: '2027-01-25', heim: 'FT Gern Darts II', gast: 'Blink 180', ort: 'Vereinsheim FT Gern' },
-      { id: 'st09', nr: 9, tag: null },
-      { id: 'st10', nr: 10, tag: '2027-03-03', heim: 'TSV Dachau 1865 4', gast: 'Blink 180', ort: 'TSV 1865 Dachau' },
-      { id: 'st11', nr: 11, tag: '2027-03-16', heim: 'Blink 180', gast: 'Dart Artists Germering II', ort: 'Bar Sehnsucht' },
-      { id: 'st12', nr: 12, tag: '2027-04-06', heim: 'Blink 180', gast: 'Voodoo Darters', ort: 'Bar Sehnsucht' },
-      { id: 'st13', nr: 13, tag: '2027-04-20', heim: 'd`Haberer 2', gast: 'Blink 180', ort: 'Heuboden' },
-      { id: 'st14', nr: 14, tag: '2027-04-30', heim: 'DCO', gast: 'Blink 180', ort: 'Gasthof Gut Keferloh' },
-      { id: 'st15', nr: 15, tag: '2027-05-11', heim: 'Blink 180', gast: 'Treff ma nix', ort: 'Bar Sehnsucht' },
-      { id: 'st16', nr: 16, tag: '2027-06-04', heim: 'TSV Oberpframmern', gast: 'Blink 180', ort: 'Gaststätte Anstoss' },
-      { id: 'st17', nr: 17, tag: '2027-06-08', heim: 'Blink 180', gast: 'FT Gern Darts II', ort: 'Bar Sehnsucht' },
-      { id: 'st18', nr: 18, tag: null }
-    ]
-  };
-
-  /* Alle Spiele eines Spieltags (Ergebnisse der Ligaleitung), von Julius
-     nach jedem Spieltag geliefert. Je Spiel: Datum, Heim, Gast, Lokal,
-     Einzel und Legs; "partien" sind die 16 Einzel [Heim, Gast, hLegs, gLegs],
-     ein * vor dem Namen heisst Gastspieler. Ohne gast = spielfrei,
-     verschoben = neuer Termin in tag. */
-  var LIGA_SPIELTAGE = {
-    st01: [
-      { heim: 'Dart Artists Germering II', gast: null },
-      { tag: '2026-10-06', heim: 'd`Haberer 2', gast: 'Voodoo Darters', ort: 'Heuboden', einzel: '8:8', legs: '20:20', partien: [
-        ['Stefan Hügel', 'Marlene Czapka', 2, 1], ['Reinhart Boehm', 'Kevin Bauer', 0, 2], ['Rolf Neeb', 'Josef Stahl', 1, 2], ['Walter Majewski', 'Matthias Steinacher', 0, 2],
-        ['Stefan Hügel', 'Kevin Bauer', 0, 2], ['Reinhart Boehm', 'Marlene Czapka', 2, 0], ['Rolf Neeb', 'Matthias Steinacher', 2, 1], ['Walter Majewski', 'Josef Stahl', 1, 2],
-        ['Rolf Neeb', 'Marlene Czapka', 2, 0], ['Walter Majewski', 'Kevin Bauer', 0, 2], ['Reinhart Boehm', 'Josef Stahl', 2, 0], ['Stefan Hügel', 'Martin Goerlich', 2, 1],
-        ['Mani Burgmair', 'Jan Strelow', 1, 2], ['Rolf Neeb', 'Kevin Bauer', 1, 2], ['Stefan Hügel', 'Josef Stahl', 2, 0], ['Reinhart Boehm', 'Martin Goerlich', 2, 1]
-      ] },
-      { tag: '2026-10-06', heim: 'Blink 180', gast: 'TSV Dachau 1865 4', ort: 'Bar Sehnsucht', einzel: '7:9', legs: '15:20' },
-      { tag: '2026-10-07', heim: 'Treff ma nix', gast: 'DCO', ort: 'Fiakerstüberl', einzel: '9:7', legs: '21:17', partien: [
-        ['Franz Freinberger', 'Naser Sharifi', 0, 2], ['Ralf Kilian', 'Christos Heuwald', 2, 0], ['Bernhard Hoffmann', 'Luck Heuwald', 2, 0], ['Christian Matejka', '*Michael Rogge', 1, 2],
-        ['Franz Freinberger', 'Christos Heuwald', 2, 0], ['Ralf Kilian', 'Naser Sharifi', 0, 2], ['Bernhard Hoffmann', '*Michael Rogge', 2, 0], ['Christian Matejka', 'Luck Heuwald', 2, 0],
-        ['Bernhard Hoffmann', 'Naser Sharifi', 2, 1], ['Christian Matejka', 'Christos Heuwald', 2, 1], ['Linda Maier', 'Alex Heuwald', 2, 1], ['Franz Freinberger', '*Michael Rogge', 1, 2],
-        ['Sven Albrecht', 'Naser Sharifi', 1, 2], ['Yves Scherer', 'Christos Heuwald', 0, 2], ['Stephan Brunner', 'Alex Heuwald', 2, 0], ['Linda Maier', '*Michael Rogge', 0, 2]
-      ], highlights: [{ wer: 'Alex Heuwald', team: 'DCO', was: '1× 180' }] },
-      { tag: '2026-10-16', heim: 'TSV Oberpframmern', gast: 'FT Gern Darts II', ort: 'Gaststätte Anstoss', verschoben: true }
-    ]
-  };
+   * Spielplan, Ergebnisse der Ligaleitung und Teams stehen in
+   * js/liga-daten.js - die oeffentliche Webseite nutzt dieselben Daten. */
+  var LIGA = window.LIGA_DATEN.liga;
+  var LIGA_SPIELTAGE = window.LIGA_DATEN.spieltage;
 
   /* Die 16 Einzel eines 4er-Ligaspiels, exakt in der Reihenfolge des
      SDM-Spielberichtsbogens (V5.2): H1–G1, H2–G2, H3–G3, H4–G4, H1–G2,
@@ -7394,6 +7659,20 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     S.ui = (UI.darts.length || ov) && uiKennung()
       ? { k: uiKennung(), darts: UI.darts.map(function (d) { return { m: d.m, n: d.n, v: d.v }; }), overlay: ov }
       : null;
+  }
+  /* Eine Nachmeldung, die nach einem spontanen Wechsel noch offen war,
+     als die Seite neu geladen wurde: wieder aufmachen (ohne Unterschrift),
+     solange der Spieler auf dem Bogen steht und noch nicht nachgemeldet ist. */
+  function nachmeldungWiederherstellen() {
+    var no = S.nmOffen;
+    if (!no) return;
+    var lg = S.tour && S.tour.liga;
+    var daTeam = lg && ((lg.heimSpieler || []).indexOf(no.id) >= 0 || (lg.gastSpieler || []).indexOf(no.id) >= 0);
+    var schon = lg && (lg.nachmeldungen || []).some(function (n) { return n.id === no.id; });
+    if (!lg || !daTeam || schon) { delete S.nmOffen; return; }
+    if (UI.overlay) return;
+    UI.overlay = { type: 'nachmeldung', draft: { team: no.team, teamFest: true, id: no.id, neuAngelegt: !!no.neuAngelegt,
+      wechsel: no.wechsel || null, nach: no.nach || '', vor: no.vor || '', u18: 'nein', g: null }, striche: [] };
   }
   function uiWiederherstellen() {
     var u = S.ui;
@@ -10411,7 +10690,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
   /* ================= Rendering ================= */
   var SCREENS = ['setup', 'tournament', 'boards', 'players', 'profile', 'bulloff', 'game', 'cricket', 'rtw', 'finisher', 'summary', 'winner', 'liga', 'bericht', 'konto'];
-  var NAV_SCREENS = { setup: 'setup', tournament: 'setup', boards: 'boards', players: 'players', profile: 'players', summary: 'setup', liga: 'liga', konto: 'konto' };
+  var NAV_SCREENS = { setup: 'setup', tournament: 'setup', boards: 'boards', players: 'players', profile: 'players', summary: 'setup', liga: 'liga', konto: 'konto', winner: 'setup' };
 
   /* Solange die Anmeldung aussteht, ist die App zu. Ohne Server (Doppelklick,
      Einzeldatei-Bündel, GitHub Pages) gibt es keine Schranke. */
@@ -10435,13 +10714,14 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
        könnte – dann wäre der Knopf eine leere Versprechung. */
     var kontoBtn = $('nav-konto');
     if (kontoBtn) kontoBtn.classList.toggle('hidden', !window.DartKonto);
-    var navFor = gesperrt() ? null : NAV_SCREENS[screen];
+    var navFor = gesperrt() ? null : (screen === 'winner' && S.tour && S.tour.liga ? 'liga' : NAV_SCREENS[screen]);
     /* In Setup, Turnier, Rangliste und Liga steht die Navigation als
        Text-Reiter in der Kopfzeile neben der Marke, ueberall sonst wie
        gehabt ueber dem Inhalt. */
     var navEl = $('nav');
     var kopf = screen === 'setup' ? $('setup-kopf') : screen === 'tournament' ? $('turnier-kopf')
-      : screen === 'liga' ? $('liga-kopf') : screen === 'boards' ? $('boards-kopf') : screen === 'players' ? $('players-kopf') : null;
+      : screen === 'liga' ? $('liga-kopf') : screen === 'boards' ? $('boards-kopf') : screen === 'players' ? $('players-kopf')
+      : screen === 'winner' ? $('winner-kopf') : null;
     if (kopf && navEl.parentElement !== kopf) kopf.appendChild(navEl);
     else if (!kopf && navEl.parentElement !== document.body) document.body.insertBefore(navEl, $('screen-setup'));
     /* Das •••-Menue gibt es nur in den Spielbildern - ueberall sonst wird
@@ -10513,7 +10793,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     /* Das Startbild steht am Tablet und quergedrehten Handy fest im Rahmen,
        innen scrollen nur Spielerliste und Einstellungen (body.fix-setup). */
     document.body.classList.toggle('fix-setup', S.screen === 'setup' || S.screen === 'tournament' || S.screen === 'bulloff' || S.screen === 'boards' ||
-      S.screen === 'liga' || S.screen === 'players');
+      S.screen === 'liga' || S.screen === 'players' || S.screen === 'winner');
     if (S.screen === 'setup') { gaesteAufraeumen(); renderSetup(); }
     /* Der Hintergrundtakt laeuft nur da, wo man ihn auch sieht: im
        Turnierbildschirm. Sonst fragt die App den ganzen Abend nach Daten,
@@ -11098,7 +11378,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           ? '<button class="btn primary start full" data-action="to-winner">Ergebnisse &amp; Spielbericht</button>' : '') +
         '<div class="lg-knoepfe">' +
           '<button class="btn ghost" data-action="liga-nachmelden">Spieler nachmelden</button>' +
-          '<button class="btn ghost" data-action="liga-bericht">Spielbericht ansehen</button></div>';
+          '<button class="btn ghost" data-action="liga-bericht-kurz">Spielbericht ansehen</button></div>';
     }
 
     $('standings-body').innerHTML = table.map(function (st, i) {
@@ -11804,23 +12084,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   var ligaTabelleKennung = null;
   var ligaTabelleMeldung = '';
 
-  /* Alle Teams unserer Liga - fuer die leere Tabelle vorbefuellt. */
-  var LIGA_TEAMS = ['Blink 180', 'TSV Dachau 1865 4', 'Dart Artists Germering II',
-    'Voodoo Darters', 'd`Haberer 2', 'DCO', 'Treff ma nix', 'TSV Oberpframmern',
-    'FT Gern Darts II'];
-  /* Vorbelegung der Tabelle, solange noch niemand auf dem Server gespeichert
-     hat: Stand der Ligaleitung nach dem 1. Spieltag (Oktober 2026). */
-  var LIGA_TABELLE_START = [
-    { team: 'TSV Dachau 1865 4', spiele: 1, g: 1, u: 0, v: 0, legs: '20:15', einzel: '9:7', punkte: 2 },
-    { team: 'Treff ma nix', spiele: 1, g: 1, u: 0, v: 0, legs: '21:17', einzel: '9:7', punkte: 2 },
-    { team: 'd`Haberer 2', spiele: 1, g: 0, u: 1, v: 0, legs: '20:20', einzel: '8:8', punkte: 1 },
-    { team: 'Voodoo Darters', spiele: 1, g: 0, u: 1, v: 0, legs: '20:20', einzel: '8:8', punkte: 1 },
-    { team: 'DCO', spiele: 1, g: 0, u: 0, v: 1, legs: '17:21', einzel: '7:9', punkte: 0 },
-    { team: 'Blink 180', spiele: 1, g: 0, u: 0, v: 1, legs: '15:20', einzel: '7:9', punkte: 0 },
-    { team: 'Dart Artists Germering II', spiele: 0, g: 0, u: 0, v: 0, legs: '0:0', einzel: '0:0', punkte: 0 },
-    { team: 'TSV Oberpframmern', spiele: 0, g: 0, u: 0, v: 0, legs: '0:0', einzel: '0:0', punkte: 0 },
-    { team: 'FT Gern Darts II', spiele: 0, g: 0, u: 0, v: 0, legs: '0:0', einzel: '0:0', punkte: 0 }
-  ];
+  var LIGA_TEAMS = window.LIGA_DATEN.teams;
+  var LIGA_TABELLE_START = window.LIGA_DATEN.tabelleStart;
 
   function ligaTabelleLaden() {
     if (!window.DartSync || !window.DartSync.liga || !window.DartSync.liga.tabelle) return;
@@ -13997,8 +14262,23 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     }
     var aktiv = document.activeElement;
     if (aktiv && aktiv.blur) aktiv.blur();
-    UI.overlay = { type: 'nachmeldung', draft: { team: q.liga.heim ? 'H' : 'G', nach: '', vor: '', u18: null, g: null } };
+    UI.overlay = { type: 'nachmeldung', draft: { team: q.liga.heim ? 'H' : 'G', nach: '', vor: '', u18: 'nein', g: null }, striche: [] };
     render();
+  }
+  /* Beim vorzeitigen Ende: alle noch nicht begonnenen Einzel kampflos fuer
+     den Gegner werten (so steht es dann im Spielbericht). */
+  function ligaOffeneKampflos() {
+    var lg = S.tour && S.tour.liga;
+    if (!lg) return;
+    S.matches.forEach(function (m) {
+      if (m.done || m.void || m.kampflos || m.belegtVon || m.legs.some(function (l) { return l.visits.length > 0; })) return;
+      var uns = ligaUnser(lg, m);
+      m.done = true; m.kampflos = true;
+      m.winner = m.p[0] === uns ? m.p[1] : m.p[0];
+      m.at = Date.now(); m.legs = [];
+      if (geteiltesTurnier() && window.DartSync && window.DartSync.turnier) window.DartSync.turnier.ergebnis(m);
+    });
+    if (!lg.zeitBis) lg.zeitBis = Date.now();
   }
   function nachmeldungWeiter() {
     var o = UI.overlay;
@@ -14012,13 +14292,51 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     }
     var nq = ligaBerichtQuelle();
     var nListe = nq ? (d.team === 'H' ? nq.liga.heimSpieler : nq.liga.gastSpieler) || [] : [];
-    if (nListe.length >= 8) {
-      o.fehler = 'Dieses Team hat schon 8 Spieler auf dem Bogen – mehr erlaubt die SWO pro Ligaspiel nicht.';
+    /* Nach einem spontanen Wechsel steht die Person schon auf dem Bogen -
+       sie belegt keinen neuen Platz. */
+    var nSchonDa = !!d.id && nListe.indexOf(d.id) >= 0;
+    if (nListe.length >= 8 && !nSchonDa) {
+      o.fehler = 'Dieses Team hat schon 8 Spieler auf dem Bogen, mehr erlaubt die SWO pro Ligaspiel nicht.';
       render();
       return;
     }
-    UI.overlay = { type: 'unterschrift', wer: 'nachmeldung', person: { team: d.team, nach: d.nach, vor: d.vor, u18: d.u18, g: d.g }, striche: [] };
-    render();
+    /* Die Unterschrift steht gleich im Bogen (Entwurf Ligaspiel). */
+    var nPunkte = (o.striche || []).reduce(function (n, st) { return n + st.length; }, 0);
+    if (nPunkte < 4) { o.fehler = 'Bitte noch im Feld unterschreiben.'; render(); return; }
+    nachmeldungAbschliessen(nq, { team: d.team, nach: d.nach, vor: d.vor, u18: d.u18, g: d.g, id: d.id || null }, signaturBild(o));
+  }
+  /* "Abbrechen" nach einem spontanen Wechsel: ohne Nachmeldung darf der
+     Spieler nicht auf dem Bogen stehen - der Wechsel wird zurueckgenommen,
+     die ausgewechselte Person kommt auf ihre Position zurueck. */
+  function ligaWechselZurueck(d) {
+    var lg = S.tour && S.tour.liga;
+    var w = d && d.wechsel;
+    if (!lg || !w || !d.id) return null;
+    var id = d.id;
+    /* Spielt das andere iPad schon ein Einzel mit dem Spontanen, laesst sich
+       der Wechsel nicht mehr zuruecknehmen - dann bitte nachmelden. */
+    if (S.matches.some(function (m) { return m.belegtVon && m.p.indexOf(id) >= 0; })) {
+      return 'Ein Einzel mit diesem Spieler läuft schon am anderen Gerät. Bitte die Nachmeldung abschließen.';
+    }
+    var fehler = ligaWechseln(w.seite, w.pos, w.raus);
+    if (fehler) return fehler;
+    var benutzt = lg.posH.concat(lg.posG).indexOf(id) >= 0 ||
+      S.matches.some(function (m) { return m.p.indexOf(id) >= 0; });
+    if (!benutzt) {
+      [lg.heimSpieler, lg.gastSpieler, lg.wir, lg.sie, S.tour.players].forEach(function (l) {
+        var i = l ? l.indexOf(id) : -1;
+        if (i >= 0) l.splice(i, 1);
+      });
+      /* Das eben erst angelegte Gastprofil ohne ein einziges Spiel geht
+         ersatzlos weg (wie bei der Gast-Bereinigung). Ein Gast, den es
+         vorher schon gab, bleibt. */
+      var p = profile(id);
+      if (d.neuAngelegt && p && p.gast && !p.dauer && !letztesSpielAm(id)) S.profiles = S.profiles.filter(function (q) { return q.id !== id; });
+    }
+    if (S.nmOffen && S.nmOffen.id === id) delete S.nmOffen;
+    save();
+    if (geteiltesTurnier()) geteiltenPlanSenden();
+    return null;
   }
   function nachmeldungAbschliessen(q, person, bild) {
     var lg = q.liga;
@@ -14027,7 +14345,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     /* Als Spieler im Team: im Bogen unter H5-H8 bzw. G5-G8 und beim
        Positionswechsel waehlbar (wird am Namen wiedererkannt). */
     var teamListe = person.team === 'H' ? lg.heimSpieler : lg.gastSpieler;
-    var id = ligaGastId(voll, []);
+    var andereListe = person.team === 'H' ? lg.gastSpieler : lg.heimSpieler;
+    var id = person.id || ligaGastId(voll, []);
+    if (andereListe && andereListe.indexOf(id) >= 0) {
+      if (UI.overlay && UI.overlay.type === 'nachmeldung') { UI.overlay.fehler = 'Diese Person steht schon im anderen Team auf dem Bogen.'; render(); }
+      return;
+    }
     var prof = profile(id);
     if (prof) { prof.voll = voll; if (prof.name === voll) prof.name = person.vor.slice(0, 16); }
     if (teamListe && teamListe.indexOf(id) < 0) teamListe.push(id);
@@ -14036,11 +14359,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (seite && seite.indexOf(id) < 0) seite.push(id);
     if (S.tour && S.tour.liga === lg && S.tour.players && S.tour.players.indexOf(id) < 0) S.tour.players.push(id);
     lg.nachmeldungen.push({ team: person.team, nach: person.nach, vor: person.vor, u18: person.u18, g: person.g, unterschrift: bild, id: id });
+    if (S.nmOffen && S.nmOffen.id === id) delete S.nmOffen;
     save();
     berichtNachmeldungenEinsetzen();
     UI.overlay = { type: 'hinweis', titel: voll + ' ist nachgemeldet',
       text: 'Steht jetzt auf Seite 2 des Spielberichts (mit Unterschrift) und im Team' +
-        (geteiltesTurnier() ? '.' : ' – über „Spieler wechseln“ einsetzbar.') +
+        (person.id ? ' und ist eingewechselt.' : geteiltesTurnier() ? '.' : ', über „Spieler wechseln“ einsetzbar.') +
         ' Gebühr nicht vergessen: ' + (person.u18 === 'ja' ? '2 €' : '10 €') + ' innerhalb von 14 Tagen.' };
     render();
   }
@@ -14649,12 +14973,31 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     $('summary-actions').innerHTML = actions;
   }
 
+  /* Highlights eines Turniers fuer den Sieger-Bildschirm: 180er, High-
+     Finish, Bestes Leg, Hoechster Average - je mit Namen. */
+  function turnierHighlights(ids, stMap) {
+    var z = [], h180 = [], fin = null, leg = null, avg = null;
+    ids.forEach(function (id) {
+      var st = stMap[id];
+      if (!st) return;
+      if (st.s180 > 0) h180.push(esc(pname(id)) + (st.s180 > 1 ? ' ×' + st.s180 : ''));
+      if (st.highCO > 0 && (!fin || st.highCO > fin.v)) fin = { v: st.highCO, id: id };
+      if (st.bestLeg && (!leg || st.bestLeg < leg.v)) leg = { v: st.bestLeg, id: id };
+      if (st.darts && (!avg || st.avg > avg.v)) avg = { v: st.avg, id: id };
+    });
+    if (h180.length) z.push(['180er', h180.join(' · ')]);
+    if (fin) z.push(['High-Finish', fin.v + ' ' + esc(pname(fin.id))]);
+    if (leg) z.push(['Bestes Leg', leg.v + ' Darts ' + esc(pname(leg.id))]);
+    if (avg) z.push(['Höchster Ø', avg.v.toFixed(1) + ' ' + esc(pname(avg.id))]);
+    return z;
+  }
+  function hlZeilen(liste) {
+    return liste.length ? liste.map(function (z) { return '<div class="sg-hl"><span>' + z[0] + '</span><b>' + z[1] + '</b></div>'; }).join('')
+      : '<p class="hint">Keine Highlights.</p>';
+  }
+
   function renderWinner() {
-    var abschluss = document.querySelector('#screen-winner [data-action="finish-tournament"]');
-    if (abschluss) {
-      abschluss.textContent = S.tour && S.tour.liga ? 'Übungsspiel abschließen' : 'Turnier abschließen';
-      abschluss.classList.remove('hidden');
-    }
+    var abschluss = null;
     /* Ligaspiel: hier gewinnt ein Team, kein Einzelner. Die Highlights
        stehen auch hier – der Bogen wird oft erst nach dem letzten Einzel
        ausgefüllt, und dann soll nichts verschwunden sein. */
@@ -14669,34 +15012,39 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
          Danach geht es zum Spielbericht - abgeschlossen ist das Ligaspiel
          erst, wenn er unterschrieben und verschickt ist. */
       var wStats = stats();
-      var motd = function (ids, team) {
+      var motd = function (ids, team, wir) {
         var b = manOfTheDay(ids, wStats);
-        var hl = teamHighlights(ids, wStats);
-        return '<div class="card motd">' +
-          '<div class="motd-team">' + esc(team) + '</div>' +
-          (b ? '<div class="motd-titel">Man of the Day</div>' +
-            '<div class="motd-person">' + avatarHTML(profile(b.id), 'md') +
-              '<div><div class="motd-name">' + esc(ligaName(b.id)) + '</div>' +
-              '<div class="muted">' + plural(b.won, 'Sieg', 'Siege') + ' aus ' + plural(b.matches, 'Einzel', 'Einzeln') +
+        var hl = teamHighlights(ids, wStats).map(function (z) {
+          var hm = /^<b>(.*?):<\/b>\s*(.*)$/.exec(z);
+          return hm ? [hm[1], hm[2]] : ['', z];
+        });
+        return '<div class="card motd' + (wir ? ' wir' : '') + '">' +
+          '<div class="motd-team kt">' + esc(team) + ' · <span class="motd-titel">Man of the Day</span></div>' +
+          (b ? '<div class="motd-person">' + avatarHTML(profile(b.id), 'lg') +
+              '<div class="motd-wer"><div class="motd-name">' + esc(ligaName(b.id)) + '</div>' +
+              '<div class="motd-zeile">' + plural(b.won, 'Sieg', 'Siege') + ' aus ' + plural(b.matches, 'Einzel', 'Einzeln') +
                 ' · Ø ' + (b.darts ? b.avg.toFixed(1) : '–') + '</div></div></div>' : '') +
-          (hl.length ? '<div class="lg-hl">' + hl.map(function (z) { return '<div>' + z + '</div>'; }).join('') + '</div>'
-            : '<div class="muted motd-leer">Keine Highlights</div>') +
+          '<div class="sg-hl-liste">' + (hl.length ? hlZeilen(hl) : '<p class="hint">Keine Highlights.</p>') + '</div>' +
           '</div>';
       };
       var offenBericht = !lw.uebung && !lw.abgeschlossen;
       $('winner-box').innerHTML =
-        '<div style="text-align:center"><div class="big-emoji">' + emoji + '</div>' +
-        '<h1>' + titel + '</h1>' +
-        '<p class="muted">' + lw.nr + '. Spieltag · ' + esc(LIGA.team) + ' gegen ' + esc(lw.gegner) + '</p>' +
-        ligaTeamsHtml(lwd) +
-        '<p class="muted">Einzel ' + lwd.wirS + ':' + lwd.sieS + ' · Legs ' + lwd.wirL + ':' + lwd.sieL + '</p></div>' +
-        '<div class="motd-paar">' + motd(lw.wir, LIGA.team) + motd(lw.sie, lw.gegner) + '</div>' +
-        (offenBericht
-          ? '<button class="btn primary start full big" data-action="liga-bericht">Weiter zum Spielbericht</button>' +
-            '<p class="hint" style="text-align:center">Abgeschlossen ist das Ligaspiel, sobald der Bericht ' +
-              'fertig ausgefüllt, von beiden TCs unterschrieben und verschickt ist.</p>'
-          : '<button class="btn ghost full" data-action="liga-bericht">Spielbericht ansehen</button>');
-      if (abschluss) abschluss.classList.toggle('hidden', offenBericht);
+        '<div class="sg-titel"><span class="sg-pokal">' + emoji + '</span><h1>' + titel + '</h1>' +
+          '<p>' + (lw.uebung ? 'Übungsspiel' : lw.nr + '. Spieltag') + ' · ' + esc(LIGA.team) + ' gegen ' + esc(lw.gegner) +
+            ' · Einzel ' + lwd.wirS + ':' + lwd.sieS + ' · Legs ' + lwd.wirL + ':' + lwd.sieL + '</p></div>' +
+        '<div class="sg-koerper liga">' +
+          '<div class="sg-stand"><span class="wir">' + esc(LIGA.team) + '</span><b>' + lwd.wirP + ' : ' + lwd.sieP + '</b><span class="sie">' + esc(lw.gegner) + '</span></div>' +
+          '<div class="motd-paar">' + motd(lw.wir, LIGA.team, true) + motd(lw.sie, lw.gegner, false) + '</div>' +
+        '</div>' +
+        '<div class="sg-aktionen">' + (offenBericht
+          ? '<div class="sg-knoepfe"><button class="btn ghost" data-action="liga-bericht">Spielbericht ansehen</button>' +
+            '<button class="btn start-rot" data-action="liga-bericht">Weiter zum Spielbericht</button></div>' +
+            '<p class="sg-hinweis">Abgeschlossen ist das Ligaspiel, sobald der Bericht ausgefüllt, von beiden TCs unterschrieben und verschickt ist.</p>'
+          : '<div class="sg-knoepfe"><button class="btn ghost" data-action="to-tournament">Zur Übersicht</button>' +
+            (lw.uebung ? '<button class="btn start-rot" data-action="finish-tournament">Übungsspiel abschließen</button>'
+              : '<button class="btn ghost" data-action="liga-bericht">Spielbericht ansehen</button>' +
+                '<button class="btn start-rot" data-action="finish-tournament">Ligaspiel abschließen</button>') + '</div>') +
+        '</div>';
       return;
     }
 
@@ -14713,18 +15061,33 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var title = tied.length > 1
       ? 'Geteilter Sieg: ' + tied.map(function (st) { return esc(st.name); }).join(' und ')
       : esc(table[0].name) + ' gewinnt!';
+    var zeile = function (st) { return plural(st.won, 'Sieg', 'Siege') + ' · Legs ' + st.legsWon + ':' + st.legsLost; };
+    var key = function (st) { return 'Ø ' + (st.avg ? st.avg.toFixed(1) : '–'); };
+    /* Podest: Zweiter links, Erster in der Mitte und hoeher, Dritter rechts. */
+    var podest = (table.length >= 3 ? [1, 0, 2] : [1, 0]).filter(function (i) { return table[i]; });
+    var hoehe = table.length >= 3 ? ['78%', '100%', '64%'] : ['78%', '100%'];
     $('winner-box').innerHTML =
-      '<div style="text-align:center"><div class="big-emoji">🏆</div>' +
-      '<h1>' + title + '</h1>' +
-      '<p class="muted">' + plural(table[0].won, 'Spiel', 'Spiele') + ' von ' + seinePartien + ' gewonnen</p></div>' +
-      '<div class="podium">' + table.map(function (st, i) {
-        return '<div class="p ' + (i === 0 ? 'first' : '') + '">' +
-          '<div class="medal">' + (medals[i] || (i + 1) + '.') + '</div>' +
-          avatarHTML(profile(st.id), 'sm') +
-          '<div class="pn">' + esc(st.name) + '</div>' +
-          '<div class="pv">' + plural(st.won, 'Sieg', 'Siege') + ' · Legs ' + st.legsWon + ':' + st.legsLost + ' · Ø ' + (st.avg ? st.avg.toFixed(1) : '–') + '</div>' +
-          '</div>';
-      }).join('') + '</div>';
+      '<div class="sg-titel"><span class="sg-pokal">🏆</span><h1>' + title + '</h1>' +
+        '<p>' + plural(table[0].won, 'Spiel', 'Spiele') + ' von ' + seinePartien + ' gewonnen · ' + tourStart() + ' Double Out · ' +
+          (tour().bestOf === 1 ? 'ein Leg' : 'Best of ' + tour().bestOf) + '</p></div>' +
+      '<div class="sg-koerper">' +
+        '<div class="sg-podest n' + podest.length + '">' + podest.map(function (idx, i) {
+          var st = table[idx];
+          return '<div class="sg-stufe' + (idx === 0 ? ' erster' : '') + '" style="--h:' + hoehe[i] + '">' +
+            '<div class="sg-av">' + avatarHTML(profile(st.id), 'lg') + '<span class="sg-medal">' + medals[idx] + '</span></div>' +
+            '<span class="sg-name">' + esc(st.name) + '</span>' +
+            '<span class="sg-zeile">' + zeile(st) + '</span>' +
+            '<span class="sg-key">' + key(st) + '</span></div>';
+        }).join('') + '</div>' +
+        '<div class="card sg-endstand"><h2 class="kt">Endstand</h2><div class="sg-liste">' + table.map(function (st, i) {
+          return '<div class="sg-row"><span class="sg-rang">' + (i + 1) + '.</span><span class="sg-nm">' + esc(st.name) + '</span>' +
+            '<span class="sg-sub">' + zeile(st) + '</span><b>' + (st.avg ? st.avg.toFixed(1) : '–') + '</b></div>';
+        }).join('') + '</div>' +
+        '<h2 class="kt sg-abstand">Highlights</h2><div class="sg-hl-liste">' + hlZeilen(turnierHighlights(tourPlayers(), stats())) + '</div></div>' +
+      '</div>' +
+      '<div class="sg-aktionen"><div class="sg-knoepfe">' +
+        '<button class="btn ghost" data-action="to-tournament">Zur Übersicht</button>' +
+        '<button class="btn start-rot" data-action="finish-tournament">Turnier abschließen</button></div></div>';
   }
 
   function renderOverlay() {
@@ -14737,6 +15100,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     /* Der Start eines Ligaspiels oder Uebungsspiels ist kein Zwischendialog,
        sondern ein eigener Bildschirm: Vollbild im App-Hintergrund. */
     ov.classList.toggle('vollbild', !!VOLLBILD_DIALOGE[UI.overlay.type]);
+    ov.classList.toggle('bogen', !!BOGEN_DIALOGE[UI.overlay.type] || (UI.overlay.type === 'confirm-reset' && !!(S.tour && S.tour.liga)));
+    ov.classList.toggle('bogen-breit', UI.overlay.type === 'liga-bericht-kurz');
     var o = UI.overlay;
     var html = '';
 
@@ -14911,24 +15276,44 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         return '<button data-action="nm-wahl" data-feld="' + feld + '" data-value="' + wert + '" class="' +
           (nd[feld] === wert ? 'active' : '') + '">' + text + '</button>';
       };
-      html = '<h3>Spieler nachmelden</h3>' +
-        '<p>Alle Felder ausfüllen, danach unterschreibt die Person. Gebühr: 10 € (U18: 2 €) innerhalb von 14 Tagen.</p>' +
+      var nListe = nq ? ((nd.team === 'H' ? nq.liga.heimSpieler : nq.liga.gastSpieler) || []) : [];
+      var nIdx = nd.id ? nListe.indexOf(nd.id) : -1;
+      var nInfo = nIdx >= 0 ? 'steht als ' + nd.team + (nIdx + 1) + ' auf dem Bogen · ' + nListe.length + ' von 8 Plätzen belegt'
+        : nListe.length >= 8 ? 'Alle 8 Plätze belegt'
+        : 'wird ' + nd.team + (nListe.length + 1) + ' · ' + nListe.length + ' von 8 Plätzen belegt';
+      /* Nach einem spontanen Wechsel steht das Team fest - sonst landete
+         dieselbe Person in beiden Teams. */
+      var nTeam = nd.teamFest
+        ? '<div class="dl-segment"><button type="button" class="active" disabled>' +
+            (nd.team === 'H' ? 'Heim · ' + esc(nHeimTeam) : 'Gast · ' + esc(nGastTeam)) + '</button></div>'
+        : '<div class="dl-segment">' + nWahl('team', 'H', 'Heim · ' + esc(nHeimTeam)) + nWahl('team', 'G', 'Gast · ' + esc(nGastTeam)) + '</div>';
+      html = '<div class="dl-kopf"><h3>Spieler nachmelden</h3>' +
+        '<p>Für Spieler, die spontan einspringen und noch nie gemeldet waren. Mit Name und Unterschrift kommen sie ' +
+          'auf den Spielbericht (H5 bis H8 bzw. G5 bis G8) und sind danach beim Wechsel wählbar. ' +
+          'Gebühr: 10 € (U18: 2 €) innerhalb von 14 Tagen.</p></div>' +
         (o.fehler ? '<p class="hint fehler" role="alert">' + esc(o.fehler) + '</p>' : '') +
-        '<div class="liga-start">' +
-          '<div class="ls-titel">Team</div>' +
-          '<div class="options">' + nWahl('team', 'H', esc(nHeimTeam) + ' (Heim)') + nWahl('team', 'G', esc(nGastTeam) + ' (Gast)') + '</div>' +
-          '<div class="ls-titel">Name</div>' +
-          '<label class="ls-zeile"><input data-role="nm-nach" maxlength="30" autocomplete="off" value="' + esc(nd.nach) + '" placeholder="Nachname"></label>' +
-          '<label class="ls-zeile"><input data-role="nm-vor" maxlength="30" autocomplete="off" value="' + esc(nd.vor) + '" placeholder="Vorname"></label>' +
-          '<div class="ls-titel">Unter 18?</div>' +
-          '<div class="options">' + nWahl('u18', 'ja', 'ja') + nWahl('u18', 'nein', 'nein') + '</div>' +
-          '<div class="ls-titel">Geschlecht</div>' +
-          '<div class="options">' + nWahl('g', 'w', 'w') + nWahl('g', 'm', 'm') + nWahl('g', 'd', 'd') + '</div>' +
+        '<div class="dl-spalten">' +
+          '<div class="dl-spalte"><div class="kt">Team</div>' +
+            nTeam +
+            '<div class="kt">Name</div>' +
+            '<input class="dl-input" data-role="nm-vor" maxlength="30" autocomplete="off" value="' + esc(nd.vor) + '" placeholder="Vorname">' +
+            '<input class="dl-input" data-role="nm-nach" maxlength="30" autocomplete="off" value="' + esc(nd.nach) + '" placeholder="Nachname">' +
+          '</div>' +
+          '<div class="dl-spalte"><div class="kt">Unter 18?</div>' +
+            '<div class="dl-segment">' + nWahl('u18', 'nein', 'Nein') + nWahl('u18', 'ja', 'Ja') + '</div>' +
+            '<div class="kt">Geschlecht</div>' +
+            '<div class="dl-segment">' + nWahl('g', 'w', 'w') + nWahl('g', 'm', 'm') + nWahl('g', 'd', 'd') + '</div>' +
+            '<p class="dl-info">' + nInfo + '</p>' +
+          '</div>' +
         '</div>' +
-        '<div class="row-btns two">' +
-          '<button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
-          '<button class="btn primary" data-action="nm-weiter">Weiter zur Unterschrift</button>' +
-        '</div>';
+        '<div class="dl-sig"><div class="dl-sig-kopf"><span class="kt">Unterschrift Spieler</span>' +
+          '<button type="button" class="dl-link" data-action="signatur-nochmal">Löschen</button></div>' +
+          '<canvas id="signatur" class="signatur" aria-label="Unterschriftsfeld"></canvas>' +
+          '<p class="dl-note">Mit der Unterschrift erkennt die Person die SWO und das Datenschutz-Merkblatt der SDM an.</p></div>' +
+        '<div class="dl-fuss">' + (nd.wechsel
+          ? '<button class="btn ghost" data-action="nm-abbrechen">Wechsel zurücknehmen</button>'
+          : '<button class="btn ghost" data-action="ov-cancel">Abbrechen</button>') +
+        '<button class="btn hell" data-action="nm-weiter">Nachmelden</button></div>';
     } else if (o.type === 'bericht-versand') {
       html = '<h3>Spielbericht versenden</h3>' +
         '<p>Beide Unterschriften sind drin. An wen geht der Bericht?</p>' +
@@ -14970,6 +15355,38 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '<p class="lp-sub">' + (lrT.tag ? fmtDate(new Date(lrT.tag + 'T12:00:00').getTime()) : '') + ' · ' + esc(LIGA.saison) + '</p>' +
         ligaRundeHtml(lrT, ligaTerminEintrag(lrT)) +
         '<button class="btn primary full" data-action="ov-cancel">Schließen</button>';
+    } else if (o.type === 'liga-bericht-kurz') {
+      var bkLg = S.tour && S.tour.liga;
+      if (!bkLg) { UI.overlay = null; ov.classList.add('hidden'); return; }
+      var bkd = ligaStandDaten();
+      var bkZeile = function (k, v) { return '<div class="dl-summe"><span>' + k + '</span><b>' + v + '</b></div>'; };
+      html = '<div class="dl-kopf dl-bericht-kopf"><div><h3>Spielbericht</h3>' +
+          '<p>5. Liga · ' + (bkLg.uebung ? 'Übungsspiel' : bkLg.nr + '. Spieltag') + ' · ' + (bkLg.heim ? 'Heim' : 'Auswärts') + ' · 20:00 Uhr</p></div>' +
+          '<div class="dl-stand"><span>' + esc(LIGA.team) + '</span><b>' + bkd.wirP + ' : ' + bkd.sieP + '</b><span class="g">' + esc(bkLg.gegner) + '</span></div></div>' +
+        '<div class="dl-bericht-spalten"><div class="dl-einzel-liste"><div class="kt">Einzel</div>' +
+          S.matches.map(function (m) {
+            var score = m.kampflos ? (m.winner === m.p[0] ? legsToWin() + ':0' : '0:' + legsToWin()) + ' w.o.'
+              : m.legs.length ? legsWon(m, m.p[0]) + ':' + legsWon(m, m.p[1]) : '–:–';
+            var pp = m.posPaar || [0, 0];
+            return '<div class="dl-einzel' + (m.void ? ' void' : '') + '">' +
+              '<span class="dl-k h">H' + (pp[0] + 1) + '</span>' +
+              '<span class="n' + (m.winner === m.p[0] ? ' sieg' : m.done ? ' verlor' : '') + '">' + esc(ligaName(m.p[0])) + '</span>' +
+              '<b>' + score + '</b>' +
+              '<span class="n r' + (m.winner === m.p[1] ? ' sieg' : m.done ? ' verlor' : '') + '">' + esc(ligaName(m.p[1])) + '</span>' +
+              '<span class="dl-k g r">G' + (pp[1] + 1) + '</span></div>';
+          }).join('') + '</div>' +
+          '<div class="dl-bericht-rechts"><div class="kt">Summe</div>' +
+            bkZeile('Punkte', bkd.wirP + ' : ' + bkd.sieP) + bkZeile('Einzel', bkd.wirS + ' : ' + bkd.sieS) +
+            bkZeile('Legs', bkd.wirL + ' : ' + bkd.sieL) + bkZeile('Gespielt', bkd.fertige + ' von ' + S.matches.length) +
+            '<div class="kt dl-abstand">Highlights</div>' +
+            (bkd.hl.length ? bkd.hl.map(function (z) {
+              var hm = /^<b>(.*?):<\/b>\s*(.*)$/.exec(z);
+              return '<div class="dl-hl"><span>' + (hm ? hm[1] : '') + '</span><b>' + (hm ? hm[2] : z) + '</b></div>';
+            }).join('') : '<p class="dl-note">Noch keine: 180er, High-Finishes ab 100 und Shortlegs bis 21 Darts.</p>') +
+          '</div></div>' +
+        '<div class="dl-fuss"><button class="btn ghost" data-action="ov-cancel">Schließen</button>' +
+        '<button class="btn ghost" data-action="liga-bericht-teilen">Teilen</button>' +
+        '<button class="btn hell" data-action="liga-bericht">Bogen und PDF</button></div>';
     } else if (o.type === 'liga-partien') {
       var lpSp = (LIGA_SPIELTAGE[o.termin] || [])[o.i];
       var lpT = LIGA.termine.filter(function (x) { return x.id === o.termin; })[0];
@@ -15142,54 +15559,89 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       var wlg = S.tour && S.tour.liga;
       if (!wlg) { UI.overlay = null; ov.classList.add('hidden'); return; }
       var wUnsere = wlg.heim ? 'H' : 'G';
-      var wZeile = function (seite, posListe) {
-        return posListe.map(function (id, i) {
-          return '<div class="rc-row">' +
-            '<span class="bo-pos">' + seite + (i + 1) + '</span>' +
-            avatarHTML(profile(id), 'sm') +
-            '<span class="rc-name">' + esc(pname(id)) +
-              (seite === wUnsere ? '' : ' <span class="gast-marke">Gast</span>') + '</span>' +
-            '<button class="btn ghost small" data-action="liga-wechsel-pos" ' +
-              'data-seite="' + seite + '" data-pos="' + i + '">Wechseln</button>' +
-            '</div>';
-        }).join('');
+      var wHeimTeam = wlg.heim ? LIGA.team : wlg.gegner, wGastTeam = wlg.heim ? wlg.gegner : LIGA.team;
+      /* Status je Position: laeuft gerade ein Einzel (auch am anderen
+         Geraet), steht das dabei - sonst "gemeldet" bzw. "Gast". */
+      var wStatus = function (seite, i) {
+        var idx = seite === 'H' ? 0 : 1;
+        var laeuft = S.matches.filter(function (m) {
+          return m.posPaar && m.posPaar[idx] === i && !m.done && !m.void &&
+            (m.belegtVon || m.legs.some(function (l) { return l.visits.length > 0; }));
+        })[0];
+        if (laeuft) return { t: 'Einzel läuft' + (laeuft.scheibe ? ' auf ' + laeuft.scheibe : ''), hell: true };
+        return { t: seite === wUnsere ? 'gemeldet' : 'Gast', hell: false };
       };
-      html = '<h3>Spieler wechseln</h3>' +
-        '<p class="hint">Nur auf derselben Position (SWO §8), höchstens 8 Spieler je Team. ' +
-          'Der Wechsel gilt für alle noch nicht begonnenen Einzel der Position – ' +
-          'ein angefangenes Einzel spielt sein Spieler zu Ende. Wer auf einer Position ' +
-          'gespielt hat, bleibt auf ihr (Rotation dort ist erlaubt). Höchstens ein nicht ' +
-          'gemeldeter Gastspieler pro Mannschaft und Ligaspiel.</p>' +
-        '<div class="roster-change">' +
-          '<div class="ls-titel">Heim</div>' + wZeile('H', wlg.posH) +
-          '<div class="ls-titel">Gast</div>' + wZeile('G', wlg.posG) +
-        '</div>' +
-        '<button class="btn primary full" data-action="ov-cancel">Fertig</button>';
+      var wSpalte = function (seite, titel, posListe) {
+        return '<div class="dl-spalte"><div class="kt">' + titel + '</div>' + posListe.map(function (id, i) {
+          var st = wStatus(seite, i);
+          return '<div class="dl-pos">' +
+            '<span class="dl-k ' + (seite === 'H' ? 'h' : 'g') + '">' + seite + (i + 1) + '</span>' +
+            '<span class="dl-wer"><b>' + esc(ligaName(id)) + '</b><small' + (st.hell ? ' class="hell"' : '') + '>' + esc(st.t) + '</small></span>' +
+            '<button class="btn ghost small" data-action="liga-wechsel-pos" data-seite="' + seite + '" data-pos="' + i + '">Wechseln</button>' +
+            '</div>';
+        }).join('') + '</div>';
+      };
+      html = '<div class="dl-kopf"><h3>Spieler wechseln</h3>' +
+        '<p>Nur auf derselben Position (SWO §8), höchstens 8 Spieler je Team. Der Wechsel gilt für alle ' +
+          'noch nicht begonnenen Einzel der Position, ein angefangenes Einzel spielt sein Spieler zu Ende. ' +
+          'Höchstens ein nicht gemeldeter Gastspieler pro Mannschaft.</p></div>' +
+        '<div class="dl-spalten">' + wSpalte('H', 'Heim · ' + esc(wHeimTeam), wlg.posH) + wSpalte('G', 'Gast · ' + esc(wGastTeam), wlg.posG) + '</div>' +
+        '<div class="dl-fuss"><button class="btn hell" data-action="ov-cancel">Fertig</button></div>';
     } else if (o.type === 'liga-wechsel-zu') {
-      var wz = o;
-      html = '<h3>Wechsel auf Position ' + wz.seite + (wz.pos + 1) + '</h3>' +
-        (o.fehler ? '<p class="edit-error">' + esc(o.fehler) + '</p>' : '') +
-        (wz.eigene
-          ? '<label class="ls-zeile liga-start"><span>Neu</span>' +
-            '<select data-role="liga-neu">' +
-            ligaKader().map(function (p) {
-              return '<option value="' + p.id + '"' + (wz.draft.neu === p.id ? ' selected' : '') + '>' +
-                esc(p.name) + '</option>';
-            }).join('') + '</select></label>'
-          : '<label class="ls-zeile liga-start"><span>Neu</span>' +
-            '<span class="namen-paar">' +
-            '<input data-role="liga-neu-name" maxlength="30" value="' + esc(wz.draft.name) + '" ' +
-            'placeholder="Vorname">' +
-            '<input data-role="liga-neu-nach" maxlength="30" value="' + esc(wz.draft.nach || '') + '" ' +
-            'placeholder="Nachname">' +
-            '</span></label>') +
-        '<div class="row-btns two">' +
-        '<button class="btn ghost" data-action="roster-change">Zurück</button>' +
-        '<button class="btn primary" data-action="liga-wechsel-ok">Einwechseln</button></div>';
+      var wz = o, wzLg = S.tour && S.tour.liga;
+      if (!wzLg) { UI.overlay = null; ov.classList.add('hidden'); return; }
+      var wzPosListe = wz.seite === 'H' ? wzLg.posH : wzLg.posG;
+      var wzTeam = (wz.seite === 'H' ? wzLg.heimSpieler : wzLg.gastSpieler) || [];
+      var wzBesetzt = wzLg.posH.concat(wzLg.posG);
+      /* Eigene Seite: der Kader (alle Stammspieler, die nicht auf dem Bogen
+         stehen); Gegner: wer schon nachgemeldet ist. Dazu immer die
+         spontane Nachmeldung mit Namen. */
+      var wzKandidaten = wz.eigene
+        ? ligaKader().filter(function (p) { return wzBesetzt.indexOf(p.id) < 0 && !istLigaGegner(p.id); })
+        : wzTeam.filter(function (id) { return wzBesetzt.indexOf(id) < 0; }).map(profile).filter(Boolean);
+      var wzMap = career();
+      var wzKnopf = function (p) {
+        var inTeam = wzTeam.indexOf(p.id);
+        var st = wzMap[p.id];
+        var sub = (st && st.darts ? 'Ø ' + st.avg.toFixed(1) + ' · ' : '') + (inTeam >= 0 ? (wz.eigene ? 'gemeldet' : 'nachgemeldet') : 'Kader');
+        return '<button type="button" class="dl-wahl' + (wz.draft.neu === p.id ? ' active' : '') + '" data-action="liga-wechsel-neu" data-id="' + esc(p.id) + '">' +
+          '<span class="dl-k h">' + (inTeam >= 0 ? wz.seite + (inTeam + 1) : '') + '</span>' +
+          '<span class="dl-wer"><b>' + esc(ligaName(p.id)) + '</b><small>' + esc(sub) + '</small></span></button>';
+      };
+      html = '<div class="dl-kopf"><h3>Wechsel auf Position ' + wz.seite + (wz.pos + 1) + '</h3>' +
+        '<p>Raus: ' + esc(ligaName(wzPosListe[wz.pos])) + '. Der neue Spieler übernimmt alle offenen Einzel von ' + wz.seite + (wz.pos + 1) + '.</p></div>' +
+        (o.fehler ? '<p class="hint fehler" role="alert">' + esc(o.fehler) + '</p>' : '') +
+        (wzKandidaten.length ? '<div class="kt">' + (wz.eigene ? 'Aus dem Kader' : 'Schon auf dem Bogen') + '</div>' +
+          '<div class="dl-raster">' + wzKandidaten.map(wzKnopf).join('') + '</div>' : '') +
+        '<div class="kt">Oder spontan nachmelden</div>' +
+        '<div class="dl-raster">' +
+          '<input class="dl-input" data-role="liga-neu-name" maxlength="30" autocomplete="off" value="' + esc(wz.draft.name || '') + '" placeholder="Vorname">' +
+          '<input class="dl-input" data-role="liga-neu-nach" maxlength="30" autocomplete="off" value="' + esc(wz.draft.nach || '') + '" placeholder="Nachname">' +
+        '</div>' +
+        '<p class="dl-note">Neuer Name kommt als Nachmeldung auf den Spielbericht und unterschreibt nach dem Einwechseln.</p>' +
+        '<div class="dl-fuss"><button class="btn ghost" data-action="roster-change">Zurück</button>' +
+        '<button class="btn hell" data-action="liga-wechsel-ok">Einwechseln</button></div>';
     } else if (o.type === 'confirm-reset') {
       var offeneSpiele = sum(S.matches, function (m) { return m.done || m.void ? 0 : 1; });
       var fertige = sum(S.matches, function (m) { return m.done ? 1 : 0; });
-      html = '<h3>' + (S.tour && S.tour.liga ? 'Ligaspiel' : 'Turnier') + ' vorzeitig beenden?</h3>' +
+      if (S.tour && S.tour.liga) {
+        var crArt = o.art || 'entfallen';
+        var crOpt = function (k, t, s) {
+          return '<button type="button" class="dl-wahl' + (crArt === k ? ' active' : '') + '" data-action="reset-art" data-value="' + k + '">' +
+            '<span class="dl-wer"><b>' + t + '</b><small>' + s + '</small></span></button>';
+        };
+        html = '<div class="dl-kopf"><h3>Ligaspiel vorzeitig beenden?</h3>' +
+          '<p>' + fertige + ' von ' + S.matches.length + ' Einzel sind gespielt. Wie sollen die ' +
+            plural(offeneSpiele, 'offene Einzel', 'offenen Einzel') + ' gewertet werden?</p></div>' +
+          '<div class="dl-liste">' +
+            crOpt('kampflos', 'Nicht begonnene Einzel kampflos für den Gegner', 'So wird es im Spielbericht gemeldet') +
+            crOpt('entfallen', 'Offene Einzel entfallen', 'Nur die gespielten Einzel zählen') +
+            crOpt('verwerfen', 'Ligaspiel verwerfen', 'Nichts wird gespeichert') +
+          '</div>' +
+          '<div class="dl-fuss"><button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
+          '<button class="btn rot" data-action="ov-reset">Beenden</button></div>';
+      } else
+      html = '<h3>Turnier vorzeitig beenden?</h3>' +
         '<p>' + (fertige
           ? '<b>' + plural(fertige, 'gespieltes Spiel', 'gespielte Spiele') + '</b> ' +
             (fertige === 1 ? 'bleibt' : 'bleiben') + ' in Statistik und Rangliste. '
@@ -15353,7 +15805,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '<button class="btn primary full" data-action="ov-cancel">Zurück zur Auswahl</button>';
     }
     $('overlay-card').innerHTML = html;
-    if (o.type === 'unterschrift') signaturVorbereiten();
+    if (o.type === 'unterschrift' || o.type === 'nachmeldung') signaturVorbereiten();
     /* Mit Tastatur: in Dialogen ohne eigene Pfeil-Wahl gleich den
        Hauptknopf markieren, damit immer etwas sichtbar gewaehlt ist. */
     var karte = $('overlay-card');
@@ -16719,6 +17171,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       case 'liga-bericht':
         UI.bericht = el.getAttribute('data-termin') || null;
         UI.berichtVon = S.screen;
+        UI.overlay = null;   // aus dem Kurz-Bogen heraus: der Dialog geht zu
         S.screen = 'bericht';
         save(); render();
         break;
@@ -16768,11 +17221,21 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         break;
       case 'nm-wahl':
         if (UI.overlay && UI.overlay.type === 'nachmeldung') {
+          if (el.getAttribute('data-feld') === 'team' && UI.overlay.draft.teamFest) break;
           UI.overlay.draft[el.getAttribute('data-feld')] = el.getAttribute('data-value');
           UI.overlay.fehler = '';
           render();
         }
         break;
+      case 'nm-abbrechen': {
+        var nmO = UI.overlay;
+        if (!nmO || nmO.type !== 'nachmeldung') break;
+        var nmFehler = ligaWechselZurueck(nmO.draft);
+        if (nmFehler) { nmO.fehler = nmFehler; render(); break; }
+        UI.overlay = { type: 'liga-wechsel' };
+        render();
+        break;
+      }
       case 'nm-weiter':
         nachmeldungWeiter();
         break;
@@ -16780,7 +17243,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         berichtUnterschreibenStarten();
         break;
       case 'signatur-nochmal':
-        if (UI.overlay && UI.overlay.type === 'unterschrift') { UI.overlay.striche = []; UI.overlay.fehler = ''; render(); }
+        if (UI.overlay && (UI.overlay.type === 'unterschrift' || UI.overlay.type === 'nachmeldung')) { UI.overlay.striche = []; UI.overlay.fehler = ''; render(); }
         break;
       case 'signatur-weiter':
         signaturWeiter();
@@ -16939,6 +17402,31 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         save(); render();
         break;
       }
+      case 'liga-bericht-kurz':
+        UI.overlay = { type: 'liga-bericht-kurz' }; render();
+        break;
+      /* Teilen aus dem Bogen: unterschrieben geht es gleich zum Versand,
+         sonst zum Bogen (dort wird unterschrieben). */
+      case 'liga-bericht-teilen': {
+        UI.bericht = null; UI.berichtVon = S.screen; S.screen = 'bericht';
+        UI.overlay = null;
+        save(); render();
+        var btq = ligaBerichtQuelle();
+        if (btq && berichtIstFinal(btq.liga)) { berichtVersandOeffnen(); render(); }
+        break;
+      }
+      case 'liga-wechsel-neu': {
+        var lwn = UI.overlay;
+        if (!lwn || lwn.type !== 'liga-wechsel-zu') break;
+        var lwnId = el.getAttribute('data-id');
+        lwn.draft.neu = lwn.draft.neu === lwnId ? '' : lwnId;
+        lwn.draft.name = ''; lwn.draft.nach = ''; lwn.fehler = '';
+        render();
+        break;
+      }
+      case 'reset-art':
+        if (UI.overlay && UI.overlay.type === 'confirm-reset') { UI.overlay.art = el.getAttribute('data-value'); render(); }
+        break;
       case 'liga-wechsel-pos': {
         var lwSeite = el.getAttribute('data-seite');
         var lwPos = Number(el.getAttribute('data-pos'));
@@ -16946,11 +17434,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         if (!lwLg) break;
         var unsere = lwLg.heim ? 'H' : 'G';
         var lwEigene = lwSeite === unsere;
-        var lwErste = lwEigene ? (ligaKader()[0] || {}).id || '' : '';
         UI.overlay = {
           type: 'liga-wechsel-zu', seite: lwSeite, pos: lwPos,
           eigene: lwEigene,
-          draft: { neu: lwErste, name: '' }
+          draft: { neu: '', name: '', nach: '' }
         };
         render();
         break;
@@ -16959,23 +17446,42 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         var lo = UI.overlay;
         if (!lo || lo.type !== 'liga-wechsel-zu') break;
         var loLg = S.tour.liga;
-        var neuId;
-        if (lo.eigene) {
+        var neuId, loSpontan = false, loNeuAngelegt = false;
+        if (lo.draft.neu) {
           neuId = lo.draft.neu;
-          if (!neuId) { lo.fehler = 'Bitte einen Spieler auswählen.'; render(); break; }
         } else {
-          var loName = (String(lo.draft.name || '').trim().slice(0, 30) + ' ' +
-            String(lo.draft.nach || '').trim().slice(0, 30)).replace(/\s+/g, ' ').trim();
-          if (!String(lo.draft.name || '').trim() || !String(lo.draft.nach || '').trim()) {
-            lo.fehler = 'Bitte Vor- und Nachnamen des neuen Gegners eintragen.'; render(); break;
+          var loVor = String(lo.draft.name || '').trim(), loNach = String(lo.draft.nach || '').trim();
+          if (!loVor || !loNach) {
+            lo.fehler = 'Bitte einen Spieler wählen oder Vor- und Nachnamen eintragen.'; render(); break;
           }
+          var loName = (loVor.slice(0, 30) + ' ' + loNach.slice(0, 30)).replace(/\s+/g, ' ').trim();
           /* Nur die AKTIVE Besetzung ausschließen: wer auf der Bank sitzt,
              wird am Namen wiedererkannt und darf zurückwechseln – sonst
              entstünde ein zweites Profil desselben Menschen. */
+          var loVorher = S.profiles.length;
           neuId = ligaGastId(loName, loLg.posH.concat(loLg.posG));
+          loNeuAngelegt = S.profiles.length > loVorher;
+          loSpontan = (loLg.heimSpieler || []).indexOf(neuId) < 0 && (loLg.gastSpieler || []).indexOf(neuId) < 0;
         }
+        var loRaus = (lo.seite === 'H' ? loLg.posH : loLg.posG)[lo.pos];
         var loFehler = ligaWechseln(lo.seite, lo.pos, neuId);
         if (loFehler) { lo.fehler = loFehler; render(); break; }
+        /* Ein spontan eingewechselter Name ist eine Nachmeldung: gleich
+           weiter zu Alter, Geschlecht und Unterschrift fuer den Bogen. Der
+           Spieler steht schon auf dem Bogen - das Overlay kennt ihn (id),
+           das Team steht fest, und "Abbrechen" nimmt den Wechsel zurueck. */
+        if (loSpontan) {
+          var loP = profile(neuId), loTeile = vollSplit(loP && loP.voll);
+          var loDraft = { team: lo.seite, teamFest: true, id: neuId, neuAngelegt: loNeuAngelegt,
+            wechsel: { seite: lo.seite, pos: lo.pos, raus: loRaus },
+            nach: loTeile.nach || '', vor: loTeile.vor || '', u18: 'nein', g: null };
+          /* Ueberlebt ein Neuladen: ohne Nachmeldung darf niemand auf dem
+             Bogen bleiben (nachmeldungWiederherstellen). Nur auf diesem
+             Geraet - der Plan des geteilten Spiels traegt es nicht. */
+          S.nmOffen = { id: neuId, team: lo.seite, wechsel: loDraft.wechsel, neuAngelegt: loNeuAngelegt, nach: loDraft.nach, vor: loDraft.vor };
+          UI.overlay = { type: 'nachmeldung', draft: loDraft, striche: [] };
+          save(); render(); break;
+        }
         UI.overlay = { type: 'liga-wechsel' };
         render();
         break;
@@ -17018,12 +17524,21 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         S.screen = 'setup';
         save(); render();
         break;
-      case 'ov-reset':
-        archiveTournament();
+      case 'ov-reset': {
+        var orArt = UI.overlay && UI.overlay.type === 'confirm-reset' ? UI.overlay.art : null;
+        if (S.tour && S.tour.liga && orArt === 'verwerfen') {
+          /* Nichts speichern: wie ein verworfenes freies Spiel. */
+          if (geteiltesTurnier() && window.DartSync && window.DartSync.turnier) window.DartSync.turnier.ende();
+          S.matches = []; S.current = null; S.tour = null;
+        } else {
+          if (S.tour && S.tour.liga && orArt === 'kampflos') ligaOffeneKampflos();
+          archiveTournament();
+        }
         UI.overlay = null;
         S.screen = 'setup';
         save(); render();
         break;
+      }
     }
   }
 
@@ -17033,7 +17548,16 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   var STICKY_OVERLAYS = { 'checkout-darts': 1, 'leg-done': 1, 'match-done': 1, 'game-done': 1, 'turnier-ende': 1 };
   /* Vollbild-Dialoge haben keinen "Rand daneben" - ein Tipp auf leere Flaeche
      (oder beim Unterschreiben knapp neben das Feld) schliesst sie nicht. */
-  var VOLLBILD_DIALOGE = { 'liga-start': 1, 'uebung-start': 1, 'unterschrift': 1, 'bericht-versand': 1, 'nachmeldung': 1 };
+  var VOLLBILD_DIALOGE = { 'liga-start': 1, 'uebung-start': 1, 'unterschrift': 1, 'bericht-versand': 1 };
+  /* Die Dialoge des Ligaspiels (Entwurf Okt. 2026): breite Bogen,
+     linksbuendig, mit Spalten - Wechseln, Nachmelden, Beenden, Spielbericht. */
+  var BOGEN_DIALOGE = { 'liga-wechsel': 1, 'liga-wechsel-zu': 1, 'nachmeldung': 1, 'liga-bericht-kurz': 1 };
+  /* Dialoge mit Eingaben und Unterschrift gehen nur ueber ihre Knoepfe zu -
+     ein Strich knapp neben dem Feld, Escape oder "Zurueck" wirft sonst
+     alles weg (und nach einem spontanen Wechsel bliebe der Spieler ohne
+     Nachmeldung auf dem Bogen). */
+  var FESTE_DIALOGE = { 'nachmeldung': 1 };
+  function bleibtOffen(typ) { return !!(STICKY_OVERLAYS[typ] || VOLLBILD_DIALOGE[typ] || FESTE_DIALOGE[typ]); }
   /* Druck-Blitz: jede wirklich gedrueckte Taste leuchtet kurz auf. Als
      neu gestartete Animation, nicht nur :active - ein 30-ms-Tipp waere
      sonst unsichtbar, und am Board braucht man die Gewissheit, dass der
@@ -17122,7 +17646,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
   document.addEventListener('click', function (ev) {
     if (isGhostTap(ev)) return;
-    if (ev.target.id === 'overlay' && UI.overlay && !STICKY_OVERLAYS[UI.overlay.type] && !VOLLBILD_DIALOGE[UI.overlay.type]) {
+    if (ev.target.id === 'overlay' && UI.overlay && !bleibtOffen(UI.overlay.type)) {
       UI.overlay = null; UI.input = ''; render(); return;
     }
     /* Menue (•••): ein Tipp neben die Karte schliesst es. */
@@ -17414,7 +17938,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   }, true);
 
   document.addEventListener('keydown', function (ev) {
-    if (ev.key === 'Escape' && UI.overlay && !STICKY_OVERLAYS[UI.overlay.type] && !VOLLBILD_DIALOGE[UI.overlay.type]) {
+    if (ev.key === 'Escape' && UI.overlay && !bleibtOffen(UI.overlay.type)) {
       UI.overlay = null; UI.input = ''; render();
       return;
     }
@@ -17888,7 +18412,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   /* Eine Stufe zurueck. Liefert true, wenn etwas passiert ist. */
   function tastaturZurueck() {
     if (UI.overlay) {
-      if (STICKY_OVERLAYS[UI.overlay.type] || VOLLBILD_DIALOGE[UI.overlay.type]) return false;
+      if (bleibtOffen(UI.overlay.type)) return false;
       UI.overlay = null; UI.input = ''; render(); return true;
     }
     if (SPIEL_SCREENS[S.screen] || S.screen === 'bulloff') return false;
@@ -17975,7 +18499,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     try { history.pushState({ dart: 1 }, ''); } catch (e) { /* egal */ }
   }
   window.addEventListener('popstate', function () {
-    if (UI.overlay && !STICKY_OVERLAYS[UI.overlay.type] && !VOLLBILD_DIALOGE[UI.overlay.type]) {
+    if (UI.overlay && !bleibtOffen(UI.overlay.type)) {
       UI.overlay = null; UI.input = ''; render(); zurueckFalle(); return;
     }
     if (UI.overlay) { zurueckFalle(); return; }
@@ -18022,6 +18546,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   }
   if (S.screen === 'game' && !currentMatch()) S.screen = 'tournament';
   uiWiederherstellen();
+  nachmeldungWiederherstellen();
   if (S.screen === 'bulloff' && !currentMatch() && !S.game) S.screen = 'tournament';
   if (!S.matches.length && S.screen === 'tournament') S.screen = 'setup';
   if (S.screen === 'profile' && !UI.profile) S.screen = 'players';

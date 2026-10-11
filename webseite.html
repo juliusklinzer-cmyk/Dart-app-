@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d0a0b">
+<meta name="description" content="Blink 180, Dartmannschaft aus München in der Steeldart Liga München: Spieltage, Tabelle, Ergebnisse und Livescoring.">
+<title>Blink 180 · Dart Turnier</title>
+<link rel="icon" href="icons/icon-192.webp" type="image/webp">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="css/webseite.css">
+</head>
+<body>
+<header class="nav">
+  <div class="nav-innen">
+    <a href="#top" class="marke" aria-label="Blink 180, nach oben">
+      <img src="icons/icon-192.webp" alt="" width="44" height="44">
+      <span class="marke-text"><span class="marke-name">Blink <em>180</em></span><span class="marke-sub">Dart Turnier · est. 2026</span></span>
+    </a>
+    <span class="nav-luft"></span>
+    <button type="button" class="knopf" id="nav-anmelden" data-action="login-oeffnen">Anmelden</button>
+  </div>
+</header>
+
+<main id="top" class="seite">
+  <!-- Spieltag laeuft: Live-Stand (wird per Skript gefuellt) -->
+  <section id="live" class="live hidden" aria-live="polite"></section>
+
+  <!-- Normal: naechster Spieltag mit Countdown -->
+  <section id="naechster" class="held"></section>
+
+  <!-- Termine, Ergebnisse, Tabelle -->
+  <section id="termine" class="raster">
+    <div class="spalte">
+      <h2 class="titel">Ligatermine</h2>
+      <div id="termine-liste" class="liste"></div>
+    </div>
+    <div class="spalte spalte-rechts">
+      <div id="ergebnisse">
+        <h2 class="titel">Ergebnisse</h2>
+        <div id="ergebnisse-liste" class="liste"></div>
+        <p class="notiz">Spielberichte gibt es für Mitglieder nach dem Anmelden.</p>
+      </div>
+      <div id="tabelle">
+        <h2 class="titel">Tabelle</h2>
+        <div class="tabelle-karte">
+          <div class="tz tz-kopf"><span>#</span><span>Team</span><span class="mitte">Sp.</span><span class="mitte">Pkt.</span><span class="rechts">Legs</span></div>
+          <div id="tabelle-zeilen"></div>
+        </div>
+        <p class="notiz" id="tabelle-stand"></p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="fuss">
+    <span class="fuss-links">
+      <span>Blink 180 · Heimspielort Bar Sehnsucht</span>
+      <a href="https://www.steeldartliga-muenchen.de" target="_blank" rel="noopener">Wir spielen in der Steeldart Liga München<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"></path></svg></a>
+    </span>
+    <span class="fuss-rechts"><a href="index.html" class="leise">Zur App</a><a href="live.html" class="leise">Live-Ticker</a></span>
+  </footer>
+</main>
+
+<!-- Anmelden / Registrieren -->
+<div id="login" class="login hidden" role="dialog" aria-modal="true" aria-labelledby="login-titel">
+  <div class="login-karte">
+    <div class="login-kopf">
+      <img src="icons/icon-192.webp" alt="" width="48" height="48">
+      <span id="login-titel" class="login-titel">Mitglieder</span>
+      <button type="button" class="login-zu" data-action="login-zu" aria-label="Schließen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+    </div>
+    <div class="login-tabs">
+      <button type="button" class="active" data-action="login-tab" data-tab="login">Anmelden</button>
+      <button type="button" data-action="login-tab" data-tab="register">Mit Code registrieren</button>
+    </div>
+    <p class="login-meldung hidden" id="login-meldung" role="alert"></p>
+    <form id="form-login" class="login-form" autocomplete="on">
+      <p class="login-hinweis">Für Mitglieder: Zusagen, Spielberichte, Kasse und die App.</p>
+      <input type="email" name="email" placeholder="E-Mail" autocomplete="email" autocapitalize="none" required>
+      <input type="password" name="password" placeholder="Passwort" autocomplete="current-password" required>
+      <button type="submit" class="knopf hell">Anmelden</button>
+      <div class="login-zeile">
+        <button type="button" class="link" data-action="passwort-vergessen">Passwort vergessen?</button>
+        <button type="button" class="link leise" data-action="login-tab" data-tab="register">Du hast einen Anmeldecode?</button>
+      </div>
+    </form>
+    <form id="form-register" class="login-form hidden" autocomplete="on">
+      <p class="login-hinweis" id="register-hinweis">Registrieren geht nur mit Anmeldecode. Den vergeben wir an neue Mitglieder.</p>
+      <input type="text" name="code" class="code" placeholder="Anmeldecode" autocomplete="off" autocapitalize="characters" spellcheck="false" required>
+      <div class="zwei">
+        <input type="text" name="vor" placeholder="Vorname" autocomplete="given-name" required>
+        <input type="text" name="nach" placeholder="Nachname" autocomplete="family-name" required>
+      </div>
+      <input type="email" name="email" placeholder="E-Mail" autocomplete="email" autocapitalize="none" required>
+      <input type="password" name="password" placeholder="Passwort wählen" autocomplete="new-password" required>
+      <button type="submit" class="knopf hell">Registrieren</button>
+    </form>
+  </div>
+</div>
+
+<script src="js/liga-daten.js"></script>
+<script src="js/webseite.js"></script>
+</body>
+</html>

@@ -971,6 +971,35 @@ export function createApi(db, config) {
     });
   }
 
+  /* Oeffentlicher Stand fuer die Webseite (ohne Konto): die Ligatabelle,
+     wie sie die Mannschaft pflegt, und - falls gerade ein geteiltes
+     Ligaspiel laeuft - der Zuschauer-Schluessel dazu. Ein am selben Abend
+     beendetes Spiel bleibt sechs Stunden als Endstand stehen. Uebungsspiele
+     und alles aelter als zwoelf Stunden zaehlen nicht. */
+  function oeffentlicheLiga(req, res) {
+    const ip = clientIp(req, config.trustProxy);
+    const warte = limit.pruefe('oeffentlich:' + ip, 600, 600e3);
+    if (warte) throw new HttpFehler(429, 'Bitte etwas langsamer.');
+    limit.zaehle('oeffentlich:' + ip, 600, 600e3);
+    const z = db.prepare('SELECT daten, updated_at FROM liga_tabelle WHERE id = 1').get();
+    let live = null;
+    const seit = new Date(Date.now() - 12 * 3600e3).toISOString();
+    const endeSeit = new Date(Date.now() - 6 * 3600e3).toISOString();
+    const offen = db.prepare(
+      "SELECT * FROM tournaments WHERE (status = 'offen' AND created_at > ?) OR (status = 'beendet' AND ended_at > ?) " +
+      "ORDER BY CASE status WHEN 'offen' THEN 0 ELSE 1 END, created_at DESC").all(seit, endeSeit);
+    for (const t of offen) {
+      let plan;
+      try { plan = JSON.parse(t.plan); } catch (e) { continue; }
+      const lg = plan && plan.liga;
+      if (!lg || lg.uebung) continue;
+      live = { zuschauer: zuschauerSchluessel(t), status: t.status, nr: lg.nr || null, gegner: lg.gegner || '', heim: !!lg.heim, ort: lg.ort || '', tag: lg.tag || '' };
+      break;
+    }
+    res.setHeader('Cache-Control', 'no-store');
+    sendJson(res, 200, { tabelle: z ? JSON.parse(z.daten) : null, stand: z ? z.updated_at : null, live });
+  }
+
   async function turnierBeenden(req, res, id) {
     pruefeHerkunft(req);
     const u = verlangeNutzer(req);
@@ -1642,6 +1671,7 @@ export function createApi(db, config) {
     ['POST', new RegExp('^\\/api\\/tournaments\\/' + TID + '\\/plan$'), turnierPlanAendern],
     ['PUT', new RegExp('^\\/api\\/tournaments\\/' + TID + '\\/matches\\/' + TID + '\\/live$'), partieLive],
     ['GET', /^\/api\/zuschauer\/([A-Za-z0-9_-]{1,64})$/, zuschauerAnsicht],
+    ['GET', /^\/api\/oeffentlich\/liga$/, oeffentlicheLiga],
     ['POST', new RegExp('^\\/api\\/tournaments\\/' + TID + '\\/matches\\/' + TID + '\\/claim$'), partieBeanspruchen],
     ['POST', new RegExp('^\\/api\\/tournaments\\/' + TID + '\\/matches\\/' + TID + '\\/frei$'), partieFreigeben],
     ['PUT', new RegExp('^\\/api\\/tournaments\\/' + TID + '\\/matches\\/' + TID + '$'), partieErgebnis],

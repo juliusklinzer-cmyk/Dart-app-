@@ -24,8 +24,10 @@ git clone https://github.com/JuliusKlinzer/Dart-app-.git /var/www/darts
 cd /var/www/darts && git pull   # später aktualisieren
 ```
 
-Gebraucht werden `index.html`, `css/`, `js/`, `icons/`, `manifest.webmanifest`
-und `sw.js`.
+Gebraucht werden `index.html`, `webseite.html`, `live.html`, `css/`, `js/`, `icons/`,
+`fonts/`, `manifest.webmanifest` und `sw.js`. Der Node-Server liefert unter `/` die
+öffentliche Webseite aus, die App liegt unter `/index.html`; ein reiner Dateiserver
+müsste `webseite.html` als Index nehmen.
 
 **HTTPS ist Pflicht**, sonst funktionieren Service Worker und damit der
 Offline-Betrieb nicht (Ausnahme: `localhost`).

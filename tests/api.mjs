@@ -542,6 +542,27 @@ async function main() {
     r = await julius.ruf('POST', '/api/tournaments/turnier1/matches/m2r1/claim');
     gleich(r.status, 409, 'und es wird nichts mehr beansprucht');
 
+    /* Oeffentliche Liga-Auskunft fuer die Webseite: Tabelle und laufendes Ligaspiel. */
+    r = await fremd.ruf('GET', '/api/oeffentlich/liga');
+    gleich(r.status, 200, 'die oeffentliche Liga-Auskunft geht ohne Konto');
+    ok(r.daten.live === null, 'ein Turnier ohne Liga zaehlt nicht als Ligaspiel');
+    r = await julius.ruf('POST', '/api/tournaments', { id: 'ligapub1', plan: { start: 501, bestOf: 3, players: [julius_id, tobi_id], matches: [{ id: 'l1', round: 1, p: [julius_id, tobi_id], posPaar: [0, 0], scheibe: 'S1' }], liga: { terminId: 'st02', nr: 2, gegner: 'Dart Artists Germering II', heim: false, ort: 'Cobblers Irish Pub', tag: '2026-10-23' } }, players: [tobi_id] });
+    gleich(r.status, 201, 'ein geteiltes Ligaspiel wird angelegt');
+    r = await fremd.ruf('GET', '/api/oeffentlich/liga');
+    ok(r.daten.live && /^[A-Za-z0-9_-]{12,}$/.test(String(r.daten.live.zuschauer)) && r.daten.live.nr === 2 && r.daten.live.status === 'offen',
+      'ein offenes Ligaspiel steht mit Zuschauer-Schluessel in der Auskunft', JSON.stringify(r.daten.live));
+    ok(!('wir' in (r.daten.live || {})) && !('plan' in (r.daten.live || {})), 'ohne Aufstellung oder Plan, nur der Schluessel');
+    r = await fremd.ruf('GET', '/api/zuschauer/' + r.daten.live.zuschauer);
+    gleich(r.status, 200, 'und der Schluessel fuehrt zum Live-Ticker');
+    r = await julius.ruf('POST', '/api/tournaments/ligapub1/ende');
+    gleich(r.status, 200, 'das Ligaspiel wird beendet');
+    r = await fremd.ruf('GET', '/api/oeffentlich/liga');
+    ok(r.daten.live && r.daten.live.status === 'beendet', 'direkt danach steht es als Endstand in der Auskunft');
+    r = await julius.ruf('POST', '/api/tournaments', { id: 'ligaueb1', plan: { start: 501, bestOf: 3, players: [julius_id], matches: [], liga: { terminId: 'st02', nr: 2, uebung: true } }, players: [] });
+    r = await fremd.ruf('GET', '/api/oeffentlich/liga');
+    ok(r.daten.live && r.daten.live.status === 'beendet', 'ein Uebungsspiel verdraengt den Endstand nicht');
+    await julius.ruf('POST', '/api/tournaments/ligaueb1/ende');
+
     console.log('\nLiga-Zusagen');
     r = await fremd.ruf('GET', '/api/liga/zusagen');
     gleich(r.status, 401, 'ohne Anmeldung gibt es keine Zusagen');
@@ -1281,13 +1302,22 @@ async function main() {
 
     console.log('\nStatische Dateien');
     let res = await fetch(BASIS + '/');
-    gleich(res.status, 200, 'die App-Seite wird ausgeliefert');
+    gleich(res.status, 200, 'die Wurzel wird ausgeliefert');
+    ok((await res.text()).includes('id="termine-liste"'), 'und zwar die oeffentliche Webseite');
+    res = await fetch(BASIS + '/index.html');
+    ok(res.status === 200 && (await res.text()).includes('id="screen-setup"'), 'die App liegt unter /index.html');
     res = await fetch(BASIS + '/js/app.js');
     gleich(res.status, 200, 'das Skript wird ausgeliefert');
     res = await fetch(BASIS + '/server/main.mjs');
     ok(res.status === 404, 'der Server-Code wird NICHT ausgeliefert');
     res = await fetch(BASIS + '/../package.json');
     ok(res.status === 404 || res.status === 400, 'Ausbruch aus dem Verzeichnis geht nicht');
+    res = await fetch(BASIS + '/%');
+    gleich(res.status, 404, 'kaputtes %-Encoding gibt 404');
+    res = await fetch(BASIS + '/api/ping');
+    gleich(res.status, 200, 'und der Server lebt danach noch');
+    res = await fetch(BASIS + '/index.html/');
+    gleich(res.status, 404, 'ein Schraegstrich am Ende ist keine Seite');
 
     console.log('\nSicherheits-Header (S-M3)');
     res = await fetch(BASIS + '/');
@@ -1306,9 +1336,11 @@ async function main() {
       ok(/script-src 'self' 'unsafe-inline'/.test(String(res.headers.get('content-security-policy'))),
         'das Einzeldatei-Buendel darf sein eingebettetes Skript ausfuehren');
     }
-    const html = await (await fetch(BASIS + '/')).text();
-    ok(!/<script(?![^>]*\ssrc=)[^>]*>/i.test(html.replace(/<!--[\s\S]*?-->/g, '')), 'index.html enthaelt kein Inline-Skript, das die CSP blockieren wuerde');
-    ok(!/\son[a-z]+\s*=/i.test(html.replace(/<!--[\s\S]*?-->/g, '')), 'und keine Inline-Event-Handler');
+    for (const seite of ['/index.html', '/']) {
+      const html = await (await fetch(BASIS + seite)).text();
+      ok(!/<script(?![^>]*\ssrc=)[^>]*>/i.test(html.replace(/<!--[\s\S]*?-->/g, '')), seite + ' enthaelt kein Inline-Skript, das die CSP blockieren wuerde');
+      ok(!/\son[a-z]+\s*=/i.test(html.replace(/<!--[\s\S]*?-->/g, '')), 'und keine Inline-Event-Handler');
+    }
 
     console.log('\nKamera-Relay nur mit Schalter (S-N1)');
     {

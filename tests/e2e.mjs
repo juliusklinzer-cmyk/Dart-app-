@@ -11,8 +11,18 @@ import { chromium } from 'playwright';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const TYPES = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.svg': 'image/svg+xml', '.png': 'image/png', '.webp': 'image/webp', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json' };
 
+/* Antworten fuer /api/..., die ein Test vorgibt (z. B. der Live-Stand der
+   Webseite). Ohne Eintrag antwortet der Server wie bisher mit 404: die App
+   laeuft dann als lokale App ohne Konto. */
+const apiMock = {};
 const server = http.createServer((req, res) => {
   const rel = decodeURIComponent(req.url.split('?')[0]);
+  if (rel.startsWith('/api/')) {
+    const antwort = apiMock[rel];
+    if (antwort) { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(antwort)); }
+    else { res.writeHead(404); res.end('not found'); }
+    return;
+  }
   const file = path.join(ROOT, rel === '/' ? 'index.html' : rel);
   if (!file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
     res.writeHead(404); res.end('not found'); return;
@@ -418,7 +428,10 @@ check('das Ergebnis steht genau mittig, auch bei ungleich langen Namen', await p
 }));
 await page.locator('#summary-actions [data-action="to-winner"]').click();
 check('Sieger-Screen', await visible('#screen-winner'));
-check('Podium mit 4 Plätzen', (await page.locator('.podium .p').count()) === 4);
+check('Podest mit drei Stufen, der Erste in der Mitte, und Endstand mit 4 Plaetzen', (await page.locator('#winner-box .sg-stufe').count()) === 3 &&
+  await page.evaluate(() => document.querySelectorAll('#winner-box .sg-stufe')[1].classList.contains('erster')) &&
+  (await page.locator('#winner-box .sg-row').count()) === 4 && (await page.locator('#winner-kopf #nav').count()) === 1);
+check('Highlights des Turniers stehen beim Endstand', (await textKlein('#winner-box .sg-endstand')).includes('highlights'));
 const final = await st();
 check('alle 6 Spiele gewertet', final.reduce((a, p) => a + p.won, 0) === 6, JSON.stringify(final.map((p) => `${p.name}:${p.won}`)));
 check('Tabelle nach Siegen sortiert', final.every((p, i) => i === 0 || final[i - 1].won >= p.won));
@@ -3020,6 +3033,16 @@ check('ein nur angetipptes Einzel behaelt den w.o.-Knopf',
   (await page.locator('#schedule .go.wo').count()) === 15,
   String(await page.locator('#schedule .go.wo').count()));
 
+/* Unterschrift ins Feld malen (Nachmeldung, Spielbericht). */
+const malen = async () => {
+  await page.locator('#signatur').scrollIntoViewIfNeeded();
+  const box = await page.locator('#signatur').boundingBox();
+  await page.mouse.move(box.x + box.width * 0.15, box.y + box.height * 0.6);
+  await page.mouse.down();
+  for (let i = 1; i <= 12; i++) await page.mouse.move(box.x + box.width * (0.15 + i * 0.05), box.y + box.height * (0.6 - Math.sin(i) * 0.2));
+  await page.mouse.up();
+};
+
 /* Spielerwechsel: nur auf derselben Position, Gegner als neuer Gast. */
 await page.locator('[data-action="roster-change"]').click();
 check('der Wechsel-Dialog zeigt alle acht Positionen',
@@ -3038,10 +3061,65 @@ check('alle offenen G2-Einzel gehoeren jetzt dem Ersatz', await page.evaluate(()
     .filter((m) => m.posPaar && m.posPaar[1] === 1 && !m.done && !m.legs.some((l) => l.visits.length))
     .every((m) => window.__dart.profile(m.p[1]).name === 'Dachau Ersatz');
 }));
+/* Ein spontaner Name ist eine Nachmeldung: das Formular folgt sofort, das
+   Team steht fest, die Person belegt keinen neuen Platz. */
+check('der spontane Ersatz landet direkt im Nachmelde-Bogen', (await textKlein('#overlay-card h3')).includes('spieler nachmelden') &&
+  (await page.locator('[data-role="nm-nach"]').inputValue()) === 'Ersatz');
+check('das Team steht fest und die Infozeile nennt G5 (fuenfter Name auf dem Bogen)', (await page.locator('[data-action="nm-wahl"][data-feld="team"]').count()) === 0 &&
+  (await text('#overlay-card .dl-info')).includes('steht als G5'), await text('#overlay-card .dl-info'));
+await page.keyboard.press('Escape');
+check('Escape schliesst die Nachmeldung nicht', await page.evaluate(() => !!document.querySelector('#overlay-card [data-action="nm-weiter"]')));
+await page.reload(); await page.waitForFunction(() => window.__dart);
+check('nach einem Neuladen ist die Nachmeldung wieder offen, mit demselben Spieler', await page.evaluate(() => {
+  const o = window.__dart.ui().overlay; const lg = window.__dart.state().tour.liga;
+  return !!o && o.type === 'nachmeldung' && o.draft.id === lg.posG[1] && o.draft.teamFest && !!o.draft.wechsel;
+}));
+const fuellIds = await page.evaluate(() => {
+  const S = window.__dart.state(); const lg = S.tour.liga;
+  const frei = [1, 2, 3].map((i) => ({ id: 'fuell' + i, name: 'Füller ' + i, voll: 'Füller ' + i, avatar: null, hue: 100 + i, created: Date.now(), gast: true }));
+  frei.forEach((p) => { S.profiles.push(p); lg.gastSpieler.push(p.id); });
+  return frei.map((p) => p.id);
+});
+check('(Vorbereitung) das Gastteam ist mit acht Namen voll', await page.evaluate(() => window.__dart.state().tour.liga.gastSpieler.length === 8));
+await page.locator('[data-action="nm-wahl"][data-feld="g"][data-value="m"]').click();
+await malen();
+await page.locator('[data-action="nm-weiter"]').click();
+check('die 8er-Grenze sperrt den nicht, der schon auf dem Bogen steht', await page.evaluate(() => {
+  const lg = window.__dart.state().tour.liga;
+  const n = lg.nachmeldungen || [];
+  return n.length === 1 && n[0].id === lg.posG[1] && n[0].team === 'G' && !!n[0].unterschrift;
+}));
+await page.evaluate((ids) => {
+  const S = window.__dart.state(); const lg = S.tour.liga;
+  lg.gastSpieler = lg.gastSpieler.filter((id) => !ids.includes(id));
+  S.profiles = S.profiles.filter((p) => !ids.includes(p.id));
+  window.__dart.save();
+}, fuellIds);
+check('der Hinweis sagt, dass der Spieler eingewechselt ist', (await text('#overlay-card')).includes('eingewechselt'));
+await page.locator('#overlay-card [data-action="ov-hinweis-zu"]').click();
+/* "Wechsel zuruecknehmen": der Ausgewechselte kommt zurueck, der Name verschwindet wieder. */
+const vorG3 = await page.evaluate(() => { const S = window.__dart.state(); return { id: S.tour.liga.posG[2], profile: S.profiles.length }; });
+await page.locator('[data-action="roster-change"]').click();
+await page.locator('[data-action="liga-wechsel-pos"][data-seite="G"][data-pos="2"]').click();
+await page.locator('[data-role="liga-neu-name"]').fill('Zweiter');
+await page.locator('[data-role="liga-neu-nach"]').fill('Ersatz');
+await page.locator('[data-action="liga-wechsel-ok"]').click();
+check('der zweite Ersatz steht vorerst auf G3', await page.evaluate(() => window.__dart.profile(window.__dart.state().tour.liga.posG[2]).name === 'Zweiter Ersatz'));
+await page.locator('[data-action="nm-abbrechen"]').click();
+check('Wechsel zuruecknehmen stellt G3 wieder her und entfernt den Namen', await page.evaluate((vor) => {
+  const S = window.__dart.state(); const lg = S.tour.liga;
+  return lg.posG[2] === vor.id && lg.gastSpieler.length === 5 && S.profiles.length === vor.profile &&
+    !S.profiles.some((p) => p.name === 'Zweiter Ersatz') &&
+    S.matches.filter((m) => m.posPaar && m.posPaar[1] === 2 && !m.done).every((m) => m.p[1] === vor.id);
+}, vorG3), JSON.stringify(await page.evaluate(() => ({ g: window.__dart.state().tour.liga.posG, n: window.__dart.state().tour.liga.gastSpieler.length }))));
+check('danach steht wieder der Wechsel-Dialog', (await page.locator('#overlay-card [data-action="liga-wechsel-pos"]').count()) === 8);
 await page.locator('#overlay-card [data-action="ov-cancel"]').click();
 
-/* Der Spielbericht: Udos Bogen, automatisch befuellt und korrigierbar. */
-await page.locator('[data-action="liga-bericht"]').click();
+/* Der Spielbericht: erst der Bogen in Kurzfassung (Entwurf Ligaspiel), dann Udos Bogen. */
+await page.locator('[data-action="liga-bericht-kurz"]').click();
+check('der Kurz-Bogen zeigt alle Einzel, die Summe und Highlights', (await page.locator('#overlay-card .dl-einzel').count()) === 16 &&
+  (await textKlein('#overlay-card')).includes('summe') && (await textKlein('#overlay-card')).includes('highlights'));
+await page.locator('#overlay-card [data-action="liga-bericht"]').click();
 check('der Spielbericht oeffnet sich', await visible('#screen-bericht'));
 check('nach einem Wechsel steht die echte Bogennummer im Einzel (G5 statt G2)', await page.evaluate(() =>
   document.getElementById('bericht-blatt').textContent.includes('– G5')));
@@ -3095,13 +3173,6 @@ check('das Blatt laesst sich Feld fuer Feld korrigieren',
 
 group('Spielbericht: beide TCs unterschreiben am iPad, dann Versand als PDF');
 {
-  const malen = async () => {
-    const box = await page.locator('#signatur').boundingBox();
-    await page.mouse.move(box.x + box.width * 0.15, box.y + box.height * 0.6);
-    await page.mouse.down();
-    for (let i = 1; i <= 12; i++) await page.mouse.move(box.x + box.width * (0.15 + i * 0.05), box.y + box.height * (0.6 - Math.sin(i) * 0.2));
-    await page.mouse.up();
-  };
   check('oben steht Unterschreiben statt Drucken',
     await visible('#screen-bericht [data-action="bericht-unterschreiben"]'));
   await page.locator('#screen-bericht [data-action="bericht-unterschreiben"]').click();
@@ -3155,21 +3226,22 @@ group('Spielbericht: beide TCs unterschreiben am iPad, dann Versand als PDF');
 
   /* Nachmeldung: Formular, Unterschrift, dann steht sie auf Seite 2 und im Team. */
   await page.locator('#bericht-blatt [data-action="liga-nachmelden"]').click();
-  check('Nachmelden oeffnet ein ganzes Formular', (await text('#overlay-card h3')).includes('Spieler nachmelden') &&
-    await page.evaluate(() => document.getElementById('overlay').classList.contains('vollbild')));
+  check('Nachmelden oeffnet einen breiten Bogen mit Unterschriftsfeld', (await textKlein('#overlay-card h3')).includes('spieler nachmelden') &&
+    await page.evaluate(() => document.getElementById('overlay').classList.contains('bogen')) && (await page.locator('#overlay-card #signatur').count()) === 1);
   await page.locator('[data-action="nm-weiter"]').click();
   check('unvollstaendig geht es nicht weiter', (await text('#overlay-card')).includes('Bitte alle Felder'));
   await page.locator('[data-role="nm-nach"]').fill('Neumann');
   await page.locator('[data-role="nm-vor"]').fill('Nora');
   await page.locator('[data-action="nm-wahl"][data-feld="u18"][data-value="nein"]').click();
   await page.locator('[data-action="nm-wahl"][data-feld="g"][data-value="w"]').click();
+  check('die Infozeile nennt den Platz auf dem Bogen', /wird [HG]\d · \d von 8 Plätzen belegt/.test(await text('#overlay-card')), await text('#overlay-card .dl-info'));
   await page.locator('[data-action="nm-weiter"]').click();
-  check('danach unterschreibt die nachgemeldete Person', (await text('#overlay-card h3')).includes('Nora Neumann'));
+  check('ohne Unterschrift geht es nicht weiter', (await text('#overlay-card')).includes('unterschreiben'));
   await malen();
-  await page.locator('[data-action="signatur-weiter"]').click();
+  await page.locator('[data-action="nm-weiter"]').click();
   check('die Nachmeldung steht mit Unterschrift auf Seite 2', await page.evaluate(() => {
     const t = document.querySelector('#bericht-blatt .b-nach').textContent;
-    return t.includes('Neumann') && t.includes('Nora') && !!document.querySelector('#bericht-blatt .b-nach td img');
+    return t.includes('Neumann') && t.includes('Nora') && t.includes('Ersatz') && document.querySelectorAll('#bericht-blatt .b-nach td img').length === 2;
   }));
   check('und "Nachmeldungen: ja" ist angekreuzt', (await text('#bericht-blatt td[data-feld="nachmeldungen"]')).replace(/\s+/g, ' ').includes('ja X'));
   check('und sie gehoert jetzt zum Team', await page.evaluate(() => {
@@ -4516,7 +4588,7 @@ group('Ligaspiel endet erst mit dem unterschriebenen Bericht');
     (await visible('#screen-winner')) && await page.evaluate(() => window.__dart.state().matches.length === 16));
   check('Man of the Day fuer beide Teams', (await page.locator('#winner-box .motd .motd-titel').count()) === 2);
   check('kein "Ligaspiel abschliessen" ohne Bericht', !(await visible('#screen-winner [data-action="finish-tournament"]')));
-  await page.locator('#winner-box [data-action="liga-bericht"]').click();
+  await page.locator('#winner-box [data-action="liga-bericht"]').first().click();
   check('weiter zum Spielbericht', await visible('#screen-bericht'));
   await page.locator('#bericht-blatt td[contenteditable]').nth(2).click();
   await page.keyboard.type('Handkorrektur');
@@ -4611,6 +4683,89 @@ group('Einmalige Korrektur: Spielbericht 1. Spieltag');
     S.profiles = S.profiles.filter((p) => p.id !== 'k_g1');
     D.ui().bericht = null; D.save(); D.setScreen('setup');
   });
+}
+
+group('Oeffentliche Webseite (webseite.html): Spieltag, Termine, Ergebnisse, Tabelle, Anmelden');
+{
+  const wp = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const wfehler = [];
+  wp.on('pageerror', (e) => wfehler.push(String(e)));
+  const wurzel = BASE.replace(/\/[^/]*$/, '');
+  await wp.goto(wurzel + '/webseite.html');
+  await wp.waitForSelector('#termine-liste .termin');
+  const wtext = async (sel) => (await wp.locator(sel).first().innerText()).replace(/\s+/g, ' ').trim();
+  check('die Kopfzeile zeigt Marke und Anmelden', (await wtext('.marke-name')).toLowerCase().includes('blink') && (await wtext('#nav-anmelden')) === 'Anmelden');
+  check('oben steht der naechste Spieltag mit Datum, Gegner und Lokal', await wp.evaluate(() => {
+    const t = document.querySelector('#naechster').textContent;
+    const D = window.LIGA_DATEN; const h = new Date(); const heute = h.getFullYear() + '-' + String(h.getMonth() + 1).padStart(2, '0') + '-' + String(h.getDate()).padStart(2, '0');
+    const n = D.liga.termine.filter((x) => x.tag && x.tag >= heute && !(D.spieltage[x.id] || []).some((g) => g.gast && (g.heim === 'Blink 180' || g.gast === 'Blink 180')))[0];
+    return !n || (t.includes(n.ort) && t.includes(n.heim === 'Blink 180' ? n.gast : n.heim) && t.includes(n.tag.slice(8, 10) + '.' + n.tag.slice(5, 7) + '.'));
+  }));
+  check('der Countdown hat vier Felder mit Zahlen', (await wp.locator('#cd .cd-zahl').count()) === 4 &&
+    (await wp.locator('#cd .cd-zahl').allInnerTexts()).every((z) => /^\d+$/.test(z.trim())));
+  check('alle 18 Ligatermine stehen in der Liste, genau einer ist der naechste',
+    (await wp.locator('#termine-liste .termin').count()) === 18 && (await wp.locator('#termine-liste .termin.naechster').count()) === 1);
+  check('der gespielte 1. Spieltag traegt sein Ergebnis', (await wtext('#termine-liste .termin[data-termin="st01"] .rechts')) === '7 : 9');
+  check('spielfreie Spieltage stehen als solche da', (await wp.locator('#termine-liste .termin:not([data-termin])').count()) === 2 &&
+    (await wtext('#termine-liste .termin:not([data-termin])')).includes('Spielfrei'));
+  check('die Ergebnisse zeigen die gespielten Spiele der Liga, unseres zuerst am selben Tag', (await wp.locator('#ergebnisse-liste .ergebnis').count()) >= 3 &&
+    (await wtext('#ergebnisse-liste .ergebnis >> nth=1')).includes('Blink 180'));
+  check('die Tabelle hat neun Teams und hebt Blink 180 hervor', (await wp.locator('#tabelle-zeilen .tz').count()) === 9 &&
+    (await wtext('#tabelle-zeilen .tz.wir')).includes('Blink 180'));
+  check('kein Live-Block ohne laufendes Spiel', !(await wp.locator('#live').isVisible()));
+  await wp.locator('[data-action="livescoring"]').click();
+  check('Livescoring ohne Spiel erklaert sich', (await wtext('.toast')).includes('Spieltag'));
+  /* Anmelden und Registrieren */
+  await wp.locator('#nav-anmelden').click();
+  check('Anmelden oeffnet den Mitglieder-Dialog mit E-Mail und Passwort', await wp.locator('#login').isVisible() &&
+    await wp.locator('#form-login input[name="email"]').isVisible() && !(await wp.locator('#form-register').isVisible()));
+  await wp.locator('.login-tabs [data-tab="register"]').click();
+  check('der Reiter "Mit Code registrieren" zeigt Code, Vor- und Nachnamen', await wp.locator('#form-register input[name="code"]').isVisible() &&
+    await wp.locator('#form-register input[name="nach"]').isVisible() && !(await wp.locator('#form-login').isVisible()));
+  await wp.keyboard.press('Escape');
+  check('Escape schliesst den Dialog', !(await wp.locator('#login').isVisible()));
+  await wp.goto(wurzel + '/webseite.html?einladung=e_abcdefgh12345');
+  await wp.waitForSelector('#termine-liste .termin');
+  check('ein Einladungs-Link oeffnet das Registrieren mit eingetragenem Code', await wp.locator('#form-register').isVisible() &&
+    (await wp.locator('#form-register input[name="code"]').inputValue()) === 'e_abcdefgh12345' && !wp.url().includes('einladung='));
+  /* Spieltag laeuft: der Live-Stand ersetzt den Countdown. */
+  const H = ['u_h1', 'u_h2'], G = ['u_g1', 'u_g2'];
+  const namen = { u_h1: 'Markus Schäfer', u_h2: 'Kevin Wolf', u_g1: 'Julius', u_g2: 'Sepp' };
+  const v = (p, s, extra) => Object.assign({ p, s, d: 3, b: false, c: false }, extra || {});
+  const turnier = {
+    status: 'offen', start: 501, bestOf: 3,
+    liga: { terminId: 'st02', nr: 2, gegner: 'Dart Artists Germering II', heim: false, ort: 'Cobblers Irish Pub', tag: '2026-10-23', uebung: false },
+    namen,
+    matches: [{ id: 'm0', round: 1, p: [H[0], G[0]], posPaar: [0, 0], scheibe: 'S1' }, { id: 'm1', round: 1, p: [H[1], G[1]], posPaar: [1, 1], scheibe: 'S2' }],
+    ergebnisse: { m0: { id: 'm0', p: [H[0], G[0]], winner: G[0], done: true, legs: [
+      { starter: H[0], winner: G[0], visits: [v(H[0], 60), v(G[0], 180), v(H[0], 100), v(G[0], 140), v(H[0], 45), v(G[0], 121, { c: true })] },
+      { starter: G[0], winner: G[0], visits: [v(G[0], 140), v(H[0], 60), v(G[0], 180), v(H[0], 100), v(G[0], 100), v(H[0], 41), v(G[0], 81, { c: true })] }
+    ] } },
+    live: [{ matchId: 'm1', stand: { p: [H[1], G[1]], starter: H[1], start: 501, legs: [{ starter: H[1], visits: [v(H[1], 100), v(G[1], 60)], winner: null }], darts: [] }, alter: 1000 }],
+    stand: Date.now()
+  };
+  apiMock['/api/oeffentlich/liga'] = { tabelle: null, stand: null, live: { zuschauer: 'abcdefgh1234', status: 'offen', nr: 2, gegner: 'Dart Artists Germering II', heim: false, ort: 'Cobblers Irish Pub', tag: '2026-10-23' } };
+  apiMock['/api/zuschauer/abcdefgh1234'] = { turnier };
+  await wp.goto(wurzel + '/webseite.html');
+  await wp.waitForSelector('#live:not(.hidden) .board');
+  check('am Spieltag steht der Live-Block statt des Countdowns', !(await wp.locator('#naechster').isVisible()) &&
+    (await wtext('#live .live-marke')).toLowerCase().includes('live') && (await wtext('#live .live-wo')).toLowerCase().includes('2. spieltag'));
+  check('der Stand zaehlt die gewonnenen Einzel, Blink 180 vorn', (await wtext('#live .punkte')) === '0 : 1' && (await wtext('#live .team.wir')).toLowerCase().includes('blink 180') &&
+    (await wtext('#live .live-zahl')).includes('1 von 2'));
+  check('das laufende Board zeigt Rest, Average und wer dran ist', (await wp.locator('#live .board').count()) === 1 &&
+    (await wtext('#live .board .bs:nth-child(2) .rest')) === '401' && (await wtext('#live .board .bs:nth-child(3) .rest')) === '441' &&
+    (await wp.locator('#live .board .bs.dran .name').innerText()).includes('Kevin Wolf') && (await wtext('#live .board-kopf')).toLowerCase().includes('board 2'));
+  check('Ergebnisse heute und Highlights stehen', (await wtext('#live .he')).includes('H1 Markus Schäfer') && (await wtext('#live .he .erg')) === '0:2' &&
+    (await wtext('#live .hl')).includes('180er') && (await wtext('#live .lk:last-child')).includes('121 Julius'));
+  check('der naechste Termin traegt das Live-Schild', (await wtext('#termine-liste .termin.naechster.live .rechts')).toLowerCase().includes('live'));
+  turnier.status = 'beendet'; turnier.live = [];
+  apiMock['/api/oeffentlich/liga'].live.status = 'beendet';
+  await wp.goto(wurzel + '/webseite.html');
+  await wp.waitForSelector('#live.vorbei');
+  check('nach dem Spiel bleibt der Endstand stehen', (await wtext('#live .live-marke')).toLowerCase().includes('endstand') && (await wtext('#live .live-leer')).includes('beendet'));
+  delete apiMock['/api/oeffentlich/liga']; delete apiMock['/api/zuschauer/abcdefgh1234'];
+  check('die Webseite laeuft ohne JS-Fehler', wfehler.length === 0, wfehler.join(' | '));
+  await wp.close();
 }
 
 group('Fehlerfreiheit');

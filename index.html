@@ -893,10 +893,20 @@
 </section>
 
 <!-- ============ SIEGER ============ -->
-<section id="screen-winner" class="screen center">
+<section id="screen-winner" class="screen">
+  <!-- Entwurf "Sieger" (Okt. 2026): Setup-Kopf, Pokal und Titel, dann
+       Podest mit Endstand und Highlights (Turnier) bzw. Punktestand und
+       Man of the Day beider Teams (Ligaspiel); unten die Knoepfe. -->
+  <div class="setup-kopf" id="winner-kopf">
+    <div class="marke">
+      <span class="blink-logo" role="img" aria-label="Blink 180"></span>
+      <div>
+        <div class="wort">Blink <span class="rot">180</span></div>
+        <div class="sub">Dart Turnier · est. 2026</div>
+      </div>
+    </div>
+  </div>
   <div id="winner-box"></div>
-  <button class="btn primary full big" data-action="finish-tournament">Turnier abschließen</button>
-  <button class="btn ghost full" data-action="to-tournament">Zurück zum Turnier</button>
 </section>
 
 <!-- ============ FINISHER ============ -->
@@ -1026,6 +1036,7 @@
 
 <input type="file" id="avatar-input" accept="image/*" class="hidden">
 
+<script src="js/liga-daten.js"></script>
 <script src="js/sound.js"></script>
 <script src="js/checkout.js"></script>
 <!-- Optionale Online-Schicht. Sie läuft VOR app.js, damit die Anmeldeschranke

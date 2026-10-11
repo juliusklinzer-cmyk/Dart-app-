@@ -71,14 +71,22 @@ const TYPEN = {
 
 /* Was ausgeliefert werden darf. Alles andere im Repo (server/, tests/, .git)
    geht niemanden etwas an. */
-const ERLAUBT = new Set(['index.html', 'manifest.webmanifest', 'sw.js', 'dart-turnier.html', 'live.html']);
+const ERLAUBT = new Set(['index.html', 'webseite.html', 'manifest.webmanifest', 'sw.js', 'dart-turnier.html', 'live.html']);
 // 'modell': CV-Modelle fuer die Kamera-Erkennung -- laedt nur das iPhone
 // als Linse, deshalb nimmt der Service Worker sie ausdruecklich nicht mit.
 const ERLAUBTE_ORDNER = new Set(['css', 'js', 'icons', 'fonts', 'modell']);
 
 function statischerPfad(pfad) {
-  const rein = decodeURIComponent(pfad).replace(/\/+$/, '') || '/index.html';
-  const rel = rein === '/index.html' || rein === '' ? 'index.html' : rein.replace(/^\//, '');
+  /* Die Wurzel ist die oeffentliche Webseite (Spieltage, Tabelle, Live).
+     Die App selbst liegt unter /index.html - so steht es auch als
+     start_url im Manifest, die installierten iPads merken nichts. */
+  let roh;
+  try { roh = decodeURIComponent(pfad); } catch (e) { return null; }   // kaputtes %-Encoding: 404, kein Absturz
+  /* Ein Schraegstrich am Ende (/index.html/) liesse relative Pfade ins
+     Leere zeigen - gibt es nicht. */
+  if (roh.length > 1 && roh.endsWith('/')) return null;
+  const rein = roh === '/' || roh === '' ? '/webseite.html' : roh;
+  const rel = rein.replace(/^\//, '');
   // Traversal ausschliessen, bevor irgendetwas am Dateisystem passiert.
   if (rel.indexOf('\0') >= 0 || rel.split('/').indexOf('..') >= 0) return null;
 

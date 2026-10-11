@@ -199,7 +199,7 @@ die Liga-Zeile mit Saison und den Reitern Spielplan · Training · Tabelle ·
 Statistik · Kasse · Regeln. Die große Spieltag-Karte zeigt alles ohne Scrollen –
 „Mannschaft gegen Mannschaft“ ist bewusst klein gehalten, damit mindestens zwei
 Reihen Teilnehmer Platz haben (Julius, Oktober 2026). Der Spielplan der Saison
-steht fest im Client (`LIGA` in `js/app.js`). **Links groß der nächste Spieltag**
+steht fest im Client (`LIGA` in `js/liga-daten.js`, gemeinsam mit der Webseite). **Links groß der nächste Spieltag**
 (oder der angetippte): Datum, Spieltag, Heim/Auswärts, 20:00 Uhr, Lokal mit Pin,
 oben rechts Route in Maps und „in den Kalender“, darunter Heim gegen Gast mit Logo
 bzw. Team-Kürzel, dann **Team · n / 4** mit allen, die zugesagt haben, und unten
@@ -240,7 +240,7 @@ Spieltag-Karte bleibt frei davon (Julius). Unser eigenes Spiel ist umrandet und
 führt zu den Ergebnissen. Ein Tipp auf ein fremdes Spiel öffnet die
 16 Einzel wie auf dem Spielberichtsbogen (Gastspieler gekennzeichnet, Sieger
 hervorgehoben) samt Highlights. Die Daten kommen von der Ligaleitung und stehen
-als Vorbelegung im Code (`LIGA_SPIELTAGE` in `js/app.js`), gepflegt nach jedem
+als Vorbelegung im Code (`LIGA_SPIELTAGE` in `js/liga-daten.js`), gepflegt nach jedem
 Spieltag.
 
 Der Reiter **Training** ist das Dienstagszuhause: **DiensDarts** – Dart-Training
@@ -333,7 +333,28 @@ H4 (hell) gegen G1 bis G4 (gedeckt), die Scheibe als Schild, „läuft bei …�
 am anderen Gerät und einen leisen w.o.-Knopf; rechts steht groß der Punktestand der
 Teams mit dem Live-Ticker-Knopf (rotes LIVE-Schild), darunter „Für den Spielbericht“
 mit 180ern, High-Finishes und Shortlegs als Zeilen sowie „Spieler nachmelden“ und
-„Spielbericht ansehen“ (die Turnier-Statistik entfällt dort). Spielerwechsel und vorzeitiges Beenden wohnen unten im Spielplan-Kasten.
+„Spielbericht ansehen“ (die Turnier-Statistik entfällt dort). Die vier Dialoge des Ligaspiels sind
+breite Bogen nach demselben Entwurf: **Spieler wechseln** (Heim und Gast in zwei
+Spalten mit Status „gemeldet“, „Einzel läuft auf S1“ oder „Gast“; dann „Wechsel auf
+Position H2“ mit Kacheln aus dem Kader bzw. den schon nachgemeldeten Gästen und der
+spontanen Nachmeldung per Vor- und Nachname, die gleich zur Nachmeldung mit
+Unterschrift führt: der Spieler steht dann schon auf dem Bogen, das Team liegt fest,
+„Wechsel zurücknehmen“ setzt die alte Besetzung wieder ein), **Spieler nachmelden**
+(Team, Name, U18, Geschlecht, Platz auf dem Bogen und das Unterschriftsfeld in einem
+Bogen; der Dialog geht nur über seine Knöpfe zu, ein Strich neben das Feld oder die
+Zurück-Taste wirft nichts weg, und nach einem Neuladen steht er wieder da, solange der
+Spontane noch nicht nachgemeldet ist), **Ligaspiel vorzeitig beenden?** (nicht begonnene
+Einzel kampflos für den Gegner, offene Einzel entfallen oder Ligaspiel verwerfen; ein
+Einzel, das das andere iPad gerade spielt, bleibt unangetastet) und der **Spielbericht** in Kurzfassung (alle Einzel, Summe, Highlights,
+„Teilen“ und „Bogen und PDF“ führen zum vollen Bogen).
+
+Der **Sieger-Bildschirm** (Entwurf „Sieger“, Oktober 2026) trägt den Setup-Kopf,
+darunter Pokal und „X gewinnt!“. Im Turnier steht das Podest (Zweiter links, Erster
+in der Mitte und höher, Dritter rechts, mit Medaille, Siegen, Legs und Average)
+neben Endstand und Highlights (180er, High-Finish, Bestes Leg, Höchster Ø); im
+Ligaspiel der Punktestand groß und je Team der Man of the Day mit Highlights. Unten
+„Zur Übersicht“ und der rote Hauptknopf (Turnier abschließen bzw. Weiter zum
+Spielbericht). Am Handy quer entfällt die Endstand-Karte. Spielerwechsel und vorzeitiges Beenden wohnen unten im Spielplan-Kasten.
 Am Tablet steht alles fest im Rahmen, der Spielplan scrollt innen; am Handy quer
 entfällt die Turnier-Statistik.
 
@@ -736,6 +757,34 @@ gespeichert); abgebrochene Turniere behalten ihre bereits gespielten Spiele in d
 Statistik. Ein Schnelles X01 über mehrere Legs lässt sich beim Abbrechen mit
 „Gespielte Legs behalten“ ohne Sieger übernehmen (Average, 180er, Finishes zählen).
 
+## Öffentliche Webseite
+
+Unter der Wurzel des Servers (`/`, Datei `webseite.html` mit `css/webseite.css`
+und `js/webseite.js`) liegt seit Oktober 2026 die öffentliche Seite im App-Stil
+(Entwurf „Webseite“); die App selbst bleibt unter `/index.html` (so steht es als
+`start_url` im Manifest, installierte Geräte merken nichts). Ohne Konto sieht man:
+
+- **Nächster Spieltag** groß mit Datum, Paarung, Lokal, „Route zum …“ (Apple
+  Maps) und „In den Kalender“ (ICS, 20:00 bis 23:00 Uhr), daneben der
+  **Countdown** bis zum Anwurf um 20:00 und der Livescoring-Knopf.
+- **Am Spieltag stattdessen der Live-Stand**: sobald ein geteiltes Ligaspiel
+  läuft (`GET /api/oeffentlich/liga` liefert den Zuschauer-Schlüssel), zeigt die
+  Seite wie der Live-Ticker den Punktestand, die laufenden Boards mit Rest und
+  Average, „Ergebnisse heute“ und Highlights (alle 4 s neu). Ein beendetes Spiel
+  bleibt sechs Stunden als Endstand stehen; Übungsspiele zählen nicht.
+- **Ligatermine** (alle 18, gespielte mit Ergebnis, der nächste hervorgehoben,
+  spielfreie als solche), **Ergebnisse** aller Spiele der Liga (aus
+  `LIGA_SPIELTAGE`) und die **Tabelle**, wie sie die Mannschaft in der App
+  pflegt (vom Server, sonst der Stand zum Saisonstart).
+- **Anmelden** oben rechts (wer schon angemeldet ist, sieht „Zur App“): E-Mail
+  und Passwort führen in die App; **Registrieren nur mit Anmeldecode** (Vor- und
+  Nachname, der volle Name landet im Profil). Ein Einladungs-Link aus der App
+  (`?einladung=…`) öffnet das Registrieren mit eingetragenem Code.
+
+Der Endpunkt gibt keine Namen, Aufstellungen oder Berichte heraus, nur Tabelle,
+Spieltag-Kennung und den Zuschauer-Schlüssel. Kontakt, Impressum und
+Datenschutz fehlen auf der Seite noch (Texte stehen aus).
+
 ## Anmelden und gemeinsam spielen
 
 Wird die App von einem Server mit Kontoschicht ausgeliefert (siehe
@@ -824,6 +873,7 @@ Ausbullen und die Dialoge nach Leg und Spiel behalten ihre eigene Pfeil-Wahl.
 | `css/styles.css` | Styling (Dark, Touch-Ziele ≥ 44 px) |
 | `js/checkout.js` | Finish-Wege aus Tabellen (Rest 2–170 je Lieblingsdoppel, Stellwürfe) plus Rechenkern „ist ein Finish möglich“ |
 | `docs/finishwege/`, `tools/finishwege-bauen.mjs` | Quelle der Finish-Tabellen und der Generator, der sie in checkout.js schreibt |
+| `js/liga-daten.js` | Spielplan, Ergebnisse der Ligaleitung, Teams (App und Webseite) |
 | `js/app.js` | Turnier-, Cricket- und RTW-Logik, Statistik, Rendering, Persistenz |
 | `js/auth.js` | *optional:* Anmelden, Roster, Zuordnung alter Profile, Einladungs-Link |
 | `js/qr.js` | *optional:* QR-Code für den Einladungs-Link (qrcode-generator, MIT) |
