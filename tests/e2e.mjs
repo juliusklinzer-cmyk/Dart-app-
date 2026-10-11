@@ -2783,14 +2783,19 @@ group('Liga: alle Spiele des Spieltags');
     (await page.locator('#liga-kopf #nav').count()) === 1 && (await page.locator('#screen-liga [data-action="logo-menu"]').count()) === 0);
   check('die Liga-Zeile nennt Liga und Saison und traegt die sechs Reiter',
     (await textKlein('#liga-sub')).includes('5. liga') && (await page.locator('#liga-tabs button').count()) === 6);
-  const zeilen = await page.locator('#liga-karte .lr-zeile').count();
+  check('unsere Spieltag-Karte zeigt keine fremden Spiele mehr', (await page.locator('#liga-karte .lk-runde').count()) === 0);
+  check('in der Spieltage-Liste fuehrt "Alle Spiele" beim 1. Spieltag zur Runde',
+    (await page.locator('#liga-liste .liga-spieltag [data-action="liga-runde"][data-termin="st01"]').count()) === 1 &&
+    (await page.locator('#liga-liste [data-action="liga-runde"]').count()) === 1);
+  await page.locator('#liga-liste [data-action="liga-runde"][data-termin="st01"]').click();
+  const zeilen = await page.locator('#overlay-card .lr-zeile').count();
   check('1. Spieltag: fuenf Zeilen - Spielfrei, drei Spiele, ein verschobenes', zeilen === 5, String(zeilen));
-  const rt = await textKlein('#liga-karte .lk-runde');
+  const rt = await textKlein('#overlay-card');
   check('Spielfrei, Ergebnisse mit Einzel und Legs, verschoben mit neuem Datum',
-    rt.includes('spielfrei') && rt.includes('8:8') && rt.includes('20:20') && rt.includes('9:7') && rt.includes('verschoben') && rt.includes('16.10.'));
+    rt.includes('1. spieltag') && rt.includes('spielfrei') && rt.includes('8:8') && rt.includes('20:20') && rt.includes('9:7') && rt.includes('verschoben') && rt.includes('16.10.'));
   check('unser Spiel ist markiert, Spielfrei gedimmt',
-    (await page.locator('#liga-karte .lr-zeile.wir').count()) === 1 && (await page.locator('#liga-karte .lr-zeile.frei').count()) === 1);
-  await page.locator('#liga-karte [data-action="liga-partien"]').nth(1).click();
+    (await page.locator('#overlay-card .lr-zeile.wir').count()) === 1 && (await page.locator('#overlay-card .lr-zeile.frei').count()) === 1);
+  await page.locator('#overlay-card [data-action="liga-partien"]').nth(1).click();
   check('ein Tipp auf Treff ma nix - DCO zeigt die 16 Einzel', (await visible('#overlay-card')) && (await page.locator('#overlay-card .lp-tab tbody tr').count()) === 16);
   const lp = await textKlein('#overlay-card');
   check('mit Gast-Kennzeichen, Spieltag, Lokal und Highlights',
@@ -2799,10 +2804,44 @@ group('Liga: alle Spiele des Spieltags');
     (await page.locator('#overlay-card .lp-tab td:first-child.sieg').count()) === 9 && (await page.locator('#overlay-card .lp-tab td:last-child.sieg').count()) === 7);
   await page.keyboard.press('Escape');
   check('Escape schliesst den Dialog', !(await visible('#overlay-card')));
-  await page.evaluate(() => { const D = window.__dart; D.ui().ligaWahl = 'st02'; D.render(); });
-  check('ein Spieltag ohne Ergebnisse zeigt keinen Block', (await page.locator('#liga-karte .lk-runde').count()) === 0);
   await page.evaluate(() => { const D = window.__dart; D.ui().ligaWahl = null; D.render(); });
+  await page.locator('#liga-tabs button[data-tab="tabelle"]').click();
+  check('im Tabellen-Reiter stehen unter der Tabelle alle Spiele des 1. Spieltags',
+    (await page.locator('#lt-runden .lk-runde').count()) === 1 && (await page.locator('#lt-runden .lr-zeile').count()) === 5 &&
+    (await textKlein('#lt-runden')).includes('alle spiele · 1. spieltag'));
+  await page.locator('#liga-tabs button[data-tab="plan"]').click();
 }
+
+group('Liga: unsere Seite im Einzel haengt nicht an der Aufstellung');
+/* Ein Ligaspiel im Archiv, in dem ein Einzel einem Spieler gehoert, den die
+   Aufstellung nicht kennt (nachgetragener Wechsel) - einmal als Heim-,
+   einmal als Auswaertsspiel. Sein verlorenes Einzel darf kein Sieg werden. */
+const wechselProbe = await page.evaluate(() => {
+  const D = window.__dart;
+  const wir = ['w1', 'w2', 'w3', 'w4'], sie = ['g1', 'g2', 'g3', 'g4'], neu = 'w5_nachtrag';
+  const leg = (sieger, verlierer) => ({ start: 501, winner: sieger, visits: [{ p: sieger, s: 180, d: 3, b: false, c: false, rest: 321 }, { p: verlierer, s: 60, d: 3, b: false, c: false, rest: 441 }, { p: sieger, s: 180, d: 3, b: false, c: false, rest: 141 }, { p: verlierer, s: 60, d: 3, b: false, c: false, rest: 381 }, { p: sieger, s: 141, d: 3, b: false, c: true, rest: 0 }] });
+  const bau = (heim) => {
+    const paare = [[0,0],[1,1],[2,2],[3,3],[0,1],[1,0],[2,3],[3,2],[2,0],[3,1],[1,2],[0,3],[3,0],[2,1],[0,2],[1,3]];
+    const matches = paare.map((pr, i) => {
+      let u = wir[pr[heim ? 0 : 1]], g = sie[pr[heim ? 1 : 0]];
+      if (i === 3) u = neu;                           // H4/G4 spielte der Nachtrag ...
+      const sieger = i === 3 ? g : u;                 // ... und verlor; alle anderen gewinnen wir
+      const verlierer = sieger === u ? g : u;
+      const p = heim ? [u, g] : [g, u];
+      return { id: 'e' + i, round: 1, p, starter: p[0], legs: [leg(sieger, verlierer), leg(sieger, verlierer)], done: true, winner: sieger, at: 1 };
+    });
+    return { id: 'probe' + (heim ? 'H' : 'A'), at: 1, lineup: wir.concat(sie), settings: { start: 501, bestOf: 3 }, matches,
+      liga: { terminId: 'probe', nr: 99, gegner: 'Probe', heim, wir: wir.slice(), sie: sie.slice(),
+        heimSpieler: heim ? wir.slice() : sie.slice(), gastSpieler: heim ? sie.slice() : wir.slice(), ort: '', tag: '' } };
+  };
+  const hH = bau(true), hA = bau(false);
+  const eH = D.ligaErgebnisAus(hH), eA = D.ligaErgebnisAus(hA);
+  return { eH, eA, wirH: hH.liga.wir.indexOf(neu) >= 0 && hH.liga.heimSpieler.indexOf(neu) >= 0 && hH.liga.gastSpieler.indexOf(neu) < 0,
+    wirA: hA.liga.wir.indexOf(neu) >= 0 && hA.liga.gastSpieler.indexOf(neu) >= 0 && hA.liga.heimSpieler.indexOf(neu) < 0 };
+});
+check('Heimspiel: das verlorene Einzel des Nachtrags zaehlt den Gegnern (15:1)', wechselProbe.eH.wirS === 15 && wechselProbe.eH.sieS === 1, JSON.stringify(wechselProbe.eH));
+check('Auswaertsspiel: ebenso (15:1)', wechselProbe.eA.wirS === 15 && wechselProbe.eA.sieS === 1, JSON.stringify(wechselProbe.eA));
+check('der Nachtrag steht danach in der Aufstellung und in der richtigen Bogen-Liste', wechselProbe.wirH && wechselProbe.wirA);
 
 group('Liga-Tabelle: eigener Reiter, von Hand gepflegt');
 await page.locator('#liga-tabs button[data-tab="tabelle"]').click();

@@ -5434,10 +5434,18 @@ body .boards-host.log #board-log { display: block; }
   #liga-tabelle .standings th { font-size: clamp(10px, 1.6vh, 17px); }
   #liga-tabelle .standings td { font-size: clamp(14px, 2.6vh, 28px); height: clamp(36px, 6.6vh, 70px); padding: 0 6px; }
   #liga-tabelle .standings td.name { font-size: clamp(13px, 2.3vh, 24px); }
-  #lt-platz .lt-platz-zahl { font-size: clamp(56px, 16vh, 170px); }
+  /* Kleiner als im Entwurf, damit rechts die Karte "Alle Spiele" Platz hat. */
+  #lt-platz .lt-platz-zahl { font-size: clamp(44px, 9vh, 96px); }
+  #lt-platz { flex: none; gap: clamp(2px, 0.5vh, 6px); padding: clamp(10px, 1.6vh, 20px) clamp(14px, 2vw, 32px); }
   #lt-platz .lt-platz-info { font-size: clamp(14px, 2.6vh, 28px); }
   #lt-platz .lt-platz-sub { font-size: clamp(12px, 2vh, 21px); }
-  .lt-stand-karte { flex: 1 1 auto; }
+  .lt-runden-karte { flex: 1 1 auto; min-height: 0; }
+  .lt-runden-karte > .karte-kopf { flex: none; }
+  .lt-runden { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
+  /* Am Tablet knapp: die Erklaerung weicht der Karte "Alle Spiele". */
+  .lt-stand-karte { flex: none; }
+  .lt-stand-karte > .hint:first-of-type { display: none; }
+  .lt-stand-karte > .luft { display: none; }
   .lt-stand-karte .btn { height: clamp(44px, 7.4vh, 76px); font-size: clamp(14px, 2.6vh, 28px); }
   /* Statistik */
   #liga-team-chips .chip { height: clamp(40px, 5.4vh, 56px); font-size: clamp(12px, 2.1vh, 22px); }
@@ -5526,20 +5534,32 @@ body .boards-host.log #board-log { display: block; }
 /* Die Liga-Zeile ist die Reiter-Zeile der Rangliste (siehe dort). */
 
 /* Alle Spiele des Spieltags: eine Zeile je Paarung, rechts das Ergebnis. */
-.liga-karte .lk-runde { display: flex; flex-direction: column; gap: 5px; margin-top: 4px; }
-.liga-karte .lr-zeile { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; padding: 4px 10px; border-radius: 10px; background: var(--bg-3); font-size: 0.95rem; }
-.liga-karte .lr-zeile.tap { cursor: pointer; }
-.liga-karte .lr-zeile.wir { box-shadow: inset 0 0 0 1px var(--aktiv-linie); }
-.liga-karte .lr-zeile.frei { opacity: 0.5; }
-.liga-karte .lr-teams { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
-.liga-karte .lr-teams i { font-style: normal; color: var(--muted); margin: 0 4px; }
-.liga-karte .lr-erg { flex: none; display: flex; align-items: baseline; gap: 6px; font-variant-numeric: tabular-nums; color: var(--muted); }
-.liga-karte .lr-erg b { font-family: var(--font-cond); font-size: 1.15em; color: var(--text); }
-.liga-karte .lr-erg.verschoben { color: var(--amber); font-size: 0.85rem; }
+/* Steht im Tabellen-Reiter (unter der Tabelle) und im Dialog "Alle Spiele"
+   aus der Spieltage-Liste. */
+.lk-runde { display: flex; flex-direction: column; gap: 5px; margin-top: 4px; }
+.lt-runden-karte { display: flex; flex-direction: column; }
+.lt-runden-karte .karte-kopf { margin-bottom: 8px; }
+.lt-runden-karte .karte-kopf .hint { margin: 0; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.lt-runden { display: flex; flex-direction: column; gap: 10px; }
+.lt-runden .lk-runde .lk-crew-titel { font-family: var(--font-cond); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+#overlay-card .lk-runde { margin: 0 0 12px; }
+.lr-zeile { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 44px; padding: 4px 10px; border-radius: 10px; background: var(--bg-3); font-size: 0.95rem; }
+.lr-zeile.tap { cursor: pointer; }
+.lr-zeile.wir { box-shadow: inset 0 0 0 1px var(--aktiv-linie); }
+.lr-zeile.frei { opacity: 0.5; }
+.lr-teams { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.lr-teams i { font-style: normal; color: var(--muted); margin: 0 4px; }
+.lr-erg { flex: none; display: flex; align-items: baseline; gap: 6px; font-variant-numeric: tabular-nums; color: var(--muted); }
+.lr-erg b { font-family: var(--font-cond); font-size: 1.15em; color: var(--text); }
+.lr-erg.verschoben { color: var(--amber); font-size: 0.85rem; }
+/* "Alle Spiele ›" in der Spieltage-Liste: ein Knopf rechts unter dem Ergebnis. */
+.liga-spieltag .lt-rechts { display: flex; flex-direction: column; align-items: flex-end; gap: 0; }
+.liga-spieltag .lt-alle { display: inline-flex; align-items: center; min-height: 32px; padding: 0 2px 0 10px; font-family: var(--font-body); font-size: 0.78rem; letter-spacing: 0; color: var(--laser-hell); font-weight: 600; cursor: pointer; white-space: nowrap; }
 @media (min-width: 700px) {
-  .liga-karte .lr-zeile { min-height: clamp(36px, 5.6vh, 56px); font-size: clamp(12px, 2vh, 20px); padding: 0 clamp(8px, 1vw, 14px); }
-  .liga-karte .lr-erg.verschoben { font-size: clamp(11px, 1.7vh, 17px); }
-  .liga-karte .lk-runde { gap: clamp(4px, 0.7vh, 8px); }
+  .lt-runden .lr-zeile { min-height: clamp(36px, 5.6vh, 56px); font-size: clamp(12px, 2vh, 20px); padding: 0 clamp(8px, 1vw, 14px); }
+  .lt-runden .lr-erg.verschoben { font-size: clamp(11px, 1.7vh, 17px); }
+  .lt-runden .lk-runde { gap: clamp(4px, 0.7vh, 8px); }
+  .lt-runden .lk-runde .lk-crew-titel { font-size: clamp(11px, 1.9vh, 20px); }
 }
 
 /* Dialog: die 16 Einzel eines fremden Spiels. */
@@ -6045,6 +6065,11 @@ body .boards-host.log #board-log { display: block; }
     </div>
     <div class="liga-rechts">
       <div class="liga-karte weiss" id="lt-platz"></div>
+      <!-- Alle Spiele je Spieltag (Ergebnisse der Ligaleitung, LIGA_SPIELTAGE). -->
+      <div class="card lt-runden-karte">
+        <div class="karte-kopf"><h2>Alle Spiele</h2><span class="hint">je Spieltag, Tipp zeigt die Einzel</span></div>
+        <div class="lt-runden" id="lt-runden"></div>
+      </div>
       <div class="card lt-stand-karte">
         <span class="lk-crew-titel">Stand</span>
         <p class="hint">Von Hand gepflegt nach den Veröffentlichungen der Ligaleitung.
@@ -7545,6 +7570,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           });
         }
       }
+      /* Ein Spieler, der in den Einzeln auf unserer Seite steht, aber in der
+         Aufstellung fehlt (nachgetragener Wechsel), kommt dauerhaft hinein -
+         siehe ligaUnser(). */
+      (s.history || []).forEach(function (h) { if (h && h.liga && Array.isArray(h.matches)) ligaUnsereIds(h); });
       return s;
     } catch (e) { return null; }
   }
@@ -9378,8 +9407,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var info = {};       // Schluessel -> { team, name }
     var lists = quellen.map(function (q) {
       var lg = q.liga;
-      var unsere = {};
-      (lg.wir || []).concat((lg.heim ? lg.heimSpieler : lg.gastSpieler) || []).forEach(function (id) { unsere[id] = 1; });
+      var unsere = ligaUnsereIds(q);
       var team = lg.gegner || 'Gegner';
       var schluessel = {};
       var key = function (id) {
@@ -10269,6 +10297,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           ['wir', 'sie', 'heimSpieler', 'gastSpieler'].forEach(function (k) {
             if (Array.isArray(lgNeu[k])) lgAlt[k] = lgNeu[k].slice();
           });
+          ligaUnsereIds(vorhanden[s.id]);
         }
         if (s.payload.namen) {
           vorhanden[s.id].namen = s.payload.namen;
@@ -10850,13 +10879,46 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return zeilen;
   }
 
+  /*
+   * Unsere Seite eines Einzels. Im Bogen steht links immer Heim, rechts
+   * Gast (p = [Heim, Gast]) - deshalb entscheidet die Position, wenn die
+   * Aufstellung (liga.wir) einen Spieler nicht kennt: ein nachgetragener
+   * Wechsel (1. Spieltag: Konradson statt Michi) stand sonst auf der
+   * falschen Seite, sein verlorenes Einzel zaehlte als Sieg (8:8 statt 7:9)
+   * und er tauchte in der Liga-Auswertung bei den Gegnern auf. Wer so
+   * gefunden wird, kommt gleich in die Aufstellung, damit alle anderen
+   * Stellen (Bogen, Bericht) ihn ebenfalls kennen.
+   */
+  function ligaUnser(lg, m) {
+    if (!lg || !m || !m.p) return null;
+    if (lg.wir && lg.wir.indexOf(m.p[0]) >= 0) return m.p[0];
+    if (lg.wir && lg.wir.indexOf(m.p[1]) >= 0) return m.p[1];
+    var id = lg.heim === false ? m.p[1] : m.p[0];
+    if (id && lg.wir && lg.wir.indexOf(id) < 0) {
+      lg.wir.push(id);
+      var liste = lg.heim === false ? lg.gastSpieler : lg.heimSpieler;
+      if (Array.isArray(liste) && liste.indexOf(id) < 0) liste.push(id);
+    }
+    return id;
+  }
+  /* Alle unsere Spieler eines Ligaspiels (Aufstellung plus alles, was in
+     den Einzeln auf unserer Seite steht). */
+  function ligaUnsereIds(h) {
+    var lg = h.liga, map = {};
+    if (!lg) return map;
+    (lg.wir || []).forEach(function (id) { map[id] = 1; });
+    ((lg.heim === false ? lg.gastSpieler : lg.heimSpieler) || []).forEach(function (id) { map[id] = 1; });
+    (h.matches || []).forEach(function (m) { var u = ligaUnser(lg, m); if (u) map[u] = 1; });
+    return map;
+  }
+
   /* Punkte nach SWO-Staffel fuer ein archiviertes Ligaspiel. */
   function ligaErgebnisAus(h) {
     var lg = h.liga, gewinnLegs = Math.floor(((h.settings && h.settings.bestOf) || 3) / 2) + 1;
     var e = { wirP: 0, sieP: 0, wirS: 0, sieS: 0 };
     (h.matches || []).forEach(function (m) {
       if (!m.done) return;
-      var unsere = lg.wir.indexOf(m.p[0]) >= 0 ? m.p[0] : m.p[1];
+      var unsere = ligaUnser(lg, m);
       var pkt = ligaPunkte(m, gewinnLegs);
       if (m.winner === unsere) { e.wirS++; e.wirP += pkt[0]; e.sieP += pkt[1]; }
       else { e.sieS++; e.sieP += pkt[0]; e.wirP += pkt[1]; }
@@ -10869,7 +10931,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (!lg) return null;
     var d = { wirS: 0, sieS: 0, wirL: 0, sieL: 0, wirP: 0, sieP: 0, fertige: 0, hl: [] };
     S.matches.forEach(function (m) {
-      var unsere = lg.wir.indexOf(m.p[0]) >= 0 ? m.p[0] : m.p[1];
+      var unsere = ligaUnser(lg, m);
       var ihre = m.p[0] === unsere ? m.p[1] : m.p[0];
       /* Ein kampfloses Einzel hat keine echten Legs - fuer Stand und Bogen
          zaehlt es trotzdem als glattes Ergebnis. */
@@ -11385,7 +11447,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         var wirS = 0, sieS = 0, wirP = 0, sieP = 0;
         h.matches.forEach(function (m) {
           if (!m.done) return;
-          var uns = h.liga.wir.indexOf(m.p[0]) >= 0 ? m.p[0] : m.p[1];
+          var uns = ligaUnser(h.liga, m);
           var pkt = ligaPunkte(m, not);
           if (m.winner === uns) { wirS++; wirP += pkt[0]; sieP += pkt[1]; }
           else { sieS++; sieP += pkt[0]; wirP += pkt[1]; }
@@ -11888,14 +11950,15 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (S.tour && S.tour.liga && !S.tour.liga.uebung && S.matches.length) spiele.push({ liga: S.tour.liga, matches: S.matches });
     var h180 = [], hFin = [], hLeg = [];
     spiele.forEach(function (h) {
+      var unsere = ligaUnsereIds(h);
       h.matches.forEach(function (m, mi) {
         if (!m.legs) return;
         var wo = h.liga.nr + '. Spieltag · Einzel ' + (mi + 1);
         m.legs.forEach(function (leg) {
           (leg.visits || []).forEach(function (v) {
-            if (v.s === 180 && !v.b && h.liga.wir.indexOf(v.p) >= 0) h180.push({ n: pname(v.p), d: wo, v: '180' });
+            if (v.s === 180 && !v.b && unsere[v.p]) h180.push({ n: pname(v.p), d: wo, v: '180' });
           });
-          if (leg.winner && h.liga.wir.indexOf(leg.winner) >= 0) {
+          if (leg.winner && unsere[leg.winner]) {
             var eigene = (leg.visits || []).filter(function (v) { return v.p === leg.winner; });
             var letzte = eigene[eigene.length - 1];
             if (letzte && letzte.s >= 100) hFin.push({ n: pname(leg.winner), d: wo, v: String(letzte.s) });
@@ -12029,6 +12092,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     /* Waehrend jemand in einer Zelle tippt, wird nichts neu gebaut - auch
        dann nicht, wenn gerade ein anderer Serverstand hereingekommen ist.
        Sonst verschwaende die Eingabe unter den Fingern. */
+    /* Rechts neben der Tabelle alle Spiele je Spieltag (Ergebnisse der Ligaleitung). */
+    $('lt-runden').innerHTML = ligaRundenAlleHtml();
     var fokus = document.activeElement;
     if (fokus && fokus.closest && fokus.closest('#lt-tabelle')) return;
 
@@ -12169,13 +12234,17 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         var n = zusagen(t).length;
         rechts = n + ' / ' + LIGA.sollSpieler; rechtsKlasse = ton(n);
       }
+      /* Liegen die Ergebnisse der ganzen Runde vor, fuehrt ein Knopf rechts
+         unter dem Ergebnis dorthin (alle Spiele des Spieltags, Dialog). */
+      var alle = LIGA_SPIELTAGE[t.id] && LIGA_SPIELTAGE[t.id].length
+        ? '<b class="lt-alle" data-action="liga-runde" data-termin="' + esc(t.id) + '" role="button" tabindex="0">Alle Spiele ›</b>' : '';
       return '<div class="liga-spieltag' + (vorbei && !h ? ' vorbei' : '') + (h ? ' gespielt' : '') + (wahl && t.id === wahl.id ? ' wahl' : '') +
         '" data-action="liga-wahl" data-id="' + esc(t.id) + '" role="button" tabindex="0">' +
         '<span class="lt-nr">' + t.nr + '</span>' +
         '<span class="lt-datum"><b>' + t.tag.slice(8, 10) + '.' + t.tag.slice(5, 7) + '.' + t.tag.slice(0, 4) + '</b><small>' + WOCHENTAGE[new Date(t.tag + 'T12:00:00').getDay()].replace('.', '') + '</small></span>' +
         '<span class="lt-wer"><span class="lt-gegner"><span class="lt-ha">' + (daheim ? 'Heim' : 'Ausw.') + '</span>' + esc(gegner) + '</span>' +
           '<span class="lt-unten">' + unten + '</span></span>' +
-        '<span class="lt-rechts ' + rechtsKlasse + '">' + rechts + '</span>' +
+        '<span class="lt-rechts ' + rechtsKlasse + '"><span>' + rechts + '</span>' + alle + '</span>' +
         '</div>';
     }).join('');
 
@@ -12252,13 +12321,18 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         ? '<div class="lk-crew"><span class="lk-crew-titel">Team · <b class="' + ton(leute.length) + '">' + leute.length + ' / ' + LIGA.sollSpieler + '</b></span>' +
           '<div class="lt-leute">' + (leute.map(function (p) { return '<span class="lt-person">' + avatarHTML(p, 'sm') + esc(p.name) + '</span>'; }).join('') || '<span class="muted">Noch niemand eingetragen.</span>') + '</div></div>'
         : '<div class="lk-crew"></div>') +
-      ligaRundeHtml(t, h) +
       fuss;
   }
 
   /* Alle Spiele des Spieltags (auch die der anderen Teams): Paarung und
      Ergebnis, Spielfrei gedimmt, Verschobenes mit neuem Datum. Ein Tipp
-     zeigt die 16 Einzel; unser eigenes Spiel fuehrt zu den Ergebnissen. */
+     zeigt die 16 Einzel; unser eigenes Spiel fuehrt zu den Ergebnissen.
+     Steht im Tabellen-Reiter unter der Tabelle und hinter "Alle Spiele"
+     in der Spieltage-Liste - nicht in unserer Spieltag-Karte (Julius). */
+  function ligaRundenAlleHtml() {
+    return LIGA.termine.filter(function (t) { return LIGA_SPIELTAGE[t.id] && LIGA_SPIELTAGE[t.id].length; })
+      .map(function (t) { return ligaRundeHtml(t, ligaTerminEintrag(t)); }).join('');
+  }
   function ligaRundeHtml(t, h) {
     var runde = LIGA_SPIELTAGE[t.id];
     if (!runde || !runde.length) return '';
@@ -13469,6 +13543,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       for (var i = 0; i < S.history.length; i++) {
         var h = S.history[i];
         if (h.liga && h.liga.terminId === UI.bericht && h.matches) {
+          ligaUnsereIds(h);   // Bogen-Listen vollstaendig, auch nach einem Nachtrag
           return {
             liga: h.liga, matches: h.matches,
             start: (h.settings && h.settings.start) || 501,
@@ -14773,6 +14848,13 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
             '<button class="btn danger" data-action="ov-discard-game">Ja, verwerfen</button></div>');
     } else if (o.type === 'warte') {
       html = '<p>' + esc(o.text) + '</p>';
+    } else if (o.type === 'liga-runde') {
+      var lrT = LIGA.termine.filter(function (x) { return x.id === o.termin; })[0];
+      html = !lrT ? '<p>Dazu liegt nichts vor.</p>' :
+        '<h3 class="lp-titel">' + lrT.nr + '. Spieltag <span>· alle Spiele</span></h3>' +
+        '<p class="lp-sub">' + (lrT.tag ? fmtDate(new Date(lrT.tag + 'T12:00:00').getTime()) : '') + ' · ' + esc(LIGA.saison) + '</p>' +
+        ligaRundeHtml(lrT, ligaTerminEintrag(lrT)) +
+        '<button class="btn primary full" data-action="ov-cancel">Schließen</button>';
     } else if (o.type === 'liga-partien') {
       var lpSp = (LIGA_SPIELTAGE[o.termin] || [])[o.i];
       var lpT = LIGA.termine.filter(function (x) { return x.id === o.termin; })[0];
@@ -16006,6 +16088,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       case 'liga-wahl': UI.ligaWahl = el.getAttribute('data-id'); render(); break;
       case 'liga-partien':
         UI.overlay = { type: 'liga-partien', termin: el.getAttribute('data-termin'), i: Number(el.getAttribute('data-i')) };
+        render();
+        break;
+      case 'liga-runde':
+        UI.overlay = { type: 'liga-runde', termin: el.getAttribute('data-termin') };
         render();
         break;
       case 'set-mode':
@@ -17879,6 +17965,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       standings: standings,
       stats: stats,
       career: career,
+      ligaErgebnisAus: ligaErgebnisAus,
       allMatches: allMatches,
       ranking: function (key) { return ranking(boardDef(key), career()); },
       remainingIn: remainingIn,

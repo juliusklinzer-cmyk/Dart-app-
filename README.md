@@ -188,6 +188,11 @@ schnellste Finish und die höchste weggemachte Zahl.
 
 ## Liga-Spielplan
 
+Welche Seite eines Einzels unsere ist, entscheidet im Zweifel die Bogen-Position
+(links Heim, rechts Gast) – ein nachgetragener Wechsel, der in der Aufstellung
+fehlt, zählt damit richtig und wird in die Aufstellung übernommen (1. Spieltag:
+Konradson statt Michi stand sonst auf der falschen Seite, 8:8 statt 7:9).
+
 Der Reiter **Liga** (Entwurf „Liga · Spielplan“, Oktober 2026) trägt denselben
 Kopf wie überall: der des Setups (Marke, Navigation als Text-Reiter), darunter
 die Liga-Zeile mit Saison und den Reitern Spielplan · Training · Tabelle ·
@@ -227,10 +232,12 @@ vorbefüllt (Stand der Ligaleitung nach dem 1. Spieltag, `LIGA_TABELLE_START`), 
 speichern"** legt den Stand auf dem Server ab, sodass alle Angemeldeten
 dieselbe Tabelle sehen (`PUT /api/liga/tabelle`).
 
-**Alle Spiele des Spieltags:** In der großen Spieltag-Karte stehen unter dem Team
-die Paarungen aller Teams dieser Runde mit Ergebnis (Einzel, dahinter Legs),
-Spielfrei gedimmt, Verschobenes mit neuem Datum; unser eigenes Spiel ist
-umrandet und führt zu den Ergebnissen. Ein Tipp auf ein fremdes Spiel öffnet die
+**Alle Spiele des Spieltags:** Im Reiter **Tabelle** stehen rechts neben der
+Ligatabelle (Karte „Alle Spiele“) je Spieltag die Paarungen aller Teams mit Ergebnis (Einzel, dahinter Legs),
+Spielfrei gedimmt, Verschobenes mit neuem Datum; in der Spieltage-Liste führt
+„Alle Spiele ›“ in einer gespielten Zeile zum selben Überblick als Dialog. Unsere
+Spieltag-Karte bleibt frei davon (Julius). Unser eigenes Spiel ist umrandet und
+führt zu den Ergebnissen. Ein Tipp auf ein fremdes Spiel öffnet die
 16 Einzel wie auf dem Spielberichtsbogen (Gastspieler gekennzeichnet, Sieger
 hervorgehoben) samt Highlights. Die Daten kommen von der Ligaleitung und stehen
 als Vorbelegung im Code (`LIGA_SPIELTAGE` in `js/app.js`), gepflegt nach jedem

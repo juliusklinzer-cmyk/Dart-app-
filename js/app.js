@@ -446,6 +446,10 @@
           });
         }
       }
+      /* Ein Spieler, der in den Einzeln auf unserer Seite steht, aber in der
+         Aufstellung fehlt (nachgetragener Wechsel), kommt dauerhaft hinein -
+         siehe ligaUnser(). */
+      (s.history || []).forEach(function (h) { if (h && h.liga && Array.isArray(h.matches)) ligaUnsereIds(h); });
       return s;
     } catch (e) { return null; }
   }
@@ -2279,8 +2283,7 @@
     var info = {};       // Schluessel -> { team, name }
     var lists = quellen.map(function (q) {
       var lg = q.liga;
-      var unsere = {};
-      (lg.wir || []).concat((lg.heim ? lg.heimSpieler : lg.gastSpieler) || []).forEach(function (id) { unsere[id] = 1; });
+      var unsere = ligaUnsereIds(q);
       var team = lg.gegner || 'Gegner';
       var schluessel = {};
       var key = function (id) {
@@ -3170,6 +3173,7 @@
           ['wir', 'sie', 'heimSpieler', 'gastSpieler'].forEach(function (k) {
             if (Array.isArray(lgNeu[k])) lgAlt[k] = lgNeu[k].slice();
           });
+          ligaUnsereIds(vorhanden[s.id]);
         }
         if (s.payload.namen) {
           vorhanden[s.id].namen = s.payload.namen;
@@ -3751,13 +3755,46 @@
     return zeilen;
   }
 
+  /*
+   * Unsere Seite eines Einzels. Im Bogen steht links immer Heim, rechts
+   * Gast (p = [Heim, Gast]) - deshalb entscheidet die Position, wenn die
+   * Aufstellung (liga.wir) einen Spieler nicht kennt: ein nachgetragener
+   * Wechsel (1. Spieltag: Konradson statt Michi) stand sonst auf der
+   * falschen Seite, sein verlorenes Einzel zaehlte als Sieg (8:8 statt 7:9)
+   * und er tauchte in der Liga-Auswertung bei den Gegnern auf. Wer so
+   * gefunden wird, kommt gleich in die Aufstellung, damit alle anderen
+   * Stellen (Bogen, Bericht) ihn ebenfalls kennen.
+   */
+  function ligaUnser(lg, m) {
+    if (!lg || !m || !m.p) return null;
+    if (lg.wir && lg.wir.indexOf(m.p[0]) >= 0) return m.p[0];
+    if (lg.wir && lg.wir.indexOf(m.p[1]) >= 0) return m.p[1];
+    var id = lg.heim === false ? m.p[1] : m.p[0];
+    if (id && lg.wir && lg.wir.indexOf(id) < 0) {
+      lg.wir.push(id);
+      var liste = lg.heim === false ? lg.gastSpieler : lg.heimSpieler;
+      if (Array.isArray(liste) && liste.indexOf(id) < 0) liste.push(id);
+    }
+    return id;
+  }
+  /* Alle unsere Spieler eines Ligaspiels (Aufstellung plus alles, was in
+     den Einzeln auf unserer Seite steht). */
+  function ligaUnsereIds(h) {
+    var lg = h.liga, map = {};
+    if (!lg) return map;
+    (lg.wir || []).forEach(function (id) { map[id] = 1; });
+    ((lg.heim === false ? lg.gastSpieler : lg.heimSpieler) || []).forEach(function (id) { map[id] = 1; });
+    (h.matches || []).forEach(function (m) { var u = ligaUnser(lg, m); if (u) map[u] = 1; });
+    return map;
+  }
+
   /* Punkte nach SWO-Staffel fuer ein archiviertes Ligaspiel. */
   function ligaErgebnisAus(h) {
     var lg = h.liga, gewinnLegs = Math.floor(((h.settings && h.settings.bestOf) || 3) / 2) + 1;
     var e = { wirP: 0, sieP: 0, wirS: 0, sieS: 0 };
     (h.matches || []).forEach(function (m) {
       if (!m.done) return;
-      var unsere = lg.wir.indexOf(m.p[0]) >= 0 ? m.p[0] : m.p[1];
+      var unsere = ligaUnser(lg, m);
       var pkt = ligaPunkte(m, gewinnLegs);
       if (m.winner === unsere) { e.wirS++; e.wirP += pkt[0]; e.sieP += pkt[1]; }
       else { e.sieS++; e.sieP += pkt[0]; e.wirP += pkt[1]; }
@@ -3770,7 +3807,7 @@
     if (!lg) return null;
     var d = { wirS: 0, sieS: 0, wirL: 0, sieL: 0, wirP: 0, sieP: 0, fertige: 0, hl: [] };
     S.matches.forEach(function (m) {
-      var unsere = lg.wir.indexOf(m.p[0]) >= 0 ? m.p[0] : m.p[1];
+      var unsere = ligaUnser(lg, m);
       var ihre = m.p[0] === unsere ? m.p[1] : m.p[0];
       /* Ein kampfloses Einzel hat keine echten Legs - fuer Stand und Bogen
          zaehlt es trotzdem als glattes Ergebnis. */
@@ -4286,7 +4323,7 @@
         var wirS = 0, sieS = 0, wirP = 0, sieP = 0;
         h.matches.forEach(function (m) {
           if (!m.done) return;
-          var uns = h.liga.wir.indexOf(m.p[0]) >= 0 ? m.p[0] : m.p[1];
+          var uns = ligaUnser(h.liga, m);
           var pkt = ligaPunkte(m, not);
           if (m.winner === uns) { wirS++; wirP += pkt[0]; sieP += pkt[1]; }
           else { sieS++; sieP += pkt[0]; wirP += pkt[1]; }
@@ -4789,14 +4826,15 @@
     if (S.tour && S.tour.liga && !S.tour.liga.uebung && S.matches.length) spiele.push({ liga: S.tour.liga, matches: S.matches });
     var h180 = [], hFin = [], hLeg = [];
     spiele.forEach(function (h) {
+      var unsere = ligaUnsereIds(h);
       h.matches.forEach(function (m, mi) {
         if (!m.legs) return;
         var wo = h.liga.nr + '. Spieltag · Einzel ' + (mi + 1);
         m.legs.forEach(function (leg) {
           (leg.visits || []).forEach(function (v) {
-            if (v.s === 180 && !v.b && h.liga.wir.indexOf(v.p) >= 0) h180.push({ n: pname(v.p), d: wo, v: '180' });
+            if (v.s === 180 && !v.b && unsere[v.p]) h180.push({ n: pname(v.p), d: wo, v: '180' });
           });
-          if (leg.winner && h.liga.wir.indexOf(leg.winner) >= 0) {
+          if (leg.winner && unsere[leg.winner]) {
             var eigene = (leg.visits || []).filter(function (v) { return v.p === leg.winner; });
             var letzte = eigene[eigene.length - 1];
             if (letzte && letzte.s >= 100) hFin.push({ n: pname(leg.winner), d: wo, v: String(letzte.s) });
@@ -4930,6 +4968,8 @@
     /* Waehrend jemand in einer Zelle tippt, wird nichts neu gebaut - auch
        dann nicht, wenn gerade ein anderer Serverstand hereingekommen ist.
        Sonst verschwaende die Eingabe unter den Fingern. */
+    /* Rechts neben der Tabelle alle Spiele je Spieltag (Ergebnisse der Ligaleitung). */
+    $('lt-runden').innerHTML = ligaRundenAlleHtml();
     var fokus = document.activeElement;
     if (fokus && fokus.closest && fokus.closest('#lt-tabelle')) return;
 
@@ -5070,13 +5110,17 @@
         var n = zusagen(t).length;
         rechts = n + ' / ' + LIGA.sollSpieler; rechtsKlasse = ton(n);
       }
+      /* Liegen die Ergebnisse der ganzen Runde vor, fuehrt ein Knopf rechts
+         unter dem Ergebnis dorthin (alle Spiele des Spieltags, Dialog). */
+      var alle = LIGA_SPIELTAGE[t.id] && LIGA_SPIELTAGE[t.id].length
+        ? '<b class="lt-alle" data-action="liga-runde" data-termin="' + esc(t.id) + '" role="button" tabindex="0">Alle Spiele ›</b>' : '';
       return '<div class="liga-spieltag' + (vorbei && !h ? ' vorbei' : '') + (h ? ' gespielt' : '') + (wahl && t.id === wahl.id ? ' wahl' : '') +
         '" data-action="liga-wahl" data-id="' + esc(t.id) + '" role="button" tabindex="0">' +
         '<span class="lt-nr">' + t.nr + '</span>' +
         '<span class="lt-datum"><b>' + t.tag.slice(8, 10) + '.' + t.tag.slice(5, 7) + '.' + t.tag.slice(0, 4) + '</b><small>' + WOCHENTAGE[new Date(t.tag + 'T12:00:00').getDay()].replace('.', '') + '</small></span>' +
         '<span class="lt-wer"><span class="lt-gegner"><span class="lt-ha">' + (daheim ? 'Heim' : 'Ausw.') + '</span>' + esc(gegner) + '</span>' +
           '<span class="lt-unten">' + unten + '</span></span>' +
-        '<span class="lt-rechts ' + rechtsKlasse + '">' + rechts + '</span>' +
+        '<span class="lt-rechts ' + rechtsKlasse + '"><span>' + rechts + '</span>' + alle + '</span>' +
         '</div>';
     }).join('');
 
@@ -5153,13 +5197,18 @@
         ? '<div class="lk-crew"><span class="lk-crew-titel">Team · <b class="' + ton(leute.length) + '">' + leute.length + ' / ' + LIGA.sollSpieler + '</b></span>' +
           '<div class="lt-leute">' + (leute.map(function (p) { return '<span class="lt-person">' + avatarHTML(p, 'sm') + esc(p.name) + '</span>'; }).join('') || '<span class="muted">Noch niemand eingetragen.</span>') + '</div></div>'
         : '<div class="lk-crew"></div>') +
-      ligaRundeHtml(t, h) +
       fuss;
   }
 
   /* Alle Spiele des Spieltags (auch die der anderen Teams): Paarung und
      Ergebnis, Spielfrei gedimmt, Verschobenes mit neuem Datum. Ein Tipp
-     zeigt die 16 Einzel; unser eigenes Spiel fuehrt zu den Ergebnissen. */
+     zeigt die 16 Einzel; unser eigenes Spiel fuehrt zu den Ergebnissen.
+     Steht im Tabellen-Reiter unter der Tabelle und hinter "Alle Spiele"
+     in der Spieltage-Liste - nicht in unserer Spieltag-Karte (Julius). */
+  function ligaRundenAlleHtml() {
+    return LIGA.termine.filter(function (t) { return LIGA_SPIELTAGE[t.id] && LIGA_SPIELTAGE[t.id].length; })
+      .map(function (t) { return ligaRundeHtml(t, ligaTerminEintrag(t)); }).join('');
+  }
   function ligaRundeHtml(t, h) {
     var runde = LIGA_SPIELTAGE[t.id];
     if (!runde || !runde.length) return '';
@@ -6370,6 +6419,7 @@
       for (var i = 0; i < S.history.length; i++) {
         var h = S.history[i];
         if (h.liga && h.liga.terminId === UI.bericht && h.matches) {
+          ligaUnsereIds(h);   // Bogen-Listen vollstaendig, auch nach einem Nachtrag
           return {
             liga: h.liga, matches: h.matches,
             start: (h.settings && h.settings.start) || 501,
@@ -7674,6 +7724,13 @@
             '<button class="btn danger" data-action="ov-discard-game">Ja, verwerfen</button></div>');
     } else if (o.type === 'warte') {
       html = '<p>' + esc(o.text) + '</p>';
+    } else if (o.type === 'liga-runde') {
+      var lrT = LIGA.termine.filter(function (x) { return x.id === o.termin; })[0];
+      html = !lrT ? '<p>Dazu liegt nichts vor.</p>' :
+        '<h3 class="lp-titel">' + lrT.nr + '. Spieltag <span>· alle Spiele</span></h3>' +
+        '<p class="lp-sub">' + (lrT.tag ? fmtDate(new Date(lrT.tag + 'T12:00:00').getTime()) : '') + ' · ' + esc(LIGA.saison) + '</p>' +
+        ligaRundeHtml(lrT, ligaTerminEintrag(lrT)) +
+        '<button class="btn primary full" data-action="ov-cancel">Schließen</button>';
     } else if (o.type === 'liga-partien') {
       var lpSp = (LIGA_SPIELTAGE[o.termin] || [])[o.i];
       var lpT = LIGA.termine.filter(function (x) { return x.id === o.termin; })[0];
@@ -8907,6 +8964,10 @@
       case 'liga-wahl': UI.ligaWahl = el.getAttribute('data-id'); render(); break;
       case 'liga-partien':
         UI.overlay = { type: 'liga-partien', termin: el.getAttribute('data-termin'), i: Number(el.getAttribute('data-i')) };
+        render();
+        break;
+      case 'liga-runde':
+        UI.overlay = { type: 'liga-runde', termin: el.getAttribute('data-termin') };
         render();
         break;
       case 'set-mode':
@@ -10802,6 +10863,7 @@
       standings: standings,
       stats: stats,
       career: career,
+      ligaErgebnisAus: ligaErgebnisAus,
       allMatches: allMatches,
       ranking: function (key) { return ranking(boardDef(key), career()); },
       remainingIn: remainingIn,
