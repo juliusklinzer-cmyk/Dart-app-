@@ -403,6 +403,37 @@ in seiner Karte, leuchtet beim Überbieten; fällt zugleich der Rekord, läuft n
 Rekord-Animation). Undo nimmt Rekord und PB mit zurück. In der Rangliste gibt es die
 Kacheln PB Team, PB Solo, Checks, Check-Quote (ab 5 Versuchen) und Versuche.
 
+### Hunter (Mäusejagd auf der Scheibe)
+
+1 bis 6 Spieler, je 3 Darts, reihum in Auswahlreihenfolge (kein Ausbullen). Gespielt
+wird in **Board-Reihenfolge im Uhrzeigersinn** (20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3,
+19, 7, 16, 8, 11, 14, 9, 12, 5, dann wieder 20), der Bull spielt keine Rolle. Die
+**Startfelder** liegen fest: 2 Spieler 20 und 3 · 3 Spieler 20, 15, 16 · 4 Spieler 20,
+6, 3, 8 · 5 Spieler 20, 13, 2, 7, 14 · 6 Spieler 20, 4, 15, 3, 16, 9 (Spieler 1 immer
+auf der 20). Das Startfeld ist das erste Ziel; ein Treffer rückt weiter, schon der
+nächste Dart geht aufs neue Ziel. **Jeder jagt den Vordermann:** Einholen reicht, wer
+das Feld eines Gegners vor sich erreicht oder überspringt, fängt ihn (mit Boost alle,
+die er überspringt). Gefangene fliegen raus und stehen ausgegraut auf der Scheibe, der
+Fänger wirft seine Aufnahme zu Ende, der Letzte gewinnt (zu zweit entscheidet der erste
+Fang). Varianten beim Start: **Normal** (jeder Treffer 1 Feld), **Boost** (Single 1,
+Doppel 2, Triple 3 Felder), **Handicap** (je Spieler eine Stufe: jeder Treffer, nur das
+Doppel oder nur das Triple zählt, immer 1 Feld). **Solo** ist ein Training: einmal rund
+um die Scheibe von der 20 zurück auf die 20, gezählt werden die Darts, der Bestwert je
+Spieler und Variante leuchtet bei Verbesserung auf.
+
+Der Bildschirm zeigt links die Scheibe (SVG, 20 Segmente) mit farbigen Markern außen
+am Rand je Spieler samt Namen (auf einem Feld versetzt nebeneinander, Bewegung als
+kurze Animation, Fang-Animation am gefangenen Marker), das Zielfeld des Werfers
+leuchtet, bei Handicap nur der zählende Ring. Rechts groß das Ziel („17“, „D17“ oder
+„T17“, bei Boost „Doppel +2, Triple +3“), klein der Vordermann („noch 4 Felder bis
+Anna“) und der Verfolger mit Abstand, die Spielerliste mit Fängen, die drei Darts der
+Aufnahme, Zurück und „Weiter“ (Rest der Aufnahme daneben), darunter die Tasten der
+eigenen Zahl (Single, Doppel, Triple, bei Handicap nur der zählende Ring) und
+„Daneben“. Undo dartweise, auch über einen Fang hinweg; der Stand übersteht ein
+Neuladen. Die Zusammenfassung nennt Gewinner, Fänge, Darts und Trefferquote je Spieler;
+in der Rangliste stehen Siege, Fänge, Trefferquote (ab 30 Darts), Solo Normal und
+Solo Boost.
+
 ## Ablauf (X01 Turnier)
 
 1. **Setup** – Antippen, wer heute mitspielt (2 bis 12 Spieler), Startpunkte (301/501/701) und Legs

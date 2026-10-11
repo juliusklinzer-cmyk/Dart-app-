@@ -166,8 +166,7 @@ await page.locator('#eingabe-wahl button[data-value="2"]').click();
 check('Tastatur gemerkt', (await page.evaluate(() => window.__dart.state().settings.tastatur)) === 1);
 await page.locator('#eingabe-wahl button[data-value="1"]').click();
 await page.locator('[data-action="set-mode"][data-value="hunter"]').click();
-check('Hunter: Regeln folgen, kein Start', (await page.locator('[data-action="start-game"]').isDisabled()) &&
-  (await textKlein('[data-action="start-game"]')).includes('regeln folgen') && (await text('#einst-hint')).includes('Regeln folgen'));
+check('Hunter: eigene Einstellungen, Start moeglich', !(await page.locator('[data-action="start-game"]').isDisabled()) && (await visible('#settings-hunter')));
 await page.locator('[data-action="set-mode"][data-value="501"]').click();
 check('zurueck im X01: GAME ON!', !(await page.locator('[data-action="start-game"]').isDisabled()));
 
@@ -4840,6 +4839,151 @@ group('Kaiwen: Team-Checkout, Regeln, Rekord und PB');
   check('zwei Kaiwen-Spiele im Archiv, der Rekord bleibt 167', (await page.evaluate(() => window.__dart.state().history.filter((h) => h.kind === 'kaiwen').length)) === 2 &&
     (await page.evaluate(() => window.__dart.kaiwenRekord().zahl)) === 167);
   await page.setViewportSize(vpKw);
+}
+
+group('Hunter: Maeusejagd, Startfelder, Fangen, Varianten, Solo');
+{
+  const vpHu = page.viewportSize();
+  await page.setViewportSize({ width: 1133, height: 744 });
+  await page.evaluate(() => { const D = window.__dart; D.ui().overlay = null; D.state().game = null; D.setScreen('setup'); });
+  await page.locator('[data-action="set-mode"][data-value="hunter"]').click();
+  check('Hunter laesst sich starten, drei Spielarten zur Wahl', !(await page.locator('[data-action="start-game"]').isDisabled()) &&
+    (await page.locator('#settings-hunter [data-setting="hunterVariante"] button').count()) === 3);
+  /* Sechs Profile fuer die Startfelder; die Zusatzprofile gehen am Ende wieder weg. */
+  const huIds = await page.evaluate(() => {
+    const S = window.__dart.state();
+    const neu = ['Anna', 'Bert', 'Cleo', 'Dana'].map((n, i) => ({ id: 'hu_' + i, name: n, voll: n, avatar: null, hue: 60 + i * 50, created: Date.now(), gast: true, dauer: true }));
+    neu.forEach((p) => S.profiles.push(p));
+    const ids = S.profiles.slice(0, 2).map((p) => p.id).concat(neu.map((p) => p.id));
+    S.lineup = ids.slice(0, 2); window.__dart.save(); window.__dart.render();
+    return ids;
+  });
+  const hst = () => page.evaluate(() => window.__dart.hunterState());
+  const huFelder = () => page.evaluate(() => { const s = window.__dart.hunterState(); const R = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5]; return window.__dart.game().players.map((id) => R[s.pos[id]]); });
+  const huStart = async (n, startPos) => {
+    await page.evaluate((ids) => { const S = window.__dart.state(); S.game = null; S.lineup = ids; window.__dart.save(); window.__dart.setScreen('setup'); }, huIds.slice(0, n));
+    await page.locator('[data-action="start-game"]').click();
+    await page.waitForTimeout(120);
+    if (startPos) await page.evaluate((sp) => { const g = window.__dart.game(); g.startPos = sp; window.__dart.save(); window.__dart.render(); }, startPos);
+  };
+  const huDart = (num, mult) => page.locator(`#hu-pad [data-num="${num}"][data-mult="${mult}"]`).click();
+  const erwartet = { 2: [20, 3], 3: [20, 15, 16], 4: [20, 6, 3, 8], 5: [20, 13, 2, 7, 14], 6: [20, 4, 15, 3, 16, 9] };
+  for (const n of [2, 3, 4, 5, 6]) {
+    await huStart(n);
+    check('Startfelder fuer ' + n + ' Spieler: ' + erwartet[n].join(', '), JSON.stringify(await huFelder()) === JSON.stringify(erwartet[n]), JSON.stringify(await huFelder()));
+  }
+  check('die Scheibe steht mit 20 Segmenten und einem Marker je Spieler', (await page.locator('#hu-scheibe .hu-seg').count()) === 20 && (await page.locator('#hu-marker .hu-mark').count()) === 6 &&
+    (await page.evaluate(() => window.__dart.state().screen)) === 'hunter' && !(await visible('#screen-bulloff')));
+  /* Normal: Treffer rueckt ein Feld, Fehlwurf bleibt. */
+  await page.evaluate(() => { window.__dart.state().settings.hunterVariante = 0; });
+  await huStart(2);
+  const [hA, hB] = huIds;
+  let s = await hst();
+  check('A beginnt auf der 20, Ziel steht gross: 20', s.werfer === hA && (await text('#hu-ziel .hu-ziel-zahl')).trim() === '20' && (await text('#hu-jagd')).includes('bis'));
+  check('Marker-Winkel folgen den Feldern', (await page.evaluate(() => getComputedStyle(document.querySelector('#hu-marker .hu-mark')).getPropertyValue('--w').trim())) === '0deg');
+  await huDart(20, 1); s = await hst();
+  check('Treffer rueckt 1 Feld weiter (20 -> 1), der naechste Dart geht aufs neue Ziel', (await huFelder())[0] === 1 && (await page.locator('#hu-pad [data-num="1"][data-mult="1"]').count()) === 1);
+  await page.waitForTimeout(350);
+  check('das Zielsegment leuchtet in Blau', await page.evaluate(() => getComputedStyle(document.querySelector('#hu-scheibe .hu-seg.ziel path.single.aussen')).fill === 'rgb(70, 170, 215)'));
+  await huDart(0, 1); s = await hst();
+  check('Fehlwurf bleibt stehen', (await huFelder())[0] === 1 && s.inVisit === 2);
+  await huDart(1, 3); s = await hst();
+  check('Normal: ein Triple bringt auch nur 1 Feld (1 -> 18), danach ist B dran', (await huFelder())[0] === 18 && s.werfer === hB && s.inVisit === 0);
+  check('Vordermann und Verfolger mit Abstand', (await text('#hu-jagd')).includes('Felder') && (await text('#hu-jagd')).includes('zurück'));
+  await page.locator('#screen-hunter [data-action="hu-end-visit"]').click(); s = await hst();
+  check('Weiter verbucht die Aufnahme als Fehlwuerfe, wieder A', s.werfer === hA && (await page.evaluate(() => window.__dart.game().throws.length)) === 6);
+  /* Wrap ueber die 5 zurueck auf die 20: der Marker dreht vorwaerts weiter (342 -> 360),
+     ein Gegner 19 Felder voraus (also 1 hinter mir) wird dabei nicht gefangen. */
+  await huStart(2, [19, 18]);
+  const huWinkel = (id) => page.evaluate((pid) => parseInt(document.querySelector('#hu-marker .hu-mark[data-id="' + pid + '"]').style.getPropertyValue('--w'), 10), id);
+  const wVor = await huWinkel(hA);
+  await huDart(5, 1); s = await hst();
+  check('Wrap: von der 5 auf die 20, der Verfolger bleibt im Spiel', (await huFelder())[0] === 20 && !s.raus[hB] && s.vorne.abstand === 18);
+  check('der Marker dreht 18 Grad vorwaerts weiter statt fast eine Runde zurueck', (await huWinkel(hA)) - wVor === 18, wVor + ' -> ' + (await huWinkel(hA)));
+  /* Fang bei genau gleichem Feld, zu zweit gewinnt der erste Fang. */
+  await huStart(2, [0, 1]);
+  await huDart(20, 1); s = await hst();
+  check('Einholen reicht: A erreicht das Feld von B, B ist gefangen, A gewinnt', !!s.raus[hB] && s.winner === hA && (await page.evaluate(() => window.__dart.game().done)) &&
+    (await text('#overlay-card')).includes('Glückwunsch'));
+  check('der gefangene Marker ist ausgegraut', await page.evaluate(() => document.querySelector('#hu-marker .hu-mark[data-id="' + window.__dart.game().players[1] + '"]').classList.contains('raus')));
+  await page.locator('#overlay-card [data-action="undo-game"]').click(); s = await hst();
+  check('Undo ueber den Fang hinweg: B wieder im Spiel, Positionen zurueck', !s.raus[hB] && !s.winner && (await huFelder())[0] === 20 && !(await page.evaluate(() => window.__dart.game().done)));
+  /* Boost: Doppel 2, Triple 3 Felder; mit einem Dart zwei Gegner ueberspringen. */
+  await page.evaluate(() => { window.__dart.state().settings.hunterVariante = 1; });
+  await huStart(3, [0, 5, 10]);
+  const hC = huIds[2];
+  await huDart(20, 2); s = await hst();
+  check('Boost: Doppel bringt 2 Felder (20 -> 18)', (await huFelder())[0] === 18 && !s.raus[hB]);
+  await huDart(18, 3); s = await hst();
+  check('Triple bringt 3 Felder und faengt B auf dem Weg (Index 2 -> 5)', (await huFelder())[0] === 6 && !!s.raus[hB] && s.faenge[hA] === 1 && !s.raus[hC]);
+  check('ab drei Spielern geht es weiter, der Faenger wirft seine Aufnahme zu Ende', !s.winner && s.werfer === hA && s.inVisit === 2 && s.aktiv.length === 2);
+  await huDart(0, 1); s = await hst();
+  check('danach ueberspringt die Reihenfolge den Gefangenen: C ist dran', s.werfer === hC);
+  await huStart(3, [0, 1, 2]);
+  await huDart(20, 3); s = await hst();
+  check('ein Triple ueber zwei Gegner faengt beide, A ist der Letzte und gewinnt', !!s.raus[hB] && !!s.raus[hC] && s.winner === hA);
+  await page.locator('#overlay-card [data-action="open-summary"]').click();
+  const huSum = await text('#summary-box');
+  check('die Zusammenfassung nennt Gewinner, Faenge, Darts und Trefferquote', huSum.includes('gewinnt die Jagd') && huSum.includes('Fänge') && huSum.includes('Trefferquote'));
+  await page.locator('#summary-actions [data-action="finish-game"]').click();
+  /* Handicap: Stufe Doppel rueckt bei Single nicht weiter. */
+  await page.evaluate(() => { window.__dart.state().settings.hunterVariante = 2; });
+  await page.evaluate((ids) => { const S = window.__dart.state(); S.lineup = ids; window.__dart.save(); window.__dart.setScreen('setup'); }, huIds.slice(0, 2));
+  await page.locator('[data-setting="hunterVariante"] button[data-value="2"]').click();
+  check('Handicap zeigt je Spieler die Stufen Single, Doppel, Triple', (await page.locator('#hu-handicap [data-action="hu-handicap"]').count()) === 6);
+  await page.locator(`#hu-handicap [data-action="hu-handicap"][data-id="${hA}"][data-value="2"]`).click();
+  await page.locator('[data-action="start-game"]').click(); await page.waitForTimeout(120);
+  check('A braucht das Doppel: Ziel D20, nur der Doppelring leuchtet, keine Single-Taste', (await text('#hu-ziel .hu-ziel-zahl')).trim() === 'D20' &&
+    (await page.locator('#hu-scheibe .hu-seg.ziel.nur-double').count()) === 1 && (await page.locator('#hu-pad [data-num="20"][data-mult="1"]').count()) === 0);
+  await page.waitForTimeout(350);
+  check('auf der Scheibe leuchtet wirklich nur der Doppelring (berechnete Farbe)', await page.evaluate(() => {
+    const seg = document.querySelector('#hu-scheibe .hu-seg.ziel');
+    const f = (sel) => getComputedStyle(seg.querySelector(sel)).fill;
+    return f('path.double') === 'rgb(70, 170, 215)' && f('path.triple') !== 'rgb(70, 170, 215)' && f('path.single.aussen') !== 'rgb(70, 170, 215)';
+  }));
+  await page.evaluate(() => window.__dart.spielDart(1, 20)); s = await hst();
+  check('ein Single zaehlt fuer Stufe Doppel nicht', (await huFelder())[0] === 20 && s.treffer[hA] === 0);
+  await huDart(20, 2); s = await hst();
+  check('das Doppel bringt 1 Feld (kein Boost bei Handicap)', (await huFelder())[0] === 1);
+  /* Solo: einmal rund um die Scheibe, Darts zaehlen, Bestwert. */
+  await page.evaluate(() => { window.__dart.state().settings.hunterVariante = 0; });
+  await huStart(1);
+  s = await hst();
+  check('Solo: Start auf 20, Runde 0 von 20', s.werfer === hA && (await text('#hu-jagd')).includes('0 von 20'));
+  for (let i = 0; i < 20; i++) { const ziel = (await huFelder())[0]; await huDart(ziel, 1); }
+  s = await hst();
+  check('nach 20 Treffern ist die Runde durch: 20 Darts, Spiel zu Ende', !!s.fertig && s.fertig.darts === 20 && (await page.evaluate(() => window.__dart.game().done)));
+  check('der erste Durchlauf ist der Bestwert', (await page.evaluate((id) => window.__dart.hunterBest(id, 'normal'), hA)) === 20 && (await page.evaluate(() => !!window.__dart.game().bestNeu)));
+  await page.locator('#overlay-card [data-action="open-summary"]').click();
+  check('Solo-Zusammenfassung nennt die Darts', (await text('#summary-box')).includes('20 Darts'));
+  await page.locator('#summary-actions [data-action="finish-game"]').click();
+  await huStart(1);
+  await huDart(0, 1); await huDart(0, 1);
+  for (let i = 0; i < 20; i++) { const ziel = (await huFelder())[0]; await huDart(ziel, 1); }
+  check('22 Darts sind kein neuer Bestwert, 20 bleibt', (await page.evaluate((id) => window.__dart.hunterBest(id, 'normal'), hA)) === 20 && !(await page.evaluate(() => !!window.__dart.game().bestNeu)));
+  await page.locator('#overlay-card [data-action="undo-game"]').click();
+  await page.evaluate(() => { const g = window.__dart.game(); g.bestNeu = 19; window.__dart.save(); });
+  await page.locator('#screen-hunter [data-action="undo-game"]').click();
+  check('Undo nimmt einen gemerkten Bestwert mit zurueck', !(await page.evaluate(() => !!window.__dart.game().bestNeu)));
+  { const ziel = (await huFelder())[0]; await huDart(ziel, 1); await huDart(ziel === 5 ? 20 : (await huFelder())[0], 1); }
+  await page.locator('#overlay-card [data-action="open-summary"]').click();
+  await page.locator('#summary-actions [data-action="finish-game"]').click();
+  const huCar = await carr();
+  check('Karriere: Siege, Faenge und Solo-Bestwert', huCar[hA].huWins === 1 && huCar[hA].huFaenge === 2 && huCar[hA].huBest.normal === 20, JSON.stringify([huCar[hA].huWins, huCar[hA].huFaenge, huCar[hA].huBest]));
+  await navTo('boards');
+  await page.locator('[data-action="board-mode"][data-value="hunter"]').click();
+  check('die Rangliste hat eine Hunter-Auswertung mit Solo-Bestwert', !(await visible('#board-bald')) && (await text('#screen-boards')).includes('20 Darts'));
+  /* Mehr als sechs: Hinweis. */
+  await page.evaluate((ids) => { const S = window.__dart.state(); S.profiles.push({ id: 'hu_x', name: 'Extra', avatar: null, hue: 5, created: Date.now(), gast: true, dauer: true }); S.lineup = ids.concat(['hu_x']); window.__dart.save(); window.__dart.setScreen('setup'); }, huIds);
+  await page.locator('[data-action="start-game"]').click();
+  check('mit sieben Spielern erklaert ein Hinweis: hoechstens sechs', (await text('#overlay-card')).includes('höchstens sechs'));
+  await page.locator('#overlay-card [data-action="ov-hinweis-zu"]').click();
+  await page.evaluate((ids) => {
+    const S = window.__dart.state(); const weg = ids.slice(2).concat(['hu_x']);
+    S.profiles = S.profiles.filter((p) => !weg.includes(p.id)); S.lineup = ids.slice(0, 2); S.game = null;
+    S.history = S.history.filter((h) => h.kind !== 'hunter'); window.__dart.save(); window.__dart.setScreen('setup');
+  }, huIds);
+  await page.setViewportSize(vpHu);
 }
 
 group('Oeffentliche Webseite (webseite.html): Spieltag, Termine, Ergebnisse, Tabelle, Anmelden');

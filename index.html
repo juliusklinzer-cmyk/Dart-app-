@@ -188,6 +188,18 @@
       <span class="note">Start 120. Ein Versuch hat 9 Darts, Aufnahmen zu je 3, abwechselnd. Check: Zahl plus 10, sonst eins runter. Rekord und PB zählen die höchste erreichte Zahl.</span>
     </div>
     </div>
+    <div class="einst hidden" id="settings-hunter">
+    <div class="setting">
+      <label>Spielart</label>
+      <div class="options" data-setting="hunterVariante">
+        <button data-value="0">Normal</button>
+        <button data-value="1">Boost</button>
+        <button data-value="2">Handicap</button>
+      </div>
+      <span class="note" id="hunter-note"></span>
+    </div>
+    <div id="hu-handicap" class="hidden"></div>
+    </div>
     <div class="einst hidden" id="settings-finisher">
     <div class="setting">
       <label><span class="lang">Punkte zum Sieg</span><span class="kurz">Sieg bei</span></label>
@@ -348,7 +360,7 @@
     </div>
   </div>
 
-  <!-- Hunter: die Auswertung kommt mit dem Spiel. -->
+  <!-- Platzhalter fuer kuenftige Spielarten ohne Auswertung. -->
   <div class="card boards-bald hidden" id="board-bald">
     <span class="bald-titel">Coming soon</span>
     <span class="bald-text" id="board-bald-text"></span>
@@ -1069,6 +1081,54 @@
       </div>
       <button class="btn ghost full" data-action="kw-fern">Fernsteuerung · Board-Anzeige, Eingabe über Tastatur</button>
       <button class="btn ghost full" data-action="kw-ende">Spiel beenden und auswerten</button>
+      <div class="game-menu-zeile">
+        <button class="btn ghost game-menu-raus" data-action="leave-game">Spiel verlassen</button>
+        <button class="btn primary" data-action="game-menu-zu">Weiterspielen</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HUNTER ============ -->
+<section id="screen-hunter" class="screen game">
+  <!-- Hunter (Oktober 2026): links die Scheibe mit den Markern am Rand,
+       rechts Menue, Info, das Ziel des Werfers, die Jagd (Vordermann und
+       Verfolger), die Spieler und die Eingabe. Zeichnet renderHunter. -->
+  <div class="game-body">
+    <div class="hu-links">
+      <div id="hu-scheibe" class="hu-scheibe"></div>
+    </div>
+    <div class="hu-rechts">
+      <div class="rtw-kopf hu-kopf">
+        <button class="xk-btn rtw-menu" data-action="game-menu" aria-label="Menü">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><g opacity="0.8"><circle cx="3.5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="20.5" cy="12" r="1.8"></circle></g></svg>
+        </button>
+        <div class="rtw-info">
+          <span class="rtw-h">Hunter</span>
+          <span class="rtw-sub" id="hu-sub"></span>
+          <span class="rtw-runde" id="hu-runde"></span>
+        </div>
+      </div>
+      <div class="hu-ziel" id="hu-ziel" aria-live="polite"></div>
+      <div class="hu-jagd" id="hu-jagd"></div>
+      <div class="hu-liste" id="hu-liste"></div>
+      <div class="rtw-top hu-top">
+        <button class="rtw-key zurueck" data-action="undo-game" aria-label="Letzten Dart zurücknehmen">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 12H7M11.5 6.5L6 12l5.5 5.5"></path></svg>
+        </button>
+        <div class="hu-visit" id="hu-visit"></div>
+        <button class="rtw-key bust" data-action="hu-end-visit">Weiter</button>
+      </div>
+      <div class="pad" id="hu-pad"></div>
+    </div>
+  </div>
+  <div id="hu-turn" class="turn-label hidden"></div>
+  <div id="hu-menu-overlay" class="game-menu hidden" role="dialog" aria-modal="true" aria-labelledby="hu-menu-titel">
+    <div class="game-menu-karte">
+      <div class="game-menu-kopf">
+        <span class="game-menu-titel" id="hu-menu-titel">Hunter</span>
+        <span class="game-menu-sub"></span>
+      </div>
       <div class="game-menu-zeile">
         <button class="btn ghost game-menu-raus" data-action="leave-game">Spiel verlassen</button>
         <button class="btn primary" data-action="game-menu-zu">Weiterspielen</button>

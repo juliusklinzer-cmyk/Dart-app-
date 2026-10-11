@@ -133,7 +133,7 @@
     return {
       v: 2,
       screen: 'setup',
-      settings: { start: 501, bestOf: 1, dartModeFrom: 170, cricketScoring: 1, finisherTo: 5, rtwBoost: 1, turnierModus: 0, quickModus: 0, quickSaetze: 1, quickLegs: 1, ton: 1, feiern: 1, tastatur: 0, dartModeMerk: 170 },
+      settings: { start: 501, bestOf: 1, dartModeFrom: 170, cricketScoring: 1, finisherTo: 5, rtwBoost: 1, hunterVariante: 0, hunterHandicap: {}, turnierModus: 0, quickModus: 0, quickSaetze: 1, quickLegs: 1, ton: 1, feiern: 1, tastatur: 0, dartModeMerk: 170 },
       mode: '501',
       game: null,
       profiles: DEFAULT_PLAYERS.map(function (n, i) {
@@ -378,6 +378,8 @@
       if (s.settings.cricketScoring === undefined) s.settings.cricketScoring = 1;
       /* Vor der Wahl gab es nur Boost -- wer von damals kommt, behaelt das. */
       if (s.settings.rtwBoost === undefined) s.settings.rtwBoost = 1;
+      if (s.settings.hunterVariante === undefined) s.settings.hunterVariante = 0;
+      if (!s.settings.hunterHandicap || typeof s.settings.hunterHandicap !== 'object') s.settings.hunterHandicap = {};
       if (FIN_TARGETS.indexOf(s.settings.finisherTo) < 0) s.settings.finisherTo = 5;
       if (s.settings.online === undefined) s.settings.online = 0;
       if (s.settings.ton !== 0) s.settings.ton = 1;
@@ -2021,6 +2023,7 @@
       rtwGames: 0, rtwWins: 0, rtwBest: null,
       finGames: 0, finWins: 0, finRounds: 0, finDarts: 0, finBest: null, finHigh: 0,
       kwGames: 0, kwVersuche: 0, kwChecks: 0, kwBestSolo: null, kwBestTeam: null,
+      huGames: 0, huWins: 0, huFaenge: 0, huDarts: 0, huTreffer: 0, huBest: { normal: null, boost: null, h1: null, h2: null, h3: null },
       lastResults: []
     };
   }
@@ -2037,6 +2040,7 @@
     st.mpr = st.cricketDarts ? (st.cricketMarks / st.cricketDarts) * 3 : 0;
     st.finAvgDarts = st.finRounds ? st.finDarts / st.finRounds : 0;
     st.kwQuote = st.kwVersuche ? (st.kwChecks / st.kwVersuche) * 100 : 0;
+    st.huQuote = st.huDarts ? (st.huTreffer / st.huDarts) * 100 : 0;
     return st;
   }
 
@@ -2215,6 +2219,19 @@
           if (rd.zahl > s.finHigh) s.finHigh = rd.zahl;
         });
         if (h.winner && map[h.winner] && h.players.length > 1) map[h.winner].finWins++;   // allein gibt es keinen Sieg
+      } else if (kind === 'hunter') {
+        var huSt = hunterState({ players: h.players, throws: h.throws || [], variante: h.variante, handicap: h.handicap, startPos: h.startPos });
+        var huKey = hunterSchluessel({ players: h.players, variante: h.variante, handicap: h.handicap });
+        h.players.forEach(function (id) {
+          var s = map[id];
+          if (!s) return;
+          s.huGames++;
+          s.huFaenge += huSt.faenge[id] || 0;
+          s.huDarts += huSt.darts[id] || 0;
+          s.huTreffer += huSt.treffer[id] || 0;
+          if (h.players.length === 1 && huSt.fertig && (s.huBest[huKey] === null || huSt.fertig.darts < s.huBest[huKey])) s.huBest[huKey] = huSt.fertig.darts;
+        });
+        if (h.winner && map[h.winner] && h.players.length > 1) map[h.winner].huWins++;
       } else if (kind === 'kaiwen') {
         var kwSt = kaiwenState({ players: h.players, versuche: h.versuche || [] });
         var kwHoch = kaiwenHoechste(h);
@@ -2381,7 +2398,12 @@
     { mode: 'kaiwen', key: 'kwBestSolo', label: 'PB Solo', get: function (s) { return s.kwBestSolo; }, fmt: function (v) { return String(v); }, min: function (s) { return s.kwBestSolo !== null; }, hint: 'Die höchste Zahl, die du allein erreicht hast.' },
     { mode: 'kaiwen', key: 'kwChecks', label: 'Checks', get: function (s) { return s.kwChecks; }, fmt: function (v) { return String(v); }, min: function (s) { return s.kwGames > 0; }, hint: 'Von dir gecheckte Versuche.' },
     { mode: 'kaiwen', key: 'kwQuote', label: 'Check-Quote', get: function (s) { return s.kwQuote; }, fmt: function (v) { return v.toFixed(0) + ' %'; }, min: function (s) { return s.kwVersuche >= 5; }, hint: 'Deine Checks je gespieltem Versuch. Zählt ab 5 Versuchen.' },
-    { mode: 'kaiwen', key: 'kwVersuche', label: 'Versuche', get: function (s) { return s.kwVersuche; }, fmt: function (v) { return String(v); }, min: function (s) { return s.kwGames > 0; }, hint: 'Alle Versuche, an denen du beteiligt warst.' }
+    { mode: 'kaiwen', key: 'kwVersuche', label: 'Versuche', get: function (s) { return s.kwVersuche; }, fmt: function (v) { return String(v); }, min: function (s) { return s.kwGames > 0; }, hint: 'Alle Versuche, an denen du beteiligt warst.' },
+    { mode: 'hunter', key: 'huWins', label: 'Siege', get: function (s) { return s.huWins; }, fmt: function (v) { return String(v); }, min: function (s) { return s.huGames > 0; }, hint: 'Gewonnene Jagden (als Letzter übrig).' },
+    { mode: 'hunter', key: 'huFaenge', label: 'Fänge', get: function (s) { return s.huFaenge; }, fmt: function (v) { return String(v); }, min: function (s) { return s.huGames > 0; }, hint: 'Gefangene Gegner über alle Jagden.' },
+    { mode: 'hunter', key: 'huQuote', label: 'Trefferquote', get: function (s) { return s.huQuote; }, fmt: function (v) { return v.toFixed(0) + ' %'; }, min: function (s) { return s.huDarts >= 30; }, hint: 'Treffer aufs Zielfeld je Dart. Zählt ab 30 Darts.' },
+    { mode: 'hunter', key: 'huBestNormal', label: 'Solo Normal', get: function (s) { return s.huBest.normal; }, fmt: function (v) { return plural(v, 'Dart', 'Darts'); }, min: function (s) { return s.huBest.normal !== null; }, asc: true, hint: 'Wenigste Darts für eine Runde um die Scheibe, Variante Normal.' },
+    { mode: 'hunter', key: 'huBestBoost', label: 'Solo Boost', get: function (s) { return s.huBest.boost; }, fmt: function (v) { return plural(v, 'Dart', 'Darts'); }, min: function (s) { return s.huBest.boost !== null; }, asc: true, hint: 'Wenigste Darts für eine Runde um die Scheibe mit Boost.' }
   ];
 
   /* Die Liga-Rangliste: dieselben Classic-Kategorien, aber nur über
@@ -2637,6 +2659,7 @@
        der Dart, der den Gleichstand ueberhaupt erzeugt hat, weg ist. */
     g.stechenSieger = null;
     g.done = false; g.winner = null; g.at = null;
+    if (g.kind === 'hunter') { delete g.bestNeu; UI.huBlitz = null; UI.huFang = null; }
     UI.overlay = null;
     UI.mult = 1;
     save(); render();
@@ -2826,6 +2849,17 @@
       done: false, winner: null, started: false
     };
     if (kind === 'rtw') S.game.boost = S.settings.rtwBoost === 1;
+    if (kind === 'hunter') {
+      /* Variante und Handicap-Stufen stehen am Spiel, nicht in den
+         Einstellungen: ein Umschalten mitten im Abend darf keinen schon
+         geworfenen Dart anders bewerten. */
+      S.game.variante = HUNTER_VARIANTEN[S.settings.hunterVariante] || 'normal';
+      if (S.game.variante === 'handicap') {
+        S.game.handicap = {};
+        S.lineup.forEach(function (id) { var st = Number((S.settings.hunterHandicap || {})[id]); S.game.handicap[id] = st === 2 || st === 3 ? st : 1; });
+      }
+      UI.huFang = null; UI.huBlitz = null;
+    }
     UI.cricketSpalten = null;   // die Cricket-Tafel faengt ohne Einschiebe-Animation an
     UI.finRunde = undefined; UI.finSpiel = null;   // der Finisher wuerfelt die erste Zahl nicht vor
     UI.finFern = false;
@@ -2872,7 +2906,7 @@
     // allein: gegen sich selbst bullt niemand aus. Das Spiel gilt dann
     // sofort als begonnen, sonst raeumte der Zurueck-Knopf es weg und
     // ein Neustart landete auf dem Bull-Off.
-    if (S.lineup.length === 1 || kind === 'kaiwen') {
+    if (S.lineup.length === 1 || kind === 'kaiwen' || kind === 'hunter') {
       S.game.started = true;
       S.screen = spielScreen(kind);
     } else {
@@ -2931,6 +2965,12 @@
          dieselben Wuerfe ergeben in Einfach und Boost verschiedene
          Zahlenfolgen. Altbestand hat sie nicht und war immer Boost. */
       if (g.kind === 'rtw') eintrag.boost = g.boost !== false;
+      if (g.kind === 'hunter') {
+        eintrag.variante = g.variante || 'normal';
+        if (g.handicap) eintrag.handicap = g.handicap;
+        if (g.startPos) eintrag.startPos = g.startPos;
+        if (g.bestNeu) eintrag.bestNeu = g.bestNeu;
+      }
     }
     S.history.unshift(eintrag);
     if (S.history.length > MAX_HISTORY) S.history.length = MAX_HISTORY;
@@ -3119,7 +3159,7 @@
     }
     var spieler = istListe(g.players) && g.players.length >= 1 &&
       g.players.every(function (id) { return typeof id === 'string' && ID_OK.test(id); });
-    if (kind === 'cricket' || kind === 'rtw') return spieler && istListe(g.throws);
+    if (kind === 'cricket' || kind === 'rtw' || kind === 'hunter') return spieler && istListe(g.throws);
     if (kind === 'finisher') return spieler && istListe(g.rounds) && g.rounds.every(function (rd) { return !!rd && istListe(rd.throws); });
     if (kind === 'kaiwen') return spieler && istListe(g.versuche) && g.versuche.every(function (v) { return !!v && typeof v.zahl === 'number' && istListe(v.visits); });
     return false;
@@ -3230,7 +3270,7 @@
   }
 
   /* ================= Rendering ================= */
-  var SCREENS = ['setup', 'tournament', 'boards', 'players', 'profile', 'bulloff', 'game', 'cricket', 'rtw', 'finisher', 'kaiwen', 'summary', 'winner', 'liga', 'bericht', 'konto'];
+  var SCREENS = ['setup', 'tournament', 'boards', 'players', 'profile', 'bulloff', 'game', 'cricket', 'rtw', 'finisher', 'kaiwen', 'hunter', 'summary', 'winner', 'liga', 'bericht', 'konto'];
   var NAV_SCREENS = { setup: 'setup', tournament: 'setup', boards: 'boards', players: 'players', profile: 'players', summary: 'setup', liga: 'liga', konto: 'konto', winner: 'setup' };
 
   /* Solange die Anmeldung aussteht, ist die App zu. Ohne Server (Doppelklick,
@@ -3268,7 +3308,7 @@
     /* Das •••-Menue gibt es nur in den Spielbildern - ueberall sonst wird
        ein haengengebliebenes Menue (Zurueck-Taste aus dem offenen Menue)
        zugeklappt. */
-    var mitMenue = screen === 'game' || screen === 'cricket' || screen === 'rtw' || screen === 'finisher' || screen === 'kaiwen';
+    var mitMenue = screen === 'game' || screen === 'cricket' || screen === 'rtw' || screen === 'finisher' || screen === 'kaiwen' || screen === 'hunter';
     if (!mitMenue) UI.menu = false;
     /* Die Liga-Auswertung wohnt im Statistik-Reiter der Liga; ueberall
        sonst steht der Ranglisten-Koerper in seinem eigenen Screen. */
@@ -3328,9 +3368,9 @@
       S.screen === 'game' || S.screen === 'cricket' || S.screen === 'rtw' || S.screen === 'finisher');
     /* Das X01-Spielbild ist auf jeder Bildschirmgroesse fest im Rahmen
        (siehe body.fix-spiel) - nichts scrollt, weder Seite noch Spielbild. */
-    document.body.classList.toggle('fix-spiel', S.screen === 'game' || S.screen === 'cricket' || S.screen === 'rtw' || S.screen === 'finisher' || S.screen === 'kaiwen');
+    document.body.classList.toggle('fix-spiel', S.screen === 'game' || S.screen === 'cricket' || S.screen === 'rtw' || S.screen === 'finisher' || S.screen === 'kaiwen' || S.screen === 'hunter');
     /* Cricket nutzt die ganze Breite - kein Seitenrand, keine Maximalbreite. */
-    document.body.classList.toggle('rand-aus', S.screen === 'cricket' || S.screen === 'game' || S.screen === 'rtw' || S.screen === 'finisher' || S.screen === 'kaiwen');
+    document.body.classList.toggle('rand-aus', S.screen === 'cricket' || S.screen === 'game' || S.screen === 'rtw' || S.screen === 'finisher' || S.screen === 'kaiwen' || S.screen === 'hunter');
     /* Das Startbild steht am Tablet und quergedrehten Handy fest im Rahmen,
        innen scrollen nur Spielerliste und Einstellungen (body.fix-setup). */
     document.body.classList.toggle('fix-setup', S.screen === 'setup' || S.screen === 'tournament' || S.screen === 'bulloff' || S.screen === 'boards' ||
@@ -3379,6 +3419,7 @@
     if (S.screen === 'cricket') renderCricket();
     if (S.screen === 'rtw') renderRtw();
     if (S.screen === 'finisher') renderFinisher();
+    if (S.screen === 'hunter') renderHunter();
     if (S.screen === 'kaiwen') renderKaiwen();
     else if ($('kw-team') && $('kw-team').innerHTML) {
       /* Beim Verlassen den Kaiwen-Bildschirm leeren: seine Felder und
@@ -3579,7 +3620,7 @@
     rtw: ['Round the World', 'Reihum von 1 bis 20, danach Bull.'],
     finisher: ['Finisher', 'Alle auf derselben Zahl zwischen 6 und 120, Double Out.'],
     kaiwen: ['Kaiwen', 'Allein oder zu zweit: die Zahl in 9 Darts finishen. Check: plus 10, daneben: eins runter.'],
-    hunter: ['Hunter', 'Die Jagd: ihr fangt euch gegenseitig. Regeln folgen.']
+    hunter: ['Hunter', 'Mäusejagd auf der Scheibe: wer den Vordermann einholt, fängt ihn. Der Letzte gewinnt.']
   };
 
   function renderSetup() {
@@ -3651,7 +3692,9 @@
     $('settings-rtw').classList.toggle('hidden', S.mode !== 'rtw');
     $('settings-finisher').classList.toggle('hidden', S.mode !== 'finisher');
     $('settings-kaiwen').classList.toggle('hidden', S.mode !== 'kaiwen');
-    var bald = S.mode === 'hunter';
+    var bald = false;
+    $('settings-hunter').classList.toggle('hidden', S.mode !== 'hunter');
+    if (S.mode === 'hunter') renderHunterEinstellungen();
     /* Eingabe-Wahl: Tastatur (Fernsteuerung ab Start), Standard (immer die
        Aufnahme als Zahl, Grenze 0) oder Gemischt (ab der Grenze Dart fuer
        Dart). Die Grenze selbst erscheint nur bei Gemischt. */
@@ -4208,7 +4251,7 @@
     var host = document.querySelector('.boards-koerper').parentElement;
     host.classList.toggle('log', !!UI.boardLog);
     /* Kaiwen und Hunter: noch kein Spiel, noch keine Auswertung. */
-    var bald = mode === 'hunter';
+    var bald = false;
     $('board-bald').classList.toggle('hidden', !bald);
     document.querySelector('.boards-koerper').classList.toggle('hidden', bald);
     if (bald) {
@@ -4322,6 +4365,10 @@
       { k: 'kwBestTeam', t: 'PB Team' },
       { k: 'kwBestSolo', t: 'PB Solo' },
       { k: 'kwChecks', t: 'Meiste Checks' }
+    ] : mode === 'hunter' ? [
+      { k: 'huBestNormal', t: 'Solo Normal' },
+      { k: 'huBestBoost', t: 'Solo Boost' },
+      { k: 'huFaenge', t: 'Meiste Fänge' }
     ] : [
       { k: 'rtwBest', t: 'Wenigste Darts' },
       { k: 'rtwWins', t: 'Meiste Siege' }
@@ -4343,7 +4390,7 @@
     $('log-title').textContent = mode === '501' ? 'Alle Classic-Spiele'
       : mode === 'liga' ? 'Alle Ligaspiele'
       : mode === 'cricket' ? 'Alle Cricket-Spiele'
-      : mode === 'finisher' ? 'Alle Finisher-Spiele' : mode === 'kaiwen' ? 'Alle Kaiwen-Spiele' : 'Alle Trainings';
+      : mode === 'finisher' ? 'Alle Finisher-Spiele' : mode === 'kaiwen' ? 'Alle Kaiwen-Spiele' : mode === 'hunter' ? 'Alle Jagden' : 'Alle Trainings';
     $('board-log-knopf').textContent = $('log-title').textContent + ' ›';
 
     /* Ligaspiele: eine Zeile je Spieltag mit dem Team-Ergebnis. */
@@ -6753,6 +6800,27 @@
   var KW_SWAP_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h14l-3-3M20 16H6l3 3"></path></svg>';
   var KW_DEL_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 12H7M11.5 6.5L6 12l5.5 5.5"></path></svg>';
 
+  /* Hunter-Einstellungen: bei Handicap je Spieler der Aufstellung eine
+     Stufe (Single, Doppel, Triple). */
+  function renderHunterEinstellungen() {
+    var box = $('hu-handicap');
+    if (!box) return;
+    var handicap = S.settings.hunterVariante === 2;
+    var note = $('hunter-note');
+    if (note) note.textContent = S.settings.hunterVariante === 1 ? 'Boost: ein Doppel bringt 2 Felder, ein Triple 3. Wer dabei mehrere Gegner überspringt, fängt alle.'
+      : handicap ? 'Handicap: je Spieler zählt jeder Treffer, nur das Doppel oder nur das Triple. Ein Treffer bringt immer 1 Feld.'
+      : 'Jeder Treffer im Zielfeld bringt 1 Feld. Einholen reicht: wer das Feld des Vordermanns erreicht, fängt ihn.';
+    box.classList.toggle('hidden', !handicap);
+    if (!handicap) { box.innerHTML = ''; return; }
+    var stufen = S.settings.hunterHandicap || {};
+    box.innerHTML = S.lineup.map(function (id) {
+      var st = Number(stufen[id]) === 2 ? 2 : Number(stufen[id]) === 3 ? 3 : 1;
+      return '<div class="setting hu-stufe"><label>' + esc(pname(id)) + '</label><div class="options">' +
+        [[1, 'Single'], [2, 'Doppel'], [3, 'Triple']].map(function (o) {
+          return '<button data-action="hu-handicap" data-id="' + esc(id) + '" data-value="' + o[0] + '" class="' + (st === o[0] ? 'active' : '') + '">' + o[1] + '</button>';
+        }).join('') + '</div></div>';
+    }).join('') || '<span class="note">Erst Spieler wählen.</span>';
+  }
   function renderKaiwen() {
     var g = S.game;
     if (!g || g.kind !== 'kaiwen') { S.screen = 'setup'; render(); return; }
@@ -6893,6 +6961,299 @@
     $('kw-ff-error').textContent = UI.error;
     $('kw-menu-overlay').classList.toggle('hidden', !UI.menu);
     if (UI.menu) document.querySelector('#kw-menu-overlay .game-menu-sub').textContent = $('kw-sub').textContent;
+  }
+
+  /* ================= Hunter (Maeusejagd auf der Scheibe) =================
+   * 1 bis 6 Spieler, je 3 Darts, reihum in Auswahlreihenfolge. Gespielt
+   * wird in Board-Reihenfolge im Uhrzeigersinn, Bull spielt keine Rolle.
+   * Jeder jagt den, der vor ihm liegt: wer mit einem Dart das Feld eines
+   * Gegners erreicht oder ueberspringt, faengt ihn (Boost: alle, die er
+   * ueberspringt). Gefangene fliegen raus, der Letzte gewinnt. Allein ist
+   * es ein Training: einmal rund um die Scheibe, gezaehlt werden die Darts.
+   *
+   * Alles wird aus g.throws gerechnet (wie Round the World) - Undo ist ein
+   * Wurf weniger, auch ueber einen Fang hinweg. g.startPos (Ring-Indizes)
+   * ersetzt die festen Startfelder, fuer Tests und Sonderfaelle.
+   */
+  var HUNTER_RING = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5];
+  /* Feste Startfelder je Spielerzahl (Julius): Spieler 1 immer auf der 20,
+     der Rest im Uhrzeigersinn in Auswahlreihenfolge. */
+  var HUNTER_START = { 1: [20], 2: [20, 3], 3: [20, 15, 16], 4: [20, 6, 3, 8], 5: [20, 13, 2, 7, 14], 6: [20, 4, 15, 3, 16, 9] };
+  var HUNTER_MAX = 6;
+  var HUNTER_VARIANTEN = ['normal', 'boost', 'handicap'];
+  function hunterRingIndex(zahl) { return HUNTER_RING.indexOf(zahl); }
+  function hunterStartPos(g) {
+    if (Array.isArray(g.startPos) && g.startPos.length === g.players.length) return g.startPos.slice();
+    var felder = HUNTER_START[g.players.length] || HUNTER_START[6];
+    return g.players.map(function (id, i) { return hunterRingIndex(felder[i] !== undefined ? felder[i] : 20); });
+  }
+  function hunterStufe(g, pid) {
+    if (g.variante !== 'handicap') return 1;
+    var s = g.handicap && g.handicap[pid];
+    return s === 2 || s === 3 ? s : 1;
+  }
+  /* Zaehlt der Dart als Treffer aufs Zielfeld? Stufe 1: jeder Ring, Stufe 2
+     nur das Doppel, Stufe 3 nur das Triple. */
+  function hunterTrifft(g, pid, t, zielZahl) {
+    if (!t.n || t.n !== zielZahl) return false;
+    var stufe = hunterStufe(g, pid);
+    return stufe === 1 || t.m === stufe;
+  }
+  function hunterState(g) {
+    var n = g.players.length, solo = n === 1;
+    var st = { pos: {}, raus: {}, faenge: {}, darts: {}, treffer: {}, schritte: {}, turn: 0, inVisit: 0, visit: [], aktiv: [], winner: null, fertig: null, over: false, letzterFang: null };
+    var start = hunterStartPos(g);
+    g.players.forEach(function (id, i) { st.pos[id] = start[i]; st.faenge[id] = 0; st.darts[id] = 0; st.treffer[id] = 0; st.schritte[id] = 0; });
+    var turn = 0, inVisit = 0;
+    var aktive = function () { return g.players.filter(function (id) { return !st.raus[id]; }); };
+    for (var i = 0; i < g.throws.length && !st.over; i++) {
+      var t = g.throws[i];
+      var pid = g.players[turn];
+      st.darts[pid]++;
+      st.visit.push(t);
+      var ziel = HUNTER_RING[st.pos[pid]];
+      if (hunterTrifft(g, pid, t, ziel)) {
+        st.treffer[pid]++;
+        var felder = g.variante === 'boost' ? t.m : 1;
+        if (solo) {
+          st.schritte[pid] += felder;
+          st.pos[pid] = (st.pos[pid] + felder) % 20;
+          if (st.schritte[pid] >= 20) { st.fertig = { darts: st.darts[pid], at: i }; st.pos[pid] = 0; st.over = true; }
+        } else {
+          /* Abstaende im Uhrzeigersinn zu allen Gegnern vor dem Dart: wer
+             hoechstens so weit weg ist, wie gezogen wird, ist gefangen. */
+          aktive().forEach(function (o) {
+            if (o === pid) return;
+            var d = (st.pos[o] - st.pos[pid] + 20) % 20;
+            if (d >= 1 && d <= felder) { st.raus[o] = { at: i, von: pid, feld: st.pos[o] }; st.faenge[pid]++; st.letzterFang = { wer: o, von: pid, at: i }; }
+          });
+          st.pos[pid] = (st.pos[pid] + felder) % 20;
+          if (aktive().length === 1) { st.winner = pid; st.over = true; }
+        }
+      }
+      inVisit++;
+      if (st.over) break;
+      if (inVisit === 3) {
+        inVisit = 0; st.visit = [];
+        var steps = 0, next = turn;
+        do { next = (next + 1) % n; steps++; } while (st.raus[g.players[next]] && steps <= n);
+        turn = next;
+      }
+    }
+    st.turn = turn;
+    st.inVisit = inVisit;
+    st.aktiv = aktive();
+    st.werfer = g.players[turn];
+    /* Vordermann (naechster Gegner im Uhrzeigersinn) und Verfolger (der,
+       fuer den ich der naechste bin), je mit Abstand in Feldern. */
+    st.vorne = null; st.hinten = null;
+    if (!solo && !st.over) {
+      var me = st.werfer;
+      st.aktiv.forEach(function (o) {
+        if (o === me) return;
+        var dv = (st.pos[o] - st.pos[me] + 20) % 20;
+        var dh = (st.pos[me] - st.pos[o] + 20) % 20;
+        if (!st.vorne || dv < st.vorne.abstand) st.vorne = { wer: o, abstand: dv };
+        if (!st.hinten || dh < st.hinten.abstand) st.hinten = { wer: o, abstand: dh };
+      });
+    }
+    return st;
+  }
+  function hunterSchluessel(g) {
+    return g.variante === 'handicap' ? 'h' + hunterStufe(g, g.players[0]) : g.variante === 'boost' ? 'boost' : 'normal';
+  }
+  /* Solo-Bestwert eines Spielers je Variante (wenigste Darts), aus Archiv
+     und laufendem Spiel. */
+  function hunterBest(pid, schluessel, ohneSpiel) {
+    var best = null;
+    var liste = wertbareHistorie().filter(function (h) { return h.kind === 'hunter' && Array.isArray(h.throws) && h.players.length === 1 && h.players[0] === pid; });
+    if (S.game && S.game.kind === 'hunter' && S.game !== ohneSpiel && S.game.players.length === 1 && S.game.players[0] === pid && !testSpiel(S.game)) liste = liste.concat([S.game]);
+    liste.forEach(function (h) {
+      if (hunterSchluessel(h) !== schluessel) return;
+      var st = hunterState({ players: h.players, throws: h.throws, variante: h.variante, handicap: h.handicap });
+      if (st.fertig && (best === null || st.fertig.darts < best)) best = st.fertig.darts;
+    });
+    return best;
+  }
+  function hunterDart(mult, num) {
+    var g = S.game;
+    if (!g || g.kind !== 'hunter' || g.done || settling()) return false;
+    pomp();
+    var m = num === 25 ? (mult === 2 ? 2 : 1) : mult;
+    var vorBest = g.players.length === 1 && !testSpiel(g) ? hunterBest(g.players[0], hunterSchluessel(g), g) : null;
+    g.throws.push({ n: num, m: num === 0 ? 0 : m });
+    UI.mult = 1;
+    var st = hunterState(g);
+    if (st.letzterFang && st.letzterFang.at === g.throws.length - 1) UI.huFang = { wer: st.letzterFang.wer, at: Date.now() };
+    if (st.winner) { g.done = true; g.winner = st.winner; g.at = Date.now(); UI.overlay = { type: 'game-done', pid: st.winner }; }
+    if (st.fertig) {
+      g.done = true; g.winner = g.players[0]; g.at = Date.now();
+      if (vorBest === null || st.fertig.darts < vorBest) { g.bestNeu = st.fertig.darts; UI.huBlitz = Date.now(); }
+      UI.overlay = { type: 'game-done', pid: g.players[0] };
+    }
+    save(); render();
+    return true;
+  }
+  function hunterAufnahmeEnde() {
+    var g = S.game;
+    if (!g || g.kind !== 'hunter' || g.done || settling()) return;
+    var offen = 3 - hunterState(g).inVisit;
+    for (var i = 0; i < offen; i++) g.throws.push({ n: 0, m: 0 });
+    UI.mult = 1;
+    save(); render();
+  }
+  function hunterVarianteText(g) {
+    return g.variante === 'boost' ? 'Boost · Doppel +2, Triple +3' : g.variante === 'handicap' ? 'Handicap' : 'Normal · jeder Treffer 1 Feld';
+  }
+  function hunterZielText(g, pid, st) {
+    var zahl = HUNTER_RING[st.pos[pid]];
+    var stufe = hunterStufe(g, pid);
+    return (stufe === 2 ? 'D' : stufe === 3 ? 'T' : '') + zahl;
+  }
+
+  /* Die Scheibe: 20 Segmente mit Doppel-, Triple- und Einzelringen in
+     Board-Reihenfolge, Bull nur als Mitte. Winkel: Segment 0 (die 20) steht
+     oben, dann im Uhrzeigersinn. Einmal gebaut, danach nur Klassen. */
+  /* Die Scheibe nimmt 76 % der Flaeche ein: aussen bleibt Platz fuer die
+     Zahlen und die Marker mit Namen. */
+  var HU_R = { bull: 16, triI: 86, triA: 100, dblI: 138, dblA: 152 };
+  function huBogen(r1, r2, a0, a1) {
+    var p = function (r, a) { var w = (a - 90) * Math.PI / 180; return (200 + r * Math.cos(w)).toFixed(1) + ' ' + (200 + r * Math.sin(w)).toFixed(1); };
+    return 'M' + p(r1, a0) + ' A' + r1 + ' ' + r1 + ' 0 0 1 ' + p(r1, a1) + ' L' + p(r2, a1) + ' A' + r2 + ' ' + r2 + ' 0 0 0 ' + p(r2, a0) + ' Z';
+  }
+  function hunterScheibeHtml() {
+    var html = '<svg class="hu-svg" viewBox="0 0 400 400" aria-hidden="true">';
+    html += '<circle cx="200" cy="200" r="' + (HU_R.dblA + 2) + '" class="hu-rand"></circle>';
+    HUNTER_RING.forEach(function (zahl, i) {
+      var a0 = i * 18 - 9, a1 = i * 18 + 9;
+      var farbe = i % 2 ? 'dunkel' : 'hell';
+      html += '<g class="hu-seg ' + farbe + '" data-i="' + i + '">' +
+        '<path class="hu-ring single aussen" d="' + huBogen(HU_R.triA, HU_R.dblI, a0, a1) + '"></path>' +
+        '<path class="hu-ring single innen" d="' + huBogen(HU_R.bull + 4, HU_R.triI, a0, a1) + '"></path>' +
+        '<path class="hu-ring triple" d="' + huBogen(HU_R.triI, HU_R.triA, a0, a1) + '"></path>' +
+        '<path class="hu-ring double" d="' + huBogen(HU_R.dblI, HU_R.dblA, a0, a1) + '"></path>' +
+        '</g>';
+    });
+    html += '<circle cx="200" cy="200" r="' + HU_R.bull + '" class="hu-bull"></circle>';
+    HUNTER_RING.forEach(function (zahl, i) {
+      var w = (i * 18 - 90) * Math.PI / 180, r = HU_R.dblA + 14;
+      html += '<text class="hu-zahl" x="' + (200 + r * Math.cos(w)).toFixed(1) + '" y="' + (200 + r * Math.sin(w)).toFixed(1) + '" data-i="' + i + '">' + zahl + '</text>';
+    });
+    html += '</svg><div class="hu-marker-schicht" id="hu-marker"></div>';
+    return html;
+  }
+  function renderHunter() {
+    var g = S.game;
+    if (!g || g.kind !== 'hunter') { S.screen = 'setup'; render(); return; }
+    var st = hunterState(g);
+    var n = g.players.length, solo = n === 1;
+    var aktiv = g.done ? g.winner : st.werfer;
+    var jetzt = Date.now();
+    var fang = UI.huFang && jetzt - UI.huFang.at < 1600 ? UI.huFang : null;
+    var screen = $('screen-hunter');
+    screen.classList.toggle('solo', solo);
+
+    $('hu-sub').textContent = hunterVarianteText(g) + ' · ' + (solo ? 'Solo: einmal rund um die Scheibe' : plural(n, 'Spieler', 'Spieler'));
+    $('hu-runde').textContent = solo ? plural(st.darts[g.players[0]], 'Dart', 'Darts') : 'Noch ' + plural(st.aktiv.length, 'Spieler', 'Spieler') + ' im Spiel';
+
+    /* Scheibe einmal bauen; dann nur das Zielfeld des Werfers markieren. */
+    var scheibe = $('hu-scheibe');
+    if (!scheibe.querySelector('svg')) scheibe.innerHTML = hunterScheibeHtml();
+    var zielIdx = g.done ? -1 : st.pos[aktiv];
+    var stufe = g.done ? 1 : hunterStufe(g, aktiv);
+    scheibe.querySelectorAll('.hu-seg').forEach(function (seg) {
+      var i = Number(seg.getAttribute('data-i'));
+      seg.classList.toggle('ziel', i === zielIdx);
+      seg.classList.toggle('nur-double', i === zielIdx && stufe === 2);
+      seg.classList.toggle('nur-triple', i === zielIdx && stufe === 3);
+    });
+    scheibe.querySelectorAll('.hu-zahl').forEach(function (z) { z.classList.toggle('ziel', Number(z.getAttribute('data-i')) === zielIdx); });
+
+    /* Marker: je Spieler ein Element, das bleibt (Animation per Transition).
+       Mehrere auf einem Feld stehen nebeneinander. */
+    var schicht = $('hu-marker');
+    if (UI.huWinkelSpiel !== g.id) { UI.huWinkelSpiel = g.id; UI.huWinkel = {}; schicht.innerHTML = ''; }
+    var belegt = {};
+    var versatz = [0, -7, 7, -14, 14, -21];
+    /* Der Werfer zuerst: er steht mittig im Feld, die anderen weichen aus. */
+    var reihenfolge = [aktiv].concat(g.players.filter(function (id) { return id !== aktiv; }));
+    reihenfolge.forEach(function (id) {
+      var i = st.pos[id];
+      var raus = st.raus[id];
+      var idx = raus ? raus.feld : i;
+      var k = belegt[idx] = (belegt[idx] || 0) + 1;
+      var el = schicht.querySelector('[data-id="' + id + '"]');
+      if (!el) {
+        el = document.createElement('div');
+        el.className = 'hu-mark';
+        el.setAttribute('data-id', id);
+        el.innerHTML = '<span class="hu-punkt" style="background:hsl(' + hue(id) + ',55%,52%)"></span><span class="hu-name">' + esc(pname(id)) + '</span>';
+        schicht.appendChild(el);
+      }
+      /* Immer den kuerzesten Weg drehen: 342 -> 360 statt zurueck auf 0. */
+      var ziel = idx * 18 + (versatz[k - 1] || 0);
+      var alt = UI.huWinkel[id];
+      var winkel = alt === undefined ? ziel : alt + ((((ziel - alt) % 360) + 540) % 360) - 180;
+      UI.huWinkel[id] = winkel;
+      el.style.setProperty('--w', winkel + 'deg');
+      el.classList.toggle('aktiv', id === aktiv && !g.done);
+      el.classList.toggle('raus', !!raus);
+      el.classList.toggle('gefangen', !!(fang && fang.wer === id));
+      el.classList.toggle('sieger', !!(g.done && g.winner === id && !solo));
+    });
+    Array.prototype.forEach.call(schicht.querySelectorAll('.hu-mark'), function (el) {
+      if (g.players.indexOf(el.getAttribute('data-id')) < 0) el.remove();
+    });
+
+    /* Rechts: Ziel gross, Jagd-Infos, Spielerliste, Eingabe. */
+    var zielText = g.done ? (solo ? '✓' : '🏆') : hunterZielText(g, aktiv, st);
+    $('hu-ziel').innerHTML = '<span class="kt">' + (g.done ? (solo ? 'Durch' : 'Sieger') : esc(pname(aktiv)) + ' braucht') + '</span>' +
+      '<span class="hu-ziel-zahl">' + esc(zielText) + '</span>' +
+      '<span class="hu-ziel-sub">' + (g.done ? esc(pname(g.winner)) : g.variante === 'boost' ? 'Doppel +2, Triple +3' : g.variante === 'handicap' ? (stufe === 2 ? 'nur das Doppel zählt' : stufe === 3 ? 'nur das Triple zählt' : 'jeder Treffer zählt') : 'jeder Treffer 1 Feld') + '</span>';
+    var jagd = '';
+    if (solo) {
+      var schritte = st.schritte[g.players[0]];
+      jagd = '<div class="hu-jagd-zeile"><span class="kt">Runde</span><b>' + Math.min(schritte, 20) + ' von 20 Feldern</b></div>' +
+        '<div class="hu-jagd-zeile"><span class="kt">Bestwert</span><b' + (UI.huBlitz && jetzt - UI.huBlitz < 1600 ? ' class="blitz"' : '') + '>' +
+          (function () { var b = hunterBest(g.players[0], hunterSchluessel(g), g.done ? null : g); return b === null ? '–' : plural(b, 'Dart', 'Darts'); })() + '</b></div>';
+    } else if (!g.done) {
+      jagd = (st.vorne ? '<div class="hu-jagd-zeile"><span class="kt">Vor dir</span><b>noch ' + plural(st.vorne.abstand, 'Feld', 'Felder') + ' bis ' + esc(pname(st.vorne.wer)) + '</b></div>' : '') +
+        (st.hinten ? '<div class="hu-jagd-zeile"><span class="kt">Hinter dir</span><b>' + esc(pname(st.hinten.wer)) + ', ' + plural(st.hinten.abstand, 'Feld', 'Felder') + ' zurück</b></div>' : '');
+    }
+    $('hu-jagd').innerHTML = jagd;
+    $('hu-liste').innerHTML = g.players.map(function (id) {
+      var raus = st.raus[id];
+      return '<div class="hu-sp' + (id === aktiv && !g.done ? ' aktiv' : '') + (raus ? ' raus' : '') + '">' +
+        '<span class="hu-sp-farbe" style="background:hsl(' + hue(id) + ',55%,52%)"></span>' +
+        '<span class="hu-sp-name">' + esc(pname(id)) + '</span>' +
+        '<span class="hu-sp-info">' + (raus ? 'gefangen von ' + esc(pname(raus.von)) : 'auf ' + hunterZielText(g, id, st) + (g.variante === 'handicap' ? '' : '')) + '</span>' +
+        '<span class="hu-sp-zahl">' + (solo ? plural(st.darts[id], 'Dart', 'Darts') : plural(st.faenge[id], 'Fang', 'Fänge')) + '</span></div>';
+    }).join('');
+
+    /* Eingabe: eigene Zahl gross (Single), Doppel und Triple daneben, Miss.
+       Bei Handicap nur der zaehlende Ring. */
+    var pad = '';
+    if (!g.done) {
+      var zahl = HUNTER_RING[st.pos[aktiv]];
+      var felderText = function (m) { return g.variante === 'boost' ? '+' + m + (m === 1 ? ' Feld' : ' Felder') : '+1 Feld'; };
+      var keys = [];
+      if (stufe === 1) keys.push('<button class="rtw-key gross" data-num="' + zahl + '" data-mult="1"><span class="z">' + zahl + '</span><span class="sub">' + felderText(1) + '</span></button>');
+      if (stufe !== 3) keys.push('<button class="rtw-key mult' + (stufe === 2 ? ' gross' : '') + '" data-num="' + zahl + '" data-mult="2"><span class="k"><span class="mx">D</span>' + zahl + '</span><span class="sub">' + felderText(2) + '</span></button>');
+      if (stufe !== 2) keys.push('<button class="rtw-key mult' + (stufe === 3 ? ' gross' : '') + '" data-num="' + zahl + '" data-mult="3"><span class="k"><span class="mx">T</span>' + zahl + '</span><span class="sub">' + felderText(3) + '</span></button>');
+      pad = '<div class="hu-treffer n' + keys.length + '">' + keys.join('') + '</div>' +
+        '<div class="rtw-reihe"><button class="rtw-key miss" data-num="0" data-mult="1"><span class="k">Daneben</span><span class="sub">ein Dart ohne Treffer</span></button></div>';
+    }
+    $('hu-pad').innerHTML = pad;
+    $('hu-visit').innerHTML = [0, 1, 2].map(function (k) {
+      var d = st.visit[k];
+      return '<span class="ct' + (d ? (d.n === 0 ? ' miss' : '') : ' leer') + '">' + (d ? (d.n === 0 ? '–' : throwLabel(d)) : '') + '</span>';
+    }).join('');
+    $('hu-turn').innerHTML = g.done
+      ? '<b>' + esc(pname(g.winner)) + '</b> ' + (solo ? 'ist durch' : 'gewinnt')
+      : '<span class="muted">Am Wurf</span> <b>' + esc(pname(aktiv)) + '</b> <span class="muted">auf</span> <b>' + esc(hunterZielText(g, aktiv, st)) + '</b>';
+    $('hu-menu-overlay').classList.toggle('hidden', !UI.menu);
+    if (UI.menu) document.querySelector('#hu-menu-overlay .game-menu-sub').textContent = $('hu-sub').textContent;
+    if (fang) setTimeout(function () { if (S.game === g) render(); }, 1700);
   }
 
   /* ================= Spielbericht (SDM-Bogen) ================= */
@@ -7884,6 +8245,31 @@
             '</div>';
         }).join('') + '</div>' + note;
 
+      actions = found.live
+        ? '<button class="btn primary full big" data-action="restart-game">Nochmal spielen</button>' +
+          '<button class="btn ghost full" data-action="finish-game">Speichern &amp; beenden</button>'
+        : '<button class="btn ghost full" data-action="summary-back">Zurück</button>';
+
+    } else if (s.kind === 'hunter') {
+      var hg = found.g;
+      var hst = hunterState({ players: hg.players, throws: hg.throws || [], variante: hg.variante, handicap: hg.handicap, startPos: hg.startPos });
+      var hSolo = hg.players.length < 2;
+      box = '<div class="sum-head"><div class="big-emoji">' + (hSolo ? '🎯' : '🏆') + '</div>' +
+        '<h2 class="sum-title">' + (hSolo ? (hst.fertig ? plural(hst.fertig.darts, 'Dart', 'Darts') + ' für die Runde' : 'Runde nicht beendet') : esc(pname(hg.winner)) + ' gewinnt die Jagd') + '</h2>' +
+        '<div class="muted">Hunter · ' + hunterVarianteText(hg) + ' · ' + fmtDate(hg.at) + (hg.bestNeu ? ' · neuer Bestwert' : '') + '</div></div>' +
+        '<div class="sum-cards">' + hg.players.map(function (id) {
+          var raus = hst.raus[id];
+          var quote = hst.darts[id] ? Math.round(hst.treffer[id] / hst.darts[id] * 100) : 0;
+          return '<div class="card sum-card ' + (hg.winner === id && !hSolo ? 'win' : '') + '">' +
+            '<div class="sum-who">' + avatarHTML(profile(id), 'md') +
+              '<div><div class="nm">' + esc(pname(id)) + '</div>' +
+              '<div class="muted">' + (hSolo ? (hg.bestNeu ? 'Neuer Bestwert: ' + plural(hg.bestNeu, 'Dart', 'Darts') : 'Variante ' + hunterVarianteText(hg).split(' ·')[0]) : raus ? 'gefangen von ' + esc(pname(raus.von)) : hg.winner === id ? 'als Letzter übrig' : 'im Spiel') +
+                (hg.variante === 'handicap' ? ' · Stufe ' + (hunterStufe(hg, id) === 2 ? 'Doppel' : hunterStufe(hg, id) === 3 ? 'Triple' : 'Single') : '') + '</div></div></div>' +
+            (hSolo ? '' : statRow('Fänge', hst.faenge[id] || 0)) +
+            statRow('Darts geworfen', hst.darts[id] || 0) +
+            statRow('Trefferquote', (hst.treffer[id] || 0) + ' von ' + (hst.darts[id] || 0) + ' (' + quote + ' %)') +
+            '</div>';
+        }).join('') + '</div>' + note;
       actions = found.live
         ? '<button class="btn primary full big" data-action="restart-game">Nochmal spielen</button>' +
           '<button class="btn ghost full" data-action="finish-game">Speichern &amp; beenden</button>'
@@ -9678,7 +10064,10 @@
         save(); render();
         break;
       case 'start-game':
-        if (S.mode === 'hunter') break;   // Regeln folgen
+        if (S.mode === 'hunter' && S.lineup.length > HUNTER_MAX) {
+          UI.overlay = { type: 'hinweis', titel: 'Hunter spielen höchstens sechs', text: 'Bitte in der Aufstellung bis zu sechs Spieler wählen. Die Reihenfolge der Auswahl ist die Wurfreihenfolge.' };
+          render(); break;
+        }
         if (S.mode === 'kaiwen' && S.lineup.length > 2) {
           UI.overlay = { type: 'hinweis', titel: 'Kaiwen spielen höchstens zwei', text: 'Bitte in der Aufstellung einen oder zwei Spieler wählen. Die Reihenfolge der Auswahl ist die Wurfreihenfolge.' };
           render(); break;
@@ -10351,6 +10740,16 @@
       case 'kw-end-visit':
         kaiwenAufnahmeEnde();
         break;
+      case 'hu-end-visit':
+        hunterAufnahmeEnde();
+        break;
+      case 'hu-handicap': {
+        tipp();
+        if (!S.settings.hunterHandicap || typeof S.settings.hunterHandicap !== 'object') S.settings.hunterHandicap = {};
+        S.settings.hunterHandicap[el.getAttribute('data-id')] = Number(el.getAttribute('data-value'));
+        save(); render();
+        break;
+      }
       case 'kw-ende':
         kaiwenBeenden();
         break;
@@ -10675,6 +11074,7 @@
     if (S.screen === 'rtw') return rtwDart(mult, num);
     if (S.screen === 'finisher') return finisherDart(mult, num);
     if (S.screen === 'kaiwen') return kaiwenDart(mult, num);
+    if (S.screen === 'hunter') return hunterDart(mult, num);
     if (S.screen !== 'game') return false;
     if (num === 0) return pushDart(1, 0);
     if (num === 25) return pushDart(mult >= 2 ? 2 : 1, 25);
@@ -10699,7 +11099,7 @@
       UI.overlay = null; UI.input = ''; render(); return;
     }
     /* Menue (•••): ein Tipp neben die Karte schliesst es. */
-    if (/^(game|cricket|rtw|fin|kw)-menu-overlay$/.test(ev.target.id || '')) { UI.menu = false; render(); return; }
+    if (/^(game|cricket|rtw|fin|kw|hu)-menu-overlay$/.test(ev.target.id || '')) { UI.menu = false; render(); return; }
     /* Ein Tipp ins Bild tut in der Fernsteuerung nichts (Julius): das Menue
        oeffnet nur •••, zurueck geht es ueber den ⌨-Knopf oben rechts. */
     var t = ev.target.closest('[data-action]');
@@ -11117,7 +11517,7 @@
        Turnier-Modus direkt. */
     var istAusstieg = ev.key === 'Escape' ||
       (ev.key === '.' && (ev.metaKey || ev.ctrlKey));
-    if (istAusstieg && !UI.overlay && (S.screen === 'game' || S.screen === 'cricket' || S.screen === 'rtw' || S.screen === 'finisher') && UI.menu) {
+    if (istAusstieg && !UI.overlay && SPIEL_SCREENS[S.screen] && UI.menu) {
       ev.preventDefault();
       UI.menu = false; render();
       return;
@@ -11409,7 +11809,7 @@
    * Backspace nichts loescht) geht eine Stufe zurueck: Menue zu, Dialog zu,
    * Reiter zurueck, Bildschirm zurueck, zuletzt ins Setup.
    */
-  var SPIEL_SCREENS = { game: 1, cricket: 1, rtw: 1, finisher: 1, kaiwen: 1 };
+  var SPIEL_SCREENS = { game: 1, cricket: 1, rtw: 1, finisher: 1, kaiwen: 1, hunter: 1 };
   var PFEIL_SCREENS = { setup: 1, tournament: 1, boards: 1, players: 1, profile: 1, liga: 1, konto: 1, summary: 1, winner: 1, bericht: 1 };
 
   /* In welchem Bereich wandern die Pfeile gerade? Ein offener Dialog oder
@@ -11585,8 +11985,7 @@
     }
     if (S.screen === 'profile') { S.screen = 'players'; save(); render(); zurueckFalle(); return; }
     /* Im Spiel verlaesst ein versehentliches Zurueck nichts. */
-    if (S.screen === 'game' || S.screen === 'bulloff' || S.screen === 'cricket' ||
-        S.screen === 'rtw' || S.screen === 'finisher') { zurueckFalle(); return; }
+    if (SPIEL_SCREENS[S.screen] || S.screen === 'bulloff') { zurueckFalle(); return; }
     if (S.screen !== 'setup') { S.screen = 'setup'; save(); render(); zurueckFalle(); return; }
     /* Setup ohne Dialog: das naechste Zurueck darf die App verlassen. */
   });
@@ -11602,14 +12001,14 @@
   UI.finFern = !!(S.settings && S.settings.tastatur === 1 && S.game && S.game.kind === 'finisher');
   UI.kwFern = !!(S.settings && S.settings.tastatur === 1 && S.game && S.game.kind === 'kaiwen');
   if (!S.lineup.length) S.lineup = activeProfiles().slice(0, 4).map(function (p) { return p.id; });
-  if ((S.screen === 'cricket' || S.screen === 'rtw' || S.screen === 'finisher') && !S.game) S.screen = 'setup';
+  if ((S.screen === 'cricket' || S.screen === 'rtw' || S.screen === 'finisher' || S.screen === 'kaiwen' || S.screen === 'hunter') && !S.game) S.screen = 'setup';
   /* Ein angefangenes Schnelles Spiel liegt in S.game, nicht im Spielplan –
      ohne diese Zeile landete man nach einem Neustart im leeren Turnier. */
   if (S.screen === 'game' && S.game && S.game.kind === 'quick' && !S.game.done) S.screen = 'game';
   if (S.game && S.game.kind !== 'quick' && !S.game.started && !S.game.throws.length) S.screen = 'bulloff';
   if (S.game && S.game.kind === 'quick' && !S.game.started) S.screen = 'bulloff';
   if (S.game && S.game.started === undefined) S.game.started = true;   // ältere Stände
-  if (S.game && (S.screen === 'cricket' || S.screen === 'rtw' || S.screen === 'finisher') && S.game.kind !== S.screen) S.screen = spielScreen(S.game.kind);
+  if (S.game && (S.screen === 'cricket' || S.screen === 'rtw' || S.screen === 'finisher' || S.screen === 'kaiwen' || S.screen === 'hunter') && S.game.kind !== S.screen) S.screen = spielScreen(S.game.kind);
   /* Ein beendetes Spiel führt zur Auswertung, nicht auf ein totes Board –
      sonst kann man in ein fertiges Match weitertippen. */
   if (S.game && S.game.done) {
@@ -11718,6 +12117,9 @@
       finisherState: function () { return finisherState(S.game); },
       finisherRunde: function () { return finisherRunde(S.game); },
       kaiwenState: function () { return kaiwenState(S.game); },
+      hunterState: function () { return hunterState(S.game); },
+      hunterBest: hunterBest,
+      spielDart: spielDart,
       kaiwenPB: kaiwenPB,
       kaiwenRekord: kaiwenRekord,
       rtwState: function () { return rtwState(S.game); },

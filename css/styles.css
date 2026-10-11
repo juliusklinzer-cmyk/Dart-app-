@@ -6121,3 +6121,109 @@ body.fix-spiel #screen-kaiwen.active { flex: 1 1 auto; height: auto; min-height:
   #screen-kaiwen .kw-rest { font-size: 84px; }
   #screen-kaiwen .kw-spieler { padding: 6px 10px; gap: 4px; }
 }
+
+/* ================= Hunter (Maeusejagd) ================= */
+#screen-hunter.active {
+  position: relative; padding: clamp(10px, 2.4vh, 30px) clamp(6px, 1vw, 14px) clamp(6px, 1.8vh, 22px);
+  gap: 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; height: calc(100vh - 12px); height: calc(100dvh - 12px);
+}
+body.fix-spiel #screen-hunter.active { flex: 1 1 auto; height: auto; min-height: 0; overflow: hidden; }
+#screen-hunter.active .game-body { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: clamp(8px, 1.6vw, 24px); align-items: stretch; }
+#screen-hunter .hu-links { min-height: 0; min-width: 0; display: flex; align-items: center; justify-content: center; }
+#screen-hunter .hu-scheibe { position: relative; width: min(100%, calc(100vh - 60px)); aspect-ratio: 1; }
+#screen-hunter .hu-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+#screen-hunter .hu-rand { fill: #0a0809; stroke: #2a2224; stroke-width: 2; }
+#screen-hunter .hu-bull { fill: #241d1f; stroke: #3a2e30; stroke-width: 1.5; }
+#screen-hunter .hu-seg.hell .single { fill: #1c1718; }
+#screen-hunter .hu-seg.dunkel .single { fill: #141011; }
+#screen-hunter .hu-seg.hell .double, #screen-hunter .hu-seg.hell .triple { fill: #2d2426; }
+#screen-hunter .hu-seg.dunkel .double, #screen-hunter .hu-seg.dunkel .triple { fill: #241c1e; }
+#screen-hunter .hu-seg path { stroke: #0d0a0b; stroke-width: 1; transition: fill 0.25s; }
+#screen-hunter .hu-seg.ziel path.hu-ring { fill: #46aad7; filter: drop-shadow(0 0 6px rgba(70, 170, 215, 0.9)); }
+/* Handicap: nur der zaehlende Ring leuchtet, der Rest des Segments bleibt dunkel. */
+#screen-hunter .hu-seg.ziel.nur-double path.hu-ring:not(.double), #screen-hunter .hu-seg.ziel.nur-triple path.hu-ring:not(.triple) { fill: #2a2224; filter: none; }
+#screen-hunter .hu-zahl { fill: #857a7b; font-family: var(--font-cond); font-weight: 700; font-size: 15px; text-anchor: middle; dominant-baseline: central; }
+#screen-hunter .hu-zahl.ziel { fill: #fff; font-size: 18px; }
+#screen-hunter .hu-marker-schicht { position: absolute; inset: 0; pointer-events: none; }
+/* Ein Marker ist ein unsichtbarer Zeiger von der Mitte zum Rand (Hoehe =
+   Radius), der um die Mitte gedreht wird; der Punkt sitzt an seiner Spitze
+   (bei 45,5 % des Durchmessers, knapp ausserhalb des Doppelrings), der Name
+   gegengedreht darueber. Die Drehung animiert als Transition. */
+#screen-hunter .hu-mark {
+  position: absolute; left: 50%; top: 4.5%; width: 0; height: 45.5%;
+  transform-origin: 50% 100%; transform: rotate(var(--w, 0deg)); transition: transform 0.55s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+#screen-hunter .hu-mark .hu-punkt {
+  position: absolute; left: 0; top: 0; width: clamp(16px, 3.6vh, 34px); height: clamp(16px, 3.6vh, 34px); border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 2px #0d0a0b, 0 0 14px rgba(70, 170, 215, 0.3); transition: transform 0.3s, opacity 0.3s;
+}
+#screen-hunter .hu-mark .hu-name {
+  position: absolute; left: 0; top: 0; transform: translate(-50%, -50%) translate(0, -1.5em) rotate(calc(-1 * var(--w, 0deg)));
+  font-family: var(--font-cond); font-weight: 700; font-size: clamp(10px, 1.8vh, 16px); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text); white-space: nowrap;
+  text-shadow: 0 0 6px #0d0a0b, 0 0 2px #0d0a0b; transition: transform 0.55s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+#screen-hunter .hu-mark.aktiv .hu-punkt { box-shadow: 0 0 0 2.5px #f2eeee, 0 0 18px rgba(70, 170, 215, 0.8); }
+#screen-hunter .hu-mark.raus .hu-punkt { background: #3a3234 !important; opacity: 0.55; box-shadow: 0 0 0 2px #0d0a0b; }
+#screen-hunter .hu-mark.raus .hu-name { color: #6a6062; text-decoration: line-through; }
+#screen-hunter .hu-mark.gefangen .hu-punkt { animation: huGefangen 1.4s ease-out both; }
+#screen-hunter .hu-mark.sieger .hu-punkt { box-shadow: 0 0 0 3px #ffc14d, 0 0 24px rgba(255, 193, 77, 0.8); }
+@keyframes huGefangen { 0% { transform: translate(-50%, -50%) scale(1.7); opacity: 1; } 60% { transform: translate(-50%, -50%) scale(0.4) rotate(40deg); } 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.55; } }
+
+#screen-hunter .hu-rechts { position: relative; z-index: 1; min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: clamp(5px, 1vh, 12px); }
+#screen-hunter .hu-kopf { flex: none; display: flex; gap: clamp(8px, 1vw, 14px); align-items: stretch; }
+#screen-hunter .hu-kopf .rtw-menu { flex: none; width: clamp(44px, 7vh, 74px); border-radius: clamp(10px, 1.6vh, 16px); background: #141011; color: var(--muted); }
+#screen-hunter .hu-kopf .rtw-info { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+#screen-hunter .hu-kopf .rtw-h { font-family: var(--font-display); font-size: clamp(15px, 3.4vh, 36px); letter-spacing: 0.05em; text-transform: uppercase; line-height: 1; }
+#screen-hunter .hu-kopf .rtw-sub { color: var(--muted); font-family: var(--font-cond); font-weight: 600; font-size: clamp(11px, 2vh, 22px); letter-spacing: 0.04em; line-height: 1.2; }
+#screen-hunter .hu-kopf .rtw-runde { font-family: var(--font-cond); font-weight: 700; font-size: clamp(12px, 2.2vh, 24px); letter-spacing: 0.06em; text-transform: uppercase; }
+#screen-hunter .hu-ziel { flex: none; display: flex; align-items: center; gap: clamp(8px, 1.2vw, 18px); padding: clamp(6px, 1.2vh, 14px) clamp(12px, 1.4vw, 20px); border-radius: clamp(12px, 1.8vh, 18px); background: var(--aktiv-flaeche); border: 1px solid var(--line-hell); box-shadow: 0 0 24px var(--schein-weich); }
+#screen-hunter .hu-ziel .kt { flex: none; font-size: clamp(10px, 1.7vh, 18px); color: var(--muted); }
+#screen-hunter .hu-ziel-zahl { flex: none; font-family: var(--font-cond); font-weight: 700; font-size: clamp(32px, 8vh, 86px); line-height: 0.95; color: #fff; text-shadow: 0 0 22px rgba(70, 170, 215, 0.45); font-variant-numeric: tabular-nums; }
+#screen-hunter .hu-ziel-sub { min-width: 0; font-family: var(--font-cond); font-weight: 600; font-size: clamp(11px, 2vh, 20px); color: var(--grau); }
+#screen-hunter .hu-jagd { flex: none; display: flex; flex-direction: column; gap: 2px; }
+#screen-hunter .hu-jagd-zeile { display: flex; align-items: baseline; gap: 10px; font-size: clamp(12px, 2vh, 20px); }
+#screen-hunter .hu-jagd-zeile .kt { flex: none; width: 5.5em; font-size: clamp(10px, 1.6vh, 16px); color: #857a7b; }
+#screen-hunter .hu-jagd-zeile b { font-family: var(--font-cond); font-weight: 700; font-size: clamp(14px, 2.6vh, 26px); }
+#screen-hunter .hu-jagd-zeile b.blitz { animation: kwBlitz 1.4s ease-out both; }
+#screen-hunter .hu-liste { flex: none; display: flex; flex-direction: column; gap: 3px; }
+#screen-hunter .hu-sp { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: clamp(6px, 0.8vw, 12px); padding: 4px clamp(8px, 1vw, 14px); border-radius: 10px; background: #141011; font-size: clamp(12px, 2vh, 20px); }
+#screen-hunter .hu-sp.aktiv { background: #221b1c; box-shadow: inset 0 0 0 1.5px #f2eeee; }
+#screen-hunter .hu-sp.raus { opacity: 0.45; }
+#screen-hunter .hu-sp-farbe { width: clamp(10px, 1.8vh, 18px); height: clamp(10px, 1.8vh, 18px); border-radius: 50%; }
+#screen-hunter .hu-sp-name { min-width: 0; font-family: var(--font-cond); font-weight: 700; font-size: clamp(13px, 2.4vh, 24px); text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#screen-hunter .hu-sp-info { color: var(--muted); white-space: nowrap; }
+#screen-hunter .hu-sp-zahl { font-family: var(--font-cond); font-weight: 700; white-space: nowrap; }
+#screen-hunter .hu-top { flex: none; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--space-2); align-items: stretch; }
+#screen-hunter .hu-top .rtw-key { min-width: clamp(64px, 10vh, 110px); min-height: clamp(48px, 8vh, 80px); padding: 0 12px; }
+#screen-hunter .hu-top .rtw-key.zurueck svg { width: clamp(22px, 4vh, 40px); height: clamp(22px, 4vh, 40px); }
+#screen-hunter .hu-visit { display: flex; gap: 6px; align-items: center; justify-content: center; }
+#screen-hunter .hu-visit .ct { min-width: 2.6em; padding: 4px 8px; border-radius: 8px; background: #141011; text-align: center; font-family: var(--font-cond); font-weight: 700; font-size: clamp(13px, 2.4vh, 24px); }
+#screen-hunter .hu-visit .ct.leer { background: transparent; box-shadow: inset 0 0 0 1px #2a2224; min-height: 1.6em; }
+#screen-hunter .hu-visit .ct.miss { color: var(--red); }
+#screen-hunter #hu-pad { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: var(--space-2); margin: 0; }
+#screen-hunter .hu-treffer { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); }
+#screen-hunter .hu-treffer.n1 { grid-template-columns: minmax(0, 1fr); }
+#screen-hunter .hu-treffer.n2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#screen-hunter .hu-treffer .rtw-key { min-height: 0; height: 100%; }
+#screen-hunter .hu-treffer .rtw-key.gross { grid-row: span 1; }
+#screen-hunter #hu-pad .rtw-reihe { flex: none; grid-template-columns: minmax(0, 1fr); }
+#screen-hunter #hu-pad .rtw-reihe .rtw-key { min-height: clamp(44px, 8vh, 80px); }
+
+@media (orientation: portrait) {
+  #screen-hunter.active { height: auto; min-height: calc(100dvh - 12px); overflow: auto; }
+  body.fix-spiel #screen-hunter.active { overflow: auto; }
+  #screen-hunter.active .game-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; gap: 8px; }
+  #screen-hunter .hu-scheibe { width: min(100%, 360px); }
+  #screen-hunter .hu-mark .hu-punkt { width: 16px; height: 16px; }
+  #screen-hunter .hu-mark .hu-name { font-size: 10px; }
+  #screen-hunter #hu-pad { flex: none; }
+  #screen-hunter .hu-treffer .rtw-key { min-height: 64px; }
+}
+@media (orientation: landscape) and (max-height: 420px) {
+  #screen-hunter.active { padding: 4px 8px; }
+  #screen-hunter .hu-rechts { gap: 4px; }
+  #screen-hunter .hu-liste { display: none; }
+  #screen-hunter .hu-ziel { padding: 4px 10px; }
+  #screen-hunter .hu-ziel-zahl { font-size: 34px; }
+}
