@@ -168,6 +168,12 @@
   /* ---------- Tabelle ---------- */
   function tabelleZeichnen(tabelle, stand) {
     var zeilen = tabelle && Array.isArray(tabelle.zeilen) && tabelle.zeilen.length ? tabelle.zeilen : DATEN.tabelleStart;
+    /* Nach Punkten, dann Leg-Differenz, dann Einzel-Differenz; bei Gleichstand
+       bleibt die Reihenfolge der Ligaleitung (stabile Sortierung). */
+    var diff = function (t) { var m = /^\s*(\d+)\s*:\s*(\d+)/.exec(String(t || '')); return m ? Number(m[1]) - Number(m[2]) : 0; };
+    zeilen = zeilen.map(function (z, i) { return { z: z, i: i }; }).sort(function (a, b) {
+      return (Number(b.z.punkte) || 0) - (Number(a.z.punkte) || 0) || diff(b.z.legs) - diff(a.z.legs) || diff(b.z.einzel) - diff(a.z.einzel) || a.i - b.i;
+    }).map(function (x) { return x.z; });
     $('tabelle-zeilen').innerHTML = zeilen.map(function (z, i) {
       var wir = z.team === TEAM;
       return '<div class="tz' + (wir ? ' wir' : '') + '"><span class="rang">' + (i + 1) + '</span>' +
