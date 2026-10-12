@@ -383,9 +383,11 @@ und auswerten“ im Menü zeigt die Zusammenfassung (höchste Zahl, Versuche, Ch
 Quote, Checks je Spieler, ob PB oder Rekord gefallen sind) und speichert.
 
 Der Bildschirm zeigt Score und groß den Rest, die 9 Darts des Versuchs als drei
-Gruppen mit dem Namen des jeweiligen Werfers, das Team mit PB, letzter Aufnahme und
+Gruppen mit dem Namen des jeweiligen Werfers, das Team mit PB, letzter Aufnahme (nur die
+Zahl, auch beim Finish) und
 dem Finish-Weg beim Werfer (Lieblingsdoppel, Darts in der Aufnahme, bis 170; der
-Stellwurf nur, wenn im Versuch noch Darts folgen), den Verlauf als Chips und rechts die
+Stellwurf nur, wenn im Versuch noch Darts folgen), den Verlauf als grüne und rote Chips
+(nur die Zahl; die Runde steht im Untertitel) und rechts die
 Eingabe: Punkte (Tastenfeld, Schnellwahl, Finish-Frage nach der Dartzahl, auch per
 Tasten 1/2/3) oder Einzel-Darts (Wechsel-Knopf, die Wahl bleibt fürs Spiel), dazu die
 Fernsteuerung mit Tastatureingabe. Testspieler setzen weder Rekord noch PB. In der
@@ -399,7 +401,10 @@ Versuch erreicht hat (Ausgangswert 120), mit Namen und Datum; er wird aus allen
 gespeicherten Kaiwen-Spielen (also auf allen Geräten mit Konto) und dem laufenden
 Spiel gerechnet, ein Merker in `S.rekorde.kaiwen` überlebt das Archiv-Limit. Beim
 ersten Überbieten im Spiel gibt es Banner und wackelnden Pokal, danach nur ein
-Aufleuchten der Rekordzahl. Jeder Spieler hat einen PB solo und einen im Team (steht
+Aufleuchten der Rekordzahl. Nach jedem Versuch pulsieren Score und Rest kurz grün
+(Check) oder rot (verfehlt). Oben rechts steht im Kasten erst der PB (solo der des
+Spielers, im Team der beste der Mitspieler), dann der Rekord mit dem Pokal vor der Zahl.
+Jeder Spieler hat einen PB solo und einen im Team (steht
 in seiner Karte, leuchtet beim Überbieten; fällt zugleich der Rekord, läuft nur die
 Rekord-Animation). Undo nimmt Rekord und PB mit zurück. In der Rangliste gibt es die
 Kacheln PB Team, PB Solo, Checks, Check-Quote (ab 5 Versuchen) und Versuche.

@@ -5023,8 +5023,14 @@ group('Kaiwen: Team-Checkout, Regeln, Rekord und PB');
   check('120 gecheckt: weiter mit 130, der Naechste (B) beginnt, Verlauf merkt den Check', ks.zahl === 130 && ks.rest === 130 && ks.werfer === kB && ks.verlauf.length === 1 && ks.verlauf[0].check && ks.verlauf[0].zahl === 120);
   check('ein +10 steht kurz am Score und der erste Rekord des Spiels bekommt das Banner', (await text('#kw-ziel')).includes('+10') && (await page.locator('#kw-ziel .kw-banner').count()) === 1 &&
     (await text('#kw-rekord')).includes('130'));
+  check('der Rest pulsiert gruen nach dem Check, der Score bleibt beim Rekord-Banner gold; oben steht PB vor Rekord mit Pokal vor der Zahl', (await page.locator('#kw-ziel .kw-rest.erfolg').count()) === 1 && (await page.locator('#kw-ziel .kw-score-zahl.gold').count()) === 1 && (await page.locator('#kw-ziel .kw-score-zahl.erfolg').count()) === 0 &&
+    (await page.evaluate(() => { const k = document.querySelectorAll('#kw-rekord .kw-rek-text'); return k.length === 2 && k[0].textContent.startsWith('PB Team') && k[0].textContent.includes('130') && !!k[1].querySelector('.kw-rek-zeile .kw-pokal + .kw-rek-zahl'); })));
+  check('zuletzt zeigt nur die Zahl, keinen Haken', (await text('#kw-team')).includes('40') && !(await text('#kw-team')).includes('✓'));
+  check('der Verlauf-Chip ist nur gruen, ohne Haken, keine Summe daneben; der Untertitel nennt Runde 2', (await page.locator('#kw-verlauf .kw-chip.ok').count()) === 1 && !(await text('#kw-verlauf')).includes('✓') &&
+    (await page.locator('#kw-verlauf .kw-chip.summe').count()) === 0 && (await text('#kw-sub')).includes('Runde 2'));
   await kwKey('0'); await kwKey('0'); await kwKey('0'); ks = await kst();
   check('Fehlversuch: 129, A beginnt (die Reihenfolge laeuft durch)', ks.zahl === 129 && ks.werfer === kA && !ks.verlauf[1].check);
+  check('nach dem Fehlversuch pulsiert der Rest rot, der Chip ist rot ohne Kreuz', (await page.locator('#kw-ziel .kw-rest.fehl').count()) === 1 && (await page.locator('#kw-verlauf .kw-chip.nein').count()) === 1 && !(await text('#kw-verlauf')).includes('✗'));
   await kwKey('89'); await kwKey('40'); await kwCo(2); ks = await kst();
   check('129 gecheckt: weiter mit 139', ks.zahl === 139 && ks.verlauf.length === 3 && ks.verlauf[2].check);
   /* Bust in Aufnahme 1 */

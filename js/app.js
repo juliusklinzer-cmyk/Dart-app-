@@ -7521,7 +7521,7 @@
       v.visits.forEach(function (vis) {
         zaehler++;
         st.dartsJe[vis.p] += vis.d;
-        st.letzte[vis.p] = vis.b ? 'Bust' : vis.c ? vis.s + ' ✓' : String(vis.s);
+        st.letzte[vis.p] = vis.b ? 'Bust' : String(vis.s);
         if (vis.b) return;
         rest -= vis.s;
         if (vis.c) { check = true; st.checksJe[vis.p]++; }
@@ -7804,10 +7804,17 @@
     screen.classList.toggle('rekord', !!banner);
 
     /* Kopf: Titel, Untertitel, Rekord. */
-    $('kw-sub').textContent = (solo ? 'Solo' : 'Team · ' + n + ' Spieler') + ' · Double Out · 9 Darts je Versuch';
-    $('kw-rekord').innerHTML = '<span class="kw-pokal' + (banner ? ' wackelt' : '') + '" aria-hidden="true">🏆</span>' +
-      '<span class="kw-rek-text"><span class="kt">Rekord' + (rekord.namen.length ? ' · ' + esc(rekord.namen.join(' & ')) : '') + '</span>' +
-      '<span class="kw-rek-zahl' + (blitz && blitz.was === 'rekord' ? ' blitz' : '') + '">' + rekord.zahl + '</span></span>';
+    $('kw-sub').textContent = (solo ? 'Solo' : 'Team · ' + n + ' Spieler') + ' · Double Out · 9 Darts je Versuch · Runde ' + (g.done ? st.versuche : st.versuche + 1);
+    /* Oben rechts: erst der PB (Solo: des Spielers, Team: der beste der
+       Mitspieler), dann der Rekord mit dem Pokal vor der Zahl. */
+    var pbOben = null;
+    g.players.forEach(function (id) { var v = kaiwenPB(id, solo); if (v !== null && (pbOben === null || v > pbOben)) pbOben = v; });
+    var pbBlitzOben = blitz && blitz.was === 'pb' && pbOben !== null && kaiwenPB(blitz.pid, solo) === pbOben;
+    $('kw-rekord').innerHTML = '<span class="kw-rek-text kw-pb' + (pbBlitzOben ? ' blitz' : '') + '"><span class="kt">PB ' + (solo ? 'Solo' : 'Team') + '</span>' +
+      '<span class="kw-rek-zahl">' + (pbOben === null ? '–' : pbOben) + '</span></span>' +
+      '<span class="kw-rek-text"><span class="kt">Rekord' + (rekord.namen.length ? '<span class="kw-rek-namen"> · ' + esc(rekord.namen.join(' & ')) + '</span>' : '') + '</span>' +
+      '<span class="kw-rek-zeile"><span class="kw-pokal' + (banner ? ' wackelt' : '') + '" aria-hidden="true">🏆</span>' +
+      '<span class="kw-rek-zahl' + (blitz && blitz.was === 'rekord' ? ' blitz' : '') + '">' + rekord.zahl + '</span></span></span>';
 
     /* Ziel: Score, grosser Rest, 9 Darts in drei Gruppen mit Werfer, Info. */
     var punkte = '';
@@ -7821,11 +7828,17 @@
       punkte += '<span class="kw-gruppe-name">' + esc(pname(gr.pid)) + '</span></span>';
     });
     var dartNr = st.dartsVersuch + 1;
+    /* Nach dem Versuch pulsieren Score und Rest kurz gruen (Check) oder rot
+       (verfehlt), solange noch kein Dart des neuen Versuchs steht. */
+    var puls = delta && st.dartsVersuch === 0 && !g.done ? (delta.wert > 0 ? ' erfolg' : ' fehl') : '';
+    /* Ein Neuzeichnen im Fenster (Ziffer getippt, Blitz-Timer) baut die Zahl
+       neu; die negative Verzoegerung setzt die Animation an der alten Stelle fort. */
+    var pulsStil = puls ? ' style="animation-delay:-' + (jetzt - delta.at) + 'ms"' : '';
     $('kw-ziel').innerHTML =
       (banner ? '<span class="kw-banner">🏆 Neuer Rekord · ' + banner.zahl + '</span>' : '') +
-      '<div class="kw-score"><span class="kt">Score</span><span class="kw-score-zahl' + (banner ? ' gold' : '') + '">' + st.zahl + '</span>' +
+      '<div class="kw-score"><span class="kt">Score</span><span class="kw-score-zahl' + (banner ? ' gold' : puls) + '"' + (banner ? '' : pulsStil) + '>' + st.zahl + '</span>' +
         (delta ? '<span class="kw-delta ' + (delta.wert > 0 ? 'plus' : 'minus') + '">' + (delta.wert > 0 ? '+10' : '−1') + '</span>' : '') + '</div>' +
-      '<span class="kw-rest">' + st.rest + '</span>' +
+      '<span class="kw-rest' + puls + '"' + pulsStil + '>' + st.rest + '</span>' +
       '<div class="kw-darts">' + punkte + '</div>' +
       '<span class="kw-info">' + (g.done ? 'Spiel beendet'
         : st.dartsVersuch === 0 ? 'Neuer Versuch · 9 Darts · ' + esc(pname(st.werfer)) + ' beginnt'
@@ -7888,10 +7901,9 @@
 
     /* Verlauf: die letzten Versuche als Chips. */
     var chips = st.verlauf.slice(-8).map(function (v) {
-      return '<span class="kw-chip ' + (v.check ? 'ok' : 'nein') + '">' + (v.check ? '✓' : '✗') + ' ' + v.zahl + '</span>';
+      return '<span class="kw-chip ' + (v.check ? 'ok' : 'nein') + '">' + v.zahl + '</span>';
     }).join('');
-    $('kw-verlauf').innerHTML = '<span class="kt">Verlauf</span>' + (chips || '<span class="kw-chip leer">noch kein Versuch</span>') +
-      (st.versuche ? '<span class="kw-chip summe">' + st.checks + ' von ' + st.versuche + '</span>' : '');
+    $('kw-verlauf').innerHTML = '<span class="kt">Verlauf</span>' + (chips || '<span class="kw-chip leer">noch kein Versuch</span>');
 
     /* Rechts: Eingabe. Punkte (Tastenfeld) oder Einzel-Darts (Zahlenfeld). */
     $('kw-swap').classList.toggle('an', modus === 'darts');

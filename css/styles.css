@@ -5950,12 +5950,29 @@ body.fix-spiel #screen-kaiwen.active { flex: 1 1 auto; height: auto; min-height:
 
 /* Kopfzeile: Titel, Untertitel, Rekord. */
 #screen-kaiwen .kw-kopf { flex: none; display: flex; align-items: stretch; gap: clamp(8px, 1.2vw, 18px); }
-#screen-kaiwen .kw-kopf .xk-btn { width: clamp(40px, 7vh, 74px); height: auto; aspect-ratio: 1.2; }
+/* Die Knoepfe im Kopf (Fernsteuerung: Menue und Zurueck zur Eingabe) haben
+   keine Grundregel aus dem Spielbild, darum hier vollstaendig: sonst zeigt
+   Safari einen leeren Systemknopf ohne Bild. */
+#screen-kaiwen .kw-kopf .xk-btn {
+  flex: none; width: clamp(40px, 7vh, 74px); height: auto; aspect-ratio: 1.2; min-width: 44px; padding: 0;
+  display: flex; align-items: center; justify-content: center; border-radius: clamp(10px, 1.6vh, 16px);
+  background: #241d1f; border: 1px solid #2b2224; color: #c9c0c0; cursor: pointer;
+}
+#screen-kaiwen .kw-kopf .xk-btn svg { display: block; width: clamp(20px, 4vh, 42px); height: clamp(20px, 4vh, 42px); flex: none; }
+#screen-kaiwen .kw-kopf .xk-btn:active { background: #2a2224; }
 #screen-kaiwen .kw-info { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
 #screen-kaiwen .kw-h { font-family: var(--font-display); font-size: clamp(15px, 3.4vh, 36px); letter-spacing: 0.05em; text-transform: uppercase; line-height: 1.15; }
 #screen-kaiwen .kw-sub { font-family: var(--font-cond); font-weight: 700; font-size: clamp(11px, 2vh, 22px); letter-spacing: 0.04em; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#screen-kaiwen .kw-rekord { flex: none; display: flex; align-items: center; gap: 8px; padding: 0 clamp(10px, 1.2vw, 16px); border-radius: 12px; background: #141011; }
-#screen-kaiwen .kw-pokal { font-size: clamp(14px, 2.6vh, 28px); }
+/* Oben rechts: PB (grau) und Rekord (gold, Pokal vor der Zahl) in einem Kasten. */
+#screen-kaiwen .kw-rekord { flex: 0 1 auto; min-width: 0; display: flex; align-items: center; gap: clamp(10px, 1.4vw, 22px); padding: 0 clamp(10px, 1.2vw, 16px); border-radius: 12px; background: #141011; }
+#screen-kaiwen .kw-rek-text { min-width: 0; max-width: 100%; }
+#screen-kaiwen .kw-rek-text .kt { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#screen-kaiwen .kw-info { min-width: 30%; }
+@media (max-width: 600px) { #screen-kaiwen .kw-rek-namen { display: none; } }
+#screen-kaiwen .kw-rek-zeile { display: flex; align-items: center; gap: 5px; }
+#screen-kaiwen .kw-pokal { font-size: clamp(12px, 2.2vh, 24px); line-height: 1; }
+#screen-kaiwen .kw-pb .kw-rek-zahl { color: #c9c0c0; }
+#screen-kaiwen .kw-pb.blitz .kw-rek-zahl { animation: kwBlitz 1.4s ease-out both; }
 #screen-kaiwen .kw-pokal.wackelt { animation: kwTrophy 1.6s ease-in-out infinite; }
 #screen-kaiwen .kw-rek-text { display: flex; flex-direction: column; align-items: flex-end; }
 #screen-kaiwen .kw-rek-text .kt { font-size: clamp(10px, 1.6vh, 16px); color: #857a7b; }
@@ -5984,6 +6001,15 @@ body.fix-spiel #screen-kaiwen.active { flex: 1 1 auto; height: auto; min-height:
 #screen-kaiwen .kw-delta.minus { color: #ff8a8a; }
 #screen-kaiwen .kw-rest { font-family: var(--font-cond); font-weight: 700; font-size: clamp(90px, 30vh, 340px); line-height: 0.92; font-variant-numeric: tabular-nums; color: #fff; text-shadow: 0 0 40px rgba(70, 170, 215, 0.45); }
 #screen-kaiwen.fern .kw-rest { font-size: clamp(110px, 36vh, 400px); }
+#screen-kaiwen.fern .kw-rek-text .kt { font-size: clamp(12px, 2vh, 20px); }
+#screen-kaiwen.fern .kw-rek-zahl { font-size: clamp(18px, 3.6vh, 40px); }
+#screen-kaiwen.fern .kw-pokal { font-size: clamp(14px, 2.8vh, 30px); }
+/* Erfolg oder Fehlversuch: Score und Rest pulsieren zweimal gruen bzw. rot
+   und kehren dann zu ihrer eigenen Farbe zurueck (backwards, kein Nachhall). */
+#screen-kaiwen .kw-rest.erfolg, #screen-kaiwen .kw-score-zahl.erfolg { animation: kwErfolg 1.6s ease-in-out backwards; }
+#screen-kaiwen .kw-rest.fehl, #screen-kaiwen .kw-score-zahl.fehl { animation: kwFehl 1.6s ease-in-out backwards; }
+@keyframes kwErfolg { 12%, 58% { color: #6fe0a8; text-shadow: 0 0 60px rgba(111, 224, 168, 0.8); } 35% { color: #b9f0d2; text-shadow: 0 0 24px rgba(111, 224, 168, 0.35); } }
+@keyframes kwFehl { 12%, 58% { color: #ff7b7b; text-shadow: 0 0 60px rgba(255, 110, 110, 0.75); } 35% { color: #ffc2c2; text-shadow: 0 0 24px rgba(255, 110, 110, 0.3); } }
 #screen-kaiwen .kw-darts { display: flex; align-items: flex-start; gap: clamp(6px, 1vw, 16px); }
 #screen-kaiwen .kw-gruppe { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: clamp(4px, 0.6vw, 9px); width: calc(3 * clamp(12px, 2.4vh, 26px) + 2 * clamp(4px, 0.6vw, 9px)); }
 #screen-kaiwen .kw-dot { width: clamp(12px, 2.4vh, 26px); height: clamp(12px, 2.4vh, 26px); border-radius: 50%; background: #241d1f; transition: background 0.25s, box-shadow 0.25s; }
@@ -6024,11 +6050,11 @@ body.fix-spiel #screen-kaiwen.active { flex: 1 1 auto; height: auto; min-height:
 #screen-kaiwen .kw-chip { flex: none; display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 8px; font-family: var(--font-cond); font-weight: 700; font-size: clamp(11px, 1.8vh, 19px); white-space: nowrap; }
 #screen-kaiwen .kw-chip.ok { background: rgba(111, 224, 168, 0.12); color: #6fe0a8; }
 #screen-kaiwen .kw-chip.nein { background: rgba(255, 90, 90, 0.10); color: #ff8a8a; }
-#screen-kaiwen .kw-chip.leer, #screen-kaiwen .kw-chip.summe { background: #141011; color: #9a8f90; }
+#screen-kaiwen .kw-chip.leer { background: #141011; color: #9a8f90; }
 
 /* Eingabe rechts. */
 #screen-kaiwen .kw-pad-kopf { flex: none; height: clamp(40px, 7vh, 74px); display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(5px, 0.9vh, 10px); }
-#screen-kaiwen .kw-pad-kopf .xk-btn { width: auto; height: 100%; border-radius: clamp(10px, 1.6vh, 16px); background: #241d1f; color: #9a8f90; }
+#screen-kaiwen .kw-pad-kopf .xk-btn { width: auto; height: 100%; min-width: 0; padding: 0; appearance: none; -webkit-appearance: none; display: flex; align-items: center; justify-content: center; border: 1px solid #2b2224; border-radius: clamp(10px, 1.6vh, 16px); background: #241d1f; color: #9a8f90; cursor: pointer; }
 #screen-kaiwen .kw-pad-kopf .xk-btn.an { color: #fff; box-shadow: 0 0 24px rgba(70, 170, 215, 0.35); }
 #screen-kaiwen .kw-pad-kopf svg { width: clamp(20px, 4vh, 42px); height: clamp(20px, 4vh, 42px); }
 #screen-kaiwen .kw-pad { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: clamp(5px, 0.9vh, 10px); margin: 0; }
@@ -6041,7 +6067,7 @@ body.fix-spiel #screen-kaiwen.active { flex: 1 1 auto; height: auto; min-height:
 #screen-kaiwen .kw-pad .kw-keys button { height: auto; min-height: 0; border-radius: clamp(10px, 1.6vh, 16px); font-family: var(--font-cond); font-weight: 700; font-size: clamp(26px, 6.4vh, 68px); letter-spacing: 0.04em; padding: 0; }
 #screen-kaiwen .kw-pad .kw-keys button.fn svg { width: clamp(26px, 5.2vh, 56px); height: clamp(26px, 5.2vh, 56px); }
 #screen-kaiwen .kw-pad .kw-keys button.ok { font-size: clamp(20px, 4.4vh, 46px); }
-#screen-kaiwen #kw-pad-darts .num-grid { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(7, minmax(0, 1fr)); gap: clamp(5px, 0.9vh, 10px); }
+#screen-kaiwen #kw-pad-darts .num-grid { flex: 1 1 auto; min-height: 0; max-height: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(7, minmax(0, 1fr)); gap: clamp(5px, 0.9vh, 10px); }
 #screen-kaiwen #kw-pad-darts .num-grid button { height: auto; min-height: 0; font-family: var(--font-cond); font-weight: 700; font-size: clamp(20px, 5vh, 54px); border-radius: clamp(10px, 1.6vh, 16px); padding: 0; }
 #screen-kaiwen #kw-pad-darts .num-grid button.mult, #screen-kaiwen #kw-pad-darts .num-grid button.bull { font-size: clamp(15px, 3vh, 32px); }
 #screen-kaiwen #kw-pad-darts .num-grid button.end-visit { grid-column: span 2; }
@@ -6096,7 +6122,7 @@ body.fix-spiel #screen-kaiwen.active { flex: 1 1 auto; height: auto; min-height:
 #screen-kaiwen.fern .kw-spieler .fk { font-size: clamp(18px, 4.4vh, 50px); }
 #screen-kaiwen.fern .kw-verlauf { grid-column: 1; grid-row: 3; align-self: center; flex-wrap: wrap; overflow: visible; }
 #screen-kaiwen.fern .kw-ff-unten { grid-column: 2; grid-row: 3; display: flex; justify-content: center; }
-#screen-kaiwen.fern .kw-ff-unten .key-mitte { width: min(100%, 420px); }
+#screen-kaiwen.fern .kw-ff-unten .key-mitte { width: 100%; }
 #screen-kaiwen.fern .kw-rest { font-size: clamp(90px, 30vh, 340px); }
 #screen-kaiwen.fern .kw-kopf .kw-menu { display: flex; }
 
@@ -6189,7 +6215,8 @@ body.fix-spiel #screen-hunter.active { flex: 1 1 auto; height: auto; min-height:
 
 #screen-hunter .hu-rechts { position: relative; z-index: 1; min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: clamp(5px, 1vh, 12px); }
 #screen-hunter .hu-kopf { flex: none; display: flex; gap: clamp(8px, 1vw, 14px); align-items: stretch; }
-#screen-hunter .hu-kopf .rtw-menu { flex: none; width: clamp(44px, 7vh, 74px); border-radius: clamp(10px, 1.6vh, 16px); background: #141011; color: var(--muted); }
+#screen-hunter .hu-kopf .rtw-menu { flex: none; width: clamp(44px, 7vh, 74px); min-height: 44px; padding: 0; appearance: none; -webkit-appearance: none; display: flex; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: clamp(10px, 1.6vh, 16px); background: #141011; color: var(--muted); cursor: pointer; }
+#screen-hunter .hu-kopf .rtw-menu svg { display: block; width: clamp(20px, 4vh, 42px); height: clamp(20px, 4vh, 42px); }
 #screen-hunter .hu-kopf .rtw-info { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 #screen-hunter .hu-kopf .rtw-h { font-family: var(--font-display); font-size: clamp(15px, 3.4vh, 36px); letter-spacing: 0.05em; text-transform: uppercase; line-height: 1; }
 #screen-hunter .hu-kopf .rtw-sub { color: var(--muted); font-family: var(--font-cond); font-weight: 600; font-size: clamp(11px, 2vh, 22px); letter-spacing: 0.04em; line-height: 1.2; }
