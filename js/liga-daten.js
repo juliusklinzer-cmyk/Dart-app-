@@ -68,19 +68,42 @@
   var LIGA_TEAMS = ['Blink 180', 'TSV Dachau 1865 4', 'Dart Artists Germering II',
     'Voodoo Darters', 'd`Haberer 2', 'DCO', 'Treff ma nix', 'TSV Oberpframmern',
     'FT Gern Darts II'];
-  /* Vorbelegung der Tabelle, solange noch niemand auf dem Server gespeichert
-     hat: Stand der Ligaleitung nach dem 1. Spieltag (Oktober 2026). */
-  var LIGA_TABELLE_START = [
-    { team: 'TSV Dachau 1865 4', spiele: 1, g: 1, u: 0, v: 0, legs: '20:15', einzel: '9:7', punkte: 2 },
-    { team: 'Treff ma nix', spiele: 1, g: 1, u: 0, v: 0, legs: '21:17', einzel: '9:7', punkte: 2 },
-    { team: 'd`Haberer 2', spiele: 1, g: 0, u: 1, v: 0, legs: '20:20', einzel: '8:8', punkte: 1 },
-    { team: 'Voodoo Darters', spiele: 1, g: 0, u: 1, v: 0, legs: '20:20', einzel: '8:8', punkte: 1 },
-    { team: 'DCO', spiele: 1, g: 0, u: 0, v: 1, legs: '17:21', einzel: '7:9', punkte: 0 },
-    { team: 'Blink 180', spiele: 1, g: 0, u: 0, v: 1, legs: '15:20', einzel: '7:9', punkte: 0 },
-    { team: 'Dart Artists Germering II', spiele: 0, g: 0, u: 0, v: 0, legs: '0:0', einzel: '0:0', punkte: 0 },
-    { team: 'TSV Oberpframmern', spiele: 0, g: 0, u: 0, v: 0, legs: '0:0', einzel: '0:0', punkte: 0 },
-    { team: 'FT Gern Darts II', spiele: 0, g: 0, u: 0, v: 0, legs: '0:0', einzel: '0:0', punkte: 0 }
-  ];
+  /* Die Ligatabelle wird aus den Ergebnissen aller Spieltage gerechnet
+     (LIGA_SPIELTAGE, Eintraege mit einzel und legs). Sieg 2 Punkte,
+     Unentschieden 1; Reihenfolge nach Punkten, dann Leg-Differenz, dann
+     Einzel-Differenz, dann Name. Liefert { zeilen, spiele, bis }. */
+  function tabelleAus(spieltage, teams) {
+    var je = {};
+    (teams || []).forEach(function (t) { je[t] = { team: t, spiele: 0, g: 0, u: 0, v: 0, lf: 0, la: 0, ef: 0, ea: 0, punkte: 0 }; });
+    var zeile = function (t) { if (!je[t]) je[t] = { team: t, spiele: 0, g: 0, u: 0, v: 0, lf: 0, la: 0, ef: 0, ea: 0, punkte: 0 }; return je[t]; };
+    var paar = function (x) { var m = /^\s*(\d+)\s*:\s*(\d+)/.exec(String(x || '')); return m ? [Number(m[1]), Number(m[2])] : null; };
+    var spiele = 0, bis = '';
+    Object.keys(spieltage || {}).forEach(function (tid) {
+      (spieltage[tid] || []).forEach(function (sp) {
+        if (!sp || !sp.heim || !sp.gast || sp.verschoben) return;
+        var e = paar(sp.einzel), l = paar(sp.legs) || [0, 0];
+        if (!e) return;
+        var h = zeile(sp.heim), g = zeile(sp.gast);
+        h.spiele++; g.spiele++;
+        h.ef += e[0]; h.ea += e[1]; g.ef += e[1]; g.ea += e[0];
+        h.lf += l[0]; h.la += l[1]; g.lf += l[1]; g.la += l[0];
+        if (e[0] > e[1]) { h.g++; g.v++; h.punkte += 2; }
+        else if (e[0] < e[1]) { g.g++; h.v++; g.punkte += 2; }
+        else { h.u++; g.u++; h.punkte++; g.punkte++; }
+        spiele++;
+        if (sp.tag && sp.tag > bis) bis = sp.tag;
+      });
+    });
+    var zeilen = Object.keys(je).map(function (t) { return je[t]; }).sort(function (a, b) {
+      /* Bei gleichen Punkten stehen Teams mit Spielen vor Teams ohne (wie
+         bei der Ligaleitung), dann Leg- und Einzel-Differenz, dann Name. */
+      return b.punkte - a.punkte || (b.spiele > 0) - (a.spiele > 0) || (b.lf - b.la) - (a.lf - a.la) || (b.ef - b.ea) - (a.ef - a.ea) ||
+        a.team.toLowerCase().localeCompare(b.team.toLowerCase(), 'de');
+    }).map(function (z) {
+      return { team: z.team, spiele: z.spiele, g: z.g, u: z.u, v: z.v, legs: z.lf + ':' + z.la, einzel: z.ef + ':' + z.ea, punkte: z.punkte };
+    });
+    return { zeilen: zeilen, spiele: spiele, bis: bis };
+  }
 
-  window.LIGA_DATEN = { liga: LIGA, spieltage: LIGA_SPIELTAGE, teams: LIGA_TEAMS, tabelleStart: LIGA_TABELLE_START };
+  window.LIGA_DATEN = { liga: LIGA, spieltage: LIGA_SPIELTAGE, teams: LIGA_TEAMS, tabelleAus: tabelleAus };
 })();

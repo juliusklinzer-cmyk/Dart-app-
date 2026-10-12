@@ -3112,7 +3112,7 @@ check('Heimspiel: das verlorene Einzel des Nachtrags zaehlt den Gegnern (15:1)',
 check('Auswaertsspiel: ebenso (15:1)', wechselProbe.eA.wirS === 15 && wechselProbe.eA.sieS === 1, JSON.stringify(wechselProbe.eA));
 check('der Nachtrag steht danach in der Aufstellung und in der richtigen Bogen-Liste', wechselProbe.wirH && wechselProbe.wirA);
 
-group('Liga-Tabelle: eigener Reiter, von Hand gepflegt');
+group('Liga-Tabelle: aus allen Spieltag-Ergebnissen berechnet');
 await page.locator('#liga-tabs button[data-tab="tabelle"]').click();
 check('der Tabellen-Reiter oeffnet sich',
   (await visible('#liga-tabelle')) && !(await visible('#liga-plan')));
@@ -3123,12 +3123,18 @@ check('Blink 180 ist hervorgehoben', await page.evaluate(() => {
   const tr = document.querySelector('#lt-tabelle tr.leader');
   return !!tr && tr.textContent.includes('Blink 180');
 }));
-check('jede Zeile laesst sich Feld fuer Feld ausfuellen',
-  (await page.locator('#lt-tabelle td[contenteditable]').count()) === 72);
+check('nichts ist mehr von Hand zu tippen', (await page.locator('#lt-tabelle td[contenteditable]').count()) === 0);
+/* 1. Spieltag: Dachau 9:7 gegen uns (Legs 20:15), Treff ma nix 9:7 (21:17), Haberer
+   und Voodoo 8:8. Dachau vor Treff ma nix wegen der Leg-Differenz. */
+const ltZeilen = await page.evaluate(() => [...document.querySelectorAll('#lt-tabelle tbody tr')].map((tr) => [...tr.querySelectorAll('td')].map((td) => td.textContent.trim()).join('|')));
+check('Dachau fuehrt mit 2 Punkten und Legs 20:15, Treff ma nix ist Zweiter',
+  ltZeilen[0] === '1|TSV Dachau 1865 4|1|1|0|0|20:15|9:7|2' && ltZeilen[1].startsWith('2|Treff ma nix|1|1|0|0|21:17|9:7|2'), ltZeilen.slice(0, 2).join(' / '));
+check('die Unentschieden stehen mit je einem Punkt dahinter, Blink 180 mit 0 Punkten und 15:20 Legs',
+  ltZeilen[2].includes('|1|0|1|0|20:20|8:8|1') && ltZeilen[3].includes('|1|0|1|0|20:20|8:8|1') &&
+  ltZeilen.some((z) => z.includes('Blink 180|1|0|0|1|15:20|7:9|0')), ltZeilen.join(' / '));
+check('der Stand nennt die Zahl der gewerteten Spiele', (await text('#lt-stand')).includes('Aus 3 Spielen berechnet'), await text('#lt-stand'));
 check('mit den Spalten der Ligaleitung (Sp, g, u, v, Legs, Spiele, Pkt)', await page.evaluate(() =>
   [...document.querySelectorAll('#lt-tabelle thead th')].map((th) => th.textContent).join(',') === '#,Mannschaft,Sp,g,u,v,Legs,Spiele,Pkt'));
-check('ohne Konto gibt es keinen Speichern-Knopf', await page.locator('#lt-speichern').isHidden());
-check('dafuer den Hinweis, sich anzumelden', (await text('#lt-stand')).includes('anmelden'));
 await page.locator('#liga-tabs button[data-tab="plan"]').click();
 
 group('Buergerlicher Name im Profil');

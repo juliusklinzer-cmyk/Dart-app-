@@ -3552,7 +3552,7 @@
     setupTakt(S.screen === 'setup');
     // Zusagen frisch holen, wenn man die Liga-Seite betritt – nicht bei
     // jedem Zeichnen, das wäre eine Anfrage je Tastendruck.
-    if (S.screen === 'liga' && letzterScreen !== 'liga') { ligaZusagenLaden(); ligaTabelleLaden(); kasseLaden(); }
+    if (S.screen === 'liga' && letzterScreen !== 'liga') { ligaZusagenLaden(); kasseLaden(); }
     letzterScreen = S.screen;
     if (S.screen === 'tournament') renderTournament();
     if (S.screen === 'boards') renderBoards();
@@ -5670,21 +5670,12 @@
     for (var i = 0; i < S.profiles.length; i++) if (S.profiles[i].id === a.id) return S.profiles[i];
     return { id: a.id, name: a.name, avatar: a.avatar || null, hue: a.hue };
   }
-  var ligaTabelle = null;   // { zeilen: [{team, spiele, punkte, legs}] } vom Server
   var ligaTabelleKennung = null;
-  var ligaTabelleMeldung = '';
 
   var LIGA_TEAMS = window.LIGA_DATEN.teams;
-  var LIGA_TABELLE_START = window.LIGA_DATEN.tabelleStart;
-
-  function ligaTabelleLaden() {
-    if (!window.DartSync || !window.DartSync.liga || !window.DartSync.liga.tabelle) return;
-    window.DartSync.liga.tabelle().then(function (t) {
-      if (!t) return;
-      ligaTabelle = t;
-      if (S.screen === 'liga') render();
-    });
-  }
+  /* Die Tabelle wird aus den Ergebnissen aller Spieltage gerechnet
+     (js/liga-daten.js, LIGA_SPIELTAGE) - nicht mehr von Hand gepflegt. */
+  function ligaTabelleBerechnet() { return window.LIGA_DATEN.tabelleAus(LIGA_SPIELTAGE, LIGA_TEAMS); }
 
   /* DiensDarts: das Dienstags-Training. Der naechste Dienstag ist der
      Termin - am Dienstag selbst gilt noch der heutige Abend. */
@@ -6015,25 +6006,13 @@
   }
 
   function renderLigaTabelle() {
-    var online = !!(window.DartSync && window.DartSync.liga && window.DartKonto && window.DartKonto.nutzer());
-    $('lt-speichern').classList.toggle('hidden', !online);
-    $('lt-stand').textContent = online
-      ? ligaTabelleMeldung
-      : 'Zum Speichern für alle bitte anmelden – hier lässt sich nur probeweise tippen.';
-
-    /* Waehrend jemand in einer Zelle tippt, wird nichts neu gebaut - auch
-       dann nicht, wenn gerade ein anderer Serverstand hereingekommen ist.
-       Sonst verschwaende die Eingabe unter den Fingern. */
+    var tab = ligaTabelleBerechnet();
+    $('lt-stand').textContent = tab.spiele
+      ? 'Aus ' + plural(tab.spiele, 'Spiel', 'Spielen') + ' berechnet' + (tab.bis ? ', Stand ' + datumDE(tab.bis) : '') + '.'
+      : 'Noch kein Spiel gewertet.';
     /* Rechts neben der Tabelle alle Spiele je Spieltag (Ergebnisse der Ligaleitung). */
     $('lt-runden').innerHTML = ligaRundenAlleHtml();
-    var fokus = document.activeElement;
-    if (fokus && fokus.closest && fokus.closest('#lt-tabelle')) return;
-
-    /* Nicht bei jedem Zeichnen neu bauen - Neuaufbau nur bei anderem
-       Serverstand (sonst blieben Handkorrekturen nicht stehen). */
-    var zeilen = (ligaTabelle && Array.isArray(ligaTabelle.zeilen) && ligaTabelle.zeilen.length)
-      ? ligaTabelle.zeilen
-      : LIGA_TABELLE_START.map(function (z) { return Object.assign({}, z); });
+    var zeilen = tab.zeilen;
     /* Rechts: unser Platz, Punkte und Legs, Abstand zur Spitze. */
     var platz = -1;
     zeilen.forEach(function (z, i) { if (platz < 0 && z.team === LIGA.team) platz = i; });
@@ -6051,7 +6030,7 @@
 
     /* Spalten wie die Tabelle der Ligaleitung: Spiele, gewonnen /
        unentschieden / verloren, Legs, Einzel ("Spiele" 9:7), Punkte. */
-    var zelle = function (v) { return '<td contenteditable>' + esc(v === undefined || v === null ? '' : String(v)) + '</td>'; };
+    var zelle = function (v) { return '<td>' + esc(v === undefined || v === null ? '' : String(v)) + '</td>'; };
     $('lt-tabelle').innerHTML =
       '<thead><tr><th>#</th><th class="left">Mannschaft</th><th>Sp</th><th>g</th><th>u</th><th>v</th>' +
         '<th>Legs</th><th title="Einzel">Spiele</th><th>Pkt</th></tr></thead>' +
@@ -6059,7 +6038,7 @@
         var wir = z.team === LIGA.team;
         return '<tr' + (wir ? ' class="leader"' : '') + '>' +
           '<td class="rank">' + (i + 1) + '</td>' +
-          '<td class="left name" contenteditable>' + esc(z.team || '') + '</td>' +
+          '<td class="left name">' + esc(z.team || '') + '</td>' +
           zelle(z.spiele) + zelle(z.g) + zelle(z.u) + zelle(z.v) + zelle(z.legs) + zelle(z.einzel) + zelle(z.punkte) +
           '</tr>';
       }).join('') + '</tbody>';
@@ -11679,27 +11658,6 @@
           ligaZusagen = z;
           render();
         }).catch(function () { /* naechstes Betreten holt den Stand */ });
-        break;
-      }
-      case 'liga-tabelle-speichern': {
-        if (!(window.DartSync && window.DartSync.liga && window.DartSync.liga.tabelleSpeichern)) break;
-        var ltZeilen = [];
-        document.querySelectorAll('#lt-tabelle tbody tr').forEach(function (tr) {
-          var z = tr.querySelectorAll('td');
-          var w = function (i) { return z[i].textContent.trim().slice(0, 12); };
-          ltZeilen.push({
-            team: z[1].textContent.trim().slice(0, 60),
-            spiele: w(2), g: w(3), u: w(4), v: w(5), legs: w(6), einzel: w(7), punkte: w(8)
-          });
-        });
-        window.DartSync.liga.tabelleSpeichern({ zeilen: ltZeilen }).then(function () {
-          ligaTabelle = { zeilen: ltZeilen };
-          ligaTabelleMeldung = 'Gespeichert – alle sehen jetzt diesen Stand.';
-          $('lt-stand').textContent = ligaTabelleMeldung;
-        }).catch(function () {
-          ligaTabelleMeldung = 'Speichern hat nicht geklappt – bitte später nochmal.';
-          $('lt-stand').textContent = ligaTabelleMeldung;
-        });
         break;
       }
       case 'liga-bericht':

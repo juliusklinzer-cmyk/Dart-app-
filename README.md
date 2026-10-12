@@ -218,8 +218,7 @@ rechts die Liste, am Handy untereinander): **Training** zeigt links DiensDarts
 (nächster Dienstag, Bar Sehnsucht mit Maps und Kalender, Abstimmung „Bin dabei /
 Unsicher / Kann nicht“ und wer kommt) und rechts das Übungs-Ligaspiel mit Vorwahl
 „Zweites eigenes Team“ oder „Gegen Bots“ samt Bot-Stärke. **Tabelle** zeigt links die
-Ligatabelle, rechts groß unseren Platz mit Punkten, Legs und Abstand zur Spitze sowie
-„Tabelle speichern“. **Statistik** ist die Liga-Auswertung (dieselben Kategorien und
+Ligatabelle, rechts groß unseren Platz mit Punkten, Legs und Abstand zur Spitze. **Statistik** ist die Liga-Auswertung (dieselben Kategorien und
 das Spieltag-Log wie früher der Liga-Knopf der Rangliste, nur über Ligaspiele
 gerechnet) mit der Team-Auswahl als Chips oben und rechts den **Highlights der
 Saison** (180er, High-Finishes ab 100, Shortlegs bis 21 Darts, je mit Spieltag und
@@ -227,10 +226,12 @@ Einzel) – in der Rangliste gibt es den Liga-Knopf nicht mehr. **Kasse** zeigt 
 den Kassenstand (Anfang, Einnahmen, Ausgaben) und „Buchung erfassen“, rechts das
 Kassenbuch und die Gründungsbeiträge als Chips. **Regeln** stehen in zwei Spalten
 (FAQ für Neue, Udos Regelecke) als aufklappbare Karten.
-Der Reiter **Tabelle** ist die von Hand gepflegte Ligatabelle: alle neun Teams
-vorbefüllt (Stand der Ligaleitung nach dem 1. Spieltag, `LIGA_TABELLE_START`), jede Zelle (Team, Spiele, Punkte, Legs) antippbar; **„Tabelle
-speichern"** legt den Stand auf dem Server ab, sodass alle Angemeldeten
-dieselbe Tabelle sehen (`PUT /api/liga/tabelle`).
+Der Reiter **Tabelle** rechnet die Ligatabelle aus den Ergebnissen aller Spieltage
+(`LIGA_SPIELTAGE` in `js/liga-daten.js`, `LIGA_DATEN.tabelleAus`): Sieg 2 Punkte,
+Unentschieden 1, Reihenfolge nach Punkten, Leg-Differenz, Einzel-Differenz, Name.
+Alle neun Teams stehen drin, auch ohne Spiel. Die Webseite rechnet dieselbe Tabelle.
+Nichts wird mehr von Hand gepflegt; der alte Server-Stand (`PUT /api/liga/tabelle`)
+bleibt ungenutzt.
 
 **Alle Spiele des Spieltags:** Im Reiter **Tabelle** stehen rechts neben der
 Ligatabelle (Karte „Alle Spiele“) je Spieltag die Paarungen aller Teams mit Ergebnis (Einzel, dahinter Legs),

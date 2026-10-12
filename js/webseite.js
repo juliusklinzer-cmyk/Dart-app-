@@ -166,14 +166,10 @@
   }
 
   /* ---------- Tabelle ---------- */
-  function tabelleZeichnen(tabelle, stand) {
-    var zeilen = tabelle && Array.isArray(tabelle.zeilen) && tabelle.zeilen.length ? tabelle.zeilen : DATEN.tabelleStart;
-    /* Nach Punkten, dann Leg-Differenz, dann Einzel-Differenz; bei Gleichstand
-       bleibt die Reihenfolge der Ligaleitung (stabile Sortierung). */
-    var diff = function (t) { var m = /^\s*(\d+)\s*:\s*(\d+)/.exec(String(t || '')); return m ? Number(m[1]) - Number(m[2]) : 0; };
-    zeilen = zeilen.map(function (z, i) { return { z: z, i: i }; }).sort(function (a, b) {
-      return (Number(b.z.punkte) || 0) - (Number(a.z.punkte) || 0) || diff(b.z.legs) - diff(a.z.legs) || diff(b.z.einzel) - diff(a.z.einzel) || a.i - b.i;
-    }).map(function (x) { return x.z; });
+  /* Aus den Ergebnissen aller Spieltage gerechnet (js/liga-daten.js), wie in der App. */
+  function tabelleZeichnen() {
+    var tab = DATEN.tabelleAus(DATEN.spieltage, DATEN.teams);
+    var zeilen = tab.zeilen;
     $('tabelle-zeilen').innerHTML = zeilen.map(function (z, i) {
       var wir = z.team === TEAM;
       return '<div class="tz' + (wir ? ' wir' : '') + '"><span class="rang">' + (i + 1) + '</span>' +
@@ -182,8 +178,8 @@
         '<span class="pkt">' + esc(z.punkte == null ? '' : z.punkte) + '</span>' +
         '<span class="rechts">' + esc(String(z.legs || '0:0')).replace(':', ' : ') + '</span></div>';
     }).join('');
-    var d = stand ? datumTeile(String(stand).slice(0, 10)) : null;
-    $('tabelle-stand').textContent = d ? 'Stand ' + d.kurz + d.jahr + ' · Tabelle der Ligaleitung' : 'Tabelle der Ligaleitung';
+    var d = tab.bis ? datumTeile(tab.bis) : null;
+    $('tabelle-stand').textContent = (d ? 'Stand ' + d.kurz + d.jahr + ' · ' : '') + 'aus ' + tab.spiele + ' Spielen berechnet';
   }
 
   /* ---------- Live-Stand ---------- */
@@ -335,7 +331,7 @@
   function ligaHolen() {
     if (document.hidden) return;
     holeJson('/api/oeffentlich/liga').then(function (d) {
-      tabelleZeichnen(d.tabelle, d.stand);
+      tabelleZeichnen();
       var neu = d.live ? d.live.zuschauer : null;
       if (neu !== liveSchluessel) {
         liveSchluessel = neu; letzterStand = null;
@@ -503,7 +499,7 @@
   heldZeichnen(false);
   termineZeichnen(false);
   ergebnisseZeichnen();
-  tabelleZeichnen(null, null);
+  tabelleZeichnen();
   einladungLesen();
   kontoPruefen();
   ligaHolen();
