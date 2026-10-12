@@ -22256,6 +22256,33 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     else if (ev.key === 'Backspace') { kaiwenKey('del'); ev.preventDefault(); }
   });
 
+  /* Hunter: Enter ist ein Treffer (die grosse Taste, also der zaehlende
+     Ring), die Leertaste ein Miss, Backspace oder Z nimmt den Dart zurueck.
+     Im Capture-Lauf, damit kein fokussierter Knopf die Taste doppelt
+     ausloest; keyup faengt den Klick ab, den die Leertaste sonst nachreicht. */
+  function hunterTaste(ev) {
+    if (S.screen !== 'hunter' || UI.overlay || UI.menu) return null;
+    if (ev.metaKey || ev.ctrlKey || ev.altKey) return null;
+    var at = document.activeElement;
+    if (at && (at.tagName === 'INPUT' || at.tagName === 'TEXTAREA' || at.isContentEditable)) return null;
+    if (ev.key === 'Enter') return 'treffer';
+    if (ev.key === ' ') return 'miss';
+    if (ev.key === 'Backspace' || ev.key.toLowerCase() === 'z') return 'zurueck';
+    return null;
+  }
+  document.addEventListener('keydown', function (ev) {
+    var was = hunterTaste(ev);
+    if (!was) return;
+    ev.preventDefault(); ev.stopImmediatePropagation();
+    if (ev.repeat) return;
+    if (was === 'zurueck') { handleAction('undo-game', null); return; }
+    var hg = S.game;
+    if (!hg || hg.kind !== 'hunter' || hg.done) return;
+    var taste = document.querySelector(was === 'treffer' ? '#hu-pad .hu-key.gross' : '#hu-pad .hu-key.miss');
+    if (taste) spielDart(Number(taste.getAttribute('data-mult')), Number(taste.getAttribute('data-num')));
+  }, true);
+  document.addEventListener('keyup', function (ev) { if (hunterTaste(ev)) { ev.preventDefault(); ev.stopImmediatePropagation(); } }, true);
+
   /* Shift gedrückt halten zeigt die Wurfliste des Matches – je Spieler auf
      seiner Seite, alle Legs mit Trennern. Loslassen führt zurück in die
      Spielansicht; verliert das Fenster den Fokus (Alt-Tab), klappt die

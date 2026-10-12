@@ -441,7 +441,9 @@ Darts). Rechts Zurück und die drei Darts der Aufnahme, darunter die Tasten für
 aktuelle Ziel: Boost mit Single groß, Doppel (+2) und Triple (+3), jeweils mit dem
 Feld danach; Normal und Handicap mit einer großen Taste („jeder Ring zählt“ bzw. der
 zählende Ring) und „Miss“. Eine Aufnahme endet nach drei Darts (Fehlwürfe als Miss).
-Undo dartweise, auch über einen Fang hinweg; der Stand übersteht ein
+Tastatur: Enter trifft (die große Taste), die Leertaste ist ein Miss, Backspace
+oder Z nimmt den Dart zurück. Undo dartweise, auch über einen Fang hinweg; der Stand
+übersteht ein
 Neuladen. Die Zusammenfassung nennt Gewinner, Fänge, Darts und Trefferquote je Spieler;
 in der Rangliste stehen Siege, Fänge, Trefferquote (ab 30 Darts), Solo Normal und
 Solo Boost.

@@ -5209,6 +5209,12 @@ group('Hunter: Maeusejagd, Startfelder, Fangen, Varianten, Solo');
   check('der Chip von A zeigt die letzte Aufnahme, der von B ist aktiv und zeigt sein Ziel', (await text('#hu-liste .hu-chip >> nth=0')).includes('20 – T1') && (await page.locator('#hu-liste .hu-chip.aktiv').count()) === 1 && (await text('#hu-liste .hu-chip.aktiv')).includes('3'));
   await huDart(0, 1); await huDart(0, 1); await huDart(0, 1); s = await hst();
   check('dreimal Miss: die Aufnahme ist voll, wieder A, Runde 2', s.werfer === hA && (await page.evaluate(() => window.__dart.game().throws.length)) === 6 && (await text('#hu-box')).includes('2'));
+  await page.keyboard.press('Enter'); s = await hst();
+  check('Tastatur: Enter ist ein Treffer (18 -> 4)', (await huFelder())[0] === 4 && s.inVisit === 1);
+  await page.keyboard.press('Space'); s = await hst();
+  check('Tastatur: Leertaste ist ein Miss, das Feld bleibt', (await huFelder())[0] === 4 && s.inVisit === 2 && (await page.evaluate(() => window.__dart.game().throws.slice(-1)[0].n)) === 0);
+  await page.keyboard.press('Backspace'); s = await hst();
+  check('Tastatur: Backspace nimmt den Dart zurueck', s.inVisit === 1 && (await page.evaluate(() => window.__dart.game().throws.length)) === 7);
   /* Wrap ueber die 5 zurueck auf die 20: der Marker dreht vorwaerts weiter (342 -> 360),
      ein Gegner 19 Felder voraus (also 1 hinter mir) wird dabei nicht gefangen. */
   await huStart(2, [19, 18]);
