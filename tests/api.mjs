@@ -781,6 +781,14 @@ async function main() {
     gleich(r.daten.saldo, 5000, 'der Bestand rechnet mit');
     ok(r.daten.mitglieder.find((m) => m.id === tobi_id).gezahlt === 5000 && r.daten.mitglieder.find((m) => m.id === julius_id).gezahlt === 0,
       'Tobi gilt als bezahlt, Julius als offen');
+    /* Gast-Konten zahlen keinen Beitrag: sie fehlen in der Liste, und ein
+       Beitrag laesst sich fuer sie nicht buchen. */
+    ok(r.daten.mitglieder.every((m) => m.name !== 'Besuch'), 'das Gast-Konto steht nicht bei den Mitgliedsbeitraegen');
+    {
+      const gastEintrag = (await julius.ruf('GET', '/api/users')).daten.nutzer.find((n) => n.name === 'Besuch');
+      r = await julius.ruf('POST', '/api/kasse', { betrag: 5000, text: 'Beitrag Besuch', kategorie: 'Mitgliedsbeiträge', datum: '2026-09-01', mitglied: gastEintrag.id });
+      gleich(r.status, 400, 'ein Mitgliedsbeitrag fuer ein Gast-Konto wird abgewiesen');
+    }
     r = await julius.ruf('POST', '/api/kasse', { betrag: -1250, text: 'Neue Flights', kategorie: 'Ausrüstung/Dartpfeile', datum: '2026-09-02' });
     gleich(r.daten.saldo, 3750, 'eine Ausgabe zieht ab');
     const kasseEintrag = r.daten.eintraege[r.daten.eintraege.length - 1];

@@ -1255,13 +1255,14 @@ export function createApi(db, config) {
     const summe = db.prepare('SELECT COALESCE(SUM(betrag), 0) s FROM kasse k WHERE' + OHNE_TEST).get(st).s;
     /* Gruendungsbeitrag: wer von den aktiven Mitgliedern hat ihn schon
        bezahlt? Summe der Mitgliedsbeitraege je Mitglied. Testkonten
-       zaehlen als Mitglieder nicht -- und sehen tut sie ohnehin nur der Tester. */
+       zaehlen als Mitglieder nicht -- und sehen tut sie ohnehin nur der Tester.
+       Gast-Konten zahlen keinen Beitrag und stehen deshalb nicht in der Liste. */
     const bezahlt = new Map();
     for (const r of db.prepare("SELECT mitglied, SUM(betrag) s, MAX(datum) d FROM kasse WHERE kategorie = 'Mitgliedsbeiträge' AND mitglied IS NOT NULL GROUP BY mitglied").all()) {
       bezahlt.set(r.mitglied, { summe: r.s, datum: r.d });
     }
     const mitglieder = db.prepare(
-      "SELECT id, display_name, avatar, hue FROM users WHERE status = 'aktiv' AND test = 0 ORDER BY display_name COLLATE NOCASE"
+      "SELECT id, display_name, avatar, hue FROM users WHERE status = 'aktiv' AND test = 0 AND gast_konto = 0 ORDER BY display_name COLLATE NOCASE"
     ).all().map((m) => ({
       id: m.id, name: m.display_name, avatar: m.avatar, hue: m.hue,
       gezahlt: (bezahlt.get(m.id) || {}).summe || 0,
@@ -1307,8 +1308,9 @@ export function createApi(db, config) {
     const datum = pruefeDatum(body.datum) || new Date().toISOString().slice(0, 10);
     let mitglied = null;
     if (body.mitglied) {
-      const m = db.prepare("SELECT id FROM users WHERE id = ? AND status = 'aktiv'").get(String(body.mitglied));
+      const m = db.prepare("SELECT id, gast_konto FROM users WHERE id = ? AND status = 'aktiv'").get(String(body.mitglied));
       if (!m) throw new HttpFehler(400, 'Dieses Mitglied gibt es nicht.');
+      if (m.gast_konto && kategorie === 'Mitgliedsbeiträge') throw new HttpFehler(400, 'Gast-Konten zahlen keinen Mitgliedsbeitrag.');
       /* Den Beitrag eines anderen bucht nur der Kassenwart -- den eigenen jeder. */
       if (m.id !== u.id && !u.kassenwart) throw new HttpFehler(403, 'Den Beitrag eines anderen traegt nur der Kassenwart ein.');
       mitglied = m.id;

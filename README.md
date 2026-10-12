@@ -270,7 +270,7 @@ auf dem Server, siehe DEPLOY.md) **verwaltet alles**: jede Buchung ändern (✎)
 löschen, Kassenjahr und Anfangsbestand einstellen, Beiträge für andere buchen. Für
 alle steht der Knopf **„Per PayPal ins Vereinskonto einzahlen“** (der PayPal-Pool
 des Vereins) da. Die Liste **Gründungsbeitrag** zeigt je Mitglied, ob der Beitrag
-(50 €) bezahlt ist; „Ich habe eingezahlt“ bzw. beim Kassenwart „Bezahlt“ bucht ihn
+(50 €) bezahlt ist (Gast-Konten zahlen keinen Beitrag und fehlen in der Liste); „Ich habe eingezahlt“ bzw. beim Kassenwart „Bezahlt“ bucht ihn
 mit Datum als Mitgliedsbeitrag (`/api/kasse`).
 
 ## Ligaspiel (SDM-Spielberichtsbogen)

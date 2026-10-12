@@ -2521,8 +2521,9 @@
     { mode: '501', key: 'winPct', label: 'Siegquote', get: function (s) { return s.winPct; }, fmt: function (v) { return v.toFixed(0) + ' %'; }, min: function (s) { return s.matches >= 3; }, hint: 'Anteil gewonnener Spiele. Zählt ab 3 Spielen.' },
     { mode: '501', key: 'legsWon', label: 'Legs', get: function (s) { return s.legsWon; }, fmt: function (v) { return String(v); }, min: function (s) { return s.legsWon > 0; }, hint: 'Gewonnene Legs insgesamt.' },
     { mode: '501', key: 'tourWins', label: 'Turniersiege', get: function (s) { return s.tourWins; }, fmt: function (v) { return String(v); }, min: function (s) { return s.tourWins > 0; }, hint: 'Gewonnene, abgeschlossene Turniere.' },
-    { mode: 'cricket', key: 'cricketWins', label: 'Siege', get: function (s) { return s.cricketWins; }, fmt: function (v) { return String(v); }, min: function (s) { return s.cricketGames > 0; }, hint: 'Gewonnene Cricket-Spiele.' },
+    /* MPR zuerst - das ist die Cricket-Kennzahl (Julius, 12.10.). */
     { mode: 'cricket', key: 'mpr', label: 'MPR', get: function (s) { return s.mpr; }, fmt: function (v) { return v.toFixed(2); }, min: function (s) { return s.cricketDarts >= 9; }, hint: 'Marks per Round: getroffene Marken je 3 Darts im Cricket.' },
+    { mode: 'cricket', key: 'cricketWins', label: 'Siege', get: function (s) { return s.cricketWins; }, fmt: function (v) { return String(v); }, min: function (s) { return s.cricketGames > 0; }, hint: 'Gewonnene Cricket-Spiele.' },
     { mode: 'rtw', key: 'rtwWins', label: 'Siege', get: function (s) { return s.rtwWins; }, fmt: function (v) { return String(v); }, min: function (s) { return s.rtwGames > 0; }, hint: 'Gewonnene Round-the-World-Trainings.' },
     { mode: 'rtw', key: 'rtwBest', label: 'Bestes Ergebnis', get: function (s) { return s.rtwBest; }, fmt: function (v) { return v + ' Darts'; }, min: function (s) { return s.rtwBest !== null; }, asc: true, hint: 'Wenigste Darts für einen kompletten Durchlauf von der 1 bis Bull.' },
     { mode: 'finisher', key: 'finWins', label: 'Siege', get: function (s) { return s.finWins; }, fmt: function (v) { return String(v); }, min: function (s) { return s.finGames > 0; }, hint: 'Gewonnene Finisher-Spiele.' },
@@ -5888,8 +5889,9 @@
         unten = 'Läuft · ' + ld.fertige + ' von ' + S.matches.length + ' Einzeln';
       } else if (h) {
         var e = ligaErgebnisAus(h);
-        rechts = e.wirP + ' : ' + e.sieP + ' ✓'; rechtsKlasse = 'fertig';
-        unten = (h.liga.abgeschlossen ? '✓ Abgeschlossen' : 'Bericht offen') + ' · ' + esc(t.ort);
+        /* Kein Haken am Ergebnis - der Stand sagt alles (Julius, 12.10.). */
+        rechts = e.wirP + ' : ' + e.sieP; rechtsKlasse = 'fertig';
+        unten = (h.liga.abgeschlossen ? 'Abgeschlossen' : 'Bericht offen') + ' · ' + esc(t.ort);
       } else if (!vorbei && ligaZusagen) {
         var n = zusagen(t).length;
         rechts = n + ' / ' + LIGA.sollSpieler; rechtsKlasse = ton(n);
@@ -5950,7 +5952,7 @@
         '<button class="btn ghost lk-zuschauen" data-action="liga-ticker"><i></i>Live zuschauen</button></div>';
     } else if (h) {
       var e2 = ligaErgebnisAus(h), zu = !!h.liga.abgeschlossen;
-      fuss = '<div class="lk-status ' + (zu ? 'voll' : 'offen') + '">' + (zu ? '✓ Abgeschlossen · ' : 'Bericht offen · ') + esc(LIGA.team) + ' ' + e2.wirP + ':' + e2.sieP + '</div>' +
+      fuss = '<div class="lk-status ' + (zu ? 'voll' : 'offen') + '">' + (zu ? 'Abgeschlossen · ' : 'Bericht offen · ') + esc(LIGA.team) + ' ' + e2.wirP + ':' + e2.sieP + '</div>' +
         '<div class="lk-knoepfe">' +
           '<button class="btn ghost" data-action="open-summary" data-kind="turnier" data-id="' + esc(h.id) + '">Ergebnisse</button>' +
           '<button class="btn ' + (zu ? 'ghost' : 'primary start') + '" data-action="liga-bericht" data-termin="' + esc(t.id) + '">' + (zu ? 'Spielbericht' : 'Bericht abschließen') + '</button>' +

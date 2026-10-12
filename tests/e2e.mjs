@@ -533,6 +533,9 @@ check('Profil zeigt Finishing-Werte', detail.includes('Doppelquote') && detail.i
 check('Profil listet gespielte Spiele', (await page.locator('#profile-detail .log-row').count()) === 3);
 await page.locator('[data-action="profil-panel-zu"]').click();
 check('"Fertig" schliesst die Tafel wieder', !(await visible('#profile-detail .pa-panel')));
+/* Die Marke im Kopf (Logo und Schriftzug) fuehrt von jeder Hauptseite zum Spiel. */
+await page.locator('#profile-kopf .marke').click();
+check('ein Tipp auf die Marke im Kopf fuehrt zum Spiel', await visible('#screen-setup'));
 
 group('Neues Profil anlegen');
 await navTo('players');
@@ -811,6 +814,10 @@ check('Classic-Verlauf zeigt nur Classic-Spiele', (await text('#log-title')).toL
 
 await page.locator('[data-action="board-mode"][data-value="cricket"]').click();
 check('Cricket-Tab aktiv', (await page.locator('[data-action="board"][data-key="mpr"]').count()) === 1);
+check('bei Cricket ist MPR die erste und vorgewaehlte Kennzahl', await page.evaluate(() => {
+  const k = [...document.querySelectorAll('[data-action="board"]')];
+  return k[0] && k[0].getAttribute('data-key') === 'mpr' && window.__dart.ui().board === 'mpr';
+}));
 check('Average-Kategorie nicht bei Cricket', (await page.locator('[data-action="board"][data-key="avg"]').count()) === 0);
 check('MPR-Rangliste gefüllt', (await page.locator('.board-row').count()) > 0);
 check('Cricket-Verlauf getrennt', (await text('#match-log')).includes('Cricket') && !(await text('#match-log')).includes('Round the World'));

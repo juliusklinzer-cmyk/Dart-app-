@@ -4596,7 +4596,7 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
 /* Kopfzeile: Marke links, die Reiter rechts (per JS hierher verschoben).
    Reiter = Text mit Strich darunter, der aktive rot und weiss. */
 .setup-kopf { display: flex; align-items: center; flex-wrap: wrap; gap: 10px clamp(10px, 1.4vw, 22px); }
-.setup-kopf .marke { padding: 0; flex: none; gap: clamp(8px, 1vw, 14px); }
+.setup-kopf .marke { padding: 0; flex: none; gap: clamp(8px, 1vw, 14px); cursor: pointer; border-radius: 14px; }
 .setup-kopf .marke .blink-logo { width: 46px; height: 46px; box-shadow: 0 0 20px var(--schein-stark); border: none; border-radius: 50%; }
 .setup-kopf .marke .wort { font-size: 1.5rem; }
 .setup-kopf #nav { flex: 1 1 100%; margin: 0; padding: 0; gap: clamp(2px, 0.4vw, 6px); display: flex; }
@@ -4607,6 +4607,14 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
 }
 .setup-kopf #nav button.active { background: transparent; border-color: var(--accent); color: #fff; }
 .setup-kopf #nav button, .setup-kopf #nav button.active { box-shadow: none; }
+/* Beim Tipp blitzt der Reiter nicht als helle Flaeche (das waere ein
+   Rechteck ohne Ecken-Rundung), sondern der Schriftzug leuchtet kurz auf
+   und klingt ab. Der Name beginnt mit "tastenblitz", damit app.js die
+   Klasse nach dem Ende wieder abnimmt. */
+@keyframes tastenblitz-schein {
+  from { color: #fff; text-shadow: 0 0 14px rgba(169, 228, 255, 0.95), 0 0 34px rgba(70, 170, 215, 0.75), 0 0 60px rgba(70, 170, 215, 0.45); }
+}
+.setup-kopf #nav button.blitzt { animation: tastenblitz-schein 520ms ease-out; background: transparent; transform: none; }
 /* Kurze Beschriftungen gibt es nur, wo es eng wird (schmal oder flach). */
 #karte-einstellungen .kurz { display: none; }
 /* GAME ON wie im Entwurf: dunkle Flaeche, roter Rand, Anton. */
@@ -4645,10 +4653,13 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
 #screen-setup .modes { display: grid; gap: 6px; }
 #screen-setup .modes button {
   min-height: 48px; padding: 0 14px; text-align: left; border-radius: 12px; background: var(--bg-3); border: 2px solid transparent;
-  color: #c9c0c0; font-family: var(--font-body); font-weight: 600; font-size: 1.05rem; letter-spacing: 0; text-transform: none;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: none; display: block;
+  color: #c9c0c0; font-family: var(--font-body); font-weight: 500; font-size: 1.05rem; letter-spacing: 0; text-transform: none;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: none;
+  /* Name senkrecht mittig, links buendig (als block stand er in Safari oben
+     links); die gewaehlte Spielart ist fett. */
+  display: flex; flex-direction: row; align-items: center; justify-content: flex-start;
 }
-#screen-setup .modes button.active { border-color: var(--aktiv-linie); color: var(--text); background: var(--bg-3); box-shadow: none; }
+#screen-setup .modes button.active { border-color: var(--aktiv-linie); color: var(--text); background: var(--bg-3); box-shadow: none; font-weight: 700; }
 
 /* Einstellungen: Name der Spielart, ein Satz dazu, darunter die Zeilen -
    Beschriftung ueber den Optionen. Die Abschnitte (.einst) sind nur
@@ -5146,10 +5157,13 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
 /* Verlauf und Rekorde */
 .boards-seite { display: flex; flex-direction: column; gap: 12px; }
 #board-chart h2 { margin-bottom: 8px; font-family: var(--font-cond); font-weight: 700; font-size: 0.9rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
-.boards-host .rekorde-titel { display: flex; align-items: center; gap: 0.5em; color: #ffd36b; overflow: visible; animation: pokal-glanz 3.2s ease-in-out infinite; }
+/* Der Pokal-Titel leuchtet ueber den Kartenkopf hinaus (die Ueberschrift-
+   Regel darueber schneidet sonst mit overflow: hidden ein Rechteck aus) und
+   pulsiert zwischen voll und mittel - nie ganz weg (Julius, 12.10.). */
+.boards-host .karte-kopf h2.rekorde-titel { display: flex; align-items: center; gap: 0.5em; color: #ffd36b; overflow: visible; text-overflow: clip; animation: pokal-glanz 3.2s ease-in-out infinite; }
 .boards-host .rekorde-titel .pokal { display: inline-block; font-size: 1.5em; letter-spacing: 0; line-height: 1; animation: pokal-kippen 3.2s ease-in-out infinite; }
-@keyframes pokal-glanz { 0%, 100% { text-shadow: 0 0 6px rgba(255, 200, 80, 0.25); } 50% { text-shadow: 0 0 10px rgba(255, 200, 80, 0.55), 0 0 22px rgba(255, 170, 40, 0.25); } }
-@keyframes pokal-kippen { 0%, 100% { transform: rotate(0deg) scale(1); filter: drop-shadow(0 0 2px rgba(255, 200, 80, 0.3)); } 50% { transform: rotate(-6deg) scale(1.06); filter: drop-shadow(0 0 7px rgba(255, 200, 80, 0.7)); } }
+@keyframes pokal-glanz { 0%, 100% { text-shadow: 0 0 10px rgba(255, 200, 80, 0.85), 0 0 26px rgba(255, 170, 40, 0.5), 0 0 48px rgba(255, 170, 40, 0.25); } 50% { text-shadow: 0 0 8px rgba(255, 200, 80, 0.55), 0 0 18px rgba(255, 170, 40, 0.3), 0 0 36px rgba(255, 170, 40, 0.12); } }
+@keyframes pokal-kippen { 0%, 100% { transform: rotate(0deg) scale(1); filter: drop-shadow(0 0 8px rgba(255, 200, 80, 0.85)); } 50% { transform: rotate(-6deg) scale(1.06); filter: drop-shadow(0 0 5px rgba(255, 200, 80, 0.55)); } }
 @media (prefers-reduced-motion: reduce) { .boards-host .rekorde-titel, .boards-host .rekorde-titel .pokal { animation: none; } }
 .boards-host .records { gap: 6px; }
 .boards-host .rec { text-align: left; background: #1c1718; border: none; border-radius: 12px; padding: 8px 10px; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
@@ -6508,7 +6522,7 @@ button.pa-gruppe { cursor: pointer; }
        Turnier, Rangliste, Liga, Spieler). Entwurf "Setup Redesign", zweite
        Fassung (Okt. 2026): aufgeraeumt, ohne Rahmen, ohne Leuchten. -->
   <div class="setup-kopf" id="setup-kopf">
-    <div class="marke">
+    <div class="marke" data-action="nav" data-screen="setup" role="button" tabindex="0" aria-label="Zum Spiel">
       <span class="blink-logo" role="img" aria-label="Blink 180"></span>
       <div>
         <div class="wort">Blink <span class="rot">180</span></div>
@@ -6722,7 +6736,7 @@ button.pa-gruppe { cursor: pointer; }
   <!-- Dieselbe Kopfleiste wie im Setup: Marke links, Navigation rechts
        (die Leiste #nav wandert per JS hierher). -->
   <div class="setup-kopf" id="turnier-kopf">
-    <div class="marke">
+    <div class="marke" data-action="nav" data-screen="setup" role="button" tabindex="0" aria-label="Zum Spiel">
       <span class="blink-logo" role="img" aria-label="Blink 180"></span>
       <div>
         <div class="wort">Blink <span class="rot">180</span></div>
@@ -6789,7 +6803,7 @@ button.pa-gruppe { cursor: pointer; }
        die Kennzahl) und die Liste aller Spieler, rechts der Verlauf zur
        gewaehlten Kennzahl und die Rekorde. -->
   <div class="setup-kopf" id="boards-kopf">
-    <div class="marke">
+    <div class="marke" data-action="nav" data-screen="setup" role="button" tabindex="0" aria-label="Zum Spiel">
       <span class="blink-logo" role="img" aria-label="Blink 180"></span>
       <div>
         <div class="wort">Blink <span class="rot">180</span></div>
@@ -6854,7 +6868,7 @@ button.pa-gruppe { cursor: pointer; }
        hierher), darunter die Liga-Zeile mit den Reitern, dann links gross
        der naechste bzw. gewaehlte Spieltag, rechts alle Spieltage kompakt. -->
   <div class="setup-kopf" id="liga-kopf">
-    <div class="marke">
+    <div class="marke" data-action="nav" data-screen="setup" role="button" tabindex="0" aria-label="Zum Spiel">
       <span class="blink-logo" role="img" aria-label="Blink 180"></span>
       <div>
         <div class="wort">Blink <span class="rot">180</span></div>
@@ -7156,7 +7170,7 @@ button.pa-gruppe { cursor: pointer; }
        angetippten Spielers; am Handy nur die Liste, Antippen oeffnet das
        Profil. -->
   <div class="setup-kopf" id="players-kopf">
-    <div class="marke">
+    <div class="marke" data-action="nav" data-screen="setup" role="button" tabindex="0" aria-label="Zum Spiel">
       <span class="blink-logo" role="img" aria-label="Blink 180"></span>
       <div>
         <div class="wort">Blink <span class="rot">180</span></div>
@@ -7185,7 +7199,7 @@ button.pa-gruppe { cursor: pointer; }
        und die Kacheln Finish-Weg, Statistik und Konto. Gezeichnet von
        renderProfile(); der Zurueck-Pfeil fuehrt zur Spielerliste. -->
   <div class="setup-kopf" id="profile-kopf">
-    <div class="marke">
+    <div class="marke" data-action="nav" data-screen="setup" role="button" tabindex="0" aria-label="Zum Spiel">
       <span class="blink-logo" role="img" aria-label="Blink 180"></span>
       <div>
         <div class="wort">Blink <span class="rot">180</span></div>
@@ -7400,7 +7414,7 @@ button.pa-gruppe { cursor: pointer; }
        Podest mit Endstand und Highlights (Turnier) bzw. Punktestand und
        Man of the Day beider Teams (Ligaspiel); unten die Knoepfe. -->
   <div class="setup-kopf" id="winner-kopf">
-    <div class="marke">
+    <div class="marke" data-action="nav" data-screen="setup" role="button" tabindex="0" aria-label="Zum Spiel">
       <span class="blink-logo" role="img" aria-label="Blink 180"></span>
       <div>
         <div class="wort">Blink <span class="rot">180</span></div>
@@ -11783,8 +11797,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     { mode: '501', key: 'winPct', label: 'Siegquote', get: function (s) { return s.winPct; }, fmt: function (v) { return v.toFixed(0) + ' %'; }, min: function (s) { return s.matches >= 3; }, hint: 'Anteil gewonnener Spiele. Zählt ab 3 Spielen.' },
     { mode: '501', key: 'legsWon', label: 'Legs', get: function (s) { return s.legsWon; }, fmt: function (v) { return String(v); }, min: function (s) { return s.legsWon > 0; }, hint: 'Gewonnene Legs insgesamt.' },
     { mode: '501', key: 'tourWins', label: 'Turniersiege', get: function (s) { return s.tourWins; }, fmt: function (v) { return String(v); }, min: function (s) { return s.tourWins > 0; }, hint: 'Gewonnene, abgeschlossene Turniere.' },
-    { mode: 'cricket', key: 'cricketWins', label: 'Siege', get: function (s) { return s.cricketWins; }, fmt: function (v) { return String(v); }, min: function (s) { return s.cricketGames > 0; }, hint: 'Gewonnene Cricket-Spiele.' },
+    /* MPR zuerst - das ist die Cricket-Kennzahl (Julius, 12.10.). */
     { mode: 'cricket', key: 'mpr', label: 'MPR', get: function (s) { return s.mpr; }, fmt: function (v) { return v.toFixed(2); }, min: function (s) { return s.cricketDarts >= 9; }, hint: 'Marks per Round: getroffene Marken je 3 Darts im Cricket.' },
+    { mode: 'cricket', key: 'cricketWins', label: 'Siege', get: function (s) { return s.cricketWins; }, fmt: function (v) { return String(v); }, min: function (s) { return s.cricketGames > 0; }, hint: 'Gewonnene Cricket-Spiele.' },
     { mode: 'rtw', key: 'rtwWins', label: 'Siege', get: function (s) { return s.rtwWins; }, fmt: function (v) { return String(v); }, min: function (s) { return s.rtwGames > 0; }, hint: 'Gewonnene Round-the-World-Trainings.' },
     { mode: 'rtw', key: 'rtwBest', label: 'Bestes Ergebnis', get: function (s) { return s.rtwBest; }, fmt: function (v) { return v + ' Darts'; }, min: function (s) { return s.rtwBest !== null; }, asc: true, hint: 'Wenigste Darts für einen kompletten Durchlauf von der 1 bis Bull.' },
     { mode: 'finisher', key: 'finWins', label: 'Siege', get: function (s) { return s.finWins; }, fmt: function (v) { return String(v); }, min: function (s) { return s.finGames > 0; }, hint: 'Gewonnene Finisher-Spiele.' },
@@ -15150,8 +15165,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         unten = 'Läuft · ' + ld.fertige + ' von ' + S.matches.length + ' Einzeln';
       } else if (h) {
         var e = ligaErgebnisAus(h);
-        rechts = e.wirP + ' : ' + e.sieP + ' ✓'; rechtsKlasse = 'fertig';
-        unten = (h.liga.abgeschlossen ? '✓ Abgeschlossen' : 'Bericht offen') + ' · ' + esc(t.ort);
+        /* Kein Haken am Ergebnis - der Stand sagt alles (Julius, 12.10.). */
+        rechts = e.wirP + ' : ' + e.sieP; rechtsKlasse = 'fertig';
+        unten = (h.liga.abgeschlossen ? 'Abgeschlossen' : 'Bericht offen') + ' · ' + esc(t.ort);
       } else if (!vorbei && ligaZusagen) {
         var n = zusagen(t).length;
         rechts = n + ' / ' + LIGA.sollSpieler; rechtsKlasse = ton(n);
@@ -15212,7 +15228,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '<button class="btn ghost lk-zuschauen" data-action="liga-ticker"><i></i>Live zuschauen</button></div>';
     } else if (h) {
       var e2 = ligaErgebnisAus(h), zu = !!h.liga.abgeschlossen;
-      fuss = '<div class="lk-status ' + (zu ? 'voll' : 'offen') + '">' + (zu ? '✓ Abgeschlossen · ' : 'Bericht offen · ') + esc(LIGA.team) + ' ' + e2.wirP + ':' + e2.sieP + '</div>' +
+      fuss = '<div class="lk-status ' + (zu ? 'voll' : 'offen') + '">' + (zu ? 'Abgeschlossen · ' : 'Bericht offen · ') + esc(LIGA.team) + ' ' + e2.wirP + ':' + e2.sieP + '</div>' +
         '<div class="lk-knoepfe">' +
           '<button class="btn ghost" data-action="open-summary" data-kind="turnier" data-id="' + esc(h.id) + '">Ergebnisse</button>' +
           '<button class="btn ' + (zu ? 'ghost' : 'primary start') + '" data-action="liga-bericht" data-termin="' + esc(t.id) + '">' + (zu ? 'Spielbericht' : 'Bericht abschließen') + '</button>' +
