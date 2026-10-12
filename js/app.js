@@ -7976,7 +7976,7 @@
   }
   function hunterState(g) {
     var n = g.players.length, solo = n === 1;
-    var st = { pos: {}, raus: {}, faenge: {}, darts: {}, treffer: {}, schritte: {}, turn: 0, inVisit: 0, visit: [], aktiv: [], winner: null, fertig: null, over: false, letzterFang: null };
+    var st = { pos: {}, raus: {}, faenge: {}, darts: {}, treffer: {}, schritte: {}, turn: 0, inVisit: 0, visit: [], aktiv: [], winner: null, fertig: null, over: false, letzterFang: null, runde: 1, letzte: {} };
     var start = hunterStartPos(g);
     g.players.forEach(function (id, i) { st.pos[id] = start[i]; st.faenge[id] = 0; st.darts[id] = 0; st.treffer[id] = 0; st.schritte[id] = 0; });
     var turn = 0, inVisit = 0;
@@ -8009,9 +8009,11 @@
       inVisit++;
       if (st.over) break;
       if (inVisit === 3) {
+        st.letzte[pid] = st.visit.map(function (d) { return d.n === 0 ? '–' : throwLabel(d); }).join(' ');
         inVisit = 0; st.visit = [];
         var steps = 0, next = turn;
         do { next = (next + 1) % n; steps++; } while (st.raus[g.players[next]] && steps <= n);
+        if (next <= turn) st.runde++;
         turn = next;
       }
     }
@@ -8059,7 +8061,10 @@
     g.throws.push({ n: num, m: num === 0 ? 0 : m });
     UI.mult = 1;
     var st = hunterState(g);
-    if (st.letzterFang && st.letzterFang.at === g.throws.length - 1) UI.huFang = { wer: st.letzterFang.wer, at: Date.now() };
+    if (st.letzterFang && st.letzterFang.at === g.throws.length - 1) {
+      var fangIdx = g.throws.length - 1;
+      UI.huFang = { wer: st.letzterFang.wer, von: st.letzterFang.von, namen: g.players.filter(function (id) { return st.raus[id] && st.raus[id].at === fangIdx; }), at: Date.now() };
+    }
     if (st.winner) { g.done = true; g.winner = st.winner; g.at = Date.now(); UI.overlay = { type: 'game-done', pid: st.winner }; }
     if (st.fertig) {
       g.done = true; g.winner = g.players[0]; g.at = Date.now();
@@ -8068,14 +8073,6 @@
     }
     save(); render();
     return true;
-  }
-  function hunterAufnahmeEnde() {
-    var g = S.game;
-    if (!g || g.kind !== 'hunter' || g.done || settling()) return;
-    var offen = 3 - hunterState(g).inVisit;
-    for (var i = 0; i < offen; i++) g.throws.push({ n: 0, m: 0 });
-    UI.mult = 1;
-    save(); render();
   }
   function hunterVarianteText(g) {
     return g.variante === 'boost' ? 'Boost · Doppel +2, Triple +3' : g.variante === 'handicap' ? 'Handicap' : 'Normal · jeder Treffer 1 Feld';
@@ -8086,35 +8083,38 @@
     return (stufe === 2 ? 'D' : stufe === 3 ? 'T' : '') + zahl;
   }
 
-  /* Die Scheibe: 20 Segmente mit Doppel-, Triple- und Einzelringen in
-     Board-Reihenfolge, Bull nur als Mitte. Winkel: Segment 0 (die 20) steht
-     oben, dann im Uhrzeigersinn. Einmal gebaut, danach nur Klassen. */
-  /* Die Scheibe nimmt 76 % der Flaeche ein: aussen bleibt Platz fuer die
-     Zahlen und die Marker mit Namen. */
-  var HU_R = { bull: 16, triI: 86, triA: 100, dblI: 138, dblA: 152 };
+  /* Die Scheibe nach dem Entwurf "Hunter Spiel": klassische Farben (Schwarz,
+     Marmor, Rot, Gruen), ein Rand mit Verlauf, die Zahlen innen am Rand und
+     der Bull als dunkle Mitte, ueber der das Ziel des Werfers steht.
+     Koordinaten: Mitte 0/0, Rand bei 101, Zeichenflaeche bis 124 (aussen
+     stehen die Marker). Segment 0 (die 20) oben, dann im Uhrzeigersinn.
+     Einmal gebaut, danach nur Klassen. */
+  var HU_R = { bull: 40, triI: 58, triA: 64, dblI: 81, dblA: 88, rand: 101, zahl: 94 };
   function huBogen(r1, r2, a0, a1) {
-    var p = function (r, a) { var w = (a - 90) * Math.PI / 180; return (200 + r * Math.cos(w)).toFixed(1) + ' ' + (200 + r * Math.sin(w)).toFixed(1); };
+    var p = function (r, a) { var w = (a - 90) * Math.PI / 180; return (r * Math.cos(w)).toFixed(2) + ' ' + (r * Math.sin(w)).toFixed(2); };
     return 'M' + p(r1, a0) + ' A' + r1 + ' ' + r1 + ' 0 0 1 ' + p(r1, a1) + ' L' + p(r2, a1) + ' A' + r2 + ' ' + r2 + ' 0 0 0 ' + p(r2, a0) + ' Z';
   }
   function hunterScheibeHtml() {
-    var html = '<svg class="hu-svg" viewBox="0 0 400 400" aria-hidden="true">';
-    html += '<circle cx="200" cy="200" r="' + (HU_R.dblA + 2) + '" class="hu-rand"></circle>';
+    var html = '<svg class="hu-svg" viewBox="-124 -124 248 248" aria-hidden="true">' +
+      '<defs><radialGradient id="huMarmor" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#f6eedb"></stop><stop offset="70%" stop-color="#e9dcbc"></stop><stop offset="100%" stop-color="#d6c39a"></stop></radialGradient>' +
+      '<radialGradient id="huRand" cx="50%" cy="50%" r="50%"><stop offset="86%" stop-color="#141414"></stop><stop offset="100%" stop-color="#050505"></stop></radialGradient></defs>' +
+      '<circle cx="0" cy="0" r="' + HU_R.rand + '" class="hu-rand"></circle>';
     HUNTER_RING.forEach(function (zahl, i) {
       var a0 = i * 18 - 9, a1 = i * 18 + 9;
-      var farbe = i % 2 ? 'dunkel' : 'hell';
-      html += '<g class="hu-seg ' + farbe + '" data-i="' + i + '">' +
-        '<path class="hu-ring single aussen" d="' + huBogen(HU_R.triA, HU_R.dblI, a0, a1) + '"></path>' +
-        '<path class="hu-ring single innen" d="' + huBogen(HU_R.bull + 4, HU_R.triI, a0, a1) + '"></path>' +
+      html += '<g class="hu-seg ' + (i % 2 ? 'gruen' : 'rot') + '" data-i="' + i + '">' +
+        '<path class="hu-ring single innen" d="' + huBogen(HU_R.bull, HU_R.triI, a0, a1) + '"></path>' +
         '<path class="hu-ring triple" d="' + huBogen(HU_R.triI, HU_R.triA, a0, a1) + '"></path>' +
+        '<path class="hu-ring single aussen" d="' + huBogen(HU_R.triA, HU_R.dblI, a0, a1) + '"></path>' +
         '<path class="hu-ring double" d="' + huBogen(HU_R.dblI, HU_R.dblA, a0, a1) + '"></path>' +
         '</g>';
     });
-    html += '<circle cx="200" cy="200" r="' + HU_R.bull + '" class="hu-bull"></circle>';
+    html += '<circle cx="0" cy="0" r="' + HU_R.bull + '" class="hu-bull"></circle>';
     HUNTER_RING.forEach(function (zahl, i) {
-      var w = (i * 18 - 90) * Math.PI / 180, r = HU_R.dblA + 14;
-      html += '<text class="hu-zahl" x="' + (200 + r * Math.cos(w)).toFixed(1) + '" y="' + (200 + r * Math.sin(w)).toFixed(1) + '" data-i="' + i + '">' + zahl + '</text>';
+      var w = (i * 18 - 90) * Math.PI / 180;
+      html += '<text class="hu-zahl" x="' + (HU_R.zahl * Math.cos(w)).toFixed(2) + '" y="' + (HU_R.zahl * Math.sin(w)).toFixed(2) + '" data-i="' + i + '">' + zahl + '</text>';
     });
-    html += '</svg><div class="hu-marker-schicht" id="hu-marker"></div>';
+    html += '</svg><div class="hu-ziel" id="hu-ziel" aria-live="polite"></div>' +
+      '<div class="hu-marker-schicht" id="hu-marker"></div><div class="hu-fang-schicht" id="hu-fang" aria-live="polite"></div>';
     return html;
   }
   function renderHunter() {
@@ -8124,12 +8124,19 @@
     var n = g.players.length, solo = n === 1;
     var aktiv = g.done ? g.winner : st.werfer;
     var jetzt = Date.now();
-    var fang = UI.huFang && jetzt - UI.huFang.at < 1600 ? UI.huFang : null;
+    var fang = UI.huFang && jetzt - UI.huFang.at < 2600 ? UI.huFang : null;
     var screen = $('screen-hunter');
     screen.classList.toggle('solo', solo);
+    var vName = g.variante === 'boost' ? 'Boost' : g.variante === 'handicap' ? 'Handicap' : 'Normal';
+    var vorname = function (id) { return String(pname(id)).trim().split(/\s+/)[0]; };
+    var farbe = function (id) { return 'hsl(' + hue(id) + ',55%,52%)'; };
 
-    $('hu-sub').textContent = hunterVarianteText(g) + ' · ' + (solo ? 'Solo: einmal rund um die Scheibe' : plural(n, 'Spieler', 'Spieler'));
-    $('hu-runde').textContent = solo ? plural(st.darts[g.players[0]], 'Dart', 'Darts') : 'Noch ' + plural(st.aktiv.length, 'Spieler', 'Spieler') + ' im Spiel';
+    /* Kopf: Untertitel, rechts die Runde bzw. solo der Bestwert. */
+    $('hu-sub').textContent = solo ? 'Training · ' + vName + ' · einmal rund' : vName + ' · ' + n + ' Spieler · ' + st.aktiv.length + ' im Spiel';
+    var best = solo ? hunterBest(g.players[0], hunterSchluessel(g), g.done ? null : g) : null;
+    var bestBlitz = solo && ((g.done && !!g.bestNeu) || (UI.huBlitz && jetzt - UI.huBlitz < 1600));
+    $('hu-box').className = 'hu-box' + (solo ? ' solo' : '') + (bestBlitz ? ' blitz' : '');
+    $('hu-box').innerHTML = '<span class="kt">' + (solo ? 'Bestwert' : 'Runde') + '</span><b>' + (solo ? (best === null ? '–' : plural(best, 'Dart', 'Darts')) : st.runde) + '</b>';
 
     /* Scheibe einmal bauen; dann nur das Zielfeld des Werfers markieren. */
     var scheibe = $('hu-scheibe');
@@ -8144,91 +8151,107 @@
     });
     scheibe.querySelectorAll('.hu-zahl').forEach(function (z) { z.classList.toggle('ziel', Number(z.getAttribute('data-i')) === zielIdx); });
 
-    /* Marker: je Spieler ein Element, das bleibt (Animation per Transition).
-       Mehrere auf einem Feld stehen nebeneinander. */
+    /* Ziel in der Mitte: wer wirft, die Zahl (mit D oder T bei Handicap)
+       und wen er jagt; solo die Darts und die restlichen Felder. */
+    var zielZahl = HUNTER_RING[st.pos[aktiv]];
+    var praefix = g.done ? '' : stufe === 2 ? 'D' : stufe === 3 ? 'T' : '';
+    var jagd = solo ? 'noch ' + plural(Math.max(0, 20 - st.schritte[aktiv]), 'Feld', 'Felder')
+      : st.vorne ? 'Jagt ' + esc(vorname(st.vorne.wer)) + ' · ' + plural(st.vorne.abstand, 'Feld', 'Felder') : '';
+    $('hu-ziel').innerHTML = '<span class="kt">' + (g.done ? (solo ? 'Durch' : 'Sieger') : solo ? plural(st.darts[aktiv], 'Dart', 'Darts') : esc(vorname(aktiv))) + '</span>' +
+      '<span class="hu-ziel-zahl">' + (g.done ? (solo ? '✓' : '🏆') : (praefix ? '<span class="mx">' + praefix + '</span>' : '') + zielZahl) + '</span>' +
+      '<span class="hu-ziel-sub">' + (g.done ? (solo ? plural(st.fertig ? st.fertig.darts : st.darts[aktiv], 'Dart', 'Darts') : esc(pname(g.winner))) : jagd) + '</span>';
+
+    /* Marker: je Spieler ein Element, das bleibt (Bewegung per Transition).
+       Mehrere auf einem Feld stehen um je 6,5 Grad versetzt nebeneinander. */
     var schicht = $('hu-marker');
     if (UI.huWinkelSpiel !== g.id) { UI.huWinkelSpiel = g.id; UI.huWinkel = {}; schicht.innerHTML = ''; }
-    var belegt = {};
-    var versatz = [0, -7, 7, -14, 14, -21];
-    /* Der Werfer zuerst: er steht mittig im Feld, die anderen weichen aus. */
-    var reihenfolge = [aktiv].concat(g.players.filter(function (id) { return id !== aktiv; }));
-    reihenfolge.forEach(function (id) {
-      var i = st.pos[id];
+    var gruppen = {};
+    g.players.forEach(function (id) { var f = st.raus[id] ? st.raus[id].feld : st.pos[id]; (gruppen[f] = gruppen[f] || []).push(id); });
+    g.players.forEach(function (id) {
       var raus = st.raus[id];
-      var idx = raus ? raus.feld : i;
-      var k = belegt[idx] = (belegt[idx] || 0) + 1;
+      var idx = raus ? raus.feld : st.pos[id];
+      var grp = gruppen[idx];
+      var ziel = idx * 18 + (grp.indexOf(id) - (grp.length - 1) / 2) * 6.5;
       var el = schicht.querySelector('[data-id="' + id + '"]');
       if (!el) {
         el = document.createElement('div');
         el.className = 'hu-mark';
         el.setAttribute('data-id', id);
-        el.innerHTML = '<span class="hu-punkt" style="background:hsl(' + hue(id) + ',55%,52%)"></span><span class="hu-name">' + esc(pname(id)) + '</span>';
+        el.innerHTML = '<span class="hu-punkt" style="background:' + farbe(id) + '">' + esc(kuerzelVon(profile(id))) + '</span>';
         schicht.appendChild(el);
       }
       /* Immer den kuerzesten Weg drehen: 342 -> 360 statt zurueck auf 0. */
-      var ziel = idx * 18 + (versatz[k - 1] || 0);
       var alt = UI.huWinkel[id];
       var winkel = alt === undefined ? ziel : alt + ((((ziel - alt) % 360) + 540) % 360) - 180;
       UI.huWinkel[id] = winkel;
       el.style.setProperty('--w', winkel + 'deg');
       el.classList.toggle('aktiv', id === aktiv && !g.done);
       el.classList.toggle('raus', !!raus);
-      el.classList.toggle('gefangen', !!(fang && fang.wer === id));
+      el.classList.toggle('gefangen', !!(fang && fang.namen.indexOf(id) >= 0 && jetzt - fang.at < 1600));
       el.classList.toggle('sieger', !!(g.done && g.winner === id && !solo));
     });
     Array.prototype.forEach.call(schicht.querySelectorAll('.hu-mark'), function (el) {
       if (g.players.indexOf(el.getAttribute('data-id')) < 0) el.remove();
     });
 
-    /* Rechts: Ziel gross, Jagd-Infos, Spielerliste, Eingabe. */
-    var zielText = g.done ? (solo ? '✓' : '🏆') : hunterZielText(g, aktiv, st);
-    $('hu-ziel').innerHTML = '<span class="kt">' + (g.done ? (solo ? 'Durch' : 'Sieger') : esc(pname(aktiv)) + ' braucht') + '</span>' +
-      '<span class="hu-ziel-zahl">' + esc(zielText) + '</span>' +
-      '<span class="hu-ziel-sub">' + (g.done ? esc(pname(g.winner)) : g.variante === 'boost' ? 'Doppel +2, Triple +3' : g.variante === 'handicap' ? (stufe === 2 ? 'nur das Doppel zählt' : stufe === 3 ? 'nur das Triple zählt' : 'jeder Treffer zählt') : 'jeder Treffer 1 Feld') + '</span>';
-    var jagd = '';
-    if (solo) {
-      var schritte = st.schritte[g.players[0]];
-      jagd = '<div class="hu-jagd-zeile"><span class="kt">Runde</span><b>' + Math.min(schritte, 20) + ' von 20 Feldern</b></div>' +
-        '<div class="hu-jagd-zeile"><span class="kt">Bestwert</span><b' + (UI.huBlitz && jetzt - UI.huBlitz < 1600 ? ' class="blitz"' : '') + '>' +
-          (function () { var b = hunterBest(g.players[0], hunterSchluessel(g), g.done ? null : g); return b === null ? '–' : plural(b, 'Dart', 'Darts'); })() + '</b></div>';
-    } else if (!g.done) {
-      jagd = (st.vorne ? '<div class="hu-jagd-zeile"><span class="kt">Vor dir</span><b>noch ' + plural(st.vorne.abstand, 'Feld', 'Felder') + ' bis ' + esc(pname(st.vorne.wer)) + '</b></div>' : '') +
-        (st.hinten ? '<div class="hu-jagd-zeile"><span class="kt">Hinter dir</span><b>' + esc(pname(st.hinten.wer)) + ', ' + plural(st.hinten.abstand, 'Feld', 'Felder') + ' zurück</b></div>' : '');
-    }
-    $('hu-jagd').innerHTML = jagd;
-    $('hu-liste').innerHTML = g.players.map(function (id) {
-      var raus = st.raus[id];
-      return '<div class="hu-sp' + (id === aktiv && !g.done ? ' aktiv' : '') + (raus ? ' raus' : '') + '">' +
-        '<span class="hu-sp-farbe" style="background:hsl(' + hue(id) + ',55%,52%)"></span>' +
-        '<span class="hu-sp-name">' + esc(pname(id)) + '</span>' +
-        '<span class="hu-sp-info">' + (raus ? 'gefangen von ' + esc(pname(raus.von)) : 'auf ' + hunterZielText(g, id, st) + (g.variante === 'handicap' ? '' : '')) + '</span>' +
-        '<span class="hu-sp-zahl">' + (solo ? plural(st.darts[id], 'Dart', 'Darts') : plural(st.faenge[id], 'Fang', 'Fänge')) + '</span></div>';
+    /* Fang-Banner ueber der Scheibe; bleibt stehen, bis es ausgeblendet ist
+       (nicht bei jedem Neuzeichnen neu starten). */
+    var fangEl = $('hu-fang');
+    if (fang) {
+      if (fangEl.getAttribute('data-at') !== String(fang.at)) {
+        fangEl.setAttribute('data-at', String(fang.at));
+        fangEl.innerHTML = '<span class="hu-fang-banner">🎯 ' + esc(vorname(fang.von)) + ' fängt ' + fang.namen.map(function (id) { return esc(vorname(id)); }).join(' und ') + '!</span>';
+      }
+    } else if (fangEl.innerHTML) { fangEl.innerHTML = ''; fangEl.removeAttribute('data-at'); }
+
+    /* Spielerchips unter der Scheibe: Farbe, Name, Zielfeld, darunter Faenge
+       und die letzte Aufnahme; solo Feld und Darts. */
+    var liste = $('hu-liste');
+    liste.style.setProperty('--n', n);
+    liste.classList.toggle('viele', n > 4);
+    liste.innerHTML = g.players.map(function (id) {
+      var raus = st.raus[id], istAktiv = id === aktiv && !g.done;
+      var meta = solo ? 'Feld ' + Math.min(20, st.schritte[id] + 1) + ' von 20 · ' + plural(st.darts[id], 'Dart', 'Darts')
+        : raus ? 'gefangen von ' + esc(vorname(raus.von))
+        : (g.variante === 'handicap' ? ['', 'Single', 'Doppel', 'Triple'][hunterStufe(g, id)] + ' · ' : '') + plural(st.faenge[id], 'Fang', 'Fänge') +
+          (st.letzte[id] && !istAktiv ? ' · ' + esc(st.letzte[id]) : '');
+      return '<div class="hu-chip' + (istAktiv ? ' aktiv' : '') + (raus ? ' raus' : '') + '">' +
+        '<div class="hu-chip-kopf"><span class="hu-chip-farbe" style="background:' + (raus ? '#3a3032' : farbe(id)) + '"></span>' +
+        '<span class="hu-chip-name">' + esc(pname(id)) + '</span>' +
+        '<span class="hu-chip-ziel">' + (raus ? '' : esc(hunterZielText(g, id, st))) + '</span></div>' +
+        '<span class="hu-chip-meta">' + meta + '</span></div>';
     }).join('');
 
-    /* Eingabe: eigene Zahl gross (Single), Doppel und Triple daneben, Miss.
-       Bei Handicap nur der zaehlende Ring. */
-    var pad = '';
-    if (!g.done) {
-      var zahl = HUNTER_RING[st.pos[aktiv]];
-      var felderText = function (m) { return g.variante === 'boost' ? '+' + m + (m === 1 ? ' Feld' : ' Felder') : '+1 Feld'; };
-      var keys = [];
-      if (stufe === 1) keys.push('<button class="rtw-key gross" data-num="' + zahl + '" data-mult="1"><span class="z">' + zahl + '</span><span class="sub">' + felderText(1) + '</span></button>');
-      if (stufe !== 3) keys.push('<button class="rtw-key mult' + (stufe === 2 ? ' gross' : '') + '" data-num="' + zahl + '" data-mult="2"><span class="k"><span class="mx">D</span>' + zahl + '</span><span class="sub">' + felderText(2) + '</span></button>');
-      if (stufe !== 2) keys.push('<button class="rtw-key mult' + (stufe === 3 ? ' gross' : '') + '" data-num="' + zahl + '" data-mult="3"><span class="k"><span class="mx">T</span>' + zahl + '</span><span class="sub">' + felderText(3) + '</span></button>');
-      pad = '<div class="hu-treffer n' + keys.length + '">' + keys.join('') + '</div>' +
-        '<div class="rtw-reihe"><button class="rtw-key miss" data-num="0" data-mult="1"><span class="k">Daneben</span><span class="sub">ein Dart ohne Treffer</span></button></div>';
-    }
-    $('hu-pad').innerHTML = pad;
+    /* Rechts: die drei Darts der Aufnahme und die Tasten fuers Ziel. Boost:
+       Single gross, Doppel und Triple daneben; sonst eine grosse Taste
+       (bei Handicap der zaehlende Ring) und Miss. */
     $('hu-visit').innerHTML = [0, 1, 2].map(function (k) {
       var d = st.visit[k];
-      return '<span class="ct' + (d ? (d.n === 0 ? ' miss' : '') : ' leer') + '">' + (d ? (d.n === 0 ? '–' : throwLabel(d)) : '') + '</span>';
+      return '<span class="ct' + (d ? (d.n === 0 ? ' miss' : '') : (k === st.inVisit && !g.done ? ' jetzt' : ' leer')) + '">' + (d ? (d.n === 0 ? '–' : throwLabel(d)) : '') + '</span>';
     }).join('');
+    var pad = '';
+    if (!g.done) {
+      var dann = function (m) { return 'dann ' + (solo && st.schritte[aktiv] + m >= 20 ? 'Ziel' : HUNTER_RING[(st.pos[aktiv] + m) % 20]); };
+      var miss = '<button class="hu-key miss" data-num="0" data-mult="1"><span class="z">Miss</span></button>';
+      if (g.variante === 'boost') {
+        pad = '<div class="hu-keys">' +
+          '<button class="hu-key gross" data-num="' + zielZahl + '" data-mult="1"><span class="z">' + zielZahl + '</span><span class="sub">+1 · ' + dann(1) + '</span></button>' +
+          '<button class="hu-key" data-num="' + zielZahl + '" data-mult="2"><span class="z"><span class="mx">D</span>' + zielZahl + '</span><span class="sub">+2 · ' + dann(2) + '</span></button>' +
+          '<button class="hu-key" data-num="' + zielZahl + '" data-mult="3"><span class="z"><span class="mx">T</span>' + zielZahl + '</span><span class="sub">+3 · ' + dann(3) + '</span></button>' +
+          miss + '</div>';
+      } else {
+        pad = '<div class="hu-keys einfach">' +
+          '<button class="hu-key gross" data-num="' + zielZahl + '" data-mult="' + stufe + '"><span class="z">' + (praefix ? '<span class="mx">' + praefix + '</span>' : '') + zielZahl + '</span>' +
+          '<span class="sub">' + (stufe === 1 ? 'jeder Ring zählt · ' : 'zählt · ') + dann(1) + '</span></button>' + miss + '</div>';
+      }
+    }
+    $('hu-pad').innerHTML = pad;
     $('hu-turn').innerHTML = g.done
       ? '<b>' + esc(pname(g.winner)) + '</b> ' + (solo ? 'ist durch' : 'gewinnt')
       : '<span class="muted">Am Wurf</span> <b>' + esc(pname(aktiv)) + '</b> <span class="muted">auf</span> <b>' + esc(hunterZielText(g, aktiv, st)) + '</b>';
     $('hu-menu-overlay').classList.toggle('hidden', !UI.menu);
     if (UI.menu) document.querySelector('#hu-menu-overlay .game-menu-sub').textContent = $('hu-sub').textContent;
-    if (fang) setTimeout(function () { if (S.game === g) render(); }, 1700);
+    if (fang) setTimeout(function () { if (S.game === g) render(); }, 2700);
   }
 
   /* ================= Spielbericht (SDM-Bogen) ================= */
@@ -11839,8 +11862,6 @@
       case 'kw-end-visit':
         kaiwenAufnahmeEnde();
         break;
-      case 'hu-end-visit':
-        hunterAufnahmeEnde();
         break;
       case 'hu-handicap': {
         tipp();

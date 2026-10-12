@@ -6165,111 +6165,168 @@ body.fix-spiel #screen-kaiwen.active { flex: 1 1 auto; height: auto; min-height:
   #screen-kaiwen .kw-spieler { padding: 6px 10px; gap: 4px; }
 }
 
-/* ================= Hunter (Maeusejagd) ================= */
+/* ================= Hunter (Entwurf "Hunter Spiel", Okt. 2026) =================
+   Links Kopf, Scheibe und Spielerchips, rechts die Eingabe. Die Scheibe
+   ist das Spielfeld: klassische Farben, das Ziel des Werfers leuchtet
+   blau, in der Mitte steht wer wirft, die Zahl und wen er jagt; die
+   Marker mit Kuerzel sitzen aussen am Rand. Hoehen in vh, weil der
+   Bildschirm die ganze Hoehe fuellt. */
 #screen-hunter.active {
-  position: relative; padding: clamp(10px, 2.4vh, 30px) clamp(6px, 1vw, 14px) clamp(6px, 1.8vh, 22px);
-  gap: 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; height: calc(100vh - 12px); height: calc(100dvh - 12px);
+  position: relative; padding: clamp(6px, 1.8vh, 22px) clamp(8px, 1.6vw, 26px); gap: 0; min-height: 0; overflow: hidden;
+  display: flex; flex-direction: column; height: calc(100vh - 12px); height: calc(100dvh - 12px);
 }
 body.fix-spiel #screen-hunter.active { flex: 1 1 auto; height: auto; min-height: 0; overflow: hidden; }
-#screen-hunter.active .game-body { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: clamp(8px, 1.6vw, 24px); align-items: stretch; }
-#screen-hunter .hu-links { min-height: 0; min-width: 0; display: flex; align-items: center; justify-content: center; }
-#screen-hunter .hu-scheibe { position: relative; width: min(100%, calc(100vh - 60px)); aspect-ratio: 1; }
-#screen-hunter .hu-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-#screen-hunter .hu-rand { fill: #0a0809; stroke: #2a2224; stroke-width: 2; }
-#screen-hunter .hu-bull { fill: #241d1f; stroke: #3a2e30; stroke-width: 1.5; }
-#screen-hunter .hu-seg.hell .single { fill: #1c1718; }
-#screen-hunter .hu-seg.dunkel .single { fill: #141011; }
-#screen-hunter .hu-seg.hell .double, #screen-hunter .hu-seg.hell .triple { fill: #2d2426; }
-#screen-hunter .hu-seg.dunkel .double, #screen-hunter .hu-seg.dunkel .triple { fill: #241c1e; }
-#screen-hunter .hu-seg path { stroke: #0d0a0b; stroke-width: 1; transition: fill 0.25s; }
-#screen-hunter .hu-seg.ziel path.hu-ring { fill: #46aad7; filter: drop-shadow(0 0 6px rgba(70, 170, 215, 0.9)); }
-/* Handicap: nur der zaehlende Ring leuchtet, der Rest des Segments bleibt dunkel. */
-#screen-hunter .hu-seg.ziel.nur-double path.hu-ring:not(.double), #screen-hunter .hu-seg.ziel.nur-triple path.hu-ring:not(.triple) { fill: #2a2224; filter: none; }
-#screen-hunter .hu-zahl { fill: #857a7b; font-family: var(--font-cond); font-weight: 700; font-size: 15px; text-anchor: middle; dominant-baseline: central; }
-#screen-hunter .hu-zahl.ziel { fill: #fff; font-size: 18px; }
-#screen-hunter .hu-marker-schicht { position: absolute; inset: 0; pointer-events: none; }
-/* Ein Marker ist ein unsichtbarer Zeiger von der Mitte zum Rand (Hoehe =
-   Radius), der um die Mitte gedreht wird; der Punkt sitzt an seiner Spitze
-   (bei 45,5 % des Durchmessers, knapp ausserhalb des Doppelrings), der Name
-   gegengedreht darueber. Die Drehung animiert als Transition. */
+#screen-hunter.active .hu-body { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) clamp(250px, 34vw, 500px); gap: clamp(8px, 1.6vw, 24px); align-items: stretch; }
+#screen-hunter .hu-links { min-height: 0; min-width: 0; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; gap: clamp(4px, 1.2vh, 14px); }
+
+/* Kopf */
+#screen-hunter .hu-kopf { display: flex; align-items: center; gap: clamp(8px, 1.2vw, 18px); min-width: 0; }
+#screen-hunter .hu-menu {
+  flex: none; width: clamp(40px, 7vh, 74px); min-width: 44px; min-height: 44px; aspect-ratio: 1.2; padding: 0; appearance: none; -webkit-appearance: none;
+  display: flex; align-items: center; justify-content: center; border: none; border-radius: clamp(10px, 1.6vh, 16px); background: #241d1f; color: #9a8f90; cursor: pointer;
+}
+#screen-hunter .hu-menu svg { display: block; width: clamp(20px, 4vh, 42px); height: clamp(20px, 4vh, 42px); }
+#screen-hunter .hu-menu:active { background: #2a2224; }
+#screen-hunter .hu-info { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+#screen-hunter .hu-h { font-family: var(--font-display); font-size: clamp(15px, 3.4vh, 36px); letter-spacing: 0.05em; text-transform: uppercase; line-height: 1.15; }
+#screen-hunter .hu-sub { font-family: var(--font-cond); font-weight: 700; font-size: clamp(11px, 2vh, 22px); letter-spacing: 0.04em; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#screen-hunter .hu-box { flex: none; display: flex; flex-direction: column; align-items: flex-end; padding: clamp(4px, 0.8vh, 8px) clamp(10px, 1.2vw, 16px); border-radius: 12px; background: transparent; }
+#screen-hunter .hu-box.solo { background: #141011; }
+#screen-hunter .hu-box .kt { font-size: clamp(10px, 1.6vh, 16px); letter-spacing: 0.14em; color: #857a7b; }
+#screen-hunter .hu-box b { font-family: var(--font-cond); font-weight: 700; font-size: clamp(14px, 3vh, 32px); line-height: 1.1; color: #fff; }
+#screen-hunter .hu-box.solo b { color: #ffc14d; }
+#screen-hunter .hu-box.blitz { animation: huBest 1.6s ease-in-out infinite; }
+@keyframes huBest { 0%, 100% { box-shadow: inset 0 0 0 1.5px rgba(255, 193, 77, 0.8), 0 0 20px rgba(255, 190, 60, 0.3); } 50% { box-shadow: inset 0 0 0 1.5px #ffd27a, 0 0 40px rgba(255, 190, 60, 0.65); } }
+
+/* Scheibe: so gross wie die Mitte zulaesst, immer quadratisch. */
+#screen-hunter .hu-mitte { min-height: 0; min-width: 0; container-type: size; display: flex; align-items: center; justify-content: center; }
+#screen-hunter .hu-scheibe { position: relative; width: min(100%, calc(100vh - 60px)); width: min(100cqw, 100cqh); aspect-ratio: 1; container-type: size; }
+#screen-hunter .hu-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+#screen-hunter .hu-rand { fill: url(#huRand); stroke: #5c5c5c; stroke-width: 1.6; }
+#screen-hunter .hu-bull { fill: #141011; stroke: #2a2224; stroke-width: 1; }
+#screen-hunter .hu-seg path { stroke: #a7a7a7; stroke-width: 0.55; transition: fill 0.3s; }
+#screen-hunter .hu-seg.rot .single { fill: #141414; }
+#screen-hunter .hu-seg.rot .double, #screen-hunter .hu-seg.rot .triple { fill: #c8302c; }
+#screen-hunter .hu-seg.gruen .single { fill: url(#huMarmor); }
+#screen-hunter .hu-seg.gruen .double, #screen-hunter .hu-seg.gruen .triple { fill: #1f8a4c; }
+/* Das Ziel leuchtet blau; bei Handicap nur der zaehlende Ring. */
+#screen-hunter .hu-seg.ziel:not(.nur-double):not(.nur-triple) .single { fill: #2f86b0; filter: drop-shadow(0 0 4px rgba(70, 170, 215, 0.9)); }
+#screen-hunter .hu-seg.ziel:not(.nur-double):not(.nur-triple) .double, #screen-hunter .hu-seg.ziel:not(.nur-double):not(.nur-triple) .triple,
+#screen-hunter .hu-seg.ziel.nur-double .double, #screen-hunter .hu-seg.ziel.nur-triple .triple { fill: #a9e4ff; filter: drop-shadow(0 0 4px rgba(70, 170, 215, 0.9)); }
+#screen-hunter .hu-zahl { fill: #e8e2d6; font-family: var(--font-cond); font-weight: 700; font-size: 9.5px; text-anchor: middle; dominant-baseline: central; transition: font-size 0.2s; }
+#screen-hunter .hu-zahl.ziel { fill: #fff; font-size: 13px; filter: drop-shadow(0 0 5px rgba(70, 170, 215, 0.8)); }
+
+/* Ziel in der Mitte (ueber dem Bull). */
+#screen-hunter .hu-ziel {
+  position: absolute; left: 33.87%; top: 33.87%; width: 32.26%; height: 32.26%; border-radius: 50%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2%; text-align: center; box-shadow: 0 0 40px rgba(70, 170, 215, 0.18);
+}
+#screen-hunter .hu-ziel .kt { font-size: clamp(10px, 1.9vh, 20px); letter-spacing: 0.16em; color: #9a8f90; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#screen-hunter .hu-ziel-zahl { font-family: var(--font-cond); font-weight: 700; font-size: clamp(44px, 12vh, 130px); line-height: 0.95; font-variant-numeric: tabular-nums; color: #fff; text-shadow: 0 0 30px rgba(70, 170, 215, 0.6); }
+#screen-hunter .hu-ziel-zahl .mx { color: #a9e4ff; font-size: 0.6em; }
+#screen-hunter .hu-ziel-sub { font-family: var(--font-cond); font-weight: 700; font-size: clamp(10px, 1.9vh, 20px); letter-spacing: 0.04em; color: #c9c0c0; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+
+/* Marker: ein unsichtbarer Zeiger von der Mitte zum Rand, der um die Mitte
+   gedreht wird; der Punkt mit dem Kuerzel sitzt an seiner Spitze (knapp
+   ausserhalb des Rands) und dreht sich zurueck, damit er aufrecht bleibt. */
+#screen-hunter .hu-marker-schicht, #screen-hunter .hu-fang-schicht { position: absolute; inset: 0; pointer-events: none; }
 #screen-hunter .hu-mark {
-  position: absolute; left: 50%; top: 4.5%; width: 0; height: 45.5%;
-  transform-origin: 50% 100%; transform: rotate(var(--w, 0deg)); transition: transform 0.55s cubic-bezier(0.2, 0.7, 0.2, 1);
+  position: absolute; left: 50%; top: 4.4%; width: 0; height: 45.6%;
+  transform-origin: 50% 100%; transform: rotate(var(--w, 0deg)); transition: transform 0.75s cubic-bezier(0.3, 0.9, 0.3, 1);
 }
 #screen-hunter .hu-mark .hu-punkt {
-  position: absolute; left: 0; top: 0; width: clamp(16px, 3.6vh, 34px); height: clamp(16px, 3.6vh, 34px); border-radius: 50%;
-  transform: translate(-50%, -50%);
-  box-shadow: 0 0 0 2px #0d0a0b, 0 0 14px rgba(70, 170, 215, 0.3); transition: transform 0.3s, opacity 0.3s;
+  position: absolute; left: 0; top: 0; width: 6.4cqw; height: 6.4cqw; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; font-family: var(--font-body); font-weight: 700; font-size: clamp(9px, 1.7vh, 18px); line-height: 1; color: #fff;
+  transform: translate(-50%, -50%) rotate(calc(-1 * var(--w, 0deg))) scale(1); box-shadow: 0 0 0 2px #0d0a0b;
+  transition: transform 0.75s cubic-bezier(0.3, 0.9, 0.3, 1), opacity 0.4s, filter 0.4s;
 }
-#screen-hunter .hu-mark .hu-name {
-  position: absolute; left: 0; top: 0; transform: translate(-50%, -50%) translate(0, -1.5em) rotate(calc(-1 * var(--w, 0deg)));
-  font-family: var(--font-cond); font-weight: 700; font-size: clamp(10px, 1.8vh, 16px); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text); white-space: nowrap;
-  text-shadow: 0 0 6px #0d0a0b, 0 0 2px #0d0a0b; transition: transform 0.55s cubic-bezier(0.2, 0.7, 0.2, 1);
-}
-#screen-hunter .hu-mark.aktiv .hu-punkt { box-shadow: 0 0 0 2.5px #f2eeee, 0 0 18px rgba(70, 170, 215, 0.8); }
-#screen-hunter .hu-mark.raus .hu-punkt { background: #3a3234 !important; opacity: 0.55; box-shadow: 0 0 0 2px #0d0a0b; }
-#screen-hunter .hu-mark.raus .hu-name { color: #6a6062; text-decoration: line-through; }
+#screen-hunter .hu-mark.aktiv { z-index: 2; }
+#screen-hunter .hu-mark.raus { z-index: 0; }
+#screen-hunter .hu-mark.aktiv .hu-punkt { transform: translate(-50%, -50%) rotate(calc(-1 * var(--w, 0deg))) scale(1.22); box-shadow: 0 0 0 2px #0d0a0b, 0 0 0 4px #f2eeee, 0 0 18px rgba(70, 170, 215, 0.8); }
+#screen-hunter .hu-mark.raus .hu-punkt { background: #3a3032 !important; opacity: 0.45; filter: grayscale(1); transform: translate(-50%, -50%) rotate(calc(-1 * var(--w, 0deg))) scale(0.8); }
 #screen-hunter .hu-mark.gefangen .hu-punkt { animation: huGefangen 1.4s ease-out both; }
-#screen-hunter .hu-mark.sieger .hu-punkt { box-shadow: 0 0 0 3px #ffc14d, 0 0 24px rgba(255, 193, 77, 0.8); }
-@keyframes huGefangen { 0% { transform: translate(-50%, -50%) scale(1.7); opacity: 1; } 60% { transform: translate(-50%, -50%) scale(0.4) rotate(40deg); } 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.55; } }
+#screen-hunter .hu-mark.sieger .hu-punkt { transform: translate(-50%, -50%) rotate(calc(-1 * var(--w, 0deg))) scale(1.22); box-shadow: 0 0 0 2px #0d0a0b, 0 0 0 4px #ffc14d, 0 0 24px rgba(255, 193, 77, 0.8); }
+@keyframes huGefangen { 0% { transform: translate(-50%, -50%) rotate(calc(-1 * var(--w, 0deg))) scale(1.7); opacity: 1; } 60% { transform: translate(-50%, -50%) rotate(calc(-1 * var(--w, 0deg))) scale(0.4); } 100% { transform: translate(-50%, -50%) rotate(calc(-1 * var(--w, 0deg))) scale(0.8); opacity: 0.45; } }
+#screen-hunter .hu-fang-banner {
+  position: absolute; left: 50%; top: 30%; transform: translateX(-50%); padding: 8px 18px; border-radius: 999px; white-space: nowrap;
+  background: linear-gradient(90deg, #3a1416, #5a1f22, #3a1416); box-shadow: 0 0 30px rgba(229, 72, 77, 0.5), inset 0 0 0 1.5px #e5484d;
+  font-family: var(--font-cond); font-weight: 700; font-size: clamp(14px, 3vh, 32px); letter-spacing: 0.12em; text-transform: uppercase; color: #fff;
+  animation: huFang 2.6s ease-out forwards;
+}
+@keyframes huFang { 0% { transform: translate(-50%, 10px) scale(0.7); opacity: 0; } 18% { transform: translate(-50%, 0) scale(1.08); opacity: 1; } 30% { transform: translate(-50%, 0) scale(1); } 85% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -6px) scale(1); } }
 
+/* Spielerchips */
+#screen-hunter .hu-chips { display: grid; grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr)); gap: clamp(4px, 0.7vw, 10px); min-width: 0; }
+#screen-hunter .hu-chip { min-width: 0; display: flex; flex-direction: column; gap: clamp(2px, 0.6vh, 7px); padding: clamp(6px, 1.2vh, 14px) clamp(8px, 0.9vw, 14px); border-radius: clamp(10px, 1.6vh, 16px); background: #141011; opacity: 0.7; transition: opacity 0.2s, box-shadow 0.2s; }
+#screen-hunter .hu-chip.aktiv { background: #221b1c; opacity: 1; box-shadow: inset 0 0 0 2px #f2eeee, 0 0 26px rgba(70, 170, 215, 0.55), 0 0 60px 8px rgba(70, 170, 215, 0.28); }
+#screen-hunter .hu-chip.raus { opacity: 0.4; }
+#screen-hunter .hu-chip-kopf { display: flex; align-items: center; gap: clamp(5px, 0.6vw, 9px); min-width: 0; }
+#screen-hunter .hu-chip-farbe { flex: none; width: clamp(10px, 1.8vh, 18px); height: clamp(10px, 1.8vh, 18px); border-radius: 50%; }
+#screen-hunter .hu-chip-name { flex: 1 1 auto; min-width: 0; font-family: var(--font-cond); font-weight: 700; font-size: clamp(12px, 2.5vh, 26px); letter-spacing: 0.03em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #c9c0c0; }
+#screen-hunter .hu-chip-ziel { flex: none; font-family: var(--font-cond); font-weight: 700; font-size: clamp(12px, 2.5vh, 26px); color: #9a8f90; }
+#screen-hunter .hu-chip.aktiv .hu-chip-name, #screen-hunter .hu-chip.aktiv .hu-chip-ziel { color: #fff; }
+#screen-hunter .hu-chip-meta { font-size: clamp(10px, 1.8vh, 18px); color: #857a7b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#screen-hunter .hu-chips.viele .hu-chip-name, #screen-hunter .hu-chips.viele .hu-chip-ziel { font-size: clamp(11px, 2vh, 21px); }
+#screen-hunter .hu-chips.viele .hu-chip-meta { font-size: clamp(9px, 1.5vh, 15px); }
+
+/* Rechts: Zurueck, die drei Darts, die Tasten. */
 #screen-hunter .hu-rechts { position: relative; z-index: 1; min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: clamp(5px, 1vh, 12px); }
-#screen-hunter .hu-kopf { flex: none; display: flex; gap: clamp(8px, 1vw, 14px); align-items: stretch; }
-#screen-hunter .hu-kopf .rtw-menu { flex: none; width: clamp(44px, 7vh, 74px); min-height: 44px; padding: 0; appearance: none; -webkit-appearance: none; display: flex; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: clamp(10px, 1.6vh, 16px); background: #141011; color: var(--muted); cursor: pointer; }
-#screen-hunter .hu-kopf .rtw-menu svg { display: block; width: clamp(20px, 4vh, 42px); height: clamp(20px, 4vh, 42px); }
-#screen-hunter .hu-kopf .rtw-info { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-#screen-hunter .hu-kopf .rtw-h { font-family: var(--font-display); font-size: clamp(15px, 3.4vh, 36px); letter-spacing: 0.05em; text-transform: uppercase; line-height: 1; }
-#screen-hunter .hu-kopf .rtw-sub { color: var(--muted); font-family: var(--font-cond); font-weight: 600; font-size: clamp(11px, 2vh, 22px); letter-spacing: 0.04em; line-height: 1.2; }
-#screen-hunter .hu-kopf .rtw-runde { font-family: var(--font-cond); font-weight: 700; font-size: clamp(12px, 2.2vh, 24px); letter-spacing: 0.06em; text-transform: uppercase; }
-#screen-hunter .hu-ziel { flex: none; display: flex; align-items: center; gap: clamp(8px, 1.2vw, 18px); padding: clamp(6px, 1.2vh, 14px) clamp(12px, 1.4vw, 20px); border-radius: clamp(12px, 1.8vh, 18px); background: var(--aktiv-flaeche); border: 1px solid var(--line-hell); box-shadow: 0 0 24px var(--schein-weich); }
-#screen-hunter .hu-ziel .kt { flex: none; font-size: clamp(10px, 1.7vh, 18px); color: var(--muted); }
-#screen-hunter .hu-ziel-zahl { flex: none; font-family: var(--font-cond); font-weight: 700; font-size: clamp(32px, 8vh, 86px); line-height: 0.95; color: #fff; text-shadow: 0 0 22px rgba(70, 170, 215, 0.45); font-variant-numeric: tabular-nums; }
-#screen-hunter .hu-ziel-sub { min-width: 0; font-family: var(--font-cond); font-weight: 600; font-size: clamp(11px, 2vh, 20px); color: var(--grau); }
-#screen-hunter .hu-jagd { flex: none; display: flex; flex-direction: column; gap: 2px; }
-#screen-hunter .hu-jagd-zeile { display: flex; align-items: baseline; gap: 10px; font-size: clamp(12px, 2vh, 20px); }
-#screen-hunter .hu-jagd-zeile .kt { flex: none; width: 5.5em; font-size: clamp(10px, 1.6vh, 16px); color: #857a7b; }
-#screen-hunter .hu-jagd-zeile b { font-family: var(--font-cond); font-weight: 700; font-size: clamp(14px, 2.6vh, 26px); }
-#screen-hunter .hu-jagd-zeile b.blitz { animation: kwBlitz 1.4s ease-out both; }
-#screen-hunter .hu-liste { flex: none; display: flex; flex-direction: column; gap: 3px; }
-#screen-hunter .hu-sp { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: clamp(6px, 0.8vw, 12px); padding: 4px clamp(8px, 1vw, 14px); border-radius: 10px; background: #141011; font-size: clamp(12px, 2vh, 20px); }
-#screen-hunter .hu-sp.aktiv { background: #221b1c; box-shadow: inset 0 0 0 1.5px #f2eeee; }
-#screen-hunter .hu-sp.raus { opacity: 0.45; }
-#screen-hunter .hu-sp-farbe { width: clamp(10px, 1.8vh, 18px); height: clamp(10px, 1.8vh, 18px); border-radius: 50%; }
-#screen-hunter .hu-sp-name { min-width: 0; font-family: var(--font-cond); font-weight: 700; font-size: clamp(13px, 2.4vh, 24px); text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#screen-hunter .hu-sp-info { color: var(--muted); white-space: nowrap; }
-#screen-hunter .hu-sp-zahl { font-family: var(--font-cond); font-weight: 700; white-space: nowrap; }
-#screen-hunter .hu-top { flex: none; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--space-2); align-items: stretch; }
-#screen-hunter .hu-top .rtw-key { min-width: clamp(64px, 10vh, 110px); min-height: clamp(48px, 8vh, 80px); padding: 0 12px; }
-#screen-hunter .hu-top .rtw-key.zurueck svg { width: clamp(22px, 4vh, 40px); height: clamp(22px, 4vh, 40px); }
-#screen-hunter .hu-visit { display: flex; gap: 6px; align-items: center; justify-content: center; }
-#screen-hunter .hu-visit .ct { min-width: 2.6em; padding: 4px 8px; border-radius: 8px; background: #141011; text-align: center; font-family: var(--font-cond); font-weight: 700; font-size: clamp(13px, 2.4vh, 24px); }
-#screen-hunter .hu-visit .ct.leer { background: transparent; box-shadow: inset 0 0 0 1px #2a2224; min-height: 1.6em; }
-#screen-hunter .hu-visit .ct.miss { color: var(--red); }
-#screen-hunter #hu-pad { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: var(--space-2); margin: 0; }
-#screen-hunter .hu-treffer { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); }
-#screen-hunter .hu-treffer.n1 { grid-template-columns: minmax(0, 1fr); }
-#screen-hunter .hu-treffer.n2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-#screen-hunter .hu-treffer .rtw-key { min-height: 0; height: 100%; }
-#screen-hunter .hu-treffer .rtw-key.gross { grid-row: span 1; }
-#screen-hunter #hu-pad .rtw-reihe { flex: none; grid-template-columns: minmax(0, 1fr); }
-#screen-hunter #hu-pad .rtw-reihe .rtw-key { min-height: clamp(44px, 8vh, 80px); }
+#screen-hunter .hu-top { flex: none; height: clamp(44px, 9vh, 96px); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(5px, 0.9vh, 10px); }
+#screen-hunter .hu-key { min-height: 0; min-width: 0; margin: 0; padding: 0; appearance: none; -webkit-appearance: none; border: none; border-radius: clamp(12px, 1.8vh, 18px); background: #141011; color: var(--text); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(2px, 0.6vh, 8px); font-family: var(--font-cond); -webkit-tap-highlight-color: transparent; }
+#screen-hunter .hu-key:active { background: #1c1718; }
+#screen-hunter .hu-top .hu-key.zurueck { border-radius: clamp(10px, 1.6vh, 16px); }
+#screen-hunter .hu-top .hu-key.zurueck svg { width: clamp(22px, 4.6vh, 50px); height: clamp(22px, 4.6vh, 50px); }
+#screen-hunter .hu-visit { grid-column: span 2; display: flex; align-items: center; justify-content: center; gap: clamp(5px, 0.6vw, 9px); border-radius: clamp(10px, 1.6vh, 16px); background: #141011; }
+#screen-hunter .hu-visit .ct { width: clamp(32px, 5.4vw, 76px); height: clamp(28px, 6vh, 64px); display: flex; align-items: center; justify-content: center; border-radius: clamp(8px, 1.2vh, 12px); background: #1c1718; font-family: var(--font-cond); font-weight: 700; font-size: clamp(14px, 3vh, 32px); color: var(--text); }
+#screen-hunter .hu-visit .ct.miss { color: #ff5a5a; }
+#screen-hunter .hu-visit .ct.jetzt { box-shadow: inset 0 0 0 1.5px #f2eeee; }
+#screen-hunter #hu-pad { flex: 1 1 auto; min-height: 0; margin: 0; display: flex; flex-direction: column; }
+#screen-hunter .hu-keys { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: minmax(0, 2.2fr) minmax(0, 1.3fr) minmax(0, 0.9fr); gap: clamp(5px, 0.9vh, 10px); }
+#screen-hunter .hu-keys.einfach { grid-template-rows: minmax(0, 3fr) minmax(0, 1fr); }
+#screen-hunter .hu-key.gross { grid-column: span 2; background: #1a1516; box-shadow: inset 0 0 0 2px #f2eeee, 0 0 26px rgba(70, 170, 215, 0.3); }
+#screen-hunter .hu-key.gross:active { background: #221b1c; }
+#screen-hunter .hu-key .z { font-weight: 700; font-size: clamp(26px, 7.5vh, 82px); line-height: 0.95; font-variant-numeric: tabular-nums; }
+#screen-hunter .hu-key.gross .z { font-size: clamp(48px, 17vh, 190px); }
+#screen-hunter .hu-keys.einfach .hu-key.gross .z { font-size: clamp(56px, 20vh, 220px); }
+#screen-hunter .hu-key .mx { color: #a9e4ff; font-size: 0.62em; }
+#screen-hunter .hu-key .sub { font-weight: 600; font-size: clamp(11px, 2.2vh, 24px); letter-spacing: 0.04em; color: #9a8f90; white-space: nowrap; }
+#screen-hunter .hu-key.miss { grid-column: span 2; color: #ff5a5a; }
+#screen-hunter .hu-key.miss .z { font-size: clamp(20px, 4.6vh, 50px); }
 
+@media (prefers-reduced-motion: reduce) { #screen-hunter * { animation: none !important; transition: none !important; } }
+/* Handy quer: feste kleine Groessen. */
+@media (orientation: landscape) and (max-height: 420px) {
+  #screen-hunter.active { padding: 4px 8px; }
+  #screen-hunter.active .hu-body { gap: 8px; }
+  #screen-hunter .hu-links { gap: 4px; }
+  #screen-hunter .hu-rechts, #screen-hunter .hu-top, #screen-hunter .hu-keys { gap: 4px; }
+  #screen-hunter .hu-ziel-zahl { font-size: 40px; }
+  #screen-hunter .hu-ziel .kt, #screen-hunter .hu-ziel-sub { font-size: 10px; }
+  #screen-hunter .hu-mark .hu-punkt { width: 7cqw; height: 7cqw; font-size: 9px; }
+  #screen-hunter .hu-fang-banner { font-size: 14px; padding: 5px 12px; }
+  #screen-hunter .hu-chip { padding: 4px 8px; gap: 1px; }
+  #screen-hunter .hu-chip-meta { display: none; }
+  #screen-hunter .hu-key .sub { font-size: 11px; }
+}
+/* Hochkant: Scheibe oben, Chips, dann die Tasten mit festen Hoehen, die Seite scrollt. */
 @media (orientation: portrait) {
   #screen-hunter.active { height: auto; min-height: calc(100dvh - 12px); overflow: auto; }
   body.fix-spiel #screen-hunter.active { overflow: auto; }
-  #screen-hunter.active .game-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; gap: 8px; }
-  #screen-hunter .hu-scheibe { width: min(100%, 360px); }
-  #screen-hunter .hu-mark .hu-punkt { width: 16px; height: 16px; }
-  #screen-hunter .hu-mark .hu-name { font-size: 10px; }
+  #screen-hunter.active .hu-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto; gap: 8px; }
+  #screen-hunter .hu-links { grid-template-rows: auto auto auto; }
+  #screen-hunter .hu-mitte { height: min(calc(100vw - 32px), 440px); }
+  #screen-hunter .hu-ziel-zahl { font-size: clamp(36px, 11vw, 64px); }
+  #screen-hunter .hu-ziel .kt, #screen-hunter .hu-ziel-sub { font-size: clamp(9px, 2.6vw, 13px); }
+  #screen-hunter .hu-mark .hu-punkt { font-size: clamp(8px, 2.4vw, 12px); }
+  /* Chips zweispaltig, damit die Namen lesbar bleiben. */
+  #screen-hunter .hu-chips { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
   #screen-hunter #hu-pad { flex: none; }
-  #screen-hunter .hu-treffer .rtw-key { min-height: 64px; }
-}
-@media (orientation: landscape) and (max-height: 420px) {
-  #screen-hunter.active { padding: 4px 8px; }
-  #screen-hunter .hu-rechts { gap: 4px; }
-  #screen-hunter .hu-liste { display: none; }
-  #screen-hunter .hu-ziel { padding: 4px 10px; }
-  #screen-hunter .hu-ziel-zahl { font-size: 34px; }
+  #screen-hunter .hu-top { height: 48px; }
+  #screen-hunter .hu-keys { grid-template-rows: 120px 72px 52px; }
+  #screen-hunter .hu-keys.einfach { grid-template-rows: 150px 52px; }
+  #screen-hunter .hu-key.gross .z, #screen-hunter .hu-keys.einfach .hu-key.gross .z { font-size: 64px; }
+  #screen-hunter .hu-key .z { font-size: 34px; }
+  #screen-hunter .hu-chip-meta { display: none; }
 }
 
 /* ======================================================================

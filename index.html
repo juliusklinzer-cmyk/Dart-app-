@@ -1100,33 +1100,29 @@
 
 <!-- ============ HUNTER ============ -->
 <section id="screen-hunter" class="screen game">
-  <!-- Hunter (Oktober 2026): links die Scheibe mit den Markern am Rand,
-       rechts Menue, Info, das Ziel des Werfers, die Jagd (Vordermann und
-       Verfolger), die Spieler und die Eingabe. Zeichnet renderHunter. -->
-  <div class="game-body">
+  <!-- Hunter nach dem Entwurf "Hunter Spiel" (Okt. 2026): links der Kopf
+       (Menue, Titel, Runde bzw. Bestwert), die Scheibe als Spielfeld mit
+       dem Ziel des Werfers in der Mitte, den Markern aussen am Rand und dem
+       Fang-Banner, darunter die Spielerchips. Rechts Zurueck, die drei Darts
+       der Aufnahme und die Tasten fuers aktuelle Ziel. Zeichnet renderHunter. -->
+  <div class="game-body hu-body">
     <div class="hu-links">
-      <div id="hu-scheibe" class="hu-scheibe"></div>
-    </div>
-    <div class="hu-rechts">
-      <div class="rtw-kopf hu-kopf">
-        <button class="xk-btn rtw-menu" data-action="game-menu" aria-label="Menü">
+      <div class="hu-kopf">
+        <button class="hu-menu" data-action="game-menu" aria-label="Menü">
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><g opacity="0.8"><circle cx="3.5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="20.5" cy="12" r="1.8"></circle></g></svg>
         </button>
-        <div class="rtw-info">
-          <span class="rtw-h">Hunter</span>
-          <span class="rtw-sub" id="hu-sub"></span>
-          <span class="rtw-runde" id="hu-runde"></span>
-        </div>
+        <div class="hu-info"><span class="hu-h">Hunter</span><span class="hu-sub" id="hu-sub"></span></div>
+        <div class="hu-box" id="hu-box"></div>
       </div>
-      <div class="hu-ziel" id="hu-ziel" aria-live="polite"></div>
-      <div class="hu-jagd" id="hu-jagd"></div>
-      <div class="hu-liste" id="hu-liste"></div>
-      <div class="rtw-top hu-top">
-        <button class="rtw-key zurueck" data-action="undo-game" aria-label="Letzten Dart zurücknehmen">
+      <div class="hu-mitte"><div id="hu-scheibe" class="hu-scheibe"></div></div>
+      <div class="hu-chips" id="hu-liste"></div>
+    </div>
+    <div class="hu-rechts">
+      <div class="hu-top">
+        <button class="hu-key zurueck" data-action="undo-game" aria-label="Letzten Dart zurücknehmen">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 12H7M11.5 6.5L6 12l5.5 5.5"></path></svg>
         </button>
         <div class="hu-visit" id="hu-visit"></div>
-        <button class="rtw-key bust" data-action="hu-end-visit">Weiter</button>
       </div>
       <div class="pad" id="hu-pad"></div>
     </div>

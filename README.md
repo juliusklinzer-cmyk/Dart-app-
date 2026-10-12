@@ -427,15 +427,21 @@ Doppel oder nur das Triple zählt, immer 1 Feld). **Solo** ist ein Training: ein
 um die Scheibe von der 20 zurück auf die 20, gezählt werden die Darts, der Bestwert je
 Spieler und Variante leuchtet bei Verbesserung auf.
 
-Der Bildschirm zeigt links die Scheibe (SVG, 20 Segmente) mit farbigen Markern außen
-am Rand je Spieler samt Namen (auf einem Feld versetzt nebeneinander, Bewegung als
-kurze Animation, Fang-Animation am gefangenen Marker), das Zielfeld des Werfers
-leuchtet, bei Handicap nur der zählende Ring. Rechts groß das Ziel („17“, „D17“ oder
-„T17“, bei Boost „Doppel +2, Triple +3“), klein der Vordermann („noch 4 Felder bis
-Anna“) und der Verfolger mit Abstand, die Spielerliste mit Fängen, die drei Darts der
-Aufnahme, Zurück und „Weiter“ (Rest der Aufnahme daneben), darunter die Tasten der
-eigenen Zahl (Single, Doppel, Triple, bei Handicap nur der zählende Ring) und
-„Daneben“. Undo dartweise, auch über einen Fang hinweg; der Stand übersteht ein
+Der Bildschirm folgt dem Entwurf „Hunter Spiel“: links der Kopf (Menü, Variante,
+Spieler, wie viele im Spiel sind, rechts die Runde bzw. solo der Bestwert, der bei
+Verbesserung leuchtet), darunter die Scheibe als Spielfeld in klassischen Farben (SVG,
+20 Segmente, Zahlen innen am Rand). Das Zielfeld des Werfers leuchtet blau, bei Handicap
+nur der zählende Ring; in der Mitte stehen der Werfer, groß sein Ziel („17“, „D17“,
+„T17“) und wen er jagt („Jagt Anna · 3 Felder“, solo „noch 8 Felder“). Die Spieler sitzen
+als farbige Marker mit Kürzel außen am Rand (auf einem Feld versetzt nebeneinander,
+Bewegung als Animation, der Werfer größer mit weißem Ring, Gefangene grau), ein Fang
+poppt als Banner über der Scheibe auf („Julius fängt Anna!“). Unter der Scheibe je
+Spieler ein Chip mit Farbe, Name, Zielfeld, Fängen und letzter Aufnahme (solo Feld und
+Darts). Rechts Zurück und die drei Darts der Aufnahme, darunter die Tasten fürs
+aktuelle Ziel: Boost mit Single groß, Doppel (+2) und Triple (+3), jeweils mit dem
+Feld danach; Normal und Handicap mit einer großen Taste („jeder Ring zählt“ bzw. der
+zählende Ring) und „Miss“. Eine Aufnahme endet nach drei Darts (Fehlwürfe als Miss).
+Undo dartweise, auch über einen Fang hinweg; der Stand übersteht ein
 Neuladen. Die Zusammenfassung nennt Gewinner, Fänge, Darts und Trefferquote je Spieler;
 in der Rangliste stehen Siege, Fänge, Trefferquote (ab 30 Darts), Solo Normal und
 Solo Boost.
