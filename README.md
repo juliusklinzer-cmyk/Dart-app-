@@ -368,6 +368,10 @@ Reihenfolge, ein Tipp rechts nimmt wieder heraus; der Erste leuchtet, der Startk
 zählt mit („Noch 2 antippen“) und wird rot, sobald alle stehen. In der Fernsteuerung
 dieselben Karten in Plakatgröße, Auswahl per 4/6 und Enter.
 
+Die vorgeschlagenen Felder in der Karte des Werfers sind zugleich Tasten: Antippen bucht
+den Dart wie im X01 (in der Fernsteuerung nur Anzeige). Dasselbe gilt für Kaiwen in der
+Einzel-Dart-Eingabe.
+
 ### Kaiwen (Team-Checkout)
 
 Allein oder zu zweit (Entwurf „Kaiwen“, Oktober 2026): die **Zahl** (zum Start 120)
@@ -676,14 +680,30 @@ die spätere Modell-Stufe.
 
 ## Spielabschluss
 
-Ist ein Spiel entschieden, kommt zuerst der Glückwunsch für den Sieger und danach eine
-eigene **Spielstatistik** – für genau dieses Spiel, bevor es weitergeht:
+Ist ein Spiel entschieden, kommt zuerst der Glückwunsch für den Sieger (mit „Letzten
+Dart zurück“). Danach folgt für die schnellen Spiele das **Spielende nach dem Entwurf
+„Sieger“**: Pokal und Titel, das Podest (Zweiter links, Erster höher in der Mitte,
+Dritter rechts), daneben der Endstand mit einer Zeile und Kennzahl je Spieler und die
+Highlights, unten „Zum Menü“ (speichert) und „Revanche“ (gleiches Spiel noch einmal).
 
-- **501**: Ergebnis in Legs, je Spieler 3-Dart-Average, First 9, beste Aufnahme,
-  180/140+/100+, höchstes Finish, Doppelquote mit Treffern/Versuchen, bestes Leg und
-  geworfene Darts, dazu jedes Leg einzeln mit Sieger, Darts und Average.
-- **Cricket**: MPR, Marken, Punkte, geschlossene Felder und Darts je Spieler.
-- **Round the World**: erreichte Zahl, Darts, Treffer und Trefferquote je Spieler.
+- **Schnelles X01**: Legs und höchstes Finish, Ø; Highlights 180er, High-Finish,
+  bestes Leg, höchster Ø, Doppelquote.
+- **Cricket**: Felder zu und Punkte, MPR; meiste Marken, höchste MPR, Darts gesamt.
+- **Round the World**: durch mit Bull bzw. erreichte Zahl, Darts; beste Quote, Darts
+  bis Bull, Darts gesamt.
+- **Finisher**: gewonnene Runden, Ø Darts je Finish; höchste Zahl, schnellstes Finish,
+  gespielte Runden.
+- **Hunter**: Fänge und Darts bzw. „gefangen von“, Trefferquote; Fänge, Doppelfang,
+  beste Quote, Darts gesamt.
+- **Kaiwen**: kein Sieger, sondern „Score N“ mit dem Team (Checks, Darts, PB);
+  höchster Check, PB, Rekord, Versuche; der rote Knopf heißt „Neuer Versuch“.
+- **Online** (geteiltes Spiel mit eigenem Konto): Titel aus eigener Sicht („Du
+  gewinnst!“, „Knapp dran!“, „Nächstes Mal!“) und die eigene Platzierung als Pille.
+
+Die ausführlichen Karten (501: 3-Dart-Average, First 9, beste Aufnahme, 180/140+/100+,
+höchstes Finish, Doppelquote, bestes Leg, Darts, jedes Leg einzeln; Cricket: MPR,
+Marken, Punkte, Felder, Darts; RTW: erreichte Zahl, Darts, Treffer, Quote) gibt es
+weiter für Turnierspiele und für jedes gespeicherte Spiel aus der Spieleliste.
 
 Von dort geht es direkt weiter zum nächsten Spiel bzw. zur Turnierauswertung, oder das
 Trainingsspiel wird gespeichert. Dieselbe Auswertung lässt sich später jederzeit über

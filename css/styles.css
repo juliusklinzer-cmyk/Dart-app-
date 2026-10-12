@@ -3898,6 +3898,11 @@ body.tastatur #overlay-card :is(button, select, input):focus { outline: 3px soli
     font-size: clamp(56px, 50vh, 560px);
     font-size: clamp(56px, min(50vh, 60cqi), 560px);
   }
+  /* Die Zahl darf nie hoeher werden als ihre Zeile: die Zeile ist ein
+     Groessen-Container, die Ziffern messen sich an ihrer Hoehe (sonst lief
+     die 50-vh-Zahl in Safari ueber die Finish-Felder darunter). */
+  :is(#screen-game.active.turnier #scoreboard, #screen-finisher.active.fern #ff-karten) .pcard .rest-zeile { container-type: size; }
+  :is(#screen-game.active.turnier #scoreboard, #screen-finisher.active.fern #ff-karten) .pcard .rest-zeile .rest { font-size: min(1em, 112cqh); }
   :is(#screen-game.active.turnier #scoreboard, #screen-finisher.active.fern #ff-karten) .pcard .letzte-box { display: none; }
   :is(#screen-game.active.turnier #scoreboard, #screen-finisher.active.fern #ff-karten) .pcard.active .rest { text-shadow: 0 0 34px var(--laser-weich); }
   :is(#screen-game.active.turnier #scoreboard, #screen-finisher.active.fern #ff-karten) .pcard .pfelder { height: clamp(40px, 11vh, 120px); gap: clamp(6px, 0.9vw, 14px); }
@@ -5005,7 +5010,10 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
 #screen-bulloff > .bo-zurueck svg { width: clamp(16px, 2.6vh, 26px); height: clamp(16px, 2.6vh, 26px); }
 
 /* Zu zweit: zwei Karten. */
-#screen-bulloff .bulloff { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); grid-template-rows: minmax(0, 1fr); grid-auto-rows: auto; gap: clamp(10px, 2vw, 32px); width: 100%; }
+/* Feste zwei Spalten: mit auto-fit legte Safari am iPad beide Karten in die
+   linke Haelfte (die leeren Spuren blieben als Breite stehen). */
+#screen-bulloff .bulloff { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: minmax(0, 1fr); grid-auto-rows: auto; gap: clamp(10px, 2vw, 32px); width: 100%; }
+@media (max-width: 520px) { #screen-bulloff .bulloff { grid-template-columns: minmax(0, 1fr); } }
 #screen-bulloff .bulloff button[data-action="pick-starter"] {
   min-height: clamp(150px, 34vh, 360px); min-width: 0; padding: clamp(10px, 2vh, 24px);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: clamp(8px, 2.4vh, 30px);
@@ -6327,6 +6335,44 @@ body.fix-spiel #screen-hunter.active { flex: 1 1 auto; height: auto; min-height:
   #screen-hunter .hu-key.gross .z, #screen-hunter .hu-keys.einfach .hu-key.gross .z { font-size: 64px; }
   #screen-hunter .hu-key .z { font-size: 34px; }
   #screen-hunter .hu-chip-meta { display: none; }
+}
+
+
+/* Spielende der schnellen Spiele (X01, Cricket, RTW, Finisher, Hunter,
+   Kaiwen): dieselbe Buehne wie der Sieger-Bildschirm, im Statistik-Screen
+   (#screen-summary.sieger). Online dazu die eigene Platzierung ("Du"). */
+#screen-summary > #summary-kopf { display: none; }
+#screen-summary.sieger > #summary-kopf { display: flex; }
+#screen-summary.sieger > .app-header { display: none; }
+#screen-summary.sieger.active { display: flex; flex-direction: column; gap: 12px; padding: 8px 0 24px; background: radial-gradient(55% 50% at 50% 18%, rgba(255, 190, 70, 0.1), transparent 70%); }
+#screen-summary.sieger #summary-box { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+#screen-summary.sieger #summary-actions { margin-top: 0; display: block; }
+.sg-pokal.still { animation: none; filter: grayscale(0.2); }
+.sg-du { margin-top: 6px; display: inline-flex; align-items: center; gap: 10px; padding: 6px 14px; border-radius: 999px; background: #141011; box-shadow: inset 0 0 0 1.5px #2a2224; max-width: 100%; }
+.sg-du.sieg { background: rgba(255, 193, 77, 0.12); box-shadow: inset 0 0 0 1.5px rgba(255, 193, 77, 0.7), 0 0 24px rgba(255, 190, 60, 0.25); }
+.sg-du-tag { font-family: var(--font-cond); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.14em; text-transform: uppercase; color: #a9e4ff; }
+.sg-du.sieg .sg-du-tag { color: #ffc14d; }
+.sg-du b { font-family: var(--font-cond); font-weight: 700; font-size: 1.1rem; color: #fff; white-space: nowrap; }
+.sg-du > span:last-child { font-size: 0.85rem; color: #c9c0c0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sg-du-chip { display: inline-block; padding: 1px 6px; border-radius: 6px; background: rgba(70, 170, 215, 0.18); color: #a9e4ff; font-family: var(--font-cond); font-weight: 700; font-size: 0.7em; letter-spacing: 0.1em; text-transform: uppercase; vertical-align: middle; }
+.sg-podest.n1 { grid-template-columns: minmax(0, 1fr); }
+.sg-podest.team .sg-stufe { background: var(--bg-2); }
+@media (min-width: 700px) {
+  body.fix-setup #screen-summary.sieger.active { flex: 1 1 auto; min-height: 0; padding: clamp(6px, 1.8vh, 22px) 0 0; gap: clamp(8px, 1.8vh, 22px); }
+  body.fix-setup #screen-summary.sieger > * { flex: none; }
+  body.fix-setup #screen-summary.sieger > #summary-box { flex: 1 1 auto; min-height: 0; gap: clamp(8px, 1.8vh, 22px); }
+  #summary-box > .sg-titel { flex: none; }
+  #summary-box > .sg-koerper { flex: 1 1 auto; min-height: 0; }
+  .sg-du { margin-top: clamp(4px, 1vh, 12px); gap: clamp(8px, 1vw, 16px); padding: clamp(6px, 1.2vh, 14px) clamp(14px, 1.6vw, 24px); }
+  .sg-du-tag { font-size: clamp(11px, 1.9vh, 20px); }
+  .sg-du b { font-size: clamp(16px, 3.2vh, 34px); }
+  .sg-du > span:last-child { font-size: clamp(12px, 2vh, 20px); }
+  .sg-du-chip { font-size: clamp(10px, 1.7vh, 17px); padding: 2px 8px; }
+}
+/* Handy quer: Podest allein, der Endstand faellt weg. */
+@media (orientation: landscape) and (max-height: 420px) {
+  #screen-summary.sieger .sg-koerper, #screen-winner .sg-koerper:not(.liga) { grid-template-columns: minmax(0, 1fr); }
+  #screen-summary.sieger .sg-endstand, #screen-winner .sg-endstand { display: none; }
 }
 
 /* ======================================================================

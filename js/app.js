@@ -3446,7 +3446,8 @@
     var navEl = $('nav');
     var kopf = screen === 'setup' ? $('setup-kopf') : screen === 'tournament' ? $('turnier-kopf')
       : screen === 'liga' ? $('liga-kopf') : screen === 'boards' ? $('boards-kopf') : screen === 'players' ? $('players-kopf')
-      : screen === 'winner' ? $('winner-kopf') : screen === 'profile' ? $('profile-kopf') : null;
+      : screen === 'winner' ? $('winner-kopf') : screen === 'profile' ? $('profile-kopf')
+      : screen === 'summary' && siegerLive() ? $('summary-kopf') : null;
     if (kopf && navEl.parentElement !== kopf) kopf.appendChild(navEl);
     else if (!kopf && navEl.parentElement !== document.body) document.body.insertBefore(navEl, $('screen-setup'));
     /* Das •••-Menue gibt es nur in den Spielbildern - ueberall sonst wird
@@ -3518,7 +3519,7 @@
     /* Das Startbild steht am Tablet und quergedrehten Handy fest im Rahmen,
        innen scrollen nur Spielerliste und Einstellungen (body.fix-setup). */
     document.body.classList.toggle('fix-setup', S.screen === 'setup' || S.screen === 'tournament' || S.screen === 'bulloff' || S.screen === 'boards' ||
-      S.screen === 'liga' || S.screen === 'players' || S.screen === 'winner' || S.screen === 'profile');
+      S.screen === 'liga' || S.screen === 'players' || S.screen === 'winner' || S.screen === 'profile' || siegerLive());
     if (S.screen === 'setup') { gaesteAufraeumen(); renderSetup(); }
     /* Der Hintergrundtakt laeuft nur da, wo man ihn auch sieht: im
        Turnierbildschirm. Sonst fragt die App den ganzen Abend nach Daten,
@@ -7376,17 +7377,24 @@
       var fPlanRest = fPlanGilt && st.inVisit > 0 && fPlan.darts.length > st.inVisit
         ? { darts: fPlan.darts.slice(st.inVisit), auf: fPlan.auf } : null;
       route = fPlanRest ? (fPlanRest.auf === null ? fPlanRest.darts : null) : Checkout.suggest(st.rest[aktiv], 3 - st.inVisit, dbl);
+      /* Die vorgeschlagene Kachel ist zugleich die Taste (wie im X01):
+         data-num/data-mult nimmt derselbe Handler wie das Zahlenfeld. In
+         der Fernsteuerung bleibt sie reine Anzeige. */
+      var fTaste = function (d, klasse, innen) {
+        var soll = labelDart(d);
+        return UI.finFern ? '<span class="fk ' + klasse + '">' + innen + '</span>'
+          : '<button type="button" class="fk tipp ' + klasse + '" data-num="' + soll.n + '" data-mult="' + soll.m + '" aria-label="' + Checkout.pretty(d) + ' getroffen">' + innen + '</button>';
+      };
       if (route) {
         for (var ri = 0; ri < route.length && st.inVisit + ri < 3; ri++) {
-          kacheln[st.inVisit + ri] = '<span class="fk' + (ri === 0 ? ' jetzt' : '') + '">' +
-            Checkout.pretty(route[ri]) + '</span>';
+          kacheln[st.inVisit + ri] = fTaste(route[ri], ri === 0 ? 'jetzt' : '', Checkout.pretty(route[ri]));
         }
       } else if (st.inVisit < 3) {
         var stw = fPlanRest && fPlanRest.auf !== null ? fPlanRest : stellwurfFuer(st.rest[aktiv], 3 - st.inVisit, dbl);
         if (stw) {
           for (var si = 0; si < stw.darts.length && st.inVisit + si < 3; si++) {
-            kacheln[st.inVisit + si] = '<span class="fk stellen' + (si === 0 ? ' jetzt' : '') + '">' + Checkout.pretty(stw.darts[si]) +
-              (si === stw.darts.length - 1 ? '<span class="fk-auf">auf ' + stw.auf + '</span>' : '') + '</span>';
+            kacheln[st.inVisit + si] = fTaste(stw.darts[si], 'stellen' + (si === 0 ? ' jetzt' : ''), Checkout.pretty(stw.darts[si]) +
+              (si === stw.darts.length - 1 ? '<span class="fk-auf">auf ' + stw.auf + '</span>' : ''));
           }
         }
       }
@@ -7848,6 +7856,13 @@
     /* Finish-Weg fuer die laufende Aufnahme des Werfers (wie im Finisher):
        Plan-Folgen ueber die offenen Darts, Stellwurf nur, wenn im Versuch
        danach noch Darts kommen. Ueber 170 kein Hinweis. */
+    /* In Einzel-Darts ist die vorgeschlagene Kachel zugleich die Taste
+       (wie im X01); in der Punkte-Eingabe und der Fernsteuerung nur Anzeige. */
+    var kwTaste = function (d, klasse, innen) {
+      var soll = labelDart(d);
+      return modus !== 'darts' || fern ? '<span class="fk ' + klasse + '">' + innen + '</span>'
+        : '<button type="button" class="fk tipp ' + klasse + '" data-num="' + soll.n + '" data-mult="' + soll.m + '" aria-label="' + Checkout.pretty(d) + ' getroffen">' + innen + '</button>';
+    };
     var kacheln = ['', '', ''];
     var route = null;
     if (!g.done && st.restVorVisit <= 170) {
@@ -7869,14 +7884,14 @@
       route = planRest ? (planRest.auf === null ? planRest.darts : null) : Checkout.suggest(st.rest, dartsLeft, dbl);
       if (route) {
         for (var ri = 0; ri < route.length && st.offen.length + ri < 3; ri++) {
-          kacheln[st.offen.length + ri] = '<span class="fk' + (ri === 0 ? ' jetzt' : '') + '">' + Checkout.pretty(route[ri]) + '</span>';
+          kacheln[st.offen.length + ri] = kwTaste(route[ri], ri === 0 ? 'jetzt' : '', Checkout.pretty(route[ri]));
         }
       } else if (st.offen.length < 3 && st.visitNr < 2) {
         var stw = planRest && planRest.auf !== null ? planRest : stellwurfFuer(st.rest, dartsLeft, dbl);
         if (stw) {
           for (var si = 0; si < stw.darts.length && st.offen.length + si < 3; si++) {
-            kacheln[st.offen.length + si] = '<span class="fk stellen' + (si === 0 ? ' jetzt' : '') + '">' + Checkout.pretty(stw.darts[si]) +
-              (si === stw.darts.length - 1 ? '<span class="fk-auf">auf ' + stw.auf + '</span>' : '') + '</span>';
+            kacheln[st.offen.length + si] = kwTaste(stw.darts[si], 'stellen' + (si === 0 ? ' jetzt' : ''), Checkout.pretty(stw.darts[si]) +
+              (si === stw.darts.length - 1 ? '<span class="fk-auf">auf ' + stw.auf + '</span>' : ''));
           }
         }
       }
@@ -9075,10 +9090,221 @@
     fertig('Das PDF ist heruntergeladen (' + name + ') und die Mail ist geöffnet – bitte dort anhängen.');
   }
 
+  /* ================= Spielende der schnellen Spiele (Entwurf "Sieger") =================
+   * X01, Cricket, Round the World, Finisher, Hunter und Kaiwen enden auf
+   * derselben Buehne wie das Turnier: Pokal und Titel, Podest (Zweiter,
+   * Erster hoeher, Dritter), Endstand mit einer Zeile und Kennzahl je
+   * Spieler, Highlights, unten "Zum Menue" und "Revanche". Kaiwen zeigt
+   * das Team ohne Plaetze. Online steht dazu die eigene Platzierung
+   * ("Du"). Die ausfuehrlichen Karten bleiben im Archiv (Spieleliste). */
+  function siegerLive() {
+    return S.screen === 'summary' && !!UI.summary && UI.summary.id === 'current' && !!S.game && !!S.game.done;
+  }
+  function siegerSpielDaten(kind, g) {
+    var d = { emoji: '🏆', titel: '', sub: '', reihen: [], team: false, label: 'Endstand', hl: [], haupt: 'Revanche' };
+    var vn = function (id) { return esc(String(pname(id)).trim().split(/\s+/)[0]); };
+    var reihe = function (id, zeile, key) { return { id: id, zeile: zeile, key: key }; };
+    var summe = function (obj, ids) { return ids.reduce(function (a, id) { return a + (obj[id] || 0); }, 0); };
+    var bester = function (ids, wert) { var b = null; ids.forEach(function (id) { var v = wert(id); if (v !== null && (b === null || v > b.v)) b = { id: id, v: v }; }); return b; };
+    var quoteText = function (ids, treffer, darts) {
+      var b = bester(ids, function (id) { return darts[id] ? treffer[id] / darts[id] : null; });
+      return b ? Math.round(b.v * 100) + ' % ' + vn(b.id) : null;
+    };
+
+    if (kind === 'quick') {
+      var qm = g.matches ? g.matches[0] : g;
+      var qStart = (g.settings && g.settings.start) || g.start || 501;
+      var map = collectStats([{ matches: [qm], start: qStart }], qm.p);
+      qm.p.forEach(function (id) { finalize(map[id]); });
+      var qSolo = qm.p.length < 2;
+      var sst = mehrereLegs(qm) ? satzStand(qm) : null;
+      var qIds = qm.p.slice().sort(function (a, b) {
+        return ((b === qm.winner) - (a === qm.winner)) || (legsWon(qm, b) - legsWon(qm, a)) || (map[b].avg - map[a].avg);
+      });
+      d.emoji = qSolo ? '🎯' : '🏆';
+      d.titel = qm.winner ? esc(pname(qm.winner)) + (qSolo ? ' hat ausgemacht' : ' gewinnt!') : 'Abgebrochen';
+      d.sub = 'Schnelles X01 · ' + qStart + ' Double Out · ' + (qSolo ? 'Solo' : sst ? dauerText(qm) : plural(qm.p.length, 'Spieler', 'Spieler')) +
+        (!qSolo && qm.p.length === 2 && !sst ? ' · Legs ' + legsWon(qm, qIds[0]) + ':' + legsWon(qm, qIds[1]) : '');
+      d.reihen = qIds.map(function (id) {
+        var st = map[id];
+        return reihe(id, sst ? kurzStand(sst, id) : plural(legsWon(qm, id), 'Leg', 'Legs') + (st.highCO ? ' · Finish ' + st.highCO : ''), 'Ø ' + (st.darts ? st.avg.toFixed(1) : '–'));
+      });
+      d.hl = turnierHighlights(qIds, map);
+      var dq = qIds.filter(function (id) { return map[id].doubleAttempts > 0; }).map(function (id) { return Math.round(map[id].doubleQuote) + ' % ' + vn(id); });
+      if (dq.length) d.hl.push(['Doppelquote', dq.join(' · ')]);
+      return d;
+    }
+
+    var n = g.players.length, solo = n < 2;
+    if (kind === 'cricket') {
+      var cst = cricketState(g);
+      var zu = function (id) { return CRICKET_NUMBERS.filter(function (x) { return cst.marks[id][x] >= 3; }).length; };
+      var mpr = function (id) { return cst.darts[id] ? (cst.allMarks[id] / cst.darts[id]) * 3 : 0; };
+      var cIds = g.players.slice().sort(function (a, b) {
+        return ((b === g.winner) - (a === g.winner)) || (zu(b) - zu(a)) || (cst.score[b] - cst.score[a]) || (mpr(b) - mpr(a));
+      });
+      d.titel = esc(pname(g.winner)) + (solo ? ' hat alles zu' : ' gewinnt!');
+      d.sub = 'Cricket ' + (g.scoring ? 'mit Punkten' : 'ohne Punkte') + ' · ' + plural(n, 'Spieler', 'Spieler');
+      d.reihen = cIds.map(function (id) {
+        var z = zu(id);
+        return reihe(id, (z === 7 ? 'alle Felder zu' : z + ' Felder zu') + (g.scoring ? ' · ' + plural(cst.score[id], 'Punkt', 'Punkte') : ''), 'MPR ' + mpr(id).toFixed(2));
+      });
+      var bm = bester(cIds, function (id) { return cst.allMarks[id]; });
+      var bq = bester(cIds, function (id) { return cst.darts[id] ? mpr(id) : null; });
+      if (bm) d.hl.push(['Meiste Marken', bm.v + ' ' + vn(bm.id)]);
+      if (bq) d.hl.push(['Höchste MPR', bq.v.toFixed(2) + ' ' + vn(bq.id)]);
+      d.hl.push(['Darts gesamt', String(summe(cst.darts, cIds))]);
+      return d;
+    }
+
+    if (kind === 'rtw') {
+      var rst = rtwState(g);
+      var durch = function (id) { return id === g.winner || !!rst.finished[id]; };
+      var rIds = g.players.slice().sort(function (a, b) {
+        return ((b === g.winner) - (a === g.winner)) || (durch(b) - durch(a)) || (rst.target[b] - rst.target[a]) || (rst.darts[a] - rst.darts[b]);
+      });
+      d.titel = esc(pname(g.winner)) + (solo ? ' ist durch' : ' gewinnt!');
+      d.sub = 'Round the World' + (g.boost !== false ? ' · Boost' : '') + ' · bis Bull';
+      d.reihen = rIds.map(function (id) {
+        var t = rst.target[id];
+        return reihe(id, durch(id) ? 'durch mit Bull' : 'steht auf ' + (t === 25 ? 'Bull' : t), plural(rst.darts[id], 'Dart', 'Darts'));
+      });
+      var rq = quoteText(rIds, rst.hits, rst.darts);
+      if (rq) d.hl.push(['Beste Quote', rq]);
+      if (g.winner) d.hl.push(['Bis Bull', plural(rst.darts[g.winner], 'Dart', 'Darts') + ' ' + vn(g.winner)]);
+      d.hl.push(['Darts gesamt', String(summe(rst.darts, rIds))]);
+      return d;
+    }
+
+    if (kind === 'finisher') {
+      var gew = {}, dsum = {}, best = {}, hoch = {};
+      g.players.forEach(function (id) { gew[id] = 0; dsum[id] = 0; best[id] = null; hoch[id] = 0; });
+      (g.rounds || []).forEach(function (rd) {
+        if (!rd.sieger || !rd.darts || gew[rd.sieger] === undefined) return;
+        gew[rd.sieger]++; dsum[rd.sieger] += rd.darts;
+        if (best[rd.sieger] === null || rd.darts < best[rd.sieger]) best[rd.sieger] = rd.darts;
+        if (rd.zahl > hoch[rd.sieger]) hoch[rd.sieger] = rd.zahl;
+      });
+      var gespielt = (g.rounds || []).filter(function (rd) { return rd.sieger; }).length;
+      var fIds = g.players.slice().sort(function (a, b) {
+        return ((b === g.winner) - (a === g.winner)) || (gew[b] - gew[a]) || ((gew[a] ? dsum[a] / gew[a] : 99) - (gew[b] ? dsum[b] / gew[b] : 99));
+      });
+      d.titel = esc(pname(g.winner)) + (solo ? ' hat ausgemacht' : ' gewinnt!');
+      d.sub = 'Finisher · ' + plural(gespielt, 'Runde', 'Runden') + ' · auf ' + g.ziel + ' Punkte';
+      d.reihen = fIds.map(function (id) {
+        return reihe(id, plural(gew[id], 'Runde', 'Runden') + ' gewonnen', gew[id] ? 'Ø ' + (dsum[id] / gew[id]).toFixed(1) + ' Darts' : '–');
+      });
+      var fh = bester(fIds, function (id) { return hoch[id] || null; });
+      var fs = bester(fIds, function (id) { return best[id] === null ? null : -best[id]; });
+      if (fh) d.hl.push(['Höchste Zahl', fh.v + ' ' + vn(fh.id)]);
+      if (fs) d.hl.push(['Schnellstes', plural(-fs.v, 'Dart', 'Darts') + ' ' + vn(fs.id)]);
+      d.hl.push(['Gespielte Runden', String(gespielt)]);
+      return d;
+    }
+
+    if (kind === 'hunter') {
+      var hst = hunterState({ players: g.players, throws: g.throws || [], variante: g.variante, handicap: g.handicap, startPos: g.startPos });
+      var hName = g.variante === 'boost' ? 'Boost' : g.variante === 'handicap' ? 'Handicap' : 'Normal';
+      var hIds = g.players.slice().sort(function (a, b) {
+        var ra = hst.raus[a], rb = hst.raus[b];
+        return ((b === g.winner) - (a === g.winner)) || ((!rb) - (!ra)) || ((rb ? rb.at : 0) - (ra ? ra.at : 0)) || (hst.faenge[b] - hst.faenge[a]);
+      });
+      d.emoji = solo ? '🎯' : '🏆';
+      d.titel = solo ? (hst.fertig ? plural(hst.fertig.darts, 'Dart', 'Darts') + ' für die Runde' : 'Runde nicht beendet') : esc(pname(g.winner)) + ' gewinnt die Jagd';
+      d.sub = 'Hunter · ' + hName + ' · ' + (solo ? 'Solo' : plural(n, 'Spieler', 'Spieler') + ' · Runde ' + hst.runde) + (g.bestNeu ? ' · neuer Bestwert' : '');
+      d.reihen = hIds.map(function (id) {
+        var raus = hst.raus[id], f = hst.faenge[id] || 0;
+        var q = hst.darts[id] ? Math.round(hst.treffer[id] / hst.darts[id] * 100) : 0;
+        return reihe(id, solo ? plural(hst.darts[id], 'Dart', 'Darts')
+          : raus ? (f ? plural(f, 'Fang', 'Fänge') + ' · ' : '') + 'gefangen von ' + vn(raus.von)
+          : plural(f, 'Fang', 'Fänge') + ' · ' + plural(hst.darts[id], 'Dart', 'Darts'), q + ' % Treffer');
+      });
+      if (!solo) {
+        var fl = hIds.filter(function (id) { return hst.faenge[id] > 0; }).map(function (id) { return hst.faenge[id] + ' ' + vn(id); });
+        if (fl.length) d.hl.push(['Fänge', fl.join(' · ')]);
+        var doppel = {};
+        g.players.forEach(function (id) { var r = hst.raus[id]; if (r) { var k = r.at + '\u0001' + r.von; doppel[k] = (doppel[k] || 0) + 1; } });
+        var dfl = Object.keys(doppel).filter(function (k) { return doppel[k] >= 2; }).map(function (k) { return vn(k.split('\u0001')[1]); });
+        if (dfl.length) d.hl.push(['Doppelfang', dfl.join(' · ')]);
+      }
+      var hq = quoteText(hIds, hst.treffer, hst.darts);
+      if (hq) d.hl.push(['Beste Quote', hq]);
+      d.hl.push(['Darts gesamt', String(summe(hst.darts, hIds))]);
+      return d;
+    }
+
+    /* Kaiwen: kein Sieger, das Team und sein Score. */
+    var kst = kaiwenState({ players: g.players, versuche: g.versuche || [] });
+    d.team = true; d.label = solo ? 'Spieler' : 'Team'; d.haupt = 'Neuer Versuch';
+    d.emoji = g.rekordNeu ? '🏆' : '🔥';
+    d.titel = g.rekordNeu ? 'Neuer Rekord: ' + g.rekordNeu : 'Score ' + kst.hoechste;
+    d.sub = g.players.map(function (id) { return esc(pname(id)); }).join(' & ') + ' · Kaiwen · ' + (solo ? 'Solo' : 'Team') + ' · ' +
+      plural(kst.versuche, 'Versuch', 'Versuche') + ' · ' + plural(kst.checks, 'Check', 'Checks');
+    d.reihen = g.players.map(function (id) {
+      var pbNeu = g.pbNeu && g.pbNeu[id];
+      var pb = pbNeu || kaiwenPB(id, solo);
+      return reihe(id, plural(kst.checksJe[id] || 0, 'Check', 'Checks') + ' · ' + plural(kst.dartsJe[id] || 0, 'Dart', 'Darts'), 'PB ' + (pb === null ? '–' : pb) + (pbNeu ? ' neu' : ''));
+    });
+    var hc = null;
+    kst.verlauf.forEach(function (v) { if (v.check && (hc === null || v.zahl > hc)) hc = v.zahl; });
+    d.hl.push(['Höchster Check', hc === null ? 'keiner' : String(hc)]);
+    var pbs = g.players.filter(function (id) { return g.pbNeu && g.pbNeu[id]; }).map(function (id) { return g.pbNeu[id] + ' ' + vn(id); });
+    d.hl.push(['PB ' + (solo ? 'Solo' : 'Team'), pbs.length ? 'neu: ' + pbs.join(' · ') : 'bleibt']);
+    var rek = kaiwenRekord();
+    d.hl.push(['Rekord', rek.zahl + (rek.namen.length ? ' ' + rek.namen.map(esc).join(' & ') : '')]);
+    d.hl.push(['Versuche', kst.versuche + ' · ' + kst.checks + ' geschafft']);
+    return d;
+  }
+  function renderSiegerSpiel(kind, found) {
+    var g = found.g;
+    var d = siegerSpielDaten(kind, g);
+    var n = d.reihen.length;
+    /* Allein gespielt: keine Medaille, kein Rang. */
+    var medals = n > 1 ? ['🥇', '🥈', '🥉'] : ['', '', ''];
+    var order = d.team ? d.reihen.map(function (_, i) { return i; }) : n >= 3 ? [1, 0, 2] : n === 2 ? [1, 0] : [0];
+    var hoehe = d.team ? order.map(function () { return '92%'; }) : n >= 3 ? ['78%', '100%', '64%'] : n === 2 ? ['78%', '100%'] : ['100%'];
+    /* Online: die eigene Platzierung, Titel aus der eigenen Sicht. */
+    var me = g.online ? eigeneKontoId() : null;
+    var meIdx = -1;
+    if (me && !d.team) d.reihen.forEach(function (r, i) { if (r.id === me) meIdx = i; });
+    var du = meIdx >= 0, gewonnen = du && meIdx === 0 && d.reihen[0].id === g.winner;
+    var titel = du ? (gewonnen ? 'Du gewinnst!' : meIdx === 1 ? 'Knapp dran!' : 'Nächstes Mal!') : d.titel;
+    var sub = du ? (gewonnen ? 'Online · ' : esc(pname(d.reihen[0].id)) + ' gewinnt · ') + d.sub : d.sub;
+    var emoji = du && !gewonnen ? '🎯' : d.emoji;
+    var duChip = function (idx) { return du && idx === meIdx ? ' <span class="sg-du-chip">Du</span>' : ''; };
+    $('summary-box').innerHTML =
+      '<div class="sg-titel"><span class="sg-pokal' + (du && !gewonnen ? ' still' : '') + '">' + emoji + '</span><h1>' + titel + '</h1><p>' + sub + '</p>' +
+        (du ? '<div class="sg-du' + (gewonnen ? ' sieg' : '') + '"><span class="sg-du-tag">Du</span><b>' + (gewonnen ? 'Platz 1' : 'Platz ' + (meIdx + 1) + ' von ' + n) + '</b>' +
+          '<span>' + d.reihen[meIdx].zeile + ' · ' + d.reihen[meIdx].key + '</span></div>' : '') + '</div>' +
+      '<div class="sg-koerper">' +
+        '<div class="sg-podest n' + order.length + (d.team ? ' team' : '') + '">' + order.map(function (idx, i) {
+          var r = d.reihen[idx];
+          return '<div class="sg-stufe' + (idx === 0 && !d.team ? ' erster' : '') + '" style="--h:' + hoehe[i] + '">' +
+            '<div class="sg-av">' + avatarHTML(profile(r.id), 'lg') + (d.team || !medals[idx] ? '' : '<span class="sg-medal">' + medals[idx] + '</span>') + '</div>' +
+            '<span class="sg-name">' + esc(pname(r.id)) + duChip(idx) + '</span>' +
+            '<span class="sg-zeile">' + r.zeile + '</span>' +
+            '<span class="sg-key">' + r.key + '</span></div>';
+        }).join('') + '</div>' +
+        '<div class="card sg-endstand"><h2 class="kt">' + d.label + '</h2><div class="sg-liste">' + d.reihen.map(function (r, i) {
+          return '<div class="sg-row"><span class="sg-rang">' + (d.team || n < 2 ? '' : (i + 1) + '.') + '</span><span class="sg-nm">' + esc(pname(r.id)) + (du && i === meIdx ? ' <span class="sg-du-chip">Du</span>' : '') + '</span>' +
+            '<span class="sg-sub">' + r.zeile + '</span><b>' + r.key + '</b></div>';
+        }).join('') + '</div>' +
+        '<h2 class="kt sg-abstand">Highlights</h2><div class="sg-hl-liste">' + hlZeilen(d.hl) + '</div></div>' +
+      '</div>';
+    $('summary-actions').innerHTML = '<div class="sg-aktionen"><div class="sg-knoepfe">' +
+      '<button class="btn ghost" data-action="finish-game">Zum Menü</button>' +
+      '<button class="btn start-rot" data-action="restart-game">' + d.haupt + '</button></div></div>';
+  }
+
   function renderSummary() {
     var s = UI.summary;
     var found = s ? findGame(s.kind, s.id) : null;
     if (!found) { S.screen = S.matches.length ? 'tournament' : 'setup'; render(); return; }
+    /* Das Ende eines laufenden Spiels: die Sieger-Buehne. Danach (Archiv)
+       die ausfuehrlichen Karten. */
+    var live = siegerLive() && found.g && found.live;
+    $('screen-summary').classList.toggle('sieger', !!live);
+    if (live) { renderSiegerSpiel(s.kind, found); return; }
 
     var box = '';
     var actions = '';
@@ -12678,8 +12904,8 @@
         !(ev.target && ev.target.closest && ev.target.closest('button, a, input, select, [role="button"]'))) {
       var saKnoepfe = document.querySelectorAll('#summary-actions [data-action]');
       var saZiel = null;
-      if (ev.key === 'Escape') saZiel = document.querySelector('#summary-actions [data-action="summary-back"]');
-      if (!saZiel) saZiel = document.querySelector('#summary-actions .btn.primary[data-action]') || saKnoepfe[0];
+      if (ev.key === 'Escape') saZiel = document.querySelector('#summary-actions [data-action="summary-back"], #summary-actions [data-action="finish-game"]');
+      if (!saZiel) saZiel = document.querySelector('#summary-actions .btn.primary[data-action], #summary-actions .btn.start-rot[data-action]') || saKnoepfe[0];
       if (saZiel) { ev.preventDefault(); handleAction(saZiel.getAttribute('data-action'), saZiel); return; }
     }
     if (ev.key !== 'Enter' && ev.key !== ' ') return;

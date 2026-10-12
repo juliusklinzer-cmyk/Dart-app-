@@ -764,7 +764,7 @@ check('nach der Schlussrunde ist das Spiel beendet', (await text('#overlay-card'
 check('Sieger ist der Bull-Werfer', await page.evaluate((id) => window.__dart.game().winner === id, rA));
 await page.locator('#overlay-card [data-action="open-summary"]').click();
 const rSum = await text('#summary-box');
-check('RTW-Statistik zeigt Darts und Trefferquote', rSum.includes('Trefferquote') && rSum.includes('Gekommen bis'));
+check('RTW-Ende als Sieger-Buehne: durch mit Bull, Darts, beste Quote', rSum.includes('durch mit Bull') && rSum.includes('Darts') && rSum.includes('Beste Quote') && (await page.locator('#summary-box .sg-stufe').count()) >= 1);
 await page.locator('#summary-actions [data-action="finish-game"]').click();
 const rCar = await carr();
 const rWin = Object.values(rCar).find((s) => s.id === rA);
@@ -1371,6 +1371,17 @@ check('Zahl liegt zwischen 6 und 120', fst.zahl >= 6 && fst.zahl <= 120, String(
 check('beide starten auf derselben Zahl', fst.rest[fA] === fst.zahl && fst.rest[fB] === fst.zahl);
 check('Zahl steht groß im Kasten und als Rest auf den Karten', (await text('#fin-zahl')).trim() === String(fst.zahl) && (await text('#fin-board')).includes(String(fst.zahl)));
 check('Menue, Info und Runde stehen rechts oben', (await visible('#screen-finisher .fin-kopf .fin-menu')) && (await textKlein('#fin-runde')).includes('runde 1'));
+check('die vorgeschlagenen Felder in der Karte sind Tasten mit Feld und Ring', (await page.locator('#fin-board .pcard.active button.fk.tipp[data-num][data-mult]').count()) >= 1);
+{
+  const vorher = await page.evaluate(() => window.__dart.game().throws ? window.__dart.game().throws.length : (window.__dart.finisherState().inVisit || 0));
+  await page.locator('#fin-board .pcard.active button.fk.tipp').first().click();
+  await page.waitForTimeout(100);
+  const nachher = await page.evaluate(() => window.__dart.finisherState().inVisit);
+  check('Antippen bucht den Dart (Schnelleingabe wie im X01)', nachher === 1, 'inVisit ' + nachher + ' (vorher ' + vorher + ')');
+  await page.locator('#screen-finisher [data-action="undo-game"]').first().click();
+  await page.waitForTimeout(100);
+  check('Zurueck nimmt ihn wieder weg', (await page.evaluate(() => window.__dart.finisherState().inVisit)) === 0);
+}
 check('je Zielpunkt eine Pille in der Karte, anfangs keine an', await page.evaluate(() => {
   const karten = document.querySelectorAll('#fin-board .pcard');
   const ziel = window.__dart.game().ziel;
@@ -1480,8 +1491,8 @@ check('Glückwunsch-Overlay', (await text('#overlay-card')).includes('Glückwuns
 
 await page.locator('#overlay-card [data-action="open-summary"]').click();
 const finSum = await text('#summary-box');
-check('Auswertung zeigt Punkte und Darts', finSum.includes('Punkte') && finSum.includes('Ø Darts je Finish'));
-check('Auswertung listet die Runden', finSum.includes('Runde 1'));
+check('Finisher-Ende: Runden gewonnen, Ø Darts, hoechste Zahl', finSum.includes('Punkte') && finSum.includes('gewonnen') && finSum.includes('Höchste Zahl'));
+check('Sieger-Buehne mit Podest und Revanche', (await page.locator('#summary-box .sg-stufe.erster').count()) === 1 && (await textKlein('#summary-actions')).includes('revanche'));
 await page.locator('#summary-actions [data-action="finish-game"]').click();
 check('Finisher gespeichert',
   (await page.evaluate(() => window.__dart.state().history.filter((h) => h.kind === 'finisher').length)) === 1);
@@ -1733,8 +1744,11 @@ check('Glückwunsch-Overlay', (await textKlein('#overlay-card')).includes('glüc
 
 await page.locator('#overlay-card [data-action="open-summary"]').click();
 const qSum = await text('#summary-box');
-check('Auswertung nennt alle drei', qIds.every((id) => qSum.includes('Darts geworfen')));
+check('Auswertung nennt alle drei', (await page.locator('#summary-box .sg-row').count()) === qIds.length && (await page.locator('#summary-box .sg-stufe').count()) === qIds.length);
 check('Auswertung nennt den Modus', (await textKlein('#summary-box')).includes('schnelles x01'));
+check('X01-Ende als Sieger-Buehne: Podest mit Erstem in der Mitte, Endstand mit Legs und Ø, Zum Menue und Revanche', (await page.locator('#summary-box .sg-stufe.erster').count()) === 1 &&
+  qSum.includes('Leg') && qSum.includes('Ø') && (await page.locator('#summary-actions [data-action="finish-game"]').count()) === 1 && (await textKlein('#summary-actions')).includes('revanche') &&
+  (await page.locator('#screen-summary.sieger #summary-kopf #nav').count()) === 1);
 await page.locator('#summary-actions [data-action="finish-game"]').click();
 check('im Archiv gelandet',
   (await page.evaluate(() => window.__dart.state().history.filter((h) => h.kind === 'quick').length)) === 1);
@@ -5249,7 +5263,7 @@ group('Hunter: Maeusejagd, Startfelder, Fangen, Varianten, Solo');
   check('ein Triple ueber zwei Gegner faengt beide, A ist der Letzte und gewinnt', !!s.raus[hB] && !!s.raus[hC] && s.winner === hA);
   await page.locator('#overlay-card [data-action="open-summary"]').click();
   const huSum = await text('#summary-box');
-  check('die Zusammenfassung nennt Gewinner, Faenge, Darts und Trefferquote', huSum.includes('gewinnt die Jagd') && huSum.includes('Fänge') && huSum.includes('Trefferquote'));
+  check('die Zusammenfassung nennt Gewinner, Faenge, Darts und Trefferquote', huSum.toLowerCase().includes('gewinnt die jagd') && huSum.includes('Fänge') && huSum.includes('% Treffer') && huSum.includes('Doppelfang'));
   await page.locator('#summary-actions [data-action="finish-game"]').click();
   /* Handicap: Stufe Doppel rueckt bei Single nicht weiter. */
   await page.evaluate(() => { window.__dart.state().settings.hunterVariante = 2; });
