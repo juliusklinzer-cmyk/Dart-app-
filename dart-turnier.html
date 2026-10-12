@@ -6315,6 +6315,61 @@ button.pa-gruppe { cursor: pointer; }
 .pa-panel-koerper .card h2 { font-family: var(--font-cond); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
 .pa-panel-hint { grid-column: 1 / -1; margin: 0; }
 
+/* Finish-Kachel: zwei Knoepfe, Unterzeile "N angepasst" */
+.pa-finish-knoepfe { display: flex; flex-direction: column; gap: 8px; margin-top: auto; }
+.pa-finish-knoepfe .pa-btn { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.pa-btn-sub { color: #857a7b; font-weight: 400; }
+.pa-btn-sub:empty { display: none; }
+
+/* Finish-Tabelle: Tafel mit Editor und Liste */
+.ft-panel { gap: 10px; }
+.ft-filter { flex: none; }
+.ft-filter button { height: 36px; min-height: 0; margin: 0; padding: 0 12px; }
+.ft-liste { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 10px; align-content: start; }
+.ft-liste { grid-auto-rows: max-content; }
+.ft-zeile { min-width: 0; display: grid; grid-template-columns: 34px minmax(0, 1fr) 8px; align-items: center; gap: 8px; margin: 0; padding: 6px 6px; border: none; border-bottom: 1px solid #1f191b; border-radius: 6px; background: transparent; color: var(--text); cursor: pointer; text-align: left; font-family: var(--font-cond); text-transform: none; letter-spacing: 0; min-height: 44px; }
+.ft-zeile.active { background: #2a2224; }
+.ft-rest { font-weight: 700; font-size: 1.05rem; font-variant-numeric: tabular-nums; text-align: right; }
+.ft-weg { min-width: 0; display: flex; gap: 0.3em; font-weight: 700; font-size: 0.95rem; white-space: nowrap; overflow: hidden; }
+.ft-tok { color: #c9c0c0; }
+.ft-tok.dbl { color: var(--text); }
+.ft-tok.fav { color: var(--laser-hell); }
+.ft-tok.auf { color: #857a7b; font-weight: 400; }
+.ft-punkt { width: 8px; height: 8px; border-radius: 50%; background: transparent; }
+.ft-punkt.an { background: #46aad7; box-shadow: 0 0 8px rgba(70, 170, 215, 0.8); }
+.ft-editor { display: flex; flex-direction: column; gap: 10px; padding: 10px 12px; border-radius: 14px; background: #1c1718; box-shadow: inset 0 0 0 1.5px var(--aktiv-linie), 0 0 22px rgba(70, 170, 215, 0.22); }
+.ft-links { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.ft-zeile1 { display: flex; align-items: center; gap: 12px; }
+.ft-ed-rest { min-width: 2.4ch; font-family: var(--font-cond); font-weight: 700; font-size: 2rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.ft-darts { flex: 1 1 auto; }
+.ft-darts button, .ft-segs button { height: 40px; min-height: 0; margin: 0; }
+.ft-slots { display: flex; gap: 6px; }
+.ft-slot { flex: 1 1 0; min-width: 0; height: 48px; margin: 0; padding: 0; border-radius: 10px; background: #241d1f; border: none; color: var(--text); font-family: var(--font-cond); font-weight: 700; font-size: 1.3rem; text-transform: none; letter-spacing: 0; }
+.ft-slot.leer { color: #5a5052; }
+.ft-slot.active { background: #2a2224; box-shadow: inset 0 0 0 1.5px var(--aktiv-linie), 0 0 18px var(--schein-weich); color: #fff; }
+.ft-check { margin: 0; font-size: 0.85rem; line-height: 1.35; color: #857a7b; }
+.ft-check.gut { color: #6fe0a8; }
+.ft-check.mittel { color: #f2d48a; }
+.ft-check.schlecht { color: #ff8a8a; }
+.ft-alts { display: flex; flex-direction: column; gap: 6px; }
+.ft-alt-liste { display: flex; flex-wrap: wrap; gap: 6px; }
+.ft-alt-laedt { font-size: 0.8rem; color: #857a7b; }
+.ft-alt { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; margin: 0; padding: 6px 10px; min-height: 44px; border-radius: 10px; background: #241d1f; border: none; color: var(--text); text-align: left; text-transform: none; letter-spacing: 0; font-family: var(--font-body); }
+.ft-alt b { font-family: var(--font-cond); font-weight: 700; font-size: 1rem; }
+.ft-alt b small { color: #857a7b; font-weight: 400; }
+.ft-alt span { font-size: 0.75rem; color: #857a7b; }
+.ft-alt.active { background: #2a2224; box-shadow: inset 0 0 0 1.5px var(--aktiv-linie); }
+.ft-knoepfe { display: flex; gap: 8px; flex-wrap: wrap; }
+.ft-knoepfe .pa-btn { flex: 1 1 auto; }
+.ft-knoepfe .pa-btn:disabled { opacity: 0.4; }
+.ft-segs { display: flex; gap: 4px; padding: 3px; border-radius: 12px; background: #141011; align-self: flex-start; width: 100%; box-sizing: border-box; }
+.ft-segs button { flex: 1 1 0; min-width: 0; padding: 0 10px; border-radius: 9px; background: transparent; border: none; color: var(--text); font-family: var(--font-body); font-weight: 600; font-size: 0.9rem; text-transform: none; letter-spacing: 0; }
+.ft-segs button.active { background: #2a2224; box-shadow: inset 0 0 0 1.5px var(--aktiv-linie), 0 0 18px var(--schein-weich); color: #fff; }
+.ft-pad { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
+.ft-pad button { height: 44px; min-height: 0; margin: 0; padding: 0; border-radius: 8px; background: #241d1f; border: none; color: var(--text); font-family: var(--font-cond); font-weight: 700; font-size: 1.05rem; font-variant-numeric: tabular-nums; text-transform: none; letter-spacing: 0; }
+.ft-pad button:disabled { opacity: 0.3; }
+.ft-pad button.leer { color: #9a8f90; }
+
 /* Finish-Dialog ("Meine besten Finishes ermitteln") im Bogen-Stil */
 .overlay.bogen .fi-gruppen { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(6px, 0.8vw, 12px); }
 .overlay.bogen .fi-gruppen .dl-wahl { min-height: clamp(56px, 9vh, 92px); }
@@ -6339,6 +6394,9 @@ button.pa-gruppe { cursor: pointer; }
 .overlay.bogen .dl-fuss .btn:disabled { opacity: 0.4; }
 
 @media (max-width: 699px) {
+  .ft-panel .pa-panel-kopf { flex-wrap: wrap; }
+  .ft-panel .pa-panel-titel { flex: 1 1 auto; }
+  .ft-panel .ft-filter { flex: 1 1 100%; order: 3; }
   .overlay.bogen .fi-gruppen { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .overlay.bogen .fi-zaehler { grid-template-columns: minmax(0, 1fr); }
   .overlay.bogen .fi-diffs { grid-template-columns: minmax(0, 1fr); }
@@ -6381,8 +6439,31 @@ button.pa-gruppe { cursor: pointer; }
   .pa-konto .pa-btn { height: clamp(44px, 6vh, 62px); }
   .pa-panel { position: absolute; inset: 0; z-index: 5; min-height: 0; padding: clamp(12px, 2vh, 24px) clamp(12px, 1.6vw, 26px); box-shadow: 0 0 0 1.5px #2a2224, 0 20px 60px rgba(0, 0, 0, 0.6); }
   .pa-panel-titel { font-size: clamp(18px, 3.6vh, 40px); }
-  .pa-fertig { height: clamp(32px, 5vh, 52px); min-height: 0; font-size: clamp(14px, 2.2vh, 22px); }
+  .pa-fertig { height: clamp(44px, 5vh, 52px); min-height: 0; font-size: clamp(14px, 2.2vh, 22px); }
   .pa-panel-koerper { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; grid-template-columns: repeat(3, minmax(0, 1fr)); align-content: start; }
+  .pa-finish-knoepfe .pa-btn { height: clamp(44px, 6vh, 62px); }
+  .ft-panel { gap: clamp(8px, 1.4vh, 16px); }
+  .ft-filter button { height: clamp(44px, 4.4vh, 46px); font-size: clamp(11px, 1.8vh, 18px); }
+  .ft-liste { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; grid-template-columns: repeat(5, minmax(0, 1fr)); column-gap: clamp(10px, 1.4vw, 22px); }
+  .ft-zeile { grid-template-columns: clamp(30px, 4.6vh, 50px) minmax(0, 1fr) 8px; padding: clamp(5px, 0.9vh, 10px) clamp(6px, 0.6vw, 10px); min-height: 44px; }
+  .ft-rest { font-size: clamp(15px, 2.5vh, 26px); }
+  .ft-weg { font-size: clamp(12px, 1.9vh, 20px); }
+  .ft-editor { flex: none; flex-direction: row; align-items: stretch; gap: clamp(8px, 1vw, 16px); padding: clamp(8px, 1.4vh, 16px) clamp(10px, 1.2vw, 18px); }
+  .ft-links { flex: 1 1 0; }
+  .ft-ed-rest { font-size: clamp(26px, 5.4vh, 58px); }
+  .ft-darts { flex: none; }
+  .ft-darts button { height: clamp(44px, 5vh, 50px); padding: 0 clamp(8px, 0.9vw, 14px); font-size: clamp(11px, 1.8vh, 18px); }
+  .ft-slots { flex-wrap: nowrap; }
+  .ft-slot { flex: none; width: clamp(56px, 6vw, 84px); height: clamp(44px, 6vh, 62px); font-size: clamp(15px, 2.8vh, 30px); }
+  .ft-check { font-size: clamp(11px, 1.7vh, 17px); }
+  .ft-knoepfe { margin-top: auto; }
+  .ft-knoepfe .pa-btn { flex: none; height: clamp(44px, 5vh, 50px); }
+  .ft-segs { flex: none; flex-direction: column; width: clamp(60px, 6vw, 90px); align-self: stretch; max-height: clamp(150px, 24vh, 240px); }
+  .ft-segs button { flex: 1 1 0; height: auto; padding: 0 6px; font-size: clamp(11px, 1.8vh, 18px); }
+  .ft-pad { flex: 0 1 46%; grid-template-columns: repeat(11, minmax(0, 1fr)); align-content: start; }
+  .ft-pad button { height: clamp(44px, 4.8vh, 50px); font-size: clamp(13px, 2.2vh, 23px); }
+  .ft-alt b { font-size: clamp(12px, 2vh, 20px); }
+  .ft-alt span { font-size: clamp(10px, 1.5vh, 15px); }
 }
 /* Flach (Handy quer): Ausweis kompakt, Kacheln nebeneinander ohne festen Rahmen. */
 @media (min-width: 700px) and (max-height: 500px) {
@@ -6401,6 +6482,13 @@ button.pa-gruppe { cursor: pointer; }
   .pa-pad button { min-height: 44px; }
   .pa-finish > .pa-btn { flex: none; margin-top: 0; }
   .pa-panel-koerper { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ft-panel { overflow-y: auto; scrollbar-width: none; }
+  .ft-liste { flex: none; overflow: visible; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ft-editor { flex-direction: column; }
+  .ft-segs { max-height: none; }
+  .ft-segs { flex-direction: row; width: auto; }
+  .ft-segs button { height: 40px; }
+  .ft-pad { flex: none; }
 }
 
 </style>
@@ -8747,6 +8835,34 @@ button.pa-gruppe { cursor: pointer; }
     return { profil: p, L: L, standard: Lstd, tabelle: tab, tabelleCheckout: tabCheckout };
   }
 
+  /*
+   * Fragen an das geloeste Modell (Finish-Tabelle im Profil): Alternativen je
+   * Rest und der Vergleich eines eigenen Wegs. Die Loesung je Profil bleibt
+   * im Speicher (hoechstens drei), damit nur die erste Frage rechnet.
+   */
+  var LOESUNGEN = {};
+  function loesungFuer(p) {
+    p = profil(p);
+    var key = JSON.stringify(p);
+    if (LOESUNGEN[key]) return LOESUNGEN[key];
+    var keys = Object.keys(LOESUNGEN);
+    if (keys.length >= 3) delete LOESUNGEN[keys[0]];
+    LOESUNGEN[key] = tabellenFuerProfil(p, { ohneCheckout: true }).L;
+    return LOESUNGEN[key];
+  }
+  function beantworten(d) {
+    var L = loesungFuer(d.profil);
+    var r = Number(d.rest), dd = Number(d.darts);
+    if (!(r >= 2 && r <= 170) || !(dd >= 1 && dd <= 3)) throw new Error('Rest oder Darts ausserhalb');
+    if (d.frage === 'alternativen') return { id: d.id, alternativen: alternativen(L, r, dd, d.anzahl || 4) };
+    if (d.frage === 'vergleich') {
+      var pr = wegPruefen(r, dd, d.tokens || []);
+      if (!pr.ok) return { id: d.id, pruefung: pr, vergleich: null };
+      return { id: d.id, pruefung: pr, vergleich: wegVergleich(L, r, dd, d.tokens) };
+    }
+    throw new Error('Unbekannte Frage ' + d.frage);
+  }
+
   /* Zeile im Format von js/checkout.js: 'T19 S12 D16|T17 BULL|T19 >44' */
   function feldLabel(t) {
     if (t === 'Bull') return 'BULL';
@@ -8774,14 +8890,14 @@ button.pa-gruppe { cursor: pointer; }
     loesen: loesen, beabsichtigt: beabsichtigt, weg: weg, tabelle: tabelle, checkoutPolitik: checkoutPolitik,
     wegBewerten: wegBewerten, wegWert: wegWert, alternativen: alternativen, tokenGueltig: tokenGueltig, wegPruefen: wegPruefen, wegVergleich: wegVergleich,
     averageModell: averageModell, sigmaAusAverage: sigmaAusAverage, fitStreuung: fitStreuung, kategorien: kategorien, profilAusTests: profilAusTests,
-    tabellenFuerProfil: tabellenFuerProfil, kompakt: kompakt
+    tabellenFuerProfil: tabellenFuerProfil, kompakt: kompakt, beantworten: beantworten
   };
 })(typeof self !== 'undefined' ? self : globalThis);
 
 if (typeof module !== 'undefined') module.exports = (typeof self !== 'undefined' ? self : globalThis).CheckoutEngine;
 
-window.__CHECKOUT_ENGINE_SRC = "/*\n * Checkout-Engine: Finish-Tabellen aus einem Treffermodell.\n *\n * Portierung von docs/finishwege/referenz/checkout_referenz.py, die fuer\n * Regeln und Konstanten massgeblich bleibt. Jeder Wurf streut normalverteilt\n * um seinen Zielpunkt auf einem Board mit Originalmassen. In jedem Zustand\n * (Rest, Darts in der Hand) waehlt die Engine den Zielpunkt, der die\n * erwartete Zahl an Aufnahmen bis zum Finish minimiert; die Variante\n * \"checkout\" maximiert stattdessen die Chance, in dieser Aufnahme\n * auszuchecken.\n *\n * Unterschied zur Referenz: das Trefferbild entsteht nicht per Monte Carlo,\n * sondern durch Integration der Normalverteilung auf einem Gitter. Das ist\n * deterministisch, auf jedem Geraet gleich und genauer als die Million\n * Stichproben der Referenz. Abweichungen in den Tabellen gibt es deshalb\n * nur bei Fast-Gleichstaenden.\n *\n * Gerechnet wird einmal im Profil (Web Worker), das Ergebnis ist eine\n * Tabelle je Spieler im Format von js/checkout.js. Diese Datei hat keine\n * DOM-Zugriffe und laeuft in Node, im Worker und im Browser.\n */\n(function (global) {\n  'use strict';\n\n  /* ---------------------------------------------------------------- */\n  /* 1. Board (Steeldart, Masse in mm)                                 */\n  /* ---------------------------------------------------------------- */\n\n  var ORDER = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5];\n  var R_BULL = 6.35, R_25 = 15.9, R_T_IN = 99.0, R_T_OUT = 107.0, R_D_IN = 162.0, R_D_OUT = 170.0;\n\n  /* Ergebnis-Indizes: 0 daneben, 1..20 Single, 21..40 Doppel, 41..60 Triple,\n     61 = 25, 62 = Bull (50, zaehlt als Doppel) */\n  var NO = 63;\n  var VAL = new Int32Array(NO), DBL = new Uint8Array(NO);\n  (function () {\n    for (var n = 1; n <= 20; n++) {\n      VAL[n] = n; VAL[20 + n] = 2 * n; DBL[20 + n] = 1; VAL[40 + n] = 3 * n;\n    }\n    VAL[61] = 25; VAL[62] = 50; DBL[62] = 1;\n  })();\n\n  var DEG = 180 / Math.PI;\n\n  /** Ergebnis-Index fuer einen Treffer (x nach rechts, y nach oben, Ursprung Bull). */\n  function ergebnis(x, y) {\n    var r = Math.sqrt(x * x + y * y);\n    if (r > R_D_OUT) return 0;\n    if (r <= R_BULL) return 62;\n    if (r <= R_25) return 61;\n    var phi = (90 - Math.atan2(y, x) * DEG) % 360;\n    if (phi < 0) phi += 360;\n    var num = ORDER[Math.floor((phi + 9) / 18) % 20];\n    if (r > R_T_IN && r <= R_T_OUT) return 40 + num;\n    if (r > R_D_IN) return 20 + num;\n    return num;\n  }\n\n  function winkel(n) { return (90 - 18 * ORDER.indexOf(n)) * Math.PI / 180; }\n\n  /* ---------------------------------------------------------------- */\n  /* 2. Zielpunkte (81): Triple, Doppel, Single aussen und innen, Zentrum */\n  /* ---------------------------------------------------------------- */\n\n  var AIMS = [], AIM_IDX = {};\n  (function () {\n    var n, a;\n    for (n = 1; n <= 20; n++) { a = winkel(n); AIMS.push({ label: 'T' + n, art: 'T', n: n, x: 103 * Math.cos(a), y: 103 * Math.sin(a) }); }\n    for (n = 1; n <= 20; n++) { a = winkel(n); AIMS.push({ label: 'D' + n, art: 'D', n: n, x: 166 * Math.cos(a), y: 166 * Math.sin(a) }); }\n    for (n = 1; n <= 20; n++) { a = winkel(n); AIMS.push({ label: 'SO' + n, art: 'S', n: n, x: 134.5 * Math.cos(a), y: 134.5 * Math.sin(a) }); }\n    for (n = 1; n <= 20; n++) { a = winkel(n); AIMS.push({ label: 'SI' + n, art: 'S', n: n, x: 57.5 * Math.cos(a), y: 57.5 * Math.sin(a) }); }\n    AIMS.push({ label: 'C', art: 'C', n: 25, x: 0, y: 0 });\n    for (var i = 0; i < AIMS.length; i++) AIM_IDX[AIMS[i].label] = i;\n  })();\n  var NA = AIMS.length;\n  var C_IDX = AIM_IDX.C;\n\n  /* ---------------------------------------------------------------- */\n  /* 3. Spielerprofil                                                  */\n  /* ---------------------------------------------------------------- */\n\n  var REFERENZ = {\n    sigma_x: 12.0,     // waagrechte Streuung in mm (gilt fuer T20, T19 und Singles)\n    sigma_y: 12.0,     // senkrechte Streuung in mm\n    f_triple: 1.0,     // Faktor fuer Triples ausser T20 und T19\n    f_doppel: 1.0,     // Faktor fuer Doppel, die kein Favorit sind\n    f_bull: 1.0,       // Faktor fuer das Zentrum (Bull und 25)\n    favoriten: [],     // Doppel-Zahlen der Lieblingsgruppe(n), 25 steht fuer Bull\n    f_fav: 0.8,        // Favoriten streuen um diesen Faktor weniger\n    ziel: 'aufnahmen'  // \"aufnahmen\" oder \"checkout\"\n  };\n\n  function profil(p) {\n    var out = {};\n    for (var k in REFERENZ) out[k] = p && p[k] !== undefined && p[k] !== null ? p[k] : REFERENZ[k];\n    out.favoriten = (out.favoriten || []).map(Number);\n    ['sigma_x', 'sigma_y', 'f_triple', 'f_doppel', 'f_bull', 'f_fav'].forEach(function (k) {\n      out[k] = Number(out[k]);\n      if (!(out[k] > 0) || !isFinite(out[k])) throw new Error('Profilwert ' + k + ' fehlt oder ist nicht positiv');\n    });\n    if (out.sigma_x < 1 || out.sigma_x > 60 || out.sigma_y < 1 || out.sigma_y > 60) throw new Error('Streuung ausserhalb von 1 bis 60 mm');\n    if (out.favoriten.some(function (f) { return !(f >= 1 && f <= 20) && f !== 25; })) throw new Error('Favorit muss ein Doppel 1 bis 20 oder 25 (Bull) sein');\n    if (out.ziel !== 'aufnahmen' && out.ziel !== 'checkout') throw new Error('Spielweise muss aufnahmen oder checkout sein');\n    return out;\n  }\n\n  /* Halbierungsketten fuer die Wahl der Lieblingsgruppe */\n  var GRUPPEN = {\n    D20: [20, 10, 5],\n    D16: [16, 8, 4, 2, 1],\n    D18: [18, 9],\n    D12: [12, 6, 3],\n    D14: [14, 7],\n    Bull: [25]\n  };\n\n  /* ---------------------------------------------------------------- */\n  /* 4. Trefferbild: Wahrscheinlichkeit jedes Ergebnisses je Zielpunkt */\n  /* ---------------------------------------------------------------- */\n\n  /*\n   * Integration: in x ein Gitter aus K Spalten (jede Spalte traegt die exakte\n   * Masse ihres Streifens), entlang y exakt ueber die Normalverteilung: die\n   * Spalte wird an allen Grenzen (sechs Kreise, zehn Sektorlinien) geteilt,\n   * jedes Stueck liegt in genau einem Feld, seine Masse ist eine Differenz\n   * der Verteilungsfunktion. Ein reines Punktgitter war an den Sektorlinien\n   * um bis zu 0,002 daneben.\n   */\n  var SPANNE = 4.5;   // Spalten bis 4,5 Streuungen vom Zielpunkt\n  var K_FEIN = 1600;  // Spalten je Verteilung (Bull-Rand braucht feine Spalten)\n  var RADIEN = [R_BULL, R_25, R_T_IN, R_T_OUT, R_D_IN, R_D_OUT];\n  var TANS = [];      // Steigungen der zehn Sektorlinien (9, 27, ... Grad von oben)\n  for (var _k = 0; _k < 10; _k++) TANS.push(Math.tan((90 - (9 + 18 * _k)) * Math.PI / 180));\n\n  /* Komplementaere Fehlerfunktion (Chebyshev-Naeherung, relativer Fehler unter 1,2e-7). */\n  function erfc(x) {\n    var z = Math.abs(x), t = 1 / (1 + 0.5 * z);\n    var r = t * Math.exp(-z * z - 1.26551223 + t * (1.00002368 + t * (0.37409196 + t * (0.09678418 +\n      t * (-0.18628806 + t * (0.27886807 + t * (-1.13520398 + t * (1.48851587 + t * (-0.82215223 + t * 0.17087277)))))))));\n    return x >= 0 ? r : 2 - r;\n  }\n  function Phi(z) { return 0.5 * erfc(-z / Math.SQRT2); }\n\n  var gitterCache = {};\n  function gitter(K) {\n    if (gitterCache[K]) return gitterCache[K];\n    var z = new Float64Array(K), w = new Float64Array(K), h = 2 * SPANNE / K;\n    for (var i = 0; i < K; i++) {\n      z[i] = -SPANNE + (i + 0.5) * h;\n      var lo = i === 0 ? -Infinity : z[i] - h / 2, hi = i === K - 1 ? Infinity : z[i] + h / 2;\n      w[i] = (hi === Infinity ? 1 : Phi(hi)) - (lo === -Infinity ? 0 : Phi(lo));\n    }\n    return (gitterCache[K] = { z: z, w: w });\n  }\n\n  /** Ergebnis-Verteilung fuer einen Wurf auf (x, y) mit Streuung sx, sy. */\n  function verteilung(x, y, sx, sy, K) {\n    var g = gitter(K || K_FEIN), z = g.z, w = g.w, n = z.length;\n    var out = new Float64Array(NO), grenzen = new Float64Array(22);\n    for (var i = 0; i < n; i++) {\n      var xi = x + sx * z[i], wi = w[i], m = 0, k;\n      for (k = 0; k < RADIEN.length; k++) {\n        var R = RADIEN[k];\n        if (Math.abs(xi) < R) { var h = Math.sqrt(R * R - xi * xi); grenzen[m++] = h; grenzen[m++] = -h; }\n      }\n      for (k = 0; k < TANS.length; k++) grenzen[m++] = xi * TANS[k];\n      var ys = grenzen.subarray(0, m).sort();\n      var prev = -Infinity, prevPhi = 0;\n      for (var j = 0; j <= m; j++) {\n        var b = j < m ? ys[j] : Infinity;\n        var phiB = j < m ? Phi((b - y) / sy) : 1;\n        var masse = phiB - prevPhi;\n        if (masse > 0) {\n          var mitte = prev === -Infinity ? b - 1 : b === Infinity ? prev + 1 : 0.5 * (prev + b);\n          out[ergebnis(xi, mitte)] += wi * masse;\n        }\n        prev = b; prevPhi = phiB;\n      }\n    }\n    return out;\n  }\n\n  function faktor(p, aim) {\n    if (aim.art === 'T') return aim.n === 19 || aim.n === 20 ? 1 : p.f_triple;\n    if (aim.art === 'D') return p.f_doppel * (p.favoriten.indexOf(aim.n) >= 0 ? p.f_fav : 1);\n    if (aim.art === 'C') return p.f_bull * (p.favoriten.indexOf(25) >= 0 ? p.f_fav : 1);\n    return 1;\n  }\n\n  /** P[a] = Verteilung fuer Zielpunkt a (Array von Float64Array). */\n  function trefferbild(p, K) {\n    p = profil(p);\n    var P = new Array(NA);\n    for (var i = 0; i < NA; i++) {\n      var f = faktor(p, AIMS[i]);\n      P[i] = verteilung(AIMS[i].x, AIMS[i].y, p.sigma_x * f, p.sigma_y * f, K);\n    }\n    return P;\n  }\n\n  /* Duenne Form fuers Rechnen: je Zielpunkt nur die Ergebnisse mit Masse. */\n  function duenn(P) {\n    var idx = [], val = [];\n    for (var a = 0; a < NA; a++) {\n      var ii = [], vv = [];\n      for (var o = 0; o < NO; o++) if (P[a][o] > 0) { ii.push(o); vv.push(P[a][o]); }\n      idx.push(Int32Array.from(ii)); val.push(Float64Array.from(vv));\n    }\n    return { idx: idx, val: val };\n  }\n\n  /* ---------------------------------------------------------------- */\n  /* 5. Wege, Finish-Modus, erlaubte Zielpunkte (unabhaengig vom Spieler) */\n  /* ---------------------------------------------------------------- */\n\n  var SETUP = [], FIN = [];\n  (function () {\n    var n;\n    for (n = 1; n <= 20; n++) SETUP.push({ label: String(n), wert: n, aims: [AIM_IDX['SO' + n], AIM_IDX['SI' + n]] });\n    for (n = 1; n <= 20; n++) SETUP.push({ label: 'T' + n, wert: 3 * n, aims: [AIM_IDX['T' + n]] });\n    SETUP.push({ label: '25', wert: 25, aims: [C_IDX] });\n    SETUP.push({ label: 'Bull', wert: 50, aims: [C_IDX] });\n    for (n = 1; n <= 20; n++) FIN.push({ label: 'D' + n, wert: 2 * n, aims: [AIM_IDX['D' + n]], bull: false });\n    FIN.push({ label: 'Bull', wert: 50, aims: [C_IDX], bull: true });\n  })();\n\n  /* ROUTES[rest][k] = Liste von { erst: erster Dart (SETUP/FIN-Eintrag), bull } */\n  var ROUTES = [];\n  (function () {\n    var r, k, i, j, f;\n    for (r = 0; r <= 170; r++) { ROUTES.push([null, [], [], []]); }\n    for (f = 0; f < FIN.length; f++) ROUTES[FIN[f].wert][1].push({ erst: FIN[f], bull: FIN[f].bull });\n    for (i = 0; i < SETUP.length; i++) for (f = 0; f < FIN.length; f++) {\n      if (SETUP[i].wert + FIN[f].wert <= 170) ROUTES[SETUP[i].wert + FIN[f].wert][2].push({ erst: SETUP[i], bull: FIN[f].bull });\n    }\n    for (i = 0; i < SETUP.length; i++) for (j = 0; j < SETUP.length; j++) for (f = 0; f < FIN.length; f++) {\n      var s = SETUP[i].wert + SETUP[j].wert + FIN[f].wert;\n      if (s <= 170) ROUTES[s][3].push({ erst: SETUP[i], bull: FIN[f].bull });\n    }\n    void k;\n  })();\n\n  /** Minimale Dartzahl ohne Bull-Finish (kNB) und mit Bull-Finish (kB). */\n  function kMin(r) {\n    var kNB = null, kB = null, k, i;\n    for (k = 1; k <= 3 && kNB === null; k++) for (i = 0; i < ROUTES[r][k].length; i++) if (!ROUTES[r][k][i].bull) { kNB = k; break; }\n    for (k = 1; k <= 3 && kB === null; k++) for (i = 0; i < ROUTES[r][k].length; i++) if (ROUTES[r][k][i].bull) { kB = k; break; }\n    return [kNB, kB];\n  }\n\n  function finishbar(r, d) {\n    if (r < 2 || r > 170 || d <= 0) return false;\n    for (var k = 1; k <= d; k++) if (ROUTES[r][k].length) return true;\n    return false;\n  }\n\n  /* MODE[d][r] = 1: Finish moeglich (nur erste Darts minimaler Wege erlaubt), 0: Stellmodus.\n     Regel 1 (hart): wenigste Darts. Bull als Schluss nur, wenn es einen Dart spart oder der einzige Weg ist. */\n  var MODE = [null, new Uint8Array(171), new Uint8Array(171), new Uint8Array(171)];\n  var MASK = [null, new Uint8Array(171 * NA), new Uint8Array(171 * NA), new Uint8Array(171 * NA)];\n  var FIRST25 = [null, new Uint8Array(171), new Uint8Array(171), new Uint8Array(171)];  // \"25\" unter den ersten Darts?\n  (function () {\n    function erlauben(d, r, route) {\n      for (var i = 0; i < route.erst.aims.length; i++) MASK[d][r * NA + route.erst.aims[i]] = 1;\n      if (route.erst.label === '25') FIRST25[d][r] = 1;\n    }\n    for (var r = 2; r <= 170; r++) {\n      var km = kMin(r), kNB = km[0], kB = km[1];\n      for (var d = 1; d <= 3; d++) {\n        var i, k;\n        if (kNB !== null && kNB <= d) {\n          for (i = 0; i < ROUTES[r][kNB].length; i++) if (!ROUTES[r][kNB][i].bull) erlauben(d, r, ROUTES[r][kNB][i]);\n          for (k = 1; k < kNB; k++) for (i = 0; i < ROUTES[r][k].length; i++) if (ROUTES[r][k][i].bull) erlauben(d, r, ROUTES[r][k][i]);\n          MODE[d][r] = 1;\n        } else if (kB !== null && kB <= d) {\n          for (i = 0; i < ROUTES[r][kB].length; i++) if (ROUTES[r][kB][i].bull) erlauben(d, r, ROUTES[r][kB][i]);\n          MODE[d][r] = 1;\n        } else {\n          for (i = 0; i < NA; i++) {\n            var a = AIMS[i];\n            if ((a.art === 'S' && a.n <= r - 2) || (a.art === 'T' && 3 * a.n <= r - 2) || (a.art === 'C' && 25 <= r - 2)) MASK[d][r * NA + i] = 1;\n          }\n          MODE[d][r] = 0;\n        }\n      }\n    }\n  })();\n\n  /* Feinregeln (Werte in Aufnahmen) */\n  var BULL_DELTA = 0.02;      // Regel 7: Zentrum nur, wenn mindestens so viel besser\n  var EPS_FAV = 0.02;         // Regel 3: Weg auf einen Favoriten gewinnt, wenn hoechstens so viel schlechter\n  var EPS_STD = 0.01;         // Standardweg bleibt, wenn hoechstens so viel schlechter (nur mit Favoriten)\n  var BOGEY_MALUS = 0.01;     // Triple, dessen Single-Fehlwurf mit 2 Darts kein Finish mehr laesst (nur bei 3 Darts)\n  var FIRST_DART_PEN = 0.01;  // ab Rest 100 erster Dart T20 oder T19, ausser ein anderes Triple ist klar besser\n\n  var PEN = new Float64Array(NA);  // winziger Gleichstandsbrecher zu vertrauten Zielen\n  var BMAL = new Float64Array(171 * NA), FPEN = new Float64Array(171 * NA);\n  var ENDCODE_AIM = new Int32Array(NA);  // Doppelzahl bzw. 25 fuer Bull\n  var VINT = [null, new Int32Array(171 * NA), new Int32Array(171 * NA), new Int32Array(171 * NA)];\n  var FINAIM = [null, new Uint8Array(171 * NA), new Uint8Array(171 * NA), new Uint8Array(171 * NA)];\n  (function () {\n    var i, r, d, a;\n    for (i = 0; i < NA; i++) {\n      a = AIMS[i];\n      if (a.art === 'T') PEN[i] = a.n === 20 ? 0 : a.n === 19 ? 0.0005 : (a.n >= 16 && a.n <= 18) ? 0.001 : 0.0015;\n      else if (a.label.indexOf('SI') === 0) PEN[i] = 0.0002;\n      ENDCODE_AIM[i] = a.art === 'D' ? a.n : a.art === 'C' ? 25 : 0;\n    }\n    for (r = 2; r <= 170; r++) {\n      if (MODE[3][r] === 1) for (i = 0; i < NA; i++) {\n        a = AIMS[i];\n        if (a.art === 'T' && MASK[3][r * NA + i] && !finishbar(r - a.n, 2)) BMAL[r * NA + i] = BOGEY_MALUS;\n      }\n      if (r >= 100) for (i = 0; i < NA; i++) {\n        a = AIMS[i];\n        if (a.art === 'T' && a.n !== 19 && a.n !== 20) FPEN[r * NA + i] = FIRST_DART_PEN;\n      }\n    }\n    for (d = 1; d <= 3; d++) for (r = 2; r <= 170; r++) for (i = 0; i < NA; i++) {\n      a = AIMS[i];\n      var ix = r * NA + i;\n      if (a.art === 'T') VINT[d][ix] = 3 * a.n;\n      else if (a.art === 'S') VINT[d][ix] = a.n;\n      else if (a.art === 'D') { VINT[d][ix] = 2 * a.n; FINAIM[d][ix] = 2 * a.n === r ? 1 : 0; }\n      else if (r === 50) { VINT[d][ix] = 50; FINAIM[d][ix] = 1; }\n      else if (MODE[d][r] === 1 && !FIRST25[d][r]) VINT[d][ix] = 50;\n      else VINT[d][ix] = 25;\n    }\n  })();\n\n  /* ---------------------------------------------------------------- */\n  /* 6. Loesung: erwartete Aufnahmen bis zum Finish minimieren         */\n  /* ---------------------------------------------------------------- */\n\n  /*\n   * Fuer jeden Startrest S einer Aufnahme (aufsteigend) wird F[S] per\n   * Fixpunkt bestimmt, weil ein Bust auf S zurueckfuehrt. In jedem Zustand\n   * (s, d) wird der Zielpunkt so gewaehlt:\n   *   eff = erwartete weitere Aufnahmen + PEN + (bei 3 Darts: BMAL + FPEN)\n   *         + BULL_DELTA fuer das Zentrum\n   *   best0 = Minimum von eff ueber die erlaubten Zielpunkte (MASK)\n   *   Favoriten: Zielpunkte, deren beabsichtigter Weg auf einem Favoriten\n   *     endet und deren eff hoechstens EPS_FAV ueber best0 liegt, bilden\n   *     die Kandidaten. Das Zentrum zaehlt nur, wenn best0 schon das Zentrum\n   *     ist. Gibt es keinen Kandidaten, sind alle erlaubten Zielpunkte\n   *     Kandidaten.\n   *   best1 = Minimum von eff ueber die Kandidaten\n   *   Standard: liegt der Zielpunkt des Profils ohne Favoriten unter den\n   *     Kandidaten und hoechstens EPS_STD ueber best1, bleibt er.\n   *\n   * Ergebnis: { F, POL, GA, GB, P } mit POL[S][d * (S + 1) + s] = Zielpunkt\n   * im Zustand (Rest s, d Darts) einer Aufnahme, die bei S begann; Wert\n   * eines Zustands = GA[S][..] + GB[S][..] * F[S].\n   */\n  function loesen(P, favoriten, polStd, maxS) {\n    maxS = maxS || 170;\n    var favset = [];\n    (favoriten || []).forEach(function (f) { if (favset.indexOf(f) < 0) favset.push(f); });\n    var sp = duenn(P), Pidx = sp.idx, Pval = sp.val;\n    var F = new Float64Array(maxS + 1);\n    var POL = new Array(maxS + 1), GAs = new Array(maxS + 1), GBs = new Array(maxS + 1);\n    var A = new Float64Array(NO), B = new Float64Array(NO);\n    var eff = new Float64Array(NA), favok = new Uint8Array(NA);\n\n    for (var S = 2; S <= maxS; S++) {\n      var S1 = S + 1, n = S - 1;\n      var GA = new Float64Array(4 * S1), GB = new Float64Array(4 * S1);\n      var pol = new Int16Array(4 * S1), endc = new Int32Array(4 * S1);\n      var EA = [null, new Float64Array(n * NA), new Float64Array(n * NA), new Float64Array(n * NA)];\n      var EB = [null, new Float64Array(n * NA), new Float64Array(n * NA), new Float64Array(n * NA)];\n\n      /* Erwartungen fuer alle Zielpunkte in Zustand (s, d) aus den Werten der Stufe d - 1. */\n      var matrix = function (d) {\n        var base = (d - 1) * S1, ea = EA[d], eb = EB[d];\n        for (var i = 0; i < n; i++) {\n          var s = i + 2, o, a;\n          for (o = 0; o < NO; o++) {\n            var spv = s - VAL[o];\n            if (spv === 0 && DBL[o]) { A[o] = 0; B[o] = 0; }\n            else if (spv < 2) { A[o] = 0; B[o] = 1; }\n            else { A[o] = GA[base + spv]; B[o] = GB[base + spv]; }\n          }\n          for (a = 0; a < NA; a++) {\n            var idx = Pidx[a], val = Pval[a], x = 0, y = 0;\n            for (var k = 0; k < idx.length; k++) { x += A[idx[k]] * val[k]; y += B[idx[k]] * val[k]; }\n            ea[i * NA + a] = x; eb[i * NA + a] = y;\n          }\n        }\n      };\n\n      var Fg = S > 2 ? F[S - 1] + 0.3 : 4.0;\n      var grund = function () {\n        GA.fill(0); GB.fill(0); pol.fill(-1); endc.fill(0);\n        for (var s = 2; s < S; s++) GA[s] = F[s];   // Aufnahme vorbei: naechste Aufnahme ab dem Rest\n        GB[S] = 1;                                   // nichts gepunktet: wieder ab S\n      };\n      grund();\n      matrix(1);   // Stufe 0 haengt nicht von Fg ab\n\n      for (var iter = 0; iter < 200; iter++) {\n        if (iter) grund();\n        for (var d = 1; d <= 3; d++) {\n          if (d > 1) matrix(d);\n          var ea = EA[d], eb = EB[d], base = d * S1, vorher = (d - 1) * S1;\n          var maskD = MASK[d], vintD = VINT[d], finD = FINAIM[d], modeD = MODE[d];\n          var polS = polStd ? polStd[S] : null;\n          for (var i = 0; i < n; i++) {\n            var s = i + 2, a, best0 = -1, beff = Infinity;\n            for (a = 0; a < NA; a++) {\n              if (!maskD[s * NA + a]) { eff[a] = Infinity; continue; }\n              var e = ea[i * NA + a] + eb[i * NA + a] * Fg + PEN[a] + (a === C_IDX ? BULL_DELTA : 0);\n              if (d === 3) e += BMAL[s * NA + a] + FPEN[s * NA + a];\n              eff[a] = e;\n              if (e < beff) { beff = e; best0 = a; }\n            }\n            var anyfav = false;\n            if (favset.length) {\n              for (a = 0; a < NA; a++) {\n                favok[a] = 0;\n                if (!maskD[s * NA + a] || (a === C_IDX && best0 !== C_IDX)) continue;\n                var vint = vintD[s * NA + a], finm = finD[s * NA + a], ae;\n                if (finm) ae = ENDCODE_AIM[a];\n                else if (s - vint >= 2) ae = endc[vorher + (s - vint)];\n                else ae = 0;\n                if (favset.indexOf(ae) >= 0 && eff[a] <= beff + EPS_FAV) { favok[a] = 1; anyfav = true; }\n              }\n            }\n            var best1 = -1, b1 = Infinity;\n            for (a = 0; a < NA; a++) {\n              var cand = anyfav ? favok[a] : maskD[s * NA + a];\n              if (cand && eff[a] < b1) { b1 = eff[a]; best1 = a; }\n            }\n            var wahl = best1;\n            if (polS) {\n              var sa = polS[base + s];\n              if (sa < 0) sa = 0; else if (sa > NA - 1) sa = NA - 1;\n              var saCand = anyfav ? favok[sa] : maskD[s * NA + sa];\n              if (saCand && eff[sa] <= b1 + EPS_STD) wahl = sa;\n            }\n            GA[base + s] = ea[i * NA + wahl];\n            GB[base + s] = eb[i * NA + wahl];\n            pol[base + s] = wahl;\n            var nx = s - vintD[s * NA + wahl];\n            var eNext = nx >= 2 ? endc[vorher + nx] : 0;\n            endc[base + s] = finD[s * NA + wahl] ? ENDCODE_AIM[wahl] : (modeD[s] === 1 ? eNext : 0);\n          }\n        }\n        var Fnew = (1 + GA[3 * S1 + S]) / (1 - GB[3 * S1 + S]);\n        if (Math.abs(Fnew - Fg) < 1e-12) { Fg = Fnew; break; }\n        Fg = Fnew;\n      }\n      F[S] = Fg; POL[S] = pol; GAs[S] = GA; GBs[S] = GB;\n    }\n    return { P: P, F: F, POL: POL, GA: GAs, GB: GBs };\n  }\n\n  /** Label, Wert und ob der Dart finisht, wenn Zielpunkt a wie geplant getroffen wird. */\n  function beabsichtigt(a, s, d) {\n    var aim = AIMS[a];\n    if (aim.art === 'T') return { label: 'T' + aim.n, wert: 3 * aim.n, finish: false };\n    if (aim.art === 'S') return { label: String(aim.n), wert: aim.n, finish: false };\n    if (aim.art === 'D') return { label: 'D' + aim.n, wert: 2 * aim.n, finish: true };\n    if (s === 50) return { label: 'Bull', wert: 50, finish: true };\n    if (MODE[d][s] === 1 && !FIRST25[d][s]) return { label: 'Bull', wert: 50, finish: false };\n    return { label: '25', wert: 25, finish: false };\n  }\n\n  /** Weg ab Rest r mit d Darts (Aufnahme begann bei S). { darts, bleibt } mit bleibt 0 = Finish.\n      Bricht bei Rest unter 2 oder fehlender Politik ab (die Referenz liefe weiter, kommt\n      dort aber nie hin, weil die Masken keinen Rest 1 oder 0 ohne Finish zulassen). */\n  function weg(L, r, d, S, pol) {\n    S = S === undefined || S === null ? r : S;\n    pol = pol || L.POL[S];\n    var S1 = S + 1, steps = [];\n    while (d > 0 && r >= 2) {\n      var a = pol[d * S1 + r];\n      if (a < 0) break;\n      var b = beabsichtigt(a, r, d);\n      steps.push(b.label);\n      r -= b.wert; d--;\n      if (b.finish) return { darts: steps, bleibt: 0 };\n    }\n    return { darts: steps, bleibt: r };\n  }\n\n  /** Tabelle: je Rest 3, 2 und 1 Dart sowie Plan B (Single statt Triple bzw. 25 statt Bull). */\n  function tabelle(L, polVon) {\n    var out = {};\n    for (var r = 2; r <= 170; r++) {\n      var pol3 = polVon ? polVon(r) : null;\n      var w3 = weg(L, r, 3, r, pol3), w2 = weg(L, r, 2, r, pol3), w1 = weg(L, r, 1, r, pol3);\n      var pol = pol3 || L.POL[r], first = AIMS[pol[3 * (r + 1) + r]], planB = null;\n      if (first.art === 'T' && r - first.n >= 2) {\n        var rb = r - first.n, wb = weg(L, rb, 2, r, pol);\n        planB = { single: String(first.n), rest: rb, weg: wb.darts, bleibt: wb.bleibt };\n      } else if (first.art === 'C' && w3.darts[0] === 'Bull' && r !== 50 && r - 25 >= 2) {\n        var rc = r - 25, wc = weg(L, rc, 2, r, pol);\n        planB = { single: '25', rest: rc, weg: wc.darts, bleibt: wc.bleibt };\n      }\n      out[r] = { 3: { weg: w3.darts, bleibt: w3.bleibt }, 2: { weg: w2.darts, bleibt: w2.bleibt }, 1: { weg: w1.darts, bleibt: w1.bleibt }, planB: planB };\n    }\n    return out;\n  }\n\n  /* ---------------------------------------------------------------- */\n  /* 7. Zielvariante \"checkout\": maximale Chance in dieser Aufnahme    */\n  /* ---------------------------------------------------------------- */\n\n  /* Liefert eine Funktion polFuer(S): Politik, die die Checkout-Chance der\n     Aufnahme maximiert; Gleichstaende (innerhalb tol) entscheidet der\n     Aufnahmen-Wert wie in loesen(). */\n  function checkoutPolitik(L, tol) {\n    tol = tol === undefined ? 0.0005 : tol;\n    var P = L.P, sp = duenn(P), Pidx = sp.idx, Pval = sp.val;\n    var pf = [new Float64Array(171), new Float64Array(171), new Float64Array(171), new Float64Array(171)];\n    var pcv = new Float64Array(NA), eff = new Float64Array(NA), A = new Float64Array(NO), B = new Float64Array(NO);\n    var d, s, a, k, o, spv;\n    function chance(d, s) {\n      for (a = 0; a < NA; a++) {\n        var idx = Pidx[a], val = Pval[a], v = 0;\n        for (k = 0; k < idx.length; k++) {\n          o = idx[k]; spv = s - VAL[o];\n          if (spv === 0 && DBL[o]) v += val[k];\n          else if (spv >= 2) v += val[k] * pf[d - 1][spv];\n        }\n        pcv[a] = v;\n      }\n    }\n    for (d = 1; d <= 3; d++) for (s = 2; s <= 170; s++) {\n      chance(d, s);\n      var m = -1;\n      for (a = 0; a < NA; a++) if (MASK[d][s * NA + a] && pcv[a] > m) m = pcv[a];\n      pf[d][s] = m;\n    }\n    return function polFuer(S) {\n      var S1 = S + 1, pol = new Int16Array(4 * S1).fill(-1), GA = L.GA[S], GB = L.GB[S], FS = L.F[S];\n      for (d = 1; d <= 3; d++) {\n        var vorher = (d - 1) * S1;\n        for (s = 2; s <= S; s++) {\n          chance(d, s);\n          for (o = 0; o < NO; o++) {\n            spv = s - VAL[o];\n            if (spv === 0 && DBL[o]) { A[o] = 0; B[o] = 0; }\n            else if (spv < 2) { A[o] = 0; B[o] = 1; }\n            else { A[o] = GA[vorher + spv]; B[o] = GB[vorher + spv]; }\n          }\n          var best = -1;\n          for (a = 0; a < NA; a++) if (MASK[d][s * NA + a] && pcv[a] > best) best = pcv[a];\n          var wahl = -1, be = Infinity;\n          for (a = 0; a < NA; a++) {\n            if (!MASK[d][s * NA + a] || pcv[a] < best - tol) continue;\n            var idx = Pidx[a], val = Pval[a], x = 0, y = 0;\n            for (k = 0; k < idx.length; k++) { x += A[idx[k]] * val[k]; y += B[idx[k]] * val[k]; }\n            var e = x + y * FS + PEN[a] + (a === C_IDX ? BULL_DELTA : 0);\n            if (d === 3) e += BMAL[s * NA + a] + FPEN[s * NA + a];\n            eff[a] = e;\n            if (e < be) { be = e; wahl = a; }\n          }\n          pol[d * S1 + s] = wahl;\n        }\n      }\n      return pol;\n    };\n  }\n\n  /* ---------------------------------------------------------------- */\n  /* 8. Wege bewerten (eigene Eintraege, Top-3-Auswahl)                */\n  /* ---------------------------------------------------------------- */\n\n  function tokenAims(t) {\n    if (t === 'Bull' || t === '25') return [C_IDX];\n    if (t.charAt(0) === 'T' || t.charAt(0) === 'D') return [AIM_IDX[t]];\n    return [AIM_IDX['SO' + t], AIM_IDX['SI' + t]];\n  }\n\n  function tokenWert(t) {\n    if (t === 'Bull') return 50;\n    if (t === '25') return 25;\n    if (t.charAt(0) === 'T') return 3 * Number(t.slice(1));\n    if (t.charAt(0) === 'D') return 2 * Number(t.slice(1));\n    return Number(t);\n  }\n\n  function kombis(listen) {\n    if (!listen.length) return [[]];\n    var out = [], rest = kombis(listen.slice(1));\n    listen[0].forEach(function (a) { rest.forEach(function (r) { out.push([a].concat(r)); }); });\n    return out;\n  }\n\n  /*\n   * Bewertet einen Weg als Plan: solange die Darts wie geplant fallen, wird\n   * der Plan weitergeworfen, nach einem Fehlwurf uebernimmt die berechnete\n   * Politik. Ergebnis { aufnahmen: erwartete weitere Aufnahmen nach dieser,\n   * checkout: Chance in dieser Aufnahme }. Kleinere Aufnahmen sind besser.\n   */\n  function wegBewerten(L, r, d, tokens) {\n    var S = r, S1 = S + 1, P = L.P, F = L.F, GA = L.GA[S], GB = L.GB[S], pol = L.POL[S];\n    var pf = [new Float64Array(S1), new Float64Array(S1), new Float64Array(S1), new Float64Array(S1)];\n    var dd, s, o, spv;\n    for (dd = 1; dd <= 3; dd++) for (s = 2; s <= S; s++) {\n      var p = P[pol[dd * S1 + s]], v = 0;\n      for (o = 0; o < NO; o++) {\n        if (!p[o]) continue;\n        spv = s - VAL[o];\n        if (spv === 0 && DBL[o]) v += p[o];\n        else if (spv >= 2) v += p[o] * pf[dd - 1][spv];\n      }\n      pf[dd][s] = v;\n    }\n    function V(s, dd) { return GA[dd * S1 + s] + GB[dd * S1 + s] * F[S]; }\n    var vals = tokens.map(tokenWert), best = null;\n    kombis(tokens.map(tokenAims)).forEach(function (combo) {\n      function rec(s, dd, k) {\n        if (k === null || k >= combo.length) return [V(s, dd), dd > 0 ? pf[dd][s] : 0];\n        var p = P[combo[k]], ev = 0, pc = 0;\n        for (var o = 0; o < NO; o++) {\n          var pr = p[o];\n          if (!pr) continue;\n          var spo = s - VAL[o];\n          if (spo === 0 && DBL[o]) pc += pr;\n          else if (spo < 2) ev += pr * F[S];\n          else if (dd - 1 === 0) ev += pr * V(spo, 0);\n          else {\n            var r2 = rec(spo, dd - 1, VAL[o] === vals[k] ? k + 1 : null);\n            ev += pr * r2[0]; pc += pr * r2[1];\n          }\n        }\n        return [ev, pc];\n      }\n      var res = rec(r, d, 0);\n      if (!best || res[0] < best[0]) best = res;\n    });\n    return { aufnahmen: best[0], checkout: best[1] };\n  }\n\n  /*\n   * Wert eines Wegs nach dem Massstab des Loesers: erwartete Aufnahmen plus\n   * die Feinregeln fuer den ersten Dart (PEN, BULL_DELTA, bei 3 Darts Bogey-\n   * Malus und T20/T19-Regel). Damit lassen sich zwei Wege so vergleichen,\n   * wie loesen() sie verglichen hat.\n   */\n  function wegWert(L, r, d, tokens) {\n    var a = tokenAims(tokens[0])[0], z = PEN[a] + (a === C_IDX ? BULL_DELTA : 0);\n    if (d === 3) z += BMAL[r * NA + a] + FPEN[r * NA + a];\n    return wegBewerten(L, r, d, tokens).aufnahmen + z;\n  }\n\n  /** Die k besten unterschiedlichen Wege fuer (r, d): [{ weg, bleibt, aufnahmen, checkout }]. */\n  function alternativen(L, r, d, k) {\n    k = k || 3;\n    var res = [], seen = {};\n    for (var a = 0; a < NA; a++) {\n      if (!MASK[d][r * NA + a]) continue;\n      var b = beabsichtigt(a, r, d), steps, bleibt;\n      if (b.finish) { steps = [b.label]; bleibt = 0; }\n      else if (d > 1) { var w = weg(L, r - b.wert, d - 1, r); steps = [b.label].concat(w.darts); bleibt = w.bleibt; }\n      else { steps = [b.label]; bleibt = r - b.wert; }\n      var key = steps.join(' ');\n      if (seen[key]) continue;\n      seen[key] = true;\n      var bew = wegBewerten(L, r, d, steps);\n      res.push({ weg: steps, bleibt: bleibt, aufnahmen: bew.aufnahmen, checkout: bew.checkout });\n    }\n    res.sort(function (x, y) { return x.aufnahmen - y.aufnahmen; });\n    return res.slice(0, k);\n  }\n\n  /** Erlaubte Felder: 1 bis 20 (Single), T1 bis T20, D1 bis D20, 25, Bull. */\n  function tokenGueltig(t) {\n    if (t === '25' || t === 'Bull') return true;\n    return /^[TD]?([1-9]|1[0-9]|20)$/.test(t);\n  }\n\n  /** Harte Pruefung eines eigenen Eintrags: { ok, fehler, warnungen }. */\n  function wegPruefen(r, d, tokens) {\n    var fehler = [], warn = [];\n    var ungueltig = tokens.filter(function (t) { return !tokenGueltig(t); });\n    if (ungueltig.length) return { ok: false, fehler: ['unbekanntes Feld ' + ungueltig.join(', ')], warnungen: [] };\n    if (!tokens.length) fehler.push('kein Dart angegeben');\n    else if (tokens.length > d) fehler.push('zu viele Darts');\n    var rest = r;\n    for (var i = 0; i < tokens.length; i++) {\n      rest -= tokenWert(tokens[i]);\n      var letzter = i === tokens.length - 1;\n      if (rest < 0 || rest === 1 || (rest === 0 && !letzter)) { fehler.push('überworfen'); break; }\n    }\n    if (!fehler.length) {\n      var last = tokens[tokens.length - 1];\n      if (rest === 0 && !(last === 'Bull' || last.charAt(0) === 'D')) fehler.push('letzter Dart muss ein Doppel oder Bull sein');\n      if (rest > 0 && finishbar(r, d)) warn.push('kein Finish, obwohl eins möglich ist');\n      var km = kMin(r), ks = km.filter(function (x) { return x !== null; });\n      var kmin = ks.length ? Math.min.apply(null, ks) : null;\n      if (rest === 0 && kmin && tokens.length > kmin) warn.push('ein Dart mehr als nötig (möglich mit ' + kmin + ')');\n    }\n    return { ok: !fehler.length, fehler: fehler, warnungen: warn };\n  }\n\n  /** Eigener Weg gegen den berechneten besten Weg. */\n  function wegVergleich(L, r, d, tokens) {\n    var bestSteps = weg(L, r, d).darts;\n    var b = wegBewerten(L, r, d, bestSteps), e = wegBewerten(L, r, d, tokens);\n    var delta = e.aufnahmen - b.aufnahmen;\n    return {\n      besterWeg: bestSteps, checkoutBester: b.checkout, checkoutEigen: e.checkout,\n      mehrAufnahmen: delta,\n      deutlichSchlechter: delta > 0.05 || (b.checkout - e.checkout) > 0.03\n    };\n  }\n\n  /* ---------------------------------------------------------------- */\n  /* 9. Kalibrierung: Average und Wurftests in Profilwerte umrechnen   */\n  /* ---------------------------------------------------------------- */\n\n  var PRIOR_SD = 0.25;                   // Vertrauen in den Ausgangswert (log-normal, etwa ±25 %)\n  var SIGMA_MIN = 4.0, SIGMA_MAX = 30.0;  // unter etwa 41er Average traegt das Modell nicht mehr\n  var T20 = AIMS[AIM_IDX.T20];\n\n  function averageModell(sx, sy, K) {\n    var p = verteilung(T20.x, T20.y, sx, sy, K || K_FEIN), s = 0;\n    for (var o = 0; o < NO; o++) s += p[o] * VAL[o];\n    return 3 * s;\n  }\n\n  /** Waagrechte Streuung sx (mit sy = q * sx), bei der das Modell den Average erreicht. */\n  function sigmaAusAverage(avg, q, K) {\n    q = q || 1;\n    var lo = SIGMA_MIN, hi = SIGMA_MAX;\n    if (avg >= averageModell(lo, q * lo, K)) return lo;\n    if (avg <= averageModell(hi, q * hi, K)) return hi;\n    for (var i = 0; i < 40; i++) {\n      var mid = 0.5 * (lo + hi);\n      if (averageModell(mid, q * mid, K) > avg) lo = mid; else hi = mid;\n    }\n    return 0.5 * (lo + hi);\n  }\n\n  function nachbarn(n) {\n    var i = ORDER.indexOf(n);\n    return [ORDER[(i + 19) % 20], ORDER[(i + 1) % 20]];\n  }\n\n  /** Ergebnis-Indizes je Zaehl-Knopf. Was nicht aufgefuehrt ist, zaehlt als \"sonst\". */\n  function kategorien(test, ziel) {\n    var nb, a, b, k = {};\n    if (test === 't20') return { treffer: [60], s20: [20, 40], eins: [1, 21, 41], fuenf: [5, 25, 45] };\n    if (test === 'doppel') {\n      nb = nachbarn(ziel); a = nb[0]; b = nb[1];\n      k.treffer = [20 + ziel]; k.innen = [ziel, 40 + ziel]; k.aussen = [0];\n      k['nachbar_' + a] = [a, 20 + a, 40 + a]; k['nachbar_' + b] = [b, 20 + b, 40 + b];\n      return k;\n    }\n    if (test === 'bull') return { bull: [62], 25: [61] };\n    if (test === 'triple') {\n      nb = nachbarn(ziel); a = nb[0]; b = nb[1];\n      return { treffer: [40 + ziel], single: [ziel, 20 + ziel], nachbar: [a, 20 + a, 40 + a, b, 20 + b, 40 + b] };\n    }\n    throw new Error('Unbekannter Test ' + test);\n  }\n\n  function loglik(p, kats, zaehler) {\n    var ll = 0, restP = 1;\n    for (var name in kats) {\n      var pk = 0;\n      for (var i = 0; i < kats[name].length; i++) pk += p[kats[name][i]];\n      restP -= pk;\n      ll += (zaehler[name] || 0) * Math.log(Math.max(pk, 1e-6));\n    }\n    ll += (zaehler.sonst || 0) * Math.log(Math.max(restP, 1e-6));\n    return ll;\n  }\n\n  function prior(f, f0) { var l = Math.log(f / f0); return -(l * l) / (2 * PRIOR_SD * PRIOR_SD); }\n\n  function logRaster(von, bis, anzahl) {\n    var out = [], a = Math.log(von), b = Math.log(bis);\n    for (var i = 0; i < anzahl; i++) out.push(Math.exp(a + (b - a) * i / (anzahl - 1)));\n    return out;\n  }\n\n  /** Average legt die Gesamtstreuung fest, der T20-Test das Verhaeltnis senkrecht zu waagrecht. */\n  function leer(o) { return !o || !Object.keys(o).length; }\n\n  function fitStreuung(avg, t20, K) {\n    if (leer(t20)) { var s = sigmaAusAverage(avg, 1, K); return [s, s]; }\n    var kats = kategorien('t20'), best = null;\n    logRaster(0.6, 1 / 0.6, 21).forEach(function (q) {\n      var sx = sigmaAusAverage(avg, q, K);\n      var p = verteilung(T20.x, T20.y, sx, q * sx, K || K_FEIN);\n      var score = loglik(p, kats, t20) + prior(q, 1);\n      if (!best || score > best[0]) best = [score, sx, q * sx];\n    });\n    return [best[1], best[2]];\n  }\n\n  function fitFaktor(x, y, sx, sy, kats, zaehler, f0, K) {\n    var best = null;\n    logRaster(0.4, 2.5, 41).forEach(function (f) {\n      var p = verteilung(x, y, sx * f, sy * f, K || K_FEIN);\n      var score = loglik(p, kats, zaehler) + prior(f, f0);\n      if (!best || score > best[0]) best = [score, f];\n    });\n    return best[1];\n  }\n\n  function rund3(x) { return Math.round(x * 1000) / 1000; }\n\n  /*\n   * eingabe: { avg, favoriten, t20, doppel, bull, triple, ziel }\n   *   t20:    { treffer, s20, eins, fuenf, sonst }\n   *   doppel: { ziel: 16, treffer, innen, aussen, nachbar_7, nachbar_8, sonst }\n   *   bull:   { bull, 25, sonst }\n   *   triple: { ziel: 16, treffer, single, nachbar, sonst }\n   * Jeder Test ist optional. Ohne Test bleibt der Ausgangswert.\n   */\n  function profilAusTests(e, K) {\n    e = e || {};\n    var avg = Number(e.avg);\n    if (!(avg > 0) || !isFinite(avg)) throw new Error('Average fehlt');\n    var fav = (e.favoriten || []).map(Number);\n    var st = fitStreuung(avg, e.t20, K), sx = st[0], sy = st[1];\n    var fDoppel = 1, fFav = 0.8, fBull = 1, fTriple = 1, g;\n    if (!leer(e.doppel)) {\n      var z = Number(e.doppel.ziel), istFav = fav.indexOf(z) >= 0;\n      if (!(z >= 1 && z <= 20)) throw new Error('Doppel-Test: Ziel muss 1 bis 20 sein');\n      var aim = AIMS[AIM_IDX['D' + z]];\n      g = fitFaktor(aim.x, aim.y, sx, sy, kategorien('doppel', z), e.doppel, istFav ? 0.8 : 1, K);\n      fDoppel = istFav ? g / 0.8 : g;\n    }\n    if (!leer(e.bull)) {\n      var bFav = fav.indexOf(25) >= 0;\n      g = fitFaktor(0, 0, sx, sy, kategorien('bull'), e.bull, bFav ? 0.8 : 1, K);\n      fBull = bFav ? g / 0.8 : g;\n    }\n    if (!leer(e.triple)) {\n      var zt = Number(e.triple.ziel);\n      if (!(zt >= 1 && zt <= 20)) throw new Error('Triple-Test: Ziel muss 1 bis 20 sein');\n      var at = AIMS[AIM_IDX['T' + zt]];\n      if (zt !== 19 && zt !== 20) fTriple = fitFaktor(at.x, at.y, sx, sy, kategorien('triple', zt), e.triple, 1, K);\n    }\n    return {\n      sigma_x: rund3(sx), sigma_y: rund3(sy), f_triple: rund3(fTriple), f_doppel: rund3(fDoppel), f_bull: rund3(fBull),\n      favoriten: fav, f_fav: fFav, ziel: e.ziel || 'aufnahmen'\n    };\n  }\n\n  /* ---------------------------------------------------------------- */\n  /* 10. Komplettlauf fuer ein Profil                                  */\n  /* ---------------------------------------------------------------- */\n\n  /** Wie die App rechnet: erst ohne Favoriten (Standard), dann mit Favoriten und Standard-Bindung. */\n  function tabellenFuerProfil(p, opts) {\n    p = profil(p);\n    opts = opts || {};\n    var ohne = profil(p); ohne.favoriten = [];\n    var Lstd = opts.standard || loesen(trefferbild(ohne, opts.K));\n    var L = p.favoriten.length ? loesen(trefferbild(p, opts.K), p.favoriten, Lstd.POL) : Lstd;\n    var tab = tabelle(L);\n    var tabCheckout = opts.ohneCheckout ? null : tabelle(L, checkoutPolitik(L));\n    return { profil: p, L: L, standard: Lstd, tabelle: tab, tabelleCheckout: tabCheckout };\n  }\n\n  /* Zeile im Format von js/checkout.js: 'T19 S12 D16|T17 BULL|T19 >44' */\n  function feldLabel(t) {\n    if (t === 'Bull') return 'BULL';\n    if (t === '25' || t.charAt(0) === 'T' || t.charAt(0) === 'D') return t;\n    return 'S' + t;\n  }\n  function kompakt(tab) {\n    var out = {};\n    for (var r = 2; r <= 170; r++) {\n      var z = tab[r];\n      if (!z) continue;\n      out[r] = [3, 2, 1].map(function (d) {\n        var w = z[d].weg.map(feldLabel);\n        return (w.join(' ') + (z[d].bleibt ? ' >' + z[d].bleibt : '')).trim();\n      }).join('|');\n    }\n    return out;\n  }\n\n  global.CheckoutEngine = {\n    ORDER: ORDER, AIMS: AIMS, AIM_IDX: AIM_IDX, VAL: VAL, DBL: DBL, NO: NO, NA: NA,\n    GRUPPEN: GRUPPEN, REFERENZ: REFERENZ, profil: profil,\n    ergebnis: ergebnis, verteilung: verteilung, trefferbild: trefferbild,\n    kMin: kMin, finishbar: finishbar, MODE: MODE, MASK: MASK,\n    loesen: loesen, beabsichtigt: beabsichtigt, weg: weg, tabelle: tabelle, checkoutPolitik: checkoutPolitik,\n    wegBewerten: wegBewerten, wegWert: wegWert, alternativen: alternativen, tokenGueltig: tokenGueltig, wegPruefen: wegPruefen, wegVergleich: wegVergleich,\n    averageModell: averageModell, sigmaAusAverage: sigmaAusAverage, fitStreuung: fitStreuung, kategorien: kategorien, profilAusTests: profilAusTests,\n    tabellenFuerProfil: tabellenFuerProfil, kompakt: kompakt\n  };\n})(typeof self !== 'undefined' ? self : globalThis);\n\nif (typeof module !== 'undefined') module.exports = (typeof self !== 'undefined' ? self : globalThis).CheckoutEngine;\n";
-window.__CHECKOUT_WORKER_SRC = "/*\n * Rechnet Finish-Tabellen im Hintergrund (Web Worker), damit die Oberflaeche\n * waehrend der ein bis zwei Sekunden nicht steht. Auftrag per postMessage:\n *   { id, profil }    Profil wie CheckoutEngine.REFERENZ (Favoriten, Streuung)\n *   { id, eingabe }   Average, Lieblingsgruppen und Wurftests, aus denen\n *                     erst das Profil kalibriert wird\n * Antwort: { id, profil, tabelle, tabelleCheckout, ms } mit den Tabellen im\n * Format von js/checkout.js (je Rest '3 Darts|2 Darts|1 Dart'), bei einem\n * Fehler { id, fehler }.\n *\n * Im Einzeldatei-Buendel laeuft derselbe Code als Blob-Worker; build-single.mjs\n * entfernt dafuer die importScripts-Zeile und stellt die Engine voran.\n */\n\nself.onmessage = function (ev) {\n  var d = ev.data || {};\n  try {\n    var t = Date.now();\n    var p = d.eingabe ? CheckoutEngine.profilAusTests(d.eingabe) : CheckoutEngine.profil(d.profil);\n    var erg = CheckoutEngine.tabellenFuerProfil(p);\n    self.postMessage({\n      id: d.id, profil: p,\n      tabelle: CheckoutEngine.kompakt(erg.tabelle),\n      tabelleCheckout: CheckoutEngine.kompakt(erg.tabelleCheckout),\n      ms: Date.now() - t\n    });\n  } catch (e) {\n    self.postMessage({ id: d.id, fehler: String(e && e.message || e) });\n  }\n};\n";
+window.__CHECKOUT_ENGINE_SRC = "/*\n * Checkout-Engine: Finish-Tabellen aus einem Treffermodell.\n *\n * Portierung von docs/finishwege/referenz/checkout_referenz.py, die fuer\n * Regeln und Konstanten massgeblich bleibt. Jeder Wurf streut normalverteilt\n * um seinen Zielpunkt auf einem Board mit Originalmassen. In jedem Zustand\n * (Rest, Darts in der Hand) waehlt die Engine den Zielpunkt, der die\n * erwartete Zahl an Aufnahmen bis zum Finish minimiert; die Variante\n * \"checkout\" maximiert stattdessen die Chance, in dieser Aufnahme\n * auszuchecken.\n *\n * Unterschied zur Referenz: das Trefferbild entsteht nicht per Monte Carlo,\n * sondern durch Integration der Normalverteilung auf einem Gitter. Das ist\n * deterministisch, auf jedem Geraet gleich und genauer als die Million\n * Stichproben der Referenz. Abweichungen in den Tabellen gibt es deshalb\n * nur bei Fast-Gleichstaenden.\n *\n * Gerechnet wird einmal im Profil (Web Worker), das Ergebnis ist eine\n * Tabelle je Spieler im Format von js/checkout.js. Diese Datei hat keine\n * DOM-Zugriffe und laeuft in Node, im Worker und im Browser.\n */\n(function (global) {\n  'use strict';\n\n  /* ---------------------------------------------------------------- */\n  /* 1. Board (Steeldart, Masse in mm)                                 */\n  /* ---------------------------------------------------------------- */\n\n  var ORDER = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5];\n  var R_BULL = 6.35, R_25 = 15.9, R_T_IN = 99.0, R_T_OUT = 107.0, R_D_IN = 162.0, R_D_OUT = 170.0;\n\n  /* Ergebnis-Indizes: 0 daneben, 1..20 Single, 21..40 Doppel, 41..60 Triple,\n     61 = 25, 62 = Bull (50, zaehlt als Doppel) */\n  var NO = 63;\n  var VAL = new Int32Array(NO), DBL = new Uint8Array(NO);\n  (function () {\n    for (var n = 1; n <= 20; n++) {\n      VAL[n] = n; VAL[20 + n] = 2 * n; DBL[20 + n] = 1; VAL[40 + n] = 3 * n;\n    }\n    VAL[61] = 25; VAL[62] = 50; DBL[62] = 1;\n  })();\n\n  var DEG = 180 / Math.PI;\n\n  /** Ergebnis-Index fuer einen Treffer (x nach rechts, y nach oben, Ursprung Bull). */\n  function ergebnis(x, y) {\n    var r = Math.sqrt(x * x + y * y);\n    if (r > R_D_OUT) return 0;\n    if (r <= R_BULL) return 62;\n    if (r <= R_25) return 61;\n    var phi = (90 - Math.atan2(y, x) * DEG) % 360;\n    if (phi < 0) phi += 360;\n    var num = ORDER[Math.floor((phi + 9) / 18) % 20];\n    if (r > R_T_IN && r <= R_T_OUT) return 40 + num;\n    if (r > R_D_IN) return 20 + num;\n    return num;\n  }\n\n  function winkel(n) { return (90 - 18 * ORDER.indexOf(n)) * Math.PI / 180; }\n\n  /* ---------------------------------------------------------------- */\n  /* 2. Zielpunkte (81): Triple, Doppel, Single aussen und innen, Zentrum */\n  /* ---------------------------------------------------------------- */\n\n  var AIMS = [], AIM_IDX = {};\n  (function () {\n    var n, a;\n    for (n = 1; n <= 20; n++) { a = winkel(n); AIMS.push({ label: 'T' + n, art: 'T', n: n, x: 103 * Math.cos(a), y: 103 * Math.sin(a) }); }\n    for (n = 1; n <= 20; n++) { a = winkel(n); AIMS.push({ label: 'D' + n, art: 'D', n: n, x: 166 * Math.cos(a), y: 166 * Math.sin(a) }); }\n    for (n = 1; n <= 20; n++) { a = winkel(n); AIMS.push({ label: 'SO' + n, art: 'S', n: n, x: 134.5 * Math.cos(a), y: 134.5 * Math.sin(a) }); }\n    for (n = 1; n <= 20; n++) { a = winkel(n); AIMS.push({ label: 'SI' + n, art: 'S', n: n, x: 57.5 * Math.cos(a), y: 57.5 * Math.sin(a) }); }\n    AIMS.push({ label: 'C', art: 'C', n: 25, x: 0, y: 0 });\n    for (var i = 0; i < AIMS.length; i++) AIM_IDX[AIMS[i].label] = i;\n  })();\n  var NA = AIMS.length;\n  var C_IDX = AIM_IDX.C;\n\n  /* ---------------------------------------------------------------- */\n  /* 3. Spielerprofil                                                  */\n  /* ---------------------------------------------------------------- */\n\n  var REFERENZ = {\n    sigma_x: 12.0,     // waagrechte Streuung in mm (gilt fuer T20, T19 und Singles)\n    sigma_y: 12.0,     // senkrechte Streuung in mm\n    f_triple: 1.0,     // Faktor fuer Triples ausser T20 und T19\n    f_doppel: 1.0,     // Faktor fuer Doppel, die kein Favorit sind\n    f_bull: 1.0,       // Faktor fuer das Zentrum (Bull und 25)\n    favoriten: [],     // Doppel-Zahlen der Lieblingsgruppe(n), 25 steht fuer Bull\n    f_fav: 0.8,        // Favoriten streuen um diesen Faktor weniger\n    ziel: 'aufnahmen'  // \"aufnahmen\" oder \"checkout\"\n  };\n\n  function profil(p) {\n    var out = {};\n    for (var k in REFERENZ) out[k] = p && p[k] !== undefined && p[k] !== null ? p[k] : REFERENZ[k];\n    out.favoriten = (out.favoriten || []).map(Number);\n    ['sigma_x', 'sigma_y', 'f_triple', 'f_doppel', 'f_bull', 'f_fav'].forEach(function (k) {\n      out[k] = Number(out[k]);\n      if (!(out[k] > 0) || !isFinite(out[k])) throw new Error('Profilwert ' + k + ' fehlt oder ist nicht positiv');\n    });\n    if (out.sigma_x < 1 || out.sigma_x > 60 || out.sigma_y < 1 || out.sigma_y > 60) throw new Error('Streuung ausserhalb von 1 bis 60 mm');\n    if (out.favoriten.some(function (f) { return !(f >= 1 && f <= 20) && f !== 25; })) throw new Error('Favorit muss ein Doppel 1 bis 20 oder 25 (Bull) sein');\n    if (out.ziel !== 'aufnahmen' && out.ziel !== 'checkout') throw new Error('Spielweise muss aufnahmen oder checkout sein');\n    return out;\n  }\n\n  /* Halbierungsketten fuer die Wahl der Lieblingsgruppe */\n  var GRUPPEN = {\n    D20: [20, 10, 5],\n    D16: [16, 8, 4, 2, 1],\n    D18: [18, 9],\n    D12: [12, 6, 3],\n    D14: [14, 7],\n    Bull: [25]\n  };\n\n  /* ---------------------------------------------------------------- */\n  /* 4. Trefferbild: Wahrscheinlichkeit jedes Ergebnisses je Zielpunkt */\n  /* ---------------------------------------------------------------- */\n\n  /*\n   * Integration: in x ein Gitter aus K Spalten (jede Spalte traegt die exakte\n   * Masse ihres Streifens), entlang y exakt ueber die Normalverteilung: die\n   * Spalte wird an allen Grenzen (sechs Kreise, zehn Sektorlinien) geteilt,\n   * jedes Stueck liegt in genau einem Feld, seine Masse ist eine Differenz\n   * der Verteilungsfunktion. Ein reines Punktgitter war an den Sektorlinien\n   * um bis zu 0,002 daneben.\n   */\n  var SPANNE = 4.5;   // Spalten bis 4,5 Streuungen vom Zielpunkt\n  var K_FEIN = 1600;  // Spalten je Verteilung (Bull-Rand braucht feine Spalten)\n  var RADIEN = [R_BULL, R_25, R_T_IN, R_T_OUT, R_D_IN, R_D_OUT];\n  var TANS = [];      // Steigungen der zehn Sektorlinien (9, 27, ... Grad von oben)\n  for (var _k = 0; _k < 10; _k++) TANS.push(Math.tan((90 - (9 + 18 * _k)) * Math.PI / 180));\n\n  /* Komplementaere Fehlerfunktion (Chebyshev-Naeherung, relativer Fehler unter 1,2e-7). */\n  function erfc(x) {\n    var z = Math.abs(x), t = 1 / (1 + 0.5 * z);\n    var r = t * Math.exp(-z * z - 1.26551223 + t * (1.00002368 + t * (0.37409196 + t * (0.09678418 +\n      t * (-0.18628806 + t * (0.27886807 + t * (-1.13520398 + t * (1.48851587 + t * (-0.82215223 + t * 0.17087277)))))))));\n    return x >= 0 ? r : 2 - r;\n  }\n  function Phi(z) { return 0.5 * erfc(-z / Math.SQRT2); }\n\n  var gitterCache = {};\n  function gitter(K) {\n    if (gitterCache[K]) return gitterCache[K];\n    var z = new Float64Array(K), w = new Float64Array(K), h = 2 * SPANNE / K;\n    for (var i = 0; i < K; i++) {\n      z[i] = -SPANNE + (i + 0.5) * h;\n      var lo = i === 0 ? -Infinity : z[i] - h / 2, hi = i === K - 1 ? Infinity : z[i] + h / 2;\n      w[i] = (hi === Infinity ? 1 : Phi(hi)) - (lo === -Infinity ? 0 : Phi(lo));\n    }\n    return (gitterCache[K] = { z: z, w: w });\n  }\n\n  /** Ergebnis-Verteilung fuer einen Wurf auf (x, y) mit Streuung sx, sy. */\n  function verteilung(x, y, sx, sy, K) {\n    var g = gitter(K || K_FEIN), z = g.z, w = g.w, n = z.length;\n    var out = new Float64Array(NO), grenzen = new Float64Array(22);\n    for (var i = 0; i < n; i++) {\n      var xi = x + sx * z[i], wi = w[i], m = 0, k;\n      for (k = 0; k < RADIEN.length; k++) {\n        var R = RADIEN[k];\n        if (Math.abs(xi) < R) { var h = Math.sqrt(R * R - xi * xi); grenzen[m++] = h; grenzen[m++] = -h; }\n      }\n      for (k = 0; k < TANS.length; k++) grenzen[m++] = xi * TANS[k];\n      var ys = grenzen.subarray(0, m).sort();\n      var prev = -Infinity, prevPhi = 0;\n      for (var j = 0; j <= m; j++) {\n        var b = j < m ? ys[j] : Infinity;\n        var phiB = j < m ? Phi((b - y) / sy) : 1;\n        var masse = phiB - prevPhi;\n        if (masse > 0) {\n          var mitte = prev === -Infinity ? b - 1 : b === Infinity ? prev + 1 : 0.5 * (prev + b);\n          out[ergebnis(xi, mitte)] += wi * masse;\n        }\n        prev = b; prevPhi = phiB;\n      }\n    }\n    return out;\n  }\n\n  function faktor(p, aim) {\n    if (aim.art === 'T') return aim.n === 19 || aim.n === 20 ? 1 : p.f_triple;\n    if (aim.art === 'D') return p.f_doppel * (p.favoriten.indexOf(aim.n) >= 0 ? p.f_fav : 1);\n    if (aim.art === 'C') return p.f_bull * (p.favoriten.indexOf(25) >= 0 ? p.f_fav : 1);\n    return 1;\n  }\n\n  /** P[a] = Verteilung fuer Zielpunkt a (Array von Float64Array). */\n  function trefferbild(p, K) {\n    p = profil(p);\n    var P = new Array(NA);\n    for (var i = 0; i < NA; i++) {\n      var f = faktor(p, AIMS[i]);\n      P[i] = verteilung(AIMS[i].x, AIMS[i].y, p.sigma_x * f, p.sigma_y * f, K);\n    }\n    return P;\n  }\n\n  /* Duenne Form fuers Rechnen: je Zielpunkt nur die Ergebnisse mit Masse. */\n  function duenn(P) {\n    var idx = [], val = [];\n    for (var a = 0; a < NA; a++) {\n      var ii = [], vv = [];\n      for (var o = 0; o < NO; o++) if (P[a][o] > 0) { ii.push(o); vv.push(P[a][o]); }\n      idx.push(Int32Array.from(ii)); val.push(Float64Array.from(vv));\n    }\n    return { idx: idx, val: val };\n  }\n\n  /* ---------------------------------------------------------------- */\n  /* 5. Wege, Finish-Modus, erlaubte Zielpunkte (unabhaengig vom Spieler) */\n  /* ---------------------------------------------------------------- */\n\n  var SETUP = [], FIN = [];\n  (function () {\n    var n;\n    for (n = 1; n <= 20; n++) SETUP.push({ label: String(n), wert: n, aims: [AIM_IDX['SO' + n], AIM_IDX['SI' + n]] });\n    for (n = 1; n <= 20; n++) SETUP.push({ label: 'T' + n, wert: 3 * n, aims: [AIM_IDX['T' + n]] });\n    SETUP.push({ label: '25', wert: 25, aims: [C_IDX] });\n    SETUP.push({ label: 'Bull', wert: 50, aims: [C_IDX] });\n    for (n = 1; n <= 20; n++) FIN.push({ label: 'D' + n, wert: 2 * n, aims: [AIM_IDX['D' + n]], bull: false });\n    FIN.push({ label: 'Bull', wert: 50, aims: [C_IDX], bull: true });\n  })();\n\n  /* ROUTES[rest][k] = Liste von { erst: erster Dart (SETUP/FIN-Eintrag), bull } */\n  var ROUTES = [];\n  (function () {\n    var r, k, i, j, f;\n    for (r = 0; r <= 170; r++) { ROUTES.push([null, [], [], []]); }\n    for (f = 0; f < FIN.length; f++) ROUTES[FIN[f].wert][1].push({ erst: FIN[f], bull: FIN[f].bull });\n    for (i = 0; i < SETUP.length; i++) for (f = 0; f < FIN.length; f++) {\n      if (SETUP[i].wert + FIN[f].wert <= 170) ROUTES[SETUP[i].wert + FIN[f].wert][2].push({ erst: SETUP[i], bull: FIN[f].bull });\n    }\n    for (i = 0; i < SETUP.length; i++) for (j = 0; j < SETUP.length; j++) for (f = 0; f < FIN.length; f++) {\n      var s = SETUP[i].wert + SETUP[j].wert + FIN[f].wert;\n      if (s <= 170) ROUTES[s][3].push({ erst: SETUP[i], bull: FIN[f].bull });\n    }\n    void k;\n  })();\n\n  /** Minimale Dartzahl ohne Bull-Finish (kNB) und mit Bull-Finish (kB). */\n  function kMin(r) {\n    var kNB = null, kB = null, k, i;\n    for (k = 1; k <= 3 && kNB === null; k++) for (i = 0; i < ROUTES[r][k].length; i++) if (!ROUTES[r][k][i].bull) { kNB = k; break; }\n    for (k = 1; k <= 3 && kB === null; k++) for (i = 0; i < ROUTES[r][k].length; i++) if (ROUTES[r][k][i].bull) { kB = k; break; }\n    return [kNB, kB];\n  }\n\n  function finishbar(r, d) {\n    if (r < 2 || r > 170 || d <= 0) return false;\n    for (var k = 1; k <= d; k++) if (ROUTES[r][k].length) return true;\n    return false;\n  }\n\n  /* MODE[d][r] = 1: Finish moeglich (nur erste Darts minimaler Wege erlaubt), 0: Stellmodus.\n     Regel 1 (hart): wenigste Darts. Bull als Schluss nur, wenn es einen Dart spart oder der einzige Weg ist. */\n  var MODE = [null, new Uint8Array(171), new Uint8Array(171), new Uint8Array(171)];\n  var MASK = [null, new Uint8Array(171 * NA), new Uint8Array(171 * NA), new Uint8Array(171 * NA)];\n  var FIRST25 = [null, new Uint8Array(171), new Uint8Array(171), new Uint8Array(171)];  // \"25\" unter den ersten Darts?\n  (function () {\n    function erlauben(d, r, route) {\n      for (var i = 0; i < route.erst.aims.length; i++) MASK[d][r * NA + route.erst.aims[i]] = 1;\n      if (route.erst.label === '25') FIRST25[d][r] = 1;\n    }\n    for (var r = 2; r <= 170; r++) {\n      var km = kMin(r), kNB = km[0], kB = km[1];\n      for (var d = 1; d <= 3; d++) {\n        var i, k;\n        if (kNB !== null && kNB <= d) {\n          for (i = 0; i < ROUTES[r][kNB].length; i++) if (!ROUTES[r][kNB][i].bull) erlauben(d, r, ROUTES[r][kNB][i]);\n          for (k = 1; k < kNB; k++) for (i = 0; i < ROUTES[r][k].length; i++) if (ROUTES[r][k][i].bull) erlauben(d, r, ROUTES[r][k][i]);\n          MODE[d][r] = 1;\n        } else if (kB !== null && kB <= d) {\n          for (i = 0; i < ROUTES[r][kB].length; i++) if (ROUTES[r][kB][i].bull) erlauben(d, r, ROUTES[r][kB][i]);\n          MODE[d][r] = 1;\n        } else {\n          for (i = 0; i < NA; i++) {\n            var a = AIMS[i];\n            if ((a.art === 'S' && a.n <= r - 2) || (a.art === 'T' && 3 * a.n <= r - 2) || (a.art === 'C' && 25 <= r - 2)) MASK[d][r * NA + i] = 1;\n          }\n          MODE[d][r] = 0;\n        }\n      }\n    }\n  })();\n\n  /* Feinregeln (Werte in Aufnahmen) */\n  var BULL_DELTA = 0.02;      // Regel 7: Zentrum nur, wenn mindestens so viel besser\n  var EPS_FAV = 0.02;         // Regel 3: Weg auf einen Favoriten gewinnt, wenn hoechstens so viel schlechter\n  var EPS_STD = 0.01;         // Standardweg bleibt, wenn hoechstens so viel schlechter (nur mit Favoriten)\n  var BOGEY_MALUS = 0.01;     // Triple, dessen Single-Fehlwurf mit 2 Darts kein Finish mehr laesst (nur bei 3 Darts)\n  var FIRST_DART_PEN = 0.01;  // ab Rest 100 erster Dart T20 oder T19, ausser ein anderes Triple ist klar besser\n\n  var PEN = new Float64Array(NA);  // winziger Gleichstandsbrecher zu vertrauten Zielen\n  var BMAL = new Float64Array(171 * NA), FPEN = new Float64Array(171 * NA);\n  var ENDCODE_AIM = new Int32Array(NA);  // Doppelzahl bzw. 25 fuer Bull\n  var VINT = [null, new Int32Array(171 * NA), new Int32Array(171 * NA), new Int32Array(171 * NA)];\n  var FINAIM = [null, new Uint8Array(171 * NA), new Uint8Array(171 * NA), new Uint8Array(171 * NA)];\n  (function () {\n    var i, r, d, a;\n    for (i = 0; i < NA; i++) {\n      a = AIMS[i];\n      if (a.art === 'T') PEN[i] = a.n === 20 ? 0 : a.n === 19 ? 0.0005 : (a.n >= 16 && a.n <= 18) ? 0.001 : 0.0015;\n      else if (a.label.indexOf('SI') === 0) PEN[i] = 0.0002;\n      ENDCODE_AIM[i] = a.art === 'D' ? a.n : a.art === 'C' ? 25 : 0;\n    }\n    for (r = 2; r <= 170; r++) {\n      if (MODE[3][r] === 1) for (i = 0; i < NA; i++) {\n        a = AIMS[i];\n        if (a.art === 'T' && MASK[3][r * NA + i] && !finishbar(r - a.n, 2)) BMAL[r * NA + i] = BOGEY_MALUS;\n      }\n      if (r >= 100) for (i = 0; i < NA; i++) {\n        a = AIMS[i];\n        if (a.art === 'T' && a.n !== 19 && a.n !== 20) FPEN[r * NA + i] = FIRST_DART_PEN;\n      }\n    }\n    for (d = 1; d <= 3; d++) for (r = 2; r <= 170; r++) for (i = 0; i < NA; i++) {\n      a = AIMS[i];\n      var ix = r * NA + i;\n      if (a.art === 'T') VINT[d][ix] = 3 * a.n;\n      else if (a.art === 'S') VINT[d][ix] = a.n;\n      else if (a.art === 'D') { VINT[d][ix] = 2 * a.n; FINAIM[d][ix] = 2 * a.n === r ? 1 : 0; }\n      else if (r === 50) { VINT[d][ix] = 50; FINAIM[d][ix] = 1; }\n      else if (MODE[d][r] === 1 && !FIRST25[d][r]) VINT[d][ix] = 50;\n      else VINT[d][ix] = 25;\n    }\n  })();\n\n  /* ---------------------------------------------------------------- */\n  /* 6. Loesung: erwartete Aufnahmen bis zum Finish minimieren         */\n  /* ---------------------------------------------------------------- */\n\n  /*\n   * Fuer jeden Startrest S einer Aufnahme (aufsteigend) wird F[S] per\n   * Fixpunkt bestimmt, weil ein Bust auf S zurueckfuehrt. In jedem Zustand\n   * (s, d) wird der Zielpunkt so gewaehlt:\n   *   eff = erwartete weitere Aufnahmen + PEN + (bei 3 Darts: BMAL + FPEN)\n   *         + BULL_DELTA fuer das Zentrum\n   *   best0 = Minimum von eff ueber die erlaubten Zielpunkte (MASK)\n   *   Favoriten: Zielpunkte, deren beabsichtigter Weg auf einem Favoriten\n   *     endet und deren eff hoechstens EPS_FAV ueber best0 liegt, bilden\n   *     die Kandidaten. Das Zentrum zaehlt nur, wenn best0 schon das Zentrum\n   *     ist. Gibt es keinen Kandidaten, sind alle erlaubten Zielpunkte\n   *     Kandidaten.\n   *   best1 = Minimum von eff ueber die Kandidaten\n   *   Standard: liegt der Zielpunkt des Profils ohne Favoriten unter den\n   *     Kandidaten und hoechstens EPS_STD ueber best1, bleibt er.\n   *\n   * Ergebnis: { F, POL, GA, GB, P } mit POL[S][d * (S + 1) + s] = Zielpunkt\n   * im Zustand (Rest s, d Darts) einer Aufnahme, die bei S begann; Wert\n   * eines Zustands = GA[S][..] + GB[S][..] * F[S].\n   */\n  function loesen(P, favoriten, polStd, maxS) {\n    maxS = maxS || 170;\n    var favset = [];\n    (favoriten || []).forEach(function (f) { if (favset.indexOf(f) < 0) favset.push(f); });\n    var sp = duenn(P), Pidx = sp.idx, Pval = sp.val;\n    var F = new Float64Array(maxS + 1);\n    var POL = new Array(maxS + 1), GAs = new Array(maxS + 1), GBs = new Array(maxS + 1);\n    var A = new Float64Array(NO), B = new Float64Array(NO);\n    var eff = new Float64Array(NA), favok = new Uint8Array(NA);\n\n    for (var S = 2; S <= maxS; S++) {\n      var S1 = S + 1, n = S - 1;\n      var GA = new Float64Array(4 * S1), GB = new Float64Array(4 * S1);\n      var pol = new Int16Array(4 * S1), endc = new Int32Array(4 * S1);\n      var EA = [null, new Float64Array(n * NA), new Float64Array(n * NA), new Float64Array(n * NA)];\n      var EB = [null, new Float64Array(n * NA), new Float64Array(n * NA), new Float64Array(n * NA)];\n\n      /* Erwartungen fuer alle Zielpunkte in Zustand (s, d) aus den Werten der Stufe d - 1. */\n      var matrix = function (d) {\n        var base = (d - 1) * S1, ea = EA[d], eb = EB[d];\n        for (var i = 0; i < n; i++) {\n          var s = i + 2, o, a;\n          for (o = 0; o < NO; o++) {\n            var spv = s - VAL[o];\n            if (spv === 0 && DBL[o]) { A[o] = 0; B[o] = 0; }\n            else if (spv < 2) { A[o] = 0; B[o] = 1; }\n            else { A[o] = GA[base + spv]; B[o] = GB[base + spv]; }\n          }\n          for (a = 0; a < NA; a++) {\n            var idx = Pidx[a], val = Pval[a], x = 0, y = 0;\n            for (var k = 0; k < idx.length; k++) { x += A[idx[k]] * val[k]; y += B[idx[k]] * val[k]; }\n            ea[i * NA + a] = x; eb[i * NA + a] = y;\n          }\n        }\n      };\n\n      var Fg = S > 2 ? F[S - 1] + 0.3 : 4.0;\n      var grund = function () {\n        GA.fill(0); GB.fill(0); pol.fill(-1); endc.fill(0);\n        for (var s = 2; s < S; s++) GA[s] = F[s];   // Aufnahme vorbei: naechste Aufnahme ab dem Rest\n        GB[S] = 1;                                   // nichts gepunktet: wieder ab S\n      };\n      grund();\n      matrix(1);   // Stufe 0 haengt nicht von Fg ab\n\n      for (var iter = 0; iter < 200; iter++) {\n        if (iter) grund();\n        for (var d = 1; d <= 3; d++) {\n          if (d > 1) matrix(d);\n          var ea = EA[d], eb = EB[d], base = d * S1, vorher = (d - 1) * S1;\n          var maskD = MASK[d], vintD = VINT[d], finD = FINAIM[d], modeD = MODE[d];\n          var polS = polStd ? polStd[S] : null;\n          for (var i = 0; i < n; i++) {\n            var s = i + 2, a, best0 = -1, beff = Infinity;\n            for (a = 0; a < NA; a++) {\n              if (!maskD[s * NA + a]) { eff[a] = Infinity; continue; }\n              var e = ea[i * NA + a] + eb[i * NA + a] * Fg + PEN[a] + (a === C_IDX ? BULL_DELTA : 0);\n              if (d === 3) e += BMAL[s * NA + a] + FPEN[s * NA + a];\n              eff[a] = e;\n              if (e < beff) { beff = e; best0 = a; }\n            }\n            var anyfav = false;\n            if (favset.length) {\n              for (a = 0; a < NA; a++) {\n                favok[a] = 0;\n                if (!maskD[s * NA + a] || (a === C_IDX && best0 !== C_IDX)) continue;\n                var vint = vintD[s * NA + a], finm = finD[s * NA + a], ae;\n                if (finm) ae = ENDCODE_AIM[a];\n                else if (s - vint >= 2) ae = endc[vorher + (s - vint)];\n                else ae = 0;\n                if (favset.indexOf(ae) >= 0 && eff[a] <= beff + EPS_FAV) { favok[a] = 1; anyfav = true; }\n              }\n            }\n            var best1 = -1, b1 = Infinity;\n            for (a = 0; a < NA; a++) {\n              var cand = anyfav ? favok[a] : maskD[s * NA + a];\n              if (cand && eff[a] < b1) { b1 = eff[a]; best1 = a; }\n            }\n            var wahl = best1;\n            if (polS) {\n              var sa = polS[base + s];\n              if (sa < 0) sa = 0; else if (sa > NA - 1) sa = NA - 1;\n              var saCand = anyfav ? favok[sa] : maskD[s * NA + sa];\n              if (saCand && eff[sa] <= b1 + EPS_STD) wahl = sa;\n            }\n            GA[base + s] = ea[i * NA + wahl];\n            GB[base + s] = eb[i * NA + wahl];\n            pol[base + s] = wahl;\n            var nx = s - vintD[s * NA + wahl];\n            var eNext = nx >= 2 ? endc[vorher + nx] : 0;\n            endc[base + s] = finD[s * NA + wahl] ? ENDCODE_AIM[wahl] : (modeD[s] === 1 ? eNext : 0);\n          }\n        }\n        var Fnew = (1 + GA[3 * S1 + S]) / (1 - GB[3 * S1 + S]);\n        if (Math.abs(Fnew - Fg) < 1e-12) { Fg = Fnew; break; }\n        Fg = Fnew;\n      }\n      F[S] = Fg; POL[S] = pol; GAs[S] = GA; GBs[S] = GB;\n    }\n    return { P: P, F: F, POL: POL, GA: GAs, GB: GBs };\n  }\n\n  /** Label, Wert und ob der Dart finisht, wenn Zielpunkt a wie geplant getroffen wird. */\n  function beabsichtigt(a, s, d) {\n    var aim = AIMS[a];\n    if (aim.art === 'T') return { label: 'T' + aim.n, wert: 3 * aim.n, finish: false };\n    if (aim.art === 'S') return { label: String(aim.n), wert: aim.n, finish: false };\n    if (aim.art === 'D') return { label: 'D' + aim.n, wert: 2 * aim.n, finish: true };\n    if (s === 50) return { label: 'Bull', wert: 50, finish: true };\n    if (MODE[d][s] === 1 && !FIRST25[d][s]) return { label: 'Bull', wert: 50, finish: false };\n    return { label: '25', wert: 25, finish: false };\n  }\n\n  /** Weg ab Rest r mit d Darts (Aufnahme begann bei S). { darts, bleibt } mit bleibt 0 = Finish.\n      Bricht bei Rest unter 2 oder fehlender Politik ab (die Referenz liefe weiter, kommt\n      dort aber nie hin, weil die Masken keinen Rest 1 oder 0 ohne Finish zulassen). */\n  function weg(L, r, d, S, pol) {\n    S = S === undefined || S === null ? r : S;\n    pol = pol || L.POL[S];\n    var S1 = S + 1, steps = [];\n    while (d > 0 && r >= 2) {\n      var a = pol[d * S1 + r];\n      if (a < 0) break;\n      var b = beabsichtigt(a, r, d);\n      steps.push(b.label);\n      r -= b.wert; d--;\n      if (b.finish) return { darts: steps, bleibt: 0 };\n    }\n    return { darts: steps, bleibt: r };\n  }\n\n  /** Tabelle: je Rest 3, 2 und 1 Dart sowie Plan B (Single statt Triple bzw. 25 statt Bull). */\n  function tabelle(L, polVon) {\n    var out = {};\n    for (var r = 2; r <= 170; r++) {\n      var pol3 = polVon ? polVon(r) : null;\n      var w3 = weg(L, r, 3, r, pol3), w2 = weg(L, r, 2, r, pol3), w1 = weg(L, r, 1, r, pol3);\n      var pol = pol3 || L.POL[r], first = AIMS[pol[3 * (r + 1) + r]], planB = null;\n      if (first.art === 'T' && r - first.n >= 2) {\n        var rb = r - first.n, wb = weg(L, rb, 2, r, pol);\n        planB = { single: String(first.n), rest: rb, weg: wb.darts, bleibt: wb.bleibt };\n      } else if (first.art === 'C' && w3.darts[0] === 'Bull' && r !== 50 && r - 25 >= 2) {\n        var rc = r - 25, wc = weg(L, rc, 2, r, pol);\n        planB = { single: '25', rest: rc, weg: wc.darts, bleibt: wc.bleibt };\n      }\n      out[r] = { 3: { weg: w3.darts, bleibt: w3.bleibt }, 2: { weg: w2.darts, bleibt: w2.bleibt }, 1: { weg: w1.darts, bleibt: w1.bleibt }, planB: planB };\n    }\n    return out;\n  }\n\n  /* ---------------------------------------------------------------- */\n  /* 7. Zielvariante \"checkout\": maximale Chance in dieser Aufnahme    */\n  /* ---------------------------------------------------------------- */\n\n  /* Liefert eine Funktion polFuer(S): Politik, die die Checkout-Chance der\n     Aufnahme maximiert; Gleichstaende (innerhalb tol) entscheidet der\n     Aufnahmen-Wert wie in loesen(). */\n  function checkoutPolitik(L, tol) {\n    tol = tol === undefined ? 0.0005 : tol;\n    var P = L.P, sp = duenn(P), Pidx = sp.idx, Pval = sp.val;\n    var pf = [new Float64Array(171), new Float64Array(171), new Float64Array(171), new Float64Array(171)];\n    var pcv = new Float64Array(NA), eff = new Float64Array(NA), A = new Float64Array(NO), B = new Float64Array(NO);\n    var d, s, a, k, o, spv;\n    function chance(d, s) {\n      for (a = 0; a < NA; a++) {\n        var idx = Pidx[a], val = Pval[a], v = 0;\n        for (k = 0; k < idx.length; k++) {\n          o = idx[k]; spv = s - VAL[o];\n          if (spv === 0 && DBL[o]) v += val[k];\n          else if (spv >= 2) v += val[k] * pf[d - 1][spv];\n        }\n        pcv[a] = v;\n      }\n    }\n    for (d = 1; d <= 3; d++) for (s = 2; s <= 170; s++) {\n      chance(d, s);\n      var m = -1;\n      for (a = 0; a < NA; a++) if (MASK[d][s * NA + a] && pcv[a] > m) m = pcv[a];\n      pf[d][s] = m;\n    }\n    return function polFuer(S) {\n      var S1 = S + 1, pol = new Int16Array(4 * S1).fill(-1), GA = L.GA[S], GB = L.GB[S], FS = L.F[S];\n      for (d = 1; d <= 3; d++) {\n        var vorher = (d - 1) * S1;\n        for (s = 2; s <= S; s++) {\n          chance(d, s);\n          for (o = 0; o < NO; o++) {\n            spv = s - VAL[o];\n            if (spv === 0 && DBL[o]) { A[o] = 0; B[o] = 0; }\n            else if (spv < 2) { A[o] = 0; B[o] = 1; }\n            else { A[o] = GA[vorher + spv]; B[o] = GB[vorher + spv]; }\n          }\n          var best = -1;\n          for (a = 0; a < NA; a++) if (MASK[d][s * NA + a] && pcv[a] > best) best = pcv[a];\n          var wahl = -1, be = Infinity;\n          for (a = 0; a < NA; a++) {\n            if (!MASK[d][s * NA + a] || pcv[a] < best - tol) continue;\n            var idx = Pidx[a], val = Pval[a], x = 0, y = 0;\n            for (k = 0; k < idx.length; k++) { x += A[idx[k]] * val[k]; y += B[idx[k]] * val[k]; }\n            var e = x + y * FS + PEN[a] + (a === C_IDX ? BULL_DELTA : 0);\n            if (d === 3) e += BMAL[s * NA + a] + FPEN[s * NA + a];\n            eff[a] = e;\n            if (e < be) { be = e; wahl = a; }\n          }\n          pol[d * S1 + s] = wahl;\n        }\n      }\n      return pol;\n    };\n  }\n\n  /* ---------------------------------------------------------------- */\n  /* 8. Wege bewerten (eigene Eintraege, Top-3-Auswahl)                */\n  /* ---------------------------------------------------------------- */\n\n  function tokenAims(t) {\n    if (t === 'Bull' || t === '25') return [C_IDX];\n    if (t.charAt(0) === 'T' || t.charAt(0) === 'D') return [AIM_IDX[t]];\n    return [AIM_IDX['SO' + t], AIM_IDX['SI' + t]];\n  }\n\n  function tokenWert(t) {\n    if (t === 'Bull') return 50;\n    if (t === '25') return 25;\n    if (t.charAt(0) === 'T') return 3 * Number(t.slice(1));\n    if (t.charAt(0) === 'D') return 2 * Number(t.slice(1));\n    return Number(t);\n  }\n\n  function kombis(listen) {\n    if (!listen.length) return [[]];\n    var out = [], rest = kombis(listen.slice(1));\n    listen[0].forEach(function (a) { rest.forEach(function (r) { out.push([a].concat(r)); }); });\n    return out;\n  }\n\n  /*\n   * Bewertet einen Weg als Plan: solange die Darts wie geplant fallen, wird\n   * der Plan weitergeworfen, nach einem Fehlwurf uebernimmt die berechnete\n   * Politik. Ergebnis { aufnahmen: erwartete weitere Aufnahmen nach dieser,\n   * checkout: Chance in dieser Aufnahme }. Kleinere Aufnahmen sind besser.\n   */\n  function wegBewerten(L, r, d, tokens) {\n    var S = r, S1 = S + 1, P = L.P, F = L.F, GA = L.GA[S], GB = L.GB[S], pol = L.POL[S];\n    var pf = [new Float64Array(S1), new Float64Array(S1), new Float64Array(S1), new Float64Array(S1)];\n    var dd, s, o, spv;\n    for (dd = 1; dd <= 3; dd++) for (s = 2; s <= S; s++) {\n      var p = P[pol[dd * S1 + s]], v = 0;\n      for (o = 0; o < NO; o++) {\n        if (!p[o]) continue;\n        spv = s - VAL[o];\n        if (spv === 0 && DBL[o]) v += p[o];\n        else if (spv >= 2) v += p[o] * pf[dd - 1][spv];\n      }\n      pf[dd][s] = v;\n    }\n    function V(s, dd) { return GA[dd * S1 + s] + GB[dd * S1 + s] * F[S]; }\n    var vals = tokens.map(tokenWert), best = null;\n    kombis(tokens.map(tokenAims)).forEach(function (combo) {\n      function rec(s, dd, k) {\n        if (k === null || k >= combo.length) return [V(s, dd), dd > 0 ? pf[dd][s] : 0];\n        var p = P[combo[k]], ev = 0, pc = 0;\n        for (var o = 0; o < NO; o++) {\n          var pr = p[o];\n          if (!pr) continue;\n          var spo = s - VAL[o];\n          if (spo === 0 && DBL[o]) pc += pr;\n          else if (spo < 2) ev += pr * F[S];\n          else if (dd - 1 === 0) ev += pr * V(spo, 0);\n          else {\n            var r2 = rec(spo, dd - 1, VAL[o] === vals[k] ? k + 1 : null);\n            ev += pr * r2[0]; pc += pr * r2[1];\n          }\n        }\n        return [ev, pc];\n      }\n      var res = rec(r, d, 0);\n      if (!best || res[0] < best[0]) best = res;\n    });\n    return { aufnahmen: best[0], checkout: best[1] };\n  }\n\n  /*\n   * Wert eines Wegs nach dem Massstab des Loesers: erwartete Aufnahmen plus\n   * die Feinregeln fuer den ersten Dart (PEN, BULL_DELTA, bei 3 Darts Bogey-\n   * Malus und T20/T19-Regel). Damit lassen sich zwei Wege so vergleichen,\n   * wie loesen() sie verglichen hat.\n   */\n  function wegWert(L, r, d, tokens) {\n    var a = tokenAims(tokens[0])[0], z = PEN[a] + (a === C_IDX ? BULL_DELTA : 0);\n    if (d === 3) z += BMAL[r * NA + a] + FPEN[r * NA + a];\n    return wegBewerten(L, r, d, tokens).aufnahmen + z;\n  }\n\n  /** Die k besten unterschiedlichen Wege fuer (r, d): [{ weg, bleibt, aufnahmen, checkout }]. */\n  function alternativen(L, r, d, k) {\n    k = k || 3;\n    var res = [], seen = {};\n    for (var a = 0; a < NA; a++) {\n      if (!MASK[d][r * NA + a]) continue;\n      var b = beabsichtigt(a, r, d), steps, bleibt;\n      if (b.finish) { steps = [b.label]; bleibt = 0; }\n      else if (d > 1) { var w = weg(L, r - b.wert, d - 1, r); steps = [b.label].concat(w.darts); bleibt = w.bleibt; }\n      else { steps = [b.label]; bleibt = r - b.wert; }\n      var key = steps.join(' ');\n      if (seen[key]) continue;\n      seen[key] = true;\n      var bew = wegBewerten(L, r, d, steps);\n      res.push({ weg: steps, bleibt: bleibt, aufnahmen: bew.aufnahmen, checkout: bew.checkout });\n    }\n    res.sort(function (x, y) { return x.aufnahmen - y.aufnahmen; });\n    return res.slice(0, k);\n  }\n\n  /** Erlaubte Felder: 1 bis 20 (Single), T1 bis T20, D1 bis D20, 25, Bull. */\n  function tokenGueltig(t) {\n    if (t === '25' || t === 'Bull') return true;\n    return /^[TD]?([1-9]|1[0-9]|20)$/.test(t);\n  }\n\n  /** Harte Pruefung eines eigenen Eintrags: { ok, fehler, warnungen }. */\n  function wegPruefen(r, d, tokens) {\n    var fehler = [], warn = [];\n    var ungueltig = tokens.filter(function (t) { return !tokenGueltig(t); });\n    if (ungueltig.length) return { ok: false, fehler: ['unbekanntes Feld ' + ungueltig.join(', ')], warnungen: [] };\n    if (!tokens.length) fehler.push('kein Dart angegeben');\n    else if (tokens.length > d) fehler.push('zu viele Darts');\n    var rest = r;\n    for (var i = 0; i < tokens.length; i++) {\n      rest -= tokenWert(tokens[i]);\n      var letzter = i === tokens.length - 1;\n      if (rest < 0 || rest === 1 || (rest === 0 && !letzter)) { fehler.push('überworfen'); break; }\n    }\n    if (!fehler.length) {\n      var last = tokens[tokens.length - 1];\n      if (rest === 0 && !(last === 'Bull' || last.charAt(0) === 'D')) fehler.push('letzter Dart muss ein Doppel oder Bull sein');\n      if (rest > 0 && finishbar(r, d)) warn.push('kein Finish, obwohl eins möglich ist');\n      var km = kMin(r), ks = km.filter(function (x) { return x !== null; });\n      var kmin = ks.length ? Math.min.apply(null, ks) : null;\n      if (rest === 0 && kmin && tokens.length > kmin) warn.push('ein Dart mehr als nötig (möglich mit ' + kmin + ')');\n    }\n    return { ok: !fehler.length, fehler: fehler, warnungen: warn };\n  }\n\n  /** Eigener Weg gegen den berechneten besten Weg. */\n  function wegVergleich(L, r, d, tokens) {\n    var bestSteps = weg(L, r, d).darts;\n    var b = wegBewerten(L, r, d, bestSteps), e = wegBewerten(L, r, d, tokens);\n    var delta = e.aufnahmen - b.aufnahmen;\n    return {\n      besterWeg: bestSteps, checkoutBester: b.checkout, checkoutEigen: e.checkout,\n      mehrAufnahmen: delta,\n      deutlichSchlechter: delta > 0.05 || (b.checkout - e.checkout) > 0.03\n    };\n  }\n\n  /* ---------------------------------------------------------------- */\n  /* 9. Kalibrierung: Average und Wurftests in Profilwerte umrechnen   */\n  /* ---------------------------------------------------------------- */\n\n  var PRIOR_SD = 0.25;                   // Vertrauen in den Ausgangswert (log-normal, etwa ±25 %)\n  var SIGMA_MIN = 4.0, SIGMA_MAX = 30.0;  // unter etwa 41er Average traegt das Modell nicht mehr\n  var T20 = AIMS[AIM_IDX.T20];\n\n  function averageModell(sx, sy, K) {\n    var p = verteilung(T20.x, T20.y, sx, sy, K || K_FEIN), s = 0;\n    for (var o = 0; o < NO; o++) s += p[o] * VAL[o];\n    return 3 * s;\n  }\n\n  /** Waagrechte Streuung sx (mit sy = q * sx), bei der das Modell den Average erreicht. */\n  function sigmaAusAverage(avg, q, K) {\n    q = q || 1;\n    var lo = SIGMA_MIN, hi = SIGMA_MAX;\n    if (avg >= averageModell(lo, q * lo, K)) return lo;\n    if (avg <= averageModell(hi, q * hi, K)) return hi;\n    for (var i = 0; i < 40; i++) {\n      var mid = 0.5 * (lo + hi);\n      if (averageModell(mid, q * mid, K) > avg) lo = mid; else hi = mid;\n    }\n    return 0.5 * (lo + hi);\n  }\n\n  function nachbarn(n) {\n    var i = ORDER.indexOf(n);\n    return [ORDER[(i + 19) % 20], ORDER[(i + 1) % 20]];\n  }\n\n  /** Ergebnis-Indizes je Zaehl-Knopf. Was nicht aufgefuehrt ist, zaehlt als \"sonst\". */\n  function kategorien(test, ziel) {\n    var nb, a, b, k = {};\n    if (test === 't20') return { treffer: [60], s20: [20, 40], eins: [1, 21, 41], fuenf: [5, 25, 45] };\n    if (test === 'doppel') {\n      nb = nachbarn(ziel); a = nb[0]; b = nb[1];\n      k.treffer = [20 + ziel]; k.innen = [ziel, 40 + ziel]; k.aussen = [0];\n      k['nachbar_' + a] = [a, 20 + a, 40 + a]; k['nachbar_' + b] = [b, 20 + b, 40 + b];\n      return k;\n    }\n    if (test === 'bull') return { bull: [62], 25: [61] };\n    if (test === 'triple') {\n      nb = nachbarn(ziel); a = nb[0]; b = nb[1];\n      return { treffer: [40 + ziel], single: [ziel, 20 + ziel], nachbar: [a, 20 + a, 40 + a, b, 20 + b, 40 + b] };\n    }\n    throw new Error('Unbekannter Test ' + test);\n  }\n\n  function loglik(p, kats, zaehler) {\n    var ll = 0, restP = 1;\n    for (var name in kats) {\n      var pk = 0;\n      for (var i = 0; i < kats[name].length; i++) pk += p[kats[name][i]];\n      restP -= pk;\n      ll += (zaehler[name] || 0) * Math.log(Math.max(pk, 1e-6));\n    }\n    ll += (zaehler.sonst || 0) * Math.log(Math.max(restP, 1e-6));\n    return ll;\n  }\n\n  function prior(f, f0) { var l = Math.log(f / f0); return -(l * l) / (2 * PRIOR_SD * PRIOR_SD); }\n\n  function logRaster(von, bis, anzahl) {\n    var out = [], a = Math.log(von), b = Math.log(bis);\n    for (var i = 0; i < anzahl; i++) out.push(Math.exp(a + (b - a) * i / (anzahl - 1)));\n    return out;\n  }\n\n  /** Average legt die Gesamtstreuung fest, der T20-Test das Verhaeltnis senkrecht zu waagrecht. */\n  function leer(o) { return !o || !Object.keys(o).length; }\n\n  function fitStreuung(avg, t20, K) {\n    if (leer(t20)) { var s = sigmaAusAverage(avg, 1, K); return [s, s]; }\n    var kats = kategorien('t20'), best = null;\n    logRaster(0.6, 1 / 0.6, 21).forEach(function (q) {\n      var sx = sigmaAusAverage(avg, q, K);\n      var p = verteilung(T20.x, T20.y, sx, q * sx, K || K_FEIN);\n      var score = loglik(p, kats, t20) + prior(q, 1);\n      if (!best || score > best[0]) best = [score, sx, q * sx];\n    });\n    return [best[1], best[2]];\n  }\n\n  function fitFaktor(x, y, sx, sy, kats, zaehler, f0, K) {\n    var best = null;\n    logRaster(0.4, 2.5, 41).forEach(function (f) {\n      var p = verteilung(x, y, sx * f, sy * f, K || K_FEIN);\n      var score = loglik(p, kats, zaehler) + prior(f, f0);\n      if (!best || score > best[0]) best = [score, f];\n    });\n    return best[1];\n  }\n\n  function rund3(x) { return Math.round(x * 1000) / 1000; }\n\n  /*\n   * eingabe: { avg, favoriten, t20, doppel, bull, triple, ziel }\n   *   t20:    { treffer, s20, eins, fuenf, sonst }\n   *   doppel: { ziel: 16, treffer, innen, aussen, nachbar_7, nachbar_8, sonst }\n   *   bull:   { bull, 25, sonst }\n   *   triple: { ziel: 16, treffer, single, nachbar, sonst }\n   * Jeder Test ist optional. Ohne Test bleibt der Ausgangswert.\n   */\n  function profilAusTests(e, K) {\n    e = e || {};\n    var avg = Number(e.avg);\n    if (!(avg > 0) || !isFinite(avg)) throw new Error('Average fehlt');\n    var fav = (e.favoriten || []).map(Number);\n    var st = fitStreuung(avg, e.t20, K), sx = st[0], sy = st[1];\n    var fDoppel = 1, fFav = 0.8, fBull = 1, fTriple = 1, g;\n    if (!leer(e.doppel)) {\n      var z = Number(e.doppel.ziel), istFav = fav.indexOf(z) >= 0;\n      if (!(z >= 1 && z <= 20)) throw new Error('Doppel-Test: Ziel muss 1 bis 20 sein');\n      var aim = AIMS[AIM_IDX['D' + z]];\n      g = fitFaktor(aim.x, aim.y, sx, sy, kategorien('doppel', z), e.doppel, istFav ? 0.8 : 1, K);\n      fDoppel = istFav ? g / 0.8 : g;\n    }\n    if (!leer(e.bull)) {\n      var bFav = fav.indexOf(25) >= 0;\n      g = fitFaktor(0, 0, sx, sy, kategorien('bull'), e.bull, bFav ? 0.8 : 1, K);\n      fBull = bFav ? g / 0.8 : g;\n    }\n    if (!leer(e.triple)) {\n      var zt = Number(e.triple.ziel);\n      if (!(zt >= 1 && zt <= 20)) throw new Error('Triple-Test: Ziel muss 1 bis 20 sein');\n      var at = AIMS[AIM_IDX['T' + zt]];\n      if (zt !== 19 && zt !== 20) fTriple = fitFaktor(at.x, at.y, sx, sy, kategorien('triple', zt), e.triple, 1, K);\n    }\n    return {\n      sigma_x: rund3(sx), sigma_y: rund3(sy), f_triple: rund3(fTriple), f_doppel: rund3(fDoppel), f_bull: rund3(fBull),\n      favoriten: fav, f_fav: fFav, ziel: e.ziel || 'aufnahmen'\n    };\n  }\n\n  /* ---------------------------------------------------------------- */\n  /* 10. Komplettlauf fuer ein Profil                                  */\n  /* ---------------------------------------------------------------- */\n\n  /** Wie die App rechnet: erst ohne Favoriten (Standard), dann mit Favoriten und Standard-Bindung. */\n  function tabellenFuerProfil(p, opts) {\n    p = profil(p);\n    opts = opts || {};\n    var ohne = profil(p); ohne.favoriten = [];\n    var Lstd = opts.standard || loesen(trefferbild(ohne, opts.K));\n    var L = p.favoriten.length ? loesen(trefferbild(p, opts.K), p.favoriten, Lstd.POL) : Lstd;\n    var tab = tabelle(L);\n    var tabCheckout = opts.ohneCheckout ? null : tabelle(L, checkoutPolitik(L));\n    return { profil: p, L: L, standard: Lstd, tabelle: tab, tabelleCheckout: tabCheckout };\n  }\n\n  /*\n   * Fragen an das geloeste Modell (Finish-Tabelle im Profil): Alternativen je\n   * Rest und der Vergleich eines eigenen Wegs. Die Loesung je Profil bleibt\n   * im Speicher (hoechstens drei), damit nur die erste Frage rechnet.\n   */\n  var LOESUNGEN = {};\n  function loesungFuer(p) {\n    p = profil(p);\n    var key = JSON.stringify(p);\n    if (LOESUNGEN[key]) return LOESUNGEN[key];\n    var keys = Object.keys(LOESUNGEN);\n    if (keys.length >= 3) delete LOESUNGEN[keys[0]];\n    LOESUNGEN[key] = tabellenFuerProfil(p, { ohneCheckout: true }).L;\n    return LOESUNGEN[key];\n  }\n  function beantworten(d) {\n    var L = loesungFuer(d.profil);\n    var r = Number(d.rest), dd = Number(d.darts);\n    if (!(r >= 2 && r <= 170) || !(dd >= 1 && dd <= 3)) throw new Error('Rest oder Darts ausserhalb');\n    if (d.frage === 'alternativen') return { id: d.id, alternativen: alternativen(L, r, dd, d.anzahl || 4) };\n    if (d.frage === 'vergleich') {\n      var pr = wegPruefen(r, dd, d.tokens || []);\n      if (!pr.ok) return { id: d.id, pruefung: pr, vergleich: null };\n      return { id: d.id, pruefung: pr, vergleich: wegVergleich(L, r, dd, d.tokens) };\n    }\n    throw new Error('Unbekannte Frage ' + d.frage);\n  }\n\n  /* Zeile im Format von js/checkout.js: 'T19 S12 D16|T17 BULL|T19 >44' */\n  function feldLabel(t) {\n    if (t === 'Bull') return 'BULL';\n    if (t === '25' || t.charAt(0) === 'T' || t.charAt(0) === 'D') return t;\n    return 'S' + t;\n  }\n  function kompakt(tab) {\n    var out = {};\n    for (var r = 2; r <= 170; r++) {\n      var z = tab[r];\n      if (!z) continue;\n      out[r] = [3, 2, 1].map(function (d) {\n        var w = z[d].weg.map(feldLabel);\n        return (w.join(' ') + (z[d].bleibt ? ' >' + z[d].bleibt : '')).trim();\n      }).join('|');\n    }\n    return out;\n  }\n\n  global.CheckoutEngine = {\n    ORDER: ORDER, AIMS: AIMS, AIM_IDX: AIM_IDX, VAL: VAL, DBL: DBL, NO: NO, NA: NA,\n    GRUPPEN: GRUPPEN, REFERENZ: REFERENZ, profil: profil,\n    ergebnis: ergebnis, verteilung: verteilung, trefferbild: trefferbild,\n    kMin: kMin, finishbar: finishbar, MODE: MODE, MASK: MASK,\n    loesen: loesen, beabsichtigt: beabsichtigt, weg: weg, tabelle: tabelle, checkoutPolitik: checkoutPolitik,\n    wegBewerten: wegBewerten, wegWert: wegWert, alternativen: alternativen, tokenGueltig: tokenGueltig, wegPruefen: wegPruefen, wegVergleich: wegVergleich,\n    averageModell: averageModell, sigmaAusAverage: sigmaAusAverage, fitStreuung: fitStreuung, kategorien: kategorien, profilAusTests: profilAusTests,\n    tabellenFuerProfil: tabellenFuerProfil, kompakt: kompakt, beantworten: beantworten\n  };\n})(typeof self !== 'undefined' ? self : globalThis);\n\nif (typeof module !== 'undefined') module.exports = (typeof self !== 'undefined' ? self : globalThis).CheckoutEngine;\n";
+window.__CHECKOUT_WORKER_SRC = "/*\n * Rechnet Finish-Tabellen im Hintergrund (Web Worker), damit die Oberflaeche\n * waehrend der ein bis zwei Sekunden nicht steht. Auftrag per postMessage:\n *   { id, profil }    Profil wie CheckoutEngine.REFERENZ (Favoriten, Streuung)\n *   { id, eingabe }   Average, Lieblingsgruppen und Wurftests, aus denen\n *                     erst das Profil kalibriert wird\n * Antwort: { id, profil, tabelle, tabelleCheckout, ms } mit den Tabellen im\n * Format von js/checkout.js (je Rest '3 Darts|2 Darts|1 Dart'), bei einem\n * Fehler { id, fehler }.\n * Fragen an das geloeste Modell ({ id, profil, frage, ... }, siehe\n * CheckoutEngine.beantworten) beantwortet derselbe Worker; die Loesung je\n * Profil bleibt dafuer im Speicher.\n *\n * Im Einzeldatei-Buendel laeuft derselbe Code als Blob-Worker; build-single.mjs\n * entfernt dafuer die importScripts-Zeile und stellt die Engine voran.\n */\n\nself.onmessage = function (ev) {\n  var d = ev.data || {};\n  try {\n    if (d.frage) { self.postMessage(CheckoutEngine.beantworten(d)); return; }\n    var t = Date.now();\n    var p = d.eingabe ? CheckoutEngine.profilAusTests(d.eingabe) : CheckoutEngine.profil(d.profil);\n    var erg = CheckoutEngine.tabellenFuerProfil(p);\n    self.postMessage({\n      id: d.id, profil: p,\n      tabelle: CheckoutEngine.kompakt(erg.tabelle),\n      tabelleCheckout: CheckoutEngine.kompakt(erg.tabelleCheckout),\n      ms: Date.now() - t\n    });\n  } catch (e) {\n    self.postMessage({ id: d.id, fehler: String(e && e.message || e) });\n  }\n};\n";
 /*
  * Finish-Wege für Double-Out.
  *
@@ -8968,10 +9084,19 @@ window.__CHECKOUT_WORKER_SRC = "/*\n * Rechnet Finish-Tabellen im Hintergrund (W
       (fav && WEGE_FAVORIT[fav][remaining]) || WEGE_STANDARD[remaining];
     if (!reihe) return null;
     var text = reihe.split('|')[3 - d];
+    if (!text) return null;
     var teile = text.split(' ');
     var auf = null;
     if (teile[teile.length - 1].charAt(0) === '>') auf = Number(teile.pop().slice(1));
     return { darts: teile, auf: auf };
+  }
+
+  /** Die feste Tabellenzeile ('3 Darts|2 Darts|1 Dart') fuer Rest und
+      Lieblingsdoppel - Grundlage, wenn eigene Eintraege nur einzelne Teile
+      ersetzen. */
+  function zeileText(remaining, dbl) {
+    var fav = favorit(dbl);
+    return (fav && WEGE_FAVORIT[fav][remaining]) || WEGE_STANDARD[remaining] || null;
   }
 
   /** Finish-Weg als Wurffolge, z.B. ['T20','T20','BULL'] - null, wenn mit
@@ -9046,6 +9171,63 @@ window.__CHECKOUT_WORKER_SRC = "/*\n * Rechnet Finish-Tabellen im Hintergrund (W
     });
   }
 
+  /*
+   * Fragen an die Engine, die das geloeste Modell brauchen (Alternativen je
+   * Rest, Vergleich eines eigenen Wegs): ein dauerhafter Worker haelt die
+   * Loesung je Profil im Speicher, die erste Frage dauert eine Sekunde, jede
+   * weitere ist sofort da. auftrag = { profil, frage: 'alternativen', rest,
+   * darts, anzahl } oder { profil, frage: 'vergleich', rest, darts, tokens }.
+   */
+  var frageWorker = null, frageNr = 0, offeneFragen = {};
+  function fragenDirekt(auftrag) {
+    var E = global.CheckoutEngine;
+    if (!E) throw new Error('Checkout-Engine nicht geladen');
+    return E.beantworten(auftrag);
+  }
+  function fragen(auftrag) {
+    return new Promise(function (resolve, reject) {
+      if (!frageWorker) {
+        frageWorker = engineWorker();
+        if (frageWorker) {
+          frageWorker.onmessage = function (ev) {
+            var d = ev.data || {}, f = offeneFragen[d.id];
+            if (!f) return;
+            delete offeneFragen[d.id]; clearTimeout(f.uhr);
+            if (d.fehler) f.reject(new Error(d.fehler)); else f.resolve(d);
+          };
+          frageWorker.onerror = function (e) {
+            if (e && e.preventDefault) e.preventDefault();
+            /* Der Worker ist hin: alle offenen Fragen direkt beantworten. */
+            var alte = offeneFragen; offeneFragen = {};
+            try { frageWorker.terminate(); } catch (x) { /* egal */ }
+            frageWorker = null;
+            Object.keys(alte).forEach(function (id) {
+              clearTimeout(alte[id].uhr);
+              try { alte[id].resolve(fragenDirekt(alte[id].auftrag)); } catch (x) { alte[id].reject(x); }
+            });
+          };
+        }
+      }
+      if (!frageWorker) {
+        try { resolve(fragenDirekt(auftrag)); } catch (e) { reject(e); }
+        return;
+      }
+      var id = 'f' + (++frageNr);
+      var kopie = {};
+      Object.keys(auftrag).forEach(function (k) { kopie[k] = auftrag[k]; });
+      kopie.id = id;
+      offeneFragen[id] = { resolve: resolve, reject: reject, auftrag: auftrag, uhr: setTimeout(function () {
+        if (!offeneFragen[id]) return;
+        delete offeneFragen[id];
+        /* Ein haengender Worker wird ersetzt, sonst wartet jede weitere Frage erneut. */
+        try { frageWorker.terminate(); } catch (x) { /* egal */ }
+        frageWorker = null;
+        reject(new Error('Die Berechnung hat zu lange gedauert'));
+      }, 60000) };
+      frageWorker.postMessage(kopie);
+    });
+  }
+
   /** Ist ein Checkout mit genau so vielen Darts möglich? */
   function possible(remaining, dartsLeft) {
     return best(remaining, dartsLeft) !== null;
@@ -9076,6 +9258,8 @@ window.__CHECKOUT_WORKER_SRC = "/*\n * Rechnet Finish-Tabellen im Hintergrund (W
     stellwurf: stellwurf,
     favorit: favorit,
     rechnen: rechnen,
+    fragen: fragen,
+    zeileText: zeileText,
     possible: possible,
     minDarts: minDarts,
     fieldValue: fieldValue,
@@ -9782,6 +9966,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       p.dbl = p.finish.gruppen.length ? doppelAusGruppe(p.finish.gruppen[0]) : null;
       if (p.finish.tabelle && typeof p.finish.tabelle !== 'object') p.finish.tabelle = null;
       if (p.finish.tabelleCheckout && typeof p.finish.tabelleCheckout !== 'object') p.finish.tabelleCheckout = null;
+      if (p.finish.eigene && typeof p.finish.eigene !== 'object') p.finish.eigene = null;
       if (!SPIELWEISEN[p.finish.spielweise]) p.finish.spielweise = 'aufnahmen';
     } else if (DOPPEL_WAHL.indexOf(p.dbl) < 0) p.dbl = null;
   }
@@ -9808,10 +9993,41 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (!p) return null;
     var f = p.finish || {};
     var dbl = DOPPEL_WAHL.indexOf(p.dbl) >= 0 ? p.dbl : null;
-    var tab = f.tabelle && typeof f.tabelle === 'object' ? f.tabelle : null;
-    if (tab && f.tabelleCheckout && (f.spielweise === 'checkout' || (f.spielweise === 'auto' && lage && lage.checkout))) tab = f.tabelleCheckout;
+    var checkout = !!(f.tabelle && f.tabelleCheckout && (f.spielweise === 'checkout' || (f.spielweise === 'auto' && lage && lage.checkout)));
+    var tab = finishTabelleGemischt(p, f, checkout);
     if (!dbl && !tab) return null;
     return { dbl: dbl, tabelle: tab };
+  }
+  /* Eigene Eintraege (p.finish.eigene, je Rest '3 Darts|2 Darts|1 Dart' mit
+     leeren Teilen fuer "wie gerechnet") liegen ueber der gerechneten bzw.
+     festen Tabelle. Das Mischen passiert einmal je Stand, nicht je Aufruf. */
+  var finishMischCache = {};
+  function finishTabelleGemischt(p, f, checkout) {
+    var basis = (checkout ? f.tabelleCheckout : f.tabelle) || null;
+    if (basis && typeof basis !== 'object') basis = null;
+    var eig = f.eigene && typeof f.eigene === 'object' ? f.eigene : null;
+    if (!eig || !Object.keys(eig).length) return basis;
+    var dbl = DOPPEL_WAHL.indexOf(p.dbl) >= 0 ? p.dbl : null;
+    /* Der Schluessel traegt alles, was in die Mischung eingeht: Grundzeilen
+       (Doppel der Hauptgruppe, Stand der Rechnung) und die eigenen Eintraege
+       selbst (vom Server kann ein anderer Inhalt mit gleicher Nummer kommen). */
+    var key = p.id + '|' + (checkout ? 'c' : 'a') + '|' + (f.stand || 0) + '|' + (f.eigeneNr || 0) + '|' + dbl + '|' + JSON.stringify(eig);
+    if (finishMischCache[key]) return finishMischCache[key];
+    var out = {};
+    if (basis) Object.keys(basis).forEach(function (r) { out[r] = basis[r]; });
+    Object.keys(eig).forEach(function (r) {
+      var teile = String(eig[r] || '').split('|');
+      var grund = (basis && basis[r]) || Checkout.zeileText(Number(r), dbl) || '';
+      var gt = grund.split('|');
+      out[r] = [0, 1, 2].map(function (i) { return teile[i] || gt[i] || ''; }).join('|');
+    });
+    if (Object.keys(finishMischCache).length > 24) finishMischCache = {};
+    finishMischCache[key] = out;
+    return out;
+  }
+  function finishEigeneAnzahl(p) {
+    var e = p && p.finish && p.finish.eigene;
+    return e && typeof e === 'object' ? Object.keys(e).filter(function (r) { return /[^|]/.test(String(e[r] || '')); }).length : 0;
   }
   /* Spielweise "auto" im X01: die Checkout-Variante, sobald ein Gegner im
      naechsten Besuch finishen kann oder es das entscheidende Leg ist. */
@@ -13852,7 +14068,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     '</div>';
 
     var koerper;
-    if (UI.profilPanel === 'stats') {
+    if (UI.profilPanel === 'tabelle') {
+      koerper = finishTabelleHtml(p, darf, eigen);
+    } else if (UI.profilPanel === 'stats') {
       koerper = '<div class="pa-panel">' +
         '<div class="pa-panel-kopf"><span class="pa-panel-titel">' + (eigen ? 'Meine Stats' : 'Statistik') + '</span>' +
           '<button class="btn hell pa-fertig" data-action="profil-panel-zu">Fertig</button></div>' +
@@ -13906,15 +14124,218 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       stand = (gr.length ? 'Standardtabelle für ' + gr[0] + '.' : 'Standardtabelle ohne Lieblingsdoppel.') +
         (darf ? ' Antippen zum Ändern. Oder die Tabelle aus Average und Wurftests ermitteln lassen.' : '');
     }
-    var knopf = !darf ? ''
-      : wahl ? '<button class="btn pa-btn hell" data-action="profil-gruppen-ok">OK</button>'
-      : '<button class="btn pa-btn" data-action="finish-ermitteln">Meine besten Finishes ermitteln</button>';
+    var nEig = finishEigeneAnzahl(p);
+    var knopf = wahl ? '<button class="btn pa-btn hell" data-action="profil-gruppen-ok">OK</button>'
+      : (darf ? '<button class="btn pa-btn" data-action="finish-ermitteln">Meine besten Finishes ermitteln</button>' : '') +
+        '<button class="btn pa-btn" data-action="profil-tabelle">' + (darf ? 'Finish-Tabelle anpassen' : 'Finish-Tabelle ansehen') +
+          '<span class="pa-btn-sub">' + (nEig ? nEig + ' angepasst' : '') + '</span></button>';
     return '<div class="pa-kachel pa-finish">' +
       '<span class="kt">Finish-Weg · Lieblingsgruppe</span>' +
       '<div class="pa-kette">' + kette + '</div>' +
       pad +
       (wahl ? '' : '<p class="pa-text">' + stand + '</p>') +
-      knopf +
+      '<div class="pa-finish-knoepfe">' + knopf + '</div>' +
+    '</div>';
+  }
+
+  /* ---------- Finish-Tabelle ansehen und anpassen (Phase 3) ----------
+     Entwurf "Profil", Tafel "Meine Finish-Tabelle": alle Reste 170 bis 2 mit
+     dem Weg fuer drei Darts (Lieblingsdoppel hell), Filter Alle · Angepasst,
+     ein Tipp auf den Rest oeffnet den Editor: Darts in der Hand (3, 2, 1),
+     drei Felder, Tastenfeld mit Single/Double/Triple, harte Pruefung
+     (Summe, Doppel am Ende), Vergleich mit dem besten Weg aus dem Modell
+     (Aufnahmen, Checkout-Chance, Warnung bei deutlich schlechter) und die
+     Alternativen der Engine. Eigene Eintraege liegen in p.finish.eigene und
+     bleiben beim Neu-Ermitteln stehen (Schloss). */
+  function tokenAusKompakt(t) { return t === 'BULL' ? 'Bull' : t.charAt(0) === 'S' ? t.slice(1) : t; }
+  function tokenKompakt(t) { return t === 'Bull' ? 'BULL' : /^\d+$/.test(t) && t !== '25' ? 'S' + t : t; }
+  function tokenWertApp(t) {
+    if (t === 'Bull') return 50;
+    if (t === '25') return 25;
+    var m = t.charAt(0) === 'T' ? 3 : t.charAt(0) === 'D' ? 2 : 1;
+    return m * Number(t.replace(/^[TD]/, ''));
+  }
+  /* Profil fuer Fragen an die Engine: das kalibrierte, sonst das
+     Referenzprofil mit dem Lieblingsdoppel (so entstanden die festen Tabellen). */
+  function finishEngineProfil(p) {
+    var f = p.finish || {};
+    if (f.profil && typeof f.profil === 'object') return f.profil;
+    var dbl = DOPPEL_WAHL.indexOf(p.dbl) >= 0 ? p.dbl : null;
+    return { favoriten: dbl && dbl !== 25 ? [dbl] : [] };
+  }
+  function tabZustand() {
+    if (!UI.tab) UI.tab = { filter: 'alle', rest: null, darts: 3, seg: 'T', slot: 0, entwurf: [], info: null, alts: {} };
+    return UI.tab;
+  }
+  /* Der Weg, der fuer Rest und Darts gerade gilt (eigen oder gerechnet/fest). */
+  function tabWegTokens(p, rest, darts) {
+    var z = Checkout.suggest(rest, darts, lieblingsDoppel(p.id)) || (Checkout.stellwurf(rest, darts, lieblingsDoppel(p.id)) || {}).darts || [];
+    return z.map(tokenAusKompakt);
+  }
+  function tabEigenerTeil(p, rest, darts) {
+    var e = p.finish && p.finish.eigene && p.finish.eigene[rest];
+    return e ? (String(e).split('|')[3 - darts] || '') : '';
+  }
+  function tabRestWaehlen(p, rest) {
+    var t = tabZustand();
+    t.rest = rest; t.slot = 0; t.seg = 'T'; t.info = null;
+    t.entwurf = tabWegTokens(p, rest, t.darts);
+    tabInfoHolen(p);
+  }
+  function tabInfoHolen(p) {
+    var t = tabZustand();
+    if (!t.rest) return;
+    var tokens = t.entwurf.filter(Boolean);
+    var profil = finishEngineProfil(p);
+    var key = t.rest + '/' + t.darts + '/' + tokens.join(' ');
+    var altKey = t.rest + '/' + t.darts;
+    t.info = { key: key, laedt: true };
+    if (!t.alts[altKey]) {
+      t.alts[altKey] = { laedt: true };
+      Checkout.fragen({ profil: profil, frage: 'alternativen', rest: t.rest, darts: t.darts, anzahl: 4 }).then(function (a) {
+        if (UI.tab !== t) return;
+        t.alts[altKey] = { liste: a.alternativen };
+        if (S.screen === 'profile' && UI.profilPanel === 'tabelle') render();
+      }, function () { if (UI.tab === t) delete t.alts[altKey]; });
+    }
+    if (!tokens.length) { t.info = { key: key, pruefung: { ok: false, fehler: ['kein Dart angegeben'], warnungen: [] } }; return; }
+    Checkout.fragen({ profil: profil, frage: 'vergleich', rest: t.rest, darts: t.darts, tokens: tokens }).then(function (a) {
+      if (UI.tab !== t || !t.info || t.info.key !== key) return;
+      t.info = { key: key, pruefung: a.pruefung, vergleich: a.vergleich };
+      if (S.screen === 'profile' && UI.profilPanel === 'tabelle') render();
+    }, function (err) {
+      if (UI.tab !== t || !t.info || t.info.key !== key) return;
+      t.info = { key: key, fehler: String(err && err.message || err) };
+      if (S.screen === 'profile' && UI.profilPanel === 'tabelle') render();
+    });
+  }
+  function tabEigenSpeichern(p, loeschen) {
+    var t = tabZustand();
+    if (!t.rest || !p.finish) p.finish = p.finish || { gruppen: [] };
+    var eig = p.finish.eigene && typeof p.finish.eigene === 'object' ? p.finish.eigene : {};
+    var teile = String(eig[t.rest] || '||').split('|');
+    while (teile.length < 3) teile.push('');
+    if (loeschen) teile[3 - t.darts] = '';
+    else {
+      var tokens = t.entwurf.filter(Boolean);
+      var bleibt = t.rest - tokens.reduce(function (a, x) { return a + tokenWertApp(x); }, 0);
+      teile[3 - t.darts] = tokens.map(tokenKompakt).join(' ') + (bleibt > 0 ? ' >' + bleibt : '');
+    }
+    if (teile.join('|') === '||') delete eig[t.rest]; else eig[t.rest] = teile.join('|');
+    p.finish.eigene = eig;
+    p.finish.eigeneNr = (p.finish.eigeneNr || 0) + 1;
+    if (window.DartKonto) window.DartKonto.profilGeaendert(p.id);
+    t.entwurf = tabWegTokens(p, t.rest, t.darts);
+    t.info = null;
+    tabInfoHolen(p);
+    save(); render();
+  }
+  function prozent(x) { return Math.round(x * 100) + ' %'; }
+  function aufn(x) { return x.toFixed(2).replace('.', ','); }
+
+  function finishTabelleHtml(p, darf, eigen) {
+    var t = tabZustand();
+    var ld = lieblingsDoppel(p.id);
+    var favs = finishFavoriten(finishGruppen(p));
+    var eig = p.finish && p.finish.eigene && typeof p.finish.eigene === 'object' ? p.finish.eigene : {};
+    var nEig = finishEigeneAnzahl(p);
+    var farbe = function (tok) {
+      var k = tokenKompakt(tok);
+      if (k === 'BULL') return favs.indexOf(25) >= 0 ? 'fav' : 'dbl';
+      if (k.charAt(0) === 'D') return favs.indexOf(Number(k.slice(1))) >= 0 ? 'fav' : 'dbl';
+      return '';
+    };
+    var tokHtml = function (tok) { return '<span class="ft-tok ' + farbe(tok) + '">' + esc(tok) + '</span>'; };
+
+    /* Liste */
+    var zeilen = [];
+    for (var r = 170; r >= 2; r--) {
+      var hatEigen = /[^|]/.test(String(eig[r] || ''));
+      if (t.filter === 'eigene' && !hatEigen) continue;
+      var w = Checkout.suggest(r, 3, ld), st = w ? null : Checkout.stellwurf(r, 3, ld);
+      var toks = (w || (st && st.darts) || []).map(tokenAusKompakt);
+      zeilen.push('<button class="ft-zeile' + (t.rest === r ? ' active' : '') + '" data-action="tab-rest" data-rest="' + r + '">' +
+        '<span class="ft-rest">' + r + '</span><span class="ft-weg">' + toks.map(tokHtml).join('') +
+        (st && st.auf ? '<span class="ft-tok auf">auf ' + st.auf + '</span>' : '') + '</span>' +
+        '<span class="ft-punkt' + (hatEigen ? ' an' : '') + '"></span></button>');
+    }
+
+    /* Editor */
+    var editor = '';
+    if (t.rest) {
+      var tokens = t.entwurf.filter(Boolean);
+      var info = t.info && t.info.key === t.rest + '/' + t.darts + '/' + tokens.join(' ') ? t.info : null;
+      var eigenTeil = tabEigenerTeil(p, t.rest, t.darts);
+      var geaendert = tokens.join(' ') !== tabWegTokens(p, t.rest, t.darts).join(' ');
+      var pr = info && info.pruefung;
+      var checkText, checkKl = '';
+      if (!tokens.length) { checkText = 'Felder antippen und den Weg eingeben.'; }
+      else if (!info || info.laedt) { checkText = 'Wird geprüft …'; }
+      else if (info.fehler) { checkText = info.fehler; checkKl = 'schlecht'; }
+      else if (!pr.ok) { checkText = pr.fehler.join(', '); checkKl = 'schlecht'; }
+      else {
+        var v = info.vergleich;
+        var bester = v.besterWeg.join(' '), gleich = bester === tokens.join(' ');
+        /* "Deutlich schlechter" richtet sich nach der Spielweise: wer auf
+           Aufnahmen spielt, bekommt bei weniger Aufnahmen und kleinerer
+           Checkout-Chance nur den Hinweis auf die Chance. */
+        var schlechtAufn = v.mehrAufnahmen > 0.05, schlechtCo = (v.checkoutBester - v.checkoutEigen) > 0.03;
+        var deutlich = schlechtAufn || ((p.finish || {}).spielweise === 'checkout' && schlechtCo);
+        checkText = (pr.warnungen.length ? pr.warnungen.join(', ') + '. ' : '') +
+          (gleich ? 'Das ist der beste Weg laut Modell · Checkout ' + prozent(v.checkoutEigen)
+            : (v.mehrAufnahmen >= 0 ? '+' : '') + aufn(v.mehrAufnahmen) + ' Aufnahmen gegenüber ' + esc(bester) +
+              ' · Checkout ' + prozent(v.checkoutEigen) + ' statt ' + prozent(v.checkoutBester));
+        checkKl = deutlich ? 'schlecht' : (schlechtCo || pr.warnungen.length) ? 'mittel' : 'gut';
+        if (deutlich) checkText = 'Deutlich schlechter als der beste Weg. ' + checkText;
+        else if (schlechtCo && !gleich) checkText = 'Geringere Checkout-Chance als der beste Weg. ' + checkText;
+      }
+      var slots = '';
+      for (var i = 0; i < t.darts; i++) {
+        slots += '<button class="ft-slot' + (i === t.slot ? ' active' : '') + (t.entwurf[i] ? '' : ' leer') + '" data-action="tab-slot" data-i="' + i + '">' +
+          (t.entwurf[i] ? esc(t.entwurf[i]) : '·') + '</button>';
+      }
+      var altKey = t.rest + '/' + t.darts, alts = t.alts[altKey];
+      var altHtml = !alts ? '' : alts.laedt ? '<span class="ft-alt-laedt">Alternativen werden gerechnet …</span>'
+        : (alts.liste || []).map(function (a) {
+          var wegT = a.weg.join(' ');
+          return '<button class="ft-alt' + (wegT === tokens.join(' ') ? ' active' : '') + '" data-action="tab-alt" data-weg="' + esc(wegT) + '">' +
+            '<b>' + esc(wegT) + (a.bleibt ? ' <small>auf ' + a.bleibt + '</small>' : '') + '</b><span>' + aufn(a.aufnahmen) + ' Aufn. · ' + prozent(a.checkout) + '</span></button>';
+        }).join('');
+      var pad = '';
+      for (var n = 1; n <= 20; n++) pad += '<button data-action="tab-pad" data-value="' + (t.seg === 'S' ? n : t.seg + n) + '">' + n + '</button>';
+      var bullT = t.seg === 'S' ? '25' : t.seg === 'D' ? 'Bull' : null;
+      pad += '<button data-action="tab-pad" data-value="' + (bullT || '') + '"' + (bullT ? '' : ' disabled') + '>' + (bullT || '25') + '</button>';
+      pad += '<button data-action="tab-pad" data-value="" class="leer">leer</button>';
+      var darfHier = darf;
+      editor = '<div class="ft-editor">' +
+        '<div class="ft-links">' +
+          '<div class="ft-zeile1"><span class="ft-ed-rest">' + t.rest + '</span>' +
+            '<div class="dl-segment ft-darts">' + [3, 2, 1].map(function (d) {
+              return '<button data-action="tab-darts" data-value="' + d + '" class="' + (t.darts === d ? 'active' : '') + '">' + d + (d === 1 ? ' Dart' : ' Darts') + '</button>';
+            }).join('') + '</div></div>' +
+          '<div class="ft-slots">' + slots + '</div>' +
+          '<p class="ft-check ' + checkKl + '">' + checkText + '</p>' +
+          '<div class="ft-alts"><span class="kt">Alternativen laut Modell</span><div class="ft-alt-liste">' + altHtml + '</div></div>' +
+          (darfHier ? '<div class="ft-knoepfe">' +
+            (eigenTeil ? '<button class="btn pa-btn" data-action="tab-standard">Eigenen Eintrag löschen</button>' : '') +
+            '<button class="btn pa-btn hell" data-action="tab-speichern"' + (pr && pr.ok && geaendert ? '' : ' disabled') + '>Übernehmen</button>' +
+          '</div>' : '') +
+        '</div>' +
+        (darfHier ? '<div class="ft-segs">' + [['S', 'Single'], ['D', 'Double'], ['T', 'Triple']].map(function (sg) {
+            return '<button data-action="tab-seg" data-value="' + sg[0] + '" class="' + (t.seg === sg[0] ? 'active' : '') + '">' + sg[1] + '</button>';
+          }).join('') + '</div>' +
+          '<div class="ft-pad">' + pad + '</div>' : '') +
+      '</div>';
+    }
+
+    return '<div class="pa-panel ft-panel">' +
+      '<div class="pa-panel-kopf"><span class="pa-panel-titel">' + (eigen ? 'Meine Finish-Tabelle' : 'Finish-Tabelle') + '</span>' +
+        '<div class="dl-segment ft-filter">' +
+          '<button data-action="tab-filter" data-value="alle" class="' + (t.filter === 'alle' ? 'active' : '') + '">Alle</button>' +
+          '<button data-action="tab-filter" data-value="eigene" class="' + (t.filter === 'eigene' ? 'active' : '') + '">Angepasst' + (nEig ? ' · ' + nEig : '') + '</button></div>' +
+        '<button class="btn hell pa-fertig" data-action="profil-panel-zu">Fertig</button></div>' +
+      editor +
+      '<div class="ft-liste">' + (zeilen.join('') || '<p class="pa-text">Noch kein eigener Eintrag. Einen Rest antippen und den Weg eingeben.</p>') + '</div>' +
     '</div>';
   }
 
@@ -14238,6 +14659,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
             }).join('') + '</div>' +
             (u.length > zeige.length ? '<p class="dl-note">und ' + (u.length - zeige.length) + ' weitere.</p>' : '')
           : '<p class="dl-info">Mit drei Darts bleibt alles wie bisher. Die Tabelle gehört trotzdem dir: Spielweise und Wurftests stecken drin.</p>') +
+        (finishEigeneAnzahl(profile(o.id)) ? '<p class="dl-note">' + plural(finishEigeneAnzahl(profile(o.id)), 'eigener Eintrag bleibt', 'eigene Einträge bleiben') + ' wie angepasst stehen.</p>' : '') +
         '<div class="dl-fuss"><button class="btn ghost" data-action="ov-cancel">Verwerfen</button>' +
           '<button class="btn ghost" data-action="fi-zurueck">Zurück</button>' +
           '<button class="btn hell" data-action="fi-uebernehmen">Übernehmen</button></div>';
@@ -19577,7 +19999,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       }
       case 'open-profile':
         UI.profile = el.getAttribute('data-id');
-        UI.profilPanel = null; UI.profilGruppenWahl = false;
+        UI.profilPanel = null; UI.profilGruppenWahl = false; UI.tab = null;
         S.screen = 'profile';
         save(); render();
         break;
@@ -19590,7 +20012,56 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         if (UI.overlay && UI.overlay.type === 'profile') $('avatar-input').click();
         break;
       case 'profil-stats': UI.profilPanel = 'stats'; render(); break;
-      case 'profil-panel-zu': UI.profilPanel = null; render(); break;
+      case 'profil-tabelle': UI.profilPanel = 'tabelle'; UI.tab = null; tabZustand(); render(); break;
+      case 'profil-panel-zu': UI.profilPanel = null; UI.tab = null; render(); break;
+      /* Finish-Tabelle: Filter, Rest waehlen, Editor */
+      case 'tab-filter': tabZustand().filter = el.getAttribute('data-value'); render(); break;
+      case 'tab-rest': {
+        var trP = profile(UI.profile); if (!trP) break;
+        var trR = Number(el.getAttribute('data-rest'));
+        if (tabZustand().rest === trR) { tabZustand().rest = null; render(); break; }
+        tabRestWaehlen(trP, trR); render();
+        break;
+      }
+      case 'tab-darts': {
+        var tdP = profile(UI.profile), tdT = tabZustand(); if (!tdP || !tdT.rest) break;
+        tdT.darts = Number(el.getAttribute('data-value')); tdT.slot = 0;
+        tdT.entwurf = tabWegTokens(tdP, tdT.rest, tdT.darts); tdT.info = null;
+        tabInfoHolen(tdP); render();
+        break;
+      }
+      case 'tab-slot': tabZustand().slot = Number(el.getAttribute('data-i')); render(); break;
+      case 'tab-seg': tabZustand().seg = el.getAttribute('data-value'); render(); break;
+      case 'tab-pad': {
+        var tpP = profile(UI.profile), tpT = tabZustand(); if (!tpP || !tpT.rest || !bearbeitbar(tpP.id)) break;
+        var tpV = el.getAttribute('data-value');
+        if (!tpV) { tpT.entwurf.splice(tpT.slot, 1); tpT.slot = Math.max(0, Math.min(tpT.slot, tpT.entwurf.length)); }
+        else { tpT.entwurf[tpT.slot] = tpV; tpT.slot = Math.min(tpT.darts - 1, tpT.slot + 1); }
+        /* Luecken schliessen: ein Weg hat keine leeren Darts in der Mitte. */
+        tpT.entwurf = tpT.entwurf.filter(Boolean).slice(0, tpT.darts);
+        tpT.slot = Math.min(tpT.slot, tpT.darts - 1);
+        tabInfoHolen(tpP); render();
+        break;
+      }
+      case 'tab-alt': {
+        var taP = profile(UI.profile), taT = tabZustand(); if (!taP || !taT.rest) break;
+        taT.entwurf = el.getAttribute('data-weg').split(' '); taT.slot = 0;
+        tabInfoHolen(taP); render();
+        break;
+      }
+      case 'tab-speichern': {
+        var tsP = profile(UI.profile); if (!tsP || !bearbeitbar(tsP.id)) break;
+        var tsT = tabZustand(), tsTok = tsT.entwurf.filter(Boolean);
+        var tsI = tsT.info && tsT.info.key === tsT.rest + '/' + tsT.darts + '/' + tsTok.join(' ') ? tsT.info : null;
+        if (!tsI || !tsI.pruefung || !tsI.pruefung.ok) break;
+        tabEigenSpeichern(tsP, false);
+        break;
+      }
+      case 'tab-standard': {
+        var tstP = profile(UI.profile); if (!tstP || !bearbeitbar(tstP.id)) break;
+        tabEigenSpeichern(tstP, true);
+        break;
+      }
       case 'profil-liga': UI.ligaTab = 'statistik'; UI.boardLog = false; S.screen = 'liga'; save(); render(); break;
       case 'profil-gruppen': UI.profilGruppenWahl = !UI.profilGruppenWahl; render(); break;
       case 'profil-gruppen-ok': UI.profilGruppenWahl = false; render(); break;
@@ -21535,7 +22006,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (S.screen === 'boards' && UI.boardLog) { UI.boardLog = false; render(); return true; }
     if (S.screen === 'liga' && (UI.ligaTab || 'plan') !== 'plan') { UI.ligaTab = 'plan'; UI.boardLog = false; render(); return true; }
     if (S.screen === 'liga' && UI.ligaWahl) { UI.ligaWahl = null; render(); return true; }
-    if (S.screen === 'profile' && (UI.profilPanel || UI.profilGruppenWahl)) { UI.profilPanel = null; UI.profilGruppenWahl = false; render(); return true; }
+    if (S.screen === 'profile' && UI.profilPanel === 'tabelle' && UI.tab && UI.tab.rest) { UI.tab.rest = null; render(); return true; }
+    if (S.screen === 'profile' && (UI.profilPanel || UI.profilGruppenWahl)) { UI.profilPanel = null; UI.tab = null; UI.profilGruppenWahl = false; render(); return true; }
     if (S.screen === 'profile') { S.screen = 'players'; save(); render(); return true; }
     if (S.screen === 'konto' && gesperrt()) return false;
     if (S.screen === 'winner' || S.screen === 'bericht' || S.screen === 'setup') return false;
@@ -21689,6 +22161,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       finishGruppen: finishGruppen,
       finishGruppenSetzen: finishGruppenSetzen,
       finishNachruesten: finishNachruesten,
+      finishEigeneAnzahl: finishEigeneAnzahl,
       eigenesProfil: eigenesProfilOeffnen,
       freeHue: freeHue,
       HUES: HUES,

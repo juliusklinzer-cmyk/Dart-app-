@@ -122,7 +122,8 @@ export function createApi(db, config) {
   const FINISH_SPIELWEISEN = new Set(['aufnahmen', 'checkout', 'auto']);
   const FINISH_TESTS = new Set(['t20', 'doppel', 'bull', 'triple']);
   const FINISH_MAX = 64 * 1024;
-  const FINISH_ZEILE = /^[TDS]?(\d{1,2}|BULL)( [TDS]?(\d{1,2}|BULL))*( >\d{1,3})?$/;
+  // Stellwurf-Ziel ">N" nur fuer Reste, die es gibt (2 bis 168).
+  const FINISH_ZEILE = /^[TDS]?(\d{1,2}|BULL)( [TDS]?(\d{1,2}|BULL))*( >([2-9]|[1-9]\d|1[0-6]\d))?$/;
   function pruefeFinish(wert) {
     if (wert === null || wert === undefined) return null;
     const kaputt = (was) => new HttpFehler(400, 'Das Finish-Profil ist unbrauchbar (' + was + ').');
@@ -180,7 +181,7 @@ export function createApi(db, config) {
         }
       }
     }
-    for (const feld of ['tabelle', 'tabelleCheckout']) {
+    for (const feld of ['tabelle', 'tabelleCheckout', 'eigene']) {
       if (wert[feld] === undefined || wert[feld] === null) continue;
       const t = wert[feld];
       if (typeof t !== 'object' || Array.isArray(t)) throw kaputt(feld);
@@ -199,6 +200,11 @@ export function createApi(db, config) {
       const st = Number(wert.stand);
       if (!Number.isInteger(st) || st < 0) throw kaputt('Stand');
       out.stand = st;
+    }
+    if (wert.eigeneNr !== undefined && wert.eigeneNr !== null) {
+      const nr = Number(wert.eigeneNr);
+      if (!Number.isInteger(nr) || nr < 0) throw kaputt('eigeneNr');
+      out.eigeneNr = nr;
     }
     return out;
   }

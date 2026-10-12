@@ -418,6 +418,13 @@ async function main() {
     gleich(r.status, 400, 'eine unbekannte Spielweise ebenfalls');
     r = await julius.ruf('PATCH', '/api/me', { finish: { avg: 58.5, tabelle: { 140: 'T20 T16 D16|T20 S20 >60|T20 >80' }, extra: 'x'.repeat(70000) } });
     gleich(r.status, 400, 'ein zu grosses Finish-Profil wird abgewiesen');
+    r = await julius.ruf('PATCH', '/api/me', { finish: { gruppen: ['D16'], eigene: { 81: 'T15 D18||', 40: '|D20|' }, eigeneNr: 3 } });
+    gleich(r.status, 200, 'eigene Eintraege (auch mit leeren Teilen) lassen sich speichern');
+    gleich(r.daten.nutzer.finish.eigene[81] + '/' + r.daten.nutzer.finish.eigeneNr, 'T15 D18||/3', 'und kommen zurueck');
+    r = await julius.ruf('PATCH', '/api/me', { finish: { eigene: { 81: 'T15 D18' } } });
+    gleich(r.status, 400, 'ein eigener Eintrag ohne die drei Teile wird abgewiesen');
+    r = await julius.ruf('PATCH', '/api/me', { finish: { eigene: { 100: 'T20 >0||' } } });
+    gleich(r.status, 400, 'ein Stellwurf auf 0 oder 1 wird abgewiesen');
     r = await julius.ruf('PATCH', '/api/me', { finish: { gruppen: ['D16'], unbekannt: 1 } });
     gleich(r.status, 200, 'unbekannte Felder werden still weggelassen');
     gleich(r.daten.nutzer.finish.unbekannt, undefined, 'und landen nicht in der Datenbank');

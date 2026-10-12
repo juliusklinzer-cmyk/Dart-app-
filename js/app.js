@@ -694,6 +694,7 @@
       p.dbl = p.finish.gruppen.length ? doppelAusGruppe(p.finish.gruppen[0]) : null;
       if (p.finish.tabelle && typeof p.finish.tabelle !== 'object') p.finish.tabelle = null;
       if (p.finish.tabelleCheckout && typeof p.finish.tabelleCheckout !== 'object') p.finish.tabelleCheckout = null;
+      if (p.finish.eigene && typeof p.finish.eigene !== 'object') p.finish.eigene = null;
       if (!SPIELWEISEN[p.finish.spielweise]) p.finish.spielweise = 'aufnahmen';
     } else if (DOPPEL_WAHL.indexOf(p.dbl) < 0) p.dbl = null;
   }
@@ -720,10 +721,41 @@
     if (!p) return null;
     var f = p.finish || {};
     var dbl = DOPPEL_WAHL.indexOf(p.dbl) >= 0 ? p.dbl : null;
-    var tab = f.tabelle && typeof f.tabelle === 'object' ? f.tabelle : null;
-    if (tab && f.tabelleCheckout && (f.spielweise === 'checkout' || (f.spielweise === 'auto' && lage && lage.checkout))) tab = f.tabelleCheckout;
+    var checkout = !!(f.tabelle && f.tabelleCheckout && (f.spielweise === 'checkout' || (f.spielweise === 'auto' && lage && lage.checkout)));
+    var tab = finishTabelleGemischt(p, f, checkout);
     if (!dbl && !tab) return null;
     return { dbl: dbl, tabelle: tab };
+  }
+  /* Eigene Eintraege (p.finish.eigene, je Rest '3 Darts|2 Darts|1 Dart' mit
+     leeren Teilen fuer "wie gerechnet") liegen ueber der gerechneten bzw.
+     festen Tabelle. Das Mischen passiert einmal je Stand, nicht je Aufruf. */
+  var finishMischCache = {};
+  function finishTabelleGemischt(p, f, checkout) {
+    var basis = (checkout ? f.tabelleCheckout : f.tabelle) || null;
+    if (basis && typeof basis !== 'object') basis = null;
+    var eig = f.eigene && typeof f.eigene === 'object' ? f.eigene : null;
+    if (!eig || !Object.keys(eig).length) return basis;
+    var dbl = DOPPEL_WAHL.indexOf(p.dbl) >= 0 ? p.dbl : null;
+    /* Der Schluessel traegt alles, was in die Mischung eingeht: Grundzeilen
+       (Doppel der Hauptgruppe, Stand der Rechnung) und die eigenen Eintraege
+       selbst (vom Server kann ein anderer Inhalt mit gleicher Nummer kommen). */
+    var key = p.id + '|' + (checkout ? 'c' : 'a') + '|' + (f.stand || 0) + '|' + (f.eigeneNr || 0) + '|' + dbl + '|' + JSON.stringify(eig);
+    if (finishMischCache[key]) return finishMischCache[key];
+    var out = {};
+    if (basis) Object.keys(basis).forEach(function (r) { out[r] = basis[r]; });
+    Object.keys(eig).forEach(function (r) {
+      var teile = String(eig[r] || '').split('|');
+      var grund = (basis && basis[r]) || Checkout.zeileText(Number(r), dbl) || '';
+      var gt = grund.split('|');
+      out[r] = [0, 1, 2].map(function (i) { return teile[i] || gt[i] || ''; }).join('|');
+    });
+    if (Object.keys(finishMischCache).length > 24) finishMischCache = {};
+    finishMischCache[key] = out;
+    return out;
+  }
+  function finishEigeneAnzahl(p) {
+    var e = p && p.finish && p.finish.eigene;
+    return e && typeof e === 'object' ? Object.keys(e).filter(function (r) { return /[^|]/.test(String(e[r] || '')); }).length : 0;
   }
   /* Spielweise "auto" im X01: die Checkout-Variante, sobald ein Gegner im
      naechsten Besuch finishen kann oder es das entscheidende Leg ist. */
@@ -4764,7 +4796,9 @@
     '</div>';
 
     var koerper;
-    if (UI.profilPanel === 'stats') {
+    if (UI.profilPanel === 'tabelle') {
+      koerper = finishTabelleHtml(p, darf, eigen);
+    } else if (UI.profilPanel === 'stats') {
       koerper = '<div class="pa-panel">' +
         '<div class="pa-panel-kopf"><span class="pa-panel-titel">' + (eigen ? 'Meine Stats' : 'Statistik') + '</span>' +
           '<button class="btn hell pa-fertig" data-action="profil-panel-zu">Fertig</button></div>' +
@@ -4818,15 +4852,218 @@
       stand = (gr.length ? 'Standardtabelle für ' + gr[0] + '.' : 'Standardtabelle ohne Lieblingsdoppel.') +
         (darf ? ' Antippen zum Ändern. Oder die Tabelle aus Average und Wurftests ermitteln lassen.' : '');
     }
-    var knopf = !darf ? ''
-      : wahl ? '<button class="btn pa-btn hell" data-action="profil-gruppen-ok">OK</button>'
-      : '<button class="btn pa-btn" data-action="finish-ermitteln">Meine besten Finishes ermitteln</button>';
+    var nEig = finishEigeneAnzahl(p);
+    var knopf = wahl ? '<button class="btn pa-btn hell" data-action="profil-gruppen-ok">OK</button>'
+      : (darf ? '<button class="btn pa-btn" data-action="finish-ermitteln">Meine besten Finishes ermitteln</button>' : '') +
+        '<button class="btn pa-btn" data-action="profil-tabelle">' + (darf ? 'Finish-Tabelle anpassen' : 'Finish-Tabelle ansehen') +
+          '<span class="pa-btn-sub">' + (nEig ? nEig + ' angepasst' : '') + '</span></button>';
     return '<div class="pa-kachel pa-finish">' +
       '<span class="kt">Finish-Weg · Lieblingsgruppe</span>' +
       '<div class="pa-kette">' + kette + '</div>' +
       pad +
       (wahl ? '' : '<p class="pa-text">' + stand + '</p>') +
-      knopf +
+      '<div class="pa-finish-knoepfe">' + knopf + '</div>' +
+    '</div>';
+  }
+
+  /* ---------- Finish-Tabelle ansehen und anpassen (Phase 3) ----------
+     Entwurf "Profil", Tafel "Meine Finish-Tabelle": alle Reste 170 bis 2 mit
+     dem Weg fuer drei Darts (Lieblingsdoppel hell), Filter Alle · Angepasst,
+     ein Tipp auf den Rest oeffnet den Editor: Darts in der Hand (3, 2, 1),
+     drei Felder, Tastenfeld mit Single/Double/Triple, harte Pruefung
+     (Summe, Doppel am Ende), Vergleich mit dem besten Weg aus dem Modell
+     (Aufnahmen, Checkout-Chance, Warnung bei deutlich schlechter) und die
+     Alternativen der Engine. Eigene Eintraege liegen in p.finish.eigene und
+     bleiben beim Neu-Ermitteln stehen (Schloss). */
+  function tokenAusKompakt(t) { return t === 'BULL' ? 'Bull' : t.charAt(0) === 'S' ? t.slice(1) : t; }
+  function tokenKompakt(t) { return t === 'Bull' ? 'BULL' : /^\d+$/.test(t) && t !== '25' ? 'S' + t : t; }
+  function tokenWertApp(t) {
+    if (t === 'Bull') return 50;
+    if (t === '25') return 25;
+    var m = t.charAt(0) === 'T' ? 3 : t.charAt(0) === 'D' ? 2 : 1;
+    return m * Number(t.replace(/^[TD]/, ''));
+  }
+  /* Profil fuer Fragen an die Engine: das kalibrierte, sonst das
+     Referenzprofil mit dem Lieblingsdoppel (so entstanden die festen Tabellen). */
+  function finishEngineProfil(p) {
+    var f = p.finish || {};
+    if (f.profil && typeof f.profil === 'object') return f.profil;
+    var dbl = DOPPEL_WAHL.indexOf(p.dbl) >= 0 ? p.dbl : null;
+    return { favoriten: dbl && dbl !== 25 ? [dbl] : [] };
+  }
+  function tabZustand() {
+    if (!UI.tab) UI.tab = { filter: 'alle', rest: null, darts: 3, seg: 'T', slot: 0, entwurf: [], info: null, alts: {} };
+    return UI.tab;
+  }
+  /* Der Weg, der fuer Rest und Darts gerade gilt (eigen oder gerechnet/fest). */
+  function tabWegTokens(p, rest, darts) {
+    var z = Checkout.suggest(rest, darts, lieblingsDoppel(p.id)) || (Checkout.stellwurf(rest, darts, lieblingsDoppel(p.id)) || {}).darts || [];
+    return z.map(tokenAusKompakt);
+  }
+  function tabEigenerTeil(p, rest, darts) {
+    var e = p.finish && p.finish.eigene && p.finish.eigene[rest];
+    return e ? (String(e).split('|')[3 - darts] || '') : '';
+  }
+  function tabRestWaehlen(p, rest) {
+    var t = tabZustand();
+    t.rest = rest; t.slot = 0; t.seg = 'T'; t.info = null;
+    t.entwurf = tabWegTokens(p, rest, t.darts);
+    tabInfoHolen(p);
+  }
+  function tabInfoHolen(p) {
+    var t = tabZustand();
+    if (!t.rest) return;
+    var tokens = t.entwurf.filter(Boolean);
+    var profil = finishEngineProfil(p);
+    var key = t.rest + '/' + t.darts + '/' + tokens.join(' ');
+    var altKey = t.rest + '/' + t.darts;
+    t.info = { key: key, laedt: true };
+    if (!t.alts[altKey]) {
+      t.alts[altKey] = { laedt: true };
+      Checkout.fragen({ profil: profil, frage: 'alternativen', rest: t.rest, darts: t.darts, anzahl: 4 }).then(function (a) {
+        if (UI.tab !== t) return;
+        t.alts[altKey] = { liste: a.alternativen };
+        if (S.screen === 'profile' && UI.profilPanel === 'tabelle') render();
+      }, function () { if (UI.tab === t) delete t.alts[altKey]; });
+    }
+    if (!tokens.length) { t.info = { key: key, pruefung: { ok: false, fehler: ['kein Dart angegeben'], warnungen: [] } }; return; }
+    Checkout.fragen({ profil: profil, frage: 'vergleich', rest: t.rest, darts: t.darts, tokens: tokens }).then(function (a) {
+      if (UI.tab !== t || !t.info || t.info.key !== key) return;
+      t.info = { key: key, pruefung: a.pruefung, vergleich: a.vergleich };
+      if (S.screen === 'profile' && UI.profilPanel === 'tabelle') render();
+    }, function (err) {
+      if (UI.tab !== t || !t.info || t.info.key !== key) return;
+      t.info = { key: key, fehler: String(err && err.message || err) };
+      if (S.screen === 'profile' && UI.profilPanel === 'tabelle') render();
+    });
+  }
+  function tabEigenSpeichern(p, loeschen) {
+    var t = tabZustand();
+    if (!t.rest || !p.finish) p.finish = p.finish || { gruppen: [] };
+    var eig = p.finish.eigene && typeof p.finish.eigene === 'object' ? p.finish.eigene : {};
+    var teile = String(eig[t.rest] || '||').split('|');
+    while (teile.length < 3) teile.push('');
+    if (loeschen) teile[3 - t.darts] = '';
+    else {
+      var tokens = t.entwurf.filter(Boolean);
+      var bleibt = t.rest - tokens.reduce(function (a, x) { return a + tokenWertApp(x); }, 0);
+      teile[3 - t.darts] = tokens.map(tokenKompakt).join(' ') + (bleibt > 0 ? ' >' + bleibt : '');
+    }
+    if (teile.join('|') === '||') delete eig[t.rest]; else eig[t.rest] = teile.join('|');
+    p.finish.eigene = eig;
+    p.finish.eigeneNr = (p.finish.eigeneNr || 0) + 1;
+    if (window.DartKonto) window.DartKonto.profilGeaendert(p.id);
+    t.entwurf = tabWegTokens(p, t.rest, t.darts);
+    t.info = null;
+    tabInfoHolen(p);
+    save(); render();
+  }
+  function prozent(x) { return Math.round(x * 100) + ' %'; }
+  function aufn(x) { return x.toFixed(2).replace('.', ','); }
+
+  function finishTabelleHtml(p, darf, eigen) {
+    var t = tabZustand();
+    var ld = lieblingsDoppel(p.id);
+    var favs = finishFavoriten(finishGruppen(p));
+    var eig = p.finish && p.finish.eigene && typeof p.finish.eigene === 'object' ? p.finish.eigene : {};
+    var nEig = finishEigeneAnzahl(p);
+    var farbe = function (tok) {
+      var k = tokenKompakt(tok);
+      if (k === 'BULL') return favs.indexOf(25) >= 0 ? 'fav' : 'dbl';
+      if (k.charAt(0) === 'D') return favs.indexOf(Number(k.slice(1))) >= 0 ? 'fav' : 'dbl';
+      return '';
+    };
+    var tokHtml = function (tok) { return '<span class="ft-tok ' + farbe(tok) + '">' + esc(tok) + '</span>'; };
+
+    /* Liste */
+    var zeilen = [];
+    for (var r = 170; r >= 2; r--) {
+      var hatEigen = /[^|]/.test(String(eig[r] || ''));
+      if (t.filter === 'eigene' && !hatEigen) continue;
+      var w = Checkout.suggest(r, 3, ld), st = w ? null : Checkout.stellwurf(r, 3, ld);
+      var toks = (w || (st && st.darts) || []).map(tokenAusKompakt);
+      zeilen.push('<button class="ft-zeile' + (t.rest === r ? ' active' : '') + '" data-action="tab-rest" data-rest="' + r + '">' +
+        '<span class="ft-rest">' + r + '</span><span class="ft-weg">' + toks.map(tokHtml).join('') +
+        (st && st.auf ? '<span class="ft-tok auf">auf ' + st.auf + '</span>' : '') + '</span>' +
+        '<span class="ft-punkt' + (hatEigen ? ' an' : '') + '"></span></button>');
+    }
+
+    /* Editor */
+    var editor = '';
+    if (t.rest) {
+      var tokens = t.entwurf.filter(Boolean);
+      var info = t.info && t.info.key === t.rest + '/' + t.darts + '/' + tokens.join(' ') ? t.info : null;
+      var eigenTeil = tabEigenerTeil(p, t.rest, t.darts);
+      var geaendert = tokens.join(' ') !== tabWegTokens(p, t.rest, t.darts).join(' ');
+      var pr = info && info.pruefung;
+      var checkText, checkKl = '';
+      if (!tokens.length) { checkText = 'Felder antippen und den Weg eingeben.'; }
+      else if (!info || info.laedt) { checkText = 'Wird geprüft …'; }
+      else if (info.fehler) { checkText = info.fehler; checkKl = 'schlecht'; }
+      else if (!pr.ok) { checkText = pr.fehler.join(', '); checkKl = 'schlecht'; }
+      else {
+        var v = info.vergleich;
+        var bester = v.besterWeg.join(' '), gleich = bester === tokens.join(' ');
+        /* "Deutlich schlechter" richtet sich nach der Spielweise: wer auf
+           Aufnahmen spielt, bekommt bei weniger Aufnahmen und kleinerer
+           Checkout-Chance nur den Hinweis auf die Chance. */
+        var schlechtAufn = v.mehrAufnahmen > 0.05, schlechtCo = (v.checkoutBester - v.checkoutEigen) > 0.03;
+        var deutlich = schlechtAufn || ((p.finish || {}).spielweise === 'checkout' && schlechtCo);
+        checkText = (pr.warnungen.length ? pr.warnungen.join(', ') + '. ' : '') +
+          (gleich ? 'Das ist der beste Weg laut Modell · Checkout ' + prozent(v.checkoutEigen)
+            : (v.mehrAufnahmen >= 0 ? '+' : '') + aufn(v.mehrAufnahmen) + ' Aufnahmen gegenüber ' + esc(bester) +
+              ' · Checkout ' + prozent(v.checkoutEigen) + ' statt ' + prozent(v.checkoutBester));
+        checkKl = deutlich ? 'schlecht' : (schlechtCo || pr.warnungen.length) ? 'mittel' : 'gut';
+        if (deutlich) checkText = 'Deutlich schlechter als der beste Weg. ' + checkText;
+        else if (schlechtCo && !gleich) checkText = 'Geringere Checkout-Chance als der beste Weg. ' + checkText;
+      }
+      var slots = '';
+      for (var i = 0; i < t.darts; i++) {
+        slots += '<button class="ft-slot' + (i === t.slot ? ' active' : '') + (t.entwurf[i] ? '' : ' leer') + '" data-action="tab-slot" data-i="' + i + '">' +
+          (t.entwurf[i] ? esc(t.entwurf[i]) : '·') + '</button>';
+      }
+      var altKey = t.rest + '/' + t.darts, alts = t.alts[altKey];
+      var altHtml = !alts ? '' : alts.laedt ? '<span class="ft-alt-laedt">Alternativen werden gerechnet …</span>'
+        : (alts.liste || []).map(function (a) {
+          var wegT = a.weg.join(' ');
+          return '<button class="ft-alt' + (wegT === tokens.join(' ') ? ' active' : '') + '" data-action="tab-alt" data-weg="' + esc(wegT) + '">' +
+            '<b>' + esc(wegT) + (a.bleibt ? ' <small>auf ' + a.bleibt + '</small>' : '') + '</b><span>' + aufn(a.aufnahmen) + ' Aufn. · ' + prozent(a.checkout) + '</span></button>';
+        }).join('');
+      var pad = '';
+      for (var n = 1; n <= 20; n++) pad += '<button data-action="tab-pad" data-value="' + (t.seg === 'S' ? n : t.seg + n) + '">' + n + '</button>';
+      var bullT = t.seg === 'S' ? '25' : t.seg === 'D' ? 'Bull' : null;
+      pad += '<button data-action="tab-pad" data-value="' + (bullT || '') + '"' + (bullT ? '' : ' disabled') + '>' + (bullT || '25') + '</button>';
+      pad += '<button data-action="tab-pad" data-value="" class="leer">leer</button>';
+      var darfHier = darf;
+      editor = '<div class="ft-editor">' +
+        '<div class="ft-links">' +
+          '<div class="ft-zeile1"><span class="ft-ed-rest">' + t.rest + '</span>' +
+            '<div class="dl-segment ft-darts">' + [3, 2, 1].map(function (d) {
+              return '<button data-action="tab-darts" data-value="' + d + '" class="' + (t.darts === d ? 'active' : '') + '">' + d + (d === 1 ? ' Dart' : ' Darts') + '</button>';
+            }).join('') + '</div></div>' +
+          '<div class="ft-slots">' + slots + '</div>' +
+          '<p class="ft-check ' + checkKl + '">' + checkText + '</p>' +
+          '<div class="ft-alts"><span class="kt">Alternativen laut Modell</span><div class="ft-alt-liste">' + altHtml + '</div></div>' +
+          (darfHier ? '<div class="ft-knoepfe">' +
+            (eigenTeil ? '<button class="btn pa-btn" data-action="tab-standard">Eigenen Eintrag löschen</button>' : '') +
+            '<button class="btn pa-btn hell" data-action="tab-speichern"' + (pr && pr.ok && geaendert ? '' : ' disabled') + '>Übernehmen</button>' +
+          '</div>' : '') +
+        '</div>' +
+        (darfHier ? '<div class="ft-segs">' + [['S', 'Single'], ['D', 'Double'], ['T', 'Triple']].map(function (sg) {
+            return '<button data-action="tab-seg" data-value="' + sg[0] + '" class="' + (t.seg === sg[0] ? 'active' : '') + '">' + sg[1] + '</button>';
+          }).join('') + '</div>' +
+          '<div class="ft-pad">' + pad + '</div>' : '') +
+      '</div>';
+    }
+
+    return '<div class="pa-panel ft-panel">' +
+      '<div class="pa-panel-kopf"><span class="pa-panel-titel">' + (eigen ? 'Meine Finish-Tabelle' : 'Finish-Tabelle') + '</span>' +
+        '<div class="dl-segment ft-filter">' +
+          '<button data-action="tab-filter" data-value="alle" class="' + (t.filter === 'alle' ? 'active' : '') + '">Alle</button>' +
+          '<button data-action="tab-filter" data-value="eigene" class="' + (t.filter === 'eigene' ? 'active' : '') + '">Angepasst' + (nEig ? ' · ' + nEig : '') + '</button></div>' +
+        '<button class="btn hell pa-fertig" data-action="profil-panel-zu">Fertig</button></div>' +
+      editor +
+      '<div class="ft-liste">' + (zeilen.join('') || '<p class="pa-text">Noch kein eigener Eintrag. Einen Rest antippen und den Weg eingeben.</p>') + '</div>' +
     '</div>';
   }
 
@@ -5150,6 +5387,7 @@
             }).join('') + '</div>' +
             (u.length > zeige.length ? '<p class="dl-note">und ' + (u.length - zeige.length) + ' weitere.</p>' : '')
           : '<p class="dl-info">Mit drei Darts bleibt alles wie bisher. Die Tabelle gehört trotzdem dir: Spielweise und Wurftests stecken drin.</p>') +
+        (finishEigeneAnzahl(profile(o.id)) ? '<p class="dl-note">' + plural(finishEigeneAnzahl(profile(o.id)), 'eigener Eintrag bleibt', 'eigene Einträge bleiben') + ' wie angepasst stehen.</p>' : '') +
         '<div class="dl-fuss"><button class="btn ghost" data-action="ov-cancel">Verwerfen</button>' +
           '<button class="btn ghost" data-action="fi-zurueck">Zurück</button>' +
           '<button class="btn hell" data-action="fi-uebernehmen">Übernehmen</button></div>';
@@ -10489,7 +10727,7 @@
       }
       case 'open-profile':
         UI.profile = el.getAttribute('data-id');
-        UI.profilPanel = null; UI.profilGruppenWahl = false;
+        UI.profilPanel = null; UI.profilGruppenWahl = false; UI.tab = null;
         S.screen = 'profile';
         save(); render();
         break;
@@ -10502,7 +10740,56 @@
         if (UI.overlay && UI.overlay.type === 'profile') $('avatar-input').click();
         break;
       case 'profil-stats': UI.profilPanel = 'stats'; render(); break;
-      case 'profil-panel-zu': UI.profilPanel = null; render(); break;
+      case 'profil-tabelle': UI.profilPanel = 'tabelle'; UI.tab = null; tabZustand(); render(); break;
+      case 'profil-panel-zu': UI.profilPanel = null; UI.tab = null; render(); break;
+      /* Finish-Tabelle: Filter, Rest waehlen, Editor */
+      case 'tab-filter': tabZustand().filter = el.getAttribute('data-value'); render(); break;
+      case 'tab-rest': {
+        var trP = profile(UI.profile); if (!trP) break;
+        var trR = Number(el.getAttribute('data-rest'));
+        if (tabZustand().rest === trR) { tabZustand().rest = null; render(); break; }
+        tabRestWaehlen(trP, trR); render();
+        break;
+      }
+      case 'tab-darts': {
+        var tdP = profile(UI.profile), tdT = tabZustand(); if (!tdP || !tdT.rest) break;
+        tdT.darts = Number(el.getAttribute('data-value')); tdT.slot = 0;
+        tdT.entwurf = tabWegTokens(tdP, tdT.rest, tdT.darts); tdT.info = null;
+        tabInfoHolen(tdP); render();
+        break;
+      }
+      case 'tab-slot': tabZustand().slot = Number(el.getAttribute('data-i')); render(); break;
+      case 'tab-seg': tabZustand().seg = el.getAttribute('data-value'); render(); break;
+      case 'tab-pad': {
+        var tpP = profile(UI.profile), tpT = tabZustand(); if (!tpP || !tpT.rest || !bearbeitbar(tpP.id)) break;
+        var tpV = el.getAttribute('data-value');
+        if (!tpV) { tpT.entwurf.splice(tpT.slot, 1); tpT.slot = Math.max(0, Math.min(tpT.slot, tpT.entwurf.length)); }
+        else { tpT.entwurf[tpT.slot] = tpV; tpT.slot = Math.min(tpT.darts - 1, tpT.slot + 1); }
+        /* Luecken schliessen: ein Weg hat keine leeren Darts in der Mitte. */
+        tpT.entwurf = tpT.entwurf.filter(Boolean).slice(0, tpT.darts);
+        tpT.slot = Math.min(tpT.slot, tpT.darts - 1);
+        tabInfoHolen(tpP); render();
+        break;
+      }
+      case 'tab-alt': {
+        var taP = profile(UI.profile), taT = tabZustand(); if (!taP || !taT.rest) break;
+        taT.entwurf = el.getAttribute('data-weg').split(' '); taT.slot = 0;
+        tabInfoHolen(taP); render();
+        break;
+      }
+      case 'tab-speichern': {
+        var tsP = profile(UI.profile); if (!tsP || !bearbeitbar(tsP.id)) break;
+        var tsT = tabZustand(), tsTok = tsT.entwurf.filter(Boolean);
+        var tsI = tsT.info && tsT.info.key === tsT.rest + '/' + tsT.darts + '/' + tsTok.join(' ') ? tsT.info : null;
+        if (!tsI || !tsI.pruefung || !tsI.pruefung.ok) break;
+        tabEigenSpeichern(tsP, false);
+        break;
+      }
+      case 'tab-standard': {
+        var tstP = profile(UI.profile); if (!tstP || !bearbeitbar(tstP.id)) break;
+        tabEigenSpeichern(tstP, true);
+        break;
+      }
       case 'profil-liga': UI.ligaTab = 'statistik'; UI.boardLog = false; S.screen = 'liga'; save(); render(); break;
       case 'profil-gruppen': UI.profilGruppenWahl = !UI.profilGruppenWahl; render(); break;
       case 'profil-gruppen-ok': UI.profilGruppenWahl = false; render(); break;
@@ -12447,7 +12734,8 @@
     if (S.screen === 'boards' && UI.boardLog) { UI.boardLog = false; render(); return true; }
     if (S.screen === 'liga' && (UI.ligaTab || 'plan') !== 'plan') { UI.ligaTab = 'plan'; UI.boardLog = false; render(); return true; }
     if (S.screen === 'liga' && UI.ligaWahl) { UI.ligaWahl = null; render(); return true; }
-    if (S.screen === 'profile' && (UI.profilPanel || UI.profilGruppenWahl)) { UI.profilPanel = null; UI.profilGruppenWahl = false; render(); return true; }
+    if (S.screen === 'profile' && UI.profilPanel === 'tabelle' && UI.tab && UI.tab.rest) { UI.tab.rest = null; render(); return true; }
+    if (S.screen === 'profile' && (UI.profilPanel || UI.profilGruppenWahl)) { UI.profilPanel = null; UI.tab = null; UI.profilGruppenWahl = false; render(); return true; }
     if (S.screen === 'profile') { S.screen = 'players'; save(); render(); return true; }
     if (S.screen === 'konto' && gesperrt()) return false;
     if (S.screen === 'winner' || S.screen === 'bericht' || S.screen === 'setup') return false;
@@ -12623,6 +12911,7 @@
       finishGruppen: finishGruppen,
       finishGruppenSetzen: finishGruppenSetzen,
       finishNachruesten: finishNachruesten,
+      finishEigeneAnzahl: finishEigeneAnzahl,
       eigenesProfil: eigenesProfilOeffnen,
       freeHue: freeHue,
       HUES: HUES,

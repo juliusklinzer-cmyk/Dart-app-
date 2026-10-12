@@ -2805,6 +2805,83 @@ check('eine andere Gruppe verwirft die Tabelle, der Average bleibt', await page.
   const weg = D.finishGruppenSetzen(p, ['D20']);
   return weg === true && !p.finish.tabelle && p.finish.avg === 60 && p.dbl === 20 && D.lieblingsDoppel(id).dbl === 20 && D.lieblingsDoppel(id).tabelle === null;
 }, dblId));
+
+/* ---------- Phase 3: Finish-Tabelle ansehen und anpassen ---------- */
+group('Finish-Tabelle im Profil: Liste, Editor, Alternativen, eigene Eintraege');
+await page.evaluate((id) => { const D = window.__dart; D.state().game = null; D.setScreen('players'); }, dblId);
+await profilOeffnen('.player-card[data-id="' + dblId + '"]');
+check('die Kachel bietet "Finish-Tabelle anpassen" an', (await text('[data-action="profil-tabelle"]')).includes('Finish-Tabelle anpassen'));
+await page.locator('[data-action="profil-tabelle"]').click();
+check('die Tafel listet alle Reste von 170 bis 2 mit dem Weg fuer drei Darts (Gruppe D20)',
+  (await page.locator('.ft-zeile').count()) === 169 &&
+  (await text('.ft-zeile[data-rest="81"]')).replace(/\s+/g, ' ').includes('T19 D12') &&
+  (await text('.ft-zeile[data-rest="169"]')).replace(/\s+/g, ' ').includes('auf 40'), await text('.ft-zeile[data-rest="81"]'));
+await page.locator('.ft-zeile[data-rest="81"]').click();
+check('der Editor zeigt 81 mit dem geltenden Weg in den Feldern',
+  (await text('.ft-ed-rest')) === '81' && (await page.locator('.ft-slot').allInnerTexts()).filter((x) => x.trim() !== '·').join(' ').trim() === 'T19 D12', (await page.locator('.ft-slot').allInnerTexts()).join(' '));
+await page.waitForSelector('.ft-alt', { timeout: 60000 });
+check('die Engine liefert Alternativen mit Aufnahmen und Checkout-Chance, der beste Weg zuerst',
+  (await page.locator('.ft-alt').count()) >= 3 && (await text('.ft-alt >> nth=0')).includes('T19 D12') && /Aufn\. · \d+ %/.test(await text('.ft-alt >> nth=0')), await text('.ft-alt >> nth=0'));
+await page.waitForFunction(() => /beste Weg/.test(document.querySelector('.ft-check').textContent), null, { timeout: 30000 });
+check('der geltende Weg wird als bester Weg laut Modell erkannt, Uebernehmen ist aus',
+  (await page.locator('[data-action="tab-speichern"]').isDisabled()));
+/* Eigener Weg T15 D18 ueber das Tastenfeld: Triple 15, Double 18. */
+await page.locator('[data-action="tab-pad"][data-value="T15"]').click();
+await page.locator('[data-action="tab-seg"][data-value="D"]').click();
+await page.locator('[data-action="tab-pad"][data-value="D18"]').click();
+await page.waitForFunction(() => /Aufnahmen gegenüber/.test(document.querySelector('.ft-check').textContent), null, { timeout: 30000 });
+check('T15 D18 wird geprueft und mit dem besten Weg verglichen (Aufnahmen und Checkout-Chance)',
+  /\+0,0\d Aufnahmen gegenüber T19 D12 · Checkout \d+ % statt \d+ %/.test(await text('.ft-check')), await text('.ft-check'));
+check('Uebernehmen ist jetzt moeglich', !(await page.locator('[data-action="tab-speichern"]').isDisabled()));
+await page.locator('[data-action="tab-speichern"]').click();
+await page.waitForTimeout(300);
+const tabEig = await page.evaluate((id) => {
+  const D = window.__dart, p = D.profile(id), ld = D.lieblingsDoppel(id);
+  return { eigene: p.finish.eigene, zeile: ld.tabelle[81], weg3: window.Checkout.suggest(81, 3, ld).join(' '), weg2: window.Checkout.suggest(81, 2, ld).join(' '), n: D.finishEigeneAnzahl(p), dbl: ld.dbl };
+}, dblId);
+check('der eigene Eintrag gilt nur fuer drei Darts, zwei Darts bleiben wie in der festen Tabelle',
+  tabEig.eigene[81] === 'T15 D18||' && tabEig.zeile === 'T15 D18|T19 D12|25 >56' && tabEig.weg3 === 'T15 D18' && tabEig.weg2 === 'T19 D12' && tabEig.n === 1 && tabEig.dbl === 20, JSON.stringify(tabEig));
+check('die Zeile traegt den Punkt fuer "angepasst" und der Filter zaehlt ihn',
+  (await page.locator('.ft-zeile[data-rest="81"] .ft-punkt.an').count()) === 1 && (await text('[data-action="tab-filter"][data-value="eigene"]')).includes('1'));
+await page.locator('[data-action="tab-filter"][data-value="eigene"]').click();
+check('Filter "Angepasst" zeigt nur den einen Rest', (await page.locator('.ft-zeile').count()) === 1);
+/* Ein Weg, der kein Finish ist, obwohl eins geht: Warnung, aber erlaubt. Ein
+   Weg ohne Doppel am Ende: Fehler, Uebernehmen gesperrt. */
+await page.locator('[data-action="tab-slot"][data-i="1"]').click();
+await page.locator('[data-action="tab-seg"][data-value="S"]').click();
+await page.locator('[data-action="tab-pad"][data-value="20"]').click();
+await page.waitForFunction(() => /Deutlich schlechter/.test(document.querySelector('.ft-check').textContent), null, { timeout: 30000 });
+check('T15 20 (kein Finish, obwohl eins geht) wird als deutlich schlechter markiert',
+  (await text('.ft-check')).includes('kein Finish, obwohl eins möglich ist'));
+await page.locator('[data-action="tab-slot"][data-i="0"]').click();
+await page.locator('[data-action="tab-seg"][data-value="T"]').click();
+await page.locator('[data-action="tab-pad"][data-value="T20"]').click();
+await page.locator('[data-action="tab-pad"][data-value="T7"]').click();
+await page.waitForFunction(() => /Doppel/.test(document.querySelector('.ft-check').textContent), null, { timeout: 30000 });
+check('T20 T7 (81 erreicht, aber kein Doppel am Ende) ist ein Fehler, Uebernehmen gesperrt',
+  (await text('.ft-check')).includes('letzter Dart muss ein Doppel') && (await page.locator('[data-action="tab-speichern"]').isDisabled()), await text('.ft-check'));
+/* Zwei Darts in der Hand: eigener Eintrag nur fuer diesen Teil. */
+await page.locator('[data-action="tab-darts"][data-value="2"]').click();
+check('bei zwei Darts stehen T19 D12 in den Feldern', (await page.locator('.ft-slot').allInnerTexts()).filter((x) => x.trim() !== '·').join(' ').trim() === 'T19 D12');
+await page.locator('[data-action="tab-alt"]').first().waitFor({ timeout: 60000 });
+await page.locator('[data-action="tab-alt"][data-weg="T15 D18"]').click();
+await page.waitForFunction(() => /Aufnahmen gegenüber/.test(document.querySelector('.ft-check').textContent), null, { timeout: 30000 });
+await page.locator('[data-action="tab-speichern"]').click();
+await page.waitForTimeout(300);
+check('Alternativen lassen sich uebernehmen, der Eintrag haelt beide Teile', await page.evaluate((id) => window.__dart.profile(id).finish.eigene[81] === 'T15 D18|T15 D18|', dblId));
+/* Schloss: "Meine besten Finishes ermitteln" laesst eigene Eintraege stehen. */
+await page.evaluate((id) => { const D = window.__dart, p = D.profile(id); p.finish.tabelle = { 81: 'T19 D12|T19 D12|25 >56' }; p.finish.tabelleCheckout = { 81: 'T19 D12|T19 D12|25 >56' }; p.finish.stand = Date.now(); D.save(); }, dblId);
+check('eine gerechnete Tabelle liegt unter dem eigenen Eintrag, der Eintrag gewinnt',
+  await page.evaluate((id) => window.Checkout.suggest(81, 3, window.__dart.lieblingsDoppel(id)).join(' ') === 'T15 D18', dblId));
+await page.locator('[data-action="tab-standard"]').click();
+await page.waitForTimeout(200);
+check('"Eigenen Eintrag löschen" nimmt nur den Teil fuer zwei Darts weg', await page.evaluate((id) => window.__dart.profile(id).finish.eigene[81] === 'T15 D18||', dblId));
+await page.locator('[data-action="tab-darts"][data-value="3"]').click();
+await page.locator('[data-action="tab-standard"]').click();
+await page.waitForTimeout(200);
+check('danach ist der Rest wieder ganz wie gerechnet', await page.evaluate((id) => { const f = window.__dart.profile(id).finish; return !f.eigene[81] && window.__dart.finishEigeneAnzahl(window.__dart.profile(id)) === 0; }, dblId));
+await page.locator('[data-action="profil-panel-zu"]').click();
+check('"Fertig" schliesst die Tafel', !(await visible('.ft-panel')));
 /* Zurueck auf "egal", damit die folgenden Gruppen ihren gewohnten Stand haben. */
 await page.evaluate((id) => { const D = window.__dart, S = D.state(); S.game = null; D.finishGruppenSetzen(D.profile(id), []); D.profile(id).finish = null; D.setScreen('setup'); D.save(); }, dblId);
 

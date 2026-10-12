@@ -184,10 +184,19 @@
       (fav && WEGE_FAVORIT[fav][remaining]) || WEGE_STANDARD[remaining];
     if (!reihe) return null;
     var text = reihe.split('|')[3 - d];
+    if (!text) return null;
     var teile = text.split(' ');
     var auf = null;
     if (teile[teile.length - 1].charAt(0) === '>') auf = Number(teile.pop().slice(1));
     return { darts: teile, auf: auf };
+  }
+
+  /** Die feste Tabellenzeile ('3 Darts|2 Darts|1 Dart') fuer Rest und
+      Lieblingsdoppel - Grundlage, wenn eigene Eintraege nur einzelne Teile
+      ersetzen. */
+  function zeileText(remaining, dbl) {
+    var fav = favorit(dbl);
+    return (fav && WEGE_FAVORIT[fav][remaining]) || WEGE_STANDARD[remaining] || null;
   }
 
   /** Finish-Weg als Wurffolge, z.B. ['T20','T20','BULL'] - null, wenn mit
@@ -262,6 +271,63 @@
     });
   }
 
+  /*
+   * Fragen an die Engine, die das geloeste Modell brauchen (Alternativen je
+   * Rest, Vergleich eines eigenen Wegs): ein dauerhafter Worker haelt die
+   * Loesung je Profil im Speicher, die erste Frage dauert eine Sekunde, jede
+   * weitere ist sofort da. auftrag = { profil, frage: 'alternativen', rest,
+   * darts, anzahl } oder { profil, frage: 'vergleich', rest, darts, tokens }.
+   */
+  var frageWorker = null, frageNr = 0, offeneFragen = {};
+  function fragenDirekt(auftrag) {
+    var E = global.CheckoutEngine;
+    if (!E) throw new Error('Checkout-Engine nicht geladen');
+    return E.beantworten(auftrag);
+  }
+  function fragen(auftrag) {
+    return new Promise(function (resolve, reject) {
+      if (!frageWorker) {
+        frageWorker = engineWorker();
+        if (frageWorker) {
+          frageWorker.onmessage = function (ev) {
+            var d = ev.data || {}, f = offeneFragen[d.id];
+            if (!f) return;
+            delete offeneFragen[d.id]; clearTimeout(f.uhr);
+            if (d.fehler) f.reject(new Error(d.fehler)); else f.resolve(d);
+          };
+          frageWorker.onerror = function (e) {
+            if (e && e.preventDefault) e.preventDefault();
+            /* Der Worker ist hin: alle offenen Fragen direkt beantworten. */
+            var alte = offeneFragen; offeneFragen = {};
+            try { frageWorker.terminate(); } catch (x) { /* egal */ }
+            frageWorker = null;
+            Object.keys(alte).forEach(function (id) {
+              clearTimeout(alte[id].uhr);
+              try { alte[id].resolve(fragenDirekt(alte[id].auftrag)); } catch (x) { alte[id].reject(x); }
+            });
+          };
+        }
+      }
+      if (!frageWorker) {
+        try { resolve(fragenDirekt(auftrag)); } catch (e) { reject(e); }
+        return;
+      }
+      var id = 'f' + (++frageNr);
+      var kopie = {};
+      Object.keys(auftrag).forEach(function (k) { kopie[k] = auftrag[k]; });
+      kopie.id = id;
+      offeneFragen[id] = { resolve: resolve, reject: reject, auftrag: auftrag, uhr: setTimeout(function () {
+        if (!offeneFragen[id]) return;
+        delete offeneFragen[id];
+        /* Ein haengender Worker wird ersetzt, sonst wartet jede weitere Frage erneut. */
+        try { frageWorker.terminate(); } catch (x) { /* egal */ }
+        frageWorker = null;
+        reject(new Error('Die Berechnung hat zu lange gedauert'));
+      }, 60000) };
+      frageWorker.postMessage(kopie);
+    });
+  }
+
   /** Ist ein Checkout mit genau so vielen Darts möglich? */
   function possible(remaining, dartsLeft) {
     return best(remaining, dartsLeft) !== null;
@@ -292,6 +358,8 @@
     stellwurf: stellwurf,
     favorit: favorit,
     rechnen: rechnen,
+    fragen: fragen,
+    zeileText: zeileText,
     possible: possible,
     minDarts: minDarts,
     fieldValue: fieldValue,

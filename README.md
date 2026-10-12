@@ -1096,6 +1096,27 @@ es per `PATCH /api/me` (`finish`, Spalte `users.finish` als JSON, Migration
 Server und kommt mit dem Kader auf jedes Gerät. Die Kachel nennt danach Datum,
 Average und Spielweise der eigenen Tabelle.
 
+**Finish-Tabelle anpassen** (Phase 3, Tafel „Meine Finish-Tabelle“ im Profil):
+alle Reste von 170 bis 2 mit dem Weg für drei Darts (Lieblingsdoppel hell, Stellwürfe
+mit „auf N“), Filter **Alle · Angepasst**. Ein Tipp auf den Rest öffnet den Editor:
+Darts in der Hand (3, 2, 1), die Felder des Wegs, Tastenfeld mit Single/Double/Triple,
+25 und Bull. Jede Eingabe wird hart geprüft (Summe, Doppel oder Bull am Ende, nicht
+mehr Darts als in der Hand) und vom Modell mit dem besten Weg verglichen: Aufnahmen
+mehr oder weniger, Checkout-Chance beider Wege, Warnung „Deutlich schlechter“ (mehr
+als 0,05 Aufnahmen oder 3 Prozentpunkte Checkout schlechter) oder „kein Finish,
+obwohl eins möglich ist“; übernehmen darf man trotzdem. Darunter die **Alternativen
+laut Modell** (die besten Wege mit Aufnahmen und Chance, antippen übernimmt sie).
+„Übernehmen“ legt den eigenen Eintrag nur für diese Dartzahl an
+(`p.finish.eigene[rest] = '3 Darts|2 Darts|1 Dart'`, leere Teile heißen „wie
+gerechnet“), „Eigenen Eintrag löschen“ nimmt ihn wieder weg. Eigene Einträge liegen
+über der gerechneten wie der festen Tabelle und über beiden Spielweise-Varianten und
+bleiben beim Neu-Ermitteln und beim Gruppenwechsel stehen (Schloss; der Dialog sagt,
+wie viele). Die Fragen an das Modell beantwortet ein dauerhafter Worker
+(`Checkout.fragen`, Lösung je Profil im Speicher: die erste Frage dauert eine Sekunde,
+jede weitere ist sofort da; Spieler ohne eigene Tabelle bekommen das Referenzprofil
+ihres Lieblingsdoppels). Im Spiel gilt der eigene Weg als Plan wie jeder andere:
+solange die Darts fallen wie angesagt, bleibt er stehen.
+
 ## Tests
 
 ```bash

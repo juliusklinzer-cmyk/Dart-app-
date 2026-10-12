@@ -860,6 +860,34 @@
     return { profil: p, L: L, standard: Lstd, tabelle: tab, tabelleCheckout: tabCheckout };
   }
 
+  /*
+   * Fragen an das geloeste Modell (Finish-Tabelle im Profil): Alternativen je
+   * Rest und der Vergleich eines eigenen Wegs. Die Loesung je Profil bleibt
+   * im Speicher (hoechstens drei), damit nur die erste Frage rechnet.
+   */
+  var LOESUNGEN = {};
+  function loesungFuer(p) {
+    p = profil(p);
+    var key = JSON.stringify(p);
+    if (LOESUNGEN[key]) return LOESUNGEN[key];
+    var keys = Object.keys(LOESUNGEN);
+    if (keys.length >= 3) delete LOESUNGEN[keys[0]];
+    LOESUNGEN[key] = tabellenFuerProfil(p, { ohneCheckout: true }).L;
+    return LOESUNGEN[key];
+  }
+  function beantworten(d) {
+    var L = loesungFuer(d.profil);
+    var r = Number(d.rest), dd = Number(d.darts);
+    if (!(r >= 2 && r <= 170) || !(dd >= 1 && dd <= 3)) throw new Error('Rest oder Darts ausserhalb');
+    if (d.frage === 'alternativen') return { id: d.id, alternativen: alternativen(L, r, dd, d.anzahl || 4) };
+    if (d.frage === 'vergleich') {
+      var pr = wegPruefen(r, dd, d.tokens || []);
+      if (!pr.ok) return { id: d.id, pruefung: pr, vergleich: null };
+      return { id: d.id, pruefung: pr, vergleich: wegVergleich(L, r, dd, d.tokens) };
+    }
+    throw new Error('Unbekannte Frage ' + d.frage);
+  }
+
   /* Zeile im Format von js/checkout.js: 'T19 S12 D16|T17 BULL|T19 >44' */
   function feldLabel(t) {
     if (t === 'Bull') return 'BULL';
@@ -887,7 +915,7 @@
     loesen: loesen, beabsichtigt: beabsichtigt, weg: weg, tabelle: tabelle, checkoutPolitik: checkoutPolitik,
     wegBewerten: wegBewerten, wegWert: wegWert, alternativen: alternativen, tokenGueltig: tokenGueltig, wegPruefen: wegPruefen, wegVergleich: wegVergleich,
     averageModell: averageModell, sigmaAusAverage: sigmaAusAverage, fitStreuung: fitStreuung, kategorien: kategorien, profilAusTests: profilAusTests,
-    tabellenFuerProfil: tabellenFuerProfil, kompakt: kompakt
+    tabellenFuerProfil: tabellenFuerProfil, kompakt: kompakt, beantworten: beantworten
   };
 })(typeof self !== 'undefined' ? self : globalThis);
 
