@@ -1150,9 +1150,12 @@ export function createApi(db, config) {
     return id;
   }
 
+  /* Ohne Profilbilder: die hat jedes Geraet schon aus dem Kader. Mit den
+     Bildern war die Antwort auf eine Zusage ueber 2 MB gross (alle Termine,
+     je Zusage das Foto) - am iPad im Mobilfunk mehrere Sekunden. */
   function ligaAlleZusagen(ich) {
     const zeilen = db.prepare(
-      'SELECT z.termin_id, z.status, u.id, u.display_name, u.avatar, u.hue' +
+      'SELECT z.termin_id, z.status, u.id, u.display_name, u.hue' +
       '  FROM liga_zusagen z JOIN users u ON u.id = z.user_id' +
       ' WHERE (u.test = 0 OR ? = 1)' +
       ' ORDER BY z.created_at'
@@ -1160,7 +1163,7 @@ export function createApi(db, config) {
     const je = {};
     for (const z of zeilen) {
       if (!je[z.termin_id]) je[z.termin_id] = [];
-      je[z.termin_id].push({ id: z.id, name: z.display_name, avatar: z.avatar, hue: z.hue, status: z.status || 'dabei' });
+      je[z.termin_id].push({ id: z.id, name: z.display_name, hue: z.hue, status: z.status || 'dabei' });
     }
     return je;
   }

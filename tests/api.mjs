@@ -670,6 +670,8 @@ async function main() {
       gleich(r.status, 403, 'zum Spieltag kann sich ein Gast-Konto nicht eintragen');
       r = await gast.ruf('PUT', '/api/liga/zusagen/tr20261013', { status: 'dabei' });
       gleich(r.status, 200, 'zum Training schon');
+      ok(r.daten.zusagen.tr20261013.every((z) => z.avatar === undefined && typeof z.name === 'string'),
+        'die Zusagen kommen ohne Profilbilder (die hat jedes Geraet aus dem Kader)');
       r = await gast.ruf('POST', '/api/tournaments', { id: 'gastliga1', plan: { start: 501, bestOf: 3, players: [], matches: [], liga: { terminId: 'st02', nr: 2 } }, players: [] });
       gleich(r.status, 403, 'ein echtes Ligaspiel kann ein Gast-Konto nicht anlegen');
       r = await gast.ruf('POST', '/api/games', { id: 'gastliga-archiv', kind: '501', at: Date.now(), players: [gastId], payload: { liga: { terminId: 'st02' }, matches: [] } });

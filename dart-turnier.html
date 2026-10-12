@@ -15024,7 +15024,14 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
   /* ================= Liga-Spielplan ================= */
 
-  var ligaZusagen = null;   // { terminId: [{id, name, avatar, hue}] } vom Server
+  var ligaZusagen = null;   // { terminId: [{id, name, hue, status}] } vom Server
+  /* Bild und Farbe zu einer Zusage kommen aus dem Kader (der Server schickt
+     keine Fotos mehr mit); kennt das Geraet den Spieler nicht, reichen
+     Name und Farbton aus der Antwort. */
+  function zusageProfil(a) {
+    for (var i = 0; i < S.profiles.length; i++) if (S.profiles[i].id === a.id) return S.profiles[i];
+    return { id: a.id, name: a.name, avatar: a.avatar || null, hue: a.hue };
+  }
   var ligaTabelle = null;   // { zeilen: [{team, spiele, punkte, legs}] } vom Server
   var ligaTabelleKennung = null;
   var ligaTabelleMeldung = '';
@@ -15310,7 +15317,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     };
     var reihe = function (a, leise) {
       return '<div class="dd-reihe' + (leise ? ' leise' : '') + '">' +
-        avatarHTML({ id: a.id, name: a.name, avatar: a.avatar, hue: a.hue }, 'sm') +
+        avatarHTML(zusageProfil(a), 'sm') +
         '<span class="nm">' + esc(a.name) + '</span></div>';
     };
 
@@ -15607,7 +15614,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       '<div class="lk-kurz">' + esc(t.heim) + ' <span>vs</span> ' + esc(t.gast) + '</div>' +
       (ligaZusagen
         ? '<div class="lk-crew"><span class="lk-crew-titel">Team · <b class="' + ton(leute.length) + '">' + leute.length + ' / ' + LIGA.sollSpieler + '</b></span>' +
-          '<div class="lt-leute">' + (leute.map(function (p) { return '<span class="lt-person">' + avatarHTML(p, 'sm') + esc(p.name) + '</span>'; }).join('') || '<span class="muted">Noch niemand eingetragen.</span>') + '</div></div>'
+          '<div class="lt-leute">' + (leute.map(function (p) { return '<span class="lt-person">' + avatarHTML(zusageProfil(p), 'sm') + esc(p.name) + '</span>'; }).join('') || '<span class="muted">Noch niemand eingetragen.</span>') + '</div></div>'
         : '<div class="lk-crew"></div>') +
       fuss;
   }
