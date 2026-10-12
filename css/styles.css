@@ -6227,3 +6227,167 @@ body.fix-spiel #screen-hunter.active { flex: 1 1 auto; height: auto; min-height:
   #screen-hunter .hu-ziel { padding: 4px 10px; }
   #screen-hunter .hu-ziel-zahl { font-size: 34px; }
 }
+
+/* ======================================================================
+   Profil nach dem Entwurf "Profil" (Okt. 2026): Setup-Kopf, Zurueck zur
+   Spielerliste, dann der Spielerausweis (Bild, Name, Chips, Profil
+   bearbeiten, Form der letzten 10) und darunter die Kacheln Finish-Weg
+   (Lieblingsgruppe als Kette, Stand, "Meine besten Finishes ermitteln"),
+   Statistik-Links und beim eigenen Konto die Konto-Kachel. "Meine Stats"
+   legt die ausfuehrlichen Karten als Tafel ueber die Kacheln. Am Tablet
+   steht alles fest im Rahmen, am Handy scrollt die Seite.
+   ====================================================================== */
+#screen-profile.active { display: flex; flex-direction: column; gap: 12px; padding: 8px 0 24px; }
+.pa-zeile { justify-content: flex-start; }
+.pa-zurueck { display: inline-flex; align-items: center; gap: 6px; margin: 0; background: #241d1f; border-color: transparent; color: var(--text); text-transform: none; letter-spacing: 0; font-family: var(--font-body); font-weight: 600; }
+.pa-zurueck svg { width: 16px; height: 16px; }
+.pa-koerper { display: flex; flex-direction: column; gap: 12px; min-width: 0; position: relative; }
+.pa-koerper .kt { font-family: var(--font-cond); font-weight: 700; font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+
+/* Spielerausweis */
+.pa-ausweis { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "av mitte" "rechts rechts"; align-items: center; gap: 12px 16px; padding: 16px; border-radius: 22px; background: radial-gradient(60% 120% at 12% 50%, rgba(70, 170, 215, 0.16), transparent 70%), var(--bg-2); }
+.pa-av { grid-area: av; position: relative; width: 84px; height: 84px; }
+.pa-av .av.xl { width: 100%; height: 100%; font-size: 1.8rem; box-shadow: 0 0 0 4px var(--bg-2), 0 0 0 6px rgba(169, 228, 255, 0.5), 0 0 44px rgba(70, 170, 215, 0.5); }
+.pa-foto { position: absolute; right: -2px; bottom: -2px; width: 30%; height: 30%; min-width: 26px; min-height: 26px; border-radius: 50%; background: #2a2224; border: none; box-shadow: 0 0 0 3px var(--bg-2); color: var(--text); cursor: pointer; padding: 0; margin: 0; display: flex; align-items: center; justify-content: center; }
+.pa-foto svg { width: 55%; height: 55%; }
+.pa-mitte { grid-area: mitte; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.pa-namen { display: flex; flex-direction: column; min-width: 0; }
+.pa-name { font-family: var(--font-display); font-size: 2rem; letter-spacing: 0.02em; text-transform: uppercase; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pa-voll { font-size: 0.9rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pa-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.pa-chip { padding: 4px 12px; border-radius: 999px; background: #241d1f; font-size: 0.78rem; color: #c9c0c0; white-space: nowrap; }
+.pa-chip.status { background: rgba(70, 170, 215, 0.14); font-family: var(--font-cond); font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--laser-hell); }
+.pa-rechts { grid-area: rechts; display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.pa-form { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.pa-form .form-row { margin: 0; gap: 4px; }
+.pa-form .form { border-radius: 7px; }
+.pa-form .form.l { background: #1c1718; color: #857a7b; }
+.pa-btn { margin: 0; min-height: 44px; padding: 0 16px; border-radius: 12px; background: #241d1f; border-color: transparent; color: var(--text); font-family: var(--font-body); font-weight: 600; font-size: 0.95rem; text-transform: none; letter-spacing: 0; white-space: nowrap; }
+.pa-btn.hell { background: #2a2224; color: #fff; box-shadow: inset 0 0 0 1.5px var(--aktiv-linie), 0 0 18px var(--schein-weich); }
+.pa-btn.leise { background: transparent; box-shadow: inset 0 0 0 1.5px #3a2e30; color: var(--muted); }
+
+/* Kacheln */
+.pa-kacheln { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; }
+.pa-kachel { min-width: 0; display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 22px; background: var(--bg-2); }
+.pa-kette { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.pa-gruppe { flex: 1 1 0; min-width: 0; min-height: 56px; margin: 0; padding: 6px 10px; border-radius: 14px; background: #1c1718; border: none; color: var(--laser-hell); font-family: var(--font-cond); font-weight: 700; font-size: 1.5rem; line-height: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-transform: none; letter-spacing: 0; }
+.pa-gruppe small { font-family: var(--font-body); font-weight: 400; font-size: 0.72rem; color: var(--muted); letter-spacing: 0; white-space: nowrap; }
+.pa-gruppe.leer { color: var(--muted); }
+.pa-gruppe.active { background: #2a2224; box-shadow: inset 0 0 0 1.5px var(--aktiv-linie), 0 0 18px var(--schein-weich); }
+button.pa-gruppe { cursor: pointer; }
+.pa-pfeil { flex: none; color: #5a5052; font-size: 1.3rem; font-weight: 700; }
+.pa-pad { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+.pa-pad button { min-height: 44px; margin: 0; padding: 0; border-radius: 8px; background: #241d1f; border: none; color: var(--text); font-family: var(--font-cond); font-weight: 700; font-size: 1.05rem; text-transform: none; letter-spacing: 0; }
+.pa-pad button.haupt { background: var(--aktiv-linie); color: #0d0a0b; }
+.pa-pad button.zweit { background: #2a2224; color: var(--laser-hell); box-shadow: inset 0 0 0 1.5px var(--laser-hell); }
+.pa-text { margin: 0; font-size: 0.85rem; color: #857a7b; line-height: 1.4; text-wrap: pretty; }
+.pa-finish > .pa-btn { margin-top: auto; }
+.pa-links { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.pa-link { min-width: 0; display: flex; flex-direction: column; justify-content: space-between; align-items: stretch; gap: 10px; margin: 0; padding: 16px; border-radius: 22px; background: var(--bg-2); border: none; color: var(--text); cursor: pointer; text-align: left; text-transform: none; letter-spacing: 0; font-family: var(--font-body); }
+.pa-link-zeile { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
+.pa-link-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pa-link-t { font-family: var(--font-display); font-size: 1.3rem; letter-spacing: 0.02em; text-transform: uppercase; line-height: 1.15; }
+.pa-link-s { font-size: 0.8rem; color: #857a7b; }
+.pa-link svg { flex: none; width: 24px; height: 24px; color: var(--laser-hell); }
+.pa-konto-feld { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pa-konto-feld span { font-size: 0.8rem; color: #857a7b; }
+.pa-konto-feld b { font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pa-konto-luft { flex: 1 1 auto; }
+
+/* Tafel "Meine Stats" */
+.pa-panel { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: 22px; background: var(--bg-2); box-shadow: 0 0 0 1.5px #2a2224; min-width: 0; }
+.pa-panel-kopf { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.pa-panel-titel { font-family: var(--font-display); font-size: 1.4rem; letter-spacing: 0.02em; text-transform: uppercase; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pa-fertig { margin: 0; min-height: 40px; padding: 0 18px; border-radius: 12px; background: var(--aktiv-linie); border-color: transparent; color: #0d0a0b; font-family: var(--font-cond); font-weight: 700; font-size: 1rem; letter-spacing: 0.06em; text-transform: none; }
+.pa-panel-koerper { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; min-width: 0; }
+.pa-panel-koerper .card { margin: 0; background: #1c1718; border-color: transparent; }
+.pa-panel-koerper .card h2 { font-family: var(--font-cond); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+.pa-panel-hint { grid-column: 1 / -1; margin: 0; }
+
+/* Finish-Dialog ("Meine besten Finishes ermitteln") im Bogen-Stil */
+.overlay.bogen .fi-gruppen { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(6px, 0.8vw, 12px); }
+.overlay.bogen .fi-gruppen .dl-wahl { min-height: clamp(56px, 9vh, 92px); }
+.overlay.bogen .fi-avg { display: flex; }
+.overlay.bogen .fi-avg .dl-input { max-width: 240px; font-size: clamp(22px, 4vh, 40px); font-family: var(--font-cond); font-weight: 700; text-align: center; height: clamp(54px, 9vh, 84px); }
+.overlay.bogen .fi-zaehler { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(6px, 0.8vw, 12px); }
+.overlay.bogen .fi-zeile { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: 8px; min-height: clamp(48px, 7.5vh, 76px); padding: 4px 6px 4px 14px; border-radius: 12px; background: #1c1718; }
+.overlay.bogen .fi-label { min-width: 0; font-weight: 600; font-size: clamp(13px, 2vh, 20px); line-height: 1.2; }
+.overlay.bogen .fi-n { min-width: 2ch; text-align: center; font-family: var(--font-cond); font-weight: 700; font-size: clamp(20px, 3.6vh, 36px); font-variant-numeric: tabular-nums; }
+.overlay.bogen .fi-minus, .overlay.bogen .fi-plus { width: clamp(44px, 6.5vh, 64px); height: clamp(44px, 6.5vh, 64px); margin: 0; padding: 0; border-radius: 10px; background: #241d1f; border: none; color: var(--text); font-family: var(--font-cond); font-weight: 700; font-size: clamp(20px, 3.4vh, 34px); line-height: 1; }
+.overlay.bogen .fi-minus:disabled, .overlay.bogen .fi-plus:disabled { opacity: 0.35; }
+.overlay.bogen .fi-rest { color: var(--laser-hell); }
+.overlay.bogen .fi-warte { padding: clamp(20px, 6vh, 60px) 0; text-align: center; animation: fi-puls 1.2s ease-in-out infinite; }
+@keyframes fi-puls { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+.overlay.bogen .fi-diffs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px clamp(8px, 1vw, 16px); max-height: 46vh; overflow-y: auto; scrollbar-width: none; }
+.overlay.bogen .fi-diff { display: grid; grid-template-columns: 2.6em minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 6px; padding: 6px 8px; border-radius: 8px; background: #1c1718; font-family: var(--font-cond); font-weight: 700; font-size: clamp(13px, 2.1vh, 21px); white-space: nowrap; }
+.overlay.bogen .fi-rest { font-variant-numeric: tabular-nums; }
+.overlay.bogen .fi-diff .fi-rest { text-align: right; color: var(--text); }
+.overlay.bogen .fi-alt { color: #857a7b; overflow: hidden; text-overflow: ellipsis; }
+.overlay.bogen .fi-pfeil { color: #5a5052; }
+.overlay.bogen .fi-neu { color: var(--laser-hell); overflow: hidden; text-overflow: ellipsis; }
+.overlay.bogen .dl-fuss .btn:disabled { opacity: 0.4; }
+
+@media (max-width: 699px) {
+  .overlay.bogen .fi-gruppen { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .overlay.bogen .fi-zaehler { grid-template-columns: minmax(0, 1fr); }
+  .overlay.bogen .fi-diffs { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (min-width: 700px) {
+  body.fix-setup #screen-profile.active { flex: 1 1 auto; min-height: 0; padding: clamp(6px, 1.8vh, 22px) 0 0; gap: clamp(8px, 1.4vh, 18px); }
+  body.fix-setup #screen-profile > * { flex: none; }
+  body.fix-setup #screen-profile > .pa-koerper { flex: 1 1 auto; min-height: 0; }
+  .pa-koerper { display: grid; grid-template-rows: minmax(0, 1fr) minmax(0, 1.25fr); gap: clamp(8px, 1.4vw, 22px); }
+  .pa-koerper .kt { font-size: clamp(11px, 1.9vh, 20px); }
+  .pa-ausweis { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "av mitte rechts"; min-height: 0; overflow: hidden; gap: clamp(14px, 2.6vw, 44px); padding: 0 clamp(16px, 2.6vw, 44px); }
+  .pa-av { width: clamp(90px, 24vh, 250px); height: clamp(90px, 24vh, 250px); }
+  .pa-av .av.xl { font-size: clamp(22px, 7vh, 80px); }
+  .pa-foto { min-width: 28px; min-height: 28px; }
+  .pa-mitte { gap: clamp(6px, 1.2vh, 14px); }
+  .pa-name { font-size: clamp(30px, 9vh, 104px); }
+  .pa-voll { font-size: clamp(12px, 2.2vh, 24px); }
+  .pa-chip { font-size: clamp(11px, 1.8vh, 19px); }
+  .pa-rechts { align-self: stretch; flex-direction: column; justify-content: space-between; align-items: flex-end; padding: clamp(12px, 2.4vh, 28px) 0; flex-wrap: nowrap; }
+  .pa-btn { min-height: 0; height: clamp(44px, 5vh, 52px); padding: 0 clamp(12px, 1.3vw, 20px); font-size: clamp(12px, 1.9vh, 19px); }
+  .pa-form .kt { font-size: clamp(10px, 1.6vh, 17px); }
+  .pa-form .form { width: clamp(22px, 3.6vh, 38px); height: clamp(22px, 3.6vh, 38px); font-size: clamp(10px, 1.8vh, 19px); }
+  .pa-kacheln { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); min-height: 0; gap: clamp(8px, 1.4vw, 22px); }
+  .pa-kacheln.drei { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr); }
+  .pa-kachel { min-height: 0; overflow: hidden; gap: clamp(8px, 1.6vh, 18px); padding: clamp(12px, 2.2vh, 26px) clamp(12px, 1.6vw, 26px); }
+  .pa-finish > .pa-btn { height: clamp(44px, 6vh, 62px); }
+  .pa-gruppe { min-height: 0; height: clamp(44px, 9vh, 96px); font-size: clamp(20px, 4.6vh, 50px); }
+  .pa-gruppe small { font-size: clamp(10px, 1.6vh, 16px); }
+  .pa-pad { flex: 1 1 auto; min-height: 0; grid-auto-rows: minmax(0, 1fr); }
+  .pa-pad button { min-height: 0; font-size: clamp(12px, 2.1vh, 22px); }
+  .pa-text { font-size: clamp(11px, 1.8vh, 18px); }
+  .pa-links { grid-template-rows: repeat(2, minmax(0, 1fr)); min-height: 0; gap: clamp(8px, 1.4vw, 22px); }
+  .pa-link { min-height: 0; padding: clamp(12px, 2.2vh, 26px) clamp(12px, 1.6vw, 26px); }
+  .pa-link-t { font-size: clamp(18px, 4vh, 44px); }
+  .pa-link-s { font-size: clamp(11px, 1.7vh, 17px); }
+  .pa-link svg { width: clamp(18px, 3.4vh, 36px); height: clamp(18px, 3.4vh, 36px); }
+  .pa-konto-feld span { font-size: clamp(11px, 1.7vh, 17px); }
+  .pa-konto-feld b { font-size: clamp(12px, 2vh, 20px); }
+  .pa-konto .pa-btn { height: clamp(44px, 6vh, 62px); }
+  .pa-panel { position: absolute; inset: 0; z-index: 5; min-height: 0; padding: clamp(12px, 2vh, 24px) clamp(12px, 1.6vw, 26px); box-shadow: 0 0 0 1.5px #2a2224, 0 20px 60px rgba(0, 0, 0, 0.6); }
+  .pa-panel-titel { font-size: clamp(18px, 3.6vh, 40px); }
+  .pa-fertig { height: clamp(32px, 5vh, 52px); min-height: 0; font-size: clamp(14px, 2.2vh, 22px); }
+  .pa-panel-koerper { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; grid-template-columns: repeat(3, minmax(0, 1fr)); align-content: start; }
+}
+/* Flach (Handy quer): Ausweis kompakt, Kacheln nebeneinander ohne festen Rahmen. */
+@media (min-width: 700px) and (max-height: 500px) {
+  .pa-koerper { grid-template-rows: auto minmax(0, 1fr); }
+  .pa-av { width: 64px; height: 64px; }
+  .pa-av .av.xl { font-size: 20px; }
+  .pa-name { font-size: 30px; }
+  .pa-rechts { padding: 8px 0; }
+  .pa-form { display: none; }
+  .pa-gruppe { height: 44px; font-size: 22px; }
+  .pa-gruppe small { display: none; }
+  /* Quer bleibt fuer das Gruppen-Pad kein Platz im Rahmen: dann scrollt die
+     Kachel, die Knoepfe behalten ihre 44 px. */
+  .pa-kachel { overflow-y: auto; scrollbar-width: none; }
+  .pa-pad { flex: none; grid-auto-rows: 44px; }
+  .pa-pad button { min-height: 44px; }
+  .pa-finish > .pa-btn { flex: none; margin-top: 0; }
+  .pa-panel-koerper { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

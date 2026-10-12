@@ -6231,6 +6231,170 @@ body.fix-spiel #screen-hunter.active { flex: 1 1 auto; height: auto; min-height:
   #screen-hunter .hu-ziel-zahl { font-size: 34px; }
 }
 
+/* ======================================================================
+   Profil nach dem Entwurf "Profil" (Okt. 2026): Setup-Kopf, Zurueck zur
+   Spielerliste, dann der Spielerausweis (Bild, Name, Chips, Profil
+   bearbeiten, Form der letzten 10) und darunter die Kacheln Finish-Weg
+   (Lieblingsgruppe als Kette, Stand, "Meine besten Finishes ermitteln"),
+   Statistik-Links und beim eigenen Konto die Konto-Kachel. "Meine Stats"
+   legt die ausfuehrlichen Karten als Tafel ueber die Kacheln. Am Tablet
+   steht alles fest im Rahmen, am Handy scrollt die Seite.
+   ====================================================================== */
+#screen-profile.active { display: flex; flex-direction: column; gap: 12px; padding: 8px 0 24px; }
+.pa-zeile { justify-content: flex-start; }
+.pa-zurueck { display: inline-flex; align-items: center; gap: 6px; margin: 0; background: #241d1f; border-color: transparent; color: var(--text); text-transform: none; letter-spacing: 0; font-family: var(--font-body); font-weight: 600; }
+.pa-zurueck svg { width: 16px; height: 16px; }
+.pa-koerper { display: flex; flex-direction: column; gap: 12px; min-width: 0; position: relative; }
+.pa-koerper .kt { font-family: var(--font-cond); font-weight: 700; font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+
+/* Spielerausweis */
+.pa-ausweis { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "av mitte" "rechts rechts"; align-items: center; gap: 12px 16px; padding: 16px; border-radius: 22px; background: radial-gradient(60% 120% at 12% 50%, rgba(70, 170, 215, 0.16), transparent 70%), var(--bg-2); }
+.pa-av { grid-area: av; position: relative; width: 84px; height: 84px; }
+.pa-av .av.xl { width: 100%; height: 100%; font-size: 1.8rem; box-shadow: 0 0 0 4px var(--bg-2), 0 0 0 6px rgba(169, 228, 255, 0.5), 0 0 44px rgba(70, 170, 215, 0.5); }
+.pa-foto { position: absolute; right: -2px; bottom: -2px; width: 30%; height: 30%; min-width: 26px; min-height: 26px; border-radius: 50%; background: #2a2224; border: none; box-shadow: 0 0 0 3px var(--bg-2); color: var(--text); cursor: pointer; padding: 0; margin: 0; display: flex; align-items: center; justify-content: center; }
+.pa-foto svg { width: 55%; height: 55%; }
+.pa-mitte { grid-area: mitte; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.pa-namen { display: flex; flex-direction: column; min-width: 0; }
+.pa-name { font-family: var(--font-display); font-size: 2rem; letter-spacing: 0.02em; text-transform: uppercase; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pa-voll { font-size: 0.9rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pa-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.pa-chip { padding: 4px 12px; border-radius: 999px; background: #241d1f; font-size: 0.78rem; color: #c9c0c0; white-space: nowrap; }
+.pa-chip.status { background: rgba(70, 170, 215, 0.14); font-family: var(--font-cond); font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--laser-hell); }
+.pa-rechts { grid-area: rechts; display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.pa-form { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.pa-form .form-row { margin: 0; gap: 4px; }
+.pa-form .form { border-radius: 7px; }
+.pa-form .form.l { background: #1c1718; color: #857a7b; }
+.pa-btn { margin: 0; min-height: 44px; padding: 0 16px; border-radius: 12px; background: #241d1f; border-color: transparent; color: var(--text); font-family: var(--font-body); font-weight: 600; font-size: 0.95rem; text-transform: none; letter-spacing: 0; white-space: nowrap; }
+.pa-btn.hell { background: #2a2224; color: #fff; box-shadow: inset 0 0 0 1.5px var(--aktiv-linie), 0 0 18px var(--schein-weich); }
+.pa-btn.leise { background: transparent; box-shadow: inset 0 0 0 1.5px #3a2e30; color: var(--muted); }
+
+/* Kacheln */
+.pa-kacheln { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; min-width: 0; }
+.pa-kachel { min-width: 0; display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: 22px; background: var(--bg-2); }
+.pa-kette { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.pa-gruppe { flex: 1 1 0; min-width: 0; min-height: 56px; margin: 0; padding: 6px 10px; border-radius: 14px; background: #1c1718; border: none; color: var(--laser-hell); font-family: var(--font-cond); font-weight: 700; font-size: 1.5rem; line-height: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-transform: none; letter-spacing: 0; }
+.pa-gruppe small { font-family: var(--font-body); font-weight: 400; font-size: 0.72rem; color: var(--muted); letter-spacing: 0; white-space: nowrap; }
+.pa-gruppe.leer { color: var(--muted); }
+.pa-gruppe.active { background: #2a2224; box-shadow: inset 0 0 0 1.5px var(--aktiv-linie), 0 0 18px var(--schein-weich); }
+button.pa-gruppe { cursor: pointer; }
+.pa-pfeil { flex: none; color: #5a5052; font-size: 1.3rem; font-weight: 700; }
+.pa-pad { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+.pa-pad button { min-height: 44px; margin: 0; padding: 0; border-radius: 8px; background: #241d1f; border: none; color: var(--text); font-family: var(--font-cond); font-weight: 700; font-size: 1.05rem; text-transform: none; letter-spacing: 0; }
+.pa-pad button.haupt { background: var(--aktiv-linie); color: #0d0a0b; }
+.pa-pad button.zweit { background: #2a2224; color: var(--laser-hell); box-shadow: inset 0 0 0 1.5px var(--laser-hell); }
+.pa-text { margin: 0; font-size: 0.85rem; color: #857a7b; line-height: 1.4; text-wrap: pretty; }
+.pa-finish > .pa-btn { margin-top: auto; }
+.pa-links { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.pa-link { min-width: 0; display: flex; flex-direction: column; justify-content: space-between; align-items: stretch; gap: 10px; margin: 0; padding: 16px; border-radius: 22px; background: var(--bg-2); border: none; color: var(--text); cursor: pointer; text-align: left; text-transform: none; letter-spacing: 0; font-family: var(--font-body); }
+.pa-link-zeile { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
+.pa-link-text { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pa-link-t { font-family: var(--font-display); font-size: 1.3rem; letter-spacing: 0.02em; text-transform: uppercase; line-height: 1.15; }
+.pa-link-s { font-size: 0.8rem; color: #857a7b; }
+.pa-link svg { flex: none; width: 24px; height: 24px; color: var(--laser-hell); }
+.pa-konto-feld { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pa-konto-feld span { font-size: 0.8rem; color: #857a7b; }
+.pa-konto-feld b { font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pa-konto-luft { flex: 1 1 auto; }
+
+/* Tafel "Meine Stats" */
+.pa-panel { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: 22px; background: var(--bg-2); box-shadow: 0 0 0 1.5px #2a2224; min-width: 0; }
+.pa-panel-kopf { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.pa-panel-titel { font-family: var(--font-display); font-size: 1.4rem; letter-spacing: 0.02em; text-transform: uppercase; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pa-fertig { margin: 0; min-height: 40px; padding: 0 18px; border-radius: 12px; background: var(--aktiv-linie); border-color: transparent; color: #0d0a0b; font-family: var(--font-cond); font-weight: 700; font-size: 1rem; letter-spacing: 0.06em; text-transform: none; }
+.pa-panel-koerper { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; min-width: 0; }
+.pa-panel-koerper .card { margin: 0; background: #1c1718; border-color: transparent; }
+.pa-panel-koerper .card h2 { font-family: var(--font-cond); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+.pa-panel-hint { grid-column: 1 / -1; margin: 0; }
+
+/* Finish-Dialog ("Meine besten Finishes ermitteln") im Bogen-Stil */
+.overlay.bogen .fi-gruppen { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(6px, 0.8vw, 12px); }
+.overlay.bogen .fi-gruppen .dl-wahl { min-height: clamp(56px, 9vh, 92px); }
+.overlay.bogen .fi-avg { display: flex; }
+.overlay.bogen .fi-avg .dl-input { max-width: 240px; font-size: clamp(22px, 4vh, 40px); font-family: var(--font-cond); font-weight: 700; text-align: center; height: clamp(54px, 9vh, 84px); }
+.overlay.bogen .fi-zaehler { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(6px, 0.8vw, 12px); }
+.overlay.bogen .fi-zeile { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: 8px; min-height: clamp(48px, 7.5vh, 76px); padding: 4px 6px 4px 14px; border-radius: 12px; background: #1c1718; }
+.overlay.bogen .fi-label { min-width: 0; font-weight: 600; font-size: clamp(13px, 2vh, 20px); line-height: 1.2; }
+.overlay.bogen .fi-n { min-width: 2ch; text-align: center; font-family: var(--font-cond); font-weight: 700; font-size: clamp(20px, 3.6vh, 36px); font-variant-numeric: tabular-nums; }
+.overlay.bogen .fi-minus, .overlay.bogen .fi-plus { width: clamp(44px, 6.5vh, 64px); height: clamp(44px, 6.5vh, 64px); margin: 0; padding: 0; border-radius: 10px; background: #241d1f; border: none; color: var(--text); font-family: var(--font-cond); font-weight: 700; font-size: clamp(20px, 3.4vh, 34px); line-height: 1; }
+.overlay.bogen .fi-minus:disabled, .overlay.bogen .fi-plus:disabled { opacity: 0.35; }
+.overlay.bogen .fi-rest { color: var(--laser-hell); }
+.overlay.bogen .fi-warte { padding: clamp(20px, 6vh, 60px) 0; text-align: center; animation: fi-puls 1.2s ease-in-out infinite; }
+@keyframes fi-puls { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+.overlay.bogen .fi-diffs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px clamp(8px, 1vw, 16px); max-height: 46vh; overflow-y: auto; scrollbar-width: none; }
+.overlay.bogen .fi-diff { display: grid; grid-template-columns: 2.6em minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 6px; padding: 6px 8px; border-radius: 8px; background: #1c1718; font-family: var(--font-cond); font-weight: 700; font-size: clamp(13px, 2.1vh, 21px); white-space: nowrap; }
+.overlay.bogen .fi-rest { font-variant-numeric: tabular-nums; }
+.overlay.bogen .fi-diff .fi-rest { text-align: right; color: var(--text); }
+.overlay.bogen .fi-alt { color: #857a7b; overflow: hidden; text-overflow: ellipsis; }
+.overlay.bogen .fi-pfeil { color: #5a5052; }
+.overlay.bogen .fi-neu { color: var(--laser-hell); overflow: hidden; text-overflow: ellipsis; }
+.overlay.bogen .dl-fuss .btn:disabled { opacity: 0.4; }
+
+@media (max-width: 699px) {
+  .overlay.bogen .fi-gruppen { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .overlay.bogen .fi-zaehler { grid-template-columns: minmax(0, 1fr); }
+  .overlay.bogen .fi-diffs { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (min-width: 700px) {
+  body.fix-setup #screen-profile.active { flex: 1 1 auto; min-height: 0; padding: clamp(6px, 1.8vh, 22px) 0 0; gap: clamp(8px, 1.4vh, 18px); }
+  body.fix-setup #screen-profile > * { flex: none; }
+  body.fix-setup #screen-profile > .pa-koerper { flex: 1 1 auto; min-height: 0; }
+  .pa-koerper { display: grid; grid-template-rows: minmax(0, 1fr) minmax(0, 1.25fr); gap: clamp(8px, 1.4vw, 22px); }
+  .pa-koerper .kt { font-size: clamp(11px, 1.9vh, 20px); }
+  .pa-ausweis { grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "av mitte rechts"; min-height: 0; overflow: hidden; gap: clamp(14px, 2.6vw, 44px); padding: 0 clamp(16px, 2.6vw, 44px); }
+  .pa-av { width: clamp(90px, 24vh, 250px); height: clamp(90px, 24vh, 250px); }
+  .pa-av .av.xl { font-size: clamp(22px, 7vh, 80px); }
+  .pa-foto { min-width: 28px; min-height: 28px; }
+  .pa-mitte { gap: clamp(6px, 1.2vh, 14px); }
+  .pa-name { font-size: clamp(30px, 9vh, 104px); }
+  .pa-voll { font-size: clamp(12px, 2.2vh, 24px); }
+  .pa-chip { font-size: clamp(11px, 1.8vh, 19px); }
+  .pa-rechts { align-self: stretch; flex-direction: column; justify-content: space-between; align-items: flex-end; padding: clamp(12px, 2.4vh, 28px) 0; flex-wrap: nowrap; }
+  .pa-btn { min-height: 0; height: clamp(44px, 5vh, 52px); padding: 0 clamp(12px, 1.3vw, 20px); font-size: clamp(12px, 1.9vh, 19px); }
+  .pa-form .kt { font-size: clamp(10px, 1.6vh, 17px); }
+  .pa-form .form { width: clamp(22px, 3.6vh, 38px); height: clamp(22px, 3.6vh, 38px); font-size: clamp(10px, 1.8vh, 19px); }
+  .pa-kacheln { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); min-height: 0; gap: clamp(8px, 1.4vw, 22px); }
+  .pa-kacheln.drei { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr); }
+  .pa-kachel { min-height: 0; overflow: hidden; gap: clamp(8px, 1.6vh, 18px); padding: clamp(12px, 2.2vh, 26px) clamp(12px, 1.6vw, 26px); }
+  .pa-finish > .pa-btn { height: clamp(44px, 6vh, 62px); }
+  .pa-gruppe { min-height: 0; height: clamp(44px, 9vh, 96px); font-size: clamp(20px, 4.6vh, 50px); }
+  .pa-gruppe small { font-size: clamp(10px, 1.6vh, 16px); }
+  .pa-pad { flex: 1 1 auto; min-height: 0; grid-auto-rows: minmax(0, 1fr); }
+  .pa-pad button { min-height: 0; font-size: clamp(12px, 2.1vh, 22px); }
+  .pa-text { font-size: clamp(11px, 1.8vh, 18px); }
+  .pa-links { grid-template-rows: repeat(2, minmax(0, 1fr)); min-height: 0; gap: clamp(8px, 1.4vw, 22px); }
+  .pa-link { min-height: 0; padding: clamp(12px, 2.2vh, 26px) clamp(12px, 1.6vw, 26px); }
+  .pa-link-t { font-size: clamp(18px, 4vh, 44px); }
+  .pa-link-s { font-size: clamp(11px, 1.7vh, 17px); }
+  .pa-link svg { width: clamp(18px, 3.4vh, 36px); height: clamp(18px, 3.4vh, 36px); }
+  .pa-konto-feld span { font-size: clamp(11px, 1.7vh, 17px); }
+  .pa-konto-feld b { font-size: clamp(12px, 2vh, 20px); }
+  .pa-konto .pa-btn { height: clamp(44px, 6vh, 62px); }
+  .pa-panel { position: absolute; inset: 0; z-index: 5; min-height: 0; padding: clamp(12px, 2vh, 24px) clamp(12px, 1.6vw, 26px); box-shadow: 0 0 0 1.5px #2a2224, 0 20px 60px rgba(0, 0, 0, 0.6); }
+  .pa-panel-titel { font-size: clamp(18px, 3.6vh, 40px); }
+  .pa-fertig { height: clamp(32px, 5vh, 52px); min-height: 0; font-size: clamp(14px, 2.2vh, 22px); }
+  .pa-panel-koerper { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; grid-template-columns: repeat(3, minmax(0, 1fr)); align-content: start; }
+}
+/* Flach (Handy quer): Ausweis kompakt, Kacheln nebeneinander ohne festen Rahmen. */
+@media (min-width: 700px) and (max-height: 500px) {
+  .pa-koerper { grid-template-rows: auto minmax(0, 1fr); }
+  .pa-av { width: 64px; height: 64px; }
+  .pa-av .av.xl { font-size: 20px; }
+  .pa-name { font-size: 30px; }
+  .pa-rechts { padding: 8px 0; }
+  .pa-form { display: none; }
+  .pa-gruppe { height: 44px; font-size: 22px; }
+  .pa-gruppe small { display: none; }
+  /* Quer bleibt fuer das Gruppen-Pad kein Platz im Rahmen: dann scrollt die
+     Kachel, die Knoepfe behalten ihre 44 px. */
+  .pa-kachel { overflow-y: auto; scrollbar-width: none; }
+  .pa-pad { flex: none; grid-auto-rows: 44px; }
+  .pa-pad button { min-height: 44px; }
+  .pa-finish > .pa-btn { flex: none; margin-top: 0; }
+  .pa-panel-koerper { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 </style>
 <div id="save-warning" class="save-warning hidden">
   ⚠️ Der Spielstand kann gerade nicht gespeichert werden – bitte Speicherplatz prüfen
@@ -6929,11 +7093,22 @@ body.fix-spiel #screen-hunter.active { flex: 1 1 auto; height: auto; min-height:
 
 <!-- ============ SPIELER-DETAIL ============ -->
 <section id="screen-profile" class="screen">
-  <header class="app-header row">
-    <button class="icon-btn" data-action="nav" data-screen="players" aria-label="Zur Spielerliste">‹</button>
-    <button class="btn ghost small" data-action="edit-current-profile">Bearbeiten</button>
-  </header>
-  <div id="profile-detail"></div>
+  <!-- Entwurf "Profil" (Okt. 2026): Setup-Kopf, darunter der Spielerausweis
+       und die Kacheln Finish-Weg, Statistik und Konto. Gezeichnet von
+       renderProfile(); der Zurueck-Pfeil fuehrt zur Spielerliste. -->
+  <div class="setup-kopf" id="profile-kopf">
+    <div class="marke">
+      <span class="blink-logo" role="img" aria-label="Blink 180"></span>
+      <div>
+        <div class="wort">Blink <span class="rot">180</span></div>
+        <div class="sub">Dart Turnier · est. 2026</div>
+      </div>
+    </div>
+  </div>
+  <div class="reiter-zeile pa-zeile">
+    <button class="btn ghost small pa-zurueck" data-action="nav" data-screen="players" aria-label="Zur Spielerliste"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 12H7M11.5 6.5L6 12l5.5 5.5"></path></svg><span>Spieler</span></button>
+  </div>
+  <div id="profile-detail" class="pa-koerper"></div>
 </section>
 
 <!-- ============ BULL-OFF ============ -->
@@ -9298,6 +9473,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       if (!(s.settings.dartModeMerk > 0)) s.settings.dartModeMerk = s.settings.dartModeFrom > 0 ? s.settings.dartModeFrom : 170;
       if (!(s.settings.quickLegs >= 1)) s.settings.quickLegs = 1;
       s.profiles.forEach(function (p, i) { if (typeof p.hue !== 'number') p.hue = HUES[i % HUES.length]; });
+      /* Lieblingsdoppel -> Lieblingsgruppe (Checkout-Engine, Phase 2). */
+      s.profiles.forEach(finishNachruesten);
       /* Liga-Stände aus der ersten Fassung (vor dem Bogen-Ausbau) kennen
          posH/posG, die Spielerlisten und die neuen Match-Felder nicht –
          nachrüsten, sonst friert der Wechsel-Dialog die App ein. Die alten
@@ -9529,20 +9706,122 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
      es eine Finish-Tabelle (docs/finishwege/). Ungerade Doppel und Bull sind
      keine Favoriten: ein Single dort laesst immer eine ungerade Zahl. Ein
      altes Profil mit so einem Wert rechnet wie "egal". */
-  var DOPPEL_WAHL = [20, 16, 18, 12, 10, 14, 8, 6, 4];
+  /* Lieblingsgruppen (Checkout-Engine, Phase 2): der Spieler waehlt keine
+     einzelne Doppelzahl mehr, sondern eine Halbierungskette. Die Gruppen
+     stehen in p.finish.gruppen (bis zwei, die erste ist die Hauptgruppe);
+     p.dbl traegt weiter das Doppel der Hauptgruppe, damit Server und
+     aeltere Geraete dieselbe Zahl sehen. Wer "Meine besten Finishes
+     ermitteln" durchlaeuft, bekommt in p.finish.tabelle (und
+     tabelleCheckout) eine eigene Tabelle im Format von js/checkout.js;
+     alle anderen spielen mit der festen Tabelle ihrer Hauptgruppe. */
+  var FINISH_GRUPPEN = ['D20', 'D16', 'D18', 'D12', 'D14', 'Bull'];
+  var FINISH_KETTE = { D20: [20, 10, 5], D16: [16, 8, 4, 2, 1], D18: [18, 9], D12: [12, 6, 3], D14: [14, 7], Bull: [25] };
+  var DOPPEL_WAHL = [20, 16, 18, 12, 14, 25];
+  var SPIELWEISEN = { aufnahmen: 'Aufnahmen', checkout: 'Checkout', auto: 'Automatisch' };
+  function gruppeAusDoppel(n) {
+    n = Number(n);
+    for (var i = 0; i < FINISH_GRUPPEN.length; i++) {
+      if (FINISH_KETTE[FINISH_GRUPPEN[i]].indexOf(n) >= 0) return FINISH_GRUPPEN[i];
+    }
+    return null;
+  }
+  function doppelAusGruppe(g) { return FINISH_KETTE[g] ? FINISH_KETTE[g][0] : null; }
+  function finishGruppen(p) {
+    var g = p && p.finish && Array.isArray(p.finish.gruppen) ? p.finish.gruppen : [];
+    var out = [];
+    g.forEach(function (x) { if (FINISH_KETTE[x] && out.indexOf(x) < 0 && out.length < 2) out.push(x); });
+    return out;
+  }
+  /* Favoriten fuer die Engine: alle Doppel beider Ketten, Hauptgruppe zuerst. */
+  function finishFavoriten(gruppen) {
+    var out = [];
+    gruppen.forEach(function (g) { (FINISH_KETTE[g] || []).forEach(function (n) { if (out.indexOf(n) < 0) out.push(n); }); });
+    return out;
+  }
+  /* Gruppen am Spieler setzen. Aendert sich die Wahl, passt eine vorher
+     gerechnete Tabelle nicht mehr (sie wurde fuer andere Favoriten
+     geloest) und wird verworfen; Average, Tests und Spielweise bleiben,
+     damit das Neu-Ermitteln nur ein Knopfdruck ist. Gibt zurueck, ob eine
+     Tabelle verworfen wurde. */
+  function finishGruppenSetzen(p, gruppen) {
+    var neu = [];
+    (gruppen || []).forEach(function (g) { if (FINISH_KETTE[g] && neu.indexOf(g) < 0 && neu.length < 2) neu.push(g); });
+    var alt = finishGruppen(p);
+    if (!p.finish || typeof p.finish !== 'object') p.finish = {};
+    p.finish.gruppen = neu;
+    p.dbl = neu.length ? doppelAusGruppe(neu[0]) : null;
+    var gleich = alt.length === neu.length && alt.every(function (g, i) { return g === neu[i]; });
+    if (gleich || !p.finish.tabelle) return false;
+    p.finish.tabelle = null;
+    p.finish.tabelleCheckout = null;
+    p.finish.profil = null;
+    p.finish.stand = null;
+    return true;
+  }
+  /* Altbestand: aus dem einzelnen Lieblingsdoppel wird die Gruppe, in deren
+     Kette es liegt (8 -> D16, 10 -> D20, 6 -> D12). */
+  function finishNachruesten(p) {
+    if (!p || typeof p !== 'object') return;
+    if (p.finish && typeof p.finish !== 'object') p.finish = null;
+    if (!p.finish && p.dbl) {
+      var g = gruppeAusDoppel(p.dbl);
+      p.finish = { gruppen: g ? [g] : [] };
+    }
+    if (p.finish) {
+      p.finish.gruppen = finishGruppen(p);
+      p.dbl = p.finish.gruppen.length ? doppelAusGruppe(p.finish.gruppen[0]) : null;
+      if (p.finish.tabelle && typeof p.finish.tabelle !== 'object') p.finish.tabelle = null;
+      if (p.finish.tabelleCheckout && typeof p.finish.tabelleCheckout !== 'object') p.finish.tabelleCheckout = null;
+      if (!SPIELWEISEN[p.finish.spielweise]) p.finish.spielweise = 'aufnahmen';
+    } else if (DOPPEL_WAHL.indexOf(p.dbl) < 0) p.dbl = null;
+  }
+  /* Auswahl im Spieler-Dialog: eine Gruppe (die Hauptgruppe); eine zweite
+     gibt es nur im Profil. Der Wert ist das Doppel der Gruppe. */
   function doppelOptionen(gewaehlt) {
     if (DOPPEL_WAHL.indexOf(gewaehlt) < 0) gewaehlt = 0;
     var html = '<option value="0"' + (gewaehlt ? '' : ' selected') + '>egal</option>';
-    DOPPEL_WAHL.forEach(function (n) {
-      html += '<option value="' + n + '"' + (gewaehlt === n ? ' selected' : '') + '>D' + n + '</option>';
+    FINISH_GRUPPEN.forEach(function (g) {
+      var n = doppelAusGruppe(g);
+      html += '<option value="' + n + '"' + (gewaehlt === n ? ' selected' : '') + '>' + g +
+        (FINISH_KETTE[g].length > 1 ? ' (' + FINISH_KETTE[g].join(' · ') + ')' : '') + '</option>';
     });
     return html;
   }
 
-  /* Das Lieblingsdoppel dessen, der gerade wirft – der Vorschlag gilt ihm. */
-  function lieblingsDoppel(pid) {
+  /* Lieblingsgruppe und eigene Tabelle dessen, der gerade wirft - der
+     Vorschlag gilt ihm. Ergebnis { dbl, tabelle } fuer js/checkout.js oder
+     null (Standardtabelle). lage.checkout: in dieser Aufnahme zaehlt nur das
+     Finish (Spielweise "checkout" immer, "auto" wenn die Lage es verlangt) -
+     dann die Checkout-Variante der eigenen Tabelle. */
+  function lieblingsDoppel(pid, lage) {
     var p = profile(pid);
-    return p && p.dbl ? p.dbl : null;
+    if (!p) return null;
+    var f = p.finish || {};
+    var dbl = DOPPEL_WAHL.indexOf(p.dbl) >= 0 ? p.dbl : null;
+    var tab = f.tabelle && typeof f.tabelle === 'object' ? f.tabelle : null;
+    if (tab && f.tabelleCheckout && (f.spielweise === 'checkout' || (f.spielweise === 'auto' && lage && lage.checkout))) tab = f.tabelleCheckout;
+    if (!dbl && !tab) return null;
+    return { dbl: dbl, tabelle: tab };
+  }
+  /* Spielweise "auto" im X01: die Checkout-Variante, sobald ein Gegner im
+     naechsten Besuch finishen kann oder es das entscheidende Leg ist. */
+  function x01Lage(m, leg, active) {
+    var checkout = false;
+    if (!m || !leg) return { checkout: false };
+    m.p.forEach(function (id) {
+      if (id === active) return;
+      var r = remainingIn(leg, id);
+      if (r <= 170 && Checkout.possible(r, 3)) checkout = true;
+    });
+    if (!checkout && m.p.length > 1) {
+      /* Entscheidend: im letzten moeglichen Satz steht jeder ein Leg vor dem
+         Sieg (bei einem einzigen Leg also immer). satzStand zaehlt die Legs
+         je Satz, legsWon ueber alle Saetze hinweg. */
+      var ss = satzStand(m);
+      var letzterSatz = ss.gewinnSaetze <= 1 || m.p.every(function (id) { return ss.saetze[id] >= ss.gewinnSaetze - 1; });
+      if (letzterSatz && m.p.every(function (id) { return ss.legs[id] >= ss.gewinnLegs - 1; })) checkout = true;
+    }
+    return { checkout: checkout };
   }
 
   function initials(name) {
@@ -12198,14 +12477,15 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
        könnte – dann wäre der Knopf eine leere Versprechung. */
     var kontoBtn = $('nav-konto');
     if (kontoBtn) kontoBtn.classList.toggle('hidden', !window.DartKonto);
-    var navFor = gesperrt() ? null : (screen === 'winner' && S.tour && S.tour.liga ? 'liga' : NAV_SCREENS[screen]);
+    var navFor = gesperrt() ? null : (screen === 'winner' && S.tour && S.tour.liga ? 'liga'
+      : screen === 'profile' && UI.profile && UI.profile === eigeneKontoId() ? 'konto' : NAV_SCREENS[screen]);
     /* In Setup, Turnier, Rangliste und Liga steht die Navigation als
        Text-Reiter in der Kopfzeile neben der Marke, ueberall sonst wie
        gehabt ueber dem Inhalt. */
     var navEl = $('nav');
     var kopf = screen === 'setup' ? $('setup-kopf') : screen === 'tournament' ? $('turnier-kopf')
       : screen === 'liga' ? $('liga-kopf') : screen === 'boards' ? $('boards-kopf') : screen === 'players' ? $('players-kopf')
-      : screen === 'winner' ? $('winner-kopf') : null;
+      : screen === 'winner' ? $('winner-kopf') : screen === 'profile' ? $('profile-kopf') : null;
     if (kopf && navEl.parentElement !== kopf) kopf.appendChild(navEl);
     else if (!kopf && navEl.parentElement !== document.body) document.body.insertBefore(navEl, $('screen-setup'));
     /* Das •••-Menue gibt es nur in den Spielbildern - ueberall sonst wird
@@ -12277,7 +12557,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     /* Das Startbild steht am Tablet und quergedrehten Handy fest im Rahmen,
        innen scrollen nur Spielerliste und Einstellungen (body.fix-setup). */
     document.body.classList.toggle('fix-setup', S.screen === 'setup' || S.screen === 'tournament' || S.screen === 'bulloff' || S.screen === 'boards' ||
-      S.screen === 'liga' || S.screen === 'players' || S.screen === 'winner');
+      S.screen === 'liga' || S.screen === 'players' || S.screen === 'winner' || S.screen === 'profile');
     if (S.screen === 'setup') { gaesteAufraeumen(); renderSetup(); }
     /* Der Hintergrundtakt laeuft nur da, wo man ihn auch sieht: im
        Turnierbildschirm. Sonst fragt die App den ganzen Abend nach Daten,
@@ -13496,36 +13776,147 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       '</div>';
   }
 
+  /* ================= Profil =================
+     Entwurf "Profil" (Okt. 2026): oben der Spielerausweis (Bild, Name,
+     Status-Chips, Profil bearbeiten, Form der letzten 10), darunter drei
+     Kacheln: Finish-Weg mit Lieblingsgruppe und "Meine besten Finishes
+     ermitteln", Statistik-Links, und beim eigenen Konto die Konto-Kachel.
+     "Meine Stats" oeffnet die ausfuehrlichen Karten als Tafel im Profil. */
+
+  function eigeneKontoId() {
+    var n = window.DartKonto && window.DartKonto.nutzer ? window.DartKonto.nutzer() : null;
+    return n ? n.id : null;
+  }
+  function eigenesProfilOeffnen() {
+    var id = eigeneKontoId();
+    if (!id || !profile(id)) return false;
+    UI.profile = id; UI.profilPanel = null; UI.profilGruppenWahl = false;
+    S.screen = 'profile'; save(); render();
+    return true;
+  }
+  function monatJahr(ts) {
+    if (!ts) return '';
+    var d = new Date(ts);
+    return ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'][d.getMonth()] + ' ' + d.getFullYear();
+  }
+
   function renderProfile() {
     var p = profile(UI.profile);
     var st = career()[p.id];
-    var editBtn = document.querySelector('[data-action="edit-current-profile"]');
-    if (editBtn) editBtn.classList.toggle('hidden', !bearbeitbar(p.id));
     if (!st) { S.screen = 'players'; render(); return; }
+    var darf = bearbeitbar(p.id);
+    var eigen = !!eigeneKontoId() && p.id === eigeneKontoId();
+    var nutzer = eigen ? window.DartKonto.nutzer() : null;
 
-    var form = st.lastResults.slice(0, 8).map(function (r) {
+    var form = st.lastResults.slice(0, 10).reverse().map(function (r) {
       return '<span class="form ' + (r.win ? 'w' : 'l') + '">' + (r.win ? 'S' : 'N') + '</span>';
     }).join('');
+    var status = p.gast ? (p.dauer ? 'Gast' : 'Gast · heute') : p.gastKonto ? 'Gast-Konto' : p.test ? 'Testkonto' : p.bot ? 'Bot' : 'Mitglied';
+    /* "seit": beim Konto das Anlegedatum vom Server, sonst das des
+       Profils - Altbestand ohne brauchbares Datum bleibt ohne Chip. */
+    var seitTs = nutzer && nutzer.seit ? Date.parse(nutzer.seit) : p.created;
+    var seit = seitTs > Date.UTC(2020, 0, 1) ? monatJahr(seitTs) : '';
+    var chips = [];
+    if (seit) chips.push('seit ' + seit);
+    chips.push(st.matches
+      ? plural(st.won, 'Sieg', 'Siege') + ' · ' + plural(st.lost, 'Niederlage', 'Niederlagen')
+      : 'Noch kein Spiel gespielt');
+    if (st.tourWins) chips.push(plural(st.tourWins, 'Turniersieg', 'Turniersiege'));
+    if (p.hidden) chips.push('ausgeblendet');
 
+    var ausweis = '<div class="pa-ausweis">' +
+      '<div class="pa-av">' + avatarHTML(p, 'xl') +
+        (darf ? '<button class="pa-foto" data-action="profil-foto" aria-label="Foto ändern">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-2.5h6L17 8h3v11H4z"></path><circle cx="12" cy="13" r="3.4"></circle></svg></button>' : '') +
+      '</div>' +
+      '<div class="pa-mitte">' +
+        '<div class="pa-namen"><span class="pa-name">' + esc(p.name) + '</span>' +
+          (p.voll ? '<span class="pa-voll">' + esc(p.voll) + '</span>' : '') + '</div>' +
+        '<div class="pa-chips"><span class="pa-chip status">' + status + '</span>' +
+          chips.map(function (c) { return '<span class="pa-chip">' + esc(c) + '</span>'; }).join('') + '</div>' +
+      '</div>' +
+      '<div class="pa-rechts">' +
+        (darf ? '<button class="btn pa-btn" data-action="edit-current-profile">Profil bearbeiten</button>' : '<span></span>') +
+        (form ? '<div class="pa-form"><span class="kt">Form · letzte 10</span><div class="form-row">' + form + '</div></div>' : '<span></span>') +
+      '</div>' +
+    '</div>';
+
+    var koerper;
+    if (UI.profilPanel === 'stats') {
+      koerper = '<div class="pa-panel">' +
+        '<div class="pa-panel-kopf"><span class="pa-panel-titel">' + (eigen ? 'Meine Stats' : 'Statistik') + '</span>' +
+          '<button class="btn hell pa-fertig" data-action="profil-panel-zu">Fertig</button></div>' +
+        '<div class="pa-panel-koerper">' + profilStatsHtml(p, st) + '</div></div>';
+    } else {
+      var linkKachel = function (action, k, t, sub) {
+        return '<button class="pa-link" data-action="' + action + '"><span class="kt">' + k + '</span>' +
+          '<span class="pa-link-zeile"><span class="pa-link-text"><span class="pa-link-t">' + t + '</span><span class="pa-link-s">' + sub + '</span></span>' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg></span></button>';
+      };
+      koerper = '<div class="pa-kacheln' + (eigen ? ' drei' : '') + '">' +
+        finishKachelHtml(p, st, darf) +
+        '<div class="pa-links">' +
+          linkKachel('profil-stats', 'Statistik', eigen ? 'Meine Stats' : 'Alle Stats', 'Alle Spielarten · ' + plural(st.matches, 'Spiel', 'Spiele')) +
+          linkKachel('profil-liga', 'Liga', 'Liga-Statistik', esc(LIGA.saison || 'Saison')) +
+        '</div>' +
+        (eigen ? '<div class="pa-kachel pa-konto"><span class="kt">Konto</span>' +
+          '<div class="pa-konto-feld"><span>E-Mail</span><b>' + esc(nutzer.email || '') + '</b></div>' +
+          '<div class="pa-konto-luft"></div>' +
+          '<button class="btn pa-btn" data-action="konto-passwort">Passwort ändern</button>' +
+          '<button class="btn pa-btn leise" data-action="konto-logout">Abmelden</button></div>' : '') +
+      '</div>';
+    }
+    $('profile-detail').innerHTML = ausweis + koerper;
+  }
+
+  /* Die Kachel "Finish-Weg": Lieblingsgruppe(n) als Kette, darunter der
+     Stand (Standardtabelle oder eigene Tabelle), dann der Knopf zum
+     Ermitteln. Antippen der Kette oeffnet die Gruppenwahl. */
+  function finishKachelHtml(p, st, darf) {
+    var gr = finishGruppen(p), f = p.finish || {};
+    var wahl = !!(UI.profilGruppenWahl && darf);
+    var tag = darf ? 'button' : 'span';
+    var kette = gr.length ? gr.map(function (g, i) {
+      return (i ? '<span class="pa-pfeil" aria-hidden="true">›</span>' : '') +
+        '<' + tag + ' class="pa-gruppe' + (wahl ? ' active' : '') + '"' + (darf ? ' data-action="profil-gruppen"' : '') + '>' + g +
+        '<small>' + FINISH_KETTE[g].join(' · ') + '</small></' + tag + '>';
+    }).join('') : '<' + tag + ' class="pa-gruppe leer' + (wahl ? ' active' : '') + '"' + (darf ? ' data-action="profil-gruppen"' : '') + '>egal<small>Standardweg</small></' + tag + '>';
+    var pad = wahl ? '<div class="pa-pad">' + FINISH_GRUPPEN.map(function (g) {
+      var an = gr.indexOf(g);
+      return '<button data-action="profil-gruppe" data-value="' + g + '" class="' + (an === 0 ? 'haupt' : an > 0 ? 'zweit' : '') + '">' + g + '</button>';
+    }).join('') + '<button data-action="profil-gruppe" data-value="" class="' + (gr.length ? '' : 'haupt') + '">egal</button></div>' +
+      '<p class="pa-text">Bis zu zwei Gruppen, die erste ist die Hauptgruppe. Nochmal antippen nimmt eine Gruppe wieder weg.</p>' : '';
+    var stand;
+    if (f.tabelle) {
+      stand = 'Eigene Tabelle vom ' + fmtDate(f.stand) + ' · Average ' + (f.avg ? String(f.avg).replace('.', ',') : '?') +
+        ' · ' + (SPIELWEISEN[f.spielweise] || 'Aufnahmen') + '.';
+    } else if (f.avg && darf) {
+      stand = 'Lieblingsgruppe geändert: die eigene Tabelle gilt nicht mehr. Bitte neu ermitteln.';
+    } else {
+      stand = (gr.length ? 'Standardtabelle für ' + gr[0] + '.' : 'Standardtabelle ohne Lieblingsdoppel.') +
+        (darf ? ' Antippen zum Ändern. Oder die Tabelle aus Average und Wurftests ermitteln lassen.' : '');
+    }
+    var knopf = !darf ? ''
+      : wahl ? '<button class="btn pa-btn hell" data-action="profil-gruppen-ok">OK</button>'
+      : '<button class="btn pa-btn" data-action="finish-ermitteln">Meine besten Finishes ermitteln</button>';
+    return '<div class="pa-kachel pa-finish">' +
+      '<span class="kt">Finish-Weg · Lieblingsgruppe</span>' +
+      '<div class="pa-kette">' + kette + '</div>' +
+      pad +
+      (wahl ? '' : '<p class="pa-text">' + stand + '</p>') +
+      knopf +
+    '</div>';
+  }
+
+  /* Die ausfuehrlichen Karten (Scoring, Finishing, Bilanz, Cricket, Round
+     the World, letzte X01-Spiele) - unveraendert aus dem alten Profil. */
+  function profilStatsHtml(p, st) {
     function line(label, value, hint) {
       return '<div class="pline"><span>' + label + (hint ? ' <i>' + hint + '</i>' : '') + '</span><b>' + value + '</b></div>';
     }
-
     var mine = allMatches().filter(function (e) { return e.m.p.indexOf(p.id) >= 0; }).slice(0, 15);
-
-    $('profile-detail').innerHTML =
-      '<div class="profile-head">' + avatarHTML(p, 'xl') +
-        '<div><h1>' + esc(p.name) + '</h1>' +
-        (p.hidden ? '<div class="muted">Ausgeblendet – taucht nicht in der Aufstellung auf</div>' : '') +
-        (p.voll ? '<div class="muted">' + esc(p.voll) + ' \u00b7 echter Name f\u00fcr die Liga</div>' : '') +
-        '<div class="muted">' + (st.matches
-          ? plural(st.won, 'Sieg', 'Siege') + ' · ' + plural(st.lost, 'Niederlage', 'Niederlagen') +
-            ' · ' + plural(st.tourWins, 'Turniersieg', 'Turniersiege')
-          : 'Noch kein Spiel gespielt') + '</div>' +
-        (form ? '<div class="form-label">Letzte Spiele</div><div class="form-row">' + form + '</div>' : '') +
-        '</div></div>' +
-
-      '<p class="hint">Alle Werte über sämtliche gespielten Classic-Spiele.</p>' +
+    return (
+      '<p class="hint pa-panel-hint">Alle Werte über sämtliche gespielten Classic-Spiele.</p>' +
       '<div class="card"><h2>Scoring</h2>' +
         line('3-Dart-Average', st.darts ? st.avg.toFixed(2) : '–') +
         line('First-9-Average', st.first9Darts ? st.first9.toFixed(2) : '–') +
@@ -13590,7 +13981,258 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           '<div class="lp right">gegen ' + esc(pname(opp)) + '</div>' +
           '<div class="ld">' + fmtDate(m.at || e.at) + (e.live ? ' · aktuelles Turnier' : '') + '</div>' +
           '</div>';
-      }).join('') : '<p class="hint">Noch keine Spiele.</p>') + '</div>';
+      }).join('') : '<p class="hint">Noch keine Spiele.</p>') + '</div>'
+    );
+  }
+
+  /* ---------- "Meine besten Finishes ermitteln" ----------
+     Vier Schritte: Lieblingsgruppen, Average, Wurftests (je 10 Darts auf
+     T20, das Doppel der Hauptgruppe, Bull und T16, alle freiwillig),
+     Spielweise. Dann rechnet die Engine (Web Worker) und zeigt, was sich
+     gegenueber der bisherigen Tabelle aendert. Erst "Übernehmen" speichert. */
+  var BOARD_ORDER = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5];
+  var FINISH_TESTS = ['t20', 'doppel', 'bull', 'triple'];
+  var FINISH_TRIPLE_ZIEL = 16;
+  function nachbarFelder(n) {
+    var i = BOARD_ORDER.indexOf(n);
+    return [BOARD_ORDER[(i + 19) % 20], BOARD_ORDER[(i + 1) % 20]];
+  }
+  /* Das Doppel fuer den Doppel-Test: das der Hauptgruppe; ist die Bull,
+     das der zweiten Gruppe, sonst D16. */
+  function finishDoppelZiel(gruppen) {
+    for (var i = 0; i < gruppen.length; i++) if (gruppen[i] !== 'Bull') return doppelAusGruppe(gruppen[i]);
+    return 16;
+  }
+  /* Zaehl-Kategorien je Test, in der Reihenfolge der Anzeige. Die Schluessel
+     sind die der Engine (CheckoutEngine.kategorien). */
+  function finishTestKategorien(test, gruppen) {
+    var nb, z;
+    if (test === 't20') return { titel: '10 Darts auf T20', text: 'Wirf 10 Darts auf die Triple 20 und zähle, wo sie landen.', kats: [['treffer', 'T20'], ['s20', '20 oder D20'], ['eins', 'Feld 1 (einfach, Doppel oder Triple)'], ['fuenf', 'Feld 5 (einfach, Doppel oder Triple)'], ['sonst', 'Sonst']] };
+    if (test === 'doppel') {
+      z = finishDoppelZiel(gruppen); nb = nachbarFelder(z);
+      return { titel: '10 Darts auf D' + z, ziel: z, text: 'Wirf 10 Darts auf die Doppel ' + z + '.', kats: [['treffer', 'D' + z], ['innen', z + ' innen (einfach oder Triple)'], ['aussen', 'Draußen, kein Feld'], ['nachbar_' + nb[0], 'Feld ' + nb[0]], ['nachbar_' + nb[1], 'Feld ' + nb[1]], ['sonst', 'Sonst']] };
+    }
+    if (test === 'bull') return { titel: '10 Darts auf Bull', text: 'Wirf 10 Darts auf das Bull.', kats: [['bull', 'Bull'], ['25', '25'], ['sonst', 'Sonst']] };
+    z = FINISH_TRIPLE_ZIEL; nb = nachbarFelder(z);
+    return { titel: '10 Darts auf T' + z, ziel: z, text: 'Wirf 10 Darts auf die Triple ' + z + '. Daraus kommt, wie gut dir die kleineren Triple gelingen.', kats: [['treffer', 'T' + z], ['single', z + ' einfach oder D' + z], ['nachbar', 'Feld ' + nb[0] + ' oder ' + nb[1]], ['sonst', 'Sonst']] };
+  }
+  function finishZaehlerSumme(z) { var n = 0; Object.keys(z || {}).forEach(function (k) { if (k !== 'ziel') n += Number(z[k]) || 0; }); return n; }
+
+  function finishDialogStarten(pid) {
+    var p = profile(pid), f = p.finish || {}, st = career()[p.id];
+    var tests = {};
+    FINISH_TESTS.forEach(function (t) { tests[t] = f.tests && f.tests[t] && typeof f.tests[t] === 'object' ? f.tests[t] : null; });
+    var avg = f.avg ? String(f.avg) : (st && st.darts >= MIN_DARTS_FOR_AVG ? st.avg.toFixed(1) : '');
+    UI.overlay = { type: 'finish', id: p.id, schritt: 'gruppen', test: 0, zaehler: null,
+      draft: { gruppen: finishGruppen(p), avg: avg.replace('.', ','), tests: tests, spielweise: SPIELWEISEN[f.spielweise] ? f.spielweise : 'aufnahmen' },
+      avgQuelle: !f.avg && st && st.darts >= MIN_DARTS_FOR_AVG ? plural(st.matches, 'Spiel', 'Spielen') : '' };
+    UI.profilGruppenWahl = false;
+    render();
+  }
+  function finishAvgWert(text) {
+    var v = parseFloat(String(text || '').replace(',', '.'));
+    return isFinite(v) ? Math.round(v * 10) / 10 : NaN;
+  }
+  function finishTestBetreten(o) {
+    var name = FINISH_TESTS[o.test];
+    var alt = o.draft.tests[name];
+    var tk = finishTestKategorien(name, o.draft.gruppen);
+    /* Alte Zaehler nur, wenn sie zum selben Ziel gehoeren (das Doppel
+       wechselt mit der Gruppe) und zusammen hoechstens zehn Darts ergeben. */
+    if (alt && ((tk.ziel && Number(alt.ziel) !== tk.ziel) || finishZaehlerSumme(ohneZiel(alt)) > 10)) alt = null;
+    o.zaehler = {};
+    tk.kats.forEach(function (k) { o.zaehler[k[0]] = alt && alt[k[0]] > 0 ? Number(alt[k[0]]) : 0; });
+    if (tk.ziel) o.zaehler.ziel = tk.ziel;
+  }
+  function ohneZiel(z) { var k = {}; Object.keys(z || {}).forEach(function (x) { if (x !== 'ziel') k[x] = z[x]; }); return k; }
+  function finishWeiter(o) {
+    o.fehler = '';
+    if (o.schritt === 'gruppen') { o.schritt = 'average'; return; }
+    if (o.schritt === 'average') {
+      var a = finishAvgWert(o.draft.avg);
+      if (!(a >= 30 && a <= 120)) { o.fehler = 'Bitte einen Average zwischen 30 und 120 eingeben.'; return; }
+      o.draft.avg = String(a).replace('.', ',');
+      o.schritt = 'tests'; o.test = 0; finishTestBetreten(o); return;
+    }
+    if (o.schritt === 'tests') {
+      var name = FINISH_TESTS[o.test];
+      if (finishZaehlerSumme(o.zaehler) !== 10) { o.fehler = 'Bitte alle 10 Darts zählen oder den Test überspringen.'; return; }
+      o.draft.tests[name] = o.zaehler;
+      finishNaechsterTest(o); return;
+    }
+    if (o.schritt === 'spielweise') finishRechnen(o);
+  }
+  function finishNaechsterTest(o) {
+    if (o.test < FINISH_TESTS.length - 1) { o.test++; finishTestBetreten(o); }
+    else { o.schritt = 'spielweise'; o.zaehler = null; }
+  }
+  function finishZurueck(o) {
+    o.fehler = '';
+    if (o.schritt === 'average') o.schritt = 'gruppen';
+    else if (o.schritt === 'tests') {
+      if (o.test > 0) { o.test--; finishTestBetreten(o); } else o.schritt = 'average';
+    } else if (o.schritt === 'spielweise') { o.schritt = 'tests'; o.test = FINISH_TESTS.length - 1; finishTestBetreten(o); }
+    else if (o.schritt === 'ergebnis') o.schritt = 'spielweise';
+  }
+  function finishEingabe(d) {
+    var e = { avg: finishAvgWert(d.avg), favoriten: finishFavoriten(d.gruppen), ziel: 'aufnahmen' };
+    FINISH_TESTS.forEach(function (t) {
+      var z = d.tests[t];
+      if (!z || !finishZaehlerSumme(z)) return;
+      var kopie = {};
+      Object.keys(z).forEach(function (k) { if (k !== 'ziel') kopie[k] = Number(z[k]) || 0; });
+      if (t === 'doppel') kopie.ziel = finishDoppelZiel(d.gruppen);
+      if (t === 'triple') kopie.ziel = FINISH_TRIPLE_ZIEL;
+      e[t] = kopie;
+    });
+    return e;
+  }
+  function finishRechnen(o) {
+    var p = profile(o.id);
+    o.schritt = 'rechnet'; o.fehler = '';
+    render();
+    Checkout.rechnen({ eingabe: finishEingabe(o.draft) }).then(function (erg) {
+      if (UI.overlay !== o) return;
+      o.ergebnis = erg;
+      o.unterschiede = finishUnterschiede(p, erg, o.draft.spielweise);
+      o.schritt = 'ergebnis';
+      render();
+    }, function (err) {
+      if (UI.overlay !== o) return;
+      o.schritt = 'spielweise';
+      o.fehler = 'Die Berechnung ist fehlgeschlagen: ' + (err && err.message ? err.message : err);
+      render();
+    });
+  }
+  /* "Das ändert sich für dich": je Rest der Weg mit drei Darts, bisher
+     (eigene Tabelle oder feste Tabelle der Hauptgruppe) gegen neu. */
+  function wegText(rest, lieblings) {
+    var w = Checkout.suggest(rest, 3, lieblings);
+    if (w) return w.join(' ');
+    var stw = Checkout.stellwurf(rest, 3, lieblings);
+    return stw ? stw.darts.join(' ') + ' >' + stw.auf : '';
+  }
+  function finishUnterschiede(p, erg, spielweise) {
+    /* Gleiche Variante gegen gleiche Variante: wer Checkout spielt, sieht
+       die Checkout-Wege bisher gegen neu, sonst die Aufnahmen-Wege. Ohne
+       eigene Tabelle ist "bisher" die feste Tabelle der Hauptgruppe. */
+    var f = p.finish || {}, co = spielweise === 'checkout';
+    var tabelle = co && erg.tabelleCheckout ? erg.tabelleCheckout : erg.tabelle;
+    var alt = co ? (f.tabelleCheckout || f.tabelle) : f.tabelle;
+    var dbl = DOPPEL_WAHL.indexOf(p.dbl) >= 0 ? p.dbl : null;
+    var bisher = dbl || alt ? { dbl: dbl, tabelle: alt && typeof alt === 'object' ? alt : null } : null;
+    var out = [];
+    for (var r = 2; r <= 170; r++) {
+      var neu = String(tabelle[r] || '').split('|')[0];
+      var alt = wegText(r, bisher);
+      if (neu && alt !== neu) out.push({ rest: r, alt: alt, neu: neu });
+    }
+    return out;
+  }
+  function finishUebernehmen(o) {
+    var p = profile(o.id), erg = o.ergebnis;
+    if (!p || !erg) return;
+    finishGruppenSetzen(p, o.draft.gruppen);
+    p.finish.avg = finishAvgWert(o.draft.avg);
+    p.finish.tests = o.draft.tests;
+    p.finish.spielweise = o.draft.spielweise;
+    p.finish.profil = erg.profil;
+    p.finish.tabelle = erg.tabelle;
+    p.finish.tabelleCheckout = erg.tabelleCheckout || null;
+    p.finish.stand = Date.now();
+    if (window.DartKonto) window.DartKonto.profilGeaendert(p.id);
+    UI.overlay = null;
+    save(); render();
+  }
+
+  function finishDialogHtml(o) {
+    var d = o.draft;
+    var schrittNr = { gruppen: 1, average: 2, tests: 3, spielweise: 4, rechnet: 4, ergebnis: 4 }[o.schritt];
+    var kopf = function (sub) {
+      return '<div class="dl-kopf"><h3>Meine besten Finishes</h3><p>' + (schrittNr ? 'Schritt ' + schrittNr + ' von 4 · ' : '') + sub + '</p></div>' +
+        (o.fehler ? '<p class="hint fehler" role="alert">' + esc(o.fehler) + '</p>' : '');
+    };
+    var fuss = function (weiterText, zurueck) {
+      return '<div class="dl-fuss"><button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
+        (zurueck ? '<button class="btn ghost" data-action="fi-zurueck">Zurück</button>' : '') +
+        (weiterText ? '<button class="btn hell" data-action="fi-weiter">' + weiterText + '</button>' : '') + '</div>';
+    };
+    if (o.schritt === 'gruppen') {
+      return kopf('Welche Doppel magst du? Bis zu zwei Gruppen, die erste ist die Hauptgruppe.') +
+        '<div class="fi-gruppen">' + FINISH_GRUPPEN.map(function (g) {
+          var an = d.gruppen.indexOf(g);
+          return '<button class="dl-wahl' + (an >= 0 ? ' active' : '') + '" data-action="fi-gruppe" data-value="' + g + '">' +
+            '<span class="dl-k">' + (an === 0 ? '1' : an === 1 ? '2' : '') + '</span>' +
+            '<span class="dl-wer"><b>' + g + '</b><small>' + (FINISH_KETTE[g].length > 1 ? FINISH_KETTE[g].join(' · ') : 'Bull') + '</small></span></button>';
+        }).join('') + '</div>' +
+        '<p class="dl-note">Ohne Gruppe rechnet die Engine den Standardweg, der nur nach Darts und Chancen geht.</p>' +
+        fuss('Weiter', false);
+    }
+    if (o.schritt === 'average') {
+      return kopf('Dein 3-Dart-Average. Er bestimmt, wie eng du streust.') +
+        '<div class="fi-avg"><input class="dl-input" type="text" inputmode="decimal" data-role="fi-avg" value="' + esc(d.avg) + '" placeholder="zum Beispiel 55" maxlength="6" aria-label="3-Dart-Average"></div>' +
+        '<p class="dl-note">' + (o.avgQuelle ? 'Vorbelegt aus deinen ' + o.avgQuelle + ' in der App. ' : '') +
+          'Nimm den Wert, den du bei normalen Spielen wirfst. Du kannst ihn jederzeit ändern.</p>' +
+        fuss('Weiter', true);
+    }
+    if (o.schritt === 'tests') {
+      var name = FINISH_TESTS[o.test], tk = finishTestKategorien(name, d.gruppen);
+      var summe = finishZaehlerSumme(o.zaehler);
+      return kopf('Wurftest ' + (o.test + 1) + ' von ' + FINISH_TESTS.length + ' · ' + tk.titel + '. Freiwillig, macht die Tabelle aber genauer.') +
+        '<p class="dl-info">' + tk.text + '</p>' +
+        '<div class="fi-zaehler">' + tk.kats.map(function (k) {
+          var n = o.zaehler[k[0]] || 0;
+          return '<div class="fi-zeile"><span class="fi-label">' + k[1] + '</span>' +
+            '<button class="fi-minus" data-action="fi-zaehl" data-kat="' + k[0] + '" data-d="-1" aria-label="weniger"' + (n ? '' : ' disabled') + '>−</button>' +
+            '<b class="fi-n">' + n + '</b>' +
+            '<button class="fi-plus" data-action="fi-zaehl" data-kat="' + k[0] + '" data-d="1" aria-label="mehr"' + (summe >= 10 ? ' disabled' : '') + '>+</button></div>';
+        }).join('') + '</div>' +
+        '<p class="dl-info fi-rest">' + (summe >= 10 ? 'Alle 10 Darts gezählt.' : 'Noch ' + plural(10 - summe, 'Dart', 'Darts') + ' zu zählen.') + '</p>' +
+        '<div class="dl-fuss"><button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
+          '<button class="btn ghost" data-action="fi-zurueck">Zurück</button>' +
+          '<button class="btn ghost" data-action="fi-test-weg">Überspringen</button>' +
+          '<button class="btn hell" data-action="fi-weiter"' + (summe === 10 ? '' : ' disabled') + '>Weiter</button></div>';
+    }
+    if (o.schritt === 'spielweise') {
+      var sw = [
+        ['aufnahmen', 'Aufnahmen', 'Möglichst wenige Aufnahmen bis zum Finish. Der normale Weg.'],
+        ['checkout', 'Checkout', 'Die höchste Chance, noch in dieser Aufnahme zu finishen, auch wenn es im Schnitt länger dauert.'],
+        ['auto', 'Automatisch', 'Checkout, wenn der Gegner im nächsten Besuch finishen kann oder es das entscheidende Leg ist. Sonst Aufnahmen.']
+      ];
+      return kopf('Wie spielst du deine Finishes?') +
+        '<div class="dl-liste">' + sw.map(function (w) {
+          return '<button class="dl-wahl' + (d.spielweise === w[0] ? ' active' : '') + '" data-action="fi-spielweise" data-value="' + w[0] + '">' +
+            '<span class="dl-wer"><b>' + w[1] + '</b><small>' + w[2] + '</small></span></button>';
+        }).join('') + '</div>' +
+        fuss('Finishes ermitteln', true);
+    }
+    if (o.schritt === 'rechnet') {
+      return kopf('Die Engine rechnet deine Tabelle.') +
+        '<p class="dl-info fi-warte">Einen Moment, das dauert ein paar Sekunden …</p>' +
+        '<div class="dl-fuss"><button class="btn ghost" data-action="ov-cancel">Abbrechen</button></div>';
+    }
+    if (o.schritt === 'ergebnis') {
+      var u = o.unterschiede || [], pr = o.ergebnis.profil;
+      var zeige = u.slice(0, 12);
+      var werte = 'Streuung ' + Math.round(pr.sigma_x) + ' × ' + Math.round(pr.sigma_y) + ' mm' +
+        (pr.f_doppel !== 1 ? ' · Doppel ' + pr.f_doppel.toFixed(2).replace('.', ',') : '') +
+        (pr.f_bull !== 1 ? ' · Bull ' + pr.f_bull.toFixed(2).replace('.', ',') : '') +
+        (pr.f_triple !== 1 ? ' · Triple ' + pr.f_triple.toFixed(2).replace('.', ',') : '');
+      return kopf('Fertig. ' + werte + '.') +
+        '<div class="kt">Das ändert sich für dich</div>' +
+        (u.length
+          ? '<p class="dl-info">' + plural(u.length, 'Rest bekommt', 'Reste bekommen') + ' mit drei Darts einen anderen Weg als bisher' + (d.spielweise === 'checkout' ? ' (Checkout-Wege)' : '') + '.</p>' +
+            '<div class="fi-diffs">' + zeige.map(function (x) {
+              return '<div class="fi-diff"><span class="fi-rest">' + x.rest + '</span><span class="fi-alt">' + esc(x.alt || '?') + '</span>' +
+                '<span class="fi-pfeil" aria-hidden="true">›</span><span class="fi-neu">' + esc(x.neu) + '</span></div>';
+            }).join('') + '</div>' +
+            (u.length > zeige.length ? '<p class="dl-note">und ' + (u.length - zeige.length) + ' weitere.</p>' : '')
+          : '<p class="dl-info">Mit drei Darts bleibt alles wie bisher. Die Tabelle gehört trotzdem dir: Spielweise und Wurftests stecken drin.</p>') +
+        '<div class="dl-fuss"><button class="btn ghost" data-action="ov-cancel">Verwerfen</button>' +
+          '<button class="btn ghost" data-action="fi-zurueck">Zurück</button>' +
+          '<button class="btn hell" data-action="fi-uebernehmen">Übernehmen</button></div>';
+    }
+    return '';
   }
 
   /* ================= Liga-Spielplan ================= */
@@ -14391,7 +15033,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var anzeige = mode === 'kamera' ? 'darts' : mode;
     var fern = anzeige === 'turnier';
     var dartsLeft = anzeige === 'darts' || UI.darts.length ? 3 - UI.darts.length : 3;
-    var route = ohneFinish ? null : Checkout.suggest(restActive, dartsLeft, lieblingsDoppel(active));
+    var lage = x01Lage(m, leg, active);
+    var route = ohneFinish ? null : Checkout.suggest(restActive, dartsLeft, lieblingsDoppel(active, lage));
     var danach = spielerDanach(m, active);
 
     /* Kopf: Spiel und Stand. In der Fernsteuerung ab drei Spielern steht
@@ -14472,7 +15115,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       var nurAnzeige = fern && UI.darts.length > 0;
       if ((anzeige === 'darts' || nurAnzeige) && istAktiv) {
         var kacheln = ['', '', ''];
-        var kDbl = ohneFinish ? null : lieblingsDoppel(active);
+        var kDbl = ohneFinish ? null : lieblingsDoppel(active, lage);
         var kRest = remainingIn(leg, active);
         var kPlan = ohneFinish ? null : planFuer(kRest, 3, kDbl);
         var kPlanGilt = !!kPlan;
@@ -14537,7 +15180,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         if (istAktiv) weg = route;
         else if (fern) {
           var wRest = remainingIn(leg, pid);
-          weg = wRest >= 2 ? Checkout.suggest(wRest, 3, lieblingsDoppel(pid)) : null;
+          weg = wRest >= 2 ? Checkout.suggest(wRest, 3, lieblingsDoppel(pid, x01Lage(m, leg, pid))) : null;
         }
       }
       return '<div class="pfelder pfinish">' + (weg ? weg.map(function (d) {
@@ -15129,7 +15772,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   }
   function finisherStellwurf(rest, dbl) {
     var ziele = [];
-    if (dbl) ziele.push(2 * dbl);
+    var d = dbl && typeof dbl === 'object' ? dbl.dbl : dbl;
+    if (d && d !== 25) ziele.push(2 * d);
     [32, 40, 24, 20, 16, 36, 12, 8, 4, 2].forEach(function (z) {
       if (ziele.indexOf(z) < 0) ziele.push(z);
     });
@@ -15300,7 +15944,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var route = null;
     var kacheln = ['', '', ''];
     if (!g.done && !rd.stechen && !st.fertig[aktiv]) {
-      var dbl = lieblingsDoppel(aktiv);
+      /* Im Finisher hat jeder genau diese drei Darts auf seinen Rest - es
+         zaehlt nur die Chance auf das Finish (Checkout-Variante). */
+      var dbl = lieblingsDoppel(aktiv, { checkout: true });
       var restLauf = st.restVorVisit;
       var fPlan = planFuer(st.restVorVisit, 3, dbl);
       var fPlanGilt = !!fPlan;
@@ -15377,7 +16023,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         var pillen = '';
         for (var fp = 0; fp < g.ziel; fp++) pillen += '<span class="fin-pille' + (fp < (st.punkte[id] || 0) ? ' an' : '') + '"></span>';
         var weg = fertig || rd.stechen || g.done ? null
-          : Checkout.suggest(st.rest[id], istAkt ? 3 - st.inVisit : 3, lieblingsDoppel(id));
+          : Checkout.suggest(st.rest[id], istAkt ? 3 - st.inVisit : 3, lieblingsDoppel(id, { checkout: true }));
         return '<div class="pcard' + (fertig ? ' fertig' : istAkt ? ' active' : '') + '">' +
           '<div class="pkopf">' + avatarHTML(profile(id), 'sm') +
             '<div class="pblock"><span class="pname">' + esc(pname(id)) + '</span>' +
@@ -15731,7 +16377,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var n = g.players.length, solo = n === 1;
     var modus = kaiwenModus();
     var fern = !!UI.kwFern;
-    var dbl = lieblingsDoppel(st.werfer);
+    /* Letzte Aufnahme des Versuchs: danach kommen keine Darts mehr, also
+       zaehlt nur noch die Chance auf das Finish (Checkout-Variante). */
+    var dbl = lieblingsDoppel(st.werfer, { checkout: st.visitNr === 2 });
     var dartsLeft = 3 - st.offen.length;
     var jetzt = Date.now();
     var rekord = kaiwenRekord();
@@ -17568,6 +18216,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
               ? 'Der Link kommt gleich vom Server – bitte in ein paar Sekunden nochmal öffnen.'
               : 'Den Live-Ticker gibt es für Ligaspiele im Modus „geteilt“ (beim Start des Ligaspiels wählen) – dann liegt der Stand beim Server.') + '</p>') +
         '<button class="btn ghost full" data-action="ov-cancel">Schließen</button>';
+    } else if (o.type === 'finish') {
+      html = finishDialogHtml(o);
     } else if (o.type === 'nachmeldung') {
       var nq = ligaBerichtQuelle();
       var nHeimTeam = nq ? (nq.liga.heim ? LIGA.team : nq.liga.gegner) : 'Heim';
@@ -17997,11 +18647,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         /* Lieblingsdoppel: der Finish-Vorschlag stellt dann bevorzugt darauf.
            Kein Umweg über einen zusätzlichen Dart – nur die Wahl zwischen
            gleich langen Wegen, siehe js/checkout.js. */
-        '<label class="dbl-wahl"><span>Lieblingsdoppel</span>' +
+        '<label class="dbl-wahl"><span>Lieblingsgruppe</span>' +
           '<select data-role="profile-double">' + doppelOptionen(p.dbl) + '</select>' +
         '</label>' +
-        '<p class="hint">Bei gleich vielen Darts stellt der Finish-Vorschlag auf dieses Doppel. ' +
-          'Einen Dart mehr kostet es nie.</p>' +
+        '<p class="hint">Bei gleich vielen Darts stellt der Finish-Vorschlag auf diese Doppel. ' +
+          'Einen Dart mehr kostet es nie. Mehr dazu im Profil unter Finish-Weg.</p>' +
         (p.avatar ? '<button class="btn ghost full" data-action="clear-avatar">Foto entfernen</button>' : '') +
         '<div class="row-btns two"><button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
         '<button class="btn primary" data-action="save-profile">Speichern</button></div>' +
@@ -18727,6 +19377,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       case 'nav': {
         var target = el.getAttribute('data-screen');
         UI.boardLog = false;
+        /* "Profil" ist das eigene Profil (Spielerausweis, Finish-Weg,
+           Konto); nur ohne Anmeldung bleibt es der Anmeldebildschirm. */
+        if (target === 'konto' && eigeneKontoId() && profile(eigeneKontoId())) {
+          UI.profile = eigeneKontoId(); UI.profilPanel = null; UI.profilGruppenWahl = false;
+          target = 'profile';
+        }
         // Ein laufendes Spiel führt zurück aufs Board; ein beendetes, noch
         // nicht gespeichertes zeigt sich im Setup als Hinweis-Box.
         // spielScreen: das Schnelle Spiel heisst 'quick', sein Bildschirm
@@ -18830,7 +19486,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           var ex = profile(UI.overlay.id);
           ex.name = name;
           ex.avatar = draft.avatar;
-          ex.dbl = draft.dbl || null;
+          /* Die Hauptgruppe aus dem Dialog; eine zweite Gruppe (nur im
+             Profil waehlbar) bleibt stehen, wenn sie nicht dieselbe ist. */
+          var exG = draft.dbl ? gruppeAusDoppel(draft.dbl) : null;
+          var exAlt = finishGruppen(ex);
+          finishGruppenSetzen(ex, exG ? [exG].concat(exAlt.filter(function (g) { return g !== exG; })).slice(0, 2) : []);
           if (ex.gast) {
             /* Wird ein dauerhafter Gast wieder temporaer, zaehlt die Frist ab jetzt. */
             if (ex.dauer && !draft.dauer) ex.fristAb = Date.now();
@@ -18846,7 +19506,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
              dem, was dort steht. */
           if (window.DartKonto) window.DartKonto.profilGeaendert(ex.id);
         } else {
-          var np = { id: uid(), name: name, avatar: draft.avatar, created: Date.now(), hue: freeHue(), dbl: draft.dbl || null, voll: vollAusTeilen(draft.vor, draft.nach) };
+          var np = { id: uid(), name: name, avatar: draft.avatar, created: Date.now(), hue: freeHue(), dbl: null, voll: vollAusTeilen(draft.vor, draft.nach) };
+          if (draft.dbl && gruppeAusDoppel(draft.dbl)) finishGruppenSetzen(np, [gruppeAusDoppel(draft.dbl)]);
           /* Angemeldet legt man hier keine Kollegen an – die haben Accounts.
              Wer von Hand dazukommt, ist der Besuch von heute Abend. */
           if (window.DartKonto && window.DartKonto.nutzer()) { np.gast = true; np.dauer = !!draft.dauer; }
@@ -18906,9 +19567,68 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       }
       case 'open-profile':
         UI.profile = el.getAttribute('data-id');
+        UI.profilPanel = null; UI.profilGruppenWahl = false;
         S.screen = 'profile';
         save(); render();
         break;
+      /* Profil: Tafel mit den Statistik-Karten, Liga-Statistik, Gruppenwahl,
+         Finish-Ermittlung. */
+      /* Kamera-Knopf am Ausweis: derselbe Dialog wie "Profil bearbeiten",
+         gleich mit der Fotowahl. */
+      case 'profil-foto':
+        handleActionInner('edit-current-profile', el);
+        if (UI.overlay && UI.overlay.type === 'profile') $('avatar-input').click();
+        break;
+      case 'profil-stats': UI.profilPanel = 'stats'; render(); break;
+      case 'profil-panel-zu': UI.profilPanel = null; render(); break;
+      case 'profil-liga': UI.ligaTab = 'statistik'; UI.boardLog = false; S.screen = 'liga'; save(); render(); break;
+      case 'profil-gruppen': UI.profilGruppenWahl = !UI.profilGruppenWahl; render(); break;
+      case 'profil-gruppen-ok': UI.profilGruppenWahl = false; render(); break;
+      case 'profil-gruppe': {
+        var pgP = profile(UI.profile);
+        if (!pgP || !bearbeitbar(pgP.id)) break;
+        var pgG = el.getAttribute('data-value'), pgL = finishGruppen(pgP);
+        if (!pgG) pgL = [];
+        else if (pgL.indexOf(pgG) >= 0) pgL.splice(pgL.indexOf(pgG), 1);
+        else if (pgL.length < 2) pgL.push(pgG);
+        else pgL[1] = pgG;
+        finishGruppenSetzen(pgP, pgL);
+        if (window.DartKonto) window.DartKonto.profilGeaendert(pgP.id);
+        save(); render();
+        break;
+      }
+      case 'finish-ermitteln':
+        if (UI.profile && bearbeitbar(UI.profile)) finishDialogStarten(UI.profile);
+        break;
+      case 'fi-gruppe': {
+        var fgO = UI.overlay; if (!fgO || fgO.type !== 'finish') break;
+        var fgG = el.getAttribute('data-value'), fgL = fgO.draft.gruppen;
+        if (fgL.indexOf(fgG) >= 0) fgL.splice(fgL.indexOf(fgG), 1);
+        else if (fgL.length < 2) fgL.push(fgG);
+        else fgL[1] = fgG;
+        render();
+        break;
+      }
+      case 'fi-weiter': if (UI.overlay && UI.overlay.type === 'finish') { finishWeiter(UI.overlay); if (UI.overlay && UI.overlay.schritt !== 'rechnet') render(); } break;
+      case 'fi-zurueck': if (UI.overlay && UI.overlay.type === 'finish') { finishZurueck(UI.overlay); render(); } break;
+      case 'fi-test-weg':
+        if (UI.overlay && UI.overlay.type === 'finish' && UI.overlay.schritt === 'tests') {
+          UI.overlay.draft.tests[FINISH_TESTS[UI.overlay.test]] = null;
+          UI.overlay.fehler = '';
+          finishNaechsterTest(UI.overlay); render();
+        }
+        break;
+      case 'fi-zaehl': {
+        var fzO = UI.overlay; if (!fzO || fzO.type !== 'finish' || !fzO.zaehler) break;
+        var fzK = el.getAttribute('data-kat'), fzD = Number(el.getAttribute('data-d'));
+        var fzN = (fzO.zaehler[fzK] || 0) + fzD;
+        if (fzN < 0 || (fzD > 0 && finishZaehlerSumme(fzO.zaehler) >= 10)) break;
+        fzO.zaehler[fzK] = fzN; fzO.fehler = '';
+        render();
+        break;
+      }
+      case 'fi-spielweise': if (UI.overlay && UI.overlay.type === 'finish') { UI.overlay.draft.spielweise = el.getAttribute('data-value'); render(); } break;
+      case 'fi-uebernehmen': if (UI.overlay && UI.overlay.type === 'finish') finishUebernehmen(UI.overlay); break;
       /* Spielerliste: Filter und Schnellansicht. */
       case 'players-filter': UI.spielerFilter = el.getAttribute('data-value'); render(); break;
       case 'spieler-wahl': UI.spielerWahl = el.getAttribute('data-id'); render(); break;
@@ -19901,7 +20621,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   var VOLLBILD_DIALOGE = { 'liga-start': 1, 'uebung-start': 1, 'unterschrift': 1, 'bericht-versand': 1 };
   /* Die Dialoge des Ligaspiels (Entwurf Okt. 2026): breite Bogen,
      linksbuendig, mit Spalten - Wechseln, Nachmelden, Beenden, Spielbericht. */
-  var BOGEN_DIALOGE = { 'liga-wechsel': 1, 'liga-wechsel-zu': 1, 'nachmeldung': 1, 'liga-bericht-kurz': 1 };
+  var BOGEN_DIALOGE = { 'liga-wechsel': 1, 'liga-wechsel-zu': 1, 'nachmeldung': 1, 'liga-bericht-kurz': 1, 'finish': 1 };
   /* Dialoge mit Eingaben und Unterschrift gehen nur ueber ihre Knoepfe zu -
      ein Strich knapp neben dem Feld, Escape oder "Zurueck" wirft sonst
      alles weg (und nach einem spontanen Wechsel bliebe der Spieler ohne
@@ -20110,6 +20830,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     }
     if (ev.target.getAttribute('data-role') === 'profile-name' && UI.overlay) {
       UI.overlay.draft.name = ev.target.value;
+    }
+    if (ev.target.getAttribute('data-role') === 'fi-avg' && UI.overlay && UI.overlay.type === 'finish') {
+      UI.overlay.draft.avg = ev.target.value;
     }
     /* Lieblingsdoppel: 0 heisst „egal". Auch hier nicht neu zeichnen – der
        Dialog wuerde sonst mitten in der Auswahl unter den Fingern wegspringen. */
@@ -20802,6 +21525,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (S.screen === 'boards' && UI.boardLog) { UI.boardLog = false; render(); return true; }
     if (S.screen === 'liga' && (UI.ligaTab || 'plan') !== 'plan') { UI.ligaTab = 'plan'; UI.boardLog = false; render(); return true; }
     if (S.screen === 'liga' && UI.ligaWahl) { UI.ligaWahl = null; render(); return true; }
+    if (S.screen === 'profile' && (UI.profilPanel || UI.profilGruppenWahl)) { UI.profilPanel = null; UI.profilGruppenWahl = false; render(); return true; }
     if (S.screen === 'profile') { S.screen = 'players'; save(); render(); return true; }
     if (S.screen === 'konto' && gesperrt()) return false;
     if (S.screen === 'winner' || S.screen === 'bericht' || S.screen === 'setup') return false;
@@ -20951,6 +21675,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       avatarHTML: avatarHTML,
       profile: profile,
       activeProfiles: activeProfiles,
+      lieblingsDoppel: lieblingsDoppel,
+      finishGruppen: finishGruppen,
+      finishGruppenSetzen: finishGruppenSetzen,
+      finishNachruesten: finishNachruesten,
+      eigenesProfil: eigenesProfilOeffnen,
       freeHue: freeHue,
       HUES: HUES,
       setScreen: function (name) { S.screen = name; save(); render(); },

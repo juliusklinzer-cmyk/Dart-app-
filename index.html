@@ -712,11 +712,22 @@
 
 <!-- ============ SPIELER-DETAIL ============ -->
 <section id="screen-profile" class="screen">
-  <header class="app-header row">
-    <button class="icon-btn" data-action="nav" data-screen="players" aria-label="Zur Spielerliste">‹</button>
-    <button class="btn ghost small" data-action="edit-current-profile">Bearbeiten</button>
-  </header>
-  <div id="profile-detail"></div>
+  <!-- Entwurf "Profil" (Okt. 2026): Setup-Kopf, darunter der Spielerausweis
+       und die Kacheln Finish-Weg, Statistik und Konto. Gezeichnet von
+       renderProfile(); der Zurueck-Pfeil fuehrt zur Spielerliste. -->
+  <div class="setup-kopf" id="profile-kopf">
+    <div class="marke">
+      <span class="blink-logo" role="img" aria-label="Blink 180"></span>
+      <div>
+        <div class="wort">Blink <span class="rot">180</span></div>
+        <div class="sub">Dart Turnier · est. 2026</div>
+      </div>
+    </div>
+  </div>
+  <div class="reiter-zeile pa-zeile">
+    <button class="btn ghost small pa-zurueck" data-action="nav" data-screen="players" aria-label="Zur Spielerliste"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 12H7M11.5 6.5L6 12l5.5 5.5"></path></svg><span>Spieler</span></button>
+  </div>
+  <div id="profile-detail" class="pa-koerper"></div>
 </section>
 
 <!-- ============ BULL-OFF ============ -->

@@ -20,7 +20,16 @@
   var meldung = '';                // Fehler- oder Erfolgstext
   var meldungArt = 'fehler';
   var beschaeftigt = false;
-  var profilOffen = false;         // eigenes Profil geaendert, aber noch nicht hochgeladen
+  /* Eigenes Profil geaendert, aber noch nicht hochgeladen. Der Merker
+     ueberlebt einen Reload (localStorage): seit der Finish-Tabelle haengen
+     an einer offenen Aenderung vierzig gezaehlte Darts und eine Rechnung. */
+  var PROFIL_OFFEN = 'dart-turnier-profil-offen';
+  var profilOffen = false;
+  try { profilOffen = localStorage.getItem(PROFIL_OFFEN) === '1'; } catch (e) { /* egal */ }
+  function profilOffenSetzen(an) {
+    profilOffen = an;
+    try { if (an) localStorage.setItem(PROFIL_OFFEN, '1'); else localStorage.removeItem(PROFIL_OFFEN); } catch (e) { /* egal */ }
+  }
   var gesperrtFlag = false;        // Anmeldung noetig, bevor die App benutzbar ist
   var einladung = null;            // { token, art, von, gueltig } aus ?einladung=... im Link
 
@@ -72,7 +81,7 @@
    */
   function profilGeaendert(id) {
     if (!nutzer || id !== nutzer.id) return;
-    profilOffen = true;
+    profilOffenSetzen(true);
     sichereProfil().catch(function () {
       /* Kein Netz: bleibt offen und geht beim nächsten Abgleich raus. */
     });
@@ -82,9 +91,9 @@
     if (!nutzer) return Promise.resolve();
     var p = D.profile(nutzer.id);
     if (!p) return Promise.resolve();
-    return ruf('PATCH', '/api/me', { name: p.name, avatar: p.avatar, hue: p.hue, dbl: p.dbl || null, voll: p.voll || null }).then(function (daten) {
+    return ruf('PATCH', '/api/me', { name: p.name, avatar: p.avatar, hue: p.hue, dbl: p.dbl || null, voll: p.voll || null, finish: p.finish || null }).then(function (daten) {
       nutzer = daten.nutzer;
-      profilOffen = false;
+      profilOffenSetzen(false);
     });
   }
 
@@ -105,9 +114,13 @@
     var nachId = {};
     S.profiles.forEach(function (p) { nachId[p.id] = p; });
 
+    var eigenesNachgeruestet = false;
     roster.forEach(function (r) {
       var p = nachId[r.id];
       if (p) {
+        // Eigenes Konto mit altem Lieblingsdoppel, aber ohne Finish-Profil
+        // auf dem Server: die uebersetzte Gruppe einmal hochschicken.
+        if (nutzer && r.id === nutzer.id && r.dbl && !r.finish) eigenesNachgeruestet = true;
         // Eigenes Profil mit noch nicht hochgeladener Änderung: der lokale
         // Stand ist der neuere und darf nicht plattgemacht werden.
         if (profilOffen && nutzer && r.id === nutzer.id) return;
@@ -117,6 +130,12 @@
         // Das Lieblingsdoppel gehoert dem Account, nicht dem Geraet: so gilt
         // es auch, wenn ein Kollege den Abend auf seinem iPad mitschreibt.
         p.dbl = r.dbl || null;
+        // Lieblingsgruppen und die eigene Finish-Tabelle (Checkout-Engine)
+        // gehoeren ebenfalls zum Account. Ein Konto, das nur das alte
+        // Lieblingsdoppel kennt, wird hier wie beim Laden in die Gruppe
+        // uebersetzt (8 -> D16) - sonst verloere es seinen Favoriten.
+        p.finish = r.finish && typeof r.finish === 'object' ? r.finish : null;
+        if (D.finishNachruesten) D.finishNachruesten(p);
         // Der buergerliche Name ebenso -- er steht auf dem Spielbericht.
         p.voll = r.voll || null;
         p.hidden = false;
@@ -131,13 +150,16 @@
           id: r.id, name: r.name, avatar: sauberesBild(r.avatar),
           hue: typeof r.hue === 'number' && r.hue >= 0 ? r.hue : D.freeHue(),
           dbl: r.dbl || null,
+          finish: r.finish && typeof r.finish === 'object' ? r.finish : null,
           voll: r.voll || null,
           test: !!r.test,
           gastKonto: !!r.gastKonto,
           created: Date.now()
         });
+        if (D.finishNachruesten) D.finishNachruesten(S.profiles[S.profiles.length - 1]);
       }
     });
+    if (eigenesNachgeruestet && !profilOffen) profilGeaendert(nutzer.id);
 
     /*
      * Ein Account, der nicht mehr im Kader steht, ist stillgelegt worden.
@@ -381,6 +403,9 @@
       '</div>';
   }
 
+  /* Das eigene Profil (Spielerausweis, Finish-Weg, Konto-Kachel) zeichnet
+     app.js unter "Profil". Diese Karte bleibt fuer den Rueckweg nach dem
+     Passwortwechsel und fuer Geraete ohne das neue Profil. */
   function htmlKonto() {
     var offen = offeneZuordnung().length;
     var syncText = window.DartSync ? window.DartSync.langText() : '';
@@ -391,9 +416,7 @@
         '<div class="sm">' + esc(nutzer.email) + '</div></div>' +
       '</div>' +
       (syncText ? '<p class="hint">' + esc(syncText) + '</p>' : '') +
-      /* Profilpflege (Bild, Namen, Lieblingsdoppel) gehoert hierher, nicht
-         in die Aufstellung: dort wird ausgewaehlt, nicht gepflegt. */
-      '<button class="btn full" data-action="konto-profil">Bearbeiten</button>' +
+      '<button class="btn full" data-action="konto-profil-seite">Zum Profil</button>' +
       (offen ? '<button class="btn full" data-action="konto-zuordnen">Alte Profile zuordnen (' + offen + ')</button>' : '') +
       '<button class="btn ghost full" data-action="konto-passwort">Passwort ändern</button>' +
       '<button class="btn ghost full" data-action="konto-logout">Abmelden</button>' +
@@ -465,9 +488,15 @@
       case 'konto-tab-register':
         ansicht = 'register'; setzeMeldung(''); neuZeichnen(true); break;
       case 'konto-zurueck':
-        ansicht = 'konto'; setzeMeldung(''); neuZeichnen(true); break;
+        ansicht = 'konto'; setzeMeldung('');
+        /* Zurueck ins eigene Profil - die Konto-Karte ist nur der Umweg. */
+        if (nutzer && D.eigenesProfil && D.eigenesProfil()) break;
+        neuZeichnen(true); break;
+      case 'konto-profil-seite':
+        if (nutzer && D.eigenesProfil) D.eigenesProfil();
+        break;
       case 'konto-zuordnen':
-        ansicht = 'zuordnung'; setzeMeldung(''); neuZeichnen(true); break;
+        ansicht = 'zuordnung'; setzeMeldung(''); D.setScreen('konto'); neuZeichnen(true); break;
 
       case 'konto-login': {
         // Erst lesen, dann zeichnen – nie umgekehrt.
@@ -508,7 +537,9 @@
         break;
 
       case 'konto-passwort':
-        ansicht = 'passwort'; setzeMeldung(''); neuZeichnen(true); break;
+        /* Der Knopf sitzt seit dem Profil-Umbau in der Konto-Kachel des
+           Profils - die Maske wohnt weiter im Konto-Bildschirm. */
+        ansicht = 'passwort'; setzeMeldung(''); D.setScreen('konto'); neuZeichnen(true); break;
 
       case 'konto-passwort-speichern':
         beschaeftigt = true;

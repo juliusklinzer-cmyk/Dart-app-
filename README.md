@@ -686,6 +686,18 @@ letzten Spiele als S/N, sechs Kennzahlen (Average, First 9, Höchstes Finish,
 180er, Doppelquote, Bestes Leg) sowie „Bearbeiten“ und „Ganzes Profil ›“. Am
 Handy (hochkant wie quer) gibt es nur die Liste, ein Tipp öffnet das Profil.
 
+**Das Profil** (Entwurf „Profil“, Oktober 2026) trägt denselben Kopf: oben der
+**Spielerausweis** (Foto mit Kamera-Knopf, Name in Plakatschrift, echter Name,
+Chips für Status, „seit“, Bilanz und Turniersiege, „Profil bearbeiten“, die Form
+der letzten zehn Spiele), darunter drei Kacheln: **Finish-Weg · Lieblingsgruppe**
+(siehe Checkout-Engine unten), die Links **Statistik** („Meine Stats“ legt die
+ausführlichen Karten Scoring, Finishing, Bilanz, Cricket, Round the World und
+letzte X01-Spiele als Tafel über die Kacheln, „Fertig“ schließt sie) und
+**Liga-Statistik**, und beim eigenen Konto die **Konto-Kachel** (E-Mail, Passwort
+ändern, Abmelden). Der Reiter **Profil** öffnet das eigene Profil; fremde Profile
+erreicht man über die Spielerliste. Am Tablet steht alles fest im Rahmen, am Handy
+scrollt die Seite.
+
 Spieler sind dauerhaft: Name und Foto werden einmal angelegt und gelten für jedes
 weitere Turnier. Das Foto kommt aus der Fotomediathek oder direkt von der Kamera und
 wird auf 220 × 220 Pixel zugeschnitten, damit der Speicher nicht vollläuft; ohne Foto
@@ -1023,9 +1035,13 @@ Rest des Plans stehen (128: T20 T16 D10 auch nach der T20), erst ein Fehlwurf l�
 für den neuen Rest nachschlagen.
 `node tools/finishwege-bauen.mjs` prüft die Tabellen (Summe, Doppel am Ende,
 Stellwurf-Ziel) und schreibt sie in `js/checkout.js`; der alte Rechenkern dort
-beantwortet nur noch, ob ein Rest mit n Darts überhaupt zu finishen ist. Wählbare
-Lieblingsdoppel sind die geraden von D20 bis D4; Bull und ungerade Doppel gibt es
-nicht mehr zur Wahl (ein Single dort lässt immer eine ungerade Zahl).
+beantwortet nur noch, ob ein Rest mit n Darts überhaupt zu finishen ist. Gewählt
+wird seit der Checkout-Engine keine einzelne Doppelzahl mehr, sondern eine
+**Lieblingsgruppe** (Halbierungskette D20 · 10 · 5, D16 · 8 · 4 · 2 · 1, D18 · 9,
+D12 · 6 · 3, D14 · 7 oder Bull), bis zu zwei je Spieler, die erste ist die
+Hauptgruppe. Ohne eigene Tabelle gilt die feste Tabelle des Doppels der
+Hauptgruppe (Bull: die Standardtabelle). Ein altes Lieblingsdoppel wird beim Laden
+in die Gruppe seiner Kette übersetzt (8 → D16, 10 → D20, 6 → D12).
 
 ### Checkout-Engine (eigene Tabelle je Spieler)
 
@@ -1053,9 +1069,32 @@ Sekunde). Das Ergebnis ist eine Tabelle im Format der festen Tabellen, die beim
 Spieler gespeichert wird; `Checkout.suggest`/`stellwurf` nehmen statt der
 Doppelzahl ein Objekt `{ dbl, tabelle }` und greifen zuerst auf die eigene Zeile zu,
 Lücken füllen die festen Tabellen. Wer keine eigene Tabelle rechnet, spielt mit der
-Standardtabelle seines Lieblingsdoppels. `npm run test:engine` prüft die Engine
+Standardtabelle seiner Hauptgruppe. `npm run test:engine` prüft die Engine
 gegen `checkout_fixtures.json` (Tabellen aller Referenzprofile, Checkout-Variante,
 Average-Tabelle, Kalibrierung, Wegbewertung, Alternativen).
+
+**Im Profil** (Kachel „Finish-Weg · Lieblingsgruppe“, Phase 2): die Kette der
+Gruppe(n) antippen öffnet die Gruppenwahl (bis zwei, die erste ist die Hauptgruppe;
+eine andere Wahl verwirft eine schon gerechnete Tabelle, Average und Tests bleiben).
+**„Meine besten Finishes ermitteln“** führt in vier Schritten durch den Dialog:
+Lieblingsgruppen, Average (vorbelegt aus den gespielten Spielen, änderbar, 30 bis
+120), vier freiwillige **Wurftests** mit je zehn Darts (T20 mit den Zählern T20 /
+20 oder D20 / Feld 1 / Feld 5 / Sonst; das Doppel der Hauptgruppe mit Treffer /
+innen / draußen / beide Nachbarfelder / Sonst; Bull mit Bull / 25 / Sonst; T16 mit
+Treffer / einfach oder Doppel / Nachbarn / Sonst, jeweils mit Plus und Minus bis
+genau zehn, „Überspringen“ lässt den Test weg) und die **Spielweise**: *Aufnahmen*
+(wenigste Aufnahmen bis zum Finish), *Checkout* (höchste Chance, in dieser Aufnahme
+zu finishen) oder *Automatisch* (Checkout, sobald ein Gegner im nächsten Besuch
+finishen kann oder es das entscheidende Leg ist, im Kaiwen in der letzten Aufnahme
+eines Versuchs, im Finisher immer). Dann rechnet die Engine beide Varianten und zeigt
+**„Das ändert sich für dich“**: je Rest der Weg mit drei Darts bisher gegen neu (die
+ersten zwölf, dazu die Zahl der weiteren). Erst „Übernehmen“ speichert alles am
+Spieler (`p.finish = { gruppen, avg, tests, spielweise, profil, tabelle,
+tabelleCheckout, stand }`, `p.dbl` bleibt das Doppel der Hauptgruppe); mit Konto geht
+es per `PATCH /api/me` (`finish`, Spalte `users.finish` als JSON, Migration
+`015_finish_profil.sql`, der Server prüft nur Form und Größe, höchstens 64 KB) zum
+Server und kommt mit dem Kader auf jedes Gerät. Die Kachel nennt danach Datum,
+Average und Spielweise der eigenen Tabelle.
 
 ## Tests
 

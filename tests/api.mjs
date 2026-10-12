@@ -393,6 +393,36 @@ async function main() {
     gleich(r.daten.nutzer.dbl, null, 'ein Feld, das es nicht gibt, wird zu "egal"');
     r = await julius.ruf('PATCH', '/api/me', { dbl: 'T20' });
     gleich(r.daten.nutzer.dbl, null, 'und Unsinn ebenfalls');
+
+    /* Finish-Profil (Checkout-Engine): Gruppen, Average, Tests, Spielweise,
+       kalibriertes Profil und die eigene Tabelle reisen als JSON mit. */
+    const finish = { gruppen: ['D16', 'D20'], avg: 58.5, spielweise: 'auto', tests: { t20: { treffer: 3, s20: 5, sonst: 2 }, doppel: null },
+      profil: { sigma_x: 17.6, sigma_y: 15.9, f_triple: 1, f_doppel: 1, f_bull: 1, favoriten: [16, 8, 4, 2, 1, 20, 10, 5], f_fav: 0.8, ziel: 'aufnahmen' },
+      tabelle: { 140: 'T20 T16 D16|T20 S20 >60|T20 >80', 170: 'T20 T20 BULL|T19 T19 >56|T19 >113', 2: 'D1|D1|D1' },
+      tabelleCheckout: { 140: 'T20 T20 D10|T20 S20 >60|T20 >80' }, stand: 1760000000000 };
+    r = await julius.ruf('PATCH', '/api/me', { finish });
+    gleich(r.status, 200, 'das Finish-Profil laesst sich speichern');
+    gleich(JSON.stringify(r.daten.nutzer.finish), JSON.stringify(finish), 'und kommt unveraendert zurueck');
+    r = await julius.ruf('GET', '/api/users');
+    gleich(r.daten.nutzer.find((n) => n.id === julius_id).finish.tabelle[140], 'T20 T16 D16|T20 S20 >60|T20 >80',
+      'die eigene Tabelle steht auch im Kader (jedes Geraet rechnet mit derselben)');
+    r = await julius.ruf('PATCH', '/api/me', { name: 'Julius K.' });
+    gleich(r.daten.nutzer.finish.gruppen.join(), 'D16,D20', 'eine Namensaenderung laesst das Finish-Profil stehen');
+    r = await julius.ruf('PATCH', '/api/me', { finish: { gruppen: ['D7'] } });
+    gleich(r.status, 400, 'eine Gruppe, die es nicht gibt, wird abgewiesen');
+    r = await julius.ruf('PATCH', '/api/me', { finish: { tabelle: { 140: 'alert(1)|x|y' } } });
+    gleich(r.status, 400, 'eine Tabellenzeile ausserhalb des Formats wird abgewiesen');
+    r = await julius.ruf('PATCH', '/api/me', { finish: { tabelle: { 171: 'D1|D1|D1' } } });
+    gleich(r.status, 400, 'ein Rest ausserhalb von 2 bis 170 ebenfalls');
+    r = await julius.ruf('PATCH', '/api/me', { finish: { spielweise: 'immer' } });
+    gleich(r.status, 400, 'eine unbekannte Spielweise ebenfalls');
+    r = await julius.ruf('PATCH', '/api/me', { finish: { avg: 58.5, tabelle: { 140: 'T20 T16 D16|T20 S20 >60|T20 >80' }, extra: 'x'.repeat(70000) } });
+    gleich(r.status, 400, 'ein zu grosses Finish-Profil wird abgewiesen');
+    r = await julius.ruf('PATCH', '/api/me', { finish: { gruppen: ['D16'], unbekannt: 1 } });
+    gleich(r.status, 200, 'unbekannte Felder werden still weggelassen');
+    gleich(r.daten.nutzer.finish.unbekannt, undefined, 'und landen nicht in der Datenbank');
+    r = await julius.ruf('PATCH', '/api/me', { finish: null });
+    gleich(r.daten.nutzer.finish, null, 'null raeumt das Finish-Profil weg (Standardtabelle)');
     r = await julius.ruf('PATCH', '/api/me', { dbl: 20 });
     gleich(r.daten.nutzer.dbl, 20, 'zurueck auf D20');
 

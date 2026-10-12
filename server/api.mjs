@@ -39,11 +39,15 @@ export function createApi(db, config) {
   }
 
   /* Nach aussen geben wir nie den Passwort-Hash oder fremde E-Mails heraus. */
+  function finishAus(u) {
+    if (!u.finish) return null;
+    try { const f = JSON.parse(u.finish); return f && typeof f === 'object' ? f : null; } catch (e) { return null; }
+  }
   function oeffentlich(u) {
-    return { id: u.id, name: u.display_name, avatar: u.avatar, hue: u.hue, dbl: u.dbl, voll: u.real_name || null, test: u.test ? true : false, gastKonto: u.gast_konto ? true : false };
+    return { id: u.id, name: u.display_name, avatar: u.avatar, hue: u.hue, dbl: u.dbl, voll: u.real_name || null, finish: finishAus(u), test: u.test ? true : false, gastKonto: u.gast_konto ? true : false };
   }
   function eigenesProfil(u) {
-    return { id: u.id, name: u.display_name, email: u.email, avatar: u.avatar, hue: u.hue, dbl: u.dbl, voll: u.real_name || null, seit: u.created_at, kassenwart: u.kassenwart ? true : false, gastKonto: u.gast_konto ? true : false };
+    return { id: u.id, name: u.display_name, email: u.email, avatar: u.avatar, hue: u.hue, dbl: u.dbl, voll: u.real_name || null, finish: finishAus(u), seit: u.created_at, kassenwart: u.kassenwart ? true : false, gastKonto: u.gast_konto ? true : false };
   }
 
   function uid(praefix) {
@@ -108,6 +112,95 @@ export function createApi(db, config) {
     const n = Number(wert);
     if (!Number.isInteger(n)) return null;
     return (n >= 1 && n <= 20) || n === 25 ? n : null;
+  }
+
+  /* Finish-Profil (Checkout-Engine): Lieblingsgruppen, Average, Wurftests,
+     Spielweise, das kalibrierte Profil und die eigene Tabelle. Der Server
+     prueft Form und Groesse, nicht die Dart-Logik -- die lebt im Client.
+     Ergebnis: das bereinigte Objekt oder null ("Standardtabelle"). */
+  const FINISH_GRUPPEN = new Set(['D20', 'D16', 'D18', 'D12', 'D14', 'Bull']);
+  const FINISH_SPIELWEISEN = new Set(['aufnahmen', 'checkout', 'auto']);
+  const FINISH_TESTS = new Set(['t20', 'doppel', 'bull', 'triple']);
+  const FINISH_MAX = 64 * 1024;
+  const FINISH_ZEILE = /^[TDS]?(\d{1,2}|BULL)( [TDS]?(\d{1,2}|BULL))*( >\d{1,3})?$/;
+  function pruefeFinish(wert) {
+    if (wert === null || wert === undefined) return null;
+    const kaputt = (was) => new HttpFehler(400, 'Das Finish-Profil ist unbrauchbar (' + was + ').');
+    if (typeof wert !== 'object' || Array.isArray(wert)) throw kaputt('kein Objekt');
+    if (JSON.stringify(wert).length > FINISH_MAX) throw kaputt('zu gross');
+    const out = { gruppen: [] };
+    if (wert.gruppen !== undefined) {
+      if (!Array.isArray(wert.gruppen)) throw kaputt('Gruppen');
+      for (const g of wert.gruppen) {
+        if (!FINISH_GRUPPEN.has(g)) throw kaputt('Gruppe ' + String(g).slice(0, 10));
+        if (!out.gruppen.includes(g) && out.gruppen.length < 2) out.gruppen.push(g);
+      }
+    }
+    if (wert.avg !== undefined && wert.avg !== null) {
+      const a = Number(wert.avg);
+      if (!(a > 0 && a <= 180)) throw kaputt('Average');
+      out.avg = a;
+    }
+    if (wert.spielweise !== undefined && wert.spielweise !== null) {
+      if (!FINISH_SPIELWEISEN.has(wert.spielweise)) throw kaputt('Spielweise');
+      out.spielweise = wert.spielweise;
+    }
+    if (wert.tests !== undefined && wert.tests !== null) {
+      if (typeof wert.tests !== 'object' || Array.isArray(wert.tests)) throw kaputt('Tests');
+      out.tests = {};
+      for (const [name, z] of Object.entries(wert.tests)) {
+        if (!FINISH_TESTS.has(name)) throw kaputt('Test ' + name.slice(0, 10));
+        if (z === null) { out.tests[name] = null; continue; }
+        if (typeof z !== 'object' || Array.isArray(z)) throw kaputt('Test ' + name);
+        const kopie = {};
+        for (const [k, v] of Object.entries(z)) {
+          if (!/^[a-z0-9_]{1,16}$/.test(k)) throw kaputt('Test ' + name);
+          const n = Number(v);
+          if (!Number.isInteger(n) || n < 0 || n > 25) throw kaputt('Test ' + name);
+          kopie[k] = n;
+        }
+        out.tests[name] = kopie;
+      }
+    }
+    if (wert.profil !== undefined && wert.profil !== null) {
+      if (typeof wert.profil !== 'object' || Array.isArray(wert.profil)) throw kaputt('Profil');
+      out.profil = {};
+      for (const [k, v] of Object.entries(wert.profil)) {
+        if (!/^[a-z_]{1,12}$/.test(k)) throw kaputt('Profil');
+        if (k === 'favoriten') {
+          if (!Array.isArray(v) || v.length > 12 || v.some((n) => !Number.isInteger(n) || n < 1 || n > 25)) throw kaputt('Favoriten');
+          out.profil[k] = v;
+        } else if (k === 'ziel') {
+          if (v !== 'aufnahmen' && v !== 'checkout') throw kaputt('Ziel');
+          out.profil[k] = v;
+        } else {
+          const n = Number(v);
+          if (!Number.isFinite(n) || n < 0 || n > 1000) throw kaputt('Profil');
+          out.profil[k] = n;
+        }
+      }
+    }
+    for (const feld of ['tabelle', 'tabelleCheckout']) {
+      if (wert[feld] === undefined || wert[feld] === null) continue;
+      const t = wert[feld];
+      if (typeof t !== 'object' || Array.isArray(t)) throw kaputt(feld);
+      const kopie = {};
+      for (const [rest, zeile] of Object.entries(t)) {
+        const r = Number(rest);
+        if (!Number.isInteger(r) || r < 2 || r > 170) throw kaputt(feld + ' Rest ' + rest.slice(0, 6));
+        if (typeof zeile !== 'string' || zeile.length > 60) throw kaputt(feld + ' ' + r);
+        const teile = zeile.split('|');
+        if (teile.length !== 3 || teile.some((x) => x !== '' && !FINISH_ZEILE.test(x))) throw kaputt(feld + ' ' + r);
+        kopie[r] = zeile;
+      }
+      out[feld] = kopie;
+    }
+    if (wert.stand !== undefined && wert.stand !== null) {
+      const st = Number(wert.stand);
+      if (!Number.isInteger(st) || st < 0) throw kaputt('Stand');
+      out.stand = st;
+    }
+    return out;
   }
 
   /* Der buergerliche Name fuer den Spielberichtsbogen: optional, aber wenn,
@@ -298,8 +391,10 @@ export function createApi(db, config) {
     const hue = body.hue === undefined ? u.hue : pruefeHue(body.hue);
     const dbl = body.dbl === undefined ? u.dbl : pruefeDoppel(body.dbl);
     const voll = body.voll === undefined ? u.real_name : pruefeVollName(body.voll);
-    db.prepare('UPDATE users SET display_name = ?, avatar = ?, hue = ?, dbl = ?, real_name = ? WHERE id = ?')
-      .run(name, avatar, hue, dbl, voll, u.id);
+    const finishObj = body.finish === undefined ? undefined : pruefeFinish(body.finish);
+    const finish = finishObj === undefined ? u.finish : finishObj === null ? null : JSON.stringify(finishObj);
+    db.prepare('UPDATE users SET display_name = ?, avatar = ?, hue = ?, dbl = ?, real_name = ?, finish = ? WHERE id = ?')
+      .run(name, avatar, hue, dbl, voll, finish, u.id);
     const frisch = db.prepare('SELECT * FROM users WHERE id = ?').get(u.id);
     sendJson(res, 200, { nutzer: eigenesProfil(frisch) });
   }
@@ -430,7 +525,7 @@ export function createApi(db, config) {
     const u = verlangeNutzer(req);
     const alle = db
       .prepare(
-        "SELECT id, display_name, real_name, avatar, hue, dbl, test, gast_konto FROM users WHERE status = 'aktiv'" +
+        "SELECT id, display_name, real_name, avatar, hue, dbl, finish, test, gast_konto FROM users WHERE status = 'aktiv'" +
           ' AND (test = 0 OR ? = 1)' +
           ' ORDER BY display_name COLLATE NOCASE'
       )

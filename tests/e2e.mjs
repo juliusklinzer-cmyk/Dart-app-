@@ -515,10 +515,24 @@ check('am Handy keine Schnellansicht - der Tipp oeffnet das Profil', !(await vis
   (await page.locator('.player-card').first().getAttribute('data-action')) === 'open-profile');
 await page.locator('.player-card').first().click();
 check('Profil-Detail offen', await visible('#screen-profile'));
+/* Entwurf "Profil": Spielerausweis mit Chips und Form, Kachel Finish-Weg,
+   Statistik-Links; die ausfuehrlichen Karten liegen hinter "Alle Stats". */
+check('der Spielerausweis zeigt Name, Status-Chip und die Form der letzten Spiele',
+  (await page.locator('#profile-detail .pa-ausweis .pa-name').count()) === 1 &&
+  (await text('#profile-detail .pa-chip.status')).toLowerCase() === 'mitglied' &&
+  (await page.locator('#profile-detail .pa-form .form').count()) > 0);
+check('die Kachel Finish-Weg nennt die Lieblingsgruppe und bietet das Ermitteln an',
+  (await text('#profile-detail .pa-finish')).toLowerCase().includes('lieblingsgruppe') &&
+  (await page.locator('#profile-detail [data-action="finish-ermitteln"]').count()) === 1);
+check('ohne Konto gibt es keine Konto-Kachel', (await page.locator('#profile-detail .pa-konto').count()) === 0);
+await page.locator('[data-action="profil-stats"]').click();
+check('"Alle Stats" legt die Statistik-Tafel ueber die Kacheln', await visible('#profile-detail .pa-panel'));
 const detail = await text('#profile-detail');
 check('Profil zeigt Scoring-Werte', detail.includes('3-Dart-Average') && detail.includes('First-9-Average'));
 check('Profil zeigt Finishing-Werte', detail.includes('Doppelquote') && detail.includes('Bestes Leg'));
 check('Profil listet gespielte Spiele', (await page.locator('#profile-detail .log-row').count()) === 3);
+await page.locator('[data-action="profil-panel-zu"]').click();
+check('"Fertig" schliesst die Tafel wieder', !(await visible('#profile-detail .pa-panel')));
 
 group('Neues Profil anlegen');
 await navTo('players');
@@ -822,6 +836,7 @@ check('Zurück aus der Statistik', await visible('#screen-boards'));
 
 await navTo('players');
 await page.locator('.player-card').first().click();
+await page.locator('[data-action="profil-stats"]').click();
 /* Überschriften werden per CSS groß gesetzt, daher ohne Groß-/Kleinschreibung prüfen. */
 const det = (await text('#profile-detail')).toLowerCase();
 check('Profil zeigt Cricket-Werte', det.includes('mpr') && det.includes('marken gesamt'));
@@ -2061,6 +2076,7 @@ check('Solo taucht nicht in der Form auf', soloNachher.form === soloVorher.form)
 check('die Darts zaehlen aber fuer den Average', soloNachher.darts > soloVorher.darts);
 await page.evaluate((id) => { window.__dart.setScreen('players'); }, soloId);
 await profilOeffnen(`#players-list [data-id="${soloId}"]`);
+await page.locator('[data-action="profil-stats"]').click();
 const soloProfil = await text('#profile-detail');
 check('das Profil listet das Solo-Spiel ohne Sieg und ohne Gegner',
   soloProfil.includes('Solo') && !soloProfil.includes('gegen undefined'), soloProfil.slice(0, 200));
@@ -2663,8 +2679,134 @@ check('die Felder zeigen den Weg auf das Lieblingsdoppel',
   (await text('.pcard.active .pfinish')).includes('D16'), await text('.pcard.active .pfinish'));
 check('und nicht mehr den allgemeinen',
   !(await text('.pcard.active .pfinish')).includes('D10'), await text('.pcard.active .pfinish'));
+
+/* ---------- Checkout-Engine, Phase 2: Lieblingsgruppe und eigene Tabelle im Profil ---------- */
+group('Finish-Engine im Profil: Gruppe, "Meine besten Finishes ermitteln", eigene Tabelle');
+/* Altbestand: aus dem einzelnen Lieblingsdoppel wird beim Laden die Gruppe
+   seiner Halbierungskette (8 -> D16, 10 -> D20). */
+await page.evaluate(() => {
+  const S = window.__dart.state();
+  S.profiles.push({ id: 'mig8', name: 'Acht', avatar: null, hue: 40, created: Date.now(), dbl: 8 });
+  S.profiles.push({ id: 'mig10', name: 'Zehn', avatar: null, hue: 60, created: Date.now(), dbl: 10 });
+  window.__dart.save();
+});
+await page.reload();
+await page.waitForFunction(() => !!window.__dart);
+check('altes Lieblingsdoppel 8 wird zur Gruppe D16 (Doppel 16), 10 zur Gruppe D20', await page.evaluate(() => {
+  const a = window.__dart.profile('mig8'), b = window.__dart.profile('mig10');
+  return a.finish.gruppen.join() === 'D16' && a.dbl === 16 && b.finish.gruppen.join() === 'D20' && b.dbl === 20;
+}));
+await page.evaluate(() => { const S = window.__dart.state(); S.profiles = S.profiles.filter((p) => p.id !== 'mig8' && p.id !== 'mig10'); window.__dart.save(); });
+/* Die Gruppe aus dem Dialog (D16) steht als Kette in der Kachel. */
+await page.evaluate(() => window.__dart.setScreen('players'));
+await profilOeffnen('.player-card[data-id="' + dblId + '"]');
+check('die Kachel zeigt die Kette der Gruppe D16 und die Standardtabelle',
+  (await text('#profile-detail .pa-kette')).replace(/\s+/g, ' ').includes('16 · 8 · 4 · 2 · 1') &&
+  (await text('#profile-detail .pa-finish')).includes('Standardtabelle für D16'), await text('#profile-detail .pa-finish'));
+/* Gruppenwahl in der Kachel: zweite Gruppe dazu, dann wieder weg. */
+await page.locator('[data-action="profil-gruppen"]').first().click();
+await page.locator('[data-action="profil-gruppe"][data-value="D20"]').click();
+check('eine zweite Gruppe kommt hinter die erste', await page.evaluate((id) => window.__dart.finishGruppen(window.__dart.profile(id)).join() === 'D16,D20', dblId));
+await page.locator('[data-action="profil-gruppe"][data-value="D20"]').click();
+await page.locator('[data-action="profil-gruppen-ok"]').click();
+check('nochmal antippen nimmt sie wieder weg, das Doppel der Hauptgruppe bleibt',
+  await page.evaluate((id) => window.__dart.finishGruppen(window.__dart.profile(id)).join() === 'D16' && window.__dart.profile(id).dbl === 16, dblId));
+/* Der Dialog: Gruppen, Average (vorbelegt aus den Spielen), vier Wurftests
+   (hier uebersprungen), Spielweise, dann rechnet die Engine und zeigt die
+   Unterschiede. Erst "Übernehmen" speichert. */
+await page.locator('[data-action="finish-ermitteln"]').click();
+check('Schritt 1 zeigt die Gruppen, D16 ist als Hauptgruppe markiert',
+  (await text('#overlay')).includes('Schritt 1 von 4') &&
+  (await page.locator('[data-action="fi-gruppe"][data-value="D16"].active .dl-k').innerText()).trim() === '1');
+await page.locator('[data-action="fi-weiter"]').click();
+const avgVor = await page.locator('[data-role="fi-avg"]').inputValue();
+check('Schritt 2 belegt den Average aus den gespielten Spielen vor', /^\d+(,\d)?$/.test(avgVor), avgVor);
+await page.locator('[data-role="fi-avg"]').fill('500');
+await page.locator('[data-action="fi-weiter"]').click();
+check('ein unsinniger Average wird abgewiesen', (await text('#overlay')).includes('zwischen 30 und 120'));
+await page.locator('[data-role="fi-avg"]').fill('60');
+await page.locator('[data-action="fi-weiter"]').click();
+check('Schritt 3: der erste Wurftest sind 10 Darts auf T20, Weiter erst nach 10 gezaehlten Darts',
+  (await text('#overlay')).includes('10 Darts auf T20') && (await page.locator('[data-action="fi-weiter"]').isDisabled()));
+await page.locator('[data-action="fi-zaehl"][data-kat="treffer"][data-d="1"]').click();
+check('gezaehlt wird mit Plus und Minus', (await page.locator('.fi-zeile').first().locator('.fi-n').innerText()).trim() === '1' &&
+  (await text('#overlay')).includes('Noch 9 Darts'));
+await page.locator('[data-action="fi-test-weg"]').click();
+check('Ueberspringen fuehrt zum Doppel-Test der Hauptgruppe', (await text('#overlay')).includes('10 Darts auf D16'));
+await page.locator('[data-action="fi-test-weg"]').click();
+check('dann Bull', (await text('#overlay')).includes('10 Darts auf Bull'));
+await page.locator('[data-action="fi-test-weg"]').click();
+check('dann T16', (await text('#overlay')).includes('10 Darts auf T16'));
+await page.locator('[data-action="fi-test-weg"]').click();
+check('Schritt 4 fragt die Spielweise, Aufnahmen ist vorgewaehlt',
+  (await text('#overlay')).includes('Schritt 4 von 4') && (await page.locator('[data-action="fi-spielweise"][data-value="aufnahmen"].active').count()) === 1);
+await page.locator('[data-action="fi-spielweise"][data-value="auto"]').click();
+await page.locator('[data-action="fi-weiter"]').click();
+await page.waitForSelector('[data-action="fi-uebernehmen"]', { timeout: 90000 });
+const fiErg = await text('#overlay');
+check('die Engine rechnet und zeigt "Das ändert sich für dich" mit der Streuung',
+  fiErg.toLowerCase().includes('das ändert sich für dich') && /Streuung \d+ × \d+ mm/.test(fiErg), fiErg.slice(0, 160));
+check('noch ist nichts gespeichert', await page.evaluate((id) => !window.__dart.profile(id).finish.tabelle, dblId));
+await page.locator('[data-action="fi-uebernehmen"]').click();
+const fiStand = await page.evaluate((id) => {
+  const p = window.__dart.profile(id), f = p.finish;
+  return { n: Object.keys(f.tabelle || {}).length, nc: Object.keys(f.tabelleCheckout || {}).length, avg: f.avg, sw: f.spielweise, stand: f.stand > 0,
+    sx: f.profil && f.profil.sigma_x, fav: f.profil && f.profil.favoriten.join(), w140: f.tabelle[140], c140: f.tabelleCheckout[140],
+    ld: window.__dart.lieblingsDoppel(id).tabelle === f.tabelle, ldc: window.__dart.lieblingsDoppel(id, { checkout: true }).tabelle === f.tabelleCheckout };
+}, dblId);
+check('Uebernehmen speichert Tabelle, Checkout-Variante, Average, Spielweise und Profil am Spieler',
+  fiStand.n === 169 && fiStand.nc === 169 && fiStand.avg === 60 && fiStand.sw === 'auto' && fiStand.stand &&
+  Math.abs(fiStand.sx - 16.2) < 0.5 && fiStand.fav === '16,8,4,2,1' && fiStand.w140 === 'T20 T16 D16|T20 T16 >32|T20 >80', JSON.stringify(fiStand));
+check('bei Spielweise "auto" liefert lieblingsDoppel je nach Lage die normale oder die Checkout-Tabelle', fiStand.ld && fiStand.ldc);
+check('die Kachel nennt jetzt die eigene Tabelle', (await text('#profile-detail .pa-finish')).includes('Eigene Tabelle vom'));
+/* Im Spiel: der Weg kommt aus der eigenen Tabelle. "auto" nimmt die
+   Checkout-Variante, sobald der Gegner im naechsten Besuch finishen kann. */
+const fiGegner = await page.evaluate((id) => window.__dart.activeProfiles().map((p) => p.id).filter((x) => x !== id)[0], dblId);
+await page.evaluate(([id, g]) => {
+  const D = window.__dart, S = D.state();
+  S.game = null; S.lineup = [id, g]; D.setScreen('setup');
+}, [dblId, fiGegner]);
+await page.locator('[data-action="set-mode"][data-value="quick"]').click();
+await page.locator('#settings-501 [data-setting="start"] button[data-value="301"]').click();
+await page.locator('#settings-501 [data-action="eingabe"][data-value="0"]').click();
+await page.locator('[data-action="start-game"]').click();
+await bullOffGo();
+/* Wer anwirft, entscheidet das Ausbullen - deshalb den Spieler am Wurf lesen. */
+const fiAmWurf = async () => page.evaluate(() => {
+  const n = document.querySelector('.pcard.active .pname');
+  return n ? n.textContent.trim() : '';
+});
+const dblName = await page.evaluate((id) => window.__dart.profile(id).name, dblId);
+if ((await fiAmWurf()).toLowerCase() !== dblName.toLowerCase()) await typeScore(100);   // der andere wirft an: 201
+await typeScore(161);                                                                 // unser Spieler: 140
+if ((await fiAmWurf()).toLowerCase() !== dblName.toLowerCase()) await typeScore(100);   // der andere: 201 bzw. 101
+const fiLage1 = await page.evaluate((id) => {
+  const D = window.__dart, p = D.profile(id);
+  const t = document.querySelector('.pcard.active .pfinish').textContent;
+  const gegnerRest = [...document.querySelectorAll('.pcard:not(.active) .rest')].map((e) => e.textContent).join(' ');
+  return { t, w: p.finish.tabelle[140].split('|')[0], c: p.finish.tabelleCheckout[140].split('|')[0], gegnerRest };
+}, dblId);
+const tokensDrin = (t, w) => w.split(' ').every((x) => t.includes(x));
+check('Gegner bei 201 oder 101: der Weg fuer 140 kommt aus der eigenen Tabelle (' + fiLage1.w + ')', tokensDrin(fiLage1.t, fiLage1.w), JSON.stringify(fiLage1));
+check('zur Kontrolle: der Weg aus der Checkout-Variante waere ein anderer oder derselbe, aber die Tabelle ist die eigene',
+  fiLage1.w.endsWith('D16'), fiLage1.w);
+/* Jetzt kann der Gegner finishen: Spielweise "auto" schaltet auf die
+   Checkout-Variante um. */
+await page.evaluate((id) => { window.__dart.profile(id).finish.tabelleCheckout[140] = 'T20 T20 D10|T20 T20 >20|T20 >80'; window.__dart.save(); }, dblId);
+await typeScore(0);     // unser Spieler laesst aus (bleibt 140)
+const gRest = await page.evaluate(() => Number(document.querySelector('.pcard.active .rest').textContent.replace(/\D/g, '')));
+await typeScore(gRest - 100);   // Gegner auf 100
+const fiLage2 = await page.evaluate(() => document.querySelector('.pcard.active .pfinish').textContent);
+check('Gegner bei 100: Spielweise "auto" nimmt die Checkout-Variante (T20 T20 D10)', tokensDrin(fiLage2, 'T20 T20 D10'), fiLage2);
+/* Aendert sich die Gruppe, passt die Tabelle nicht mehr: sie wird verworfen,
+   Average und Tests bleiben fuers Neu-Ermitteln. */
+check('eine andere Gruppe verwirft die Tabelle, der Average bleibt', await page.evaluate((id) => {
+  const D = window.__dart, p = D.profile(id);
+  const weg = D.finishGruppenSetzen(p, ['D20']);
+  return weg === true && !p.finish.tabelle && p.finish.avg === 60 && p.dbl === 20 && D.lieblingsDoppel(id).dbl === 20 && D.lieblingsDoppel(id).tabelle === null;
+}, dblId));
 /* Zurueck auf "egal", damit die folgenden Gruppen ihren gewohnten Stand haben. */
-await page.evaluate((id) => { window.__dart.profile(id).dbl = null; window.__dart.save(); }, dblId);
+await page.evaluate((id) => { const D = window.__dart, S = D.state(); S.game = null; D.finishGruppenSetzen(D.profile(id), []); D.profile(id).finish = null; D.setScreen('setup'); D.save(); }, dblId);
 
 group('Liga: Spielplan, Kalender, Zusagen-Hinweis');
 /* Das Trainingsspiel der Gruppe davor verwerfen – im Spiel ist die
