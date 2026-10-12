@@ -415,14 +415,17 @@ check('Weg zur Spielstatistik angeboten', (await textKlein('#overlay-card')).inc
 await page.locator('#overlay-card [data-action="open-summary"]').click();
 check('Spielstatistik sichtbar', await visible('#screen-summary'));
 const sumText = await text('#summary-box');
-check('Statistik zeigt Sieger und Legs', sumText.includes('gewinnt') && sumText.toLowerCase().includes('legs'));
-check('Statistik zeigt Average je Spieler', (await page.locator('#summary-box .sum-card').count()) === 2 && sumText.includes('3-Dart-Average'));
+check('Statistik zeigt Sieger (Pille) und Legs', (await page.locator('#summary-box .st-pille').count()) === 1 && sumText.toLowerCase().includes('legs'));
+check('Statistik zeigt Average je Spieler (je Spieler eine Spalte)', (await page.locator('#summary-box .st-kopf .st-sp').count()) === 2 && sumText.includes('3-Dart-Average') &&
+  (await page.locator('#summary-box .st-zeile').first().locator('.st-v').count()) === 2);
+check('der bessere Wert einer Zeile leuchtet, der Verlauf listet die Legs, der Kopf traegt die Navigation', (await page.locator('#summary-box .st-v.best').count()) >= 1 &&
+  (await page.locator('#summary-box .st-verlauf .st-item').count()) >= 1 && (await page.locator('#screen-summary #summary-kopf #nav').count()) === 1);
 check('Statistik zeigt Doppelquote und bestes Leg', sumText.includes('Doppelquote') && sumText.includes('Bestes Leg'));
 check('Hinweis auf Gesamtstatistik', (await text('#summary-box')).includes('Karriere-Statistik'));
 check('das Ergebnis steht genau mittig, auch bei ungleich langen Namen', await page.evaluate(() => {
-  const z = document.querySelector('#summary-box .sum-score.zwei');
-  z.firstElementChild.textContent = 'Vincent von Frankenberg';
-  const b = z.querySelector('b').getBoundingClientRect(), r = z.getBoundingClientRect();
+  const z = document.querySelector('#summary-box .st-ergebnis');
+  z.querySelector('.st-sn').textContent = 'Vincent von Frankenberg';
+  const b = z.querySelector('.st-stand b').getBoundingClientRect(), r = z.getBoundingClientRect();
   return Math.abs((b.left + b.width / 2) - (r.left + r.width / 2)) < 2;
 }));
 await page.locator('#summary-actions [data-action="to-winner"]').click();
@@ -838,7 +841,7 @@ await page.locator('[data-action="board-mode"][data-value="501"]').click();
 await page.locator('#board-log-knopf').click();
 await page.locator('#match-log .log-row').first().click();
 check('Spielstatistik aus dem Verlauf abrufbar', await visible('#screen-summary'));
-await page.locator('#summary-actions [data-action="summary-back"]').click();
+await page.locator('#screen-summary [data-action="summary-back"]').click();
 check('Zurück aus der Statistik', await visible('#screen-boards'));
 
 await navTo('players');
@@ -4711,15 +4714,15 @@ check('in der Spieleliste steht eine Turnierzeile', (await page.locator('#match-
 await page.locator('#board-log-knopf').click();
 await page.locator('#match-log .turnier-row[data-id="turnier_x"]').click();
 check('Turnier-Endstand oeffnet sich', await visible('#screen-summary') && (await textKlein('#summary-box')).includes('turnier'));
-check('drei Plaetze mit Siegen und Ø', (await page.locator('#summary-box .podium .p').count()) === 3 &&
-  (await page.locator('#summary-box .podium .p').first().innerText()).includes('2 Siege'));
-check('Ø des Siegers stimmt mit der Karte ueberein', await page.evaluate(() => {
-  const p = document.querySelector('#summary-box .podium .p .pv').textContent;
-  const karte = document.querySelector('#summary-box .sum-card .pline b').textContent;
-  return p.includes('Ø ' + (+karte).toFixed(1));
+check('drei Spalten mit Siegen und Legs, der Sieger zuerst', (await page.locator('#summary-box .st-kopf .st-sp').count()) === 3 &&
+  (await page.locator('#summary-box .st-kopf .st-sp').first().innerText()).includes('2 Siege'));
+check('Ø des Siegers steht in seiner Spalte und leuchtet', await page.evaluate(() => {
+  const zeile = document.querySelector('#summary-box .st-zeile');
+  const v = zeile.querySelectorAll('.st-v');
+  return zeile.textContent.includes('3-Dart-Average') && parseFloat(v[0].textContent) > 0 && v[0].classList.contains('best');
 }));
-check('die einzelnen Spiele sind aufgelistet', (await page.locator('#summary-box .pline.tap').count()) === 3);
-await page.locator('#summary-box .pline.tap').first().click();
+check('die einzelnen Spiele sind aufgelistet', (await page.locator('#summary-box .st-item.tap').count()) === 3);
+await page.locator('#summary-box .st-item.tap').first().click();
 check('ein Spiel daraus laesst sich oeffnen', (await textKlein('#summary-box')).includes('3-dart-average') && !(await textKlein('#summary-box')).includes('endstand'));
 
 /* Dasselbe Turnier laeuft hier noch als geteilte Kopie (anderes Geraet hat

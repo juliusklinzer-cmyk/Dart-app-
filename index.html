@@ -914,8 +914,9 @@
 
 <!-- ============ SPIELSTATISTIK ============ -->
 <section id="screen-summary" class="screen">
-  <!-- Spielende der schnellen Spiele nach dem Entwurf "Sieger": Setup-Kopf
-       statt der Statistik-Kopfzeile (Klasse sieger, siehe renderSiegerSpiel). -->
+  <!-- Spielstatistik nach dem Entwurf (renderSummary) bzw. das Spielende der
+       schnellen Spiele nach dem Entwurf "Sieger" (Klasse sieger, renderSiegerSpiel).
+       Der Setup-Kopf traegt die Navigation. -->
   <div class="setup-kopf" id="summary-kopf">
     <div class="marke" data-action="nav" data-screen="setup" role="button" tabindex="0" aria-label="Zum Spiel">
       <span class="blink-logo" role="img" aria-label="Blink 180"></span>
@@ -925,11 +926,6 @@
       </div>
     </div>
   </div>
-  <header class="app-header row">
-    <button class="icon-btn" data-action="summary-back" aria-label="Statistik schließen">‹</button>
-    <h1>Spielstatistik</h1>
-    <span style="width:44px"></span>
-  </header>
   <div id="summary-box"></div>
   <div id="summary-actions"></div>
 </section>
@@ -1155,6 +1151,15 @@
 
 <!-- ============ KONTO ============ -->
 <section id="screen-konto" class="screen">
+  <div class="setup-kopf" id="konto-kopf">
+    <div class="marke" data-action="nav" data-screen="setup" role="button" tabindex="0" aria-label="Zum Spiel">
+      <span class="blink-logo" role="img" aria-label="Blink 180"></span>
+      <div>
+        <div class="wort">Blink <span class="rot">180</span></div>
+        <div class="sub">Dart Turnier · est. 2026</div>
+      </div>
+    </div>
+  </div>
   <header class="app-header">
     <h1>Konto</h1>
   </header>

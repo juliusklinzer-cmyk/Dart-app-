@@ -700,10 +700,19 @@ Highlights, unten „Zum Menü“ (speichert) und „Revanche“ (gleiches Spiel
 - **Online** (geteiltes Spiel mit eigenem Konto): Titel aus eigener Sicht („Du
   gewinnst!“, „Knapp dran!“, „Nächstes Mal!“) und die eigene Platzierung als Pille.
 
-Die ausführlichen Karten (501: 3-Dart-Average, First 9, beste Aufnahme, 180/140+/100+,
-höchstes Finish, Doppelquote, bestes Leg, Darts, jedes Leg einzeln; Cricket: MPR,
-Marken, Punkte, Felder, Darts; RTW: erreichte Zahl, Darts, Treffer, Quote) gibt es
-weiter für Turnierspiele und für jedes gespeicherte Spiel aus der Spieleliste.
+Die **Spielstatistik** (nach dem Entwurf „Spielstatistik“) gibt es für Turnierspiele
+direkt nach dem Spiel und für jedes gespeicherte Spiel aus der Spieleliste: oben das
+Ergebnis als Karte (Spielart und Daten links, in der Mitte der Stand „A 3 : 1 B“ bzw.
+„A gewinnt“, rechts der Sieger als Pille; im Archiv der Zurück-Pfeil), darunter alle Werte
+als Vergleich mit einer Spalte je Spieler, der beste Wert einer Zeile leuchtet (501:
+3-Dart-Average, First 9, höchste Aufnahme, 180/140+/100+, höchstes Finish, Doppelquote,
+bestes Leg, Darts; Cricket: MPR, Marken, Punkte, Felder zu, Darts; RTW: erreichte Zahl,
+Darts, Treffer, Quote; Finisher: Punkte, Ø Darts, schnellstes Finish, höchste Zahl;
+Hunter: Fänge, Darts, Treffer, Quote; Kaiwen: Checks, Darts, PB), rechts der Verlauf (Legs,
+Spiele eines Turniers zum Antippen, Runden, Felder, Fänge, Versuche). Im Turnierspiel
+stehen unten „Letzte Aufnahme zurücknehmen“, „Zur Tabelle“ und „Nächstes Spiel“ bzw.
+„Turnier auswerten“. Der Kopf mit der Navigation ist derselbe wie überall, auch im
+Konto.
 
 Von dort geht es direkt weiter zum nächsten Spiel bzw. zur Turnierauswertung, oder das
 Trainingsspiel wird gespeichert. Dieselbe Auswertung lässt sich später jederzeit über

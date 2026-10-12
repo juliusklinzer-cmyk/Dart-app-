@@ -3447,7 +3447,7 @@
     var kopf = screen === 'setup' ? $('setup-kopf') : screen === 'tournament' ? $('turnier-kopf')
       : screen === 'liga' ? $('liga-kopf') : screen === 'boards' ? $('boards-kopf') : screen === 'players' ? $('players-kopf')
       : screen === 'winner' ? $('winner-kopf') : screen === 'profile' ? $('profile-kopf')
-      : screen === 'summary' && siegerLive() ? $('summary-kopf') : null;
+      : screen === 'summary' ? $('summary-kopf') : screen === 'konto' ? $('konto-kopf') : null;
     if (kopf && navEl.parentElement !== kopf) kopf.appendChild(navEl);
     else if (!kopf && navEl.parentElement !== document.body) document.body.insertBefore(navEl, $('screen-setup'));
     /* Das •••-Menue gibt es nur in den Spielbildern - ueberall sonst wird
@@ -3519,7 +3519,7 @@
     /* Das Startbild steht am Tablet und quergedrehten Handy fest im Rahmen,
        innen scrollen nur Spielerliste und Einstellungen (body.fix-setup). */
     document.body.classList.toggle('fix-setup', S.screen === 'setup' || S.screen === 'tournament' || S.screen === 'bulloff' || S.screen === 'boards' ||
-      S.screen === 'liga' || S.screen === 'players' || S.screen === 'winner' || S.screen === 'profile' || siegerLive());
+      S.screen === 'liga' || S.screen === 'players' || S.screen === 'winner' || S.screen === 'profile' || S.screen === 'summary');
     if (S.screen === 'setup') { gaesteAufraeumen(); renderSetup(); }
     /* Der Hintergrundtakt laeuft nur da, wo man ihn auch sieht: im
        Turnierbildschirm. Sonst fragt die App den ganzen Abend nach Daten,
@@ -7096,7 +7096,7 @@
         if ((e.kind || '501') !== '501' && e.kind !== 'quick') continue;
         if (!Array.isArray(e.matches)) continue;
         for (var j = 0; j < e.matches.length; j++) {
-          if (e.matches[j].id === id) return { m: e.matches[j], start: (e.settings && e.settings.start) || 501, live: false };
+          if (e.matches[j].id === id) return { m: e.matches[j], start: (e.settings && e.settings.start) || 501, live: false, quick: e.kind === 'quick', at: e.at };
         }
       }
       return null;
@@ -9296,146 +9296,149 @@
       '<button class="btn start-rot" data-action="restart-game">' + d.haupt + '</button></div></div>';
   }
 
+  /* ================= Spielstatistik (Entwurf "Spielstatistik", Okt. 2026) =================
+   * Oben das Ergebnis: Art und Meta, in der Mitte der Stand (zu zweit
+   * "A 3 : 1 B", sonst "A gewinnt"), rechts der Sieger als Pille. Links
+   * alle Werte als Vergleich, je Spieler eine Spalte, der beste Wert je
+   * Zeile leuchtet. Rechts der Verlauf (Legs, Spiele, Runden, Felder).
+   * Unten links das Zuruecknehmen, rechts weiter; im Archiv steht der
+   * Zurueck-Pfeil im Ergebnis. Das Ende eines laufenden schnellen Spiels
+   * zeigt stattdessen die Sieger-Buehne (renderSiegerSpiel). */
+  var ST_PFEIL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 12H7M11.5 6.5L6 12l5.5 5.5"></path></svg>';
+  function stZahl(s) { var m = /-?\d+(?:[.,]\d+)?/.exec(String(s)); return m ? parseFloat(m[0].replace(',', '.')) : NaN; }
+  function statistikHtml(d) {
+    var n = d.spieler.length;
+    var ergebnis = '<div class="st-ergebnis' + (d.archiv ? ' archiv' : '') + '">' +
+      '<div class="st-links"><button class="st-zurueck" data-action="summary-back" aria-label="Zurück">' + ST_PFEIL + '</button>' +
+        '<div class="st-art"><span class="kt">' + d.kind + '</span><span class="st-meta">' + d.meta + '</span></div></div>' +
+      '<div class="st-stand">' + (d.zwei
+        ? '<span class="st-sn' + (d.sieger === d.zwei.a ? ' sieg' : '') + '">' + esc(pname(d.zwei.a)) + '</span><b>' + d.zwei.stand + '</b>' +
+          '<span class="st-sn' + (d.sieger === d.zwei.b ? ' sieg' : '') + '">' + esc(pname(d.zwei.b)) + '</span>'
+        : '<b class="st-titel">' + d.titel + '</b>') + '</div>' +
+      '<div class="st-rechts">' + (d.sieger ? '<span class="st-pille">🏆 ' + esc(pname(d.sieger)) + '</span>' : d.pille ? '<span class="st-pille">' + d.pille + '</span>' : '') + '</div></div>';
+    var cols = 'minmax(0, ' + (n <= 2 ? '1.1' : '1.3') + 'fr) repeat(' + n + ', minmax(0, 1fr))';
+    var koepfe = d.spieler.map(function (sp) {
+      return '<div class="st-sp' + (sp.id === d.sieger ? ' sieg' : '') + '">' + avatarHTML(profile(sp.id), 'md') +
+        '<span class="st-sp-name">' + esc(pname(sp.id)) + '</span><span class="st-sp-sub">' + (sp.sub || '') + '</span></div>';
+    }).join('');
+    var zeilen = d.zeilen.map(function (z) {
+      var best = -1;
+      if (z.besser && z.v.length > 1) {
+        var nums = z.v.map(stZahl), ok = nums.filter(function (x) { return !isNaN(x); });
+        if (ok.length > 1) {
+          var ziel = z.besser === 'hi' ? Math.max.apply(null, ok) : Math.min.apply(null, ok);
+          if (nums.filter(function (x) { return x === ziel; }).length === 1) best = nums.indexOf(ziel);
+        }
+      }
+      return '<div class="st-zeile"><span class="st-k">' + z.k + '</span>' +
+        z.v.map(function (v, i) { return '<span class="st-v' + (i === best ? ' best' : '') + '">' + v + '</span>'; }).join('') + '</div>';
+    }).join('');
+    var vergleich = '<div class="card st-vergleich' + (n <= 2 ? ' zwei' : n > 3 ? ' viele' : '') + '" style="--cols:' + cols + '">' +
+      '<div class="st-kopf"><span class="kt">Statistik</span>' + koepfe + '</div><div class="st-zeilen">' + zeilen + '</div></div>';
+    var seite = d.seite ? '<div class="card st-verlauf"><span class="kt">' + d.seite.titel + '</span><div class="st-liste">' + (d.seite.eintraege.length ? d.seite.eintraege.map(function (e) {
+      return '<div class="st-item' + (e.action ? ' tap' : '') + '"' + (e.action ? ' data-action="' + e.action + '" ' + (e.attrs || '') + ' role="button" tabindex="0"' : '') + '>' +
+        '<span class="st-n">' + e.n + '</span><span class="st-wer">' +
+        (e.wer ? '<span class="st-punkt" style="background:hsl(' + hue(e.wer) + ',55%,52%)"></span><span class="st-wname">' + esc(pname(e.wer)) + '</span>' : '<span class="st-wname">' + (e.wertext || '') + '</span>') +
+        '</span><span class="st-wert">' + e.text + '</span></div>';
+    }).join('') : '<p class="hint">Noch nichts.</p>') + '</div><span class="st-note">Die Werte fließen in Karriere-Statistik und Ranglisten ein.</span></div>' : '';
+    var a = d.aktionen;
+    var aktionen = a ? '<div class="st-aktionen">' +
+      (a.fix ? '<button class="btn st-fix" data-action="' + a.fix.action + '"' + (a.fix.attrs || '') + '>' + ST_PFEIL + a.fix.label + '</button>' : '') +
+      '<span class="st-luft"></span>' +
+      (a.zurueck ? '<button class="btn ghost" data-action="' + a.zurueck.action + '">' + a.zurueck.label + '</button>' : '') +
+      (a.haupt ? '<button class="btn start-rot" data-action="' + a.haupt.action + '">' + a.haupt.label + '</button>' : '') + '</div>' : '';
+    return { box: ergebnis + '<div class="st-inhalt' + (d.seite ? '' : ' allein') + '">' + vergleich + seite + '</div>', aktionen: aktionen };
+  }
+  /* Die X01-Zeilen (Turnierspiel, schnelles Spiel, Turnier): eine Spalte je Spieler. */
+  function x01Zeilen(stats, mitDoppel) {
+    var z = [
+      { k: '3-Dart-Average', v: stats.map(function (st) { return st.darts ? st.avg.toFixed(2) : '–'; }), besser: 'hi' },
+      { k: 'First 9', v: stats.map(function (st) { return st.first9Darts ? st.first9.toFixed(2) : '–'; }), besser: 'hi' },
+      { k: 'Höchste Aufnahme', v: stats.map(function (st) { return st.highScore || '–'; }), besser: 'hi' },
+      { k: '180 / 140+ / 100+', v: stats.map(function (st) { return st.s180 + ' / ' + st.s140 + ' / ' + st.s100; }), besser: null },
+      { k: 'Höchstes Finish', v: stats.map(function (st) { return st.highCO || '–'; }), besser: 'hi' }
+    ];
+    if (mitDoppel) z.push({ k: 'Doppelquote', v: stats.map(function (st) { return st.doubleAttempts ? st.doubleQuote.toFixed(0) + ' % (' + st.checkouts + '/' + st.doubleAttempts + ')' : '–'; }), besser: 'hi' });
+    z.push({ k: 'Bestes Leg', v: stats.map(function (st) { return st.bestLeg ? st.bestLeg + ' Darts' : '–'; }), besser: 'lo' });
+    z.push({ k: 'Darts geworfen', v: stats.map(function (st) { return String(st.darts); }), besser: null });
+    return z;
+  }
+  /* Der Stand zu zweit: Saetze, wenn welche gespielt werden, sonst Legs. */
+  function x01Stand(m) {
+    var st = mehrereLegs(m) ? satzStand(m) : null;
+    if (st && st.gewinnSaetze > 1) return st.saetze[m.p[0]] + ' : ' + st.saetze[m.p[1]];
+    return legsWon(m, m.p[0]) + ' : ' + legsWon(m, m.p[1]);
+  }
+  function legEintraege(m, start) {
+    var out = [];
+    m.legs.forEach(function (leg, i) {
+      if (!leg.winner) return;
+      var dl = dartsInLeg(leg, leg.winner);
+      out.push({ n: 'Leg ' + (i + 1), wer: leg.winner, text: dl + ' Darts · Ø ' + ((start / dl) * 3).toFixed(1) });
+    });
+    return out;
+  }
   function renderSummary() {
     var s = UI.summary;
     var found = s ? findGame(s.kind, s.id) : null;
     if (!found) { S.screen = S.matches.length ? 'tournament' : 'setup'; render(); return; }
     /* Das Ende eines laufenden Spiels: die Sieger-Buehne. Danach (Archiv)
-       die ausfuehrlichen Karten. */
+       die Spielstatistik. */
     var live = siegerLive() && found.g && found.live;
     $('screen-summary').classList.toggle('sieger', !!live);
     if (live) { renderSiegerSpiel(s.kind, found); return; }
 
-    var box = '';
-    var actions = '';
-    var note = '<p class="hint center">Diese Werte fließen in Karriere-Statistik und Ranglisten ein.</p>';
+    var d = null;
+    var P = function (nn, e, mm) { return plural(nn, e, mm); };
+    var spielAktionen = function (istLive) {
+      return istLive ? { zurueck: { label: 'Speichern und beenden', action: 'finish-game' }, haupt: { label: 'Nochmal spielen', action: 'restart-game' } } : null;
+    };
 
     if (s.kind === 'turnier') {
-      /* Der Endstand eines gespielten Turniers, so wie er am Abend auf dem
-         Bildschirm stand -- zum Nachschauen aus der Spieleliste. */
+      /* Der Endstand eines gespielten Turniers -- zum Nachschauen aus der Spieleliste. */
       var th = found.h;
       var tStart = (th.settings && th.settings.start) || 501;
       var tTab = turnierTabelle(th);
-      var tMedals = ['🥇', '🥈', '🥉'];
       var tFertig = th.matches.filter(function (x) { return x.done; });
-      box = '<div class="sum-head"><div class="big-emoji">🏆</div>' +
-        '<h2 class="sum-title">' + (th.winner ? esc(pname(th.winner)) + ' gewinnt' : 'Turnier') + '</h2>' +
-        '<div class="muted">Turnier · ' + fmtDate(th.at) + ' · ' + plural((th.lineup || []).length, 'Spieler', 'Spieler') +
-          ' · ' + tStart + ' Double Out' + (th.settings && th.settings.bestOf > 1 ? ' · Best of ' + th.settings.bestOf : ' · ein Leg') +
-          ' · ' + plural(tFertig.length, 'Spiel', 'Spiele') + '</div></div>' +
-        '<div class="podium">' + tTab.map(function (st, i) {
-          return '<div class="p ' + (i === 0 && st.won > 0 ? 'first' : '') + '">' +
-            '<div class="medal">' + (tMedals[i] || (i + 1) + '.') + '</div>' +
-            avatarHTML(profile(st.id), 'sm') +
-            '<div class="pn">' + esc(st.name) + '</div>' +
-            '<div class="pv">' + plural(st.won, 'Sieg', 'Siege') + ' · Legs ' + st.legsWon + ':' + st.legsLost + ' · Ø ' + (st.avg ? st.avg.toFixed(1) : '–') + '</div>' +
-            '</div>';
-        }).join('') + '</div>' +
-        '<div class="sum-cards">' + tTab.map(function (st) {
-          return '<div class="card sum-card ' + (th.winner === st.id ? 'win' : '') + '">' +
-            '<div class="sum-who">' + avatarHTML(profile(st.id), 'md') +
-              '<div><div class="nm">' + esc(st.name) + '</div>' +
-              '<div class="muted">' + st.won + ' von ' + st.matches + ' gewonnen</div></div></div>' +
-            statRow('3-Dart-Average', st.darts ? st.avg.toFixed(2) : '–') +
-            statRow('First 9', st.first9Darts ? st.first9.toFixed(2) : '–') +
-            statRow('Höchste Aufnahme', st.highScore || '–') +
-            statRow('180 / 140+ / 100+', st.s180 + ' / ' + st.s140 + ' / ' + st.s100) +
-            statRow('Höchstes Finish', st.highCO || '–') +
-            statRow('Bestes Leg', st.bestLeg ? st.bestLeg + ' Darts' : '–') +
-            statRow('Darts geworfen', st.darts) +
-            '</div>';
-        }).join('') + '</div>' +
-        '<div class="card"><h2>Spiele</h2>' + tFertig.map(function (x) {
-          return '<div class="pline tap" data-action="open-summary" data-kind="501" data-id="' + esc(x.id) + '" role="button" tabindex="0">' +
-            '<span>' + (x.winner === x.p[0] ? '<b>' + esc(pname(x.p[0])) + '</b>' : esc(pname(x.p[0]))) + ' – ' +
-            (x.winner === x.p[1] ? '<b>' + esc(pname(x.p[1])) + '</b>' : esc(pname(x.p[1]))) + '</span>' +
-            '<b>' + legsWon(x, x.p[0]) + ':' + legsWon(x, x.p[1]) + '</b></div>';
-        }).join('') + '</div>' + note;
-      actions = '<button class="btn ghost full" data-action="summary-back">Zurück</button>';
+      d = {
+        kind: 'Turnier', archiv: true, aktionen: null,
+        meta: fmtDate(th.at) + ' · ' + P((th.lineup || []).length, 'Spieler', 'Spieler') + ' · ' + tStart + ' Double Out' +
+          (th.settings && th.settings.bestOf > 1 ? ' · Best of ' + th.settings.bestOf : ' · ein Leg') + ' · ' + P(tFertig.length, 'Spiel', 'Spiele'),
+        zwei: null, titel: th.winner ? esc(pname(th.winner)) + ' gewinnt' : 'Turnier', sieger: th.winner || null,
+        spieler: tTab.map(function (st) { return { id: st.id, sub: P(st.won, 'Sieg', 'Siege') + ' · ' + st.legsWon + ':' + st.legsLost }; }),
+        zeilen: x01Zeilen(tTab, false),
+        seite: { titel: 'Spiele', eintraege: tFertig.map(function (x, i) {
+          var verlierer = x.p[0] === x.winner ? x.p[1] : x.p[0];
+          return { n: 'Sp. ' + (i + 1), wer: x.winner, text: 'gegen ' + esc(pname(verlierer)) + ' · ' + legsWon(x, x.winner) + ':' + legsWon(x, verlierer),
+            action: 'open-summary', attrs: 'data-kind="501" data-id="' + esc(x.id) + '"' };
+        }) }
+      };
 
     } else if (s.kind === '501') {
       var m = found.m;
       var map = collectStats([{ matches: [m], start: found.start }], m.p);
       m.p.forEach(function (id) { finalize(map[id]); });
-
       var mSolo = m.p.length < 2;
-      box = '<div class="sum-head">' +
-        '<div class="big-emoji">' + (mSolo ? '🎯' : '🏆') + '</div>' +
-        '<h2 class="sum-title">' + esc(pname(m.winner)) + (mSolo ? ' hat ausgemacht' : ' gewinnt') + '</h2>' +
-        (mSolo
-          ? '<div class="muted">Schnelles X01 · ' + found.start + ' Double Out · Solo</div>'
-          : m.p.length > 2
-          ? '<div class="sum-score">' + m.p.map(function (pid) {
-              return '<span class="' + (m.winner === pid ? 'w' : '') + '">' + esc(pname(pid)) + ' <b>' + legsWon(m, pid) + '</b></span>';
-            }).join(' · ') + '</div>'
-          : '<div class="sum-score zwei">' +
-            '<span class="' + (m.winner === m.p[0] ? 'w' : '') + '">' + esc(pname(m.p[0])) + '</span>' +
-            '<b>' + legsWon(m, m.p[0]) + ':' + legsWon(m, m.p[1]) + '</b>' +
-            '<span class="' + (m.winner === m.p[1] ? 'w' : '') + '">' + esc(pname(m.p[1])) + '</span>' +
-          '</div>') +
-        '</div>' +
-
-        '<div class="sum-cards">' + m.p.map(function (id) {
-          var st = map[id];
-          return '<div class="card sum-card ' + (m.winner === id ? 'win' : '') + '">' +
-            '<div class="sum-who">' + avatarHTML(profile(id), 'md') +
-              '<div><div class="nm">' + esc(pname(id)) + '</div>' +
-              '<div class="muted">' + (mSolo ? 'ausgecheckt' : st.legsWon + ' Leg' + (st.legsWon === 1 ? '' : 's')) + '</div></div></div>' +
-            statRow('3-Dart-Average', st.darts ? st.avg.toFixed(2) : '–') +
-            statRow('First 9', st.first9Darts ? st.first9.toFixed(2) : '–') +
-            statRow('Höchste Aufnahme', st.highScore || '–') +
-            statRow('180 / 140+ / 100+', st.s180 + ' / ' + st.s140 + ' / ' + st.s100) +
-            statRow('Höchstes Finish', st.highCO || '–') +
-            statRow('Doppelquote', st.doubleAttempts ? st.doubleQuote.toFixed(0) + ' % (' + st.checkouts + '/' + st.doubleAttempts + ')' : '–') +
-            statRow('Bestes Leg', st.bestLeg ? st.bestLeg + ' Darts' : '–') +
-            statRow('Darts geworfen', st.darts) +
-            '</div>';
-        }).join('') + '</div>' +
-
-        '<div class="card"><h2>Legs</h2>' + m.legs.map(function (leg, i) {
-          if (!leg.winner) return '';
-          var d = dartsInLeg(leg, leg.winner);
-          var pts = found.start;
-          return statRow('Leg ' + (i + 1), esc(pname(leg.winner)) + ' · ' + d + ' Darts · Ø ' + ((pts / d) * 3).toFixed(1));
-        }).join('') + '</div>' + note;
-
-      var fixBtn = m.done
-        ? '<button class="btn ghost full" data-action="reopen-match" data-id="' + esc(m.id) + '">Letzte Aufnahme zurücknehmen</button>'
-        : '';
-      if (found.live && !allMatchesDone()) {
-        actions = '<button class="btn primary full big" data-action="ov-next-match">Nächstes Spiel</button>' +
-          '<button class="btn ghost full" data-action="to-tournament">Zur Tabelle</button>' + fixBtn;
-      } else if (found.live) {
-        actions = '<button class="btn primary full big" data-action="to-winner">Turnier auswerten</button>' +
-          '<button class="btn ghost full" data-action="to-tournament">Zur Tabelle</button>' + fixBtn;
-      } else {
-        actions = '<button class="btn ghost full" data-action="summary-back">Zurück</button>';
+      var mPos = found.live ? S.matches.indexOf(m) : -1;
+      var mLegs = m.legs.filter(function (l) { return l.winner; }).length;
+      var mAkt = null;
+      if (found.live) {
+        mAkt = {
+          fix: m.done ? { label: 'Letzte Aufnahme zurücknehmen', action: 'reopen-match', attrs: ' data-id="' + esc(m.id) + '"' } : null,
+          zurueck: { label: 'Zur Tabelle', action: 'to-tournament' },
+          haupt: !allMatchesDone() ? { label: 'Nächstes Spiel', action: 'ov-next-match' } : { label: 'Turnier auswerten', action: 'to-winner' }
+        };
       }
-
-    } else if (s.kind === 'cricket') {
-      var g = found.g;
-      var cst = cricketState(g);
-      box = '<div class="sum-head"><div class="big-emoji">🏆</div>' +
-        '<h2 class="sum-title">' + esc(pname(g.winner)) + (g.players.length < 2 ? ' hat alles zu' : ' gewinnt') + '</h2>' +
-        '<div class="muted">Cricket ' + (g.scoring ? 'mit Punkten' : 'ohne Punkte') + '</div></div>' +
-        '<div class="sum-cards">' + g.players.map(function (id) {
-          var closed = CRICKET_NUMBERS.filter(function (n) { return cst.marks[id][n] >= 3; }).length;
-          var mpr = cst.darts[id] ? (cst.allMarks[id] / cst.darts[id]) * 3 : 0;
-          return '<div class="card sum-card ' + (g.winner === id ? 'win' : '') + '">' +
-            '<div class="sum-who">' + avatarHTML(profile(id), 'md') +
-              '<div class="nm">' + esc(pname(id)) + '</div></div>' +
-            statRow('MPR', mpr.toFixed(2), 'Marken je 3 Darts') +
-            statRow('Marken', cst.allMarks[id]) +
-            (g.scoring ? statRow('Punkte', cst.score[id]) : '') +
-            statRow('Felder zu', closed + ' / 7') +
-            statRow('Darts', cst.darts[id]) +
-            '</div>';
-        }).join('') + '</div>' + note;
-
-      actions = found.live
-        ? '<button class="btn primary full big" data-action="restart-game">Nochmal spielen</button>' +
-          '<button class="btn ghost full" data-action="finish-game">Speichern &amp; beenden</button>'
-        : '<button class="btn ghost full" data-action="summary-back">Zurück</button>';
+      d = {
+        kind: 'X01 · ' + (mSolo ? 'Solo' : found.quick ? 'Schnelles Spiel' : found.live ? 'Turnierspiel ' + (mPos + 1) + ' von ' + S.matches.length : 'Turnierspiel'), archiv: !found.live, aktionen: mAkt,
+        meta: (found.live ? '' : fmtDate(m.at || found.at) + ' · ') + found.start + ' Double Out · ' + (mehrereLegs(m) ? dauerText(m) : P(mLegs, 'Leg', 'Legs')),
+        zwei: !mSolo && m.p.length === 2 ? { a: m.p[0], b: m.p[1], stand: x01Stand(m) } : null,
+        titel: m.winner ? esc(pname(m.winner)) + (mSolo ? ' hat ausgemacht' : ' gewinnt') : 'Offen',
+        sieger: mSolo ? null : m.winner || null, pille: mSolo ? '🎯 ausgemacht' : null,
+        spieler: m.p.map(function (id) { return { id: id, sub: mSolo ? 'ausgecheckt' : P(legsWon(m, id), 'Leg', 'Legs') }; }),
+        zeilen: x01Zeilen(m.p.map(function (id) { return map[id]; }), true),
+        seite: { titel: 'Legs', eintraege: legEintraege(m, found.start) }
+      };
 
     } else if (s.kind === 'quick') {
       var qg = found.g;
@@ -9444,91 +9447,85 @@
       var qMap = collectStats([{ matches: [qm], start: qStart }], qm.p);
       qm.p.forEach(function (id) { finalize(qMap[id]); });
       var qLeg = qm.legs[qm.legs.length - 1];
-
       var qSolo = qm.p.length < 2;
       var qSSt = mehrereLegs(qm) ? satzStand(qm) : null;
-      box = '<div class="sum-head"><div class="big-emoji">' + (qSolo ? '🎯' : '🏆') + '</div>' +
-        '<h2 class="sum-title">' + (qm.winner ? esc(pname(qm.winner)) + (qSolo ? ' hat ausgemacht' : ' gewinnt') : 'Abgebrochen – ohne Sieger') + '</h2>' +
-        '<div class="muted">Schnelles X01 · ' + qStart + ' Double Out · ' +
-          (qSolo ? 'Solo' : plural(qm.p.length, 'Spieler', 'Spieler')) +
-          (qSSt ? ' · ' + dauerText(qm) : '') + '</div>' +
-        (qSSt && !qSolo ? '<div class="muted sum-stand">' + standZeile(qm, qSSt) + '</div>' : '') + '</div>' +
-        '<div class="sum-cards">' + qm.p.map(function (id) {
-          var st = qMap[id];
-          var rest = qLeg ? remainingIn(qLeg, id) : 0;
-          return '<div class="card sum-card ' + (qm.winner === id ? 'win' : '') + '">' +
-            '<div class="sum-who">' + avatarHTML(profile(id), 'md') +
-              '<div><div class="nm">' + esc(pname(id)) + '</div>' +
-              '<div class="muted">' + (qSSt ? kurzStand(qSSt, id) : qm.winner === id ? 'ausgecheckt' : 'Rest ' + rest) + '</div></div></div>' +
-            statRow('3-Dart-Average', st.darts ? st.avg.toFixed(2) : '–') +
-            statRow('First 9', st.first9Darts ? st.first9.toFixed(2) : '–') +
-            statRow('Höchste Aufnahme', st.highScore || '–') +
-            statRow('180 / 140+ / 100+', st.s180 + ' / ' + st.s140 + ' / ' + st.s100) +
-            statRow('Höchstes Finish', st.highCO || '–') +
-            statRow('Darts geworfen', st.darts) +
-            '</div>';
-        }).join('') + '</div>' + note;
+      d = {
+        kind: 'X01 · ' + (qSolo ? 'Solo' : 'Schnelles Spiel'), archiv: !found.live, aktionen: spielAktionen(found.live),
+        meta: (found.live ? '' : fmtDate(qg.at || qm.at) + ' · ') + qStart + ' Double Out · ' + (qSolo ? 'Solo' : P(qm.p.length, 'Spieler', 'Spieler')) + ' · ' + (qSSt ? dauerText(qm) : P(qm.legs.filter(function (l) { return l.winner; }).length, 'Leg', 'Legs')),
+        zwei: !qSolo && qm.p.length === 2 ? { a: qm.p[0], b: qm.p[1], stand: x01Stand(qm) } : null,
+        titel: qm.winner ? esc(pname(qm.winner)) + (qSolo ? ' hat ausgemacht' : ' gewinnt') : 'Abgebrochen',
+        sieger: qSolo ? null : qm.winner || null, pille: qSolo ? '🎯 ausgemacht' : null,
+        spieler: qm.p.map(function (id) { return { id: id, sub: qSSt ? kurzStand(qSSt, id) : qm.winner === id ? 'ausgecheckt' : 'Rest ' + (qLeg ? remainingIn(qLeg, id) : 0) }; }),
+        zeilen: x01Zeilen(qm.p.map(function (id) { return qMap[id]; }), true),
+        seite: { titel: 'Legs', eintraege: legEintraege(qm, qStart) }
+      };
 
-      actions = found.live
-        ? '<button class="btn primary full big" data-action="restart-game">Nochmal spielen</button>' +
-          '<button class="btn ghost full" data-action="finish-game">Speichern &amp; beenden</button>'
-        : '<button class="btn ghost full" data-action="summary-back">Zurück</button>';
+    } else if (s.kind === 'cricket') {
+      var g = found.g;
+      var cst = cricketState(g);
+      var cZu = function (id) { return CRICKET_NUMBERS.filter(function (nx) { return cst.marks[id][nx] >= 3; }); };
+      var cMpr = function (id) { return cst.darts[id] ? (cst.allMarks[id] / cst.darts[id]) * 3 : 0; };
+      var cRunden = Math.ceil((g.throws || []).length / (3 * g.players.length));
+      var cZeilen = [
+        { k: 'MPR', v: g.players.map(function (id) { return cMpr(id).toFixed(2); }), besser: 'hi' },
+        { k: 'Marken', v: g.players.map(function (id) { return String(cst.allMarks[id]); }), besser: 'hi' }
+      ];
+      if (g.scoring) cZeilen.push({ k: 'Punkte', v: g.players.map(function (id) { return String(cst.score[id]); }), besser: 'hi' });
+      cZeilen.push({ k: 'Felder zu', v: g.players.map(function (id) { return cZu(id).length + ' / 7'; }), besser: null });
+      cZeilen.push({ k: 'Darts', v: g.players.map(function (id) { return String(cst.darts[id]); }), besser: null });
+      d = {
+        kind: 'Cricket · ' + (g.scoring ? 'mit Punkten' : 'ohne Punkte'), archiv: !found.live, aktionen: spielAktionen(found.live),
+        meta: (found.live ? '' : fmtDate(g.at) + ' · ') + P(g.players.length, 'Spieler', 'Spieler') + ' · ' + P(cRunden, 'Runde', 'Runden'),
+        zwei: null, titel: esc(pname(g.winner)) + (g.players.length < 2 ? ' hat alles zu' : ' gewinnt'), sieger: g.players.length < 2 ? null : g.winner,
+        pille: g.players.length < 2 ? '🎯 alles zu' : null,
+        spieler: g.players.map(function (id) { var z = cZu(id).length; return { id: id, sub: z === 7 ? 'alle zu' : z + ' zu' }; }),
+        zeilen: cZeilen,
+        seite: { titel: 'Felder zu', eintraege: g.players.map(function (id, i) {
+          return { n: (i + 1) + '.', wer: id, text: cZu(id).map(function (nx) { return nx === 25 ? 'Bull' : nx; }).join(' · ') || '–' };
+        }) }
+      };
 
     } else if (s.kind === 'hunter') {
       var hg = found.g;
       var hst = hunterState({ players: hg.players, throws: hg.throws || [], variante: hg.variante, handicap: hg.handicap, startPos: hg.startPos });
       var hSolo = hg.players.length < 2;
-      box = '<div class="sum-head"><div class="big-emoji">' + (hSolo ? '🎯' : '🏆') + '</div>' +
-        '<h2 class="sum-title">' + (hSolo ? (hst.fertig ? plural(hst.fertig.darts, 'Dart', 'Darts') + ' für die Runde' : 'Runde nicht beendet') : esc(pname(hg.winner)) + ' gewinnt die Jagd') + '</h2>' +
-        '<div class="muted">Hunter · ' + hunterVarianteText(hg) + ' · ' + fmtDate(hg.at) + (hg.bestNeu ? ' · neuer Bestwert' : '') + '</div></div>' +
-        '<div class="sum-cards">' + hg.players.map(function (id) {
-          var raus = hst.raus[id];
-          var quote = hst.darts[id] ? Math.round(hst.treffer[id] / hst.darts[id] * 100) : 0;
-          return '<div class="card sum-card ' + (hg.winner === id && !hSolo ? 'win' : '') + '">' +
-            '<div class="sum-who">' + avatarHTML(profile(id), 'md') +
-              '<div><div class="nm">' + esc(pname(id)) + '</div>' +
-              '<div class="muted">' + (hSolo ? (hg.bestNeu ? 'Neuer Bestwert: ' + plural(hg.bestNeu, 'Dart', 'Darts') : 'Variante ' + hunterVarianteText(hg).split(' ·')[0]) : raus ? 'gefangen von ' + esc(pname(raus.von)) : hg.winner === id ? 'als Letzter übrig' : 'im Spiel') +
-                (hg.variante === 'handicap' ? ' · Stufe ' + (hunterStufe(hg, id) === 2 ? 'Doppel' : hunterStufe(hg, id) === 3 ? 'Triple' : 'Single') : '') + '</div></div></div>' +
-            (hSolo ? '' : statRow('Fänge', hst.faenge[id] || 0)) +
-            statRow('Darts geworfen', hst.darts[id] || 0) +
-            statRow('Trefferquote', (hst.treffer[id] || 0) + ' von ' + (hst.darts[id] || 0) + ' (' + quote + ' %)') +
-            '</div>';
-        }).join('') + '</div>' + note;
-      actions = found.live
-        ? '<button class="btn primary full big" data-action="restart-game">Nochmal spielen</button>' +
-          '<button class="btn ghost full" data-action="finish-game">Speichern &amp; beenden</button>'
-        : '<button class="btn ghost full" data-action="summary-back">Zurück</button>';
+      var hName = hg.variante === 'boost' ? 'Boost' : hg.variante === 'handicap' ? 'Handicap' : 'Normal';
+      var hZeilen = [];
+      if (!hSolo) hZeilen.push({ k: 'Fänge', v: hg.players.map(function (id) { return String(hst.faenge[id] || 0); }), besser: 'hi' });
+      hZeilen.push({ k: 'Darts geworfen', v: hg.players.map(function (id) { return String(hst.darts[id] || 0); }), besser: null });
+      hZeilen.push({ k: 'Treffer', v: hg.players.map(function (id) { return String(hst.treffer[id] || 0); }), besser: 'hi' });
+      hZeilen.push({ k: 'Trefferquote', v: hg.players.map(function (id) { return hst.darts[id] ? Math.round(hst.treffer[id] / hst.darts[id] * 100) + ' %' : '–'; }), besser: 'hi' });
+      if (hg.variante === 'handicap') hZeilen.push({ k: 'Stufe', v: hg.players.map(function (id) { return ['', 'Single', 'Doppel', 'Triple'][hunterStufe(hg, id)]; }), besser: null });
+      var hFaenge = [];
+      hg.players.forEach(function (id) { var r = hst.raus[id]; if (r) hFaenge.push({ at: r.at, wer: r.von, text: 'fängt ' + esc(pname(id)) }); });
+      hFaenge.sort(function (a, b) { return a.at - b.at; });
+      d = {
+        kind: 'Hunter · ' + hName, archiv: !found.live, aktionen: spielAktionen(found.live),
+        meta: (found.live ? '' : fmtDate(hg.at) + ' · ') + (hSolo ? 'Solo' : P(hg.players.length, 'Spieler', 'Spieler') + ' · ' + P(hst.runde, 'Runde', 'Runden')) + (hg.bestNeu ? ' · neuer Bestwert' : ''),
+        zwei: null, titel: hSolo ? (hst.fertig ? P(hst.fertig.darts, 'Dart', 'Darts') + ' für die Runde' : 'Runde nicht beendet') : esc(pname(hg.winner)) + ' gewinnt die Jagd',
+        sieger: hSolo ? null : hg.winner, pille: hSolo && hg.bestNeu ? '🏆 Bestwert ' + P(hg.bestNeu, 'Dart', 'Darts') : null,
+        spieler: hg.players.map(function (id) { var r = hst.raus[id]; return { id: id, sub: hSolo ? P(hst.darts[id] || 0, 'Dart', 'Darts') : r ? 'gefangen' : hg.winner === id ? 'als Letzter übrig' : 'im Spiel' }; }),
+        zeilen: hZeilen,
+        seite: hSolo ? null : { titel: 'Fänge', eintraege: hFaenge.map(function (f, i) { return { n: (i + 1) + '.', wer: f.wer, text: f.text }; }) }
+      };
 
     } else if (s.kind === 'kaiwen') {
       var kg = found.g;
       var kst = kaiwenState({ players: kg.players, versuche: kg.versuche || [] });
       var kSolo = kg.players.length < 2;
-      box = '<div class="sum-head"><div class="big-emoji">' + (kg.rekordNeu ? '🏆' : '🎯') + '</div>' +
-        '<h2 class="sum-title">' + (kg.rekordNeu ? 'Neuer Rekord: ' + kg.rekordNeu : 'Höchste Zahl ' + kst.hoechste) + '</h2>' +
-        '<div class="muted">Kaiwen · ' + (kSolo ? 'Solo' : 'Team · ' + kg.players.map(pname).map(esc).join(' und ')) + ' · ' + fmtDate(kg.at) + '</div></div>' +
-        '<div class="card">' +
-          statRow('Höchste Zahl', kst.hoechste) +
-          statRow('Versuche', kst.versuche) +
-          statRow('Checks', kst.checks + (kst.versuche ? ' (' + Math.round(kst.quote) + ' %)' : '')) +
-          (kg.rekordNeu ? statRow('Rekord', 'gefallen: ' + kg.rekordNeu + ' 🏆') : '') +
-        '</div>' +
-        '<div class="sum-cards">' + kg.players.map(function (id) {
-          var pbNeu = kg.pbNeu && kg.pbNeu[id];
-          return '<div class="card sum-card ' + (pbNeu ? 'win' : '') + '">' +
-            '<div class="sum-who">' + avatarHTML(profile(id), 'md') +
-              '<div><div class="nm">' + esc(pname(id)) + '</div>' +
-              '<div class="muted">' + (pbNeu ? 'Neuer PB ' + (kSolo ? 'Solo' : 'Team') + ': ' + pbNeu : 'PB ' + (kSolo ? 'Solo' : 'Team') + ': ' + (kaiwenPB(id, kSolo) === null ? '–' : kaiwenPB(id, kSolo))) + '</div></div></div>' +
-            statRow('Checks', kst.checksJe[id] || 0) +
-            statRow('Darts geworfen', kst.dartsJe[id] || 0) +
-            '</div>';
-        }).join('') + '</div>' +
-        (kst.verlauf.length ? '<div class="card"><h2>Versuche</h2>' + kst.verlauf.map(function (v, i) {
-          return statRow('Versuch ' + (i + 1) + ' · ' + v.zahl, v.check ? 'Check ✓' : 'daneben');
-        }).join('') + '</div>' : '') + note;
-      actions = found.live
-        ? '<button class="btn primary full big" data-action="restart-game">Nochmal spielen</button>' +
-          '<button class="btn ghost full" data-action="finish-game">Speichern &amp; beenden</button>'
-        : '<button class="btn ghost full" data-action="summary-back">Zurück</button>';
+      d = {
+        kind: 'Kaiwen · ' + (kSolo ? 'Solo' : 'Team'), archiv: !found.live, aktionen: spielAktionen(found.live),
+        meta: (found.live ? '' : fmtDate(kg.at) + ' · ') + P(kst.versuche, 'Versuch', 'Versuche') + ' · ' + P(kst.checks, 'Check', 'Checks') + (kst.versuche ? ' (' + Math.round(kst.quote) + ' %)' : ''),
+        zwei: null, titel: kg.rekordNeu ? 'Neuer Rekord: ' + kg.rekordNeu : 'Score ' + kst.hoechste, sieger: null,
+        pille: kg.rekordNeu ? '🏆 Rekord' : '🔥 ' + kst.hoechste,
+        spieler: kg.players.map(function (id) { var pbNeu = kg.pbNeu && kg.pbNeu[id]; var pb = pbNeu || kaiwenPB(id, kSolo); return { id: id, sub: 'PB ' + (pb === null ? '–' : pb) + (pbNeu ? ' neu' : '') }; }),
+        zeilen: [
+          { k: 'Checks', v: kg.players.map(function (id) { return String(kst.checksJe[id] || 0); }), besser: 'hi' },
+          { k: 'Darts geworfen', v: kg.players.map(function (id) { return String(kst.dartsJe[id] || 0); }), besser: null },
+          { k: 'PB ' + (kSolo ? 'Solo' : 'Team'), v: kg.players.map(function (id) { var pb = (kg.pbNeu && kg.pbNeu[id]) || kaiwenPB(id, kSolo); return pb === null ? '–' : String(pb); }), besser: 'hi' }
+        ],
+        seite: { titel: 'Versuche', eintraege: kst.verlauf.map(function (v, i) { return { n: 'V' + (i + 1), wer: null, wertext: String(v.zahl), text: v.check ? 'Check ✓' : 'daneben' }; }) }
+      };
 
     } else if (s.kind === 'finisher') {
       var fg2 = found.g;
@@ -9541,58 +9538,46 @@
         if (best[rd.sieger] === null || rd.darts < best[rd.sieger]) best[rd.sieger] = rd.darts;
         if (rd.zahl > hoch[rd.sieger]) hoch[rd.sieger] = rd.zahl;
       });
-      var gespielt = (fg2.rounds || []).filter(function (rd) { return rd.sieger; }).length;
-
-      box = '<div class="sum-head"><div class="big-emoji">🏆</div>' +
-        '<h2 class="sum-title">' + esc(pname(fg2.winner)) + (fg2.players.length < 2 ? ' hat ausgemacht' : ' gewinnt') + '</h2>' +
-        '<div class="muted">Finisher · ' + plural(gespielt, 'Runde', 'Runden') + ' · auf ' + fg2.ziel + ' Punkte</div></div>' +
-        '<div class="sum-cards">' + fg2.players.map(function (id) {
-          return '<div class="card sum-card ' + (fg2.winner === id ? 'win' : '') + '">' +
-            '<div class="sum-who">' + avatarHTML(profile(id), 'md') +
-              '<div class="nm">' + esc(pname(id)) + '</div></div>' +
-            statRow('Punkte', gewonnen[id]) +
-            statRow('Ø Darts je Finish', gewonnen[id] ? (dartsSum[id] / gewonnen[id]).toFixed(1) : '–') +
-            statRow('Schnellstes Finish', best[id] === null ? '–' : plural(best[id], 'Dart', 'Darts')) +
-            statRow('Höchste Zahl', hoch[id] || '–') +
-            '</div>';
-        }).join('') + '</div>' +
-        '<div class="card"><h2>Runden</h2>' + (fg2.rounds || []).map(function (rd, i) {
-          if (!rd.sieger) return '';
-          return statRow('Runde ' + (i + 1) + ' · ' + rd.zahl,
-            esc(pname(rd.sieger)) + ' · ' + plural(rd.darts, 'Dart', 'Darts'));
-        }).join('') + '</div>' + note;
-
-      actions = found.live
-        ? '<button class="btn primary full big" data-action="restart-game">Nochmal spielen</button>' +
-          '<button class="btn ghost full" data-action="finish-game">Speichern &amp; beenden</button>'
-        : '<button class="btn ghost full" data-action="summary-back">Zurück</button>';
+      var gespielt = (fg2.rounds || []).filter(function (rd) { return rd.sieger; });
+      d = {
+        kind: 'Finisher', archiv: !found.live, aktionen: spielAktionen(found.live),
+        meta: (found.live ? '' : fmtDate(fg2.at) + ' · ') + P(gespielt.length, 'Runde', 'Runden') + ' · auf ' + fg2.ziel + ' Punkte · ' + P(fg2.players.length, 'Spieler', 'Spieler'),
+        zwei: null, titel: esc(pname(fg2.winner)) + (fg2.players.length < 2 ? ' hat ausgemacht' : ' gewinnt'), sieger: fg2.players.length < 2 ? null : fg2.winner,
+        pille: fg2.players.length < 2 ? '🎯 ausgemacht' : null,
+        spieler: fg2.players.map(function (id) { return { id: id, sub: P(gewonnen[id], 'Punkt', 'Punkte') }; }),
+        zeilen: [
+          { k: 'Punkte', v: fg2.players.map(function (id) { return String(gewonnen[id]); }), besser: 'hi' },
+          { k: 'Ø Darts je Finish', v: fg2.players.map(function (id) { return gewonnen[id] ? (dartsSum[id] / gewonnen[id]).toFixed(1) : '–'; }), besser: 'lo' },
+          { k: 'Schnellstes Finish', v: fg2.players.map(function (id) { return best[id] === null ? '–' : P(best[id], 'Dart', 'Darts'); }), besser: 'lo' },
+          { k: 'Höchste Zahl', v: fg2.players.map(function (id) { return hoch[id] ? String(hoch[id]) : '–'; }), besser: 'hi' }
+        ],
+        seite: { titel: 'Runden', eintraege: (fg2.rounds || []).map(function (rd, i) { return rd.sieger ? { n: 'R' + (i + 1), wer: rd.sieger, text: rd.zahl + ' · ' + P(rd.darts, 'Dart', 'Darts') } : null; }).filter(Boolean) }
+      };
 
     } else {
       var rg = found.g;
       var rst = rtwState(rg);
-      box = '<div class="sum-head"><div class="big-emoji">🏆</div>' +
-        '<h2 class="sum-title">' + esc(pname(rg.winner)) + (rg.players.length < 2 ? ' ist durch' : ' gewinnt') + '</h2>' +
-        '<div class="muted">Round the World · ' + rst.darts[rg.winner] + ' Darts bis Bull</div></div>' +
-        '<div class="sum-cards">' + rg.players.map(function (id) {
-          var t = rst.target[id];
-          return '<div class="card sum-card ' + (rg.winner === id ? 'win' : '') + '">' +
-            '<div class="sum-who">' + avatarHTML(profile(id), 'md') +
-              '<div class="nm">' + esc(pname(id)) + '</div></div>' +
-            statRow('Gekommen bis', rg.winner === id ? 'Bull ✓' : (t === 25 ? 'Bull' : t)) +
-            statRow('Darts', rst.darts[id]) +
-            statRow('Treffer', rst.hits[id]) +
-            statRow('Trefferquote', rst.darts[id] ? Math.round(rst.hits[id] / rst.darts[id] * 100) + ' %' : '–') +
-            '</div>';
-        }).join('') + '</div>' + note;
-
-      actions = found.live
-        ? '<button class="btn primary full big" data-action="restart-game">Nochmal spielen</button>' +
-          '<button class="btn ghost full" data-action="finish-game">Speichern &amp; beenden</button>'
-        : '<button class="btn ghost full" data-action="summary-back">Zurück</button>';
+      var rDurch = function (id) { return rg.winner === id || !!rst.finished[id]; };
+      var rBis = function (id) { var t = rst.target[id]; return rDurch(id) ? 'Bull ✓' : (t === 25 ? 'Bull' : String(t)); };
+      d = {
+        kind: 'Round the World', archiv: !found.live, aktionen: spielAktionen(found.live),
+        meta: (found.live ? '' : fmtDate(rg.at) + ' · ') + (rg.boost !== false ? 'Boost · ' : '') + (rg.winner ? P(rst.darts[rg.winner], 'Dart', 'Darts') + ' bis Bull · ' : '') + P(rg.players.length, 'Spieler', 'Spieler'),
+        zwei: null, titel: esc(pname(rg.winner)) + (rg.players.length < 2 ? ' ist durch' : ' gewinnt'), sieger: rg.players.length < 2 ? null : rg.winner,
+        pille: rg.players.length < 2 ? '🎯 durch' : null,
+        spieler: rg.players.map(function (id) { return { id: id, sub: rDurch(id) ? 'Bull ✓' : 'bis ' + rBis(id) }; }),
+        zeilen: [
+          { k: 'Gekommen bis', v: rg.players.map(rBis), besser: null },
+          { k: 'Darts', v: rg.players.map(function (id) { return String(rst.darts[id]); }), besser: null },
+          { k: 'Treffer', v: rg.players.map(function (id) { return String(rst.hits[id]); }), besser: 'hi' },
+          { k: 'Trefferquote', v: rg.players.map(function (id) { return rst.darts[id] ? Math.round(rst.hits[id] / rst.darts[id] * 100) + ' %' : '–'; }), besser: 'hi' }
+        ],
+        seite: { titel: 'Weg', eintraege: rg.players.map(function (id, i) { return { n: (i + 1) + '.', wer: id, text: (rDurch(id) ? 'durch' : 'bis ' + rBis(id)) + ' · ' + P(rst.darts[id], 'Dart', 'Darts') }; }) }
+      };
     }
 
-    $('summary-box').innerHTML = box;
-    $('summary-actions').innerHTML = actions;
+    var html = statistikHtml(d);
+    $('summary-box').innerHTML = html.box;
+    $('summary-actions').innerHTML = html.aktionen;
   }
 
   /* Highlights eines Turniers fuer den Sieger-Bildschirm: 180er, High-
@@ -12904,7 +12889,7 @@
         !(ev.target && ev.target.closest && ev.target.closest('button, a, input, select, [role="button"]'))) {
       var saKnoepfe = document.querySelectorAll('#summary-actions [data-action]');
       var saZiel = null;
-      if (ev.key === 'Escape') saZiel = document.querySelector('#summary-actions [data-action="summary-back"], #summary-actions [data-action="finish-game"]');
+      if (ev.key === 'Escape') saZiel = document.querySelector('#screen-summary [data-action="summary-back"], #summary-actions [data-action="finish-game"]');
       if (!saZiel) saZiel = document.querySelector('#summary-actions .btn.primary[data-action], #summary-actions .btn.start-rot[data-action]') || saKnoepfe[0];
       if (saZiel) { ev.preventDefault(); handleAction(saZiel.getAttribute('data-action'), saZiel); return; }
     }
@@ -13290,7 +13275,7 @@
     }
     if (SPIEL_SCREENS[S.screen] || S.screen === 'bulloff') return false;
     if (S.screen === 'summary') {
-      var sb = document.querySelector('#summary-actions [data-action="summary-back"]');
+      var sb = document.querySelector('#screen-summary [data-action="summary-back"]');
       if (sb) { handleAction('summary-back', sb); return true; }
       return false;
     }
@@ -13381,7 +13366,7 @@
     }
     if (UI.overlay) { zurueckFalle(); return; }
     if (S.screen === 'summary') {
-      var sb = document.querySelector('#summary-actions [data-action="summary-back"]');
+      var sb = document.querySelector('#screen-summary [data-action="summary-back"]');
       if (sb) handleAction('summary-back', sb);
       zurueckFalle(); return;
     }
