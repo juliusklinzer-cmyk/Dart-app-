@@ -169,7 +169,10 @@ body { background: transparent; }
 body {
   max-width: var(--maxw, 620px);
   margin: 0 auto;
-  padding: env(safe-area-inset-top) 12px calc(12px + env(safe-area-inset-bottom));
+  /* Unten nur der groessere Wert aus Innenabstand und Schutzzone fuer den
+     Home-Balken, nicht beide addiert - sonst bleibt am iPad fast ein
+     Zentimeter leer (Julius, 13.10.). */
+  padding: env(safe-area-inset-top) 12px max(12px, env(safe-area-inset-bottom, 0px));
   min-height: 100vh;
   min-height: 100dvh;
 }
@@ -4709,7 +4712,7 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
     height: 100vh; height: 100dvh; min-height: 0; overflow: hidden;
     display: flex; flex-direction: column;
     max-width: none;
-    padding: env(safe-area-inset-top) clamp(8px, 1.6vw, 26px) calc(clamp(6px, 1.8vh, 22px) + env(safe-area-inset-bottom));
+    padding: env(safe-area-inset-top) clamp(8px, 1.6vw, 26px) max(clamp(6px, 1.8vh, 22px), env(safe-area-inset-bottom, 0px));
   }
   body.fix-setup > * { flex: none; }
   body.fix-setup #screen-setup.active { flex: 1 1 auto; min-height: 0; padding: clamp(6px, 1.8vh, 22px) 0 0; gap: clamp(8px, 1.8vh, 22px); }
