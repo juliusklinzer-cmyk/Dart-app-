@@ -430,6 +430,29 @@ async function main() {
     gleich(r.daten.nutzer.finish.unbekannt, undefined, 'und landen nicht in der Datenbank');
     r = await julius.ruf('PATCH', '/api/me', { finish: null });
     gleich(r.daten.nutzer.finish, null, 'null raeumt das Finish-Profil weg (Standardtabelle)');
+
+    /* Profil bearbeiten: Kuerzel, Wurfhand und die E-Mail als Anmeldename. */
+    r = await julius.ruf('PATCH', '/api/me', { kuerzel: 'JK', wurfhand: 'L' });
+    gleich(r.daten.nutzer.kuerzel + '/' + r.daten.nutzer.wurfhand, 'JK/L', 'Kuerzel und Wurfhand lassen sich setzen');
+    r = await julius.ruf('GET', '/api/users');
+    gleich(r.daten.nutzer.find((n) => n.id === julius_id).kuerzel, 'JK', 'das Kuerzel steht auch im Kader');
+    r = await julius.ruf('PATCH', '/api/me', { kuerzel: 'VIER' });
+    gleich(r.status, 400, 'ein Kuerzel mit vier Zeichen wird abgewiesen');
+    r = await julius.ruf('PATCH', '/api/me', { wurfhand: 'beide' });
+    gleich(r.status, 400, 'eine unbekannte Wurfhand ebenfalls');
+    r = await julius.ruf('PATCH', '/api/me', { kuerzel: '', wurfhand: null });
+    gleich(r.daten.nutzer.kuerzel + '/' + r.daten.nutzer.wurfhand, 'null/null', 'leer heisst: aus dem Namen bzw. keine Angabe');
+    r = await julius.ruf('PATCH', '/api/me', { email: 'tobi@example.de' });
+    gleich(r.status, 409, 'eine E-Mail, die einem anderen Konto gehoert, wird abgewiesen');
+    r = await julius.ruf('PATCH', '/api/me', { email: 'keine-adresse' });
+    gleich(r.status, 400, 'eine kaputte E-Mail ebenfalls');
+    r = await julius.ruf('PATCH', '/api/me', { email: 'Julius.Neu@Example.de' });
+    gleich(r.status, 200, 'eine freie E-Mail laesst sich setzen');
+    gleich(r.daten.nutzer.email, 'julius.neu@example.de', 'und kommt klein geschrieben zurueck');
+    r = await julius.ruf('GET', '/api/me');
+    gleich(r.daten.nutzer.email, 'julius.neu@example.de', 'die Sitzung bleibt bestehen');
+    r = await julius.ruf('PATCH', '/api/me', { email: 'julius@example.de' });
+    gleich(r.status, 200, 'und zurueck auf die alte Adresse');
     r = await julius.ruf('PATCH', '/api/me', { dbl: 20 });
     gleich(r.daten.nutzer.dbl, 20, 'zurueck auf D20');
 

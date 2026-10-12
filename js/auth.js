@@ -87,11 +87,23 @@
     });
   }
 
+  /* Neue E-Mail (Anmeldename) fuer das eigene Konto - der Server prueft
+     Form und ob sie frei ist. */
+  function emailAendern(email) {
+    if (!nutzer) return Promise.reject(new Error('Nicht angemeldet.'));
+    return ruf('PATCH', '/api/me', { email: email }).then(function (daten) {
+      nutzer = daten.nutzer;
+      merkeServer(nutzer);
+      neuZeichnen(true);
+    });
+  }
+
   function sichereProfil() {
     if (!nutzer) return Promise.resolve();
     var p = D.profile(nutzer.id);
     if (!p) return Promise.resolve();
-    return ruf('PATCH', '/api/me', { name: p.name, avatar: p.avatar, hue: p.hue, dbl: p.dbl || null, voll: p.voll || null, finish: p.finish || null }).then(function (daten) {
+    return ruf('PATCH', '/api/me', { name: p.name, avatar: p.avatar, hue: p.hue, dbl: p.dbl || null, voll: p.voll || null, finish: p.finish || null,
+      kuerzel: p.kuerzel || null, wurfhand: p.wurfhand || null }).then(function (daten) {
       nutzer = daten.nutzer;
       profilOffenSetzen(false);
     });
@@ -136,6 +148,8 @@
         // uebersetzt (8 -> D16) - sonst verloere es seinen Favoriten.
         p.finish = r.finish && typeof r.finish === 'object' ? r.finish : null;
         if (D.finishNachruesten) D.finishNachruesten(p);
+        p.kuerzel = r.kuerzel || null;
+        p.wurfhand = r.wurfhand || null;
         // Der buergerliche Name ebenso -- er steht auf dem Spielbericht.
         p.voll = r.voll || null;
         p.hidden = false;
@@ -151,6 +165,8 @@
           hue: typeof r.hue === 'number' && r.hue >= 0 ? r.hue : D.freeHue(),
           dbl: r.dbl || null,
           finish: r.finish && typeof r.finish === 'object' ? r.finish : null,
+          kuerzel: r.kuerzel || null,
+          wurfhand: r.wurfhand || null,
           voll: r.voll || null,
           test: !!r.test,
           gastKonto: !!r.gastKonto,
@@ -628,6 +644,7 @@
       holeRoster: holeRoster,
       darfBearbeiten: darfBearbeiten,
       profilGeaendert: profilGeaendert,
+      emailAendern: emailAendern,
       gesperrt: gesperrt
     };
   }

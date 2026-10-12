@@ -44,10 +44,10 @@ export function createApi(db, config) {
     try { const f = JSON.parse(u.finish); return f && typeof f === 'object' ? f : null; } catch (e) { return null; }
   }
   function oeffentlich(u) {
-    return { id: u.id, name: u.display_name, avatar: u.avatar, hue: u.hue, dbl: u.dbl, voll: u.real_name || null, finish: finishAus(u), test: u.test ? true : false, gastKonto: u.gast_konto ? true : false };
+    return { id: u.id, name: u.display_name, avatar: u.avatar, hue: u.hue, dbl: u.dbl, voll: u.real_name || null, finish: finishAus(u), kuerzel: u.kuerzel || null, wurfhand: u.wurfhand || null, test: u.test ? true : false, gastKonto: u.gast_konto ? true : false };
   }
   function eigenesProfil(u) {
-    return { id: u.id, name: u.display_name, email: u.email, avatar: u.avatar, hue: u.hue, dbl: u.dbl, voll: u.real_name || null, finish: finishAus(u), seit: u.created_at, kassenwart: u.kassenwart ? true : false, gastKonto: u.gast_konto ? true : false };
+    return { id: u.id, name: u.display_name, email: u.email, avatar: u.avatar, hue: u.hue, dbl: u.dbl, voll: u.real_name || null, finish: finishAus(u), kuerzel: u.kuerzel || null, wurfhand: u.wurfhand || null, seit: u.created_at, kassenwart: u.kassenwart ? true : false, gastKonto: u.gast_konto ? true : false };
   }
 
   function uid(praefix) {
@@ -216,6 +216,19 @@ export function createApi(db, config) {
     const n = String(wert).trim().replace(/\s+/g, ' ');
     if (n.length > 60) throw new HttpFehler(400, 'Der Name ist zu lang.');
     return n;
+  }
+
+  /* Kuerzel im Avatar: bis drei sichtbare Zeichen, sonst NULL (= aus dem Namen). */
+  function pruefeKuerzel(wert) {
+    if (wert === null || wert === undefined) return null;
+    const k = String(wert).trim().replace(/[\u0000-\u001f<>"'&]/g, '');
+    if (k.length > 3) throw new HttpFehler(400, 'Das Kürzel hat höchstens drei Zeichen.');
+    return k || null;
+  }
+  function pruefeWurfhand(wert) {
+    if (wert === null || wert === undefined || wert === '') return null;
+    if (wert !== 'R' && wert !== 'L') throw new HttpFehler(400, 'Die Wurfhand ist R oder L.');
+    return wert;
   }
 
   function pruefeHue(wert) {
@@ -399,8 +412,18 @@ export function createApi(db, config) {
     const voll = body.voll === undefined ? u.real_name : pruefeVollName(body.voll);
     const finishObj = body.finish === undefined ? undefined : pruefeFinish(body.finish);
     const finish = finishObj === undefined ? u.finish : finishObj === null ? null : JSON.stringify(finishObj);
-    db.prepare('UPDATE users SET display_name = ?, avatar = ?, hue = ?, dbl = ?, real_name = ?, finish = ? WHERE id = ?')
-      .run(name, avatar, hue, dbl, voll, finish, u.id);
+    const kuerzel = body.kuerzel === undefined ? u.kuerzel : pruefeKuerzel(body.kuerzel);
+    const wurfhand = body.wurfhand === undefined ? u.wurfhand : pruefeWurfhand(body.wurfhand);
+    /* Neue E-Mail (Anmeldename): Form pruefen, und sie darf niemandem sonst gehoeren. */
+    let email = u.email;
+    if (body.email !== undefined) {
+      email = pruefeEmail(body.email);
+      if (email !== u.email && db.prepare('SELECT 1 FROM users WHERE email = ? AND id <> ?').get(email, u.id)) {
+        throw new HttpFehler(409, 'Diese E-Mail-Adresse gehört schon zu einem anderen Konto.');
+      }
+    }
+    db.prepare('UPDATE users SET display_name = ?, avatar = ?, hue = ?, dbl = ?, real_name = ?, finish = ?, kuerzel = ?, wurfhand = ?, email = ? WHERE id = ?')
+      .run(name, avatar, hue, dbl, voll, finish, kuerzel, wurfhand, email, u.id);
     const frisch = db.prepare('SELECT * FROM users WHERE id = ?').get(u.id);
     sendJson(res, 200, { nutzer: eigenesProfil(frisch) });
   }
@@ -531,7 +554,7 @@ export function createApi(db, config) {
     const u = verlangeNutzer(req);
     const alle = db
       .prepare(
-        "SELECT id, display_name, real_name, avatar, hue, dbl, finish, test, gast_konto FROM users WHERE status = 'aktiv'" +
+        "SELECT id, display_name, real_name, avatar, hue, dbl, finish, kuerzel, wurfhand, test, gast_konto FROM users WHERE status = 'aktiv'" +
           ' AND (test = 0 OR ? = 1)' +
           ' ORDER BY display_name COLLATE NOCASE'
       )

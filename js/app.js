@@ -778,6 +778,11 @@
     return { checkout: checkout };
   }
 
+  /* Das Kuerzel im Avatar: selbst gewaehlt (bis drei Zeichen) oder aus dem Namen. */
+  function kuerzelVon(p) {
+    var k = p && typeof p.kuerzel === 'string' ? p.kuerzel.trim().slice(0, 3) : '';
+    return k || initials(p ? p.name : '');
+  }
   function initials(name) {
     var parts = String(name).trim().split(/\s+/);
     if (!parts[0]) return '?';
@@ -810,7 +815,8 @@
   function avatarHTML(p, cls) {
     var c = 'av ' + (cls || '');
     if (p.avatar && avatarSicher(p.avatar)) return '<span class="' + esc(c) + '" style="background-image:url(' + p.avatar + ')"></span>';
-    return '<span class="' + c + ' init" style="background:hsl(' + hue(p.id) + ',40%,28%)">' + esc(initials(p.name)) + '</span>';
+    var h = typeof p.hue === 'number' ? p.hue : hue(p.id);
+    return '<span class="' + c + ' init" style="background:hsl(' + h + ',40%,28%)">' + esc(kuerzelVon(p)) + '</span>';
   }
 
   /* Bild auf 220px quadratisch zuschneiden – sonst sprengen Fotos den Speicher. */
@@ -3551,7 +3557,7 @@
     if (S.screen === 'tournament') renderTournament();
     if (S.screen === 'boards') renderBoards();
     if (S.screen === 'players') renderPlayers();
-    if (S.screen === 'profile') renderProfile();
+    if (S.screen === 'profile') { renderProfile(); if (UI.profilPanel === 'foto') fotoZiehenEinrichten(); }
     if (S.screen === 'bulloff') renderBullOff();
     if (S.screen === 'game') renderGame();
     if (S.screen === 'cricket') renderCricket();
@@ -4797,7 +4803,11 @@
     '</div>';
 
     var koerper;
-    if (UI.profilPanel === 'tabelle') {
+    if (UI.profilPanel === 'foto' && UI.foto) {
+      koerper = fotoPanelHtml(p);
+    } else if (UI.profilPanel === 'edit' && UI.profilEdit) {
+      koerper = profilBearbeitenHtml(p, eigen);
+    } else if (UI.profilPanel === 'tabelle') {
       koerper = finishTabelleHtml(p, darf, eigen);
     } else if (UI.profilPanel === 'stats') {
       koerper = '<div class="pa-panel">' +
@@ -4865,6 +4875,260 @@
       (wahl ? '' : '<p class="pa-text">' + stand + '</p>') +
       '<div class="pa-finish-knoepfe">' + knopf + '</div>' +
     '</div>';
+  }
+
+  /* ---------- Profil bearbeiten (Entwurf "Profil bearbeiten", Okt. 2026) ----------
+     Eigene Flaeche im Profil statt des Dialogs: links Foto mit "Foto ändern"
+     und "Entfernen" sowie die Avatar-Farbe, rechts Spielername, Kürzel,
+     Vor- und Nachname, E-Mail (nur beim eigenen Konto) und Wurfhand. */
+  function profilBearbeitenStarten(p) {
+    var t = vollSplit(p.voll);
+    var eigen = !!eigeneKontoId() && p.id === eigeneKontoId();
+    var nutzer = eigen ? window.DartKonto.nutzer() : null;
+    UI.profilEdit = { name: p.name || '', kuerzel: typeof p.kuerzel === 'string' ? p.kuerzel : '', vor: t.vor, nach: t.nach,
+      email: nutzer ? nutzer.email || '' : null, emailAlt: nutzer ? nutzer.email || '' : null,
+      hue: typeof p.hue === 'number' ? p.hue : hue(p.id), wurfhand: p.wurfhand === 'L' || p.wurfhand === 'R' ? p.wurfhand : null,
+      avatar: p.avatar || null, fehler: '', doppeltOk: null, laeuft: false };
+    UI.profilPanel = 'edit'; UI.profilGruppenWahl = false;
+    render();
+  }
+  function profilBearbeitenHtml(p, eigen) {
+    var d = UI.profilEdit;
+    var vorschau = { id: p.id, name: d.name || p.name, kuerzel: d.kuerzel, avatar: d.avatar, hue: d.hue };
+    var feld = function (role, label, wert, extra) {
+      return '<label class="pe-feld"><span class="kt">' + label + '</span>' +
+        '<input class="pe-input" type="text" data-role="' + role + '" value="' + esc(wert || '') + '" ' + (extra || '') + '></label>';
+    };
+    return '<div class="pa-panel pe-panel">' +
+      '<div class="pa-panel-kopf"><span class="pa-panel-titel">Profil bearbeiten</span>' +
+        '<button class="btn pa-btn" data-action="pe-abbrechen">Abbrechen</button>' +
+        '<button class="btn hell pa-fertig" data-action="pe-speichern"' + (d.laeuft ? ' disabled' : '') + '>Speichern</button></div>' +
+      (d.fehler ? '<p class="hint fehler pe-fehler" role="alert">' + esc(d.fehler) + '</p>' : '') +
+      '<div class="pe-koerper">' +
+        '<div class="pe-links">' +
+          '<div class="pe-av">' + avatarHTML(vorschau, 'xl') + '</div>' +
+          '<div class="pe-foto-knoepfe">' +
+            '<button class="btn pa-btn" data-action="pe-foto">Foto ändern</button>' +
+            '<button class="btn pa-btn leise" data-action="pe-foto-weg"' + (d.avatar ? '' : ' disabled') + '>Entfernen</button></div>' +
+          '<span class="kt">Avatar-Farbe</span>' +
+          '<div class="pe-farben">' + HUES.map(function (h) {
+            return '<button class="pe-farbe' + (h === d.hue ? ' active' : '') + '" data-action="pe-farbe" data-hue="' + h + '" style="background:hsl(' + h + ',40%,28%)" aria-label="Farbton ' + h + '"></button>';
+          }).join('') + '</div>' +
+        '</div>' +
+        '<div class="pe-rechts">' +
+          '<div class="pe-raster">' +
+            feld('profile-name', 'Spielername', d.name, 'placeholder="Spielername" maxlength="16" autocomplete="off"') +
+            feld('pe-kuerzel', 'Kürzel', d.kuerzel, 'placeholder="' + esc(initials(d.name || p.name)) + '" maxlength="3" autocomplete="off" autocapitalize="characters"') +
+            feld('profile-vor', 'Vorname', d.vor, 'placeholder="Vorname" maxlength="30" autocomplete="off"') +
+            feld('profile-nach', 'Nachname', d.nach, 'placeholder="Nachname" maxlength="30" autocomplete="off"') +
+          '</div>' +
+          '<p class="pa-text">Der echte Name steht nur auf Spielberichten und in der Liga.</p>' +
+          (eigen ? feld('pe-email', 'E-Mail', d.email, 'placeholder="E-Mail" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off"') : '') +
+          '<div class="pe-feld"><span class="kt">Wurfhand</span><div class="dl-segment pe-hand">' +
+            '<button data-action="pe-hand" data-value="R" class="' + (d.wurfhand === 'R' ? 'active' : '') + '">Rechts</button>' +
+            '<button data-action="pe-hand" data-value="L" class="' + (d.wurfhand === 'L' ? 'active' : '') + '">Links</button></div></div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+  function profilBearbeitenSpeichern() {
+    var d = UI.profilEdit, p = profile(UI.profile);
+    if (!d || !p || !bearbeitbar(p.id)) return;
+    var name = (d.name || '').trim();
+    if (!name) { d.fehler = 'Bitte einen Namen eingeben.'; render(); return; }
+    var doppelt = S.profiles.some(function (x) { return x.id !== p.id && !x.hidden && String(x.name).trim().toLowerCase() === name.toLowerCase(); });
+    if (doppelt && d.doppeltOk !== name) {
+      d.doppeltOk = name;
+      d.fehler = '„' + name + '“ gibt es schon. Nochmal auf Speichern tippen, wenn es wirklich ein zweiter Spieler ist.';
+      render(); return;
+    }
+    var fertig = function () {
+      p.name = name;
+      p.kuerzel = (d.kuerzel || '').replace(/[\u0000-\u001f<>"'&]/g, '').trim().slice(0, 3) || null;
+      p.voll = vollAusTeilen(d.vor, d.nach) || null;
+      p.hue = d.hue;
+      p.wurfhand = d.wurfhand;
+      p.avatar = d.avatar;
+      if (window.DartKonto) window.DartKonto.profilGeaendert(p.id);
+      UI.profilPanel = null; UI.profilEdit = null;
+      save(); render();
+    };
+    /* E-Mail nur beim eigenen Konto und nur, wenn sie sich aendert: der
+       Server prueft Form und Freiheit, erst dann wird gespeichert. */
+    var neueMail = d.email === null ? null : (d.email || '').trim();
+    if (neueMail !== null && neueMail !== d.emailAlt && window.DartKonto && window.DartKonto.emailAendern) {
+      d.laeuft = true; d.fehler = ''; render();
+      window.DartKonto.emailAendern(neueMail).then(function () { d.laeuft = false; fertig(); }, function (err) {
+        d.laeuft = false; d.fehler = err && err.message ? err.message : 'Die E-Mail ließ sich nicht ändern.'; render();
+      });
+      return;
+    }
+    fertig();
+  }
+
+  /* ---------- Foto anpassen (Entwurf "Foto anpassen") ----------
+     Links das Bild im Ausschnitt (ziehen zum Verschieben, runder Rahmen),
+     rechts Vorschau in drei Groessen, Zoom und die Quellen Kamera / Galerie.
+     "Übernehmen" schneidet den Kreis auf 220 × 220 zu - wie bisher readAvatar. */
+  var FOTO_MAX = 1200;
+  function fotoStarten(avatar, zurueck) {
+    UI.foto = { src: avatar || null, nw: 0, nh: 0, zoom: 0, x: 0, y: 0, zurueck: zurueck, laedt: false };
+    UI.profilPanel = 'foto';
+    if (avatar) fotoMasse(avatar);
+    render();
+    if (!avatar) $('avatar-input').click();
+  }
+  function fotoMasse(src) {
+    var img = new Image();
+    img.onload = function () { if (UI.foto && UI.foto.src === src) { UI.foto.nw = img.naturalWidth; UI.foto.nh = img.naturalHeight; render(); } };
+    img.src = src;
+  }
+  /* Ein gewaehltes Bild einlesen und auf hoechstens FOTO_MAX Pixel bringen,
+     damit das Ziehen fluessig bleibt und der Speicher nicht vollläuft. */
+  function fotoLaden(file) {
+    var reader = new FileReader();
+    reader.onload = function () { fotoAusDataUrl(reader.result); };
+    reader.readAsDataURL(file);
+  }
+  function fotoAusDataUrl(dataUrl) {
+    var img = new Image();
+    img.onload = function () {
+      var f = Math.min(1, FOTO_MAX / Math.max(img.width, img.height));
+      var w = Math.max(1, Math.round(img.width * f)), h = Math.max(1, Math.round(img.height * f));
+      var c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      var src;
+      try { src = c.toDataURL('image/jpeg', 0.9); } catch (e) { src = null; }
+      if (!UI.foto) return;
+      if (!src) { UI.foto.fehler = 'Das Bild ließ sich nicht lesen.'; UI.foto.laedt = false; render(); return; }
+      UI.foto.src = src; UI.foto.nw = w; UI.foto.nh = h; UI.foto.zoom = 15; UI.foto.x = 0; UI.foto.y = 0; UI.foto.fehler = ''; UI.foto.laedt = false;
+      render();
+    };
+    img.onerror = function () { if (UI.foto) { UI.foto.fehler = 'Das Bild ließ sich nicht lesen.'; UI.foto.laedt = false; render(); } };
+    img.src = dataUrl;
+  }
+  /* Geometrie des Ausschnitts: Buehne S x S, Bild mit Breite S * k (k aus dem
+     Zoom), um (x, y) verschoben; der Kreis hat 82 % der Buehne. */
+  function fotoGeometrie(f, S) {
+    /* Zoom 0: die kurze Bildseite fuellt den Kreis genau (ein schon
+       zugeschnittenes 220er-Foto bleibt so unveraendert), Zoom 100 das
+       Zweieinhalbfache. */
+    var seiten = f.nw && f.nh ? Math.max(f.nw / f.nh, f.nh / f.nw) : 1;
+    var k = 0.82 * seiten * (1 + f.zoom * 0.015);
+    var w = S * k, h = f.nw && f.nh ? w * f.nh / f.nw : w;
+    if (f.nw && f.nh && f.nh > f.nw) { h = S * k; w = h * f.nw / f.nh; }
+    var d = S * 0.82;
+    /* Das Bild darf den Kreis nie freigeben. */
+    var maxX = Math.max(0, (w - d) / 2), maxY = Math.max(0, (h - d) / 2);
+    f.x = Math.max(-maxX, Math.min(maxX, f.x)); f.y = Math.max(-maxY, Math.min(maxY, f.y));
+    return { w: w, h: h, d: d, left: S / 2 + f.x - w / 2, top: S / 2 + f.y - h / 2, kreisLeft: (S - d) / 2, kreisTop: (S - d) / 2 };
+  }
+  function fotoAusschnitt(f, S, groesse) {
+    if (!f.src || !f.nw) return null;
+    var g = fotoGeometrie(f, S), img = fotoBild(f);
+    if (!img) return null;
+    var size = groesse || 220, m = size / g.d;
+    var c = document.createElement('canvas'); c.width = size; c.height = size;
+    var ctx = c.getContext('2d');
+    ctx.fillStyle = '#0b0809'; ctx.fillRect(0, 0, size, size);
+    ctx.drawImage(img, (g.left - g.kreisLeft) * m, (g.top - g.kreisTop) * m, g.w * m, g.h * m);
+    try { return c.toDataURL('image/jpeg', 0.82); } catch (e) { return null; }
+  }
+  var fotoBildCache = { src: null, img: null };
+  function fotoBild(f) {
+    if (fotoBildCache.src === f.src && fotoBildCache.img && fotoBildCache.img.complete) return fotoBildCache.img;
+    var img = new Image();
+    /* Sobald das Bild da ist, einmal neu zeichnen - dann stimmt die Vorschau. */
+    img.onload = function () { if (UI.foto && UI.foto.src === f.src && S.screen === 'profile') render(); };
+    img.src = f.src;
+    fotoBildCache = { src: f.src, img: img };
+    return img.complete && img.naturalWidth ? img : null;
+  }
+  function fotoPanelHtml(p) {
+    var f = UI.foto;
+    var S = 1000;   /* Buehnen-Mass in Promille: alles relativ, die Buehne skaliert per CSS */
+    var g = f.src && f.nw ? fotoGeometrie(f, S) : null;
+    var vorschau = g ? fotoAusschnitt(f, S, 220) : null;
+    var pz = function (v) { return (v / 10).toFixed(2) + '%'; };
+    var kreis = function (kl) {
+      return '<span class="pf-vor ' + kl + '">' + (vorschau ? '<span class="pf-vor-bild" style="background-image:url(' + vorschau + ')"></span>' : avatarHTML({ id: p.id, name: p.name, kuerzel: p.kuerzel, avatar: null, hue: p.hue }, 'xl')) + '</span>';
+    };
+    return '<div class="pa-panel pf-panel">' +
+      '<div class="pa-panel-kopf"><span class="pa-panel-titel">Foto anpassen</span>' +
+        '<button class="btn pa-btn" data-action="foto-abbrechen">Abbrechen</button>' +
+        '<button class="btn hell pa-fertig" data-action="foto-ok"' + (g ? '' : ' disabled') + '>Übernehmen</button></div>' +
+      (f.fehler ? '<p class="hint fehler pe-fehler" role="alert">' + esc(f.fehler) + '</p>' : '') +
+      '<div class="pf-koerper">' +
+        '<div class="pf-rahmen"><div class="pf-buehne" id="pf-buehne">' +
+          (g ? '<img class="pf-bild" src="' + f.src + '" alt="" draggable="false" style="left:' + pz(g.left) + ';top:' + pz(g.top) + ';width:' + pz(g.w) + ';height:' + pz(g.h) + '">'
+            : '<span class="pf-leer">' + (f.laedt ? 'Bild wird geladen …' : 'Noch kein Bild. Unten Kamera oder Galerie wählen.') + '</span>') +
+          '<span class="pf-kreis"></span>' +
+          (g ? '<span class="pf-tipp">Ziehen zum Verschieben</span>' : '') +
+        '</div></div>' +
+        '<div class="pf-rechts">' +
+          '<span class="kt">Vorschau</span>' +
+          '<div class="pf-vorschau">' +
+            '<div class="pf-vor-eintrag">' + kreis('gross') + '<span>Profil</span></div>' +
+            '<div class="pf-vor-eintrag">' + kreis('mittel') + '<span>Spiel</span></div>' +
+            '<div class="pf-vor-eintrag">' + kreis('klein') + '<span>Liste</span></div>' +
+          '</div>' +
+          '<span class="kt">Zoom</span>' +
+          '<div class="pf-zoom">' +
+            '<button data-action="foto-zoom" data-d="-10" aria-label="Kleiner"' + (g ? '' : ' disabled') + '>−</button>' +
+            '<input type="range" min="0" max="100" step="1" value="' + f.zoom + '" data-role="foto-zoom" aria-label="Zoom"' + (g ? '' : ' disabled') + '>' +
+            '<button data-action="foto-zoom" data-d="10" aria-label="Größer"' + (g ? '' : ' disabled') + '>+</button>' +
+          '</div>' +
+          '<div class="pf-luft"></div>' +
+          '<div class="pf-quellen">' +
+            '<button class="btn pa-btn" data-action="foto-kamera"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-2.5h6L17 8h3v11H4z"></path><circle cx="12" cy="13" r="3.4"></circle></svg>Kamera</button>' +
+            '<button class="btn pa-btn" data-action="foto-galerie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2"></rect><path d="M3.5 16l5-5 4 4 3-3 5 5"></path></svg>Galerie</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }
+  /* Ziehen auf der Buehne: waehrend der Bewegung nur das Bild verschieben,
+     neu gezeichnet wird erst beim Loslassen (dann auch die Vorschau). */
+  function fotoZiehenEinrichten() {
+    var b = $('pf-buehne');
+    if (!b || !UI.foto || !UI.foto.src) return;
+    var start = null;
+    b.addEventListener('pointerdown', function (ev) {
+      if (!UI.foto) return;
+      start = { px: ev.clientX, py: ev.clientY, x: UI.foto.x, y: UI.foto.y, S: b.clientWidth };
+      try { b.setPointerCapture(ev.pointerId); } catch (e) { /* egal */ }
+      ev.preventDefault();
+    });
+    b.addEventListener('pointermove', function (ev) {
+      if (!start || !UI.foto) return;
+      var f = UI.foto, S = 1000, sk = S / start.S;
+      f.x = start.x + (ev.clientX - start.px) * sk; f.y = start.y + (ev.clientY - start.py) * sk;
+      var g = fotoGeometrie(f, S), img = b.querySelector('.pf-bild');
+      if (img) { img.style.left = (g.left / 10).toFixed(2) + '%'; img.style.top = (g.top / 10).toFixed(2) + '%'; }
+    });
+    var ende = function () { if (!start) return; start = null; render(); };
+    b.addEventListener('pointerup', ende);
+    b.addEventListener('pointercancel', ende);
+  }
+  function fotoSchliessen() {
+    var f = UI.foto;
+    UI.foto = null;
+    fotoBildCache = { src: null, img: null };
+    UI.profilPanel = f && f.zurueck === 'edit' && UI.profilEdit ? 'edit' : null;
+    render();
+  }
+  function fotoUebernehmen() {
+    var f = UI.foto, p = profile(UI.profile);
+    if (!f || !p) return;
+    var bild = fotoAusschnitt(f, 1000, 220);
+    if (!bild) { f.fehler = 'Das Bild ließ sich nicht zuschneiden.'; render(); return; }
+    if (f.zurueck === 'edit' && UI.profilEdit) { UI.profilEdit.avatar = bild; fotoSchliessen(); return; }
+    if (!bearbeitbar(p.id)) return;
+    p.avatar = bild;
+    if (window.DartKonto) window.DartKonto.profilGeaendert(p.id);
+    UI.foto = null; UI.profilPanel = null;
+    fotoBildCache = { src: null, img: null };
+    save(); render();
   }
 
   /* ---------- Finish-Tabelle ansehen und anpassen (Phase 3) ----------
@@ -10583,11 +10847,29 @@
       }
       case 'edit-current-profile': {
         var cp = profile(UI.profile);
+        /* Entwurf "Profil bearbeiten": eigene Flaeche im Profil. Gaeste
+           behalten den Dialog - der kennt Gast-Art und Loeschen. */
+        /* Laeuft die Flaeche schon, bleibt der Entwurf stehen. */
+        if (UI.profilEdit && (UI.profilPanel === 'edit' || UI.profilPanel === 'foto')) break;
+        if (!cp.gast) { profilBearbeitenStarten(cp); break; }
         var cpTeile = vollSplit(cp.voll);
         UI.overlay = { type: 'profile', id: cp.id, draft: { name: cp.name, avatar: cp.avatar, dbl: DOPPEL_WAHL.indexOf(cp.dbl) >= 0 ? cp.dbl : null, vor: cpTeile.vor, nach: cpTeile.nach, dauer: !!cp.dauer } };
         render();
         break;
       }
+      /* Flaeche "Profil bearbeiten" */
+      case 'pe-abbrechen': UI.profilPanel = null; UI.profilEdit = null; render(); break;
+      case 'pe-farbe': if (UI.profilEdit) { UI.profilEdit.hue = Number(el.getAttribute('data-hue')); render(); } break;
+      case 'pe-hand': if (UI.profilEdit) { UI.profilEdit.wurfhand = el.getAttribute('data-value') || null; render(); } break;
+      case 'pe-foto-weg': if (UI.profilEdit) { UI.profilEdit.avatar = null; render(); } break;
+      case 'pe-foto': if (UI.profilEdit) fotoStarten(UI.profilEdit.avatar, 'edit'); break;
+      case 'pe-speichern': profilBearbeitenSpeichern(); break;
+      /* Flaeche "Foto anpassen" */
+      case 'foto-galerie': $('avatar-input').click(); break;
+      case 'foto-kamera': $('avatar-kamera').click(); break;
+      case 'foto-zoom': if (UI.foto) { UI.foto.zoom = Math.max(0, Math.min(100, UI.foto.zoom + Number(el.getAttribute('data-d')))); render(); } break;
+      case 'foto-abbrechen': fotoSchliessen(); break;
+      case 'foto-ok': fotoUebernehmen(); break;
       case 'pick-avatar':
         $('avatar-input').click();
         break;
@@ -10729,7 +11011,7 @@
       }
       case 'open-profile':
         UI.profile = el.getAttribute('data-id');
-        UI.profilPanel = null; UI.profilGruppenWahl = false; UI.tab = null;
+        UI.profilPanel = null; UI.profilGruppenWahl = false; UI.tab = null; UI.profilEdit = null; UI.foto = null;
         S.screen = 'profile';
         save(); render();
         break;
@@ -10737,10 +11019,16 @@
          Finish-Ermittlung. */
       /* Kamera-Knopf am Ausweis: derselbe Dialog wie "Profil bearbeiten",
          gleich mit der Fotowahl. */
-      case 'profil-foto':
-        handleActionInner('edit-current-profile', el);
-        if (UI.overlay && UI.overlay.type === 'profile') $('avatar-input').click();
+      case 'profil-foto': {
+        var pfP = profile(UI.profile);
+        if (!pfP || !bearbeitbar(pfP.id)) break;
+        if (pfP.gast) { handleActionInner('edit-current-profile', el); if (UI.overlay && UI.overlay.type === 'profile') $('avatar-input').click(); break; }
+        if (UI.profilPanel === 'foto') break;
+        /* Mit offener Bearbeiten-Flaeche gehoert das Foto in den Entwurf. */
+        if (UI.profilEdit && UI.profilPanel === 'edit') { fotoStarten(UI.profilEdit.avatar, 'edit'); break; }
+        fotoStarten(pfP.avatar, null);
         break;
+      }
       case 'profil-stats': UI.profilPanel = 'stats'; render(); break;
       case 'profil-tabelle': UI.profilPanel = 'tabelle'; UI.tab = null; tabZustand(); render(); break;
       case 'profil-panel-zu': UI.profilPanel = null; UI.tab = null; render(); break;
@@ -11855,6 +12143,9 @@
     void taste.offsetWidth;               // Animation von vorn starten
     taste.classList.add('blitzt');
   }, { capture: true, passive: true });
+  document.addEventListener('change', function (ev) {
+    if (ev.target && ev.target.getAttribute && ev.target.getAttribute('data-role') === 'foto-zoom' && UI.foto) render();
+  });
   document.addEventListener('animationend', function (ev) {
     if (String(ev.animationName).indexOf('tastenblitz') === 0) {
       ev.target.classList.remove('blitzt');
@@ -12045,6 +12336,21 @@
     if (ev.target.getAttribute('data-role') === 'fi-avg' && UI.overlay && UI.overlay.type === 'finish') {
       UI.overlay.draft.avg = ev.target.value;
     }
+    /* Flaeche "Profil bearbeiten": dieselben Rollen wie der Dialog, dazu
+       Kuerzel und E-Mail. */
+    if (UI.profilEdit && !UI.overlay) {
+      var peRole = ev.target.getAttribute('data-role');
+      if (peRole === 'profile-name') UI.profilEdit.name = ev.target.value;
+      if (peRole === 'pe-kuerzel') UI.profilEdit.kuerzel = ev.target.value;
+      if (peRole === 'profile-vor') UI.profilEdit.vor = ev.target.value;
+      if (peRole === 'profile-nach') UI.profilEdit.nach = ev.target.value;
+      if (peRole === 'pe-email') UI.profilEdit.email = ev.target.value;
+    }
+    if (ev.target.getAttribute('data-role') === 'foto-zoom' && UI.foto) {
+      UI.foto.zoom = Number(ev.target.value) || 0;
+      var fzB = $('pf-buehne'), fzImg = fzB && fzB.querySelector('.pf-bild');
+      if (fzImg) { var fzG = fotoGeometrie(UI.foto, 1000); fzImg.style.left = (fzG.left / 10).toFixed(2) + '%'; fzImg.style.top = (fzG.top / 10).toFixed(2) + '%'; fzImg.style.width = (fzG.w / 10).toFixed(2) + '%'; fzImg.style.height = (fzG.h / 10).toFixed(2) + '%'; }
+    }
     /* Lieblingsdoppel: 0 heisst „egal". Auch hier nicht neu zeichnen – der
        Dialog wuerde sonst mitten in der Auswahl unter den Fingern wegspringen. */
     if (ev.target.getAttribute('data-role') === 'profile-double' && UI.overlay) {
@@ -12081,14 +12387,18 @@
     }
   });
 
-  $('avatar-input').addEventListener('change', function (ev) {
+  function bildGewaehlt(ev) {
     var file = ev.target.files && ev.target.files[0];
     ev.target.value = '';
-    if (!file || !UI.overlay) return;
+    if (!file) return;
+    if (UI.profilPanel === 'foto' && UI.foto) { UI.foto.laedt = true; render(); fotoLaden(file); return; }
+    if (!UI.overlay) return;
     readAvatar(file, function (dataUrl) {
       if (dataUrl && UI.overlay) { UI.overlay.draft.avatar = dataUrl; render(); }
     });
-  });
+  }
+  $('avatar-input').addEventListener('change', bildGewaehlt);
+  if ($('avatar-kamera')) $('avatar-kamera').addEventListener('change', bildGewaehlt);
 
   /* Als Schaltfläche angesagte Elemente müssen auch per Tastatur gehen. */
   /*
@@ -12736,6 +13046,8 @@
     if (S.screen === 'boards' && UI.boardLog) { UI.boardLog = false; render(); return true; }
     if (S.screen === 'liga' && (UI.ligaTab || 'plan') !== 'plan') { UI.ligaTab = 'plan'; UI.boardLog = false; render(); return true; }
     if (S.screen === 'liga' && UI.ligaWahl) { UI.ligaWahl = null; render(); return true; }
+    if (S.screen === 'profile' && UI.profilPanel === 'foto') { fotoSchliessen(); return true; }
+    if (S.screen === 'profile' && UI.profilPanel === 'edit') { UI.profilPanel = null; UI.profilEdit = null; render(); return true; }
     if (S.screen === 'profile' && UI.profilPanel === 'tabelle' && UI.tab && UI.tab.rest) { UI.tab.rest = null; render(); return true; }
     if (S.screen === 'profile' && (UI.profilPanel || UI.profilGruppenWahl)) { UI.profilPanel = null; UI.tab = null; UI.profilGruppenWahl = false; render(); return true; }
     if (S.screen === 'profile') { S.screen = 'players'; save(); render(); return true; }
@@ -12914,6 +13226,7 @@
       finishGruppenSetzen: finishGruppenSetzen,
       finishNachruesten: finishNachruesten,
       finishEigeneAnzahl: finishEigeneAnzahl,
+      fotoAusDataUrl: fotoAusDataUrl,
       eigenesProfil: eigenesProfilOeffnen,
       freeHue: freeHue,
       HUES: HUES,

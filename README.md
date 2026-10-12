@@ -698,6 +698,17 @@ letzte X01-Spiele als Tafel über die Kacheln, „Fertig“ schließt sie) und
 erreicht man über die Spielerliste. Am Tablet steht alles fest im Rahmen, am Handy
 scrollt die Seite.
 
+**Profil bearbeiten** (Entwurf Oktober 2026) ist eine eigene Fläche im Profil:
+links das Foto mit „Foto ändern“ und „Entfernen“ und die **Avatar-Farbe** (zwölf
+Töne), rechts Spielername, **Kürzel** (bis drei Zeichen, sonst aus dem Namen),
+Vor- und Nachname, beim eigenen Konto die **E-Mail** (Anmeldename, der Server prüft
+Form und Freiheit) und die **Wurfhand**. „Speichern“ übernimmt alles auf einmal;
+Gäste behalten den kleinen Dialog mit Gast-Art und Löschen. **Foto anpassen**
+(Kamera-Knopf am Ausweis oder „Foto ändern“): das Bild liegt im Ausschnitt, ziehen
+verschiebt es, Zoom per Schieber oder Plus/Minus, rechts die Vorschau in den drei
+Größen Profil, Spiel und Liste; „Kamera“ öffnet am Gerät die Kamera, „Galerie“ die
+Fotos. „Übernehmen“ schneidet den Kreis auf 220 × 220 zu.
+
 Spieler sind dauerhaft: Name und Foto werden einmal angelegt und gelten für jedes
 weitere Turnier. Das Foto kommt aus der Fotomediathek oder direkt von der Kamera und
 wird auf 220 × 220 Pixel zugeschnitten, damit der Speicher nicht vollläuft; ohne Foto

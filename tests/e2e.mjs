@@ -2656,13 +2656,11 @@ const dblId = await page.evaluate(() => window.__dart.activeProfiles()[0].id);
    ueber die Spielerliste. */
 await page.evaluate(() => window.__dart.setScreen('players'));
 await profilOeffnen('.player-card[data-id="' + dblId + '"]');
-await page.locator('[data-action="edit-current-profile"]').click();
-check('das Profil bietet ein Lieblingsdoppel an',
-  (await page.locator('[data-role="profile-double"]').count()) === 1);
-check('voreingestellt ist "egal"',
-  (await page.locator('[data-role="profile-double"]').inputValue()) === '0');
-await page.locator('[data-role="profile-double"]').selectOption('16');
-await page.locator('[data-action="save-profile"]').click();
+/* Die Gruppe waehlt man in der Kachel Finish-Weg: Kette antippen, Gruppe, OK. */
+check('voreingestellt ist "egal"', (await text('#profile-detail .pa-kette')).toLowerCase().includes('egal'));
+await page.locator('[data-action="profil-gruppen"]').first().click();
+await page.locator('[data-action="profil-gruppe"][data-value="D16"]').click();
+await page.locator('[data-action="profil-gruppen-ok"]').click();
 check('die Wahl steht im Profil',
   await page.evaluate((id) => window.__dart.profile(id).dbl === 16, dblId));
 await page.reload();
@@ -3136,15 +3134,64 @@ await page.locator('#liga-tabs button[data-tab="plan"]').click();
 group('Buergerlicher Name im Profil');
 await navTo('players');
 await profilOeffnen('#players-list .player-card:has-text("Lenas")');
-await page.locator('[data-action="edit-current-profile"]').click();
-check('das Profil hat je ein Feld fuer Vor- und Nachnamen',
-  (await page.locator('[data-role="profile-vor"]').count()) === 1 &&
-  (await page.locator('[data-role="profile-nach"]').count()) === 1);
+await page.locator('.pa-rechts [data-action="edit-current-profile"]').click();
+check('"Profil bearbeiten" oeffnet die Flaeche mit je einem Feld fuer Vor- und Nachnamen',
+  await visible('.pe-panel') &&
+  (await page.locator('.pe-panel [data-role="profile-vor"]').count()) === 1 &&
+  (await page.locator('.pe-panel [data-role="profile-nach"]').count()) === 1);
 await page.locator('[data-role="profile-vor"]').fill('Lena');
 await page.locator('[data-role="profile-nach"]').fill('Musterfrau');
-await page.locator('[data-action="save-profile"]').click();
+await page.locator('[data-action="pe-speichern"]').click();
 check('der volle Name ist gespeichert', await page.evaluate(() =>
   window.__dart.state().profiles.find((p) => p.name === 'Lenas').voll === 'Lena Musterfrau'));
+check('die Flaeche ist danach zu', !(await visible('.pe-panel')));
+
+/* Entwurf "Profil bearbeiten" / "Foto anpassen": Kuerzel, Avatar-Farbe,
+   Wurfhand, Foto mit Ausschnitt und Zoom. */
+group('Profil bearbeiten: Kuerzel, Farbe, Wurfhand, Foto anpassen');
+await page.locator('.pa-rechts [data-action="edit-current-profile"]').click();
+check('die Flaeche zeigt Spielername, Kuerzel, Avatar-Farben und Wurfhand',
+  (await page.locator('.pe-panel [data-role="profile-name"]').count()) === 1 &&
+  (await page.locator('.pe-panel [data-role="pe-kuerzel"]').count()) === 1 &&
+  (await page.locator('.pe-panel [data-action="pe-farbe"]').count()) === 12 &&
+  (await page.locator('.pe-panel [data-action="pe-hand"]').count()) === 2);
+check('ohne Konto gibt es kein E-Mail-Feld', (await page.locator('.pe-panel [data-role="pe-email"]').count()) === 0);
+await page.locator('[data-role="pe-kuerzel"]').fill('LM');
+await page.locator('[data-action="pe-hand"][data-value="L"]').click();
+await page.locator('[data-action="pe-farbe"][data-hue="355"]').click();
+/* Foto anpassen: ein Testbild kommt direkt in die Flaeche (so wie es die
+   Galerie liefern wuerde), dann Zoom und Uebernehmen. */
+await page.locator('[data-action="pe-foto"]').click();
+check('"Foto ändern" oeffnet die Flaeche Foto anpassen, noch ohne Bild',
+  await visible('.pf-panel') && (await page.locator('[data-action="foto-ok"]').isDisabled()) &&
+  (await page.locator('[data-action="foto-kamera"]').count()) === 1 && (await page.locator('[data-action="foto-galerie"]').count()) === 1);
+await page.evaluate(() => {
+  const c = document.createElement('canvas'); c.width = 600; c.height = 400; const x = c.getContext('2d');
+  x.fillStyle = '#2f7fa8'; x.fillRect(0, 0, 600, 400); x.fillStyle = '#ffd36b'; x.fillRect(280, 180, 40, 40);
+  window.__dart.fotoAusDataUrl(c.toDataURL('image/png'));
+});
+await page.waitForSelector('.pf-bild', { timeout: 10000 });
+await page.waitForSelector('.pf-vor-bild', { timeout: 10000 });
+check('das Bild liegt im Ausschnitt, die Vorschau zeigt den Kreis in drei Groessen',
+  (await page.locator('.pf-vor-bild').count()) === 3);
+const zoomVor = await page.evaluate(() => document.querySelector('.pf-bild').getBoundingClientRect().width);
+await page.locator('[data-action="foto-zoom"][data-d="10"]').click();
+const zoomNach = await page.evaluate(() => document.querySelector('.pf-bild').getBoundingClientRect().width);
+check('Plus zoomt das Bild', zoomNach > zoomVor, zoomVor + ' -> ' + zoomNach);
+await page.locator('[data-action="foto-ok"]').click();
+check('Uebernehmen fuehrt zurueck in die Flaeche Profil bearbeiten, mit dem neuen Bild',
+  await visible('.pe-panel') && (await page.locator('.pe-av .av[style*="background-image"]').count()) === 1);
+await page.locator('[data-action="pe-speichern"]').click();
+const peNach = await page.evaluate(() => { const p = window.__dart.state().profiles.find((x) => x.name === 'Lenas'); return { k: p.kuerzel, h: p.hue, w: p.wurfhand, av: typeof p.avatar === 'string' && p.avatar.indexOf('data:image/jpeg') === 0 && p.avatar.length > 1000 }; });
+check('Speichern schreibt Kuerzel, Farbe, Wurfhand und das zugeschnittene Foto an den Spieler',
+  peNach.k === 'LM' && peNach.h === 355 && peNach.w === 'L' && peNach.av, JSON.stringify(peNach));
+check('der Ausweis zeigt das Foto', (await page.locator('#profile-detail .pa-av .av[style*="background-image"]').count()) === 1);
+await page.locator('.pa-rechts [data-action="edit-current-profile"]').click();
+await page.locator('[data-action="pe-foto-weg"]').click();
+await page.locator('[data-action="pe-speichern"]').click();
+check('"Entfernen" nimmt das Foto weg, das Kuerzel steht im Avatar',
+  await page.evaluate(() => { const p = window.__dart.state().profiles.find((x) => x.name === 'Lenas'); return p.avatar === null; }) &&
+  (await text('#profile-detail .pa-av .av')).trim() === 'LM');
 await navTo('liga');
 
 /* ---------- Ligaspiel-Modus: der Spielberichtsbogen als Spielplan ---------- */

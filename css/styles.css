@@ -6262,7 +6262,7 @@ body.fix-spiel #screen-hunter.active { flex: 1 1 auto; height: auto; min-height:
 .pa-ausweis { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "av mitte" "rechts rechts"; align-items: center; gap: 12px 16px; padding: 16px; border-radius: 22px; background: radial-gradient(60% 120% at 12% 50%, rgba(70, 170, 215, 0.16), transparent 70%), var(--bg-2); }
 .pa-av { grid-area: av; position: relative; width: 84px; height: 84px; }
 .pa-av .av.xl { width: 100%; height: 100%; font-size: 1.8rem; box-shadow: 0 0 0 4px var(--bg-2), 0 0 0 6px rgba(169, 228, 255, 0.5), 0 0 44px rgba(70, 170, 215, 0.5); }
-.pa-foto { position: absolute; right: -2px; bottom: -2px; width: 30%; height: 30%; min-width: 26px; min-height: 26px; border-radius: 50%; background: #2a2224; border: none; box-shadow: 0 0 0 3px var(--bg-2); color: var(--text); cursor: pointer; padding: 0; margin: 0; display: flex; align-items: center; justify-content: center; }
+.pa-foto { position: absolute; right: -2px; bottom: -2px; width: 30%; height: 30%; min-width: 32px; min-height: 32px; border-radius: 50%; background: #2a2224; border: none; box-shadow: 0 0 0 3px var(--bg-2); color: var(--text); cursor: pointer; padding: 0; margin: 0; display: flex; align-items: center; justify-content: center; }
 .pa-foto svg { width: 55%; height: 55%; }
 .pa-mitte { grid-area: mitte; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .pa-namen { display: flex; flex-direction: column; min-width: 0; }
@@ -6312,11 +6312,59 @@ button.pa-gruppe { cursor: pointer; }
 .pa-panel { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: 22px; background: var(--bg-2); box-shadow: 0 0 0 1.5px #2a2224; min-width: 0; }
 .pa-panel-kopf { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .pa-panel-titel { font-family: var(--font-display); font-size: 1.4rem; letter-spacing: 0.02em; text-transform: uppercase; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.pa-fertig { margin: 0; min-height: 40px; padding: 0 18px; border-radius: 12px; background: var(--aktiv-linie); border-color: transparent; color: #0d0a0b; font-family: var(--font-cond); font-weight: 700; font-size: 1rem; letter-spacing: 0.06em; text-transform: none; }
+.pa-fertig { margin: 0; min-height: 44px; padding: 0 18px; border-radius: 12px; background: var(--aktiv-linie); border-color: transparent; color: #0d0a0b; font-family: var(--font-cond); font-weight: 700; font-size: 1rem; letter-spacing: 0.06em; text-transform: none; }
 .pa-panel-koerper { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; min-width: 0; }
 .pa-panel-koerper .card { margin: 0; background: #1c1718; border-color: transparent; }
 .pa-panel-koerper .card h2 { font-family: var(--font-cond); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
 .pa-panel-hint { grid-column: 1 / -1; margin: 0; }
+
+/* Profil bearbeiten (Flaeche) */
+.pe-panel { gap: 12px; }
+.pe-fehler { margin: 0; }
+.pe-koerper { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.pe-links { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.pe-av .av.xl { width: 110px; height: 110px; font-size: 2.2rem; box-shadow: 0 0 0 4px var(--bg-2), 0 0 0 6px rgba(169, 228, 255, 0.5), 0 0 44px rgba(70, 170, 215, 0.45); }
+.pe-foto-knoepfe { display: flex; gap: 6px; }
+.pe-farben { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.pe-farbe { width: 44px; height: 44px; min-height: 0; margin: 0; padding: 0; border-radius: 50%; border: none; cursor: pointer; }
+.pe-farbe.active { box-shadow: 0 0 0 3px var(--bg-2), 0 0 0 5px var(--aktiv-linie); }
+.pe-rechts { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.pe-raster { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.pe-feld { min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.pe-input { min-width: 0; width: 100%; height: 46px; padding: 0 12px; border-radius: 12px; background: #1c1718; border: none; box-shadow: inset 0 0 0 1.5px #2a2224; color: var(--text); font-family: var(--font-body); font-weight: 600; font-size: 1rem; outline: none; }
+.pe-input:focus { box-shadow: inset 0 0 0 1.5px var(--aktiv-linie); }
+.pe-hand { display: flex; gap: 4px; padding: 3px; border-radius: 12px; background: #1c1718; }
+.pe-hand button { flex: 1 1 0; min-width: 0; height: 44px; min-height: 0; margin: 0; border-radius: 9px; background: transparent; border: none; box-shadow: none; color: var(--text); font-family: var(--font-body); font-weight: 600; font-size: 0.95rem; text-transform: none; letter-spacing: 0; }
+.pe-hand button.active { background: #2a2224; box-shadow: inset 0 0 0 1.5px var(--aktiv-linie), 0 0 18px var(--schein-weich); color: #fff; }
+
+/* Foto anpassen (Flaeche) */
+.pf-panel { gap: 12px; }
+.pf-koerper { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.pf-rahmen { min-width: 0; min-height: 0; display: flex; align-items: center; justify-content: center; }
+.pf-buehne { position: relative; width: 100%; aspect-ratio: 1; overflow: hidden; border-radius: 18px; background: #0b0809; touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; }
+.pf-bild { position: absolute; max-width: none; pointer-events: none; }
+.pf-kreis { position: absolute; left: 9%; top: 9%; width: 82%; height: 82%; border-radius: 50%; box-shadow: 0 0 0 2000px rgba(11, 8, 9, 0.72), inset 0 0 0 2px var(--aktiv-linie), 0 0 34px rgba(70, 170, 215, 0.45); pointer-events: none; }
+.pf-tipp { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); padding: 5px 12px; border-radius: 999px; background: rgba(20, 16, 17, 0.85); font-size: 0.8rem; color: #c9c0c0; white-space: nowrap; pointer-events: none; }
+.pf-leer { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px; color: #857a7b; font-size: 0.9rem; }
+.pf-rechts { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.pf-vorschau { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px; }
+.pf-vor-eintrag { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 0.8rem; color: #857a7b; }
+.pf-vor { display: block; position: relative; border-radius: 50%; overflow: hidden; background: #0b0809; }
+.pf-vor .av { width: 100%; height: 100%; }
+.pf-vor.gross { width: 90px; height: 90px; box-shadow: 0 0 0 3px var(--bg-2), 0 0 0 5px rgba(169, 228, 255, 0.5), 0 0 30px rgba(70, 170, 215, 0.45); }
+.pf-vor.mittel { width: 48px; height: 48px; }
+.pf-vor.mittel .av.xl { font-size: 1rem; }
+.pf-vor.klein { width: 30px; height: 30px; }
+.pf-vor.klein .av.xl { font-size: 0.65rem; }
+.pf-vor-bild { position: absolute; inset: 0; background-size: cover; background-position: center; }
+.pf-zoom { display: flex; align-items: center; gap: 10px; }
+.pf-zoom button { flex: none; width: 44px; height: 44px; min-height: 0; margin: 0; padding: 0; border-radius: 12px; background: #241d1f; border: none; color: var(--text); font-family: var(--font-cond); font-weight: 700; font-size: 1.4rem; }
+.pf-zoom button:disabled { opacity: 0.35; }
+.pf-zoom input[type="range"] { flex: 1 1 auto; min-width: 0; height: 44px; margin: 0; background: transparent; accent-color: #46aad7; }
+.pf-luft { flex: 1 1 auto; }
+.pf-quellen { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.pf-quellen .pa-btn { display: flex; align-items: center; justify-content: center; gap: 8px; }
+.pf-quellen svg { width: 1.2em; height: 1.2em; }
 
 /* Finish-Kachel: zwei Knoepfe, Unterzeile "N angepasst" */
 .pa-finish-knoepfe { display: flex; flex-direction: column; gap: 8px; margin-top: auto; }
@@ -6397,7 +6445,9 @@ button.pa-gruppe { cursor: pointer; }
 .overlay.bogen .dl-fuss .btn:disabled { opacity: 0.4; }
 
 @media (max-width: 699px) {
-  .ft-panel .pa-panel-kopf { flex-wrap: wrap; }
+  .ft-panel .pa-panel-kopf, .pe-panel .pa-panel-kopf, .pf-panel .pa-panel-kopf { flex-wrap: wrap; }
+  .pe-panel .pa-panel-titel, .pf-panel .pa-panel-titel { flex: 1 1 100%; }
+  .pe-panel .pa-panel-kopf .pa-btn, .pe-panel .pa-panel-kopf .pa-fertig, .pf-panel .pa-panel-kopf .pa-btn, .pf-panel .pa-panel-kopf .pa-fertig { flex: 1 1 0; }
   .ft-panel .pa-panel-titel { flex: 1 1 auto; }
   .ft-panel .ft-filter { flex: 1 1 100%; order: 3; }
   .overlay.bogen .fi-gruppen { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -6445,6 +6495,27 @@ button.pa-gruppe { cursor: pointer; }
   .pa-fertig { height: clamp(44px, 5vh, 52px); min-height: 0; font-size: clamp(14px, 2.2vh, 22px); }
   .pa-panel-koerper { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; grid-template-columns: repeat(3, minmax(0, 1fr)); align-content: start; }
   .pa-finish-knoepfe .pa-btn { height: clamp(44px, 6vh, 62px); }
+  .pe-panel .pa-panel-kopf .pa-btn { height: clamp(44px, 5.4vh, 56px); }
+  .pe-koerper { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 2fr); gap: clamp(14px, 2.4vw, 40px); align-items: start; }
+  .pe-av .av.xl { width: clamp(90px, 22vh, 230px); height: clamp(90px, 22vh, 230px); font-size: clamp(22px, 6vh, 66px); }
+  .pe-farbe { width: clamp(44px, 4.6vh, 46px); height: clamp(44px, 4.6vh, 46px); }
+  .pe-raster { gap: clamp(8px, 1.2vw, 18px); }
+  .pe-input { height: clamp(44px, 7vh, 70px); font-size: clamp(14px, 2.3vh, 23px); }
+  .pe-hand button { height: clamp(44px, 5.6vh, 56px); font-size: clamp(12px, 2vh, 20px); }
+  .pf-koerper { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: clamp(14px, 2.4vw, 40px); }
+  /* Die Buehne bleibt quadratisch (die Geometrie rechnet in Anteilen der
+     Seite): so gross wie die kleinere Seite ihres Rahmens. */
+  .pf-rahmen { container-type: size; }
+  .pf-buehne { width: min(100cqw, 100cqh); height: min(100cqw, 100cqh); aspect-ratio: auto; }
+  .pf-rechts { min-height: 0; }
+  .pf-vor.gross { width: clamp(90px, 26vh, 260px); height: clamp(90px, 26vh, 260px); }
+  .pf-vor.gross .av.xl { font-size: clamp(28px, 8vh, 86px); }
+  .pf-vor.mittel { width: clamp(48px, 11vh, 110px); height: clamp(48px, 11vh, 110px); }
+  .pf-vor.mittel .av.xl { font-size: clamp(16px, 3.6vh, 38px); }
+  .pf-vor.klein { width: clamp(30px, 6vh, 60px); height: clamp(30px, 6vh, 60px); }
+  .pf-vor.klein .av.xl { font-size: clamp(11px, 2vh, 21px); }
+  .pf-zoom button { width: clamp(44px, 6vh, 60px); height: clamp(44px, 6vh, 60px); }
+  .pf-quellen .pa-btn { height: clamp(44px, 6vh, 62px); }
   .ft-panel { gap: clamp(8px, 1.4vh, 16px); }
   .ft-filter button { height: clamp(44px, 4.4vh, 46px); font-size: clamp(11px, 1.8vh, 18px); }
   .ft-liste { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; grid-template-columns: repeat(5, minmax(0, 1fr)); column-gap: clamp(10px, 1.4vw, 22px); }
@@ -6485,7 +6556,10 @@ button.pa-gruppe { cursor: pointer; }
   .pa-pad button { min-height: 44px; }
   .pa-finish > .pa-btn { flex: none; margin-top: 0; }
   .pa-panel-koerper { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .ft-panel { overflow-y: auto; scrollbar-width: none; }
+  .ft-panel, .pf-panel, .pe-panel { overflow-y: auto; scrollbar-width: none; }
+  .pf-koerper { flex: none; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .pf-rahmen { container-type: normal; }
+  .pf-buehne { width: 100%; height: auto; aspect-ratio: 1; }
   .ft-liste { flex: none; overflow: visible; grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .ft-editor { flex-direction: column; }
   .ft-segs { max-height: none; }
