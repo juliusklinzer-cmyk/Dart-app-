@@ -938,7 +938,8 @@ Ausbullen und die Dialoge nach Leg und Spiel behalten ihre eigene Pfeil-Wahl.
 |---|---|
 | `index.html` | Aufbau aller Screens |
 | `css/styles.css` | Styling (Dark, Touch-Ziele ≥ 44 px) |
-| `js/checkout.js` | Finish-Wege aus Tabellen (Rest 2–170 je Lieblingsdoppel, Stellwürfe) plus Rechenkern „ist ein Finish möglich“ |
+| `js/checkout.js` | Finish-Wege aus Tabellen (Rest 2–170 je Lieblingsdoppel, Stellwürfe), eigene Spieler-Tabellen, plus Rechenkern „ist ein Finish möglich“ |
+| `js/checkout-engine.js`, `js/checkout-worker.js` | Checkout-Engine: rechnet aus einem Treffermodell je Spieler eine eigene Finish-Tabelle (im Web Worker); Referenz und Testdaten unter `docs/finishwege/referenz/` |
 | `docs/finishwege/`, `tools/finishwege-bauen.mjs` | Quelle der Finish-Tabellen und der Generator, der sie in checkout.js schreibt |
 | `js/liga-daten.js` | Spielplan, Ergebnisse der Ligaleitung, Teams (App und Webseite) |
 | `js/app.js` | Turnier-, Cricket- und RTW-Logik, Statistik, Rendering, Persistenz |
@@ -1026,6 +1027,36 @@ beantwortet nur noch, ob ein Rest mit n Darts überhaupt zu finishen ist. Wählb
 Lieblingsdoppel sind die geraden von D20 bis D4; Bull und ungerade Doppel gibt es
 nicht mehr zur Wahl (ein Single dort lässt immer eine ungerade Zahl).
 
+### Checkout-Engine (eigene Tabelle je Spieler)
+
+`js/checkout-engine.js` ist die Portierung der Referenz
+`docs/finishwege/referenz/checkout_referenz.py` (maßgeblich für Regeln und
+Konstanten) nach JavaScript. Sie rechnet aus einem **Treffermodell** die komplette
+Finish-Tabelle für einen Spieler: jeder Wurf streut normalverteilt um seinen Zielpunkt
+(81 Zielpunkte: Triple, Doppel, Single außen und innen, Zentrum) auf einem Board mit
+Originalmaßen; in jedem Zustand (Rest, Darts in der Hand) wird der Zielpunkt gewählt,
+der die erwartete Zahl an Aufnahmen bis zum Finish minimiert (Variante „checkout“:
+maximale Chance, in dieser Aufnahme auszuchecken). Das Profil besteht aus Streuung
+waagrecht und senkrecht, Faktoren für Triple, Doppel und Bull, Lieblingsgruppen
+(D20 → D10 → D5, D16 → D8 → D4 → D2 → D1, D18 → D9, D12 → D6 → D3, D14 → D7, Bull)
+und der Spielweise. Aus Average und Wurftests (je zehn Darts auf T20, ein Doppel,
+Bull, ein Triple) kalibriert die Engine das Profil. Das Trefferbild entsteht nicht
+per Monte Carlo wie in der Referenz, sondern durch Integration der Normalverteilung
+(je Spalte exakt entlang y), ist also deterministisch und auf jedem Gerät gleich.
+Mit dem Referenzprofil „Fortgeschritten“ (12 mm Streuung) ergeben sich die festen
+Tabellen oben; wo zwei Wege näher beieinander liegen als das Rauschen der Referenz
+(etwa ein Prozent der Einträge), kann die Wahl anders ausfallen.
+
+Gerechnet wird einmal auf Wunsch im Profil, im Web Worker (`js/checkout-worker.js`,
+im Einzeldatei-Bündel als Blob-Worker aus dem eingebetteten Quelltext; rund eine
+Sekunde). Das Ergebnis ist eine Tabelle im Format der festen Tabellen, die beim
+Spieler gespeichert wird; `Checkout.suggest`/`stellwurf` nehmen statt der
+Doppelzahl ein Objekt `{ dbl, tabelle }` und greifen zuerst auf die eigene Zeile zu,
+Lücken füllen die festen Tabellen. Wer keine eigene Tabelle rechnet, spielt mit der
+Standardtabelle seines Lieblingsdoppels. `npm run test:engine` prüft die Engine
+gegen `checkout_fixtures.json` (Tabellen aller Referenzprofile, Checkout-Variante,
+Average-Tabelle, Kalibrierung, Wegbewertung, Alternativen).
+
 ## Tests
 
 ```bash
@@ -1044,9 +1075,10 @@ Profilverwaltung, Archivierung und Persistenz nach Reload.
 Für die Kontoschicht kommen zwei Durchläufe dazu:
 
 ```bash
+npm run test:engine  # Checkout-Engine gegen die Referenzdaten (Node, ohne Browser)
 npm run test:api     # Server allein: Registrierung, Rechte, Rate-Limit, Grabsteine
 npm run test:konto   # zwei Browser, zwei Accounts, ein gemeinsames Spiel
-npm run test:alle    # alle drei nacheinander
+npm run test:alle    # alle vier nacheinander
 ```
 
 `test:konto` startet den echten Server gegen eine Wegwerf-Datenbank, registriert zwei

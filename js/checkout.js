@@ -13,6 +13,12 @@
  * Der Rechenkern darunter (best/possible/minDarts) bleibt fuer die Frage,
  * ob ein Rest mit n Darts ueberhaupt zu finishen ist - das brauchen
  * Statistik (Doppelversuche) und der Finish-Dialog.
+ *
+ * Eigene Tabelle je Spieler: statt der Doppelzahl darf ueberall ein Objekt
+ * { dbl, tabelle } stehen. tabelle kommt aus der Checkout-Engine
+ * (js/checkout-engine.js, im Profil einmal gerechnet und gespeichert) im
+ * selben Zeilenformat wie unten; was dort fehlt, faellt auf die festen
+ * Tabellen zurueck. rechnen() stoesst die Engine im Web Worker an.
  */
 (function (global) {
   'use strict';
@@ -167,12 +173,15 @@
   }
 
   /* Die Tabellenzeile zu Rest und Darts in der Hand: Felder in Solver-
-     Schreibweise, bei einem Stellwurf dazu die Zahl, auf die er stellt. */
+     Schreibweise, bei einem Stellwurf dazu die Zahl, auf die er stellt.
+     lieblings: Doppelzahl oder { dbl, tabelle } (eigene Tabelle zuerst). */
   function zeile(remaining, dartsLeft, lieblings) {
     var d = dartsLeft === undefined ? 3 : dartsLeft;
     if (!(remaining >= 2) || remaining > 170 || d < 1 || d > 3) return null;
-    var fav = favorit(lieblings);
-    var reihe = (fav && WEGE_FAVORIT[fav][remaining]) || WEGE_STANDARD[remaining];
+    var eigen = lieblings && typeof lieblings === 'object' ? lieblings : null;
+    var fav = favorit(eigen ? eigen.dbl : lieblings);
+    var reihe = (eigen && eigen.tabelle && eigen.tabelle[remaining]) ||
+      (fav && WEGE_FAVORIT[fav][remaining]) || WEGE_STANDARD[remaining];
     if (!reihe) return null;
     var text = reihe.split('|')[3 - d];
     var teile = text.split(' ');
@@ -193,6 +202,64 @@
   function stellwurf(remaining, dartsLeft, lieblings) {
     var z = zeile(remaining, dartsLeft, lieblings);
     return z && z.auf !== null ? z : null;
+  }
+
+  /*
+   * Tabellen fuer ein Profil rechnen lassen - im Web Worker, damit die
+   * Oberflaeche nicht steht. auftrag = { profil } oder { eingabe } (siehe
+   * js/checkout-worker.js). Liefert ein Promise auf { profil, tabelle,
+   * tabelleCheckout, ms }. In der Einzeldatei kommt der Worker aus dem
+   * eingebetteten Quelltext; wo kein Worker geht, rechnet die Engine direkt,
+   * sofern sie auf der Seite liegt.
+   */
+  var workerUrl = null;
+  function engineWorker() {
+    if (typeof Worker === 'undefined') return null;
+    try {
+      if (global.__CHECKOUT_ENGINE_SRC) {
+        if (!workerUrl) {
+          workerUrl = URL.createObjectURL(new Blob([global.__CHECKOUT_ENGINE_SRC, '\n', global.__CHECKOUT_WORKER_SRC], { type: 'text/javascript' }));
+        }
+        return new Worker(workerUrl);
+      }
+      return new Worker('js/checkout-worker.js');
+    } catch (e) { return null; }
+  }
+  function rechnenDirekt(auftrag) {
+    var E = global.CheckoutEngine;
+    if (!E) throw new Error('Checkout-Engine nicht geladen');
+    var t = Date.now();
+    var p = auftrag.eingabe ? E.profilAusTests(auftrag.eingabe) : E.profil(auftrag.profil);
+    var erg = E.tabellenFuerProfil(p);
+    return { id: auftrag.id, profil: p, tabelle: E.kompakt(erg.tabelle), tabelleCheckout: E.kompakt(erg.tabelleCheckout), ms: Date.now() - t };
+  }
+  function rechnen(auftrag) {
+    return new Promise(function (resolve, reject) {
+      var w = engineWorker();
+      if (!w) {
+        try { resolve(rechnenDirekt(auftrag)); } catch (e) { reject(e); }
+        return;
+      }
+      var fertig = false;
+      /* Ein haengender Worker darf das Promise nicht ewig offen lassen. */
+      var uhr = setTimeout(function () {
+        if (fertig) return;
+        fertig = true; w.terminate();
+        reject(new Error('Die Berechnung hat zu lange gedauert'));
+      }, 60000);
+      w.onmessage = function (ev) {
+        if (fertig) return;
+        fertig = true; clearTimeout(uhr); w.terminate();
+        if (ev.data && ev.data.fehler) reject(new Error(ev.data.fehler)); else resolve(ev.data);
+      };
+      w.onerror = function (e) {
+        if (fertig) return;
+        fertig = true; clearTimeout(uhr); w.terminate();
+        if (e && e.preventDefault) e.preventDefault();
+        try { resolve(rechnenDirekt(auftrag)); } catch (x) { reject(x); }
+      };
+      w.postMessage(auftrag);
+    });
   }
 
   /** Ist ein Checkout mit genau so vielen Darts möglich? */
@@ -224,6 +291,7 @@
     suggest: suggest,
     stellwurf: stellwurf,
     favorit: favorit,
+    rechnen: rechnen,
     possible: possible,
     minDarts: minDarts,
     fieldValue: fieldValue,

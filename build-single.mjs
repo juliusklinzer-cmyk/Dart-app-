@@ -32,7 +32,16 @@ const css = read('css/styles.css')
     (_, datei) => "url('" + einbetten('icons/' + datei, 'image/webp') + "')");
 // js/kamera.js bleibt bewusst draussen: die Kamera-Kopplung braucht den
 // Server als Vermittler - in der Einzeldatei gaebe es nur einen toten Knopf.
-const js = [read('js/liga-daten.js'), read('js/sound.js'), read('js/checkout.js'), read('js/app.js')]
+// Die Checkout-Engine liegt doppelt im Buendel: als Skript auf der Seite und
+// als Quelltext fuer den Blob-Worker (eine Einzeldatei hat keine Nachbardatei,
+// aus der ein Worker laden koennte). "</" wird entschaerft, damit der Text den
+// Script-Block nicht beendet.
+const engineSrc = read('js/checkout-engine.js');
+const workerSrc = read('js/checkout-worker.js').replace(/^importScripts\([^\n]*\n/m, '');
+const quelltext = (t) => JSON.stringify(t).replace(/<\//g, '<\\/');
+const js = [read('js/liga-daten.js'), read('js/sound.js'), engineSrc,
+  'window.__CHECKOUT_ENGINE_SRC = ' + quelltext(engineSrc) + ';\nwindow.__CHECKOUT_WORKER_SRC = ' + quelltext(workerSrc) + ';',
+  read('js/checkout.js'), read('js/app.js')]
   // Ohne Nachbardateien gibt es keinen Service Worker zu registrieren.
   .join('\n')
   .replace(/\n\s*if \('serviceWorker' in navigator[\s\S]*?\n\s*\}\n/, '\n');

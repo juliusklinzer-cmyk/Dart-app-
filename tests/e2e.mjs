@@ -2601,6 +2601,31 @@ check('Stellwurf aus der Tabelle: 99 mit zwei Darts T19 10 auf 32, 159 mit dreie
   return a.darts.join(' ') === 'T19 S10' && a.auf === 32 && b.darts.join(' ') === 'T20 T19 S10' && b.auf === 32;
 }));
 
+/* Eigene Tabelle je Spieler (Checkout-Engine, Phase 1): statt der Doppelzahl
+   ein Objekt { dbl, tabelle }. Die eigene Zeile gewinnt, Luecken fallen auf
+   die festen Tabellen des Favoriten zurueck. */
+check('eigene Tabelle: die eigene Zeile gewinnt, Luecken fallen auf den Favoriten zurueck', await page.evaluate(() => {
+  const C = window.Checkout;
+  const eig = { dbl: 16, tabelle: { 140: 'T20 T20 D10|T20 T20 >20|T20 >80', 99: 'T19 S10 D16|T19 S10 >32|T19 >42' } };
+  return C.suggest(140, 3, eig).join(' ') === 'T20 T20 D10' && C.suggest(140, 3, 16).join(' ') === 'T20 T16 D16' &&
+    C.stellwurf(99, 2, eig).auf === 32 && C.suggest(80, 3, eig).join(' ') === 'T16 D16' && C.suggest(141, 3, eig).join(' ') === 'T20 T19 D12';
+}));
+/* Die Engine selbst laeuft im Web Worker (im Buendel als Blob) und liefert
+   die Tabelle im Format der festen Tabellen. */
+const engine = await page.evaluate(() => window.Checkout.rechnen({ profil: { favoriten: [16] } })
+  .then((e) => ({ n: Object.keys(e.tabelle).length, w140: e.tabelle[140], w99: e.tabelle[99], w170: e.tabelle[170], ms: e.ms, fav: e.profil.favoriten }), (err) => ({ fehler: String(err) })));
+check('die Engine rechnet im Worker eine Tabelle fuer D16 (140 = T20 T16 D16, 99 = T19 10 D16)',
+  engine.n === 169 && engine.w140 === 'T20 T16 D16|T20 T16 >32|T20 >80' && engine.w99 === 'T19 S10 D16|T19 S10 >32|T19 >42' && engine.w170 === 'T20 T20 BULL|T20 T20 >50|T20 >110', JSON.stringify(engine));
+const engineStd = await page.evaluate(() => window.Checkout.rechnen({ profil: {} })
+  .then((e) => ({ w101: e.tabelle[101], c101: e.tabelleCheckout[101], w84: e.tabelle[84] }), (err) => ({ fehler: String(err) })));
+check('ohne Favorit: 101 = T19 12 D16 und 84 = Bull D17, die Checkout-Variante nimmt auf 101 T20 3 D19',
+  engineStd.w101 === 'T19 S12 D16|T17 BULL|T19 >44' && engineStd.w84 === 'BULL D17|T20 D12|25 >59' && engineStd.c101 === 'T20 S3 D19|T17 BULL|T19 >44', JSON.stringify(engineStd));
+const kal = await page.evaluate(() => window.Checkout.rechnen({ eingabe: { avg: 60, favoriten: [16, 8, 4, 2],
+  t20: { treffer: 1, s20: 6, eins: 1, fuenf: 2 }, doppel: { ziel: 16, treffer: 2, innen: 4, aussen: 3, nachbar_7: 0, nachbar_8: 1 }, bull: { bull: 1, 25: 3, sonst: 6 } } })
+  .then((e) => ({ sx: e.profil.sigma_x, sy: e.profil.sigma_y, fd: e.profil.f_doppel, fb: e.profil.f_bull, n: Object.keys(e.tabelle).length }), (err) => ({ fehler: String(err) })));
+check('aus Average und Wurftests entsteht ein Profil (60er Average: rund 16 mm Streuung, Doppel 1,09, Bull 0,96)',
+  kal.n === 169 && Math.abs(kal.sx - 16.2) < 0.5 && Math.abs(kal.sy - 17.05) < 0.5 && Math.abs(kal.fd - 1.089) < 0.05 && Math.abs(kal.fb - 0.955) < 0.05, JSON.stringify(kal));
+
 // Und jetzt durch die Oberflaeche: einstellen, speichern, im Spiel sehen.
 await page.evaluate(() => window.__dart.setScreen('setup'));
 const dblId = await page.evaluate(() => window.__dart.activeProfiles()[0].id);

@@ -141,11 +141,11 @@ function liefereDatei(req, res, datei) {
    Server laufen. Liefert der Server es aus, bekommt es eine CSP, die genau
    das zulaesst, aber weiterhin nichts von fremden Servern laedt. */
 const CSP =
-  "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; " +
+  "default-src 'self'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline'; " +
   "img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self'; font-src 'self'; " +
   "frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
 const CSP_BUENDEL =
-  "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; " +
+  "default-src 'self'; script-src 'self' 'unsafe-inline'; worker-src blob:; style-src 'self' 'unsafe-inline'; " +
   "img-src 'self' data: blob:; connect-src 'self'; font-src 'self' data:; media-src 'self' blob: data:; " +
   "frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
 

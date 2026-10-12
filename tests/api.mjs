@@ -1324,6 +1324,7 @@ async function main() {
     {
       const csp = String(res.headers.get('content-security-policy'));
       ok(/script-src 'self';/.test(csp), 'die App-Seite erlaubt nur eigene Skripte, keine Inline-Skripte');
+      ok(/worker-src 'self';/.test(csp), 'und einen eigenen Web Worker (Checkout-Engine)');
       ok(csp.includes("frame-ancestors 'none'") && csp.includes("default-src 'self'"), 'und laesst sich nicht in fremde Seiten einbetten');
       gleich(res.headers.get('x-frame-options'), 'DENY', 'X-Frame-Options steht auf DENY');
       gleich(res.headers.get('x-content-type-options'), 'nosniff', 'X-Content-Type-Options steht auf nosniff');
@@ -1335,6 +1336,8 @@ async function main() {
     if (res.status === 200) {
       ok(/script-src 'self' 'unsafe-inline'/.test(String(res.headers.get('content-security-policy'))),
         'das Einzeldatei-Buendel darf sein eingebettetes Skript ausfuehren');
+      ok(/worker-src blob:/.test(String(res.headers.get('content-security-policy'))),
+        'und seinen Worker aus dem eingebetteten Quelltext starten');
     }
     for (const seite of ['/index.html', '/']) {
       const html = await (await fetch(BASIS + seite)).text();

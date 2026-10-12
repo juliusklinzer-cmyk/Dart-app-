@@ -18,3 +18,4 @@ deploy/.env
 .claude/skills/spec-driven-development/
 .claude/skills/planning-and-task-breakdown/
 .agent-deploy.sh
+__pycache__/
