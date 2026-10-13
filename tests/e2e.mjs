@@ -1377,9 +1377,15 @@ check('Menue, Info und Runde stehen rechts oben', (await visible('#screen-finish
 check('die vorgeschlagenen Felder in der Karte sind Tasten mit Feld und Ring', (await page.locator('#fin-board .pcard.active button.fk.tipp[data-num][data-mult]').count()) >= 1);
 {
   const vorher = await page.evaluate(() => window.__dart.game().throws ? window.__dart.game().throws.length : (window.__dart.finisherState().inVisit || 0));
-  await page.locator('#fin-board .pcard.active button.fk.tipp').first().click();
-  await page.waitForTimeout(100);
-  const nachher = await page.evaluate(() => window.__dart.finisherState().inVisit);
+  /* Direkt nach dem Start wuerfelt die Zahl noch (1,5 s) und zeichnet die Karten
+     neu; der Tipp landet sonst auf einer gerade ersetzten Kachel. */
+  await page.waitForTimeout(1700);
+  let nachher = 0;
+  for (let versuch = 0; versuch < 3 && nachher !== 1; versuch++) {
+    await page.locator('#fin-board .pcard.active button.fk.tipp').first().click();
+    await page.waitForTimeout(200);
+    nachher = await page.evaluate(() => window.__dart.finisherState().inVisit);
+  }
   check('Antippen bucht den Dart (Schnelleingabe wie im X01)', nachher === 1, 'inVisit ' + nachher + ' (vorher ' + vorher + ')');
   await page.locator('#screen-finisher [data-action="undo-game"]').first().click();
   await page.waitForTimeout(100);
@@ -1570,11 +1576,17 @@ check('60 getippt: Rest 40, die Aufnahme ist durch', await page.evaluate((id) =>
   const st = window.__dart.finisherState(); return st.rest[id] === 40 && st.aufnahmen[id] === 1;
 }, ffA));
 check('die Liste unten zeigt 100 → 40', (await text('#ff-hist-l')).includes('100 → 40'));
-await page.keyboard.type('90'); await page.keyboard.press('Enter');   // Gegner: 100 -> 10
+const ffGegner = await page.evaluate(() => window.__dart.game().players[1]);
+await page.keyboard.type('10'); await page.keyboard.press('NumLock');   // Gegner tippt den Rest: 100 -> 10
+check('Clear bucht den eingetippten Rest (100 -> 10)', await page.evaluate((id) => window.__dart.finisherState().rest[id] === 10, ffGegner));
+await page.keyboard.press('-');   // A: Bust, Rest bleibt 40, die Aufnahme ist weg
+check('Minus bucht einen Bust: Rest bleibt 40, die Aufnahme ist durch, der Gegner ist dran', await page.evaluate((id) => { const st = window.__dart.finisherState(); return st.rest[id] === 40 && st.aufnahmen[id] === 2 && window.__dart.game().players[st.turn] !== id; }, ffA));
+await page.keyboard.type('3'); await page.keyboard.press('Enter');     // Gegner: 10 -> 7
 await page.keyboard.type('40'); await page.keyboard.press('Enter');
 check('Finish getippt: die Frage nach der Dartzahl', (await text('#overlay-card')).includes('wie vielen Darts'));
 await page.keyboard.press('1');
 check('ein Dart: D20, Spieler A ist durch', await page.evaluate((id) => !!window.__dart.finisherState().fertig[id], ffA));
+
 await page.keyboard.type('5'); await page.keyboard.press('Enter');     // Gegner: 10 -> 5 = Bust? nein: Rest 5 bleibt (ohne Doppel kein Finish, 5 ist regulaer)
 check('nach der Runde rollt die neue Zahl', await page.evaluate(() => window.__dart.finisherState().runde === 1));
 await page.keyboard.press('Escape');

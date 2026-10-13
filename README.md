@@ -371,6 +371,8 @@ dieselben Karten in Plakatgröße, Auswahl per 4/6 und Enter.
 Die vorgeschlagenen Felder in der Karte des Werfers sind zugleich Tasten: Antippen bucht
 den Dart wie im X01 (in der Fernsteuerung nur Anzeige). Dasselbe gilt für Kaiwen in der
 Einzel-Dart-Eingabe.
+In der Fernsteuerung bucht die Clear-Taste den eingetippten Rest und Minus einen Bust,
+genau wie im X01.
 
 ### Kaiwen (Team-Checkout)
 

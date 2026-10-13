@@ -2873,7 +2873,8 @@
       var fertig = false, bust = false;
       // Genau wie im X01: unter null, auf 1 stehen bleiben oder ohne Doppel
       // auf null – alles drei ist ein Bust, die ganze Aufnahme verfällt.
-      if (nach === 0 && t.m === 2) { st.rest[pid] = 0; fertig = true; }
+      if (t.bust) bust = true;
+      else if (nach === 0 && t.m === 2) { st.rest[pid] = 0; fertig = true; }
       else if (nach < 0 || nach === 1 || nach === 0) bust = true;
       else st.rest[pid] = nach;
 
@@ -7258,6 +7259,18 @@
       if (bust && finisherState(g).inVisit === 0) break;   // der Dart hat ueberworfen - Schluss
     }
     if (!bust) { var offen = frei - darts.length; for (var o = 0; o < offen; o++) rd.throws.push({ n: 0, m: 0 }); }
+    UI.input = ''; UI.error = ''; UI.mult = 1;
+    pruefeFinisherRunde(g);
+    save(); render();
+  }
+  /* "-" in der Fernsteuerung: die Aufnahme ist ueberworfen, der Rest bleibt. */
+  function finisherUeberworfen() {
+    var g = S.game;
+    if (!g || g.kind !== 'finisher' || g.done) return;
+    var rd = finisherRunde(g);
+    if (rd.stechen) return;
+    pomp();
+    rd.throws.push({ n: 0, m: 0, bust: true });
     UI.input = ''; UI.error = ''; UI.mult = 1;
     pruefeFinisherRunde(g);
     save(); render();
@@ -12968,6 +12981,19 @@
     if (!fg || fg.kind !== 'finisher') return;
     if (ev.key === 'Escape') { UI.finFern = false; UI.input = ''; save(); render(); ev.preventDefault(); return; }
     if (fg.done) return;
+    /* Clear bucht den eingetippten Rest, Minus einen Bust - wie im X01. */
+    if (istRestTaste(ev)) {
+      ev.preventDefault();
+      if (UI.input === '') { UI.error = 'Erst den Rest eintippen, dann clear.'; render(); return; }
+      var fSt = finisherState(fg);
+      var fRest = fSt.rest[fg.players[fSt.turn]];
+      var fNeu = parseInt(UI.input, 10);
+      if (fNeu > fRest) { UI.error = 'Rest ' + fNeu + ' ist mehr als vorher (' + fRest + ').'; UI.input = ''; render(); return; }
+      ev.eingabeGebucht = true;
+      finisherAufnahmeTippen(fRest - fNeu);
+      return;
+    }
+    if (istUeberworfenTaste(ev)) { ev.preventDefault(); finisherUeberworfen(); return; }
     var zFin = tasteZiffer(ev);
     if (zFin !== null) {
       if (UI.input.length < 3) { UI.input = UI.input === '0' ? zFin : UI.input + zFin; UI.error = ''; render(); }
