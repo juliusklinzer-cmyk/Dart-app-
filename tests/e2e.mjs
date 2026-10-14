@@ -5367,6 +5367,23 @@ group('Hunter: Maeusejagd, Startfelder, Fangen, Varianten, Solo');
   await page.setViewportSize(vpHu);
 }
 
+group('Kaiwen: ein laufendes Spiel geht beim Start eines anderen nicht verloren');
+{
+  await page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; S.matches = []; D.ui().overlay = null; S.lineup = D.activeProfiles().slice(0, 2).map((p) => p.id); D.save(); D.setScreen('setup'); });
+  await page.locator('[data-action="set-mode"][data-value="kaiwen"]').click();
+  await page.locator('[data-action="start-game"]').click(); await page.waitForTimeout(150);
+  for (const c of '60') await page.locator(`#kw-pad-total .kw-keys button[data-key="${c}"]`).click();
+  await page.locator('#kw-pad-total .kw-keys button[data-key="ok"]').click();
+  const kwId = await page.evaluate(() => window.__dart.game().id);
+  await page.locator('.kw-pad-kopf [data-action="game-menu"]').click();
+  await page.locator('#kw-menu-overlay [data-action="leave-game"]').click();
+  check('Spiel verlassen laesst das Kaiwen-Spiel offen (Setup)', (await page.evaluate(() => window.__dart.state().screen)) === 'setup' && (await page.evaluate(() => !!window.__dart.game())));
+  await page.locator('[data-action="set-mode"][data-value="hunter"]').click();
+  await page.locator('[data-action="start-game"]').click(); await page.waitForTimeout(150);
+  check('ein anderes Spiel starten sichert das Kaiwen-Spiel samt Aufnahme ins Archiv', await page.evaluate((id) => { const h = window.__dart.state().history.find((x) => x.id === id); return !!h && h.kind === 'kaiwen' && Array.isArray(h.versuche) && h.versuche[0].visits.length === 1 && h.versuche[0].visits[0].s === 60; }, kwId));
+  await page.evaluate((id) => { const D = window.__dart, S = D.state(); S.game = null; S.history = S.history.filter((x) => x.id !== id); D.save(); D.setScreen('setup'); }, kwId);
+}
+
 group('Oeffentliche Webseite (webseite.html): Spieltag, Termine, Ergebnisse, Tabelle, Anmelden');
 {
   const wp = await browser.newPage({ viewport: { width: 390, height: 844 } });

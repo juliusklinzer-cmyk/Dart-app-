@@ -2988,6 +2988,13 @@
   function startGame(kind) {
     bereinigeAufstellung();
     // Ein beendetes, noch nicht gespeichertes Spiel zuerst sichern.
+    /* Kaiwen hat kein Spielende von selbst: ein laufendes Spiel mit
+       geworfenen Aufnahmen wird hier abgeschlossen und gesichert statt
+       stillschweigend ueberschrieben (so ging am 13.10. ein Spiel verloren). */
+    if (S.game && !S.game.done && S.game.kind === 'kaiwen' && Array.isArray(S.game.versuche) &&
+        S.game.versuche.some(function (v) { return v.visits && v.visits.length; })) {
+      S.game.done = true; S.game.winner = null; S.game.at = Date.now();
+    }
     if (S.game && S.game.done) archiveGame(S.game);
     /* Cricket, Round the World und Finisher gehen auch allein – als Training
        gegen sich selbst. Nur ganz ohne Spieler geht nichts. */
