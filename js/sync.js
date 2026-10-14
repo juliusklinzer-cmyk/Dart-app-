@@ -135,6 +135,17 @@
 
   /* Alles anstellen, was zu Accounts gehört und noch nicht oben liegt. */
   function backfill() {
+    /* Kaiwen und Hunter wies der Server bis zum 14.10.2026 als unbekannte
+       Spielart ab, und die App hakte sie daraufhin als "oben" ab. Einmalig
+       wieder freigeben: der Server nimmt sie jetzt, die Kennung macht das
+       Hochladen idempotent. */
+    if (!zustand.khNachgereicht) {
+      zustand.hoch = zustand.hoch.filter(function (id) {
+        var h = eintragNachId(id);
+        return !(h && (h.kind === 'kaiwen' || h.kind === 'hunter') && !h.von);
+      });
+      zustand.khNachgereicht = 1;
+    }
     D.state().history.forEach(function (h) {
       if (ladbar(h) && zustand.outbox.indexOf(h.id) < 0) zustand.outbox.push(h.id);
     });

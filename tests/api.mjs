@@ -1193,6 +1193,14 @@ async function main() {
     gleich(r.status, 201, 'ein Schnelles Spiel, wie die App es ablegt, geht durch');
     r = await spielMit('finish1', 'finisher', { id: 'finish1', kind: 'finisher', players: [julius_id], rounds: [], ziel: 60, winner: julius_id });
     gleich(r.status, 201, 'ein Finisher, wie die App ihn ablegt, geht durch');
+    r = await spielMit('kaiwen1', 'kaiwen', { id: 'kaiwen1', kind: 'kaiwen', players: [julius_id, tobi_id], winner: null, versuche: [{ zahl: 120, visits: [{ p: julius_id, s: 60, d: 3, b: false, c: false, o: 0 }] }], namen: { [julius_id]: 'Julius', [tobi_id]: 'Tobi' } });
+    gleich(r.status, 201, 'ein Kaiwen-Spiel (Versuche) wird angenommen');
+    r = await spielMit('kaputtk', 'kaiwen', { kind: 'kaiwen', players: [julius_id, tobi_id] });
+    gleich(r.status, 400, 'Kaiwen ohne Versuche wird abgewiesen');
+    r = await spielMit('hunter1', 'hunter', { id: 'hunter1', kind: 'hunter', players: [julius_id, tobi_id], winner: julius_id, variante: 'boost', leben: 3, throws: [{ n: 20, m: 3 }], namen: { [julius_id]: 'Julius', [tobi_id]: 'Tobi' } });
+    gleich(r.status, 201, 'ein Hunter-Spiel (Wuerfe, Variante, Leben) wird angenommen');
+    r = await spielMit('kaputth', 'hunter', { kind: 'hunter', players: [julius_id, tobi_id] });
+    gleich(r.status, 400, 'Hunter ohne Wurfliste wird abgewiesen');
     r = await julius.ruf('POST', '/api/tournaments', { id: 'turnier9', plan: { players: [julius_id, tobi_id], matches: null }, players: [tobi_id] });
     gleich(r.status, 400, 'ein Spielplan ohne Partienliste wird abgewiesen');
     r = await julius.ruf('POST', '/api/tournaments', {

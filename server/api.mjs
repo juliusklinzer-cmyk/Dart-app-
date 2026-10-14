@@ -15,7 +15,7 @@ import * as relay from './lib/relay.mjs';
 import * as livestrom from './lib/livestrom.mjs';
 import { sendJson, sendFehler, leseCookies, leseJson, clientIp, HttpFehler, MAX_BODY_KLEIN } from './lib/http.mjs';
 
-const KINDS = new Set(['501', 'cricket', 'rtw', 'finisher', 'tournament']);
+const KINDS = new Set(['501', 'cricket', 'rtw', 'finisher', 'kaiwen', 'hunter', 'tournament']);
 const MAX_SPIELER = 16;
 const SEITE = 200; // Spiele pro Abruf
 
@@ -498,7 +498,8 @@ export function createApi(db, config) {
     idListe(p.players, 'Spieler');
     if (p.lineup !== undefined) idListe(p.lineup, 'Aufstellung');
     if (art === 'finisher') liste(p.rounds, 'Runden');
-    else if (art === 'cricket' || art === 'rtw') liste(p.throws, 'Wuerfe');
+    else if (art === 'kaiwen') liste(p.versuche, 'Versuche');
+    else if (art === 'cricket' || art === 'rtw' || art === 'hunter') liste(p.throws, 'Wuerfe');
     else if (p.throws !== undefined) liste(p.throws, 'Wuerfe');
   }
 
