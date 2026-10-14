@@ -396,7 +396,8 @@ Stellwurf nur, wenn im Versuch noch Darts folgen), den Verlauf als grüne und ro
 (nur die Zahl; die Runde steht im Untertitel) und rechts die
 Eingabe: Punkte (Tastenfeld, Schnellwahl, Finish-Frage nach der Dartzahl, auch per
 Tasten 1/2/3) oder Einzel-Darts (Wechsel-Knopf, die Wahl bleibt fürs Spiel), dazu die
-Fernsteuerung mit Tastatureingabe. Testspieler setzen weder Rekord noch PB. In der
+Fernsteuerung mit Tastatureingabe (wie im X01: Clear bucht den eingetippten Rest, Minus
+einen Bust, Plus oder Shift gedrückt zeigt die Aufnahmen des Versuchs groß). Testspieler setzen weder Rekord noch PB. In der
 Rangliste steht der App-Rekord mit Namen in der Rekorde-Karte, die Spiele-Liste nennt
 höchste Zahl und Checks. Nach jedem
 Versuch steht kurz „+10“ oder „−1“ am Score. Undo wie im X01, auch über das
@@ -426,10 +427,13 @@ auf der 20). Das Startfeld ist das erste Ziel; ein Treffer rückt weiter, schon 
 nächste Dart geht aufs neue Ziel. **Jeder jagt den Vordermann:** Einholen reicht, wer
 das Feld eines Gegners vor sich erreicht oder überspringt, fängt ihn (mit Boost alle,
 die er überspringt). Gefangene fliegen raus und stehen ausgegraut auf der Scheibe, der
-Fänger wirft seine Aufnahme zu Ende, der Letzte gewinnt (zu zweit entscheidet der erste
-Fang). Varianten beim Start: **Normal** (jeder Treffer 1 Feld), **Boost** (Single 1,
+Fänger wirft seine Aufnahme zu Ende, der Letzte gewinnt (zu zweit entscheidet mit einem
+Leben der erste Fang). Varianten beim Start: **Normal** (jeder Treffer 1 Feld), **Boost** (Single 1,
 Doppel 2, Triple 3 Felder), **Handicap** (je Spieler eine Stufe: jeder Treffer, nur das
-Doppel oder nur das Triple zählt, immer 1 Feld). **Solo** ist ein Training: einmal rund
+Doppel oder nur das Triple zählt, immer 1 Feld). Dazu die **Leben** (1, 3 oder 5): so
+oft darf einer gefangen werden; wer gefangen wird und noch Leben hat, steigt auf der
+gegenüberliegenden Seite der Scheibe (10 Felder weiter) wieder ein, erst der letzte
+Fang wirft ihn raus. **Solo** ist ein Training: einmal rund
 um die Scheibe von der 20 zurück auf die 20, gezählt werden die Darts, der Bestwert je
 Spieler und Variante leuchtet bei Verbesserung auf.
 
@@ -452,7 +456,7 @@ Doppel, Triple aufs Zielfeld, die Leertaste ein Miss, Enter ein Bust, Backspace 
 nimmt den Dart zurück. Undo dartweise, auch über einen Fang hinweg; der Stand
 übersteht ein
 Neuladen. Die Zusammenfassung nennt Gewinner, Fänge, Darts und Trefferquote je Spieler;
-in der Rangliste stehen Siege, Fänge, Trefferquote (ab 30 Darts), Solo Normal und
+in der Rangliste stehen Siege, Fänge, MPR (Treffer je 3 Darts, ab 30 Darts), Trefferquote (ab 30 Darts), Solo Normal und
 Solo Boost.
 
 ## Ablauf (X01 Turnier)

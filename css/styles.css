@@ -6132,6 +6132,17 @@ body.fix-spiel #screen-kaiwen.active { flex: 1 1 auto; height: auto; min-height:
 #screen-kaiwen.fern .kw-verlauf { grid-column: 1; grid-row: 3; align-self: center; flex-wrap: wrap; overflow: visible; }
 #screen-kaiwen.fern .kw-ff-unten { grid-column: 2; grid-row: 3; display: flex; justify-content: center; }
 #screen-kaiwen.fern .kw-ff-unten .key-mitte { width: 100%; }
+/* "+"/Shift gedrueckt: die Aufnahmen des Versuchs gross ueber dem Bild. */
+#screen-kaiwen .kw-verlauf-gross { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 5; width: min(92%, 720px); max-height: 86%; overflow-y: auto; display: flex; flex-direction: column; gap: clamp(4px, 0.8vh, 8px); padding: clamp(12px, 2vh, 24px) clamp(14px, 1.6vw, 26px); border-radius: 22px; background: #141011; box-shadow: inset 0 0 0 1.5px #2a2224, 0 0 60px rgba(0, 0, 0, 0.6); }
+#screen-kaiwen .kw-verlauf-gross.hidden { display: none; }
+#screen-kaiwen .kw-verlauf-gross .kt { font-size: clamp(11px, 1.9vh, 20px); letter-spacing: 0.14em; color: var(--muted); padding-bottom: 6px; }
+#screen-kaiwen .kvg-zeile { display: grid; grid-template-columns: 2.2em minmax(0, 1fr) auto auto; align-items: center; gap: clamp(8px, 1vw, 16px); padding: clamp(6px, 1.2vh, 12px) clamp(10px, 1vw, 14px); border-radius: 12px; background: #1c1718; font-size: clamp(14px, 2.6vh, 28px); }
+#screen-kaiwen .kvg-n { font-family: var(--font-cond); font-weight: 700; color: #857a7b; }
+#screen-kaiwen .kvg-wer { min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#screen-kaiwen .kvg-zeile b { font-family: var(--font-cond); font-weight: 700; font-size: 1.2em; font-variant-numeric: tabular-nums; }
+#screen-kaiwen .kvg-zeile.bust b { color: var(--red); }
+#screen-kaiwen .kvg-zeile.co b { color: #6fe0a8; }
+#screen-kaiwen .kvg-rest { font-family: var(--font-cond); font-weight: 700; color: #c9c0c0; white-space: nowrap; }
 #screen-kaiwen.fern .kw-rest { font-size: clamp(90px, 30vh, 340px); }
 #screen-kaiwen.fern .kw-kopf .kw-menu { display: flex; }
 
@@ -6255,6 +6266,8 @@ body.fix-spiel #screen-hunter.active { flex: 1 1 auto; height: auto; min-height:
 #screen-hunter .hu-mark.raus .hu-punkt { background: #3a3032 !important; opacity: 0.45; filter: grayscale(1); transform: translate(-50%, -50%) rotate(calc(-1 * var(--w, 0deg))) scale(0.8); }
 #screen-hunter .hu-mark.gefangen .hu-punkt { animation: huGefangen 1.4s ease-out both; }
 #screen-hunter .hu-mark.sieger .hu-punkt { transform: translate(-50%, -50%) rotate(calc(-1 * var(--w, 0deg))) scale(1.22); box-shadow: 0 0 0 2px #0d0a0b, 0 0 0 4px #ffc14d, 0 0 24px rgba(255, 193, 77, 0.8); }
+#screen-hunter .hu-mark.neu .hu-punkt { animation: huNeu 1.2s ease-out both; }
+@keyframes huNeu { 0% { transform: translate(-50%, -50%) rotate(calc(-1 * var(--w, 0deg))) scale(0.3); opacity: 0.2; } 60% { transform: translate(-50%, -50%) rotate(calc(-1 * var(--w, 0deg))) scale(1.4); opacity: 1; } 100% { transform: translate(-50%, -50%) rotate(calc(-1 * var(--w, 0deg))) scale(1); opacity: 1; } }
 @keyframes huGefangen { 0% { transform: translate(-50%, -50%) rotate(calc(-1 * var(--w, 0deg))) scale(1.7); opacity: 1; } 60% { transform: translate(-50%, -50%) rotate(calc(-1 * var(--w, 0deg))) scale(0.4); } 100% { transform: translate(-50%, -50%) rotate(calc(-1 * var(--w, 0deg))) scale(0.8); opacity: 0.45; } }
 #screen-hunter .hu-fang-banner {
   position: absolute; left: 50%; top: 30%; transform: translateX(-50%); padding: 8px 18px; border-radius: 999px; white-space: nowrap;

@@ -5113,9 +5113,19 @@ group('Kaiwen: Team-Checkout, Regeln, Rekord und PB');
   /* Finish-Frage per Tastatur in der Fernsteuerung: Rest 42, "42" Enter, dann "2". */
   await page.locator('.kw-pad-kopf [data-action="kw-fern"]').click();
   await page.keyboard.type('42'); await page.keyboard.press('Enter');
-  check('die Finish-Frage erscheint auch in der Fernsteuerung', (await page.locator('[data-action="co-darts"]').count()) >= 2);
+  check('die Finish-Frage erscheint auch in der Fernsteuerung und bleibt offen', (await page.locator('#overlay-card [data-action="co-darts"]').count()) >= 2 && (await page.evaluate(() => window.__dart.ui().overlay && window.__dart.ui().overlay.type === 'checkout-darts')));
   await page.keyboard.press('2'); ks = await kst();
   check('die Ziffer 2 bucht den Check mit zwei Darts: 157, naechster Versuch', ks.zahl === 157 && ks.dartsVersuch === 0 && (await page.evaluate(() => !window.__dart.ui().overlay)));
+  /* Clear, Minus und Shift in der Fernsteuerung, wie im X01. */
+  await page.keyboard.down('Shift'); await page.waitForTimeout(80);
+  check('Shift gedrueckt zeigt die Aufnahmen des Versuchs gross', (await visible('#kw-verlauf-gross')) && (await text('#kw-verlauf-gross')).includes('157'));
+  await page.keyboard.up('Shift'); await page.waitForTimeout(80);
+  check('losgelassen ist die Liste wieder weg', !(await visible('#kw-verlauf-gross')));
+  await page.keyboard.type('100'); await page.keyboard.press('NumLock'); ks = await kst();
+  check('Clear bucht den eingetippten Rest (157 -> 100, also 57 Punkte)', ks.rest === 100 && ks.dartsVersuch === 3, 'Rest ' + ks.rest + ', Darts ' + ks.dartsVersuch);
+  await page.keyboard.press('-'); ks = await kst();
+  check('Minus bucht einen Bust: Rest bleibt 100, die Aufnahme ist weg', ks.rest === 100 && ks.dartsVersuch === 6);
+  await page.evaluate(() => { const g = window.__dart.game(); const v = g.versuche[g.versuche.length - 1]; v.visits = []; v.offen = []; window.__dart.save(); window.__dart.render(); }); ks = await kst();
   await page.keyboard.press('Escape');
   /* Frage per Tipp beantworten, dann im Einzel-Darts-Modus Enter druecken: kein Absturz. */
   await kwKey('117'); ks = await kst();
@@ -5269,6 +5279,14 @@ group('Hunter: Maeusejagd, Startfelder, Fangen, Varianten, Solo');
     (await text('#hu-fang')).toLowerCase().includes('fängt'));
   await page.locator('#overlay-card [data-action="undo-game"]').click(); s = await hst();
   check('Undo ueber den Fang hinweg: B wieder im Spiel, Positionen zurueck', !s.raus[hB] && !s.winner && (await huFelder())[0] === 20 && !(await page.evaluate(() => window.__dart.game().done)));
+  /* Leben: mit 3 Leben steigt der Gefangene gegenueber wieder ein. */
+  await page.evaluate(() => { window.__dart.state().settings.hunterLeben = 3; });
+  await huStart(2, [0, 1]);
+  check('Leben 3 steht am Spiel, der Untertitel nennt es', (await page.evaluate(() => window.__dart.game().leben)) === 3 && (await text('#hu-sub')).includes('3 Leben'));
+  await huDart(20, 1); s = await hst();
+  check('erster Fang: B bleibt im Spiel und steht gegenueber (Feld 19), A hat 1 Fang, kein Sieger', !s.raus[hB] && s.gefangen[hB] === 1 && (await huFelder())[1] === 19 && s.faenge[hA] === 1 && !s.winner && !(await page.evaluate(() => window.__dart.game().done)));
+  check('der Chip zeigt die restlichen Leben als Herzen und das Banner den Fang', (await text('#hu-liste')).includes('♥♥') && (await text('#hu-fang')).toLowerCase().includes('fängt'));
+  await page.evaluate(() => { window.__dart.state().settings.hunterLeben = 1; });
   /* Boost: Doppel 2, Triple 3 Felder; mit einem Dart zwei Gegner ueberspringen. */
   await page.evaluate(() => { window.__dart.state().settings.hunterVariante = 1; });
   await huStart(3, [0, 5, 10]);
@@ -5286,7 +5304,7 @@ group('Hunter: Maeusejagd, Startfelder, Fangen, Varianten, Solo');
   check('ein Triple ueber zwei Gegner faengt beide, A ist der Letzte und gewinnt', !!s.raus[hB] && !!s.raus[hC] && s.winner === hA);
   await page.locator('#overlay-card [data-action="open-summary"]').click();
   const huSum = await text('#summary-box');
-  check('die Zusammenfassung nennt Gewinner, Faenge, Darts und Trefferquote', huSum.toLowerCase().includes('gewinnt die jagd') && huSum.includes('Fänge') && huSum.includes('% Treffer') && huSum.includes('Doppelfang'));
+  check('die Zusammenfassung nennt Gewinner, Faenge, Darts und Trefferquote', huSum.toLowerCase().includes('gewinnt die jagd') && huSum.includes('Fänge') && huSum.includes('MPR') && huSum.includes('Doppelfang'));
   await page.locator('#summary-actions [data-action="finish-game"]').click();
   /* Handicap: Stufe Doppel rueckt bei Single nicht weiter. */
   await page.evaluate(() => { window.__dart.state().settings.hunterVariante = 2; });
