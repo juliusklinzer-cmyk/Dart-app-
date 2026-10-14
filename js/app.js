@@ -8270,7 +8270,7 @@
     if (!g.done) {
       var dann = function (m) { return 'dann ' + (solo && st.schritte[aktiv] + m >= 20 ? 'Ziel' : HUNTER_RING[(st.pos[aktiv] + m) % 20]); };
       var miss = '<button class="hu-key miss" data-num="0" data-mult="1"><span class="z">Miss</span></button>' +
-        '<button class="hu-key bust" data-action="hu-bust"><span class="z">Bust</span><span class="sub">Rest der Aufnahme weg</span></button>';
+        '<button class="hu-key bust" data-action="hu-bust"><span class="z">Bust</span></button>';
       if (g.variante === 'boost') {
         pad = '<div class="hu-keys">' +
           '<button class="hu-key gross" data-num="' + zielZahl + '" data-mult="1"><span class="z">' + zielZahl + '</span><span class="sub">+1 · ' + dann(1) + '</span></button>' +
