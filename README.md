@@ -446,8 +446,8 @@ nur der zählende Ring; in der Mitte stehen der Werfer, groß sein Ziel („17�
 als farbige Marker mit Kürzel außen am Rand (auf einem Feld versetzt nebeneinander,
 Bewegung als Animation, der Werfer größer mit weißem Ring, Gefangene grau), ein Fang
 poppt als Banner über der Scheibe auf („Julius fängt Anna!“). Unter der Scheibe je
-Spieler ein Chip mit Farbe, Name, Zielfeld, Fängen und letzter Aufnahme (solo Feld und
-Darts). Rechts Zurück und die drei Darts der Aufnahme, darunter die Tasten fürs
+Spieler ein Chip mit Farbe, Name, Zielfeld, Fängen, MPR (Treffer je 3 Darts, live) und letzter
+Aufnahme (solo Feld, Darts und MPR), bei mehreren Leben die restlichen als Herzen. Rechts Zurück und die drei Darts der Aufnahme, darunter die Tasten fürs
 aktuelle Ziel: Boost mit Single groß, Doppel (+2) und Triple (+3), jeweils mit dem
 Feld danach; Normal und Handicap mit einer großen Taste („jeder Ring zählt“ bzw. der
 zählende Ring), dazu „Miss“ und „Bust“ (der Rest der Aufnahme verfällt, der Nächste ist

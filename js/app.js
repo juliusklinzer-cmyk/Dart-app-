@@ -8278,9 +8278,10 @@
     liste.classList.toggle('viele', n > 4);
     liste.innerHTML = g.players.map(function (id) {
       var raus = st.raus[id], istAktiv = id === aktiv && !g.done;
-      var meta = solo ? 'Feld ' + Math.min(20, st.schritte[id] + 1) + ' von 20 · ' + plural(st.darts[id], 'Dart', 'Darts')
+      var meta = solo ? 'Feld ' + Math.min(20, st.schritte[id] + 1) + ' von 20 · ' + plural(st.darts[id], 'Dart', 'Darts') + ' · MPR ' + (st.darts[id] ? (st.treffer[id] / st.darts[id] * 3).toFixed(2) : '–')
         : raus ? 'gefangen von ' + esc(vorname(raus.von))
         : (g.variante === 'handicap' ? ['', 'Single', 'Doppel', 'Triple'][hunterStufe(g, id)] + ' · ' : '') + plural(st.faenge[id], 'Fang', 'Fänge') +
+          ' · MPR ' + (st.darts[id] ? (st.treffer[id] / st.darts[id] * 3).toFixed(2) : '–') +
           (g.leben > 1 ? ' · ' + new Array(Math.max(0, g.leben - st.gefangen[id]) + 1).join('♥') : '') +
           (st.letzte[id] && !istAktiv ? ' · ' + esc(st.letzte[id]) : '');
       return '<div class="hu-chip' + (istAktiv ? ' aktiv' : '') + (raus ? ' raus' : '') + '">' +

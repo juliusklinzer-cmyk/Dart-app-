@@ -5248,6 +5248,7 @@ group('Hunter: Maeusejagd, Startfelder, Fangen, Varianten, Solo');
   await page.evaluate(() => window.__dart.spielDart(3, 1)); s = await hst();
   check('Normal: ein Triple (per Tastatur) bringt auch nur 1 Feld (1 -> 18), danach ist B dran', (await huFelder())[0] === 18 && s.werfer === hB && s.inVisit === 0);
   check('der Chip von A zeigt die letzte Aufnahme, der von B ist aktiv und zeigt sein Ziel', (await text('#hu-liste .hu-chip >> nth=0')).includes('20 – T1') && (await page.locator('#hu-liste .hu-chip.aktiv').count()) === 1 && (await text('#hu-liste .hu-chip.aktiv')).includes('3'));
+  check('der Chip zeigt die MPR live (A: 2 Treffer aus 3 Darts = 2.00)', (await text('#hu-liste .hu-chip >> nth=0')).includes('MPR 2.00'));
   await huDart(0, 1); await huDart(0, 1); await huDart(0, 1); s = await hst();
   check('dreimal Miss: die Aufnahme ist voll, wieder A, Runde 2', s.werfer === hA && (await page.evaluate(() => window.__dart.game().throws.length)) === 6 && (await text('#hu-box')).includes('2'));
   await page.keyboard.press('1'); s = await hst();
