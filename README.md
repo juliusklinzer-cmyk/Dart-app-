@@ -446,9 +446,10 @@ Spieler ein Chip mit Farbe, Name, Zielfeld, Fängen und letzter Aufnahme (solo F
 Darts). Rechts Zurück und die drei Darts der Aufnahme, darunter die Tasten fürs
 aktuelle Ziel: Boost mit Single groß, Doppel (+2) und Triple (+3), jeweils mit dem
 Feld danach; Normal und Handicap mit einer großen Taste („jeder Ring zählt“ bzw. der
-zählende Ring) und „Miss“. Eine Aufnahme endet nach drei Darts (Fehlwürfe als Miss).
-Tastatur: Enter trifft (die große Taste), die Leertaste ist ein Miss, Backspace
-oder Z nimmt den Dart zurück. Undo dartweise, auch über einen Fang hinweg; der Stand
+zählende Ring), dazu „Miss“ und „Bust“ (der Rest der Aufnahme verfällt, der Nächste ist
+dran). Eine Aufnahme endet nach drei Darts oder mit Bust. Tastatur: 1, 2, 3 sind Single,
+Doppel, Triple aufs Zielfeld, die Leertaste ein Miss, Enter ein Bust, Backspace oder Z
+nimmt den Dart zurück. Undo dartweise, auch über einen Fang hinweg; der Stand
 übersteht ein
 Neuladen. Die Zusammenfassung nennt Gewinner, Fänge, Darts und Trefferquote je Spieler;
 in der Rangliste stehen Siege, Fänge, Trefferquote (ab 30 Darts), Solo Normal und

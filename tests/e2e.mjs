@@ -1367,6 +1367,8 @@ await page.locator('[data-setting="finisherTo"] button[data-value="3"]').click()
 await page.locator('[data-action="start-game"]').click();
 await bullOffGo();
 check('Finisher-Screen', await visible('#screen-finisher'));
+/* Feste Zahl, damit der Tipp auf die erste Kachel die Runde nicht zufaellig beendet. */
+await page.evaluate(() => { const g = window.__dart.game(); g.rounds[g.rounds.length - 1].zahl = 101; window.__dart.save(); window.__dart.render(); });
 
 let fst = await finState();
 const [fA, fB] = await page.evaluate(() => window.__dart.game().players);
@@ -5221,7 +5223,7 @@ group('Hunter: Maeusejagd, Startfelder, Fangen, Varianten, Solo');
   check('A beginnt auf der 20, Ziel steht gross in der Mitte: 20, darunter wen er jagt', s.werfer === hA && (await text('#hu-ziel .hu-ziel-zahl')).trim() === '20' && (await text('#hu-ziel .hu-ziel-sub')).includes('Jagt'));
   check('Kopf: Runde 1, Untertitel nennt Variante, Spieler und wer im Spiel ist', (await text('#hu-box')).includes('Runde') && (await text('#hu-box')).includes('1') && (await text('#hu-sub')).includes('2 im Spiel'));
   check('Normal: nur eine grosse Taste (jeder Ring zaehlt) und Miss, kein Doppel/Triple, kein Weiter', (await page.locator('#hu-pad .hu-key.gross').count()) === 1 && (await page.locator('#hu-pad [data-mult="2"], #hu-pad [data-mult="3"]').count()) === 0 &&
-    (await text('#hu-pad .hu-key.gross')).includes('dann 1') && (await page.locator('#screen-hunter [data-action="hu-end-visit"]').count()) === 0);
+    (await text('#hu-pad .hu-key.gross')).includes('dann 1') && (await page.locator('#screen-hunter [data-action="hu-end-visit"]').count()) === 0 && (await page.locator('#hu-pad [data-action="hu-bust"]').count()) === 1);
   check('die Scheibe traegt klassische Farben: Rot und Gruen in den Ringen, die Marker zeigen Kuerzel', await page.evaluate(() => {
     const f = (sel) => getComputedStyle(document.querySelector(sel)).fill;
     return f('#hu-scheibe .hu-seg.rot:not(.ziel) path.double') === 'rgb(200, 48, 44)' && f('#hu-scheibe .hu-seg.gruen path.double') === 'rgb(31, 138, 76)' && /^[A-Z0-9]{1,3}$/.test(document.querySelector('#hu-marker .hu-punkt').textContent.trim());
@@ -5238,12 +5240,18 @@ group('Hunter: Maeusejagd, Startfelder, Fangen, Varianten, Solo');
   check('der Chip von A zeigt die letzte Aufnahme, der von B ist aktiv und zeigt sein Ziel', (await text('#hu-liste .hu-chip >> nth=0')).includes('20 – T1') && (await page.locator('#hu-liste .hu-chip.aktiv').count()) === 1 && (await text('#hu-liste .hu-chip.aktiv')).includes('3'));
   await huDart(0, 1); await huDart(0, 1); await huDart(0, 1); s = await hst();
   check('dreimal Miss: die Aufnahme ist voll, wieder A, Runde 2', s.werfer === hA && (await page.evaluate(() => window.__dart.game().throws.length)) === 6 && (await text('#hu-box')).includes('2'));
-  await page.keyboard.press('Enter'); s = await hst();
-  check('Tastatur: Enter ist ein Treffer (18 -> 4)', (await huFelder())[0] === 4 && s.inVisit === 1);
+  await page.keyboard.press('1'); s = await hst();
+  check('Tastatur: 1 ist ein Single aufs Ziel (18 -> 4)', (await huFelder())[0] === 4 && s.inVisit === 1);
   await page.keyboard.press('Space'); s = await hst();
   check('Tastatur: Leertaste ist ein Miss, das Feld bleibt', (await huFelder())[0] === 4 && s.inVisit === 2 && (await page.evaluate(() => window.__dart.game().throws.slice(-1)[0].n)) === 0);
   await page.keyboard.press('Backspace'); s = await hst();
   check('Tastatur: Backspace nimmt den Dart zurueck', s.inVisit === 1 && (await page.evaluate(() => window.__dart.game().throws.length)) === 7);
+  await page.keyboard.press('3'); s = await hst();
+  check('Tastatur: 3 ist ein Triple aufs Ziel (Normal: 1 Feld, 4 -> 13)', (await huFelder())[0] === 13 && s.inVisit === 2 && (await page.evaluate(() => window.__dart.game().throws.slice(-1)[0].m)) === 3);
+  await page.keyboard.press('Enter'); s = await hst();
+  check('Tastatur: Enter ist Bust, der Rest der Aufnahme verfaellt und B ist dran', s.inVisit === 0 && s.werfer === hB && (await page.evaluate(() => window.__dart.game().throws.length)) === 9);
+  await page.locator('#hu-pad [data-action="hu-bust"]').click(); s = await hst();
+  check('die Bust-Taste tut dasselbe (drei Fehlwuerfe fuer B, wieder A)', s.inVisit === 0 && s.werfer === hA && (await page.evaluate(() => window.__dart.game().throws.length)) === 12);
   /* Wrap ueber die 5 zurueck auf die 20: der Marker dreht vorwaerts weiter (342 -> 360),
      ein Gegner 19 Felder voraus (also 1 hinter mir) wird dabei nicht gefangen. */
   await huStart(2, [19, 18]);
@@ -5265,7 +5273,7 @@ group('Hunter: Maeusejagd, Startfelder, Fangen, Varianten, Solo');
   await page.evaluate(() => { window.__dart.state().settings.hunterVariante = 1; });
   await huStart(3, [0, 5, 10]);
   const hC = huIds[2];
-  check('Boost: Single gross, Doppel +2 und Triple +3 als Tasten mit dem naechsten Feld', (await page.locator('#hu-pad .hu-key').count()) === 4 && (await text('#hu-pad [data-mult="2"]')).includes('+2 · dann 18') && (await text('#hu-pad [data-mult="3"]')).includes('+3 · dann 4'));
+  check('Boost: Single gross, Doppel +2 und Triple +3 als Tasten mit dem naechsten Feld, dazu Miss und Bust', (await page.locator('#hu-pad .hu-key').count()) === 5 && (await text('#hu-pad [data-mult="2"]')).includes('+2 · dann 18') && (await text('#hu-pad [data-mult="3"]')).includes('+3 · dann 4'));
   await huDart(20, 2); s = await hst();
   check('Boost: Doppel bringt 2 Felder (20 -> 18)', (await huFelder())[0] === 18 && !s.raus[hB]);
   await huDart(18, 3); s = await hst();

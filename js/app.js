@@ -8102,6 +8102,15 @@
     save(); render();
     return true;
   }
+  function hunterBust() {
+    var g = S.game;
+    if (!g || g.kind !== 'hunter' || g.done || settling()) return;
+    pomp();
+    var offen = 3 - hunterState(g).inVisit;
+    for (var i = 0; i < offen; i++) g.throws.push({ n: 0, m: 0 });
+    UI.mult = 1;
+    save(); render();
+  }
   function hunterVarianteText(g) {
     return g.variante === 'boost' ? 'Boost · Doppel +2, Triple +3' : g.variante === 'handicap' ? 'Handicap' : 'Normal · jeder Treffer 1 Feld';
   }
@@ -8260,7 +8269,8 @@
     var pad = '';
     if (!g.done) {
       var dann = function (m) { return 'dann ' + (solo && st.schritte[aktiv] + m >= 20 ? 'Ziel' : HUNTER_RING[(st.pos[aktiv] + m) % 20]); };
-      var miss = '<button class="hu-key miss" data-num="0" data-mult="1"><span class="z">Miss</span></button>';
+      var miss = '<button class="hu-key miss" data-num="0" data-mult="1"><span class="z">Miss</span></button>' +
+        '<button class="hu-key bust" data-action="hu-bust"><span class="z">Bust</span><span class="sub">Rest der Aufnahme weg</span></button>';
       if (g.variante === 'boost') {
         pad = '<div class="hu-keys">' +
           '<button class="hu-key gross" data-num="' + zielZahl + '" data-mult="1"><span class="z">' + zielZahl + '</span><span class="sub">+1 · ' + dann(1) + '</span></button>' +
@@ -11549,6 +11559,9 @@
       case 'undo-game':
         undoGame();
         break;
+      case 'hu-bust':
+        hunterBust();
+        break;
       case 'finish-game':
         finishGame();
         break;
@@ -13027,16 +13040,18 @@
     else if (ev.key === 'Backspace') { kaiwenKey('del'); ev.preventDefault(); }
   });
 
-  /* Hunter: Enter ist ein Treffer (die grosse Taste, also der zaehlende
-     Ring), die Leertaste ein Miss, Backspace oder Z nimmt den Dart zurueck.
-     Im Capture-Lauf, damit kein fokussierter Knopf die Taste doppelt
-     ausloest; keyup faengt den Klick ab, den die Leertaste sonst nachreicht. */
+  /* Hunter: 1, 2, 3 sind Single, Doppel, Triple aufs Zielfeld, die Leertaste
+     ein Miss, Enter ein Bust (der Rest der Aufnahme verfaellt), Backspace
+     oder Z nimmt den Dart zurueck. Im Capture-Lauf, damit kein fokussierter
+     Knopf die Taste doppelt ausloest; keyup faengt den Klick ab, den die
+     Leertaste sonst nachreicht. */
   function hunterTaste(ev) {
     if (S.screen !== 'hunter' || UI.overlay || UI.menu) return null;
     if (ev.metaKey || ev.ctrlKey || ev.altKey) return null;
     var at = document.activeElement;
     if (at && (at.tagName === 'INPUT' || at.tagName === 'TEXTAREA' || at.isContentEditable)) return null;
-    if (ev.key === 'Enter') return 'treffer';
+    if (ev.key === 'Enter') return 'bust';
+    if (ev.key === '1' || ev.key === '2' || ev.key === '3') return 'treffer' + ev.key;
     if (ev.key === ' ') return 'miss';
     if (ev.key === 'Backspace' || ev.key.toLowerCase() === 'z') return 'zurueck';
     return null;
@@ -13049,8 +13064,10 @@
     if (was === 'zurueck') { handleAction('undo-game', null); return; }
     var hg = S.game;
     if (!hg || hg.kind !== 'hunter' || hg.done) return;
-    var taste = document.querySelector(was === 'treffer' ? '#hu-pad .hu-key.gross' : '#hu-pad .hu-key.miss');
-    if (taste) spielDart(Number(taste.getAttribute('data-mult')), Number(taste.getAttribute('data-num')));
+    if (was === 'bust') { hunterBust(); return; }
+    if (was === 'miss') { spielDart(1, 0); return; }
+    var hZiel = document.querySelector('#hu-pad .hu-key.gross');
+    if (hZiel) spielDart(Number(was.slice(-1)), Number(hZiel.getAttribute('data-num')));
   }, true);
   document.addEventListener('keyup', function (ev) { if (hunterTaste(ev)) { ev.preventDefault(); ev.stopImmediatePropagation(); } }, true);
 

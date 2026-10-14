@@ -6299,7 +6299,9 @@ body.fix-spiel #screen-hunter.active { flex: 1 1 auto; height: auto; min-height:
 #screen-hunter .hu-keys.einfach .hu-key.gross .z { font-size: clamp(56px, 20vh, 220px); }
 #screen-hunter .hu-key .mx { color: #a9e4ff; font-size: 0.62em; }
 #screen-hunter .hu-key .sub { font-weight: 600; font-size: clamp(11px, 2.2vh, 24px); letter-spacing: 0.04em; color: #9a8f90; white-space: nowrap; }
-#screen-hunter .hu-key.miss { grid-column: span 2; color: #ff5a5a; }
+#screen-hunter .hu-key.miss { color: #ff5a5a; }
+#screen-hunter .hu-key.bust { color: #ffc14d; }
+#screen-hunter .hu-key.bust .z { font-size: clamp(20px, 4.6vh, 50px); }
 #screen-hunter .hu-key.miss .z { font-size: clamp(20px, 4.6vh, 50px); }
 
 @media (prefers-reduced-motion: reduce) { #screen-hunter * { animation: none !important; transition: none !important; } }
