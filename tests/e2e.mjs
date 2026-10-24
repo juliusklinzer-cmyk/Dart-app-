@@ -2384,6 +2384,131 @@ await page.evaluate(() => {
   D.setScreen('setup');
 });
 
+/* ---------- Liga: nur Ergebnisse eintragen (der Gegner zaehlt) ---------- */
+
+group('Ligaspiel "nur Ergebnisse": Leg-Stand je Einzel ohne Wuerfe');
+await navTo('liga');
+await page.locator('#liga-liste .liga-spieltag[data-id="st01"]').click();
+await page.locator('#liga-plan [data-action="liga-spiel"]').first().click();
+for (let i = 0; i < 4; i++) {
+  await page.locator(`[data-role="liga-gegner"][data-i="${i}"]`).fill('Probe');
+  await page.locator(`[data-role="liga-gegner-nach"][data-i="${i}"]`).fill('Gegner' + (i + 1));
+}
+check('der Start fragt nach dem Mitschreiben', await visible('[data-action="liga-mitschreiben"][data-value="1"]'));
+await page.locator('[data-action="liga-mitschreiben"][data-value="1"]').click();
+await page.locator('[data-action="liga-los"]').click();
+check('das Ligaspiel steht', await visible('#screen-tournament'));
+check('der Modus steht im Ligaspiel', await page.evaluate(() => window.__dart.state().tour.liga.nurErgebnis === true));
+check('jedes Einzel traegt vorn den Ergebnis-Knopf', (await page.locator('#schedule .match-row .go[data-action="liga-ergebnis"]').count()) === 16);
+check('Mitschreiben in der App bleibt daneben moeglich', (await page.locator('#schedule .match-row .go.wo[data-action="open-match"]').count()) === 16);
+await page.locator('#schedule .match-row .go[data-action="liga-ergebnis"]').first().click();
+check('die Kacheln zeigen alle Bo3-Staende', (await page.locator('.lerg-grid .lerg').count()) === 4);
+await page.locator('.lerg-grid .lerg[data-h="2"][data-g="1"]').click();
+check('das Einzel ist mit 2:1 fertig', (await text('#schedule .match-row.done .res')).trim() === '2:1');
+check('drei Legs ohne einen Wurf, Sieger ist der Heimspieler', await page.evaluate(() => {
+  const m = window.__dart.state().matches[0];
+  return m.done && m.ergebnis === true && m.winner === m.p[0] && m.legs.length === 3 &&
+    m.legs.every((l) => l.visits.length === 0) && m.legs.filter((l) => l.winner === m.p[0]).length === 2;
+}));
+check('in der Turnier-Statistik gibt es dafuer keinen Average', (await page.locator('#stats-grid .stat-card').first().locator('.line b').first().innerText()).trim() === '–');
+check('der Stand zaehlt das Einzel: 1:0, Legs 2:1', (await text('#liga-stand')).indexOf('Einzel 1:0 · Legs 2:1') >= 0, await text('#liga-stand'));
+await page.locator('#schedule .match-row.done .go[data-action="liga-ergebnis"]').click();
+check('"aendern" oeffnet die Kacheln mit dem Stand als gewaehlt', await visible('.lerg-grid .lerg.active[data-h="2"][data-g="1"]'));
+await page.locator('[data-action="liga-ergebnis-zurueck"]').click();
+check('zurueckgenommen: das Einzel ist wieder offen', await page.evaluate(() => {
+  const m = window.__dart.state().matches[0];
+  return !m.done && !m.ergebnis && m.legs.length === 0 && m.winner === null;
+}));
+/* Im normalen Ligaspiel fuehrt der w.o.-Dialog ebenfalls zum Ergebnis. */
+await page.evaluate(() => { window.__dart.state().tour.liga.nurErgebnis = false; window.__dart.save(); });
+await page.reload();
+await page.locator('#schedule .match-row .go.wo[data-action="liga-kampflos"]').first().click();
+check('der w.o.-Dialog bietet "nur das Ergebnis eintragen"', await visible('.overlay-card [data-action="liga-ergebnis"]'));
+await page.locator('.overlay-card [data-action="liga-ergebnis"]').click();
+await page.locator('.lerg-grid .lerg[data-h="0"][data-g="2"]').click();
+check('0:2 fuer den Gast eingetragen', (await text('#schedule .match-row.done .res')).trim() === '0:2');
+
+/* Aufraeumen: Probe-Ligaspiel weg. */
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  D.ui().overlay = null;
+  S.tour = null; S.matches = []; S.current = null; S.game = null;
+  S.history = S.history.filter((h) => !h.liga);
+  S.profiles = S.profiles.filter((p) => !(p.gast && (p.voll || '').indexOf('Probe ') === 0));
+  S.lineup = D.activeProfiles().filter((p) => !p.gast).slice(0, 4).map((p) => p.id);
+  D.setScreen('setup');
+});
+
+/* ---------- Liga: Spieltag vom Bogen der Ligaleitung uebernehmen ---------- */
+
+group('Liga: 2. Spieltag vom Bogen uebernehmen (16 Einzel, 10:6)');
+/* Sechs Blink-Konten fuer die sechs Bogen-Namen - zwei kommen dazu. */
+await page.evaluate(() => {
+  const S = window.__dart.state();
+  S.profiles.push({ id: 'p_alfred', name: 'Alfred', voll: 'Alfred Buchner', avatar: null, hue: 40, created: Date.now() });
+  S.profiles.push({ id: 'p_michael', name: 'Michi', voll: 'Michael Schmeiß', avatar: null, hue: 80, created: Date.now() });
+  window.__dart.save();
+});
+await navTo('liga');
+await page.locator('#liga-liste .liga-spieltag[data-id="st02"]').click();
+check('die Karte des 2. Spieltags bietet "Vom Bogen uebernehmen"', await visible('#liga-karte [data-action="liga-nachtrag"]'));
+await page.locator('#liga-karte [data-action="liga-nachtrag"]').click();
+check('sechs Bogen-Namen unserer Seite stehen zur Zuordnung', (await page.locator('[data-role="nachtrag-wer"]').count()) === 6);
+check('ganzer Name und eindeutiger Vorname sind vorgeschlagen', await page.evaluate(() => {
+  const z = window.__dart.ui().overlay.draft.zuordnung;
+  const lenas = window.__dart.activeProfiles().find((p) => p.name === 'Lenas');
+  return z['Lenas Becker'] === lenas.id && z['Alfred Buchner'] === 'p_alfred' && z['Michael Schmeiß'] === 'p_michael' && z['Dominik Uhl'] === '';
+}));
+await page.locator('[data-action="liga-nachtrag-los"]').click();
+check('ohne vollstaendige Zuordnung geht es nicht weiter', await visible('.overlay-card .edit-error'));
+const kaderIds = await page.evaluate(() => Object.fromEntries(window.__dart.activeProfiles().map((p) => [p.name, p.id])));
+await page.selectOption('[data-role="nachtrag-wer"][data-name="Dominik Uhl"]', kaderIds.Domi);
+await page.selectOption('[data-role="nachtrag-wer"][data-name="Tobias Thomas"]', kaderIds.Tobi);
+await page.selectOption('[data-role="nachtrag-wer"][data-name="Dominik Beuscher"]', kaderIds.Julius);
+await page.locator('[data-action="liga-nachtrag-los"]').click();
+check('Hinweis: Spieltag uebernommen', (await textKlein('.overlay-card')).indexOf('spieltag übernommen') >= 0);
+await page.locator('[data-action="ov-hinweis-zu"]').click();
+const nachtrag = await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  const h = S.history.find((x) => x.liga && x.liga.terminId === 'st02');
+  if (!h) return null;
+  const sieger = h.matches.filter((m) => h.liga.wir.indexOf(m.winner) >= 0).length;
+  const legsWir = h.matches.reduce((n, m) => n + m.legs.filter((l) => h.liga.wir.indexOf(l.winner) >= 0).length, 0);
+  const legsSie = h.matches.reduce((n, m) => n + m.legs.filter((l) => h.liga.wir.indexOf(l.winner) < 0).length, 0);
+  const g5 = D.profile(h.liga.gastSpieler[4]), g6 = D.profile(h.liga.gastSpieler[5]);
+  return { einzel: h.matches.length, fertig: h.matches.every((m) => m.done && m.ergebnis), sieger, legsWir, legsSie,
+    zu: !!h.liga.abgeschlossen, heim: h.liga.heim, gaeste: h.liga.sie.length, g5: g5 && (g5.voll || g5.name), g6: g6 && (g6.voll || g6.name),
+    ohneWurf: h.matches.every((m) => m.legs.every((l) => l.visits.length === 0)) };
+});
+check('das Ligaspiel liegt abgeschlossen im Archiv', !!nachtrag && nachtrag.zu && nachtrag.einzel === 16 && nachtrag.fertig && nachtrag.ohneWurf);
+check('10:6 Einzel und 22:13 Legs fuer uns, auswaerts', !!nachtrag && nachtrag.sieger === 10 && nachtrag.legsWir === 22 && nachtrag.legsSie === 13 && nachtrag.heim === false, JSON.stringify(nachtrag));
+check('die vier Germeringer sind Gaeste', !!nachtrag && nachtrag.gaeste === 4);
+check('Bogen-Nummern wie auf Papier: G5 Beuscher, G6 Schmeiss', !!nachtrag && nachtrag.g5 === 'Julius' && nachtrag.g6 === 'Michael Schmeiß');
+check('die Karte zeigt den Spieltag als abgeschlossen mit 10:6', (await textKlein('#liga-karte')).indexOf('abgeschlossen') >= 0 && (await text('#liga-karte')).indexOf('10:6') >= 0);
+check('ein zweites Uebernehmen gibt es nicht mehr', (await page.locator('#liga-karte [data-action="liga-nachtrag"]').count()) === 0);
+await page.locator('#liga-karte [data-action="liga-bericht"]').click();
+check('der Spielbericht oeffnet', await visible('#screen-bericht'));
+check('im Bericht steht das Einzel H2 – G6 (Schmeiss eingewechselt)', (await text('#screen-bericht')).replace(/\s+/g, ' ').indexOf('H2 – G6') >= 0);
+/* Zurueck vom Bericht (dort gibt es keine Navigation) in die Liga. */
+await page.evaluate(() => window.__dart.setScreen('liga'));
+check('die Siege aus dem Nachtrag haengen an den Konten', await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  const lenas = D.activeProfiles().find((p) => p.name === 'Lenas');
+  const h = S.history.find((x) => x.liga && x.liga.terminId === 'st02');
+  return h.matches.filter((m) => m.winner === lenas.id).length === 3;
+}));
+
+/* Aufraeumen: Nachtrag, Gaeste und die zwei Zusatzkonten weg. */
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  D.ui().overlay = null; D.ui().ligaWahl = null;
+  S.history = S.history.filter((h) => !h.liga);
+  S.profiles = S.profiles.filter((p) => !(p.gast && ['Melanie Ziesen', 'Julius Frank', 'Fritz Frank', 'Gerd Stegerer'].indexOf(p.voll || '') >= 0) &&
+    p.id !== 'p_alfred' && p.id !== 'p_michael');
+  S.lineup = D.activeProfiles().filter((p) => !p.gast).slice(0, 4).map((p) => p.id);
+  D.setScreen('setup');
+});
+
 /* ---------- Round the World: Spielart Einfach ---------- */
 
 group('Round the World: Einfach zählt nur die Zahl');
@@ -3084,15 +3209,15 @@ group('Liga: alle Spiele des Spieltags');
   check('die Liga-Zeile nennt Liga und Saison und traegt die sechs Reiter',
     (await textKlein('#liga-sub')).includes('5. liga') && (await page.locator('#liga-tabs button').count()) === 6);
   check('unsere Spieltag-Karte zeigt keine fremden Spiele mehr', (await page.locator('#liga-karte .lk-runde').count()) === 0);
-  check('in der Spieltage-Liste fuehrt "Alle Spiele" beim 1. Spieltag zur Runde',
+  check('in der Spieltage-Liste fuehrt "Alle Spiele" beim 1. und 2. Spieltag zur Runde',
     (await page.locator('#liga-liste .liga-spieltag [data-action="liga-runde"][data-termin="st01"]').count()) === 1 &&
-    (await page.locator('#liga-liste [data-action="liga-runde"]').count()) === 1);
+    (await page.locator('#liga-liste [data-action="liga-runde"]').count()) === 2);
   await page.locator('#liga-liste [data-action="liga-runde"][data-termin="st01"]').click();
   const zeilen = await page.locator('#overlay-card .lr-zeile').count();
-  check('1. Spieltag: fuenf Zeilen - Spielfrei, drei Spiele, ein verschobenes', zeilen === 5, String(zeilen));
+  check('1. Spieltag: fuenf Zeilen - Spielfrei und vier Spiele (das nachgeholte dabei)', zeilen === 5, String(zeilen));
   const rt = await textKlein('#overlay-card');
-  check('Spielfrei, Ergebnisse mit Einzel und Legs, verschoben mit neuem Datum',
-    rt.includes('1. spieltag') && rt.includes('spielfrei') && rt.includes('8:8') && rt.includes('20:20') && rt.includes('9:7') && rt.includes('verschoben') && rt.includes('16.10.'));
+  check('Spielfrei und Ergebnisse mit Einzel und Legs, das nachgeholte Spiel gewertet (12:4)',
+    rt.includes('1. spieltag') && rt.includes('spielfrei') && rt.includes('8:8') && rt.includes('20:20') && rt.includes('9:7') && rt.includes('12:4') && rt.includes('26:10') && !rt.includes('verschoben'));
   check('unser Spiel ist markiert, Spielfrei gedimmt',
     (await page.locator('#overlay-card .lr-zeile.wir').count()) === 1 && (await page.locator('#overlay-card .lr-zeile.frei').count()) === 1);
   await page.locator('#overlay-card [data-action="liga-partien"]').nth(1).click();
@@ -3106,9 +3231,12 @@ group('Liga: alle Spiele des Spieltags');
   check('Escape schliesst den Dialog', !(await visible('#overlay-card')));
   await page.evaluate(() => { const D = window.__dart; D.ui().ligaWahl = null; D.render(); });
   await page.locator('#liga-tabs button[data-tab="tabelle"]').click();
-  check('im Tabellen-Reiter stehen unter der Tabelle alle Spiele des 1. Spieltags',
-    (await page.locator('#lt-runden .lk-runde').count()) === 1 && (await page.locator('#lt-runden .lr-zeile').count()) === 5 &&
-    (await textKlein('#lt-runden')).includes('alle spiele · 1. spieltag'));
+  check('im Tabellen-Reiter stehen unter der Tabelle alle Spiele des 1. und 2. Spieltags',
+    (await page.locator('#lt-runden .lk-runde').count()) === 2 && (await page.locator('#lt-runden .lr-zeile').count()) === 9 &&
+    (await textKlein('#lt-runden')).includes('alle spiele · 1. spieltag') && (await textKlein('#lt-runden')).includes('alle spiele · 2. spieltag'));
+  check('2. Spieltag: unser Spiel mit 6:10, ein Spiel noch ohne Ergebnis',
+    (await textKlein('#lt-runden')).includes('6:10') && (await textKlein('#lt-runden')).includes('13:22') &&
+    (await page.locator('#lt-runden .lr-zeile.wir').count()) === 2);
   await page.locator('#liga-tabs button[data-tab="plan"]').click();
 }
 
@@ -3155,15 +3283,19 @@ check('Blink 180 ist hervorgehoben', await page.evaluate(() => {
   return !!tr && tr.textContent.includes('Blink 180');
 }));
 check('nichts ist mehr von Hand zu tippen', (await page.locator('#lt-tabelle td[contenteditable]').count()) === 0);
-/* 1. Spieltag: Dachau 9:7 gegen uns (Legs 20:15), Treff ma nix 9:7 (21:17), Haberer
-   und Voodoo 8:8. Dachau vor Treff ma nix wegen der Leg-Differenz. */
+/* Stand nach dem 2. Spieltag (Tabelle der Ligaleitung vom 23.10.2026 plus
+   unser 10:6 in Germering): Treff ma nix mit zwei Siegen vorn, dann
+   Oberpframmern (26:10) und Dachau (20:15) mit je einem Sieg, wir Vierter mit
+   2 Punkten und 37:33 Legs, Haberer und Voodoo mit ihrem Unentschieden. */
 const ltZeilen = await page.evaluate(() => [...document.querySelectorAll('#lt-tabelle tbody tr')].map((tr) => [...tr.querySelectorAll('td')].map((td) => td.textContent.trim()).join('|')));
-check('Dachau fuehrt mit 2 Punkten und Legs 20:15, Treff ma nix ist Zweiter',
-  ltZeilen[0] === '1|TSV Dachau 1865 4|1|1|0|0|20:15|9:7|2' && ltZeilen[1].startsWith('2|Treff ma nix|1|1|0|0|21:17|9:7|2'), ltZeilen.slice(0, 2).join(' / '));
-check('die Unentschieden stehen mit je einem Punkt dahinter, Blink 180 mit 0 Punkten und 15:20 Legs',
-  ltZeilen[2].includes('|1|0|1|0|20:20|8:8|1') && ltZeilen[3].includes('|1|0|1|0|20:20|8:8|1') &&
-  ltZeilen.some((z) => z.includes('Blink 180|1|0|0|1|15:20|7:9|0')), ltZeilen.join(' / '));
-check('der Stand nennt die Zahl der gewerteten Spiele', (await text('#lt-stand')).includes('Aus 3 Spielen berechnet'), await text('#lt-stand'));
+check('Treff ma nix fuehrt mit 4 Punkten, Oberpframmern vor Dachau wegen der Leg-Differenz',
+  ltZeilen[0] === '1|Treff ma nix|2|2|0|0|49:28|22:10|4' && ltZeilen[1] === '2|TSV Oberpframmern|1|1|0|0|26:10|12:4|2' &&
+  ltZeilen[2] === '3|TSV Dachau 1865 4|1|1|0|0|20:15|9:7|2', ltZeilen.slice(0, 3).join(' / '));
+check('Blink 180 ist Vierter mit 2 Punkten und 37:33 Legs, die Unentschieden mit je einem Punkt dahinter',
+  ltZeilen[3] === '4|Blink 180|2|1|0|1|37:33|17:15|2' &&
+  ltZeilen[4].includes('|1|0|1|0|20:20|8:8|1') && ltZeilen[5].includes('|1|0|1|0|20:20|8:8|1') &&
+  ltZeilen.some((z) => z.includes('Dart Artists Germering II|1|0|0|1|13:22|6:10|0')), ltZeilen.join(' / '));
+check('der Stand nennt die Zahl der gewerteten Spiele', (await text('#lt-stand')).includes('Aus 6 Spielen berechnet'), await text('#lt-stand'));
 check('mit den Spalten der Ligaleitung (Sp, g, u, v, Legs, Spiele, Pkt)', await page.evaluate(() =>
   [...document.querySelectorAll('#lt-tabelle thead th')].map((th) => th.textContent).join(',') === '#,Mannschaft,Sp,g,u,v,Legs,Spiele,Pkt'));
 await page.locator('#liga-tabs button[data-tab="plan"]').click();
@@ -5407,8 +5539,8 @@ group('Oeffentliche Webseite (webseite.html): Spieltag, Termine, Ergebnisse, Tab
   check('der gespielte 1. Spieltag traegt sein Ergebnis', (await wtext('#termine-liste .termin[data-termin="st01"] .rechts')) === '7 : 9');
   check('spielfreie Spieltage stehen als solche da', (await wp.locator('#termine-liste .termin:not([data-termin])').count()) === 2 &&
     (await wtext('#termine-liste .termin:not([data-termin])')).includes('Spielfrei'));
-  check('die Ergebnisse zeigen die gespielten Spiele der Liga, unseres zuerst am selben Tag', (await wp.locator('#ergebnisse-liste .ergebnis').count()) >= 3 &&
-    (await wtext('#ergebnisse-liste .ergebnis >> nth=1')).includes('Blink 180'));
+  check('die Ergebnisse zeigen die gespielten Spiele der Liga, das juengste zuerst (unser 6:10 in Germering)', (await wp.locator('#ergebnisse-liste .ergebnis').count()) >= 3 &&
+    (await wtext('#ergebnisse-liste .ergebnis >> nth=0')).includes('Blink 180') && (await wtext('#ergebnisse-liste .ergebnis >> nth=0')).includes('6 : 10'));
   check('die Tabelle hat neun Teams und hebt Blink 180 hervor', (await wp.locator('#tabelle-zeilen .tz').count()) === 9 &&
     (await wtext('#tabelle-zeilen .tz.wir')).includes('Blink 180'));
   check('kein Live-Block ohne laufendes Spiel', !(await wp.locator('#live').isVisible()));

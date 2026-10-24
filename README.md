@@ -302,6 +302,34 @@ Einzel gar nicht (kein Wurf, kein Sieg, keine Niederlage). Über **„ändern"**
 lässt sich die Wertung zurücknehmen; im geteilten Spiel wandert sie sofort
 auf das andere Gerät und ist dort nicht mehr rückholbar.
 
+**Nur Ergebnisse** (Oktober 2026): Zählt der Gegner mit seinem eigenen System,
+wird beim Start unter **Mitschreiben** „nur Ergebnisse“ gewählt. Dann trägt
+jedes Einzel in der Übersicht vorn den Knopf **Ergebnis**: ein Tipp, und die
+möglichen Leg-Stände stehen als Kacheln da (Bo3: 2:0, 2:1, 1:2, 0:2 – Heim :
+Gast wie auf dem Bogen, der Sieger klein darunter). Das Einzel ist damit fertig,
+„ändern“ öffnet die Kacheln noch einmal, „Ergebnis zurücknehmen“ macht es wieder
+offen (im geteilten Spiel nicht mehr, sobald das andere Gerät es hat). Die Legs
+stehen ohne Würfe im Archiv: Siege, Niederlagen und die Leg-Bilanz zählen in
+Liga-Statistik und Rangliste, Average, Bestes Leg, Darts je Leg und Highlights
+gibt es für solche Einzel nicht (im Verlauf bekommen sie keinen Average-Punkt).
+Mitschreiben in der App bleibt daneben möglich („Start“ klein rechts), und
+umgekehrt lässt sich in jedem Ligaspiel ein Einzel, das der Gegner gezählt hat,
+über **w.o. → „Nur das Ergebnis eintragen“** nachtragen. Bericht, Stand und
+Endstand rechnen mit beidem wie immer.
+
+**Nachtragen:** Ein vergangener Spieltag ohne Ligaspiel in der App zeigt auf
+seiner Karte **„Nachtragen“** – das ist der normale Start mit „nur Ergebnisse“
+vorgewählt – und, sobald die Ligaleitung alle 16 Einzel gemeldet hat
+(`LIGA_SPIELTAGE` mit `partien`, dazu `aufstellung` für die Bogen-Listen),
+**„Vom Bogen übernehmen“**: ein Dialog ordnet jedem Bogen-Namen unserer Seite
+ein Konto zu (ganzer Name, eindeutiger Vor- oder Nachname werden vorgeschlagen),
+die Gegner werden Gäste wie beim Ligaspiel-Start, und mit „Übernehmen“ liegt
+das Ligaspiel abgeschlossen im Archiv – 16 Einzel mit Leg-Stand, Positionen,
+Scheiben und Bogen-Nummern (G5/G6 für Eingewechselte), Bericht mit
+„Nachmeldungen: nein“, angemeldet geht es wie jedes Spiel an den Server. Der
+2. Spieltag (Cobblers Irish Pub, 23.10.2026, 10:6 für uns) wurde so
+nachgetragen.
+
 **Spielerwechsel** gibt es nach SWO: nur auf derselben Position, höchstens
 8 Spieler je Team, der Wechsel greift für alle noch nicht begonnenen Einzel
 der Position (im geteilten Spiel derzeit gesperrt). Der **Spielbericht** –

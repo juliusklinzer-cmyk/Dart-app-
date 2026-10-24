@@ -2585,6 +2585,25 @@ button, input, select, textarea { font-family: inherit; }
 .liga-start .ls-zeile > .namen-paar { flex: 1; min-width: 0; }
 .liga-start .namen-paar input { width: 100%; }
 
+/* Nachtrag vom Bogen: je Bogen-Name (klein) die Konto-Auswahl darunter. */
+.liga-start .ls-zeile > .nt-wer { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.liga-start .nt-wer small { color: var(--muted); font-weight: 600; }
+.liga-start .nt-wer select { width: 100%; }
+
+/* "Nur Ergebnisse": der Leg-Stand eines Einzels als Kacheln, Heim : Gast,
+   der Sieger klein darunter. Gewaehlt ist, was schon eingetragen ist. */
+.lerg-paar { font-weight: 700; margin: 0 0 var(--space-2); }
+.lerg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: var(--space-3) 0; }
+.lerg-grid .lerg {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  min-height: 60px; padding: 8px 6px; cursor: pointer;
+  background: var(--bg-3); border: 1px solid var(--line); border-radius: var(--r-m); color: var(--text);
+}
+.lerg-grid .lerg b { font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+.lerg-grid .lerg small { color: var(--muted); font-size: 0.78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.lerg-grid .lerg.active { border-color: var(--accent); background: var(--accent-soft); }
+.lerg-grid .lerg.active b, .lerg-grid .lerg.active small { color: var(--accent); }
+
 /* Solo-Spiel (ein Spieler): eine grosse Karte statt einer halb leeren
    Zweierreihe, darunter Finish-Kaestchen und der Verlauf mittig. */
 #scoreboard.solo { grid-template-columns: 1fr; }

@@ -2596,6 +2596,25 @@ button, input, select, textarea { font-family: inherit; }
 .liga-start .ls-zeile > .namen-paar { flex: 1; min-width: 0; }
 .liga-start .namen-paar input { width: 100%; }
 
+/* Nachtrag vom Bogen: je Bogen-Name (klein) die Konto-Auswahl darunter. */
+.liga-start .ls-zeile > .nt-wer { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.liga-start .nt-wer small { color: var(--muted); font-weight: 600; }
+.liga-start .nt-wer select { width: 100%; }
+
+/* "Nur Ergebnisse": der Leg-Stand eines Einzels als Kacheln, Heim : Gast,
+   der Sieger klein darunter. Gewaehlt ist, was schon eingetragen ist. */
+.lerg-paar { font-weight: 700; margin: 0 0 var(--space-2); }
+.lerg-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: var(--space-3) 0; }
+.lerg-grid .lerg {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  min-height: 60px; padding: 8px 6px; cursor: pointer;
+  background: var(--bg-3); border: 1px solid var(--line); border-radius: var(--r-m); color: var(--text);
+}
+.lerg-grid .lerg b { font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+.lerg-grid .lerg small { color: var(--muted); font-size: 0.78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.lerg-grid .lerg.active { border-color: var(--accent); background: var(--accent-soft); }
+.lerg-grid .lerg.active b, .lerg-grid .lerg.active small { color: var(--accent); }
+
 /* Solo-Spiel (ein Spieler): eine grosse Karte statt einer halb leeren
    Zweierreihe, darunter Finish-Kaestchen und der Verlauf mittig. */
 #scoreboard.solo { grid-template-columns: 1fr; }
@@ -8048,7 +8067,10 @@ button.pa-gruppe { cursor: pointer; }
      nach jedem Spieltag geliefert. Je Spiel: Datum, Heim, Gast, Lokal,
      Einzel und Legs; "partien" sind die 16 Einzel [Heim, Gast, hLegs, gLegs],
      ein * vor dem Namen heisst Gastspieler. Ohne gast = spielfrei,
-     verschoben = neuer Termin in tag. */
+     verschoben = neuer Termin in tag. Bei unserem eigenen Spiel ergaenzt
+     "aufstellung" (heim/gast: die Bogen-Listen H1-H8 bzw. G1-G8) - damit
+     laesst sich das Spiel in der App "vom Bogen uebernehmen" (js/app.js,
+     ligaNachtragUebernehmen), wenn es am Abend nicht mitgeschrieben wurde. */
   var LIGA_SPIELTAGE = {
     st01: [
       { heim: 'Dart Artists Germering II', gast: null },
@@ -8065,7 +8087,29 @@ button.pa-gruppe { cursor: pointer; }
         ['Bernhard Hoffmann', 'Naser Sharifi', 2, 1], ['Christian Matejka', 'Christos Heuwald', 2, 1], ['Linda Maier', 'Alex Heuwald', 2, 1], ['Franz Freinberger', '*Michael Rogge', 1, 2],
         ['Sven Albrecht', 'Naser Sharifi', 1, 2], ['Yves Scherer', 'Christos Heuwald', 0, 2], ['Stephan Brunner', 'Alex Heuwald', 2, 0], ['Linda Maier', '*Michael Rogge', 0, 2]
       ], highlights: [{ wer: 'Alex Heuwald', team: 'DCO', was: '1× 180' }] },
-      { tag: '2026-10-16', heim: 'TSV Oberpframmern', gast: 'FT Gern Darts II', ort: 'Gaststätte Anstoss', verschoben: true }
+      /* Stand zuerst "verschoben", inzwischen gespielt und gewertet (Tabelle
+         der Ligaleitung vom 23.10.2026). */
+      { tag: '2026-10-16', heim: 'TSV Oberpframmern', gast: 'FT Gern Darts II', ort: 'Gaststätte Anstoss', einzel: '12:4', legs: '26:10' }
+    ],
+    st02: [
+      { heim: 'Voodoo Darters', gast: null },
+      { tag: '2026-10-19', heim: 'FT Gern Darts II', gast: 'Treff ma nix', ort: 'Vereinsheim FT Gern', einzel: '3:13', legs: '11:28' },
+      { tag: '2026-10-21', heim: 'TSV Dachau 1865 4', gast: 'TSV Oberpframmern', ort: 'TSV 1865 Dachau' },
+      /* Unser Spiel, vom Spielberichtsbogen (Cobblers Irish Pub, 23.10.2026).
+         aufstellung: die Bogen-Listen H1-H8 / G1-G8, damit der Nachtrag in
+         der App dieselben Nummern traegt wie der Papierbogen (G5 Beuscher,
+         G6 Schmeiss kamen in Durchgang 3 und 4 fuer G4 bzw. G3). */
+      { tag: '2026-10-23', heim: 'Dart Artists Germering II', gast: 'Blink 180', ort: 'Cobblers Irish Pub', einzel: '6:10', legs: '13:22',
+        aufstellung: {
+          heim: ['Melanie Ziesen', 'Julius Frank', 'Fritz Frank', 'Gerd Stegerer'],
+          gast: ['Lenas Becker', 'Dominik Uhl', 'Tobias Thomas', 'Alfred Buchner', 'Dominik Beuscher', 'Michael Schmeiß']
+        },
+        partien: [
+          ['Melanie Ziesen', 'Lenas Becker', 0, 2], ['Julius Frank', 'Dominik Uhl', 2, 0], ['Fritz Frank', 'Tobias Thomas', 0, 2], ['Gerd Stegerer', 'Alfred Buchner', 2, 0],
+          ['Melanie Ziesen', 'Dominik Uhl', 0, 2], ['Julius Frank', 'Lenas Becker', 1, 2], ['Fritz Frank', 'Alfred Buchner', 0, 2], ['Gerd Stegerer', 'Tobias Thomas', 0, 2],
+          ['Fritz Frank', 'Lenas Becker', 0, 2], ['Gerd Stegerer', 'Dominik Uhl', 2, 0], ['Julius Frank', 'Michael Schmeiß', 2, 1], ['Melanie Ziesen', 'Dominik Beuscher', 0, 2],
+          ['Gerd Stegerer', 'Lenas Becker', 2, 1], ['Fritz Frank', 'Dominik Uhl', 0, 2], ['Melanie Ziesen', 'Michael Schmeiß', 0, 2], ['Julius Frank', 'Dominik Beuscher', 2, 0]
+        ] }
     ]
   };
 
@@ -11771,6 +11815,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
     var m = currentMatch();
     if (!m) return;
+    /* Ein nur als Ergebnis eingetragenes Einzel hat keine Aufnahme, die
+       sich zuruecknehmen liesse - es wird ueber "aendern" korrigiert. */
+    if (m.ergebnis || m.kampflos) { UI.overlay = null; render(); return; }
     while (m.legs.length && m.legs[m.legs.length - 1].visits.length === 0) m.legs.pop();
     if (!m.legs.length) {
       /* Noch nichts geworfen: Zurueck fuehrt wieder ins Ausbullen - ein
@@ -11932,13 +11979,17 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           if (leg.winner) {
             var w = stat(leg.winner);
             var used = dartsInLeg(leg, leg.winner);
+            /* Ein Leg, das nur als Ergebnis eingetragen wurde (der Gegner hat
+               mit seinem System gezaehlt), hat keine Wuerfe: es zaehlt in der
+               Leg-Bilanz, aber nicht als Bestes Leg oder Darts je Leg. */
+            var mitWuerfen = used > 0;
             /* Das beste Leg ist eine persoenliche Bestmarke und zaehlt auch
                allein - die Leg-Bilanz braucht einen Gegner. */
-            if (ist501 && (w.bestLeg === null || used < w.bestLeg)) w.bestLeg = used;
+            if (ist501 && mitWuerfen && (w.bestLeg === null || used < w.bestLeg)) w.bestLeg = used;
             if (!solo) {
               w.legsWon++;
               m.p.forEach(function (pid) { if (pid !== leg.winner) stat(pid).legsLost++; });
-              if (ist501) { w.dartsInWonLegs += used; w.legsWon501++; }
+              if (ist501 && mitWuerfen) { w.dartsInWonLegs += used; w.legsWon501++; }
             }
           }
         });
@@ -13821,6 +13872,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       var score = m.kampflos
         ? (m.winner === m.p[0] ? legsToWin() + ':0' : '0:' + legsToWin()) + ' w.o.'
         : m.legs.length ? legsWon(m, m.p[0]) + ':' + legsWon(m, m.p[1]) : '–:–';
+      /* Zaehlt der Gegner mit seinem System (Modus "Nur Ergebnisse"), wird
+         je Einzel nur der Leg-Stand eingetragen - der Knopf dafuer steht
+         dann vorn, Mitschreiben in der App bleibt daneben moeglich. */
+      var nurErg = !!(liga && S.tour.liga.nurErgebnis);
+      var nochOhneWurf = !m.legs.some(function (l) { return l.visits.length > 0; });
       html += '<div class="match-row ' + (m.done ? 'done' : '') + (m.void ? ' void' : '') + ' ' + (isNext ? 'next' : '') + '">' +
         '<div class="pair">' +
           posA + (m.winner === m.p[0] ? '<b>' + esc(a) + '</b>' : esc(a)) + ' <span class="muted">vs</span> ' +
@@ -13831,14 +13887,20 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         (m.done || m.void
           ? (liga && m.kampflos
             ? '<button class="go wo" data-action="liga-kampflos" data-id="' + esc(m.id) + '">ändern</button>'
+            : liga && m.ergebnis && m.done
+            ? '<button class="go wo" data-action="liga-ergebnis" data-id="' + esc(m.id) + '">ändern</button>'
             : m.done && !m.void ? '<span class="fertig">fertig</span>' : '')
           : m.belegtVon && Date.now() - (m.belegtSeit || Date.now()) > ((S.tour && S.tour.claimFrist) || 10 * 60000)
             ? '<span class="belegt">bei ' + esc(m.belegtVon) + ' hängengeblieben?</span>' +
               '<button class="go" data-action="open-match" data-id="' + esc(m.id) + '">Übernehmen</button>'
           : m.belegtVon ? '<span class="belegt">läuft bei ' + esc(m.belegtVon) + '</span>'
+          : nurErg && nochOhneWurf
+            ? '<button class="go" data-action="liga-ergebnis" data-id="' + esc(m.id) + '">Ergebnis</button>' +
+              '<button class="go wo" data-action="open-match" data-id="' + esc(m.id) + '" ' +
+                'title="In der App mitschreiben" aria-label="In der App mitschreiben">Start</button>'
           : '<button class="go" data-action="open-match" data-id="' + esc(m.id) + '">' +
             (m.legs.length ? 'Weiter' : 'Start') + '</button>' +
-            (liga && !m.legs.some(function (l) { return l.visits.length > 0; })
+            (liga && nochOhneWurf
               ? '<button class="go wo" data-action="liga-kampflos" data-id="' + esc(m.id) + '" ' +
                 'title="Kampflos werten" aria-label="Kampflos werten">w.o.</button>'
               : '')) +
@@ -13906,6 +13968,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       var quelle = mode === 'liga' ? alleLigaMatches() : allMatches();
       quelle.slice().reverse().forEach(function (e) {
         if (e.m.kampflos) return;
+        /* Nur als Ergebnis eingetragen (keine Wuerfe): im Verlauf gibt es
+           dafuer Sieg und Legs, aber keinen Average-Punkt bei null. */
+        if (e.m.ergebnis && key !== 'won' && key !== 'legsWon' && key !== 'winPct') return;
         /* Allein am Board gibt es weder Sieg noch Leg-Bilanz - das Spiel
            bekommt in diesen Verlaeufen keinen Punkt. */
         if (e.m.p.length < 2 && (key === 'won' || key === 'legsWon' || key === 'winPct')) return;
@@ -15771,11 +15836,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       : 'Eintragen geht nur in der Online-Fassung mit Konto.';
 
     var ich = online ? window.DartKonto.nutzer().id : null;
-    var heute = new Date();
-    /* window.__ligaHeute: nur fuer die Tests (fester Stichtag), sonst nie gesetzt. */
-    var heuteIso = window.__ligaHeute || (heute.getFullYear() + '-' +
-      String(heute.getMonth() + 1).padStart(2, '0') + '-' +
-      String(heute.getDate()).padStart(2, '0'));
+    var heuteIso = ligaHeuteIso();
     var laeuftId = S.tour && S.tour.liga && !S.tour.liga.uebung ? S.tour.liga.terminId : null;
 
     /* Zusagen je Termin: wer "dabei" ist. Ohne Server bleibt die Zahl weg. */
@@ -15884,13 +15945,25 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           '<button class="btn ' + (zu ? 'ghost' : 'primary start') + '" data-action="liga-bericht" data-termin="' + esc(t.id) + '">' + (zu ? 'Spielbericht' : 'Bericht abschließen') + '</button>' +
         '</div>';
     } else if (!vorbei) {
+      /* Liegt der Bogen der Ligaleitung schon vor (gespielt, aber nicht in
+         der App), geht es direkt ans Uebernehmen. */
+      var bogenVor = ligaBogenEintrag(t);
       fuss = '<div class="lk-knoepfe">' +
         (online && !ichBinGastKonto()
           ? '<button class="btn ' + (binDabei ? 'ghost' : 'hell') + '" data-action="liga-zusage" data-id="' + esc(t.id) + '" data-dabei="' + (binDabei ? '0' : '1') + '">' + (binDabei ? 'Bin raus' : 'Ich bin dabei') + '</button>'
           : '') +
         (ichBinGastKonto()
           ? '<span class="lk-gast">Als Gast: verfolgen über den Live-Ticker</span>'
-          : '<button class="btn primary start" data-action="liga-spiel" data-id="' + esc(t.id) + '">Game On!</button>') +
+          : (bogenVor ? '<button class="btn hell" data-action="liga-nachtrag" data-id="' + esc(t.id) + '">Vom Bogen übernehmen</button>' : '') +
+            '<button class="btn primary start" data-action="liga-spiel" data-id="' + esc(t.id) + '">Game On!</button>') +
+        '</div>';
+    } else if (!ichBinGastKonto()) {
+      /* Vorbei, aber nichts in der App: nachtragen - vom Bogen der
+         Ligaleitung (ein Tipp) oder von Hand, nur mit Ergebnissen. */
+      var bogenAlt = ligaBogenEintrag(t);
+      fuss = '<div class="lk-knoepfe">' +
+        (bogenAlt ? '<button class="btn primary start" data-action="liga-nachtrag" data-id="' + esc(t.id) + '">Vom Bogen übernehmen</button>' : '') +
+        '<button class="btn ' + (bogenAlt ? 'ghost' : 'primary start') + '" data-action="liga-spiel" data-id="' + esc(t.id) + '">Nachtragen</button>' +
         '</div>';
     }
     karte.innerHTML =
@@ -15953,6 +16026,166 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   }
   function ligaTerminBelegt(t) {
     return !!(S.tour && S.tour.liga && !S.tour.liga.uebung && S.tour.liga.terminId === t.id) || !!ligaTerminEintrag(t);
+  }
+  /* Heute als ISO-Datum. window.__ligaHeute: nur fuer die Tests (fester
+     Stichtag), sonst nie gesetzt. */
+  function ligaHeuteIso() {
+    if (window.__ligaHeute) return window.__ligaHeute;
+    var heute = new Date();
+    return heute.getFullYear() + '-' + String(heute.getMonth() + 1).padStart(2, '0') + '-' + String(heute.getDate()).padStart(2, '0');
+  }
+
+  /* ================= Nur Ergebnisse / Nachtrag ================= */
+  /* Ein Einzel, das nicht in der App mitgeschrieben wurde (der Gegner hat
+     mit seinem System gezaehlt, oder es kommt vom Bogen der Ligaleitung):
+     der Leg-Stand wird zu Legs ohne Wuerfe, der Sieger im Wechsel mit dem
+     Verlierer, den Deckel macht der Sieger drauf (2:1 = Sieger, Verlierer,
+     Sieger). Bericht, Stand und Leg-Bilanz rechnen damit wie immer;
+     Average, Bestes Leg und Highlights bleiben leer. */
+  function ergebnisSetzen(m, h, g, start, at) {
+    /* Ohne Sieger (Gleichstand, 0:0, Unsinn) gibt es kein Ergebnis. */
+    if (!(h >= 0 && g >= 0) || h === g) return null;
+    var sieger = h > g ? m.p[0] : m.p[1], verlierer = h > g ? m.p[1] : m.p[0];
+    var restS = Math.max(h, g), restV = Math.min(h, g), siegerDran = true;
+    var legs = [];
+    while (restS + restV > 0) {
+      var wer = (siegerDran && restS > 0) || restV === 0 ? sieger : verlierer;
+      if (wer === sieger) restS--; else restV--;
+      legs.push({ starter: null, visits: [], winner: wer, start: start || 501, ergebnis: true });
+      siegerDran = !siegerDran;
+    }
+    m.legs = legs;
+    m.done = true;
+    m.ergebnis = true;
+    m.kampflos = false;
+    m.winner = sieger;
+    m.at = at || Date.now();
+    return m;
+  }
+  /* Unser Spiel eines Spieltags, wie es die Ligaleitung gemeldet hat - mit
+     allen 16 Einzeln (LIGA_SPIELTAGE, partien). Nur dann laesst es sich
+     in die App uebernehmen. */
+  function ligaBogenEintrag(t) {
+    var runde = (t && LIGA_SPIELTAGE[t.id]) || [];
+    for (var i = 0; i < runde.length; i++) {
+      var sp = runde[i];
+      if (sp && sp.gast && (sp.heim === LIGA.team || sp.gast === LIGA.team) && !sp.verschoben &&
+          Array.isArray(sp.partien) && sp.partien.length === LIGA_EINZEL.length && sp.einzel) return sp;
+    }
+    return null;
+  }
+  /* Die Bogen-Liste einer Seite (H1-H8 bzw. G1-G8) aus dem gemeldeten
+     Spiel: erst die gepflegte Aufstellung, dann alles, was in den Einzeln
+     sonst noch auf dieser Seite steht, in Reihenfolge des Auftretens. */
+  function nachtragNamen(sp, heim) {
+    var ohneStern = function (n) { return String(n || '').replace(/^\*/, '').trim(); };
+    var liste = ((sp.aufstellung && sp.aufstellung[heim ? 'heim' : 'gast']) || []).map(ohneStern).filter(Boolean);
+    (sp.partien || []).forEach(function (p) {
+      var n = ohneStern(p[heim ? 0 : 1]);
+      if (n && liste.indexOf(n) < 0) liste.push(n);
+    });
+    return liste;
+  }
+  /* Welches Konto ein Bogen-Name wohl ist: ganzer Name (buergerlich oder
+     Anzeigename), sonst eindeutiger Vorname, sonst eindeutiger Nachname.
+     Schon vergebene Konten kommen nicht noch einmal. Nichts Eindeutiges =
+     leer, das entscheidet dann der Mensch. */
+  function nachtragVorschlag(name, vergeben) {
+    var norm = function (s) { return String(s || '').replace(/\s+/g, ' ').trim().toLowerCase(); };
+    var kader = ligaKader().filter(function (p) { return (vergeben || []).indexOf(p.id) < 0; });
+    var n = norm(name), teile = n.split(' '), vor = teile[0], nach = teile[teile.length - 1];
+    var treffer = kader.filter(function (p) { return norm(p.voll) === n || norm(p.name) === n; });
+    if (treffer.length === 1) return treffer[0].id;
+    treffer = kader.filter(function (p) {
+      var pv = norm(p.voll).split(' ')[0];
+      return norm(p.name) === vor || (pv && pv === vor);
+    });
+    if (treffer.length === 1) return treffer[0].id;
+    treffer = kader.filter(function (p) { var pv = norm(p.voll).split(' '); return pv.length > 1 && pv[pv.length - 1] === nach; });
+    if (treffer.length === 1) return treffer[0].id;
+    return '';
+  }
+  /* Der Nachtrag selbst: aus den 16 gemeldeten Einzeln wird ein
+     abgeschlossenes Ligaspiel im Archiv - mit Bogen-Listen, Positionen und
+     Scheiben wie an einem echten Abend, nur ohne Wuerfe. Die Gegner werden
+     Gaeste wie beim Ligaspiel-Start. Der Bericht ist auf Papier laengst bei
+     der Ligaleitung, deshalb gilt der Spieltag sofort als abgeschlossen. */
+  function ligaNachtragUebernehmen() {
+    var o = UI.overlay;
+    if (!o || o.type !== 'liga-nachtrag') return;
+    var t = o.termin, b = o.bogen, z = o.draft.zuordnung || {};
+    if (ligaTerminBelegt(t)) { UI.overlay = null; render(); return; }
+    var daheim = b.heim === LIGA.team;
+    var unsereNamen = nachtragNamen(b, daheim), ihreNamen = nachtragNamen(b, !daheim);
+    var wir = unsereNamen.map(function (nm) { return z[nm] || ''; });
+    var kader = ligaKader();
+    var fremd = wir.some(function (id) { return !kader.some(function (p) { return p.id === id; }); });
+    if (wir.some(function (id) { return !id; }) || fremd || wir.some(function (id, i) { return wir.indexOf(id) !== i; })) {
+      o.fehler = 'Bitte jedem Namen genau einen eigenen Spieler zuordnen – niemand doppelt.';
+      render(); return;
+    }
+    var wirMap = {}, sieMap = {}, sie = [];
+    unsereNamen.forEach(function (nm, i) { wirMap[nm] = wir[i]; });
+    ihreNamen.forEach(function (nm) {
+      var id = ligaGastId(nm, wir.concat(sie));
+      sieMap[nm] = id;
+      sie.push(id);
+    });
+    var heimListe = daheim ? wir.slice() : sie.slice();
+    var gastListe = daheim ? sie.slice() : wir.slice();
+    var heimMap = daheim ? wirMap : sieMap, gastMap = daheim ? sieMap : wirMap;
+    var ohneStern = function (n) { return String(n || '').replace(/^\*/, '').trim(); };
+    var tag = b.tag || t.tag || '';
+    var at = tag ? new Date(tag + 'T20:00:00').getTime() : Date.now();
+    var maxLegs = 0;
+    b.partien.forEach(function (p) { maxLegs = Math.max(maxLegs, Number(p[2]) || 0, Number(p[3]) || 0); });
+    var bestOf = maxLegs >= 3 ? 5 : 3;
+    var kaputt = false;
+    var matches = b.partien.map(function (p, i) {
+      var m = {
+        /* Feste Kennungen je Spieltag: tippen zwei Geraete "uebernehmen",
+           bevor der Abgleich lief, nimmt der Server den Eintrag nur einmal
+           an und das zweite Geraet erkennt ihn beim Abgleich wieder. */
+        id: 'nachtrag-' + t.id + '-' + (i + 1), round: Math.floor(i / 4) + 1, p: [heimMap[ohneStern(p[0])], gastMap[ohneStern(p[1])]],
+        starter: null, posPaar: LIGA_EINZEL[i].slice(), scheibe: LIGA_SCHEIBEN[i],
+        legs: [], done: false, winner: null, at: null
+      };
+      /* Je Durchgang etwa eine Dreiviertelstunde - nur damit die Einzel im
+         Verlauf in Bogen-Reihenfolge stehen. */
+      if (!ergebnisSetzen(m, Number(p[2]) || 0, Number(p[3]) || 0, 501, at + Math.floor(i / 4) * 45 * 60000 + (i % 4) * 60000)) kaputt = true;
+      return m;
+    });
+    if (kaputt) {
+      o.fehler = 'Der gemeldete Bogen hat ein Einzel ohne Sieger – bitte die Daten in liga-daten.js prüfen.';
+      render(); return;
+    }
+    var eintrag = {
+      id: 'nachtrag-' + t.id, at: at,
+      lineup: wir.concat(sie),
+      settings: { start: 501, bestOf: bestOf },
+      matches: matches, winner: null,
+      liga: {
+        terminId: t.id, nr: t.nr, gegner: daheim ? b.gast : b.heim, heim: daheim,
+        wir: wir.slice(), sie: sie.slice(),
+        heimSpieler: heimListe, gastSpieler: gastListe,
+        posH: heimListe.slice(0, 4), posG: gastListe.slice(0, 4),
+        ort: b.ort || t.ort || '', tag: tag,
+        /* Keine erfundene Spielzeit - die Felder von/bis bleiben im Bogen leer. */
+        finish: false, zeitVon: null, zeitBis: null,
+        nurErgebnis: true, nachgetragen: Date.now(), abgeschlossen: Date.now(),
+        berichtKreuze: { nachmeldungen: 'nein', proteste: 'nein' }
+      }
+    };
+    S.history.unshift(eintrag);
+    S.history.sort(function (a, c) { return (c.at || 0) - (a.at || 0); });
+    if (S.history.length > MAX_HISTORY) S.history.length = MAX_HISTORY;
+    meldeNeuesSpiel(eintrag);
+    var e = ligaErgebnisAus(eintrag);
+    UI.ligaWahl = t.id;
+    UI.overlay = { type: 'hinweis', titel: 'Spieltag übernommen',
+      text: t.nr + '. Spieltag gegen ' + eintrag.liga.gegner + ': ' + LIGA.team + ' ' + e.wirP + ':' + e.sieP +
+        '. Die 16 Einzel stehen im Archiv und in der Liga-Statistik, der Spieltag gilt als abgeschlossen.' };
+    save(); render();
   }
   /* Alle Termine als iCal-Datei – ganztägige Einträge, die Anwurfzeit steht
      ja nicht im Spielplan. Rein im Browser gebaut, kein Server nötig. */
@@ -19095,7 +19328,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     m.legs.forEach(function (leg, i) {
       if (!leg.winner) return;
       var dl = dartsInLeg(leg, leg.winner);
-      out.push({ n: 'Leg ' + (i + 1), wer: leg.winner, text: dl + ' Darts · Ø ' + ((start / dl) * 3).toFixed(1) });
+      out.push({ n: 'Leg ' + (i + 1), wer: leg.winner, text: dl ? dl + ' Darts · Ø ' + ((start / dl) * 3).toFixed(1) : 'nur Ergebnis' });
     });
     return out;
   }
@@ -19145,7 +19378,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       var mAkt = null;
       if (found.live) {
         mAkt = {
-          fix: m.done ? { label: 'Letzte Aufnahme zurücknehmen', action: 'reopen-match', attrs: ' data-id="' + esc(m.id) + '"' } : null,
+          fix: m.done && !m.ergebnis && !m.kampflos ? { label: 'Letzte Aufnahme zurücknehmen', action: 'reopen-match', attrs: ' data-id="' + esc(m.id) + '"' } : null,
           zurueck: { label: 'Zur Tabelle', action: 'to-tournament' },
           haupt: !allMatchesDone() ? { label: 'Nächstes Spiel', action: 'ov-next-match' } : { label: 'Turnier auswerten', action: 'to-winner' }
         };
@@ -19803,6 +20036,13 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           '</div>' +
           '<p class="hint">Ohne ist Liga-konform: Der Schreiber darf das benötigte Doppel ' +
             'nicht ansagen (WDF 3.08) – die App zeigt dann keine Finish-Wege.</p>' +
+          '<div class="ls-titel">Mitschreiben</div>' +
+          '<div class="options">' +
+            '<button data-action="liga-mitschreiben" data-value="0" class="' + (ld.nurErgebnis ? '' : 'active') + '">in der App</button>' +
+            '<button data-action="liga-mitschreiben" data-value="1" class="' + (ld.nurErgebnis ? 'active' : '') + '">nur Ergebnisse</button>' +
+          '</div>' +
+          '<p class="hint">Nur Ergebnisse: Der Gegner zählt mit seinem System, wir tragen je Einzel nur ' +
+            'den Leg-Stand ein – Siege und Legs zählen, Average und Highlights gibt es dann nicht.</p>' +
           (kannTeilenLiga
             ? '<div class="ls-titel">An zwei Scheiben</div>' +
               '<div class="options">' +
@@ -19813,7 +20053,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '</div>' +
         '<div class="row-btns two">' +
         '<button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
-        '<button class="btn primary start" data-action="liga-los">GAME ON!</button></div>';
+        '<button class="btn primary start" data-action="liga-los">' + (ld.nachtrag ? 'Ergebnisse eintragen' : 'GAME ON!') + '</button></div>';
     } else if (o.type === 'uebung-start') {
       var ud = o.draft;
       var uProfile = activeProfiles();
@@ -19882,8 +20122,78 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
             '<button class="btn full" data-action="liga-kampflos-wer" data-wer="' + esc(kfMatch.p[0]) + '">' +
               esc(ligaName(kfMatch.p[0])) + ' fehlt</button>' +
             '<button class="btn full" data-action="liga-kampflos-wer" data-wer="' + esc(kfMatch.p[1]) + '">' +
-              esc(ligaName(kfMatch.p[1])) + ' fehlt</button>') +
+              esc(ligaName(kfMatch.p[1])) + ' fehlt</button>' +
+            /* Gespielt, aber nicht hier mitgeschrieben (der Gegner hat
+               gezaehlt): dann nur den Leg-Stand eintragen. */
+            '<button class="btn ghost full" data-action="liga-ergebnis" data-id="' + esc(kfMatch.id) + '">Nur das Ergebnis eintragen</button>') +
         '<button class="btn ghost full" data-action="ov-cancel">Abbrechen</button>';
+    } else if (o.type === 'liga-ergebnis') {
+      /* Modus "Nur Ergebnisse" (oder ein Einzel, das der Gegner gezaehlt
+         hat): der Leg-Stand des Einzels, Heim : Gast, ohne einen Wurf.
+         Jede moegliche Endstellung ist ein Knopf, der Sieger steht klein
+         darunter. */
+      var leM = matchById(o.id);
+      if (!leM) { UI.overlay = null; ov.classList.add('hidden'); return; }
+      var leWin = legsToWin();
+      var leA = ligaName(leM.p[0]), leB = ligaName(leM.p[1]);
+      var leVar = [];
+      for (var lv = 0; lv < leWin; lv++) leVar.push([leWin, lv]);
+      for (var lw2 = leWin - 1; lw2 >= 0; lw2--) leVar.push([lw2, leWin]);
+      var leJetzt = leM.ergebnis && leM.done ? legsWon(leM, leM.p[0]) + ':' + legsWon(leM, leM.p[1]) : null;
+      var leFest = !!(leM.done && geteiltesTurnier());
+      html = '<h3>' + (leJetzt ? 'Ergebnis ändern' : 'Ergebnis eintragen') + '</h3>' +
+        '<p class="lerg-paar">' +
+          (leM.posPaar ? '<span class="posmark h">H' + (leM.posPaar[0] + 1) + '</span> ' : '') + esc(leA) +
+          ' <span class="muted">vs</span> ' +
+          (leM.posPaar ? '<span class="posmark g">G' + (leM.posPaar[1] + 1) + '</span> ' : '') + esc(leB) + '</p>' +
+        (leFest
+          ? '<p class="hint">Im geteilten Spiel lässt sich ein eingetragenes Ergebnis nicht mehr ändern – ' +
+            'das andere Gerät hat es bereits übernommen.</p>'
+          : '<p class="hint">Legs Heim : Gast, wie auf dem Bogen – ohne Würfe, also ohne Average.</p>' +
+            '<div class="lerg-grid">' + leVar.map(function (v) {
+              var sieger = v[0] > v[1] ? leA : leB;
+              var aktiv = leJetzt === v[0] + ':' + v[1];
+              return '<button class="lerg' + (aktiv ? ' active' : '') + '" data-action="liga-ergebnis-setzen" ' +
+                'data-id="' + esc(leM.id) + '" data-h="' + v[0] + '" data-g="' + v[1] + '">' +
+                '<b>' + v[0] + ' : ' + v[1] + '</b><small>' + esc(sieger) + '</small></button>';
+            }).join('') + '</div>' +
+            (leJetzt
+              ? '<button class="btn ghost full" data-action="liga-ergebnis-zurueck">Ergebnis zurücknehmen</button>'
+              : '')) +
+        '<button class="btn ghost full" data-action="ov-cancel">' + (leFest ? 'Schließen' : 'Abbrechen') + '</button>';
+    } else if (o.type === 'liga-nachtrag') {
+      /* Ein Spieltag, den die Ligaleitung schon mit allen 16 Einzeln
+         gemeldet hat (LIGA_SPIELTAGE, partien): die Ergebnisse kommen in
+         die App, als haetten wir sie am Abend eingetragen. Zu klaeren ist
+         nur, welcher Bogen-Name welches Konto ist. */
+      var nt = o.termin, nb = o.bogen, nd = o.draft;
+      var nDaheim = nb.heim === LIGA.team;
+      var nUnsere = nachtragNamen(nb, nDaheim);
+      var nKader = ligaKader();
+      html = '<h3>Ergebnisse vom Bogen übernehmen</h3>' +
+        '<p>' + nt.nr + '. Spieltag · ' + esc(nb.heim) + ' vs ' + esc(nb.gast) +
+          ' · Einzel ' + esc(nb.einzel) + (nb.legs ? ' · Legs ' + esc(nb.legs) : '') + '</p>' +
+        (o.fehler ? '<p class="edit-error">' + esc(o.fehler) + '</p>' : '') +
+        '<div class="liga-start">' +
+          '<div class="ls-titel">Wer ist wer bei ' + esc(LIGA.team) + '</div>' +
+          nUnsere.map(function (nm, i) {
+            var gewaehlt = nd.zuordnung[nm] || '';
+            return '<label class="ls-zeile nt"><span>' + (nDaheim ? 'H' : 'G') + (i + 1) + '</span>' +
+              '<span class="nt-wer"><small>' + esc(nm) + '</small>' +
+              '<select data-role="nachtrag-wer" data-name="' + esc(nm) + '">' +
+                '<option value=""' + (gewaehlt ? '' : ' selected') + '>– bitte wählen –</option>' +
+                nKader.map(function (p) {
+                  return '<option value="' + p.id + '"' + (gewaehlt === p.id ? ' selected' : '') + '>' +
+                    esc(p.voll || p.name) + '</option>';
+                }).join('') + '</select></span></label>';
+          }).join('') +
+          '<p class="hint">Die 16 Einzel kommen mit ihrem Leg-Stand vom Spielberichtsbogen – ohne Würfe, ' +
+            'also ohne Average und Highlights. Siege und Legs zählen in Liga-Statistik und Rangliste; ' +
+            'der Spieltag gilt danach als abgeschlossen.</p>' +
+        '</div>' +
+        '<div class="row-btns two">' +
+        '<button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
+        '<button class="btn primary start" data-action="liga-nachtrag-los">Übernehmen</button></div>';
     } else if (o.type === 'liga-wechsel') {
       /* Die acht Positionen mit ihrer aktuellen Besetzung – Wechsel je
          Position, wie es die SWO erlaubt. */
@@ -20309,7 +20619,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         heimSpieler: heimListe, gastSpieler: gastListe,
         posH: heimListe.slice(0, 4), posG: gastListe.slice(0, 4),
         ort: t.ort || '', tag: t.tag || '',
-        finish: !!d.finish, zeitVon: Date.now(), zeitBis: null
+        finish: !!d.finish, zeitVon: Date.now(), zeitBis: null,
+        /* Der Gegner zaehlt mit seinem System: je Einzel nur der Leg-Stand. */
+        nurErgebnis: !!d.nurErgebnis
       }
     };
     S.matches = LIGA_EINZEL.map(function (paar, i) {
@@ -21449,11 +21761,15 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         lsAktive.forEach(function (p) {
           if (lsVorschlag.length < 4 && lsVorschlag.indexOf(p.id) < 0) lsVorschlag.push(p.id);
         });
+        /* Ein vergangener Spieltag wird nachgetragen: dann sind "nur
+           Ergebnisse" die Voreinstellung - gespielt wurde ja schon. */
+        var lsNachtrag = lsTermin.tag < ligaHeuteIso();
         UI.overlay = {
           type: 'liga-start', termin: lsTermin,
           /* Best of 3 (unsere 4. Liga) und ohne Finish-Hilfen (WDF 3.08:
              das Doppel wird nicht angesagt) sind die Voreinstellung. */
-          draft: { bestOf: 3, wir: lsVorschlag.slice(0, 4), gegner: ['', '', '', ''], gegnerNach: ['', '', '', ''], geteilt: false, finish: false }
+          draft: { bestOf: 3, wir: lsVorschlag.slice(0, 4), gegner: ['', '', '', ''], gegnerNach: ['', '', '', ''], geteilt: false, finish: false,
+            nurErgebnis: lsNachtrag, nachtrag: lsNachtrag }
         };
         render();
         break;
@@ -21908,6 +22224,81 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         save(); render();
         break;
       }
+      /* Nur das Ergebnis eines Einzels (Modus "Nur Ergebnisse" oder ein
+         Einzel, das der Gegner gezaehlt hat): Leg-Stand ohne Wuerfe. */
+      case 'liga-ergebnis': {
+        var leM0 = matchById(el.getAttribute('data-id'));
+        if (!leM0 || !(S.tour && S.tour.liga) || leM0.void || leM0.belegtVon) break;
+        /* Ein hier angefangenes Einzel wird zu Ende gespielt, nicht ueberschrieben. */
+        if (!leM0.ergebnis && (leM0.kampflos || leM0.legs.some(function (l) { return l.visits.length > 0; }))) break;
+        UI.overlay = { type: 'liga-ergebnis', id: leM0.id };
+        render();
+        break;
+      }
+      case 'liga-ergebnis-setzen': {
+        var lsM = matchById(el.getAttribute('data-id'));
+        if (!lsM || !(S.tour && S.tour.liga) || lsM.void) break;
+        if (!lsM.ergebnis && (lsM.kampflos || lsM.legs.some(function (l) { return l.visits.length > 0; }))) break;
+        if (lsM.done && geteiltesTurnier()) break;
+        var lsH = Number(el.getAttribute('data-h')), lsG = Number(el.getAttribute('data-g'));
+        var lsWin = legsToWin();
+        if (!(lsH === lsWin && lsG >= 0 && lsG < lsWin) && !(lsG === lsWin && lsH >= 0 && lsH < lsWin)) break;
+        ergebnisSetzen(lsM, lsH, lsG, tourStart(), Date.now());
+        if (S.tour.liga && !S.tour.liga.zeitBis && !nextOpenMatch()) S.tour.liga.zeitBis = Date.now();
+        UI.overlay = null;
+        save();
+        /* Im geteilten Spiel steht das Ergebnis sofort auch am anderen Geraet. */
+        if (geteiltesTurnier() && window.DartSync && window.DartSync.turnier) {
+          window.DartSync.turnier.ergebnis(lsM);
+        }
+        render();
+        break;
+      }
+      case 'liga-ergebnis-zurueck': {
+        var lzM = matchById(UI.overlay && UI.overlay.id);
+        if (!lzM || !lzM.ergebnis || geteiltesTurnier()) break;
+        lzM.done = false;
+        lzM.ergebnis = false;
+        lzM.winner = null;
+        lzM.at = null;
+        lzM.legs = [];
+        if (S.tour.liga && S.tour.liga.zeitBis && nextOpenMatch()) S.tour.liga.zeitBis = null;
+        UI.overlay = null;
+        save(); render();
+        break;
+      }
+      case 'liga-mitschreiben':
+        if (UI.overlay && UI.overlay.type === 'liga-start') {
+          UI.overlay.draft.nurErgebnis = el.getAttribute('data-value') === '1';
+          render();
+        }
+        break;
+      /* Ergebnisse eines schon gemeldeten Spieltags vom Bogen der
+         Ligaleitung uebernehmen - Zuordnung der Namen zu Konten vorher. */
+      case 'liga-nachtrag': {
+        if (ichBinGastKonto()) break;
+        if ((S.game && !S.game.done) || (S.matches.length && !allMatchesDone())) {
+          UI.overlay = { type: 'hinweis', text: 'Es läuft noch ein Spiel oder Turnier – bitte erst abschließen oder beenden.' };
+          render();
+          break;
+        }
+        var ntTermin = null;
+        LIGA.termine.forEach(function (t) { if (t.id === el.getAttribute('data-id')) ntTermin = t; });
+        var ntBogen = ntTermin ? ligaBogenEintrag(ntTermin) : null;
+        if (!ntTermin || !ntBogen || ligaTerminBelegt(ntTermin)) break;
+        var ntZu = {}, ntVergeben = [];
+        nachtragNamen(ntBogen, ntBogen.heim === LIGA.team).forEach(function (nm) {
+          var id = nachtragVorschlag(nm, ntVergeben);
+          ntZu[nm] = id;
+          if (id) ntVergeben.push(id);
+        });
+        UI.overlay = { type: 'liga-nachtrag', termin: ntTermin, bogen: ntBogen, draft: { zuordnung: ntZu } };
+        render();
+        break;
+      }
+      case 'liga-nachtrag-los':
+        ligaNachtragUebernehmen();
+        break;
       case 'liga-bericht-kurz':
         UI.overlay = { type: 'liga-bericht-kurz' }; render();
         break;
@@ -22312,6 +22703,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     }
     if (ev.target.getAttribute('data-role') === 'uebung-sie' && UI.overlay && UI.overlay.draft) {
       UI.overlay.draft.sie[Number(ev.target.getAttribute('data-i'))] = ev.target.value;
+    }
+    if (ev.target.getAttribute('data-role') === 'nachtrag-wer' && UI.overlay && UI.overlay.type === 'liga-nachtrag') {
+      UI.overlay.draft.zuordnung[ev.target.getAttribute('data-name')] = ev.target.value;
     }
     if (ev.target.getAttribute('data-role') === 'liga-neu' && UI.overlay && UI.overlay.draft) {
       UI.overlay.draft.neu = ev.target.value;

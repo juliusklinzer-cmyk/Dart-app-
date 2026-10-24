@@ -43,7 +43,10 @@
      nach jedem Spieltag geliefert. Je Spiel: Datum, Heim, Gast, Lokal,
      Einzel und Legs; "partien" sind die 16 Einzel [Heim, Gast, hLegs, gLegs],
      ein * vor dem Namen heisst Gastspieler. Ohne gast = spielfrei,
-     verschoben = neuer Termin in tag. */
+     verschoben = neuer Termin in tag. Bei unserem eigenen Spiel ergaenzt
+     "aufstellung" (heim/gast: die Bogen-Listen H1-H8 bzw. G1-G8) - damit
+     laesst sich das Spiel in der App "vom Bogen uebernehmen" (js/app.js,
+     ligaNachtragUebernehmen), wenn es am Abend nicht mitgeschrieben wurde. */
   var LIGA_SPIELTAGE = {
     st01: [
       { heim: 'Dart Artists Germering II', gast: null },
@@ -60,7 +63,29 @@
         ['Bernhard Hoffmann', 'Naser Sharifi', 2, 1], ['Christian Matejka', 'Christos Heuwald', 2, 1], ['Linda Maier', 'Alex Heuwald', 2, 1], ['Franz Freinberger', '*Michael Rogge', 1, 2],
         ['Sven Albrecht', 'Naser Sharifi', 1, 2], ['Yves Scherer', 'Christos Heuwald', 0, 2], ['Stephan Brunner', 'Alex Heuwald', 2, 0], ['Linda Maier', '*Michael Rogge', 0, 2]
       ], highlights: [{ wer: 'Alex Heuwald', team: 'DCO', was: '1× 180' }] },
-      { tag: '2026-10-16', heim: 'TSV Oberpframmern', gast: 'FT Gern Darts II', ort: 'Gaststätte Anstoss', verschoben: true }
+      /* Stand zuerst "verschoben", inzwischen gespielt und gewertet (Tabelle
+         der Ligaleitung vom 23.10.2026). */
+      { tag: '2026-10-16', heim: 'TSV Oberpframmern', gast: 'FT Gern Darts II', ort: 'Gaststätte Anstoss', einzel: '12:4', legs: '26:10' }
+    ],
+    st02: [
+      { heim: 'Voodoo Darters', gast: null },
+      { tag: '2026-10-19', heim: 'FT Gern Darts II', gast: 'Treff ma nix', ort: 'Vereinsheim FT Gern', einzel: '3:13', legs: '11:28' },
+      { tag: '2026-10-21', heim: 'TSV Dachau 1865 4', gast: 'TSV Oberpframmern', ort: 'TSV 1865 Dachau' },
+      /* Unser Spiel, vom Spielberichtsbogen (Cobblers Irish Pub, 23.10.2026).
+         aufstellung: die Bogen-Listen H1-H8 / G1-G8, damit der Nachtrag in
+         der App dieselben Nummern traegt wie der Papierbogen (G5 Beuscher,
+         G6 Schmeiss kamen in Durchgang 3 und 4 fuer G4 bzw. G3). */
+      { tag: '2026-10-23', heim: 'Dart Artists Germering II', gast: 'Blink 180', ort: 'Cobblers Irish Pub', einzel: '6:10', legs: '13:22',
+        aufstellung: {
+          heim: ['Melanie Ziesen', 'Julius Frank', 'Fritz Frank', 'Gerd Stegerer'],
+          gast: ['Lenas Becker', 'Dominik Uhl', 'Tobias Thomas', 'Alfred Buchner', 'Dominik Beuscher', 'Michael Schmeiß']
+        },
+        partien: [
+          ['Melanie Ziesen', 'Lenas Becker', 0, 2], ['Julius Frank', 'Dominik Uhl', 2, 0], ['Fritz Frank', 'Tobias Thomas', 0, 2], ['Gerd Stegerer', 'Alfred Buchner', 2, 0],
+          ['Melanie Ziesen', 'Dominik Uhl', 0, 2], ['Julius Frank', 'Lenas Becker', 1, 2], ['Fritz Frank', 'Alfred Buchner', 0, 2], ['Gerd Stegerer', 'Tobias Thomas', 0, 2],
+          ['Fritz Frank', 'Lenas Becker', 0, 2], ['Gerd Stegerer', 'Dominik Uhl', 2, 0], ['Julius Frank', 'Michael Schmeiß', 2, 1], ['Melanie Ziesen', 'Dominik Beuscher', 0, 2],
+          ['Gerd Stegerer', 'Lenas Becker', 2, 1], ['Fritz Frank', 'Dominik Uhl', 0, 2], ['Melanie Ziesen', 'Michael Schmeiß', 0, 2], ['Julius Frank', 'Dominik Beuscher', 2, 0]
+        ] }
     ]
   };
 
