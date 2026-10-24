@@ -318,10 +318,13 @@ umgekehrt lässt sich in jedem Ligaspiel ein Einzel, das der Gegner gezählt hat
 Endstand rechnen mit beidem wie immer.
 
 **Nachtragen:** Ein vergangener Spieltag ohne Ligaspiel in der App zeigt auf
-seiner Karte **„Nachtragen“** – das ist der normale Start mit „nur Ergebnisse“
-vorgewählt – und, sobald die Ligaleitung alle 16 Einzel gemeldet hat
-(`LIGA_SPIELTAGE` mit `partien`, dazu `aufstellung` für die Bogen-Listen),
-**„Vom Bogen übernehmen“**: ein Dialog ordnet jedem Bogen-Namen unserer Seite
+seiner Karte eine Statuszeile („Gespielt · Blink 180 10:6 · noch nicht im
+Archiv“) mit dem Hinweis, dass erst das Übernehmen Siege in die Statistik und
+den Spielbericht bringt – die Zahlen im Spielplan und in der Tabelle kommen ja
+nur von der Ligaleitung. Dazu **„Von Hand nachtragen“** – das ist der normale
+Start mit „nur Ergebnisse“ vorgewählt – und, sobald die Ligaleitung alle 16
+Einzel gemeldet hat (`LIGA_SPIELTAGE` mit `partien`, dazu `aufstellung` für
+die Bogen-Listen), **„Spielbericht übernehmen“**: ein Dialog ordnet jedem Bogen-Namen unserer Seite
 ein Konto zu (ganzer Name, eindeutiger Vor- oder Nachname werden vorgeschlagen),
 die Gegner werden Gäste wie beim Ligaspiel-Start, und mit „Übernehmen“ liegt
 das Ligaspiel abgeschlossen im Archiv – 16 Einzel mit Leg-Stand, Positionen,

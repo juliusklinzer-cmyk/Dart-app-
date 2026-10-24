@@ -5467,6 +5467,7 @@ body .boards-host.log #board-log { display: block; }
 .liga-karte .lk-knoepfe .lk-zuschauen { display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
 .liga-karte .lk-knoepfe .lk-zuschauen i { width: 0.5em; height: 0.5em; border-radius: 50%; background: var(--accent); animation: livePulse 1.4s ease-in-out infinite; }
 .liga-karte .lk-gast { color: var(--muted); font-size: 0.9rem; text-align: center; }
+.liga-karte .lk-hinweis { margin: 0; color: var(--muted); font-size: 0.88rem; line-height: 1.35; }
 @keyframes livePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
 @media (prefers-reduced-motion: reduce) { .liga-karte .lk-live i, .liga-karte .lk-zuschauen i { animation: none; } }
 
@@ -15944,27 +15945,38 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           '<button class="btn ghost" data-action="open-summary" data-kind="turnier" data-id="' + esc(h.id) + '">Ergebnisse</button>' +
           '<button class="btn ' + (zu ? 'ghost' : 'primary start') + '" data-action="liga-bericht" data-termin="' + esc(t.id) + '">' + (zu ? 'Spielbericht' : 'Bericht abschließen') + '</button>' +
         '</div>';
-    } else if (!vorbei) {
-      /* Liegt der Bogen der Ligaleitung schon vor (gespielt, aber nicht in
-         der App), geht es direkt ans Uebernehmen. */
-      var bogenVor = ligaBogenEintrag(t);
-      fuss = '<div class="lk-knoepfe">' +
-        (online && !ichBinGastKonto()
-          ? '<button class="btn ' + (binDabei ? 'ghost' : 'hell') + '" data-action="liga-zusage" data-id="' + esc(t.id) + '" data-dabei="' + (binDabei ? '0' : '1') + '">' + (binDabei ? 'Bin raus' : 'Ich bin dabei') + '</button>'
-          : '') +
-        (ichBinGastKonto()
-          ? '<span class="lk-gast">Als Gast: verfolgen über den Live-Ticker</span>'
-          : (bogenVor ? '<button class="btn hell" data-action="liga-nachtrag" data-id="' + esc(t.id) + '">Vom Bogen übernehmen</button>' : '') +
-            '<button class="btn primary start" data-action="liga-spiel" data-id="' + esc(t.id) + '">Game On!</button>') +
-        '</div>';
-    } else if (!ichBinGastKonto()) {
-      /* Vorbei, aber nichts in der App: nachtragen - vom Bogen der
-         Ligaleitung (ein Tipp) oder von Hand, nur mit Ergebnissen. */
-      var bogenAlt = ligaBogenEintrag(t);
-      fuss = '<div class="lk-knoepfe">' +
-        (bogenAlt ? '<button class="btn primary start" data-action="liga-nachtrag" data-id="' + esc(t.id) + '">Vom Bogen übernehmen</button>' : '') +
-        '<button class="btn ' + (bogenAlt ? 'ghost' : 'primary start') + '" data-action="liga-spiel" data-id="' + esc(t.id) + '">Nachtragen</button>' +
-        '</div>';
+    } else if (!ichBinGastKonto() || !vorbei) {
+      /* Nichts in der App. Liegt der Bogen der Ligaleitung schon vor
+         (gespielt, aber nicht mitgeschrieben), steht das Ergebnis zwar im
+         Spielplan - aber erst das Uebernehmen macht daraus das Ligaspiel im
+         Archiv, mit Siegen in der Statistik und dem Spielbericht. Das sagt
+         die Karte dazu; ein vorbeigegangener Spieltag ohne Bogen laesst sich
+         von Hand nachtragen (Start mit "nur Ergebnisse"). */
+      var bogen = ligaBogenEintrag(t);
+      var bogenStand = '';
+      if (bogen && bogen.einzel) {
+        var bTeile = String(bogen.einzel).split(':');
+        bogenStand = daheim ? bTeile[0] + ':' + bTeile[1] : bTeile[1] + ':' + bTeile[0];
+      }
+      var erklaerung = '';
+      if (bogen && !ichBinGastKonto()) {
+        erklaerung = '<div class="lk-status offen">Gespielt · ' + esc(LIGA.team) + ' ' + esc(bogenStand) + ' · noch nicht im Archiv</div>' +
+          '<p class="lk-hinweis">Alle 16 Einzel vom Spielbericht liegen vor. Einmal übernehmen, dann zählen Siege und Legs in der Liga-Statistik und der Spielbericht ist da.</p>';
+      } else if (vorbei) {
+        erklaerung = '<div class="lk-status offen">Vorbei · noch nicht in der App</div>' +
+          '<p class="lk-hinweis">Ohne Spiel im Archiv zählt nichts in die Statistik. Von Hand nachtragen heißt: Spiel nachträglich anlegen und je Einzel nur den Leg-Stand antippen.</p>';
+      }
+      var knoepfe = vorbei
+        ? (bogen ? '<button class="btn primary start" data-action="liga-nachtrag" data-id="' + esc(t.id) + '">Spielbericht übernehmen</button>' : '') +
+          '<button class="btn ' + (bogen ? 'ghost' : 'primary start') + '" data-action="liga-spiel" data-id="' + esc(t.id) + '">Von Hand nachtragen</button>'
+        : (online && !ichBinGastKonto()
+            ? '<button class="btn ' + (binDabei ? 'ghost' : 'hell') + '" data-action="liga-zusage" data-id="' + esc(t.id) + '" data-dabei="' + (binDabei ? '0' : '1') + '">' + (binDabei ? 'Bin raus' : 'Ich bin dabei') + '</button>'
+            : '') +
+          (ichBinGastKonto()
+            ? '<span class="lk-gast">Als Gast: verfolgen über den Live-Ticker</span>'
+            : (bogen ? '<button class="btn hell" data-action="liga-nachtrag" data-id="' + esc(t.id) + '">Spielbericht übernehmen</button>' : '') +
+              '<button class="btn primary start" data-action="liga-spiel" data-id="' + esc(t.id) + '">Game On!</button>');
+      fuss = erklaerung + '<div class="lk-knoepfe">' + knoepfe + '</div>';
     }
     karte.innerHTML =
       '<div class="lk-kopf">' + kopfLinks +
@@ -20170,9 +20182,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       var nDaheim = nb.heim === LIGA.team;
       var nUnsere = nachtragNamen(nb, nDaheim);
       var nKader = ligaKader();
-      html = '<h3>Ergebnisse vom Bogen übernehmen</h3>' +
+      html = '<h3>Spielbericht übernehmen</h3>' +
         '<p>' + nt.nr + '. Spieltag · ' + esc(nb.heim) + ' vs ' + esc(nb.gast) +
           ' · Einzel ' + esc(nb.einzel) + (nb.legs ? ' · Legs ' + esc(nb.legs) : '') + '</p>' +
+        '<p class="hint">Das Ergebnis steht schon im Spielplan. Erst das Übernehmen macht daraus das Ligaspiel ' +
+          'im Archiv: mit den 16 Einzeln, Siegen in der Liga-Statistik und dem fertigen Spielbericht.</p>' +
         (o.fehler ? '<p class="edit-error">' + esc(o.fehler) + '</p>' : '') +
         '<div class="liga-start">' +
           '<div class="ls-titel">Wer ist wer bei ' + esc(LIGA.team) + '</div>' +

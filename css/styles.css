@@ -5456,6 +5456,7 @@ body .boards-host.log #board-log { display: block; }
 .liga-karte .lk-knoepfe .lk-zuschauen { display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
 .liga-karte .lk-knoepfe .lk-zuschauen i { width: 0.5em; height: 0.5em; border-radius: 50%; background: var(--accent); animation: livePulse 1.4s ease-in-out infinite; }
 .liga-karte .lk-gast { color: var(--muted); font-size: 0.9rem; text-align: center; }
+.liga-karte .lk-hinweis { margin: 0; color: var(--muted); font-size: 0.88rem; line-height: 1.35; }
 @keyframes livePulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
 @media (prefers-reduced-motion: reduce) { .liga-karte .lk-live i, .liga-karte .lk-zuschauen i { animation: none; } }
 
