@@ -2589,6 +2589,8 @@ button, input, select, textarea { font-family: inherit; }
 .liga-start .ls-zeile > .nt-wer { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .liga-start .nt-wer small { color: var(--muted); font-weight: 600; }
 .liga-start .nt-wer select { width: 100%; }
+.liga-start .nt-wer select.fehlt { border-color: var(--red); box-shadow: 0 0 0 1px var(--red); }
+.overlay-card .nt-fehler { margin: var(--space-3) 0 0; text-align: left; }
 
 /* "Nur Ergebnisse": der Leg-Stand eines Einzels als Kacheln, Heim : Gast,
    der Sieger klein darunter. Gewaehlt ist, was schon eingetragen ist. */
@@ -3017,7 +3019,9 @@ body { font-size: 1rem; }
     radial-gradient(1000px 560px at 72% -5%, rgba(64, 150, 195, 0.16), transparent 62%),
     radial-gradient(800px 500px at 15% 105%, rgba(64, 150, 195, 0.08), transparent 60%);
   place-items: start center;
-  padding: max(10px, env(safe-area-inset-top, 0px)) var(--space-4) max(12px, env(safe-area-inset-bottom, 0px));
+  /* Oben Luft lassen: am Handy sitzt sonst die Ueberschrift unter der
+     Statusleiste bzw. der Kerbe. */
+  padding: max(18px, calc(env(safe-area-inset-top, 0px) + 10px)) var(--space-4) max(12px, env(safe-area-inset-bottom, 0px));
 }
 .overlay.vollbild .overlay-card {
   background: transparent; border: 0; border-radius: 0;

@@ -325,7 +325,11 @@ nur von der Ligaleitung. Dazu **„Von Hand nachtragen“** – das ist der norm
 Start mit „nur Ergebnisse“ vorgewählt – und, sobald die Ligaleitung alle 16
 Einzel gemeldet hat (`LIGA_SPIELTAGE` mit `partien`, dazu `aufstellung` für
 die Bogen-Listen), **„Spielbericht übernehmen“**: ein Dialog ordnet jedem Bogen-Namen unserer Seite
-ein Konto zu (ganzer Name, eindeutiger Vor- oder Nachname werden vorgeschlagen),
+ein Konto zu (ganzer Name, eindeutiger Vor- oder Nachname werden vorgeschlagen;
+wer kein Konto hat, wird über den letzten Eintrag der Liste als dauerhafter Gast
+angelegt – in die Liga-Rangliste kommt er erst mit Konto). Der Dialog ist ein
+Vollbild wie der Ligaspiel-Start; fehlt eine Zuordnung, nennt die Meldung direkt
+über „Übernehmen“ die offenen Namen und markiert ihre Zeilen rot,
 die Gegner werden Gäste wie beim Ligaspiel-Start, und mit „Übernehmen“ liegt
 das Ligaspiel abgeschlossen im Archiv – 16 Einzel mit Leg-Stand, Positionen,
 Scheiben und Bogen-Nummern (G5/G6 für Eingewechselte), Bericht mit

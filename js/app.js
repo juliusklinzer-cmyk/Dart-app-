@@ -6427,9 +6427,19 @@
     var unsereNamen = nachtragNamen(b, daheim), ihreNamen = nachtragNamen(b, !daheim);
     var wir = unsereNamen.map(function (nm) { return z[nm] || ''; });
     var kader = ligaKader();
-    var fremd = wir.some(function (id) { return !kader.some(function (p) { return p.id === id; }); });
-    if (wir.some(function (id) { return !id; }) || fremd || wir.some(function (id, i) { return wir.indexOf(id) !== i; })) {
-      o.fehler = 'Bitte jedem Namen genau einen eigenen Spieler zuordnen – niemand doppelt.';
+    /* Die Meldung nennt die Zeilen, an denen es haengt - "geht nicht" allein
+       hilft am Handy niemandem. */
+    var ohne = [], doppelt = [];
+    unsereNamen.forEach(function (nm, i) {
+      var id = wir[i];
+      if (!id || !kader.some(function (p) { return p.id === id; })) ohne.push(nm);
+      else if (wir.indexOf(id) !== i) doppelt.push(nm);
+    });
+    if (ohne.length || doppelt.length) {
+      o.fehlt = ohne.concat(doppelt);
+      o.fehler = (ohne.length ? 'Noch ohne Spieler: ' + ohne.join(', ') + '. ' : '') +
+        (doppelt.length ? 'Doppelt vergeben: ' + doppelt.join(', ') + '. ' : '') +
+        'Bitte jedem Namen genau einen eigenen Spieler zuordnen.';
       render(); return;
     }
     var wirMap = {}, sieMap = {}, sie = [];
@@ -10483,24 +10493,32 @@
           ' · Einzel ' + esc(nb.einzel) + (nb.legs ? ' · Legs ' + esc(nb.legs) : '') + '</p>' +
         '<p class="hint">Das Ergebnis steht schon im Spielplan. Erst das Übernehmen macht daraus das Ligaspiel ' +
           'im Archiv: mit den 16 Einzeln, Siegen in der Liga-Statistik und dem fertigen Spielbericht.</p>' +
-        (o.fehler ? '<p class="edit-error">' + esc(o.fehler) + '</p>' : '') +
         '<div class="liga-start">' +
           '<div class="ls-titel">Wer ist wer bei ' + esc(LIGA.team) + '</div>' +
           nUnsere.map(function (nm, i) {
             var gewaehlt = nd.zuordnung[nm] || '';
+            var offen = (o.fehlt || []).indexOf(nm) >= 0;
             return '<label class="ls-zeile nt"><span>' + (nDaheim ? 'H' : 'G') + (i + 1) + '</span>' +
               '<span class="nt-wer"><small>' + esc(nm) + '</small>' +
-              '<select data-role="nachtrag-wer" data-name="' + esc(nm) + '">' +
+              '<select data-role="nachtrag-wer" data-name="' + esc(nm) + '"' + (offen ? ' class="fehlt"' : '') + '>' +
                 '<option value=""' + (gewaehlt ? '' : ' selected') + '>– bitte wählen –</option>' +
                 nKader.map(function (p) {
                   return '<option value="' + p.id + '"' + (gewaehlt === p.id ? ' selected' : '') + '>' +
                     esc(p.voll || p.name) + '</option>';
-                }).join('') + '</select></span></label>';
+                }).join('') +
+                /* Kein Konto, kein Profil: als Gast anlegen, damit der Bogen
+                   stimmt. In die Liga-Rangliste kommt nur, wer ein Konto hat. */
+                '<option value="__neu">+ „' + esc(nm) + '“ neu als Gast anlegen</option>' +
+              '</select></span></label>';
           }).join('') +
           '<p class="hint">Die 16 Einzel kommen mit ihrem Leg-Stand vom Spielberichtsbogen – ohne Würfe, ' +
             'also ohne Average und Highlights. Siege und Legs zählen in Liga-Statistik und Rangliste; ' +
-            'der Spieltag gilt danach als abgeschlossen.</p>' +
+            'der Spieltag gilt danach als abgeschlossen. Fehlt jemand in der Liste, lege ihn über den ' +
+            'letzten Eintrag als Gast an – in die Rangliste kommt er dann erst mit eigenem Konto.</p>' +
         '</div>' +
+        /* Die Meldung steht direkt ueber dem Knopf, der sie ausgeloest hat -
+           oben im Dialog wuerde sie am Handy aus dem Bild rutschen. */
+        (o.fehler ? '<p class="edit-error nt-fehler">' + esc(o.fehler) + '</p>' : '') +
         '<div class="row-btns two">' +
         '<button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
         '<button class="btn primary start" data-action="liga-nachtrag-los">Übernehmen</button></div>';
@@ -12755,7 +12773,7 @@
   var STICKY_OVERLAYS = { 'checkout-darts': 1, 'leg-done': 1, 'match-done': 1, 'game-done': 1, 'turnier-ende': 1 };
   /* Vollbild-Dialoge haben keinen "Rand daneben" - ein Tipp auf leere Flaeche
      (oder beim Unterschreiben knapp neben das Feld) schliesst sie nicht. */
-  var VOLLBILD_DIALOGE = { 'liga-start': 1, 'uebung-start': 1, 'unterschrift': 1, 'bericht-versand': 1 };
+  var VOLLBILD_DIALOGE = { 'liga-start': 1, 'uebung-start': 1, 'unterschrift': 1, 'bericht-versand': 1, 'liga-nachtrag': 1 };
   /* Die Dialoge des Ligaspiels (Entwurf Okt. 2026): breite Bogen,
      linksbuendig, mit Spalten - Wechseln, Nachmelden, Beenden, Spielbericht. */
   var BOGEN_DIALOGE = { 'liga-wechsel': 1, 'liga-wechsel-zu': 1, 'nachmeldung': 1, 'liga-bericht-kurz': 1, 'finish': 1 };
@@ -13015,7 +13033,18 @@
       UI.overlay.draft.sie[Number(ev.target.getAttribute('data-i'))] = ev.target.value;
     }
     if (ev.target.getAttribute('data-role') === 'nachtrag-wer' && UI.overlay && UI.overlay.type === 'liga-nachtrag') {
-      UI.overlay.draft.zuordnung[ev.target.getAttribute('data-name')] = ev.target.value;
+      var ntName = ev.target.getAttribute('data-name'), ntWert = ev.target.value;
+      if (ntWert === '__neu') {
+        /* Dauerhafter Gast mit dem Namen vom Bogen - sichtbar in der
+           Spielerliste, damit man ihn spaeter einem Konto zuordnen kann. */
+        var ntNeu = { id: uid(), name: ntName.slice(0, 30), voll: ntName, avatar: null, hue: freeHue(), created: Date.now(), gast: true, dauer: true };
+        S.profiles.push(ntNeu);
+        ntWert = ntNeu.id;
+        save();
+      }
+      UI.overlay.draft.zuordnung[ntName] = ntWert;
+      if (UI.overlay.fehlt) UI.overlay.fehlt = UI.overlay.fehlt.filter(function (n) { return n !== ntName; });
+      render();
     }
     if (ev.target.getAttribute('data-role') === 'liga-neu' && UI.overlay && UI.overlay.draft) {
       UI.overlay.draft.neu = ev.target.value;

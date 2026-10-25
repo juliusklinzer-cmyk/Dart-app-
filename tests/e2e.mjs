@@ -2456,6 +2456,7 @@ check('die Karte sagt, dass das Ergebnis noch nicht im Archiv ist', /Blink 180 1
 check('die Karte erklaert, was das Uebernehmen bringt', /Siege und Legs in der Liga-Statistik/.test(await text('#liga-karte .lk-hinweis')));
 await page.locator('#liga-karte [data-action="liga-nachtrag"]').click();
 check('sechs Bogen-Namen unserer Seite stehen zur Zuordnung', (await page.locator('[data-role="nachtrag-wer"]').count()) === 6);
+check('der Dialog ist ein Vollbild (am Handy nichts abgeschnitten)', await page.evaluate(() => document.getElementById('overlay').classList.contains('vollbild')));
 check('ganzer Name und eindeutiger Vorname sind vorgeschlagen', await page.evaluate(() => {
   const z = window.__dart.ui().overlay.draft.zuordnung;
   const lenas = window.__dart.activeProfiles().find((p) => p.name === 'Lenas');
@@ -2463,10 +2464,19 @@ check('ganzer Name und eindeutiger Vorname sind vorgeschlagen', await page.evalu
 }));
 await page.locator('[data-action="liga-nachtrag-los"]').click();
 check('ohne vollstaendige Zuordnung geht es nicht weiter', await visible('.overlay-card .edit-error'));
+check('die Meldung nennt die offenen Namen und steht ueber dem Knopf', /Noch ohne Spieler: Dominik Uhl, Tobias Thomas, Dominik Beuscher/.test(await text('.overlay-card .nt-fehler')));
+check('die offenen Zeilen sind markiert', (await page.locator('[data-role="nachtrag-wer"].fehlt').count()) === 3);
 const kaderIds = await page.evaluate(() => Object.fromEntries(window.__dart.activeProfiles().map((p) => [p.name, p.id])));
 await page.selectOption('[data-role="nachtrag-wer"][data-name="Dominik Uhl"]', kaderIds.Domi);
 await page.selectOption('[data-role="nachtrag-wer"][data-name="Tobias Thomas"]', kaderIds.Tobi);
-await page.selectOption('[data-role="nachtrag-wer"][data-name="Dominik Beuscher"]', kaderIds.Julius);
+/* Fuer den Sechsten gibt es kein Konto: ueber den letzten Eintrag als Gast anlegen. */
+await page.selectOption('[data-role="nachtrag-wer"][data-name="Dominik Beuscher"]', '__neu');
+const neuerGast = await page.evaluate(() => {
+  const p = window.__dart.state().profiles.find((x) => x.voll === 'Dominik Beuscher');
+  return p ? { gast: !!p.gast, dauer: !!p.dauer, zu: window.__dart.ui().overlay.draft.zuordnung['Dominik Beuscher'] === p.id } : null;
+});
+check('"neu als Gast anlegen" legt einen dauerhaften Gast an und ordnet ihn zu', !!neuerGast && neuerGast.gast && neuerGast.dauer && neuerGast.zu);
+check('die Markierung der offenen Zeilen ist nach der Wahl weg', (await page.locator('[data-role="nachtrag-wer"].fehlt').count()) === 0);
 await page.locator('[data-action="liga-nachtrag-los"]').click();
 check('Hinweis: Spieltag uebernommen', (await textKlein('.overlay-card')).indexOf('spieltag übernommen') >= 0);
 await page.locator('[data-action="ov-hinweis-zu"]').click();
@@ -2485,7 +2495,7 @@ const nachtrag = await page.evaluate(() => {
 check('das Ligaspiel liegt abgeschlossen im Archiv', !!nachtrag && nachtrag.zu && nachtrag.einzel === 16 && nachtrag.fertig && nachtrag.ohneWurf);
 check('10:6 Einzel und 22:13 Legs fuer uns, auswaerts', !!nachtrag && nachtrag.sieger === 10 && nachtrag.legsWir === 22 && nachtrag.legsSie === 13 && nachtrag.heim === false, JSON.stringify(nachtrag));
 check('die vier Germeringer sind Gaeste', !!nachtrag && nachtrag.gaeste === 4);
-check('Bogen-Nummern wie auf Papier: G5 Beuscher, G6 Schmeiss', !!nachtrag && nachtrag.g5 === 'Julius' && nachtrag.g6 === 'Michael Schmeiß');
+check('Bogen-Nummern wie auf Papier: G5 Beuscher, G6 Schmeiss', !!nachtrag && nachtrag.g5 === 'Dominik Beuscher' && nachtrag.g6 === 'Michael Schmeiß');
 check('die Karte zeigt den Spieltag als abgeschlossen mit 10:6', (await textKlein('#liga-karte')).indexOf('abgeschlossen') >= 0 && (await text('#liga-karte')).indexOf('10:6') >= 0);
 check('ein zweites Uebernehmen gibt es nicht mehr', (await page.locator('#liga-karte [data-action="liga-nachtrag"]').count()) === 0);
 await page.locator('#liga-karte [data-action="liga-bericht"]').click();
@@ -2505,7 +2515,7 @@ await page.evaluate(() => {
   const D = window.__dart, S = D.state();
   D.ui().overlay = null; D.ui().ligaWahl = null;
   S.history = S.history.filter((h) => !h.liga);
-  S.profiles = S.profiles.filter((p) => !(p.gast && ['Melanie Ziesen', 'Julius Frank', 'Fritz Frank', 'Gerd Stegerer'].indexOf(p.voll || '') >= 0) &&
+  S.profiles = S.profiles.filter((p) => !(p.gast && ['Melanie Ziesen', 'Julius Frank', 'Fritz Frank', 'Gerd Stegerer', 'Dominik Beuscher'].indexOf(p.voll || '') >= 0) &&
     p.id !== 'p_alfred' && p.id !== 'p_michael');
   S.lineup = D.activeProfiles().filter((p) => !p.gast).slice(0, 4).map((p) => p.id);
   D.setScreen('setup');
