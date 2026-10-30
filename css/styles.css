@@ -735,7 +735,12 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   overflow-y: auto; -webkit-overflow-scrolling: touch;
 }
 /* Auf hohen Schirmen mittig, auf flachen von oben – sonst ragt der Dialog raus. */
-@media (min-height: 620px) { .overlay { place-items: center; } }
+/* Mittig, wenn Platz ist - sonst von oben her scrollbar. place-items: center
+   schnitt einen zu hohen Dialog am Handy oben ab (die Meldung des Nachtrags
+   war unsichtbar, Julius 30.10.). Auto-Raender zentrieren nur bei freiem
+   Platz, bei Ueberlauf sind sie null. */
+.overlay-card { margin: auto 0; }
+.overlay.vollbild .overlay-card { margin: 0; }
 .overlay-card {
   background: var(--bg-2); border: 1px solid var(--line); border-radius: 18px;
   padding: 22px; width: 100%; max-width: 380px; text-align: center;
@@ -5441,6 +5446,11 @@ body .boards-host.log #board-log { display: block; }
 .liga-karte .lk-knoepfe .btn { min-height: 48px; border-radius: 12px; font-family: var(--font-cond); font-weight: 700; font-size: 1rem; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .liga-karte .lk-knoepfe .btn.start { font-family: var(--font-display); font-weight: 400; letter-spacing: 0.08em; }
 .liga-karte .lk-knoepfe .btn.hell { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+/* Zwei lange Knoepfe ("Spielbericht uebernehmen" / "Von Hand nachtragen") am
+   Handy untereinander statt abgeschnitten. */
+@media (max-width: 480px) {
+  .liga-karte .lk-knoepfe:has([data-action="liga-nachtrag"]) { grid-template-columns: minmax(0, 1fr); }
+}
 .liga-karte .lk-knoepfe .lk-zuschauen { display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
 .liga-karte .lk-knoepfe .lk-zuschauen i { width: 0.5em; height: 0.5em; border-radius: 50%; background: var(--accent); animation: livePulse 1.4s ease-in-out infinite; }
 .liga-karte .lk-gast { color: var(--muted); font-size: 0.9rem; text-align: center; }
@@ -6838,3 +6848,31 @@ button.pa-gruppe { cursor: pointer; }
   .ft-segs button { height: 40px; }
   .ft-pad { flex: none; }
 }
+
+/* ---------- Reiter Tabelle: Einzelrangliste, Highlights, Team-Dialog ----------
+   Daten der Ligaleitung (js/liga-sdm.js, tools/liga-import.mjs). */
+#liga-tabelle .standings tr[data-action] { cursor: pointer; }
+#liga-tabelle .standings tr.wir td { background: var(--aktiv-flaeche); }
+#liga-tabelle .standings tr.wir td.name { color: #fff; }
+#liga-tabelle .standings td.name .gast-marke { margin-left: 6px; font-size: 0.7rem; vertical-align: 1px; }
+#liga-tabelle .standings td.name small.team { display: block; color: var(--muted); font-weight: 400; font-size: 0.78rem; line-height: 1.2; }
+#liga-tabelle .standings.einzel td { font-size: 0.98rem; padding: 6px 5px; }
+.lt-einzel-karte .lt-scroll { overflow: auto; }
+.lt-mehr { margin-top: 10px; }
+.lt-hl { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px 16px; }
+.lt-hl-block { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lt-hl-block .lk-crew-titel { font-family: var(--font-cond); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.lt-hl-block .hint { margin: 0; }
+.lt-hl-zeile { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; min-height: 30px; font-size: 0.92rem; }
+.lt-hl-zeile > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lt-hl-zeile small { color: var(--muted); font-size: 0.8rem; margin-left: 4px; }
+.lt-hl-zeile.wir > span { color: #fff; font-weight: 600; }
+.lt-hl-zeile b { flex: none; font-family: var(--font-cond); font-size: 1.1em; }
+/* Team-Dialog */
+#overlay-card .ti-titel { display: block; text-align: left; margin: 10px 0 6px; font-family: var(--font-cond); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.ti-spieler { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; font-size: 0.92rem; text-align: left; }
+.ti-spieler li { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ti-spieler small { color: var(--muted); margin-left: 4px; }
+.ti-spiele { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; text-align: left; }
+.ti-spiele .lr-zeile small.ti-nr { flex: none; color: var(--muted); font-variant-numeric: tabular-nums; margin-right: 6px; }
+.ti-spiele .lr-teams { display: flex; gap: 0; align-items: baseline; }

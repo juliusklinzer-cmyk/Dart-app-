@@ -39,7 +39,7 @@ const css = read('css/styles.css')
 const engineSrc = read('js/checkout-engine.js');
 const workerSrc = read('js/checkout-worker.js').replace(/^importScripts\([^\n]*\n/m, '');
 const quelltext = (t) => JSON.stringify(t).replace(/<\//g, '<\\/');
-const js = [read('js/liga-daten.js'), read('js/sound.js'), engineSrc,
+const js = [read('js/liga-sdm.js'), read('js/liga-daten.js'), read('js/sound.js'), engineSrc,
   'window.__CHECKOUT_ENGINE_SRC = ' + quelltext(engineSrc) + ';\nwindow.__CHECKOUT_WORKER_SRC = ' + quelltext(workerSrc) + ';',
   read('js/checkout.js'), read('js/app.js')]
   // Ohne Nachbardateien gibt es keinen Service Worker zu registrieren.

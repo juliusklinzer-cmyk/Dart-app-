@@ -240,9 +240,28 @@ Spielfrei gedimmt, Verschobenes mit neuem Datum; in der Spieltage-Liste führt
 Spieltag-Karte bleibt frei davon (Julius). Unser eigenes Spiel ist umrandet und
 führt zu den Ergebnissen. Ein Tipp auf ein fremdes Spiel öffnet die
 16 Einzel wie auf dem Spielberichtsbogen (Gastspieler gekennzeichnet, Sieger
-hervorgehoben) samt Highlights. Die Daten kommen von der Ligaleitung und stehen
-als Vorbelegung im Code (`LIGA_SPIELTAGE` in `js/liga-daten.js`), gepflegt nach jedem
-Spieltag.
+hervorgehoben) samt Highlights. Gezeigt werden die Spieltage mit Ergebnis und der
+nächste; „Alle 18 Spieltage zeigen“ klappt den Rest auf.
+
+**Daten der Ligaleitung:** Spielplan, Ergebnisse, alle Spielberichte (16 Einzel,
+Highlights) und die Mannschaftsseiten (Lokal, Adresse, Spielerliste) kommen von
+steeldart-muenchen.de. `node tools/liga-import.mjs` holt sie und schreibt
+`js/liga-sdm.js` (`window.LIGA_SDM`); mit `--pruefen` rechnet das Skript Tabelle und
+Einzelrangliste nach und vergleicht Zeile für Zeile mit der Webseite (`npm run liga`).
+`js/liga-daten.js` mischt dazu, was die Webseite nicht weiß (`LIGA_HAND`: unsere
+Bogen-Aufstellung H1–H8/G1–G8, notfalls ein Ergebnis vom Papierbogen, bevor es die
+Ligaleitung hat) und gleicht unsere Termine mit dem Spielplan ab (Verlegungen).
+Nach jedem Spieltag: Import laufen lassen, Bündel bauen, `CACHE` in `sw.js` hochzählen.
+
+Im Reiter **Tabelle** stehen darunter die **Einzelrangliste** der ganzen Liga
+(alle Spieler aller Teams, Schlüssel der Ligaleitung: Sieger 2 Punkte plus
+Leg-Differenz, also 2:0 = 4 und 2:1 = 3, Verlierer seine gewonnenen Legs; Reihenfolge
+Punkte, Spiel-Differenz, Leg-Differenz; gleiche Werte = gleicher Platz; erst 15,
+dann alle; unsere Leute hervorgehoben, Gäste markiert) und die **Highlights** der
+Liga (180er je Spieler, kürzeste Legs, höchste Finishes). Ein Tipp auf ein Team in
+der Ligatabelle öffnet Lokal mit Adresse, Spielerliste (TC = Team-Captain) und alle
+Spiele des Teams; gespielte führen zu den 16 Einzeln. Liegt unser eigenes Spiel bei
+der Ligaleitung vor, bietet die Spieltag-Karte „Spielbericht übernehmen“ von selbst an.
 
 Der Reiter **Training** ist das Dienstagszuhause: **DiensDarts** – Dart-Training
 jeden Dienstag in der Bar Sehnsucht (mit Logo). Eine Umfrage fragt je Termin
@@ -1049,7 +1068,8 @@ Ausbullen und die Dialoge nach Leg und Spiel behalten ihre eigene Pfeil-Wahl.
 | `js/checkout.js` | Finish-Wege aus Tabellen (Rest 2–170 je Lieblingsdoppel, Stellwürfe), eigene Spieler-Tabellen, plus Rechenkern „ist ein Finish möglich“ |
 | `js/checkout-engine.js`, `js/checkout-worker.js` | Checkout-Engine: rechnet aus einem Treffermodell je Spieler eine eigene Finish-Tabelle (im Web Worker); Referenz und Testdaten unter `docs/finishwege/referenz/` |
 | `docs/finishwege/`, `tools/finishwege-bauen.mjs` | Quelle der Finish-Tabellen und der Generator, der sie in checkout.js schreibt |
-| `js/liga-daten.js` | Spielplan, Ergebnisse der Ligaleitung, Teams (App und Webseite) |
+| `js/liga-sdm.js`, `tools/liga-import.mjs` | Daten der Ligaleitung (Spielplan, Ergebnisse, Spielberichte, Teams), automatisch von steeldart-muenchen.de geholt |
+| `js/liga-daten.js` | mischt Ligaleitung und Handpflege (`LIGA_HAND`), rechnet Tabelle, Einzelrangliste, Highlights (App und Webseite) |
 | `js/app.js` | Turnier-, Cricket- und RTW-Logik, Statistik, Rendering, Persistenz |
 | `js/auth.js` | *optional:* Anmelden, Roster, Zuordnung alter Profile, Einladungs-Link |
 | `js/qr.js` | *optional:* QR-Code für den Einladungs-Link (qrcode-generator, MIT) |

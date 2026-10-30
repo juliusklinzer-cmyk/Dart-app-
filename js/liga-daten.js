@@ -1,16 +1,25 @@
 /*
- * Liga-Daten der Saison 2026/27: Spielplan, Ergebnisse der Ligaleitung,
- * Teams und der Tabellenstand zum Start. Gemeinsame Quelle fuer die App
+ * Liga-Daten der Saison 2026/27: Spielplan, Ergebnisse aller Teams, die
+ * 16 Einzel jedes Spiels, Highlights, Mannschaften (Lokal, Spielerliste)
+ * und die daraus gerechneten Tabellen. Gemeinsame Quelle fuer die App
  * (js/app.js) und die oeffentliche Webseite (js/webseite.js).
  *
- * Neue Ergebnisse nach jedem Spieltag: in LIGA_SPIELTAGE eintragen.
+ * Woher die Daten kommen:
+ *  - js/liga-sdm.js (window.LIGA_SDM): automatisch von der Seite der
+ *    Ligaleitung geholt - "node tools/liga-import.mjs" nach jedem Spieltag.
+ *  - LIGA_HAND (unten): was die Webseite nicht weiss, z. B. unsere Bogen-
+ *    Aufstellung (H1-H8 / G1-G8) oder ein Ergebnis vom Papierbogen, bevor
+ *    die Ligaleitung es eingetragen hat. Wird je Spiel dazugemischt.
  */
 (function () {
   'use strict';
+  var SDM = window.LIGA_SDM || { spieltage: {}, teams: {} };
+
   /* ================= Liga =================
-   * Der Spielplan der Saison 2026/27, fest im Client – er ändert sich nur,
-   * wenn der Verband ihn ändert, und dann hier. Die Zusagen („ich bin
-   * dabei") liegen auf dem Server, je Termin-Kennung.
+   * Unsere 18 Spieltage. Datum, Heim, Gast und Lokal kommen aus dem
+   * Spielplan der Ligaleitung (auch Verlegungen), die Liste hier ist die
+   * Rueckfallebene ohne js/liga-sdm.js. Die Zusagen („ich bin dabei")
+   * liegen auf dem Server, je Termin-Kennung.
    * sollSpieler: so viele braucht ein Spieltag, damit die Aufstellung als
    * vollständig gilt – bei Bedarf hier anpassen. */
   var LIGA = {
@@ -39,60 +48,81 @@
     ]
   };
 
-  /* Alle Spiele eines Spieltags (Ergebnisse der Ligaleitung), von Julius
-     nach jedem Spieltag geliefert. Je Spiel: Datum, Heim, Gast, Lokal,
-     Einzel und Legs; "partien" sind die 16 Einzel [Heim, Gast, hLegs, gLegs],
-     ein * vor dem Namen heisst Gastspieler. Ohne gast = spielfrei,
-     verschoben = neuer Termin in tag. Bei unserem eigenen Spiel ergaenzt
-     "aufstellung" (heim/gast: die Bogen-Listen H1-H8 bzw. G1-G8) - damit
-     laesst sich das Spiel in der App "vom Bogen uebernehmen" (js/app.js,
-     ligaNachtragUebernehmen), wenn es am Abend nicht mitgeschrieben wurde. */
-  var LIGA_SPIELTAGE = {
-    st01: [
-      { heim: 'Dart Artists Germering II', gast: null },
-      { tag: '2026-10-06', heim: 'd`Haberer 2', gast: 'Voodoo Darters', ort: 'Heuboden', einzel: '8:8', legs: '20:20', partien: [
-        ['Stefan Hügel', 'Marlene Czapka', 2, 1], ['Reinhart Boehm', 'Kevin Bauer', 0, 2], ['Rolf Neeb', 'Josef Stahl', 1, 2], ['Walter Majewski', 'Matthias Steinacher', 0, 2],
-        ['Stefan Hügel', 'Kevin Bauer', 0, 2], ['Reinhart Boehm', 'Marlene Czapka', 2, 0], ['Rolf Neeb', 'Matthias Steinacher', 2, 1], ['Walter Majewski', 'Josef Stahl', 1, 2],
-        ['Rolf Neeb', 'Marlene Czapka', 2, 0], ['Walter Majewski', 'Kevin Bauer', 0, 2], ['Reinhart Boehm', 'Josef Stahl', 2, 0], ['Stefan Hügel', 'Martin Goerlich', 2, 1],
-        ['Mani Burgmair', 'Jan Strelow', 1, 2], ['Rolf Neeb', 'Kevin Bauer', 1, 2], ['Stefan Hügel', 'Josef Stahl', 2, 0], ['Reinhart Boehm', 'Martin Goerlich', 2, 1]
-      ] },
-      { tag: '2026-10-06', heim: 'Blink 180', gast: 'TSV Dachau 1865 4', ort: 'Bar Sehnsucht', einzel: '7:9', legs: '15:20' },
-      { tag: '2026-10-07', heim: 'Treff ma nix', gast: 'DCO', ort: 'Fiakerstüberl', einzel: '9:7', legs: '21:17', partien: [
-        ['Franz Freinberger', 'Naser Sharifi', 0, 2], ['Ralf Kilian', 'Christos Heuwald', 2, 0], ['Bernhard Hoffmann', 'Luck Heuwald', 2, 0], ['Christian Matejka', '*Michael Rogge', 1, 2],
-        ['Franz Freinberger', 'Christos Heuwald', 2, 0], ['Ralf Kilian', 'Naser Sharifi', 0, 2], ['Bernhard Hoffmann', '*Michael Rogge', 2, 0], ['Christian Matejka', 'Luck Heuwald', 2, 0],
-        ['Bernhard Hoffmann', 'Naser Sharifi', 2, 1], ['Christian Matejka', 'Christos Heuwald', 2, 1], ['Linda Maier', 'Alex Heuwald', 2, 1], ['Franz Freinberger', '*Michael Rogge', 1, 2],
-        ['Sven Albrecht', 'Naser Sharifi', 1, 2], ['Yves Scherer', 'Christos Heuwald', 0, 2], ['Stephan Brunner', 'Alex Heuwald', 2, 0], ['Linda Maier', '*Michael Rogge', 0, 2]
-      ], highlights: [{ wer: 'Alex Heuwald', team: 'DCO', was: '1× 180' }] },
-      /* Stand zuerst "verschoben", inzwischen gespielt und gewertet (Tabelle
-         der Ligaleitung vom 23.10.2026). */
-      { tag: '2026-10-16', heim: 'TSV Oberpframmern', gast: 'FT Gern Darts II', ort: 'Gaststätte Anstoss', einzel: '12:4', legs: '26:10' }
-    ],
+  /* Von Hand: je Spieltag die Spiele, zu denen wir mehr wissen als die
+     Webseite. Gefunden wird ein Spiel ueber heim + gast; alles, was hier
+     steht, ueberschreibt bzw. ergaenzt den Eintrag der Ligaleitung. Ein
+     Spiel, das die Webseite noch gar nicht hat (Papierbogen vom Abend),
+     kommt als ganzer Eintrag dazu: tag, heim, gast, ort, einzel, legs,
+     partien (16 x [Heim, Gast, hLegs, gLegs], * = Gast).
+     aufstellung: die Bogen-Listen H1-H8 / G1-G8, damit der Nachtrag in der
+     App dieselben Nummern traegt wie der Papierbogen - ohne sie zaehlt die
+     App die Namen in der Reihenfolge ihres ersten Einzels. */
+  var LIGA_HAND = {
     st02: [
-      { heim: 'Voodoo Darters', gast: null },
-      { tag: '2026-10-19', heim: 'FT Gern Darts II', gast: 'Treff ma nix', ort: 'Vereinsheim FT Gern', einzel: '3:13', legs: '11:28' },
-      { tag: '2026-10-21', heim: 'TSV Dachau 1865 4', gast: 'TSV Oberpframmern', ort: 'TSV 1865 Dachau' },
-      /* Unser Spiel, vom Spielberichtsbogen (Cobblers Irish Pub, 23.10.2026).
-         aufstellung: die Bogen-Listen H1-H8 / G1-G8, damit der Nachtrag in
-         der App dieselben Nummern traegt wie der Papierbogen (G5 Beuscher,
-         G6 Schmeiss kamen in Durchgang 3 und 4 fuer G4 bzw. G3). */
-      { tag: '2026-10-23', heim: 'Dart Artists Germering II', gast: 'Blink 180', ort: 'Cobblers Irish Pub', einzel: '6:10', legs: '13:22',
+      /* Cobblers Irish Pub, 23.10.2026: G5 Beuscher und G6 Schmeiss kamen in
+         Durchgang 3 und 4 fuer G4 bzw. G3. */
+      { heim: 'Dart Artists Germering II', gast: 'Blink 180',
         aufstellung: {
-          heim: ['Melanie Ziesen', 'Julius Frank', 'Fritz Frank', 'Gerd Stegerer'],
+          /* Nur unsere Seite: die Germeringer stehen bei der Ligaleitung in
+             Bogen-Reihenfolge (H1-H4 = die ersten vier Einzel). */
           gast: ['Lenas Becker', 'Dominik Uhl', 'Tobias Thomas', 'Alfred Buchner', 'Dominik Beuscher', 'Michael Schmeiß']
-        },
-        partien: [
-          ['Melanie Ziesen', 'Lenas Becker', 0, 2], ['Julius Frank', 'Dominik Uhl', 2, 0], ['Fritz Frank', 'Tobias Thomas', 0, 2], ['Gerd Stegerer', 'Alfred Buchner', 2, 0],
-          ['Melanie Ziesen', 'Dominik Uhl', 0, 2], ['Julius Frank', 'Lenas Becker', 1, 2], ['Fritz Frank', 'Alfred Buchner', 0, 2], ['Gerd Stegerer', 'Tobias Thomas', 0, 2],
-          ['Fritz Frank', 'Lenas Becker', 0, 2], ['Gerd Stegerer', 'Dominik Uhl', 2, 0], ['Julius Frank', 'Michael Schmeiß', 2, 1], ['Melanie Ziesen', 'Dominik Beuscher', 0, 2],
-          ['Gerd Stegerer', 'Lenas Becker', 2, 1], ['Fritz Frank', 'Dominik Uhl', 0, 2], ['Melanie Ziesen', 'Michael Schmeiß', 0, 2], ['Julius Frank', 'Dominik Beuscher', 2, 0]
-        ] }
+        } }
     ]
   };
+
+  /* Spieltage = Webseite der Ligaleitung + LIGA_HAND. Reihenfolge je
+     Spieltag wie bei der Ligaleitung (Spielfrei zuerst, dann nach Datum). */
+  function mische(sdmSpieltage, hand) {
+    var out = {};
+    var ids = {};
+    Object.keys(sdmSpieltage || {}).forEach(function (id) { ids[id] = 1; });
+    Object.keys(hand || {}).forEach(function (id) { ids[id] = 1; });
+    Object.keys(ids).sort().forEach(function (id) {
+      var zeilen = (sdmSpieltage[id] || []).map(function (sp) {
+        var k = {};
+        Object.keys(sp).forEach(function (f) { k[f] = sp[f]; });
+        return k;
+      });
+      (hand[id] || []).forEach(function (h) {
+        var ziel = null;
+        zeilen.forEach(function (z) { if (!ziel && z.heim === h.heim && z.gast === h.gast) ziel = z; });
+        if (!ziel) { ziel = {}; zeilen.push(ziel); }
+        Object.keys(h).forEach(function (f) { ziel[f] = h[f]; });
+      });
+      out[id] = zeilen;
+    });
+    return out;
+  }
+  var LIGA_SPIELTAGE = mische(SDM.spieltage, LIGA_HAND);
+
+  /* Unsere Termine mit dem Spielplan der Ligaleitung abgleichen: Datum,
+     Heim/Gast und Lokal von dort, falls der Spieltag vorliegt. */
+  LIGA.termine.forEach(function (t) {
+    var runde = LIGA_SPIELTAGE[t.id];
+    if (!runde) return;
+    var unser = null, frei = false;
+    runde.forEach(function (sp) {
+      if (sp.heim === LIGA.team && !sp.gast) frei = true;
+      if (sp.gast && (sp.heim === LIGA.team || sp.gast === LIGA.team)) unser = sp;
+    });
+    if (unser) {
+      if (unser.tag) t.tag = unser.tag;
+      t.heim = unser.heim; t.gast = unser.gast;
+      if (unser.ort) t.ort = unser.ort;
+      if (unser.verschoben) t.verschoben = true;
+    } else if (frei) {
+      t.tag = null;
+    }
+  });
 
   /* Alle Teams unserer Liga - fuer die leere Tabelle vorbefuellt. */
   var LIGA_TEAMS = ['Blink 180', 'TSV Dachau 1865 4', 'Dart Artists Germering II',
     'Voodoo Darters', 'd`Haberer 2', 'DCO', 'Treff ma nix', 'TSV Oberpframmern',
     'FT Gern Darts II'];
+  Object.keys(SDM.teams || {}).forEach(function (t) { if (LIGA_TEAMS.indexOf(t) < 0) LIGA_TEAMS.push(t); });
+
+  var paar = function (x) { var m = /^\s*(\d+)\s*:\s*(\d+)/.exec(String(x || '')); return m ? [Number(m[1]), Number(m[2])] : null; };
+
   /* Die Ligatabelle wird aus den Ergebnissen aller Spieltage gerechnet
      (LIGA_SPIELTAGE, Eintraege mit einzel und legs). Sieg 2 Punkte,
      Unentschieden 1; Reihenfolge nach Punkten, dann Leg-Differenz, dann
@@ -101,7 +131,6 @@
     var je = {};
     (teams || []).forEach(function (t) { je[t] = { team: t, spiele: 0, g: 0, u: 0, v: 0, lf: 0, la: 0, ef: 0, ea: 0, punkte: 0 }; });
     var zeile = function (t) { if (!je[t]) je[t] = { team: t, spiele: 0, g: 0, u: 0, v: 0, lf: 0, la: 0, ef: 0, ea: 0, punkte: 0 }; return je[t]; };
-    var paar = function (x) { var m = /^\s*(\d+)\s*:\s*(\d+)/.exec(String(x || '')); return m ? [Number(m[1]), Number(m[2])] : null; };
     var spiele = 0, bis = '';
     Object.keys(spieltage || {}).forEach(function (tid) {
       (spieltage[tid] || []).forEach(function (sp) {
@@ -130,5 +159,80 @@
     return { zeilen: zeilen, spiele: spiele, bis: bis };
   }
 
-  window.LIGA_DATEN = { liga: LIGA, spieltage: LIGA_SPIELTAGE, teams: LIGA_TEAMS, tabelleAus: tabelleAus };
+  /* Die Einzelrangliste der Liga, gerechnet aus allen 16er-Spielberichten,
+     nach dem Schluessel der Ligaleitung: je Einzel bekommt der Sieger
+     2 Punkte plus Leg-Differenz (2:0 = 4, 2:1 = 3), der Verlierer seine
+     gewonnenen Legs (1:2 = 1, 0:2 = 0). Reihenfolge: Punkte, Spiel-
+     Differenz (Siege minus Niederlagen), Leg-Differenz, gewonnene Legs,
+     Name - so sortiert auch die Ligaleitung. Gastspieler ("*Name") bleiben
+     drin und sind markiert. Liefert Zeilen { name, team, gast, lf, la,
+     siege, nied, legs "lf:la", spiele "siege:nied", punkte }. */
+  function einzelranglisteAus(spieltage) {
+    var je = {};
+    var zeile = function (roh, team) {
+      var gast = String(roh).charAt(0) === '*';
+      var name = gast ? String(roh).slice(1).trim() : String(roh).trim();
+      var k = team + '|' + name;
+      if (!je[k]) je[k] = { name: name, team: team, gast: gast, lf: 0, la: 0, siege: 0, nied: 0, punkte: 0 };
+      return je[k];
+    };
+    var buche = function (z, lw, ll) {
+      z.lf += lw; z.la += ll;
+      if (lw > ll) { z.siege++; z.punkte += 2 + lw - ll; } else { z.nied++; z.punkte += lw; }
+    };
+    Object.keys(spieltage || {}).forEach(function (tid) {
+      (spieltage[tid] || []).forEach(function (sp) {
+        if (!sp || !sp.gast || !Array.isArray(sp.partien)) return;
+        sp.partien.forEach(function (p) {
+          var h = Number(p[2]) || 0, g = Number(p[3]) || 0;
+          if (h === g) return;
+          buche(zeile(p[0], sp.heim), h, g);
+          buche(zeile(p[1], sp.gast), g, h);
+        });
+      });
+    });
+    return Object.keys(je).map(function (k) { return je[k]; }).sort(function (a, b) {
+      return b.punkte - a.punkte || (b.siege - b.nied) - (a.siege - a.nied) || (b.lf - b.la) - (a.lf - a.la) || b.lf - a.lf ||
+        a.name.toLowerCase().localeCompare(b.name.toLowerCase(), 'de');
+    }).map(function (z) {
+      z.legs = z.lf + ':' + z.la; z.spiele = z.siege + ':' + z.nied;
+      return z;
+    });
+  }
+
+  /* Highlights der ganzen Liga aus den Spielberichten: 180er (Anzahl je
+     Spieler), Shortlegs (wenigste Darts zuerst) und Highfinishes (hoechste
+     zuerst). Liefert { s180: [{name, team, gast, n}], shortleg: [{name,
+     team, gast, wert, tag}], highfinish: [...] }. */
+  function highlightsAus(spieltage) {
+    var s180 = {}, shortleg = [], highfinish = [];
+    var klar = function (roh) { var gast = String(roh).charAt(0) === '*'; return { name: gast ? String(roh).slice(1).trim() : String(roh).trim(), gast: gast }; };
+    Object.keys(spieltage || {}).forEach(function (tid) {
+      (spieltage[tid] || []).forEach(function (sp) {
+        (sp && sp.highlights || []).forEach(function (h) {
+          var w = klar(h.wer);
+          var team = h.team || '';
+          if (h.s180) {
+            var k = team + '|' + w.name;
+            if (!s180[k]) s180[k] = { name: w.name, team: team, gast: w.gast, n: 0 };
+            s180[k].n += Number(h.s180) || 0;
+          }
+          (h.shortleg || []).forEach(function (v) { shortleg.push({ name: w.name, team: team, gast: w.gast, wert: v, tag: sp.tag }); });
+          (h.highfinish || []).forEach(function (v) { highfinish.push({ name: w.name, team: team, gast: w.gast, wert: v, tag: sp.tag }); });
+        });
+      });
+    });
+    var nachName = function (a, b) { return a.name.toLowerCase().localeCompare(b.name.toLowerCase(), 'de'); };
+    return {
+      s180: Object.keys(s180).map(function (k) { return s180[k]; }).sort(function (a, b) { return b.n - a.n || nachName(a, b); }),
+      shortleg: shortleg.sort(function (a, b) { return a.wert - b.wert || nachName(a, b); }),
+      highfinish: highfinish.sort(function (a, b) { return b.wert - a.wert || nachName(a, b); })
+    };
+  }
+
+  window.LIGA_DATEN = {
+    liga: LIGA, spieltage: LIGA_SPIELTAGE, teams: LIGA_TEAMS,
+    teamInfo: SDM.teams || {}, stand: SDM.stand || null, quelle: SDM.quelle || null,
+    tabelleAus: tabelleAus, einzelranglisteAus: einzelranglisteAus, highlightsAus: highlightsAus
+  };
 })();

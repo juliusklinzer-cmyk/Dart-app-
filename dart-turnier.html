@@ -746,7 +746,12 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   overflow-y: auto; -webkit-overflow-scrolling: touch;
 }
 /* Auf hohen Schirmen mittig, auf flachen von oben – sonst ragt der Dialog raus. */
-@media (min-height: 620px) { .overlay { place-items: center; } }
+/* Mittig, wenn Platz ist - sonst von oben her scrollbar. place-items: center
+   schnitt einen zu hohen Dialog am Handy oben ab (die Meldung des Nachtrags
+   war unsichtbar, Julius 30.10.). Auto-Raender zentrieren nur bei freiem
+   Platz, bei Ueberlauf sind sie null. */
+.overlay-card { margin: auto 0; }
+.overlay.vollbild .overlay-card { margin: 0; }
 .overlay-card {
   background: var(--bg-2); border: 1px solid var(--line); border-radius: 18px;
   padding: 22px; width: 100%; max-width: 380px; text-align: center;
@@ -5452,6 +5457,11 @@ body .boards-host.log #board-log { display: block; }
 .liga-karte .lk-knoepfe .btn { min-height: 48px; border-radius: 12px; font-family: var(--font-cond); font-weight: 700; font-size: 1rem; letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .liga-karte .lk-knoepfe .btn.start { font-family: var(--font-display); font-weight: 400; letter-spacing: 0.08em; }
 .liga-karte .lk-knoepfe .btn.hell { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+/* Zwei lange Knoepfe ("Spielbericht uebernehmen" / "Von Hand nachtragen") am
+   Handy untereinander statt abgeschnitten. */
+@media (max-width: 480px) {
+  .liga-karte .lk-knoepfe:has([data-action="liga-nachtrag"]) { grid-template-columns: minmax(0, 1fr); }
+}
 .liga-karte .lk-knoepfe .lk-zuschauen { display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
 .liga-karte .lk-knoepfe .lk-zuschauen i { width: 0.5em; height: 0.5em; border-radius: 50%; background: var(--accent); animation: livePulse 1.4s ease-in-out infinite; }
 .liga-karte .lk-gast { color: var(--muted); font-size: 0.9rem; text-align: center; }
@@ -6850,6 +6860,34 @@ button.pa-gruppe { cursor: pointer; }
   .ft-pad { flex: none; }
 }
 
+/* ---------- Reiter Tabelle: Einzelrangliste, Highlights, Team-Dialog ----------
+   Daten der Ligaleitung (js/liga-sdm.js, tools/liga-import.mjs). */
+#liga-tabelle .standings tr[data-action] { cursor: pointer; }
+#liga-tabelle .standings tr.wir td { background: var(--aktiv-flaeche); }
+#liga-tabelle .standings tr.wir td.name { color: #fff; }
+#liga-tabelle .standings td.name .gast-marke { margin-left: 6px; font-size: 0.7rem; vertical-align: 1px; }
+#liga-tabelle .standings td.name small.team { display: block; color: var(--muted); font-weight: 400; font-size: 0.78rem; line-height: 1.2; }
+#liga-tabelle .standings.einzel td { font-size: 0.98rem; padding: 6px 5px; }
+.lt-einzel-karte .lt-scroll { overflow: auto; }
+.lt-mehr { margin-top: 10px; }
+.lt-hl { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px 16px; }
+.lt-hl-block { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lt-hl-block .lk-crew-titel { font-family: var(--font-cond); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.lt-hl-block .hint { margin: 0; }
+.lt-hl-zeile { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; min-height: 30px; font-size: 0.92rem; }
+.lt-hl-zeile > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lt-hl-zeile small { color: var(--muted); font-size: 0.8rem; margin-left: 4px; }
+.lt-hl-zeile.wir > span { color: #fff; font-weight: 600; }
+.lt-hl-zeile b { flex: none; font-family: var(--font-cond); font-size: 1.1em; }
+/* Team-Dialog */
+#overlay-card .ti-titel { display: block; text-align: left; margin: 10px 0 6px; font-family: var(--font-cond); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.ti-spieler { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; font-size: 0.92rem; text-align: left; }
+.ti-spieler li { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ti-spieler small { color: var(--muted); margin-left: 4px; }
+.ti-spiele { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; text-align: left; }
+.ti-spiele .lr-zeile small.ti-nr { flex: none; color: var(--muted); font-variant-numeric: tabular-nums; margin-right: 6px; }
+.ti-spiele .lr-teams { display: flex; gap: 0; align-items: baseline; }
+
 </style>
 </head>
 <body>
@@ -7288,7 +7326,7 @@ button.pa-gruppe { cursor: pointer; }
        Ergebnisse, wir tragen sie ab), für alle Angemeldeten derselbe Stand. -->
   <div id="liga-tabelle" class="hidden liga-zwei breit">
     <div class="card lt-karte">
-      <div class="karte-kopf"><h2>Ligatabelle</h2><span class="hint">aus allen Ergebnissen</span></div>
+      <div class="karte-kopf"><h2>Ligatabelle</h2><span class="hint">Tipp auf ein Team: Lokal, Spieler, Spiele</span></div>
       <div class="lt-scroll"><table class="standings" id="lt-tabelle"></table></div>
     </div>
     <div class="liga-rechts">
@@ -7297,6 +7335,16 @@ button.pa-gruppe { cursor: pointer; }
       <div class="card lt-runden-karte">
         <div class="karte-kopf"><h2>Alle Spiele</h2><span class="hint">je Spieltag, Tipp zeigt die Einzel</span></div>
         <div class="lt-runden" id="lt-runden"></div>
+      </div>
+      <!-- Einzelrangliste und Highlights der ganzen Liga, gerechnet aus allen
+           Spielberichten der Ligaleitung (js/liga-sdm.js, tools/liga-import.mjs). -->
+      <div class="card lt-einzel-karte">
+        <div class="karte-kopf"><h2>Einzelrangliste</h2><span class="hint">alle Spieler der Liga</span></div>
+        <div class="lt-scroll" id="lt-einzel"></div>
+      </div>
+      <div class="card lt-hl-karte">
+        <div class="karte-kopf"><h2>Highlights</h2><span class="hint">180er, Shortlegs, Highfinishes</span></div>
+        <div class="lt-hl" id="lt-highlights"></div>
       </div>
       <div class="card lt-stand-karte">
         <span class="lk-crew-titel">Stand</span>
@@ -8011,19 +8059,611 @@ button.pa-gruppe { cursor: pointer; }
 <!-- "Kamera" in "Foto anpassen": am Handy und iPad oeffnet capture direkt die Kamera. -->
 <input type="file" id="avatar-kamera" accept="image/*" capture="user" class="hidden">
 <script>
+/* Automatisch erzeugt von tools/liga-import.mjs am 2026-10-30 aus
+   https://steeldart-muenchen.de/4er-liga/4er-5-liga.html
+   Nicht von Hand aendern - nach jedem Spieltag einfach neu erzeugen:
+     node tools/liga-import.mjs
+   Von Hand gepflegte Ergaenzungen (z. B. unsere Bogen-Aufstellung) stehen
+   in js/liga-daten.js (LIGA_HAND) und werden dort dazugemischt.
+   Spielerlisten: "*Name" = Gastspieler (bei der Ligaleitung "(n * Gast)"). */
+window.LIGA_SDM = {
+  stand: '2026-10-30',
+  quelle: 'https://steeldart-muenchen.de/4er-liga/4er-5-liga.html',
+  spieltage: {
+    st01: [
+      { heim: 'Dart Artists Germering II', gast: null },
+      {
+        tag: '2026-10-06',
+        heim: 'd`Haberer 2',
+        gast: 'Voodoo Darters',
+        ort: 'Heuboden',
+        einzel: '8:8',
+        legs: '20:20',
+        bericht: 2307,
+        partien: [
+          ['Stefan Hügel', 'Marlene Czapka', 2, 1],
+          ['Reinhart Boehm', 'Kevin Bauer', 0, 2],
+          ['Rolf Neeb', 'Josef Stahl', 1, 2],
+          ['Walter Majewski', 'Matthias Steinacher', 0, 2],
+          ['Stefan Hügel', 'Kevin Bauer', 0, 2],
+          ['Reinhart Boehm', 'Marlene Czapka', 2, 0],
+          ['Rolf Neeb', 'Matthias Steinacher', 2, 1],
+          ['Walter Majewski', 'Josef Stahl', 1, 2],
+          ['Rolf Neeb', 'Marlene Czapka', 2, 0],
+          ['Walter Majewski', 'Kevin Bauer', 0, 2],
+          ['Reinhart Boehm', 'Josef Stahl', 2, 0],
+          ['Stefan Hügel', 'Martin Goerlich', 2, 1],
+          ['Mani Burgmair', 'Jan Strelow', 1, 2],
+          ['Rolf Neeb', 'Kevin Bauer', 1, 2],
+          ['Stefan Hügel', 'Josef Stahl', 2, 0],
+          ['Reinhart Boehm', 'Martin Goerlich', 2, 1]
+        ]
+      },
+      {
+        tag: '2026-10-06',
+        heim: 'Blink 180',
+        gast: 'TSV Dachau 1865 4',
+        ort: 'Bar Sehnsucht',
+        einzel: '7:9',
+        legs: '15:20',
+        bericht: 2310,
+        partien: [
+          ['Lenas Becker', 'Marius Forster', 2, 1],
+          ['Julius Klinzer', 'Dominik Gaßner', 1, 2],
+          ['Dominik Beuscher', 'Vincent von Frankenberg', 0, 2],
+          ['Michael Schmeiß', 'Lars Toni', 2, 0],
+          ['Lenas Becker', 'Dominik Gaßner', 2, 0],
+          ['Julius Klinzer', 'Marius Forster', 0, 2],
+          ['Dominik Beuscher', 'Lars Toni', 0, 2],
+          ['Michael Schmeiß', 'Vincent von Frankenberg', 0, 2],
+          ['Dominik Beuscher', 'Marius Forster', 2, 0],
+          ['Michael Schmeiß', 'Dominik Gaßner', 0, 2],
+          ['Julius Klinzer', 'Vincent von Frankenberg', 2, 0],
+          ['Lenas Becker', 'Lars Toni', 2, 0],
+          ['Michael Göbel', 'Marius Forster', 0, 2],
+          ['Dominik Beuscher', 'Dominik Gaßner', 0, 2],
+          ['Lenas Becker', 'Vincent von Frankenberg', 0, 2],
+          ['Julius Klinzer', 'Lars Toni', 2, 1]
+        ]
+      },
+      {
+        tag: '2026-10-07',
+        heim: 'Treff ma nix',
+        gast: 'DCO',
+        ort: 'Fiakerstüberl',
+        einzel: '9:7',
+        legs: '21:17',
+        bericht: 2308,
+        partien: [
+          ['Franz Freinberger', 'Naser Sharifi', 0, 2],
+          ['Ralf Kilian', 'Christos Heuwald', 2, 0],
+          ['Bernhard Hoffmann', 'Luck Heuwald', 2, 0],
+          ['Christian Matejka', '*Michael Rogge', 1, 2],
+          ['Franz Freinberger', 'Christos Heuwald', 2, 0],
+          ['Ralf Kilian', 'Naser Sharifi', 0, 2],
+          ['Bernhard Hoffmann', '*Michael Rogge', 2, 0],
+          ['Christian Matejka', 'Luck Heuwald', 2, 0],
+          ['Bernhard Hoffmann', 'Naser Sharifi', 2, 1],
+          ['Christian Matejka', 'Christos Heuwald', 2, 1],
+          ['Linda Maier', 'Alex Heuwald', 2, 1],
+          ['Franz Freinberger', '*Michael Rogge', 1, 2],
+          ['Sven Albrecht', 'Naser Sharifi', 1, 2],
+          ['Yves Scherer', 'Christos Heuwald', 0, 2],
+          ['Stephan Brunner', 'Alex Heuwald', 2, 0],
+          ['Linda Maier', '*Michael Rogge', 0, 2]
+        ],
+        highlights: [
+          { wer: 'Alex Heuwald', team: 'DCO', s180: 1, was: '1× 180' }
+        ]
+      },
+      {
+        tag: '2026-10-16',
+        heim: 'TSV Oberpframmern',
+        gast: 'FT Gern Darts II',
+        ort: 'Gaststätte Anstoss',
+        einzel: '12:4',
+        legs: '26:10',
+        bericht: 2309,
+        partien: [
+          ['René Mai', 'Maximilian Dallinger', 2, 0],
+          ['Andreas Sedlbauer', 'Theresa Matejka', 2, 0],
+          ['Stefan Edelbauer', 'Janik Guthmann', 0, 2],
+          ['Florian Janetschko', 'Maximilian Königsbauer', 2, 0],
+          ['René Mai', 'Theresa Matejka', 2, 0],
+          ['Andreas Sedlbauer', 'Maximilian Dallinger', 1, 2],
+          ['Stefan Edelbauer', 'Maximilian Königsbauer', 2, 0],
+          ['Florian Janetschko', 'Janik Guthmann', 2, 1],
+          ['Stefan Edelbauer', 'Maximilian Dallinger', 2, 0],
+          ['Florian Janetschko', 'Theresa Matejka', 2, 1],
+          ['Andreas Sedlbauer', 'Janik Guthmann', 2, 0],
+          ['René Mai', 'Maximilian Königsbauer', 0, 2],
+          ['Florian Janetschko', 'Maximilian Dallinger', 1, 2],
+          ['Stefan Edelbauer', 'Theresa Matejka', 2, 0],
+          ['René Mai', 'Janik Guthmann', 2, 0],
+          ['Andreas Sedlbauer', 'Maximilian Königsbauer', 2, 0]
+        ],
+        highlights: [
+          {
+            wer: 'Andreas Sedlbauer',
+            team: 'TSV Oberpframmern',
+            shortleg: [21],
+            was: 'Shortleg 21'
+          }
+        ]
+      }
+    ],
+    st02: [
+      { heim: 'Voodoo Darters', gast: null },
+      {
+        tag: '2026-10-19',
+        heim: 'FT Gern Darts II',
+        gast: 'Treff ma nix',
+        ort: 'Vereinsheim FT Gern',
+        einzel: '3:13',
+        legs: '11:28',
+        bericht: 2314,
+        partien: [
+          ['Janik Guthmann', 'Franz Freinberger', 2, 1],
+          ['Maximilian Königsbauer', 'Ralf Kilian', 0, 2],
+          ['Maximilian Dallinger', 'Stephan Brunner', 1, 2],
+          ['Sebastian Königsbauer', 'Christian Matejka', 1, 2],
+          ['Janik Guthmann', 'Ralf Kilian', 0, 2],
+          ['Maximilian Königsbauer', 'Sven Albrecht', 0, 2],
+          ['Maximilian Dallinger', 'Christian Matejka', 0, 2],
+          ['Sebastian Königsbauer', 'Stephan Brunner', 1, 2],
+          ['Maximilian Dallinger', 'Franz Freinberger', 0, 2],
+          ['Sebastian Königsbauer', 'Yves Scherer', 0, 2],
+          ['Maximilian Königsbauer', 'Stephan Brunner', 1, 2],
+          ['Janik Guthmann', 'Christian Matejka', 0, 2],
+          ['Sebastian Königsbauer', 'Sven Albrecht', 2, 0],
+          ['Maximilian Dallinger', 'Yves Scherer', 2, 1],
+          ['Janik Guthmann', 'Stephan Brunner', 1, 2],
+          ['Theresa Matejka', 'Christian Matejka', 0, 2]
+        ],
+        highlights: [
+          {
+            wer: 'Christian Matejka',
+            team: 'Treff ma nix',
+            shortleg: [18],
+            was: 'Shortleg 18'
+          }
+        ]
+      },
+      {
+        tag: '2026-10-21',
+        heim: 'TSV Dachau 1865 4',
+        gast: 'TSV Oberpframmern',
+        ort: 'TSV 1865 Dachau',
+        einzel: '8:8',
+        legs: '20:19',
+        bericht: 2315,
+        partien: [
+          ['Marius Forster', 'René Mai', 0, 2],
+          ['Dominik Gaßner', 'Olle Aronsson', 1, 2],
+          ['Cordula Gangl', 'Stefan Edelbauer', 1, 2],
+          ['Johannes Wolters', 'Igor Tomic', 2, 1],
+          ['Marius Forster', 'Olle Aronsson', 2, 1],
+          ['Dominik Gaßner', 'René Mai', 2, 0],
+          ['Cordula Gangl', 'Igor Tomic', 2, 1],
+          ['Johannes Wolters', 'Stefan Edelbauer', 1, 2],
+          ['Cordula Gangl', 'René Mai', 0, 2],
+          ['Johannes Wolters', 'Olle Aronsson', 2, 0],
+          ['Dominik Gaßner', 'Stefan Edelbauer', 0, 2],
+          ['Marius Forster', 'Ralf Mäutner', 2, 0],
+          ['Johannes Wolters', 'René Mai', 1, 2],
+          ['Cordula Gangl', 'Olle Aronsson', 2, 0],
+          ['Marius Forster', 'Stefan Edelbauer', 0, 2],
+          ['Dominik Gaßner', 'Ralf Mäutner', 2, 0]
+        ]
+      },
+      {
+        tag: '2026-10-23',
+        heim: 'DCO',
+        gast: 'd`Haberer 2',
+        ort: 'Gasthof Gut Keferloh',
+        einzel: '8:8',
+        legs: '20:23',
+        bericht: 2313,
+        partien: [
+          ['Robert Völkl', 'Reinhart Boehm', 0, 2],
+          ['Naser Sharifi', 'Rolf Neeb', 2, 1],
+          ['Christos Heuwald', 'Mani Burgmair', 2, 1],
+          ['*Michael Rogge', 'Carol Zehetmeier', 2, 1],
+          ['Robert Völkl', 'Rolf Neeb', 1, 2],
+          ['Naser Sharifi', 'Reinhart Boehm', 2, 1],
+          ['Christos Heuwald', 'Carol Zehetmeier', 1, 2],
+          ['*Michael Rogge', 'Mani Burgmair', 2, 1],
+          ['Christos Heuwald', 'Reinhart Boehm', 0, 2],
+          ['*Michael Rogge', 'Rolf Neeb', 2, 0],
+          ['Naser Sharifi', 'Mani Burgmair', 2, 1],
+          ['Lissy Attanasio', 'Carol Zehetmeier', 0, 2],
+          ['*Michael Rogge', 'Reinhart Boehm', 2, 1],
+          ['Christos Heuwald', 'Rolf Neeb', 1, 2],
+          ['Lissy Attanasio', 'Mani Burgmair', 1, 2],
+          ['Naser Sharifi', 'Carol Zehetmeier', 0, 2]
+        ]
+      },
+      {
+        tag: '2026-10-23',
+        heim: 'Dart Artists Germering II',
+        gast: 'Blink 180',
+        ort: 'Cobblers Irish Pub',
+        einzel: '6:10',
+        legs: '13:22',
+        bericht: 2316,
+        partien: [
+          ['Melanie Ziemann', 'Lenas Becker', 0, 2],
+          ['Julian Frank', 'Dominik Uhl', 2, 0],
+          ['Carl Friedrich Frank', 'Tobias Thomas', 0, 2],
+          ['Gerd Stegerer', 'Alfred Buchner', 2, 0],
+          ['Melanie Ziemann', 'Dominik Uhl', 0, 2],
+          ['Julian Frank', 'Lenas Becker', 1, 2],
+          ['Carl Friedrich Frank', 'Alfred Buchner', 0, 2],
+          ['Gerd Stegerer', 'Tobias Thomas', 0, 2],
+          ['Carl Friedrich Frank', 'Lenas Becker', 0, 2],
+          ['Gerd Stegerer', 'Dominik Uhl', 2, 0],
+          ['Julian Frank', 'Michael Schmeiß', 2, 1],
+          ['Melanie Ziemann', 'Dominik Beuscher', 0, 2],
+          ['Gerd Stegerer', 'Lenas Becker', 2, 1],
+          ['Carl Friedrich Frank', 'Dominik Uhl', 0, 2],
+          ['Melanie Ziemann', 'Michael Schmeiß', 0, 2],
+          ['Julian Frank', 'Dominik Beuscher', 2, 0]
+        ],
+        highlights: [
+          {
+            wer: 'Gerd Stegerer',
+            team: 'Dart Artists Germering II',
+            shortleg: [20],
+            was: 'Shortleg 20'
+          }
+        ]
+      }
+    ],
+    st03: [
+      { heim: 'Treff ma nix', gast: null },
+      {
+        tag: '2026-10-26',
+        heim: 'Voodoo Darters',
+        gast: 'Blink 180',
+        ort: 'Heuboden',
+        einzel: '7:9',
+        legs: '22:22',
+        bericht: 2317,
+        partien: [
+          ['Kevin Bauer', 'Dominik Uhl', 1, 2],
+          ['Martin Appelon', 'Tobias Thomas', 1, 2],
+          ['Josef Stahl', 'Michael Schmeiß', 1, 2],
+          ['Patrick Meyer', 'Lenas Becker', 1, 2],
+          ['Kevin Bauer', 'Tobias Thomas', 2, 0],
+          ['Martin Appelon', 'Dominik Uhl', 2, 1],
+          ['Josef Stahl', 'Lenas Becker', 1, 2],
+          ['Patrick Meyer', 'Michael Schmeiß', 2, 1],
+          ['Matthias Steinacher', 'Dominik Uhl', 1, 2],
+          ['Patrick Meyer', 'Tobias Thomas', 0, 2],
+          ['Martin Appelon', 'Michael Schmeiß', 2, 1],
+          ['Kevin Bauer', 'Lenas Becker', 2, 1],
+          ['Patrick Meyer', 'Dominik Uhl', 1, 2],
+          ['Matthias Steinacher', 'Tobias Thomas', 2, 0],
+          ['Kevin Bauer', 'Michael Schmeiß', 2, 0],
+          ['Martin Appelon', 'Lenas Becker', 1, 2]
+        ],
+        highlights: [
+          {
+            wer: 'Dominik Uhl',
+            team: 'Blink 180',
+            shortleg: [17],
+            was: 'Shortleg 17'
+          },
+          {
+            wer: 'Lenas Becker',
+            team: 'Blink 180',
+            shortleg: [20],
+            was: 'Shortleg 20'
+          }
+        ]
+      },
+      {
+        tag: '2026-10-27',
+        heim: 'd`Haberer 2',
+        gast: 'FT Gern Darts II',
+        ort: 'Heuboden',
+        einzel: '11:5',
+        legs: '26:11',
+        bericht: 2318,
+        partien: [
+          ['Stefan Hügel', 'Theodor Munzert', 1, 2],
+          ['Reinhart Boehm', 'Janik Guthmann', 2, 0],
+          ['Rolf Neeb', 'Theresa Matejka', 2, 1],
+          ['Mani Burgmair', '*Tim Steidinger', 2, 0],
+          ['Stefan Hügel', 'Janik Guthmann', 2, 0],
+          ['Reinhart Boehm', 'Theodor Munzert', 2, 0],
+          ['Rolf Neeb', '*Tim Steidinger', 2, 0],
+          ['Mani Burgmair', 'Theresa Matejka', 2, 0],
+          ['Rolf Neeb', 'Theodor Munzert', 1, 2],
+          ['Mani Burgmair', 'Janik Guthmann', 1, 2],
+          ['Reinhart Boehm', 'Theresa Matejka', 2, 0],
+          ['Stefan Hügel', 'Maximilian Königsbauer', 2, 0],
+          ['Mani Burgmair', 'Theodor Munzert', 0, 2],
+          ['Rolf Neeb', 'Janik Guthmann', 2, 0],
+          ['Stefan Hügel', 'Theresa Matejka', 2, 0],
+          ['Reinhart Boehm', 'Maximilian Königsbauer', 1, 2]
+        ]
+      },
+      { tag: '2026-10-30', heim: 'TSV Oberpframmern', gast: 'DCO', ort: 'Gaststätte Anstoss' },
+      { tag: '2026-10-30', heim: 'Dart Artists Germering II', gast: 'TSV Dachau 1865 4', ort: 'Cobblers Irish Pub' }
+    ],
+    st04: [
+      { heim: 'TSV Oberpframmern', gast: null },
+      { tag: '2026-11-09', heim: 'FT Gern Darts II', gast: 'Voodoo Darters', ort: 'Vereinsheim FT Gern' },
+      { tag: '2026-11-10', heim: 'Blink 180', gast: 'd`Haberer 2', ort: 'Bar Sehnsucht' },
+      { tag: '2026-11-11', heim: 'TSV Dachau 1865 4', gast: 'Treff ma nix', ort: 'TSV 1865 Dachau' },
+      { tag: '2026-11-13', heim: 'DCO', gast: 'Dart Artists Germering II', ort: 'Gasthof Gut Keferloh' }
+    ],
+    st05: [
+      { heim: 'FT Gern Darts II', gast: null },
+      { tag: '2026-11-23', heim: 'Voodoo Darters', gast: 'Treff ma nix', ort: 'Heuboden' },
+      { tag: '2026-11-24', heim: 'Blink 180', gast: 'DCO', ort: 'Bar Sehnsucht' },
+      { tag: '2026-11-25', heim: 'TSV Dachau 1865 4', gast: 'd`Haberer 2', ort: 'TSV 1865 Dachau' },
+      { tag: '2026-11-27', heim: 'Dart Artists Germering II', gast: 'TSV Oberpframmern', ort: 'Cobblers Irish Pub' }
+    ],
+    st06: [
+      { heim: 'TSV Dachau 1865 4', gast: null },
+      { tag: '2026-12-04', heim: 'FT Gern Darts II', gast: 'DCO', ort: 'Vereinsheim FT Gern', verschoben: true },
+      { tag: '2026-12-08', heim: 'd`Haberer 2', gast: 'Dart Artists Germering II', ort: 'Heuboden' },
+      { tag: '2026-12-09', heim: 'Treff ma nix', gast: 'Blink 180', ort: 'Fiakerstüberl' },
+      { tag: '2026-12-11', heim: 'TSV Oberpframmern', gast: 'Voodoo Darters', ort: 'Gaststätte Anstoss' }
+    ],
+    st07: [
+      { heim: 'DCO', gast: null },
+      { tag: '2027-01-11', heim: 'Voodoo Darters', gast: 'TSV Dachau 1865 4', ort: 'Heuboden' },
+      { tag: '2027-01-11', heim: 'FT Gern Darts II', gast: 'Dart Artists Germering II', ort: 'Vereinsheim FT Gern' },
+      { tag: '2027-01-12', heim: 'd`Haberer 2', gast: 'Treff ma nix', ort: 'Heuboden' },
+      { tag: '2027-01-12', heim: 'Blink 180', gast: 'TSV Oberpframmern', ort: 'Bar Sehnsucht' }
+    ],
+    st08: [
+      { heim: 'd`Haberer 2', gast: null },
+      { tag: '2027-01-25', heim: 'FT Gern Darts II', gast: 'Blink 180', ort: 'Vereinsheim FT Gern' },
+      { tag: '2027-01-27', heim: 'TSV Dachau 1865 4', gast: 'DCO', ort: 'TSV 1865 Dachau' },
+      { tag: '2027-01-27', heim: 'Treff ma nix', gast: 'TSV Oberpframmern', ort: 'Fiakerstüberl' },
+      { tag: '2027-01-29', heim: 'Dart Artists Germering II', gast: 'Voodoo Darters', ort: 'Cobblers Irish Pub' }
+    ],
+    st09: [
+      { heim: 'Blink 180', gast: null },
+      { tag: '2027-02-15', heim: 'Voodoo Darters', gast: 'DCO', ort: 'Heuboden' },
+      { tag: '2027-02-17', heim: 'TSV Dachau 1865 4', gast: 'FT Gern Darts II', ort: 'TSV 1865 Dachau' },
+      { tag: '2027-02-19', heim: 'TSV Oberpframmern', gast: 'd`Haberer 2', ort: 'Gaststätte Anstoss' },
+      { tag: '2027-02-19', heim: 'Dart Artists Germering II', gast: 'Treff ma nix', ort: 'Cobblers Irish Pub' }
+    ],
+    st10: [
+      { heim: 'Dart Artists Germering II', gast: null },
+      { tag: '2027-03-01', heim: 'Voodoo Darters', gast: 'd`Haberer 2', ort: 'Heuboden' },
+      { tag: '2027-03-01', heim: 'FT Gern Darts II', gast: 'TSV Oberpframmern', ort: 'Vereinsheim FT Gern' },
+      { tag: '2027-03-03', heim: 'TSV Dachau 1865 4', gast: 'Blink 180', ort: 'TSV 1865 Dachau' },
+      { tag: '2027-03-05', heim: 'DCO', gast: 'Treff ma nix', ort: 'Gasthof Gut Keferloh' }
+    ],
+    st11: [
+      { heim: 'Voodoo Darters', gast: null },
+      { tag: '2027-03-16', heim: 'd`Haberer 2', gast: 'DCO', ort: 'Heuboden' },
+      { tag: '2027-03-16', heim: 'Blink 180', gast: 'Dart Artists Germering II', ort: 'Bar Sehnsucht' },
+      { tag: '2027-03-17', heim: 'Treff ma nix', gast: 'FT Gern Darts II', ort: 'Fiakerstüberl' },
+      { tag: '2027-03-19', heim: 'TSV Oberpframmern', gast: 'TSV Dachau 1865 4', ort: 'Gaststätte Anstoss' }
+    ],
+    st12: [
+      { heim: 'Treff ma nix', gast: null },
+      { tag: '2027-04-05', heim: 'FT Gern Darts II', gast: 'd`Haberer 2', ort: 'Vereinsheim FT Gern' },
+      { tag: '2027-04-06', heim: 'Blink 180', gast: 'Voodoo Darters', ort: 'Bar Sehnsucht' },
+      { tag: '2027-04-07', heim: 'TSV Dachau 1865 4', gast: 'Dart Artists Germering II', ort: 'TSV 1865 Dachau' },
+      { tag: '2027-04-09', heim: 'DCO', gast: 'TSV Oberpframmern', ort: 'Gasthof Gut Keferloh' }
+    ],
+    st13: [
+      { heim: 'TSV Oberpframmern', gast: null },
+      { tag: '2027-04-19', heim: 'Voodoo Darters', gast: 'FT Gern Darts II', ort: 'Heuboden' },
+      { tag: '2027-04-20', heim: 'd`Haberer 2', gast: 'Blink 180', ort: 'Heuboden' },
+      { tag: '2027-04-21', heim: 'Treff ma nix', gast: 'TSV Dachau 1865 4', ort: 'Fiakerstüberl' },
+      { tag: '2027-04-23', heim: 'Dart Artists Germering II', gast: 'DCO', ort: 'Cobblers Irish Pub' }
+    ],
+    st14: [
+      { heim: 'FT Gern Darts II', gast: null },
+      { tag: '2027-04-27', heim: 'd`Haberer 2', gast: 'TSV Dachau 1865 4', ort: 'Heuboden' },
+      { tag: '2027-04-28', heim: 'Treff ma nix', gast: 'Voodoo Darters', ort: 'Fiakerstüberl' },
+      { tag: '2027-04-30', heim: 'DCO', gast: 'Blink 180', ort: 'Gasthof Gut Keferloh' },
+      { tag: '2027-04-30', heim: 'TSV Oberpframmern', gast: 'Dart Artists Germering II', ort: 'Gaststätte Anstoss' }
+    ],
+    st15: [
+      { heim: 'TSV Dachau 1865 4', gast: null },
+      { tag: '2027-05-10', heim: 'Voodoo Darters', gast: 'TSV Oberpframmern', ort: 'Heuboden' },
+      { tag: '2027-05-11', heim: 'Blink 180', gast: 'Treff ma nix', ort: 'Bar Sehnsucht' },
+      { tag: '2027-05-14', heim: 'DCO', gast: 'FT Gern Darts II', ort: 'Gasthof Gut Keferloh', verschoben: true },
+      { tag: '2027-05-14', heim: 'Dart Artists Germering II', gast: 'd`Haberer 2', ort: 'Cobblers Irish Pub' }
+    ],
+    st16: [
+      { heim: 'DCO', gast: null },
+      { tag: '2027-06-02', heim: 'TSV Dachau 1865 4', gast: 'Voodoo Darters', ort: 'TSV 1865 Dachau' },
+      { tag: '2027-06-02', heim: 'Treff ma nix', gast: 'd`Haberer 2', ort: 'Fiakerstüberl' },
+      { tag: '2027-06-04', heim: 'Dart Artists Germering II', gast: 'FT Gern Darts II', ort: 'Cobblers Irish Pub' },
+      { tag: '2027-06-04', heim: 'TSV Oberpframmern', gast: 'Blink 180', ort: 'Gaststätte Anstoss' }
+    ],
+    st17: [
+      { heim: 'd`Haberer 2', gast: null },
+      { tag: '2027-06-07', heim: 'Voodoo Darters', gast: 'Dart Artists Germering II', ort: 'Heuboden' },
+      { tag: '2027-06-08', heim: 'Blink 180', gast: 'FT Gern Darts II', ort: 'Bar Sehnsucht' },
+      { tag: '2027-06-11', heim: 'DCO', gast: 'TSV Dachau 1865 4', ort: 'Gasthof Gut Keferloh' },
+      { tag: '2027-06-11', heim: 'TSV Oberpframmern', gast: 'Treff ma nix', ort: 'Gaststätte Anstoss' }
+    ],
+    st18: [
+      { heim: 'Blink 180', gast: null },
+      { tag: '2027-06-21', heim: 'FT Gern Darts II', gast: 'TSV Dachau 1865 4', ort: 'Vereinsheim FT Gern' },
+      { tag: '2027-06-22', heim: 'd`Haberer 2', gast: 'TSV Oberpframmern', ort: 'Heuboden' },
+      { tag: '2027-06-23', heim: 'Treff ma nix', gast: 'Dart Artists Germering II', ort: 'Fiakerstüberl' },
+      { tag: '2027-06-25', heim: 'DCO', gast: 'Voodoo Darters', ort: 'Gasthof Gut Keferloh' }
+    ]
+  },
+  teams: {
+    "Blink 180": {
+      id: 262,
+      lokal: 'Bar Sehnsucht',
+      adresse: 'Amalienstraße 26, 80333 München',
+      spieler: [
+        { name: 'Michael Schmeiß', info: 'TC-1' },
+        { name: 'Tobias Thomas', info: 'TC-2' },
+        { name: 'Alfred Buchner' },
+        { name: 'Benjamin Bauer' },
+        { name: 'Dominik Beuscher' },
+        { name: 'Dominik Uhl' },
+        { name: 'Julius Klinzer' },
+        { name: 'Lenas Becker' },
+        { name: 'Michael Göbel' },
+        { name: 'Tobias Zangl' }
+      ]
+    },
+    "d`Haberer 2": {
+      id: 255,
+      lokal: 'Heuboden',
+      adresse: 'Kapuzinerstr. 2, 80337 München',
+      spieler: [
+        { name: 'Andrea Moosleitner', info: 'TC-1' },
+        { name: 'Carol Zehetmeier' },
+        { name: 'Christian Hackl' },
+        { name: 'Mani Burgmair' },
+        { name: 'Reinhart Boehm' },
+        { name: 'Rolf Neeb' },
+        { name: 'Stefan Hügel' },
+        { name: 'Walter Majewski' }
+      ]
+    },
+    "Dart Artists Germering II": {
+      id: 263,
+      lokal: 'Cobblers Irish Pub',
+      adresse: 'Schusterhäusl 1, 82110 Germering',
+      spieler: [
+        { name: 'Julian Frank', info: 'TC-1' },
+        { name: '*****' },
+        { name: 'Carl Friedrich Frank' },
+        { name: 'Gerd Stegerer' },
+        { name: 'Melanie Ziemann' },
+        { name: 'Rudolf Weiß' }
+      ]
+    },
+    DCO: {
+      id: 256,
+      lokal: 'Gasthof Gut Keferloh',
+      adresse: 'Im Keferloh 2, 85630 Grasbrunn-Keferloh',
+      spieler: [
+        { name: 'Alex Heuwald', info: 'TC-1' },
+        { name: 'Laura Vogel', info: 'TC-2' },
+        { name: '*Michael Rogge' },
+        { name: 'Angelo Attanasio' },
+        { name: 'Christos Heuwald' },
+        { name: 'Heike Vogel' },
+        { name: 'Lissy Attanasio' },
+        { name: 'Luck Heuwald' },
+        { name: 'Melanie Völkl' },
+        { name: 'Michael Czechowsky' },
+        { name: 'Naser Sharifi' },
+        { name: 'Robert Völkl' }
+      ]
+    },
+    "FT Gern Darts II": {
+      id: 260,
+      lokal: 'Vereinsheim FT Gern',
+      adresse: 'Hanebergstraße 1, 80637 München',
+      spieler: [
+        { name: 'Theresa Matejka', info: 'TC-1' },
+        { name: 'Maximilian Dallinger', info: 'TC-2' },
+        { name: '*Tim Steidinger' },
+        { name: 'Janik Guthmann' },
+        { name: 'Maximilian Königsbauer' },
+        { name: 'Sebastian Königsbauer' },
+        { name: 'Theodor Munzert' }
+      ]
+    },
+    "Treff ma nix": {
+      id: 257,
+      lokal: 'Fiakerstüberl',
+      adresse: 'Zenettistraße. 30, 80337 München',
+      spieler: [
+        { name: 'Christian Matejka', info: 'TC-1' },
+        { name: 'Monika Maier', info: 'TC-2' },
+        { name: 'Bernhard Hoffmann' },
+        { name: 'Franz Freinberger' },
+        { name: 'Linda Maier' },
+        { name: 'Ralf Kilian' },
+        { name: 'Stephan Brunner' },
+        { name: 'Sven Albrecht' },
+        { name: 'Yves Scherer' }
+      ]
+    },
+    "TSV Dachau 1865 4": {
+      id: 261,
+      lokal: 'TSV 1865 Dachau',
+      adresse: 'Jahnstr. 25, 85221 Dachau',
+      spieler: [
+        { name: 'Johannes Wolters', info: 'TC-1' },
+        { name: 'Cordula Gangl', info: 'TC-2' },
+        { name: 'Dominik Gaßner' },
+        { name: 'Lars Toni' },
+        { name: 'Marius Forster' },
+        { name: 'Vincent von Frankenberg' }
+      ]
+    },
+    "TSV Oberpframmern": {
+      id: 259,
+      lokal: 'Gaststätte Anstoss',
+      adresse: 'Kreuzerweg 2, 85667 Oberpframmern',
+      spieler: [
+        { name: 'Stefan Edelbauer', info: 'TC-1' },
+        { name: 'René Mai', info: 'TC-2' },
+        { name: 'Andreas Sedlbauer' },
+        { name: 'Bastian Elbauer' },
+        { name: 'Florian Janetschko' },
+        { name: 'Igor Tomic' },
+        { name: 'Olle Aronsson' },
+        { name: 'Ralf Mäutner' },
+        { name: 'Stefan Zistel' },
+        { name: 'Stephan Uhlig' }
+      ]
+    },
+    "Voodoo Darters": {
+      id: 258,
+      lokal: 'Heuboden',
+      adresse: 'Kapuzinerstr. 2, 80337 München',
+      spieler: [
+        { name: 'Matthias Steinacher', info: 'TC-1' },
+        { name: 'Martin Goerlich', info: 'TC-2' },
+        { name: 'Felix Maschinowski' },
+        { name: 'Jan Strelow' },
+        { name: 'Josef Stahl' },
+        { name: 'Kevin Bauer' },
+        { name: 'Marlene Czapka' },
+        { name: 'Martin Appelon' },
+        { name: 'Patrick Meyer' }
+      ]
+    }
+  }
+};
+
 /*
- * Liga-Daten der Saison 2026/27: Spielplan, Ergebnisse der Ligaleitung,
- * Teams und der Tabellenstand zum Start. Gemeinsame Quelle fuer die App
+ * Liga-Daten der Saison 2026/27: Spielplan, Ergebnisse aller Teams, die
+ * 16 Einzel jedes Spiels, Highlights, Mannschaften (Lokal, Spielerliste)
+ * und die daraus gerechneten Tabellen. Gemeinsame Quelle fuer die App
  * (js/app.js) und die oeffentliche Webseite (js/webseite.js).
  *
- * Neue Ergebnisse nach jedem Spieltag: in LIGA_SPIELTAGE eintragen.
+ * Woher die Daten kommen:
+ *  - js/liga-sdm.js (window.LIGA_SDM): automatisch von der Seite der
+ *    Ligaleitung geholt - "node tools/liga-import.mjs" nach jedem Spieltag.
+ *  - LIGA_HAND (unten): was die Webseite nicht weiss, z. B. unsere Bogen-
+ *    Aufstellung (H1-H8 / G1-G8) oder ein Ergebnis vom Papierbogen, bevor
+ *    die Ligaleitung es eingetragen hat. Wird je Spiel dazugemischt.
  */
 (function () {
   'use strict';
+  var SDM = window.LIGA_SDM || { spieltage: {}, teams: {} };
+
   /* ================= Liga =================
-   * Der Spielplan der Saison 2026/27, fest im Client – er ändert sich nur,
-   * wenn der Verband ihn ändert, und dann hier. Die Zusagen („ich bin
-   * dabei") liegen auf dem Server, je Termin-Kennung.
+   * Unsere 18 Spieltage. Datum, Heim, Gast und Lokal kommen aus dem
+   * Spielplan der Ligaleitung (auch Verlegungen), die Liste hier ist die
+   * Rueckfallebene ohne js/liga-sdm.js. Die Zusagen („ich bin dabei")
+   * liegen auf dem Server, je Termin-Kennung.
    * sollSpieler: so viele braucht ein Spieltag, damit die Aufstellung als
    * vollständig gilt – bei Bedarf hier anpassen. */
   var LIGA = {
@@ -8052,60 +8692,81 @@ button.pa-gruppe { cursor: pointer; }
     ]
   };
 
-  /* Alle Spiele eines Spieltags (Ergebnisse der Ligaleitung), von Julius
-     nach jedem Spieltag geliefert. Je Spiel: Datum, Heim, Gast, Lokal,
-     Einzel und Legs; "partien" sind die 16 Einzel [Heim, Gast, hLegs, gLegs],
-     ein * vor dem Namen heisst Gastspieler. Ohne gast = spielfrei,
-     verschoben = neuer Termin in tag. Bei unserem eigenen Spiel ergaenzt
-     "aufstellung" (heim/gast: die Bogen-Listen H1-H8 bzw. G1-G8) - damit
-     laesst sich das Spiel in der App "vom Bogen uebernehmen" (js/app.js,
-     ligaNachtragUebernehmen), wenn es am Abend nicht mitgeschrieben wurde. */
-  var LIGA_SPIELTAGE = {
-    st01: [
-      { heim: 'Dart Artists Germering II', gast: null },
-      { tag: '2026-10-06', heim: 'd`Haberer 2', gast: 'Voodoo Darters', ort: 'Heuboden', einzel: '8:8', legs: '20:20', partien: [
-        ['Stefan Hügel', 'Marlene Czapka', 2, 1], ['Reinhart Boehm', 'Kevin Bauer', 0, 2], ['Rolf Neeb', 'Josef Stahl', 1, 2], ['Walter Majewski', 'Matthias Steinacher', 0, 2],
-        ['Stefan Hügel', 'Kevin Bauer', 0, 2], ['Reinhart Boehm', 'Marlene Czapka', 2, 0], ['Rolf Neeb', 'Matthias Steinacher', 2, 1], ['Walter Majewski', 'Josef Stahl', 1, 2],
-        ['Rolf Neeb', 'Marlene Czapka', 2, 0], ['Walter Majewski', 'Kevin Bauer', 0, 2], ['Reinhart Boehm', 'Josef Stahl', 2, 0], ['Stefan Hügel', 'Martin Goerlich', 2, 1],
-        ['Mani Burgmair', 'Jan Strelow', 1, 2], ['Rolf Neeb', 'Kevin Bauer', 1, 2], ['Stefan Hügel', 'Josef Stahl', 2, 0], ['Reinhart Boehm', 'Martin Goerlich', 2, 1]
-      ] },
-      { tag: '2026-10-06', heim: 'Blink 180', gast: 'TSV Dachau 1865 4', ort: 'Bar Sehnsucht', einzel: '7:9', legs: '15:20' },
-      { tag: '2026-10-07', heim: 'Treff ma nix', gast: 'DCO', ort: 'Fiakerstüberl', einzel: '9:7', legs: '21:17', partien: [
-        ['Franz Freinberger', 'Naser Sharifi', 0, 2], ['Ralf Kilian', 'Christos Heuwald', 2, 0], ['Bernhard Hoffmann', 'Luck Heuwald', 2, 0], ['Christian Matejka', '*Michael Rogge', 1, 2],
-        ['Franz Freinberger', 'Christos Heuwald', 2, 0], ['Ralf Kilian', 'Naser Sharifi', 0, 2], ['Bernhard Hoffmann', '*Michael Rogge', 2, 0], ['Christian Matejka', 'Luck Heuwald', 2, 0],
-        ['Bernhard Hoffmann', 'Naser Sharifi', 2, 1], ['Christian Matejka', 'Christos Heuwald', 2, 1], ['Linda Maier', 'Alex Heuwald', 2, 1], ['Franz Freinberger', '*Michael Rogge', 1, 2],
-        ['Sven Albrecht', 'Naser Sharifi', 1, 2], ['Yves Scherer', 'Christos Heuwald', 0, 2], ['Stephan Brunner', 'Alex Heuwald', 2, 0], ['Linda Maier', '*Michael Rogge', 0, 2]
-      ], highlights: [{ wer: 'Alex Heuwald', team: 'DCO', was: '1× 180' }] },
-      /* Stand zuerst "verschoben", inzwischen gespielt und gewertet (Tabelle
-         der Ligaleitung vom 23.10.2026). */
-      { tag: '2026-10-16', heim: 'TSV Oberpframmern', gast: 'FT Gern Darts II', ort: 'Gaststätte Anstoss', einzel: '12:4', legs: '26:10' }
-    ],
+  /* Von Hand: je Spieltag die Spiele, zu denen wir mehr wissen als die
+     Webseite. Gefunden wird ein Spiel ueber heim + gast; alles, was hier
+     steht, ueberschreibt bzw. ergaenzt den Eintrag der Ligaleitung. Ein
+     Spiel, das die Webseite noch gar nicht hat (Papierbogen vom Abend),
+     kommt als ganzer Eintrag dazu: tag, heim, gast, ort, einzel, legs,
+     partien (16 x [Heim, Gast, hLegs, gLegs], * = Gast).
+     aufstellung: die Bogen-Listen H1-H8 / G1-G8, damit der Nachtrag in der
+     App dieselben Nummern traegt wie der Papierbogen - ohne sie zaehlt die
+     App die Namen in der Reihenfolge ihres ersten Einzels. */
+  var LIGA_HAND = {
     st02: [
-      { heim: 'Voodoo Darters', gast: null },
-      { tag: '2026-10-19', heim: 'FT Gern Darts II', gast: 'Treff ma nix', ort: 'Vereinsheim FT Gern', einzel: '3:13', legs: '11:28' },
-      { tag: '2026-10-21', heim: 'TSV Dachau 1865 4', gast: 'TSV Oberpframmern', ort: 'TSV 1865 Dachau' },
-      /* Unser Spiel, vom Spielberichtsbogen (Cobblers Irish Pub, 23.10.2026).
-         aufstellung: die Bogen-Listen H1-H8 / G1-G8, damit der Nachtrag in
-         der App dieselben Nummern traegt wie der Papierbogen (G5 Beuscher,
-         G6 Schmeiss kamen in Durchgang 3 und 4 fuer G4 bzw. G3). */
-      { tag: '2026-10-23', heim: 'Dart Artists Germering II', gast: 'Blink 180', ort: 'Cobblers Irish Pub', einzel: '6:10', legs: '13:22',
+      /* Cobblers Irish Pub, 23.10.2026: G5 Beuscher und G6 Schmeiss kamen in
+         Durchgang 3 und 4 fuer G4 bzw. G3. */
+      { heim: 'Dart Artists Germering II', gast: 'Blink 180',
         aufstellung: {
-          heim: ['Melanie Ziesen', 'Julius Frank', 'Fritz Frank', 'Gerd Stegerer'],
+          /* Nur unsere Seite: die Germeringer stehen bei der Ligaleitung in
+             Bogen-Reihenfolge (H1-H4 = die ersten vier Einzel). */
           gast: ['Lenas Becker', 'Dominik Uhl', 'Tobias Thomas', 'Alfred Buchner', 'Dominik Beuscher', 'Michael Schmeiß']
-        },
-        partien: [
-          ['Melanie Ziesen', 'Lenas Becker', 0, 2], ['Julius Frank', 'Dominik Uhl', 2, 0], ['Fritz Frank', 'Tobias Thomas', 0, 2], ['Gerd Stegerer', 'Alfred Buchner', 2, 0],
-          ['Melanie Ziesen', 'Dominik Uhl', 0, 2], ['Julius Frank', 'Lenas Becker', 1, 2], ['Fritz Frank', 'Alfred Buchner', 0, 2], ['Gerd Stegerer', 'Tobias Thomas', 0, 2],
-          ['Fritz Frank', 'Lenas Becker', 0, 2], ['Gerd Stegerer', 'Dominik Uhl', 2, 0], ['Julius Frank', 'Michael Schmeiß', 2, 1], ['Melanie Ziesen', 'Dominik Beuscher', 0, 2],
-          ['Gerd Stegerer', 'Lenas Becker', 2, 1], ['Fritz Frank', 'Dominik Uhl', 0, 2], ['Melanie Ziesen', 'Michael Schmeiß', 0, 2], ['Julius Frank', 'Dominik Beuscher', 2, 0]
-        ] }
+        } }
     ]
   };
+
+  /* Spieltage = Webseite der Ligaleitung + LIGA_HAND. Reihenfolge je
+     Spieltag wie bei der Ligaleitung (Spielfrei zuerst, dann nach Datum). */
+  function mische(sdmSpieltage, hand) {
+    var out = {};
+    var ids = {};
+    Object.keys(sdmSpieltage || {}).forEach(function (id) { ids[id] = 1; });
+    Object.keys(hand || {}).forEach(function (id) { ids[id] = 1; });
+    Object.keys(ids).sort().forEach(function (id) {
+      var zeilen = (sdmSpieltage[id] || []).map(function (sp) {
+        var k = {};
+        Object.keys(sp).forEach(function (f) { k[f] = sp[f]; });
+        return k;
+      });
+      (hand[id] || []).forEach(function (h) {
+        var ziel = null;
+        zeilen.forEach(function (z) { if (!ziel && z.heim === h.heim && z.gast === h.gast) ziel = z; });
+        if (!ziel) { ziel = {}; zeilen.push(ziel); }
+        Object.keys(h).forEach(function (f) { ziel[f] = h[f]; });
+      });
+      out[id] = zeilen;
+    });
+    return out;
+  }
+  var LIGA_SPIELTAGE = mische(SDM.spieltage, LIGA_HAND);
+
+  /* Unsere Termine mit dem Spielplan der Ligaleitung abgleichen: Datum,
+     Heim/Gast und Lokal von dort, falls der Spieltag vorliegt. */
+  LIGA.termine.forEach(function (t) {
+    var runde = LIGA_SPIELTAGE[t.id];
+    if (!runde) return;
+    var unser = null, frei = false;
+    runde.forEach(function (sp) {
+      if (sp.heim === LIGA.team && !sp.gast) frei = true;
+      if (sp.gast && (sp.heim === LIGA.team || sp.gast === LIGA.team)) unser = sp;
+    });
+    if (unser) {
+      if (unser.tag) t.tag = unser.tag;
+      t.heim = unser.heim; t.gast = unser.gast;
+      if (unser.ort) t.ort = unser.ort;
+      if (unser.verschoben) t.verschoben = true;
+    } else if (frei) {
+      t.tag = null;
+    }
+  });
 
   /* Alle Teams unserer Liga - fuer die leere Tabelle vorbefuellt. */
   var LIGA_TEAMS = ['Blink 180', 'TSV Dachau 1865 4', 'Dart Artists Germering II',
     'Voodoo Darters', 'd`Haberer 2', 'DCO', 'Treff ma nix', 'TSV Oberpframmern',
     'FT Gern Darts II'];
+  Object.keys(SDM.teams || {}).forEach(function (t) { if (LIGA_TEAMS.indexOf(t) < 0) LIGA_TEAMS.push(t); });
+
+  var paar = function (x) { var m = /^\s*(\d+)\s*:\s*(\d+)/.exec(String(x || '')); return m ? [Number(m[1]), Number(m[2])] : null; };
+
   /* Die Ligatabelle wird aus den Ergebnissen aller Spieltage gerechnet
      (LIGA_SPIELTAGE, Eintraege mit einzel und legs). Sieg 2 Punkte,
      Unentschieden 1; Reihenfolge nach Punkten, dann Leg-Differenz, dann
@@ -8114,7 +8775,6 @@ button.pa-gruppe { cursor: pointer; }
     var je = {};
     (teams || []).forEach(function (t) { je[t] = { team: t, spiele: 0, g: 0, u: 0, v: 0, lf: 0, la: 0, ef: 0, ea: 0, punkte: 0 }; });
     var zeile = function (t) { if (!je[t]) je[t] = { team: t, spiele: 0, g: 0, u: 0, v: 0, lf: 0, la: 0, ef: 0, ea: 0, punkte: 0 }; return je[t]; };
-    var paar = function (x) { var m = /^\s*(\d+)\s*:\s*(\d+)/.exec(String(x || '')); return m ? [Number(m[1]), Number(m[2])] : null; };
     var spiele = 0, bis = '';
     Object.keys(spieltage || {}).forEach(function (tid) {
       (spieltage[tid] || []).forEach(function (sp) {
@@ -8143,7 +8803,82 @@ button.pa-gruppe { cursor: pointer; }
     return { zeilen: zeilen, spiele: spiele, bis: bis };
   }
 
-  window.LIGA_DATEN = { liga: LIGA, spieltage: LIGA_SPIELTAGE, teams: LIGA_TEAMS, tabelleAus: tabelleAus };
+  /* Die Einzelrangliste der Liga, gerechnet aus allen 16er-Spielberichten,
+     nach dem Schluessel der Ligaleitung: je Einzel bekommt der Sieger
+     2 Punkte plus Leg-Differenz (2:0 = 4, 2:1 = 3), der Verlierer seine
+     gewonnenen Legs (1:2 = 1, 0:2 = 0). Reihenfolge: Punkte, Spiel-
+     Differenz (Siege minus Niederlagen), Leg-Differenz, gewonnene Legs,
+     Name - so sortiert auch die Ligaleitung. Gastspieler ("*Name") bleiben
+     drin und sind markiert. Liefert Zeilen { name, team, gast, lf, la,
+     siege, nied, legs "lf:la", spiele "siege:nied", punkte }. */
+  function einzelranglisteAus(spieltage) {
+    var je = {};
+    var zeile = function (roh, team) {
+      var gast = String(roh).charAt(0) === '*';
+      var name = gast ? String(roh).slice(1).trim() : String(roh).trim();
+      var k = team + '|' + name;
+      if (!je[k]) je[k] = { name: name, team: team, gast: gast, lf: 0, la: 0, siege: 0, nied: 0, punkte: 0 };
+      return je[k];
+    };
+    var buche = function (z, lw, ll) {
+      z.lf += lw; z.la += ll;
+      if (lw > ll) { z.siege++; z.punkte += 2 + lw - ll; } else { z.nied++; z.punkte += lw; }
+    };
+    Object.keys(spieltage || {}).forEach(function (tid) {
+      (spieltage[tid] || []).forEach(function (sp) {
+        if (!sp || !sp.gast || !Array.isArray(sp.partien)) return;
+        sp.partien.forEach(function (p) {
+          var h = Number(p[2]) || 0, g = Number(p[3]) || 0;
+          if (h === g) return;
+          buche(zeile(p[0], sp.heim), h, g);
+          buche(zeile(p[1], sp.gast), g, h);
+        });
+      });
+    });
+    return Object.keys(je).map(function (k) { return je[k]; }).sort(function (a, b) {
+      return b.punkte - a.punkte || (b.siege - b.nied) - (a.siege - a.nied) || (b.lf - b.la) - (a.lf - a.la) || b.lf - a.lf ||
+        a.name.toLowerCase().localeCompare(b.name.toLowerCase(), 'de');
+    }).map(function (z) {
+      z.legs = z.lf + ':' + z.la; z.spiele = z.siege + ':' + z.nied;
+      return z;
+    });
+  }
+
+  /* Highlights der ganzen Liga aus den Spielberichten: 180er (Anzahl je
+     Spieler), Shortlegs (wenigste Darts zuerst) und Highfinishes (hoechste
+     zuerst). Liefert { s180: [{name, team, gast, n}], shortleg: [{name,
+     team, gast, wert, tag}], highfinish: [...] }. */
+  function highlightsAus(spieltage) {
+    var s180 = {}, shortleg = [], highfinish = [];
+    var klar = function (roh) { var gast = String(roh).charAt(0) === '*'; return { name: gast ? String(roh).slice(1).trim() : String(roh).trim(), gast: gast }; };
+    Object.keys(spieltage || {}).forEach(function (tid) {
+      (spieltage[tid] || []).forEach(function (sp) {
+        (sp && sp.highlights || []).forEach(function (h) {
+          var w = klar(h.wer);
+          var team = h.team || '';
+          if (h.s180) {
+            var k = team + '|' + w.name;
+            if (!s180[k]) s180[k] = { name: w.name, team: team, gast: w.gast, n: 0 };
+            s180[k].n += Number(h.s180) || 0;
+          }
+          (h.shortleg || []).forEach(function (v) { shortleg.push({ name: w.name, team: team, gast: w.gast, wert: v, tag: sp.tag }); });
+          (h.highfinish || []).forEach(function (v) { highfinish.push({ name: w.name, team: team, gast: w.gast, wert: v, tag: sp.tag }); });
+        });
+      });
+    });
+    var nachName = function (a, b) { return a.name.toLowerCase().localeCompare(b.name.toLowerCase(), 'de'); };
+    return {
+      s180: Object.keys(s180).map(function (k) { return s180[k]; }).sort(function (a, b) { return b.n - a.n || nachName(a, b); }),
+      shortleg: shortleg.sort(function (a, b) { return a.wert - b.wert || nachName(a, b); }),
+      highfinish: highfinish.sort(function (a, b) { return b.wert - a.wert || nachName(a, b); })
+    };
+  }
+
+  window.LIGA_DATEN = {
+    liga: LIGA, spieltage: LIGA_SPIELTAGE, teams: LIGA_TEAMS,
+    teamInfo: SDM.teams || {}, stand: SDM.stand || null, quelle: SDM.quelle || null,
+    tabelleAus: tabelleAus, einzelranglisteAus: einzelranglisteAus, highlightsAus: highlightsAus
+  };
 })();
 
 /*
@@ -15737,11 +16472,15 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
   function renderLigaTabelle() {
     var tab = ligaTabelleBerechnet();
-    $('lt-stand').textContent = tab.spiele
-      ? 'Aus ' + plural(tab.spiele, 'Spiel', 'Spielen') + ' berechnet' + (tab.bis ? ', Stand ' + datumDE(tab.bis) : '') + '.'
-      : 'Noch kein Spiel gewertet.';
+    var ligaStand = window.LIGA_DATEN.stand;
+    $('lt-stand').textContent = (tab.spiele
+      ? 'Aus ' + plural(tab.spiele, 'Spiel', 'Spielen') + ' berechnet' + (tab.bis ? ', letztes am ' + datumDE(tab.bis) : '') + '.'
+      : 'Noch kein Spiel gewertet.') +
+      (ligaStand ? ' Ergebnisse der Ligaleitung (steeldart-muenchen.de), geholt am ' + datumDE(ligaStand) + '.' : '');
     /* Rechts neben der Tabelle alle Spiele je Spieltag (Ergebnisse der Ligaleitung). */
     $('lt-runden').innerHTML = ligaRundenAlleHtml();
+    renderLigaEinzel();
+    renderLigaHighlights();
     var zeilen = tab.zeilen;
     /* Rechts: unser Platz, Punkte und Legs, Abstand zur Spitze. */
     var platz = -1;
@@ -15766,12 +16505,66 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '<th>Legs</th><th title="Einzel">Spiele</th><th>Pkt</th></tr></thead>' +
       '<tbody>' + zeilen.map(function (z, i) {
         var wir = z.team === LIGA.team;
-        return '<tr' + (wir ? ' class="leader"' : '') + '>' +
+        /* Ein Tipp auf die Zeile: Lokal, Spielerliste und alle Spiele des Teams. */
+        return '<tr' + (wir ? ' class="leader"' : '') + ' data-action="liga-team-info" data-team="' + esc(z.team || '') + '" role="button" tabindex="0">' +
           '<td class="rank">' + (i + 1) + '</td>' +
           '<td class="left name">' + esc(z.team || '') + '</td>' +
           zelle(z.spiele) + zelle(z.g) + zelle(z.u) + zelle(z.v) + zelle(z.legs) + zelle(z.einzel) + zelle(z.punkte) +
           '</tr>';
       }).join('') + '</tbody>';
+  }
+
+  /* Die Einzelrangliste der ganzen Liga (alle Spieler aller Teams), wie
+     sie die Ligaleitung fuehrt: aus den 16 Einzeln jedes Spielberichts
+     (LIGA_DATEN.einzelranglisteAus). Gleiche Werte = gleicher Platz. Erst
+     die ersten 15, auf Wunsch alle; unsere Leute hervorgehoben. */
+  function renderLigaEinzel() {
+    var ziel = $('lt-einzel');
+    if (!ziel) return;
+    var er = window.LIGA_DATEN.einzelranglisteAus(LIGA_SPIELTAGE);
+    if (!er.length) { ziel.innerHTML = '<p class="hint">Noch kein Spielbericht der Ligaleitung.</p>'; return; }
+    var KURZ = 15;
+    var alle = !!UI.ligaEinzelAlle || er.length <= KURZ;
+    var platz = 0, vorher = null;
+    var zeilen = er.map(function (z, i) {
+      var k = [z.punkte, z.siege - z.nied, z.lf - z.la, z.lf].join('|');
+      if (k !== vorher) { platz = i + 1; vorher = k; }
+      z.platz = platz;
+      return z;
+    });
+    var meinTeam = LIGA.team;
+    ziel.innerHTML =
+      '<table class="standings einzel"><thead><tr><th>#</th><th class="left">Spieler</th><th>Legs</th><th>Spiele</th><th>Pkt</th></tr></thead><tbody>' +
+      zeilen.slice(0, alle ? zeilen.length : KURZ).map(function (z) {
+        return '<tr' + (z.team === meinTeam ? ' class="wir"' : '') + '>' +
+          '<td class="rank">' + z.platz + '</td>' +
+          '<td class="left name">' + esc(z.name) + (z.gast ? '<small class="gast-marke">Gast</small>' : '') + '<small class="team">' + esc(z.team) + '</small></td>' +
+          '<td>' + esc(z.legs) + '</td><td>' + esc(z.spiele) + '</td><td>' + z.punkte + '</td></tr>';
+      }).join('') + '</tbody></table>' +
+      (er.length > KURZ
+        ? '<button class="btn ghost small full lt-mehr" data-action="liga-einzel-alle">' + (UI.ligaEinzelAlle ? 'Nur die ersten ' + KURZ : 'Alle ' + er.length + ' Spieler zeigen') + '</button>'
+        : '');
+  }
+
+  /* Highlights der ganzen Liga: 180er je Spieler, die kuerzesten Legs,
+     die hoechsten Finishes - aus den Spielberichten der Ligaleitung. */
+  function renderLigaHighlights() {
+    var ziel = $('lt-highlights');
+    if (!ziel) return;
+    var hl = window.LIGA_DATEN.highlightsAus(LIGA_SPIELTAGE);
+    var block = function (titel, liste, wert, leer) {
+      return '<div class="lt-hl-block"><span class="lk-crew-titel">' + titel + '</span>' +
+        (liste.length
+          ? liste.slice(0, 8).map(function (z) {
+              return '<div class="lt-hl-zeile' + (z.team === LIGA.team ? ' wir' : '') + '"><span>' + esc(z.name) +
+                (z.gast ? '<small class="gast-marke">Gast</small>' : '') + '<small>' + esc(z.team) + '</small></span><b>' + wert(z) + '</b></div>';
+            }).join('')
+          : '<p class="hint">' + leer + '</p>') + '</div>';
+    };
+    ziel.innerHTML =
+      block('180er', hl.s180, function (z) { return z.n + '×'; }, 'Noch keine 180.') +
+      block('Shortlegs', hl.shortleg, function (z) { return z.wert + ' Darts'; }, 'Noch kein Shortleg.') +
+      block('Highfinishes', hl.highfinish, function (z) { return String(z.wert); }, 'Noch kein Highfinish gemeldet.');
   }
 
   function ligaZusagenLaden() {
@@ -15991,8 +16784,25 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
      Steht im Tabellen-Reiter unter der Tabelle und hinter "Alle Spiele"
      in der Spieltage-Liste - nicht in unserer Spieltag-Karte (Julius). */
   function ligaRundenAlleHtml() {
-    return LIGA.termine.filter(function (t) { return LIGA_SPIELTAGE[t.id] && LIGA_SPIELTAGE[t.id].length; })
-      .map(function (t) { return ligaRundeHtml(t, ligaTerminEintrag(t)); }).join('');
+    /* Seit der Spielplan der Ligaleitung komplett vorliegt, gibt es alle 18
+       Spieltage: gezeigt werden die mit Ergebnis und der naechste, der Rest
+       erst auf "Alle Spieltage" - sonst wird die Karte am Handy endlos. */
+    var mitDaten = LIGA.termine.filter(function (t) { return LIGA_SPIELTAGE[t.id] && LIGA_SPIELTAGE[t.id].length; });
+    var gespielt = function (t) { return LIGA_SPIELTAGE[t.id].some(function (sp) { return sp.gast && sp.einzel; }); };
+    var zeigen = mitDaten;
+    if (!UI.ligaRundenAlle) {
+      var naechster = false;
+      zeigen = mitDaten.filter(function (t) {
+        if (gespielt(t)) return true;
+        if (naechster) return false;
+        naechster = true; return true;
+      });
+    }
+    return zeigen.map(function (t) { return ligaRundeHtml(t, ligaTerminEintrag(t)); }).join('') +
+      (zeigen.length < mitDaten.length || UI.ligaRundenAlle
+        ? '<button class="btn ghost small full lt-mehr" data-action="liga-runden-alle">' +
+          (UI.ligaRundenAlle ? 'Nur gespielte Spieltage' : 'Alle ' + mitDaten.length + ' Spieltage zeigen') + '</button>'
+        : '');
   }
   function ligaRundeHtml(t, h) {
     var runde = LIGA_SPIELTAGE[t.id];
@@ -19982,6 +20792,39 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
             lpSp.highlights.map(function (x) { return '<div class="lp-hl-zeile"><span>' + esc(x.wer) + ' <small>' + esc(x.team) + '</small></span><b>' + esc(x.was) + '</b></div>'; }).join('') + '</div>'
           : '') +
         '<button class="btn primary full" data-action="ov-cancel">Schließen</button>';
+    } else if (o.type === 'liga-team-info') {
+      /* Ein Team der Liga: Lokal mit Adresse, Spielerliste (TC = Team-
+         Captain) und alle Spiele der Saison; gespielte oeffnen die Einzel. */
+      var tiName = o.team;
+      var ti = (window.LIGA_DATEN.teamInfo || {})[tiName] || {};
+      var tiSpiele = [];
+      LIGA.termine.forEach(function (t) {
+        (LIGA_SPIELTAGE[t.id] || []).forEach(function (sp, i) {
+          if (!sp.gast || (sp.heim !== tiName && sp.gast !== tiName)) return;
+          tiSpiele.push({ t: t, i: i, sp: sp });
+        });
+      });
+      var tiZeile = function (x) {
+        var daheim = x.sp.heim === tiName;
+        var gegner = daheim ? x.sp.gast : x.sp.heim;
+        var tipp = x.sp.partien && x.sp.partien.length ? ' data-action="liga-partien" data-termin="' + esc(x.t.id) + '" data-i="' + x.i + '" role="button" tabindex="0"' : '';
+        var rechts = x.sp.verschoben ? '<span class="lr-erg verschoben">verschoben</span>'
+          : x.sp.einzel ? '<span class="lr-erg"><b>' + esc(x.sp.einzel) + '</b><small>' + esc(x.sp.legs || '') + '</small></span>'
+          : '<span class="lr-erg">' + (x.sp.tag ? esc(x.sp.tag.slice(8, 10) + '.' + x.sp.tag.slice(5, 7) + '.') : '–') + '</span>';
+        return '<div class="lr-zeile' + (gegner === LIGA.team ? ' wir' : '') + (tipp ? ' tap' : '') + '"' + tipp + '>' +
+          '<span class="lr-teams"><small class="ti-nr">' + x.t.nr + '</small>' + (daheim ? '' : '<i>@</i>') + esc(gegner) + '</span>' + rechts + '</div>';
+      };
+      html = '<h3 class="lp-titel">' + esc(tiName) + '</h3>' +
+        '<p class="lp-sub">' + (ti.lokal ? esc(ti.lokal) + (ti.adresse ? ' · ' + esc(ti.adresse) : '') : 'Lokal nicht bekannt') + '</p>' +
+        '<span class="ti-titel">Spieler</span>' +
+        (ti.spieler && ti.spieler.length
+          ? '<ul class="ti-spieler">' + ti.spieler.map(function (p) {
+              var gast = String(p.name).charAt(0) === '*';
+              return '<li>' + esc(gast ? p.name.slice(1) : p.name) + (p.info ? '<small>' + esc(p.info) + '</small>' : '') + (gast ? '<small class="gast-marke">Gast</small>' : '') + '</li>';
+            }).join('') + '</ul>'
+          : '<p class="hint">Keine Spielerliste.</p>') +
+        '<span class="ti-titel">Spiele</span><div class="ti-spiele">' + tiSpiele.map(tiZeile).join('') + '</div>' +
+        '<button class="btn primary full" data-action="ov-cancel">Schließen</button>';
     } else if (o.type === 'hinweis') {
       html = '<h3>' + esc(o.titel || 'Geht gerade nicht') + '</h3><p>' + esc(o.text) + '</p>' +
         '<button class="btn primary full" data-action="ov-hinweis-zu">Verstanden</button>';
@@ -21470,6 +22313,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         UI.overlay = { type: 'liga-runde', termin: el.getAttribute('data-termin') };
         render();
         break;
+      case 'liga-team-info':
+        UI.overlay = { type: 'liga-team-info', team: el.getAttribute('data-team') };
+        render();
+        break;
+      case 'liga-einzel-alle': UI.ligaEinzelAlle = !UI.ligaEinzelAlle; ligaTabelleKennung = null; render(); break;
+      case 'liga-runden-alle': UI.ligaRundenAlle = !UI.ligaRundenAlle; ligaTabelleKennung = null; render(); break;
       case 'set-mode':
         S.mode = el.getAttribute('data-value');
         save(); render();

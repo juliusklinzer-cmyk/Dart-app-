@@ -6045,11 +6045,15 @@
 
   function renderLigaTabelle() {
     var tab = ligaTabelleBerechnet();
-    $('lt-stand').textContent = tab.spiele
-      ? 'Aus ' + plural(tab.spiele, 'Spiel', 'Spielen') + ' berechnet' + (tab.bis ? ', Stand ' + datumDE(tab.bis) : '') + '.'
-      : 'Noch kein Spiel gewertet.';
+    var ligaStand = window.LIGA_DATEN.stand;
+    $('lt-stand').textContent = (tab.spiele
+      ? 'Aus ' + plural(tab.spiele, 'Spiel', 'Spielen') + ' berechnet' + (tab.bis ? ', letztes am ' + datumDE(tab.bis) : '') + '.'
+      : 'Noch kein Spiel gewertet.') +
+      (ligaStand ? ' Ergebnisse der Ligaleitung (steeldart-muenchen.de), geholt am ' + datumDE(ligaStand) + '.' : '');
     /* Rechts neben der Tabelle alle Spiele je Spieltag (Ergebnisse der Ligaleitung). */
     $('lt-runden').innerHTML = ligaRundenAlleHtml();
+    renderLigaEinzel();
+    renderLigaHighlights();
     var zeilen = tab.zeilen;
     /* Rechts: unser Platz, Punkte und Legs, Abstand zur Spitze. */
     var platz = -1;
@@ -6074,12 +6078,66 @@
         '<th>Legs</th><th title="Einzel">Spiele</th><th>Pkt</th></tr></thead>' +
       '<tbody>' + zeilen.map(function (z, i) {
         var wir = z.team === LIGA.team;
-        return '<tr' + (wir ? ' class="leader"' : '') + '>' +
+        /* Ein Tipp auf die Zeile: Lokal, Spielerliste und alle Spiele des Teams. */
+        return '<tr' + (wir ? ' class="leader"' : '') + ' data-action="liga-team-info" data-team="' + esc(z.team || '') + '" role="button" tabindex="0">' +
           '<td class="rank">' + (i + 1) + '</td>' +
           '<td class="left name">' + esc(z.team || '') + '</td>' +
           zelle(z.spiele) + zelle(z.g) + zelle(z.u) + zelle(z.v) + zelle(z.legs) + zelle(z.einzel) + zelle(z.punkte) +
           '</tr>';
       }).join('') + '</tbody>';
+  }
+
+  /* Die Einzelrangliste der ganzen Liga (alle Spieler aller Teams), wie
+     sie die Ligaleitung fuehrt: aus den 16 Einzeln jedes Spielberichts
+     (LIGA_DATEN.einzelranglisteAus). Gleiche Werte = gleicher Platz. Erst
+     die ersten 15, auf Wunsch alle; unsere Leute hervorgehoben. */
+  function renderLigaEinzel() {
+    var ziel = $('lt-einzel');
+    if (!ziel) return;
+    var er = window.LIGA_DATEN.einzelranglisteAus(LIGA_SPIELTAGE);
+    if (!er.length) { ziel.innerHTML = '<p class="hint">Noch kein Spielbericht der Ligaleitung.</p>'; return; }
+    var KURZ = 15;
+    var alle = !!UI.ligaEinzelAlle || er.length <= KURZ;
+    var platz = 0, vorher = null;
+    var zeilen = er.map(function (z, i) {
+      var k = [z.punkte, z.siege - z.nied, z.lf - z.la, z.lf].join('|');
+      if (k !== vorher) { platz = i + 1; vorher = k; }
+      z.platz = platz;
+      return z;
+    });
+    var meinTeam = LIGA.team;
+    ziel.innerHTML =
+      '<table class="standings einzel"><thead><tr><th>#</th><th class="left">Spieler</th><th>Legs</th><th>Spiele</th><th>Pkt</th></tr></thead><tbody>' +
+      zeilen.slice(0, alle ? zeilen.length : KURZ).map(function (z) {
+        return '<tr' + (z.team === meinTeam ? ' class="wir"' : '') + '>' +
+          '<td class="rank">' + z.platz + '</td>' +
+          '<td class="left name">' + esc(z.name) + (z.gast ? '<small class="gast-marke">Gast</small>' : '') + '<small class="team">' + esc(z.team) + '</small></td>' +
+          '<td>' + esc(z.legs) + '</td><td>' + esc(z.spiele) + '</td><td>' + z.punkte + '</td></tr>';
+      }).join('') + '</tbody></table>' +
+      (er.length > KURZ
+        ? '<button class="btn ghost small full lt-mehr" data-action="liga-einzel-alle">' + (UI.ligaEinzelAlle ? 'Nur die ersten ' + KURZ : 'Alle ' + er.length + ' Spieler zeigen') + '</button>'
+        : '');
+  }
+
+  /* Highlights der ganzen Liga: 180er je Spieler, die kuerzesten Legs,
+     die hoechsten Finishes - aus den Spielberichten der Ligaleitung. */
+  function renderLigaHighlights() {
+    var ziel = $('lt-highlights');
+    if (!ziel) return;
+    var hl = window.LIGA_DATEN.highlightsAus(LIGA_SPIELTAGE);
+    var block = function (titel, liste, wert, leer) {
+      return '<div class="lt-hl-block"><span class="lk-crew-titel">' + titel + '</span>' +
+        (liste.length
+          ? liste.slice(0, 8).map(function (z) {
+              return '<div class="lt-hl-zeile' + (z.team === LIGA.team ? ' wir' : '') + '"><span>' + esc(z.name) +
+                (z.gast ? '<small class="gast-marke">Gast</small>' : '') + '<small>' + esc(z.team) + '</small></span><b>' + wert(z) + '</b></div>';
+            }).join('')
+          : '<p class="hint">' + leer + '</p>') + '</div>';
+    };
+    ziel.innerHTML =
+      block('180er', hl.s180, function (z) { return z.n + '×'; }, 'Noch keine 180.') +
+      block('Shortlegs', hl.shortleg, function (z) { return z.wert + ' Darts'; }, 'Noch kein Shortleg.') +
+      block('Highfinishes', hl.highfinish, function (z) { return String(z.wert); }, 'Noch kein Highfinish gemeldet.');
   }
 
   function ligaZusagenLaden() {
@@ -6299,8 +6357,25 @@
      Steht im Tabellen-Reiter unter der Tabelle und hinter "Alle Spiele"
      in der Spieltage-Liste - nicht in unserer Spieltag-Karte (Julius). */
   function ligaRundenAlleHtml() {
-    return LIGA.termine.filter(function (t) { return LIGA_SPIELTAGE[t.id] && LIGA_SPIELTAGE[t.id].length; })
-      .map(function (t) { return ligaRundeHtml(t, ligaTerminEintrag(t)); }).join('');
+    /* Seit der Spielplan der Ligaleitung komplett vorliegt, gibt es alle 18
+       Spieltage: gezeigt werden die mit Ergebnis und der naechste, der Rest
+       erst auf "Alle Spieltage" - sonst wird die Karte am Handy endlos. */
+    var mitDaten = LIGA.termine.filter(function (t) { return LIGA_SPIELTAGE[t.id] && LIGA_SPIELTAGE[t.id].length; });
+    var gespielt = function (t) { return LIGA_SPIELTAGE[t.id].some(function (sp) { return sp.gast && sp.einzel; }); };
+    var zeigen = mitDaten;
+    if (!UI.ligaRundenAlle) {
+      var naechster = false;
+      zeigen = mitDaten.filter(function (t) {
+        if (gespielt(t)) return true;
+        if (naechster) return false;
+        naechster = true; return true;
+      });
+    }
+    return zeigen.map(function (t) { return ligaRundeHtml(t, ligaTerminEintrag(t)); }).join('') +
+      (zeigen.length < mitDaten.length || UI.ligaRundenAlle
+        ? '<button class="btn ghost small full lt-mehr" data-action="liga-runden-alle">' +
+          (UI.ligaRundenAlle ? 'Nur gespielte Spieltage' : 'Alle ' + mitDaten.length + ' Spieltage zeigen') + '</button>'
+        : '');
   }
   function ligaRundeHtml(t, h) {
     var runde = LIGA_SPIELTAGE[t.id];
@@ -10290,6 +10365,39 @@
             lpSp.highlights.map(function (x) { return '<div class="lp-hl-zeile"><span>' + esc(x.wer) + ' <small>' + esc(x.team) + '</small></span><b>' + esc(x.was) + '</b></div>'; }).join('') + '</div>'
           : '') +
         '<button class="btn primary full" data-action="ov-cancel">Schließen</button>';
+    } else if (o.type === 'liga-team-info') {
+      /* Ein Team der Liga: Lokal mit Adresse, Spielerliste (TC = Team-
+         Captain) und alle Spiele der Saison; gespielte oeffnen die Einzel. */
+      var tiName = o.team;
+      var ti = (window.LIGA_DATEN.teamInfo || {})[tiName] || {};
+      var tiSpiele = [];
+      LIGA.termine.forEach(function (t) {
+        (LIGA_SPIELTAGE[t.id] || []).forEach(function (sp, i) {
+          if (!sp.gast || (sp.heim !== tiName && sp.gast !== tiName)) return;
+          tiSpiele.push({ t: t, i: i, sp: sp });
+        });
+      });
+      var tiZeile = function (x) {
+        var daheim = x.sp.heim === tiName;
+        var gegner = daheim ? x.sp.gast : x.sp.heim;
+        var tipp = x.sp.partien && x.sp.partien.length ? ' data-action="liga-partien" data-termin="' + esc(x.t.id) + '" data-i="' + x.i + '" role="button" tabindex="0"' : '';
+        var rechts = x.sp.verschoben ? '<span class="lr-erg verschoben">verschoben</span>'
+          : x.sp.einzel ? '<span class="lr-erg"><b>' + esc(x.sp.einzel) + '</b><small>' + esc(x.sp.legs || '') + '</small></span>'
+          : '<span class="lr-erg">' + (x.sp.tag ? esc(x.sp.tag.slice(8, 10) + '.' + x.sp.tag.slice(5, 7) + '.') : '–') + '</span>';
+        return '<div class="lr-zeile' + (gegner === LIGA.team ? ' wir' : '') + (tipp ? ' tap' : '') + '"' + tipp + '>' +
+          '<span class="lr-teams"><small class="ti-nr">' + x.t.nr + '</small>' + (daheim ? '' : '<i>@</i>') + esc(gegner) + '</span>' + rechts + '</div>';
+      };
+      html = '<h3 class="lp-titel">' + esc(tiName) + '</h3>' +
+        '<p class="lp-sub">' + (ti.lokal ? esc(ti.lokal) + (ti.adresse ? ' · ' + esc(ti.adresse) : '') : 'Lokal nicht bekannt') + '</p>' +
+        '<span class="ti-titel">Spieler</span>' +
+        (ti.spieler && ti.spieler.length
+          ? '<ul class="ti-spieler">' + ti.spieler.map(function (p) {
+              var gast = String(p.name).charAt(0) === '*';
+              return '<li>' + esc(gast ? p.name.slice(1) : p.name) + (p.info ? '<small>' + esc(p.info) + '</small>' : '') + (gast ? '<small class="gast-marke">Gast</small>' : '') + '</li>';
+            }).join('') + '</ul>'
+          : '<p class="hint">Keine Spielerliste.</p>') +
+        '<span class="ti-titel">Spiele</span><div class="ti-spiele">' + tiSpiele.map(tiZeile).join('') + '</div>' +
+        '<button class="btn primary full" data-action="ov-cancel">Schließen</button>';
     } else if (o.type === 'hinweis') {
       html = '<h3>' + esc(o.titel || 'Geht gerade nicht') + '</h3><p>' + esc(o.text) + '</p>' +
         '<button class="btn primary full" data-action="ov-hinweis-zu">Verstanden</button>';
@@ -11778,6 +11886,12 @@
         UI.overlay = { type: 'liga-runde', termin: el.getAttribute('data-termin') };
         render();
         break;
+      case 'liga-team-info':
+        UI.overlay = { type: 'liga-team-info', team: el.getAttribute('data-team') };
+        render();
+        break;
+      case 'liga-einzel-alle': UI.ligaEinzelAlle = !UI.ligaEinzelAlle; ligaTabelleKennung = null; render(); break;
+      case 'liga-runden-alle': UI.ligaRundenAlle = !UI.ligaRundenAlle; ligaTabelleKennung = null; render(); break;
       case 'set-mode':
         S.mode = el.getAttribute('data-value');
         save(); render();

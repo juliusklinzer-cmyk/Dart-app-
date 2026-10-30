@@ -10,7 +10,9 @@
     "test:api": "node tests/api.mjs",
     "test:engine": "node tests/checkout-engine.mjs",
     "test:konto": "node tests/konto.mjs",
-    "test:alle": "npm run test:engine && npm test && npm run test:api && npm run test:konto",
+    "test:liga": "node tests/liga-daten.mjs",
+    "liga": "node tools/liga-import.mjs --pruefen",
+    "test:alle": "npm run test:engine && npm run test:liga && npm test && npm run test:api && npm run test:konto",
     "invite": "node server/scripts/invite-hash.mjs",
     "build": "node build-single.mjs"
   },

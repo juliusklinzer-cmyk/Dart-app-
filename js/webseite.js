@@ -36,12 +36,13 @@
   function anpfiff(tag) { return new Date(tag + 'T20:00:00').getTime(); }
 
   /* ---------- Daten ---------- */
-  /* Unser Spiel eines Spieltags aus den Ergebnissen der Ligaleitung. */
+  /* Unser gespieltes Spiel eines Spieltags aus den Ergebnissen der
+     Ligaleitung - nur mit Ergebnis; der Spielplan kennt sonst jedes Spiel. */
   function unserSpiel(t) {
     var liste = SPIELTAGE[t.id] || [];
     for (var i = 0; i < liste.length; i++) {
       var g = liste[i];
-      if (g.gast && (g.heim === TEAM || g.gast === TEAM)) return g;
+      if (g.gast && g.einzel && !g.verschoben && (g.heim === TEAM || g.gast === TEAM)) return g;
     }
     return null;
   }

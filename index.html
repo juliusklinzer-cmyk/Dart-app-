@@ -450,7 +450,7 @@
        Ergebnisse, wir tragen sie ab), für alle Angemeldeten derselbe Stand. -->
   <div id="liga-tabelle" class="hidden liga-zwei breit">
     <div class="card lt-karte">
-      <div class="karte-kopf"><h2>Ligatabelle</h2><span class="hint">aus allen Ergebnissen</span></div>
+      <div class="karte-kopf"><h2>Ligatabelle</h2><span class="hint">Tipp auf ein Team: Lokal, Spieler, Spiele</span></div>
       <div class="lt-scroll"><table class="standings" id="lt-tabelle"></table></div>
     </div>
     <div class="liga-rechts">
@@ -459,6 +459,16 @@
       <div class="card lt-runden-karte">
         <div class="karte-kopf"><h2>Alle Spiele</h2><span class="hint">je Spieltag, Tipp zeigt die Einzel</span></div>
         <div class="lt-runden" id="lt-runden"></div>
+      </div>
+      <!-- Einzelrangliste und Highlights der ganzen Liga, gerechnet aus allen
+           Spielberichten der Ligaleitung (js/liga-sdm.js, tools/liga-import.mjs). -->
+      <div class="card lt-einzel-karte">
+        <div class="karte-kopf"><h2>Einzelrangliste</h2><span class="hint">alle Spieler der Liga</span></div>
+        <div class="lt-scroll" id="lt-einzel"></div>
+      </div>
+      <div class="card lt-hl-karte">
+        <div class="karte-kopf"><h2>Highlights</h2><span class="hint">180er, Shortlegs, Highfinishes</span></div>
+        <div class="lt-hl" id="lt-highlights"></div>
       </div>
       <div class="card lt-stand-karte">
         <span class="lk-crew-titel">Stand</span>
@@ -1196,6 +1206,7 @@
 <!-- "Kamera" in "Foto anpassen": am Handy und iPad oeffnet capture direkt die Kamera. -->
 <input type="file" id="avatar-kamera" accept="image/*" capture="user" class="hidden">
 
+<script src="js/liga-sdm.js"></script>
 <script src="js/liga-daten.js"></script>
 <script src="js/sound.js"></script>
 <script src="js/checkout-engine.js"></script>
