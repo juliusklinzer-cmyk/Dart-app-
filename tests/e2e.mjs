@@ -2456,6 +2456,8 @@ check('die Karte sagt, dass das Ergebnis noch nicht im Archiv ist', /Blink 180 1
 check('die Karte erklaert, was das Uebernehmen bringt', /Siege und Legs in der Liga-Statistik/.test(await text('#liga-karte .lk-hinweis')));
 await page.locator('#liga-karte [data-action="liga-nachtrag"]').click();
 check('sechs Bogen-Namen unserer Seite stehen zur Zuordnung', (await page.locator('[data-role="nachtrag-wer"]').count()) === 6);
+var ntBox = await page.locator('[data-role="nachtrag-wer"]').first().boundingBox();
+check('das Auswahlfeld ist breit genug, um den Namen zu zeigen (nicht 22 px)', !!ntBox && ntBox.width >= 160);
 check('der Dialog ist ein Vollbild (am Handy nichts abgeschnitten)', await page.evaluate(() => document.getElementById('overlay').classList.contains('vollbild')));
 check('ganzer Name und eindeutiger Vorname sind vorgeschlagen', await page.evaluate(() => {
   const z = window.__dart.ui().overlay.draft.zuordnung;

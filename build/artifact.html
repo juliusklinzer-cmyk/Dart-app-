@@ -2347,8 +2347,10 @@ button, input, select, textarea { font-family: inherit; }
   display: flex; align-items: center; gap: 10px; margin-bottom: var(--space-2);
 }
 /* Nur die Positionsnummer ist schmal – nicht der Wrapper der beiden
-   Namensfelder (.namen-paar), sonst schrumpfen Vor- und Nachname auf 22 px. */
-.liga-start .ls-zeile > span:not(.namen-paar) {
+   Namensfelder (.namen-paar) und nicht die Konto-Auswahl beim Nachtrag
+   (.nt-wer): sonst schrumpfen Felder auf 22 px und das Auswahlfeld zeigt am
+   Handy nur noch einen Pfeil ohne Namen (Julius, 30.10.). */
+.liga-start .ls-zeile > span:not(.namen-paar):not(.nt-wer) {
   width: 22px; flex: none; text-align: center; font-weight: 700; color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -2571,9 +2573,9 @@ button, input, select, textarea { font-family: inherit; }
 .liga-start .namen-paar input { width: 100%; }
 
 /* Nachtrag vom Bogen: je Bogen-Name (klein) die Konto-Auswahl darunter. */
-.liga-start .ls-zeile > .nt-wer { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.liga-start .nt-wer small { color: var(--muted); font-weight: 600; }
-.liga-start .nt-wer select { width: 100%; }
+.liga-start .ls-zeile > .nt-wer { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; text-align: left; }
+.liga-start .nt-wer small { color: var(--muted); font-weight: 600; font-size: 0.82rem; }
+.liga-start .nt-wer select { width: 100%; display: block; }
 .liga-start .nt-wer select.fehlt { border-color: var(--red); box-shadow: 0 0 0 1px var(--red); }
 .overlay-card .nt-fehler { margin: var(--space-3) 0 0; text-align: left; }
 
@@ -16119,7 +16121,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       o.fehlt = ohne.concat(doppelt);
       o.fehler = (ohne.length ? 'Noch ohne Spieler: ' + ohne.join(', ') + '. ' : '') +
         (doppelt.length ? 'Doppelt vergeben: ' + doppelt.join(', ') + '. ' : '') +
-        'Bitte jedem Namen genau einen eigenen Spieler zuordnen.';
+        'Bitte jedem Namen genau einen eigenen Spieler zuordnen – wer kein Konto hat, bekommt unten in der Liste „neu als Gast anlegen“.';
       render(); return;
     }
     var wirMap = {}, sieMap = {}, sie = [];

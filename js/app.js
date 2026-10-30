@@ -6439,7 +6439,7 @@
       o.fehlt = ohne.concat(doppelt);
       o.fehler = (ohne.length ? 'Noch ohne Spieler: ' + ohne.join(', ') + '. ' : '') +
         (doppelt.length ? 'Doppelt vergeben: ' + doppelt.join(', ') + '. ' : '') +
-        'Bitte jedem Namen genau einen eigenen Spieler zuordnen.';
+        'Bitte jedem Namen genau einen eigenen Spieler zuordnen – wer kein Konto hat, bekommt unten in der Liste „neu als Gast anlegen“.';
       render(); return;
     }
     var wirMap = {}, sieMap = {}, sie = [];
