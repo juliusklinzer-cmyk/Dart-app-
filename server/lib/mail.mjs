@@ -52,8 +52,8 @@ function dateiName(n) {
 /*
  * Jede Mail geht als Text UND als HTML raus (multipart/alternative): der
  * Text ist die Wahrheit und reicht jedem Leser, das HTML legt die Farben
- * der App darueber - schwarze Karte, roter Balken, Logo mit Wortmarke,
- * heller Knopf. Nichts wird doppelt gepflegt: textZuHtml() baut das HTML
+ * der App darueber - schwarze Karte mit blauem Schein, Logo mit Wortmarke,
+ * roter Knopf. Nichts wird doppelt gepflegt: textZuHtml() baut das HTML
  * aus dem Text. Regeln: Leerzeile = Absatz; ein Absatz, dessen erste
  * Zeile mit ":" endet, wird zum Block mit Ueberschrift und einer Zeile je
  * Eintrag; zwei Leerzeichen in so einer Zeile trennen links (Name) von
@@ -129,7 +129,7 @@ export function htmlBrief(b) {
     (b.vorschau ? '<div style="display:none;max-height:0;overflow:hidden;opacity:0;font-size:1px;line-height:1px;">' + escapeHtml(b.vorschau) + '</div>' : '') +
     '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="aussen" style="background-color:' + AUSSEN_HELL + ';"><tr><td align="center" style="padding:24px 12px 32px;">' +
     '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">' +
-    '<tr><td bgcolor="' + FARBEN.karte + '" style="' + schein + 'border:1px solid ' + FARBEN.linie + ';border-top:4px solid ' + FARBEN.akzent + ';border-radius:18px;">' +
+    '<tr><td bgcolor="' + FARBEN.karte + '" style="' + schein + 'border:1px solid ' + FARBEN.linie + ';border-radius:18px;">' +
     '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">' +
     '<tr><td style="padding:22px 24px 0;"><table role="presentation" cellpadding="0" cellspacing="0"><tr>' +
     (logo ? '<td width="48" valign="middle">' + logo + '</td>' : '') +
