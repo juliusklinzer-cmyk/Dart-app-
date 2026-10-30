@@ -97,29 +97,45 @@ export function textZuHtml(text) {
   }).join('');
 }
 
-/* b: { titel, kicker, text, knopf: { text, url } | null, vorschau, logoUrl, fuss } */
+/* b: { titel, kicker, text, knopf: { text, url } | null, vorschau, logoUrl, fuss }
+   Aussen folgt die Seite dem Postfach (hell oder dunkel: color-scheme "light
+   dark", dazu prefers-color-scheme und Outlooks data-ogsb fuer die Clients,
+   die das lesen). Die Karte ist immer schwarz wie die App - mit dem blauen
+   Schein oben rechts (radial-gradient; wer den nicht kann, sieht glattes
+   Schwarz). Logo und Wortmarke stehen in der Karte, damit sie auf hellem
+   Grund nicht verschwinden; nur der Fusstext steht aussen, in Grau, das auf
+   beidem lesbar ist. */
+const AUSSEN_HELL = '#efeaea', AUSSEN_DUNKEL = '#0d0a0b';
 export function htmlBrief(b) {
   const logo = b.logoUrl ? '<img src="' + escapeHtml(b.logoUrl) + '" width="48" height="48" alt="" style="display:block;width:48px;height:48px;border-radius:50%;border:0;">' : '';
   const knopf = b.knopf && b.knopf.url ?
     '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:6px 0 8px;"><tr><td bgcolor="' + FARBEN.akzent + '" style="border-radius:999px;' + flaeche(FARBEN.akzent) + '">' +
     '<a href="' + escapeHtml(b.knopf.url) + '" style="display:inline-block;padding:13px 24px;font-family:' + SCHRIFT + ';font-size:16px;font-weight:700;letter-spacing:.02em;color:#ffffff;text-decoration:none;border-radius:999px;">' + escapeHtml(b.knopf.text || 'Zur Dart-App') + ' &rarr;</a></td></tr></table>' : '';
   const fuss = b.fuss == null ? 'Diese Mail kommt aus der Dart-App von Blink 180. Welche Mitteilungen du bekommst, stellst du in der App ein: Profil &rarr; Konto &rarr; Benachrichtigungen.' : escapeHtml(b.fuss);
+  /* Der Schein: erst die sichere Flaeche, dann der Verlauf obendrauf - ein
+     Client, der radial-gradient nicht kennt, verwirft nur die zweite Zeile. */
+  const schein = flaeche(FARBEN.karte) +
+    'background-image:radial-gradient(560px 300px at 82% -4%, rgba(64,150,195,0.26), rgba(64,150,195,0) 64%),radial-gradient(420px 260px at 8% 104%, rgba(64,150,195,0.12), rgba(64,150,195,0) 62%),linear-gradient(' + FARBEN.karte + ',' + FARBEN.karte + ');';
   return '<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">' +
-    '<meta name="color-scheme" content="dark"><meta name="supported-color-schemes" content="dark">' +
+    '<meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark">' +
     '<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;700&display=swap" rel="stylesheet">' +
+    '<style>' +
+    ':root{color-scheme:light dark;supported-color-schemes:light dark;}' +
+    '@media (prefers-color-scheme:dark){.aussen{background-color:' + AUSSEN_DUNKEL + ' !important;background-image:linear-gradient(' + AUSSEN_DUNKEL + ',' + AUSSEN_DUNKEL + ') !important;}}' +
+    '[data-ogsb] .aussen,[data-ogsc] .aussen{background-color:' + AUSSEN_DUNKEL + ' !important;background-image:linear-gradient(' + AUSSEN_DUNKEL + ',' + AUSSEN_DUNKEL + ') !important;}' +
+    '</style>' +
     '<title>' + escapeHtml(b.titel) + '</title></head>' +
-    '<body bgcolor="' + FARBEN.bg + '" style="margin:0;padding:0;' + flaeche(FARBEN.bg) + '">' +
-    (b.vorschau ? '<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:' + FARBEN.bg + ';">' + escapeHtml(b.vorschau) + '</div>' : '') +
-    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="' + FARBEN.bg + '" style="' + flaeche(FARBEN.bg) + '"><tr><td align="center" bgcolor="' + FARBEN.bg + '" style="padding:24px 12px 32px;' + flaeche(FARBEN.bg) + '">' +
+    '<body class="aussen" bgcolor="' + AUSSEN_HELL + '" style="margin:0;padding:0;background-color:' + AUSSEN_HELL + ';">' +
+    (b.vorschau ? '<div style="display:none;max-height:0;overflow:hidden;opacity:0;font-size:1px;line-height:1px;">' + escapeHtml(b.vorschau) + '</div>' : '') +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="aussen" style="background-color:' + AUSSEN_HELL + ';"><tr><td align="center" style="padding:24px 12px 32px;">' +
     '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;">' +
-    '<tr><td style="padding:0 6px 14px;"><table role="presentation" cellpadding="0" cellspacing="0"><tr>' +
+    '<tr><td bgcolor="' + FARBEN.karte + '" style="' + schein + 'border:1px solid ' + FARBEN.linie + ';border-top:4px solid ' + FARBEN.akzent + ';border-radius:18px;">' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">' +
+    '<tr><td style="padding:22px 24px 0;"><table role="presentation" cellpadding="0" cellspacing="0"><tr>' +
     (logo ? '<td width="48" valign="middle">' + logo + '</td>' : '') +
     '<td valign="middle" style="padding-left:' + (logo ? 12 : 0) + 'px;font-family:' + TITELSCHRIFT + ';font-size:18px;line-height:1.1;letter-spacing:.08em;text-transform:uppercase;color:' + FARBEN.text + ';">Blink <span style="color:' + FARBEN.akzent + ';">180</span>' +
     '<br><span style="font-family:' + SCHRIFT + ';font-size:12px;font-weight:700;letter-spacing:.14em;color:' + FARBEN.muted + ';">Dart-App</span></td></tr></table></td></tr>' +
-    '<tr><td bgcolor="' + FARBEN.karte + '" style="' + flaeche(FARBEN.karte) + 'border:1px solid ' + FARBEN.linie + ';border-radius:18px;">' +
-    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0">' +
-    '<tr><td bgcolor="' + FARBEN.akzent + '" style="height:4px;' + flaeche(FARBEN.akzent) + 'border-radius:18px 18px 0 0;font-size:0;line-height:0;">&nbsp;</td></tr>' +
-    '<tr><td style="padding:24px 24px 14px;">' +
+    '<tr><td style="padding:26px 24px 14px;">' +
     (b.kicker ? '<p style="margin:0 0 8px;font-family:' + SCHRIFT + ';font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:' + FARBEN.akzent + ';">' + escapeHtml(b.kicker) + '</p>' : '') +
     '<h1 style="margin:0 0 18px;font-family:' + TITELSCHRIFT + ';font-size:26px;line-height:1.15;font-weight:400;letter-spacing:.01em;color:' + FARBEN.text + ';">' + escapeHtml(b.titel) + '</h1>' +
     textZuHtml(b.text) + knopf +

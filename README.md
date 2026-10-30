@@ -274,8 +274,10 @@ dem Server (`BREVO_SMTP_USER`, `BREVO_SMTP_KEY`, `DARTS_VAPID_PUBLIC`,
 Ohne sie bleibt der Server stumm, die App zeigt es im Dialog an.
 
 Jede Mail geht als Text **und** als HTML im Look der App raus (multipart/alternative):
-schwarze Karte mit rotem Balken, Logo und Wortmarke, Kicker in Rot (das Thema), Titel in
-Anton, heller Knopf („Jetzt abstimmen“, „Zum Live-Ticker“ …). Nichts wird doppelt gepflegt:
+schwarze Karte mit roter Oberkante und blauem Schein, Logo und Wortmarke, Kicker in Rot (das
+Thema), Titel in Anton, roter Knopf („Jetzt abstimmen“, „Zum Live-Ticker“ …). Außen folgt die
+Seite dem Postfach (hell oder dunkel). Outlook rechnet im Dunkelmodus Farben um, deshalb liegt
+jede Fläche zusätzlich als Farbverlauf darunter, den es nicht anfasst. Nichts wird doppelt gepflegt:
 `textZuHtml()` in `server/lib/mail.mjs` baut das HTML aus dem Text – Leerzeile = Absatz, ein
 Absatz, dessen erste Zeile mit „:“ endet, wird zur Liste mit Überschrift, zwei Leerzeichen in
 einer Listenzeile trennen Name (links) und Ergebnis (rechts, fett), Links werden anklickbar.
