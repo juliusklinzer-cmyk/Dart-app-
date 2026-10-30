@@ -153,21 +153,11 @@ html, body {
   -webkit-text-size-adjust: 100%;
 }
 
-/*
- * Das Barlicht: zwei weiche blaue Lichtquellen, oben rechts und unten links.
- * Sie liegen fest am Fenster, nicht am Inhalt – sonst würde der Schein beim
- * Scrollen mitwandern und wirkte wie ein Fleck statt wie Licht im Raum.
- */
-/* Der Schein liegt auf html, nicht auf body: body ist auf --maxw begrenzt
-   und wuerde das Licht am grossen iPad seitlich hart abschneiden. */
-html {
-  background-image:
-    radial-gradient(1000px 560px at 72% -5%, rgba(64, 150, 195, 0.16), transparent 62%),
-    radial-gradient(800px 500px at 15% 105%, rgba(64, 150, 195, 0.08), transparent 60%);
-  background-attachment: fixed;
-  background-repeat: no-repeat;
-}
-body { background: transparent; }
+/* Kein Barlicht mehr: die beiden weichen blauen Lichtkegel (oben rechts,
+   unten links, fest am Fenster) wirkten im Browser wie ein verwischter
+   Uebergang am oberen Rand (Julius, 30.10.). Der Hintergrund ist jetzt
+   ueberall glatt --bg. */
+body { background: var(--bg); }
 
 body {
   max-width: var(--maxw, 620px);
@@ -3003,13 +2993,11 @@ body { font-size: 1rem; }
    verschmelzen. */
 .overlay-card > .row-btns:not(:first-child) { margin-top: var(--space-5); }
 /* Start von Ligaspiel und Uebungsspiel: Vollbild im normalen App-Hintergrund
-   mit dem blauen Schein (wie html), keine schwebende Karte - und so dicht,
+   (glattes --bg wie die Seite), keine schwebende Karte - und so dicht,
    dass am iPhone alles in einem Bild steht. */
 .overlay.vollbild {
   background-color: var(--bg);
-  background-image:
-    radial-gradient(1000px 560px at 72% -5%, rgba(64, 150, 195, 0.16), transparent 62%),
-    radial-gradient(800px 500px at 15% 105%, rgba(64, 150, 195, 0.08), transparent 60%);
+  background-image: none;
   place-items: start center;
   /* Oben Luft lassen: am Handy sitzt sonst die Ueberschrift unter der
      Statusleiste bzw. der Kerbe. */
