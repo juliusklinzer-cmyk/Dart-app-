@@ -382,6 +382,19 @@ async function main() {
        gaelte es nicht, wenn ein Kollege den Abend mitschreibt. */
     r = await julius.ruf('PATCH', '/api/me', { dbl: 16 });
     gleich(r.daten.nutzer.dbl, 16, 'Lieblingsdoppel laesst sich setzen');
+    /* Mails: ohne Brevo-Zugangsdaten ist nichts eingerichtet - die App
+       erfaehrt das ueber /api/me, die Mail-Routen antworten 503. */
+    r = await julius.ruf('GET', '/api/me');
+    gleich(r.daten.mail, false, '/api/me sagt: kein Mailversand eingerichtet');
+    gleich(r.daten.nutzer.mailErinnerung, true, 'Erinnerungs-Mails vor dem Spieltag sind voreingestellt an');
+    r = await julius.ruf('PATCH', '/api/me', { mailErinnerung: false });
+    gleich(r.daten.nutzer.mailErinnerung, false, 'und lassen sich abschalten');
+    r = await julius.ruf('PATCH', '/api/me', { mailErinnerung: true });
+    gleich(r.daten.nutzer.mailErinnerung, true, 'und wieder einschalten');
+    r = await julius.ruf('POST', '/api/liga/bericht-mail', { an: ['liga@beispiel.de'], betreff: 'Spielbericht', text: 'Hallo' });
+    gleich(r.status, 503, 'Spielbericht per Mail: ohne eingerichteten Versand 503');
+    r = await julius.ruf('POST', '/api/mail/probe', {});
+    gleich(r.status, 503, 'Testmail: ohne eingerichteten Versand 503');
     r = await julius.ruf('GET', '/api/users');
     gleich(r.daten.nutzer.find((n) => n.id === julius_id).dbl, 16,
       'und steht auch im Kader, den die anderen sehen');

@@ -1,0 +1,209 @@
+/*
+ * Mailversand ueber Brevo (SMTP-Relay mit STARTTLS) - ohne eine einzige
+ * Abhaengigkeit, nur node:net und node:tls. Das Image bleibt damit so
+ * schlank wie bisher (siehe deploy/Dockerfile).
+ *
+ * Zwei Absender, je nach Anlass (deploy/env.example):
+ *   liga  Blink 180 <blink180@wirtschaftln.de>  Spielberichte, Erinnerungen
+ *   app   Dart-App  <dart@wirtschaftln.de>      alles Allgemeine
+ * Die Domain wirtschaftln.de ist bei Brevo authentifiziert (SPF/DKIM), die
+ * Postfaecher liegen bei Microsoft - Antworten landen also dort.
+ *
+ * Ohne BREVO_SMTP_USER/KEY ist der Mailer nicht "bereit": er verwirft
+ * jede Mail mit einer Logzeile, die API meldet 503. Nichts anderes haengt
+ * daran - die App laeuft wie vorher.
+ */
+import net from 'node:net';
+import tls from 'node:tls';
+import { randomBytes } from 'node:crypto';
+
+export const BREVO_HOST = 'smtp-relay.brevo.com';
+export const BREVO_PORT = 587;
+
+/* ---------- Adressen und Kopfzeilen ---------- */
+
+function kopfWert(s) { return String(s || '').replace(/[\r\n]+/g, ' ').trim(); }
+
+/* Umlaute im Betreff oder Anzeigenamen: RFC 2047 (Base64). */
+export function kodiereKopf(s) {
+  s = kopfWert(s);
+  return /^[\x20-\x7e]*$/.test(s) ? s : '=?UTF-8?B?' + Buffer.from(s, 'utf8').toString('base64') + '?=';
+}
+
+/* "Blink 180 <blink180@wirtschaftln.de>" oder nackte Adresse -> { name, adresse } */
+export function adresse(roh) {
+  const m = /^\s*(?:"?([^"<]*?)"?\s*)?<([^>]+)>\s*$/.exec(String(roh || ''));
+  if (m) return { name: (m[1] || '').trim(), adresse: m[2].trim().toLowerCase() };
+  return { name: '', adresse: String(roh || '').trim().toLowerCase() };
+}
+export function istAdresse(a) { return /^[^\s@<>",]+@[^\s@<>",]+\.[^\s@<>",]+$/.test(String(a || '')); }
+function kopfAdresse(roh) {
+  const a = adresse(roh);
+  return a.name ? kodiereKopf(a.name) + ' <' + a.adresse + '>' : a.adresse;
+}
+function zeilen76(b64) { return b64.replace(/.{76}/g, '$&\r\n'); }
+function dateiName(n) {
+  const s = String(n || 'Anhang').replace(/[^A-Za-z0-9._-]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 80);
+  return s || 'Anhang';
+}
+
+/* ---------- MIME ---------- */
+
+/* Immer multipart/mixed: Text (UTF-8, Base64) plus Anhaenge. Ohne HTML -
+   der Text sagt alles, und nichts muss escaped werden. */
+export function mimeBauen(m) {
+  const grenze = '=_blink180_' + Date.now().toString(36) + '_' + randomBytes(6).toString('hex');
+  const von = adresse(m.von);
+  const kopf = [
+    'From: ' + kopfAdresse(m.von),
+    'To: ' + m.an.map(kopfAdresse).join(', ')
+  ];
+  if (m.cc && m.cc.length) kopf.push('Cc: ' + m.cc.map(kopfAdresse).join(', '));
+  if (m.antwortAn) kopf.push('Reply-To: ' + kopfAdresse(m.antwortAn));
+  kopf.push(
+    'Subject: ' + kodiereKopf(m.betreff),
+    'Date: ' + new Date(m.zeit || Date.now()).toUTCString(),
+    'Message-ID: <' + (m.id || randomBytes(8).toString('hex')) + '@' + (von.adresse.split('@')[1] || 'localhost') + '>',
+    'MIME-Version: 1.0',
+    'Content-Type: multipart/mixed; boundary="' + grenze + '"'
+  );
+  const teile = [
+    'Content-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n' +
+      zeilen76(Buffer.from(String(m.text || ''), 'utf8').toString('base64'))
+  ];
+  (m.anhaenge || []).forEach(function (a) {
+    const name = dateiName(a.name);
+    teile.push(
+      'Content-Type: ' + (a.typ || 'application/octet-stream') + '; name="' + name + '"\r\n' +
+      'Content-Transfer-Encoding: base64\r\n' +
+      'Content-Disposition: attachment; filename="' + name + '"\r\n\r\n' +
+      zeilen76(Buffer.from(a.inhalt).toString('base64'))
+    );
+  });
+  return kopf.join('\r\n') + '\r\n\r\n' +
+    teile.map(function (t) { return '--' + grenze + '\r\n' + t + '\r\n'; }).join('') +
+    '--' + grenze + '--\r\n';
+}
+
+/* ---------- SMTP ---------- */
+
+/*
+ * Ein kompletter SMTP-Dialog: EHLO, STARTTLS (Pflicht, ausser starttls:
+ * false fuer den Test gegen einen eigenen Server auf localhost), AUTH LOGIN,
+ * MAIL FROM, RCPT TO, DATA, QUIT. Antworten koennen mehrzeilig sein
+ * ("250-..." bis "250 ..."). Liefert die Antwort auf DATA (Brevo nennt dort
+ * die Message-Kennung).
+ */
+export function smtpSenden(opt) {
+  return new Promise(function (resolve, reject) {
+    let sock = net.connect({ host: opt.host, port: opt.port });
+    let puffer = '';
+    let warten = null;
+    let fertig = false;
+    const timer = setTimeout(function () { ende(new Error('SMTP: Zeitueberschreitung (' + opt.host + ')')); }, opt.timeoutMs || 25000);
+    function ende(err, wert) {
+      if (fertig) return;
+      fertig = true;
+      clearTimeout(timer);
+      try { sock.end(); } catch (e) { /* egal */ }
+      if (err) reject(err); else resolve(wert);
+    }
+    function pruefe() {
+      if (!warten) return;
+      const zeilen = puffer.split('\r\n');
+      for (let i = 0; i < zeilen.length - 1; i++) {
+        if (/^\d{3}(?: |$)/.test(zeilen[i])) {
+          const block = zeilen.slice(0, i + 1);
+          puffer = zeilen.slice(i + 1).join('\r\n');
+          const w = warten;
+          warten = null;
+          w.res({ code: Number(block[i].slice(0, 3)), zeilen: block });
+          return;
+        }
+      }
+    }
+    function anhaengen(s) {
+      s.on('data', function (d) { puffer += d.toString('utf8'); pruefe(); });
+      s.on('error', function (e) { ende(e); });
+      s.on('close', function () { if (!fertig) ende(new Error('SMTP: Verbindung vorzeitig beendet')); });
+    }
+    function antwort() {
+      return new Promise(function (res, rej) { warten = { res: res, rej: rej }; pruefe(); });
+    }
+    async function befehl(text, erwartet, nenn) {
+      sock.write(text + '\r\n');
+      const a = await antwort();
+      if (erwartet.indexOf(a.code) < 0) {
+        throw new Error('SMTP ' + a.code + ' auf ' + (nenn || text.split(' ')[0]) + ': ' + a.zeilen.join(' ').slice(0, 300));
+      }
+      return a;
+    }
+    const helo = opt.name || 'darts.wirtschaftln.de';
+    (async function () {
+      anhaengen(sock);
+      await new Promise(function (r, j) { sock.once('connect', r); sock.once('error', j); });
+      const gruss = await antwort();
+      if (gruss.code !== 220) throw new Error('SMTP: unerwarteter Gruss ' + gruss.zeilen.join(' '));
+      let ehlo = await befehl('EHLO ' + helo, [250]);
+      if (opt.starttls !== false) {
+        if (!ehlo.zeilen.some(function (z) { return /STARTTLS/i.test(z); })) throw new Error('SMTP: Server bietet kein STARTTLS');
+        await befehl('STARTTLS', [220]);
+        sock.removeAllListeners('data'); sock.removeAllListeners('close'); sock.removeAllListeners('error');
+        const roh = sock;
+        sock = await new Promise(function (r, j) {
+          const t = tls.connect({ socket: roh, servername: opt.host }, function () { r(t); });
+          t.once('error', j);
+        });
+        puffer = '';
+        anhaengen(sock);
+        ehlo = await befehl('EHLO ' + helo, [250]);
+      }
+      if (opt.user) {
+        await befehl('AUTH LOGIN', [334]);
+        await befehl(Buffer.from(String(opt.user), 'utf8').toString('base64'), [334], 'AUTH (Benutzer)');
+        await befehl(Buffer.from(String(opt.pass), 'utf8').toString('base64'), [235], 'AUTH (Schluessel)');
+      }
+      await befehl('MAIL FROM:<' + opt.von + '>', [250]);
+      for (const an of opt.an) await befehl('RCPT TO:<' + an + '>', [250, 251]);
+      await befehl('DATA', [354]);
+      /* Zeilen, die mit einem Punkt beginnen, bekommen einen zweiten (Dot-Stuffing). */
+      let daten = String(opt.daten).replace(/\r?\n/g, '\r\n').replace(/^\./mg, '..');
+      if (!daten.endsWith('\r\n')) daten += '\r\n';
+      sock.write(daten);
+      const d = await befehl('.', [250], 'DATA-Ende');
+      try { await befehl('QUIT', [221]); } catch (e) { /* schon gesendet */ }
+      ende(null, { antwort: d.zeilen.join(' ') });
+    })().catch(function (e) { ende(e); });
+  });
+}
+
+/* ---------- Der Mailer der App ---------- */
+
+export function erstelleMailer(cfg) {
+  cfg = cfg || {};
+  const bereit = !!(cfg.user && cfg.key);
+  const absender = {
+    liga: cfg.absenderLiga || 'Blink 180 <blink180@wirtschaftln.de>',
+    app: cfg.absenderApp || 'Dart-App <dart@wirtschaftln.de>'
+  };
+  /* m: { von: 'liga'|'app', an: [], cc: [], antwortAn, betreff, text, anhaenge: [{ name, typ, inhalt }] } */
+  async function sende(m) {
+    const von = absender[m.von] || absender.app;
+    const an = (m.an || []).map(function (a) { return adresse(a).adresse; }).filter(istAdresse);
+    const cc = (m.cc || []).map(function (a) { return adresse(a).adresse; }).filter(istAdresse);
+    if (!an.length) throw new Error('Mail ohne Empfaenger');
+    const id = Date.now().toString(36) + '.' + randomBytes(6).toString('hex');
+    const daten = mimeBauen({ von: von, an: m.an, cc: m.cc, antwortAn: m.antwortAn || von, betreff: m.betreff, text: m.text, anhaenge: m.anhaenge, id: id });
+    if (!bereit) {
+      console.log('[mail] nicht eingerichtet - verworfen: "' + kopfWert(m.betreff) + '" an ' + an.join(', '));
+      return { gesendet: false, id: id };
+    }
+    const r = await smtpSenden({
+      host: cfg.host || BREVO_HOST, port: cfg.port || BREVO_PORT, starttls: cfg.starttls !== false, name: cfg.heloName,
+      user: cfg.user, pass: cfg.key, von: adresse(von).adresse, an: an.concat(cc), daten: daten
+    });
+    console.log('[mail] gesendet: "' + kopfWert(m.betreff) + '" an ' + an.join(', ') + ' (' + r.antwort.slice(0, 80) + ')');
+    return { gesendet: true, id: id };
+  }
+  return { bereit: bereit, sende: sende, absender: absender };
+}

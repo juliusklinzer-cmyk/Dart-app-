@@ -4890,6 +4890,12 @@
         '</div>' +
         (eigen ? '<div class="pa-kachel pa-konto"><span class="kt">Konto</span>' +
           '<div class="pa-konto-feld"><span>E-Mail</span><b>' + esc(nutzer.email || '') + '</b></div>' +
+          /* Nur mit eingerichtetem Mailversand auf dem Server (js/auth.js). */
+          (window.DartKonto && window.DartKonto.mailBereit && window.DartKonto.mailBereit()
+            ? '<label class="pa-konto-schalter"><input type="checkbox" data-action="konto-mail-erinnerung"' + (nutzer.mailErinnerung === false ? '' : ' checked') + '>' +
+              '<span>Erinnerung per Mail vor dem Spieltag, solange ich nicht abgestimmt habe</span></label>' +
+              '<button class="btn pa-btn leise" data-action="konto-mail-probe">Testmail an mich</button>'
+            : '') +
           '<div class="pa-konto-luft"></div>' +
           '<button class="btn pa-btn" data-action="konto-passwort">Passwort ändern</button>' +
           '<button class="btn pa-btn leise" data-action="konto-logout">Abmelden</button></div>' : '') +
@@ -9430,6 +9436,28 @@
     var pdf = berichtPdf();
     var liste = adressen.join(', ');
     try { if (navigator.clipboard) navigator.clipboard.writeText(liste).catch(function () {}); } catch (e) { /* egal */ }
+    /* Mit eingerichtetem Mailversand schickt der Server die Mail samt PDF
+       von blink180@ - ohne Teilen-Menue, mit Kopie ins Blink-Postfach. Geht
+       das schief, bleibt der Dialog offen und bietet das Teilen-Menue an. */
+    if (!o.ohneServer && window.DartKonto && window.DartKonto.nutzer() && window.DartKonto.mailBereit && window.DartKonto.mailBereit()) {
+      o.sendet = true; o.fehler = ''; render();
+      var leser = new FileReader();
+      leser.onload = function () {
+        var b64 = String(leser.result || '').split(',')[1] || '';
+        window.DartKonto.ruf('POST', '/api/liga/bericht-mail', { an: adressen, betreff: betreff, text: text, pdf: b64, name: name }).then(function (d) {
+          o.sendet = false;
+          fertig('Die Mail mit dem PDF ist raus, Absender ' + (d && d.von ? d.von : 'blink180@wirtschaftln.de') + ', Kopie im Blink-Postfach.');
+        }).catch(function (e) {
+          o.sendet = false;
+          o.ohneServer = true;
+          o.fehler = 'Der Server konnte die Mail nicht schicken (' + (e && e.message ? e.message : 'keine Verbindung') + '). Unten geht es über das Teilen-Menü.';
+          render();
+        });
+      };
+      leser.onerror = function () { o.sendet = false; o.fehler = 'Das PDF ließ sich nicht lesen.'; render(); };
+      leser.readAsDataURL(pdf);
+      return;
+    }
     var datei = null;
     try { datei = new File([pdf], name, { type: 'application/pdf' }); } catch (e) { datei = null; }
     var fertig = function (wie) {
@@ -10305,12 +10333,16 @@
             'data-role="bericht-mail" data-i="' + i + '" value="' + esc(a) + '" ' +
             'placeholder="' + (i === 0 ? 'Ligaleitung' : i === 1 ? 'TC Gast' : 'weitere Adresse') + '"></label>';
         }).join('') + '</div>' +
-        '<p class="hint">Beim Senden öffnet sich das Teilen-Menü mit dem PDF. Dort <b>Mail</b> wählen. ' +
-          'Die Adressen sind dann schon kopiert: ins Feld „An“ tippen und <b>Einfügen</b>.</p>' +
+        (!o.ohneServer && window.DartKonto && window.DartKonto.nutzer() && window.DartKonto.mailBereit && window.DartKonto.mailBereit()
+          ? '<p class="hint">Der Server schickt die Mail mit dem PDF von <b>blink180@wirtschaftln.de</b>, eine Kopie geht ins Blink-Postfach.</p>'
+          : '<p class="hint">Beim Senden öffnet sich das Teilen-Menü mit dem PDF. Dort <b>Mail</b> wählen. ' +
+            'Die Adressen sind dann schon kopiert: ins Feld „An“ tippen und <b>Einfügen</b>.</p>') +
         '<div class="row-btns two">' +
-          '<button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
-          '<button class="btn primary start" data-action="bericht-senden">Senden</button>' +
+          '<button class="btn ghost" data-action="ov-cancel"' + (o.sendet ? ' disabled' : '') + '>Abbrechen</button>' +
+          '<button class="btn primary start" data-action="bericht-senden"' + (o.sendet ? ' disabled' : '') + '>' + (o.sendet ? 'Sendet …' : 'Senden') + '</button>' +
         '</div>' +
+        (!o.ohneServer && window.DartKonto && window.DartKonto.nutzer() && window.DartKonto.mailBereit && window.DartKonto.mailBereit()
+          ? '<button class="btn ghost full" data-action="bericht-senden-teilen">Stattdessen über das Teilen-Menü</button>' : '') +
         '<button class="btn ghost full" data-action="bericht-ohne-senden">Abschließen ohne Senden</button>';
     } else if (o.type === 'confirm-discard-game') {
       var dgLegs = entschiedeneLegs(S.game);
@@ -12497,6 +12529,10 @@
         signaturWeiter();
         break;
       case 'bericht-senden':
+        berichtSenden();
+        break;
+      case 'bericht-senden-teilen':
+        if (UI.overlay && UI.overlay.type === 'bericht-versand') { UI.overlay.ohneServer = true; UI.overlay.fehler = ''; }
         berichtSenden();
         break;
       case 'bericht-ohne-senden':

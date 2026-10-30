@@ -552,6 +552,31 @@
         abmelden().catch(fehlerZeigen).then(function () { beschaeftigt = false; });
         break;
 
+      /* Mail-Einstellungen in der Konto-Kachel des Profils (app.js): der
+         Schalter fuer die Erinnerung vor dem Spieltag und eine Testmail.
+         Rueckmeldung als Hinweis-Dialog, denn die Konto-Meldung sieht man
+         auf der Profilseite nicht. */
+      case 'konto-mail-erinnerung':
+        ruf('PATCH', '/api/me', { mailErinnerung: !!(el && el.checked) }).then(function (daten) {
+          nutzer = daten.nutzer; merkeServer(nutzer);
+        }).catch(function (e) {
+          D.ui().overlay = { type: 'hinweis', titel: 'Nicht gespeichert', text: e && e.message ? e.message : 'Keine Verbindung zum Server.' };
+          D.render();
+        });
+        break;
+      case 'konto-mail-probe':
+        beschaeftigt = true;
+        ruf('POST', '/api/mail/probe', {}).then(function (d) {
+          beschaeftigt = false;
+          D.ui().overlay = { type: 'hinweis', titel: 'Testmail ist unterwegs', text: 'Von ' + d.von + ' an ' + d.an + '. Schau ins Postfach, notfalls in den Spam-Ordner.' };
+          D.render();
+        }).catch(function (e) {
+          beschaeftigt = false;
+          D.ui().overlay = { type: 'hinweis', titel: 'Keine Testmail', text: e && e.message ? e.message : 'Keine Verbindung zum Server.' };
+          D.render();
+        });
+        break;
+
       case 'konto-passwort':
         /* Der Knopf sitzt seit dem Profil-Umbau in der Konto-Kachel des
            Profils - die Maske wohnt weiter im Konto-Bildschirm. */
@@ -645,7 +670,9 @@
       darfBearbeiten: darfBearbeiten,
       profilGeaendert: profilGeaendert,
       emailAendern: emailAendern,
-      gesperrt: gesperrt
+      gesperrt: gesperrt,
+      /* Kann der Server Mails verschicken (Brevo eingerichtet)? */
+      mailBereit: function () { return mailBereit; }
     };
   }
 
@@ -676,6 +703,7 @@
     });
   }
 
+  var mailBereit = false;
   function start() {
     D = window.__dart;
     if (!D) return;
@@ -683,6 +711,7 @@
 
     ruf('GET', '/api/me').then(function (daten) {
       anmelden();
+      mailBereit = !!daten.mail;
       merkeServer(daten.nutzer);
       if (daten.nutzer) {
         setzeSchranke(false);

@@ -14,6 +14,7 @@ import * as limit from './lib/ratelimit.mjs';
 import * as relay from './lib/relay.mjs';
 import * as livestrom from './lib/livestrom.mjs';
 import { sendJson, sendFehler, leseCookies, leseJson, clientIp, HttpFehler, MAX_BODY_KLEIN } from './lib/http.mjs';
+import { istAdresse } from './lib/mail.mjs';
 
 const KINDS = new Set(['501', 'cricket', 'rtw', 'finisher', 'kaiwen', 'hunter', 'tournament']);
 const MAX_SPIELER = 16;
@@ -47,7 +48,8 @@ export function createApi(db, config) {
     return { id: u.id, name: u.display_name, avatar: u.avatar, hue: u.hue, dbl: u.dbl, voll: u.real_name || null, finish: finishAus(u), kuerzel: u.kuerzel || null, wurfhand: u.wurfhand || null, test: u.test ? true : false, gastKonto: u.gast_konto ? true : false };
   }
   function eigenesProfil(u) {
-    return { id: u.id, name: u.display_name, email: u.email, avatar: u.avatar, hue: u.hue, dbl: u.dbl, voll: u.real_name || null, finish: finishAus(u), kuerzel: u.kuerzel || null, wurfhand: u.wurfhand || null, seit: u.created_at, kassenwart: u.kassenwart ? true : false, gastKonto: u.gast_konto ? true : false };
+    return { id: u.id, name: u.display_name, email: u.email, avatar: u.avatar, hue: u.hue, dbl: u.dbl, voll: u.real_name || null, finish: finishAus(u), kuerzel: u.kuerzel || null, wurfhand: u.wurfhand || null, seit: u.created_at, kassenwart: u.kassenwart ? true : false, gastKonto: u.gast_konto ? true : false,
+      mailErinnerung: u.mail_erinnerung === 0 ? false : true };
   }
 
   function uid(praefix) {
@@ -397,7 +399,9 @@ export function createApi(db, config) {
 
   async function me(req, res) {
     const u = nutzer(req);
-    sendJson(res, 200, { nutzer: u ? eigenesProfil(u) : null });
+    /* mail: ob der Server Mails verschicken kann (Brevo eingerichtet) - die
+       App zeigt dann "Senden" ueber den Server und die Mail-Einstellungen. */
+    sendJson(res, 200, { nutzer: u ? eigenesProfil(u) : null, mail: !!(config.mailer && config.mailer.bereit) });
   }
 
   /* Anzeigename, Bild und Farbe aendern -- der Client hat dafuer schon eine Maske. */
@@ -424,6 +428,9 @@ export function createApi(db, config) {
     }
     db.prepare('UPDATE users SET display_name = ?, avatar = ?, hue = ?, dbl = ?, real_name = ?, finish = ?, kuerzel = ?, wurfhand = ?, email = ? WHERE id = ?')
       .run(name, avatar, hue, dbl, voll, finish, kuerzel, wurfhand, email, u.id);
+    if (body.mailErinnerung !== undefined) {
+      db.prepare('UPDATE users SET mail_erinnerung = ? WHERE id = ?').run(body.mailErinnerung ? 1 : 0, u.id);
+    }
     const frisch = db.prepare('SELECT * FROM users WHERE id = ?').get(u.id);
     sendJson(res, 200, { nutzer: eigenesProfil(frisch) });
   }
@@ -1207,6 +1214,121 @@ export function createApi(db, config) {
     sendJson(res, 200, { zusagen: ligaAlleZusagen(u) });
   }
 
+  /* ---------- Mails: Spielbericht, Testmail, Erinnerungen ---------- */
+
+  function mailer() {
+    const m = config.mailer;
+    if (!m || !m.bereit) throw new HttpFehler(503, 'Mailversand ist auf dem Server nicht eingerichtet.');
+    return m;
+  }
+
+  /* Der unterschriebene Spielbericht als PDF an Ligaleitung und Gegner -
+     vom Server, Absender blink180@, Kopie ins eigene Postfach. */
+  async function ligaBerichtMail(req, res) {
+    pruefeHerkunft(req);
+    const u = verlangeNutzer(req);
+    if (u.gast_konto) throw new HttpFehler(403, 'Mit einem Gast-Konto geht das nicht.');
+    const m = mailer();
+    const warte = limit.pruefe('bericht-mail:' + u.id, 10, 3600e3);
+    if (warte) throw new HttpFehler(429, 'Zu viele Mails. Bitte in ' + Math.ceil(warte / 60) + ' Minuten nochmal.');
+    const body = await leseJson(req, 6 * 1024 * 1024);
+    const an = Array.isArray(body.an) ? body.an.map((a) => String(a || '').trim().toLowerCase()).filter(Boolean) : [];
+    if (!an.length || an.length > 5 || !an.every(istAdresse)) throw new HttpFehler(400, 'Bitte 1 bis 5 gültige Mailadressen angeben.');
+    const betreff = String(body.betreff || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 200);
+    if (!betreff) throw new HttpFehler(400, 'Ohne Betreff geht keine Mail raus.');
+    const text = String(body.text || '').slice(0, 5000);
+    const anhaenge = [];
+    if (body.pdf !== undefined && body.pdf !== null && body.pdf !== '') {
+      if (typeof body.pdf !== 'string' || body.pdf.length > 4.2e6) throw new HttpFehler(400, 'Das PDF ist zu groß (höchstens 3 MB).');
+      const inhalt = Buffer.from(body.pdf, 'base64');
+      if (inhalt.length < 8 || inhalt.subarray(0, 5).toString('latin1') !== '%PDF-') throw new HttpFehler(400, 'Der Anhang ist kein PDF.');
+      let name = String(body.name || 'Spielbericht.pdf').replace(/[^A-Za-z0-9._-]+/g, '_').slice(0, 80);
+      if (!/\.pdf$/i.test(name)) name += '.pdf';
+      anhaenge.push({ name, typ: 'application/pdf', inhalt });
+    }
+    limit.zaehle('bericht-mail:' + u.id, 10, 3600e3);
+    await m.sende({ von: 'liga', an, cc: [m.absender.liga], betreff, text, anhaenge });
+    sendJson(res, 200, { gesendet: true, von: m.absender.liga });
+  }
+
+  /* Eine Testmail an die eigene Adresse: zeigt, ob Brevo, Absender und
+     Postfach zusammenpassen. */
+  async function mailProbe(req, res) {
+    pruefeHerkunft(req);
+    const u = verlangeNutzer(req);
+    const m = mailer();
+    const warte = limit.pruefe('mail-probe:' + u.id, 3, 3600e3);
+    if (warte) throw new HttpFehler(429, 'Drei Testmails pro Stunde reichen. Bitte in ' + Math.ceil(warte / 60) + ' Minuten nochmal.');
+    limit.zaehle('mail-probe:' + u.id, 3, 3600e3);
+    await m.sende({
+      von: 'app', an: [u.email], betreff: 'Testmail aus der Dart-App',
+      text: 'Hallo ' + u.display_name + ',\n\ndiese Mail kommt aus der Dart-App (' + (config.appUrl || 'https://darts.wirtschaftln.de') + '). ' +
+        'Wenn du sie liest, passt alles: Brevo, Absender und dein Postfach.\n\n' +
+        'Spielberichte und Erinnerungen vor dem Spieltag kommen von ' + m.absender.liga + ', alles Allgemeine von ' + m.absender.app + '.\n\nViele Grüße\nDart-App'
+    });
+    sendJson(res, 200, { gesendet: true, von: m.absender.app, an: u.email });
+  }
+
+  /* Erinnerung vor dem Spieltag an alle Ligaspieler, die noch nicht
+     abgestimmt haben: einmal in der Woche davor (Stufe 7, 4 bis 7 Tage
+     vorher) und einmal kurz davor (Stufe 2, 1 bis 3 Tage vorher). Die
+     Fenster statt eines festen Tages, damit ein Tag Serverpause nichts
+     verschluckt; mail_log sorgt dafuer, dass jede Stufe nur einmal geht.
+     Wer "Ich bin dabei" getippt hat, hat eine Zusage-Zeile und bekommt
+     nichts. heuteIso nur fuer Tests. Liefert die Zahl der Mails. */
+  async function erinnerungenSenden(heuteIso) {
+    const m = config.mailer;
+    const liga = config.liga;
+    if (!m || !m.bereit || !liga || !liga.liga || !Array.isArray(liga.liga.termine)) return 0;
+    const heute = heuteIso || new Date().toISOString().slice(0, 10);
+    const faellig = [];
+    for (const t of liga.liga.termine) {
+      if (!t.tag || !t.gast) continue;
+      const tage = Math.round((Date.parse(t.tag + 'T12:00:00Z') - Date.parse(heute + 'T12:00:00Z')) / 86400e3);
+      const stufe = tage >= 4 && tage <= 7 ? '7' : tage >= 1 && tage <= 3 ? '2' : null;
+      if (stufe) faellig.push({ t, stufe, tage });
+    }
+    if (!faellig.length) return 0;
+    const empfaenger = db.prepare(
+      "SELECT id, email, display_name FROM users WHERE status = 'aktiv' AND gast_konto = 0 AND test = 0 AND mail_erinnerung = 1 ORDER BY created_at"
+    ).all();
+    const hatZusage = db.prepare('SELECT 1 FROM liga_zusagen WHERE termin_id = ? AND user_id = ?');
+    const schon = db.prepare('SELECT 1 FROM mail_log WHERE termin_id = ? AND stufe = ? AND user_id = ?');
+    const dabei = db.prepare("SELECT COUNT(*) AS n FROM liga_zusagen z JOIN users u ON u.id = z.user_id WHERE z.termin_id = ? AND (z.status IS NULL OR z.status = 'dabei') AND u.test = 0");
+    const logge = db.prepare('INSERT OR IGNORE INTO mail_log (termin_id, stufe, user_id, sent_at) VALUES (?, ?, ?, ?)');
+    const team = liga.liga.team;
+    const soll = liga.liga.sollSpieler || 4;
+    const WT = ['So.', 'Mo.', 'Di.', 'Mi.', 'Do.', 'Fr.', 'Sa.'];
+    let n = 0;
+    for (const f of faellig) {
+      const t = f.t;
+      const daheim = t.heim === team;
+      const gegner = daheim ? t.gast : t.heim;
+      const d = new Date(t.tag + 'T12:00:00Z');
+      const datum = WT[d.getUTCDay()] + ' ' + t.tag.slice(8, 10) + '.' + t.tag.slice(5, 7) + '.' + t.tag.slice(0, 4);
+      for (const u of empfaenger) {
+        if (hatZusage.get(t.id, u.id) || schon.get(t.id, f.stufe, u.id)) continue;
+        const zahl = dabei.get(t.id).n;
+        const betreff = t.nr + '. Spieltag am ' + datum + ' gegen ' + gegner + ' – bist du dabei?';
+        const text = 'Hallo ' + u.display_name + ',\n\n' +
+          'am ' + datum + ' spielt ' + team + ' gegen ' + gegner + ' (' + (daheim ? 'Heim' : 'Auswärts') + (t.ort ? ', ' + t.ort : '') + ', 20:00 Uhr) – ' +
+          'das ist in ' + (f.tage === 1 ? 'einem Tag' : f.tage + ' Tagen') + '. Du hast noch nicht abgestimmt, ob du dabei bist.\n\n' +
+          'Bitte sag kurz Bescheid: ' + (config.appUrl || 'https://darts.wirtschaftln.de') + ' → Liga → ' + t.nr + '. Spieltag → „Ich bin dabei“.\n\n' +
+          'Bisher dabei: ' + zahl + ' von ' + soll + '.\n\n' +
+          'Wenn du nicht kannst, brauchst du nichts zu tun. Diese Erinnerung kommt höchstens zweimal je Spieltag; abschalten kannst du sie in der App unter Profil → Konto.\n\n' +
+          'Viele Grüße\n' + team;
+        try {
+          await m.sende({ von: 'liga', an: [u.email], betreff, text });
+          logge.run(t.id, f.stufe, u.id, new Date().toISOString());
+          n++;
+        } catch (e) {
+          console.error('[mail] Erinnerung an ' + u.email + ' fehlgeschlagen: ' + (e && e.message));
+        }
+      }
+    }
+    return n;
+  }
+
   /* ---------- Ligatabelle ---------- */
   /* Ein manuell gepflegter JSON-Blob: der Client baut die Tabelle, der
      Server verwahrt nur den letzten Stand. */
@@ -1793,6 +1915,8 @@ export function createApi(db, config) {
     ['GET', /^\/api\/liga\/tabelle$/, ligaTabelleHolen],
     ['PUT', /^\/api\/liga\/tabelle$/, ligaTabelleSpeichern],
     ['PUT', /^\/api\/liga\/zusagen\/([a-z0-9-]{2,40})$/, ligaZusageSetzen],
+    ['POST', /^\/api\/liga\/bericht-mail$/, ligaBerichtMail],
+    ['POST', /^\/api\/mail\/probe$/, mailProbe],
 
     ['POST', /^\/api\/tournaments$/, turnierAnlegen],
     ['GET', /^\/api\/tournaments$/, turniereListe],
@@ -1858,5 +1982,6 @@ export function createApi(db, config) {
     sendFehler(res, 404, 'Diesen Weg gibt es nicht.');
   }
   handleApi.aufraeumen = liveAufraeumen;
+  handleApi.erinnerungen = erinnerungenSenden;
   return handleApi;
 }
