@@ -104,25 +104,28 @@ neu.run('u_b', 'b@beispiel.de', 'Bert', hashPassword('pw'), 'aktiv', jetzt, 0, 0
 neu.run('u_c', 'c@beispiel.de', 'Carl', hashPassword('pw'), 'aktiv', jetzt, 0, 0, 0);   // abbestellt
 neu.run('u_d', 'd@beispiel.de', 'Dora', hashPassword('pw'), 'aktiv', jetzt, 1, 0, 1);   // Gast-Konto
 neu.run('u_e', 'e@beispiel.de', 'Emil', hashPassword('pw'), 'gesperrt', jetzt, 0, 0, 1);
+/* Carl hat die Mail abbestellt: seit der Mitteilungszentrale (018) ist das das
+   Thema "Zusage" nur als Push - und ohne Push-Abo kommt dann nichts. */
+api.mitteilungen.setze('u_c', 'zusage', 'push');
 const st04 = liga.liga.termine.find((t) => t.id === 'st04');
 db.prepare('INSERT INTO liga_zusagen (termin_id, user_id, created_at, status) VALUES (?, ?, ?, ?)').run('st04', 'u_b', jetzt, 'dabei');
 const tagMinus = (iso, tage) => new Date(Date.parse(iso + 'T12:00:00Z') - tage * 86400e3).toISOString().slice(0, 10);
 /* Der 4. Spieltag (10.11.) liegt frei: der 3. ist 15 Tage davor, der 5. 14 danach -
    so faellt kein anderer Spieltag in die Fenster. */
-let n = await api.erinnerungen(tagMinus(st04.tag, 9));
+let n = await api.mitteilungen.zusageErinnerung(tagMinus(st04.tag, 9));
 check('9 Tage vorher: nichts', n === 0 && gesendet.length === 0);
-n = await api.erinnerungen(tagMinus(st04.tag, 7));
+n = await api.mitteilungen.zusageErinnerung(tagMinus(st04.tag, 7));
 check('7 Tage vorher (Stufe 7): nur Anna - Bert hat zugesagt, Carl abbestellt, Dora Gast, Emil gesperrt', n === 1 && gesendet.length === 1 && gesendet[0].an[0] === 'a@beispiel.de' && gesendet[0].von === 'liga');
 check('die Mail nennt Spieltag, Gegner, Datum, Link und den Stand der Zusagen', /4\. Spieltag/.test(gesendet[0].betreff) && /d`Haberer 2/.test(gesendet[0].text) && /https:\/\/darts\.test/.test(gesendet[0].text) && /Bisher dabei: 1 von 4/.test(gesendet[0].text) && /Anna/.test(gesendet[0].text));
-n = await api.erinnerungen(tagMinus(st04.tag, 6));
+n = await api.mitteilungen.zusageErinnerung(tagMinus(st04.tag, 6));
 check('am naechsten Tag nicht nochmal (mail_log)', n === 0 && gesendet.length === 1);
-n = await api.erinnerungen(tagMinus(st04.tag, 2));
+n = await api.mitteilungen.zusageErinnerung(tagMinus(st04.tag, 2));
 check('2 Tage vorher (Stufe 2): Anna noch einmal', n === 1 && gesendet.length === 2 && /2 Tagen/.test(gesendet[1].text));
 db.prepare('INSERT INTO liga_zusagen (termin_id, user_id, created_at, status) VALUES (?, ?, ?, ?)').run('st05', 'u_a', jetzt, 'dabei');
-n = await api.erinnerungen(tagMinus(st04.tag, 1));
+n = await api.mitteilungen.zusageErinnerung(tagMinus(st04.tag, 1));
 check('1 Tag vorher: Stufe 2 schon erledigt, nichts mehr', n === 0);
 const ohneMailer = createApi(db, { secureCookies: false, mailer: { bereit: false }, liga: liga });
-check('ohne eingerichteten Mailer passiert nichts', (await ohneMailer.erinnerungen(tagMinus(st04.tag, 7))) === 0);
+check('ohne eingerichteten Mailer passiert nichts', (await ohneMailer.mitteilungen.zusageErinnerung(tagMinus(st04.tag, 7))) === 0);
 db.close();
 try { fs.rmSync(tmp, { recursive: true, force: true }); } catch (e) { /* egal */ }
 

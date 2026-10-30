@@ -1108,7 +1108,14 @@
       S.tour.cursor = daten.cursor;
     }
     if (typeof daten.claimFrist === 'number') S.tour.claimFrist = daten.claimFrist;
-    if (daten.zuschauer && S.tour.zuschauer !== daten.zuschauer) { S.tour.zuschauer = daten.zuschauer; neu = true; }
+    if (daten.zuschauer && S.tour.zuschauer !== daten.zuschauer) {
+      S.tour.zuschauer = daten.zuschauer; neu = true;
+      /* Anpfiff: der Ticker steht - alle, die nicht da sind, bekommen den Link. */
+      if (S.tour.liga && !S.tour.liga.uebung) {
+        mitteilungEreignis('live', { termin: S.tour.liga.terminId, nr: S.tour.liga.nr, gegner: S.tour.liga.gegner, heim: !!S.tour.liga.heim,
+          ort: ligaOrt(S.tour.liga.terminId), link: location.origin + '/live.html#' + daten.zuschauer });
+      }
+    }
     if (daten.status === 'beendet') S.tour.beendet = true;
     if (geteiltesTurnierAufraeumen()) neu = true;
     /* Frische Ergebnisse des anderen Geraets sofort ins Bild -- sonst zeigt
@@ -4890,12 +4897,8 @@
         '</div>' +
         (eigen ? '<div class="pa-kachel pa-konto"><span class="kt">Konto</span>' +
           '<div class="pa-konto-feld"><span>E-Mail</span><b>' + esc(nutzer.email || '') + '</b></div>' +
-          /* Nur mit eingerichtetem Mailversand auf dem Server (js/auth.js). */
-          (window.DartKonto && window.DartKonto.mailBereit && window.DartKonto.mailBereit()
-            ? '<label class="pa-konto-schalter"><input type="checkbox" data-action="konto-mail-erinnerung"' + (nutzer.mailErinnerung === false ? '' : ' checked') + '>' +
-              '<span>Erinnerung per Mail vor dem Spieltag, solange ich nicht abgestimmt habe</span></label>' +
-              '<button class="btn pa-btn leise" data-action="konto-mail-probe">Testmail an mich</button>'
-            : '') +
+          /* Benachrichtigungen (Push und Mail je Thema): Dialog aus js/auth.js. */
+          '<button class="btn pa-btn" data-action="konto-mitteilungen">Benachrichtigungen</button>' +
           '<div class="pa-konto-luft"></div>' +
           '<button class="btn pa-btn" data-action="konto-passwort">Passwort ändern</button>' +
           '<button class="btn pa-btn leise" data-action="konto-logout">Abmelden</button></div>' : '') +
@@ -9391,22 +9394,89 @@
   /* Bericht fertig, beide unterschrieben, verschickt: das Ligaspiel ist
      abgeschlossen. Laeuft es noch, wandert es jetzt ins Archiv (mit
      Unterschriften und Nachmeldungen); der Bericht bleibt offen sichtbar. */
+  /* ---------- Mitteilungen an den Server (Push und Mail an alle) ----------
+     Das Geraet, das etwas abschliesst, meldet es einmal; der Server baut den
+     Text, verteilt nach den Einstellungen und haelt jedes Ereignis je Konto
+     auf einmal - auch wenn zwei iPads es melden. */
+  function mitteilungEreignis(art, daten) {
+    if (!daten || !window.DartKonto || !window.DartKonto.nutzer() || !window.DartKonto.ruf) return;
+    window.DartKonto.ruf('POST', '/api/mitteilungen/ereignis', { art: art, daten: daten }).catch(function () { /* nicht kritisch */ });
+  }
+  function ligaOrt(terminId) {
+    var t = LIGA.termine.filter(function (x) { return x.id === terminId; })[0];
+    return t && t.ort ? t.ort : '';
+  }
+  /* Zusammenfassung des laufenden Ligaspiels fuer die Ergebnis-Mitteilung -
+     vor dem Archivieren, solange S.matches noch das Spiel sind. */
+  function ligaErgebnisDaten(lg) {
+    var d = ligaStandDaten();
+    if (!d) return null;
+    var stMap = stats();
+    var mod = manOfTheDay(lg.wir, stMap);
+    var einzel = S.matches.map(function (m) {
+      var score = m.kampflos ? (m.winner === m.p[0] ? legsToWin() + ':0' : '0:' + legsToWin()) + ' w.o.'
+        : m.legs.length ? legsWon(m, m.p[0]) + ':' + legsWon(m, m.p[1]) : '–:–';
+      return { h: ligaName(m.p[0]), g: ligaName(m.p[1]), score: score };
+    });
+    return {
+      termin: lg.terminId, nr: lg.nr, gegner: lg.gegner, heim: !!lg.heim, ort: ligaOrt(lg.terminId),
+      wirP: d.wirP, sieP: d.sieP, wirS: d.wirS, sieS: d.sieS, wirL: d.wirL, sieL: d.sieL,
+      mod: mod ? mod.name + ' (' + plural(mod.won, 'Sieg', 'Siege') + ')' : '',
+      hl: d.hl.map(function (z) { return String(z).replace(/<[^>]*>/g, ''); }),
+      einzel: einzel
+    };
+  }
+  /* Teamrekorde (nur Konten, nur Liga): hoechstes Finish, hoechste Aufnahme,
+     kuerzestes Leg. Beim ersten Lauf nur merken, danach jede Verbesserung
+     melden - der Server haelt jeden Rekord auf einmal. */
+  function rekordePruefen() {
+    var map = careerLiga();
+    var arten = [['highCO', 'Höchstes Finish', ''], ['highScore', 'Höchste Aufnahme', ''], ['bestLeg', 'Kürzestes Leg', 'Darts']];
+    var best = {};
+    Object.keys(map).forEach(function (k) {
+      var p = profile(k);
+      if (!p || p.gast || p.bot || p.test || p.gastKonto) return;
+      arten.forEach(function (a) {
+        var v = map[k][a[0]];
+        if (!(v > 0)) return;
+        var besser = a[0] === 'bestLeg' ? (!best[a[0]] || v < best[a[0]].wert) : (!best[a[0]] || v > best[a[0]].wert);
+        if (besser) best[a[0]] = { wert: v, name: map[k].name };
+      });
+    });
+    var alt = S.rekorde || null;
+    S.rekorde = best;
+    save();
+    if (!alt) return;
+    arten.forEach(function (a) {
+      var n = best[a[0]], o = alt[a[0]];
+      if (!n) return;
+      var neu = !o || (a[0] === 'bestLeg' ? n.wert < o.wert : n.wert > o.wert);
+      if (neu) mitteilungEreignis('rekord', { art: a[1], wert: n.wert, name: n.name, einheit: a[2] });
+    });
+  }
+
   function ligaAbschliessen(lg) {
     var q = ligaBerichtQuelle();
     if (q && q.liga === lg && !ligaAllesGespielt(q)) return;   // nie mitten im Abend
     lg.abgeschlossen = Date.now();
+    var ergebnis = S.tour && S.tour.liga === lg ? ligaErgebnisDaten(lg) : null;
     if (S.tour && S.tour.liga === lg) {
       UI.bericht = lg.terminId;
       berichtStand = null;
       archiveTournament();
     }
     save();
+    if (ergebnis) {
+      mitteilungEreignis('ergebnis', ergebnis);
+      try { rekordePruefen(); } catch (e) { /* Rekorde sind Kuer */ }
+    }
   }
 
   function berichtOhneSendenAbschliessen() {
     var q = ligaBerichtQuelle();
     if (!q) return;
     ligaAbschliessen(q.liga);
+    mitteilungEreignis('bericht-offen', { termin: q.liga.terminId, nr: q.liga.nr, gegner: q.liga.gegner });
     UI.overlay = { type: 'hinweis', titel: 'Ligaspiel abgeschlossen',
       text: 'Der Bericht ist unterschrieben, aber noch nicht verschickt – bitte selbst an die Ligaleitung schicken (Drucken → PDF). Im Spielplan steht der Spieltag als abgeschlossen.' };
     render();
@@ -10454,6 +10524,37 @@
           : '<p class="hint">Keine Spielerliste.</p>') +
         '<span class="ti-titel">Spiele</span><div class="ti-spiele">' + tiSpiele.map(tiZeile).join('') + '</div>' +
         '<button class="btn primary full" data-action="ov-cancel">Schließen</button>';
+    } else if (o.type === 'mitteilungen') {
+      /* Benachrichtigungen: je Thema Push und Mail, nur Push oder aus. Die
+         Daten laedt js/auth.js (GET /api/mitteilungen), bis dahin "laedt". */
+      var ms = window.DartKonto && window.DartKonto.mitteilungenStand ? window.DartKonto.mitteilungenStand() : null;
+      var msMail = window.DartKonto && window.DartKonto.nutzer() ? window.DartKonto.nutzer().email : '';
+      if (!ms) {
+        html = '<h3>Benachrichtigungen</h3><p class="hint">Lade …</p><button class="btn ghost full" data-action="ov-cancel">Schließen</button>';
+      } else {
+        var kanalName = { beide: 'Push + Mail', push: 'nur Push', aus: 'aus' };
+        var pushZeile = !ms.push ? 'Push ist auf dem Server nicht eingerichtet.'
+          : !ms.pushMoeglich ? 'Dieses Gerät kann keine Push-Mitteilungen – am iPhone die App vom Home-Bildschirm öffnen.'
+          : ms.pushHier ? 'Push ist auf diesem Gerät an.' : 'Push ist auf diesem Gerät noch aus.';
+        html = '<h3>Benachrichtigungen</h3>' +
+          '<p class="hint">' + esc(pushZeile) + ' ' + (ms.mail ? 'Mails gehen an ' + esc(msMail) + '.' : 'Mails sind auf dem Server nicht eingerichtet.') + '</p>' +
+          (ms.push && ms.pushMoeglich
+            ? '<button class="btn ' + (ms.pushHier ? 'ghost' : 'primary') + ' full" data-action="' + (ms.pushHier ? 'konto-push-aus' : 'konto-push-an') + '">' +
+              (ms.pushHier ? 'Push auf diesem Gerät ausschalten' : 'Push auf diesem Gerät einschalten') + '</button>'
+            : '') +
+          '<div class="mt-liste">' + (ms.themen || []).map(function (t) {
+            var k = (ms.einstellungen && ms.einstellungen[t.id]) || t.standard;
+            return '<div class="mt-zeile"><div class="mt-text"><b>' + esc(t.titel) + '</b><small>' + esc(t.text) + '</small></div>' +
+              (t.fest ? '<span class="mt-fest">immer per Mail</span>'
+                : '<div class="mt-kanaele">' + ['beide', 'push', 'aus'].map(function (kk) {
+                    return '<button class="mt-kanal' + (k === kk ? ' active' : '') + '" data-action="konto-mitteilung-kanal" data-thema="' + esc(t.id) + '" data-kanal="' + kk + '">' + kanalName[kk] + '</button>';
+                  }).join('') + '</div>') +
+              '</div>';
+          }).join('') + '</div>' +
+          (o.meldung ? '<p class="hint mt-meldung" role="status">' + esc(o.meldung) + '</p>' : '') +
+          ((ms.mail || ms.push) ? '<button class="btn hell full" data-action="konto-mitteilungen-test">Alle Beispiele an mich senden</button>' : '') +
+          '<button class="btn ghost full" data-action="ov-cancel">Schließen</button>';
+      }
     } else if (o.type === 'hinweis') {
       html = '<h3>' + esc(o.titel || 'Geht gerade nicht') + '</h3><p>' + esc(o.text) + '</p>' +
         '<button class="btn primary full" data-action="ov-hinweis-zu">Verstanden</button>';
@@ -12947,7 +13048,7 @@
   var STICKY_OVERLAYS = { 'checkout-darts': 1, 'leg-done': 1, 'match-done': 1, 'game-done': 1, 'turnier-ende': 1 };
   /* Vollbild-Dialoge haben keinen "Rand daneben" - ein Tipp auf leere Flaeche
      (oder beim Unterschreiben knapp neben das Feld) schliesst sie nicht. */
-  var VOLLBILD_DIALOGE = { 'liga-start': 1, 'uebung-start': 1, 'unterschrift': 1, 'bericht-versand': 1, 'liga-nachtrag': 1 };
+  var VOLLBILD_DIALOGE = { 'liga-start': 1, 'uebung-start': 1, 'unterschrift': 1, 'bericht-versand': 1, 'liga-nachtrag': 1, 'mitteilungen': 1 };
   /* Die Dialoge des Ligaspiels (Entwurf Okt. 2026): breite Bogen,
      linksbuendig, mit Spalten - Wechseln, Nachmelden, Beenden, Spielbericht. */
   var BOGEN_DIALOGE = { 'liga-wechsel': 1, 'liga-wechsel-zu': 1, 'nachmeldung': 1, 'liga-bericht-kurz': 1, 'finish': 1 };

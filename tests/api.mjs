@@ -395,6 +395,29 @@ async function main() {
     gleich(r.status, 503, 'Spielbericht per Mail: ohne eingerichteten Versand 503');
     r = await julius.ruf('POST', '/api/mail/probe', {});
     gleich(r.status, 503, 'Testmail: ohne eingerichteten Versand 503');
+    /* Mitteilungen: Themen, Einstellungen, Push-Abos, Ereignisse. */
+    r = await julius.ruf('GET', '/api/mitteilungen');
+    gleich(r.status, 200, 'Mitteilungen: Stand abrufbar');
+    gleich(r.daten.themen.length, 11, 'elf Themen');
+    gleich(r.daten.einstellungen.zusage, 'beide', 'Zusage: Push und Mail voreingestellt');
+    r = await julius.ruf('PUT', '/api/mitteilungen/einstellungen', { zusage: 'push', rekord: 'aus' });
+    gleich(r.daten.einstellungen.zusage + '/' + r.daten.einstellungen.rekord, 'push/aus', 'Einstellungen lassen sich setzen');
+    r = await julius.ruf('PUT', '/api/mitteilungen/einstellungen', { konto: 'aus' });
+    gleich(r.status, 400, 'Konto und Sicherheit laesst sich nicht abschalten');
+    r = await julius.ruf('POST', '/api/push/abo', { endpoint: 'https://push.example.com/abc1234567', keys: { p256dh: 'A'.repeat(87), auth: 'B'.repeat(22) } });
+    gleich(r.status, 200, 'Push-Abo angelegt');
+    gleich(r.daten.abos.length, 1, 'und steht in der Liste');
+    r = await julius.ruf('POST', '/api/push/abo', { endpoint: 'kaputt' });
+    gleich(r.status, 400, 'unbrauchbares Abo wird abgewiesen');
+    r = await julius.ruf('POST', '/api/push/abo/weg', { endpoint: 'https://push.example.com/abc1234567' });
+    gleich(r.daten.abos.length, 0, 'Abo wieder weg');
+    r = await julius.ruf('POST', '/api/mitteilungen/ereignis', { art: 'ergebnis', daten: { termin: 'st03', nr: 3, gegner: 'Voodoo Darters', wirP: 9, sieP: 7 } });
+    gleich(r.status, 200, 'Ereignis angenommen');
+    gleich(r.daten.n, 0, 'ohne Mail und Push geht nichts raus');
+    r = await julius.ruf('POST', '/api/mitteilungen/ereignis', { art: 'quatsch' });
+    gleich(r.status, 400, 'unbekanntes Ereignis 400');
+    r = await julius.ruf('POST', '/api/mitteilungen/test', {});
+    gleich(r.status, 503, 'Testversand ohne Mail und Push 503');
     r = await julius.ruf('GET', '/api/users');
     gleich(r.daten.nutzer.find((n) => n.id === julius_id).dbl, 16,
       'und steht auch im Kader, den die anderen sehen');

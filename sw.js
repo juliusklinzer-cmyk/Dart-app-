@@ -1,5 +1,5 @@
 /* Offline-Cache für die App-Shell. Bei Änderungen CACHE hochzählen. */
-var CACHE = 'dart-turnier-v164';
+var CACHE = 'dart-turnier-v165';
 var ASSETS = [
   './',
   './index.html',
@@ -100,4 +100,26 @@ self.addEventListener('fetch', function (e) {
       });
     })
   );
+});
+
+/* Push-Mitteilungen vom Server (server/lib/push.mjs): { titel, text, url,
+   tag }. Ein Tipp auf die Mitteilung holt die App nach vorn oder oeffnet
+   sie mit der genannten Adresse. */
+self.addEventListener('push', function (e) {
+  var d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (err) { d = { titel: 'Blink 180', text: e.data ? e.data.text() : '' }; }
+  e.waitUntil(self.registration.showNotification(d.titel || 'Blink 180', {
+    body: d.text || '', icon: './icons/icon-192.webp', badge: './icons/icon-192.webp',
+    tag: d.tag || undefined, data: { url: d.url || './' }
+  }));
+});
+self.addEventListener('notificationclick', function (e) {
+  e.notification.close();
+  var url = (e.notification.data && e.notification.data.url) || './';
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (fenster) {
+    for (var i = 0; i < fenster.length; i++) {
+      if ('focus' in fenster[i]) return fenster[i].focus();
+    }
+    return self.clients.openWindow(url);
+  }));
 });

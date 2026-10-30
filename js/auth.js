@@ -577,6 +577,47 @@
         });
         break;
 
+      /* Benachrichtigungen: je Thema Push und Mail, nur Push oder aus; Push
+         auf diesem Geraet ein- und ausschalten; alle Beispiele an sich
+         selbst. Der Dialog wohnt in app.js (Overlay "mitteilungen"). */
+      case 'konto-mitteilungen':
+        mitteilungenStand = null;
+        D.ui().overlay = { type: 'mitteilungen' }; D.render();
+        mitteilungenLaden().then(function () { D.render(); }).catch(function (e) {
+          D.ui().overlay = { type: 'hinweis', titel: 'Benachrichtigungen', text: e && e.message ? e.message : 'Keine Verbindung zum Server.' };
+          D.render();
+        });
+        break;
+      case 'konto-mitteilung-kanal': {
+        var kThema = el.getAttribute('data-thema'), kKanal = el.getAttribute('data-kanal');
+        var kBody = {}; kBody[kThema] = kKanal;
+        if (mitteilungenStand) { mitteilungenStand.einstellungen[kThema] = kKanal; D.render(); }
+        ruf('PUT', '/api/mitteilungen/einstellungen', kBody).then(function (d) {
+          if (mitteilungenStand) mitteilungenStand.einstellungen = d.einstellungen;
+          D.render();
+        }).catch(function (e) { mitteilungMeldung('Nicht gespeichert: ' + (e && e.message ? e.message : 'keine Verbindung')); });
+        break;
+      }
+      case 'konto-push-an':
+        beschaeftigt = true;
+        pushAnmelden().then(function () { beschaeftigt = false; return mitteilungenLaden(); })
+          .then(function () { mitteilungMeldung('Push ist an. Mitteilungen kommen jetzt auf dieses Gerät.'); })
+          .catch(function (e) { beschaeftigt = false; mitteilungMeldung(e && e.message ? e.message : 'Push ließ sich nicht einschalten.'); });
+        break;
+      case 'konto-push-aus':
+        beschaeftigt = true;
+        pushAbmelden().then(function () { beschaeftigt = false; return mitteilungenLaden(); })
+          .then(function () { mitteilungMeldung('Push ist auf diesem Gerät aus.'); })
+          .catch(function (e) { beschaeftigt = false; mitteilungMeldung(e && e.message ? e.message : 'Push ließ sich nicht ausschalten.'); });
+        break;
+      case 'konto-mitteilungen-test':
+        beschaeftigt = true;
+        ruf('POST', '/api/mitteilungen/test', {}).then(function (d) {
+          beschaeftigt = false;
+          mitteilungMeldung(d.n + ' Beispiele sind raus' + (d.mail ? ' per Mail' : '') + (d.push ? ' und als Push' : '') + '. Schau ins Postfach, notfalls in den Spam-Ordner.');
+        }).catch(function (e) { beschaeftigt = false; mitteilungMeldung(e && e.message ? e.message : 'Keine Verbindung zum Server.'); });
+        break;
+
       case 'konto-passwort':
         /* Der Knopf sitzt seit dem Profil-Umbau in der Konto-Kachel des
            Profils - die Maske wohnt weiter im Konto-Bildschirm. */
@@ -672,7 +713,9 @@
       emailAendern: emailAendern,
       gesperrt: gesperrt,
       /* Kann der Server Mails verschicken (Brevo eingerichtet)? */
-      mailBereit: function () { return mailBereit; }
+      mailBereit: function () { return mailBereit; },
+      /* Stand der Benachrichtigungen fuer den Dialog (null = laedt noch). */
+      mitteilungenStand: function () { return mitteilungenStand; }
     };
   }
 
@@ -704,6 +747,62 @@
   }
 
   var mailBereit = false;
+
+  /* ================= Benachrichtigungen (Push) ================= */
+  var mitteilungenStand = null;
+  function mitteilungMeldung(text) {
+    var o = D.ui().overlay;
+    if (o && o.type === 'mitteilungen') o.meldung = text;
+    else D.ui().overlay = { type: 'hinweis', titel: 'Benachrichtigungen', text: text };
+    D.render();
+  }
+  function b64urlZuBytes(s) {
+    var rest = (4 - s.length % 4) % 4, p = '';
+    while (p.length < rest) p += '=';
+    var b = atob((s + p).replace(/-/g, '+').replace(/_/g, '/'));
+    var a = new Uint8Array(b.length);
+    for (var i = 0; i < b.length; i++) a[i] = b.charCodeAt(i);
+    return a;
+  }
+  function pushMoeglich() {
+    return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  }
+  function pushAbo() {
+    if (!pushMoeglich()) return Promise.resolve(null);
+    return navigator.serviceWorker.ready.then(function (r) { return r.pushManager.getSubscription(); }).catch(function () { return null; });
+  }
+  function mitteilungenLaden() {
+    return Promise.all([ruf('GET', '/api/mitteilungen'), pushAbo()]).then(function (x) {
+      mitteilungenStand = x[0];
+      var abo = x[1];
+      mitteilungenStand.pushHier = !!(abo && (mitteilungenStand.abos || []).indexOf(abo.endpoint) >= 0);
+      mitteilungenStand.pushMoeglich = pushMoeglich();
+      return mitteilungenStand;
+    });
+  }
+  function pushAnmelden() {
+    if (!pushMoeglich()) {
+      return Promise.reject(new Error('Dieses Gerät kann keine Push-Mitteilungen. Am iPhone: die App vom Home-Bildschirm öffnen (ab iOS 16.4).'));
+    }
+    if (!mitteilungenStand || !mitteilungenStand.vapid) return Promise.reject(new Error('Push ist auf dem Server nicht eingerichtet.'));
+    return Notification.requestPermission().then(function (erg) {
+      if (erg !== 'granted') throw new Error('Mitteilungen wurden nicht erlaubt. Das lässt sich in den Einstellungen des Geräts ändern.');
+      return navigator.serviceWorker.ready;
+    }).then(function (reg) {
+      return reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64urlZuBytes(mitteilungenStand.vapid) });
+    }).then(function (abo) {
+      var j = abo.toJSON();
+      return ruf('POST', '/api/push/abo', { endpoint: j.endpoint, keys: j.keys, geraet: String(navigator.userAgent || '').slice(0, 120) });
+    });
+  }
+  function pushAbmelden() {
+    return pushAbo().then(function (abo) {
+      if (!abo) return null;
+      var ep = abo.endpoint;
+      return abo.unsubscribe().then(function () { return ruf('POST', '/api/push/abo/weg', { endpoint: ep }); });
+    });
+  }
+
   function start() {
     D = window.__dart;
     if (!D) return;

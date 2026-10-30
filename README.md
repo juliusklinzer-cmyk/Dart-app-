@@ -263,20 +263,32 @@ der Ligatabelle öffnet Lokal mit Adresse, Spielerliste (TC = Team-Captain) und 
 Spiele des Teams; gespielte führen zu den 16 Einzeln. Liegt unser eigenes Spiel bei
 der Ligaleitung vor, bietet die Spieltag-Karte „Spielbericht übernehmen“ von selbst an.
 
-**Mails aus der App:** Der Server verschickt über Brevo (SMTP-Relay mit STARTTLS,
-eigener kleiner Client in `server/lib/mail.mjs`, keine Abhängigkeit) mit zwei
-Absendern: **blink180@wirtschaftln.de** für alles rund um die Liga (Spielbericht als
-PDF an Ligaleitung und Gegner, Erinnerungen vor dem Spieltag) und
-**dart@wirtschaftln.de** für Allgemeines (z. B. die Testmail). Zugangsdaten nur in der
-`.env` auf dem Server (`BREVO_SMTP_USER`, `BREVO_SMTP_KEY`, siehe `deploy/env.example`);
-ohne sie zeigt die App keine Mail-Knöpfe und der Spielbericht geht wie bisher über das
-Teilen-Menü. **Erinnerung vor dem Spieltag:** Wer noch nicht „Ich bin dabei“ getippt
-hat, bekommt eine Mail in der Woche davor (4 bis 7 Tage vorher) und noch eine kurz
-davor (1 bis 3 Tage), mit Gegner, Datum, Lokal und dem Stand der Zusagen; jede Stufe
-nur einmal (`mail_log`), kein Gast- oder Testkonto. Abschalten geht in der App unter
-Profil → Konto („Erinnerung per Mail vor dem Spieltag“), dort gibt es auch „Testmail
-an mich“. Der Server prüft alle 30 Minuten (`handleApi.erinnerungen`), die Termine
-kommen aus `js/liga-daten.js` (`server/lib/liga.mjs`). Tests: `npm run test:mail`.
+**Mails und Push aus der App (Benachrichtigungen):** Der Server verschickt Mails über
+Brevo (SMTP-Relay mit STARTTLS, eigener kleiner Client in `server/lib/mail.mjs`, keine
+Abhängigkeit) und Push-Mitteilungen per Web Push (VAPID und aes128gcm selbst gerechnet in
+`server/lib/push.mjs`; der Service Worker zeigt sie an, ein Tipp öffnet die App). Zwei
+Mail-Absender: **blink180@wirtschaftln.de** für alles rund um die Liga und
+**dart@wirtschaftln.de** für Allgemeines. Zugangsdaten und Schlüssel nur in der `.env` auf
+dem Server (`BREVO_SMTP_USER`, `BREVO_SMTP_KEY`, `DARTS_VAPID_PUBLIC`,
+`DARTS_VAPID_PRIVATE` aus `node server/scripts/vapid.mjs`; siehe `deploy/env.example`).
+Ohne sie bleibt der Server stumm, die App zeigt es im Dialog an.
+
+Die **Mitteilungszentrale** (`server/lib/mitteilungen.mjs`) verteilt elf Themen, jedes je
+Konto als **Push + Mail, nur Push oder aus** (Profil → Konto → **Benachrichtigungen**; dort
+auch „Push auf diesem Gerät einschalten“ – am iPhone nur in der installierten App – und
+„Alle Beispiele an mich senden“). Voreinstellungen: Zusage zum Spieltag fehlt (7 und 2
+Tage vorher) und DiensDarts-Umfrage fehlt (3 Tage vorher, Samstag; Gast-Konten dabei):
+Push + Mail. Unser Ligaergebnis (beim Abschluss des Ligaspiels: Endstand, alle Einzel,
+Man of the Day, Highlights): Push + Mail. Spieltag morgen (an die Zugesagten, mit
+Aufstellung), Tabelle nach komplettem Spieltag der Ligaleitung, neuer Teamrekord
+(höchstes Finish, höchste Aufnahme, kürzestes Leg – erkannt auf dem Gerät, das das
+Ligaspiel abschließt), Anpfiff mit Ticker-Link, Kasse (Buchung auf dein Konto) und
+Spielbericht noch nicht verschickt (nur an den Auslöser): nur Push. Konto und Sicherheit
+(Passwort geändert, Anmeldung nach über 30 Tagen Pause): immer per Mail. Neues Mitglied:
+aus. Jede Mitteilung geht je Konto nur einmal raus (`mitteilung_log`), auch wenn zwei
+iPads dasselbe melden; die Jobs laufen alle 30 Minuten (`handleApi.erinnerungen`), die
+Termine kommen aus `js/liga-daten.js` (`server/lib/liga.mjs`). Ereignisse aus der App:
+`POST /api/mitteilungen/ereignis`. Tests: `npm run test:mail`, `npm run test:mitteilungen`.
 
 Der Reiter **Training** ist das Dienstagszuhause: **DiensDarts** – Dart-Training
 jeden Dienstag in der Bar Sehnsucht (mit Logo). Eine Umfrage fragt je Termin
@@ -1089,7 +1101,7 @@ Ausbullen und die Dialoge nach Leg und Spiel behalten ihre eigene Pfeil-Wahl.
 | `js/auth.js` | *optional:* Anmelden, Roster, Zuordnung alter Profile, Einladungs-Link |
 | `js/qr.js` | *optional:* QR-Code für den Einladungs-Link (qrcode-generator, MIT) |
 | `js/sync.js` | *optional:* Warteschlange, Hoch- und Runterladen von Spielen |
-| `server/lib/mail.mjs`, `server/lib/liga.mjs` | Mails über Brevo (eigener SMTP-Client, STARTTLS) und die Liga-Daten im Server (Erinnerungen) |
+| `server/lib/mail.mjs`, `server/lib/push.mjs`, `server/lib/mitteilungen.mjs`, `server/lib/liga.mjs` | Mails über Brevo (eigener SMTP-Client), Web Push (VAPID, aes128gcm), die Mitteilungszentrale (elf Themen, je Konto Push/Mail/aus) und die Liga-Daten im Server |
 | `js/kamera.js` | *optional:* Kamera-Kopplung – iPhone als Linse, iPad bucht (SSE) |
 | `js/linse-cv.js` | *optional:* die Erkennung selbst – Kalibrierung, Differenzbild, Wertung |
 | `server/` | *optional:* Node + SQLite – Accounts, geteilte Historie, Kamera-Relay |

@@ -15,6 +15,7 @@ import { aufraeumen } from './lib/ratelimit.mjs';
 import { aufraeumen as relayAufraeumen } from './lib/relay.mjs';
 import { createApi } from './api.mjs';
 import { erstelleMailer } from './lib/mail.mjs';
+import { erstellePush } from './lib/push.mjs';
 import { ladeLigaDaten } from './lib/liga.mjs';
 
 const SERVER_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -56,6 +57,13 @@ config.mailer = erstelleMailer({
   absenderApp: process.env.DARTS_MAIL_APP || 'Dart-App <dart@wirtschaftln.de>'
 });
 if (!config.mailer.bereit) console.warn('Hinweis: BREVO_SMTP_USER/KEY fehlen -- die App verschickt keine Mails.');
+/* Web Push (VAPID): Schluesselpaar mit node server/scripts/vapid.mjs. */
+config.push = erstellePush({
+  public: process.env.DARTS_VAPID_PUBLIC || '',
+  private: process.env.DARTS_VAPID_PRIVATE || '',
+  kontakt: 'mailto:' + (process.env.DARTS_MAIL_APP || 'dart@wirtschaftln.de').replace(/^.*<|>.*$/g, '')
+});
+if (!config.push.bereit) console.warn('Hinweis: DARTS_VAPID_PUBLIC/PRIVATE fehlen -- keine Push-Mitteilungen.');
 /* Spielplan der Liga fuer die Erinnerungen vor dem Spieltag. */
 config.liga = ladeLigaDaten(APP_DIR);
 
@@ -222,12 +230,13 @@ const putzen = setInterval(function () {
 }, 3600e3);
 putzen.unref();
 
-/* Erinnerungen vor dem Spieltag: alle 30 Minuten nachsehen (mail_log
-   verhindert Doppeltes), erstmals kurz nach dem Start. */
+/* Mitteilungs-Jobs (Zusage fehlt, DiensDarts, Spieltag morgen, Tabelle):
+   alle 30 Minuten nachsehen - das Log verhindert Doppeltes -, erstmals
+   kurz nach dem Start. */
 function erinnern() {
   handleApi.erinnerungen().then(function (n) {
-    if (n) console.log('[mail] ' + n + ' Erinnerung(en) vor dem Spieltag verschickt');
-  }).catch(function (e) { console.error('Erinnerungen fehlgeschlagen:', e); });
+    if (n) console.log('[mitteilung] ' + n + ' Mitteilung(en) verschickt');
+  }).catch(function (e) { console.error('Mitteilungs-Jobs fehlgeschlagen:', e); });
 }
 const erinnerer = setInterval(erinnern, 30 * 60e3);
 erinnerer.unref();

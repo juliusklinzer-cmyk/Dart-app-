@@ -15,6 +15,7 @@ import * as relay from './lib/relay.mjs';
 import * as livestrom from './lib/livestrom.mjs';
 import { sendJson, sendFehler, leseCookies, leseJson, clientIp, HttpFehler, MAX_BODY_KLEIN } from './lib/http.mjs';
 import { istAdresse } from './lib/mail.mjs';
+import { erstelleMitteilungen, THEMEN, KANAELE } from './lib/mitteilungen.mjs';
 
 const KINDS = new Set(['501', 'cricket', 'rtw', 'finisher', 'kaiwen', 'hunter', 'tournament']);
 const MAX_SPIELER = 16;
@@ -26,6 +27,8 @@ const BLIND = hashPassword(randomBytes(16).toString('hex'));
 
 export function createApi(db, config) {
   const secure = !!config.secureCookies;
+  /* Mitteilungen (Push und Mail je Thema): server/lib/mitteilungen.mjs. */
+  const mitteilungen = config.mitteilungen || erstelleMitteilungen({ db, mailer: config.mailer, push: config.push, liga: config.liga, appUrl: config.appUrl });
 
   /* ---------- kleine Bausteine ---------- */
 
@@ -303,6 +306,7 @@ export function createApi(db, config) {
     const token = sess.createSession(db, id);
     limit.loesche('reg:' + ip);
     const u = db.prepare('SELECT * FROM users WHERE id = ?').get(id);
+    if (!gastKonto) mitteilungen.neuesMitglied(u).catch(() => {});
     sendJson(res, 201, { nutzer: eigenesProfil(u) }, { 'Set-Cookie': sess.cookieHeader(token, secure) });
   }
 
@@ -386,6 +390,8 @@ export function createApi(db, config) {
     if (braucheNeuHash(u.password_hash)) {
       db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hashPassword(String(body.password)), u.id);
     }
+    /* Anmeldung nach mehr als 30 Tagen Pause: Sicherheitshinweis per Mail. */
+    if (u.last_login_at && Date.now() - Date.parse(u.last_login_at) > 30 * 86400e3) mitteilungen.konto(u, 'anmeldung').catch(() => {});
     db.prepare('UPDATE users SET last_login_at = ? WHERE id = ?').run(new Date().toISOString(), u.id);
     const token = sess.createSession(db, u.id);
     sendJson(res, 200, { nutzer: eigenesProfil(u) }, { 'Set-Cookie': sess.cookieHeader(token, secure) });
@@ -430,6 +436,7 @@ export function createApi(db, config) {
       .run(name, avatar, hue, dbl, voll, finish, kuerzel, wurfhand, email, u.id);
     if (body.mailErinnerung !== undefined) {
       db.prepare('UPDATE users SET mail_erinnerung = ? WHERE id = ?').run(body.mailErinnerung ? 1 : 0, u.id);
+      mitteilungen.setze(u.id, 'zusage', body.mailErinnerung ? 'beide' : 'push');
     }
     const frisch = db.prepare('SELECT * FROM users WHERE id = ?').get(u.id);
     sendJson(res, 200, { nutzer: eigenesProfil(frisch) });
@@ -448,6 +455,7 @@ export function createApi(db, config) {
     db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hashPassword(body.neu), u.id);
     // Andere Geraete abmelden: wer das Passwort aendert, will genau das.
     sess.destroyOtherSessions(db, u.id, leseCookies(req)[sess.COOKIE]);
+    mitteilungen.konto(voll, 'passwort').catch(() => {});
     sendJson(res, 200, { ok: true });
   }
 
@@ -1269,64 +1277,82 @@ export function createApi(db, config) {
     sendJson(res, 200, { gesendet: true, von: m.absender.app, an: u.email });
   }
 
-  /* Erinnerung vor dem Spieltag an alle Ligaspieler, die noch nicht
-     abgestimmt haben: einmal in der Woche davor (Stufe 7, 4 bis 7 Tage
-     vorher) und einmal kurz davor (Stufe 2, 1 bis 3 Tage vorher). Die
-     Fenster statt eines festen Tages, damit ein Tag Serverpause nichts
-     verschluckt; mail_log sorgt dafuer, dass jede Stufe nur einmal geht.
-     Wer "Ich bin dabei" getippt hat, hat eine Zusage-Zeile und bekommt
-     nichts. heuteIso nur fuer Tests. Liefert die Zahl der Mails. */
-  async function erinnerungenSenden(heuteIso) {
-    const m = config.mailer;
-    const liga = config.liga;
-    if (!m || !m.bereit || !liga || !liga.liga || !Array.isArray(liga.liga.termine)) return 0;
-    const heute = heuteIso || new Date().toISOString().slice(0, 10);
-    const faellig = [];
-    for (const t of liga.liga.termine) {
-      if (!t.tag || !t.gast) continue;
-      const tage = Math.round((Date.parse(t.tag + 'T12:00:00Z') - Date.parse(heute + 'T12:00:00Z')) / 86400e3);
-      const stufe = tage >= 4 && tage <= 7 ? '7' : tage >= 1 && tage <= 3 ? '2' : null;
-      if (stufe) faellig.push({ t, stufe, tage });
+  /* ---------- Mitteilungen: Einstellungen, Push-Abos, Ereignisse ---------- */
+
+  async function mitteilungenStand(req, res) {
+    const u = verlangeNutzer(req);
+    sendJson(res, 200, {
+      themen: THEMEN.map((t) => ({ id: t.id, titel: t.titel, text: t.text, standard: t.standard, fest: !!t.fest })),
+      einstellungen: mitteilungen.einstellungen(u.id), kanaele: KANAELE,
+      push: mitteilungen.pushBereit, mail: mitteilungen.mailBereit, vapid: mitteilungen.vapid,
+      abos: mitteilungen.abos(u.id).map((x) => x.endpoint)
+    });
+  }
+
+  async function mitteilungenEinstellen(req, res) {
+    pruefeHerkunft(req);
+    const u = verlangeNutzer(req);
+    const body = await leseJson(req, MAX_BODY_KLEIN);
+    for (const k of Object.keys(body || {})) {
+      try { mitteilungen.setze(u.id, k, String(body[k])); } catch (e) { throw new HttpFehler(400, e.message); }
     }
-    if (!faellig.length) return 0;
-    const empfaenger = db.prepare(
-      "SELECT id, email, display_name FROM users WHERE status = 'aktiv' AND gast_konto = 0 AND test = 0 AND mail_erinnerung = 1 ORDER BY created_at"
-    ).all();
-    const hatZusage = db.prepare('SELECT 1 FROM liga_zusagen WHERE termin_id = ? AND user_id = ?');
-    const schon = db.prepare('SELECT 1 FROM mail_log WHERE termin_id = ? AND stufe = ? AND user_id = ?');
-    const dabei = db.prepare("SELECT COUNT(*) AS n FROM liga_zusagen z JOIN users u ON u.id = z.user_id WHERE z.termin_id = ? AND (z.status IS NULL OR z.status = 'dabei') AND u.test = 0");
-    const logge = db.prepare('INSERT OR IGNORE INTO mail_log (termin_id, stufe, user_id, sent_at) VALUES (?, ?, ?, ?)');
-    const team = liga.liga.team;
-    const soll = liga.liga.sollSpieler || 4;
-    const WT = ['So.', 'Mo.', 'Di.', 'Mi.', 'Do.', 'Fr.', 'Sa.'];
-    let n = 0;
-    for (const f of faellig) {
-      const t = f.t;
-      const daheim = t.heim === team;
-      const gegner = daheim ? t.gast : t.heim;
-      const d = new Date(t.tag + 'T12:00:00Z');
-      const datum = WT[d.getUTCDay()] + ' ' + t.tag.slice(8, 10) + '.' + t.tag.slice(5, 7) + '.' + t.tag.slice(0, 4);
-      for (const u of empfaenger) {
-        if (hatZusage.get(t.id, u.id) || schon.get(t.id, f.stufe, u.id)) continue;
-        const zahl = dabei.get(t.id).n;
-        const betreff = t.nr + '. Spieltag am ' + datum + ' gegen ' + gegner + ' – bist du dabei?';
-        const text = 'Hallo ' + u.display_name + ',\n\n' +
-          'am ' + datum + ' spielt ' + team + ' gegen ' + gegner + ' (' + (daheim ? 'Heim' : 'Auswärts') + (t.ort ? ', ' + t.ort : '') + ', 20:00 Uhr) – ' +
-          'das ist in ' + (f.tage === 1 ? 'einem Tag' : f.tage + ' Tagen') + '. Du hast noch nicht abgestimmt, ob du dabei bist.\n\n' +
-          'Bitte sag kurz Bescheid: ' + (config.appUrl || 'https://darts.wirtschaftln.de') + ' → Liga → ' + t.nr + '. Spieltag → „Ich bin dabei“.\n\n' +
-          'Bisher dabei: ' + zahl + ' von ' + soll + '.\n\n' +
-          'Wenn du nicht kannst, brauchst du nichts zu tun. Diese Erinnerung kommt höchstens zweimal je Spieltag; abschalten kannst du sie in der App unter Profil → Konto.\n\n' +
-          'Viele Grüße\n' + team;
-        try {
-          await m.sende({ von: 'liga', an: [u.email], betreff, text });
-          logge.run(t.id, f.stufe, u.id, new Date().toISOString());
-          n++;
-        } catch (e) {
-          console.error('[mail] Erinnerung an ' + u.email + ' fehlgeschlagen: ' + (e && e.message));
-        }
-      }
+    sendJson(res, 200, { einstellungen: mitteilungen.einstellungen(u.id) });
+  }
+
+  /* Ein Push-Abo dieses Geraets (PushSubscription.toJSON()). Hoechstens zehn
+     je Konto, die aeltesten fliegen raus. */
+  async function pushAboAnlegen(req, res) {
+    pruefeHerkunft(req);
+    const u = verlangeNutzer(req);
+    const body = await leseJson(req, MAX_BODY_KLEIN);
+    const endpoint = String(body.endpoint || '');
+    const keys = body.keys && typeof body.keys === 'object' ? body.keys : {};
+    const b64 = /^[A-Za-z0-9_-]{10,200}$/;
+    if (!/^https:\/\/[^\s"'<>]{10,1000}$/.test(endpoint) || !b64.test(String(keys.p256dh || '')) || !b64.test(String(keys.auth || ''))) {
+      throw new HttpFehler(400, 'Das Push-Abo ist unbrauchbar.');
     }
-    return n;
+    db.prepare(
+      'INSERT INTO push_abos (user_id, endpoint, p256dh, auth, geraet, created_at) VALUES (?, ?, ?, ?, ?, ?) ' +
+      'ON CONFLICT (endpoint) DO UPDATE SET user_id = excluded.user_id, p256dh = excluded.p256dh, auth = excluded.auth, geraet = excluded.geraet'
+    ).run(u.id, endpoint, String(keys.p256dh), String(keys.auth), String(body.geraet || '').slice(0, 120) || null, new Date().toISOString());
+    db.prepare('DELETE FROM push_abos WHERE user_id = ? AND id NOT IN (SELECT id FROM push_abos WHERE user_id = ? ORDER BY id DESC LIMIT 10)').run(u.id, u.id);
+    sendJson(res, 200, { ok: true, abos: mitteilungen.abos(u.id).map((x) => x.endpoint) });
+  }
+
+  async function pushAboLoeschen(req, res) {
+    pruefeHerkunft(req);
+    const u = verlangeNutzer(req);
+    const body = await leseJson(req, MAX_BODY_KLEIN);
+    db.prepare('DELETE FROM push_abos WHERE user_id = ? AND endpoint = ?').run(u.id, String(body.endpoint || ''));
+    sendJson(res, 200, { ok: true, abos: mitteilungen.abos(u.id).map((x) => x.endpoint) });
+  }
+
+  /* Ereignis aus der App (Ergebnis, Anpfiff, Rekord, Bericht offen): der
+     Server baut den Text und verteilt; der Schluessel haelt jedes Ereignis
+     je Konto auf einmal, auch wenn zwei iPads es melden. */
+  async function mitteilungEreignis(req, res) {
+    pruefeHerkunft(req);
+    const u = verlangeNutzer(req);
+    if (u.gast_konto) throw new HttpFehler(403, 'Mit einem Gast-Konto geht das nicht.');
+    const warte = limit.pruefe('ereignis:' + u.id, 30, 3600e3);
+    if (warte) throw new HttpFehler(429, 'Zu viele Mitteilungen. Bitte spaeter nochmal.');
+    limit.zaehle('ereignis:' + u.id, 30, 3600e3);
+    const body = await leseJson(req, 64 * 1024);
+    let n;
+    try { n = await mitteilungen.ereignis(u, String(body.art || ''), body.daten); } catch (e) { throw new HttpFehler(400, e.message); }
+    sendJson(res, 200, { ok: true, n });
+  }
+
+  /* Jedes Thema einmal als Beispiel an das eigene Konto - zum Ansehen. */
+  async function mitteilungenTest(req, res) {
+    pruefeHerkunft(req);
+    const u = verlangeNutzer(req);
+    if (!mitteilungen.mailBereit && !mitteilungen.pushBereit) throw new HttpFehler(503, 'Weder Mail noch Push sind auf dem Server eingerichtet.');
+    const warte = limit.pruefe('mitteilungen-test:' + u.id, 2, 3600e3);
+    if (warte) throw new HttpFehler(429, 'Zwei Testläufe pro Stunde reichen. Bitte in ' + Math.ceil(warte / 60) + ' Minuten nochmal.');
+    limit.zaehle('mitteilungen-test:' + u.id, 2, 3600e3);
+    const n = await mitteilungen.testAlle(u);
+    sendJson(res, 200, { ok: true, n, mail: mitteilungen.mailBereit, push: mitteilungen.pushBereit && mitteilungen.abos(u.id).length > 0 });
   }
 
   /* ---------- Ligatabelle ---------- */
@@ -1473,6 +1499,8 @@ export function createApi(db, config) {
     const b = pruefeBuchung(await leseJson(req), u);
     db.prepare('INSERT INTO kasse (user_id, betrag, text, datum, kategorie, mitglied, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
       .run(u.id, b.betrag, b.text, b.datum, b.kategorie, b.mitglied, new Date().toISOString());
+    /* Buchung auf das Konto eines anderen: der erfaehrt es (Thema Kasse). */
+    if (b.mitglied && b.mitglied !== u.id) mitteilungen.kasseBuchung(b.mitglied, b, u.display_name).catch(() => {});
     return kasseHolen(req, res);
   }
 
@@ -1917,6 +1945,12 @@ export function createApi(db, config) {
     ['PUT', /^\/api\/liga\/zusagen\/([a-z0-9-]{2,40})$/, ligaZusageSetzen],
     ['POST', /^\/api\/liga\/bericht-mail$/, ligaBerichtMail],
     ['POST', /^\/api\/mail\/probe$/, mailProbe],
+    ['GET', /^\/api\/mitteilungen$/, mitteilungenStand],
+    ['PUT', /^\/api\/mitteilungen\/einstellungen$/, mitteilungenEinstellen],
+    ['POST', /^\/api\/mitteilungen\/ereignis$/, mitteilungEreignis],
+    ['POST', /^\/api\/mitteilungen\/test$/, mitteilungenTest],
+    ['POST', /^\/api\/push\/abo$/, pushAboAnlegen],
+    ['POST', /^\/api\/push\/abo\/weg$/, pushAboLoeschen],
 
     ['POST', /^\/api\/tournaments$/, turnierAnlegen],
     ['GET', /^\/api\/tournaments$/, turniereListe],
@@ -1982,6 +2016,7 @@ export function createApi(db, config) {
     sendFehler(res, 404, 'Diesen Weg gibt es nicht.');
   }
   handleApi.aufraeumen = liveAufraeumen;
-  handleApi.erinnerungen = erinnerungenSenden;
+  handleApi.erinnerungen = (heute) => mitteilungen.jobs(heute);
+  handleApi.mitteilungen = mitteilungen;
   return handleApi;
 }
