@@ -1,5 +1,5 @@
 /* Offline-Cache für die App-Shell. Bei Änderungen CACHE hochzählen. */
-var CACHE = 'dart-turnier-v167';
+var CACHE = 'dart-turnier-v168';
 var ASSETS = [
   './',
   './index.html',

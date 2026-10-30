@@ -610,13 +610,6 @@
           .then(function () { mitteilungMeldung('Push ist auf diesem Gerät aus.'); })
           .catch(function (e) { beschaeftigt = false; mitteilungMeldung(e && e.message ? e.message : 'Push ließ sich nicht ausschalten.'); });
         break;
-      case 'konto-mitteilungen-test':
-        beschaeftigt = true;
-        ruf('POST', '/api/mitteilungen/test', {}).then(function (d) {
-          beschaeftigt = false;
-          mitteilungMeldung(d.n + ' Beispiele sind raus' + (d.mail ? ' per Mail' : '') + (d.push ? ' und als Push' : '') + '. Schau ins Postfach, notfalls in den Spam-Ordner.');
-        }).catch(function (e) { beschaeftigt = false; mitteilungMeldung(e && e.message ? e.message : 'Keine Verbindung zum Server.'); });
-        break;
 
       case 'konto-passwort':
         /* Der Knopf sitzt seit dem Profil-Umbau in der Konto-Kachel des

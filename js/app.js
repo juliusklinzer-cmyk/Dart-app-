@@ -10552,7 +10552,6 @@
               '</div>';
           }).join('') + '</div>' +
           (o.meldung ? '<p class="hint mt-meldung" role="status">' + esc(o.meldung) + '</p>' : '') +
-          ((ms.mail || ms.push) ? '<button class="btn hell full" data-action="konto-mitteilungen-test">Alle Beispiele an mich senden</button>' : '') +
           '<button class="btn ghost full" data-action="ov-cancel">Schließen</button>';
       }
     } else if (o.type === 'hinweis') {

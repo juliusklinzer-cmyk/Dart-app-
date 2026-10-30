@@ -1347,18 +1347,6 @@ export function createApi(db, config) {
     sendJson(res, 200, { ok: true, n });
   }
 
-  /* Jedes Thema einmal als Beispiel an das eigene Konto - zum Ansehen. */
-  async function mitteilungenTest(req, res) {
-    pruefeHerkunft(req);
-    const u = verlangeNutzer(req);
-    if (!mitteilungen.mailBereit && !mitteilungen.pushBereit) throw new HttpFehler(503, 'Weder Mail noch Push sind auf dem Server eingerichtet.');
-    const warte = limit.pruefe('mitteilungen-test:' + u.id, 2, 3600e3);
-    if (warte) throw new HttpFehler(429, 'Zwei Testläufe pro Stunde reichen. Bitte in ' + Math.ceil(warte / 60) + ' Minuten nochmal.');
-    limit.zaehle('mitteilungen-test:' + u.id, 2, 3600e3);
-    const n = await mitteilungen.testAlle(u);
-    sendJson(res, 200, { ok: true, n, mail: mitteilungen.mailBereit, push: mitteilungen.pushBereit && mitteilungen.abos(u.id).length > 0 });
-  }
-
   /* ---------- Ligatabelle ---------- */
   /* Ein manuell gepflegter JSON-Blob: der Client baut die Tabelle, der
      Server verwahrt nur den letzten Stand. */
@@ -1952,7 +1940,6 @@ export function createApi(db, config) {
     ['GET', /^\/api\/mitteilungen$/, mitteilungenStand],
     ['PUT', /^\/api\/mitteilungen\/einstellungen$/, mitteilungenEinstellen],
     ['POST', /^\/api\/mitteilungen\/ereignis$/, mitteilungEreignis],
-    ['POST', /^\/api\/mitteilungen\/test$/, mitteilungenTest],
     ['POST', /^\/api\/push\/abo$/, pushAboAnlegen],
     ['POST', /^\/api\/push\/abo\/weg$/, pushAboLoeschen],
 

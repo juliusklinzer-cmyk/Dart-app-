@@ -416,8 +416,6 @@ async function main() {
     gleich(r.daten.n, 0, 'ohne Mail und Push geht nichts raus');
     r = await julius.ruf('POST', '/api/mitteilungen/ereignis', { art: 'quatsch' });
     gleich(r.status, 400, 'unbekanntes Ereignis 400');
-    r = await julius.ruf('POST', '/api/mitteilungen/test', {});
-    gleich(r.status, 503, 'Testversand ohne Mail und Push 503');
     r = await julius.ruf('GET', '/api/users');
     gleich(r.daten.nutzer.find((n) => n.id === julius_id).dbl, 16,
       'und steht auch im Kader, den die anderen sehen');

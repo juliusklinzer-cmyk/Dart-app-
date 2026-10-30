@@ -285,8 +285,8 @@ Der Text bleibt die Wahrheit und reicht jedem Leser, der HTML abschaltet.
 
 Die **Mitteilungszentrale** (`server/lib/mitteilungen.mjs`) verteilt elf Themen, jedes je
 Konto als **Push + Mail, nur Push oder aus** (Profil → Konto → **Benachrichtigungen**; dort
-auch „Push auf diesem Gerät einschalten“ – am iPhone nur in der installierten App – und
-„Alle Beispiele an mich senden“). Voreinstellungen: Zusage zum Spieltag fehlt (7 und 2
+auch „Push auf diesem Gerät einschalten“ – am iPhone nur in der installierten App).
+Voreinstellungen: Zusage zum Spieltag fehlt (7 und 2
 Tage vorher) und DiensDarts-Umfrage fehlt (3 Tage vorher, Samstag; Gast-Konten dabei):
 Push + Mail. Unser Ligaergebnis (beim Abschluss des Ligaspiels: Endstand, alle Einzel,
 Man of the Day, Highlights): Push + Mail. Spieltag morgen (an die Zugesagten, mit
@@ -298,7 +298,10 @@ Spielbericht noch nicht verschickt (nur an den Auslöser): nur Push. Konto und S
 aus. Jede Mitteilung geht je Konto nur einmal raus (`mitteilung_log`), auch wenn zwei
 iPads dasselbe melden; die Jobs laufen alle 30 Minuten (`handleApi.erinnerungen`), die
 Termine kommen aus `js/liga-daten.js` (`server/lib/liga.mjs`). Ereignisse aus der App:
-`POST /api/mitteilungen/ereignis`. Tests: `npm run test:mail`, `npm run test:mitteilungen`.
+`POST /api/mitteilungen/ereignis`. Alle elf Themen einmal als Beispiel an ein Konto (Mail und
+Push, zum Ansehen des Designs): `node server/scripts/beispiele.mjs <e-mail>` auf dem Server –
+nur für Julius, einen Knopf dafür gibt es in der App nicht mehr. Tests: `npm run test:mail`,
+`npm run test:mitteilungen`.
 
 Der Reiter **Training** ist das Dienstagszuhause: **DiensDarts** – Dart-Training
 jeden Dienstag in der Bar Sehnsucht (mit Logo). Eine Umfrage fragt je Termin
@@ -1332,6 +1335,7 @@ Für Aufräumarbeiten am echten Server gibt es drei Verwaltungs-Skripte
 (im Container per `docker compose exec darts node …` aufrufen):
 
 ```bash
+node server/scripts/beispiele.mjs <e-mail>                     # alle Mitteilungs-Themen einmal als Beispiel (Mail + Push)
 node server/scripts/konto-anlegen.mjs <e-mail> <anzeigename> <passwort>
 node server/scripts/spiel-zurueckziehen.mjs <spiel-id> [...]   # Soft-Delete, Geräte räumen nach
 node server/scripts/konto-loeschen.mjs <e-mail>                # verweigert bei aktiven Spielen

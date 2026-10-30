@@ -14,9 +14,7 @@ import { sweepExpired } from './lib/session.mjs';
 import { aufraeumen } from './lib/ratelimit.mjs';
 import { aufraeumen as relayAufraeumen } from './lib/relay.mjs';
 import { createApi } from './api.mjs';
-import { erstelleMailer } from './lib/mail.mjs';
-import { erstellePush } from './lib/push.mjs';
-import { ladeLigaDaten } from './lib/liga.mjs';
+import { erstelleDienste } from './lib/dienste.mjs';
 
 const SERVER_DIR = path.dirname(fileURLToPath(import.meta.url));
 const APP_DIR = path.dirname(SERVER_DIR); // Repo-Wurzel: index.html, css/, js/
@@ -42,31 +40,11 @@ const config = {
   kontingentSpiele: Number(process.env.DARTS_KONTINGENT_SPIELE) || 0,
   /* Nur fuer Tests: Frist, nach der ein Anspruch ohne Lebenszeichen verfaellt. */
   claimFristMs: Number(process.env.DARTS_CLAIM_FRIST_MS) || 0,
-  kontingentLive: Number(process.env.DARTS_KONTINGENT_LIVE) || 0,
-  // Adresse der App in Mails (Erinnerungen, Testmail).
-  appUrl: process.env.DARTS_APP_URL || 'https://darts.wirtschaftln.de'
+  kontingentLive: Number(process.env.DARTS_KONTINGENT_LIVE) || 0
 };
 
-/* Mails ueber Brevo (SMTP-Relay, STARTTLS): ohne Zugangsdaten bleibt der
-   Mailer stumm, die App zeigt dann keine Mail-Knoepfe. Absender je Anlass
-   (Liga: Spielberichte und Erinnerungen; App: alles Allgemeine). */
-config.mailer = erstelleMailer({
-  user: process.env.BREVO_SMTP_USER || '',
-  key: process.env.BREVO_SMTP_KEY || '',
-  absenderLiga: process.env.DARTS_MAIL_LIGA || 'Blink 180 <blink180@wirtschaftln.de>',
-  absenderApp: process.env.DARTS_MAIL_APP || 'Dart-App <dart@wirtschaftln.de>',
-  appUrl: config.appUrl
-});
-if (!config.mailer.bereit) console.warn('Hinweis: BREVO_SMTP_USER/KEY fehlen -- die App verschickt keine Mails.');
-/* Web Push (VAPID): Schluesselpaar mit node server/scripts/vapid.mjs. */
-config.push = erstellePush({
-  public: process.env.DARTS_VAPID_PUBLIC || '',
-  private: process.env.DARTS_VAPID_PRIVATE || '',
-  kontakt: 'mailto:' + (process.env.DARTS_MAIL_APP || 'dart@wirtschaftln.de').replace(/^.*<|>.*$/g, '')
-});
-if (!config.push.bereit) console.warn('Hinweis: DARTS_VAPID_PUBLIC/PRIVATE fehlen -- keine Push-Mitteilungen.');
-/* Spielplan der Liga fuer die Erinnerungen vor dem Spieltag. */
-config.liga = ladeLigaDaten(APP_DIR);
+/* Mailer, Push und Spielplan - aus der Umgebung, siehe lib/dienste.mjs. */
+Object.assign(config, erstelleDienste(process.env, APP_DIR));
 
 if (!config.inviteHash) {
   console.warn('WARNUNG: DARTS_INVITE_HASH ist nicht gesetzt -- niemand kann sich registrieren.');
