@@ -31,6 +31,12 @@ export const THEMEN = [
 export const KANAELE = ['beide', 'push', 'aus'];
 const THEMA = {};
 THEMEN.forEach(function (t) { THEMA[t.id] = t; });
+/* Beschriftung des Knopfs in der HTML-Mail je Thema (Ziel: push.url, sonst die App). */
+const KNOPF = {
+  zusage: 'Jetzt abstimmen', training: 'Zur Umfrage', 'spieltag-morgen': 'Zum Spieltag', ergebnis: 'Spielbericht und Statistik',
+  tabelle: 'Zur Tabelle', rekord: 'Alle Rekorde', live: 'Zum Live-Ticker', kasse: 'Zum Kassenbuch', 'bericht-offen': 'Spielbericht senden',
+  konto: 'Zur Dart-App', mitglied: 'Zur Dart-App'
+};
 
 const WT = ['So.', 'Mo.', 'Di.', 'Mi.', 'Do.', 'Fr.', 'Sa.'];
 function datumDe(iso) {
@@ -102,7 +108,12 @@ export function erstelleMitteilungen(opt) {
     let ok = false;
     if ((k === 'beide' || k === 'mail') && mailer.bereit && inhalt.betreff) {
       try {
-        await mailer.sende({ von: t.von, an: [u.email], betreff: inhalt.betreff, text: inhalt.text, anhaenge: inhalt.anhaenge });
+        await mailer.sende({
+          von: t.von, an: [u.email], betreff: inhalt.betreff, text: inhalt.text, anhaenge: inhalt.anhaenge,
+          titel: String(inhalt.betreff).replace(/^\[Test\]\s*/, ''), kicker: (erzwinge ? 'Beispiel · ' : '') + t.titel,
+          knopf: { text: KNOPF[themaId] || 'Zur Dart-App', url: (inhalt.push && inhalt.push.url) || appUrl },
+          vorschau: inhalt.push ? inhalt.push.text : ''
+        });
         ok = true;
       } catch (e) {
         console.error('[mitteilung] Mail "' + themaId + '" an ' + u.email + ' fehlgeschlagen: ' + (e && e.message));
@@ -233,9 +244,9 @@ export function erstelleMitteilungen(opt) {
       if (!letzter || tageBis(letzter, heute) < 0 || tageBis(letzter, heute) > 10) continue;
       const tab = liga.tabelleAus(liga.spieltage, liga.teams).zeilen;
       const platz = tab.findIndex((z) => z.team === team) + 1;
-      const zeilen = tab.map((z, i) => (i + 1) + '. ' + z.team + ' – ' + z.punkte + ' Pkt (' + z.einzel + ' Spiele, ' + z.legs + ' Legs)').join('\n');
+      const zeilen = tab.map((z, i) => (i + 1) + '. ' + z.team + '  ' + z.punkte + ' Pkt (' + z.einzel + ' Spiele, ' + z.legs + ' Legs)').join('\n');
       const unser = gespielt.find((s) => s.heim === team || s.gast === team);
-      const ergebnisse = gespielt.map((s) => s.heim + ' – ' + s.gast + ' ' + s.einzel + (s.legs ? ' (' + s.legs + ' Legs)' : '')).join('\n');
+      const ergebnisse = gespielt.map((s) => s.heim + ' – ' + s.gast + '  ' + s.einzel + (s.legs ? ' (' + s.legs + ' Legs)' : '')).join('\n');
       const inhalt = {
         betreff: 'Tabelle nach dem ' + t.nr + '. Spieltag – ' + team + ' auf Platz ' + platz,
         text: 'Hallo zusammen,\n\nder ' + t.nr + '. Spieltag ist komplett gewertet.\n\nErgebnisse:\n' + ergebnisse + '\n\nTabelle:\n' + zeilen +
@@ -360,7 +371,7 @@ export function erstelleMitteilungen(opt) {
       ['training', { betreff: '[Test] DiensDarts am Dienstag – kommst du?', text: 'Hallo ' + u.display_name + ',\n\nso sieht die Erinnerung aus, wenn du am Samstag die Umfrage fürs Training noch nicht beantwortet hast.\n\nViele Grüße\n' + team, push: { titel: '[Test] DiensDarts am Dienstag – kommst du?', text: 'Noch keine Antwort in der Umfrage', url: appUrl } }],
       ['spieltag-morgen', { betreff: '[Test] Morgen ' + t.nr + '. Spieltag gegen ' + x.gegner, text: 'Hallo ' + u.display_name + ',\n\nmorgen, ' + x.datum + ', spielt ' + team + ' gegen ' + x.gegner + ' – ' + x.wo + ', 20:00 Uhr.\n\nDabei (4): Lenas, Tobi, Domi, Julius.\n\nViele Grüße\n' + team, push: { titel: '[Test] Morgen: ' + t.nr + '. Spieltag gegen ' + x.gegner, text: x.wo + ' · 20:00 Uhr · dabei: Lenas, Tobi, Domi, Julius', url: appUrl } }],
       ['ergebnis', { betreff: '[Test] Sieg am 3. Spieltag: ' + team + ' 9 : 7 Voodoo Darters', text: 'Hallo zusammen,\n\n' + team + ' 9 : 7 Voodoo Darters (Auswärts, Heuboden), 3. Spieltag.\nEinzel 9 : 7, Legs 22 : 22.\nMan of the Day: Dominik Uhl (3 Siege)\n\nHighlights:\nShortlegs: 17 Darts Dominik Uhl · 20 Darts Lenas Becker\n\nAlle Einzel:\nKevin Bauer – Dominik Uhl  1:2\nMartin Appelon – Tobias Thomas  1:2\n…\n\nSpielbericht und Statistik: ' + appUrl + '\n\nViele Grüße\n' + team, push: { titel: '[Test] Sieg: ' + team + ' 9 : 7 Voodoo Darters', text: 'Einzel 9:7 · Legs 22:22 · MotD Dominik Uhl', url: appUrl } }],
-      ['tabelle', { betreff: '[Test] Tabelle nach dem 3. Spieltag – ' + team + ' auf Platz 3', text: 'Hallo zusammen,\n\nder 3. Spieltag ist komplett gewertet.\n\nTabelle:\n1. Treff ma nix – 4 Pkt\n2. d`Haberer 2 – 4 Pkt\n3. ' + team + ' – 4 Pkt\n…\n\nAlles im Detail: ' + appUrl + ' → Liga → Tabelle.\n\nViele Grüße\n' + team, push: { titel: '[Test] ' + team + ' auf Platz 3 nach dem 3. Spieltag', text: 'Tabelle und Einzelrangliste in der App', url: appUrl } }],
+      ['tabelle', { betreff: '[Test] Tabelle nach dem 3. Spieltag – ' + team + ' auf Platz 3', text: 'Hallo zusammen,\n\nder 3. Spieltag ist komplett gewertet.\n\nErgebnisse:\nVoodoo Darters – ' + team + '  7:9 (22:22 Legs)\nTreff ma nix – Dart Artists Germering II  10:6\n\nTabelle:\n1. Treff ma nix  4 Pkt (2 Spiele)\n2. d`Haberer 2  4 Pkt (2 Spiele)\n3. ' + team + '  4 Pkt (2 Spiele)\n…\n\nAlles im Detail: ' + appUrl + ' → Liga → Tabelle.\n\nViele Grüße\n' + team, push: { titel: '[Test] ' + team + ' auf Platz 3 nach dem 3. Spieltag', text: 'Tabelle und Einzelrangliste in der App', url: appUrl } }],
       ['rekord', { betreff: '[Test] Neuer Teamrekord – Höchstes Finish: 121 – Lenas', text: 'Hallo zusammen,\n\nneuer Rekord im Team: Höchstes Finish: 121 – Lenas.\n\nViele Grüße\n' + team, push: { titel: '[Test] Neuer Rekord: Höchstes Finish', text: '121 – Lenas', url: appUrl } }],
       ['live', { betreff: '[Test] Anpfiff: ' + team + ' gegen ' + x.gegner, text: 'Hallo zusammen,\n\ngerade geht es los: ' + team + ' gegen ' + x.gegner + ' (' + x.wo + ').\n\nLive mitfiebern: ' + appUrl + '/live.html\n\nViele Grüße\n' + team, push: { titel: '[Test] Anpfiff: ' + team + ' – ' + x.gegner, text: x.wo + ' · zum Live-Ticker', url: appUrl } }],
       ['kasse', { betreff: '[Test] Kasse: 20,00 € – Mitgliedsbeitrag', text: 'Hallo ' + u.display_name + ',\n\nder Kassenwart hat auf dein Konto gebucht: 20,00 € – Mitgliedsbeitrag (Mitgliedsbeiträge).\n\nViele Grüße\n' + team, push: { titel: '[Test] Kasse: 20,00 €', text: 'Mitgliedsbeitrag · vom Kassenwart', url: appUrl } }],

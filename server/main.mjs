@@ -54,7 +54,8 @@ config.mailer = erstelleMailer({
   user: process.env.BREVO_SMTP_USER || '',
   key: process.env.BREVO_SMTP_KEY || '',
   absenderLiga: process.env.DARTS_MAIL_LIGA || 'Blink 180 <blink180@wirtschaftln.de>',
-  absenderApp: process.env.DARTS_MAIL_APP || 'Dart-App <dart@wirtschaftln.de>'
+  absenderApp: process.env.DARTS_MAIL_APP || 'Dart-App <dart@wirtschaftln.de>',
+  appUrl: config.appUrl
 });
 if (!config.mailer.bereit) console.warn('Hinweis: BREVO_SMTP_USER/KEY fehlen -- die App verschickt keine Mails.');
 /* Web Push (VAPID): Schluesselpaar mit node server/scripts/vapid.mjs. */

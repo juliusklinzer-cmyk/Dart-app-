@@ -14,7 +14,7 @@ import * as limit from './lib/ratelimit.mjs';
 import * as relay from './lib/relay.mjs';
 import * as livestrom from './lib/livestrom.mjs';
 import { sendJson, sendFehler, leseCookies, leseJson, clientIp, HttpFehler, MAX_BODY_KLEIN } from './lib/http.mjs';
-import { istAdresse } from './lib/mail.mjs';
+import { istAdresse, adresse } from './lib/mail.mjs';
 import { erstelleMitteilungen, THEMEN, KANAELE } from './lib/mitteilungen.mjs';
 
 const KINDS = new Set(['501', 'cricket', 'rtw', 'finisher', 'kaiwen', 'hunter', 'tournament']);
@@ -1255,7 +1255,10 @@ export function createApi(db, config) {
       anhaenge.push({ name, typ: 'application/pdf', inhalt });
     }
     limit.zaehle('bericht-mail:' + u.id, 10, 3600e3);
-    await m.sende({ von: 'liga', an, cc: [m.absender.liga], betreff, text, anhaenge });
+    await m.sende({
+      von: 'liga', an, cc: [m.absender.liga], betreff, text, anhaenge, kicker: 'Spielbericht',
+      fuss: 'Gesendet aus der Dart-App von Blink 180. Antworten gehen an ' + adresse(m.absender.liga).adresse + '.'
+    });
     sendJson(res, 200, { gesendet: true, von: m.absender.liga });
   }
 
@@ -1269,7 +1272,8 @@ export function createApi(db, config) {
     if (warte) throw new HttpFehler(429, 'Drei Testmails pro Stunde reichen. Bitte in ' + Math.ceil(warte / 60) + ' Minuten nochmal.');
     limit.zaehle('mail-probe:' + u.id, 3, 3600e3);
     await m.sende({
-      von: 'app', an: [u.email], betreff: 'Testmail aus der Dart-App',
+      von: 'app', an: [u.email], betreff: 'Testmail aus der Dart-App', kicker: 'Testmail',
+      knopf: { text: 'Zur Dart-App', url: config.appUrl || 'https://darts.wirtschaftln.de' },
       text: 'Hallo ' + u.display_name + ',\n\ndiese Mail kommt aus der Dart-App (' + (config.appUrl || 'https://darts.wirtschaftln.de') + '). ' +
         'Wenn du sie liest, passt alles: Brevo, Absender und dein Postfach.\n\n' +
         'Spielberichte und Erinnerungen vor dem Spieltag kommen von ' + m.absender.liga + ', alles Allgemeine von ' + m.absender.app + '.\n\nViele Grüße\nDart-App'

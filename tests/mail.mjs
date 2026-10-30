@@ -10,7 +10,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { mimeBauen, smtpSenden, erstelleMailer, adresse, kodiereKopf, istAdresse } from '../server/lib/mail.mjs';
+import { mimeBauen, smtpSenden, erstelleMailer, adresse, kodiereKopf, istAdresse, textZuHtml, htmlBrief, escapeHtml } from '../server/lib/mail.mjs';
 import { ladeLigaDaten } from '../server/lib/liga.mjs';
 import { openDb } from '../server/lib/db.mjs';
 import { createApi } from '../server/api.mjs';
@@ -35,8 +35,28 @@ const grenze = /boundary="([^"]+)"/.exec(mime)[1];
 check('multipart/mixed mit Text und PDF-Anhang, Abschluss-Grenze', mime.split('--' + grenze + '\r\n').length === 3 && mime.endsWith('--' + grenze + '--\r\n') &&
   /Content-Type: application\/pdf; name="Spielbericht_Spieltag3_Voodoo.pdf"/.test(mime) && /Content-Disposition: attachment; filename="Spielbericht_Spieltag3_Voodoo.pdf"/.test(mime));
 check('Text ist Base64 und kommt lesbar zurueck', Buffer.from(/text\/plain; charset=UTF-8\r\nContent-Transfer-Encoding: base64\r\n\r\n([A-Za-z0-9+\/=\r\n]+)/.exec(mime)[1].replace(/\r\n/g, ''), 'base64').toString('utf8').includes('Viele Grüße'));
+check('ohne html-Feld kein HTML-Teil in mimeBauen', !/text\/html/.test(mime));
 check('Anhang ist Base64 des PDFs', mime.includes(pdf.toString('base64')));
 check('nur CRLF als Zeilenende', !/[^\r]\n/.test(mime));
+
+/* ---------- 1b. HTML-Brief im Look der App ---------- */
+console.log('Mail: HTML-Brief');
+const h1 = textZuHtml('Hallo Anna,\n\nSieg <3 & fertig.\nZweite Zeile https://darts.test/x.\n\nAlle Einzel:\nKevin Bauer – Dominik Uhl  1:2\nNur eine Zeile\n\nViele Grüße\nBlink 180');
+check('Absaetze, Zeilenumbruch, Escaping', (h1.match(/<p /g) || []).length === 4 && /Sieg &lt;3 &amp; fertig\.<br>Zweite Zeile/.test(h1));
+check('Link anklickbar, Punkt bleibt draussen', /<a href="https:\/\/darts\.test\/x" [^>]*>darts\.test\/x<\/a>\./.test(h1));
+check('Block "Alle Einzel": Tabelle, zwei Leerzeichen trennen Name und Ergebnis', /ALLE EINZEL|Alle Einzel<\/p>/.test(h1) && /<td [^>]*>Kevin Bauer – Dominik Uhl<\/td><td align="right"[^>]*>1:2<\/td>/.test(h1) && /<td colspan="2"[^>]*>Nur eine Zeile<\/td>/.test(h1));
+const brief = htmlBrief({ titel: 'Sieg am 3. Spieltag', kicker: 'Unser Ligaergebnis', text: 'Hallo zusammen,\n\n9 : 7.', knopf: { text: 'Zur App', url: 'https://darts.test/?a=1&b=2' }, vorschau: 'Einzel 9:7', logoUrl: 'https://darts.test/icons/apple-touch-icon.png' });
+check('Brief: Logo, Wortmarke, Kicker, Titel, Knopf mit escapter URL, Vorschau, Fuss', /<img src="https:\/\/darts\.test\/icons\/apple-touch-icon\.png"/.test(brief) && /Blink <span[^>]*>180<\/span>/.test(brief) &&
+  /Unser Ligaergebnis<\/p>/.test(brief) && /<h1 [^>]*>Sieg am 3\. Spieltag<\/h1>/.test(brief) && /<a href="https:\/\/darts\.test\/\?a=1&amp;b=2" [^>]*>Zur App &rarr;<\/a>/.test(brief) &&
+  /Einzel 9:7<\/div>/.test(brief) && /Benachrichtigungen\.<\/td>/.test(brief) && /#e5484d/.test(brief) && /#0d0a0b/.test(brief));
+check('Brief ohne Knopf und mit eigenem Fuss', !/<a href/.test(htmlBrief({ titel: 'T', text: 'x', knopf: null, fuss: 'Antworten an <x>' })) && /Antworten an &lt;x&gt;<\/td>/.test(htmlBrief({ titel: 'T', text: 'x', fuss: 'Antworten an <x>' })));
+check('escapeHtml', escapeHtml('<a href="x">\'&\'</a>') === '&lt;a href=&quot;x&quot;&gt;&#39;&amp;&#39;&lt;/a&gt;');
+const mime2 = mimeBauen({ von: 'Dart-App <dart@wirtschaftln.de>', an: ['a@beispiel.de'], betreff: 'HTML', text: 'Nur Text', html: '<p>Nur HTML</p>', anhaenge: [{ name: 'a.pdf', typ: 'application/pdf', inhalt: pdf }], id: 'h1' });
+const g2 = /multipart\/alternative; boundary="([^"]+)"/.exec(mime2);
+check('mit HTML: multipart/alternative (Text, dann HTML) im multipart/mixed, Anhang bleibt eigener Teil', !!g2 && mime2.split('--' + /boundary="([^"]+)"/.exec(mime2)[1] + '\r\n').length === 3 &&
+  mime2.split('--' + g2[1] + '\r\n').length === 3 && mime2.indexOf('text/plain') < mime2.indexOf('text/html') && mime2.includes(Buffer.from('<p>Nur HTML</p>').toString('base64')) && mime2.includes(pdf.toString('base64')));
+const mime3 = mimeBauen({ von: 'dart@wirtschaftln.de', an: ['a@beispiel.de'], betreff: 'Text', text: 'Nur Text', id: 'h2' });
+check('ohne HTML: wie bisher nur Text', !/multipart\/alternative|text\/html/.test(mime3));
 
 /* ---------- 2. SMTP-Dialog gegen einen Mini-Server ---------- */
 console.log('Mail: SMTP-Dialog');

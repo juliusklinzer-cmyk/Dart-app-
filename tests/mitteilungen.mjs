@@ -95,6 +95,7 @@ let n = await Z.ereignis({ id: 'u_a', display_name: 'Anna' }, 'ergebnis', { term
 check('Ergebnis: Anna (beide) Mail + Push, Bert (beide) Mail, Gast und Test nicht; totes Abo geloescht',
   n === 2 && mails.length === 2 && mails.every((x) => x.von === 'liga' && /Sieg am 3\. Spieltag: Blink 180 9 : 7 Voodoo Darters/.test(x.betreff)) &&
   /Man of the Day: Dominik Uhl/.test(mails[0].text) && /Kevin Bauer – Dominik Uhl  1:2/.test(mails[0].text) &&
+  mails[0].kicker === 'Unser Ligaergebnis' && mails[0].knopf.text === 'Spielbericht und Statistik' && mails[0].knopf.url === 'https://darts.test' && /^Sieg am 3/.test(mails[0].titel) && /Einzel 9:7/.test(mails[0].vorschau) &&
   pushes.length === 2 && pushes[0].n.tag === 'ergebnis' && db.prepare('SELECT COUNT(*) AS n FROM push_abos').get().n === 1, JSON.stringify({ n, mails: mails.length, pushes: pushes.length }));
 leer();
 n = await Z.ereignis({ id: 'u_b' }, 'ergebnis', { termin: 'st03', nr: 3, gegner: 'Voodoo Darters', wirP: 9, sieP: 7 });
