@@ -3832,6 +3832,13 @@ check('Gesamte Liga: Gegner stehen mit ihrem Team in der Rangliste (auch ausgebl
   const rows = [...document.querySelectorAll('#board-list .board-row')].map((r) => r.innerText);
   return gegnerNamen.length > 0 && rows.some((r) => gegnerNamen.some((n) => r.includes(n)) && r.includes('TSV Dachau'));
 }));
+/* Die Spiele der anderen Teams kommen aus den Spielberichten der Ligaleitung:
+   jeder Spieler der Liga steht mit seinen Siegen drin, alle Teams als Chips. */
+check('Gesamte Liga: auch Spieler aus Spielen ohne uns (Treff ma nix, d`Haberer 2) stehen mit ihrem Team drin', await page.evaluate(() => {
+  const rows = [...document.querySelectorAll('#board-list .board-row')].map((r) => r.innerText);
+  const chips = [...document.querySelectorAll('.liga-team-wahl [data-action="liga-team"]')].map((b) => b.textContent);
+  return rows.length >= 40 && rows.some((r) => r.includes('Treff ma nix')) && rows.some((r) => r.includes('Reinhart Boehm')) && chips.length >= 9 && chips.includes('FT Gern Darts II') && chips.includes('Treff ma nix');
+}));
 check('der Verlauf (unsere Spieler) ist dabei ausgeblendet', await page.evaluate(() => document.getElementById('board-chart').classList.contains('hidden')));
 await page.locator('.liga-team-wahl [data-team="TSV Dachau 1865 4"]').click().catch(() => {});
 check('nur der Gegner: keine eigenen Spieler in der Liste', await page.evaluate(() => {

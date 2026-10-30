@@ -2422,8 +2422,10 @@
   }
 
   /*
-   * Liga-Auswertung ueber alle Teams (nur aus den Spielen, die wir erfasst
-   * haben). Unsere Spieler behalten ihre Kennung; jeder Gegner wird
+   * Liga-Auswertung ueber alle Teams: unsere Spiele aus dem Archiv, die
+   * Spiele der anderen Teams aus den Spielberichten der Ligaleitung
+   * (LIGA_SPIELTAGE, partien - nur Leg-Staende, also Siege und Legs, kein
+   * Average). Unsere Spieler behalten ihre Kennung; jeder Gegner wird
    * automatisch seinem Team zugeordnet und ueber alle Spieltage und Geraete
    * hinweg am Namen wiedererkannt (Schluessel "lg|Team|name"), auch wenn
    * sein Gast-Profil laengst ausgeblendet ist oder auf einem anderen iPad
@@ -2464,6 +2466,28 @@
         };
       });
       return { matches: matches, start: q.start };
+    });
+    /* Die Spiele der anderen Teams, wie die Ligaleitung sie meldet: jedes
+       Einzel als Ergebnis ohne Wuerfe (ergebnisSetzen). Unsere eigenen
+       Spiele kommen nur aus dem Archiv - sonst zaehlten sie doppelt, und
+       dort haengen sie an den Konten. */
+    var keyName = function (team, roh) {
+      var nm = String(roh || '').replace(/^\*/, '').trim() || 'Unbekannt';
+      var k = 'lg|' + team + '|' + nm.toLowerCase().replace(/\s+/g, ' ').slice(0, 30);
+      if (!info[k]) info[k] = { team: team, name: nm };
+      return k;
+    };
+    Object.keys(LIGA_SPIELTAGE).forEach(function (tid) {
+      (LIGA_SPIELTAGE[tid] || []).forEach(function (sp) {
+        if (!sp || !sp.gast || sp.verschoben || !Array.isArray(sp.partien)) return;
+        if (sp.heim === LIGA.team || sp.gast === LIGA.team) return;
+        var at = sp.tag ? new Date(sp.tag + 'T20:00:00').getTime() : 0;
+        var matches = sp.partien.map(function (p, i) {
+          var m = { p: [keyName(sp.heim, p[0]), keyName(sp.gast, p[1])], starter: null, legs: [], done: false, winner: null, at: null };
+          return ergebnisSetzen(m, Number(p[2]) || 0, Number(p[3]) || 0, 501, at + i * 60000);
+        }).filter(Boolean);
+        if (matches.length) lists.push({ matches: matches, start: 501 });
+      });
     });
     var map = collectStats(lists, []);
     Object.keys(map).forEach(function (k) {

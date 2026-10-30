@@ -10,7 +10,11 @@
 <!-- iOS liest ausschließlich diesen Link und kann kein WebP. -->
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- Deckend schwarz statt black-translucent: seit iOS 26 legt das System unter
+     die durchscheinende Statusleiste einen Glas-Blur ueber den Inhalt (das Logo
+     verschwamm, Julius 30.10.). Nach einer Aenderung hier muss die App vom
+     Home-Bildschirm geloescht und neu hinzugefuegt werden. -->
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
