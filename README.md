@@ -1335,6 +1335,7 @@ Für Aufräumarbeiten am echten Server gibt es drei Verwaltungs-Skripte
 (im Container per `docker compose exec darts node …` aufrufen):
 
 ```bash
+node server/scripts/aktivitaet.mjs [stunden]                   # wer spielt gerade / zuletzt: Live-Spiele, Turniere, Spiele, Anmeldungen
 node server/scripts/beispiele.mjs <e-mail>                     # alle Mitteilungs-Themen einmal als Beispiel (Mail + Push)
 node server/scripts/konto-anlegen.mjs <e-mail> <anzeigename> <passwort>
 node server/scripts/spiel-zurueckziehen.mjs <spiel-id> [...]   # Soft-Delete, Geräte räumen nach
