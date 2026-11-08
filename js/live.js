@@ -10,10 +10,17 @@
 (function () {
   'use strict';
   var TEAM = 'Blink 180';
-  var TAKT = 4000;
+  var TAKT = 4000, TAKT_MAX = 60000;
   var box = document.getElementById('ticker');
   var schluessel = (location.hash || '').replace(/^#/, '');
   var letzter = null, letzteZeit = 0, fehlerZahl = 0, timer = null;
+  /* Viele Zuschauer hinter einer IP (Kneipen-WLAN) laufen ins Server-Limit
+     (429). Dann den Takt verdoppeln statt stur weiterzufragen; die naechste
+     gute Antwort stellt ihn zurueck. */
+  var takt = TAKT, gedrosselt = false;
+  /* Zahlen aus dem Spielstand kommen vom Server und landen ungefiltert im
+     Markup - was keine Zahl ist, wird 0, statt als Text durchzurutschen. */
+  function zahl(v) { var n = Number(v); return isFinite(n) ? n : 0; }
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -32,7 +39,7 @@
   /* Rest eines Spielers im laufenden Leg (ohne Bust-Aufnahmen). */
   function rest(start, leg, pid) {
     var r = start;
-    (leg ? leg.visits : []).forEach(function (v) { if (v.p === pid && !v.b) r -= v.s; });
+    (leg ? leg.visits : []).forEach(function (v) { if (v.p === pid && !v.b) r -= zahl(v.s); });
     return r;
   }
   function amWurf(m, leg) {
@@ -58,16 +65,17 @@
         var darts = {};
         (leg.visits || []).forEach(function (v) {
           var x = s(v.p);
-          x.darts += v.d || 0;
-          darts[v.p] = (darts[v.p] || 0) + (v.d || 0);
+          var vd = zahl(v.d), vs = zahl(v.s);
+          x.darts += vd;
+          darts[v.p] = (darts[v.p] || 0) + vd;
           if (v.b) return;
-          x.punkte += v.s;
-          if (v.s === 180) x.s180++;
-          else if (v.s >= 140) x.s140++;
-          else if (v.s >= 100) x.s100++;
+          x.punkte += vs;
+          if (vs === 180) x.s180++;
+          else if (vs >= 140) x.s140++;
+          else if (vs >= 100) x.s100++;
           if (v.c) {
-            if (v.s > x.finish) x.finish = v.s;
-            if (v.s >= 100) x.finishes.push(v.s);
+            if (vs > x.finish) x.finish = vs;
+            if (vs >= 100) x.finishes.push(vs);
           }
         });
         if (leg.winner) {
@@ -144,18 +152,18 @@
       var m = x.live, pm = x.plan;
       var legs = m.legs || [];
       var leg = legs.length && !legs[legs.length - 1].winner ? legs[legs.length - 1] : null;
-      var start = m.start || t.start || 501;
+      var start = zahl(m.start) || zahl(t.start) || 501;
       var dran = amWurf({ p: x.p, starter: m.starter }, leg || { starter: null, visits: [] });
-      var offen = (m.darts || []).reduce(function (a, d) { return a + (d.v || 0); }, 0);
+      var offen = (m.darts || []).reduce(function (a, d) { return a + zahl(d.v); }, 0);
       links += '<div class="live-einzel"><div class="le-kopf"><span class="live-marke"><span class="punkt"></span>LIVE</span>' +
-        '<span>' + (pm.scheibe ? 'Board ' + esc(pm.scheibe.replace('S', '')) + ' · ' : '') + 'Leg ' + (legs.filter(function (l) { return l.winner; }).length + 1) + '</span></div>';
+        '<span>' + (pm.scheibe ? 'Board ' + esc(String(pm.scheibe).replace('S', '')) + ' · ' : '') + 'Leg ' + (legs.filter(function (l) { return l.winner; }).length + 1) + '</span></div>';
       x.p.forEach(function (pid, i) {
         var r = rest(start, leg, pid) - (pid === dran ? offen : 0);
-        var pos = pm.posPaar ? (i === 0 ? 'H' : 'G') + (pm.posPaar[i] + 1) : '';
+        var pos = pm.posPaar ? (i === 0 ? 'H' : 'G') + (zahl(pm.posPaar[i]) + 1) : '';
         links += '<div class="le-spieler"><div class="le-name' + (pid === dran ? ' dran' : '') + '"><span class="pos">' + pos + '</span>' + esc(nm(pid)) + '</div>' +
           '<div class="le-legs">' + legsGewonnen(m, pid) + '</div><div class="le-rest">' + r + '</div></div>';
       });
-      var letzte = leg ? leg.visits.slice(-4).map(function (v) { return esc(nm(v.p).split(' ')[0]) + ' ' + (v.b ? 'Bust' : v.s); }) : [];
+      var letzte = leg ? leg.visits.slice(-4).map(function (v) { return esc(nm(v.p).split(' ')[0]) + ' ' + (v.b ? 'Bust' : zahl(v.s)); }) : [];
       if (offen) letzte.push(esc(nm(dran).split(' ')[0]) + ' wirft gerade (' + (m.darts || []).length + ' Dart' + ((m.darts || []).length === 1 ? '' : 's') + ')');
       if (letzte.length) links += '<div class="le-letzte">' + letzte.join(' · ') + '</div>';
       links += '</div>';
@@ -173,9 +181,9 @@
       var chip = x.ergebnis && x.ergebnis.done ? '<span class="chip fertig">fertig</span>'
         : x.live ? '<span class="chip live">live</span>' : '<span class="chip">offen</span>';
       links += '<div class="einzel">' +
-        '<div class="a' + (sieger === x.p[0] ? ' w' : '') + '">' + esc(nm(x.p[0])) + ' <span class="pos">H' + (pm.posPaar ? pm.posPaar[0] + 1 : '') + '</span></div>' +
+        '<div class="a' + (sieger === x.p[0] ? ' w' : '') + '">' + esc(nm(x.p[0])) + ' <span class="pos">H' + (pm.posPaar ? zahl(pm.posPaar[0]) + 1 : '') + '</span></div>' +
         '<div class="erg">' + (m ? a + ':' + b : '–') + '</div>' +
-        '<div class="' + (sieger === x.p[1] ? 'w' : '') + '"><span class="pos">G' + (pm.posPaar ? pm.posPaar[1] + 1 : '') + '</span> ' + esc(nm(x.p[1])) + '</div>' +
+        '<div class="' + (sieger === x.p[1] ? 'w' : '') + '"><span class="pos">G' + (pm.posPaar ? zahl(pm.posPaar[1]) + 1 : '') + '</span> ' + esc(nm(x.p[1])) + '</div>' +
         chip + '</div>';
     });
     links += '</section>';
@@ -184,7 +192,7 @@
       var m = x.ergebnis || x.live;
       return m ? { p: x.p, legs: m.legs || [], done: !!(x.ergebnis && x.ergebnis.done), winner: x.ergebnis ? x.ergebnis.winner : null } : null;
     }).filter(Boolean);
-    var st = statistik(alle, t.start || 501);
+    var st = statistik(alle, zahl(t.start) || 501);
     var heimIds = [], gastIds = [];
     partien.forEach(function (x) {
       if (heimIds.indexOf(x.p[0]) < 0) heimIds.push(x.p[0]);
@@ -252,24 +260,41 @@
     var f = document.getElementById('fuss');
     if (!f) return;
     var s = letzteZeit ? Math.round((Date.now() - letzteZeit) / 1000) : 0;
-    f.textContent = (fehlerZahl ? 'Verbindung wird gesucht … · ' : '') +
+    f.textContent = (fehlerZahl ? 'Verbindung wird gesucht … · ' : gedrosselt ? 'Viele Zuschauer – etwas langsamer · ' : '') +
       'Aktualisiert vor ' + s + ' s · Blink 180 Live-Ticker';
+  }
+
+  function taktStellen(neu) {
+    if (neu === takt && timer) return;
+    takt = neu;
+    if (timer) clearInterval(timer);
+    timer = setInterval(holen, takt);
   }
 
   function holen() {
     if (document.hidden) return;
     fetch('/api/zuschauer/' + encodeURIComponent(schluessel), { cache: 'no-store' }).then(function (r) {
       if (r.status === 404) { stoppen('Diesen Live-Ticker gibt es nicht (mehr). Bitte den Link prüfen.'); return null; }
-      if (!r.ok) throw new Error('HTTP ' + r.status);
+      if (!r.ok) { var e = new Error('HTTP ' + r.status); e.status = r.status; throw e; }
       return r.json();
     }).then(function (d) {
       if (!d) return;
       fehlerZahl = 0;
       letzteZeit = Date.now();
+      if (gedrosselt) { gedrosselt = false; taktStellen(TAKT); }
       var text = JSON.stringify(d.turnier);
       if (text !== letzter) { letzter = text; zeichne(d.turnier); }
       else fussAktualisieren();
-    }).catch(function () {
+    }).catch(function (e) {
+      if (e && e.status === 429) {
+        /* Der Server ist da, nur ueberlaufen: kein Verbindungsfehler, also
+           nicht "Verbindung wird gesucht", sondern langsamer fragen. */
+        gedrosselt = true;
+        taktStellen(Math.min(takt * 2, TAKT_MAX));
+        if (!letzter) box.innerHTML = '<p class="fehler-seite">Viele Zuschauer gerade – der Stand kommt gleich …</p>';
+        else fussAktualisieren();
+        return;
+      }
       fehlerZahl++;
       if (!letzter) box.innerHTML = '<p class="fehler-seite">Keine Verbindung – es wird weiter versucht …</p>';
       else fussAktualisieren();
@@ -289,7 +314,7 @@
     return;
   }
   holen();
-  timer = setInterval(holen, TAKT);
+  taktStellen(TAKT);
   setInterval(fussAktualisieren, 1000);
   document.addEventListener('visibilitychange', function () { if (!document.hidden) holen(); });
 })();

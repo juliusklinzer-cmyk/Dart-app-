@@ -41,8 +41,9 @@ function check(name, cond, extra = '') {
 }
 function group(name) { console.log(`\n${name}`); }
 
-/* Vorinstalliertes Chromium nutzen, falls die Playwright-Version einen anderen Build erwartet. */
-const preinstalled = '/opt/pw-browsers/chromium';
+/* Browser: PW_CHROMIUM (eigener Pfad), sonst ein vorinstalliertes Chromium, sonst der
+   Playwright-eigene Build. Gleiche Regel wie in tests/konto.mjs. */
+const preinstalled = process.env.PW_CHROMIUM || '/opt/pw-browsers/chromium';
 const browser = await chromium.launch(fs.existsSync(preinstalled) ? { executablePath: preinstalled } : {});
 const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
 const errors = [];
@@ -129,14 +130,142 @@ const st = () => page.evaluate(() => window.__dart.standings());
 await page.addInitScript(() => { window.__ligaHeute = "2026-10-01"; });
 await page.goto(BASE);
 
-group('Setup');
+/* Jede Gruppe laeuft abgefangen: ein Timeout oder Fehler zaehlt als roter Check der Gruppe,
+   die Suite laeuft weiter. Vorher riss der erste Fehler den ganzen Lauf ab und alles danach
+   blieb ungeprueft. Die Gruppen teilen sich Zustand ueber die Variablen unten (frueher
+   Top-Level-const), deshalb stehen die hier auf Modulebene. */
+async function gruppe(name, fn) {
+  group(name);
+  try { await fn(); }
+  catch (e) { check(name + ' (Gruppe abgebrochen)', false, String(e && e.message || e).split(String.fromCharCode(10))[0]); }
+}
+let names, matchCount, rounds, pairs, firstName, activeName, hist0, table1, winner, opts, sumText, final, afterReload, carr, board, c1, champ, avgBoard, legBoard, detail, profileNames, c2, c3, cs, pA, pB, fuehrend, cSum, cCar, cWinner, before, rtwStarter, rA, misses, weiter, rTarget, rGross, wurfZahl, vorWeiter, vorRest, rSum, rCar, rWin, rBefore, kategorien, lines, legend, colors, det, ids, winnerBefore, dartsBefore, restBefore, standingsBefore, loserId, visitsBefore, profileCount, matchesBefore, voided, addable, quoteDartWeg, quotePunkteWeg, histText, histLower, alleIds, wahlHoehe, cOrder, throwsBefore, throwsMid, deadColor, liveColor, bullTot, cgKey, finState, fst, fA, fB, zielzahl, stechenDa, rundeVorher, finSum, finCar, ffA, ffGegner, vorher, rfrage, nachher, wonVorher, bestVorher, qOrder, qIds, amWurf, qSum, qCar, wonNachher, sA, sB, dranId, stand, bA, bB, drei, drei2, tippeQ, soloId, soloVorher, soloNachher, soloProfil, tippe, ntBox, kaderIds, neuerGast, nachtrag, rtwAufbau, eZiel, rtwIds, aufnahme, rtwSt, stCar, feierText, werferName, vorWurf, feierAn, restVorBust, farben, chipFarbe, weg, engine, engineStd, kal, dblId, avgVor, fiErg, fiStand, fiGegner, fiAmWurf, dblName, fiLage1, tokensDrin, gRest, fiLage2, tabEig, ersterSpieltag, rundenSoll, ical, icalPfad, icalInhalt, einzel, wechselProbe, ltZeilen, ltSoll, ltPunkte, ltLegDiff, zoomVor, zoomNach, peNach, visit, malen, fuellIds, vorG3, planWahl, vpTablet, kachel, vorMenu, tVor, tDoppel, tLeer;
+
+async function quickLeg() {
+  await typeScore(180); await typeScore(60);   // 321 / 441
+  await typeScore(180); await typeScore(60);   // 141 / 381
+  await modus('total');
+  return typeScore(141);
+}
+
+async function cDart(label) {
+  if (label === 'MISS') return page.locator('#cricket-grid [data-num="0"]').click();
+  const mult = label[0] === 'T' ? 3 : label[0] === 'D' ? 2 : 1;
+  const num = parseInt(label.replace(/^[TDS]/, ''), 10);
+  return page.locator(`#cricket-grid button[data-num="${num}"][data-mult="${mult}"]`).click();
+}
+
+async function rDart(label) {
+  if (label === 'MISS') return page.locator('#rtw-pad [data-num="0"]').click();
+  const mult = label[0] === 'T' ? 3 : label[0] === 'D' ? 2 : 1;
+  const num = parseInt(label.replace(/^[TDS]/, ''), 10);
+  const key = page.locator(`#rtw-pad [data-num="${num}"][data-mult="${mult}"]`);
+  if (await key.count()) return key.click();
+  return null;   // Zahl steht nicht zur Wahl – das ist der Testfall "falsche Zahl"
+}
+
+async function ligaAusbullen() {
+  if (!(await visible('#screen-bulloff'))) return false;
+  await page.locator('#bulloff-buttons [data-action="pick-starter"]').first().click();
+  await page.waitForTimeout(150);
+  return true;
+}
+
+async function bullOffGo() {
+  if (!(await visible('#screen-bulloff'))) return;   // allein wird nicht ausgebullt
+  /* Ab drei Spielern: Namen links in Wurf-Reihenfolge antippen (der letzte
+     rueckt von selbst nach), dann starten. Bei zweien: direkter Tipp. */
+  if (await page.locator('.bo-spalten').count()) {
+    while (await page.locator('[data-action="order-pick"]').count()) {
+      await page.locator('[data-action="order-pick"]').first().click();
+    }
+    await page.locator('[data-action="start-order"]').click();
+  } else {
+    await page.locator('#bulloff-buttons button').first().click();
+  }
+}
+
+async function reduceLineupToTwo() {
+  for (let i = 0; i < 10; i++) {
+    const sel = page.locator('.roster-item.selected');
+    if ((await sel.count()) <= 2) break;
+    await sel.nth(2).click();
+  }
+}
+
+async function finSetMult(mult) {
+  const ist = await page.evaluate(() => window.__dart.ui().mult);
+  if (ist === mult) return;
+  if (mult === 1) await page.locator(`#fin-pad .num-grid button.mult[data-mult="${ist}"]`).click();
+  else await page.locator(`#fin-pad .num-grid button.mult[data-mult="${mult}"]`).click();
+}
+
+async function finDart(label) {
+  if (label === 'BULL') return page.locator('#fin-pad button[data-num="25"][data-mult="2"]').click();
+  if (label === '25') return page.locator('#fin-pad button[data-num="25"][data-mult="1"]').click();
+  const mult = label[0] === 'T' ? 3 : label[0] === 'D' ? 2 : 1;
+  const num = parseInt(label.slice(1), 10);
+  await finSetMult(mult);
+  return page.locator(`#fin-pad .num-grid button[data-num="${num}"]`).click();
+}
+
+async function finCheckout() {
+  const route = await page.evaluate(() => {
+    const g = window.__dart.game();
+    const st = window.__dart.finisherState();
+    return window.Checkout.suggest(st.rest[g.players[st.turn]], 3 - st.inVisit);
+  });
+  if (!route) return false;
+  for (const label of route) await finDart(label);
+  return true;
+}
+
+async function finMiss(n) {
+  for (let i = 0; i < n; i++) await page.locator('#fin-pad button.miss').click();
+}
+
+async function finVisitEnde() {
+  let st = await finState();
+  while (st.inVisit !== 0) {
+    await page.locator('#fin-pad button.miss').click();
+    st = await finState();
+  }
+}
+
+async function finRundeGewinnen() {
+  await finVisitEnde();
+  const ok = await finCheckout();
+  await finMiss(3);
+  return ok;
+}
+
+async function t20() {
+  await finSetMult(3);
+  await page.locator('#fin-pad .num-grid button[data-num="20"]').click();
+}
+
+async function legFuer(ziel) {
+  if ((await dranId()) !== ziel) await typeScore(60);
+  await typeScore(180); await typeScore(60); await typeScore(121);
+  await page.locator('#overlay-card [data-action="co-darts"]').first().click();
+}
+
+async function legFuerDrei(ziel) {
+  while ((await dranId()) !== ziel) await typeScore(26);
+  await typeScore(180); await typeScore(26); await typeScore(26); await typeScore(121);
+  await page.locator('#overlay-card [data-action="co-darts"]').first().click();
+}
+
+await gruppe('Setup', async () => {
 check('Setup-Screen sichtbar', await visible('#screen-setup'));
-const names = await page.locator('#roster .nm').allInnerTexts();
+names = await page.locator('#roster .nm').allInnerTexts();
 check('4 Profile vorbelegt', JSON.stringify(names) === '["Lenas","Tobi","Domi","Julius"]', names.join(','));
 check('alle vier für das Turnier ausgewählt', (await page.locator('.roster-item.selected').count()) === 4);
 check('501 vorausgewählt', await page.locator('[data-setting="start"] button[data-value="501"]').evaluate((e) => e.classList.contains('active')));
 
-group('Setup: Startbild nach Entwurf');
+});
+
+await gruppe('Setup: Startbild nach Entwurf', async () => {
 check('Navigation steht in der Kopfzeile neben der Marke', (await page.locator('#setup-kopf #nav').count()) === 1);
 check('die Nummer im Kreis ist die Reihenfolge der Auswahl',
   (await page.locator('.roster-item.selected .check').allInnerTexts()).map((t) => t.trim()).join('') === '1234');
@@ -170,7 +299,9 @@ check('Hunter: eigene Einstellungen, Start moeglich', !(await page.locator('[dat
 await page.locator('[data-action="set-mode"][data-value="501"]').click();
 check('zurueck im X01: GAME ON!', !(await page.locator('[data-action="start-game"]').isDisabled()));
 
-group('Tastatur ueberall: Pfeile, Enter, Zurueck');
+});
+
+await gruppe('Tastatur ueberall: Pfeile, Enter, Zurueck', async () => {
 {
   const fokus = async () => page.evaluate(() => {
     const a = document.activeElement;
@@ -255,6 +386,9 @@ group('Tastatur ueberall: Pfeile, Enter, Zurueck');
   /* Dialoge: Pfeile wandern, Escape schliesst - auch mit Backspace. */
   await page.locator('#screen-setup [data-action="new-profile"]').click();
   check('Dialog offen', await visible('#overlay-card'));
+  /* Seit D1 (Audit 11/2026) steht der Fokus beim Oeffnen im Namensfeld; die
+     Regel "Backspace schliesst" gilt ohne Fokus in einem Feld. */
+  await page.evaluate(() => document.activeElement && document.activeElement.blur());
   await page.keyboard.press('Backspace');
   check('Backspace schliesst den Dialog (kein Feld hatte den Fokus)', !(await visible('#overlay-card')));
   await page.locator('#screen-setup [data-action="new-profile"]').click();
@@ -271,31 +405,37 @@ group('Tastatur ueberall: Pfeile, Enter, Zurueck');
   await page.mouse.click(5, 5);
 }
 
-group('Turnierplan');
+});
+
+await gruppe('Turnierplan', async () => {
 await page.locator('[data-action="start-game"]').click();
 check('Tabelle sichtbar', await visible('#screen-tournament'));
 check('Navigation steht in der Kopfzeile des Turniers', (await page.locator('#turnier-kopf #nav').count()) === 1);
-const matchCount = await page.locator('.match-row').count();
+matchCount = await page.locator('.match-row').count();
 check('6 Spiele bei 4 Spielern (jeder gegen jeden)', matchCount === 6, `war ${matchCount}`);
-const rounds = await page.locator('.round-label').count();
+rounds = await page.locator('.round-label').count();
 check('3 Runden', rounds === 3, `war ${rounds}`);
-const pairs = await page.evaluate(() => window.__dart.state().matches.map((m) => m.p.slice().sort().join('|')));
+pairs = await page.evaluate(() => window.__dart.state().matches.map((m) => m.p.slice().sort().join('|')));
 check('keine Paarung doppelt', new Set(pairs).size === 6);
 
-group('Bull-Off & Spielstart');
+});
+
+await gruppe('Bull-Off & Spielstart', async () => {
 await page.locator('#schedule .match-row .go:not(.wo)').first().click();
 check('Bull-Off-Screen', await visible('#screen-bulloff'));
 check('rechts oben der Zusammenhang: Spiel 1 von 6', (await text('#bulloff-ctx')).trim() === 'Spiel 1 von 6');
 check('beide Karten tragen ihr Etikett', (await page.locator('#bulloff-buttons button .bo-tag').count()) === 2);
 /* Der Button enthält Avatar und Name – nur den Namen lesen. */
-const firstName = await page.locator('#bulloff-buttons button').first().locator('span:not(.av)').innerText();
+firstName = await page.locator('#bulloff-buttons button').first().locator('span:not(.av)').innerText();
 await page.locator('#bulloff-buttons button').first().click();
 check('Spiel-Screen', await visible('#screen-game'));
 check('beide starten bei 501', (await rest(0)) === '501' && (await rest(1)) === '501');
-const activeName = await page.locator('.pcard.active .pname').innerText();
+activeName = await page.locator('.pcard.active .pname').innerText();
 check('Bull-Off-Sieger beginnt', activeName.toLowerCase().includes(firstName.toLowerCase()), `${activeName} vs ${firstName}`);
 
-group('Punkte-Eingabe (abwechselnd)');
+});
+
+await gruppe('Punkte-Eingabe (abwechselnd)', async () => {
 await typeScore(180);
 check('180 abgezogen -> 321', (await rest(0)) === '321');
 check('danach ist der Gegner dran', await page.locator('.pcard').nth(1).evaluate((e) => e.classList.contains('active')));
@@ -308,7 +448,7 @@ check('bei Gegner (441) weiter Punkte-Eingabe', await visible('#pad-total'));
 await typeScore(60);
 check('Gegner 381', (await rest(1)) === '381');
 check('Auto-Umschaltung auf Einzel-Darts bei Rest <= 170', await visible('#pad-darts'));
-const hist0 = (await page.locator('#history .col').first().innerText()).replace(/\s+/g, ' ');
+hist0 = (await page.locator('#history .col').first().innerText()).replace(/\s+/g, ' ');
 check('Wurfverlauf zeigt die eigenen Reste', hist0.includes('Rest 141') && hist0.includes('Rest 321'), hist0);
 check('Finish-Vorschlag T20 T19 D12 steht in den grossen Kacheln',
   (await text('#game-kacheln')).replace(/\s+/g, ' ').includes('T20 T19 D12'));
@@ -317,7 +457,9 @@ check('keine Leiste mehr - die Kacheln in der Karte tragen den Weg',
 check('der naechste Wurf ist markiert', await page.evaluate(() =>
   document.querySelector('#game-kacheln .fk.jetzt').textContent.trim() === 'T20'));
 
-group('Tastenbeschriftung im Einzel-Dart-Modus');
+});
+
+await gruppe('Tastenbeschriftung im Einzel-Dart-Modus', async () => {
 await setMult(2);
 check('Doppel zeigt weiter die Feldzahl 18 (nicht 36)', (await page.locator('#num-grid button[data-num="18"]').innerText()).replace(/\s/g, '') === 'D18');
 await setMult(3);
@@ -325,7 +467,9 @@ check('Triple zeigt T20 statt 60', (await page.locator('#num-grid button[data-nu
 await setMult(1);
 check('Single zeigt die blanke Zahl', (await page.locator('#num-grid button[data-num="20"]').innerText()).trim() === '20');
 
-group('Bust-Regel');
+});
+
+await gruppe('Bust-Regel', async () => {
 await modus('total');
 await typeScore(140); // 141 - 140 = 1 -> Bust, Rest bleibt stehen
 check('Rest bleibt 141 nach Bust auf 1', (await rest(0)) === '141');
@@ -333,7 +477,9 @@ check('Bust beendet die Aufnahme (Gegner ist dran)', await page.locator('.pcard'
 await typeScore(60);
 check('Gegner 321', (await rest(1)) === '321');
 
-group('Einzel-Darts & Checkout');
+});
+
+await gruppe('Einzel-Darts & Checkout', async () => {
 check('wieder Einzel-Darts aktiv', await visible('#pad-darts'));
 /* Die Kacheln beginnen leer und fuellen sich Dart fuer Dart. */
 check('drei leere Kacheln vor dem ersten Dart',
@@ -354,7 +500,9 @@ check('Rest 12 nach voller Aufnahme', (await rest(0)) === '12');
 check('nach 3 Darts ist der Gegner dran', await page.locator('.pcard').nth(1).evaluate((e) => e.classList.contains('active')));
 await typeScore(60);
 
-group('Double Out');
+});
+
+await gruppe('Double Out', async () => {
 await dart('S12'); // 0 ohne Doppel -> Bust
 check('Single 12 auf Rest 12 ist Bust (nur Doppel checkt aus)', (await rest(0)) === '12');
 check('Bust beendet die Aufnahme sofort', await page.locator('.pcard').nth(1).evaluate((e) => e.classList.contains('active')));
@@ -366,14 +514,16 @@ check('Finish-Vorschlag D6 in den Kacheln', (await text('#game-kacheln')).replac
 await dart('D6');
 check('Match-Ende-Overlay mit Glückwunsch', (await visible('#overlay')) && (await text('#overlay-card')).includes('Glückwunsch'));
 
-const table1 = await st();
-const winner = table1.find((p) => p.name.toLowerCase() === firstName.toLowerCase());   // die Ausbull-Knoepfe stehen in Versalien
+table1 = await st();
+winner = table1.find((p) => p.name.toLowerCase() === firstName.toLowerCase());   // die Ausbull-Knoepfe stehen in Versalien
 check('Sieger hat 1 Sieg', winner.won === 1, JSON.stringify(winner));
 check('180er gezählt', winner.s180 === 2, String(winner.s180));
 check('höchstes Finish 12', winner.highCO === 12, String(winner.highCO));
 check('Average = 501 Punkte / geworfene Darts', Math.abs(winner.avg - (501 / winner.darts) * 3) < 0.01, `avg ${winner.avg} bei ${winner.darts} Darts`);
 
-group('Undo');
+});
+
+await gruppe('Undo', async () => {
 await page.locator('#overlay-card [data-action="undo"]').click();
 check('Rest wieder 12', (await rest(0)) === '12');
 check('Match wieder offen', await page.evaluate(() => !window.__dart.currentMatch().done));
@@ -381,14 +531,10 @@ await dart('D6');
 check('erneut ausgecheckt', (await text('#overlay-card')).includes('Glückwunsch'));
 
 /* Ein Leg im Schnelldurchlauf: Anwerfer checkt mit 180 / 180 / 141 aus. */
-async function quickLeg() {
-  await typeScore(180); await typeScore(60);   // 321 / 441
-  await typeScore(180); await typeScore(60);   // 141 / 381
-  await modus('total');
-  return typeScore(141);
-}
 
-group('Checkout über Punkte-Eingabe');
+});
+
+await gruppe('Checkout über Punkte-Eingabe', async () => {
 await page.locator('#overlay-card [data-action="ov-next-match"]').click();
 await page.locator('#bulloff-buttons button').first().click();
 await typeScore(180); await typeScore(60);
@@ -398,12 +544,14 @@ await typeScore(179);
 check('179 als unmöglicher Wurf abgelehnt', (await text('#input-error')).includes('nicht möglich'));
 await typeScore(141);
 check('Checkout-Dialog fragt nach Dart-Anzahl', (await text('#overlay-card')).includes('Mit wie vielen Darts'));
-const opts = await page.locator('#overlay-card [data-action="co-darts"]').allInnerTexts();
+opts = await page.locator('#overlay-card [data-action="co-darts"]').allInnerTexts();
 check('nur 3 Darts möglich für 141', opts.join(',') === '3', opts.join(','));
 await page.locator('#overlay-card [data-action="co-darts"]').first().click();
 check('Match beendet', (await text('#overlay-card')).includes('Glückwunsch'));
 
-group('Restliches Turnier & Endstand');
+});
+
+await gruppe('Restliches Turnier & Endstand', async () => {
 for (let i = 0; i < 4; i++) {
   await page.locator('#overlay-card [data-action="ov-next-match"], #overlay-card [data-action="ov-finish"]').first().click();
   if (await visible('#screen-bulloff')) await page.locator('#bulloff-buttons button').nth(i % 2).click();
@@ -414,7 +562,7 @@ check('Glückwunsch vor der Auswertung', (await text('#overlay-card')).includes(
 check('Weg zur Spielstatistik angeboten', (await textKlein('#overlay-card')).includes('spielstatistik'));
 await page.locator('#overlay-card [data-action="open-summary"]').click();
 check('Spielstatistik sichtbar', await visible('#screen-summary'));
-const sumText = await text('#summary-box');
+sumText = await text('#summary-box');
 check('Statistik zeigt Sieger (Pille) und Legs', (await page.locator('#summary-box .st-pille').count()) === 1 && sumText.toLowerCase().includes('legs'));
 check('Statistik zeigt Average je Spieler (je Spieler eine Spalte)', (await page.locator('#summary-box .st-kopf .st-sp').count()) === 2 && sumText.includes('3-Dart-Average') &&
   (await page.locator('#summary-box .st-zeile').first().locator('.st-v').count()) === 2);
@@ -434,22 +582,26 @@ check('Podest mit drei Stufen, der Erste in der Mitte, und Endstand mit 4 Plaetz
   await page.evaluate(() => document.querySelectorAll('#winner-box .sg-stufe')[1].classList.contains('erster')) &&
   (await page.locator('#winner-box .sg-row').count()) === 4 && (await page.locator('#winner-kopf #nav').count()) === 1);
 check('Highlights des Turniers stehen beim Endstand', (await textKlein('#winner-box .sg-endstand')).includes('highlights'));
-const final = await st();
+final = await st();
 check('alle 6 Spiele gewertet', final.reduce((a, p) => a + p.won, 0) === 6, JSON.stringify(final.map((p) => `${p.name}:${p.won}`)));
 check('Tabelle nach Siegen sortiert', final.every((p, i) => i === 0 || final[i - 1].won >= p.won));
 
-group('Persistenz');
+});
+
+await gruppe('Persistenz', async () => {
 await page.reload();
 check('Stand nach Reload erhalten', await visible('#screen-winner'));
-const afterReload = await st();
+afterReload = await st();
 check('Statistik nach Reload identisch', JSON.stringify(afterReload.map((p) => p.won)) === JSON.stringify(final.map((p) => p.won)));
 
-const carr = () => page.evaluate(() => window.__dart.career());
-const board = (key) => page.evaluate((k) => window.__dart.ranking(k), key);
+carr = () => page.evaluate(() => window.__dart.career());
+board = (key) => page.evaluate((k) => window.__dart.ranking(k), key);
 
-group('Karriere-Statistik');
-const c1 = await carr();
-const champ = Object.values(c1).find((s) => s.name.toLowerCase() === firstName.toLowerCase());
+});
+
+await gruppe('Karriere-Statistik', async () => {
+c1 = await carr();
+champ = Object.values(c1).find((s) => s.name.toLowerCase() === firstName.toLowerCase());
 check('Karriere zählt alle Spiele des Turniers', Object.values(c1).reduce((a, s) => a + s.matches, 0) === 12, 'Summe Spielteilnahmen');
 check('Average über alle Spiele vorhanden', champ.avg > 0 && champ.darts > 0);
 check('First-9-Average berechnet', champ.first9 > 0, String(champ.first9));
@@ -457,7 +609,9 @@ check('Doppelquote aus Doppelversuchen', champ.doubleAttempts > 0 && champ.doubl
 check('180er über alle Spiele gezählt', champ.s180 >= 2, String(champ.s180));
 check('100+ Aufnahmen gezählt', champ.tons >= champ.s180);
 
-group('Ranglisten');
+});
+
+await gruppe('Ranglisten', async () => {
 await page.locator('#screen-winner [data-action="to-tournament"]').click();
 check('Navigation außerhalb des Spiels sichtbar', await visible('#nav'));
 check('Navigation durchgehend deutsch: Spiel · Liga · Rang · Spieler', (await page.locator('#nav button:not(.hidden)').allInnerTexts())
@@ -487,7 +641,7 @@ check('Alle Spiele oeffnet den Verlauf anstelle der Spalten', (await visible('#m
 await page.locator('[data-action="board-log-zu"]').click();
 check('zurueck zur Rangliste', await visible('#board-list'));
 check('Average-Rangliste hat Einträge', (await page.locator('.board-row').count()) > 0);
-const avgBoard = await board('avg');
+avgBoard = await board('avg');
 check('Rangliste absteigend sortiert', avgBoard.every((s, i) => i === 0 || avgBoard[i - 1].avg >= s.avg));
 await page.locator('[data-action="board"][data-key="s180"]').click();
 check('Kategorie 180er wechselbar', (await text('#board-hint')).includes('Triple 20'));
@@ -499,12 +653,14 @@ check('Hoechstes Finish: der Verlauf zeigt die Finishes je Spiel, die Legende da
   return /^höchstes finish –/i.test(t) && (!l || !/Ø/.test(l.textContent));
 }));
 await page.locator('[data-action="board"][data-key="bestLeg"]').click();
-const legBoard = await board('bestLeg');
+legBoard = await board('bestLeg');
 check('Bestes Leg aufsteigend (wenigste Darts zuerst)', legBoard.every((s, i) => i === 0 || legBoard[i - 1].bestLeg <= s.bestLeg));
 check('Rekord-Kacheln gefüllt', (await page.locator('.records .rec').count()) === 6);
 check('Alle Spiele dokumentiert', (await page.locator('#match-log .log-row').count()) === 6);
 
-group('Spielerprofile');
+});
+
+await gruppe('Spielerprofile', async () => {
 await navTo('players');
 check('Spielerliste sichtbar', (await page.locator('.player-card').count()) === 4);
 check('der Kopf ist der des Setups, darunter Filter Alle · Team · Gaeste und "+ Spieler"',
@@ -530,7 +686,7 @@ check('die Kachel Finish-Weg nennt die Lieblingsgruppe und bietet das Ermitteln 
 check('ohne Konto gibt es keine Konto-Kachel', (await page.locator('#profile-detail .pa-konto').count()) === 0);
 await page.locator('[data-action="profil-stats"]').click();
 check('"Alle Stats" legt die Statistik-Tafel ueber die Kacheln', await visible('#profile-detail .pa-panel'));
-const detail = await text('#profile-detail');
+detail = await text('#profile-detail');
 check('Profil zeigt Scoring-Werte', detail.includes('3-Dart-Average') && detail.includes('First-9-Average'));
 check('Profil zeigt Finishing-Werte', detail.includes('Doppelquote') && detail.includes('Bestes Leg'));
 check('Profil listet gespielte Spiele', (await page.locator('#profile-detail .log-row').count()) === 3);
@@ -540,19 +696,23 @@ check('"Fertig" schliesst die Tafel wieder', !(await visible('#profile-detail .p
 await page.locator('#profile-kopf .marke').click();
 check('ein Tipp auf die Marke im Kopf fuehrt zum Spiel', await visible('#screen-setup'));
 
-group('Neues Profil anlegen');
+});
+
+await gruppe('Neues Profil anlegen', async () => {
 await navTo('players');
 await page.locator('#screen-players [data-action="new-profile"]').click();
 await page.locator('[data-role="profile-name"]').fill('Testspieler');
 await page.locator('[data-action="save-profile"]').click();
-const profileNames = await page.evaluate(() => window.__dart.state().profiles.map((p) => p.name));
+profileNames = await page.evaluate(() => window.__dart.state().profiles.map((p) => p.name));
 check('Profil gespeichert', profileNames.includes('Testspieler'), profileNames.join(','));
 check('neues Profil ist für das nächste Turnier ausgewählt', await page.evaluate(() => {
   const s = window.__dart.state();
   return s.lineup.includes(s.profiles.find((p) => p.name === 'Testspieler').id);
 }));
 
-group('Turnier abschließen & Archiv');
+});
+
+await gruppe('Turnier abschließen & Archiv', async () => {
 /* Ein fertig gespieltes Turnier darf den Spiel-Reiter nicht in der alten
    Tabelle festhalten: der Tipp auf "Spiel" archiviert es und zeigt das Setup. */
 await navTo('boards');
@@ -560,63 +720,25 @@ await navTo('setup');
 check('Spiel-Reiter bei fertigem Turnier: Setup statt alter Tabelle', await visible('#screen-setup'));
 check('fertiges Turnier beim Verlassen archiviert', await page.evaluate(() => window.__dart.state().history.length) === 1);
 check('kein laufendes Turnier mehr', await page.evaluate(() => window.__dart.state().matches.length) === 0);
-const c2 = await carr();
+c2 = await carr();
 check('Karriere-Werte bleiben nach Archivierung erhalten',
   Object.values(c2).reduce((a, s) => a + s.matches, 0) === 12);
 check('Turniersieg gezählt', Object.values(c2).reduce((a, s) => a + s.tourWins, 0) === 1);
 await page.reload();
-const c3 = await carr();
+c3 = await carr();
 check('Archiv übersteht Reload', JSON.stringify(Object.values(c3).map((s) => s.matches)) === JSON.stringify(Object.values(c2).map((s) => s.matches)));
 
 /* Cricket: alle Felder liegen als Single-, Double- und Triple-Block bereit. */
-async function cDart(label) {
-  if (label === 'MISS') return page.locator('#cricket-grid [data-num="0"]').click();
-  const mult = label[0] === 'T' ? 3 : label[0] === 'D' ? 2 : 1;
-  const num = parseInt(label.replace(/^[TDS]/, ''), 10);
-  return page.locator(`#cricket-grid button[data-num="${num}"][data-mult="${mult}"]`).click();
-}
 /* Round the World zeigt nur die eigene Zahl: Single/Double/Triple/Miss. */
-async function rDart(label) {
-  if (label === 'MISS') return page.locator('#rtw-pad [data-num="0"]').click();
-  const mult = label[0] === 'T' ? 3 : label[0] === 'D' ? 2 : 1;
-  const num = parseInt(label.replace(/^[TDS]/, ''), 10);
-  const key = page.locator(`#rtw-pad [data-num="${num}"][data-mult="${mult}"]`);
-  if (await key.count()) return key.click();
-  return null;   // Zahl steht nicht zur Wahl – das ist der Testfall "falsche Zahl"
-}
 /* Bull-Off eines Trainings-/Cricket-Spiels bestätigen: bei zwei Spielern per
    Tipp auf den Anfänger, bei mehr über die Reihenfolge-Liste. */
 /* Liga-Einzel: seit der SWO 10/2026 wird ausgebullt. In den Tests gewinnt
    der Heimspieler (erster Knopf), damit die Pruefungen dahinter gleich bleiben. */
-async function ligaAusbullen() {
-  if (!(await visible('#screen-bulloff'))) return false;
-  await page.locator('#bulloff-buttons [data-action="pick-starter"]').first().click();
-  await page.waitForTimeout(150);
-  return true;
-}
 
-async function bullOffGo() {
-  if (!(await visible('#screen-bulloff'))) return;   // allein wird nicht ausgebullt
-  /* Ab drei Spielern: Namen links in Wurf-Reihenfolge antippen (der letzte
-     rueckt von selbst nach), dann starten. Bei zweien: direkter Tipp. */
-  if (await page.locator('.bo-spalten').count()) {
-    while (await page.locator('[data-action="order-pick"]').count()) {
-      await page.locator('[data-action="order-pick"]').first().click();
-    }
-    await page.locator('[data-action="start-order"]').click();
-  } else {
-    await page.locator('#bulloff-buttons button').first().click();
-  }
-}
-async function reduceLineupToTwo() {
-  for (let i = 0; i < 10; i++) {
-    const sel = page.locator('.roster-item.selected');
-    if ((await sel.count()) <= 2) break;
-    await sel.nth(2).click();
-  }
-}
 
-group('Cricket');
+});
+
+await gruppe('Cricket', async () => {
 await navTo('setup');
 await reduceLineupToTwo();
 check('zwei Spieler in der Aufstellung', (await page.evaluate(() => window.__dart.state().lineup.length)) === 2);
@@ -635,8 +757,8 @@ check('Menue, Zurueck und Bust stehen in der Kopfzeile der Tafel',
   (await visible('#cricket-grid .cr-menu')) && (await visible('#cricket-grid [data-action="undo-game"]')) && (await textKlein('#cricket-grid .bust')) === 'bust');
 
 await cDart('T20');
-let cs = await page.evaluate(() => window.__dart.cricketState());
-const [pA, pB] = await page.evaluate(() => window.__dart.game().players);
+cs = await page.evaluate(() => window.__dart.cricketState());
+;[pA, pB] = await page.evaluate(() => window.__dart.game().players);
 check('Triple schließt eine Zahl sofort (3 Marken)', cs.marks[pA][20] === 3);
 check('noch keine Punkte, alle Marken zum Schließen gebraucht', cs.score[pA] === 0);
 await cDart('S20');
@@ -647,7 +769,7 @@ cs = await page.evaluate(() => window.__dart.cricketState());
 check('19 ebenfalls zu', cs.marks[pA][19] === 3);
 /* Wer vorn liegt, wird an der Punktzahl markiert – aber nur einer, und nur
    wenn ueberhaupt schon Punkte da sind. */
-const fuehrend = () => page.evaluate(() => {
+fuehrend = () => page.evaluate(() => {
   const zellen = [...document.querySelectorAll('#cricket-board .cr-pts')];
   return zellen.map((z) => z.classList.contains('fuehrt'));
 });
@@ -682,14 +804,14 @@ await page.locator('#overlay-card [data-action="undo-game"]').click();
 check('Undo nimmt den letzten Dart zurück', !(await page.evaluate(() => window.__dart.game().done)));
 await cDart('S25');
 await page.locator('#overlay-card [data-action="open-summary"]').click();
-const cSum = await text('#summary-box');
+cSum = await text('#summary-box');
 check('Cricket-Statistik zeigt MPR und Marken', cSum.includes('MPR') && cSum.includes('Marken'));
 check('Cricket-Statistik zeigt Punkte und Felder', cSum.includes('Punkte') && cSum.includes('Felder zu'));
 await page.locator('#summary-actions [data-action="finish-game"]').click();
 check('Cricket gespeichert', await page.evaluate(() => window.__dart.state().history.filter((h) => h.kind === 'cricket').length) === 1);
-const cCar = await carr();
-const cWinner = Object.values(cCar).find((s) => s.id === pA);
-const before = Object.values(c1).find((s) => s.id === pA);
+cCar = await carr();
+cWinner = Object.values(cCar).find((s) => s.id === pA);
+before = Object.values(c1).find((s) => s.id === pA);
 check('Cricket-Sieg in der Karriere', cWinner.cricketWins === 1);
 check('MPR berechnet', cWinner.mpr > 0, String(cWinner.mpr));
 check('Cricket-Darts zählen NICHT in den 501-Average',
@@ -698,7 +820,9 @@ check('Cricket-Darts zählen NICHT in den 501-Average',
 check('Cricket verändert die Doppelquote nicht', cWinner.doubleAttempts === before.doubleAttempts);
 check('Cricket zählt nicht als 501-Spiel', cWinner.matches === before.matches);
 
-group('Round the World');
+});
+
+await gruppe('Round the World', async () => {
 await page.locator('[data-action="set-mode"][data-value="rtw"]').click();
 check('zwei Spielarten zur Wahl',
   (await page.locator('#settings-rtw [data-setting="rtwBoost"] button').count()) === 2);
@@ -706,7 +830,7 @@ check('Boost ist voreingestellt',
   await page.evaluate(() => window.__dart.state().settings.rtwBoost === 1));
 await page.locator('[data-action="start-game"]').click();
 check('Bull-Off auch im Training', await visible('#screen-bulloff'));
-const rtwStarter = await page.locator('#bulloff-buttons button').first().locator('span:not(.av)').innerText();
+rtwStarter = await page.locator('#bulloff-buttons button').first().locator('span:not(.av)').innerText();
 await page.locator('#bulloff-buttons button').first().click();
 check('RTW-Screen', await visible('#screen-rtw'));
 check('der Bull-Sieger beginnt', (await textKlein('#rtw-turn')).includes(rtwStarter.toLowerCase()), await text('#rtw-turn'));
@@ -714,12 +838,12 @@ check('alle starten auf der 1', await page.evaluate(() => {
   const s = window.__dart.rtwState();
   return Object.values(s.target).every((t) => t === 1);
 }));
-const [rA] = await page.evaluate(() => window.__dart.game().players);
-const misses = async () => { for (const _ of [1, 2, 3]) await rDart('MISS'); };
-const weiter = () => page.locator('#screen-rtw [data-action="end-rtw-visit"]').click();   // "Bust" oben rechts
-const rTarget = async () => (await page.evaluate(() => window.__dart.rtwState())).target[rA];
+;[rA] = await page.evaluate(() => window.__dart.game().players);
+misses = async () => { for (const _ of [1, 2, 3]) await rDart('MISS'); };
+weiter = () => page.locator('#screen-rtw [data-action="end-rtw-visit"]').click();   // "Bust" oben rechts
+rTarget = async () => (await page.evaluate(() => window.__dart.rtwState())).target[rA];
 
-const rGross = () => text('#rtw-pad .rtw-key.gross .z');
+rGross = () => text('#rtw-pad .rtw-key.gross .z');
 check('die eigene Zahl steht groß da', (await rGross()) === '1', await rGross());
 check('Fortschritt zeigt die erste von 21 Stationen',
   (await text('#rtw-fortschritt-txt')).includes('Station 1 von 21'), await text('#rtw-fortschritt-txt'));
@@ -734,14 +858,14 @@ await rDart('T4');
 check('Triple überspringt zwei Zahlen (4 -> 7)', (await rTarget()) === 7, String(await rTarget()));
 /* Getroffen wird selten – deshalb muss eine Aufnahme mit einem Tipp
    abzuschließen sein, statt drei Mal Miss zu verlangen. */
-const wurfZahl = () => page.evaluate(() => window.__dart.game().throws.length);
-const vorWeiter = await wurfZahl();
+wurfZahl = () => page.evaluate(() => window.__dart.game().throws.length);
+vorWeiter = await wurfZahl();
 await weiter();
 check('Weiter verbucht die ganze Aufnahme als Fehlwürfe',
   (await wurfZahl()) === vorWeiter + 3, `${vorWeiter} -> ${await wurfZahl()}`);
 await rDart('T7'); await rDart('T10'); await rDart('T13');
 check('drei Darts, dann ist der Nächste dran', (await rTarget()) === 16, String(await rTarget()));
-const vorRest = await wurfZahl();
+vorRest = await wurfZahl();
 await rDart('MISS');
 await weiter();
 check('Weiter füllt nur die noch offenen Darts auf',
@@ -766,12 +890,12 @@ await misses();
 check('nach der Schlussrunde ist das Spiel beendet', (await text('#overlay-card')).includes('Glückwunsch'));
 check('Sieger ist der Bull-Werfer', await page.evaluate((id) => window.__dart.game().winner === id, rA));
 await page.locator('#overlay-card [data-action="open-summary"]').click();
-const rSum = await text('#summary-box');
+rSum = await text('#summary-box');
 check('RTW-Ende als Sieger-Buehne: durch mit Bull, Darts, beste Quote', rSum.includes('durch mit Bull') && rSum.includes('Darts') && rSum.includes('Beste Quote') && (await page.locator('#summary-box .sg-stufe').count()) >= 1);
 await page.locator('#summary-actions [data-action="finish-game"]').click();
-const rCar = await carr();
-const rWin = Object.values(rCar).find((s) => s.id === rA);
-const rBefore = Object.values(cCar).find((s) => s.id === rA);
+rCar = await carr();
+rWin = Object.values(rCar).find((s) => s.id === rA);
+rBefore = Object.values(cCar).find((s) => s.id === rA);
 check('RTW-Sieg gespeichert', rWin.rtwWins === 1);
 check('Bestleistung in Darts festgehalten', rWin.rtwBest > 0, String(rWin.rtwBest));
 check('Round-the-World-Darts zählen NICHT in den 501-Average',
@@ -781,13 +905,15 @@ check('RTW verändert Doppelquote und 501-Bilanz nicht',
   rWin.doubleAttempts === rBefore.doubleAttempts && rWin.matches === rBefore.matches);
 check('RTW zählt auch nicht in die Cricket-Werte', rWin.cricketDarts === rBefore.cricketDarts);
 
-group('Statistik nach Spielmodus');
+});
+
+await gruppe('Statistik nach Spielmodus', async () => {
 await navTo('boards');
 check('Classic ist voreingestellt', await page.locator('[data-action="board-mode"][data-value="501"]').evaluate((e) => e.classList.contains('active')));
 check('Classic-Kategorien sichtbar', (await page.locator('[data-action="board"][data-key="avg"]').count()) === 1);
 /* In jedem Modus stehen Siege vorn, dann der Average -- und was vorn steht,
    ist auch das, was beim Moduswechsel als Erstes gezeigt wird. */
-const kategorien = async () => page.evaluate(() =>
+kategorien = async () => page.evaluate(() =>
   [...document.querySelectorAll('#board-kacheln .bk-kachel .bk-t')].map((c) => c.textContent.trim()));
 check('Siege stehen an erster Stelle', (await kategorien())[0] === 'Siege', (await kategorien()).join(' | '));
 check('danach der Average', (await kategorien())[1] === 'Average');
@@ -803,15 +929,15 @@ check('nur der Erste leuchtet - Name und Zahl, keine Klinge mehr', await page.ev
 check('Cricket-Kategorien nicht in Classic', (await page.locator('[data-action="board"][data-key="mpr"]').count()) === 0);
 await page.locator('[data-action="board"][data-key="avg"]').click();
 check('Verlaufsdiagramm für Classic (Average)', (await page.locator('#board-chart .chart').count()) === 1 && (await textKlein('#board-chart h2')).startsWith('average –'), await text('#board-chart h2'));
-const lines = await page.locator('#board-chart .chart polyline').count();
+lines = await page.locator('#board-chart .chart polyline').count();
 check('eine Linie je Spieler', lines >= 2, `${lines} Linien`);
-const legend = await page.locator('#board-chart .chart-legend .cl').count();
+legend = await page.locator('#board-chart .chart-legend .cl').count();
 check('unter dem Diagramm steht der beste Schnitt zuerst, der schwaechste zuletzt', await page.evaluate(() => {
   const w = [...document.querySelectorAll('#board-chart .chart-legend .cl b')].map((e) => parseFloat(e.textContent.replace('Ø', '')));
   return w.length > 0 && w.every((v, i) => i === 0 || w[i - 1] >= v);
 }));
 check('Legende mit Spielerfarben', legend === lines);
-const colors = await page.locator('#board-chart .chart polyline').evaluateAll((els) => els.map((e) => e.getAttribute('stroke')));
+colors = await page.locator('#board-chart .chart polyline').evaluateAll((els) => els.map((e) => e.getAttribute('stroke')));
 check('jeder Spieler eine eigene Farbe', new Set(colors).size === colors.length, colors.join(' '));
 check('Classic-Verlauf zeigt nur Classic-Spiele', (await text('#log-title')).toLowerCase().includes('classic'));
 
@@ -848,15 +974,17 @@ await navTo('players');
 await page.locator('.player-card').first().click();
 await page.locator('[data-action="profil-stats"]').click();
 /* Überschriften werden per CSS groß gesetzt, daher ohne Groß-/Kleinschreibung prüfen. */
-const det = (await text('#profile-detail')).toLowerCase();
+det = (await text('#profile-detail')).toLowerCase();
 check('Profil zeigt Cricket-Werte', det.includes('mpr') && det.includes('marken gesamt'));
 check('Profil zeigt Round-the-World-Werte', det.includes('round the world') && det.includes('bestes ergebnis'));
 
-group('Regression: gemeldete Fehler');
+});
+
+await gruppe('Regression: gemeldete Fehler', async () => {
 /* Frisch anfangen, damit die Prüfungen unabhängig vom bisherigen Verlauf sind. */
 await page.evaluate(() => localStorage.clear());
 await page.reload();
-const ids = () => page.evaluate(() => window.__dart.state().profiles.map((p) => p.id));
+ids = () => page.evaluate(() => window.__dart.state().profiles.map((p) => p.id));
 
 // (1) Beendetes Match darf nach einem Reload nicht überschreibbar sein
 await page.locator('[data-action="start-game"]').click();
@@ -866,13 +994,13 @@ await typeScore(180); await typeScore(60); await typeScore(180); await typeScore
 await modus('total');
 await typeScore(141);
 await page.locator('#overlay-card [data-action="co-darts"]').first().click();
-const winnerBefore = await page.evaluate(() => window.__dart.currentMatch().winner);
+winnerBefore = await page.evaluate(() => window.__dart.currentMatch().winner);
 await page.reload();
 check('Reload nach Matchende landet in der Spielstatistik, nicht im Spiel',
   await visible('#screen-summary'), await page.evaluate(() => window.__dart.state().screen));
 check('das beendete Match ist unverändert',
   (await page.evaluate(() => window.__dart.currentMatch().winner)) === winnerBefore);
-const dartsBefore = await page.evaluate(() => window.__dart.currentMatch().legs[0].visits.length);
+dartsBefore = await page.evaluate(() => window.__dart.currentMatch().legs[0].visits.length);
 await page.evaluate(() => { window.__dart.state().screen = 'game'; });
 await page.reload();
 await page.evaluate(() => window.__dart.submitTotal());
@@ -883,7 +1011,7 @@ check('kein Nachtragen von Würfen in ein beendetes Match',
 await page.locator('#summary-actions [data-action="ov-next-match"]').click();
 await page.locator('#bulloff-buttons button').first().click();
 await typeScore(180);
-const restBefore = await rest(0);
+restBefore = await rest(0);
 await spielVerlassen();
 await page.locator('[data-action="to-setup"]').click();
 await page.locator('[data-setting="start"] button[data-value="301"]').click();
@@ -895,8 +1023,8 @@ check('Legs pro Spiel bleibt für das laufende Turnier gültig',
   !(await text('#game-leg-label')).includes('first to 3'), await text('#game-leg-label'));
 
 // (3) Spieler ausblenden zerstört das laufende Turnier nicht
-const standingsBefore = (await st()).length;
-const loserId = await page.evaluate(() => {
+standingsBefore = (await st()).length;
+loserId = await page.evaluate(() => {
   const m = window.__dart.currentMatch();
   return m.p[0];
 });
@@ -925,7 +1053,7 @@ await page.locator('#overlay-card [data-action="ov-cancel"]').click();
 await navTo('setup');
 await page.locator('.match-row .go').first().click();
 await page.waitForTimeout(400);
-const visitsBefore = await page.evaluate(() => window.__dart.activeLeg(window.__dart.currentMatch()).visits.length);
+visitsBefore = await page.evaluate(() => window.__dart.activeLeg(window.__dart.currentMatch()).visits.length);
 await page.locator('[data-quick="60"]').dblclick();
 check('Doppeltipp auf die Schnellwahl zählt einmal',
   (await page.evaluate(() => window.__dart.activeLeg(window.__dart.currentMatch()).visits.length)) === visitsBefore + 1);
@@ -953,7 +1081,7 @@ check('Single und Triple ohne Umschalten',
 check('MPR steht unter dem Namen', (await text('#cricket-board')).includes('MPR'));
 
 // (7) Beschädigter Speicherstand wirft Profile und Archiv nicht weg
-const profileCount = (await ids()).length;
+profileCount = (await ids()).length;
 await page.evaluate(() => {
   const s = JSON.parse(localStorage.getItem('dart-turnier-v1'));
   delete s.settings;
@@ -973,7 +1101,9 @@ await page.evaluate(() => {
 await page.reload();
 check('Spielstand ohne Spielerliste wird verworfen, App bleibt bedienbar', await visible('#screen-setup'));
 
-group('Neue Funktionen aus der Prüfung');
+});
+
+await gruppe('Neue Funktionen aus der Prüfung', async () => {
 await page.evaluate(() => localStorage.clear());
 await page.reload();
 await page.locator('[data-action="start-game"]').click();
@@ -1008,17 +1138,17 @@ await page.locator('#overlay-card [data-action="ov-cancel"]').click();
 
 // Spieler nachtragen und abmelden
 await spielVerlassen();
-const matchesBefore = await page.evaluate(() => window.__dart.state().matches.length);
+matchesBefore = await page.evaluate(() => window.__dart.state().matches.length);
 await page.locator('[data-action="roster-change"]').click();
 await page.locator('#overlay-card [data-action="withdraw-player"]').first().click();
-const voided = await page.evaluate(() => window.__dart.state().matches.filter((m) => m.void).length);
+voided = await page.evaluate(() => window.__dart.state().matches.filter((m) => m.void).length);
 check('offene Spiele des Abgemeldeten entfallen', voided > 0, String(voided));
 check('gespielte Spiele bleiben erhalten',
   (await page.evaluate(() => window.__dart.state().matches.filter((m) => m.done && m.void).length)) === 0);
 await page.locator('#overlay-card [data-action="ov-cancel"]').click();
 check('Tabelle behält den Abgemeldeten', (await st()).length === 4);
 await page.locator('[data-action="roster-change"]').click();
-const addable = await page.locator('#overlay-card [data-action="add-player"]').count();
+addable = await page.locator('#overlay-card [data-action="add-player"]').count();
 if (addable === 0) {
   await page.locator('#overlay-card [data-action="ov-cancel"]').click();
   await navTo('players');
@@ -1035,7 +1165,9 @@ check('Nachzügler bekommt Spiele gegen alle',
   `${matchesBefore} -> ${await page.evaluate(() => window.__dart.state().matches.length)}`);
 check('Nachzügler steht in der Tabelle', (await st()).length === 5);
 
-group('Regression: Nebenwirkungen der ersten Korrekturrunde');
+});
+
+await gruppe('Regression: Nebenwirkungen der ersten Korrekturrunde', async () => {
 await page.evaluate(() => localStorage.clear());
 await page.reload();
 await page.locator('[data-action="start-game"]').click();
@@ -1076,7 +1208,9 @@ check('Korrektur-Dialog offen', await visible('#overlay'));
 await page.locator('#overlay').click({ position: { x: 5, y: 5 } });
 check('Tipp neben den Dialog schließt ihn', !(await visible('#overlay')));
 
-group('Regression: zweite Prüfungsrunde');
+});
+
+await gruppe('Regression: zweite Prüfungsrunde', async () => {
 await page.evaluate(() => localStorage.clear());
 await page.reload();
 
@@ -1100,7 +1234,7 @@ await typeScore(180); await typeScore(60); await typeScore(180); await typeScore
 await dart('T20'); await dart('T19'); await dart('S4');
 await typeScore(60);
 await dart('D10');   // Rest 20, getroffen -> Versuch mit Treffer
-const quoteDartWeg = await page.evaluate(() => {
+quoteDartWeg = await page.evaluate(() => {
   const m = window.__dart.currentMatch();
   const s = window.__dart.stats();
   return { versuche: s[m.p[0]].doubleAttempts, treffer: s[m.p[0]].doubleHits, quote: s[m.p[0]].doubleQuote };
@@ -1108,7 +1242,7 @@ const quoteDartWeg = await page.evaluate(() => {
 check('Doppelversuche werden dartgenau gezählt',
   quoteDartWeg.versuche === 2 && quoteDartWeg.treffer === 1 && Math.round(quoteDartWeg.quote) === 50,
   JSON.stringify(quoteDartWeg));
-const quotePunkteWeg = await page.evaluate(() => {
+quotePunkteWeg = await page.evaluate(() => {
   const m = window.__dart.currentMatch();
   const leg = m.legs[0];
   // Aufnahme ohne Einzeldarts (wie über die Punkte-Eingabe) einfügen
@@ -1131,7 +1265,9 @@ await page.evaluate(() => window.__dart.action('add-player', { getAttribute: () 
 check('Nachtragen achtet die Obergrenze von 12',
   (await page.evaluate(() => window.__dart.state().tour.players.length)) === 12);
 
-group('Aufnahme im Einzel-Dart-Modus abschließen');
+});
+
+await gruppe('Aufnahme im Einzel-Dart-Modus abschließen', async () => {
 await page.evaluate(() => localStorage.clear());
 await page.reload();
 await page.locator('[data-action="start-game"]').click();
@@ -1154,7 +1290,9 @@ check('angefangene Aufnahme wird übernommen', (await rest(0)) === '81', await r
 check('auch dann drei Darts',
   (await page.evaluate(() => window.__dart.activeLeg(window.__dart.currentMatch()).visits.slice(-1)[0])).d === 3);
 
-group('Wurfverlauf über das ganze Match');
+});
+
+await gruppe('Wurfverlauf über das ganze Match', async () => {
 await page.evaluate(() => localStorage.clear());
 await page.reload();
 await page.locator('[data-setting="bestOf"] button[data-value="3"]').click();
@@ -1168,8 +1306,8 @@ await typeScore(141);
 await page.locator('#overlay-card [data-action="co-darts"]').first().click();
 await page.locator('#overlay-card [data-action="ov-next-leg"]').click();
 await typeScore(100); await typeScore(60); await typeScore(85);
-const histText = (await text('#history')).replace(/\s+/g, ' ');
-const histLower = histText.toLowerCase();
+histText = (await text('#history')).replace(/\s+/g, ' ');
+histLower = histText.toLowerCase();
 check('Verlauf zeigt auch das vorige Leg', histLower.includes('leg 1'), histText.slice(0, 120));
 check('Leg-Trenner nennt den Ausgang', histLower.includes('gewonnen') || histLower.includes('verloren'));
 check('mehr als fünf Aufnahmen sichtbar',
@@ -1182,7 +1320,9 @@ check('nur das laufende Leg ist korrigierbar',
   (await page.locator('#history .v.tap').count()) === 3,
   String(await page.locator('#history .v.tap').count()));
 
-group('Cricket: Reihenfolge, graue Zahlen, Aufnahme abkürzen');
+});
+
+await gruppe('Cricket: Reihenfolge, graue Zahlen, Aufnahme abkürzen', async () => {
 await page.evaluate(() => localStorage.clear());
 await page.reload();
 check('vier Spieler in der Aufstellung', (await page.evaluate(() => window.__dart.state().lineup.length)) === 4);
@@ -1194,10 +1334,10 @@ check('Bull-Off zeigt links alle vier zur Wahl - ohne Nummern',
 check('rechts warten vier leere nummerierte Slots',
   (await page.locator('.bo-reihe .bo-row').count()) === 0 &&
   (await page.locator('.bo-reihe .bo-slot').count()) === 4);
-const alleIds = await page.evaluate(() => window.__dart.game().players.slice());
+alleIds = await page.evaluate(() => window.__dart.game().players.slice());
 /* Der Naechste am Bull wird zuerst angetippt: hier der Vierte, dann der
    Zweite - danach zwei Erstbeste. Der letzte rueckt von selbst nach. */
-const wahlHoehe = await page.locator('.bo-wahl').evaluate((e) => e.getBoundingClientRect().height);
+wahlHoehe = await page.locator('.bo-wahl').evaluate((e) => e.getBoundingClientRect().height);
 await page.locator(`[data-action="order-pick"][data-id="${alleIds[3]}"]`).click();
 check('der Angetippte steht rechts als 1.', await page.evaluate((id) =>
   window.__dart.ui().bullReihe[0] === id, alleIds[3]));
@@ -1219,7 +1359,7 @@ await page.locator(`[data-action="order-pick"][data-id="${alleIds[1]}"]`).click(
 await page.locator(`[data-action="order-pick"][data-id="${alleIds[0]}"]`).click();
 check('der letzte Spieler rueckt von selbst nach', await page.evaluate(() =>
   window.__dart.ui().bullReihe.length === 4));
-const cOrder = await page.evaluate(() => window.__dart.ui().bullReihe.slice());
+cOrder = await page.evaluate(() => window.__dart.ui().bullReihe.slice());
 check('Startknopf nennt den ersten Spieler',
   (await text('[data-action="start-order"]')).toLowerCase()
     .includes((await page.evaluate((id) => window.__dart.state().profiles.find((p) => p.id === id).name, cOrder[0])).toLowerCase()));
@@ -1229,14 +1369,14 @@ check('Cricket startet in der angetippten Reihenfolge',
   (await page.evaluate(() => window.__dart.gameTurnPlayer())) === cOrder[0]);
 
 // Aufnahme abkürzen: ein Tipp statt dreimal Miss
-const throwsBefore = await page.evaluate(() => window.__dart.game().throws.length);
+throwsBefore = await page.evaluate(() => window.__dart.game().throws.length);
 await page.locator('#cricket-grid [data-action="end-cricket-visit"]').click();
 check('Weiter-Knopf füllt die Aufnahme mit drei Fehlwürfen',
   (await page.evaluate(() => window.__dart.game().throws.length)) === throwsBefore + 3);
 check('danach ist der nächste Spieler am Wurf',
   (await page.evaluate(() => window.__dart.gameTurnPlayer())) === cOrder[1]);
 await cDart('T20');
-const throwsMid = await page.evaluate(() => window.__dart.game().throws.length);
+throwsMid = await page.evaluate(() => window.__dart.game().throws.length);
 await page.locator('#cricket-grid [data-action="end-cricket-visit"]').click();
 check('angefangene Aufnahme wird auf drei Darts aufgefüllt',
   (await page.evaluate(() => window.__dart.game().throws.length)) === throwsMid + 2);
@@ -1256,8 +1396,8 @@ check('geschlossene Zahl ist auf der Tafel ausgegraut',
   (await page.locator('.cr-num.dead').count()) === 1, String(await page.locator('.cr-num.dead').count()));
 check('auch die Marken der Zeile sind grau',
   (await page.locator('.cr-mark.dead').count()) === (await page.evaluate(() => window.__dart.game().players.length)));
-const deadColor = await page.locator('.cr-num.dead').first().evaluate((e) => getComputedStyle(e).color);
-const liveColor = await page.locator('.cr-num:not(.dead)').first().evaluate((e) => getComputedStyle(e).color);
+deadColor = await page.locator('.cr-num.dead').first().evaluate((e) => getComputedStyle(e).color);
+liveColor = await page.locator('.cr-num:not(.dead)').first().evaluate((e) => getComputedStyle(e).color);
 check('graue Zahl unterscheidet sich sichtbar', deadColor !== liveColor, `${deadColor} vs ${liveColor}`);
 check('Eingabefelder der toten Zahl sind ebenfalls grau',
   (await page.locator('#cricket-grid button.dim').count()) === 3,
@@ -1277,12 +1417,12 @@ check('Bull ist bei allen zu', await page.evaluate(() => {
 check('auch der Bull wird im Eingabefeld ausgegraut',
   (await page.locator('#cricket-grid button.bull.dim').count()) === 2,
   String(await page.locator('#cricket-grid button.bull.dim').count()));
-const bullTot = await page.locator('#cricket-grid button.bull.dim').first()
+bullTot = await page.locator('#cricket-grid button.bull.dim').first()
   .evaluate((e) => getComputedStyle(e).color);
 check('und zwar sichtbar, nicht nur als Klasse',
   bullTot === deadColor, bullTot + ' vs ' + deadColor);
 
-const cgKey = page.locator('#cricket-grid button[data-mult="3"]').first();
+cgKey = page.locator('#cricket-grid button[data-mult="3"]').first();
 check('Eingabefelder am Handy groß genug zum schnellen Tippen',
   (await cgKey.boundingBox()).height >= 52, String((await cgKey.boundingBox()).height));
 await page.setViewportSize({ width: 1194, height: 834 });
@@ -1303,60 +1443,22 @@ await page.setViewportSize({ width: 390, height: 844 });
 /* Ein Dart im Finisher. Die Zahlen 1–20 richten sich nach der eingestellten
    Multiplikatorreihe, 25 und Bull haben sie fest am Knopf. */
 /* Double und Triple sind auch hier Schalter (Tipp an, nochmal Tipp aus). */
-async function finSetMult(mult) {
-  const ist = await page.evaluate(() => window.__dart.ui().mult);
-  if (ist === mult) return;
-  if (mult === 1) await page.locator(`#fin-pad .num-grid button.mult[data-mult="${ist}"]`).click();
-  else await page.locator(`#fin-pad .num-grid button.mult[data-mult="${mult}"]`).click();
-}
-async function finDart(label) {
-  if (label === 'BULL') return page.locator('#fin-pad button[data-num="25"][data-mult="2"]').click();
-  if (label === '25') return page.locator('#fin-pad button[data-num="25"][data-mult="1"]').click();
-  const mult = label[0] === 'T' ? 3 : label[0] === 'D' ? 2 : 1;
-  const num = parseInt(label.slice(1), 10);
-  await finSetMult(mult);
-  return page.locator(`#fin-pad .num-grid button[data-num="${num}"]`).click();
-}
 
 /* Der Solver sagt uns, wie die gezogene Zahl zu treffen ist – so kann der
    Test jede Zufallszahl auschecken, ohne sie vorher zu kennen. */
-async function finCheckout() {
-  const route = await page.evaluate(() => {
-    const g = window.__dart.game();
-    const st = window.__dart.finisherState();
-    return window.Checkout.suggest(st.rest[g.players[st.turn]], 3 - st.inVisit);
-  });
-  if (!route) return false;
-  for (const label of route) await finDart(label);
-  return true;
-}
 
-async function finMiss(n) {
-  for (let i = 0; i < n; i++) await page.locator('#fin-pad button.miss').click();
-}
 
-const finState = () => page.evaluate(() => window.__dart.finisherState());
+finState = () => page.evaluate(() => window.__dart.finisherState());
 
 /* Angefangene Aufnahme zu Ende werfen, damit wieder drei Darts zur Verfügung
    stehen – sonst findet der Solver für den Rest keinen Weg mehr. */
-async function finVisitEnde() {
-  let st = await finState();
-  while (st.inVisit !== 0) {
-    await page.locator('#fin-pad button.miss').click();
-    st = await finState();
-  }
-}
 
 /* Eine ganze Runde: der Spieler am Wurf checkt aus, der andere zieht nicht
    nach. Danach ist die Runde entschieden und die nächste Zahl gezogen. */
-async function finRundeGewinnen() {
-  await finVisitEnde();
-  const ok = await finCheckout();
-  await finMiss(3);
-  return ok;
-}
 
-group('Finisher: alle auf dieselbe Zahl');
+});
+
+await gruppe('Finisher: alle auf dieselbe Zahl', async () => {
 await page.evaluate(() => window.__dart.setScreen('setup'));
 await reduceLineupToTwo();
 await page.locator('[data-action="set-mode"][data-value="finisher"]').click();
@@ -1370,8 +1472,8 @@ check('Finisher-Screen', await visible('#screen-finisher'));
 /* Feste Zahl, damit der Tipp auf die erste Kachel die Runde nicht zufaellig beendet. */
 await page.evaluate(() => { const g = window.__dart.game(); g.rounds[g.rounds.length - 1].zahl = 101; window.__dart.save(); window.__dart.render(); });
 
-let fst = await finState();
-const [fA, fB] = await page.evaluate(() => window.__dart.game().players);
+fst = await finState();
+;[fA, fB] = await page.evaluate(() => window.__dart.game().players);
 check('Zahl liegt zwischen 6 und 120', fst.zahl >= 6 && fst.zahl <= 120, String(fst.zahl));
 check('beide starten auf derselben Zahl', fst.rest[fA] === fst.zahl && fst.rest[fB] === fst.zahl);
 check('Zahl steht groß im Kasten und als Rest auf den Karten', (await text('#fin-zahl')).trim() === String(fst.zahl) && (await text('#fin-board')).includes(String(fst.zahl)));
@@ -1410,11 +1512,7 @@ check('noch keine Punkte', fst.punkte[fA] === 0 && fst.punkte[fB] === 0);
  * (Vorher stand hier eine gerechnete Zahl, gedeckelt auf 20 – die bustete
  * bei großen Zielzahlen nicht und der Test ging nur mit Glück durch.)
  */
-async function t20() {
-  await finSetMult(3);
-  await page.locator('#fin-pad .num-grid button[data-num="20"]').click();
-}
-const zielzahl = fst.zahl;
+zielzahl = fst.zahl;
 await t20();
 if ((await finState()).rest[fA] !== zielzahl) await t20();
 fst = await finState();
@@ -1448,13 +1546,15 @@ check('und ist danach wieder weg - das Zahl-Feld hat sie', await page.evaluate((
   !document.getElementById('fin-roller').classList.contains('an') && document.getElementById('fin-zahl').textContent === String(window.__dart.finisherState().zahl)));
 check('alle wieder auf Anfang', fst.rest[fA] === fst.zahl && fst.rest[fB] === fst.zahl);
 
-group('Finisher: Stechen, wenn beide gleichziehen');
+});
+
+await gruppe('Finisher: Stechen, wenn beide gleichziehen', async () => {
 // Beide checken dieselbe Zahl in ihrer ersten Aufnahme aus.
 check('A checkt aus', await finCheckout());
 await finVisitEnde();
 check('B zieht gleich', await finCheckout());
 fst = await finState();
-const stechenDa = await page.evaluate(() => !!window.__dart.finisherRunde().stechen);
+stechenDa = await page.evaluate(() => !!window.__dart.finisherRunde().stechen);
 check('beide gefinished, also Stechen', stechenDa);
 check('Punkte noch unverändert', fst.punkte[fA] === 1 && fst.punkte[fB] === 0);
 check('Stechen steht sichtbar als Dialog auf dem Schirm', await page.locator('.fin-stechen').isVisible());
@@ -1469,7 +1569,9 @@ await page.locator(`[data-action="fin-stechen"][data-id="${fB}"]`).click();
 fst = await finState();
 check('der Getippte bekommt den Punkt', fst.punkte[fB] === 1);
 
-group('Finisher: dritte Runde');
+});
+
+await gruppe('Finisher: dritte Runde', async () => {
 check('A gewinnt die dritte Runde', await finRundeGewinnen());
 fst = await finState();
 check('A führt mit 2 zu 1', fst.punkte[fA] === 2 && fst.punkte[fB] === 1, JSON.stringify(fst.punkte));
@@ -1477,8 +1579,10 @@ check('A führt mit 2 zu 1', fst.punkte[fA] === 2 && fst.punkte[fB] === 1, JSON.
 /* Undo über eine Rundengrenze hinweg: die frische Runde wird verworfen und
    die entschiedene wieder geöffnet – sonst käme man aus einer neu gezogenen
    Zahl nie mehr zurück. */
-group('Finisher: Undo über die Rundengrenze');
-const rundeVorher = fst.runde;
+});
+
+await gruppe('Finisher: Undo über die Rundengrenze', async () => {
+rundeVorher = fst.runde;
 await page.locator('#screen-finisher [data-action="undo-game"]').click();
 fst = await finState();
 check('die frische Runde ist weg', fst.runde === rundeVorher - 1);
@@ -1492,7 +1596,9 @@ await finVisitEnde();
 fst = await finState();
 check('erneut gewonnen, wieder 2 zu 1', fst.punkte[fA] === 2 && fst.punkte[fB] === 1, JSON.stringify(fst.punkte));
 
-group('Finisher: Spielende');
+});
+
+await gruppe('Finisher: Spielende', async () => {
 check('A gewinnt die letzte Runde', await finRundeGewinnen());
 fst = await finState();
 check('A hat drei Punkte', fst.punkte[fA] === 3, JSON.stringify(fst.punkte));
@@ -1501,14 +1607,14 @@ check('Sieger steht fest', await page.evaluate((id) => window.__dart.game().winn
 check('Glückwunsch-Overlay', (await text('#overlay-card')).includes('Glückwunsch'));
 
 await page.locator('#overlay-card [data-action="open-summary"]').click();
-const finSum = await text('#summary-box');
+finSum = await text('#summary-box');
 check('Finisher-Ende: Runden gewonnen, Ø Darts, hoechste Zahl', finSum.includes('Punkte') && finSum.includes('gewonnen') && finSum.includes('Höchste Zahl'));
 check('Sieger-Buehne mit Podest und Revanche', (await page.locator('#summary-box .sg-stufe.erster').count()) === 1 && (await textKlein('#summary-actions')).includes('revanche'));
 await page.locator('#summary-actions [data-action="finish-game"]').click();
 check('Finisher gespeichert',
   (await page.evaluate(() => window.__dart.state().history.filter((h) => h.kind === 'finisher').length)) === 1);
 
-const finCar = await carr();
+finCar = await carr();
 check('Karriere zählt gewonnene Runden', finCar[fA].finRounds === 3, String(finCar[fA].finRounds));
 check('Karriere zählt den Spielsieg', finCar[fA].finWins === 1);
 check('auch der Verlierer hat seine Runde', finCar[fB].finRounds === 1, String(finCar[fB].finRounds));
@@ -1522,7 +1628,9 @@ check('auch der Finisher hat seinen Verlauf', (await visible('#board-chart')) &&
 
 /* ---------- Finisher: die drei Kacheln ---------- */
 
-group('Finisher: drei Kacheln zeigen den Weg');
+});
+
+await gruppe('Finisher: drei Kacheln zeigen den Weg', async () => {
 await page.evaluate(() => window.__dart.setScreen('setup'));
 await page.locator('[data-action="set-mode"][data-value="finisher"]').click();
 await page.locator('[data-action="start-game"]').click();
@@ -1562,12 +1670,14 @@ check('Fehlwürfe stehen als – in den Kacheln',
 check('der letzte Dart kann nicht finishen: grauer Stellwurf 7 (auf D16)',
   /^7\s+auf \d+$/.test((await page.locator('#fin-hint .fk.stellen').innerText()).trim()));
 
-group('Finisher: Fernsteuerung - die Aufnahme als Zahl, Weg und Finish-Frage');
+});
+
+await gruppe('Finisher: Fernsteuerung - die Aufnahme als Zahl, Weg und Finish-Frage', async () => {
 await page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; S.lineup = D.activeProfiles().slice(0, 2).map((p) => p.id); S.mode = 'finisher'; D.save(); D.setScreen('setup'); });
 await page.locator('[data-action="start-game"]').click();
 await bullOffGo();
 await page.evaluate(() => { window.__dart.finisherRunde().zahl = 100; window.__dart.render(); });
-const [ffA] = await page.evaluate(() => window.__dart.game().players);
+;[ffA] = await page.evaluate(() => window.__dart.game().players);
 await page.locator('#screen-finisher .fin-menu').first().click();
 await page.locator('#fin-menu-overlay [data-action="fin-fern"]').click();
 check('die Fernsteuerung steht: Karten, Zahl, Eingabe-Anzeige', (await visible('#fin-fern')) && (await text('#ff-zahl')).trim() === '100' &&
@@ -1578,7 +1688,7 @@ check('60 getippt: Rest 40, die Aufnahme ist durch', await page.evaluate((id) =>
   const st = window.__dart.finisherState(); return st.rest[id] === 40 && st.aufnahmen[id] === 1;
 }, ffA));
 check('die Liste unten zeigt 100 → 40', (await text('#ff-hist-l')).includes('100 → 40'));
-const ffGegner = await page.evaluate(() => window.__dart.game().players[1]);
+ffGegner = await page.evaluate(() => window.__dart.game().players[1]);
 await page.keyboard.type('10'); await page.keyboard.press('NumLock');   // Gegner tippt den Rest: 100 -> 10
 check('Clear bucht den eingetippten Rest (100 -> 10)', await page.evaluate((id) => window.__dart.finisherState().rest[id] === 10, ffGegner));
 await page.keyboard.press('-');   // A: Bust, Rest bleibt 40, die Aufnahme ist weg
@@ -1603,7 +1713,9 @@ await page.evaluate(() => {
 
 /* ---------- Turnier vorzeitig beenden ---------- */
 
-group('Turnier beenden: Gespieltes bleibt, Offenes faellt weg');
+});
+
+await gruppe('Turnier beenden: Gespieltes bleibt, Offenes faellt weg', async () => {
 await page.evaluate(() => window.__dart.setScreen('setup'));
 await page.evaluate(() => {
   const S = window.__dart.state();
@@ -1616,7 +1728,7 @@ await page.locator('[data-action="start-game"]').click();
 await page.waitForTimeout(300);
 
 /* Zwei der sechs Partien zu Ende spielen, die anderen offen lassen. */
-const vorher = await page.evaluate(() => {
+vorher = await page.evaluate(() => {
   const c = window.__dart.career();
   return Object.keys(c).reduce((s, k) => s + c[k].matches, 0);
 });
@@ -1644,7 +1756,7 @@ await page.evaluate(() => window.__dart.setScreen('setup'));
 check('Fortsetzen-Box ist da', await visible('#resume-box'));
 check('und hat einen Beenden-Knopf', await page.locator('#resume-box [data-action="beenden"]').isVisible());
 await page.locator('#resume-box [data-action="beenden"]').click();
-const rfrage = await textKlein('#overlay-card');
+rfrage = await textKlein('#overlay-card');
 check('fragt vorher nach', rfrage.includes('vorzeitig beenden'));
 check('nennt die gespielten Partien', rfrage.includes('2 gespielte spiele'));
 check('nennt die offenen', rfrage.includes('4 offenen partien'));
@@ -1652,7 +1764,7 @@ await page.locator('#overlay-card [data-action="ov-reset"]').click();
 
 check('Turnier ist weg', (await page.evaluate(() => window.__dart.state().matches.length)) === 0);
 check('zurück im Setup', await visible('#screen-setup'));
-const nachher = await page.evaluate(() => {
+nachher = await page.evaluate(() => {
   const c = window.__dart.career();
   return Object.keys(c).reduce((s, k) => s + c[k].matches, 0);
 });
@@ -1661,14 +1773,16 @@ check('die offenen nicht', nachher !== vorher + 12);
 
 /* ---------- Schnelles Spiel ---------- */
 
-group('Schnelles X01: alle gleichzeitig, ein Leg');
+});
+
+await gruppe('Schnelles X01: alle gleichzeitig, ein Leg', async () => {
 /* Vorher merken: in der Karriere stehen schon Siege aus den Tests davor,
    also zaehlt hier die Differenz und nicht der absolute Stand. */
-const wonVorher = await page.evaluate(() => {
+wonVorher = await page.evaluate(() => {
   const c = window.__dart.career();
   return Object.keys(c).reduce((s, k) => s + c[k].won, 0);
 });
-const bestVorher = await page.evaluate(() => {
+bestVorher = await page.evaluate(() => {
   const c = window.__dart.career();
   return Object.keys(c).map((k) => c[k].bestLeg);
 });
@@ -1701,7 +1815,7 @@ await page.locator('[data-action="start-game"]').click();
   await page.locator(`[data-action="order-pick"][data-id="${qIds0[2]}"]`).click();
   await page.locator(`[data-action="order-pick"][data-id="${qIds0[0]}"]`).click();
 }
-const qOrder = await page.evaluate(() => window.__dart.ui().bullReihe.slice());
+qOrder = await page.evaluate(() => window.__dart.ui().bullReihe.slice());
 await bullOffGo();
 check('läuft auf dem X01-Bildschirm', await visible('#screen-game'));
 check('die ausgebullte Reihenfolge gilt im Spiel', await page.evaluate((order) => {
@@ -1713,7 +1827,7 @@ check('der Ausbull-Sieger ist am Wurf', await page.evaluate((id) => {
   return D.activePlayer(D.activeLeg(m), m) === id;
 }, qOrder[0]));
 
-const qIds = await page.evaluate(() => window.__dart.currentMatch().p);
+qIds = await page.evaluate(() => window.__dart.currentMatch().p);
 check('alle drei Spieler auf der Tafel', (await page.locator('#scoreboard .pcard').count()) === 3);
 check('alle starten auf 301', await page.evaluate(() => {
   const D = window.__dart, m = D.currentMatch(), leg = D.activeLeg(m);
@@ -1726,7 +1840,7 @@ check('kein Turnier-Zaehler in der Kopfzeile',
 check('ohne Finish bleiben die Felder des Spielers am Wurf leer', (await page.locator('#scoreboard .pcard.active .pfelder .fk').count()) === 0);
 
 /* Reihum: nach drei Darts ist der Naechste dran, nicht wieder der Erste. */
-const amWurf = () => page.evaluate(() => {
+amWurf = () => page.evaluate(() => {
   const D = window.__dart, m = D.currentMatch();
   return D.activePlayer(D.activeLeg(m), m);
 });
@@ -1760,7 +1874,7 @@ check('Sieger ist Spieler 1', await page.evaluate((id) => window.__dart.currentM
 check('Glückwunsch-Overlay', (await textKlein('#overlay-card')).includes('glückwunsch'));
 
 await page.locator('#overlay-card [data-action="open-summary"]').click();
-const qSum = await text('#summary-box');
+qSum = await text('#summary-box');
 check('Auswertung nennt alle drei', (await page.locator('#summary-box .sg-row').count()) === qIds.length && (await page.locator('#summary-box .sg-stufe').count()) === qIds.length);
 check('Auswertung nennt den Modus', (await textKlein('#summary-box')).includes('schnelles x01'));
 check('X01-Ende als Sieger-Buehne: Podest mit Erstem in der Mitte, Endstand mit Legs und Ø, Zum Menue und Revanche', (await page.locator('#summary-box .sg-stufe.erster').count()) === 1 &&
@@ -1770,9 +1884,9 @@ await page.locator('#summary-actions [data-action="finish-game"]').click();
 check('im Archiv gelandet',
   (await page.evaluate(() => window.__dart.state().history.filter((h) => h.kind === 'quick').length)) === 1);
 
-const qCar = await carr();
+qCar = await carr();
 check('zaehlt als Spiel fuer alle drei', qIds.every((id) => qCar[id].matches >= 1));
-const wonNachher = Object.keys(qCar).reduce((s, k) => s + qCar[k].won, 0);
+wonNachher = Object.keys(qCar).reduce((s, k) => s + qCar[k].won, 0);
 check('genau ein Sieg dazugekommen', wonNachher === wonVorher + 1,
   wonVorher + ' -> ' + wonNachher);
 check('der Sieger hat ihn', qCar[qIds[0]].won >= 1);
@@ -1784,7 +1898,9 @@ check('ein 301er-Leg aendert das beste Leg nicht', await page.evaluate((vorher) 
 
 /* ---------- Schnelles X01: Legs wie im Turnier ---------- */
 
-group('Schnelles X01: Legs wie im Turnier (1 Leg, Best of 3, Best of 5)');
+});
+
+await gruppe('Schnelles X01: Legs wie im Turnier (1 Leg, Best of 3, Best of 5)', async () => {
 await page.evaluate(() => {
   const D = window.__dart, S = D.state();
   S.game = null;
@@ -1800,7 +1916,7 @@ await page.locator('[data-setting="bestOf"] button[data-value="3"]').click();
 await page.locator('[data-action="start-game"]').click();
 await bullOffGo();
 check('läuft auf dem X01-Bildschirm', await visible('#screen-game'));
-const [sA, sB] = await page.evaluate(() => window.__dart.currentMatch().p);
+;[sA, sB] = await page.evaluate(() => window.__dart.currentMatch().p);
 check('Spiel kennt sein Ziel: Best of 3 Legs, ein Satz, alle Legs werden gespielt', await page.evaluate(() => {
   const m = window.__dart.currentMatch();
   return m.bestOf === 3 && m.saetzeBestOf === 1 && m.spieldauer.modus === 1 && m.spieldauer.alle === true;
@@ -1808,16 +1924,11 @@ check('Spiel kennt sein Ziel: Best of 3 Legs, ein Satz, alle Legs werden gespiel
 check('Kopfzeile nennt Best of 3', (await textKlein('#game-leg-label')).includes('best of 3'));
 
 /* Ein Leg auf 301 fuer einen bestimmten Spieler: 180, (Gegner 60), 121. */
-const dranId = () => page.evaluate(() => {
+dranId = () => page.evaluate(() => {
   const D = window.__dart, m = D.currentMatch();
   return D.activePlayer(D.activeLeg(m), m);
 });
-async function legFuer(ziel) {
-  if ((await dranId()) !== ziel) await typeScore(60);
-  await typeScore(180); await typeScore(60); await typeScore(121);
-  await page.locator('#overlay-card [data-action="co-darts"]').first().click();
-}
-const stand = () => page.evaluate(() => window.__dart.satzStand(window.__dart.currentMatch()));
+stand = () => page.evaluate(() => window.__dart.satzStand(window.__dart.currentMatch()));
 
 await legFuer(sA);
 check('Leg 1 an A: Dialog sagt Leg, nicht Satz', (await textKlein('#overlay-card')).includes('leg an') &&
@@ -1847,7 +1958,9 @@ await page.evaluate(() => {
 
 /* ---------- Best of: alle Legs werden gespielt, Kurzstatistik nach jedem Leg ---------- */
 
-group('Schnelles X01: Best of 3 Legs spielt alle drei Legs');
+});
+
+await gruppe('Schnelles X01: Best of 3 Legs spielt alle drei Legs', async () => {
 await page.evaluate(() => {
   const D = window.__dart, S = D.state();
   S.game = null;
@@ -1857,7 +1970,7 @@ await page.evaluate(() => {
 });
 await page.locator('[data-action="start-game"]').click();
 await bullOffGo();
-const [bA, bB] = await page.evaluate(() => window.__dart.currentMatch().p);
+;[bA, bB] = await page.evaluate(() => window.__dart.currentMatch().p);
 check('Spiel traegt Best of 3 mit Merkmal "alle Legs"', await page.evaluate(() => {
   const m = window.__dart.currentMatch();
   return m.bestOf === 3 && m.spieldauer.modus === 1 && m.spieldauer.alle === true;
@@ -1892,7 +2005,9 @@ check('Glückwunsch an A mit Kurzstatistik des letzten Legs', (await textKlein('
 await page.locator('#overlay-card [data-action="open-summary"]').click();
 await page.locator('#summary-actions [data-action="finish-game"]').click();
 
-group('Best of mit drei Spielern: Gleichstand nach allen Legs -> noch ein Leg, Sieger ist der Fuehrende');
+});
+
+await gruppe('Best of mit drei Spielern: Gleichstand nach allen Legs -> noch ein Leg, Sieger ist der Fuehrende', async () => {
 await page.evaluate(() => {
   const D = window.__dart, S = D.state();
   S.game = null;
@@ -1902,14 +2017,9 @@ await page.evaluate(() => {
 });
 await page.locator('[data-action="start-game"]').click();
 await bullOffGo();
-const drei = await page.evaluate(() => window.__dart.currentMatch().p);
+drei = await page.evaluate(() => window.__dart.currentMatch().p);
 check('drei Spieler am Board', drei.length === 3);
 /* Ein Leg (301) fuer einen bestimmten der drei: die anderen werfen 26. */
-async function legFuerDrei(ziel) {
-  while ((await dranId()) !== ziel) await typeScore(26);
-  await typeScore(180); await typeScore(26); await typeScore(26); await typeScore(121);
-  await page.locator('#overlay-card [data-action="co-darts"]').first().click();
-}
 await legFuerDrei(drei[0]); await page.locator('#overlay-card [data-action="ov-next-leg"]').click();
 await legFuerDrei(drei[1]); await page.locator('#overlay-card [data-action="ov-next-leg"]').click();
 await legFuerDrei(drei[2]);
@@ -1923,7 +2033,9 @@ check('viertes Leg entscheidet: Sieger ist der Fuehrende', await page.evaluate((
 await page.locator('#overlay-card [data-action="open-summary"]').click();
 await page.locator('#summary-actions [data-action="finish-game"]').click();
 
-group('Best of ab drei Spielern: das letzte Leg macht nicht automatisch den Sieger');
+});
+
+await gruppe('Best of ab drei Spielern: das letzte Leg macht nicht automatisch den Sieger', async () => {
 await page.evaluate(() => {
   const D = window.__dart, S = D.state();
   S.game = null;
@@ -1933,7 +2045,7 @@ await page.evaluate(() => {
 });
 await page.locator('[data-action="start-game"]').click();
 await bullOffGo();
-const drei2 = await page.evaluate(() => window.__dart.currentMatch().p);
+drei2 = await page.evaluate(() => window.__dart.currentMatch().p);
 await legFuerDrei(drei2[0]); await page.locator('#overlay-card [data-action="ov-next-leg"]').click();
 await legFuerDrei(drei2[0]); await page.locator('#overlay-card [data-action="ov-next-leg"]').click();
 await legFuerDrei(drei2[2]);
@@ -1952,7 +2064,9 @@ await page.evaluate(() => {
 
 /* ---------- Turnier-Modus: nur im Ligaspiel, Umschalten per Zyklus-Taste ---------- */
 
-group('Modus-Knoepfe: Punkte, Einzel-Darts und Turnier direkt klickbar');
+});
+
+await gruppe('Modus-Knoepfe: Punkte, Einzel-Darts und Turnier direkt klickbar', async () => {
 await page.evaluate(() => {
   const D = window.__dart, S = D.state();
   S.game = null;
@@ -2012,7 +2126,7 @@ check('Tab: Turnier -> wieder Punkte', await visible('#pad-total'));
 /* Spielende am Board: Pfeile waehlen zwischen Statistik und Ruecknahme,
    Enter bestaetigt - auch das Schnelle Spiel laeuft ohne Bildschirm-Tipp. */
 await modus('turnier');
-const tippeQ = async (z) => { await page.keyboard.type(z); await page.keyboard.press('Enter'); };
+tippeQ = async (z) => { await page.keyboard.type(z); await page.keyboard.press('Enter'); };
 await tippeQ('180'); await tippeQ('180'); await tippeQ('180'); await tippeQ('180');
 await tippeQ('141');
 await page.keyboard.press('3');
@@ -2040,7 +2154,9 @@ await page.evaluate(() => {
   D.setScreen('setup');
 });
 
-group('Allein spielen: kein Ausbullen, eine grosse Karte');
+});
+
+await gruppe('Allein spielen: kein Ausbullen, eine grosse Karte', async () => {
 await page.evaluate(() => {
   const D = window.__dart, S = D.state();
   S.game = null;
@@ -2086,8 +2202,8 @@ check('Fortsetzen fuehrt zurueck ins Spiel mit dem alten Stand',
 
 /* Allein ausmachen ist kein Sieg: niemand wurde geschlagen. Average und
    Rekorde zaehlen trotzdem - nur die Bilanz (Siege/Niederlagen/Legs) nicht. */
-const soloId = await page.evaluate(() => window.__dart.currentMatch().p[0]);
-const soloVorher = await page.evaluate((id) => {
+soloId = await page.evaluate(() => window.__dart.currentMatch().p[0]);
+soloVorher = await page.evaluate((id) => {
   const c = window.__dart.career()[id];
   return { won: c.won, lost: c.lost, matches: c.matches, legsWon: c.legsWon, darts: c.darts, form: c.lastResults.length };
 }, soloId);
@@ -2103,7 +2219,7 @@ await page.locator('#overlay-card [data-action="open-summary"]').click();
 check('Auswertung sagt nicht "gewinnt"',
   (await textKlein('#summary-box')).includes('ausgemacht') && !(await textKlein('#summary-box')).includes('gewinnt'));
 await page.locator('#summary-actions [data-action="finish-game"]').click();
-const soloNachher = await page.evaluate((id) => {
+soloNachher = await page.evaluate((id) => {
   const c = window.__dart.career()[id];
   return { won: c.won, lost: c.lost, matches: c.matches, legsWon: c.legsWon, darts: c.darts, form: c.lastResults.length };
 }, soloId);
@@ -2115,7 +2231,7 @@ check('die Darts zaehlen aber fuer den Average', soloNachher.darts > soloVorher.
 await page.evaluate((id) => { window.__dart.setScreen('players'); }, soloId);
 await profilOeffnen(`#players-list [data-id="${soloId}"]`);
 await page.locator('[data-action="profil-stats"]').click();
-const soloProfil = await text('#profile-detail');
+soloProfil = await text('#profile-detail');
 check('das Profil listet das Solo-Spiel ohne Sieg und ohne Gegner',
   soloProfil.includes('Solo') && !soloProfil.includes('gegen undefined'), soloProfil.slice(0, 200));
 
@@ -2131,7 +2247,9 @@ await page.evaluate(() => {
   D.setScreen('setup');
 });
 
-group('Turnier-Modus: Anzeige am Board, Eingabe per Tastatur - im Liga-Einzel');
+});
+
+await gruppe('Turnier-Modus: Anzeige am Board, Eingabe per Tastatur - im Liga-Einzel', async () => {
 await navTo('liga');
 await page.locator('#liga-plan [data-action="liga-spiel"]').first().click();
 for (let i = 0; i < 4; i++) {
@@ -2260,7 +2378,7 @@ await page.keyboard.press('Backspace'); await page.keyboard.press('Backspace');
 /* Checkout am Board: die Dart-Frage wird mit 1/2/3 beantwortet - und eine
    verirrte Ziffer darf die Eingabe nicht veraendern, sonst wuerde aus der
    naechsten 5 still eine 95. */
-const tippe = async (z) => { await page.keyboard.type(z); await page.keyboard.press('Enter'); };
+tippe = async (z) => { await page.keyboard.type(z); await page.keyboard.press('Enter'); };
 await tippe('100');   // Gast -> 401
 await tippe('180');   // Heim 456 -> 276
 await tippe('100');   // Gast -> 301
@@ -2287,7 +2405,9 @@ check('Taste 1 bucht den Checkout mit einem Dart', await page.evaluate(() => {
   return !m.done && co && co.d === 1;
 }));
 
-group('Turnier-Modus: das ganze Einzel per Tastatur zu Ende');
+});
+
+await gruppe('Turnier-Modus: das ganze Einzel per Tastatur zu Ende', async () => {
 check('das Leg-Ende steht in Plakatgroesse', await page.evaluate(() => {
   const ov = document.getElementById('overlay');
   return ov.classList.contains('gross') &&
@@ -2386,7 +2506,9 @@ await page.evaluate(() => {
 
 /* ---------- Liga: nur Ergebnisse eintragen (der Gegner zaehlt) ---------- */
 
-group('Ligaspiel "nur Ergebnisse": Leg-Stand je Einzel ohne Wuerfe');
+});
+
+await gruppe('Ligaspiel "nur Ergebnisse": Leg-Stand je Einzel ohne Wuerfe', async () => {
 await navTo('liga');
 await page.locator('#liga-liste .liga-spieltag[data-id="st01"]').click();
 await page.locator('#liga-plan [data-action="liga-spiel"]').first().click();
@@ -2441,7 +2563,9 @@ await page.evaluate(() => {
 
 /* ---------- Liga: Spieltag vom Bogen der Ligaleitung uebernehmen ---------- */
 
-group('Liga: 2. Spieltag vom Bogen uebernehmen (16 Einzel, 10:6)');
+});
+
+await gruppe('Liga: 2. Spieltag vom Bogen uebernehmen (16 Einzel, 10:6)', async () => {
 /* Sechs Blink-Konten fuer die sechs Bogen-Namen - zwei kommen dazu. */
 await page.evaluate(() => {
   const S = window.__dart.state();
@@ -2456,7 +2580,7 @@ check('die Karte sagt, dass das Ergebnis noch nicht im Archiv ist', /Blink 180 1
 check('die Karte erklaert, was das Uebernehmen bringt', /Siege und Legs in der Liga-Statistik/.test(await text('#liga-karte .lk-hinweis')));
 await page.locator('#liga-karte [data-action="liga-nachtrag"]').click();
 check('sechs Bogen-Namen unserer Seite stehen zur Zuordnung', (await page.locator('[data-role="nachtrag-wer"]').count()) === 6);
-var ntBox = await page.locator('[data-role="nachtrag-wer"]').first().boundingBox();
+ntBox = await page.locator('[data-role="nachtrag-wer"]').first().boundingBox();
 check('das Auswahlfeld ist breit genug, um den Namen zu zeigen (nicht 22 px)', !!ntBox && ntBox.width >= 160);
 check('der Dialog ist ein Vollbild (am Handy nichts abgeschnitten)', await page.evaluate(() => document.getElementById('overlay').classList.contains('vollbild')));
 check('ganzer Name und eindeutiger Vorname sind vorgeschlagen', await page.evaluate(() => {
@@ -2468,12 +2592,12 @@ await page.locator('[data-action="liga-nachtrag-los"]').click();
 check('ohne vollstaendige Zuordnung geht es nicht weiter', await visible('.overlay-card .edit-error'));
 check('die Meldung nennt die offenen Namen und steht ueber dem Knopf', /Noch ohne Spieler: Dominik Uhl, Tobias Thomas, Dominik Beuscher/.test(await text('.overlay-card .nt-fehler')));
 check('die offenen Zeilen sind markiert', (await page.locator('[data-role="nachtrag-wer"].fehlt').count()) === 3);
-const kaderIds = await page.evaluate(() => Object.fromEntries(window.__dart.activeProfiles().map((p) => [p.name, p.id])));
+kaderIds = await page.evaluate(() => Object.fromEntries(window.__dart.activeProfiles().map((p) => [p.name, p.id])));
 await page.selectOption('[data-role="nachtrag-wer"][data-name="Dominik Uhl"]', kaderIds.Domi);
 await page.selectOption('[data-role="nachtrag-wer"][data-name="Tobias Thomas"]', kaderIds.Tobi);
 /* Fuer den Sechsten gibt es kein Konto: ueber den letzten Eintrag als Gast anlegen. */
 await page.selectOption('[data-role="nachtrag-wer"][data-name="Dominik Beuscher"]', '__neu');
-const neuerGast = await page.evaluate(() => {
+neuerGast = await page.evaluate(() => {
   const p = window.__dart.state().profiles.find((x) => x.voll === 'Dominik Beuscher');
   return p ? { gast: !!p.gast, dauer: !!p.dauer, zu: window.__dart.ui().overlay.draft.zuordnung['Dominik Beuscher'] === p.id } : null;
 });
@@ -2482,7 +2606,7 @@ check('die Markierung der offenen Zeilen ist nach der Wahl weg', (await page.loc
 await page.locator('[data-action="liga-nachtrag-los"]').click();
 check('Hinweis: Spieltag uebernommen', (await textKlein('.overlay-card')).indexOf('spieltag übernommen') >= 0);
 await page.locator('[data-action="ov-hinweis-zu"]').click();
-const nachtrag = await page.evaluate(() => {
+nachtrag = await page.evaluate(() => {
   const D = window.__dart, S = D.state();
   const h = S.history.find((x) => x.liga && x.liga.terminId === 'st02');
   if (!h) return null;
@@ -2525,8 +2649,10 @@ await page.evaluate(() => {
 
 /* ---------- Round the World: Spielart Einfach ---------- */
 
-group('Round the World: Einfach zählt nur die Zahl');
-const rtwAufbau = async (boost, spieler) => {
+});
+
+await gruppe('Round the World: Einfach zählt nur die Zahl', async () => {
+rtwAufbau = async (boost, spieler) => {
   await page.evaluate((n) => {
     const D = window.__dart, S = D.state();
     S.game = null;
@@ -2539,7 +2665,7 @@ const rtwAufbau = async (boost, spieler) => {
   await page.locator('#bulloff-buttons button').first().click();
 };
 await rtwAufbau(0, 2);
-const eZiel = async () => {
+eZiel = async () => {
   const [id] = await page.evaluate(() => window.__dart.game().players);
   return (await page.evaluate(() => window.__dart.rtwState())).target[id];
 };
@@ -2567,20 +2693,22 @@ check('die Spielart steht am Spiel, nicht in den Einstellungen',
 
 /* ---------- Round the World: Stechen bei Gleichstand ---------- */
 
-group('Round the World: Nearest to the Bull bei Gleichstand');
+});
+
+await gruppe('Round the World: Nearest to the Bull bei Gleichstand', async () => {
 await rtwAufbau(1, 2);
-const rtwIds = await page.evaluate(() => window.__dart.game().players);
+rtwIds = await page.evaluate(() => window.__dart.game().players);
 /* Beide werfen dieselbe Folge: 1-4-7-10-13-16-19-Bull in acht Darts. Damit
    sind sie gleichauf, und der frühere Treffer darf nicht entscheiden.
    Geworfen wird abwechselnd – nach drei Darts ist der Nächste dran. */
-const aufnahme = async (...wuerfe) => { for (const w of wuerfe) await rDart(w); };
+aufnahme = async (...wuerfe) => { for (const w of wuerfe) await rDart(w); };
 await aufnahme('T1', 'T4', 'T7');        // Spieler 1 auf 10
 await aufnahme('T1', 'T4', 'T7');        // Spieler 2 auf 10
 await aufnahme('T10', 'T13', 'T16');     // Spieler 1 auf 19
 await aufnahme('T10', 'T13', 'T16');     // Spieler 2 auf 19
 await aufnahme('T19', 'S25');            // Spieler 1 fertig, 8 Darts
 await aufnahme('T19', 'S25');            // Spieler 2 zieht gleich, 8 Darts
-const rtwSt = () => page.evaluate(() => window.__dart.rtwState());
+rtwSt = () => page.evaluate(() => window.__dart.rtwState());
 check('beide sind mit acht Darts fertig', await page.evaluate((ids) => {
   const s = window.__dart.rtwState();
   return ids.every((id) => s.finished[id] && s.finished[id].darts === 8);
@@ -2601,7 +2729,7 @@ check('und nicht der frühere Treffer',
 check('Spiel ist beendet', await page.evaluate(() => window.__dart.game().done));
 await page.locator('#overlay-card [data-action="open-summary"]').click();
 await page.locator('#summary-actions [data-action="finish-game"]').click();
-const stCar = await carr();
+stCar = await carr();
 check('der Stechen-Sieg zählt in der Karriere',
   Object.values(stCar).find((s) => s.id === rtwIds[1]).rtwWins >= 1);
 check('die Spielart liegt im Archiv',
@@ -2609,7 +2737,9 @@ check('die Spielart liegt im Archiv',
 
 /* ---------- Die 180er-Feier ---------- */
 
-group('180: die Feier');
+});
+
+await gruppe('180: die Feier', async () => {
 /* In den Gruppen davor faellt auch schon mal eine 180 – erst abwarten, bis
    die Buehne wieder frei ist, sonst prueft man die falsche Feier. */
 await page.waitForFunction(() => !document.getElementById('feier').classList.contains('an'),
@@ -2633,14 +2763,13 @@ check('140 ist keine Feier wert', !(await page.evaluate(() =>
 await typeScore(180);   // der zweite Spieler
 /* Der Neustart der Feier gönnt sich eine Frame-Pause (Safari-Fix) –
    deshalb kurz warten statt sofort nachzusehen. */
-await page.waitForFunction(() => document.getElementById('feier').classList.contains('an'),
-  null, { timeout: 2000 });
-check('die Feier läuft', true);
-const feierText = await text('#feier');
+check('die Feier läuft', await page.waitForFunction(() => document.getElementById('feier').classList.contains('an'),
+  null, { timeout: 2000 }).then(() => true, () => false));
+feierText = await text('#feier');
 check('die 180 steht gross da', feierText.includes('180'));
 /* Die Anzeige schreibt den Namen gross (text-transform), im Profil steht er
    normal – also ohne Ruecksicht auf die Schreibweise vergleichen. */
-const werferName = await page.evaluate((id) =>
+werferName = await page.evaluate((id) =>
   window.__dart.state().profiles.find((p) => p.id === id).name,
   await page.evaluate(() => window.__dart.currentMatch().p[1]));
 check('mit dem Namen des Werfers',
@@ -2658,14 +2787,13 @@ check('sie nimmt keine Klicks an', await page.evaluate(() => {
   const e = document.elementFromPoint(innerWidth / 2, innerHeight * 0.5);
   return !!e && !e.closest('#feier');
 }));
-const vorWurf = await page.evaluate(() => window.__dart.activeLeg(window.__dart.currentMatch()).visits.length);
+vorWurf = await page.evaluate(() => window.__dart.activeLeg(window.__dart.currentMatch()).visits.length);
 await typeScore(60);
 check('und man kann waehrenddessen weiterschreiben',
   (await page.evaluate(() => window.__dart.activeLeg(window.__dart.currentMatch()).visits.length)) === vorWurf + 1);
 /* Hoechstens fuenf Sekunden – danach ist wieder Ruhe. */
-await page.waitForFunction(() => !document.getElementById('feier').classList.contains('an'),
-  null, { timeout: 6000 });
-check('nach spaetestens fuenf Sekunden ist Schluss', true);
+check('nach spaetestens fuenf Sekunden ist Schluss', await page.waitForFunction(() => !document.getElementById('feier').classList.contains('an'),
+  null, { timeout: 6000 }).then(() => true, () => false));
 check('und der Bildschirm ist wieder leer',
   (await page.evaluate(() => document.getElementById('feier').innerHTML)) === '');
 check('der Wurf selbst ist ganz normal verbucht', await page.evaluate((id) => {
@@ -2678,7 +2806,7 @@ check('der Wurf selbst ist ganz normal verbucht', await page.evaluate((id) => {
  * nicht. Also wird auch nicht gefeiert. Spieler 2 steht nach zwei 180ern
  * auf 141 – der dritte kann gar nicht mehr aufgehen.
  */
-const feierAn = () => page.evaluate(() => document.getElementById('feier').classList.contains('an'));
+feierAn = () => page.evaluate(() => document.getElementById('feier').classList.contains('an'));
 await typeScore(60);        // Spieler 1
 await typeScore(180);       // Spieler 2 auf 141, feiert nochmal
 await page.waitForFunction(() => !document.getElementById('feier').classList.contains('an'),
@@ -2688,7 +2816,7 @@ await typeScore(60);        // Spieler 1 – feiert inzwischen selbst den Löwen
    BUST nicht gefeiert wird – nicht die 60 von eben. */
 await page.waitForFunction(() => !document.getElementById('feier').classList.contains('an'),
   null, { timeout: 6000 });
-const restVorBust = await page.evaluate(() => {
+restVorBust = await page.evaluate(() => {
   const D = window.__dart, m = D.currentMatch(), leg = D.activeLeg(m);
   return D.remainingIn(leg, D.activePlayer(leg, m));
 });
@@ -2703,10 +2831,12 @@ check('und wird nicht gefeiert', !(await feierAn()));
 
 /* ---------- Farben im Einzel-Dart-Zahlenfeld ---------- */
 
-group('Einzel-Darts: D und T sind blau, der Finish-Vorschlag bleibt rot');
+});
+
+await gruppe('Einzel-Darts: D und T sind blau, der Finish-Vorschlag bleibt rot', async () => {
 await modus('darts');
 await setMult(3);
-const farben = await page.evaluate(() => {
+farben = await page.evaluate(() => {
   const wurzel = getComputedStyle(document.documentElement);
   const nimm = (v) => wurzel.getPropertyValue(v).trim();
   const alsRgb = (c) => { const d = document.createElement('div');
@@ -2727,7 +2857,7 @@ check('beim Doppel steht ein D da', (await text('#num-grid')).includes('D'));
    Finish moeglich ist, haengt am Spielstand – deshalb wird die Regel an
    einem eingesetzten Chip gemessen statt an einem zufaellig vorhandenen. */
 /* Der Finish-Weg in der Karte ist neutral - kein Feld ist rot (Entwurf 10/2026). */
-const chipFarbe = await page.evaluate(() => {
+chipFarbe = await page.evaluate(() => {
   const zeile = document.querySelector('.pcard.active .pfelder');
   const probe = document.createElement('span');
   probe.className = 'fk weg';
@@ -2744,10 +2874,12 @@ await setMult(1);
 
 /* ---------- Lieblingsdoppel ---------- */
 
-group('Lieblingsdoppel: der Finish-Vorschlag stellt darauf');
+});
+
+await gruppe('Lieblingsdoppel: der Finish-Vorschlag stellt darauf', async () => {
 /* Erst der Rechenkern allein – so ist bei einem Fehlschlag sofort klar, ob
    die Regel falsch ist oder nur die Anzeige. */
-const weg = (rest, dbl) => page.evaluate(([r, d]) => window.Checkout.suggest(r, 3, d).join(' '), [rest, dbl]);
+weg = (rest, dbl) => page.evaluate(([r, d]) => window.Checkout.suggest(r, 3, d).join(' '), [rest, dbl]);
 check('ohne Vorliebe bleibt alles wie bisher', (await weg(140, null)) === 'T20 T20 D10', await weg(140, null));
 check('mit D16 wird auf D16 gestellt', (await weg(140, 16)) === 'T20 T16 D16', await weg(140, 16));
 check('auch beim kleinen Rest (41)', (await weg(41, 16)) === 'S9 D16', await weg(41, 16));
@@ -2805,15 +2937,15 @@ check('eigene Tabelle: die eigene Zeile gewinnt, Luecken fallen auf den Favorite
 }));
 /* Die Engine selbst laeuft im Web Worker (im Buendel als Blob) und liefert
    die Tabelle im Format der festen Tabellen. */
-const engine = await page.evaluate(() => window.Checkout.rechnen({ profil: { favoriten: [16] } })
+engine = await page.evaluate(() => window.Checkout.rechnen({ profil: { favoriten: [16] } })
   .then((e) => ({ n: Object.keys(e.tabelle).length, w140: e.tabelle[140], w99: e.tabelle[99], w170: e.tabelle[170], ms: e.ms, fav: e.profil.favoriten }), (err) => ({ fehler: String(err) })));
 check('die Engine rechnet im Worker eine Tabelle fuer D16 (140 = T20 T16 D16, 99 = T19 10 D16)',
   engine.n === 169 && engine.w140 === 'T20 T16 D16|T20 T16 >32|T20 >80' && engine.w99 === 'T19 S10 D16|T19 S10 >32|T19 >42' && engine.w170 === 'T20 T20 BULL|T20 T20 >50|T20 >110', JSON.stringify(engine));
-const engineStd = await page.evaluate(() => window.Checkout.rechnen({ profil: {} })
+engineStd = await page.evaluate(() => window.Checkout.rechnen({ profil: {} })
   .then((e) => ({ w101: e.tabelle[101], c101: e.tabelleCheckout[101], w84: e.tabelle[84] }), (err) => ({ fehler: String(err) })));
 check('ohne Favorit: 101 = T19 12 D16 und 84 = Bull D17, die Checkout-Variante nimmt auf 101 T20 3 D19',
   engineStd.w101 === 'T19 S12 D16|T17 BULL|T19 >44' && engineStd.w84 === 'BULL D17|T20 D12|25 >59' && engineStd.c101 === 'T20 S3 D19|T17 BULL|T19 >44', JSON.stringify(engineStd));
-const kal = await page.evaluate(() => window.Checkout.rechnen({ eingabe: { avg: 60, favoriten: [16, 8, 4, 2],
+kal = await page.evaluate(() => window.Checkout.rechnen({ eingabe: { avg: 60, favoriten: [16, 8, 4, 2],
   t20: { treffer: 1, s20: 6, eins: 1, fuenf: 2 }, doppel: { ziel: 16, treffer: 2, innen: 4, aussen: 3, nachbar_7: 0, nachbar_8: 1 }, bull: { bull: 1, 25: 3, sonst: 6 } } })
   .then((e) => ({ sx: e.profil.sigma_x, sy: e.profil.sigma_y, fd: e.profil.f_doppel, fb: e.profil.f_bull, n: Object.keys(e.tabelle).length }), (err) => ({ fehler: String(err) })));
 check('aus Average und Wurftests entsteht ein Profil (60er Average: rund 16 mm Streuung, Doppel 1,09, Bull 0,96)',
@@ -2821,7 +2953,7 @@ check('aus Average und Wurftests entsteht ein Profil (60er Average: rund 16 mm S
 
 // Und jetzt durch die Oberflaeche: einstellen, speichern, im Spiel sehen.
 await page.evaluate(() => window.__dart.setScreen('setup'));
-const dblId = await page.evaluate(() => window.__dart.activeProfiles()[0].id);
+dblId = await page.evaluate(() => window.__dart.activeProfiles()[0].id);
 /* Ohne Server gibt es kein Konto -- den Profil-Dialog erreicht man hier
    ueber die Spielerliste. */
 await page.evaluate(() => window.__dart.setScreen('players'));
@@ -2856,7 +2988,9 @@ check('und nicht mehr den allgemeinen',
   !(await text('.pcard.active .pfinish')).includes('D10'), await text('.pcard.active .pfinish'));
 
 /* ---------- Checkout-Engine, Phase 2: Lieblingsgruppe und eigene Tabelle im Profil ---------- */
-group('Finish-Engine im Profil: Gruppe, "Meine besten Finishes ermitteln", eigene Tabelle');
+});
+
+await gruppe('Finish-Engine im Profil: Gruppe, "Meine besten Finishes ermitteln", eigene Tabelle', async () => {
 /* Altbestand: aus dem einzelnen Lieblingsdoppel wird beim Laden die Gruppe
    seiner Halbierungskette (8 -> D16, 10 -> D20). */
 await page.evaluate(() => {
@@ -2894,7 +3028,7 @@ check('Schritt 1 zeigt die Gruppen, D16 ist als Hauptgruppe markiert',
   (await text('#overlay')).includes('Schritt 1 von 4') &&
   (await page.locator('[data-action="fi-gruppe"][data-value="D16"].active .dl-k').innerText()).trim() === '1');
 await page.locator('[data-action="fi-weiter"]').click();
-const avgVor = await page.locator('[data-role="fi-avg"]').inputValue();
+avgVor = await page.locator('[data-role="fi-avg"]').inputValue();
 check('Schritt 2 belegt den Average aus den gespielten Spielen vor', /^\d+(,\d)?$/.test(avgVor), avgVor);
 await page.locator('[data-role="fi-avg"]').fill('500');
 await page.locator('[data-action="fi-weiter"]').click();
@@ -2918,12 +3052,12 @@ check('Schritt 4 fragt die Spielweise, Aufnahmen ist vorgewaehlt',
 await page.locator('[data-action="fi-spielweise"][data-value="auto"]').click();
 await page.locator('[data-action="fi-weiter"]').click();
 await page.waitForSelector('[data-action="fi-uebernehmen"]', { timeout: 90000 });
-const fiErg = await text('#overlay');
+fiErg = await text('#overlay');
 check('die Engine rechnet und zeigt "Das ändert sich für dich" mit der Streuung',
   fiErg.toLowerCase().includes('das ändert sich für dich') && /Streuung \d+ × \d+ mm/.test(fiErg), fiErg.slice(0, 160));
 check('noch ist nichts gespeichert', await page.evaluate((id) => !window.__dart.profile(id).finish.tabelle, dblId));
 await page.locator('[data-action="fi-uebernehmen"]').click();
-const fiStand = await page.evaluate((id) => {
+fiStand = await page.evaluate((id) => {
   const p = window.__dart.profile(id), f = p.finish;
   return { n: Object.keys(f.tabelle || {}).length, nc: Object.keys(f.tabelleCheckout || {}).length, avg: f.avg, sw: f.spielweise, stand: f.stand > 0,
     sx: f.profil && f.profil.sigma_x, fav: f.profil && f.profil.favoriten.join(), w140: f.tabelle[140], c140: f.tabelleCheckout[140],
@@ -2936,7 +3070,7 @@ check('bei Spielweise "auto" liefert lieblingsDoppel je nach Lage die normale od
 check('die Kachel nennt jetzt die eigene Tabelle', (await text('#profile-detail .pa-finish')).includes('Eigene Tabelle vom'));
 /* Im Spiel: der Weg kommt aus der eigenen Tabelle. "auto" nimmt die
    Checkout-Variante, sobald der Gegner im naechsten Besuch finishen kann. */
-const fiGegner = await page.evaluate((id) => window.__dart.activeProfiles().map((p) => p.id).filter((x) => x !== id)[0], dblId);
+fiGegner = await page.evaluate((id) => window.__dart.activeProfiles().map((p) => p.id).filter((x) => x !== id)[0], dblId);
 await page.evaluate(([id, g]) => {
   const D = window.__dart, S = D.state();
   S.game = null; S.lineup = [id, g]; D.setScreen('setup');
@@ -2947,21 +3081,21 @@ await page.locator('#settings-501 [data-action="eingabe"][data-value="0"]').clic
 await page.locator('[data-action="start-game"]').click();
 await bullOffGo();
 /* Wer anwirft, entscheidet das Ausbullen - deshalb den Spieler am Wurf lesen. */
-const fiAmWurf = async () => page.evaluate(() => {
+fiAmWurf = async () => page.evaluate(() => {
   const n = document.querySelector('.pcard.active .pname');
   return n ? n.textContent.trim() : '';
 });
-const dblName = await page.evaluate((id) => window.__dart.profile(id).name, dblId);
+dblName = await page.evaluate((id) => window.__dart.profile(id).name, dblId);
 if ((await fiAmWurf()).toLowerCase() !== dblName.toLowerCase()) await typeScore(100);   // der andere wirft an: 201
 await typeScore(161);                                                                 // unser Spieler: 140
 if ((await fiAmWurf()).toLowerCase() !== dblName.toLowerCase()) await typeScore(100);   // der andere: 201 bzw. 101
-const fiLage1 = await page.evaluate((id) => {
+fiLage1 = await page.evaluate((id) => {
   const D = window.__dart, p = D.profile(id);
   const t = document.querySelector('.pcard.active .pfinish').textContent;
   const gegnerRest = [...document.querySelectorAll('.pcard:not(.active) .rest')].map((e) => e.textContent).join(' ');
   return { t, w: p.finish.tabelle[140].split('|')[0], c: p.finish.tabelleCheckout[140].split('|')[0], gegnerRest };
 }, dblId);
-const tokensDrin = (t, w) => w.split(' ').every((x) => t.includes(x));
+tokensDrin = (t, w) => w.split(' ').every((x) => t.includes(x));
 check('Gegner bei 201 oder 101: der Weg fuer 140 kommt aus der eigenen Tabelle (' + fiLage1.w + ')', tokensDrin(fiLage1.t, fiLage1.w), JSON.stringify(fiLage1));
 check('zur Kontrolle: der Weg aus der Checkout-Variante waere ein anderer oder derselbe, aber die Tabelle ist die eigene',
   fiLage1.w.endsWith('D16'), fiLage1.w);
@@ -2969,9 +3103,9 @@ check('zur Kontrolle: der Weg aus der Checkout-Variante waere ein anderer oder d
    Checkout-Variante um. */
 await page.evaluate((id) => { window.__dart.profile(id).finish.tabelleCheckout[140] = 'T20 T20 D10|T20 T20 >20|T20 >80'; window.__dart.save(); }, dblId);
 await typeScore(0);     // unser Spieler laesst aus (bleibt 140)
-const gRest = await page.evaluate(() => Number(document.querySelector('.pcard.active .rest').textContent.replace(/\D/g, '')));
+gRest = await page.evaluate(() => Number(document.querySelector('.pcard.active .rest').textContent.replace(/\D/g, '')));
 await typeScore(gRest - 100);   // Gegner auf 100
-const fiLage2 = await page.evaluate(() => document.querySelector('.pcard.active .pfinish').textContent);
+fiLage2 = await page.evaluate(() => document.querySelector('.pcard.active .pfinish').textContent);
 check('Gegner bei 100: Spielweise "auto" nimmt die Checkout-Variante (T20 T20 D10)', tokensDrin(fiLage2, 'T20 T20 D10'), fiLage2);
 /* Aendert sich die Gruppe, passt die Tabelle nicht mehr: sie wird verworfen,
    Average und Tests bleiben fuers Neu-Ermitteln. */
@@ -2982,7 +3116,9 @@ check('eine andere Gruppe verwirft die Tabelle, der Average bleibt', await page.
 }, dblId));
 
 /* ---------- Phase 3: Finish-Tabelle ansehen und anpassen ---------- */
-group('Finish-Tabelle im Profil: Liste, Editor, Alternativen, eigene Eintraege');
+});
+
+await gruppe('Finish-Tabelle im Profil: Liste, Editor, Alternativen, eigene Eintraege', async () => {
 await page.evaluate((id) => { const D = window.__dart; D.state().game = null; D.setScreen('players'); }, dblId);
 await profilOeffnen('.player-card[data-id="' + dblId + '"]');
 check('die Kachel bietet "Finish-Tabelle anpassen" an', (await text('[data-action="profil-tabelle"]')).includes('Finish-Tabelle anpassen'));
@@ -3010,7 +3146,7 @@ check('T15 D18 wird geprueft und mit dem besten Weg verglichen (Aufnahmen und Ch
 check('Uebernehmen ist jetzt moeglich', !(await page.locator('[data-action="tab-speichern"]').isDisabled()));
 await page.locator('[data-action="tab-speichern"]').click();
 await page.waitForTimeout(300);
-const tabEig = await page.evaluate((id) => {
+tabEig = await page.evaluate((id) => {
   const D = window.__dart, p = D.profile(id), ld = D.lieblingsDoppel(id);
   return { eigene: p.finish.eigene, zeile: ld.tabelle[81], weg3: window.Checkout.suggest(81, 3, ld).join(' '), weg2: window.Checkout.suggest(81, 2, ld).join(' '), n: D.finishEigeneAnzahl(p), dbl: ld.dbl };
 }, dblId);
@@ -3060,7 +3196,9 @@ check('"Fertig" schliesst die Tafel', !(await visible('.ft-panel')));
 /* Zurueck auf "egal", damit die folgenden Gruppen ihren gewohnten Stand haben. */
 await page.evaluate((id) => { const D = window.__dart, S = D.state(); S.game = null; D.finishGruppenSetzen(D.profile(id), []); D.profile(id).finish = null; D.setScreen('setup'); D.save(); }, dblId);
 
-group('Liga: Spielplan, Kalender, Zusagen-Hinweis');
+});
+
+await gruppe('Liga: Spielplan, Kalender, Zusagen-Hinweis', async () => {
 /* Das Trainingsspiel der Gruppe davor verwerfen – im Spiel ist die
    Navigation ja ausgeblendet. */
 await page.evaluate(() => {
@@ -3074,7 +3212,7 @@ check('Liga-Zeile nennt Liga und Saison', (await textKlein('#liga-sub')).include
 check('18 Spieltage stehen im Plan', (await page.locator('.liga-spieltag').count()) === 18,
   String(await page.locator('.liga-spieltag').count()));
 check('zwei davon sind spielfrei', (await page.locator('.liga-spieltag.frei').count()) === 2);
-const ersterSpieltag = await page.locator('.liga-spieltag:not(.frei)').first().innerText();
+ersterSpieltag = await page.locator('.liga-spieltag:not(.frei)').first().innerText();
 check('der erste Spieltag traegt Datum, Gegner und Ort',
   ersterSpieltag.includes('06.10.2026') && ersterSpieltag.includes('TSV Dachau') &&
   ersterSpieltag.includes('Bar Sehnsucht'), ersterSpieltag.replace(/\s+/g, ' ').slice(0, 80));
@@ -3100,7 +3238,7 @@ check('"Alle Spieler zeigen" klappt die ganze Liste auf', (await page.locator('#
 check('Tabelle: Highlights mit 180ern, Shortlegs und Highfinishes',
   /180er/i.test(await text('#lt-highlights')) && /shortlegs/i.test(await text('#lt-highlights')) && (await page.locator('#lt-highlights .lt-hl-zeile').count()) >= 1);
 check('Tabelle: der Stand der Ligaleitung steht dabei', /Ligaleitung/.test(await text('#lt-stand')));
-const rundenSoll = await page.evaluate(() => {
+rundenSoll = await page.evaluate(() => {
   const sp = window.LIGA_DATEN.spieltage;
   return Object.keys(sp).filter((id) => sp[id].some((s) => s.gast && s.einzel)).length + 1;
 });
@@ -3123,14 +3261,14 @@ await page.locator('#liga-tabs button[data-tab="plan"]').click();
 check('ohne Konto gibt es keinen Eintragen-Knopf',
   (await page.locator('[data-action="liga-zusage"]').count()) === 0);
 /* Die iCal-Datei selbst: das Kopf-Icon laedt alle Termine. */
-const [ical] = await Promise.all([
+;[ical] = await Promise.all([
   page.waitForEvent('download'),
   page.locator('#screen-liga [data-action="liga-ical"]:not([data-id])').click()
 ]);
 check('die iCal-Datei heisst nach dem Team',
   ical.suggestedFilename() === 'blink180-spielplan.ics');
-const icalPfad = await ical.path();
-const icalInhalt = fs.readFileSync(icalPfad, 'utf8');
+icalPfad = await ical.path();
+icalInhalt = fs.readFileSync(icalPfad, 'utf8');
 check('sie enthaelt 16 Termine', (icalInhalt.match(/BEGIN:VEVENT/g) || []).length === 16);
 check('mit Datum und Ort des ersten Spieltags',
   icalInhalt.includes('DTSTART;VALUE=DATE:20261006') && icalInhalt.includes('Bar Sehnsucht'));
@@ -3139,7 +3277,7 @@ check('mit Datum und Ort des ersten Spieltags',
 await page.locator('#liga-liste [data-action="liga-wahl"][data-id="st02"]').click();
 check('ein Tipp auf einen Spieltag zeigt ihn links gross', (await text('#liga-karte')).includes('Germering'));
 await page.locator('#liga-liste [data-action="liga-wahl"][data-id="st01"]').click();
-const [einzel] = await Promise.all([
+;[einzel] = await Promise.all([
   page.waitForEvent('download'),
   page.locator('#liga-karte [data-action="liga-ical"][data-id="st01"]').click()
 ]);
@@ -3169,7 +3307,9 @@ check('und die Regelwerke sind verlinkt',
 await page.locator('#liga-tabs button[data-tab="plan"]').click();
 check('zurueck zum Spielplan', await visible('#liga-plan'));
 
-group('DiensDarts und Uebungs-Ligaspiel gegen Bots');
+});
+
+await gruppe('DiensDarts und Uebungs-Ligaspiel gegen Bots', async () => {
 await page.locator('#liga-tabs button[data-tab="training"]').click();
 check('der Trainings-Reiter oeffnet sich',
   (await visible('#liga-training')) && !(await visible('#liga-plan')));
@@ -3240,7 +3380,9 @@ await page.evaluate(() => {
 });
 await page.locator('#liga-tabs button[data-tab="plan"]').click();
 
-group('Liga: alle Spiele des Spieltags');
+});
+
+await gruppe('Liga: alle Spiele des Spieltags', async () => {
 {
   await navTo('liga');
   await page.evaluate(() => { const D = window.__dart; D.ui().ligaTab = 'plan'; D.ui().ligaWahl = 'st01'; D.render(); });
@@ -3291,11 +3433,13 @@ group('Liga: alle Spiele des Spieltags');
   await page.locator('#liga-tabs button[data-tab="plan"]').click();
 }
 
-group('Liga: unsere Seite im Einzel haengt nicht an der Aufstellung');
+});
+
+await gruppe('Liga: unsere Seite im Einzel haengt nicht an der Aufstellung', async () => {
 /* Ein Ligaspiel im Archiv, in dem ein Einzel einem Spieler gehoert, den die
    Aufstellung nicht kennt (nachgetragener Wechsel) - einmal als Heim-,
    einmal als Auswaertsspiel. Sein verlorenes Einzel darf kein Sieg werden. */
-const wechselProbe = await page.evaluate(() => {
+wechselProbe = await page.evaluate(() => {
   const D = window.__dart;
   const wir = ['w1', 'w2', 'w3', 'w4'], sie = ['g1', 'g2', 'g3', 'g4'], neu = 'w5_nachtrag';
   const leg = (sieger, verlierer) => ({ start: 501, winner: sieger, visits: [{ p: sieger, s: 180, d: 3, b: false, c: false, rest: 321 }, { p: verlierer, s: 60, d: 3, b: false, c: false, rest: 441 }, { p: sieger, s: 180, d: 3, b: false, c: false, rest: 141 }, { p: verlierer, s: 60, d: 3, b: false, c: false, rest: 381 }, { p: sieger, s: 141, d: 3, b: false, c: true, rest: 0 }] });
@@ -3322,7 +3466,9 @@ check('Heimspiel: das verlorene Einzel des Nachtrags zaehlt den Gegnern (15:1)',
 check('Auswaertsspiel: ebenso (15:1)', wechselProbe.eA.wirS === 15 && wechselProbe.eA.sieS === 1, JSON.stringify(wechselProbe.eA));
 check('der Nachtrag steht danach in der Aufstellung und in der richtigen Bogen-Liste', wechselProbe.wirH && wechselProbe.wirA);
 
-group('Liga-Tabelle: aus allen Spieltag-Ergebnissen berechnet');
+});
+
+await gruppe('Liga-Tabelle: aus allen Spieltag-Ergebnissen berechnet', async () => {
 await page.locator('#liga-tabs button[data-tab="tabelle"]').click();
 check('der Tabellen-Reiter oeffnet sich',
   (await visible('#liga-tabelle')) && !(await visible('#liga-plan')));
@@ -3337,13 +3483,13 @@ check('nichts ist mehr von Hand zu tippen', (await page.locator('#lt-tabelle td[
 /* Die Zeilen sind die aus allen Ergebnissen der Ligaleitung gerechneten
    (LIGA_DATEN.tabelleAus) - die Zahlen wandern mit jedem Import, die Regeln
    nicht: Punkte fallend, bei Gleichstand die Leg-Differenz. */
-const ltZeilen = await page.evaluate(() => [...document.querySelectorAll('#lt-tabelle tbody tr')].map((tr) => [...tr.querySelectorAll('td')].map((td) => td.textContent.trim()).join('|')));
-const ltSoll = await page.evaluate(() => {
+ltZeilen = await page.evaluate(() => [...document.querySelectorAll('#lt-tabelle tbody tr')].map((tr) => [...tr.querySelectorAll('td')].map((td) => td.textContent.trim()).join('|')));
+ltSoll = await page.evaluate(() => {
   const D = window.LIGA_DATEN; const tab = D.tabelleAus(D.spieltage, D.teams);
   return { zeilen: tab.zeilen.map((z, i) => [i + 1, z.team, z.spiele, z.g, z.u, z.v, z.legs, z.einzel, z.punkte].join('|')), spiele: tab.spiele };
 });
-const ltPunkte = ltZeilen.map((z) => Number(z.split('|')[8]));
-const ltLegDiff = ltZeilen.map((z) => { const l = z.split('|')[6].split(':'); return Number(l[0]) - Number(l[1]); });
+ltPunkte = ltZeilen.map((z) => Number(z.split('|')[8]));
+ltLegDiff = ltZeilen.map((z) => { const l = z.split('|')[6].split(':'); return Number(l[0]) - Number(l[1]); });
 check('die Tabelle zeigt genau die gerechneten Zeilen aller neun Teams',
   ltZeilen.length === 9 && ltZeilen.join(' / ') === ltSoll.zeilen.join(' / '), ltZeilen.join(' / '));
 check('Punkte fallend, bei gleichen Punkten die bessere Leg-Differenz zuerst',
@@ -3356,7 +3502,9 @@ check('mit den Spalten der Ligaleitung (Sp, g, u, v, Legs, Spiele, Pkt)', await 
   [...document.querySelectorAll('#lt-tabelle thead th')].map((th) => th.textContent).join(',') === '#,Mannschaft,Sp,g,u,v,Legs,Spiele,Pkt'));
 await page.locator('#liga-tabs button[data-tab="plan"]').click();
 
-group('Buergerlicher Name im Profil');
+});
+
+await gruppe('Buergerlicher Name im Profil', async () => {
 await navTo('players');
 await profilOeffnen('#players-list .player-card:has-text("Lenas")');
 await page.locator('.pa-rechts [data-action="edit-current-profile"]').click();
@@ -3373,7 +3521,9 @@ check('die Flaeche ist danach zu', !(await visible('.pe-panel')));
 
 /* Entwurf "Profil bearbeiten" / "Foto anpassen": Kuerzel, Avatar-Farbe,
    Wurfhand, Foto mit Ausschnitt und Zoom. */
-group('Profil bearbeiten: Kuerzel, Farbe, Wurfhand, Foto anpassen');
+});
+
+await gruppe('Profil bearbeiten: Kuerzel, Farbe, Wurfhand, Foto anpassen', async () => {
 await page.locator('.pa-rechts [data-action="edit-current-profile"]').click();
 check('die Flaeche zeigt Spielername, Kuerzel, Avatar-Farben und Wurfhand',
   (await page.locator('.pe-panel [data-role="profile-name"]').count()) === 1 &&
@@ -3399,15 +3549,15 @@ await page.waitForSelector('.pf-bild', { timeout: 10000 });
 await page.waitForSelector('.pf-vor-bild', { timeout: 10000 });
 check('das Bild liegt im Ausschnitt, die Vorschau zeigt den Kreis in drei Groessen',
   (await page.locator('.pf-vor-bild').count()) === 3);
-const zoomVor = await page.evaluate(() => document.querySelector('.pf-bild').getBoundingClientRect().width);
+zoomVor = await page.evaluate(() => document.querySelector('.pf-bild').getBoundingClientRect().width);
 await page.locator('[data-action="foto-zoom"][data-d="10"]').click();
-const zoomNach = await page.evaluate(() => document.querySelector('.pf-bild').getBoundingClientRect().width);
+zoomNach = await page.evaluate(() => document.querySelector('.pf-bild').getBoundingClientRect().width);
 check('Plus zoomt das Bild', zoomNach > zoomVor, zoomVor + ' -> ' + zoomNach);
 await page.locator('[data-action="foto-ok"]').click();
 check('Uebernehmen fuehrt zurueck in die Flaeche Profil bearbeiten, mit dem neuen Bild',
   await visible('.pe-panel') && (await page.locator('.pe-av .av[style*="background-image"]').count()) === 1);
 await page.locator('[data-action="pe-speichern"]').click();
-const peNach = await page.evaluate(() => { const p = window.__dart.state().profiles.find((x) => x.name === 'Lenas'); return { k: p.kuerzel, h: p.hue, w: p.wurfhand, av: typeof p.avatar === 'string' && p.avatar.indexOf('data:image/jpeg') === 0 && p.avatar.length > 1000 }; });
+peNach = await page.evaluate(() => { const p = window.__dart.state().profiles.find((x) => x.name === 'Lenas'); return { k: p.kuerzel, h: p.hue, w: p.wurfhand, av: typeof p.avatar === 'string' && p.avatar.indexOf('data:image/jpeg') === 0 && p.avatar.length > 1000 }; });
 check('Speichern schreibt Kuerzel, Farbe, Wurfhand und das zugeschnittene Foto an den Spieler',
   peNach.k === 'LM' && peNach.h === 355 && peNach.w === 'L' && peNach.av, JSON.stringify(peNach));
 check('der Ausweis zeigt das Foto', (await page.locator('#profile-detail .pa-av .av[style*="background-image"]').count()) === 1);
@@ -3421,7 +3571,9 @@ await navTo('liga');
 
 /* ---------- Ligaspiel-Modus: der Spielberichtsbogen als Spielplan ---------- */
 
-group('Ligaspiel: 16 Einzel nach Spielberichtsbogen');
+});
+
+await gruppe('Ligaspiel: 16 Einzel nach Spielberichtsbogen', async () => {
 await page.locator('#liga-plan [data-action="liga-spiel"]').first().click();
 check('die Aufstellung oeffnet sich', (await text('#overlay-card')).includes('Ligaspiel'));
 check('unsere vier Positionen sind vorbelegt',
@@ -3464,7 +3616,7 @@ check('der Gewinner des Ausbullens wirft das erste Leg an', await page.evaluate(
 }));
 /* Ein Einzel im Schnelldurchlauf: der Anwurf wechselt je Leg, also gewinnt
    immer der Anwerfer – Heim, Gast, Heim: 2:1 fuer unseren Spieler. */
-const visit = (n) => page.evaluate((v) => {
+visit = (n) => page.evaluate((v) => {
   window.__dart.ui().input = String(v);
   window.__dart.submitTotal();
 }, n);
@@ -3514,7 +3666,9 @@ check('jedes Einzel traegt seine Scheibe', await page.evaluate(() => {
   return M[0].scheibe === 'S1' && M[1].scheibe === 'S2';
 }));
 
-group('Kampflos nach SWO: nicht gestellter Spieler');
+});
+
+await gruppe('Kampflos nach SWO: nicht gestellter Spieler', async () => {
 check('offene Einzel bieten den w.o.-Knopf an',
   (await page.locator('#schedule .go.wo').count()) === 15,
   String(await page.locator('#schedule .go.wo').count()));
@@ -3556,7 +3710,7 @@ check('ein nur angetipptes Einzel behaelt den w.o.-Knopf',
   String(await page.locator('#schedule .go.wo').count()));
 
 /* Unterschrift ins Feld malen (Nachmeldung, Spielbericht). */
-const malen = async () => {
+malen = async () => {
   await page.locator('#signatur').scrollIntoViewIfNeeded();
   const box = await page.locator('#signatur').boundingBox();
   await page.mouse.move(box.x + box.width * 0.15, box.y + box.height * 0.6);
@@ -3596,7 +3750,7 @@ check('nach einem Neuladen ist die Nachmeldung wieder offen, mit demselben Spiel
   const o = window.__dart.ui().overlay; const lg = window.__dart.state().tour.liga;
   return !!o && o.type === 'nachmeldung' && o.draft.id === lg.posG[1] && o.draft.teamFest && !!o.draft.wechsel;
 }));
-const fuellIds = await page.evaluate(() => {
+fuellIds = await page.evaluate(() => {
   const S = window.__dart.state(); const lg = S.tour.liga;
   const frei = [1, 2, 3].map((i) => ({ id: 'fuell' + i, name: 'Füller ' + i, voll: 'Füller ' + i, avatar: null, hue: 100 + i, created: Date.now(), gast: true }));
   frei.forEach((p) => { S.profiles.push(p); lg.gastSpieler.push(p.id); });
@@ -3620,7 +3774,7 @@ await page.evaluate((ids) => {
 check('der Hinweis sagt, dass der Spieler eingewechselt ist', (await text('#overlay-card')).includes('eingewechselt'));
 await page.locator('#overlay-card [data-action="ov-hinweis-zu"]').click();
 /* "Wechsel zuruecknehmen": der Ausgewechselte kommt zurueck, der Name verschwindet wieder. */
-const vorG3 = await page.evaluate(() => { const S = window.__dart.state(); return { id: S.tour.liga.posG[2], profile: S.profiles.length }; });
+vorG3 = await page.evaluate(() => { const S = window.__dart.state(); return { id: S.tour.liga.posG[2], profile: S.profiles.length }; });
 await page.locator('[data-action="roster-change"]').click();
 await page.locator('[data-action="liga-wechsel-pos"][data-seite="G"][data-pos="2"]').click();
 await page.locator('[data-role="liga-neu-name"]').fill('Zweiter');
@@ -3693,7 +3847,9 @@ check('die Highlights stehen in Udos Form', await page.evaluate(() => {
 check('das Blatt laesst sich Feld fuer Feld korrigieren',
   (await page.locator('#bericht-blatt [contenteditable]').count()) > 40);
 
-group('Spielbericht: beide TCs unterschreiben am iPad, dann Versand als PDF');
+});
+
+await gruppe('Spielbericht: beide TCs unterschreiben am iPad, dann Versand als PDF', async () => {
 {
   check('oben steht Unterschreiben statt Drucken',
     await visible('#screen-bericht [data-action="bericht-unterschreiben"]'));
@@ -3801,7 +3957,9 @@ await page.locator('[data-action="ov-reset"]').click();
 check('das Ligaspiel liegt im Archiv', await page.evaluate(() =>
   window.__dart.state().history.filter((h) => h.liga).length === 1));
 
-group('Liga-Rangliste: Classic-Werte nur aus Ligaspielen');
+});
+
+await gruppe('Liga-Rangliste: Classic-Werte nur aus Ligaspielen', async () => {
 await ligaStatistik();
 check('der Liga-Reiter steht in der Rangliste', (await text('#boards-sub')).includes('Spieltag'));
 check('mit den Classic-Kategorien, aber ohne Turniersiege', await page.evaluate(() => {
@@ -3847,7 +4005,9 @@ check('nur der Gegner: keine eigenen Spieler in der Liste', await page.evaluate(
 }));
 await page.locator('.liga-team-wahl [data-team="wir"]').click();
 
-group('Gaeste: temporaer, dauerhaft, Gast-Konto');
+});
+
+await gruppe('Gaeste: temporaer, dauerhaft, Gast-Konto', async () => {
 {
   const r = await page.evaluate(() => {
     const D = window.__dart, S = D.state();
@@ -3956,7 +4116,9 @@ group('Gaeste: temporaer, dauerhaft, Gast-Konto');
   });
 }
 
-group('Archiv-Nachtrag vom Server: Einzel und Besetzung (nachgetragener Wechsel)');
+});
+
+await gruppe('Archiv-Nachtrag vom Server: Einzel und Besetzung (nachgetragener Wechsel)', async () => {
 {
   const r = await page.evaluate(() => {
     const D = window.__dart, S = D.state();
@@ -3988,7 +4150,9 @@ group('Archiv-Nachtrag vom Server: Einzel und Besetzung (nachgetragener Wechsel)
   check('das Einzel haengt am eingewechselten Spieler, Bericht-Korrekturen bleiben lokal', r);
 }
 
-group('Rangliste nur mit Stammspielern, Aufstellung nach Nutzung');
+});
+
+await gruppe('Rangliste nur mit Stammspielern, Aufstellung nach Nutzung', async () => {
 await page.evaluate(() => { window.__dart.ui().boardMode = '501'; window.__dart.setScreen('boards'); });
 check('kein Gast steht in der Rangliste', await page.evaluate(() => {
   const S = window.__dart.state();
@@ -4014,7 +4178,9 @@ check('das Lieblingsdoppel wird weiter abgefragt',
   (await page.locator('[data-role="profile-double"]').count()) === 1);
 await page.locator('[data-action="ov-cancel"]').click();
 
-group('Neuer Spieler: kein leerer, doppelter Name nur mit Bestaetigung');
+});
+
+await gruppe('Neuer Spieler: kein leerer, doppelter Name nur mit Bestaetigung', async () => {
 {
   const anzahl = await page.evaluate(() => window.__dart.state().profiles.length);
   await page.locator('#screen-setup [data-action="new-profile"]').click();
@@ -4040,7 +4206,9 @@ group('Neuer Spieler: kein leerer, doppelter Name nur mit Bestaetigung');
   });
 }
 
-group('Wer gerade spielt, laesst sich nicht loeschen');
+});
+
+await gruppe('Wer gerade spielt, laesst sich nicht loeschen', async () => {
 {
   const erg = await page.evaluate(() => {
     const D = window.__dart, S = D.state();
@@ -4058,7 +4226,9 @@ group('Wer gerade spielt, laesst sich nicht loeschen');
   check('kein Loeschen-Knopf fuer einen Spieler im laufenden Spiel', erg === false);
 }
 
-group('Gast direkt loeschen');
+});
+
+await gruppe('Gast direkt loeschen', async () => {
 await page.evaluate(() => window.__dart.setScreen('players'));
 check('der Dachauer Gast steht in der Spielerliste', (await text('#players-list')).includes('Dachau 1'));
 await profilOeffnen('#players-list .player-card:has-text("Dachau 1")');
@@ -4088,7 +4258,9 @@ await page.evaluate(() => {
   D.setScreen('setup');
 });
 
-group('Ausbullen per Tastatur OHNE Turnier-Modus: der Bull-Sieger beginnt');
+});
+
+await gruppe('Ausbullen per Tastatur OHNE Turnier-Modus: der Bull-Sieger beginnt', async () => {
 await page.evaluate(() => {
   const D = window.__dart, S = D.state();
   S.game = null; S.matches = []; S.tour = null; S.current = null;
@@ -4107,7 +4279,9 @@ check('Spieler 2 gewinnt das Bullen und ist dran - ohne geschenkte 0-Aufnahme', 
     D.state().matches[0].legs[0].starter === m.p[1];
 }));
 
-group('Turnier-Menue: naechstes Einzel per Tastatur waehlen und starten');
+});
+
+await gruppe('Turnier-Menue: naechstes Einzel per Tastatur waehlen und starten', async () => {
 await page.evaluate(() => {
   const D = window.__dart, S = D.state();
   S.game = null; S.matches = []; S.tour = null; S.current = null;
@@ -4118,7 +4292,7 @@ await page.evaluate(() => {
 await page.locator('[data-action="start-game"]').click();
 check('ohne Tastendruck ist im Spielplan nichts markiert', await page.evaluate(() => !document.querySelector('#schedule .match-row.wahl')));
 await page.keyboard.press('Numpad2');
-const planWahl = () => page.evaluate(() => {
+planWahl = () => page.evaluate(() => {
   const z = document.querySelector('#schedule .match-row.wahl');
   return z ? [...document.querySelectorAll('#schedule .match-row')].indexOf(z) : -1;
 });
@@ -4136,7 +4310,9 @@ check('Enter startet das gewaehlte Einzel (Ausbullen)', await page.evaluate(() =
 await page.locator('#screen-bulloff > [data-action="to-tournament"]').click();
 check('zurueck im Spielplan', await page.evaluate(() => window.__dart.state().screen === 'tournament'));
 
-group('Ausbullen und Checkout am Board per Tastatur');
+});
+
+await gruppe('Ausbullen und Checkout am Board per Tastatur', async () => {
 await page.evaluate(() => {
   const D = window.__dart, S = D.state();
   S.game = null; S.matches = []; S.tour = null; S.current = null;
@@ -4264,7 +4440,9 @@ await page.evaluate(() => {
   D.setScreen('setup');
 });
 
-group('spielDart bucht in jedem Modus');
+});
+
+await gruppe('spielDart bucht in jedem Modus', async () => {
 /* Die zentrale Weiche fuer alle Dart-Quellen (Board-Tasten, Tastatur,
    kuenftig Kamera): je Bildschirm die passende Buchung, die Rueckgabe sagt,
    ob gebucht wurde. */
@@ -4332,7 +4510,9 @@ await page.evaluate(() => {
   D.setScreen('setup');
 });
 
-group('Spiel-Reiter findet zurueck ins Schnelle Spiel');
+});
+
+await gruppe('Spiel-Reiter findet zurueck ins Schnelle Spiel', async () => {
 /* Der Nav-Handler sprang frueher auf S.game.kind - beim Schnellen Spiel
    heisst der aber 'quick', diesen Bildschirm gibt es nicht, und die Seite
    blieb schwarz (gespeichert sogar ueber den Neustart hinweg). */
@@ -4347,9 +4527,11 @@ await page.locator('[data-action="start-game"]').click();
 await bullOffGo();
 check('das Schnelle Spiel laeuft', await visible('#screen-game'));
 await page.evaluate(() => window.__dart.setScreen('players'));
-group('Spieler am Tablet: Schnellansicht und Filter');
+});
+
+await gruppe('Spieler am Tablet: Schnellansicht und Filter', async () => {
 /* Hier laeuft die Suite im Handy-Format - fuer die Schnellansicht kurz aufs Tablet. */
-const vpTablet = page.viewportSize();
+vpTablet = page.viewportSize();
 await page.setViewportSize({ width: 1133, height: 744 });
 await page.waitForFunction(() => matchMedia('(min-width: 700px) and (min-height: 501px)').matches);
 await page.evaluate(() => window.__dart.setScreen('players'));
@@ -4405,7 +4587,9 @@ await page.evaluate(() => {
   D.setScreen('setup');
 });
 
-group('Ohne Server bleibt es die lokale App');
+});
+
+await gruppe('Ohne Server bleibt es die lokale App', async () => {
 /* Aus dem laufenden Cricket zurück ins Setup – dort ist die Navigation
    sichtbar, im Spiel wird sie bewusst ausgeblendet. */
 await page.evaluate(() => window.__dart.setScreen('setup'));
@@ -4424,7 +4608,9 @@ check('und niemand ist als Gast markiert',
   await page.evaluate(() => JSON.stringify(window.__dart.state().profiles.filter((p) => p.gast).map((p) => p.voll || p.name))));
 
 /* ---------- Testspieler zaehlen nirgends ---------- */
-group('Testspieler: Spiele mit ihnen bleiben aus der Statistik');
+});
+
+await gruppe('Testspieler: Spiele mit ihnen bleiben aus der Statistik', async () => {
 {
   /* Ein Spieler mit gespielten Partien wird zum Testkonto erklaert (das Flag
      setzt sonst der Server im Roster): seine Spiele fallen aus Karriere,
@@ -4452,7 +4638,9 @@ group('Testspieler: Spiele mit ihnen bleiben aus der Statistik');
 }
 
 /* ---------- Eingabe: OK immer, Zurueck bis zum Wurf davor, Kachel als Taste ---------- */
-group('Eingabe: nichts wird automatisch uebernommen');
+});
+
+await gruppe('Eingabe: nichts wird automatisch uebernommen', async () => {
 await page.evaluate(() => {
   const D = window.__dart, S = D.state();
   S.game = null; S.matches = []; S.tour = null;
@@ -4499,7 +4687,7 @@ check('Double ist ein Schalter: an, aus - Triple schliesst Double aus', await pa
   && (await setMult(2), await setMult(3), await page.evaluate(() => window.__dart.ui().mult === 3 &&
       !document.querySelector('#num-grid button.mult[data-mult="2"]').classList.contains('active')))
   && (await setMult(1), true));
-const kachel = page.locator('#game-kacheln .fk.tipp').first();
+kachel = page.locator('#game-kacheln .fk.tipp').first();
 check('die vorgeschlagene Kachel ist eine Taste', (await kachel.count()) === 1 && (await kachel.innerText()).trim() === 'T20');
 await kachel.click();
 check('Tipp auf die Kachel bucht den Dart', await page.evaluate(() => {
@@ -4585,7 +4773,7 @@ await page.locator('#num-grid button.zurueck').click();
 check('Zurueck nimmt den Dart, der Hinweis ist weg', (await rest(0)) === '141' && (await text('#darts-error')).trim() === '');
 /* Ein offenes Menue sperrt die Tastatur - nichts wird dahinter gebucht oder zurueckgenommen. */
 await page.locator('#game-menu').click();
-const vorMenu = await page.evaluate(() => window.__dart.activeLeg(window.__dart.currentMatch()).visits.length);
+vorMenu = await page.evaluate(() => window.__dart.activeLeg(window.__dart.currentMatch()).visits.length);
 await page.keyboard.press('z');
 check('z (Ruecknahme) tut hinter dem offenen Menue nichts',
   (await page.evaluate(() => window.__dart.activeLeg(window.__dart.currentMatch()).visits.length)) === vorMenu && (await visible('#game-menu-overlay')));
@@ -4616,7 +4804,9 @@ await page.evaluate(() => { window.__dart.ui().modeOverride = null; });
 await page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; D.save(); D.setScreen('setup'); });
 
 /* ---------- Online: einzelne Darts live, Feier auf allen Geraeten ---------- */
-group('Online-Spiel: halbfertige Aufnahme geht mit, Feier bei allen');
+});
+
+await gruppe('Online-Spiel: halbfertige Aufnahme geht mit, Feier bei allen', async () => {
 await page.evaluate(() => {
   const D = window.__dart, S = D.state();
   S.game = null; S.matches = []; S.tour = null;
@@ -4790,7 +4980,9 @@ check('Spielende beim anderen zeigt den Glueckwunsch, auch ueber einem Hinweis',
 await page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; D.ui().overlay = null; D.save(); D.setScreen('setup'); });
 
 /* ---------- Jedes Format: Tastenfeld ganz im Bild, nichts scrollt ---------- */
-group('Spielbild passt auf jedes Format ohne Scrollen');
+});
+
+await gruppe('Spielbild passt auf jedes Format ohne Scrollen', async () => {
 {
   const vorher = page.viewportSize();
   await page.evaluate(() => {
@@ -4830,7 +5022,9 @@ group('Spielbild passt auf jedes Format ohne Scrollen');
 }
 
 /* ---------- Gaeste raeumen sich auch im laufenden Betrieb weg ---------- */
-group('Gaeste: weg nach dem Abend, aber nie mitten im Turnier');
+});
+
+await gruppe('Gaeste: weg nach dem Abend, aber nie mitten im Turnier', async () => {
 await page.evaluate(() => {
   const D = window.__dart, S = D.state();
   S.game = null; S.matches = []; S.tour = null;
@@ -4873,7 +5067,9 @@ await page.evaluate(() => {
   D.save(); D.setScreen('setup');
 });
 
-group('Diagramm: jede Linie eine eigene Farbe, auch wenn alle Profile denselben Ton haben');
+});
+
+await gruppe('Diagramm: jede Linie eine eigene Farbe, auch wenn alle Profile denselben Ton haben', async () => {
 {
   const farben = await page.evaluate(() => {
     const D = window.__dart, S = D.state();
@@ -4886,7 +5082,9 @@ group('Diagramm: jede Linie eine eigene Farbe, auch wenn alle Profile denselben 
   check('Linien unterscheiden sich trotz gleicher Profilfarbe', farben.length < 2 || new Set(farben).size === farben.length, JSON.stringify(farben));
 }
 
-group('Diagramm-Legende: Durchschnitt der gezeigten Spiele');
+});
+
+await gruppe('Diagramm-Legende: Durchschnitt der gezeigten Spiele', async () => {
 await page.evaluate(() => { window.__dart.ui().boardMode = '501'; window.__dart.ui().board = 'avg'; window.__dart.setScreen('boards'); });
 check('unter dem Diagramm steht ein Ø ohne Spielzahl', await page.evaluate(() => {
   const l = document.querySelector('#board-chart .chart-legend');
@@ -4903,8 +5101,10 @@ check('der Ø ist der Durchschnitt ueber die Spiele, nicht der letzte Wert', awa
 }));
 
 /* ---------- Turnier-Auswertung und keine Doppelzaehlung ---------- */
-group('Turnier: Endstand nachschauen, geteiltes Turnier zaehlt nur einmal');
-const tVor = await page.evaluate(() => {
+});
+
+await gruppe('Turnier: Endstand nachschauen, geteiltes Turnier zaehlt nur einmal', async () => {
+tVor = await page.evaluate(() => {
   const D = window.__dart, S = D.state();
   S.game = null; S.matches = []; S.tour = null;
   const ids = D.activeProfiles().slice(0, 3).map((p) => p.id);
@@ -4938,7 +5138,7 @@ check('ein Spiel daraus laesst sich oeffnen', (await textKlein('#summary-box')).
 /* Dasselbe Turnier laeuft hier noch als geteilte Kopie (anderes Geraet hat
    abgeschlossen): es darf nicht doppelt zaehlen -- und das Abschliessen hier
    legt keinen zweiten Eintrag an. */
-const tDoppel = await page.evaluate((vor) => {
+tDoppel = await page.evaluate((vor) => {
   const D = window.__dart, S = D.state();
   const h = S.history.find((x) => x.id === 'turnier_x');
   S.tour = { start: 501, bestOf: 1, players: vor.ids.slice(), geteilt: true, sid: 'turnier_x', cursor: 5, beendet: true };
@@ -4955,7 +5155,7 @@ check('Abschliessen legt keinen zweiten Eintrag an und raeumt auf', tDoppel.eint
   JSON.stringify(tDoppel.wonNach) === JSON.stringify(tVor.won), JSON.stringify(tDoppel));
 
 /* Ein Turnier, in dem nichts gespielt wurde, hinterlaesst keinen Eintrag. */
-const tLeer = await page.evaluate((vor) => {
+tLeer = await page.evaluate((vor) => {
   const D = window.__dart, S = D.state();
   const n = S.history.length;
   S.lineup = vor.ids.slice(); S.mode = '501'; D.save(); D.setScreen('setup');
@@ -4968,7 +5168,9 @@ check('leeres Turnier wird nicht archiviert', tLeer.laeuft === 3 && tLeer.nach =
 await page.evaluate(() => { const D = window.__dart, S = D.state(); S.history = S.history.filter((x) => x.id !== 'turnier_x'); D.save(); D.setScreen('setup'); });
 
 /* ---------- Geist in der Aufstellung ---------- */
-group('Aufstellung: ausgeblendeter Gast kann nicht mitspielen');
+});
+
+await gruppe('Aufstellung: ausgeblendeter Gast kann nicht mitspielen', async () => {
 {
   const g = await page.evaluate(() => {
     const D = window.__dart, S = D.state();
@@ -4996,7 +5198,9 @@ group('Aufstellung: ausgeblendeter Gast kann nicht mitspielen');
 }
 
 /* ---------- Ton & Feiern abschaltbar ---------- */
-group('Ton & Feiern: Feiern lassen sich abschalten');
+});
+
+await gruppe('Ton & Feiern: Feiern lassen sich abschalten', async () => {
 {
   await page.evaluate(() => {
     const D = window.__dart, S = D.state();
@@ -5020,7 +5224,9 @@ group('Ton & Feiern: Feiern lassen sich abschalten');
 }
 
 /* ---------- Zurueck-Taste ---------- */
-group('Zurueck-Taste verlaesst die App nicht aus Versehen');
+});
+
+await gruppe('Zurueck-Taste verlaesst die App nicht aus Versehen', async () => {
 {
   await navTo('boards');
   await page.goBack();
@@ -5034,7 +5240,9 @@ group('Zurueck-Taste verlaesst die App nicht aus Versehen');
 }
 
 /* ---------- Kein Spiel laeuft laenger als 12 Stunden ---------- */
-group('Altes Spiel: nach 12 Stunden beendet, nicht gespeichert');
+});
+
+await gruppe('Altes Spiel: nach 12 Stunden beendet, nicht gespeichert', async () => {
 {
   await page.evaluate(() => {
     const D = window.__dart, S = D.state();
@@ -5076,7 +5284,9 @@ group('Altes Spiel: nach 12 Stunden beendet, nicht gespeichert');
   await page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; D.ui().overlay = null; D.save(); D.setScreen('setup'); });
 }
 
-group('Erster Start: Willkommen-Karte');
+});
+
+await gruppe('Erster Start: Willkommen-Karte', async () => {
 {
   await page.evaluate(() => {
     const D = window.__dart, S = D.state();
@@ -5092,7 +5302,9 @@ group('Erster Start: Willkommen-Karte');
 }
 
 /* ---------- Ligaspiel: Ergebnisse, Bericht, erst dann abgeschlossen ---------- */
-group('Ligaspiel endet erst mit dem unterschriebenen Bericht');
+});
+
+await gruppe('Ligaspiel endet erst mit dem unterschriebenen Bericht', async () => {
 {
   await page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; S.matches = []; S.tour = null; S.current = null; D.ui().overlay = null; D.save(); D.setScreen('liga'); });
   await page.locator('#liga-plan [data-action="liga-spiel"]').first().click();
@@ -5164,7 +5376,9 @@ group('Ligaspiel endet erst mit dem unterschriebenen Bericht');
   }, termin);
 }
 
-group('Einmalige Korrektur: Spielbericht 1. Spieltag');
+});
+
+await gruppe('Einmalige Korrektur: Spielbericht 1. Spieltag', async () => {
 {
   await page.evaluate(() => {
     const D = window.__dart, S = D.state();
@@ -5215,7 +5429,9 @@ group('Einmalige Korrektur: Spielbericht 1. Spieltag');
   });
 }
 
-group('Kaiwen: Team-Checkout, Regeln, Rekord und PB');
+});
+
+await gruppe('Kaiwen: Team-Checkout, Regeln, Rekord und PB', async () => {
 {
   const vpKw = page.viewportSize();
   await page.setViewportSize({ width: 1133, height: 744 });
@@ -5388,7 +5604,9 @@ group('Kaiwen: Team-Checkout, Regeln, Rekord und PB');
   await page.setViewportSize(vpKw);
 }
 
-group('Hunter: Maeusejagd, Startfelder, Fangen, Varianten, Solo');
+});
+
+await gruppe('Hunter: Maeusejagd, Startfelder, Fangen, Varianten, Solo', async () => {
 {
   const vpHu = page.viewportSize();
   await page.setViewportSize({ width: 1133, height: 744 });
@@ -5563,7 +5781,9 @@ group('Hunter: Maeusejagd, Startfelder, Fangen, Varianten, Solo');
   await page.setViewportSize(vpHu);
 }
 
-group('Kaiwen: ein laufendes Spiel geht beim Start eines anderen nicht verloren');
+});
+
+await gruppe('Kaiwen: ein laufendes Spiel geht beim Start eines anderen nicht verloren', async () => {
 {
   await page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; S.matches = []; D.ui().overlay = null; S.lineup = D.activeProfiles().slice(0, 2).map((p) => p.id); D.save(); D.setScreen('setup'); });
   await page.locator('[data-action="set-mode"][data-value="kaiwen"]').click();
@@ -5580,7 +5800,9 @@ group('Kaiwen: ein laufendes Spiel geht beim Start eines anderen nicht verloren'
   await page.evaluate((id) => { const D = window.__dart, S = D.state(); S.game = null; S.history = S.history.filter((x) => x.id !== id); D.save(); D.setScreen('setup'); }, kwId);
 }
 
-group('Oeffentliche Webseite (webseite.html): Spieltag, Termine, Ergebnisse, Tabelle, Anmelden');
+});
+
+await gruppe('Oeffentliche Webseite (webseite.html): Spieltag, Termine, Ergebnisse, Tabelle, Anmelden', async () => {
 {
   const wp = await browser.newPage({ viewport: { width: 390, height: 844 } });
   const wfehler = [];
@@ -5671,8 +5893,203 @@ group('Oeffentliche Webseite (webseite.html): Spieltag, Termine, Ergebnisse, Tab
   await wp.close();
 }
 
-group('Fehlerfreiheit');
+/* ---------- Audit 08.11.2026 (Pakete L18, L21-L23, D1, D11) ---------- */
+
+});
+
+await gruppe('Audit 11/2026: Dialoge sind Dialoge - Semantik, Fokus, inert, Esc (D1, D11)', async () => {
+{
+  await page.evaluate(() => { const D = window.__dart; D.ui().overlay = null; D.ui().menu = false; D.setScreen('setup'); });
+  await page.locator('#screen-setup [data-action="new-profile"]').click();
+  check('#overlay traegt role=dialog, aria-modal und zeigt per aria-labelledby auf seine Ueberschrift', await page.evaluate(() => {
+    const ov = document.getElementById('overlay'), l = ov.getAttribute('aria-labelledby');
+    return ov.getAttribute('role') === 'dialog' && ov.getAttribute('aria-modal') === 'true' && !!l &&
+      !!document.getElementById(l) && document.getElementById('overlay-card').contains(document.getElementById(l));
+  }));
+  check('der Fokus liegt nach dem Oeffnen im Dialog, im ersten Eingabefeld', await page.evaluate(() => {
+    const a = document.activeElement;
+    return !!a && document.getElementById('overlay-card').contains(a) && a.tagName === 'INPUT';
+  }), await page.evaluate(() => document.activeElement && document.activeElement.outerHTML.slice(0, 80)));
+  check('die Bildschirme und die Navigation dahinter sind inert, der Dialog nicht', await page.evaluate(() =>
+    document.getElementById('screen-setup').hasAttribute('inert') && document.getElementById('nav').hasAttribute('inert') &&
+    !document.getElementById('overlay').hasAttribute('inert')));
+  await page.keyboard.press('Escape');
+  check('Escape im leeren Feld schliesst den Dialog sofort (nicht erst beim zweiten Mal)', !(await visible('#overlay-card')));
+  check('danach ist nichts mehr inert', await page.evaluate(() =>
+    !document.getElementById('screen-setup').hasAttribute('inert') && !document.getElementById('nav').hasAttribute('inert')));
+  check('der Fokus ist zurueck auf dem Knopf, der den Dialog geoeffnet hat', await page.evaluate(() => {
+    const a = document.activeElement;
+    return !!a && a.getAttribute('data-action') === 'new-profile';
+  }), await page.evaluate(() => document.activeElement ? document.activeElement.outerHTML.slice(0, 80) : '-'));
+  /* Dialog mit Text im Feld: Escape verlaesst nur das Feld (wie bisher). */
+  await page.locator('#screen-setup [data-action="new-profile"]').click();
+  await page.focus('#overlay-card [data-role="profile-name"]');
+  await page.keyboard.type('Ab');
+  await page.keyboard.press('Escape');
+  check('mit Text im Feld verlaesst Escape nur das Feld', await visible('#overlay-card'));
+  await page.keyboard.press('Escape');
+  check('das zweite Escape schliesst', !(await visible('#overlay-card')));
+}
+
+});
+
+await gruppe('Audit 11/2026: alle Highlights je Leg, Man of the Day bei Gleichstand (L18, L23)', async () => {
+{
+  const r = await page.evaluate(() => {
+    const D = window.__dart;
+    const v = (p, s, extra) => Object.assign({ p, s, d: 3, b: false, c: false }, extra || {});
+    const A = 'hlA', B = 'hlB';
+    const leg = (winner, visits) => ({ starter: A, winner, visits });
+    const m = { id: 'hlm', p: [A, B], done: true, winner: A, legs: [
+      /* A: 9-Darter mit 141 */
+      leg(A, [v(A, 180), v(B, 60), v(A, 180), v(B, 60), v(A, 141, { c: true })]),
+      /* A: 11-Darter mit 101 (letzte Aufnahme 2 Darts) */
+      leg(A, [v(A, 100), v(B, 60), v(A, 100), v(B, 60), v(A, 100), v(B, 60), v(A, 101, { c: true, d: 2 })]),
+      /* B: 12 Darts, Finish 41 (kein High-Finish), zwei 180er */
+      leg(B, [v(A, 60), v(B, 180), v(A, 60), v(B, 180), v(A, 60), v(B, 100), v(A, 60), v(B, 41, { c: true })])
+    ] };
+    const hl = D.legHighlights([m], 501, [A, B]);
+    const st = (id, name, won, lw, ll, darts, avg) => ({ id, name, matches: 4, won, legsWon: lw, legsLost: ll, darts, avg });
+    const gleich = D.manOfTheDay(['a', 'b', 'c'], { a: st('a', 'Anna', 3, 6, 2, 90, 61.2), b: st('b', 'Bernd', 3, 6, 2, 90, 61.2), c: st('c', 'Carl', 2, 5, 4, 90, 70) });
+    const legDiff = D.manOfTheDay(['a', 'b'], { a: st('a', 'Anna', 3, 6, 3, 90, 61.2), b: st('b', 'Bernd', 3, 6, 2, 90, 55) });
+    const nurErgebnis = D.manOfTheDay(['a', 'b'], { a: st('a', 'Anna', 3, 6, 2, 90, 61.2), b: st('b', 'Bernd', 3, 6, 2, 0, 0) });
+    const lang = D.mitteilungsZeilen(['<b>High-Finishes:</b> ' + Array.from({ length: 20 }, (_, i) => (100 + i) + ' Spielername Lang').join(' · ')]);
+    return {
+      a: hl[A], b: hl[B],
+      gleich: { namen: gleich.namen, text: D.manOfTheDayText(gleich) },
+      legDiff: { id: legDiff.id, geteilt: legDiff.geteilt.length, text: D.manOfTheDayText(legDiff) },
+      nurErgebnis: { geteilt: nurErgebnis.geteilt.length },
+      lang
+    };
+  });
+  check('je Spieler stehen ALLE Finishes ab 100, absteigend', JSON.stringify(r.a.finishes) === '[141,101]' && r.b.finishes.length === 0, JSON.stringify(r.a));
+  check('je Spieler stehen ALLE Shortlegs bis 21 Darts, aufsteigend', JSON.stringify(r.a.shortlegs) === '[9,11]' && JSON.stringify(r.b.shortlegs) === '[12]', JSON.stringify(r.a) + JSON.stringify(r.b));
+  check('180er werden je Spieler gezaehlt', r.a.s180 === 2 && r.b.s180 === 2);
+  check('Man of the Day bei exaktem Gleichstand: geteilt, beide Namen, "je"', r.gleich.namen.join('&') === 'Anna&Bernd' && r.gleich.text === 'geteilt: Anna & Bernd (je 3 Siege)', r.gleich.text);
+  check('gleich viele Siege: die Leg-Differenz entscheidet vor dem Average', r.legDiff.id === 'b' && r.legDiff.geteilt === 0 && r.legDiff.text === 'Bernd (3 Siege)', JSON.stringify(r.legDiff));
+  check('ein Nur-Ergebnis-Spieler (Average 0) verliert den Titel nicht still an den Average', r.nurErgebnis.geteilt === 1);
+  check('Mitteilungszeilen brechen vor 160 Zeichen um und tragen die Rubrik weiter', r.lang.length > 1 && r.lang.every((z) => z.length <= 160) &&
+    r.lang[0].startsWith('High-Finishes: ') && r.lang[1].startsWith('High-Finishes (weiter): '), JSON.stringify(r.lang.map((z) => z.length)));
+}
+
+});
+
+await gruppe('Audit 11/2026: Spielbericht und Bogen nennen beide Shortlegs eines Spielers (L18)', async () => {
+{
+  await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    const wir = D.activeProfiles().slice(0, 4).map((p) => p.id);
+    const sie = ['hlg1', 'hlg2', 'hlg3', 'hlg4'];
+    sie.forEach((id, i) => { if (!S.profiles.some((p) => p.id === id)) S.profiles.push({ id, name: 'Gegner ' + (i + 1), voll: 'Gegner Nummer' + (i + 1), avatar: null, hue: 100, created: Date.now(), gast: true, dauer: true }); });
+    const v = (p, s, extra) => Object.assign({ p, s, d: 3, b: false, c: false }, extra || {});
+    const A = wir[0], B = sie[0];
+    const leg = (winner, visits) => ({ starter: A, winner, visits });
+    S.game = null;
+    S.tour = { start: 501, bestOf: 3, players: wir.concat(sie), liga: {
+      terminId: 'uebung', nr: 0, gegner: 'Testgegner', heim: true, uebung: true, wir, sie,
+      heimSpieler: wir.slice(), gastSpieler: sie.slice(), posH: wir.slice(), posG: sie.slice(),
+      ort: 'Bar Sehnsucht', tag: '', finish: true, zeitVon: Date.now(), zeitBis: null } };
+    S.matches = [{ id: 'hlm1', round: 1, p: [A, B], starter: A, posPaar: [0, 0], scheibe: 'S1', done: true, winner: A, at: Date.now(), legs: [
+      leg(A, [v(A, 180), v(B, 60), v(A, 180), v(B, 60), v(A, 141, { c: true })]),
+      leg(A, [v(A, 100), v(B, 60), v(A, 100), v(B, 60), v(A, 100), v(B, 60), v(A, 101, { c: true, d: 2 })])
+    ] }];
+    S.current = null; D.ui().overlay = null; D.ui().bericht = null;
+    D.setScreen('tournament');
+  });
+  const karte = await page.evaluate(() => document.getElementById('liga-bericht-karte').innerText.replace(/\s+/g, ' '));
+  check('die Karte "Fuer den Spielbericht" nennt beide Shortlegs und beide Finishes', karte.includes('9 Darts') && karte.includes('11 Darts') &&
+    karte.includes('141') && karte.includes('101'), karte);
+  await page.evaluate(() => { const D = window.__dart; D.berichtNeu(); D.setScreen('bericht'); });
+  const blatt = await page.evaluate(() => {
+    const t = document.getElementById('bericht-blatt').textContent;
+    return { darter: (t.match(/-Darter/g) || []).length, f141: t.includes('141 Finish'), f101: t.includes('101 Finish'),
+      zeilen: document.querySelectorAll('.b-hl tr').length };
+  });
+  check('der Bogen fuehrt jedes Shortleg in einer eigenen Zeile', blatt.darter === 2 && blatt.f141 && blatt.f101, JSON.stringify(blatt));
+  check('der Bogen hat weiter mindestens sieben Highlight-Zeilen je Seite', blatt.zeilen >= 14, String(blatt.zeilen));
+  await page.evaluate(() => { const D = window.__dart, S = D.state(); S.matches = []; S.tour = null; S.current = null; D.ui().bericht = null; D.setScreen('setup'); });
+}
+
+});
+
+await gruppe('Audit 11/2026: v2-Altstand wird auf v3 gehoben, neuere Staende bleiben unangetastet, altes Spiel behaelt Legs (L21, L22)', async () => {
+{
+  const alt = {
+    v: 2, screen: 'setup', settings: { start: 501, bestOf: 1, dartModeFrom: 170 }, mode: '501', game: null,
+    profiles: [{ id: 'alt1', name: 'Alt-Anna', avatar: null, created: 1700000000000 }, { id: 'alt2', name: 'Alt-Bernd', avatar: null, created: 1700000000000 }],
+    lineup: ['alt1', 'alt2'], matches: [], current: null,
+    history: [{ id: 'alth1', at: 1700000000000, lineup: ['alt1', 'alt2'], settings: { start: 501, bestOf: 1 }, winner: 'alt1',
+      matches: [{ id: 'altm1', p: ['alt1', 'alt2'], starter: 'alt1', done: true, winner: 'alt1', at: 1700000000000, legs: [
+        { starter: 'alt1', winner: 'alt1', visits: [{ p: 'alt1', s: 180, d: 3, b: false, c: false }, { p: 'alt2', s: 26, d: 3, b: false, c: false },
+          { p: 'alt1', s: 180, d: 3, b: false, c: false }, { p: 'alt2', s: 26, d: 3, b: false, c: false }, { p: 'alt1', s: 141, d: 3, b: false, c: true }] }] }] }]
+  };
+  const p2 = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const f2 = [];
+  p2.on('pageerror', (e) => f2.push(String(e)));
+  /* Nur beim ersten Laden setzen: das Init-Skript laeuft bei jedem Reload
+     erneut und wuerde sonst die spaeteren Umbauten (altes Spiel, v4) ueberschreiben. */
+  await p2.addInitScript((stand) => { if (!localStorage.getItem('dart-turnier-v1')) localStorage.setItem('dart-turnier-v1', JSON.stringify(stand)); }, alt);
+  await p2.goto(BASE);
+  await p2.waitForSelector('#screen-setup');
+  const r = await p2.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    D.save();
+    const g = JSON.parse(localStorage.getItem('dart-turnier-v1'));
+    const c = D.career();
+    return { v: g.v, namen: S.profiles.map((p) => p.name), hist: S.history.length, quick: S.settings.quickModus, ton: S.settings.ton,
+      hue: typeof S.profiles[0].hue, hinweis: !!document.getElementById('lade-hinweis'), s180: c.alt1 ? c.alt1.s180 : -1, tourn: c.alt1 ? c.alt1.tournaments : -1 };
+  });
+  check('Profile und Archiv des v2-Stands sind da', r.namen.includes('Alt-Anna') && r.namen.includes('Alt-Bernd') && r.hist === 1, JSON.stringify(r));
+  check('der Stand ist jetzt als v3 gespeichert, die Defaults stehen fest drin', r.v === 3 && r.quick === 0 && r.ton === 1 && r.hue === 'number', JSON.stringify(r));
+  check('kein Lade-Hinweis, die Karriere rechnet aus dem Altbestand', !r.hinweis && r.s180 === 2 && r.tourn === 1, JSON.stringify(r));
+  /* L22: ein 13 Stunden altes Schnelles Spiel mit einem fertigen Leg. */
+  await p2.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem('dart-turnier-v1'));
+    const v = (p, sc, extra) => Object.assign({ p, s: sc, d: 3, b: false, c: false }, extra || {});
+    s.game = { id: 'altq1', kind: 'quick', p: ['alt1', 'alt2'], players: ['alt1', 'alt2'], start: 501, bestOf: 3, starter: 'alt1', started: true, done: false, winner: null, at: Date.now() - 13 * 3600e3,
+      legs: [{ starter: 'alt1', winner: 'alt1', visits: [v('alt1', 180), v('alt2', 60), v('alt1', 180), v('alt2', 60), v('alt1', 141, { c: true })] },
+        { starter: 'alt2', winner: null, visits: [v('alt2', 100)] }] };
+    s.gameSeit = { id: 'altq1', seit: Date.now() - 13 * 3600e3 };
+    s.mode = 'quick'; s.screen = 'game';
+    localStorage.setItem('dart-turnier-v1', JSON.stringify(s));
+  });
+  await p2.reload();
+  await p2.waitForSelector('#screen-setup');
+  const alt2 = await p2.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    const h = S.history.find((x) => x.id === 'altq1');
+    const o = D.ui().overlay;
+    return { weg: S.game === null, h: !!h, abgebrochen: !!(h && h.abgebrochen), legs: h ? h.matches[0].legs.length : -1, text: o ? o.text : '' };
+  });
+  check('das alte Schnelle Spiel ist beendet, das fertige Leg steht ohne Sieger im Archiv', alt2.weg && alt2.h && alt2.abgebrochen && alt2.legs === 1, JSON.stringify(alt2));
+  check('der Hinweis sagt, dass das fertige Leg gespeichert wurde', alt2.text.includes('fertige Leg') && alt2.text.includes('gespeichert'), alt2.text);
+  /* Ein Stand aus einer NEUEREN Version: nicht anfassen, nichts speichern. */
+  await p2.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem('dart-turnier-v1'));
+    s.v = 4; s.profiles[0].name = 'Zukunft';
+    localStorage.setItem('dart-turnier-v1', JSON.stringify(s));
+  });
+  await p2.reload();
+  await p2.waitForSelector('#screen-setup');
+  const neuer = await p2.evaluate(() => {
+    const D = window.__dart;
+    D.save();
+    const g = JSON.parse(localStorage.getItem('dart-turnier-v1'));
+    const bar = document.getElementById('lade-hinweis');
+    return { v: g.v, name: g.profiles[0].name, hinweis: bar ? bar.textContent : '' };
+  });
+  check('ein Stand einer neueren Version bleibt unangetastet, auch nach save()', neuer.v === 4 && neuer.name === 'Zukunft', JSON.stringify(neuer));
+  check('und oben steht der Hinweis auf die neuere App-Version', neuer.hinweis.includes('neueren App-Version'), neuer.hinweis);
+  check('die zweite Seite laeuft ohne JS-Fehler', f2.length === 0, f2.join(' | '));
+  await p2.close();
+}
+
+});
+
+await gruppe('Fehlerfreiheit', async () => {
 check('keine JS-Fehler', errors.length === 0, errors.join(' | '));
+
+});
 
 await browser.close();
 server.close();

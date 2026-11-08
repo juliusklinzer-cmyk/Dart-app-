@@ -235,8 +235,8 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 /* ---------- Navigation ---------- */
 .nav {
   /* Die Leiste klebt nicht: sie scrollt mit dem Inhalt weg (Julius' Wunsch
-     vom zweiten Testtag – auch am iPad). Was oben lesbar bleiben muss, ist
-     Apples Uhr und Batterie, und das regelt der Schleier am body::before. */
+     vom zweiten Testtag – auch am iPad). Einen Schleier am oberen Rand gibt
+     es nicht mehr, der Hintergrund bleibt glattes --bg (Julius, 30.10.). */
   /* Automatische Spalten: der Konto-Knopf kommt nur dazu, wenn die Seite von
      einem Server geladen wurde – dann rückt die Leiste von 3 auf 4. */
   display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: var(--space-2);
@@ -969,7 +969,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   /* Cricket: die Punktezeile muss sichtbar bleiben. */
   .cr-cell { padding: 2px 3px; }
   .cr-head { font-size: 0.75rem; padding: 2px; gap: 2px; }
-  .cr-head .av.sm { width: 20px; height: 20px; font-size: 0.62rem; }
+  .cr-head .av.sm { width: 20px; height: 20px; font-size: max(11px, 0.62rem); }
   .cr-mark { min-height: 26px; font-size: 0.95rem; }
   .cr-num { font-size: 0.8rem; }
   .cr-score { font-size: 0.9rem; }
@@ -1101,7 +1101,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   .cricket-board { flex: 1 1 auto; min-height: 0; overflow: auto; }
   .cr-cell { padding: var(--space-1) 3px; }
   .cr-head { font-size: 0.75rem; padding: var(--space-1) 2px; gap: 2px; }
-  .cr-head .av.sm { width: 22px; height: 22px; font-size: 0.62rem; }
+  .cr-head .av.sm { width: 22px; height: 22px; font-size: max(11px, 0.62rem); }
   .cr-mark { min-height: 30px; font-size: 1rem; }
   .cr-num { font-size: 0.8rem; }
   .cr-score { font-size: 0.95rem; }
@@ -1802,20 +1802,21 @@ button, input, select, textarea { font-family: inherit; }
  * will, muss durch sie hindurchtippen koennen.
  */
 /* Immer im Layout, nie anklickbar: ohne Inhalt ist die Ebene unsichtbar.
-   Kein display-Umschalten – das ließ WebKit die Blur-Ebene (::before) nach
-   der ersten Feier gelegentlich gar nicht mehr zeichnen. */
+   Kein display-Umschalten – das ließ WebKit die Abdunkel-Ebene (::before)
+   nach der ersten Feier gelegentlich gar nicht mehr zeichnen. */
 .feier {
-  position: fixed; inset: 0; z-index: 90;
+  /* Unter den Dialogen (.overlay, z-index 50): eine 180 mit sofortigem
+     Finish darf die Checkout-Frage nicht sekundenlang verdecken (D9). */
+  position: fixed; inset: 0; z-index: 40;
   pointer-events: none; overflow: hidden;
 }
 
-/* Während der Feier blurt der Spielstand dahinter leicht aus – die Feier
-   gehört kurz allein ins Bild, und danach ist alles wieder scharf. */
+/* Während der Feier dunkelt der Spielstand dahinter leicht ab – ohne Blur:
+   der verschmierte das Tastenfeld, das darunter bedienbar bleibt, und blieb
+   auch bei reduzierter Bewegung stehen (D9). */
 .feier.an::before {
   content: ''; position: absolute; inset: 0;
-  background: rgba(6, 9, 13, 0.22);
-  -webkit-backdrop-filter: blur(5px);
-  backdrop-filter: blur(5px);
+  background: rgba(0, 0, 0, 0.35);
 }
 
 /* Der Herzschlag der Feiern: zwei Schläge, kurze Pause – „SECH-ZIG",
@@ -2165,10 +2166,9 @@ button, input, select, textarea { font-family: inherit; }
    geworfenen 60 (siehe feiere60 in js/app.js). Als CSS-Hintergrund, damit
    das Bild im Einzeldatei-Bündel genau einmal eingebettet wird. */
 
-/* Die Sechzig liegt unter den Dialogen (.overlay, z-index 50): checkt jemand
-   mit genau 60 aus, gewinnt die Dart-Abfrage bzw. der Leg-Dialog das Bild,
-   der Löwe leuchtet dahinter. Die 180 behält die oberste Ebene. */
-.feier.sechzig { z-index: 45; }
+/* Die Sechzig liegt wie jede Feier unter den Dialogen (.feier 40, .overlay
+   50): checkt jemand mit genau 60 aus, gewinnt die Dart-Abfrage bzw. der
+   Leg-Dialog das Bild, der Löwe leuchtet dahinter. */
 .feier-logo {
   width: clamp(160px, min(46vw, 34vh), 420px);
   aspect-ratio: 1920 / 2395;
@@ -2292,7 +2292,8 @@ button, input, select, textarea { font-family: inherit; }
 .regel summary {
   cursor: pointer; font-weight: 700; font-size: 1rem;
   font-family: var(--font-cond); letter-spacing: 0.02em;
-  min-height: 28px;
+  /* Aufklapper sind Touchziele: 44 px statt 28 (D7). */
+  min-height: 44px; padding: 10px 0; box-sizing: border-box;
 }
 .regel summary::marker { color: var(--muted); }
 .regel[open] summary { margin-bottom: 8px; }
@@ -2593,21 +2594,6 @@ button, input, select, textarea { font-family: inherit; }
 /* Der Verlauf nutzt allein die volle Breite seiner Spalte - am iPad
    fuellt er die linke Haelfte, am Handy ohnehin alles. */
 #screen-game.solo #history { grid-template-columns: 1fr; }
-
-/* Der Notausgang aus dem Turnier-Modus fuer Geraete ohne Tastatur:
-   schwebt unten mittig, nur solange sichtbar, wie jemand getippt hat. */
-.turnier-exit {
-  /* Zentriert ueber Auto-Margins, NICHT ueber translateX: .btn:active
-     ersetzt transform durch scale(0.98) - mit translateX spraenge der
-     Knopf beim Druecken zur Seite und der Finger traefe ins Leere. */
-  position: fixed; left: 0; right: 0; bottom: 18px;
-  margin: 0 auto; width: fit-content;
-  z-index: 45; padding: var(--space-3) 22px;
-  background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--r-m);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
-}
-
-#screen-game:not(.turnier) .turnier-exit { display: none; }
 
 
 /* ================= Tastgefuehl =================
@@ -3010,11 +2996,22 @@ body { font-size: 1rem; }
 .overlay.vollbild .liga-start .ls-zeile { margin-bottom: 6px; }
 .overlay.vollbild .liga-start select,
 .overlay.vollbild .liga-start input {
-  min-height: 42px; padding-top: 8px; padding-bottom: 8px;
+  min-height: 44px; padding-top: 8px; padding-bottom: 8px;
   background: rgba(255, 255, 255, 0.04); border-color: rgba(70, 170, 215, 0.18);
 }
 .overlay.vollbild .liga-start .options button { min-height: 44px; padding-top: 8px; padding-bottom: 8px; }
 .overlay.vollbild .overlay-card > .row-btns:not(:first-child) { margin-top: var(--space-4); }
+/* Die Knopfzeile klebt am unteren Rand: der Ligaspiel-Dialog ist am iPhone
+   hoeher als der Schirm (929 zu 844 px), und GAME ON! darf nicht erst nach
+   dem Scrollen auftauchen (D3). Hintergrund und Linie, damit der Inhalt
+   sichtbar darunter durchlaeuft; der negative Rand unten gleicht die eigene
+   Sicherheitszone aus, sobald der Fuss am Ende des Blatts angekommen ist. */
+.overlay.vollbild .overlay-card > .row-btns {
+  position: sticky; bottom: 0; z-index: 1;
+  background: var(--bg); border-top: 1px solid var(--line);
+  padding: var(--space-3) 0 max(12px, env(safe-area-inset-bottom, 0px));
+  margin-bottom: calc(-1 * max(12px, env(safe-area-inset-bottom, 0px)));
+}
 .overlay-card .row-btns > .btn { margin-top: 0; }
 /* Vier Gegner-Optionen: 2x2 statt 3+1 (Bots schwer stand allein). */
 .liga-start .options:has(> button:nth-child(4):last-child) {
@@ -3198,20 +3195,6 @@ body { font-size: 1rem; }
   #screen-game.turnier .pcard .pname { font-size: 1.1rem; }
   #screen-game.turnier .pcard .meta { font-size: 1.1rem; }
   #screen-game.turnier .pcard .pname .av { display: none; }
-}
-
-/* ---------- Turnier-Modus am Touch-Geraet: sichtbarer Rueckweg (D-E2) ----------
- * Ohne Tastatur gibt es weder Tab noch Esc. Auf Geraeten ohne Maus steht
- * der Ausgang deshalb dauerhaft klein oben rechts – leise, aber da. */
-@media (hover: none) {
-  #screen-game.turnier #turnier-exit,
-  #screen-game.turnier #turnier-exit.hidden {
-    display: inline-flex !important; align-items: center;
-    position: fixed; top: calc(env(safe-area-inset-top, 0px) + 6px); left: max(10px, env(safe-area-inset-left, 0px));
-    right: auto; bottom: auto; margin: 0; width: auto;
-    min-height: 44px; padding: var(--space-2) var(--space-3);
-    font-size: 0.85rem; opacity: 0.75; box-shadow: none;
-  }
 }
 
 /* ---------- Die Sechzig: kurz, klein, durchsichtig (D-E1) ----------
@@ -3548,8 +3531,9 @@ body.tastatur #overlay-card :is(button, select, input):focus { outline: 3px soli
 }
 #screen-game.active .game-title #game-leg-label {
   font-family: var(--font-cond); font-weight: 600; font-size: clamp(13px, 2.5vh, 27px);
-  letter-spacing: 0.04em; color: var(--muted); white-space: nowrap; overflow: hidden;
-  text-overflow: ellipsis; min-width: 0; max-width: 100%;
+  letter-spacing: 0.04em; color: var(--muted); min-width: 0; max-width: 100%;
+  /* Zwei Zeilen statt "2 Spieler · 501 D…": die Kopfzeile ist hoch genug (D10). */
+  line-height: 1.15; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
 }
 
 /* ---------- Spielerkarte ---------- */
@@ -3565,7 +3549,7 @@ body.tastatur #overlay-card :is(button, select, input):focus { outline: 3px soli
 }
 :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .pkopf { display: flex; align-items: center; gap: clamp(6px, 0.8vw, 12px); min-width: 0; flex: none; }
 :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .pkopf .av.sm {
-  flex: none; width: clamp(20px, 4.8vh, 52px); height: clamp(20px, 4.8vh, 52px); font-size: clamp(9px, 1.6vh, 18px); display: inline-flex;
+  flex: none; width: clamp(20px, 4.8vh, 52px); height: clamp(20px, 4.8vh, 52px); font-size: clamp(11px, 1.6vh, 18px); display: inline-flex;
 }
 :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .pblock {
   flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: clamp(1px, 0.3vh, 4px); line-height: 1.05;
@@ -3751,7 +3735,7 @@ body.tastatur #overlay-card :is(button, select, input):focus { outline: 3px soli
   #screen-game.active .game-title #game-leg-label { font-size: 0.78rem; }
   :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) { grid-template-columns: repeat(var(--n, 2), minmax(0, 1fr)); gap: var(--space-2); margin-bottom: 6px; }
   :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard { padding: 8px 10px; gap: 2px; border-radius: var(--radius); }
-  :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .pkopf .av.sm { width: 24px; height: 24px; font-size: 0.65rem; }
+  :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .pkopf .av.sm { width: 24px; height: 24px; font-size: max(11px, 0.65rem); }
   :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .pname, :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .pavg { font-size: 0.95rem; }
   :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .pmeta { font-size: 0.72rem; }
   :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .rest-zeile {
@@ -3781,7 +3765,7 @@ body.tastatur #overlay-card :is(button, select, input):focus { outline: 3px soli
   #screen-game.active #pad-total .display-row { height: 48px; margin-bottom: 6px; }
   #screen-game.active #pad-total .score-display { font-size: 2rem; }
   #screen-game.active #pad-total .quick-row { gap: var(--gap-keys); margin-bottom: 6px; }
-  #screen-game.active #pad-total .quick-row button { height: 42px; font-size: 1rem; }
+  #screen-game.active #pad-total .quick-row button { height: 44px; font-size: 1rem; }
   #screen-game.active #pad-total .keypad button { font-size: 1.5rem; }
   #screen-game.active #pad-total .keypad button.ok { font-size: 1.1rem; }
   :is(#screen-game.active #pad-darts, #screen-finisher.active #fin-pad) .num-grid button { font-size: 1.15rem; }
@@ -3833,7 +3817,7 @@ body.tastatur #overlay-card :is(button, select, input):focus { outline: 3px soli
   #screen-game.active #pad-total .display-row { flex: none; height: clamp(46px, 13vh, 140px); }
   #screen-game.active #pad-total .score-display { font-size: clamp(36px, 10vh, 110px); }
   #screen-game.active #pad-total .input-error { font-size: clamp(11px, 1.8vh, 16px); }
-  #screen-game.active #pad-total .quick-row { flex: none; height: clamp(40px, 9vh, 96px); gap: clamp(5px, 0.9vh, 10px); }
+  #screen-game.active #pad-total .quick-row { flex: none; height: clamp(44px, 9vh, 96px); gap: clamp(5px, 0.9vh, 10px); }
   #screen-game.active #pad-total .quick-row button { height: auto; font-size: clamp(18px, 4vh, 44px); }
   #screen-game.active #pad-total .keypad {
     flex: 1 1 auto; min-height: 0; grid-template-rows: repeat(4, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); gap: clamp(5px, 0.9vh, 10px);
@@ -3850,7 +3834,7 @@ body.tastatur #overlay-card :is(button, select, input):focus { outline: 3px soli
   /* Vier Spieler im 2x2-Raster: alles eine Stufe kleiner. */
   :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten).viele .pcard .pkopf .av.sm { width: clamp(18px, 3.6vh, 40px); height: clamp(18px, 3.6vh, 40px); }
   :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten).viele .pcard .pname, :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten).viele .pcard .pavg { font-size: clamp(13px, 2.8vh, 32px); }
-  :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten).viele .pcard .pmeta { font-size: clamp(10px, 1.7vh, 18px); }
+  :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten).viele .pcard .pmeta { font-size: clamp(11px, 1.7vh, 18px); }
   :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten).viele .pcard .rest-zeile {
     grid-template-columns: minmax(0, 0.3fr) auto minmax(0, 1.7fr);
     font-size: clamp(32px, 24vh, 220px);
@@ -3863,9 +3847,9 @@ body.tastatur #overlay-card :is(button, select, input):focus { outline: 3px soli
      Rest und Felder in eine 150 px hohe Karte passen. */
   @media (max-height: 560px) {
     :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard { padding: 5px 10px; gap: 2px; }
-    :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .pkopf .av.sm { width: 18px; height: 18px; font-size: 8px; }
+    :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .pkopf .av.sm { width: 20px; height: 20px; font-size: 11px; }
     :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .pname, :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .pavg { font-size: 14px; }
-    :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .pmeta { font-size: 10px; }
+    :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .pmeta { font-size: 11px; }
     :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .rest-zeile {
       font-size: clamp(30px, 16vh, 100px);
       font-size: clamp(30px, min(16vh, 28cqi), 100px);
@@ -3889,7 +3873,7 @@ body.tastatur #overlay-card :is(button, select, input):focus { outline: 3px soli
   :is(#screen-game.active.turnier #scoreboard, #screen-finisher.active.fern #ff-karten) .pcard.active { box-shadow: 0 0 26px var(--laser-weich), 0 0 90px 14px var(--schein-stark); }
   :is(#screen-game.active.turnier #scoreboard, #screen-finisher.active.fern #ff-karten) .pcard:not(.active) { opacity: 0.8; }
   :is(#screen-game.active.turnier #scoreboard, #screen-finisher.active.fern #ff-karten) .pcard .pkopf { gap: clamp(8px, 1vw, 16px); }
-  :is(#screen-game.active.turnier #scoreboard, #screen-finisher.active.fern #ff-karten) .pcard .pkopf .av.sm { width: clamp(24px, 5.8vh, 62px); height: clamp(24px, 5.8vh, 62px); font-size: clamp(10px, 2vh, 22px); }
+  :is(#screen-game.active.turnier #scoreboard, #screen-finisher.active.fern #ff-karten) .pcard .pkopf .av.sm { width: clamp(24px, 5.8vh, 62px); height: clamp(24px, 5.8vh, 62px); font-size: clamp(11px, 2vh, 22px); }
   :is(#screen-game.active.turnier #scoreboard, #screen-finisher.active.fern #ff-karten) .pcard .pname, :is(#screen-game.active.turnier #scoreboard, #screen-finisher.active.fern #ff-karten) .pcard .pavg { font-size: clamp(18px, 5.4vh, 58px); }
   :is(#screen-game.active.turnier #scoreboard, #screen-finisher.active.fern #ff-karten) .pcard .pmeta { font-size: clamp(13px, 3vh, 34px); }
   /* Der Rest steht allein und mittig - die letzte Aufnahme steht unten in
@@ -3923,7 +3907,7 @@ body.tastatur #overlay-card :is(button, select, input):focus { outline: 3px soli
   }
   #screen-game.active.turnier .key-hist .v:not(:first-child) { opacity: 0.75; }
   #screen-game.active.turnier .key-hist .v .s { font-size: clamp(13px, 2.5vh, 26px); line-height: 1; }
-  #screen-game.active.turnier .key-hist .v .r { font-size: clamp(10px, 1.9vh, 19px); line-height: 1; }
+  #screen-game.active.turnier .key-hist .v .r { font-size: clamp(11px, 1.9vh, 19px); line-height: 1; }
   #screen-game.active.turnier .key-mitte { display: flex; flex-direction: column; min-height: 0; gap: 0; position: relative; }
   #screen-game.active.turnier .key-display {
     flex: 1 1 auto; min-height: 0; height: 100%; padding: 0; border-radius: clamp(14px, 2.2vh, 24px); font-size: clamp(44px, 15vh, 160px);
@@ -3935,8 +3919,8 @@ body.tastatur #overlay-card :is(button, select, input):focus { outline: 3px soli
   /* Handy quer: auch sechs Aufnahmen (Liga), nur kleiner. */
   @media (max-height: 560px) {
     #screen-game.active.turnier .input-area { height: clamp(96px, 30vh, 150px); }
-    #screen-game.active.turnier .key-hist .v .s { font-size: clamp(10px, 2.4vh, 16px); }
-    #screen-game.active.turnier .key-hist .v .r { font-size: clamp(9px, 2vh, 13px); }
+    #screen-game.active.turnier .key-hist .v .s { font-size: clamp(11px, 2.4vh, 16px); }
+    #screen-game.active.turnier .key-hist .v .r { font-size: clamp(11px, 2vh, 13px); }
   }
   /* Shift gedrueckt: die Wurfliste des Matches statt Eingabe und Karten. */
   #screen-game.active.turnier.verlauf #history { display: grid; flex: 1 1 auto; min-height: 88px; }
@@ -4055,7 +4039,7 @@ body.fix-spiel #screen-cricket.active { flex: 1 1 auto; height: auto; min-height
 }
 #screen-cricket.active .cr-card .pkopf { display: flex; align-items: center; gap: clamp(6px, 0.7vw, 10px); min-width: 0; flex: none; }
 #screen-cricket.active .cr-card .pkopf .av.sm {
-  flex: none; width: clamp(18px, 3.6vh, 42px); height: clamp(18px, 3.6vh, 42px); font-size: clamp(9px, 1.5vh, 18px); display: inline-flex;
+  flex: none; width: clamp(18px, 3.6vh, 42px); height: clamp(18px, 3.6vh, 42px); font-size: clamp(11px, 1.5vh, 18px); display: inline-flex;
 }
 #screen-cricket.active .cr-card .pblock { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: clamp(1px, 0.3vh, 4px); }
 #screen-cricket.active .cr-card .pname {
@@ -4193,16 +4177,16 @@ body.fix-spiel #screen-cricket.active { flex: 1 1 auto; height: auto; min-height
   #screen-cricket.active .cr-num { grid-column: 1; }
   #screen-cricket.active .cr-key { grid-column: var(--c); grid-row: calc(8 + var(--m)); }
   #screen-cricket.active .cr-card { padding: 6px 6px; gap: 3px; border-radius: var(--r-m); }
-  #screen-cricket.active .cr-card .pkopf .av.sm { width: 20px; height: 20px; font-size: 0.6rem; }
+  #screen-cricket.active .cr-card .pkopf .av.sm { width: 20px; height: 20px; font-size: max(11px, 0.6rem); }
   #screen-cricket.active .viele .cr-card .pkopf .av.sm { display: none; }
   #screen-cricket.active .cr-card .pname, #screen-cricket.active .viele .cr-card .pname { font-size: 0.8rem; }
-  #screen-cricket.active .cr-card .pmeta, #screen-cricket.active .viele .cr-card .pmeta { font-size: 0.65rem; }
+  #screen-cricket.active .cr-card .pmeta, #screen-cricket.active .viele .cr-card .pmeta { font-size: max(11px, 0.65rem); }
   #screen-cricket.active .cr-card .cr-pts, #screen-cricket.active .viele .cr-card .cr-pts { font-size: clamp(22px, 4vh, 40px); margin: 2px 0 4px; }
   #screen-cricket.active .cr-card .cr-pts.klein, #screen-cricket.active .viele .cr-card .cr-pts.klein { font-size: 0.9rem; }
   #screen-cricket.active .cr-card .cr-tiles, #screen-cricket.active .viele .cr-card .cr-tiles { height: 26px; gap: 3px; }
   #screen-cricket.active .cr-card .ct, #screen-cricket.active .viele .cr-card .ct { font-size: 0.75rem; }
   #screen-cricket.active .cr-h { font-size: 1rem; }
-  #screen-cricket.active .cr-sub { font-size: 0.65rem; }
+  #screen-cricket.active .cr-sub { font-size: max(11px, 0.65rem); }
   #screen-cricket.active .cr-runde { font-size: 0.75rem; }
   #screen-cricket.active .cr-top { height: 44px; gap: 4px; grid-template-columns: minmax(44px, 1fr) 2fr; }
   #screen-cricket.active .cr-top .bust { grid-column: auto; }
@@ -4250,7 +4234,7 @@ body.fix-spiel #screen-rtw.active { flex: 1 1 auto; height: auto; min-height: 0;
   opacity: 1; border-color: var(--aktiv-linie); background: var(--aktiv-flaeche);
   box-shadow: 0 0 26px var(--laser-weich), 0 0 60px 8px var(--schein-stark);
 }
-#screen-rtw.active .rtw-row .av.md { width: clamp(22px, 6.4vh, 66px); height: clamp(22px, 6.4vh, 66px); font-size: clamp(9px, 1.6vh, 18px); display: inline-flex; }
+#screen-rtw.active .rtw-row .av.md { width: clamp(22px, 6.4vh, 66px); height: clamp(22px, 6.4vh, 66px); font-size: clamp(11px, 1.6vh, 18px); display: inline-flex; }
 #screen-rtw.active .rtw-board.viele .rtw-row .av.md { width: clamp(20px, 5vh, 54px); height: clamp(20px, 5vh, 54px); }
 #screen-rtw.active .rtw-row .rw-main { min-width: 0; display: flex; flex-direction: column; gap: clamp(3px, 0.7vh, 8px); flex: none; }
 #screen-rtw.active .rtw-row .rw-name {
@@ -4358,12 +4342,12 @@ body.fix-spiel #screen-rtw.active { flex: 1 1 auto; height: auto; min-height: 0;
   #screen-rtw.active .game-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1.1fr); gap: 8px; }
   #screen-rtw.active .rtw-board { gap: 6px; }
   #screen-rtw.active .rtw-row { padding: 0 10px; column-gap: 8px; border-radius: var(--r-m); }
-  #screen-rtw.active .rtw-row .av.md, #screen-rtw.active .rtw-board.viele .rtw-row .av.md { width: 28px; height: 28px; font-size: 0.65rem; }
+  #screen-rtw.active .rtw-row .av.md, #screen-rtw.active .rtw-board.viele .rtw-row .av.md { width: 28px; height: 28px; font-size: max(11px, 0.65rem); }
   #screen-rtw.active .rtw-row .rw-name, #screen-rtw.active .rtw-board.viele .rtw-row .rw-name { font-size: 1rem; }
   #screen-rtw.active .rtw-row .rw-sub, #screen-rtw.active .rtw-board.viele .rtw-row .rw-sub { font-size: 0.7rem; }
   #screen-rtw.active .rtw-row .rw-bar { height: 5px; }
   #screen-rtw.active .rtw-row .rw-tiles, #screen-rtw.active .rtw-board.viele .rtw-row .rw-tiles { min-width: 0; gap: 3px; }
-  #screen-rtw.active .rtw-row .rw-tiles .ct, #screen-rtw.active .rtw-board.viele .rtw-row .rw-tiles .ct { width: 26px; height: 26px; font-size: 0.7rem; }
+  #screen-rtw.active .rtw-row .rw-tiles .ct, #screen-rtw.active .rtw-board.viele .rtw-row .rw-tiles .ct { width: 26px; height: 26px; font-size: max(11px, 0.7rem); }
   #screen-rtw.active .rtw-row .rw-target, #screen-rtw.active .rtw-board.viele .rtw-row .rw-target { font-size: clamp(24px, 5vh, 44px); }
   #screen-rtw.active .rtw-row .rw-target.bull, #screen-rtw.active .rtw-board.viele .rtw-row .rw-target.bull { font-size: 1.2rem; }
   #screen-rtw.active .rtw-rechts { gap: 6px; }
@@ -4378,6 +4362,19 @@ body.fix-spiel #screen-rtw.active { flex: 1 1 auto; height: auto; min-height: 0;
   #screen-rtw.active .rtw-key.mult .k { font-size: 1.6rem; }
   #screen-rtw.active .rtw-key .sub { font-size: 0.72rem; }
   #screen-rtw.active .rtw-key.miss .k { font-size: 1.1rem; }
+}
+/* Handy hoch: die Tafel ist so hoch wie ihre Zeilen, den Rest bekommen die
+   Tasten. Vorher teilten sich Tafel und Tasten den Schirm, und mit zwei
+   Spielern blieb das dritte der drei festen Felder leer – rund 40 % ohne
+   Inhalt (D17). Die Zeilen bekommen eine feste Hoehe, die Zielzahl eine
+   Stufe mehr. Am Tablet hoch bleibt die Teilung, dort tragen die Zeilen. */
+@media (orientation: portrait) and (max-width: 699px) {
+  #screen-rtw.active .game-body { grid-template-rows: auto minmax(0, 1fr); }
+  #screen-rtw.active .rtw-board { grid-template-rows: none; grid-auto-rows: auto; }
+  #screen-rtw.active .rtw-row { min-height: clamp(84px, 13vh, 120px); }
+  #screen-rtw.active .rtw-board.viele .rtw-row { min-height: clamp(56px, 8vh, 80px); }
+  #screen-rtw.active .rtw-row .rw-target { font-size: clamp(28px, 6vh, 56px); }
+  #screen-rtw.active .rtw-board.viele .rtw-row .rw-target { font-size: clamp(24px, 5vh, 44px); }
 }
 
 
@@ -4433,7 +4430,7 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
   padding: clamp(4px, 0.8vh, 10px) clamp(10px, 1.4vw, 20px); border-radius: clamp(12px, 1.8vh, 18px);
   background: var(--aktiv-flaeche); border: 1px solid var(--line-hell); box-shadow: 0 0 24px var(--schein-weich);
 }
-#screen-finisher.active .fz-label { font-family: var(--font-cond); font-weight: 600; font-size: clamp(10px, 1.7vh, 18px); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); line-height: 1; }
+#screen-finisher.active .fz-label { font-family: var(--font-cond); font-weight: 600; font-size: clamp(11px, 1.7vh, 18px); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); line-height: 1; }
 #screen-finisher.active .fz-wert { font-family: var(--font-cond); font-weight: 700; font-size: clamp(28px, 7.6vh, 82px); line-height: 0.95; color: #fff; text-shadow: 0 0 22px rgba(70, 170, 215, 0.45); font-variant-numeric: tabular-nums; }
 #screen-finisher.active #fin-pad { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; margin: 0; }
 #screen-finisher.active #fin-pad .num-grid { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(7, minmax(0, 1fr)); gap: clamp(5px, 0.9vh, 10px); }
@@ -4451,7 +4448,7 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
   #screen-finisher.active .fin-h { font-size: 1rem; }
   #screen-finisher.active .fin-sub { font-size: 0.7rem; }
   #screen-finisher.active .fin-runde { font-size: 0.75rem; }
-  #screen-finisher.active .fz-label { font-size: 0.6rem; }
+  #screen-finisher.active .fz-label { font-size: max(11px, 0.6rem); }
   #screen-finisher.active .fz-wert { font-size: 1.6rem; }
 }
 
@@ -4728,7 +4725,7 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
   .setup-kopf { flex-wrap: nowrap; height: clamp(44px, 5.4vh, 58px); }
   .setup-kopf .marke .blink-logo { width: clamp(44px, 5.4vh, 58px); height: clamp(44px, 5.4vh, 58px); }
   .setup-kopf .marke .wort { font-size: clamp(14px, 3vh, 32px); }
-  .setup-kopf .marke .sub { font-size: clamp(9px, 1.4vh, 15px); margin-top: 2px; }
+  .setup-kopf .marke .sub { font-size: clamp(11px, 1.4vh, 15px); margin-top: 2px; }
   .setup-kopf #nav { flex: none; height: 100%; margin-left: auto; }
   .setup-kopf #nav button { flex: none; height: 100%; min-height: 0; padding: 0 clamp(8px, 1.4vw, 22px); font-size: clamp(12px, 2.2vh, 23px); }
 
@@ -4758,7 +4755,7 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
   }
   #karte-spieler .roster::-webkit-scrollbar { width: 0; height: 0; display: none; }
   #screen-setup .roster-item { min-height: 0; padding: 0 clamp(10px, 1.2vw, 16px); gap: clamp(8px, 1vw, 14px); }
-  #screen-setup .roster-item .av { width: clamp(28px, 5vh, 52px); height: clamp(28px, 5vh, 52px); font-size: clamp(10px, 1.8vh, 18px); }
+  #screen-setup .roster-item .av { width: clamp(28px, 5vh, 52px); height: clamp(28px, 5vh, 52px); font-size: clamp(11px, 1.8vh, 18px); }
   #screen-setup .roster-item .nm { font-size: clamp(14px, 2.3vh, 24px); }
   #screen-setup .roster-item .gast-marke { font-size: clamp(12px, 1.8vh, 18px); }
   #screen-setup .roster-item .check { width: clamp(22px, 3.6vh, 38px); height: clamp(22px, 3.6vh, 38px); font-size: clamp(12px, 2vh, 20px); }
@@ -4896,7 +4893,7 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
 #screen-tournament .lg-team.sie .lg-zahl { color: #c9c0c0; }
 #screen-tournament .lg-team .lg-name { font-size: 0.85rem; letter-spacing: 0.08em; text-transform: uppercase; margin: 2px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #screen-tournament .lg-team.sie .lg-name { color: var(--muted); }
-#screen-tournament .lg-doppel { font-family: var(--font-display); color: #5a5052; }
+#screen-tournament .lg-doppel { font-family: var(--font-display); color: var(--muted); }
 #screen-tournament .lg-hl-liste { display: flex; flex-direction: column; }
 #screen-tournament .lg-hl-zeile { display: flex; align-items: baseline; gap: 12px; padding: 7px 0; border-bottom: 1px solid #1f191b; }
 #screen-tournament .lg-hl-k { flex: none; width: 90px; font-size: 0.85rem; color: var(--muted); }
@@ -4905,8 +4902,11 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
 #screen-tournament .lg-knoepfe { margin-top: 10px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 #screen-tournament .lg-knoepfe .btn { min-height: 44px; padding: 0 8px; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: #241d1f; border-color: transparent; color: var(--text); }
 #screen-tournament #liga-bericht-karte > .btn.primary { margin-top: 10px; }
-#screen-tournament .spielplan-aktionen { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-#screen-tournament .spielplan-aktionen .btn { min-height: 44px; padding: 0 8px; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Untereinander mit vollem Text: nebeneinander wurden "Spieler nachtragen
+   oder abmelden" und "Turnier vorzeitig beenden" auf jedem Schirm zu
+   "Spieler nachtragen o…" (D8). */
+#screen-tournament .spielplan-aktionen { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+#screen-tournament .spielplan-aktionen .btn { min-height: 44px; padding: 8px 10px; font-size: 0.9rem; line-height: 1.2; white-space: normal; }
 #screen-tournament #turnier-endstand { margin-top: 10px; }
 
 /* Tabelle */
@@ -4967,18 +4967,18 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
   #screen-tournament .match-row .res { font-size: clamp(16px, 3.2vh, 34px); }
   #screen-tournament .match-row .go { height: clamp(34px, 6vh, 62px); min-width: clamp(70px, 7.5vw, 112px); font-size: clamp(13px, 2.4vh, 26px); }
   #screen-tournament .match-row .fertig { min-width: clamp(70px, 7.5vw, 112px); font-size: clamp(11px, 1.8vh, 19px); }
-  #screen-tournament .spielplan-aktionen .btn { height: clamp(38px, 6.4vh, 62px); font-size: clamp(12px, 1.9vh, 18px); }
+  #screen-tournament .spielplan-aktionen .btn { min-height: clamp(44px, 6.4vh, 62px); font-size: clamp(12px, 1.9vh, 18px); }
 
-  #screen-tournament .standings th { font-size: clamp(10px, 1.6vh, 17px); }
+  #screen-tournament .standings th { font-size: clamp(11px, 1.6vh, 17px); }
   #screen-tournament .standings td { font-size: clamp(15px, 2.8vh, 30px); height: clamp(36px, 6.6vh, 70px); padding: 0 6px; }
   #screen-tournament .standings td.name { font-size: clamp(13px, 2.3vh, 24px); }
-  #screen-tournament .standings td .av.sm { width: clamp(22px, 4vh, 42px); height: clamp(22px, 4vh, 42px); font-size: clamp(9px, 1.4vh, 15px); }
+  #screen-tournament .standings td .av.sm { width: clamp(22px, 4vh, 42px); height: clamp(22px, 4vh, 42px); font-size: clamp(11px, 1.4vh, 15px); }
   #screen-tournament .standings .rank { font-size: clamp(14px, 2.8vh, 30px); }
 
   #screen-tournament .stat-card { padding: clamp(8px, 1.2vh, 14px) clamp(8px, 0.9vw, 14px); }
-  #screen-tournament .stat-card .who .av.md { width: clamp(20px, 3.4vh, 36px); height: clamp(20px, 3.4vh, 36px); font-size: clamp(9px, 1.3vh, 14px); }
+  #screen-tournament .stat-card .who .av.md { width: clamp(20px, 3.4vh, 36px); height: clamp(20px, 3.4vh, 36px); font-size: clamp(11px, 1.3vh, 14px); }
   #screen-tournament .stat-card .who .wer-name { font-size: clamp(13px, 2.2vh, 23px); }
-  #screen-tournament .stat-card .line { font-size: clamp(10px, 1.6vh, 16px); padding: clamp(1px, 0.3vh, 4px) 0; }
+  #screen-tournament .stat-card .line { font-size: clamp(11px, 1.6vh, 16px); padding: clamp(1px, 0.3vh, 4px) 0; }
   #screen-tournament .stat-card .line b { font-size: clamp(13px, 2.2vh, 23px); }
 }
 @media (min-width: 1100px) {
@@ -5045,15 +5045,15 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
 #screen-bulloff .bo-wahl button:active { background: var(--aktiv-flaeche); border-color: var(--aktiv-linie); box-shadow: 0 0 24px var(--schein); }
 #screen-bulloff .bo-wahl .bo-weg { visibility: hidden; }
 #screen-bulloff .bo-name { flex: 1 1 auto; min-width: 0; font-size: inherit; font-weight: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#screen-bulloff .bo-wahl .av.sm, #screen-bulloff .bo-reihe .av.sm { flex: none; width: clamp(28px, 6vh, 64px); height: clamp(28px, 6vh, 64px); font-size: clamp(10px, 2vh, 22px); }
-#screen-bulloff .bo-reihe .bo-row .av.sm { width: clamp(24px, 4.6vh, 50px); height: clamp(24px, 4.6vh, 50px); font-size: clamp(9px, 1.7vh, 18px); }
+#screen-bulloff .bo-wahl .av.sm, #screen-bulloff .bo-reihe .av.sm { flex: none; width: clamp(28px, 6vh, 64px); height: clamp(28px, 6vh, 64px); font-size: clamp(11px, 2vh, 22px); }
+#screen-bulloff .bo-reihe .bo-row .av.sm { width: clamp(24px, 4.6vh, 50px); height: clamp(24px, 4.6vh, 50px); font-size: clamp(11px, 1.7vh, 18px); }
 #screen-bulloff .bo-pos { flex: none; width: clamp(28px, 6vh, 64px); height: clamp(28px, 6vh, 64px); min-width: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-cond); font-weight: 700; font-size: clamp(16px, 3.6vh, 40px); background: var(--line-hell); color: var(--text); font-variant-numeric: tabular-nums; }
 #screen-bulloff .bo-slot { background: transparent; border: 1px dashed var(--line-hell); color: var(--dead); }
 #screen-bulloff .bo-slot .bo-pos { background: var(--bg-3); color: var(--dead); }
 #screen-bulloff .bo-slot .bo-frei { flex: 1; text-align: left; }
 #screen-bulloff .bo-reihe .bo-row.erster { background: var(--aktiv-flaeche); border-color: var(--aktiv-linie); box-shadow: 0 0 30px var(--schein); }
 #screen-bulloff .bo-reihe .bo-row.erster .bo-pos { background: var(--primary); color: var(--on-primary); box-shadow: 0 0 16px rgba(70, 170, 215, 0.45); }
-#screen-bulloff .bo-reihe .bo-tag { flex: none; font-size: clamp(10px, 1.7vh, 18px); color: var(--laser-hell); }
+#screen-bulloff .bo-reihe .bo-tag { flex: none; font-size: clamp(11px, 1.7vh, 18px); color: var(--laser-hell); }
 #screen-bulloff .bulloff-order .btn.start { width: 100%; min-height: clamp(46px, 8vh, 84px); font-size: clamp(17px, 3vh, 32px); border-radius: 12px; }
 #screen-bulloff .bulloff-order .btn.start.offen { background: transparent; border: 1px solid var(--line-hell); color: var(--dead); box-shadow: none; opacity: 1; }
 
@@ -5137,7 +5137,8 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
   flex: 0 0 112px; min-width: 0; min-height: 44px; display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
   padding: 8px 10px; border-radius: 12px; background: var(--bg-2); border: 1px solid transparent; box-shadow: none; text-align: left; cursor: pointer;
 }
-.bk-kachel .bk-t { max-width: 100%; font-family: var(--font-cond); font-weight: 700; font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: #857a7b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Kachel-Titel duerfen zwei Zeilen haben statt einer Ellipse (D10). */
+.bk-kachel .bk-t { max-width: 100%; font-family: var(--font-cond); font-weight: 700; font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: #857a7b; line-height: 1.15; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
 .bk-kachel .bk-v { font-family: var(--font-cond); font-weight: 700; font-size: 1.3rem; line-height: 1.1; font-variant-numeric: tabular-nums; color: #c9c0c0; }
 .bk-kachel .bk-n { max-width: 100%; font-size: 0.75rem; color: #857a7b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bk-kachel.active { background: #2a2224; box-shadow: inset 0 0 0 1.5px var(--aktiv-linie), 0 0 22px var(--schein-weich); }
@@ -5176,7 +5177,9 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
 @media (prefers-reduced-motion: reduce) { .boards-host .rekorde-titel, .boards-host .rekorde-titel .pokal { animation: none; } }
 .boards-host .records { gap: 6px; }
 .boards-host .rec { text-align: left; background: #1c1718; border: none; border-radius: 12px; padding: 8px 10px; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.boards-host .rec .rt { text-transform: none; letter-spacing: 0; font-size: 0.75rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* "Hoechste Aufnahme" und "Beste Doppelquote" brechen auf zwei Zeilen um,
+   statt als "Höchste Aufna…" zu enden (D10). */
+.boards-host .rec .rt { text-transform: none; letter-spacing: 0; font-size: 0.75rem; color: var(--muted); line-height: 1.2; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
 .boards-host .rec .rv { font-family: var(--font-cond); font-weight: 700; font-size: 1.4rem; line-height: 1.05; color: var(--text); margin: 0; text-shadow: none; }
 .boards-host .rec .rn { font-size: 0.75rem; color: #c9c0c0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Spielverlauf nur, wenn er geoeffnet ist - dann anstelle der Spalten. */
@@ -5199,26 +5202,34 @@ body .boards-host.log #board-log { display: block; }
   .boards-host .karte-kopf { margin-bottom: clamp(6px, 1.2vh, 14px); }
   .boards-host .karte-kopf h2 { font-size: clamp(11px, 1.9vh, 20px); }
   .boards-host .karte-kopf .hint { font-size: clamp(11px, 1.6vh, 16px); }
-  .boards-host .karte-kopf .btn.small { height: clamp(40px, 4.6vh, 46px); min-height: 0; font-size: clamp(11px, 1.7vh, 17px); }
+  .boards-host .karte-kopf .btn.small { height: clamp(44px, 4.6vh, 46px); min-height: 0; font-size: clamp(11px, 1.7vh, 17px); }
 
   .reiter-zeile { flex-wrap: nowrap; height: clamp(44px, 5.4vh, 56px); }
   .reiter-zeile .kt { font-size: clamp(11px, 1.9vh, 20px); }
   .kopf-reiter { flex: none; margin-left: auto; height: 100%; flex-wrap: nowrap; gap: clamp(5px, 0.6vw, 9px); min-width: 0; }
   .kopf-reiter button { flex: none; height: 100%; min-height: 0; padding: 0 clamp(8px, 1.2vw, 20px); border-radius: clamp(10px, 1.6vh, 16px); font-size: clamp(12px, 2.2vh, 23px); }
+  /* iPad hoch: sechs Reiter und der Kicker passen nicht in eine Zeile, der
+     Kicker wurde auf 188 px zusammengeschoben ("5. LIGA · SA…", D2). Der
+     Kicker steht hier ueber den Reitern, wie am Handy. */
+  @media (orientation: portrait) {
+    .reiter-zeile { flex-wrap: wrap; height: auto; }
+    .reiter-zeile .kt { flex: 1 1 100%; }
+    .kopf-reiter { margin-left: 0; height: clamp(44px, 5.4vh, 56px); }
+  }
 
   .boards-koerper { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: clamp(8px, 1.4vw, 22px); }
   .boards-links { min-height: 0; gap: clamp(8px, 1.4vh, 16px); }
   .board-kacheln { flex: none; display: grid; grid-template-columns: repeat(var(--kn, 4), minmax(0, 1fr)); gap: clamp(5px, 0.7vw, 10px); overflow: visible; padding: 0; }
   .bk-kachel { flex: auto; padding: clamp(6px, 1.1vh, 12px) clamp(8px, 0.9vw, 14px); }
-  .bk-kachel .bk-t { font-size: clamp(10px, 1.6vh, 16px); }
+  .bk-kachel .bk-t { font-size: clamp(11px, 1.6vh, 16px); }
   .bk-kachel .bk-v { font-size: clamp(16px, 3vh, 32px); }
-  .bk-kachel .bk-n { font-size: clamp(10px, 1.5vh, 15px); }
+  .bk-kachel .bk-n { font-size: clamp(11px, 1.5vh, 15px); }
   .boards-liste { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
   .boards-liste > .karte-kopf { flex: none; }
   .boards-liste > .board-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
   .boards-host .board-row { flex: 1 0 auto; min-height: clamp(30px, 4.6vh, 52px); max-height: 72px; gap: clamp(8px, 1vw, 14px); padding: 2px 2px; }
   .boards-host .board-row .pos { width: clamp(20px, 3.2vh, 32px); height: clamp(20px, 3.2vh, 32px); font-size: clamp(11px, 1.8vh, 18px); }
-  .boards-host .board-row .av.sm { width: clamp(22px, 3.6vh, 36px); height: clamp(22px, 3.6vh, 36px); font-size: clamp(9px, 1.3vh, 13px); }
+  .boards-host .board-row .av.sm { width: clamp(22px, 3.6vh, 36px); height: clamp(22px, 3.6vh, 36px); font-size: clamp(11px, 1.3vh, 13px); }
   .boards-host .board-row .nm { font-size: clamp(13px, 2vh, 20px); }
   .boards-host .board-row .val { font-size: clamp(15px, 2.6vh, 27px); }
   .boards-seite { min-height: 0; gap: clamp(8px, 1.4vh, 16px); }
@@ -5232,7 +5243,7 @@ body .boards-host.log #board-log { display: block; }
   .boards-seite > #board-rekorde { flex: none; }
   .boards-host .records { gap: clamp(5px, 0.8vw, 10px); }
   .boards-host .rec { padding: clamp(6px, 1.1vh, 12px) clamp(8px, 0.9vw, 14px); }
-  .boards-host .rec .rt, .boards-host .rec .rn { font-size: clamp(10px, 1.5vh, 15px); }
+  .boards-host .rec .rt, .boards-host .rec .rn { font-size: clamp(11px, 1.5vh, 15px); }
   .boards-host .rec .rv { font-size: clamp(18px, 3.6vh, 40px); }
   body .boards-host.log #board-log { display: flex; flex-direction: column; }
   #board-log > #match-log { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
@@ -5308,7 +5319,8 @@ body .boards-host.log #board-log { display: block; }
 .lt-karte .karte-kopf { margin-bottom: 8px; }
 .lt-karte .lt-scroll { overflow: auto; }
 #liga-tabelle .standings th { background: transparent; font-family: var(--font-cond); font-weight: 600; font-size: 0.75rem; letter-spacing: 0.12em; color: var(--muted); padding: 6px 5px; }
-#liga-tabelle .standings td { font-family: var(--font-cond); font-weight: 700; font-size: 1.05rem; padding: 8px 5px; }
+/* Die Zeilen oeffnen die Team-Info: 44 px hoch statt 37 (D7). */
+#liga-tabelle .standings td { font-family: var(--font-cond); font-weight: 700; font-size: 1.05rem; height: 44px; padding: 6px 5px; }
 #liga-tabelle .standings td.name { font-family: var(--font-body); font-weight: 600; font-size: 0.95rem; }
 #liga-tabelle .standings .rank { color: var(--muted); }
 #liga-tabelle .standings tr.leader td { background: var(--aktiv-flaeche); box-shadow: none; text-shadow: none; }
@@ -5343,7 +5355,9 @@ body .boards-host.log #board-log { display: block; }
 
 /* Kasse: links Stand und Erfassen, rechts Kassenbuch und Beitraege. */
 .kasse-stand { gap: 8px; }
-.kasse-stand .lk-kopf .hint { margin: 0; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Der Hinweis rechts darf zwei Zeilen haben, statt bei "Kassenwart/in: noch
+   nicht…" zu enden (D10). */
+.kasse-stand .lk-kopf .hint { margin: 0; font-size: 0.8rem; text-align: right; line-height: 1.3; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
 .kasse-stand .ks-saldo { font-family: var(--font-cond); font-weight: 700; font-size: clamp(40px, 12vw, 64px); line-height: 1; color: #fff; }
 .kasse-stand .ks-saldo.minus { color: var(--red); }
 .kasse-stand .ks-drei { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
@@ -5376,7 +5390,7 @@ body .boards-host.log #board-log { display: block; }
 .regel-spalte .regel-liste { display: flex; flex-direction: column; gap: 6px; }
 .regel-spalte .regel { margin: 0; background: var(--bg-3); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
 .regel-spalte .regel[open] { background: var(--aktiv-flaeche); border-color: var(--aktiv-linie); box-shadow: 0 0 24px var(--schein-weich); }
-.regel-spalte .regel summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; font-family: var(--font-cond); font-weight: 700; font-size: 1.05rem; letter-spacing: 0.02em; cursor: pointer; }
+.regel-spalte .regel summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 0; font-family: var(--font-cond); font-weight: 700; font-size: 1.05rem; letter-spacing: 0.02em; cursor: pointer; }
 .regel-spalte .regel summary::-webkit-details-marker { display: none; }
 .regel-spalte .regel summary::after { content: '+'; flex: none; font-family: var(--font-cond); font-weight: 700; font-size: 1.3rem; color: var(--muted); }
 .regel-spalte .regel[open] summary::after { content: '−'; }
@@ -5393,7 +5407,18 @@ body .boards-host.log #board-log { display: block; }
 .liga-karte.live { border-color: var(--accent); box-shadow: 0 0 36px rgba(229, 72, 77, 0.25); }
 .liga-karte .lk-kopf { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .liga-karte .lk-kopf > :first-child { min-width: 0; display: flex; align-items: center; gap: 10px; }
-.liga-karte .lk-etikett { font-family: var(--font-cond); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--laser-hell); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Zwei Zeilen statt "NÄCHSTER SPIELT…": der Kicker traegt die Information,
+   die Ellipse schnitt sie am iPad hoch und bei 120 % Schrift ab (D2, D10). */
+.liga-karte .lk-etikett { font-family: var(--font-cond); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--laser-hell); line-height: 1.2; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+/* Der Kicker ist meist selbst das erste Kind des Kopfs – das display: flex
+   der Regel darueber darf den Zeilenkasten nicht ueberstimmen. */
+.liga-karte .lk-kopf > .lk-etikett { display: -webkit-box; }
+/* Tablet hoch: neben den zwei Icon-Knoepfen bleiben dem Kicker rund 190 px –
+   "NÄCHSTER SPIELTAG · IN 2 TAGEN" darf dort enger gesetzt drei Zeilen
+   haben, die Karte hat die Hoehe uebrig. */
+@media (min-width: 700px) and (orientation: portrait) {
+  .liga-karte .lk-etikett { font-size: clamp(12px, 1.4vh, 17px); letter-spacing: 0.12em; -webkit-line-clamp: 3; line-clamp: 3; }
+}
 .liga-karte .lk-live { display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px; border-radius: 8px; background: var(--accent); color: #fff; font-family: var(--font-cond); font-weight: 700; font-size: 0.9rem; letter-spacing: 0.16em; line-height: 1; box-shadow: 0 0 22px rgba(229, 72, 77, 0.45); }
 .liga-karte .lk-live i { width: 0.55em; height: 0.55em; border-radius: 50%; background: #fff; animation: livePulse 1.4s ease-in-out infinite; }
 .liga-karte .lk-einzel { font-family: var(--font-cond); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
@@ -5450,7 +5475,10 @@ body .boards-host.log #board-log { display: block; }
 .liga-liste-karte { display: flex; flex-direction: column; }
 #liga-liste { display: flex; flex-direction: column; gap: 5px; }
 .liga-spieltag {
-  display: grid; grid-template-columns: 30px 92px minmax(0, 1fr) auto; align-items: center; gap: 8px;
+  /* Die Datumsspalte waechst mit ihrem Inhalt: am iPad hoch lief
+     "06.10.2026" sonst in die Heim/Ausw.-Spalte (D2). Die Untergrenze haelt
+     die Zeilen untereinander buendig. */
+  display: grid; grid-template-columns: 30px minmax(92px, max-content) minmax(0, 1fr) auto; align-items: center; gap: 8px;
   min-height: 48px; padding: 5px 10px; border-radius: 12px; background: var(--bg-3); border: 1px solid var(--line); cursor: pointer;
 }
 .liga-spieltag.wahl { background: var(--aktiv-flaeche); border-color: var(--aktiv-linie); }
@@ -5499,12 +5527,12 @@ body .boards-host.log #board-log { display: block; }
   .liga-uebung .setting > label { font-size: clamp(12px, 1.9vh, 19px); }
   .liga-uebung .options button { height: clamp(40px, 7vh, 70px); font-size: clamp(13px, 2.4vh, 25px); }
   .liga-uebung .options.drei button { height: clamp(52px, 9vh, 92px); }
-  .liga-uebung .options button small { font-size: clamp(10px, 1.6vh, 17px); }
+  .liga-uebung .options button small { font-size: clamp(11px, 1.6vh, 17px); }
   .liga-uebung .btn.start { height: clamp(46px, 8vh, 84px); font-size: clamp(16px, 3vh, 32px); }
   /* Tabelle */
   .lt-karte .lt-scroll { flex: 1 1 auto; min-height: 0; overflow: auto; scrollbar-width: none; }
-  #liga-tabelle .standings th { font-size: clamp(10px, 1.6vh, 17px); }
-  #liga-tabelle .standings td { font-size: clamp(14px, 2.6vh, 28px); height: clamp(36px, 6.6vh, 70px); padding: 0 6px; }
+  #liga-tabelle .standings th { font-size: clamp(11px, 1.6vh, 17px); }
+  #liga-tabelle .standings td { font-size: clamp(14px, 2.6vh, 28px); height: clamp(44px, 6.6vh, 70px); padding: 0 6px; }
   #liga-tabelle .standings td.name { font-size: clamp(13px, 2.3vh, 24px); }
   /* Kleiner als im Entwurf, damit rechts die Karte "Alle Spiele" Platz hat. */
   #lt-platz .lt-platz-zahl { font-size: clamp(44px, 9vh, 96px); }
@@ -5524,11 +5552,11 @@ body .boards-host.log #board-log { display: block; }
   #liga-highlights { flex: 1 1 auto; min-height: 0; }
   #liga-highlights .hl-liste { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
   #liga-highlights .hl-liste { gap: clamp(10px, 1.8vh, 20px); }
-  #liga-highlights .hl-titel { font-size: clamp(10px, 1.6vh, 16px); }
+  #liga-highlights .hl-titel { font-size: clamp(11px, 1.6vh, 16px); }
   #liga-highlights .hl-raster { gap: clamp(5px, 0.7vw, 10px); }
   #liga-highlights .hl-kachel { padding: clamp(6px, 1.1vh, 12px) clamp(8px, 0.9vw, 14px); }
   #liga-highlights .hl-wer { font-size: clamp(11px, 1.7vh, 17px); }
-  #liga-highlights .hl-kachel small { font-size: clamp(10px, 1.5vh, 15px); }
+  #liga-highlights .hl-kachel small { font-size: clamp(11px, 1.5vh, 15px); }
   #liga-highlights .hl-wert { font-size: clamp(18px, 3.4vh, 36px); }
   /* Kasse */
   .kasse-stand .ks-saldo { font-size: clamp(44px, 12vh, 130px); }
@@ -5563,26 +5591,26 @@ body .boards-host.log #board-log { display: block; }
   .liga-karte .lk-team .blink-logo, .liga-karte .lk-ini { width: clamp(40px, 6.4vh, 72px); height: clamp(40px, 6.4vh, 72px); }
   .liga-karte .lk-ini { font-size: clamp(13px, 2.4vh, 26px); }
   .liga-karte .lk-teamname { font-size: clamp(13px, 2.3vh, 24px); }
-  .liga-karte .lk-rolle { font-size: clamp(9px, 1.4vh, 15px); }
+  .liga-karte .lk-rolle { font-size: clamp(11px, 1.4vh, 15px); }
   .liga-karte .lk-vs { font-size: clamp(14px, 2.6vh, 28px); }
   .liga-karte .lk-crew-titel { font-size: clamp(11px, 1.9vh, 20px); }
   .liga-karte .lt-person { height: clamp(38px, 5.6vh, 58px); padding: 0 clamp(12px, 1.4vw, 20px) 0 clamp(5px, 0.5vw, 8px); font-size: clamp(13px, 2.1vh, 22px); }
-  .liga-karte .lt-person .av.sm { width: clamp(28px, 4.2vh, 44px); height: clamp(28px, 4.2vh, 44px); font-size: clamp(10px, 1.5vh, 16px); }
+  .liga-karte .lt-person .av.sm { width: clamp(28px, 4.2vh, 44px); height: clamp(28px, 4.2vh, 44px); font-size: clamp(11px, 1.5vh, 16px); }
   .liga-karte .lk-status { font-size: clamp(13px, 2.2vh, 22px); }
   .liga-karte .lk-knoepfe .btn { height: clamp(44px, 6.4vh, 66px); font-size: clamp(14px, 2.6vh, 28px); }
 
   .liga-liste-karte { min-height: 0; padding: clamp(10px, 1.8vh, 20px); }
   .liga-liste-karte > .karte-kopf { flex: none; margin-bottom: clamp(6px, 1.2vh, 14px); }
   #screen-liga h2 { font-size: clamp(13px, 2.4vh, 26px); }
-  #screen-liga .karte-kopf .btn.small { height: clamp(40px, 5vh, 50px); min-height: 0; font-size: clamp(11px, 1.7vh, 17px); border-radius: 10px; }
+  #screen-liga .karte-kopf .btn.small { height: clamp(44px, 5vh, 50px); min-height: 0; font-size: clamp(11px, 1.7vh, 17px); border-radius: 10px; }
   #screen-liga .karte-kopf .btn.small .ico { width: clamp(12px, 2vh, 20px); height: clamp(12px, 2vh, 20px); }
   #liga-liste { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; gap: clamp(4px, 0.7vh, 8px); }
-  .liga-spieltag { min-height: clamp(44px, 7.6vh, 78px); grid-template-columns: clamp(30px, 4vw, 52px) clamp(80px, 8vw, 116px) minmax(0, 1fr) auto; gap: clamp(6px, 0.8vw, 12px); padding: 0 clamp(10px, 1.2vw, 16px); }
+  .liga-spieltag { min-height: clamp(44px, 7.6vh, 78px); grid-template-columns: clamp(30px, 4vw, 52px) minmax(clamp(80px, 8vw, 116px), max-content) minmax(0, 1fr) auto; gap: clamp(6px, 0.8vw, 12px); padding: 0 clamp(10px, 1.2vw, 16px); }
   .liga-spieltag .lt-nr { font-size: clamp(13px, 2.4vh, 26px); }
   .liga-spieltag .lt-datum b { font-size: clamp(13px, 2.3vh, 24px); }
-  .liga-spieltag .lt-datum small { font-size: clamp(10px, 1.5vh, 15px); }
+  .liga-spieltag .lt-datum small { font-size: clamp(11px, 1.5vh, 15px); }
   .liga-spieltag .lt-gegner { font-size: clamp(12px, 2.1vh, 21px); }
-  .liga-spieltag .lt-unten { font-size: clamp(10px, 1.5vh, 15px); }
+  .liga-spieltag .lt-unten { font-size: clamp(11px, 1.5vh, 15px); }
   .liga-spieltag .lt-rechts { font-size: clamp(12px, 2.1vh, 22px); }
   .liga-spieltag .lt-rechts.fertig { font-size: clamp(16px, 3vh, 32px); }
 }
@@ -5626,7 +5654,9 @@ body .boards-host.log #board-log { display: block; }
 .lr-erg.verschoben { color: var(--amber); font-size: 0.85rem; }
 /* "Alle Spiele ›" in der Spieltage-Liste: ein Knopf rechts unter dem Ergebnis. */
 .liga-spieltag .lt-rechts { display: flex; flex-direction: column; align-items: flex-end; gap: 0; }
-.liga-spieltag .lt-alle { display: inline-flex; align-items: center; min-height: 32px; padding: 0 2px 0 10px; font-family: var(--font-body); font-size: 0.78rem; letter-spacing: 0; color: var(--laser-hell); font-weight: 600; cursor: pointer; white-space: nowrap; }
+/* 44 px Tipp-Flaeche bei gleich hoher Zeile: der negative Rand oben und unten
+   laesst den Knopf im Layout 32 px einnehmen, getroffen wird er auf 44 (D7). */
+.liga-spieltag .lt-alle { display: inline-flex; align-items: center; min-height: 44px; margin: -6px 0; padding: 0 2px 0 10px; font-family: var(--font-body); font-size: 0.78rem; letter-spacing: 0; color: var(--laser-hell); font-weight: 600; cursor: pointer; white-space: nowrap; }
 @media (min-width: 700px) {
   .lt-runden .lr-zeile { min-height: clamp(36px, 5.6vh, 56px); font-size: clamp(12px, 2vh, 20px); padding: 0 clamp(8px, 1vw, 14px); }
   .lt-runden .lr-erg.verschoben { font-size: clamp(11px, 1.7vh, 17px); }
@@ -5707,17 +5737,17 @@ body .boards-host.log #board-log { display: block; }
   .player-card .av.lg { width: clamp(36px, 6.4vh, 66px); height: clamp(36px, 6.4vh, 66px); font-size: clamp(11px, 2vh, 21px); }
   .player-card .pc-main { gap: clamp(2px, 0.5vh, 6px); }
   .player-card .pc-name { font-size: clamp(14px, 2.3vh, 24px); }
-  .player-card .pc-tag { font-size: clamp(10px, 1.5vh, 15px); }
+  .player-card .pc-tag { font-size: clamp(11px, 1.5vh, 15px); }
   .player-card .pc-stats { font-size: clamp(11px, 1.7vh, 17px); gap: clamp(8px, 1vw, 14px); }
   .players-schnell { min-height: 0; min-width: 0; overflow-y: auto; scrollbar-width: none; gap: clamp(10px, 1.8vh, 20px); padding: clamp(14px, 2.4vh, 28px) clamp(14px, 1.8vw, 28px); }
   .ps-kopf .av.xl { width: clamp(56px, 11vh, 116px); height: clamp(56px, 11vh, 116px); font-size: clamp(18px, 3.6vh, 38px); }
   .ps-name { font-size: clamp(20px, 4.4vh, 46px); }
   .ps-bilanz { font-size: clamp(12px, 1.9vh, 19px); }
-  .ps-form .kt { font-size: clamp(10px, 1.6vh, 16px); }
+  .ps-form .kt { font-size: clamp(11px, 1.6vh, 16px); }
   .ps-form .form { width: clamp(22px, 3.6vh, 36px); height: clamp(22px, 3.6vh, 36px); font-size: clamp(11px, 1.8vh, 18px); }
   .ps-raster { gap: clamp(5px, 0.7vw, 10px); }
   .ps-kachel { padding: clamp(6px, 1.1vh, 12px) clamp(8px, 0.9vw, 14px); }
-  .ps-k { font-size: clamp(10px, 1.5vh, 15px); }
+  .ps-k { font-size: clamp(11px, 1.5vh, 15px); }
   .ps-v { font-size: clamp(18px, 3.4vh, 36px); }
   .ps-knoepfe { gap: clamp(6px, 0.8vw, 12px); }
   .ps-knoepfe .btn { height: clamp(42px, 7vh, 72px); min-height: 0; font-size: clamp(13px, 2.1vh, 21px); }
@@ -5754,7 +5784,7 @@ body .boards-host.log #board-log { display: block; }
 .overlay.bogen .dl-k.g { color: #c9c0c0; }
 .overlay.bogen .dl-wer { min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
 .overlay.bogen .dl-wer b { font-weight: 600; font-size: clamp(13px, 2.1vh, 21px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.overlay.bogen .dl-wer small { font-size: clamp(10px, 1.6vh, 16px); color: #857a7b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.overlay.bogen .dl-wer small { font-size: clamp(11px, 1.6vh, 16px); color: #857a7b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .overlay.bogen .dl-wer small.hell { color: var(--laser-hell); }
 .overlay.bogen .dl-pos .btn.small { margin: 0; min-height: 0; height: clamp(44px, 5.4vh, 54px); padding: 0 clamp(10px, 1.1vw, 16px); border-radius: 10px; background: #241d1f; border-color: transparent; color: var(--text); font-weight: 600; font-size: clamp(12px, 1.9vh, 19px); }
 .overlay.bogen .dl-raster { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(6px, 0.8vw, 12px); }
@@ -5777,6 +5807,16 @@ body .boards-host.log #board-log { display: block; }
 .overlay.bogen .dl-link { background: transparent; border: none; color: var(--muted); font-family: var(--font-body); font-weight: 600; font-size: clamp(11px, 1.7vh, 17px); cursor: pointer; padding: 0 8px; margin: 0; min-height: 44px; }
 .overlay.bogen .signatur { margin: 0; height: clamp(90px, 18vh, 200px); background: #1c1718; border: none; border-radius: 14px; box-shadow: inset 0 0 0 1.5px #2a2224, inset 0 -46px 0 -45px #3a2e30; }
 .overlay.bogen .dl-fuss { display: flex; justify-content: flex-end; gap: clamp(6px, 0.8vw, 12px); flex-wrap: wrap; }
+/* Der Fuss klebt am unteren Rand des Bogens (der Bogen selbst scrollt): die
+   Hauptaktion bleibt sichtbar, auch wenn Kader und Unterschrift laenger
+   sind als der Schirm (D3). Unten so viel Polster wie der Bogen selbst,
+   per negativem Rand wieder aufgehoben, damit am Ende nichts doppelt ist. */
+.overlay.bogen .dl-fuss {
+  position: sticky; bottom: 0; z-index: 1;
+  background: var(--bg-2); border-top: 1px solid var(--line);
+  padding-top: clamp(8px, 1.4vh, 14px);
+  padding-bottom: clamp(14px, 2.8vh, 32px); margin-bottom: calc(-1 * clamp(14px, 2.8vh, 32px));
+}
 .overlay.bogen .dl-fuss .btn { margin: 0; min-height: 0; height: clamp(44px, 6.6vh, 66px); padding: 0 clamp(14px, 1.6vw, 24px); border-radius: 12px; font-family: var(--font-body); font-weight: 600; font-size: clamp(13px, 2.1vh, 21px); white-space: nowrap; }
 .overlay.bogen .dl-fuss .btn.ghost { background: #241d1f; border-color: transparent; color: var(--text); }
 .overlay.bogen .dl-fuss .btn.hell { background: #f2eeee; border-color: transparent; color: #0d0a0b; font-family: var(--font-cond); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
@@ -5990,7 +6030,7 @@ body.fix-spiel #screen-kaiwen.active { flex: 1 1 auto; height: auto; min-height:
 #screen-kaiwen .kw-pb.blitz .kw-rek-zahl { animation: kwBlitz 1.4s ease-out both; }
 #screen-kaiwen .kw-pokal.wackelt { animation: kwTrophy 1.6s ease-in-out infinite; }
 #screen-kaiwen .kw-rek-text { display: flex; flex-direction: column; align-items: flex-end; }
-#screen-kaiwen .kw-rek-text .kt { font-size: clamp(10px, 1.6vh, 16px); color: #857a7b; }
+#screen-kaiwen .kw-rek-text .kt { font-size: clamp(11px, 1.6vh, 16px); color: #857a7b; }
 #screen-kaiwen .kw-rek-zahl { font-family: var(--font-cond); font-weight: 700; font-size: clamp(14px, 2.8vh, 30px); line-height: 1.1; color: #ffc14d; }
 #screen-kaiwen .kw-rek-zahl.blitz, #screen-kaiwen .kw-sp-pb.blitz b { animation: kwBlitz 1.4s ease-out both; }
 
@@ -6030,7 +6070,7 @@ body.fix-spiel #screen-kaiwen.active { flex: 1 1 auto; height: auto; min-height:
 #screen-kaiwen .kw-dot { width: clamp(12px, 2.4vh, 26px); height: clamp(12px, 2.4vh, 26px); border-radius: 50%; background: #241d1f; transition: background 0.25s, box-shadow 0.25s; }
 #screen-kaiwen .kw-dot.weg { background: #46aad7; box-shadow: 0 0 10px rgba(70, 170, 215, 0.7); }
 #screen-kaiwen .kw-dot.jetzt { background: #2a2224; box-shadow: inset 0 0 0 1.5px #f2eeee; }
-#screen-kaiwen .kw-gruppe-name { flex: 1 0 100%; text-align: center; font-family: var(--font-cond); font-weight: 700; font-size: clamp(9px, 1.5vh, 15px); letter-spacing: 0.1em; text-transform: uppercase; color: #857a7b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#screen-kaiwen .kw-gruppe-name { flex: 1 0 100%; text-align: center; font-family: var(--font-cond); font-weight: 700; font-size: clamp(11px, 1.5vh, 15px); letter-spacing: 0.1em; text-transform: uppercase; color: #857a7b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #screen-kaiwen .kw-gruppe.laeuft .kw-gruppe-name { color: var(--text); }
 #screen-kaiwen .kw-info-zeile, #screen-kaiwen .kw-info { }
 #screen-kaiwen .kw-ziel .kw-info { font-family: var(--font-cond); font-weight: 700; font-size: clamp(12px, 2.2vh, 24px); letter-spacing: 0.08em; text-transform: uppercase; color: #9a8f90; text-align: center; }
@@ -6046,7 +6086,7 @@ body.fix-spiel #screen-kaiwen.active { flex: 1 1 auto; height: auto; min-height:
 #screen-kaiwen .kw-sp-name { flex: 1 1 auto; min-width: 0; font-family: var(--font-cond); font-weight: 700; font-size: clamp(15px, 3.4vh, 36px); letter-spacing: 0.03em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #c9c0c0; }
 #screen-kaiwen .kw-spieler.aktiv .kw-sp-name { color: #fff; }
 #screen-kaiwen .kw-sp-pb, #screen-kaiwen .kw-sp-letzte { flex: none; display: flex; flex-direction: column; align-items: flex-end; line-height: 1.05; }
-#screen-kaiwen .kw-sp-pb .kt, #screen-kaiwen .kw-sp-letzte .kt { font-size: clamp(9px, 1.5vh, 15px); color: #857a7b; }
+#screen-kaiwen .kw-sp-pb .kt, #screen-kaiwen .kw-sp-letzte .kt { font-size: clamp(11px, 1.5vh, 15px); color: #857a7b; }
 #screen-kaiwen .kw-sp-pb b, #screen-kaiwen .kw-sp-letzte b { font-family: var(--font-cond); font-weight: 700; font-size: clamp(16px, 3.6vh, 38px); font-variant-numeric: tabular-nums; color: #9a8f90; }
 #screen-kaiwen .kw-spieler.aktiv .kw-sp-letzte b { color: var(--text); }
 #screen-kaiwen .kw-sp-pb b { color: #c9c0c0; }
@@ -6061,7 +6101,7 @@ body.fix-spiel #screen-kaiwen.active { flex: 1 1 auto; height: auto; min-height:
 
 /* Verlauf. */
 #screen-kaiwen .kw-verlauf { flex: none; display: flex; align-items: center; gap: clamp(4px, 0.6vw, 8px); min-width: 0; overflow: hidden; }
-#screen-kaiwen .kw-verlauf .kt { flex: none; font-size: clamp(10px, 1.6vh, 16px); color: #857a7b; }
+#screen-kaiwen .kw-verlauf .kt { flex: none; font-size: clamp(11px, 1.6vh, 16px); color: #857a7b; }
 #screen-kaiwen .kw-chip { flex: none; display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 8px; font-family: var(--font-cond); font-weight: 700; font-size: clamp(11px, 1.8vh, 19px); white-space: nowrap; }
 #screen-kaiwen .kw-chip.ok { background: rgba(111, 224, 168, 0.12); color: #6fe0a8; }
 #screen-kaiwen .kw-chip.nein { background: rgba(255, 90, 90, 0.10); color: #ff8a8a; }
@@ -6218,7 +6258,7 @@ body.fix-spiel #screen-hunter.active { flex: 1 1 auto; height: auto; min-height:
 #screen-hunter .hu-sub { font-family: var(--font-cond); font-weight: 700; font-size: clamp(11px, 2vh, 22px); letter-spacing: 0.04em; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #screen-hunter .hu-box { flex: none; display: flex; flex-direction: column; align-items: flex-end; padding: clamp(4px, 0.8vh, 8px) clamp(10px, 1.2vw, 16px); border-radius: 12px; background: transparent; }
 #screen-hunter .hu-box.solo { background: #141011; }
-#screen-hunter .hu-box .kt { font-size: clamp(10px, 1.6vh, 16px); letter-spacing: 0.14em; color: #857a7b; }
+#screen-hunter .hu-box .kt { font-size: clamp(11px, 1.6vh, 16px); letter-spacing: 0.14em; color: #857a7b; }
 #screen-hunter .hu-box b { font-family: var(--font-cond); font-weight: 700; font-size: clamp(14px, 3vh, 32px); line-height: 1.1; color: #fff; }
 #screen-hunter .hu-box.solo b { color: #ffc14d; }
 #screen-hunter .hu-box.blitz { animation: huBest 1.6s ease-in-out infinite; }
@@ -6247,10 +6287,10 @@ body.fix-spiel #screen-hunter.active { flex: 1 1 auto; height: auto; min-height:
   position: absolute; left: 33.87%; top: 33.87%; width: 32.26%; height: 32.26%; border-radius: 50%;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2%; text-align: center; box-shadow: 0 0 40px rgba(70, 170, 215, 0.18);
 }
-#screen-hunter .hu-ziel .kt { font-size: clamp(10px, 1.9vh, 20px); letter-spacing: 0.16em; color: #9a8f90; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#screen-hunter .hu-ziel .kt { font-size: clamp(11px, 1.9vh, 20px); letter-spacing: 0.16em; color: #9a8f90; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #screen-hunter .hu-ziel-zahl { font-family: var(--font-cond); font-weight: 700; font-size: clamp(44px, 12vh, 130px); line-height: 0.95; font-variant-numeric: tabular-nums; color: #fff; text-shadow: 0 0 30px rgba(70, 170, 215, 0.6); }
 #screen-hunter .hu-ziel-zahl .mx { color: #a9e4ff; font-size: 0.6em; }
-#screen-hunter .hu-ziel-sub { font-family: var(--font-cond); font-weight: 700; font-size: clamp(10px, 1.9vh, 20px); letter-spacing: 0.04em; color: #c9c0c0; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+#screen-hunter .hu-ziel-sub { font-family: var(--font-cond); font-weight: 700; font-size: clamp(11px, 1.9vh, 20px); letter-spacing: 0.04em; color: #c9c0c0; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 
 /* Marker: ein unsichtbarer Zeiger von der Mitte zum Rand, der um die Mitte
    gedreht wird; der Punkt mit dem Kuerzel sitzt an seiner Spitze (knapp
@@ -6262,7 +6302,7 @@ body.fix-spiel #screen-hunter.active { flex: 1 1 auto; height: auto; min-height:
 }
 #screen-hunter .hu-mark .hu-punkt {
   position: absolute; left: 0; top: 0; width: 6.4cqw; height: 6.4cqw; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center; font-family: var(--font-body); font-weight: 700; font-size: clamp(9px, 1.7vh, 18px); line-height: 1; color: #fff;
+  display: flex; align-items: center; justify-content: center; font-family: var(--font-body); font-weight: 700; font-size: clamp(11px, 1.7vh, 18px); line-height: 1; color: #fff;
   transform: translate(-50%, -50%) rotate(calc(-1 * var(--w, 0deg))) scale(1); box-shadow: 0 0 0 2px #0d0a0b;
   transition: transform 0.75s cubic-bezier(0.3, 0.9, 0.3, 1), opacity 0.4s, filter 0.4s;
 }
@@ -6293,9 +6333,9 @@ body.fix-spiel #screen-hunter.active { flex: 1 1 auto; height: auto; min-height:
 #screen-hunter .hu-chip-name { flex: 1 1 auto; min-width: 0; font-family: var(--font-cond); font-weight: 700; font-size: clamp(12px, 2.5vh, 26px); letter-spacing: 0.03em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #c9c0c0; }
 #screen-hunter .hu-chip-ziel { flex: none; font-family: var(--font-cond); font-weight: 700; font-size: clamp(12px, 2.5vh, 26px); color: #9a8f90; }
 #screen-hunter .hu-chip.aktiv .hu-chip-name, #screen-hunter .hu-chip.aktiv .hu-chip-ziel { color: #fff; }
-#screen-hunter .hu-chip-meta { font-size: clamp(10px, 1.8vh, 18px); color: #857a7b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#screen-hunter .hu-chip-meta { font-size: clamp(11px, 1.8vh, 18px); color: #857a7b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #screen-hunter .hu-chips.viele .hu-chip-name, #screen-hunter .hu-chips.viele .hu-chip-ziel { font-size: clamp(11px, 2vh, 21px); }
-#screen-hunter .hu-chips.viele .hu-chip-meta { font-size: clamp(9px, 1.5vh, 15px); }
+#screen-hunter .hu-chips.viele .hu-chip-meta { font-size: clamp(11px, 1.5vh, 15px); }
 
 /* Rechts: Zurueck, die drei Darts, die Tasten. */
 #screen-hunter .hu-rechts { position: relative; z-index: 1; min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: clamp(5px, 1vh, 12px); }
@@ -6331,8 +6371,8 @@ body.fix-spiel #screen-hunter.active { flex: 1 1 auto; height: auto; min-height:
   #screen-hunter .hu-links { gap: 4px; }
   #screen-hunter .hu-rechts, #screen-hunter .hu-top, #screen-hunter .hu-keys { gap: 4px; }
   #screen-hunter .hu-ziel-zahl { font-size: 40px; }
-  #screen-hunter .hu-ziel .kt, #screen-hunter .hu-ziel-sub { font-size: 10px; }
-  #screen-hunter .hu-mark .hu-punkt { width: 7cqw; height: 7cqw; font-size: 9px; }
+  #screen-hunter .hu-ziel .kt, #screen-hunter .hu-ziel-sub { font-size: 11px; }
+  #screen-hunter .hu-mark .hu-punkt { width: 7cqw; height: 7cqw; font-size: 11px; }
   #screen-hunter .hu-fang-banner { font-size: 14px; padding: 5px 12px; }
   #screen-hunter .hu-chip { padding: 4px 8px; gap: 1px; }
   #screen-hunter .hu-chip-meta { display: none; }
@@ -6346,8 +6386,8 @@ body.fix-spiel #screen-hunter.active { flex: 1 1 auto; height: auto; min-height:
   #screen-hunter .hu-links { grid-template-rows: auto auto auto; }
   #screen-hunter .hu-mitte { height: min(calc(100vw - 32px), 440px); }
   #screen-hunter .hu-ziel-zahl { font-size: clamp(36px, 11vw, 64px); }
-  #screen-hunter .hu-ziel .kt, #screen-hunter .hu-ziel-sub { font-size: clamp(9px, 2.6vw, 13px); }
-  #screen-hunter .hu-mark .hu-punkt { font-size: clamp(8px, 2.4vw, 12px); }
+  #screen-hunter .hu-ziel .kt, #screen-hunter .hu-ziel-sub { font-size: clamp(11px, 2.6vw, 13px); }
+  #screen-hunter .hu-mark .hu-punkt { font-size: clamp(11px, 2.4vw, 12px); }
   /* Chips zweispaltig, damit die Namen lesbar bleiben. */
   #screen-hunter .hu-chips { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
   #screen-hunter #hu-pad { flex: none; }
@@ -6386,7 +6426,7 @@ body.fix-spiel #screen-hunter.active { flex: 1 1 auto; height: auto; min-height:
   .sg-du-tag { font-size: clamp(11px, 1.9vh, 20px); }
   .sg-du b { font-size: clamp(16px, 3.2vh, 34px); }
   .sg-du > span:last-child { font-size: clamp(12px, 2vh, 20px); }
-  .sg-du-chip { font-size: clamp(10px, 1.7vh, 17px); padding: 2px 8px; }
+  .sg-du-chip { font-size: clamp(11px, 1.7vh, 17px); padding: 2px 8px; }
 }
 /* Handy quer: Podest allein, der Endstand faellt weg. */
 @media (orientation: landscape) and (max-height: 420px) {
@@ -6449,7 +6489,7 @@ body.fix-spiel #screen-hunter.active { flex: 1 1 auto; height: auto; min-height:
 .st-punkt { flex: none; width: 10px; height: 10px; border-radius: 50%; }
 .st-wname { min-width: 0; font-weight: 600; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .st-wert { font-family: var(--font-cond); font-weight: 700; font-size: 0.95rem; color: #c9c0c0; white-space: nowrap; }
-.st-note { font-size: 0.75rem; color: #5a5052; line-height: 1.4; padding-top: 6px; }
+.st-note { font-size: 0.75rem; color: #857a7b; line-height: 1.4; padding-top: 6px; }
 .st-aktionen { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .st-aktionen .btn { margin: 0; min-height: 44px; height: 48px; padding: 0 18px; border-radius: 12px; font-size: 0.95rem; white-space: nowrap; }
 .st-aktionen .btn.ghost { background: #241d1f; border-color: transparent; color: var(--text); }
@@ -6478,7 +6518,7 @@ body.fix-spiel #screen-hunter.active { flex: 1 1 auto; height: auto; min-height:
   .st-vergleich.viele .st-sp .av { width: clamp(30px, 5.6vh, 58px); height: clamp(30px, 5.6vh, 58px); }
   .st-sp-name { font-size: clamp(14px, 2.8vh, 30px); }
   .st-vergleich.viele .st-sp-name { font-size: clamp(12px, 2.3vh, 24px); }
-  .st-sp-sub { font-size: clamp(10px, 1.6vh, 16px); }
+  .st-sp-sub { font-size: clamp(11px, 1.6vh, 16px); }
   .st-zeilen { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
   .st-zeile { flex: 1 1 0; min-height: clamp(30px, 5.6vh, 60px); gap: clamp(6px, 1vw, 16px); }
   .st-k { font-size: clamp(12px, 2.1vh, 21px); }
@@ -6489,7 +6529,7 @@ body.fix-spiel #screen-hunter.active { flex: 1 1 auto; height: auto; min-height:
   .st-item { padding: clamp(8px, 1.4vh, 14px) clamp(10px, 1vw, 14px); gap: clamp(8px, 1vw, 14px); }
   .st-n, .st-wname { font-size: clamp(12px, 2vh, 20px); }
   .st-wert { font-size: clamp(13px, 2.2vh, 23px); }
-  .st-note { font-size: clamp(10px, 1.6vh, 16px); }
+  .st-note { font-size: clamp(11px, 1.6vh, 16px); }
   .st-aktionen .btn { height: clamp(42px, 7vh, 72px); padding: 0 clamp(16px, 2vw, 30px); font-size: clamp(13px, 2.1vh, 21px); }
   .st-aktionen .btn.start-rot { padding: 0 clamp(20px, 2.6vw, 40px); font-size: clamp(15px, 2.6vh, 28px); }
   .st-aktionen .btn.st-fix { height: clamp(40px, 6.6vh, 66px); padding: 0 clamp(12px, 1.4vw, 20px); font-size: clamp(12px, 1.9vh, 19px); }
@@ -6533,6 +6573,10 @@ body.fix-spiel #screen-hunter.active { flex: 1 1 auto; height: auto; min-height:
 .pa-av .av.xl { width: 100%; height: 100%; font-size: 1.8rem; box-shadow: 0 0 0 4px var(--bg-2), 0 0 0 6px rgba(169, 228, 255, 0.5), 0 0 44px rgba(70, 170, 215, 0.5); }
 .pa-foto { position: absolute; right: -2px; bottom: -2px; width: 30%; height: 30%; min-width: 32px; min-height: 32px; border-radius: 50%; background: #2a2224; border: none; box-shadow: 0 0 0 3px var(--bg-2); color: var(--text); cursor: pointer; padding: 0; margin: 0; display: flex; align-items: center; justify-content: center; }
 .pa-foto svg { width: 55%; height: 55%; }
+/* Der Kamera-Knopf bleibt 32 px klein (er sitzt auf dem Avatar), getroffen
+   wird er aber auf mindestens 44: die unsichtbare Flaeche ragt 8 px ueber
+   den Rand hinaus (D7). */
+.pa-foto::before { content: ''; position: absolute; inset: -8px; border-radius: 50%; }
 .pa-mitte { grid-area: mitte; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .pa-namen { display: flex; flex-direction: column; min-width: 0; }
 .pa-name { font-family: var(--font-display); font-size: 2rem; letter-spacing: 0.02em; text-transform: uppercase; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -6558,7 +6602,7 @@ body.fix-spiel #screen-hunter.active { flex: 1 1 auto; height: auto; min-height:
 .pa-gruppe.leer { color: var(--muted); }
 .pa-gruppe.active { background: #2a2224; box-shadow: inset 0 0 0 1.5px var(--aktiv-linie), 0 0 18px var(--schein-weich); }
 button.pa-gruppe { cursor: pointer; }
-.pa-pfeil { flex: none; color: #5a5052; font-size: 1.3rem; font-weight: 700; }
+.pa-pfeil { flex: none; color: #857a7b; font-size: 1.3rem; font-weight: 700; }
 .pa-pad { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
 .pa-pad button { min-height: 44px; margin: 0; padding: 0; border-radius: 8px; background: #241d1f; border: none; color: var(--text); font-family: var(--font-cond); font-weight: 700; font-size: 1.05rem; text-transform: none; letter-spacing: 0; }
 .pa-pad button.haupt { background: var(--aktiv-linie); color: #0d0a0b; }
@@ -6665,7 +6709,7 @@ button.pa-gruppe { cursor: pointer; }
 .ft-darts button, .ft-segs button { height: 40px; min-height: 0; margin: 0; }
 .ft-slots { display: flex; gap: 6px; }
 .ft-slot { flex: 1 1 0; min-width: 0; height: 48px; margin: 0; padding: 0; border-radius: 10px; background: #241d1f; border: none; color: var(--text); font-family: var(--font-cond); font-weight: 700; font-size: 1.3rem; text-transform: none; letter-spacing: 0; }
-.ft-slot.leer { color: #5a5052; }
+.ft-slot.leer { color: #857a7b; }
 .ft-slot.active { background: #2a2224; box-shadow: inset 0 0 0 1.5px var(--aktiv-linie), 0 0 18px var(--schein-weich); color: #fff; }
 .ft-check { margin: 0; font-size: 0.85rem; line-height: 1.35; color: #857a7b; }
 .ft-check.gut { color: #6fe0a8; }
@@ -6709,7 +6753,7 @@ button.pa-gruppe { cursor: pointer; }
 .overlay.bogen .fi-rest { font-variant-numeric: tabular-nums; }
 .overlay.bogen .fi-diff .fi-rest { text-align: right; color: var(--text); }
 .overlay.bogen .fi-alt { color: #857a7b; overflow: hidden; text-overflow: ellipsis; }
-.overlay.bogen .fi-pfeil { color: #5a5052; }
+.overlay.bogen .fi-pfeil { color: #857a7b; }
 .overlay.bogen .fi-neu { color: var(--laser-hell); overflow: hidden; text-overflow: ellipsis; }
 .overlay.bogen .dl-fuss .btn:disabled { opacity: 0.4; }
 
@@ -6740,14 +6784,14 @@ button.pa-gruppe { cursor: pointer; }
   .pa-chip { font-size: clamp(11px, 1.8vh, 19px); }
   .pa-rechts { align-self: stretch; flex-direction: column; justify-content: space-between; align-items: flex-end; padding: clamp(12px, 2.4vh, 28px) 0; flex-wrap: nowrap; }
   .pa-btn { min-height: 0; height: clamp(44px, 5vh, 52px); padding: 0 clamp(12px, 1.3vw, 20px); font-size: clamp(12px, 1.9vh, 19px); }
-  .pa-form .kt { font-size: clamp(10px, 1.6vh, 17px); }
-  .pa-form .form { width: clamp(22px, 3.6vh, 38px); height: clamp(22px, 3.6vh, 38px); font-size: clamp(10px, 1.8vh, 19px); }
+  .pa-form .kt { font-size: clamp(11px, 1.6vh, 17px); }
+  .pa-form .form { width: clamp(22px, 3.6vh, 38px); height: clamp(22px, 3.6vh, 38px); font-size: clamp(11px, 1.8vh, 19px); }
   .pa-kacheln { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); min-height: 0; gap: clamp(8px, 1.4vw, 22px); }
   .pa-kacheln.drei { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr); }
   .pa-kachel { min-height: 0; overflow: hidden; gap: clamp(8px, 1.6vh, 18px); padding: clamp(12px, 2.2vh, 26px) clamp(12px, 1.6vw, 26px); }
   .pa-finish > .pa-btn { height: clamp(44px, 6vh, 62px); }
   .pa-gruppe { min-height: 0; height: clamp(44px, 9vh, 96px); font-size: clamp(20px, 4.6vh, 50px); }
-  .pa-gruppe small { font-size: clamp(10px, 1.6vh, 16px); }
+  .pa-gruppe small { font-size: clamp(11px, 1.6vh, 16px); }
   .pa-pad { flex: 1 1 auto; min-height: 0; grid-auto-rows: minmax(0, 1fr); }
   .pa-pad button { min-height: 0; font-size: clamp(12px, 2.1vh, 22px); }
   .pa-text { font-size: clamp(11px, 1.8vh, 18px); }
@@ -6806,7 +6850,7 @@ button.pa-gruppe { cursor: pointer; }
   .ft-pad { flex: 0 1 46%; grid-template-columns: repeat(11, minmax(0, 1fr)); align-content: start; }
   .ft-pad button { height: clamp(44px, 4.8vh, 50px); font-size: clamp(13px, 2.2vh, 23px); }
   .ft-alt b { font-size: clamp(12px, 2vh, 20px); }
-  .ft-alt span { font-size: clamp(10px, 1.5vh, 15px); }
+  .ft-alt span { font-size: clamp(11px, 1.5vh, 15px); }
 }
 /* Flach (Handy quer): Ausweis kompakt, Kacheln nebeneinander ohne festen Rahmen. */
 @media (min-width: 700px) and (max-height: 500px) {
@@ -6876,11 +6920,25 @@ button.pa-gruppe { cursor: pointer; }
 .mt-text b { font-size: 0.95rem; }
 .mt-text small { color: var(--muted); font-size: 0.8rem; line-height: 1.3; }
 .mt-kanaele { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-.mt-kanal { min-height: 38px; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: var(--muted); font-family: var(--font-cond); font-weight: 700; font-size: 0.82rem; letter-spacing: 0.04em; text-transform: uppercase; }
+.mt-kanal { min-height: 44px; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: var(--muted); font-family: var(--font-cond); font-weight: 700; font-size: 0.82rem; letter-spacing: 0.04em; text-transform: uppercase; }
 .mt-kanal.active { background: var(--aktiv-flaeche); border-color: var(--aktiv-linie); color: #fff; }
 .mt-fest { font-size: 0.8rem; color: var(--muted); }
 #overlay-card .mt-meldung { margin: 6px 0 10px; color: var(--text); text-align: left; }
 @media (min-width: 560px) {
   .mt-zeile { flex-direction: row; align-items: center; justify-content: space-between; }
   .mt-kanaele { flex: none; width: 300px; }
+}
+
+/* iOS-Glas-Blur am oberen Rand (installierte App, iOS 26.1+/27): ein deckender,
+   fixierter Streifen in der Seitenfarbe am Rand laesst den System-Blur
+   verschwinden. Kein Schleier, kein Verlauf - nur das glatte --bg, nur im
+   Standalone-Modus; in der Seitenfarbe ist er unsichtbar, zaehlt fuer das
+   System aber als gemalte Flaeche (Rezept aus tips.ojapp.app). */
+.ios-oben { display: none; }
+@media (display-mode: standalone) {
+  .ios-oben {
+    display: block; position: fixed; inset: 0 0 auto; height: 11px;
+    pointer-events: none; z-index: 1000;
+    background: var(--bg);
+  }
 }

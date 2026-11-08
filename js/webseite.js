@@ -187,9 +187,12 @@
   function legsGewonnen(m, pid) {
     return (m.legs || []).filter(function (l) { return l.winner === pid; }).length;
   }
+  /* Zahlen aus dem Spielstand kommen vom Server und landen ungefiltert im
+     Markup - was keine Zahl ist, wird 0, statt als Text durchzurutschen. */
+  function zahl(v) { var n = Number(v); return isFinite(n) ? n : 0; }
   function rest(start, leg, pid) {
     var r = start;
-    (leg ? leg.visits : []).forEach(function (v) { if (v.p === pid && !v.b) r -= v.s; });
+    (leg ? leg.visits : []).forEach(function (v) { if (v.p === pid && !v.b) r -= zahl(v.s); });
     return r;
   }
   function amWurf(m, leg) {
@@ -209,12 +212,13 @@
         var darts = {};
         (leg.visits || []).forEach(function (v) {
           var x = s(v.p);
-          x.darts += v.d || 0;
-          darts[v.p] = (darts[v.p] || 0) + (v.d || 0);
+          var vd = zahl(v.d), vs = zahl(v.s);
+          x.darts += vd;
+          darts[v.p] = (darts[v.p] || 0) + vd;
           if (v.b) return;
-          x.punkte += v.s;
-          if (v.s === 180) x.s180++;
-          if (v.c && v.s >= 100) x.finishes.push(v.s);
+          x.punkte += vs;
+          if (vs === 180) x.s180++;
+          if (v.c && vs >= 100) x.finishes.push(vs);
         });
         if (leg.winner && darts[leg.winner] && darts[leg.winner] <= 21 && start === 501) s(leg.winner).shortlegs.push(darts[leg.winner]);
       });
@@ -248,8 +252,8 @@
     var vorbei = t.status !== 'offen';
     var laufen = partien.filter(function (x) { return x.live; });
     var alle = partien.map(function (x) { var m = x.ergebnis || x.live; return m ? { p: x.p, legs: m.legs || [] } : null; }).filter(Boolean);
-    var st = statistik(alle, t.start || 501);
-    var start = t.start || 501;
+    var start = zahl(t.start) || 501;
+    var st = statistik(alle, start);
 
     var html = '<div class="live-kopf">' +
       '<span class="live-marke' + (vorbei ? ' aus' : '') + '"><span class="punkt"></span>' + (vorbei ? 'Endstand' : 'Live') + '</span>' +
@@ -270,12 +274,12 @@
       var legs = m.legs || [];
       var leg = legs.length && !legs[legs.length - 1].winner ? legs[legs.length - 1] : null;
       var dran = amWurf({ p: x.p, starter: m.starter }, leg || { starter: null, visits: [] });
-      var offen = (m.darts || []).reduce(function (a, d) { return a + (d.v || 0); }, 0);
+      var offen = (m.darts || []).reduce(function (a, d) { return a + zahl(d.v); }, 0);
       html += '<div class="board"><div class="board-kopf"><span>' + (pm.scheibe ? 'Board ' + esc(String(pm.scheibe).replace('S', '')) : 'Board') + '</span>' +
         '<span>Legs ' + legsGewonnen(m, x.p[0]) + ' : ' + legsGewonnen(m, x.p[1]) + '</span></div>';
       x.p.forEach(function (pid, i) {
-        var r = rest(m.start || start, leg, pid) - (pid === dran ? offen : 0);
-        var pos = pm.posPaar ? (i === 0 ? 'H' : 'G') + (Number(pm.posPaar[i]) + 1) : '';
+        var r = rest(zahl(m.start) || start, leg, pid) - (pid === dran ? offen : 0);
+        var pos = pm.posPaar ? (i === 0 ? 'H' : 'G') + (zahl(pm.posPaar[i]) + 1) : '';
         var a = st[pid] && st[pid].avg;
         html += '<div class="bs' + (pid === dran ? ' dran' : '') + '"><span class="dot"></span>' +
           '<span class="name"><span class="pos">' + pos + '</span> ' + esc(nm(pid)) + '</span>' +
@@ -288,7 +292,7 @@
     var heute = partien.filter(function (x) { return x.ergebnis && x.ergebnis.done; }).map(function (x) {
       var m = x.ergebnis, pm = x.plan;
       var a = legsGewonnen(m, x.p[0]), b = legsGewonnen(m, x.p[1]);
-      var posH = pm.posPaar ? 'H' + (Number(pm.posPaar[0]) + 1) + ' ' : '', posG = pm.posPaar ? 'G' + (Number(pm.posPaar[1]) + 1) + ' ' : '';
+      var posH = pm.posPaar ? 'H' + (zahl(pm.posPaar[0]) + 1) + ' ' : '', posG = pm.posPaar ? 'G' + (zahl(pm.posPaar[1]) + 1) + ' ' : '';
       return '<div class="he"><span class="' + (m.winner === x.p[0] ? 'w' : '') + '">' + esc(posH + nm(x.p[0])) + '</span>' +
         '<span class="erg">' + a + ':' + b + '</span>' +
         '<span class="' + (m.winner === x.p[1] ? 'w' : '') + '">' + esc(posG + nm(x.p[1])) + '</span></div>';
@@ -346,6 +350,13 @@
     if (document.hidden || !liveSchluessel) return;
     holeJson('/api/zuschauer/' + encodeURIComponent(liveSchluessel)).then(function (d) {
       if (!d || !d.turnier) return;
+      /* Nach einer Drosselung (429) wieder im normalen Takt, sobald der
+         Server antwortet - sonst bliebe die Seite den Abend lang langsam. */
+      if (liveTakt !== TAKT_LIVE) {
+        liveTakt = TAKT_LIVE;
+        if (liveTimer) clearInterval(liveTimer);
+        liveTimer = setInterval(liveStandHolen, liveTakt);
+      }
       var text = JSON.stringify(d.turnier);
       if (text === letzterStand) return;
       letzterStand = text;

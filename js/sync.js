@@ -27,7 +27,14 @@
    * Warteschlange, und bei jeder Anmeldung würde die komplette Historie erneut
    * angeboten.
    */
-  var zustand = { userId: null, cursor: 0, outbox: [], hoch: [], alle: true };
+  /*
+   * `fehlgeschlagen` haelt fest, was die Schlange endgueltig abgehakt hat
+   * (4xx ausser 429). Vorher verschwand so ein Spiel still und lag fuer immer
+   * nur auf dem Geraet - der einzige Hinweis war ein Satz im Konto-Langtext,
+   * der beim naechsten Abgleich wieder weg war. app.js zeigt die Liste im Konto.
+   */
+  var FEHLER_MAX = 20;
+  var zustand = { userId: null, cursor: 0, outbox: [], hoch: [], alle: true, fehlgeschlagen: [], ersetzen: [] };
 
   /* ================= eigener kleiner Speicher ================= */
 
@@ -41,6 +48,9 @@
         zustand.cursor = Number(z.cursor) || 0;
         zustand.outbox = Array.isArray(z.outbox) ? z.outbox : [];
         zustand.hoch = Array.isArray(z.hoch) ? z.hoch : [];
+        zustand.fehlgeschlagen = Array.isArray(z.fehlgeschlagen) ? z.fehlgeschlagen : [];
+        zustand.ersetzen = Array.isArray(z.ersetzen) ? z.ersetzen : [];
+        if (z.khNachgereicht) zustand.khNachgereicht = z.khNachgereicht;
         /* Frueher lieferte der Server nur die eigenen Spiele. Ein Geraet
            von damals holt einmal alles von vorn - Vorhandenes wird beim
            Einmischen ohnehin uebersprungen. */
@@ -99,10 +109,15 @@
   /* Die Namen der Beteiligten reisen im Spielinhalt mit: andere Geraete
      kennen fremde Gastspieler nicht und zeigten sonst "Unbekannt". */
   function mitNamen(h) {
+    /* Beim Archivieren festgehaltene Namen (h.namen, voller Name) haben
+       Vorrang - die Liga-Auswertung schluesselt Gegner danach (L26). Nur
+       fehlende Ids werden aus den Profilen ergaenzt. */
     var namen = {};
+    if (h.namen && typeof h.namen === 'object') Object.keys(h.namen).forEach(function (id) { namen[id] = h.namen[id]; });
     beteiligte(h).forEach(function (id) {
+      if (namen[id]) return;
       var p = D.profile(id);
-      if (p && p.name && p.name !== 'Unbekannt') namen[id] = p.name;
+      if (p && p.name && p.name !== 'Unbekannt') namen[id] = p.voll || p.name;
     });
     var kopie = {};
     Object.keys(h).forEach(function (k) { kopie[k] = h[k]; });
@@ -175,14 +190,17 @@
           entferneAusSchlange(id);
           return;
         }
-        return window.DartKonto.ruf('POST', '/api/games', {
+        var paket = {
           id: h.id,
           kind: art(h),
           at: h.at || Date.now(),
           payload: mitNamen(h),
           players: spielerListe(h)
-        }).then(function () {
+        };
+        if (ersetzenVorgemerkt(id)) paket.ersetzen = true;
+        return window.DartKonto.ruf('POST', '/api/games', paket).then(function () {
           geschafft++;
+          ersetzenErledigt(id);
           merkeAlsOben(id);
           entferneAusSchlange(id);
         }).catch(function (e) {
@@ -192,6 +210,8 @@
             letzterFehler = 'Ein Spiel liess sich nicht hochladen: ' + e.message;
             // Abhaken statt endlos wiederholen – sonst stellt backfill() das
             // Spiel bei jeder Anmeldung erneut an und der Fehler kommt wieder.
+            // Aber mit Spur: das Konto zeigt, was liegen geblieben ist.
+            merkeFehlschlag(id, e);
             merkeAlsOben(id);
             entferneAusSchlange(id);
           } else {
@@ -208,6 +228,51 @@
     var i = zustand.outbox.indexOf(id);
     if (i >= 0) zustand.outbox.splice(i, 1);
     sichern();
+  }
+
+  /* Ein abgehaktes Spiel samt Grund festhalten; dasselbe Spiel steht nur
+     einmal drin (der juengste Versuch zaehlt). Gedeckelt, damit der
+     Speicher nicht mit uralten Fehlern vollaeuft. */
+  function merkeFehlschlag(id, e) {
+    zustand.fehlgeschlagen = zustand.fehlgeschlagen.filter(function (f) { return f.id !== id; });
+    zustand.fehlgeschlagen.push({
+      id: id,
+      grund: (e && e.message) || (e && e.status ? 'HTTP ' + e.status : 'Unbekannter Fehler'),
+      zeit: new Date().toISOString()
+    });
+    if (zustand.fehlgeschlagen.length > FEHLER_MAX) {
+      zustand.fehlgeschlagen.splice(0, zustand.fehlgeschlagen.length - FEHLER_MAX);
+    }
+    sichern();
+  }
+
+  function fehlgeschlagen() { return zustand.fehlgeschlagen.slice(); }
+
+  function fehlgeschlagenLeeren() {
+    zustand.fehlgeschlagen = [];
+    sichern();
+  }
+
+  /* Liegt das Spiel schon auf dem Server? (Fuer die Speicher-Entlastung in
+     app.js: gesicherte Spiele duerfen zuerst ihre Einzeldarts verlieren.) */
+  function hochgeladen(id) { return zustand.hoch.indexOf(id) >= 0; }
+
+  /* Ein schon archiviertes Online-Spiel laeuft doch weiter (der Server
+     meldete beim Beenden einen Konflikt, O21): der alte Upload gilt nicht
+     mehr. Aus Schlange und "oben"-Liste nehmen und vormerken, dass die
+     naechste Fassung die erste auf dem Server ersetzen soll. */
+  function spielZurueckziehen(id) {
+    if (!id) return;
+    entferneAusSchlange(id);
+    zustand.hoch = zustand.hoch.filter(function (x) { return x !== id; });
+    /* Persistent im Sync-Zustand: das Spiel laeuft danach oft noch Minuten,
+       ein Neuladen dazwischen darf die Vormerkung nicht vergessen. */
+    if (zustand.ersetzen.indexOf(id) < 0) zustand.ersetzen.push(id);
+    sichern();
+  }
+  function ersetzenVorgemerkt(id) { return zustand.ersetzen.indexOf(id) >= 0; }
+  function ersetzenErledigt(id) {
+    zustand.ersetzen = zustand.ersetzen.filter(function (x) { return x !== id; });
   }
 
   function runter() {
@@ -274,10 +339,17 @@
   }
 
   function statusText() {
-    if (!nutzer || !zustand.outbox.length) return '';
+    if (!nutzer) return '';
     var n = zustand.outbox.length;
-    return (n === 1 ? '1 Spiel wartet' : n + ' Spiele warten') + ' auf den Upload' +
-      (navigator.onLine ? ' …' : ' – kein Netz');
+    /* Ohne Netz immer sichtbar, auch ohne wartende Spiele: der Spieler soll
+       wissen, warum Zusage oder Abgleich gerade nicht ankommen - und dass
+       nichts verloren geht. */
+    if (navigator.onLine === false) {
+      return 'Kein Netz – Spiele werden gespeichert und später hochgeladen' +
+        (n ? ' (' + (n === 1 ? '1 Spiel wartet' : n + ' Spiele warten') + ')' : '');
+    }
+    if (!n) return '';
+    return (n === 1 ? '1 Spiel wartet' : n + ' Spiele warten') + ' auf den Upload …';
   }
 
   function langText() {
@@ -533,6 +605,11 @@
   var liveTaktAn = null;         // sid, fuer die gerade getaktet wird (oder null)
   var liveStrom = null;          // EventSource auf /api/live/:id/strom
   var liveStromOffen = false;    // Verbindung steht und liefert
+  /* Neuaufbau nach endgueltigem Fehler: erst nach 5 s, dann doppelt so lang
+     bis hoechstens eine Minute; eine gelungene Verbindung setzt zurueck. */
+  var LIVE_STROM_WARTE = 5000, LIVE_STROM_WARTE_MAX = 60000;
+  var liveStromWarte = LIVE_STROM_WARTE;
+  var liveStromNeuTimer = null;
   var liveSchreibt = null;   // laufender PUT, damit nicht zwei ueberholen
   var liveDran = false;      // waehrend des PUT kam schon die naechste Aenderung
   var liveStoerung = false;  // letzter Ruf ging schief (kein Netz, Server weg)
@@ -629,13 +706,31 @@
   }
 
   /* Zu -- mit Schlussstand in einem Rutsch, nachdem ein laufender PUT
-     durch ist. So kommt "Speichern" nie vor dem letzten Wurf an. */
+     durch ist. So kommt "Speichern" nie vor dem letzten Wurf an.
+
+     Die Version (`seq`) reist mit, damit der Schlussstand dieselbe Pruefung
+     durchlaeuft wie jeder PUT: hat der andere inzwischen etwas eingetragen
+     (etwa den Checkout zurueckgenommen), antwortet der Server 409 mit dem
+     geltenden Stand statt ihn zu ueberschreiben. Dann kommt hier ein Fehler
+     mit `status: 409` und `stand` (die Spiel-Antwort des Servers) zurueck;
+     app.js uebernimmt ihn und entscheidet neu. Alle anderen Fehler bleiben
+     wie bisher stumm - das Spiel ist lokal ohnehin fertig. */
   function liveEnde(id, stand) {
     if (!nutzer || !id) return Promise.resolve();
     var vorher = liveSchreibt || Promise.resolve();
     return vorher.catch(function () {}).then(function () {
-      return liveRuf('POST', '/' + id + '/ende', stand ? { state: stand.state } : {});
-    }).catch(function () {});
+      var body = {};
+      if (stand && stand.state) body.state = stand.state;
+      if (stand && stand.seq !== undefined && stand.seq !== null) body.seq = stand.seq;   // auch ohne state: Versionspruefung
+      return liveRuf('POST', '/' + id + '/ende', body);
+    }).catch(function (e) {
+      if (e && e.status === 409 && e.daten && e.daten.spiel) {
+        var konflikt = new Error(e.message || 'Der andere war schneller.');
+        konflikt.status = 409;
+        konflikt.stand = e.daten.spiel;
+        throw konflikt;
+      }
+    });
   }
 
   /* Ein Durchgang: erst Eigenes loswerden, dann nachsehen, was der andere
@@ -686,6 +781,7 @@
     var quelle = liveStrom;
     quelle.addEventListener('open', function () {
       if (quelle !== liveStrom) return;
+      liveStromWarte = LIVE_STROM_WARTE;
       if (!liveStromOffen) { liveStromOffen = true; liveTaktStellen(); }
       // Was waehrend des Verbindungsaufbaus geschah, gleich nachholen.
       liveRunde();
@@ -702,17 +798,43 @@
     quelle.addEventListener('error', function () {
       if (quelle !== liveStrom) return;
       /* Der Browser versucht es selbst erneut. Bis dahin wieder schnell
-         fragen; ist die Verbindung endgueltig zu (404/403, alter Server
-         ohne Route), bleibt es beim Takt. */
+         fragen. Antwortet der Server mit einem Fehler (Deploy -> 502, zu
+         viele Anfragen -> 429, alter Server ohne Route -> 404), ist die
+         Verbindung endgueltig zu und der Browser tut nichts mehr - dann
+         bauen wir sie selbst wieder auf, sonst bliebe es fuer den Rest des
+         Abends beim 2,5-s-Takt. */
       if (liveStromOffen) { liveStromOffen = false; liveTaktStellen(); }
-      if (quelle.readyState === 2) liveStrom = null;
+      if (quelle.readyState === 2) { liveStrom = null; liveStromNeuPlanen(); }
     });
+  }
+
+  function liveStromNeuPlanen() {
+    if (liveStromNeuTimer || !liveTaktAn) return;
+    liveStromNeuTimer = setTimeout(function () {
+      liveStromNeuTimer = null;
+      /* Im Hintergrund nicht anklopfen - iOS wirft die Verbindung sowieso
+         gleich weg; visibilitychange versucht es beim Zurueckkommen. */
+      if (document.hidden) return;
+      liveStromNeu();
+    }, liveStromWarte);
+    liveStromWarte = Math.min(liveStromWarte * 2, LIVE_STROM_WARTE_MAX);
+  }
+
+  /* Sofort neu aufmachen, falls gerade keine Verbindung steht oder selbst
+     neu verbindet (Netz zurueck, App wieder vorn, Backoff abgelaufen). */
+  function liveStromNeu() {
+    if (!liveTaktAn) return;
+    if (liveStrom && liveStrom.readyState !== 2) return;
+    if (liveStromNeuTimer) { clearTimeout(liveStromNeuTimer); liveStromNeuTimer = null; }
+    liveStromAuf(liveTaktAn);
   }
 
   function liveStromZu() {
     if (liveStrom) { try { liveStrom.close(); } catch (e) { /* egal */ } }
     liveStrom = null;
     liveStromOffen = false;
+    if (liveStromNeuTimer) { clearTimeout(liveStromNeuTimer); liveStromNeuTimer = null; }
+    liveStromWarte = LIVE_STROM_WARTE;
   }
 
   function liveStatus() {
@@ -794,6 +916,11 @@
       statusText: statusText,
       langText: langText,
       wartend: function () { return zustand.outbox.length; },
+      /* Endgueltig abgehakte Uploads: [{ id, grund, zeit }], juengster zuletzt. */
+      fehlgeschlagen: fehlgeschlagen,
+      fehlgeschlagenLeeren: fehlgeschlagenLeeren,
+      hochgeladen: hochgeladen,
+      spielZurueckziehen: spielZurueckziehen,
       liga: {
         zusagen: ligaZusagenHolen,
         zusage: ligaZusageSetzen,
@@ -848,7 +975,14 @@
     };
 
     // Wieder online, App wieder im Vordergrund, oder einfach nach einer Weile.
-    window.addEventListener('online', function () { jetzt(); turnierSofort(); });
+    window.addEventListener('online', function () {
+      statusNeu();          // die "Kein Netz"-Leiste sofort weg
+      jetzt();
+      turnierSofort();
+      liveStromNeu();
+    });
+    // Netz weg: die Leiste sofort zeigen, nicht erst beim naechsten Zeichnen.
+    window.addEventListener('offline', statusNeu);
     document.addEventListener('visibilitychange', function () {
       var g = D.state().game;
       var online = g && g.online && !g.online.wartet;
@@ -861,8 +995,9 @@
       }
       jetzt();
       turnierSofort();
-      /* Zurueck am Handy: sofort nachsehen, nicht erst auf den Takt warten. */
-      if (online && liveTaktAn) liveRunde();
+      /* Zurueck am Handy: sofort nachsehen, nicht erst auf den Takt warten -
+         und den Live-Strom wieder aufmachen, falls er im Hintergrund starb. */
+      if (online && liveTaktAn) { liveStromNeu(); liveRunde(); }
     });
     setInterval(function () {
       if (nutzer && (zustand.outbox.length || !document.hidden)) jetzt();

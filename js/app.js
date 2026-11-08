@@ -2,7 +2,7 @@
  * Dart-Turnier – Jeder gegen jeden, 501 Double Out.
  * Kein Framework, kein Build: State im Speicher, Persistenz via localStorage.
  *
- * Datenmodell (v2):
+ * Datenmodell (v3, siehe STAND_VERSION und die Migrationskette in ladeStand):
  *   profiles  dauerhafte Spieler (Name + Bild), überleben jedes Turnier
  *   lineup    Profil-IDs des laufenden Turniers
  *   matches   Spiele des laufenden Turniers (Legs -> Aufnahmen -> Darts)
@@ -55,6 +55,22 @@
   var IMPOSSIBLE = { 163: 1, 166: 1, 169: 1, 172: 1, 173: 1, 175: 1, 176: 1, 178: 1, 179: 1 };
   var MIN_DARTS_FOR_AVG = 9;    // ab wann ein Average in der Rangliste zählt
   var MAX_HISTORY = 500;        // so viele Spiele bleiben archiviert
+  /* Die Grenzen der Scheibe: 170 ist das hoechste Finish mit drei Darts
+     (T20 T20 Bull) und damit der Beginn des Finish-Bereichs, 180 die
+     hoechste Aufnahme. Die Konstanten stehen dort, wo die Zahl genau das
+     bedeutet - nicht bei Winkeln oder Anzeigetexten. */
+  var MAX_CHECKOUT = 170;
+  var MAX_VISIT = 180;
+  /* Die Aufnahme, die den Loewen ruft (1860: SECHZIG!). */
+  var FEIER_60 = 60;
+  /* Was der Spielberichtsbogen als Highlight abfragt: Finishes ab 100,
+     gewonnene 501er-Legs bis 21 Darts (und jeder 180er). */
+  var HIGHFINISH_AB = 100;
+  var SHORTLEG_BIS = 21;
+  /* Version des gespeicherten Stands. Bei jeder Schema-Aenderung hochzaehlen
+     und eine Stufe in `migrationen` ergaenzen - nur so greift der Schutz
+     "Stand einer neueren Version nicht anfassen" (ladeStand) wirklich. */
+  var STAND_VERSION = 3;
 
   var S = null;
   /* Doppeltipp-Schutz, zweifach:
@@ -131,9 +147,9 @@
 
   function newState() {
     return {
-      v: 2,
+      v: STAND_VERSION,
       screen: 'setup',
-      settings: { start: 501, bestOf: 1, dartModeFrom: 170, cricketScoring: 1, finisherTo: 5, rtwBoost: 1, hunterVariante: 0, hunterHandicap: {}, hunterLeben: 1, turnierModus: 0, quickModus: 0, quickSaetze: 1, quickLegs: 1, ton: 1, feiern: 1, tastatur: 0, dartModeMerk: 170 },
+      settings: { start: 501, bestOf: 1, dartModeFrom: MAX_CHECKOUT, cricketScoring: 1, finisherTo: 5, rtwBoost: 1, hunterVariante: 0, hunterHandicap: {}, hunterLeben: 1, turnierModus: 0, quickModus: 0, quickSaetze: 1, quickLegs: 1, ton: 1, feiern: 1, tastatur: 0, dartModeMerk: MAX_CHECKOUT },
       mode: '501',
       game: null,
       profiles: DEFAULT_PLAYERS.map(function (n, i) {
@@ -156,8 +172,12 @@
   }
   function uiMerken() {
     var ov = UI.overlay && (UI.overlay.type === 'checkout-darts' || UI.overlay.type === 'leg-done') ? UI.overlay : null;
+    /* `fremd`: die Darts stammen vom Mitspieler (Online-Spiel). Ohne das
+       Merkmal waere die Sperre gegen das Loeschen fremder Darts nach einem
+       Neuladen weg (fremdeDartsSperre). */
     S.ui = (UI.darts.length || ov) && uiKennung()
-      ? { k: uiKennung(), darts: UI.darts.map(function (d) { return { m: d.m, n: d.n, v: d.v }; }), overlay: ov }
+      ? { k: uiKennung(), darts: UI.darts.map(function (d) { return { m: d.m, n: d.n, v: d.v }; }), overlay: ov,
+          fremd: !!(UI.dartsFremd && UI.darts.length), fremdZeit: UI.dartsFremd ? (UI.dartsFremdZeit || null) : null }
       : null;
   }
   /* Eine Nachmeldung, die nach einem spontanen Wechsel noch offen war,
@@ -185,7 +205,10 @@
     if (S.screen !== 'game') return;
     var m = currentMatch();
     if (!m || m.done) return;
-    if (Array.isArray(u.darts) && u.darts.length < 3) UI.darts = u.darts;
+    if (Array.isArray(u.darts) && u.darts.length < 3) {
+      UI.darts = u.darts;
+      if (u.fremd && UI.darts.length) { UI.dartsFremd = true; UI.dartsFremdZeit = u.fremdZeit || Date.now(); }
+    }
     if (u.overlay && u.overlay.type === 'checkout-darts' && !UI.darts.length) UI.overlay = u.overlay;
     /* Der Leg-Dialog gilt nur, solange das naechste Leg noch nicht begonnen hat. */
     if (u.overlay && u.overlay.type === 'leg-done') {
@@ -225,10 +248,95 @@
       if (saveBroken) { saveBroken = false; renderSaveWarning(); }
     } catch (e) {
       // Speicher voll oder privater Modus: der Abend läuft weiter, aber
-      // stillschweigend Daten zu verlieren wäre das Schlimmste.
-      if (!saveBroken) { saveBroken = true; renderSaveWarning(); }
+      // stillschweigend Daten zu verlieren wäre das Schlimmste. Bei vollem
+      // Speicher wird erst Platz geschaffen (speicherEntlasten) - nur wenn
+      // auch das nicht reicht, bleibt die Warnung stehen.
+      if (speicherEntlasten(e)) { if (saveBroken) saveBroken = false; renderSaveWarning(); }
+      else if (!saveBroken) { saveBroken = true; renderSaveWarning(); }
     }
     liveAnstossen();
+  }
+
+  /*
+   * Speicher voll (QuotaExceeded). Statt aufzugeben in zwei Stufen Platz
+   * schaffen und sofort wieder speichern:
+   *  1. Den aeltesten Archiv-Eintraegen die Einzeldart-Details (v.k) nehmen.
+   *     Die braucht nur die Doppelquote; Average, 180er, Finishes und Legs
+   *     bleiben vollstaendig. Spiele, die der Server schon hat, zuerst (dort
+   *     liegen die Details weiter) - falls die Online-Schicht das verraet.
+   *  2. Das Archiv von hinten kuerzen, bis es passt (nie unter 20 Spiele).
+   * `speicherEntlastet` verhindert, dass ein Fehlschlag mitten in der
+   * Entlastung noch einmal hier landet - kein Karussell.
+   */
+  var speicherEntlastet = false;
+  var speicherHinweis = '';   // was die Entlastung getan hat (Warn-Balken)
+  var MIN_HISTORY_NOTFALL = 20;
+  function speicherVoll(e) {
+    if (!e) return false;
+    return e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || e.code === 22 || e.code === 1014;
+  }
+  function speicherEntlasten(e) {
+    if (!speicherVoll(e) || speicherEntlastet || !S || !Array.isArray(S.history) || !S.history.length) return false;
+    speicherEntlastet = true;
+    var passt = function () {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(S)); return true; }
+      catch (e2) { if (speicherVoll(e2)) return false; throw e2; }
+    };
+    var gesichert = function (h) {
+      return !!(window.DartSync && typeof window.DartSync.hochgeladen === 'function' && window.DartSync.hochgeladen(h.id));
+    };
+    var detailsWeg = function (h) {
+      var n = 0;
+      (h.matches || []).forEach(function (m) {
+        (m.legs || []).forEach(function (l) {
+          (l.visits || []).forEach(function (v) { if (v && v.k) { delete v.k; n++; } });
+        });
+      });
+      return n;
+    };
+    try {
+      /* Stufe 1: aelteste zuerst (das Archiv ist juengste-zuerst sortiert),
+         darunter die gesicherten vor den nur lokalen. */
+      var reihe = S.history.slice().reverse();
+      reihe.sort(function (a, b) { return (gesichert(b) ? 1 : 0) - (gesichert(a) ? 1 : 0); });
+      var entfernt = 0, i = 0;
+      while (i < reihe.length) {
+        /* In Vierteln, nicht je Spiel: jeder Versuch serialisiert den ganzen Stand. */
+        var bis = Math.min(reihe.length, i + Math.max(1, Math.ceil(reihe.length / 4)));
+        for (; i < bis; i++) entfernt += detailsWeg(reihe[i]);
+        if (entfernt && passt()) {
+          speicherHinweis = 'Speicher voll – aus ' + plural(i, 'altem Spiel', 'alten Spielen') + ' wurden die Einzeldart-Details entfernt (Average, 180er und Finishes bleiben). Bitte Spiele im Konto sichern.';
+          speicherEntlastet = false;
+          return true;
+        }
+      }
+      /* Stufe 2: das Archiv kuerzen - in derselben Reihenfolge wie oben
+         (aelteste zuerst, gesicherte vor nur lokalen), damit ein Spiel, das
+         noch in der Upload-Schlange wartet, als letztes dran ist. Klappt
+         auch das nicht, kommt alles zurueck: nichts wird still verloren. */
+      var kopie = S.history.slice();
+      var vorher = S.history.length;
+      var weg = {};
+      var r = 0;
+      while (S.history.length > MIN_HISTORY_NOTFALL && r < reihe.length) {
+        var schritt = Math.max(1, Math.ceil(S.history.length / 10));
+        for (var k = 0; k < schritt && r < reihe.length && S.history.length - k > MIN_HISTORY_NOTFALL; r++) {
+          if (!weg[reihe[r].id]) { weg[reihe[r].id] = true; k++; }
+        }
+        S.history = kopie.filter(function (h) { return !weg[h.id]; });
+        if (passt()) {
+          speicherHinweis = 'Speicher voll – die ' + plural(vorher - S.history.length, 'aelteste Spiel wurde', 'aeltesten Spiele wurden') + ' aus dem Archiv entfernt. Bitte Spiele im Konto sichern.';
+          speicherEntlastet = false;
+          return true;
+        }
+      }
+      S.history = kopie;
+      speicherEntlastet = false;
+      return false;
+    } catch (e3) {
+      speicherEntlastet = false;
+      return false;
+    }
   }
 
   /*
@@ -256,7 +364,7 @@
       /* Beim App-Start steht die Online-Schicht noch nicht: dann merken und
          die Meldung an Server und Mitspieler nachreichen (offeneEndenSenden). */
       if (S.game.online && !S.game.online.wartet) {
-        if (window.DartSync && window.DartSync.live && liveNutzer()) liveEnde(S.game);
+        if (window.DartSync && window.DartSync.live && liveNutzer()) liveEnde(S.game, true);
         else S.offeneEnden.push({ typ: 'live', sid: S.game.online.sid });
       }
       if (S.game.done) {
@@ -264,6 +372,13 @@
            ins Archiv. */
         archiveGame(S.game);
         weg.push(art + ' (entschieden) wurde gespeichert');
+      } else if (entschiedeneLegs(S.game)) {
+        /* Angefangen, aber mit fertigen Legs: die gehen wie beim Abbruch
+           von Hand ("Gespielte Legs behalten") ohne Sieger in die
+           Statistik - Average, 180er und Finishes sind echt geworfen. */
+        var fertigeLegs = entschiedeneLegs(S.game);
+        archiveGame(S.game, true);
+        weg.push(art + ' (angefangen): ' + (fertigeLegs === 1 ? 'das fertige Leg wurde' : 'die ' + fertigeLegs + ' fertigen Legs wurden') + ' gespeichert, das offene verworfen');
       } else {
         /* Angefangen und liegen geblieben: verworfen, nichts gespeichert. */
         weg.push('das angefangene ' + art + ' wurde beendet und nicht gespeichert');
@@ -310,10 +425,15 @@
     if (!document.hidden && S && altesSpielBeenden()) render();
   });
 
+  var saveWarnungText = null;   // der Standardtext aus dem HTML, einmal gemerkt
   function renderSaveWarning() {
     var bar = $('save-warning');
     if (!bar) return;
-    bar.classList.toggle('hidden', !saveBroken);
+    if (saveWarnungText === null) saveWarnungText = bar.textContent;
+    /* Hat die Entlastung gegriffen, steht ihr Weg im Balken - sonst die
+       allgemeine Warnung. Der Hinweis bleibt bis zum naechsten Laden. */
+    bar.textContent = saveBroken ? saveWarnungText : speicherHinweis ? '⚠️ ' + speicherHinweis : saveWarnungText;
+    bar.classList.toggle('hidden', !saveBroken && !speicherHinweis);
   }
 
   /*
@@ -358,16 +478,49 @@
         : '⚠️ Der gespeicherte Stand war beschädigt und ließ sich nicht lesen. Er ist als Sicherung aufgehoben (dart-turnier-v1.kaputt), die App startet frisch.';
   }
 
+  /*
+   * Migrationskette: migrationen[n] hebt einen Stand von Version n auf n+1.
+   * ladeStand wendet alle Stufen bis STAND_VERSION der Reihe nach an.
+   *   1 -> 2: aus den Turnier-Spielern werden dauerhafte Profile (migrate1to2).
+   *   2 -> 3: alles, was seit v2 dazukam (Einstellungen fuer Cricket, RTW,
+   *           Hunter, Schnelles Spiel, Ton, Tastatur, Liga-Felder) steht
+   *           seit Jahren nur als Default beim Laden - jetzt wird es fest in
+   *           den Stand geschrieben. Inhaltlich aendert sich nichts, aber
+   *           die Versionsnummer stimmt wieder, und ein Zurueckrollen auf
+   *           eine aeltere App trifft auf den Schutz in ladeStand.
+   */
+  var migrationen = {};
+  migrationen[1] = migrate1to2;
+  migrationen[2] = function (s) { standErgaenzen(s); return s; };
+
   function ladeStand(raw) {
     try {
       var s = JSON.parse(raw);
       if (!s) return null;
-      if (typeof s.v === 'number' && s.v > 2) { ladeProblem = 'neuer'; return null; }
-      if (s.v === 1) s = migrate1to2(s);
-      if (s.v !== 2 || !Array.isArray(s.profiles)) return null;
+      if (typeof s.v === 'number' && s.v > STAND_VERSION) { ladeProblem = 'neuer'; return null; }
+      if (typeof s.v !== 'number' || s.v < 1) return null;
+      for (var stufe = s.v; stufe < STAND_VERSION; stufe++) {
+        if (typeof migrationen[stufe] !== 'function') return null;
+        s = migrationen[stufe](s) || s;
+        s.v = stufe + 1;
+      }
+      if (s.v !== STAND_VERSION || !Array.isArray(s.profiles)) return null;
+      /* Auch ein Stand der aktuellen Version wird ergaenzt: ein Feld, das
+         bei einer kaputten Speicherung fehlt, ist kein Grund, Profile und
+         Archiv zu verwerfen. */
+      standErgaenzen(s);
+      return s;
+    } catch (e) { return null; }
+  }
+
+  /* Fehlende Felder nachruesten - die Defaults, die ein Stand der aktuellen
+     Version haben muss. Wirft, wenn der Stand grundlegend kaputt ist
+     (ladeStand faengt das und sichert den Rohtext). */
+  function standErgaenzen(s) {
       if (!Array.isArray(s.history)) s.history = [];
       if (!Array.isArray(s.lineup)) s.lineup = [];
       if (!s.mode) s.mode = '501';
+      if (!s.settings || typeof s.settings !== 'object') s.settings = newState().settings;
       if (START_SCORES.indexOf(s.settings.start) < 0) s.settings.start = 501;
       if (s.game === undefined) s.game = null;
       /* Ein Finisher-Spiel ohne Runden kann es nicht geben – ein solcher
@@ -375,6 +528,12 @@
          auffliegen. Lieber verwerfen als abstürzen. */
       if (s.game && s.game.kind === 'finisher' && !Array.isArray(s.game.rounds)) s.game = null;
       if (s.game && s.game.kind === 'kaiwen' && !(Array.isArray(s.game.versuche) && s.game.versuche.length)) s.game = null;
+      /* Ein Spiel ohne Spielerliste kann es ebenso wenig geben: jeder
+         Spielbildschirm liest sie als Erstes. Ohne Spiel gehoert der
+         Bildschirm zurueck ins Setup. (Bis v3 fing das nur der Zufall ab:
+         solche Staende kamen ueber den .kaputt-Pfad als frischer Stand.) */
+      if (s.game && !Array.isArray(s.game.players) && !Array.isArray(s.game.p)) s.game = null;
+      if (!s.game && (SPIEL_SCREENS[s.screen] || s.screen === 'bulloff') && !(Array.isArray(s.matches) && s.matches.length)) s.screen = 'setup';
       if (s.settings.cricketScoring === undefined) s.settings.cricketScoring = 1;
       /* Vor der Wahl gab es nur Boost -- wer von damals kommt, behaelt das. */
       if (s.settings.rtwBoost === undefined) s.settings.rtwBoost = 1;
@@ -393,7 +552,7 @@
          dem neuen Startbild; der Merkwert haelt die Einzel-Dart-Grenze fest,
          solange "Standard" (immer die Aufnahme als Zahl) gewaehlt ist. */
       if (s.settings.tastatur !== 1) s.settings.tastatur = 0;
-      if (!(s.settings.dartModeMerk > 0)) s.settings.dartModeMerk = s.settings.dartModeFrom > 0 ? s.settings.dartModeFrom : 170;
+      if (!(s.settings.dartModeMerk > 0)) s.settings.dartModeMerk = s.settings.dartModeFrom > 0 ? s.settings.dartModeFrom : MAX_CHECKOUT;
       if (!(s.settings.quickLegs >= 1)) s.settings.quickLegs = 1;
       s.profiles.forEach(function (p, i) { if (typeof p.hue !== 'number') p.hue = HUES[i % HUES.length]; });
       /* Lieblingsdoppel -> Lieblingsgruppe (Checkout-Engine, Phase 2). */
@@ -425,7 +584,6 @@
          siehe ligaUnser(). */
       (s.history || []).forEach(function (h) { if (h && h.liga && Array.isArray(h.matches)) ligaUnsereIds(h); });
       return s;
-    } catch (e) { return null; }
   }
 
   /* Aus den Turnier-Spielern der ersten Version werden dauerhafte Profile. */
@@ -766,7 +924,7 @@
     m.p.forEach(function (id) {
       if (id === active) return;
       var r = remainingIn(leg, id);
-      if (r <= 170 && Checkout.possible(r, 3)) checkout = true;
+      if (r <= MAX_CHECKOUT && Checkout.possible(r, 3)) checkout = true;
     });
     if (!checkout && m.p.length > 1) {
       /* Entscheidend: im letzten moeglichen Satz steht jeder ein Leg vor dem
@@ -933,9 +1091,6 @@
      dort startet er am Board-iPad von selbst. In normalen Turnieren und im
      Schnellen Spiel laesst er sich per Knopf dazuschalten; nur allein gibt
      es ihn nicht (eine Seite des Bildes bliebe leer). */
-  function ligaEinzel() {
-    return !!(S.tour && S.tour.liga) && !(S.game && S.game.kind === 'quick');
-  }
   function turnierErlaubt() {
     if (S.game && S.game.kind === 'quick') return S.game.p.length > 1;
     return !!S.tour;
@@ -1367,10 +1522,10 @@
       vgl.neu.forEach(function (e) {
         if (schonDa[e.key]) { schonDa[e.key]--; return; }
         var v = e.v;
-        if (!v || v.b || (v.s !== 180 && v.s !== 60)) return;
+        if (!v || v.b || (v.s !== MAX_VISIT && v.s !== FEIER_60)) return;
         if (!beste || v.s > beste.s) beste = v;
       });
-      if (beste && beste.s === 180) feiere180(beste.p);
+      if (beste && beste.s === MAX_VISIT) feiere180(beste.p);
       else if (beste) feiere60(beste.p);
     }
 
@@ -1423,6 +1578,9 @@
         var lz = neu.legs.filter(function (l) { return l.winner; }).pop();
         UI.overlay = { type: 'leg-done', pid: lz.winner, satz: satzStand(neu).satzZu, fremd: true };
       }
+      /* Der andere hat das Leg-Ende zurueckgenommen (Undo): der Dialog
+         hier gehoert zu einem Leg, das es nicht mehr gibt. */
+      if (wonNeu < wonAlt && UI.overlay && UI.overlay.type === 'leg-done') UI.overlay = null;
     }
     if (S.screen === 'bulloff' && neu.started) S.screen = spielScreen(neu.kind);
     /* Konflikt: der andere war schneller. Steht meine Eingabe schon in
@@ -1525,11 +1683,49 @@
       (g.online.wartet ? ' · wird angelegt …' : st && st.stoerung ? ' · keine Verbindung' : '');
   }
 
-  function liveEnde(g) {
+  function liveEnde(g, ohneKonflikt) {
     if (!g || !g.online || !window.DartSync || !window.DartSync.live) return;
     if (g.online.wartet) return;   // nie beim Server angekommen
     var stand = S.game === g ? liveStand() : null;
-    window.DartSync.live.ende(g.online.sid, stand);
+    /* Auch ohne eigene ungesendete Aenderung reist die bekannte Version mit:
+       liveStand() ist dann null (Hash stimmt), aber der andere kann seit dem
+       letzten PUT etwas zurueckgenommen haben. Nur mit `seq` kann der Server
+       das merken - sonst schliesst er blind mit dem fremden Stand. */
+    if (!stand && S.game === g && g.online.seq) stand = { seq: g.online.seq };
+    var p = window.DartSync.live.ende(g.online.sid, stand);
+    if (!p || typeof p.then !== 'function') return;
+    /* 409: der andere hat nach meinem letzten Stand noch etwas geaendert
+       (etwa den Checkout zurueckgenommen). Dann nicht blind zumachen -
+       der frische Server-Stand wird wie jeder andere uebernommen, und wer
+       beenden wollte, prueft und tippt noch einmal. Andere Fehler schluckt
+       die Online-Schicht weiterhin selbst. `ohneKonflikt` (12-h-Aufraeumen):
+       ein uraltes Spiel wird nicht wiederbelebt, der Server raeumt es selbst. */
+    p.then(null, function (e) {
+      if (!e || e.status !== 409 || !e.stand || ohneKonflikt) return;
+      liveEndeKonflikt(g, e.stand);
+    });
+  }
+  function liveEndeKonflikt(g, spiel) {
+    if (S.game && S.game !== g) return;   // laengst ein neues Spiel angefangen: nicht dazwischenfunken
+    if (!S.game) {
+      /* Schon ins Archiv geschrieben: der Eintrag traegt den alten Stand -
+         weg damit, das Spiel laeuft weiter. */
+      S.history = S.history.filter(function (h) { return h.id !== g.id; });
+      S.game = g;
+      S.screen = spielScreen(g.kind);
+      /* Der alte Upload darf nicht stehen bleiben: die naechste Fassung
+         ersetzt ihn auf dem Server (sync.js schickt `ersetzen`). */
+      if (window.DartSync && typeof window.DartSync.spielZurueckziehen === 'function') window.DartSync.spielZurueckziehen(g.id);
+    }
+    g.online.seq = 0;   // damit der Server-Stand als neuer gilt (liveUebernehmen prueft seq)
+    liveUebernehmen(spiel, true);
+    /* War der Server-Stand schon "zu" (der andere hat inzwischen beendet),
+       hat liveUebernehmen das Spiel archiviert - dann kein "erneut beenden". */
+    if (S.game === g) {
+      UI.overlay = { type: 'hinweis', titel: 'Noch nicht beendet',
+        text: (spiel.geaendertVonName || 'Dein Mitspieler') + ' hat noch etwas geändert – bitte den Stand prüfen und dann erneut beenden.' };
+    }
+    save(); render();
   }
 
   /* Neues Spiel online anmelden. Klappt es nicht (kein Netz, Server weg),
@@ -1588,13 +1784,22 @@
     var text = JSON.stringify(neu);
     neu.online = liveMeta(spiel, text);
     liveNamenUebernehmen(neu);
+    /* Die halbfertige Aufnahme des Werfers kommt mit - wie in
+       liveUebernehmen gehoert sie in UI.darts, nicht in den Stand: bliebe
+       `offen` am Objekt, ginge der naechste PUT ohne sie hinaus (liveText
+       laesst den Schluessel weg), und der Werfer saehe seine Darts
+       verschwinden. Der Hash ist ueber den Text MIT `offen` gebildet,
+       genau wie der naechste eigene liveText ihn wieder liefert. */
+    var offen = Array.isArray(neu.offen) ? neu.offen.map(function (d) { return { m: d.m, n: d.n, v: d.v }; }) : [];
+    delete neu.offen;
     S.game = neu;
     S.mode = neu.kind;
     /* Aufstellung und Online-Schalter mitnehmen: "Nochmal spielen" soll
        hier dieselben Leute wieder online zusammenbringen. */
     S.lineup = (neu.players || []).slice();
     S.settings.online = 1;
-    UI.overlay = null; UI.darts = []; UI.input = ''; UI.error = ''; UI.mult = 1; UI.menu = false;
+    UI.overlay = null; UI.darts = offen; UI.input = ''; UI.error = ''; UI.mult = 1; UI.menu = false;
+    UI.dartsFremd = offen.length > 0; UI.dartsFremdZeit = Date.now();
     UI.turnier = false; UI.bullReihe = [];
     S.screen = neu.started ? spielScreen(neu.kind) : 'bulloff';
     save(); render();
@@ -1775,7 +1980,7 @@
    *   einfach durch sie hindurch; niemand muss auf das Ende warten.
    * - Sie liegt ausserhalb der Screens, render() fasst sie also nicht an.
    */
-  var FEIER_MS = 4600;
+  var FEIER_MS = 2500;
   /* Die Sechzig ist kurz: ein Puls („SECH-ZIG", bum-bum), dann wieder weg –
      sie kommt ja auch deutlich öfter als die 180. Genau so lang wie ihre
      Animation (1,2 s): kuerzer abgeraeumt wirkte der Loewe abgehackt und
@@ -1871,6 +2076,16 @@
       feierTimer = null;
     }, ruhig ? 900 : SECHZIG_MS);
   }
+  /* Geht ein Dialog auf (Checkout-Frage, Leg-Ende, Hinweis), ist die Feier
+     vorbei: sie laege sonst mit Blur und Konfetti ueber der Frage, die
+     gerade beantwortet werden soll. */
+  function feierAbbrechen() {
+    if (feierTimer) { clearTimeout(feierTimer); feierTimer = null; }
+    var box = $('feier');
+    if (!box || !box.classList.contains('an')) return;
+    box.classList.remove('an', 'sechzig');
+    box.innerHTML = '';
+  }
 
   /* Aufnahme abschließen und Leg-/Matchstand fortschreiben.
      k = Einzeldarts (nur im Einzel-Dart-Modus vorhanden, für Doppelquote). */
@@ -1889,9 +2104,9 @@
        genau die Zwischenaktion, die die SWO dem Schreiber verbietet. */
     var ligaMatch = m.kind !== 'quick' && S.tour && S.tour.liga && !S.tour.liga.uebung;
     // Höher geht es mit drei Darts nicht.
-    if (!isBust && score === 180 && !ligaMatch) feiere180(pid);
+    if (!isBust && score === MAX_VISIT && !ligaMatch) feiere180(pid);
     // Die 60 gehört dem Löwen – bei jeder geworfenen 60 (siehe feiere60).
-    else if (!isBust && score === 60 && !ligaMatch) feiere60(pid);
+    else if (!isBust && score === FEIER_60 && !ligaMatch) feiere60(pid);
 
     UI.input = ''; UI.darts = []; UI.mult = 1; UI.error = '';
     /* "Punkte" von Hand gilt nur fuer diese Aufnahme, danach entscheidet
@@ -1957,7 +2172,7 @@
     var leg = activeLeg(m);
     var rest = remainingIn(leg, activePlayer(leg, m));
 
-    if (v > 180) { UI.error = 'Maximal 180'; UI.input = ''; render(); return; }
+    if (v > MAX_VISIT) { UI.error = 'Maximal ' + MAX_VISIT; UI.input = ''; render(); return; }
     if (IMPOSSIBLE[v]) { UI.error = v + ' ist mit 3 Darts nicht möglich'; UI.input = ''; render(); return; }
     /* Einzeldarts dieser Aufnahme stehen schon: eine Gesamtzahl daneben
        wuerde sie verwerfen (auch beim Mitspieler im Online-Spiel). */
@@ -2007,7 +2222,7 @@
     var next = UI.input + k;
     if (next.length > 3) return;
     var val = parseInt(next, 10);
-    if (val > 180) { UI.error = 'Maximal 180'; render(); return; }
+    if (val > MAX_VISIT) { UI.error = 'Maximal ' + MAX_VISIT; render(); return; }
     tipp();
     UI.input = String(val);
     /* Keine automatische Uebernahme mehr: jede Aufnahme wird mit OK
@@ -2080,7 +2295,7 @@
     var v = leg && leg.visits[idx];
     if (!v) return 'Aufnahme nicht gefunden.';
     if (v.c) return 'Ein Finish lässt sich nicht ändern – dafür bitte zurücknehmen.';
-    if (value > 180) return 'Maximal 180.';
+    if (value > MAX_VISIT) return 'Maximal ' + MAX_VISIT + '.';
     if (IMPOSSIBLE[value]) return value + ' ist mit 3 Darts nicht möglich.';
 
     var backup = { s: v.s, b: v.b, o: v.o, k: v.k, d: v.d };
@@ -2171,7 +2386,7 @@
       checkouts: 0, doubleAttempts: 0, doubleHits: 0,
       highCO: 0, highFinishes: 0, highScore: 0,
       s180: 0, s140: 0, s100: 0, s60: 0,
-      bestLeg: null, tournaments: 0, tourWins: 0,
+      bestLeg: null, tournaments: 0, tourWins: 0, ligaTage: 0,
       cricketGames: 0, cricketWins: 0, cricketMarks: 0, cricketDarts: 0,
       rtwGames: 0, rtwWins: 0, rtwBest: null,
       finGames: 0, finWins: 0, finRounds: 0, finDarts: 0, finBest: null, finHigh: 0,
@@ -2268,7 +2483,7 @@
               st.points += v.s;
               rest[v.p] = before - v.s;
               if (v.s > st.highScore) st.highScore = v.s;
-              if (v.s === 180) st.s180++;
+              if (v.s === MAX_VISIT) st.s180++;
               else if (v.s >= 140) st.s140++;
               else if (v.s >= 100) st.s100++;
               else if (v.s >= 60) st.s60++;
@@ -2341,8 +2556,12 @@
           if (!m.done) return;
           played[m.p[0]] = 1; played[m.p[1]] = 1;
         });
-        Object.keys(played).forEach(function (id) { if (map[id]) map[id].tournaments++; });
-        if (h.winner && map[h.winner] && played[h.winner]) map[h.winner].tourWins++;
+        /* Ein Ligaspieltag (auch ein Nachtrag) ist kein Turnier: er zaehlt
+           als Ligaspieltag, nicht unter "Turniere gespielt". Einen
+           Turniersieg gibt es dort ohnehin nicht (archiveTournament). */
+        var zaehler = h.liga ? 'ligaTage' : 'tournaments';
+        Object.keys(played).forEach(function (id) { if (map[id]) map[id][zaehler]++; });
+        if (!h.liga && h.winner && map[h.winner] && played[h.winner]) map[h.winner].tourWins++;
         return;
       }
       if (kind === 'cricket') {
@@ -2453,8 +2672,11 @@
       var key = function (id) {
         if (!id || unsere[id]) return id;
         if (schluessel[id]) return schluessel[id];
+        /* Der beim Archivieren festgehaltene Name geht vor: er aendert sich
+           nicht mehr, wenn jemand das Gastprofil spaeter umbenennt. Aeltere
+           Eintraege ohne `namen` laufen weiter ueber das Profil. */
         var pr = S.profiles.filter(function (x) { return x.id === id; })[0];
-        var nm = String((pr && (pr.voll || pr.name)) || q.namen[id] || 'Unbekannt').trim();
+        var nm = String(q.namen[id] || (pr && (pr.voll || pr.name)) || 'Unbekannt').trim();
         /* Andere Geraete kennen den Namen nur auf 30 Zeichen gekuerzt (Sync):
            verglichen wird deshalb ueber die ersten 30. */
         var k = 'lg|' + team + '|' + nm.toLowerCase().replace(/\s+/g, ' ').slice(0, 30);
@@ -2656,7 +2878,6 @@
 
   /* ================= Cricket ================= */
   var CRICKET_NUMBERS = [20, 19, 18, 17, 16, 15, 25];
-  function cricketLabel(n) { return n === 25 ? 'Bull' : String(n); }
 
   /* Der Zustand wird immer aus der Wurfliste neu aufgebaut – so ist jeder
      Dart einzeln rücknehmbar und nichts kann auseinanderlaufen. */
@@ -3268,8 +3489,17 @@
       });
       if (S.history.length > MAX_HISTORY) S.history.length = MAX_HISTORY;
       // Ligaspiele behalten ihre Team-Daten – die Auswertung soll später noch
-      // wissen, gegen wen und an welchem Spieltag das war.
-      if (S.tour && S.tour.liga) S.history[0].liga = S.tour.liga;
+      // wissen, gegen wen und an welchem Spieltag das war. Dazu die Namen
+      // aller Beteiligten, wie sie HEUTE heissen: die Liga-Auswertung
+      // erkennt einen Gegner ueber Team und Namen wieder, und ein spaeter
+      // umbenanntes Gastprofil darf denselben Gegner nicht in zwei Zeilen
+      // spalten (ligaTeamDaten bevorzugt diese Namen).
+      if (S.tour && S.tour.liga) {
+        S.history[0].liga = S.tour.liga;
+        var namen = {};
+        tourPlayers().forEach(function (id) { var pr = profile(id); namen[id] = String(pr.voll || pr.name || '').slice(0, 60); });
+        S.history[0].namen = namen;
+      }
       meldeNeuesSpiel(S.history[0]);
     }
     S.matches = [];
@@ -3431,7 +3661,13 @@
         geaendert++;
         return;
       }
-      if (vorhanden[s.id] || !s.payload) return;
+      /* Ein Eintrag, der selbst vom Server kam (`von`), ist eine reine Kopie:
+         liefert der Server ihn mit neuer Fassung noch einmal (der Eintragende
+         hat ihn nach einem Konflikt ersetzt), wird die Kopie ausgetauscht.
+         Eigene Eintraege bleiben, wie sie sind. */
+      var alt = vorhanden[s.id];
+      var ersetzt = !!(alt && alt.von && s.payload);
+      if ((alt && !ersetzt) || !s.payload) return;
       if (typeof s.id !== 'string' || !ID_OK.test(s.id) || !spielGueltig(s.payload)) return;   // kaputt: draussen lassen
       var eintrag = s.payload;
       eintrag.id = s.id;
@@ -3451,7 +3687,12 @@
       // Wer es eingetragen hat, bleibt sichtbar – bei fremden Einträgen ist
       // das die einzige Möglichkeit nachzuvollziehen, wo sie herkommen.
       if (s.eingetragenVonName) eintrag.von = s.eingetragenVonName;
-      S.history.push(eintrag);
+      if (ersetzt) {
+        var stelle = S.history.indexOf(alt);
+        if (stelle >= 0) S.history[stelle] = eintrag; else S.history.push(eintrag);
+      } else {
+        S.history.push(eintrag);
+      }
       vorhanden[s.id] = eintrag;
       geaendert++;
     });
@@ -3630,9 +3871,48 @@
     if (S.screen === 'liga') renderLiga();
     if (S.screen === 'bericht') renderBericht();
     if (S.screen === 'konto' && window.DartKonto) window.DartKonto.render();
+    if (S.screen === 'konto') renderKontoFehlschlaege();
     renderSyncStatus();
     renderOverlay();
     planeBotZug();
+    hashKontoEinloesen();
+  }
+
+  /* Spiele, die die Warteschlange endgueltig abgehakt hat (4xx ausser 429,
+     etwa "Mitspieler ist kein bekannter Account" oder ein zu grosser
+     Eintrag): sie bleiben nur auf diesem Geraet und tauchten bisher nirgends
+     auf. Hier im Konto kurz gelistet, mit dem Servertext als Grund. */
+  function renderKontoFehlschlaege() {
+    var box = $('konto-fehlschlaege');
+    if (!box) return;
+    var liste = window.DartSync && typeof window.DartSync.fehlgeschlagen === 'function' ? window.DartSync.fehlgeschlagen() : null;
+    if (!liste || !liste.length) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+    box.classList.remove('hidden');
+    var zeilen = liste.slice().reverse().map(function (f) {
+      var h = S.history.filter(function (x) { return x && x.id === f.id; })[0];
+      var wann = fmtDate(Date.parse(f.zeit) || (h && h.at) || 0) || '–';
+      var was = h ? kindName(h.kind || '501') + (h.players || h.lineup ? ' · ' + (h.players || h.lineup).map(pname).join(', ') : '') : 'Spiel ' + f.id;
+      return '<div class="pline"><span>' + esc(wann) + ' – ' + esc(was) + '</span><b>' + esc(f.grund || '') + '</b></div>';
+    });
+    box.innerHTML = '<div class="card"><h2>Nicht hochgeladen</h2>' + zeilen.join('') +
+      '<p class="hint">Diese Spiele liegen nur auf diesem Gerät; der Server hat sie abgelehnt.</p>' +
+      (typeof window.DartSync.fehlgeschlagenLeeren === 'function'
+        ? '<button class="btn ghost full" data-action="konto-fehlschlaege-leeren">Liste leeren</button>' : '') + '</div>';
+  }
+
+  /* Aus einer Mitteilungs-Mail (List-Unsubscribe): <app>/#konto fuehrt zu
+     den Benachrichtigungs-Einstellungen. Der Hash wird beim Start gelesen
+     und gleich entfernt (sonst spraenge jedes Neuladen wieder dorthin); ist
+     die Anmeldung noch unterwegs, wartet das Einloesen bis zum ersten
+     Zeichnen mit bekanntem Konto. Mehr Hash-Routing gibt es nicht. */
+  function hashKontoEinloesen() {
+    if (!UI.hashKonto) return;
+    if (!(window.DartKonto && window.DartKonto.aktion && eigeneKontoId() && profile(eigeneKontoId()))) return;
+    UI.hashKonto = false;
+    setTimeout(function () {
+      eigenesProfilOeffnen();
+      window.DartKonto.aktion('konto-mitteilungen', null);
+    }, 0);
   }
 
   /* Schmale Zeile über der Navigation: was noch nicht beim Server ist.
@@ -3983,29 +4263,84 @@
     return !!(lg && !lg.uebung && !lg.abgeschlossen && !S.tour.beendet && S.matches.length);
   }
 
-  /* Man of the Day je Team: die meisten gewonnenen Einzel, bei Gleichstand
-     der hoehere 3-Dart-Average. */
+  /* Man of the Day je Team: die meisten gewonnenen Einzel, dann die bessere
+     Leg-Differenz, dann der hoehere 3-Dart-Average - der aber nur, wenn
+     beide einen haben (ein Nur-Ergebnis-Einzel hat Average 0, und dann
+     entschiede der Eingabeweg statt der Leistung). Bleibt es gleich, ist
+     der Titel geteilt: das geht per Mitteilung an alle hinaus, da darf
+     nicht still der Erste der Aufstellung gewinnen.
+     Ergebnis: der Beste mit `geteilt` (die Gleichauf-Liegenden) und `namen`
+     (alle Traeger), oder null. */
   function manOfTheDay(ids, stMap) {
-    var bester = null;
-    ids.forEach(function (id) {
-      var st = stMap[id];
-      if (!st || !st.matches) return;
-      if (!bester || st.won > bester.won || (st.won === bester.won && st.avg > bester.avg)) bester = st;
+    var kandidaten = ids.map(function (id) { return stMap[id]; }).filter(function (st) { return st && st.matches; });
+    if (!kandidaten.length) return null;
+    var vergleich = function (a, b) {
+      if (a.won !== b.won) return b.won - a.won;
+      var ad = a.legsWon - a.legsLost, bd = b.legsWon - b.legsLost;
+      if (ad !== bd) return bd - ad;
+      if (a.darts && b.darts && a.avg !== b.avg) return b.avg - a.avg;
+      return 0;
+    };
+    kandidaten.sort(vergleich);
+    var bester = kandidaten[0];
+    var geteilt = kandidaten.slice(1).filter(function (st) { return vergleich(bester, st) === 0; });
+    return {
+      id: bester.id, name: bester.name, won: bester.won, matches: bester.matches, darts: bester.darts, avg: bester.avg,
+      geteilt: geteilt, namen: [bester].concat(geteilt).map(function (st) { return st.name; })
+    };
+  }
+  /* Der Man of the Day als Text fuer die Mitteilung. */
+  function manOfTheDayText(mod, nameFn) {
+    if (!mod) return '';
+    var namen = [mod].concat(mod.geteilt).map(function (st) { return nameFn ? nameFn(st.id) : st.name; });
+    return (mod.geteilt.length ? 'geteilt: ' + namen.join(' & ') + ' (je ' : namen[0] + ' (') + plural(mod.won, 'Sieg', 'Siege') + ')';
+  }
+
+  /*
+   * Alle Highlights, die der Spielberichtsbogen abfragt, je Spieler und je
+   * Leg: jeder 180er, jedes Finish ab 100 und jedes gewonnene 501er-Leg bis
+   * 21 Darts - nicht nur das beste je Spieler. Die Ligaleitung fuehrt sie
+   * als Listen (js/liga-daten.js), der Bogen hat je Zeile eine. Finishes
+   * absteigend, Shortlegs aufsteigend sortiert.
+   */
+  function legHighlights(matches, start, ids) {
+    var map = {};
+    var eintrag = function (id) { if (!map[id]) map[id] = { s180: 0, finishes: [], shortlegs: [] }; return map[id]; };
+    (ids || []).forEach(eintrag);
+    (matches || []).forEach(function (m) {
+      if (!m || m.kampflos || !Array.isArray(m.legs)) return;
+      m.legs.forEach(function (leg) {
+        var legVon = leg && typeof leg.start === 'number' ? leg.start : (start || 501);
+        (leg.visits || []).forEach(function (v) {
+          if (!v || v.b) return;
+          if (v.s === MAX_VISIT) eintrag(v.p).s180++;
+          if (v.c && v.s >= HIGHFINISH_AB) eintrag(v.p).finishes.push(v.s);
+        });
+        if (leg.winner && legVon === 501) {
+          var darts = dartsInLeg(leg, leg.winner);
+          if (darts > 0 && darts <= SHORTLEG_BIS) eintrag(leg.winner).shortlegs.push(darts);
+        }
+      });
     });
-    return bester;
+    Object.keys(map).forEach(function (id) {
+      map[id].finishes.sort(function (a, b) { return b - a; });
+      map[id].shortlegs.sort(function (a, b) { return a - b; });
+    });
+    return map;
   }
 
   /* Die Highlights eines Teams (180er, High-Finishes ab 100, Shortlegs bis
-     21 Darts) als Zeilen. */
-  function teamHighlights(ids, stMap) {
+     21 Darts) als drei Zeilen mit <b>Rubrik:</b> - jedes Finish und jedes
+     Shortleg einzeln. nameFn: ligaName (buergerlich) oder pname. */
+  function teamHighlights(ids, hlMap, nameFn) {
     var hl180 = [], hlFin = [], hlLeg = [], zeilen = [];
     ids.forEach(function (id) {
-      var st = stMap[id];
-      if (!st) return;
-      var nm = esc(ligaName(id));
-      if (st.s180 > 0) hl180.push(nm + (st.s180 > 1 ? ' ×' + st.s180 : ''));
-      if (st.highCO >= 100) hlFin.push(st.highCO + ' ' + nm);
-      if (st.bestLeg && st.bestLeg <= 21) hlLeg.push(st.bestLeg + ' Darts ' + nm);
+      var h = hlMap[id];
+      if (!h) return;
+      var nm = esc((nameFn || ligaName)(id));
+      if (h.s180 > 0) hl180.push(nm + (h.s180 > 1 ? ' ×' + h.s180 : ''));
+      h.finishes.forEach(function (f) { hlFin.push(f + ' ' + nm); });
+      h.shortlegs.forEach(function (d) { hlLeg.push(d + ' Darts ' + nm); });
     });
     if (hl180.length) zeilen.push('<b>180er:</b> ' + hl180.join(' · '));
     if (hlFin.length) zeilen.push('<b>High-Finishes:</b> ' + hlFin.join(' · '));
@@ -4046,7 +4381,7 @@
     return map;
   }
 
-  /* Punkte nach SWO-Staffel fuer ein archiviertes Ligaspiel. */
+  /* Punkte (1 je gewonnenem Einzel) fuer ein archiviertes Ligaspiel. */
   function ligaErgebnisAus(h) {
     var lg = h.liga, gewinnLegs = Math.floor(((h.settings && h.settings.bestOf) || 3) / 2) + 1;
     var e = { wirP: 0, sieP: 0, wirS: 0, sieS: 0 };
@@ -4086,24 +4421,14 @@
       }
     });
     /* Die Highlights, die der Spielberichtsbogen abfragt: 180er,
-       High-Finishes ab 100 und Shortlegs bis 21 Darts – nur unsere Seite. */
-    var stMap = stats();
-    var hl180 = [], hlFin = [], hlLeg = [];
-    lg.wir.forEach(function (id) {
-      var s = stMap[id];
-      if (!s) return;
-      if (s.s180 > 0) hl180.push(esc(s.name) + (s.s180 > 1 ? ' ×' + s.s180 : ''));
-      if (s.highCO >= 100) hlFin.push(s.highCO + ' ' + esc(s.name));
-      if (s.bestLeg && s.bestLeg <= 21) hlLeg.push(s.bestLeg + ' Darts ' + esc(s.name));
-    });
-    if (hl180.length) d.hl.push('<b>180er:</b> ' + hl180.join(' · '));
-    if (hlFin.length) d.hl.push('<b>High-Finishes:</b> ' + hlFin.join(' · '));
-    if (hlLeg.length) d.hl.push('<b>Shortlegs:</b> ' + hlLeg.join(' · '));
+       High-Finishes ab 100 und Shortlegs bis 21 Darts – nur unsere Seite,
+       jedes Leg einzeln (legHighlights). */
+    d.hl = teamHighlights(lg.wir, legHighlights(S.matches, tourStart(), lg.wir), pname);
     return d;
   }
 
   function ligaTeamsHtml(d) {
-    /* Gross stehen die PUNKTE nach SWO-Staffel - das ist die Wertung, die
+    /* Gross stehen die PUNKTE (1 je gewonnenem Einzel) - das ist die Wertung, die
        in die Ligatabelle geht. Einzel und Legs stehen darunter. */
     return '<div class="lg-teams">' +
       '<div class="lg-team wir"><div class="lg-zahl">' + d.wirP + '</div>' +
@@ -4112,12 +4437,6 @@
       '<div class="lg-team sie"><div class="lg-zahl">' + d.sieP + '</div>' +
         '<div class="lg-name">' + esc(S.tour.liga.gegner) + '</div></div>' +
       '</div>';
-  }
-
-  function ligaHighlightsHtml(d) {
-    if (!d.hl.length) return '';
-    return '<div class="lg-hl"><div class="lg-hl-titel">Für den Spielbericht</div>' +
-      d.hl.map(function (z) { return '<div>' + z + '</div>'; }).join('') + '</div>';
   }
 
   function renderTournament() {
@@ -4957,7 +5276,7 @@
     var eigen = !!eigeneKontoId() && p.id === eigeneKontoId();
     var nutzer = eigen ? window.DartKonto.nutzer() : null;
     UI.profilEdit = { name: p.name || '', kuerzel: typeof p.kuerzel === 'string' ? p.kuerzel : '', vor: t.vor, nach: t.nach,
-      email: nutzer ? nutzer.email || '' : null, emailAlt: nutzer ? nutzer.email || '' : null,
+      email: nutzer ? nutzer.email || '' : null, emailAlt: nutzer ? nutzer.email || '' : null, emailPass: '',
       hue: typeof p.hue === 'number' ? p.hue : hue(p.id), wurfhand: p.wurfhand === 'L' || p.wurfhand === 'R' ? p.wurfhand : null,
       avatar: p.avatar || null, fehler: '', doppeltOk: null, laeuft: false };
     UI.profilPanel = 'edit'; UI.profilGruppenWahl = false;
@@ -4995,6 +5314,14 @@
           '</div>' +
           '<p class="pa-text">Der echte Name steht nur auf Spielberichten und in der Liga.</p>' +
           (eigen ? feld('pe-email', 'E-Mail', d.email, 'placeholder="E-Mail" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off"') : '') +
+          /* Eine neue E-Mail nimmt der Server nur mit dem aktuellen Passwort
+             an. Das Feld steht immer da (Tippen zeichnet nicht neu, sonst
+             koennte es nicht erst beim Aendern der Adresse erscheinen) und
+             wird nur gebraucht, wenn die Adresse wirklich wechselt. */
+          (eigen
+            ? '<label class="pe-feld"><span class="kt">Aktuelles Passwort (nur bei neuer E-Mail)</span>' +
+              '<input class="pe-input" type="password" data-role="pe-email-pass" value="' + esc(d.emailPass || '') + '" autocomplete="current-password" placeholder="zum Bestätigen der neuen E-Mail"></label>'
+            : '') +
           '<div class="pe-feld"><span class="kt">Wurfhand</span><div class="dl-segment pe-hand">' +
             '<button data-action="pe-hand" data-value="R" class="' + (d.wurfhand === 'R' ? 'active' : '') + '">Rechts</button>' +
             '<button data-action="pe-hand" data-value="L" class="' + (d.wurfhand === 'L' ? 'active' : '') + '">Links</button></div></div>' +
@@ -5028,8 +5355,9 @@
        Server prueft Form und Freiheit, erst dann wird gespeichert. */
     var neueMail = d.email === null ? null : (d.email || '').trim();
     if (neueMail !== null && neueMail !== d.emailAlt && window.DartKonto && window.DartKonto.emailAendern) {
+      if (!(d.emailPass || '').length) { d.fehler = 'Für eine neue E-Mail bitte das aktuelle Passwort eingeben.'; render(); return; }
       d.laeuft = true; d.fehler = ''; render();
-      window.DartKonto.emailAendern(neueMail).then(function () { d.laeuft = false; fertig(); }, function (err) {
+      window.DartKonto.emailAendern(neueMail, d.emailPass).then(function () { d.laeuft = false; fertig(); }, function (err) {
         d.laeuft = false; d.fehler = err && err.message ? err.message : 'Die E-Mail ließ sich nicht ändern.'; render();
       });
       return;
@@ -5313,7 +5641,7 @@
 
     /* Liste */
     var zeilen = [];
-    for (var r = 170; r >= 2; r--) {
+    for (var r = MAX_CHECKOUT; r >= 2; r--) {
       var hatEigen = /[^|]/.test(String(eig[r] || ''));
       if (t.filter === 'eigene' && !hatEigen) continue;
       var w = Checkout.suggest(r, 3, ld), st = w ? null : Checkout.stellwurf(r, 3, ld);
@@ -5441,6 +5769,7 @@
         line('Legs gewonnen / verloren', st.legsWon + ' / ' + st.legsLost) +
         line('Turniere gespielt', st.tournaments) +
         line('Turniersiege', st.tourWins) +
+        (st.ligaTage ? line('Ligaspieltage', st.ligaTage) : '') +
       '</div>' +
 
       (st.cricketGames ? '<div class="card"><h2>Cricket</h2>' +
@@ -5617,7 +5946,7 @@
     var dbl = DOPPEL_WAHL.indexOf(p.dbl) >= 0 ? p.dbl : null;
     var bisher = dbl || alt ? { dbl: dbl, tabelle: alt && typeof alt === 'object' ? alt : null } : null;
     var out = [];
-    for (var r = 2; r <= 170; r++) {
+    for (var r = 2; r <= MAX_CHECKOUT; r++) {
       var neu = String(tabelle[r] || '').split('|')[0];
       var alt = wegText(r, bisher);
       if (neu && alt !== neu) out.push({ rest: r, alt: alt, neu: neu });
@@ -5734,6 +6063,18 @@
   /* ================= Liga-Spielplan ================= */
 
   var ligaZusagen = null;   // { terminId: [{id, name, hue, status}] } vom Server
+  /* "Ich bin dabei" kam nicht beim Server an: sichtbar sagen, statt still
+     zu schweigen - sonst glaubt der Spieler, er habe zugesagt, und die
+     Erinnerung kommt trotzdem. Die Leiste "Kein Netz" (sync.js) steht
+     daneben; hier der Hinweis zur konkreten Handlung. */
+  function zusageFehlgeschlagen(e) {
+    var offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+    UI.overlay = { type: 'hinweis', titel: offline ? 'Kein Netz' : 'Zusage nicht gespeichert',
+      text: offline
+        ? 'Die Zusage kam nicht beim Server an. Sobald wieder Netz da ist, bitte erneut tippen.'
+        : 'Der Server hat die Zusage nicht angenommen' + (e && e.message ? ' (' + e.message + ')' : '') + '. Bitte später erneut tippen.' };
+    render();
+  }
   /* Bild und Farbe zu einer Zusage kommen aus dem Kader (der Server schickt
      keine Fotos mehr mit); kennt das Geraet den Spieler nicht, reichen
      Name und Farbton aus der Antwort. */
@@ -5876,7 +6217,7 @@
     $('kasse-karte').innerHTML =
       '<div class="liga-karte weiss kasse-stand">' +
         '<div class="lk-kopf"><span class="lk-crew-titel">Kassenstand · Kassenjahr ' + konfig.jahr + '</span>' +
-          '<span class="hint">Kassenwart/in: ' + esc(((d && d.kassenwarte) || []).join(', ') || 'noch nicht festgelegt') + '</span></div>' +
+          '<span class="hint">Kasse führt: ' + esc(((d && d.kassenwarte) || []).join(', ') || 'noch offen') + '</span></div>' +
         '<span class="ks-saldo ' + (saldo < 0 ? 'minus' : 'plus') + '">' + euro(saldo) + '</span>' +
         '<div class="ks-drei">' +
           '<div><span class="lk-crew-titel">Anfang</span><b>' + euro(konfig.anfangsbestand) + '</b></div>' +
@@ -5889,7 +6230,7 @@
         ? '<div class="kasse-form' + (bearbeite ? ' bearbeiten' : '') + '">' +
             '<h3>' + (bearbeite ? 'Buchung Nr. ' + (eintraege.indexOf(bearbeite) + 1) + ' ändern' : 'Eintragen: Einzahlung oder Ausgabe') + '</h3>' +
             (bearbeite ? '' : '<p class="hint">Jede Einzahlung und jede Ausgabe hier eintragen – sie steht sofort im Kassenbuch. ' +
-              (((d && d.kassenwarte) || []).join(', ') || 'Der Kassenwart') + ' prüft und verwaltet die Buchungen.</p>') +
+              (((d && d.kassenwarte) || []).join(', ') || 'Wer die Kasse führt,') + ' prüft und verwaltet die Buchungen.</p>') +
             '<div class="options" id="kasse-art">' +
               '<button data-action="kasse-art" data-value="ein" class="' + (art === 'ein' ? 'active' : '') + '">Einnahme</button>' +
               '<button data-action="kasse-art" data-value="aus" class="' + (art === 'aus' ? 'active' : '') + '">Ausgabe</button>' +
@@ -5917,7 +6258,7 @@
                   : '<span></span>') +
             '</div>' +
             '<p class="hint" id="kasse-meldung"></p>' +
-            (wart ? '<details class="kasse-konfig"><summary>Kassenjahr und Anfangsbestand (Kassenwart)</summary>' +
+            (wart ? '<details class="kasse-konfig"><summary>Kassenjahr und Anfangsbestand (Kasse)</summary>' +
               '<div class="zeile">' +
                 '<input id="kasse-jahr" type="number" min="2000" max="2100" value="' + konfig.jahr + '" aria-label="Kassenjahr">' +
                 '<input id="kasse-anfang" type="text" inputmode="decimal" value="' + (konfig.anfangsbestand / 100).toFixed(2).replace('.', ',') + '" aria-label="Anfangsbestand in Euro">' +
@@ -5950,7 +6291,7 @@
         var wo = h.liga.nr + '. Spieltag · Einzel ' + (mi + 1);
         m.legs.forEach(function (leg) {
           (leg.visits || []).forEach(function (v) {
-            if (v.s === 180 && !v.b && unsere[v.p]) h180.push({ n: pname(v.p), d: wo, v: '180' });
+            if (v.s === MAX_VISIT && !v.b && unsere[v.p]) h180.push({ n: pname(v.p), d: wo, v: '180' });
           });
           if (leg.winner && unsere[leg.winner]) {
             var eigene = (leg.visits || []).filter(function (v) { return v.p === leg.winner; });
@@ -6197,8 +6538,13 @@
     $('liga-sub').textContent = '5. Liga · ' + LIGA.saison;
 
     var tab = UI.ligaTab || 'plan';
+    /* Die Kasse ist Vereinssache: Gast-Konten bekommen sie vom Server nicht
+       (403) - dann auch keinen Reiter, der ins Leere fuehrt. */
+    var ohneKasse = ichBinGastKonto();
+    if (ohneKasse && tab === 'kasse') { tab = 'plan'; UI.ligaTab = 'plan'; }
     $('liga-tabs').querySelectorAll('button').forEach(function (b) {
       b.classList.toggle('active', b.getAttribute('data-tab') === tab);
+      if (b.getAttribute('data-tab') === 'kasse') b.classList.toggle('hidden', ohneKasse);
     });
     $('liga-plan').classList.toggle('hidden', tab !== 'plan');
     $('liga-training').classList.toggle('hidden', tab !== 'training');
@@ -6792,7 +7138,9 @@
       subText = qSt
         ? (qSt.gewinnSaetze > 1 ? 'Satz ' + qSt.satzNr + ' · ' : '') + 'Leg ' + (m.done ? qSt.legNr - 1 : qSt.legNr) +
           ' · ' + dauerText(m) + ' · ' + matchStart(m)
-        : plural(m.p.length, 'Spieler', 'Spieler') + ' · ' + matchStart(m) + ' Double Out';
+        /* Knapp: "2 Spieler · 501 DO" statt "... Double Out" - der volle
+           Text war am Handy abgeschnitten ("501 D…"). */
+        : plural(m.p.length, 'Spieler', 'Spieler') + ' · ' + matchStart(m) + ' DO';
     } else {
       var idx = S.matches.indexOf(m);
       $('game-match-label').textContent = 'Spiel ' + (idx + 1) + ' von ' + S.matches.length;
@@ -6819,6 +7167,7 @@
     $('game-swap').classList.toggle('hidden', fern);
     $('game-menu-kamera').classList.toggle('hidden', !window.DartKamera);
     $('game-menu-overlay').classList.toggle('hidden', !UI.menu);
+    menueFokus($('game-menu-overlay'));
     if (UI.menu) {
       $('game-menu-titel').textContent = $('game-match-label').textContent;
       document.querySelector('#game-menu-overlay .game-menu-sub').textContent = $('game-leg-label').textContent;
@@ -7268,6 +7617,7 @@
       ? '<b>' + esc(pname(g.winner)) + '</b> ' + (n < 2 ? 'hat alles zu' : 'gewinnt')
       : '<span class="muted">Am Wurf</span> <b>' + esc(pname(active)) + '</b>';
     $('cricket-menu-overlay').classList.toggle('hidden', !UI.menu);
+    menueFokus($('cricket-menu-overlay'));
     if (UI.menu) document.querySelector('#cricket-menu-overlay .game-menu-sub').textContent = $('cricket-sub').textContent;
   }
 
@@ -7330,6 +7680,7 @@
           '<span class="muted">Am Wurf</span> <b>' + esc(pname(active)) + '</b> <span class="muted">auf</span> <b>' +
           (st.target[active] === 25 ? 'Bull' : st.target[active]) + '</b>';
     $('rtw-menu-overlay').classList.toggle('hidden', !UI.menu);
+    menueFokus($('rtw-menu-overlay'));
     if (UI.menu) document.querySelector('#rtw-menu-overlay .game-menu-sub').textContent = $('rtw-sub').textContent;
 
     /*
@@ -7387,23 +7738,6 @@
     $('rtw-pad').innerHTML = treffer + miss;
   }
 
-  /* Wie weit ist der, der gerade wirft? Die Reihe zeigt alle 21 Stationen –
-     die 20 Zahlen und den Bull – und markiert die erledigten. */
-  function rtwFortschritt(st, pid) {
-    var ziel = st.target[pid];
-    var fertig = st.finished[pid] ? 21 : (ziel === 25 ? 20 : ziel - 1);
-    var punkte = '';
-    for (var i = 0; i < 21; i++) {
-      punkte += '<span class="' + (i < fertig ? 'ok' : i === fertig ? 'jetzt' : '') +
-        (i === 20 ? ' bull' : '') + '"></span>';
-    }
-    return '<div class="rtw-fortschritt">' +
-      '<div class="pfad">' + punkte + '</div>' +
-      '<div class="txt" id="rtw-fortschritt-txt">Station ' + Math.min(fertig + 1, 21) + ' von 21 · ' +
-        plural(st.darts[pid], 'Dart', 'Darts') + ' geworfen</div>' +
-      '</div>';
-  }
-
   function throwLabel(t) {
     if (!t.n) return '0';
     if (t.n === 25) return t.m === 2 ? 'Bull×2' : 'Bull';
@@ -7440,10 +7774,6 @@
       if (S.history[k].id === id) return { g: S.history[k], live: false };
     }
     return null;
-  }
-
-  function statRow(label, value, hint) {
-    return '<div class="pline"><span>' + label + (hint ? ' <i>' + hint + '</i>' : '') + '</span><b>' + value + '</b></div>';
   }
 
   /* Die Aufnahmen einer Runde, fürs Protokoll nachgespielt – dieselbe
@@ -7575,7 +7905,7 @@
     var st = finisherState(g);
     var pid = g.players[st.turn];
     var rest = st.rest[pid], frei = 3 - st.inVisit;
-    if (total > 180 || IMPOSSIBLE[total] || !dartsFuerPunkte(total, frei)) {
+    if (total > MAX_VISIT || IMPOSSIBLE[total] || !dartsFuerPunkte(total, frei)) {
       UI.error = total + ' ist mit ' + plural(frei, 'Dart', 'Darts') + ' nicht möglich'; UI.input = ''; render(); return;
     }
     var nach = rest - total;
@@ -7682,6 +8012,7 @@
         : '<span class="muted">Am Wurf</span> <b>' + esc(pname(aktiv)) + '</b>' +
           '<span class="muted"> · Rest ' + st.rest[aktiv] + '</span>';
     $('fin-menu-overlay').classList.toggle('hidden', !UI.menu);
+    menueFokus($('fin-menu-overlay'));
     if (UI.menu) document.querySelector('#fin-menu-overlay .game-menu-sub').textContent = $('fin-sub').textContent;
     /* Stechen: gleichgezogen, jetzt entscheidet der Bull. Wie beim Anwurf
        wird von Hand getippt, wer naeher dran war – messen kann die App das
@@ -7990,8 +8321,8 @@
     v.visits.push(vis);
     v.offen = [];
     UI.aufnahmeZeit = Date.now();
-    if (!isBust && score === 180) feiere180(st.werfer);
-    else if (!isBust && score === 60) feiere60(st.werfer);
+    if (!isBust && score === MAX_VISIT) feiere180(st.werfer);
+    else if (!isBust && score === FEIER_60) feiere60(st.werfer);
     var fertig = isCheckout || v.visits.length >= 3;
     if (fertig) {
       neuerKaiwenVersuch(g, Math.max(KAIWEN_MIN, v.zahl + (isCheckout ? 10 : -1)));
@@ -8007,7 +8338,7 @@
     if (!g || g.kind !== 'kaiwen' || g.done || UI.input === '' || settling()) return;
     var v = parseInt(UI.input, 10);
     var st = kaiwenState(g);
-    if (v > 180) { UI.error = 'Maximal 180'; UI.input = ''; render(); return; }
+    if (v > MAX_VISIT) { UI.error = 'Maximal ' + MAX_VISIT; UI.input = ''; render(); return; }
     if (IMPOSSIBLE[v]) { UI.error = v + ' ist mit 3 Darts nicht möglich'; UI.input = ''; render(); return; }
     if (st.offen.length) { UI.error = 'Die Aufnahme läuft in Einzel-Darts, bitte dort weiter eintragen.'; UI.input = ''; render(); return; }
     pomp();
@@ -8037,7 +8368,7 @@
     var next = UI.input + k;
     if (next.length > 3) return;
     var val = parseInt(next, 10);
-    if (val > 180) { UI.error = 'Maximal 180'; render(); return; }
+    if (val > MAX_VISIT) { UI.error = 'Maximal ' + MAX_VISIT; render(); return; }
     tipp();
     UI.input = String(val);
     render();
@@ -8213,7 +8544,7 @@
     };
     var kacheln = ['', '', ''];
     var route = null;
-    if (!g.done && st.restVorVisit <= 170) {
+    if (!g.done && st.restVorVisit <= MAX_CHECKOUT) {
       var plan = planFuer(st.restVorVisit, 3, dbl);
       var planGilt = !!plan;
       var restLauf = st.restVorVisit;
@@ -8307,6 +8638,7 @@
     }
     $('kw-ff-error').textContent = UI.error;
     $('kw-menu-overlay').classList.toggle('hidden', !UI.menu);
+    menueFokus($('kw-menu-overlay'));
     if (UI.menu) document.querySelector('#kw-menu-overlay .game-menu-sub').textContent = $('kw-sub').textContent;
   }
 
@@ -8463,9 +8795,6 @@
     for (var i = 0; i < offen; i++) g.throws.push({ n: 0, m: 0 });
     UI.mult = 1;
     save(); render();
-  }
-  function hunterVarianteText(g) {
-    return g.variante === 'boost' ? 'Boost · Doppel +2, Triple +3' : g.variante === 'handicap' ? 'Handicap' : 'Normal · jeder Treffer 1 Feld';
   }
   function hunterZielText(g, pid, st) {
     var zahl = HUNTER_RING[st.pos[pid]];
@@ -8645,6 +8974,7 @@
       ? '<b>' + esc(pname(g.winner)) + '</b> ' + (solo ? 'ist durch' : 'gewinnt')
       : '<span class="muted">Am Wurf</span> <b>' + esc(pname(aktiv)) + '</b> <span class="muted">auf</span> <b>' + esc(hunterZielText(g, aktiv, st)) + '</b>';
     $('hu-menu-overlay').classList.toggle('hidden', !UI.menu);
+    menueFokus($('hu-menu-overlay'));
     if (UI.menu) document.querySelector('#hu-menu-overlay .game-menu-sub').textContent = $('hu-sub').textContent;
     if (fang) setTimeout(function () { if (S.game === g) render(); }, 2700);
   }
@@ -8681,17 +9011,21 @@
   }
 
   /* Eine Highlight-Zeilenliste je Bogen-Seite: „Mark 180 ×2", „Mark 141
-     Finish", „Mark 18-Darter" – höchstens 7 Zeilen, wie auf dem Bogen. */
-  function berichtHighlights(ids, stM) {
+     Finish", „Mark 18-Darter" – jedes Finish und jedes Shortleg in einer
+     eigenen Zeile, wie die Ligaleitung sie fuehrt. Der Bogen hat sieben
+     Zeilen vorgedruckt; sind es mehr, waechst die Tabelle (hlZeilen in
+     renderBericht), statt dass Highlights stumm wegfallen. */
+  function berichtHighlights(ids, hlMap) {
     var zeilen = [];
     ids.forEach(function (id) {
-      var s = stM[id];
-      if (!s) return;
-      if (s.s180 > 0) zeilen.push(esc(s.name) + ' 180' + (s.s180 > 1 ? ' ×' + s.s180 : ''));
-      if (s.highCO >= 100) zeilen.push(esc(s.name) + ' ' + s.highCO + ' Finish');
-      if (s.bestLeg && s.bestLeg <= 21) zeilen.push(esc(s.name) + ' ' + s.bestLeg + '-Darter');
+      var h = hlMap[id];
+      if (!h) return;
+      var nm = esc(pname(id));
+      if (h.s180 > 0) zeilen.push(nm + ' 180' + (h.s180 > 1 ? ' ×' + h.s180 : ''));
+      h.finishes.forEach(function (f) { zeilen.push(nm + ' ' + f + ' Finish'); });
+      h.shortlegs.forEach(function (d) { zeilen.push(nm + ' ' + d + '-Darter'); });
     });
-    return zeilen.slice(0, 7);
+    return zeilen;
   }
 
   /* Nicht bei jedem Zeichnen neu bauen: der Hintergrund-Abgleich würde
@@ -8711,9 +9045,6 @@
     var gastTeam = lg.heim ? lg.gegner : LIGA.team;
     var heimIds = lg.heimSpieler || (lg.heim ? lg.wir : lg.sie);
     var gastIds = lg.gastSpieler || (lg.heim ? lg.sie : lg.wir);
-
-    var stM = collectStats([{ matches: q.matches, start: q.start }], heimIds.concat(gastIds));
-    Object.keys(stM).forEach(function (k) { stM[k].name = pname(k); finalize(stM[k]); });
 
     /* Spielerzeilen H1–H8 / G1–G8: der Anzeigename steht im Vornamen-Feld,
        der bürgerliche Nachname wird von Hand ergänzt (SWO verlangt ihn). */
@@ -8785,11 +9116,14 @@
         '<td contenteditable>' + einzelPunkte(m) + '</td></tr>';
     }).join('');
 
-    var hlHeim = berichtHighlights(heimIds, stM);
-    var hlGast = berichtHighlights(gastIds, stM);
+    var hlMap = legHighlights(q.matches, q.start || 501, heimIds.concat(gastIds));
+    var hlHeim = berichtHighlights(heimIds, hlMap);
+    var hlGast = berichtHighlights(gastIds, hlMap);
+    /* Sieben Zeilen wie vorgedruckt - bei mehr Highlights so viele, wie es
+       braucht (der Bogen bricht dann um, statt abzuschneiden). */
     var hlZeilen = function (praefix, liste) {
       var zeilen = '';
-      for (var i = 0; i < 7; i++) {
+      for (var i = 0; i < Math.max(7, liste.length); i++) {
         zeilen += '<tr><th>' + praefix + '</th><td contenteditable>' + (liste[i] || '') + '</td></tr>';
       }
       return zeilen;
@@ -9421,10 +9755,32 @@
     return {
       termin: lg.terminId, nr: lg.nr, gegner: lg.gegner, heim: !!lg.heim, ort: ligaOrt(lg.terminId),
       wirP: d.wirP, sieP: d.sieP, wirS: d.wirS, sieS: d.sieS, wirL: d.wirL, sieL: d.sieL,
-      mod: mod ? mod.name + ' (' + plural(mod.won, 'Sieg', 'Siege') + ')' : '',
-      hl: d.hl.map(function (z) { return String(z).replace(/<[^>]*>/g, ''); }),
+      /* Der Server nimmt hoechstens 80 Zeichen bzw. sechs Zeilen an und
+         lehnt sonst die ganze Meldung ab - lieber hier kappen. */
+      mod: String(manOfTheDayText(mod) || '').slice(0, 80),
+      hl: mitteilungsZeilen(d.hl).slice(0, 6),
       einzel: einzel
     };
+  }
+  /* Die Highlight-Zeilen fuer die Mitteilung: ohne HTML, und keine laenger
+     als der Server nimmt (server/lib/mitteilungen.mjs kuerzt jede Zeile auf
+     160 Zeichen und nimmt hoechstens sechs). Eine zu lange Rubrik wird an
+     den Trennpunkten umgebrochen, die Fortsetzung traegt die Rubrik erneut. */
+  var MITTEILUNG_ZEILE_MAX = 150;
+  function mitteilungsZeilen(hl) {
+    var aus = [];
+    hl.forEach(function (z) {
+      var m = /^<b>(.*?):<\/b>\s*(.*)$/.exec(String(z));
+      var rubrik = m ? m[1] : '', teile = (m ? m[2] : String(z).replace(/<[^>]*>/g, '')).split(' · ');
+      var zeile = '';
+      teile.forEach(function (t) {
+        var naechste = zeile ? zeile + ' · ' + t : (rubrik ? rubrik + ': ' : '') + t;
+        if (zeile && naechste.length > MITTEILUNG_ZEILE_MAX) { aus.push(zeile); zeile = (rubrik ? rubrik + ' (weiter): ' : '') + t; }
+        else zeile = naechste;
+      });
+      if (zeile) aus.push(zeile);
+    });
+    return aus.map(function (z) { return z.replace(/<[^>]*>/g, ''); });
   }
   /* Teamrekorde (nur Konten, nur Liga): hoechstes Finish, hoechste Aufnahme,
      kuerzestes Leg. Beim ersten Lauf nur merken, danach jede Verbesserung
@@ -9520,7 +9876,13 @@
         }).catch(function (e) {
           o.sendet = false;
           o.ohneServer = true;
-          o.fehler = 'Der Server konnte die Mail nicht schicken (' + (e && e.message ? e.message : 'keine Verbindung') + '). Unten geht es über das Teilen-Menü.';
+          /* Abgelehnte Adresse (400, Erlaubtliste des Servers: Ligaleitung
+             und eigene Adresse): der Servertext nennt die Adresse und
+             steht hier wortwoertlich - sonst wuesste niemand, welche. */
+          var abgelehnt = e && e.status === 400 && e.message;
+          o.fehler = abgelehnt
+            ? e.message + ' Bitte die Adresse prüfen – oder unten über das Teilen-Menü schicken.'
+            : 'Der Server konnte die Mail nicht schicken (' + (e && e.message ? e.message : 'keine Verbindung') + '). Unten geht es über das Teilen-Menü.';
           render();
         });
       };
@@ -9827,7 +10189,7 @@
       { k: '180 / 140+ / 100+', v: stats.map(function (st) { return st.s180 + ' / ' + st.s140 + ' / ' + st.s100; }), besser: null },
       { k: 'Höchstes Finish', v: stats.map(function (st) { return st.highCO || '–'; }), besser: 'hi' }
     ];
-    if (mitDoppel) z.push({ k: 'Doppelquote', v: stats.map(function (st) { return st.doubleAttempts ? st.doubleQuote.toFixed(0) + ' % (' + st.checkouts + '/' + st.doubleAttempts + ')' : '–'; }), besser: 'hi' });
+    if (mitDoppel) z.push({ k: 'Doppelquote', v: stats.map(function (st) { return st.doubleAttempts ? st.doubleQuote.toFixed(0) + ' % (' + st.doubleHits + '/' + st.doubleAttempts + ')' : '–'; }), besser: 'hi' });
     z.push({ k: 'Bestes Leg', v: stats.map(function (st) { return st.bestLeg ? st.bestLeg + ' Darts' : '–'; }), besser: 'lo' });
     z.push({ k: 'Darts geworfen', v: stats.map(function (st) { return String(st.darts); }), besser: null });
     return z;
@@ -10089,18 +10451,21 @@
          Danach geht es zum Spielbericht - abgeschlossen ist das Ligaspiel
          erst, wenn er unterschrieben und verschickt ist. */
       var wStats = stats();
+      var wHl = legHighlights(S.matches, tourStart(), tourPlayers());
       var motd = function (ids, team, wir) {
         var b = manOfTheDay(ids, wStats);
-        var hl = teamHighlights(ids, wStats).map(function (z) {
+        var hl = teamHighlights(ids, wHl).map(function (z) {
           var hm = /^<b>(.*?):<\/b>\s*(.*)$/.exec(z);
           return hm ? [hm[1], hm[2]] : ['', z];
         });
+        /* Geteilt: alle Traeger nebeneinander, die Zeile sagt "je". */
+        var traeger = b ? [b].concat(b.geteilt) : [];
         return '<div class="card motd' + (wir ? ' wir' : '') + '">' +
-          '<div class="motd-team kt">' + esc(team) + ' · <span class="motd-titel">Man of the Day</span></div>' +
-          (b ? '<div class="motd-person">' + avatarHTML(profile(b.id), 'lg') +
-              '<div class="motd-wer"><div class="motd-name">' + esc(ligaName(b.id)) + '</div>' +
-              '<div class="motd-zeile">' + plural(b.won, 'Sieg', 'Siege') + ' aus ' + plural(b.matches, 'Einzel', 'Einzeln') +
-                ' · Ø ' + (b.darts ? b.avg.toFixed(1) : '–') + '</div></div></div>' : '') +
+          '<div class="motd-team kt">' + esc(team) + ' · <span class="motd-titel">Man of the Day' + (b && b.geteilt.length ? ' – geteilt' : '') + '</span></div>' +
+          (b ? '<div class="motd-person">' + traeger.map(function (t) { return avatarHTML(profile(t.id), 'lg'); }).join('') +
+              '<div class="motd-wer"><div class="motd-name">' + traeger.map(function (t) { return esc(ligaName(t.id)); }).join(' & ') + '</div>' +
+              '<div class="motd-zeile">' + (b.geteilt.length ? 'je ' : '') + plural(b.won, 'Sieg', 'Siege') + ' aus ' + plural(b.matches, 'Einzel', 'Einzeln') +
+                (b.geteilt.length ? '' : ' · Ø ' + (b.darts ? b.avg.toFixed(1) : '–')) + '</div></div></div>' : '') +
           '<div class="sg-hl-liste">' + (hl.length ? hlZeilen(hl) : '<p class="hint">Keine Highlights.</p>') + '</div>' +
           '</div>';
       };
@@ -10167,9 +10532,100 @@
         '<button class="btn start-rot" data-action="finish-tournament">Turnier abschließen</button></div></div>';
   }
 
+  /*
+   * Dialog-Semantik und Fokus. #overlay traegt role="dialog" und aria-modal
+   * im HTML; hier kommt dazu, was sich je Dialog aendert: die Ueberschrift
+   * benennt ihn (aria-labelledby), der Rest der Seite ist waehrenddessen
+   * inert (keine Tabs, keine Klicks dahinter), der Fokus geht beim Oeffnen
+   * ins erste Feld oder auf den ersten Knopf und beim Schliessen zurueck
+   * auf das Element, das den Dialog geoeffnet hat.
+   *
+   * render() zeichnet den offenen Dialog bei jeder Aenderung neu - der
+   * Fokus wandert deshalb nur, wenn ein ANDERES Dialog-Objekt aufgeht,
+   * nicht bei jedem Neuzeichnen desselben.
+   *
+   * Dialoge mit eigener Tastenwahl (Leg-Ende, Spielende, Checkout-Frage:
+   * Ziffern und Pfeile waehlen, Enter bestaetigt) bekommen den Fokus auf
+   * die Karte selbst statt auf einen Knopf - sonst drueckte Enter den
+   * fokussierten Knopf UND die Tastenwahl.
+   */
+  var dialogOffen = null;        // das UI.overlay-Objekt, das zuletzt gezeichnet wurde
+  var dialogRueckFokus = null;   // Element, das vor dem Oeffnen den Fokus hatte
+  var HAUPTBEREICHE = '#nav, .screen, #save-warning, #sync-status, #lade-hinweis';
+  function hintergrundInert(an) {
+    var teile = document.querySelectorAll(HAUPTBEREICHE);
+    for (var i = 0; i < teile.length; i++) {
+      if (an) teile[i].setAttribute('inert', ''); else teile[i].removeAttribute('inert');
+    }
+  }
+  function dialogBeschriften(ov, karte) {
+    var kopf = karte.querySelector('h1, h2, h3, h4');
+    if (kopf) {
+      if (!kopf.id) kopf.id = 'overlay-titel';
+      ov.setAttribute('aria-labelledby', kopf.id);
+      ov.removeAttribute('aria-label');
+    } else {
+      ov.removeAttribute('aria-labelledby');
+      ov.setAttribute('aria-label', 'Dialog');
+    }
+  }
+  function dialogFokusHinein(karte, typ) {
+    /* Am Touch-Geraet kein Textfeld vorab fokussieren: iOS klappt sonst bei
+       jedem Dialog die Tastatur aus (Nachmeldung, Versand, Aufstellung).
+       Dort reicht der Fokus auf der Karte fuer Esc und Vorlese-Reihenfolge. */
+    var touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    var ziel = touch ? null : karte.querySelector('input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])');
+    if (!ziel && !touch && !(PFEIL_DIALOGE[typ] || typ === 'checkout-darts')) {
+      ziel = karte.querySelector('.btn.primary:not([disabled])') || karte.querySelector('button:not([disabled]), [role="button"], [tabindex="0"]');
+    }
+    if (!ziel) { karte.setAttribute('tabindex', '-1'); ziel = karte; }
+    if (ziel.focus) ziel.focus({ preventScroll: true });
+  }
+  function dialogGeoeffnet(ov, karte, o) {
+    dialogBeschriften(ov, karte);
+    if (dialogOffen === o) return;
+    var ersterAuf = !dialogOffen;
+    dialogOffen = o;
+    feierAbbrechen();
+    if (ersterAuf) {
+      var aktiv = document.activeElement;
+      dialogRueckFokus = aktiv && aktiv !== document.body && !ov.contains(aktiv) ? aktiv : null;
+      hintergrundInert(true);
+    }
+    dialogFokusHinein(karte, o.type);
+  }
+  function dialogGeschlossen() {
+    if (!dialogOffen) return;
+    dialogOffen = null;
+    hintergrundInert(false);
+    var zurueck = dialogRueckFokus;
+    dialogRueckFokus = null;
+    /* Der Knopf von vorhin kann weggezeichnet sein (render baut die
+       Bildschirme neu) - dann bleibt der Fokus, wo der Browser ihn laesst. */
+    if (zurueck && zurueck.focus && document.contains(zurueck)) zurueck.focus({ preventScroll: true });
+  }
+  /* Die Spielmenues (role="dialog" im HTML) genauso: beim Aufgehen hinein,
+     beim Zugehen zurueck. */
+  var menueWarOffen = false, menueRueckFokus = null;
+  function menueFokus(el) {
+    var auf = !el.classList.contains('hidden');
+    if (auf === menueWarOffen) return;
+    menueWarOffen = auf;
+    if (auf) {
+      var aktiv = document.activeElement;
+      menueRueckFokus = aktiv && aktiv !== document.body && !el.contains(aktiv) ? aktiv : null;
+      var ziel = el.querySelector('button:not([disabled]), [role="button"]');
+      if (ziel) ziel.focus({ preventScroll: true });
+    } else {
+      var zurueck = menueRueckFokus;
+      menueRueckFokus = null;
+      if (zurueck && zurueck.focus && document.contains(zurueck)) zurueck.focus({ preventScroll: true });
+    }
+  }
+
   function renderOverlay() {
     var ov = $('overlay');
-    if (!UI.overlay) { ov.classList.add('hidden'); ov.classList.remove('gross', 'vollbild'); return; }
+    if (!UI.overlay) { ov.classList.add('hidden'); ov.classList.remove('gross', 'vollbild'); dialogGeschlossen(); return; }
     ov.classList.remove('hidden');
     /* Im Turnier-Modus sprechen auch die Dialoge Plakatsprache - der
        Schreiber steht vorn an der Scheibe, gelesen wird vom Oche aus. */
@@ -11039,9 +11495,10 @@
     }
     $('overlay-card').innerHTML = html;
     if (o.type === 'unterschrift' || o.type === 'nachmeldung') signaturVorbereiten();
+    var karte = $('overlay-card');
+    dialogGeoeffnet(ov, karte, o);
     /* Mit Tastatur: in Dialogen ohne eigene Pfeil-Wahl gleich den
        Hauptknopf markieren, damit immer etwas sichtbar gewaehlt ist. */
-    var karte = $('overlay-card');
     if (document.body.classList.contains('tastatur') && !PFEIL_DIALOGE[o.type] && o.type !== 'checkout-darts' &&
         !karte.contains(document.activeElement) && !karte.querySelector('input, select, textarea, canvas')) {
       var erster = karte.querySelector('.btn.primary') || karte.querySelector('button');
@@ -11309,7 +11766,7 @@
   function botAufnahme(rest, staerke) {
     var s = BOT_STAERKEN[staerke] || BOT_STAERKEN.mittel;
     // Finish-Versuch, wenn einer moeglich ist.
-    if (rest <= 170 && Checkout.possible(rest, 3)) {
+    if (rest <= MAX_CHECKOUT && Checkout.possible(rest, 3)) {
       var p = rest <= 50 ? s.finishNah : s.finish;
       if (Math.random() < p) {
         var darts = 3;
@@ -11328,7 +11785,7 @@
     // Scoring: Normalverteilung, gedeckelt, nie in den Bust.
     var wert = botWurfNormal(s.mittel, s.streuung);
     if (wert < 0) wert = 0;
-    if (wert > 180) wert = 180;
+    if (wert > MAX_VISIT) wert = MAX_VISIT;
     if (wert > rest - 2) wert = Math.max(0, rest - 50);
     while (wert > 0 && IMPOSSIBLE[wert]) wert--;
     return { score: wert, darts: 3, checkout: false };
@@ -12074,7 +12531,7 @@
            des X01 bleibt davon unberuehrt. */
         if (el.closest('#eingabe-wahl-fin, #eingabe-wahl-kw')) { save(); render(); break; }
         if (ew === 0 && S.settings.dartModeFrom > 0) { S.settings.dartModeMerk = S.settings.dartModeFrom; S.settings.dartModeFrom = 0; }
-        if (ew === 1 && !(S.settings.dartModeFrom > 0)) S.settings.dartModeFrom = S.settings.dartModeMerk > 0 ? S.settings.dartModeMerk : 170;
+        if (ew === 1 && !(S.settings.dartModeFrom > 0)) S.settings.dartModeFrom = S.settings.dartModeMerk > 0 ? S.settings.dartModeMerk : MAX_CHECKOUT;
         save(); render();
         break;
       }
@@ -12545,7 +13002,7 @@
         window.DartSync.liga.zusage(tzTid, tzStatus).then(function (z) {
           ligaZusagen = z;
           render();
-        }).catch(function () { /* naechstes Betreten holt den Stand */ });
+        }).catch(function (e) { zusageFehlgeschlagen(e); });
         break;
       }
       case 'liga-bericht':
@@ -12641,6 +13098,10 @@
       case 'liga-zum-spiel':
         S.screen = 'tournament'; save(); render();
         break;
+      case 'konto-fehlschlaege-leeren':
+        if (window.DartSync && typeof window.DartSync.fehlgeschlagenLeeren === 'function') window.DartSync.fehlgeschlagenLeeren();
+        render();
+        break;
       case 'liga-zusage': {
         if (!(window.DartSync && window.DartSync.liga && window.DartKonto && window.DartKonto.nutzer())) return;
         var lgTermin = el.getAttribute('data-id');
@@ -12648,9 +13109,7 @@
         window.DartSync.liga.zusage(lgTermin, lgDabei).then(function (z) {
           ligaZusagen = z;
           render();
-        }).catch(function () {
-          /* Kein Netz: nichts kaputt – beim nächsten Betreten stimmt es wieder. */
-        });
+        }).catch(function (e) { zusageFehlgeschlagen(e); });
         break;
       }
       case 'end-visit': {
@@ -13275,6 +13734,7 @@
       if (peRole === 'profile-vor') UI.profilEdit.vor = ev.target.value;
       if (peRole === 'profile-nach') UI.profilEdit.nach = ev.target.value;
       if (peRole === 'pe-email') UI.profilEdit.email = ev.target.value;
+      if (peRole === 'pe-email-pass') UI.profilEdit.emailPass = ev.target.value;
     }
     if (ev.target.getAttribute('data-role') === 'foto-zoom' && UI.foto) {
       UI.foto.zoom = Number(ev.target.value) || 0;
@@ -13369,7 +13829,7 @@
     var neu = parseInt(UI.input, 10);
     if (neu > rest) { UI.error = 'Rest ' + neu + ' ist mehr als vorher (' + rest + ').'; UI.input = ''; render(); return; }
     var wurf = rest - neu;
-    if (wurf > 180) { UI.error = 'Das wären ' + wurf + ' Punkte – mehr als 180.'; UI.input = ''; render(); return; }
+    if (wurf > MAX_VISIT) { UI.error = 'Das wären ' + wurf + ' Punkte – mehr als ' + MAX_VISIT + '.'; UI.input = ''; render(); return; }
     UI.input = String(wurf);
     submitTotal();
   }
@@ -13951,7 +14411,9 @@
          dessen Beschriftung – Enter darf dann nicht am Knopf vorbei das Leg
          bestätigen, während „Eingabe rückgängig" unter dem Finger liegt. */
       var fokus = document.activeElement;
-      var imDialog = fokus && fokus.closest && fokus.closest('#overlay');
+      /* Nur ein KNOPF zaehlt - die Dialogkarte selbst traegt den Fokus seit
+         D1 immer (dialogFokusHinein), damit Hilfstechnik im Dialog ist. */
+      var imDialog = fokus && fokus.closest && fokus.closest('#overlay button, #overlay [role="button"]');
       var ldN = legDoneUebersicht() ? 3 : 2;
       var ldW = Math.min(ov.wahl || 0, ldN - 1);
       if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp' ||
@@ -14093,9 +14555,18 @@
     if (bereich && document.activeElement && bereich.contains(document.activeElement)) UI.fokusMerk = fokusSchluessel(document.activeElement);
 
     if (istZurueck) {
-      /* In einem Feld: Backspace loescht, Escape verlaesst das Feld. */
+      /* In einem Feld: Backspace loescht, Escape verlaesst das Feld. Ist
+         das Feld leer, gibt es nichts zu verlassen - dann schliesst Escape
+         gleich den Dialog, statt erst beim zweiten Druck. */
       if (imFeld) {
-        if (ev.key === 'Escape') { ziel.blur(); ev.preventDefault(); ev.stopImmediatePropagation(); }
+        if (ev.key === 'Escape') {
+          var feldLeer = ziel.tagName === 'SELECT' ? false
+            : ziel.isContentEditable ? !String(ziel.textContent || '').trim()
+            : !String(ziel.value || '').trim();
+          ev.preventDefault(); ev.stopImmediatePropagation();
+          if (feldLeer && UI.overlay && !bleibtOffen(UI.overlay.type)) { ziel.blur(); tastaturZurueck(); }
+          else ziel.blur();
+        }
         return;
       }
       /* Backspace ist in den Spielbildern das Loeschen und bleibt es;
@@ -14138,6 +14609,14 @@
   renderLadeHinweis();
   spielUhrStellen();          // Altbestand ohne Startzeit: ab jetzt zaehlen
   altesSpielBeenden();
+  /* #konto aus einer Mitteilungs-Mail (siehe hashKontoEinloesen): Hash
+     sofort weg, Konto-Bildschirm auf - angemeldet geht es von dort zu den
+     Benachrichtigungen, sonst steht wie gewohnt die Anmeldung. */
+  if (location.hash === '#konto') {
+    UI.hashKonto = true;
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* egal */ }
+    if (!SPIEL_SCREENS[S.screen] && S.screen !== 'bulloff') S.screen = 'konto';
+  }
   einmaligeBerichtKorrekturen();
 
   /*
@@ -14262,6 +14741,11 @@
       einzelVerloren: einzelVerloren,
       planNachreichen: planNachreichen,
       berichtNeu: function () { berichtStand = null; },   // nur fuer Tests
+      manOfTheDay: manOfTheDay,                            // nur fuer Tests
+      manOfTheDayText: manOfTheDayText,                    // nur fuer Tests
+      legHighlights: legHighlights,                        // nur fuer Tests
+      ligaErgebnisDaten: ligaErgebnisDaten,                // nur fuer Tests
+      mitteilungsZeilen: mitteilungsZeilen,                // nur fuer Tests
       uebernehmeTurnier: uebernehmeTurnier,
       turnierListeAktualisieren: beitretbareHolen,
       turnierBeitreten: turnierBeitreten,

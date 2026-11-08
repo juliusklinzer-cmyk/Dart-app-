@@ -9,7 +9,7 @@
 :root {
   --bg: #0d0a0b; --karte: #141011; --karte2: #1c1718; --knopf: #241d1f; --aktiv: #2a2224;
   --linie: #1f191b; --linie2: #2a2224;
-  --text: #f2eeee; --hell: #ffffff; --grau: #c9c0c0; --leise: #9a8f90; --leiser: #857a7b; --platzhalter: #5a5052;
+  --text: #f2eeee; --hell: #ffffff; --grau: #c9c0c0; --leise: #9a8f90; --leiser: #857a7b; --platzhalter: #857a7b;
   --rot: #e5484d; --blau: #a9e4ff;
   --schein: rgba(70, 170, 215, 0.35); --schein-weich: rgba(70, 170, 215, 0.22); --schein-zart: rgba(70, 170, 215, 0.12);
   --display: 'Anton', 'Barlow Condensed', 'Arial Narrow', sans-serif;
@@ -160,7 +160,9 @@ svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; 
 .tz-kopf { padding: 8px 0; border-top: none; font-family: var(--eng); font-weight: 700; font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--leiser); }
 .tz:nth-child(1) { border-top-color: transparent; }
 .tz .rang { font-family: var(--eng); font-weight: 700; font-size: 18px; color: var(--leise); }
-.tz .team { min-width: 0; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Lange Teamnamen ("Dart Artists Germering II") brechen um, statt am Handy
+   abgeschnitten zu werden (D19). */
+.tz .team { min-width: 0; font-weight: 500; line-height: 1.2; overflow-wrap: anywhere; }
 .tz .mitte { text-align: center; color: var(--grau); }
 .tz .pkt { text-align: center; font-family: var(--eng); font-weight: 700; font-size: 20px; color: var(--text); }
 .tz .rechts { text-align: right; color: var(--leise); white-space: nowrap; }

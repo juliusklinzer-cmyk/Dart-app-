@@ -10,14 +10,21 @@
 <!-- iOS liest ausschließlich diesen Link und kann kein WebP. -->
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<!-- Deckend schwarz statt black-translucent: seit iOS 26 legt das System unter
-     die durchscheinende Statusleiste einen Glas-Blur ueber den Inhalt (das Logo
-     verschwamm, Julius 30.10.). Nach einer Aenderung hier muss die App vom
-     Home-Bildschirm geloescht und neu hinzugefuegt werden. -->
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<!-- Kein apple-mobile-web-app-status-bar-style mehr: seit iOS 26.1 legt das
+     System bei JEDEM gesetzten Wert ein Glas-Band ueber den oberen Rand (das Logo
+     verschwamm trotz "black", Julius 08.11.). Ohne das Tag nimmt die Leiste die
+     Seitenfarbe (theme-color) und bleibt deckend - Apples Empfehlung in WebKit
+     Bug 317153. Nach einer Aenderung hier muss die App vom Home-Bildschirm
+     geloescht und neu hinzugefuegt werden; iOS liest das nur beim Hinzufuegen. -->
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
+
+<!-- Gemalter Streifen ganz oben, nur in der installierten App: seit iOS 26/27 legt
+     das System einen Glas-Blur ueber den oberen Rand der Seite. Ein deckend
+     gefaerbtes, fixiertes Element am Rand nimmt ihm die Flaeche (Workaround aus
+     tips.ojapp.app, Julius 08.11.). Nicht klickbar, keine eigene Optik. -->
+<div class="ios-oben" aria-hidden="true"></div>
 
 <div id="save-warning" class="save-warning hidden">
   ⚠️ Der Spielstand kann gerade nicht gespeichert werden – bitte Speicherplatz prüfen
@@ -807,7 +814,7 @@
     <div id="pad-total" class="pad">
       <div class="display-row">
         <div id="score-display" class="score-display">0</div>
-        <div id="input-error" class="input-error"></div>
+        <div id="input-error" class="input-error" role="status" aria-live="polite"></div>
       </div>
       <div class="quick-row" id="quick-row"></div>
       <div class="keypad">
@@ -823,7 +830,7 @@
     <!-- Einzel-Dart-Eingabe: ein Raster - oben Double/Triple (Schalter)
          und Bull, dann 1 bis 20, unten Zurueck, 0 und OK. -->
     <div id="pad-darts" class="pad hidden">
-      <div id="darts-error" class="input-error"></div>
+      <div id="darts-error" class="input-error" role="status" aria-live="polite"></div>
       <div class="num-grid" id="num-grid"></div>
     </div>
 
@@ -837,7 +844,7 @@
       <div id="key-hist-l" class="key-hist"></div>
       <div class="key-mitte">
         <div id="key-display" class="key-display" aria-live="polite"></div>
-        <div id="key-error" class="input-error"></div>
+        <div id="key-error" class="input-error" role="status" aria-live="polite"></div>
       </div>
       <div id="key-hist-r" class="key-hist"></div>
     </div>
@@ -1016,7 +1023,7 @@
     <div class="scoreboard ff-karten" id="ff-karten"></div>
     <div class="ff-unten">
       <div id="ff-hist-l" class="key-hist"></div>
-      <div class="key-mitte"><div id="ff-display" class="key-display" aria-live="polite"></div><div id="ff-error" class="input-error"></div></div>
+      <div class="key-mitte"><div id="ff-display" class="key-display" aria-live="polite"></div><div id="ff-error" class="input-error" role="status" aria-live="polite"></div></div>
       <div id="ff-hist-r" class="key-hist"></div>
     </div>
   </div>
@@ -1088,7 +1095,7 @@
       <div class="kw-ziel" id="kw-ziel" aria-live="polite"></div>
       <div class="kw-team" id="kw-team"></div>
       <div class="kw-verlauf" id="kw-verlauf"></div>
-      <div class="kw-ff-unten nur-fern"><div class="key-mitte"><div id="kw-ff-display" class="key-display" aria-live="polite"></div><div id="kw-ff-error" class="input-error"></div></div></div>
+      <div class="kw-ff-unten nur-fern"><div class="key-mitte"><div id="kw-ff-display" class="key-display" aria-live="polite"></div><div id="kw-ff-error" class="input-error" role="status" aria-live="polite"></div></div></div>
       <div class="kw-verlauf-gross nur-fern hidden" id="kw-verlauf-gross" aria-live="polite"></div>
     </div>
     <div class="kw-rechts nur-pad">
@@ -1099,7 +1106,7 @@
         <button class="xk-btn" id="kw-swap" data-action="kw-swap" aria-label="Eingabe wechseln"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h14l-3-3M20 16H6l3 3"></path></svg></button>
       </div>
       <div id="kw-pad-total" class="pad kw-pad">
-        <div class="display-row"><div id="kw-display" class="score-display">0</div><div id="kw-error" class="input-error"></div></div>
+        <div class="display-row"><div id="kw-display" class="score-display">0</div><div id="kw-error" class="input-error" role="status" aria-live="polite"></div></div>
         <div class="quick-row" id="kw-quick"></div>
         <div class="kw-keys">
           <button data-key="1">1</button><button data-key="2">2</button><button data-key="3">3</button>
@@ -1194,10 +1201,15 @@
     <img src="icons/icon-512.webp" width="512" height="512" alt="Blink 180" decoding="async">
   </div>
   <div id="konto-inhalt"></div>
+  <!-- Vom Server endgueltig abgelehnte Uploads (renderKontoFehlschlaege in app.js). -->
+  <div id="konto-fehlschlaege" class="hidden"></div>
 </section>
 
 <!-- ============ OVERLAY ============ -->
-<div id="overlay" class="overlay hidden">
+<!-- Ein Dialog fuer Hilfstechnik: role/aria-modal fest, aria-labelledby setzt
+     app.js je Dialog auf die Ueberschrift (dialogBeschriften); waehrend er
+     offen ist, sind die Bildschirme dahinter inert. -->
+<div id="overlay" class="overlay hidden" role="dialog" aria-modal="true">
   <div class="overlay-card" id="overlay-card"></div>
 </div>
 

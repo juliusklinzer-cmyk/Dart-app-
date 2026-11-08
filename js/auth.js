@@ -88,10 +88,13 @@
   }
 
   /* Neue E-Mail (Anmeldename) fuer das eigene Konto - der Server prueft
-     Form und ob sie frei ist. */
-  function emailAendern(email) {
+     Form und ob sie frei ist. Das aktuelle Passwort muss mit: eine
+     uebernommene Session allein soll die Anmeldeadresse nicht umbiegen
+     koennen (sonst waere das Konto per Passwort-Reset dauerhaft weg). */
+  function emailAendern(email, passwort) {
     if (!nutzer) return Promise.reject(new Error('Nicht angemeldet.'));
-    return ruf('PATCH', '/api/me', { email: email }).then(function (daten) {
+    if (!passwort) return Promise.reject(new Error('Bitte gib dein aktuelles Passwort ein, um die E-Mail zu ändern.'));
+    return ruf('PATCH', '/api/me', { email: email, password: passwort }).then(function (daten) {
       nutzer = daten.nutzer;
       merkeServer(nutzer);
       neuZeichnen(true);
@@ -256,7 +259,18 @@
       setzeMeldung('Du bist abgemeldet. Deine Spiele bleiben auf diesem Gerät gespeichert.', 'ok');
       neuZeichnen();
     }
-    return ruf('POST', '/api/logout').then(zurueckZurAnmeldung).catch(function () {
+    /* Vorher das Push-Abo dieses Geraets loesen - solange die Session noch
+       gilt, denn der Server nimmt das Abmelden des Abos nur angemeldet an.
+       Sonst bekaeme das Bar-iPad weiter die Mitteilungen des Vorgaengers,
+       bis sich der Naechste anmeldet. Klappt es nicht (kein Netz, kein
+       Service Worker, der `ready` nie aufloest), geht es nach drei Sekunden
+       trotzdem weiter: das Abmelden darf daran nie haengen bleiben. */
+    var pushWeg;
+    try { pushWeg = pushAbmelden(); } catch (e) { pushWeg = Promise.resolve(); }
+    var frist = new Promise(function (loese) { setTimeout(loese, 3000); });
+    return Promise.race([pushWeg.catch(function () {}), frist]).then(function () {
+      return ruf('POST', '/api/logout');
+    }).then(zurueckZurAnmeldung).catch(function () {
       // Ohne Netz lässt sich die Session serverseitig nicht beenden. Auf
       // diesem Gerät abmelden ist trotzdem richtig – der Server räumt die
       // Session spätestens nach 90 Tagen selbst weg.
@@ -353,9 +367,13 @@
       '|' + (eigen && eigen.avatar ? eigen.avatar : '');
   }
 
-  function feld(id, label, typ, hinweis) {
+  /* `auto` ist der autocomplete-Wert: damit bieten Passwort-Manager beim
+     Anmelden das gespeicherte Passwort an und schlagen beim Registrieren
+     ein neues vor, statt beides zu raten. */
+  function feld(id, label, typ, hinweis, auto) {
     return '<label class="konto-feld"><span>' + esc(label) + '</span>' +
       '<input id="' + id + '" type="' + typ + '" autocapitalize="none" autocorrect="off" spellcheck="false"' +
+      (auto ? ' autocomplete="' + auto + '"' : '') +
       (hinweis ? ' placeholder="' + esc(hinweis) + '"' : '') + '></label>';
   }
 
@@ -376,13 +394,13 @@
           : (einladung && einladung.gueltig === false
               ? '<p class="hint fehler">Dieser Einladungs-Link ist abgelaufen oder schon benutzt. Lass dir einen neuen schicken – oder nimm den Einladungscode aus der Gruppe.</p>'
               : '<p class="hint">Du brauchst den Einladungscode aus der Gruppe.</p>') +
-            feld('konto-invite', 'Einladungscode', 'text')) +
-          feld('konto-name', 'Anzeigename', 'text', 'wie dich alle nennen') +
-          feld('konto-email', 'E-Mail', 'email') +
-          feld('konto-pass', 'Passwort', 'password', 'mindestens 6 Zeichen') +
+            feld('konto-invite', 'Einladungscode', 'text', null, 'off')) +
+          feld('konto-name', 'Anzeigename', 'text', 'wie dich alle nennen', 'nickname') +
+          feld('konto-email', 'E-Mail', 'email', null, 'email') +
+          feld('konto-pass', 'Passwort', 'password', 'mindestens 6 Zeichen', 'new-password') +
           '<button class="btn primary full" data-action="konto-register">Account anlegen</button>'
-        : feld('konto-email', 'E-Mail', 'email') +
-          feld('konto-pass', 'Passwort', 'password') +
+        : feld('konto-email', 'E-Mail', 'email', null, 'email') +
+          feld('konto-pass', 'Passwort', 'password', null, 'current-password') +
           '<button class="btn primary full" data-action="konto-login">Anmelden</button>') +
       '<p class="hint">Einmal angemeldet, läuft die App auch ohne Netz weiter – ' +
         'die Spiele werden nachgereicht, sobald wieder Empfang da ist.</p>' +
@@ -442,8 +460,8 @@
   function htmlPasswort() {
     return '<div class="card konto-karte">' +
       '<h2>Passwort ändern</h2>' +
-      feld('konto-pass-alt', 'Bisheriges Passwort', 'password') +
-      feld('konto-pass-neu', 'Neues Passwort', 'password', 'mindestens 6 Zeichen') +
+      feld('konto-pass-alt', 'Bisheriges Passwort', 'password', null, 'current-password') +
+      feld('konto-pass-neu', 'Neues Passwort', 'password', 'mindestens 6 Zeichen', 'new-password') +
       '<p class="hint">Deine anderen Geräte werden dabei abgemeldet.</p>' +
       '<button class="btn primary full" data-action="konto-passwort-speichern">Speichern</button>' +
       '<button class="btn ghost full" data-action="konto-zurueck">Zurück</button>' +
@@ -463,7 +481,10 @@
       var inhalt = nutzer
         ? (ansicht === 'zuordnung' ? htmlZuordnung() : ansicht === 'passwort' ? htmlPasswort() : htmlKonto())
         : htmlLogin();
-      box.innerHTML = '<p id="konto-meldung" class="konto-meldung hidden"></p>' + inhalt;
+      /* Live-Region: Vorleser sagen "Passwort falsch" an, statt dass die
+         Meldung stumm ueber dem Formular erscheint. Einmal beim Aufbau,
+         der Text wird unten nur noch ausgetauscht. */
+      box.innerHTML = '<p id="konto-meldung" class="konto-meldung hidden" role="status" aria-live="polite"></p>' + inhalt;
     }
     var m = document.getElementById('konto-meldung');
     if (m) {
@@ -550,31 +571,6 @@
       case 'konto-logout':
         beschaeftigt = true;
         abmelden().catch(fehlerZeigen).then(function () { beschaeftigt = false; });
-        break;
-
-      /* Mail-Einstellungen in der Konto-Kachel des Profils (app.js): der
-         Schalter fuer die Erinnerung vor dem Spieltag und eine Testmail.
-         Rueckmeldung als Hinweis-Dialog, denn die Konto-Meldung sieht man
-         auf der Profilseite nicht. */
-      case 'konto-mail-erinnerung':
-        ruf('PATCH', '/api/me', { mailErinnerung: !!(el && el.checked) }).then(function (daten) {
-          nutzer = daten.nutzer; merkeServer(nutzer);
-        }).catch(function (e) {
-          D.ui().overlay = { type: 'hinweis', titel: 'Nicht gespeichert', text: e && e.message ? e.message : 'Keine Verbindung zum Server.' };
-          D.render();
-        });
-        break;
-      case 'konto-mail-probe':
-        beschaeftigt = true;
-        ruf('POST', '/api/mail/probe', {}).then(function (d) {
-          beschaeftigt = false;
-          D.ui().overlay = { type: 'hinweis', titel: 'Testmail ist unterwegs', text: 'Von ' + d.von + ' an ' + d.an + '. Schau ins Postfach, notfalls in den Spam-Ordner.' };
-          D.render();
-        }).catch(function (e) {
-          beschaeftigt = false;
-          D.ui().overlay = { type: 'hinweis', titel: 'Keine Testmail', text: e && e.message ? e.message : 'Keine Verbindung zum Server.' };
-          D.render();
-        });
         break;
 
       /* Benachrichtigungen: je Thema Push und Mail, nur Push oder aus; Push
