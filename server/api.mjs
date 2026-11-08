@@ -51,8 +51,10 @@ export function createApi(db, config) {
     return { id: u.id, name: u.display_name, avatar: u.avatar, hue: u.hue, dbl: u.dbl, voll: u.real_name || null, finish: finishAus(u), kuerzel: u.kuerzel || null, wurfhand: u.wurfhand || null, test: u.test ? true : false, gastKonto: u.gast_konto ? true : false };
   }
   function eigenesProfil(u) {
-    return { id: u.id, name: u.display_name, email: u.email, avatar: u.avatar, hue: u.hue, dbl: u.dbl, voll: u.real_name || null, finish: finishAus(u), kuerzel: u.kuerzel || null, wurfhand: u.wurfhand || null, seit: u.created_at, kassenwart: u.kassenwart ? true : false, gastKonto: u.gast_konto ? true : false,
-      mailErinnerung: u.mail_erinnerung === 0 ? false : true };
+    /* M19: users.mail_erinnerung ist seit Migration 018 nur noch eine alte
+       Spalte - was gilt, steht je Thema in `benachrichtigungen`
+       (GET /api/mitteilungen). Hier deshalb kein mailErinnerung mehr. */
+    return { id: u.id, name: u.display_name, email: u.email, avatar: u.avatar, hue: u.hue, dbl: u.dbl, voll: u.real_name || null, finish: finishAus(u), kuerzel: u.kuerzel || null, wurfhand: u.wurfhand || null, seit: u.created_at, kassenwart: u.kassenwart ? true : false, gastKonto: u.gast_konto ? true : false };
   }
 
   function uid(praefix) {
@@ -363,9 +365,12 @@ export function createApi(db, config) {
     // erst als Schluessel ins Rate-Limit, sonst waere das ein Speicherfresser.
     if (email.length > 200) throw new HttpFehler(400, 'Bitte eine E-Mail-Adresse angeben.');
 
+    /* S9: der Konto-Zaehler haengt an IP und Adresse. Ein Zaehler nur je
+       Adresse liesse einen Fremden mit fuenf Fehlversuchen ein Konto fuer
+       alle sperren - auch fuer den Besitzer am anderen Ende der Stadt. */
     const eimer = [
       ['login-ip:' + ip, 10, 900e3],
-      ['login-mail:' + email, 5, 900e3]
+      ['login-mail:' + ip + ':' + email, 5, 900e3]
     ];
     for (const [schluessel, max, fenster] of eimer) {
       const warte = limit.pruefe(schluessel, max, fenster);
@@ -397,8 +402,18 @@ export function createApi(db, config) {
     sendJson(res, 200, { nutzer: eigenesProfil(u) }, { 'Set-Cookie': sess.cookieHeader(token, secure) });
   }
 
+  /* M5: schickt die App { endpoint } mit (PushSubscription.endpoint dieses
+     Geraets), fliegt das Push-Abo mit raus. Sonst bekaeme das Bar-iPad die
+     Pushs des Abgemeldeten weiter, bis sich der Naechste anmeldet. Ohne
+     Koerper wie bisher. */
   async function logout(req, res) {
     pruefeHerkunft(req);
+    const u = nutzer(req);
+    const body = req.headers['content-length'] && req.headers['content-length'] !== '0'
+      ? await leseJson(req, MAX_BODY_KLEIN) : {};
+    if (u && body && typeof body.endpoint === 'string' && body.endpoint) {
+      db.prepare('DELETE FROM push_abos WHERE user_id = ? AND endpoint = ?').run(u.id, body.endpoint.slice(0, 1000));
+    }
     sess.destroySession(db, leseCookies(req)[sess.COOKIE]);
     sendJson(res, 200, { ok: true }, { 'Set-Cookie': sess.clearCookieHeader(secure) });
   }
@@ -432,12 +447,32 @@ export function createApi(db, config) {
         throw new HttpFehler(409, 'Diese E-Mail-Adresse gehört schon zu einem anderen Konto.');
       }
     }
+    /* S4: die Adresse ist der Anmeldename und der Weg zum Passwort-Reset.
+       Wer sie wechselt, weist sich mit dem aktuellen Passwort aus (Feld
+       `password`) - eine uebernommene Session allein reicht nicht. Die
+       alte Adresse erfaehrt es per Mail, damit der Besitzer es merkt. */
+    const alteAdresse = u.email;
+    if (email !== alteAdresse) {
+      if (body.password === undefined || body.password === null || body.password === '') {
+        throw new HttpFehler(400, 'Zum Ändern der E-Mail-Adresse bitte das aktuelle Passwort angeben.');
+      }
+      const voll2 = db.prepare('SELECT password_hash FROM users WHERE id = ?').get(u.id);
+      if (!verifyPassword(String(body.password), voll2.password_hash)) {
+        throw new HttpFehler(403, 'Das Passwort stimmt nicht.');
+      }
+    }
     db.prepare('UPDATE users SET display_name = ?, avatar = ?, hue = ?, dbl = ?, real_name = ?, finish = ?, kuerzel = ?, wurfhand = ?, email = ? WHERE id = ?')
       .run(name, avatar, hue, dbl, voll, finish, kuerzel, wurfhand, email, u.id);
-    if (body.mailErinnerung !== undefined) {
-      db.prepare('UPDATE users SET mail_erinnerung = ? WHERE id = ?').run(body.mailErinnerung ? 1 : 0, u.id);
-      mitteilungen.setze(u.id, 'zusage', body.mailErinnerung ? 'beide' : 'push');
+    if (email !== alteAdresse && config.mailer && config.mailer.bereit) {
+      config.mailer.sende({
+        von: 'app', an: [alteAdresse], betreff: 'Deine E-Mail-Adresse in der Dart-App wurde geändert', kicker: 'Konto und Sicherheit',
+        knopf: { text: 'Zur Dart-App', url: config.appUrl || 'https://darts.wirtschaftln.de' },
+        text: 'Hallo ' + u.display_name + ',\n\ndeine E-Mail-Adresse in der Dart-App wurde auf ' + email + ' geändert. ' +
+          'Warst du das nicht, melde dich bei Julius.\n\nDart-App'
+      }).catch((e) => console.error('[mail] Hinweis E-Mail-Wechsel an ' + alteAdresse + ' fehlgeschlagen: ' + (e && e.message)));
     }
+    /* M19: `mailErinnerung` aus aelteren App-Staenden wird ignoriert - die
+       Erinnerungen stellt man unter Benachrichtigungen (Thema zusage) ein. */
     const frisch = db.prepare('SELECT * FROM users WHERE id = ?').get(u.id);
     sendJson(res, 200, { nutzer: eigenesProfil(frisch) });
   }
@@ -527,11 +562,36 @@ export function createApi(db, config) {
     namensListe(plan.gaeste, 'Spielplan: Gaeste');
   }
 
+  /* S7: Legs eines 501-Stands, wie der Zuschauer-Ticker (js/live.js,
+     js/webseite.js) sie rechnet und ohne Escaping ins Markup schreibt:
+     visits[].s und .d, darts[].v, start. Was dort steht, muss eine Zahl
+     sein - ein String waere im Ticker fremdes Markup, in der Rechnung
+     Unsinn ("501" - "60" geht, "501" + ... nicht). */
+  function istZahlOderLeer(v) { return v === undefined || v === null || (typeof v === 'number' && Number.isFinite(v)); }
+  function pruefeLegZahlen(st, was) {
+    if (!istZahlOderLeer(st.start)) throw kaputt(was + ': Startwert');
+    for (const leg of Array.isArray(st.legs) ? st.legs : []) {
+      if (!istObjekt(leg)) throw kaputt(was + ': Leg');
+      if (leg.winner !== undefined && leg.winner !== null && !istId(leg.winner)) throw kaputt(was + ': Leg-Sieger');
+      if (leg.visits !== undefined) {
+        liste(leg.visits, was + ': Aufnahmen');
+        for (const v of leg.visits) {
+          if (!istObjekt(v) || !istZahlOderLeer(v.s) || !istZahlOderLeer(v.d)) throw kaputt(was + ': Aufnahme');
+        }
+      }
+    }
+    if (st.darts !== undefined) {
+      liste(st.darts, was + ': Darts');
+      for (const d of st.darts) if (!istObjekt(d) || !istZahlOderLeer(d.v)) throw kaputt(was + ': Dart');
+    }
+  }
+
   /* Laufender Spielstand (S.game im Client). */
   function pruefeLiveForm(st, kind) {
     if (kind === 'quick') {
       idListe(st.p, 'Spieler');
       liste(st.legs, 'Legs');
+      pruefeLegZahlen(st, 'Stand');
     } else {
       idListe(st.players, 'Spieler');
       if (kind === 'finisher') liste(st.rounds, 'Runden');
@@ -602,15 +662,20 @@ export function createApi(db, config) {
 
     // Schon da? Dann ist das ein wiederholter Versuch aus der Warteschlange --
     // freundlich mit demselben Ergebnis antworten statt zu meckern.
-    const da = db.prepare('SELECT seq FROM games WHERE id = ?').get(id);
-    if (da) return sendJson(res, 200, { ok: true, seq: da.seq, schonDa: true });
+    const da = db.prepare('SELECT seq, recorded_by, deleted_at FROM games WHERE id = ?').get(id);
+    /* `ersetzen`: das Online-Spiel wurde schon archiviert, dann kam vom Server
+       ein 409 (der andere hatte noch etwas geaendert) und es wurde erneut
+       beendet. Die zweite Fassung darf die erste ersetzen -- aber nur, wer
+       sie selbst eingetragen hat (O21-Folge). Sonst wie bisher: harmlos. */
+    const ersetzen = da && body.ersetzen === true && da.recorded_by === u.id && !da.deleted_at;
+    if (da && !ersetzen) return sendJson(res, 200, { ok: true, seq: da.seq, schonDa: true });
 
     pruefeSpielInhalt(String(body.kind), body.payload);
     const inhalt = JSON.stringify(body.payload);
     if (inhalt.length > (String(body.kind) === 'tournament' ? MAX_TURNIER_ARCHIV : MAX_INHALT)) {
       throw new HttpFehler(413, 'Das Spiel ist zu gross.');
     }
-    kontingentPruefen(u, 'spiele');
+    kontingentPruefen(u, 'spiele');   // auch beim Ersetzen: jede Fassung zaehlt
 
     const zeilen = spieler.map(function (p, i) {
       if (p && p.userId) {
@@ -625,15 +690,22 @@ export function createApi(db, config) {
 
     const seq = transaktion(db, function () {
       const s = nextSeq(db);
-      db.prepare(
-        'INSERT INTO games (id, seq, kind, payload, recorded_by, client_at, created_at)' +
-          ' VALUES (?, ?, ?, ?, ?, ?, ?)'
-      ).run(id, s, String(body.kind), inhalt, u.id, at, new Date().toISOString());
+      if (ersetzen) {
+        db.prepare('UPDATE games SET seq = ?, kind = ?, payload = ?, client_at = ? WHERE id = ?')
+          .run(s, String(body.kind), inhalt, at, id);
+        db.prepare('DELETE FROM game_players WHERE game_id = ?').run(id);
+      } else {
+        db.prepare(
+          'INSERT INTO games (id, seq, kind, payload, recorded_by, client_at, created_at)' +
+            ' VALUES (?, ?, ?, ?, ?, ?, ?)'
+        ).run(id, s, String(body.kind), inhalt, u.id, at, new Date().toISOString());
+      }
       const einfuegen = db.prepare('INSERT INTO game_players (game_id, pos, user_id, guest_name) VALUES (?, ?, ?, ?)');
       for (const z of zeilen) einfuegen.run(id, z.pos, z.user_id, z.guest_name);
       return s;
     });
     kontingentZaehlen(u, 'spiele');
+    if (ersetzen) return sendJson(res, 200, { ok: true, seq, ersetzt: true });
 
     sendJson(res, 201, { ok: true, seq });
   }
@@ -962,6 +1034,7 @@ export function createApi(db, config) {
     pruefePartie(body.result, 'Ergebnis');
     if (body.result.id !== mid) throw kaputt('Ergebnis gehoert zu einer anderen Partie');
     if (!Array.isArray(body.result.legs)) throw kaputt('Ergebnis ohne Legs');
+    pruefeLegZahlen(body.result, 'Ergebnis');   // S7: der Ticker rechnet und zeigt auch fertige Einzel
     const ergebnisText = JSON.stringify(body.result);
     if (ergebnisText.length > MAX_INHALT) throw new HttpFehler(413, 'Das Ergebnis ist zu gross.');
     kontingentPruefen(u, 'spiele');
@@ -1025,16 +1098,34 @@ export function createApi(db, config) {
     const neu = Object.assign({}, body.plan, { planStand: altStand + 1 });
     const planText = JSON.stringify(neu);
     if (planText.length > MAX_INHALT) throw new HttpFehler(413, 'Der Spielplan ist zu gross.');
-    transaktion(db, function () {
-      db.prepare('UPDATE tournaments SET plan = ? WHERE id = ?').run(planText, t.id);
-      /* Wer neu im Plan steht und ein Konto hat, sieht das Turnier jetzt auch. */
-      const ins = db.prepare('INSERT OR IGNORE INTO tournament_players (tournament_id, user_id) VALUES (?, ?)');
-      for (const p of Array.isArray(neu.players) ? neu.players : []) {
-        const k = db.prepare("SELECT id FROM users WHERE id = ? AND status = 'aktiv'").get(String(p));
-        if (k) ins.run(t.id, k.id);
-      }
-    });
-    sendJson(res, 200, { turnier: turnierAntwort(verlangeTurnier(t.id), 0, u) });
+    /* S2: `t` stammt von vor dem await auf den Koerper - in der Zeit kann
+       das andere iPad seinen Wechsel komplett durchgebracht haben. Deshalb
+       entscheidet wie beim Live-Spiel das UPDATE selbst: es greift nur,
+       solange in der Datenbank noch der gelesene planStand steht. */
+    let geschrieben = false;
+    try {
+      transaktion(db, function () {
+        const r = db.prepare(
+          "UPDATE tournaments SET plan = ? WHERE id = ? AND status = 'offen' AND COALESCE(json_extract(plan, '$.planStand'), 0) = ?"
+        ).run(planText, t.id, altStand);
+        if (!r.changes) throw NICHTS;
+        /* Wer neu im Plan steht und ein Konto hat, sieht das Turnier jetzt auch. */
+        const ins = db.prepare('INSERT OR IGNORE INTO tournament_players (tournament_id, user_id) VALUES (?, ?)');
+        for (const p of Array.isArray(neu.players) ? neu.players : []) {
+          const k = db.prepare("SELECT id FROM users WHERE id = ? AND status = 'aktiv'").get(String(p));
+          if (k) ins.run(t.id, k.id);
+        }
+        geschrieben = true;
+      });
+    } catch (e) {
+      if (e !== NICHTS) throw e;
+    }
+    const frisch = verlangeTurnier(t.id);
+    if (!geschrieben) {
+      if (frisch.status !== 'offen') throw new HttpFehler(409, 'Das Turnier ist schon beendet.');
+      return sendJson(res, 409, { fehler: 'Der Spielplan wurde gerade auf dem anderen Gerät geändert.', turnier: turnierAntwort(frisch, 0, u) });
+    }
+    sendJson(res, 200, { turnier: turnierAntwort(frisch, 0, u) });
   }
 
   /* Laufender Stand eines Einzels fuer die Zuschauer (vom spielenden
@@ -1057,6 +1148,7 @@ export function createApi(db, config) {
     }
     const st = body.stand;
     if (!istObjekt(st) || !Array.isArray(st.legs) || !Array.isArray(st.p)) throw kaputt('Live-Stand');
+    pruefeLegZahlen(st, 'Live-Stand');   // S7: landet ungeschuetzt im Ticker
     liveEinzelSetzen(t.id, mid, { stand: st, at: Date.now(), von: u.id });
     sendJson(res, 200, { ok: true });
   }
@@ -1065,10 +1157,13 @@ export function createApi(db, config) {
      den geheimen Schluessel kennt. Bericht-Daten (Unterschriften,
      Nachmeldungen, Korrekturen) gehen hier bewusst nicht raus. */
   function zuschauerAnsicht(req, res, treffer) {
+    /* O24: der Ticker fragt alle 4 s (150 je 10 min), die Webseite alle 6 s.
+       Im Lokal haengen alle Zuschauer hinter einer WLAN-Adresse - 1200
+       reichten fuer acht; 6000 fuer rund vierzig. */
     const ip = clientIp(req, config.trustProxy);
-    const warte = limit.pruefe('zuschauer:' + ip, 1200, 600e3);
+    const warte = limit.pruefe('zuschauer:' + ip, 6000, 600e3);
     if (warte) throw new HttpFehler(429, 'Bitte etwas langsamer.');
-    limit.zaehle('zuschauer:' + ip, 1200, 600e3);
+    limit.zaehle('zuschauer:' + ip, 6000, 600e3);
     const k = String(Array.isArray(treffer) ? treffer[0] : treffer || '');
     if (!/^[A-Za-z0-9_-]{8,40}$/.test(k)) throw new HttpFehler(404, 'Diesen Live-Ticker gibt es nicht.');
     const t = db.prepare('SELECT * FROM tournaments WHERE zuschauer = ?').get(k);
@@ -1230,18 +1325,48 @@ export function createApi(db, config) {
     return m;
   }
 
+  /* S3: Wohin der Spielbericht darf. Absender ist der Verein - ein
+     uebernommenes Konto koennte sonst mit Vereinsabsender und PDF-Anhang an
+     Fremde schreiben. Erlaubt sind die eigene Konto-Adresse, Adressen aus
+     den Liga-Daten (falls dort je Kontakte stehen) und die Liste aus
+     DARTS_MAIL_ERLAUBT (kommagetrennt). Fehlt die Variable, gilt die
+     Ligaleitung, die auch die App als ersten Empfaenger vorschlaegt. */
+  const MAIL_ERLAUBT_VORGABE = 'spielbericht@steeldart-muenchen.de';
+  const mailErlaubtListe = String(config.mailErlaubt === undefined || config.mailErlaubt === null ? MAIL_ERLAUBT_VORGABE : config.mailErlaubt)
+    .split(',').map((a) => a.trim().toLowerCase()).filter(istAdresse);
+  function adressenAus(wert, sammel, tiefe) {
+    if (tiefe > 4 || wert == null) return sammel;
+    if (typeof wert === 'string') { if (istAdresse(wert)) sammel.add(wert.trim().toLowerCase()); return sammel; }
+    if (Array.isArray(wert)) { for (const w of wert) adressenAus(w, sammel, tiefe + 1); return sammel; }
+    if (typeof wert === 'object') for (const k of Object.keys(wert)) adressenAus(wert[k], sammel, tiefe + 1);
+    return sammel;
+  }
+  /* Nur `liga` (Team, Termine, Kontakte) - nicht die importierten Spieltage
+     aller Mannschaften. */
+  const mailErlaubtLiga = adressenAus(config.liga && config.liga.liga, new Set(), 0);
+  function mailEmpfaengerErlaubt(u, adr) {
+    return adr === String(u.email || '').toLowerCase() || mailErlaubtListe.includes(adr) || mailErlaubtLiga.has(adr);
+  }
+
   /* Der unterschriebene Spielbericht als PDF an Ligaleitung und Gegner -
      vom Server, Absender blink180@, Kopie ins eigene Postfach. */
   async function ligaBerichtMail(req, res) {
     pruefeHerkunft(req);
     const u = verlangeNutzer(req);
     if (u.gast_konto) throw new HttpFehler(403, 'Mit einem Gast-Konto geht das nicht.');
-    const m = mailer();
     const warte = limit.pruefe('bericht-mail:' + u.id, 10, 3600e3);
     if (warte) throw new HttpFehler(429, 'Zu viele Mails. Bitte in ' + Math.ceil(warte / 60) + ' Minuten nochmal.');
     const body = await leseJson(req, 6 * 1024 * 1024);
     const an = Array.isArray(body.an) ? body.an.map((a) => String(a || '').trim().toLowerCase()).filter(Boolean) : [];
     if (!an.length || an.length > 5 || !an.every(istAdresse)) throw new HttpFehler(400, 'Bitte 1 bis 5 gültige Mailadressen angeben.');
+    const fremd = an.filter((a) => !mailEmpfaengerErlaubt(u, a));
+    if (fremd.length) {
+      throw new HttpFehler(400, 'Empfänger nicht erlaubt: ' + fremd.join(', ') + '. Der Spielbericht geht nur an die Ligaleitung und an deine eigene Adresse.');
+    }
+    /* Erst nach der Pruefung der Eingaben: so antwortet der Server auch
+       ohne eingerichteten Versand mit 400 statt 503, und die Pruefung
+       laesst sich ohne Brevo testen. */
+    const m = mailer();
     const betreff = String(body.betreff || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 200);
     if (!betreff) throw new HttpFehler(400, 'Ohne Betreff geht keine Mail raus.');
     const text = String(body.text || '').slice(0, 5000);
@@ -1297,10 +1422,34 @@ export function createApi(db, config) {
     pruefeHerkunft(req);
     const u = verlangeNutzer(req);
     const body = await leseJson(req, MAX_BODY_KLEIN);
-    for (const k of Object.keys(body || {})) {
-      try { mitteilungen.setze(u.id, k, String(body[k])); } catch (e) { throw new HttpFehler(400, e.message); }
+    /* M18: alle Themen in einer Transaktion - sonst blieben bei einem
+       unbekannten Kanal in der Mitte die ersten Zeilen gespeichert, und die
+       App zeigte nach dem 400er einen anderen Stand als gemeint. */
+    try {
+      transaktion(db, function () {
+        for (const k of Object.keys(body || {})) mitteilungen.setze(u.id, k, String(body[k]));
+      });
+    } catch (e) {
+      if (e instanceof HttpFehler) throw e;
+      throw new HttpFehler(400, e.message);
     }
     sendJson(res, 200, { einstellungen: mitteilungen.einstellungen(u.id) });
+  }
+
+  /* Push-Dienste der Browser: Apple (Safari, iOS), Google (Chrome, Edge,
+     Brave, Samsung), Mozilla (Firefox), Microsoft (Edge-Altbestand). */
+  const PUSH_HOSTS = [
+    /(^|\.)push\.apple\.com$/,
+    /^fcm\.googleapis\.com$/,
+    /(^|\.)push\.services\.mozilla\.com$/,
+    /(^|\.)notify\.windows\.com$/
+  ];
+  function pushDienstErlaubt(endpoint) {
+    let url;
+    try { url = new URL(endpoint); } catch (e) { return false; }
+    if (url.protocol !== 'https:' || url.username || url.password || url.port) return false;
+    const host = url.hostname.toLowerCase();
+    return PUSH_HOSTS.some((m) => m.test(host));
   }
 
   /* Ein Push-Abo dieses Geraets (PushSubscription.toJSON()). Hoechstens zehn
@@ -1311,8 +1460,16 @@ export function createApi(db, config) {
     const body = await leseJson(req, MAX_BODY_KLEIN);
     const endpoint = String(body.endpoint || '');
     const keys = body.keys && typeof body.keys === 'object' ? body.keys : {};
-    const b64 = /^[A-Za-z0-9_-]{10,200}$/;
-    if (!/^https:\/\/[^\s"'<>]{10,1000}$/.test(endpoint) || !b64.test(String(keys.p256dh || '')) || !b64.test(String(keys.auth || ''))) {
+    /* S5: der Server ruft den Endpunkt spaeter selbst auf (Web Push). Ohne
+       Beschraenkung waere das eine blinde Anfrage an jede Adresse, die ein
+       Konto hier eintraegt - auch 127.0.0.1. Also nur https und nur die
+       Push-Dienste der Browser, die es gibt.
+       M8: p256dh sind 65 Bytes, auth 16 Bytes - base64url ohne Fuellzeichen
+       87 bzw. 22 Zeichen. Kuerzere Schluessel scheitern bei jedem Versand
+       an der Verschluesselung und blieben sonst ewig liegen. */
+    if (!/^https:\/\/[^\s"'<>]{10,1000}$/.test(endpoint) || !pushDienstErlaubt(endpoint) ||
+        !/^[A-Za-z0-9_-]{87}$/.test(String(keys.p256dh || '').replace(/=+$/, '')) ||
+        !/^[A-Za-z0-9_-]{22}$/.test(String(keys.auth || '').replace(/=+$/, ''))) {
       throw new HttpFehler(400, 'Das Push-Abo ist unbrauchbar.');
     }
     db.prepare(
@@ -1334,6 +1491,59 @@ export function createApi(db, config) {
   /* Ereignis aus der App (Ergebnis, Anpfiff, Rekord, Bericht offen): der
      Server baut den Text und verteilt; der Schluessel haelt jedes Ereignis
      je Konto auf einmal, auch wenn zwei iPads es melden. */
+  /* M3/S6: was die App melden darf, bevor mitteilungen.mjs den Text baut.
+     Jedes Konto (auch eine alte Session auf dem Bar-iPad) erreicht damit
+     alle - deshalb nur echte Spieltage, nur Links in die App, nur die drei
+     Rekordarten, kurze Texte, und je Spieltag hoechstens zwei Ergebnis-
+     bzw. Anpfiff-Meldungen am Tag. */
+  const EREIGNIS_ARTEN = new Set(['ergebnis', 'live', 'rekord', 'bericht-offen']);
+  const REKORD_ARTEN = new Set(['Höchstes Finish', 'Höchste Aufnahme', 'Kürzestes Leg']);
+  const EREIGNIS_TEXTE = { gegner: 60, ort: 60, name: 40, wert: 12, einheit: 12, mod: 80, art: 40 };
+  function ligaTermine() {
+    const lg = config.liga && config.liga.liga;
+    return lg && Array.isArray(lg.termine) ? lg.termine : [];
+  }
+  function pruefeEreignis(art, d) {
+    if (!EREIGNIS_ARTEN.has(art)) throw new HttpFehler(400, 'Unbekanntes Ereignis.');
+    if (!istObjekt(d)) throw new HttpFehler(400, 'Zum Ereignis fehlen die Daten.');
+    for (const [feld, max] of Object.entries(EREIGNIS_TEXTE)) {
+      const w = d[feld];
+      if (w === undefined || w === null) continue;
+      if ((typeof w !== 'string' && typeof w !== 'number') || String(w).length > max) {
+        throw new HttpFehler(400, 'Das Feld "' + feld + '" ist zu lang oder unbrauchbar.');
+      }
+    }
+    if (d.hl !== undefined && (!Array.isArray(d.hl) || d.hl.length > 6 || !d.hl.every((x) => typeof x === 'string' && x.length <= 160))) {
+      throw new HttpFehler(400, 'Die Highlights sind unbrauchbar.');
+    }
+    if (d.einzel !== undefined && (!Array.isArray(d.einzel) || d.einzel.length > 16 ||
+        !d.einzel.every((e) => istObjekt(e) && String(e.h == null ? '' : e.h).length <= 40 && String(e.g == null ? '' : e.g).length <= 40 && String(e.score == null ? '' : e.score).length <= 12))) {
+      throw new HttpFehler(400, 'Die Einzel sind unbrauchbar.');
+    }
+    /* Spieltag: nur eine Kennung aus dem Spielplan (st01 ...). Fuer
+       Ergebnis und Anpfiff Pflicht, beim offenen Bericht nur der Schluessel. */
+    let termin = null;
+    if (d.termin !== undefined && d.termin !== null && d.termin !== '') {
+      if (typeof d.termin !== 'string' || !ligaTermine().some((t) => t && t.id === d.termin)) {
+        throw new HttpFehler(400, 'Diesen Spieltag gibt es im Spielplan nicht.');
+      }
+      termin = d.termin;
+    }
+    if ((art === 'ergebnis' || art === 'live') && !termin) throw new HttpFehler(400, 'Ohne Spieltag keine Meldung.');
+    /* Link nur in die App selbst (Live-Ticker). Alles andere waere ein
+       Phishing-Knopf mit Vereinsabsender. */
+    if (art === 'live' && d.link !== undefined && d.link !== null && d.link !== '') {
+      let ziel = null;
+      try { ziel = new URL(String(d.link)); } catch (e) { ziel = null; }
+      const app = new URL(config.appUrl || 'https://darts.wirtschaftln.de');
+      if (!ziel || ziel.origin !== app.origin || String(d.link).length > 200) {
+        throw new HttpFehler(400, 'Der Link muss zur Dart-App führen.');
+      }
+    }
+    if (art === 'rekord' && !REKORD_ARTEN.has(String(d.art))) throw new HttpFehler(400, 'Unbekannte Rekordart.');
+    return termin;
+  }
+
   async function mitteilungEreignis(req, res) {
     pruefeHerkunft(req);
     const u = verlangeNutzer(req);
@@ -1342,8 +1552,18 @@ export function createApi(db, config) {
     if (warte) throw new HttpFehler(429, 'Zu viele Mitteilungen. Bitte spaeter nochmal.');
     limit.zaehle('ereignis:' + u.id, 30, 3600e3);
     const body = await leseJson(req, 64 * 1024);
+    const art = String(body.art || '');
+    const termin = pruefeEreignis(art, body.daten);
+    /* Je Spieltag und Tag hoechstens zwei Ergebnis- bzw. Anpfiff-Meldungen,
+       egal von welchem Konto: einmal echt, einmal Korrektur. */
+    const tagesSchluessel = (art === 'ergebnis' || art === 'live')
+      ? 'ereignis:' + art + ':' + termin + ':' + new Date().toISOString().slice(0, 10) : null;
+    if (tagesSchluessel && limit.pruefe(tagesSchluessel, 2, TAG)) {
+      throw new HttpFehler(429, 'Diese Meldung ist fuer den Spieltag heute schon zweimal rausgegangen.');
+    }
     let n;
-    try { n = await mitteilungen.ereignis(u, String(body.art || ''), body.daten); } catch (e) { throw new HttpFehler(400, e.message); }
+    try { n = await mitteilungen.ereignis(u, art, body.daten); } catch (e) { throw new HttpFehler(400, e.message); }
+    if (tagesSchluessel) limit.zaehle(tagesSchluessel, 2, TAG);
     sendJson(res, 200, { ok: true, n });
   }
 
@@ -1362,6 +1582,8 @@ export function createApi(db, config) {
   async function ligaTabelleSpeichern(req, res) {
     pruefeHerkunft(req);
     const u = verlangeNutzer(req);
+    /* S1: die Tabelle gehoert zur Liga - Gast-Konten lesen sie nur. */
+    if (u.gast_konto) throw new HttpFehler(403, 'Mit einem Gast-Konto kannst du die Ligatabelle ansehen, aber nicht aendern.');
     const body = await leseJson(req);
     /* Der Client rechnet mit { zeilen: [...] } - alles andere wuerde beim
        Rendern jeden Reiter zerschiessen, also gar nicht erst annehmen. */
@@ -1405,6 +1627,9 @@ export function createApi(db, config) {
 
   async function kasseHolen(req, res) {
     const u = verlangeNutzer(req);
+    /* S1: das Kassenbuch (Saldo, Buchungen, Beitragsstand aller Mitglieder)
+       ist Vereinssache - Gast-Konten zahlen keinen Beitrag und sehen es nicht. */
+    if (u.gast_konto) throw new HttpFehler(403, 'Mit einem Gast-Konto geht das Kassenbuch nichts an.');
     const konfig = kasseKonfig();
     /* Buchungen von oder fuer Testkonten sieht (und zaehlt) nur, wer
        Testkonten sehen darf. */
@@ -1488,6 +1713,7 @@ export function createApi(db, config) {
   async function kasseBuchen(req, res) {
     pruefeHerkunft(req);
     const u = verlangeNutzer(req);
+    if (u.gast_konto) throw new HttpFehler(403, 'Mit einem Gast-Konto kannst du nichts in die Kasse buchen.');   // S1
     const b = pruefeBuchung(await leseJson(req), u);
     db.prepare('INSERT INTO kasse (user_id, betrag, text, datum, kategorie, mitglied, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
       .run(u.id, b.betrag, b.text, b.datum, b.kategorie, b.mitglied, new Date().toISOString());
@@ -1873,7 +2099,9 @@ export function createApi(db, config) {
     let konflikt = false;
     try {
       neu = transaktion(db, function () {
-        if (state && basis !== null) {
+        /* Auch ohne eigenen Schlussstand: wer nur `seq` schickt, will mit dem
+           Stand schliessen, den er kennt - ist der Server weiter, 409. */
+        if (basis !== null) {
           const jetzt = db.prepare('SELECT seq, status FROM live_games WHERE id = ?').get(g.id);
           if (jetzt.status === 'offen' && jetzt.seq !== basis) { konflikt = true; throw NICHTS; }
         }

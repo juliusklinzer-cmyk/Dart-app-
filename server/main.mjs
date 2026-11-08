@@ -40,7 +40,11 @@ const config = {
   kontingentSpiele: Number(process.env.DARTS_KONTINGENT_SPIELE) || 0,
   /* Nur fuer Tests: Frist, nach der ein Anspruch ohne Lebenszeichen verfaellt. */
   claimFristMs: Number(process.env.DARTS_CLAIM_FRIST_MS) || 0,
-  kontingentLive: Number(process.env.DARTS_KONTINGENT_LIVE) || 0
+  kontingentLive: Number(process.env.DARTS_KONTINGENT_LIVE) || 0,
+  /* S3: Empfaenger, an die der Spielbericht mit Vereinsabsender gehen darf
+     (kommagetrennt), zusaetzlich zur eigenen Konto-Adresse. Nicht gesetzt:
+     die Ligaleitung (Vorgabe in api.mjs). Leer gesetzt: nur die eigene. */
+  mailErlaubt: process.env.DARTS_MAIL_ERLAUBT
 };
 
 /* Mailer, Push und Spielplan - aus der Umgebung, siehe lib/dienste.mjs. */
@@ -130,7 +134,23 @@ function liefereDatei(req, res, datei) {
     'Cache-Control': 'no-cache',
     'X-Content-Type-Options': 'nosniff'
   });
-  fs.createReadStream(datei).pipe(res);
+  /* S8: ein Lesefehler mitten im Strom (Datei waehrend des Deploys
+     ausgetauscht, Platte) ist ohne Handler ein unbehandeltes 'error' - der
+     Prozess stirbt, alle Live-Stroeme reissen ab. Stattdessen: Verbindung
+     beenden, der Browser laedt nach. Geht der Client vorher, schliessen wir
+     die Datei. */
+  const strom = fs.createReadStream(datei);
+  strom.on('error', function (e) {
+    console.error('Statische Datei nicht lesbar (' + datei + '): ' + (e && e.message));
+    if (!res.headersSent) {
+      res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
+      res.end('Fehler beim Lesen');
+    } else {
+      res.destroy();
+    }
+  });
+  res.on('close', function () { strom.destroy(); });
+  strom.pipe(res);
 }
 
 /* ---------- Sicherheits-Header ----------

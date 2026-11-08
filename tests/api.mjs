@@ -92,12 +92,12 @@ function geraet(name) {
  * Ein PUT, dessen Koerper langsam ankommt -- wie ueber schlechten Mobilfunk.
  * Die erste Haelfte geht sofort raus, der Rest erst mit fertig().
  */
-function langsamerPut(pfad, cookie, body) {
+function langsamerPut(pfad, cookie, body, methode) {
   const text = JSON.stringify(body);
   const halb = Math.floor(text.length / 2);
   let antwort;
   const req = http.request({
-    host: '127.0.0.1', port: PORT, path: pfad, method: 'PUT',
+    host: '127.0.0.1', port: PORT, path: pfad, method: methode || 'PUT',
     headers: { 'X-Darts-App': '1', Cookie: cookie, 'Content-Type': 'application/json' }
   });
   const fertigAntwort = new Promise((resolve, reject) => {
@@ -170,6 +170,8 @@ async function main() {
       DARTS_KONTINGENT_LIVE: '60',
       // Lebenszeichen im Live-Strom alle 300 ms statt alle 25 s.
       DARTS_SSE_PULS_MS: '300',
+      // Spielbericht-Mail (S3): erlaubte Fremdadresse neben der eigenen.
+      DARTS_MAIL_ERLAUBT: 'ligaleitung@beispiel.de, kapitaen@gegner.de',
       NODE_ENV: 'test'
     },
     stdio: ['ignore', 'pipe', 'pipe']
@@ -291,6 +293,25 @@ async function main() {
     ok(r.daten.schonDa === true, 'der Server erkennt den Wiederholungsversuch');
     gleich(r.daten.seq, ersteSeq, 'der Cursor bleibt dabei gleich');
 
+    // O21-Folge: nach einem Konflikt beim Beenden ersetzt die zweite Fassung die erste --
+    // nur fuer den, der sie eingetragen hat.
+    const spielNeu = JSON.parse(JSON.stringify(spiel));
+    spielNeu.throws.push({ p: tobi_id, s: 60 });
+    r = await tobi.ruf('POST', '/api/games', {
+      id: spiel.id, kind: '501', at: spiel.at, payload: spielNeu, ersetzen: true,
+      players: [{ userId: julius_id }, { userId: tobi_id }]
+    });
+    gleich(r.status, 200, 'ein anderer darf mit `ersetzen` nichts ueberschreiben');
+    ok(r.daten.schonDa === true, '... er bekommt die harmlose Wiederholungs-Antwort');
+    r = await julius.ruf('POST', '/api/games', {
+      id: spiel.id, kind: '501', at: spiel.at, payload: spielNeu, ersetzen: true,
+      players: [{ userId: julius_id }, { userId: tobi_id }]
+    });
+    gleich(r.status, 200, 'der Eintragende darf seine Fassung ersetzen');
+    ok(r.daten.ersetzt === true && r.daten.seq > ersteSeq, '... mit neuem Cursor');
+    r = await tobi.ruf('GET', '/api/games?since=0');
+    ok(r.daten.spiele.some((s) => s.id === spiel.id && s.payload.throws.length === 2), 'die ersetzte Fassung liegt auf dem Server');
+
     r = await julius.ruf('POST', '/api/games', {
       id: 'gastspiel',
       kind: 'cricket',
@@ -324,7 +345,7 @@ async function main() {
     gleich(r.daten.spiele.length, 2, 'Tobi sieht auch das Gastspiel, in dem er nicht stand');
     gleich(r.daten.spiele[0].id, spiel.id, 'es ist das richtige Spiel');
     gleich(r.daten.spiele[0].eingetragenVonName, 'Julius', 'Tobi sieht, wer es eingetragen hat');
-    ok(r.daten.spiele[0].payload.throws.length === 1, 'der Spielinhalt kommt unveraendert an');
+    ok(r.daten.spiele[0].payload.throws.length === 2, 'der Spielinhalt kommt unveraendert an (die ersetzte Fassung mit zwei Aufnahmen)');
 
     r = await julius.ruf('GET', '/api/games?since=0');
     gleich(r.daten.spiele.length, 2, 'Julius sieht beide von ihm eingetragenen Spiele');
@@ -386,13 +407,21 @@ async function main() {
        erfaehrt das ueber /api/me, die Mail-Routen antworten 503. */
     r = await julius.ruf('GET', '/api/me');
     gleich(r.daten.mail, false, '/api/me sagt: kein Mailversand eingerichtet');
-    gleich(r.daten.nutzer.mailErinnerung, true, 'Erinnerungs-Mails vor dem Spieltag sind voreingestellt an');
+    /* M19: das alte Feld mailErinnerung gibt es nicht mehr - die
+       Erinnerungen stellt man je Thema unter Benachrichtigungen ein. Ein
+       aelterer Client, der es noch schickt, bekommt keinen Fehler. */
+    ok(!('mailErinnerung' in r.daten.nutzer), 'das Profil traegt kein mailErinnerung mehr (M19)');
     r = await julius.ruf('PATCH', '/api/me', { mailErinnerung: false });
-    gleich(r.daten.nutzer.mailErinnerung, false, 'und lassen sich abschalten');
-    r = await julius.ruf('PATCH', '/api/me', { mailErinnerung: true });
-    gleich(r.daten.nutzer.mailErinnerung, true, 'und wieder einschalten');
+    gleich(r.status, 200, 'ein alter Client mit mailErinnerung stoert nicht');
+    /* S3: der Spielbericht geht nur an Ligaleitung (DARTS_MAIL_ERLAUBT) und
+       die eigene Adresse - die Pruefung kommt vor dem 503 des fehlenden Mailers. */
     r = await julius.ruf('POST', '/api/liga/bericht-mail', { an: ['liga@beispiel.de'], betreff: 'Spielbericht', text: 'Hallo' });
-    gleich(r.status, 503, 'Spielbericht per Mail: ohne eingerichteten Versand 503');
+    gleich(r.status, 400, 'Spielbericht an eine fremde Adresse: 400 (S3)');
+    ok(/Empfänger nicht erlaubt: liga@beispiel.de/.test((r.daten && r.daten.fehler) || ''), 'mit der Adresse in der Meldung');
+    r = await julius.ruf('POST', '/api/liga/bericht-mail', { an: ['ligaleitung@beispiel.de', 'Kapitaen@Gegner.de', 'julius@example.de'], betreff: 'Spielbericht', text: 'Hallo' });
+    gleich(r.status, 503, 'an Ligaleitung, erlaubte Liste und sich selbst: ohne eingerichteten Versand 503');
+    r = await julius.ruf('POST', '/api/liga/bericht-mail', { an: ['ligaleitung@beispiel.de', 'boese@phish.example'], betreff: 'Spielbericht', text: 'Hallo' });
+    gleich(r.status, 400, 'eine fremde Adresse in der Liste reicht fuer 400');
     r = await julius.ruf('POST', '/api/mail/probe', {});
     gleich(r.status, 503, 'Testmail: ohne eingerichteten Versand 503');
     /* Mitteilungen: Themen, Einstellungen, Push-Abos, Ereignisse. */
@@ -404,16 +433,77 @@ async function main() {
     gleich(r.daten.einstellungen.zusage + '/' + r.daten.einstellungen.rekord, 'push/aus', 'Einstellungen lassen sich setzen');
     r = await julius.ruf('PUT', '/api/mitteilungen/einstellungen', { konto: 'aus' });
     gleich(r.status, 400, 'Konto und Sicherheit laesst sich nicht abschalten');
-    r = await julius.ruf('POST', '/api/push/abo', { endpoint: 'https://push.example.com/abc1234567', keys: { p256dh: 'A'.repeat(87), auth: 'B'.repeat(22) } });
-    gleich(r.status, 200, 'Push-Abo angelegt');
+    /* M18: ein Fehler in der Mitte laesst nichts halb gespeichert zurueck. */
+    r = await julius.ruf('PUT', '/api/mitteilungen/einstellungen', { zusage: 'beide', rekord: 'quatsch' });
+    gleich(r.status, 400, 'ein unbekannter Kanal: 400');
+    r = await julius.ruf('GET', '/api/mitteilungen');
+    gleich(r.daten.einstellungen.zusage + '/' + r.daten.einstellungen.rekord, 'push/aus', 'und die Themen davor bleiben unveraendert (M18)');
+    /* S5/M8: nur https zu den Push-Diensten der Browser, Schluessel in voller Laenge. */
+    const SCHLUESSEL = { p256dh: 'A'.repeat(87), auth: 'B'.repeat(22) };
+    r = await julius.ruf('POST', '/api/push/abo', { endpoint: 'https://fcm.googleapis.com/fcm/send/abc1234567', keys: SCHLUESSEL });
+    gleich(r.status, 200, 'Push-Abo angelegt (Google)');
     gleich(r.daten.abos.length, 1, 'und steht in der Liste');
+    r = await julius.ruf('POST', '/api/push/abo', { endpoint: 'https://web.push.apple.com/QAbc1234567890', keys: SCHLUESSEL });
+    gleich(r.status, 200, 'Apple geht');
+    r = await julius.ruf('POST', '/api/push/abo', { endpoint: 'https://updates.push.services.mozilla.com/wpush/v2/abc1234567', keys: SCHLUESSEL });
+    gleich(r.status, 200, 'Mozilla geht');
+    r = await julius.ruf('POST', '/api/push/abo', { endpoint: 'https://wns2-par02p.notify.windows.com/w/?token=abc1234567', keys: SCHLUESSEL });
+    gleich(r.status, 200, 'Microsoft geht');
+    gleich(r.daten.abos.length, 4, 'vier Abos');
+    r = await julius.ruf('POST', '/api/push/abo', { endpoint: 'https://push.example.com/abc1234567', keys: SCHLUESSEL });
+    gleich(r.status, 400, 'ein fremder Host wird abgewiesen (S5)');
+    r = await julius.ruf('POST', '/api/push/abo', { endpoint: 'https://127.0.0.1:3999/irgendwas/lang', keys: SCHLUESSEL });
+    gleich(r.status, 400, 'die eigene Kiste erst recht');
+    r = await julius.ruf('POST', '/api/push/abo', { endpoint: 'http://fcm.googleapis.com/fcm/send/abc1234567', keys: SCHLUESSEL });
+    gleich(r.status, 400, 'nur https');
+    r = await julius.ruf('POST', '/api/push/abo', { endpoint: 'https://fcm.googleapis.com.boese.example/fcm/send/abc1234567', keys: SCHLUESSEL });
+    gleich(r.status, 400, 'ein Host, der nur so beginnt, zaehlt nicht');
+    r = await julius.ruf('POST', '/api/push/abo', { endpoint: 'https://fcm.googleapis.com/fcm/send/kurz1234567', keys: { p256dh: 'A'.repeat(40), auth: 'B'.repeat(22) } });
+    gleich(r.status, 400, 'zu kurzer p256dh wird abgewiesen (M8)');
+    r = await julius.ruf('POST', '/api/push/abo', { endpoint: 'https://fcm.googleapis.com/fcm/send/kurz1234567', keys: { p256dh: 'A'.repeat(87), auth: 'B'.repeat(16) } });
+    gleich(r.status, 400, 'zu kurzer auth ebenfalls');
     r = await julius.ruf('POST', '/api/push/abo', { endpoint: 'kaputt' });
     gleich(r.status, 400, 'unbrauchbares Abo wird abgewiesen');
-    r = await julius.ruf('POST', '/api/push/abo/weg', { endpoint: 'https://push.example.com/abc1234567' });
-    gleich(r.daten.abos.length, 0, 'Abo wieder weg');
+    r = await julius.ruf('POST', '/api/push/abo/weg', { endpoint: 'https://web.push.apple.com/QAbc1234567890' });
+    gleich(r.daten.abos.length, 3, 'Abo wieder weg');
+    /* M5: Abmelden mit { endpoint } nimmt das Abo dieses Geraets mit. */
+    r = await julius.ruf('POST', '/api/logout', { endpoint: 'https://fcm.googleapis.com/fcm/send/abc1234567' });
+    gleich(r.status, 200, 'Abmelden mit Endpoint klappt');
+    r = await julius.ruf('POST', '/api/login', { email: 'julius@example.de', password: 'neuespasswort2026' });
+    gleich(r.status, 200, 'wieder angemeldet');
+    r = await julius.ruf('GET', '/api/mitteilungen');
+    ok(r.daten.abos.length === 2 && !r.daten.abos.includes('https://fcm.googleapis.com/fcm/send/abc1234567'), 'das Abo des abgemeldeten Geraets ist weg, die anderen bleiben (M5)');
+    for (const ep of r.daten.abos) await julius.ruf('POST', '/api/push/abo/weg', { endpoint: ep });
+    /* M3/S6: Ereignisse nur fuer echte Spieltage, Links nur in die App,
+       Rekorde nur in den drei bekannten Arten, und je Spieltag und Tag
+       hoechstens zwei Ergebnis- bzw. Anpfiff-Meldungen. */
     r = await julius.ruf('POST', '/api/mitteilungen/ereignis', { art: 'ergebnis', daten: { termin: 'st03', nr: 3, gegner: 'Voodoo Darters', wirP: 9, sieP: 7 } });
     gleich(r.status, 200, 'Ereignis angenommen');
     gleich(r.daten.n, 0, 'ohne Mail und Push geht nichts raus');
+    r = await julius.ruf('POST', '/api/mitteilungen/ereignis', { art: 'ergebnis', daten: { termin: 'fake-01', nr: 99, gegner: 'Niemand', wirP: 9, sieP: 7 } });
+    gleich(r.status, 400, 'ein erfundener Spieltag: 400 (M3)');
+    r = await julius.ruf('POST', '/api/mitteilungen/ereignis', { art: 'ergebnis', daten: { nr: 3, gegner: 'Voodoo Darters', wirP: 9, sieP: 7 } });
+    gleich(r.status, 400, 'ohne Spieltag: 400');
+    r = await julius.ruf('POST', '/api/mitteilungen/ereignis', { art: 'live', daten: { termin: 'st03', gegner: 'Voodoo Darters', link: 'https://boese.example/phish' } });
+    gleich(r.status, 400, 'ein fremder Link: 400');
+    r = await julius.ruf('POST', '/api/mitteilungen/ereignis', { art: 'live', daten: { termin: 'st03', gegner: 'Voodoo Darters', link: 'https://darts.wirtschaftln.de/live.html#abcdefghijkl' } });
+    gleich(r.status, 200, 'ein Link in die App geht');
+    r = await julius.ruf('POST', '/api/mitteilungen/ereignis', { art: 'live', daten: { termin: 'st03', gegner: 'Voodoo Darters' } });
+    gleich(r.status, 200, 'der zweite Anpfiff am Tag noch (Korrektur)');
+    r = await julius.ruf('POST', '/api/mitteilungen/ereignis', { art: 'live', daten: { termin: 'st03', gegner: 'Voodoo Darters' } });
+    gleich(r.status, 429, 'der dritte nicht mehr (S6)');
+    r = await julius.ruf('POST', '/api/mitteilungen/ereignis', { art: 'live', daten: { termin: 'st04', gegner: 'd`Haberer 2' } });
+    gleich(r.status, 200, 'ein anderer Spieltag zaehlt getrennt');
+    r = await julius.ruf('POST', '/api/mitteilungen/ereignis', { art: 'rekord', daten: { art: 'Passwort läuft ab', wert: 'neu setzen', name: 'https://boese.example' } });
+    gleich(r.status, 400, 'eine erfundene Rekordart: 400');
+    r = await julius.ruf('POST', '/api/mitteilungen/ereignis', { art: 'rekord', daten: { art: 'Höchstes Finish', wert: 121, name: 'Lenas' } });
+    gleich(r.status, 200, 'eine echte Rekordart geht');
+    r = await julius.ruf('POST', '/api/mitteilungen/ereignis', { art: 'rekord', daten: { art: 'Höchstes Finish', wert: 121, name: 'N'.repeat(41) } });
+    gleich(r.status, 400, 'ein zu langer Name: 400');
+    r = await julius.ruf('POST', '/api/mitteilungen/ereignis', { art: 'bericht-offen', daten: { termin: 'st03', nr: 3, gegner: 'Voodoo Darters' } });
+    gleich(r.status, 200, 'Spielbericht offen: an sich selbst');
+    r = await julius.ruf('POST', '/api/mitteilungen/ereignis', { art: 'bericht-offen', daten: { termin: 'st99', nr: 99, gegner: 'Voodoo Darters' } });
+    gleich(r.status, 400, 'aber auch nur fuer echte Spieltage');
     r = await julius.ruf('POST', '/api/mitteilungen/ereignis', { art: 'quatsch' });
     gleich(r.status, 400, 'unbekanntes Ereignis 400');
     r = await julius.ruf('GET', '/api/users');
@@ -480,12 +570,21 @@ async function main() {
     gleich(r.status, 409, 'eine E-Mail, die einem anderen Konto gehoert, wird abgewiesen');
     r = await julius.ruf('PATCH', '/api/me', { email: 'keine-adresse' });
     gleich(r.status, 400, 'eine kaputte E-Mail ebenfalls');
+    /* S4: der Wechsel der Adresse braucht das aktuelle Passwort. */
     r = await julius.ruf('PATCH', '/api/me', { email: 'Julius.Neu@Example.de' });
-    gleich(r.status, 200, 'eine freie E-Mail laesst sich setzen');
+    gleich(r.status, 400, 'ohne Passwort wird die Adresse nicht gewechselt (S4)');
+    r = await julius.ruf('PATCH', '/api/me', { email: 'Julius.Neu@Example.de', password: 'falsch' });
+    gleich(r.status, 403, 'mit falschem Passwort auch nicht');
+    r = await julius.ruf('GET', '/api/me');
+    gleich(r.daten.nutzer.email, 'julius@example.de', 'die Adresse ist unveraendert');
+    r = await julius.ruf('PATCH', '/api/me', { email: 'julius@example.de' });
+    gleich(r.status, 200, 'die eigene Adresse unveraendert mitzuschicken braucht kein Passwort');
+    r = await julius.ruf('PATCH', '/api/me', { email: 'Julius.Neu@Example.de', password: 'neuespasswort2026' });
+    gleich(r.status, 200, 'eine freie E-Mail laesst sich mit Passwort setzen');
     gleich(r.daten.nutzer.email, 'julius.neu@example.de', 'und kommt klein geschrieben zurueck');
     r = await julius.ruf('GET', '/api/me');
     gleich(r.daten.nutzer.email, 'julius.neu@example.de', 'die Sitzung bleibt bestehen');
-    r = await julius.ruf('PATCH', '/api/me', { email: 'julius@example.de' });
+    r = await julius.ruf('PATCH', '/api/me', { email: 'julius@example.de', password: 'neuespasswort2026' });
     gleich(r.status, 200, 'und zurueck auf die alte Adresse');
     r = await julius.ruf('PATCH', '/api/me', { dbl: 20 });
     gleich(r.daten.nutzer.dbl, 20, 'zurueck auf D20');
@@ -575,6 +674,23 @@ async function main() {
       stand: { p: [tobi_id, julius_id], starter: tobi_id, start: 501, legs: [{ starter: tobi_id, visits: [{ p: tobi_id, s: 100, d: 3, b: false, c: false }], winner: null }], darts: [] }
     });
     gleich(r.status, 200, 'das spielende Geraet meldet den Livestand');
+    /* S7: der Ticker schreibt s, d, v und start ungeschuetzt ins Markup - also nur Zahlen. */
+    r = await tobi.ruf('PUT', '/api/tournaments/turnier1/matches/m2r1/live', {
+      stand: { p: [tobi_id, julius_id], start: 501, legs: [{ visits: [{ p: tobi_id, s: '<img src=x onerror=alert(1)>', d: 3 }] }], darts: [] }
+    });
+    gleich(r.status, 400, 'eine Aufnahme mit Text statt Zahl wird abgewiesen (S7)');
+    r = await tobi.ruf('PUT', '/api/tournaments/turnier1/matches/m2r1/live', {
+      stand: { p: [tobi_id, julius_id], start: '501', legs: [], darts: [] }
+    });
+    gleich(r.status, 400, 'ein Startwert als Text ebenfalls');
+    r = await tobi.ruf('PUT', '/api/tournaments/turnier1/matches/m2r1/live', {
+      stand: { p: [tobi_id, julius_id], start: 501, legs: [], darts: [{ m: 3, n: 20, v: '60' }] }
+    });
+    gleich(r.status, 400, 'und ein Dart mit Text als Wert');
+    r = await tobi.ruf('PUT', '/api/tournaments/turnier1/matches/m2r1', {
+      result: { id: 'm2r1', p: [tobi_id, julius_id], winner: tobi_id, legs: [{ winner: tobi_id, visits: [{ p: tobi_id, s: 'x', d: 3 }] }], done: true }
+    });
+    gleich(r.status, 400, 'auch im Ergebnis einer Partie');
     r = await fremd.ruf('GET', '/api/zuschauer/' + zs);
     gleich(r.status, 200, 'der Live-Ticker geht ohne Konto');
     ok(r.daten.turnier.live.some((l) => l.matchId === 'm2r1' && l.stand.legs[0].visits[0].s === 100), 'und zeigt das laufende Einzel mit Stand');
@@ -600,6 +716,27 @@ async function main() {
     plan3.matches = [plan3.matches[0]];
     r = await julius.ruf('POST', '/api/tournaments/turnier1/plan', { plan: plan3, basis: 1 });
     gleich(r.status, 400, 'Partien duerfen dabei nicht verschwinden');
+    /* S2: zwei Wechsel gegen denselben Stand, der langsame kommt als zweiter
+       an - er darf den schnellen nicht still ueberschreiben. Der Server hat
+       den Plan des langsamen schon gelesen, bevor der schnelle schreibt. */
+    {
+      const planLangsam = JSON.parse(JSON.stringify(plan2));
+      planLangsam.matches[1].p = [tobi_id, 'gastl'];
+      planLangsam.gaeste = { gastl: 'Langsamer Ersatz' };
+      const planSchnell = JSON.parse(JSON.stringify(plan2));
+      planSchnell.matches[1].p = [tobi_id, 'gasts'];
+      planSchnell.gaeste = { gasts: 'Schneller Ersatz' };
+      const langsam = langsamerPut('/api/tournaments/turnier1/plan', tobi.cookie(), { plan: planLangsam, basis: 1 }, 'POST');
+      await new Promise((w) => setTimeout(w, 150));
+      r = await julius.ruf('POST', '/api/tournaments/turnier1/plan', { plan: planSchnell, basis: 1 });
+      gleich(r.status, 200, 'der schnelle Wechsel geht durch');
+      gleich(r.daten.turnier.plan.planStand, 2, 'Stand 2');
+      r = await langsam.fertig();
+      gleich(r.status, 409, 'der langsame gegen denselben alten Stand bekommt 409 (S2)');
+      ok(r.daten.turnier && r.daten.turnier.plan.planStand === 2 && r.daten.turnier.plan.matches[1].p[1] === 'gasts', 'samt dem geltenden Plan - der schnelle Wechsel bleibt');
+      r = await julius.ruf('GET', '/api/tournaments/turnier1');
+      gleich(r.daten.turnier.plan.gaeste.gasts, 'Schneller Ersatz', 'und steht so auch in der Datenbank');
+    }
     r = await julius.ruf('GET', '/api/tournaments/turnier1');
     ok(r.daten.turnier.partien.find((p) => p.matchId === 'm1r1').result.winner === julius_id, 'das fertige Ergebnis bleibt unberuehrt');
 
@@ -710,6 +847,13 @@ async function main() {
       gleich(r.status, 403, 'ein echtes Ligaspiel kann ein Gast-Konto nicht anlegen');
       r = await gast.ruf('POST', '/api/games', { id: 'gastliga-archiv', kind: '501', at: Date.now(), players: [gastId], payload: { liga: { terminId: 'st02' }, matches: [] } });
       gleich(r.status, 403, 'auch kein Ligaspiel-Archiv hochladen');
+      /* S1: Kasse und Ligatabelle sind Vereinssache. */
+      r = await gast.ruf('GET', '/api/kasse');
+      gleich(r.status, 403, 'das Kassenbuch sieht ein Gast-Konto nicht (S1)');
+      r = await gast.ruf('POST', '/api/kasse', { betrag: 500, text: 'Spende', kategorie: 'Spenden' });
+      gleich(r.status, 403, 'und bucht nichts');
+      r = await gast.ruf('PUT', '/api/liga/tabelle', { tabelle: null });
+      gleich(r.status, 403, 'die Ligatabelle aendert es auch nicht');
       r = await gast.ruf('GET', '/api/liga/zusagen');
       gleich(r.status, 200, 'mitlesen darf es');
       r = await gast.ruf('PUT', '/api/liga/zusagen/tr20261013', { status: 'absage' });
@@ -1411,6 +1555,19 @@ async function main() {
       'mit Tobis Stand in der gewohnten Konflikt-Form -- das Spiel bleibt offen');
     r = await julius.ruf('POST', '/api/live/live7/ende', { state: Object.assign({}, standA, { id: 'live7', done: true, winner: julius_id }), seq: seq7 });
     gleich(r.status, 200, 'gegen die aktuelle Version klappt das Ende');
+
+    /* Ende nur mit Version, ohne eigenen Stand (der Normalfall: der eigene
+       PUT ist laengst durch, der Hash stimmt): die Pruefung gilt trotzdem. */
+    r = await julius.ruf('POST', '/api/live', { id: 'live8', kind: 'quick', state: Object.assign({}, standA, { id: 'live8' }), players: [tobi_id] });
+    const basis8 = r.daten.spiel.seq;
+    r = await tobi.ruf('PUT', '/api/live/live8', { state: Object.assign({}, standA, { id: 'live8', undo: true }), seq: basis8 });
+    const seq8 = r.daten.spiel.seq;
+    r = await julius.ruf('POST', '/api/live/live8/ende', { seq: basis8 });
+    gleich(r.status, 409, 'Ende nur mit alter Version (ohne Stand) wird abgewiesen');
+    ok(r.daten.spiel && r.daten.spiel.status === 'offen' && r.daten.spiel.state.undo === true, '... das Spiel bleibt mit Tobis Stand offen');
+    r = await julius.ruf('POST', '/api/live/live8/ende', { seq: seq8 });
+    gleich(r.status, 200, 'Ende nur mit aktueller Version schliesst mit dem Server-Stand');
+    ok(r.daten.spiel.status === 'zu' && r.daten.spiel.state.undo === true, '... und zwar mit Tobis Stand');
 
     console.log('\nStatische Dateien');
     let res = await fetch(BASIS + '/');
