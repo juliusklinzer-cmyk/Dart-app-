@@ -218,7 +218,6 @@ nur der Einladungs-Hash und – für Mail und Push – die Brevo- und VAPID-Zeil
 | `DARTS_MAIL_LIGA` | `Blink 180 <blink180@wirtschaftln.de>` | Absender für Spielberichte und Spieltag-Erinnerungen. |
 | `DARTS_MAIL_APP` | `Dart-App <dart@wirtschaftln.de>` | Absender für alles Allgemeine; die Adresse ist auch der VAPID-Kontakt. |
 | `DARTS_APP_URL` | `https://darts.wirtschaftln.de` | Adresse der App in Mails und Push (Links, Logo). |
-| `DARTS_MAIL_ERLAUBT` | nicht gesetzt = `spielbericht@steeldart-muenchen.de` | kommagetrennte Liste zusätzlicher erlaubter Empfänger der Spielbericht-Mail (die eigene Konto-Adresse ist immer erlaubt). Leer gesetzt (`DARTS_MAIL_ERLAUBT=`) = nur die eigene Adresse. Beispiel: `spielbericht@steeldart-muenchen.de,kapitaen@gegner.de`. |
 | `DARTS_VAPID_PUBLIC`, `DARTS_VAPID_PRIVATE` | leer | Schlüsselpaar für Web Push aus `node server/scripts/vapid.mjs`. Ohne beide keine Push-Mitteilungen; ein neues Paar heißt: alle Geräte schalten Push neu ein. |
 | `DARTS_KAMERA=1` | aus | schaltet das Kamera-Relay (Projekt Linse) ein – die Routen brauchen keine Anmeldung und bleiben aus, solange `js/kamera.js` nicht geladen wird. |
 | `DARTS_KONTINGENT_SPIELE` | 200 | Tagesgrenze gespeicherter Spiele je Konto (nur für Tests gedacht). |

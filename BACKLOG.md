@@ -3,7 +3,7 @@
 ## In Arbeit
 
 - [ ] DRT-001 Audit 08.11.2026 umsetzen: alle freigegebenen Befunde (Pakete A–F) · prio:hoch · bis:2026-11-10 · von:Julius · am:2026-11-08 · quelle:audit-2026-11-08/
-  - Server (S1–S9, M3): Rechte, Rate-Limits, Lost-Update-Pfade, Mail-Empfänger (DARTS_MAIL_ERLAUBT)
+  - Server (S1–S9, M3): Rechte, Rate-Limits, Lost-Update-Pfade (S3-Erlaubtliste wieder raus: Gegner-Adresse wird am Spieltag eingetippt, Julius 08.11.)
   - Mitteilungen (M1–M17): Themen, Zeitfenster der Jobs, Push-Abos, Mail-Texte
   - Client (L18–L26, O21–O27, D1, D9, D11): Live-Ende mit seq, Beitritt mitten in der Aufnahme, Live-Strom nach Fehler, Zuschauer-Ticker bei 429, Warteschlange, Gast-Sperren
   - CSS (D2–D19): Tokens, Kontraste, Kompakt-Layouts, Schleier/Barlicht
@@ -12,7 +12,6 @@
 ## Wartet auf Julius
 
 - [ ] DRT-002 Backup prüfen: auf dem Server `crontab -l` ansehen (läuft `/opt/dart-turnier/backup.sh` täglich 04:30?) und einmal einen Restore nach DEPLOY.md „Backup“ üben · prio:hoch · von:Audit H7/S-M6 · am:2026-11-08
-- [ ] DRT-003 Spielbericht-Mail geht ab jetzt nur an die Ligaleitung (spielbericht@steeldart-muenchen.de, Vorgabe) und die eigene Konto-Adresse. Sollen Gegner-Kapitäne dazu: ihre Adressen in `/opt/dart-turnier/.env` als `DARTS_MAIL_ERLAUBT=spielbericht@steeldart-muenchen.de,kapitaen@gegner.de` eintragen, dann `docker compose -f compose.yml up -d` · von:Audit S3 · am:2026-11-08
 - [ ] DRT-004 Brevo-Schlüssel aus dem Sitzungs-Transkript schwärzen (Befehl steht im Chat vom 08.11.); Erneuern bei Brevo hast du bewusst nicht gewollt · am:2026-11-08
 - [ ] DRT-017 iPhone: App einmal vom Home-Bildschirm löschen und neu hinzufügen, damit die Statusleiste ohne Glas-Blur kommt (Meta-Tag ist raus, iOS liest das nur beim Hinzufügen) · prio:hoch · von:Julius · am:2026-11-08
 

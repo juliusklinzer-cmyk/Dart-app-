@@ -171,7 +171,6 @@ async function main() {
       // Lebenszeichen im Live-Strom alle 300 ms statt alle 25 s.
       DARTS_SSE_PULS_MS: '300',
       // Spielbericht-Mail (S3): erlaubte Fremdadresse neben der eigenen.
-      DARTS_MAIL_ERLAUBT: 'ligaleitung@beispiel.de, kapitaen@gegner.de',
       NODE_ENV: 'test'
     },
     stdio: ['ignore', 'pipe', 'pipe']
@@ -413,15 +412,15 @@ async function main() {
     ok(!('mailErinnerung' in r.daten.nutzer), 'das Profil traegt kein mailErinnerung mehr (M19)');
     r = await julius.ruf('PATCH', '/api/me', { mailErinnerung: false });
     gleich(r.status, 200, 'ein alter Client mit mailErinnerung stoert nicht');
-    /* S3: der Spielbericht geht nur an Ligaleitung (DARTS_MAIL_ERLAUBT) und
-       die eigene Adresse - die Pruefung kommt vor dem 503 des fehlenden Mailers. */
-    r = await julius.ruf('POST', '/api/liga/bericht-mail', { an: ['liga@beispiel.de'], betreff: 'Spielbericht', text: 'Hallo' });
-    gleich(r.status, 400, 'Spielbericht an eine fremde Adresse: 400 (S3)');
-    ok(/Empfänger nicht erlaubt: liga@beispiel.de/.test((r.daten && r.daten.fehler) || ''), 'mit der Adresse in der Meldung');
+    /* Spielbericht-Mail: die Gegner-Adresse wird am Spieltag eingetippt, es
+       gibt bewusst keine Erlaubtliste (Julius, 08.11.) - nur gueltige
+       Adressen, hoechstens fuenf. */
     r = await julius.ruf('POST', '/api/liga/bericht-mail', { an: ['ligaleitung@beispiel.de', 'Kapitaen@Gegner.de', 'julius@example.de'], betreff: 'Spielbericht', text: 'Hallo' });
-    gleich(r.status, 503, 'an Ligaleitung, erlaubte Liste und sich selbst: ohne eingerichteten Versand 503');
-    r = await julius.ruf('POST', '/api/liga/bericht-mail', { an: ['ligaleitung@beispiel.de', 'boese@phish.example'], betreff: 'Spielbericht', text: 'Hallo' });
-    gleich(r.status, 400, 'eine fremde Adresse in der Liste reicht fuer 400');
+    gleich(r.status, 503, 'an Ligaleitung, Gegner und sich selbst: ohne eingerichteten Versand 503 (keine Empfaenger-Sperre)');
+    r = await julius.ruf('POST', '/api/liga/bericht-mail', { an: ['kein-at'], betreff: 'Spielbericht', text: 'Hallo' });
+    gleich(r.status, 400, 'eine ungueltige Adresse wird abgewiesen');
+    r = await julius.ruf('POST', '/api/liga/bericht-mail', { an: ['a@b.de', 'c@d.de', 'e@f.de', 'g@h.de', 'i@j.de', 'k@l.de'], betreff: 'Spielbericht', text: 'Hallo' });
+    gleich(r.status, 400, 'mehr als fuenf Adressen werden abgewiesen');
     r = await julius.ruf('POST', '/api/mail/probe', {});
     gleich(r.status, 503, 'Testmail: ohne eingerichteten Versand 503');
     /* Mitteilungen: Themen, Einstellungen, Push-Abos, Ereignisse. */

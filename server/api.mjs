@@ -1325,31 +1325,12 @@ export function createApi(db, config) {
     return m;
   }
 
-  /* S3: Wohin der Spielbericht darf. Absender ist der Verein - ein
-     uebernommenes Konto koennte sonst mit Vereinsabsender und PDF-Anhang an
-     Fremde schreiben. Erlaubt sind die eigene Konto-Adresse, Adressen aus
-     den Liga-Daten (falls dort je Kontakte stehen) und die Liste aus
-     DARTS_MAIL_ERLAUBT (kommagetrennt). Fehlt die Variable, gilt die
-     Ligaleitung, die auch die App als ersten Empfaenger vorschlaegt. */
-  const MAIL_ERLAUBT_VORGABE = 'spielbericht@steeldart-muenchen.de';
-  const mailErlaubtListe = String(config.mailErlaubt === undefined || config.mailErlaubt === null ? MAIL_ERLAUBT_VORGABE : config.mailErlaubt)
-    .split(',').map((a) => a.trim().toLowerCase()).filter(istAdresse);
-  function adressenAus(wert, sammel, tiefe) {
-    if (tiefe > 4 || wert == null) return sammel;
-    if (typeof wert === 'string') { if (istAdresse(wert)) sammel.add(wert.trim().toLowerCase()); return sammel; }
-    if (Array.isArray(wert)) { for (const w of wert) adressenAus(w, sammel, tiefe + 1); return sammel; }
-    if (typeof wert === 'object') for (const k of Object.keys(wert)) adressenAus(wert[k], sammel, tiefe + 1);
-    return sammel;
-  }
-  /* Nur `liga` (Team, Termine, Kontakte) - nicht die importierten Spieltage
-     aller Mannschaften. */
-  const mailErlaubtLiga = adressenAus(config.liga && config.liga.liga, new Set(), 0);
-  function mailEmpfaengerErlaubt(u, adr) {
-    return adr === String(u.email || '').toLowerCase() || mailErlaubtListe.includes(adr) || mailErlaubtLiga.has(adr);
-  }
-
   /* Der unterschriebene Spielbericht als PDF an Ligaleitung und Gegner -
-     vom Server, Absender blink180@, Kopie ins eigene Postfach. */
+     vom Server, Absender blink180@, Kopie ins eigene Postfach. Die
+     Gegner-Adresse tippt der Kapitaen am Spieltag ein; eine Erlaubtliste
+     (Audit S3) hat Julius am 08.11. ausdruecklich abgelehnt - der Versand
+     muss ohne Freigabe an anderer Stelle gehen. Schutz bleibt: Login,
+     Header-Filter, hoechstens fuenf Adressen und 10 Mails je Stunde. */
   async function ligaBerichtMail(req, res) {
     pruefeHerkunft(req);
     const u = verlangeNutzer(req);
@@ -1359,13 +1340,6 @@ export function createApi(db, config) {
     const body = await leseJson(req, 6 * 1024 * 1024);
     const an = Array.isArray(body.an) ? body.an.map((a) => String(a || '').trim().toLowerCase()).filter(Boolean) : [];
     if (!an.length || an.length > 5 || !an.every(istAdresse)) throw new HttpFehler(400, 'Bitte 1 bis 5 gültige Mailadressen angeben.');
-    const fremd = an.filter((a) => !mailEmpfaengerErlaubt(u, a));
-    if (fremd.length) {
-      throw new HttpFehler(400, 'Empfänger nicht erlaubt: ' + fremd.join(', ') + '. Der Spielbericht geht nur an die Ligaleitung und an deine eigene Adresse.');
-    }
-    /* Erst nach der Pruefung der Eingaben: so antwortet der Server auch
-       ohne eingerichteten Versand mit 400 statt 503, und die Pruefung
-       laesst sich ohne Brevo testen. */
     const m = mailer();
     const betreff = String(body.betreff || '').replace(/[\r\n]+/g, ' ').trim().slice(0, 200);
     if (!betreff) throw new HttpFehler(400, 'Ohne Betreff geht keine Mail raus.');

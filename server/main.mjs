@@ -41,10 +41,6 @@ const config = {
   /* Nur fuer Tests: Frist, nach der ein Anspruch ohne Lebenszeichen verfaellt. */
   claimFristMs: Number(process.env.DARTS_CLAIM_FRIST_MS) || 0,
   kontingentLive: Number(process.env.DARTS_KONTINGENT_LIVE) || 0,
-  /* S3: Empfaenger, an die der Spielbericht mit Vereinsabsender gehen darf
-     (kommagetrennt), zusaetzlich zur eigenen Konto-Adresse. Nicht gesetzt:
-     die Ligaleitung (Vorgabe in api.mjs). Leer gesetzt: nur die eigene. */
-  mailErlaubt: process.env.DARTS_MAIL_ERLAUBT
 };
 
 /* Mailer, Push und Spielplan - aus der Umgebung, siehe lib/dienste.mjs. */
