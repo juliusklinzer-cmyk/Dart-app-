@@ -157,6 +157,16 @@
         <button data-value="5"><span class="lang">Best of 5</span><span class="kurz">Bo5</span></button>
       </div>
     </div>
+    <!-- Allein im Schnellen X01 gibt es kein Leg-Ziel: die Session laeuft
+         Leg um Leg, bis "Session beenden" im Spielmenue. Nur Anzeige, keine
+         Wahl (renderSetup blendet sie statt der Legs-Zeile ein). -->
+    <div class="setting hidden" id="setting-session">
+      <label>Legs</label>
+      <div class="options">
+        <button type="button" class="active" aria-pressed="true">Session</button>
+      </div>
+      <span class="note">Leg um Leg weiter – beenden im Spielmenü (•••), die Statistik zählt über alle Legs.</span>
+    </div>
     <!-- Wie wird eingetragen? Tastatur = Fernsteuerung vom Board-iPad aus,
          Standard = immer die Aufnahme als Zahl, Gemischt = im Finish-Bereich
          Dart fuer Dart. Im Spiel laesst sich jederzeit wechseln. -->
@@ -847,7 +857,15 @@
         <div id="key-error" class="input-error" role="status" aria-live="polite"></div>
       </div>
       <div id="key-hist-r" class="key-hist"></div>
+      <!-- Allein: Statistik-Kacheln und die letzten Aufnahmen statt der
+           beiden Listen (renderGame fuellt sie). -->
+      <div id="key-solo" class="key-solo hidden"></div>
     </div>
+    <!-- Nur allein (Tastatur-Modus am Handy): ein Tipp auf die Anzeige
+         fokussiert dieses unsichtbare Feld, damit das Handy seine
+         Zifferntastatur zeigt. Bewusst ausserhalb von #pad-key und nie von
+         selbst fokussiert - am Board-iPad bleibt die Systemleiste weg. -->
+    <input id="key-input" class="key-input" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" enterkeyhint="done" aria-hidden="true" tabindex="-1">
   </div>
   </div>
 
@@ -862,6 +880,8 @@
       </div>
       <!-- Nur mit optionaler Kamera-Schicht (js/kamera.js) sichtbar. -->
       <button class="btn ghost full hidden" id="game-menu-kamera" data-action="game-kamera">Kamera</button>
+      <!-- Nur in der Solo-Session: die fertigen Legs ins Archiv, dann die Auswertung. -->
+      <button class="btn ghost full hidden" id="game-menu-session" data-action="session-ende">Session beenden</button>
       <div class="game-menu-zeile">
         <button class="btn ghost game-menu-raus" data-action="to-tournament">Spiel verlassen</button>
         <button class="btn primary" data-action="game-menu-zu">Weiterspielen</button>

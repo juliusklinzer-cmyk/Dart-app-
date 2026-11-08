@@ -80,6 +80,19 @@ dem letzten Leg beim Glückwunsch. In der
 Statistik zählt das ganze Spiel als ein Sieg, jedes Leg fließt in Average und
 Rekorde ein. Die Einstellung bleibt gespeichert, bis sie geändert wird.
 
+**Allein: Session** (Handy-Block 2, November 2026). Mit genau einem Spieler gibt es
+keine Legs-Wahl, im Setup steht nur „Session“: 501 (oder die gewählte Startzahl)
+ohne Leg-Ziel. Ist ein Leg ausgemacht, läuft das nächste sofort; der Dialog danach
+zeigt kurz das Leg („Leg 3 in 15 Darts“) und die **Session-Zahlen über alle Legs**
+(Legs, Ø, bestes Leg, 180er, höchstes Finish, Darts, höchste Aufnahme, First 9) und
+schließt sich nach sechs Sekunden von selbst – „Weiter“, „Eingabe rückgängig“ und
+„Session beenden“ stehen trotzdem da. Beendet wird die Session jederzeit im Spielmenü
+(•••, **Session beenden**): die fertigen Legs kommen wie ein Übungsspiel ins Archiv
+(„X01 · Session“, ohne Sieger – ein Solo zählt wie bisher nicht als Sieg, wohl aber
+in Average und Rekorde), ein angefangenes Leg fällt weg, danach steht die Auswertung.
+Ohne ein einziges fertiges Leg fragt stattdessen der Abbruch-Dialog. Der Kopf zählt
+„Session · Leg 4“, die Karte „Legs 3“.
+
 ### X01 Turnier (jeder gegen jeden)
 
 Der Hauptmodus, siehe Ablauf und Eingabe unten.
@@ -203,7 +216,10 @@ steht fest im Client (`LIGA` in `js/liga-daten.js`, gemeinsam mit der Webseite).
 (oder der angetippte): Datum, Spieltag, Heim/Auswärts, 20:00 Uhr, Lokal mit Pin,
 oben rechts Route in Maps und „in den Kalender“, darunter Heim gegen Gast mit Logo
 bzw. Team-Kürzel, dann **Team · n / 4** mit allen, die zugesagt haben, und unten
-„Ich bin dabei“ / „Bin raus“ neben **GAME ON!** (startet das Ligaspiel). Die
+„Ich bin dabei“ / „Bin raus“ – und **nur am Spieltag selbst** daneben **GAME ON!**
+(startet das Ligaspiel; an allen anderen Tagen stehen dort nur die Zusagen, damit
+niemand Tage vorher aus Versehen den Spielabend anlegt – das Übungsspiel im
+Trainings-Reiter geht jederzeit). Die
 Zusagen färben die Karte: unter 4 rot, genau 4 gelb, ab 5 grün. **Läuft das
 Ligaspiel**, wird die Karte zum LIVE-Schild mit Punktestand, Legs, „Zum Ligaspiel“
 und „Live zuschauen“ (Ticker). Gespielte Spieltage zeigen Ergebnis, „Ergebnisse“
@@ -358,7 +374,7 @@ Der Spielplan sind die **16 Einzel in vier Durchgängen, exakt in der
 Reihenfolge des Spielberichtsbogens** (`LIGA_EINZEL`); jede Begegnung steht
 als **H1 Name – G1 Name** da, und im Liga-Kontext erscheint der
 **bürgerliche Name** aus dem Profil statt des Spitznamens (die SWO will keine
-Künstlernamen). Jedes Einzel trägt seine Scheibe (S1/S2); je zwei Einzel laufen parallel, und jeder Spieler beider Teams spielt genau 2× an S1 und 2× an S2. Ist der Abend durch, wird der **Spielbericht am iPad unterschrieben**: „Unterschreiben“ öffnet nacheinander je einen ganzen Bildschirm für TC Heim und TC Gast (mit dem Finger, „Nochmal“ löscht), danach die Mailadressen (Ligaleitung vorbelegt, die übrigen werden gemerkt; der Server verschickt nur an die Ligaleitung, an Adressen aus `DARTS_MAIL_ERLAUBT` und an die eigene Konto-Adresse, andere lehnt er mit Hinweis ab). „Senden“ macht aus dem Bogen – genau wie er auf dem Bildschirm steht, mit allen Handkorrekturen und Unterschriften – ein zweiseitiges A4-PDF und öffnet das Teilen-Menü; die Adressen sind dann schon kopiert und werden in der Mail nur eingefügt. Ohne Teilen-Menü (Computer) wird das PDF heruntergeladen und die Mail mit Empfängern geöffnet. Ist auf dem Server der **Mailversand** eingerichtet (siehe „Mails aus der App“), schickt „Senden“ die Mail mit dem PDF direkt vom Server: Absender blink180@wirtschaftln.de, Kopie ins Blink-Postfach, ohne Teilen-Menü; schlägt das fehl, bleibt der Dialog offen und bietet das Teilen-Menü an. Im **Spielbericht** zeigt jede Einzel-Zeile die echte Bogennummer der Spieler: Wer eingewechselt wurde, steht dort als H5–H8 bzw. G5–G8. Bis zur Unterschrift ist jedes Feld anpassbar (auch die Einzel-Bezeichnung), Nachmeldungen und Proteste werden per Tipp auf „ja“ oder „nein“ angekreuzt. Sobald **beide TCs unterschrieben** haben, ist der Bericht **final**: kein Feld lässt sich mehr ändern, oben steht nur noch „Versenden“. **Abschluss:** Nach dem letzten Einzel wird das Ligaspiel nicht beendet. Es kommen zuerst die **Ergebnisse** mit den Highlights beider Teams (jedes Finish ab 100 und jedes gewonnene Leg bis 21 Darts je Spieler, nicht nur das beste; der Bogen wächst bei mehr als sieben Zeilen) und je einem **Man of the Day** (meiste gewonnene Einzel, dann Leg-Differenz, dann Average; bei Gleichstand geteilt), dann geht es zum Spielbericht. Erst wenn der unterschrieben und verschickt ist (oder „Abschließen ohne Senden“), ist das Ligaspiel abgeschlossen: Es wandert ins Archiv, im Spielplan steht der Spieltag als „Abgeschlossen“ mit Endstand, Ergebnissen und Bericht und lässt sich nicht noch einmal starten. Bis dahin bleibt es komplett offen; auch der Spiel-Tab archiviert es nicht still. Ein Spieltag mit archiviertem, aber noch nicht abgeschlossenem Ligaspiel zeigt „Bericht offen“. Im **geteilten Ligaspiel an zwei iPads** geht der Spielerwechsel als geänderter Spielplan an den Server; das andere iPad übernimmt ihn beim nächsten Abgleich, ein dort laufendes oder fertiges Einzel bleibt unberührt. Fertige Einzel, deren Ergebnis wegen eines Funklochs nicht beim Server ankam, reicht die App bei jedem Abgleich nach. **Nachmeldungen** gehen über „Spieler nachmelden“ im Ligaspiel (oder den Knopf auf Seite 2 des Berichts): Team, Nachname, Vorname, U18 ja/nein und w/m/d, danach unterschreibt die Person mit dem Finger. Sie steht dann mit Unterschrift auf Seite 2, „Nachmeldungen: ja“ ist angekreuzt, und sie gehört zum Team (H5–H8 bzw. G5–G8), einsetzbar über „Spieler wechseln“. Jedes Einzel
+Künstlernamen). Jedes Einzel trägt seine Scheibe (S1/S2); je zwei Einzel laufen parallel, und jeder Spieler beider Teams spielt genau 2× an S1 und 2× an S2. Ist der Abend durch, wird der **Spielbericht am iPad unterschrieben**: „Unterschreiben“ öffnet nacheinander je einen ganzen Bildschirm für TC Heim und TC Gast (mit dem Finger, „Nochmal“ löscht), danach die Mailadressen (Ligaleitung vorbelegt, die übrigen werden gemerkt; die Gegner-Adresse wird hier eingetippt; die Mail geht an Gegner, Ligaleitung und unser Postfach). „Senden“ macht aus dem Bogen – genau wie er auf dem Bildschirm steht, mit allen Handkorrekturen und Unterschriften – ein zweiseitiges A4-PDF und öffnet das Teilen-Menü; die Adressen sind dann schon kopiert und werden in der Mail nur eingefügt. Ohne Teilen-Menü (Computer) wird das PDF heruntergeladen und die Mail mit Empfängern geöffnet. Ist auf dem Server der **Mailversand** eingerichtet (siehe „Mails aus der App“), schickt „Senden“ die Mail mit dem PDF direkt vom Server: Absender blink180@wirtschaftln.de, Kopie ins Blink-Postfach, ohne Teilen-Menü; schlägt das fehl, bleibt der Dialog offen und bietet das Teilen-Menü an. Im **Spielbericht** zeigt jede Einzel-Zeile die echte Bogennummer der Spieler: Wer eingewechselt wurde, steht dort als H5–H8 bzw. G5–G8. Bis zur Unterschrift ist jedes Feld anpassbar (auch die Einzel-Bezeichnung), Nachmeldungen und Proteste werden per Tipp auf „ja“ oder „nein“ angekreuzt. Sobald **beide TCs unterschrieben** haben, ist der Bericht **final**: kein Feld lässt sich mehr ändern, oben steht nur noch „Versenden“. **Abschluss:** Nach dem letzten Einzel wird das Ligaspiel nicht beendet. Es kommen zuerst die **Ergebnisse** mit den Highlights beider Teams (jedes Finish ab 100 und jedes gewonnene Leg bis 21 Darts je Spieler, nicht nur das beste; der Bogen wächst bei mehr als sieben Zeilen) und je einem **Man of the Day** (meiste gewonnene Einzel, dann Leg-Differenz, dann Average; bei Gleichstand geteilt), dann geht es zum Spielbericht. Erst wenn der unterschrieben und verschickt ist (oder „Abschließen ohne Senden“), ist das Ligaspiel abgeschlossen: Es wandert ins Archiv, im Spielplan steht der Spieltag als „Abgeschlossen“ mit Endstand, Ergebnissen und Bericht und lässt sich nicht noch einmal starten. Bis dahin bleibt es komplett offen; auch der Spiel-Tab archiviert es nicht still. Ein Spieltag mit archiviertem, aber noch nicht abgeschlossenem Ligaspiel zeigt „Bericht offen“. Im **geteilten Ligaspiel an zwei iPads** geht der Spielerwechsel als geänderter Spielplan an den Server; das andere iPad übernimmt ihn beim nächsten Abgleich, ein dort laufendes oder fertiges Einzel bleibt unberührt. Fertige Einzel, deren Ergebnis wegen eines Funklochs nicht beim Server ankam, reicht die App bei jedem Abgleich nach. **Nachmeldungen** gehen über „Spieler nachmelden“ im Ligaspiel (oder den Knopf auf Seite 2 des Berichts): Team, Nachname, Vorname, U18 ja/nein und w/m/d, danach unterschreibt die Person mit dem Finger. Sie steht dann mit Unterschrift auf Seite 2, „Nachmeldungen: ja“ ist angekreuzt, und sie gehört zum Team (H5–H8 bzw. G5–G8), einsetzbar über „Spieler wechseln“. Jedes Einzel
 **beginnt mit dem Ausbullen** (SWO Punkt 8, Fassung Oktober 2026): der
 Gewinner wirft Leg 1 an, danach wechselt der Anwurf. Im Übungs-Ligaspiel gegen
 Bots wirft der eigene Spieler ohne Ausbullen an. Die Übersicht zeigt den **Team-Stand** – groß die **Punkte
@@ -611,10 +627,15 @@ oder **Weiterspielen** – ein Tipp daneben oder Esc schließt es). In der Mitte
 Spiel und Stand. Rechts **⌨** schaltet die Fernsteuerung (Board-Anzeige, siehe
 unten) ein und aus – das Zeichen leuchtet blau, solange sie läuft –, und **⇄**
 wechselt mit einem Tipp zwischen Punkten und Einzel-Darts. Die **Tab-Taste**
-schaltet dieselben Modi im Kreis durch. Der ⌨-Knopf fehlt, wenn jemand allein
-spielt; die Kamera erscheint im Menü nur mit Server (siehe
+schaltet dieselben Modi im Kreis durch. Allein ist ⌨ der **Tastatur-Modus** (siehe
+Fernsteuerung); die Kamera erscheint im Menü nur mit Server (siehe
 [Kamera-Kopplung](#kamera-kopplung-linse)). Einen Rücknahme-Knopf im Kopf gibt es
 nicht mehr – zurück geht es über **←** im Tastenfeld.
+
+**Handy hochkant** (Handy-Block 2): zwischen Kopfzeile und Spielerkarten liegt
+derselbe Abstand wie zwischen den Karten, links und rechts der Seitenrand der App;
+ab drei Spielern brechen lange Namen auf zwei Zeilen um statt abgeschnitten zu
+werden, und nichts Kleingedrucktes ist kleiner als 11 px.
 
 Links unten im Zahlenfeld sitzt **←** (letzter Dart bzw. letzte Aufnahme zurück),
 daneben **0** (Fehlwurf, rot) und rechts das helle **OK**: Es schließt die Aufnahme
@@ -629,7 +650,7 @@ Bull-Tasten heißen einheitlich **Bull** (25) und **Bull ×2** (50), gelb wie ü
 **Fernsteuerung (Turnier-Modus):** Die Riesenanzeige für den Bildschirm, der vorn
 am Board hängt. In **Liga-Einzeln** öffnet sie sich am Board-iPad (das sie einmal an
 hatte) von selbst; im X01-Turnier und im Schnellen X01 schaltet sie der ⌨-Knopf
-bewusst dazu – automatisch startet dort nichts. Allein gibt es sie nicht. Die
+bewusst dazu – automatisch startet dort nichts. Die
 Karten **bleiben an ihrem Platz** (zu zweit nebeneinander, ab drei Spielern im
 2×2-Raster) – nach jeder Aufnahme wandert nur die Markierung zum Nächsten, und ab
 drei Spielern nennt die Kopfzeile, wer danach kommt („Danach: Toni · Sepp“). Die
@@ -668,6 +689,22 @@ gewählte leuchtet), **Enter** startet sie direkt wieder in der Riesenanzeige.
 Eine eigene Statistik-Seite gibt es in der Fernsteuerung nicht. Ein Tipp ins Bild tut
 nichts; das Menü öffnet nur •••, und der ⌨-Knopf oben rechts beendet die
 Fernsteuerung – damit niemand ohne Tab und Esc gefangen sitzt.
+
+**Fernsteuerung am Handy hochkant** (Handy-Block 2): statt hoher leerer Säulen steht
+**eine Zeile je Spieler** untereinander, volle Breite – links Avatar und Name (ganz,
+notfalls zweizeilig) mit Legs und Darts, rechts der Rest groß, darunter die letzten
+drei Aufnahmen mit Rest, wie sie unten in den Listen stünden (die haben hochkant
+keinen Platz). Der Werfer trägt den Rahmen wie immer, das Eingabefeld bleibt unten.
+Am iPad bleibt das Board-Layout.
+
+**Allein: Tastatur-Modus** (Handy-Block 2). Mit einem Spieler schaltet ⌨ nicht auf die
+Riesenanzeige, sondern tauscht das Tastenfeld gegen das **Eingabefeld** (quer rechts,
+hochkant unten) – an einer echten Tastatur wie am Board (Ziffern, Enter, Löschen), am
+Handy holt ein Tipp auf das Feld die Zifferntastatur des Systems. Darunter sechs
+**Kacheln**: Average, First 9, Darts im Leg, 180er, höchste Aufnahme, Checkout-Quote
+(die kennt die App nur aus Einzel-Darts, sonst steht ein Strich), und die letzten
+Aufnahmen als Liste. In der Session sind es die Zahlen der ganzen Session. Links die
+Karte: Rest groß, darunter die letzten Aufnahmen, dazu der Finish-Weg.
 
 **Klang:** Jede gebuchte Eingabe klingt wie ein Pfeil, der ins Board schlägt –
 **„Pomp"** (Julius' eigene Aufnahme, eingebettet in `js/sound.js`): beim

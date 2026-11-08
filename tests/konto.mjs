@@ -168,6 +168,20 @@ async function modusAuf(page, ziel) {
   if (ist !== ziel) await page.locator('#game-swap').click();
 }
 
+/* GAME ON steht auf der Spieltag-Karte nur am Spieltag selbst (Handy-Block 2):
+   zum Start stellt der Test den Stichtag auf den gewaehlten Termin und danach
+   wieder auf den festen Stichtag zurueck (wie tests/e2e.mjs). */
+async function ligaSpielStarten(page) {
+  const tag = await page.evaluate(() => {
+    const w = document.querySelector('#liga-liste .liga-spieltag.wahl');
+    const t = window.LIGA_DATEN.liga.termine.find((x) => x.id === (w && w.getAttribute('data-id')));
+    return t ? t.tag : null;
+  });
+  await page.evaluate((t) => { window.__ligaHeute = t; window.__dart.render(); }, tag);
+  await page.locator('#liga-plan [data-action="liga-spiel"]').first().click();
+  await page.evaluate(() => { window.__ligaHeute = '2026-10-01'; });
+}
+
 /* Den Nachmeldungs-Dialog weglegen, falls er nach einem Wechsel offen ist.
    Nach einem Wechsel bietet er nur "Nachmelden" (Name + Unterschrift) oder
    "Wechsel zuruecknehmen" -- beides wuerde den geprueften Wechsel veraendern,
@@ -1435,7 +1449,7 @@ async function main() {
         S.game = null; S.matches = []; S.tour = null; S.current = null; D.ui().overlay = null;
         D.save(); D.setScreen('liga');
       });
-      await julius.page.locator('#liga-plan [data-action="liga-spiel"]').first().click();
+      await ligaSpielStarten(julius.page);
       for (let i = 0; i < 4; i++) {
         await julius.page.locator(`[data-role="liga-gegner"][data-i="${i}"]`).fill('Geteilt' + i);
         await julius.page.locator(`[data-role="liga-gegner-nach"][data-i="${i}"]`).fill('Gegner' + i);
@@ -1544,7 +1558,7 @@ async function main() {
       const leeren = (g) => g.page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; S.matches = []; S.tour = null; S.current = null; D.ui().overlay = null; D.save(); D.setScreen('setup'); });
       await leeren(julius); await leeren(tobi);
       await julius.page.evaluate(() => window.__dart.setScreen('liga'));
-      await julius.page.locator('#liga-plan [data-action="liga-spiel"]').first().click();
+      await ligaSpielStarten(julius.page);
       for (let i = 0; i < 4; i++) {
         await julius.page.locator(`[data-role="liga-gegner"][data-i="${i}"]`).fill('Funk' + i);
         await julius.page.locator(`[data-role="liga-gegner-nach"][data-i="${i}"]`).fill('Loch' + i);
@@ -1679,7 +1693,7 @@ async function main() {
       const leeren = (g) => g.page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; S.matches = []; S.tour = null; S.current = null; D.ui().overlay = null; D.save(); D.setScreen('setup'); });
       await leeren(julius); await leeren(tobi);
       await julius.page.evaluate(() => window.__dart.setScreen('liga'));
-      await julius.page.locator('#liga-plan [data-action="liga-spiel"]').first().click();
+      await ligaSpielStarten(julius.page);
       for (let i = 0; i < 4; i++) {
         await julius.page.locator(`[data-role="liga-gegner"][data-i="${i}"]`).fill('Pruef' + i);
         await julius.page.locator(`[data-role="liga-gegner-nach"][data-i="${i}"]`).fill('Fall' + i);

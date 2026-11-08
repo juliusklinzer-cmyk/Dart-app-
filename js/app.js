@@ -97,6 +97,10 @@
      an genau dieser Stelle, damit bewusste schnelle Bedienung frei bleibt. */
   var ghostTapUntil = 0;
   var turnierEndeTimer = null;
+  /* Session (allein): der Dialog nach dem Leg schliesst sich nach sechs
+     Sekunden von selbst - das naechste Leg laeuft laengst, niemand muss
+     klicken (Julius: kein "Nochmal?"-Zwang). */
+  var sessionLegTimer = null;
   function armGhostTapGuard() { ghostTapUntil = Date.now() + 400; }
   function isGhostTap(ev) {
     /* `detail >= 2` ist die Doppelklick-Zählung des Browsers: zweite
@@ -1089,10 +1093,11 @@
 
   /* Der Turnier-Modus (Riesenanzeige am Board) gehoert zu Liga-Einzeln -
      dort startet er am Board-iPad von selbst. In normalen Turnieren und im
-     Schnellen Spiel laesst er sich per Knopf dazuschalten; nur allein gibt
-     es ihn nicht (eine Seite des Bildes bliebe leer). */
+     Schnellen Spiel laesst er sich per Knopf dazuschalten. Allein ist er
+     der Tastatur-Modus: Eingabefeld und Statistik-Kacheln statt des
+     Tastenfelds (Julius, Handy-Block 2). */
   function turnierErlaubt() {
-    if (S.game && S.game.kind === 'quick') return S.game.p.length > 1;
+    if (S.game && S.game.kind === 'quick') return true;
     return !!S.tour;
   }
 
@@ -1888,7 +1893,9 @@
     var fest = festeDauer(match);
     var gewinnLegs = matchLegsToWin(match);
     var gewinnSaetze = matchSaetzeZuGewinnen(match);
-    var legsJeSatz = match.bestOf || 1, saetzeGesamt = match.saetzeBestOf || 1;
+    /* Session (allein, ohne Leg-Ziel): kein Satz wird je voll, also auch
+       kein Sieger - die Legs zaehlen einfach weiter. */
+    var legsJeSatz = match.session ? Infinity : (match.bestOf || 1), saetzeGesamt = match.saetzeBestOf || 1;
     var saetze = {}, legs = {};
     match.p.forEach(function (id) { saetze[id] = 0; legs[id] = 0; });
     var satzNr = 1, legNr = 1, satzZu = false, sieger = null;
@@ -1920,6 +1927,7 @@
   /* "First to 2 Sätze à 3 Legs" bzw. "Best of 5 Legs" -- so, wie es
      eingestellt wurde. */
   function dauerText(match) {
+    if (match.session) return 'Session';
     var d = match.spieldauer || { modus: 1, saetze: match.saetzeBestOf || 1, legs: match.bestOf || 1 };
     var w = d.modus === 1 ? 'Best of ' : 'First to ';
     if (matchSaetzeZuGewinnen(match) > 1) return w + d.saetze + ' Sätze à ' + d.legs + (d.legs === 1 ? ' Leg' : ' Legs');
@@ -2152,6 +2160,7 @@
       } else {
         /* Ist damit ein ganzer Satz zu, sagt der Dialog das auch. */
         UI.overlay = { type: 'leg-done', pid: pid, satz: st.satzZu };
+        if (m.session) sessionLegTimerStarten();
       }
       /* Das letzte Einzel des Ligaspiels stempelt die Endzeit für den
          Spielberichtsbogen. */
@@ -3304,8 +3313,14 @@
       S.game.p = S.lineup.slice();
       S.game.start = S.settings.start;
       /* Dieselbe Legs-Wahl wie im Turnier (1 Leg, Best of 3, Best of 5),
-         ein Satz; Best of heisst: alle Legs werden gespielt (festeDauer). */
-      var qd = { modus: 1, saetze: 1, legs: S.settings.bestOf || 1, alle: true };
+         ein Satz; Best of heisst: alle Legs werden gespielt (festeDauer).
+         Allein gibt es kein Leg-Ziel, sondern die Session: Leg um Leg
+         weiter, bis "Session beenden" im Menue (Julius, Handy-Block 2) -
+         satzStand kennt bei session nie einen Sieger. */
+      var qd = S.lineup.length === 1
+        ? { modus: 1, saetze: 1, legs: 1, alle: true }
+        : { modus: 1, saetze: 1, legs: S.settings.bestOf || 1, alle: true };
+      if (S.lineup.length === 1) S.game.session = true;
       S.game.spieldauer = qd;
       S.game.bestOf = bestOfAus(qd.modus, qd.legs);
       S.game.saetzeBestOf = bestOfAus(qd.modus, qd.saetze);
@@ -3316,8 +3331,8 @@
     UI.modeOverride = null;   // neue Partie, neue Handwahl
     UI.overlay = null;
     /* "Tastatur" im Setup: Schnelles Spiel und Finisher starten gleich in
-       der Fernsteuerung (zu zweit oder mehr - allein gibt es sie nicht). */
-    UI.turnier = kind === 'quick' && S.settings.tastatur === 1 && S.lineup.length > 1;
+       der Fernsteuerung (allein: im Tastatur-Modus mit Statistik). */
+    UI.turnier = kind === 'quick' && S.settings.tastatur === 1;
     if (kind === 'finisher') UI.finFern = S.settings.tastatur === 1;
     // Wie im Turnier wird auch hier ausgeworfen, wer anfängt - ausser
     // allein: gegen sich selbst bullt niemand aus. Das Spiel gilt dann
@@ -3367,14 +3382,21 @@
          Match-Liste mit genau einem Eintrag. Dadurch rechnet collectStats()
          Average, First 9, Doppelquote und Rekorde daraus ohne jede
          Sonderbehandlung. */
+      /* Eine Session (allein, ohne Leg-Ziel) ist nie "entschieden": sie
+         wird mit ihren fertigen Legs abgelegt - ohne Sieger, aber auch
+         ohne das Abbruch-Zeichen -, ein offenes Leg faellt weg. Gewertet
+         wird sie wie jedes Solo-Spiel (Average, Rekorde, keine Siege). */
+      var session = !!g.session;
+      if (session) { delete eintrag.abgebrochen; eintrag.session = true; eintrag.winner = null; }
       eintrag.lineup = g.p.slice();
       eintrag.settings = { start: g.start, bestOf: g.bestOf || 1 };
       eintrag.matches = [{
         id: g.id, p: g.p.slice(), starter: g.starter,
-        legs: abgebrochen ? g.legs.filter(function (l) { return l.winner; }) : g.legs,
-        done: !abgebrochen, winner: eintrag.winner, at: eintrag.at, start: g.start,
+        legs: abgebrochen || session ? g.legs.filter(function (l) { return l.winner; }) : g.legs,
+        done: !abgebrochen || session, winner: eintrag.winner, at: eintrag.at, start: g.start,
         bestOf: g.bestOf || 1, saetzeBestOf: g.saetzeBestOf || 1, spieldauer: g.spieldauer || null
       }];
+      if (session) eintrag.matches[0].session = true;
     } else {
       eintrag.scoring = g.scoring;
       eintrag.throws = g.throws;
@@ -3418,6 +3440,50 @@
     if (!offen.length) return [];
     var ab = Math.min.apply(null, offen.map(function (x) { return x.round || 1; }));
     return offen.filter(function (x) { return (x.round || 1) <= ab + 1; }).slice(0, 8);
+  }
+
+  /* Die Zahlen einer Solo-Session (oder eines Solo-Spiels) ueber alle
+     Legs - fuer die Kacheln im Tastatur-Modus und den Dialog nach dem Leg.
+     Bestes Leg hier auch fuer 301/701: es ist die Bestmarke dieser Session,
+     kein Karriere-Rekord (den zaehlt collectStats nur aus 501ern). */
+  function sessionStat(m) {
+    var pid = m.p[0];
+    var st = collectStats([{ matches: [{ p: m.p, legs: m.legs }], start: matchStart(m) }], m.p)[pid];
+    finalize(st);
+    var fertig = m.legs.filter(function (l) { return l.winner; });
+    var best = null;
+    fertig.forEach(function (l) { var d = dartsInLeg(l, pid); if (d > 0 && (best === null || d < best)) best = d; });
+    var letztes = m.legs[m.legs.length - 1];
+    var laufend = letztes && !letztes.winner ? letztes : null;
+    return { legs: fertig.length, avg: st.avg, darts: st.darts, bestLeg: best, s180: st.s180, highCO: st.highCO,
+      highScore: st.highScore, first9: st.first9, first9Darts: st.first9Darts,
+      doubleAttempts: st.doubleAttempts, doubleQuote: st.doubleQuote, checkouts: st.checkouts,
+      dartsImLeg: laufend ? dartsInLeg(laufend, pid) : 0 };
+  }
+  /* Die Kacheln dazu: 'dialog' = alles ueber die Session (nach dem Leg),
+     'kacheln' = die sechs Werte neben dem Eingabefeld im Tastatur-Modus.
+     Die Checkout-Quote kennt die App nur aus Einzel-Darts (siehe
+     collectStats) - in der Punkte-Eingabe steht dort ein Strich. */
+  function sessionKachelnHTML(m, art) {
+    var s = sessionStat(m);
+    var f1 = function (x, hat) { return hat ? x.toFixed(1) : '–'; };
+    var k = art === 'dialog' ? [
+      ['Legs', s.legs], ['Ø', f1(s.avg, s.darts)], ['Bestes Leg', s.bestLeg ? s.bestLeg + ' Darts' : '–'], ['180er', s.s180],
+      ['Höchstes Finish', s.highCO || '–'], ['Darts', s.darts], ['Höchste Aufnahme', s.highScore || '–'], ['First 9', f1(s.first9, s.first9Darts)]
+    ] : [
+      ['Average', f1(s.avg, s.darts)], ['First 9', f1(s.first9, s.first9Darts)], ['Darts im Leg', s.dartsImLeg], ['180er', s.s180],
+      ['Höchste Aufnahme', s.highScore || '–'], ['Checkout-Quote', s.doubleAttempts ? Math.round(s.doubleQuote) + ' %' : '–']
+    ];
+    return '<div class="ss-kacheln' + (art === 'dialog' ? ' dialog' : '') + '">' + k.map(function (z) {
+      return '<div class="ss"><span>' + z[0] + '</span><b>' + z[1] + '</b></div>';
+    }).join('') + '</div>';
+  }
+  function sessionLegTimerStarten() {
+    if (sessionLegTimer) clearTimeout(sessionLegTimer);
+    sessionLegTimer = setTimeout(function () {
+      sessionLegTimer = null;
+      if (UI.overlay && UI.overlay.type === 'leg-done' && S.game && S.game.session) { UI.overlay = null; save(); render(); }
+    }, 6000);
   }
 
   /* Wie viele Legs eines laufenden Schnellen Spiels schon entschieden sind. */
@@ -4197,8 +4263,11 @@
        und Einzel-Dart-Grenze gelten für beide. Nur die Legs sind Turniersache;
        zwei getrennte Karten wären zwei Bedienelemente für dieselbe Einstellung. */
     $('settings-501').classList.toggle('hidden', S.mode !== '501' && S.mode !== 'quick');
-    /* Legs gelten fuer Turnier und Schnelles X01 gleichermassen. */
-    $('setting-bestof').classList.toggle('hidden', S.mode !== '501' && S.mode !== 'quick');
+    /* Legs gelten fuer Turnier und Schnelles X01 gleichermassen - ausser
+       allein: dort gibt es kein Leg-Ziel, sondern die Session. */
+    var soloSession = S.mode === 'quick' && S.lineup.length === 1;
+    $('setting-bestof').classList.toggle('hidden', (S.mode !== '501' && S.mode !== 'quick') || soloSession);
+    $('setting-session').classList.toggle('hidden', !soloSession);
     /* Round the World mit Boost: ein Satz dazu, was Boost heisst. */
     var rtwNote = $('rtw-note');
     if (rtwNote) rtwNote.textContent = S.mode === 'rtw' && S.settings.rtwBoost === 1 ? 'Boost: ein Double überspringt eine Zahl, ein Triple zwei.' : '';
@@ -5015,7 +5084,8 @@
         return '<div class="log-row tap" data-action="open-summary" data-kind="501" data-id="' + esc(m.id) + '" role="button" tabindex="0">' +
           '<div class="lp">' + esc(pname(m.p[0])) + '<span class="a">Ø ' + avgOf(m.p[0]) + '</span></div>' +
           '<div class="ls">' + soloD + '</div>' +
-          '<div class="lp right muted">Solo<span class="a">' + plural(soloD, 'Dart', 'Darts') + '</span></div>' +
+          '<div class="lp right muted">' + (m.session ? 'Session · ' + plural(m.legs.filter(function (l) { return l.winner; }).length, 'Leg', 'Legs') : 'Solo') +
+            '<span class="a">' + plural(soloD, 'Dart', 'Darts') + '</span></div>' +
           '<div class="ld">' + fmtDate(m.at || e.at) + '</div>' +
           '</div>';
       }
@@ -5793,7 +5863,7 @@
           /* Solo-Spiel: kein Gegner, kein Sieg - nur die Darts bis zum Finish. */
           var soloDarts = sum(m.legs, function (l) { return dartsInLeg(l, p.id); });
           return '<div class="log-row">' +
-            '<div class="lp">Solo</div>' +
+            '<div class="lp">' + (m.session ? 'Session' : 'Solo') + '</div>' +
             '<div class="ls">' + plural(soloDarts, 'Dart', 'Darts') + '</div>' +
             '<div class="lp right">' + (m.start || e.start) + ' allein</div>' +
             '<div class="ld">' + fmtDate(m.at || e.at) + '</div>' +
@@ -6708,7 +6778,10 @@
           (ichBinGastKonto()
             ? '<span class="lk-gast">Als Gast: verfolgen über den Live-Ticker</span>'
             : (bogen ? '<button class="btn hell" data-action="liga-nachtrag" data-id="' + esc(t.id) + '">Spielbericht übernehmen</button>' : '') +
-              '<button class="btn primary start" data-action="liga-spiel" data-id="' + esc(t.id) + '">Game On!</button>');
+              /* GAME ON nur am Spieltag selbst - vorher stehen hier nur die
+                 Zusagen, sonst startet jemand aus Versehen Tage vorher das
+                 Ligaspiel (Julius, Handy-Block 2). */
+              (t.tag === heuteIso ? '<button class="btn primary start" data-action="liga-spiel" data-id="' + esc(t.id) + '">Game On!</button>' : ''));
       fuss = erklaerung + '<div class="lk-knoepfe">' + knoepfe + '</div>';
     }
     karte.innerHTML =
@@ -7115,7 +7188,7 @@
     var spielerName = !schnell && S.tour && S.tour.liga ? ligaName : pname;
     /* Ueber mehrere Legs oder Saetze zaehlt der Kopf Satz und Leg mit,
        und die Karten zeigen den Stand statt der Dartzahl. */
-    var qSt = schnell && mehrereLegs(m) ? satzStand(m) : null;
+    var qSt = schnell && (mehrereLegs(m) || m.session) ? satzStand(m) : null;
 
     var pendingSum = sum(UI.darts, function (d) { return d.v; });
     var restActive = remainingIn(leg, active) - pendingSum;
@@ -7135,7 +7208,9 @@
     var subText;
     if (schnell) {
       $('game-match-label').textContent = 'Schnelles X01' + liveLabel(m);
-      subText = qSt
+      subText = m.session
+        ? 'Session · Leg ' + qSt.legNr + ' · ' + matchStart(m) + ' DO'
+        : qSt
         ? (qSt.gewinnSaetze > 1 ? 'Satz ' + qSt.satzNr + ' · ' : '') + 'Leg ' + (m.done ? qSt.legNr - 1 : qSt.legNr) +
           ' · ' + dauerText(m) + ' · ' + matchStart(m)
         /* Knapp: "2 Spieler · 501 DO" statt "... Double Out" - der volle
@@ -7166,6 +7241,7 @@
     $('game-fern').setAttribute('aria-pressed', fern ? 'true' : 'false');
     $('game-swap').classList.toggle('hidden', fern);
     $('game-menu-kamera').classList.toggle('hidden', !window.DartKamera);
+    $('game-menu-session').classList.toggle('hidden', !(schnell && m.session));
     $('game-menu-overlay').classList.toggle('hidden', !UI.menu);
     menueFokus($('game-menu-overlay'));
     if (UI.menu) {
@@ -7284,6 +7360,25 @@
       }).join('') : '') + '</div>';
     }
 
+    /* Die letzten Aufnahmen eines Spielers im laufenden Leg (neueste oben,
+       hoechstens n): unten in der Fernsteuerung links und rechts der
+       Eingabe (Liga-Vorschrift: sechs), und in der Fernsteuerung am Handy
+       hochkant bzw. allein in der Karte selbst (drei) - dort gibt es die
+       Listen unten nicht (siehe .pwuerfe im CSS). */
+    var histSpalte = function (pid, n) {
+      if (!pid) return '';
+      var restLauf = legStart(leg);
+      var zeilen = [];
+      leg.visits.forEach(function (v) {
+        if (v.p !== pid) return;
+        if (!v.b) restLauf -= v.s;
+        zeilen.push('<div class="v ' + (v.b ? 'bust' : v.c ? 'co' : '') + '">' +
+          '<span class="s">' + (v.b ? v.o : v.s) + '</span>' +
+          '<span class="r">' + (v.b ? 'Bust' : 'Rest ' + restLauf) + '</span></div>');
+      });
+      return zeilen.slice(-n).reverse().join('');
+    };
+
     $('scoreboard').innerHTML = karten.map(function (pid, ki) {
       var istAktiv = pid === active;
       var rest = remainingIn(leg, pid) - (istAktiv ? pendingSum : 0);
@@ -7294,7 +7389,8 @@
          und die Darts der laufenden Aufnahme. */
       var meta = [];
       if (schnell && qSt) {
-        meta.push('Siege ' + qSt.legs[pid]);
+        /* In der Session zaehlen die Legs einfach mit - "Siege" gibt es allein nicht. */
+        meta.push((m.session ? 'Legs ' : 'Siege ') + qSt.legs[pid]);
         if (qSt.gewinnSaetze > 1) meta.push('Sätze ' + qSt.saetze[pid]);
       } else if (!schnell) {
         meta.push('Siege ' + legsWon(m, pid));
@@ -7328,6 +7424,7 @@
           '<span class="pmeta">' + meta.join(' · ') + '</span></div>' +
           '<span class="pavg">Ø <b>' + avg + '</b></span></div>' +
         '<div class="rest-zeile"><span class="rest">' + rest + '</span>' + letzte + '</div>' +
+        (fern ? '<div class="pwuerfe">' + histSpalte(pid, 3) + '</div>' : '') +
         felderHTML(pid, istAktiv || m.p.length === 1) +
         '</div>';
     }).join('');
@@ -7416,22 +7513,23 @@
       /* Links und rechts der Eingabe die letzten sechs Aufnahmen des
          laufenden Legs (Liga-Vorschrift), neueste oben. Zu zweit links der
          erste, rechts der zweite Spieler (fest wie die Karten); ab dreien
-         links wer wirft, rechts wer als Naechstes kommt. */
-      var histSpalte = function (pid) {
-        if (!pid) return '';
-        var restLauf = legStart(leg);
-        var zeilen = [];
-        leg.visits.forEach(function (v) {
-          if (v.p !== pid) return;
-          if (!v.b) restLauf -= v.s;
-          zeilen.push('<div class="v ' + (v.b ? 'bust' : v.c ? 'co' : '') + '">' +
-            '<span class="s">' + (v.b ? v.o : v.s) + '</span>' +
-            '<span class="r">' + (v.b ? 'Bust' : 'Rest ' + restLauf) + '</span></div>');
-        });
-        return zeilen.slice(-6).reverse().join('');
-      };
-      $('key-hist-l').innerHTML = histSpalte(m.p.length === 2 ? m.p[0] : active);
-      $('key-hist-r').innerHTML = histSpalte(m.p.length === 2 ? m.p[1] : danach[0]);
+         links wer wirft, rechts wer als Naechstes kommt. Allein (Tastatur-
+         Modus) stehen statt der Listen die Statistik-Kacheln und die letzten
+         Aufnahmen rechts bzw. unter dem Eingabefeld. */
+      var soloFern = m.p.length === 1;
+      $('pad-key').classList.toggle('solo', soloFern);
+      $('key-solo').classList.toggle('hidden', !soloFern);
+      $('key-solo').innerHTML = soloFern
+        ? sessionKachelnHTML(m, 'kacheln') + '<div class="key-liste">' + histSpalte(active, 8) + '</div>' : '';
+      $('key-hist-l').innerHTML = soloFern ? '' : histSpalte(m.p.length === 2 ? m.p[0] : active, 6);
+      $('key-hist-r').innerHTML = soloFern ? '' : histSpalte(m.p.length === 2 ? m.p[1] : danach[0], 6);
+      /* Allein am Handy gibt es keine Tastatur: ein Tipp auf die Anzeige
+         holt ueber das versteckte Feld die Zifferntastatur des Systems. */
+      var kd = $('key-display');
+      if (soloFern) { kd.setAttribute('data-action', 'key-tippen'); kd.setAttribute('role', 'button'); kd.setAttribute('tabindex', '0'); kd.setAttribute('aria-label', 'Aufnahme eintippen'); }
+      else { kd.removeAttribute('data-action'); kd.removeAttribute('role'); kd.removeAttribute('tabindex'); kd.removeAttribute('aria-label'); }
+      var kiFeld = $('key-input');
+      if (kiFeld && kiFeld.value !== UI.input) kiFeld.value = UI.input;
       $('key-error').textContent = UI.error;
       /* Kein Platzhaltertext – leer steht nur der blaue Eingabestrich,
          und sobald Ziffern da sind, stehen nur die Ziffern. */
@@ -10279,14 +10377,15 @@
       qm.p.forEach(function (id) { finalize(qMap[id]); });
       var qLeg = qm.legs[qm.legs.length - 1];
       var qSolo = qm.p.length < 2;
+      var qSession = !!(qm.session || qg.session);
       var qSSt = mehrereLegs(qm) ? satzStand(qm) : null;
       d = {
-        kind: 'X01 · ' + (qSolo ? 'Solo' : 'Schnelles Spiel'), archiv: !found.live, aktionen: spielAktionen(found.live),
+        kind: 'X01 · ' + (qSession ? 'Session' : qSolo ? 'Solo' : 'Schnelles Spiel'), archiv: !found.live, aktionen: spielAktionen(found.live),
         meta: (found.live ? '' : fmtDate(qg.at || qm.at) + ' · ') + qStart + ' Double Out · ' + (qSolo ? 'Solo' : P(qm.p.length, 'Spieler', 'Spieler')) + ' · ' + (qSSt ? dauerText(qm) : P(qm.legs.filter(function (l) { return l.winner; }).length, 'Leg', 'Legs')),
         zwei: !qSolo && qm.p.length === 2 ? { a: qm.p[0], b: qm.p[1], stand: x01Stand(qm) } : null,
-        titel: qm.winner ? esc(pname(qm.winner)) + (qSolo ? ' hat ausgemacht' : ' gewinnt') : 'Abgebrochen',
-        sieger: qSolo ? null : qm.winner || null, pille: qSolo ? '🎯 ausgemacht' : null,
-        spieler: qm.p.map(function (id) { return { id: id, sub: qSSt ? kurzStand(qSSt, id) : qm.winner === id ? 'ausgecheckt' : 'Rest ' + (qLeg ? remainingIn(qLeg, id) : 0) }; }),
+        titel: qm.winner ? esc(pname(qm.winner)) + (qSolo ? ' hat ausgemacht' : ' gewinnt') : qSession ? 'Session beendet' : 'Abgebrochen',
+        sieger: qSolo ? null : qm.winner || null, pille: qSession ? '🎯 Session' : qSolo ? '🎯 ausgemacht' : null,
+        spieler: qm.p.map(function (id) { return { id: id, sub: qSession ? P(legsWon(qm, id), 'Leg', 'Legs') : qSSt ? kurzStand(qSSt, id) : qm.winner === id ? 'ausgecheckt' : 'Rest ' + (qLeg ? remainingIn(qLeg, id) : 0) }; }),
         zeilen: x01Zeilen(qm.p.map(function (id) { return qMap[id]; }), true),
         seite: { titel: 'Legs', eintraege: legEintraege(qm, qStart) }
       };
@@ -10733,6 +10832,21 @@
         : legsWon(m1, m1.p[0]) + ':' + legsWon(m1, m1.p[1]);
       /* Das eben beendete Leg: das letzte mit Sieger. */
       var ldLeg = m1.legs.filter(function (l) { return l.winner; }).pop();
+      if (m1.session) {
+        /* Session (allein): das Leg ist durch, das naechste laeuft schon.
+           Kurz die Zahlen des Legs und der ganzen Session - der Dialog geht
+           nach sechs Sekunden von selbst zu (sessionLegTimerStarten), und
+           beenden laesst sich die Session hier wie im Menue. */
+        var ssLegs = m1.legs.filter(function (l) { return l.winner; }).length;
+        var ssDarts = ldLeg ? dartsInLeg(ldLeg, m1.p[0]) : 0;
+        html = '<div class="big-emoji">🎯</div><h3>Leg ' + ssLegs + ' in ' + ssDarts + ' Darts</h3>' +
+          '<p>Session · ' + plural(ssLegs, 'Leg', 'Legs') + ' gespielt · das nächste läuft</p>' +
+          sessionKachelnHTML(m1, 'dialog') +
+          '<button class="' + ldKl(0, 'btn primary full') + '" data-action="ov-next-leg">Weiter</button>' +
+          '<button class="' + ldKl(1, 'btn ghost full') + '" data-action="undo">Eingabe rückgängig</button>' +
+          '<button class="' + ldKl(2, 'btn ghost full') + '" data-action="session-ende">Session beenden</button>' +
+          (ldWahl >= 0 ? '<p class="te-hint">8 / 2 · wählen &nbsp;&nbsp; Enter · bestätigen &nbsp;&nbsp; Löschen · direkt zurück</p>' : '');
+      } else
       html = '<div class="big-emoji">🎯</div><h3>' + (o.satz ? 'Satz' : 'Leg') + ' an ' + esc(pname(o.pid)) + '</h3>' +
         '<p>Stand: ' + ldStand + '</p>' +
         legStatHTML(m1, ldLeg) +
@@ -13197,8 +13311,34 @@
         startTournament(true);
         break;
       case 'ov-next-leg':
+        if (sessionLegTimer) { clearTimeout(sessionLegTimer); sessionLegTimer = null; }
         UI.overlay = null; save(); render();
         break;
+      case 'session-ende': {
+        /* Session (allein) beenden: die fertigen Legs kommen wie ein
+           Uebungsspiel ins Archiv, dann die Auswertung. Ohne fertiges Leg
+           gibt es nichts zu sichern - dann fragt der Abbruch-Dialog. */
+        UI.menu = false;
+        if (sessionLegTimer) { clearTimeout(sessionLegTimer); sessionLegTimer = null; }
+        if (!S.game || !S.game.session) break;
+        if (!entschiedeneLegs(S.game)) { UI.overlay = { type: 'confirm-discard-game' }; render(); break; }
+        var seId = S.game.id;
+        liveEnde(S.game);
+        archiveGame(S.game, true);
+        S.game = null;
+        UI.overlay = null;
+        UI.summary = { kind: 'quick', id: seId, from: 'setup' };
+        S.screen = 'summary';
+        save(); render();
+        break;
+      }
+      case 'key-tippen': {
+        /* Allein im Tastatur-Modus: das versteckte Feld bekommt den Fokus,
+           damit das Handy seine Zifferntastatur zeigt. */
+        var ktFeld = $('key-input');
+        if (ktFeld) { ktFeld.value = UI.input; ktFeld.focus(); }
+        break;
+      }
       case 'schalter': {
         /* Klaenge und Feiern: an oder aus, nichts dazwischen. */
         var sKey = el.getAttribute('data-key');
@@ -13609,6 +13749,11 @@
 
   document.addEventListener('click', function (ev) {
     if (isGhostTap(ev)) return;
+    /* Der click zur gerade per pointerdown gebuchten Spieltaste: schon erledigt. */
+    if (tasteSchonGetippt && Date.now() - tasteSchonGetipptZeit < 1200 && spielTaste(ev.target) === tasteSchonGetippt) {
+      tasteSchonGetippt = null;
+      return;
+    }
     if (ev.target.id === 'overlay' && UI.overlay && !bleibtOffen(UI.overlay.type)) {
       UI.overlay = null; UI.input = ''; render(); return;
     }
@@ -13666,40 +13811,71 @@
       return;
     }
 
-    var key2 = ev.target.closest('.keypad button, .kw-keys button');
-    if (key2) { if (S.screen === 'kaiwen') kaiwenKey(key2.getAttribute('data-key')); else pressKey(key2.getAttribute('data-key')); return; }
+    spielTasteTipp(ev.target);
+  });
 
-    var quick = ev.target.closest('[data-quick]');
+  /*
+   * Die Spieltasten (Zahlenfeld, Schnellwahl, Einzel-Darts, Double/Triple)
+   * reagieren am Touch-Geraet schon beim Aufsetzen des Fingers (pointerdown),
+   * nicht erst beim "click": iOS liefert den click nur, wenn der Finger
+   * praktisch still liegt und kein Scroll beginnt - beim schnellen Tippen am
+   * iPad gingen so Eingaben verloren (Julius, 08.11.: "muss drei Mal
+   * tippen"). Maus und Tastatur bleiben beim click (Doppelausloesung
+   * verhindert `tasteSchonGetippt`). Innerhalb des Ghost-Tap-Fensters nach
+   * einem Bildschirmwechsel bleibt es beim click mit seiner Doppeltipp-
+   * Pruefung. Welche Tasten: nur die im Spielbild, kein Dialog, kein Menue.
+   */
+  var tasteSchonGetippt = null, tasteSchonGetipptZeit = 0;
+  function spielTaste(ziel) {
+    if (!ziel || !ziel.closest) return null;
+    return ziel.closest('.keypad button, .kw-keys button, [data-quick], .mult-row button, .num-grid button.mult, [data-bull], [data-num]');
+  }
+  function spielTasteTipp(ziel) {
+    var key2 = ziel.closest('.keypad button, .kw-keys button');
+    if (key2) { if (S.screen === 'kaiwen') kaiwenKey(key2.getAttribute('data-key')); else pressKey(key2.getAttribute('data-key')); return true; }
+
+    var quick = ziel.closest('[data-quick]');
     if (quick) {
-      if (settling() || quickDoubleTap(quick.getAttribute('data-quick'))) return;
+      if (settling() || quickDoubleTap(quick.getAttribute('data-quick'))) return true;
       UI.error = '';
       UI.input = quick.getAttribute('data-quick');
       submitTotal();
-      return;
+      return true;
     }
 
-    var mult = ev.target.closest('.mult-row button');
-    if (mult) { tipp(); UI.mult = Number(mult.getAttribute('data-mult')); render(); return; }
+    var mult = ziel.closest('.mult-row button');
+    if (mult) { tipp(); UI.mult = Number(mult.getAttribute('data-mult')); render(); return true; }
     /* Double/Triple im X01-Zahlenfeld sind Schalter: Tipp an, nochmal Tipp
        aus (keiner an heisst Single); sie schliessen sich gegenseitig aus. */
-    var schalter = ev.target.closest('.num-grid button.mult');
+    var schalter = ziel.closest('.num-grid button.mult');
     if (schalter) {
       tipp();
       var sm = Number(schalter.getAttribute('data-mult'));
       UI.mult = UI.mult === sm ? 1 : sm;
-      render(); return;
+      render(); return true;
     }
 
-    var bull = ev.target.closest('[data-bull]');
-    if (bull) { spielDart(2, 25); return; }
+    var bull = ziel.closest('[data-bull]');
+    if (bull) { spielDart(2, 25); return true; }
 
-    var num = ev.target.closest('[data-num]');
+    var num = ziel.closest('[data-num]');
     if (num) {
       var n2 = Number(num.getAttribute('data-num'));
       var own = num.getAttribute('data-mult');
       spielDart(own ? Number(own) : UI.mult, n2);
-      return;
+      return true;
     }
+    return false;
+  }
+  document.addEventListener('pointerdown', function (ev) {
+    if (ev.pointerType !== 'touch' && ev.pointerType !== 'pen') return;
+    if (!ev.isPrimary || ev.button !== 0) return;
+    if (UI.overlay || UI.menu) return;
+    if (Date.now() <= ghostTapUntil) return;
+    var taste = spielTaste(ev.target);
+    if (!taste || taste.disabled || !taste.closest('#screen-game, #screen-kaiwen, #screen-finisher')) return;
+    tasteSchonGetippt = taste; tasteSchonGetipptZeit = Date.now();
+    spielTasteTipp(taste);
   });
 
   /* Name im Profil-Dialog: nur den Entwurf pflegen, nicht neu rendern –
@@ -14126,6 +14302,8 @@
   document.addEventListener('keydown', function (ev) {
     if (S.screen !== 'game' || !UI.turnier || UI.overlay || UI.menu) return;
     if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    /* Das versteckte Feld des Solo-Tastatur-Modus hat seine eigenen Regeln (unten). */
+    if (document.activeElement && document.activeElement.id === 'key-input') return;
     var tm = currentMatch();
     if (!tm || tm.done) return;
     var zTurnier = tasteZiffer(ev);
@@ -14152,6 +14330,36 @@
       ev.preventDefault();
     }
   });
+
+  /* Solo-Tastatur-Modus am Handy: ein Tipp auf die Anzeige (key-tippen)
+     fokussiert dieses versteckte Feld, und das Handy zeigt seine
+     Zifferntastatur. Was dort getippt wird, landet in UI.input wie am
+     Board; Enter bucht, Loeschen im leeren Feld nimmt die Aufnahme zurueck.
+     Eine echte Tastatur laeuft weiter ueber den Handler darueber. */
+  (function () {
+    var feld = $('key-input');
+    if (!feld) return;
+    feld.addEventListener('input', function () {
+      if (S.screen !== 'game' || !UI.turnier || UI.overlay || UI.menu) { feld.value = UI.input; return; }
+      var neu = String(feld.value || '').replace(/\D/g, '').slice(0, 3);
+      if (neu !== feld.value) feld.value = neu;
+      if (neu === UI.input) return;
+      UI.input = neu; UI.error = '';
+      render();
+    });
+    feld.addEventListener('keydown', function (ev) {
+      if (S.screen !== 'game' || !UI.turnier || UI.overlay || UI.menu) return;
+      if (ev.key === 'Enter') {
+        ev.preventDefault();
+        if (UI.input !== '') { UI.error = ''; ev.eingabeGebucht = true; submitTotal(); }
+      } else if (ev.key === 'Backspace' && !feld.value) {
+        ev.preventDefault();
+        undo();
+      } else if (ev.key === 'Escape') {
+        feld.blur();
+      }
+    });
+  })();
 
   /* Finisher-Fernsteuerung: Ziffern in die Anzeige, Enter bucht die
      Aufnahme, Loeschen nimmt erst Ziffern und dann den letzten Dart zurueck,
@@ -14414,7 +14622,8 @@
       /* Nur ein KNOPF zaehlt - die Dialogkarte selbst traegt den Fokus seit
          D1 immer (dialogFokusHinein), damit Hilfstechnik im Dialog ist. */
       var imDialog = fokus && fokus.closest && fokus.closest('#overlay button, #overlay [role="button"]');
-      var ldN = legDoneUebersicht() ? 3 : 2;
+      var ldM = currentMatch();
+      var ldN = legDoneUebersicht() || (ldM && ldM.session) ? 3 : 2;
       var ldW = Math.min(ov.wahl || 0, ldN - 1);
       if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp' ||
           ev.key === 'ArrowRight' || ev.key === 'ArrowLeft' || ev.key === 'Tab') {
@@ -14424,7 +14633,7 @@
       } else if (ev.key === 'Enter' && !imDialog) {
         ev.preventDefault();
         if (ldW === 1) { undo(); }
-        else if (ldW === 2) { handleAction('to-tournament', ev.target); }
+        else if (ldW === 2) { handleAction(ldM && ldM.session ? 'session-ende' : 'to-tournament', ev.target); }
         else { UI.overlay = null; render(); }
       } else if (ev.key === 'Backspace' && !imDialog) {
         undo(); ev.preventDefault();

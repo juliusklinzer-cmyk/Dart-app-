@@ -2,14 +2,9 @@
 
 ## In Arbeit
 
-- [ ] DRT-001 Audit 08.11.2026 umsetzen: alle freigegebenen Befunde (Pakete A–F) · prio:hoch · bis:2026-11-10 · von:Julius · am:2026-11-08 · quelle:audit-2026-11-08/
-  - Server (S1–S9, M3): Rechte, Rate-Limits, Lost-Update-Pfade (S3-Erlaubtliste wieder raus: Gegner-Adresse wird am Spieltag eingetippt, Julius 08.11.)
-  - Mitteilungen (M1–M17): Themen, Zeitfenster der Jobs, Push-Abos, Mail-Texte
-  - Client (L18–L26, O21–O27, D1, D9, D11): Live-Ende mit seq, Beitritt mitten in der Aufnahme, Live-Strom nach Fehler, Zuschauer-Ticker bei 429, Warteschlange, Gast-Sperren
-  - CSS (D2–D19): Tokens, Kontraste, Kompakt-Layouts, Schleier/Barlicht
-  - Tests/Build (O20, T-H1, T-H2, T-M1–T-M8, T-N1, T-N5): konto.mjs grün, Gruppen-Kapselung, tests/alle.mjs im Deploy, Einzeldatei-Head aus index.html, Lockfile, env.example, Node ≥ 22.13, Repo-Hygiene, Backlog, OFL, README
-
 ## Wartet auf Julius
+
+- [ ] DRT-020 Block 2 am Handy/iPad gegenprüfen und drei Kleinigkeiten entscheiden: (a) Der Session-Dialog nach jedem Leg schließt sich nach 6 s von selbst – passt, oder lieber nur ein kurzes Banner? (b) „Checkout-Quote“ im Tastatur-Modus zeigt „–“ (nur aus Einzeldarts berechenbar) – stattdessen „Checkouts / Legs“? (c) Liga-Karte vor dem Spieltag: Hinweis „GAME ON erscheint am Spieltag“ gewünscht? Dazu: Tastenfeld am iPad – kommen die Tipps jetzt beim ersten Mal an? · von:Julius · am:2026-11-08
 
 - [ ] DRT-002 Backup prüfen: auf dem Server `crontab -l` ansehen (läuft `/opt/dart-turnier/backup.sh` täglich 04:30?) und einmal einen Restore nach DEPLOY.md „Backup“ üben · prio:hoch · von:Audit H7/S-M6 · am:2026-11-08
 - [ ] DRT-004 Brevo-Schlüssel aus dem Sitzungs-Transkript schwärzen (Befehl steht im Chat vom 08.11.); Erneuern bei Brevo hast du bewusst nicht gewollt · am:2026-11-08
@@ -17,11 +12,6 @@
 
 ## Offen
 
-- [ ] DRT-018 Handy-Block 2 (Screenshots Julius 08.11.): Session-Modus für Solo-X01 (bei einem Spieler gibt es nur „Session“ statt Leg/Set-Wahl, Leg zu Ende → nächstes sofort, Session-Zahlen über alle Legs, Beenden nach jedem Spiel, zählt als Übung) · prio:hoch · von:Julius · am:2026-11-08
-  - Solo quer: ⌨ Tastatur-Modus auch allein, Tastenfeld weg, rechts Eingabefeld + Kacheln (Average, First 9, Darts im Leg, 180er, höchste Aufnahme, Checkout-Quote) + letzte Aufnahmen
-  - Fernsteuerung hoch: Spielerkarten als breite Zeilen statt leerer Säulen – Rest groß wie immer, die letzten Würfe in der gewohnten Ansicht
-  - Punkte-Modus hoch: Abstand zwischen Kopf und Spielerkarten und zum Rand; Namen bei vier Spielern nicht abschneiden
-  - Liga-Karten: „GAME ON“ nur am Spieltag selbst, vorher nur Zusagen/Absagen
 - [ ] DRT-005 D16: harte Farb- und Radiuswerte in css/styles.css in Tokens überführen · quelle:audit-2026-11-08 D16 · am:2026-11-08
 - [ ] DRT-006 T-N3: die fünf esc()-Kopien (app.js, auth.js, kamera.js, live.js, webseite.js) zusammenlegen, Zuschauer-Rendering live.js/webseite.js teilen · quelle:audit-2026-11-08 T-N3 · am:2026-11-08
 - [ ] DRT-007 S3-Ausbau: Betreff und Text der Spielbericht-Mail serverseitig bauen statt aus dem Client übernehmen · quelle:audit-2026-11-08 S3 · am:2026-11-08
@@ -38,3 +28,7 @@
 ## Ideen
 
 ## Erledigt
+
+- [x] DRT-001 Audit 08.11.2026 umsetzen: alle freigegebenen Befunde (Pakete A–F; S3-Erlaubtliste auf Julius' Wunsch wieder raus) · prio:hoch · von:Julius · am:2026-11-08 · fertig:2026-11-08 · quelle:audit-2026-11-08/
+- [x] DRT-018 Handy-Block 2: Session-Modus Solo-X01, Solo-Tastatur-Modus mit Statistik, Fernsteuerung hoch als Zeilen, Abstände Punkte-Modus hoch, GAME ON nur am Spieltag, Logo-Abstand oben in der installierten App · prio:hoch · von:Julius · am:2026-11-08 · fertig:2026-11-08
+- [x] DRT-019 Tastenfeld: Spieltasten buchen am Touch-Gerät per pointerdown statt click, touch-action none (iPad schluckte Tipps mit rutschendem Finger) · von:Julius · am:2026-11-08 · fertig:2026-11-08

@@ -124,6 +124,20 @@ async function spielVerlassen() {
 }
 const rest = (i) => page.locator('.pcard').nth(i).locator('.rest').innerText();
 const st = () => page.evaluate(() => window.__dart.standings());
+/* GAME ON steht auf der Spieltag-Karte nur am Spieltag selbst (Handy-Block 2):
+   zum Start eines Ligaspiels stellt der Test den Stichtag auf den gewaehlten
+   Termin und danach wieder auf den festen Stichtag zurueck. */
+async function ligaHeute(tag) { await page.evaluate((t) => { window.__ligaHeute = t; window.__dart.render(); }, tag); }
+async function ligaSpielStarten() {
+  const tag = await page.evaluate(() => {
+    const w = document.querySelector('#liga-liste .liga-spieltag.wahl');
+    const t = window.LIGA_DATEN.liga.termine.find((x) => x.id === (w && w.getAttribute('data-id')));
+    return t ? t.tag : null;
+  });
+  await ligaHeute(tag);
+  await page.locator('#liga-plan [data-action="liga-spiel"]').first().click();
+  await ligaHeute('2026-10-01');
+}
 
 /* Fester Stichtag fuer den Liga-Spielplan: der 1. Spieltag (Heim gegen Dachau)
    ist in den Tests immer der naechste - egal, wann sie laufen. */
@@ -2172,11 +2186,13 @@ check('eine grosse Karte statt einer halb leeren Zweierreihe', await page.evalua
   document.querySelectorAll('#scoreboard .pcard').length === 1));
 check('der Verlauf steht mittig in einer Spalte', await page.evaluate(() =>
   document.getElementById('screen-game').classList.contains('solo')));
-check('allein gibt es keinen Fernsteuerungs-Knopf',
-  await page.locator('#game-fern').isHidden());
+check('allein gibt es den Fernsteuerungs-Knopf - als Tastatur-Modus (Handy-Block 2)',
+  await visible('#game-fern'));
 await page.keyboard.press('Tab');
 await page.keyboard.press('Tab');
-check('Tab pendelt allein nur zwischen Punkte und Einzel-Darts', await visible('#pad-total'));
+check('Tab laeuft allein durch Punkte, Einzel-Darts und Tastatur-Modus', await visible('#pad-key'));
+await page.keyboard.press('Tab');
+check('und wieder zurueck zu Punkte', await visible('#pad-total'));
 /* Der Zurueck-Knopf verspricht "Stand bleibt erhalten" - auch allein. */
 await page.evaluate(() => { window.__dart.ui().input = '60'; window.__dart.submitTotal(); });
 await spielVerlassen();
@@ -2212,13 +2228,19 @@ await typeScore(180); await typeScore(180);           // 441 -> 261 -> 81
 await modus('total');
 await typeScore(81);                                   // Finish
 await page.locator('#overlay-card [data-action="co-darts"]').first().click();
-check('Solo-Spiel ist ausgemacht', await page.evaluate(() => window.__dart.currentMatch().done));
-check('kein Glueckwunsch zum Sieg, sondern zum Ausmachen',
-  (await textKlein('#overlay-card')).includes('ausgemacht') && !(await textKlein('#overlay-card')).includes('glückwunsch'));
-await page.locator('#overlay-card [data-action="open-summary"]').click();
-check('Auswertung sagt nicht "gewinnt"',
-  (await textKlein('#summary-box')).includes('ausgemacht') && !(await textKlein('#summary-box')).includes('gewinnt'));
-await page.locator('#summary-actions [data-action="finish-game"]').click();
+/* Allein ist das Schnelle X01 eine Session (Handy-Block 2): das Leg ist
+   ausgemacht, das naechste laeuft schon - kein Sieg, kein Glueckwunsch. */
+check('das Leg ist ausgemacht, die Session laeuft weiter', await page.evaluate(() => {
+  const m = window.__dart.currentMatch();
+  return !m.done && m.session === true && m.legs.filter((l) => l.winner).length === 1;
+}));
+check('kein Glueckwunsch zum Sieg, sondern das Leg mit den Session-Zahlen',
+  (await textKlein('#overlay-card')).includes('leg 1 in') && (await textKlein('#overlay-card')).includes('session') &&
+  !(await textKlein('#overlay-card')).includes('glückwunsch'));
+await page.locator('#overlay-card [data-action="session-ende"]').click();
+check('"Session beenden" fuehrt zur Auswertung, die nicht "gewinnt" sagt',
+  (await visible('#screen-summary')) && (await textKlein('#summary-box')).includes('session beendet') && !(await textKlein('#summary-box')).includes('gewinnt'));
+check('das Spiel ist archiviert und weg', await page.evaluate(() => !window.__dart.state().game && window.__dart.state().history[0].session === true));
 soloNachher = await page.evaluate((id) => {
   const c = window.__dart.career()[id];
   return { won: c.won, lost: c.lost, matches: c.matches, legsWon: c.legsWon, darts: c.darts, form: c.lastResults.length };
@@ -2232,8 +2254,8 @@ await page.evaluate((id) => { window.__dart.setScreen('players'); }, soloId);
 await profilOeffnen(`#players-list [data-id="${soloId}"]`);
 await page.locator('[data-action="profil-stats"]').click();
 soloProfil = await text('#profile-detail');
-check('das Profil listet das Solo-Spiel ohne Sieg und ohne Gegner',
-  soloProfil.includes('Solo') && !soloProfil.includes('gegen undefined'), soloProfil.slice(0, 200));
+check('das Profil listet die Session ohne Sieg und ohne Gegner',
+  soloProfil.includes('Session') && !soloProfil.includes('gegen undefined'), soloProfil.slice(0, 200));
 
 await page.evaluate(() => {
   const D = window.__dart, S = D.state();
@@ -2251,7 +2273,7 @@ await page.evaluate(() => {
 
 await gruppe('Turnier-Modus: Anzeige am Board, Eingabe per Tastatur - im Liga-Einzel', async () => {
 await navTo('liga');
-await page.locator('#liga-plan [data-action="liga-spiel"]').first().click();
+await ligaSpielStarten();
 for (let i = 0; i < 4; i++) {
   await page.locator(`[data-role="liga-gegner"][data-i="${i}"]`).fill('Probe');
   await page.locator(`[data-role="liga-gegner-nach"][data-i="${i}"]`).fill('Gegner' + (i + 1));
@@ -2511,7 +2533,7 @@ await page.evaluate(() => {
 await gruppe('Ligaspiel "nur Ergebnisse": Leg-Stand je Einzel ohne Wuerfe', async () => {
 await navTo('liga');
 await page.locator('#liga-liste .liga-spieltag[data-id="st01"]').click();
-await page.locator('#liga-plan [data-action="liga-spiel"]').first().click();
+await ligaSpielStarten();
 for (let i = 0; i < 4; i++) {
   await page.locator(`[data-role="liga-gegner"][data-i="${i}"]`).fill('Probe');
   await page.locator(`[data-role="liga-gegner-nach"][data-i="${i}"]`).fill('Gegner' + (i + 1));
@@ -3574,7 +3596,7 @@ await navTo('liga');
 });
 
 await gruppe('Ligaspiel: 16 Einzel nach Spielberichtsbogen', async () => {
-await page.locator('#liga-plan [data-action="liga-spiel"]').first().click();
+await ligaSpielStarten();
 check('die Aufstellung oeffnet sich', (await text('#overlay-card')).includes('Ligaspiel'));
 check('unsere vier Positionen sind vorbelegt',
   (await page.locator('[data-role="liga-pos"]').count()) === 4);
@@ -4088,9 +4110,12 @@ await gruppe('Gaeste: temporaer, dauerhaft, Gast-Konto', async () => {
     const echt = window.DartKonto;
     window.DartKonto = new Proxy({ nutzer: () => ({ id: 'u_gastkonto', gastKonto: true }) }, { get: (t, k) => (k in t ? t[k] : () => null) });
     D.setScreen('liga'); D.ui().ligaTab = 'plan'; D.render();
+    /* Am Spieltag selbst - sonst fehlte GAME ON ohnehin (Handy-Block 2). */
+    const w = document.querySelector('#liga-liste .liga-spieltag.wahl');
+    window.__ligaHeute = window.LIGA_DATEN.liga.termine.find((x) => x.id === w.getAttribute('data-id')).tag; D.render();
     const plan = document.getElementById('liga-plan').innerHTML;
     const keinStart = !plan.includes('data-action="liga-spiel"') && plan.includes('Live-Ticker');
-    window.DartKonto = echt; D.render();
+    window.DartKonto = echt; window.__ligaHeute = '2026-10-01'; D.render();
     return { keinStart };
   });
   check('ein Gast-Konto sieht keinen "Ligaspiel starten"-Knopf, sondern den Hinweis auf den Live-Ticker', r.keinStart);
@@ -4099,11 +4124,14 @@ await gruppe('Gaeste: temporaer, dauerhaft, Gast-Konto', async () => {
     const alt = { game: S.game, matches: S.matches, tour: S.tour, current: S.current };
     S.game = null; S.matches = []; S.tour = null; S.current = null;
     D.setScreen('liga'); D.ui().ligaTab = 'plan'; D.render();
+    const w = document.querySelector('#liga-liste .liga-spieltag.wahl');
+    window.__ligaHeute = window.LIGA_DATEN.liga.termine.find((x) => x.id === w.getAttribute('data-id')).tag; D.render();
     const knopf = document.querySelector('#liga-plan [data-action="liga-spiel"]');
     D.action('liga-spiel', knopf);
     const o = D.ui().overlay;
     const html = document.getElementById('overlay-card').innerHTML;
     D.ui().overlay = null;
+    window.__ligaHeute = '2026-10-01';
     Object.assign(S, alt); D.render();
     return !!o && o.type === 'liga-start' && !html.includes('Besuchskonto') && html.includes('Lenas');
   });
@@ -5307,7 +5335,7 @@ await gruppe('Erster Start: Willkommen-Karte', async () => {
 await gruppe('Ligaspiel endet erst mit dem unterschriebenen Bericht', async () => {
 {
   await page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; S.matches = []; S.tour = null; S.current = null; D.ui().overlay = null; D.save(); D.setScreen('liga'); });
-  await page.locator('#liga-plan [data-action="liga-spiel"]').first().click();
+  await ligaSpielStarten();
   for (let i = 0; i < 4; i++) {
     await page.locator(`[data-role="liga-gegner"][data-i="${i}"]`).fill('Abschluss' + i);
     await page.locator(`[data-role="liga-gegner-nach"][data-i="${i}"]`).fill('Test' + i);
@@ -5364,8 +5392,12 @@ await gruppe('Ligaspiel endet erst mit dem unterschriebenen Bericht', async () =
     const D = window.__dart, S = D.state();
     const h = S.history.find((x) => x.liga && x.liga.terminId === t);
     h.matches.forEach((m) => { m.done = false; m.winner = null; m.legs = []; });
+    /* GAME ON gibt es nur am Spieltag selbst (Handy-Block 2). */
+    window.__ligaHeute = window.LIGA_DATEN.liga.termine.find((x) => x.id === t).tag;
     D.save(); D.setScreen('liga');
-    return !!document.querySelector('#liga-plan [data-action="liga-spiel"]');
+    const da = !!document.querySelector('#liga-plan [data-action="liga-spiel"]');
+    window.__ligaHeute = '2026-10-01'; D.render();
+    return da;
   }, termin);
   check('ein Eintrag ohne gespieltes Einzel laesst den Spieltag startbar', startbar);
   await page.evaluate((t) => {
@@ -6084,6 +6116,242 @@ await gruppe('Audit 11/2026: v2-Altstand wird auf v3 gehoben, neuere Staende ble
   await p2.close();
 }
 
+});
+
+/* ================= Handy-Block 2 (Julius, 08.11.2026) ================= */
+
+await gruppe('Handy-Block 2: Solo-Session - Leg um Leg, Statistik ueber alle Legs, Beenden archiviert', async () => {
+  const soloStart = () => page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    S.game = null; S.lineup = [D.activeProfiles()[0].id]; S.mode = 'quick';
+    S.settings.start = 501; S.settings.dartModeFrom = 0; S.settings.bestOf = 3; D.ui().modeOverride = null; D.ui().turnier = false;
+    D.save(); D.setScreen('setup');
+  });
+  await soloStart();
+  check('im Setup steht allein nur "Session", keine Legs-Wahl', (await visible('#setting-session')) && !(await visible('#setting-bestof')));
+  await page.evaluate(() => { const D = window.__dart, S = D.state(); S.lineup = D.activeProfiles().slice(0, 2).map((p) => p.id); D.setScreen('setup'); });
+  check('zu zweit ist die Legs-Wahl wieder da', (await visible('#setting-bestof')) && !(await visible('#setting-session')));
+  await soloStart();
+  const sessId = await page.evaluate(() => window.__dart.state().lineup[0]);
+  const cVor = await page.evaluate((id) => { const c = window.__dart.career()[id]; return { darts: c.darts, won: c.won, matches: c.matches }; }, sessId);
+  await page.locator('[data-action="start-game"]').click();
+  check('die Session laeuft: der Kopf sagt "Session · Leg 1"', (await textKlein('#game-leg-label')).includes('session') && (await textKlein('#game-leg-label')).includes('leg 1'));
+  check('das Spiel traegt das Session-Zeichen, die Legs-Wahl (Best of 3) gilt nicht', await page.evaluate(() => {
+    const m = window.__dart.currentMatch(); return m.session === true && m.bestOf === 1;
+  }));
+  check('im Menue steht "Session beenden"', await page.evaluate(() => !document.getElementById('game-menu-session').classList.contains('hidden')));
+  /* Leg 1 in 9 Darts: 180, 180, 141. */
+  await typeScore(180); await typeScore(180); await typeScore(141);
+  await page.locator('#overlay-card [data-action="co-darts"]').first().click();
+  check('nach dem Leg: kein Sieg, die Session laeuft, das naechste Leg steht schon', await page.evaluate(() => {
+    const m = window.__dart.currentMatch();
+    return !m.done && m.legs.length === 2 && !!m.legs[0].winner && !m.legs[1].winner;
+  }));
+  check('der Dialog zeigt "Leg 1 in 9 Darts" und acht Session-Kacheln',
+    (await textKlein('#overlay-card')).includes('leg 1 in 9 darts') && (await page.locator('#overlay-card .ss-kacheln .ss').count()) === 8);
+  check('"Weiter", "Eingabe rueckgaengig" und "Session beenden" stehen zur Wahl - kein Zwang zu einem "Nochmal"',
+    (await page.locator('#overlay-card [data-action="ov-next-leg"]').count()) === 1 &&
+    (await page.locator('#overlay-card [data-action="undo"]').count()) === 1 &&
+    (await page.locator('#overlay-card [data-action="session-ende"]').count()) === 1 &&
+    !(await textKlein('#overlay-card')).includes('nochmal'));
+  await page.locator('#overlay-card [data-action="ov-next-leg"]').click();
+  check('Kopf zaehlt "Leg 2", die Karte "Legs 1"', (await textKlein('#game-leg-label')).includes('leg 2') && (await textKlein('#scoreboard')).includes('legs 1'));
+  /* Leg 2 in 14 Darts: 100, 100, 100, 100, 101 (das Finish mit zwei Darts). */
+  await typeScore(100); await typeScore(100); await typeScore(100); await typeScore(100); await typeScore(101);
+  await page.locator('#overlay-card [data-action="co-darts"]').first().click();
+  check('der Dialog zeigt "Leg 2 in 14 Darts"', (await textKlein('#overlay-card')).includes('leg 2 in 14 darts'));
+  const kacheln = await page.evaluate(() => Array.from(document.querySelectorAll('#overlay-card .ss-kacheln .ss'))
+    .map((e) => e.querySelector('span').textContent + '=' + e.querySelector('b').textContent).join(' | '));
+  check('Session-Statistik ueber beide Legs: 2 Legs, Ø 130.7 (1002 Punkte / 23 Darts), bestes Leg 9 Darts, 2x 180, Finish 141, 23 Darts, hoechste 180, First 9 133.5',
+    kacheln === 'Legs=2 | Ø=130.7 | Bestes Leg=9 Darts | 180er=2 | Höchstes Finish=141 | Darts=23 | Höchste Aufnahme=180 | First 9=133.5', kacheln);
+  /* Kein Zwang: der Dialog geht nach sechs Sekunden von selbst zu. */
+  await page.waitForTimeout(6600);
+  check('der Dialog schliesst sich von selbst, das dritte Leg laeuft', await page.evaluate(() => {
+    const D = window.__dart, m = D.currentMatch(); return !D.ui().overlay && m.legs.length === 3;
+  }));
+  check('Kopf zaehlt "Leg 3"', (await textKlein('#game-leg-label')).includes('leg 3'));
+  /* Ein angefangenes drittes Leg faellt beim Beenden weg. */
+  await typeScore(60);
+  await page.locator('#game-menu').click();
+  await page.locator('#game-menu-session').click();
+  check('"Session beenden" im Menue fuehrt zur Auswertung "Session beendet"',
+    (await visible('#screen-summary')) && (await textKlein('#summary-box')).includes('session beendet') && (await textKlein('#summary-box')).includes('session'));
+  check('im Archiv liegt die Session mit zwei fertigen Legs, ohne Sieger, nicht als abgebrochen', await page.evaluate(() => {
+    const S = window.__dart.state(), h = S.history[0];
+    return !S.game && h.kind === 'quick' && h.session === true && !h.abgebrochen && h.winner === null &&
+      h.matches[0].legs.length === 2 && h.matches[0].done === true;
+  }));
+  const cNach = await page.evaluate((id) => { const c = window.__dart.career()[id]; return { darts: c.darts, won: c.won, matches: c.matches }; }, sessId);
+  check('in der Karriere zaehlen die 23 Darts der fertigen Legs (das angefangene dritte Leg nicht), kein Sieg, kein Spiel in der Bilanz',
+    cNach.darts - cVor.darts === 23 && cNach.won === cVor.won && cNach.matches === cVor.matches, JSON.stringify([cVor, cNach]));
+  /* Ohne ein einziges fertiges Leg gibt es nichts zu sichern: der Abbruch-Dialog fragt. */
+  await soloStart();
+  await page.locator('[data-action="start-game"]').click();
+  await typeScore(60);
+  await page.locator('#game-menu').click();
+  await page.locator('#game-menu-session').click();
+  check('ohne fertiges Leg fragt der Abbruch-Dialog', (await textKlein('#overlay-card')).includes('abbrechen') && (await page.locator('#overlay-card [data-action="ov-discard-game"]').count()) === 1);
+  await page.locator('#overlay-card [data-action="ov-discard-game"]').click();
+  check('verworfen: kein Spiel, kein neuer Archiv-Eintrag', await page.evaluate(() => { const S = window.__dart.state(); return !S.game && S.history[0].session === true && S.history[0].matches[0].legs.length === 2; }));
+  await page.evaluate(() => { const D = window.__dart, S = D.state(); S.settings.bestOf = 1; D.save(); D.setScreen('setup'); });
+});
+
+await gruppe('Handy-Block 2: Solo-Tastatur-Modus - Eingabefeld und Kacheln statt Tastenfeld', async () => {
+  const vp = page.viewportSize();
+  await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    S.game = null; S.lineup = [D.activeProfiles()[0].id]; S.mode = 'quick';
+    S.settings.start = 501; S.settings.dartModeFrom = 0; D.ui().modeOverride = null; D.ui().turnier = false;
+    D.save(); D.setScreen('setup');
+  });
+  await page.locator('[data-action="start-game"]').click();
+  check('der ⌨-Knopf steht auch allein', await visible('#game-fern'));
+  await modus('turnier');
+  check('Tastenfeld weg, Eingabefeld und Kacheln da, keine Board-Listen',
+    !(await visible('#pad-total')) && !(await visible('#pad-darts')) && (await visible('#key-display')) &&
+    (await visible('#key-solo')) && !(await visible('#key-hist-l')) && !(await visible('#key-hist-r')));
+  const labels = await page.evaluate(() => Array.from(document.querySelectorAll('#key-solo .ss-kacheln .ss span')).map((e) => e.textContent).join(' | '));
+  check('sechs Kacheln: Average, First 9, Darts im Leg, 180er, Hoechste Aufnahme, Checkout-Quote',
+    labels === 'Average | First 9 | Darts im Leg | 180er | Höchste Aufnahme | Checkout-Quote', labels);
+  await page.keyboard.type('180'); await page.keyboard.press('Enter');
+  check('die Tastatur bucht wie am Board: Rest 321', (await rest(0)) === '321', await rest(0));
+  const werte = await page.evaluate(() => Array.from(document.querySelectorAll('#key-solo .ss-kacheln .ss b')).map((e) => e.textContent).join(' | '));
+  check('die Kacheln rechnen mit: Ø 180.0, First 9 180.0, 3 Darts im Leg, 1x 180, hoechste 180, Checkout-Quote ohne Einzel-Darts ein Strich',
+    werte === '180.0 | 180.0 | 3 | 1 | 180 | –', werte);
+  check('die Liste zeigt die 180 mit Rest 321', (await text('#key-solo .key-liste')).includes('180') && (await text('#key-solo .key-liste')).includes('Rest 321'));
+  check('die Karte zeigt die letzten Wuerfe unter dem Rest', await page.evaluate(() => {
+    const w = document.querySelector('#scoreboard .pcard .pwuerfe');
+    return !!w && getComputedStyle(w).display !== 'none' && w.textContent.includes('180') && w.textContent.includes('Rest 321');
+  }));
+  /* Am Handy ohne Tastatur: ein Tipp auf die Anzeige holt ueber das
+     versteckte Feld die Zifferntastatur - getippt wird dann dort. */
+  await page.locator('#key-display').click();
+  check('ein Tipp auf die Anzeige fokussiert das Eingabefeld', await page.evaluate(() => document.activeElement && document.activeElement.id === 'key-input'));
+  await page.keyboard.type('60');
+  check('im Feld getippt: die Anzeige zeigt 60', (await text('#key-display')).trim() === '60', await text('#key-display'));
+  await page.keyboard.press('Enter');
+  check('Enter im Feld bucht: Rest 261', (await rest(0)) === '261', await rest(0));
+  await page.keyboard.press('Backspace');
+  check('Loeschen im leeren Feld nimmt die Aufnahme zurueck: Rest 321', (await rest(0)) === '321', await rest(0));
+  /* Quer: Karte links, Eingabe und Kacheln rechts; hochkant untereinander. */
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.waitForTimeout(150);
+  const quer = await page.evaluate(() => {
+    const r = (s) => document.querySelector(s).getBoundingClientRect();
+    const k = r('#scoreboard .pcard'), e = r('.input-area'), kd = r('#key-display'), ka = r('#key-solo .ss-kacheln');
+    return { kRight: k.right, kBottom: k.bottom, eLeft: e.left, kdTop: kd.top, kaBottom: ka.bottom, innen: window.innerHeight,
+      scroll: document.documentElement.scrollHeight <= window.innerHeight + 1, restPx: parseFloat(getComputedStyle(document.querySelector('#scoreboard .rest')).fontSize) };
+  });
+  check('quer: die Karte links, Eingabefeld und Kacheln rechts daneben', quer.eLeft >= quer.kRight - 1 && quer.kdTop < quer.kBottom, JSON.stringify(quer));
+  check('quer: der Rest steht gross, alles im Bild, nichts scrollt', quer.restPx >= 60 && quer.kaBottom <= quer.innen + 0.5 && quer.scroll, JSON.stringify(quer));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForTimeout(150);
+  const hoch = await page.evaluate(() => {
+    const r = (s) => document.querySelector(s).getBoundingClientRect();
+    const k = r('#scoreboard .pcard'), kd = r('#key-display'), ka = r('#key-solo .ss-kacheln');
+    return { kBottom: k.bottom, kdTop: kd.top, kaBottom: ka.bottom, innen: window.innerHeight, scroll: document.documentElement.scrollHeight <= window.innerHeight + 1 };
+  });
+  check('hochkant: das Eingabefeld unter der Karte, die Kacheln im Bild', hoch.kdTop >= hoch.kBottom - 1 && hoch.kaBottom <= hoch.innen + 0.5 && hoch.scroll, JSON.stringify(hoch));
+  await page.locator('#game-fern').click();
+  check('⌨ fuehrt zurueck zum Tastenfeld', await visible('#pad-total'));
+  await page.setViewportSize(vp);
+  await page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; D.save(); D.setScreen('setup'); });
+});
+
+await gruppe('Handy-Block 2: Fernsteuerung hochkant - eine Zeile je Spieler', async () => {
+  const vp = page.viewportSize();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    S.game = null; S.lineup = D.activeProfiles().slice(0, 3).map((p) => p.id); S.mode = 'quick';
+    S.settings.start = 501; S.settings.dartModeFrom = 0; D.ui().modeOverride = null; D.ui().turnier = false;
+    D.save(); D.setScreen('setup');
+  });
+  await page.locator('[data-action="start-game"]').click();
+  await bullOffGo();
+  await modus('turnier');
+  await page.keyboard.type('60'); await page.keyboard.press('Enter');
+  const lage = await page.evaluate(() => {
+    const karten = Array.from(document.querySelectorAll('#scoreboard .pcard'));
+    const sb = document.getElementById('scoreboard').getBoundingClientRect();
+    return {
+      k: karten.map((e) => { const r = e.getBoundingClientRect(); return { top: r.top, bottom: r.bottom, left: r.left, width: r.width }; }),
+      sbWidth: sb.width,
+      namen: Array.from(document.querySelectorAll('#scoreboard .pname')).map((e) => ({ sw: e.scrollWidth, cw: e.clientWidth, sh: e.scrollHeight, ch: e.clientHeight })),
+      reihen: karten.map((e) => ({ restLeft: e.querySelector('.rest').getBoundingClientRect().left, kopfRight: e.querySelector('.pkopf').getBoundingClientRect().right })),
+      wuerfe: document.getElementById('scoreboard').innerText,
+      kdTop: document.getElementById('key-display').getBoundingClientRect().top,
+      aktiv: document.querySelectorAll('#scoreboard .pcard.active').length,
+      scroll: document.documentElement.scrollHeight <= window.innerHeight + 1
+    };
+  });
+  check('drei Karten untereinander, jede ueber die volle Breite',
+    lage.k.length === 3 && lage.k[1].top >= lage.k[0].bottom - 1 && lage.k[2].top >= lage.k[1].bottom - 1 &&
+    lage.k.every((r) => r.width >= lage.sbWidth - 2), JSON.stringify(lage.k));
+  check('Name links, Rest rechts', lage.reihen.every((r) => r.restLeft >= r.kopfRight - 1), JSON.stringify(lage.reihen));
+  check('kein Name ist abgeschnitten', lage.namen.every((n) => n.sw <= n.cw + 1 && n.sh <= n.ch + 1), JSON.stringify(lage.namen));
+  check('die letzten Wuerfe stehen in der Karte (60 · Rest 441)', lage.wuerfe.includes('60') && lage.wuerfe.includes('Rest 441'));
+  check('der Werfer ist markiert, das Eingabefeld bleibt unten, nichts scrollt', lage.aktiv === 1 && lage.kdTop >= lage.k[2].bottom && lage.scroll, JSON.stringify(lage));
+  await page.locator('#game-fern').click();
+  await page.setViewportSize(vp);
+  await page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; D.save(); D.setScreen('setup'); });
+});
+
+await gruppe('Handy-Block 2: Punkte-Modus hochkant - Abstand zum Kopf, Rand, lange Namen', async () => {
+  const vp = page.viewportSize();
+  await page.setViewportSize({ width: 390, height: 844 });
+  const alterName = await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    const vier = D.activeProfiles().slice(0, 4);
+    const alt = vier[3].name; vier[3].name = 'Harrypotter';
+    S.game = null; S.lineup = vier.map((p) => p.id); S.mode = 'quick';
+    S.settings.start = 501; S.settings.dartModeFrom = 0; D.ui().modeOverride = null; D.ui().turnier = false;
+    D.save(); D.setScreen('setup');
+    return alt;
+  });
+  await page.locator('[data-action="start-game"]').click();
+  await bullOffGo();
+  const lage = await page.evaluate(() => {
+    const r = (s) => document.querySelector(s).getBoundingClientRect();
+    const karten = Array.from(document.querySelectorAll('#scoreboard .pcard'));
+    const name = Array.from(document.querySelectorAll('#scoreboard .pname')).find((e) => /harrypotter/i.test(e.textContent));
+    const px = (sel) => Math.min.apply(null, Array.from(document.querySelectorAll(sel)).map((e) => parseFloat(getComputedStyle(e).fontSize)));
+    return {
+      kopfUnten: r('#screen-game .game-header').bottom, kartenOben: r('#scoreboard').top,
+      links: karten[0].getBoundingClientRect().left, rechts: window.innerWidth - karten[karten.length - 1].getBoundingClientRect().right,
+      name: name ? { sw: name.scrollWidth, cw: name.clientWidth, sh: name.scrollHeight, ch: name.clientHeight } : null,
+      meta: px('#scoreboard .pmeta'), avg: px('#scoreboard .pavg'), pname: px('#scoreboard .pname'),
+      okUnten: r('.keypad button[data-key="ok"]').bottom, innen: window.innerHeight
+    };
+  });
+  check('zwischen Kopf und Karten liegen mindestens 8 px', lage.kartenOben - lage.kopfUnten >= 8, JSON.stringify(lage));
+  check('die erste Karte steht mindestens 8 px vom linken Rand, die letzte vom rechten', lage.links >= 8 && lage.rechts >= 8, JSON.stringify(lage));
+  check('HARRYPOTTER ist nicht abgeschnitten (zweizeilig statt Ellipse)', !!lage.name && lage.name.sw <= lage.name.cw + 1 && lage.name.sh <= lage.name.ch + 1, JSON.stringify(lage.name));
+  check('Kleingedrucktes nie unter 11 px', lage.meta >= 11 && lage.avg >= 11 && lage.pname >= 11, JSON.stringify(lage));
+  check('das Tastenfeld bleibt ganz im Bild', lage.okUnten <= lage.innen + 0.5, JSON.stringify(lage));
+  await page.setViewportSize(vp);
+  await page.evaluate((alt) => {
+    const D = window.__dart, S = D.state();
+    D.activeProfiles()[3].name = alt; S.game = null; D.save(); D.setScreen('setup');
+  }, alterName);
+});
+
+await gruppe('Handy-Block 2: GAME ON nur am Spieltag', async () => {
+  await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    S.game = null; S.matches = []; S.tour = null; S.current = null; D.ui().overlay = null; D.ui().ligaWahl = 'st05';
+    D.save(); D.setScreen('liga'); D.ui().ligaTab = 'plan'; D.render();
+  });
+  check('die Karte zeigt den 5. Spieltag (24.11.)', (await textKlein('#liga-karte')).includes('5. spieltag'));
+  check('vor dem Spieltag: kein GAME ON', (await page.locator('#liga-karte [data-action="liga-spiel"]').count()) === 0);
+  await ligaHeute('2026-11-24');
+  check('am Spieltag selbst steht GAME ON', (await page.locator('#liga-karte [data-action="liga-spiel"]').count()) === 1 &&
+    (await textKlein('#liga-karte [data-action="liga-spiel"]')).includes('game on'));
+  await ligaHeute('2026-11-25');
+  check('danach: "Von Hand nachtragen" statt GAME ON', (await page.locator('#liga-karte [data-action="liga-spiel"]').count()) === 1 &&
+    (await textKlein('#liga-karte [data-action="liga-spiel"]')).includes('nachtragen'));
+  await ligaHeute('2026-10-01');
+  await page.evaluate(() => { const D = window.__dart; D.ui().ligaWahl = null; D.setScreen('setup'); });
 });
 
 await gruppe('Fehlerfreiheit', async () => {

@@ -6958,6 +6958,166 @@ button.pa-gruppe { cursor: pointer; }
   }
 }
 
+/* ================= Handy-Block 2 (Julius, 08.11.2026, Screenshots vom iPhone) =================
+ * 1. Punkte-Modus hochkant: Luft zwischen Kopf und Karten, Seitenrand wie
+ *    ueberall, lange Namen ab drei Spielern zweizeilig statt abgeschnitten.
+ * 2. Fernsteuerung hochkant am Handy: eine Zeile je Spieler (Name links,
+ *    Rest rechts, darunter die letzten Aufnahmen) statt hoher leerer Saeulen.
+ *    Am iPad bleibt das Board-Layout.
+ * 3. Allein im Tastatur-Modus: Eingabefeld, Statistik-Kacheln und die
+ *    letzten Aufnahmen statt des Tastenfelds - quer rechts, hochkant unten.
+ * Steht am Ende der Datei, damit es die gewachsenen Schichten darueber
+ * ueberstimmt. Kein Blur, kein Schleier, kein Verlauf am oberen Rand. */
+
+/* ---- 1. Hochkant: Abstaende und Namen ---- */
+@media (orientation: portrait) {
+  /* Kopf -> Karten derselbe Abstand wie zwischen den Karten (--space-2);
+     links und rechts der Rand, den der Rest der App auch hat - vorher
+     klebte die erste Karte am Bildschirmrand und alle am Kopf. */
+  #screen-game.active { padding-left: var(--space-2); padding-right: var(--space-2); }
+  #screen-game.active .game-header { margin-bottom: var(--space-2); }
+  /* Ab drei Spielern: der Name bricht auf zwei Zeilen um (notfalls mitten
+     im Wort - "HARRYPOTTER" wurde sonst abgeschnitten); Kleingedrucktes
+     nie unter 11 px. */
+  #screen-game.active #scoreboard.viele .pcard .pkopf { align-items: flex-start; }
+  #screen-game.active #scoreboard.viele .pcard .pname {
+    white-space: normal; overflow-wrap: anywhere; word-break: break-word;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
+    line-height: 1.05; font-size: max(11px, 0.72rem);
+  }
+  #screen-game.active #scoreboard.viele .pcard .pmeta { font-size: max(11px, 0.65rem); white-space: normal; line-height: 1.1; }
+  #screen-game.active #scoreboard.viele .pcard .pavg { font-size: max(11px, 0.75rem); }
+}
+
+/* ---- Die letzten Aufnahmen in der Karte (Fernsteuerung) ----
+   renderGame schreibt sie in jede Karte; sichtbar nur dort, wo die Listen
+   unten fehlen: am Handy hochkant und allein. */
+.pcard .pwuerfe { display: none; }
+.pcard .pwuerfe .v {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+  background: var(--bg-3); border-radius: 8px; padding: 3px 10px;
+  font-family: var(--font-cond); font-variant-numeric: tabular-nums; line-height: 1.2;
+}
+.pcard .pwuerfe .v .s { font-weight: 700; font-size: 1.05rem; color: var(--ruhig, var(--text)); }
+.pcard .pwuerfe .v .r { color: var(--muted); font-size: 0.85rem; }
+.pcard .pwuerfe .v.bust .s { color: var(--red); text-decoration: line-through; }
+.pcard .pwuerfe .v.co .s { color: var(--accent); }
+.pcard .pwuerfe .v:not(:first-child) { opacity: 0.7; }
+
+/* ---- 2. Fernsteuerung hochkant am Handy: Zeilen statt Saeulen ---- */
+@media (orientation: portrait) and (max-width: 699px) {
+  #screen-game.active.turnier #scoreboard { grid-template-columns: minmax(0, 1fr); grid-auto-rows: minmax(0, 1fr); gap: var(--space-2); }
+  #screen-game.active.turnier #scoreboard .pcard {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas: "kopf rest" "wuerfe rest" "felder felder";
+    column-gap: 10px; row-gap: 4px; align-items: center; padding: 8px 12px; gap: 4px 10px;
+  }
+  #screen-game.active.turnier #scoreboard .pcard .pkopf { grid-area: kopf; align-self: start; }
+  /* Der Name ganz, zur Not auf zwei Zeilen. */
+  #screen-game.active.turnier #scoreboard .pcard .pname {
+    white-space: normal; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2; line-clamp: 2; font-size: 1.05rem; line-height: 1.05;
+  }
+  #screen-game.active.turnier #scoreboard .pcard .pavg { font-size: 1rem; }
+  #screen-game.active.turnier #scoreboard .pcard .pmeta { font-size: max(11px, 0.78rem); }
+  /* Der Rest rechts, gross wie immer; die Container-Messung der Board-
+     Ansicht gilt hier nicht (die Zelle hat keine feste Hoehe). */
+  #screen-game.active.turnier #scoreboard .pcard .rest-zeile,
+  #screen-game.active.turnier #scoreboard.viele .pcard .rest-zeile {
+    grid-area: rest; container-type: normal; display: flex; align-items: center; justify-content: flex-end;
+    min-height: 0; min-width: 2.2ch; line-height: 0.9; margin: 0; font-size: clamp(2.6rem, 13vh, 6rem);
+  }
+  #screen-game.active.turnier #scoreboard.viele .pcard .rest-zeile { font-size: clamp(2.2rem, 9vh, 4.4rem); }
+  #screen-game.active.turnier #scoreboard .pcard .rest-zeile .rest { font-size: 1em; }
+  #screen-game.active.turnier #scoreboard .pcard .pwuerfe { grid-area: wuerfe; display: flex; flex-direction: column; gap: 3px; align-self: start; min-width: 0; }
+  #screen-game.active.turnier #scoreboard .pcard .pfelder { grid-area: felder; height: 34px; margin: 0; }
+  #screen-game.active.turnier #scoreboard .pcard .pfelder:empty { display: none; }
+  /* Allein hochkant: der Rest mittig und gross, die Aufnahmen darunter. */
+  #screen-game.active.turnier.solo #scoreboard .pcard {
+    grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto auto;
+    grid-template-areas: "kopf" "rest" "wuerfe" "felder";
+  }
+  #screen-game.active.turnier.solo #scoreboard .pcard .rest-zeile { justify-content: center; font-size: clamp(3rem, 18vh, 9rem); }
+  #screen-game.active.turnier.solo #scoreboard .pcard .pwuerfe { align-self: end; }
+  /* Unten: Eingabefeld, Kacheln, hoechstens vier Aufnahmen - der Rest der
+     Hoehe gehoert der Karte. */
+  #screen-game.active.turnier.solo .key-liste .v:nth-child(n+5) { display: none; }
+}
+
+/* ---- 3. Allein im Tastatur-Modus: Eingabefeld, Kacheln, Liste ---- */
+#screen-game.active.turnier.solo .key-hist { display: none; }
+#screen-game.active.turnier.solo .pad-key { display: flex; flex-direction: column; gap: var(--space-2); height: auto; min-height: 0; }
+#screen-game.active.turnier.solo .pad-key .key-mitte { flex: none; }
+#screen-game.active.turnier.solo .key-display { min-height: 72px; height: auto; font-size: clamp(2.2rem, 8vh, 4rem); cursor: text; }
+.key-solo { display: flex; flex-direction: column; gap: var(--space-2); min-height: 0; }
+.ss-kacheln { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.ss-kacheln .ss {
+  background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--r-m);
+  padding: 6px 8px; display: flex; flex-direction: column; gap: 3px; min-width: 0; text-align: center;
+}
+.ss-kacheln .ss span {
+  font-family: var(--font-cond); font-weight: 600; font-size: max(11px, 0.72rem); letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ss-kacheln .ss b {
+  font-family: var(--font-cond); font-weight: 700; font-size: clamp(1.1rem, 3vh, 1.8rem);
+  color: var(--ruhig, var(--text)); font-variant-numeric: tabular-nums; line-height: 1;
+}
+/* Im Dialog nach dem Leg: alle acht Session-Werte, vier je Reihe, die
+   Beschriftung darf umbrechen. */
+.ss-kacheln.dialog { grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 8px 0 14px; }
+.ss-kacheln.dialog .ss span { white-space: normal; line-height: 1.1; font-size: max(11px, 0.68rem); }
+.ss-kacheln.dialog .ss b { font-size: clamp(1rem, 2.6vh, 1.5rem); white-space: nowrap; }
+.key-liste { display: flex; flex-direction: column; gap: 3px; min-height: 0; overflow: hidden; }
+.key-liste .v {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+  background: var(--bg-2); border-radius: 8px; padding: 4px 12px;
+  font-family: var(--font-cond); font-variant-numeric: tabular-nums;
+}
+.key-liste .v .s { font-weight: 700; font-size: 1.1rem; color: var(--ruhig, var(--text)); }
+.key-liste .v .r { color: var(--muted); font-size: 0.9rem; }
+.key-liste .v.bust .s { color: var(--red); text-decoration: line-through; }
+.key-liste .v.co .s { color: var(--accent); }
+.key-liste .v:not(:first-child) { opacity: 0.75; }
+/* Das unsichtbare Feld fuer die Handy-Tastatur: da, aber nicht zu sehen. */
+.key-input { position: absolute; left: 0; top: 0; width: 1px; height: 1px; opacity: 0; border: 0; padding: 0; margin: 0; pointer-events: none; }
+/* Quer: links die Karte (Rest gross, darunter die letzten Aufnahmen),
+   rechts Eingabefeld, Kacheln und Liste - wie Punkte-Modus und Tastenfeld. */
+@media (orientation: landscape) {
+  #screen-game.active.turnier.solo .game-body { flex-direction: row; gap: clamp(8px, 1.6vw, 24px); align-items: stretch; }
+  #screen-game.active.turnier.solo .game-main { flex: 1 1 52%; min-width: 0; }
+  #screen-game.active.turnier.solo #scoreboard { grid-template-columns: minmax(0, 1fr); }
+  #screen-game.active.turnier.solo #scoreboard .pcard .rest-zeile { font-size: clamp(56px, 34vh, 300px); }
+  #screen-game.active.turnier.solo #scoreboard .pcard .pwuerfe { display: flex; flex-direction: column; gap: 4px; flex: none; }
+  #screen-game.active.turnier.solo .input-area { flex: 1 1 48%; height: auto; min-height: 0; min-width: 0; display: flex; flex-direction: column; }
+  #screen-game.active.turnier.solo .pad-key { height: 100%; }
+  #screen-game.active.turnier.solo .key-solo { flex: 1 1 auto; }
+  #screen-game.active.turnier.solo .key-liste { flex: 1 1 auto; }
+  /* Handy quer: die Kacheln kleiner, hoechstens drei Aufnahmen. */
+  @media (max-height: 560px) {
+    #screen-game.active.turnier.solo .key-display { min-height: 48px; font-size: 1.8rem; }
+    .ss-kacheln .ss { padding: 3px 6px; gap: 1px; }
+    .ss-kacheln .ss b { font-size: 1.05rem; }
+    #screen-game.active.turnier.solo .key-liste .v { padding: 2px 10px; }
+    #screen-game.active.turnier.solo .key-liste .v:nth-child(n+4) { display: none; }
+  }
+}
+
+/* Installiert am iPhone: ohne Statusleisten-Meta meldet iOS den oberen
+   Inset als 0 - das Logo samt Schein begann am Viewport-Rand, und der
+   Streifen .ios-oben malte ueber den oberen Rand des Scheins. Nur im
+   Standalone-Modus etwas Abstand; kein Blur, kein Verlauf (Julius, 30.10.). */
+@media (display-mode: standalone) {
+  body { padding-top: max(env(safe-area-inset-top, 0px), 24px); }
+}
+
+/* Spieltasten: kein Scroll-Beginn auf einer Taste. iOS wertete einen Tipp
+   mit minimal rutschendem Finger als Wischen und schluckte den click; die
+   Tasten buchen jetzt per pointerdown (app.js, spielTasteTipp), und das
+   System darf hier gar nicht erst ans Scrollen denken. Gescrollt wird
+   daneben, nicht auf dem Tastenfeld. */
+.keypad button, .num-grid button, .quick-row button, .mult-row button, .kw-keys button { touch-action: none; }
+
 </style>
 </head>
 <body>
@@ -7097,6 +7257,16 @@ button.pa-gruppe { cursor: pointer; }
         <button data-value="3"><span class="lang">Best of 3</span><span class="kurz">Bo3</span></button>
         <button data-value="5"><span class="lang">Best of 5</span><span class="kurz">Bo5</span></button>
       </div>
+    </div>
+    <!-- Allein im Schnellen X01 gibt es kein Leg-Ziel: die Session laeuft
+         Leg um Leg, bis "Session beenden" im Spielmenue. Nur Anzeige, keine
+         Wahl (renderSetup blendet sie statt der Legs-Zeile ein). -->
+    <div class="setting hidden" id="setting-session">
+      <label>Legs</label>
+      <div class="options">
+        <button type="button" class="active" aria-pressed="true">Session</button>
+      </div>
+      <span class="note">Leg um Leg weiter – beenden im Spielmenü (•••), die Statistik zählt über alle Legs.</span>
     </div>
     <!-- Wie wird eingetragen? Tastatur = Fernsteuerung vom Board-iPad aus,
          Standard = immer die Aufnahme als Zahl, Gemischt = im Finish-Bereich
@@ -7788,7 +7958,15 @@ button.pa-gruppe { cursor: pointer; }
         <div id="key-error" class="input-error" role="status" aria-live="polite"></div>
       </div>
       <div id="key-hist-r" class="key-hist"></div>
+      <!-- Allein: Statistik-Kacheln und die letzten Aufnahmen statt der
+           beiden Listen (renderGame fuellt sie). -->
+      <div id="key-solo" class="key-solo hidden"></div>
     </div>
+    <!-- Nur allein (Tastatur-Modus am Handy): ein Tipp auf die Anzeige
+         fokussiert dieses unsichtbare Feld, damit das Handy seine
+         Zifferntastatur zeigt. Bewusst ausserhalb von #pad-key und nie von
+         selbst fokussiert - am Board-iPad bleibt die Systemleiste weg. -->
+    <input id="key-input" class="key-input" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" enterkeyhint="done" aria-hidden="true" tabindex="-1">
   </div>
   </div>
 
@@ -7803,6 +7981,8 @@ button.pa-gruppe { cursor: pointer; }
       </div>
       <!-- Nur mit optionaler Kamera-Schicht (js/kamera.js) sichtbar. -->
       <button class="btn ghost full hidden" id="game-menu-kamera" data-action="game-kamera">Kamera</button>
+      <!-- Nur in der Solo-Session: die fertigen Legs ins Archiv, dann die Auswertung. -->
+      <button class="btn ghost full hidden" id="game-menu-session" data-action="session-ende">Session beenden</button>
       <div class="game-menu-zeile">
         <button class="btn ghost game-menu-raus" data-action="to-tournament">Spiel verlassen</button>
         <button class="btn primary" data-action="game-menu-zu">Weiterspielen</button>
@@ -10603,6 +10783,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
      an genau dieser Stelle, damit bewusste schnelle Bedienung frei bleibt. */
   var ghostTapUntil = 0;
   var turnierEndeTimer = null;
+  /* Session (allein): der Dialog nach dem Leg schliesst sich nach sechs
+     Sekunden von selbst - das naechste Leg laeuft laengst, niemand muss
+     klicken (Julius: kein "Nochmal?"-Zwang). */
+  var sessionLegTimer = null;
   function armGhostTapGuard() { ghostTapUntil = Date.now() + 400; }
   function isGhostTap(ev) {
     /* `detail >= 2` ist die Doppelklick-Zählung des Browsers: zweite
@@ -11595,10 +11779,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
   /* Der Turnier-Modus (Riesenanzeige am Board) gehoert zu Liga-Einzeln -
      dort startet er am Board-iPad von selbst. In normalen Turnieren und im
-     Schnellen Spiel laesst er sich per Knopf dazuschalten; nur allein gibt
-     es ihn nicht (eine Seite des Bildes bliebe leer). */
+     Schnellen Spiel laesst er sich per Knopf dazuschalten. Allein ist er
+     der Tastatur-Modus: Eingabefeld und Statistik-Kacheln statt des
+     Tastenfelds (Julius, Handy-Block 2). */
   function turnierErlaubt() {
-    if (S.game && S.game.kind === 'quick') return S.game.p.length > 1;
+    if (S.game && S.game.kind === 'quick') return true;
     return !!S.tour;
   }
 
@@ -12394,7 +12579,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var fest = festeDauer(match);
     var gewinnLegs = matchLegsToWin(match);
     var gewinnSaetze = matchSaetzeZuGewinnen(match);
-    var legsJeSatz = match.bestOf || 1, saetzeGesamt = match.saetzeBestOf || 1;
+    /* Session (allein, ohne Leg-Ziel): kein Satz wird je voll, also auch
+       kein Sieger - die Legs zaehlen einfach weiter. */
+    var legsJeSatz = match.session ? Infinity : (match.bestOf || 1), saetzeGesamt = match.saetzeBestOf || 1;
     var saetze = {}, legs = {};
     match.p.forEach(function (id) { saetze[id] = 0; legs[id] = 0; });
     var satzNr = 1, legNr = 1, satzZu = false, sieger = null;
@@ -12426,6 +12613,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   /* "First to 2 Sätze à 3 Legs" bzw. "Best of 5 Legs" -- so, wie es
      eingestellt wurde. */
   function dauerText(match) {
+    if (match.session) return 'Session';
     var d = match.spieldauer || { modus: 1, saetze: match.saetzeBestOf || 1, legs: match.bestOf || 1 };
     var w = d.modus === 1 ? 'Best of ' : 'First to ';
     if (matchSaetzeZuGewinnen(match) > 1) return w + d.saetze + ' Sätze à ' + d.legs + (d.legs === 1 ? ' Leg' : ' Legs');
@@ -12658,6 +12846,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       } else {
         /* Ist damit ein ganzer Satz zu, sagt der Dialog das auch. */
         UI.overlay = { type: 'leg-done', pid: pid, satz: st.satzZu };
+        if (m.session) sessionLegTimerStarten();
       }
       /* Das letzte Einzel des Ligaspiels stempelt die Endzeit für den
          Spielberichtsbogen. */
@@ -13810,8 +13999,14 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       S.game.p = S.lineup.slice();
       S.game.start = S.settings.start;
       /* Dieselbe Legs-Wahl wie im Turnier (1 Leg, Best of 3, Best of 5),
-         ein Satz; Best of heisst: alle Legs werden gespielt (festeDauer). */
-      var qd = { modus: 1, saetze: 1, legs: S.settings.bestOf || 1, alle: true };
+         ein Satz; Best of heisst: alle Legs werden gespielt (festeDauer).
+         Allein gibt es kein Leg-Ziel, sondern die Session: Leg um Leg
+         weiter, bis "Session beenden" im Menue (Julius, Handy-Block 2) -
+         satzStand kennt bei session nie einen Sieger. */
+      var qd = S.lineup.length === 1
+        ? { modus: 1, saetze: 1, legs: 1, alle: true }
+        : { modus: 1, saetze: 1, legs: S.settings.bestOf || 1, alle: true };
+      if (S.lineup.length === 1) S.game.session = true;
       S.game.spieldauer = qd;
       S.game.bestOf = bestOfAus(qd.modus, qd.legs);
       S.game.saetzeBestOf = bestOfAus(qd.modus, qd.saetze);
@@ -13822,8 +14017,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     UI.modeOverride = null;   // neue Partie, neue Handwahl
     UI.overlay = null;
     /* "Tastatur" im Setup: Schnelles Spiel und Finisher starten gleich in
-       der Fernsteuerung (zu zweit oder mehr - allein gibt es sie nicht). */
-    UI.turnier = kind === 'quick' && S.settings.tastatur === 1 && S.lineup.length > 1;
+       der Fernsteuerung (allein: im Tastatur-Modus mit Statistik). */
+    UI.turnier = kind === 'quick' && S.settings.tastatur === 1;
     if (kind === 'finisher') UI.finFern = S.settings.tastatur === 1;
     // Wie im Turnier wird auch hier ausgeworfen, wer anfängt - ausser
     // allein: gegen sich selbst bullt niemand aus. Das Spiel gilt dann
@@ -13873,14 +14068,21 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
          Match-Liste mit genau einem Eintrag. Dadurch rechnet collectStats()
          Average, First 9, Doppelquote und Rekorde daraus ohne jede
          Sonderbehandlung. */
+      /* Eine Session (allein, ohne Leg-Ziel) ist nie "entschieden": sie
+         wird mit ihren fertigen Legs abgelegt - ohne Sieger, aber auch
+         ohne das Abbruch-Zeichen -, ein offenes Leg faellt weg. Gewertet
+         wird sie wie jedes Solo-Spiel (Average, Rekorde, keine Siege). */
+      var session = !!g.session;
+      if (session) { delete eintrag.abgebrochen; eintrag.session = true; eintrag.winner = null; }
       eintrag.lineup = g.p.slice();
       eintrag.settings = { start: g.start, bestOf: g.bestOf || 1 };
       eintrag.matches = [{
         id: g.id, p: g.p.slice(), starter: g.starter,
-        legs: abgebrochen ? g.legs.filter(function (l) { return l.winner; }) : g.legs,
-        done: !abgebrochen, winner: eintrag.winner, at: eintrag.at, start: g.start,
+        legs: abgebrochen || session ? g.legs.filter(function (l) { return l.winner; }) : g.legs,
+        done: !abgebrochen || session, winner: eintrag.winner, at: eintrag.at, start: g.start,
         bestOf: g.bestOf || 1, saetzeBestOf: g.saetzeBestOf || 1, spieldauer: g.spieldauer || null
       }];
+      if (session) eintrag.matches[0].session = true;
     } else {
       eintrag.scoring = g.scoring;
       eintrag.throws = g.throws;
@@ -13924,6 +14126,50 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (!offen.length) return [];
     var ab = Math.min.apply(null, offen.map(function (x) { return x.round || 1; }));
     return offen.filter(function (x) { return (x.round || 1) <= ab + 1; }).slice(0, 8);
+  }
+
+  /* Die Zahlen einer Solo-Session (oder eines Solo-Spiels) ueber alle
+     Legs - fuer die Kacheln im Tastatur-Modus und den Dialog nach dem Leg.
+     Bestes Leg hier auch fuer 301/701: es ist die Bestmarke dieser Session,
+     kein Karriere-Rekord (den zaehlt collectStats nur aus 501ern). */
+  function sessionStat(m) {
+    var pid = m.p[0];
+    var st = collectStats([{ matches: [{ p: m.p, legs: m.legs }], start: matchStart(m) }], m.p)[pid];
+    finalize(st);
+    var fertig = m.legs.filter(function (l) { return l.winner; });
+    var best = null;
+    fertig.forEach(function (l) { var d = dartsInLeg(l, pid); if (d > 0 && (best === null || d < best)) best = d; });
+    var letztes = m.legs[m.legs.length - 1];
+    var laufend = letztes && !letztes.winner ? letztes : null;
+    return { legs: fertig.length, avg: st.avg, darts: st.darts, bestLeg: best, s180: st.s180, highCO: st.highCO,
+      highScore: st.highScore, first9: st.first9, first9Darts: st.first9Darts,
+      doubleAttempts: st.doubleAttempts, doubleQuote: st.doubleQuote, checkouts: st.checkouts,
+      dartsImLeg: laufend ? dartsInLeg(laufend, pid) : 0 };
+  }
+  /* Die Kacheln dazu: 'dialog' = alles ueber die Session (nach dem Leg),
+     'kacheln' = die sechs Werte neben dem Eingabefeld im Tastatur-Modus.
+     Die Checkout-Quote kennt die App nur aus Einzel-Darts (siehe
+     collectStats) - in der Punkte-Eingabe steht dort ein Strich. */
+  function sessionKachelnHTML(m, art) {
+    var s = sessionStat(m);
+    var f1 = function (x, hat) { return hat ? x.toFixed(1) : '–'; };
+    var k = art === 'dialog' ? [
+      ['Legs', s.legs], ['Ø', f1(s.avg, s.darts)], ['Bestes Leg', s.bestLeg ? s.bestLeg + ' Darts' : '–'], ['180er', s.s180],
+      ['Höchstes Finish', s.highCO || '–'], ['Darts', s.darts], ['Höchste Aufnahme', s.highScore || '–'], ['First 9', f1(s.first9, s.first9Darts)]
+    ] : [
+      ['Average', f1(s.avg, s.darts)], ['First 9', f1(s.first9, s.first9Darts)], ['Darts im Leg', s.dartsImLeg], ['180er', s.s180],
+      ['Höchste Aufnahme', s.highScore || '–'], ['Checkout-Quote', s.doubleAttempts ? Math.round(s.doubleQuote) + ' %' : '–']
+    ];
+    return '<div class="ss-kacheln' + (art === 'dialog' ? ' dialog' : '') + '">' + k.map(function (z) {
+      return '<div class="ss"><span>' + z[0] + '</span><b>' + z[1] + '</b></div>';
+    }).join('') + '</div>';
+  }
+  function sessionLegTimerStarten() {
+    if (sessionLegTimer) clearTimeout(sessionLegTimer);
+    sessionLegTimer = setTimeout(function () {
+      sessionLegTimer = null;
+      if (UI.overlay && UI.overlay.type === 'leg-done' && S.game && S.game.session) { UI.overlay = null; save(); render(); }
+    }, 6000);
   }
 
   /* Wie viele Legs eines laufenden Schnellen Spiels schon entschieden sind. */
@@ -14703,8 +14949,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
        und Einzel-Dart-Grenze gelten für beide. Nur die Legs sind Turniersache;
        zwei getrennte Karten wären zwei Bedienelemente für dieselbe Einstellung. */
     $('settings-501').classList.toggle('hidden', S.mode !== '501' && S.mode !== 'quick');
-    /* Legs gelten fuer Turnier und Schnelles X01 gleichermassen. */
-    $('setting-bestof').classList.toggle('hidden', S.mode !== '501' && S.mode !== 'quick');
+    /* Legs gelten fuer Turnier und Schnelles X01 gleichermassen - ausser
+       allein: dort gibt es kein Leg-Ziel, sondern die Session. */
+    var soloSession = S.mode === 'quick' && S.lineup.length === 1;
+    $('setting-bestof').classList.toggle('hidden', (S.mode !== '501' && S.mode !== 'quick') || soloSession);
+    $('setting-session').classList.toggle('hidden', !soloSession);
     /* Round the World mit Boost: ein Satz dazu, was Boost heisst. */
     var rtwNote = $('rtw-note');
     if (rtwNote) rtwNote.textContent = S.mode === 'rtw' && S.settings.rtwBoost === 1 ? 'Boost: ein Double überspringt eine Zahl, ein Triple zwei.' : '';
@@ -15521,7 +15770,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         return '<div class="log-row tap" data-action="open-summary" data-kind="501" data-id="' + esc(m.id) + '" role="button" tabindex="0">' +
           '<div class="lp">' + esc(pname(m.p[0])) + '<span class="a">Ø ' + avgOf(m.p[0]) + '</span></div>' +
           '<div class="ls">' + soloD + '</div>' +
-          '<div class="lp right muted">Solo<span class="a">' + plural(soloD, 'Dart', 'Darts') + '</span></div>' +
+          '<div class="lp right muted">' + (m.session ? 'Session · ' + plural(m.legs.filter(function (l) { return l.winner; }).length, 'Leg', 'Legs') : 'Solo') +
+            '<span class="a">' + plural(soloD, 'Dart', 'Darts') + '</span></div>' +
           '<div class="ld">' + fmtDate(m.at || e.at) + '</div>' +
           '</div>';
       }
@@ -16299,7 +16549,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           /* Solo-Spiel: kein Gegner, kein Sieg - nur die Darts bis zum Finish. */
           var soloDarts = sum(m.legs, function (l) { return dartsInLeg(l, p.id); });
           return '<div class="log-row">' +
-            '<div class="lp">Solo</div>' +
+            '<div class="lp">' + (m.session ? 'Session' : 'Solo') + '</div>' +
             '<div class="ls">' + plural(soloDarts, 'Dart', 'Darts') + '</div>' +
             '<div class="lp right">' + (m.start || e.start) + ' allein</div>' +
             '<div class="ld">' + fmtDate(m.at || e.at) + '</div>' +
@@ -17214,7 +17464,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           (ichBinGastKonto()
             ? '<span class="lk-gast">Als Gast: verfolgen über den Live-Ticker</span>'
             : (bogen ? '<button class="btn hell" data-action="liga-nachtrag" data-id="' + esc(t.id) + '">Spielbericht übernehmen</button>' : '') +
-              '<button class="btn primary start" data-action="liga-spiel" data-id="' + esc(t.id) + '">Game On!</button>');
+              /* GAME ON nur am Spieltag selbst - vorher stehen hier nur die
+                 Zusagen, sonst startet jemand aus Versehen Tage vorher das
+                 Ligaspiel (Julius, Handy-Block 2). */
+              (t.tag === heuteIso ? '<button class="btn primary start" data-action="liga-spiel" data-id="' + esc(t.id) + '">Game On!</button>' : ''));
       fuss = erklaerung + '<div class="lk-knoepfe">' + knoepfe + '</div>';
     }
     karte.innerHTML =
@@ -17621,7 +17874,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var spielerName = !schnell && S.tour && S.tour.liga ? ligaName : pname;
     /* Ueber mehrere Legs oder Saetze zaehlt der Kopf Satz und Leg mit,
        und die Karten zeigen den Stand statt der Dartzahl. */
-    var qSt = schnell && mehrereLegs(m) ? satzStand(m) : null;
+    var qSt = schnell && (mehrereLegs(m) || m.session) ? satzStand(m) : null;
 
     var pendingSum = sum(UI.darts, function (d) { return d.v; });
     var restActive = remainingIn(leg, active) - pendingSum;
@@ -17641,7 +17894,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var subText;
     if (schnell) {
       $('game-match-label').textContent = 'Schnelles X01' + liveLabel(m);
-      subText = qSt
+      subText = m.session
+        ? 'Session · Leg ' + qSt.legNr + ' · ' + matchStart(m) + ' DO'
+        : qSt
         ? (qSt.gewinnSaetze > 1 ? 'Satz ' + qSt.satzNr + ' · ' : '') + 'Leg ' + (m.done ? qSt.legNr - 1 : qSt.legNr) +
           ' · ' + dauerText(m) + ' · ' + matchStart(m)
         /* Knapp: "2 Spieler · 501 DO" statt "... Double Out" - der volle
@@ -17672,6 +17927,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     $('game-fern').setAttribute('aria-pressed', fern ? 'true' : 'false');
     $('game-swap').classList.toggle('hidden', fern);
     $('game-menu-kamera').classList.toggle('hidden', !window.DartKamera);
+    $('game-menu-session').classList.toggle('hidden', !(schnell && m.session));
     $('game-menu-overlay').classList.toggle('hidden', !UI.menu);
     menueFokus($('game-menu-overlay'));
     if (UI.menu) {
@@ -17790,6 +18046,25 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       }).join('') : '') + '</div>';
     }
 
+    /* Die letzten Aufnahmen eines Spielers im laufenden Leg (neueste oben,
+       hoechstens n): unten in der Fernsteuerung links und rechts der
+       Eingabe (Liga-Vorschrift: sechs), und in der Fernsteuerung am Handy
+       hochkant bzw. allein in der Karte selbst (drei) - dort gibt es die
+       Listen unten nicht (siehe .pwuerfe im CSS). */
+    var histSpalte = function (pid, n) {
+      if (!pid) return '';
+      var restLauf = legStart(leg);
+      var zeilen = [];
+      leg.visits.forEach(function (v) {
+        if (v.p !== pid) return;
+        if (!v.b) restLauf -= v.s;
+        zeilen.push('<div class="v ' + (v.b ? 'bust' : v.c ? 'co' : '') + '">' +
+          '<span class="s">' + (v.b ? v.o : v.s) + '</span>' +
+          '<span class="r">' + (v.b ? 'Bust' : 'Rest ' + restLauf) + '</span></div>');
+      });
+      return zeilen.slice(-n).reverse().join('');
+    };
+
     $('scoreboard').innerHTML = karten.map(function (pid, ki) {
       var istAktiv = pid === active;
       var rest = remainingIn(leg, pid) - (istAktiv ? pendingSum : 0);
@@ -17800,7 +18075,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
          und die Darts der laufenden Aufnahme. */
       var meta = [];
       if (schnell && qSt) {
-        meta.push('Siege ' + qSt.legs[pid]);
+        /* In der Session zaehlen die Legs einfach mit - "Siege" gibt es allein nicht. */
+        meta.push((m.session ? 'Legs ' : 'Siege ') + qSt.legs[pid]);
         if (qSt.gewinnSaetze > 1) meta.push('Sätze ' + qSt.saetze[pid]);
       } else if (!schnell) {
         meta.push('Siege ' + legsWon(m, pid));
@@ -17834,6 +18110,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           '<span class="pmeta">' + meta.join(' · ') + '</span></div>' +
           '<span class="pavg">Ø <b>' + avg + '</b></span></div>' +
         '<div class="rest-zeile"><span class="rest">' + rest + '</span>' + letzte + '</div>' +
+        (fern ? '<div class="pwuerfe">' + histSpalte(pid, 3) + '</div>' : '') +
         felderHTML(pid, istAktiv || m.p.length === 1) +
         '</div>';
     }).join('');
@@ -17922,22 +18199,23 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       /* Links und rechts der Eingabe die letzten sechs Aufnahmen des
          laufenden Legs (Liga-Vorschrift), neueste oben. Zu zweit links der
          erste, rechts der zweite Spieler (fest wie die Karten); ab dreien
-         links wer wirft, rechts wer als Naechstes kommt. */
-      var histSpalte = function (pid) {
-        if (!pid) return '';
-        var restLauf = legStart(leg);
-        var zeilen = [];
-        leg.visits.forEach(function (v) {
-          if (v.p !== pid) return;
-          if (!v.b) restLauf -= v.s;
-          zeilen.push('<div class="v ' + (v.b ? 'bust' : v.c ? 'co' : '') + '">' +
-            '<span class="s">' + (v.b ? v.o : v.s) + '</span>' +
-            '<span class="r">' + (v.b ? 'Bust' : 'Rest ' + restLauf) + '</span></div>');
-        });
-        return zeilen.slice(-6).reverse().join('');
-      };
-      $('key-hist-l').innerHTML = histSpalte(m.p.length === 2 ? m.p[0] : active);
-      $('key-hist-r').innerHTML = histSpalte(m.p.length === 2 ? m.p[1] : danach[0]);
+         links wer wirft, rechts wer als Naechstes kommt. Allein (Tastatur-
+         Modus) stehen statt der Listen die Statistik-Kacheln und die letzten
+         Aufnahmen rechts bzw. unter dem Eingabefeld. */
+      var soloFern = m.p.length === 1;
+      $('pad-key').classList.toggle('solo', soloFern);
+      $('key-solo').classList.toggle('hidden', !soloFern);
+      $('key-solo').innerHTML = soloFern
+        ? sessionKachelnHTML(m, 'kacheln') + '<div class="key-liste">' + histSpalte(active, 8) + '</div>' : '';
+      $('key-hist-l').innerHTML = soloFern ? '' : histSpalte(m.p.length === 2 ? m.p[0] : active, 6);
+      $('key-hist-r').innerHTML = soloFern ? '' : histSpalte(m.p.length === 2 ? m.p[1] : danach[0], 6);
+      /* Allein am Handy gibt es keine Tastatur: ein Tipp auf die Anzeige
+         holt ueber das versteckte Feld die Zifferntastatur des Systems. */
+      var kd = $('key-display');
+      if (soloFern) { kd.setAttribute('data-action', 'key-tippen'); kd.setAttribute('role', 'button'); kd.setAttribute('tabindex', '0'); kd.setAttribute('aria-label', 'Aufnahme eintippen'); }
+      else { kd.removeAttribute('data-action'); kd.removeAttribute('role'); kd.removeAttribute('tabindex'); kd.removeAttribute('aria-label'); }
+      var kiFeld = $('key-input');
+      if (kiFeld && kiFeld.value !== UI.input) kiFeld.value = UI.input;
       $('key-error').textContent = UI.error;
       /* Kein Platzhaltertext – leer steht nur der blaue Eingabestrich,
          und sobald Ziffern da sind, stehen nur die Ziffern. */
@@ -20785,14 +21063,15 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       qm.p.forEach(function (id) { finalize(qMap[id]); });
       var qLeg = qm.legs[qm.legs.length - 1];
       var qSolo = qm.p.length < 2;
+      var qSession = !!(qm.session || qg.session);
       var qSSt = mehrereLegs(qm) ? satzStand(qm) : null;
       d = {
-        kind: 'X01 · ' + (qSolo ? 'Solo' : 'Schnelles Spiel'), archiv: !found.live, aktionen: spielAktionen(found.live),
+        kind: 'X01 · ' + (qSession ? 'Session' : qSolo ? 'Solo' : 'Schnelles Spiel'), archiv: !found.live, aktionen: spielAktionen(found.live),
         meta: (found.live ? '' : fmtDate(qg.at || qm.at) + ' · ') + qStart + ' Double Out · ' + (qSolo ? 'Solo' : P(qm.p.length, 'Spieler', 'Spieler')) + ' · ' + (qSSt ? dauerText(qm) : P(qm.legs.filter(function (l) { return l.winner; }).length, 'Leg', 'Legs')),
         zwei: !qSolo && qm.p.length === 2 ? { a: qm.p[0], b: qm.p[1], stand: x01Stand(qm) } : null,
-        titel: qm.winner ? esc(pname(qm.winner)) + (qSolo ? ' hat ausgemacht' : ' gewinnt') : 'Abgebrochen',
-        sieger: qSolo ? null : qm.winner || null, pille: qSolo ? '🎯 ausgemacht' : null,
-        spieler: qm.p.map(function (id) { return { id: id, sub: qSSt ? kurzStand(qSSt, id) : qm.winner === id ? 'ausgecheckt' : 'Rest ' + (qLeg ? remainingIn(qLeg, id) : 0) }; }),
+        titel: qm.winner ? esc(pname(qm.winner)) + (qSolo ? ' hat ausgemacht' : ' gewinnt') : qSession ? 'Session beendet' : 'Abgebrochen',
+        sieger: qSolo ? null : qm.winner || null, pille: qSession ? '🎯 Session' : qSolo ? '🎯 ausgemacht' : null,
+        spieler: qm.p.map(function (id) { return { id: id, sub: qSession ? P(legsWon(qm, id), 'Leg', 'Legs') : qSSt ? kurzStand(qSSt, id) : qm.winner === id ? 'ausgecheckt' : 'Rest ' + (qLeg ? remainingIn(qLeg, id) : 0) }; }),
         zeilen: x01Zeilen(qm.p.map(function (id) { return qMap[id]; }), true),
         seite: { titel: 'Legs', eintraege: legEintraege(qm, qStart) }
       };
@@ -21239,6 +21518,21 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         : legsWon(m1, m1.p[0]) + ':' + legsWon(m1, m1.p[1]);
       /* Das eben beendete Leg: das letzte mit Sieger. */
       var ldLeg = m1.legs.filter(function (l) { return l.winner; }).pop();
+      if (m1.session) {
+        /* Session (allein): das Leg ist durch, das naechste laeuft schon.
+           Kurz die Zahlen des Legs und der ganzen Session - der Dialog geht
+           nach sechs Sekunden von selbst zu (sessionLegTimerStarten), und
+           beenden laesst sich die Session hier wie im Menue. */
+        var ssLegs = m1.legs.filter(function (l) { return l.winner; }).length;
+        var ssDarts = ldLeg ? dartsInLeg(ldLeg, m1.p[0]) : 0;
+        html = '<div class="big-emoji">🎯</div><h3>Leg ' + ssLegs + ' in ' + ssDarts + ' Darts</h3>' +
+          '<p>Session · ' + plural(ssLegs, 'Leg', 'Legs') + ' gespielt · das nächste läuft</p>' +
+          sessionKachelnHTML(m1, 'dialog') +
+          '<button class="' + ldKl(0, 'btn primary full') + '" data-action="ov-next-leg">Weiter</button>' +
+          '<button class="' + ldKl(1, 'btn ghost full') + '" data-action="undo">Eingabe rückgängig</button>' +
+          '<button class="' + ldKl(2, 'btn ghost full') + '" data-action="session-ende">Session beenden</button>' +
+          (ldWahl >= 0 ? '<p class="te-hint">8 / 2 · wählen &nbsp;&nbsp; Enter · bestätigen &nbsp;&nbsp; Löschen · direkt zurück</p>' : '');
+      } else
       html = '<div class="big-emoji">🎯</div><h3>' + (o.satz ? 'Satz' : 'Leg') + ' an ' + esc(pname(o.pid)) + '</h3>' +
         '<p>Stand: ' + ldStand + '</p>' +
         legStatHTML(m1, ldLeg) +
@@ -23703,8 +23997,34 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         startTournament(true);
         break;
       case 'ov-next-leg':
+        if (sessionLegTimer) { clearTimeout(sessionLegTimer); sessionLegTimer = null; }
         UI.overlay = null; save(); render();
         break;
+      case 'session-ende': {
+        /* Session (allein) beenden: die fertigen Legs kommen wie ein
+           Uebungsspiel ins Archiv, dann die Auswertung. Ohne fertiges Leg
+           gibt es nichts zu sichern - dann fragt der Abbruch-Dialog. */
+        UI.menu = false;
+        if (sessionLegTimer) { clearTimeout(sessionLegTimer); sessionLegTimer = null; }
+        if (!S.game || !S.game.session) break;
+        if (!entschiedeneLegs(S.game)) { UI.overlay = { type: 'confirm-discard-game' }; render(); break; }
+        var seId = S.game.id;
+        liveEnde(S.game);
+        archiveGame(S.game, true);
+        S.game = null;
+        UI.overlay = null;
+        UI.summary = { kind: 'quick', id: seId, from: 'setup' };
+        S.screen = 'summary';
+        save(); render();
+        break;
+      }
+      case 'key-tippen': {
+        /* Allein im Tastatur-Modus: das versteckte Feld bekommt den Fokus,
+           damit das Handy seine Zifferntastatur zeigt. */
+        var ktFeld = $('key-input');
+        if (ktFeld) { ktFeld.value = UI.input; ktFeld.focus(); }
+        break;
+      }
       case 'schalter': {
         /* Klaenge und Feiern: an oder aus, nichts dazwischen. */
         var sKey = el.getAttribute('data-key');
@@ -24115,6 +24435,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
   document.addEventListener('click', function (ev) {
     if (isGhostTap(ev)) return;
+    /* Der click zur gerade per pointerdown gebuchten Spieltaste: schon erledigt. */
+    if (tasteSchonGetippt && Date.now() - tasteSchonGetipptZeit < 1200 && spielTaste(ev.target) === tasteSchonGetippt) {
+      tasteSchonGetippt = null;
+      return;
+    }
     if (ev.target.id === 'overlay' && UI.overlay && !bleibtOffen(UI.overlay.type)) {
       UI.overlay = null; UI.input = ''; render(); return;
     }
@@ -24172,40 +24497,71 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       return;
     }
 
-    var key2 = ev.target.closest('.keypad button, .kw-keys button');
-    if (key2) { if (S.screen === 'kaiwen') kaiwenKey(key2.getAttribute('data-key')); else pressKey(key2.getAttribute('data-key')); return; }
+    spielTasteTipp(ev.target);
+  });
 
-    var quick = ev.target.closest('[data-quick]');
+  /*
+   * Die Spieltasten (Zahlenfeld, Schnellwahl, Einzel-Darts, Double/Triple)
+   * reagieren am Touch-Geraet schon beim Aufsetzen des Fingers (pointerdown),
+   * nicht erst beim "click": iOS liefert den click nur, wenn der Finger
+   * praktisch still liegt und kein Scroll beginnt - beim schnellen Tippen am
+   * iPad gingen so Eingaben verloren (Julius, 08.11.: "muss drei Mal
+   * tippen"). Maus und Tastatur bleiben beim click (Doppelausloesung
+   * verhindert `tasteSchonGetippt`). Innerhalb des Ghost-Tap-Fensters nach
+   * einem Bildschirmwechsel bleibt es beim click mit seiner Doppeltipp-
+   * Pruefung. Welche Tasten: nur die im Spielbild, kein Dialog, kein Menue.
+   */
+  var tasteSchonGetippt = null, tasteSchonGetipptZeit = 0;
+  function spielTaste(ziel) {
+    if (!ziel || !ziel.closest) return null;
+    return ziel.closest('.keypad button, .kw-keys button, [data-quick], .mult-row button, .num-grid button.mult, [data-bull], [data-num]');
+  }
+  function spielTasteTipp(ziel) {
+    var key2 = ziel.closest('.keypad button, .kw-keys button');
+    if (key2) { if (S.screen === 'kaiwen') kaiwenKey(key2.getAttribute('data-key')); else pressKey(key2.getAttribute('data-key')); return true; }
+
+    var quick = ziel.closest('[data-quick]');
     if (quick) {
-      if (settling() || quickDoubleTap(quick.getAttribute('data-quick'))) return;
+      if (settling() || quickDoubleTap(quick.getAttribute('data-quick'))) return true;
       UI.error = '';
       UI.input = quick.getAttribute('data-quick');
       submitTotal();
-      return;
+      return true;
     }
 
-    var mult = ev.target.closest('.mult-row button');
-    if (mult) { tipp(); UI.mult = Number(mult.getAttribute('data-mult')); render(); return; }
+    var mult = ziel.closest('.mult-row button');
+    if (mult) { tipp(); UI.mult = Number(mult.getAttribute('data-mult')); render(); return true; }
     /* Double/Triple im X01-Zahlenfeld sind Schalter: Tipp an, nochmal Tipp
        aus (keiner an heisst Single); sie schliessen sich gegenseitig aus. */
-    var schalter = ev.target.closest('.num-grid button.mult');
+    var schalter = ziel.closest('.num-grid button.mult');
     if (schalter) {
       tipp();
       var sm = Number(schalter.getAttribute('data-mult'));
       UI.mult = UI.mult === sm ? 1 : sm;
-      render(); return;
+      render(); return true;
     }
 
-    var bull = ev.target.closest('[data-bull]');
-    if (bull) { spielDart(2, 25); return; }
+    var bull = ziel.closest('[data-bull]');
+    if (bull) { spielDart(2, 25); return true; }
 
-    var num = ev.target.closest('[data-num]');
+    var num = ziel.closest('[data-num]');
     if (num) {
       var n2 = Number(num.getAttribute('data-num'));
       var own = num.getAttribute('data-mult');
       spielDart(own ? Number(own) : UI.mult, n2);
-      return;
+      return true;
     }
+    return false;
+  }
+  document.addEventListener('pointerdown', function (ev) {
+    if (ev.pointerType !== 'touch' && ev.pointerType !== 'pen') return;
+    if (!ev.isPrimary || ev.button !== 0) return;
+    if (UI.overlay || UI.menu) return;
+    if (Date.now() <= ghostTapUntil) return;
+    var taste = spielTaste(ev.target);
+    if (!taste || taste.disabled || !taste.closest('#screen-game, #screen-kaiwen, #screen-finisher')) return;
+    tasteSchonGetippt = taste; tasteSchonGetipptZeit = Date.now();
+    spielTasteTipp(taste);
   });
 
   /* Name im Profil-Dialog: nur den Entwurf pflegen, nicht neu rendern –
@@ -24632,6 +24988,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   document.addEventListener('keydown', function (ev) {
     if (S.screen !== 'game' || !UI.turnier || UI.overlay || UI.menu) return;
     if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+    /* Das versteckte Feld des Solo-Tastatur-Modus hat seine eigenen Regeln (unten). */
+    if (document.activeElement && document.activeElement.id === 'key-input') return;
     var tm = currentMatch();
     if (!tm || tm.done) return;
     var zTurnier = tasteZiffer(ev);
@@ -24658,6 +25016,36 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       ev.preventDefault();
     }
   });
+
+  /* Solo-Tastatur-Modus am Handy: ein Tipp auf die Anzeige (key-tippen)
+     fokussiert dieses versteckte Feld, und das Handy zeigt seine
+     Zifferntastatur. Was dort getippt wird, landet in UI.input wie am
+     Board; Enter bucht, Loeschen im leeren Feld nimmt die Aufnahme zurueck.
+     Eine echte Tastatur laeuft weiter ueber den Handler darueber. */
+  (function () {
+    var feld = $('key-input');
+    if (!feld) return;
+    feld.addEventListener('input', function () {
+      if (S.screen !== 'game' || !UI.turnier || UI.overlay || UI.menu) { feld.value = UI.input; return; }
+      var neu = String(feld.value || '').replace(/\D/g, '').slice(0, 3);
+      if (neu !== feld.value) feld.value = neu;
+      if (neu === UI.input) return;
+      UI.input = neu; UI.error = '';
+      render();
+    });
+    feld.addEventListener('keydown', function (ev) {
+      if (S.screen !== 'game' || !UI.turnier || UI.overlay || UI.menu) return;
+      if (ev.key === 'Enter') {
+        ev.preventDefault();
+        if (UI.input !== '') { UI.error = ''; ev.eingabeGebucht = true; submitTotal(); }
+      } else if (ev.key === 'Backspace' && !feld.value) {
+        ev.preventDefault();
+        undo();
+      } else if (ev.key === 'Escape') {
+        feld.blur();
+      }
+    });
+  })();
 
   /* Finisher-Fernsteuerung: Ziffern in die Anzeige, Enter bucht die
      Aufnahme, Loeschen nimmt erst Ziffern und dann den letzten Dart zurueck,
@@ -24920,7 +25308,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       /* Nur ein KNOPF zaehlt - die Dialogkarte selbst traegt den Fokus seit
          D1 immer (dialogFokusHinein), damit Hilfstechnik im Dialog ist. */
       var imDialog = fokus && fokus.closest && fokus.closest('#overlay button, #overlay [role="button"]');
-      var ldN = legDoneUebersicht() ? 3 : 2;
+      var ldM = currentMatch();
+      var ldN = legDoneUebersicht() || (ldM && ldM.session) ? 3 : 2;
       var ldW = Math.min(ov.wahl || 0, ldN - 1);
       if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp' ||
           ev.key === 'ArrowRight' || ev.key === 'ArrowLeft' || ev.key === 'Tab') {
@@ -24930,7 +25319,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       } else if (ev.key === 'Enter' && !imDialog) {
         ev.preventDefault();
         if (ldW === 1) { undo(); }
-        else if (ldW === 2) { handleAction('to-tournament', ev.target); }
+        else if (ldW === 2) { handleAction(ldM && ldM.session ? 'session-ende' : 'to-tournament', ev.target); }
         else { UI.overlay = null; render(); }
       } else if (ev.key === 'Backspace' && !imDialog) {
         undo(); ev.preventDefault();
