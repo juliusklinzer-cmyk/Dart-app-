@@ -57,14 +57,34 @@ const body = html.slice(html.indexOf('<body>') + 6, html.lastIndexOf('</body>'))
   // gehoeren mit raus -- sie beschreiben Dateien, die es im Buendel nicht gibt.
   .replace(/\n\s*<!-- Optionale Online-Schicht[\s\S]*?-->/, '')
   .replace(/\n\s*<!-- Kamera-Kopplung \("Linse"\)[\s\S]*?-->/, '')
-  .replace(/\n\s*<!-- <script src="js\/kamera\.js"><\/script> -->/, '')
-  // Die Wortmarke behält ihr Logo – als eingebettetes Bild.
-  .replace(/src="icons\/icon-192\.webp"/g, 'src="' + einbetten('icons/icon-192.webp', 'image/webp') + '"');
+  .replace(/\n\s*<!-- <script src="js\/kamera\.js"><\/script> -->/, '');
 
-const title = 'Blink 180 – Dart Turnier';
+/*
+ * Der <head> kommt Zeile fuer Zeile aus index.html, damit Theme-Farbe,
+ * Viewport und die iOS-Statusleiste nie wieder auseinanderlaufen (Audit
+ * 08.11.2026, T-M1: hier standen noch #0e1116 und black-translucent, waehrend
+ * index.html laengst #0d0a0b und black hatte). Nur die <link>-Zeilen fallen
+ * weg -- Manifest, Icons und Stylesheet sind Nachbardateien, die es neben
+ * einer Einzeldatei nicht gibt; das Stylesheet kommt eingebettet. Ein
+ * einzeiliger Kommentar direkt ueber so einem Link erklaert nur ihn und
+ * geht mit.
+ */
+const kopfZeilen = html.slice(html.indexOf('<head>') + 6, html.indexOf('</head>')).split('\n');
+const kopf = [];
+for (const zeile of kopfZeilen) {
+  if (/^\s*<link\b/.test(zeile)) {
+    if (kopf.length && /^\s*<!--.*-->\s*$/.test(kopf[kopf.length - 1])) kopf.pop();
+    continue;
+  }
+  kopf.push(zeile);
+}
+const head = kopf.join('\n').trim();
+const titel = (html.match(/<title>[^<]*<\/title>/) || ['<title>Blink 180 – Dart Turnier</title>'])[0];
+const viewport = (html.match(/<meta name="viewport"[^>]*>/) || [''])[0];
+
 const fragment = [
-  `<title>${title}</title>`,
-  '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">',
+  titel,
+  viewport,
   `<style>\n${css}\n</style>`,
   body,
   `<script>\n${js}\n</script>`
@@ -74,15 +94,12 @@ const page = [
   '<!DOCTYPE html>',
   '<html lang="de">',
   '<head>',
-  '<meta charset="utf-8">',
-  '<meta name="theme-color" content="#0e1116">',
-  '<meta name="apple-mobile-web-app-capable" content="yes">',
-  '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">',
-  fragment.slice(0, fragment.indexOf('<style>')),
-  fragment.slice(fragment.indexOf('<style>'), fragment.indexOf('</style>') + 8),
+  head,
+  `<style>\n${css}\n</style>`,
   '</head>',
   '<body>',
-  fragment.slice(fragment.indexOf('</style>') + 8).trim(),
+  body,
+  `<script>\n${js}\n</script>`,
   '</body>',
   '</html>'
 ].join('\n');

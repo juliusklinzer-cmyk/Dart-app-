@@ -1,7 +1,8 @@
 # Darts Finish-Wege nach Lieblingsdoppel
 
 Checkout-Tabellen für die Checkout Engine (von Julius geliefert, Oktober 2026).
-Für jeden Favoriten, den der Spieler in der App wählen kann, steht in
+Für jeden Favoriten (in der App wählbar sind D20, D16, D18, D12, D14 und Bull; D8, D10,
+D6 und D4 liegen nur als Tabellen bereit) steht in
 `docs/finishwege/` (je Favorit eine Datei, standard.txt ohne Favorit) jeder Rest von 2 bis 170 mit dem besten Weg bei
 3, 2 und 1 Dart in der Hand. Gerechnet für das Referenzprofil „Fortgeschritten“.
 Die Spalte „Plan B“ der Originaltabellen (neuer Weg nach Single statt Triple)
@@ -31,8 +32,9 @@ am Ende, Stellwurf-Ziel) und schreibt sie als Daten in `js/checkout.js`.
 - Pfadqualität: Checkout-Chance mit 3 Darts ab der Startzahl des Pfads, ohne
   Favoriten-Bonus. Sie zeigt, wie gut der Pfad Fehlwürfe nach innen auffängt:
   32 → 16 → 8 bleibt zweimal gerade, 36 → 18 → 9 nur einmal.
-- Ungerade Doppel und Bull (D1, D3 … D19, Bull) sind keine wählbaren
-  Favoriten, weil ein Single-Treffer dort immer eine ungerade Zahl hinterlässt.
+- Ungerade Doppel (D1, D3 … D19) sind keine wählbaren Favoriten, weil ein
+  Single-Treffer dort immer eine ungerade Zahl hinterlässt; Bull ist als
+  Favorit wählbar (eigene Tabelle `bull.txt`).
   Die Engine nutzt sie trotzdem automatisch, wo sie der beste Weg sind
   (zum Beispiel 38 = D19).
 

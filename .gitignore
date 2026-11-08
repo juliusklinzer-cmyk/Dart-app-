@@ -1,5 +1,4 @@
 node_modules/
-package-lock.json
 .DS_Store
 
 # Wegwerf-Skripte der Prüfläufe
@@ -19,3 +18,10 @@ deploy/.env
 .claude/skills/planning-and-task-breakdown/
 .agent-deploy.sh
 __pycache__/
+
+# Handoff des Rebrandings vom 24.08.2026 – bleibt lokal liegen (enthält ein
+# Personenfoto), die Spezifikation ist in css/styles.css übernommen.
+Dart App Rebranding/
+
+# Screenshots der Audit-Läufe (die Audit-Ordner selbst sind ohnehin unversioniert)
+audit-*/screenshots/

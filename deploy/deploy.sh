@@ -35,7 +35,12 @@ if [ -z "$SERVER" ]; then
 fi
 
 echo "── 1/6 Tests ──"
-# Nie etwas hochladen, das lokal nicht laeuft.
+# Nie etwas hochladen, das lokal nicht laeuft. tests/alle.mjs laesst alle
+# Suiten nacheinander laufen -- Engine, Liga, Mail, Mitteilungen, Browser
+# gegen index.html, dann baut es das Buendel und prueft dart-turnier.html,
+# zuletzt Server-API und Konto -- und bricht beim ersten Fehler ab.
+# Bewusst "node ..." statt "npm run ...": in WSL zeigt ein Shim ~/bin/node auf
+# das Windows-Node, npm dagegen scheitert dort am UNC-Pfad.
 #
 # DARTS_SKIP_TESTS=1 ueberspringt sie -- gedacht fuer den Fall, dass die Tests
 # gerade woanders gelaufen sind (z. B. auf der Windows-Seite, wo der
@@ -44,11 +49,12 @@ echo "── 1/6 Tests ──"
 if [ "${DARTS_SKIP_TESTS:-}" = "1" ]; then
   echo "   ÜBERSPRUNGEN (DARTS_SKIP_TESTS=1) -- die Tests müssen anderswo grün gewesen sein!"
 else
-  node tests/e2e.mjs
-  node tests/api.mjs
+  node tests/alle.mjs
 fi
 
 echo "── 2/6 Einzeldatei-Buendel nachziehen ──"
+# tests/alle.mjs hat schon gebaut; hier noch einmal (eine Sekunde), damit das
+# Buendel auch mit DARTS_SKIP_TESTS=1 frisch ins Image kommt.
 node build-single.mjs
 
 echo "── 3/6 Image bauen ──"

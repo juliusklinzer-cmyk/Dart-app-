@@ -252,6 +252,9 @@ Einzelrangliste nach und vergleicht Zeile für Zeile mit der Webseite (`npm run 
 Bogen-Aufstellung H1–H8/G1–G8, notfalls ein Ergebnis vom Papierbogen, bevor es die
 Ligaleitung hat) und gleicht unsere Termine mit dem Spielplan ab (Verlegungen).
 Nach jedem Spieltag: Import laufen lassen, Bündel bauen, `CACHE` in `sw.js` hochzählen.
+Passt eine Seite nicht (Spielbericht ohne 16 Einzel, Teamseite ohne Spielerliste),
+gibt der Import nur eine Warnung aus und lässt die Stelle leer; nur ein kaputter
+Spielplan bricht ab.
 
 Im Reiter **Tabelle** stehen darunter die **Einzelrangliste** der ganzen Liga
 (alle Spieler aller Teams, Schlüssel der Ligaleitung: Sieger 2 Punkte plus
@@ -286,19 +289,28 @@ Der Text bleibt die Wahrheit und reicht jedem Leser, der HTML abschaltet.
 Die **Mitteilungszentrale** (`server/lib/mitteilungen.mjs`) verteilt elf Themen, jedes je
 Konto als **Push + Mail, nur Push oder aus** (Profil → Konto → **Benachrichtigungen**; dort
 auch „Push auf diesem Gerät einschalten“ – am iPhone nur in der installierten App).
-Voreinstellungen: Zusage zum Spieltag fehlt (7 und 2
-Tage vorher) und DiensDarts-Umfrage fehlt (3 Tage vorher, Samstag; Gast-Konten dabei):
-Push + Mail. Unser Ligaergebnis (beim Abschluss des Ligaspiels: Endstand, alle Einzel,
+Voreinstellungen: Zusage zum Spieltag fehlt (4–7 und 1–2
+Tage vorher) und DiensDarts-Umfrage fehlt (3 Tage vorher, Samstag; Gast-Konten dabei;
+entfällt an Dienstagen mit Ligaspiel): Push + Mail. Unser Ligaergebnis (beim Abschluss des Ligaspiels: Endstand, alle Einzel,
 Man of the Day, Highlights): Push + Mail. Spieltag morgen (an die Zugesagten, mit
 Aufstellung), Tabelle nach komplettem Spieltag der Ligaleitung, neuer Teamrekord
 (höchstes Finish, höchste Aufnahme, kürzestes Leg – erkannt auf dem Gerät, das das
 Ligaspiel abschließt), Anpfiff mit Ticker-Link, Kasse (Buchung auf dein Konto) und
 Spielbericht noch nicht verschickt (nur an den Auslöser): nur Push. Konto und Sicherheit
 (Passwort geändert, Anmeldung nach über 30 Tagen Pause): immer per Mail. Neues Mitglied:
-aus. Jede Mitteilung geht je Konto nur einmal raus (`mitteilung_log`), auch wenn zwei
-iPads dasselbe melden; die Jobs laufen alle 30 Minuten (`handleApi.erinnerungen`), die
-Termine kommen aus `js/liga-daten.js` (`server/lib/liga.mjs`). Ereignisse aus der App:
-`POST /api/mitteilungen/ereignis`. Alle elf Themen einmal als Beispiel an ein Konto (Mail und
+aus. Jede Mitteilung geht je Konto nur einmal raus (`mitteilung_log`, der Schlüssel wird
+vor dem Versand reserviert), auch wenn zwei iPads gleichzeitig dasselbe melden; die Jobs
+laufen alle 30 Minuten (`handleApi.erinnerungen`), rechnen in Berliner Zeit und verschicken
+nur zwischen 9 und 21 Uhr. Schlüssel: `zusage:<id>:<tag>:<7|2>`, `morgen:<id>:<tag>`,
+`tabelle:<id>:<gewertete Spiele>` (ein Nachholspiel bringt eine zweite Meldung),
+`training:tr<JJJJMMTT>`; verschobene Spieltage werden übersprungen, bis das neue Datum
+steht. Push-Tag und -Topic sind Thema plus Schlüssel-Hash, damit zwei Kassenbuchungen
+nicht zusammenfallen; Mitteilungs-Mails tragen `List-Unsubscribe` (führt zu
+Profil → Konto → Benachrichtigungen) und `Auto-Submitted`. Die Termine kommen aus
+`js/liga-daten.js` (`server/lib/liga.mjs`). Ereignisse aus der App:
+`POST /api/mitteilungen/ereignis` – der Server nimmt nur Termine aus dem Spielplan, Links
+auf die eigene Adresse und die drei bekannten Rekordarten an, Ergebnis und Anpfiff
+höchstens zweimal je Spieltag und Tag. Alle elf Themen einmal als Beispiel an ein Konto (Mail und
 Push, zum Ansehen des Designs): `node server/scripts/beispiele.mjs <e-mail>` auf dem Server –
 nur für Julius, einen Knopf dafür gibt es in der App nicht mehr. Tests: `npm run test:mail`,
 `npm run test:mitteilungen`.
@@ -318,14 +330,15 @@ Rangliste. Im Training darf der Löwe übrigens brüllen – nur das echte
 Ligaspiel bleibt feierfrei.
 
 Der Reiter **Kasse** ist das **Kassenbuch des Vereins**, aufgebaut wie die
-Excel-Vorlage der Kassenwartin: Kassenjahr, Kassenwart/in und Anfangsbestand im
+Excel-Vorlage der Kassenwartin: Kassenjahr, „Kasse führt: …“ und Anfangsbestand im
 Kopf, darunter der Kassenstand mit Summe Einnahmen und Ausgaben, dann jede Buchung
 mit Nr., Datum, Beschreibung, Kategorie (die Kategorienliste der Vorlage: Mitglieds-
 beiträge, Startgelder, Spenden, Sponsoring, Sonstige Einnahmen bzw. Turnierkosten,
 Ausrüstung/Dartpfeile, Getränke/Verpflegung, Raummiete, Verbandsgebühren, Sonstige
 Ausgaben), Betrag und laufendem Saldo, unten die Summen und der Endbestand.
 **Jeder Angemeldete trägt Einzahlungen und Ausgaben direkt ein** – sie stehen sofort
-im Kassenbuch, eigene Buchungen darf man wieder löschen. **Der Kassenwart** (Rolle
+im Kassenbuch, eigene Buchungen darf man wieder löschen. Gast-Konten sehen die Kasse
+nicht (der Server weist sie ab, wie beim Speichern der Ligatabelle). **Der Kassenwart** (Rolle
 auf dem Server, siehe DEPLOY.md) **verwaltet alles**: jede Buchung ändern (✎) oder
 löschen, Kassenjahr und Anfangsbestand einstellen, Beiträge für andere buchen. Für
 alle steht der Knopf **„Per PayPal ins Vereinskonto einzahlen“** (der PayPal-Pool
@@ -345,7 +358,7 @@ Der Spielplan sind die **16 Einzel in vier Durchgängen, exakt in der
 Reihenfolge des Spielberichtsbogens** (`LIGA_EINZEL`); jede Begegnung steht
 als **H1 Name – G1 Name** da, und im Liga-Kontext erscheint der
 **bürgerliche Name** aus dem Profil statt des Spitznamens (die SWO will keine
-Künstlernamen). Jedes Einzel trägt seine Scheibe (S1/S2); je zwei Einzel laufen parallel, und jeder Spieler beider Teams spielt genau 2× an S1 und 2× an S2. Ist der Abend durch, wird der **Spielbericht am iPad unterschrieben**: „Unterschreiben“ öffnet nacheinander je einen ganzen Bildschirm für TC Heim und TC Gast (mit dem Finger, „Nochmal“ löscht), danach die Mailadressen (Ligaleitung vorbelegt, die übrigen werden gemerkt). „Senden“ macht aus dem Bogen – genau wie er auf dem Bildschirm steht, mit allen Handkorrekturen und Unterschriften – ein zweiseitiges A4-PDF und öffnet das Teilen-Menü; die Adressen sind dann schon kopiert und werden in der Mail nur eingefügt. Ohne Teilen-Menü (Computer) wird das PDF heruntergeladen und die Mail mit Empfängern geöffnet. Ist auf dem Server der **Mailversand** eingerichtet (siehe „Mails aus der App“), schickt „Senden“ die Mail mit dem PDF direkt vom Server: Absender blink180@wirtschaftln.de, Kopie ins Blink-Postfach, ohne Teilen-Menü; schlägt das fehl, bleibt der Dialog offen und bietet das Teilen-Menü an. Im **Spielbericht** zeigt jede Einzel-Zeile die echte Bogennummer der Spieler: Wer eingewechselt wurde, steht dort als H5–H8 bzw. G5–G8. Bis zur Unterschrift ist jedes Feld anpassbar (auch die Einzel-Bezeichnung), Nachmeldungen und Proteste werden per Tipp auf „ja“ oder „nein“ angekreuzt. Sobald **beide TCs unterschrieben** haben, ist der Bericht **final**: kein Feld lässt sich mehr ändern, oben steht nur noch „Versenden“. **Abschluss:** Nach dem letzten Einzel wird das Ligaspiel nicht beendet. Es kommen zuerst die **Ergebnisse** mit den Highlights beider Teams und je einem **Man of the Day** (meiste gewonnene Einzel, bei Gleichstand der höhere Average), dann geht es zum Spielbericht. Erst wenn der unterschrieben und verschickt ist (oder „Abschließen ohne Senden“), ist das Ligaspiel abgeschlossen: Es wandert ins Archiv, im Spielplan steht der Spieltag als „Abgeschlossen“ mit Endstand, Ergebnissen und Bericht und lässt sich nicht noch einmal starten. Bis dahin bleibt es komplett offen; auch der Spiel-Tab archiviert es nicht still. Ein Spieltag mit archiviertem, aber noch nicht abgeschlossenem Ligaspiel zeigt „Bericht offen“. Im **geteilten Ligaspiel an zwei iPads** geht der Spielerwechsel als geänderter Spielplan an den Server; das andere iPad übernimmt ihn beim nächsten Abgleich, ein dort laufendes oder fertiges Einzel bleibt unberührt. Fertige Einzel, deren Ergebnis wegen eines Funklochs nicht beim Server ankam, reicht die App bei jedem Abgleich nach. **Nachmeldungen** gehen über „Spieler nachmelden“ im Ligaspiel (oder den Knopf auf Seite 2 des Berichts): Team, Nachname, Vorname, U18 ja/nein und w/m/d, danach unterschreibt die Person mit dem Finger. Sie steht dann mit Unterschrift auf Seite 2, „Nachmeldungen: ja“ ist angekreuzt, und sie gehört zum Team (H5–H8 bzw. G5–G8), einsetzbar über „Spieler wechseln“. Jedes Einzel
+Künstlernamen). Jedes Einzel trägt seine Scheibe (S1/S2); je zwei Einzel laufen parallel, und jeder Spieler beider Teams spielt genau 2× an S1 und 2× an S2. Ist der Abend durch, wird der **Spielbericht am iPad unterschrieben**: „Unterschreiben“ öffnet nacheinander je einen ganzen Bildschirm für TC Heim und TC Gast (mit dem Finger, „Nochmal“ löscht), danach die Mailadressen (Ligaleitung vorbelegt, die übrigen werden gemerkt; der Server verschickt nur an die Ligaleitung, an Adressen aus `DARTS_MAIL_ERLAUBT` und an die eigene Konto-Adresse, andere lehnt er mit Hinweis ab). „Senden“ macht aus dem Bogen – genau wie er auf dem Bildschirm steht, mit allen Handkorrekturen und Unterschriften – ein zweiseitiges A4-PDF und öffnet das Teilen-Menü; die Adressen sind dann schon kopiert und werden in der Mail nur eingefügt. Ohne Teilen-Menü (Computer) wird das PDF heruntergeladen und die Mail mit Empfängern geöffnet. Ist auf dem Server der **Mailversand** eingerichtet (siehe „Mails aus der App“), schickt „Senden“ die Mail mit dem PDF direkt vom Server: Absender blink180@wirtschaftln.de, Kopie ins Blink-Postfach, ohne Teilen-Menü; schlägt das fehl, bleibt der Dialog offen und bietet das Teilen-Menü an. Im **Spielbericht** zeigt jede Einzel-Zeile die echte Bogennummer der Spieler: Wer eingewechselt wurde, steht dort als H5–H8 bzw. G5–G8. Bis zur Unterschrift ist jedes Feld anpassbar (auch die Einzel-Bezeichnung), Nachmeldungen und Proteste werden per Tipp auf „ja“ oder „nein“ angekreuzt. Sobald **beide TCs unterschrieben** haben, ist der Bericht **final**: kein Feld lässt sich mehr ändern, oben steht nur noch „Versenden“. **Abschluss:** Nach dem letzten Einzel wird das Ligaspiel nicht beendet. Es kommen zuerst die **Ergebnisse** mit den Highlights beider Teams (jedes Finish ab 100 und jedes gewonnene Leg bis 21 Darts je Spieler, nicht nur das beste; der Bogen wächst bei mehr als sieben Zeilen) und je einem **Man of the Day** (meiste gewonnene Einzel, dann Leg-Differenz, dann Average; bei Gleichstand geteilt), dann geht es zum Spielbericht. Erst wenn der unterschrieben und verschickt ist (oder „Abschließen ohne Senden“), ist das Ligaspiel abgeschlossen: Es wandert ins Archiv, im Spielplan steht der Spieltag als „Abgeschlossen“ mit Endstand, Ergebnissen und Bericht und lässt sich nicht noch einmal starten. Bis dahin bleibt es komplett offen; auch der Spiel-Tab archiviert es nicht still. Ein Spieltag mit archiviertem, aber noch nicht abgeschlossenem Ligaspiel zeigt „Bericht offen“. Im **geteilten Ligaspiel an zwei iPads** geht der Spielerwechsel als geänderter Spielplan an den Server; das andere iPad übernimmt ihn beim nächsten Abgleich, ein dort laufendes oder fertiges Einzel bleibt unberührt. Fertige Einzel, deren Ergebnis wegen eines Funklochs nicht beim Server ankam, reicht die App bei jedem Abgleich nach. **Nachmeldungen** gehen über „Spieler nachmelden“ im Ligaspiel (oder den Knopf auf Seite 2 des Berichts): Team, Nachname, Vorname, U18 ja/nein und w/m/d, danach unterschreibt die Person mit dem Finger. Sie steht dann mit Unterschrift auf Seite 2, „Nachmeldungen: ja“ ist angekreuzt, und sie gehört zum Team (H5–H8 bzw. G5–G8), einsetzbar über „Spieler wechseln“. Jedes Einzel
 **beginnt mit dem Ausbullen** (SWO Punkt 8, Fassung Oktober 2026): der
 Gewinner wirft Leg 1 an, danach wechselt der Anwurf. Im Übungs-Ligaspiel gegen
 Bots wirft der eigene Spieler ohne Ausbullen an. Die Übersicht zeigt den **Team-Stand** – groß die **Punkte
@@ -681,9 +694,15 @@ Damit der Wartende nichts verpasst, hält die App im Online-Spiel den
 **Bildschirm an** und die Audio-Sitzung offen; beim Aufwecken wird sofort
 abgeglichen. Ist der Ton trotzdem gesperrt (iOS nach Neuladen), steht unten
 der Knopf **„🔇 Ton an – einmal antippen"**. Fehlt die Verbindung, sagt es eine
-Leiste oben, statt nur klein im Kopf. Der Server meldet jede Änderung sofort
-über eine Live-Verbindung; nur wenn die nicht steht, fragt die App alle 2,5 s
-nach. Haben beide gleichzeitig dieselbe Aufnahme getippt, bleibt sie einmal
+Leiste oben, statt nur klein im Kopf; ganz ohne Netz steht dort „Kein Netz“, und
+eine Zusage ohne Netz meldet sich statt still zu scheitern. Der Server meldet jede
+Änderung sofort über eine Live-Verbindung; reißt sie ab (Deploy, Funkloch), baut die
+App sie mit wachsendem Abstand wieder auf, und nur solange sie nicht steht, fragt die
+App alle 2,5 s nach. Wer mitten in einer Aufnahme „Mitspielen“ tippt, übernimmt die
+schon geworfenen Darts des anderen, statt sie zu löschen. „Speichern und beenden“
+schickt den Stand mit Versionsnummer: Hat der andere inzwischen etwas zurückgenommen,
+kommt sein Stand zurück und das Spiel läuft weiter, statt die Rücknahme zu
+überschreiben; die zweite Fassung ersetzt dann die erste auf dem Server. Haben beide gleichzeitig dieselbe Aufnahme getippt, bleibt sie einmal
 stehen – ein „bitte nochmal eintragen" kommt nur, wenn die eigene Eingabe
 wirklich fehlt.
 
@@ -705,7 +724,9 @@ nach, ein Tipp rechts nimmt einen wieder heraus.
 
 **Die Sechzig:** Wirft jemand genau **60**, kommt der Löwe – das 1860-Wappen vor
 blauen Strahlen, darunter „SECHZIG!". In jedem Eingabemodus; fällt die Feier mit
-einem Dialog zusammen (60er-Checkout), bleibt der Dialog obenauf.
+einem Dialog zusammen (60er-Checkout), bleibt der Dialog obenauf. Keine Feier legt
+einen Blur über das Bild, die 180er dauert 2,5 Sekunden, und jeder Dialog, der
+aufgeht, bricht sie sofort ab.
 
 **Finish-Vorschlag:** Über der Eingabe steht immer der sinnvollste Weg zum Double-Out
 für den aktuellen Rest – und zwar passend zu den *noch verfügbaren* Darts der
@@ -837,8 +858,10 @@ der letzten zehn Spiele), darunter drei Kacheln: **Finish-Weg · Lieblingsgruppe
 (siehe Checkout-Engine unten), die Links **Statistik** („Meine Stats“ legt die
 ausführlichen Karten Scoring, Finishing, Bilanz, Cricket, Round the World und
 letzte X01-Spiele als Tafel über die Kacheln, „Fertig“ schließt sie) und
-**Liga-Statistik**, und beim eigenen Konto die **Konto-Kachel** (E-Mail, Passwort
-ändern, Abmelden). Der Reiter **Profil** öffnet das eigene Profil; fremde Profile
+**Liga-Statistik**, und beim eigenen Konto die **Konto-Kachel** (E-Mail – eine neue
+Adresse braucht das aktuelle Passwort, die alte Adresse bekommt einen Hinweis –,
+Passwort ändern, Abmelden; das Abmelden löst auch das Push-Abo dieses Geräts). Darunter
+listet „Nicht hochgeladen“ Spiele, die der Server endgültig abgelehnt hat, mit Grund. Der Reiter **Profil** öffnet das eigene Profil; fremde Profile
 erreicht man über die Spielerliste. Am Tablet steht alles fest im Rahmen, am Handy
 scrollt die Seite.
 
@@ -914,7 +937,7 @@ die Statistik der Mannschaft zu berühren (siehe [DEPLOY.md](DEPLOY.md#testkonte
 |---|---|
 | Scoring | 3-Dart-Average, First-9-Average, höchste Aufnahme, 180er, 140–179, 100–139, 60–99, Aufnahmen, geworfene Darts |
 | Finishing | Doppelquote, Doppelversuche, Checkouts, höchstes Finish, Finishes ab 100, bestes Leg, Ø Darts je gewonnenem Leg (beide nur aus 501er-Legs – ein 301er in sechs Darts ist kein Rekord) |
-| Bilanz | Spiele, Siege/Niederlagen, Siegquote, Legs, Turniere, Turniersiege, Form der letzten Spiele |
+| Bilanz | Spiele, Siege/Niederlagen, Siegquote, Legs, Turniere, Turniersiege, Ligaspieltage (Spieltage und Nachträge zählen nicht als Turnier), Form der letzten Spiele |
 
 Dazu die letzten Spiele mit Gegner, Ergebnis und Datum.
 
@@ -1069,14 +1092,18 @@ Reines HTML/CSS/JavaScript, kein Build-Schritt, keine Abhängigkeiten zur Laufze
 Profile, laufendes Turnier und Archiv liegen in `localStorage` und überstehen Reload
 und App-Neustart – auch eine angefangene Aufnahme in Einzel-Darts und eine
 offene Checkout- oder Leg-Ende-Frage. Ältere Stände werden beim Laden
-automatisch auf das aktuelle Datenmodell gehoben. Ein beschädigter Stand wird
+automatisch auf das aktuelle Datenmodell gehoben (Version 3; eine Migrationskette
+hebt v1 und v2 schrittweise an). Ein beschädigter Stand wird
 nicht überschrieben, sondern unter `dart-turnier-v1.kaputt` gesichert (mit
-Hinweis oben); ein Stand einer neueren App-Version bleibt unangetastet.
+Hinweis oben); ein Stand einer neueren App-Version bleibt unangetastet. Ist der
+Speicher des Browsers voll, entfernt die App zuerst die Einzeldart-Details alter
+Spiele, dann die ältesten Archiv-Einträge, und sagt das oben im Balken.
 
 **Kein Spiel läuft ewig:** Ein angefangenes Spiel ist höchstens **12 Stunden**
-aktiv. Danach wird es beim nächsten Öffnen beendet und **nicht gespeichert**
-(ein Hinweis sagt das). Ein schon entschiedenes, nur nie gespeichertes Spiel
-kommt dagegen ins Archiv, und ein Turnier wird wie mit „Turnier beenden"
+aktiv. Danach wird es beim nächsten Öffnen beendet; schon fertige Legs eines
+Schnellen Spiels kommen ohne Sieger in die Statistik, nur ein Spiel ohne fertiges
+Leg wird verworfen (ein Hinweis sagt das). Ein schon entschiedenes, nur nie
+gespeichertes Spiel kommt ins Archiv, und ein Turnier wird wie mit „Turnier beenden"
 abgeschlossen: fertige Partien bleiben in der Statistik, offene entfallen.
 
 Gibt es eine **neue Version** der App, erscheint oben „Neue Version der App ist
@@ -1115,16 +1142,22 @@ Ausbullen und die Dialoge nach Leg und Spiel behalten ihre eigene Pfeil-Wahl.
 | `js/qr.js` | *optional:* QR-Code für den Einladungs-Link (qrcode-generator, MIT) |
 | `js/sync.js` | *optional:* Warteschlange, Hoch- und Runterladen von Spielen |
 | `server/lib/mail.mjs`, `server/lib/push.mjs`, `server/lib/mitteilungen.mjs`, `server/lib/liga.mjs` | Mails über Brevo (eigener SMTP-Client), Web Push (VAPID, aes128gcm), die Mitteilungszentrale (elf Themen, je Konto Push/Mail/aus) und die Liga-Daten im Server |
+| `js/sound.js` | Töne und Feiern (180, Checkout, Pomp) über die Web Audio API, ohne Dateien |
 | `js/kamera.js` | *optional:* Kamera-Kopplung – iPhone als Linse, iPad bucht (SSE) |
 | `js/linse-cv.js` | *optional:* die Erkennung selbst – Kalibrierung, Differenzbild, Wertung |
-| `server/` | *optional:* Node + SQLite – Accounts, geteilte Historie, Kamera-Relay |
+| `webseite.html`, `js/webseite.js`, `css/webseite.css` | die öffentliche Seite unter `/` – Tabelle, Spielplan, Live-Ticker, ohne Anmeldung |
+| `live.html`, `js/live.js`, `css/live.css` | Zuschauerseite zu einem geteilten Turnier oder Ligaspiel (Link mit Zuschauer-Schlüssel) |
+| `server/` | *optional:* Node + SQLite – Accounts, geteilte Historie, Live-Strom, Mail, Push, Kamera-Relay |
+| `server/scripts/` | Verwaltungs-Skripte für den Server (Konten, Spiele, Sicherung, Schlüssel) – Liste unter „Testdaten“ |
 | `sw.js`, `manifest.webmanifest` | Offline-Betrieb und Installation als App |
 | `icons/` | App-Icons aus dem Mannschaftslogo (WebP, dazu ein PNG für iOS) |
 | `assets/blink180.jpeg` | das Logo im Original – Quelle für die Icons |
 | `tools/make-icons.mjs` | erzeugt `icons/` neu, falls sich das Logo ändert |
 | `build-single.mjs` | baut `dart-turnier.html` – alles in einer Datei (`npm run build`) |
-| `tests/e2e.mjs` | Browser-Tests des kompletten Turnierablaufs |
-| `tests/api.mjs`, `tests/konto.mjs` | Tests der Kontoschicht |
+| `tests/e2e.mjs` | Browser-Tests des kompletten Turnierablaufs (auch gegen das Einzeldatei-Bündel mit `TARGET=dart-turnier.html`) |
+| `tests/api.mjs`, `tests/konto.mjs` | Tests der Kontoschicht: Server allein bzw. zwei Browser gegen den echten Server |
+| `tests/checkout-engine.mjs`, `tests/liga-daten.mjs`, `tests/mail.mjs`, `tests/mitteilungen.mjs` | Node-Suiten ohne Browser: Checkout-Engine gegen die Referenz, Liga-Rechnung, Mail-Aufbau und SMTP, Push-Verschlüsselung und Mitteilungszentrale |
+| `tests/alle.mjs` | führt alle Suiten samt Build nacheinander aus (`npm run test:alle`, Deploy) |
 
 Die `optional`-Zeilen heißen genau das: `js/auth.js`, `js/sync.js` und
 `js/kamera.js` docken über `window.__dart` an und melden sich gar nicht erst an,
@@ -1132,8 +1165,10 @@ wenn kein Server antwortet. `js/app.js` ruft sie nur über `window.DartKonto` /
 `window.DartSync` / `window.DartKamera` auf, falls vorhanden. Deshalb funktionieren `index.html` per Doppelklick und das
 Einzeldatei-Bündel unverändert weiter – ohne Konto, ohne Netz, ohne Fehlermeldung.
 
-Der Server bringt **keine** npm-Abhängigkeit mit: SQLite steckt seit Node 22.5 in
-der Laufzeit (`node:sqlite`), Passwörter macht `node:crypto` (scrypt). Sessions sind
+Der Server bringt **keine** npm-Abhängigkeit mit: SQLite steckt in der Laufzeit
+(`node:sqlite`; in Node 22.5–22.12 nur hinter einem Startflag, ohne Flag ab 22.13 –
+deshalb `engines >=22.13` in beiden `package.json`), Passwörter macht `node:crypto`
+(scrypt). Sessions sind
 zufällige Tokens in einer Tabelle, das Cookie ist `HttpOnly`, `Secure` und
 `SameSite=Lax`.
 
@@ -1155,8 +1190,9 @@ das kein WebP liest. WebP statt PNG, weil das verrauschte Artwork verlustfrei ru
 
 ### Anstrich
 
-Die Gestaltung folgt dem Handoff in
-[Dart App Rebranding/README.md](Dart%20App%20Rebranding/README.md): warmes
+Die Gestaltung folgt dem Handoff „Dart App Rebranding“ vom 24.08.2026 (liegt nur
+noch lokal, nicht im Repo – er enthält ein Personenfoto; die Spezifikation ist in
+die Kommentare oben in `css/styles.css` übernommen): warmes
 Schwarz, ein Rot, viel Weiß, dazu ein blauer Lichtschein wie das Barlicht der
 Location. Alle Farben hängen an wenigen Variablen ganz oben in
 `css/styles.css`.
@@ -1177,8 +1213,12 @@ schicken. Nur die Latin-Teilmenge, zusammen 128 KB. Neu holen mit
 `node tools/fetch-fonts.mjs`, danach `CACHE` in `sw.js` hochzählen.
 
 **Finish-Wege** kommen seit Oktober 2026 aus festen Tabellen (`docs/finishwege/`,
-Beschreibung in `docs/finishwege.md`): je Lieblingsdoppel (D16, D20, D18, D12, D8,
-D10, D14, D6, D4) und ohne Favorit steht für jeden Rest von 2 bis 170 der beste Weg mit
+Beschreibung in `docs/finishwege.md`): je Lieblingsdoppel und ohne Favorit steht für
+jeden Rest von 2 bis 170 der beste Weg. Tabellen gibt es für neun Doppel (D16, D20,
+D18, D12, D8, D10, D14, D6, D4); in der App wählbar sind als Lieblingsgruppe nur
+D20, D16, D18, D12, D14 und Bull (`DOPPEL_WAHL` in `js/app.js`) – D8, D10, D6 und D4
+liegen nur intern in `js/checkout.js` (`WEGE_FAVORIT`) und werden über die App nicht
+erreicht. Jeder Weg steht mit
 3, 2 und 1 Dart in der Hand – gerechnet mit einem Treffermodell (Streuung um den
 Zielpunkt, Profil „Fortgeschritten“): wenigste Darts zuerst (ohne Bull gerechnet, ein
 kürzerer Bull-Weg ist nur Kandidat), keine Bogey-Reste, das
@@ -1289,14 +1329,27 @@ Profilverwaltung, Archivierung und Persistenz nach Reload.
 
 `TARGET=dart-turnier.html npm test` prüft dieselben Abläufe im Einzeldatei-Bündel.
 
-Für die Kontoschicht kommen zwei Durchläufe dazu:
+Dazu kommen die Suiten ohne Browser und die der Kontoschicht:
 
 ```bash
-npm run test:engine  # Checkout-Engine gegen die Referenzdaten (Node, ohne Browser)
-npm run test:api     # Server allein: Registrierung, Rechte, Rate-Limit, Grabsteine
-npm run test:konto   # zwei Browser, zwei Accounts, ein gemeinsames Spiel
-npm run test:alle    # alle vier nacheinander
+npm run test:engine        # Checkout-Engine gegen die Referenzdaten (Node, ohne Browser)
+npm run test:liga          # Liga-Daten: Tabelle, Einzelrangliste, Highlights aus js/liga-sdm.js + LIGA_HAND
+npm run test:mail          # MIME-Aufbau, SMTP-Dialog gegen einen Mini-Server, Erinnerungs-Mails
+npm run test:mitteilungen  # Web-Push-Verschlüsselung, VAPID, Themen-Einstellungen, Jobs
+npm run test:api           # Server allein: Registrierung, Rechte, Rate-Limit, Grabsteine
+npm run test:konto         # zwei Browser, zwei Accounts, ein gemeinsames Spiel (fester Port 3198, `TEST_PORT` setzbar)
+npm run test:alle          # alles nacheinander – auch Build und Einzeldatei, siehe unten
 ```
+
+`npm run test:alle` ist `node tests/alle.mjs`: Engine, Liga, Mail, Mitteilungen,
+Browser gegen `index.html`, dann `node build-single.mjs` und dieselben Browser-Tests
+gegen `dart-turnier.html`, zuletzt API und Konto – Abbruch beim ersten Fehler. Genau
+das lässt auch `deploy/deploy.sh` vor jedem Deploy laufen (bewusst mit `node …`
+statt `npm run …`, damit es im WSL-Shim ohne npm funktioniert). Die Browser-Suiten
+nehmen den Playwright-Chromium; `PW_CHROMIUM=/pfad/zu/chrome` schaltet in
+`tests/konto.mjs` auf einen anderen Browser um. Die Playwright-Version ist über
+`package-lock.json` fixiert (`npm ci` statt `npm install`, wenn es genau die sein
+soll).
 
 `test:konto` startet den echten Server gegen eine Wegwerf-Datenbank, registriert zwei
 Konten über die echten Formulare, spielt eine Partie Cricket durch und prüft, dass sie
@@ -1331,13 +1384,25 @@ DEMO_URL=https://darts.wirtschaftln.de node tools/demo.mjs
 Die Konten laufen alle auf `@demo.blink180` – daran erkennt `--weg` sie wieder,
 und niemand verwechselt sie mit einem echten Kollegen.
 
-Für Aufräumarbeiten am echten Server gibt es drei Verwaltungs-Skripte
-(im Container per `docker compose exec darts node …` aufrufen):
+Für Betrieb und Aufräumarbeiten am echten Server liegen in `server/scripts/`
+Verwaltungs-Skripte (im Container per `docker compose exec darts node …` aufrufen;
+jedes erklärt sich im Kopfkommentar, löschende Skripte zeigen ohne `--wirklich`
+bzw. `--ja` nur, was passieren würde):
 
-```bash
-node server/scripts/aktivitaet.mjs [stunden]                   # wer spielt gerade / zuletzt: Live-Spiele, Turniere, Spiele, Anmeldungen
-node server/scripts/beispiele.mjs <e-mail>                     # alle Mitteilungs-Themen einmal als Beispiel (Mail + Push)
-node server/scripts/konto-anlegen.mjs <e-mail> <anzeigename> <passwort>
-node server/scripts/spiel-zurueckziehen.mjs <spiel-id> [...]   # Soft-Delete, Geräte räumen nach
-node server/scripts/konto-loeschen.mjs <e-mail>                # verweigert bei aktiven Spielen
-```
+| Skript | Zweck |
+|---|---|
+| `aktivitaet.mjs [stunden]` | Wer spielt gerade oder zuletzt: offene Live-Spiele, offene geteilte Turniere, letzte Spiele, frische Anmeldungen (Vorgabe 24 h). |
+| `backup.mjs` | Konsistente Kopie der Datenbank per `VACUUM INTO`, behält 14 Stände; läuft im Container, aufgerufen von `deploy/backup.sh`. |
+| `beispiele.mjs <e-mail>` | Schickt alle Mitteilungs-Themen einmal als Beispiel an ein Konto (Mail und Push), um das Design anzusehen. |
+| `demo.mjs [--weg]` | Legt sechs Testspieler auf `@demo.blink180` an bzw. entfernt sie samt Spielen wieder. |
+| `einzel-umschreiben.mjs <spiel-id> <einzel-id> <alt> <neu> [--ja]` | Schreibt ein gespieltes Einzel nachträglich einem anderen Spieler zu (vergessener Wechsel am Spieltag). |
+| `invite-hash.mjs [code]` | Würfelt einen Einladungscode oder hasht den eigenen für `DARTS_INVITE_HASH` (`npm run invite`). |
+| `kassenwart.mjs [--aus] <e-mail>` | Macht ein Konto zum Kassenwart (bucht und löscht im Kassenbuch) oder nimmt die Rolle wieder. |
+| `konto-anlegen.mjs <e-mail> <anzeigename> <passwort>` | Legt ein Konto direkt an, ohne Einladungscode durch die App. |
+| `konto-loeschen.mjs <e-mail>` | Löscht ein Konto restlos; verweigert, solange aktive Spiele daran hängen. |
+| `konto-weg.mjs --mail <e-mail> [--wirklich]` | Entfernt ein Konto sauber: ohne Spiele ganz weg, mit Spielen bekommen diese Grabsteine und das Konto wird stillgelegt. |
+| `neustart.mjs --behalte <e-mail> [--wirklich]` | Sauberer Start vor dem ersten echten Abend: alle Spiele bekommen Grabsteine, alle Konten außer dem genannten verschwinden. |
+| `reset-password.mjs <e-mail> <neues-passwort>` | Setzt ein Passwort neu und meldet alle Geräte des Kontos ab („Passwort vergessen“ läuft über Julius). |
+| `spiel-zurueckziehen.mjs <spiel-id> [...]` | Soft-Delete wie `DELETE /api/games/:id`; die Geräte räumen das Spiel beim nächsten Abgleich selbst aus. |
+| `testkonto.mjs [--aus] <e-mail>`, `testkonto.mjs --sieht <e-mail>` | Markiert ein Konto als Testkonto (zählt in keine Statistik) bzw. legt fest, wer Testkonten sieht. |
+| `vapid.mjs` | Erzeugt das VAPID-Schlüsselpaar für Web Push (`DARTS_VAPID_PUBLIC`/`_PRIVATE`). |

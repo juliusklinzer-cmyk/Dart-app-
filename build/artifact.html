@@ -1,5 +1,5 @@
 <title>Blink 180 – Dart Turnier</title>
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
 <style>
 /* ---- Schriften ----------------------------------------------------
    Selbst ausgeliefert, nicht von Google eingebunden: die App muss offline
@@ -238,8 +238,8 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
 /* ---------- Navigation ---------- */
 .nav {
   /* Die Leiste klebt nicht: sie scrollt mit dem Inhalt weg (Julius' Wunsch
-     vom zweiten Testtag – auch am iPad). Was oben lesbar bleiben muss, ist
-     Apples Uhr und Batterie, und das regelt der Schleier am body::before. */
+     vom zweiten Testtag – auch am iPad). Einen Schleier am oberen Rand gibt
+     es nicht mehr, der Hintergrund bleibt glattes --bg (Julius, 30.10.). */
   /* Automatische Spalten: der Konto-Knopf kommt nur dazu, wenn die Seite von
      einem Server geladen wurde – dann rückt die Leiste von 3 auf 4. */
   display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: var(--space-2);
@@ -972,7 +972,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   /* Cricket: die Punktezeile muss sichtbar bleiben. */
   .cr-cell { padding: 2px 3px; }
   .cr-head { font-size: 0.75rem; padding: 2px; gap: 2px; }
-  .cr-head .av.sm { width: 20px; height: 20px; font-size: 0.62rem; }
+  .cr-head .av.sm { width: 20px; height: 20px; font-size: max(11px, 0.62rem); }
   .cr-mark { min-height: 26px; font-size: 0.95rem; }
   .cr-num { font-size: 0.8rem; }
   .cr-score { font-size: 0.9rem; }
@@ -1104,7 +1104,7 @@ h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; colo
   .cricket-board { flex: 1 1 auto; min-height: 0; overflow: auto; }
   .cr-cell { padding: var(--space-1) 3px; }
   .cr-head { font-size: 0.75rem; padding: var(--space-1) 2px; gap: 2px; }
-  .cr-head .av.sm { width: 22px; height: 22px; font-size: 0.62rem; }
+  .cr-head .av.sm { width: 22px; height: 22px; font-size: max(11px, 0.62rem); }
   .cr-mark { min-height: 30px; font-size: 1rem; }
   .cr-num { font-size: 0.8rem; }
   .cr-score { font-size: 0.95rem; }
@@ -1805,20 +1805,21 @@ button, input, select, textarea { font-family: inherit; }
  * will, muss durch sie hindurchtippen koennen.
  */
 /* Immer im Layout, nie anklickbar: ohne Inhalt ist die Ebene unsichtbar.
-   Kein display-Umschalten – das ließ WebKit die Blur-Ebene (::before) nach
-   der ersten Feier gelegentlich gar nicht mehr zeichnen. */
+   Kein display-Umschalten – das ließ WebKit die Abdunkel-Ebene (::before)
+   nach der ersten Feier gelegentlich gar nicht mehr zeichnen. */
 .feier {
-  position: fixed; inset: 0; z-index: 90;
+  /* Unter den Dialogen (.overlay, z-index 50): eine 180 mit sofortigem
+     Finish darf die Checkout-Frage nicht sekundenlang verdecken (D9). */
+  position: fixed; inset: 0; z-index: 40;
   pointer-events: none; overflow: hidden;
 }
 
-/* Während der Feier blurt der Spielstand dahinter leicht aus – die Feier
-   gehört kurz allein ins Bild, und danach ist alles wieder scharf. */
+/* Während der Feier dunkelt der Spielstand dahinter leicht ab – ohne Blur:
+   der verschmierte das Tastenfeld, das darunter bedienbar bleibt, und blieb
+   auch bei reduzierter Bewegung stehen (D9). */
 .feier.an::before {
   content: ''; position: absolute; inset: 0;
-  background: rgba(6, 9, 13, 0.22);
-  -webkit-backdrop-filter: blur(5px);
-  backdrop-filter: blur(5px);
+  background: rgba(0, 0, 0, 0.35);
 }
 
 /* Der Herzschlag der Feiern: zwei Schläge, kurze Pause – „SECH-ZIG",
@@ -2168,10 +2169,9 @@ button, input, select, textarea { font-family: inherit; }
    geworfenen 60 (siehe feiere60 in js/app.js). Als CSS-Hintergrund, damit
    das Bild im Einzeldatei-Bündel genau einmal eingebettet wird. */
 
-/* Die Sechzig liegt unter den Dialogen (.overlay, z-index 50): checkt jemand
-   mit genau 60 aus, gewinnt die Dart-Abfrage bzw. der Leg-Dialog das Bild,
-   der Löwe leuchtet dahinter. Die 180 behält die oberste Ebene. */
-.feier.sechzig { z-index: 45; }
+/* Die Sechzig liegt wie jede Feier unter den Dialogen (.feier 40, .overlay
+   50): checkt jemand mit genau 60 aus, gewinnt die Dart-Abfrage bzw. der
+   Leg-Dialog das Bild, der Löwe leuchtet dahinter. */
 .feier-logo {
   width: clamp(160px, min(46vw, 34vh), 420px);
   aspect-ratio: 1920 / 2395;
@@ -2295,7 +2295,8 @@ button, input, select, textarea { font-family: inherit; }
 .regel summary {
   cursor: pointer; font-weight: 700; font-size: 1rem;
   font-family: var(--font-cond); letter-spacing: 0.02em;
-  min-height: 28px;
+  /* Aufklapper sind Touchziele: 44 px statt 28 (D7). */
+  min-height: 44px; padding: 10px 0; box-sizing: border-box;
 }
 .regel summary::marker { color: var(--muted); }
 .regel[open] summary { margin-bottom: 8px; }
@@ -2596,21 +2597,6 @@ button, input, select, textarea { font-family: inherit; }
 /* Der Verlauf nutzt allein die volle Breite seiner Spalte - am iPad
    fuellt er die linke Haelfte, am Handy ohnehin alles. */
 #screen-game.solo #history { grid-template-columns: 1fr; }
-
-/* Der Notausgang aus dem Turnier-Modus fuer Geraete ohne Tastatur:
-   schwebt unten mittig, nur solange sichtbar, wie jemand getippt hat. */
-.turnier-exit {
-  /* Zentriert ueber Auto-Margins, NICHT ueber translateX: .btn:active
-     ersetzt transform durch scale(0.98) - mit translateX spraenge der
-     Knopf beim Druecken zur Seite und der Finger traefe ins Leere. */
-  position: fixed; left: 0; right: 0; bottom: 18px;
-  margin: 0 auto; width: fit-content;
-  z-index: 45; padding: var(--space-3) 22px;
-  background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--r-m);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
-}
-
-#screen-game:not(.turnier) .turnier-exit { display: none; }
 
 
 /* ================= Tastgefuehl =================
@@ -3013,11 +2999,22 @@ body { font-size: 1rem; }
 .overlay.vollbild .liga-start .ls-zeile { margin-bottom: 6px; }
 .overlay.vollbild .liga-start select,
 .overlay.vollbild .liga-start input {
-  min-height: 42px; padding-top: 8px; padding-bottom: 8px;
+  min-height: 44px; padding-top: 8px; padding-bottom: 8px;
   background: rgba(255, 255, 255, 0.04); border-color: rgba(70, 170, 215, 0.18);
 }
 .overlay.vollbild .liga-start .options button { min-height: 44px; padding-top: 8px; padding-bottom: 8px; }
 .overlay.vollbild .overlay-card > .row-btns:not(:first-child) { margin-top: var(--space-4); }
+/* Die Knopfzeile klebt am unteren Rand: der Ligaspiel-Dialog ist am iPhone
+   hoeher als der Schirm (929 zu 844 px), und GAME ON! darf nicht erst nach
+   dem Scrollen auftauchen (D3). Hintergrund und Linie, damit der Inhalt
+   sichtbar darunter durchlaeuft; der negative Rand unten gleicht die eigene
+   Sicherheitszone aus, sobald der Fuss am Ende des Blatts angekommen ist. */
+.overlay.vollbild .overlay-card > .row-btns {
+  position: sticky; bottom: 0; z-index: 1;
+  background: var(--bg); border-top: 1px solid var(--line);
+  padding: var(--space-3) 0 max(12px, env(safe-area-inset-bottom, 0px));
+  margin-bottom: calc(-1 * max(12px, env(safe-area-inset-bottom, 0px)));
+}
 .overlay-card .row-btns > .btn { margin-top: 0; }
 /* Vier Gegner-Optionen: 2x2 statt 3+1 (Bots schwer stand allein). */
 .liga-start .options:has(> button:nth-child(4):last-child) {
@@ -3201,20 +3198,6 @@ body { font-size: 1rem; }
   #screen-game.turnier .pcard .pname { font-size: 1.1rem; }
   #screen-game.turnier .pcard .meta { font-size: 1.1rem; }
   #screen-game.turnier .pcard .pname .av { display: none; }
-}
-
-/* ---------- Turnier-Modus am Touch-Geraet: sichtbarer Rueckweg (D-E2) ----------
- * Ohne Tastatur gibt es weder Tab noch Esc. Auf Geraeten ohne Maus steht
- * der Ausgang deshalb dauerhaft klein oben rechts – leise, aber da. */
-@media (hover: none) {
-  #screen-game.turnier #turnier-exit,
-  #screen-game.turnier #turnier-exit.hidden {
-    display: inline-flex !important; align-items: center;
-    position: fixed; top: calc(env(safe-area-inset-top, 0px) + 6px); left: max(10px, env(safe-area-inset-left, 0px));
-    right: auto; bottom: auto; margin: 0; width: auto;
-    min-height: 44px; padding: var(--space-2) var(--space-3);
-    font-size: 0.85rem; opacity: 0.75; box-shadow: none;
-  }
 }
 
 /* ---------- Die Sechzig: kurz, klein, durchsichtig (D-E1) ----------
@@ -3551,8 +3534,9 @@ body.tastatur #overlay-card :is(button, select, input):focus { outline: 3px soli
 }
 #screen-game.active .game-title #game-leg-label {
   font-family: var(--font-cond); font-weight: 600; font-size: clamp(13px, 2.5vh, 27px);
-  letter-spacing: 0.04em; color: var(--muted); white-space: nowrap; overflow: hidden;
-  text-overflow: ellipsis; min-width: 0; max-width: 100%;
+  letter-spacing: 0.04em; color: var(--muted); min-width: 0; max-width: 100%;
+  /* Zwei Zeilen statt "2 Spieler · 501 D…": die Kopfzeile ist hoch genug (D10). */
+  line-height: 1.15; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden;
 }
 
 /* ---------- Spielerkarte ---------- */
@@ -3568,7 +3552,7 @@ body.tastatur #overlay-card :is(button, select, input):focus { outline: 3px soli
 }
 :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .pkopf { display: flex; align-items: center; gap: clamp(6px, 0.8vw, 12px); min-width: 0; flex: none; }
 :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .pkopf .av.sm {
-  flex: none; width: clamp(20px, 4.8vh, 52px); height: clamp(20px, 4.8vh, 52px); font-size: clamp(9px, 1.6vh, 18px); display: inline-flex;
+  flex: none; width: clamp(20px, 4.8vh, 52px); height: clamp(20px, 4.8vh, 52px); font-size: clamp(11px, 1.6vh, 18px); display: inline-flex;
 }
 :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .pblock {
   flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: clamp(1px, 0.3vh, 4px); line-height: 1.05;
@@ -3754,7 +3738,7 @@ body.tastatur #overlay-card :is(button, select, input):focus { outline: 3px soli
   #screen-game.active .game-title #game-leg-label { font-size: 0.78rem; }
   :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) { grid-template-columns: repeat(var(--n, 2), minmax(0, 1fr)); gap: var(--space-2); margin-bottom: 6px; }
   :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard { padding: 8px 10px; gap: 2px; border-radius: var(--radius); }
-  :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .pkopf .av.sm { width: 24px; height: 24px; font-size: 0.65rem; }
+  :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .pkopf .av.sm { width: 24px; height: 24px; font-size: max(11px, 0.65rem); }
   :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .pname, :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .pavg { font-size: 0.95rem; }
   :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .pmeta { font-size: 0.72rem; }
   :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .rest-zeile {
@@ -3784,7 +3768,7 @@ body.tastatur #overlay-card :is(button, select, input):focus { outline: 3px soli
   #screen-game.active #pad-total .display-row { height: 48px; margin-bottom: 6px; }
   #screen-game.active #pad-total .score-display { font-size: 2rem; }
   #screen-game.active #pad-total .quick-row { gap: var(--gap-keys); margin-bottom: 6px; }
-  #screen-game.active #pad-total .quick-row button { height: 42px; font-size: 1rem; }
+  #screen-game.active #pad-total .quick-row button { height: 44px; font-size: 1rem; }
   #screen-game.active #pad-total .keypad button { font-size: 1.5rem; }
   #screen-game.active #pad-total .keypad button.ok { font-size: 1.1rem; }
   :is(#screen-game.active #pad-darts, #screen-finisher.active #fin-pad) .num-grid button { font-size: 1.15rem; }
@@ -3836,7 +3820,7 @@ body.tastatur #overlay-card :is(button, select, input):focus { outline: 3px soli
   #screen-game.active #pad-total .display-row { flex: none; height: clamp(46px, 13vh, 140px); }
   #screen-game.active #pad-total .score-display { font-size: clamp(36px, 10vh, 110px); }
   #screen-game.active #pad-total .input-error { font-size: clamp(11px, 1.8vh, 16px); }
-  #screen-game.active #pad-total .quick-row { flex: none; height: clamp(40px, 9vh, 96px); gap: clamp(5px, 0.9vh, 10px); }
+  #screen-game.active #pad-total .quick-row { flex: none; height: clamp(44px, 9vh, 96px); gap: clamp(5px, 0.9vh, 10px); }
   #screen-game.active #pad-total .quick-row button { height: auto; font-size: clamp(18px, 4vh, 44px); }
   #screen-game.active #pad-total .keypad {
     flex: 1 1 auto; min-height: 0; grid-template-rows: repeat(4, minmax(0, 1fr)); grid-auto-rows: minmax(0, 1fr); gap: clamp(5px, 0.9vh, 10px);
@@ -3853,7 +3837,7 @@ body.tastatur #overlay-card :is(button, select, input):focus { outline: 3px soli
   /* Vier Spieler im 2x2-Raster: alles eine Stufe kleiner. */
   :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten).viele .pcard .pkopf .av.sm { width: clamp(18px, 3.6vh, 40px); height: clamp(18px, 3.6vh, 40px); }
   :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten).viele .pcard .pname, :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten).viele .pcard .pavg { font-size: clamp(13px, 2.8vh, 32px); }
-  :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten).viele .pcard .pmeta { font-size: clamp(10px, 1.7vh, 18px); }
+  :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten).viele .pcard .pmeta { font-size: clamp(11px, 1.7vh, 18px); }
   :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten).viele .pcard .rest-zeile {
     grid-template-columns: minmax(0, 0.3fr) auto minmax(0, 1.7fr);
     font-size: clamp(32px, 24vh, 220px);
@@ -3866,9 +3850,9 @@ body.tastatur #overlay-card :is(button, select, input):focus { outline: 3px soli
      Rest und Felder in eine 150 px hohe Karte passen. */
   @media (max-height: 560px) {
     :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard { padding: 5px 10px; gap: 2px; }
-    :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .pkopf .av.sm { width: 18px; height: 18px; font-size: 8px; }
+    :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .pkopf .av.sm { width: 20px; height: 20px; font-size: 11px; }
     :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .pname, :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .pavg { font-size: 14px; }
-    :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .pmeta { font-size: 10px; }
+    :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .pmeta { font-size: 11px; }
     :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .rest-zeile {
       font-size: clamp(30px, 16vh, 100px);
       font-size: clamp(30px, min(16vh, 28cqi), 100px);
@@ -3892,7 +3876,7 @@ body.tastatur #overlay-card :is(button, select, input):focus { outline: 3px soli
   :is(#screen-game.active.turnier #scoreboard, #screen-finisher.active.fern #ff-karten) .pcard.active { box-shadow: 0 0 26px var(--laser-weich), 0 0 90px 14px var(--schein-stark); }
   :is(#screen-game.active.turnier #scoreboard, #screen-finisher.active.fern #ff-karten) .pcard:not(.active) { opacity: 0.8; }
   :is(#screen-game.active.turnier #scoreboard, #screen-finisher.active.fern #ff-karten) .pcard .pkopf { gap: clamp(8px, 1vw, 16px); }
-  :is(#screen-game.active.turnier #scoreboard, #screen-finisher.active.fern #ff-karten) .pcard .pkopf .av.sm { width: clamp(24px, 5.8vh, 62px); height: clamp(24px, 5.8vh, 62px); font-size: clamp(10px, 2vh, 22px); }
+  :is(#screen-game.active.turnier #scoreboard, #screen-finisher.active.fern #ff-karten) .pcard .pkopf .av.sm { width: clamp(24px, 5.8vh, 62px); height: clamp(24px, 5.8vh, 62px); font-size: clamp(11px, 2vh, 22px); }
   :is(#screen-game.active.turnier #scoreboard, #screen-finisher.active.fern #ff-karten) .pcard .pname, :is(#screen-game.active.turnier #scoreboard, #screen-finisher.active.fern #ff-karten) .pcard .pavg { font-size: clamp(18px, 5.4vh, 58px); }
   :is(#screen-game.active.turnier #scoreboard, #screen-finisher.active.fern #ff-karten) .pcard .pmeta { font-size: clamp(13px, 3vh, 34px); }
   /* Der Rest steht allein und mittig - die letzte Aufnahme steht unten in
@@ -3926,7 +3910,7 @@ body.tastatur #overlay-card :is(button, select, input):focus { outline: 3px soli
   }
   #screen-game.active.turnier .key-hist .v:not(:first-child) { opacity: 0.75; }
   #screen-game.active.turnier .key-hist .v .s { font-size: clamp(13px, 2.5vh, 26px); line-height: 1; }
-  #screen-game.active.turnier .key-hist .v .r { font-size: clamp(10px, 1.9vh, 19px); line-height: 1; }
+  #screen-game.active.turnier .key-hist .v .r { font-size: clamp(11px, 1.9vh, 19px); line-height: 1; }
   #screen-game.active.turnier .key-mitte { display: flex; flex-direction: column; min-height: 0; gap: 0; position: relative; }
   #screen-game.active.turnier .key-display {
     flex: 1 1 auto; min-height: 0; height: 100%; padding: 0; border-radius: clamp(14px, 2.2vh, 24px); font-size: clamp(44px, 15vh, 160px);
@@ -3938,8 +3922,8 @@ body.tastatur #overlay-card :is(button, select, input):focus { outline: 3px soli
   /* Handy quer: auch sechs Aufnahmen (Liga), nur kleiner. */
   @media (max-height: 560px) {
     #screen-game.active.turnier .input-area { height: clamp(96px, 30vh, 150px); }
-    #screen-game.active.turnier .key-hist .v .s { font-size: clamp(10px, 2.4vh, 16px); }
-    #screen-game.active.turnier .key-hist .v .r { font-size: clamp(9px, 2vh, 13px); }
+    #screen-game.active.turnier .key-hist .v .s { font-size: clamp(11px, 2.4vh, 16px); }
+    #screen-game.active.turnier .key-hist .v .r { font-size: clamp(11px, 2vh, 13px); }
   }
   /* Shift gedrueckt: die Wurfliste des Matches statt Eingabe und Karten. */
   #screen-game.active.turnier.verlauf #history { display: grid; flex: 1 1 auto; min-height: 88px; }
@@ -4058,7 +4042,7 @@ body.fix-spiel #screen-cricket.active { flex: 1 1 auto; height: auto; min-height
 }
 #screen-cricket.active .cr-card .pkopf { display: flex; align-items: center; gap: clamp(6px, 0.7vw, 10px); min-width: 0; flex: none; }
 #screen-cricket.active .cr-card .pkopf .av.sm {
-  flex: none; width: clamp(18px, 3.6vh, 42px); height: clamp(18px, 3.6vh, 42px); font-size: clamp(9px, 1.5vh, 18px); display: inline-flex;
+  flex: none; width: clamp(18px, 3.6vh, 42px); height: clamp(18px, 3.6vh, 42px); font-size: clamp(11px, 1.5vh, 18px); display: inline-flex;
 }
 #screen-cricket.active .cr-card .pblock { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: clamp(1px, 0.3vh, 4px); }
 #screen-cricket.active .cr-card .pname {
@@ -4196,16 +4180,16 @@ body.fix-spiel #screen-cricket.active { flex: 1 1 auto; height: auto; min-height
   #screen-cricket.active .cr-num { grid-column: 1; }
   #screen-cricket.active .cr-key { grid-column: var(--c); grid-row: calc(8 + var(--m)); }
   #screen-cricket.active .cr-card { padding: 6px 6px; gap: 3px; border-radius: var(--r-m); }
-  #screen-cricket.active .cr-card .pkopf .av.sm { width: 20px; height: 20px; font-size: 0.6rem; }
+  #screen-cricket.active .cr-card .pkopf .av.sm { width: 20px; height: 20px; font-size: max(11px, 0.6rem); }
   #screen-cricket.active .viele .cr-card .pkopf .av.sm { display: none; }
   #screen-cricket.active .cr-card .pname, #screen-cricket.active .viele .cr-card .pname { font-size: 0.8rem; }
-  #screen-cricket.active .cr-card .pmeta, #screen-cricket.active .viele .cr-card .pmeta { font-size: 0.65rem; }
+  #screen-cricket.active .cr-card .pmeta, #screen-cricket.active .viele .cr-card .pmeta { font-size: max(11px, 0.65rem); }
   #screen-cricket.active .cr-card .cr-pts, #screen-cricket.active .viele .cr-card .cr-pts { font-size: clamp(22px, 4vh, 40px); margin: 2px 0 4px; }
   #screen-cricket.active .cr-card .cr-pts.klein, #screen-cricket.active .viele .cr-card .cr-pts.klein { font-size: 0.9rem; }
   #screen-cricket.active .cr-card .cr-tiles, #screen-cricket.active .viele .cr-card .cr-tiles { height: 26px; gap: 3px; }
   #screen-cricket.active .cr-card .ct, #screen-cricket.active .viele .cr-card .ct { font-size: 0.75rem; }
   #screen-cricket.active .cr-h { font-size: 1rem; }
-  #screen-cricket.active .cr-sub { font-size: 0.65rem; }
+  #screen-cricket.active .cr-sub { font-size: max(11px, 0.65rem); }
   #screen-cricket.active .cr-runde { font-size: 0.75rem; }
   #screen-cricket.active .cr-top { height: 44px; gap: 4px; grid-template-columns: minmax(44px, 1fr) 2fr; }
   #screen-cricket.active .cr-top .bust { grid-column: auto; }
@@ -4253,7 +4237,7 @@ body.fix-spiel #screen-rtw.active { flex: 1 1 auto; height: auto; min-height: 0;
   opacity: 1; border-color: var(--aktiv-linie); background: var(--aktiv-flaeche);
   box-shadow: 0 0 26px var(--laser-weich), 0 0 60px 8px var(--schein-stark);
 }
-#screen-rtw.active .rtw-row .av.md { width: clamp(22px, 6.4vh, 66px); height: clamp(22px, 6.4vh, 66px); font-size: clamp(9px, 1.6vh, 18px); display: inline-flex; }
+#screen-rtw.active .rtw-row .av.md { width: clamp(22px, 6.4vh, 66px); height: clamp(22px, 6.4vh, 66px); font-size: clamp(11px, 1.6vh, 18px); display: inline-flex; }
 #screen-rtw.active .rtw-board.viele .rtw-row .av.md { width: clamp(20px, 5vh, 54px); height: clamp(20px, 5vh, 54px); }
 #screen-rtw.active .rtw-row .rw-main { min-width: 0; display: flex; flex-direction: column; gap: clamp(3px, 0.7vh, 8px); flex: none; }
 #screen-rtw.active .rtw-row .rw-name {
@@ -4361,12 +4345,12 @@ body.fix-spiel #screen-rtw.active { flex: 1 1 auto; height: auto; min-height: 0;
   #screen-rtw.active .game-body { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1.1fr); gap: 8px; }
   #screen-rtw.active .rtw-board { gap: 6px; }
   #screen-rtw.active .rtw-row { padding: 0 10px; column-gap: 8px; border-radius: var(--r-m); }
-  #screen-rtw.active .rtw-row .av.md, #screen-rtw.active .rtw-board.viele .rtw-row .av.md { width: 28px; height: 28px; font-size: 0.65rem; }
+  #screen-rtw.active .rtw-row .av.md, #screen-rtw.active .rtw-board.viele .rtw-row .av.md { width: 28px; height: 28px; font-size: max(11px, 0.65rem); }
   #screen-rtw.active .rtw-row .rw-name, #screen-rtw.active .rtw-board.viele .rtw-row .rw-name { font-size: 1rem; }
   #screen-rtw.active .rtw-row .rw-sub, #screen-rtw.active .rtw-board.viele .rtw-row .rw-sub { font-size: 0.7rem; }
   #screen-rtw.active .rtw-row .rw-bar { height: 5px; }
   #screen-rtw.active .rtw-row .rw-tiles, #screen-rtw.active .rtw-board.viele .rtw-row .rw-tiles { min-width: 0; gap: 3px; }
-  #screen-rtw.active .rtw-row .rw-tiles .ct, #screen-rtw.active .rtw-board.viele .rtw-row .rw-tiles .ct { width: 26px; height: 26px; font-size: 0.7rem; }
+  #screen-rtw.active .rtw-row .rw-tiles .ct, #screen-rtw.active .rtw-board.viele .rtw-row .rw-tiles .ct { width: 26px; height: 26px; font-size: max(11px, 0.7rem); }
   #screen-rtw.active .rtw-row .rw-target, #screen-rtw.active .rtw-board.viele .rtw-row .rw-target { font-size: clamp(24px, 5vh, 44px); }
   #screen-rtw.active .rtw-row .rw-target.bull, #screen-rtw.active .rtw-board.viele .rtw-row .rw-target.bull { font-size: 1.2rem; }
   #screen-rtw.active .rtw-rechts { gap: 6px; }
@@ -4381,6 +4365,19 @@ body.fix-spiel #screen-rtw.active { flex: 1 1 auto; height: auto; min-height: 0;
   #screen-rtw.active .rtw-key.mult .k { font-size: 1.6rem; }
   #screen-rtw.active .rtw-key .sub { font-size: 0.72rem; }
   #screen-rtw.active .rtw-key.miss .k { font-size: 1.1rem; }
+}
+/* Handy hoch: die Tafel ist so hoch wie ihre Zeilen, den Rest bekommen die
+   Tasten. Vorher teilten sich Tafel und Tasten den Schirm, und mit zwei
+   Spielern blieb das dritte der drei festen Felder leer – rund 40 % ohne
+   Inhalt (D17). Die Zeilen bekommen eine feste Hoehe, die Zielzahl eine
+   Stufe mehr. Am Tablet hoch bleibt die Teilung, dort tragen die Zeilen. */
+@media (orientation: portrait) and (max-width: 699px) {
+  #screen-rtw.active .game-body { grid-template-rows: auto minmax(0, 1fr); }
+  #screen-rtw.active .rtw-board { grid-template-rows: none; grid-auto-rows: auto; }
+  #screen-rtw.active .rtw-row { min-height: clamp(84px, 13vh, 120px); }
+  #screen-rtw.active .rtw-board.viele .rtw-row { min-height: clamp(56px, 8vh, 80px); }
+  #screen-rtw.active .rtw-row .rw-target { font-size: clamp(28px, 6vh, 56px); }
+  #screen-rtw.active .rtw-board.viele .rtw-row .rw-target { font-size: clamp(24px, 5vh, 44px); }
 }
 
 
@@ -4436,7 +4433,7 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
   padding: clamp(4px, 0.8vh, 10px) clamp(10px, 1.4vw, 20px); border-radius: clamp(12px, 1.8vh, 18px);
   background: var(--aktiv-flaeche); border: 1px solid var(--line-hell); box-shadow: 0 0 24px var(--schein-weich);
 }
-#screen-finisher.active .fz-label { font-family: var(--font-cond); font-weight: 600; font-size: clamp(10px, 1.7vh, 18px); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); line-height: 1; }
+#screen-finisher.active .fz-label { font-family: var(--font-cond); font-weight: 600; font-size: clamp(11px, 1.7vh, 18px); letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); line-height: 1; }
 #screen-finisher.active .fz-wert { font-family: var(--font-cond); font-weight: 700; font-size: clamp(28px, 7.6vh, 82px); line-height: 0.95; color: #fff; text-shadow: 0 0 22px rgba(70, 170, 215, 0.45); font-variant-numeric: tabular-nums; }
 #screen-finisher.active #fin-pad { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; margin: 0; }
 #screen-finisher.active #fin-pad .num-grid { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: repeat(7, minmax(0, 1fr)); gap: clamp(5px, 0.9vh, 10px); }
@@ -4454,7 +4451,7 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
   #screen-finisher.active .fin-h { font-size: 1rem; }
   #screen-finisher.active .fin-sub { font-size: 0.7rem; }
   #screen-finisher.active .fin-runde { font-size: 0.75rem; }
-  #screen-finisher.active .fz-label { font-size: 0.6rem; }
+  #screen-finisher.active .fz-label { font-size: max(11px, 0.6rem); }
   #screen-finisher.active .fz-wert { font-size: 1.6rem; }
 }
 
@@ -4731,7 +4728,7 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
   .setup-kopf { flex-wrap: nowrap; height: clamp(44px, 5.4vh, 58px); }
   .setup-kopf .marke .blink-logo { width: clamp(44px, 5.4vh, 58px); height: clamp(44px, 5.4vh, 58px); }
   .setup-kopf .marke .wort { font-size: clamp(14px, 3vh, 32px); }
-  .setup-kopf .marke .sub { font-size: clamp(9px, 1.4vh, 15px); margin-top: 2px; }
+  .setup-kopf .marke .sub { font-size: clamp(11px, 1.4vh, 15px); margin-top: 2px; }
   .setup-kopf #nav { flex: none; height: 100%; margin-left: auto; }
   .setup-kopf #nav button { flex: none; height: 100%; min-height: 0; padding: 0 clamp(8px, 1.4vw, 22px); font-size: clamp(12px, 2.2vh, 23px); }
 
@@ -4761,7 +4758,7 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
   }
   #karte-spieler .roster::-webkit-scrollbar { width: 0; height: 0; display: none; }
   #screen-setup .roster-item { min-height: 0; padding: 0 clamp(10px, 1.2vw, 16px); gap: clamp(8px, 1vw, 14px); }
-  #screen-setup .roster-item .av { width: clamp(28px, 5vh, 52px); height: clamp(28px, 5vh, 52px); font-size: clamp(10px, 1.8vh, 18px); }
+  #screen-setup .roster-item .av { width: clamp(28px, 5vh, 52px); height: clamp(28px, 5vh, 52px); font-size: clamp(11px, 1.8vh, 18px); }
   #screen-setup .roster-item .nm { font-size: clamp(14px, 2.3vh, 24px); }
   #screen-setup .roster-item .gast-marke { font-size: clamp(12px, 1.8vh, 18px); }
   #screen-setup .roster-item .check { width: clamp(22px, 3.6vh, 38px); height: clamp(22px, 3.6vh, 38px); font-size: clamp(12px, 2vh, 20px); }
@@ -4899,7 +4896,7 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
 #screen-tournament .lg-team.sie .lg-zahl { color: #c9c0c0; }
 #screen-tournament .lg-team .lg-name { font-size: 0.85rem; letter-spacing: 0.08em; text-transform: uppercase; margin: 2px 0 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #screen-tournament .lg-team.sie .lg-name { color: var(--muted); }
-#screen-tournament .lg-doppel { font-family: var(--font-display); color: #5a5052; }
+#screen-tournament .lg-doppel { font-family: var(--font-display); color: var(--muted); }
 #screen-tournament .lg-hl-liste { display: flex; flex-direction: column; }
 #screen-tournament .lg-hl-zeile { display: flex; align-items: baseline; gap: 12px; padding: 7px 0; border-bottom: 1px solid #1f191b; }
 #screen-tournament .lg-hl-k { flex: none; width: 90px; font-size: 0.85rem; color: var(--muted); }
@@ -4908,8 +4905,11 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
 #screen-tournament .lg-knoepfe { margin-top: 10px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 #screen-tournament .lg-knoepfe .btn { min-height: 44px; padding: 0 8px; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: #241d1f; border-color: transparent; color: var(--text); }
 #screen-tournament #liga-bericht-karte > .btn.primary { margin-top: 10px; }
-#screen-tournament .spielplan-aktionen { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-#screen-tournament .spielplan-aktionen .btn { min-height: 44px; padding: 0 8px; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Untereinander mit vollem Text: nebeneinander wurden "Spieler nachtragen
+   oder abmelden" und "Turnier vorzeitig beenden" auf jedem Schirm zu
+   "Spieler nachtragen o…" (D8). */
+#screen-tournament .spielplan-aktionen { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+#screen-tournament .spielplan-aktionen .btn { min-height: 44px; padding: 8px 10px; font-size: 0.9rem; line-height: 1.2; white-space: normal; }
 #screen-tournament #turnier-endstand { margin-top: 10px; }
 
 /* Tabelle */
@@ -4970,18 +4970,18 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
   #screen-tournament .match-row .res { font-size: clamp(16px, 3.2vh, 34px); }
   #screen-tournament .match-row .go { height: clamp(34px, 6vh, 62px); min-width: clamp(70px, 7.5vw, 112px); font-size: clamp(13px, 2.4vh, 26px); }
   #screen-tournament .match-row .fertig { min-width: clamp(70px, 7.5vw, 112px); font-size: clamp(11px, 1.8vh, 19px); }
-  #screen-tournament .spielplan-aktionen .btn { height: clamp(38px, 6.4vh, 62px); font-size: clamp(12px, 1.9vh, 18px); }
+  #screen-tournament .spielplan-aktionen .btn { min-height: clamp(44px, 6.4vh, 62px); font-size: clamp(12px, 1.9vh, 18px); }
 
-  #screen-tournament .standings th { font-size: clamp(10px, 1.6vh, 17px); }
+  #screen-tournament .standings th { font-size: clamp(11px, 1.6vh, 17px); }
   #screen-tournament .standings td { font-size: clamp(15px, 2.8vh, 30px); height: clamp(36px, 6.6vh, 70px); padding: 0 6px; }
   #screen-tournament .standings td.name { font-size: clamp(13px, 2.3vh, 24px); }
-  #screen-tournament .standings td .av.sm { width: clamp(22px, 4vh, 42px); height: clamp(22px, 4vh, 42px); font-size: clamp(9px, 1.4vh, 15px); }
+  #screen-tournament .standings td .av.sm { width: clamp(22px, 4vh, 42px); height: clamp(22px, 4vh, 42px); font-size: clamp(11px, 1.4vh, 15px); }
   #screen-tournament .standings .rank { font-size: clamp(14px, 2.8vh, 30px); }
 
   #screen-tournament .stat-card { padding: clamp(8px, 1.2vh, 14px) clamp(8px, 0.9vw, 14px); }
-  #screen-tournament .stat-card .who .av.md { width: clamp(20px, 3.4vh, 36px); height: clamp(20px, 3.4vh, 36px); font-size: clamp(9px, 1.3vh, 14px); }
+  #screen-tournament .stat-card .who .av.md { width: clamp(20px, 3.4vh, 36px); height: clamp(20px, 3.4vh, 36px); font-size: clamp(11px, 1.3vh, 14px); }
   #screen-tournament .stat-card .who .wer-name { font-size: clamp(13px, 2.2vh, 23px); }
-  #screen-tournament .stat-card .line { font-size: clamp(10px, 1.6vh, 16px); padding: clamp(1px, 0.3vh, 4px) 0; }
+  #screen-tournament .stat-card .line { font-size: clamp(11px, 1.6vh, 16px); padding: clamp(1px, 0.3vh, 4px) 0; }
   #screen-tournament .stat-card .line b { font-size: clamp(13px, 2.2vh, 23px); }
 }
 @media (min-width: 1100px) {
@@ -5048,15 +5048,15 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
 #screen-bulloff .bo-wahl button:active { background: var(--aktiv-flaeche); border-color: var(--aktiv-linie); box-shadow: 0 0 24px var(--schein); }
 #screen-bulloff .bo-wahl .bo-weg { visibility: hidden; }
 #screen-bulloff .bo-name { flex: 1 1 auto; min-width: 0; font-size: inherit; font-weight: inherit; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#screen-bulloff .bo-wahl .av.sm, #screen-bulloff .bo-reihe .av.sm { flex: none; width: clamp(28px, 6vh, 64px); height: clamp(28px, 6vh, 64px); font-size: clamp(10px, 2vh, 22px); }
-#screen-bulloff .bo-reihe .bo-row .av.sm { width: clamp(24px, 4.6vh, 50px); height: clamp(24px, 4.6vh, 50px); font-size: clamp(9px, 1.7vh, 18px); }
+#screen-bulloff .bo-wahl .av.sm, #screen-bulloff .bo-reihe .av.sm { flex: none; width: clamp(28px, 6vh, 64px); height: clamp(28px, 6vh, 64px); font-size: clamp(11px, 2vh, 22px); }
+#screen-bulloff .bo-reihe .bo-row .av.sm { width: clamp(24px, 4.6vh, 50px); height: clamp(24px, 4.6vh, 50px); font-size: clamp(11px, 1.7vh, 18px); }
 #screen-bulloff .bo-pos { flex: none; width: clamp(28px, 6vh, 64px); height: clamp(28px, 6vh, 64px); min-width: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-cond); font-weight: 700; font-size: clamp(16px, 3.6vh, 40px); background: var(--line-hell); color: var(--text); font-variant-numeric: tabular-nums; }
 #screen-bulloff .bo-slot { background: transparent; border: 1px dashed var(--line-hell); color: var(--dead); }
 #screen-bulloff .bo-slot .bo-pos { background: var(--bg-3); color: var(--dead); }
 #screen-bulloff .bo-slot .bo-frei { flex: 1; text-align: left; }
 #screen-bulloff .bo-reihe .bo-row.erster { background: var(--aktiv-flaeche); border-color: var(--aktiv-linie); box-shadow: 0 0 30px var(--schein); }
 #screen-bulloff .bo-reihe .bo-row.erster .bo-pos { background: var(--primary); color: var(--on-primary); box-shadow: 0 0 16px rgba(70, 170, 215, 0.45); }
-#screen-bulloff .bo-reihe .bo-tag { flex: none; font-size: clamp(10px, 1.7vh, 18px); color: var(--laser-hell); }
+#screen-bulloff .bo-reihe .bo-tag { flex: none; font-size: clamp(11px, 1.7vh, 18px); color: var(--laser-hell); }
 #screen-bulloff .bulloff-order .btn.start { width: 100%; min-height: clamp(46px, 8vh, 84px); font-size: clamp(17px, 3vh, 32px); border-radius: 12px; }
 #screen-bulloff .bulloff-order .btn.start.offen { background: transparent; border: 1px solid var(--line-hell); color: var(--dead); box-shadow: none; opacity: 1; }
 
@@ -5140,7 +5140,8 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
   flex: 0 0 112px; min-width: 0; min-height: 44px; display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
   padding: 8px 10px; border-radius: 12px; background: var(--bg-2); border: 1px solid transparent; box-shadow: none; text-align: left; cursor: pointer;
 }
-.bk-kachel .bk-t { max-width: 100%; font-family: var(--font-cond); font-weight: 700; font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: #857a7b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Kachel-Titel duerfen zwei Zeilen haben statt einer Ellipse (D10). */
+.bk-kachel .bk-t { max-width: 100%; font-family: var(--font-cond); font-weight: 700; font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: #857a7b; line-height: 1.15; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
 .bk-kachel .bk-v { font-family: var(--font-cond); font-weight: 700; font-size: 1.3rem; line-height: 1.1; font-variant-numeric: tabular-nums; color: #c9c0c0; }
 .bk-kachel .bk-n { max-width: 100%; font-size: 0.75rem; color: #857a7b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bk-kachel.active { background: #2a2224; box-shadow: inset 0 0 0 1.5px var(--aktiv-linie), 0 0 22px var(--schein-weich); }
@@ -5179,7 +5180,9 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
 @media (prefers-reduced-motion: reduce) { .boards-host .rekorde-titel, .boards-host .rekorde-titel .pokal { animation: none; } }
 .boards-host .records { gap: 6px; }
 .boards-host .rec { text-align: left; background: #1c1718; border: none; border-radius: 12px; padding: 8px 10px; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.boards-host .rec .rt { text-transform: none; letter-spacing: 0; font-size: 0.75rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* "Hoechste Aufnahme" und "Beste Doppelquote" brechen auf zwei Zeilen um,
+   statt als "Höchste Aufna…" zu enden (D10). */
+.boards-host .rec .rt { text-transform: none; letter-spacing: 0; font-size: 0.75rem; color: var(--muted); line-height: 1.2; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
 .boards-host .rec .rv { font-family: var(--font-cond); font-weight: 700; font-size: 1.4rem; line-height: 1.05; color: var(--text); margin: 0; text-shadow: none; }
 .boards-host .rec .rn { font-size: 0.75rem; color: #c9c0c0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Spielverlauf nur, wenn er geoeffnet ist - dann anstelle der Spalten. */
@@ -5202,26 +5205,34 @@ body .boards-host.log #board-log { display: block; }
   .boards-host .karte-kopf { margin-bottom: clamp(6px, 1.2vh, 14px); }
   .boards-host .karte-kopf h2 { font-size: clamp(11px, 1.9vh, 20px); }
   .boards-host .karte-kopf .hint { font-size: clamp(11px, 1.6vh, 16px); }
-  .boards-host .karte-kopf .btn.small { height: clamp(40px, 4.6vh, 46px); min-height: 0; font-size: clamp(11px, 1.7vh, 17px); }
+  .boards-host .karte-kopf .btn.small { height: clamp(44px, 4.6vh, 46px); min-height: 0; font-size: clamp(11px, 1.7vh, 17px); }
 
   .reiter-zeile { flex-wrap: nowrap; height: clamp(44px, 5.4vh, 56px); }
   .reiter-zeile .kt { font-size: clamp(11px, 1.9vh, 20px); }
   .kopf-reiter { flex: none; margin-left: auto; height: 100%; flex-wrap: nowrap; gap: clamp(5px, 0.6vw, 9px); min-width: 0; }
   .kopf-reiter button { flex: none; height: 100%; min-height: 0; padding: 0 clamp(8px, 1.2vw, 20px); border-radius: clamp(10px, 1.6vh, 16px); font-size: clamp(12px, 2.2vh, 23px); }
+  /* iPad hoch: sechs Reiter und der Kicker passen nicht in eine Zeile, der
+     Kicker wurde auf 188 px zusammengeschoben ("5. LIGA · SA…", D2). Der
+     Kicker steht hier ueber den Reitern, wie am Handy. */
+  @media (orientation: portrait) {
+    .reiter-zeile { flex-wrap: wrap; height: auto; }
+    .reiter-zeile .kt { flex: 1 1 100%; }
+    .kopf-reiter { margin-left: 0; height: clamp(44px, 5.4vh, 56px); }
+  }
 
   .boards-koerper { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: clamp(8px, 1.4vw, 22px); }
   .boards-links { min-height: 0; gap: clamp(8px, 1.4vh, 16px); }
   .board-kacheln { flex: none; display: grid; grid-template-columns: repeat(var(--kn, 4), minmax(0, 1fr)); gap: clamp(5px, 0.7vw, 10px); overflow: visible; padding: 0; }
   .bk-kachel { flex: auto; padding: clamp(6px, 1.1vh, 12px) clamp(8px, 0.9vw, 14px); }
-  .bk-kachel .bk-t { font-size: clamp(10px, 1.6vh, 16px); }
+  .bk-kachel .bk-t { font-size: clamp(11px, 1.6vh, 16px); }
   .bk-kachel .bk-v { font-size: clamp(16px, 3vh, 32px); }
-  .bk-kachel .bk-n { font-size: clamp(10px, 1.5vh, 15px); }
+  .bk-kachel .bk-n { font-size: clamp(11px, 1.5vh, 15px); }
   .boards-liste { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
   .boards-liste > .karte-kopf { flex: none; }
   .boards-liste > .board-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
   .boards-host .board-row { flex: 1 0 auto; min-height: clamp(30px, 4.6vh, 52px); max-height: 72px; gap: clamp(8px, 1vw, 14px); padding: 2px 2px; }
   .boards-host .board-row .pos { width: clamp(20px, 3.2vh, 32px); height: clamp(20px, 3.2vh, 32px); font-size: clamp(11px, 1.8vh, 18px); }
-  .boards-host .board-row .av.sm { width: clamp(22px, 3.6vh, 36px); height: clamp(22px, 3.6vh, 36px); font-size: clamp(9px, 1.3vh, 13px); }
+  .boards-host .board-row .av.sm { width: clamp(22px, 3.6vh, 36px); height: clamp(22px, 3.6vh, 36px); font-size: clamp(11px, 1.3vh, 13px); }
   .boards-host .board-row .nm { font-size: clamp(13px, 2vh, 20px); }
   .boards-host .board-row .val { font-size: clamp(15px, 2.6vh, 27px); }
   .boards-seite { min-height: 0; gap: clamp(8px, 1.4vh, 16px); }
@@ -5235,7 +5246,7 @@ body .boards-host.log #board-log { display: block; }
   .boards-seite > #board-rekorde { flex: none; }
   .boards-host .records { gap: clamp(5px, 0.8vw, 10px); }
   .boards-host .rec { padding: clamp(6px, 1.1vh, 12px) clamp(8px, 0.9vw, 14px); }
-  .boards-host .rec .rt, .boards-host .rec .rn { font-size: clamp(10px, 1.5vh, 15px); }
+  .boards-host .rec .rt, .boards-host .rec .rn { font-size: clamp(11px, 1.5vh, 15px); }
   .boards-host .rec .rv { font-size: clamp(18px, 3.6vh, 40px); }
   body .boards-host.log #board-log { display: flex; flex-direction: column; }
   #board-log > #match-log { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
@@ -5311,7 +5322,8 @@ body .boards-host.log #board-log { display: block; }
 .lt-karte .karte-kopf { margin-bottom: 8px; }
 .lt-karte .lt-scroll { overflow: auto; }
 #liga-tabelle .standings th { background: transparent; font-family: var(--font-cond); font-weight: 600; font-size: 0.75rem; letter-spacing: 0.12em; color: var(--muted); padding: 6px 5px; }
-#liga-tabelle .standings td { font-family: var(--font-cond); font-weight: 700; font-size: 1.05rem; padding: 8px 5px; }
+/* Die Zeilen oeffnen die Team-Info: 44 px hoch statt 37 (D7). */
+#liga-tabelle .standings td { font-family: var(--font-cond); font-weight: 700; font-size: 1.05rem; height: 44px; padding: 6px 5px; }
 #liga-tabelle .standings td.name { font-family: var(--font-body); font-weight: 600; font-size: 0.95rem; }
 #liga-tabelle .standings .rank { color: var(--muted); }
 #liga-tabelle .standings tr.leader td { background: var(--aktiv-flaeche); box-shadow: none; text-shadow: none; }
@@ -5346,7 +5358,9 @@ body .boards-host.log #board-log { display: block; }
 
 /* Kasse: links Stand und Erfassen, rechts Kassenbuch und Beitraege. */
 .kasse-stand { gap: 8px; }
-.kasse-stand .lk-kopf .hint { margin: 0; font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Der Hinweis rechts darf zwei Zeilen haben, statt bei "Kassenwart/in: noch
+   nicht…" zu enden (D10). */
+.kasse-stand .lk-kopf .hint { margin: 0; font-size: 0.8rem; text-align: right; line-height: 1.3; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
 .kasse-stand .ks-saldo { font-family: var(--font-cond); font-weight: 700; font-size: clamp(40px, 12vw, 64px); line-height: 1; color: #fff; }
 .kasse-stand .ks-saldo.minus { color: var(--red); }
 .kasse-stand .ks-drei { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
@@ -5379,7 +5393,7 @@ body .boards-host.log #board-log { display: block; }
 .regel-spalte .regel-liste { display: flex; flex-direction: column; gap: 6px; }
 .regel-spalte .regel { margin: 0; background: var(--bg-3); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
 .regel-spalte .regel[open] { background: var(--aktiv-flaeche); border-color: var(--aktiv-linie); box-shadow: 0 0 24px var(--schein-weich); }
-.regel-spalte .regel summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; font-family: var(--font-cond); font-weight: 700; font-size: 1.05rem; letter-spacing: 0.02em; cursor: pointer; }
+.regel-spalte .regel summary { list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; padding: 0; font-family: var(--font-cond); font-weight: 700; font-size: 1.05rem; letter-spacing: 0.02em; cursor: pointer; }
 .regel-spalte .regel summary::-webkit-details-marker { display: none; }
 .regel-spalte .regel summary::after { content: '+'; flex: none; font-family: var(--font-cond); font-weight: 700; font-size: 1.3rem; color: var(--muted); }
 .regel-spalte .regel[open] summary::after { content: '−'; }
@@ -5396,7 +5410,18 @@ body .boards-host.log #board-log { display: block; }
 .liga-karte.live { border-color: var(--accent); box-shadow: 0 0 36px rgba(229, 72, 77, 0.25); }
 .liga-karte .lk-kopf { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .liga-karte .lk-kopf > :first-child { min-width: 0; display: flex; align-items: center; gap: 10px; }
-.liga-karte .lk-etikett { font-family: var(--font-cond); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--laser-hell); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Zwei Zeilen statt "NÄCHSTER SPIELT…": der Kicker traegt die Information,
+   die Ellipse schnitt sie am iPad hoch und bei 120 % Schrift ab (D2, D10). */
+.liga-karte .lk-etikett { font-family: var(--font-cond); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--laser-hell); line-height: 1.2; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+/* Der Kicker ist meist selbst das erste Kind des Kopfs – das display: flex
+   der Regel darueber darf den Zeilenkasten nicht ueberstimmen. */
+.liga-karte .lk-kopf > .lk-etikett { display: -webkit-box; }
+/* Tablet hoch: neben den zwei Icon-Knoepfen bleiben dem Kicker rund 190 px –
+   "NÄCHSTER SPIELTAG · IN 2 TAGEN" darf dort enger gesetzt drei Zeilen
+   haben, die Karte hat die Hoehe uebrig. */
+@media (min-width: 700px) and (orientation: portrait) {
+  .liga-karte .lk-etikett { font-size: clamp(12px, 1.4vh, 17px); letter-spacing: 0.12em; -webkit-line-clamp: 3; line-clamp: 3; }
+}
 .liga-karte .lk-live { display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px; border-radius: 8px; background: var(--accent); color: #fff; font-family: var(--font-cond); font-weight: 700; font-size: 0.9rem; letter-spacing: 0.16em; line-height: 1; box-shadow: 0 0 22px rgba(229, 72, 77, 0.45); }
 .liga-karte .lk-live i { width: 0.55em; height: 0.55em; border-radius: 50%; background: #fff; animation: livePulse 1.4s ease-in-out infinite; }
 .liga-karte .lk-einzel { font-family: var(--font-cond); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
@@ -5453,7 +5478,10 @@ body .boards-host.log #board-log { display: block; }
 .liga-liste-karte { display: flex; flex-direction: column; }
 #liga-liste { display: flex; flex-direction: column; gap: 5px; }
 .liga-spieltag {
-  display: grid; grid-template-columns: 30px 92px minmax(0, 1fr) auto; align-items: center; gap: 8px;
+  /* Die Datumsspalte waechst mit ihrem Inhalt: am iPad hoch lief
+     "06.10.2026" sonst in die Heim/Ausw.-Spalte (D2). Die Untergrenze haelt
+     die Zeilen untereinander buendig. */
+  display: grid; grid-template-columns: 30px minmax(92px, max-content) minmax(0, 1fr) auto; align-items: center; gap: 8px;
   min-height: 48px; padding: 5px 10px; border-radius: 12px; background: var(--bg-3); border: 1px solid var(--line); cursor: pointer;
 }
 .liga-spieltag.wahl { background: var(--aktiv-flaeche); border-color: var(--aktiv-linie); }
@@ -5502,12 +5530,12 @@ body .boards-host.log #board-log { display: block; }
   .liga-uebung .setting > label { font-size: clamp(12px, 1.9vh, 19px); }
   .liga-uebung .options button { height: clamp(40px, 7vh, 70px); font-size: clamp(13px, 2.4vh, 25px); }
   .liga-uebung .options.drei button { height: clamp(52px, 9vh, 92px); }
-  .liga-uebung .options button small { font-size: clamp(10px, 1.6vh, 17px); }
+  .liga-uebung .options button small { font-size: clamp(11px, 1.6vh, 17px); }
   .liga-uebung .btn.start { height: clamp(46px, 8vh, 84px); font-size: clamp(16px, 3vh, 32px); }
   /* Tabelle */
   .lt-karte .lt-scroll { flex: 1 1 auto; min-height: 0; overflow: auto; scrollbar-width: none; }
-  #liga-tabelle .standings th { font-size: clamp(10px, 1.6vh, 17px); }
-  #liga-tabelle .standings td { font-size: clamp(14px, 2.6vh, 28px); height: clamp(36px, 6.6vh, 70px); padding: 0 6px; }
+  #liga-tabelle .standings th { font-size: clamp(11px, 1.6vh, 17px); }
+  #liga-tabelle .standings td { font-size: clamp(14px, 2.6vh, 28px); height: clamp(44px, 6.6vh, 70px); padding: 0 6px; }
   #liga-tabelle .standings td.name { font-size: clamp(13px, 2.3vh, 24px); }
   /* Kleiner als im Entwurf, damit rechts die Karte "Alle Spiele" Platz hat. */
   #lt-platz .lt-platz-zahl { font-size: clamp(44px, 9vh, 96px); }
@@ -5527,11 +5555,11 @@ body .boards-host.log #board-log { display: block; }
   #liga-highlights { flex: 1 1 auto; min-height: 0; }
   #liga-highlights .hl-liste { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
   #liga-highlights .hl-liste { gap: clamp(10px, 1.8vh, 20px); }
-  #liga-highlights .hl-titel { font-size: clamp(10px, 1.6vh, 16px); }
+  #liga-highlights .hl-titel { font-size: clamp(11px, 1.6vh, 16px); }
   #liga-highlights .hl-raster { gap: clamp(5px, 0.7vw, 10px); }
   #liga-highlights .hl-kachel { padding: clamp(6px, 1.1vh, 12px) clamp(8px, 0.9vw, 14px); }
   #liga-highlights .hl-wer { font-size: clamp(11px, 1.7vh, 17px); }
-  #liga-highlights .hl-kachel small { font-size: clamp(10px, 1.5vh, 15px); }
+  #liga-highlights .hl-kachel small { font-size: clamp(11px, 1.5vh, 15px); }
   #liga-highlights .hl-wert { font-size: clamp(18px, 3.4vh, 36px); }
   /* Kasse */
   .kasse-stand .ks-saldo { font-size: clamp(44px, 12vh, 130px); }
@@ -5566,26 +5594,26 @@ body .boards-host.log #board-log { display: block; }
   .liga-karte .lk-team .blink-logo, .liga-karte .lk-ini { width: clamp(40px, 6.4vh, 72px); height: clamp(40px, 6.4vh, 72px); }
   .liga-karte .lk-ini { font-size: clamp(13px, 2.4vh, 26px); }
   .liga-karte .lk-teamname { font-size: clamp(13px, 2.3vh, 24px); }
-  .liga-karte .lk-rolle { font-size: clamp(9px, 1.4vh, 15px); }
+  .liga-karte .lk-rolle { font-size: clamp(11px, 1.4vh, 15px); }
   .liga-karte .lk-vs { font-size: clamp(14px, 2.6vh, 28px); }
   .liga-karte .lk-crew-titel { font-size: clamp(11px, 1.9vh, 20px); }
   .liga-karte .lt-person { height: clamp(38px, 5.6vh, 58px); padding: 0 clamp(12px, 1.4vw, 20px) 0 clamp(5px, 0.5vw, 8px); font-size: clamp(13px, 2.1vh, 22px); }
-  .liga-karte .lt-person .av.sm { width: clamp(28px, 4.2vh, 44px); height: clamp(28px, 4.2vh, 44px); font-size: clamp(10px, 1.5vh, 16px); }
+  .liga-karte .lt-person .av.sm { width: clamp(28px, 4.2vh, 44px); height: clamp(28px, 4.2vh, 44px); font-size: clamp(11px, 1.5vh, 16px); }
   .liga-karte .lk-status { font-size: clamp(13px, 2.2vh, 22px); }
   .liga-karte .lk-knoepfe .btn { height: clamp(44px, 6.4vh, 66px); font-size: clamp(14px, 2.6vh, 28px); }
 
   .liga-liste-karte { min-height: 0; padding: clamp(10px, 1.8vh, 20px); }
   .liga-liste-karte > .karte-kopf { flex: none; margin-bottom: clamp(6px, 1.2vh, 14px); }
   #screen-liga h2 { font-size: clamp(13px, 2.4vh, 26px); }
-  #screen-liga .karte-kopf .btn.small { height: clamp(40px, 5vh, 50px); min-height: 0; font-size: clamp(11px, 1.7vh, 17px); border-radius: 10px; }
+  #screen-liga .karte-kopf .btn.small { height: clamp(44px, 5vh, 50px); min-height: 0; font-size: clamp(11px, 1.7vh, 17px); border-radius: 10px; }
   #screen-liga .karte-kopf .btn.small .ico { width: clamp(12px, 2vh, 20px); height: clamp(12px, 2vh, 20px); }
   #liga-liste { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; gap: clamp(4px, 0.7vh, 8px); }
-  .liga-spieltag { min-height: clamp(44px, 7.6vh, 78px); grid-template-columns: clamp(30px, 4vw, 52px) clamp(80px, 8vw, 116px) minmax(0, 1fr) auto; gap: clamp(6px, 0.8vw, 12px); padding: 0 clamp(10px, 1.2vw, 16px); }
+  .liga-spieltag { min-height: clamp(44px, 7.6vh, 78px); grid-template-columns: clamp(30px, 4vw, 52px) minmax(clamp(80px, 8vw, 116px), max-content) minmax(0, 1fr) auto; gap: clamp(6px, 0.8vw, 12px); padding: 0 clamp(10px, 1.2vw, 16px); }
   .liga-spieltag .lt-nr { font-size: clamp(13px, 2.4vh, 26px); }
   .liga-spieltag .lt-datum b { font-size: clamp(13px, 2.3vh, 24px); }
-  .liga-spieltag .lt-datum small { font-size: clamp(10px, 1.5vh, 15px); }
+  .liga-spieltag .lt-datum small { font-size: clamp(11px, 1.5vh, 15px); }
   .liga-spieltag .lt-gegner { font-size: clamp(12px, 2.1vh, 21px); }
-  .liga-spieltag .lt-unten { font-size: clamp(10px, 1.5vh, 15px); }
+  .liga-spieltag .lt-unten { font-size: clamp(11px, 1.5vh, 15px); }
   .liga-spieltag .lt-rechts { font-size: clamp(12px, 2.1vh, 22px); }
   .liga-spieltag .lt-rechts.fertig { font-size: clamp(16px, 3vh, 32px); }
 }
@@ -5629,7 +5657,9 @@ body .boards-host.log #board-log { display: block; }
 .lr-erg.verschoben { color: var(--amber); font-size: 0.85rem; }
 /* "Alle Spiele ›" in der Spieltage-Liste: ein Knopf rechts unter dem Ergebnis. */
 .liga-spieltag .lt-rechts { display: flex; flex-direction: column; align-items: flex-end; gap: 0; }
-.liga-spieltag .lt-alle { display: inline-flex; align-items: center; min-height: 32px; padding: 0 2px 0 10px; font-family: var(--font-body); font-size: 0.78rem; letter-spacing: 0; color: var(--laser-hell); font-weight: 600; cursor: pointer; white-space: nowrap; }
+/* 44 px Tipp-Flaeche bei gleich hoher Zeile: der negative Rand oben und unten
+   laesst den Knopf im Layout 32 px einnehmen, getroffen wird er auf 44 (D7). */
+.liga-spieltag .lt-alle { display: inline-flex; align-items: center; min-height: 44px; margin: -6px 0; padding: 0 2px 0 10px; font-family: var(--font-body); font-size: 0.78rem; letter-spacing: 0; color: var(--laser-hell); font-weight: 600; cursor: pointer; white-space: nowrap; }
 @media (min-width: 700px) {
   .lt-runden .lr-zeile { min-height: clamp(36px, 5.6vh, 56px); font-size: clamp(12px, 2vh, 20px); padding: 0 clamp(8px, 1vw, 14px); }
   .lt-runden .lr-erg.verschoben { font-size: clamp(11px, 1.7vh, 17px); }
@@ -5710,17 +5740,17 @@ body .boards-host.log #board-log { display: block; }
   .player-card .av.lg { width: clamp(36px, 6.4vh, 66px); height: clamp(36px, 6.4vh, 66px); font-size: clamp(11px, 2vh, 21px); }
   .player-card .pc-main { gap: clamp(2px, 0.5vh, 6px); }
   .player-card .pc-name { font-size: clamp(14px, 2.3vh, 24px); }
-  .player-card .pc-tag { font-size: clamp(10px, 1.5vh, 15px); }
+  .player-card .pc-tag { font-size: clamp(11px, 1.5vh, 15px); }
   .player-card .pc-stats { font-size: clamp(11px, 1.7vh, 17px); gap: clamp(8px, 1vw, 14px); }
   .players-schnell { min-height: 0; min-width: 0; overflow-y: auto; scrollbar-width: none; gap: clamp(10px, 1.8vh, 20px); padding: clamp(14px, 2.4vh, 28px) clamp(14px, 1.8vw, 28px); }
   .ps-kopf .av.xl { width: clamp(56px, 11vh, 116px); height: clamp(56px, 11vh, 116px); font-size: clamp(18px, 3.6vh, 38px); }
   .ps-name { font-size: clamp(20px, 4.4vh, 46px); }
   .ps-bilanz { font-size: clamp(12px, 1.9vh, 19px); }
-  .ps-form .kt { font-size: clamp(10px, 1.6vh, 16px); }
+  .ps-form .kt { font-size: clamp(11px, 1.6vh, 16px); }
   .ps-form .form { width: clamp(22px, 3.6vh, 36px); height: clamp(22px, 3.6vh, 36px); font-size: clamp(11px, 1.8vh, 18px); }
   .ps-raster { gap: clamp(5px, 0.7vw, 10px); }
   .ps-kachel { padding: clamp(6px, 1.1vh, 12px) clamp(8px, 0.9vw, 14px); }
-  .ps-k { font-size: clamp(10px, 1.5vh, 15px); }
+  .ps-k { font-size: clamp(11px, 1.5vh, 15px); }
   .ps-v { font-size: clamp(18px, 3.4vh, 36px); }
   .ps-knoepfe { gap: clamp(6px, 0.8vw, 12px); }
   .ps-knoepfe .btn { height: clamp(42px, 7vh, 72px); min-height: 0; font-size: clamp(13px, 2.1vh, 21px); }
@@ -5757,7 +5787,7 @@ body .boards-host.log #board-log { display: block; }
 .overlay.bogen .dl-k.g { color: #c9c0c0; }
 .overlay.bogen .dl-wer { min-width: 0; display: flex; flex-direction: column; line-height: 1.2; }
 .overlay.bogen .dl-wer b { font-weight: 600; font-size: clamp(13px, 2.1vh, 21px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.overlay.bogen .dl-wer small { font-size: clamp(10px, 1.6vh, 16px); color: #857a7b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.overlay.bogen .dl-wer small { font-size: clamp(11px, 1.6vh, 16px); color: #857a7b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .overlay.bogen .dl-wer small.hell { color: var(--laser-hell); }
 .overlay.bogen .dl-pos .btn.small { margin: 0; min-height: 0; height: clamp(44px, 5.4vh, 54px); padding: 0 clamp(10px, 1.1vw, 16px); border-radius: 10px; background: #241d1f; border-color: transparent; color: var(--text); font-weight: 600; font-size: clamp(12px, 1.9vh, 19px); }
 .overlay.bogen .dl-raster { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: clamp(6px, 0.8vw, 12px); }
@@ -5780,6 +5810,16 @@ body .boards-host.log #board-log { display: block; }
 .overlay.bogen .dl-link { background: transparent; border: none; color: var(--muted); font-family: var(--font-body); font-weight: 600; font-size: clamp(11px, 1.7vh, 17px); cursor: pointer; padding: 0 8px; margin: 0; min-height: 44px; }
 .overlay.bogen .signatur { margin: 0; height: clamp(90px, 18vh, 200px); background: #1c1718; border: none; border-radius: 14px; box-shadow: inset 0 0 0 1.5px #2a2224, inset 0 -46px 0 -45px #3a2e30; }
 .overlay.bogen .dl-fuss { display: flex; justify-content: flex-end; gap: clamp(6px, 0.8vw, 12px); flex-wrap: wrap; }
+/* Der Fuss klebt am unteren Rand des Bogens (der Bogen selbst scrollt): die
+   Hauptaktion bleibt sichtbar, auch wenn Kader und Unterschrift laenger
+   sind als der Schirm (D3). Unten so viel Polster wie der Bogen selbst,
+   per negativem Rand wieder aufgehoben, damit am Ende nichts doppelt ist. */
+.overlay.bogen .dl-fuss {
+  position: sticky; bottom: 0; z-index: 1;
+  background: var(--bg-2); border-top: 1px solid var(--line);
+  padding-top: clamp(8px, 1.4vh, 14px);
+  padding-bottom: clamp(14px, 2.8vh, 32px); margin-bottom: calc(-1 * clamp(14px, 2.8vh, 32px));
+}
 .overlay.bogen .dl-fuss .btn { margin: 0; min-height: 0; height: clamp(44px, 6.6vh, 66px); padding: 0 clamp(14px, 1.6vw, 24px); border-radius: 12px; font-family: var(--font-body); font-weight: 600; font-size: clamp(13px, 2.1vh, 21px); white-space: nowrap; }
 .overlay.bogen .dl-fuss .btn.ghost { background: #241d1f; border-color: transparent; color: var(--text); }
 .overlay.bogen .dl-fuss .btn.hell { background: #f2eeee; border-color: transparent; color: #0d0a0b; font-family: var(--font-cond); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
@@ -5993,7 +6033,7 @@ body.fix-spiel #screen-kaiwen.active { flex: 1 1 auto; height: auto; min-height:
 #screen-kaiwen .kw-pb.blitz .kw-rek-zahl { animation: kwBlitz 1.4s ease-out both; }
 #screen-kaiwen .kw-pokal.wackelt { animation: kwTrophy 1.6s ease-in-out infinite; }
 #screen-kaiwen .kw-rek-text { display: flex; flex-direction: column; align-items: flex-end; }
-#screen-kaiwen .kw-rek-text .kt { font-size: clamp(10px, 1.6vh, 16px); color: #857a7b; }
+#screen-kaiwen .kw-rek-text .kt { font-size: clamp(11px, 1.6vh, 16px); color: #857a7b; }
 #screen-kaiwen .kw-rek-zahl { font-family: var(--font-cond); font-weight: 700; font-size: clamp(14px, 2.8vh, 30px); line-height: 1.1; color: #ffc14d; }
 #screen-kaiwen .kw-rek-zahl.blitz, #screen-kaiwen .kw-sp-pb.blitz b { animation: kwBlitz 1.4s ease-out both; }
 
@@ -6033,7 +6073,7 @@ body.fix-spiel #screen-kaiwen.active { flex: 1 1 auto; height: auto; min-height:
 #screen-kaiwen .kw-dot { width: clamp(12px, 2.4vh, 26px); height: clamp(12px, 2.4vh, 26px); border-radius: 50%; background: #241d1f; transition: background 0.25s, box-shadow 0.25s; }
 #screen-kaiwen .kw-dot.weg { background: #46aad7; box-shadow: 0 0 10px rgba(70, 170, 215, 0.7); }
 #screen-kaiwen .kw-dot.jetzt { background: #2a2224; box-shadow: inset 0 0 0 1.5px #f2eeee; }
-#screen-kaiwen .kw-gruppe-name { flex: 1 0 100%; text-align: center; font-family: var(--font-cond); font-weight: 700; font-size: clamp(9px, 1.5vh, 15px); letter-spacing: 0.1em; text-transform: uppercase; color: #857a7b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#screen-kaiwen .kw-gruppe-name { flex: 1 0 100%; text-align: center; font-family: var(--font-cond); font-weight: 700; font-size: clamp(11px, 1.5vh, 15px); letter-spacing: 0.1em; text-transform: uppercase; color: #857a7b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #screen-kaiwen .kw-gruppe.laeuft .kw-gruppe-name { color: var(--text); }
 #screen-kaiwen .kw-info-zeile, #screen-kaiwen .kw-info { }
 #screen-kaiwen .kw-ziel .kw-info { font-family: var(--font-cond); font-weight: 700; font-size: clamp(12px, 2.2vh, 24px); letter-spacing: 0.08em; text-transform: uppercase; color: #9a8f90; text-align: center; }
@@ -6049,7 +6089,7 @@ body.fix-spiel #screen-kaiwen.active { flex: 1 1 auto; height: auto; min-height:
 #screen-kaiwen .kw-sp-name { flex: 1 1 auto; min-width: 0; font-family: var(--font-cond); font-weight: 700; font-size: clamp(15px, 3.4vh, 36px); letter-spacing: 0.03em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #c9c0c0; }
 #screen-kaiwen .kw-spieler.aktiv .kw-sp-name { color: #fff; }
 #screen-kaiwen .kw-sp-pb, #screen-kaiwen .kw-sp-letzte { flex: none; display: flex; flex-direction: column; align-items: flex-end; line-height: 1.05; }
-#screen-kaiwen .kw-sp-pb .kt, #screen-kaiwen .kw-sp-letzte .kt { font-size: clamp(9px, 1.5vh, 15px); color: #857a7b; }
+#screen-kaiwen .kw-sp-pb .kt, #screen-kaiwen .kw-sp-letzte .kt { font-size: clamp(11px, 1.5vh, 15px); color: #857a7b; }
 #screen-kaiwen .kw-sp-pb b, #screen-kaiwen .kw-sp-letzte b { font-family: var(--font-cond); font-weight: 700; font-size: clamp(16px, 3.6vh, 38px); font-variant-numeric: tabular-nums; color: #9a8f90; }
 #screen-kaiwen .kw-spieler.aktiv .kw-sp-letzte b { color: var(--text); }
 #screen-kaiwen .kw-sp-pb b { color: #c9c0c0; }
@@ -6064,7 +6104,7 @@ body.fix-spiel #screen-kaiwen.active { flex: 1 1 auto; height: auto; min-height:
 
 /* Verlauf. */
 #screen-kaiwen .kw-verlauf { flex: none; display: flex; align-items: center; gap: clamp(4px, 0.6vw, 8px); min-width: 0; overflow: hidden; }
-#screen-kaiwen .kw-verlauf .kt { flex: none; font-size: clamp(10px, 1.6vh, 16px); color: #857a7b; }
+#screen-kaiwen .kw-verlauf .kt { flex: none; font-size: clamp(11px, 1.6vh, 16px); color: #857a7b; }
 #screen-kaiwen .kw-chip { flex: none; display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 8px; font-family: var(--font-cond); font-weight: 700; font-size: clamp(11px, 1.8vh, 19px); white-space: nowrap; }
 #screen-kaiwen .kw-chip.ok { background: rgba(111, 224, 168, 0.12); color: #6fe0a8; }
 #screen-kaiwen .kw-chip.nein { background: rgba(255, 90, 90, 0.10); color: #ff8a8a; }
@@ -6221,7 +6261,7 @@ body.fix-spiel #screen-hunter.active { flex: 1 1 auto; height: auto; min-height:
 #screen-hunter .hu-sub { font-family: var(--font-cond); font-weight: 700; font-size: clamp(11px, 2vh, 22px); letter-spacing: 0.04em; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #screen-hunter .hu-box { flex: none; display: flex; flex-direction: column; align-items: flex-end; padding: clamp(4px, 0.8vh, 8px) clamp(10px, 1.2vw, 16px); border-radius: 12px; background: transparent; }
 #screen-hunter .hu-box.solo { background: #141011; }
-#screen-hunter .hu-box .kt { font-size: clamp(10px, 1.6vh, 16px); letter-spacing: 0.14em; color: #857a7b; }
+#screen-hunter .hu-box .kt { font-size: clamp(11px, 1.6vh, 16px); letter-spacing: 0.14em; color: #857a7b; }
 #screen-hunter .hu-box b { font-family: var(--font-cond); font-weight: 700; font-size: clamp(14px, 3vh, 32px); line-height: 1.1; color: #fff; }
 #screen-hunter .hu-box.solo b { color: #ffc14d; }
 #screen-hunter .hu-box.blitz { animation: huBest 1.6s ease-in-out infinite; }
@@ -6250,10 +6290,10 @@ body.fix-spiel #screen-hunter.active { flex: 1 1 auto; height: auto; min-height:
   position: absolute; left: 33.87%; top: 33.87%; width: 32.26%; height: 32.26%; border-radius: 50%;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2%; text-align: center; box-shadow: 0 0 40px rgba(70, 170, 215, 0.18);
 }
-#screen-hunter .hu-ziel .kt { font-size: clamp(10px, 1.9vh, 20px); letter-spacing: 0.16em; color: #9a8f90; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#screen-hunter .hu-ziel .kt { font-size: clamp(11px, 1.9vh, 20px); letter-spacing: 0.16em; color: #9a8f90; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #screen-hunter .hu-ziel-zahl { font-family: var(--font-cond); font-weight: 700; font-size: clamp(44px, 12vh, 130px); line-height: 0.95; font-variant-numeric: tabular-nums; color: #fff; text-shadow: 0 0 30px rgba(70, 170, 215, 0.6); }
 #screen-hunter .hu-ziel-zahl .mx { color: #a9e4ff; font-size: 0.6em; }
-#screen-hunter .hu-ziel-sub { font-family: var(--font-cond); font-weight: 700; font-size: clamp(10px, 1.9vh, 20px); letter-spacing: 0.04em; color: #c9c0c0; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+#screen-hunter .hu-ziel-sub { font-family: var(--font-cond); font-weight: 700; font-size: clamp(11px, 1.9vh, 20px); letter-spacing: 0.04em; color: #c9c0c0; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
 
 /* Marker: ein unsichtbarer Zeiger von der Mitte zum Rand, der um die Mitte
    gedreht wird; der Punkt mit dem Kuerzel sitzt an seiner Spitze (knapp
@@ -6265,7 +6305,7 @@ body.fix-spiel #screen-hunter.active { flex: 1 1 auto; height: auto; min-height:
 }
 #screen-hunter .hu-mark .hu-punkt {
   position: absolute; left: 0; top: 0; width: 6.4cqw; height: 6.4cqw; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center; font-family: var(--font-body); font-weight: 700; font-size: clamp(9px, 1.7vh, 18px); line-height: 1; color: #fff;
+  display: flex; align-items: center; justify-content: center; font-family: var(--font-body); font-weight: 700; font-size: clamp(11px, 1.7vh, 18px); line-height: 1; color: #fff;
   transform: translate(-50%, -50%) rotate(calc(-1 * var(--w, 0deg))) scale(1); box-shadow: 0 0 0 2px #0d0a0b;
   transition: transform 0.75s cubic-bezier(0.3, 0.9, 0.3, 1), opacity 0.4s, filter 0.4s;
 }
@@ -6296,9 +6336,9 @@ body.fix-spiel #screen-hunter.active { flex: 1 1 auto; height: auto; min-height:
 #screen-hunter .hu-chip-name { flex: 1 1 auto; min-width: 0; font-family: var(--font-cond); font-weight: 700; font-size: clamp(12px, 2.5vh, 26px); letter-spacing: 0.03em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #c9c0c0; }
 #screen-hunter .hu-chip-ziel { flex: none; font-family: var(--font-cond); font-weight: 700; font-size: clamp(12px, 2.5vh, 26px); color: #9a8f90; }
 #screen-hunter .hu-chip.aktiv .hu-chip-name, #screen-hunter .hu-chip.aktiv .hu-chip-ziel { color: #fff; }
-#screen-hunter .hu-chip-meta { font-size: clamp(10px, 1.8vh, 18px); color: #857a7b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#screen-hunter .hu-chip-meta { font-size: clamp(11px, 1.8vh, 18px); color: #857a7b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #screen-hunter .hu-chips.viele .hu-chip-name, #screen-hunter .hu-chips.viele .hu-chip-ziel { font-size: clamp(11px, 2vh, 21px); }
-#screen-hunter .hu-chips.viele .hu-chip-meta { font-size: clamp(9px, 1.5vh, 15px); }
+#screen-hunter .hu-chips.viele .hu-chip-meta { font-size: clamp(11px, 1.5vh, 15px); }
 
 /* Rechts: Zurueck, die drei Darts, die Tasten. */
 #screen-hunter .hu-rechts { position: relative; z-index: 1; min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: clamp(5px, 1vh, 12px); }
@@ -6334,8 +6374,8 @@ body.fix-spiel #screen-hunter.active { flex: 1 1 auto; height: auto; min-height:
   #screen-hunter .hu-links { gap: 4px; }
   #screen-hunter .hu-rechts, #screen-hunter .hu-top, #screen-hunter .hu-keys { gap: 4px; }
   #screen-hunter .hu-ziel-zahl { font-size: 40px; }
-  #screen-hunter .hu-ziel .kt, #screen-hunter .hu-ziel-sub { font-size: 10px; }
-  #screen-hunter .hu-mark .hu-punkt { width: 7cqw; height: 7cqw; font-size: 9px; }
+  #screen-hunter .hu-ziel .kt, #screen-hunter .hu-ziel-sub { font-size: 11px; }
+  #screen-hunter .hu-mark .hu-punkt { width: 7cqw; height: 7cqw; font-size: 11px; }
   #screen-hunter .hu-fang-banner { font-size: 14px; padding: 5px 12px; }
   #screen-hunter .hu-chip { padding: 4px 8px; gap: 1px; }
   #screen-hunter .hu-chip-meta { display: none; }
@@ -6349,8 +6389,8 @@ body.fix-spiel #screen-hunter.active { flex: 1 1 auto; height: auto; min-height:
   #screen-hunter .hu-links { grid-template-rows: auto auto auto; }
   #screen-hunter .hu-mitte { height: min(calc(100vw - 32px), 440px); }
   #screen-hunter .hu-ziel-zahl { font-size: clamp(36px, 11vw, 64px); }
-  #screen-hunter .hu-ziel .kt, #screen-hunter .hu-ziel-sub { font-size: clamp(9px, 2.6vw, 13px); }
-  #screen-hunter .hu-mark .hu-punkt { font-size: clamp(8px, 2.4vw, 12px); }
+  #screen-hunter .hu-ziel .kt, #screen-hunter .hu-ziel-sub { font-size: clamp(11px, 2.6vw, 13px); }
+  #screen-hunter .hu-mark .hu-punkt { font-size: clamp(11px, 2.4vw, 12px); }
   /* Chips zweispaltig, damit die Namen lesbar bleiben. */
   #screen-hunter .hu-chips { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
   #screen-hunter #hu-pad { flex: none; }
@@ -6389,7 +6429,7 @@ body.fix-spiel #screen-hunter.active { flex: 1 1 auto; height: auto; min-height:
   .sg-du-tag { font-size: clamp(11px, 1.9vh, 20px); }
   .sg-du b { font-size: clamp(16px, 3.2vh, 34px); }
   .sg-du > span:last-child { font-size: clamp(12px, 2vh, 20px); }
-  .sg-du-chip { font-size: clamp(10px, 1.7vh, 17px); padding: 2px 8px; }
+  .sg-du-chip { font-size: clamp(11px, 1.7vh, 17px); padding: 2px 8px; }
 }
 /* Handy quer: Podest allein, der Endstand faellt weg. */
 @media (orientation: landscape) and (max-height: 420px) {
@@ -6452,7 +6492,7 @@ body.fix-spiel #screen-hunter.active { flex: 1 1 auto; height: auto; min-height:
 .st-punkt { flex: none; width: 10px; height: 10px; border-radius: 50%; }
 .st-wname { min-width: 0; font-weight: 600; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .st-wert { font-family: var(--font-cond); font-weight: 700; font-size: 0.95rem; color: #c9c0c0; white-space: nowrap; }
-.st-note { font-size: 0.75rem; color: #5a5052; line-height: 1.4; padding-top: 6px; }
+.st-note { font-size: 0.75rem; color: #857a7b; line-height: 1.4; padding-top: 6px; }
 .st-aktionen { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .st-aktionen .btn { margin: 0; min-height: 44px; height: 48px; padding: 0 18px; border-radius: 12px; font-size: 0.95rem; white-space: nowrap; }
 .st-aktionen .btn.ghost { background: #241d1f; border-color: transparent; color: var(--text); }
@@ -6481,7 +6521,7 @@ body.fix-spiel #screen-hunter.active { flex: 1 1 auto; height: auto; min-height:
   .st-vergleich.viele .st-sp .av { width: clamp(30px, 5.6vh, 58px); height: clamp(30px, 5.6vh, 58px); }
   .st-sp-name { font-size: clamp(14px, 2.8vh, 30px); }
   .st-vergleich.viele .st-sp-name { font-size: clamp(12px, 2.3vh, 24px); }
-  .st-sp-sub { font-size: clamp(10px, 1.6vh, 16px); }
+  .st-sp-sub { font-size: clamp(11px, 1.6vh, 16px); }
   .st-zeilen { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
   .st-zeile { flex: 1 1 0; min-height: clamp(30px, 5.6vh, 60px); gap: clamp(6px, 1vw, 16px); }
   .st-k { font-size: clamp(12px, 2.1vh, 21px); }
@@ -6492,7 +6532,7 @@ body.fix-spiel #screen-hunter.active { flex: 1 1 auto; height: auto; min-height:
   .st-item { padding: clamp(8px, 1.4vh, 14px) clamp(10px, 1vw, 14px); gap: clamp(8px, 1vw, 14px); }
   .st-n, .st-wname { font-size: clamp(12px, 2vh, 20px); }
   .st-wert { font-size: clamp(13px, 2.2vh, 23px); }
-  .st-note { font-size: clamp(10px, 1.6vh, 16px); }
+  .st-note { font-size: clamp(11px, 1.6vh, 16px); }
   .st-aktionen .btn { height: clamp(42px, 7vh, 72px); padding: 0 clamp(16px, 2vw, 30px); font-size: clamp(13px, 2.1vh, 21px); }
   .st-aktionen .btn.start-rot { padding: 0 clamp(20px, 2.6vw, 40px); font-size: clamp(15px, 2.6vh, 28px); }
   .st-aktionen .btn.st-fix { height: clamp(40px, 6.6vh, 66px); padding: 0 clamp(12px, 1.4vw, 20px); font-size: clamp(12px, 1.9vh, 19px); }
@@ -6536,6 +6576,10 @@ body.fix-spiel #screen-hunter.active { flex: 1 1 auto; height: auto; min-height:
 .pa-av .av.xl { width: 100%; height: 100%; font-size: 1.8rem; box-shadow: 0 0 0 4px var(--bg-2), 0 0 0 6px rgba(169, 228, 255, 0.5), 0 0 44px rgba(70, 170, 215, 0.5); }
 .pa-foto { position: absolute; right: -2px; bottom: -2px; width: 30%; height: 30%; min-width: 32px; min-height: 32px; border-radius: 50%; background: #2a2224; border: none; box-shadow: 0 0 0 3px var(--bg-2); color: var(--text); cursor: pointer; padding: 0; margin: 0; display: flex; align-items: center; justify-content: center; }
 .pa-foto svg { width: 55%; height: 55%; }
+/* Der Kamera-Knopf bleibt 32 px klein (er sitzt auf dem Avatar), getroffen
+   wird er aber auf mindestens 44: die unsichtbare Flaeche ragt 8 px ueber
+   den Rand hinaus (D7). */
+.pa-foto::before { content: ''; position: absolute; inset: -8px; border-radius: 50%; }
 .pa-mitte { grid-area: mitte; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .pa-namen { display: flex; flex-direction: column; min-width: 0; }
 .pa-name { font-family: var(--font-display); font-size: 2rem; letter-spacing: 0.02em; text-transform: uppercase; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -6561,7 +6605,7 @@ body.fix-spiel #screen-hunter.active { flex: 1 1 auto; height: auto; min-height:
 .pa-gruppe.leer { color: var(--muted); }
 .pa-gruppe.active { background: #2a2224; box-shadow: inset 0 0 0 1.5px var(--aktiv-linie), 0 0 18px var(--schein-weich); }
 button.pa-gruppe { cursor: pointer; }
-.pa-pfeil { flex: none; color: #5a5052; font-size: 1.3rem; font-weight: 700; }
+.pa-pfeil { flex: none; color: #857a7b; font-size: 1.3rem; font-weight: 700; }
 .pa-pad { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
 .pa-pad button { min-height: 44px; margin: 0; padding: 0; border-radius: 8px; background: #241d1f; border: none; color: var(--text); font-family: var(--font-cond); font-weight: 700; font-size: 1.05rem; text-transform: none; letter-spacing: 0; }
 .pa-pad button.haupt { background: var(--aktiv-linie); color: #0d0a0b; }
@@ -6668,7 +6712,7 @@ button.pa-gruppe { cursor: pointer; }
 .ft-darts button, .ft-segs button { height: 40px; min-height: 0; margin: 0; }
 .ft-slots { display: flex; gap: 6px; }
 .ft-slot { flex: 1 1 0; min-width: 0; height: 48px; margin: 0; padding: 0; border-radius: 10px; background: #241d1f; border: none; color: var(--text); font-family: var(--font-cond); font-weight: 700; font-size: 1.3rem; text-transform: none; letter-spacing: 0; }
-.ft-slot.leer { color: #5a5052; }
+.ft-slot.leer { color: #857a7b; }
 .ft-slot.active { background: #2a2224; box-shadow: inset 0 0 0 1.5px var(--aktiv-linie), 0 0 18px var(--schein-weich); color: #fff; }
 .ft-check { margin: 0; font-size: 0.85rem; line-height: 1.35; color: #857a7b; }
 .ft-check.gut { color: #6fe0a8; }
@@ -6712,7 +6756,7 @@ button.pa-gruppe { cursor: pointer; }
 .overlay.bogen .fi-rest { font-variant-numeric: tabular-nums; }
 .overlay.bogen .fi-diff .fi-rest { text-align: right; color: var(--text); }
 .overlay.bogen .fi-alt { color: #857a7b; overflow: hidden; text-overflow: ellipsis; }
-.overlay.bogen .fi-pfeil { color: #5a5052; }
+.overlay.bogen .fi-pfeil { color: #857a7b; }
 .overlay.bogen .fi-neu { color: var(--laser-hell); overflow: hidden; text-overflow: ellipsis; }
 .overlay.bogen .dl-fuss .btn:disabled { opacity: 0.4; }
 
@@ -6743,14 +6787,14 @@ button.pa-gruppe { cursor: pointer; }
   .pa-chip { font-size: clamp(11px, 1.8vh, 19px); }
   .pa-rechts { align-self: stretch; flex-direction: column; justify-content: space-between; align-items: flex-end; padding: clamp(12px, 2.4vh, 28px) 0; flex-wrap: nowrap; }
   .pa-btn { min-height: 0; height: clamp(44px, 5vh, 52px); padding: 0 clamp(12px, 1.3vw, 20px); font-size: clamp(12px, 1.9vh, 19px); }
-  .pa-form .kt { font-size: clamp(10px, 1.6vh, 17px); }
-  .pa-form .form { width: clamp(22px, 3.6vh, 38px); height: clamp(22px, 3.6vh, 38px); font-size: clamp(10px, 1.8vh, 19px); }
+  .pa-form .kt { font-size: clamp(11px, 1.6vh, 17px); }
+  .pa-form .form { width: clamp(22px, 3.6vh, 38px); height: clamp(22px, 3.6vh, 38px); font-size: clamp(11px, 1.8vh, 19px); }
   .pa-kacheln { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); min-height: 0; gap: clamp(8px, 1.4vw, 22px); }
   .pa-kacheln.drei { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr); }
   .pa-kachel { min-height: 0; overflow: hidden; gap: clamp(8px, 1.6vh, 18px); padding: clamp(12px, 2.2vh, 26px) clamp(12px, 1.6vw, 26px); }
   .pa-finish > .pa-btn { height: clamp(44px, 6vh, 62px); }
   .pa-gruppe { min-height: 0; height: clamp(44px, 9vh, 96px); font-size: clamp(20px, 4.6vh, 50px); }
-  .pa-gruppe small { font-size: clamp(10px, 1.6vh, 16px); }
+  .pa-gruppe small { font-size: clamp(11px, 1.6vh, 16px); }
   .pa-pad { flex: 1 1 auto; min-height: 0; grid-auto-rows: minmax(0, 1fr); }
   .pa-pad button { min-height: 0; font-size: clamp(12px, 2.1vh, 22px); }
   .pa-text { font-size: clamp(11px, 1.8vh, 18px); }
@@ -6809,7 +6853,7 @@ button.pa-gruppe { cursor: pointer; }
   .ft-pad { flex: 0 1 46%; grid-template-columns: repeat(11, minmax(0, 1fr)); align-content: start; }
   .ft-pad button { height: clamp(44px, 4.8vh, 50px); font-size: clamp(13px, 2.2vh, 23px); }
   .ft-alt b { font-size: clamp(12px, 2vh, 20px); }
-  .ft-alt span { font-size: clamp(10px, 1.5vh, 15px); }
+  .ft-alt span { font-size: clamp(11px, 1.5vh, 15px); }
 }
 /* Flach (Handy quer): Ausweis kompakt, Kacheln nebeneinander ohne festen Rahmen. */
 @media (min-width: 700px) and (max-height: 500px) {
@@ -6879,7 +6923,7 @@ button.pa-gruppe { cursor: pointer; }
 .mt-text b { font-size: 0.95rem; }
 .mt-text small { color: var(--muted); font-size: 0.8rem; line-height: 1.3; }
 .mt-kanaele { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-.mt-kanal { min-height: 38px; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: var(--muted); font-family: var(--font-cond); font-weight: 700; font-size: 0.82rem; letter-spacing: 0.04em; text-transform: uppercase; }
+.mt-kanal { min-height: 44px; border-radius: 10px; border: 1px solid var(--line); background: transparent; color: var(--muted); font-family: var(--font-cond); font-weight: 700; font-size: 0.82rem; letter-spacing: 0.04em; text-transform: uppercase; }
 .mt-kanal.active { background: var(--aktiv-flaeche); border-color: var(--aktiv-linie); color: #fff; }
 .mt-fest { font-size: 0.8rem; color: var(--muted); }
 #overlay-card .mt-meldung { margin: 6px 0 10px; color: var(--text); text-align: left; }
@@ -6888,7 +6932,27 @@ button.pa-gruppe { cursor: pointer; }
   .mt-kanaele { flex: none; width: 300px; }
 }
 
+/* iOS-Glas-Blur am oberen Rand (installierte App, iOS 26.1+/27): ein deckender,
+   fixierter Streifen in der Seitenfarbe am Rand laesst den System-Blur
+   verschwinden. Kein Schleier, kein Verlauf - nur das glatte --bg, nur im
+   Standalone-Modus; in der Seitenfarbe ist er unsichtbar, zaehlt fuer das
+   System aber als gemalte Flaeche (Rezept aus tips.ojapp.app). */
+.ios-oben { display: none; }
+@media (display-mode: standalone) {
+  .ios-oben {
+    display: block; position: fixed; inset: 0 0 auto; height: 11px;
+    pointer-events: none; z-index: 1000;
+    background: var(--bg);
+  }
+}
+
 </style>
+<!-- Gemalter Streifen ganz oben, nur in der installierten App: seit iOS 26/27 legt
+     das System einen Glas-Blur ueber den oberen Rand der Seite. Ein deckend
+     gefaerbtes, fixiertes Element am Rand nimmt ihm die Flaeche (Workaround aus
+     tips.ojapp.app, Julius 08.11.). Nicht klickbar, keine eigene Optik. -->
+<div class="ios-oben" aria-hidden="true"></div>
+
 <div id="save-warning" class="save-warning hidden">
   ⚠️ Der Spielstand kann gerade nicht gespeichert werden – bitte Speicherplatz prüfen
   oder den privaten Modus verlassen. Der Abend läuft weiter, geht aber beim Neustart verloren.
@@ -7677,7 +7741,7 @@ button.pa-gruppe { cursor: pointer; }
     <div id="pad-total" class="pad">
       <div class="display-row">
         <div id="score-display" class="score-display">0</div>
-        <div id="input-error" class="input-error"></div>
+        <div id="input-error" class="input-error" role="status" aria-live="polite"></div>
       </div>
       <div class="quick-row" id="quick-row"></div>
       <div class="keypad">
@@ -7693,7 +7757,7 @@ button.pa-gruppe { cursor: pointer; }
     <!-- Einzel-Dart-Eingabe: ein Raster - oben Double/Triple (Schalter)
          und Bull, dann 1 bis 20, unten Zurueck, 0 und OK. -->
     <div id="pad-darts" class="pad hidden">
-      <div id="darts-error" class="input-error"></div>
+      <div id="darts-error" class="input-error" role="status" aria-live="polite"></div>
       <div class="num-grid" id="num-grid"></div>
     </div>
 
@@ -7707,7 +7771,7 @@ button.pa-gruppe { cursor: pointer; }
       <div id="key-hist-l" class="key-hist"></div>
       <div class="key-mitte">
         <div id="key-display" class="key-display" aria-live="polite"></div>
-        <div id="key-error" class="input-error"></div>
+        <div id="key-error" class="input-error" role="status" aria-live="polite"></div>
       </div>
       <div id="key-hist-r" class="key-hist"></div>
     </div>
@@ -7886,7 +7950,7 @@ button.pa-gruppe { cursor: pointer; }
     <div class="scoreboard ff-karten" id="ff-karten"></div>
     <div class="ff-unten">
       <div id="ff-hist-l" class="key-hist"></div>
-      <div class="key-mitte"><div id="ff-display" class="key-display" aria-live="polite"></div><div id="ff-error" class="input-error"></div></div>
+      <div class="key-mitte"><div id="ff-display" class="key-display" aria-live="polite"></div><div id="ff-error" class="input-error" role="status" aria-live="polite"></div></div>
       <div id="ff-hist-r" class="key-hist"></div>
     </div>
   </div>
@@ -7958,7 +8022,7 @@ button.pa-gruppe { cursor: pointer; }
       <div class="kw-ziel" id="kw-ziel" aria-live="polite"></div>
       <div class="kw-team" id="kw-team"></div>
       <div class="kw-verlauf" id="kw-verlauf"></div>
-      <div class="kw-ff-unten nur-fern"><div class="key-mitte"><div id="kw-ff-display" class="key-display" aria-live="polite"></div><div id="kw-ff-error" class="input-error"></div></div></div>
+      <div class="kw-ff-unten nur-fern"><div class="key-mitte"><div id="kw-ff-display" class="key-display" aria-live="polite"></div><div id="kw-ff-error" class="input-error" role="status" aria-live="polite"></div></div></div>
       <div class="kw-verlauf-gross nur-fern hidden" id="kw-verlauf-gross" aria-live="polite"></div>
     </div>
     <div class="kw-rechts nur-pad">
@@ -7969,7 +8033,7 @@ button.pa-gruppe { cursor: pointer; }
         <button class="xk-btn" id="kw-swap" data-action="kw-swap" aria-label="Eingabe wechseln"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h14l-3-3M20 16H6l3 3"></path></svg></button>
       </div>
       <div id="kw-pad-total" class="pad kw-pad">
-        <div class="display-row"><div id="kw-display" class="score-display">0</div><div id="kw-error" class="input-error"></div></div>
+        <div class="display-row"><div id="kw-display" class="score-display">0</div><div id="kw-error" class="input-error" role="status" aria-live="polite"></div></div>
         <div class="quick-row" id="kw-quick"></div>
         <div class="kw-keys">
           <button data-key="1">1</button><button data-key="2">2</button><button data-key="3">3</button>
@@ -8044,7 +8108,10 @@ button.pa-gruppe { cursor: pointer; }
 </section>
 
 <!-- ============ OVERLAY ============ -->
-<div id="overlay" class="overlay hidden">
+<!-- Ein Dialog fuer Hilfstechnik: role/aria-modal fest, aria-labelledby setzt
+     app.js je Dialog auf die Ueberschrift (dialogBeschriften); waehrend er
+     offen ist, sind die Bildschirme dahinter inert. -->
+<div id="overlay" class="overlay hidden" role="dialog" aria-modal="true">
   <div class="overlay-card" id="overlay-card"></div>
 </div>
 
@@ -10427,7 +10494,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
  * Dart-Turnier – Jeder gegen jeden, 501 Double Out.
  * Kein Framework, kein Build: State im Speicher, Persistenz via localStorage.
  *
- * Datenmodell (v2):
+ * Datenmodell (v3, siehe STAND_VERSION und die Migrationskette in ladeStand):
  *   profiles  dauerhafte Spieler (Name + Bild), überleben jedes Turnier
  *   lineup    Profil-IDs des laufenden Turniers
  *   matches   Spiele des laufenden Turniers (Legs -> Aufnahmen -> Darts)
@@ -10480,6 +10547,22 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   var IMPOSSIBLE = { 163: 1, 166: 1, 169: 1, 172: 1, 173: 1, 175: 1, 176: 1, 178: 1, 179: 1 };
   var MIN_DARTS_FOR_AVG = 9;    // ab wann ein Average in der Rangliste zählt
   var MAX_HISTORY = 500;        // so viele Spiele bleiben archiviert
+  /* Die Grenzen der Scheibe: 170 ist das hoechste Finish mit drei Darts
+     (T20 T20 Bull) und damit der Beginn des Finish-Bereichs, 180 die
+     hoechste Aufnahme. Die Konstanten stehen dort, wo die Zahl genau das
+     bedeutet - nicht bei Winkeln oder Anzeigetexten. */
+  var MAX_CHECKOUT = 170;
+  var MAX_VISIT = 180;
+  /* Die Aufnahme, die den Loewen ruft (1860: SECHZIG!). */
+  var FEIER_60 = 60;
+  /* Was der Spielberichtsbogen als Highlight abfragt: Finishes ab 100,
+     gewonnene 501er-Legs bis 21 Darts (und jeder 180er). */
+  var HIGHFINISH_AB = 100;
+  var SHORTLEG_BIS = 21;
+  /* Version des gespeicherten Stands. Bei jeder Schema-Aenderung hochzaehlen
+     und eine Stufe in `migrationen` ergaenzen - nur so greift der Schutz
+     "Stand einer neueren Version nicht anfassen" (ladeStand) wirklich. */
+  var STAND_VERSION = 3;
 
   var S = null;
   /* Doppeltipp-Schutz, zweifach:
@@ -10556,9 +10639,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
   function newState() {
     return {
-      v: 2,
+      v: STAND_VERSION,
       screen: 'setup',
-      settings: { start: 501, bestOf: 1, dartModeFrom: 170, cricketScoring: 1, finisherTo: 5, rtwBoost: 1, hunterVariante: 0, hunterHandicap: {}, hunterLeben: 1, turnierModus: 0, quickModus: 0, quickSaetze: 1, quickLegs: 1, ton: 1, feiern: 1, tastatur: 0, dartModeMerk: 170 },
+      settings: { start: 501, bestOf: 1, dartModeFrom: MAX_CHECKOUT, cricketScoring: 1, finisherTo: 5, rtwBoost: 1, hunterVariante: 0, hunterHandicap: {}, hunterLeben: 1, turnierModus: 0, quickModus: 0, quickSaetze: 1, quickLegs: 1, ton: 1, feiern: 1, tastatur: 0, dartModeMerk: MAX_CHECKOUT },
       mode: '501',
       game: null,
       profiles: DEFAULT_PLAYERS.map(function (n, i) {
@@ -10581,8 +10664,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   }
   function uiMerken() {
     var ov = UI.overlay && (UI.overlay.type === 'checkout-darts' || UI.overlay.type === 'leg-done') ? UI.overlay : null;
+    /* `fremd`: die Darts stammen vom Mitspieler (Online-Spiel). Ohne das
+       Merkmal waere die Sperre gegen das Loeschen fremder Darts nach einem
+       Neuladen weg (fremdeDartsSperre). */
     S.ui = (UI.darts.length || ov) && uiKennung()
-      ? { k: uiKennung(), darts: UI.darts.map(function (d) { return { m: d.m, n: d.n, v: d.v }; }), overlay: ov }
+      ? { k: uiKennung(), darts: UI.darts.map(function (d) { return { m: d.m, n: d.n, v: d.v }; }), overlay: ov,
+          fremd: !!(UI.dartsFremd && UI.darts.length), fremdZeit: UI.dartsFremd ? (UI.dartsFremdZeit || null) : null }
       : null;
   }
   /* Eine Nachmeldung, die nach einem spontanen Wechsel noch offen war,
@@ -10610,7 +10697,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (S.screen !== 'game') return;
     var m = currentMatch();
     if (!m || m.done) return;
-    if (Array.isArray(u.darts) && u.darts.length < 3) UI.darts = u.darts;
+    if (Array.isArray(u.darts) && u.darts.length < 3) {
+      UI.darts = u.darts;
+      if (u.fremd && UI.darts.length) { UI.dartsFremd = true; UI.dartsFremdZeit = u.fremdZeit || Date.now(); }
+    }
     if (u.overlay && u.overlay.type === 'checkout-darts' && !UI.darts.length) UI.overlay = u.overlay;
     /* Der Leg-Dialog gilt nur, solange das naechste Leg noch nicht begonnen hat. */
     if (u.overlay && u.overlay.type === 'leg-done') {
@@ -10650,10 +10740,95 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       if (saveBroken) { saveBroken = false; renderSaveWarning(); }
     } catch (e) {
       // Speicher voll oder privater Modus: der Abend läuft weiter, aber
-      // stillschweigend Daten zu verlieren wäre das Schlimmste.
-      if (!saveBroken) { saveBroken = true; renderSaveWarning(); }
+      // stillschweigend Daten zu verlieren wäre das Schlimmste. Bei vollem
+      // Speicher wird erst Platz geschaffen (speicherEntlasten) - nur wenn
+      // auch das nicht reicht, bleibt die Warnung stehen.
+      if (speicherEntlasten(e)) { if (saveBroken) saveBroken = false; renderSaveWarning(); }
+      else if (!saveBroken) { saveBroken = true; renderSaveWarning(); }
     }
     liveAnstossen();
+  }
+
+  /*
+   * Speicher voll (QuotaExceeded). Statt aufzugeben in zwei Stufen Platz
+   * schaffen und sofort wieder speichern:
+   *  1. Den aeltesten Archiv-Eintraegen die Einzeldart-Details (v.k) nehmen.
+   *     Die braucht nur die Doppelquote; Average, 180er, Finishes und Legs
+   *     bleiben vollstaendig. Spiele, die der Server schon hat, zuerst (dort
+   *     liegen die Details weiter) - falls die Online-Schicht das verraet.
+   *  2. Das Archiv von hinten kuerzen, bis es passt (nie unter 20 Spiele).
+   * `speicherEntlastet` verhindert, dass ein Fehlschlag mitten in der
+   * Entlastung noch einmal hier landet - kein Karussell.
+   */
+  var speicherEntlastet = false;
+  var speicherHinweis = '';   // was die Entlastung getan hat (Warn-Balken)
+  var MIN_HISTORY_NOTFALL = 20;
+  function speicherVoll(e) {
+    if (!e) return false;
+    return e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED' || e.code === 22 || e.code === 1014;
+  }
+  function speicherEntlasten(e) {
+    if (!speicherVoll(e) || speicherEntlastet || !S || !Array.isArray(S.history) || !S.history.length) return false;
+    speicherEntlastet = true;
+    var passt = function () {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(S)); return true; }
+      catch (e2) { if (speicherVoll(e2)) return false; throw e2; }
+    };
+    var gesichert = function (h) {
+      return !!(window.DartSync && typeof window.DartSync.hochgeladen === 'function' && window.DartSync.hochgeladen(h.id));
+    };
+    var detailsWeg = function (h) {
+      var n = 0;
+      (h.matches || []).forEach(function (m) {
+        (m.legs || []).forEach(function (l) {
+          (l.visits || []).forEach(function (v) { if (v && v.k) { delete v.k; n++; } });
+        });
+      });
+      return n;
+    };
+    try {
+      /* Stufe 1: aelteste zuerst (das Archiv ist juengste-zuerst sortiert),
+         darunter die gesicherten vor den nur lokalen. */
+      var reihe = S.history.slice().reverse();
+      reihe.sort(function (a, b) { return (gesichert(b) ? 1 : 0) - (gesichert(a) ? 1 : 0); });
+      var entfernt = 0, i = 0;
+      while (i < reihe.length) {
+        /* In Vierteln, nicht je Spiel: jeder Versuch serialisiert den ganzen Stand. */
+        var bis = Math.min(reihe.length, i + Math.max(1, Math.ceil(reihe.length / 4)));
+        for (; i < bis; i++) entfernt += detailsWeg(reihe[i]);
+        if (entfernt && passt()) {
+          speicherHinweis = 'Speicher voll – aus ' + plural(i, 'altem Spiel', 'alten Spielen') + ' wurden die Einzeldart-Details entfernt (Average, 180er und Finishes bleiben). Bitte Spiele im Konto sichern.';
+          speicherEntlastet = false;
+          return true;
+        }
+      }
+      /* Stufe 2: das Archiv kuerzen - in derselben Reihenfolge wie oben
+         (aelteste zuerst, gesicherte vor nur lokalen), damit ein Spiel, das
+         noch in der Upload-Schlange wartet, als letztes dran ist. Klappt
+         auch das nicht, kommt alles zurueck: nichts wird still verloren. */
+      var kopie = S.history.slice();
+      var vorher = S.history.length;
+      var weg = {};
+      var r = 0;
+      while (S.history.length > MIN_HISTORY_NOTFALL && r < reihe.length) {
+        var schritt = Math.max(1, Math.ceil(S.history.length / 10));
+        for (var k = 0; k < schritt && r < reihe.length && S.history.length - k > MIN_HISTORY_NOTFALL; r++) {
+          if (!weg[reihe[r].id]) { weg[reihe[r].id] = true; k++; }
+        }
+        S.history = kopie.filter(function (h) { return !weg[h.id]; });
+        if (passt()) {
+          speicherHinweis = 'Speicher voll – die ' + plural(vorher - S.history.length, 'aelteste Spiel wurde', 'aeltesten Spiele wurden') + ' aus dem Archiv entfernt. Bitte Spiele im Konto sichern.';
+          speicherEntlastet = false;
+          return true;
+        }
+      }
+      S.history = kopie;
+      speicherEntlastet = false;
+      return false;
+    } catch (e3) {
+      speicherEntlastet = false;
+      return false;
+    }
   }
 
   /*
@@ -10681,7 +10856,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       /* Beim App-Start steht die Online-Schicht noch nicht: dann merken und
          die Meldung an Server und Mitspieler nachreichen (offeneEndenSenden). */
       if (S.game.online && !S.game.online.wartet) {
-        if (window.DartSync && window.DartSync.live && liveNutzer()) liveEnde(S.game);
+        if (window.DartSync && window.DartSync.live && liveNutzer()) liveEnde(S.game, true);
         else S.offeneEnden.push({ typ: 'live', sid: S.game.online.sid });
       }
       if (S.game.done) {
@@ -10689,6 +10864,13 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
            ins Archiv. */
         archiveGame(S.game);
         weg.push(art + ' (entschieden) wurde gespeichert');
+      } else if (entschiedeneLegs(S.game)) {
+        /* Angefangen, aber mit fertigen Legs: die gehen wie beim Abbruch
+           von Hand ("Gespielte Legs behalten") ohne Sieger in die
+           Statistik - Average, 180er und Finishes sind echt geworfen. */
+        var fertigeLegs = entschiedeneLegs(S.game);
+        archiveGame(S.game, true);
+        weg.push(art + ' (angefangen): ' + (fertigeLegs === 1 ? 'das fertige Leg wurde' : 'die ' + fertigeLegs + ' fertigen Legs wurden') + ' gespeichert, das offene verworfen');
       } else {
         /* Angefangen und liegen geblieben: verworfen, nichts gespeichert. */
         weg.push('das angefangene ' + art + ' wurde beendet und nicht gespeichert');
@@ -10735,10 +10917,15 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (!document.hidden && S && altesSpielBeenden()) render();
   });
 
+  var saveWarnungText = null;   // der Standardtext aus dem HTML, einmal gemerkt
   function renderSaveWarning() {
     var bar = $('save-warning');
     if (!bar) return;
-    bar.classList.toggle('hidden', !saveBroken);
+    if (saveWarnungText === null) saveWarnungText = bar.textContent;
+    /* Hat die Entlastung gegriffen, steht ihr Weg im Balken - sonst die
+       allgemeine Warnung. Der Hinweis bleibt bis zum naechsten Laden. */
+    bar.textContent = saveBroken ? saveWarnungText : speicherHinweis ? '⚠️ ' + speicherHinweis : saveWarnungText;
+    bar.classList.toggle('hidden', !saveBroken && !speicherHinweis);
   }
 
   /*
@@ -10783,16 +10970,49 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         : '⚠️ Der gespeicherte Stand war beschädigt und ließ sich nicht lesen. Er ist als Sicherung aufgehoben (dart-turnier-v1.kaputt), die App startet frisch.';
   }
 
+  /*
+   * Migrationskette: migrationen[n] hebt einen Stand von Version n auf n+1.
+   * ladeStand wendet alle Stufen bis STAND_VERSION der Reihe nach an.
+   *   1 -> 2: aus den Turnier-Spielern werden dauerhafte Profile (migrate1to2).
+   *   2 -> 3: alles, was seit v2 dazukam (Einstellungen fuer Cricket, RTW,
+   *           Hunter, Schnelles Spiel, Ton, Tastatur, Liga-Felder) steht
+   *           seit Jahren nur als Default beim Laden - jetzt wird es fest in
+   *           den Stand geschrieben. Inhaltlich aendert sich nichts, aber
+   *           die Versionsnummer stimmt wieder, und ein Zurueckrollen auf
+   *           eine aeltere App trifft auf den Schutz in ladeStand.
+   */
+  var migrationen = {};
+  migrationen[1] = migrate1to2;
+  migrationen[2] = function (s) { standErgaenzen(s); return s; };
+
   function ladeStand(raw) {
     try {
       var s = JSON.parse(raw);
       if (!s) return null;
-      if (typeof s.v === 'number' && s.v > 2) { ladeProblem = 'neuer'; return null; }
-      if (s.v === 1) s = migrate1to2(s);
-      if (s.v !== 2 || !Array.isArray(s.profiles)) return null;
+      if (typeof s.v === 'number' && s.v > STAND_VERSION) { ladeProblem = 'neuer'; return null; }
+      if (typeof s.v !== 'number' || s.v < 1) return null;
+      for (var stufe = s.v; stufe < STAND_VERSION; stufe++) {
+        if (typeof migrationen[stufe] !== 'function') return null;
+        s = migrationen[stufe](s) || s;
+        s.v = stufe + 1;
+      }
+      if (s.v !== STAND_VERSION || !Array.isArray(s.profiles)) return null;
+      /* Auch ein Stand der aktuellen Version wird ergaenzt: ein Feld, das
+         bei einer kaputten Speicherung fehlt, ist kein Grund, Profile und
+         Archiv zu verwerfen. */
+      standErgaenzen(s);
+      return s;
+    } catch (e) { return null; }
+  }
+
+  /* Fehlende Felder nachruesten - die Defaults, die ein Stand der aktuellen
+     Version haben muss. Wirft, wenn der Stand grundlegend kaputt ist
+     (ladeStand faengt das und sichert den Rohtext). */
+  function standErgaenzen(s) {
       if (!Array.isArray(s.history)) s.history = [];
       if (!Array.isArray(s.lineup)) s.lineup = [];
       if (!s.mode) s.mode = '501';
+      if (!s.settings || typeof s.settings !== 'object') s.settings = newState().settings;
       if (START_SCORES.indexOf(s.settings.start) < 0) s.settings.start = 501;
       if (s.game === undefined) s.game = null;
       /* Ein Finisher-Spiel ohne Runden kann es nicht geben – ein solcher
@@ -10800,6 +11020,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
          auffliegen. Lieber verwerfen als abstürzen. */
       if (s.game && s.game.kind === 'finisher' && !Array.isArray(s.game.rounds)) s.game = null;
       if (s.game && s.game.kind === 'kaiwen' && !(Array.isArray(s.game.versuche) && s.game.versuche.length)) s.game = null;
+      /* Ein Spiel ohne Spielerliste kann es ebenso wenig geben: jeder
+         Spielbildschirm liest sie als Erstes. Ohne Spiel gehoert der
+         Bildschirm zurueck ins Setup. (Bis v3 fing das nur der Zufall ab:
+         solche Staende kamen ueber den .kaputt-Pfad als frischer Stand.) */
+      if (s.game && !Array.isArray(s.game.players) && !Array.isArray(s.game.p)) s.game = null;
+      if (!s.game && (SPIEL_SCREENS[s.screen] || s.screen === 'bulloff') && !(Array.isArray(s.matches) && s.matches.length)) s.screen = 'setup';
       if (s.settings.cricketScoring === undefined) s.settings.cricketScoring = 1;
       /* Vor der Wahl gab es nur Boost -- wer von damals kommt, behaelt das. */
       if (s.settings.rtwBoost === undefined) s.settings.rtwBoost = 1;
@@ -10818,7 +11044,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
          dem neuen Startbild; der Merkwert haelt die Einzel-Dart-Grenze fest,
          solange "Standard" (immer die Aufnahme als Zahl) gewaehlt ist. */
       if (s.settings.tastatur !== 1) s.settings.tastatur = 0;
-      if (!(s.settings.dartModeMerk > 0)) s.settings.dartModeMerk = s.settings.dartModeFrom > 0 ? s.settings.dartModeFrom : 170;
+      if (!(s.settings.dartModeMerk > 0)) s.settings.dartModeMerk = s.settings.dartModeFrom > 0 ? s.settings.dartModeFrom : MAX_CHECKOUT;
       if (!(s.settings.quickLegs >= 1)) s.settings.quickLegs = 1;
       s.profiles.forEach(function (p, i) { if (typeof p.hue !== 'number') p.hue = HUES[i % HUES.length]; });
       /* Lieblingsdoppel -> Lieblingsgruppe (Checkout-Engine, Phase 2). */
@@ -10850,7 +11076,6 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
          siehe ligaUnser(). */
       (s.history || []).forEach(function (h) { if (h && h.liga && Array.isArray(h.matches)) ligaUnsereIds(h); });
       return s;
-    } catch (e) { return null; }
   }
 
   /* Aus den Turnier-Spielern der ersten Version werden dauerhafte Profile. */
@@ -11191,7 +11416,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     m.p.forEach(function (id) {
       if (id === active) return;
       var r = remainingIn(leg, id);
-      if (r <= 170 && Checkout.possible(r, 3)) checkout = true;
+      if (r <= MAX_CHECKOUT && Checkout.possible(r, 3)) checkout = true;
     });
     if (!checkout && m.p.length > 1) {
       /* Entscheidend: im letzten moeglichen Satz steht jeder ein Leg vor dem
@@ -11358,9 +11583,6 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
      dort startet er am Board-iPad von selbst. In normalen Turnieren und im
      Schnellen Spiel laesst er sich per Knopf dazuschalten; nur allein gibt
      es ihn nicht (eine Seite des Bildes bliebe leer). */
-  function ligaEinzel() {
-    return !!(S.tour && S.tour.liga) && !(S.game && S.game.kind === 'quick');
-  }
   function turnierErlaubt() {
     if (S.game && S.game.kind === 'quick') return S.game.p.length > 1;
     return !!S.tour;
@@ -11792,10 +12014,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       vgl.neu.forEach(function (e) {
         if (schonDa[e.key]) { schonDa[e.key]--; return; }
         var v = e.v;
-        if (!v || v.b || (v.s !== 180 && v.s !== 60)) return;
+        if (!v || v.b || (v.s !== MAX_VISIT && v.s !== FEIER_60)) return;
         if (!beste || v.s > beste.s) beste = v;
       });
-      if (beste && beste.s === 180) feiere180(beste.p);
+      if (beste && beste.s === MAX_VISIT) feiere180(beste.p);
       else if (beste) feiere60(beste.p);
     }
 
@@ -11848,6 +12070,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         var lz = neu.legs.filter(function (l) { return l.winner; }).pop();
         UI.overlay = { type: 'leg-done', pid: lz.winner, satz: satzStand(neu).satzZu, fremd: true };
       }
+      /* Der andere hat das Leg-Ende zurueckgenommen (Undo): der Dialog
+         hier gehoert zu einem Leg, das es nicht mehr gibt. */
+      if (wonNeu < wonAlt && UI.overlay && UI.overlay.type === 'leg-done') UI.overlay = null;
     }
     if (S.screen === 'bulloff' && neu.started) S.screen = spielScreen(neu.kind);
     /* Konflikt: der andere war schneller. Steht meine Eingabe schon in
@@ -11950,11 +12175,49 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       (g.online.wartet ? ' · wird angelegt …' : st && st.stoerung ? ' · keine Verbindung' : '');
   }
 
-  function liveEnde(g) {
+  function liveEnde(g, ohneKonflikt) {
     if (!g || !g.online || !window.DartSync || !window.DartSync.live) return;
     if (g.online.wartet) return;   // nie beim Server angekommen
     var stand = S.game === g ? liveStand() : null;
-    window.DartSync.live.ende(g.online.sid, stand);
+    /* Auch ohne eigene ungesendete Aenderung reist die bekannte Version mit:
+       liveStand() ist dann null (Hash stimmt), aber der andere kann seit dem
+       letzten PUT etwas zurueckgenommen haben. Nur mit `seq` kann der Server
+       das merken - sonst schliesst er blind mit dem fremden Stand. */
+    if (!stand && S.game === g && g.online.seq) stand = { seq: g.online.seq };
+    var p = window.DartSync.live.ende(g.online.sid, stand);
+    if (!p || typeof p.then !== 'function') return;
+    /* 409: der andere hat nach meinem letzten Stand noch etwas geaendert
+       (etwa den Checkout zurueckgenommen). Dann nicht blind zumachen -
+       der frische Server-Stand wird wie jeder andere uebernommen, und wer
+       beenden wollte, prueft und tippt noch einmal. Andere Fehler schluckt
+       die Online-Schicht weiterhin selbst. `ohneKonflikt` (12-h-Aufraeumen):
+       ein uraltes Spiel wird nicht wiederbelebt, der Server raeumt es selbst. */
+    p.then(null, function (e) {
+      if (!e || e.status !== 409 || !e.stand || ohneKonflikt) return;
+      liveEndeKonflikt(g, e.stand);
+    });
+  }
+  function liveEndeKonflikt(g, spiel) {
+    if (S.game && S.game !== g) return;   // laengst ein neues Spiel angefangen: nicht dazwischenfunken
+    if (!S.game) {
+      /* Schon ins Archiv geschrieben: der Eintrag traegt den alten Stand -
+         weg damit, das Spiel laeuft weiter. */
+      S.history = S.history.filter(function (h) { return h.id !== g.id; });
+      S.game = g;
+      S.screen = spielScreen(g.kind);
+      /* Der alte Upload darf nicht stehen bleiben: die naechste Fassung
+         ersetzt ihn auf dem Server (sync.js schickt `ersetzen`). */
+      if (window.DartSync && typeof window.DartSync.spielZurueckziehen === 'function') window.DartSync.spielZurueckziehen(g.id);
+    }
+    g.online.seq = 0;   // damit der Server-Stand als neuer gilt (liveUebernehmen prueft seq)
+    liveUebernehmen(spiel, true);
+    /* War der Server-Stand schon "zu" (der andere hat inzwischen beendet),
+       hat liveUebernehmen das Spiel archiviert - dann kein "erneut beenden". */
+    if (S.game === g) {
+      UI.overlay = { type: 'hinweis', titel: 'Noch nicht beendet',
+        text: (spiel.geaendertVonName || 'Dein Mitspieler') + ' hat noch etwas geändert – bitte den Stand prüfen und dann erneut beenden.' };
+    }
+    save(); render();
   }
 
   /* Neues Spiel online anmelden. Klappt es nicht (kein Netz, Server weg),
@@ -12013,13 +12276,22 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var text = JSON.stringify(neu);
     neu.online = liveMeta(spiel, text);
     liveNamenUebernehmen(neu);
+    /* Die halbfertige Aufnahme des Werfers kommt mit - wie in
+       liveUebernehmen gehoert sie in UI.darts, nicht in den Stand: bliebe
+       `offen` am Objekt, ginge der naechste PUT ohne sie hinaus (liveText
+       laesst den Schluessel weg), und der Werfer saehe seine Darts
+       verschwinden. Der Hash ist ueber den Text MIT `offen` gebildet,
+       genau wie der naechste eigene liveText ihn wieder liefert. */
+    var offen = Array.isArray(neu.offen) ? neu.offen.map(function (d) { return { m: d.m, n: d.n, v: d.v }; }) : [];
+    delete neu.offen;
     S.game = neu;
     S.mode = neu.kind;
     /* Aufstellung und Online-Schalter mitnehmen: "Nochmal spielen" soll
        hier dieselben Leute wieder online zusammenbringen. */
     S.lineup = (neu.players || []).slice();
     S.settings.online = 1;
-    UI.overlay = null; UI.darts = []; UI.input = ''; UI.error = ''; UI.mult = 1; UI.menu = false;
+    UI.overlay = null; UI.darts = offen; UI.input = ''; UI.error = ''; UI.mult = 1; UI.menu = false;
+    UI.dartsFremd = offen.length > 0; UI.dartsFremdZeit = Date.now();
     UI.turnier = false; UI.bullReihe = [];
     S.screen = neu.started ? spielScreen(neu.kind) : 'bulloff';
     save(); render();
@@ -12200,7 +12472,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
    *   einfach durch sie hindurch; niemand muss auf das Ende warten.
    * - Sie liegt ausserhalb der Screens, render() fasst sie also nicht an.
    */
-  var FEIER_MS = 4600;
+  var FEIER_MS = 2500;
   /* Die Sechzig ist kurz: ein Puls („SECH-ZIG", bum-bum), dann wieder weg –
      sie kommt ja auch deutlich öfter als die 180. Genau so lang wie ihre
      Animation (1,2 s): kuerzer abgeraeumt wirkte der Loewe abgehackt und
@@ -12296,6 +12568,16 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       feierTimer = null;
     }, ruhig ? 900 : SECHZIG_MS);
   }
+  /* Geht ein Dialog auf (Checkout-Frage, Leg-Ende, Hinweis), ist die Feier
+     vorbei: sie laege sonst mit Blur und Konfetti ueber der Frage, die
+     gerade beantwortet werden soll. */
+  function feierAbbrechen() {
+    if (feierTimer) { clearTimeout(feierTimer); feierTimer = null; }
+    var box = $('feier');
+    if (!box || !box.classList.contains('an')) return;
+    box.classList.remove('an', 'sechzig');
+    box.innerHTML = '';
+  }
 
   /* Aufnahme abschließen und Leg-/Matchstand fortschreiben.
      k = Einzeldarts (nur im Einzel-Dart-Modus vorhanden, für Doppelquote). */
@@ -12314,9 +12596,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
        genau die Zwischenaktion, die die SWO dem Schreiber verbietet. */
     var ligaMatch = m.kind !== 'quick' && S.tour && S.tour.liga && !S.tour.liga.uebung;
     // Höher geht es mit drei Darts nicht.
-    if (!isBust && score === 180 && !ligaMatch) feiere180(pid);
+    if (!isBust && score === MAX_VISIT && !ligaMatch) feiere180(pid);
     // Die 60 gehört dem Löwen – bei jeder geworfenen 60 (siehe feiere60).
-    else if (!isBust && score === 60 && !ligaMatch) feiere60(pid);
+    else if (!isBust && score === FEIER_60 && !ligaMatch) feiere60(pid);
 
     UI.input = ''; UI.darts = []; UI.mult = 1; UI.error = '';
     /* "Punkte" von Hand gilt nur fuer diese Aufnahme, danach entscheidet
@@ -12382,7 +12664,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var leg = activeLeg(m);
     var rest = remainingIn(leg, activePlayer(leg, m));
 
-    if (v > 180) { UI.error = 'Maximal 180'; UI.input = ''; render(); return; }
+    if (v > MAX_VISIT) { UI.error = 'Maximal ' + MAX_VISIT; UI.input = ''; render(); return; }
     if (IMPOSSIBLE[v]) { UI.error = v + ' ist mit 3 Darts nicht möglich'; UI.input = ''; render(); return; }
     /* Einzeldarts dieser Aufnahme stehen schon: eine Gesamtzahl daneben
        wuerde sie verwerfen (auch beim Mitspieler im Online-Spiel). */
@@ -12432,7 +12714,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var next = UI.input + k;
     if (next.length > 3) return;
     var val = parseInt(next, 10);
-    if (val > 180) { UI.error = 'Maximal 180'; render(); return; }
+    if (val > MAX_VISIT) { UI.error = 'Maximal ' + MAX_VISIT; render(); return; }
     tipp();
     UI.input = String(val);
     /* Keine automatische Uebernahme mehr: jede Aufnahme wird mit OK
@@ -12505,7 +12787,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var v = leg && leg.visits[idx];
     if (!v) return 'Aufnahme nicht gefunden.';
     if (v.c) return 'Ein Finish lässt sich nicht ändern – dafür bitte zurücknehmen.';
-    if (value > 180) return 'Maximal 180.';
+    if (value > MAX_VISIT) return 'Maximal ' + MAX_VISIT + '.';
     if (IMPOSSIBLE[value]) return value + ' ist mit 3 Darts nicht möglich.';
 
     var backup = { s: v.s, b: v.b, o: v.o, k: v.k, d: v.d };
@@ -12596,7 +12878,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       checkouts: 0, doubleAttempts: 0, doubleHits: 0,
       highCO: 0, highFinishes: 0, highScore: 0,
       s180: 0, s140: 0, s100: 0, s60: 0,
-      bestLeg: null, tournaments: 0, tourWins: 0,
+      bestLeg: null, tournaments: 0, tourWins: 0, ligaTage: 0,
       cricketGames: 0, cricketWins: 0, cricketMarks: 0, cricketDarts: 0,
       rtwGames: 0, rtwWins: 0, rtwBest: null,
       finGames: 0, finWins: 0, finRounds: 0, finDarts: 0, finBest: null, finHigh: 0,
@@ -12693,7 +12975,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
               st.points += v.s;
               rest[v.p] = before - v.s;
               if (v.s > st.highScore) st.highScore = v.s;
-              if (v.s === 180) st.s180++;
+              if (v.s === MAX_VISIT) st.s180++;
               else if (v.s >= 140) st.s140++;
               else if (v.s >= 100) st.s100++;
               else if (v.s >= 60) st.s60++;
@@ -12766,8 +13048,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           if (!m.done) return;
           played[m.p[0]] = 1; played[m.p[1]] = 1;
         });
-        Object.keys(played).forEach(function (id) { if (map[id]) map[id].tournaments++; });
-        if (h.winner && map[h.winner] && played[h.winner]) map[h.winner].tourWins++;
+        /* Ein Ligaspieltag (auch ein Nachtrag) ist kein Turnier: er zaehlt
+           als Ligaspieltag, nicht unter "Turniere gespielt". Einen
+           Turniersieg gibt es dort ohnehin nicht (archiveTournament). */
+        var zaehler = h.liga ? 'ligaTage' : 'tournaments';
+        Object.keys(played).forEach(function (id) { if (map[id]) map[id][zaehler]++; });
+        if (!h.liga && h.winner && map[h.winner] && played[h.winner]) map[h.winner].tourWins++;
         return;
       }
       if (kind === 'cricket') {
@@ -12878,8 +13164,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       var key = function (id) {
         if (!id || unsere[id]) return id;
         if (schluessel[id]) return schluessel[id];
+        /* Der beim Archivieren festgehaltene Name geht vor: er aendert sich
+           nicht mehr, wenn jemand das Gastprofil spaeter umbenennt. Aeltere
+           Eintraege ohne `namen` laufen weiter ueber das Profil. */
         var pr = S.profiles.filter(function (x) { return x.id === id; })[0];
-        var nm = String((pr && (pr.voll || pr.name)) || q.namen[id] || 'Unbekannt').trim();
+        var nm = String(q.namen[id] || (pr && (pr.voll || pr.name)) || 'Unbekannt').trim();
         /* Andere Geraete kennen den Namen nur auf 30 Zeichen gekuerzt (Sync):
            verglichen wird deshalb ueber die ersten 30. */
         var k = 'lg|' + team + '|' + nm.toLowerCase().replace(/\s+/g, ' ').slice(0, 30);
@@ -13081,7 +13370,6 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
   /* ================= Cricket ================= */
   var CRICKET_NUMBERS = [20, 19, 18, 17, 16, 15, 25];
-  function cricketLabel(n) { return n === 25 ? 'Bull' : String(n); }
 
   /* Der Zustand wird immer aus der Wurfliste neu aufgebaut – so ist jeder
      Dart einzeln rücknehmbar und nichts kann auseinanderlaufen. */
@@ -13693,8 +13981,17 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       });
       if (S.history.length > MAX_HISTORY) S.history.length = MAX_HISTORY;
       // Ligaspiele behalten ihre Team-Daten – die Auswertung soll später noch
-      // wissen, gegen wen und an welchem Spieltag das war.
-      if (S.tour && S.tour.liga) S.history[0].liga = S.tour.liga;
+      // wissen, gegen wen und an welchem Spieltag das war. Dazu die Namen
+      // aller Beteiligten, wie sie HEUTE heissen: die Liga-Auswertung
+      // erkennt einen Gegner ueber Team und Namen wieder, und ein spaeter
+      // umbenanntes Gastprofil darf denselben Gegner nicht in zwei Zeilen
+      // spalten (ligaTeamDaten bevorzugt diese Namen).
+      if (S.tour && S.tour.liga) {
+        S.history[0].liga = S.tour.liga;
+        var namen = {};
+        tourPlayers().forEach(function (id) { var pr = profile(id); namen[id] = String(pr.voll || pr.name || '').slice(0, 60); });
+        S.history[0].namen = namen;
+      }
       meldeNeuesSpiel(S.history[0]);
     }
     S.matches = [];
@@ -13856,7 +14153,13 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         geaendert++;
         return;
       }
-      if (vorhanden[s.id] || !s.payload) return;
+      /* Ein Eintrag, der selbst vom Server kam (`von`), ist eine reine Kopie:
+         liefert der Server ihn mit neuer Fassung noch einmal (der Eintragende
+         hat ihn nach einem Konflikt ersetzt), wird die Kopie ausgetauscht.
+         Eigene Eintraege bleiben, wie sie sind. */
+      var alt = vorhanden[s.id];
+      var ersetzt = !!(alt && alt.von && s.payload);
+      if ((alt && !ersetzt) || !s.payload) return;
       if (typeof s.id !== 'string' || !ID_OK.test(s.id) || !spielGueltig(s.payload)) return;   // kaputt: draussen lassen
       var eintrag = s.payload;
       eintrag.id = s.id;
@@ -13876,7 +14179,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       // Wer es eingetragen hat, bleibt sichtbar – bei fremden Einträgen ist
       // das die einzige Möglichkeit nachzuvollziehen, wo sie herkommen.
       if (s.eingetragenVonName) eintrag.von = s.eingetragenVonName;
-      S.history.push(eintrag);
+      if (ersetzt) {
+        var stelle = S.history.indexOf(alt);
+        if (stelle >= 0) S.history[stelle] = eintrag; else S.history.push(eintrag);
+      } else {
+        S.history.push(eintrag);
+      }
       vorhanden[s.id] = eintrag;
       geaendert++;
     });
@@ -14055,9 +14363,48 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (S.screen === 'liga') renderLiga();
     if (S.screen === 'bericht') renderBericht();
     if (S.screen === 'konto' && window.DartKonto) window.DartKonto.render();
+    if (S.screen === 'konto') renderKontoFehlschlaege();
     renderSyncStatus();
     renderOverlay();
     planeBotZug();
+    hashKontoEinloesen();
+  }
+
+  /* Spiele, die die Warteschlange endgueltig abgehakt hat (4xx ausser 429,
+     etwa "Mitspieler ist kein bekannter Account" oder ein zu grosser
+     Eintrag): sie bleiben nur auf diesem Geraet und tauchten bisher nirgends
+     auf. Hier im Konto kurz gelistet, mit dem Servertext als Grund. */
+  function renderKontoFehlschlaege() {
+    var box = $('konto-fehlschlaege');
+    if (!box) return;
+    var liste = window.DartSync && typeof window.DartSync.fehlgeschlagen === 'function' ? window.DartSync.fehlgeschlagen() : null;
+    if (!liste || !liste.length) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+    box.classList.remove('hidden');
+    var zeilen = liste.slice().reverse().map(function (f) {
+      var h = S.history.filter(function (x) { return x && x.id === f.id; })[0];
+      var wann = fmtDate(Date.parse(f.zeit) || (h && h.at) || 0) || '–';
+      var was = h ? kindName(h.kind || '501') + (h.players || h.lineup ? ' · ' + (h.players || h.lineup).map(pname).join(', ') : '') : 'Spiel ' + f.id;
+      return '<div class="pline"><span>' + esc(wann) + ' – ' + esc(was) + '</span><b>' + esc(f.grund || '') + '</b></div>';
+    });
+    box.innerHTML = '<div class="card"><h2>Nicht hochgeladen</h2>' + zeilen.join('') +
+      '<p class="hint">Diese Spiele liegen nur auf diesem Gerät; der Server hat sie abgelehnt.</p>' +
+      (typeof window.DartSync.fehlgeschlagenLeeren === 'function'
+        ? '<button class="btn ghost full" data-action="konto-fehlschlaege-leeren">Liste leeren</button>' : '') + '</div>';
+  }
+
+  /* Aus einer Mitteilungs-Mail (List-Unsubscribe): <app>/#konto fuehrt zu
+     den Benachrichtigungs-Einstellungen. Der Hash wird beim Start gelesen
+     und gleich entfernt (sonst spraenge jedes Neuladen wieder dorthin); ist
+     die Anmeldung noch unterwegs, wartet das Einloesen bis zum ersten
+     Zeichnen mit bekanntem Konto. Mehr Hash-Routing gibt es nicht. */
+  function hashKontoEinloesen() {
+    if (!UI.hashKonto) return;
+    if (!(window.DartKonto && window.DartKonto.aktion && eigeneKontoId() && profile(eigeneKontoId()))) return;
+    UI.hashKonto = false;
+    setTimeout(function () {
+      eigenesProfilOeffnen();
+      window.DartKonto.aktion('konto-mitteilungen', null);
+    }, 0);
   }
 
   /* Schmale Zeile über der Navigation: was noch nicht beim Server ist.
@@ -14408,29 +14755,84 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return !!(lg && !lg.uebung && !lg.abgeschlossen && !S.tour.beendet && S.matches.length);
   }
 
-  /* Man of the Day je Team: die meisten gewonnenen Einzel, bei Gleichstand
-     der hoehere 3-Dart-Average. */
+  /* Man of the Day je Team: die meisten gewonnenen Einzel, dann die bessere
+     Leg-Differenz, dann der hoehere 3-Dart-Average - der aber nur, wenn
+     beide einen haben (ein Nur-Ergebnis-Einzel hat Average 0, und dann
+     entschiede der Eingabeweg statt der Leistung). Bleibt es gleich, ist
+     der Titel geteilt: das geht per Mitteilung an alle hinaus, da darf
+     nicht still der Erste der Aufstellung gewinnen.
+     Ergebnis: der Beste mit `geteilt` (die Gleichauf-Liegenden) und `namen`
+     (alle Traeger), oder null. */
   function manOfTheDay(ids, stMap) {
-    var bester = null;
-    ids.forEach(function (id) {
-      var st = stMap[id];
-      if (!st || !st.matches) return;
-      if (!bester || st.won > bester.won || (st.won === bester.won && st.avg > bester.avg)) bester = st;
+    var kandidaten = ids.map(function (id) { return stMap[id]; }).filter(function (st) { return st && st.matches; });
+    if (!kandidaten.length) return null;
+    var vergleich = function (a, b) {
+      if (a.won !== b.won) return b.won - a.won;
+      var ad = a.legsWon - a.legsLost, bd = b.legsWon - b.legsLost;
+      if (ad !== bd) return bd - ad;
+      if (a.darts && b.darts && a.avg !== b.avg) return b.avg - a.avg;
+      return 0;
+    };
+    kandidaten.sort(vergleich);
+    var bester = kandidaten[0];
+    var geteilt = kandidaten.slice(1).filter(function (st) { return vergleich(bester, st) === 0; });
+    return {
+      id: bester.id, name: bester.name, won: bester.won, matches: bester.matches, darts: bester.darts, avg: bester.avg,
+      geteilt: geteilt, namen: [bester].concat(geteilt).map(function (st) { return st.name; })
+    };
+  }
+  /* Der Man of the Day als Text fuer die Mitteilung. */
+  function manOfTheDayText(mod, nameFn) {
+    if (!mod) return '';
+    var namen = [mod].concat(mod.geteilt).map(function (st) { return nameFn ? nameFn(st.id) : st.name; });
+    return (mod.geteilt.length ? 'geteilt: ' + namen.join(' & ') + ' (je ' : namen[0] + ' (') + plural(mod.won, 'Sieg', 'Siege') + ')';
+  }
+
+  /*
+   * Alle Highlights, die der Spielberichtsbogen abfragt, je Spieler und je
+   * Leg: jeder 180er, jedes Finish ab 100 und jedes gewonnene 501er-Leg bis
+   * 21 Darts - nicht nur das beste je Spieler. Die Ligaleitung fuehrt sie
+   * als Listen (js/liga-daten.js), der Bogen hat je Zeile eine. Finishes
+   * absteigend, Shortlegs aufsteigend sortiert.
+   */
+  function legHighlights(matches, start, ids) {
+    var map = {};
+    var eintrag = function (id) { if (!map[id]) map[id] = { s180: 0, finishes: [], shortlegs: [] }; return map[id]; };
+    (ids || []).forEach(eintrag);
+    (matches || []).forEach(function (m) {
+      if (!m || m.kampflos || !Array.isArray(m.legs)) return;
+      m.legs.forEach(function (leg) {
+        var legVon = leg && typeof leg.start === 'number' ? leg.start : (start || 501);
+        (leg.visits || []).forEach(function (v) {
+          if (!v || v.b) return;
+          if (v.s === MAX_VISIT) eintrag(v.p).s180++;
+          if (v.c && v.s >= HIGHFINISH_AB) eintrag(v.p).finishes.push(v.s);
+        });
+        if (leg.winner && legVon === 501) {
+          var darts = dartsInLeg(leg, leg.winner);
+          if (darts > 0 && darts <= SHORTLEG_BIS) eintrag(leg.winner).shortlegs.push(darts);
+        }
+      });
     });
-    return bester;
+    Object.keys(map).forEach(function (id) {
+      map[id].finishes.sort(function (a, b) { return b - a; });
+      map[id].shortlegs.sort(function (a, b) { return a - b; });
+    });
+    return map;
   }
 
   /* Die Highlights eines Teams (180er, High-Finishes ab 100, Shortlegs bis
-     21 Darts) als Zeilen. */
-  function teamHighlights(ids, stMap) {
+     21 Darts) als drei Zeilen mit <b>Rubrik:</b> - jedes Finish und jedes
+     Shortleg einzeln. nameFn: ligaName (buergerlich) oder pname. */
+  function teamHighlights(ids, hlMap, nameFn) {
     var hl180 = [], hlFin = [], hlLeg = [], zeilen = [];
     ids.forEach(function (id) {
-      var st = stMap[id];
-      if (!st) return;
-      var nm = esc(ligaName(id));
-      if (st.s180 > 0) hl180.push(nm + (st.s180 > 1 ? ' ×' + st.s180 : ''));
-      if (st.highCO >= 100) hlFin.push(st.highCO + ' ' + nm);
-      if (st.bestLeg && st.bestLeg <= 21) hlLeg.push(st.bestLeg + ' Darts ' + nm);
+      var h = hlMap[id];
+      if (!h) return;
+      var nm = esc((nameFn || ligaName)(id));
+      if (h.s180 > 0) hl180.push(nm + (h.s180 > 1 ? ' ×' + h.s180 : ''));
+      h.finishes.forEach(function (f) { hlFin.push(f + ' ' + nm); });
+      h.shortlegs.forEach(function (d) { hlLeg.push(d + ' Darts ' + nm); });
     });
     if (hl180.length) zeilen.push('<b>180er:</b> ' + hl180.join(' · '));
     if (hlFin.length) zeilen.push('<b>High-Finishes:</b> ' + hlFin.join(' · '));
@@ -14471,7 +14873,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return map;
   }
 
-  /* Punkte nach SWO-Staffel fuer ein archiviertes Ligaspiel. */
+  /* Punkte (1 je gewonnenem Einzel) fuer ein archiviertes Ligaspiel. */
   function ligaErgebnisAus(h) {
     var lg = h.liga, gewinnLegs = Math.floor(((h.settings && h.settings.bestOf) || 3) / 2) + 1;
     var e = { wirP: 0, sieP: 0, wirS: 0, sieS: 0 };
@@ -14511,24 +14913,14 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       }
     });
     /* Die Highlights, die der Spielberichtsbogen abfragt: 180er,
-       High-Finishes ab 100 und Shortlegs bis 21 Darts – nur unsere Seite. */
-    var stMap = stats();
-    var hl180 = [], hlFin = [], hlLeg = [];
-    lg.wir.forEach(function (id) {
-      var s = stMap[id];
-      if (!s) return;
-      if (s.s180 > 0) hl180.push(esc(s.name) + (s.s180 > 1 ? ' ×' + s.s180 : ''));
-      if (s.highCO >= 100) hlFin.push(s.highCO + ' ' + esc(s.name));
-      if (s.bestLeg && s.bestLeg <= 21) hlLeg.push(s.bestLeg + ' Darts ' + esc(s.name));
-    });
-    if (hl180.length) d.hl.push('<b>180er:</b> ' + hl180.join(' · '));
-    if (hlFin.length) d.hl.push('<b>High-Finishes:</b> ' + hlFin.join(' · '));
-    if (hlLeg.length) d.hl.push('<b>Shortlegs:</b> ' + hlLeg.join(' · '));
+       High-Finishes ab 100 und Shortlegs bis 21 Darts – nur unsere Seite,
+       jedes Leg einzeln (legHighlights). */
+    d.hl = teamHighlights(lg.wir, legHighlights(S.matches, tourStart(), lg.wir), pname);
     return d;
   }
 
   function ligaTeamsHtml(d) {
-    /* Gross stehen die PUNKTE nach SWO-Staffel - das ist die Wertung, die
+    /* Gross stehen die PUNKTE (1 je gewonnenem Einzel) - das ist die Wertung, die
        in die Ligatabelle geht. Einzel und Legs stehen darunter. */
     return '<div class="lg-teams">' +
       '<div class="lg-team wir"><div class="lg-zahl">' + d.wirP + '</div>' +
@@ -14537,12 +14929,6 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       '<div class="lg-team sie"><div class="lg-zahl">' + d.sieP + '</div>' +
         '<div class="lg-name">' + esc(S.tour.liga.gegner) + '</div></div>' +
       '</div>';
-  }
-
-  function ligaHighlightsHtml(d) {
-    if (!d.hl.length) return '';
-    return '<div class="lg-hl"><div class="lg-hl-titel">Für den Spielbericht</div>' +
-      d.hl.map(function (z) { return '<div>' + z + '</div>'; }).join('') + '</div>';
   }
 
   function renderTournament() {
@@ -15382,7 +15768,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var eigen = !!eigeneKontoId() && p.id === eigeneKontoId();
     var nutzer = eigen ? window.DartKonto.nutzer() : null;
     UI.profilEdit = { name: p.name || '', kuerzel: typeof p.kuerzel === 'string' ? p.kuerzel : '', vor: t.vor, nach: t.nach,
-      email: nutzer ? nutzer.email || '' : null, emailAlt: nutzer ? nutzer.email || '' : null,
+      email: nutzer ? nutzer.email || '' : null, emailAlt: nutzer ? nutzer.email || '' : null, emailPass: '',
       hue: typeof p.hue === 'number' ? p.hue : hue(p.id), wurfhand: p.wurfhand === 'L' || p.wurfhand === 'R' ? p.wurfhand : null,
       avatar: p.avatar || null, fehler: '', doppeltOk: null, laeuft: false };
     UI.profilPanel = 'edit'; UI.profilGruppenWahl = false;
@@ -15420,6 +15806,14 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           '</div>' +
           '<p class="pa-text">Der echte Name steht nur auf Spielberichten und in der Liga.</p>' +
           (eigen ? feld('pe-email', 'E-Mail', d.email, 'placeholder="E-Mail" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off"') : '') +
+          /* Eine neue E-Mail nimmt der Server nur mit dem aktuellen Passwort
+             an. Das Feld steht immer da (Tippen zeichnet nicht neu, sonst
+             koennte es nicht erst beim Aendern der Adresse erscheinen) und
+             wird nur gebraucht, wenn die Adresse wirklich wechselt. */
+          (eigen
+            ? '<label class="pe-feld"><span class="kt">Aktuelles Passwort (nur bei neuer E-Mail)</span>' +
+              '<input class="pe-input" type="password" data-role="pe-email-pass" value="' + esc(d.emailPass || '') + '" autocomplete="current-password" placeholder="zum Bestätigen der neuen E-Mail"></label>'
+            : '') +
           '<div class="pe-feld"><span class="kt">Wurfhand</span><div class="dl-segment pe-hand">' +
             '<button data-action="pe-hand" data-value="R" class="' + (d.wurfhand === 'R' ? 'active' : '') + '">Rechts</button>' +
             '<button data-action="pe-hand" data-value="L" class="' + (d.wurfhand === 'L' ? 'active' : '') + '">Links</button></div></div>' +
@@ -15453,8 +15847,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
        Server prueft Form und Freiheit, erst dann wird gespeichert. */
     var neueMail = d.email === null ? null : (d.email || '').trim();
     if (neueMail !== null && neueMail !== d.emailAlt && window.DartKonto && window.DartKonto.emailAendern) {
+      if (!(d.emailPass || '').length) { d.fehler = 'Für eine neue E-Mail bitte das aktuelle Passwort eingeben.'; render(); return; }
       d.laeuft = true; d.fehler = ''; render();
-      window.DartKonto.emailAendern(neueMail).then(function () { d.laeuft = false; fertig(); }, function (err) {
+      window.DartKonto.emailAendern(neueMail, d.emailPass).then(function () { d.laeuft = false; fertig(); }, function (err) {
         d.laeuft = false; d.fehler = err && err.message ? err.message : 'Die E-Mail ließ sich nicht ändern.'; render();
       });
       return;
@@ -15738,7 +16133,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
     /* Liste */
     var zeilen = [];
-    for (var r = 170; r >= 2; r--) {
+    for (var r = MAX_CHECKOUT; r >= 2; r--) {
       var hatEigen = /[^|]/.test(String(eig[r] || ''));
       if (t.filter === 'eigene' && !hatEigen) continue;
       var w = Checkout.suggest(r, 3, ld), st = w ? null : Checkout.stellwurf(r, 3, ld);
@@ -15866,6 +16261,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         line('Legs gewonnen / verloren', st.legsWon + ' / ' + st.legsLost) +
         line('Turniere gespielt', st.tournaments) +
         line('Turniersiege', st.tourWins) +
+        (st.ligaTage ? line('Ligaspieltage', st.ligaTage) : '') +
       '</div>' +
 
       (st.cricketGames ? '<div class="card"><h2>Cricket</h2>' +
@@ -16042,7 +16438,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var dbl = DOPPEL_WAHL.indexOf(p.dbl) >= 0 ? p.dbl : null;
     var bisher = dbl || alt ? { dbl: dbl, tabelle: alt && typeof alt === 'object' ? alt : null } : null;
     var out = [];
-    for (var r = 2; r <= 170; r++) {
+    for (var r = 2; r <= MAX_CHECKOUT; r++) {
       var neu = String(tabelle[r] || '').split('|')[0];
       var alt = wegText(r, bisher);
       if (neu && alt !== neu) out.push({ rest: r, alt: alt, neu: neu });
@@ -16159,6 +16555,18 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   /* ================= Liga-Spielplan ================= */
 
   var ligaZusagen = null;   // { terminId: [{id, name, hue, status}] } vom Server
+  /* "Ich bin dabei" kam nicht beim Server an: sichtbar sagen, statt still
+     zu schweigen - sonst glaubt der Spieler, er habe zugesagt, und die
+     Erinnerung kommt trotzdem. Die Leiste "Kein Netz" (sync.js) steht
+     daneben; hier der Hinweis zur konkreten Handlung. */
+  function zusageFehlgeschlagen(e) {
+    var offline = typeof navigator !== 'undefined' && navigator.onLine === false;
+    UI.overlay = { type: 'hinweis', titel: offline ? 'Kein Netz' : 'Zusage nicht gespeichert',
+      text: offline
+        ? 'Die Zusage kam nicht beim Server an. Sobald wieder Netz da ist, bitte erneut tippen.'
+        : 'Der Server hat die Zusage nicht angenommen' + (e && e.message ? ' (' + e.message + ')' : '') + '. Bitte später erneut tippen.' };
+    render();
+  }
   /* Bild und Farbe zu einer Zusage kommen aus dem Kader (der Server schickt
      keine Fotos mehr mit); kennt das Geraet den Spieler nicht, reichen
      Name und Farbton aus der Antwort. */
@@ -16301,7 +16709,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     $('kasse-karte').innerHTML =
       '<div class="liga-karte weiss kasse-stand">' +
         '<div class="lk-kopf"><span class="lk-crew-titel">Kassenstand · Kassenjahr ' + konfig.jahr + '</span>' +
-          '<span class="hint">Kassenwart/in: ' + esc(((d && d.kassenwarte) || []).join(', ') || 'noch nicht festgelegt') + '</span></div>' +
+          '<span class="hint">Kasse führt: ' + esc(((d && d.kassenwarte) || []).join(', ') || 'noch offen') + '</span></div>' +
         '<span class="ks-saldo ' + (saldo < 0 ? 'minus' : 'plus') + '">' + euro(saldo) + '</span>' +
         '<div class="ks-drei">' +
           '<div><span class="lk-crew-titel">Anfang</span><b>' + euro(konfig.anfangsbestand) + '</b></div>' +
@@ -16314,7 +16722,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         ? '<div class="kasse-form' + (bearbeite ? ' bearbeiten' : '') + '">' +
             '<h3>' + (bearbeite ? 'Buchung Nr. ' + (eintraege.indexOf(bearbeite) + 1) + ' ändern' : 'Eintragen: Einzahlung oder Ausgabe') + '</h3>' +
             (bearbeite ? '' : '<p class="hint">Jede Einzahlung und jede Ausgabe hier eintragen – sie steht sofort im Kassenbuch. ' +
-              (((d && d.kassenwarte) || []).join(', ') || 'Der Kassenwart') + ' prüft und verwaltet die Buchungen.</p>') +
+              (((d && d.kassenwarte) || []).join(', ') || 'Wer die Kasse führt,') + ' prüft und verwaltet die Buchungen.</p>') +
             '<div class="options" id="kasse-art">' +
               '<button data-action="kasse-art" data-value="ein" class="' + (art === 'ein' ? 'active' : '') + '">Einnahme</button>' +
               '<button data-action="kasse-art" data-value="aus" class="' + (art === 'aus' ? 'active' : '') + '">Ausgabe</button>' +
@@ -16342,7 +16750,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
                   : '<span></span>') +
             '</div>' +
             '<p class="hint" id="kasse-meldung"></p>' +
-            (wart ? '<details class="kasse-konfig"><summary>Kassenjahr und Anfangsbestand (Kassenwart)</summary>' +
+            (wart ? '<details class="kasse-konfig"><summary>Kassenjahr und Anfangsbestand (Kasse)</summary>' +
               '<div class="zeile">' +
                 '<input id="kasse-jahr" type="number" min="2000" max="2100" value="' + konfig.jahr + '" aria-label="Kassenjahr">' +
                 '<input id="kasse-anfang" type="text" inputmode="decimal" value="' + (konfig.anfangsbestand / 100).toFixed(2).replace('.', ',') + '" aria-label="Anfangsbestand in Euro">' +
@@ -16375,7 +16783,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         var wo = h.liga.nr + '. Spieltag · Einzel ' + (mi + 1);
         m.legs.forEach(function (leg) {
           (leg.visits || []).forEach(function (v) {
-            if (v.s === 180 && !v.b && unsere[v.p]) h180.push({ n: pname(v.p), d: wo, v: '180' });
+            if (v.s === MAX_VISIT && !v.b && unsere[v.p]) h180.push({ n: pname(v.p), d: wo, v: '180' });
           });
           if (leg.winner && unsere[leg.winner]) {
             var eigene = (leg.visits || []).filter(function (v) { return v.p === leg.winner; });
@@ -16622,8 +17030,13 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     $('liga-sub').textContent = '5. Liga · ' + LIGA.saison;
 
     var tab = UI.ligaTab || 'plan';
+    /* Die Kasse ist Vereinssache: Gast-Konten bekommen sie vom Server nicht
+       (403) - dann auch keinen Reiter, der ins Leere fuehrt. */
+    var ohneKasse = ichBinGastKonto();
+    if (ohneKasse && tab === 'kasse') { tab = 'plan'; UI.ligaTab = 'plan'; }
     $('liga-tabs').querySelectorAll('button').forEach(function (b) {
       b.classList.toggle('active', b.getAttribute('data-tab') === tab);
+      if (b.getAttribute('data-tab') === 'kasse') b.classList.toggle('hidden', ohneKasse);
     });
     $('liga-plan').classList.toggle('hidden', tab !== 'plan');
     $('liga-training').classList.toggle('hidden', tab !== 'training');
@@ -17217,7 +17630,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       subText = qSt
         ? (qSt.gewinnSaetze > 1 ? 'Satz ' + qSt.satzNr + ' · ' : '') + 'Leg ' + (m.done ? qSt.legNr - 1 : qSt.legNr) +
           ' · ' + dauerText(m) + ' · ' + matchStart(m)
-        : plural(m.p.length, 'Spieler', 'Spieler') + ' · ' + matchStart(m) + ' Double Out';
+        /* Knapp: "2 Spieler · 501 DO" statt "... Double Out" - der volle
+           Text war am Handy abgeschnitten ("501 D…"). */
+        : plural(m.p.length, 'Spieler', 'Spieler') + ' · ' + matchStart(m) + ' DO';
     } else {
       var idx = S.matches.indexOf(m);
       $('game-match-label').textContent = 'Spiel ' + (idx + 1) + ' von ' + S.matches.length;
@@ -17244,6 +17659,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     $('game-swap').classList.toggle('hidden', fern);
     $('game-menu-kamera').classList.toggle('hidden', !window.DartKamera);
     $('game-menu-overlay').classList.toggle('hidden', !UI.menu);
+    menueFokus($('game-menu-overlay'));
     if (UI.menu) {
       $('game-menu-titel').textContent = $('game-match-label').textContent;
       document.querySelector('#game-menu-overlay .game-menu-sub').textContent = $('game-leg-label').textContent;
@@ -17693,6 +18109,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       ? '<b>' + esc(pname(g.winner)) + '</b> ' + (n < 2 ? 'hat alles zu' : 'gewinnt')
       : '<span class="muted">Am Wurf</span> <b>' + esc(pname(active)) + '</b>';
     $('cricket-menu-overlay').classList.toggle('hidden', !UI.menu);
+    menueFokus($('cricket-menu-overlay'));
     if (UI.menu) document.querySelector('#cricket-menu-overlay .game-menu-sub').textContent = $('cricket-sub').textContent;
   }
 
@@ -17755,6 +18172,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           '<span class="muted">Am Wurf</span> <b>' + esc(pname(active)) + '</b> <span class="muted">auf</span> <b>' +
           (st.target[active] === 25 ? 'Bull' : st.target[active]) + '</b>';
     $('rtw-menu-overlay').classList.toggle('hidden', !UI.menu);
+    menueFokus($('rtw-menu-overlay'));
     if (UI.menu) document.querySelector('#rtw-menu-overlay .game-menu-sub').textContent = $('rtw-sub').textContent;
 
     /*
@@ -17812,23 +18230,6 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     $('rtw-pad').innerHTML = treffer + miss;
   }
 
-  /* Wie weit ist der, der gerade wirft? Die Reihe zeigt alle 21 Stationen –
-     die 20 Zahlen und den Bull – und markiert die erledigten. */
-  function rtwFortschritt(st, pid) {
-    var ziel = st.target[pid];
-    var fertig = st.finished[pid] ? 21 : (ziel === 25 ? 20 : ziel - 1);
-    var punkte = '';
-    for (var i = 0; i < 21; i++) {
-      punkte += '<span class="' + (i < fertig ? 'ok' : i === fertig ? 'jetzt' : '') +
-        (i === 20 ? ' bull' : '') + '"></span>';
-    }
-    return '<div class="rtw-fortschritt">' +
-      '<div class="pfad">' + punkte + '</div>' +
-      '<div class="txt" id="rtw-fortschritt-txt">Station ' + Math.min(fertig + 1, 21) + ' von 21 · ' +
-        plural(st.darts[pid], 'Dart', 'Darts') + ' geworfen</div>' +
-      '</div>';
-  }
-
   function throwLabel(t) {
     if (!t.n) return '0';
     if (t.n === 25) return t.m === 2 ? 'Bull×2' : 'Bull';
@@ -17865,10 +18266,6 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       if (S.history[k].id === id) return { g: S.history[k], live: false };
     }
     return null;
-  }
-
-  function statRow(label, value, hint) {
-    return '<div class="pline"><span>' + label + (hint ? ' <i>' + hint + '</i>' : '') + '</span><b>' + value + '</b></div>';
   }
 
   /* Die Aufnahmen einer Runde, fürs Protokoll nachgespielt – dieselbe
@@ -18000,7 +18397,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var st = finisherState(g);
     var pid = g.players[st.turn];
     var rest = st.rest[pid], frei = 3 - st.inVisit;
-    if (total > 180 || IMPOSSIBLE[total] || !dartsFuerPunkte(total, frei)) {
+    if (total > MAX_VISIT || IMPOSSIBLE[total] || !dartsFuerPunkte(total, frei)) {
       UI.error = total + ' ist mit ' + plural(frei, 'Dart', 'Darts') + ' nicht möglich'; UI.input = ''; render(); return;
     }
     var nach = rest - total;
@@ -18107,6 +18504,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         : '<span class="muted">Am Wurf</span> <b>' + esc(pname(aktiv)) + '</b>' +
           '<span class="muted"> · Rest ' + st.rest[aktiv] + '</span>';
     $('fin-menu-overlay').classList.toggle('hidden', !UI.menu);
+    menueFokus($('fin-menu-overlay'));
     if (UI.menu) document.querySelector('#fin-menu-overlay .game-menu-sub').textContent = $('fin-sub').textContent;
     /* Stechen: gleichgezogen, jetzt entscheidet der Bull. Wie beim Anwurf
        wird von Hand getippt, wer naeher dran war – messen kann die App das
@@ -18415,8 +18813,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     v.visits.push(vis);
     v.offen = [];
     UI.aufnahmeZeit = Date.now();
-    if (!isBust && score === 180) feiere180(st.werfer);
-    else if (!isBust && score === 60) feiere60(st.werfer);
+    if (!isBust && score === MAX_VISIT) feiere180(st.werfer);
+    else if (!isBust && score === FEIER_60) feiere60(st.werfer);
     var fertig = isCheckout || v.visits.length >= 3;
     if (fertig) {
       neuerKaiwenVersuch(g, Math.max(KAIWEN_MIN, v.zahl + (isCheckout ? 10 : -1)));
@@ -18432,7 +18830,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (!g || g.kind !== 'kaiwen' || g.done || UI.input === '' || settling()) return;
     var v = parseInt(UI.input, 10);
     var st = kaiwenState(g);
-    if (v > 180) { UI.error = 'Maximal 180'; UI.input = ''; render(); return; }
+    if (v > MAX_VISIT) { UI.error = 'Maximal ' + MAX_VISIT; UI.input = ''; render(); return; }
     if (IMPOSSIBLE[v]) { UI.error = v + ' ist mit 3 Darts nicht möglich'; UI.input = ''; render(); return; }
     if (st.offen.length) { UI.error = 'Die Aufnahme läuft in Einzel-Darts, bitte dort weiter eintragen.'; UI.input = ''; render(); return; }
     pomp();
@@ -18462,7 +18860,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var next = UI.input + k;
     if (next.length > 3) return;
     var val = parseInt(next, 10);
-    if (val > 180) { UI.error = 'Maximal 180'; render(); return; }
+    if (val > MAX_VISIT) { UI.error = 'Maximal ' + MAX_VISIT; render(); return; }
     tipp();
     UI.input = String(val);
     render();
@@ -18638,7 +19036,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     };
     var kacheln = ['', '', ''];
     var route = null;
-    if (!g.done && st.restVorVisit <= 170) {
+    if (!g.done && st.restVorVisit <= MAX_CHECKOUT) {
       var plan = planFuer(st.restVorVisit, 3, dbl);
       var planGilt = !!plan;
       var restLauf = st.restVorVisit;
@@ -18732,6 +19130,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     }
     $('kw-ff-error').textContent = UI.error;
     $('kw-menu-overlay').classList.toggle('hidden', !UI.menu);
+    menueFokus($('kw-menu-overlay'));
     if (UI.menu) document.querySelector('#kw-menu-overlay .game-menu-sub').textContent = $('kw-sub').textContent;
   }
 
@@ -18888,9 +19287,6 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     for (var i = 0; i < offen; i++) g.throws.push({ n: 0, m: 0 });
     UI.mult = 1;
     save(); render();
-  }
-  function hunterVarianteText(g) {
-    return g.variante === 'boost' ? 'Boost · Doppel +2, Triple +3' : g.variante === 'handicap' ? 'Handicap' : 'Normal · jeder Treffer 1 Feld';
   }
   function hunterZielText(g, pid, st) {
     var zahl = HUNTER_RING[st.pos[pid]];
@@ -19070,6 +19466,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       ? '<b>' + esc(pname(g.winner)) + '</b> ' + (solo ? 'ist durch' : 'gewinnt')
       : '<span class="muted">Am Wurf</span> <b>' + esc(pname(aktiv)) + '</b> <span class="muted">auf</span> <b>' + esc(hunterZielText(g, aktiv, st)) + '</b>';
     $('hu-menu-overlay').classList.toggle('hidden', !UI.menu);
+    menueFokus($('hu-menu-overlay'));
     if (UI.menu) document.querySelector('#hu-menu-overlay .game-menu-sub').textContent = $('hu-sub').textContent;
     if (fang) setTimeout(function () { if (S.game === g) render(); }, 2700);
   }
@@ -19106,17 +19503,21 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   }
 
   /* Eine Highlight-Zeilenliste je Bogen-Seite: „Mark 180 ×2", „Mark 141
-     Finish", „Mark 18-Darter" – höchstens 7 Zeilen, wie auf dem Bogen. */
-  function berichtHighlights(ids, stM) {
+     Finish", „Mark 18-Darter" – jedes Finish und jedes Shortleg in einer
+     eigenen Zeile, wie die Ligaleitung sie fuehrt. Der Bogen hat sieben
+     Zeilen vorgedruckt; sind es mehr, waechst die Tabelle (hlZeilen in
+     renderBericht), statt dass Highlights stumm wegfallen. */
+  function berichtHighlights(ids, hlMap) {
     var zeilen = [];
     ids.forEach(function (id) {
-      var s = stM[id];
-      if (!s) return;
-      if (s.s180 > 0) zeilen.push(esc(s.name) + ' 180' + (s.s180 > 1 ? ' ×' + s.s180 : ''));
-      if (s.highCO >= 100) zeilen.push(esc(s.name) + ' ' + s.highCO + ' Finish');
-      if (s.bestLeg && s.bestLeg <= 21) zeilen.push(esc(s.name) + ' ' + s.bestLeg + '-Darter');
+      var h = hlMap[id];
+      if (!h) return;
+      var nm = esc(pname(id));
+      if (h.s180 > 0) zeilen.push(nm + ' 180' + (h.s180 > 1 ? ' ×' + h.s180 : ''));
+      h.finishes.forEach(function (f) { zeilen.push(nm + ' ' + f + ' Finish'); });
+      h.shortlegs.forEach(function (d) { zeilen.push(nm + ' ' + d + '-Darter'); });
     });
-    return zeilen.slice(0, 7);
+    return zeilen;
   }
 
   /* Nicht bei jedem Zeichnen neu bauen: der Hintergrund-Abgleich würde
@@ -19136,9 +19537,6 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var gastTeam = lg.heim ? lg.gegner : LIGA.team;
     var heimIds = lg.heimSpieler || (lg.heim ? lg.wir : lg.sie);
     var gastIds = lg.gastSpieler || (lg.heim ? lg.sie : lg.wir);
-
-    var stM = collectStats([{ matches: q.matches, start: q.start }], heimIds.concat(gastIds));
-    Object.keys(stM).forEach(function (k) { stM[k].name = pname(k); finalize(stM[k]); });
 
     /* Spielerzeilen H1–H8 / G1–G8: der Anzeigename steht im Vornamen-Feld,
        der bürgerliche Nachname wird von Hand ergänzt (SWO verlangt ihn). */
@@ -19210,11 +19608,14 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '<td contenteditable>' + einzelPunkte(m) + '</td></tr>';
     }).join('');
 
-    var hlHeim = berichtHighlights(heimIds, stM);
-    var hlGast = berichtHighlights(gastIds, stM);
+    var hlMap = legHighlights(q.matches, q.start || 501, heimIds.concat(gastIds));
+    var hlHeim = berichtHighlights(heimIds, hlMap);
+    var hlGast = berichtHighlights(gastIds, hlMap);
+    /* Sieben Zeilen wie vorgedruckt - bei mehr Highlights so viele, wie es
+       braucht (der Bogen bricht dann um, statt abzuschneiden). */
     var hlZeilen = function (praefix, liste) {
       var zeilen = '';
-      for (var i = 0; i < 7; i++) {
+      for (var i = 0; i < Math.max(7, liste.length); i++) {
         zeilen += '<tr><th>' + praefix + '</th><td contenteditable>' + (liste[i] || '') + '</td></tr>';
       }
       return zeilen;
@@ -19846,10 +20247,32 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return {
       termin: lg.terminId, nr: lg.nr, gegner: lg.gegner, heim: !!lg.heim, ort: ligaOrt(lg.terminId),
       wirP: d.wirP, sieP: d.sieP, wirS: d.wirS, sieS: d.sieS, wirL: d.wirL, sieL: d.sieL,
-      mod: mod ? mod.name + ' (' + plural(mod.won, 'Sieg', 'Siege') + ')' : '',
-      hl: d.hl.map(function (z) { return String(z).replace(/<[^>]*>/g, ''); }),
+      /* Der Server nimmt hoechstens 80 Zeichen bzw. sechs Zeilen an und
+         lehnt sonst die ganze Meldung ab - lieber hier kappen. */
+      mod: String(manOfTheDayText(mod) || '').slice(0, 80),
+      hl: mitteilungsZeilen(d.hl).slice(0, 6),
       einzel: einzel
     };
+  }
+  /* Die Highlight-Zeilen fuer die Mitteilung: ohne HTML, und keine laenger
+     als der Server nimmt (server/lib/mitteilungen.mjs kuerzt jede Zeile auf
+     160 Zeichen und nimmt hoechstens sechs). Eine zu lange Rubrik wird an
+     den Trennpunkten umgebrochen, die Fortsetzung traegt die Rubrik erneut. */
+  var MITTEILUNG_ZEILE_MAX = 150;
+  function mitteilungsZeilen(hl) {
+    var aus = [];
+    hl.forEach(function (z) {
+      var m = /^<b>(.*?):<\/b>\s*(.*)$/.exec(String(z));
+      var rubrik = m ? m[1] : '', teile = (m ? m[2] : String(z).replace(/<[^>]*>/g, '')).split(' · ');
+      var zeile = '';
+      teile.forEach(function (t) {
+        var naechste = zeile ? zeile + ' · ' + t : (rubrik ? rubrik + ': ' : '') + t;
+        if (zeile && naechste.length > MITTEILUNG_ZEILE_MAX) { aus.push(zeile); zeile = (rubrik ? rubrik + ' (weiter): ' : '') + t; }
+        else zeile = naechste;
+      });
+      if (zeile) aus.push(zeile);
+    });
+    return aus.map(function (z) { return z.replace(/<[^>]*>/g, ''); });
   }
   /* Teamrekorde (nur Konten, nur Liga): hoechstes Finish, hoechste Aufnahme,
      kuerzestes Leg. Beim ersten Lauf nur merken, danach jede Verbesserung
@@ -19945,7 +20368,13 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         }).catch(function (e) {
           o.sendet = false;
           o.ohneServer = true;
-          o.fehler = 'Der Server konnte die Mail nicht schicken (' + (e && e.message ? e.message : 'keine Verbindung') + '). Unten geht es über das Teilen-Menü.';
+          /* Abgelehnte Adresse (400, Erlaubtliste des Servers: Ligaleitung
+             und eigene Adresse): der Servertext nennt die Adresse und
+             steht hier wortwoertlich - sonst wuesste niemand, welche. */
+          var abgelehnt = e && e.status === 400 && e.message;
+          o.fehler = abgelehnt
+            ? e.message + ' Bitte die Adresse prüfen – oder unten über das Teilen-Menü schicken.'
+            : 'Der Server konnte die Mail nicht schicken (' + (e && e.message ? e.message : 'keine Verbindung') + '). Unten geht es über das Teilen-Menü.';
           render();
         });
       };
@@ -20252,7 +20681,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       { k: '180 / 140+ / 100+', v: stats.map(function (st) { return st.s180 + ' / ' + st.s140 + ' / ' + st.s100; }), besser: null },
       { k: 'Höchstes Finish', v: stats.map(function (st) { return st.highCO || '–'; }), besser: 'hi' }
     ];
-    if (mitDoppel) z.push({ k: 'Doppelquote', v: stats.map(function (st) { return st.doubleAttempts ? st.doubleQuote.toFixed(0) + ' % (' + st.checkouts + '/' + st.doubleAttempts + ')' : '–'; }), besser: 'hi' });
+    if (mitDoppel) z.push({ k: 'Doppelquote', v: stats.map(function (st) { return st.doubleAttempts ? st.doubleQuote.toFixed(0) + ' % (' + st.doubleHits + '/' + st.doubleAttempts + ')' : '–'; }), besser: 'hi' });
     z.push({ k: 'Bestes Leg', v: stats.map(function (st) { return st.bestLeg ? st.bestLeg + ' Darts' : '–'; }), besser: 'lo' });
     z.push({ k: 'Darts geworfen', v: stats.map(function (st) { return String(st.darts); }), besser: null });
     return z;
@@ -20514,18 +20943,21 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
          Danach geht es zum Spielbericht - abgeschlossen ist das Ligaspiel
          erst, wenn er unterschrieben und verschickt ist. */
       var wStats = stats();
+      var wHl = legHighlights(S.matches, tourStart(), tourPlayers());
       var motd = function (ids, team, wir) {
         var b = manOfTheDay(ids, wStats);
-        var hl = teamHighlights(ids, wStats).map(function (z) {
+        var hl = teamHighlights(ids, wHl).map(function (z) {
           var hm = /^<b>(.*?):<\/b>\s*(.*)$/.exec(z);
           return hm ? [hm[1], hm[2]] : ['', z];
         });
+        /* Geteilt: alle Traeger nebeneinander, die Zeile sagt "je". */
+        var traeger = b ? [b].concat(b.geteilt) : [];
         return '<div class="card motd' + (wir ? ' wir' : '') + '">' +
-          '<div class="motd-team kt">' + esc(team) + ' · <span class="motd-titel">Man of the Day</span></div>' +
-          (b ? '<div class="motd-person">' + avatarHTML(profile(b.id), 'lg') +
-              '<div class="motd-wer"><div class="motd-name">' + esc(ligaName(b.id)) + '</div>' +
-              '<div class="motd-zeile">' + plural(b.won, 'Sieg', 'Siege') + ' aus ' + plural(b.matches, 'Einzel', 'Einzeln') +
-                ' · Ø ' + (b.darts ? b.avg.toFixed(1) : '–') + '</div></div></div>' : '') +
+          '<div class="motd-team kt">' + esc(team) + ' · <span class="motd-titel">Man of the Day' + (b && b.geteilt.length ? ' – geteilt' : '') + '</span></div>' +
+          (b ? '<div class="motd-person">' + traeger.map(function (t) { return avatarHTML(profile(t.id), 'lg'); }).join('') +
+              '<div class="motd-wer"><div class="motd-name">' + traeger.map(function (t) { return esc(ligaName(t.id)); }).join(' & ') + '</div>' +
+              '<div class="motd-zeile">' + (b.geteilt.length ? 'je ' : '') + plural(b.won, 'Sieg', 'Siege') + ' aus ' + plural(b.matches, 'Einzel', 'Einzeln') +
+                (b.geteilt.length ? '' : ' · Ø ' + (b.darts ? b.avg.toFixed(1) : '–')) + '</div></div></div>' : '') +
           '<div class="sg-hl-liste">' + (hl.length ? hlZeilen(hl) : '<p class="hint">Keine Highlights.</p>') + '</div>' +
           '</div>';
       };
@@ -20592,9 +21024,100 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '<button class="btn start-rot" data-action="finish-tournament">Turnier abschließen</button></div></div>';
   }
 
+  /*
+   * Dialog-Semantik und Fokus. #overlay traegt role="dialog" und aria-modal
+   * im HTML; hier kommt dazu, was sich je Dialog aendert: die Ueberschrift
+   * benennt ihn (aria-labelledby), der Rest der Seite ist waehrenddessen
+   * inert (keine Tabs, keine Klicks dahinter), der Fokus geht beim Oeffnen
+   * ins erste Feld oder auf den ersten Knopf und beim Schliessen zurueck
+   * auf das Element, das den Dialog geoeffnet hat.
+   *
+   * render() zeichnet den offenen Dialog bei jeder Aenderung neu - der
+   * Fokus wandert deshalb nur, wenn ein ANDERES Dialog-Objekt aufgeht,
+   * nicht bei jedem Neuzeichnen desselben.
+   *
+   * Dialoge mit eigener Tastenwahl (Leg-Ende, Spielende, Checkout-Frage:
+   * Ziffern und Pfeile waehlen, Enter bestaetigt) bekommen den Fokus auf
+   * die Karte selbst statt auf einen Knopf - sonst drueckte Enter den
+   * fokussierten Knopf UND die Tastenwahl.
+   */
+  var dialogOffen = null;        // das UI.overlay-Objekt, das zuletzt gezeichnet wurde
+  var dialogRueckFokus = null;   // Element, das vor dem Oeffnen den Fokus hatte
+  var HAUPTBEREICHE = '#nav, .screen, #save-warning, #sync-status, #lade-hinweis';
+  function hintergrundInert(an) {
+    var teile = document.querySelectorAll(HAUPTBEREICHE);
+    for (var i = 0; i < teile.length; i++) {
+      if (an) teile[i].setAttribute('inert', ''); else teile[i].removeAttribute('inert');
+    }
+  }
+  function dialogBeschriften(ov, karte) {
+    var kopf = karte.querySelector('h1, h2, h3, h4');
+    if (kopf) {
+      if (!kopf.id) kopf.id = 'overlay-titel';
+      ov.setAttribute('aria-labelledby', kopf.id);
+      ov.removeAttribute('aria-label');
+    } else {
+      ov.removeAttribute('aria-labelledby');
+      ov.setAttribute('aria-label', 'Dialog');
+    }
+  }
+  function dialogFokusHinein(karte, typ) {
+    /* Am Touch-Geraet kein Textfeld vorab fokussieren: iOS klappt sonst bei
+       jedem Dialog die Tastatur aus (Nachmeldung, Versand, Aufstellung).
+       Dort reicht der Fokus auf der Karte fuer Esc und Vorlese-Reihenfolge. */
+    var touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    var ziel = touch ? null : karte.querySelector('input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])');
+    if (!ziel && !touch && !(PFEIL_DIALOGE[typ] || typ === 'checkout-darts')) {
+      ziel = karte.querySelector('.btn.primary:not([disabled])') || karte.querySelector('button:not([disabled]), [role="button"], [tabindex="0"]');
+    }
+    if (!ziel) { karte.setAttribute('tabindex', '-1'); ziel = karte; }
+    if (ziel.focus) ziel.focus({ preventScroll: true });
+  }
+  function dialogGeoeffnet(ov, karte, o) {
+    dialogBeschriften(ov, karte);
+    if (dialogOffen === o) return;
+    var ersterAuf = !dialogOffen;
+    dialogOffen = o;
+    feierAbbrechen();
+    if (ersterAuf) {
+      var aktiv = document.activeElement;
+      dialogRueckFokus = aktiv && aktiv !== document.body && !ov.contains(aktiv) ? aktiv : null;
+      hintergrundInert(true);
+    }
+    dialogFokusHinein(karte, o.type);
+  }
+  function dialogGeschlossen() {
+    if (!dialogOffen) return;
+    dialogOffen = null;
+    hintergrundInert(false);
+    var zurueck = dialogRueckFokus;
+    dialogRueckFokus = null;
+    /* Der Knopf von vorhin kann weggezeichnet sein (render baut die
+       Bildschirme neu) - dann bleibt der Fokus, wo der Browser ihn laesst. */
+    if (zurueck && zurueck.focus && document.contains(zurueck)) zurueck.focus({ preventScroll: true });
+  }
+  /* Die Spielmenues (role="dialog" im HTML) genauso: beim Aufgehen hinein,
+     beim Zugehen zurueck. */
+  var menueWarOffen = false, menueRueckFokus = null;
+  function menueFokus(el) {
+    var auf = !el.classList.contains('hidden');
+    if (auf === menueWarOffen) return;
+    menueWarOffen = auf;
+    if (auf) {
+      var aktiv = document.activeElement;
+      menueRueckFokus = aktiv && aktiv !== document.body && !el.contains(aktiv) ? aktiv : null;
+      var ziel = el.querySelector('button:not([disabled]), [role="button"]');
+      if (ziel) ziel.focus({ preventScroll: true });
+    } else {
+      var zurueck = menueRueckFokus;
+      menueRueckFokus = null;
+      if (zurueck && zurueck.focus && document.contains(zurueck)) zurueck.focus({ preventScroll: true });
+    }
+  }
+
   function renderOverlay() {
     var ov = $('overlay');
-    if (!UI.overlay) { ov.classList.add('hidden'); ov.classList.remove('gross', 'vollbild'); return; }
+    if (!UI.overlay) { ov.classList.add('hidden'); ov.classList.remove('gross', 'vollbild'); dialogGeschlossen(); return; }
     ov.classList.remove('hidden');
     /* Im Turnier-Modus sprechen auch die Dialoge Plakatsprache - der
        Schreiber steht vorn an der Scheibe, gelesen wird vom Oche aus. */
@@ -21464,9 +21987,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     }
     $('overlay-card').innerHTML = html;
     if (o.type === 'unterschrift' || o.type === 'nachmeldung') signaturVorbereiten();
+    var karte = $('overlay-card');
+    dialogGeoeffnet(ov, karte, o);
     /* Mit Tastatur: in Dialogen ohne eigene Pfeil-Wahl gleich den
        Hauptknopf markieren, damit immer etwas sichtbar gewaehlt ist. */
-    var karte = $('overlay-card');
     if (document.body.classList.contains('tastatur') && !PFEIL_DIALOGE[o.type] && o.type !== 'checkout-darts' &&
         !karte.contains(document.activeElement) && !karte.querySelector('input, select, textarea, canvas')) {
       var erster = karte.querySelector('.btn.primary') || karte.querySelector('button');
@@ -21734,7 +22258,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   function botAufnahme(rest, staerke) {
     var s = BOT_STAERKEN[staerke] || BOT_STAERKEN.mittel;
     // Finish-Versuch, wenn einer moeglich ist.
-    if (rest <= 170 && Checkout.possible(rest, 3)) {
+    if (rest <= MAX_CHECKOUT && Checkout.possible(rest, 3)) {
       var p = rest <= 50 ? s.finishNah : s.finish;
       if (Math.random() < p) {
         var darts = 3;
@@ -21753,7 +22277,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     // Scoring: Normalverteilung, gedeckelt, nie in den Bust.
     var wert = botWurfNormal(s.mittel, s.streuung);
     if (wert < 0) wert = 0;
-    if (wert > 180) wert = 180;
+    if (wert > MAX_VISIT) wert = MAX_VISIT;
     if (wert > rest - 2) wert = Math.max(0, rest - 50);
     while (wert > 0 && IMPOSSIBLE[wert]) wert--;
     return { score: wert, darts: 3, checkout: false };
@@ -22499,7 +23023,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
            des X01 bleibt davon unberuehrt. */
         if (el.closest('#eingabe-wahl-fin, #eingabe-wahl-kw')) { save(); render(); break; }
         if (ew === 0 && S.settings.dartModeFrom > 0) { S.settings.dartModeMerk = S.settings.dartModeFrom; S.settings.dartModeFrom = 0; }
-        if (ew === 1 && !(S.settings.dartModeFrom > 0)) S.settings.dartModeFrom = S.settings.dartModeMerk > 0 ? S.settings.dartModeMerk : 170;
+        if (ew === 1 && !(S.settings.dartModeFrom > 0)) S.settings.dartModeFrom = S.settings.dartModeMerk > 0 ? S.settings.dartModeMerk : MAX_CHECKOUT;
         save(); render();
         break;
       }
@@ -22970,7 +23494,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         window.DartSync.liga.zusage(tzTid, tzStatus).then(function (z) {
           ligaZusagen = z;
           render();
-        }).catch(function () { /* naechstes Betreten holt den Stand */ });
+        }).catch(function (e) { zusageFehlgeschlagen(e); });
         break;
       }
       case 'liga-bericht':
@@ -23066,6 +23590,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       case 'liga-zum-spiel':
         S.screen = 'tournament'; save(); render();
         break;
+      case 'konto-fehlschlaege-leeren':
+        if (window.DartSync && typeof window.DartSync.fehlgeschlagenLeeren === 'function') window.DartSync.fehlgeschlagenLeeren();
+        render();
+        break;
       case 'liga-zusage': {
         if (!(window.DartSync && window.DartSync.liga && window.DartKonto && window.DartKonto.nutzer())) return;
         var lgTermin = el.getAttribute('data-id');
@@ -23073,9 +23601,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         window.DartSync.liga.zusage(lgTermin, lgDabei).then(function (z) {
           ligaZusagen = z;
           render();
-        }).catch(function () {
-          /* Kein Netz: nichts kaputt – beim nächsten Betreten stimmt es wieder. */
-        });
+        }).catch(function (e) { zusageFehlgeschlagen(e); });
         break;
       }
       case 'end-visit': {
@@ -23700,6 +24226,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       if (peRole === 'profile-vor') UI.profilEdit.vor = ev.target.value;
       if (peRole === 'profile-nach') UI.profilEdit.nach = ev.target.value;
       if (peRole === 'pe-email') UI.profilEdit.email = ev.target.value;
+      if (peRole === 'pe-email-pass') UI.profilEdit.emailPass = ev.target.value;
     }
     if (ev.target.getAttribute('data-role') === 'foto-zoom' && UI.foto) {
       UI.foto.zoom = Number(ev.target.value) || 0;
@@ -23794,7 +24321,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var neu = parseInt(UI.input, 10);
     if (neu > rest) { UI.error = 'Rest ' + neu + ' ist mehr als vorher (' + rest + ').'; UI.input = ''; render(); return; }
     var wurf = rest - neu;
-    if (wurf > 180) { UI.error = 'Das wären ' + wurf + ' Punkte – mehr als 180.'; UI.input = ''; render(); return; }
+    if (wurf > MAX_VISIT) { UI.error = 'Das wären ' + wurf + ' Punkte – mehr als ' + MAX_VISIT + '.'; UI.input = ''; render(); return; }
     UI.input = String(wurf);
     submitTotal();
   }
@@ -24376,7 +24903,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
          dessen Beschriftung – Enter darf dann nicht am Knopf vorbei das Leg
          bestätigen, während „Eingabe rückgängig" unter dem Finger liegt. */
       var fokus = document.activeElement;
-      var imDialog = fokus && fokus.closest && fokus.closest('#overlay');
+      /* Nur ein KNOPF zaehlt - die Dialogkarte selbst traegt den Fokus seit
+         D1 immer (dialogFokusHinein), damit Hilfstechnik im Dialog ist. */
+      var imDialog = fokus && fokus.closest && fokus.closest('#overlay button, #overlay [role="button"]');
       var ldN = legDoneUebersicht() ? 3 : 2;
       var ldW = Math.min(ov.wahl || 0, ldN - 1);
       if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp' ||
@@ -24518,9 +25047,18 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (bereich && document.activeElement && bereich.contains(document.activeElement)) UI.fokusMerk = fokusSchluessel(document.activeElement);
 
     if (istZurueck) {
-      /* In einem Feld: Backspace loescht, Escape verlaesst das Feld. */
+      /* In einem Feld: Backspace loescht, Escape verlaesst das Feld. Ist
+         das Feld leer, gibt es nichts zu verlassen - dann schliesst Escape
+         gleich den Dialog, statt erst beim zweiten Druck. */
       if (imFeld) {
-        if (ev.key === 'Escape') { ziel.blur(); ev.preventDefault(); ev.stopImmediatePropagation(); }
+        if (ev.key === 'Escape') {
+          var feldLeer = ziel.tagName === 'SELECT' ? false
+            : ziel.isContentEditable ? !String(ziel.textContent || '').trim()
+            : !String(ziel.value || '').trim();
+          ev.preventDefault(); ev.stopImmediatePropagation();
+          if (feldLeer && UI.overlay && !bleibtOffen(UI.overlay.type)) { ziel.blur(); tastaturZurueck(); }
+          else ziel.blur();
+        }
         return;
       }
       /* Backspace ist in den Spielbildern das Loeschen und bleibt es;
@@ -24563,6 +25101,14 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   renderLadeHinweis();
   spielUhrStellen();          // Altbestand ohne Startzeit: ab jetzt zaehlen
   altesSpielBeenden();
+  /* #konto aus einer Mitteilungs-Mail (siehe hashKontoEinloesen): Hash
+     sofort weg, Konto-Bildschirm auf - angemeldet geht es von dort zu den
+     Benachrichtigungen, sonst steht wie gewohnt die Anmeldung. */
+  if (location.hash === '#konto') {
+    UI.hashKonto = true;
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) { /* egal */ }
+    if (!SPIEL_SCREENS[S.screen] && S.screen !== 'bulloff') S.screen = 'konto';
+  }
   einmaligeBerichtKorrekturen();
 
   /*
@@ -24665,6 +25211,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       einzelVerloren: einzelVerloren,
       planNachreichen: planNachreichen,
       berichtNeu: function () { berichtStand = null; },   // nur fuer Tests
+      manOfTheDay: manOfTheDay,                            // nur fuer Tests
+      manOfTheDayText: manOfTheDayText,                    // nur fuer Tests
+      legHighlights: legHighlights,                        // nur fuer Tests
+      ligaErgebnisDaten: ligaErgebnisDaten,                // nur fuer Tests
+      mitteilungsZeilen: mitteilungsZeilen,                // nur fuer Tests
       uebernehmeTurnier: uebernehmeTurnier,
       turnierListeAktualisieren: beitretbareHolen,
       turnierBeitreten: turnierBeitreten,

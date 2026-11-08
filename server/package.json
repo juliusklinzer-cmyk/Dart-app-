@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Accounts und geteilte Spielhistorie fuer die Dart-App",
   "engines": {
-    "node": ">=22.5"
+    "node": ">=22.13"
   },
   "scripts": {
     "dev": "node main.mjs",

@@ -151,8 +151,9 @@ Wirtschaftln und Darts sind es nicht.
 ## Was dahinter steckt
 
 Ein einziger Node-Prozess (`server/main.mjs`) liefert die Seite **und** die API
-aus. Keine Laufzeit-Abhängigkeiten: SQLite steckt seit Node 22.5 in der
-Laufzeit (`node:sqlite`), Passwörter macht `node:crypto`.
+aus. Keine Laufzeit-Abhängigkeiten: SQLite steckt in der Laufzeit (`node:sqlite`,
+ohne Startflag ab Node 22.13 – darum `engines >=22.13` in beiden `package.json`),
+Passwörter macht `node:crypto`.
 
 Der Server kennt **keine Dart-Regeln**. Er nimmt fertige Spiele als JSON
 entgegen, merkt sich wer mitgespielt hat, und gibt sie wieder heraus.
@@ -206,12 +207,28 @@ Migration 014, läuft beim Start automatisch), gilt sieben Tage und legt je nach
 Wahl ein Gast-Konto oder ein Vereinsmitglied an – der Code selbst bleibt auf dem
 Server.
 
-Weitere Schalter in derselben Datei (alle optional, Vorlage `deploy/env.example`):
+Weitere Werte in derselben Datei (Vorlage `deploy/env.example`; Pflicht sind
+nur der Einladungs-Hash und – für Mail und Push – die Brevo- und VAPID-Zeilen):
 
-| Variable | Wirkung |
-|---|---|
-| `DARTS_KAMERA=1` | schaltet das Kamera-Relay (Projekt Linse) ein. Standard: aus – die Routen brauchen keine Anmeldung und sind abgeschaltet, solange `js/kamera.js` nicht geladen wird. |
-| `DARTS_BACKUP_OFFSITE` | rsync-Ziel für die zweite Kopie der Sicherung, gelesen von `backup.sh` auf dem Host (siehe Backup). |
+| Variable | Vorgabe | Wirkung |
+|---|---|---|
+| `DARTS_INVITE_HASH` | – (Pflicht) | Hash des Einladungscodes aus `npm run invite`. |
+| `DARTS_GAST_INVITE_HASH` | leer | zweiter Code für Gast-Konten (kein Ligaspieler). Leer = keine Gast-Registrierung per Code; Einladungs-Links aus der App gehen trotzdem. |
+| `BREVO_SMTP_USER`, `BREVO_SMTP_KEY` | leer | Brevo-SMTP-Zugang. Ohne beide verschickt die App keine Mails. |
+| `DARTS_MAIL_LIGA` | `Blink 180 <blink180@wirtschaftln.de>` | Absender für Spielberichte und Spieltag-Erinnerungen. |
+| `DARTS_MAIL_APP` | `Dart-App <dart@wirtschaftln.de>` | Absender für alles Allgemeine; die Adresse ist auch der VAPID-Kontakt. |
+| `DARTS_APP_URL` | `https://darts.wirtschaftln.de` | Adresse der App in Mails und Push (Links, Logo). |
+| `DARTS_MAIL_ERLAUBT` | nicht gesetzt = `spielbericht@steeldart-muenchen.de` | kommagetrennte Liste zusätzlicher erlaubter Empfänger der Spielbericht-Mail (die eigene Konto-Adresse ist immer erlaubt). Leer gesetzt (`DARTS_MAIL_ERLAUBT=`) = nur die eigene Adresse. Beispiel: `spielbericht@steeldart-muenchen.de,kapitaen@gegner.de`. |
+| `DARTS_VAPID_PUBLIC`, `DARTS_VAPID_PRIVATE` | leer | Schlüsselpaar für Web Push aus `node server/scripts/vapid.mjs`. Ohne beide keine Push-Mitteilungen; ein neues Paar heißt: alle Geräte schalten Push neu ein. |
+| `DARTS_KAMERA=1` | aus | schaltet das Kamera-Relay (Projekt Linse) ein – die Routen brauchen keine Anmeldung und bleiben aus, solange `js/kamera.js` nicht geladen wird. |
+| `DARTS_KONTINGENT_SPIELE` | 200 | Tagesgrenze gespeicherter Spiele je Konto (nur für Tests gedacht). |
+| `DARTS_KONTINGENT_LIVE` | 5000 | Tagesgrenze der Live-Schreibvorgänge je Konto (nur für Tests gedacht). |
+| `DARTS_CLAIM_FRIST_MS` | 600000 (10 min) | Frist ohne Lebenszeichen, nach der ein geteiltes Einzel als hängengeblieben gilt und ein anderes iPad übernehmen darf (die Tests setzen 3000). |
+| `DARTS_SSE_PULS_MS` | 25000 | Keepalive-Takt des Live-Stroms (SSE). |
+| `DARTS_BACKUP_DIR` | `/data/backups` (neben der DB) | Ordner für die Stände von `server/scripts/backup.mjs` im Container. |
+| `DARTS_BACKUP_OFFSITE` | leer | rsync-Ziel für die zweite Kopie der Sicherung, gelesen von `backup.sh` auf dem Host (siehe Backup). |
+| `DARTS_DEMO_PASSWORT` | zufällig | gemeinsames Passwort der Demo-Konten aus `server/scripts/demo.mjs`; nur das Skript liest es. |
+| `PORT`, `HOST`, `DARTS_DB`, `DARTS_TRUST_PROXY`, `DARTS_SECURE_COOKIES`, `NODE_ENV` | von `compose.yml` gesetzt | Port 3002, Adresse 0.0.0.0, Datenbank `/data/darts.db`, X-Forwarded-For von Caddy glauben, Session-Cookie nur über HTTPS, Produktion. Nicht in die `.env` – `compose.yml` setzt sie fest; lokal (`node server/main.mjs`) gelten die Vorgaben 3002 / `server/data/darts.db` / Cookies ohne Secure. |
 
 **3. Deployen.**
 
@@ -219,8 +236,12 @@ Weitere Schalter in derselben Datei (alle optional, Vorlage `deploy/env.example`
 bash deploy/deploy.sh
 ```
 
-Das Skript baut lokal (der 2-GB-Server baut nie selbst), lässt vorher die Tests
-laufen, schiebt das Image per SSH rüber und macht eine Rauchprobe. Bis hierher
+Das Skript baut lokal (der 2-GB-Server baut nie selbst), lässt vorher alle
+Suiten laufen (`node tests/alle.mjs`: Checkout-Engine, Liga-Daten, Mail,
+Mitteilungen, Browser gegen `index.html`, dann das frisch gebaute
+`dart-turnier.html`, Server-API, Konto mit zwei Geräten – Abbruch beim ersten
+Fehler; `DARTS_SKIP_TESTS=1` überspringt sie laut und bewusst), schiebt das
+Image per SSH rüber und macht eine Rauchprobe. Bis hierher
 ist Wirtschaftln nicht angefasst worden — der Container läuft, ist aber von
 außen noch nicht erreichbar.
 
