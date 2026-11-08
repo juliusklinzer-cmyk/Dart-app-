@@ -24,10 +24,23 @@ export const BREVO_PORT = 587;
 
 function kopfWert(s) { return String(s || '').replace(/[\r\n]+/g, ' ').trim(); }
 
-/* Umlaute im Betreff oder Anzeigenamen: RFC 2047 (Base64). */
+/* Umlaute im Betreff oder Anzeigenamen: RFC 2047 (Base64). Ein encoded-word
+   darf hoechstens 75 Zeichen lang sein - ein langer Betreff wird deshalb in
+   Stuecke von bis zu 45 Bytes zerlegt (Base64 60 Zeichen plus Rahmen 12)
+   und mit CRLF+Leerzeichen gefaltet; der Leser setzt benachbarte
+   encoded-words ohne den Zwischenraum wieder zusammen. Geschnitten wird nur
+   zwischen Zeichen, nie mitten in einer UTF-8-Folge. */
 export function kodiereKopf(s) {
   s = kopfWert(s);
-  return /^[\x20-\x7e]*$/.test(s) ? s : '=?UTF-8?B?' + Buffer.from(s, 'utf8').toString('base64') + '?=';
+  if (/^[\x20-\x7e]*$/.test(s)) return s;
+  const stuecke = [];
+  let akt = '';
+  for (const zeichen of s) {
+    if (akt && Buffer.byteLength(akt + zeichen, 'utf8') > 45) { stuecke.push(akt); akt = ''; }
+    akt += zeichen;
+  }
+  if (akt) stuecke.push(akt);
+  return stuecke.map(function (t) { return '=?UTF-8?B?' + Buffer.from(t, 'utf8').toString('base64') + '?='; }).join('\r\n ');
 }
 
 /* "Blink 180 <blink180@wirtschaftln.de>" oder nackte Adresse -> { name, adresse } */
@@ -37,9 +50,13 @@ export function adresse(roh) {
   return { name: '', adresse: String(roh || '').trim().toLowerCase() };
 }
 export function istAdresse(a) { return /^[^\s@<>",]+@[^\s@<>",]+\.[^\s@<>",]+$/.test(String(a || '')); }
+/* Kopfzeilen-Form einer Adresse. Zeilenumbrueche fliegen auch aus dem
+   Adressteil - mimeBauen soll nicht davon abhaengen, dass jeder Aufrufer
+   vorher filtert (Header-Injection). */
 function kopfAdresse(roh) {
   const a = adresse(roh);
-  return a.name ? kodiereKopf(a.name) + ' <' + a.adresse + '>' : a.adresse;
+  const adr = a.adresse.replace(/[^\x21-\x7e]+/g, '');
+  return a.name ? kodiereKopf(a.name) + ' <' + adr + '>' : adr;
 }
 function zeilen76(b64) { return b64.replace(/.{76}/g, '$&\r\n'); }
 function dateiName(n) {
@@ -97,7 +114,11 @@ export function textZuHtml(text) {
   }).join('');
 }
 
-/* b: { titel, kicker, text, knopf: { text, url } | null, vorschau, logoUrl, fuss }
+/* b: { titel, kicker, text, knopf: { text, url } | null, vorschau, logoUrl, fuss, appUrl }
+   Der Knopf fuehrt nur zu http(s)-Adressen; alles andere (javascript:,
+   data:) wird durch appUrl ersetzt - Escaping allein macht aus so einem
+   Link keinen harmlosen. Die Schriften kommen ohne Google-Fonts-Link: fast
+   jedes Postfach blockt den Abruf, der CSS-Stapel hat seine Ersatzschriften.
    Aussen folgt die Seite dem Postfach (hell oder dunkel: color-scheme "light
    dark", dazu prefers-color-scheme und Outlooks data-ogsb fuer die Clients,
    die das lesen). Die Karte ist immer schwarz wie die App - mit dem blauen
@@ -108,9 +129,10 @@ export function textZuHtml(text) {
 const AUSSEN_HELL = '#efeaea', AUSSEN_DUNKEL = '#0d0a0b';
 export function htmlBrief(b) {
   const logo = b.logoUrl ? '<img src="' + escapeHtml(b.logoUrl) + '" width="48" height="48" alt="" style="display:block;width:48px;height:48px;border-radius:50%;border:0;">' : '';
-  const knopf = b.knopf && b.knopf.url ?
+  const knopfUrl = b.knopf ? (/^https?:\/\//i.test(String(b.knopf.url || '').trim()) ? String(b.knopf.url).trim() : (b.appUrl || '')) : '';
+  const knopf = knopfUrl ?
     '<table role="presentation" cellpadding="0" cellspacing="0" style="margin:6px 0 8px;"><tr><td bgcolor="' + FARBEN.akzent + '" style="border-radius:999px;' + flaeche(FARBEN.akzent) + '">' +
-    '<a href="' + escapeHtml(b.knopf.url) + '" style="display:inline-block;padding:13px 24px;font-family:' + SCHRIFT + ';font-size:16px;font-weight:700;letter-spacing:.02em;color:#ffffff;text-decoration:none;border-radius:999px;">' + escapeHtml(b.knopf.text || 'Zur Dart-App') + ' &rarr;</a></td></tr></table>' : '';
+    '<a href="' + escapeHtml(knopfUrl) + '" style="display:inline-block;padding:13px 24px;font-family:' + SCHRIFT + ';font-size:16px;font-weight:700;letter-spacing:.02em;color:#ffffff;text-decoration:none;border-radius:999px;">' + escapeHtml(b.knopf.text || 'Zur Dart-App') + ' &rarr;</a></td></tr></table>' : '';
   const fuss = b.fuss == null ? 'Diese Mail kommt aus der Dart-App von Blink 180. Welche Mitteilungen du bekommst, stellst du in der App ein: Profil &rarr; Konto &rarr; Benachrichtigungen.' : escapeHtml(b.fuss);
   /* Der Schein: erst die sichere Flaeche, dann der Verlauf obendrauf - ein
      Client, der radial-gradient nicht kennt, verwirft nur die zweite Zeile. */
@@ -118,7 +140,6 @@ export function htmlBrief(b) {
     'background-image:radial-gradient(560px 300px at 82% -4%, rgba(64,150,195,0.26), rgba(64,150,195,0) 64%),radial-gradient(420px 260px at 8% 104%, rgba(64,150,195,0.12), rgba(64,150,195,0) 62%),linear-gradient(' + FARBEN.karte + ',' + FARBEN.karte + ');';
   return '<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">' +
     '<meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark">' +
-    '<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@500;700&display=swap" rel="stylesheet">' +
     '<style>' +
     ':root{color-scheme:light dark;supported-color-schemes:light dark;}' +
     '@media (prefers-color-scheme:dark){.aussen{background-color:' + AUSSEN_DUNKEL + ' !important;background-image:linear-gradient(' + AUSSEN_DUNKEL + ',' + AUSSEN_DUNKEL + ') !important;}}' +
@@ -147,7 +168,11 @@ export function htmlBrief(b) {
 /* ---------- MIME ---------- */
 
 /* Immer multipart/mixed: Text (UTF-8, Base64) - bei m.html als
-   multipart/alternative zusammen mit dem HTML - plus Anhaenge. */
+   multipart/alternative zusammen mit dem HTML - plus Anhaenge.
+   m.abmeldeUrl: die Mail ist eine automatische Mitteilung an viele - dann
+   kommen List-Unsubscribe (wo man sie abstellt) und Auto-Submitted dazu,
+   damit Postfaecher sie als Rundmail einordnen und Abwesenheitsnotizen
+   nicht antworten. Eine Mail an Menschen (Spielbericht) hat das nicht. */
 export function mimeBauen(m) {
   const grenze = '=_blink180_' + Date.now().toString(36) + '_' + randomBytes(6).toString('hex');
   const von = adresse(m.von);
@@ -157,6 +182,9 @@ export function mimeBauen(m) {
   ];
   if (m.cc && m.cc.length) kopf.push('Cc: ' + m.cc.map(kopfAdresse).join(', '));
   if (m.antwortAn) kopf.push('Reply-To: ' + kopfAdresse(m.antwortAn));
+  if (m.abmeldeUrl) {
+    kopf.push('List-Unsubscribe: <' + kopfWert(m.abmeldeUrl).replace(/[\s<>]/g, '') + '>', 'Auto-Submitted: auto-generated');
+  }
   kopf.push(
     'Subject: ' + kodiereKopf(m.betreff),
     'Date: ' + new Date(m.zeit || Date.now()).toUTCString(),
@@ -293,16 +321,23 @@ export function erstelleMailer(cfg) {
   };
   const appUrl = String(cfg.appUrl || 'https://darts.wirtschaftln.de').replace(/\/+$/, '');
   const logoUrl = cfg.logoUrl === undefined ? appUrl + '/icons/apple-touch-icon.png' : cfg.logoUrl;
+  /* Wo man Mitteilungen abstellt: Profil -> Konto -> Benachrichtigungen. */
+  const abmeldeUrl = appUrl + '/#konto';
   /* m: { von: 'liga'|'app', an: [], cc: [], antwortAn, betreff, text, anhaenge: [{ name, typ, inhalt }],
-          titel (Ueberschrift, sonst Betreff), kicker, knopf: { text, url }, vorschau, fuss, html (fertig oder false = nur Text) } */
+          titel (Ueberschrift, sonst Betreff), kicker, knopf: { text, url }, vorschau, fuss, html (fertig oder false = nur Text),
+          mitteilung (true = automatische Rundmail der Mitteilungszentrale, bekommt die Listen-Kopfzeilen) } */
   async function sende(m) {
     const von = absender[m.von] || absender.app;
-    const html = m.html === undefined ? htmlBrief({ titel: m.titel || m.betreff, kicker: m.kicker, text: m.text, knopf: m.knopf, vorschau: m.vorschau, fuss: m.fuss, logoUrl: logoUrl }) : m.html;
-    const an = (m.an || []).map(function (a) { return adresse(a).adresse; }).filter(istAdresse);
-    const cc = (m.cc || []).map(function (a) { return adresse(a).adresse; }).filter(istAdresse);
+    const html = m.html === undefined ? htmlBrief({ titel: m.titel || m.betreff, kicker: m.kicker, text: m.text, knopf: m.knopf, vorschau: m.vorschau, fuss: m.fuss, logoUrl: logoUrl, appUrl: appUrl }) : m.html;
+    /* Nur Eintraege mit brauchbarer Adresse - dieselbe Liste geht in den
+       Umschlag (RCPT TO) und in die Kopfzeilen, mit Anzeigename. */
+    const brauchbar = function (a) { return istAdresse(adresse(a).adresse); };
+    const anRoh = (m.an || []).filter(brauchbar), ccRoh = (m.cc || []).filter(brauchbar);
+    const an = anRoh.map(function (a) { return adresse(a).adresse; });
+    const cc = ccRoh.map(function (a) { return adresse(a).adresse; });
     if (!an.length) throw new Error('Mail ohne Empfaenger');
     const id = Date.now().toString(36) + '.' + randomBytes(6).toString('hex');
-    const daten = mimeBauen({ von: von, an: m.an, cc: m.cc, antwortAn: m.antwortAn || von, betreff: m.betreff, text: m.text, html: html, anhaenge: m.anhaenge, id: id });
+    const daten = mimeBauen({ von: von, an: anRoh, cc: ccRoh, antwortAn: m.antwortAn || von, betreff: m.betreff, text: m.text, html: html, anhaenge: m.anhaenge, id: id, abmeldeUrl: m.mitteilung ? abmeldeUrl : '' });
     if (!bereit) {
       console.log('[mail] nicht eingerichtet - verworfen: "' + kopfWert(m.betreff) + '" an ' + an.join(', '));
       return { gesendet: false, id: id };

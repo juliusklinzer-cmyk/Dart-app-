@@ -13,7 +13,14 @@
  *    Ergebnis, Anpfiff (Live), neuer Rekord, Spielbericht noch offen.
  *  - Aus der API: Kasse (Buchung aufs eigene Konto), Konto (Passwort,
  *    Anmeldung nach langer Pause), neues Mitglied.
+ *
+ * Die Jobs rechnen in Berliner Zeit (der Container laeuft in UTC) und nur
+ * zwischen 9 und 21 Uhr - nachts bleibt das Telefon still. Die Schluessel
+ * der Terminjobs tragen das Datum (zusage:<id>:<tag>:<stufe>,
+ * morgen:<id>:<tag>, tabelle:<id>:<gewertete Spiele>), damit ein verlegter
+ * Spieltag und ein Nachholspiel neu gemeldet werden.
  */
+import crypto from 'node:crypto';
 
 export const THEMEN = [
   { id: 'zusage', titel: 'Zusage zum Spieltag fehlt', text: '7 und 2 Tage vor dem Ligaspiel, solange du nicht abgestimmt hast', standard: 'beide', von: 'liga' },
@@ -52,6 +59,23 @@ function tageBis(heute, tag) {
 /* Trainingstermin-Kennung wie in js/app.js (trainingsTerminId): 'tr' + JJJJMMTT. */
 function trainingsId(iso) { return 'tr' + iso.replace(/-/g, ''); }
 
+/* Tag (JJJJ-MM-TT) und Stunde in Berliner Zeit. Der Container kennt nur UTC,
+   und der UTC-Tag wechselt um 1 Uhr (Winter) bzw. 2 Uhr (Sommer) nachts -
+   mit toISOString() liefen die Tagesjobs genau dann. */
+export function berlinZeit(d) {
+  const teile = {};
+  new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Berlin', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23' })
+    .formatToParts(d || new Date()).forEach(function (p) { teile[p.type] = p.value; });
+  return { tag: teile.year + '-' + teile.month + '-' + teile.day, stunde: Number(teile.hour) };
+}
+/* Tagesjobs nur tagsueber: ab 9 Uhr, letzter Lauf vor 21 Uhr. */
+export const JOB_FENSTER = { von: 9, bis: 21 };
+
+/* Kurzer Hash fuer die Push-Kennung (tag/Topic): gleiche Mitteilung an
+   dasselbe Geraet ersetzt sich, zwei verschiedene bleiben beide stehen.
+   base64url passt zu Topic (RFC 8030: max. 32 Zeichen aus A-Z a-z 0-9 - _). */
+function kurzHash(s) { return crypto.createHash('sha1').update(String(s)).digest('base64url').slice(0, 8); }
+
 export function erstelleMitteilungen(opt) {
   const db = opt.db;
   const mailer = opt.mailer || { bereit: false };
@@ -69,6 +93,7 @@ export function erstelleMitteilungen(opt) {
   const qAboOk = db.prepare('UPDATE push_abos SET last_ok_at = ? WHERE id = ?');
   const qSchon = db.prepare('SELECT 1 FROM mitteilung_log WHERE schluessel = ? AND user_id = ?');
   const qLogge = db.prepare('INSERT OR IGNORE INTO mitteilung_log (schluessel, user_id, sent_at) VALUES (?, ?, ?)');
+  const qLogWeg = db.prepare('DELETE FROM mitteilung_log WHERE schluessel = ? AND user_id = ?');
   const qMitglieder = db.prepare("SELECT id, email, display_name, gast_konto FROM users WHERE status = 'aktiv' AND test = 0 ORDER BY created_at");
   const qZusage = db.prepare('SELECT status FROM liga_zusagen WHERE termin_id = ? AND user_id = ?');
   const qZugesagt = db.prepare("SELECT u.id, u.email, u.display_name FROM liga_zusagen z JOIN users u ON u.id = z.user_id WHERE z.termin_id = ? AND (z.status IS NULL OR z.status = 'dabei') AND u.test = 0 AND u.status = 'aktiv' ORDER BY z.created_at");
@@ -97,14 +122,30 @@ export function erstelleMitteilungen(opt) {
    * Eine Mitteilung an ein Konto. inhalt: { betreff, text, push: { titel,
    * text, url }, anhaenge }. schluessel: einmalig je Konto (null = immer).
    * erzwinge: alle Kanaele unabhaengig von der Einstellung (Testversand).
+   * alt: fruehere Schreibweisen desselben Schluessels (siehe anAlle).
    * Liefert true, wenn mindestens ein Weg geklappt hat.
+   *
+   * Der Schluessel wird VOR dem Versand im Log reserviert (INSERT OR
+   * IGNORE; changes 0 = ein anderer Aufruf war schneller). Erst pruefen und
+   * nach dem Versand loggen liess zwei iPads, die binnen Sekunden dasselbe
+   * Ergebnis melden, jede Mitteilung doppelt schicken - der erste Versand
+   * dauert mit einer SMTP-Verbindung je Mail laenger als der Abstand der
+   * Anfragen. Klappt kein Weg, kommt die Zeile wieder weg, damit der
+   * naechste Lauf es noch einmal versuchen kann.
    */
-  async function anKonto(u, themaId, inhalt, schluessel, erzwinge) {
+  async function anKonto(u, themaId, inhalt, schluessel, erzwinge, alt) {
     const t = THEMA[themaId];
     if (!t || !u || !u.email) return false;
-    if (schluessel && qSchon.get(schluessel, u.id)) return false;
     const k = erzwinge ? 'beide' : kanalVon(u.id, themaId);
     if (k === 'aus') return false;
+    if (schluessel) {
+      if (alt && alt.some(function (a) { return qSchon.get(a, u.id); })) return false;
+      if (qLogge.run(schluessel, u.id, new Date().toISOString()).changes === 0) return false;
+    }
+    /* Push-Kennung: Thema plus Hash des Schluessels - nur das Thema liess
+       zwei Kassenbuchungen kurz nacheinander zu einer zusammenfallen. Ohne
+       Schluessel (Kasse, Konto) ist jede Mitteilung eine eigene. */
+    const tag = themaId + '-' + kurzHash(schluessel || (Date.now().toString(36) + Math.random()));
     let ok = false;
     if ((k === 'beide' || k === 'mail') && mailer.bereit && inhalt.betreff) {
       try {
@@ -112,7 +153,8 @@ export function erstelleMitteilungen(opt) {
           von: t.von, an: [u.email], betreff: inhalt.betreff, text: inhalt.text, anhaenge: inhalt.anhaenge,
           titel: String(inhalt.betreff).replace(/^\[Test\]\s*/, ''), kicker: (erzwinge ? 'Beispiel · ' : '') + t.titel,
           knopf: { text: KNOPF[themaId] || 'Zur Dart-App', url: (inhalt.push && inhalt.push.url) || appUrl },
-          vorschau: inhalt.push ? inhalt.push.text : ''
+          vorschau: inhalt.push ? inhalt.push.text : '',
+          mitteilung: true
         });
         ok = true;
       } catch (e) {
@@ -123,7 +165,7 @@ export function erstelleMitteilungen(opt) {
       for (const abo of qAbos.all(u.id)) {
         try {
           const r = await push.sende({ endpoint: abo.endpoint, keys: { p256dh: abo.p256dh, auth: abo.auth } },
-            { titel: inhalt.push.titel, text: inhalt.push.text, url: inhalt.push.url || appUrl, tag: themaId });
+            { titel: inhalt.push.titel, text: inhalt.push.text, url: inhalt.push.url || appUrl, tag: tag });
           if (r.weg) qAboWeg.run(abo.id);
           else if (r.ok) { ok = true; qAboOk.run(new Date().toISOString(), abo.id); }
           else console.error('[mitteilung] Push "' + themaId + '" an ' + u.display_name + ': ' + (r.status || '') + ' ' + (r.grund || ''));
@@ -132,13 +174,17 @@ export function erstelleMitteilungen(opt) {
         }
       }
     }
-    if (schluessel && ok) qLogge.run(schluessel, u.id, new Date().toISOString());
+    if (schluessel && !ok) qLogWeg.run(schluessel, u.id);
     return ok;
   }
 
   /* An alle Mitglieder (ohne Test-Konten; Gast-Konten nur mit
      filter.mitGaesten). filter.nur(u) waehlt aus, filter.ohne laesst ein
-     Konto aus, filter.inhaltJe(u) baut den Text je Empfaenger. */
+     Konto aus, filter.inhaltJe(u) baut den Text je Empfaenger.
+     filter.alt: Schluessel aus der Zeit vor dem Datum im Schluessel
+     (Nov. 2026: zusage:<id>:<stufe>, morgen:<id>, tabelle:<id>) - ein
+     Spieltag, an den unter dem alten Namen schon erinnert wurde, kommt
+     nach dem Update nicht noch einmal. Kann nach der Saison 2026/27 weg. */
   async function anAlle(themaId, inhalt, schluessel, filter) {
     let n = 0;
     filter = filter || {};
@@ -146,7 +192,7 @@ export function erstelleMitteilungen(opt) {
       if (u.gast_konto && !filter.mitGaesten) continue;
       if (filter.ohne && filter.ohne === u.id) continue;
       if (filter.nur && !filter.nur(u)) continue;
-      if (await anKonto(u, themaId, filter.inhaltJe ? filter.inhaltJe(u) : inhalt, schluessel)) n++;
+      if (await anKonto(u, themaId, filter.inhaltJe ? filter.inhaltJe(u) : inhalt, schluessel, false, filter.alt)) n++;
     }
     return n;
   }
@@ -159,15 +205,19 @@ export function erstelleMitteilungen(opt) {
     return { daheim, gegner: daheim ? t.gast : t.heim, datum: datumDe(t.tag), wo: (daheim ? 'Heim' : 'Auswärts') + (t.ort ? ', ' + t.ort : '') };
   }
 
-  /* Zusage fehlt: 4 bis 7 Tage vorher (Stufe 7) und 1 bis 3 Tage vorher
+  /* Zusage fehlt: 4 bis 7 Tage vorher (Stufe 7) und 1 bis 2 Tage vorher
      (Stufe 2). Fenster statt eines festen Tages, damit ein Tag Serverpause
-     nichts verschluckt; der Schluessel haelt jede Stufe auf einmal. */
+     nichts verschluckt; der Schluessel haelt jede Stufe auf einmal. Die
+     Stufe 2 beginnt erst bei 2 Tagen - mit 3 kam "2 Tage vorher" am
+     dritten Tag. Verschobene Spieltage (t.verschoben aus js/liga-daten.js,
+     t.tag ist dann noch das alte Datum) bleiben aussen vor; steht das neue
+     Datum, erinnert der Schluessel mit Datum erneut. */
   async function zusageErinnerung(heute) {
     let n = 0;
     for (const t of termine()) {
-      if (!t.tag || !t.gast) continue;
+      if (!t.tag || !t.gast || t.verschoben) continue;
       const tage = tageBis(heute, t.tag);
-      const stufe = tage >= 4 && tage <= 7 ? '7' : tage >= 1 && tage <= 3 ? '2' : null;
+      const stufe = tage >= 4 && tage <= 7 ? '7' : tage >= 1 && tage <= 2 ? '2' : null;
       if (!stufe) continue;
       const x = terminText(t);
       const dabei = qZugesagt.all(t.id).length;
@@ -182,18 +232,21 @@ export function erstelleMitteilungen(opt) {
           'Viele Grüße\n' + team,
         push: { titel: 'Bist du dabei? ' + t.nr + '. Spieltag gegen ' + x.gegner, text: x.datum + ' · ' + x.wo + ' · bisher ' + dabei + ' von ' + soll + ' dabei', url: appUrl }
       });
-      n += await anAlle('zusage', null, 'zusage:' + t.id + ':' + stufe, { nur: (u) => !qZusage.get(t.id, u.id), inhaltJe: inhalt });
+      n += await anAlle('zusage', null, 'zusage:' + t.id + ':' + t.tag + ':' + stufe, { nur: (u) => !qZusage.get(t.id, u.id), inhaltJe: inhalt, alt: ['zusage:' + t.id + ':' + stufe] });
     }
     return n;
   }
 
   /* DiensDarts: 3 Tage vor dem Dienstag (also am Samstag) an alle, die
-     die Umfrage noch nicht beantwortet haben - Gast-Konten trainieren mit. */
+     die Umfrage noch nicht beantwortet haben - Gast-Konten trainieren mit.
+     Faellt auf den Dienstag ein Ligaspiel, gibt es kein Training und keine
+     Umfrage - dann kommt auch keine Erinnerung. */
   async function trainingErinnerung(heute) {
     const d = new Date(heute + 'T12:00:00Z');
     const bisDienstag = (2 - d.getUTCDay() + 7) % 7;
     if (bisDienstag !== 3) return 0;
     const tag = isoPlus(heute, 3);
+    if (termine().some((t) => t.tag === tag && t.gast && !t.verschoben)) return 0;
     const tid = trainingsId(tag);
     const inhalt = (u) => ({
       betreff: 'DiensDarts am ' + datumDe(tag) + ' – kommst du?',
@@ -210,7 +263,7 @@ export function erstelleMitteilungen(opt) {
   async function spieltagMorgen(heute) {
     let n = 0;
     for (const t of termine()) {
-      if (!t.tag || !t.gast || tageBis(heute, t.tag) !== 1) continue;
+      if (!t.tag || !t.gast || t.verschoben || tageBis(heute, t.tag) !== 1) continue;
       const x = terminText(t);
       const zu = qZugesagt.all(t.id);
       const namen = zu.map((u) => u.display_name).join(', ') || 'noch niemand';
@@ -221,15 +274,17 @@ export function erstelleMitteilungen(opt) {
             'Dabei (' + zu.length + '): ' + namen + '.\n\nViele Grüße\n' + team,
           push: { titel: 'Morgen: ' + t.nr + '. Spieltag gegen ' + x.gegner, text: x.wo + ' · 20:00 Uhr · dabei: ' + namen, url: appUrl }
         };
-        if (await anKonto(u, 'spieltag-morgen', inhalt, 'morgen:' + t.id)) n++;
+        if (await anKonto(u, 'spieltag-morgen', inhalt, 'morgen:' + t.id + ':' + t.tag, false, ['morgen:' + t.id])) n++;
       }
     }
     return n;
   }
 
-  /* Tabelle nach einem kompletten Spieltag der Ligaleitung (alle vier
-     Spiele mit Ergebnis), nur fuer Spieltage der letzten zehn Tage - sonst
-     kaeme beim ersten Lauf die ganze Vergangenheit. */
+  /* Tabelle nach einem Spieltag der Ligaleitung, sobald jedes Spiel ein
+     Ergebnis hat oder verschoben ist, nur fuer Spieltage der letzten zehn
+     Tage - sonst kaeme beim ersten Lauf die ganze Vergangenheit. Der
+     Schluessel zaehlt die gewerteten Spiele mit: ein Nachholspiel macht
+     aus 3 von 4 wieder 4 von 4 und loest so eine zweite Meldung aus. */
   async function tabelleNeu(heute) {
     if (!liga || !liga.spieltage || !liga.tabelleAus) return 0;
     let n = 0;
@@ -240,26 +295,40 @@ export function erstelleMitteilungen(opt) {
       if (!spiele.length || !spiele.every((s) => s.einzel || s.verschoben)) continue;
       const gespielt = spiele.filter((s) => s.einzel);
       if (!gespielt.length) continue;
+      const offen = spiele.length - gespielt.length;
       const letzter = gespielt.map((s) => s.tag || '').sort().pop();
       if (!letzter || tageBis(letzter, heute) < 0 || tageBis(letzter, heute) > 10) continue;
       const tab = liga.tabelleAus(liga.spieltage, liga.teams).zeilen;
       const platz = tab.findIndex((z) => z.team === team) + 1;
-      const zeilen = tab.map((z, i) => (i + 1) + '. ' + z.team + '  ' + z.punkte + ' Pkt (' + z.einzel + ' Spiele, ' + z.legs + ' Legs)').join('\n');
+      /* z.einzel ist das Einzelverhaeltnis (z. B. 22:10), z.spiele die Zahl der Spiele. */
+      const zeilen = tab.map((z, i) => (i + 1) + '. ' + z.team + '  ' + z.punkte + ' Pkt (' + z.spiele + ' Spiele, Einzel ' + z.einzel + ', Legs ' + z.legs + ')').join('\n');
       const unser = gespielt.find((s) => s.heim === team || s.gast === team);
       const ergebnisse = gespielt.map((s) => s.heim + ' – ' + s.gast + '  ' + s.einzel + (s.legs ? ' (' + s.legs + ' Legs)' : '')).join('\n');
+      const stand = offen ? 'ist gewertet – ' + (offen === 1 ? 'ein Spiel ist' : offen + ' Spiele sind') + ' verschoben' : 'ist komplett gewertet';
       const inhalt = {
         betreff: 'Tabelle nach dem ' + t.nr + '. Spieltag – ' + team + ' auf Platz ' + platz,
-        text: 'Hallo zusammen,\n\nder ' + t.nr + '. Spieltag ist komplett gewertet.\n\nErgebnisse:\n' + ergebnisse + '\n\nTabelle:\n' + zeilen +
+        text: 'Hallo zusammen,\n\nder ' + t.nr + '. Spieltag ' + stand + '.\n\nErgebnisse:\n' + ergebnisse + '\n\nTabelle:\n' + zeilen +
           '\n\nAlles im Detail: ' + appUrl + ' → Liga → Tabelle.\n\nViele Grüße\n' + team,
         push: { titel: team + ' auf Platz ' + platz + ' nach dem ' + t.nr + '. Spieltag', text: (unser ? unser.heim + ' – ' + unser.gast + ' ' + unser.einzel + ' · ' : '') + 'Tabelle und Einzelrangliste in der App', url: appUrl }
       };
-      n += await anAlle('tabelle', inhalt, 'tabelle:' + t.id);
+      n += await anAlle('tabelle', inhalt, 'tabelle:' + t.id + ':' + gespielt.length, { alt: ['tabelle:' + t.id] });
     }
     return n;
   }
 
-  async function jobs(heute) {
-    heute = heute || new Date().toISOString().slice(0, 10);
+  /* Alle Tagesjobs. jetzt: ein Date (die echte Uhr, Vorgabe) - dann gilt
+     Berliner Datum und das Fenster 9 bis 21 Uhr, nachts passiert nichts.
+     Ein Tag als 'JJJJ-MM-TT' (Tests, Skripte) steht fuer "genau dieser
+     Tag", ohne Uhrzeit und ohne Fenster. */
+  async function jobs(jetzt) {
+    let heute;
+    if (typeof jetzt === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(jetzt)) {
+      heute = jetzt;
+    } else {
+      const b = berlinZeit(jetzt instanceof Date ? jetzt : new Date());
+      if (b.stunde < JOB_FENSTER.von || b.stunde >= JOB_FENSTER.bis) return 0;
+      heute = b.tag;
+    }
     let n = 0;
     for (const job of [zusageErinnerung, trainingErinnerung, spieltagMorgen, tabelleNeu]) {
       try { n += await job(heute); } catch (e) { console.error('[mitteilung] Job ' + job.name + ' fehlgeschlagen:', e); }

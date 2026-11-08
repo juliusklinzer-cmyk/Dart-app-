@@ -1,13 +1,18 @@
-/* Offline-Cache für die App-Shell. Bei Änderungen CACHE hochzählen. */
-var CACHE = 'dart-turnier-v168';
+/* Offline-Cache für die App-Shell. Bei Änderungen CACHE hochzählen.
+   Nur die App (index.html samt Skripten, Schriften, Icons) liegt vorab im
+   Cache – sie soll in der Bar auch ohne Netz starten. Die öffentliche
+   Webseite (webseite.html, js/webseite.js, css/webseite.css) und der
+   Live-Ticker (live.html, js/live.js, css/live.css) gehören nicht dazu:
+   beide leben vom Server (aktuelle Ergebnisse, Event-Stream) und nützen
+   offline nichts; der Service Worker wird ohnehin nur von der App
+   registriert. */
+var CACHE = 'dart-turnier-v169';
 var ASSETS = [
   './',
   './index.html',
   './css/styles.css',
   './js/liga-sdm.js',
   './js/liga-daten.js',
-  './js/webseite.js',
-  './css/webseite.css',
   './js/app.js',
   './js/checkout.js',
   './js/checkout-engine.js',
@@ -103,8 +108,9 @@ self.addEventListener('fetch', function (e) {
 });
 
 /* Push-Mitteilungen vom Server (server/lib/push.mjs): { titel, text, url,
-   tag }. Ein Tipp auf die Mitteilung holt die App nach vorn oder oeffnet
-   sie mit der genannten Adresse. */
+   tag }. tag ist Thema plus Hash des Schluessels (server/lib/mitteilungen.mjs):
+   dieselbe Mitteilung ersetzt sich, zwei verschiedene zum selben Thema
+   (zwei Kassenbuchungen) bleiben beide stehen. */
 self.addEventListener('push', function (e) {
   var d = {};
   try { d = e.data ? e.data.json() : {}; } catch (err) { d = { titel: 'Blink 180', text: e.data ? e.data.text() : '' }; }
@@ -113,13 +119,31 @@ self.addEventListener('push', function (e) {
     tag: d.tag || undefined, data: { url: d.url || './' }
   }));
 });
+/* Ein Tipp auf die Mitteilung soll zur genannten Adresse fuehren - nicht
+   nur irgendein offenes Fenster nach vorn holen (dann blieb der Live-Ticker
+   zu, sobald die App im Hintergrund offen war). Reihenfolge: ein Fenster,
+   das die Adresse schon zeigt (ohne #-Teil verglichen), wird fokussiert und
+   bei anderem #-Teil dorthin bewegt; sonst wird ein offenes Fenster auf die
+   Adresse geschickt (WindowClient.navigate), und erst ohne Fenster oder
+   ohne navigate ein neues geoeffnet. */
 self.addEventListener('notificationclick', function (e) {
   e.notification.close();
-  var url = (e.notification.data && e.notification.data.url) || './';
+  var ziel = new URL((e.notification.data && e.notification.data.url) || './', self.location.href).href;
+  var ohneHash = function (u) { return String(u || '').split('#')[0]; };
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (fenster) {
+    var passend = null, irgendeins = null;
     for (var i = 0; i < fenster.length; i++) {
-      if ('focus' in fenster[i]) return fenster[i].focus();
+      if (!('focus' in fenster[i])) continue;
+      if (!irgendeins) irgendeins = fenster[i];
+      if (!passend && ohneHash(fenster[i].url) === ohneHash(ziel)) passend = fenster[i];
     }
-    return self.clients.openWindow(url);
+    var f = passend || irgendeins;
+    if (!f) return self.clients.openWindow(ziel);
+    return f.focus().then(function (f2) {
+      f2 = f2 || f;
+      if (f2.url === ziel) return f2;
+      if ('navigate' in f2) return f2.navigate(ziel).catch(function () { return self.clients.openWindow(ziel); });
+      return self.clients.openWindow(ziel);
+    });
   }));
 });

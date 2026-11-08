@@ -26,6 +26,14 @@ check('Name und Adresse werden getrennt', JSON.stringify(adresse('Blink 180 <Bli
 check('nackte Adresse bleibt', adresse('dart@wirtschaftln.de').adresse === 'dart@wirtschaftln.de' && adresse('dart@wirtschaftln.de').name === '');
 check('Adressform', istAdresse('a.b@c.de') && !istAdresse('kein@mail') && !istAdresse('x y@z.de'));
 check('ASCII-Betreff bleibt, Umlaute werden RFC-2047-kodiert', kodiereKopf('Spielbericht 3') === 'Spielbericht 3' && /^=\?UTF-8\?B\?.+\?=$/.test(kodiereKopf('Grüße')));
+/* Langer Betreff mit Umlauten: viele encoded-words von hoechstens 75
+   Zeichen, gefaltet; zusammengesetzt wieder der Originaltext. */
+const lang = ('Spielbericht 4. Spieltag: Blink 180 – d`Haberer 2, Grüße aus der Bar Sehnsucht, Über-Öl-Äpfel ').repeat(3).slice(0, 200);
+const kodiert = kodiereKopf(lang);
+const woerter = kodiert.split('\r\n ');
+const zurueck = woerter.map((w) => { const m = /^=\?UTF-8\?B\?([A-Za-z0-9+/=]+)\?=$/.exec(w); return m ? Buffer.from(m[1], 'base64').toString('utf8') : '\u0000'; }).join('');
+check('200 Zeichen Betreff: ' + woerter.length + ' encoded-words, jedes hoechstens 75 Zeichen, Faltung mit CRLF+Leerzeichen', lang.length === 200 && woerter.length > 3 && woerter.every((w) => w.length <= 75 && /^=\?UTF-8\?B\?/.test(w)));
+check('zusammengesetzt ergibt sich der Betreff unveraendert (kein Schnitt in einer UTF-8-Folge)', zurueck === lang);
 const pdf = Buffer.from('%PDF-1.4 test');
 const mime = mimeBauen({ von: 'Blink 180 <blink180@wirtschaftln.de>', an: ['liga@beispiel.de', 'TC <tc@beispiel.de>'], cc: ['blink180@wirtschaftln.de'], antwortAn: 'blink180@wirtschaftln.de',
   betreff: 'Spielbericht 3. Spieltag: Voodoo Darters – Blink 180', text: 'Hallo,\n\nanbei der Bericht.\n\nViele Grüße\nBlink 180', anhaenge: [{ name: 'Spielbericht_Spieltag3 Voodoo.pdf', typ: 'application/pdf', inhalt: pdf }], id: 'test123' });
@@ -38,6 +46,11 @@ check('Text ist Base64 und kommt lesbar zurueck', Buffer.from(/text\/plain; char
 check('ohne html-Feld kein HTML-Teil in mimeBauen', !/text\/html/.test(mime));
 check('Anhang ist Base64 des PDFs', mime.includes(pdf.toString('base64')));
 check('nur CRLF als Zeilenende', !/[^\r]\n/.test(mime));
+check('ohne Rundmail-Kennung keine Listen-Kopfzeilen', !/List-Unsubscribe|Auto-Submitted/.test(mime));
+const mimeInj = mimeBauen({ von: 'dart@wirtschaftln.de', an: ['Böse <a@beispiel.de>\r\nBcc: boese@beispiel.de'], betreff: 'x', text: 'x', id: 'i1', abmeldeUrl: 'https://darts.test/#konto' });
+const kopfInj = mimeInj.split('\r\n\r\n')[0];
+check('Zeilenumbruch in einer Adresse erzeugt keine eigene Kopfzeile, To bleibt eine 7-Bit-Zeile', !/^Bcc:/m.test(kopfInj) && kopfInj.split('\r\n').filter((z) => /^To: /.test(z)).length === 1 && /^To: [\x21-\x7e]+\r\n/m.test(mimeInj), JSON.stringify(/^To: .*$/m.exec(mimeInj)));
+check('Rundmail: List-Unsubscribe und Auto-Submitted', /\r\nList-Unsubscribe: <https:\/\/darts\.test\/#konto>\r\n/.test(mimeInj) && /\r\nAuto-Submitted: auto-generated\r\n/.test(mimeInj));
 
 /* ---------- 1b. HTML-Brief im Look der App ---------- */
 console.log('Mail: HTML-Brief');
@@ -51,6 +64,9 @@ check('Brief: Logo, Wortmarke, Kicker, Titel, Knopf mit escapter URL, Vorschau, 
   /Einzel 9:7<\/div>/.test(brief) && /Benachrichtigungen\.<\/td>/.test(brief) && /#e5484d/.test(brief) && /#0d0a0b/.test(brief));
 check('Brief: aussen hell mit Dunkelmodus-Regel, Karte schwarz mit blauem Schein', /color-scheme" content="light dark"/.test(brief) && /prefers-color-scheme:dark/.test(brief) && /\[data-ogsb\] \.aussen/.test(brief) && /<body class="aussen" bgcolor="#efeaea"/.test(brief) && brief.includes('radial-gradient(560px 300px at 82% -4%, rgba(64,150,195,0.26)') && /bgcolor="#141011"/.test(brief));
 check('Brief ohne Knopf und mit eigenem Fuss', !/<a href/.test(htmlBrief({ titel: 'T', text: 'x', knopf: null, fuss: 'Antworten an <x>' })) && /Antworten an &lt;x&gt;<\/td>/.test(htmlBrief({ titel: 'T', text: 'x', fuss: 'Antworten an <x>' })));
+check('Brief ohne Google-Fonts-Abruf', !/fonts\.googleapis|<link /.test(brief));
+const briefJs = htmlBrief({ titel: 'T', text: 'x', knopf: { text: 'Klick', url: 'javascript:alert(1)' }, appUrl: 'https://darts.test' });
+check('Knopf mit javascript:-Adresse zeigt auf die App, ohne appUrl gibt es keinen Knopf', /<a href="https:\/\/darts\.test" /.test(briefJs) && !/javascript:/.test(briefJs) && !/<a href/.test(htmlBrief({ titel: 'T', text: 'x', knopf: { text: 'K', url: 'data:text/html,x' } })) && /<a href="HTTP:\/\/darts\.test\/x"/.test(htmlBrief({ titel: 'T', text: 'x', knopf: { text: 'K', url: ' HTTP://darts.test/x ' } })));
 check('escapeHtml', escapeHtml('<a href="x">\'&\'</a>') === '&lt;a href=&quot;x&quot;&gt;&#39;&amp;&#39;&lt;/a&gt;');
 const mime2 = mimeBauen({ von: 'Dart-App <dart@wirtschaftln.de>', an: ['a@beispiel.de'], betreff: 'HTML', text: 'Nur Text', html: '<p>Nur HTML</p>', anhaenge: [{ name: 'a.pdf', typ: 'application/pdf', inhalt: pdf }], id: 'h1' });
 const g2 = /multipart\/alternative; boundary="([^"]+)"/.exec(mime2);
@@ -104,6 +120,11 @@ const m2 = erstelleMailer({ user: 'brevo-user', key: 'geheim', host: '127.0.0.1'
 protokoll.length = 0; empfangen = '';
 const r2 = await m2.sende({ von: 'liga', an: ['tc@beispiel.de'], cc: ['blink180@wirtschaftln.de'], betreff: 'Hallo', text: 'Text' });
 check('Mailer: Absender liga, Empfaenger plus Cc im Umschlag, Antwort gesendet', r2.gesendet && protokoll.includes('MAIL FROM:<blink180@wirtschaftln.de>') && protokoll.includes('RCPT TO:<tc@beispiel.de>') && protokoll.includes('RCPT TO:<blink180@wirtschaftln.de>') && /^From: Blink 180 <blink180@wirtschaftln.de>/m.test(empfangen));
+check('Mail an Menschen: keine Listen-Kopfzeilen', !/List-Unsubscribe|Auto-Submitted/.test(empfangen));
+protokoll.length = 0; empfangen = '';
+await m2.sende({ von: 'liga', an: ['TC <tc@beispiel.de>', 'x@y.de\r\nBcc: boese@z.de', 'kein@mail'], betreff: 'Rundmail', text: 'Text', mitteilung: true });
+check('Mitteilung: unbrauchbare Adressen fehlen in Umschlag UND Kopf, Anzeigename bleibt, Listen-Kopfzeilen dabei', protokoll.filter((z) => /^RCPT TO:/.test(z)).join() === 'RCPT TO:<tc@beispiel.de>' &&
+  /^To: TC <tc@beispiel.de>\r\n/m.test(empfangen) && !/boese|Bcc:/.test(empfangen) && /^List-Unsubscribe: <https:\/\/darts\.wirtschaftln\.de\/#konto>\r\n/m.test(empfangen) && /^Auto-Submitted: auto-generated\r\n/m.test(empfangen), JSON.stringify(empfangen.split('\r\n\r\n')[0]));
 const m3 = erstelleMailer({});
 const r3 = await m3.sende({ von: 'app', an: ['x@beispiel.de'], betreff: 'Nichts', text: '' });
 check('ohne Zugangsdaten: nicht bereit, Mail wird verworfen statt zu scheitern', !m3.bereit && r3.gesendet === false);
@@ -140,6 +161,8 @@ check('7 Tage vorher (Stufe 7): nur Anna - Bert hat zugesagt, Carl abbestellt, D
 check('die Mail nennt Spieltag, Gegner, Datum, Link und den Stand der Zusagen', /4\. Spieltag/.test(gesendet[0].betreff) && /d`Haberer 2/.test(gesendet[0].text) && /https:\/\/darts\.test/.test(gesendet[0].text) && /Bisher dabei: 1 von 4/.test(gesendet[0].text) && /Anna/.test(gesendet[0].text));
 n = await api.mitteilungen.zusageErinnerung(tagMinus(st04.tag, 6));
 check('am naechsten Tag nicht nochmal (mail_log)', n === 0 && gesendet.length === 1);
+n = await api.mitteilungen.zusageErinnerung(tagMinus(st04.tag, 3));
+check('3 Tage vorher: zwischen den Stufen, nichts', n === 0 && gesendet.length === 1);
 n = await api.mitteilungen.zusageErinnerung(tagMinus(st04.tag, 2));
 check('2 Tage vorher (Stufe 2): Anna noch einmal', n === 1 && gesendet.length === 2 && /2 Tagen/.test(gesendet[1].text));
 db.prepare('INSERT INTO liga_zusagen (termin_id, user_id, created_at, status) VALUES (?, ?, ?, ?)').run('st05', 'u_a', jetzt, 'dabei');

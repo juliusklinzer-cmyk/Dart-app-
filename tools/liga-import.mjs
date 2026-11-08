@@ -16,6 +16,14 @@
  * Keine Abhaengigkeiten: die Seiten sind einfache Tabellen, die Regexe
  * unten reichen. Aendert die Ligaleitung ihr Layout, meldet das Skript
  * "nichts gefunden" statt stillschweigend leere Daten zu schreiben.
+ *
+ * Hart abgebrochen (Exit 1) wird nur, wenn der Spielplan selbst nicht
+ * passt - ohne ihn gibt es nichts zu schreiben. Ein einzelner Spielbericht
+ * mit 15 Zeilen (kampflos, Tippfehler der Ligaleitung) oder eine Teamseite
+ * ohne Spielerliste ist dagegen nur eine Warnung: das Spiel kommt ohne
+ * `partien`, das Team ohne `spieler` in die Datei, die Warnungen stehen
+ * gesammelt am Ende, Exit 0. Sonst blockierte ein fremdes Spiel den Import
+ * der ganzen Liga.
  */
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -33,6 +41,10 @@ const opt = (name) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1
 const AUS = opt('--aus');
 const SPEICHERN = opt('--speichern');
 const PRUEFEN = args.includes('--pruefen');
+
+/* Warnungen: sofort ausgeben und am Ende noch einmal gesammelt. */
+const warnungen = [];
+function warne(text) { warnungen.push(text); console.warn('Warnung: ' + text); }
 
 /* ---------- HTML-Kleinkram ---------- */
 const ENTITAETEN = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', ndash: '–', mdash: '—', auml: 'ä', ouml: 'ö', uuml: 'ü', Auml: 'Ä', Ouml: 'Ö', Uuml: 'Ü', szlig: 'ß', eacute: 'é' };
@@ -146,12 +158,17 @@ function einzelAusSeite(html) {
 }
 
 /* ---------- Spielbericht: 16 Einzel und Highlights ---------- */
+/* partien ist null, wenn der Bericht nicht 16 Einzel hat - der Aufrufer
+   laesst das Feld dann weg; Highlights werden trotzdem gelesen. */
 function spielberichtAus(html, id) {
-  const partien = [];
+  let partien = [];
   const re = /<tr>\s*<td><span class="(?:winner|loser)">([\s\S]*?)<\/span><\/td>\s*<td><span class="(?:winner|loser)">([\s\S]*?)<\/span><\/td>\s*<td>\s*(\d+)\s*:\s*(\d+)\s*<\/td>/g;
   let m;
   while ((m = re.exec(html))) partien.push([spielerName(m[1]), spielerName(m[2]), Number(m[3]), Number(m[4])]);
-  if (partien.length !== 16) throw new Error('Spielbericht ' + id + ': ' + partien.length + ' statt 16 Einzel');
+  if (partien.length !== 16) {
+    warne('Spielbericht ' + id + ': ' + partien.length + ' statt 16 Einzel - Spiel kommt ohne Einzel in die Datei');
+    partien = null;
+  }
   const highlights = [];
   const ab = html.indexOf('<h2>Highlights</h2>');
   if (ab >= 0) {
@@ -200,7 +217,10 @@ function teamAus(html, id) {
       t.spieler.push(s);
     }
   }
-  if (!t.spieler.length) throw new Error('Mannschaftsseite ' + id + ': keine Spielerliste');
+  if (!t.spieler.length) {
+    warne('Mannschaftsseite ' + id + ': keine Spielerliste - Team kommt ohne Spieler in die Datei');
+    delete t.spieler;
+  }
   return t;
 }
 
@@ -242,9 +262,8 @@ async function haupt() {
       if (!sp.bericht) continue;
       const html = await seite(BASIS + 'spielberichte/id/' + sp.bericht + '.html', 'sb-' + sp.bericht + '.html');
       const b = spielberichtAus(html, sp.bericht);
-      sp.partien = b.partien;
+      if (b.partien) { sp.partien = b.partien; berichte++; }
       if (b.highlights.length) sp.highlights = b.highlights;
-      berichte++;
     }
   }
   const teams = {};
@@ -298,6 +317,10 @@ async function haupt() {
   const ergebnisse = Object.values(runden).flat().filter((s) => s.einzel).length;
   console.log('js/liga-sdm.js geschrieben: ' + Object.keys(runden).length + ' Spieltage, ' + spiele + ' Spiele, ' +
     ergebnisse + ' mit Ergebnis, ' + berichte + ' Spielberichte, ' + Object.keys(teams).length + ' Teams (Stand ' + stand + ').');
+  if (warnungen.length) {
+    console.warn('\n' + warnungen.length + ' Warnung(en):');
+    warnungen.forEach((w) => console.warn('  - ' + w));
+  }
 }
 
 haupt().catch((e) => { console.error('Liga-Import fehlgeschlagen: ' + (e && e.message || e)); process.exit(1); });

@@ -70,15 +70,24 @@ export function verschluessele(text, abo, optionen) {
 /*
  * Der Push-Dienst der App. cfg: { public, private, kontakt }. Ohne
  * Schluessel nicht "bereit". sende(abo, nachricht) schickt { titel, text,
- * url, tag } als JSON; Antwort { ok, weg } - weg = das Abo gibt es nicht
- * mehr (404/410), der Aufrufer loescht es dann.
+ * url, tag } als JSON; Antwort { ok, weg } - weg = das Abo taugt nicht
+ * mehr, der Aufrufer loescht es dann: 404/410 (abgemeldet), 401/403 (der
+ * Dienst nimmt unsere VAPID-Signatur fuer dieses Abo nicht mehr, etwa nach
+ * einem Schluesselwechsel) oder Schluessel, mit denen sich nichts
+ * verschluesseln laesst - so ein Abo wuerde sonst bei jedem Versand
+ * dieselbe Fehlerzeile ins Log schreiben, fuer immer.
  */
 export function erstellePush(cfg) {
   cfg = cfg || {};
   const bereit = !!(cfg.public && cfg.private);
   async function sende(abo, nachricht, optionen) {
     if (!bereit) return { ok: false, weg: false, grund: 'nicht eingerichtet' };
-    const body = verschluessele(JSON.stringify(nachricht), abo);
+    let body;
+    try {
+      body = verschluessele(JSON.stringify(nachricht), abo);
+    } catch (e) {
+      return { ok: false, weg: true, grund: 'Abo unbrauchbar: ' + (e && e.message) };
+    }
     const kopf = {
       'Content-Type': 'application/octet-stream',
       'Content-Encoding': 'aes128gcm',
@@ -87,9 +96,12 @@ export function erstellePush(cfg) {
       Urgency: (optionen && optionen.urgency) || 'normal',
       Authorization: vapidKopf(abo.endpoint, cfg, cfg.kontakt)
     };
+    /* Topic (RFC 8030): gleiche Kennung ersetzt eine noch nicht zugestellte
+       Nachricht beim Dienst. Der Aufrufer haengt an das Thema einen Hash des
+       Schluessels - nur das Thema liess zwei Kasse-Pushes zu einem werden. */
     if (nachricht && nachricht.tag) kopf.Topic = String(nachricht.tag).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 32);
     const r = await fetch(abo.endpoint, { method: 'POST', headers: kopf, body, signal: AbortSignal.timeout(15000) });
-    if (r.status === 404 || r.status === 410) return { ok: false, weg: true, status: r.status };
+    if (r.status === 404 || r.status === 410 || r.status === 401 || r.status === 403) return { ok: false, weg: true, status: r.status };
     if (r.status >= 200 && r.status < 300) return { ok: true, weg: false, status: r.status };
     const t = await r.text().catch(function () { return ''; });
     return { ok: false, weg: false, status: r.status, grund: t.slice(0, 200) };
