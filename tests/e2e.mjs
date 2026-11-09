@@ -6267,6 +6267,39 @@ await gruppe('Handy-Block 2: Solo-Tastatur-Modus - Eingabefeld und Kacheln statt
   await page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; D.save(); D.setScreen('setup'); });
 });
 
+await gruppe('Allein im Punkte-Modus: die Restzahl fuellt die Karte - quer am iPad und am Handy, hochkant am Handy', async () => {
+  const vp = page.viewportSize();
+  await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    S.game = null; S.lineup = [D.activeProfiles()[0].id]; S.mode = 'quick';
+    S.settings.start = 501; S.settings.dartModeFrom = 0; D.ui().modeOverride = null; D.ui().turnier = false;
+    D.save(); D.setScreen('setup');
+  });
+  await page.locator('[data-action="start-game"]').click();
+  await page.keyboard.type('25'); await page.keyboard.press('Enter');
+  check('Rest 476 nach der 25', (await rest(0)) === '476', await rest(0));
+  const lage = () => page.evaluate(() => {
+    const r = (s) => document.querySelector(s).getBoundingClientRect();
+    const k = r('#scoreboard .pcard'), z = r('#scoreboard .rest'), l = r('#scoreboard .letzte-box');
+    return { kBreite: k.width, kLinks: k.left, kOben: k.top, kUnten: k.bottom, zLinks: z.left, zOben: z.top, zUnten: z.bottom, zRechts: z.right,
+      lLinks: l.left, lRechts: l.right, lOben: l.top, restPx: parseFloat(getComputedStyle(document.querySelector('#scoreboard .rest')).fontSize),
+      scroll: document.documentElement.scrollHeight <= window.innerHeight + 1 };
+  });
+  /* Quer steht die Aufnahme klein unter der Zahl, hochkant rechts daneben. */
+  for (const [name, w, h, mind, unten] of [['iPad quer', 1194, 834, 300, true], ['Handy quer', 844, 390, 200, true], ['Handy hochkant', 390, 844, 120, false]]) {
+    await page.setViewportSize({ width: w, height: h });
+    await page.waitForTimeout(150);
+    const g = await lage();
+    check(name + ': die Restzahl ist mindestens ' + mind + ' px gross', g.restPx >= mind, JSON.stringify(g));
+    check(name + ': sie steht linksbuendig in der Karte, die Aufnahme ' + (unten ? 'darunter' : 'rechts daneben'),
+      g.zLinks - g.kLinks <= 40 && g.lRechts <= g.kLinks + g.kBreite &&
+      (unten ? g.lOben >= g.zUnten - 1 && g.lLinks <= g.zLinks + 20 : g.lLinks >= g.zRechts - 1), JSON.stringify(g));
+    check(name + ': nichts ragt aus der Karte, nichts scrollt', g.zOben >= g.kOben - 1 && g.zUnten <= g.kUnten + 1 && g.scroll, JSON.stringify(g));
+  }
+  await page.setViewportSize(vp);
+  await page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; D.save(); D.setScreen('setup'); });
+});
+
 await gruppe('Handy-Block 2: Fernsteuerung hochkant - eine Zeile je Spieler', async () => {
   const vp = page.viewportSize();
   await page.setViewportSize({ width: 390, height: 844 });

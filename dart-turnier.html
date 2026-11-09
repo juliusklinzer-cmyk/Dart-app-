@@ -7145,6 +7145,27 @@ button.pa-gruppe { cursor: pointer; }
   #screen-game.active:not(.turnier) #scoreboard.solo .pcard .pavg { font-size: 1.1rem; }
 }
 
+/* Allein quer (Punkte- und Einzel-Darts-Modus): die Karte hat die halbe
+   Breite und die volle Hoehe, die Restzahl stand trotzdem in Zweier-Groesse
+   (27 vh) mittig mit der Aufnahme rechts. Jetzt fuellt sie die Karte: so
+   gross, wie Breite der Karte oder Hoehe der Zeile erlauben, linksbuendig,
+   die letzte Aufnahme klein darunter (Julius, 09.11.: "im Querformat ist
+   die Zahl links noch winzig"). Die Zeile ist ein Groessen-
+   Container, die Ziffern messen sich an ihrer Hoehe (siehe Fernsteuerung). */
+@media (orientation: landscape) {
+  #screen-game.active:not(.turnier) #scoreboard.solo .pcard .rest-zeile {
+    grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; align-content: center;
+    justify-items: start; container-type: size;
+    font-size: clamp(3rem, 60cqi, 40rem); line-height: 0.8;
+  }
+  /* Die Zahl nimmt die Breite, die letzte Aufnahme steht klein darunter -
+     nebeneinander haette die Zahl nur zwei Fuenftel der Karte bekommen. */
+  #screen-game.active:not(.turnier) #scoreboard.solo .pcard .rest { grid-column: 1; grid-row: 1; align-self: end; font-size: min(1em, 92cqh); }
+  #screen-game.active:not(.turnier) #scoreboard.solo .pcard .letzte-box {
+    grid-column: 1; grid-row: 2; justify-self: start; font-size: 0.5em; margin: 0.1em 0 0 0.08em; padding: 0 0 0 0.16em;
+  }
+}
+
 /* Tastatur-Modus allein hochkant (Handy): alles gleich breit, die
    Aufnahmen nur einmal. Die Karte stand 14 px eingerueckt (Innenabstand
    der Fernsteuerung fuer den Schein) und zeigte die letzten Wuerfe, die
