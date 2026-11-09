@@ -3420,10 +3420,15 @@ await gruppe('Liga: alle Spiele des Spieltags', async () => {
     (await textKlein('#liga-sub')).includes('5. liga') && (await page.locator('#liga-tabs button').count()) === 6);
   check('unsere Spieltag-Karte zeigt keine fremden Spiele mehr', (await page.locator('#liga-karte .lk-runde').count()) === 0);
   const termineMitTag = await page.evaluate(() => window.LIGA_DATEN.liga.termine.filter((t) => t.tag).length);
-  check('in der Spieltage-Liste fuehrt "Alle Spiele" an jedem Spieltag mit Datum zur Runde (Spielplan der Ligaleitung)',
-    (await page.locator('#liga-liste .liga-spieltag [data-action="liga-runde"][data-termin="st01"]').count()) === 1 &&
-    (await page.locator('#liga-liste [data-action="liga-runde"]').count()) === termineMitTag && termineMitTag === 16);
-  await page.locator('#liga-liste [data-action="liga-runde"][data-termin="st01"]').click();
+  check('in der Spieltage-Liste gibt es keinen "Alle Spiele"-Link mehr', (await page.locator('#liga-liste [data-action="liga-runde"]').count()) === 0 && termineMitTag === 16);
+  /* Ein Tag nach dem 1. Spieltag: das Spiel vom Bogen (Blink 7:9 Dachau) steht
+     rechts mit Stand und "Niederlage" - ohne Link. */
+  await ligaHeute('2026-10-07');
+  const st01 = page.locator('#liga-liste .liga-spieltag[data-id="st01"] .lt-rechts');
+  check('vergangenes Spiel: Stand 7 : 9 und darunter Niederlage, rot', (await st01.evaluate((e) => e.className.includes('fertig') && e.className.includes('niederlage'))) &&
+    (await st01.locator('.lt-stand').evaluate((e) => e.textContent)) === '7 : 9' && (await st01.locator('.lt-ausgang').evaluate((e) => e.textContent)) === 'Niederlage');
+  await ligaHeute('2026-10-01');
+  await page.evaluate(() => { const D = window.__dart; D.ui().overlay = { type: 'liga-runde', termin: 'st01' }; D.render(); });
   const zeilen = await page.locator('#overlay-card .lr-zeile').count();
   check('1. Spieltag: fuenf Zeilen - Spielfrei und vier Spiele (das nachgeholte dabei)', zeilen === 5, String(zeilen));
   const rt = await textKlein('#overlay-card');
@@ -6228,8 +6233,8 @@ await gruppe('Handy-Block 2: Solo-Tastatur-Modus - Eingabefeld und Kacheln statt
   check('die Kacheln rechnen mit: Ø 180.0, First 9 180.0, 3 Darts im Leg, 1x 180, hoechste 180, noch kein Finish - ein Strich',
     werte === '180.0 | 180.0 | 3 | 1 | 180 | –', werte);
   check('die Liste zeigt die 180 mit Rest 321', (await text('#key-solo .key-liste')).includes('180') && (await text('#key-solo .key-liste')).includes('Rest 321'));
-  /* Hochkant am Handy stehen die Aufnahmen nur in der Liste - in der Karte
-     waeren sie doppelt (Julius, 09.11.). Quer zeigt sie die Karte (unten). */
+  /* Die Aufnahmen stehen nur in der Liste - in der Karte waeren sie
+     doppelt, hochkant wie quer (Julius, 09.11.). */
   check('hochkant: die Karte zeigt die Wuerfe nicht noch einmal', await page.evaluate(() => {
     const w = document.querySelector('#scoreboard .pcard .pwuerfe');
     return !!w && getComputedStyle(w).display === 'none';
@@ -6254,9 +6259,9 @@ await gruppe('Handy-Block 2: Solo-Tastatur-Modus - Eingabefeld und Kacheln statt
       scroll: document.documentElement.scrollHeight <= window.innerHeight + 1, restPx: parseFloat(getComputedStyle(document.querySelector('#scoreboard .rest')).fontSize) };
   });
   check('quer: die Karte links, Eingabefeld und Kacheln rechts daneben', quer.eLeft >= quer.kRight - 1 && quer.kdTop < quer.kBottom, JSON.stringify(quer));
-  check('quer: die Karte zeigt die letzten Wuerfe unter dem Rest', await page.evaluate(() => {
-    const w = document.querySelector('#scoreboard .pcard .pwuerfe');
-    return !!w && getComputedStyle(w).display !== 'none' && w.textContent.includes('180') && w.textContent.includes('Rest 321');
+  check('quer: die Karte zeigt die Wuerfe nicht noch einmal, die Liste rechts hat sie', await page.evaluate(() => {
+    const w = document.querySelector('#scoreboard .pcard .pwuerfe'), l = document.querySelector('#key-solo .key-liste');
+    return !!w && getComputedStyle(w).display === 'none' && l.textContent.includes('180') && l.textContent.includes('Rest 321');
   }));
   check('quer: der Rest steht gross, alles im Bild, nichts scrollt', quer.restPx >= 60 && quer.kaBottom <= quer.innen + 0.5 && quer.scroll, JSON.stringify(quer));
   await page.setViewportSize({ width: 390, height: 844 });
@@ -6343,6 +6348,13 @@ await gruppe('Spielplan am Handy: der Spieltag klappt in der Liste auf, jeder sa
   });
   let g = await lage();
   check('die Karte steht in der Liste direkt unter dem 5. Spieltag', g.inListe && g.vorher === 'st05' && g.offen && g.sichtbar, JSON.stringify(g));
+  check('Zeile und Karte sind ein Kasten: keine Fuge, kein Rand dazwischen, kein doppeltes Datum', await page.evaluate(() => {
+    const z = document.querySelector('#liga-liste .liga-spieltag.offen'), k = document.getElementById('liga-karte');
+    const zr = z.getBoundingClientRect(), kr = k.getBoundingClientRect(), zs = getComputedStyle(z), ks = getComputedStyle(k);
+    return Math.abs(kr.top - zr.bottom) < 1 && zs.borderBottomWidth === '0px' && ks.borderTopWidth === '0px' &&
+      zs.borderBottomLeftRadius === '0px' && ks.borderTopLeftRadius === '0px' && zs.borderLeftColor === ks.borderLeftColor &&
+      getComputedStyle(k.querySelector('.lk-datum')).display === 'none' && Math.abs(zr.left - kr.left) < 1 && Math.abs(zr.right - kr.right) < 1;
+  }));
   check('darueber nur vergangene Spieltage, darunter nur kommende', g.vor.length >= 4 && g.vor.every((d) => d < '20261124') && g.nach.length >= 10 && g.nach.every((d) => d > '20261124'), JSON.stringify({ vor: g.vor, nach: g.nach }));
   check('Dabei 1 / 4 mit Tobi, Kann nicht 1 mit Max, Noch keine Antwort 1 mit mir - das Gast-Konto fehlt',
     /Dabei · 1 \/ 4 Tobi/.test(g.text) && /Kann nicht · 1 Max/.test(g.text) && /Noch keine Antwort · 1 Ich/.test(g.text) && !g.text.includes('Besuch'), g.text);
@@ -6356,13 +6368,22 @@ await gruppe('Spielplan am Handy: der Spieltag klappt in der Liste auf, jeder sa
   g = await lage();
   check('Kann nicht: ich stehe bei den Absagen, der Knopf ist gedrueckt, keine offene Antwort mehr',
     /Kann nicht · 2 Max Ich/.test(g.text) && !g.text.includes('Noch keine Antwort') && (await page.locator('#liga-karte [data-action="liga-zusage"][data-status="absage"].aktiv').count()) === 1, g.text);
+  check('die gedrueckte Absage ist rot markiert', await page.evaluate(() => {
+    const b = document.querySelector('#liga-karte [data-action="liga-zusage"][data-status="absage"]');
+    return b.classList.contains('absage') && b.getAttribute('aria-pressed') === 'true' && getComputedStyle(b).borderColor.indexOf('229, 72, 77') >= 0;
+  }));
   await page.locator('#liga-karte [data-action="liga-zusage"][data-status="absage"]').click();
-  await page.waitForFunction(() => /Noch keine Antwort · 1/.test(document.getElementById('liga-karte').textContent));
-  check('nochmal getippt: die Antwort ist wieder ausgetragen', /Kann nicht · 1 Max/.test((await lage()).text));
+  await page.waitForTimeout(150);
+  g = await lage();
+  check('nochmal auf Kann nicht getippt: nichts aendert sich, die Antwort bleibt', /Kann nicht · 2 Max Ich/.test(g.text) && !g.text.includes('Noch keine Antwort'), g.text);
   await page.locator('#liga-karte [data-action="liga-zusage"][data-status="dabei"]').click();
   await page.waitForFunction(() => /Dabei · 2 \/ 4/.test(document.getElementById('liga-karte').textContent));
   g = await lage();
-  check('Bin dabei: 2 / 4 mit Tobi und mir', /Dabei · 2 \/ 4 Tobi Ich/.test(g.text) && (await page.locator('#liga-karte [data-action="liga-zusage"][data-status="dabei"].aktiv').count()) === 1, g.text);
+  check('Bin dabei: 2 / 4 mit Tobi und mir, bei Kann nicht nur noch Max', /Dabei · 2 \/ 4 Tobi Ich/.test(g.text) && /Kann nicht · 1 Max/.test(g.text) &&
+    (await page.locator('#liga-karte [data-action="liga-zusage"][data-status="dabei"].aktiv').count()) === 1 && (await page.locator('#liga-karte [data-action="liga-zusage"][data-status="absage"].aktiv').count()) === 0, g.text);
+  await page.locator('#liga-karte [data-action="liga-zusage"][data-status="dabei"]').click();
+  await page.waitForTimeout(150);
+  check('nochmal auf Bin dabei getippt: ich bleibe dabei', /Dabei · 2 \/ 4 Tobi Ich/.test((await lage()).text));
   /* Zuklappen und woanders aufklappen. */
   await page.locator('#liga-liste .liga-spieltag.wahl').click();
   g = await lage();

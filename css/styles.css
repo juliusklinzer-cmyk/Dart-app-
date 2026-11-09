@@ -5660,11 +5660,11 @@ body .boards-host.log #board-log { display: block; }
 .lr-erg { flex: none; display: flex; align-items: baseline; gap: 6px; font-variant-numeric: tabular-nums; color: var(--muted); }
 .lr-erg b { font-family: var(--font-cond); font-size: 1.15em; color: var(--text); }
 .lr-erg.verschoben { color: var(--amber); font-size: 0.85rem; }
-/* "Alle Spiele ›" in der Spieltage-Liste: ein Knopf rechts unter dem Ergebnis. */
+/* Rechts in der Spieltage-Liste: Stand, darunter Sieg / Niederlage. */
 .liga-spieltag .lt-rechts { display: flex; flex-direction: column; align-items: flex-end; gap: 0; }
-/* 44 px Tipp-Flaeche bei gleich hoher Zeile: der negative Rand oben und unten
-   laesst den Knopf im Layout 32 px einnehmen, getroffen wird er auf 44 (D7). */
-.liga-spieltag .lt-alle { display: inline-flex; align-items: center; min-height: 44px; margin: -6px 0; padding: 0 2px 0 10px; font-family: var(--font-body); font-size: 0.78rem; letter-spacing: 0; color: var(--laser-hell); font-weight: 600; cursor: pointer; white-space: nowrap; }
+.liga-spieltag .lt-rechts.fertig.sieg { color: #3fbf7f; }
+.liga-spieltag .lt-rechts.fertig.remis { color: var(--amber); }
+.liga-spieltag .lt-ausgang { font-family: var(--font-cond); font-weight: 700; font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); line-height: 1.1; }
 @media (min-width: 700px) {
   .lt-runden .lr-zeile { min-height: clamp(36px, 5.6vh, 56px); font-size: clamp(12px, 2vh, 20px); padding: 0 clamp(8px, 1vw, 14px); }
   .lt-runden .lr-erg.verschoben { font-size: clamp(11px, 1.7vh, 17px); }
@@ -7074,14 +7074,17 @@ button.pa-gruppe { cursor: pointer; }
 .key-liste .v:not(:first-child) { opacity: 0.75; }
 /* Das unsichtbare Feld fuer die Handy-Tastatur: da, aber nicht zu sehen. */
 .key-input { position: absolute; left: 0; top: 0; width: 1px; height: 1px; opacity: 0; border: 0; padding: 0; margin: 0; pointer-events: none; }
-/* Quer: links die Karte (Rest gross, darunter die letzten Aufnahmen),
-   rechts Eingabefeld, Kacheln und Liste - wie Punkte-Modus und Tastenfeld. */
+/* Quer: links die Karte mit dem Rest, rechts Eingabefeld, Kacheln und
+   Liste - wie Punkte-Modus und Tastenfeld. Die letzten Aufnahmen stehen
+   nur in der Liste rechts; in der Karte waeren sie doppelt (Julius, 09.11.:
+   "im Querformat wird immer noch zweimal angezeigt"). */
 @media (orientation: landscape) {
   #screen-game.active.turnier.solo .game-body { flex-direction: row; gap: clamp(8px, 1.6vw, 24px); align-items: stretch; }
   #screen-game.active.turnier.solo .game-main { flex: 1 1 52%; min-width: 0; }
   #screen-game.active.turnier.solo #scoreboard { grid-template-columns: minmax(0, 1fr); }
   #screen-game.active.turnier.solo #scoreboard .pcard .rest-zeile { font-size: clamp(56px, 34vh, 300px); }
-  #screen-game.active.turnier.solo #scoreboard .pcard .pwuerfe { display: flex; flex-direction: column; gap: 4px; flex: none; }
+  #screen-game.active.turnier.solo #scoreboard .pcard .pwuerfe { display: none; }
+  #screen-game.active.turnier.solo #scoreboard .pcard { grid-template-areas: "kopf" "rest" "felder"; grid-template-rows: auto minmax(0, 1fr) auto; }
   #screen-game.active.turnier.solo .input-area { flex: 1 1 48%; height: auto; min-height: 0; min-width: 0; display: flex; flex-direction: column; }
   #screen-game.active.turnier.solo .pad-key { height: 100%; }
   #screen-game.active.turnier.solo .key-solo { flex: 1 1 auto; }
@@ -7168,9 +7171,18 @@ button.pa-gruppe { cursor: pointer; }
    kommende darunter (Julius, 09.11.). Dazu die drei Zusage-Gruppen der
    Karte: dabei, kann nicht (rot gerahmt, Bild grau), noch keine Antwort
    (blass, gestrichelt). */
-.liga-karte.in-liste { margin: 2px 0 8px; }
-.liga-spieltag.offen { border-bottom-left-radius: 4px; border-bottom-right-radius: 4px; }
+.liga-spieltag.offen { opacity: 1; border-bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-color: var(--line-hell); background: var(--aktiv-flaeche); }
+.liga-karte.in-liste { margin: -5px 0 8px; padding-top: 2px; border-width: 1px; border-top: 0; border-top-left-radius: 0; border-top-right-radius: 0; box-shadow: none; }
+.liga-karte.in-liste .lk-datum { display: none; }
+.liga-spieltag.offen[data-ton="rot"] { border-color: rgba(229, 72, 77, 0.55); }
+.liga-spieltag.offen[data-ton="gelb"] { border-color: rgba(255, 193, 77, 0.6); }
+.liga-spieltag.offen[data-ton="gruen"] { border-color: rgba(63, 191, 127, 0.6); }
+.liga-spieltag.offen[data-ton="live"] { border-color: var(--accent); }
 .liga-karte .lk-knoepfe:empty { display: none; }
 .liga-karte .lt-leute.leise .lt-person { opacity: 0.6; border-style: dashed; }
 .liga-karte .lt-person.absage { border-color: rgba(229, 72, 77, 0.55); color: var(--muted); }
 .liga-karte .lt-person.absage .av { filter: grayscale(1); opacity: 0.7; }
+
+/* Zusage-Knoepfe im Spielplan: die eigene Antwort ist gefuellt - Bin dabei
+   gelb (.hell), Kann nicht rot - die andere bleibt Umriss. */
+.liga-karte .lk-antworten .btn.aktiv.absage { background: rgba(229, 72, 77, 0.22); border-color: rgba(229, 72, 77, 0.85); color: #fff; }

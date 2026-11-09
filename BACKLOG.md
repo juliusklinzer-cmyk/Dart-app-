@@ -27,7 +27,7 @@
 
 ## Erledigt
 
-- [x] DRT-022 Spielplan am Handy: Spieltag klappt in der Liste auf (Karte unter der Zeile, vergangene oben, kommende unten); Zusagen als „Bin dabei“ / „Kann nicht“ mit drei Gruppen Dabei, Kann nicht, Noch keine Antwort · von:Julius · am:2026-11-09 · fertig:2026-11-09
+- [x] DRT-022 Spielplan am Handy: Spieltag klappt in der Liste auf (Karte unter der Zeile, vergangene oben, kommende unten); Zusagen als „Bin dabei“ / „Kann nicht“ (Entweder-oder, kein Austragen) mit drei Gruppen Dabei, Kann nicht, Noch keine Antwort; Zeile und Karte ein Kasten, vergangene Spiele mit Sieg/Niederlage statt "Alle Spiele"-Link; Tastatur-Modus quer ohne doppelte Aufnahmen · von:Julius · am:2026-11-09 · fertig:2026-11-09
 
 - [x] DRT-020 Block-2-Entscheidungen (Julius 09.11.): Session-Dialog bleibt bis zum Wegtippen (kein 6-s-Timer), Kachel „Höchstes Finish“ statt Checkout-Quote, kein Hinweis auf der Liga-Karte, iPad-Tasten meldet er bei Bedarf · von:Julius · am:2026-11-08 · fertig:2026-11-09
 - [x] DRT-001 Audit 08.11.2026 umsetzen: alle freigegebenen Befunde (Pakete A–F; S3-Erlaubtliste auf Julius' Wunsch wieder raus) · prio:hoch · von:Julius · am:2026-11-08 · fertig:2026-11-08 · quelle:audit-2026-11-08/

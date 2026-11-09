@@ -219,7 +219,8 @@ bzw. Team-Kürzel, dann die Antworten in drei Gruppen – **Dabei · n / 4**, **
 nicht** (rot gerahmt) und **Noch keine Antwort** (blass; alle Vereinskonten im Kader,
 die weder zu- noch abgesagt haben – so sieht der Kapitän, wer nur noch nicht
 geschaut hat) – und unten die zwei Knöpfe **Bin dabei** / **Kann nicht** (jeder im
-Team antwortet aktiv; die eigene Antwort nochmal antippen trägt sie aus) – und
+Team antwortet aktiv; ein Entweder-oder: die gewählte Antwort bleibt gedrückt, ein
+Tipp auf die andere wechselt, austragen gibt es nicht) – und
 **nur am Spieltag selbst** darunter **GAME ON!**
 (startet das Ligaspiel; an allen anderen Tagen stehen dort nur die Zusagen, damit
 niemand Tage vorher aus Versehen den Spielabend anlegt – das Übungsspiel im
@@ -230,9 +231,11 @@ und „Live zuschauen“ (Ticker). Gespielte Spieltage zeigen Ergebnis, „Ergeb
 und „Spielbericht“. **Rechts alle Spieltage** kompakt: Nummer, Datum, Gegner, Lokal,
 rechts das Ergebnis (gespielt), die Zusagen (2 / 4) oder LIVE; ein Tipp zeigt den
 Spieltag links groß, Spielfrei-Runden gedimmt. **Am Handy** (unter 700 px) gibt es
-keine zwei Spalten: der angetippte Spieltag klappt **in der Liste** auf – die große
-Karte steht direkt unter seiner Zeile, vergangene Spieltage darüber, kommende
-darunter; ein Tipp auf die offene Zeile klappt sie wieder zu. **„Alle in den Kalender“** lädt alle
+keine zwei Spalten: der angetippte Spieltag klappt **selbst auf** – die Zeile wird
+zum Kopf, die Karte hängt ohne Fuge darunter (ein Kasten, gleiche Randfarbe, ohne
+das Datum ein zweites Mal), vergangene Spieltage darüber, kommende darunter; ein
+Tipp auf die offene Zeile klappt sie wieder zu. Beim Öffnen des Spielplans ist der
+nächste Spieltag offen. **„Alle in den Kalender“** lädt alle
 Termine als iCal-Datei (ganztägig). Die Zusagen liegen auf dem Server und sind für
 alle gleich; ohne Server bleibt der Spielplan lesbar, nur das Eintragen entfällt.
 Am Tablet steht das Bild fest im Rahmen, die Liste scrollt innen; am Handy quer
@@ -258,8 +261,10 @@ bleibt ungenutzt.
 
 **Alle Spiele des Spieltags:** Im Reiter **Tabelle** stehen rechts neben der
 Ligatabelle (Karte „Alle Spiele“) je Spieltag die Paarungen aller Teams mit Ergebnis (Einzel, dahinter Legs),
-Spielfrei gedimmt, Verschobenes mit neuem Datum; in der Spieltage-Liste führt
-„Alle Spiele ›“ in einer gespielten Zeile zum selben Überblick als Dialog. Unsere
+Spielfrei gedimmt, Verschobenes mit neuem Datum. Die Spieltage-Liste zeigt an
+vergangenen Spielen nur unseren Stand mit **Sieg**, **Niederlage** oder
+**Unentschieden** darunter – einen Link zu allen Spielen gibt es dort nicht mehr, die
+stehen in der Tabelle (Julius, 09.11.). Unsere
 Spieltag-Karte bleibt frei davon (Julius). Unser eigenes Spiel ist umrandet und
 führt zu den Ergebnissen. Ein Tipp auf ein fremdes Spiel öffnet die
 16 Einzel wie auf dem Spielberichtsbogen (Gastspieler gekennzeichnet, Sieger
@@ -710,8 +715,9 @@ hochkant unten) – an einer echten Tastatur wie am Board (Ziffern, Enter, Lösc
 Handy holt ein Tipp auf das Feld die Zifferntastatur des Systems. Darunter sechs
 **Kacheln**: Average, First 9, Darts im Leg, 180er, höchste Aufnahme, höchstes Finish
 (eine Checkout-Quote kennt die App nur aus Einzel-Darts), und die letzten
-Aufnahmen als Liste. In der Session sind es die Zahlen der ganzen Session. Links die
-Karte: Rest groß, darunter die letzten Aufnahmen, dazu der Finish-Weg.
+Aufnahmen als Liste. In der Session sind es die Zahlen der ganzen Session. Die
+Karte zeigt nur den Rest groß und den Finish-Weg – die Aufnahmen stehen allein in
+der Liste, hochkant wie quer.
 
 **Klang:** Jede gebuchte Eingabe klingt wie ein Pfeil, der ins Board schlägt –
 **„Pomp"** (Julius' eigene Aufnahme, eingebettet in `js/sound.js`): beim

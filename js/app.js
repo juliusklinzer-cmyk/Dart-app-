@@ -6688,23 +6688,31 @@
       } else if (h) {
         var e = ligaErgebnisAus(h);
         /* Kein Haken am Ergebnis - der Stand sagt alles (Julius, 12.10.). */
-        rechts = e.wirP + ' : ' + e.sieP; rechtsKlasse = 'fertig';
+        rechts = ausgangHTML(e.wirP, e.sieP);
         unten = (h.liga.abgeschlossen ? 'Abgeschlossen' : 'Bericht offen') + ' · ' + esc(t.ort);
+      } else if (vorbei && ligaBogenEintrag(t)) {
+        /* Gespielt, aber nicht in der App: der Stand vom Bogen der Ligaleitung. */
+        var bt = String(ligaBogenEintrag(t).einzel).split(':');
+        rechts = ausgangHTML(+(daheim ? bt[0] : bt[1]), +(daheim ? bt[1] : bt[0]));
       } else if (!vorbei && ligaZusagen) {
         var n = zusagen(t).length;
         rechts = n + ' / ' + LIGA.sollSpieler; rechtsKlasse = ton(n);
       }
-      /* Liegen die Ergebnisse der ganzen Runde vor, fuehrt ein Knopf rechts
-         unter dem Ergebnis dorthin (alle Spiele des Spieltags, Dialog). */
-      var alle = LIGA_SPIELTAGE[t.id] && LIGA_SPIELTAGE[t.id].length
-        ? '<b class="lt-alle" data-action="liga-runde" data-termin="' + esc(t.id) + '" role="button" tabindex="0">Alle Spiele ›</b>' : '';
+      /* Vergangene Spiele zeigen Stand und Sieg/Niederlage - mehr nicht. Den
+         "Alle Spiele"-Link gibt es hier nicht mehr, alle Spiele stehen in der
+         Tabelle (Julius, 09.11.). */
+      function ausgangHTML(wir, sie) {
+        var a = wir > sie ? ['sieg', 'Sieg'] : wir < sie ? ['niederlage', 'Niederlage'] : ['remis', 'Unentschieden'];
+        rechtsKlasse = 'fertig ' + a[0];
+        return '<span class="lt-stand">' + wir + ' : ' + sie + '</span><small class="lt-ausgang">' + a[1] + '</small>';
+      }
       return '<div class="liga-spieltag' + (vorbei && !h ? ' vorbei' : '') + (h ? ' gespielt' : '') + (wahl && !zugeklappt && t.id === wahl.id ? ' wahl' : '') +
         '" data-action="liga-wahl" data-id="' + esc(t.id) + '" role="button" tabindex="0">' +
         '<span class="lt-nr">' + t.nr + '</span>' +
         '<span class="lt-datum"><b>' + t.tag.slice(8, 10) + '.' + t.tag.slice(5, 7) + '.' + t.tag.slice(0, 4) + '</b><small>' + WOCHENTAGE[new Date(t.tag + 'T12:00:00').getDay()].replace('.', '') + '</small></span>' +
         '<span class="lt-wer"><span class="lt-gegner"><span class="lt-ha">' + (daheim ? 'Heim' : 'Ausw.') + '</span>' + esc(gegner) + '</span>' +
           '<span class="lt-unten">' + unten + '</span></span>' +
-        '<span class="lt-rechts ' + rechtsKlasse + '"><span>' + rechts + '</span>' + alle + '</span>' +
+        '<span class="lt-rechts ' + rechtsKlasse + '">' + (rechts.charAt(0) === '<' ? rechts : '<span>' + rechts + '</span>') + '</span>' +
         '</div>';
     }).join('');
 
@@ -6785,10 +6793,14 @@
         erklaerung = '<div class="lk-status offen">Vorbei · noch nicht in der App</div>' +
           '<p class="lk-hinweis">Ohne Spiel im Archiv zählt nichts in die Statistik. Von Hand nachtragen heißt: Spiel nachträglich anlegen und je Einzel nur den Leg-Stand antippen.</p>';
       }
-      /* Jeder im Team antwortet aktiv: Bin dabei oder Kann nicht. Nochmal
-         auf die eigene Antwort tippen traegt sie aus (wie beim Training). */
+      /* Jeder im Team antwortet aktiv: Bin dabei oder Kann nicht - ein
+         Entweder-oder. Die gewaehlte Antwort bleibt gedrueckt, ein Tipp auf
+         die andere wechselt; ein Tipp auf die eigene tut nichts (Julius,
+         09.11.: "Bin dabei abwaehlen" ergab keinen Sinn). */
       var antwortKnopf = function (status, txt) {
-        return '<button class="btn' + (meine === status ? ' hell aktiv' : ' ghost') + '" data-action="liga-zusage" data-id="' + esc(t.id) + '" data-status="' + status + '">' + txt + '</button>';
+        var aktiv = meine === status;
+        return '<button class="btn' + (aktiv ? (status === 'absage' ? ' aktiv absage' : ' hell aktiv') : ' ghost') + '" data-action="liga-zusage" data-id="' + esc(t.id) + '" data-status="' + status + '"' +
+          (aktiv ? ' aria-pressed="true"' : '') + '>' + txt + '</button>';
       };
       var antwortZeile = !vorbei && online && !ichBinGastKonto()
         ? '<div class="lk-knoepfe lk-antworten">' + antwortKnopf('dabei', 'Bin dabei') + antwortKnopf('absage', 'Kann nicht') + '</div>'
@@ -6844,7 +6856,14 @@
     /* Handy: die Karte unter die Zeile des gewaehlten Spieltags. */
     if (schmal) {
       var zeile = $('liga-liste').querySelector('.liga-spieltag[data-id="' + t.id + '"]');
-      if (zeile) { zeile.insertAdjacentElement('afterend', karte); karte.classList.add('in-liste'); zeile.classList.add('offen'); }
+      if (zeile) {
+        zeile.insertAdjacentElement('afterend', karte);
+        karte.classList.add('in-liste');
+        /* Zeile und Karte werden ein Kasten: die Zeile ist der Kopf, die
+           Karte haengt ohne Fuge darunter und traegt dieselbe Randfarbe. */
+        zeile.classList.add('offen');
+        zeile.setAttribute('data-ton', tonKlasse);
+      }
     }
   }
 
@@ -13277,9 +13296,11 @@
       case 'liga-zusage': {
         if (!(window.DartSync && window.DartSync.liga && window.DartKonto && window.DartKonto.nutzer())) return;
         var lgTermin = el.getAttribute('data-id');
-        /* Bin dabei / Kann nicht; die eigene Antwort nochmal antippen
-           traegt sie aus (null -> der Server loescht die Zeile). */
-        var lgStatus = el.classList.contains('aktiv') ? null : el.getAttribute('data-status');
+        /* Bin dabei / Kann nicht: ein Entweder-oder. Die eigene Antwort
+           nochmal antippen aendert nichts - austragen gibt es hier nicht,
+           wer geantwortet hat, wechselt hoechstens die Antwort. */
+        if (el.classList.contains('aktiv')) return;
+        var lgStatus = el.getAttribute('data-status');
         window.DartSync.liga.zusage(lgTermin, lgStatus).then(function (z) {
           ligaZusagen = z;
           render();
