@@ -6164,11 +6164,14 @@ await gruppe('Handy-Block 2: Solo-Session - Leg um Leg, Statistik ueber alle Leg
     .map((e) => e.querySelector('span').textContent + '=' + e.querySelector('b').textContent).join(' | '));
   check('Session-Statistik ueber beide Legs: 2 Legs, Ø 130.7 (1002 Punkte / 23 Darts), bestes Leg 9 Darts, 2x 180, Finish 141, 23 Darts, hoechste 180, First 9 133.5',
     kacheln === 'Legs=2 | Ø=130.7 | Bestes Leg=9 Darts | 180er=2 | Höchstes Finish=141 | Darts=23 | Höchste Aufnahme=180 | First 9=133.5', kacheln);
-  /* Kein Zwang: der Dialog geht nach sechs Sekunden von selbst zu. */
-  await page.waitForTimeout(6600);
-  check('der Dialog schliesst sich von selbst, das dritte Leg laeuft', await page.evaluate(() => {
-    const D = window.__dart, m = D.currentMatch(); return !D.ui().overlay && m.legs.length === 3;
+  /* Der Dialog bleibt stehen, bis er weggetippt wird (Julius, 09.11.) -
+     das dritte Leg laeuft darunter trotzdem schon. */
+  await page.waitForTimeout(1500);
+  check('der Dialog bleibt stehen, das dritte Leg laeuft darunter schon', await page.evaluate(() => {
+    const D = window.__dart, m = D.currentMatch(); return D.ui().overlay && D.ui().overlay.type === 'leg-done' && m.legs.length === 3;
   }));
+  await page.locator('#overlay-card [data-action="ov-next-leg"]').click();
+  check('"Weiter" schliesst ihn', await page.evaluate(() => !window.__dart.ui().overlay));
   check('Kopf zaehlt "Leg 3"', (await textKlein('#game-leg-label')).includes('leg 3'));
   /* Ein angefangenes drittes Leg faellt beim Beenden weg. */
   await typeScore(60);
@@ -6211,12 +6214,12 @@ await gruppe('Handy-Block 2: Solo-Tastatur-Modus - Eingabefeld und Kacheln statt
     !(await visible('#pad-total')) && !(await visible('#pad-darts')) && (await visible('#key-display')) &&
     (await visible('#key-solo')) && !(await visible('#key-hist-l')) && !(await visible('#key-hist-r')));
   const labels = await page.evaluate(() => Array.from(document.querySelectorAll('#key-solo .ss-kacheln .ss span')).map((e) => e.textContent).join(' | '));
-  check('sechs Kacheln: Average, First 9, Darts im Leg, 180er, Hoechste Aufnahme, Checkout-Quote',
-    labels === 'Average | First 9 | Darts im Leg | 180er | Höchste Aufnahme | Checkout-Quote', labels);
+  check('sechs Kacheln: Average, First 9, Darts im Leg, 180er, Hoechste Aufnahme, Hoechstes Finish',
+    labels === 'Average | First 9 | Darts im Leg | 180er | Höchste Aufnahme | Höchstes Finish', labels);
   await page.keyboard.type('180'); await page.keyboard.press('Enter');
   check('die Tastatur bucht wie am Board: Rest 321', (await rest(0)) === '321', await rest(0));
   const werte = await page.evaluate(() => Array.from(document.querySelectorAll('#key-solo .ss-kacheln .ss b')).map((e) => e.textContent).join(' | '));
-  check('die Kacheln rechnen mit: Ø 180.0, First 9 180.0, 3 Darts im Leg, 1x 180, hoechste 180, Checkout-Quote ohne Einzel-Darts ein Strich',
+  check('die Kacheln rechnen mit: Ø 180.0, First 9 180.0, 3 Darts im Leg, 1x 180, hoechste 180, noch kein Finish - ein Strich',
     werte === '180.0 | 180.0 | 3 | 1 | 180 | –', werte);
   check('die Liste zeigt die 180 mit Rest 321', (await text('#key-solo .key-liste')).includes('180') && (await text('#key-solo .key-liste')).includes('Rest 321'));
   check('die Karte zeigt die letzten Wuerfe unter dem Rest', await page.evaluate(() => {

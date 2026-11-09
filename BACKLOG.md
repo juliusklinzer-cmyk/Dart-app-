@@ -4,8 +4,6 @@
 
 ## Wartet auf Julius
 
-- [ ] DRT-020 Block 2 am Handy/iPad gegenprüfen und drei Kleinigkeiten entscheiden: (a) Der Session-Dialog nach jedem Leg schließt sich nach 6 s von selbst – passt, oder lieber nur ein kurzes Banner? (b) „Checkout-Quote“ im Tastatur-Modus zeigt „–“ (nur aus Einzeldarts berechenbar) – stattdessen „Checkouts / Legs“? (c) Liga-Karte vor dem Spieltag: Hinweis „GAME ON erscheint am Spieltag“ gewünscht? Dazu: Tastenfeld am iPad – kommen die Tipps jetzt beim ersten Mal an? · von:Julius · am:2026-11-08
-
 - [ ] DRT-002 Backup prüfen: auf dem Server `crontab -l` ansehen (läuft `/opt/dart-turnier/backup.sh` täglich 04:30?) und einmal einen Restore nach DEPLOY.md „Backup“ üben · prio:hoch · von:Audit H7/S-M6 · am:2026-11-08
 - [ ] DRT-004 Brevo-Schlüssel aus dem Sitzungs-Transkript schwärzen (Befehl steht im Chat vom 08.11.); Erneuern bei Brevo hast du bewusst nicht gewollt · am:2026-11-08
 - [ ] DRT-017 iPhone: App einmal vom Home-Bildschirm löschen und neu hinzufügen, damit die Statusleiste ohne Glas-Blur kommt (Meta-Tag ist raus, iOS liest das nur beim Hinzufügen) · prio:hoch · von:Julius · am:2026-11-08
@@ -29,6 +27,7 @@
 
 ## Erledigt
 
+- [x] DRT-020 Block-2-Entscheidungen (Julius 09.11.): Session-Dialog bleibt bis zum Wegtippen (kein 6-s-Timer), Kachel „Höchstes Finish“ statt Checkout-Quote, kein Hinweis auf der Liga-Karte, iPad-Tasten meldet er bei Bedarf · von:Julius · am:2026-11-08 · fertig:2026-11-09
 - [x] DRT-001 Audit 08.11.2026 umsetzen: alle freigegebenen Befunde (Pakete A–F; S3-Erlaubtliste auf Julius' Wunsch wieder raus) · prio:hoch · von:Julius · am:2026-11-08 · fertig:2026-11-08 · quelle:audit-2026-11-08/
 - [x] DRT-018 Handy-Block 2: Session-Modus Solo-X01, Solo-Tastatur-Modus mit Statistik, Fernsteuerung hoch als Zeilen, Abstände Punkte-Modus hoch, GAME ON nur am Spieltag, Logo-Abstand oben in der installierten App · prio:hoch · von:Julius · am:2026-11-08 · fertig:2026-11-08
 - [x] DRT-019 Tastenfeld: Spieltasten buchen am Touch-Gerät per pointerdown statt click, touch-action none (iPad schluckte Tipps mit rutschendem Finger) · von:Julius · am:2026-11-08 · fertig:2026-11-08

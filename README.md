@@ -85,8 +85,8 @@ keine Legs-Wahl, im Setup steht nur „Session“: 501 (oder die gewählte Start
 ohne Leg-Ziel. Ist ein Leg ausgemacht, läuft das nächste sofort; der Dialog danach
 zeigt kurz das Leg („Leg 3 in 15 Darts“) und die **Session-Zahlen über alle Legs**
 (Legs, Ø, bestes Leg, 180er, höchstes Finish, Darts, höchste Aufnahme, First 9) und
-schließt sich nach sechs Sekunden von selbst – „Weiter“, „Eingabe rückgängig“ und
-„Session beenden“ stehen trotzdem da. Beendet wird die Session jederzeit im Spielmenü
+bleibt stehen, bis er weggetippt wird – „Weiter“, „Eingabe rückgängig“ oder
+„Session beenden“. Beendet wird die Session jederzeit im Spielmenü
 (•••, **Session beenden**): die fertigen Legs kommen wie ein Übungsspiel ins Archiv
 („X01 · Session“, ohne Sieger – ein Solo zählt wie bisher nicht als Sieg, wohl aber
 in Average und Rekorde), ein angefangenes Leg fällt weg, danach steht die Auswertung.
@@ -701,8 +701,8 @@ Am iPad bleibt das Board-Layout.
 Riesenanzeige, sondern tauscht das Tastenfeld gegen das **Eingabefeld** (quer rechts,
 hochkant unten) – an einer echten Tastatur wie am Board (Ziffern, Enter, Löschen), am
 Handy holt ein Tipp auf das Feld die Zifferntastatur des Systems. Darunter sechs
-**Kacheln**: Average, First 9, Darts im Leg, 180er, höchste Aufnahme, Checkout-Quote
-(die kennt die App nur aus Einzel-Darts, sonst steht ein Strich), und die letzten
+**Kacheln**: Average, First 9, Darts im Leg, 180er, höchste Aufnahme, höchstes Finish
+(eine Checkout-Quote kennt die App nur aus Einzel-Darts), und die letzten
 Aufnahmen als Liste. In der Session sind es die Zahlen der ganzen Session. Links die
 Karte: Rest groß, darunter die letzten Aufnahmen, dazu der Finish-Weg.
 

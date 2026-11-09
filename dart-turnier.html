@@ -10819,7 +10819,6 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   /* Session (allein): der Dialog nach dem Leg schliesst sich nach sechs
      Sekunden von selbst - das naechste Leg laeuft laengst, niemand muss
      klicken (Julius: kein "Nochmal?"-Zwang). */
-  var sessionLegTimer = null;
   function armGhostTapGuard() { ghostTapUntil = Date.now() + 400; }
   function isGhostTap(ev) {
     /* `detail >= 2` ist die Doppelklick-Zählung des Browsers: zweite
@@ -12879,7 +12878,6 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       } else {
         /* Ist damit ein ganzer Satz zu, sagt der Dialog das auch. */
         UI.overlay = { type: 'leg-done', pid: pid, satz: st.satzZu };
-        if (m.session) sessionLegTimerStarten();
       }
       /* Das letzte Einzel des Ligaspiels stempelt die Endzeit für den
          Spielberichtsbogen. */
@@ -14181,8 +14179,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   }
   /* Die Kacheln dazu: 'dialog' = alles ueber die Session (nach dem Leg),
      'kacheln' = die sechs Werte neben dem Eingabefeld im Tastatur-Modus.
-     Die Checkout-Quote kennt die App nur aus Einzel-Darts (siehe
-     collectStats) - in der Punkte-Eingabe steht dort ein Strich. */
+     Statt einer Checkout-Quote (die kennt die App nur aus Einzel-Darts)
+     steht dort das hoechste Finish (Julius, 09.11.). */
   function sessionKachelnHTML(m, art) {
     var s = sessionStat(m);
     var f1 = function (x, hat) { return hat ? x.toFixed(1) : '–'; };
@@ -14191,20 +14189,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       ['Höchstes Finish', s.highCO || '–'], ['Darts', s.darts], ['Höchste Aufnahme', s.highScore || '–'], ['First 9', f1(s.first9, s.first9Darts)]
     ] : [
       ['Average', f1(s.avg, s.darts)], ['First 9', f1(s.first9, s.first9Darts)], ['Darts im Leg', s.dartsImLeg], ['180er', s.s180],
-      ['Höchste Aufnahme', s.highScore || '–'], ['Checkout-Quote', s.doubleAttempts ? Math.round(s.doubleQuote) + ' %' : '–']
+      ['Höchste Aufnahme', s.highScore || '–'], ['Höchstes Finish', s.highCO || '–']
     ];
     return '<div class="ss-kacheln' + (art === 'dialog' ? ' dialog' : '') + '">' + k.map(function (z) {
       return '<div class="ss"><span>' + z[0] + '</span><b>' + z[1] + '</b></div>';
     }).join('') + '</div>';
   }
-  function sessionLegTimerStarten() {
-    if (sessionLegTimer) clearTimeout(sessionLegTimer);
-    sessionLegTimer = setTimeout(function () {
-      sessionLegTimer = null;
-      if (UI.overlay && UI.overlay.type === 'leg-done' && S.game && S.game.session) { UI.overlay = null; save(); render(); }
-    }, 6000);
-  }
-
   /* Wie viele Legs eines laufenden Schnellen Spiels schon entschieden sind. */
   function entschiedeneLegs(g) {
     if (!g || g.kind !== 'quick' || !Array.isArray(g.legs)) return 0;
@@ -21553,9 +21543,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       var ldLeg = m1.legs.filter(function (l) { return l.winner; }).pop();
       if (m1.session) {
         /* Session (allein): das Leg ist durch, das naechste laeuft schon.
-           Kurz die Zahlen des Legs und der ganzen Session - der Dialog geht
-           nach sechs Sekunden von selbst zu (sessionLegTimerStarten), und
-           beenden laesst sich die Session hier wie im Menue. */
+           Die Zahlen des Legs und der ganzen Session; der Dialog bleibt, bis
+           er weggetippt wird (Julius, 09.11.: kein Zeitlimit), und beenden
+           laesst sich die Session hier wie im Menue. */
         var ssLegs = m1.legs.filter(function (l) { return l.winner; }).length;
         var ssDarts = ldLeg ? dartsInLeg(ldLeg, m1.p[0]) : 0;
         html = '<div class="big-emoji">🎯</div><h3>Leg ' + ssLegs + ' in ' + ssDarts + ' Darts</h3>' +
@@ -24030,7 +24020,6 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         startTournament(true);
         break;
       case 'ov-next-leg':
-        if (sessionLegTimer) { clearTimeout(sessionLegTimer); sessionLegTimer = null; }
         UI.overlay = null; save(); render();
         break;
       case 'session-ende': {
@@ -24038,7 +24027,6 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
            Uebungsspiel ins Archiv, dann die Auswertung. Ohne fertiges Leg
            gibt es nichts zu sichern - dann fragt der Abbruch-Dialog. */
         UI.menu = false;
-        if (sessionLegTimer) { clearTimeout(sessionLegTimer); sessionLegTimer = null; }
         if (!S.game || !S.game.session) break;
         if (!entschiedeneLegs(S.game)) { UI.overlay = { type: 'confirm-discard-game' }; render(); break; }
         var seId = S.game.id;

@@ -6,7 +6,7 @@
    beide leben vom Server (aktuelle Ergebnisse, Event-Stream) und nützen
    offline nichts; der Service Worker wird ohnehin nur von der App
    registriert. */
-var CACHE = 'dart-turnier-v172';
+var CACHE = 'dart-turnier-v173';
 var ASSETS = [
   './',
   './index.html',
