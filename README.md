@@ -215,8 +215,12 @@ Reihen Teilnehmer Platz haben (Julius, Oktober 2026). Der Spielplan der Saison
 steht fest im Client (`LIGA` in `js/liga-daten.js`, gemeinsam mit der Webseite). **Links groß der nächste Spieltag**
 (oder der angetippte): Datum, Spieltag, Heim/Auswärts, 20:00 Uhr, Lokal mit Pin,
 oben rechts Route in Maps und „in den Kalender“, darunter Heim gegen Gast mit Logo
-bzw. Team-Kürzel, dann **Team · n / 4** mit allen, die zugesagt haben, und unten
-„Ich bin dabei“ / „Bin raus“ – und **nur am Spieltag selbst** daneben **GAME ON!**
+bzw. Team-Kürzel, dann die Antworten in drei Gruppen – **Dabei · n / 4**, **Kann
+nicht** (rot gerahmt) und **Noch keine Antwort** (blass; alle Vereinskonten im Kader,
+die weder zu- noch abgesagt haben – so sieht der Kapitän, wer nur noch nicht
+geschaut hat) – und unten die zwei Knöpfe **Bin dabei** / **Kann nicht** (jeder im
+Team antwortet aktiv; die eigene Antwort nochmal antippen trägt sie aus) – und
+**nur am Spieltag selbst** darunter **GAME ON!**
 (startet das Ligaspiel; an allen anderen Tagen stehen dort nur die Zusagen, damit
 niemand Tage vorher aus Versehen den Spielabend anlegt – das Übungsspiel im
 Trainings-Reiter geht jederzeit). Die
@@ -225,7 +229,10 @@ Ligaspiel**, wird die Karte zum LIVE-Schild mit Punktestand, Legs, „Zum Ligasp
 und „Live zuschauen“ (Ticker). Gespielte Spieltage zeigen Ergebnis, „Ergebnisse“
 und „Spielbericht“. **Rechts alle Spieltage** kompakt: Nummer, Datum, Gegner, Lokal,
 rechts das Ergebnis (gespielt), die Zusagen (2 / 4) oder LIVE; ein Tipp zeigt den
-Spieltag links groß, Spielfrei-Runden gedimmt. **„Alle in den Kalender“** lädt alle
+Spieltag links groß, Spielfrei-Runden gedimmt. **Am Handy** (unter 700 px) gibt es
+keine zwei Spalten: der angetippte Spieltag klappt **in der Liste** auf – die große
+Karte steht direkt unter seiner Zeile, vergangene Spieltage darüber, kommende
+darunter; ein Tipp auf die offene Zeile klappt sie wieder zu. **„Alle in den Kalender“** lädt alle
 Termine als iCal-Datei (ganztägig). Die Zusagen liegen auf dem Server und sind für
 alle gleich; ohne Server bleibt der Spielplan lesbar, nur das Eintragen entfällt.
 Am Tablet steht das Bild fest im Rahmen, die Liste scrollt innen; am Handy quer

@@ -7166,6 +7166,18 @@ button.pa-gruppe { cursor: pointer; }
   #screen-game.active.turnier.solo .key-liste .v:nth-child(n+6) { display: none; }
 }
 
+/* Spielplan am Handy: der gewaehlte Spieltag klappt in der Liste auf - die
+   grosse Karte steht unter seiner Zeile, vergangene Spieltage darueber,
+   kommende darunter (Julius, 09.11.). Dazu die drei Zusage-Gruppen der
+   Karte: dabei, kann nicht (rot gerahmt, Bild grau), noch keine Antwort
+   (blass, gestrichelt). */
+.liga-karte.in-liste { margin: 2px 0 8px; }
+.liga-spieltag.offen { border-bottom-left-radius: 4px; border-bottom-right-radius: 4px; }
+.liga-karte .lk-knoepfe:empty { display: none; }
+.liga-karte .lt-leute.leise .lt-person { opacity: 0.6; border-style: dashed; }
+.liga-karte .lt-person.absage { border-color: rgba(229, 72, 77, 0.55); color: var(--muted); }
+.liga-karte .lt-person.absage .av { filter: grayscale(1); opacity: 0.7; }
+
 </style>
 <!-- Gemalter Streifen ganz oben, nur in der installierten App: seit iOS 26/27 legt
      das System einen Glas-Blur ueber den oberen Rand der Seite. Ein deckend
@@ -14559,7 +14571,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       else { boardsHost.appendChild(koerper); boardsHost.appendChild($('board-log')); }
     }
     /* Beim Betreten der Liga zeigt der Spielplan wieder den naechsten Spieltag. */
-    if (screen !== 'liga') UI.ligaWahl = null;
+    if (screen !== 'liga') { UI.ligaWahl = null; UI.ligaZu = false; }
     $('nav').classList.toggle('hidden', !navFor);
     if (navFor) {
       $('nav').querySelectorAll('button').forEach(function (b) {
@@ -15855,6 +15867,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   if (window.matchMedia) {
     window.matchMedia('(min-width: 700px) and (min-height: 501px)').addEventListener('change', function () {
       if (S.screen === 'players') render();
+    });
+    /* Spielplan: am Handy klappt die Karte in der Liste auf, am Tablet
+       steht sie links - beim Drehen oder Split View neu entscheiden. */
+    window.matchMedia('(max-width: 699px)').addEventListener('change', function () {
+      if (S.screen === 'liga') render();
     });
   }
 
@@ -17396,6 +17413,18 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var naechster = null;
     termine.forEach(function (t) { if (!naechster && t.tag && t.tag >= heuteIso && !ligaTerminBelegt(t)) naechster = t; });
 
+    /* Am Handy klappt der gewaehlte Spieltag in der Liste auf: die grosse
+       Karte wandert unter seine Zeile - vergangene Spieltage darueber,
+       kommende darunter (Julius, 09.11.: "unten anklicken und oben wechselt
+       das Feld" war unhandlich). Vor dem Neuzeichnen der Liste muss die
+       Karte zurueck in die Spalte, sonst nimmt innerHTML sie mit. */
+    var karte = $('liga-karte');
+    var spalten = document.querySelector('#liga-plan .liga-spalten');
+    if (karte.parentNode !== spalten) spalten.insertBefore(karte, spalten.firstChild);
+    karte.classList.remove('in-liste', 'hidden');
+    var schmal = !!(window.matchMedia && window.matchMedia('(max-width: 699px)').matches);
+    var zugeklappt = schmal && !!UI.ligaZu;
+
     /* ---- Rechts: alle Spieltage kompakt ---- */
     $('liga-liste').innerHTML = termine.map(function (t) {
       if (!t.tag) {
@@ -17425,7 +17454,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
          unter dem Ergebnis dorthin (alle Spiele des Spieltags, Dialog). */
       var alle = LIGA_SPIELTAGE[t.id] && LIGA_SPIELTAGE[t.id].length
         ? '<b class="lt-alle" data-action="liga-runde" data-termin="' + esc(t.id) + '" role="button" tabindex="0">Alle Spiele ›</b>' : '';
-      return '<div class="liga-spieltag' + (vorbei && !h ? ' vorbei' : '') + (h ? ' gespielt' : '') + (wahl && t.id === wahl.id ? ' wahl' : '') +
+      return '<div class="liga-spieltag' + (vorbei && !h ? ' vorbei' : '') + (h ? ' gespielt' : '') + (wahl && !zugeklappt && t.id === wahl.id ? ' wahl' : '') +
         '" data-action="liga-wahl" data-id="' + esc(t.id) + '" role="button" tabindex="0">' +
         '<span class="lt-nr">' + t.nr + '</span>' +
         '<span class="lt-datum"><b>' + t.tag.slice(8, 10) + '.' + t.tag.slice(5, 7) + '.' + t.tag.slice(0, 4) + '</b><small>' + WOCHENTAGE[new Date(t.tag + 'T12:00:00').getDay()].replace('.', '') + '</small></span>' +
@@ -17436,15 +17465,24 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     }).join('');
 
     /* ---- Links: der gewaehlte Spieltag gross ---- */
-    var karte = $('liga-karte');
-    if (!wahl) { karte.innerHTML = ''; karte.className = 'liga-karte'; return; }
+    if (!wahl || zugeklappt) { karte.innerHTML = ''; karte.className = 'liga-karte' + (zugeklappt ? ' hidden' : ''); return; }
     var t = wahl;
     var daheim = t.heim === LIGA.team;
     var vorbei = t.tag < heuteIso;
     var live = t.id === laeuftId;
     var h = ligaTerminEintrag(t);
+    var antworten = (ligaZusagen && ligaZusagen[t.id]) || [];
     var leute = zusagen(t);
-    var binDabei = ich ? leute.some(function (p) { return p.id === ich; }) : false;
+    var absagen = antworten.filter(function (a) { return a.status === 'absage'; });
+    var meine = null;
+    antworten.forEach(function (a) { if (a.id === ich) meine = a.status || 'dabei'; });
+    /* Wer hat noch nicht geantwortet? Alle Vereinskonten im Kader, die
+       weder zu- noch abgesagt haben - Gast- und Testkonten nicht. */
+    var geantwortet = {};
+    antworten.forEach(function (a) { geantwortet[a.id] = 1; });
+    var offen = S.profiles.filter(function (p) {
+      return String(p.id).indexOf('u_') === 0 && !p.hidden && !p.gastKonto && !p.test && !p.bot && !p.gast && !geantwortet[p.id];
+    });
     var d = new Date(t.tag + 'T12:00:00');
     var MONATE = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
     var datumGross = WOCHENTAGE[d.getDay()].replace('.', '') + ' ' + d.getDate() + '. ' + MONATE[d.getMonth()];
@@ -17503,21 +17541,48 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         erklaerung = '<div class="lk-status offen">Vorbei · noch nicht in der App</div>' +
           '<p class="lk-hinweis">Ohne Spiel im Archiv zählt nichts in die Statistik. Von Hand nachtragen heißt: Spiel nachträglich anlegen und je Einzel nur den Leg-Stand antippen.</p>';
       }
+      /* Jeder im Team antwortet aktiv: Bin dabei oder Kann nicht. Nochmal
+         auf die eigene Antwort tippen traegt sie aus (wie beim Training). */
+      var antwortKnopf = function (status, txt) {
+        return '<button class="btn' + (meine === status ? ' hell aktiv' : ' ghost') + '" data-action="liga-zusage" data-id="' + esc(t.id) + '" data-status="' + status + '">' + txt + '</button>';
+      };
+      var antwortZeile = !vorbei && online && !ichBinGastKonto()
+        ? '<div class="lk-knoepfe lk-antworten">' + antwortKnopf('dabei', 'Bin dabei') + antwortKnopf('absage', 'Kann nicht') + '</div>'
+        : '';
       var knoepfe = vorbei
         ? (bogen ? '<button class="btn primary start" data-action="liga-nachtrag" data-id="' + esc(t.id) + '">Spielbericht übernehmen</button>' : '') +
           '<button class="btn ' + (bogen ? 'ghost' : 'primary start') + '" data-action="liga-spiel" data-id="' + esc(t.id) + '">Von Hand nachtragen</button>'
-        : (online && !ichBinGastKonto()
-            ? '<button class="btn ' + (binDabei ? 'ghost' : 'hell') + '" data-action="liga-zusage" data-id="' + esc(t.id) + '" data-dabei="' + (binDabei ? '0' : '1') + '">' + (binDabei ? 'Bin raus' : 'Ich bin dabei') + '</button>'
-            : '') +
-          (ichBinGastKonto()
+        : (ichBinGastKonto()
             ? '<span class="lk-gast">Als Gast: verfolgen über den Live-Ticker</span>'
             : (bogen ? '<button class="btn hell" data-action="liga-nachtrag" data-id="' + esc(t.id) + '">Spielbericht übernehmen</button>' : '') +
               /* GAME ON nur am Spieltag selbst - vorher stehen hier nur die
                  Zusagen, sonst startet jemand aus Versehen Tage vorher das
                  Ligaspiel (Julius, Handy-Block 2). */
               (t.tag === heuteIso ? '<button class="btn primary start" data-action="liga-spiel" data-id="' + esc(t.id) + '">Game On!</button>' : ''));
-      fuss = erklaerung + '<div class="lk-knoepfe">' + knoepfe + '</div>';
+      fuss = erklaerung + antwortZeile + '<div class="lk-knoepfe">' + knoepfe + '</div>';
     }
+    var person = function (p, klasse) {
+      return '<span class="lt-person' + (klasse ? ' ' + klasse : '') + '">' + avatarHTML(zusageProfil(p), 'sm') + esc(p.name) + '</span>';
+    };
+    /* Drei Gruppen wie beim Training: dabei, kann nicht, noch keine Antwort -
+       sonst weiss der Kapitaen nicht, wer abgesagt und wer nur noch nicht
+       geschaut hat (Julius, 09.11.). Gespielt oder live: nur noch, wer
+       dabei war. */
+    var crewHTML = function () {
+      var html = '<div class="lk-crew"><span class="lk-crew-titel">Dabei · <b class="' + ton(leute.length) + '">' + leute.length + ' / ' + LIGA.sollSpieler + '</b></span>' +
+        '<div class="lt-leute">' + (leute.map(function (p) { return person(p, ''); }).join('') || '<span class="muted">Noch niemand.</span>') + '</div>';
+      if (!h && !live) {
+        if (absagen.length) {
+          html += '<span class="lk-crew-titel">Kann nicht · <b class="rot">' + absagen.length + '</b></span>' +
+            '<div class="lt-leute">' + absagen.map(function (p) { return person(p, 'absage'); }).join('') + '</div>';
+        }
+        if (!vorbei && offen.length) {
+          html += '<span class="lk-crew-titel">Noch keine Antwort · <b>' + offen.length + '</b></span>' +
+            '<div class="lt-leute leise">' + offen.map(function (p) { return person(p, 'offen'); }).join('') + '</div>';
+        }
+      }
+      return html + '</div>';
+    };
     karte.innerHTML =
       '<div class="lk-kopf">' + kopfLinks +
         '<span class="lk-icons">' +
@@ -17530,11 +17595,13 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '<span class="lk-ort"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"></path><circle cx="12" cy="9.5" r="2.5"></circle></svg>' + esc(t.ort) + '</span></div>' +
       '<div class="lk-teams">' + teamBlock(t.heim, 'Heim') + '<span class="lk-vs">VS</span>' + teamBlock(t.gast, 'Gast') + '</div>' +
       '<div class="lk-kurz">' + esc(t.heim) + ' <span>vs</span> ' + esc(t.gast) + '</div>' +
-      (ligaZusagen
-        ? '<div class="lk-crew"><span class="lk-crew-titel">Team · <b class="' + ton(leute.length) + '">' + leute.length + ' / ' + LIGA.sollSpieler + '</b></span>' +
-          '<div class="lt-leute">' + (leute.map(function (p) { return '<span class="lt-person">' + avatarHTML(zusageProfil(p), 'sm') + esc(p.name) + '</span>'; }).join('') || '<span class="muted">Noch niemand eingetragen.</span>') + '</div></div>'
-        : '<div class="lk-crew"></div>') +
+      (ligaZusagen ? crewHTML() : '<div class="lk-crew"></div>') +
       fuss;
+    /* Handy: die Karte unter die Zeile des gewaehlten Spieltags. */
+    if (schmal) {
+      var zeile = $('liga-liste').querySelector('.liga-spieltag[data-id="' + t.id + '"]');
+      if (zeile) { zeile.insertAdjacentElement('afterend', karte); karte.classList.add('in-liste'); zeile.classList.add('offen'); }
+    }
   }
 
   /* Alle Spiele des Spieltags (auch die der anderen Teams): Paarung und
@@ -23338,7 +23405,20 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       /* Rangliste: Spielverlauf auf und zu. */
       case 'board-log': UI.boardLog = true; render(); break;
       case 'board-log-zu': UI.boardLog = false; render(); break;
-      case 'liga-wahl': UI.ligaWahl = el.getAttribute('data-id'); render(); break;
+      case 'liga-wahl': {
+        var lwId = el.getAttribute('data-id');
+        var lwSchmal = !!(window.matchMedia && window.matchMedia('(max-width: 699px)').matches);
+        /* Am Handy klappt ein Tipp auf den offenen Spieltag ihn wieder zu;
+           die Zeile bleibt im Bild, auch wenn oben eine Karte zugeht. */
+        UI.ligaZu = lwSchmal && el.classList.contains('wahl');
+        UI.ligaWahl = lwId;
+        render();
+        if (lwSchmal) {
+          var lwZeile = $('liga-liste').querySelector('.liga-spieltag[data-id="' + lwId + '"]');
+          if (lwZeile && lwZeile.scrollIntoView) lwZeile.scrollIntoView({ block: 'nearest' });
+        }
+        break;
+      }
       case 'liga-partien':
         UI.overlay = { type: 'liga-partien', termin: el.getAttribute('data-termin'), i: Number(el.getAttribute('data-i')) };
         render();
@@ -23953,8 +24033,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       case 'liga-zusage': {
         if (!(window.DartSync && window.DartSync.liga && window.DartKonto && window.DartKonto.nutzer())) return;
         var lgTermin = el.getAttribute('data-id');
-        var lgDabei = el.getAttribute('data-dabei') === '1';
-        window.DartSync.liga.zusage(lgTermin, lgDabei).then(function (z) {
+        /* Bin dabei / Kann nicht; die eigene Antwort nochmal antippen
+           traegt sie aus (null -> der Server loescht die Zeile). */
+        var lgStatus = el.classList.contains('aktiv') ? null : el.getAttribute('data-status');
+        window.DartSync.liga.zusage(lgTermin, lgStatus).then(function (z) {
           ligaZusagen = z;
           render();
         }).catch(function (e) { zusageFehlgeschlagen(e); });

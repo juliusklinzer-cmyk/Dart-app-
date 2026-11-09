@@ -138,6 +138,12 @@ async function ligaSpielStarten() {
   await page.locator('#liga-plan [data-action="liga-spiel"]').first().click();
   await ligaHeute('2026-10-01');
 }
+/* Einen Spieltag in der Liste antippen. Am Handy klappt ein Tipp auf den
+   schon offenen wieder zu - deshalb nur tippen, wenn er nicht offen ist. */
+async function ligaTipp(id) {
+  const z = page.locator('#liga-liste .liga-spieltag[data-id="' + id + '"]');
+  if (!(await z.evaluate((e) => e.classList.contains('wahl')))) await z.click();
+}
 
 /* Fester Stichtag fuer den Liga-Spielplan: der 1. Spieltag (Heim gegen Dachau)
    ist in den Tests immer der naechste - egal, wann sie laufen. */
@@ -2532,7 +2538,7 @@ await page.evaluate(() => {
 
 await gruppe('Ligaspiel "nur Ergebnisse": Leg-Stand je Einzel ohne Wuerfe', async () => {
 await navTo('liga');
-await page.locator('#liga-liste .liga-spieltag[data-id="st01"]').click();
+await ligaTipp('st01');
 await ligaSpielStarten();
 for (let i = 0; i < 4; i++) {
   await page.locator(`[data-role="liga-gegner"][data-i="${i}"]`).fill('Probe');
@@ -2596,7 +2602,7 @@ await page.evaluate(() => {
   window.__dart.save();
 });
 await navTo('liga');
-await page.locator('#liga-liste .liga-spieltag[data-id="st02"]').click();
+await ligaTipp('st02');
 check('die Karte des 2. Spieltags bietet "Spielbericht uebernehmen"', await visible('#liga-karte [data-action="liga-nachtrag"]'));
 check('die Karte sagt, dass das Ergebnis noch nicht im Archiv ist', /Blink 180 10:6 · noch nicht im Archiv/.test(await text('#liga-karte .lk-status')));
 check('die Karte erklaert, was das Uebernehmen bringt', /Siege und Legs in der Liga-Statistik/.test(await text('#liga-karte .lk-hinweis')));
@@ -3296,9 +3302,9 @@ check('mit Datum und Ort des ersten Spieltags',
   icalInhalt.includes('DTSTART;VALUE=DATE:20261006') && icalInhalt.includes('Bar Sehnsucht'));
 /* Das Icon am einzelnen Termin laedt nur diesen einen - ein Tipp rechts
    zeigt den Spieltag links gross. */
-await page.locator('#liga-liste [data-action="liga-wahl"][data-id="st02"]').click();
+await ligaTipp('st02');
 check('ein Tipp auf einen Spieltag zeigt ihn links gross', (await text('#liga-karte')).includes('Germering'));
-await page.locator('#liga-liste [data-action="liga-wahl"][data-id="st01"]').click();
+await ligaTipp('st01');
 ;[einzel] = await Promise.all([
   page.waitForEvent('download'),
   page.locator('#liga-karte [data-action="liga-ical"][data-id="st01"]').click()
@@ -5380,7 +5386,7 @@ await gruppe('Ligaspiel endet erst mit dem unterschriebenen Bericht', async () =
   await page.evaluate(() => window.__dart.setScreen('liga'));
   check('rechts in der Liste steht der Spieltag als abgeschlossen',
     (await page.locator('#liga-liste .liga-spieltag').first().innerText()).includes('Abgeschlossen'));
-  await page.locator('#liga-liste [data-action="liga-wahl"][data-id="' + termin + '"]').click();
+  await ligaTipp(termin);
   const karte = page.locator('#liga-karte');
   check('links steht der Spieltag als abgeschlossen', (await karte.innerText()).includes('Abgeschlossen'));
   check('und laesst sich nicht nochmal starten', (await karte.locator('[data-action="liga-spiel"]').count()) === 0);
@@ -6298,6 +6304,86 @@ await gruppe('Allein im Punkte-Modus: die Restzahl fuellt die Karte - quer am iP
   }
   await page.setViewportSize(vp);
   await page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; D.save(); D.setScreen('setup'); });
+});
+
+await gruppe('Spielplan am Handy: der Spieltag klappt in der Liste auf, jeder sagt zu oder ab', async () => {
+  const vp = page.viewportSize();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    window.__ligaHeute = '2026-11-20';
+    /* Drei Vereinskonten und ein Gast-Konto im Kader; der Server-Ersatz
+       kennt zwei Antworten zum 5. Spieltag (24.11.): Tobi dabei, Max nicht. */
+    S.profiles.push({ id: 'u_ich', name: 'Ich', hue: 10, created: Date.now() }, { id: 'u_tobi', name: 'Tobi', hue: 20, created: Date.now() },
+      { id: 'u_max', name: 'Max', hue: 30, created: Date.now() }, { id: 'u_gastk', name: 'Besuch', hue: 40, gastKonto: true, created: Date.now() });
+    const Z = { st05: [{ id: 'u_tobi', name: 'Tobi', hue: 20, status: 'dabei' }, { id: 'u_max', name: 'Max', hue: 30, status: 'absage' }] };
+    window.__echt = { sync: window.DartSync, konto: window.DartKonto };
+    window.DartSync = Object.assign({ statusText: () => '' }, window.DartSync || {}, { kasse: null, liga: {
+      zusagen: () => Promise.resolve(Z),
+      zusage: (id, st) => {
+        Z[id] = (Z[id] || []).filter((a) => a.id !== 'u_ich');
+        if (st) Z[id].push({ id: 'u_ich', name: 'Ich', hue: 10, status: st });
+        return Promise.resolve(Z);
+      }
+    } });
+    window.DartKonto = new Proxy({ nutzer: () => ({ id: 'u_ich' }) }, { get: (t, k) => (k in t ? t[k] : () => null) });
+    D.ui().ligaTab = 'plan'; D.ui().ligaWahl = null;
+    D.setScreen('setup'); D.setScreen('liga');
+  });
+  await page.waitForFunction(() => document.querySelector('#liga-karte .lk-crew-titel'));
+  const lage = () => page.evaluate(() => {
+    const liste = document.getElementById('liga-liste'), karte = document.getElementById('liga-karte');
+    const kinder = Array.from(liste.children), i = kinder.indexOf(karte);
+    const datum = (el) => { const b = el.querySelector('.lt-datum b'); const m = b && b.textContent.match(/(\d\d)\.(\d\d)\.(\d{4})/); return m ? m[3] + m[2] + m[1] : null; };
+    const vor = kinder.slice(0, Math.max(0, i - 1)).map(datum).filter(Boolean), nach = kinder.slice(i + 1).map(datum).filter(Boolean);
+    return { inListe: i >= 0, vorher: i > 0 ? kinder[i - 1].getAttribute('data-id') : null, offen: i > 0 && kinder[i - 1].classList.contains('wahl'),
+      vor, nach, sichtbar: karte.offsetParent !== null, wahl: liste.querySelectorAll('.liga-spieltag.wahl').length, roh: karte.textContent,
+      text: Array.from(karte.querySelectorAll('.lk-crew-titel')).map((el) => el.textContent.trim() + ' ' +
+        Array.from(el.nextElementSibling.querySelectorAll('.lt-person')).map((p) => p.lastChild.textContent.trim()).join(' ')).join(' | ') };
+  });
+  let g = await lage();
+  check('die Karte steht in der Liste direkt unter dem 5. Spieltag', g.inListe && g.vorher === 'st05' && g.offen && g.sichtbar, JSON.stringify(g));
+  check('darueber nur vergangene Spieltage, darunter nur kommende', g.vor.length >= 4 && g.vor.every((d) => d < '20261124') && g.nach.length >= 10 && g.nach.every((d) => d > '20261124'), JSON.stringify({ vor: g.vor, nach: g.nach }));
+  check('Dabei 1 / 4 mit Tobi, Kann nicht 1 mit Max, Noch keine Antwort 1 mit mir - das Gast-Konto fehlt',
+    /Dabei · 1 \/ 4 Tobi/.test(g.text) && /Kann nicht · 1 Max/.test(g.text) && /Noch keine Antwort · 1 Ich/.test(g.text) && !g.text.includes('Besuch'), g.text);
+  check('Max ist als Absage markiert', await page.evaluate(() => { const p = Array.from(document.querySelectorAll('#liga-karte .lt-person')).find((e) => e.textContent.includes('Max')); return !!p && p.classList.contains('absage'); }));
+  const knoepfe = page.locator('#liga-karte [data-action="liga-zusage"]');
+  const knopfText = await page.evaluate(() => Array.from(document.querySelectorAll('#liga-karte [data-action="liga-zusage"]')).map((b) => b.textContent.trim()).join('|'));
+  check('zwei Knoepfe: Bin dabei und Kann nicht, keiner gedrueckt', (await knoepfe.count()) === 2 && knopfText === 'Bin dabei|Kann nicht' &&
+    (await page.locator('#liga-karte [data-action="liga-zusage"].aktiv').count()) === 0);
+  await page.locator('#liga-karte [data-action="liga-zusage"][data-status="absage"]').click();
+  await page.waitForFunction(() => /Kann nicht · 2/.test(document.getElementById('liga-karte').textContent));
+  g = await lage();
+  check('Kann nicht: ich stehe bei den Absagen, der Knopf ist gedrueckt, keine offene Antwort mehr',
+    /Kann nicht · 2 Max Ich/.test(g.text) && !g.text.includes('Noch keine Antwort') && (await page.locator('#liga-karte [data-action="liga-zusage"][data-status="absage"].aktiv').count()) === 1, g.text);
+  await page.locator('#liga-karte [data-action="liga-zusage"][data-status="absage"]').click();
+  await page.waitForFunction(() => /Noch keine Antwort · 1/.test(document.getElementById('liga-karte').textContent));
+  check('nochmal getippt: die Antwort ist wieder ausgetragen', /Kann nicht · 1 Max/.test((await lage()).text));
+  await page.locator('#liga-karte [data-action="liga-zusage"][data-status="dabei"]').click();
+  await page.waitForFunction(() => /Dabei · 2 \/ 4/.test(document.getElementById('liga-karte').textContent));
+  g = await lage();
+  check('Bin dabei: 2 / 4 mit Tobi und mir', /Dabei · 2 \/ 4 Tobi Ich/.test(g.text) && (await page.locator('#liga-karte [data-action="liga-zusage"][data-status="dabei"].aktiv').count()) === 1, g.text);
+  /* Zuklappen und woanders aufklappen. */
+  await page.locator('#liga-liste .liga-spieltag.wahl').click();
+  g = await lage();
+  check('ein Tipp auf die offene Zeile klappt sie zu - keine Karte, keine Markierung', !g.sichtbar && g.wahl === 0, JSON.stringify(g));
+  await ligaTipp('st02');
+  g = await lage();
+  check('ein Tipp auf den 2. Spieltag oeffnet ihn an Ort und Stelle', g.inListe && g.vorher === 'st02' && g.sichtbar && g.roh.includes('Germering'), JSON.stringify(g));
+  /* Tablet: wieder zwei Spalten, die Karte links. */
+  await page.setViewportSize({ width: 1133, height: 744 });
+  await page.waitForTimeout(150);
+  check('am Tablet steht die Karte wieder links in der Spalte', await page.evaluate(() => {
+    const k = document.getElementById('liga-karte');
+    return k.parentNode.classList.contains('liga-spalten') && k.parentNode.firstElementChild === k && !k.classList.contains('in-liste') && k.offsetParent !== null;
+  }));
+  await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    window.DartSync = window.__echt.sync; window.DartKonto = window.__echt.konto; delete window.__echt; delete window.__ligaHeute;
+    S.profiles = S.profiles.filter((p) => ['u_ich', 'u_tobi', 'u_max', 'u_gastk'].indexOf(p.id) < 0);
+    D.ui().ligaWahl = null; D.ui().ligaZu = false; D.save(); D.setScreen('setup');
+  });
+  await page.setViewportSize(vp);
 });
 
 await gruppe('Handy-Block 2: Fernsteuerung hochkant - eine Zeile je Spieler', async () => {

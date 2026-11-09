@@ -7162,3 +7162,15 @@ button.pa-gruppe { cursor: pointer; }
   #screen-game.active.turnier.solo .key-liste .v:nth-child(n+5) { display: flex; }
   #screen-game.active.turnier.solo .key-liste .v:nth-child(n+6) { display: none; }
 }
+
+/* Spielplan am Handy: der gewaehlte Spieltag klappt in der Liste auf - die
+   grosse Karte steht unter seiner Zeile, vergangene Spieltage darueber,
+   kommende darunter (Julius, 09.11.). Dazu die drei Zusage-Gruppen der
+   Karte: dabei, kann nicht (rot gerahmt, Bild grau), noch keine Antwort
+   (blass, gestrichelt). */
+.liga-karte.in-liste { margin: 2px 0 8px; }
+.liga-spieltag.offen { border-bottom-left-radius: 4px; border-bottom-right-radius: 4px; }
+.liga-karte .lk-knoepfe:empty { display: none; }
+.liga-karte .lt-leute.leise .lt-person { opacity: 0.6; border-style: dashed; }
+.liga-karte .lt-person.absage { border-color: rgba(229, 72, 77, 0.55); color: var(--muted); }
+.liga-karte .lt-person.absage .av { filter: grayscale(1); opacity: 0.7; }
