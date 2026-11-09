@@ -3209,7 +3209,9 @@ body { font-size: 1rem; }
 .feier.sechzig .feier-strahlen i { opacity: 0.4; }
 .feier.sechzig .feier-mitte { animation-duration: 0.65s; top: 36%; }
 .feier.sechzig .feier-logo {
-  width: clamp(96px, min(30vw, 22vh), 240px);
+  /* Anderthalbfach so gross wie bei D-E1 (Julius, 09.11.): der Loewe soll
+     auffallen, kurz bleibt die Feier trotzdem. */
+  width: clamp(144px, min(45vw, 33vh), 360px);
   animation:
     sechzig-schlag 0.2s cubic-bezier(0.2, 1.7, 0.4, 1) both,
     feier-puls 0.45s ease-in-out 0.2s 1 both;
