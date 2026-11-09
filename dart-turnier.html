@@ -7118,6 +7118,25 @@ button.pa-gruppe { cursor: pointer; }
    daneben, nicht auf dem Tastenfeld. */
 .keypad button, .num-grid button, .quick-row button, .mult-row button, .kw-keys button { touch-action: none; }
 
+/* Allein hochkant (Punkte- und Einzel-Darts-Modus): die Restzahl ist das
+   Wichtigste auf dem Bildschirm und stand bisher in Zweier-Groesse im
+   mittleren Drittel der Karte. Jetzt linksbuendig, so gross wie die
+   Kartenbreite erlaubt, die letzte Aufnahme klein daneben; die Karte
+   bekommt dafuer ein Drittel der Hoehe, der Verlauf den Rest (Julius, 09.11.). */
+@media (orientation: portrait) {
+  #screen-game.active:not(.turnier) #scoreboard.solo .pcard {
+    min-height: clamp(180px, 30vh, 340px); justify-content: center; gap: clamp(2px, 0.8vh, 8px);
+  }
+  #screen-game.active:not(.turnier) #scoreboard.solo .pcard .rest-zeile {
+    grid-template-columns: auto minmax(0, 1fr); justify-content: start; min-height: 0;
+    font-size: clamp(4rem, min(22vh, 42cqi), 12rem); line-height: 0.86;
+  }
+  #screen-game.active:not(.turnier) #scoreboard.solo .pcard .rest { grid-column: 1; }
+  #screen-game.active:not(.turnier) #scoreboard.solo .pcard .letzte-box { grid-column: 2; justify-self: start; }
+  #screen-game.active:not(.turnier) #scoreboard.solo .pcard .pname,
+  #screen-game.active:not(.turnier) #scoreboard.solo .pcard .pavg { font-size: 1.1rem; }
+}
+
 </style>
 </head>
 <body>
@@ -9375,7 +9394,13 @@ window.LIGA_SDM = {
     try { document.dispatchEvent(new CustomEvent('dart-ton')); } catch (e) { /* egal */ }
   }
 
+  /* pointerdown allein reicht iOS nicht: ein Finger-Tipp gilt dort erst
+     beim Loslassen (touchend/click) als Nutzergeste. Seit die Spieltasten
+     per pointerdown buchen (app.js), kam der Ton sonst nie - der Kontext
+     blieb 'suspended', weil resume() nur ausserhalb einer Geste lief. */
   document.addEventListener('pointerdown', weckauf, { capture: true, passive: true });
+  document.addEventListener('pointerup', weckauf, { capture: true, passive: true });
+  document.addEventListener('click', weckauf, { capture: true, passive: true });
   document.addEventListener('keydown', weckauf, true);
   /* Zurueck aus dem Hintergrund: den Kontext gleich wieder anwerfen, damit
      die naechste Buchung des anderen nicht ins Leere klingt. */
@@ -9384,7 +9409,13 @@ window.LIGA_SDM = {
   });
   window.addEventListener('focus', function () { if (ctx) weckauf(); });
 
-  window.DartSound = { pomp: spielePomp, klick: spieleKlick, tipp: spieleTipp, klopfen: spieleKlopfen, fremdeEingabe: spieleFremdeEingabe, halten: halten, status: status };
+  /* Die eigenen Toene laufen durch nachAufwachen: wird per pointerdown
+     gebucht, schlaeft der Kontext oft noch - der Ton kommt dann, sobald
+     resume() durch ist (einige Millisekunden spaeter), statt auszufallen. */
+  function pompBald() { nachAufwachen(spielePomp); }
+  function klickBald() { nachAufwachen(spieleKlick); }
+  function tippBald() { nachAufwachen(spieleTipp); }
+  window.DartSound = { pomp: pompBald, klick: klickBald, tipp: tippBald, klopfen: spieleKlopfen, fremdeEingabe: spieleFremdeEingabe, halten: halten, status: status };
 })();
 
 /*

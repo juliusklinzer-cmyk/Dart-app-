@@ -7102,3 +7102,22 @@ button.pa-gruppe { cursor: pointer; }
    System darf hier gar nicht erst ans Scrollen denken. Gescrollt wird
    daneben, nicht auf dem Tastenfeld. */
 .keypad button, .num-grid button, .quick-row button, .mult-row button, .kw-keys button { touch-action: none; }
+
+/* Allein hochkant (Punkte- und Einzel-Darts-Modus): die Restzahl ist das
+   Wichtigste auf dem Bildschirm und stand bisher in Zweier-Groesse im
+   mittleren Drittel der Karte. Jetzt linksbuendig, so gross wie die
+   Kartenbreite erlaubt, die letzte Aufnahme klein daneben; die Karte
+   bekommt dafuer ein Drittel der Hoehe, der Verlauf den Rest (Julius, 09.11.). */
+@media (orientation: portrait) {
+  #screen-game.active:not(.turnier) #scoreboard.solo .pcard {
+    min-height: clamp(180px, 30vh, 340px); justify-content: center; gap: clamp(2px, 0.8vh, 8px);
+  }
+  #screen-game.active:not(.turnier) #scoreboard.solo .pcard .rest-zeile {
+    grid-template-columns: auto minmax(0, 1fr); justify-content: start; min-height: 0;
+    font-size: clamp(4rem, min(22vh, 42cqi), 12rem); line-height: 0.86;
+  }
+  #screen-game.active:not(.turnier) #scoreboard.solo .pcard .rest { grid-column: 1; }
+  #screen-game.active:not(.turnier) #scoreboard.solo .pcard .letzte-box { grid-column: 2; justify-self: start; }
+  #screen-game.active:not(.turnier) #scoreboard.solo .pcard .pname,
+  #screen-game.active:not(.turnier) #scoreboard.solo .pcard .pavg { font-size: 1.1rem; }
+}

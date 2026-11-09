@@ -233,7 +233,13 @@
     try { document.dispatchEvent(new CustomEvent('dart-ton')); } catch (e) { /* egal */ }
   }
 
+  /* pointerdown allein reicht iOS nicht: ein Finger-Tipp gilt dort erst
+     beim Loslassen (touchend/click) als Nutzergeste. Seit die Spieltasten
+     per pointerdown buchen (app.js), kam der Ton sonst nie - der Kontext
+     blieb 'suspended', weil resume() nur ausserhalb einer Geste lief. */
   document.addEventListener('pointerdown', weckauf, { capture: true, passive: true });
+  document.addEventListener('pointerup', weckauf, { capture: true, passive: true });
+  document.addEventListener('click', weckauf, { capture: true, passive: true });
   document.addEventListener('keydown', weckauf, true);
   /* Zurueck aus dem Hintergrund: den Kontext gleich wieder anwerfen, damit
      die naechste Buchung des anderen nicht ins Leere klingt. */
@@ -242,5 +248,11 @@
   });
   window.addEventListener('focus', function () { if (ctx) weckauf(); });
 
-  window.DartSound = { pomp: spielePomp, klick: spieleKlick, tipp: spieleTipp, klopfen: spieleKlopfen, fremdeEingabe: spieleFremdeEingabe, halten: halten, status: status };
+  /* Die eigenen Toene laufen durch nachAufwachen: wird per pointerdown
+     gebucht, schlaeft der Kontext oft noch - der Ton kommt dann, sobald
+     resume() durch ist (einige Millisekunden spaeter), statt auszufallen. */
+  function pompBald() { nachAufwachen(spielePomp); }
+  function klickBald() { nachAufwachen(spieleKlick); }
+  function tippBald() { nachAufwachen(spieleTipp); }
+  window.DartSound = { pomp: pompBald, klick: klickBald, tipp: tippBald, klopfen: spieleKlopfen, fremdeEingabe: spieleFremdeEingabe, halten: halten, status: status };
 })();
