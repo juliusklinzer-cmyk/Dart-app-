@@ -1993,7 +1993,7 @@
      Animation (1,2 s): kuerzer abgeraeumt wirkte der Loewe abgehackt und
      klein (Julius, 10.10.2026). Die Feier liegt ohne Klickfang ueber dem
      Bild, das Tastenfeld bleibt die ganze Zeit bedienbar. */
-  var SECHZIG_MS = 1200;
+  var SECHZIG_MS = 2500;   // Schlag 0,25 s + zwei Pulse je 1 s + Ausblenden
 
   /* Feier anwerfen. Kein display-Umschalten und kein Klassen-Neustart-Trick:
      die Kinder werden je Feier frisch eingesetzt und starten ihre Animationen

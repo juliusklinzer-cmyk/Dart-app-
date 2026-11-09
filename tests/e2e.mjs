@@ -6222,9 +6222,11 @@ await gruppe('Handy-Block 2: Solo-Tastatur-Modus - Eingabefeld und Kacheln statt
   check('die Kacheln rechnen mit: Ø 180.0, First 9 180.0, 3 Darts im Leg, 1x 180, hoechste 180, noch kein Finish - ein Strich',
     werte === '180.0 | 180.0 | 3 | 1 | 180 | –', werte);
   check('die Liste zeigt die 180 mit Rest 321', (await text('#key-solo .key-liste')).includes('180') && (await text('#key-solo .key-liste')).includes('Rest 321'));
-  check('die Karte zeigt die letzten Wuerfe unter dem Rest', await page.evaluate(() => {
+  /* Hochkant am Handy stehen die Aufnahmen nur in der Liste - in der Karte
+     waeren sie doppelt (Julius, 09.11.). Quer zeigt sie die Karte (unten). */
+  check('hochkant: die Karte zeigt die Wuerfe nicht noch einmal', await page.evaluate(() => {
     const w = document.querySelector('#scoreboard .pcard .pwuerfe');
-    return !!w && getComputedStyle(w).display !== 'none' && w.textContent.includes('180') && w.textContent.includes('Rest 321');
+    return !!w && getComputedStyle(w).display === 'none';
   }));
   /* Am Handy ohne Tastatur: ein Tipp auf die Anzeige holt ueber das
      versteckte Feld die Zifferntastatur - getippt wird dann dort. */
@@ -6246,6 +6248,10 @@ await gruppe('Handy-Block 2: Solo-Tastatur-Modus - Eingabefeld und Kacheln statt
       scroll: document.documentElement.scrollHeight <= window.innerHeight + 1, restPx: parseFloat(getComputedStyle(document.querySelector('#scoreboard .rest')).fontSize) };
   });
   check('quer: die Karte links, Eingabefeld und Kacheln rechts daneben', quer.eLeft >= quer.kRight - 1 && quer.kdTop < quer.kBottom, JSON.stringify(quer));
+  check('quer: die Karte zeigt die letzten Wuerfe unter dem Rest', await page.evaluate(() => {
+    const w = document.querySelector('#scoreboard .pcard .pwuerfe');
+    return !!w && getComputedStyle(w).display !== 'none' && w.textContent.includes('180') && w.textContent.includes('Rest 321');
+  }));
   check('quer: der Rest steht gross, alles im Bild, nichts scrollt', quer.restPx >= 60 && quer.kaBottom <= quer.innen + 0.5 && quer.scroll, JSON.stringify(quer));
   await page.setViewportSize({ width: 390, height: 844 });
   await page.waitForTimeout(150);

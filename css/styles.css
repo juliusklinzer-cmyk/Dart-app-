@@ -3197,28 +3197,34 @@ body { font-size: 1rem; }
   #screen-game.turnier .pcard .pname .av { display: none; }
 }
 
-/* ---------- Die Sechzig: kurz, klein, durchsichtig (D-E1) ----------
- * Jede 60 bekommt weiter den Loewen und "SECHZIG!" – in jedem Modus. Aber
- * die 60 ist die haeufigste Aufnahme des Abends: Die Feier dauert jetzt
- * 650 ms statt 1,2 s, blurt nichts, der Loewe ist kleiner, und durch die
- * Ebene hindurch bleibt das Tastenfeld sichtbar und bedienbar. */
+/* ---------- Die Sechzig: durchsichtig, zwei Pulse (D-E1, Julius 09.11.) ----------
+ * Jede 60 bekommt weiter den Loewen und "SECHZIG!" – in jedem Modus. Die
+ * Feier blurt nichts, und durch die Ebene hindurch bleibt das Tastenfeld
+ * sichtbar und bedienbar. Die Kurzfassung aus D-E1 (650 ms) war Julius zu
+ * hastig: der Loewe kommt mit dem Schlag und pulsiert dann zweimal je eine
+ * Sekunde ("SECH-ZIG"), danach blendet alles aus - 2,5 s (SECHZIG_MS). */
 .feier.sechzig { pointer-events: none; }
 .feier.sechzig.an::before { content: none; display: none; }
-.feier.sechzig .feier-blitz { animation-duration: 0.65s; opacity: 0.55; }
-.feier.sechzig .feier-strahlen { animation-duration: 0.65s; }
+.feier.sechzig .feier-blitz { animation-duration: 2.5s; opacity: 0.55; }
+.feier.sechzig .feier-strahlen { animation-duration: 2.5s; }
 .feier.sechzig .feier-strahlen i { opacity: 0.4; }
-.feier.sechzig .feier-mitte { animation-duration: 0.65s; top: 36%; }
+.feier.sechzig .feier-mitte { animation-duration: 2.5s; top: 36%; }
 .feier.sechzig .feier-logo {
-  /* Anderthalbfach so gross wie bei D-E1 (Julius, 09.11.): der Loewe soll
-     auffallen, kurz bleibt die Feier trotzdem. */
+  /* Anderthalbfach so gross wie bei D-E1 (Julius, 09.11.). */
   width: clamp(144px, min(45vw, 33vh), 360px);
   animation:
-    sechzig-schlag 0.2s cubic-bezier(0.2, 1.7, 0.4, 1) both,
-    feier-puls 0.45s ease-in-out 0.2s 1 both;
+    sechzig-schlag 0.25s cubic-bezier(0.2, 1.7, 0.4, 1) both,
+    sechzig-puls 1s ease-in-out 0.25s 2 both;
 }
 .feier.sechzig .feier-name {
   font-size: clamp(1.6rem, 7vw, 2.8rem);
-  animation: feier-puls 0.45s ease-in-out 0.2s 1 both;
+  animation: sechzig-puls 1s ease-in-out 0.25s 2 both;
+}
+/* Ein Puls je Sekunde: hoch und wieder zurueck, zweimal hintereinander. */
+@keyframes sechzig-puls {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.14); }
+  100% { transform: scale(1); }
 }
 .feier.sechzig .feier-gruss { font-size: clamp(0.9rem, 3.6vw, 1.3rem); margin-top: 4px; }
 @media (prefers-reduced-motion: reduce) {
@@ -7122,4 +7128,16 @@ button.pa-gruppe { cursor: pointer; }
   #screen-game.active:not(.turnier) #scoreboard.solo .pcard .letzte-box { grid-column: 2; justify-self: start; }
   #screen-game.active:not(.turnier) #scoreboard.solo .pcard .pname,
   #screen-game.active:not(.turnier) #scoreboard.solo .pcard .pavg { font-size: 1.1rem; }
+}
+
+/* Tastatur-Modus allein hochkant (Handy): alles gleich breit, die
+   Aufnahmen nur einmal. Die Karte stand 14 px eingerueckt (Innenabstand
+   der Fernsteuerung fuer den Schein) und zeigte die letzten Wuerfe, die
+   unter den Kacheln noch einmal als Liste standen (Julius, 09.11.). */
+@media (orientation: portrait) and (max-width: 699px) {
+  #screen-game.active.turnier .game-main { padding: 0; }
+  #screen-game.active.turnier.solo #scoreboard .pcard .pwuerfe { display: none; }
+  #screen-game.active.turnier.solo #scoreboard .pcard { grid-template-areas: "kopf" "rest" "felder"; grid-template-rows: auto minmax(0, 1fr) auto; }
+  #screen-game.active.turnier.solo .key-liste .v:nth-child(n+5) { display: flex; }
+  #screen-game.active.turnier.solo .key-liste .v:nth-child(n+6) { display: none; }
 }

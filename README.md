@@ -762,8 +762,8 @@ nach, ein Tipp rechts nimmt einen wieder heraus.
 **Die Sechzig:** Wirft jemand genau **60**, kommt der Löwe – das 1860-Wappen vor
 blauen Strahlen, darunter „SECHZIG!". In jedem Eingabemodus; fällt die Feier mit
 einem Dialog zusammen (60er-Checkout), bleibt der Dialog obenauf. Keine Feier legt
-einen Blur über das Bild, die 180er dauert 2,5 Sekunden, und jeder Dialog, der
-aufgeht, bricht sie sofort ab.
+einen Blur über das Bild; der Löwe pulsiert zweimal je eine Sekunde (2,5 Sekunden wie
+die 180er), und jeder Dialog, der aufgeht, bricht sie sofort ab.
 
 **Finish-Vorschlag:** Über der Eingabe steht immer der sinnvollste Weg zum Double-Out
 für den aktuellen Rest – und zwar passend zu den *noch verfügbaren* Darts der
