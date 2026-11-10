@@ -80,10 +80,14 @@ export function erstelleMitteilungen(opt) {
   const db = opt.db;
   const mailer = opt.mailer || { bereit: false };
   const push = opt.push || { bereit: false };
-  const liga = opt.liga || null;
+  /* Die Liga-Daten kommen als Objekt (Tests, Skripte) oder als Funktion:
+     der Server holt die Ergebnisse stuendlich neu (lib/liga.mjs) und
+     tauscht config.liga aus - jeder Lauf soll den frischen Stand sehen. */
+  const ligaDaten = typeof opt.liga === 'function' ? opt.liga : function () { return opt.liga || null; };
   const appUrl = opt.appUrl || 'https://darts.wirtschaftln.de';
-  const team = (liga && liga.liga && liga.liga.team) || 'Blink 180';
-  const soll = (liga && liga.liga && liga.liga.sollSpieler) || 4;
+  const ersteLiga = ligaDaten();
+  const team = (ersteLiga && ersteLiga.liga && ersteLiga.liga.team) || 'Blink 180';
+  const soll = (ersteLiga && ersteLiga.liga && ersteLiga.liga.sollSpieler) || 4;
 
   const qKanal = db.prepare('SELECT kanal FROM benachrichtigungen WHERE user_id = ? AND thema = ?');
   const qAlle = db.prepare('SELECT thema, kanal FROM benachrichtigungen WHERE user_id = ?');
@@ -199,7 +203,7 @@ export function erstelleMitteilungen(opt) {
 
   /* ---------- Jobs ---------- */
 
-  function termine() { return liga && liga.liga && Array.isArray(liga.liga.termine) ? liga.liga.termine : []; }
+  function termine() { const liga = ligaDaten(); return liga && liga.liga && Array.isArray(liga.liga.termine) ? liga.liga.termine : []; }
   function terminText(t) {
     const daheim = t.heim === team;
     return { daheim, gegner: daheim ? t.gast : t.heim, datum: datumDe(t.tag), wo: (daheim ? 'Heim' : 'Auswärts') + (t.ort ? ', ' + t.ort : '') };
@@ -286,6 +290,7 @@ export function erstelleMitteilungen(opt) {
      Schluessel zaehlt die gewerteten Spiele mit: ein Nachholspiel macht
      aus 3 von 4 wieder 4 von 4 und loest so eine zweite Meldung aus. */
   async function tabelleNeu(heute) {
+    const liga = ligaDaten();
     if (!liga || !liga.spieltage || !liga.tabelleAus) return 0;
     let n = 0;
     for (const t of termine()) {

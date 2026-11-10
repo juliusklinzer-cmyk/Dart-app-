@@ -153,6 +153,11 @@ function spielPayload(spielerIds) {
 async function main() {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'darts-test-'));
   const dbDatei = path.join(tmp, 'test.db');
+  /* Neben der Datenbank liegt eine vom Server geholte liga-sdm.js mit
+     juengerem Stand als im Repo - der Server muss sie statt js/liga-sdm.js
+     ausliefern (lib/liga.mjs). Der Abgleich selbst bleibt aus (NODE_ENV test). */
+  fs.writeFileSync(path.join(tmp, 'liga-sdm.js'),
+    fs.readFileSync(path.join(ROOT, 'js', 'liga-sdm.js'), 'utf8').replace(/stand: '\d{4}-\d{2}-\d{2}'/, "stand: '2099-01-01'") + '\n/* MARKE-LIGA-SERVER */\n');
 
   const proc = spawn(process.execPath, [path.join(ROOT, 'server', 'main.mjs')], {
     env: {
@@ -1576,6 +1581,14 @@ async function main() {
     ok(res.status === 200 && (await res.text()).includes('id="screen-setup"'), 'die App liegt unter /index.html');
     res = await fetch(BASIS + '/js/app.js');
     gleich(res.status, 200, 'das Skript wird ausgeliefert');
+    res = await fetch(BASIS + '/js/liga-sdm.js');
+    {
+      const t = await res.text();
+      ok(res.status === 200 && t.includes('MARKE-LIGA-SERVER') && t.includes("stand: '2099-01-01'"), 'die Ergebnisse der Ligaleitung kommen aus dem Datenordner, wenn die Fassung dort juenger ist');
+      ok((res.headers.get('content-type') || '').startsWith('text/javascript'), '... als JavaScript');
+    }
+    res = await fetch(BASIS + '/js/liga-sdm.js?t=123');
+    ok(res.status === 200 && (await res.text()).includes('MARKE-LIGA-SERVER'), '... auch mit Zeitstempel (Nachladen der App)');
     res = await fetch(BASIS + '/server/main.mjs');
     ok(res.status === 404, 'der Server-Code wird NICHT ausgeliefert');
     res = await fetch(BASIS + '/../package.json');

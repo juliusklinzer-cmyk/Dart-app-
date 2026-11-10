@@ -15,6 +15,10 @@ const TYPES = { '.html': 'text/html', '.css': 'text/css', '.js': 'text/javascrip
    Webseite). Ohne Eintrag antwortet der Server wie bisher mit 404: die App
    laeuft dann als lokale App ohne Konto. */
 const apiMock = {};
+/* Statische Dateien, die ein Test vorübergehend ersetzt (Pfad -> Text), z. B.
+   js/liga-sdm.js mit neuen Ergebnissen - ueber den Server, nicht per
+   page.route: Anfragen des Service Workers sieht Playwright nicht. */
+const dateiMock = {};
 const server = http.createServer((req, res) => {
   const rel = decodeURIComponent(req.url.split('?')[0]);
   if (rel.startsWith('/api/')) {
@@ -23,6 +27,7 @@ const server = http.createServer((req, res) => {
     else { res.writeHead(404); res.end('not found'); }
     return;
   }
+  if (dateiMock[rel] !== undefined) { res.writeHead(200, { 'Content-Type': 'text/javascript' }); res.end(dateiMock[rel]); return; }
   const file = path.join(ROOT, rel === '/' ? 'index.html' : rel);
   if (!file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
     res.writeHead(404); res.end('not found'); return;
@@ -3256,7 +3261,43 @@ await page.locator('#liga-tabs button[data-tab="training"]').click();
 check('Training: DiensDarts links, Uebungsspiel mit Gegner-Vorwahl rechts',
   (await textKlein('#dienstdarts-karte')).includes('diensdarts') && (await page.locator('#uebung-karte [data-action="uebung-vorwahl"][data-value="mittel"].active').count()) === 1);
 await page.locator('#liga-tabs button[data-tab="tabelle"]').click();
-check('Tabelle: rechts unser Platz', (await textKlein('#lt-platz')).includes('unser platz') && (await text('#lt-platz')).includes('.'));
+check('Tabelle: links oben unser Platz, darunter die Tabelle, darunter der Stand',
+  (await textKlein('#lt-platz')).includes('unser platz') && (await text('#lt-platz')).includes('.') &&
+  await page.evaluate(() => {
+    const links = document.querySelector('#liga-tabelle .liga-links');
+    const reihe = ['#lt-platz', '.lt-karte', '.lt-stand-karte'].map((s) => document.querySelector(s));
+    return reihe.every((el) => el && el.parentElement === links) && reihe[0].compareDocumentPosition(reihe[1]) & 4 && reihe[1].compareDocumentPosition(reihe[2]) & 4 &&
+      ['.lt-runden-karte', '.lt-einzel-karte', '.lt-hl-karte'].every((s) => document.querySelector(s).parentElement.classList.contains('liga-rechts'));
+  }));
+/* Am Computer: der Platz als Band ueber der Tabelle, alle neun Teams ohne
+   Rollen; rechts rollt die ganze Spalte (vorher stand die Einzelrangliste
+   fest, "Alle Spiele" hatte null Hoehe und alles darunter war unerreichbar). */
+{
+  const vpTab = page.viewportSize();
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await page.waitForTimeout(150);
+  const g = await page.evaluate(() => {
+    const r = (s) => document.querySelector(s).getBoundingClientRect();
+    const rechts = document.querySelector('#liga-tabelle .liga-rechts');
+    const tab = document.querySelector('.lt-karte .lt-scroll');
+    const zahl = r('#lt-platz .lt-platz-zahl'), info = r('#lt-platz .lt-platz-info');
+    return {
+      fix: document.body.classList.contains('fix-setup'),
+      platzUeberTabelle: r('#lt-platz').bottom <= r('.lt-karte').top + 1 && Math.abs(r('#lt-platz').left - r('.lt-karte').left) < 1,
+      band: zahl.right <= info.left && zahl.height < r('#lt-platz').height + 1,
+      standUnten: r('.lt-stand-karte').top >= r('.lt-karte').bottom - 1 && r('.lt-stand-karte').bottom <= innerHeight + 1,
+      tabelleOhneRollen: tab.scrollHeight <= tab.clientHeight + 1 && document.querySelectorAll('#lt-tabelle tbody tr').length === 9,
+      rundenSichtbar: r('#lt-runden').height > 100,
+      spalteRollt: getComputedStyle(rechts).overflowY === 'auto' && rechts.scrollHeight > rechts.clientHeight + 100,
+      imRahmen: rechts.getBoundingClientRect().bottom <= innerHeight + 1 && document.scrollingElement.scrollHeight <= innerHeight + 1
+    };
+  });
+  check('Computer: Platz-Band links ueber der Tabelle, Zahl neben Punkten', g.fix && g.platzUeberTabelle && g.band, JSON.stringify(g));
+  check('Computer: alle neun Teams ohne Rollen, der Stand darunter im Rahmen', g.tabelleOhneRollen && g.standUnten, JSON.stringify(g));
+  check('Computer: rechts rollt die Spalte mit Alle Spiele, Einzelrangliste, Highlights', g.rundenSichtbar && g.spalteRollt && g.imRahmen, JSON.stringify(g));
+  await page.setViewportSize(vpTab);
+  await page.waitForTimeout(150);
+}
 /* Daten der Ligaleitung (js/liga-sdm.js): Einzelrangliste, Highlights, Teams, alle Spieltage. */
 check('Tabelle: Einzelrangliste der Liga, erst 15 Spieler, mit Legs, Spielen, Punkten',
   (await page.locator('#lt-einzel .standings.einzel tbody tr').count()) === 15 && /legs/i.test(await text('#lt-einzel thead')) &&
@@ -3266,6 +3307,41 @@ check('"Alle Spieler zeigen" klappt die ganze Liste auf', (await page.locator('#
 check('Tabelle: Highlights mit 180ern, Shortlegs und Highfinishes',
   /180er/i.test(await text('#lt-highlights')) && /shortlegs/i.test(await text('#lt-highlights')) && (await page.locator('#lt-highlights .lt-hl-zeile').count()) >= 1);
 check('Tabelle: der Stand der Ligaleitung steht dabei', /Ligaleitung/.test(await text('#lt-stand')));
+/* Der Server holt die Ergebnisse der Ligaleitung stuendlich; die App laedt
+   js/liga-sdm.js beim Oeffnen des Reiters nach (als <script>, hoechstens
+   alle 15 Minuten) und zeichnet neu, wenn sich etwas geaendert hat. Hier
+   liefert die Route eine Fassung, in der wir den 4. Spieltag 9:7 gewonnen
+   haben - danach wieder die echte Datei, damit der Rest des Tests stimmt. */
+{
+  const vorher = await page.evaluate(() => ({ platz: document.querySelector('#lt-platz .lt-platz-zahl').textContent, stand: document.querySelector('#lt-stand').textContent }));
+  const sdmNeu = (() => {
+    const fenster = {};
+    new Function('window', fs.readFileSync(path.join(ROOT, 'js', 'liga-sdm.js'), 'utf8'))(fenster);
+    const sdm = fenster.LIGA_SDM;
+    const sp = sdm.spieltage.st04.find((s) => s.heim === 'Blink 180');
+    sp.einzel = '9:7'; sp.legs = '21:17';
+    sdm.stand = '2099-01-01';
+    return 'window.LIGA_SDM = ' + JSON.stringify(sdm) + ';';
+  })();
+  dateiMock['/js/liga-sdm.js'] = sdmNeu;
+  await page.evaluate(() => window.__dart.ligaDatenPruefen(true));
+  await page.waitForFunction(() => /01\.01\.2099/.test(document.querySelector('#lt-stand').textContent), null, { timeout: 5000 }).catch(() => {});
+  const nachher = await page.evaluate(() => ({
+    platz: document.querySelector('#lt-platz .lt-platz-zahl').textContent, stand: document.querySelector('#lt-stand').textContent,
+    zeile: [...document.querySelector('#lt-tabelle tr[data-team="Blink 180"]').querySelectorAll('td')].map((t) => t.textContent.trim()).join('|'),
+    runde: document.querySelector('#lt-runden').textContent
+  }));
+  check('Nachgeladene Ergebnisse der Ligaleitung: neuer Stand, Sieg am 4. Spieltag in Tabelle und Alle Spiele',
+    /01\.01\.2099/.test(nachher.stand) && /\|Blink 180\|4\|3\|0\|1\|/.test(nachher.zeile) && /9:7/.test(nachher.runde) && nachher.platz !== vorher.platz, JSON.stringify(nachher));
+  delete dateiMock['/js/liga-sdm.js'];
+  await page.evaluate(() => window.__dart.ligaDatenPruefen(true));
+  await page.waitForFunction((alt) => document.querySelector('#lt-stand').textContent === alt, vorher.stand, { timeout: 5000 }).catch(() => {});
+  check('die echte Datei stellt den alten Stand wieder her', (await text('#lt-stand')) === vorher.stand && (await text('#lt-platz .lt-platz-zahl')) === vorher.platz);
+  check('Nachladen ohne Aenderung zeichnet nichts neu (Kennung gleich)', await page.evaluate(() => {
+    const k = document.querySelector('#lt-tabelle').innerHTML; window.__dart.ligaDatenPruefen(true);
+    return new Promise((r) => setTimeout(() => r(document.querySelector('#lt-tabelle').innerHTML === k), 800));
+  }));
+}
 rundenSoll = await page.evaluate(() => {
   const sp = window.LIGA_DATEN.spieltage;
   return Object.keys(sp).filter((id) => sp[id].some((s) => s.gast && s.einzel)).length + 1;
@@ -3441,8 +3517,9 @@ await gruppe('Liga: alle Spiele des Spieltags', async () => {
   await page.locator('#overlay-card [data-action="liga-partien"][data-i="3"]').click();
   check('ein Tipp auf Treff ma nix - DCO zeigt die 16 Einzel', (await visible('#overlay-card')) && (await page.locator('#overlay-card .lp-tab tbody tr').count()) === 16);
   const lp = await textKlein('#overlay-card');
-  check('mit Gast-Kennzeichen, Spieltag, Lokal und Highlights',
-    lp.includes('michael rogge') && lp.includes('gast') && lp.includes('1. spieltag') && lp.includes('fiakerstüberl') && lp.includes('alex heuwald') && lp.includes('180'));
+  /* Michael Rogge fuehrt die Ligaleitung seit 10.11. als festen Spieler (vorher Gast). */
+  check('mit Spieltag, Lokal und Highlights',
+    lp.includes('michael rogge') && lp.includes('1. spieltag') && lp.includes('fiakerstüberl') && lp.includes('alex heuwald') && lp.includes('180'));
   check('Sieger je Einzel hervorgehoben: 9 Heim-, 7 Gast-Siege',
     (await page.locator('#overlay-card .lp-tab td:first-child.sieg').count()) === 9 && (await page.locator('#overlay-card .lp-tab td:last-child.sieg').count()) === 7);
   await page.keyboard.press('Escape');

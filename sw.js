@@ -6,7 +6,7 @@
    beide leben vom Server (aktuelle Ergebnisse, Event-Stream) und nützen
    offline nichts; der Service Worker wird ohnehin nur von der App
    registriert. */
-var CACHE = 'dart-turnier-v178';
+var CACHE = 'dart-turnier-v179';
 var ASSETS = [
   './',
   './index.html',
@@ -85,6 +85,22 @@ self.addEventListener('fetch', function (e) {
   if (pfad.indexOf('/modell/') === 0 || pfad.indexOf('linse-cv.js') >= 0) return;
 
   var navigation = e.request.mode === 'navigate';
+  /* Die Ergebnisse der Ligaleitung (js/liga-sdm.js) holt der Server
+     stuendlich neu - die Datei kommt deshalb zuerst vom Netz und landet
+     frisch im Cache; nur offline gilt die gemerkte Fassung. Alles andere
+     aendert sich nur mit einer neuen Version (CACHE). */
+  if (pfad.indexOf('/js/liga-sdm.js') >= 0) {
+    e.respondWith(fetch(e.request).then(function (res) {
+      if (res.ok && res.type === 'basic') {
+        var kopie = res.clone();
+        caches.open(CACHE).then(function (c) { c.put(e.request, kopie); }).catch(function () {});
+      }
+      return res;
+    }).catch(function () {
+      return caches.match(e.request).then(function (hit) { return hit || caches.match('./js/liga-sdm.js'); }).then(function (hit) { return hit || Response.error(); });
+    }));
+    return;
+  }
   e.respondWith(
     caches.match(e.request).then(function (hit) {
       return hit || fetch(e.request).then(function (res) {

@@ -225,6 +225,8 @@ nur der Einladungs-Hash und – für Mail und Push – die Brevo- und VAPID-Zeil
 | `DARTS_CLAIM_FRIST_MS` | 600000 (10 min) | Frist ohne Lebenszeichen, nach der ein geteiltes Einzel als hängengeblieben gilt und ein anderes iPad übernehmen darf (die Tests setzen 3000). |
 | `DARTS_SSE_PULS_MS` | 25000 | Keepalive-Takt des Live-Stroms (SSE). |
 | `DARTS_BACKUP_DIR` | `/data/backups` (neben der DB) | Ordner für die Stände von `server/scripts/backup.mjs` im Container. |
+| `DARTS_LIGA_IMPORT` | an bei `NODE_ENV=production` | Stündlicher Abgleich mit steeldart-muenchen.de (`server/lib/liga.mjs`): neue Ergebnisse landen als `liga-sdm.js` neben der Datenbank (`/data`) und werden statt der Repo-Fassung ausgeliefert. `1` erzwingt (auch lokal), `0` verbietet. |
+| `DARTS_LIGA_IMPORT_MIN` | `60` | Takt des Abgleichs in Minuten. |
 | `DARTS_BACKUP_OFFSITE` | leer | rsync-Ziel für die zweite Kopie der Sicherung, gelesen von `backup.sh` auf dem Host (siehe Backup). |
 | `DARTS_DEMO_PASSWORT` | zufällig | gemeinsames Passwort der Demo-Konten aus `server/scripts/demo.mjs`; nur das Skript liest es. |
 | `PORT`, `HOST`, `DARTS_DB`, `DARTS_TRUST_PROXY`, `DARTS_SECURE_COOKIES`, `NODE_ENV` | von `compose.yml` gesetzt | Port 3002, Adresse 0.0.0.0, Datenbank `/data/darts.db`, X-Forwarded-For von Caddy glauben, Session-Cookie nur über HTTPS, Produktion. Nicht in die `.env` – `compose.yml` setzt sie fest; lokal (`node server/main.mjs`) gelten die Vorgaben 3002 / `server/data/darts.db` / Cookies ohne Secure. |

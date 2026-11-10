@@ -1,12 +1,13 @@
-/* Automatisch erzeugt von tools/liga-import.mjs am 2026-10-30 aus
+/* Automatisch erzeugt von tools/liga-import.mjs am 2026-11-10 aus
    https://steeldart-muenchen.de/4er-liga/4er-5-liga.html
    Nicht von Hand aendern - nach jedem Spieltag einfach neu erzeugen:
      node tools/liga-import.mjs
+   (Der Server macht das stuendlich selbst, server/lib/liga-import.mjs.)
    Von Hand gepflegte Ergaenzungen (z. B. unsere Bogen-Aufstellung) stehen
    in js/liga-daten.js (LIGA_HAND) und werden dort dazugemischt.
    Spielerlisten: "*Name" = Gastspieler (bei der Ligaleitung "(n * Gast)"). */
 window.LIGA_SDM = {
-  stand: '2026-10-30',
+  stand: '2026-11-10',
   quelle: 'https://steeldart-muenchen.de/4er-liga/4er-5-liga.html',
   spieltage: {
     st01: [
@@ -77,19 +78,19 @@ window.LIGA_SDM = {
           ['Franz Freinberger', 'Naser Sharifi', 0, 2],
           ['Ralf Kilian', 'Christos Heuwald', 2, 0],
           ['Bernhard Hoffmann', 'Luck Heuwald', 2, 0],
-          ['Christian Matejka', '*Michael Rogge', 1, 2],
+          ['Christian Matejka', 'Michael Rogge', 1, 2],
           ['Franz Freinberger', 'Christos Heuwald', 2, 0],
           ['Ralf Kilian', 'Naser Sharifi', 0, 2],
-          ['Bernhard Hoffmann', '*Michael Rogge', 2, 0],
+          ['Bernhard Hoffmann', 'Michael Rogge', 2, 0],
           ['Christian Matejka', 'Luck Heuwald', 2, 0],
           ['Bernhard Hoffmann', 'Naser Sharifi', 2, 1],
           ['Christian Matejka', 'Christos Heuwald', 2, 1],
           ['Linda Maier', 'Alex Heuwald', 2, 1],
-          ['Franz Freinberger', '*Michael Rogge', 1, 2],
+          ['Franz Freinberger', 'Michael Rogge', 1, 2],
           ['Sven Albrecht', 'Naser Sharifi', 1, 2],
           ['Yves Scherer', 'Christos Heuwald', 0, 2],
           ['Stephan Brunner', 'Alex Heuwald', 2, 0],
-          ['Linda Maier', '*Michael Rogge', 0, 2]
+          ['Linda Maier', 'Michael Rogge', 0, 2]
         ],
         highlights: [
           { wer: 'Alex Heuwald', team: 'DCO', s180: 1, was: '1× 180' }
@@ -207,16 +208,16 @@ window.LIGA_SDM = {
           ['Robert Völkl', 'Reinhart Boehm', 0, 2],
           ['Naser Sharifi', 'Rolf Neeb', 2, 1],
           ['Christos Heuwald', 'Mani Burgmair', 2, 1],
-          ['*Michael Rogge', 'Carol Zehetmeier', 2, 1],
+          ['Michael Rogge', 'Carol Zehetmeier', 2, 1],
           ['Robert Völkl', 'Rolf Neeb', 1, 2],
           ['Naser Sharifi', 'Reinhart Boehm', 2, 1],
           ['Christos Heuwald', 'Carol Zehetmeier', 1, 2],
-          ['*Michael Rogge', 'Mani Burgmair', 2, 1],
+          ['Michael Rogge', 'Mani Burgmair', 2, 1],
           ['Christos Heuwald', 'Reinhart Boehm', 0, 2],
-          ['*Michael Rogge', 'Rolf Neeb', 2, 0],
+          ['Michael Rogge', 'Rolf Neeb', 2, 0],
           ['Naser Sharifi', 'Mani Burgmair', 2, 1],
           ['Lissy Attanasio', 'Carol Zehetmeier', 0, 2],
-          ['*Michael Rogge', 'Reinhart Boehm', 2, 1],
+          ['Michael Rogge', 'Reinhart Boehm', 2, 1],
           ['Christos Heuwald', 'Rolf Neeb', 1, 2],
           ['Lissy Attanasio', 'Mani Burgmair', 1, 2],
           ['Naser Sharifi', 'Carol Zehetmeier', 0, 2]
@@ -328,8 +329,68 @@ window.LIGA_SDM = {
           ['Reinhart Boehm', 'Maximilian Königsbauer', 1, 2]
         ]
       },
-      { tag: '2026-10-30', heim: 'TSV Oberpframmern', gast: 'DCO', ort: 'Gaststätte Anstoss' },
-      { tag: '2026-10-30', heim: 'Dart Artists Germering II', gast: 'TSV Dachau 1865 4', ort: 'Cobblers Irish Pub' }
+      {
+        tag: '2026-10-30',
+        heim: 'TSV Oberpframmern',
+        gast: 'DCO',
+        ort: 'Gaststätte Anstoss',
+        einzel: '6:10',
+        legs: '17:23',
+        bericht: 2319,
+        partien: [
+          ['Andreas Sedlbauer', 'Michael Rogge', 1, 2],
+          ['Olle Aronsson', 'Melanie Völkl', 1, 2],
+          ['René Mai', 'Naser Sharifi', 0, 2],
+          ['Stephan Uhlig', 'Christos Heuwald', 2, 0],
+          ['Andreas Sedlbauer', 'Melanie Völkl', 1, 2],
+          ['Olle Aronsson', 'Michael Rogge', 2, 0],
+          ['René Mai', 'Christos Heuwald', 2, 1],
+          ['Stephan Uhlig', 'Naser Sharifi', 1, 2],
+          ['René Mai', 'Michael Rogge', 0, 2],
+          ['Stephan Uhlig', 'Melanie Völkl', 2, 1],
+          ['Olle Aronsson', 'Naser Sharifi', 0, 2],
+          ['Andreas Sedlbauer', 'Robert Völkl', 0, 2],
+          ['Stephan Uhlig', 'Michael Rogge', 2, 1],
+          ['René Mai', 'Melanie Völkl', 2, 0],
+          ['Andreas Sedlbauer', 'Naser Sharifi', 1, 2],
+          ['Olle Aronsson', 'Robert Völkl', 0, 2]
+        ]
+      },
+      {
+        tag: '2026-10-30',
+        heim: 'Dart Artists Germering II',
+        gast: 'TSV Dachau 1865 4',
+        ort: 'Cobblers Irish Pub',
+        einzel: '11:5',
+        legs: '24:14',
+        bericht: 2320,
+        partien: [
+          ['Martin Kern-Emden', 'Johannes Wolters', 0, 2],
+          ['Andi Kaiser', 'Lars Toni', 2, 0],
+          ['*Vincent Freer', 'Cordula Gangl', 2, 1],
+          ['Julian Frank', 'Vincent von Frankenberg', 2, 1],
+          ['Martin Kern-Emden', 'Lars Toni', 0, 2],
+          ['Andi Kaiser', 'Johannes Wolters', 2, 0],
+          ['*Vincent Freer', 'Vincent von Frankenberg', 2, 0],
+          ['Julian Frank', 'Cordula Gangl', 2, 1],
+          ['*Vincent Freer', 'Johannes Wolters', 2, 0],
+          ['Julian Frank', 'Lars Toni', 2, 1],
+          ['Andi Kaiser', 'Cordula Gangl', 2, 0],
+          ['Melanie Ziemann', 'Vincent von Frankenberg', 0, 2],
+          ['Julian Frank', 'Johannes Wolters', 1, 2],
+          ['*Vincent Freer', 'Lars Toni', 2, 0],
+          ['Melanie Ziemann', 'Cordula Gangl', 1, 2],
+          ['Andi Kaiser', 'Vincent von Frankenberg', 2, 0]
+        ],
+        highlights: [
+          {
+            wer: 'Andi Kaiser',
+            team: 'Dart Artists Germering II',
+            highfinish: [104],
+            was: 'Highfinish 104'
+          }
+        ]
+      }
     ],
     st04: [
       { heim: 'TSV Oberpframmern', gast: null },
@@ -476,9 +537,12 @@ window.LIGA_SDM = {
       adresse: 'Schusterhäusl 1, 82110 Germering',
       spieler: [
         { name: 'Julian Frank', info: 'TC-1' },
+        { name: '*Vincent Freer' },
+        { name: 'Andi Kaiser' },
         { name: '*****' },
         { name: 'Carl Friedrich Frank' },
         { name: 'Gerd Stegerer' },
+        { name: 'Martin Kern-Emden' },
         { name: 'Melanie Ziemann' },
         { name: 'Rudolf Weiß' }
       ]
@@ -490,7 +554,6 @@ window.LIGA_SDM = {
       spieler: [
         { name: 'Alex Heuwald', info: 'TC-1' },
         { name: 'Laura Vogel', info: 'TC-2' },
-        { name: '*Michael Rogge' },
         { name: 'Angelo Attanasio' },
         { name: 'Christos Heuwald' },
         { name: 'Heike Vogel' },
@@ -498,6 +561,7 @@ window.LIGA_SDM = {
         { name: 'Luck Heuwald' },
         { name: 'Melanie Völkl' },
         { name: 'Michael Czechowsky' },
+        { name: 'Michael Rogge' },
         { name: 'Naser Sharifi' },
         { name: 'Robert Völkl' }
       ]

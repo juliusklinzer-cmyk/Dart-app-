@@ -27,6 +27,8 @@
 
 ## Erledigt
 
+- [x] DRT-023 Ligaergebnisse von selbst aktuell: der Server holt stuendlich bei der Ligaleitung nach (server/lib/liga-import.mjs, liga.mjs), liefert die frische liga-sdm.js aus /data aus, Service Worker netzzuerst, App laedt im Liga-Reiter alle 15 Min nach; Tabelle am Computer: Platz-Band links ueber der Tabelle, Stand darunter, rechts rollt die Spalte (Alle Spiele war auf null gequetscht, darunter unerreichbar) · von:Julius · am:2026-11-10 · fertig:2026-11-10
+
 - [x] DRT-022 Spielplan am Handy: Spieltag klappt in der Liste auf (Karte unter der Zeile, vergangene oben, kommende unten); Zusagen als „Bin dabei“ / „Kann nicht“ (Entweder-oder, kein Austragen) mit drei Gruppen Dabei, Kann nicht, Noch keine Antwort; Zeile und Karte ein Kasten, vergangene Spiele mit Sieg/Niederlage statt "Alle Spiele"-Link; Tastatur-Modus quer: letzte und vorletzte Aufnahme rechts neben dem Rest, keine Liste, Eingabefeld hoeher · von:Julius · am:2026-11-09 · fertig:2026-11-09
 
 - [x] DRT-020 Block-2-Entscheidungen (Julius 09.11.): Session-Dialog bleibt bis zum Wegtippen (kein 6-s-Timer), Kachel „Höchstes Finish“ statt Checkout-Quote, kein Hinweis auf der Liga-Karte, iPad-Tasten meldet er bei Bedarf · von:Julius · am:2026-11-08 · fertig:2026-11-09

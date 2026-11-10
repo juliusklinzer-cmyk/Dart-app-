@@ -469,13 +469,24 @@
 
   <!-- Die Ligatabelle: von Hand gepflegt (die Liga veröffentlicht die
        Ergebnisse, wir tragen sie ab), für alle Angemeldeten derselbe Stand. -->
+  <!-- Tabelle: links oben unser Platz, darunter die Tabelle und der Stand;
+       rechts (am Computer eine rollende Spalte) Alle Spiele, Einzelrangliste
+       und Highlights der Ligaleitung. -->
   <div id="liga-tabelle" class="hidden liga-zwei breit">
-    <div class="card lt-karte">
-      <div class="karte-kopf"><h2>Ligatabelle</h2><span class="hint">Tipp auf ein Team: Lokal, Spieler, Spiele</span></div>
-      <div class="lt-scroll"><table class="standings" id="lt-tabelle"></table></div>
+    <div class="liga-links">
+      <div class="liga-karte weiss" id="lt-platz"></div>
+      <div class="card lt-karte">
+        <div class="karte-kopf"><h2>Ligatabelle</h2><span class="hint">Tipp auf ein Team: Lokal, Spieler, Spiele</span></div>
+        <div class="lt-scroll"><table class="standings" id="lt-tabelle"></table></div>
+      </div>
+      <div class="card lt-stand-karte">
+        <span class="lk-crew-titel">Stand</span>
+        <p class="hint">Berechnet aus den Ergebnissen aller Spieltage (Karte Alle Spiele):
+          Sieg 2 Punkte, Unentschieden 1. Reihenfolge nach Punkten, dann Leg-Differenz, dann Einzel-Differenz.</p>
+        <p class="hint" id="lt-stand"></p>
+      </div>
     </div>
     <div class="liga-rechts">
-      <div class="liga-karte weiss" id="lt-platz"></div>
       <!-- Alle Spiele je Spieltag (Ergebnisse der Ligaleitung, LIGA_SPIELTAGE). -->
       <div class="card lt-runden-karte">
         <div class="karte-kopf"><h2>Alle Spiele</h2><span class="hint">je Spieltag, Tipp zeigt die Einzel</span></div>
@@ -490,12 +501,6 @@
       <div class="card lt-hl-karte">
         <div class="karte-kopf"><h2>Highlights</h2><span class="hint">180er, Shortlegs, Highfinishes</span></div>
         <div class="lt-hl" id="lt-highlights"></div>
-      </div>
-      <div class="card lt-stand-karte">
-        <span class="lk-crew-titel">Stand</span>
-        <p class="hint">Berechnet aus den Ergebnissen aller Spieltage (Karte Alle Spiele):
-          Sieg 2 Punkte, Unentschieden 1. Reihenfolge nach Punkten, dann Leg-Differenz, dann Einzel-Differenz.</p>
-        <p class="hint" id="lt-stand"></p>
       </div>
     </div>
   </div>

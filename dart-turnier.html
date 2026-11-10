@@ -5340,7 +5340,8 @@ body .boards-host.log #board-log { display: block; }
 .liga-uebung .options.drei button span:first-child { text-transform: uppercase; font-weight: 700; }
 .liga-uebung .btn.start { min-height: 48px; }
 
-/* Tabelle: links die Tabelle, rechts unser Platz und der Stand. */
+/* Tabelle: links unser Platz, die Tabelle und der Stand; rechts Alle Spiele,
+   Einzelrangliste und Highlights. */
 .lt-karte { display: flex; flex-direction: column; }
 .lt-karte .karte-kopf { margin-bottom: 8px; }
 .lt-karte .lt-scroll { overflow: auto; }
@@ -5558,19 +5559,28 @@ body .boards-host.log #board-log { display: block; }
   /* Tabelle */
   .lt-karte .lt-scroll { flex: 1 1 auto; min-height: 0; overflow: auto; scrollbar-width: none; }
   #liga-tabelle .standings th { font-size: clamp(11px, 1.6vh, 17px); }
-  #liga-tabelle .standings td { font-size: clamp(14px, 2.6vh, 28px); height: clamp(44px, 6.6vh, 70px); padding: 0 6px; }
+  /* Flacher als die Entwurfs-Zeilen, damit links alle neun Teams unter dem Platz-Band und ueber dem Stand stehen, ohne zu rollen. */
+  #liga-tabelle .standings td { font-size: clamp(14px, 2.3vh, 24px); height: clamp(40px, 5.2vh, 60px); padding: 0 6px; }
   #liga-tabelle .standings td.name { font-size: clamp(13px, 2.3vh, 24px); }
-  /* Kleiner als im Entwurf, damit rechts die Karte "Alle Spiele" Platz hat. */
-  #lt-platz .lt-platz-zahl { font-size: clamp(44px, 9vh, 96px); }
-  #lt-platz { flex: none; gap: clamp(2px, 0.5vh, 6px); padding: clamp(10px, 1.6vh, 20px) clamp(14px, 2vw, 32px); }
+  /* Links oben unser Platz als Band ueber der Tabelle: die Zahl links,
+     daneben Punkte, Legs und Abstand (Julius, 10.11.). */
+  #lt-platz { flex: none; display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: clamp(12px, 1.6vw, 28px); row-gap: 0; align-items: center; justify-items: start; text-align: left; padding: clamp(8px, 1.4vh, 16px) clamp(14px, 2vw, 32px); }
+  #lt-platz .lt-platz-zahl { grid-row: 1 / 4; grid-column: 1; font-size: clamp(40px, 7.5vh, 80px); }
+  #lt-platz .lk-crew-titel, #lt-platz .lt-platz-info, #lt-platz .lt-platz-sub { grid-column: 2; }
   #lt-platz .lt-platz-info { font-size: clamp(14px, 2.6vh, 28px); }
   #lt-platz .lt-platz-sub { font-size: clamp(12px, 2vh, 21px); }
-  .lt-runden-karte { flex: 1 1 auto; min-height: 0; }
-  .lt-runden-karte > .karte-kopf { flex: none; }
-  .lt-runden { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
+  #liga-tabelle .liga-links > .lt-karte { flex: 1 1 auto; min-height: 0; }
+  /* Rechts rollt die ganze Spalte - Alle Spiele, Einzelrangliste und
+     Highlights in voller Laenge. Vorher war die Spalte fest hoch, die
+     Einzelrangliste drueckte "Alle Spiele" auf null und alles darunter
+     lag unerreichbar ausserhalb des Rahmens (Julius, 10.11.). */
+  #liga-tabelle .liga-rechts { overflow-y: auto; scrollbar-width: none; }
+  #liga-tabelle .liga-rechts > * { flex: none; }
   /* Am Tablet knapp: die Erklaerung weicht der Karte "Alle Spiele". */
-  .lt-stand-karte { flex: none; }
+  .lt-stand-karte { flex: none; padding: clamp(6px, 1vh, 12px) clamp(10px, 1.8vh, 20px); gap: 0; }
+  .lt-stand-karte > .lk-crew-titel { display: none; }
   .lt-stand-karte > .hint:first-of-type { display: none; }
+  .lt-stand-karte > .hint { font-size: clamp(11px, 1.6vh, 15px); line-height: 1.3; }
   .lt-stand-karte > .luft { display: none; }
   .lt-stand-karte .btn { height: clamp(44px, 7.4vh, 76px); font-size: clamp(14px, 2.6vh, 28px); }
   /* Statistik */
@@ -7677,13 +7687,24 @@ button.pa-gruppe { cursor: pointer; }
 
   <!-- Die Ligatabelle: von Hand gepflegt (die Liga veröffentlicht die
        Ergebnisse, wir tragen sie ab), für alle Angemeldeten derselbe Stand. -->
+  <!-- Tabelle: links oben unser Platz, darunter die Tabelle und der Stand;
+       rechts (am Computer eine rollende Spalte) Alle Spiele, Einzelrangliste
+       und Highlights der Ligaleitung. -->
   <div id="liga-tabelle" class="hidden liga-zwei breit">
-    <div class="card lt-karte">
-      <div class="karte-kopf"><h2>Ligatabelle</h2><span class="hint">Tipp auf ein Team: Lokal, Spieler, Spiele</span></div>
-      <div class="lt-scroll"><table class="standings" id="lt-tabelle"></table></div>
+    <div class="liga-links">
+      <div class="liga-karte weiss" id="lt-platz"></div>
+      <div class="card lt-karte">
+        <div class="karte-kopf"><h2>Ligatabelle</h2><span class="hint">Tipp auf ein Team: Lokal, Spieler, Spiele</span></div>
+        <div class="lt-scroll"><table class="standings" id="lt-tabelle"></table></div>
+      </div>
+      <div class="card lt-stand-karte">
+        <span class="lk-crew-titel">Stand</span>
+        <p class="hint">Berechnet aus den Ergebnissen aller Spieltage (Karte Alle Spiele):
+          Sieg 2 Punkte, Unentschieden 1. Reihenfolge nach Punkten, dann Leg-Differenz, dann Einzel-Differenz.</p>
+        <p class="hint" id="lt-stand"></p>
+      </div>
     </div>
     <div class="liga-rechts">
-      <div class="liga-karte weiss" id="lt-platz"></div>
       <!-- Alle Spiele je Spieltag (Ergebnisse der Ligaleitung, LIGA_SPIELTAGE). -->
       <div class="card lt-runden-karte">
         <div class="karte-kopf"><h2>Alle Spiele</h2><span class="hint">je Spieltag, Tipp zeigt die Einzel</span></div>
@@ -7698,12 +7719,6 @@ button.pa-gruppe { cursor: pointer; }
       <div class="card lt-hl-karte">
         <div class="karte-kopf"><h2>Highlights</h2><span class="hint">180er, Shortlegs, Highfinishes</span></div>
         <div class="lt-hl" id="lt-highlights"></div>
-      </div>
-      <div class="card lt-stand-karte">
-        <span class="lk-crew-titel">Stand</span>
-        <p class="hint">Berechnet aus den Ergebnissen aller Spieltage (Karte Alle Spiele):
-          Sieg 2 Punkte, Unentschieden 1. Reihenfolge nach Punkten, dann Leg-Differenz, dann Einzel-Differenz.</p>
-        <p class="hint" id="lt-stand"></p>
       </div>
     </div>
   </div>
@@ -8425,15 +8440,16 @@ button.pa-gruppe { cursor: pointer; }
 <!-- "Kamera" in "Foto anpassen": am Handy und iPad oeffnet capture direkt die Kamera. -->
 <input type="file" id="avatar-kamera" accept="image/*" capture="user" class="hidden">
 <script>
-/* Automatisch erzeugt von tools/liga-import.mjs am 2026-10-30 aus
+/* Automatisch erzeugt von tools/liga-import.mjs am 2026-11-10 aus
    https://steeldart-muenchen.de/4er-liga/4er-5-liga.html
    Nicht von Hand aendern - nach jedem Spieltag einfach neu erzeugen:
      node tools/liga-import.mjs
+   (Der Server macht das stuendlich selbst, server/lib/liga-import.mjs.)
    Von Hand gepflegte Ergaenzungen (z. B. unsere Bogen-Aufstellung) stehen
    in js/liga-daten.js (LIGA_HAND) und werden dort dazugemischt.
    Spielerlisten: "*Name" = Gastspieler (bei der Ligaleitung "(n * Gast)"). */
 window.LIGA_SDM = {
-  stand: '2026-10-30',
+  stand: '2026-11-10',
   quelle: 'https://steeldart-muenchen.de/4er-liga/4er-5-liga.html',
   spieltage: {
     st01: [
@@ -8504,19 +8520,19 @@ window.LIGA_SDM = {
           ['Franz Freinberger', 'Naser Sharifi', 0, 2],
           ['Ralf Kilian', 'Christos Heuwald', 2, 0],
           ['Bernhard Hoffmann', 'Luck Heuwald', 2, 0],
-          ['Christian Matejka', '*Michael Rogge', 1, 2],
+          ['Christian Matejka', 'Michael Rogge', 1, 2],
           ['Franz Freinberger', 'Christos Heuwald', 2, 0],
           ['Ralf Kilian', 'Naser Sharifi', 0, 2],
-          ['Bernhard Hoffmann', '*Michael Rogge', 2, 0],
+          ['Bernhard Hoffmann', 'Michael Rogge', 2, 0],
           ['Christian Matejka', 'Luck Heuwald', 2, 0],
           ['Bernhard Hoffmann', 'Naser Sharifi', 2, 1],
           ['Christian Matejka', 'Christos Heuwald', 2, 1],
           ['Linda Maier', 'Alex Heuwald', 2, 1],
-          ['Franz Freinberger', '*Michael Rogge', 1, 2],
+          ['Franz Freinberger', 'Michael Rogge', 1, 2],
           ['Sven Albrecht', 'Naser Sharifi', 1, 2],
           ['Yves Scherer', 'Christos Heuwald', 0, 2],
           ['Stephan Brunner', 'Alex Heuwald', 2, 0],
-          ['Linda Maier', '*Michael Rogge', 0, 2]
+          ['Linda Maier', 'Michael Rogge', 0, 2]
         ],
         highlights: [
           { wer: 'Alex Heuwald', team: 'DCO', s180: 1, was: '1× 180' }
@@ -8634,16 +8650,16 @@ window.LIGA_SDM = {
           ['Robert Völkl', 'Reinhart Boehm', 0, 2],
           ['Naser Sharifi', 'Rolf Neeb', 2, 1],
           ['Christos Heuwald', 'Mani Burgmair', 2, 1],
-          ['*Michael Rogge', 'Carol Zehetmeier', 2, 1],
+          ['Michael Rogge', 'Carol Zehetmeier', 2, 1],
           ['Robert Völkl', 'Rolf Neeb', 1, 2],
           ['Naser Sharifi', 'Reinhart Boehm', 2, 1],
           ['Christos Heuwald', 'Carol Zehetmeier', 1, 2],
-          ['*Michael Rogge', 'Mani Burgmair', 2, 1],
+          ['Michael Rogge', 'Mani Burgmair', 2, 1],
           ['Christos Heuwald', 'Reinhart Boehm', 0, 2],
-          ['*Michael Rogge', 'Rolf Neeb', 2, 0],
+          ['Michael Rogge', 'Rolf Neeb', 2, 0],
           ['Naser Sharifi', 'Mani Burgmair', 2, 1],
           ['Lissy Attanasio', 'Carol Zehetmeier', 0, 2],
-          ['*Michael Rogge', 'Reinhart Boehm', 2, 1],
+          ['Michael Rogge', 'Reinhart Boehm', 2, 1],
           ['Christos Heuwald', 'Rolf Neeb', 1, 2],
           ['Lissy Attanasio', 'Mani Burgmair', 1, 2],
           ['Naser Sharifi', 'Carol Zehetmeier', 0, 2]
@@ -8755,8 +8771,68 @@ window.LIGA_SDM = {
           ['Reinhart Boehm', 'Maximilian Königsbauer', 1, 2]
         ]
       },
-      { tag: '2026-10-30', heim: 'TSV Oberpframmern', gast: 'DCO', ort: 'Gaststätte Anstoss' },
-      { tag: '2026-10-30', heim: 'Dart Artists Germering II', gast: 'TSV Dachau 1865 4', ort: 'Cobblers Irish Pub' }
+      {
+        tag: '2026-10-30',
+        heim: 'TSV Oberpframmern',
+        gast: 'DCO',
+        ort: 'Gaststätte Anstoss',
+        einzel: '6:10',
+        legs: '17:23',
+        bericht: 2319,
+        partien: [
+          ['Andreas Sedlbauer', 'Michael Rogge', 1, 2],
+          ['Olle Aronsson', 'Melanie Völkl', 1, 2],
+          ['René Mai', 'Naser Sharifi', 0, 2],
+          ['Stephan Uhlig', 'Christos Heuwald', 2, 0],
+          ['Andreas Sedlbauer', 'Melanie Völkl', 1, 2],
+          ['Olle Aronsson', 'Michael Rogge', 2, 0],
+          ['René Mai', 'Christos Heuwald', 2, 1],
+          ['Stephan Uhlig', 'Naser Sharifi', 1, 2],
+          ['René Mai', 'Michael Rogge', 0, 2],
+          ['Stephan Uhlig', 'Melanie Völkl', 2, 1],
+          ['Olle Aronsson', 'Naser Sharifi', 0, 2],
+          ['Andreas Sedlbauer', 'Robert Völkl', 0, 2],
+          ['Stephan Uhlig', 'Michael Rogge', 2, 1],
+          ['René Mai', 'Melanie Völkl', 2, 0],
+          ['Andreas Sedlbauer', 'Naser Sharifi', 1, 2],
+          ['Olle Aronsson', 'Robert Völkl', 0, 2]
+        ]
+      },
+      {
+        tag: '2026-10-30',
+        heim: 'Dart Artists Germering II',
+        gast: 'TSV Dachau 1865 4',
+        ort: 'Cobblers Irish Pub',
+        einzel: '11:5',
+        legs: '24:14',
+        bericht: 2320,
+        partien: [
+          ['Martin Kern-Emden', 'Johannes Wolters', 0, 2],
+          ['Andi Kaiser', 'Lars Toni', 2, 0],
+          ['*Vincent Freer', 'Cordula Gangl', 2, 1],
+          ['Julian Frank', 'Vincent von Frankenberg', 2, 1],
+          ['Martin Kern-Emden', 'Lars Toni', 0, 2],
+          ['Andi Kaiser', 'Johannes Wolters', 2, 0],
+          ['*Vincent Freer', 'Vincent von Frankenberg', 2, 0],
+          ['Julian Frank', 'Cordula Gangl', 2, 1],
+          ['*Vincent Freer', 'Johannes Wolters', 2, 0],
+          ['Julian Frank', 'Lars Toni', 2, 1],
+          ['Andi Kaiser', 'Cordula Gangl', 2, 0],
+          ['Melanie Ziemann', 'Vincent von Frankenberg', 0, 2],
+          ['Julian Frank', 'Johannes Wolters', 1, 2],
+          ['*Vincent Freer', 'Lars Toni', 2, 0],
+          ['Melanie Ziemann', 'Cordula Gangl', 1, 2],
+          ['Andi Kaiser', 'Vincent von Frankenberg', 2, 0]
+        ],
+        highlights: [
+          {
+            wer: 'Andi Kaiser',
+            team: 'Dart Artists Germering II',
+            highfinish: [104],
+            was: 'Highfinish 104'
+          }
+        ]
+      }
     ],
     st04: [
       { heim: 'TSV Oberpframmern', gast: null },
@@ -8903,9 +8979,12 @@ window.LIGA_SDM = {
       adresse: 'Schusterhäusl 1, 82110 Germering',
       spieler: [
         { name: 'Julian Frank', info: 'TC-1' },
+        { name: '*Vincent Freer' },
+        { name: 'Andi Kaiser' },
         { name: '*****' },
         { name: 'Carl Friedrich Frank' },
         { name: 'Gerd Stegerer' },
+        { name: 'Martin Kern-Emden' },
         { name: 'Melanie Ziemann' },
         { name: 'Rudolf Weiß' }
       ]
@@ -8917,7 +8996,6 @@ window.LIGA_SDM = {
       spieler: [
         { name: 'Alex Heuwald', info: 'TC-1' },
         { name: 'Laura Vogel', info: 'TC-2' },
-        { name: '*Michael Rogge' },
         { name: 'Angelo Attanasio' },
         { name: 'Christos Heuwald' },
         { name: 'Heike Vogel' },
@@ -8925,6 +9003,7 @@ window.LIGA_SDM = {
         { name: 'Luck Heuwald' },
         { name: 'Melanie Völkl' },
         { name: 'Michael Czechowsky' },
+        { name: 'Michael Rogge' },
         { name: 'Naser Sharifi' },
         { name: 'Robert Völkl' }
       ]
@@ -16959,6 +17038,42 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
      (js/liga-daten.js, LIGA_SPIELTAGE) - nicht mehr von Hand gepflegt. */
   function ligaTabelleBerechnet() { return window.LIGA_DATEN.tabelleAus(LIGA_SPIELTAGE, LIGA_TEAMS); }
 
+  /* Die Ergebnisse der Ligaleitung holt der Server stuendlich neu und
+     liefert sie als js/liga-sdm.js aus (server/lib/liga.mjs). Die App laedt
+     die Datei beim Start - und, damit ein tagelang offenes iPad nicht beim
+     alten Stand bleibt, beim Oeffnen des Liga-Reiters hoechstens alle
+     15 Minuten noch einmal nach: als <script>, denn eval erlaubt die CSP
+     nicht. Hat sich etwas geaendert, laeuft js/liga-daten.js erneut (es
+     mischt LIGA_HAND dazu und gleicht die Termine ab), die drei Bindungen
+     hier werden umgehaengt und der Reiter neu gezeichnet. Ohne Server
+     (Einzeldatei vom AirDrop) scheitert das Laden still. */
+  var ligaGeprueft = 0;
+  var ligaSdmKennung = JSON.stringify(window.LIGA_SDM || null);
+  function skriptLaden(pfad, dann) {
+    var s = document.createElement('script');
+    s.src = pfad + '?t=' + Date.now();
+    s.onload = function () { s.remove(); dann(); };
+    s.onerror = function () { s.remove(); };
+    document.head.appendChild(s);
+  }
+  function ligaDatenPruefen(erzwingen) {
+    if (!erzwingen && (Date.now() - ligaGeprueft < 15 * 60e3 || navigator.onLine === false)) return;
+    ligaGeprueft = Date.now();
+    skriptLaden('js/liga-sdm.js', function () {
+      var kennung = JSON.stringify(window.LIGA_SDM || null);
+      if (kennung === ligaSdmKennung) return;
+      ligaSdmKennung = kennung;
+      skriptLaden('js/liga-daten.js', function () {
+        if (!window.LIGA_DATEN) return;
+        LIGA = window.LIGA_DATEN.liga;
+        LIGA_SPIELTAGE = window.LIGA_DATEN.spieltage;
+        LIGA_TEAMS = window.LIGA_DATEN.teams;
+        ligaTabelleKennung = null;
+        if (S.screen === 'liga') render();
+      });
+    });
+  }
+
   /* DiensDarts: das Dienstags-Training. Der naechste Dienstag ist der
      Termin - am Dienstag selbst gilt noch der heutige Abend. */
   function naechsterDienstag() {
@@ -17299,7 +17414,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     renderLigaEinzel();
     renderLigaHighlights();
     var zeilen = tab.zeilen;
-    /* Rechts: unser Platz, Punkte und Legs, Abstand zur Spitze. */
+    /* Links ueber der Tabelle: unser Platz, Punkte und Legs, Abstand zur Spitze. */
     var platz = -1;
     zeilen.forEach(function (z, i) { if (platz < 0 && z.team === LIGA.team) platz = i; });
     var pz = platz >= 0 ? zeilen[platz] : null;
@@ -17406,6 +17521,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
   function renderLiga() {
     $('liga-sub').textContent = '5. Liga · ' + LIGA.saison;
+    ligaDatenPruefen();
 
     var tab = UI.ligaTab || 'plan';
     /* Die Kasse ist Vereinssache: Gast-Konten bekommen sie vom Server nicht
@@ -25794,6 +25910,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   // optionale Online-Schicht (js/auth.js, js/sync.js).
   if (typeof window !== 'undefined') {
     window.__dart = {
+      ligaDatenPruefen: ligaDatenPruefen,
       state: function () { return S; },
       ui: function () { return UI; },
       action: handleAction,

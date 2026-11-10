@@ -75,5 +75,82 @@ check('Highlights: 180er gezaehlt, Shortleg und Highfinish mit Wert und Gast-Ken
   hl.s180[0].name === 'Anna' && hl.s180[0].n === 2 && hl.shortleg[0].wert === 15 && hl.highfinish[0].wert === 120 && hl.highfinish[0].gast === true);
 check('Termine ohne Spielplan der Ligaleitung bleiben wie von Hand gepflegt', F.liga.termine.find((t) => t.id === 'st03').heim === 'Voodoo Darters');
 
+/* ---------- 3. Der Import-Kern (server/lib/liga-import.mjs) ---------- */
+console.log('\nLiga-Import: Beispielseiten der Ligaleitung');
+{
+  const { ligaImportieren, sdmText, sdmAusText, standAusText, sdmInhaltGleich } = await import('../server/lib/liga-import.mjs');
+  const { ligaAktualisieren, ligaDateiWaehlen } = await import('../server/lib/liga.mjs');
+  const os = await import('node:os');
+  const team = (id, name) => '<a href="mannschaftsseite/id/' + id + '.html">' + name + '</a>';
+  const spiel = (am, heim, gast, ort, score, legs) => '<tr class="spiel"><td class=\'spiel am\'>' + am + '</td><td class=\'spiel home\'>' + heim + '</td>' +
+    '<td class=\'spiel away\'>' + gast + '</td><td class=\'spiel ort\'>' + ort + '</td><td class=\'spiel score\'>' + score + '</td><td class=\'spiel legs\'>' + legs + '</td></tr>';
+  const ligaSeite = (st02Erg) => '<h3>1. Spieltag</h3><table>' +
+    spiel('06.10.2026', team(1, 'Alpha'), team(2, 'Beta'), 'Bar', '<a href="spielberichte/id/555.html">9 : 7</a>', '20 : 15') +
+    spiel('', team(3, 'Gamma'), 'Spielfrei', '', '', '') + '</table>' +
+    '<h3>2. Spieltag</h3><table>' +
+    spiel('20.10.2026', team(2, 'Beta'), team(3, 'Gamma'), 'Pub', st02Erg ? '<a href="spielberichte/id/556.html">8 : 8</a>' : '', st02Erg ? '20 : 20' : '') +
+    spiel('21.10.2026', team(1, 'Alpha'), team(3, 'Gamma'), 'Bar', '', 'verschoben') + '</table>' +
+    '<table><tr><th>Platz</th><th>Mannschaft</th></tr><tr><td>1</td><td>Alpha</td><td>1</td><td>1</td><td>0</td><td>0</td><td>20:15</td><td>9:7</td><td>2</td></tr></table>';
+  const einzel = (a, b, x, y) => '<tr><td><span class="winner">' + a + '</span></td><td><span class="loser">' + b + '</span></td><td>' + x + ' : ' + y + '</td></tr>';
+  const bericht = (n) => '<table>' + Array.from({ length: n }, (_, i) => einzel('Heim' + (i % 4), i === 3 ? '(2 * Gast) Gast Spieler' : 'Gast' + (i % 4), 2, i % 2)).join('') + '</table>' +
+    '<h2>Highlights</h2><table><tr><th>Spieler</th></tr><tr><td>Heim0</td><td>Alpha</td><td>2</td><td>15</td><td>120</td></tr></table>';
+  const teamSeite = (lokal, spieler) => '<h2>Spielort</h2><h3>' + lokal + '</h3><div class="address">Strasse 1<br>80000 M&uuml;nchen</div>' +
+    '<h2>Spielerliste</h2><table>' + spieler.map((s) => '<tr><td>' + s + '</td><td>' + (s === 'Heim0' ? 'TC' : '') + '</td></tr>').join('') + '</table>';
+  const seiten = {
+    'liga.html': ligaSeite(false), 'sb-555.html': bericht(16), 'sb-556.html': bericht(15),
+    'team-1.html': teamSeite('Bar', ['Heim0', 'Heim1', 'Heim2', 'Heim3']), 'team-2.html': teamSeite('Pub', ['Gast0', 'Gast1']), 'team-3.html': teamSeite('Keller', ['Dritte'])
+  };
+  const abrufe = [];
+  const laden = async (url, datei) => { abrufe.push(datei); if (!(datei in seiten)) throw new Error('unbekannt: ' + datei); return seiten[datei]; };
+
+  const r1 = await ligaImportieren({ laden, voll: true, heute: new Date(2026, 10, 10) });
+  check('voll: Spielplan, ein Spielbericht und drei Mannschaftsseiten werden geladen', r1.geladen === 5 && abrufe.join() === 'liga.html,sb-555.html,team-1.html,team-2.html,team-3.html');
+  const a1 = r1.sdm.spieltage.st01[0];
+  check('Spiel mit Ergebnis: Datum, Ort, Einzel, Legs, Bericht, 16 Partien, Gast mit Stern, Highlights',
+    a1.tag === '2026-10-06' && a1.ort === 'Bar' && a1.einzel === '9:7' && a1.legs === '20:15' && a1.bericht === 555 && a1.partien.length === 16 &&
+    a1.partien[3][1] === '*Gast Spieler' && a1.highlights[0].s180 === 2 && a1.highlights[0].was === '2× 180 · Shortleg 15 · Highfinish 120');
+  check('Spielfrei, offenes Spiel und Verschobenes', r1.sdm.spieltage.st01[1].gast === null && !r1.sdm.spieltage.st02[0].einzel && r1.sdm.spieltage.st02[1].verschoben === true);
+  check('Teams mit Lokal, Adresse (Umlaut, Zeilenumbruch als Komma) und Spielerliste (TC)',
+    r1.sdm.teams.Alpha.id === 1 && r1.sdm.teams.Alpha.lokal === 'Bar' && r1.sdm.teams.Alpha.adresse === 'Strasse 1, 80000 München' && r1.sdm.teams.Alpha.spieler[0].info === 'TC' && r1.sdm.teams.Gamma.spieler.length === 1);
+  check('Stand ist der Tag des Imports, keine Warnungen', r1.sdm.stand === '2026-11-10' && r1.warnungen.length === 0);
+  const zurueck = sdmAusText(r1.text);
+  check('Dateitext laeuft als Skript und ergibt dasselbe Objekt; Stand lesbar ohne Ausfuehren',
+    JSON.stringify(zurueck) === JSON.stringify(r1.sdm) && standAusText(r1.text) === '2026-11-10' && sdmText(r1.sdm) === r1.text);
+
+  abrufe.length = 0;
+  const r2 = await ligaImportieren({ laden, bekannt: r1.sdm, heute: new Date(2026, 10, 11) });
+  check('mit bekannter Datei: nur der Spielplan wird geladen, Bericht und Teams kommen von vorher',
+    r2.geladen === 1 && abrufe.join() === 'liga.html' && r2.sdm.spieltage.st01[0].partien.length === 16 && r2.sdm.teams.Beta.lokal === 'Pub');
+  check('gleicher Inhalt trotz neuem Stand', sdmInhaltGleich(r1.sdm, r2.sdm) && r2.sdm.stand === '2026-11-11');
+
+  seiten['liga.html'] = ligaSeite(true);
+  abrufe.length = 0;
+  const r3 = await ligaImportieren({ laden, bekannt: r1.sdm, heute: new Date(2026, 10, 12) });
+  check('neues Ergebnis: nur der neue Spielbericht wird dazugeladen', r3.geladen === 2 && abrufe.join() === 'liga.html,sb-556.html');
+  check('15 statt 16 Einzel: Spiel ohne Partien, aber mit Ergebnis und Warnung',
+    r3.sdm.spieltage.st02[0].einzel === '8:8' && !r3.sdm.spieltage.st02[0].partien && r3.warnungen.length === 1 && /556/.test(r3.warnungen[0]) && !sdmInhaltGleich(r1.sdm, r3.sdm));
+  const defekt = await ligaImportieren({ laden: async () => '<p>Wartungsarbeiten</p>', voll: true }).then(() => null, (e) => e);
+  check('ohne Spieltage auf der Seite bricht der Import ab statt leer zu schreiben', defekt && /keine Spieltage/.test(defekt.message));
+
+  /* Der Server-Abgleich: schreibt neben die Datenbank, nur bei Aenderung. */
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'liga-abgleich-'));
+  seiten['liga.html'] = ligaSeite(false);
+  const appDir = path.join(tmp, 'app');
+  fs.mkdirSync(path.join(appDir, 'js'), { recursive: true });
+  fs.writeFileSync(path.join(appDir, 'js', 'liga-sdm.js'), r1.text);
+  fs.copyFileSync(path.join(wurzel, 'js', 'liga-daten.js'), path.join(appDir, 'js', 'liga-daten.js'));
+  const datenDir = path.join(tmp, 'data');
+  let g = await ligaAktualisieren({ appDir, datenDir, laden, heute: new Date(2026, 10, 11) });
+  check('Abgleich ohne Neues: nichts geschrieben, Repo-Fassung gilt weiter', g.geaendert === false && !fs.existsSync(path.join(datenDir, 'liga-sdm.js')) && ligaDateiWaehlen(appDir, datenDir).quelle === 'repo');
+  seiten['liga.html'] = ligaSeite(true);
+  g = await ligaAktualisieren({ appDir, datenDir, laden, heute: new Date(2026, 10, 12) });
+  const wahl = ligaDateiWaehlen(appDir, datenDir);
+  check('Abgleich mit neuem Ergebnis: Datei neben der Datenbank, sie gilt (juengerer Stand)',
+    g.geaendert === true && g.stand === '2026-11-12' && wahl.quelle === 'server' && wahl.stand === '2026-11-12' && sdmAusText(fs.readFileSync(wahl.pfad, 'utf8')).spieltage.st02[0].einzel === '8:8');
+  g = await ligaAktualisieren({ appDir, datenDir, laden: async () => { throw new Error('Netz weg'); }, heute: new Date(2026, 10, 13) });
+  check('Netzfehler: alte Datei bleibt, Fehler wird gemeldet', g.fehler === 'Netz weg' && ligaDateiWaehlen(appDir, datenDir).stand === '2026-11-12');
+  fs.rmSync(tmp, { recursive: true, force: true });
+}
+
 console.log(fehler ? '\n' + fehler + ' Fehler' : '\nAlle Liga-Daten-Tests bestanden');
 process.exit(fehler ? 1 : 0);

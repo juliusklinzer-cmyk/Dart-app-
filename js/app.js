@@ -6154,6 +6154,42 @@
      (js/liga-daten.js, LIGA_SPIELTAGE) - nicht mehr von Hand gepflegt. */
   function ligaTabelleBerechnet() { return window.LIGA_DATEN.tabelleAus(LIGA_SPIELTAGE, LIGA_TEAMS); }
 
+  /* Die Ergebnisse der Ligaleitung holt der Server stuendlich neu und
+     liefert sie als js/liga-sdm.js aus (server/lib/liga.mjs). Die App laedt
+     die Datei beim Start - und, damit ein tagelang offenes iPad nicht beim
+     alten Stand bleibt, beim Oeffnen des Liga-Reiters hoechstens alle
+     15 Minuten noch einmal nach: als <script>, denn eval erlaubt die CSP
+     nicht. Hat sich etwas geaendert, laeuft js/liga-daten.js erneut (es
+     mischt LIGA_HAND dazu und gleicht die Termine ab), die drei Bindungen
+     hier werden umgehaengt und der Reiter neu gezeichnet. Ohne Server
+     (Einzeldatei vom AirDrop) scheitert das Laden still. */
+  var ligaGeprueft = 0;
+  var ligaSdmKennung = JSON.stringify(window.LIGA_SDM || null);
+  function skriptLaden(pfad, dann) {
+    var s = document.createElement('script');
+    s.src = pfad + '?t=' + Date.now();
+    s.onload = function () { s.remove(); dann(); };
+    s.onerror = function () { s.remove(); };
+    document.head.appendChild(s);
+  }
+  function ligaDatenPruefen(erzwingen) {
+    if (!erzwingen && (Date.now() - ligaGeprueft < 15 * 60e3 || navigator.onLine === false)) return;
+    ligaGeprueft = Date.now();
+    skriptLaden('js/liga-sdm.js', function () {
+      var kennung = JSON.stringify(window.LIGA_SDM || null);
+      if (kennung === ligaSdmKennung) return;
+      ligaSdmKennung = kennung;
+      skriptLaden('js/liga-daten.js', function () {
+        if (!window.LIGA_DATEN) return;
+        LIGA = window.LIGA_DATEN.liga;
+        LIGA_SPIELTAGE = window.LIGA_DATEN.spieltage;
+        LIGA_TEAMS = window.LIGA_DATEN.teams;
+        ligaTabelleKennung = null;
+        if (S.screen === 'liga') render();
+      });
+    });
+  }
+
   /* DiensDarts: das Dienstags-Training. Der naechste Dienstag ist der
      Termin - am Dienstag selbst gilt noch der heutige Abend. */
   function naechsterDienstag() {
@@ -6494,7 +6530,7 @@
     renderLigaEinzel();
     renderLigaHighlights();
     var zeilen = tab.zeilen;
-    /* Rechts: unser Platz, Punkte und Legs, Abstand zur Spitze. */
+    /* Links ueber der Tabelle: unser Platz, Punkte und Legs, Abstand zur Spitze. */
     var platz = -1;
     zeilen.forEach(function (z, i) { if (platz < 0 && z.team === LIGA.team) platz = i; });
     var pz = platz >= 0 ? zeilen[platz] : null;
@@ -6601,6 +6637,7 @@
 
   function renderLiga() {
     $('liga-sub').textContent = '5. Liga · ' + LIGA.saison;
+    ligaDatenPruefen();
 
     var tab = UI.ligaTab || 'plan';
     /* Die Kasse ist Vereinssache: Gast-Konten bekommen sie vom Server nicht
@@ -15011,6 +15048,7 @@
   // optionale Online-Schicht (js/auth.js, js/sync.js).
   if (typeof window !== 'undefined') {
     window.__dart = {
+      ligaDatenPruefen: ligaDatenPruefen,
       state: function () { return S; },
       ui: function () { return UI; },
       action: handleAction,

@@ -9,7 +9,7 @@ import { erstelleMailer } from './mail.mjs';
 import { erstellePush } from './push.mjs';
 import { ladeLigaDaten } from './liga.mjs';
 
-export function erstelleDienste(env, appDir) {
+export function erstelleDienste(env, appDir, datenDir) {
   // Adresse der App in Mails (Erinnerungen, Knoepfe, Testmail).
   const appUrl = env.DARTS_APP_URL || 'https://darts.wirtschaftln.de';
   /* Mails ueber Brevo (SMTP-Relay, STARTTLS): ohne Zugangsdaten bleibt der
@@ -30,6 +30,8 @@ export function erstelleDienste(env, appDir) {
     kontakt: 'mailto:' + (env.DARTS_MAIL_APP || 'dart@wirtschaftln.de').replace(/^.*<|>.*$/g, '')
   });
   if (!push.bereit) console.warn('Hinweis: DARTS_VAPID_PUBLIC/PRIVATE fehlen -- keine Push-Mitteilungen.');
-  /* Spielplan der Liga fuer die Erinnerungen vor dem Spieltag. */
-  return { appUrl: appUrl, mailer: mailer, push: push, liga: ladeLigaDaten(appDir) };
+  /* Spielplan und Ergebnisse der Liga fuer Erinnerungen und Tabellen-
+     Mitteilung - die Repo-Fassung oder die vom Server selbst geholte
+     (lib/liga.mjs), je nachdem, welche juenger ist. */
+  return { appUrl: appUrl, mailer: mailer, push: push, liga: ladeLigaDaten(appDir, datenDir) };
 }

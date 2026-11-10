@@ -28,7 +28,7 @@ const BLIND = hashPassword(randomBytes(16).toString('hex'));
 export function createApi(db, config) {
   const secure = !!config.secureCookies;
   /* Mitteilungen (Push und Mail je Thema): server/lib/mitteilungen.mjs. */
-  const mitteilungen = config.mitteilungen || erstelleMitteilungen({ db, mailer: config.mailer, push: config.push, liga: config.liga, appUrl: config.appUrl });
+  const mitteilungen = config.mitteilungen || erstelleMitteilungen({ db, mailer: config.mailer, push: config.push, liga: () => config.liga, appUrl: config.appUrl });
 
   /* ---------- kleine Bausteine ---------- */
 

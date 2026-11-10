@@ -15,6 +15,7 @@ import { aufraeumen } from './lib/ratelimit.mjs';
 import { aufraeumen as relayAufraeumen } from './lib/relay.mjs';
 import { createApi } from './api.mjs';
 import { erstelleDienste } from './lib/dienste.mjs';
+import { ladeLigaDaten, ligaDateiWaehlen, ligaAktualisieren } from './lib/liga.mjs';
 
 const SERVER_DIR = path.dirname(fileURLToPath(import.meta.url));
 const APP_DIR = path.dirname(SERVER_DIR); // Repo-Wurzel: index.html, css/, js/
@@ -22,6 +23,15 @@ const APP_DIR = path.dirname(SERVER_DIR); // Repo-Wurzel: index.html, css/, js/
 const PORT = Number(process.env.PORT) || 3002;
 const HOST = process.env.HOST || '0.0.0.0';
 const DB_DATEI = process.env.DARTS_DB || path.join(SERVER_DIR, 'data', 'darts.db');
+/* Neben der Datenbank (im Container das Volume /data): dort legt der Server
+   die stuendlich von der Ligaleitung geholte liga-sdm.js ab - sie ueberlebt
+   ein Deploy, das Image bringt nur die Repo-Fassung mit. */
+const DATEN_DIR = path.dirname(DB_DATEI);
+/* Liga-Abgleich mit steeldart-muenchen.de: im Betrieb an, lokal und in den
+   Tests aus (DARTS_LIGA_IMPORT=1 erzwingt, 0 verbietet). */
+const LIGA_IMPORT = process.env.DARTS_LIGA_IMPORT === '1' ||
+  (process.env.DARTS_LIGA_IMPORT !== '0' && process.env.NODE_ENV === 'production');
+const LIGA_IMPORT_TAKT_MS = Number(process.env.DARTS_LIGA_IMPORT_MIN) * 60e3 || 60 * 60e3;
 
 const config = {
   inviteHash: process.env.DARTS_INVITE_HASH || '',
@@ -44,7 +54,7 @@ const config = {
 };
 
 /* Mailer, Push und Spielplan - aus der Umgebung, siehe lib/dienste.mjs. */
-Object.assign(config, erstelleDienste(process.env, APP_DIR));
+Object.assign(config, erstelleDienste(process.env, APP_DIR, DATEN_DIR));
 
 if (!config.inviteHash) {
   console.warn('WARNUNG: DARTS_INVITE_HASH ist nicht gesetzt -- niemand kann sich registrieren.');
@@ -53,6 +63,34 @@ if (!config.inviteHash) {
 
 const db = openDb(DB_DATEI);
 const handleApi = createApi(db, config);
+
+/* ---------- Ergebnisse der Ligaleitung ---------- */
+let ligaPfad = (ligaDateiWaehlen(APP_DIR, DATEN_DIR) || {}).pfad || null;
+let ligaVollZuletzt = 0;
+/* Stuendlich bei der Ligaleitung nachsehen: meist ein einziger Abruf (nur
+   neue Spielberichte werden geladen), einmal am Tag alles neu. Aendert
+   sich etwas, gilt sofort die neue Datei - fuer /js/liga-sdm.js, die
+   Erinnerungen und die Tabellen-Mitteilung, die gleich mit angestossen
+   wird. Fehler lassen die alte Datei stehen. */
+function ligaAbgleich() {
+  const voll = Date.now() - ligaVollZuletzt > 20 * 3600e3;
+  return ligaAktualisieren({ appDir: APP_DIR, datenDir: DATEN_DIR, voll }).then(function (r) {
+    if (r.fehler) { console.error('[liga] Abgleich fehlgeschlagen: ' + r.fehler); return r; }
+    if (voll) ligaVollZuletzt = Date.now();
+    (r.warnungen || []).forEach(function (w) { console.warn('[liga] ' + w); });
+    if (r.geaendert) {
+      ligaPfad = (ligaDateiWaehlen(APP_DIR, DATEN_DIR) || {}).pfad || ligaPfad;
+      config.liga = ladeLigaDaten(APP_DIR, DATEN_DIR) || config.liga;
+      console.log('[liga] neue Ergebnisse der Ligaleitung: ' + r.zusammenfassung);
+      erinnern();
+    }
+    return r;
+  }).catch(function (e) { console.error('[liga] Abgleich fehlgeschlagen:', e); return { fehler: String(e) }; });
+}
+if (LIGA_IMPORT) {
+  setTimeout(ligaAbgleich, 20e3).unref();
+  setInterval(ligaAbgleich, LIGA_IMPORT_TAKT_MS).unref();
+}
 
 /* ---------- statische Dateien ---------- */
 
@@ -95,6 +133,9 @@ function statischerPfad(pfad) {
   if (rel.indexOf('\0') >= 0 || rel.split('/').indexOf('..') >= 0) return null;
 
   const teile = rel.split('/');
+  /* Die Ergebnisse der Ligaleitung: die juengere von Repo- und Server-Fassung
+     (lib/liga.mjs), neu gewaehlt nach jedem Abgleich. */
+  if (rel === 'js/liga-sdm.js' && ligaPfad) return ligaPfad;
   if (teile.length === 1 && ERLAUBT.has(teile[0])) return path.join(APP_DIR, teile[0]);
   if (teile.length === 2 && ERLAUBTE_ORDNER.has(teile[0])) return path.join(APP_DIR, teile[0], teile[1]);
   return null;

@@ -243,8 +243,10 @@ bleibt nur die große Karte. Die übrigen Reiter folgen demselben Aufbau (links 
 rechts die Liste, am Handy untereinander): **Training** zeigt links DiensDarts
 (nächster Dienstag, Bar Sehnsucht mit Maps und Kalender, Abstimmung „Bin dabei /
 Unsicher / Kann nicht“ und wer kommt) und rechts das Übungs-Ligaspiel mit Vorwahl
-„Zweites eigenes Team“ oder „Gegen Bots“ samt Bot-Stärke. **Tabelle** zeigt links die
-Ligatabelle, rechts groß unseren Platz mit Punkten, Legs und Abstand zur Spitze. **Statistik** ist die Liga-Auswertung (dieselben Kategorien und
+„Zweites eigenes Team“ oder „Gegen Bots“ samt Bot-Stärke. **Tabelle** zeigt links oben unseren Platz
+als Band (Zahl, daneben Punkte, Legs und Abstand zur Spitze), darunter die Ligatabelle
+und den Stand; rechts Alle Spiele, Einzelrangliste und Highlights – am Computer rollt
+diese Spalte als Ganzes, damit alles erreichbar bleibt. **Statistik** ist die Liga-Auswertung (dieselben Kategorien und
 das Spieltag-Log wie früher der Liga-Knopf der Rangliste, nur über Ligaspiele
 gerechnet) mit der Team-Auswahl als Chips oben und rechts den **Highlights der
 Saison** (180er, High-Finishes ab 100, Shortlegs bis 21 Darts, je mit Spieltag und
@@ -259,8 +261,7 @@ Alle neun Teams stehen drin, auch ohne Spiel. Die Webseite rechnet dieselbe Tabe
 Nichts wird mehr von Hand gepflegt; der alte Server-Stand (`PUT /api/liga/tabelle`)
 bleibt ungenutzt.
 
-**Alle Spiele des Spieltags:** Im Reiter **Tabelle** stehen rechts neben der
-Ligatabelle (Karte „Alle Spiele“) je Spieltag die Paarungen aller Teams mit Ergebnis (Einzel, dahinter Legs),
+**Alle Spiele des Spieltags:** Im Reiter **Tabelle** stehen rechts (Karte „Alle Spiele“) je Spieltag die Paarungen aller Teams mit Ergebnis (Einzel, dahinter Legs),
 Spielfrei gedimmt, Verschobenes mit neuem Datum. Die Spieltage-Liste zeigt an
 vergangenen Spielen nur unseren Stand mit **Sieg**, **Niederlage** oder
 **Unentschieden** darunter – einen Link zu allen Spielen gibt es dort nicht mehr, die
@@ -279,7 +280,21 @@ Einzelrangliste nach und vergleicht Zeile für Zeile mit der Webseite (`npm run 
 `js/liga-daten.js` mischt dazu, was die Webseite nicht weiß (`LIGA_HAND`: unsere
 Bogen-Aufstellung H1–H8/G1–G8, notfalls ein Ergebnis vom Papierbogen, bevor es die
 Ligaleitung hat) und gleicht unsere Termine mit dem Spielplan ab (Verlegungen).
-Nach jedem Spieltag: Import laufen lassen, Bündel bauen, `CACHE` in `sw.js` hochzählen.
+**Von selbst aktuell:** Der Server macht denselben Import stündlich
+(`server/lib/liga-import.mjs`, `server/lib/liga.mjs`): meist ein einziger Abruf des
+Spielplans, nur neue Spielberichte werden nachgeladen, einmal am Tag alles. Ändert
+sich etwas, schreibt er `liga-sdm.js` neben die Datenbank (Volume `/data`, überlebt
+ein Deploy) und liefert ab sofort diese Fassung als `/js/liga-sdm.js` aus – es gilt
+immer die mit dem jüngeren Stand, Repo oder Server. Erinnerungen und die
+Tabellen-Mitteilung lesen denselben Stand; nach einer Änderung läuft der
+Mitteilungs-Job sofort. Der Service Worker holt `js/liga-sdm.js` zuerst vom Netz
+(Cache nur offline), und die App lädt die Datei beim Öffnen des Liga-Reiters
+höchstens alle 15 Minuten nach (als `<script>`, eval verbietet die CSP) und
+zeichnet bei Änderung neu – ein tagelang offenes iPad bleibt so nicht beim alten
+Stand. Fehler (Netz, geändertes Layout der Ligaleitung) lassen die alte Datei
+stehen und landen im Log. Schalter: `DARTS_LIGA_IMPORT` (an in Produktion, `1`
+erzwingt, `0` verbietet), Takt `DARTS_LIGA_IMPORT_MIN` (60). Der Import von Hand
+(`npm run liga`) bleibt für die Repo-Fassung: Rückfallebene, Einzeldatei-Bündel, Tests.
 Passt eine Seite nicht (Spielbericht ohne 16 Einzel, Teamseite ohne Spielerliste),
 gibt der Import nur eine Warnung aus und lässt die Stelle leer; nur ein kaputter
 Spielplan bricht ab.
