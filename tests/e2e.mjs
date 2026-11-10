@@ -501,6 +501,18 @@ check('Rest bleibt 141 nach Bust auf 1', (await rest(0)) === '141');
 check('Bust beendet die Aufnahme (Gegner ist dran)', await page.locator('.pcard').nth(1).evaluate((e) => e.classList.contains('active')));
 await typeScore(60);
 check('Gegner 321', (await rest(1)) === '321');
+/* "0 Enter" sieht aus wie ein Bust: rot, durchgestrichen, "Bust" (Julius, 10.11.). */
+await modus('total');   // der Gemischt-Modus ist fuer 141 Rest auf Einzel-Darts zurueck
+await typeScore(0);
+check('0 Enter: Rest bleibt 141', (await rest(0)) === '141');
+check('0 Enter: auf der Karte rot durchgestrichen wie ein Bust', await page.locator('.pcard').nth(0).locator('.letzte').evaluate((e) => e.classList.contains('bust') && e.textContent.trim() === '0'));
+check('0 Enter: im Verlauf als Bust', await page.evaluate(() => {
+  const z = Array.from(document.querySelectorAll('.v.bust')).filter((e) => (e.querySelector('.s') || {}).textContent.trim() === '0');
+  return z.length > 0 && z.every((e) => /Bust/.test((e.querySelector('.r') || {}).textContent || ''));
+}));
+/* Die 0 wieder zuruecknehmen, damit das Turnier wie geplant weitergeht. */
+await page.evaluate(() => { const D = window.__dart; D.action('undo'); D.ui().input = ''; D.ui().error = ''; D.render(); });
+check('nach dem Zuruecknehmen: Rest 141, Gegner 321, vorne wieder dran', (await rest(0)) === '141' && (await rest(1)) === '321' && await page.locator('.pcard').nth(0).evaluate((e) => e.classList.contains('active')));
 
 });
 
@@ -6279,6 +6291,89 @@ await gruppe('Audit 11/2026: v2-Altstand wird auf v3 gehoben, neuere Staende ble
 });
 
 /* ================= Handy-Block 2 (Julius, 08.11.2026) ================= */
+
+await gruppe('Schnelles X01 zu zweit: zwischen den Legs Statistik und vorzeitiges Ende (Julius, 10.11.)', async () => {
+  await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    S.game = null; S.lineup = D.activeProfiles().slice(0, 2).map((p) => p.id); S.mode = 'quick';
+    S.settings.start = 501; S.settings.dartModeFrom = 0; S.settings.bestOf = 5; D.ui().modeOverride = null; D.ui().turnier = false;
+    D.save(); D.setScreen('setup');
+  });
+  await page.locator('[data-action="start-game"]').click();
+  if (await visible('#screen-bulloff')) await page.locator('#bulloff-buttons [data-action="pick-starter"]').first().click();
+  await modus('total');
+  const vorneId = await page.evaluate(() => window.__dart.currentMatch().p[0]);
+  const dartsVor = await page.evaluate((id) => { const c = window.__dart.career()[id]; return c ? c.darts : 0; }, vorneId);
+  check('vor dem ersten Leg steht kein "Spiel beenden" im Menue', await page.evaluate(() => document.getElementById('game-menu-session').classList.contains('hidden')));
+  /* Leg 1 an den Anwerfenden: 180, 180, 141. */
+  await typeScore(180); await typeScore(60); await typeScore(180); await typeScore(45); await typeScore(141);
+  await page.locator('#overlay-card [data-action="co-darts"]').first().click();
+  check('der Leg-Dialog zeigt den Average des ganzen Spiels ("Ø Spiel")', (await text('#overlay-card')).includes('Ø Spiel'));
+  check('"Spiel beenden & speichern" steht als dritter Knopf im Dialog', (await page.locator('#overlay-card [data-action="spiel-ende"]').count()) === 1);
+  await page.locator('#overlay-card [data-action="ov-next-leg"]').click();
+  check('im Spielmenue steht jetzt "Spiel beenden & speichern"', await page.evaluate(() => {
+    const k = document.getElementById('game-menu-session');
+    return !k.classList.contains('hidden') && k.textContent.trim() === 'Spiel beenden & speichern';
+  }));
+  /* Leg 2 angefangen, dann Schluss: das fertige Leg bleibt, das offene faellt weg. */
+  await typeScore(100);
+  const gameId = await page.evaluate(() => window.__dart.state().game.id);
+  await page.evaluate(() => window.__dart.action('spiel-ende'));
+  check('nach "Spiel beenden" steht die Auswertung', await page.evaluate(() => window.__dart.state().screen === 'summary' && !window.__dart.state().game));
+  const eintrag = await page.evaluate((id) => {
+    const h = window.__dart.state().history.find((e) => e.id === id);
+    return h ? { abgebrochen: !!h.abgebrochen, winner: h.winner, legs: h.matches[0].legs.length } : null;
+  }, gameId);
+  check('im Archiv: ohne Sieger, als abgebrochen, nur das fertige Leg', !!eintrag && eintrag.abgebrochen && eintrag.winner === null && eintrag.legs === 1, JSON.stringify(eintrag));
+  check('die 9 Darts des fertigen Legs zaehlen im Verlauf des Siegers, die 3 des offenen nicht', await page.evaluate(([id, vor]) => {
+    const c = window.__dart.career()[id]; return !!c && c.darts === vor + 9;
+  }, [vorneId, dartsVor]));
+  await page.evaluate(() => { const D = window.__dart; D.ui().summary = null; D.setScreen('setup'); });
+});
+
+await gruppe('Solo-Session am iPad quer: Zahlen mittig, kleines Eingabefeld, Tabelle und Balken rechts (Julius, 10.11.)', async () => {
+  const vpVor = page.viewportSize();
+  await page.setViewportSize({ width: 1180, height: 820 });
+  await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    S.game = null; S.lineup = [D.activeProfiles()[0].id]; S.mode = 'quick';
+    S.settings.start = 501; S.settings.dartModeFrom = 0; D.ui().modeOverride = null; D.ui().turnier = false;
+    D.save(); D.setScreen('setup');
+  });
+  await page.locator('[data-action="start-game"]').click();
+  await modus('turnier');
+  await page.keyboard.type('180'); await page.keyboard.press('Enter');
+  await page.keyboard.type('180'); await page.keyboard.press('Enter');
+  await page.keyboard.type('141'); await page.keyboard.press('Enter');
+  await page.locator('#overlay-card [data-action="co-darts"]').first().click();
+  await page.locator('#overlay-card [data-action="ov-next-leg"]').click();
+  await page.keyboard.type('100'); await page.keyboard.press('Enter');
+  check('quer: rechts die Tabelle Leg | Session | Gesamt statt der sechs Kacheln', await page.evaluate(() => {
+    const t = document.querySelector('#key-solo .ss-tabelle'), k = document.querySelector('#key-solo .ss-kacheln');
+    const kopf = t ? Array.from(t.querySelectorAll('thead th')).map((e) => e.textContent).join('|') : '';
+    return kopf === '|Leg|Session|Gesamt' && getComputedStyle(t).display !== 'none' && getComputedStyle(k).display === 'none';
+  }));
+  const tab = await page.evaluate(() => Array.from(document.querySelectorAll('#key-solo .ss-tabelle tbody tr')).map((r) => Array.from(r.children).map((c) => c.textContent).join('|')).join(' / '));
+  check('Leg 100.0 · Session 150.3 (601 Punkte in 12 Darts) · Darts 3 bzw. 12', tab.includes('Ø|100.0|150.3|') && tab.includes('Darts|3|12|'), tab);
+  check('zwei Balken: das fertige Leg (167) und das laufende (100, heller)', await page.evaluate(() => {
+    const b = Array.from(document.querySelectorAll('#key-solo .ss-chart rect.bar'));
+    const w = Array.from(document.querySelectorAll('#key-solo .ss-chart text.wert')).map((e) => e.textContent).join(',');
+    return b.length === 2 && !b[0].classList.contains('offen') && b[1].classList.contains('offen') && w === '167,100';
+  }));
+  check('Legende mit Session- und Gesamt-Linie', (await text('#key-solo .ss-legende')).includes('Session') && (await text('#key-solo .ss-legende')).includes('Gesamt'));
+  check('Rest und letzte Aufnahme stehen als Paar in der Mitte', await page.evaluate(() => {
+    const z = document.querySelector('#scoreboard .pcard .rest-zeile');
+    const r = z.querySelector('.rest').getBoundingClientRect(), l = z.querySelector('.letzte-box').getBoundingClientRect(), zz = z.getBoundingClientRect();
+    const paarMitte = (r.left + l.right) / 2, zeileMitte = (zz.left + zz.right) / 2;
+    return getComputedStyle(z).justifyContent === 'center' && Math.abs(paarMitte - zeileMitte) < 12;
+  }));
+  check('das Eingabefeld nimmt hoechstens ein Drittel der rechten Spalte, die Zahl ist gross', await page.evaluate(() => {
+    const f = document.getElementById('key-display').getBoundingClientRect(), s = document.querySelector('.input-area').getBoundingClientRect();
+    return f.height < s.height / 3 && parseFloat(getComputedStyle(document.getElementById('key-display')).fontSize) >= 80;
+  }));
+  await page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; D.ui().overlay = null; D.ui().turnier = false; D.save(); D.setScreen('setup'); });
+  await page.setViewportSize(vpVor);
+});
 
 await gruppe('Handy-Block 2: Solo-Session - Leg um Leg, Statistik ueber alle Legs, Beenden archiviert', async () => {
   const soloStart = () => page.evaluate(() => {

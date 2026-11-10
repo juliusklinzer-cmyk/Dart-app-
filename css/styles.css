@@ -3203,26 +3203,27 @@ body { font-size: 1rem; }
  * Jede 60 bekommt weiter den Loewen und "SECHZIG!" – in jedem Modus. Die
  * Feier blurt nichts, und durch die Ebene hindurch bleibt das Tastenfeld
  * sichtbar und bedienbar. Die Kurzfassung aus D-E1 (650 ms) war Julius zu
- * hastig: der Loewe kommt mit dem Schlag und pulsiert dann zweimal je eine
- * Sekunde ("SECH-ZIG"), danach blendet alles aus - 2,5 s (SECHZIG_MS). */
+ * hastig, eine Sekunde je Puls dann zu traege (10.11.): der Loewe kommt mit dem
+ * Schlag und pulsiert zweimal je eine halbe Sekunde ("SECH-ZIG"), danach
+ * blendet alles aus - 1,5 s (SECHZIG_MS). */
 .feier.sechzig { pointer-events: none; }
 .feier.sechzig.an::before { content: none; display: none; }
-.feier.sechzig .feier-blitz { animation-duration: 2.5s; opacity: 0.55; }
-.feier.sechzig .feier-strahlen { animation-duration: 2.5s; }
+.feier.sechzig .feier-blitz { animation-duration: 1.5s; opacity: 0.55; }
+.feier.sechzig .feier-strahlen { animation-duration: 1.5s; }
 .feier.sechzig .feier-strahlen i { opacity: 0.4; }
-.feier.sechzig .feier-mitte { animation-duration: 2.5s; top: 36%; }
+.feier.sechzig .feier-mitte { animation-duration: 1.5s; top: 36%; }
 .feier.sechzig .feier-logo {
   /* Anderthalbfach so gross wie bei D-E1 (Julius, 09.11.). */
   width: clamp(144px, min(45vw, 33vh), 360px);
   animation:
     sechzig-schlag 0.25s cubic-bezier(0.2, 1.7, 0.4, 1) both,
-    sechzig-puls 1s ease-in-out 0.25s 2 both;
+    sechzig-puls 0.5s ease-in-out 0.25s 2 both;
 }
 .feier.sechzig .feier-name {
   font-size: clamp(1.6rem, 7vw, 2.8rem);
-  animation: sechzig-puls 1s ease-in-out 0.25s 2 both;
+  animation: sechzig-puls 0.5s ease-in-out 0.25s 2 both;
 }
-/* Ein Puls je Sekunde: hoch und wieder zurueck, zweimal hintereinander. */
+/* Ein Puls je halbe Sekunde: hoch und wieder zurueck, zweimal hintereinander. */
 @keyframes sechzig-puls {
   0%   { transform: scale(1); }
   45%  { transform: scale(1.14); }
@@ -7094,6 +7095,28 @@ button.pa-gruppe { cursor: pointer; }
 .key-liste .v.bust .s { color: var(--red); text-decoration: line-through; }
 .key-liste .v.co .s { color: var(--accent); }
 .key-liste .v:not(:first-child) { opacity: 0.75; }
+/* Tabelle (Leg | Session | Gesamt), Balken je Leg und Legende der
+   Solo-Session - nur im Tastatur-Modus quer sichtbar (siehe unten). */
+.ss-mehr { display: none; flex-direction: column; gap: 6px; min-height: 0; }
+.ss-tabelle { width: 100%; border-collapse: collapse; font-family: var(--font-cond); font-variant-numeric: tabular-nums; }
+.ss-tabelle th, .ss-tabelle td { padding: 2px 6px; text-align: right; font-size: clamp(0.95rem, 2.4vh, 1.3rem); line-height: 1.2; }
+.ss-tabelle thead th { color: var(--muted); font-weight: 600; font-size: max(11px, 0.72rem); letter-spacing: 0.04em; text-transform: uppercase; border-bottom: 1px solid var(--line); }
+.ss-tabelle tbody th { text-align: left; color: var(--muted); font-weight: 600; }
+.ss-tabelle tbody td { font-weight: 700; color: var(--ruhig, var(--text)); }
+.ss-tabelle tbody td:nth-child(3) { color: var(--text); }
+.ss-chart { display: block; width: 100%; height: auto; max-height: clamp(90px, 26vh, 220px); flex: 0 1 auto; background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--r-m); }
+.ss-chart .bar { fill: var(--accent); opacity: 0.85; }
+.ss-chart .bar.offen { opacity: 0.4; }
+.ss-chart .wert { fill: var(--text); font-size: 10px; font-family: var(--font-cond); font-weight: 700; }
+.ss-chart .nr { fill: var(--muted); font-size: 9px; font-family: var(--font-cond); }
+.ss-chart line.session { stroke: var(--laser); stroke-width: 1.5; }
+.ss-chart line.gesamt { stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 4 3; }
+.ss-legende { margin: 0; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; color: var(--muted); font-family: var(--font-cond); font-size: max(11px, 0.78rem); }
+.ss-legende i { display: inline-block; width: 14px; height: 0; border-top: 2px solid var(--laser); }
+.ss-legende i.gesamt { border-top-style: dashed; border-top-color: var(--muted); margin-left: 8px; }
+.ss-legende b { margin-left: auto; font-size: 1rem; color: var(--text); }
+.ss-legende b.plus { color: #3fbf7f; }
+.ss-legende b.minus { color: var(--red); }
 /* Das unsichtbare Feld fuer die Handy-Tastatur: da, aber nicht zu sehen. */
 .key-input { position: absolute; left: 0; top: 0; width: 1px; height: 1px; opacity: 0; border: 0; padding: 0; margin: 0; pointer-events: none; }
 /* Quer: links die Karte mit dem Rest, rechts daneben die letzte Aufnahme
@@ -7124,10 +7147,20 @@ button.pa-gruppe { cursor: pointer; }
   #screen-game.active.turnier.solo .input-area { flex: 1 1 48%; height: auto; min-height: 0; min-width: 0; display: flex; flex-direction: column; }
   #screen-game.active.turnier.solo .pad-key { height: 100%; }
   /* Das Eingabefeld fuellt die Hoehe ueber den Kacheln; die Liste entfaellt. */
-  #screen-game.active.turnier.solo .pad-key .key-mitte { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
-  #screen-game.active.turnier.solo .key-display { flex: 1 1 auto; height: auto; min-height: 56px; font-size: clamp(2.4rem, 14vh, 5rem); }
-  #screen-game.active.turnier.solo .key-solo { flex: none; }
+  /* Das Eingabefeld ist klein, die getippte Zahl gross; darunter die
+     Tabelle Leg | Session | Gesamt und die Balken je Leg statt der sechs
+     Kacheln (Julius, 10.11.). */
+  #screen-game.active.turnier.solo .pad-key .key-mitte { flex: none; display: flex; flex-direction: column; }
+  #screen-game.active.turnier.solo .key-display { flex: none; height: clamp(84px, 20vh, 160px); min-height: 0; font-size: clamp(3rem, 15vh, 7rem); }
+  #screen-game.active.turnier.solo .key-solo { flex: 1 1 auto; min-height: 0; overflow: hidden; }
+  #screen-game.active.turnier.solo .key-solo .ss-kacheln { display: none; }
+  #screen-game.active.turnier.solo .key-solo .ss-mehr { display: flex; }
   #screen-game.active.turnier.solo .key-liste { display: none; }
+  /* Rest und letzte Aufnahme stehen als Paar in der Mitte der Karte - nicht
+     die Zahl mittig und die Aufnahme am rechten Rand (Julius, 10.11.). */
+  #screen-game.active.turnier.solo #scoreboard .pcard .rest-zeile { grid-template-columns: auto auto; justify-content: center; }
+  #screen-game.active.turnier.solo #scoreboard .pcard .rest-zeile .rest { grid-column: 1; }
+  #screen-game.active.turnier.solo #scoreboard .pcard .rest-zeile .letzte-box { grid-column: 2; }
   /* Handy quer: die Kacheln kleiner. */
   @media (max-height: 560px) {
     .ss-kacheln .ss { padding: 3px 6px; gap: 1px; }

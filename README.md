@@ -78,7 +78,11 @@ früheren Spieldauer-Einstellung bleiben im Archiv lesbar. Der Anwurf wandert Le
 Leg mit, die Spielerfelder zeigen den Stand, und am Ende eines Satzes sagt der Dialog
 „Satz an …“. Nach jedem Leg zeigt der Dialog eine **Kurzstatistik des Legs** (Average,
 Darts, höchste Aufnahme, Finish je Spieler) direkt über „Nächstes Leg“ – ebenso nach
-dem letzten Leg beim Glückwunsch. In der
+dem letzten Leg beim Glückwunsch; bei Best of 3/5 steht darunter **Ø Spiel**, der
+Average über alle bisherigen Legs. Wer keine Lust mehr hat, beendet das Spiel dort
+(**„Spiel beenden & speichern“**, auch im Spielmenü •••, sobald ein Leg entschieden
+ist): die fertigen Legs kommen ohne Sieger ins Archiv, ein angefangenes fällt weg,
+danach steht die Auswertung. In der
 Statistik zählt das ganze Spiel als ein Sieg, jedes Leg fließt in Average und
 Rekorde ein. Die Einstellung bleibt gespeichert, bis sie geändert wird.
 
@@ -93,7 +97,13 @@ bleibt stehen, bis er weggetippt wird – „Weiter“, „Eingabe rückgängig�
 („X01 · Session“, ohne Sieger – ein Solo zählt wie bisher nicht als Sieg, wohl aber
 in Average und Rekorde), ein angefangenes Leg fällt weg, danach steht die Auswertung.
 Ohne ein einziges fertiges Leg fragt stattdessen der Abbruch-Dialog. Der Kopf zählt
-„Session · Leg 4“, die Karte „Legs 3“.
+„Session · Leg 4“, die Karte „Legs 3“. **Am iPad quer im Tastatur-Modus** stehen Rest
+und letzte Aufnahme als Paar in der Mitte der Karte; rechts ist das Eingabefeld klein
+und die getippte Zahl groß, darunter die Tabelle **Leg | Session | Gesamt** (Ø, First 9,
+Darts, 180er, höchste Aufnahme, Finish – Gesamt ist der eigene Verlauf über alle
+Spiele) und ein Balkendiagramm mit dem Average je Leg (das laufende heller), einer
+Linie für den Session-Schnitt und einer gestrichelten für den Gesamt-Schnitt, plus die
+Abweichung als Zahl.
 
 ### X01 Turnier (jeder gegen jeden)
 
@@ -804,7 +814,7 @@ nach, ein Tipp rechts nimmt einen wieder heraus.
 **Die Sechzig:** Wirft jemand genau **60**, kommt der Löwe – das 1860-Wappen vor
 blauen Strahlen, darunter „SECHZIG!". In jedem Eingabemodus; fällt die Feier mit
 einem Dialog zusammen (60er-Checkout), bleibt der Dialog obenauf. Keine Feier legt
-einen Blur über das Bild; der Löwe pulsiert zweimal je eine Sekunde (2,5 Sekunden wie
+einen Blur über das Bild; der Löwe pulsiert zweimal je eine halbe Sekunde (1,5 Sekunden, kürzer als
 die 180er), und jeder Dialog, der aufgeht, bricht sie sofort ab.
 
 **Finish-Vorschlag:** Über der Eingabe steht immer der sinnvollste Weg zum Double-Out
@@ -825,7 +835,8 @@ markiert, im Einzel-Dart-Modus ist die passende Zahl zusätzlich umrandet.
 (eine Zeile, bei Überlänge mit Ellipse) und darunter klein **Siege · Sätze · Darts**
 (gewonnene Legs, Satzstand nur im Satz-Modus, Darts im laufenden Leg), rechts oben
 der Ø. Darunter groß der **Rest**, fest in der Mitte, und rechts daneben **klein die
-letzte Aufnahme** („345 | 60“, Bust rot durchgestrichen). Wirft er wieder, rutscht die
+letzte Aufnahme** („345 | 60“, Bust rot durchgestrichen – eine 0 steht überall wie ein
+Bust, auch im Verlauf). Wirft er wieder, rutscht die
 alte Zahl wie in einem Drehrad nach unten und verblasst, die neue kommt von oben nach.
 Einen Wurfverlauf gibt es im Spielbild nicht mehr – in der Fernsteuerung zeigt ihn
 weiterhin Shift. **←** im Tastenfeld nimmt Dart für Dart bzw. Aufnahme für Aufnahme

@@ -31,6 +31,8 @@
 
 ## Erledigt
 
+- [x] DRT-029 Schnelles X01 über mehrere Legs: Leg-Dialog mit „Ø Spiel“ und „Spiel beenden & speichern“ (auch im Menü), fertige Legs ohne Sieger ins Archiv, dann Auswertung · von:Julius · am:2026-11-10 · fertig:2026-11-10
+- [x] DRT-030 Solo-Session am iPad quer: Rest und letzte Aufnahme mittig als Paar, Eingabefeld klein und Zahl groß, rechts Tabelle Leg | Session | Gesamt und Balken je Leg mit Session- und Gesamt-Linie · von:Julius · am:2026-11-10 · fertig:2026-11-10
 - [x] DRT-028 Vorauswahl beim Spielstart: angemeldet nur der eigene Spieler, nach dem ersten Spiel des Abends (8 h) dessen Aufstellung, Ligaspiel: unsere vier; ohne Konto und bei laufendem Spiel unverändert · von:Julius · am:2026-11-10 · fertig:2026-11-10
 - [x] DRT-027 Passwort vergessen per Mail-Link: „Passwort vergessen?“ auf der Anmeldeseite, Link an die Konto-Adresse (1 h, einmal, nur Hash gespeichert, 3 je Stunde), Seite „Neues Passwort“ meldet direkt an; Mail-Ausgabe in Datei für Tests (DARTS_MAIL_AUSGABE); Nachtrag: Link greift auch bei noch lebender Sitzung (Michi landete in der Spielerübersicht) · von:Julius · am:2026-11-10 · fertig:2026-11-10
 

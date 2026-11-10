@@ -1315,6 +1315,12 @@
 
   function liveSpiel() { return S.game && S.game.online ? S.game : null; }
 
+  /* Eine Aufnahme mit 0 Punkten steht in den Listen wie ein Bust: rot,
+     durchgestrichen, "Bust" (Julius, 10.11.2026: "0 Enter" soll aussehen wie
+     die Minus-Taste). Gespeichert bleibt sie eine 0 - fuer Average und
+     Darts zaehlt sie wie bisher. */
+  function wieBust(v) { return !!(v && (v.b || (!v.c && Number(v.s) === 0))); }
+
   function liveNutzer() {
     return window.DartKonto && window.DartKonto.nutzer() ? window.DartKonto.nutzer().id : null;
   }
@@ -2019,7 +2025,7 @@
      Animation (1,2 s): kuerzer abgeraeumt wirkte der Loewe abgehackt und
      klein (Julius, 10.10.2026). Die Feier liegt ohne Klickfang ueber dem
      Bild, das Tastenfeld bleibt die ganze Zeit bedienbar. */
-  var SECHZIG_MS = 2500;   // Schlag 0,25 s + zwei Pulse je 1 s + Ausblenden
+  var SECHZIG_MS = 1500;   // Schlag 0,25 s + zwei Pulse je 0,5 s + Ausblenden
 
   /* Feier anwerfen. Kein display-Umschalten und kein Klassen-Neustart-Trick:
      die Kinder werden je Feier frisch eingesetzt und starten ihre Animationen
@@ -3560,6 +3566,69 @@
     return '<div class="ss-kacheln' + (art === 'dialog' ? ' dialog' : '') + '">' + k.map(function (z) {
       return '<div class="ss"><span>' + z[0] + '</span><b>' + z[1] + '</b></div>';
     }).join('') + '</div>';
+  }
+  /* Allein im Tastatur-Modus quer: unter dem (kleineren) Eingabefeld die
+     Zahlen des laufenden Legs, der Session und aller Spiele nebeneinander,
+     dazu der Average je Leg als Balken mit Session- und Gesamt-Linie - so
+     sieht man, wie man vom eigenen Schnitt abweicht (Julius, 10.11.2026). */
+  var gesamtCache = { key: '', st: null };
+  function sessionMehrHTML(m) {
+    var pid = m.p[0];
+    var start = matchStart(m);
+    var statFuer = function (legs) {
+      return finalize(collectStats([{ matches: [{ p: m.p, legs: legs }], start: start }], m.p)[pid]);
+    };
+    var fertig = m.legs.filter(function (l) { return l.winner; });
+    var letztes = m.legs[m.legs.length - 1];
+    var laufend = letztes && !letztes.winner ? letztes : null;
+    var sLeg = statFuer(laufend ? [laufend] : []);
+    var sSes = statFuer(m.legs);
+    /* Die Karriere rechnet ueber das ganze Archiv - einmal je Stand reicht. */
+    var gKey = pid + '|' + S.history.length;
+    if (gesamtCache.key !== gKey) { var c = career()[pid]; gesamtCache = { key: gKey, st: c ? finalize(c) : null }; }
+    var sGes = gesamtCache.st;
+    var f1 = function (s, k, hat) { return s && (hat === undefined ? s.darts : hat) ? s[k].toFixed(1) : '–'; };
+    var zahl = function (s, k) { return s && s[k] ? s[k] : '–'; };
+    var reihen = [
+      ['Ø', f1(sLeg, 'avg'), f1(sSes, 'avg'), f1(sGes, 'avg')],
+      ['First 9', f1(sLeg, 'first9', sLeg.first9Darts), f1(sSes, 'first9', sSes.first9Darts), sGes ? f1(sGes, 'first9', sGes.first9Darts) : '–'],
+      ['Darts', zahl(sLeg, 'darts'), zahl(sSes, 'darts'), zahl(sGes, 'darts')],
+      ['180er', sLeg.s180 || 0, sSes.s180 || 0, sGes ? sGes.s180 || 0 : '–'],
+      ['Höchste', zahl(sLeg, 'highScore'), zahl(sSes, 'highScore'), zahl(sGes, 'highScore')],
+      ['Finish', zahl(sLeg, 'highCO'), zahl(sSes, 'highCO'), zahl(sGes, 'highCO')]
+    ];
+    var tabelle = '<table class="ss-tabelle"><thead><tr><th></th><th>Leg</th><th>Session</th><th>Gesamt</th></tr></thead><tbody>' +
+      reihen.map(function (r) { return '<tr><th>' + r[0] + '</th><td>' + r[1] + '</td><td>' + r[2] + '</td><td>' + r[3] + '</td></tr>'; }).join('') +
+      '</tbody></table>';
+    /* Balken: Average je Leg (hoechstens die letzten zwoelf), das laufende
+       Leg heller; Linien fuer den Session- und den Gesamt-Schnitt. */
+    var legsAvg = fertig.map(function (l, i) { return { nr: i + 1, avg: statFuer([l]).avg, offen: false }; });
+    if (laufend && sLeg.darts) legsAvg.push({ nr: fertig.length + 1, avg: sLeg.avg, offen: true });
+    legsAvg = legsAvg.slice(-12);
+    var chart = '';
+    if (legsAvg.length) {
+      var W = 320, H = 120, ob = 14, un = 16, li = 6, re = 6;
+      var werte = legsAvg.map(function (x) { return x.avg; }).concat([sSes.avg || 0, sGes ? sGes.avg : 0]);
+      var maxA = Math.max(60, Math.ceil(Math.max.apply(null, werte) / 20) * 20);
+      /* Hoechstens 44 Einheiten je Leg, wenige Balken stehen mittig. */
+      var bw = Math.min(44, (W - li - re) / legsAvg.length);
+      var links = li + ((W - li - re) - bw * legsAvg.length) / 2;
+      var y = function (v) { return ob + (H - ob - un) * (1 - Math.min(v, maxA) / maxA); };
+      var balken = legsAvg.map(function (x, i) {
+        var bx = links + i * bw + bw * 0.15, mitte = bx + bw * 0.35, oben = y(x.avg);
+        return '<rect class="bar' + (x.offen ? ' offen' : '') + '" x="' + bx.toFixed(1) + '" y="' + oben.toFixed(1) + '" width="' + (bw * 0.7).toFixed(1) + '" height="' + Math.max(0, H - un - oben).toFixed(1) + '" rx="2"></rect>' +
+          '<text class="wert" x="' + mitte.toFixed(1) + '" y="' + (oben - 3).toFixed(1) + '" text-anchor="middle">' + Math.round(x.avg) + '</text>' +
+          '<text class="nr" x="' + mitte.toFixed(1) + '" y="' + (H - 4) + '" text-anchor="middle">' + x.nr + '</text>';
+      }).join('');
+      var linie = function (v, kl) { return v ? '<line class="' + kl + '" x1="' + li + '" x2="' + (W - re) + '" y1="' + y(v).toFixed(1) + '" y2="' + y(v).toFixed(1) + '"></line>' : ''; };
+      chart = '<svg class="ss-chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Average je Leg">' +
+        balken + linie(sSes.avg, 'session') + linie(sGes ? sGes.avg : 0, 'gesamt') + '</svg>';
+    }
+    var diff = sGes && sGes.darts && sSes.darts ? sSes.avg - sGes.avg : null;
+    var legende = '<p class="ss-legende"><i class="session"></i>Session' + (sSes.darts ? ' ' + sSes.avg.toFixed(1) : '') +
+      '<i class="gesamt"></i>Gesamt' + (sGes && sGes.darts ? ' ' + sGes.avg.toFixed(1) : '') +
+      (diff !== null ? '<b class="' + (diff >= 0 ? 'plus' : 'minus') + '">' + (diff >= 0 ? '+' : '−') + Math.abs(diff).toFixed(1) + '</b>' : '') + '</p>';
+    return '<div class="ss-mehr">' + tabelle + chart + legende + '</div>';
   }
   /* Wie viele Legs eines laufenden Schnellen Spiels schon entschieden sind. */
   function entschiedeneLegs(g) {
@@ -7444,7 +7513,11 @@
     $('game-fern').setAttribute('aria-pressed', fern ? 'true' : 'false');
     $('game-swap').classList.toggle('hidden', fern);
     $('game-menu-kamera').classList.toggle('hidden', !window.DartKamera);
-    $('game-menu-session').classList.toggle('hidden', !(schnell && m.session));
+    /* "Session beenden" bzw. im Schnellen Spiel ueber mehrere Legs "Spiel
+       beenden & speichern", sobald ein Leg entschieden ist. */
+    var menuEnde = schnell && (m.session || entschiedeneLegs(S.game) > 0);
+    $('game-menu-session').classList.toggle('hidden', !menuEnde);
+    $('game-menu-session').textContent = m.session ? 'Session beenden' : 'Spiel beenden & speichern';
     $('game-menu-overlay').classList.toggle('hidden', !UI.menu);
     menueFokus($('game-menu-overlay'));
     if (UI.menu) {
@@ -7575,9 +7648,9 @@
       leg.visits.forEach(function (v) {
         if (v.p !== pid) return;
         if (!v.b) restLauf -= v.s;
-        zeilen.push('<div class="v ' + (v.b ? 'bust' : v.c ? 'co' : '') + '">' +
+        zeilen.push('<div class="v ' + (wieBust(v) ? 'bust' : v.c ? 'co' : '') + '">' +
           '<span class="s">' + (v.b ? v.o : v.s) + '</span>' +
-          '<span class="r">' + (v.b ? 'Bust' : 'Rest ' + restLauf) + '</span></div>');
+          '<span class="r">' + (wieBust(v) ? 'Bust' : 'Rest ' + restLauf) + '</span></div>');
       });
       return zeilen.slice(-n).reverse().join('');
     };
@@ -7617,12 +7690,12 @@
         var alt = '';
         if (vorletzteIdx[pid] !== undefined) {
           var av = leg.visits[vorletzteIdx[pid]];
-          alt = '<span class="letzte-alt' + (av.b ? ' bust' : '') + (frisch ? ' neu' : ' still') + '"' + verz + '>' + (av.b ? av.o : av.s) + '</span>';
+          alt = '<span class="letzte-alt' + (wieBust(av) ? ' bust' : '') + (frisch ? ' neu' : ' still') + '"' + verz + '>' + (av.b ? av.o : av.s) + '</span>';
         }
         /* Ein Tipp auf die Zahl korrigiert die Aufnahme. */
         letzte = '<span class="letzte-box' + (aenderbar ? ' tap' : '') + '"' +
           (aenderbar ? ' data-action="edit-visit" data-i="' + li + '" role="button" tabindex="0" aria-label="Letzte Aufnahme korrigieren"' : '') + '>' +
-          alt + '<span class="letzte' + (lv.b ? ' bust' : '') + (frisch ? ' neu' : '') + '"' + verz + '>' +
+          alt + '<span class="letzte' + (wieBust(lv) ? ' bust' : '') + (frisch ? ' neu' : '') + '"' + verz + '>' +
           (lv.b ? lv.o : lv.s) + '</span></span>';
       } else {
         /* Ohne Aufnahme bleibt der Platz leer - der Rest steht trotzdem fest. */
@@ -7663,11 +7736,11 @@
           grund = danachRest < 0 ? ' · überworfen' : danachRest === 1 ? ' · Rest 1' : danachRest === 0 ? ' · kein Doppel' : '';
         }
         var aenderbar = !v.c && !m.done;
-        return '<div class="v ' + (v.b ? 'bust' : v.c ? 'co' : '') + (aenderbar ? ' tap' : '') + '"' +
+        return '<div class="v ' + (wieBust(v) ? 'bust' : v.c ? 'co' : '') + (aenderbar ? ' tap' : '') + '"' +
           (aenderbar ? ' data-action="edit-visit" data-i="' + e.idx + '" role="button" tabindex="0"' : '') + '>' +
           '<span class="wer">' + esc(pname(v.p)) + '</span>' +
           '<span class="s">' + (v.b ? v.o : v.s) + '</span>' +
-          '<span class="r">' + (v.b ? 'Bust' + grund : 'Rest ' + e.rest) + '</span></div>';
+          '<span class="r">' + (wieBust(v) ? 'Bust' + grund : 'Rest ' + e.rest) + '</span></div>';
       }).join('') + '</div>';
     } else {
       /* Kompletter Match-Verlauf, neueste Aufnahme oben, mit Leg-Trennern.
@@ -7699,10 +7772,10 @@
               why = after < 0 ? ' · überworfen' : after === 1 ? ' · Rest 1' : after === 0 ? ' · kein Doppel' : '';
             }
             var editable = isActiveLeg && !v.c && !m.done;
-            rows.push('<div class="v ' + (v.b ? 'bust' : v.c ? 'co' : '') + (editable ? ' tap' : '') + '"' +
+            rows.push('<div class="v ' + (wieBust(v) ? 'bust' : v.c ? 'co' : '') + (editable ? ' tap' : '') + '"' +
               (editable ? ' data-action="edit-visit" data-i="' + e.idx + '" role="button" tabindex="0"' : '') + '>' +
               '<span class="s">' + (v.b ? v.o : v.s) + '</span>' +
-              '<span class="r">' + (v.b ? 'Bust' + why : 'Rest ' + e.rest) + '</span></div>');
+              '<span class="r">' + (wieBust(v) ? 'Bust' + why : 'Rest ' + e.rest) + '</span></div>');
           });
         }
         return '<div class="col">' + rows.join('') + '</div>';
@@ -7730,7 +7803,7 @@
       $('pad-key').classList.toggle('solo', soloFern);
       $('key-solo').classList.toggle('hidden', !soloFern);
       $('key-solo').innerHTML = soloFern
-        ? sessionKachelnHTML(m, 'kacheln') + '<div class="key-liste">' + histSpalte(active, 8) + '</div>' : '';
+        ? sessionKachelnHTML(m, 'kacheln') + sessionMehrHTML(m) + '<div class="key-liste">' + histSpalte(active, 8) + '</div>' : '';
       $('key-hist-l').innerHTML = soloFern ? '' : histSpalte(m.p.length === 2 ? m.p[0] : active, 6);
       $('key-hist-r').innerHTML = soloFern ? '' : histSpalte(m.p.length === 2 ? m.p[1] : danach[0], 6);
       /* Allein am Handy gibt es keine Tastatur: ein Tipp auf die Anzeige
@@ -8514,7 +8587,7 @@
       v.visits.forEach(function (vis) {
         zaehler++;
         st.dartsJe[vis.p] += vis.d;
-        st.letzte[vis.p] = vis.b ? 'Bust' : String(vis.s);
+        st.letzte[vis.p] = wieBust(vis) ? 'Bust' : String(vis.s);
         if (vis.b) return;
         rest -= vis.s;
         if (vis.c) { check = true; st.checksJe[vis.p]++; }
@@ -11076,7 +11149,8 @@
         '<button class="' + ldKl(0, 'btn primary full') + '" data-action="ov-next-leg">' + (o.satz ? 'Nächster Satz' : 'Nächstes Leg') + '</button>' +
         '<button class="' + ldKl(1, 'btn ghost full') + '" data-action="undo">Eingabe rückgängig</button>' +
         (ldUeb ? '<button class="' + ldKl(2, 'btn ghost full') + '" data-action="to-tournament">' +
-          (S.tour && S.tour.liga ? 'Zur Ligaspiel-Übersicht' : 'Zur Turnierübersicht') + '</button>' : '') +
+          (S.tour && S.tour.liga ? 'Zur Ligaspiel-Übersicht' : 'Zur Turnierübersicht') + '</button>'
+          : legDoneDritte(m1) === 'spiel-ende' ? '<button class="' + ldKl(2, 'btn ghost full') + '" data-action="spiel-ende">Spiel beenden &amp; speichern</button>' : '') +
         (ldWahl >= 0 ? '<p class="te-hint">8 / 2 · wählen &nbsp;&nbsp; Enter · bestätigen &nbsp;&nbsp; Löschen · direkt zurück</p>' : '');
     } else if (o.type === 'match-done') {
       var m2 = currentMatch();
@@ -13647,12 +13721,14 @@
       case 'ov-next-leg':
         UI.overlay = null; save(); render();
         break;
-      case 'session-ende': {
-        /* Session (allein) beenden: die fertigen Legs kommen wie ein
-           Uebungsspiel ins Archiv, dann die Auswertung. Ohne fertiges Leg
-           gibt es nichts zu sichern - dann fragt der Abbruch-Dialog. */
+      case 'session-ende':
+      case 'spiel-ende': {
+        /* Session (allein) oder Schnelles Spiel vorzeitig beenden: die
+           fertigen Legs kommen ohne Sieger ins Archiv (Average, 180er,
+           Finishes zaehlen), dann die Auswertung. Ohne fertiges Leg gibt es
+           nichts zu sichern - dann fragt der Abbruch-Dialog. */
         UI.menu = false;
-        if (!S.game || !S.game.session) break;
+        if (!S.game || S.game.kind !== 'quick') break;
         if (!entschiedeneLegs(S.game)) { UI.overlay = { type: 'confirm-discard-game' }; render(); break; }
         var seId = S.game.id;
         liveEnde(S.game);
@@ -14371,17 +14447,37 @@
       ['Höchste', function (s) { return s.highScore || '–'; }],
       ['Finish', function (s) { return s.highCO || '–'; }]
     ];
+    /* Schnelles Spiel ueber mehrere Legs: darunter der Average des ganzen
+       Spiels bis hierher - zwischen den Legs sieht man so, wo man steht
+       (Julius, 10.11.2026). */
+    var fertigeLegs = m.legs.filter(function (l) { return l.winner; });
+    if (m.kind === 'quick' && !m.session && fertigeLegs.length && (m.bestOf || 1) > 1) {
+      var gesamt = collectStats([{ matches: [{ p: m.p, legs: fertigeLegs }], start: matchStart(m) }], m.p);
+      m.p.forEach(function (id) { finalize(gesamt[id]); });
+      zeilen.push(['Ø Spiel', function (s, id) { return gesamt[id].darts ? gesamt[id].avg.toFixed(1) : '–'; }]);
+    }
     var kl = function (id) { return id === leg.winner ? ' class="sieger"' : ''; };
     return '<table class="leg-stat' + (m.p.length > 2 ? ' viele' : '') + '"><thead><tr><th></th>' +
       m.p.map(function (id) { return '<th' + kl(id) + '>' + esc(pname(id)) + '</th>'; }).join('') + '</tr></thead><tbody>' +
       zeilen.map(function (z) {
-        return '<tr><th>' + z[0] + '</th>' + m.p.map(function (id) { return '<td' + kl(id) + '>' + z[1](st[id]) + '</td>'; }).join('') + '</tr>';
+        return '<tr><th>' + z[0] + '</th>' + m.p.map(function (id) { return '<td' + kl(id) + '>' + z[1](st[id], id) + '</td>'; }).join('') + '</tr>';
       }).join('') + '</tbody></table>';
   }
 
   function legDoneUebersicht() {
     var m = currentMatch();
     return !!(m && m.kind !== 'quick' && !S.game && S.matches.indexOf(m) >= 0);
+  }
+  /* Der dritte Knopf im Leg-Dialog: Session beenden, zur Turnieruebersicht
+     oder - im Schnellen Spiel ueber mehrere Legs - das Spiel vorzeitig
+     beenden und die gespielten Legs behalten (Julius, 10.11.2026: nach
+     drei Legs bei 1:2 einfach Schluss machen koennen). */
+  function legDoneDritte(m) {
+    if (!m) return null;
+    if (m.session) return 'session-ende';
+    if (legDoneUebersicht()) return 'to-tournament';
+    if (m.kind === 'quick' && S.game && S.game.id === m.id && entschiedeneLegs(m) > 0) return 'spiel-ende';
+    return null;
   }
 
   /* Welche Ziffer meint die Taste? Der Ziffernblock zaehlt immer als Ziffer -
@@ -14955,7 +15051,7 @@
          D1 immer (dialogFokusHinein), damit Hilfstechnik im Dialog ist. */
       var imDialog = fokus && fokus.closest && fokus.closest('#overlay button, #overlay [role="button"]');
       var ldM = currentMatch();
-      var ldN = legDoneUebersicht() || (ldM && ldM.session) ? 3 : 2;
+      var ldN = legDoneDritte(ldM) ? 3 : 2;
       var ldW = Math.min(ov.wahl || 0, ldN - 1);
       if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp' ||
           ev.key === 'ArrowRight' || ev.key === 'ArrowLeft' || ev.key === 'Tab') {
@@ -14965,7 +15061,7 @@
       } else if (ev.key === 'Enter' && !imDialog) {
         ev.preventDefault();
         if (ldW === 1) { undo(); }
-        else if (ldW === 2) { handleAction(ldM && ldM.session ? 'session-ende' : 'to-tournament', ev.target); }
+        else if (ldW === 2) { handleAction(legDoneDritte(ldM) || 'to-tournament', ev.target); }
         else { UI.overlay = null; render(); }
       } else if (ev.key === 'Backspace' && !imDialog) {
         undo(); ev.preventDefault();
