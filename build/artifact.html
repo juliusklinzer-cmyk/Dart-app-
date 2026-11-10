@@ -20637,10 +20637,14 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return q.matches.every(function (m) { return m.done || m.void; });
   }
   function berichtVersandOeffnen() {
-    var gemerkt = Array.isArray(S.settings.berichtMails) ? S.settings.berichtMails.slice(0, 3) : [];
+    var q = ligaBerichtQuelle();
+    var uebung = !!(q && q.liga && q.liga.uebung);
+    var gemerkt = !uebung && Array.isArray(S.settings.berichtMails) ? S.settings.berichtMails.slice(0, 3) : [];
     while (gemerkt.length < 3) gemerkt.push('');
-    if (!gemerkt[0]) gemerkt[0] = LIGALEITUNG_MAIL;
-    UI.overlay = { type: 'bericht-versand', adressen: gemerkt };
+    /* Testlauf (Uebungsspiel): die eigene Adresse statt der Ligaleitung. */
+    if (uebung) gemerkt[0] = (window.DartKonto && window.DartKonto.nutzer() && window.DartKonto.nutzer().email) || '';
+    else if (!gemerkt[0]) gemerkt[0] = LIGALEITUNG_MAIL;
+    UI.overlay = { type: 'bericht-versand', adressen: gemerkt, uebung: uebung };
     render();
   }
   function berichtUnterschreibenStarten() {
@@ -20898,7 +20902,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       archiveTournament();
     }
     save();
-    if (ergebnis) {
+    if (ergebnis && !lg.uebung) {
       mitteilungEreignis('ergebnis', ergebnis);
       try { rekordePruefen(); } catch (e) { /* Rekorde sind Kuer */ }
     }
@@ -20908,7 +20912,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var q = ligaBerichtQuelle();
     if (!q) return;
     ligaAbschliessen(q.liga);
-    mitteilungEreignis('bericht-offen', { termin: q.liga.terminId, nr: q.liga.nr, gegner: q.liga.gegner });
+    if (!q.liga.uebung) mitteilungEreignis('bericht-offen', { termin: q.liga.terminId, nr: q.liga.nr, gegner: q.liga.gegner });
     UI.overlay = { type: 'hinweis', titel: 'Ligaspiel abgeschlossen',
       text: 'Der Bericht ist unterschrieben, aber noch nicht verschickt – bitte selbst an die Ligaleitung schicken (Drucken → PDF). Im Spielplan steht der Spieltag als abgeschlossen.' };
     render();
@@ -20926,13 +20930,16 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       render();
       return;
     }
-    S.settings.berichtMails = o.adressen.slice(0, 3);
     var lg = q.liga;
+    /* Adressen merkt sich die App nur vom echten Spieltag - sonst staende
+       nach einem Testlauf die eigene Adresse an Stelle der Ligaleitung. */
+    if (!lg.uebung) S.settings.berichtMails = o.adressen.slice(0, 3);
     var heimTeam = lg.heim ? LIGA.team : lg.gegner;
     var gastTeam = lg.heim ? lg.gegner : LIGA.team;
     var datum = lg.tag ? ligaDatum(lg.tag) : fmtDate(q.at || Date.now());
-    var betreff = 'Spielbericht ' + (lg.nr ? lg.nr + '. Spieltag: ' : '') + heimTeam + ' – ' + gastTeam + ' (' + datum + ')';
-    var text = 'Hallo,\n\nanbei der unterschriebene Spielbericht: ' + betreff + '.\n\nViele Grüße\n' + LIGA.team;
+    var betreff = (lg.uebung ? '[Test] ' : '') + 'Spielbericht ' + (lg.nr ? lg.nr + '. Spieltag: ' : '') + heimTeam + ' – ' + gastTeam + ' (' + datum + ')';
+    var text = 'Hallo,\n\nanbei der unterschriebene Spielbericht: ' + betreff + '.\n\n' +
+      (lg.uebung ? 'Das ist ein Testlauf aus dem Übungsspiel der App – bitte nicht weiterleiten.\n\n' : '') + 'Viele Grüße\n' + LIGA.team;
     var name = ('Spielbericht_' + (lg.nr ? 'Spieltag' + lg.nr + '_' : '') + heimTeam + '_' + gastTeam)
       .replace(/[^A-Za-z0-9ÄÖÜäöüß_-]+/g, '_').replace(/_+/g, '_') + '.pdf';
     var pdf = berichtPdf();
@@ -21546,7 +21553,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           '<div class="sg-hl-liste">' + (hl.length ? hlZeilen(hl) : '<p class="hint">Keine Highlights.</p>') + '</div>' +
           '</div>';
       };
-      var offenBericht = !lw.uebung && !lw.abgeschlossen;
+      /* Auch das Uebungsspiel geht weiter zum Spielbericht - als Testlauf
+         vor dem Spieltag: Unterschriften, PDF und Mail wie am Abend selbst,
+         nur vorbelegt mit der eigenen Adresse statt der Ligaleitung und
+         ohne Mitteilung ans Team (Julius, 10.11.). */
+      var offenBericht = !lw.abgeschlossen;
       $('winner-box').innerHTML =
         '<div class="sg-titel"><span class="sg-pokal">' + emoji + '</span><h1>' + titel + '</h1>' +
           '<p>' + (lw.uebung ? 'Übungsspiel' : lw.nr + '. Spieltag') + ' · ' + esc(LIGA.team) + ' gegen ' + esc(lw.gegner) +
@@ -21558,7 +21569,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '<div class="sg-aktionen">' + (offenBericht
           ? '<div class="sg-knoepfe"><button class="btn ghost" data-action="liga-bericht">Spielbericht ansehen</button>' +
             '<button class="btn start-rot" data-action="liga-bericht">Weiter zum Spielbericht</button></div>' +
-            '<p class="sg-hinweis">Abgeschlossen ist das Ligaspiel, sobald der Bericht ausgefüllt, von beiden TCs unterschrieben und verschickt ist.</p>'
+            '<p class="sg-hinweis">' + (lw.uebung
+              ? 'Testlauf: Bericht ausfüllen, unterschreiben, verschicken – genau wie am Spieltag. Vorbelegt ist nur deine eigene Adresse, nichts geht an die Ligaleitung, die Adressen werden nicht gemerkt.'
+              : 'Abgeschlossen ist das Ligaspiel, sobald der Bericht ausgefüllt, von beiden TCs unterschrieben und verschickt ist.') + '</p>'
           : '<div class="sg-knoepfe"><button class="btn ghost" data-action="to-tournament">Zur Übersicht</button>' +
             (lw.uebung ? '<button class="btn start-rot" data-action="finish-tournament">Übungsspiel abschließen</button>'
               : '<button class="btn ghost" data-action="liga-bericht">Spielbericht ansehen</button>' +
@@ -21942,14 +21955,14 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           : '<button class="btn ghost" data-action="ov-cancel">Abbrechen</button>') +
         '<button class="btn hell" data-action="nm-weiter">Nachmelden</button></div>';
     } else if (o.type === 'bericht-versand') {
-      html = '<h3>Spielbericht versenden</h3>' +
-        '<p>Beide Unterschriften sind drin. An wen geht der Bericht?</p>' +
+      html = '<h3>Spielbericht versenden' + (o.uebung ? ' · Testlauf' : '') + '</h3>' +
+        '<p>' + (o.uebung ? 'Übungsspiel: Die Mail geht nur an die Adressen hier – vorbelegt ist deine eigene, die Ligaleitung bleibt außen vor.' : 'Beide Unterschriften sind drin. An wen geht der Bericht?') + '</p>' +
         (o.fehler ? '<p class="hint fehler" role="alert">' + esc(o.fehler) + '</p>' : '') +
         '<div class="liga-start">' + o.adressen.map(function (a, i) {
           return '<label class="ls-zeile"><span>' + (i + 1) + '</span>' +
             '<input type="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" ' +
             'data-role="bericht-mail" data-i="' + i + '" value="' + esc(a) + '" ' +
-            'placeholder="' + (i === 0 ? 'Ligaleitung' : i === 1 ? 'TC Gast' : 'weitere Adresse') + '"></label>';
+            'placeholder="' + (i === 0 ? (o.uebung ? 'deine Adresse' : 'Ligaleitung') : i === 1 ? 'TC Gast' : 'weitere Adresse') + '"></label>';
         }).join('') + '</div>' +
         (!o.ohneServer && window.DartKonto && window.DartKonto.nutzer() && window.DartKonto.mailBereit && window.DartKonto.mailBereit()
           ? '<p class="hint">Der Server schickt die Mail mit dem PDF von <b>blink180@wirtschaftln.de</b>, eine Kopie geht ins Blink-Postfach.</p>'
@@ -25897,6 +25910,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   if (typeof window !== 'undefined') {
     window.__dart = {
       ligaDatenPruefen: ligaDatenPruefen,
+      berichtVersandOeffnen: berichtVersandOeffnen,
       state: function () { return S; },
       ui: function () { return UI; },
       action: handleAction,

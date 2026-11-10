@@ -6132,6 +6132,48 @@ await gruppe('Audit 11/2026: Spielbericht und Bogen nennen beide Shortlegs eines
 
 });
 
+/* Testlauf vor dem Spieltag (Julius, 10.11.): das Uebungsspiel geht weiter
+   zum Spielbericht wie ein echtes, der Versand ist aber nur mit der eigenen
+   Adresse vorbelegt, merkt sich nichts und sagt dem Team nichts. */
+await gruppe('Uebungsspiel als Testlauf: Bericht und Versand ohne Ligaleitung', async () => {
+{
+  await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    const wir = D.activeProfiles().slice(0, 4).map((p) => p.id);
+    const sie = ['tlg1', 'tlg2', 'tlg3', 'tlg4'];
+    sie.forEach((id, i) => { if (!S.profiles.some((p) => p.id === id)) S.profiles.push({ id, name: 'Test ' + (i + 1), avatar: null, hue: 120, created: Date.now(), gast: true, dauer: true }); });
+    const v = (p, s, extra) => Object.assign({ p, s, d: 3, b: false, c: false }, extra || {});
+    const A = wir[0], B = sie[0];
+    S.settings.berichtMails = ['spielbericht@steeldart-muenchen.de', 'tc@gegner.de', ''];
+    S.game = null;
+    S.tour = { start: 501, bestOf: 3, players: wir.concat(sie), liga: {
+      terminId: 'uebung', nr: 0, gegner: 'Testgegner', heim: true, uebung: true, wir, sie,
+      heimSpieler: wir.slice(), gastSpieler: sie.slice(), posH: wir.slice(), posG: sie.slice(),
+      ort: 'Bar Sehnsucht', tag: '', finish: true, zeitVon: Date.now(), zeitBis: null } };
+    S.matches = [{ id: 'tlm1', round: 1, p: [A, B], starter: A, posPaar: [0, 0], scheibe: 'S1', done: true, winner: A, at: Date.now(), legs: [
+      { starter: A, winner: A, visits: [v(A, 180), v(B, 60), v(A, 180), v(B, 60), v(A, 141, { c: true })] },
+      { starter: B, winner: A, visits: [v(B, 60), v(A, 180), v(B, 60), v(A, 180), v(B, 60), v(A, 141, { c: true })] }
+    ] }];
+    S.current = null; D.ui().overlay = null; D.ui().bericht = null;
+    D.setScreen('winner');
+  });
+  const wb = await page.evaluate(() => document.getElementById('winner-box').innerText.replace(/\s+/g, ' '));
+  check('der Ergebnis-Bildschirm des Uebungsspiels fuehrt weiter zum Spielbericht und nennt den Testlauf',
+    wb.includes('Übungsspiel') && /weiter zum spielbericht/i.test(wb) && wb.includes('Testlauf') && wb.includes('nichts geht an die Ligaleitung'), wb);
+  await page.evaluate(() => { const D = window.__dart; D.ui().bericht = null; D.berichtVersandOeffnen(); });
+  const vd = await page.evaluate(() => ({
+    text: document.getElementById('overlay-card').innerText.replace(/\s+/g, ' '),
+    werte: [...document.querySelectorAll('#overlay-card input[data-role="bericht-mail"]')].map((i) => i.value),
+    platzhalter: document.querySelector('#overlay-card input[data-role="bericht-mail"]').getAttribute('placeholder')
+  }));
+  check('der Versand-Dialog ist ein Testlauf: keine Ligaleitung, keine gemerkten Adressen, eigene Adresse als Platzhalter',
+    vd.text.includes('Testlauf') && vd.werte.every((w) => w === '') && vd.platzhalter === 'deine Adresse', JSON.stringify(vd));
+  await page.evaluate(() => { const D = window.__dart, S = D.state(); D.ui().overlay = null; S.matches = []; S.tour = null; S.current = null; D.ui().bericht = null;
+    S.profiles = S.profiles.filter((p) => !/^tlg/.test(p.id)); delete S.settings.berichtMails; D.setScreen('setup'); });
+}
+
+});
+
 await gruppe('Audit 11/2026: v2-Altstand wird auf v3 gehoben, neuere Staende bleiben unangetastet, altes Spiel behaelt Legs (L21, L22)', async () => {
 {
   const alt = {
