@@ -18,6 +18,7 @@
   var roster = [];                 // alle Accounts
   var ansicht = 'login';           // login | register | vergessen | neu | konto | passwort | zuordnung
   var reset = null;                // ?passwort=TOKEN aus der Mail: { token, name, gueltig }
+  var sitzungHinterLink = null;    // per Passwort-Link gekommen, obwohl die Sitzung noch lebt: der angemeldete Nutzer
   var meldung = '';                // Fehler- oder Erfolgstext
   var meldungArt = 'fehler';
   var beschaeftigt = false;
@@ -553,7 +554,10 @@
     if (beschaeftigt) return;
     switch (name) {
       case 'konto-tab-login':
-        ansicht = 'login'; setzeMeldung(''); neuZeichnen(true); break;
+        ansicht = 'login'; setzeMeldung('');
+        /* "Abbrechen" auf dem Passwort-Link, obwohl noch angemeldet: zurück in die App. */
+        if (sitzungHinterLink) { var zurueck = sitzungHinterLink; sitzungHinterLink = null; reset = null; nachAnmeldung(zurueck); neuZeichnen(true); break; }
+        neuZeichnen(true); break;
       case 'konto-tab-register':
         ansicht = 'register'; setzeMeldung(''); neuZeichnen(true); break;
       case 'konto-vergessen':
@@ -576,7 +580,7 @@
         beschaeftigt = true; setzeMeldung('Setze das Passwort …', 'ok'); render();
         ruf('POST', '/api/passwort-neu', { token: reset ? reset.token : '', passwort: pn1 })
           .then(function (daten) {
-            beschaeftigt = false; reset = null; ansicht = 'login';
+            beschaeftigt = false; reset = null; ansicht = 'login'; sitzungHinterLink = null;
             setzeMeldung('');
             return nachAnmeldung(daten.nutzer);
           })
@@ -881,7 +885,26 @@
       anmelden();
       mailBereit = !!daten.mail;
       merkeServer(daten.nutzer);
-      if (daten.nutzer) {
+      if (daten.nutzer && reset) {
+        /* Passwort-Link, obwohl die Sitzung noch lebt (Michi, 10.11.: Passwort
+           weg, aber im Browser noch angemeldet - die App sprang einfach in die
+           Spielerübersicht). Der Link zählt: gültig führt er zum neuen
+           Passwort, sonst geht es normal in die App. */
+        einladung = null;
+        sitzungHinterLink = daten.nutzer;
+        setzeSchranke(true);
+        ansicht = 'neu';
+        window.__dart.render();
+        resetNachsehen().then(function () {
+          if (reset && reset.gueltig) { neuZeichnen(true); return; }
+          reset = null; ansicht = 'login'; sitzungHinterLink = null;
+          /* nachAnmeldung setzt den Nutzer sofort - gleich neu zeichnen, damit
+             nicht das Formular stehen bleibt, bis der Kader da ist. */
+          var weiter = nachAnmeldung(daten.nutzer);
+          neuZeichnen(true);
+          return weiter;
+        });
+      } else if (daten.nutzer) {
         setzeSchranke(false);
         einladung = null;   // schon angemeldet: der Link ist fuer neue Konten
         nachAnmeldung(daten.nutzer);

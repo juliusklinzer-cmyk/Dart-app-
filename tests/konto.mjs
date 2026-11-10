@@ -227,6 +227,7 @@ async function main() {
       DARTS_INVITE_HASH: hashPassword(CODE),
       DARTS_SECURE_COOKIES: '0',
       DARTS_CLAIM_FRIST_MS: '3000',    // haengengebliebene Einzel: im Test nach 3 s statt 10 min
+      DARTS_MAIL_AUSGABE: path.join(tmp, 'mails.jsonl'),   // Mails landen in einer Datei (Passwort-Link)
       NODE_ENV: 'test'
     },
     stdio: ['ignore', 'pipe', 'pipe']
@@ -1820,6 +1821,53 @@ async function main() {
       });
       check('E) ein nachgetragenes Archiv aktualisiert den Eintrag auf dem Geraet', archivNeu);
       await leeren(julius); await leeren(tobi);
+    });
+
+    await gruppe('Passwort-Link, obwohl noch angemeldet (Michi, 10.11.)', async () => {
+      /* Passwort weg, aber im Browser lebt die Sitzung noch: der Link aus der
+         Mail muss trotzdem zum Formular fuehren statt in die Spielerübersicht. */
+      async function linkHolen() {
+        const res = await fetch(BASIS + '/api/passwort-vergessen', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Darts-App': '1' },
+          body: JSON.stringify({ email: 'julius@example.de' })
+        });
+        check('Link angefordert', res.status === 200, 'Status ' + res.status);
+        const zeilen = fs.readFileSync(path.join(tmp, 'mails.jsonl'), 'utf8').trim().split('\n');
+        const mail = JSON.parse(zeilen[zeilen.length - 1]);
+        const m = /[?&]passwort=([A-Za-z0-9_.%-]+)/.exec(JSON.stringify(mail));
+        check('Mail mit Link an Julius', Array.isArray(mail.an) && mail.an.includes('julius@example.de') && !!m, mail.betreff);
+        return m ? decodeURIComponent(m[1]) : '';
+      }
+      const angemeldet = await julius.page.evaluate(() => !!(window.DartKonto && window.DartKonto.nutzer()));
+      check('Julius ist noch angemeldet', angemeldet);
+      const token = await linkHolen();
+      await julius.page.goto(BASIS + '/index.html?passwort=' + encodeURIComponent(token));
+      await julius.page.waitForFunction(() => /Neues Passwort/.test((document.getElementById('konto-inhalt') || {}).textContent || ''));
+      const gesperrt = await julius.page.evaluate(() => document.body.classList.contains('gesperrt'));
+      check('Link führt angemeldet zum Formular „Neues Passwort“', gesperrt);
+      await julius.page.locator('[data-action="konto-tab-login"]').click();
+      await julius.page.waitForFunction(() => !document.body.classList.contains('gesperrt'));
+      const nochDrin = await julius.page.evaluate(() => !!(window.DartKonto && window.DartKonto.nutzer()));
+      check('Abbrechen führt zurück in die App, weiter angemeldet', nochDrin);
+      await julius.page.goto(BASIS + '/index.html?passwort=' + encodeURIComponent(token));
+      await julius.page.waitForFunction(() => /Neues Passwort/.test((document.getElementById('konto-inhalt') || {}).textContent || ''));
+      await julius.page.locator('#konto-pass-neu').fill('neuesturnier2026');
+      await julius.page.locator('#konto-pass-neu2').fill('neuesturnier2026');
+      await julius.page.locator('[data-action="konto-passwort-setzen"]').click();
+      await julius.page.waitForFunction(() => !document.body.classList.contains('gesperrt') && !!(window.DartKonto && window.DartKonto.nutzer()));
+      const wer = await julius.page.evaluate(() => window.DartKonto.nutzer().name);
+      check('neues Passwort gesetzt, direkt angemeldet', wer === 'Julius', wer);
+      const login = await fetch(BASIS + '/api/login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Darts-App': '1' },
+        body: JSON.stringify({ email: 'julius@example.de', password: 'neuesturnier2026' })
+      });
+      check('Anmeldung mit dem neuen Passwort geht', login.status === 200, 'Status ' + login.status);
+      /* Abgelaufener oder falscher Link bei lebender Sitzung: normal in die App. */
+      await julius.page.goto(BASIS + '/index.html?passwort=p_' + 'x'.repeat(32));
+      await julius.page.waitForFunction(() => !!window.__dart);
+      await julius.page.waitForFunction(() => !document.body.classList.contains('gesperrt') && !!(window.DartKonto && window.DartKonto.nutzer()));
+      const kein = await julius.page.waitForFunction(() => !/Neues Passwort|Link abgelaufen/.test((document.getElementById('konto-inhalt') || {}).textContent || '')).then(() => true, () => false);
+      check('ungültiger Link bei lebender Sitzung: App öffnet normal', kein);
     });
 
     await gruppe('Fehlerfreiheit', async () => {

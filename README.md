@@ -943,7 +943,9 @@ schickt einen Link an die Konto-Adresse (`POST /api/passwort-vergessen`, Absende
 gilt eine Stunde und einmal, nur der Hash des Tokens liegt in der Datenbank, die Antwort
 verrät nicht, ob es die Adresse gibt, höchstens drei Links je Stunde und Adresse). Der Link
 öffnet die App mit `?passwort=TOKEN`, dort setzt man ein neues Passwort (`POST
-/api/passwort-neu`) und ist direkt angemeldet; andere Geräte sind abgemeldet, der
+/api/passwort-neu`) und ist direkt angemeldet (auch wenn man in diesem Browser noch
+angemeldet war – dann zeigt der Link trotzdem das Formular, „Abbrechen“ führt zurück in die
+App); andere Geräte sind abgemeldet, der
 Sicherheitshinweis „Passwort geändert“ geht raus. Ohne eingerichteten Mailversand sagt die
 App, dass Julius helfen muss. Darunter
 listet „Nicht hochgeladen“ Spiele, die der Server endgültig abgelehnt hat, mit Grund. Der Reiter **Profil** öffnet das eigene Profil; fremde Profile
@@ -1491,7 +1493,7 @@ bzw. `--ja` nur, was passieren würde):
 | `konto-loeschen.mjs <e-mail>` | Löscht ein Konto restlos; verweigert, solange aktive Spiele daran hängen. |
 | `konto-weg.mjs --mail <e-mail> [--wirklich]` | Entfernt ein Konto sauber: ohne Spiele ganz weg, mit Spielen bekommen diese Grabsteine und das Konto wird stillgelegt. |
 | `neustart.mjs --behalte <e-mail> [--wirklich]` | Sauberer Start vor dem ersten echten Abend: alle Spiele bekommen Grabsteine, alle Konten außer dem genannten verschwinden. |
-| `reset-password.mjs <e-mail> <neues-passwort>` | Setzt ein Passwort neu und meldet alle Geräte des Kontos ab („Passwort vergessen“ läuft über Julius). |
+| `reset-password.mjs <e-mail> <neues-passwort>` | Setzt ein Passwort neu und meldet alle Geräte des Kontos ab (Notnagel, normal läuft „Passwort vergessen“ über den Mail-Link). |
 | `spiel-zurueckziehen.mjs <spiel-id> [...]` | Soft-Delete wie `DELETE /api/games/:id`; die Geräte räumen das Spiel beim nächsten Abgleich selbst aus. |
 | `testkonto.mjs [--aus] <e-mail>`, `testkonto.mjs --sieht <e-mail>` | Markiert ein Konto als Testkonto (zählt in keine Statistik) bzw. legt fest, wer Testkonten sieht. |
 | `vapid.mjs` | Erzeugt das VAPID-Schlüsselpaar für Web Push (`DARTS_VAPID_PUBLIC`/`_PRIVATE`). |
