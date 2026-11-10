@@ -1870,6 +1870,65 @@ async function main() {
       check('ungültiger Link bei lebender Sitzung: App öffnet normal', kein);
     });
 
+    await gruppe('Vorauswahl beim Spielstart: nur ich, am Abend das letzte Spiel', async () => {
+      /* Julius (10.11.): auf dem Geraet waren immer irgendwelche Spieler
+         vorgewaehlt. Angemeldet soll nur der eigene Spieler gewaehlt sein,
+         nach dem ersten Spiel des Abends dessen Aufstellung. */
+      const neu = await geraet(browser, 'neu');
+      await neu.page.locator('#konto-email').fill('julius@example.de');
+      await neu.page.locator('#konto-pass').fill('neuesturnier2026');
+      await neu.page.locator('[data-action="konto-login"]').click();
+      await neu.page.waitForFunction(() => !document.body.classList.contains('gesperrt') && !!(window.DartKonto && window.DartKonto.nutzer()));
+      const ich = await neu.page.evaluate(() => window.DartKonto.nutzer().id);
+      const lineup1 = await neu.page.evaluate(() => window.__dart.state().lineup.slice());
+      check('frisches Geraet: nur der eigene Spieler gewaehlt', lineup1.length === 1 && lineup1[0] === ich, JSON.stringify(lineup1));
+      const anzahl = await neu.page.locator('.roster-item.selected').count();
+      check('auch in der Spielerliste nur einer markiert', anzahl === 1, 'markiert: ' + anzahl);
+      /* Ein Spiel von vorhin an diesem Abend: dessen Aufstellung gilt weiter. */
+      const tobiId = await neu.page.evaluate(() => (window.__dart.activeProfiles().find((p) => p.name === 'Tobi') || {}).id);
+      check('Tobi steht im Kader', !!tobiId);
+      await neu.page.evaluate(([a, b]) => {
+        const S = window.__dart.state();
+        S.history.push({ id: 'abend_1', kind: 'quick', at: Date.now() - 20 * 60e3, players: [b, a], lineup: [b, a], winner: a, matches: [] });
+        S.lineup = [a];
+        window.__dart.save();
+      }, [ich, tobiId]);
+      await neu.page.reload();
+      await neu.page.waitForFunction(() => !!window.__dart && !document.body.classList.contains('gesperrt') && !!(window.DartKonto && window.DartKonto.nutzer()));
+      await neu.page.waitForFunction(() => window.__dart.state().lineup.length === 2);
+      const lineup2 = await neu.page.evaluate(() => window.__dart.state().lineup.slice());
+      check('Spiel von vorhin: dessen Aufstellung in derselben Reihenfolge', lineup2[0] === tobiId && lineup2[1] === ich, JSON.stringify(lineup2));
+      /* Das Spiel ist von gestern: wieder nur ich. */
+      await neu.page.evaluate(() => {
+        const S = window.__dart.state();
+        const e = S.history.find((h) => h.id === 'abend_1');
+        e.at = Date.now() - 20 * 3600e3;
+        window.__dart.save();
+      });
+      await neu.page.reload();
+      await neu.page.waitForFunction(() => !!window.__dart && !document.body.classList.contains('gesperrt') && !!(window.DartKonto && window.DartKonto.nutzer()));
+      await neu.page.waitForFunction(() => window.__dart.state().lineup.length === 1);
+      const lineup3 = await neu.page.evaluate(() => window.__dart.state().lineup.slice());
+      check('Spiel von gestern zaehlt nicht: nur ich', lineup3.length === 1 && lineup3[0] === ich, JSON.stringify(lineup3));
+      /* Laufendes Spiel bleibt unangetastet. */
+      await neu.page.evaluate(([a, b]) => {
+        const S = window.__dart.state();
+        S.history = S.history.filter((h) => h.id !== 'abend_1');
+        S.lineup = [a, b];
+        window.__dart.save();
+      }, [ich, tobiId]);
+      const unveraendert = await neu.page.evaluate(() => {
+        const S = window.__dart.state();
+        S.game = { id: 'lauf', kind: 'quick', done: false, players: S.lineup.slice(), p: S.lineup.slice(), legs: [] };
+        const geaendert = window.__dart.lineupVorbelegen();
+        S.game = null;
+        return !geaendert && S.lineup.length === 2;
+      });
+      check('laufendes Spiel: Auswahl bleibt', unveraendert);
+      neu.fehlerLog.forEach((f) => julius.fehlerLog.push(f));
+      await neu.ctx.close();
+    });
+
     await gruppe('Fehlerfreiheit', async () => {
       const alleFehler = julius.fehlerLog.concat(tobi.fehlerLog, lenas ? lenas.fehlerLog : []);
       check('keine JS-Fehler', alleFehler.length === 0, alleFehler.join(' | '));

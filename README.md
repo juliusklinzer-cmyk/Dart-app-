@@ -43,7 +43,9 @@ aufgeräumt: eine Schrift für Inhalte, kleine graue Überschriften, Flächen oh
 Rahmen, keine Leuchteffekte und keine Statistikzeilen. Oben die Marke, rechts die
 Navigation als schlanke Text-Reiter (der aktive mit rotem Strich); darunter drei
 Spalten – **Spieler** (zwei Spalten, die Zahl im Kreis ist die Reihenfolge der
-Auswahl, also die Wurf-Reihenfolge; „N gewählt“ zählt mit), **Spielart** (nur die
+Auswahl, also die Wurf-Reihenfolge; „N gewählt“ zählt mit; angemeldet ist beim
+Öffnen nur der eigene Spieler gewählt, lief an diesem Abend auf dem Gerät schon ein
+Spiel, dessen Aufstellung – ein laufendes Spiel bleibt unangetastet), **Spielart** (nur die
 Namen) und rechts die **Einstellungen**: oben der Name der Spielart mit einem
 Satz dazu, dann die Zeilen, ganz unten GAME ON (dunkel mit rotem Rand). Ausgewählt
 heißt überall dasselbe: weißer Rand bei Spielern und Spielart, hellere Fläche mit

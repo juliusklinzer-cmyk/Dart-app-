@@ -235,6 +235,8 @@
     merkeServer(nutzer);
     return holeRoster().then(function () {
       if (window.DartSync) window.DartSync.angemeldet(nutzer);
+      /* Vorauswahl fuer den Spielstart: nur ich - oder das letzte Spiel des Abends. */
+      if (D.lineupVorbelegen && D.lineupVorbelegen()) D.save();
       if (offeneZuordnung().length) {
         // Erst klären, wer wer ist – danach geht es in die App.
         ansicht = 'zuordnung';

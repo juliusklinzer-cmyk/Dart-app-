@@ -31,6 +31,7 @@
 
 ## Erledigt
 
+- [x] DRT-028 Vorauswahl beim Spielstart: angemeldet nur der eigene Spieler, nach dem ersten Spiel des Abends (8 h) dessen Aufstellung, Ligaspiel: unsere vier; ohne Konto und bei laufendem Spiel unverändert · von:Julius · am:2026-11-10 · fertig:2026-11-10
 - [x] DRT-027 Passwort vergessen per Mail-Link: „Passwort vergessen?“ auf der Anmeldeseite, Link an die Konto-Adresse (1 h, einmal, nur Hash gespeichert, 3 je Stunde), Seite „Neues Passwort“ meldet direkt an; Mail-Ausgabe in Datei für Tests (DARTS_MAIL_AUSGABE); Nachtrag: Link greift auch bei noch lebender Sitzung (Michi landete in der Spielerübersicht) · von:Julius · am:2026-11-10 · fertig:2026-11-10
 
 - [x] DRT-024 Spieltag proben und Kader: Kader des Gegners als Chips im Start-Dialog, Probelauf gegen den nächsten Gegner im Übungsspiel (Gäste, Koppeln, Bericht, Mail nur an sich), Übungsspiel geht weiter zum Spielbericht; Liga-Statistik mit den Highlights der Ligaleitung für nachgetragene Spieltage; kein Training am Ligaspiel-Dienstag · von:Julius · am:2026-11-10 · fertig:2026-11-10

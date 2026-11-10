@@ -12212,6 +12212,32 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return window.DartKonto && window.DartKonto.nutzer() ? window.DartKonto.nutzer().id : null;
   }
 
+  /* Vorauswahl beim Spielstart (Julius, 10.11.2026): angemeldet ist erst
+     einmal nur der eigene Spieler gewählt. Lief an diesem Abend auf dem
+     Gerät schon ein Spiel, gilt dessen Aufstellung weiter (beim Ligaspiel
+     unsere vier). Läuft gerade ein Spiel oder Turnier, bleibt alles, wie es
+     ist; ohne Konto ebenso. Liefert true, wenn sich die Auswahl geändert hat. */
+  var ABEND_MS = 8 * 3600e3;
+  function lineupVorbelegen() {
+    var ich = liveNutzer();
+    if (!ich || !profile(ich)) return false;
+    if ((S.game && !S.game.done) || S.matches.length) return false;
+    var letztes = null;
+    S.history.forEach(function (e) {
+      /* `von` tragen nur Einträge, die vom Server kamen - die zählen nicht als Spiel dieses Geräts. */
+      if (e && !e.von && Number(e.at) && (!letztes || e.at > letztes.at)) letztes = e;
+    });
+    var neu = null;
+    if (letztes && Date.now() - letztes.at < ABEND_MS) {
+      var liste = letztes.liga && Array.isArray(letztes.liga.wir) ? letztes.liga.wir : (letztes.lineup || letztes.players || []);
+      neu = liste.filter(function (id) { var p = profile(id); return p && !p.hidden; });
+    }
+    if (!neu || !neu.length) neu = [ich];
+    if (neu.length === S.lineup.length && neu.every(function (id, i) { return S.lineup[i] === id; })) return false;
+    S.lineup = neu;
+    return true;
+  }
+
   /* Online geht nur angemeldet, in den Spielarten dafuer und mit
      mindestens einem Mitspieler, der ein Konto hat -- sonst gaebe es
      niemanden, auf dessen Handy das Spiel auftauchen koennte. */
@@ -26103,6 +26129,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   if (typeof window !== 'undefined') {
     window.__dart = {
       ligaDatenPruefen: ligaDatenPruefen,
+      lineupVorbelegen: lineupVorbelegen,
       berichtVersandOeffnen: berichtVersandOeffnen,
       state: function () { return S; },
       ui: function () { return UI; },
