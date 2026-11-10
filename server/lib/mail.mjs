@@ -15,6 +15,7 @@
  */
 import net from 'node:net';
 import tls from 'node:tls';
+import fs from 'node:fs';
 import { randomBytes } from 'node:crypto';
 
 export const BREVO_HOST = 'smtp-relay.brevo.com';
@@ -314,7 +315,10 @@ export function smtpSenden(opt) {
 
 export function erstelleMailer(cfg) {
   cfg = cfg || {};
-  const bereit = !!(cfg.user && cfg.key);
+  /* cfg.ausgabe (DARTS_MAIL_AUSGABE): statt zu senden jede Mail als
+     JSON-Zeile in diese Datei schreiben - fuer Tests (Passwort-Link
+     auslesen) und zum Probieren ohne Brevo. Der Mailer gilt dann als bereit. */
+  const bereit = !!(cfg.user && cfg.key) || !!cfg.ausgabe;
   const absender = {
     liga: cfg.absenderLiga || 'Blink 180 <blink180@wirtschaftln.de>',
     app: cfg.absenderApp || 'Dart-App <dart@wirtschaftln.de>'
@@ -338,6 +342,10 @@ export function erstelleMailer(cfg) {
     if (!an.length) throw new Error('Mail ohne Empfaenger');
     const id = Date.now().toString(36) + '.' + randomBytes(6).toString('hex');
     const daten = mimeBauen({ von: von, an: anRoh, cc: ccRoh, antwortAn: m.antwortAn || von, betreff: m.betreff, text: m.text, html: html, anhaenge: m.anhaenge, id: id, abmeldeUrl: m.mitteilung ? abmeldeUrl : '' });
+    if (cfg.ausgabe) {
+      fs.appendFileSync(cfg.ausgabe, JSON.stringify({ zeit: new Date().toISOString(), von: von, an: an, cc: cc, betreff: m.betreff, text: m.text, knopf: m.knopf || null, anhaenge: (m.anhaenge || []).map(function (a) { return a.name; }) }) + '\n');
+      return { gesendet: true, id: id };
+    }
     if (!bereit) {
       console.log('[mail] nicht eingerichtet - verworfen: "' + kopfWert(m.betreff) + '" an ' + an.join(', '));
       return { gesendet: false, id: id };

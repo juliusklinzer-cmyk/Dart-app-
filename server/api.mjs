@@ -6,7 +6,7 @@
  * herausgegeben. Wer mitgespielt hat, steht zusaetzlich in `game_players` --
  * nur damit man "alle Spiele von X" abfragen kann.
  */
-import { randomBytes } from 'node:crypto';
+import { randomBytes, createHash } from 'node:crypto';
 import { nextSeq, transaktion, zaehler } from './lib/db.mjs';
 import { hashPassword, verifyPassword, checkPassword, braucheNeuHash } from './lib/password.mjs';
 import * as sess from './lib/session.mjs';
@@ -492,6 +492,86 @@ export function createApi(db, config) {
     sess.destroyOtherSessions(db, u.id, leseCookies(req)[sess.COOKIE]);
     mitteilungen.konto(voll, 'passwort').catch(() => {});
     sendJson(res, 200, { ok: true });
+  }
+
+  /* ---------- Passwort vergessen: Link per Mail ----------
+   * Wer sein Passwort nicht mehr weiss, bekommt einen Link an die Adresse
+   * seines Kontos (Julius, 10.11.: "Michi kann kein neues Passwort machen").
+   * Gespeichert ist nur der Hash des Tokens, der Link gilt eine Stunde und
+   * einmal; ob es die Adresse gibt, verraet die Antwort nicht. Mit dem neuen
+   * Passwort ist man direkt angemeldet, alle anderen Geraete fliegen raus,
+   * und der Sicherheitshinweis "Passwort geaendert" geht wie beim normalen
+   * Wechsel raus. */
+  const RESET_GUELTIG_MS = 3600e3;
+  function resetHash(token) { return createHash('sha256').update(String(token)).digest('hex'); }
+  function resetEintrag(token) {
+    if (!/^p_[A-Za-z0-9_-]{20,60}$/.test(String(token || ''))) return null;
+    const z = db.prepare('SELECT r.*, u.display_name, u.status FROM passwort_resets r JOIN users u ON u.id = r.user_id WHERE r.token_hash = ?').get(resetHash(token));
+    if (!z || z.used_at || z.status !== 'aktiv' || Date.parse(z.expires_at) < Date.now()) return null;
+    return z;
+  }
+  async function passwortVergessen(req, res) {
+    pruefeHerkunft(req);
+    const ip = clientIp(req, config.trustProxy);
+    const body = await leseJson(req, MAX_BODY_KLEIN);
+    const email = String(body.email || '').trim().toLowerCase();
+    if (!email || email.length > 200 || !istAdresse(email)) throw new HttpFehler(400, 'Bitte deine E-Mail-Adresse angeben.');
+    if (!(config.mailer && config.mailer.bereit)) {
+      throw new HttpFehler(503, 'Der Mailversand ist auf dem Server nicht eingerichtet – bitte Julius um ein neues Passwort.');
+    }
+    const eimer = [['reset-ip:' + ip, 5, 900e3], ['reset-mail:' + email, 3, 3600e3]];
+    for (const [k, max, f] of eimer) {
+      const warte = limit.pruefe(k, max, f);
+      if (warte) throw new HttpFehler(429, 'Zu viele Anfragen. Bitte in ' + Math.ceil(warte / 60) + ' Minuten nochmal.');
+    }
+    for (const [k, max, f] of eimer) limit.zaehle(k, max, f);
+    db.prepare('DELETE FROM passwort_resets WHERE expires_at < ?').run(new Date(Date.now() - 86400e3).toISOString());
+    const u = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+    if (u && u.status === 'aktiv') {
+      const token = 'p_' + randomBytes(24).toString('base64url');
+      const jetzt = Date.now();
+      db.prepare('DELETE FROM passwort_resets WHERE user_id = ?').run(u.id);
+      db.prepare('INSERT INTO passwort_resets (token_hash, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)')
+        .run(resetHash(token), u.id, new Date(jetzt).toISOString(), new Date(jetzt + RESET_GUELTIG_MS).toISOString());
+      const link = String(config.appUrl || 'https://darts.wirtschaftln.de').replace(/\/+$/, '') + '/index.html?passwort=' + encodeURIComponent(token);
+      config.mailer.sende({
+        von: 'app', an: [u.email], betreff: 'Neues Passwort für die Dart-App', kicker: 'Konto und Sicherheit',
+        knopf: { text: 'Neues Passwort setzen', url: link },
+        text: 'Hallo ' + u.display_name + ',\n\njemand hat für dein Konto in der Dart-App ein neues Passwort angefordert. ' +
+          'Mit diesem Link setzt du eines – er gilt eine Stunde und nur einmal:\n\n' + link + '\n\n' +
+          'Warst du das nicht, ignoriere diese Mail einfach – dein Passwort bleibt, wie es ist.\n\nDart-App'
+      }).catch((e) => console.error('[mail] Passwort-Link an ' + u.email + ' fehlgeschlagen: ' + (e && e.message)));
+    }
+    /* Immer dieselbe Antwort - ob es die Adresse gibt, bleibt Sache des Kontos. */
+    sendJson(res, 200, { ok: true });
+  }
+  async function passwortNeuPruefen(req, res, token) {
+    let roh = token;
+    try { roh = decodeURIComponent(token); } catch (e) { roh = ''; }
+    const z = resetEintrag(roh);
+    res.setHeader('Cache-Control', 'no-store');
+    sendJson(res, 200, z ? { gueltig: true, name: z.display_name } : { gueltig: false });
+  }
+  async function passwortNeuSetzen(req, res) {
+    pruefeHerkunft(req);
+    const ip = clientIp(req, config.trustProxy);
+    const warte = limit.pruefe('reset-neu:' + ip, 10, 900e3);
+    if (warte) throw new HttpFehler(429, 'Zu viele Versuche. Bitte in ' + Math.ceil(warte / 60) + ' Minuten nochmal.');
+    const body = await leseJson(req, MAX_BODY_KLEIN);
+    const z = resetEintrag(body.token);
+    if (!z) {
+      limit.zaehle('reset-neu:' + ip, 10, 900e3);
+      throw new HttpFehler(400, 'Dieser Link ist abgelaufen oder schon benutzt. Fordere bitte einen neuen an.');
+    }
+    const schwach = checkPassword(body.passwort);
+    if (schwach) throw new HttpFehler(400, schwach);
+    db.prepare('UPDATE users SET password_hash = ?, last_login_at = ? WHERE id = ?').run(hashPassword(body.passwort), new Date().toISOString(), z.user_id);
+    db.prepare('UPDATE passwort_resets SET used_at = ? WHERE token_hash = ?').run(new Date().toISOString(), z.token_hash);
+    sess.destroyOtherSessions(db, z.user_id, null);
+    const u = db.prepare('SELECT * FROM users WHERE id = ?').get(z.user_id);
+    mitteilungen.konto(u, 'passwort').catch(() => {});
+    const sitzung = sess.createSession(db, u.id);
+    sendJson(res, 200, { nutzer: eigenesProfil(u) }, { 'Set-Cookie': sess.cookieHeader(sitzung, secure) });
   }
 
   /* Testkonten sieht, wer sieht_test hat -- und ein Testkonto selbst, sonst
@@ -2121,6 +2201,9 @@ export function createApi(db, config) {
     ['GET', /^\/api\/me$/, me],
     ['PATCH', /^\/api\/me$/, profilAendern],
     ['POST', /^\/api\/password$/, passwortAendern],
+    ['POST', /^\/api\/passwort-vergessen$/, passwortVergessen],
+    ['GET', /^\/api\/passwort-neu\/([A-Za-z0-9_.%-]{10,120})$/, passwortNeuPruefen],
+    ['POST', /^\/api\/passwort-neu$/, passwortNeuSetzen],
     ['POST', /^\/api\/einladungen$/, einladungAnlegen],
     ['GET', /^\/api\/einladungen\/([A-Za-z0-9_-]{4,64})$/, einladungAnsehen],
     ['GET', /^\/api\/users$/, nutzerListe],

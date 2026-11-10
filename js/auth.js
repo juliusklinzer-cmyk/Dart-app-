@@ -16,7 +16,8 @@
   var D = null;                    // Brücke zu app.js
   var nutzer = null;               // angemeldeter Account oder null
   var roster = [];                 // alle Accounts
-  var ansicht = 'login';           // login | register | konto | passwort | zuordnung
+  var ansicht = 'login';           // login | register | vergessen | neu | konto | passwort | zuordnung
+  var reset = null;                // ?passwort=TOKEN aus der Mail: { token, name, gueltig }
   var meldung = '';                // Fehler- oder Erfolgstext
   var meldungArt = 'fehler';
   var beschaeftigt = false;
@@ -362,7 +363,8 @@
     var kader = roster.map(function (r) {
       return r.id + ':' + (r.avatar ? r.avatar.length : 0) + ':' + (r.name || '') + ':' + (r.dbl || 0);
     }).join(',');
-    return ansicht + einl + '|' + (nutzer ? nutzer.id : '-') + '|' + kader +
+    var rs = reset ? '|r:' + (reset.gueltig === undefined ? '?' : reset.gueltig ? 1 : 0) + ':' + (reset.name || '') : '';
+    return ansicht + einl + rs + '|' + (nutzer ? nutzer.id : '-') + '|' + kader +
       '|' + (eigen ? eigen.name : '') + '|' + (eigen ? eigen.dbl || 0 : 0) +
       '|' + (eigen && eigen.avatar ? eigen.avatar : '');
   }
@@ -378,6 +380,35 @@
   }
 
   function htmlLogin() {
+    /* Passwort vergessen: Adresse eingeben, Link kommt per Mail. */
+    if (ansicht === 'vergessen') {
+      return '<div class="card konto-karte">' +
+        '<h2>Passwort vergessen</h2>' +
+        '<p class="hint">Gib die E-Mail-Adresse deines Kontos ein. Du bekommst einen Link, mit dem du ein neues Passwort setzt – er gilt eine Stunde.</p>' +
+        feld('konto-email', 'E-Mail', 'email', null, 'email') +
+        '<button class="btn primary full" data-action="konto-vergessen-senden">Link schicken</button>' +
+        '<button class="btn ghost full" data-action="konto-tab-login">Zurück zur Anmeldung</button>' +
+        '</div>';
+    }
+    /* Aus der Mail gekommen: neues Passwort setzen. */
+    if (ansicht === 'neu' && reset) {
+      if (reset.gueltig === false) {
+        return '<div class="card konto-karte">' +
+          '<h2>Link abgelaufen</h2>' +
+          '<p class="hint">Dieser Link ist abgelaufen oder schon benutzt. Fordere einfach einen neuen an.</p>' +
+          '<button class="btn primary full" data-action="konto-vergessen">Neuen Link anfordern</button>' +
+          '<button class="btn ghost full" data-action="konto-tab-login">Zur Anmeldung</button>' +
+          '</div>';
+      }
+      return '<div class="card konto-karte">' +
+        '<h2>Neues Passwort</h2>' +
+        '<p class="hint">' + (reset.name ? 'Hallo ' + esc(reset.name) + ', vergib' : 'Vergib') + ' ein neues Passwort für dein Konto. Andere Geräte werden dabei abgemeldet.</p>' +
+        feld('konto-pass-neu', 'Neues Passwort', 'password', 'mindestens 6 Zeichen', 'new-password') +
+        feld('konto-pass-neu2', 'Nochmal', 'password', null, 'new-password') +
+        '<button class="btn primary full" data-action="konto-passwort-setzen">Passwort setzen</button>' +
+        '<button class="btn ghost full" data-action="konto-tab-login">Abbrechen</button>' +
+        '</div>';
+    }
     return '<div class="card konto-karte">' +
       '<div class="konto-tabs">' +
         '<button class="' + (ansicht === 'login' ? 'active' : '') + '" data-action="konto-tab-login">Anmelden</button>' +
@@ -401,7 +432,8 @@
           '<button class="btn primary full" data-action="konto-register">Account anlegen</button>'
         : feld('konto-email', 'E-Mail', 'email', null, 'email') +
           feld('konto-pass', 'Passwort', 'password', null, 'current-password') +
-          '<button class="btn primary full" data-action="konto-login">Anmelden</button>') +
+          '<button class="btn primary full" data-action="konto-login">Anmelden</button>' +
+          '<button class="btn ghost full" data-action="konto-vergessen">Passwort vergessen?</button>') +
       '<p class="hint">Einmal angemeldet, läuft die App auch ohne Netz weiter – ' +
         'die Spiele werden nachgereicht, sobald wieder Empfang da ist.</p>' +
       '</div>';
@@ -524,6 +556,33 @@
         ansicht = 'login'; setzeMeldung(''); neuZeichnen(true); break;
       case 'konto-tab-register':
         ansicht = 'register'; setzeMeldung(''); neuZeichnen(true); break;
+      case 'konto-vergessen':
+        ansicht = 'vergessen'; setzeMeldung(''); neuZeichnen(true); break;
+      case 'konto-vergessen-senden': {
+        var vgMail = wert('konto-email');
+        beschaeftigt = true; setzeMeldung('Schicke den Link …', 'ok'); render();
+        ruf('POST', '/api/passwort-vergessen', { email: vgMail })
+          .then(function () {
+            beschaeftigt = false; ansicht = 'login';
+            setzeMeldung('Wenn es ein Konto mit dieser Adresse gibt, ist die Mail unterwegs. Der Link gilt eine Stunde – schau notfalls im Spam nach.', 'ok');
+            neuZeichnen(true);
+          })
+          .catch(fehlerZeigen);
+        break;
+      }
+      case 'konto-passwort-setzen': {
+        var pn1 = wert('konto-pass-neu'), pn2 = wert('konto-pass-neu2');
+        if (pn1 !== pn2) { setzeMeldung('Die beiden Passwörter sind nicht gleich.', 'fehler'); neuZeichnen(true); break; }
+        beschaeftigt = true; setzeMeldung('Setze das Passwort …', 'ok'); render();
+        ruf('POST', '/api/passwort-neu', { token: reset ? reset.token : '', passwort: pn1 })
+          .then(function (daten) {
+            beschaeftigt = false; reset = null; ansicht = 'login';
+            setzeMeldung('');
+            return nachAnmeldung(daten.nutzer);
+          })
+          .catch(fehlerZeigen);
+        break;
+      }
       case 'konto-zurueck':
         ansicht = 'konto'; setzeMeldung('');
         /* Zurueck ins eigene Profil - die Konto-Karte ist nur der Umweg. */
@@ -722,6 +781,26 @@
     try { history.replaceState(history.state, '', location.pathname + (location.hash || '')); } catch (e) { /* egal */ }
   }
 
+  /* ?passwort=TOKEN aus der Mail "Neues Passwort": merken, aus der Adresse
+     nehmen, beim Server nachsehen, ob der Link noch gilt. */
+  function resetLesen() {
+    var m = /[?&]passwort=([A-Za-z0-9_.~%-]+)/.exec(location.search || '');
+    if (!m) return;
+    var token;
+    try { token = decodeURIComponent(m[1]); } catch (e) { token = ''; }
+    reset = /^p_[A-Za-z0-9_-]{20,60}$/.test(token) ? { token: token, name: '', gueltig: undefined } : null;
+    try { history.replaceState(history.state, '', location.pathname + (location.hash || '')); } catch (e) { /* egal */ }
+  }
+  function resetNachsehen() {
+    if (!reset) return Promise.resolve();
+    return ruf('GET', '/api/passwort-neu/' + encodeURIComponent(reset.token)).then(function (d) {
+      reset.gueltig = !!d.gueltig; reset.name = d.name || '';
+    }).catch(function () {
+      /* Funkloch: das Formular trotzdem zeigen, der Server sagt beim Setzen Bescheid. */
+      reset.gueltig = true;
+    });
+  }
+
   function einladungNachsehen() {
     if (!einladung) return Promise.resolve();
     return ruf('GET', '/api/einladungen/' + encodeURIComponent(einladung.token)).then(function (d) {
@@ -796,6 +875,7 @@
     D = window.__dart;
     if (!D) return;
     einladungLesen();
+    resetLesen();
 
     ruf('GET', '/api/me').then(function (daten) {
       anmelden();
@@ -807,10 +887,12 @@
         nachAnmeldung(daten.nutzer);
       } else {
         setzeSchranke(true);
-        /* Per Einladung gekommen: gleich das Registrieren zeigen. */
-        ansicht = einladung ? 'register' : 'login';
+        /* Per Einladung gekommen: gleich das Registrieren zeigen; per
+           Passwort-Link: gleich das neue Passwort. */
+        ansicht = reset ? 'neu' : einladung ? 'register' : 'login';
         window.__dart.render();
         einladungNachsehen().then(function () { if (einladung) neuZeichnen(true); });
+        resetNachsehen().then(function () { if (reset) neuZeichnen(true); });
       }
     }).catch(function (e) {
       if (e && e.status) {

@@ -1633,7 +1633,9 @@ async function main() {
       const tmp2 = fs.mkdtempSync(path.join(os.tmpdir(), 'darts-test2-'));
       const proc2 = spawn(process.execPath, [path.join(ROOT, 'server', 'main.mjs')], {
         env: { ...process.env, PORT: String(PORT2), HOST: '127.0.0.1', DARTS_DB: path.join(tmp2, 't.db'),
-          DARTS_INVITE_HASH: hashPassword(CODE), DARTS_KAMERA: '', NODE_ENV: 'test' },
+          DARTS_INVITE_HASH: hashPassword(CODE), DARTS_KAMERA: '', NODE_ENV: 'test',
+          /* Mails in eine Datei statt zu Brevo - so laesst sich der Passwort-Link auslesen. */
+          DARTS_MAIL_AUSGABE: path.join(tmp2, 'mails.jsonl'), DARTS_APP_URL: 'https://darts.test' },
         stdio: ['ignore', 'ignore', 'ignore']
       });
       try {
@@ -1645,6 +1647,68 @@ async function main() {
         gleich(a.status, 404, 'ohne DARTS_KAMERA=1 gibt es keinen Kamera-Raum');
         const b = await fetch(basis2 + '/api/kamera/raum/TESTQ2/strom?rolle=tisch');
         gleich(b.status, 404, 'und keinen Kamera-Strom');
+
+        console.log('\nPasswort vergessen: Link per Mail');
+        {
+          const h2 = { 'X-Darts-App': '1', 'Content-Type': 'application/json' };
+          const post2 = (pfad, body) => fetch(basis2 + pfad, { method: 'POST', headers: h2, body: JSON.stringify(body) });
+          const mailsDatei = path.join(tmp2, 'mails.jsonl');
+          const mails = () => fs.existsSync(mailsDatei) ? fs.readFileSync(mailsDatei, 'utf8').trim().split('\n').filter(Boolean).map((z) => JSON.parse(z)) : [];
+          let r2 = await post2('/api/register', { invite: CODE, name: 'Michi', email: 'michi@example.de', password: 'altespasswort2026', hue: 10 });
+          gleich(r2.status, 201, 'Michi hat ein Konto');
+          r2 = await post2('/api/passwort-vergessen', { email: 'keine-adresse' });
+          gleich(r2.status, 400, 'ohne brauchbare Adresse gibt es nichts');
+          r2 = await post2('/api/passwort-vergessen', { email: 'niemand@example.de' });
+          gleich(r2.status, 200, 'unbekannte Adresse: dieselbe Antwort wie sonst');
+          gleich(mails().length, 0, '... aber keine Mail');
+          r2 = await post2('/api/passwort-vergessen', { email: 'Michi@Example.de ' });
+          gleich(r2.status, 200, 'bekannte Adresse (Gross-/Kleinschreibung und Leerzeichen egal): Antwort gleich');
+          await new Promise((r3) => setTimeout(r3, 300));
+          let m2 = mails();
+          gleich(m2.length, 1, 'genau eine Mail ist raus');
+          ok(m2[0].an[0] === 'michi@example.de' && /Neues Passwort/.test(m2[0].betreff) && m2[0].von.indexOf('dart@') >= 0, 'an Michi, Betreff "Neues Passwort", vom App-Absender', JSON.stringify(m2[0]).slice(0, 200));
+          const link = /https:\/\/darts\.test\/index\.html\?passwort=([A-Za-z0-9_%-]+)/.exec(m2[0].text);
+          ok(!!link && m2[0].knopf && m2[0].knopf.url === link[0], 'die Mail enthaelt den Link zur App mit dem Token, auch als Knopf', m2[0].text);
+          const token = decodeURIComponent(link[1]);
+          r2 = await fetch(basis2 + '/api/passwort-neu/' + encodeURIComponent(token), { headers: h2 });
+          let d2 = await r2.json();
+          ok(r2.status === 200 && d2.gueltig === true && d2.name === 'Michi', 'der Link ist gueltig und nennt den Namen', JSON.stringify(d2));
+          r2 = await fetch(basis2 + '/api/passwort-neu/p_gibtsnichtgibtsnichtgibtsnicht', { headers: h2 });
+          d2 = await r2.json();
+          ok(r2.status === 200 && d2.gueltig === false, 'ein fremder Token ist ungueltig, ohne Fehlercode');
+          r2 = await post2('/api/passwort-neu', { token, passwort: 'kurz' });
+          gleich(r2.status, 400, 'zu kurzes Passwort wird abgewiesen');
+          r2 = await post2('/api/passwort-neu', { token: 'p_gibtsnichtgibtsnichtgibtsnicht', passwort: 'neuespasswort2026' });
+          gleich(r2.status, 400, 'ein falscher Token wird abgewiesen');
+          r2 = await post2('/api/passwort-neu', { token, passwort: 'neuespasswort2026' });
+          d2 = await r2.json();
+          ok(r2.status === 200 && d2.nutzer && d2.nutzer.email === 'michi@example.de' && /darts_session=/.test(String(r2.headers.get('set-cookie'))), 'neues Passwort gesetzt, Michi ist direkt angemeldet', JSON.stringify(d2).slice(0, 160));
+          r2 = await post2('/api/passwort-neu', { token, passwort: 'nochmalneu2026' });
+          gleich(r2.status, 400, 'der Link geht nur einmal');
+          r2 = await post2('/api/login', { email: 'michi@example.de', password: 'altespasswort2026' });
+          gleich(r2.status, 401, 'das alte Passwort gilt nicht mehr');
+          r2 = await post2('/api/login', { email: 'michi@example.de', password: 'neuespasswort2026' });
+          gleich(r2.status, 200, 'das neue Passwort gilt');
+          await new Promise((r3) => setTimeout(r3, 300));
+          m2 = mails();
+          ok(m2.length === 2 && /Passwort wurde geändert/.test(m2[1].betreff), 'der Sicherheitshinweis "Passwort geaendert" ist raus', JSON.stringify(m2.map((x) => x.betreff)));
+          /* Ein neuer Link macht den alten ungueltig. */
+          r2 = await post2('/api/passwort-vergessen', { email: 'michi@example.de' });
+          await new Promise((r3) => setTimeout(r3, 300));
+          r2 = await post2('/api/passwort-vergessen', { email: 'michi@example.de' });
+          await new Promise((r3) => setTimeout(r3, 300));
+          m2 = mails();
+          const t1 = decodeURIComponent(/passwort=([A-Za-z0-9_%-]+)/.exec(m2[2].text)[1]);
+          const t2 = decodeURIComponent(/passwort=([A-Za-z0-9_%-]+)/.exec(m2[3].text)[1]);
+          r2 = await fetch(basis2 + '/api/passwort-neu/' + encodeURIComponent(t1), { headers: h2 });
+          d2 = await r2.json();
+          ok(d2.gueltig === false, 'ein neuer Link macht den vorigen ungueltig');
+          r2 = await fetch(basis2 + '/api/passwort-neu/' + encodeURIComponent(t2), { headers: h2 });
+          d2 = await r2.json();
+          ok(d2.gueltig === true, '... der neueste gilt');
+          r2 = await post2('/api/passwort-vergessen', { email: 'michi@example.de' });
+          gleich(r2.status, 429, 'mehr als drei Links je Stunde und Adresse gibt es nicht');
+        }
       } finally {
         proc2.kill('SIGTERM');
         await new Promise((r2) => setTimeout(r2, 300));

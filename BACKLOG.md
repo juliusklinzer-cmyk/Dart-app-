@@ -31,6 +31,8 @@
 
 ## Erledigt
 
+- [x] DRT-027 Passwort vergessen per Mail-Link: „Passwort vergessen?“ auf der Anmeldeseite, Link an die Konto-Adresse (1 h, einmal, nur Hash gespeichert, 3 je Stunde), Seite „Neues Passwort“ meldet direkt an; Mail-Ausgabe in Datei für Tests (DARTS_MAIL_AUSGABE) · von:Julius · am:2026-11-10 · fertig:2026-11-10
+
 - [x] DRT-024 Spieltag proben und Kader: Kader des Gegners als Chips im Start-Dialog, Probelauf gegen den nächsten Gegner im Übungsspiel (Gäste, Koppeln, Bericht, Mail nur an sich), Übungsspiel geht weiter zum Spielbericht; Liga-Statistik mit den Highlights der Ligaleitung für nachgetragene Spieltage; kein Training am Ligaspiel-Dienstag · von:Julius · am:2026-11-10 · fertig:2026-11-10
 
 - [x] DRT-023 Ligaergebnisse von selbst aktuell: der Server holt stuendlich bei der Ligaleitung nach (server/lib/liga-import.mjs, liga.mjs), liefert die frische liga-sdm.js aus /data aus, Service Worker netzzuerst, App laedt im Liga-Reiter alle 15 Min nach; Tabelle am Computer: Platz-Band links ueber der Tabelle, Stand darunter, rechts rollt die Spalte (Alle Spiele war auf null gequetscht, darunter unerreichbar) · von:Julius · am:2026-11-10 · fertig:2026-11-10

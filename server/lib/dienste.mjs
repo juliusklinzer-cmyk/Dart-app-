@@ -20,7 +20,9 @@ export function erstelleDienste(env, appDir, datenDir) {
     key: env.BREVO_SMTP_KEY || '',
     absenderLiga: env.DARTS_MAIL_LIGA || 'Blink 180 <blink180@wirtschaftln.de>',
     absenderApp: env.DARTS_MAIL_APP || 'Dart-App <dart@wirtschaftln.de>',
-    appUrl: appUrl
+    appUrl: appUrl,
+    /* Nur Tests und lokales Probieren: Mails in eine Datei statt zu Brevo. */
+    ausgabe: env.DARTS_MAIL_AUSGABE || ''
   });
   if (!mailer.bereit) console.warn('Hinweis: BREVO_SMTP_USER/KEY fehlen -- die App verschickt keine Mails.');
   /* Web Push (VAPID): Schluesselpaar mit node server/scripts/vapid.mjs. */

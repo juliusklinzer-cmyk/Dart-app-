@@ -937,7 +937,15 @@ ausführlichen Karten Scoring, Finishing, Bilanz, Cricket, Round the World und
 letzte X01-Spiele als Tafel über die Kacheln, „Fertig“ schließt sie) und
 **Liga-Statistik**, und beim eigenen Konto die **Konto-Kachel** (E-Mail – eine neue
 Adresse braucht das aktuelle Passwort, die alte Adresse bekommt einen Hinweis –,
-Passwort ändern, Abmelden; das Abmelden löst auch das Push-Abo dieses Geräts). Darunter
+Passwort ändern, Abmelden; das Abmelden löst auch das Push-Abo dieses Geräts). Wer sein
+Passwort nicht mehr weiß, tippt auf der Anmeldeseite **„Passwort vergessen?“**: Der Server
+schickt einen Link an die Konto-Adresse (`POST /api/passwort-vergessen`, Absender dart@,
+gilt eine Stunde und einmal, nur der Hash des Tokens liegt in der Datenbank, die Antwort
+verrät nicht, ob es die Adresse gibt, höchstens drei Links je Stunde und Adresse). Der Link
+öffnet die App mit `?passwort=TOKEN`, dort setzt man ein neues Passwort (`POST
+/api/passwort-neu`) und ist direkt angemeldet; andere Geräte sind abgemeldet, der
+Sicherheitshinweis „Passwort geändert“ geht raus. Ohne eingerichteten Mailversand sagt die
+App, dass Julius helfen muss. Darunter
 listet „Nicht hochgeladen“ Spiele, die der Server endgültig abgelehnt hat, mit Grund. Der Reiter **Profil** öffnet das eigene Profil; fremde Profile
 erreicht man über die Spielerliste. Am Tablet steht alles fest im Rahmen, am Handy
 scrollt die Seite.
