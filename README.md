@@ -714,10 +714,13 @@ Riesenanzeige, sondern tauscht das Tastenfeld gegen das **Eingabefeld** (quer re
 hochkant unten) – an einer echten Tastatur wie am Board (Ziffern, Enter, Löschen), am
 Handy holt ein Tipp auf das Feld die Zifferntastatur des Systems. Darunter sechs
 **Kacheln**: Average, First 9, Darts im Leg, 180er, höchste Aufnahme, höchstes Finish
-(eine Checkout-Quote kennt die App nur aus Einzel-Darts), und die letzten
-Aufnahmen als Liste. In der Session sind es die Zahlen der ganzen Session. Die
-Karte zeigt nur den Rest groß und den Finish-Weg – die Aufnahmen stehen allein in
-der Liste, hochkant wie quer.
+(eine Checkout-Quote kennt die App nur aus Einzel-Darts), hochkant darunter die
+letzten Aufnahmen als Liste. In der Session sind es die Zahlen der ganzen Session.
+Hochkant zeigt die Karte nur den Rest groß und den Finish-Weg, die Aufnahmen stehen
+allein in der Liste. **Quer** stehen sie rechts neben dem Rest: die letzte oben, die
+vorletzte darunter, mit rotem Balken und dem Drehrad aus dem Punkte-Modus (die neue
+kommt von oben, die alte rutscht eine Zeile tiefer); die Liste entfällt, das
+Eingabefeld nimmt ihren Platz.
 
 **Klang:** Jede gebuchte Eingabe klingt wie ein Pfeil, der ins Board schlägt –
 **„Pomp"** (Julius' eigene Aufnahme, eingebettet in `js/sound.js`): beim

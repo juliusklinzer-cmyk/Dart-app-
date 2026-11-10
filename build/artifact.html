@@ -2807,6 +2807,8 @@ body.am-board #screen-bulloff.turnier.active {
   line-height: 1; white-space: nowrap;
 }
 .pcard .letzte.bust, .pcard .letzte-alt.bust { color: var(--red); text-decoration: line-through; }
+/* Die vorletzte Aufnahme ohne Animation zeigt nur der Tastatur-Modus quer. */
+.pcard .letzte-alt.still { display: none; }
 /* Drehrad: die alte Zahl faehrt nach oben aus dem Bild und verblasst
    langsam, die neue schiebt von unten nach. */
 .pcard .letzte.neu { animation: letzte-rein 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
@@ -3611,6 +3613,7 @@ body.tastatur #overlay-card :is(button, select, input):focus { outline: 3px soli
    nach unten und verblasst - beide beruehren sich nie. */
 :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .letzte.neu { animation: drumIn 0.504s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 :is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .letzte-alt { animation: drumOut 1.4s linear both; pointer-events: none; }
+:is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .letzte-alt.still { display: none; animation: none; }
 @keyframes drumIn { from { transform: translateY(-130%); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes drumOut {
   0% { transform: none; opacity: 1; animation-timing-function: cubic-bezier(0.2, 0.7, 0.2, 1); }
@@ -7077,30 +7080,49 @@ button.pa-gruppe { cursor: pointer; }
 .key-liste .v:not(:first-child) { opacity: 0.75; }
 /* Das unsichtbare Feld fuer die Handy-Tastatur: da, aber nicht zu sehen. */
 .key-input { position: absolute; left: 0; top: 0; width: 1px; height: 1px; opacity: 0; border: 0; padding: 0; margin: 0; pointer-events: none; }
-/* Quer: links die Karte mit dem Rest, rechts Eingabefeld, Kacheln und
-   Liste - wie Punkte-Modus und Tastenfeld. Die letzten Aufnahmen stehen
-   nur in der Liste rechts; in der Karte waeren sie doppelt (Julius, 09.11.:
-   "im Querformat wird immer noch zweimal angezeigt"). */
+/* Quer: links die Karte mit dem Rest, rechts daneben die letzte Aufnahme
+   und darunter die vorletzte - mit dem roten Balken und dem Drehrad wie im
+   Punkte-Modus (die neue kommt von oben, die alte rutscht eine Zeile
+   tiefer). Rechts Eingabefeld und Kacheln; die Aufnahmen-Liste entfaellt,
+   das Eingabefeld nimmt ihren Platz (Julius, 10.11.). */
 @media (orientation: landscape) {
   #screen-game.active.turnier.solo .game-body { flex-direction: row; gap: clamp(8px, 1.6vw, 24px); align-items: stretch; }
   #screen-game.active.turnier.solo .game-main { flex: 1 1 52%; min-width: 0; }
   #screen-game.active.turnier.solo #scoreboard { grid-template-columns: minmax(0, 1fr); }
   #screen-game.active.turnier.solo #scoreboard .pcard .rest-zeile { font-size: clamp(56px, 34vh, 300px); }
+  /* Die Zahl misst sich an Hoehe und Breite der Zeile, damit rechts die
+     Aufnahmen Platz haben (drei Ziffern plus Box). */
+  #screen-game.active.turnier.solo #scoreboard .pcard .rest-zeile .rest { font-size: min(1em, 112cqh, 36cqi); }
+  #screen-game.active.turnier.solo #scoreboard .pcard .letzte-box {
+    display: inline-grid; grid-column: 3; grid-template-rows: auto auto; row-gap: 0.06em; align-content: center; justify-items: start;
+    margin: 0 0 0 0.12em; padding: 0 0 0 0.14em; border-left: 0.035em solid var(--line-hell); min-height: 44px; min-width: 44px;
+  }
+  #screen-game.active.turnier.solo #scoreboard .pcard.active .letzte-box { border-left-color: var(--accent); }
+  #screen-game.active.turnier.solo #scoreboard .pcard .letzte-box.ohne { border-left-color: transparent; }
+  #screen-game.active.turnier.solo #scoreboard .pcard .letzte { grid-area: 1 / 1; }
+  #screen-game.active.turnier.solo #scoreboard .pcard .letzte-alt { grid-area: 2 / 1; display: block; opacity: 0.5; }
+  #screen-game.active.turnier.solo #scoreboard .pcard .letzte-alt.still { display: block; animation: none; }
+  #screen-game.active.turnier.solo #scoreboard .pcard .letzte-alt.neu { animation: drumNach 0.504s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
   #screen-game.active.turnier.solo #scoreboard .pcard .pwuerfe { display: none; }
   #screen-game.active.turnier.solo #scoreboard .pcard { grid-template-areas: "kopf" "rest" "felder"; grid-template-rows: auto minmax(0, 1fr) auto; }
   #screen-game.active.turnier.solo .input-area { flex: 1 1 48%; height: auto; min-height: 0; min-width: 0; display: flex; flex-direction: column; }
   #screen-game.active.turnier.solo .pad-key { height: 100%; }
-  #screen-game.active.turnier.solo .key-solo { flex: 1 1 auto; }
-  #screen-game.active.turnier.solo .key-liste { flex: 1 1 auto; }
-  /* Handy quer: die Kacheln kleiner, hoechstens drei Aufnahmen. */
+  /* Das Eingabefeld fuellt die Hoehe ueber den Kacheln; die Liste entfaellt. */
+  #screen-game.active.turnier.solo .pad-key .key-mitte { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+  #screen-game.active.turnier.solo .key-display { flex: 1 1 auto; height: auto; min-height: 56px; font-size: clamp(2.4rem, 14vh, 5rem); }
+  #screen-game.active.turnier.solo .key-solo { flex: none; }
+  #screen-game.active.turnier.solo .key-liste { display: none; }
+  /* Handy quer: die Kacheln kleiner. */
   @media (max-height: 560px) {
-    #screen-game.active.turnier.solo .key-display { min-height: 48px; font-size: 1.8rem; }
     .ss-kacheln .ss { padding: 3px 6px; gap: 1px; }
     .ss-kacheln .ss b { font-size: 1.05rem; }
-    #screen-game.active.turnier.solo .key-liste .v { padding: 2px 10px; }
-    #screen-game.active.turnier.solo .key-liste .v:nth-child(n+4) { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #screen-game.active.turnier.solo #scoreboard .pcard .letzte-alt.neu { animation: none; }
   }
 }
+/* Die alte Aufnahme rutscht von der oberen in die untere Zeile. */
+@keyframes drumNach { from { transform: translateY(-110%); opacity: 1; } to { transform: none; opacity: 0.5; } }
 
 /* Installiert am iPhone: ohne Statusleisten-Meta meldet iOS den oberen
    Inset als 0 - das Logo samt Schein begann am Viewport-Rand, und der
@@ -7164,6 +7186,7 @@ button.pa-gruppe { cursor: pointer; }
 @media (orientation: portrait) and (max-width: 699px) {
   #screen-game.active.turnier .game-main { padding: 0; }
   #screen-game.active.turnier.solo #scoreboard .pcard .pwuerfe { display: none; }
+  #screen-game.active.turnier.solo #scoreboard .pcard .letzte-box { display: none; }
   #screen-game.active.turnier.solo #scoreboard .pcard { grid-template-areas: "kopf" "rest" "felder"; grid-template-rows: auto minmax(0, 1fr) auto; }
   #screen-game.active.turnier.solo .key-liste .v:nth-child(n+5) { display: flex; }
   #screen-game.active.turnier.solo .key-liste .v:nth-child(n+6) { display: none; }
@@ -18230,16 +18253,23 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       meta.push(plural(darts, 'Dart', 'Darts'));
 
       var letzte = '';
-      var li = fern ? undefined : letzteIdx[pid];
+      /* Fernsteuerung: die Aufnahmen stehen in den Listen, die Box bleibt
+         leer - ausser allein (Tastatur-Modus), da zeigt sie quer die letzte
+         und vorletzte Aufnahme neben dem Rest. */
+      var li = fern && m.p.length > 1 ? undefined : letzteIdx[pid];
       if (li !== undefined) {
         var lv = leg.visits[li];
         var frisch = li === neuesteVisit && seitAufnahme >= 0 && seitAufnahme < DREH_MS;
         var verz = frisch ? ' style="animation-delay:-' + seitAufnahme + 'ms"' : '';
         var aenderbar = !lv.c && !m.done;
+        /* Die vorletzte Aufnahme: frisch faehrt sie mit der Animation aus
+           dem Bild (bzw. im Tastatur-Modus quer eine Zeile tiefer), sonst
+           steht sie still - und ist nur dort sichtbar, wo das Layout sie
+           zeigt (Tastatur-Modus quer: letzte und vorletzte neben dem Rest). */
         var alt = '';
-        if (frisch && vorletzteIdx[pid] !== undefined) {
+        if (vorletzteIdx[pid] !== undefined) {
           var av = leg.visits[vorletzteIdx[pid]];
-          alt = '<span class="letzte-alt' + (av.b ? ' bust' : '') + '"' + verz + '>' + (av.b ? av.o : av.s) + '</span>';
+          alt = '<span class="letzte-alt' + (av.b ? ' bust' : '') + (frisch ? ' neu' : ' still') + '"' + verz + '>' + (av.b ? av.o : av.s) + '</span>';
         }
         /* Ein Tipp auf die Zahl korrigiert die Aufnahme. */
         letzte = '<span class="letzte-box' + (aenderbar ? ' tap' : '') + '"' +

@@ -6259,10 +6259,31 @@ await gruppe('Handy-Block 2: Solo-Tastatur-Modus - Eingabefeld und Kacheln statt
       scroll: document.documentElement.scrollHeight <= window.innerHeight + 1, restPx: parseFloat(getComputedStyle(document.querySelector('#scoreboard .rest')).fontSize) };
   });
   check('quer: die Karte links, Eingabefeld und Kacheln rechts daneben', quer.eLeft >= quer.kRight - 1 && quer.kdTop < quer.kBottom, JSON.stringify(quer));
-  check('quer: die Karte zeigt die Wuerfe nicht noch einmal, die Liste rechts hat sie', await page.evaluate(() => {
+  /* Quer stehen die Aufnahmen rechts neben dem Rest: die letzte oben, die
+     vorletzte darunter, mit rotem Balken - keine Liste rechts, dafuer das
+     Eingabefeld hoeher (Julius, 10.11.). */
+  const box = await page.evaluate(() => {
+    const r = (s) => document.querySelector(s).getBoundingClientRect();
+    const b = document.querySelector('#scoreboard .pcard .letzte-box'), bs = getComputedStyle(b);
     const w = document.querySelector('#scoreboard .pcard .pwuerfe'), l = document.querySelector('#key-solo .key-liste');
-    return !!w && getComputedStyle(w).display === 'none' && l.textContent.includes('180') && l.textContent.includes('Rest 321');
-  }));
+    return { sichtbar: bs.display !== 'none', links: b.getBoundingClientRect().left, restRechts: r('#scoreboard .rest').right, balken: bs.borderLeftColor,
+      letzte: document.querySelector('#scoreboard .pcard .letzte').textContent, alt: document.querySelectorAll('#scoreboard .pcard .letzte-alt').length,
+      wuerfe: getComputedStyle(w).display, liste: getComputedStyle(l).display, feld: r('#key-display').height };
+  });
+  check('quer: die letzte Aufnahme steht rechts neben dem Rest mit rotem Balken, keine Liste rechts, Eingabefeld hoeher',
+    box.sichtbar && box.links >= box.restRechts - 1 && box.letzte === '180' && box.alt === 0 && box.balken.indexOf('229, 72, 77') >= 0 &&
+    box.wuerfe === 'none' && box.liste === 'none' && box.feld >= 70, JSON.stringify(box));
+  await page.keyboard.type('41'); await page.keyboard.press('Enter');
+  const zwei = await page.evaluate(() => {
+    const l = document.querySelector('#scoreboard .pcard .letzte'), a = document.querySelector('#scoreboard .pcard .letzte-alt');
+    return { letzte: l.textContent, alt: a && a.textContent, altSichtbar: !!a && getComputedStyle(a).display !== 'none',
+      altUnten: !!a && a.getBoundingClientRect().top >= l.getBoundingClientRect().bottom - 2, anim: a && getComputedStyle(a).animationName };
+  });
+  check('nach der 41: die 41 oben, die 180 rutscht darunter (Drehrad)', zwei.letzte === '41' && zwei.alt === '180' && zwei.altSichtbar && zwei.altUnten && zwei.anim === 'drumNach', JSON.stringify(zwei));
+  await page.waitForTimeout(700);
+  check('danach steht die 180 still darunter', await page.evaluate(() => { const a = document.querySelector('#scoreboard .pcard .letzte-alt'); return !!a && getComputedStyle(a).display !== 'none' && a.getBoundingClientRect().top > document.querySelector('#scoreboard .pcard .letzte').getBoundingClientRect().bottom - 2; }));
+  await page.keyboard.press('Backspace');
+  check('zurueckgenommen: Rest 321, nur noch die 180', (await rest(0)) === '321' && (await page.locator('#scoreboard .pcard .letzte-alt').count()) === 0, await rest(0));
   check('quer: der Rest steht gross, alles im Bild, nichts scrollt', quer.restPx >= 60 && quer.kaBottom <= quer.innen + 0.5 && quer.scroll, JSON.stringify(quer));
   await page.setViewportSize({ width: 390, height: 844 });
   await page.waitForTimeout(150);
@@ -6272,6 +6293,7 @@ await gruppe('Handy-Block 2: Solo-Tastatur-Modus - Eingabefeld und Kacheln statt
     return { kBottom: k.bottom, kdTop: kd.top, kaBottom: ka.bottom, innen: window.innerHeight, scroll: document.documentElement.scrollHeight <= window.innerHeight + 1 };
   });
   check('hochkant: das Eingabefeld unter der Karte, die Kacheln im Bild', hoch.kdTop >= hoch.kBottom - 1 && hoch.kaBottom <= hoch.innen + 0.5 && hoch.scroll, JSON.stringify(hoch));
+  check('hochkant: die Aufnahme-Box bleibt aus, die Liste zeigt die Aufnahmen', await page.evaluate(() => getComputedStyle(document.querySelector('#scoreboard .pcard .letzte-box')).display === 'none' && getComputedStyle(document.querySelector('#key-solo .key-liste')).display !== 'none'));
   await page.locator('#game-fern').click();
   check('⌨ fuehrt zurueck zum Tastenfeld', await visible('#pad-total'));
   await page.setViewportSize(vp);

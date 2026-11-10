@@ -7462,16 +7462,23 @@
       meta.push(plural(darts, 'Dart', 'Darts'));
 
       var letzte = '';
-      var li = fern ? undefined : letzteIdx[pid];
+      /* Fernsteuerung: die Aufnahmen stehen in den Listen, die Box bleibt
+         leer - ausser allein (Tastatur-Modus), da zeigt sie quer die letzte
+         und vorletzte Aufnahme neben dem Rest. */
+      var li = fern && m.p.length > 1 ? undefined : letzteIdx[pid];
       if (li !== undefined) {
         var lv = leg.visits[li];
         var frisch = li === neuesteVisit && seitAufnahme >= 0 && seitAufnahme < DREH_MS;
         var verz = frisch ? ' style="animation-delay:-' + seitAufnahme + 'ms"' : '';
         var aenderbar = !lv.c && !m.done;
+        /* Die vorletzte Aufnahme: frisch faehrt sie mit der Animation aus
+           dem Bild (bzw. im Tastatur-Modus quer eine Zeile tiefer), sonst
+           steht sie still - und ist nur dort sichtbar, wo das Layout sie
+           zeigt (Tastatur-Modus quer: letzte und vorletzte neben dem Rest). */
         var alt = '';
-        if (frisch && vorletzteIdx[pid] !== undefined) {
+        if (vorletzteIdx[pid] !== undefined) {
           var av = leg.visits[vorletzteIdx[pid]];
-          alt = '<span class="letzte-alt' + (av.b ? ' bust' : '') + '"' + verz + '>' + (av.b ? av.o : av.s) + '</span>';
+          alt = '<span class="letzte-alt' + (av.b ? ' bust' : '') + (frisch ? ' neu' : ' still') + '"' + verz + '>' + (av.b ? av.o : av.s) + '</span>';
         }
         /* Ein Tipp auf die Zahl korrigiert die Aufnahme. */
         letzte = '<span class="letzte-box' + (aenderbar ? ' tap' : '') + '"' +
