@@ -5339,6 +5339,15 @@ body .boards-host.log #board-log { display: block; }
 .liga-uebung .options button.active { background: var(--aktiv-flaeche); border-color: var(--aktiv-linie); color: var(--text); box-shadow: 0 0 0 1px var(--aktiv-linie) inset, 0 0 24px var(--schein-weich); }
 .liga-uebung .options.drei button span:first-child { text-transform: uppercase; font-weight: 700; }
 .liga-uebung .btn.start { min-height: 48px; }
+/* Kader-Chips des Gegners im Start-Dialog (Ligaspiel und Probelauf). */
+.liga-start .ls-kader { margin: 2px 0 0; gap: 6px; }
+.liga-start .ls-kader .chip { min-height: 36px; padding: 0 12px; font-size: 0.86rem; }
+.liga-start .ls-kader + .hint { margin: 4px 0 8px; }
+.liga-start .options button.breit { flex-basis: 100%; }
+.liga-start .options button.breit small { display: block; font-size: 0.72rem; font-weight: 600; color: var(--muted); }
+/* Trainings-Karte: "Nächster Gegner" bekommt eine eigene Zeile, darunter Team B und Bots. */
+.liga-uebung .options:not(.drei) { flex-wrap: wrap; }
+.liga-uebung .options button.breit { flex: 1 1 100%; }
 
 /* Tabelle: links unser Platz, die Tabelle und der Stand; rechts Alle Spiele,
    Einzelrangliste und Highlights. */
@@ -13522,6 +13531,45 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return map;
   }
 
+  /* Highlights der Ligaleitung (180er, Shortlegs, Highfinishes aus dem
+     Spielbericht auf steeldart-muenchen.de) fuer ein Ligaspiel, dessen Einzel
+     die App nur als Ergebnis kennt - der Nachtrag vom Bogen hat keine
+     Wuerfe, also auch keinen Average, kein 180, kein bestes Leg. Was die
+     Ligaleitung gemeldet hat, kommt so trotzdem in Rangliste und Highlights
+     der Saison (Julius, 10.11.: "da kommen nicht alle Spieler vor"). Nur
+     fuer Spiele ohne einen einzigen Wurf, sonst zaehlten 180er doppelt.
+     Zugeordnet wird ueber die Reihenfolge: Zeile i des Bogens = Einzel i
+     des Eintrags; Gegner bekommen keine Kennung, nur Name und Team.
+     Liefert [{ id, name, team, s180, shortleg: [], highfinish: [] }]. */
+  function ligaBogenHighlights(h) {
+    var lg = h && h.liga;
+    if (!lg || lg.uebung || !Array.isArray(h.matches) || !h.matches.length) return [];
+    var mitWuerfen = h.matches.some(function (m) { return (m.legs || []).some(function (l) { return l.visits && l.visits.length; }); });
+    if (mitWuerfen) return [];
+    var t = LIGA.termine.filter(function (x) { return x.id === lg.terminId; })[0];
+    var sp = t ? ligaBogenEintrag(t) : null;
+    if (!sp || !Array.isArray(sp.partien) || !Array.isArray(sp.highlights) || sp.partien.length !== h.matches.length) return [];
+    var ohneStern = function (n) { return String(n || '').replace(/^\*/, '').trim(); };
+    var idVon = {};
+    sp.partien.forEach(function (p, i) {
+      var m = h.matches[i];
+      if (!m || !m.p) return;
+      idVon[ohneStern(p[0])] = m.p[0];
+      idVon[ohneStern(p[1])] = m.p[1];
+    });
+    return sp.highlights.map(function (e) {
+      var nm = ohneStern(e.wer);
+      return { id: idVon[nm] || null, name: nm, team: e.team || '', s180: Number(e.s180) || 0,
+        shortleg: Array.isArray(e.shortleg) ? e.shortleg.slice() : [], highfinish: Array.isArray(e.highfinish) ? e.highfinish.slice() : [] };
+    });
+  }
+  /* Ein gemeldetes Highlight in einen Statistik-Satz rechnen. */
+  function statHighlightsDazu(st, e) {
+    if (e.s180) { st.s180 += e.s180; if (st.highScore < MAX_VISIT) st.highScore = MAX_VISIT; }
+    e.highfinish.forEach(function (f) { f = Number(f) || 0; if (f > st.highCO) st.highCO = f; if (f >= 100) st.highFinishes++; });
+    e.shortleg.forEach(function (d) { d = Number(d) || 0; if (d > 0 && (st.bestLeg === null || d < st.bestLeg)) st.bestLeg = d; });
+  }
+
   /* Karriere-Statistik nur über Ligaspiele – für den Liga-Reiter der
      Rangliste. Gleiche Rechnung wie career(), andere Auswahl. */
   function careerLiga() {
@@ -13530,6 +13578,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       .map(function (h) { return { matches: h.matches, start: (h.settings && h.settings.start) || 501 }; });
     if (S.matches.length && S.tour && S.tour.liga && !S.tour.liga.uebung && !turnierSchonArchiviert()) lists.push({ matches: S.matches, start: tourStart() });
     var map = collectStats(lists, S.profiles.map(function (p) { return p.id; }));
+    /* Nachgetragene Spieltage: die Highlights der Ligaleitung fuer unsere Leute. */
+    wertbareHistorie().forEach(function (h) {
+      ligaBogenHighlights(h).forEach(function (e) { if (e.id && map[e.id]) statHighlightsDazu(map[e.id], e); });
+    });
     Object.keys(map).forEach(function (k) {
       map[k].name = pname(k);
       finalize(map[k]);
@@ -13597,6 +13649,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       if (!info[k]) info[k] = { team: team, name: nm };
       return k;
     };
+    /* Gemeldete Highlights (180er, Shortlegs, Highfinishes) - fuer die
+       Spiele der anderen Teams immer, fuer unsere nur ohne Wuerfe in der App. */
+    var highlights = [];
     Object.keys(LIGA_SPIELTAGE).forEach(function (tid) {
       (LIGA_SPIELTAGE[tid] || []).forEach(function (sp) {
         if (!sp || !sp.gast || sp.verschoben || !Array.isArray(sp.partien)) return;
@@ -13607,9 +13662,22 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           return ergebnisSetzen(m, Number(p[2]) || 0, Number(p[3]) || 0, 501, at + i * 60000);
         }).filter(Boolean);
         if (matches.length) lists.push({ matches: matches, start: 501 });
+        (sp.highlights || []).forEach(function (e) {
+          highlights.push({ key: keyName(e.team, e.wer), e: { s180: Number(e.s180) || 0, shortleg: e.shortleg || [], highfinish: e.highfinish || [] } });
+        });
+      });
+    });
+    quellen.forEach(function (q) {
+      ligaBogenHighlights(q).forEach(function (e) {
+        var unsere = ligaUnsereIds(q);
+        highlights.push({ key: e.id && unsere[e.id] ? e.id : keyName(e.team, e.name), e: e });
       });
     });
     var map = collectStats(lists, []);
+    highlights.forEach(function (n) {
+      if (!map[n.key]) { map[n.key] = emptyStat(n.key); map[n.key].dartsInWonLegs = 0; map[n.key].legsWon501 = 0; }
+      statHighlightsDazu(map[n.key], n.e);
+    });
     Object.keys(map).forEach(function (k) {
       map[k].name = info[k] ? info[k].name : pname(k);
       map[k].team = info[k] ? info[k].team : LIGA.team;
@@ -17077,8 +17145,16 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   /* DiensDarts: das Dienstags-Training. Der naechste Dienstag ist der
      Termin - am Dienstag selbst gilt noch der heutige Abend. */
   function naechsterDienstag() {
-    var d = new Date();
+    var d = new Date(heuteISO() + 'T12:00:00');
     d.setDate(d.getDate() + ((2 - d.getDay() + 7) % 7));
+    /* Dienstag mit Ligaspiel ist kein Training (Julius, 10.11.): dann gilt
+       die Woche danach - wie beim Server, der an solchen Dienstagen auch
+       keine DiensDarts-Umfrage verschickt. */
+    for (var i = 0; i < 8; i++) {
+      var iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      if (!LIGA.termine.some(function (t) { return t.tag === iso && t.gast && !t.verschoben; })) break;
+      d.setDate(d.getDate() + 7);
+    }
     return d;
   }
   function trainingsTerminId(d) {
@@ -17271,6 +17347,14 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var h180 = [], hFin = [], hLeg = [];
     spiele.forEach(function (h) {
       var unsere = ligaUnsereIds(h);
+      /* Nachgetragene Spieltage ohne Wuerfe: was die Ligaleitung gemeldet hat. */
+      ligaBogenHighlights(h).forEach(function (e) {
+        if (!e.id || !unsere[e.id]) return;
+        var woL = h.liga.nr + '. Spieltag · Ligaleitung';
+        for (var k = 0; k < e.s180; k++) h180.push({ n: pname(e.id), d: woL, v: '180' });
+        e.highfinish.forEach(function (f) { if (f >= 100) hFin.push({ n: pname(e.id), d: woL, v: String(f) }); });
+        e.shortleg.forEach(function (d) { if (d > 0 && d <= 21) hLeg.push({ n: pname(e.id), d: woL, v: d + ' Darts' }); });
+      });
       h.matches.forEach(function (m, mi) {
         if (!m.legs) return;
         var wo = h.liga.nr + '. Spieltag · Einzel ' + (mi + 1);
@@ -17348,7 +17432,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     };
 
     var MONATE_K = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
-    var heute0 = new Date(); heute0.setHours(12, 0, 0, 0);
+    var heute0 = new Date(heuteISO() + 'T12:00:00');
     var d12 = new Date(d.getTime()); d12.setHours(12, 0, 0, 0);
     var tage = Math.round((d12 - heute0) / 86400000);
     var wann = tage <= 0 ? 'heute' : tage === 1 ? 'morgen' : 'in ' + tage + ' Tagen';
@@ -17390,10 +17474,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       '<h2 class="gross">Übungs-Ligaspiel</h2>' +
       '<p class="hint">Der komplette Liga-Ablauf zum Üben: 16 Einzel in Bogen-Reihenfolge, zwei Scheiben, Team-Stand und Spielbericht. Zählt nirgends in die Liga-Wertung.</p>' +
       '<div class="setting"><label>Gegner</label><div class="options">' +
+        (ligaNaechsterTermin() ? wahl('uebung-vorwahl', 'liga', 'Nächster Gegner', (function (t) { return t.heim === LIGA.team ? t.gast : t.heim; })(ligaNaechsterTermin())).replace('<button class="', '<button class="breit ') : '') +
         wahl('uebung-vorwahl', 'team', 'Zweites eigenes Team') +
-        '<button class="' + (ug !== 'team' ? 'active' : '') + '" data-action="uebung-vorwahl" data-value="bots"><span>Gegen Bots</span></button>' +
+        '<button class="' + (ug !== 'team' && ug !== 'liga' ? 'active' : '') + '" data-action="uebung-vorwahl" data-value="bots"><span>Gegen Bots</span></button>' +
       '</div></div>' +
-      (ug !== 'team'
+      (ug !== 'team' && ug !== 'liga'
         ? '<div class="setting"><label>Bot-Stärke</label><div class="options drei">' +
             wahl('uebung-vorwahl', 'leicht', 'Leicht', '≈ 38er-Aufnahmen') + wahl('uebung-vorwahl', 'mittel', 'Mittel', '≈ 52') + wahl('uebung-vorwahl', 'schwer', 'Schwer', '≈ 72') +
           '</div></div>'
@@ -22171,16 +22256,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
                   esc(p.name) + '</option>';
               }).join('') + '</select></label>';
           }).join('') +
-          '<div class="ls-titel">' + esc(ltGegner) + ' \u2013 Vor- und Nachname (SWO)</div>' +
-          [0, 1, 2, 3].map(function (i) {
-            return '<label class="ls-zeile"><span>' + (i + 1) + '</span>' +
-              '<span class="namen-paar">' +
-              '<input data-role="liga-gegner" data-i="' + i + '" maxlength="30" ' +
-              'value="' + esc(ld.gegner[i]) + '" placeholder="Vorname">' +
-              '<input data-role="liga-gegner-nach" data-i="' + i + '" maxlength="30" ' +
-              'value="' + esc((ld.gegnerNach || [])[i] || '') + '" placeholder="Nachname">' +
-              '</span></label>';
-          }).join('') +
+          ligaGegnerFelderHtml(ltGegner, ld) +
           '<div class="ls-titel">Legs je Einzel</div>' +
           '<div class="options">' +
             '<button data-action="liga-bestof" data-value="3" class="' + (ld.bestOf === 3 ? 'active' : '') + '">Best of 3</button>' +
@@ -22215,6 +22291,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       var ud = o.draft;
       var uProfile = activeProfiles();
       var uKannTeilen = !!(window.DartSync && window.DartSync.turnier && window.DartKonto && window.DartKonto.nutzer());
+      /* Probelauf: der naechste Gegner laut Spielplan mit seinem Kader -
+         Gaeste wie am Spieltag, Ausbullen, beide Scheiben, Koppeln, Bericht
+         und Mail nur an sich selbst. Zum Ueben des Ablaufs (Julius, 10.11.). */
+      var uTermin = ligaNaechsterTermin();
+      var uGegnerTeam = uTermin ? (uTermin.heim === LIGA.team ? uTermin.gast : uTermin.heim) : '';
+      if (ud.modus === 'liga' && !uTermin) ud.modus = 'mittel';
       var uSelect = function (rolle, liste, i) {
         return '<label class="ls-zeile"><span>' + (i + 1) + '</span>' +
           '<select data-role="' + rolle + '" data-i="' + i + '">' +
@@ -22228,18 +22310,23 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '<div class="liga-start">' +
           '<div class="ls-titel">Gegner</div>' +
           '<div class="options">' +
-            ['team', 'leicht', 'mittel', 'schwer'].map(function (g) {
-              var txt = g === 'team' ? 'Team B' : 'Bots ' + g;
+            (uTermin ? ['liga', 'team', 'leicht', 'mittel', 'schwer'] : ['team', 'leicht', 'mittel', 'schwer']).map(function (g) {
+              var txt = g === 'liga' ? esc(uGegnerTeam) + '<small>Probelauf · ' + uTermin.nr + '. Spieltag</small>' : g === 'team' ? 'Team B' : 'Bots ' + g;
               return '<button data-action="uebung-gegner" data-value="' + g + '" class="' +
-                (ud.gegner === g ? 'active' : '') + '">' + txt + '</button>';
+                (ud.modus === g ? 'active' : '') + (g === 'liga' ? ' breit' : '') + '">' + txt + '</button>';
             }).join('') +
           '</div>' +
-          '<div class="ls-titel">Team A</div>' +
+          (ud.modus === 'liga'
+            ? '<p class="hint">Probelauf wie am Spieltag: Gäste aus dem Kader, Ausbullen, beide Scheiben, auf Wunsch geteilt an zwei iPads – danach Bericht, Unterschriften und Mail nur an dich. Zählt nirgends.</p>'
+            : '') +
+          '<div class="ls-titel">' + (ud.modus === 'liga' ? esc(LIGA.team) + ' – unsere Positionen' : 'Team A') + '</div>' +
           [0, 1, 2, 3].map(function (i) { return uSelect('liga-pos', ud.wir, i); }).join('') +
-          (ud.gegner === 'team'
+          (ud.modus === 'team'
             ? '<div class="ls-titel">Team B</div>' +
               [0, 1, 2, 3].map(function (i) { return uSelect('uebung-sie', ud.sie, i); }).join('')
-            : '<p class="hint">Vier Bots treten an – sie werfen von selbst, wenn sie dran sind.</p>') +
+            : ud.modus === 'liga'
+              ? ligaGegnerFelderHtml(uGegnerTeam, ud)
+              : '<p class="hint">Vier Bots treten an – sie werfen von selbst, wenn sie dran sind.</p>') +
           '<div class="ls-titel">Legs je Einzel</div>' +
           '<div class="options">' +
             '<button data-action="liga-bestof" data-value="3" class="' + (ud.bestOf === 3 ? 'active' : '') + '">Best of 3</button>' +
@@ -22250,7 +22337,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
             '<button data-action="liga-finish" data-value="0" class="' + (ud.finish ? '' : 'active') + '">ohne</button>' +
             '<button data-action="liga-finish" data-value="1" class="' + (ud.finish ? 'active' : '') + '">mit</button>' +
           '</div>' +
-          (uKannTeilen && ud.gegner === 'team'
+          (uKannTeilen && (ud.modus === 'team' || ud.modus === 'liga')
             ? '<div class="ls-titel">An zwei Scheiben</div>' +
               '<div class="options">' +
                 '<button data-action="liga-geteilt" data-value="0" class="' + (ud.geteilt ? '' : 'active') + '">ein Gerät</button>' +
@@ -22648,8 +22735,25 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       o.fehler = 'Bitte vier verschiedene Spieler für Team A aufstellen.';
       render(); return;
     }
-    var sie, gegnerName;
-    if (d.gegner === 'team') {
+    var sie, gegnerName, daheim = true;
+    if (d.modus === 'liga') {
+      /* Probelauf gegen den naechsten Gegner: Gaeste wie beim echten Start. */
+      var pTermin = ligaNaechsterTermin();
+      if (!pTermin) { o.fehler = 'Kein kommender Spieltag im Plan.'; render(); return; }
+      daheim = pTermin.heim === LIGA.team;
+      gegnerName = daheim ? pTermin.gast : pTermin.heim;
+      var pNamen = [0, 1, 2, 3].map(function (i) { return gegnerVollName(d, i); });
+      if ([0, 1, 2, 3].some(function (i) { return !String((d.gegner || [])[i] || '').trim() || !String((d.gegnerNach || [])[i] || '').trim(); })) {
+        o.fehler = 'Bitte alle vier Gegner mit Vor- und Nachnamen eintragen – aus dem Kader antippen oder eintippen.';
+        render(); return;
+      }
+      if (pNamen.some(function (n, i) { return pNamen.indexOf(n) !== i; })) {
+        o.fehler = 'Zwei Gegner heißen gleich – bitte unterscheidbar machen.';
+        render(); return;
+      }
+      sie = [];
+      pNamen.forEach(function (n) { sie.push(ligaGastId(n, wir.concat(sie))); });
+    } else if (d.modus === 'team') {
       sie = d.sie.slice(0, 4);
       var alle = wir.concat(sie);
       if (sie.length < 4 || alle.some(function (id, i) { return alle.indexOf(id) !== i; })) {
@@ -22664,15 +22768,19 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       sie = BOT_NAMEN.map(function (nm) {
         var da = null;
         S.profiles.forEach(function (p) {
-          if (!da && p.bot === d.gegner && p.name === nm) da = p;
+          if (!da && p.bot === d.modus && p.name === nm) da = p;
         });
         if (da) return da.id;
-        var p = { id: uid(), name: nm, voll: nm, avatar: null, hue: freeHue(), created: Date.now(), gast: true, hidden: true, bot: d.gegner };
+        var p = { id: uid(), name: nm, voll: nm, avatar: null, hue: freeHue(), created: Date.now(), gast: true, hidden: true, bot: d.modus };
         S.profiles.push(p);
         return p.id;
       });
-      gegnerName = 'Bots (' + d.gegner + ')';
+      gegnerName = 'Bots (' + d.modus + ')';
     }
+    /* Bogen-Listen wie im echten Ligaspiel: im Probelauf auswaerts stehen
+       wir als Gast (G1-G4), sonst immer als Heim. */
+    var uHeimListe = daheim ? wir.slice() : sie.slice();
+    var uGastListe = daheim ? sie.slice() : wir.slice();
 
     if (S.matches.length) archiveTournament();
     if (S.game && S.game.done) archiveGame(S.game);
@@ -22680,21 +22788,21 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     S.tour = {
       start: 501, bestOf: d.bestOf, players: wir.concat(sie),
       liga: {
-        terminId: 'uebung', nr: 0, gegner: gegnerName, heim: true, uebung: true,
+        terminId: 'uebung', nr: 0, gegner: gegnerName, heim: daheim, uebung: true,
         wir: wir, sie: sie,
-        heimSpieler: wir.slice(), gastSpieler: sie.slice(),
-        posH: wir.slice(0, 4), posG: sie.slice(0, 4),
+        heimSpieler: uHeimListe, gastSpieler: uGastListe,
+        posH: uHeimListe.slice(0, 4), posG: uGastListe.slice(0, 4),
         ort: 'Bar Sehnsucht', tag: '',
         finish: !!d.finish, zeitVon: Date.now(), zeitBis: null
       }
     };
     S.matches = LIGA_EINZEL.map(function (paar, i) {
-      var h = wir[paar[0]], g = sie[paar[1]];
+      var h = uHeimListe[paar[0]], g = uGastListe[paar[1]];
       return {
         id: uid(), round: Math.floor(i / 4) + 1, p: [h, g],
         /* Gegen Bots wird nicht ausgebullt (die werfen keinen Bull) - der
            eigene Spieler wirft an. Gegen echte Leute wie im Ligaspiel. */
-        starter: d.gegner === 'team' ? null : h, posPaar: paar.slice(),
+        starter: d.modus === 'team' || d.modus === 'liga' ? null : (daheim ? h : g), posPaar: paar.slice(),
         scheibe: LIGA_SCHEIBEN[i],
         legs: [], done: false, winner: null, at: null
       };
@@ -22705,7 +22813,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     S.screen = 'tournament';
     /* Geteilt an zwei Geraeten wie das echte Ligaspiel - nur sinnvoll mit
        zwei echten Teams (Bots werfen auf dem einen Geraet von selbst). */
-    if (d.geteilt && d.gegner === 'team' && window.DartSync && window.DartSync.turnier &&
+    if (d.geteilt && (d.modus === 'team' || d.modus === 'liga') && window.DartSync && window.DartSync.turnier &&
         window.DartKonto && window.DartKonto.nutzer()) {
       var usid = uid();
       var uGaeste = {};
@@ -22846,6 +22954,57 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   /* Gegner-Gast finden oder anlegen: Wiederverwendung per Namensgleichheit,
      aber nie ein Profil, das schon im Spiel steht – und Ausgeblendete
      kommen zurück ins Licht. */
+  /* Der Kader des Gegners laut Ligaleitung (Mannschaftsseite) plus alle,
+     die laut Spielberichten schon fuer das Team geworfen haben - als Chips
+     im Start-Dialog: ein Tipp traegt den Namen in die naechste freie
+     Gegner-Zeile (Vorname / Nachname), ein zweiter nimmt ihn wieder raus.
+     Spart das Tippen am Spieltag; neue Gesichter tippt man weiter ein
+     (Julius, 10.11.). */
+  function ligaGegnerKader(team) {
+    var info = (window.LIGA_DATEN.teamInfo || {})[team] || {};
+    var namen = [];
+    var dazu = function (n) { n = String(n || '').replace(/^\*/, '').trim(); if (n && namen.indexOf(n) < 0) namen.push(n); };
+    (info.spieler || []).forEach(function (s) { dazu(s.name); });
+    Object.keys(LIGA_SPIELTAGE).forEach(function (tid) {
+      (LIGA_SPIELTAGE[tid] || []).forEach(function (sp) {
+        if (!sp || !Array.isArray(sp.partien)) return;
+        sp.partien.forEach(function (p) { if (sp.heim === team) dazu(p[0]); if (sp.gast === team) dazu(p[1]); });
+      });
+    });
+    return namen;
+  }
+  function gegnerVollName(d, i) {
+    return (String((d.gegner || [])[i] || '').trim() + ' ' + String((d.gegnerNach || [])[i] || '').trim()).replace(/\s+/g, ' ').trim();
+  }
+  /* Die vier Gegner-Zeilen (Vor- und Nachname) mit den Kader-Chips darueber -
+     im Ligaspiel-Start und im Probelauf des Uebungsspiels dieselben. */
+  function ligaGegnerFelderHtml(team, d) {
+    var kader = ligaGegnerKader(team);
+    var drin = [0, 1, 2, 3].map(function (i) { return gegnerVollName(d, i); });
+    return '<div class="ls-titel">' + esc(team) + ' \u2013 Vor- und Nachname (SWO)</div>' +
+      (kader.length
+        ? '<div class="chips ls-kader">' + kader.map(function (n) {
+            return '<button type="button" class="chip' + (drin.indexOf(n) >= 0 ? ' active' : '') + '" data-action="liga-gegner-kader" data-name="' + esc(n) + '">' + esc(n) + '</button>';
+          }).join('') + '</div>' +
+          '<p class="hint">Kader laut Ligaleitung – antippen füllt die nächste freie Zeile, nochmal tippen nimmt den Namen raus.</p>'
+        : '') +
+      [0, 1, 2, 3].map(function (i) {
+        return '<label class="ls-zeile"><span>' + (i + 1) + '</span>' +
+          '<span class="namen-paar">' +
+          '<input data-role="liga-gegner" data-i="' + i + '" maxlength="30" ' +
+          'value="' + esc((d.gegner || [])[i] || '') + '" placeholder="Vorname">' +
+          '<input data-role="liga-gegner-nach" data-i="' + i + '" maxlength="30" ' +
+          'value="' + esc((d.gegnerNach || [])[i] || '') + '" placeholder="Nachname">' +
+          '</span></label>';
+      }).join('');
+  }
+  /* Der naechste Spieltag mit Datum ab heute (heute selbst eingeschlossen). */
+  function ligaNaechsterTermin() {
+    var heute = heuteISO(), best = null;
+    LIGA.termine.forEach(function (t) { if (t.tag && t.tag >= heute && (!best || t.tag < best.tag)) best = t; });
+    return best;
+  }
+
   function ligaGastId(name, ausschluss) {
     var da = null;
     S.profiles.forEach(function (p) {
@@ -23982,6 +24141,26 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       case 'liga-los':
         ligaSpielStarten();
         break;
+      case 'liga-gegner-kader': {
+        /* Kader-Chip: in die naechste freie Gegner-Zeile, oder wieder raus. */
+        var kd = UI.overlay && UI.overlay.draft;
+        if (!kd || !Array.isArray(kd.gegner)) break;
+        if (!Array.isArray(kd.gegnerNach)) kd.gegnerNach = ['', '', '', ''];
+        var kName = el.getAttribute('data-name') || '';
+        var kDrin = -1, kFrei = -1;
+        for (var ki = 0; ki < 4; ki++) {
+          if (gegnerVollName(kd, ki) === kName) kDrin = ki;
+          if (kFrei < 0 && !gegnerVollName(kd, ki)) kFrei = ki;
+        }
+        if (kDrin >= 0) { kd.gegner[kDrin] = ''; kd.gegnerNach[kDrin] = ''; }
+        else if (kFrei >= 0) {
+          var kTeile = kName.split(' ');
+          kd.gegnerNach[kFrei] = kTeile.length > 1 ? kTeile.pop() : '';
+          kd.gegner[kFrei] = kTeile.join(' ');
+        }
+        render();
+        break;
+      }
       case 'uebung-start': {
         /* Aufstellung vorbelegen: erst die DiensDarts-Zusagen, dann der
            Rest der aktiven Profile - Team B bekommt die naechsten vier. */
@@ -23998,7 +24177,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         UI.overlay = {
           type: 'uebung-start',
           draft: {
-            gegner: UI.uebungGegner || 'mittel', bestOf: 3, finish: true, geteilt: false,
+            modus: UI.uebungGegner || 'mittel', gegner: ['', '', '', ''], gegnerNach: ['', '', '', ''], bestOf: 3, finish: true, geteilt: false,
             wir: utVorschlag.slice(0, 4),
             sie: utVorschlag.slice(4, 8)
           }
@@ -24013,10 +24192,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       case 'training-ical': trainingKalender(); break;
       case 'uebung-gegner':
         if (UI.overlay && UI.overlay.type === 'uebung-start') {
-          UI.overlay.draft.gegner = el.getAttribute('data-value');
+          UI.overlay.draft.modus = el.getAttribute('data-value');
           /* Geteilt braucht zwei echte Teams - Bots werfen auf dem einen
              Geraet von selbst. */
-          if (UI.overlay.draft.gegner !== 'team') UI.overlay.draft.geteilt = false;
+          if (UI.overlay.draft.modus !== 'team' && UI.overlay.draft.modus !== 'liga') UI.overlay.draft.geteilt = false;
           render();
         }
         break;

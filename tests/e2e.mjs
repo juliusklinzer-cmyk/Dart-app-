@@ -2285,6 +2285,18 @@ await page.evaluate(() => {
 await gruppe('Turnier-Modus: Anzeige am Board, Eingabe per Tastatur - im Liga-Einzel', async () => {
 await navTo('liga');
 await ligaSpielStarten();
+/* Kader des Gegners laut Ligaleitung als Chips: ein Tipp fuellt die naechste
+   freie Zeile mit Vor- und Nachname, ein zweiter nimmt den Namen wieder raus. */
+{
+  const chips = await page.locator('#overlay-card .ls-kader .chip').count();
+  check('der Start-Dialog bietet den Kader des Gegners als Chips an', chips >= 4, String(chips));
+  const erster = (await page.locator('#overlay-card .ls-kader .chip').first().textContent()).trim();
+  await page.locator('#overlay-card .ls-kader .chip').first().click();
+  const z1 = await page.evaluate(() => [document.querySelector('[data-role="liga-gegner"][data-i="0"]').value, document.querySelector('[data-role="liga-gegner-nach"][data-i="0"]').value]);
+  check('ein Tipp traegt Vor- und Nachname in Zeile 1 ein', z1[0] && z1[1] && (z1[0] + ' ' + z1[1]) === erster && await page.evaluate(() => document.querySelector('#overlay-card .ls-kader .chip').classList.contains('active')), JSON.stringify(z1) + ' / ' + erster);
+  await page.locator('#overlay-card .ls-kader .chip').first().click();
+  check('nochmal tippen leert die Zeile wieder', await page.evaluate(() => !document.querySelector('[data-role="liga-gegner"][data-i="0"]').value && !document.querySelector('[data-role="liga-gegner-nach"][data-i="0"]').value));
+}
 for (let i = 0; i < 4; i++) {
   await page.locator(`[data-role="liga-gegner"][data-i="${i}"]`).fill('Probe');
   await page.locator(`[data-role="liga-gegner-nach"][data-i="${i}"]`).fill('Gegner' + (i + 1));
@@ -2657,6 +2669,18 @@ check('die vier Germeringer sind Gaeste', !!nachtrag && nachtrag.gaeste === 4);
 check('Bogen-Nummern wie auf Papier: G5 Beuscher, G6 Schmeiss', !!nachtrag && nachtrag.g5 === 'Dominik Beuscher' && nachtrag.g6 === 'Michael Schmeiß');
 check('die Karte zeigt den Spieltag als abgeschlossen mit 10:6', (await textKlein('#liga-karte')).indexOf('abgeschlossen') >= 0 && (await text('#liga-karte')).indexOf('10:6') >= 0);
 check('ein zweites Uebernehmen gibt es nicht mehr', (await page.locator('#liga-karte [data-action="liga-nachtrag"]').count()) === 0);
+/* Der Nachtrag hat keine Wuerfe - die Highlights der Ligaleitung aus dem
+   Spielbericht (hier: Gerd Stegerer, Shortleg 20) stehen trotzdem in der
+   Liga-Rangliste, zugeordnet ueber die Reihenfolge der 16 Einzel. */
+{
+  await ligaStatistik();
+  await page.evaluate(() => { const D = window.__dart; D.ui().ligaTeam = 'Dart Artists Germering II'; D.ui().board = 'bestLeg'; D.render(); });
+  const rl = await page.evaluate(() => document.getElementById('board-list').innerText.replace(/\s+/g, ' '));
+  check('Liga-Rangliste "Bestes Leg" der Germeringer nennt das gemeldete Shortleg von Gerd Stegerer (20 Darts)', /Gerd Stegerer.*20 Darts/.test(rl), rl.slice(0, 200));
+  await page.evaluate(() => { const D = window.__dart; D.ui().ligaTeam = 'wir'; D.ui().board = 'won'; D.render(); });
+  await navTo('liga');
+  await page.locator('#liga-tabs button[data-tab="plan"]').click();
+}
 await page.locator('#liga-karte [data-action="liga-bericht"]').click();
 check('der Spielbericht oeffnet', await visible('#screen-bericht'));
 check('im Bericht steht das Einzel H2 – G6 (Schmeiss eingewechselt)', (await text('#screen-bericht')).replace(/\s+/g, ' ').indexOf('H2 – G6') >= 0);
@@ -3431,6 +3455,12 @@ await page.locator('[data-action="uebung-start"]').click();
 check('der Aufstellungs-Dialog oeffnet sich', (await text('#overlay-card')).includes('Übungs-Ligaspiel'));
 check('Bots mittel sind vorgewaehlt', await page.evaluate(() =>
   document.querySelector('[data-action="uebung-gegner"][data-value="mittel"]').classList.contains('active')));
+/* Probelauf gegen den naechsten Gegner: dieselben Gegner-Zeilen mit Kader-Chips wie im echten Start. */
+await page.locator('[data-action="uebung-gegner"][data-value="liga"]').click();
+check('Probelauf gegen den naechsten Gegner: Kader-Chips und vier Gegner-Zeilen',
+  (await page.locator('#overlay-card .ls-kader .chip').count()) >= 4 && (await page.locator('#overlay-card [data-role="liga-gegner"]').count()) === 4 &&
+  (await text('#overlay-card')).includes('Probelauf'));
+await page.locator('[data-action="uebung-gegner"][data-value="mittel"]').click();
 await page.locator('[data-action="uebung-los"]').click();
 check('das Uebungsspiel steht wie ein Ligaspiel', (await visible('#screen-tournament')) &&
   await page.evaluate(() => {

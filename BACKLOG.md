@@ -4,11 +4,15 @@
 
 ## Wartet auf Julius
 
+- [ ] DRT-026 Doppelquote auch im Tastatur-/Punkte-Modus: beim Checkout zusätzlich „davon aufs Doppel?“ fragen, bei einer Aufnahme ohne Finish auf 50 oder gerade bis 40 kurz „Darts aufs Doppel 0/1/2/3“; aus Rest und Darts allein ist nur der letzte Dart sicher – bitte ja/nein · von:Julius · am:2026-11-10
+
 - [ ] DRT-002 Backup prüfen: auf dem Server `crontab -l` ansehen (läuft `/opt/dart-turnier/backup.sh` täglich 04:30?) und einmal einen Restore nach DEPLOY.md „Backup“ üben · prio:hoch · von:Audit H7/S-M6 · am:2026-11-08
 - [ ] DRT-004 Brevo-Schlüssel aus dem Sitzungs-Transkript schwärzen (Befehl steht im Chat vom 08.11.); Erneuern bei Brevo hast du bewusst nicht gewollt · am:2026-11-08
 - [ ] DRT-017 iPhone: App einmal vom Home-Bildschirm löschen und neu hinzufügen, damit die Statusleiste ohne Glas-Blur kommt (Meta-Tag ist raus, iOS liest das nur beim Hinzufügen) · prio:hoch · von:Julius · am:2026-11-08
 
 ## Offen
+
+- [ ] DRT-025 Training umbauen: Zusagen Bin dabei / Kann nicht plus „Noch keine Antwort“ (kein Unsicher), Übungs-Ligaspiel raus, rechts Trainingsstatistik aus den Zusagen (Abende, wer wie oft dabei, Anteil, Serien, Rekordabend, Ø Leute, Spiele am Dienstag) – Deploy erst nach dem Ligaspiel am 10.11., solange braucht Julius das Übungsspiel zum Proben · von:Julius · am:2026-11-10
 
 - [ ] DRT-005 D16: harte Farb- und Radiuswerte in css/styles.css in Tokens überführen · quelle:audit-2026-11-08 D16 · am:2026-11-08
 - [ ] DRT-006 T-N3: die fünf esc()-Kopien (app.js, auth.js, kamera.js, live.js, webseite.js) zusammenlegen, Zuschauer-Rendering live.js/webseite.js teilen · quelle:audit-2026-11-08 T-N3 · am:2026-11-08
@@ -26,6 +30,8 @@
 ## Ideen
 
 ## Erledigt
+
+- [x] DRT-024 Spieltag proben und Kader: Kader des Gegners als Chips im Start-Dialog, Probelauf gegen den nächsten Gegner im Übungsspiel (Gäste, Koppeln, Bericht, Mail nur an sich), Übungsspiel geht weiter zum Spielbericht; Liga-Statistik mit den Highlights der Ligaleitung für nachgetragene Spieltage; kein Training am Ligaspiel-Dienstag · von:Julius · am:2026-11-10 · fertig:2026-11-10
 
 - [x] DRT-023 Ligaergebnisse von selbst aktuell: der Server holt stuendlich bei der Ligaleitung nach (server/lib/liga-import.mjs, liga.mjs), liefert die frische liga-sdm.js aus /data aus, Service Worker netzzuerst, App laedt im Liga-Reiter alle 15 Min nach; Tabelle am Computer: Platz-Band links ueber der Tabelle, Stand darunter, rechts rollt die Spalte (Alle Spiele war auf null gequetscht, darunter unerreichbar) · von:Julius · am:2026-11-10 · fertig:2026-11-10
 

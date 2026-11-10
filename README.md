@@ -359,11 +359,16 @@ nur für Julius, einen Knopf dafür gibt es in der App nicht mehr. Tests: `npm r
 `npm run test:mitteilungen`.
 
 Der Reiter **Training** ist das Dienstagszuhause: **DiensDarts** – Dart-Training
-jeden Dienstag in der Bar Sehnsucht (mit Logo). Eine Umfrage fragt je Termin
+jeden Dienstag in der Bar Sehnsucht (mit Logo); fällt der Dienstag auf ein
+Ligaspiel, gilt die Woche danach. Eine Umfrage fragt je Termin
 **Bin dabei / Unsicher / Kann nicht** ab (serverweit, mit Bild und Namen aller,
 die kommen). Darunter startet das **Übungs-Ligaspiel**: der komplette
 Liga-Ablauf – 16 Einzel in Bogen-Reihenfolge, zwei Scheiben, Team-Stand,
-Spielbericht – gegen ein zweites eigenes Team **oder gegen Bots** in drei
+Spielbericht – als **Probelauf gegen den nächsten Gegner** laut Spielplan (Gäste
+aus dessen Kader-Chips, Ausbullen, Heim/Gast wie am Spieltag, geteilt an zwei
+iPads möglich; danach Bericht, Unterschriften und Versand, vorbelegt nur mit der
+eigenen Adresse, Betreff „[Test] …“, Adressen werden nicht gemerkt, keine
+Mitteilung ans Team), gegen ein zweites eigenes Team **oder gegen Bots** in drei
 Stärken (leicht ≈ 38er-Aufnahmen, mittel ≈ 52, schwer ≈ 72; Bots stellen sich
 auf Doppel, busten nie und werfen nach kurzer Denkpause von selbst – und nur
 im Übungsspiel, nirgendwo sonst). Übungsspiele zählen in **keine** Wertung,
@@ -425,8 +430,12 @@ Gast wie auf dem Bogen, der Sieger klein darunter). Das Einzel ist damit fertig,
 „ändern“ öffnet die Kacheln noch einmal, „Ergebnis zurücknehmen“ macht es wieder
 offen (im geteilten Spiel nicht mehr, sobald das andere Gerät es hat). Die Legs
 stehen ohne Würfe im Archiv: Siege, Niederlagen und die Leg-Bilanz zählen in
-Liga-Statistik und Rangliste, Average, Bestes Leg, Darts je Leg und Highlights
-gibt es für solche Einzel nicht (im Verlauf bekommen sie keinen Average-Punkt).
+Liga-Statistik und Rangliste, Average und Darts je Leg gibt es für solche Einzel
+nicht (im Verlauf bekommen sie keinen Average-Punkt). Was die Ligaleitung im
+Spielbericht als Highlight gemeldet hat – 180er, Shortlegs, Highfinishes –,
+rechnet die App für Spieltage ohne einen einzigen Wurf trotzdem in Rangliste
+(180er, Bestes Leg, Höchstes Finish, für alle Teams) und Highlights der Saison
+ein, zugeordnet über die Reihenfolge der 16 Einzel.
 Mitschreiben in der App bleibt daneben möglich („Start“ klein rechts), und
 umgekehrt lässt sich in jedem Ligaspiel ein Einzel, das der Gegner gezählt hat,
 über **w.o. → „Nur das Ergebnis eintragen“** nachtragen. Bericht, Stand und
@@ -955,7 +964,11 @@ Liga-Kontext (Spielplan, Spielbildschirm, Spielbericht), damit auf dem Bogen
 nichts nachgetragen werden muss. Das Profil zeigt den echten Namen unter dem
 Anzeigenamen; gepflegt wird alles über **Bearbeiten** (im Konto oder am Profil).
 Auch die **Gegner** eines Ligaspiels werden mit Vor- und Nachnamen erfasst –
-die SWO verlangt bürgerliche Namen auf dem Bogen.
+die SWO verlangt bürgerliche Namen auf dem Bogen. Der Start-Dialog bietet dafür
+den **Kader des Gegners** laut Ligaleitung als Chips an (Mannschaftsseite plus
+alle, die laut Spielberichten schon für das Team geworfen haben): ein Tipp füllt
+die nächste freie Zeile mit Vor- und Nachname, ein zweiter nimmt den Namen raus;
+neue Gesichter tippt man weiter ein.
 
 Wer nicht mehr mitspielt, lässt sich **ausblenden** statt löschen — dann verschwindet
 er aus der Aufstellung, seine Ergebnisse bleiben aber in Statistik, Ranglisten und

@@ -5324,6 +5324,15 @@ body .boards-host.log #board-log { display: block; }
 .liga-uebung .options button.active { background: var(--aktiv-flaeche); border-color: var(--aktiv-linie); color: var(--text); box-shadow: 0 0 0 1px var(--aktiv-linie) inset, 0 0 24px var(--schein-weich); }
 .liga-uebung .options.drei button span:first-child { text-transform: uppercase; font-weight: 700; }
 .liga-uebung .btn.start { min-height: 48px; }
+/* Kader-Chips des Gegners im Start-Dialog (Ligaspiel und Probelauf). */
+.liga-start .ls-kader { margin: 2px 0 0; gap: 6px; }
+.liga-start .ls-kader .chip { min-height: 36px; padding: 0 12px; font-size: 0.86rem; }
+.liga-start .ls-kader + .hint { margin: 4px 0 8px; }
+.liga-start .options button.breit { flex-basis: 100%; }
+.liga-start .options button.breit small { display: block; font-size: 0.72rem; font-weight: 600; color: var(--muted); }
+/* Trainings-Karte: "Nächster Gegner" bekommt eine eigene Zeile, darunter Team B und Bots. */
+.liga-uebung .options:not(.drei) { flex-wrap: wrap; }
+.liga-uebung .options button.breit { flex: 1 1 100%; }
 
 /* Tabelle: links unser Platz, die Tabelle und der Stand; rechts Alle Spiele,
    Einzelrangliste und Highlights. */
