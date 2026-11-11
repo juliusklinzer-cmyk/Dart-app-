@@ -6471,6 +6471,120 @@ await gruppe('Ligaspiel-Start: Gastspieler und Nachmeldung fuer beide Teams, fes
 }
 });
 
+await gruppe('Meine Stats als Dashboard: Kennzahlen, Diagramme, Doppel-Board, Rekorde, Filter (Julius, 11.11.)', async () => {
+/* Zwoelf Spiele mit Einzel-Darts auf die Doppel: acht in einem Turnier vor
+   zehn Wochen, vier in einem Ligaspiel vor zwei Tagen. Jedes dritte Spiel
+   geht verloren. */
+const dash = await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  S.game = null; S.matches = []; S.tour = null; S.current = null; D.ui().overlay = null;
+  /* Ein eigenes Profil, damit keine Spiele aus frueheren Gruppen hineinzaehlen. */
+  S.profiles.push({ id: 'dash_me', name: 'Dash-Tester', avatar: null, created: Date.now() });
+  const ids = ['dash_me'].concat(D.activeProfiles().slice(0, 2).map((p) => p.id));
+  const me = ids[0];
+  const v = (p, s, c, k) => Object.assign({ p, s, d: 3, b: false, c: !!c, o: 0 }, k ? { k } : {});
+  /* 180, 180, dann 141 = T20 T19 D12: nur der dritte Dart ist ein Versuch auf ein Doppel (D12) und trifft. */
+  const legSieg = (a, b) => ({ starter: a, start: 501, winner: a, visits: [v(a, 180), v(b, 60), v(a, 180), v(b, 60), v(a, 141, true, [{ m: 3, n: 20 }, { m: 3, n: 19 }, { m: 2, n: 12 }])] });
+  /* 180, 180, 109 (Rest 32), dann 16 (D16 vorbei, zweimal D8 vorbei), dann D8. */
+  const legZaeh = (a, b) => ({ starter: a, start: 501, winner: a, visits: [v(a, 180), v(b, 60), v(a, 180), v(b, 60), v(a, 109), v(b, 60),
+    v(a, 16, false, [{ m: 1, n: 16 }, { m: 0, n: 0 }, { m: 0, n: 0 }]), v(b, 60), v(a, 16, true, [{ m: 2, n: 8 }])] });
+  const legNied = (a, b) => ({ starter: a, start: 501, winner: b, visits: [v(a, 60), v(b, 180), v(a, 60), v(b, 180), v(a, 60), v(b, 141, true, [{ m: 3, n: 20 }, { m: 3, n: 19 }, { m: 2, n: 12 }])] });
+  const tag = 864e5, jetzt = Date.now(), spiele = [];
+  for (let i = 0; i < 12; i++) {
+    const gegner = ids[1 + (i % 2)], sieg = i % 3 !== 2;
+    spiele.push({ id: 'dash' + i, round: 1, p: [me, gegner], starter: me, done: true, winner: sieg ? me : gegner, at: jetzt - (12 - i) * 6 * tag,
+      legs: sieg ? [legSieg(me, gegner), legZaeh(me, gegner)] : [legNied(me, gegner)] });
+  }
+  S.history.unshift({ id: 'dash_turnier', at: jetzt - 70 * tag, lineup: ids, settings: { start: 501, bestOf: 3 }, matches: spiele.slice(0, 8), winner: me });
+  S.history.unshift({ id: 'dash_liga', at: jetzt - 2 * tag, lineup: ids, settings: { start: 501, bestOf: 3 }, matches: spiele.slice(8), winner: null,
+    liga: { terminId: 'dash_termin', nr: 99, gegner: 'DC Testteam', heim: true, wir: [me], sie: [ids[1], ids[2]] } });
+  /* Dazu ein Schnelles X01 zu dritt, gestern: beide Legs gewinnt der Dritte. */
+  S.history.unshift({ id: 'dash_quick', kind: 'quick', at: jetzt - tag, lineup: ids, settings: { start: 501, bestOf: 3 }, winner: ids[2],
+    matches: [{ id: 'dashq', kind: 'quick', round: 1, p: ids, starter: me, done: true, winner: ids[2], at: jetzt - tag, legs: [legNied(me, ids[2]), legNied(me, ids[2])] }] });
+  D.save();
+  const reihe = D.spielerSpiele(me);
+  const g9 = reihe.filter((s) => s.id === 'dash9')[0];
+  const q = reihe[reihe.length - 1];
+  return { me, n: reihe.length, modi: reihe.map((s) => s.modus), q: { modus: q.modus, gegnerId: q.gegnerId, gegner: q.gegner, legsWon: q.legsWon, legsLost: q.legsLost, won: q.won }, g9: g9 && { team: g9.team, won: g9.won, doppel: g9.doppel, legsWon: g9.legsWon, legsLost: g9.legsLost, avg: +g9.st.avg.toFixed(2) },
+    liga: D.statsSumme(reihe.filter((s) => s.modus === 'liga')) };
+});
+check('die Spielreihe kennt alle dreizehn Spiele, aelteste zuerst, Turnier vor Liga, zuletzt das Schnelle',
+  dash.n === 13 && dash.modi.lastIndexOf('turnier') < dash.modi.indexOf('liga') && dash.modi[12] === 'quick', dash.modi.join(','));
+check('zu dritt: beide Gegner genannt, kein Duell-Gegner, beide fremd gewonnenen Legs verloren',
+  dash.q.gegnerId === null && dash.q.gegner.includes(' / ') && dash.q.legsWon === 0 && dash.q.legsLost === 2 && dash.q.won === false, JSON.stringify(dash.q));
+check('ein Ligaspiel traegt Gegner-Team, Sieg, Legs und seinen Average',
+  !!dash.g9 && dash.g9.team === 'DC Testteam' && dash.g9.won === true && dash.g9.legsWon === 2 && dash.g9.legsLost === 0 && dash.g9.avg > 100, JSON.stringify(dash.g9));
+check('je Doppel Treffer und Versuche wie die Doppelquote: D12 1/1, D16 0/1, D8 1/3',
+  !!dash.g9 && JSON.stringify(dash.g9.doppel['12']) === '[1,1]' && JSON.stringify(dash.g9.doppel['16']) === '[0,1]' && JSON.stringify(dash.g9.doppel['8']) === '[1,3]', JSON.stringify(dash.g9 && dash.g9.doppel));
+check('die Summe: vier Ligaspiele, Average punktgenau, Doppelquote 4 von 10, Siegquote 50 %',
+  dash.liga.n === 4 && dash.liga.matches === 4 && dash.liga.win === 50 && dash.liga.hits === 4 && dash.liga.att === 10 && dash.liga.avg > 100, JSON.stringify(dash.liga));
+
+await page.evaluate((id) => { const D = window.__dart; D.ui().profile = id; D.ui().profilPanel = 'stats'; D.ui().statsFilter = null; D.setScreen('profile'); }, dash.me);
+check('die Tafel oeffnet mit dem Dashboard: Filter-Chips, sieben Kennzahlen, zehn Karten',
+  await visible('#profile-detail .st-dash') && (await page.locator('#profile-detail .st-chip').count()) >= 6 &&
+  (await page.locator('#profile-detail .st-kpi').count()) === 7 && (await page.locator('#profile-detail .st-karte').count()) === 10);
+const kpiText = (await text('#profile-detail .st-kpis')).toLowerCase();
+check('Kennzahlen: Average, First 9, Doppelquote, Siegquote, 180er, hoechstes Finish, bestes Leg mit Vergleich',
+  ['ø 3-dart-average', 'first 9', 'doppelquote', 'siegquote', '180er', 'höchstes finish', 'bestes leg', 'vs. davor'].every((t) => kpiText.includes(t)), kpiText.slice(0, 200));
+await page.waitForTimeout(1700);
+check('die Zahlen zaehlen hoch und stehen dann am Ziel', await page.evaluate(() => {
+  const v = document.querySelector('#profile-detail .st-kpi .v .z');
+  return Math.abs(parseFloat(v.textContent) - parseFloat(v.getAttribute('data-zahl'))) < 0.02;
+}));
+check('Average-Verlauf: Linie gezogen, gleitender Schnitt, Trendlinie, bester Punkt, Legende', await page.evaluate(() => {
+  const k = document.getElementById('st-avg');
+  const glanz = k.querySelector('path.st-glanz');
+  return !!k.querySelector('[data-st-chart="avg"]') && !!k.querySelector('.st-trend') && parseFloat(glanz.style.strokeDashoffset) === 0 &&
+    k.textContent.includes('Best ') && k.textContent.includes('Trend ') && k.querySelectorAll('circle.st-pt').length === 13;
+}));
+check('Form-Ring mit Siegquote, Bilanz, Serie und zehn Pillen', await page.evaluate(() => {
+  const k = document.getElementById('st-form');
+  return !!k.querySelector('.st-ring') && k.textContent.includes('8 : 5') && k.textContent.includes('in Folge') && k.querySelectorAll('.st-pill').length === 10;
+}));
+check('Spielerprofil als Radar mit sechs Achsen und zwei Flaechen', (await page.locator('#st-radar polygon').count()) === 6 && (await text('#st-radar')).includes('Konstanz'));
+check('Doppel-Board: Ring je Doppel, Bull, Balken fuer D8, D12, D16 und die Finish-Kette', await page.evaluate(() => {
+  const k = document.getElementById('st-doppel'), t = k.textContent;
+  return !!k.querySelector('.st-board') && k.querySelectorAll('.st-board path.st-fade').length === 20 && t.includes('D8') && t.includes('D12') && t.includes('D16') && t.includes('Finish-Kette') &&
+    [...k.querySelectorAll('.st-fill')].every((f) => parseFloat(f.style.width) > 0 || parseFloat(f.getAttribute('data-w')) === 0);
+}));
+check('Big Scores je Monat als gestapelte Balken, Doppelquote im Verlauf, Modi-Vergleich, Aktivitaet, Gegnerbilanz, Rekorde',
+  (await page.locator('#st-big g.st-growY').count()) >= 2 && (await page.locator('#st-dbltrend path.st-draw').count()) === 1 &&
+  (await text('#st-modi')).includes('Liga') && (await text('#st-modi')).includes('Turnier') &&
+  (await text('#st-kalender')).includes('Spiele an') && (await page.locator('#st-gegner tbody tr').count()) === 2 /* nur Duelle */ &&
+  (await text('#st-rekorde')).toLowerCase().includes('bester average') && (await text('#st-rekorde')).includes('vs.'));
+await page.locator('#st-form .st-pill').last().hover();
+await page.waitForTimeout(250);
+check('ein Zeiger ueber einer Form-Pille zeigt Datum und Leg-Stand', await page.evaluate(() => {
+  const t = document.getElementById('st-tip');
+  return !!t && t.classList.contains('an') && /\d : \d/.test(t.textContent);
+}));
+await page.locator('#st-avg [data-st-chart="avg"]').hover({ position: { x: 150, y: 80 } });
+await page.waitForTimeout(250);
+check('ueber dem Average-Verlauf nennt der Tooltip Spiel und Schnitt, der Cursor steht', await page.evaluate(() => {
+  const t = document.getElementById('st-tip');
+  return t.classList.contains('an') && t.textContent.includes('Schnitt (5)') && document.querySelector('#st-avg .st-cursor').getAttribute('opacity') === '1';
+}));
+await page.locator('#profile-detail .st-chip[data-wert="liga"]').click();
+check('Filter Liga: nur die vier Ligaspiele, Kennzahl und Gegnerbilanz folgen',
+  (await text('#profile-detail .st-kpi:nth-child(6)')).includes('4 Spiele') && (await page.locator('#profile-detail .st-chip.on[data-wert="liga"]').count()) === 1);
+await page.locator('#profile-detail .st-chip[data-wert="10"]').click();
+check('Letzte 10 dazu: beide Filter bleiben beim Neuzeichnen gewaehlt',
+  (await page.locator('#profile-detail .st-chip.on[data-wert="10"]').count()) === 1 && (await page.locator('#profile-detail .st-chip.on[data-wert="liga"]').count()) === 1);
+await page.locator('#profile-detail .st-chip[data-wert="alle"]').click();
+await page.locator('#profile-detail .st-chip[data-wert="0"]').click();
+check('zurueck auf Alle: wieder dreizehn Punkte im Verlauf', (await page.locator('#st-avg circle.st-pt').count()) === 13);
+await page.evaluate(() => window.__dart.render());
+check('ein Neuzeichnen aus anderem Anlass steht still statt alles noch einmal zu animieren', (await page.locator('#profile-detail .st-dash.st-still').count()) === 1);
+check('die bisherigen Karten Scoring, Finishing, Bilanz und die letzten Spiele stehen weiter darunter',
+  (await text('#profile-detail')).toLowerCase().includes('finishing') && (await page.locator('#profile-detail .log-row').count()) > 0);
+await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  S.history = S.history.filter((h) => !/^dash_/.test(h.id));
+  S.profiles = S.profiles.filter((p) => p.id !== 'dash_me');
+  D.ui().profilPanel = null; D.ui().statsFilter = null; D.save(); D.setScreen('setup');
+});
+});
+
 await gruppe('Handy-Block 2: Solo-Session - Leg um Leg, Statistik ueber alle Legs, Beenden archiviert', async () => {
   const soloStart = () => page.evaluate(() => {
     const D = window.__dart, S = D.state();

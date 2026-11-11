@@ -958,7 +958,7 @@ Handy (hochkant wie quer) gibt es nur die Liste, ein Tipp öffnet das Profil.
 **Spielerausweis** (Foto mit Kamera-Knopf, Name in Plakatschrift, echter Name,
 Chips für Status, „seit“, Bilanz und Turniersiege, „Profil bearbeiten“, die Form
 der letzten zehn Spiele), darunter drei Kacheln: **Finish-Weg · Lieblingsgruppe**
-(siehe Checkout-Engine unten), die Links **Statistik** („Meine Stats“ legt die
+(siehe Checkout-Engine unten), die Links **Statistik** („Meine Stats“ legt das Dashboard mit Filtern, Kennzahlen und Diagrammen sowie die
 ausführlichen Karten Scoring, Finishing, Bilanz, Cricket, Round the World und
 letzte X01-Spiele als Tafel über die Kacheln, „Fertig“ schließt sie) und
 **Liga-Statistik**, und beim eigenen Konto die **Konto-Kachel** (E-Mail – eine neue
@@ -1057,6 +1057,35 @@ die Statistik der Mannschaft zu berühren (siehe [DEPLOY.md](DEPLOY.md#testkonte
 | Bilanz | Spiele, Siege/Niederlagen, Siegquote, Legs, Turniere, Turniersiege, Ligaspieltage (Spieltage und Nachträge zählen nicht als Turnier), Form der letzten Spiele |
 
 Dazu die letzten Spiele mit Gegner, Ergebnis und Datum.
+
+**Meine Stats als Dashboard** (nach Julius' Artefakt „Darts Statistik“, November 2026): Die
+Statistik-Tafel im Profil beginnt mit einem Dashboard aus den echten Aufnahmen, darunter stehen
+die bisherigen Karten mit den Gesamtwerten. Oben Filter-Chips für den Modus (Alle, Liga,
+Turnier, Schnell, Solo – mit Spielzahl; Übungsspiele zählen wie überall nicht) und den
+Zeitraum (letzte 10, letzte 30, alle Spiele). Dann sieben Kennzahlen, die hochzählen –
+Average, First 9, Doppelquote, Siegquote, 180er, höchstes Finish, bestes Leg –, jede mit dem
+Vergleich „letzte N vs. davor“ (N höchstens 10, höchstens die halbe Reihe). Dann zehn Karten:
+**Average-Entwicklung** (Ø je Spiel, gleitender Schnitt über 5 Spiele in Gold, Trendlinie aus
+kleinsten Quadraten mit „Trend ± Punkte“, First 9 dünn, bester Punkt beschriftet; der Zeiger
+zeigt je Spiel Datum, Gegner, Ø und Legs), **Form & Siegquote** (Ring, Siege : Niederlagen,
+Legs, aktuelle Serie, längste Siegesserie, die letzten zehn als Pillen), **Spielerprofil**
+(Radar mit Scoring, First 9, Doppel, Konstanz = Streuung der Averages, Big Scores je Leg,
+Siege; letzte 10 gegen die ganze Auswahl), **Doppel-Analyse** (ein Dartboard, dessen äußerer
+Ring je Doppel die Trefferquote als Farbe trägt – rot, amber, grün –, ★ markiert die
+Finish-Kette aus den Lieblingsgruppen des Profils, rechts die neun meistgeworfenen Doppel als
+Balken; gezählt wird wie bei der Doppelquote nur aus Einzel-Darts: jeder Dart ist ein Versuch
+auf das Doppel, das der Rest vor ihm erlaubt, der Finish-Dart ein Treffer), **Big Scores je
+Monat** (100+, 140+, 180 gestapelt), **Doppelquote im Verlauf** (je Monat), **Liga · Turnier
+· Schnell · Solo** (Average, Doppel, Siege je Modus, unabhängig vom Modus-Filter),
+**Aktivität** (20 Wochen als Kacheln), **Gegnerbilanz** (Head-to-Head mit Bilanz, Legs, Ø und
+Siegquote, bei Ligagegnern mit Team) und **Rekorde** (bester Average, beste First 9, höchstes
+Finish, kürzestes Leg, meiste 180 im Spiel, beste Doppelquote ab 8 Versuchen, längste
+Siegesserie, Spiele gesamt – jeweils mit Datum und Gegner). Alles ist SVG ohne Bibliothek;
+Linien ziehen sich, Balken wachsen, Ringe füllen sich und Zahlen zählen hoch, einmal je
+Auswahl. Zeichnet die App die Seite aus anderem Anlass neu oder wünscht das Gerät „weniger
+Bewegung“, steht alles sofort am Ziel. Die Rechnung steckt in `spielerSpiele(pid)` (je Spiel
+Modus, Gegner, Legs, Sieg, die Statistik nur dieses Spiels und je Doppel Treffer/Versuche)
+und `statsSumme(spiele)`.
 
 **Turniere nachschauen:** In der Spieleliste unter Classic steht zu jedem gespielten
 Turnier eine eigene Zeile (🏆). Ein Tipp öffnet den **Endstand** wie am Abend auf dem

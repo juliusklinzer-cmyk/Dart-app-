@@ -4094,7 +4094,7 @@
     if (S.screen === 'tournament') renderTournament();
     if (S.screen === 'boards') renderBoards();
     if (S.screen === 'players') renderPlayers();
-    if (S.screen === 'profile') { renderProfile(); if (UI.profilPanel === 'foto') fotoZiehenEinrichten(); }
+    if (S.screen === 'profile') { renderProfile(); if (UI.profilPanel === 'foto') fotoZiehenEinrichten(); if (UI.profilPanel === 'stats') statsNachRender(); }
     if (S.screen === 'bulloff') renderBullOff();
     if (S.screen === 'game') renderGame();
     if (S.screen === 'cricket') renderCricket();
@@ -5989,7 +5989,10 @@
     }
     var mine = allMatches().filter(function (e) { return e.m.p.indexOf(p.id) >= 0; }).slice(0, 15);
     return (
-      '<p class="hint pa-panel-hint">Alle Werte über sämtliche gespielten Classic-Spiele.</p>' +
+      /* Oben das Dashboard (Filter, Kennzahlen, Diagramme), darunter wie
+         bisher die Gesamtwerte ueber alle Classic-Spiele. */
+      statsDashboardHtml(p) +
+      '<p class="hint pa-panel-hint">Gesamtwerte über sämtliche gespielten Classic-Spiele.</p>' +
       '<div class="card"><h2>Scoring</h2>' +
         line('3-Dart-Average', st.darts ? st.avg.toFixed(2) : '–') +
         line('First-9-Average', st.first9Darts ? st.first9.toFixed(2) : '–') +
@@ -6057,6 +6060,608 @@
           '</div>';
       }).join('') : '<p class="hint">Noch keine Spiele.</p>') + '</div>'
     );
+  }
+
+  /* ================= Spieler-Dashboard („Meine Stats“) =================
+     Die Karten aus Julius' Artefakt „Darts Statistik“ (10.11.2026), gespeist
+     aus den echten Aufnahmen statt aus Handeingaben: Kennzahlen mit
+     Vergleich, Average-Verlauf mit gleitendem Schnitt und Trend, Form,
+     Spielerprofil, Doppel-Analyse am Board, Big Scores und Doppelquote je
+     Monat, Modi im Vergleich, Aktivitaet, Gegnerbilanz, Rekorde. Alles SVG
+     ohne Bibliothek; die Animationen laufen einmal je Auswahl
+     (statsNachRender), ein Neuzeichnen aus anderem Anlass steht still. */
+  var STATS_MODI = [['alle', 'Alle'], ['liga', 'Liga'], ['turnier', 'Turnier'], ['quick', 'Schnell'], ['solo', 'Solo']];
+  var STATS_MODUS_TEXT = { liga: 'Liga', turnier: 'Turnier', quick: 'Schnell', solo: 'Solo' };
+  var STATS_BEREICHE = [[10, 'Letzte 10'], [30, 'Letzte 30'], [0, 'Alle Spiele']];
+  var ST_FARBE = { blau: '#46aad7', gold: '#ffc14d', gruen: '#4ade80', rot: '#e5484d', lila: '#a78bfa', creme: '#f3e7c9' };
+  var ST_BOARD = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5];
+  var ST_MONATE = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+  var STATS_TIPS = {};          // Diagramm-Kennung -> Tooltip-Text je Punkt
+  var statsAnimiertFuer = '';   // Auswahl, fuer die die Animationen zuletzt liefen
+
+  function statsFilter() {
+    if (!UI.statsFilter) UI.statsFilter = { modus: 'alle', bereich: 0 };
+    return UI.statsFilter;
+  }
+  function stZahl(v, dez) { return (v === null || v === undefined || !isFinite(v)) ? '–' : Number(v).toFixed(dez === undefined ? 1 : dez); }
+  function stDatum(ts) { var d = new Date(ts); return d.getDate() + '. ' + ST_MONATE[d.getMonth()] + ' ' + String(d.getFullYear()).slice(2); }
+  function stMonat(ts) { var d = new Date(ts); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2); }
+  function stMonatText(k) { return ST_MONATE[Number(k.slice(5, 7)) - 1] + ' ' + k.slice(2, 4); }
+  function stTag(ts) { var d = new Date(ts); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  function stModusText(s) { return (STATS_MODUS_TEXT[s.modus] || '') + (s.gegner ? ' vs. ' + esc(s.gegner) : s.session ? ' · Session' : ''); }
+
+  /* Je Doppel [Treffer, Versuche] eines Spielers in einem Spiel - dieselbe
+     Zaehlung wie die Doppelquote (collectStats): ein Dart ist ein Versuch auf
+     das Doppel, das der Rest vor ihm erlaubt (50 = Bull), der Finish-Dart
+     ein Treffer. Nur Einzel-Darts (v.k), Punkte-Eingaben bleiben aussen vor. */
+  function doppelJeFeld(m, pid, start) {
+    var d = {};
+    (m.legs || []).forEach(function (leg) {
+      var rest = typeof leg.start === 'number' ? leg.start : (start || 501);
+      (leg.visits || []).forEach(function (v) {
+        if (v.p !== pid) return;
+        if (v.k && v.k.length) {
+          var r = rest;
+          for (var i = 0; i < v.k.length; i++) {
+            if (oneDartFinish(r)) {
+              var key = r === 50 ? '25' : String(r / 2);
+              if (!d[key]) d[key] = [0, 0];
+              d[key][1]++;
+              if (v.c && i === v.k.length - 1) d[key][0]++;
+            }
+            r -= v.k[i].m * v.k[i].n;
+          }
+        }
+        if (!v.b) rest -= v.s;
+      });
+    });
+    return d;
+  }
+
+  /* Alle Classic-Spiele eines Spielers, aelteste zuerst: je Spiel Modus,
+     Gegner, Legs, Sieg und die Statistik nur dieses Spiels. Dieselbe Auswahl
+     wie career()/collectStats: keine Uebung, keine Testspiele, keine
+     Kampflosen; Spiele gegen inzwischen geloeschte Profile zaehlen mit. */
+  function spielerSpiele(pid) {
+    var out = [];
+    function nimm(m, start, at, modus, h) {
+      if (!m || !m.done || m.kampflos || !m.p || m.p.indexOf(pid) < 0) return;
+      var solo = m.p.length < 2;
+      var map = collectStats([{ matches: [m], start: start }], m.p);
+      var st = finalize(map[pid]);
+      /* Ein Schnelles X01 kann mehr als zwei Spieler haben: dann zaehlt jedes
+         fremd gewonnene Leg als verloren (wie collectStats), und der Gegner
+         ist die ganze Runde. In die Gegnerbilanz kommen nur Duelle. */
+      var andere = m.p.filter(function (x) { return x !== pid; });
+      var gegnerId = andere.length === 1 ? andere[0] : null;
+      var gewertet = (m.legs || []).filter(function (l) { return l.winner; });
+      var legs = (m.legs || []).filter(function (l) { return l.winner || (l.visits && l.visits.length); }).length;
+      out.push({
+        id: m.id, at: m.at || at || 0, modus: solo ? 'solo' : modus, solo: solo, session: !!m.session,
+        gegnerId: gegnerId, gegner: solo ? '' : andere.map(pname).join(' / '),
+        team: h && h.liga && h.liga.gegner && modus === 'liga' ? String(h.liga.gegner) : '',
+        legsWon: solo ? 0 : legsWon(m, pid), legsLost: solo ? 0 : gewertet.filter(function (l) { return l.winner !== pid; }).length, legs: legs,
+        won: solo ? null : m.winner === pid,
+        st: st, doppel: doppelJeFeld(m, pid, start)
+      });
+    }
+    if (S.matches.length && !(S.tour && S.tour.liga && S.tour.liga.uebung) && turnierWertbar() && !turnierSchonArchiviert()) {
+      var modusLive = S.tour && S.tour.liga ? 'liga' : 'turnier';
+      S.matches.forEach(function (m) { nimm(m, tourStart(), m.at, m.kind === 'quick' ? 'quick' : modusLive, S.tour); });
+    }
+    wertbareHistorie().forEach(function (h) {
+      if (h.liga && h.liga.uebung) return;
+      var kind = h.kind || '501';
+      if (kind !== '501' && kind !== 'quick') return;
+      var modus = h.liga ? 'liga' : kind === 'quick' ? 'quick' : 'turnier';
+      (h.matches || []).forEach(function (m) { nimm(m, (h.settings && h.settings.start) || 501, h.at, m.kind === 'quick' ? 'quick' : modus, h); });
+    });
+    out.sort(function (a, b) { return a.at - b.at; });
+    return out;
+  }
+  function statsAuswahl(spiele, f) {
+    var g = f.modus === 'alle' ? spiele : spiele.filter(function (s) { return s.modus === f.modus; });
+    return f.bereich ? g.slice(-f.bereich) : g;
+  }
+  /* Summen ueber eine Spielreihe: Average punktgenau (Punkte durch Darts),
+     Doppelquote aus Versuchen, Siegquote nur aus Spielen mit Gegner. */
+  function statsSumme(spiele) {
+    if (!spiele.length) return null;
+    var o = { n: spiele.length, points: 0, darts: 0, f9p: 0, f9d: 0, att: 0, hits: 0, matches: 0, siege: 0,
+      c100: 0, c140: 0, c180: 0, legs: 0, legsW: 0, legsL: 0, hf: 0, bl: null, avgs: [] };
+    spiele.forEach(function (s) {
+      var st = s.st;
+      o.points += st.points; o.darts += st.darts; o.f9p += st.first9Points; o.f9d += st.first9Darts;
+      o.att += st.doubleAttempts; o.hits += st.doubleHits;
+      o.c100 += st.s100; o.c140 += st.s140; o.c180 += st.s180;
+      o.legs += s.legs; o.legsW += s.legsWon; o.legsL += s.legsLost;
+      if (st.highCO > o.hf) o.hf = st.highCO;
+      if (st.bestLeg && (o.bl === null || st.bestLeg < o.bl)) o.bl = st.bestLeg;
+      if (st.darts) o.avgs.push(st.avg);
+      if (s.won !== null) { o.matches++; if (s.won) o.siege++; }
+    });
+    o.avg = o.darts ? (o.points / o.darts) * 3 : null;
+    o.first9 = o.f9d ? (o.f9p / o.f9d) * 3 : null;
+    o.dbl = o.att ? (o.hits / o.att) * 100 : null;
+    o.win = o.matches ? (o.siege / o.matches) * 100 : null;
+    var mittel = o.avgs.length ? o.avgs.reduce(function (a, b) { return a + b; }, 0) / o.avgs.length : 0;
+    o.std = o.avgs.length > 1 ? Math.sqrt(o.avgs.reduce(function (a, b) { return a + (b - mittel) * (b - mittel); }, 0) / (o.avgs.length - 1)) : 0;
+    o.tonsProLeg = o.legs ? (o.c100 + o.c140 + o.c180) / o.legs : 0;
+    return o;
+  }
+
+  function statsDashboardHtml(p) {
+    var f = statsFilter();
+    var alle = spielerSpiele(p.id);
+    var spiele = statsAuswahl(alle, f);
+    var zaehl = {};
+    alle.forEach(function (s) { zaehl[s.modus] = (zaehl[s.modus] || 0) + 1; });
+    var chips = STATS_MODI.map(function (m) {
+      var n = m[0] === 'alle' ? alle.length : (zaehl[m[0]] || 0);
+      if (m[0] !== 'alle' && !n) return '';
+      return '<button type="button" class="st-chip' + (f.modus === m[0] ? ' on' : '') + '" data-action="stats-modus" data-wert="' + m[0] + '">' + m[1] + ' <small>' + n + '</small></button>';
+    }).join('') + '<span class="st-sep"></span>' + STATS_BEREICHE.map(function (b) {
+      return '<button type="button" class="st-chip' + (f.bereich === b[0] ? ' on' : '') + '" data-action="stats-bereich" data-wert="' + b[0] + '">' + b[1] + '</button>';
+    }).join('');
+    STATS_TIPS = {};
+    var karten = !spiele.length ? '<p class="st-leer">Keine Spiele in dieser Auswahl.</p>' :
+      stAvgKarte(spiele) + stFormKarte(spiele) + stRadarKarte(spiele) + stDoppelKarte(p, spiele) + stBigKarte(spiele) +
+      stDblTrendKarte(spiele) + stModiKarte(alle, f) + stKalenderKarte(alle, f) + stGegnerKarte(spiele) + stRekordKarte(spiele);
+    return '<div class="st-dash" data-spiele="' + alle.length + '">' +
+      '<div class="st-chips">' + chips + '</div>' +
+      stKpisHtml(spiele) +
+      '<div class="st-raster">' + karten + '</div></div>';
+  }
+
+  /* Sieben Kennzahlen mit Vergleich „letzte N vs. davor“ (N = hoechstens 10,
+     hoechstens die halbe Reihe). Die Zahl steht schon am Ziel, das
+     Hochzaehlen (stZaehlen) startet sie bei null. */
+  function stKpisHtml(spiele) {
+    var s = statsSumme(spiele);
+    if (!s) return '';
+    var halb = Math.min(10, Math.floor(spiele.length / 2));
+    var a = halb ? statsSumme(spiele.slice(-halb)) : null, b = halb ? statsSumme(spiele.slice(-2 * halb, -halb)) : null;
+    function delta(key, dez, kleinerBesser) {
+      if (!a || !b || a[key] === null || b[key] === null || a[key] === undefined || b[key] === undefined) return '';
+      var d = a[key] - b[key], gut = kleinerBesser ? d < 0 : d > 0;
+      var cls = Math.abs(d) < 0.05 ? '' : gut ? 'auf' : 'ab';
+      return '<span class="' + cls + '">' + (d >= 0 ? '▲ +' : '▼ ') + d.toFixed(dez) + '</span> letzte ' + halb + ' vs. davor';
+    }
+    var kpis = [
+      ['Ø 3-Dart-Average', s.avg, 2, '', ST_FARBE.blau, delta('avg', 2)],
+      ['First 9', s.first9, 2, '', ST_FARBE.lila, delta('first9', 2)],
+      ['Doppelquote', s.dbl, 1, ' %', ST_FARBE.gruen, s.att ? (delta('dbl', 1) || s.hits + ' von ' + s.att) : 'nur aus Einzel-Darts'],
+      ['Siegquote', s.win, 0, ' %', ST_FARBE.gold, plural(s.matches, 'Spiel mit Gegner', 'Spiele mit Gegner')],
+      ['180er', s.c180, 0, '', ST_FARBE.rot, s.c140 + '× 140+ · ' + s.c100 + '× 100+'],
+      ['Höchstes Finish', s.hf || null, 0, '', ST_FARBE.creme, plural(s.n, 'Spiel', 'Spiele') + ' · ' + plural(s.legs, 'Leg', 'Legs')],
+      ['Bestes Leg', s.bl, 0, ' Darts', ST_FARBE.gruen, 'kürzestes 501er-Leg']
+    ];
+    return '<div class="st-kpis">' + kpis.map(function (k, i) {
+      var leer = k[1] === null || k[1] === undefined;
+      return '<div class="st-kpi" style="--c:' + k[4] + ';animation-delay:' + (i * 60) + 'ms"><span class="l">' + k[0] + '</span>' +
+        '<span class="v">' + (leer ? '–' : '<span class="z" data-zahl="' + k[1] + '" data-dez="' + k[2] + '">' + stZahl(k[1], k[2]) + '</span>' + (k[3] ? '<small>' + k[3] + '</small>' : '')) + '</span>' +
+        '<span class="d">' + k[5] + '</span></div>';
+    }).join('') + '</div>';
+  }
+
+  function stKarte(id, titel, sub, inhalt, breit) {
+    return '<div class="st-karte' + (breit ? ' breit' : '') + '" id="st-' + id + '"><h3>' + titel + '</h3>' + (sub ? '<p class="st-sub">' + sub + '</p>' : '') + '<div class="st-box">' + inhalt + '</div></div>';
+  }
+  /* Pfad durch Punkte; null unterbricht die Linie. */
+  function stLinie(pts) {
+    var d = '', neu = true;
+    pts.forEach(function (p) { if (!p) { neu = true; return; } d += (neu ? 'M' : 'L') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); neu = false; });
+    return d;
+  }
+  function stQuoteFarbe(q) {
+    var stops = [[0, [229, 72, 77]], [0.22, [255, 193, 77]], [0.45, [74, 222, 128]]];
+    if (q >= 0.45) return 'rgb(74,222,128)';
+    var a = stops[0], b = stops[1];
+    if (q > 0.22) { a = stops[1]; b = stops[2]; }
+    var t = (q - a[0]) / (b[0] - a[0]);
+    return 'rgb(' + a[1].map(function (c, i) { return Math.round(c + (b[1][i] - c) * t); }).join(',') + ')';
+  }
+  function stMonate(spiele) {
+    var m = {};
+    spiele.forEach(function (s) { var k = stMonat(s.at); (m[k] = m[k] || []).push(s); });
+    return Object.keys(m).sort().map(function (k) { return { k: k, gs: m[k] }; });
+  }
+
+  /* Average je Spiel, gleitender Schnitt ueber 5, Trend (kleinste Quadrate),
+     First 9 als duenne Linie, bester Punkt in Gold. */
+  function stAvgKarte(spiele) {
+    var titel = '📈 Average-Entwicklung', sub = '3-Dart-Average je Spiel, gleitender Schnitt über 5 Spiele und Trendlinie';
+    var gs = spiele.filter(function (s) { return s.st.darts > 0; });
+    if (gs.length < 2) return stKarte('avg', titel, sub, '<p class="st-leer">Mindestens 2 Spiele mit Würfen nötig.</p>', true);
+    /* Am Handy ein schmaleres Bild: das SVG skaliert auf die Kartenbreite,
+       bei 640 Einheiten waere die Schrift dort nur halb so gross. */
+    var schmal = window.innerWidth < 700;
+    var W = schmal ? 380 : 640, H = schmal ? 230 : 250, L = 36, R = 14, T = 18, B = 26, n = gs.length;
+    var v = gs.map(function (s) { return s.st.avg; });
+    var f9 = gs.map(function (s) { return s.st.first9Darts ? s.st.first9 : null; });
+    var roll = v.map(function (_, i) { var t = v.slice(Math.max(0, i - 4), i + 1); return t.reduce(function (a, b) { return a + b; }, 0) / t.length; });
+    var alle = v.concat(f9.filter(function (q) { return q !== null; }));
+    var lo = Math.floor(Math.min.apply(null, alle) - 3), hi = Math.ceil(Math.max.apply(null, alle) + 3);
+    if (hi - lo < 6) hi = lo + 6;
+    var x = function (i) { return L + i * (W - L - R) / (n - 1); }, y = function (val) { return T + (hi - val) * (H - T - B) / (hi - lo); };
+    var schritt = Math.max(2, Math.round((hi - lo) / 5)), grid = '';
+    for (var t = Math.ceil(lo / schritt) * schritt; t <= hi; t += schritt) grid += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(t).toFixed(1) + '" y2="' + y(t).toFixed(1) + '" class="st-gl"/><text x="' + (L - 6) + '" y="' + (y(t) + 3).toFixed(1) + '" text-anchor="end" class="st-ax">' + t + '</text>';
+    var achse = [0, Math.floor((n - 1) / 2), n - 1].map(function (i, j) { return '<text x="' + x(i).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="' + (j === 0 ? 'start' : j === 2 ? 'end' : 'middle') + '" class="st-ax">' + stDatum(gs[i].at) + '</text>'; }).join('');
+    var pV = v.map(function (val, i) { return [x(i), y(val)]; });
+    var flaeche = '<path d="' + stLinie(pV) + 'L' + x(n - 1).toFixed(1) + ' ' + (H - B) + 'L' + x(0).toFixed(1) + ' ' + (H - B) + 'Z" fill="url(#st-ga)" class="st-fade"/>';
+    var f9Pfad = f9.some(function (q) { return q !== null; }) ? '<path d="' + stLinie(f9.map(function (q, i) { return q === null ? null : [x(i), y(q)]; })) + '" fill="none" stroke="' + ST_FARBE.lila + '" stroke-width="1.4" opacity=".55" class="st-draw" style="transition-delay:150ms"/>' : '';
+    var mx = (n - 1) / 2, my = v.reduce(function (a, c) { return a + c; }, 0) / n, zae = 0, nen = 0;
+    v.forEach(function (val, i) { zae += (i - mx) * (val - my); nen += (i - mx) * (i - mx); });
+    var steig = nen ? zae / nen : 0, ab = my - steig * mx, gewinn = steig * (n - 1);
+    var best = v.indexOf(Math.max.apply(null, v));
+    var punkte = v.map(function (val, i) { return '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(val).toFixed(1) + '" r="' + (i === best ? 5 : 2.6) + '" fill="' + (i === best ? ST_FARBE.gold : ST_FARBE.blau) + '" stroke="#0d0a0b" stroke-width="1.5" class="st-pt" style="animation-delay:' + Math.round(400 + i * 1400 / n) + 'ms"/>'; }).join('');
+    STATS_TIPS.avg = gs.map(function (s, i) { return '<b>' + stDatum(s.at) + '</b> · ' + stModusText(s) + '<br>Ø ' + s.st.avg.toFixed(2) + (s.st.first9Darts ? ' · First 9 ' + s.st.first9.toFixed(2) : '') + '<br>Schnitt (5): ' + roll[i].toFixed(2) + (s.won !== null ? '<br>Legs ' + s.legsWon + ' : ' + s.legsLost : ''); });
+    var svg = '<svg class="st-svg" viewBox="0 0 ' + W + ' ' + H + '" data-st-chart="avg" data-l="' + L + '" data-r="' + R + '" data-w="' + W + '" data-n="' + n + '">' +
+      '<defs><linearGradient id="st-ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + ST_FARBE.blau + '" stop-opacity=".35"/><stop offset="1" stop-color="' + ST_FARBE.blau + '" stop-opacity="0"/></linearGradient></defs>' +
+      grid + achse + flaeche + f9Pfad +
+      '<path d="' + stLinie(pV) + '" fill="none" stroke="' + ST_FARBE.blau + '" stroke-width="1.6" opacity=".8" class="st-draw"/>' +
+      '<path d="M' + x(0).toFixed(1) + ' ' + y(ab).toFixed(1) + 'L' + x(n - 1).toFixed(1) + ' ' + y(ab + steig * (n - 1)).toFixed(1) + '" stroke="' + ST_FARBE.rot + '" stroke-width="1.6" stroke-dasharray="5 5" fill="none" class="st-fade st-trend" style="animation-delay:1.2s"/>' +
+      '<path d="' + stLinie(roll.map(function (q, i) { return [x(i), y(q)]; })) + '" fill="none" stroke="' + ST_FARBE.gold + '" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="st-draw st-glanz" style="transition-delay:300ms"/>' +
+      punkte +
+      '<text x="' + x(best).toFixed(1) + '" y="' + (y(v[best]) - 10).toFixed(1) + '" text-anchor="' + (x(best) > W - 70 ? 'end' : x(best) < L + 40 ? 'start' : 'middle') + '" fill="' + ST_FARBE.gold + '" font-size="11" font-weight="700" class="st-fade" style="animation-delay:1.6s">Best ' + v[best].toFixed(2) + '</text>' +
+      '<text x="' + (W - R) + '" y="' + (T + 4) + '" text-anchor="end" fill="' + (gewinn >= 0 ? ST_FARBE.gruen : ST_FARBE.rot) + '" font-size="12" font-weight="700" class="st-fade" style="animation-delay:1.4s">Trend ' + (gewinn >= 0 ? '+' : '') + gewinn.toFixed(1) + ' Punkte</text>' +
+      '<line class="st-cursor" y1="' + T + '" y2="' + (H - B) + '" stroke="#ffffff40" stroke-dasharray="3 3" opacity="0"/>' +
+      '<rect x="' + L + '" y="0" width="' + (W - L - R) + '" height="' + H + '" fill="transparent"/></svg>';
+    var legende = '<div class="st-legende"><span><i style="background:' + ST_FARBE.blau + '"></i>Ø je Spiel</span><span><i style="background:' + ST_FARBE.gold + '"></i>Gleitender Schnitt (5)</span><span><i style="background:' + ST_FARBE.rot + '"></i>Trend</span><span><i style="background:' + ST_FARBE.lila + '"></i>First 9</span></div>';
+    return stKarte('avg', titel, sub, svg + legende, true);
+  }
+
+  /* Siegquote als Ring, Bilanz, Serien, die letzten zehn als Pillen. */
+  function stFormKarte(spiele) {
+    var titel = '🔥 Form & Siegquote', sub = 'Spiele mit Gegner';
+    var m = spiele.filter(function (s) { return s.won !== null; });
+    if (!m.length) return stKarte('form', titel, sub, '<p class="st-leer">Noch keine Spiele mit Gegner.</p>');
+    var siege = m.filter(function (s) { return s.won; }).length, q = siege / m.length, C = 2 * Math.PI * 52;
+    var lauf = 0, beste = 0;
+    m.forEach(function (s) { if (s.won) { lauf++; if (lauf > beste) beste = lauf; } else lauf = 0; });
+    var akt = 0, aktW = null;
+    for (var i = m.length - 1; i >= 0; i--) { if (aktW === null) aktW = m[i].won; if (m[i].won === aktW) akt++; else break; }
+    var lw = sum(m, function (s) { return s.legsWon; }), ll = sum(m, function (s) { return s.legsLost; });
+    var ring = '<svg viewBox="0 0 130 130" class="st-ringsvg"><circle cx="65" cy="65" r="52" fill="none" stroke="#ffffff10" stroke-width="12"/>' +
+      '<circle cx="65" cy="65" r="52" fill="none" stroke="' + (q >= 0.5 ? ST_FARBE.gruen : ST_FARBE.gold) + '" stroke-width="12" stroke-linecap="round" transform="rotate(-90 65 65)" stroke-dasharray="' + C.toFixed(1) + '" stroke-dashoffset="' + (C * (1 - q)).toFixed(1) + '" class="st-ring" data-voll="' + C.toFixed(1) + '"/>' +
+      '<text x="65" y="74" text-anchor="middle" fill="#f2eeee" font-size="28" class="st-ringzahl" data-zahl="' + (q * 100) + '" data-dez="0" data-suf=" %">' + Math.round(q * 100) + ' %</text></svg>';
+    var pillen = m.slice(-10).map(function (s, i) {
+      var tip = '<b>' + stDatum(s.at) + '</b>' + (s.gegner ? ' vs. ' + esc(s.gegner) : '') + '<br>' + s.legsWon + ' : ' + s.legsLost + (s.st.darts ? ' · Ø ' + s.st.avg.toFixed(2) : '');
+      return '<span class="st-pill ' + (s.won ? 'w' : 'l') + '" style="animation-delay:' + (300 + i * 70) + 'ms" data-tip="' + esc(tip) + '">' + (s.won ? 'S' : 'N') + '</span>';
+    }).join('');
+    var text = '<div class="st-ringtxt"><div class="gross">' + siege + ' : ' + (m.length - siege) + '</div><div>Siege : Niederlagen</div>' +
+      '<div class="luft">Legs ' + lw + ' : ' + ll + (lw + ll ? ' (' + Math.round(lw / (lw + ll) * 100) + ' %)' : '') + '</div>' +
+      '<div>Aktuell: <b style="color:' + (aktW ? ST_FARBE.gruen : ST_FARBE.rot) + '">' + akt + ' ' + (aktW ? (akt > 1 ? 'Siege' : 'Sieg') : (akt > 1 ? 'Niederlagen' : 'Niederlage')) + ' in Folge</b></div>' +
+      '<div>Längste Siegesserie: <b style="color:' + ST_FARBE.gold + '">' + beste + '</b></div></div>';
+    return stKarte('form', titel, sub, '<div class="st-ringwrap">' + ring + text + '</div><p class="st-sub">Letzte 10 Spiele</p><div class="st-pillen">' + pillen + '</div>');
+  }
+
+  /* Sechs Achsen von 0 bis 1: Scoring 35..75, First 9 35..80, Doppel 0..50 %,
+     Konstanz (Streuung der Averages, 14 Punkte = 0), Big Scores je Leg bis
+     3,2, Siegquote. Letzte 10 gegen die ganze Auswahl. */
+  function stRadarWerte(s) {
+    var cl = function (v) { return Math.max(0, Math.min(1, v)); };
+    return [cl(((s.avg || 0) - 35) / 40), cl(((s.first9 || s.avg || 0) - 35) / 45), cl((s.dbl || 0) / 50), cl(1 - (s.std || 0) / 14), cl(s.tonsProLeg / 3.2), cl((s.win === null ? 50 : s.win) / 100)];
+  }
+  function stRadarKarte(spiele) {
+    var titel = '🧬 Spielerprofil', sub = 'Letzte 10 Spiele im Vergleich zur ganzen Auswahl';
+    if (spiele.length < 2) return stKarte('radar', titel, sub, '<p class="st-leer">Mindestens 2 Spiele nötig.</p>');
+    var ges = statsSumme(spiele), letzte = statsSumme(spiele.slice(-10));
+    var L = ['Scoring', 'First 9', 'Doppel', 'Konstanz', 'Big Scores', 'Siege'];
+    var W = 340, H = 292, cx = W / 2, cy = H / 2 + 4, R = Math.min(W, H) / 2 - 38;
+    var ang = function (i) { return -Math.PI / 2 + i * 2 * Math.PI / 6; };
+    var pt = function (i, r) { return [cx + Math.cos(ang(i)) * r, cy + Math.sin(ang(i)) * r]; };
+    var netz = [0.25, 0.5, 0.75, 1].map(function (f) { return '<polygon points="' + L.map(function (_, i) { return pt(i, R * f).map(function (c) { return c.toFixed(1); }).join(','); }).join(' ') + '" fill="' + (f === 1 ? '#ffffff05' : 'none') + '" stroke="#ffffff14"/>'; }).join('');
+    var achsen = L.map(function (l, i) {
+      var p = pt(i, R), t = pt(i, R + 20);
+      return '<line x1="' + cx + '" y1="' + cy + '" x2="' + p[0].toFixed(1) + '" y2="' + p[1].toFixed(1) + '" stroke="#ffffff14"/>' +
+        '<text x="' + t[0].toFixed(1) + '" y="' + (t[1] + 4).toFixed(1) + '" text-anchor="' + (Math.abs(t[0] - cx) < 5 ? 'middle' : t[0] > cx ? 'start' : 'end') + '" fill="#9a8f90" font-size="11" font-weight="600">' + l + '</text>';
+    }).join('');
+    var flaechen = [[stRadarWerte(ges), ST_FARBE.blau, 0], [stRadarWerte(letzte), ST_FARBE.rot, 250]].map(function (e) {
+      var vals = e[0];
+      return '<g class="st-growR" style="animation-delay:' + e[2] + 'ms"><polygon points="' + vals.map(function (v, i) { var a = ang(i); return (Math.cos(a) * R * v).toFixed(1) + ',' + (Math.sin(a) * R * v).toFixed(1); }).join(' ') + '" fill="' + e[1] + '" fill-opacity=".18" stroke="' + e[1] + '" stroke-width="2.2" stroke-linejoin="round"/>' +
+        vals.map(function (v, i) { var a = ang(i); return '<circle cx="' + (Math.cos(a) * R * v).toFixed(1) + '" cy="' + (Math.sin(a) * R * v).toFixed(1) + '" r="3.2" fill="' + e[1] + '"/>'; }).join('') + '</g>';
+    }).join('');
+    var det = [function (a) { return stZahl(a.avg, 2); }, function (a) { return stZahl(a.first9, 2); }, function (a) { return a.dbl === null ? '–' : a.dbl.toFixed(1) + ' %'; },
+      function (a) { return '±' + a.std.toFixed(1); }, function (a) { return a.tonsProLeg.toFixed(2) + ' je Leg'; }, function (a) { return a.win === null ? '–' : a.win.toFixed(0) + ' %'; }];
+    STATS_TIPS.radar = L.map(function (l, i) { return '<b>' + l + '</b><br><span style="color:' + ST_FARBE.rot + '">Letzte 10: ' + det[i](letzte) + '</span><br><span style="color:' + ST_FARBE.blau + '">Auswahl: ' + det[i](ges) + '</span>'; });
+    var svg = '<svg class="st-svg st-radar" viewBox="0 0 ' + W + ' ' + H + '" data-st-chart="radar" data-cx="' + cx + '" data-cy="' + cy + '" data-w="' + W + '" data-h="' + H + '">' + netz + achsen + '<g transform="translate(' + cx + ' ' + cy + ')">' + flaechen + '</g></svg>';
+    var legende = '<div class="st-legende"><span><i style="background:' + ST_FARBE.rot + '"></i>Letzte 10</span><span><i style="background:' + ST_FARBE.blau + '"></i>Auswahl</span></div>';
+    return stKarte('radar', titel, sub, svg + legende);
+  }
+
+  /* Das Board: der aeussere Ring traegt je Doppel die Quote als Farbe, ★ ist
+     die Finish-Kette des Spielers (Lieblingsgruppen aus dem Profil, sonst
+     die 16er-Kette). Rechts die neun meistgeworfenen Doppel als Balken. */
+  function stDoppelKarte(p, spiele) {
+    var d = {};
+    spiele.forEach(function (s) { Object.keys(s.doppel).forEach(function (k) { if (!d[k]) d[k] = [0, 0]; d[k][0] += s.doppel[k][0]; d[k][1] += s.doppel[k][1]; }); });
+    var keys = Object.keys(d).filter(function (k) { return d[k][1] > 0; });
+    var favs = finishFavoriten(finishGruppen(p)).map(String);
+    if (!favs.length) favs = ['16', '8', '4', '2', '1'];
+    var favText = favs.map(function (k) { return k === '25' ? 'Bull' : 'D' + k; }).join(', ');
+    var titel = '🎯 Doppel-Analyse', sub = 'Trefferquote je Doppel, nur aus Einzel-Darts. Grün = stark, Rot = Baustelle. ★ = deine Finish-Kette ' + favText;
+    if (!keys.length) return stKarte('doppel', titel, sub, '<p class="st-leer">Noch kein Dart auf ein Doppel erfasst. Gezählt wird im Einzel-Dart-Modus, in den die App im Finish-Bereich von selbst wechselt.</p>', true);
+    var size = 320, c = size / 2, R = size / 2 / 1.17;
+    var P = function (r, a) { return [c + r * Math.sin(a), c - r * Math.cos(a)]; };
+    var fx = function (q) { return q[0].toFixed(2) + ' ' + q[1].toFixed(2); };
+    var seg = function (r0, r1, a0, a1) { return 'M' + fx(P(r1, a0)) + 'A' + r1.toFixed(2) + ' ' + r1.toFixed(2) + ' 0 0 1 ' + fx(P(r1, a1)) + 'L' + fx(P(r0, a1)) + 'A' + r0.toFixed(2) + ' ' + r0.toFixed(2) + ' 0 0 0 ' + fx(P(r0, a0)) + 'Z'; };
+    var felder = '', ringe = '', texte = '', treffer = '';
+    ST_BOARD.forEach(function (n, i) {
+      var a0 = (i * 18 - 9) * Math.PI / 180, a1 = (i * 18 + 9) * Math.PI / 180, alt = i % 2;
+      felder += '<path d="' + seg(R * 0.1, R * 0.58, a0, a1) + '" fill="' + (alt ? '#1e1719' : '#171213') + '"/><path d="' + seg(R * 0.58, R * 0.64, a0, a1) + '" fill="' + (alt ? '#2a3a2f' : '#3a2629') + '"/><path d="' + seg(R * 0.64, R * 0.93, a0, a1) + '" fill="' + (alt ? '#1e1719' : '#171213') + '"/>';
+      var v = d[String(n)], q = v && v[1] ? v[0] / v[1] : null, fav = favs.indexOf(String(n)) >= 0;
+      ringe += '<path d="' + seg(R * 0.93, R, a0, a1) + '" fill="' + (q === null ? '#2a2224' : stQuoteFarbe(q)) + '" stroke="#0d0a0b" stroke-width=".8" class="st-fade" style="animation-delay:' + (500 + i * 45) + 'ms"/>';
+      var tp = P(R * 1.075, (a0 + a1) / 2);
+      texte += '<text x="' + tp[0].toFixed(1) + '" y="' + (tp[1] + 4).toFixed(1) + '" text-anchor="middle" fill="' + (fav ? ST_FARBE.gold : '#9fb0c4') + '" font-size="' + (R * 0.085).toFixed(1) + '" font-weight="' + (fav ? 800 : 600) + '">' + n + '</text>';
+      treffer += '<path d="' + seg(R * 0.58, R * 1.13, a0, a1) + '" fill="transparent" data-tip="' + esc('<b>D' + n + (fav ? ' ★' : '') + '</b><br>' + (v ? (q * 100).toFixed(1) + ' % (' + v[0] + ' von ' + v[1] + ')' : 'noch nicht geworfen')) + '"/>';
+    });
+    var bv = d['25'], bq = bv && bv[1] ? bv[0] / bv[1] : null;
+    var bull = '<circle cx="' + c + '" cy="' + c + '" r="' + (R * 0.1).toFixed(1) + '" fill="#4ade8055"/>' +
+      '<circle cx="' + c + '" cy="' + c + '" r="' + (R * 0.05).toFixed(1) + '" fill="' + (bq === null ? '#2a2224' : stQuoteFarbe(bq)) + '" stroke="#0d0a0b" class="st-fade" style="animation-delay:1.4s" data-tip="' + esc('<b>Bull</b><br>' + (bv ? (bq * 100).toFixed(1) + ' % (' + bv[0] + ' von ' + bv[1] + ')' : 'noch nicht geworfen')) + '"/>';
+    var svg = '<svg class="st-svg st-board" viewBox="0 0 ' + size + ' ' + size + '"><circle cx="' + c + '" cy="' + c + '" r="' + (R * 1.16).toFixed(1) + '" fill="#110d0e" stroke="#2a2224"/><g class="st-growR st-boardfelder">' + felder + '</g>' + ringe + bull + texte + treffer + '</svg>';
+    var sortiert = keys.sort(function (a, b) { return d[b][1] - d[a][1]; }).slice(0, 9);
+    var favQ = favs.reduce(function (acc, k) { return [acc[0] + (d[k] ? d[k][0] : 0), acc[1] + (d[k] ? d[k][1] : 0)]; }, [0, 0]);
+    var balken = '<div class="st-brow"><div class="t"><b class="fav">★ Finish-Kette gesamt</b><span>' + (favQ[1] ? (favQ[0] / favQ[1] * 100).toFixed(1) + ' % · ' + favQ[0] + '/' + favQ[1] : '–') + '</span></div>' +
+      '<div class="st-track"><div class="st-fill" data-w="' + (favQ[1] ? Math.min(100, favQ[0] / favQ[1] * 100 / 0.6).toFixed(1) : 0) + '" style="background:linear-gradient(90deg,' + ST_FARBE.gold + ',#ff9f3d)"></div></div></div>' +
+      sortiert.map(function (k) {
+        var h = d[k][0], a = d[k][1], q = h / a, fav = favs.indexOf(k) >= 0;
+        return '<div class="st-brow"><div class="t"><b class="' + (fav ? 'fav' : '') + '">' + (k === '25' ? 'Bull' : 'D' + k) + (fav ? ' ★' : '') + '</b><span>' + (q * 100).toFixed(1) + ' % · ' + h + '/' + a + '</span></div>' +
+          '<div class="st-track"><div class="st-fill" data-w="' + Math.min(100, q * 100 / 0.6).toFixed(1) + '" style="background:' + stQuoteFarbe(q) + '"></div></div></div>';
+      }).join('') +
+      '<p class="st-note">Balkenlänge: 60 % Quote = voller Balken. Sortiert nach Anzahl Darts.</p>';
+    return stKarte('doppel', titel, sub, '<div class="st-dbl"><div class="st-dbl-board">' + svg + '</div><div class="st-dbl-bars">' + balken + '</div></div>', true);
+  }
+
+  /* Gestapelte Balken je Monat: 100+, 140+, 180. */
+  function stBigKarte(spiele) {
+    var titel = '💥 Big Scores je Monat', sub = 'Aufnahmen 100+, 140+ und 180 je Monat';
+    var ms = stMonate(spiele).slice(-8);
+    if (!ms.length) return stKarte('big', titel, sub, '<p class="st-leer">Keine Daten.</p>');
+    var data = ms.map(function (e) { return { k: e.k, a: sum(e.gs, function (s) { return s.st.s100; }), b: sum(e.gs, function (s) { return s.st.s140; }), c: sum(e.gs, function (s) { return s.st.s180; }), n: e.gs.length }; });
+    var W = 340, H = 230, L = 30, R = 8, T = 12, B = 24, max = Math.max(1, Math.max.apply(null, data.map(function (q) { return q.a + q.b + q.c; })));
+    var y = function (v) { return T + (1 - v / max) * (H - T - B); }, bw = (W - L - R) / data.length;
+    var grid = [0, 0.5, 1].map(function (f) { var v = Math.round(max * f); return '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(v).toFixed(1) + '" y2="' + y(v).toFixed(1) + '" class="st-gl"/><text x="' + (L - 6) + '" y="' + (y(v) + 3).toFixed(1) + '" text-anchor="end" class="st-ax">' + v + '</text>'; }).join('');
+    var balken = data.map(function (q, i) {
+      var x = L + i * bw + bw * 0.18, ww = bw * 0.64, basis = 0, rects = '';
+      [['a', ST_FARBE.blau], ['b', ST_FARBE.gold], ['c', ST_FARBE.rot]].forEach(function (e) {
+        if (!q[e[0]]) return;
+        rects += '<rect x="' + x.toFixed(1) + '" y="' + y(basis + q[e[0]]).toFixed(1) + '" width="' + ww.toFixed(1) + '" height="' + (y(basis) - y(basis + q[e[0]])).toFixed(1) + '" fill="' + e[1] + '"/>';
+        basis += q[e[0]];
+      });
+      return (rects ? '<g class="st-growY" style="animation-delay:' + (i * 90) + 'ms">' + rects + '</g>' : '') +
+        '<text x="' + (x + ww / 2).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" class="st-ax">' + stMonatText(q.k) + '</text>' +
+        '<rect x="' + (L + i * bw).toFixed(1) + '" y="' + T + '" width="' + bw.toFixed(1) + '" height="' + (H - T - B) + '" fill="transparent" data-tip="' + esc('<b>' + stMonatText(q.k) + '</b> · ' + plural(q.n, 'Spiel', 'Spiele') + '<br>100+: ' + q.a + '<br>140+: ' + q.b + '<br>180: ' + q.c) + '"/>';
+    }).join('');
+    var legende = '<div class="st-legende"><span><i style="background:' + ST_FARBE.blau + '"></i>100 bis 139</span><span><i style="background:' + ST_FARBE.gold + '"></i>140 bis 179</span><span><i style="background:' + ST_FARBE.rot + '"></i>180</span></div>';
+    return stKarte('big', titel, sub, '<svg class="st-svg" viewBox="0 0 ' + W + ' ' + H + '">' + grid + balken + '</svg>' + legende);
+  }
+
+  /* Doppelquote je Monat als weiche Kurve (Catmull-Rom). */
+  function stDblTrendKarte(spiele) {
+    var titel = '✅ Doppelquote im Verlauf', sub = 'Quote je Monat in Prozent';
+    var ms = stMonate(spiele).map(function (e) {
+      var a = sum(e.gs, function (s) { return s.st.doubleAttempts; }), h = sum(e.gs, function (s) { return s.st.doubleHits; });
+      return { k: e.k, q: a ? h / a * 100 : null, a: a, h: h };
+    }).filter(function (q) { return q.q !== null; }).slice(-8);
+    if (ms.length < 2) return stKarte('dbltrend', titel, sub, '<p class="st-leer">Mindestens 2 Monate mit Doppel-Daten nötig.</p>');
+    var W = 340, H = 230, L = 30, R = 14, T = 20, B = 24;
+    var max = Math.ceil(Math.max.apply(null, ms.map(function (q) { return q.q; })) / 10) * 10 + 5;
+    var min = Math.max(0, Math.floor(Math.min.apply(null, ms.map(function (q) { return q.q; })) / 10) * 10 - 5);
+    var x = function (i) { return L + i * (W - L - R) / (ms.length - 1); }, y = function (v) { return T + (max - v) * (H - T - B) / (max - min); };
+    var grid = '';
+    for (var t = min; t <= max; t += 10) grid += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(t).toFixed(1) + '" y2="' + y(t).toFixed(1) + '" class="st-gl"/><text x="' + (L - 6) + '" y="' + (y(t) + 3).toFixed(1) + '" text-anchor="end" class="st-ax">' + t + '</text>';
+    var pts = ms.map(function (q, i) { return [x(i), y(q.q)]; }), dd = 'M' + pts[0][0].toFixed(1) + ' ' + pts[0][1].toFixed(1);
+    for (var i = 0; i < pts.length - 1; i++) {
+      var p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+      dd += 'C' + (p1[0] + (p2[0] - p0[0]) / 6).toFixed(1) + ' ' + (p1[1] + (p2[1] - p0[1]) / 6).toFixed(1) + ' ' + (p2[0] - (p3[0] - p1[0]) / 6).toFixed(1) + ' ' + (p2[1] - (p3[1] - p1[1]) / 6).toFixed(1) + ' ' + p2[0].toFixed(1) + ' ' + p2[1].toFixed(1);
+    }
+    var punkte = ms.map(function (q, i) {
+      return '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(q.q).toFixed(1) + '" r="5" fill="#0d0a0b" stroke="' + ST_FARBE.gruen + '" stroke-width="2.5" class="st-pt" style="animation-delay:' + (300 + i * 160) + 'ms"/>' +
+        '<text x="' + x(i).toFixed(1) + '" y="' + (y(q.q) - 11).toFixed(1) + '" text-anchor="middle" fill="#f2eeee" font-size="10" font-weight="700" class="st-fade" style="animation-delay:' + (500 + i * 160) + 'ms">' + q.q.toFixed(0) + '</text>' +
+        '<text x="' + x(i).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" class="st-ax">' + stMonatText(q.k) + '</text>' +
+        '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(q.q).toFixed(1) + '" r="16" fill="transparent" data-tip="' + esc('<b>' + stMonatText(q.k) + '</b><br>' + q.q.toFixed(1) + ' % (' + q.h + ' von ' + q.a + ')') + '"/>';
+    }).join('');
+    var svg = '<svg class="st-svg" viewBox="0 0 ' + W + ' ' + H + '"><defs><linearGradient id="st-gd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + ST_FARBE.gruen + '" stop-opacity=".4"/><stop offset="1" stop-color="' + ST_FARBE.gruen + '" stop-opacity="0"/></linearGradient></defs>' + grid +
+      '<path d="' + dd + 'L' + x(ms.length - 1).toFixed(1) + ' ' + (H - B) + 'L' + x(0).toFixed(1) + ' ' + (H - B) + 'Z" fill="url(#st-gd)" class="st-fade"/>' +
+      '<path d="' + dd + '" fill="none" stroke="' + ST_FARBE.gruen + '" stroke-width="3" stroke-linecap="round" class="st-draw"/>' + punkte + '</svg>';
+    return stKarte('dbltrend', titel, sub, svg);
+  }
+
+  /* Liga, Turnier, Schnell, Solo nebeneinander - unabhaengig vom Modus-Filter,
+     der Zeitraum gilt. */
+  function stModiKarte(alle, f) {
+    var titel = '⚖️ Liga · Turnier · Schnell · Solo';
+    var gs = f.bereich ? alle.slice(-f.bereich) : alle;
+    var sub = 'Average, Doppelquote und Siegquote je Modus' + (f.bereich ? ' (letzte ' + f.bereich + ' Spiele)' : '');
+    var zeilen = STATS_MODI.slice(1).map(function (m) { return { m: m[0], t: m[1], s: statsSumme(gs.filter(function (s) { return s.modus === m[0]; })) }; }).filter(function (r) { return r.s; });
+    if (!zeilen.length) return stKarte('modi', titel, sub, '<p class="st-leer">Keine Daten.</p>');
+    var maxAvg = Math.max.apply(null, zeilen.map(function (r) { return r.s.avg || 0; })) || 1;
+    var farbe = { liga: ST_FARBE.blau, turnier: ST_FARBE.gold, quick: ST_FARBE.gruen, solo: ST_FARBE.lila };
+    var html = zeilen.map(function (r) {
+      return '<div class="st-mrow"><div class="h">' + r.t + '<span>' + plural(r.s.n, 'Spiel', 'Spiele') + '</span></div>' +
+        [['Average', r.s.avg, maxAvg * 1.05, 2, ''], ['Doppel', r.s.dbl, 60, 1, ' %'], ['Siege', r.s.win, 100, 0, ' %']].map(function (e) {
+          return '<div class="st-mbar">' + e[0] + '<div class="st-track"><div class="st-fill" data-w="' + (e[1] === null ? 0 : Math.min(100, e[1] / e[2] * 100).toFixed(1)) + '" style="background:' + farbe[r.m] + '"></div></div><b>' + (e[1] === null ? '–' : e[1].toFixed(e[3]) + e[4]) + '</b></div>';
+        }).join('') + '</div>';
+    }).join('');
+    return stKarte('modi', titel, sub, html);
+  }
+
+  /* 20 Wochen als Kacheln, je Tag die Zahl der Spiele - der Modus-Filter gilt,
+     der Zeitraum nicht. */
+  function stKalenderKarte(alle, f) {
+    var gs = f.modus === 'alle' ? alle : alle.filter(function (s) { return s.modus === f.modus; });
+    var cnt = {};
+    gs.forEach(function (s) { var k = stTag(s.at); cnt[k] = (cnt[k] || 0) + 1; });
+    var wochen = 20, lab = 22, zelle = 12, gap = 3, W = lab + wochen * (zelle + gap), H = 7 * (zelle + gap) + 22;
+    var heute = new Date(); heute.setHours(12, 0, 0, 0);
+    var dow = (heute.getDay() + 6) % 7;
+    var start = new Date(heute.getTime() - ((wochen - 1) * 7 + dow) * 864e5);
+    var svg = ['Mo', '', 'Mi', '', 'Fr', '', 'So'].map(function (t, i) { return t ? '<text x="0" y="' + (i * (zelle + gap) + zelle - 2) + '" class="st-ax">' + t + '</text>' : ''; }).join('');
+    var letzterM = -1, gesamt = 0, tage = 0;
+    for (var wk = 0; wk < wochen; wk++) {
+      for (var d = 0; d < 7; d++) {
+        var dt = new Date(start.getTime() + (wk * 7 + d) * 864e5);
+        if (dt > heute) continue;
+        var k = stTag(dt.getTime()), c = cnt[k] || 0;
+        gesamt += c; if (c) tage++;
+        svg += '<rect x="' + (lab + wk * (zelle + gap)) + '" y="' + (d * (zelle + gap)) + '" width="' + zelle + '" height="' + zelle + '" rx="3" fill="' + (c === 0 ? '#ffffff0a' : c === 1 ? '#e5484d66' : c === 2 ? '#e5484daa' : '#e5484d') + '" class="st-pt" style="animation-delay:' + ((wk + d) * 22) + 'ms"' +
+          (c ? ' data-tip="' + esc('<b>' + stDatum(dt.getTime()) + '</b><br>' + plural(c, 'Spiel', 'Spiele')) + '"' : '') + '/>';
+        if (d === 0 && dt.getMonth() !== letzterM && dt.getDate() <= 7) { letzterM = dt.getMonth(); svg += '<text x="' + (lab + wk * (zelle + gap)) + '" y="' + (H - 6) + '" class="st-ax">' + ST_MONATE[letzterM] + '</text>'; }
+      }
+    }
+    return stKarte('kalender', '📅 Aktivität', 'Gespielte Spiele der letzten 20 Wochen', '<svg class="st-svg st-kal" viewBox="0 0 ' + W + ' ' + H + '">' + svg + '</svg>' +
+      '<p class="st-note">' + plural(gesamt, 'Spiel', 'Spiele') + ' an ' + plural(tage, 'Tag', 'Tagen') + ', im Schnitt ' + (gesamt / wochen).toFixed(1) + ' je Woche</p>');
+  }
+
+  /* Head-to-Head: je Gegner Spiele, Bilanz, Legs, eigener Average, Siegquote. */
+  function stGegnerKarte(spiele) {
+    var titel = '🤝 Gegnerbilanz', sub = 'Head-to-Head, meistgespielte zuerst';
+    var m = spiele.filter(function (s) { return s.won !== null && s.gegnerId; });
+    if (!m.length) return stKarte('gegner', titel, sub, '<p class="st-leer">Noch keine Spiele mit Gegner.</p>', true);
+    var o = {};
+    m.forEach(function (s) {
+      var x = o[s.gegnerId];
+      if (!x) x = o[s.gegnerId] = { name: s.gegner, team: '', n: 0, w: 0, lw: 0, ll: 0, pts: 0, darts: 0 };
+      x.n++; if (s.won) x.w++;
+      x.lw += s.legsWon; x.ll += s.legsLost; x.pts += s.st.points; x.darts += s.st.darts;
+      if (s.team) x.team = s.team;
+    });
+    var zeilen = Object.keys(o).map(function (k) { return o[k]; }).sort(function (a, b) { return b.n - a.n || b.w - a.w; }).slice(0, 10);
+    var html = '<table class="st-tab"><thead><tr><th>Gegner</th><th class="n">Spiele</th><th class="n">Bilanz</th><th class="n">Legs</th><th class="n">Ø</th><th class="q">Siegquote</th></tr></thead><tbody>' +
+      zeilen.map(function (x, i) {
+        var q = x.w / x.n * 100, farbe = q >= 50 ? ST_FARBE.gruen : ST_FARBE.rot;
+        return '<tr class="st-fade" style="animation-delay:' + (i * 60) + 'ms"><td><b>' + esc(x.name) + '</b>' + (x.team ? '<small>' + esc(x.team) + '</small>' : '') + '</td><td class="n">' + x.n + '</td>' +
+          '<td class="n" style="color:' + farbe + '">' + x.w + ' : ' + (x.n - x.w) + '</td><td class="n">' + x.lw + ' : ' + x.ll + '</td><td class="n">' + (x.darts ? (x.pts / x.darts * 3).toFixed(1) : '–') + '</td>' +
+          '<td><div class="st-track"><div class="st-fill" data-w="' + q.toFixed(1) + '" style="background:' + farbe + '"></div></div></td></tr>';
+      }).join('') + '</tbody></table>';
+    return stKarte('gegner', titel, sub, html, true);
+  }
+
+  /* Bestleistungen mit Datum und Gegner. */
+  function stRekordKarte(spiele) {
+    var best = function (f, kleiner) {
+      var k = spiele.filter(function (s) { return f(s) > 0; });
+      return k.length ? k.reduce(function (b, s) { return b === null || (kleiner ? f(s) < f(b) : f(s) > f(b)) ? s : b; }, null) : null;
+    };
+    var ba = best(function (s) { return s.st.darts ? s.st.avg : 0; }), bf = best(function (s) { return s.st.first9Darts ? s.st.first9 : 0; });
+    var hf = best(function (s) { return s.st.highCO; }), bl = best(function (s) { return s.st.bestLeg || 0; }, true), m180 = best(function (s) { return s.st.s180; });
+    var dq = spiele.filter(function (s) { return s.st.doubleAttempts >= 8; }).sort(function (a, b) { return b.st.doubleQuote - a.st.doubleQuote; })[0];
+    var lauf = 0, serie = 0;
+    spiele.forEach(function (s) { if (s.won === null) return; if (s.won) { lauf++; if (lauf > serie) serie = lauf; } else lauf = 0; });
+    var ges = statsSumme(spiele);
+    var wo = function (s) { return s ? stDatum(s.at) + (s.gegner ? ' vs. ' + esc(s.gegner) : ' · ' + (STATS_MODUS_TEXT[s.modus] || '')) : ''; };
+    var R = [['⚡', 'Bester Average', ba ? ba.st.avg.toFixed(2) : null, wo(ba)], ['🚀', 'Beste First 9', bf ? bf.st.first9.toFixed(2) : null, wo(bf)], ['🎯', 'Höchstes Finish', hf ? hf.st.highCO : null, wo(hf)],
+      ['⏱️', 'Kürzestes Leg', bl ? bl.st.bestLeg + ' Darts' : null, wo(bl)], ['💥', 'Meiste 180 im Spiel', m180 ? m180.st.s180 : null, wo(m180)],
+      ['✅', 'Beste Doppelquote', dq ? dq.st.doubleQuote.toFixed(0) + ' %' : null, dq ? wo(dq) + ' (' + dq.st.doubleHits + '/' + dq.st.doubleAttempts + ')' : ''],
+      ['🔥', 'Längste Siegesserie', serie || null, 'Spiele in Folge'], ['📊', 'Spiele gesamt', spiele.length, plural(ges.legs, 'Leg', 'Legs')]];
+    var html = R.map(function (r, i) {
+      if (r[2] === null || r[2] === undefined) return '';
+      return '<div class="st-rec" style="animation-delay:' + (i * 70) + 'ms"><div class="e">' + r[0] + '</div><div class="v">' + r[2] + '</div><div class="l">' + r[1] + '</div><div class="s">' + r[3] + '</div></div>';
+    }).join('');
+    return stKarte('rekorde', '🏆 Rekorde', 'Deine Bestleistungen in der Auswahl', '<div class="st-recs">' + html + '</div>', true);
+  }
+
+  /* ---- Tooltip und Animationen ---- */
+  var stTipEl = null, stHoererDran = false, stTipSeit = 0;
+  function stTip() {
+    if (!stTipEl) { stTipEl = document.createElement('div'); stTipEl.id = 'st-tip'; document.body.appendChild(stTipEl); }
+    return stTipEl;
+  }
+  function stTipZeigen(html, x, y) {
+    var t = stTip();
+    t.innerHTML = html; t.classList.add('an'); stTipSeit = Date.now();
+    var w = t.offsetWidth, h = t.offsetHeight, l = x + 14, o = y - h - 12;
+    if (l + w > window.innerWidth - 8) l = x - w - 14;
+    if (l < 8) l = 8;
+    if (o < 8) o = y + 16;
+    t.style.left = l + 'px'; t.style.top = o + 'px';
+  }
+  function stTipWeg() {
+    if (stTipEl) stTipEl.classList.remove('an');
+    var cur = document.querySelectorAll('.st-dash .st-cursor');
+    for (var i = 0; i < cur.length; i++) cur[i].setAttribute('opacity', 0);
+  }
+  /* Ein Zeiger ueber einem Element mit data-tip zeigt dessen Text; ueber dem
+     Average-Verlauf den naechsten Punkt, ueber dem Radar die naechste Achse. */
+  function stTipZeiger(e) {
+    var t = e.target;
+    var ziel = t && t.closest ? t.closest('[data-tip], [data-st-chart]') : null;
+    if (!ziel || !ziel.closest('.st-dash')) { stTipWeg(); return; }
+    if (ziel.hasAttribute('data-tip')) { stTipZeigen(ziel.getAttribute('data-tip'), e.clientX, e.clientY); return; }
+    var art = ziel.getAttribute('data-st-chart'), r = ziel.getBoundingClientRect(), tips = STATS_TIPS[art];
+    if (!tips || !tips.length || !r.width) return;
+    if (art === 'avg') {
+      var W = Number(ziel.getAttribute('data-w')), L = Number(ziel.getAttribute('data-l')), R = Number(ziel.getAttribute('data-r')), n = Number(ziel.getAttribute('data-n'));
+      var px = (e.clientX - r.left) * (W / r.width);
+      var i = Math.max(0, Math.min(n - 1, Math.round((px - L) / ((W - L - R) / (n - 1)))));
+      var cur = ziel.querySelector('.st-cursor');
+      if (cur) { var cx = L + i * (W - L - R) / (n - 1); cur.setAttribute('x1', cx); cur.setAttribute('x2', cx); cur.setAttribute('opacity', 1); }
+      stTipZeigen(tips[i], e.clientX, e.clientY);
+    } else if (art === 'radar') {
+      var W2 = Number(ziel.getAttribute('data-w')), H2 = Number(ziel.getAttribute('data-h'));
+      var qx = (e.clientX - r.left) * (W2 / r.width) - Number(ziel.getAttribute('data-cx')), qy = (e.clientY - r.top) * (H2 / r.height) - Number(ziel.getAttribute('data-cy'));
+      var a = Math.atan2(qy, qx) + Math.PI / 2;
+      if (a < 0) a += 2 * Math.PI;
+      stTipZeigen(tips[Math.round(a / (Math.PI / 3)) % 6], e.clientX, e.clientY);
+    }
+  }
+  function stHoererEinrichten() {
+    if (stHoererDran) return;
+    stHoererDran = true;
+    document.addEventListener('pointermove', stTipZeiger, { passive: true });
+    document.addEventListener('pointerdown', stTipZeiger, { passive: true });
+    /* Scrollen blendet den Tipp aus - ausser er kam gerade erst (ein Tipp
+       auf ein Element am Rand rollt es zuerst ins Bild und loest so ein
+       Scrollen aus, das den frischen Tipp sonst sofort wieder schliesst). */
+    document.addEventListener('scroll', function () { if (Date.now() - stTipSeit > 400) stTipWeg(); }, { passive: true, capture: true });
+  }
+  /* Zahl zaehlt in 1,3 s von null ans Ziel (kubisch auslaufend). */
+  function stZaehlen(el) {
+    var ziel = Number(el.getAttribute('data-zahl')), dez = Number(el.getAttribute('data-dez')) || 0, suf = el.getAttribute('data-suf') || '';
+    if (!isFinite(ziel)) return;
+    var t0 = performance.now(), D = 1300;
+    el.textContent = (0).toFixed(dez) + suf;
+    requestAnimationFrame(function schritt(t) {
+      var p = Math.min(1, (t - t0) / D), e = 1 - Math.pow(1 - p, 3);
+      el.textContent = (ziel * e).toFixed(dez) + suf;
+      if (p < 1 && el.isConnected) requestAnimationFrame(schritt);
+    });
+  }
+  /* Nach dem Zeichnen: Linien ziehen sich, Balken wachsen, Ringe fuellen
+     sich, Zahlen zaehlen hoch - einmal je Auswahl. Zeichnet die Seite aus
+     anderem Anlass neu (Abgleich, Tick) oder wuenscht das Geraet weniger
+     Bewegung, steht alles sofort am Ziel (.st-still). */
+  function statsNachRender() {
+    var wurzel = $('profile-detail').querySelector('.st-dash');
+    if (!wurzel) return;
+    stHoererEinrichten(); stTipWeg();
+    var f = statsFilter();
+    var key = UI.profile + '|' + f.modus + '|' + f.bereich + '|' + wurzel.getAttribute('data-spiele');
+    var ruhig = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    var still = key === statsAnimiertFuer || ruhig;
+    statsAnimiertFuer = key;
+    var pfade = wurzel.querySelectorAll('path.st-draw'), fuellungen = wurzel.querySelectorAll('.st-fill[data-w]');
+    var ringe = wurzel.querySelectorAll('.st-ring'), zahlen = wurzel.querySelectorAll('[data-zahl]');
+    var i;
+    var ziel = function (el) { el.style.width = el.getAttribute('data-w') + '%'; };
+    if (still) {
+      wurzel.classList.add('st-still');
+      for (i = 0; i < fuellungen.length; i++) ziel(fuellungen[i]);
+      return;
+    }
+    for (i = 0; i < pfade.length; i++) { var len = pfade[i].getTotalLength(); pfade[i].style.strokeDasharray = len; pfade[i].style.strokeDashoffset = len; }
+    for (i = 0; i < ringe.length; i++) ringe[i].style.strokeDashoffset = ringe[i].getAttribute('data-voll');
+    for (i = 0; i < zahlen.length; i++) stZaehlen(zahlen[i]);
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        if (!wurzel.isConnected) return;
+        var j;
+        for (j = 0; j < pfade.length; j++) pfade[j].style.strokeDashoffset = 0;
+        for (j = 0; j < ringe.length; j++) ringe[j].style.strokeDashoffset = ringe[j].getAttribute('stroke-dashoffset');
+        for (j = 0; j < fuellungen.length; j++) ziel(fuellungen[j]);
+      });
+    });
   }
 
   /* ---------- "Meine besten Finishes ermitteln" ----------
@@ -13019,7 +13624,9 @@
         fotoStarten(pfP.avatar, null);
         break;
       }
-      case 'profil-stats': UI.profilPanel = 'stats'; render(); break;
+      case 'profil-stats': UI.profilPanel = 'stats'; statsAnimiertFuer = ''; render(); break;
+      case 'stats-modus': statsFilter().modus = el.getAttribute('data-wert') || 'alle'; render(); break;
+      case 'stats-bereich': statsFilter().bereich = Number(el.getAttribute('data-wert')) || 0; render(); break;
       case 'profil-tabelle': UI.profilPanel = 'tabelle'; UI.tab = null; tabZustand(); render(); break;
       case 'profil-panel-zu': UI.profilPanel = null; UI.tab = null; render(); break;
       /* Finish-Tabelle: Filter, Rest waehlen, Editor */
@@ -15657,6 +16264,7 @@
       satzStand: satzStand,
       pname: pname,
       chartSeries: chartSeries,
+      spielerSpiele: spielerSpiele, statsSumme: statsSumme,   // Spieler-Dashboard, fuer die Tests
       currentMatch: currentMatch,
       game: function () { return S.game; },
       cricketState: function () { return cricketState(S.game); },
