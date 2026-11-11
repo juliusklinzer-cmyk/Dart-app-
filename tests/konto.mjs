@@ -265,7 +265,7 @@ async function main() {
       check('Anmeldebildschirm steht sofort da', await julius.page.locator('#screen-konto').isVisible());
       check('Navigation ist aus', await julius.page.locator('#nav').isHidden());
       check('kein Blick aufs Turnier', await julius.page.locator('#screen-setup').isHidden());
-      check('kein Blick auf die Rangliste', await julius.page.locator('#screen-boards').isHidden());
+      check('kein Blick auf die Rangliste', await julius.page.locator('#screen-stats').isHidden());
       check('kein Blick auf die Spieler', await julius.page.locator('#screen-players').isHidden());
       check('Schranke ist gesetzt', await julius.page.evaluate(() => document.body.classList.contains('gesperrt')));
       check('DartKonto vorhanden', await julius.page.evaluate(() => !!window.DartKonto));

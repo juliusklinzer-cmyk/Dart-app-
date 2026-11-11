@@ -37,7 +37,7 @@
 <nav id="nav" class="nav hidden">
   <button data-action="nav" data-screen="setup">Spiel</button>
   <button data-action="nav" data-screen="liga">Liga</button>
-  <button data-action="nav" data-screen="boards">Rang</button>
+  <button data-action="nav" data-screen="stats">Statistik</button>
   <button data-action="nav" data-screen="players">Spieler</button>
   <!-- Erscheint nur, wenn die Seite von einem Server kommt (siehe js/auth.js). -->
   <button id="nav-konto" class="hidden" data-action="nav" data-screen="konto">Profil</button>
@@ -341,15 +341,18 @@
   </div>
 </section>
 
-<!-- ============ RANGLISTE ============ -->
-<section id="screen-boards" class="screen boards-host">
-  <!-- Entwurf "Rangliste Redesign" (2. Fassung, Okt. 2026): oben der
-       Setup-Kopf (Marke, Navigation als Text-Reiter - #nav wandert per JS
-       hierher), darunter die Spielart mit Spielzahl und die Spielart-Reiter.
-       Links die Bestwert-Karten (Wert und wer ihn haelt; antippen waehlt
-       die Kennzahl) und die Liste aller Spieler, rechts der Verlauf zur
-       gewaehlten Kennzahl und die Rekorde. -->
-  <div class="setup-kopf" id="boards-kopf">
+<!-- ============ STATISTIK ============ -->
+<section id="screen-stats" class="screen boards-host">
+  <!-- Reiter "Statistik" nach dem Artefakt "Darts Statistik" (Nov. 2026):
+       oben der Setup-Kopf (Marke, Navigation als Text-Reiter - #nav wandert
+       per JS hierher), dann der Ebenen-Schalter Person / Mannschaft. Den
+       Inhalt zeichnet renderStats() in #stats-main (Person: das Dashboard
+       des Profils mit Spieler-Chips, Liga-Bilanz, weiteren Spielarten und
+       allen Zahlen; Mannschaft: Liga oder alle Spielarten). Unter der Crew
+       steht die Rangliste je Spielart in festen Bausteinen (#stats-rang),
+       die renderBoards() fuellt: Spielart-Reiter, Bestwert-Karten, Liste,
+       Verlauf, Rekorde, Spielverlauf. -->
+  <div class="setup-kopf" id="stats-kopf">
     <div class="marke" data-action="nav" data-screen="setup" role="button" tabindex="0" aria-label="Zum Spiel">
       <span class="blink-logo" role="img" aria-label="Blink 180"></span>
       <div>
@@ -358,8 +361,14 @@
       </div>
     </div>
   </div>
-  <div class="reiter-zeile">
-    <span class="kt" id="boards-sub"></span>
+  <div class="st-ebene" id="stats-ebene" role="tablist" aria-label="Ebene">
+    <button type="button" data-action="stats-ebene" data-wert="person" role="tab"><span class="i" aria-hidden="true">👤</span><span class="t">Person</span><span class="s">ein Spieler</span></button>
+    <button type="button" data-action="stats-ebene" data-wert="team" role="tab"><span class="i" aria-hidden="true">👥</span><span class="t">Mannschaft</span><span class="s">Team &amp; Liga</span></button>
+  </div>
+  <div id="stats-main"></div>
+
+  <div class="st-rang hidden" id="stats-rang">
+    <div class="st-rang-kopf"><h3>🏅 Rangliste je Spielart</h3><span id="boards-sub"></span></div>
     <div class="options kopf-reiter" id="board-mode">
       <button data-action="board-mode" data-value="501">Classic</button>
       <button data-action="board-mode" data-value="cricket">Cricket</button>
@@ -368,40 +377,32 @@
       <button data-action="board-mode" data-value="kaiwen">Kaiwen</button>
       <button data-action="board-mode" data-value="hunter">Hunter</button>
     </div>
-  </div>
 
-  <div class="boards-koerper">
-    <div class="boards-links">
-      <!-- Bestwert-Karten: je Kennzahl der beste Wert und wer ihn haelt. -->
-      <div class="board-kacheln" id="board-kacheln"></div>
-      <div class="card boards-liste">
-        <div class="karte-kopf"><h2 id="board-titel">Rangliste</h2><span class="hint" id="board-hint"></span><button class="btn ghost small nur-flach" data-action="board-log">Alle Spiele ›</button></div>
-        <div id="board-list" class="board-list"></div>
+    <div class="boards-koerper">
+      <div class="boards-links">
+        <!-- Bestwert-Karten: je Kennzahl der beste Wert und wer ihn haelt. -->
+        <div class="board-kacheln" id="board-kacheln"></div>
+        <div class="card boards-liste">
+          <div class="karte-kopf"><h2 id="board-titel">Rangliste</h2><span class="hint" id="board-hint"></span><button class="btn ghost small nur-flach" data-action="board-log">Alle Spiele ›</button></div>
+          <div id="board-list" class="board-list"></div>
+        </div>
+      </div>
+
+      <div class="boards-seite">
+        <div class="card" id="board-chart"></div>
+        <div class="card" id="board-rekorde">
+          <div class="karte-kopf"><h2 class="rekorde-titel"><span class="pokal" aria-hidden="true">🏆</span>Rekorde</h2><button class="btn ghost small" data-action="board-log" id="board-log-knopf">Alle Spiele ›</button></div>
+          <div id="records" class="records"></div>
+        </div>
       </div>
     </div>
 
-    <div class="boards-seite">
-      <div class="card" id="board-chart"></div>
-      <div class="card hidden" id="liga-highlights"></div>
-      <div class="card" id="board-rekorde">
-        <div class="karte-kopf"><h2 class="rekorde-titel"><span class="pokal" aria-hidden="true">🏆</span>Rekorde</h2><button class="btn ghost small" data-action="board-log" id="board-log-knopf">Alle Spiele ›</button></div>
-        <div id="records" class="records"></div>
-      </div>
+    <!-- Der Spielverlauf: "Alle Spiele" oeffnet ihn anstelle der Spalten. -->
+    <div class="card" id="board-log">
+      <div class="karte-kopf"><h2 id="log-title">Alle Spiele</h2><button class="btn ghost small" data-action="board-log-zu">‹ Rangliste</button></div>
+      <div id="match-log"></div>
     </div>
   </div>
-
-  <!-- Platzhalter fuer kuenftige Spielarten ohne Auswertung. -->
-  <div class="card boards-bald hidden" id="board-bald">
-    <span class="bald-titel">Coming soon</span>
-    <span class="bald-text" id="board-bald-text"></span>
-  </div>
-
-  <!-- Der Spielverlauf: "Alle Spiele" oeffnet ihn anstelle der Spalten. -->
-  <div class="card" id="board-log">
-    <div class="karte-kopf"><h2 id="log-title">Alle Spiele</h2><button class="btn ghost small" data-action="board-log-zu">‹ Rangliste</button></div>
-    <div id="match-log"></div>
-  </div>
-
 </section>
 
 <!-- ============ LIGA ============ -->
@@ -429,6 +430,7 @@
       <button data-action="liga-tab" data-tab="plan" class="active">Spielplan</button>
       <button data-action="liga-tab" data-tab="training">Training</button>
       <button data-action="liga-tab" data-tab="tabelle">Tabelle</button>
+      <!-- Springt in den Reiter Statistik › Mannschaft › Liga. -->
       <button data-action="liga-tab" data-tab="statistik">Statistik</button>
       <button data-action="liga-tab" data-tab="kasse">Kasse</button>
       <button data-action="liga-tab" data-tab="regeln">Regeln</button>
@@ -449,13 +451,6 @@
         <div id="liga-liste"></div>
       </div>
     </div>
-  </div>
-
-  <!-- Statistik: die Liga-Auswertung der Rangliste (Kategorien, Liste,
-       Verlauf, Rekorde) wandert per JS hierher, solange der Reiter offen ist. -->
-  <div id="liga-statistik" class="boards-host hidden">
-    <!-- Team-Auswahl (unsere, ganze Liga, Gegner) als Chips ueber den Spalten. -->
-    <div id="liga-team-chips" class="chips"></div>
   </div>
 
   <!-- DiensDarts: das Dienstags-Training in der Sehnsucht - mit Umfrage,

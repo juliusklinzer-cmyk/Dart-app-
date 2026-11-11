@@ -3411,7 +3411,7 @@ body.tastatur #screen-bulloff button:focus {
 /* Pfeiltasten ueberall: auf den Menue-Bildschirmen und in den Menues ist
    der markierte Knopf ebenso deutlich - innen liegend, damit die Marke in
    scrollenden Listen nicht abgeschnitten wird. */
-body.tastatur :is(#screen-setup, #screen-boards, #screen-players, #screen-profile, #screen-liga, #screen-konto, #screen-summary, #screen-winner, #screen-bericht, .game-menu-karte) :is(button, [role="button"], a[href], summary, select, input):focus {
+body.tastatur :is(#screen-setup, #screen-stats, #screen-players, #screen-profile, #screen-liga, #screen-konto, #screen-summary, #screen-winner, #screen-bericht, .game-menu-karte) :is(button, [role="button"], a[href], summary, select, input):focus {
   outline: 3px solid var(--laser, #4fb3e0); outline-offset: -3px;
   box-shadow: 0 0 30px var(--schein-stark);
 }
@@ -3513,9 +3513,6 @@ body.tastatur #overlay-card :is(button, select, input):focus { outline: 3px soli
 #overlay-card .konto-einladung b { color: var(--text); }
 
 
-/* Rang -> Liga: Auswahl des Teams als eigene Zeile ueber den Werte-Chips. */
-.liga-team-wahl { display: flex; flex-wrap: wrap; gap: 8px; flex-basis: 100%; width: 100%; margin-bottom: 4px; }
-.board-row .nm .board-team { display: block; font-size: 0.72rem; color: var(--muted); font-weight: 500; }
 
 
 /* ================= X01-Spielbild: Querformat zuerst (Entwurf 10/2026) =================
@@ -5129,7 +5126,7 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
    Karten seitlich; quer entfallen Verlauf und Rekorde.
    ====================================================================== */
 
-#screen-boards.active { display: flex; flex-direction: column; gap: 12px; padding: 8px 0 24px; }
+#screen-stats.active { display: flex; flex-direction: column; gap: 12px; padding: 8px 0 24px; }
 .boards-host .card { margin: 0; }
 .boards-host .karte-kopf { align-items: center; gap: 10px; }
 .boards-host .karte-kopf h2 {
@@ -5213,20 +5210,10 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
 .boards-host .rec .rn { font-size: 0.75rem; color: #c9c0c0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Spielverlauf nur, wenn er geoeffnet ist - dann anstelle der Spalten. */
 body .boards-host #board-log { display: none; }
-body .boards-host.log #board-log { display: block; }
-.boards-host.log .boards-koerper, .boards-host.log #board-bald { display: none; }
+body #stats-rang.log #board-log { display: block; }
+#stats-rang.log .boards-koerper { display: none; }
 #board-log .karte-kopf { margin-bottom: 8px; }
-/* Kaiwen und Hunter */
-.boards-bald { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; padding: 24px; border: none; min-height: 200px; }
-.boards-bald .bald-titel { font-family: var(--font-display); font-size: clamp(26px, 6vh, 64px); letter-spacing: 0.06em; text-transform: uppercase; line-height: 1.1; white-space: nowrap; }
-.boards-bald .bald-text { color: var(--muted); font-family: var(--font-cond); font-weight: 600; font-size: clamp(13px, 2.4vh, 26px); letter-spacing: 0.04em; }
-
 @media (min-width: 700px) {
-  body.fix-setup #screen-boards.active { flex: 1 1 auto; min-height: 0; padding: clamp(6px, 1.8vh, 22px) 0 0; gap: clamp(6px, 1.4vh, 16px); }
-  body.fix-setup #screen-boards > * { flex: none; }
-  body.fix-setup #screen-boards > .boards-koerper, body.fix-setup #liga-statistik > .boards-koerper,
-  body.fix-setup #screen-boards.log > #board-log, body.fix-setup #liga-statistik.log > #board-log,
-  body.fix-setup #screen-boards > #board-bald { flex: 1 1 auto; min-height: 0; }
   .boards-host .card { padding: clamp(10px, 1.8vh, 20px) clamp(12px, 1.4vw, 22px); }
   .boards-host .karte-kopf { margin-bottom: clamp(6px, 1.2vh, 14px); }
   .boards-host .karte-kopf h2 { font-size: clamp(11px, 1.9vh, 20px); }
@@ -5246,7 +5233,7 @@ body .boards-host.log #board-log { display: block; }
     .kopf-reiter { margin-left: 0; height: clamp(44px, 5.4vh, 56px); }
   }
 
-  .boards-koerper { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: clamp(8px, 1.4vw, 22px); }
+  .boards-koerper { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: clamp(8px, 1.4vw, 22px); align-items: start; }
   .boards-links { min-height: 0; gap: clamp(8px, 1.4vh, 16px); }
   .board-kacheln { flex: none; display: grid; grid-template-columns: repeat(var(--kn, 4), minmax(0, 1fr)); gap: clamp(5px, 0.7vw, 10px); overflow: visible; padding: 0; }
   .bk-kachel { flex: auto; padding: clamp(6px, 1.1vh, 12px) clamp(8px, 0.9vw, 14px); }
@@ -5255,27 +5242,23 @@ body .boards-host.log #board-log { display: block; }
   .bk-kachel .bk-n { font-size: clamp(11px, 1.5vh, 15px); }
   .boards-liste { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
   .boards-liste > .karte-kopf { flex: none; }
-  .boards-liste > .board-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
   .boards-host .board-row { flex: 1 0 auto; min-height: clamp(30px, 4.6vh, 52px); max-height: 72px; gap: clamp(8px, 1vw, 14px); padding: 2px 2px; }
   .boards-host .board-row .pos { width: clamp(20px, 3.2vh, 32px); height: clamp(20px, 3.2vh, 32px); font-size: clamp(11px, 1.8vh, 18px); }
   .boards-host .board-row .av.sm { width: clamp(22px, 3.6vh, 36px); height: clamp(22px, 3.6vh, 36px); font-size: clamp(11px, 1.3vh, 13px); }
   .boards-host .board-row .nm { font-size: clamp(13px, 2vh, 20px); }
   .boards-host .board-row .val { font-size: clamp(15px, 2.6vh, 27px); }
   .boards-seite { min-height: 0; gap: clamp(8px, 1.4vh, 16px); }
-  .boards-seite > #board-chart { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: clamp(4px, 0.8vh, 10px); }
+  .boards-seite > #board-chart { display: flex; flex-direction: column; gap: clamp(4px, 0.8vh, 10px); }
   #board-chart h2 { flex: none; margin: 0; font-size: clamp(11px, 1.9vh, 20px); }
-  #board-chart .chart { flex: 1 1 auto; min-height: 0; max-height: none; height: 100%; width: 100%; }
+  #board-chart .chart { width: 100%; max-height: 260px; }
   #board-chart .chart-legend { flex: none; margin-top: 0; }
   #board-chart .chart-legend .cl { font-size: clamp(11px, 1.7vh, 17px); }
   #board-chart > .hint { margin: 0; }
-  .boards-seite > #liga-highlights { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
   .boards-seite > #board-rekorde { flex: none; }
   .boards-host .records { gap: clamp(5px, 0.8vw, 10px); }
   .boards-host .rec { padding: clamp(6px, 1.1vh, 12px) clamp(8px, 0.9vw, 14px); }
   .boards-host .rec .rt, .boards-host .rec .rn { font-size: clamp(11px, 1.5vh, 15px); }
   .boards-host .rec .rv { font-size: clamp(18px, 3.6vh, 40px); }
-  body .boards-host.log #board-log { display: flex; flex-direction: column; }
-  #board-log > #match-log { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
 }
 /* Flach (Handy quer): eine Spalte, die Karten wischen seitlich, ohne
    Verlauf und Rekorde - der Weg zum Spielverlauf sitzt dann im Kopf der
@@ -5374,23 +5357,8 @@ body .boards-host.log #board-log { display: block; }
 .lt-stand-karte .btn { min-height: 48px; font-family: var(--font-cond); font-weight: 700; font-size: 1rem; letter-spacing: 0.06em; text-transform: uppercase; }
 
 /* Statistik: Team-Chips oben, Highlights rechts. */
-#liga-team-chips { margin: 0; }
-#liga-team-chips.hidden { display: none; }
-#liga-team-chips .liga-team-wahl { display: flex; flex-wrap: nowrap; gap: 6px; margin: 0; overflow-x: auto; scrollbar-width: none; }
-#liga-team-chips .chip { flex: none; min-height: 44px; padding: 0 14px; font-family: var(--font-cond); font-weight: 600; font-size: 0.95rem; letter-spacing: 0.04em; }
-#liga-team-chips .chip.active { background: #2a2224; border-color: transparent; color: #fff; box-shadow: inset 0 0 0 1.5px var(--aktiv-linie), 0 0 18px var(--schein-weich); }
 /* Highlights der Saison (Entwurf "Liga", Statistik, Okt. 2026): je Gruppe
    Kacheln zu zweit - Wert gross, Name, Spieltag und Einzel. */
-#liga-highlights { display: flex; flex-direction: column; }
-#liga-highlights .hl-liste { display: flex; flex-direction: column; gap: 12px; }
-#liga-highlights .hl-gruppe { display: flex; flex-direction: column; gap: 5px; }
-#liga-highlights .hl-titel { font-family: var(--font-cond); font-weight: 700; font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
-#liga-highlights .hl-raster { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
-#liga-highlights .hl-kachel { min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; background: #1c1718; border-radius: 12px; }
-#liga-highlights .hl-wert { font-family: var(--font-cond); font-weight: 700; font-size: 1.4rem; line-height: 1.05; color: var(--text); }
-#liga-highlights .hl-wer { font-weight: 600; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#liga-highlights .hl-kachel small { font-size: 0.75rem; color: #857a7b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#liga-highlights .hint { margin: 0; }
 
 /* Kasse: links Stand und Erfassen, rechts Kassenbuch und Beitraege. */
 .kasse-stand { gap: 8px; }
@@ -5541,13 +5509,10 @@ body .boards-host.log #board-log { display: block; }
 @media (min-width: 700px) {
   body.fix-setup #screen-liga.active { flex: 1 1 auto; min-height: 0; padding: clamp(6px, 1.8vh, 22px) 0 0; gap: clamp(6px, 1.4vh, 16px); }
   body.fix-setup #screen-liga > * { flex: none; }
-  body.fix-setup #screen-liga > #liga-plan, body.fix-setup #screen-liga > #liga-statistik { flex: 1 1 auto; min-height: 0; }
+  body.fix-setup #screen-liga > #liga-plan { flex: 1 1 auto; min-height: 0; }
   #liga-plan { gap: clamp(6px, 1.4vh, 16px); }
   body.fix-setup #liga-plan > .liga-spalten { flex: 1 1 auto; min-height: 0; }
   .liga-spalten { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); grid-template-rows: minmax(0, 1fr); gap: clamp(8px, 1.4vw, 22px); }
-  #liga-statistik { display: flex; flex-direction: column; gap: clamp(6px, 1.4vh, 16px); }
-  #liga-statistik.hidden { display: none; }
-  #liga-statistik > #liga-team-chips { flex: none; }
   body.fix-setup #screen-liga > .liga-zwei { flex: 1 1 auto; min-height: 0; }
   .liga-zwei { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); grid-template-rows: minmax(0, 1fr); gap: clamp(8px, 1.4vw, 22px); }
   .liga-zwei.hidden { display: none; }
@@ -5596,16 +5561,6 @@ body .boards-host.log #board-log { display: block; }
   .lt-stand-karte > .luft { display: none; }
   .lt-stand-karte .btn { height: clamp(44px, 7.4vh, 76px); font-size: clamp(14px, 2.6vh, 28px); }
   /* Statistik */
-  #liga-team-chips .chip { height: clamp(40px, 5.4vh, 56px); font-size: clamp(12px, 2.1vh, 22px); }
-  #liga-highlights { flex: 1 1 auto; min-height: 0; }
-  #liga-highlights .hl-liste { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
-  #liga-highlights .hl-liste { gap: clamp(10px, 1.8vh, 20px); }
-  #liga-highlights .hl-titel { font-size: clamp(11px, 1.6vh, 16px); }
-  #liga-highlights .hl-raster { gap: clamp(5px, 0.7vw, 10px); }
-  #liga-highlights .hl-kachel { padding: clamp(6px, 1.1vh, 12px) clamp(8px, 0.9vw, 14px); }
-  #liga-highlights .hl-wer { font-size: clamp(11px, 1.7vh, 17px); }
-  #liga-highlights .hl-kachel small { font-size: clamp(11px, 1.5vh, 15px); }
-  #liga-highlights .hl-wert { font-size: clamp(18px, 3.4vh, 36px); }
   /* Kasse */
   .kasse-stand .ks-saldo { font-size: clamp(44px, 12vh, 130px); }
   .kasse-stand .ks-drei b { font-size: clamp(15px, 2.8vh, 30px); }
@@ -7379,4 +7334,146 @@ button.pa-gruppe { cursor: pointer; }
 @media (max-width: 479px) {
   .st-kpi .v { font-size: 1.9rem; }
   .st-raster { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ---- Reiter „Statistik“: Person und Mannschaft (Artefakt „Darts Statistik“, 11.11.2026) ----
+   Die Ebene faerbt die Akzente: Person in Laser-Blau, Mannschaft in Amber
+   (--st-ebene). Karten warten (.st-wart), bis sie ins Bild scrollen. */
+#screen-stats { --st-ebene: #46aad7; --st-ebene-w: rgba(70, 170, 215, 0.14); }
+#screen-stats.st-team { --st-ebene: #ffc14d; --st-ebene-w: rgba(255, 193, 77, 0.13); }
+#profile-detail .st-dash { --st-ebene: #46aad7; --st-ebene-w: rgba(70, 170, 215, 0.14); }
+#stats-main { min-width: 0; }
+.st-ebene { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 4px; border-radius: 18px; background: #141011; border: 1px solid #2a2224; max-width: 560px; }
+.st-ebene button { display: grid; grid-template-columns: auto 1fr; column-gap: 10px; align-items: center; min-height: 58px; margin: 0; padding: 8px 14px; border-radius: 14px; border: 1px solid transparent; background: none; box-shadow: none; color: var(--muted); text-align: left; text-transform: none; letter-spacing: 0; transition: background 0.25s, color 0.25s; }
+.st-ebene .i { grid-row: 1 / 3; font-size: 1.5rem; filter: grayscale(1); opacity: 0.55; }
+.st-ebene .t { font-family: var(--font-display); font-size: 1.25rem; letter-spacing: 0.04em; text-transform: uppercase; line-height: 1; }
+.st-ebene .s { font-family: var(--font-body); font-size: 0.76rem; font-weight: 600; }
+.st-ebene button.on { background: var(--st-ebene-w); border-color: var(--st-ebene); color: var(--text); }
+.st-ebene button.on .t { color: var(--st-ebene); }
+.st-ebene button.on .i { filter: none; opacity: 1; }
+.st-wer { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 18px; background: linear-gradient(100deg, var(--st-ebene-w), transparent 70%), #171213; border: 1px solid #2a2224; border-left: 4px solid var(--st-ebene); animation: st-rein 0.5s ease both; min-width: 0; }
+.st-wer .i { font-size: 1.7rem; flex: none; }
+.st-wer-text { min-width: 0; flex: 1 1 auto; }
+.st-wer .k { font-family: var(--font-cond); font-weight: 700; font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--st-ebene); }
+.st-wer b { display: block; font-family: var(--font-display); font-size: 1.7rem; line-height: 1.05; letter-spacing: 0.02em; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-wer b em { font-style: normal; font-family: var(--font-body); font-size: 0.85rem; color: var(--muted); }
+.st-wer small { display: block; font-size: 0.8rem; color: var(--muted); }
+.st-knopf { flex: none; min-height: 44px; margin: 0; padding: 0 12px; border-radius: 10px; background: #241d1f; border: 1px solid transparent; box-shadow: none; color: var(--text); font-family: var(--font-body); font-weight: 600; font-size: 0.85rem; text-transform: none; letter-spacing: 0; }
+.st-chip.on { background: var(--st-ebene); border-color: var(--st-ebene); color: #0d0a0b; }
+.st-chips.klein .st-chip { font-size: 0.76rem; padding: 0 11px; }
+.st-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; vertical-align: 0; }
+.st-karte { box-shadow: inset 0 2px 0 var(--st-ebene-w); }
+.st-karte h3::before { content: ""; display: inline-block; width: 4px; height: 14px; border-radius: 2px; background: var(--st-ebene); margin-right: 7px; vertical-align: -2px; }
+/* Mini-Kacheln (Liga-Bilanz, Spielarten, Rekorde der Rangliste) */
+.st-minis { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 8px; }
+.st-mini { min-width: 0; padding: 9px 11px; border-radius: 12px; background: #141011; border: 1px solid #2a2224; animation: st-grow 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+.st-mini span { display: block; font-family: var(--font-cond); font-weight: 700; font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.st-mini b { display: block; font-family: var(--font-display); font-weight: 400; font-size: 1.3rem; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-mini small { display: block; font-size: 0.7rem; color: var(--muted); line-height: 1.3; }
+/* Liga-Bilanz: Platz als Band */
+.st-platz { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+.st-platz .z { font-family: var(--font-display); font-size: 2.9rem; line-height: 1; color: var(--st-ebene); }
+.st-platz .z small { font-size: 1.1rem; color: var(--muted); }
+.st-platz .t { flex: 1; font-size: 0.8rem; color: var(--muted); }
+.st-platz .t .st-track { margin-top: 6px; }
+/* Weitere Spielarten: je Art ein Kopf zum Aufklappen, drei Kacheln, Details */
+.st-art + .st-art { margin-top: 12px; padding-top: 12px; border-top: 1px solid #ffffff0a; }
+.st-art-titel { display: block; margin-bottom: 6px; font-family: var(--font-cond); font-weight: 700; font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text); }
+.st-art-kopf { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; margin: 0 0 8px; padding: 0 4px; background: none; border: 0; box-shadow: none; color: var(--text); text-align: left; text-transform: none; letter-spacing: 0; border-radius: 10px; }
+.st-art-kopf .t { font-family: var(--font-cond); font-weight: 700; font-size: 0.95rem; letter-spacing: 0.1em; text-transform: uppercase; }
+.st-art-kopf .n { flex: 1; font-size: 0.78rem; color: var(--muted); }
+.st-art-kopf .pfeil { font-size: 1.4rem; line-height: 1; color: var(--muted); transition: transform 0.25s; }
+.st-art.auf .st-art-kopf .pfeil { transform: rotate(90deg); color: var(--st-ebene); }
+.st-art-kopf:hover { background: #ffffff06; }
+.st-art-mehr { margin-top: 8px; display: flex; flex-direction: column; gap: 8px; animation: st-fade 0.4s ease both; }
+.st-art-liste { margin-top: 4px; }
+/* Kader-Listen (Kader-Beitrag, Tabelle, Einzelrangliste, Kader im Vergleich) */
+.st-kliste { display: flex; flex-direction: column; gap: 4px; }
+.st-krow { display: grid; grid-template-columns: 28px minmax(0, 1.3fr) minmax(60px, 1fr) auto; gap: 10px; align-items: center; width: 100%; min-height: 48px; margin: 0; padding: 6px 8px; border-radius: 12px; border: 1px solid transparent; background: none; box-shadow: none; color: var(--text); text-align: left; text-transform: none; letter-spacing: 0; animation: st-fade 0.6s ease both; }
+button.st-krow:hover { background: #ffffff06; }
+.st-krow.wir { background: rgba(229, 72, 77, 0.07); }
+.st-krow.an { border-color: var(--st-ebene); background: var(--st-ebene-w); }
+.st-krang { font-family: var(--font-cond); font-weight: 700; font-size: 0.9rem; color: var(--muted); text-align: center; }
+.st-krang.m1 { color: #d9b45a; }
+.st-krang.m2 { color: #b9c0c8; }
+.st-krang.m3 { color: #b07a4c; }
+.st-kname { display: flex; flex-direction: column; min-width: 0; }
+.st-kname b { font-size: 0.88rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-kname small { font-size: 0.7rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-kwert { font-family: var(--font-display); font-size: 1.2rem; text-align: right; min-width: 42px; font-variant-numeric: tabular-nums; }
+.st-gast { font-size: 0.62rem; font-weight: 700; padding: 1px 5px; border-radius: 5px; background: #ffffff14; color: var(--muted); margin-left: 4px; vertical-align: 1px; }
+/* Bilanz gegen jedes Team: Ergebnis-Pillen */
+.st-erg { display: inline-block; margin: 2px 4px 2px 0; padding: 3px 7px; border-radius: 7px; font-weight: 800; font-size: 0.74rem; }
+.st-erg.w { background: rgba(74, 222, 128, 0.15); color: var(--st-gruen); }
+.st-erg.u { background: rgba(255, 193, 77, 0.15); color: var(--st-gold); }
+.st-erg.l { background: rgba(229, 72, 77, 0.14); color: var(--st-rot); }
+/* Highlights */
+.st-hl { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 6px; }
+.st-hlz { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border-radius: 10px; background: #141011; border: 1px solid #2a2224; min-width: 0; animation: st-grow 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+.st-hlz.wir { border-color: rgba(229, 72, 77, 0.5); }
+.st-hlz b { font-family: var(--font-display); font-weight: 400; font-size: 1.2rem; color: var(--st-gold); white-space: nowrap; }
+.st-hlz span { display: flex; flex-direction: column; min-width: 0; font-size: 0.78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-hlz small { font-size: 0.68rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+/* Alle Zahlen */
+.st-zahlen { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
+.st-zgr { padding: 12px 14px; border-radius: 12px; background: #141011; border: 1px solid #2a2224; min-width: 0; }
+.st-zgr h4 { margin: 0 0 6px; font-family: var(--font-cond); font-weight: 700; font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.st-zl { display: flex; justify-content: space-between; gap: 10px; font-size: 0.82rem; padding: 4px 0; border-bottom: 1px solid #ffffff08; }
+.st-zl:last-child { border: 0; }
+.st-zl span { color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-zl b { font-weight: 700; flex: none; font-variant-numeric: tabular-nums; }
+/* Rangliste (Liga-Rangliste im Dashboard, Rangliste je Spielart darunter) */
+.st-rang { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; border-radius: 18px; background: #171213; border: 1px solid #2a2224; box-shadow: inset 0 2px 0 var(--st-ebene-w); animation: st-rein 0.6s ease both; min-width: 0; }
+.st-rang-kopf { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 12px; }
+.st-rang-kopf h3 { margin: 0; font-family: var(--font-body); font-size: 0.95rem; font-weight: 700; text-transform: none; letter-spacing: 0; }
+.st-rang-kopf h3::before { content: ""; display: inline-block; width: 4px; height: 14px; border-radius: 2px; background: var(--st-ebene); margin-right: 7px; vertical-align: -2px; }
+.st-rang-kopf span { font-family: var(--font-cond); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.st-rgrid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.st-kacheln { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 6px; }
+.st-kachel { display: flex; flex-direction: column; align-items: flex-start; min-height: 44px; margin: 0; padding: 8px 10px; border-radius: 12px; background: #141011; border: 1px solid transparent; box-shadow: none; text-align: left; min-width: 0; text-transform: none; letter-spacing: 0; }
+.st-kachel .t { font-family: var(--font-cond); font-weight: 700; font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: #857a7b; }
+.st-kachel .v { font-family: var(--font-cond); font-weight: 700; font-size: 1.3rem; color: #c9c0c0; font-variant-numeric: tabular-nums; }
+.st-kachel .n { max-width: 100%; font-size: 0.74rem; color: #857a7b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-kachel.on { background: #2a2224; box-shadow: inset 0 0 0 1.5px var(--text); }
+.st-kachel.on .v { color: #fff; }
+.st-liste { margin-top: 10px; padding: 10px 12px; border-radius: 14px; background: #1c1718; }
+.st-liste h4 { margin: 0 0 4px; display: flex; justify-content: space-between; gap: 8px; font-family: var(--font-cond); font-weight: 700; font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.st-lrow { display: grid; grid-template-columns: 30px 32px 1fr auto; gap: 10px; align-items: center; padding: 6px 2px; border-bottom: 1px solid #ffffff08; }
+.st-lrow:last-child { border: 0; }
+.st-pos { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 0.8rem; color: var(--muted); }
+.st-pos.m1 { background: #d9b45a; color: #0d0a0b; }
+.st-pos.m2 { background: #b9c0c8; color: #0d0a0b; }
+.st-pos.m3 { background: #b07a4c; color: #0d0a0b; }
+.st-av { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 0.68rem; font-weight: 800; color: #fff; }
+.st-lrow .nm { min-width: 0; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-lrow .nm small { display: block; font-size: 0.7rem; color: var(--muted); }
+.st-lrow .val { font-family: var(--font-cond); font-weight: 700; font-size: 1.2rem; font-variant-numeric: tabular-nums; }
+.st-seite { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.st-seite .st-karte { animation: none; }
+/* Die Rangliste je Spielart in den alten Bausteinen, im neuen Rahmen */
+#stats-rang .kopf-reiter { flex: 1 1 100%; }
+#stats-rang .boards-koerper { gap: 12px; }
+#stats-rang .card { background: #1c1718; border: 1px solid #2a2224; }
+#stats-rang .st-rang-kopf span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+/* Warten, bis die Karte im Bild ist */
+.st-wart, .st-wart * { animation-play-state: paused !important; }
+.st-still .st-wer, .st-still .st-mini, .st-still .st-krow, .st-still .st-hlz, .st-still .st-rang, .st-still .st-art-mehr { animation: none; }
+@media (prefers-reduced-motion: reduce) {
+  .st-wer, .st-mini, .st-krow, .st-hlz, .st-rang, .st-art-mehr { animation: none; }
+}
+@media (min-width: 760px) {
+  .st-rgrid { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); }
+}
+@media (min-width: 900px) {
+  #screen-stats .st-kpis { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+}
+@media (min-width: 1100px) {
+  #screen-stats .st-raster { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  #screen-stats .st-karte.zwei { grid-column: span 2; }
+}
+@media (max-width: 479px) {
+  .st-ebene .t { font-size: 1.05rem; }
+  .st-ebene .i { font-size: 1.3rem; }
+  .st-wer b { font-size: 1.4rem; }
+  .st-krow { grid-template-columns: 24px minmax(0, 1.4fr) minmax(50px, 1fr) auto; gap: 8px; padding: 6px 4px; }
 }

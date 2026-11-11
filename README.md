@@ -258,11 +258,9 @@ Unsicher / Kann nicht“ und wer kommt) und rechts das Übungs-Ligaspiel mit Vor
 „Zweites eigenes Team“ oder „Gegen Bots“ samt Bot-Stärke. **Tabelle** zeigt links oben unseren Platz
 als Band (Zahl, daneben Punkte, Legs und Abstand zur Spitze), darunter die Ligatabelle
 und den Stand; rechts Alle Spiele, Einzelrangliste und Highlights – am Computer rollt
-diese Spalte als Ganzes, damit alles erreichbar bleibt. **Statistik** ist die Liga-Auswertung (dieselben Kategorien und
-das Spieltag-Log wie früher der Liga-Knopf der Rangliste, nur über Ligaspiele
-gerechnet) mit der Team-Auswahl als Chips oben und rechts den **Highlights der
-Saison** (180er, High-Finishes ab 100, Shortlegs bis 21 Darts, je mit Spieltag und
-Einzel) – in der Rangliste gibt es den Liga-Knopf nicht mehr. **Kasse** zeigt links
+diese Spalte als Ganzes, damit alles erreichbar bleibt. **Statistik** springt in den
+Reiter Statistik › Mannschaft › Liga (siehe [Statistik und Ranglisten](#statistik-und-ranglisten)).
+**Kasse** zeigt links
 den Kassenstand (Anfang, Einnahmen, Ausgaben) und „Buchung erfassen“, rechts das
 Kassenbuch und die Gründungsbeiträge als Chips. **Regeln** stehen in zwei Spalten
 (FAQ für Neue, Udos Regelecke) als aufklappbare Karten.
@@ -495,13 +493,11 @@ mit **w.o.** –, rechts das Ergebnis je Einzel wie auf dem Bogen – 1 : 0 oder
 Endergebnis als Summe der Legs und Punkte, Spielzeit, Highlights je Seite), jede
 Zelle lässt sich antippen und korrigieren, und **„Drucken"** gibt Seite 1
 plus das Nachmelde-/Protest-Leerformular als Seite 2 aus. Nach dem Abschluss
-bleibt der Bericht über den Spieltag im Liga-Reiter abrufbar. In der
-Liga-Seite gibt es den Reiter **„Statistik"** (Entwurf „Liga“, Oktober 2026):
-Team-Auswahl (Blink 180, Gesamte Liga, jeder Gegner), dann wie in der Rangliste
-die Bestwert-Karten und die Liste aller Spieler („nur Ligaspiele“) – dieselben
-Classic-Kategorien, gerechnet nur über Ligaspiele – und rechts die **Highlights
-der Saison** mit Pokal: 180er, High-Finishes ab 100 und Shortlegs bis 21 Darts
-als Kacheln zu zweit (Wert, Name, Spieltag und Einzel), dazu das Spieltag-Log. Im Regeln-Reiter der Liga-Seite stehen dazu ein
+bleibt der Bericht über den Spieltag im Liga-Reiter abrufbar. Die Liga-Auswertung
+(Team-Kennzahlen, Spieltag für Spieltag, Kader-Beitrag, Tabelle, Bilanz gegen jedes
+Team, Highlights, Liga-Rangliste; Team-Auswahl Blink 180, Gesamte Liga, jeder Gegner)
+steht im Reiter **Statistik › Mannschaft › Liga**, der Reiter „Statistik“ der Liga-Seite
+springt dorthin. Im Regeln-Reiter der Liga-Seite stehen dazu ein
 FAQ für Neue und Udos Regelecke.
 
 Die **Turnier-Übersicht** (Entwurf „Turnier Redesign“, überarbeitet Oktober 2026)
@@ -958,10 +954,11 @@ Handy (hochkant wie quer) gibt es nur die Liste, ein Tipp öffnet das Profil.
 **Spielerausweis** (Foto mit Kamera-Knopf, Name in Plakatschrift, echter Name,
 Chips für Status, „seit“, Bilanz und Turniersiege, „Profil bearbeiten“, die Form
 der letzten zehn Spiele), darunter drei Kacheln: **Finish-Weg · Lieblingsgruppe**
-(siehe Checkout-Engine unten), die Links **Statistik** („Meine Stats“ legt das Dashboard mit Filtern, Kennzahlen und Diagrammen sowie die
-ausführlichen Karten Scoring, Finishing, Bilanz, Cricket, Round the World und
-letzte X01-Spiele als Tafel über die Kacheln, „Fertig“ schließt sie) und
-**Liga-Statistik**, und beim eigenen Konto die **Konto-Kachel** (E-Mail – eine neue
+(siehe Checkout-Engine unten), die Links **Statistik** („Meine Stats“ legt das Dashboard
+der Person – Filter, Kennzahlen, Diagramme, Liga-Bilanz, weitere Spielarten und
+„Alle Zahlen“, dasselbe wie im Reiter Statistik › Person – als Tafel über die Kacheln,
+„Fertig“ schließt sie) und **Liga-Statistik** (springt in Statistik › Mannschaft › Liga),
+und beim eigenen Konto die **Konto-Kachel** (E-Mail – eine neue
 Adresse braucht das aktuelle Passwort, die alte Adresse bekommt einen Hinweis –,
 Passwort ändern, Abmelden; das Abmelden löst auch das Push-Abo dieses Geräts). Wer sein
 Passwort nicht mehr weiß, tippt auf der Anmeldeseite **„Passwort vergessen?“**: Der Server
@@ -1048,7 +1045,7 @@ kein Spiel mit Testbeteiligung in Karriere, Rangliste, Rekorde, Diagramm oder
 Spieleliste. So lässt sich nach einem Update am echten Server ausprobieren, ohne
 die Statistik der Mannschaft zu berühren (siehe [DEPLOY.md](DEPLOY.md#testkonten)).
 
-**Im Spielerprofil** (Reiter „Spieler"):
+**Im Spielerprofil** (Reiter „Spieler", Tafel „Meine Stats“, Karte „Alle Zahlen“):
 
 | Bereich | Werte |
 |---|---|
@@ -1058,9 +1055,9 @@ die Statistik der Mannschaft zu berühren (siehe [DEPLOY.md](DEPLOY.md#testkonte
 
 Dazu die letzten Spiele mit Gegner, Ergebnis und Datum.
 
-**Meine Stats als Dashboard** (nach Julius' Artefakt „Darts Statistik“, November 2026): Die
-Statistik-Tafel im Profil beginnt mit einem Dashboard aus den echten Aufnahmen, darunter stehen
-die bisherigen Karten mit den Gesamtwerten. Oben Filter-Chips für den Modus (Alle, Liga,
+**Die Person als Dashboard** (nach Julius' Artefakt „Darts Statistik“, November 2026): Die
+Statistik-Tafel im Profil und der Reiter Statistik › Person zeigen dasselbe Dashboard aus den
+echten Aufnahmen. Oben Filter-Chips für den Modus (Alle, Liga,
 Turnier, Schnell, Solo – mit Spielzahl; Übungsspiele zählen wie überall nicht) und den
 Zeitraum (letzte 10, letzte 30, alle Spiele). Dann sieben Kennzahlen, die hochzählen –
 Average, First 9, Doppelquote, Siegquote, 180er, höchstes Finish, bestes Leg –, jede mit dem
@@ -1080,12 +1077,21 @@ Monat** (100+, 140+, 180 gestapelt), **Doppelquote im Verlauf** (je Monat), **Li
 **Aktivität** (20 Wochen als Kacheln), **Gegnerbilanz** (Head-to-Head mit Bilanz, Legs, Ø und
 Siegquote, bei Ligagegnern mit Team) und **Rekorde** (bester Average, beste First 9, höchstes
 Finish, kürzestes Leg, meiste 180 im Spiel, beste Doppelquote ab 8 Versuchen, längste
-Siegesserie, Spiele gesamt – jeweils mit Datum und Gegner). Alles ist SVG ohne Bibliothek;
-Linien ziehen sich, Balken wachsen, Ringe füllen sich und Zahlen zählen hoch, einmal je
-Auswahl. Zeichnet die App die Seite aus anderem Anlass neu oder wünscht das Gerät „weniger
-Bewegung“, steht alles sofort am Ziel. Die Rechnung steckt in `spielerSpiele(pid)` (je Spiel
-Modus, Gegner, Legs, Sieg, die Statistik nur dieses Spiels und je Doppel Treffer/Versuche)
-und `statsSumme(spiele)`.
+Siegesserie, Spiele gesamt – jeweils mit Datum und Gegner). Dazu drei Karten aus dem
+erweiterten Artefakt (11. November 2026): **Liga-Bilanz** (Platz in der Einzelrangliste der
+Ligaleitung mit Punkten, Einzel und Legs – zugeordnet über den vollen Namen –, dazu Liga-Ø und
+Doppelquote aus den Würfen der App, 180er, höchstes Finish und bestes Leg als Bestes aus beiden
+Quellen, gemeldete Highfinishes und Shortlegs als Notiz), **Weitere Spielarten** (je gespielter
+Art – Cricket, Round the World, Finisher, Kaiwen, Hunter – ein Kopf mit den drei wichtigsten
+Kennzahlen; ein Tipp klappt die Details auf: weitere Kennzahlen und die letzten fünf Spiele
+mit Ergebnis) und **Alle Zahlen** (Scoring, Finishing, Bilanz und die letzten Spiele als
+kompakte Gruppen – die früheren Einzelkarten). Alles ist SVG ohne Bibliothek; Linien ziehen
+sich, Balken wachsen, Ringe füllen sich und Zahlen zählen hoch, einmal je Auswahl – Kopf,
+Chips und Kennzahlen sofort, jede Karte erst, wenn sie ins Bild scrollt. Zeichnet die App die
+Seite aus anderem Anlass neu (auch beim Aufklappen) oder wünscht das Gerät „weniger Bewegung“,
+steht alles sofort am Ziel. Die Rechnung steckt in `spielerSpiele(pid)` (je Spiel Modus,
+Gegner, Legs, Sieg, die Statistik nur dieses Spiels und je Doppel Treffer/Versuche) und
+`statsSumme(spiele)`.
 
 **Turniere nachschauen:** In der Spieleliste unter Classic steht zu jedem gespielten
 Turnier eine eigene Zeile (🏆). Ein Tipp öffnet den **Endstand** wie am Abend auf dem
@@ -1100,12 +1106,31 @@ Für Cricket kommt die **MPR** (Marks per Round – getroffene Marken je 3 Darts
 übliche Cricket-Maß) samt Siegen dazu, für Round the World die Bestleistung in Darts
 und die Siege.
 
-**Im Reiter „Rang"** (Entwurf „Rangliste Redesign“, zweite Fassung, Oktober 2026)
-trägt die Seite den Kopf des Setups: Marke links, die Navigation als Text-Reiter
-rechts (das frühere Logo-Menü gibt es nicht mehr). Darunter die Spielart mit
-Spielzahl und die Spielart-Reiter – Classic, Cricket, RTW, Finisher sowie Kaiwen
-und Hunter („Coming soon“, bis die Spiele da sind); die Liga-Auswertung steht im
-Reiter „Statistik“ der Liga-Seite. Links die **Bestwert-Karten**: je Kennzahl der
+**Der Reiter „Statistik“** (nach dem erweiterten Artefakt „Darts Statistik“, November 2026;
+er ersetzt den Reiter „Rang“) trägt den Kopf des Setups und darunter den Ebenen-Schalter
+**Person / Mannschaft**. **Person** ist das Dashboard von oben, dazu eine Wer-Karte
+(„Profil ›“ öffnet das Profil) und Spieler-Chips für den ganzen Kader (dieselben Leute wie in
+der Rangliste: keine Bots, keine Testkonten, Gäste nur dauerhafte); voreingestellt ist das
+eigene Konto. **Mannschaft** hat zwei Umfänge. **Liga** (Chips: Blink 180, Gesamte Liga, jeder
+Gegner) rechnet aus den Spielberichten der Ligaleitung (`LIGA_SPIELTAGE`): je Team sieben
+Kennzahlen (Tabellenplatz, Punkte mit S/U/N, Einzel-Quote, Leg-Quote, Team-Average und
+Doppelquote aus den Würfen der App – nur für unser Team –, 180er mit höchstem Finish und
+Shortleg), dann **Spieltag für Spieltag** (Einzel gewonnen und verloren als Säulen, Punkte
+aufsummiert als Linie), **Kader-Beitrag** (Punkte je Spieler in der Einzelrangliste, bei uns
+mit Liga-Ø; ein Tipp öffnet die Person), **Tabelle** (ein Tipp wählt das Team), **Bilanz gegen
+jedes Team** (Ergebnis-Pillen je Begegnung), bei Gegnern die **Highlights**, und die
+**Liga-Rangliste** aus der Einzelrangliste (Kacheln Punkte, Siege, Legs, Siegquote ab zwei
+Einzeln; die Liste dazu; daneben die Highlights laut Spielberichten). „Gesamte Liga“ zeigt
+Teams, Begegnungen, 180er, höchstes Finish, kürzestes Leg und Tabellenführer, die Tabelle, die
+besten 12 der Einzelrangliste und die Highlights der ganzen Liga. **Alle Spielarten** ist die
+Crew: Spiele (X01 einmal je Spiel, dazu die anderen Arten), Team-Average, First 9, Doppelquote,
+180er, höchstes Finish über alle Einsätze des Kaders, **Kader im Vergleich** (Chips für
+Average, First 9, Doppelquote, Siegquote, 180er, höchstes Finish, bestes Leg; ein Tipp öffnet
+die Person), **Aktivität**, **Team-Form je Monat** (Säulen = Spiele, Linie = Team-Average),
+**Big Scores je Monat**, **Doppelquote im Verlauf** – und darunter die **Rangliste je
+Spielart**, wie bisher im Reiter „Rang“ (Entwurf „Rangliste Redesign“, zweite Fassung,
+Oktober 2026): die Spielart-Reiter Classic, Cricket, RTW, Finisher, Kaiwen und Hunter mit
+Spielzahl. Links die **Bestwert-Karten**: je Kennzahl der
 beste Wert und wer ihn hält; ein Tipp auf eine Karte zeigt darunter die Liste
 aller Spieler zu dieser Kennzahl (Platz 1 bis 3 in Gold, Silber und Bronze, der
 Beste leuchtet). Rechts **der Verlauf der letzten 10 Spiele zur gewählten
@@ -1114,9 +1139,8 @@ auf („… gesamt“), Averages stehen je Spiel (die Legende nennt den Schnitt 
 die gezeigten Spiele), Bestmarken je Spiel, bei „weniger ist besser“ (Bestes Leg,
 RTW, Finisher) steht der kleine Wert oben – und die **Rekorde** mit Pokal.
 „Alle Spiele ›“ öffnet den Spielverlauf anstelle der Spalten, „‹ Rangliste“ führt
-zurück. Am Tablet steht das Bild fest im Rahmen, die Liste scrollt innen; am Handy
-wischen die Bestwert-Karten seitlich, quer entfallen Verlauf und Rekorde, hochkant
-steht alles untereinander. Die Werte sind nach
+zurück. Am Handy wischen die Bestwert-Karten seitlich, quer entfallen Verlauf und
+Rekorde, hochkant steht alles untereinander. Die Werte sind nach
 Spielmodus getrennt – Classic, Cricket und Round the World haben je eigene
 Bestenlisten, eigene Rekordtafel und einen eigenen Spielverlauf:
 

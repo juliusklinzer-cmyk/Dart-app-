@@ -405,7 +405,7 @@
         : 'das Turnier wurde abgeschlossen (fertige Partien bleiben in der Statistik)');
     }
     if (!weg.length) return false;
-    if (S.screen !== 'boards' && S.screen !== 'players' && S.screen !== 'profile' && S.screen !== 'liga') S.screen = 'setup';
+    if (S.screen !== 'stats' && S.screen !== 'players' && S.screen !== 'profile' && S.screen !== 'liga') S.screen = 'setup';
     UI.darts = []; UI.input = '';
     UI.overlay = { type: 'hinweis', titel: 'Altes Spiel beendet',
       text: (ligaWeg && weg.length === 1 ? 'Länger als 36 Stunden offen: ' : 'Älter als 12 Stunden: ') + weg.join(', ') + '.' };
@@ -2760,105 +2760,6 @@
     return map;
   }
 
-  /*
-   * Liga-Auswertung ueber alle Teams: unsere Spiele aus dem Archiv, die
-   * Spiele der anderen Teams aus den Spielberichten der Ligaleitung
-   * (LIGA_SPIELTAGE, partien - nur Leg-Staende, also Siege und Legs, kein
-   * Average). Unsere Spieler behalten ihre Kennung; jeder Gegner wird
-   * automatisch seinem Team zugeordnet und ueber alle Spieltage und Geraete
-   * hinweg am Namen wiedererkannt (Schluessel "lg|Team|name"), auch wenn
-   * sein Gast-Profil laengst ausgeblendet ist oder auf einem anderen iPad
-   * eine andere Kennung hatte.
-   */
-  function ligaTeamDaten() {
-    var quellen = wertbareHistorie().filter(function (h) { return h.liga && !h.liga.uebung && h.matches; })
-      .map(function (h) { return { liga: h.liga, matches: h.matches, start: (h.settings && h.settings.start) || 501, namen: h.namen || {} }; });
-    if (S.matches.length && S.tour && S.tour.liga && !S.tour.liga.uebung && !turnierSchonArchiviert()) {
-      quellen.push({ liga: S.tour.liga, matches: S.matches, start: tourStart(), namen: {} });
-    }
-    var info = {};       // Schluessel -> { team, name }
-    var lists = quellen.map(function (q) {
-      var lg = q.liga;
-      var unsere = ligaUnsereIds(q);
-      var team = lg.gegner || 'Gegner';
-      var schluessel = {};
-      var key = function (id) {
-        if (!id || unsere[id]) return id;
-        if (schluessel[id]) return schluessel[id];
-        /* Der beim Archivieren festgehaltene Name geht vor: er aendert sich
-           nicht mehr, wenn jemand das Gastprofil spaeter umbenennt. Aeltere
-           Eintraege ohne `namen` laufen weiter ueber das Profil. */
-        var pr = S.profiles.filter(function (x) { return x.id === id; })[0];
-        var nm = String(q.namen[id] || (pr && (pr.voll || pr.name)) || 'Unbekannt').trim();
-        /* Andere Geraete kennen den Namen nur auf 30 Zeichen gekuerzt (Sync):
-           verglichen wird deshalb ueber die ersten 30. */
-        var k = 'lg|' + team + '|' + nm.toLowerCase().replace(/\s+/g, ' ').slice(0, 30);
-        if (!info[k]) info[k] = { team: team, name: nm };
-        schluessel[id] = k;
-        return k;
-      };
-      var matches = q.matches.map(function (m) {
-        return {
-          p: m.p.map(key), starter: key(m.starter), winner: key(m.winner), done: m.done, at: m.at, kampflos: m.kampflos,
-          legs: m.legs.map(function (l) {
-            return { starter: key(l.starter), winner: key(l.winner), start: l.start, visits: l.visits.map(function (v) {
-              var c = {}; for (var f in v) c[f] = v[f]; c.p = key(v.p); return c;
-            }) };
-          })
-        };
-      });
-      return { matches: matches, start: q.start };
-    });
-    /* Die Spiele der anderen Teams, wie die Ligaleitung sie meldet: jedes
-       Einzel als Ergebnis ohne Wuerfe (ergebnisSetzen). Unsere eigenen
-       Spiele kommen nur aus dem Archiv - sonst zaehlten sie doppelt, und
-       dort haengen sie an den Konten. */
-    var keyName = function (team, roh) {
-      var nm = String(roh || '').replace(/^\*/, '').trim() || 'Unbekannt';
-      var k = 'lg|' + team + '|' + nm.toLowerCase().replace(/\s+/g, ' ').slice(0, 30);
-      if (!info[k]) info[k] = { team: team, name: nm };
-      return k;
-    };
-    /* Gemeldete Highlights (180er, Shortlegs, Highfinishes) - fuer die
-       Spiele der anderen Teams immer, fuer unsere nur ohne Wuerfe in der App. */
-    var highlights = [];
-    Object.keys(LIGA_SPIELTAGE).forEach(function (tid) {
-      (LIGA_SPIELTAGE[tid] || []).forEach(function (sp) {
-        if (!sp || !sp.gast || sp.verschoben || !Array.isArray(sp.partien)) return;
-        if (sp.heim === LIGA.team || sp.gast === LIGA.team) return;
-        var at = sp.tag ? new Date(sp.tag + 'T20:00:00').getTime() : 0;
-        var matches = sp.partien.map(function (p, i) {
-          var m = { p: [keyName(sp.heim, p[0]), keyName(sp.gast, p[1])], starter: null, legs: [], done: false, winner: null, at: null };
-          return ergebnisSetzen(m, Number(p[2]) || 0, Number(p[3]) || 0, 501, at + i * 60000);
-        }).filter(Boolean);
-        if (matches.length) lists.push({ matches: matches, start: 501 });
-        (sp.highlights || []).forEach(function (e) {
-          highlights.push({ key: keyName(e.team, e.wer), e: { s180: Number(e.s180) || 0, shortleg: e.shortleg || [], highfinish: e.highfinish || [] } });
-        });
-      });
-    });
-    quellen.forEach(function (q) {
-      ligaBogenHighlights(q).forEach(function (e) {
-        var unsere = ligaUnsereIds(q);
-        highlights.push({ key: e.id && unsere[e.id] ? e.id : keyName(e.team, e.name), e: e });
-      });
-    });
-    var map = collectStats(lists, []);
-    highlights.forEach(function (n) {
-      if (!map[n.key]) { map[n.key] = emptyStat(n.key); map[n.key].dartsInWonLegs = 0; map[n.key].legsWon501 = 0; }
-      statHighlightsDazu(map[n.key], n.e);
-    });
-    Object.keys(map).forEach(function (k) {
-      map[k].name = info[k] ? info[k].name : pname(k);
-      map[k].team = info[k] ? info[k].team : LIGA.team;
-      finalize(map[k]);
-    });
-    var teams = [];
-    Object.keys(info).forEach(function (k) { if (teams.indexOf(info[k].team) < 0) teams.push(info[k].team); });
-    teams.sort(function (a, b) { return a.localeCompare(b); });
-    return { map: map, teams: teams };
-  }
-
   /* Alle fertigen Liga-Einzel, neueste zuerst – fürs Liga-Verlaufsdiagramm. */
   function alleLigaMatches() {
     var out = [];
@@ -3734,7 +3635,7 @@
       // aller Beteiligten, wie sie HEUTE heissen: die Liga-Auswertung
       // erkennt einen Gegner ueber Team und Namen wieder, und ein spaeter
       // umbenanntes Gastprofil darf denselben Gegner nicht in zwei Zeilen
-      // spalten (ligaTeamDaten bevorzugt diese Namen).
+      // spalten (die Liga-Statistik bevorzugt diese Namen).
       if (S.tour && S.tour.liga) {
         S.history[0].liga = S.tour.liga;
         var namen = {};
@@ -3949,8 +3850,8 @@
   }
 
   /* ================= Rendering ================= */
-  var SCREENS = ['setup', 'tournament', 'boards', 'players', 'profile', 'bulloff', 'game', 'cricket', 'rtw', 'finisher', 'kaiwen', 'hunter', 'summary', 'winner', 'liga', 'bericht', 'konto'];
-  var NAV_SCREENS = { setup: 'setup', tournament: 'setup', boards: 'boards', players: 'players', profile: 'players', summary: 'setup', liga: 'liga', konto: 'konto', winner: 'setup' };
+  var SCREENS = ['setup', 'tournament', 'stats', 'players', 'profile', 'bulloff', 'game', 'cricket', 'rtw', 'finisher', 'kaiwen', 'hunter', 'summary', 'winner', 'liga', 'bericht', 'konto'];
+  var NAV_SCREENS = { setup: 'setup', tournament: 'setup', stats: 'stats', players: 'players', profile: 'players', summary: 'setup', liga: 'liga', konto: 'konto', winner: 'setup' };
 
   /* Solange die Anmeldung aussteht, ist die App zu. Ohne Server (Doppelklick,
      Einzeldatei-Bündel, GitHub Pages) gibt es keine Schranke. */
@@ -3981,7 +3882,7 @@
        gehabt ueber dem Inhalt. */
     var navEl = $('nav');
     var kopf = screen === 'setup' ? $('setup-kopf') : screen === 'tournament' ? $('turnier-kopf')
-      : screen === 'liga' ? $('liga-kopf') : screen === 'boards' ? $('boards-kopf') : screen === 'players' ? $('players-kopf')
+      : screen === 'liga' ? $('liga-kopf') : screen === 'stats' ? $('stats-kopf') : screen === 'players' ? $('players-kopf')
       : screen === 'winner' ? $('winner-kopf') : screen === 'profile' ? $('profile-kopf')
       : screen === 'summary' ? $('summary-kopf') : screen === 'konto' ? $('konto-kopf') : null;
     if (kopf && navEl.parentElement !== kopf) kopf.appendChild(navEl);
@@ -3991,14 +3892,6 @@
        zugeklappt. */
     var mitMenue = screen === 'game' || screen === 'cricket' || screen === 'rtw' || screen === 'finisher' || screen === 'kaiwen' || screen === 'hunter';
     if (!mitMenue) UI.menu = false;
-    /* Die Liga-Auswertung wohnt im Statistik-Reiter der Liga; ueberall
-       sonst steht der Ranglisten-Koerper in seinem eigenen Screen. */
-    var boardsHost = screen === 'liga' && (UI.ligaTab || 'plan') === 'statistik' ? $('liga-statistik') : $('screen-boards');
-    var koerper = document.querySelector('.boards-koerper');
-    if (koerper && koerper.parentElement !== boardsHost) {
-      if (boardsHost.id === 'screen-boards') { boardsHost.insertBefore(koerper, $('board-bald')); boardsHost.insertBefore($('board-log'), $('board-bald')); }
-      else { boardsHost.appendChild(koerper); boardsHost.appendChild($('board-log')); }
-    }
     /* Beim Betreten der Liga zeigt der Spielplan wieder den naechsten Spieltag. */
     if (screen !== 'liga') { UI.ligaWahl = null; UI.ligaZu = false; }
     $('nav').classList.toggle('hidden', !navFor);
@@ -4054,7 +3947,7 @@
     document.body.classList.toggle('rand-aus', S.screen === 'cricket' || S.screen === 'game' || S.screen === 'rtw' || S.screen === 'finisher' || S.screen === 'kaiwen' || S.screen === 'hunter');
     /* Das Startbild steht am Tablet und quergedrehten Handy fest im Rahmen,
        innen scrollen nur Spielerliste und Einstellungen (body.fix-setup). */
-    document.body.classList.toggle('fix-setup', S.screen === 'setup' || S.screen === 'tournament' || S.screen === 'bulloff' || S.screen === 'boards' ||
+    document.body.classList.toggle('fix-setup', S.screen === 'setup' || S.screen === 'tournament' || S.screen === 'bulloff' ||
       S.screen === 'liga' || S.screen === 'players' || S.screen === 'winner' || S.screen === 'profile' || S.screen === 'summary');
     if (S.screen === 'setup') { gaesteAufraeumen(); renderSetup(); }
     /* Der Hintergrundtakt laeuft nur da, wo man ihn auch sieht: im
@@ -4092,9 +3985,13 @@
     if (S.screen === 'liga' && letzterScreen !== 'liga') { ligaZusagenLaden(); kasseLaden(); }
     letzterScreen = S.screen;
     if (S.screen === 'tournament') renderTournament();
-    if (S.screen === 'boards') renderBoards();
+    if (S.screen === 'stats') renderStats();
+    /* Verlaesst man die Statistik, bleibt ihr Inhalt nicht versteckt im DOM
+       (Karten-Kennungen wie #st-avg gibt es auch im Profil). */
+    else if ($('stats-main') && $('stats-main').innerHTML) { $('stats-main').innerHTML = ''; if (stBeobachter) { stBeobachter.disconnect(); stBeobachter = null; } }
+    if (S.screen !== 'profile' && $('profile-detail').querySelector('.st-dash')) $('profile-detail').innerHTML = '';
     if (S.screen === 'players') renderPlayers();
-    if (S.screen === 'profile') { renderProfile(); if (UI.profilPanel === 'foto') fotoZiehenEinrichten(); if (UI.profilPanel === 'stats') statsNachRender(); }
+    if (S.screen === 'profile') { renderProfile(); if (UI.profilPanel === 'foto') fotoZiehenEinrichten(); if (UI.profilPanel === 'stats') { var stF = statsFilter(), stW = $('profile-detail').querySelector('.st-dash'); statsNachRender(stW, ['profil', UI.profile, stF.modus, stF.bereich, stW && stW.getAttribute('data-spiele')].join('|')); } }
     if (S.screen === 'bulloff') renderBullOff();
     if (S.screen === 'game') renderGame();
     if (S.screen === 'cricket') renderCricket();
@@ -5001,104 +4898,45 @@
       }).join('') + '</div>';
   }
 
+  /* Rangliste je Spielart (Statistik › Mannschaft › Alle Spielarten): die
+     Spielart-Reiter, je Kennzahl eine Bestwert-Karte (antippen waehlt die
+     Kennzahl), die Liste aller Spieler, rechts der Verlauf der letzten 10
+     Spiele und die Rekorde. "Alle Spiele" oeffnet den Spielverlauf
+     anstelle der Spalten. Fuellt die festen Bausteine in #stats-rang. */
   function renderBoards() {
     var mode = UI.boardMode;
-    /* Die Liga-Auswertung gibt es nur im Statistik-Reiter der Liga-Seite -
-       die Rangliste selbst faellt auf Classic zurueck. Das muss vor allem
-       anderen feststehen, sonst rechnet ein Zeichnen mit dem falschen Modus. */
-    var imLiga = S.screen === 'liga';
-    if (imLiga) mode = UI.boardMode = 'liga';
-    else if (mode === 'liga') mode = UI.boardMode = '501';
-    /* Der Liga-Reiter rechnet dieselben Classic-Werte, aber nur über
-       Ligaspiele – eigene Karriere-Karte statt der großen. */
-    var map = mode === 'liga' ? careerLiga() : career();
-    /* Liga: Auswertung je Team - unsere Mannschaft (Voreinstellung), die
-       ganze Liga oder ein Gegner, aus allen Spieltagen, die wir erfasst haben. */
-    var ligaTeam = mode === 'liga' ? (UI.ligaTeam || 'wir') : 'wir';
-    var teamDaten = null;
-    if (mode === 'liga') {
-      teamDaten = ligaTeamDaten();
-      if (!teamDaten.teams.length || (ligaTeam !== 'alle' && ligaTeam !== 'wir' && teamDaten.teams.indexOf(ligaTeam) < 0)) ligaTeam = UI.ligaTeam = 'wir';
-    }
+    if (!mode || mode === 'liga') mode = UI.boardMode = '501';
+    var map = career();
     $('board-mode').querySelectorAll('button').forEach(function (b) {
       b.classList.toggle('active', b.getAttribute('data-value') === mode);
     });
-    /* Spielverlauf anstelle der Spalten - im jeweiligen Wirt. */
-    var host = document.querySelector('.boards-koerper').parentElement;
-    host.classList.toggle('log', !!UI.boardLog);
-    /* Kaiwen und Hunter: noch kein Spiel, noch keine Auswertung. */
-    var bald = false;
-    $('board-bald').classList.toggle('hidden', !bald);
-    document.querySelector('.boards-koerper').classList.toggle('hidden', bald);
-    if (bald) {
-      $('boards-sub').textContent = kindName(mode);
-      $('board-bald-text').textContent = 'Die ' + kindName(mode) + '-Auswertung kommt mit dem Spiel.';
-      host.classList.remove('log');
-      return;
-    }
+    /* Spielverlauf anstelle der Spalten. */
+    $('stats-rang').classList.toggle('log', !!UI.boardLog);
     var defs = boardsFor(mode);
     if (!defs.some(function (b) { return b.key === UI.board; })) UI.board = defs[0].key;
     var def = boardDef(UI.board);
-    $('board-titel').textContent = def.label + ' · ' + (ligaTeam === 'wir' || ligaTeam === 'alle' ? 'alle Spieler' : ligaTeam);
+    $('board-titel').textContent = def.label + ' · alle Spieler';
 
-    var ligaSpieltage = wertbareHistorie().filter(function (h) { return h.liga && !h.liga.uebung && h.matches; });
     var log = allGamesLog().filter(function (row) { return row.kind === mode; });
-    var modeName = mode === '501' ? 'Classic' : mode === 'liga' ? 'Liga' : kindName(mode);
-    $('boards-sub').textContent = mode === 'liga'
-      ? (ligaSpieltage.length
-        ? 'Liga · ' + plural(ligaSpieltage.length, 'Spieltag', 'Spieltage') + ' · ' + LIGA.saison
-        : 'Liga · noch kein Spieltag gespielt')
-      : log.length
-        ? modeName + ' · ' + plural(log.length, 'Spiel', 'Spiele') +
-          (mode === '501' ? ' · ' + plural(wertbareHistorie().filter(function (h) { return (h.kind || '501') === '501'; }).length, 'Turnier', 'Turniere') : '')
-        : modeName + ' · noch keine Spiele';
+    var modeName = mode === '501' ? 'Classic' : kindName(mode);
+    $('boards-sub').textContent = log.length
+      ? modeName + ' · ' + plural(log.length, 'Spiel', 'Spiele') +
+        (mode === '501' ? ' · ' + plural(wertbareHistorie().filter(function (h) { return (h.kind || '501') === '501'; }).length, 'Turnier', 'Turniere') : '')
+      : modeName + ' · noch keine Spiele';
 
-    /* Verlauf: folgt der gewaehlten Kennzahl - eine farbige Linie je
-       Spieler. Im Liga-Reiter stehen stattdessen die Highlights. */
+    /* Verlauf: folgt der gewaehlten Kennzahl - eine farbige Linie je Spieler. */
     var chartLabel = def.label + (VERLAUF_SUMME[def.key] ? ' gesamt' : '') + ' – letzte ' + CHART_GAMES + (def.key === 'tourWins' ? ' Turniere' : ' Spiele');
-    $('board-chart').classList.toggle('hidden', ligaTeam !== 'wir' || imLiga);
-    if (ligaTeam === 'wir' && !imLiga) {
-      var chart = lineChart(verlaufReihen(mode, def), chartLabel, def);
-      $('board-chart').innerHTML = '<h2>' + chartLabel + '</h2>' +
-        (chart || '<p class="hint">Ab dem zweiten Spiel wird hier der Verlauf gezeichnet.</p>');
-    }
+    var chart = lineChart(verlaufReihen(mode, def), chartLabel, def);
+    $('board-chart').innerHTML = '<h2>' + chartLabel + '</h2>' +
+      (chart || '<p class="hint">Ab dem zweiten Spiel wird hier der Verlauf gezeichnet.</p>');
 
-    /* Im Liga-Reiter stehen die Team-Chips ueber den Spalten, rechts die
-       Highlights der Saison statt Verlauf und Rekorde. */
-    var teamChips = teamDaten && teamDaten.teams.length
-      ? '<div class="liga-team-wahl">' + [['wir', LIGA.team], ['alle', 'Gesamte Liga']].concat(teamDaten.teams.map(function (t) { return [t, t]; }))
-          .map(function (t) {
-            return '<button class="chip ' + (t[0] === ligaTeam ? 'active' : '') + '" data-action="liga-team" data-team="' + esc(t[0]) + '">' + esc(t[1]) + '</button>';
-          }).join('') + '</div>'
-      : '';
-    var chipsOben = $('liga-team-chips');
-    if (chipsOben) { chipsOben.innerHTML = imLiga ? teamChips : ''; chipsOben.classList.toggle('hidden', !imLiga || !teamChips); }
-    $('board-rekorde').classList.toggle('hidden', imLiga);
-    $('liga-highlights').classList.toggle('hidden', !imLiga);
-    if (imLiga) $('liga-highlights').innerHTML = ligaHighlightsSaisonHtml();
-
-    /* Ranglisten-Zeilen: bei "Gesamte Liga" oder einem Gegner aus der
-       Team-Auswertung (Gegner sind dort keine Profile, nur Namen). */
-    var teamRanking = function (d) {
-      if (ligaTeam === 'wir') return ranking(d, map, mode);
-      var unsere = ligaTeam === 'alle' ? ranking(d, teamDaten.map, 'liga').filter(function (st) { return st.team === LIGA.team; }) : [];
-      var andere = Object.keys(teamDaten.map).map(function (k) { return teamDaten.map[k]; }).filter(function (st) {
-        return st.team !== LIGA.team && (ligaTeam === 'alle' || st.team === ligaTeam) && d.min(st);
-      });
-      var alle = unsere.concat(andere);
-      alle.sort(function (a, b) {
-        var x = d.asc ? d.get(a) - d.get(b) : d.get(b) - d.get(a);
-        return x !== 0 ? x : a.name.localeCompare(b.name);
-      });
-      return alle;
-    };
-    var rows = teamRanking(def);
+    var rows = ranking(def, map, mode);
     /* Bestwert-Karten: je Kennzahl der beste Wert und wer ihn haelt; die
        angetippte Karte bestimmt Liste und Verlauf. Hoechstens vier nebeneinander. */
     var kacheln = $('board-kacheln');
     kacheln.style.setProperty('--kn', Math.min(4, defs.length));
     kacheln.innerHTML = defs.map(function (b) {
-      var top = teamRanking(b)[0];
+      var top = ranking(b, map, mode)[0];
       return '<button class="bk-kachel' + (b.key === UI.board ? ' active' : '') + '" data-action="board" data-key="' + b.key + '">' +
         '<span class="bk-t">' + b.label + '</span>' +
         '<span class="bk-v">' + (top ? b.fmt(b.get(top)) : '–') + '</span>' +
@@ -5106,22 +4944,18 @@
     }).join('');
     /* Platz 1 bis 3 in Medaillenfarbe (Gold, Silber, Bronze), der Beste leuchtet. */
     $('board-list').innerHTML = rows.length ? rows.map(function (st, i) {
-      var gegner = String(st.id).indexOf('lg|') === 0;
-      return '<div class="board-row ' + (i === 0 ? 'top' : '') + '"' +
-        (gegner ? '' : ' data-action="open-profile" data-id="' + esc(st.id) + '" role="button" tabindex="0"') + '>' +
+      return '<div class="board-row ' + (i === 0 ? 'top' : '') + '" data-action="open-profile" data-id="' + esc(st.id) + '" role="button" tabindex="0">' +
         '<div class="pos' + (i < 3 ? ' m' + (i + 1) : '') + '">' + (i + 1) + '</div>' +
-        avatarHTML(gegner ? { id: st.id, name: st.name, hue: 210 } : profile(st.id), 'sm') +
-        '<div class="nm">' + esc(st.name) +
-          (ligaTeam === 'alle' && st.team ? '<span class="board-team">' + esc(st.team) + '</span>' : '') + '</div>' +
+        avatarHTML(profile(st.id), 'sm') +
+        '<div class="nm">' + esc(st.name) + '</div>' +
         '<div class="val">' + def.fmt(def.get(st)) + '</div>' +
         '</div>';
     }).join('') : '<div class="board-empty">Dafür fehlen noch Daten.</div>';
-    /* Im Liga-Reiter reicht der Hinweis, dass nur Ligaspiele zaehlen. */
-    $('board-hint').textContent = imLiga ? 'nur Ligaspiele' : def.hint;
-    $('board-hint').classList.toggle('hidden', !(imLiga || def.hint));
+    $('board-hint').textContent = def.hint;
+    $('board-hint').classList.toggle('hidden', !def.hint);
 
     /* Rekorde des jeweiligen Modus. */
-    var recs = mode === '501' || mode === 'liga' ? [
+    var recs = mode === '501' ? [
       { k: 'highCO', t: 'Höchstes Finish' },
       { k: 'highScore', t: 'Höchste Aufnahme' },
       { k: 'bestLeg', t: 'Bestes Leg' },
@@ -5132,8 +4966,6 @@
       { k: 'mpr', t: 'Beste MPR' },
       { k: 'cricketWins', t: 'Meiste Siege' }
     ] : mode === 'finisher' ? [
-      /* Eigene Rekorde – vorher standen hier versehentlich die von
-         Round the World („Wenigste Darts" eines ganz anderen Spiels). */
       { k: 'finBest', t: 'Schnellstes Finish' },
       { k: 'finHigh', t: 'Höchste Zahl' },
       { k: 'finWins', t: 'Meiste Siege' }
@@ -5155,7 +4987,7 @@
         '<div class="rn">' + (kwRek.namen.length ? esc(kwRek.namen.join(' & ')) : 'Ausgangswert') + '</div></div>' : '') +
       recs.map(function (r) {
       var d = boardDef(r.k);
-      var top = teamRanking(d)[0];
+      var top = ranking(d, map, mode)[0];
       return '<div class="rec">' +
         '<div class="rt">' + r.t + '</div>' +
         '<div class="rv">' + (top ? d.fmt(d.get(top)) : '–') + '</div>' +
@@ -5164,41 +4996,9 @@
     }).join('');
 
     $('log-title').textContent = mode === '501' ? 'Alle Classic-Spiele'
-      : mode === 'liga' ? 'Alle Ligaspiele'
       : mode === 'cricket' ? 'Alle Cricket-Spiele'
       : mode === 'finisher' ? 'Alle Finisher-Spiele' : mode === 'kaiwen' ? 'Alle Kaiwen-Spiele' : mode === 'hunter' ? 'Alle Jagden' : 'Alle Trainings';
     $('board-log-knopf').textContent = $('log-title').textContent + ' ›';
-
-    /* Ligaspiele: eine Zeile je Spieltag mit dem Team-Ergebnis. */
-    if (mode === 'liga') {
-      /* Bei einem gewaehlten Gegner nur die Spieltage gegen ihn. */
-      var ligaLog = ligaSpieltage.filter(function (h) { return ligaTeam === 'wir' || ligaTeam === 'alle' || h.liga.gegner === ligaTeam; });
-      if (S.tour && S.tour.liga && S.matches.length && (ligaTeam === 'wir' || ligaTeam === 'alle' || S.tour.liga.gegner === ligaTeam)) {
-        ligaLog.unshift({ liga: S.tour.liga, matches: S.matches, at: Date.now(), live: true });
-      }
-      $('match-log').innerHTML = ligaLog.map(function (h) {
-        /* Gewonnen ist ein Spieltag nach SWO-PUNKTEN - 8:8 nach Einzeln
-           kann nach Punkten laengst entschieden sein. */
-        var not = Math.floor(((h.settings && h.settings.bestOf) || 3) / 2) + 1;
-        var wirS = 0, sieS = 0, wirP = 0, sieP = 0;
-        h.matches.forEach(function (m) {
-          if (!m.done) return;
-          var uns = ligaUnser(h.liga, m);
-          var pkt = ligaPunkte(m, not);
-          if (m.winner === uns) { wirS++; wirP += pkt[0]; sieP += pkt[1]; }
-          else { sieS++; sieP += pkt[0]; wirP += pkt[1]; }
-        });
-        return '<div class="log-row">' +
-          '<div class="lp ' + (wirP > sieP ? 'w' : '') + '">' + esc(LIGA.team) +
-            '<span class="a">' + h.liga.nr + '. Spieltag · ' + (h.liga.heim ? 'Heim' : 'Auswärts') + '</span></div>' +
-          '<div class="ls">' + wirP + ':' + sieP + '</div>' +
-          '<div class="lp right ' + (sieP > wirP ? 'w' : '') + '">' + esc(h.liga.gegner) + '</div>' +
-          '<div class="ld">' + fmtDate(h.at) + ' · Einzel ' + wirS + ':' + sieS +
-            (h.live ? ' · läuft gerade' : '') + '</div>' +
-          '</div>';
-      }).join('') || '<p class="hint">Noch keine Ligaspiele.</p>';
-      return;
-    }
 
     /* Bei Classic steht zu jedem gespielten Turnier eine eigene Zeile: ein
        Tipp oeffnet den Endstand mit allen Averages, wie am Abend am Bildschirm. */
@@ -5984,82 +5784,9 @@
   /* Die ausfuehrlichen Karten (Scoring, Finishing, Bilanz, Cricket, Round
      the World, letzte X01-Spiele) - unveraendert aus dem alten Profil. */
   function profilStatsHtml(p, st) {
-    function line(label, value, hint) {
-      return '<div class="pline"><span>' + label + (hint ? ' <i>' + hint + '</i>' : '') + '</span><b>' + value + '</b></div>';
-    }
-    var mine = allMatches().filter(function (e) { return e.m.p.indexOf(p.id) >= 0; }).slice(0, 15);
-    return (
-      /* Oben das Dashboard (Filter, Kennzahlen, Diagramme), darunter wie
-         bisher die Gesamtwerte ueber alle Classic-Spiele. */
-      statsDashboardHtml(p) +
-      '<p class="hint pa-panel-hint">Gesamtwerte über sämtliche gespielten Classic-Spiele.</p>' +
-      '<div class="card"><h2>Scoring</h2>' +
-        line('3-Dart-Average', st.darts ? st.avg.toFixed(2) : '–') +
-        line('First-9-Average', st.first9Darts ? st.first9.toFixed(2) : '–') +
-        line('Höchste Aufnahme', st.highScore || '–') +
-        line('180er', st.s180) +
-        line('140 – 179', st.s140) +
-        line('100 – 139', st.s100) +
-        line('60 – 99', st.s60) +
-        line('Aufnahmen gesamt', st.visits) +
-        line('Darts geworfen', st.darts) +
-      '</div>' +
-
-      '<div class="card"><h2>Finishing</h2>' +
-        line('Doppelquote', st.doubleAttempts ? st.doubleQuote.toFixed(1) + ' %' : '–', 'Treffer je Wurf auf ein mögliches Doppel') +
-        line('Doppelversuche', st.doubleAttempts) +
-        line('Checkouts', st.checkouts) +
-        line('Höchstes Finish', st.highCO || '–') +
-        line('Finishes ab 100', st.highFinishes) +
-        line('Bestes Leg', st.bestLeg ? st.bestLeg + ' Darts' : '–') +
-        line('Ø Darts je gewonnenem Leg (501)', st.dartsPerLeg ? st.dartsPerLeg.toFixed(1) : '–') +
-      '</div>' +
-
-      '<div class="card"><h2>Bilanz</h2>' +
-        line('Spiele', st.matches) +
-        line('Siege / Niederlagen', st.won + ' / ' + st.lost) +
-        line('Siegquote', st.matches ? st.winPct.toFixed(0) + ' %' : '–') +
-        line('Legs gewonnen / verloren', st.legsWon + ' / ' + st.legsLost) +
-        line('Turniere gespielt', st.tournaments) +
-        line('Turniersiege', st.tourWins) +
-        (st.ligaTage ? line('Ligaspieltage', st.ligaTage) : '') +
-      '</div>' +
-
-      (st.cricketGames ? '<div class="card"><h2>Cricket</h2>' +
-        line('Spiele', st.cricketGames) +
-        line('Siege', st.cricketWins) +
-        line('MPR', st.cricketDarts ? st.mpr.toFixed(2) : '–', 'Marks per Round – Marken je 3 Darts') +
-        line('Marken gesamt', st.cricketMarks) +
-      '</div>' : '') +
-
-      (st.rtwGames ? '<div class="card"><h2>Round the World</h2>' +
-        line('Spiele', st.rtwGames) +
-        line('Siege', st.rtwWins) +
-        line('Bestes Ergebnis', st.rtwBest ? st.rtwBest + ' Darts' : '–') +
-      '</div>' : '') +
-
-      '<div class="card"><h2>Letzte X01-Spiele</h2>' + (mine.length ? mine.map(function (e) {
-        var m = e.m;
-        var opp = m.p[0] === p.id ? m.p[1] : m.p[0];
-        var win = m.winner === p.id;
-        if (m.p.length < 2) {
-          /* Solo-Spiel: kein Gegner, kein Sieg - nur die Darts bis zum Finish. */
-          var soloDarts = sum(m.legs, function (l) { return dartsInLeg(l, p.id); });
-          return '<div class="log-row">' +
-            '<div class="lp">' + (m.session ? 'Session' : 'Solo') + '</div>' +
-            '<div class="ls">' + plural(soloDarts, 'Dart', 'Darts') + '</div>' +
-            '<div class="lp right">' + (m.start || e.start) + ' allein</div>' +
-            '<div class="ld">' + fmtDate(m.at || e.at) + '</div>' +
-            '</div>';
-        }
-        return '<div class="log-row">' +
-          '<div class="lp ' + (win ? 'w' : '') + '">' + (win ? 'Sieg' : 'Niederlage') + '</div>' +
-          '<div class="ls">' + legsWon(m, p.id) + ':' + legsWon(m, opp) + '</div>' +
-          '<div class="lp right">gegen ' + esc(pname(opp)) + '</div>' +
-          '<div class="ld">' + fmtDate(m.at || e.at) + (e.live ? ' · aktuelles Turnier' : '') + '</div>' +
-          '</div>';
-      }).join('') : '<p class="hint">Noch keine Spiele.</p>') + '</div>'
-    );
+    /* Das Dashboard (Filter, Kennzahlen, Diagramme, Liga-Bilanz, weitere
+       Spielarten, alle Zahlen) - dasselbe wie im Reiter Statistik › Person. */
+    return statsDashboardHtml(p, { st: st });
   }
 
   /* ================= Spieler-Dashboard („Meine Stats“) =================
@@ -6190,9 +5917,15 @@
     return o;
   }
 
-  function statsDashboardHtml(p) {
+  /* Das Dashboard einer Person. opts.kopf steht ueber den Filter-Chips (im
+     Reiter Statistik: Wer-Karte und Spieler-Chips), opts.alle/opts.st sparen
+     die doppelte Rechnung, wenn der Aufrufer sie schon hat. */
+  function statsDashboardHtml(p, opts) {
+    opts = opts || {};
     var f = statsFilter();
-    var alle = spielerSpiele(p.id);
+    stLigaCache = null;
+    var alle = opts.alle || spielerSpiele(p.id);
+    var st = opts.st || career()[p.id] || finalize(emptyStat(p.id));
     var spiele = statsAuswahl(alle, f);
     var zaehl = {};
     alle.forEach(function (s) { zaehl[s.modus] = (zaehl[s.modus] || 0) + 1; });
@@ -6204,12 +5937,13 @@
       return '<button type="button" class="st-chip' + (f.bereich === b[0] ? ' on' : '') + '" data-action="stats-bereich" data-wert="' + b[0] + '">' + b[1] + '</button>';
     }).join('');
     STATS_TIPS = {};
-    var karten = !spiele.length ? '<p class="st-leer">Keine Spiele in dieser Auswahl.</p>' :
+    var karten = (!spiele.length ? '<p class="st-leer">Keine Spiele in dieser Auswahl.</p>' :
       stAvgKarte(spiele) + stFormKarte(spiele) + stRadarKarte(spiele) + stDoppelKarte(p, spiele) + stBigKarte(spiele) +
-      stDblTrendKarte(spiele) + stModiKarte(alle, f) + stKalenderKarte(alle, f) + stGegnerKarte(spiele) + stRekordKarte(spiele);
-    return '<div class="st-dash" data-spiele="' + alle.length + '">' +
+      stDblTrendKarte(spiele) + stModiKarte(alle, f) + stKalenderKarte(alle, f) + stGegnerKarte(spiele)) +
+      stLigaBilanzKarte(p) + stSpielartenKarte(p, st) + (spiele.length ? stRekordKarte(spiele) : '') + stZahlenKarte(p, st);
+    return '<div class="st-dash" data-spiele="' + alle.length + '">' + (opts.kopf || '') +
       '<div class="st-chips">' + chips + '</div>' +
-      stKpisHtml(spiele) +
+      (spiele.length ? stKpisHtml(spiele) : '') +
       '<div class="st-raster">' + karten + '</div></div>';
   }
 
@@ -6236,16 +5970,11 @@
       ['Höchstes Finish', s.hf || null, 0, '', ST_FARBE.creme, plural(s.n, 'Spiel', 'Spiele') + ' · ' + plural(s.legs, 'Leg', 'Legs')],
       ['Bestes Leg', s.bl, 0, ' Darts', ST_FARBE.gruen, 'kürzestes 501er-Leg']
     ];
-    return '<div class="st-kpis">' + kpis.map(function (k, i) {
-      var leer = k[1] === null || k[1] === undefined;
-      return '<div class="st-kpi" style="--c:' + k[4] + ';animation-delay:' + (i * 60) + 'ms"><span class="l">' + k[0] + '</span>' +
-        '<span class="v">' + (leer ? '–' : '<span class="z" data-zahl="' + k[1] + '" data-dez="' + k[2] + '">' + stZahl(k[1], k[2]) + '</span>' + (k[3] ? '<small>' + k[3] + '</small>' : '')) + '</span>' +
-        '<span class="d">' + k[5] + '</span></div>';
-    }).join('') + '</div>';
+    return stKpiHtml(kpis);
   }
 
   function stKarte(id, titel, sub, inhalt, breit) {
-    return '<div class="st-karte' + (breit ? ' breit' : '') + '" id="st-' + id + '"><h3>' + titel + '</h3>' + (sub ? '<p class="st-sub">' + sub + '</p>' : '') + '<div class="st-box">' + inhalt + '</div></div>';
+    return '<div class="st-karte' + (breit === 'zwei' ? ' zwei' : breit ? ' breit' : '') + '" id="st-' + id + '"><h3>' + titel + '</h3>' + (sub ? '<p class="st-sub">' + sub + '</p>' : '') + '<div class="st-box">' + inhalt + '</div></div>';
   }
   /* Pfad durch Punkte; null unterbricht die Linie. */
   function stLinie(pts) {
@@ -6629,15 +6358,17 @@
     });
   }
   /* Nach dem Zeichnen: Linien ziehen sich, Balken wachsen, Ringe fuellen
-     sich, Zahlen zaehlen hoch - einmal je Auswahl. Zeichnet die Seite aus
-     anderem Anlass neu (Abgleich, Tick) oder wuenscht das Geraet weniger
-     Bewegung, steht alles sofort am Ziel (.st-still). */
-  function statsNachRender() {
-    var wurzel = $('profile-detail').querySelector('.st-dash');
+     sich, Zahlen zaehlen hoch - einmal je Auswahl (key). Alles ausserhalb
+     der Karten (Kopf, Chips, Kennzahlen) startet sofort, jede Karte erst,
+     wenn sie ins Bild scrollt (IntersectionObserver, .st-wart haelt sie
+     bis dahin an). Zeichnet die Seite aus anderem Anlass neu (Abgleich,
+     Tick, Aufklappen) oder wuenscht das Geraet weniger Bewegung, steht
+     alles sofort am Ziel (.st-still). */
+  var stBeobachter = null;
+  function statsNachRender(wurzel, key) {
     if (!wurzel) return;
     stHoererEinrichten(); stTipWeg();
-    var f = statsFilter();
-    var key = UI.profile + '|' + f.modus + '|' + f.bereich + '|' + wurzel.getAttribute('data-spiele');
+    if (stBeobachter) { stBeobachter.disconnect(); stBeobachter = null; }
     var ruhig = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     var still = key === statsAnimiertFuer || ruhig;
     statsAnimiertFuer = key;
@@ -6652,16 +6383,590 @@
     }
     for (i = 0; i < pfade.length; i++) { var len = pfade[i].getTotalLength(); pfade[i].style.strokeDasharray = len; pfade[i].style.strokeDashoffset = len; }
     for (i = 0; i < ringe.length; i++) ringe[i].style.strokeDashoffset = ringe[i].getAttribute('data-voll');
-    for (i = 0; i < zahlen.length; i++) stZaehlen(zahlen[i]);
-    requestAnimationFrame(function () {
+    for (i = 0; i < zahlen.length; i++) zahlen[i].textContent = (0).toFixed(Number(zahlen[i].getAttribute('data-dez')) || 0) + (zahlen[i].getAttribute('data-suf') || '');
+    var KARTE = '.st-karte, .st-rang';
+    var starten = function (nur) {
+      var j;
+      for (j = 0; j < zahlen.length; j++) if (nur(zahlen[j])) stZaehlen(zahlen[j]);
       requestAnimationFrame(function () {
-        if (!wurzel.isConnected) return;
-        var j;
-        for (j = 0; j < pfade.length; j++) pfade[j].style.strokeDashoffset = 0;
-        for (j = 0; j < ringe.length; j++) ringe[j].style.strokeDashoffset = ringe[j].getAttribute('stroke-dashoffset');
-        for (j = 0; j < fuellungen.length; j++) ziel(fuellungen[j]);
+        requestAnimationFrame(function () {
+          if (!wurzel.isConnected) return;
+          var k;
+          for (k = 0; k < pfade.length; k++) if (nur(pfade[k])) pfade[k].style.strokeDashoffset = 0;
+          for (k = 0; k < ringe.length; k++) if (nur(ringe[k])) ringe[k].style.strokeDashoffset = ringe[k].getAttribute('stroke-dashoffset');
+          for (k = 0; k < fuellungen.length; k++) if (nur(fuellungen[k])) ziel(fuellungen[k]);
+        });
+      });
+    };
+    var karten = Array.prototype.slice.call(wurzel.querySelectorAll(KARTE));
+    starten(function (el) { return !el.closest(KARTE); });
+    var inKarte = function (k) { return function (el) { return el.closest(KARTE) === k; }; };
+    if (!('IntersectionObserver' in window)) { karten.forEach(function (k) { starten(inKarte(k)); }); return; }
+    karten.forEach(function (k) { k.classList.add('st-wart'); });
+    stBeobachter = new IntersectionObserver(function (eintraege) {
+      eintraege.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        var k = e.target;
+        stBeobachter.unobserve(k);
+        k.classList.remove('st-wart');
+        starten(inKarte(k));
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -5% 0px' });
+    karten.forEach(function (k) { stBeobachter.observe(k); });
+  }
+
+  /* ================= Reiter „Statistik“: Person und Mannschaft =================
+     Nach dem erweiterten Artefakt „Darts Statistik“ (Julius, 11.11.2026). Der
+     Reiter ersetzt „Rang“: oben der Ebenen-Schalter, dann die Person (das
+     Dashboard aus dem Profil, dazu Spieler-Chips, Liga-Bilanz, weitere
+     Spielarten aufklappbar, alle Zahlen) oder die Mannschaft (Liga: Team-
+     Kennzahlen, Spieltag fuer Spieltag, Kader-Beitrag, Tabelle, Bilanz je
+     Team, Highlights, Liga-Rangliste aus der Einzelrangliste der Ligaleitung;
+     Alle Spielarten: Crew-Kennzahlen, Kader im Vergleich, Team-Form, Big
+     Scores, Doppelquote und darunter die Rangliste je Spielart wie bisher).
+     Liga-Zahlen kommen aus js/liga-daten.js (Tabelle, Einzelrangliste,
+     Highlights aus den Spielberichten), Wuerfe und Averages aus der App. */
+  var ST_KZ = [
+    ['avg', 'Average', function (s) { return s.avg; }, function (v) { return v.toFixed(2); }, 'Punkte je 3 Darts über alle Spiele.'],
+    ['first9', 'First 9', function (s) { return s.first9; }, function (v) { return v.toFixed(2); }, 'Average der ersten 9 Darts eines Legs.'],
+    ['dbl', 'Doppelquote', function (s) { return s.dbl; }, function (v) { return v.toFixed(1) + ' %'; }, 'Getroffene Finishes je Dart auf ein mögliches Doppel, nur aus Einzel-Darts.'],
+    ['win', 'Siegquote', function (s) { return s.win; }, function (v) { return v.toFixed(0) + ' %'; }, 'Anteil gewonnener Spiele mit Gegner.'],
+    ['c180', '180er', function (s) { return s.c180; }, function (v) { return String(v); }, 'Maximum: alle drei Darts in die Triple 20.'],
+    ['hf', 'Höchstes Finish', function (s) { return s.hf || null; }, function (v) { return String(v); }, 'Der höchste je ausgecheckte Rest.'],
+    ['bl', 'Bestes Leg', function (s) { return s.bl; }, function (v) { return v + ' Darts'; }, 'Wenigste Darts für ein gewonnenes 501er-Leg.', true]
+  ];
+  var ST_LIGA_KZ = [
+    ['punkte', 'Punkte', function (z) { return z.punkte; }, function (v) { return String(v); }],
+    ['won', 'Siege', function (z) { return z.siege; }, function (v) { return String(v); }],
+    ['legs', 'Legs', function (z) { return z.lf; }, function (v) { return String(v); }],
+    ['quote', 'Siegquote', function (z) { return z.siege + z.nied >= 2 ? z.siege / (z.siege + z.nied) * 100 : null; }, function (v) { return v.toFixed(0) + ' %'; }]
+  ];
+  var stLigaCache = null;   // Liga-Daten einmal je Zeichnen
+
+  function statsUI() {
+    if (!UI.stats) UI.stats = { ebene: 'person', spieler: null, umfang: 'liga', kader: 'avg', liga: 'punkte', auf: {} };
+    if (!UI.stats.auf) UI.stats.auf = {};
+    return UI.stats;
+  }
+  /* Der Kader: dieselben Leute wie in der Rangliste - keine Bots, keine
+     Testkonten, Gaeste nur, wenn sie dauerhaft sind. */
+  function statsCrew() { return activeProfiles().filter(function (p) { return !p.bot && !p.test && (!p.gast || p.dauer); }); }
+  /* Die gewaehlte Person: die angetippte, sonst das eigene Konto, sonst der Erste. */
+  function statsSpieler() {
+    var st = statsUI(), crew = statsCrew(), p = null, eig = eigeneKontoId();
+    if (!crew.length) return null;
+    crew.forEach(function (x) { if (x.id === st.spieler) p = x; });
+    if (!p && eig) crew.forEach(function (x) { if (x.id === eig) p = x; });
+    if (!p) p = crew[0];
+    st.spieler = p.id;
+    return p;
+  }
+  /* Von anderswo in die Statistik springen (Liga-Reiter, Profil-Kachel). */
+  function statsOeffnen(ebene, umfang, team) {
+    var st = statsUI();
+    st.ebene = ebene;
+    if (umfang) st.umfang = umfang;
+    if (team) UI.ligaTeam = team;
+    UI.boardLog = false;
+    S.screen = 'stats';
+    save(); render();
+  }
+
+  /* ---- Bausteine ---- */
+  function stMinis(liste) {
+    var h = liste.filter(function (e) { return e && e[1] !== null && e[1] !== undefined && e[1] !== ''; }).map(function (e, i) {
+      return '<div class="st-mini" style="animation-delay:' + (i * 50) + 'ms"><span>' + e[0] + '</span><b' + (e[3] ? ' style="color:' + e[3] + '"' : '') + '>' + e[1] + '</b>' + (e[2] ? '<small>' + e[2] + '</small>' : '') + '</div>';
+    }).join('');
+    return h ? '<div class="st-minis">' + h + '</div>' : '';
+  }
+  function stBalken(w, farbe) { return '<div class="st-track"><div class="st-fill" data-w="' + Math.max(0, Math.min(100, w || 0)).toFixed(1) + '" style="background:' + farbe + '"></div></div>'; }
+  function stChip(action, wert, text, an, extra) {
+    return '<button type="button" class="st-chip' + (an ? ' on' : '') + '" data-action="' + action + '" data-wert="' + esc(String(wert)) + '">' + text + (extra || '') + '</button>';
+  }
+  function stWer(art, ico, titel, sub, knopf) {
+    return '<div class="st-wer"><span class="i" aria-hidden="true">' + ico + '</span><div class="st-wer-text"><div class="k">' + (art === 'person' ? 'Personenstatistik' : 'Mannschaftsstatistik') + '</div><b>' + titel + '</b>' + (sub ? '<small>' + sub + '</small>' : '') + '</div>' + (knopf || '') + '</div>';
+  }
+  /* Kennzahl-Kacheln: [Titel, Wert, Dezimalen, Einheit, Farbe, Zeile darunter]. */
+  function stKpiHtml(kpis) {
+    return '<div class="st-kpis">' + kpis.map(function (k, i) {
+      var leer = k[1] === null || k[1] === undefined || !isFinite(k[1]);
+      return '<div class="st-kpi" style="--c:' + k[4] + ';animation-delay:' + (i * 60) + 'ms"><span class="l">' + k[0] + '</span>' +
+        '<span class="v">' + (leer ? '–' : '<span class="z" data-zahl="' + k[1] + '" data-dez="' + k[2] + '">' + stZahl(k[1], k[2]) + '</span>' + (k[3] ? '<small>' + k[3] + '</small>' : '')) + '</span>' +
+        '<span class="d">' + (k[5] || '') + '</span></div>';
+    }).join('') + '</div>';
+  }
+  function stLrow(i, name, sub, wert, farbe) {
+    var ini = String(name).split(' ').map(function (x) { return x.charAt(0); }).join('').slice(0, 2).toUpperCase();
+    return '<div class="st-lrow"><span class="st-pos' + (i < 3 ? ' m' + (i + 1) : '') + '">' + (i + 1) + '</span><span class="st-av" style="background:' + farbe + '">' + esc(ini) + '</span><span class="nm">' + esc(name) + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</span><span class="val">' + wert + '</span></div>';
+  }
+  function stName(s) { return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
+  function stLigaName(p) { return p.voll || p.name; }
+  function stPaar(x) { var m = /^\s*(\d+)\s*:\s*(\d+)/.exec(String(x || '')); return m ? [Number(m[1]), Number(m[2])] : null; }
+  function stIsoText(iso) { return iso ? String(Number(iso.slice(8, 10))) + '. ' + ST_MONATE[Number(iso.slice(5, 7)) - 1] : ''; }
+
+  /* ---- Liga-Daten (Ligaleitung) ---- */
+  function stLigaDaten() {
+    if (stLigaCache) return stLigaCache;
+    var tab = ligaTabelleBerechnet();
+    var er = window.LIGA_DATEN.einzelranglisteAus(LIGA_SPIELTAGE);
+    var platz = 0, vorher = null;
+    er.forEach(function (z, i) {
+      var k = [z.punkte, z.siege - z.nied, z.lf - z.la, z.lf].join('|');
+      if (k !== vorher) { platz = i + 1; vorher = k; }
+      z.platz = platz;
+    });
+    var hl = window.LIGA_DATEN.highlightsAus(LIGA_SPIELTAGE);
+    var spiele = [];
+    Object.keys(LIGA_SPIELTAGE).sort().forEach(function (tid) {
+      (LIGA_SPIELTAGE[tid] || []).forEach(function (sp) {
+        if (!sp || !sp.heim || !sp.gast || sp.verschoben) return;
+        var e = stPaar(sp.einzel);
+        if (!e) return;
+        spiele.push({ nr: Number(String(tid).replace(/\D/g, '')) || 0, tag: sp.tag || '', heim: sp.heim, gast: sp.gast, e: e, l: stPaar(sp.legs) || [0, 0] });
       });
     });
+    var teams = LIGA_TEAMS.filter(function (t) { return t !== LIGA.team; }).sort(function (a, b) { return a.localeCompare(b, 'de'); });
+    stLigaCache = { tab: tab, er: er, hl: hl, spiele: spiele, teams: teams };
+    return stLigaCache;
+  }
+  function stTeamSpiele(d, team) {
+    return d.spiele.filter(function (s) { return s.heim === team || s.gast === team; }).map(function (s) {
+      var h = s.heim === team, ef = h ? s.e[0] : s.e[1], ea = h ? s.e[1] : s.e[0];
+      return { nr: s.nr, tag: s.tag, heim: h, gegner: h ? s.gast : s.heim, ef: ef, ea: ea, lf: h ? s.l[0] : s.l[1], la: h ? s.l[1] : s.l[0], pkt: ef > ea ? 2 : ef === ea ? 1 : 0 };
+    }).sort(function (a, b) { return (a.tag || '').localeCompare(b.tag || '') || a.nr - b.nr; });
+  }
+  /* Profil und Einzelrangliste gehoeren zusammen, wenn der ganze Name passt,
+     sonst wenn Vor- oder Nachname eindeutig sind - dieselbe Regel wie beim
+     Nachtrag vom Bogen (nachtragVorschlag). */
+  function stNamenPassen(p, erName) {
+    var n = stName(erName), teile = n.split(' '), vor = teile[0], nach = teile[teile.length - 1];
+    var voll = stName(p.voll), kurz = stName(p.name), pv = voll.split(' ');
+    return { ganz: voll === n || kurz === n, vor: kurz === vor || (pv[0] && pv[0] === vor), nach: pv.length > 1 && pv[pv.length - 1] === nach };
+  }
+  function stEindeutig(liste, stufe) {
+    var ganz = liste.filter(function (x) { return x.t.ganz; });
+    if (ganz.length) return ganz[0].x;
+    var vor = liste.filter(function (x) { return x.t.vor; });
+    if (vor.length === 1) return vor[0].x;
+    var nach = liste.filter(function (x) { return x.t.nach; });
+    return nach.length === 1 ? nach[0].x : null;
+  }
+  /* Die Zeile eines unserer Spieler in der Einzelrangliste. */
+  function stErZeile(d, p) {
+    return stEindeutig(d.er.filter(function (z) { return z.team === LIGA.team; }).map(function (z) { return { x: z, t: stNamenPassen(p, z.name) }; }));
+  }
+  /* Das Profil zu einem Namen der Einzelrangliste (nur Kader). */
+  function stProfilZuName(name) {
+    return stEindeutig(statsCrew().map(function (p) { return { x: p, t: stNamenPassen(p, name) }; }));
+  }
+
+  /* ---- Person: Seite im Reiter ---- */
+  function statsPersonSeiteHtml() {
+    var p = statsSpieler();
+    if (!p) return '<div class="st-dash" data-spiele="0"><p class="st-leer">Noch keine Spieler angelegt.</p></div>';
+    var crew = statsCrew();
+    var alle = spielerSpiele(p.id), ges = statsSumme(alle);
+    var kopf = stWer('person', '👤', esc(p.name) + (p.id === eigeneKontoId() ? ' <em>(du)</em>' : ''),
+      (istGastProfil(p) ? 'Gast' : 'Mitglied ' + esc(LIGA.team)) + ' · ' + plural(ges ? ges.matches : 0, 'Spiel', 'Spiele') + ' mit Gegner',
+      '<button type="button" class="st-knopf" data-action="open-profile" data-id="' + esc(p.id) + '">Profil ›</button>');
+    var chips = '<div class="st-chips st-spieler">' + crew.map(function (x) {
+      return stChip('stats-spieler', x.id, '<i class="st-dot" style="background:' + playerColor(x.id) + '"></i>' + esc(x.name), x.id === p.id, istGastProfil(x) ? ' <small>Gast</small>' : '');
+    }).join('') + '</div>';
+    return statsDashboardHtml(p, { kopf: kopf + chips, alle: alle });
+  }
+
+  /* ---- Person: Liga-Bilanz ---- */
+  function stLigaBilanzKarte(p) {
+    var titel = '🏟️ Liga-Bilanz', sub = 'Persönlich in der ' + esc(LIGA.saison) + ': Einzelrangliste der Ligaleitung und Würfe aus der App';
+    var d = stLigaDaten(), z = stErZeile(d, p), ls = careerLiga()[p.id];
+    if (ls && !ls.matches && !ls.darts && !ls.s180 && !ls.highCO) ls = null;
+    var n = stName(stLigaName(p));
+    var mein = function (l) { return l.filter(function (h) { return h.team === LIGA.team && stName(h.name) === n; }); };
+    var h180 = mein(d.hl.s180), hf = mein(d.hl.highfinish), sl = mein(d.hl.shortleg);
+    if (!z && !ls) return stKarte('ligabilanz', titel, sub, '<p class="st-leer">Noch kein Einsatz in der Liga.</p>');
+    var html = '';
+    if (z) {
+      html += '<div class="st-platz"><div class="z"><span data-zahl="' + z.platz + '" data-dez="0">' + z.platz + '</span><small>. Platz</small></div>' +
+        '<div class="t">von ' + d.er.length + ' Spielern der Liga' + stBalken(d.er.length > 1 ? (d.er.length - z.platz) / (d.er.length - 1) * 100 : 100, 'linear-gradient(90deg,' + ST_FARBE.blau + ',' + ST_FARBE.gruen + ')') + '</div></div>';
+    }
+    var q = z && z.siege + z.nied ? z.siege / (z.siege + z.nied) * 100 : null;
+    var s180 = Math.max(ls ? ls.s180 : 0, sum(h180, function (x) { return x.n; }));
+    var hoch = Math.max(ls ? ls.highCO : 0, hf.length ? hf[0].wert : 0);
+    var bl = [sl.length ? sl[0].wert : 0, ls && ls.bestLeg ? ls.bestLeg : 0].filter(Boolean);
+    bl = bl.length ? Math.min.apply(null, bl) : null;
+    html += stMinis([
+      z ? ['Punkte', z.punkte, 'Einzelrangliste', ST_FARBE.gold] : null,
+      z ? ['Einzel', z.siege + ' : ' + z.nied, q === null ? '' : q.toFixed(0) + ' % gewonnen', q >= 50 ? ST_FARBE.gruen : ST_FARBE.rot] : null,
+      z ? ['Legs', z.lf + ' : ' + z.la] : null,
+      ls && ls.darts ? ['Liga-Ø', ls.avg.toFixed(2), 'aus der App', ST_FARBE.blau] : null,
+      ls && ls.doubleAttempts ? ['Doppelquote', ls.doubleQuote.toFixed(1) + ' %', ls.doubleHits + ' von ' + ls.doubleAttempts, ST_FARBE.gruen] : null,
+      s180 ? ['180er', s180, '', ST_FARBE.rot] : null,
+      hoch ? ['Höchstes Finish', hoch] : null,
+      bl ? ['Bestes Leg', bl + ' Darts'] : null
+    ]);
+    if (hf.length || sl.length) {
+      html += '<p class="st-note">Laut Ligaleitung: ' + [hf.length ? 'Highfinishes ' + hf.map(function (x) { return x.wert; }).join(', ') : '',
+        sl.length ? 'Shortlegs ' + sl.map(function (x) { return x.wert + ' Darts'; }).join(', ') : ''].filter(Boolean).join(' · ') + '</p>';
+    }
+    return stKarte('ligabilanz', titel, sub, html);
+  }
+
+  /* ---- Person: weitere Spielarten, aufklappbar ---- */
+  /* Die letzten fuenf Spiele einer Spielart mit diesem Spieler. */
+  function stArtSpiele(kind, pid) {
+    var liste = wertbareHistorie().filter(function (h) { return h.kind === kind && (h.players || []).indexOf(pid) >= 0; });
+    if (S.game && S.game.kind === kind && S.game.done && !testSpiel(S.game) && (S.game.players || []).indexOf(pid) >= 0) liste = liste.concat([S.game]);
+    liste.sort(function (a, b) { return (b.at || 0) - (a.at || 0); });
+    return liste.slice(0, 5).map(function (h) {
+      var allein = h.players.length < 2;
+      var mit = allein ? 'allein' : h.players.filter(function (id) { return id !== pid; }).map(pname).map(esc).join(', ');
+      var ausgang = allein ? '' : (h.winner === pid ? 'Sieg' : h.winner ? 'Niederlage' : 'abgebrochen') + ' · ';
+      var erg;
+      if (kind === 'rtw') {
+        var fin = rtwState({ players: h.players, throws: h.throws, boost: h.boost !== false }).finished[pid];
+        erg = fin ? plural(fin.darts, 'Dart', 'Darts') : 'nicht beendet';
+      } else if (kind === 'kaiwen') {
+        var ks = kaiwenState({ players: h.players, versuche: h.versuche || [] });
+        erg = 'Höchste ' + ks.hoechste + ' · ' + ks.checks + ' von ' + ks.versuche + ' gecheckt';
+      } else if (kind === 'finisher') {
+        erg = ausgang + plural((h.rounds || []).filter(function (r) { return r.sieger === pid; }).length, 'Runde', 'Runden');
+      } else if (kind === 'hunter') {
+        var hs = hunterState({ players: h.players, throws: h.throws || [], variante: h.variante, handicap: h.handicap, startPos: h.startPos, leben: h.leben });
+        erg = ausgang + plural(hs.faenge[pid] || 0, 'Fang', 'Fänge');
+      } else {
+        var cs = cricketState({ players: h.players, throws: h.throws, scoring: h.scoring });
+        erg = ausgang + plural(cs.allMarks[pid] || 0, 'Marke', 'Marken');
+      }
+      return { at: h.at, erg: erg, mit: mit };
+    });
+  }
+  function stSpielartenKarte(p, st) {
+    var titel = '🎲 Weitere Spielarten', sub = 'Cricket, Round the World, Finisher, Kaiwen und Hunter – ein Tipp öffnet die Details';
+    var F = ST_FARBE;
+    var arten = [
+      { k: 'cricket', t: 'Cricket', n: st.cricketGames,
+        top: [['Spiele', st.cricketGames], ['Siege', st.cricketWins], ['MPR', st.cricketDarts ? st.mpr.toFixed(2) : '–', 'Marken je 3 Darts', F.blau]],
+        mehr: [['Siegquote', st.cricketGames ? Math.round(st.cricketWins / st.cricketGames * 100) + ' %' : '–'], ['Marken gesamt', st.cricketMarks], ['Darts', st.cricketDarts]] },
+      { k: 'rtw', t: 'Round the World', n: st.rtwGames,
+        top: [['Spiele', st.rtwGames], ['Siege', st.rtwWins], ['Bestes', st.rtwBest ? st.rtwBest + ' Darts' : '–', 'kompletter Durchlauf', F.gold]],
+        mehr: [['Siegquote', st.rtwGames ? Math.round(st.rtwWins / st.rtwGames * 100) + ' %' : '–']] },
+      { k: 'finisher', t: 'Finisher', n: st.finGames,
+        top: [['Spiele', st.finGames], ['Siege', st.finWins], ['Ø Darts', st.finRounds ? st.finAvgDarts.toFixed(1) : '–', 'je Finish', F.gruen]],
+        mehr: [['Gewonnene Runden', st.finRounds], ['Schnellstes', st.finBest ? plural(st.finBest, 'Dart', 'Darts') : '–'], ['Höchste Zahl', st.finHigh || '–']] },
+      { k: 'kaiwen', t: 'Kaiwen', n: st.kwGames,
+        top: [['Spiele', st.kwGames], ['PB Solo', st.kwBestSolo !== null ? st.kwBestSolo : '–', '', F.gold], ['PB Team', st.kwBestTeam !== null ? st.kwBestTeam : '–']],
+        mehr: [['Checks', st.kwChecks], ['Versuche', st.kwVersuche], ['Check-Quote', st.kwVersuche ? st.kwQuote.toFixed(0) + ' %' : '–']] },
+      { k: 'hunter', t: 'Hunter', n: st.huGames,
+        top: [['Spiele', st.huGames], ['Siege', st.huWins], ['Fänge', st.huFaenge, '', F.rot]],
+        mehr: [['MPR', st.huDarts ? st.huMpr.toFixed(2) : '–', 'Treffer je 3 Darts'], ['Trefferquote', st.huDarts ? st.huQuote.toFixed(0) + ' %' : '–'],
+          ['Solo Normal', st.huBest.normal !== null ? plural(st.huBest.normal, 'Dart', 'Darts') : '–'], ['Solo Boost', st.huBest.boost !== null ? plural(st.huBest.boost, 'Dart', 'Darts') : '–']] }
+    ].filter(function (a) { return a.n > 0; });
+    if (!arten.length) return stKarte('spielarten', titel, sub, '<p class="st-leer">Noch nichts außer X01 gespielt.</p>');
+    var auf = statsUI().auf;
+    var html = arten.map(function (a) {
+      var offen = !!auf[a.k];
+      var letzte = offen ? stArtSpiele(a.k, p.id) : [];
+      return '<div class="st-art' + (offen ? ' auf' : '') + '">' +
+        '<button type="button" class="st-art-kopf" data-action="stats-art" data-art="' + a.k + '" aria-expanded="' + (offen ? 'true' : 'false') + '">' +
+          '<span class="t">' + a.t + '</span><span class="n">' + plural(a.n, 'Spiel', 'Spiele') + '</span><span class="pfeil" aria-hidden="true">›</span></button>' +
+        stMinis(a.top) +
+        (offen ? '<div class="st-art-mehr">' + stMinis(a.mehr) +
+          (letzte.length ? '<div class="st-art-liste"><span class="st-art-titel">Letzte Spiele</span>' + letzte.map(function (l) {
+            return '<div class="st-zl"><span>' + stDatum(l.at) + ' · ' + l.mit + '</span><b>' + l.erg + '</b></div>';
+          }).join('') + '</div>' : '') + '</div>' : '') +
+        '</div>';
+    }).join('');
+    return stKarte('spielarten', titel, sub, html);
+  }
+
+  /* ---- Person: alle Zahlen (die frueheren Karten Scoring, Finishing, Bilanz, letzte Spiele) ---- */
+  function stZahlenKarte(p, st) {
+    var zl = function (a, b) { return '<div class="st-zl"><span>' + a + '</span><b>' + b + '</b></div>'; };
+    var gr = function (t, l) { return '<div class="st-zgr"><h4>' + t + '</h4>' + l.join('') + '</div>'; };
+    var letzte = allMatches().filter(function (e) { return e.m.p.indexOf(p.id) >= 0; }).slice(0, 6).map(function (e) {
+      var m = e.m;
+      if (m.p.length < 2) {
+        var sd = sum(m.legs, function (l) { return dartsInLeg(l, p.id); });
+        return zl(stDatum(m.at || e.at) + ' · ' + (m.session ? 'Session' : 'Solo'), plural(sd, 'Dart', 'Darts'));
+      }
+      var opp = m.p.filter(function (id) { return id !== p.id; }), win = m.winner === p.id;
+      var fremd = opp.length === 1 ? legsWon(m, opp[0]) : m.legs.filter(function (l) { return l.winner && l.winner !== p.id; }).length;
+      return zl(stDatum(m.at || e.at) + ' · ' + esc(opp.map(pname).join(' / ')), '<span style="color:' + (win ? ST_FARBE.gruen : ST_FARBE.rot) + '">' + (win ? 'Sieg ' : 'Niederlage ') + legsWon(m, p.id) + ':' + fremd + '</span>');
+    });
+    return stKarte('zahlen', '📋 Alle Zahlen', 'Gesamtwerte über sämtliche Classic-Spiele, dazu die letzten Spiele', '<div class="st-zahlen">' +
+      gr('Scoring', [zl('3-Dart-Average', st.darts ? st.avg.toFixed(2) : '–'), zl('First-9-Average', st.first9Darts ? st.first9.toFixed(2) : '–'), zl('Höchste Aufnahme', st.highScore || '–'),
+        zl('180er', st.s180), zl('140 – 179', st.s140), zl('100 – 139', st.s100), zl('60 – 99', st.s60), zl('Aufnahmen gesamt', st.visits), zl('Darts geworfen', st.darts)]) +
+      gr('Finishing', [zl('Doppelquote', st.doubleAttempts ? st.doubleQuote.toFixed(1) + ' %' : '–'), zl('Doppelversuche', st.doubleAttempts), zl('Checkouts', st.checkouts),
+        zl('Höchstes Finish', st.highCO || '–'), zl('Finishes ab 100', st.highFinishes), zl('Bestes Leg', st.bestLeg ? st.bestLeg + ' Darts' : '–'),
+        zl('Ø Darts je gewonnenem Leg (501)', st.dartsPerLeg ? st.dartsPerLeg.toFixed(1) : '–')]) +
+      gr('Bilanz', [zl('Spiele', st.matches), zl('Siege / Niederlagen', st.won + ' / ' + st.lost), zl('Siegquote', st.matches ? st.winPct.toFixed(0) + ' %' : '–'),
+        zl('Legs gewonnen / verloren', st.legsWon + ' / ' + st.legsLost), zl('Turniere gespielt', st.tournaments), zl('Turniersiege', st.tourWins)].concat(st.ligaTage ? [zl('Ligaspieltage', st.ligaTage)] : [])) +
+      gr('Letzte Spiele', letzte.length ? letzte : ['<p class="st-leer">Noch keine Spiele.</p>']) + '</div>', true);
+  }
+
+  /* ---- Mannschaft ---- */
+  function statsTeamSeiteHtml() {
+    var st = statsUI();
+    var umfang = st.umfang === 'alle' ? 'alle' : 'liga';
+    var chips = '<div class="st-chips">' + stChip('stats-umfang', 'liga', '🏟️ Liga', umfang === 'liga') + stChip('stats-umfang', 'alle', '🎯 Alle Spielarten', umfang === 'alle') + '</div>';
+    var inhalt;
+    if (umfang === 'alle') inhalt = stCrewHtml();
+    else {
+      var d = stLigaDaten();
+      var team = UI.ligaTeam || 'wir';
+      if (team !== 'wir' && team !== 'alle' && d.teams.indexOf(team) < 0) team = UI.ligaTeam = 'wir';
+      chips += '<div class="st-chips">' + [['wir', LIGA.team], ['alle', 'Gesamte Liga']].concat(d.teams.map(function (t) { return [t, t]; })).map(function (t) {
+        return stChip('stats-team', t[0], esc(t[1]), team === t[0]);
+      }).join('') + '</div>';
+      inhalt = team === 'alle' ? stLigaGesamtHtml(d) : stLigaTeamHtml(d, team === 'wir' ? LIGA.team : team);
+    }
+    return '<div class="st-dash st-team" data-spiele="' + wertbareHistorie().length + '">' + chips + inhalt + '</div>';
+  }
+
+  function stTeamKpis(d, name) {
+    var zs = d.tab.zeilen, zi = -1;
+    zs.forEach(function (z, i) { if (z.team === name) zi = i; });
+    var z = zi >= 0 ? zs[zi] : { punkte: 0, g: 0, u: 0, v: 0 };
+    var sp = stTeamSpiele(d, name), wir = name === LIGA.team;
+    var ef = sum(sp, function (s) { return s.ef; }), ea = sum(sp, function (s) { return s.ea; }), lf = sum(sp, function (s) { return s.lf; }), la = sum(sp, function (s) { return s.la; });
+    var s180 = sum(d.hl.s180.filter(function (x) { return x.team === name; }), function (x) { return x.n; });
+    var hf = d.hl.highfinish.filter(function (x) { return x.team === name; })[0], sl = d.hl.shortleg.filter(function (x) { return x.team === name; })[0];
+    /* Unser Team: Average und Doppelquote aus den Wuerfen der App (nur Ligaspiele). */
+    var app = null;
+    if (wir) {
+      var cl = careerLiga();
+      app = { points: 0, darts: 0, hits: 0, att: 0, s180: 0, hf: 0 };
+      statsCrew().forEach(function (p) {
+        var s = cl[p.id];
+        if (!s) return;
+        app.points += s.points; app.darts += s.darts; app.hits += s.doubleHits; app.att += s.doubleAttempts; app.s180 += s.s180;
+        if (s.highCO > app.hf) app.hf = s.highCO;
+      });
+    }
+    var F = ST_FARBE;
+    var kpis = [
+      ['Tabellenplatz', zi >= 0 ? zi + 1 : null, 0, '.', F.gold, 'von ' + zs.length + ' Teams'],
+      ['Punkte', z.punkte, 0, '', F.creme, z.g + ' S · ' + z.u + ' U · ' + z.v + ' N'],
+      ['Einzel-Quote', ef + ea ? ef / (ef + ea) * 100 : null, 0, ' %', F.gruen, ef + ' : ' + ea + ' Einzel'],
+      ['Leg-Quote', lf + la ? lf / (lf + la) * 100 : null, 0, ' %', F.blau, lf + ' : ' + la + ' Legs'],
+      ['Team-Average', app && app.darts ? app.points / app.darts * 3 : null, 2, '', F.lila, wir ? 'aus den Würfen in der App' : 'nur für unser Team'],
+      ['Doppelquote', app && app.att ? app.hits / app.att * 100 : null, 1, ' %', F.gruen, wir ? (app.att ? app.hits + ' von ' + app.att : 'nur aus Einzel-Darts') : 'nur für unser Team'],
+      ['180er', Math.max(s180, app ? app.s180 : 0), 0, '', F.rot, 'Höchstes Finish ' + (Math.max(hf ? hf.wert : 0, app ? app.hf : 0) || '–') + (sl ? ' · Shortleg ' + sl.wert : '')]
+    ];
+    return { sp: sp, kpis: stKpiHtml(kpis) };
+  }
+  function stLigaTeamHtml(d, name) {
+    var wir = name === LIGA.team, k = stTeamKpis(d, name);
+    var h = stWer('team', wir ? '🛡️' : '⚔️', esc(name), (wir ? 'Unser Team' : 'Gegner') + ' · ' + esc(LIGA.saison) + ' · ' + plural(k.sp.length, 'Spieltag', 'Spieltage') + ' gewertet') + k.kpis;
+    h += '<div class="st-raster">' + stSpieltagKarte(k.sp, !wir) + (wir ? '' : stHlKarte(d, name)) + stKaderKarte(d, name) + stTabelleKarte(d, name) + stTeamGegnerKarte(k.sp) + '</div>';
+    return h + stLigaRangHtml(d, name);
+  }
+  function stLigaGesamtHtml(d) {
+    var zs = d.tab.zeilen, hl = d.hl, ein = 0, legs = 0;
+    zs.forEach(function (z) { var e = stPaar(z.einzel), l = stPaar(z.legs); ein += e ? e[0] : 0; legs += l ? l[0] : 0; });
+    var F = ST_FARBE;
+    var h = stWer('team', '🏟️', 'Gesamte Liga', esc(LIGA.saison) + ' · ' + zs.length + ' Teams' + (d.tab.bis ? ' · Stand ' + stIsoText(d.tab.bis) : ''));
+    h += stKpiHtml([
+      ['Teams', zs.length, 0, '', F.creme, d.er.length + ' Spieler im Einsatz'],
+      ['Begegnungen', d.spiele.length, 0, '', F.blau, ein + ' Einzel · ' + legs + ' Legs'],
+      ['180er', sum(hl.s180, function (x) { return x.n; }), 0, '', F.rot, hl.s180.length ? 'meiste: ' + esc(hl.s180[0].name) : ''],
+      ['Höchstes Finish', hl.highfinish.length ? hl.highfinish[0].wert : null, 0, '', F.gold, hl.highfinish.length ? esc(hl.highfinish[0].name) : ''],
+      ['Kürzestes Leg', hl.shortleg.length ? hl.shortleg[0].wert : null, 0, ' Darts', F.gruen, hl.shortleg.length ? esc(hl.shortleg[0].name) : ''],
+      ['Tabellenführer', zs.length ? zs[0].punkte : null, 0, ' Pkt', F.gold, zs.length ? esc(zs[0].team) : '']
+    ]);
+    var mP = Math.max.apply(null, [1].concat(d.er.map(function (z) { return z.punkte; })));
+    var top = d.er.length ? '<div class="st-kliste">' + d.er.slice(0, 12).map(function (z, i) {
+      return '<div class="st-krow' + (z.team === LIGA.team ? ' wir' : '') + '" style="animation-delay:' + (i * 40) + 'ms"><span class="st-krang">' + z.platz + '.</span>' +
+        '<span class="st-kname"><b>' + esc(z.name) + (z.gast ? '<span class="st-gast">Gast</span>' : '') + '</b><small>' + esc(z.team) + ' · Einzel ' + z.siege + ':' + z.nied + '</small></span>' +
+        stBalken(z.punkte / mP * 100, z.team === LIGA.team ? F.rot : F.blau) + '<span class="st-kwert">' + z.punkte + '</span></div>';
+    }).join('') + '</div>' : '<p class="st-leer">Noch kein Spielbericht.</p>';
+    h += '<div class="st-raster">' + stTabelleKarte(d, '') + stKarte('einzel', '🥇 Einzelrangliste', 'Die besten 12 der Liga nach Punkten (Sieg = 2 + Leg-Differenz)', top) + stHlKarte(d, '') + '</div>';
+    return h + stLigaRangHtml(d, '');
+  }
+
+  /* Einzel gewonnen/verloren je Spieltag als Saeulen, Punkte aufsummiert als Linie. */
+  function stSpieltagKarte(sp, zwei) {
+    var titel = '📊 Spieltag für Spieltag', sub = 'Einzel gewonnen und verloren je Spieltag, Linie = Punkte aufsummiert';
+    if (!sp.length) return stKarte('spieltage', titel, sub, '<p class="st-leer">Noch kein Ergebnis gemeldet.</p>', true);
+    var F = ST_FARBE, schmal = window.innerWidth < 700;
+    var W = schmal ? 380 : 640, H = schmal ? 230 : 260, L = 28, R = 34, T = 22, B = 34, n = sp.length;
+    var mE = Math.max.apply(null, [8].concat(sp.map(function (s) { return Math.max(s.ef, s.ea); })));
+    var kum = [], k = 0;
+    sp.forEach(function (s) { k += s.pkt; kum.push(k); });
+    var mP = Math.max(2, k), bw = (W - L - R) / n;
+    var y = function (v) { return T + (1 - v / mE) * (H - T - B); }, yp = function (v) { return T + (1 - v / mP) * (H - T - B); };
+    var s = [0, Math.round(mE / 2), mE].map(function (t) { return '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(t).toFixed(1) + '" y2="' + y(t).toFixed(1) + '" class="st-gl"/><text x="' + (L - 6) + '" y="' + (y(t) + 3).toFixed(1) + '" text-anchor="end" class="st-ax">' + t + '</text>'; }).join('') +
+      '<text x="' + (W - R + 6) + '" y="' + (yp(mP) + 3).toFixed(1) + '" class="st-ax" style="fill:' + F.gold + '">' + mP + ' Pkt</text>';
+    sp.forEach(function (q, i) {
+      var m = L + i * bw + bw / 2, w = Math.min(22, bw * 0.3), e = q.pkt === 2 ? ['S', F.gruen] : q.pkt === 1 ? ['U', F.gold] : ['N', F.rot];
+      s += '<g class="st-growY" style="animation-delay:' + (i * 80) + 'ms"><rect x="' + (m - w - 1).toFixed(1) + '" y="' + y(q.ef).toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + (y(0) - y(q.ef)).toFixed(1) + '" rx="3" fill="' + F.gruen + '"/>' +
+        '<rect x="' + (m + 1).toFixed(1) + '" y="' + y(q.ea).toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + (y(0) - y(q.ea)).toFixed(1) + '" rx="3" fill="' + F.rot + '" opacity=".75"/></g>' +
+        '<text x="' + m.toFixed(1) + '" y="' + (H - 18) + '" text-anchor="middle" class="st-ax">' + q.nr + '.</text>' +
+        '<text x="' + m.toFixed(1) + '" y="' + (H - 5) + '" text-anchor="middle" font-size="10" font-weight="800" fill="' + e[1] + '">' + e[0] + '</text>' +
+        '<rect x="' + (L + i * bw).toFixed(1) + '" y="' + T + '" width="' + bw.toFixed(1) + '" height="' + (H - T - B + 20) + '" fill="transparent" data-tip="' + esc('<b>' + q.nr + '. Spieltag · ' + stIsoText(q.tag) + '</b><br>' + (q.heim ? 'Heim' : 'Auswärts') + ' gegen ' + esc(q.gegner) + '<br>Einzel ' + q.ef + ' : ' + q.ea + ' · Legs ' + q.lf + ' : ' + q.la + '<br>Punkte bis hier: ' + kum[i]) + '"/>';
+    });
+    s += '<path d="' + stLinie(kum.map(function (v, i) { return [L + i * bw + bw / 2, yp(v)]; })) + '" fill="none" stroke="' + F.gold + '" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" class="st-draw st-glanz" style="transition-delay:400ms"/>' +
+      kum.map(function (v, i) { return '<circle cx="' + (L + i * bw + bw / 2).toFixed(1) + '" cy="' + yp(v).toFixed(1) + '" r="3.6" fill="' + F.gold + '" stroke="#0d0a0b" stroke-width="1.4" class="st-pt" style="animation-delay:' + (700 + i * 90) + 'ms"/>'; }).join('');
+    var legende = '<div class="st-legende"><span><i style="background:' + F.gruen + '"></i>Einzel gewonnen</span><span><i style="background:' + F.rot + '"></i>Einzel verloren</span><span><i style="background:' + F.gold + '"></i>Punkte aufsummiert</span></div>';
+    return stKarte('spieltage', titel, sub, '<svg class="st-svg" viewBox="0 0 ' + W + ' ' + H + '">' + s + '</svg>' + legende, zwei ? 'zwei' : true);
+  }
+  /* Punkte je Spieler in der Einzelrangliste; bei uns mit dem Liga-Ø aus der App, ein Tipp oeffnet die Person. */
+  function stKaderKarte(d, name) {
+    var wir = name === LIGA.team, er = d.er.filter(function (z) { return z.team === name; });
+    var mP = Math.max.apply(null, [1].concat(er.map(function (z) { return z.punkte; })));
+    var cl = wir ? careerLiga() : null;
+    var html = er.length ? '<div class="st-kliste">' + er.map(function (z, i) {
+      var p = wir ? stProfilZuName(z.name) : null, ls = p && cl ? cl[p.id] : null, q = z.siege + z.nied ? z.siege / (z.siege + z.nied) : 0;
+      var innen = '<span class="st-krang">' + z.platz + '.</span><span class="st-kname"><b>' + esc(z.name) + (z.gast ? '<span class="st-gast">Gast</span>' : '') + '</b>' +
+        '<small>Einzel ' + z.siege + ' : ' + z.nied + ' · Legs ' + z.lf + ':' + z.la + (ls && ls.darts ? ' · Ø ' + ls.avg.toFixed(1) : '') + '</small></span>' +
+        stBalken(z.punkte / mP * 100, stQuoteFarbe(q * 0.6)) + '<span class="st-kwert">' + z.punkte + '</span>';
+      return p ? '<button type="button" class="st-krow" style="animation-delay:' + (i * 50) + 'ms" data-action="stats-person" data-wert="' + esc(p.id) + '">' + innen + '</button>'
+        : '<div class="st-krow" style="animation-delay:' + (i * 50) + 'ms">' + innen + '</div>';
+    }).join('') + '</div>' : '<p class="st-leer">Noch kein Spielbericht.</p>';
+    return stKarte('kader', '👥 Kader-Beitrag', 'Punkte je Spieler in der Einzelrangliste (Sieg = 2 + Leg-Differenz)' + (wir ? ', dazu der Liga-Ø aus der App. Tipp öffnet die Person.' : ''), html);
+  }
+  function stTabelleKarte(d, name) {
+    var zs = d.tab.zeilen, mP = Math.max.apply(null, [1].concat(zs.map(function (z) { return z.punkte; })));
+    var html = '<div class="st-kliste">' + zs.map(function (z, i) {
+      var an = z.team === name, u = z.team === LIGA.team;
+      return '<button type="button" class="st-krow' + (an ? ' an' : '') + (u ? ' wir' : '') + '" style="animation-delay:' + (i * 40) + 'ms" data-action="stats-team" data-wert="' + esc(u ? 'wir' : z.team) + '">' +
+        '<span class="st-krang">' + (i + 1) + '.</span><span class="st-kname"><b>' + esc(z.team) + '</b><small>' + z.g + ' S · ' + z.u + ' U · ' + z.v + ' N · Legs ' + esc(z.legs) + '</small></span>' +
+        stBalken(z.punkte / mP * 100, an ? ST_FARBE.gold : u ? ST_FARBE.rot : '#5b5153') + '<span class="st-kwert">' + z.punkte + '</span></button>';
+    }).join('') + '</div>';
+    return stKarte('tabelle', '🏆 Tabelle', 'Punkte aller Teams, berechnet aus den Ergebnissen der Ligaleitung. Tipp wählt das Team.', html);
+  }
+  function stTeamGegnerKarte(sp) {
+    var o = {}, r = [];
+    sp.forEach(function (s) {
+      if (!o[s.gegner]) { o[s.gegner] = { name: s.gegner, sp: [], ef: 0, ea: 0, lf: 0, la: 0 }; r.push(o[s.gegner]); }
+      var x = o[s.gegner];
+      x.sp.push(s); x.ef += s.ef; x.ea += s.ea; x.lf += s.lf; x.la += s.la;
+    });
+    var html = r.length ? '<table class="st-tab"><thead><tr><th>Gegner</th><th>Ergebnisse</th><th class="n">Einzel</th><th class="n">Legs</th><th class="q">Einzel-Quote</th></tr></thead><tbody>' + r.map(function (x, i) {
+      var q = x.ef + x.ea ? x.ef / (x.ef + x.ea) * 100 : 0, c = q > 50 ? ST_FARBE.gruen : q === 50 ? ST_FARBE.gold : ST_FARBE.rot;
+      return '<tr class="st-fade" style="animation-delay:' + (i * 60) + 'ms"><td><b>' + esc(x.name) + '</b></td><td>' + x.sp.map(function (s) {
+        return '<span class="st-erg ' + (s.pkt === 2 ? 'w' : s.pkt ? 'u' : 'l') + '" data-tip="' + esc('<b>' + s.nr + '. Spieltag · ' + stIsoText(s.tag) + '</b><br>' + (s.heim ? 'Heim' : 'Auswärts') + ' · Legs ' + s.lf + ' : ' + s.la) + '">' + s.ef + ':' + s.ea + '</span>';
+      }).join('') + '</td><td class="n" style="color:' + c + '">' + x.ef + ' : ' + x.ea + '</td><td class="n">' + x.lf + ' : ' + x.la + '</td><td>' + stBalken(q, c) + '</td></tr>';
+    }).join('') + '</tbody></table>' : '<p class="st-leer">Noch keine Begegnung.</p>';
+    return stKarte('teamgegner', '⚔️ Bilanz gegen jedes Team', 'Jede Begegnung mit Einzel und Legs', html);
+  }
+  /* 180er, Highfinishes, Shortlegs laut Spielberichten - eines Teams oder der ganzen Liga. */
+  function stHlKarte(d, name) {
+    var nur = function (l) { return name ? l.filter(function (h) { return h.team === name; }) : l; };
+    var g = function (t, l, w) {
+      if (!l.length) return '';
+      return '<div class="st-art"><span class="st-art-titel">' + t + '</span><div class="st-hl">' + l.slice(0, 6).map(function (h, i) {
+        return '<div class="st-hlz' + (h.team === LIGA.team ? ' wir' : '') + '" style="animation-delay:' + (i * 50) + 'ms"><b>' + w(h) + '</b><span>' + esc(h.name) + (name ? '' : '<small>' + esc(h.team) + '</small>') + '</span></div>';
+      }).join('') + '</div></div>';
+    };
+    var inhalt = g('180er', nur(d.hl.s180), function (h) { return h.n + '×'; }) + g('Highfinishes', nur(d.hl.highfinish), function (h) { return h.wert; }) + g('Shortlegs', nur(d.hl.shortleg), function (h) { return h.wert + ' D'; });
+    return stKarte('highlights', '✨ Highlights', 'Laut Spielberichten der Ligaleitung' + (name ? '' : ', ganze Liga'), inhalt || '<p class="st-leer">Noch keine Highlights gemeldet.</p>');
+  }
+  /* Liga-Rangliste aus der Einzelrangliste: Bestwert-Kacheln je Kennzahl,
+     die Liste dazu, rechts die Highlights. */
+  function stLigaRangHtml(d, name) {
+    var rows = d.er.filter(function (z) { return !name || z.team === name; }), st = statsUI();
+    var def = ST_LIGA_KZ.filter(function (k) { return k[0] === st.liga; })[0] || ST_LIGA_KZ[0];
+    var sortiert = function (k) { return rows.filter(function (z) { return k[2](z) !== null; }).sort(function (a, b) { return k[2](b) - k[2](a) || a.platz - b.platz; }); };
+    var titel = '🏅 Liga-Rangliste' + (name ? (name === LIGA.team ? '' : ' · ' + esc(name)) : ' · ganze Liga');
+    return '<div class="st-rang" id="st-ligarang"><div class="st-rang-kopf"><h3>' + titel + '</h3><span>nur Ligaspiele · ' + esc(LIGA.saison) + '</span></div>' +
+      '<div class="st-rgrid"><div><div class="st-kacheln">' + ST_LIGA_KZ.map(function (k) {
+        var t = sortiert(k)[0];
+        return '<button type="button" class="st-kachel' + (k === def ? ' on' : '') + '" data-action="stats-liga" data-wert="' + k[0] + '"><span class="t">' + k[1] + '</span><span class="v">' + (t ? k[3](k[2](t)) : '–') + '</span><span class="n">' + (t ? esc(t.name) : 'noch offen') + '</span></button>';
+      }).join('') + '</div>' +
+      '<div class="st-liste"><h4><span>' + def[1] + ' · ' + (name ? 'Spieler' : 'alle Spieler') + '</span><span>nur Ligaspiele</span></h4>' +
+        (rows.length ? sortiert(def).slice(0, 12).map(function (z, i) { return stLrow(i, z.name, z.team, def[3](def[2](z)), z.team === LIGA.team ? ST_FARBE.rot : '#5b6a7a'); }).join('') : '<p class="st-leer">Noch kein Spielbericht.</p>') +
+      '</div></div><div class="st-seite">' + stHlKarte(d, name === LIGA.team ? LIGA.team : name) + '</div></div></div>';
+  }
+
+  /* ---- Mannschaft · alle Spielarten (die Crew) ---- */
+  function stCrewHtml() {
+    var crew = statsCrew();
+    var je = crew.map(function (p) { return { p: p, spiele: spielerSpiele(p.id) }; });
+    /* Jeder Einsatz zaehlt fuer Average und Co. (ein Duell zweier Crew-Spieler
+       steht zweimal drin, je mit den eigenen Wuerfen); fuer Spielzahlen und
+       Kalender zaehlt jedes Spiel einmal. */
+    var alle = [], gesehen = {};
+    je.forEach(function (r) { r.spiele.forEach(function (s) { alle.push(s); }); });
+    alle.sort(function (a, b) { return a.at - b.at; });
+    var eindeutig = alle.filter(function (s) { if (gesehen[s.id]) return false; gesehen[s.id] = 1; return true; });
+    var s = statsSumme(alle), F = ST_FARBE;
+    var andere = wertbareHistorie().filter(function (h) {
+      return (h.kind || '501') !== '501' && h.kind !== 'quick' && (h.players || []).some(function (id) { return crew.some(function (p) { return p.id === id; }); });
+    }).length;
+    var h = stWer('team', '🛡️', esc(LIGA.team) + ' · Crew', plural(crew.length, 'Spieler', 'Spieler') + ' im Kader · alle Spielarten: Liga, Turnier, Schnell und Solo');
+    if (!s) return h + '<p class="st-leer">Noch keine Spiele.</p>';
+    h += stKpiHtml([
+      ['Spiele', eindeutig.length + andere, 0, '', F.creme, eindeutig.length + ' X01 · ' + andere + ' andere'],
+      ['Team-Average', s.avg, 2, '', F.blau, 'aus ' + Math.round(s.darts) + ' Darts'],
+      ['First 9', s.first9, 2, '', F.lila, 'Scoring-Antritt der Crew'],
+      ['Doppelquote', s.dbl, 1, ' %', F.gruen, s.att ? s.hits + ' von ' + s.att : 'nur aus Einzel-Darts'],
+      ['180er', s.c180, 0, '', F.rot, s.c140 + '× 140+ · ' + s.c100 + '× 100+'],
+      ['Höchstes Finish', s.hf || null, 0, '', F.gold, s.bl ? 'bestes Leg ' + s.bl + ' Darts' : '']
+    ]);
+    return h + '<div class="st-raster">' + stKaderVergleichKarte(je) + stKalenderKarte(eindeutig, { modus: 'alle', bereich: 0 }) + stCrewFormKarte(alle, eindeutig) + stBigKarte(alle) + stDblTrendKarte(alle) + '</div>';
+  }
+  function stKaderVergleichKarte(je) {
+    var st = statsUI(), d = ST_KZ.filter(function (k) { return k[0] === st.kader; })[0] || ST_KZ[0];
+    var rows = je.map(function (r) { return { p: r.p, s: statsSumme(r.spiele) }; }).filter(function (r) { var v = r.s ? d[2](r.s) : null; return v !== null && v !== undefined && isFinite(v); });
+    rows.sort(function (a, b) { return d[5] ? d[2](a.s) - d[2](b.s) : d[2](b.s) - d[2](a.s); });
+    var w = rows.map(function (r) { return d[2](r.s); });
+    var best = w.length ? (d[5] ? Math.min.apply(null, w) : Math.max.apply(null, w)) : 0;
+    var eng = d[0] === 'avg' || d[0] === 'first9', lo = eng && w.length ? Math.min.apply(null, w) - Math.max(2, (best - Math.min.apply(null, w)) * 0.6) : 0;
+    var chips = '<div class="st-chips klein">' + ST_KZ.map(function (k) { return stChip('stats-kader', k[0], k[1], k === d); }).join('') + '</div>';
+    var liste = rows.length ? '<div class="st-kliste">' + rows.map(function (r, i) {
+      var v = d[2](r.s), a = d[5] ? best / v : best - lo ? (v - lo) / (best - lo) : (v > 0 ? 1 : 0);
+      return '<button type="button" class="st-krow" style="animation-delay:' + (i * 50) + 'ms" data-action="stats-person" data-wert="' + esc(r.p.id) + '"><span class="st-krang' + (i < 3 ? ' m' + (i + 1) : '') + '">' + (i + 1) + '</span>' +
+        '<span class="st-kname"><b><i class="st-dot" style="background:' + playerColor(r.p.id) + '"></i>' + esc(r.p.name) + '</b><small>' + plural(r.s.matches, 'Spiel', 'Spiele') + ' mit Gegner</small></span>' +
+        stBalken(a * 100, playerColor(r.p.id)) + '<span class="st-kwert">' + d[3](v) + '</span></button>';
+    }).join('') + '</div>' : '<p class="st-leer">Dafür fehlen noch Daten.</p>';
+    return stKarte('kadervergleich', '⚖️ Kader im Vergleich', d[4] + ' Tipp öffnet die Person.', chips + liste, 'zwei');
+  }
+  /* Saeulen = X01-Spiele der Crew je Monat, Linie = Team-Average. */
+  function stCrewFormKarte(alle, eindeutig) {
+    var titel = '📈 Team-Form je Monat', sub = 'Säulen = X01-Spiele der Crew, Linie = Team-Average';
+    var zaehl = {};
+    eindeutig.forEach(function (s) { var k = stMonat(s.at); zaehl[k] = (zaehl[k] || 0) + 1; });
+    var d = stMonate(alle).slice(-8).map(function (e) {
+      var p = sum(e.gs, function (s) { return s.st.points; }), dd = sum(e.gs, function (s) { return s.st.darts; });
+      return { k: e.k, n: zaehl[e.k] || 0, avg: dd ? p / dd * 3 : null };
+    }).filter(function (q) { return q.avg !== null; });
+    if (d.length < 2) return stKarte('crewform', titel, sub, '<p class="st-leer">Mindestens 2 Monate mit Spielen nötig.</p>');
+    var F = ST_FARBE, W = 340, H = 230, L = 30, R = 34, T = 16, B = 24;
+    var mN = Math.max.apply(null, d.map(function (q) { return q.n; })) || 1, av = d.map(function (q) { return q.avg; });
+    var lo = Math.floor(Math.min.apply(null, av) - 3), hi = Math.ceil(Math.max.apply(null, av) + 3), bw = (W - L - R) / d.length;
+    if (hi - lo < 6) hi = lo + 6;
+    var y = function (v) { return T + (1 - v / mN) * (H - T - B); }, ya = function (v) { return T + (hi - v) * (H - T - B) / (hi - lo); };
+    var s = [lo, Math.round((lo + hi) / 2), hi].map(function (t) { return '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + ya(t).toFixed(1) + '" y2="' + ya(t).toFixed(1) + '" class="st-gl"/><text x="' + (W - R + 4) + '" y="' + (ya(t) + 3).toFixed(1) + '" class="st-ax" style="fill:' + F.blau + '">' + t + '</text>'; }).join('') +
+      '<text x="' + (L - 6) + '" y="' + (y(mN) + 3).toFixed(1) + '" text-anchor="end" class="st-ax">' + mN + '</text>';
+    d.forEach(function (q, i) {
+      var x = L + i * bw + bw * 0.22, w = bw * 0.56;
+      s += '<rect x="' + x.toFixed(1) + '" y="' + y(q.n).toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + (y(0) - y(q.n)).toFixed(1) + '" rx="4" fill="#ffffff1a" class="st-growY" style="animation-delay:' + (i * 80) + 'ms"/>' +
+        '<text x="' + (x + w / 2).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" class="st-ax">' + stMonatText(q.k) + '</text>' +
+        '<rect x="' + (L + i * bw).toFixed(1) + '" y="' + T + '" width="' + bw.toFixed(1) + '" height="' + (H - T - B) + '" fill="transparent" data-tip="' + esc('<b>' + stMonatText(q.k) + '</b><br>' + plural(q.n, 'Spiel', 'Spiele') + '<br>Team-Ø ' + q.avg.toFixed(2)) + '"/>';
+    });
+    var pts = d.map(function (q, i) { return [L + i * bw + bw / 2, ya(q.avg)]; });
+    s += '<path d="' + stLinie(pts) + '" fill="none" stroke="' + F.blau + '" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="st-draw"/>' +
+      pts.map(function (p, i) { return '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="4" fill="#0d0a0b" stroke="' + F.blau + '" stroke-width="2.2" class="st-pt" style="animation-delay:' + (400 + i * 120) + 'ms"/>'; }).join('');
+    return stKarte('crewform', titel, sub, '<svg class="st-svg" viewBox="0 0 ' + W + ' ' + H + '">' + s + '</svg><div class="st-legende"><span><i style="background:#ffffff33"></i>Spiele</span><span><i style="background:' + F.blau + '"></i>Team-Average</span></div>');
+  }
+
+  /* ---- Der Reiter ---- */
+  function renderStats() {
+    var st = statsUI();
+    var ebene = st.ebene === 'team' ? 'team' : 'person';
+    var screen = $('screen-stats');
+    screen.classList.toggle('st-team', ebene === 'team');
+    $('stats-ebene').querySelectorAll('button').forEach(function (b) { var an = b.getAttribute('data-wert') === ebene; b.classList.toggle('on', an); b.setAttribute('aria-selected', an ? 'true' : 'false'); });
+    stLigaCache = null;
+    var zeigRang = ebene === 'team' && st.umfang === 'alle';
+    $('stats-rang').classList.toggle('hidden', !zeigRang);
+    if (!zeigRang) UI.boardLog = false;
+    $('stats-main').innerHTML = ebene === 'person' ? statsPersonSeiteHtml() : statsTeamSeiteHtml();
+    if (zeigRang) renderBoards();
+    var f = statsFilter(), dash = $('stats-main').querySelector('.st-dash');
+    /* Kennzahl-Kacheln und Vergleichs-Chips wechseln still (kein neuer Schluessel). */
+    statsNachRender(dash, ['stats', ebene, st.spieler, st.umfang, UI.ligaTeam, f.modus, f.bereich, dash && dash.getAttribute('data-spiele')].join('|'));
   }
 
   /* ---------- "Meine besten Finishes ermitteln" ----------
@@ -7179,53 +7484,6 @@
   /* Highlights der ganzen Saison (nur unsere Spieler, nur echte Spieltage):
      180er, High-Finishes ab 100 und Shortlegs bis 21 Darts - je mit
      Spieltag und Einzel, wie sie der Bogen abfragt. */
-  function ligaHighlightsSaisonHtml() {
-    var spiele = wertbareHistorie().filter(function (h) { return h.liga && !h.liga.uebung && h.matches; }).slice().reverse();
-    if (S.tour && S.tour.liga && !S.tour.liga.uebung && S.matches.length) spiele.push({ liga: S.tour.liga, matches: S.matches });
-    var h180 = [], hFin = [], hLeg = [];
-    spiele.forEach(function (h) {
-      var unsere = ligaUnsereIds(h);
-      /* Nachgetragene Spieltage ohne Wuerfe: was die Ligaleitung gemeldet hat. */
-      ligaBogenHighlights(h).forEach(function (e) {
-        if (!e.id || !unsere[e.id]) return;
-        var woL = h.liga.nr + '. Spieltag · Ligaleitung';
-        for (var k = 0; k < e.s180; k++) h180.push({ n: pname(e.id), d: woL, v: '180' });
-        e.highfinish.forEach(function (f) { if (f >= 100) hFin.push({ n: pname(e.id), d: woL, v: String(f) }); });
-        e.shortleg.forEach(function (d) { if (d > 0 && d <= 21) hLeg.push({ n: pname(e.id), d: woL, v: d + ' Darts' }); });
-      });
-      h.matches.forEach(function (m, mi) {
-        if (!m.legs) return;
-        var wo = h.liga.nr + '. Spieltag · Einzel ' + (mi + 1);
-        m.legs.forEach(function (leg) {
-          (leg.visits || []).forEach(function (v) {
-            if (v.s === MAX_VISIT && !v.b && unsere[v.p]) h180.push({ n: pname(v.p), d: wo, v: '180' });
-          });
-          if (leg.winner && unsere[leg.winner]) {
-            var eigene = (leg.visits || []).filter(function (v) { return v.p === leg.winner; });
-            var letzte = eigene[eigene.length - 1];
-            if (letzte && letzte.s >= 100) hFin.push({ n: pname(leg.winner), d: wo, v: String(letzte.s) });
-            var darts = dartsInLeg(leg, leg.winner);
-            if (darts > 0 && darts <= 21) hLeg.push({ n: pname(leg.winner), d: wo, v: darts + ' Darts' });
-          }
-        });
-      });
-    });
-    hFin.sort(function (a, b) { return parseInt(b.v, 10) - parseInt(a.v, 10); });
-    hLeg.sort(function (a, b) { return parseInt(a.v, 10) - parseInt(b.v, 10); });
-    /* Je Gruppe Kacheln zu zweit nebeneinander: Wert gross, Name, wo. */
-    var gruppe = function (titel, liste) {
-      if (!liste.length) return '';
-      return '<div class="hl-gruppe"><span class="hl-titel">' + titel + '</span><div class="hl-raster">' +
-        liste.slice(0, 6).map(function (i) {
-          return '<div class="hl-kachel"><span class="hl-wert">' + esc(i.v) + '</span><span class="hl-wer">' + esc(i.n) + '</span><small>' + esc(i.d) + '</small></div>';
-        }).join('') + '</div></div>';
-    };
-    var inhalt = gruppe('180er', h180) + gruppe('High-Finishes ab 100', hFin) + gruppe('Shortlegs bis 21 Darts', hLeg);
-    return '<div class="karte-kopf"><h2 class="rekorde-titel"><span class="pokal" aria-hidden="true">🏆</span>Highlights der Saison</h2>' +
-      '<button class="btn ghost small" data-action="board-log">Alle Ligaspiele ›</button></div>' +
-      '<div class="hl-liste">' + (inhalt || '<p class="hint">Noch keine Highlights – sie kommen mit dem ersten Spieltag.</p>') + '</div>';
-  }
-
   /* DiensDarts als iCal: ein ganztaegiger Eintrag fuer den naechsten Dienstag. */
   function trainingKalender() {
     var d = naechsterDienstag();
@@ -7458,15 +7716,11 @@
     $('liga-plan').classList.toggle('hidden', tab !== 'plan');
     $('liga-training').classList.toggle('hidden', tab !== 'training');
     $('liga-tabelle').classList.toggle('hidden', tab !== 'tabelle');
-    $('liga-statistik').classList.toggle('hidden', tab !== 'statistik');
     $('liga-kasse').classList.toggle('hidden', tab !== 'kasse');
     $('liga-regeln').classList.toggle('hidden', tab !== 'regeln');
     if (tab === 'training') { renderLigaTraining(); return; }
     if (tab === 'kasse') { renderLigaKasse(); return; }
     if (tab === 'tabelle') { renderLigaTabelle(); return; }
-    /* Statistik: die Liga-Auswertung der Rangliste, hierher verschoben
-       (siehe show()). Die Unterzeile nennt Spieltage und Saison. */
-    if (tab === 'statistik') { renderBoards(); $('liga-sub').textContent = $('boards-sub').textContent; return; }
     if (tab !== 'plan') return;
 
     /* Ohne Server (Einzeldatei) oder ohne Anmeldung bleibt der Spielplan
@@ -13677,7 +13931,7 @@
         tabEigenSpeichern(tstP, true);
         break;
       }
-      case 'profil-liga': UI.ligaTab = 'statistik'; UI.boardLog = false; S.screen = 'liga'; save(); render(); break;
+      case 'profil-liga': statsOeffnen('team', 'liga', 'wir'); break;
       case 'profil-gruppen': UI.profilGruppenWahl = !UI.profilGruppenWahl; render(); break;
       case 'profil-gruppen-ok': UI.profilGruppenWahl = false; render(); break;
       case 'profil-gruppe': {
@@ -13746,9 +14000,9 @@
       case 'summary-back': {
         var from = UI.summary && UI.summary.from;
         UI.summary = null;
-        S.screen = from === 'boards' || from === 'players' || from === 'liga' ? from
+        S.screen = from === 'stats' || from === 'players' || from === 'liga' ? from
           : S.game && !S.game.done ? S.game.kind
-          : S.matches.length ? 'tournament' : 'boards';
+          : S.matches.length ? 'tournament' : 'stats';
         save(); render();
         break;
       }
@@ -13756,10 +14010,20 @@
         UI.board = el.getAttribute('data-key');
         render();
         break;
-      case 'liga-team':
-        UI.ligaTeam = el.getAttribute('data-team');
+      case 'stats-team':
+        UI.ligaTeam = el.getAttribute('data-wert') || 'wir';
+        statsUI().umfang = 'liga';
         render();
         break;
+      case 'stats-ebene': statsUI().ebene = el.getAttribute('data-wert') === 'team' ? 'team' : 'person'; UI.boardLog = false; window.scrollTo(0, 0); render(); break;
+      case 'stats-spieler': statsUI().spieler = el.getAttribute('data-wert'); render(); break;
+      case 'stats-umfang': statsUI().umfang = el.getAttribute('data-wert') === 'alle' ? 'alle' : 'liga'; UI.boardLog = false; render(); break;
+      case 'stats-kader': statsUI().kader = el.getAttribute('data-wert') || 'avg'; render(); break;
+      case 'stats-liga': statsUI().liga = el.getAttribute('data-wert') || 'punkte'; render(); break;
+      /* Weitere Spielarten: die Details auf- und zuklappen. */
+      case 'stats-art': { var stA = el.getAttribute('data-art'), stAuf = statsUI().auf; stAuf[stA] = !stAuf[stA]; render(); break; }
+      /* Aus Kader-Liste oder Vergleich zur Person. */
+      case 'stats-person': { var stS = statsUI(); stS.ebene = 'person'; stS.spieler = el.getAttribute('data-wert'); window.scrollTo(0, 0); render(); break; }
       case 'board-mode':
         UI.boardMode = el.getAttribute('data-value');
         UI.board = (boardsFor(UI.boardMode)[0] || { key: 'won' }).key;
@@ -14076,6 +14340,8 @@
         ligaKalender(el.getAttribute('data-id') || null);
         break;
       case 'liga-tab':
+        /* "Statistik" wohnt im Reiter Statistik › Mannschaft › Liga. */
+        if (el.getAttribute('data-tab') === 'statistik') { statsOeffnen('team', 'liga', 'wir'); break; }
         UI.ligaTab = el.getAttribute('data-tab');
         UI.boardLog = false;
         render();
@@ -15926,7 +16192,7 @@
    * Reiter zurueck, Bildschirm zurueck, zuletzt ins Setup.
    */
   var SPIEL_SCREENS = { game: 1, cricket: 1, rtw: 1, finisher: 1, kaiwen: 1, hunter: 1 };
-  var PFEIL_SCREENS = { setup: 1, tournament: 1, boards: 1, players: 1, profile: 1, liga: 1, konto: 1, summary: 1, winner: 1, bericht: 1 };
+  var PFEIL_SCREENS = { setup: 1, tournament: 1, stats: 1, players: 1, profile: 1, liga: 1, konto: 1, summary: 1, winner: 1, bericht: 1 };
 
   /* In welchem Bereich wandern die Pfeile gerade? Ein offener Dialog oder
      ein offenes Menue schliesst den Rest aus. */
@@ -16012,7 +16278,7 @@
       if (sb) { handleAction('summary-back', sb); return true; }
       return false;
     }
-    if (S.screen === 'boards' && UI.boardLog) { UI.boardLog = false; render(); return true; }
+    if (S.screen === 'stats' && UI.boardLog) { UI.boardLog = false; render(); return true; }
     if (S.screen === 'liga' && (UI.ligaTab || 'plan') !== 'plan') { UI.ligaTab = 'plan'; UI.boardLog = false; render(); return true; }
     if (S.screen === 'liga' && UI.ligaWahl) { UI.ligaWahl = null; render(); return true; }
     if (S.screen === 'profile' && UI.profilPanel === 'foto') { fotoSchliessen(); return true; }
@@ -16265,6 +16531,7 @@
       pname: pname,
       chartSeries: chartSeries,
       spielerSpiele: spielerSpiele, statsSumme: statsSumme,   // Spieler-Dashboard, fuer die Tests
+      statsCrew: statsCrew, careerLiga: careerLiga,
       currentMatch: currentMatch,
       game: function () { return S.game; },
       cricketState: function () { return cricketState(S.game); },
