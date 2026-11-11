@@ -428,6 +428,29 @@ async function main() {
     gleich(r.status, 400, 'mehr als fuenf Adressen werden abgewiesen');
     r = await julius.ruf('POST', '/api/mail/probe', {});
     gleich(r.status, 503, 'Testmail: ohne eingerichteten Versand 503');
+    /* Feste Empfaenger des Spielberichts (Julius, 11.11.): beide TCs laut
+       Ligaleitung (Adresse vom Konto mit dem Namen), die Ligaleitung, dazu
+       je Gegner die Adresse des TC - fuer alle Geraete dieselbe Liste. */
+    r = await julius.ruf('GET', '/api/liga/empfaenger');
+    gleich(r.status, 200, 'Empfaenger: abrufbar');
+    gleich(r.daten.fest.length, 3, 'drei feste Zeilen');
+    gleich(r.daten.fest[2], 'spielbericht@steeldart-muenchen.de', 'die dritte ist die Ligaleitung');
+    gleich((r.daten.tc || []).map((t) => t.name).join('/'), 'Michael Schmeiß/Tobias Thomas', 'die TCs kommen aus den Daten der Ligaleitung (TC-1, TC-2)');
+    gleich(r.daten.fest[0] + r.daten.fest[1], '', 'ohne Konto mit dem TC-Namen bleiben die Zeilen leer');
+    r = await tobi.ruf('PATCH', '/api/me', { voll: 'Tobias Thomas' });
+    gleich(r.status, 200, 'Tobi traegt seinen buergerlichen Namen ein');
+    r = await julius.ruf('GET', '/api/liga/empfaenger');
+    gleich(r.daten.fest[1], 'tobi@example.de', 'Tobis Konto heisst wie TC-2: seine Adresse steht in Zeile 2');
+    r = await julius.ruf('PUT', '/api/liga/empfaenger', { fest: ['Kapitaen@Blink.de', '', ''], gegner: { DCO: 'TC@dco.de' } });
+    gleich(r.status, 200, 'Empfaenger lassen sich speichern');
+    gleich(r.daten.fest.join('|'), 'kapitaen@blink.de|tobi@example.de|spielbericht@steeldart-muenchen.de', 'gespeicherte Adresse vorn, leere Zeilen behalten die Voreinstellung');
+    gleich(r.daten.gegner.DCO, 'tc@dco.de', 'die Gegner-Adresse ist je Team gemerkt (kleingeschrieben)');
+    r = await julius.ruf('PUT', '/api/liga/empfaenger', { fest: ['kein-at', '', ''] });
+    gleich(r.status, 400, 'eine kaputte Adresse wird abgewiesen');
+    r = await julius.ruf('PUT', '/api/liga/empfaenger', { gegner: { DCO: '' } });
+    gleich(r.status === 200 && r.daten.gegner.DCO === undefined, true, 'leer loescht die Gegner-Adresse');
+    r = await fremd.ruf('GET', '/api/liga/empfaenger');
+    gleich(r.status, 401, 'ohne Anmeldung keine Empfaenger');
     /* Mitteilungen: Themen, Einstellungen, Push-Abos, Ereignisse. */
     r = await julius.ruf('GET', '/api/mitteilungen');
     gleich(r.status, 200, 'Mitteilungen: Stand abrufbar');

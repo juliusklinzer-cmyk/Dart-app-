@@ -1359,6 +1359,87 @@ export function createApi(db, config) {
     return je;
   }
 
+  /* ---------- Spielbericht: feste Empfaenger ----------
+   * Drei Adressen stehen bei jedem Versand fest (Julius, 11.11.): unsere
+   * beiden Teamcaptains (laut Ligaleitung TC-1/TC-2; die Adresse kommt vom
+   * Konto, das so heisst) und die Ligaleitung. Einmal im Dialog geaendert,
+   * gilt die Liste fuer alle Geraete. Die Adresse des gegnerischen TC wird
+   * je Team gemerkt - beim Rueckspiel und in der naechsten Saison steht sie
+   * schon im Dialog. */
+  const LIGALEITUNG_MAIL = 'spielbericht@steeldart-muenchen.de';
+  function empfaengerSetzen(schluessel, wert, userId) {
+    db.prepare(
+      'INSERT INTO liga_empfaenger (schluessel, wert, updated_at, updated_by) VALUES (?, ?, ?, ?) ' +
+      'ON CONFLICT (schluessel) DO UPDATE SET wert = excluded.wert, updated_at = excluded.updated_at, updated_by = excluded.updated_by'
+    ).run(schluessel, wert, new Date().toISOString(), userId);
+  }
+  /* Unsere Teamcaptains laut Ligaleitung, mit der Adresse des Kontos, das
+     so heisst (buergerlicher oder Anzeigename, Gross/Klein egal). */
+  function teamcaptains() {
+    const lg = config.liga || {};
+    const team = lg.liga && lg.liga.team;
+    const info = team && lg.teamInfo ? lg.teamInfo[team] : null;
+    const tcs = ((info && info.spieler) || [])
+      .filter((s) => /^TC/i.test(String(s.info || '')))
+      .sort((a, b) => String(a.info).localeCompare(String(b.info)))
+      .slice(0, 2);
+    const norm = (s) => String(s || '').replace(/^\*/, '').replace(/\s+/g, ' ').trim().toLowerCase();
+    const konten = db.prepare("SELECT display_name, real_name, email FROM users WHERE status = 'aktiv' AND gast_konto = 0").all();
+    return tcs.map((s) => {
+      const n = norm(s.name);
+      const k = konten.find((u) => norm(u.real_name) === n) || konten.find((u) => norm(u.display_name) === n) || null;
+      return { name: String(s.name || '').replace(/^\*/, '').trim(), email: k ? k.email : null };
+    });
+  }
+  function empfaengerStand() {
+    const tc = teamcaptains();
+    const fest = [tc[0] && tc[0].email ? tc[0].email : '', tc[1] && tc[1].email ? tc[1].email : '', LIGALEITUNG_MAIL];
+    const z = db.prepare('SELECT wert FROM liga_empfaenger WHERE schluessel = ?').get('fest');
+    if (z) {
+      try {
+        const liste = JSON.parse(z.wert);
+        /* Eine leere gespeicherte Zeile heisst: Voreinstellung behalten. */
+        if (Array.isArray(liste)) liste.slice(0, 3).forEach((a, i) => { if (a) fest[i] = String(a); });
+      } catch (e) { /* kaputter Eintrag: Voreinstellung */ }
+    }
+    const gegner = {};
+    for (const g of db.prepare("SELECT schluessel, wert FROM liga_empfaenger WHERE schluessel LIKE 'gegner:%'").all()) {
+      gegner[g.schluessel.slice(7)] = g.wert;
+    }
+    return { fest, tc, ligaleitung: LIGALEITUNG_MAIL, gegner };
+  }
+  async function ligaEmpfaengerHolen(req, res) {
+    verlangeNutzer(req);
+    sendJson(res, 200, empfaengerStand());
+  }
+  async function ligaEmpfaengerSpeichern(req, res) {
+    pruefeHerkunft(req);
+    const u = verlangeNutzer(req);
+    if (u.gast_konto) throw new HttpFehler(403, 'Mit einem Gast-Konto kannst du die Empfaenger ansehen, aber nicht aendern.');
+    const body = await leseJson(req, MAX_BODY_KLEIN);
+    const putz = (a) => String(a || '').trim().toLowerCase();
+    const fest = body.fest === undefined ? null : body.fest;
+    if (fest !== null && (!Array.isArray(fest) || fest.length > 3 || !fest.every((a) => !putz(a) || istAdresse(putz(a))))) {
+      throw new HttpFehler(400, 'Feste Empfaenger: bis zu drei gueltige Mailadressen (leer = Voreinstellung).');
+    }
+    const gegner = body.gegner === undefined ? null : body.gegner;
+    if (gegner !== null && (typeof gegner !== 'object' || Array.isArray(gegner) || Object.keys(gegner).length > 30 ||
+        !Object.keys(gegner).every((t) => t.trim().length >= 2 && t.length <= 80 && (!putz(gegner[t]) || istAdresse(putz(gegner[t])))))) {
+      throw new HttpFehler(400, 'Gegner-Adressen: je Team eine gueltige Mailadresse (leer loescht sie).');
+    }
+    transaktion(db, () => {
+      if (fest) empfaengerSetzen('fest', JSON.stringify(fest.map(putz)), u.id);
+      if (gegner) {
+        for (const t of Object.keys(gegner)) {
+          const a = putz(gegner[t]);
+          if (a) empfaengerSetzen('gegner:' + t.trim(), a, u.id);
+          else db.prepare('DELETE FROM liga_empfaenger WHERE schluessel = ?').run('gegner:' + t.trim());
+        }
+      }
+    });
+    sendJson(res, 200, empfaengerStand());
+  }
+
   async function ligaZusagen(req, res) {
     const u = verlangeNutzer(req);
     sendJson(res, 200, { zusagen: ligaAlleZusagen(u) });
@@ -2212,6 +2293,8 @@ export function createApi(db, config) {
     ['DELETE', /^\/api\/games\/([A-Za-z0-9_-]{4,64})$/, spielLoeschen],
 
     ['GET', /^\/api\/liga\/zusagen$/, ligaZusagen],
+    ['GET', /^\/api\/liga\/empfaenger$/, ligaEmpfaengerHolen],
+    ['PUT', /^\/api\/liga\/empfaenger$/, ligaEmpfaengerSpeichern],
     ['GET', /^\/api\/kasse$/, kasseHolen],
     ['POST', /^\/api\/kasse$/, kasseBuchen],
     ['DELETE', /^\/api\/kasse\/(\d{1,12})$/, kasseLoeschen],

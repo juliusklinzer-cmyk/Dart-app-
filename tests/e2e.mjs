@@ -4024,8 +4024,10 @@ await gruppe('Spielbericht: beide TCs unterschreiben am iPad, dann Versand als P
   check('danach TC Gast', (await text('#overlay-card h3')).includes('TC Gast'));
   await malen();
   await page.locator('[data-action="signatur-weiter"]').click();
-  check('dann die Mailadressen, die Ligaleitung ist vorbelegt', await page.evaluate(() =>
-    document.querySelector('[data-role="bericht-mail"][data-i="0"]').value === 'spielbericht@steeldart-muenchen.de'));
+  /* Seit 11.11.: Zeile 1 und 2 sind unsere TCs, Zeile 3 die Ligaleitung. */
+  check('dann die Mailadressen, die Ligaleitung ist in Zeile 3 vorbelegt', await page.evaluate(() =>
+    document.querySelectorAll('[data-role="bericht-mail"]').length === 5 &&
+    document.querySelector('[data-role="bericht-mail"][data-i="2"]').value === 'spielbericht@steeldart-muenchen.de'));
   check('beide Unterschriften stehen im Bericht',
     (await page.locator('#bericht-blatt .b-unterschrift img').count()) === 2);
   await page.locator('[data-role="bericht-mail"][data-i="1"]').fill('kein-mail');
@@ -6373,6 +6375,100 @@ await gruppe('Solo-Session am iPad quer: Zahlen mittig, kleines Eingabefeld, Tab
   }));
   await page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; D.ui().overlay = null; D.ui().turnier = false; D.save(); D.setScreen('setup'); });
   await page.setViewportSize(vpVor);
+});
+
+await gruppe('Ligaspiel-Start: Gastspieler und Nachmeldung fuer beide Teams, feste Empfaenger (Julius, 11.11.)', async () => {
+{
+  await page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; S.matches = []; S.tour = null; S.current = null; D.ui().overlay = null; D.save(); D.setScreen('liga'); });
+  await ligaSpielStarten();
+  const typText = (seite, i) => page.evaluate(([s, k]) => (document.querySelector('#overlay-card .ls-typ[data-seite="' + s + '"][data-i="' + k + '"]') || {}).textContent, [seite, i]);
+  check('jede eigene Position hat einen Status-Knopf, vorbelegt "gemeldet"',
+    (await page.locator('#overlay-card .ls-typ[data-seite="wir"]').count()) === 4 && (await typText('wir', 0)) === 'gemeldet');
+  check('und jede Gegner-Zeile auch', (await page.locator('#overlay-card .ls-typ[data-seite="gegner"]').count()) === 4 && (await typText('gegner', 3)) === 'gemeldet');
+  /* Position 4: jemand ohne Konto - "Anderer Name", als Gastspieler. */
+  await page.locator('[data-role="liga-pos"][data-i="3"]').selectOption('__name');
+  check('"Anderer Name" oeffnet Vor- und Nachname und stellt Gastspieler ein',
+    (await page.locator('[data-role="liga-wir-vor"][data-i="3"]').count()) === 1 && (await typText('wir', 3)) === 'Gastspieler', await typText('wir', 3));
+  await page.locator('[data-action="liga-los"]').click();
+  check('ohne Namen geht es nicht los', (await text('#overlay-card')).includes('Position 4: bitte Vor- und Nachnamen'));
+  await page.locator('[data-role="liga-wir-vor"][data-i="3"]').fill('Gustav');
+  await page.locator('[data-role="liga-wir-nach"][data-i="3"]').fill('Gastmann');
+  for (let i = 0; i < 4; i++) {
+    await page.locator(`[data-role="liga-gegner"][data-i="${i}"]`).fill('Typ');
+    await page.locator(`[data-role="liga-gegner-nach"][data-i="${i}"]`).fill('Gegner' + (i + 1));
+  }
+  /* Ein zweiter Gastspieler bei uns: die SWO erlaubt einen je Team. */
+  await page.locator('#overlay-card .ls-typ[data-seite="wir"][data-i="0"]').click();
+  check('Antippen wechselt auf Gastspieler', (await typText('wir', 0)) === 'Gastspieler');
+  await page.locator('[data-action="liga-los"]').click();
+  check('zwei Gastspieler in einem Team gehen nicht', (await text('#overlay-card')).includes('Höchstens ein nicht gemeldeter Gastspieler'));
+  await page.locator('#overlay-card .ls-typ[data-seite="wir"][data-i="0"]').click();
+  await page.locator('#overlay-card .ls-typ[data-seite="wir"][data-i="0"]').click();
+  check('zweimal weiter steht wieder "gemeldet"', (await typText('wir', 0)) === 'gemeldet');
+  /* Gegner 2 ist neu zu melden. */
+  await page.locator('#overlay-card .ls-typ[data-seite="gegner"][data-i="1"]').click();
+  await page.locator('#overlay-card .ls-typ[data-seite="gegner"][data-i="1"]').click();
+  check('Gegner 2 steht auf "neu melden"', (await typText('gegner', 1)) === 'neu melden');
+  await page.locator('[data-action="liga-los"]').click();
+  const nmStart = await page.evaluate(() => {
+    const D = window.__dart, S = D.state(), o = D.ui().overlay, lg = S.tour && S.tour.liga;
+    return { tour: !!lg, typ: o && o.type, id: o && o.draft && o.draft.id, sie1: lg && lg.sie[1], start: !!(o && o.draft && o.draft.start),
+      fest: !!(o && o.draft && o.draft.teamFest), nach: o && o.draft && o.draft.nach, gast: lg && D.ligaTyp(lg, lg.wir[3]), gastName: lg && D.profile(lg.wir[3]).voll, gegner: lg && lg.gegner };
+  });
+  check('das Ligaspiel steht, und die Nachmeldung von Gegner 2 oeffnet sich sofort (Team fest, Name drin)',
+    nmStart.tour && nmStart.typ === 'nachmeldung' && nmStart.id === nmStart.sie1 && nmStart.start && nmStart.fest && nmStart.nach === 'Gegner2', JSON.stringify(nmStart));
+  check('unser vierter ist der Gastspieler Gustav Gastmann', nmStart.gast === 'gast' && nmStart.gastName === 'Gustav Gastmann', JSON.stringify(nmStart));
+  check('"Spaeter" statt Abbrechen', (await text('#overlay-card .dl-fuss')).includes('Später'));
+  await page.locator('#overlay-card .dl-fuss [data-action="ov-cancel"]').click();
+  check('Spaeter schliesst den Bogen, die Nachmeldung bleibt offen', await page.evaluate(() => {
+    const D = window.__dart, lg = D.state().tour.liga; return !D.ui().overlay && D.ligaTyp(lg, lg.sie[1]) === 'neu' && !(lg.nachmeldungen || []).length;
+  }));
+  /* Im Spielbericht steht der Gastspieler als "(Gast)". */
+  await page.evaluate(() => { const D = window.__dart; D.ui().bericht = null; D.berichtNeu(); D.setScreen('bericht'); });
+  check('auf dem Bogen steht hinter dem Gastspieler "(Gast)"', (await text('#bericht-blatt')).includes('Gastmann (Gast)'));
+  /* Unterschreiben geht erst, wenn die offene Nachmeldung erledigt ist. */
+  await page.evaluate(() => { const S = window.__dart.state(); S.matches.forEach((m) => { m.done = true; m.winner = m.p[0]; m.at = Date.now(); }); window.__dart.save(); });
+  await page.locator('#screen-bericht [data-action="bericht-unterschreiben"]').click();
+  const nmVor = await page.evaluate(() => { const o = window.__dart.ui().overlay; return { typ: o && o.type, fehler: o && o.fehler, id: o && o.draft && o.draft.id }; });
+  check('vor den TC-Unterschriften verlangt die App die fehlende Nachmeldung', nmVor.typ === 'nachmeldung' && /fehlt noch die Nachmeldung von Typ Gegner2/.test(nmVor.fehler || ''), JSON.stringify(nmVor));
+  await page.locator('[data-action="nm-wahl"][data-feld="g"][data-value="m"]').click();
+  await malen();
+  await page.locator('[data-action="nm-weiter"]').click();
+  check('nach der Unterschrift steht Gegner 2 auf Seite 2, nichts ist mehr offen', await page.evaluate(() => {
+    const D = window.__dart, lg = D.state().tour.liga;
+    return (lg.nachmeldungen || []).some((n) => n.id === lg.sie[1] && n.nach === 'Gegner2' && !!n.unterschrift) &&
+      document.querySelector('#bericht-blatt .b-nach').textContent.includes('Gegner2');
+  }));
+  check('der Hinweis sagt, dass die Person in der Aufstellung steht', (await text('#overlay-card')).includes('steht in der Aufstellung'));
+  await page.locator('#overlay-card [data-action="ov-hinweis-zu"]').click();
+  /* Versand: beide TCs und die Ligaleitung stehen fest, die Gegner-Adresse
+     kommt aus dem Gedaechtnis je Team, eine Zeile bleibt frei. */
+  await page.evaluate((gegner) => {
+    const D = window.__dart, S = D.state();
+    S.settings.berichtFest = ['tc1@blink.de', 'tc2@blink.de', ''];
+    S.settings.gegnerMails = {}; S.settings.gegnerMails[gegner] = 'tc@gegner.de';
+    D.save(); D.berichtVersandOeffnen();
+  }, nmStart.gegner);
+  const mails = await page.evaluate(() => Array.from(document.querySelectorAll('[data-role="bericht-mail"]')).map((e) => e.value));
+  const rollen = await page.evaluate(() => Array.from(document.querySelectorAll('#overlay-card .ls-mail small')).map((e) => e.textContent.trim()));
+  check('fuenf Zeilen: beide TCs, Ligaleitung (Udo), TC Gegner (gemerkt), eine freie',
+    JSON.stringify(mails) === JSON.stringify(['tc1@blink.de', 'tc2@blink.de', 'spielbericht@steeldart-muenchen.de', 'tc@gegner.de', '']), JSON.stringify(mails));
+  check('die Rollen stehen ueber den Feldern, mit den TC-Namen laut Ligaleitung',
+    rollen.length === 5 && rollen[0].includes('TC Blink 180') && rollen[0].includes('Michael Schmeiß') && rollen[1].includes('Tobias Thomas') &&
+    rollen[2].includes('Ligaleitung') && rollen[3].startsWith('TC ' + nmStart.gegner) && rollen[0].endsWith('fest') && !rollen[3].endsWith('fest'), JSON.stringify(rollen));
+  const gemerkt = await page.evaluate(() => {
+    const D = window.__dart, S = D.state(), lg = S.tour.liga;
+    D.berichtEmpfaengerMerken(lg, ['tc1@blink.de', 'neu-tc2@blink.de', 'spielbericht@steeldart-muenchen.de', ' tc-neu@gegner.de ', '']);
+    return { fest: S.settings.berichtFest, gegner: S.settings.gegnerMails[lg.gegner] };
+  });
+  check('nach dem Versand sind die festen Zeilen und die Gegner-Adresse je Team gemerkt',
+    gemerkt.fest[1] === 'neu-tc2@blink.de' && gemerkt.gegner === 'tc-neu@gegner.de', JSON.stringify(gemerkt));
+  await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    S.profiles = S.profiles.filter((p) => !/^(Typ Gegner|Gustav Gastmann)/.test(p.voll || p.name));
+    S.game = null; S.matches = []; S.tour = null; S.current = null; D.ui().overlay = null; D.ui().bericht = null; D.save(); D.setScreen('setup');
+  });
+}
 });
 
 await gruppe('Handy-Block 2: Solo-Session - Leg um Leg, Statistik ueber alle Legs, Beenden archiviert', async () => {

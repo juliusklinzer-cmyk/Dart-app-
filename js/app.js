@@ -657,6 +657,37 @@
     var listen = S.history.concat(S.tour && S.tour.liga ? [{ liga: S.tour.liga }] : []);
     return listen.some(function (h) { return h.liga && (h.liga.sie || []).indexOf(id) >= 0; });
   }
+  /* SWO-Status eines Spielers im Ligaspiel (Julius, 11.11.): '' = gemeldet,
+     'gast' = nicht gemeldeter Gastspieler (hoechstens einer je Team und
+     Spiel, hoechstens zwei Einsaetze je Saison), 'neu' = Nachmeldung mit
+     Unterschrift auf Seite 2. Steht je Spieler in liga.typen, fuer beide
+     Teams - gesetzt beim Start, beim Wechsel und bei der Nachmeldung. */
+  var LIGA_TYPEN = ['', 'gast', 'neu'];
+  var LIGA_TYP_TEXT = { '': 'gemeldet', gast: 'Gastspieler', neu: 'neu melden' };
+  var LIGA_GAST_FEHLER = 'Höchstens ein nicht gemeldeter Gastspieler je Mannschaft und Ligaspiel (SWO) – der zweite muss nachgemeldet werden.';
+  function ligaTyp(lg, id) { return (lg && lg.typen && lg.typen[id]) || ''; }
+  function ligaTypSetzen(lg, id, typ) {
+    if (!lg || !id) return;
+    if (!lg.typen) lg.typen = {};
+    if (typ) lg.typen[id] = typ; else delete lg.typen[id];
+  }
+  /* Wie viele nicht gemeldete Gastspieler eine Seite schon hat (ohne `ausser`). */
+  function ligaGaeste(lg, seite, ausser) {
+    var liste = (seite === 'H' ? lg.heimSpieler : lg.gastSpieler) || [];
+    return liste.filter(function (id) { return id !== ausser && ligaTyp(lg, id) === 'gast'; }).length;
+  }
+  /* Beim Start als "neu melden" eingetragen, aber noch ohne Unterschrift
+     auf Seite 2 - die holt die App spaetestens vor den TC-Unterschriften. */
+  function ligaNachmeldungenOffen(lg) {
+    if (!lg || !lg.typen) return [];
+    var da = (lg.nachmeldungen || []).map(function (n) { return n.id; });
+    return Object.keys(lg.typen).filter(function (id) { return lg.typen[id] === 'neu' && da.indexOf(id) < 0; });
+  }
+  function ligaTypKnopfHtml(seite, i, typ) {
+    typ = typ || '';
+    return '<button type="button" class="ls-typ' + (typ ? ' ' + typ : '') + '" data-action="liga-typ" data-seite="' + seite + '" data-i="' + i + '" ' +
+      'aria-label="Status: ' + LIGA_TYP_TEXT[typ] + ', antippen zum Wechseln">' + LIGA_TYP_TEXT[typ] + '</button>';
+  }
   /* Ist der angemeldete Nutzer ein Gast-Konto? */
   function ichBinGastKonto() {
     var n = window.DartKonto && window.DartKonto.nutzer && window.DartKonto.nutzer();
@@ -9453,6 +9484,8 @@
             vor = ganz || pname(ids[i]);
           }
         }
+        /* Nicht gemeldeter Gastspieler: so steht es auch auf dem Papierbogen. */
+        if (ids[i] && ligaTyp(lg, ids[i]) === 'gast') nach = (nach ? nach + ' ' : '') + '(Gast)';
         zeilen += '<tr' + (i === 3 ? ' class="b-trenn"' : '') + '>' +
           '<th>' + praefix + (i + 1) + '</th>' +
           '<td contenteditable>' + esc(vor) + '</td>' +
@@ -9715,6 +9748,24 @@
     UI.overlay = { type: 'nachmeldung', draft: { team: q.liga.heim ? 'H' : 'G', nach: '', vor: '', u18: 'nein', g: null }, striche: [] };
     render();
   }
+  /* Die Nachmeldung fuer jemanden, der beim Start als "neu melden" auf dem
+     Bogen steht: Team und Name stehen fest, "Spaeter" ist erlaubt - die App
+     holt die Unterschrift spaetestens vor denen der Teamcaptains nach. */
+  function nachmeldungFuerStart(id, hinweis) {
+    var lg = S.tour && S.tour.liga;
+    if (!lg || !id) return false;
+    var seite = (lg.heimSpieler || []).indexOf(id) >= 0 ? 'H' : 'G';
+    var p = profile(id), t = vollSplit(p && (p.voll || p.name));
+    var aktiv = document.activeElement;
+    if (aktiv && aktiv.blur) aktiv.blur();
+    UI.overlay = { type: 'nachmeldung', fehler: hinweis || '', striche: [],
+      draft: { team: seite, teamFest: true, id: id, start: true, nach: t.nach || '', vor: t.vor || '', u18: 'nein', g: null } };
+    return true;
+  }
+  function nachmeldungenOffenStarten(hinweis) {
+    var offen = ligaNachmeldungenOffen(S.tour && S.tour.liga);
+    return offen.length ? nachmeldungFuerStart(offen[0], hinweis) : false;
+  }
   /* Beim vorzeitigen Ende: alle noch nicht begonnenen Einzel kampflos fuer
      den Gegner werten (so steht es dann im Spielbericht). */
   function ligaOffeneKampflos() {
@@ -9753,7 +9804,7 @@
     /* Die Unterschrift steht gleich im Bogen (Entwurf Ligaspiel). */
     var nPunkte = (o.striche || []).reduce(function (n, st) { return n + st.length; }, 0);
     if (nPunkte < 4) { o.fehler = 'Bitte noch im Feld unterschreiben.'; render(); return; }
-    nachmeldungAbschliessen(nq, { team: d.team, nach: d.nach, vor: d.vor, u18: d.u18, g: d.g, id: d.id || null }, signaturBild(o));
+    nachmeldungAbschliessen(nq, { team: d.team, nach: d.nach, vor: d.vor, u18: d.u18, g: d.g, id: d.id || null, start: !!d.start }, signaturBild(o));
   }
   /* "Abbrechen" nach einem spontanen Wechsel: ohne Nachmeldung darf der
      Spieler nicht auf dem Bogen stehen - der Wechsel wird zurueckgenommen,
@@ -9809,12 +9860,15 @@
     if (seite && seite.indexOf(id) < 0) seite.push(id);
     if (S.tour && S.tour.liga === lg && S.tour.players && S.tour.players.indexOf(id) < 0) S.tour.players.push(id);
     lg.nachmeldungen.push({ team: person.team, nach: person.nach, vor: person.vor, u18: person.u18, g: person.g, unterschrift: bild, id: id });
+    ligaTypSetzen(lg, id, 'neu');
     if (S.nmOffen && S.nmOffen.id === id) delete S.nmOffen;
     save();
     berichtNachmeldungenEinsetzen();
+    /* Beim Start mehrere "neu melden": gleich der naechste Bogen. */
+    if (person.start && S.tour && S.tour.liga === lg && nachmeldungenOffenStarten()) { render(); return; }
     UI.overlay = { type: 'hinweis', titel: voll + ' ist nachgemeldet',
       text: 'Steht jetzt auf Seite 2 des Spielberichts (mit Unterschrift) und im Team' +
-        (person.id ? ' und ist eingewechselt.' : geteiltesTurnier() ? '.' : ', über „Spieler wechseln“ einsetzbar.') +
+        (person.start ? ' und steht in der Aufstellung.' : person.id ? ' und ist eingewechselt.' : geteiltesTurnier() ? '.' : ', über „Spieler wechseln“ einsetzbar.') +
         ' Gebühr nicht vergessen: ' + (person.u18 === 'ja' ? '2 €' : '10 €') + ' innerhalb von 14 Tagen.' };
     render();
   }
@@ -9941,15 +9995,74 @@
   function ligaAllesGespielt(q) {
     return q.matches.every(function (m) { return m.done || m.void; });
   }
+  /* Die Empfaenger des Spielberichts (Julius, 11.11.): drei stehen fest -
+     unsere beiden Teamcaptains (laut Ligaleitung TC-1/TC-2) und die
+     Ligaleitung -, dazu der TC des Gegners, dessen Adresse die App je Team
+     behaelt (Rueckspiel, naechste Saison), und eine freie Zeile. Angemeldet
+     kommt die Liste vom Server und ist auf allen Geraeten dieselbe; sonst
+     gilt, was dieses Geraet zuletzt verschickt hat. */
+  function ligaTeamcaptains(team) {
+    var info = (window.LIGA_DATEN.teamInfo || {})[team] || {};
+    return (info.spieler || []).filter(function (sp) { return /^TC/i.test(String(sp.info || '')); })
+      .sort(function (a, b) { return String(a.info).localeCompare(String(b.info)); })
+      .slice(0, 2).map(function (sp) { return String(sp.name || '').replace(/^\*/, '').trim(); });
+  }
+  function berichtEmpfaengerVorlage(lg) {
+    var tcs = ligaTeamcaptains(LIGA.team);
+    var fest = Array.isArray(S.settings.berichtFest) ? S.settings.berichtFest.slice(0, 3) : [];
+    while (fest.length < 3) fest.push('');
+    fest = fest.map(function (a) { return String(a || '').trim(); });
+    if (!fest[2]) fest[2] = LIGALEITUNG_MAIL;
+    var gegner = lg && lg.gegner ? lg.gegner : '';
+    return {
+      adressen: [fest[0], fest[1], fest[2], (S.settings.gegnerMails || {})[gegner] || '', ''],
+      rollen: ['TC ' + LIGA.team + (tcs[0] ? ' · ' + tcs[0] : ''), 'TC ' + LIGA.team + (tcs[1] ? ' · ' + tcs[1] : ' (2)'),
+        'Ligaleitung · Udo Kern', 'TC ' + (gegner || 'Gegner'), 'weitere Adresse']
+    };
+  }
+  /* Nach dem Versand merken: die drei festen Zeilen und die Gegner-Adresse
+     je Team - hier und, angemeldet, fuer alle auf dem Server. */
+  function berichtEmpfaengerMerken(lg, adressen) {
+    if (!lg || lg.uebung) return;
+    var festNeu = adressen.slice(0, 3).map(function (a) { return String(a || '').trim(); });
+    S.settings.berichtFest = festNeu;
+    if (!S.settings.gegnerMails) S.settings.gegnerMails = {};
+    var gegnerNeu = String(adressen[3] || '').trim();
+    if (lg.gegner) { if (gegnerNeu) S.settings.gegnerMails[lg.gegner] = gegnerNeu; else delete S.settings.gegnerMails[lg.gegner]; }
+    if (window.DartKonto && window.DartKonto.nutzer()) {
+      var merk = { fest: festNeu };
+      if (lg.gegner) { merk.gegner = {}; merk.gegner[lg.gegner] = gegnerNeu; }
+      window.DartKonto.ruf('PUT', '/api/liga/empfaenger', merk).catch(function () { /* dann eben nur auf diesem Geraet gemerkt */ });
+    }
+  }
   function berichtVersandOeffnen() {
     var q = ligaBerichtQuelle();
-    var uebung = !!(q && q.liga && q.liga.uebung);
-    var gemerkt = !uebung && Array.isArray(S.settings.berichtMails) ? S.settings.berichtMails.slice(0, 3) : [];
-    while (gemerkt.length < 3) gemerkt.push('');
-    /* Testlauf (Uebungsspiel): die eigene Adresse statt der Ligaleitung. */
-    if (uebung) gemerkt[0] = (window.DartKonto && window.DartKonto.nutzer() && window.DartKonto.nutzer().email) || '';
-    else if (!gemerkt[0]) gemerkt[0] = LIGALEITUNG_MAIL;
-    UI.overlay = { type: 'bericht-versand', adressen: gemerkt, uebung: uebung };
+    var lg = q ? q.liga : null;
+    var o;
+    if (lg && lg.uebung) {
+      /* Testlauf (Uebungsspiel): die eigene Adresse statt der Ligaleitung. */
+      var eigene = (window.DartKonto && window.DartKonto.nutzer() && window.DartKonto.nutzer().email) || '';
+      o = { type: 'bericht-versand', adressen: [eigene, '', ''], rollen: ['deine Adresse', 'weitere Adresse', 'weitere Adresse'], uebung: true };
+    } else {
+      var vorlage = berichtEmpfaengerVorlage(lg);
+      o = { type: 'bericht-versand', adressen: vorlage.adressen, rollen: vorlage.rollen, uebung: false, beruehrt: {} };
+      if (window.DartKonto && window.DartKonto.nutzer()) {
+        o.laedt = true;
+        window.DartKonto.ruf('GET', '/api/liga/empfaenger').then(function (d) {
+          if (UI.overlay !== o) return;
+          o.laedt = false;
+          var fest = Array.isArray(d && d.fest) ? d.fest : [];
+          S.settings.berichtFest = [fest[0] || '', fest[1] || '', fest[2] || LIGALEITUNG_MAIL];
+          if (!S.settings.gegnerMails) S.settings.gegnerMails = {};
+          var gegner = (d && d.gegner) || {};
+          Object.keys(gegner).forEach(function (t) { S.settings.gegnerMails[t] = gegner[t]; });
+          var neu = berichtEmpfaengerVorlage(lg);
+          neu.adressen.forEach(function (a, i) { if (a && !o.beruehrt[i]) o.adressen[i] = a; });
+          save(); render();
+        }).catch(function () { if (UI.overlay === o) { o.laedt = false; render(); } });
+      }
+    }
+    UI.overlay = o;
     render();
   }
   function berichtUnterschreibenStarten() {
@@ -9960,6 +10073,14 @@
       var offen = q.matches.filter(function (m) { return !m.done && !m.void; }).length;
       UI.overlay = { type: 'hinweis', titel: 'Noch nicht fertig',
         text: 'Unterschrieben wird erst, wenn alle Einzel gespielt sind – es ' + (offen === 1 ? 'fehlt noch 1 Einzel' : 'fehlen noch ' + offen + ' Einzel') + '. Den Bogen kannst du schon ausfüllen, Korrekturen bleiben gespeichert.' };
+      render();
+      return;
+    }
+    /* Wer beim Start "neu melden" war, unterschreibt spaetestens jetzt -
+       ohne Nachmeldung darf er nicht auf dem Bogen stehen. */
+    var nmOffen = S.tour && S.tour.liga === q.liga ? ligaNachmeldungenOffen(q.liga) : [];
+    if (nmOffen.length) {
+      nachmeldungFuerStart(nmOffen[0], 'Vor den Unterschriften der Teamcaptains fehlt noch die Nachmeldung von ' + ligaName(nmOffen[0]) + '.');
       render();
       return;
     }
@@ -10238,7 +10359,7 @@
     var lg = q.liga;
     /* Adressen merkt sich die App nur vom echten Spieltag - sonst staende
        nach einem Testlauf die eigene Adresse an Stelle der Ligaleitung. */
-    if (!lg.uebung) S.settings.berichtMails = o.adressen.slice(0, 3);
+    berichtEmpfaengerMerken(lg, o.adressen);
     var heimTeam = lg.heim ? LIGA.team : lg.gegner;
     var gastTeam = lg.heim ? lg.gegner : LIGA.team;
     var datum = lg.tag ? ligaDatum(lg.tag) : fmtDate(q.at || Date.now());
@@ -11234,8 +11355,11 @@
             (nd.team === 'H' ? 'Heim · ' + esc(nHeimTeam) : 'Gast · ' + esc(nGastTeam)) + '</button></div>'
         : '<div class="dl-segment">' + nWahl('team', 'H', 'Heim · ' + esc(nHeimTeam)) + nWahl('team', 'G', 'Gast · ' + esc(nGastTeam)) + '</div>';
       html = '<div class="dl-kopf"><h3>Spieler nachmelden</h3>' +
-        '<p>Für Spieler, die spontan einspringen und noch nie gemeldet waren. Mit Name und Unterschrift kommen sie ' +
-          'auf den Spielbericht (H5 bis H8 bzw. G5 bis G8) und sind danach beim Wechsel wählbar. ' +
+        '<p>' + (nd.start
+          ? 'Beim Start als <b>neu melden</b> eingetragen: Mit der Unterschrift kommt die Person auf Seite 2 des Spielberichts. ' +
+            '„Später“ geht – spätestens vor den Unterschriften der Teamcaptains muss sie nachgemeldet sein. '
+          : 'Für Spieler, die spontan einspringen und noch nie gemeldet waren. Mit Name und Unterschrift kommen sie ' +
+            'auf den Spielbericht (H5 bis H8 bzw. G5 bis G8) und sind danach beim Wechsel wählbar. ') +
           'Gebühr: 10 € (U18: 2 €) innerhalb von 14 Tagen.</p></div>' +
         (o.fehler ? '<p class="hint fehler" role="alert">' + esc(o.fehler) + '</p>' : '') +
         '<div class="dl-spalten">' +
@@ -11258,18 +11382,21 @@
           '<p class="dl-note">Mit der Unterschrift erkennt die Person die SWO und das Datenschutz-Merkblatt der SDM an.</p></div>' +
         '<div class="dl-fuss">' + (nd.wechsel
           ? '<button class="btn ghost" data-action="nm-abbrechen">Wechsel zurücknehmen</button>'
-          : '<button class="btn ghost" data-action="ov-cancel">Abbrechen</button>') +
+          : '<button class="btn ghost" data-action="ov-cancel">' + (nd.start ? 'Später' : 'Abbrechen') + '</button>') +
         '<button class="btn hell" data-action="nm-weiter">Nachmelden</button></div>';
     } else if (o.type === 'bericht-versand') {
       html = '<h3>Spielbericht versenden' + (o.uebung ? ' · Testlauf' : '') + '</h3>' +
-        '<p>' + (o.uebung ? 'Übungsspiel: Die Mail geht nur an die Adressen hier – vorbelegt ist deine eigene, die Ligaleitung bleibt außen vor.' : 'Beide Unterschriften sind drin. An wen geht der Bericht?') + '</p>' +
+        '<p>' + (o.uebung ? 'Übungsspiel: Die Mail geht nur an die Adressen hier – vorbelegt ist deine eigene, die Ligaleitung bleibt außen vor.'
+          : 'Beide Unterschriften sind drin. Unsere Teamcaptains und die Ligaleitung stehen fest; die Adresse des gegnerischen TC merkt sich die App je Team.') + '</p>' +
         (o.fehler ? '<p class="hint fehler" role="alert">' + esc(o.fehler) + '</p>' : '') +
         '<div class="liga-start">' + o.adressen.map(function (a, i) {
-          return '<label class="ls-zeile"><span>' + (i + 1) + '</span>' +
+          var rolle = (o.rollen || [])[i] || (i === 0 ? (o.uebung ? 'deine Adresse' : 'Ligaleitung') : i === 1 ? 'TC Gast' : 'weitere Adresse');
+          return '<label class="ls-mail"><small>' + esc(rolle) + (o.rollen && !o.uebung && i < 3 ? ' <em>fest</em>' : '') + '</small>' +
             '<input type="email" inputmode="email" autocapitalize="off" autocorrect="off" spellcheck="false" ' +
             'data-role="bericht-mail" data-i="' + i + '" value="' + esc(a) + '" ' +
-            'placeholder="' + (i === 0 ? (o.uebung ? 'deine Adresse' : 'Ligaleitung') : i === 1 ? 'TC Gast' : 'weitere Adresse') + '"></label>';
+            'placeholder="' + esc(rolle) + '"></label>';
         }).join('') + '</div>' +
+        (o.laedt ? '<p class="hint">Hole die gemerkten Adressen vom Server …</p>' : '') +
         (!o.ohneServer && window.DartKonto && window.DartKonto.nutzer() && window.DartKonto.mailBereit && window.DartKonto.mailBereit()
           ? '<p class="hint">Der Server schickt die Mail mit dem PDF von <b>blink180@wirtschaftln.de</b>, eine Kopie geht ins Blink-Postfach.</p>'
           : '<p class="hint">Beim Senden öffnet sich das Teilen-Menü mit dem PDF. Dort <b>Mail</b> wählen. ' +
@@ -11456,13 +11583,27 @@
         '<div class="liga-start">' +
           '<div class="ls-titel">Unsere Positionen</div>' +
           [0, 1, 2, 3].map(function (i) {
-            return '<label class="ls-zeile"><span>' + (i + 1) + '</span>' +
+            /* "Anderer Name": jemand ohne Konto - Gastspieler oder neu zu
+               melden - mit Vor- und Nachname darunter (Julius, 11.11.). */
+            var ltName = ld.wir[i] === '__name';
+            var ltN = (ld.wirNamen || [])[i] || {};
+            return '<div class="ls-zeile"><span>' + (i + 1) + '</span>' +
               '<select data-role="liga-pos" data-i="' + i + '">' +
               ltProfile.map(function (p) {
                 return '<option value="' + p.id + '"' + (ld.wir[i] === p.id ? ' selected' : '') + '>' +
                   esc(p.name) + '</option>';
-              }).join('') + '</select></label>';
+              }).join('') +
+              '<option value="__name"' + (ltName ? ' selected' : '') + '>Anderer Name (Gast oder neu) …</option>' +
+              '</select>' + ligaTypKnopfHtml('wir', i, (ld.wirTyp || [])[i]) + '</div>' +
+              (ltName
+                ? '<div class="ls-zeile ls-unter"><span></span><span class="namen-paar">' +
+                  '<input data-role="liga-wir-vor" data-i="' + i + '" maxlength="30" autocomplete="off" value="' + esc(ltN.vor || '') + '" placeholder="Vorname">' +
+                  '<input data-role="liga-wir-nach" data-i="' + i + '" maxlength="30" autocomplete="off" value="' + esc(ltN.nach || '') + '" placeholder="Nachname">' +
+                  '</span></div>'
+                : '');
           }).join('') +
+          '<p class="hint">Status antippen: <b>gemeldet</b> → <b>Gastspieler</b> (nicht gemeldet; höchstens einer je Team und Spiel, ab dem dritten Einsatz nachmelden) → ' +
+            '<b>neu melden</b> (Nachmeldung mit Unterschrift gleich nach dem Start, 10 €, U18 2 €). Gilt für beide Teams.</p>' +
           ligaGegnerFelderHtml(ltGegner, ld) +
           '<div class="ls-titel">Legs je Einzel</div>' +
           '<div class="options">' +
@@ -11671,7 +11812,8 @@
             (m.belegtVon || m.legs.some(function (l) { return l.visits.length > 0; }));
         })[0];
         if (laeuft) return { t: 'Einzel läuft' + (laeuft.scheibe ? ' auf ' + laeuft.scheibe : ''), hell: true };
-        return { t: seite === wUnsere ? 'gemeldet' : 'Gast', hell: false };
+        var wTyp = ligaTyp(wlg, (seite === 'H' ? wlg.posH : wlg.posG)[i]);
+        return { t: wTyp === 'gast' ? 'Gastspieler' : wTyp === 'neu' ? 'nachgemeldet' : seite === wUnsere ? 'gemeldet' : 'Gast', hell: false };
       };
       var wSpalte = function (seite, titel, posListe) {
         return '<div class="dl-spalte"><div class="kt">' + titel + '</div>' + posListe.map(function (id, i) {
@@ -11720,7 +11862,13 @@
           '<input class="dl-input" data-role="liga-neu-name" maxlength="30" autocomplete="off" value="' + esc(wz.draft.name || '') + '" placeholder="Vorname">' +
           '<input class="dl-input" data-role="liga-neu-nach" maxlength="30" autocomplete="off" value="' + esc(wz.draft.nach || '') + '" placeholder="Nachname">' +
         '</div>' +
-        '<p class="dl-note">Neuer Name kommt als Nachmeldung auf den Spielbericht und unterschreibt nach dem Einwechseln.</p>' +
+        '<div class="dl-segment ls-neu-typ">' +
+          '<button type="button" data-action="liga-neu-typ" data-value="neu" class="' + (wz.draft.typ === 'gast' ? '' : 'active') + '">neu melden</button>' +
+          '<button type="button" data-action="liga-neu-typ" data-value="gast" class="' + (wz.draft.typ === 'gast' ? 'active' : '') + '">Gastspieler</button>' +
+        '</div>' +
+        '<p class="dl-note">' + (wz.draft.typ === 'gast'
+          ? 'Gastspieler: nicht gemeldet, höchstens einer je Mannschaft und Spiel, höchstens zwei Einsätze je Saison – steht so auf dem Bogen, ohne Unterschrift.'
+          : 'Neuer Name kommt als Nachmeldung auf den Spielbericht und unterschreibt nach dem Einwechseln.') + '</p>' +
         '<div class="dl-fuss"><button class="btn ghost" data-action="roster-change">Zurück</button>' +
         '<button class="btn hell" data-action="liga-wechsel-ok">Einwechseln</button></div>';
     } else if (o.type === 'confirm-reset') {
@@ -12053,9 +12201,28 @@
     var d = o.draft, t = o.termin;
 
     var wir = d.wir.slice(0, 4);
-    var doppelt = wir.some(function (id, i) { return wir.indexOf(id) !== i; });
-    if (wir.length < 4 || doppelt) {
+    var wirTyp = Array.isArray(d.wirTyp) ? d.wirTyp : [], gegnerTyp = Array.isArray(d.gegnerTyp) ? d.gegnerTyp : [];
+    /* "Anderer Name" (Gastspieler oder Nachmeldung ohne Konto): Vor- und
+       Nachname wie beim Gegner, daraus wird ein Gast dieses Geraets. */
+    var wirNamen = [];
+    for (var wi = 0; wi < 4; wi++) {
+      if (wir[wi] !== '__name') continue;
+      var wn = (d.wirNamen || [])[wi] || {};
+      if (!String(wn.vor || '').trim() || !String(wn.nach || '').trim()) {
+        o.fehler = 'Position ' + (wi + 1) + ': bitte Vor- und Nachnamen eintragen (SWO: bürgerliche Namen).';
+        render(); return;
+      }
+      wirNamen.push({ i: wi, voll: (String(wn.vor).trim().slice(0, 30) + ' ' + String(wn.nach).trim().slice(0, 30)).replace(/\s+/g, ' ').trim() });
+    }
+    var wirKonten = wir.filter(function (id) { return id !== '__name'; });
+    var doppelt = wirKonten.some(function (id, i) { return wirKonten.indexOf(id) !== i; }) ||
+      wirNamen.some(function (n, i) { return wirNamen.some(function (m, j) { return j !== i && m.voll === n.voll; }); });
+    if (wir.length < 4 || wir.some(function (id) { return !id; }) || doppelt) {
       o.fehler = 'Bitte vier verschiedene eigene Spieler aufstellen.';
+      render(); return;
+    }
+    if (wirTyp.filter(function (t) { return t === 'gast'; }).length > 1 || gegnerTyp.filter(function (t) { return t === 'gast'; }).length > 1) {
+      o.fehler = LIGA_GAST_FEHLER;
       render(); return;
     }
     var namen = d.gegner.map(function (n, i) {
@@ -12081,10 +12248,17 @@
        geworfen hat, wird am Namen wiedererkannt – aber nie ein Profil, das
        bereits auf unserer Seite aufgestellt ist (sonst spielte jemand gegen
        sich selbst), und Ausgeblendete kommen zurück ins Licht. */
+    wirNamen.forEach(function (n) {
+      wir[n.i] = ligaGastId(n.voll, wir.filter(function (id) { return id !== '__name'; }));
+    });
     var sie = [];
     namen.forEach(function (n) {
       sie.push(ligaGastId(n, wir.concat(sie)));
     });
+    /* Der SWO-Status je Spieler, beide Teams (nur wer nicht "gemeldet" ist). */
+    var typen = {};
+    wir.forEach(function (id, i) { if (wirTyp[i]) typen[id] = wirTyp[i]; });
+    sie.forEach(function (id, i) { if (gegnerTyp[i]) typen[id] = gegnerTyp[i]; });
 
     if (S.matches.length) archiveTournament();
     if (S.game && S.game.done) archiveGame(S.game);
@@ -12104,7 +12278,8 @@
         ort: t.ort || '', tag: t.tag || '',
         finish: !!d.finish, zeitVon: Date.now(), zeitBis: null,
         /* Der Gegner zaehlt mit seinem System: je Einzel nur der Leg-Stand. */
-        nurErgebnis: !!d.nurErgebnis
+        nurErgebnis: !!d.nurErgebnis,
+        typen: typen
       }
     };
     S.matches = LIGA_EINZEL.map(function (paar, i) {
@@ -12127,6 +12302,8 @@
     S.lineup = wir.slice();
     UI.overlay = null;
     S.screen = 'tournament';
+    /* Wer "neu melden" ist, unterschreibt gleich - einer nach dem anderen. */
+    nachmeldungenOffenStarten();
 
     /* Geteilt wie beim Turnier: zwei iPads schreiben – die SWO will ohnehin
        zwei Boards. Der Plan trägt die Liga-Daten und die Anwerfer mit. */
@@ -12167,6 +12344,12 @@
      Gegner-Zeile (Vorname / Nachname), ein zweiter nimmt ihn wieder raus.
      Spart das Tippen am Spieltag; neue Gesichter tippt man weiter ein
      (Julius, 10.11.). */
+  /* Wen die Ligaleitung im Kader schon als Gast fuehrt ("*Name"). */
+  function ligaGegnerKaderGaeste(team) {
+    var info = (window.LIGA_DATEN.teamInfo || {})[team] || {};
+    return (info.spieler || []).filter(function (s) { return /^\*/.test(String(s.name || '')); })
+      .map(function (s) { return String(s.name).replace(/^\*/, '').trim(); });
+  }
   function ligaGegnerKader(team) {
     var info = (window.LIGA_DATEN.teamInfo || {})[team] || {};
     var namen = [];
@@ -12187,22 +12370,26 @@
      im Ligaspiel-Start und im Probelauf des Uebungsspiels dieselben. */
   function ligaGegnerFelderHtml(team, d) {
     var kader = ligaGegnerKader(team);
+    var kaderGaeste = ligaGegnerKaderGaeste(team);
     var drin = [0, 1, 2, 3].map(function (i) { return gegnerVollName(d, i); });
     return '<div class="ls-titel">' + esc(team) + ' \u2013 Vor- und Nachname (SWO)</div>' +
       (kader.length
         ? '<div class="chips ls-kader">' + kader.map(function (n) {
-            return '<button type="button" class="chip' + (drin.indexOf(n) >= 0 ? ' active' : '') + '" data-action="liga-gegner-kader" data-name="' + esc(n) + '">' + esc(n) + '</button>';
+            var gast = kaderGaeste.indexOf(n) >= 0;
+            return '<button type="button" class="chip' + (drin.indexOf(n) >= 0 ? ' active' : '') + (gast ? ' gast' : '') + '" data-action="liga-gegner-kader" data-name="' + esc(n) + '"' +
+              (gast ? ' title="Laut Ligaleitung Gastspieler"' : '') + '>' + esc(n) + '</button>';
           }).join('') + '</div>' +
-          '<p class="hint">Kader laut Ligaleitung – antippen füllt die nächste freie Zeile, nochmal tippen nimmt den Namen raus.</p>'
+          '<p class="hint">Kader laut Ligaleitung – antippen füllt die nächste freie Zeile, nochmal tippen nimmt den Namen raus' +
+            (kaderGaeste.length ? '; gestrichelt = dort schon als Gastspieler geführt' : '') + '.</p>'
         : '') +
       [0, 1, 2, 3].map(function (i) {
-        return '<label class="ls-zeile"><span>' + (i + 1) + '</span>' +
+        return '<div class="ls-zeile"><span>' + (i + 1) + '</span>' +
           '<span class="namen-paar">' +
           '<input data-role="liga-gegner" data-i="' + i + '" maxlength="30" ' +
           'value="' + esc((d.gegner || [])[i] || '') + '" placeholder="Vorname">' +
           '<input data-role="liga-gegner-nach" data-i="' + i + '" maxlength="30" ' +
           'value="' + esc((d.gegnerNach || [])[i] || '') + '" placeholder="Nachname">' +
-          '</span></label>';
+          '</span>' + ligaTypKnopfHtml('gegner', i, (d.gegnerTyp || [])[i]) + '</div>';
       }).join('');
   }
   /* Der naechste Spieltag mit Datum ab heute (heute selbst eingeschlossen). */
@@ -13359,15 +13546,37 @@
           if (gegnerVollName(kd, ki) === kName) kDrin = ki;
           if (kFrei < 0 && !gegnerVollName(kd, ki)) kFrei = ki;
         }
-        if (kDrin >= 0) { kd.gegner[kDrin] = ''; kd.gegnerNach[kDrin] = ''; }
+        if (!Array.isArray(kd.gegnerTyp)) kd.gegnerTyp = ['', '', '', ''];
+        if (kDrin >= 0) { kd.gegner[kDrin] = ''; kd.gegnerNach[kDrin] = ''; kd.gegnerTyp[kDrin] = ''; }
         else if (kFrei >= 0) {
           var kTeile = kName.split(' ');
           kd.gegnerNach[kFrei] = kTeile.length > 1 ? kTeile.pop() : '';
           kd.gegner[kFrei] = kTeile.join(' ');
+          /* Wen die Ligaleitung schon als Gast fuehrt, ist auch hier einer. */
+          kd.gegnerTyp[kFrei] = el.classList.contains('gast') ? 'gast' : '';
         }
         render();
         break;
       }
+      case 'liga-typ': {
+        /* Status-Knopf im Start-Dialog: gemeldet -> Gastspieler -> neu melden. */
+        var tyD = UI.overlay && UI.overlay.draft;
+        if (!tyD) break;
+        var tyFeld = el.getAttribute('data-seite') === 'wir' ? 'wirTyp' : 'gegnerTyp';
+        if (!Array.isArray(tyD[tyFeld])) tyD[tyFeld] = ['', '', '', ''];
+        var tyI = Number(el.getAttribute('data-i'));
+        tyD[tyFeld][tyI] = LIGA_TYPEN[(LIGA_TYPEN.indexOf(tyD[tyFeld][tyI] || '') + 1) % LIGA_TYPEN.length];
+        UI.overlay.fehler = '';
+        render();
+        break;
+      }
+      case 'liga-neu-typ':
+        if (UI.overlay && UI.overlay.type === 'liga-wechsel-zu') {
+          UI.overlay.draft.typ = el.getAttribute('data-value') === 'gast' ? 'gast' : 'neu';
+          UI.overlay.fehler = '';
+          render();
+        }
+        break;
       case 'uebung-start': {
         /* Aufstellung vorbelegen: erst die DiensDarts-Zusagen, dann der
            Rest der aktiven Profile - Team B bekommt die naechsten vier. */
@@ -13969,9 +14178,20 @@
           loNeuAngelegt = S.profiles.length > loVorher;
           loSpontan = (loLg.heimSpieler || []).indexOf(neuId) < 0 && (loLg.gastSpieler || []).indexOf(neuId) < 0;
         }
+        /* Spontaner Name als Gastspieler (statt Nachmeldung): nur einer je
+           Seite, dann ohne Unterschrift auf den Bogen. */
+        var loGast = loSpontan && lo.draft.typ === 'gast';
+        if (loGast && ligaGaeste(loLg, lo.seite, neuId) >= 1) { lo.fehler = LIGA_GAST_FEHLER; render(); break; }
         var loRaus = (lo.seite === 'H' ? loLg.posH : loLg.posG)[lo.pos];
         var loFehler = ligaWechseln(lo.seite, lo.pos, neuId);
         if (loFehler) { lo.fehler = loFehler; render(); break; }
+        if (loGast) {
+          ligaTypSetzen(loLg, neuId, 'gast');
+          save();
+          if (geteiltesTurnier()) geteiltenPlanSenden();
+          UI.overlay = { type: 'liga-wechsel' };
+          render(); break;
+        }
         /* Ein spontan eingewechselter Name ist eine Nachmeldung: gleich
            weiter zu Alter, Geschlecht und Unterschrift fuer den Bogen. Der
            Spieler steht schon auf dem Bogen - das Overlay kennt ihn (id),
@@ -14302,6 +14522,9 @@
     }
     if (ev.target.getAttribute('data-role') === 'bericht-mail' && UI.overlay && UI.overlay.type === 'bericht-versand') {
       UI.overlay.adressen[Number(ev.target.getAttribute('data-i'))] = ev.target.value;
+      /* Was jemand schon angefasst hat, ueberschreibt die Serverliste nicht mehr. */
+      if (!UI.overlay.beruehrt) UI.overlay.beruehrt = {};
+      UI.overlay.beruehrt[Number(ev.target.getAttribute('data-i'))] = true;
     }
     if (ev.target.getAttribute('data-role') === 'profile-name' && UI.overlay) {
       UI.overlay.draft.name = ev.target.value;
@@ -14345,7 +14568,22 @@
       UI.overlay.draft.gegnerNach[Number(ev.target.getAttribute('data-i'))] = ev.target.value;
     }
     if (ev.target.getAttribute('data-role') === 'liga-pos' && UI.overlay && UI.overlay.draft) {
-      UI.overlay.draft.wir[Number(ev.target.getAttribute('data-i'))] = ev.target.value;
+      var lpD = UI.overlay.draft, lpI = Number(ev.target.getAttribute('data-i'));
+      var lpWar = lpD.wir[lpI] === '__name', lpWird = ev.target.value === '__name';
+      lpD.wir[lpI] = ev.target.value;
+      /* "Anderer Name": Namensfelder darunter, als Gastspieler voreingestellt;
+         nur dann neu zeichnen (sonst springt die Auswahl unter dem Finger weg). */
+      if (lpWird) {
+        if (!Array.isArray(lpD.wirTyp)) lpD.wirTyp = ['', '', '', ''];
+        if (!lpD.wirTyp[lpI]) lpD.wirTyp[lpI] = 'gast';
+      }
+      if (lpWar !== lpWird) render();
+    }
+    if ((ev.target.getAttribute('data-role') === 'liga-wir-vor' || ev.target.getAttribute('data-role') === 'liga-wir-nach') && UI.overlay && UI.overlay.draft) {
+      var lwD = UI.overlay.draft, lwI = Number(ev.target.getAttribute('data-i'));
+      if (!Array.isArray(lwD.wirNamen)) lwD.wirNamen = [{}, {}, {}, {}];
+      if (!lwD.wirNamen[lwI]) lwD.wirNamen[lwI] = {};
+      lwD.wirNamen[lwI][ev.target.getAttribute('data-role') === 'liga-wir-vor' ? 'vor' : 'nach'] = ev.target.value;
     }
     if (ev.target.getAttribute('data-role') === 'uebung-sie' && UI.overlay && UI.overlay.draft) {
       UI.overlay.draft.sie[Number(ev.target.getAttribute('data-i'))] = ev.target.value;
@@ -15355,6 +15593,7 @@
     window.__dart = {
       ligaDatenPruefen: ligaDatenPruefen,
       lineupVorbelegen: lineupVorbelegen,
+      ligaTyp: ligaTyp, berichtVersandOeffnen: berichtVersandOeffnen, berichtEmpfaengerMerken: berichtEmpfaengerMerken,
       berichtVersandOeffnen: berichtVersandOeffnen,
       state: function () { return S; },
       ui: function () { return UI; },

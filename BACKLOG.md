@@ -31,6 +31,8 @@
 
 ## Erledigt
 
+- [x] DRT-031 Ligaspiel-Start: Spielertypen für beide Teams – Status-Knopf gemeldet / Gastspieler / neu melden je Zeile, „Anderer Name“ ohne Konto bei uns, Kader-Chips mit Gast-Kennung der Ligaleitung, höchstens ein Gastspieler je Team (SWO), Nachmelde-Bogen direkt nach GAME ON bzw. spätestens vor den TC-Unterschriften, „(Gast)“ im Bogen, Gast oder Nachmeldung auch beim spontanen Wechsel · von:Julius · am:2026-11-11 · fertig:2026-11-11
+- [x] DRT-032 Spielbericht-Versand: fünf Zeilen mit Rolle, fest sind beide TCs (TC-1/TC-2 laut Ligaleitung, Adresse vom Konto) und die Ligaleitung (spielbericht@steeldart-muenchen.de, laut Bogen V5.2; Udo schreibt selbst von liga@), dazu TC Gegner je Team gemerkt und eine freie Zeile; Liste auf dem Server (GET/PUT /api/liga/empfaenger), für alle Geräte · von:Julius · am:2026-11-11 · fertig:2026-11-11
 - [x] DRT-029 Schnelles X01 über mehrere Legs: Leg-Dialog mit „Ø Spiel“ und „Spiel beenden & speichern“ (auch im Menü), fertige Legs ohne Sieger ins Archiv, dann Auswertung · von:Julius · am:2026-11-10 · fertig:2026-11-10
 - [x] DRT-030 Solo-Session am iPad quer: Rest und letzte Aufnahme mittig als Paar, Eingabefeld klein und Zahl groß, rechts Tabelle Leg | Session | Gesamt und Balken je Leg mit Session- und Gesamt-Linie · von:Julius · am:2026-11-10 · fertig:2026-11-10
 - [x] DRT-028 Vorauswahl beim Spielstart: angemeldet nur der eigene Spieler, nach dem ersten Spiel des Abends (8 h) dessen Aufstellung, Ligaspiel: unsere vier; ohne Konto und bei laufendem Spiel unverändert · von:Julius · am:2026-11-10 · fertig:2026-11-10
