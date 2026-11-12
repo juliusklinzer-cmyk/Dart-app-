@@ -2452,6 +2452,17 @@
   }
 
   /* ================= Undo ================= */
+  /* Kurzer Hinweis im Spielbild (z. B. "Aufnahme 60 von Max zurückgenommen"):
+     im Ligaspiel hat jemand zurückgenommen, ohne es zu merken (Julius, 12.11.).
+     Verschwindet nach gut zwei Sekunden von selbst. */
+  var hinweisNr = 0;
+  function hinweisZeigen(text) {
+    var nr = ++hinweisNr;
+    UI.hinweis = { text: text, nr: nr };
+    setTimeout(function () {
+      if (UI.hinweis && UI.hinweis.nr === nr) { UI.hinweis = null; var hz = $('spiel-hinweis'); if (hz) hz.classList.remove('an'); }
+    }, 2600);
+  }
   function undo() {
     klick();
     UI.error = '';   // ein alter Hinweis (z. B. zum Moduswechsel) ist mit der Ruecknahme erledigt
@@ -2464,7 +2475,9 @@
         render();
         return;
       }
-      UI.darts.pop(); UI.mult = 1; save(); render(); return;
+      var dartWeg = UI.darts.pop(); UI.mult = 1;
+      hinweisZeigen('Dart ' + (dartWeg.n === 0 ? '0' : dartLabel(dartWeg)) + ' zurückgenommen');
+      save(); render(); return;
     }
 
     var m = currentMatch();
@@ -2488,6 +2501,7 @@
     var leg = m.legs[m.legs.length - 1];
     var weg = leg.visits.pop();
     leg.winner = null;
+    hinweisZeigen('Aufnahme ' + (weg.b ? weg.o + ' (Bust)' : weg.c ? weg.s + ' (Finish)' : weg.s) + ' von ' + pname(weg.p) + ' zurückgenommen');
     /* Im geteilten Turnier ist das Ergebnis schon beim Server: merken, dass
        hier korrigiert wird, sonst holt der Abgleich das alte zurueck. */
     if (m.done && m.kind !== 'quick' && geteiltesTurnier()) { m.korrektur = Date.now(); m.gemeldet = false; }
@@ -8607,6 +8621,8 @@
     $('game-menu-session').textContent = m.session ? 'Session beenden' : 'Spiel beenden & speichern';
     $('game-menu-overlay').classList.toggle('hidden', !UI.menu);
     menueFokus($('game-menu-overlay'));
+    var hz = $('spiel-hinweis');
+    if (hz) { hz.textContent = UI.hinweis ? UI.hinweis.text : ''; hz.classList.toggle('an', !!UI.hinweis); }
     if (UI.menu) {
       $('game-menu-titel').textContent = $('game-match-label').textContent;
       document.querySelector('#game-menu-overlay .game-menu-sub').textContent = $('game-leg-label').textContent;

@@ -593,6 +593,10 @@ await typeScore(180); await typeScore(60);
 await modus('total');
 await typeScore(179);
 check('179 als unmöglicher Wurf abgelehnt', (await text('#input-error')).includes('nicht möglich'));
+check('der Hinweis steht groß als roter Balken (Julius 12.11.: war winzig)', await page.evaluate(() => {
+  const cs = getComputedStyle(document.getElementById('input-error'));
+  return parseFloat(cs.fontSize) >= 15 && cs.backgroundColor === 'rgb(255, 90, 90)' && cs.color === 'rgb(255, 255, 255)';
+}));
 await typeScore(141);
 check('Checkout-Dialog fragt nach Dart-Anzahl', (await text('#overlay-card')).includes('Mit wie vielen Darts'));
 opts = await page.locator('#overlay-card [data-action="co-darts"]').allInnerTexts();
@@ -4980,6 +4984,7 @@ check('⇄ bei angefangener Aufnahme: sichtbarer Hinweis, das Feld bleibt',
   (await visible('#pad-darts')) && (await text('#darts-error')).includes('angefangene Aufnahme'), await text('#darts-error'));
 await page.locator('#num-grid button.zurueck').click();
 check('Zurueck nimmt den Dart, der Hinweis ist weg', (await rest(0)) === '141' && (await text('#darts-error')).trim() === '');
+check('die Rücknahme wird kurz eingeblendet', (await text('#spiel-hinweis')).includes('zurückgenommen') && await page.evaluate(() => document.getElementById('spiel-hinweis').classList.contains('an')), await text('#spiel-hinweis'));
 /* Ein offenes Menue sperrt die Tastatur - nichts wird dahinter gebucht oder zurueckgenommen. */
 await page.locator('#game-menu').click();
 vorMenu = await page.evaluate(() => window.__dart.activeLeg(window.__dart.currentMatch()).visits.length);

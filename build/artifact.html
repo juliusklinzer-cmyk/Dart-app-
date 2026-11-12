@@ -7524,6 +7524,51 @@ button.st-krow:hover { background: #ffffff06; }
   .st-krow { grid-template-columns: 24px minmax(0, 1.4fr) minmax(50px, 1fr) auto; gap: 8px; padding: 6px 4px; }
 }
 
+/* ================= Eingabe am Handy (Julius, 12.11.2026) =================
+ * 1. "Maximal 180" und "179 ist mit 3 Darts nicht möglich" standen winzig
+ *    unter der Zahl. Jetzt ein roter Balken mitten in der Anzeige, weiß und
+ *    fett, der kurz wackelt - in allen Eingabearten des Spiels.
+ * 2. Eine Rücknahme (Dart oder Aufnahme) wird kurz eingeblendet.
+ * 3. Hochkant: Average in der Karte und die getippte Zahl größer. */
+#screen-game.active .input-error:not(:empty),
+#screen-finisher.active .input-error:not(:empty),
+#screen-kaiwen .input-error:not(:empty) {
+  display: block; background: var(--red); color: #fff; font-weight: 700;
+  font-size: clamp(15px, 2.4vh, 22px); line-height: 1.2; padding: 8px 14px; border-radius: 12px;
+  text-align: center; max-height: none; overflow: visible; z-index: 3;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+  animation: fehler-wackeln 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+#screen-game.active #pad-total .input-error:not(:empty) { position: absolute; left: 6px; right: 6px; top: 50%; bottom: auto; transform: translateY(-50%); }
+#screen-game.active.turnier .pad-key .input-error:not(:empty) { bottom: 10px; left: 8px; right: 8px; }
+@keyframes fehler-wackeln {
+  10%, 90% { transform: translate3d(-2px, var(--wy, 0), 0); }
+  20%, 80% { transform: translate3d(3px, var(--wy, 0), 0); }
+  30%, 50%, 70% { transform: translate3d(-5px, var(--wy, 0), 0); }
+  40%, 60% { transform: translate3d(5px, var(--wy, 0), 0); }
+}
+#screen-game.active #pad-total .input-error:not(:empty) { --wy: -50%; }
+@media (prefers-reduced-motion: reduce) {
+  #screen-game.active .input-error:not(:empty), #screen-finisher.active .input-error:not(:empty), #screen-kaiwen .input-error:not(:empty) { animation: none; }
+}
+.spiel-hinweis {
+  position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 30vh); z-index: 60;
+  transform: translate(-50%, 8px); opacity: 0; pointer-events: none;
+  width: max-content; max-width: min(92vw, 520px); padding: 10px 16px; border-radius: 14px;
+  background: #1c1718; border: 1px solid var(--accent); color: #fff;
+  font-weight: 700; font-size: clamp(15px, 2.4vh, 22px); line-height: 1.25; text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.spiel-hinweis.an { opacity: 1; transform: translate(-50%, 0); }
+.spiel-hinweis:empty { display: none; }
+@media (orientation: portrait) and (max-width: 699px) {
+  #screen-game.active:not(.turnier) #scoreboard:not(.viele) .pcard .pavg { font-size: 1.25rem; }
+  #screen-game.active:not(.turnier) #scoreboard.solo .pcard .pavg { font-size: 1.4rem; }
+  #screen-game.active #pad-total .display-row { height: 64px; }
+  #screen-game.active #pad-total .score-display { font-size: 2.9rem; }
+}
+
 </style>
 <!-- Gemalter Streifen ganz oben, nur in der installierten App: seit iOS 26/27 legt
      das System einen Glas-Blur ueber den oberen Rand der Seite. Ein deckend
@@ -8299,6 +8344,7 @@ button.st-krow:hover { background: #ffffff06; }
 
 <!-- ============ SPIEL ============ -->
 <section id="screen-game" class="screen game">
+  <div id="spiel-hinweis" class="spiel-hinweis" role="status" aria-live="polite"></div>
   <!-- Kopfleiste (Entwurf "X01 Redesign", 10/2026): links das Menue (Spiel
        verlassen), in der Mitte Spiel und Stand, rechts die Fernsteuerung
        (Board-Anzeige, Eingabe ueber Tastatur) und der Wechsel zwischen
@@ -13624,6 +13670,17 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   }
 
   /* ================= Undo ================= */
+  /* Kurzer Hinweis im Spielbild (z. B. "Aufnahme 60 von Max zurückgenommen"):
+     im Ligaspiel hat jemand zurückgenommen, ohne es zu merken (Julius, 12.11.).
+     Verschwindet nach gut zwei Sekunden von selbst. */
+  var hinweisNr = 0;
+  function hinweisZeigen(text) {
+    var nr = ++hinweisNr;
+    UI.hinweis = { text: text, nr: nr };
+    setTimeout(function () {
+      if (UI.hinweis && UI.hinweis.nr === nr) { UI.hinweis = null; var hz = $('spiel-hinweis'); if (hz) hz.classList.remove('an'); }
+    }, 2600);
+  }
   function undo() {
     klick();
     UI.error = '';   // ein alter Hinweis (z. B. zum Moduswechsel) ist mit der Ruecknahme erledigt
@@ -13636,7 +13693,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         render();
         return;
       }
-      UI.darts.pop(); UI.mult = 1; save(); render(); return;
+      var dartWeg = UI.darts.pop(); UI.mult = 1;
+      hinweisZeigen('Dart ' + (dartWeg.n === 0 ? '0' : dartLabel(dartWeg)) + ' zurückgenommen');
+      save(); render(); return;
     }
 
     var m = currentMatch();
@@ -13660,6 +13719,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var leg = m.legs[m.legs.length - 1];
     var weg = leg.visits.pop();
     leg.winner = null;
+    hinweisZeigen('Aufnahme ' + (weg.b ? weg.o + ' (Bust)' : weg.c ? weg.s + ' (Finish)' : weg.s) + ' von ' + pname(weg.p) + ' zurückgenommen');
     /* Im geteilten Turnier ist das Ergebnis schon beim Server: merken, dass
        hier korrigiert wird, sonst holt der Abgleich das alte zurueck. */
     if (m.done && m.kind !== 'quick' && geteiltesTurnier()) { m.korrektur = Date.now(); m.gemeldet = false; }
@@ -19779,6 +19839,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     $('game-menu-session').textContent = m.session ? 'Session beenden' : 'Spiel beenden & speichern';
     $('game-menu-overlay').classList.toggle('hidden', !UI.menu);
     menueFokus($('game-menu-overlay'));
+    var hz = $('spiel-hinweis');
+    if (hz) { hz.textContent = UI.hinweis ? UI.hinweis.text : ''; hz.classList.toggle('an', !!UI.hinweis); }
     if (UI.menu) {
       $('game-menu-titel').textContent = $('game-match-label').textContent;
       document.querySelector('#game-menu-overlay .game-menu-sub').textContent = $('game-leg-label').textContent;
