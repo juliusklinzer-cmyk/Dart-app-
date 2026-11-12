@@ -7257,11 +7257,13 @@ button.pa-gruppe { cursor: pointer; }
 .st-dash { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 12px; min-width: 0; --st-blau: #46aad7; --st-gold: #ffc14d; --st-gruen: #4ade80; --st-rot: #e5484d; --st-lila: #a78bfa; }
 .st-chips { display: flex; flex: none; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
 .st-chips::-webkit-scrollbar { display: none; }
-.st-chip { flex: none; min-height: 0; height: 40px; margin: 0; padding: 0 13px; border-radius: 999px; background: #1c1718; border: 1px solid #2a2224; box-shadow: none; font-family: var(--font-body); font-size: 0.82rem; font-weight: 600; color: var(--muted); text-transform: none; letter-spacing: 0; white-space: nowrap; transition: background 0.2s, color 0.2s; }
+.st-chip { flex: none; display: inline-flex; align-items: center; gap: 7px; min-height: 0; height: 40px; margin: 0; padding: 0 13px; border-radius: 999px; background: #1c1718; border: 1px solid #2a2224; box-shadow: none; font-family: var(--font-body); font-size: 0.82rem; font-weight: 600; color: var(--muted); text-transform: none; letter-spacing: 0; white-space: nowrap; transition: background 0.2s, color 0.2s; }
+.st-chip .av { flex: none; }
+.av.xs { width: 24px; height: 24px; font-size: 0.6rem; }
 .st-chip small { font-size: 0.72rem; font-weight: 500; opacity: 0.75; }
-.st-chip.on { background: var(--aktiv-linie); color: #0d0a0b; border-color: var(--aktiv-linie); }
+.st-chip.on { background: #2a2224; color: #fff; border-color: #2a2224; box-shadow: inset 0 0 0 1.5px var(--text); }
 .st-sep { flex: none; width: 1px; margin: 4px 2px; background: #2a2224; }
-.st-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.st-kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .st-kpi { position: relative; overflow: hidden; display: flex; flex-direction: column; padding: 12px 14px; border-radius: 16px; background: linear-gradient(160deg, #1c1718, #141011); border: 1px solid #2a2224; animation: st-grow 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
 .st-kpi::after { content: ""; position: absolute; right: -30px; bottom: -40px; width: 90px; height: 90px; border-radius: 50%; background: var(--c, var(--st-rot)); opacity: 0.09; }
 .st-kpi .l { font-family: var(--font-cond); font-weight: 700; font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
@@ -7274,13 +7276,13 @@ button.pa-gruppe { cursor: pointer; }
    "breit" nimmt die ganze Zeile, "zwei" zwei Spalten; dense fuellt Luecken
    (Julius, 12.11.: "unter Average nur zwei kleine Wuerfel, rechts viel Platz"). */
 .st-raster { display: grid; grid-template-columns: minmax(0, 1fr); grid-auto-flow: dense; gap: 12px; }
-.st-karte { min-width: 0; padding: 14px 16px; border-radius: var(--radius); background: var(--bg-2); border: 1px solid var(--line); animation: st-rein 0.6s ease both; }
+.st-karte { display: flex; flex-direction: column; min-width: 0; padding: 14px 16px; border-radius: var(--radius); background: var(--bg-2); border: 1px solid var(--line); animation: st-rein 0.6s ease both; }
 .st-karte.breit { grid-column: 1 / -1; }
-/* Kartentitel wie die Ueberschriften der uebrigen Karten (h2): Versalien,
-   Display-Schrift, ohne Symbol und ohne Balken davor. */
-.st-karte h3 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 0.95rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text); }
-.st-sub { margin: 3px 0 0; font-size: 0.78rem; color: var(--muted); line-height: 1.4; }
-.st-box { margin-top: 12px; min-width: 0; }
+/* Kartentitel wie im Entwurf "Darts Statistik" (Julius, 12.11.): Barlow fett,
+   normale Schreibung, ohne Symbol und ohne Balken davor. */
+.st-karte h3 { margin: 0; font-family: var(--font-body); font-weight: 700; font-size: 1rem; letter-spacing: 0; text-transform: none; color: var(--text); }
+.st-sub { margin: 3px 0 0; font-size: 0.8rem; color: var(--muted); line-height: 1.4; }
+.st-box { margin-top: 12px; min-width: 0; flex: 1 1 auto; }
 .st-svg { display: block; width: 100%; height: auto; overflow: visible; }
 .st-svg text { font-family: var(--font-body); }
 .st-ax { fill: #857a7b; font-size: 10px; }
@@ -7328,19 +7330,25 @@ button.pa-gruppe { cursor: pointer; }
 .st-mrow .h span { color: var(--muted); font-weight: 500; font-size: 0.76rem; }
 .st-mbar { display: grid; grid-template-columns: 62px 1fr 52px; gap: 8px; align-items: center; font-size: 0.74rem; color: var(--muted); margin-top: 4px; }
 .st-mbar b { color: var(--text); text-align: right; font-variant-numeric: tabular-nums; }
-.st-kal { max-width: 640px; }
+.st-akt { display: grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 16px; align-items: center; }
+.st-akt .st-minis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.st-akt .st-mini b { font-size: 1.5rem; }
+@media (max-width: 759px) {
+  .st-akt { grid-template-columns: minmax(0, 1fr); }
+}
 .st-tab { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 .st-tab th { font-family: var(--font-cond); font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); text-align: left; font-weight: 700; padding: 6px; border-bottom: 1px solid #2a2224; }
 .st-tab td { padding: 8px 6px; border-bottom: 1px solid #ffffff08; vertical-align: middle; }
 .st-tab td small { display: block; font-size: 0.7rem; color: var(--muted); }
 .st-tab .n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* Siegquote je Gegner: Balken und die Zahl daneben. */
-.st-mehr { display: block; width: 100%; min-height: 40px; margin: 10px 0 0; padding: 0 12px; border-radius: 10px; background: #1c1718; border: 1px solid var(--line); box-shadow: none; color: var(--text); font-family: var(--font-body); font-weight: 600; font-size: 0.82rem; text-transform: none; letter-spacing: 0; }
-.st-recs { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
-.st-rec { padding: 12px; border-radius: 14px; background: #1c1718; border: 1px solid #2a2224; animation: st-grow 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
-.st-rec .v { font-family: var(--font-display); font-size: 1.8rem; line-height: 1.1; color: var(--st-gold); }
-.st-rec .l { font-family: var(--font-cond); font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
-.st-rec .s { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+.st-mehr { display: inline-flex; align-items: center; width: auto; min-height: 36px; margin: 12px 0 0; padding: 0 12px; border-radius: 10px; background: #1c1718; border: 1px solid var(--line); box-shadow: none; color: var(--muted); font-family: var(--font-cond); font-weight: 700; font-size: 0.85rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.st-mehr:hover { color: var(--text); }
+.st-recs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.st-rec { min-width: 0; padding: 12px; border-radius: 14px; background: #1c1718; border: 1px solid #2a2224; animation: st-grow 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+.st-rec .v { font-family: var(--font-display); font-size: 1.75rem; line-height: 1.2; color: var(--st-gold); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-rec .l { font-family: var(--font-cond); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+.st-rec .s { font-size: 0.72rem; color: var(--muted); margin-top: 2px; line-height: 1.3; }
 #st-tip { position: fixed; z-index: 60; pointer-events: none; background: rgba(13, 10, 11, 0.96); border: 1px solid #2a2224; border-radius: 10px; padding: 8px 10px; font-family: var(--font-body); font-size: 0.78rem; line-height: 1.45; opacity: 0; transition: opacity 0.12s; max-width: 240px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); color: var(--text); }
 #st-tip.an { opacity: 1; }
 #st-tip b { color: var(--st-gold, #ffc14d); }
@@ -7356,9 +7364,16 @@ button.pa-gruppe { cursor: pointer; }
 @media (min-width: 640px) {
   .st-raster { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .st-karte.zwei { grid-column: span 2; }
+  .st-recs { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (min-width: 700px) {
+  .st-kpis { grid-template-columns: repeat(var(--h, 4), minmax(0, 1fr)); }
 }
 @media (min-width: 1100px) {
   .st-raster { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .st-kpis { grid-template-columns: repeat(var(--n, 8), minmax(0, 1fr)); }
+  .st-kpi .v { font-size: 2rem; }
+  .st-recs { grid-template-columns: repeat(8, minmax(0, 1fr)); }
 }
 
 /* ---- Reiter „Statistik“: Person und Mannschaft (Artefakt „Darts Statistik“, 11.11.2026) ----
@@ -7370,9 +7385,9 @@ button.pa-gruppe { cursor: pointer; }
 #stats-main { min-width: 0; }
 /* Kleiner Schalter Einzel / Mannschaft - wie die Reiter in den Karten,
    kein grosser Knopf (Julius, 12.11.). */
-.st-ebene { display: inline-flex; gap: 4px; padding: 3px; border-radius: 999px; background: #141011; border: 1px solid #2a2224; align-self: flex-start; }
-.st-ebene button { min-height: 0; height: 36px; margin: 0; padding: 0 18px; border-radius: 999px; border: 1px solid transparent; background: none; box-shadow: none; color: var(--muted); font-family: var(--font-cond); font-weight: 700; font-size: 0.85rem; letter-spacing: 0.1em; text-transform: uppercase; transition: background 0.2s, color 0.2s; }
-.st-ebene button.on { background: var(--aktiv-flaeche); border-color: var(--aktiv-linie); color: var(--text); }
+.st-ebene { display: inline-flex; gap: 4px; padding: 3px; border-radius: 12px; background: #141011; border: 1px solid #2a2224; align-self: flex-start; }
+.st-ebene button { min-height: 0; height: 34px; margin: 0; padding: 0 18px; border-radius: 9px; border: 0; background: none; box-shadow: none; color: var(--muted); font-family: var(--font-cond); font-weight: 700; font-size: 0.9rem; letter-spacing: 0.1em; text-transform: uppercase; transition: background 0.2s, color 0.2s; }
+.st-ebene button.on { background: #2a2224; color: #fff; box-shadow: inset 0 0 0 1.5px var(--text); }
 /* Die Wer-Karte: Profilbild, Name, eine Zeile darunter - ohne Balken. */
 .st-wer { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--radius); background: var(--bg-2); border: 1px solid var(--line); animation: st-rein 0.5s ease both; min-width: 0; }
 .st-wer .av { flex: none; }
@@ -7382,7 +7397,6 @@ button.pa-gruppe { cursor: pointer; }
 .st-wer b em { font-style: normal; font-family: var(--font-body); font-size: 0.85rem; color: var(--muted); }
 .st-wer small { display: block; font-size: 0.8rem; color: var(--muted); }
 .st-knopf { flex: none; min-height: 44px; margin: 0; padding: 0 12px; border-radius: 10px; background: #241d1f; border: 1px solid transparent; box-shadow: none; color: var(--text); font-family: var(--font-body); font-weight: 600; font-size: 0.85rem; text-transform: none; letter-spacing: 0; }
-.st-chip.on { background: var(--st-ebene); border-color: var(--st-ebene); color: #0d0a0b; }
 .st-chips.klein .st-chip { font-size: 0.76rem; padding: 0 11px; }
 .st-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; vertical-align: 0; }
 /* Mini-Kacheln (Liga-Bilanz, Spielarten, Schnellansicht im Spieler-Reiter) */
@@ -7454,7 +7468,7 @@ button.st-krow:hover { background: #ffffff06; }
 /* Rangliste (Liga-Rangliste im Dashboard, Rangliste je Spielart darunter) */
 .st-rang { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; border-radius: var(--radius); background: var(--bg-2); border: 1px solid var(--line); animation: st-rein 0.6s ease both; min-width: 0; }
 .st-rang-kopf { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 12px; }
-.st-rang-kopf h3 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 0.95rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text); }
+.st-rang-kopf h3 { margin: 0; font-family: var(--font-body); font-weight: 700; font-size: 1rem; letter-spacing: 0; text-transform: none; color: var(--text); }
 .st-rang-kopf span { font-family: var(--font-cond); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 .st-rgrid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 .st-kacheln { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 6px; }
@@ -7491,9 +7505,6 @@ button.st-krow:hover { background: #ffffff06; }
 }
 @media (min-width: 760px) {
   .st-rgrid { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); }
-}
-@media (min-width: 900px) {
-  #screen-stats .st-kpis { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
 }
 /* Welches Doppel? - die naheliegenden gross, alle anderen moeglichen klein */
 .cd-andere { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 10px 0 12px; }
@@ -14031,9 +14042,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
        diesem Modus dafuer steht), dann der Rest. Der erste Eintrag ist auch
        die Voreinstellung beim Moduswechsel -- siehe renderBoards(). */
     { mode: '501', key: 'won', label: 'Siege', get: function (s) { return s.won; }, fmt: function (v) { return String(v); }, min: function (s) { return s.matches > 0; }, hint: '' },
-    { mode: '501', key: 'avg', label: 'Average', unit: '', get: function (s) { return s.avg; }, fmt: function (v) { return v.toFixed(2); }, min: function (s) { return s.darts >= MIN_DARTS_FOR_AVG; }, hint: 'Punkte je 3 Darts über alle Spiele. Zählt ab ' + MIN_DARTS_FOR_AVG + ' geworfenen Darts.' },
-    { mode: '501', key: 'first9', label: 'First 9', get: function (s) { return s.first9; }, fmt: function (v) { return v.toFixed(2); }, min: function (s) { return s.first9Darts >= 9; }, hint: 'Average der ersten 9 Darts eines Legs – das Maß für den Scoring-Antritt.' },
-    { mode: '501', key: 'doubleQuote', label: 'Doppelquote', get: function (s) { return s.doubleQuote; }, fmt: function (v) { return v.toFixed(1) + ' %'; }, min: function (s) { return s.doubleAttempts >= 3; }, hint: 'Getroffene Finishes je Dart auf ein mögliches Doppel (Rest 2–40 gerade oder Bull). Zählt ab 3 Versuchen.' },
+    { mode: '501', key: 'avg', label: 'Average', unit: '', get: function (s) { return s.avg; }, fmt: function (v) { return v.toFixed(1).replace('.', ','); }, min: function (s) { return s.darts >= MIN_DARTS_FOR_AVG; }, hint: 'Punkte je 3 Darts über alle Spiele. Zählt ab ' + MIN_DARTS_FOR_AVG + ' geworfenen Darts.' },
+    { mode: '501', key: 'first9', label: 'First 9', get: function (s) { return s.first9; }, fmt: function (v) { return v.toFixed(1).replace('.', ','); }, min: function (s) { return s.first9Darts >= 9; }, hint: 'Average der ersten 9 Darts eines Legs – das Maß für den Scoring-Antritt.' },
+    { mode: '501', key: 'doubleQuote', label: 'Doppelquote', get: function (s) { return s.doubleQuote; }, fmt: function (v) { return v.toFixed(1).replace('.', ',') + ' %'; }, min: function (s) { return s.doubleAttempts >= 3; }, hint: 'Getroffene Finishes je Dart auf ein mögliches Doppel (Rest 2–40 gerade oder Bull). Zählt ab 3 Versuchen.' },
     { mode: '501', key: 'highCO', label: 'Höchstes Finish', get: function (s) { return s.highCO; }, fmt: function (v) { return String(v); }, min: function (s) { return s.highCO > 0; }, hint: 'Der höchste je ausgecheckte Rest.' },
     { mode: '501', key: 's180', label: '180er', get: function (s) { return s.s180; }, fmt: function (v) { return String(v); }, min: function (s) { return s.s180 > 0; }, hint: 'Maximum – alle drei Darts in die Triple 20.' },
     { mode: '501', key: 'highScore', label: 'Höchste Aufnahme', get: function (s) { return s.highScore; }, fmt: function (v) { return String(v); }, min: function (s) { return s.highScore > 0; }, hint: 'Die beste einzelne Aufnahme aus 3 Darts.' },
@@ -14043,12 +14054,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     { mode: '501', key: 'legsWon', label: 'Legs', get: function (s) { return s.legsWon; }, fmt: function (v) { return String(v); }, min: function (s) { return s.legsWon > 0; }, hint: 'Gewonnene Legs insgesamt.' },
     { mode: '501', key: 'tourWins', label: 'Turniersiege', get: function (s) { return s.tourWins; }, fmt: function (v) { return String(v); }, min: function (s) { return s.tourWins > 0; }, hint: 'Gewonnene, abgeschlossene Turniere.' },
     /* MPR zuerst - das ist die Cricket-Kennzahl (Julius, 12.10.). */
-    { mode: 'cricket', key: 'mpr', label: 'MPR', get: function (s) { return s.mpr; }, fmt: function (v) { return v.toFixed(2); }, min: function (s) { return s.cricketDarts >= 9; }, hint: 'Marks per Round: getroffene Marken je 3 Darts im Cricket.' },
+    { mode: 'cricket', key: 'mpr', label: 'MPR', get: function (s) { return s.mpr; }, fmt: function (v) { return v.toFixed(1).replace('.', ','); }, min: function (s) { return s.cricketDarts >= 9; }, hint: 'Marks per Round: getroffene Marken je 3 Darts im Cricket.' },
     { mode: 'cricket', key: 'cricketWins', label: 'Siege', get: function (s) { return s.cricketWins; }, fmt: function (v) { return String(v); }, min: function (s) { return s.cricketGames > 0; }, hint: 'Gewonnene Cricket-Spiele.' },
     { mode: 'rtw', key: 'rtwWins', label: 'Siege', get: function (s) { return s.rtwWins; }, fmt: function (v) { return String(v); }, min: function (s) { return s.rtwGames > 0; }, hint: 'Gewonnene Round-the-World-Trainings.' },
     { mode: 'rtw', key: 'rtwBest', label: 'Bestes Ergebnis', get: function (s) { return s.rtwBest; }, fmt: function (v) { return v + ' Darts'; }, min: function (s) { return s.rtwBest !== null; }, asc: true, hint: 'Wenigste Darts für einen kompletten Durchlauf von der 1 bis Bull.' },
     { mode: 'finisher', key: 'finWins', label: 'Siege', get: function (s) { return s.finWins; }, fmt: function (v) { return String(v); }, min: function (s) { return s.finGames > 0; }, hint: 'Gewonnene Finisher-Spiele.' },
-    { mode: 'finisher', key: 'finAvgDarts', label: 'Ø Darts je Finish', get: function (s) { return s.finAvgDarts; }, fmt: function (v) { return v.toFixed(1); }, min: function (s) { return s.finRounds >= 3; }, asc: true, hint: 'Wie viele Darts du im Schnitt für ein gewonnenes Finish brauchst. Zählt ab 3 gewonnenen Runden.' },
+    { mode: 'finisher', key: 'finAvgDarts', label: 'Ø Darts je Finish', get: function (s) { return s.finAvgDarts; }, fmt: function (v) { return v.toFixed(1).replace('.', ','); }, min: function (s) { return s.finRounds >= 3; }, asc: true, hint: 'Wie viele Darts du im Schnitt für ein gewonnenes Finish brauchst. Zählt ab 3 gewonnenen Runden.' },
     { mode: 'finisher', key: 'finRounds', label: 'Gewonnene Runden', get: function (s) { return s.finRounds; }, fmt: function (v) { return String(v); }, min: function (s) { return s.finGames > 0; }, hint: 'Jede Runde, in der du als Erster ausgecheckt hast.' },
     { mode: 'finisher', key: 'finBest', label: 'Schnellstes Finish', get: function (s) { return s.finBest; }, fmt: function (v) { return plural(v, 'Dart', 'Darts'); }, min: function (s) { return s.finBest !== null; }, asc: true, hint: 'Wenigste Darts für ein gewonnenes Finish.' },
     { mode: 'finisher', key: 'finHigh', label: 'Höchste Zahl', get: function (s) { return s.finHigh; }, fmt: function (v) { return String(v); }, min: function (s) { return s.finHigh > 0; }, hint: 'Die höchste Zahl, die du in einer Runde als Erster weggemacht hast.' },
@@ -14059,7 +14070,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     { mode: 'kaiwen', key: 'kwVersuche', label: 'Versuche', get: function (s) { return s.kwVersuche; }, fmt: function (v) { return String(v); }, min: function (s) { return s.kwGames > 0; }, hint: 'Alle Versuche, an denen du beteiligt warst.' },
     { mode: 'hunter', key: 'huWins', label: 'Siege', get: function (s) { return s.huWins; }, fmt: function (v) { return String(v); }, min: function (s) { return s.huGames > 0; }, hint: 'Gewonnene Jagden (als Letzter übrig).' },
     { mode: 'hunter', key: 'huFaenge', label: 'Fänge', get: function (s) { return s.huFaenge; }, fmt: function (v) { return String(v); }, min: function (s) { return s.huGames > 0; }, hint: 'Gefangene Gegner über alle Jagden.' },
-    { mode: 'hunter', key: 'huMpr', label: 'MPR', get: function (s) { return s.huMpr; }, fmt: function (v) { return v.toFixed(2); }, min: function (s) { return s.huDarts >= 30; }, hint: 'Treffer aufs Zielfeld je 3 Darts. Zählt ab 30 Darts.' },
+    { mode: 'hunter', key: 'huMpr', label: 'MPR', get: function (s) { return s.huMpr; }, fmt: function (v) { return v.toFixed(1).replace('.', ','); }, min: function (s) { return s.huDarts >= 30; }, hint: 'Treffer aufs Zielfeld je 3 Darts. Zählt ab 30 Darts.' },
     { mode: 'hunter', key: 'huQuote', label: 'Trefferquote', get: function (s) { return s.huQuote; }, fmt: function (v) { return v.toFixed(0) + ' %'; }, min: function (s) { return s.huDarts >= 30; }, hint: 'Treffer aufs Zielfeld je Dart. Zählt ab 30 Darts.' },
     { mode: 'hunter', key: 'huBestNormal', label: 'Solo Normal', get: function (s) { return s.huBest.normal; }, fmt: function (v) { return plural(v, 'Dart', 'Darts'); }, min: function (s) { return s.huBest.normal !== null; }, asc: true, hint: 'Wenigste Darts für eine Runde um die Scheibe, Variante Normal.' },
     { mode: 'hunter', key: 'huBestBoost', label: 'Solo Boost', get: function (s) { return s.huBest.boost; }, fmt: function (v) { return plural(v, 'Dart', 'Darts'); }, min: function (s) { return s.huBest.boost !== null; }, asc: true, hint: 'Wenigste Darts für eine Runde um die Scheibe mit Boost.' }
@@ -17050,7 +17061,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (!UI.statsFilter) UI.statsFilter = { modus: 'alle', bereich: 0 };
     return UI.statsFilter;
   }
-  function stFmt(v, dez) { return (v === null || v === undefined || !isFinite(v)) ? '–' : Number(v).toFixed(dez === undefined ? 1 : dez); }
+  function stFmt(v, dez) { return (v === null || v === undefined || !isFinite(v)) ? '–' : Number(v).toFixed(dez === undefined ? 1 : dez).replace('.', ','); }
   function stDatum(ts) { var d = new Date(ts); return d.getDate() + '. ' + ST_MONATE[d.getMonth()] + ' ' + String(d.getFullYear()).slice(2); }
   function stMonat(ts) { var d = new Date(ts); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2); }
   function stMonatText(k) { return ST_MONATE[Number(k.slice(5, 7)) - 1] + ' ' + k.slice(2, 4); }
@@ -17142,12 +17153,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
      Doppelquote aus Versuchen, Siegquote nur aus Spielen mit Gegner. */
   function statsSumme(spiele) {
     if (!spiele.length) return null;
-    var o = { n: spiele.length, points: 0, darts: 0, f9p: 0, f9d: 0, att: 0, hits: 0, matches: 0, siege: 0,
+    var o = { n: spiele.length, points: 0, darts: 0, f9p: 0, f9d: 0, att: 0, hits: 0, co: 0, matches: 0, siege: 0,
       c100: 0, c140: 0, c180: 0, legs: 0, legsW: 0, legsL: 0, hf: 0, bl: null, avgs: [] };
     spiele.forEach(function (s) {
       var st = s.st;
       o.points += st.points; o.darts += st.darts; o.f9p += st.first9Points; o.f9d += st.first9Darts;
-      o.att += st.doubleAttempts; o.hits += st.doubleHits;
+      o.att += st.doubleAttempts; o.hits += st.doubleHits; o.co += st.checkouts || 0;
       o.c100 += st.s100; o.c140 += st.s140; o.c180 += st.s180;
       o.legs += s.legs; o.legsW += s.legsWon; o.legsL += s.legsLost;
       if (st.highCO > o.hf) o.hf = st.highCO;
@@ -17185,14 +17196,15 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       return '<button type="button" class="st-chip' + (f.bereich === b[0] ? ' on' : '') + '" data-action="stats-bereich" data-wert="' + b[0] + '">' + b[1] + '</button>';
     }).join('');
     STATS_TIPS = {};
-    /* Reihenfolge fuellt das Raster (3 Spalten am Computer): Average breit,
-       dann Form / Profil / Big Scores, Doppel breit, Aktivitaet (2) neben der
-       Doppelquote, Gegner breit, Modi neben den Spielarten (2), Liga-Bilanz
-       neben den Rekorden (2), alle Zahlen breit. */
+    /* Reihenfolge wie im Entwurf "Darts Statistik" (Julius, 12.11.: "genau
+       wie im Design"), 3 Spalten am Computer: Aktivitaet breit, Average (2)
+       neben der Form, Profil / Big Scores / Doppelquote, Doppel-Analyse breit
+       (im Entwurf stand daneben "Doppel erfassen", das faellt weg), Spielarten
+       (2) neben den Modi, Rekorde breit, Gegner (2) neben der Liga-Bilanz,
+       alle Zahlen breit. */
     var karten = (!spiele.length ? '<p class="st-leer">Keine Spiele in dieser Auswahl.</p>' :
-      stAvgKarte(spiele) + stFormKarte(spiele) + stRadarKarte(p, spiele, f) + stBigKarte(spiele) + stDoppelKarte(p, spiele) +
-      stKalenderKarte(alle, f) + stDblTrendKarte(spiele) + stGegnerKarte(spiele) + stModiKarte(alle, f)) +
-      stSpielartenKarte(p, st) + stLigaBilanzKarte(p) + (spiele.length ? stRekordKarte(spiele) : '') + stZahlenKarte(p, st);
+      stKalenderKarte(alle, f, 'Spieleraktivität') + stAvgKarte(spiele) + stFormKarte(spiele) + stRadarKarte(p, spiele, f) + stBigKarte(spiele) + stDblTrendKarte(spiele) + stDoppelKarte(p, spiele)) +
+      stSpielartenKarte(p, st) + (spiele.length ? stModiKarte(alle, f) + stRekordKarte(spiele) + stGegnerKarte(spiele) : '') + stLigaBilanzKarte(p) + stZahlenKarte(p, st);
     return '<div class="st-dash" data-spiele="' + alle.length + '">' + (opts.kopf || '') +
       '<div class="st-chips">' + chips + '</div>' +
       (spiele.length ? stKpisHtml(spiele) : '') +
@@ -17210,16 +17222,17 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       if (!a || !b || a[key] === null || b[key] === null || a[key] === undefined || b[key] === undefined) return '';
       var d = a[key] - b[key], gut = kleinerBesser ? d < 0 : d > 0;
       var cls = Math.abs(d) < 0.05 ? '' : gut ? 'auf' : 'ab';
-      return '<span class="' + cls + '">' + (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(dez) + '</span> vs. letzte 10';
+      return '<span class="' + cls + '">' + (d >= 0 ? '▲ +' : '▼ −') + Math.abs(d).toFixed(dez).replace('.', ',') + '</span> vs. letzte 10';
     }
     var kpis = [
       ['Ø 3-Dart-Average', s.avg, 1, '', ST_FARBE.blau, delta('avg', 1)],
       ['First 9', s.first9, 1, '', ST_FARBE.lila, delta('first9', 1)],
       ['Doppelquote', s.dbl, 1, ' %', ST_FARBE.gruen, s.att ? (delta('dbl', 1) || s.hits + ' von ' + s.att) : ''],
-      ['Siegquote', s.win, 0, ' %', ST_FARBE.gold, plural(s.matches, 'Spiel mit Gegner', 'Spiele mit Gegner')],
+      ['Siegquote', s.win, 0, ' %', ST_FARBE.gold, delta('win', 1) || plural(s.matches, 'Spiel mit Gegner', 'Spiele mit Gegner')],
       ['180er', s.c180, 0, '', ST_FARBE.rot, s.c140 + '× 140+ · ' + s.c100 + '× 100+'],
-      ['Höchstes Finish', s.hf || null, 0, '', ST_FARBE.creme, plural(s.n, 'Spiel', 'Spiele') + ' · ' + plural(s.legs, 'Leg', 'Legs')],
-      ['Bestes Leg', s.bl, 0, ' Darts', ST_FARBE.gruen, 'kürzestes 501er-Leg']
+      ['Höchstes Finish', s.hf || null, 0, '', ST_FARBE.creme, plural(s.co, 'Checkout', 'Checkouts')],
+      ['Bestes Leg', s.bl, 0, ' Darts', ST_FARBE.gruen, 'kürzestes 501er-Leg'],
+      ['Spiele', s.n, 0, '', ST_FARBE.creme, plural(s.legs, 'Leg', 'Legs') + ' · ' + plural(s.siege, 'Sieg', 'Siege')]
     ];
     return stKpiHtml(kpis);
   }
@@ -17252,11 +17265,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   function stAvgKarte(spiele) {
     var titel = 'Average-Entwicklung', sub = '3-Dart-Average je Spiel, gleitender Schnitt über 5 Spiele und Trendlinie';
     var gs = spiele.filter(function (s) { return s.st.darts > 0; });
-    if (gs.length < 2) return stKarte('avg', titel, sub, '<p class="st-leer">Mindestens 2 Spiele mit Würfen nötig.</p>', true);
+    if (gs.length < 2) return stKarte('avg', titel, sub, '<p class="st-leer">Mindestens 2 Spiele mit Würfen nötig.</p>', 'zwei');
     /* Am Handy ein schmaleres Bild: das SVG skaliert auf die Kartenbreite,
        bei 640 Einheiten waere die Schrift dort nur halb so gross. */
-    var schmal = window.innerWidth < 700;
-    var W = schmal ? 380 : 640, H = schmal ? 230 : 250, L = 36, R = 14, T = 18, B = 26, n = gs.length;
+    var W = window.innerWidth < 700 ? 380 : window.innerWidth < 1100 ? 680 : 700, H = window.innerWidth < 1000 ? 250 : 270, L = 36, R = 14, T = 18, B = 26, n = gs.length;
     var v = gs.map(function (s) { return s.st.avg; });
     var f9 = gs.map(function (s) { return s.st.first9Darts ? s.st.first9 : null; });
     var roll = v.map(function (_, i) { var t = v.slice(Math.max(0, i - 4), i + 1); return t.reduce(function (a, b) { return a + b; }, 0) / t.length; });
@@ -17275,7 +17287,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var steig = nen ? zae / nen : 0, ab = my - steig * mx, gewinn = steig * (n - 1);
     var best = v.indexOf(Math.max.apply(null, v));
     var punkte = v.map(function (val, i) { return '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(val).toFixed(1) + '" r="' + (i === best ? 5 : 2.6) + '" fill="' + (i === best ? ST_FARBE.gold : ST_FARBE.blau) + '" stroke="#0d0a0b" stroke-width="1.5" class="st-pt" style="animation-delay:' + Math.round(400 + i * 1400 / n) + 'ms"/>'; }).join('');
-    STATS_TIPS.avg = gs.map(function (s, i) { return '<b>' + stDatum(s.at) + '</b> · ' + stModusText(s) + '<br>Ø ' + s.st.avg.toFixed(1) + (s.st.first9Darts ? ' · First 9 ' + s.st.first9.toFixed(1) : '') + '<br>Schnitt (5): ' + roll[i].toFixed(1) + (s.won !== null ? '<br>Legs ' + s.legsWon + ' : ' + s.legsLost : ''); });
+    STATS_TIPS.avg = gs.map(function (s, i) { return '<b>' + stDatum(s.at) + '</b> · ' + stModusText(s) + '<br>Ø ' + s.st.avg.toFixed(1).replace('.', ',') + (s.st.first9Darts ? ' · First 9 ' + s.st.first9.toFixed(1).replace('.', ',') : '') + '<br>Schnitt (5): ' + roll[i].toFixed(1).replace('.', ',') + (s.won !== null ? '<br>Legs ' + s.legsWon + ' : ' + s.legsLost : ''); });
     var svg = '<svg class="st-svg" viewBox="0 0 ' + W + ' ' + H + '" data-st-chart="avg" data-l="' + L + '" data-r="' + R + '" data-w="' + W + '" data-n="' + n + '">' +
       '<defs><linearGradient id="st-ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + ST_FARBE.blau + '" stop-opacity=".35"/><stop offset="1" stop-color="' + ST_FARBE.blau + '" stop-opacity="0"/></linearGradient></defs>' +
       grid + achse + flaeche + f9Pfad +
@@ -17283,12 +17295,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       '<path d="M' + x(0).toFixed(1) + ' ' + y(ab).toFixed(1) + 'L' + x(n - 1).toFixed(1) + ' ' + y(ab + steig * (n - 1)).toFixed(1) + '" stroke="' + ST_FARBE.rot + '" stroke-width="1.6" stroke-dasharray="5 5" fill="none" class="st-fade st-trend" style="animation-delay:1.2s"/>' +
       '<path d="' + stLinie(roll.map(function (q, i) { return [x(i), y(q)]; })) + '" fill="none" stroke="' + ST_FARBE.gold + '" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="st-draw st-glanz" style="transition-delay:300ms"/>' +
       punkte +
-      '<text x="' + x(best).toFixed(1) + '" y="' + (y(v[best]) - 10).toFixed(1) + '" text-anchor="' + (x(best) > W - 70 ? 'end' : x(best) < L + 40 ? 'start' : 'middle') + '" fill="' + ST_FARBE.gold + '" font-size="11" font-weight="700" class="st-fade" style="animation-delay:1.6s">Best ' + v[best].toFixed(1) + '</text>' +
-      '<text x="' + (W - R) + '" y="' + (T + 4) + '" text-anchor="end" fill="' + (gewinn >= 0 ? ST_FARBE.gruen : ST_FARBE.rot) + '" font-size="12" font-weight="700" class="st-fade" style="animation-delay:1.4s">Trend ' + (gewinn >= 0 ? '+' : '') + gewinn.toFixed(1) + ' Punkte</text>' +
+      '<text x="' + x(best).toFixed(1) + '" y="' + (y(v[best]) - 10).toFixed(1) + '" text-anchor="' + (x(best) > W - 70 ? 'end' : x(best) < L + 40 ? 'start' : 'middle') + '" fill="' + ST_FARBE.gold + '" font-size="11" font-weight="700" class="st-fade" style="animation-delay:1.6s">Best ' + v[best].toFixed(1).replace('.', ',') + '</text>' +
+      '<text x="' + (W - R) + '" y="' + (T + 4) + '" text-anchor="end" fill="' + (gewinn >= 0 ? ST_FARBE.gruen : ST_FARBE.rot) + '" font-size="12" font-weight="700" class="st-fade" style="animation-delay:1.4s">Trend ' + (gewinn >= 0 ? '+' : '') + gewinn.toFixed(1).replace('.', ',') + ' Punkte</text>' +
       '<line class="st-cursor" y1="' + T + '" y2="' + (H - B) + '" stroke="#ffffff40" stroke-dasharray="3 3" opacity="0"/>' +
       '<rect x="' + L + '" y="0" width="' + (W - L - R) + '" height="' + H + '" fill="transparent"/></svg>';
     var legende = '<div class="st-legende"><span><i style="background:' + ST_FARBE.blau + '"></i>Ø je Spiel</span><span><i style="background:' + ST_FARBE.gold + '"></i>Gleitender Schnitt (5)</span><span><i style="background:' + ST_FARBE.rot + '"></i>Trend</span><span><i style="background:' + ST_FARBE.lila + '"></i>First 9</span></div>';
-    return stKarte('avg', titel, sub, svg + legende, true);
+    return stKarte('avg', titel, sub, svg + legende, 'zwei');
   }
 
   /* Siegquote als Ring, Bilanz, Serien, die letzten zehn als Pillen. */
@@ -17306,7 +17318,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       '<circle cx="65" cy="65" r="52" fill="none" stroke="' + (q >= 0.5 ? ST_FARBE.gruen : ST_FARBE.gold) + '" stroke-width="12" stroke-linecap="round" transform="rotate(-90 65 65)" stroke-dasharray="' + C.toFixed(1) + '" stroke-dashoffset="' + (C * (1 - q)).toFixed(1) + '" class="st-ring" data-voll="' + C.toFixed(1) + '"/>' +
       '<text x="65" y="74" text-anchor="middle" fill="#f2eeee" font-size="28" class="st-ringzahl" data-zahl="' + (q * 100) + '" data-dez="0" data-suf=" %">' + Math.round(q * 100) + ' %</text></svg>';
     var pillen = m.slice(-10).map(function (s, i) {
-      var tip = '<b>' + stDatum(s.at) + '</b>' + (s.gegner ? ' vs. ' + esc(s.gegner) : '') + '<br>' + s.legsWon + ' : ' + s.legsLost + (s.st.darts ? ' · Ø ' + s.st.avg.toFixed(1) : '');
+      var tip = '<b>' + stDatum(s.at) + '</b>' + (s.gegner ? ' vs. ' + esc(s.gegner) : '') + '<br>' + s.legsWon + ' : ' + s.legsLost + (s.st.darts ? ' · Ø ' + s.st.avg.toFixed(1).replace('.', ',') : '');
       return '<span class="st-pill ' + (s.won ? 'w' : 'l') + '" style="animation-delay:' + (300 + i * 70) + 'ms" data-tip="' + esc(tip) + '">' + (s.won ? 'S' : 'N') + '</span>';
     }).join('');
     var text = '<div class="st-ringtxt"><div class="gross">' + siege + ' : ' + (m.length - siege) + '</div><div>Siege : Niederlagen</div>' +
@@ -17324,12 +17336,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   /* Die sechs Werte einer Summe: Average, First 9, Doppelquote, Streuung
      der Averages (kleiner ist besser), Big Scores je Leg, Siegquote. */
   var ST_RADAR = [
-    ['Scoring', function (s) { return s.avg; }, 30, false, function (v) { return v.toFixed(1); }],
-    ['First 9', function (s) { return s.first9; }, 30, false, function (v) { return v.toFixed(1); }],
-    ['Doppel', function (s) { return s.dbl; }, 50, false, function (v) { return v.toFixed(1) + ' %'; }],
-    ['Konstanz', function (s) { return s.avgs.length > 1 ? s.std : null; }, 14, true, function (v) { return '±' + v.toFixed(1); }],
-    ['Big Scores', function (s) { return s.legs ? s.tonsProLeg : null; }, 3, false, function (v) { return v.toFixed(1) + ' je Leg'; }],
-    ['Siege', function (s) { return s.win; }, 100, false, function (v) { return v.toFixed(0) + ' %'; }]
+    ['Scoring', function (s) { return s.avg; }, 30, false, function (v) { return v.toFixed(1).replace('.', ','); }],
+    ['First 9', function (s) { return s.first9; }, 30, false, function (v) { return v.toFixed(1).replace('.', ','); }],
+    ['Doppel', function (s) { return s.dbl; }, 50, false, function (v) { return v.toFixed(1).replace('.', ',') + ' %'; }],
+    ['Konstanz', function (s) { return s.avgs.length > 1 ? s.std : null; }, 14, true, function (v) { return '±' + v.toFixed(1).replace('.', ','); }],
+    ['Big Scores', function (s) { return s.legs ? s.tonsProLeg : null; }, 3, false, function (v) { return v.toFixed(1).replace('.', ',') + ' je Leg'; }],
+    ['Siege', function (s) { return s.win; }, 100, false, function (v) { return v.toFixed(0).replace('.', ',') + ' %'; }]
   ];
   /* Je Achse der Mittelwert ueber die Spieler (jeder zaehlt gleich). */
   function stRadarMittel(summen) {
@@ -17411,19 +17423,19 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       ringe += '<path d="' + seg(R * 0.93, R, a0, a1) + '" fill="' + (q === null ? '#2a2224' : stQuoteFarbe(q)) + '" stroke="#0d0a0b" stroke-width=".8" class="st-fade" style="animation-delay:' + (500 + i * 45) + 'ms"/>';
       var tp = P(R * 1.075, (a0 + a1) / 2);
       texte += '<text x="' + tp[0].toFixed(1) + '" y="' + (tp[1] + 4).toFixed(1) + '" text-anchor="middle" fill="' + (fav ? ST_FARBE.gold : '#9fb0c4') + '" font-size="' + (R * 0.085).toFixed(1) + '" font-weight="' + (fav ? 800 : 600) + '">' + n + '</text>';
-      treffer += '<path d="' + seg(R * 0.58, R * 1.13, a0, a1) + '" fill="transparent" data-tip="' + esc('<b>D' + n + (fav ? ' ★' : '') + '</b><br>' + (v ? (q * 100).toFixed(1) + ' % (' + v[0] + ' von ' + v[1] + ')' : 'noch nicht geworfen')) + '"/>';
+      treffer += '<path d="' + seg(R * 0.58, R * 1.13, a0, a1) + '" fill="transparent" data-tip="' + esc('<b>D' + n + (fav ? ' ★' : '') + '</b><br>' + (v ? (q * 100).toFixed(1).replace('.', ',') + ' % (' + v[0] + ' von ' + v[1] + ')' : 'noch nicht geworfen')) + '"/>';
     });
     var bv = d['25'], bq = bv && bv[1] ? bv[0] / bv[1] : null;
     var bull = '<circle cx="' + c + '" cy="' + c + '" r="' + (R * 0.1).toFixed(1) + '" fill="#4ade8055"/>' +
-      '<circle cx="' + c + '" cy="' + c + '" r="' + (R * 0.05).toFixed(1) + '" fill="' + (bq === null ? '#2a2224' : stQuoteFarbe(bq)) + '" stroke="#0d0a0b" class="st-fade" style="animation-delay:1.4s" data-tip="' + esc('<b>Bull</b><br>' + (bv ? (bq * 100).toFixed(1) + ' % (' + bv[0] + ' von ' + bv[1] + ')' : 'noch nicht geworfen')) + '"/>';
+      '<circle cx="' + c + '" cy="' + c + '" r="' + (R * 0.05).toFixed(1) + '" fill="' + (bq === null ? '#2a2224' : stQuoteFarbe(bq)) + '" stroke="#0d0a0b" class="st-fade" style="animation-delay:1.4s" data-tip="' + esc('<b>Bull</b><br>' + (bv ? (bq * 100).toFixed(1).replace('.', ',') + ' % (' + bv[0] + ' von ' + bv[1] + ')' : 'noch nicht geworfen')) + '"/>';
     var svg = '<svg class="st-svg st-board" viewBox="0 0 ' + size + ' ' + size + '"><circle cx="' + c + '" cy="' + c + '" r="' + (R * 1.16).toFixed(1) + '" fill="#110d0e" stroke="#2a2224"/><g class="st-growR st-boardfelder">' + felder + '</g>' + ringe + bull + texte + treffer + '</svg>';
     var sortiert = keys.sort(function (a, b) { return d[b][1] - d[a][1]; }).slice(0, 9);
     var favQ = favs.reduce(function (acc, k) { return [acc[0] + (d[k] ? d[k][0] : 0), acc[1] + (d[k] ? d[k][1] : 0)]; }, [0, 0]);
-    var balken = '<div class="st-brow"><div class="t"><b class="fav">★ Finish-Kette gesamt</b><span>' + (favQ[1] ? (favQ[0] / favQ[1] * 100).toFixed(1) + ' % · ' + favQ[0] + '/' + favQ[1] : '–') + '</span></div>' +
+    var balken = '<div class="st-brow"><div class="t"><b class="fav">★ Finish-Kette gesamt</b><span>' + (favQ[1] ? (favQ[0] / favQ[1] * 100).toFixed(1).replace('.', ',') + ' % · ' + favQ[0] + '/' + favQ[1] : '–') + '</span></div>' +
       '<div class="st-track"><div class="st-fill" data-w="' + (favQ[1] ? Math.min(100, favQ[0] / favQ[1] * 100 / 0.6).toFixed(1) : 0) + '" style="background:linear-gradient(90deg,' + ST_FARBE.gold + ',#ff9f3d)"></div></div></div>' +
       sortiert.map(function (k) {
         var h = d[k][0], a = d[k][1], q = h / a, fav = favs.indexOf(k) >= 0;
-        return '<div class="st-brow"><div class="t"><b class="' + (fav ? 'fav' : '') + '">' + (k === '25' ? 'Bull' : 'D' + k) + (fav ? ' ★' : '') + '</b><span>' + (q * 100).toFixed(1) + ' % · ' + h + '/' + a + '</span></div>' +
+        return '<div class="st-brow"><div class="t"><b class="' + (fav ? 'fav' : '') + '">' + (k === '25' ? 'Bull' : 'D' + k) + (fav ? ' ★' : '') + '</b><span>' + (q * 100).toFixed(1).replace('.', ',') + ' % · ' + h + '/' + a + '</span></div>' +
           '<div class="st-track"><div class="st-fill" data-w="' + Math.min(100, q * 100 / 0.6).toFixed(1) + '" style="background:' + stQuoteFarbe(q) + '"></div></div></div>';
       }).join('') +
       '<p class="st-note">Balkenlänge: 60 % Quote = voller Balken. Sortiert nach Anzahl Darts.</p>';
@@ -17455,13 +17467,13 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   }
 
   /* Doppelquote je Monat als weiche Kurve (Catmull-Rom). */
-  function stDblTrendKarte(spiele) {
+  function stDblTrendKarte(spiele, breit) {
     var titel = 'Doppelquote im Verlauf', sub = 'Quote je Monat in Prozent';
     var ms = stMonate(spiele).map(function (e) {
       var a = sum(e.gs, function (s) { return s.st.doubleAttempts; }), h = sum(e.gs, function (s) { return s.st.doubleHits; });
       return { k: e.k, q: a ? h / a * 100 : null, a: a, h: h };
     }).filter(function (q) { return q.q !== null; }).slice(-8);
-    if (ms.length < 2) return stKarte('dbltrend', titel, sub, '<p class="st-leer">Mindestens 2 Monate mit Doppel-Daten nötig.</p>');
+    if (ms.length < 2) return stKarte('dbltrend', titel, sub, '<p class="st-leer">Mindestens 2 Monate mit Doppel-Daten nötig.</p>', breit);
     var W = 340, H = 230, L = 30, R = 14, T = 20, B = 24;
     var max = Math.ceil(Math.max.apply(null, ms.map(function (q) { return q.q; })) / 10) * 10 + 5;
     var min = Math.max(0, Math.floor(Math.min.apply(null, ms.map(function (q) { return q.q; })) / 10) * 10 - 5);
@@ -17477,12 +17489,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       return '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(q.q).toFixed(1) + '" r="5" fill="#0d0a0b" stroke="' + ST_FARBE.gruen + '" stroke-width="2.5" class="st-pt" style="animation-delay:' + (300 + i * 160) + 'ms"/>' +
         '<text x="' + x(i).toFixed(1) + '" y="' + (y(q.q) - 11).toFixed(1) + '" text-anchor="middle" fill="#f2eeee" font-size="10" font-weight="700" class="st-fade" style="animation-delay:' + (500 + i * 160) + 'ms">' + q.q.toFixed(0) + '</text>' +
         '<text x="' + x(i).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" class="st-ax">' + stMonatText(q.k) + '</text>' +
-        '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(q.q).toFixed(1) + '" r="16" fill="transparent" data-tip="' + esc('<b>' + stMonatText(q.k) + '</b><br>' + q.q.toFixed(1) + ' % (' + q.h + ' von ' + q.a + ')') + '"/>';
+        '<circle cx="' + x(i).toFixed(1) + '" cy="' + y(q.q).toFixed(1) + '" r="16" fill="transparent" data-tip="' + esc('<b>' + stMonatText(q.k) + '</b><br>' + q.q.toFixed(1).replace('.', ',') + ' % (' + q.h + ' von ' + q.a + ')') + '"/>';
     }).join('');
     var svg = '<svg class="st-svg" viewBox="0 0 ' + W + ' ' + H + '"><defs><linearGradient id="st-gd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + ST_FARBE.gruen + '" stop-opacity=".4"/><stop offset="1" stop-color="' + ST_FARBE.gruen + '" stop-opacity="0"/></linearGradient></defs>' + grid +
       '<path d="' + dd + 'L' + x(ms.length - 1).toFixed(1) + ' ' + (H - B) + 'L' + x(0).toFixed(1) + ' ' + (H - B) + 'Z" fill="url(#st-gd)" class="st-fade"/>' +
       '<path d="' + dd + '" fill="none" stroke="' + ST_FARBE.gruen + '" stroke-width="3" stroke-linecap="round" class="st-draw"/>' + punkte + '</svg>';
-    return stKarte('dbltrend', titel, sub, svg);
+    return stKarte('dbltrend', titel, sub, svg, breit);
   }
 
   /* Liga, Turnier, Schnell, Solo nebeneinander - unabhaengig vom Modus-Filter,
@@ -17498,7 +17510,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var html = zeilen.map(function (r) {
       return '<div class="st-mrow"><div class="h">' + r.t + '<span>' + plural(r.s.n, 'Spiel', 'Spiele') + '</span></div>' +
         [['Average', r.s.avg, maxAvg * 1.05, 1, ''], ['Doppel', r.s.dbl, 60, 1, ' %'], ['Siege', r.s.win, 100, 0, ' %']].map(function (e) {
-          return '<div class="st-mbar">' + e[0] + '<div class="st-track"><div class="st-fill" data-w="' + (e[1] === null ? 0 : Math.min(100, e[1] / e[2] * 100).toFixed(1)) + '" style="background:' + farbe[r.m] + '"></div></div><b>' + (e[1] === null ? '–' : e[1].toFixed(e[3]) + e[4]) + '</b></div>';
+          return '<div class="st-mbar">' + e[0] + '<div class="st-track"><div class="st-fill" data-w="' + (e[1] === null ? 0 : Math.min(100, e[1] / e[2] * 100).toFixed(1)) + '" style="background:' + farbe[r.m] + '"></div></div><b>' + (e[1] === null ? '–' : e[1].toFixed(e[3]).replace('.', ',') + e[4]) + '</b></div>';
         }).join('') + '</div>';
     }).join('');
     return stKarte('modi', titel, sub, html);
@@ -17506,39 +17518,52 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
   /* 20 Wochen als Kacheln, je Tag die Zahl der Spiele - der Modus-Filter gilt,
      der Zeitraum nicht. */
-  function stKalenderKarte(alle, f) {
+  /* Aktivitaet wie im Entwurf: Kalender ueber 17 / 26 / 30 Wochen (Handy /
+     Tablet / Computer), rechts sechs Kennkacheln (diese Woche, Serie, dieser
+     Monat, laengste Serie, aktivster Tag, Schnitt je Woche). Breite Karte. */
+  function stKalenderKarte(alle, f, titel) {
     var gs = f.modus === 'alle' ? alle : alle.filter(function (s) { return s.modus === f.modus; });
     var cnt = {};
     gs.forEach(function (s) { var k = stTag(s.at); cnt[k] = (cnt[k] || 0) + 1; });
-    /* Breite Karte mit groesseren Kacheln (Julius: "fast noch praesenter"):
-       26 Wochen am Computer, 20 am Handy. */
-    var schmal = window.innerWidth < 700;
-    var wochen = schmal ? 20 : 26, lab = 24, zelle = 14, gap = 3, W = lab + wochen * (zelle + gap), H = 7 * (zelle + gap) + 22;
+    var wochen = window.innerWidth < 700 ? 17 : window.innerWidth < 1100 ? 26 : 30, lab = 22, zelle = 13, gap = 3, W = lab + wochen * (zelle + gap), H = 7 * (zelle + gap) + 22;
     var heute = new Date(); heute.setHours(12, 0, 0, 0);
     var dow = (heute.getDay() + 6) % 7;
     var start = new Date(heute.getTime() - ((wochen - 1) * 7 + dow) * 864e5);
     var svg = ['Mo', '', 'Mi', '', 'Fr', '', 'So'].map(function (t, i) { return t ? '<text x="0" y="' + (i * (zelle + gap) + zelle - 2) + '" class="st-ax">' + t + '</text>' : ''; }).join('');
-    var letzterM = -1, gesamt = 0, tage = 0;
+    var letzterM = -1, gesamt = 0, tage = 0, jeWoche = [], wt = [0, 0, 0, 0, 0, 0, 0];
     for (var wk = 0; wk < wochen; wk++) {
+      var wc = 0;
       for (var d = 0; d < 7; d++) {
         var dt = new Date(start.getTime() + (wk * 7 + d) * 864e5);
         if (dt > heute) continue;
         var k = stTag(dt.getTime()), c = cnt[k] || 0;
-        gesamt += c; if (c) tage++;
+        gesamt += c; wc += c; wt[d] += c; if (c) tage++;
         svg += '<rect x="' + (lab + wk * (zelle + gap)) + '" y="' + (d * (zelle + gap)) + '" width="' + zelle + '" height="' + zelle + '" rx="3" fill="' + (c === 0 ? '#ffffff0a' : c === 1 ? '#e5484d66' : c === 2 ? '#e5484daa' : '#e5484d') + '" class="st-pt" style="animation-delay:' + ((wk + d) * 22) + 'ms"' +
           (c ? ' data-tip="' + esc('<b>' + stDatum(dt.getTime()) + '</b><br>' + plural(c, 'Spiel', 'Spiele')) + '"' : '') + '/>';
         if (d === 0 && dt.getMonth() !== letzterM && dt.getDate() <= 7) { letzterM = dt.getMonth(); svg += '<text x="' + (lab + wk * (zelle + gap)) + '" y="' + (H - 6) + '" class="st-ax">' + ST_MONATE[letzterM] + '</text>'; }
       }
+      jeWoche.push(wc);
     }
-    return stKarte('kalender', 'Aktivität', 'Gespielte Spiele der letzten ' + wochen + ' Wochen', '<svg class="st-svg st-kal" viewBox="0 0 ' + W + ' ' + H + '">' + svg + '</svg>' +
-      '<p class="st-note">' + plural(gesamt, 'Spiel', 'Spiele') + ' an ' + plural(tage, 'Tag', 'Tagen') + ', im Schnitt ' + (gesamt / wochen).toFixed(1) + ' je Woche</p>', 'zwei');
+    /* Serie: Wochen mit Spiel am Stueck bis heute (eine leere laufende Woche bricht sie nicht). */
+    var serie = 0, i;
+    for (i = jeWoche.length - 1; i >= 0; i--) { if (jeWoche[i]) serie++; else if (i === jeWoche.length - 1) continue; else break; }
+    var lang = 0, lauf = 0;
+    jeWoche.forEach(function (w) { if (w) { lauf++; if (lauf > lang) lang = lauf; } else lauf = 0; });
+    var WT = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+    var top = wt.indexOf(Math.max.apply(null, wt));
+    var mk = stMonat(Date.now()), dm = gs.filter(function (s) { return stMonat(s.at) === mk; }).length;
+    var F = ST_FARBE, letzte = jeWoche[jeWoche.length - 1] || 0;
+    var rechts = stMinis([['Diese Woche', letzte, plural(letzte, 'Spiel', 'Spiele'), F.rot], ['Serie', serie, plural(serie, 'Woche', 'Wochen') + ' in Folge', F.gold], ['Diesen Monat', dm, plural(dm, 'Spiel', 'Spiele'), F.blau],
+      ['Längste Serie', lang, 'Wochen am Stück'], ['Aktivster Tag', gesamt ? WT[top].slice(0, 2) : '–', gesamt ? WT[top] : ''], ['Ø je Woche', stFmt(gesamt / wochen, 1), 'Spiele', F.gruen]]);
+    return stKarte('kalender', titel || 'Aktivität', 'Gespielte Spiele der letzten ' + wochen + ' Wochen. ' + plural(gesamt, 'Spiel', 'Spiele') + ' an ' + plural(tage, 'Tag', 'Tagen') + '.',
+      '<div class="st-akt"><svg class="st-svg st-kal" viewBox="0 0 ' + W + ' ' + H + '">' + svg + '</svg>' + rechts + '</div>', true);
   }
 
   /* Head-to-Head: je Gegner Spiele, Bilanz, Legs, eigener Average, Siegquote. */
   function stGegnerKarte(spiele) {
-    var titel = 'Gegnerbilanz', sub = 'Head-to-Head, meistgespielte zuerst';
+    var titel = 'Gegnerbilanz', sub = 'Head-to-Head, meistgespielte zuerst. Siegquote = gewonnene Spiele geteilt durch Spiele gegen diesen Gegner.';
     var m = spiele.filter(function (s) { return s.won !== null && s.gegnerId; });
-    if (!m.length) return stKarte('gegner', titel, sub, '<p class="st-leer">Noch keine Spiele mit Gegner.</p>', true);
+    if (!m.length) return stKarte('gegner', titel, sub, '<p class="st-leer">Noch keine Spiele mit Gegner.</p>', 'zwei');
     var o = {};
     m.forEach(function (s) {
       var x = o[s.gegnerId];
@@ -17550,15 +17575,15 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var alleZeilen = Object.keys(o).map(function (k) { return o[k]; }).sort(function (a, b) { return b.n - a.n || b.w - a.w; });
     /* Die zehn haeufigsten, der Rest klappt auf. */
     var offen = !!statsUI().gegnerAlle, zeilen = offen ? alleZeilen : alleZeilen.slice(0, 10);
-    var html = '<table class="st-tab"><thead><tr><th>Gegner</th><th class="n">Spiele</th><th class="n">Bilanz</th><th class="n">Legs</th><th class="n">Ø</th><th class="n">Siegquote</th></tr></thead><tbody>' +
+    var html = '<table class="st-tab"><thead><tr><th>Gegner</th><th class="n">Spiele</th><th class="n">Siege : Niederl.</th><th class="n">Legs</th><th class="n">Dein Ø</th><th class="n">Siegquote</th></tr></thead><tbody>' +
       zeilen.map(function (x, i) {
-        var q = x.w / x.n * 100, farbe = q >= 50 ? ST_FARBE.gruen : ST_FARBE.rot;
+        var q = x.w / x.n * 100, farbe = q > 50 ? ST_FARBE.gruen : q === 50 ? ST_FARBE.gold : ST_FARBE.rot;
         return '<tr class="st-fade" style="animation-delay:' + (Math.min(i, 12) * 60) + 'ms"><td><b>' + esc(x.name) + '</b>' + (x.team ? '<small>' + esc(x.team) + '</small>' : '') + '</td><td class="n">' + x.n + '</td>' +
-          '<td class="n" style="color:' + farbe + '">' + x.w + ' : ' + (x.n - x.w) + '</td><td class="n">' + x.lw + ' : ' + x.ll + '</td><td class="n">' + (x.darts ? (x.pts / x.darts * 3).toFixed(1) : '–') + '</td>' +
+          '<td class="n" style="color:' + farbe + '">' + x.w + ' : ' + (x.n - x.w) + '</td><td class="n">' + x.lw + ' : ' + x.ll + '</td><td class="n">' + (x.darts ? (x.pts / x.darts * 3).toFixed(1).replace('.', ',') : '–') + '</td>' +
           '<td class="n"><b style="color:' + farbe + '">' + Math.round(q) + ' %</b></td></tr>';
       }).join('') + '</tbody></table>' +
-      (alleZeilen.length > 10 ? '<button type="button" class="st-mehr" data-action="stats-gegner-alle">' + (offen ? 'Nur die zehn häufigsten' : 'Alle ' + alleZeilen.length + ' Gegner anzeigen') + '</button>' : '');
-    return stKarte('gegner', titel, sub, html, true);
+      (alleZeilen.length > 10 ? '<button type="button" class="st-mehr" data-action="stats-gegner-alle">' + (offen ? 'Nur die zehn häufigsten' : 'Weitere ' + (alleZeilen.length - 10) + ' Gegner anzeigen') + '</button>' : '');
+    return stKarte('gegner', titel, sub, html, 'zwei');
   }
 
   /* Bestleistungen mit Datum und Gegner. */
@@ -17574,15 +17599,15 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     spiele.forEach(function (s) { if (s.won === null) return; if (s.won) { lauf++; if (lauf > serie) serie = lauf; } else lauf = 0; });
     var ges = statsSumme(spiele);
     var wo = function (s) { return s ? stDatum(s.at) + (s.gegner ? ' vs. ' + esc(s.gegner) : ' · ' + (STATS_MODUS_TEXT[s.modus] || '')) : ''; };
-    var R = [['Bester Average', ba ? ba.st.avg.toFixed(1) : null, wo(ba)], ['Beste First 9', bf ? bf.st.first9.toFixed(1) : null, wo(bf)], ['Höchstes Finish', hf ? hf.st.highCO : null, wo(hf)],
+    var R = [['Bester Average', ba ? ba.st.avg.toFixed(1).replace('.', ',') : null, wo(ba)], ['Beste First 9', bf ? bf.st.first9.toFixed(1).replace('.', ',') : null, wo(bf)], ['Höchstes Finish', hf ? hf.st.highCO : null, wo(hf)],
       ['Kürzestes Leg', bl ? bl.st.bestLeg + ' Darts' : null, wo(bl)], ['Meiste 180 im Spiel', m180 ? m180.st.s180 : null, wo(m180)],
-      ['Beste Doppelquote', dq ? dq.st.doubleQuote.toFixed(0) + ' %' : null, dq ? wo(dq) + ' (' + dq.st.doubleHits + '/' + dq.st.doubleAttempts + ')' : ''],
+      ['Beste Doppelquote', dq ? dq.st.doubleQuote.toFixed(0).replace('.', ',') + ' %' : null, dq ? wo(dq) + ' (' + dq.st.doubleHits + '/' + dq.st.doubleAttempts + ')' : ''],
       ['Längste Siegesserie', serie || null, 'Spiele in Folge'], ['Spiele gesamt', spiele.length, plural(ges.legs, 'Leg', 'Legs')]];
     var html = R.map(function (r, i) {
       if (r[1] === null || r[1] === undefined) return '';
-      return '<div class="st-rec" style="animation-delay:' + (i * 70) + 'ms"><div class="l">' + r[0] + '</div><div class="v">' + r[1] + '</div><div class="s">' + r[2] + '</div></div>';
+      return '<div class="st-rec" style="animation-delay:' + (i * 70) + 'ms"><div class="v">' + r[1] + '</div><div class="l">' + r[0] + '</div><div class="s">' + r[2] + '</div></div>';
     }).join('');
-    return stKarte('rekorde', 'Rekorde', 'Bestleistungen in der Auswahl', '<div class="st-recs">' + html + '</div>', 'zwei');
+    return stKarte('rekorde', 'Rekorde', 'Bestleistungen in der Auswahl', '<div class="st-recs">' + html + '</div>', true);
   }
 
   /* ---- Tooltip und Animationen ---- */
@@ -17644,10 +17669,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var ziel = Number(el.getAttribute('data-zahl')), dez = Number(el.getAttribute('data-dez')) || 0, suf = el.getAttribute('data-suf') || '';
     if (!isFinite(ziel)) return;
     var t0 = performance.now(), D = 1300;
-    el.textContent = (0).toFixed(dez) + suf;
+    el.textContent = (0).toFixed(dez).replace('.', ',') + suf;
     requestAnimationFrame(function schritt(t) {
       var p = Math.min(1, (t - t0) / D), e = 1 - Math.pow(1 - p, 3);
-      el.textContent = (ziel * e).toFixed(dez) + suf;
+      el.textContent = (ziel * e).toFixed(dez).replace('.', ',') + suf;
       if (p < 1 && el.isConnected) requestAnimationFrame(schritt);
     });
   }
@@ -17677,7 +17702,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     }
     for (i = 0; i < pfade.length; i++) { var len = pfade[i].getTotalLength(); pfade[i].style.strokeDasharray = len; pfade[i].style.strokeDashoffset = len; }
     for (i = 0; i < ringe.length; i++) ringe[i].style.strokeDashoffset = ringe[i].getAttribute('data-voll');
-    for (i = 0; i < zahlen.length; i++) zahlen[i].textContent = (0).toFixed(Number(zahlen[i].getAttribute('data-dez')) || 0) + (zahlen[i].getAttribute('data-suf') || '');
+    for (i = 0; i < zahlen.length; i++) zahlen[i].textContent = (0).toFixed(Number(zahlen[i].getAttribute('data-dez')) || 0).replace('.', ',') + (zahlen[i].getAttribute('data-suf') || '');
     var KARTE = '.st-karte, .st-rang';
     var starten = function (nur) {
       var j;
@@ -17721,10 +17746,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
      Liga-Zahlen kommen aus js/liga-daten.js (Tabelle, Einzelrangliste,
      Highlights aus den Spielberichten), Wuerfe und Averages aus der App. */
   var ST_KZ = [
-    ['avg', 'Average', function (s) { return s.avg; }, function (v) { return v.toFixed(1); }, 'Punkte je 3 Darts über alle Spiele.'],
-    ['first9', 'First 9', function (s) { return s.first9; }, function (v) { return v.toFixed(1); }, 'Average der ersten 9 Darts eines Legs.'],
-    ['dbl', 'Doppelquote', function (s) { return s.dbl; }, function (v) { return v.toFixed(1) + ' %'; }, 'Getroffene Finishes je Dart auf ein mögliches Doppel.'],
-    ['win', 'Siegquote', function (s) { return s.win; }, function (v) { return v.toFixed(0) + ' %'; }, 'Anteil gewonnener Spiele mit Gegner.'],
+    ['avg', 'Average', function (s) { return s.avg; }, function (v) { return v.toFixed(1).replace('.', ','); }, 'Punkte je 3 Darts über alle Spiele.'],
+    ['first9', 'First 9', function (s) { return s.first9; }, function (v) { return v.toFixed(1).replace('.', ','); }, 'Average der ersten 9 Darts eines Legs.'],
+    ['dbl', 'Doppelquote', function (s) { return s.dbl; }, function (v) { return v.toFixed(1).replace('.', ',') + ' %'; }, 'Getroffene Finishes je Dart auf ein mögliches Doppel.'],
+    ['win', 'Siegquote', function (s) { return s.win; }, function (v) { return v.toFixed(0).replace('.', ',') + ' %'; }, 'Anteil gewonnener Spiele mit Gegner.'],
     ['c180', '180er', function (s) { return s.c180; }, function (v) { return String(v); }, 'Maximum: alle drei Darts in die Triple 20.'],
     ['hf', 'Höchstes Finish', function (s) { return s.hf || null; }, function (v) { return String(v); }, 'Der höchste je ausgecheckte Rest.'],
     ['bl', 'Bestes Leg', function (s) { return s.bl; }, function (v) { return v + ' Darts'; }, 'Wenigste Darts für ein gewonnenes 501er-Leg.', true]
@@ -17733,7 +17758,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     ['punkte', 'Punkte', function (z) { return z.punkte; }, function (v) { return String(v); }],
     ['won', 'Siege', function (z) { return z.siege; }, function (v) { return String(v); }],
     ['legs', 'Legs', function (z) { return z.lf; }, function (v) { return String(v); }],
-    ['quote', 'Siegquote', function (z) { return z.siege + z.nied >= 2 ? z.siege / (z.siege + z.nied) * 100 : null; }, function (v) { return v.toFixed(0) + ' %'; }]
+    ['quote', 'Siegquote', function (z) { return z.siege + z.nied >= 2 ? z.siege / (z.siege + z.nied) * 100 : null; }, function (v) { return v.toFixed(0).replace('.', ',') + ' %'; }]
   ];
   var stLigaCache = null;   // Liga-Daten einmal je Zeichnen
 
@@ -17795,7 +17820,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   }
   /* Kennzahl-Kacheln: [Titel, Wert, Dezimalen, Einheit, Farbe, Zeile darunter]. */
   function stKpiHtml(kpis) {
-    return '<div class="st-kpis">' + kpis.map(function (k, i) {
+    return '<div class="st-kpis" style="--n:' + kpis.length + ';--h:' + Math.ceil(kpis.length / 2) + '">' + kpis.map(function (k, i) {
       var leer = k[1] === null || k[1] === undefined || !isFinite(k[1]);
       return '<div class="st-kpi" style="--c:' + k[4] + ';animation-delay:' + (i * 60) + 'ms"><span class="l">' + k[0] + '</span>' +
         '<span class="v">' + (leer ? '–' : '<span class="z" data-zahl="' + k[1] + '" data-dez="' + k[2] + '">' + stFmt(k[1], k[2]) + '</span>' + (k[3] ? '<small>' + k[3] + '</small>' : '')) + '</span>' +
@@ -17877,11 +17902,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
        fremde Profile sieht niemand (Julius, 12.11.). */
     var kopf = stWer('person', avatarHTML(p, 'md'), esc(p.name) + (p.id === eigeneKontoId() ? ' <em>(du)</em>' : ''),
       (istGastProfil(p) ? 'Gast' : 'Mitglied ' + esc(LIGA.team)) + ' · ' + plural(ges ? ges.matches : 0, 'Spiel', 'Spiele') + ' mit Gegner',
-      bearbeitbar(p.id) ? '<button type="button" class="st-knopf" data-action="open-profile" data-id="' + esc(p.id) + '">Profil ›</button>' : '');
+      bearbeitbar(p.id) ? '<button type="button" class="st-knopf" data-action="open-profile" data-id="' + esc(p.id) + '">' + (p.id === eigeneKontoId() ? 'Mein Profil ›' : 'Profil ›') + '</button>' : '');
     /* Steht die Person nicht im Kader, bekommt sie vorn ihren eigenen Chip. */
     if (!crew.some(function (x) { return x.id === p.id; })) crew = [p].concat(crew);
     var chips = '<div class="st-chips st-spieler">' + crew.map(function (x) {
-      return stChip('stats-spieler', x.id, '<i class="st-dot" style="background:' + playerColor(x.id) + '"></i>' + esc(x.name), x.id === p.id, istGastProfil(x) ? ' <small>Gast</small>' : '');
+      return stChip('stats-spieler', x.id, avatarHTML(x, 'xs') + esc(x.name), x.id === p.id, istGastProfil(x) ? ' <small>Gast</small>' : '');
     }).join('') + '</div>';
     return statsDashboardHtml(p, { kopf: kopf + chips, alle: alle });
   }
@@ -17907,10 +17932,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     bl = bl.length ? Math.min.apply(null, bl) : null;
     html += stMinis([
       z ? ['Punkte', z.punkte, 'Einzelrangliste', ST_FARBE.gold] : null,
-      z ? ['Einzel', z.siege + ' : ' + z.nied, q === null ? '' : q.toFixed(0) + ' % gewonnen', q >= 50 ? ST_FARBE.gruen : ST_FARBE.rot] : null,
+      z ? ['Einzel', z.siege + ' : ' + z.nied, q === null ? '' : q.toFixed(0).replace('.', ',') + ' % gewonnen', q >= 50 ? ST_FARBE.gruen : ST_FARBE.rot] : null,
       z ? ['Legs', z.lf + ' : ' + z.la] : null,
-      ls && ls.darts ? ['Liga-Ø', ls.avg.toFixed(1), 'aus der App', ST_FARBE.blau] : null,
-      ls && ls.doubleAttempts ? ['Doppelquote', ls.doubleQuote.toFixed(1) + ' %', ls.doubleHits + ' von ' + ls.doubleAttempts, ST_FARBE.gruen] : null,
+      ls && ls.darts ? ['Liga-Ø', ls.avg.toFixed(1).replace('.', ','), 'aus der App', ST_FARBE.blau] : null,
+      ls && ls.doubleAttempts ? ['Doppelquote', ls.doubleQuote.toFixed(1).replace('.', ',') + ' %', ls.doubleHits + ' von ' + ls.doubleAttempts, ST_FARBE.gruen] : null,
       s180 ? ['180er', s180, '', ST_FARBE.rot] : null,
       hoch ? ['Höchstes Finish', hoch] : null,
       bl ? ['Bestes Leg', bl + ' Darts'] : null
@@ -17956,20 +17981,20 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var F = ST_FARBE;
     var arten = [
       { k: 'cricket', t: 'Cricket', n: st.cricketGames,
-        top: [['Spiele', st.cricketGames], ['Siege', st.cricketWins], ['MPR', st.cricketDarts ? st.mpr.toFixed(1) : '–', 'Marken je 3 Darts', F.blau]],
+        top: [['Spiele', st.cricketGames], ['Siege', st.cricketWins], ['MPR', st.cricketDarts ? st.mpr.toFixed(1).replace('.', ',') : '–', 'Marken je 3 Darts', F.blau]],
         mehr: [['Siegquote', st.cricketGames ? Math.round(st.cricketWins / st.cricketGames * 100) + ' %' : '–'], ['Marken gesamt', st.cricketMarks], ['Darts', st.cricketDarts]] },
       { k: 'rtw', t: 'Round the World', n: st.rtwGames,
         top: [['Spiele', st.rtwGames], ['Siege', st.rtwWins], ['Bestes', st.rtwBest ? st.rtwBest + ' Darts' : '–', 'kompletter Durchlauf', F.gold]],
         mehr: [['Siegquote', st.rtwGames ? Math.round(st.rtwWins / st.rtwGames * 100) + ' %' : '–']] },
       { k: 'finisher', t: 'Finisher', n: st.finGames,
-        top: [['Spiele', st.finGames], ['Siege', st.finWins], ['Ø Darts', st.finRounds ? st.finAvgDarts.toFixed(1) : '–', 'je Finish', F.gruen]],
+        top: [['Spiele', st.finGames], ['Siege', st.finWins], ['Ø Darts', st.finRounds ? st.finAvgDarts.toFixed(1).replace('.', ',') : '–', 'je Finish', F.gruen]],
         mehr: [['Gewonnene Runden', st.finRounds], ['Schnellstes', st.finBest ? plural(st.finBest, 'Dart', 'Darts') : '–'], ['Höchste Zahl', st.finHigh || '–']] },
       { k: 'kaiwen', t: 'Kaiwen', n: st.kwGames,
         top: [['Spiele', st.kwGames], ['PB Solo', st.kwBestSolo !== null ? st.kwBestSolo : '–', '', F.gold], ['PB Team', st.kwBestTeam !== null ? st.kwBestTeam : '–']],
-        mehr: [['Checks', st.kwChecks], ['Versuche', st.kwVersuche], ['Check-Quote', st.kwVersuche ? st.kwQuote.toFixed(0) + ' %' : '–']] },
+        mehr: [['Checks', st.kwChecks], ['Versuche', st.kwVersuche], ['Check-Quote', st.kwVersuche ? st.kwQuote.toFixed(0).replace('.', ',') + ' %' : '–']] },
       { k: 'hunter', t: 'Hunter', n: st.huGames,
         top: [['Spiele', st.huGames], ['Siege', st.huWins], ['Fänge', st.huFaenge, '', F.rot]],
-        mehr: [['MPR', st.huDarts ? st.huMpr.toFixed(1) : '–', 'Treffer je 3 Darts'], ['Trefferquote', st.huDarts ? st.huQuote.toFixed(0) + ' %' : '–'],
+        mehr: [['MPR', st.huDarts ? st.huMpr.toFixed(1).replace('.', ',') : '–', 'Treffer je 3 Darts'], ['Trefferquote', st.huDarts ? st.huQuote.toFixed(0).replace('.', ',') + ' %' : '–'],
           ['Solo Normal', st.huBest.normal !== null ? plural(st.huBest.normal, 'Dart', 'Darts') : '–'], ['Solo Boost', st.huBest.boost !== null ? plural(st.huBest.boost, 'Dart', 'Darts') : '–']] }
     ].filter(function (a) { return a.n > 0; });
     if (!arten.length) return stKarte('spielarten', titel, sub, '<p class="st-leer">Noch nichts außer X01 gespielt.</p>', 'zwei');
@@ -18005,12 +18030,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       return zl(stDatum(m.at || e.at) + ' · ' + esc(opp.map(pname).join(' / ')), '<span style="color:' + (win ? ST_FARBE.gruen : ST_FARBE.rot) + '">' + (win ? 'Sieg ' : 'Niederlage ') + legsWon(m, p.id) + ':' + fremd + '</span>');
     });
     return stKarte('zahlen', 'Alle Zahlen', 'Gesamtwerte über sämtliche Classic-Spiele, dazu die letzten Spiele', '<div class="st-zahlen">' +
-      gr('Scoring', [zl('3-Dart-Average', st.darts ? st.avg.toFixed(1) : '–'), zl('First-9-Average', st.first9Darts ? st.first9.toFixed(1) : '–'), zl('Höchste Aufnahme', st.highScore || '–'),
+      gr('Scoring', [zl('3-Dart-Average', st.darts ? st.avg.toFixed(1).replace('.', ',') : '–'), zl('First-9-Average', st.first9Darts ? st.first9.toFixed(1).replace('.', ',') : '–'), zl('Höchste Aufnahme', st.highScore || '–'),
         zl('180er', st.s180), zl('140 – 179', st.s140), zl('100 – 139', st.s100), zl('60 – 99', st.s60), zl('Aufnahmen gesamt', st.visits), zl('Darts geworfen', st.darts)]) +
-      gr('Finishing', [zl('Doppelquote', st.doubleAttempts ? st.doubleQuote.toFixed(1) + ' %' : '–'), zl('Doppelversuche', st.doubleAttempts), zl('Checkouts', st.checkouts),
+      gr('Finishing', [zl('Doppelquote', st.doubleAttempts ? st.doubleQuote.toFixed(1).replace('.', ',') + ' %' : '–'), zl('Doppelversuche', st.doubleAttempts), zl('Checkouts', st.checkouts),
         zl('Höchstes Finish', st.highCO || '–'), zl('Finishes ab 100', st.highFinishes), zl('Bestes Leg', st.bestLeg ? st.bestLeg + ' Darts' : '–'),
-        zl('Ø Darts je gewonnenem Leg (501)', st.dartsPerLeg ? st.dartsPerLeg.toFixed(1) : '–')]) +
-      gr('Bilanz', [zl('Spiele', st.matches), zl('Siege / Niederlagen', st.won + ' / ' + st.lost), zl('Siegquote', st.matches ? st.winPct.toFixed(0) + ' %' : '–'),
+        zl('Ø Darts je gewonnenem Leg (501)', st.dartsPerLeg ? st.dartsPerLeg.toFixed(1).replace('.', ',') : '–')]) +
+      gr('Bilanz', [zl('Spiele', st.matches), zl('Siege / Niederlagen', st.won + ' / ' + st.lost), zl('Siegquote', st.matches ? st.winPct.toFixed(0).replace('.', ',') + ' %' : '–'),
         zl('Legs gewonnen / verloren', st.legsWon + ' / ' + st.legsLost), zl('Turniere gespielt', st.tournaments), zl('Turniersiege', st.tourWins)].concat(st.ligaTage ? [zl('Ligaspieltage', st.ligaTage)] : [])) +
       gr('Letzte Spiele', letzte.length ? letzte : ['<p class="st-leer">Noch keine Spiele.</p>']) + '</div>', true);
   }
@@ -18136,7 +18161,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var html = er.length ? '<div class="st-kliste">' + er.map(function (z, i) {
       var p = wir ? stProfilZuName(z.name) : null, ls = p && cl ? cl[p.id] : null, q = z.siege + z.nied ? z.siege / (z.siege + z.nied) : 0;
       var innen = '<span class="st-krang">' + z.platz + '.</span><span class="st-kname"><b>' + esc(z.name) + (z.gast ? '<span class="st-gast">Gast</span>' : '') + '</b>' +
-        '<small>Einzel ' + z.siege + ' : ' + z.nied + ' · Legs ' + z.lf + ':' + z.la + (ls && ls.darts ? ' · Ø ' + ls.avg.toFixed(1) : '') + '</small></span>' +
+        '<small>Einzel ' + z.siege + ' : ' + z.nied + ' · Legs ' + z.lf + ':' + z.la + (ls && ls.darts ? ' · Ø ' + ls.avg.toFixed(1).replace('.', ',') : '') + '</small></span>' +
         stBalken(z.punkte / mP * 100, stQuoteFarbe(q * 0.6)) + '<span class="st-kwert">' + z.punkte + '</span>';
       return p ? '<button type="button" class="st-krow" style="animation-delay:' + (i * 50) + 'ms" data-action="stats-person" data-wert="' + esc(p.id) + '">' + innen + '</button>'
         : '<div class="st-krow" style="animation-delay:' + (i * 50) + 'ms">' + innen + '</div>';
@@ -18222,7 +18247,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       ['180er', s.c180, 0, '', F.rot, s.c140 + '× 140+ · ' + s.c100 + '× 100+'],
       ['Höchstes Finish', s.hf || null, 0, '', F.gold, s.bl ? 'bestes Leg ' + s.bl + ' Darts' : '']
     ]);
-    return h + '<div class="st-raster">' + stKaderVergleichKarte(je) + stKalenderKarte(eindeutig, { modus: 'alle', bereich: 0 }) + stCrewFormKarte(alle, eindeutig) + stBigKarte(alle) + stDblTrendKarte(alle) + '</div>';
+    return h + '<div class="st-raster">' + stKaderVergleichKarte(je) + stCrewFormKarte(alle, eindeutig) + stKalenderKarte(eindeutig, { modus: 'alle', bereich: 0 }, 'Aktivität der Crew') + stBigKarte(alle) + stDblTrendKarte(alle, 'zwei') + '</div>';
   }
   function stKaderVergleichKarte(je) {
     var st = statsUI(), d = ST_KZ.filter(function (k) { return k[0] === st.kader; })[0] || ST_KZ[0];
@@ -18235,7 +18260,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var liste = rows.length ? '<div class="st-kliste">' + rows.map(function (r, i) {
       var v = d[2](r.s), a = d[5] ? best / v : best - lo ? (v - lo) / (best - lo) : (v > 0 ? 1 : 0);
       return '<button type="button" class="st-krow" style="animation-delay:' + (i * 50) + 'ms" data-action="stats-person" data-wert="' + esc(r.p.id) + '"><span class="st-krang' + (i < 3 ? ' m' + (i + 1) : '') + '">' + (i + 1) + '</span>' +
-        '<span class="st-kname"><b><i class="st-dot" style="background:' + playerColor(r.p.id) + '"></i>' + esc(r.p.name) + '</b><small>' + plural(r.s.matches, 'Spiel', 'Spiele') + ' mit Gegner</small></span>' +
+        '<span class="st-kname"><b>' + avatarHTML(r.p, 'xs') + esc(r.p.name) + '</b><small>' + plural(r.s.matches, 'Spiel', 'Spiele') + ' mit Gegner</small></span>' +
         stBalken(a * 100, playerColor(r.p.id)) + '<span class="st-kwert">' + d[3](v) + '</span></button>';
     }).join('') + '</div>' : '<p class="st-leer">Dafür fehlen noch Daten.</p>';
     return stKarte('kadervergleich', 'Kader im Vergleich', d[4] + ' Tipp öffnet die Person.', chips + liste, 'zwei');
@@ -18261,7 +18286,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       var x = L + i * bw + bw * 0.22, w = bw * 0.56;
       s += '<rect x="' + x.toFixed(1) + '" y="' + y(q.n).toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + (y(0) - y(q.n)).toFixed(1) + '" rx="4" fill="#ffffff1a" class="st-growY" style="animation-delay:' + (i * 80) + 'ms"/>' +
         '<text x="' + (x + w / 2).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" class="st-ax">' + stMonatText(q.k) + '</text>' +
-        '<rect x="' + (L + i * bw).toFixed(1) + '" y="' + T + '" width="' + bw.toFixed(1) + '" height="' + (H - T - B) + '" fill="transparent" data-tip="' + esc('<b>' + stMonatText(q.k) + '</b><br>' + plural(q.n, 'Spiel', 'Spiele') + '<br>Team-Ø ' + q.avg.toFixed(1)) + '"/>';
+        '<rect x="' + (L + i * bw).toFixed(1) + '" y="' + T + '" width="' + bw.toFixed(1) + '" height="' + (H - T - B) + '" fill="transparent" data-tip="' + esc('<b>' + stMonatText(q.k) + '</b><br>' + plural(q.n, 'Spiel', 'Spiele') + '<br>Team-Ø ' + q.avg.toFixed(1).replace('.', ',')) + '"/>';
     });
     var pts = d.map(function (q, i) { return [L + i * bw + bw / 2, ya(q.avg)]; });
     s += '<path d="' + stLinie(pts) + '" fill="none" stroke="' + F.blau + '" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="st-draw"/>' +

@@ -6570,18 +6570,18 @@ check('die Summe: vier Ligaspiele, Average punktgenau, Doppelquote 4 von 10, Sie
   dash.liga.n === 4 && dash.liga.matches === 4 && dash.liga.win === 50 && dash.liga.hits === 4 && dash.liga.att === 10 && dash.liga.avg > 100, JSON.stringify(dash.liga));
 
 await page.evaluate((id) => { const D = window.__dart; D.ui().profile = id; D.ui().profilPanel = 'stats'; D.ui().statsFilter = null; D.setScreen('profile'); }, dash.me);
-check('die Tafel oeffnet mit dem Dashboard: Filter-Chips, sieben Kennzahlen, dreizehn Karten',
+check('die Tafel oeffnet mit dem Dashboard: Filter-Chips, acht Kennzahlen, dreizehn Karten',
   await visible('#profile-detail .st-dash') && (await page.locator('#profile-detail .st-chip').count()) >= 6 &&
-  (await page.locator('#profile-detail .st-kpi').count()) === 7 && (await page.locator('#profile-detail .st-karte').count()) === 13);
+  (await page.locator('#profile-detail .st-kpi').count()) === 8 && (await page.locator('#profile-detail .st-karte').count()) === 13);
 /* Karten animieren erst, wenn sie ins Bild scrollen - fuer die Pruefung jede einmal ins Bild holen. */
 const insBild = async (sel, ms) => { await page.locator(sel).scrollIntoViewIfNeeded(); await page.waitForTimeout(ms || 2100); };
 const kpiText = (await text('#profile-detail .st-kpis')).toLowerCase();
 check('Kennzahlen: Average, First 9, Doppelquote, Siegquote, 180er, hoechstes Finish, bestes Leg mit Vergleich',
   ['ø 3-dart-average', 'first 9', 'doppelquote', 'siegquote', '180er', 'höchstes finish', 'bestes leg', 'vs. letzte 10'].every((t) => kpiText.includes(t)), kpiText.slice(0, 200));
 await page.waitForTimeout(1700);
-check('die Zahlen zaehlen hoch und stehen dann am Ziel (eine Nachkommastelle)', await page.evaluate(() => {
+check('die Zahlen zaehlen hoch und stehen dann am Ziel (eine Nachkommastelle, Komma)', await page.evaluate(() => {
   const v = document.querySelector('#profile-detail .st-kpi .v .z');
-  return Math.abs(parseFloat(v.textContent) - parseFloat(v.getAttribute('data-zahl'))) < 0.06 && /^\d+\.\d$/.test(v.textContent.trim());
+  return Math.abs(parseFloat(v.textContent.replace(',', '.')) - parseFloat(v.getAttribute('data-zahl'))) < 0.06 && /^\d+,\d$/.test(v.textContent.trim());
 }));
 await insBild('#st-avg');
 check('Average-Verlauf: Linie gezogen, gleitender Schnitt, Trendlinie, bester Punkt, Legende', await page.evaluate(() => {
@@ -6629,7 +6629,7 @@ check('ueber dem Average-Verlauf nennt der Tooltip Spiel und Schnitt, der Cursor
 }));
 await page.locator('#profile-detail .st-chip[data-wert="liga"]').click();
 check('Filter Liga: nur die vier Ligaspiele, Kennzahl und Gegnerbilanz folgen',
-  (await text('#profile-detail .st-kpi:nth-child(6)')).includes('4 Spiele') && (await page.locator('#profile-detail .st-chip.on[data-wert="liga"]').count()) === 1);
+  (await page.locator('#profile-detail .st-kpi:nth-child(8) .z').getAttribute('data-zahl')) === '4' && (await page.locator('#profile-detail .st-chip.on[data-wert="liga"]').count()) === 1);
 await page.locator('#profile-detail .st-chip[data-wert="10"]').click();
 check('Letzte 10 dazu: beide Filter bleiben beim Neuzeichnen gewaehlt',
   (await page.locator('#profile-detail .st-chip.on[data-wert="10"]').count()) === 1 && (await page.locator('#profile-detail .st-chip.on[data-wert="liga"]').count()) === 1);
@@ -6675,13 +6675,13 @@ check('die Person: Wer-Karte mit Profilbild und Namen, Spieler-Chips, der Gewaeh
     const avg = k.length && k[0].querySelector('.z') ? k[0].querySelector('.z').textContent.trim() : '';
     return { avg: avg, davor: k.some((x) => /letzte \d+ vs\. davor/.test(x.textContent)), einzel: k.some((x) => /nur aus Einzel-Darts/.test(x.textContent)), n: k.length };
   });
-  check('Kennzahlen mit einer Nachkommastelle, der Vergleich heisst "vs. letzte 10" (oder fehlt bei wenigen Spielen)',
-    /^\d+\.\d$/.test(z.avg) && !z.davor && !z.einzel, JSON.stringify(z));
+  check('Kennzahlen mit einer Nachkommastelle und Komma, der Vergleich heisst "vs. letzte 10" (oder fehlt bei wenigen Spielen)',
+    /^\d+,\d$/.test(z.avg) && !z.davor && !z.einzel, JSON.stringify(z));
 }
-check('Spielerprofil: der Spieler in Rot gegen den Rest des Teams in Blau, Gegnerbilanz mit Prozentzahl, Aktivitaet ueber zwei Spalten', await page.evaluate(() => {
+check('Spielerprofil: der Spieler in Rot gegen den Rest des Teams in Blau, Gegnerbilanz mit Prozentzahl, Aktivitaet ueber die ganze Breite mit Kennkacheln', await page.evaluate(() => {
   const r = document.getElementById('st-radar'), g = document.getElementById('st-gegner'), k = document.getElementById('st-kalender');
   return r.textContent.includes('Rest des Teams') && r.querySelectorAll('polygon').length >= 6 && !!g && !g.querySelector('.st-track') && /\d+ %/.test(g.querySelector('tbody td:last-child').textContent) && getComputedStyle(g.querySelector('tbody td.n')).whiteSpace === 'nowrap' &&
-    !!k && k.classList.contains('zwei') && document.getElementById('st-spielarten').classList.contains('zwei');
+    !!k && k.classList.contains('breit') && k.querySelectorAll('.st-mini').length === 6 && document.getElementById('st-spielarten').classList.contains('zwei');
 }));
 check('weitere Spielarten: je gespielter Art ein Kopf mit drei Kennzahlen, zugeklappt', await page.evaluate((e) => {
   const arten = [...document.querySelectorAll('#st-spielarten .st-art')];
@@ -6918,8 +6918,8 @@ await gruppe('Allein im Punkte-Modus: die Restzahl fuellt die Karte - quer am iP
   /* Handy quer: die Aufnahme-Box steht direkt ueber den drei Feldern. Die
      alte Zahl faehrt im Drehrad nach unten - sie bleibt in der Box und legt
      sich nicht ueber die Kacheln (Julius, 12.11., Screenshot). Die Seiten-
-     polster messen sich an der Schutzzone (Insel quer): im Spiel ohne Inset
-     0 (body.rand-aus), sonst 12 px - so parst der Browser die Ausdruecke. */
+     polster des body messen sich an der Schutzzone (Insel quer); ohne
+     Inset bleiben es 12 px - so parst der Browser den max()-Ausdruck. */
   await page.setViewportSize({ width: 844, height: 390 });
   await page.waitForTimeout(150);
   await page.keyboard.type('60'); await page.keyboard.press('Enter');
