@@ -17060,7 +17060,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (!UI.statsFilter) UI.statsFilter = { modus: 'alle', bereich: 0 };
     return UI.statsFilter;
   }
-  function stZahl(v, dez) { return (v === null || v === undefined || !isFinite(v)) ? '–' : Number(v).toFixed(dez === undefined ? 1 : dez); }
+  function stFmt(v, dez) { return (v === null || v === undefined || !isFinite(v)) ? '–' : Number(v).toFixed(dez === undefined ? 1 : dez); }
   function stDatum(ts) { var d = new Date(ts); return d.getDate() + '. ' + ST_MONATE[d.getMonth()] + ' ' + String(d.getFullYear()).slice(2); }
   function stMonat(ts) { var d = new Date(ts); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2); }
   function stMonatText(k) { return ST_MONATE[Number(k.slice(5, 7)) - 1] + ' ' + k.slice(2, 4); }
@@ -17808,7 +17808,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return '<div class="st-kpis">' + kpis.map(function (k, i) {
       var leer = k[1] === null || k[1] === undefined || !isFinite(k[1]);
       return '<div class="st-kpi" style="--c:' + k[4] + ';animation-delay:' + (i * 60) + 'ms"><span class="l">' + k[0] + '</span>' +
-        '<span class="v">' + (leer ? '–' : '<span class="z" data-zahl="' + k[1] + '" data-dez="' + k[2] + '">' + stZahl(k[1], k[2]) + '</span>' + (k[3] ? '<small>' + k[3] + '</small>' : '')) + '</span>' +
+        '<span class="v">' + (leer ? '–' : '<span class="z" data-zahl="' + k[1] + '" data-dez="' + k[2] + '">' + stFmt(k[1], k[2]) + '</span>' + (k[3] ? '<small>' + k[3] + '</small>' : '')) + '</span>' +
         '<span class="d">' + (k[5] || '') + '</span></div>';
     }).join('') + '</div>';
   }
