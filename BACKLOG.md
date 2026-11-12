@@ -4,16 +4,12 @@
 
 ## Wartet auf Julius
 
-- [ ] DRT-041 Deploy von DRT-039 (Commit b3edd47c, Cache v191) freigeben oder selbst anstoßen: der Deploy-Befehl wurde im Auto-Modus geblockt (`cd ~/projects/darts-app && DARTS_SKIP_TESTS=1 bash deploy/deploy.sh` in WSL; Tests sind im Commit-Stand grün, 1436 Prüfungen) · von:Claude · am:2026-11-12
-- [ ] DRT-040 Screenshot „Schnelles X01, 44 | 22, D20 15 12 auf 32“ (12.11.): Julius sagt „rechnet komplett falsch“. Die Zahlen im Bild passen zueinander (Rest 99 vor der Aufnahme, D20 und 15 geworfen = 44 live; mit einem Dart ist 44 nicht zu beenden, D22 gibt es nicht, daher Stellwurf 12 auf 32; die kleine 22 ist die vorige Aufnahme, nicht die laufende; Ø 52,7 = 457 Punkte durch 26 Darts). Bitte sagen, welche Zahl falsch war und was stattdessen erwartet wurde, zum Beispiel: Rest vor der Aufnahme, geworfene Darts, Vorschlag, oder soll die kleine Zahl während der Aufnahme die Summe der bisherigen Darts (55) zeigen statt der letzten Aufnahme? · von:Julius · am:2026-11-12
-
-- [ ] DRT-026 Doppel-Fehlwürfe im Punkte-Modus: das Finish-Doppel wird seit DRT-035 erfragt, Fehlwürfe aufs Doppel in Aufnahmen ohne Finish (Rest 50 oder gerade bis 40) kennt die App weiter nicht – kurz „Darts aufs Doppel 0/1/2/3“ fragen? bitte ja/nein · von:Julius · am:2026-11-10
-
-- [ ] DRT-002 Backup prüfen: auf dem Server `crontab -l` ansehen (läuft `/opt/dart-turnier/backup.sh` täglich 04:30?) und einmal einen Restore nach DEPLOY.md „Backup“ üben · prio:hoch · von:Audit H7/S-M6 · am:2026-11-08
+- [ ] DRT-042 Statistik › Einzel und › Mannschaft am iPad ansehen (Stand fd806950 ist live) und sagen, ob es dem Entwurf „Darts Statistik“ entspricht · von:Claude · am:2026-11-12
 - [ ] DRT-004 Brevo-Schlüssel aus dem Sitzungs-Transkript schwärzen (Befehl steht im Chat vom 08.11.); Erneuern bei Brevo hast du bewusst nicht gewollt · am:2026-11-08
-- [ ] DRT-017 iPhone: App einmal vom Home-Bildschirm löschen und neu hinzufügen, damit die Statusleiste ohne Glas-Blur kommt (Meta-Tag ist raus, iOS liest das nur beim Hinzufügen) · prio:hoch · von:Julius · am:2026-11-08
 
 ## Offen
+
+- [ ] DRT-040 Einzel-Darts-Eingabe verständlicher machen (Julius 12.11., Screenshot „44 | 22, D20 15 12 auf 32“): Julius konnte nicht erkennen, welche der drei Felder schon geworfen und eingetragen waren und welches der Vorschlag ist; die Zahlen selbst stimmten (Rest 99 → D20, 15 → 44 live, Stellwurf 12 auf 32, die kleine 22 ist die vorige Aufnahme). Zählen an der Tastatur und die Anzeigen der Karte noch einmal als UI durchdenken: geworfene Darts klar von Vorschlägen trennen (z. B. Zählstand „2 von 3 Darts“, Summe der Aufnahme statt vorige Aufnahme, Vorschlagskacheln deutlicher als Vorschlag gestalten), Entwurf vor dem Bau mit Julius abstimmen · von:Julius · am:2026-11-12
 
 - [ ] DRT-025 Training umbauen: Zusagen Bin dabei / Kann nicht plus „Noch keine Antwort“ (kein Unsicher), Übungs-Ligaspiel raus, rechts Trainingsstatistik aus den Zusagen (Abende, wer wie oft dabei, Anteil, Serien, Rekordabend, Ø Leute, Spiele am Dienstag) – Deploy erst nach dem Ligaspiel am 10.11., solange braucht Julius das Übungsspiel zum Proben · von:Julius · am:2026-11-10
 
@@ -36,6 +32,10 @@
 
 ## Erledigt
 
+- [x] DRT-041 Deploy von DRT-039 und DRT-038 zusammen (Stand fd806950, Cache v192) nach Freigabe von Julius ausgeführt, Rauchprobe ping 200, live liefert v192 · von:Claude · am:2026-11-12 · fertig:2026-11-12
+- [x] DRT-026 Doppel-Fehlwürfe im Punkte-Modus: Entscheidung Julius 12.11.: nein, keine Frage „Darts aufs Doppel 0/1/2/3“; die Doppelquote bleibt aus Einzel-Darts und den erfragten Finish-Doppeln · von:Julius · am:2026-11-10 · fertig:2026-11-12
+- [x] DRT-002 Backup geprüft (Julius 12.11.): crontab auf dem Server angesehen, Restore nach DEPLOY.md „Backup“ geübt · prio:hoch · von:Audit H7/S-M6 · am:2026-11-08 · fertig:2026-11-12
+- [x] DRT-017 iPhone: App vom Home-Bildschirm gelöscht und neu hinzugefügt, Statusleiste ohne Glas-Blur (Julius 12.11.) · prio:hoch · von:Julius · am:2026-11-08 · fertig:2026-11-12
 - [x] DRT-038 Statistik-Reiter näher an den Entwurf „Darts Statistik“ (Artefakt, Stand 12.11.) bringen, Julius findet den Entwurf besser getroffen; Ausnahme: der Block „Doppel erfassen“ aus dem Entwurf ist Quatsch und bleibt draußen. Umgesetzt: Kartentitel in Barlow statt Anton-Versalien, Aktivität nach oben mit sechs Kennkacheln, Average zwei Drittel neben Form, Rekorde als eine Reihe mit Zahl über Beschriftung, Gegnerbilanz neben Liga-Bilanz, Spiele-Kachel in den Kennzahlen, Chips mit Profilbild und weißem Aktiv-Ring statt blauer Füllung, Komma und eine Nachkommastelle überall (Rangliste je Spielart zeigt noch 45.03), Lücke neben „Doppelquote im Verlauf“ auf Ebene Mannschaft schließen, Abschnittstitel wie „Bestenliste“ zwischen Kartengruppen. Ebene Mannschaft behält Wer-Karte und Kennzahlen (Entscheidung DRT-035), Gegnerbilanz ohne Balken (DRT-039) · von:Claude · am:2026-11-12 · begonnen:2026-11-12 · fertig:2026-11-12
 - [x] DRT-039 Zwei iPhone-Befunde (Julius 12.11.): Gegnerbilanz ohne Siegquote-Balken, nur noch die Prozentzahl, Zahlenspalten ohne Umbruch („6 : 16“ in einer Zeile); Querformat allein (Punkte/Einzel-Darts): Seitenpolster des body messen sich jetzt an den Safe-Area-Insets, die große Restzahl liegt nicht mehr unter der Insel; die vorletzte Aufnahme, die im Drehrad nach unten fährt, bleibt in ihrer Box statt über den Finish-Kacheln zu liegen; Cache v191 · von:Julius · am:2026-11-12 · fertig:2026-11-12
 - [x] DRT-037 Deploy von DRT-035 (Statistik-Umbau, Doppel-Abfrage, Cache v189) nach Freigabe von Julius ausgeführt, Rauchprobe ping 200 · von:Claude · am:2026-11-12 · fertig:2026-11-12
