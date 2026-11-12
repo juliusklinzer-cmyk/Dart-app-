@@ -5518,6 +5518,9 @@ body #stats-rang.log #board-log { display: block; }
   .liga-zwei.hidden { display: none; }
   .liga-zwei.breit { grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); }
   .liga-zwei > * { min-height: 0; }
+  /* Die Liga-Statistik ist eine Seite, keine zwei Spalten: sie rollt in sich. */
+  #liga-statistik { display: block; overflow-y: auto; padding-bottom: 12px; }
+  #liga-statistik.hidden { display: none; }
   .liga-links, .liga-rechts { gap: clamp(8px, 1.4vh, 16px); }
   #screen-liga .card { padding: clamp(10px, 1.8vh, 20px); }
   /* Training */
@@ -7241,7 +7244,7 @@ button.pa-gruppe { cursor: pointer; }
    .st-still (Neuzeichnen aus anderem Anlass) und "weniger Bewegung" stellen
    alles sofort ans Ziel. */
 .st-dash { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 12px; min-width: 0; --st-blau: #46aad7; --st-gold: #ffc14d; --st-gruen: #4ade80; --st-rot: #e5484d; --st-lila: #a78bfa; }
-.st-chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.st-chips { display: flex; flex: none; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
 .st-chips::-webkit-scrollbar { display: none; }
 .st-chip { flex: none; min-height: 0; height: 40px; margin: 0; padding: 0 13px; border-radius: 999px; background: #1c1718; border: 1px solid #2a2224; box-shadow: none; font-family: var(--font-body); font-size: 0.82rem; font-weight: 600; color: var(--muted); text-transform: none; letter-spacing: 0; white-space: nowrap; transition: background 0.2s, color 0.2s; }
 .st-chip small { font-size: 0.72rem; font-weight: 500; opacity: 0.75; }
@@ -7253,13 +7256,18 @@ button.pa-gruppe { cursor: pointer; }
 .st-kpi .l { font-family: var(--font-cond); font-weight: 700; font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
 .st-kpi .v { font-family: var(--font-display); font-size: 2.3rem; line-height: 1.05; margin-top: 4px; color: var(--c, var(--text)); font-variant-numeric: tabular-nums; }
 .st-kpi .v small { font-family: var(--font-cond); font-size: 0.95rem; font-weight: 700; letter-spacing: 0.04em; color: var(--muted); margin-left: 3px; }
-.st-kpi .d { font-size: 0.76rem; font-weight: 600; margin-top: 2px; color: var(--muted); }
+.st-kpi .d { font-size: 0.7rem; font-weight: 600; margin-top: 2px; color: var(--muted); }
 .st-kpi .d .auf { color: var(--st-gruen); }
 .st-kpi .d .ab { color: var(--st-rot); }
-.st-raster { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
-.st-karte { min-width: 0; padding: 14px 16px; border-radius: 18px; background: #1c1718; border: 1px solid #2a2224; animation: st-rein 0.6s ease both; }
+/* Das Raster: eine Spalte am Handy, zwei am Tablet, drei am Computer.
+   "breit" nimmt die ganze Zeile, "zwei" zwei Spalten; dense fuellt Luecken
+   (Julius, 12.11.: "unter Average nur zwei kleine Wuerfel, rechts viel Platz"). */
+.st-raster { display: grid; grid-template-columns: minmax(0, 1fr); grid-auto-flow: dense; gap: 12px; }
+.st-karte { min-width: 0; padding: 14px 16px; border-radius: var(--radius); background: var(--bg-2); border: 1px solid var(--line); animation: st-rein 0.6s ease both; }
 .st-karte.breit { grid-column: 1 / -1; }
-.st-karte h3 { margin: 0; font-family: var(--font-body); font-size: 0.95rem; font-weight: 700; text-transform: none; letter-spacing: 0; }
+/* Kartentitel wie die Ueberschriften der uebrigen Karten (h2): Versalien,
+   Display-Schrift, ohne Symbol und ohne Balken davor. */
+.st-karte h3 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 0.95rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text); }
 .st-sub { margin: 3px 0 0; font-size: 0.78rem; color: var(--muted); line-height: 1.4; }
 .st-box { margin-top: 12px; min-width: 0; }
 .st-svg { display: block; width: 100%; height: auto; overflow: visible; }
@@ -7309,16 +7317,20 @@ button.pa-gruppe { cursor: pointer; }
 .st-mrow .h span { color: var(--muted); font-weight: 500; font-size: 0.76rem; }
 .st-mbar { display: grid; grid-template-columns: 62px 1fr 52px; gap: 8px; align-items: center; font-size: 0.74rem; color: var(--muted); margin-top: 4px; }
 .st-mbar b { color: var(--text); text-align: right; font-variant-numeric: tabular-nums; }
-.st-kal { max-width: 420px; }
+.st-kal { max-width: 640px; }
 .st-tab { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
 .st-tab th { font-family: var(--font-cond); font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); text-align: left; font-weight: 700; padding: 6px; border-bottom: 1px solid #2a2224; }
 .st-tab td { padding: 8px 6px; border-bottom: 1px solid #ffffff08; vertical-align: middle; }
 .st-tab td small { display: block; font-size: 0.7rem; color: var(--muted); }
 .st-tab .n { text-align: right; font-variant-numeric: tabular-nums; }
-.st-tab .q { width: 26%; }
+.st-tab .q { width: 30%; }
+/* Siegquote je Gegner: Balken und die Zahl daneben. */
+.st-quote { display: flex; align-items: center; gap: 8px; }
+.st-quote .st-track { flex: 1 1 auto; }
+.st-quote b { flex: none; min-width: 38px; text-align: right; font-variant-numeric: tabular-nums; font-size: 0.8rem; }
+.st-mehr { display: block; width: 100%; min-height: 40px; margin: 10px 0 0; padding: 0 12px; border-radius: 10px; background: #1c1718; border: 1px solid var(--line); box-shadow: none; color: var(--text); font-family: var(--font-body); font-weight: 600; font-size: 0.82rem; text-transform: none; letter-spacing: 0; }
 .st-recs { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
-.st-rec { padding: 12px; border-radius: 14px; background: #141011; border: 1px solid #2a2224; animation: st-grow 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
-.st-rec .e { font-size: 1.2rem; }
+.st-rec { padding: 12px; border-radius: 14px; background: #1c1718; border: 1px solid #2a2224; animation: st-grow 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
 .st-rec .v { font-family: var(--font-display); font-size: 1.8rem; line-height: 1.1; color: var(--st-gold); }
 .st-rec .l { font-family: var(--font-cond); font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
 .st-rec .s { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
@@ -7333,26 +7345,30 @@ button.pa-gruppe { cursor: pointer; }
 }
 @media (max-width: 479px) {
   .st-kpi .v { font-size: 1.9rem; }
-  .st-raster { grid-template-columns: minmax(0, 1fr); }
+}
+@media (min-width: 640px) {
+  .st-raster { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .st-karte.zwei { grid-column: span 2; }
+}
+@media (min-width: 1100px) {
+  .st-raster { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 /* ---- Reiter „Statistik“: Person und Mannschaft (Artefakt „Darts Statistik“, 11.11.2026) ----
    Die Ebene faerbt die Akzente: Person in Laser-Blau, Mannschaft in Amber
    (--st-ebene). Karten warten (.st-wart), bis sie ins Bild scrollen. */
 #screen-stats { --st-ebene: #46aad7; --st-ebene-w: rgba(70, 170, 215, 0.14); }
-#screen-stats.st-team { --st-ebene: #ffc14d; --st-ebene-w: rgba(255, 193, 77, 0.13); }
+#screen-stats.st-team, #liga-statistik { --st-ebene: #ffc14d; --st-ebene-w: rgba(255, 193, 77, 0.13); }
 #profile-detail .st-dash { --st-ebene: #46aad7; --st-ebene-w: rgba(70, 170, 215, 0.14); }
 #stats-main { min-width: 0; }
-.st-ebene { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 4px; border-radius: 18px; background: #141011; border: 1px solid #2a2224; max-width: 560px; }
-.st-ebene button { display: grid; grid-template-columns: auto 1fr; column-gap: 10px; align-items: center; min-height: 58px; margin: 0; padding: 8px 14px; border-radius: 14px; border: 1px solid transparent; background: none; box-shadow: none; color: var(--muted); text-align: left; text-transform: none; letter-spacing: 0; transition: background 0.25s, color 0.25s; }
-.st-ebene .i { grid-row: 1 / 3; font-size: 1.5rem; filter: grayscale(1); opacity: 0.55; }
-.st-ebene .t { font-family: var(--font-display); font-size: 1.25rem; letter-spacing: 0.04em; text-transform: uppercase; line-height: 1; }
-.st-ebene .s { font-family: var(--font-body); font-size: 0.76rem; font-weight: 600; }
-.st-ebene button.on { background: var(--st-ebene-w); border-color: var(--st-ebene); color: var(--text); }
-.st-ebene button.on .t { color: var(--st-ebene); }
-.st-ebene button.on .i { filter: none; opacity: 1; }
-.st-wer { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 18px; background: linear-gradient(100deg, var(--st-ebene-w), transparent 70%), #171213; border: 1px solid #2a2224; border-left: 4px solid var(--st-ebene); animation: st-rein 0.5s ease both; min-width: 0; }
-.st-wer .i { font-size: 1.7rem; flex: none; }
+/* Kleiner Schalter Einzel / Mannschaft - wie die Reiter in den Karten,
+   kein grosser Knopf (Julius, 12.11.). */
+.st-ebene { display: inline-flex; gap: 4px; padding: 3px; border-radius: 999px; background: #141011; border: 1px solid #2a2224; align-self: flex-start; }
+.st-ebene button { min-height: 0; height: 36px; margin: 0; padding: 0 18px; border-radius: 999px; border: 1px solid transparent; background: none; box-shadow: none; color: var(--muted); font-family: var(--font-cond); font-weight: 700; font-size: 0.85rem; letter-spacing: 0.1em; text-transform: uppercase; transition: background 0.2s, color 0.2s; }
+.st-ebene button.on { background: var(--aktiv-flaeche); border-color: var(--aktiv-linie); color: var(--text); }
+/* Die Wer-Karte: Profilbild, Name, eine Zeile darunter - ohne Balken. */
+.st-wer { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--radius); background: var(--bg-2); border: 1px solid var(--line); animation: st-rein 0.5s ease both; min-width: 0; }
+.st-wer .av { flex: none; }
 .st-wer-text { min-width: 0; flex: 1 1 auto; }
 .st-wer .k { font-family: var(--font-cond); font-weight: 700; font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--st-ebene); }
 .st-wer b { display: block; font-family: var(--font-display); font-size: 1.7rem; line-height: 1.05; letter-spacing: 0.02em; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -7362,11 +7378,9 @@ button.pa-gruppe { cursor: pointer; }
 .st-chip.on { background: var(--st-ebene); border-color: var(--st-ebene); color: #0d0a0b; }
 .st-chips.klein .st-chip { font-size: 0.76rem; padding: 0 11px; }
 .st-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 7px; vertical-align: 0; }
-.st-karte { box-shadow: inset 0 2px 0 var(--st-ebene-w); }
-.st-karte h3::before { content: ""; display: inline-block; width: 4px; height: 14px; border-radius: 2px; background: var(--st-ebene); margin-right: 7px; vertical-align: -2px; }
-/* Mini-Kacheln (Liga-Bilanz, Spielarten, Rekorde der Rangliste) */
+/* Mini-Kacheln (Liga-Bilanz, Spielarten, Schnellansicht im Spieler-Reiter) */
 .st-minis { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 8px; }
-.st-mini { min-width: 0; padding: 9px 11px; border-radius: 12px; background: #141011; border: 1px solid #2a2224; animation: st-grow 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+.st-mini { min-width: 0; padding: 9px 11px; border-radius: 12px; background: #1c1718; border: 1px solid #2a2224; animation: st-grow 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
 .st-mini span { display: block; font-family: var(--font-cond); font-weight: 700; font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
 .st-mini b { display: block; font-family: var(--font-display); font-weight: 400; font-size: 1.3rem; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .st-mini small { display: block; font-size: 0.7rem; color: var(--muted); line-height: 1.3; }
@@ -7376,8 +7390,16 @@ button.pa-gruppe { cursor: pointer; }
 .st-platz .z small { font-size: 1.1rem; color: var(--muted); }
 .st-platz .t { flex: 1; font-size: 0.8rem; color: var(--muted); }
 .st-platz .t .st-track { margin-top: 6px; }
-/* Weitere Spielarten: je Art ein Kopf zum Aufklappen, drei Kacheln, Details */
+/* Weitere Spielarten: 2x2 Kacheln, je Art ein Kopf zum Aufklappen, drei
+   Kennzahlen, aufgeklappt die Details */
+.st-arten { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.st-arten .st-art { min-width: 0; padding: 8px 12px 12px; border-radius: 12px; background: #1c1718; border: 1px solid #2a2224; }
+.st-arten .st-art .st-mini { background: #141011; }
 .st-art + .st-art { margin-top: 12px; padding-top: 12px; border-top: 1px solid #ffffff0a; }
+.st-arten .st-art + .st-art { margin-top: 0; padding-top: 8px; border-top: 0; }
+@media (min-width: 640px) {
+  .st-arten { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 .st-art-titel { display: block; margin-bottom: 6px; font-family: var(--font-cond); font-weight: 700; font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text); }
 .st-art-kopf { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; margin: 0 0 8px; padding: 0 4px; background: none; border: 0; box-shadow: none; color: var(--text); text-align: left; text-transform: none; letter-spacing: 0; border-radius: 10px; }
 .st-art-kopf .t { font-family: var(--font-cond); font-weight: 700; font-size: 0.95rem; letter-spacing: 0.1em; text-transform: uppercase; }
@@ -7409,28 +7431,27 @@ button.st-krow:hover { background: #ffffff06; }
 .st-erg.l { background: rgba(229, 72, 77, 0.14); color: var(--st-rot); }
 /* Highlights */
 .st-hl { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 6px; }
-.st-hlz { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border-radius: 10px; background: #141011; border: 1px solid #2a2224; min-width: 0; animation: st-grow 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+.st-hlz { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border-radius: 10px; background: #1c1718; border: 1px solid #2a2224; min-width: 0; animation: st-grow 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
 .st-hlz.wir { border-color: rgba(229, 72, 77, 0.5); }
 .st-hlz b { font-family: var(--font-display); font-weight: 400; font-size: 1.2rem; color: var(--st-gold); white-space: nowrap; }
 .st-hlz span { display: flex; flex-direction: column; min-width: 0; font-size: 0.78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .st-hlz small { font-size: 0.68rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
 /* Alle Zahlen */
 .st-zahlen { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
-.st-zgr { padding: 12px 14px; border-radius: 12px; background: #141011; border: 1px solid #2a2224; min-width: 0; }
+.st-zgr { padding: 12px 14px; border-radius: 12px; background: #1c1718; border: 1px solid #2a2224; min-width: 0; }
 .st-zgr h4 { margin: 0 0 6px; font-family: var(--font-cond); font-weight: 700; font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
 .st-zl { display: flex; justify-content: space-between; gap: 10px; font-size: 0.82rem; padding: 4px 0; border-bottom: 1px solid #ffffff08; }
 .st-zl:last-child { border: 0; }
 .st-zl span { color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .st-zl b { font-weight: 700; flex: none; font-variant-numeric: tabular-nums; }
 /* Rangliste (Liga-Rangliste im Dashboard, Rangliste je Spielart darunter) */
-.st-rang { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; border-radius: 18px; background: #171213; border: 1px solid #2a2224; box-shadow: inset 0 2px 0 var(--st-ebene-w); animation: st-rein 0.6s ease both; min-width: 0; }
+.st-rang { display: flex; flex-direction: column; gap: 12px; padding: 14px 16px; border-radius: var(--radius); background: var(--bg-2); border: 1px solid var(--line); animation: st-rein 0.6s ease both; min-width: 0; }
 .st-rang-kopf { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 12px; }
-.st-rang-kopf h3 { margin: 0; font-family: var(--font-body); font-size: 0.95rem; font-weight: 700; text-transform: none; letter-spacing: 0; }
-.st-rang-kopf h3::before { content: ""; display: inline-block; width: 4px; height: 14px; border-radius: 2px; background: var(--st-ebene); margin-right: 7px; vertical-align: -2px; }
+.st-rang-kopf h3 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 0.95rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text); }
 .st-rang-kopf span { font-family: var(--font-cond); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
 .st-rgrid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 .st-kacheln { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 6px; }
-.st-kachel { display: flex; flex-direction: column; align-items: flex-start; min-height: 44px; margin: 0; padding: 8px 10px; border-radius: 12px; background: #141011; border: 1px solid transparent; box-shadow: none; text-align: left; min-width: 0; text-transform: none; letter-spacing: 0; }
+.st-kachel { display: flex; flex-direction: column; align-items: flex-start; min-height: 44px; margin: 0; padding: 8px 10px; border-radius: 12px; background: #1c1718; border: 1px solid transparent; box-shadow: none; text-align: left; min-width: 0; text-transform: none; letter-spacing: 0; }
 .st-kachel .t { font-family: var(--font-cond); font-weight: 700; font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: #857a7b; }
 .st-kachel .v { font-family: var(--font-cond); font-weight: 700; font-size: 1.3rem; color: #c9c0c0; font-variant-numeric: tabular-nums; }
 .st-kachel .n { max-width: 100%; font-size: 0.74rem; color: #857a7b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -7467,13 +7488,13 @@ button.st-krow:hover { background: #ffffff06; }
 @media (min-width: 900px) {
   #screen-stats .st-kpis { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
 }
-@media (min-width: 1100px) {
-  #screen-stats .st-raster { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  #screen-stats .st-karte.zwei { grid-column: span 2; }
-}
+/* Welches Doppel? - die naheliegenden gross, alle anderen moeglichen klein */
+.cd-andere { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 10px 0 12px; }
+.cd-andere .btn { flex: none; min-height: 40px; height: 40px; margin: 0; padding: 0 12px; font-size: 0.85rem; }
+/* Schnellansicht im Spieler-Reiter: drei Knoepfe beim eigenen Profil */
+.ps-knoepfe.drei { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.players-schnell .st-pillen { margin-top: 0; }
 @media (max-width: 479px) {
-  .st-ebene .t { font-size: 1.05rem; }
-  .st-ebene .i { font-size: 1.3rem; }
   .st-wer b { font-size: 1.4rem; }
   .st-krow { grid-template-columns: 24px minmax(0, 1.4fr) minmax(50px, 1fr) auto; gap: 8px; padding: 6px 4px; }
 }

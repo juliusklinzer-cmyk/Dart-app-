@@ -678,6 +678,7 @@ async function main() {
       await tobi.page.locator('#num-grid button[data-num="20"]').click();
       if (await tobi.page.locator('#overlay-card [data-action="co-darts"]').count()) {
         await tobi.page.locator('#overlay-card [data-action="co-darts"]').first().click();
+        if (await tobi.page.locator('#overlay-card [data-action="co-doppel"]').count()) await tobi.page.locator('#overlay-card [data-action="co-doppel"]').first().click();
       }
       await tobi.page.waitForTimeout(900);
       check('Tobis Partie ist entschieden',
@@ -1120,6 +1121,7 @@ async function main() {
       await typeScoreAuf(julius.page, 20);
       if (await julius.page.locator('#overlay-card [data-action="co-darts"]').count()) {
         await julius.page.locator('#overlay-card [data-action="co-darts"]').first().click();
+        if (await julius.page.locator('#overlay-card [data-action="co-doppel"]').count()) await julius.page.locator('#overlay-card [data-action="co-doppel"]').first().click();
       }
       await julius.page.waitForTimeout(900);
       check('Julius hat ausgemacht', await julius.page.evaluate(() => window.__dart.state().game.done));

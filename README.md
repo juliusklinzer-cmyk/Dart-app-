@@ -258,8 +258,8 @@ Unsicher / Kann nicht“ und wer kommt) und rechts das Übungs-Ligaspiel mit Vor
 „Zweites eigenes Team“ oder „Gegen Bots“ samt Bot-Stärke. **Tabelle** zeigt links oben unseren Platz
 als Band (Zahl, daneben Punkte, Legs und Abstand zur Spitze), darunter die Ligatabelle
 und den Stand; rechts Alle Spiele, Einzelrangliste und Highlights – am Computer rollt
-diese Spalte als Ganzes, damit alles erreichbar bleibt. **Statistik** springt in den
-Reiter Statistik › Mannschaft › Liga (siehe [Statistik und Ranglisten](#statistik-und-ranglisten)).
+diese Spalte als Ganzes, damit alles erreichbar bleibt. **Statistik** ist die Liga-Statistik
+(Mannschaft, gesamte Liga, jeder Gegner; siehe [Statistik und Ranglisten](#statistik-und-ranglisten)).
 **Kasse** zeigt links
 den Kassenstand (Anfang, Einnahmen, Ausgaben) und „Buchung erfassen“, rechts das
 Kassenbuch und die Gründungsbeiträge als Chips. **Regeln** stehen in zwei Spalten
@@ -496,8 +496,8 @@ plus das Nachmelde-/Protest-Leerformular als Seite 2 aus. Nach dem Abschluss
 bleibt der Bericht über den Spieltag im Liga-Reiter abrufbar. Die Liga-Auswertung
 (Team-Kennzahlen, Spieltag für Spieltag, Kader-Beitrag, Tabelle, Bilanz gegen jedes
 Team, Highlights, Liga-Rangliste; Team-Auswahl Blink 180, Gesamte Liga, jeder Gegner)
-steht im Reiter **Statistik › Mannschaft › Liga**, der Reiter „Statistik“ der Liga-Seite
-springt dorthin. Im Regeln-Reiter der Liga-Seite stehen dazu ein
+steht im Reiter **Liga › Statistik** (seit 12.11.2026 dort, nicht mehr im Reiter
+Statistik). Im Regeln-Reiter der Liga-Seite stehen dazu ein
 FAQ für Neue und Udos Regelecke.
 
 Die **Turnier-Übersicht** (Entwurf „Turnier Redesign“, überarbeitet Oktober 2026)
@@ -837,6 +837,19 @@ markiert, im Einzel-Dart-Modus ist die passende Zahl zusätzlich umrandet.
 - Bei Eingabe der Gesamtpunktzahl fragt die App bei einem Finish nach, mit wie vielen
   Darts ausgecheckt wurde (nur die tatsächlich möglichen Anzahlen stehen zur Wahl),
   damit der Average stimmt.
+- **Welches Doppel?** (Julius, 12.11.2026, DRT-035): Danach fragt die App außer im
+  Ligaspiel, auf welchem Doppel zugemacht wurde – per Ausschlussverfahren aus Rest und
+  Dartzahl (`doppelKandidaten`): Steht das Doppel fest (32 mit einem Dart = D16), fragt
+  sie nicht. Vorn stehen groß die naheliegenden Doppel – bei einem schon finishbaren Rest
+  das Doppel selbst (erster Dart vorbei), das halbe nach einem Treffer ins einfache Feld
+  und die nach einem Treffer ins Nachbarfeld (32 mit 2 Darts: D16, D8, D12), sonst das
+  Doppel aus der Finish-Tabelle und die Lieblingsdoppel –, darunter klein alle anderen,
+  die mit so vielen Darts möglich waren, zum Schluss „Weiß nicht“. Das Doppel steht als
+  `dd` an der Aufnahme (1–20, 25 = Bull) und zählt in Doppelquote und Doppel-Analyse:
+  war der Rest vor der Aufnahme schon mit einem Dart zu machen, lagen alle Darts der
+  Aufnahme auf einem Doppel (der erste auf dem des Rests, die weiteren auf dem
+  Finish-Doppel), sonst nur der Finish-Dart. Im Ligaspiel bleibt die Frage aus – der
+  Schreiber ist Schiedsrichter –, eindeutige Doppel werden aber auch dort vermerkt.
 - Mit 3 Darts unmögliche Summen (179, 178, 176, 175, 173, 172, 169, 166, 163) werden
   abgelehnt.
 
@@ -945,10 +958,15 @@ den Spielverlauf in der Rangliste wieder öffnen.
 Setups; darunter steht „N im Team · M Gäste“ mit den Filtern **Alle · Team ·
 Gäste** und „+ Spieler“. Links alle Spieler als ruhige Karten mit Ø, Siegen und
 180ern (Gäste, Gast-Konten, Test und Ausgeblendete tragen eine kleine Marke),
-am Tablet rechts die **Schnellansicht** des angetippten Spielers: Bilanz, die
-letzten Spiele als S/N, sechs Kennzahlen (Average, First 9, Höchstes Finish,
-180er, Doppelquote, Bestes Leg) sowie „Bearbeiten“ und „Ganzes Profil ›“. Am
-Handy (hochkant wie quer) gibt es nur die Liste, ein Tipp öffnet das Profil.
+am Tablet rechts die **Schnellansicht** des angetippten Spielers im Stil der
+Statistik: Bilanz, die letzten zehn Spiele als Pillen, sechs Kennzahl-Kacheln
+(Average, First 9, Doppelquote, 180er, Höchstes Finish, Bestes Leg) und
+„Statistik ›“ (Statistik › Einzel dieser Person); „Bearbeiten“ und „Profil ›“
+gibt es nur, wo man das Profil auch pflegen darf (eigenes Konto, Gäste ohne
+Konto) – fremde Profile sieht niemand (Julius, 12.11.2026). Am Handy (hochkant
+wie quer) gibt es nur die Liste; ein Tipp öffnet das eigene Profil, bei allen
+anderen die Einzelstatistik. Dasselbe gilt für „Profil“-Tipps in Rangliste und
+Statistik: wer das Profil nicht pflegen darf, landet in der Einzelstatistik.
 
 **Das Profil** (Entwurf „Profil“, Oktober 2026) trägt denselben Kopf: oben der
 **Spielerausweis** (Foto mit Kamera-Knopf, Name in Plakatschrift, echter Name,
@@ -956,8 +974,8 @@ Chips für Status, „seit“, Bilanz und Turniersiege, „Profil bearbeiten“,
 der letzten zehn Spiele), darunter drei Kacheln: **Finish-Weg · Lieblingsgruppe**
 (siehe Checkout-Engine unten), die Links **Statistik** („Meine Stats“ legt das Dashboard
 der Person – Filter, Kennzahlen, Diagramme, Liga-Bilanz, weitere Spielarten und
-„Alle Zahlen“, dasselbe wie im Reiter Statistik › Person – als Tafel über die Kacheln,
-„Fertig“ schließt sie) und **Liga-Statistik** (springt in Statistik › Mannschaft › Liga),
+„Alle Zahlen“, dasselbe wie im Reiter Statistik › Einzel – als Tafel über die Kacheln,
+„Fertig“ schließt sie) und **Liga-Statistik** (springt in Liga › Statistik),
 und beim eigenen Konto die **Konto-Kachel** (E-Mail – eine neue
 Adresse braucht das aktuelle Passwort, die alte Adresse bekommt einen Hinweis –,
 Passwort ändern, Abmelden; das Abmelden löst auch das Push-Abo dieses Geräts). Wer sein
@@ -1056,36 +1074,47 @@ die Statistik der Mannschaft zu berühren (siehe [DEPLOY.md](DEPLOY.md#testkonte
 Dazu die letzten Spiele mit Gegner, Ergebnis und Datum.
 
 **Die Person als Dashboard** (nach Julius' Artefakt „Darts Statistik“, November 2026): Die
-Statistik-Tafel im Profil und der Reiter Statistik › Person zeigen dasselbe Dashboard aus den
+Statistik-Tafel im Profil und der Reiter Statistik › Einzel zeigen dasselbe Dashboard aus den
 echten Aufnahmen. Oben Filter-Chips für den Modus (Alle, Liga,
 Turnier, Schnell, Solo – mit Spielzahl; Übungsspiele zählen wie überall nicht) und den
 Zeitraum (letzte 10, letzte 30, alle Spiele). Dann sieben Kennzahlen, die hochzählen –
-Average, First 9, Doppelquote, Siegquote, 180er, höchstes Finish, bestes Leg –, jede mit dem
-Vergleich „letzte N vs. davor“ (N höchstens 10, höchstens die halbe Reihe). Dann zehn Karten:
+Average, First 9, Doppelquote, Siegquote, 180er, höchstes Finish, bestes Leg –, mit einer
+Nachkommastelle und klein darunter dem Vergleich „vs. letzte 10“ (die letzten zehn Spiele gegen
+die davor, ab elf Spielen). Dann zehn Karten (Titel ohne Symbole, im Stil der übrigen Karten):
 **Average-Entwicklung** (Ø je Spiel, gleitender Schnitt über 5 Spiele in Gold, Trendlinie aus
 kleinsten Quadraten mit „Trend ± Punkte“, First 9 dünn, bester Punkt beschriftet; der Zeiger
 zeigt je Spiel Datum, Gegner, Ø und Legs), **Form & Siegquote** (Ring, Siege : Niederlagen,
 Legs, aktuelle Serie, längste Siegesserie, die letzten zehn als Pillen), **Spielerprofil**
-(Radar mit Scoring, First 9, Doppel, Konstanz = Streuung der Averages, Big Scores je Leg,
-Siege; letzte 10 gegen die ganze Auswahl), **Doppel-Analyse** (ein Dartboard, dessen äußerer
+(Netz mit Scoring, First 9, Doppel, Konstanz = Streuung der Averages, Big Scores je Leg,
+Siege: der Spieler in Rot gegen den Schnitt der anderen im Kader in Blau – jeder Mitspieler
+zählt gleich, derselbe Modus- und Zeitraum-Filter. Die Mitte jeder Achse ist der Teamschnitt
+mit Stand 12.11.2026 (`ST_RADAR_STICHTAG`, Spiele davor), die Skala je Achse fest – heute
+also ein fast regelmäßiges Sechseck für den Rest des Teams, später wandert es mit, wenn sich
+die Mannschaft als Ganzes bewegt), **Doppel-Analyse** (ein Dartboard, dessen äußerer
 Ring je Doppel die Trefferquote als Farbe trägt – rot, amber, grün –, ★ markiert die
 Finish-Kette aus den Lieblingsgruppen des Profils, rechts die neun meistgeworfenen Doppel als
-Balken; gezählt wird wie bei der Doppelquote nur aus Einzel-Darts: jeder Dart ist ein Versuch
-auf das Doppel, das der Rest vor ihm erlaubt, der Finish-Dart ein Treffer), **Big Scores je
+Balken; gezählt werden nur 301er und 501er, wie bei der Doppelquote: im Einzel-Dart-Modus
+jeder Dart als Versuch auf das Doppel, das der Rest vor ihm erlaubt, der Finish-Dart als
+Treffer; in der Punkte-Eingabe das erfragte Finish-Doppel – siehe „Welches Doppel?“ im
+Abschnitt X01), **Big Scores je
 Monat** (100+, 140+, 180 gestapelt), **Doppelquote im Verlauf** (je Monat), **Liga · Turnier
 · Schnell · Solo** (Average, Doppel, Siege je Modus, unabhängig vom Modus-Filter),
-**Aktivität** (20 Wochen als Kacheln), **Gegnerbilanz** (Head-to-Head mit Bilanz, Legs, Ø und
-Siegquote, bei Ligagegnern mit Team) und **Rekorde** (bester Average, beste First 9, höchstes
+**Aktivität** (26 Wochen als Kacheln, am Handy 20; zwei Spalten breit), **Gegnerbilanz**
+(Head-to-Head mit Bilanz, Legs, Ø und Siegquote als Balken mit Prozentzahl – Siege durch Spiele
+gegen diesen Gegner, Spiele ohne Sieger zählen nicht –, bei Ligagegnern mit Team; die zehn
+häufigsten, der Rest klappt auf) und **Rekorde** (bester Average, beste First 9, höchstes
 Finish, kürzestes Leg, meiste 180 im Spiel, beste Doppelquote ab 8 Versuchen, längste
 Siegesserie, Spiele gesamt – jeweils mit Datum und Gegner). Dazu drei Karten aus dem
 erweiterten Artefakt (11. November 2026): **Liga-Bilanz** (Platz in der Einzelrangliste der
 Ligaleitung mit Punkten, Einzel und Legs – zugeordnet über den vollen Namen –, dazu Liga-Ø und
 Doppelquote aus den Würfen der App, 180er, höchstes Finish und bestes Leg als Bestes aus beiden
-Quellen, gemeldete Highfinishes und Shortlegs als Notiz), **Weitere Spielarten** (je gespielter
-Art – Cricket, Round the World, Finisher, Kaiwen, Hunter – ein Kopf mit den drei wichtigsten
-Kennzahlen; ein Tipp klappt die Details auf: weitere Kennzahlen und die letzten fünf Spiele
-mit Ergebnis) und **Alle Zahlen** (Scoring, Finishing, Bilanz und die letzten Spiele als
-kompakte Gruppen – die früheren Einzelkarten). Alles ist SVG ohne Bibliothek; Linien ziehen
+Quellen, gemeldete Highfinishes und Shortlegs als Notiz), **Weitere Spielarten** (zwei Spalten
+breit, die Arten als 2×2-Kacheln – Cricket, Round the World, Finisher, Kaiwen, Hunter – je ein
+Kopf mit den drei wichtigsten Kennzahlen; ein Tipp klappt die Details auf: weitere Kennzahlen
+und die letzten fünf Spiele mit Ergebnis) und **Alle Zahlen** (Scoring, Finishing, Bilanz und
+die letzten Spiele als kompakte Gruppen – die früheren Einzelkarten). Das Raster hat am
+Computer drei Spalten, am Tablet zwei, am Handy eine; „breit“ nimmt die Zeile, „zwei“ zwei
+Spalten, und `grid-auto-flow: dense` füllt Lücken. Alles ist SVG ohne Bibliothek; Linien ziehen
 sich, Balken wachsen, Ringe füllen sich und Zahlen zählen hoch, einmal je Auswahl – Kopf,
 Chips und Kennzahlen sofort, jede Karte erst, wenn sie ins Bild scrollt. Zeichnet die App die
 Seite aus anderem Anlass neu (auch beim Aufklappen) oder wünscht das Gerät „weniger Bewegung“,
@@ -1107,26 +1136,30 @@ Für Cricket kommt die **MPR** (Marks per Round – getroffene Marken je 3 Darts
 und die Siege.
 
 **Der Reiter „Statistik“** (nach dem erweiterten Artefakt „Darts Statistik“, November 2026;
-er ersetzt den Reiter „Rang“) trägt den Kopf des Setups und darunter den Ebenen-Schalter
-**Person / Mannschaft**. **Person** ist das Dashboard von oben, dazu eine Wer-Karte
-(„Profil ›“ öffnet das Profil) und Spieler-Chips für den ganzen Kader (dieselben Leute wie in
-der Rangliste: keine Bots, keine Testkonten, Gäste nur dauerhafte); voreingestellt ist das
-eigene Konto. **Mannschaft** hat zwei Umfänge. **Liga** (Chips: Blink 180, Gesamte Liga, jeder
-Gegner) rechnet aus den Spielberichten der Ligaleitung (`LIGA_SPIELTAGE`): je Team sieben
+er ersetzt den Reiter „Rang“; Fassung vom 12.11.2026: zurück zum App-Design – keine Emojis,
+keine farbigen Balken links, Kartentitel wie die übrigen Überschriften) trägt den Kopf des
+Setups und darunter den kleinen Schalter **Einzel / Mannschaft**. Der Reiter ist nur für
+uns da. **Einzel** ist das Dashboard von oben, dazu eine Wer-Karte mit Profilbild („Profil ›“
+nur, wo man das Profil auch pflegen darf: eigenes Konto, Gäste) und Spieler-Chips für den
+ganzen Kader (dieselben Leute wie in der Rangliste: keine Bots, keine Testkonten, Gäste nur
+dauerhafte); voreingestellt ist das eigene Konto. **Mannschaft** ist die Crew über alle
+Spielarten (unten) mit den Bestenlisten darunter. Die **Liga-Statistik** wohnt seit dem
+12.11. im Reiter **Liga › Statistik** (Chips: Blink 180, Gesamte Liga, jeder
+Gegner) und rechnet aus den Spielberichten der Ligaleitung (`LIGA_SPIELTAGE`): je Team sieben
 Kennzahlen (Tabellenplatz, Punkte mit S/U/N, Einzel-Quote, Leg-Quote, Team-Average und
 Doppelquote aus den Würfen der App – nur für unser Team –, 180er mit höchstem Finish und
 Shortleg), dann **Spieltag für Spieltag** (Einzel gewonnen und verloren als Säulen, Punkte
 aufsummiert als Linie), **Kader-Beitrag** (Punkte je Spieler in der Einzelrangliste, bei uns
-mit Liga-Ø; ein Tipp öffnet die Person), **Tabelle** (ein Tipp wählt das Team), **Bilanz gegen
+mit Liga-Ø; ein Tipp führt in Statistik › Einzel zu dieser Person), **Tabelle** (ein Tipp wählt das Team), **Bilanz gegen
 jedes Team** (Ergebnis-Pillen je Begegnung), bei Gegnern die **Highlights**, und die
 **Liga-Rangliste** aus der Einzelrangliste (Kacheln Punkte, Siege, Legs, Siegquote ab zwei
 Einzeln; die Liste dazu; daneben die Highlights laut Spielberichten). „Gesamte Liga“ zeigt
 Teams, Begegnungen, 180er, höchstes Finish, kürzestes Leg und Tabellenführer, die Tabelle, die
-besten 12 der Einzelrangliste und die Highlights der ganzen Liga. **Alle Spielarten** ist die
+besten 12 der Einzelrangliste und die Highlights der ganzen Liga. **Statistik › Mannschaft** ist die
 Crew: Spiele (X01 einmal je Spiel, dazu die anderen Arten), Team-Average, First 9, Doppelquote,
 180er, höchstes Finish über alle Einsätze des Kaders, **Kader im Vergleich** (Chips für
 Average, First 9, Doppelquote, Siegquote, 180er, höchstes Finish, bestes Leg; ein Tipp öffnet
-die Person), **Aktivität**, **Team-Form je Monat** (Säulen = Spiele, Linie = Team-Average),
+die Einzelstatistik), **Aktivität**, **Team-Form je Monat** (Säulen = Spiele, Linie = Team-Average),
 **Big Scores je Monat**, **Doppelquote im Verlauf** – und darunter die **Rangliste je
 Spielart**, wie bisher im Reiter „Rang“ (Entwurf „Rangliste Redesign“, zweite Fassung,
 Oktober 2026): die Spielart-Reiter Classic, Cricket, RTW, Finisher, Kaiwen und Hunter mit

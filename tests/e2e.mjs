@@ -76,7 +76,13 @@ const text = (sel) => $(sel).innerText();
 /* Knöpfe und Überschriften stehen per CSS in Versalien – innerText gibt sie
    auch so zurück. Für Textprüfungen deshalb kleinschreiben. */
 const textKlein = async (sel) => (await $(sel).innerText()).toLowerCase();
-/* Der Statistik-Reiter der Liga-Seite fuehrt in Statistik › Mannschaft › Liga. */
+/* Checkout in der Punkte-Eingabe: erst die Dartzahl, dann - ausser im
+   Ligaspiel und wenn das Doppel feststeht - das Doppel (DRT-035). */
+async function coDarts() {
+  await page.locator('#overlay-card [data-action="co-darts"]').first().click();
+  if (await page.locator('#overlay-card [data-action="co-doppel"]').count()) await page.locator('#overlay-card [data-action="co-doppel"]').first().click();
+}
+/* Der Statistik-Reiter der Liga-Seite zeigt die Liga-Statistik (Liga › Statistik). */
 async function ligaStatistik() {
   await navTo('liga');
   await page.locator('#liga-tabs button[data-tab="statistik"]').click();
@@ -280,13 +286,13 @@ async function t20() {
 async function legFuer(ziel) {
   if ((await dranId()) !== ziel) await typeScore(60);
   await typeScore(180); await typeScore(60); await typeScore(121);
-  await page.locator('#overlay-card [data-action="co-darts"]').first().click();
+  await coDarts();
 }
 
 async function legFuerDrei(ziel) {
   while ((await dranId()) !== ziel) await typeScore(26);
   await typeScore(180); await typeScore(26); await typeScore(26); await typeScore(121);
-  await page.locator('#overlay-card [data-action="co-darts"]').first().click();
+  await coDarts();
 }
 
 await gruppe('Setup', async () => {
@@ -592,6 +598,22 @@ check('Checkout-Dialog fragt nach Dart-Anzahl', (await text('#overlay-card')).in
 opts = await page.locator('#overlay-card [data-action="co-darts"]').allInnerTexts();
 check('nur 3 Darts möglich für 141', opts.join(',') === '3', opts.join(','));
 await page.locator('#overlay-card [data-action="co-darts"]').first().click();
+/* Punkte-Eingabe ohne Einzel-Darts (kein Ligaspiel): danach die Frage nach
+   dem Doppel - vorn das aus der Finish-Tabelle (141 = T20 T19 D12), darunter
+   klein alle anderen, die mit 3 Darts moeglich waren (DRT-035). */
+check('danach fragt die App nach dem Doppel: D12 vorn, die anderen moeglichen klein darunter, "Weiß nicht" zum Schluss',
+  (await text('#overlay-card')).includes('Welches Doppel') && (await page.locator('#overlay-card .cd-logisch .btn').first().innerText()).trim() === 'D12' &&
+  (await page.locator('#overlay-card .cd-andere .btn').count()) >= 4 && (await page.locator('#overlay-card [data-action="co-doppel"][data-d="0"]').count()) === 1);
+await page.locator('#overlay-card [data-action="co-doppel"][data-d="12"]').click();
+check('das Doppel steht an der Aufnahme (dd = 12)', await page.evaluate(() => {
+  const m = window.__dart.state().matches.find((x) => x.done && x.legs.some((l) => l.visits.some((v) => v.c && v.dd === 12)));
+  return !!m;
+}));
+check('Ausschlussverfahren: 32 mit 1 Dart ist D16 ohne Frage, 32 mit 2 Darts fuehrt D16, D8, D12 vorn, 50 mit 2 Darts das Bull', await page.evaluate(() => {
+  const D = window.__dart, a = D.doppelKandidaten(32, 1), b = D.doppelKandidaten(32, 2), c = D.doppelKandidaten(50, 2);
+  return a.alle.length === 1 && a.alle[0] === 16 && b.logisch.join(',') === '16,8,12' && b.andere.length >= 10 && b.andere.indexOf(16) < 0 &&
+    c.logisch.join(',') === '25' && c.alle.indexOf(20) >= 0;
+}));
 check('Match beendet', (await text('#overlay-card')).includes('Glückwunsch'));
 
 });
@@ -601,7 +623,7 @@ for (let i = 0; i < 4; i++) {
   await page.locator('#overlay-card [data-action="ov-next-match"], #overlay-card [data-action="ov-finish"]').first().click();
   if (await visible('#screen-bulloff')) await page.locator('#bulloff-buttons button').nth(i % 2).click();
   await quickLeg();
-  await page.locator('#overlay-card [data-action="co-darts"]').first().click();
+  await coDarts();
 }
 check('Glückwunsch vor der Auswertung', (await text('#overlay-card')).includes('Glückwunsch'));
 check('Weg zur Spielstatistik angeboten', (await textKlein('#overlay-card')).includes('spielstatistik'));
@@ -682,7 +704,7 @@ check('die Siege-Karte nennt den Besten mit seinen Siegen', await page.evaluate(
 }));
 check('die Liste heisst nach der Kennzahl: "… · alle Spieler"', (await textKlein('#board-titel')).endsWith('· alle spieler'), await text('#board-titel'));
 check('der Verlauf folgt der Kennzahl (Siege laufen auf)', (await textKlein('#board-chart h2')).startsWith('siege gesamt'), await text('#board-chart h2'));
-check('die Rekorde tragen den Pokal', (await page.locator('#board-rekorde .rekorde-titel .pokal').count()) === 1);
+check('die Rekorde tragen keinen Pokal mehr (keine Emojis in der Statistik, Julius 12.11.)', (await page.locator('#board-rekorde .rekorde-titel .pokal').count()) === 0 && (await text('#board-rekorde .rekorde-titel')).trim().toLowerCase() === 'rekorde');
 check('Platz 1 bis 3 tragen Medaillenfarbe', (await page.locator('#board-list .board-row .pos.m1').count()) === 1);
 check('der Spielverlauf ist zu, bis man ihn oeffnet', !(await visible('#match-log')));
 await page.locator('#board-log-knopf').click();
@@ -1042,7 +1064,7 @@ await page.locator('#bulloff-buttons button').first().click();
 await typeScore(180); await typeScore(60); await typeScore(180); await typeScore(60);
 await modus('total');
 await typeScore(141);
-await page.locator('#overlay-card [data-action="co-darts"]').first().click();
+await coDarts();
 winnerBefore = await page.evaluate(() => window.__dart.currentMatch().winner);
 await page.reload();
 check('Reload nach Matchende landet in der Spielstatistik, nicht im Spiel',
@@ -1243,7 +1265,7 @@ check('Legzeile zeigt weiter die Turnierregel',
 await typeScore(180); await typeScore(60); await typeScore(180); await typeScore(60);
 await modus('total');
 await typeScore(81);
-await page.locator('#overlay-card [data-action="co-darts"]').first().click();
+await coDarts();
 await page.locator('#overlay-card [data-action="open-summary"]').click();
 check('Spielstatistik bietet das Zurücknehmen an',
   (await page.locator('#summary-actions [data-action="reopen-match"]').count()) === 1);
@@ -1352,7 +1374,7 @@ await page.locator('#bulloff-buttons button').first().click();
 await typeScore(180); await typeScore(60); await typeScore(180); await typeScore(60);
 await modus('total');
 await typeScore(141);
-await page.locator('#overlay-card [data-action="co-darts"]').first().click();
+await coDarts();
 await page.locator('#overlay-card [data-action="ov-next-leg"]').click();
 await typeScore(100); await typeScore(60); await typeScore(85);
 histText = (await text('#history')).replace(/\s+/g, ' ');
@@ -1917,7 +1939,7 @@ check('sobald ein Finish ansteht, steht er in den Feldern des Spielers am Wurf',
 await typeScore(41);                                  // Spieler 1 auf Rest 20
 await typeScore(60); await typeScore(60);            // die anderen beiden
 await typeScore(20);                                  // Finish – App fragt nach den Darts
-await page.locator('#overlay-card [data-action="co-darts"]').first().click();
+await coDarts();
 check('Spiel ist entschieden', await page.evaluate(() => window.__dart.currentMatch().done));
 check('Sieger ist Spieler 1', await page.evaluate((id) => window.__dart.currentMatch().winner === id, qIds[0]));
 check('Glückwunsch-Overlay', (await textKlein('#overlay-card')).includes('glückwunsch'));
@@ -2262,7 +2284,7 @@ await page.evaluate(() => { window.__dart.state().settings.dartModeFrom = 0; });
 await typeScore(180); await typeScore(180);           // 441 -> 261 -> 81
 await modus('total');
 await typeScore(81);                                   // Finish
-await page.locator('#overlay-card [data-action="co-darts"]').first().click();
+await coDarts();
 /* Allein ist das Schnelle X01 eine Session (Handy-Block 2): das Leg ist
    ausgemacht, das naechste laeuft schon - kein Sieg, kein Glueckwunsch. */
 check('das Leg ist ausgemacht, die Session laeuft weiter', await page.evaluate(() => {
@@ -2698,15 +2720,11 @@ check('ein zweites Uebernehmen gibt es nicht mehr', (await page.locator('#liga-k
    Liga-Rangliste, zugeordnet ueber die Reihenfolge der 16 Einzel. */
 {
   await ligaStatistik();
-  await page.locator('#stats-main .st-chip[data-action="stats-team"][data-wert="Dart Artists Germering II"]').click();
+  await page.locator('#liga-statistik .st-chip[data-action="stats-team"][data-wert="Dart Artists Germering II"]').click();
   const hl = await page.evaluate(() => document.getElementById('st-highlights').innerText.replace(/\s+/g, ' '));
-  check('Mannschaft › Liga › Germering: die Highlights nennen das gemeldete Shortleg von Gerd Stegerer (20 Darts)', /20 D Gerd Stegerer/.test(hl), hl.slice(0, 200));
-  /* Zurueck in den Spielplan: die Statistik ist ein eigener Reiter, beim
-     Betreten der Liga zeigt der Plan wieder den naechsten Spieltag - fuer
-     den Bericht also den 2. Spieltag erneut waehlen. */
-  await page.evaluate(() => { window.__dart.ui().ligaTeam = 'wir'; });
-  await navTo('liga');
-  await page.evaluate(() => { const D = window.__dart; D.ui().ligaTab = 'plan'; D.ui().ligaWahl = 'st02'; D.ui().ligaZu = false; D.render(); });
+  check('Liga › Statistik › Germering: die Highlights nennen das gemeldete Shortleg von Gerd Stegerer (20 Darts)', /20 D Gerd Stegerer/.test(hl), hl.slice(0, 200));
+  /* Zurueck in den Spielplan - fuer den Bericht den 2. Spieltag erneut waehlen. */
+  await page.evaluate(() => { const D = window.__dart; D.ui().ligaTeam = 'wir'; D.ui().ligaTab = 'plan'; D.ui().ligaWahl = 'st02'; D.ui().ligaZu = false; D.render(); });
 }
 await page.locator('#liga-karte [data-action="liga-bericht"]').click();
 check('der Spielbericht oeffnet', await visible('#screen-bericht'));
@@ -3799,7 +3817,7 @@ for (let leg = 0; leg < 3; leg++) {
   await visit(41);
   await visit(180); await visit(41);
   await visit(141);
-  await page.locator('#overlay-card [data-action="co-darts"]').first().click();
+  await coDarts();
   if (await page.locator('#overlay-card [data-action="ov-next-leg"]').count()) {
     await page.locator('#overlay-card [data-action="ov-next-leg"]').click();
   }
@@ -4131,19 +4149,24 @@ check('das Ligaspiel liegt im Archiv', await page.evaluate(() =>
 
 });
 
-await gruppe('Statistik › Mannschaft › Liga: unser Team, Gesamte Liga, ein Gegner', async () => {
+await gruppe('Liga › Statistik: unser Team, Gesamte Liga, ein Gegner (seit 12.11. im Liga-Reiter)', async () => {
 await ligaStatistik();
-check('der Statistik-Reiter der Liga fuehrt in Statistik › Mannschaft › Liga', (await visible('#screen-stats')) &&
-  (await page.locator('#stats-ebene button.on[data-wert="team"]').count()) === 1 && (await page.locator('#stats-main .st-chip.on[data-wert="liga"]').count()) === 1);
+check('der Statistik-Reiter der Liga zeigt die Liga-Statistik im Liga-Reiter, Reiter Statistik bleibt zu', (await visible('#screen-liga')) &&
+  (await visible('#liga-statistik .st-dash')) && (await page.locator('#liga-tabs button.active[data-tab="statistik"]').count()) === 1 && !(await visible('#screen-stats')));
+check('die Wer-Karte traegt kein Symbol und keinen Balken, der Titel ist unser Team', await page.evaluate(() => {
+  const w = document.querySelector('#liga-statistik .st-wer');
+  return !!w && !w.querySelector('.i') && getComputedStyle(w).borderLeftWidth === '1px' && w.querySelector('b').textContent.trim() === 'Blink 180' &&
+    !/[\u{1F300}-\u{1FAFF}]/u.test(document.getElementById('liga-statistik').textContent);
+}));
 check('Team-Auswahl: unsere Mannschaft, Gesamte Liga und die Gegner', await page.evaluate(() => {
-  const t = [...document.querySelectorAll('#stats-main .st-chip[data-action="stats-team"]')].map((b) => b.textContent.trim());
+  const t = [...document.querySelectorAll('#liga-statistik .st-chip[data-action="stats-team"]')].map((b) => b.textContent.trim());
   return t[0] === 'Blink 180' && t[1] === 'Gesamte Liga' && t.some((x) => x.includes('TSV Dachau')) && t.length >= 10;
 }));
-const kpiBlink = (await text('#stats-main .st-kpis')).toLowerCase();
+const kpiBlink = (await text('#liga-statistik .st-kpis')).toLowerCase();
 check('Kennzahlen: Tabellenplatz, Punkte, Einzel-Quote, Leg-Quote, Team-Average, Doppelquote, 180er',
   ['tabellenplatz', 'punkte', 'einzel-quote', 'leg-quote', 'team-average', 'doppelquote', '180er'].every((k) => kpiBlink.includes(k)), kpiBlink.slice(0, 200));
 check('Team-Average aus den Wuerfen unserer Ligaspiele, das 141er-Finish als hoechstes', await page.evaluate(() => {
-  const k = document.querySelectorAll('#stats-main .st-kpi');
+  const k = document.querySelectorAll('#liga-statistik .st-kpi');
   return parseFloat(k[4].querySelector('.z').getAttribute('data-zahl')) > 0 && k[6].textContent.includes('141');
 }));
 check('Spieltag fuer Spieltag: Saeulen je Spieltag und die Punkte-Linie',
@@ -4155,7 +4178,7 @@ check('Liga-Rangliste: vier Kacheln, Liste unserer Spieler, Highlights daneben',
 await page.locator('#st-ligarang .st-kachel[data-wert="won"]').click();
 check('eine Kachel waehlt die Kennzahl der Liste', (await page.locator('#st-ligarang .st-kachel.on[data-wert="won"]').count()) === 1 && (await text('#st-ligarang .st-liste h4')).toLowerCase().includes('siege'));
 
-await page.locator('#stats-main .st-chip[data-action="stats-team"][data-wert="alle"]').click();
+await page.locator('#liga-statistik .st-chip[data-action="stats-team"][data-wert="alle"]').click();
 check('Gesamte Liga: Tabelle, Einzelrangliste mit Spielern anderer Teams, Highlights der ganzen Liga', await page.evaluate(() => {
   const e = document.getElementById('st-einzel').innerText;
   return document.querySelectorAll('#st-tabelle .st-krow').length >= 9 && document.querySelectorAll('#st-einzel .st-krow').length === 12 &&
@@ -4163,13 +4186,25 @@ check('Gesamte Liga: Tabelle, Einzelrangliste mit Spielern anderer Teams, Highli
 }));
 check('auch Spieler aus Spielen ohne uns (Reinhart Boehm, d`Haberer 2) stehen in der Liga-Rangliste', (await text('#st-ligarang')).includes('Reinhart Boehm'));
 
-await page.locator('#stats-main .st-chip[data-action="stats-team"][data-wert="TSV Dachau 1865 4"]').click();
+await page.locator('#liga-statistik .st-chip[data-action="stats-team"][data-wert="TSV Dachau 1865 4"]').click();
 check('nur der Gegner: Kader ohne Tipp zur Person, Team-Average nur fuer unser Team', await page.evaluate(() => {
   const rows = [...document.querySelectorAll('#st-kader .st-krow')];
-  return rows.length > 0 && rows.every((r) => r.tagName !== 'BUTTON') && document.querySelector('#stats-main .st-kpis').textContent.includes('nur für unser Team');
+  return rows.length > 0 && rows.every((r) => r.tagName !== 'BUTTON') && document.querySelector('#liga-statistik .st-kpis').textContent.includes('nur für unser Team');
 }));
 await page.locator('#st-tabelle .st-krow[data-wert="wir"]').click();
-check('ein Tipp in der Tabelle wechselt das Team', (await page.locator('#stats-main .st-chip.on[data-wert="wir"]').count()) === 1);
+check('ein Tipp in der Tabelle wechselt das Team', (await page.locator('#liga-statistik .st-chip.on[data-wert="wir"]').count()) === 1);
+/* Ein Tipp auf eine Person im Kader-Beitrag fuehrt in Statistik › Einzel. */
+await page.locator('#st-kader button.st-krow').first().click();
+check('ein Tipp auf eine Person im Kader-Beitrag oeffnet ihre Einzelstatistik im Reiter Statistik', (await visible('#screen-stats')) &&
+  (await page.locator('#stats-ebene button.on[data-wert="person"]').count()) === 1 && (await visible('#stats-main .st-wer .av')));
+/* Am Handy liegt die erste Karte unter den Kennzahlen - erst ins Bild rollen. */
+await page.locator('#stats-main .st-karte').first().scrollIntoViewIfNeeded();
+await page.waitForTimeout(1200);
+check('aus der Liga kommend werden die Karten im Bild sichtbar (der geteilte Beobachter bleibt dran)', await page.evaluate(() => {
+  const k = document.querySelector('#stats-main .st-karte');
+  return !!k && !k.classList.contains('st-wart') && parseFloat(getComputedStyle(k).opacity) > 0.5 && !document.getElementById('liga-statistik').innerHTML;
+}));
+await page.evaluate(() => { const D = window.__dart; D.ui().ligaTab = 'plan'; D.setScreen('liga'); });
 
 });
 
@@ -4712,7 +4747,7 @@ check('am Tablet steht rechts die Schnellansicht des ersten Spielers', await pag
   const s = document.getElementById('players-schnell'), erste = document.querySelector('#players-list .player-card');
   return !!s && !s.classList.contains('hidden') && erste.classList.contains('active') &&
     s.querySelector('.ps-name').textContent === erste.querySelector('.pc-nm').textContent &&
-    s.querySelectorAll('.ps-kachel').length === 6 && s.querySelector('.form-row') !== null;
+    s.querySelectorAll('.st-mini').length === 6 && s.querySelector('.st-pillen') !== null && s.querySelector('[data-action="stats-person"]') !== null;
 }));
 await page.locator('#players-list .player-card').nth(1).click();
 check('ein Tipp auf eine andere Karte wechselt die Schnellansicht', await page.evaluate(() => {
@@ -6324,7 +6359,7 @@ await gruppe('Schnelles X01 zu zweit: zwischen den Legs Statistik und vorzeitige
   check('vor dem ersten Leg steht kein "Spiel beenden" im Menue', await page.evaluate(() => document.getElementById('game-menu-session').classList.contains('hidden')));
   /* Leg 1 an den Anwerfenden: 180, 180, 141. */
   await typeScore(180); await typeScore(60); await typeScore(180); await typeScore(45); await typeScore(141);
-  await page.locator('#overlay-card [data-action="co-darts"]').first().click();
+  await coDarts();
   check('der Leg-Dialog zeigt den Average des ganzen Spiels ("Ø Spiel")', (await text('#overlay-card')).includes('Ø Spiel'));
   check('"Spiel beenden & speichern" steht als dritter Knopf im Dialog', (await page.locator('#overlay-card [data-action="spiel-ende"]').count()) === 1);
   await page.locator('#overlay-card [data-action="ov-next-leg"]').click();
@@ -6362,7 +6397,7 @@ await gruppe('Solo-Session am iPad quer: Zahlen mittig, kleines Eingabefeld, Tab
   await page.keyboard.type('180'); await page.keyboard.press('Enter');
   await page.keyboard.type('180'); await page.keyboard.press('Enter');
   await page.keyboard.type('141'); await page.keyboard.press('Enter');
-  await page.locator('#overlay-card [data-action="co-darts"]').first().click();
+  await coDarts();
   await page.locator('#overlay-card [data-action="ov-next-leg"]').click();
   await page.keyboard.type('100'); await page.keyboard.press('Enter');
   check('quer: rechts die Tabelle Leg | Session | Gesamt statt der sechs Kacheln', await page.evaluate(() => {
@@ -6542,11 +6577,11 @@ check('die Tafel oeffnet mit dem Dashboard: Filter-Chips, sieben Kennzahlen, dre
 const insBild = async (sel, ms) => { await page.locator(sel).scrollIntoViewIfNeeded(); await page.waitForTimeout(ms || 2100); };
 const kpiText = (await text('#profile-detail .st-kpis')).toLowerCase();
 check('Kennzahlen: Average, First 9, Doppelquote, Siegquote, 180er, hoechstes Finish, bestes Leg mit Vergleich',
-  ['ø 3-dart-average', 'first 9', 'doppelquote', 'siegquote', '180er', 'höchstes finish', 'bestes leg', 'vs. davor'].every((t) => kpiText.includes(t)), kpiText.slice(0, 200));
+  ['ø 3-dart-average', 'first 9', 'doppelquote', 'siegquote', '180er', 'höchstes finish', 'bestes leg', 'vs. letzte 10'].every((t) => kpiText.includes(t)), kpiText.slice(0, 200));
 await page.waitForTimeout(1700);
-check('die Zahlen zaehlen hoch und stehen dann am Ziel', await page.evaluate(() => {
+check('die Zahlen zaehlen hoch und stehen dann am Ziel (eine Nachkommastelle)', await page.evaluate(() => {
   const v = document.querySelector('#profile-detail .st-kpi .v .z');
-  return Math.abs(parseFloat(v.textContent) - parseFloat(v.getAttribute('data-zahl'))) < 0.02;
+  return Math.abs(parseFloat(v.textContent) - parseFloat(v.getAttribute('data-zahl'))) < 0.06 && /^\d+\.\d$/.test(v.textContent.trim());
 }));
 await insBild('#st-avg');
 check('Average-Verlauf: Linie gezogen, gleitender Schnitt, Trendlinie, bester Punkt, Legende', await page.evaluate(() => {
@@ -6622,9 +6657,32 @@ const erster = await page.evaluate(() => {
   D.setScreen('stats');
   return { id: c.id, name: c.name, cricket: D.career()[c.id].cricketGames, rtw: D.career()[c.id].rtwGames };
 });
-check('die Person: Wer-Karte mit Namen, Spieler-Chips, der Gewaehlte markiert',
-  (await text('#stats-main .st-wer')).includes(erster.name) && (await page.locator('#stats-main .st-spieler .st-chip.on').count()) === 1 &&
+check('die Person: Wer-Karte mit Profilbild und Namen, Spieler-Chips, der Gewaehlte markiert',
+  (await text('#stats-main .st-wer')).includes(erster.name) && (await page.locator('#stats-main .st-wer .av').count()) === 1 && (await page.locator('#stats-main .st-spieler .st-chip.on').count()) === 1 &&
   (await text('#stats-main .st-spieler .st-chip.on')).includes(erster.name));
+{
+  const d = await page.evaluate(() => {
+    const s = document.getElementById('screen-stats');
+    const w = s.querySelector('.st-wer'), h = s.querySelector('.st-karte h3'), eb = s.querySelector('#stats-ebene button');
+    const emoji = /[\u{1F300}-\u{1FAFF}\u{2705}\u{2728}\u{2694}\u{2696}\u{26A1}\u{23F1}]/u;
+    return { emoji: emoji.test(s.textContent) ? (s.textContent.match(emoji) || [])[0] : '', rand: getComputedStyle(w).borderLeftWidth, vor: getComputedStyle(h, '::before').content,
+      knoepfe: [...s.querySelectorAll('#stats-ebene button')].map((b) => b.textContent.trim()).join('|'), hoehe: eb.getBoundingClientRect().height };
+  });
+  check('Design (Julius, 12.11.): keine Emojis, kein Balken links an der Wer-Karte, keine Balken vor den Kartentiteln, Schalter heisst Einzel / Mannschaft',
+    d.emoji === '' && d.rand === '1px' && d.vor === 'none' && d.knoepfe === 'Einzel|Mannschaft' && d.hoehe < 44, JSON.stringify(d));
+  const z = await page.evaluate(() => {
+    const k = [...document.querySelectorAll('#stats-main .st-kpi')];
+    const avg = k.length && k[0].querySelector('.z') ? k[0].querySelector('.z').textContent.trim() : '';
+    return { avg: avg, davor: k.some((x) => /letzte \d+ vs\. davor/.test(x.textContent)), einzel: k.some((x) => /nur aus Einzel-Darts/.test(x.textContent)), n: k.length };
+  });
+  check('Kennzahlen mit einer Nachkommastelle, der Vergleich heisst "vs. letzte 10" (oder fehlt bei wenigen Spielen)',
+    /^\d+\.\d$/.test(z.avg) && !z.davor && !z.einzel, JSON.stringify(z));
+}
+check('Spielerprofil: der Spieler in Rot gegen den Rest des Teams in Blau, Gegnerbilanz mit Prozentzahl, Aktivitaet ueber zwei Spalten', await page.evaluate(() => {
+  const r = document.getElementById('st-radar'), g = document.getElementById('st-gegner'), k = document.getElementById('st-kalender');
+  return r.textContent.includes('Rest des Teams') && r.querySelectorAll('polygon').length >= 6 && !!g && !!g.querySelector('.st-quote') && /\d+ %/.test(g.querySelector('.st-quote').textContent) &&
+    !!k && k.classList.contains('zwei') && document.getElementById('st-spielarten').classList.contains('zwei');
+}));
 check('weitere Spielarten: je gespielter Art ein Kopf mit drei Kennzahlen, zugeklappt', await page.evaluate((e) => {
   const arten = [...document.querySelectorAll('#st-spielarten .st-art')];
   const soll = (e.cricket ? 1 : 0) + (e.rtw ? 1 : 0);
@@ -6643,15 +6701,14 @@ check('noch ein Tipp klappt wieder zu', (await page.locator('#st-spielarten .st-
 const zweiter = await page.evaluate(() => window.__dart.statsCrew()[1].id);
 await page.locator('#stats-main .st-spieler .st-chip[data-wert="' + zweiter + '"]').click();
 check('ein Spieler-Chip wechselt die Person', (await page.evaluate(() => window.__dart.ui().stats.spieler)) === zweiter && (await page.locator('#stats-main .st-spieler .st-chip.on[data-wert="' + zweiter + '"]').count()) === 1);
-check('"Profil ›" fuehrt ins Profil des Gewaehlten', (await page.locator('#stats-main .st-wer [data-action="open-profile"][data-id="' + zweiter + '"]').count()) === 1);
+check('"Profil ›" fuehrt ins Profil des Gewaehlten (ohne Konto darf jeder jedes Profil pflegen)', (await page.locator('#stats-main .st-wer [data-action="open-profile"][data-id="' + zweiter + '"]').count()) === 1);
 
 await page.locator('#stats-ebene [data-wert="team"]').click();
-check('Mannschaft oeffnet mit der Liga', (await page.locator('#stats-ebene button.on[data-wert="team"]').count()) === 1 && (await page.locator('#stats-main .st-chip.on[data-wert="liga"]').count()) === 1 && (await visible('#st-spieltage')));
-await page.locator('#stats-main [data-action="stats-umfang"][data-wert="alle"]').click();
-check('Alle Spielarten: Crew-Kennzahlen, Kader im Vergleich, Aktivitaet, Team-Form, Big Scores, Doppelquote, darunter die Rangliste je Spielart',
+check('Mannschaft: Crew-Kennzahlen, Kader im Vergleich, Aktivitaet, Team-Form, Big Scores, Doppelquote, darunter die Rangliste je Spielart (keine Liga mehr hier)',
   (await page.locator('#stats-main .st-kpi').count()) === 6 && (await page.locator('#st-kadervergleich .st-krow').count()) >= 2 &&
   (await visible('#st-kalender')) && (await page.locator('#st-crewform').count()) === 1 && (await page.locator('#st-big').count()) === 1 && (await page.locator('#st-dbltrend').count()) === 1 &&
-  (await visible('#stats-rang')) && (await page.locator('#board-kacheln .bk-kachel').count()) >= 10);
+  (await visible('#stats-rang')) && (await page.locator('#board-kacheln .bk-kachel').count()) >= 10 &&
+  (await page.locator('#stats-ebene button.on[data-wert="team"]').count()) === 1 && (await page.locator('#stats-main [data-action="stats-team"]').count()) === 0 && (await page.locator('#st-spieltage').count()) === 0);
 await page.locator('#st-kadervergleich .st-chip[data-wert="win"]').click();
 check('eine Kennzahl im Kader-Vergleich: Siegquote mit Prozent, die Seite zeichnet still', (await page.locator('#st-kadervergleich .st-chip.on[data-wert="win"]').count()) === 1 &&
   (await page.locator('#st-kadervergleich .st-kwert').first().innerText()).includes('%') && (await page.locator('#stats-main .st-dash.st-still').count()) === 1);
@@ -6682,7 +6739,7 @@ await gruppe('Handy-Block 2: Solo-Session - Leg um Leg, Statistik ueber alle Leg
   check('im Menue steht "Session beenden"', await page.evaluate(() => !document.getElementById('game-menu-session').classList.contains('hidden')));
   /* Leg 1 in 9 Darts: 180, 180, 141. */
   await typeScore(180); await typeScore(180); await typeScore(141);
-  await page.locator('#overlay-card [data-action="co-darts"]').first().click();
+  await coDarts();
   check('nach dem Leg: kein Sieg, die Session laeuft, das naechste Leg steht schon', await page.evaluate(() => {
     const m = window.__dart.currentMatch();
     return !m.done && m.legs.length === 2 && !!m.legs[0].winner && !m.legs[1].winner;
@@ -6698,7 +6755,7 @@ await gruppe('Handy-Block 2: Solo-Session - Leg um Leg, Statistik ueber alle Leg
   check('Kopf zaehlt "Leg 2", die Karte "Legs 1"', (await textKlein('#game-leg-label')).includes('leg 2') && (await textKlein('#scoreboard')).includes('legs 1'));
   /* Leg 2 in 14 Darts: 100, 100, 100, 100, 101 (das Finish mit zwei Darts). */
   await typeScore(100); await typeScore(100); await typeScore(100); await typeScore(100); await typeScore(101);
-  await page.locator('#overlay-card [data-action="co-darts"]').first().click();
+  await coDarts();
   check('der Dialog zeigt "Leg 2 in 14 Darts"', (await textKlein('#overlay-card')).includes('leg 2 in 14 darts'));
   const kacheln = await page.evaluate(() => Array.from(document.querySelectorAll('#overlay-card .ss-kacheln .ss'))
     .map((e) => e.querySelector('span').textContent + '=' + e.querySelector('b').textContent).join(' | '));
