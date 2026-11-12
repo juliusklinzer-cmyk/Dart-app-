@@ -6396,12 +6396,12 @@
     var alleZeilen = Object.keys(o).map(function (k) { return o[k]; }).sort(function (a, b) { return b.n - a.n || b.w - a.w; });
     /* Die zehn haeufigsten, der Rest klappt auf. */
     var offen = !!statsUI().gegnerAlle, zeilen = offen ? alleZeilen : alleZeilen.slice(0, 10);
-    var html = '<table class="st-tab"><thead><tr><th>Gegner</th><th class="n">Spiele</th><th class="n">Bilanz</th><th class="n">Legs</th><th class="n">Ø</th><th class="q">Siegquote</th></tr></thead><tbody>' +
+    var html = '<table class="st-tab"><thead><tr><th>Gegner</th><th class="n">Spiele</th><th class="n">Bilanz</th><th class="n">Legs</th><th class="n">Ø</th><th class="n">Siegquote</th></tr></thead><tbody>' +
       zeilen.map(function (x, i) {
         var q = x.w / x.n * 100, farbe = q >= 50 ? ST_FARBE.gruen : ST_FARBE.rot;
         return '<tr class="st-fade" style="animation-delay:' + (Math.min(i, 12) * 60) + 'ms"><td><b>' + esc(x.name) + '</b>' + (x.team ? '<small>' + esc(x.team) + '</small>' : '') + '</td><td class="n">' + x.n + '</td>' +
           '<td class="n" style="color:' + farbe + '">' + x.w + ' : ' + (x.n - x.w) + '</td><td class="n">' + x.lw + ' : ' + x.ll + '</td><td class="n">' + (x.darts ? (x.pts / x.darts * 3).toFixed(1) : '–') + '</td>' +
-          '<td><div class="st-quote"><div class="st-track"><div class="st-fill" data-w="' + q.toFixed(1) + '" style="background:' + farbe + '"></div></div><b style="color:' + farbe + '">' + Math.round(q) + ' %</b></div></td></tr>';
+          '<td class="n"><b style="color:' + farbe + '">' + Math.round(q) + ' %</b></td></tr>';
       }).join('') + '</tbody></table>' +
       (alleZeilen.length > 10 ? '<button type="button" class="st-mehr" data-action="stats-gegner-alle">' + (offen ? 'Nur die zehn häufigsten' : 'Alle ' + alleZeilen.length + ' Gegner anzeigen') + '</button>' : '');
     return stKarte('gegner', titel, sub, html, true);

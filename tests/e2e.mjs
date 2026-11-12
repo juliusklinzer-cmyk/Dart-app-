@@ -6680,7 +6680,7 @@ check('die Person: Wer-Karte mit Profilbild und Namen, Spieler-Chips, der Gewaeh
 }
 check('Spielerprofil: der Spieler in Rot gegen den Rest des Teams in Blau, Gegnerbilanz mit Prozentzahl, Aktivitaet ueber zwei Spalten', await page.evaluate(() => {
   const r = document.getElementById('st-radar'), g = document.getElementById('st-gegner'), k = document.getElementById('st-kalender');
-  return r.textContent.includes('Rest des Teams') && r.querySelectorAll('polygon').length >= 6 && !!g && !!g.querySelector('.st-quote') && /\d+ %/.test(g.querySelector('.st-quote').textContent) &&
+  return r.textContent.includes('Rest des Teams') && r.querySelectorAll('polygon').length >= 6 && !!g && !g.querySelector('.st-track') && /\d+ %/.test(g.querySelector('tbody td:last-child').textContent) && getComputedStyle(g.querySelector('tbody td.n')).whiteSpace === 'nowrap' &&
     !!k && k.classList.contains('zwei') && document.getElementById('st-spielarten').classList.contains('zwei');
 }));
 check('weitere Spielarten: je gespielter Art ein Kopf mit drei Kennzahlen, zugeklappt', await page.evaluate((e) => {
@@ -6915,8 +6915,28 @@ await gruppe('Allein im Punkte-Modus: die Restzahl fuellt die Karte - quer am iP
       (unten ? g.lOben >= g.zUnten - 1 && g.lLinks <= g.zLinks + 20 : g.lLinks >= g.zRechts - 1), JSON.stringify(g));
     check(name + ': nichts ragt aus der Karte, nichts scrollt', g.zOben >= g.kOben - 1 && g.zUnten <= g.kUnten + 1 && g.scroll, JSON.stringify(g));
   }
+  /* Handy quer: die Aufnahme-Box steht direkt ueber den drei Feldern. Die
+     alte Zahl faehrt im Drehrad nach unten - sie bleibt in der Box und legt
+     sich nicht ueber die Kacheln (Julius, 12.11., Screenshot). Die Seiten-
+     polster messen sich an der Schutzzone (Insel quer): im Spiel ohne Inset
+     0 (body.rand-aus), sonst 12 px - so parst der Browser die Ausdruecke. */
+  await page.setViewportSize({ width: 844, height: 390 });
+  await page.waitForTimeout(150);
+  await page.keyboard.type('60'); await page.keyboard.press('Enter');
+  await page.waitForTimeout(250);
+  const drum = await page.evaluate(() => {
+    const b = document.querySelector('#scoreboard .pcard .letzte-box'), a = document.querySelector('#scoreboard .pcard .letzte-alt');
+    const f = document.querySelector('#scoreboard .pcard .pfelder');
+    return { overflow: getComputedStyle(b).overflow, alt: a && a.textContent, anim: a && getComputedStyle(a).animationName,
+      boxUnten: b.getBoundingClientRect().bottom, felderOben: f ? f.getBoundingClientRect().top : 9999,
+      body: getComputedStyle(document.body).paddingLeft + ' ' + getComputedStyle(document.body).paddingRight };
+  });
+  check('Handy quer: die alte Aufnahme bleibt in ihrer Box (overflow hidden), die Box endet ueber den Feldern',
+    drum.overflow === 'hidden' && drum.alt === '25' && drum.anim === 'drumOut' && drum.boxUnten <= drum.felderOben + 1, JSON.stringify(drum));
+  check('im Spiel ohne Schutzzone kein Seitenrand (env-Fallback 0)', drum.body === '0px 0px', drum.body);
   await page.setViewportSize(vp);
   await page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; D.save(); D.setScreen('setup'); });
+  check('ausserhalb des Spiels sind die Seitenpolster 12 px - der max()-Ausdruck mit den Insets parst', await page.evaluate(() => getComputedStyle(document.body).paddingLeft === '12px' && getComputedStyle(document.body).paddingRight === '12px'));
 });
 
 await gruppe('Spielplan am Handy: der Spieltag klappt in der Liste auf, jeder sagt zu oder ab', async () => {

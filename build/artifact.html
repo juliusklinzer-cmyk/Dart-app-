@@ -165,7 +165,7 @@ body {
   /* Unten nur der groessere Wert aus Innenabstand und Schutzzone fuer den
      Home-Balken, nicht beide addiert - sonst bleibt am iPad fast ein
      Zentimeter leer (Julius, 13.10.). */
-  padding: env(safe-area-inset-top) 12px max(12px, env(safe-area-inset-bottom, 0px));
+  padding: env(safe-area-inset-top) max(12px, env(safe-area-inset-right, 0px)) max(12px, env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
   min-height: 100vh;
   min-height: 100dvh;
 }
@@ -4027,7 +4027,11 @@ body.tastatur #overlay-card :is(button, select, input):focus { outline: 3px soli
    bildschirmhoch, nichts scrollt) und ueber die ganze Breite (body.rand-aus:
    kein Seitenrand, keine Maximalbreite). Oben etwas mehr Luft, damit der
    Schein der aktiven Karte nicht an der Kante abgeschnitten wird. */
-body.rand-aus { max-width: none; padding-left: 0; padding-right: 0; }
+/* Kein Seitenrand - aber die Schutzzone bleibt: am iPhone quer liegt sonst
+   die grosse Restzahl unter der Insel (Julius, 12.11.). Am Board (eigene
+   Polster im Screen) bleibt der body ohne Rand. */
+body.rand-aus { max-width: none; padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
+body.am-board.rand-aus { padding-left: 0; padding-right: 0; }
 #screen-cricket.active {
   padding: clamp(10px, 2.4vh, 30px) clamp(6px, 1vw, 14px) clamp(6px, 1.8vh, 22px);
   gap: 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column;
@@ -7203,6 +7207,10 @@ button.pa-gruppe { cursor: pointer; }
   #screen-game.active:not(.turnier) #scoreboard.solo .pcard .rest { grid-column: 1; grid-row: 1; align-self: end; font-size: min(1em, 92cqh); }
   #screen-game.active:not(.turnier) #scoreboard.solo .pcard .letzte-box {
     grid-column: 1; grid-row: 2; justify-self: start; font-size: 0.5em; margin: 0.1em 0 0 0.08em; padding: 0 0 0 0.16em;
+    /* Die Box steht direkt ueber den drei Feldern: die alte Aufnahme, die
+       im Drehrad nach unten faehrt, bleibt in der Box und legt sich nicht
+       ueber die Finish-Kacheln (Julius, 12.11., Screenshot quer). */
+    overflow: hidden;
   }
 }
 
@@ -7325,12 +7333,8 @@ button.pa-gruppe { cursor: pointer; }
 .st-tab th { font-family: var(--font-cond); font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); text-align: left; font-weight: 700; padding: 6px; border-bottom: 1px solid #2a2224; }
 .st-tab td { padding: 8px 6px; border-bottom: 1px solid #ffffff08; vertical-align: middle; }
 .st-tab td small { display: block; font-size: 0.7rem; color: var(--muted); }
-.st-tab .n { text-align: right; font-variant-numeric: tabular-nums; }
-.st-tab .q { width: 30%; }
+.st-tab .n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 /* Siegquote je Gegner: Balken und die Zahl daneben. */
-.st-quote { display: flex; align-items: center; gap: 8px; }
-.st-quote .st-track { flex: 1 1 auto; }
-.st-quote b { flex: none; min-width: 38px; text-align: right; font-variant-numeric: tabular-nums; font-size: 0.8rem; }
 .st-mehr { display: block; width: 100%; min-height: 40px; margin: 10px 0 0; padding: 0 12px; border-radius: 10px; background: #1c1718; border: 1px solid var(--line); box-shadow: none; color: var(--text); font-family: var(--font-body); font-weight: 600; font-size: 0.82rem; text-transform: none; letter-spacing: 0; }
 .st-recs { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
 .st-rec { padding: 12px; border-radius: 14px; background: #1c1718; border: 1px solid #2a2224; animation: st-grow 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
@@ -17546,12 +17550,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var alleZeilen = Object.keys(o).map(function (k) { return o[k]; }).sort(function (a, b) { return b.n - a.n || b.w - a.w; });
     /* Die zehn haeufigsten, der Rest klappt auf. */
     var offen = !!statsUI().gegnerAlle, zeilen = offen ? alleZeilen : alleZeilen.slice(0, 10);
-    var html = '<table class="st-tab"><thead><tr><th>Gegner</th><th class="n">Spiele</th><th class="n">Bilanz</th><th class="n">Legs</th><th class="n">Ø</th><th class="q">Siegquote</th></tr></thead><tbody>' +
+    var html = '<table class="st-tab"><thead><tr><th>Gegner</th><th class="n">Spiele</th><th class="n">Bilanz</th><th class="n">Legs</th><th class="n">Ø</th><th class="n">Siegquote</th></tr></thead><tbody>' +
       zeilen.map(function (x, i) {
         var q = x.w / x.n * 100, farbe = q >= 50 ? ST_FARBE.gruen : ST_FARBE.rot;
         return '<tr class="st-fade" style="animation-delay:' + (Math.min(i, 12) * 60) + 'ms"><td><b>' + esc(x.name) + '</b>' + (x.team ? '<small>' + esc(x.team) + '</small>' : '') + '</td><td class="n">' + x.n + '</td>' +
           '<td class="n" style="color:' + farbe + '">' + x.w + ' : ' + (x.n - x.w) + '</td><td class="n">' + x.lw + ' : ' + x.ll + '</td><td class="n">' + (x.darts ? (x.pts / x.darts * 3).toFixed(1) : '–') + '</td>' +
-          '<td><div class="st-quote"><div class="st-track"><div class="st-fill" data-w="' + q.toFixed(1) + '" style="background:' + farbe + '"></div></div><b style="color:' + farbe + '">' + Math.round(q) + ' %</b></div></td></tr>';
+          '<td class="n"><b style="color:' + farbe + '">' + Math.round(q) + ' %</b></td></tr>';
       }).join('') + '</tbody></table>' +
       (alleZeilen.length > 10 ? '<button type="button" class="st-mehr" data-action="stats-gegner-alle">' + (offen ? 'Nur die zehn häufigsten' : 'Alle ' + alleZeilen.length + ' Gegner anzeigen') + '</button>' : '');
     return stKarte('gegner', titel, sub, html, true);
