@@ -4,7 +4,6 @@
 
 ## Wartet auf Julius
 
-- [ ] DRT-037 Deploy von DRT-035 (Statistik-Umbau, Doppel-Abfrage, Cache v189): der Auto-Modus blockt den Deploy – bitte in WSL ausführen: `cd /home/julius/projects/darts-app && PATH=~/bin:$PATH DARTS_SKIP_TESTS=1 bash deploy/deploy.sh` (Tests sind hier grün); danach am Handy einmal Statistik › Einzel und Liga › Statistik ansehen und beim nächsten Schnellen X01 die Frage „Welches Doppel?“ ausprobieren · von:Claude · am:2026-11-12
 
 - [ ] DRT-026 Doppel-Fehlwürfe im Punkte-Modus: das Finish-Doppel wird seit DRT-035 erfragt, Fehlwürfe aufs Doppel in Aufnahmen ohne Finish (Rest 50 oder gerade bis 40) kennt die App weiter nicht – kurz „Darts aufs Doppel 0/1/2/3“ fragen? bitte ja/nein · von:Julius · am:2026-11-10
 
@@ -35,6 +34,7 @@
 
 ## Erledigt
 
+- [x] DRT-037 Deploy von DRT-035 (Statistik-Umbau, Doppel-Abfrage, Cache v189) nach Freigabe von Julius ausgeführt, Rauchprobe ping 200 · von:Claude · am:2026-11-12 · fertig:2026-11-12
 - [x] DRT-035 Statistik zurück zum App-Design (Julius 12.11.): keine Emojis, keine dicken linken Balken, Profilbild statt Personen-Symbol, kleiner Schalter Einzel / Mannschaft; Statistik-Reiter nur für uns (Einzel + Mannschaft mit Bestenlisten), Liga-Statistik mit Mannschaftsstatistik im Liga-Reiter, Tipp auf eine Person führt zur Einzelstatistik; eine Nachkommastelle, „vs. letzte 10“, Spielerprofil = Spieler (rot) gegen Rest des Teams (blau, Skala Teamschnitt Stand 12.11.), Aktivität breiter, Gegnerbilanz mit Prozent und aufklappbar (Spiele ohne Sieger zählen nicht mehr als Niederlage), Spielarten 2×2, Raster ohne Lücken; Doppel-Abfrage im Punkte-Modus (nicht Liga): nach „wie viele Darts“ das Doppel per Ausschlussverfahren, nur 301/501; andere Spieler nur noch Schnellansicht + Einzelstatistik, kein fremdes Profil · von:Julius · am:2026-11-12 · begonnen:2026-11-12 · fertig:2026-11-12
 - [x] DRT-034 Statistik-Bereich nach dem erweiterten Artefakt „Darts Statistik“ (Stand 11.11.): Ebene Person (Spieler-Chips, Liga-Bilanz aus Einzelrangliste + App, Weitere Spielarten, Alle Zahlen) und Ebene Mannschaft (Liga: Spieltag-Diagramm, Kader-Beitrag, Tabelle, Bilanz je Team, Highlights, Liga-Rangliste; Alle Spielarten: Kader-Vergleich, Team-Form, Rangliste je Spielart) hier in der App aus echten Daten bauen – Entscheidung Julius 11.11.: ja, eigener Reiter „Statistik“ statt „Rang“, Ranglisten unter Mannschaft je Spielart, andere Spielarten als aufklappbare Karten mit drei Kennzahlen · von:Julius · am:2026-11-11 · begonnen:2026-11-11 · fertig:2026-11-11
 - [x] DRT-031 Ligaspiel-Start: Spielertypen für beide Teams – Status-Knopf gemeldet / Gastspieler / neu melden je Zeile, „Anderer Name“ ohne Konto bei uns, Kader-Chips mit Gast-Kennung der Ligaleitung, höchstens ein Gastspieler je Team (SWO), Nachmelde-Bogen direkt nach GAME ON bzw. spätestens vor den TC-Unterschriften, „(Gast)“ im Bogen, Gast oder Nachmeldung auch beim spontanen Wechsel · von:Julius · am:2026-11-11 · fertig:2026-11-11
