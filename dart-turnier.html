@@ -7188,12 +7188,15 @@ button.pa-gruppe { cursor: pointer; }
    Kartenbreite erlaubt, die letzte Aufnahme klein daneben; die Karte
    bekommt dafuer ein Drittel der Hoehe, der Verlauf den Rest (Julius, 09.11.). */
 @media (orientation: portrait) {
+  /* Flacher als zuerst gebaut (30 vh): allein waren die Tasten am Handy
+     deutlich kleiner als zu zweit, weil die Karte ein Drittel der Hoehe
+     nahm (Julius, 12.11.). Jetzt etwa ein Fuenftel, die Zahl bleibt gross. */
   #screen-game.active:not(.turnier) #scoreboard.solo .pcard {
-    min-height: clamp(180px, 30vh, 340px); justify-content: center; gap: clamp(2px, 0.8vh, 8px);
+    min-height: clamp(150px, 21vh, 260px); justify-content: center; gap: clamp(2px, 0.6vh, 6px);
   }
   #screen-game.active:not(.turnier) #scoreboard.solo .pcard .rest-zeile {
     grid-template-columns: auto minmax(0, 1fr); justify-content: start; min-height: 0;
-    font-size: clamp(4rem, min(22vh, 42cqi), 12rem); line-height: 0.86;
+    font-size: clamp(3.4rem, min(15vh, 38cqi), 10rem); line-height: 0.86;
   }
   #screen-game.active:not(.turnier) #scoreboard.solo .pcard .rest { grid-column: 1; }
   #screen-game.active:not(.turnier) #scoreboard.solo .pcard .letzte-box { grid-column: 2; justify-self: start; }
@@ -7208,20 +7211,26 @@ button.pa-gruppe { cursor: pointer; }
    die letzte Aufnahme klein darunter (Julius, 09.11.: "im Querformat ist
    die Zahl links noch winzig"). Die Zeile ist ein Groessen-
    Container, die Ziffern messen sich an ihrer Hoehe (siehe Fernsteuerung). */
+/* Am iPhone quer lag die linksbuendige Zahl unter der Insel. Jetzt steht
+   die Zahl mittig in der Karte, die letzte Aufnahme rechts daneben - beide
+   zusammen zentriert (Julius, 12.11., Screenshot). Die Zahl misst sich an
+   der Zeilenhoehe und bekommt hoechstens 44 % der Breite, damit auch eine
+   dreistellige Zahl samt Aufnahme nebeneinander passt. */
 @media (orientation: landscape) {
   #screen-game.active:not(.turnier) #scoreboard.solo .pcard .rest-zeile {
-    grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; align-content: center;
-    justify-items: start; container-type: size;
+    grid-template-columns: auto auto; grid-template-rows: minmax(0, 1fr); align-content: center; align-items: center;
+    justify-content: center; justify-items: center; container-type: size;
     font-size: clamp(3rem, 60cqi, 40rem); line-height: 0.8;
   }
-  /* Die Zahl nimmt die Breite, die letzte Aufnahme steht klein darunter -
-     nebeneinander haette die Zahl nur zwei Fuenftel der Karte bekommen. */
-  #screen-game.active:not(.turnier) #scoreboard.solo .pcard .rest { grid-column: 1; grid-row: 1; align-self: end; font-size: min(1em, 92cqh); }
+  /* Dreistellig (Leg-Anfang) bekommt die Zahl weniger Breite, damit sie
+     samt Aufnahme mittig bleibt und am Handy von der Insel wegbleibt;
+     ein- und zweistellig begrenzt ohnehin die Hoehe. */
+  #screen-game.active:not(.turnier) #scoreboard.solo .pcard .rest-zeile.z3 { font-size: clamp(3rem, 40cqi, 40rem); }
+  #screen-game.active:not(.turnier) #scoreboard.solo .pcard .rest { grid-column: 1; grid-row: 1; align-self: center; font-size: min(1em, 92cqh); }
   #screen-game.active:not(.turnier) #scoreboard.solo .pcard .letzte-box {
-    grid-column: 1; grid-row: 2; justify-self: start; font-size: 0.5em; margin: 0.1em 0 0 0.08em; padding: 0 0 0 0.16em;
-    /* Die Box steht direkt ueber den drei Feldern: die alte Aufnahme, die
-       im Drehrad nach unten faehrt, bleibt in der Box und legt sich nicht
-       ueber die Finish-Kacheln (Julius, 12.11., Screenshot quer). */
+    grid-column: 2; grid-row: 1; justify-self: start; align-self: center; font-size: min(0.5em, 46cqh); margin: 0 0 0 0.14em; padding: 0 0 0 0.16em;
+    /* Die alte Aufnahme, die im Drehrad nach unten faehrt, bleibt in der
+       Box und legt sich nicht ueber die Finish-Kacheln (Julius, 12.11.). */
     overflow: hidden;
   }
 }
@@ -7526,8 +7535,21 @@ button.st-krow:hover { background: #ffffff06; }
   .st-rgrid { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); }
 }
 /* Welches Doppel? - die naheliegenden gross, alle anderen moeglichen klein */
-.cd-andere { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 10px 0 12px; }
-.cd-andere .btn { flex: none; min-height: 40px; height: 40px; margin: 0; padding: 0 12px; font-size: 0.85rem; }
+/* "Welches Doppel?" (Julius, 12.11.): die drei wahrscheinlichsten Doppel
+   gross und weiss in einer Reihe, der Rest als Raster mit grossen Feldern -
+   der Dialog wird am Handy mit ausgestrecktem Arm bedient. */
+.cd-logisch { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.cd-logisch.n1 { grid-template-columns: minmax(0, 1fr); }
+.cd-logisch.n2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.cd-logisch .btn { margin: 0; min-height: 68px; padding: 0 6px; font-size: clamp(1.4rem, 6.5vw, 1.9rem); letter-spacing: 0.03em; }
+.cd-andere { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 10px 0 10px; }
+.cd-andere .btn { margin: 0; min-height: 54px; padding: 0 4px; font-size: 1.15rem; font-weight: 700; }
+.overlay-card .cd-weiss-nicht { min-height: 52px; }
+@media (orientation: landscape) and (max-height: 560px) {
+  .cd-logisch .btn { min-height: 54px; font-size: 1.4rem; }
+  .cd-andere { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+  .cd-andere .btn { min-height: 44px; font-size: 1rem; }
+}
 /* Schnellansicht im Spieler-Reiter: drei Knoepfe beim eigenen Profil */
 .ps-knoepfe.drei { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .players-schnell .st-pillen { margin-top: 0; }
@@ -7579,6 +7601,19 @@ button.st-krow:hover { background: #ffffff06; }
   #screen-game.active:not(.turnier) #scoreboard.solo .pcard .pavg { font-size: 1.4rem; }
   #screen-game.active #pad-total .display-row { height: 64px; }
   #screen-game.active #pad-total .score-display { font-size: 2.9rem; }
+}
+
+/* Bust-Taste im Einzel-Darts-Feld (statt Bull x2): rot wie der Fehlwurf. */
+#screen-game.active #pad-darts .num-grid button.bust { color: var(--red); }
+/* Quer allein ohne Aufnahme (Leg-Anfang): die leere Box braucht keinen
+   Platz, sonst steht die Zahl ein Stueck links der Mitte. */
+@media (orientation: landscape) {
+  #screen-game.active:not(.turnier) #scoreboard.solo .pcard .letzte-box.ohne { margin: 0; padding: 0; }
+}
+/* Am iPad quer (keine Insel, breite Karte) darf die dreistellige Zahl mehr
+   von der Breite nehmen. */
+@media (orientation: landscape) and (min-width: 700px) and (min-height: 600px) {
+  #screen-game.active:not(.turnier) #scoreboard.solo .pcard .rest-zeile.z3 { font-size: clamp(3rem, 49cqi, 40rem); }
 }
 
 </style>
@@ -20041,7 +20076,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           '<div class="pblock"><span class="pname">' + esc(spielerName(pid)) + '</span>' +
           '<span class="pmeta">' + meta.join(' · ') + '</span></div>' +
           '<span class="pavg">Ø <b>' + avg + '</b></span></div>' +
-        '<div class="rest-zeile"><span class="rest">' + rest + '</span>' + letzte + '</div>' +
+        '<div class="rest-zeile' + (String(rest).length >= 3 ? ' z3' : '') + '"><span class="rest">' + rest + '</span>' + letzte + '</div>' +
         (fern ? '<div class="pwuerfe">' + histSpalte(pid, 3) + '</div>' : '') +
         felderHTML(pid, istAktiv || m.p.length === 1) +
         '</div>';
@@ -20171,11 +20206,13 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
          welches Feld man gerade trifft. */
       var prefix = UI.mult === 3 ? 'T' : UI.mult === 2 ? 'D' : '';
       /* Oberste Reihe: Double und Triple als Schalter (keiner an = Single),
-         Bull und Bull x2. */
+         Bull - mit Double davor "D Bull" (50) - und Bust (Julius, 12.11.:
+         statt "Bull x2"; die Aufnahme ist ueberworfen, der Rest bleibt). */
+      var bullHl = (hl === '25' && UI.mult === 1) || (hl === 'BULL' && UI.mult >= 2);
       var nums = '<button class="mult' + (UI.mult === 2 ? ' active' : '') + '" data-mult="2" aria-pressed="' + (UI.mult === 2) + '">Double</button>' +
         '<button class="mult' + (UI.mult === 3 ? ' active' : '') + '" data-mult="3" aria-pressed="' + (UI.mult === 3) + '">Triple</button>' +
-        '<button class="bull ' + (hl === '25' ? 'hl' : '') + '" data-num="25">Bull</button>' +
-        '<button class="bull ' + (hl === 'BULL' ? 'hl' : '') + '" data-bull="1">Bull ×2</button>';
+        '<button class="bull ' + (bullHl ? 'hl' : '') + '" data-num="25">' + (UI.mult >= 2 ? '<span class="mx">D</span>Bull' : 'Bull') + '</button>' +
+        '<button class="bust" data-action="bust-visit" aria-label="Aufnahme als Bust buchen">Bust</button>';
       for (var n = 1; n <= 20; n++) {
         nums += '<button data-num="' + n + '" class="' + (n === hlNum ? 'hl' : '') + '">' +
           (prefix ? '<span class="mx">' + prefix + '</span>' : '') + n + '</button>';
@@ -20195,7 +20232,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
   function dartLabel(d) {
     if (d.n === 0) return '0';
-    if (d.n === 25) return d.m === 2 ? 'Bull' : '25';
+    if (d.n === 25) return d.m === 2 ? 'D Bull' : 'Bull';
     return (d.m === 3 ? 'T' : d.m === 2 ? 'D' : '') + d.n;
   }
 
@@ -23472,10 +23509,16 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         (coWahl >= 0 ? '<p class="te-hint">1/2/3 direkt &nbsp;&nbsp; ← → / Tab · wählen &nbsp;&nbsp; Enter · bestätigen</p>' : '');
     } else if (o.type === 'checkout-doppel') {
       var cdKnopf = function (d, kl) { return '<button class="' + kl + '" data-action="co-doppel" data-d="' + d + '">' + doppelName(d) + '</button>'; };
+      /* Die drei wahrscheinlichsten Doppel (erst die logischen, dann die
+         uebrigen in der Vorzugsreihenfolge) gross und weiss nebeneinander,
+         alle weiteren als Raster darunter - so gross, dass sich der Dialog
+         mit ausgestrecktem Arm bedienen laesst (Julius, 12.11.). */
+      var cdAlle = o.logisch.concat(o.andere);
+      var cdTop = cdAlle.slice(0, 3), cdRest = cdAlle.slice(3);
       html = '<h3>Welches Doppel?</h3><p>' + o.rest + ' Rest mit ' + plural(o.n, 'Dart', 'Darts') + ' zugemacht – auf welchem Doppel?</p>' +
-        (o.logisch.length ? '<div class="row-btns cd-logisch">' + o.logisch.map(function (d) { return cdKnopf(d, 'btn primary'); }).join('') + '</div>' : '') +
-        (o.andere.length ? '<div class="cd-andere">' + o.andere.map(function (d) { return cdKnopf(d, 'btn ghost small'); }).join('') + '</div>' : '') +
-        '<button class="btn ghost full" data-action="co-doppel" data-d="0">Weiß nicht</button>';
+        (cdTop.length ? '<div class="cd-logisch n' + cdTop.length + '">' + cdTop.map(function (d) { return cdKnopf(d, 'btn primary'); }).join('') + '</div>' : '') +
+        (cdRest.length ? '<div class="cd-andere">' + cdRest.map(function (d) { return cdKnopf(d, 'btn ghost'); }).join('') + '</div>' : '') +
+        '<button class="btn ghost full cd-weiss-nicht" data-action="co-doppel" data-d="0">Weiß nicht</button>';
     } else if (o.type === 'leg-done' || o.type === 'match-done') {
       /* Die laufende Partie kann unter dem Overlay wegfallen: im geteilten
          Turnier traegt ein anderes Geraet vielleicht gerade dasselbe
@@ -26167,6 +26210,17 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           ligaZusagen = z;
           render();
         }).catch(function (e) { zusageFehlgeschlagen(e); });
+        break;
+      }
+      /* Bust-Taste im Einzel-Darts-Feld: die Aufnahme ist ueberworfen, egal
+         mit welchem Dart - gebucht wie jeder Bust (0 Punkte, drei Darts),
+         die schon getippten Darts bleiben als Einzeldarts dran. */
+      case 'bust-visit': {
+        var bm = currentMatch();
+        if (!bm || bm.done || settling()) return;
+        if (fremdeDartsSperre()) { UI.error = spielerName(liveAmWurf(liveSpiel())) + ' trägt gerade selbst ein – warte, bis die Aufnahme gebucht ist.'; render(); return; }
+        pomp();
+        commitVisit(sum(UI.darts, function (d) { return d.v; }), 3, false, true, UI.darts);
         break;
       }
       case 'end-visit': {

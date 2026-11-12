@@ -8809,7 +8809,7 @@
           '<div class="pblock"><span class="pname">' + esc(spielerName(pid)) + '</span>' +
           '<span class="pmeta">' + meta.join(' · ') + '</span></div>' +
           '<span class="pavg">Ø <b>' + avg + '</b></span></div>' +
-        '<div class="rest-zeile"><span class="rest">' + rest + '</span>' + letzte + '</div>' +
+        '<div class="rest-zeile' + (String(rest).length >= 3 ? ' z3' : '') + '"><span class="rest">' + rest + '</span>' + letzte + '</div>' +
         (fern ? '<div class="pwuerfe">' + histSpalte(pid, 3) + '</div>' : '') +
         felderHTML(pid, istAktiv || m.p.length === 1) +
         '</div>';
@@ -8939,11 +8939,13 @@
          welches Feld man gerade trifft. */
       var prefix = UI.mult === 3 ? 'T' : UI.mult === 2 ? 'D' : '';
       /* Oberste Reihe: Double und Triple als Schalter (keiner an = Single),
-         Bull und Bull x2. */
+         Bull - mit Double davor "D Bull" (50) - und Bust (Julius, 12.11.:
+         statt "Bull x2"; die Aufnahme ist ueberworfen, der Rest bleibt). */
+      var bullHl = (hl === '25' && UI.mult === 1) || (hl === 'BULL' && UI.mult >= 2);
       var nums = '<button class="mult' + (UI.mult === 2 ? ' active' : '') + '" data-mult="2" aria-pressed="' + (UI.mult === 2) + '">Double</button>' +
         '<button class="mult' + (UI.mult === 3 ? ' active' : '') + '" data-mult="3" aria-pressed="' + (UI.mult === 3) + '">Triple</button>' +
-        '<button class="bull ' + (hl === '25' ? 'hl' : '') + '" data-num="25">Bull</button>' +
-        '<button class="bull ' + (hl === 'BULL' ? 'hl' : '') + '" data-bull="1">Bull ×2</button>';
+        '<button class="bull ' + (bullHl ? 'hl' : '') + '" data-num="25">' + (UI.mult >= 2 ? '<span class="mx">D</span>Bull' : 'Bull') + '</button>' +
+        '<button class="bust" data-action="bust-visit" aria-label="Aufnahme als Bust buchen">Bust</button>';
       for (var n = 1; n <= 20; n++) {
         nums += '<button data-num="' + n + '" class="' + (n === hlNum ? 'hl' : '') + '">' +
           (prefix ? '<span class="mx">' + prefix + '</span>' : '') + n + '</button>';
@@ -8963,7 +8965,7 @@
 
   function dartLabel(d) {
     if (d.n === 0) return '0';
-    if (d.n === 25) return d.m === 2 ? 'Bull' : '25';
+    if (d.n === 25) return d.m === 2 ? 'D Bull' : 'Bull';
     return (d.m === 3 ? 'T' : d.m === 2 ? 'D' : '') + d.n;
   }
 
@@ -12240,10 +12242,16 @@
         (coWahl >= 0 ? '<p class="te-hint">1/2/3 direkt &nbsp;&nbsp; ← → / Tab · wählen &nbsp;&nbsp; Enter · bestätigen</p>' : '');
     } else if (o.type === 'checkout-doppel') {
       var cdKnopf = function (d, kl) { return '<button class="' + kl + '" data-action="co-doppel" data-d="' + d + '">' + doppelName(d) + '</button>'; };
+      /* Die drei wahrscheinlichsten Doppel (erst die logischen, dann die
+         uebrigen in der Vorzugsreihenfolge) gross und weiss nebeneinander,
+         alle weiteren als Raster darunter - so gross, dass sich der Dialog
+         mit ausgestrecktem Arm bedienen laesst (Julius, 12.11.). */
+      var cdAlle = o.logisch.concat(o.andere);
+      var cdTop = cdAlle.slice(0, 3), cdRest = cdAlle.slice(3);
       html = '<h3>Welches Doppel?</h3><p>' + o.rest + ' Rest mit ' + plural(o.n, 'Dart', 'Darts') + ' zugemacht – auf welchem Doppel?</p>' +
-        (o.logisch.length ? '<div class="row-btns cd-logisch">' + o.logisch.map(function (d) { return cdKnopf(d, 'btn primary'); }).join('') + '</div>' : '') +
-        (o.andere.length ? '<div class="cd-andere">' + o.andere.map(function (d) { return cdKnopf(d, 'btn ghost small'); }).join('') + '</div>' : '') +
-        '<button class="btn ghost full" data-action="co-doppel" data-d="0">Weiß nicht</button>';
+        (cdTop.length ? '<div class="cd-logisch n' + cdTop.length + '">' + cdTop.map(function (d) { return cdKnopf(d, 'btn primary'); }).join('') + '</div>' : '') +
+        (cdRest.length ? '<div class="cd-andere">' + cdRest.map(function (d) { return cdKnopf(d, 'btn ghost'); }).join('') + '</div>' : '') +
+        '<button class="btn ghost full cd-weiss-nicht" data-action="co-doppel" data-d="0">Weiß nicht</button>';
     } else if (o.type === 'leg-done' || o.type === 'match-done') {
       /* Die laufende Partie kann unter dem Overlay wegfallen: im geteilten
          Turnier traegt ein anderes Geraet vielleicht gerade dasselbe
@@ -14935,6 +14943,17 @@
           ligaZusagen = z;
           render();
         }).catch(function (e) { zusageFehlgeschlagen(e); });
+        break;
+      }
+      /* Bust-Taste im Einzel-Darts-Feld: die Aufnahme ist ueberworfen, egal
+         mit welchem Dart - gebucht wie jeder Bust (0 Punkte, drei Darts),
+         die schon getippten Darts bleiben als Einzeldarts dran. */
+      case 'bust-visit': {
+        var bm = currentMatch();
+        if (!bm || bm.done || settling()) return;
+        if (fremdeDartsSperre()) { UI.error = spielerName(liveAmWurf(liveSpiel())) + ' trägt gerade selbst ein – warte, bis die Aufnahme gebucht ist.'; render(); return; }
+        pomp();
+        commitVisit(sum(UI.darts, function (d) { return d.v; }), 3, false, true, UI.darts);
         break;
       }
       case 'end-visit': {

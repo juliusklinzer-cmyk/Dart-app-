@@ -122,7 +122,8 @@ async function setMult(mult) {
   else await page.locator(`#num-grid button.mult[data-mult="${mult}"]`).click();
 }
 async function dart(label) {
-  if (label === 'BULL') return page.locator('[data-bull]').click();
+  /* D Bull: Double an, dann die Bull-Taste (sie zeigt dann "D Bull"). */
+  if (label === 'BULL') { await setMult(2); return page.locator('#num-grid button[data-num="25"]').click(); }
   const mult = label[0] === 'T' ? 3 : label[0] === 'D' ? 2 : 1;
   const num = parseInt(label.replace(/^[TDS]/, ''), 10);
   await setMult(mult);
@@ -561,6 +562,27 @@ await typeScore(60);
 await dart('T20'); // Überwurf
 check('Überwurf ist Bust, Rest bleibt 12', (await rest(0)) === '12');
 await typeScore(60);
+/* Bust-Taste (Julius, 12.11.): statt "Bull x2" steht oben rechts "Bust" - die
+   Aufnahme ist ueberworfen, ohne jeden Dart einzutippen. Und mit Double
+   zeigt die Bull-Taste "D Bull" (50). */
+await dart('S1');
+check('S1 auf 12: Rest 11, Aufnahme offen', (await rest(0)) === '11');
+await setMult(2);
+check('mit Double zeigt die Bull-Taste "D Bull"; "Bull x2" gibt es nicht mehr, dafuer "Bust"', await page.evaluate(() => {
+  const b = document.querySelector('#num-grid button[data-num="25"]');
+  return !!b && b.textContent.replace(/\s+/g, '') === 'DBull' && !!b.querySelector('.mx') && !document.querySelector('[data-bull]') &&
+    !!document.querySelector('#num-grid button.bust[data-action="bust-visit"]');
+}));
+await setMult(1);
+check('ohne Double heisst sie wieder "Bull"', await page.evaluate(() => document.querySelector('#num-grid button[data-num="25"]').textContent.trim() === 'Bull'));
+await page.locator('#num-grid button.bust').click();
+check('Bust-Taste: Rest bleibt 12, der Gegner ist dran, die Aufnahme steht als Bust mit dem einen Dart im Leg',
+  (await rest(0)) === '12' && await page.locator('.pcard').nth(1).evaluate((e) => e.classList.contains('active')) &&
+  await page.evaluate(() => { const m = window.__dart.currentMatch(); const l = m.legs[m.legs.length - 1]; const v = l.visits[l.visits.length - 1];
+    return v.b && v.s === 0 && v.o === 1 && v.d === 3 && !!v.k && v.k.length === 1 && v.k[0].n === 1; }),
+  await page.evaluate(() => { const m = window.__dart.currentMatch(); const l = m.legs[m.legs.length - 1]; return JSON.stringify(l.visits[l.visits.length - 1]); }));
+/* Der Gegner steht bei 141 - im Einzel-Darts-Bereich tippt er drei T20, sonst 60. */
+if (await visible('#pad-darts')) { for (const d of ['T20', 'T20', 'T20']) await dart(d); } else await typeScore(60);
 check('Finish-Vorschlag D6 in den Kacheln', (await text('#game-kacheln')).replace(/\s+/g, ' ').includes('D6'));
 await dart('D6');
 check('Match-Ende-Overlay mit Glückwunsch', (await visible('#overlay')) && (await text('#overlay-card')).includes('Glückwunsch'));
@@ -605,9 +627,17 @@ await page.locator('#overlay-card [data-action="co-darts"]').first().click();
 /* Punkte-Eingabe ohne Einzel-Darts (kein Ligaspiel): danach die Frage nach
    dem Doppel - vorn das aus der Finish-Tabelle (141 = T20 T19 D12), darunter
    klein alle anderen, die mit 3 Darts moeglich waren (DRT-035). */
-check('danach fragt die App nach dem Doppel: D12 vorn, die anderen moeglichen klein darunter, "Weiß nicht" zum Schluss',
+check('danach fragt die App nach dem Doppel: D12 vorn, drei grosse weisse Knoepfe, die anderen moeglichen als Raster darunter, "Weiß nicht" zum Schluss',
   (await text('#overlay-card')).includes('Welches Doppel') && (await page.locator('#overlay-card .cd-logisch .btn').first().innerText()).trim() === 'D12' &&
-  (await page.locator('#overlay-card .cd-andere .btn').count()) >= 4 && (await page.locator('#overlay-card [data-action="co-doppel"][data-d="0"]').count()) === 1);
+  (await page.locator('#overlay-card .cd-logisch .btn.primary').count()) === 3 &&
+  /* 141 mit 3 Darts: sechs Doppel moeglich (12, 15, 17, 18, 20, Bull) - drei oben, drei unten. */
+  (await page.locator('#overlay-card .cd-andere .btn').count()) === 3 && (await page.locator('#overlay-card [data-action="co-doppel"][data-d="0"]').count()) === 1,
+  await page.evaluate(() => document.querySelector('#overlay-card').innerHTML.replace(/\s+/g, ' ').slice(0, 400)));
+check('Doppel-Dialog (Julius 12.11.): die drei oben mindestens 60 px hoch, das Raster darunter in Spalten mit mindestens 50 px hohen Feldern', await page.evaluate(() => {
+  const top = [...document.querySelectorAll('#overlay-card .cd-logisch .btn')].map((b) => b.getBoundingClientRect());
+  const rest = [...document.querySelectorAll('#overlay-card .cd-andere .btn')].map((b) => b.getBoundingClientRect());
+  return top.every((r) => r.height >= 60) && rest.every((r) => r.height >= 50) && getComputedStyle(document.querySelector('#overlay-card .cd-andere')).display === 'grid';
+}));
 await page.locator('#overlay-card [data-action="co-doppel"][data-d="12"]').click();
 check('das Doppel steht an der Aufnahme (dd = 12)', await page.evaluate(() => {
   const m = window.__dart.state().matches.find((x) => x.done && x.legs.some((l) => l.visits.some((v) => v.c && v.dd === 12)));
@@ -6911,15 +6941,17 @@ await gruppe('Allein im Punkte-Modus: die Restzahl fuellt die Karte - quer am iP
       lLinks: l.left, lRechts: l.right, lOben: l.top, restPx: parseFloat(getComputedStyle(document.querySelector('#scoreboard .rest')).fontSize),
       scroll: document.documentElement.scrollHeight <= window.innerHeight + 1 };
   });
-  /* Quer steht die Aufnahme klein unter der Zahl, hochkant rechts daneben. */
-  for (const [name, w, h, mind, unten] of [['iPad quer', 1194, 834, 300, true], ['Handy quer', 844, 390, 200, true], ['Handy hochkant', 390, 844, 120, false]]) {
+  /* Quer stehen Zahl und Aufnahme nebeneinander mittig in der Karte (Julius,
+     12.11.: links lag die Zahl unter der iPhone-Insel), hochkant steht die
+     Zahl links und die Aufnahme rechts daneben. */
+  for (const [name, w, h, mind, mittig, rand] of [['iPad quer', 1194, 834, 250, true, 40], ['Handy quer', 844, 390, 150, true, 60], ['Handy hochkant', 390, 844, 120, false, 0]]) {
     await page.setViewportSize({ width: w, height: h });
     await page.waitForTimeout(150);
     const g = await lage();
     check(name + ': die Restzahl ist mindestens ' + mind + ' px gross', g.restPx >= mind, JSON.stringify(g));
-    check(name + ': sie steht linksbuendig in der Karte, die Aufnahme ' + (unten ? 'darunter' : 'rechts daneben'),
-      g.zLinks - g.kLinks <= 40 && g.lRechts <= g.kLinks + g.kBreite &&
-      (unten ? g.lOben >= g.zUnten - 1 && g.lLinks <= g.zLinks + 20 : g.lLinks >= g.zRechts - 1), JSON.stringify(g));
+    check(name + ': die Aufnahme steht rechts neben der Zahl, ' + (mittig ? 'beide zusammen mittig in der Karte' : 'die Zahl links in der Karte'),
+      g.lLinks >= g.zRechts - 1 && g.lRechts <= g.kLinks + g.kBreite &&
+      (mittig ? Math.abs((g.zLinks + g.lRechts) / 2 - (g.kLinks + g.kBreite / 2)) <= 12 && g.zLinks - g.kLinks >= rand : g.zLinks - g.kLinks <= 40), JSON.stringify(g));
     check(name + ': nichts ragt aus der Karte, nichts scrollt', g.zOben >= g.kOben - 1 && g.zUnten <= g.kUnten + 1 && g.scroll, JSON.stringify(g));
   }
   /* Handy quer: die Aufnahme-Box steht direkt ueber den drei Feldern. Die
@@ -6940,6 +6972,9 @@ await gruppe('Allein im Punkte-Modus: die Restzahl fuellt die Karte - quer am iP
   });
   check('Handy quer: die alte Aufnahme bleibt in ihrer Box (overflow hidden), die Box endet ueber den Feldern',
     drum.overflow === 'hidden' && drum.alt === '25' && drum.anim === 'drumOut' && drum.boxUnten <= drum.felderOben + 1, JSON.stringify(drum));
+  const g3 = await lage();
+  check('Handy quer dreistellig (416): Zahl und Aufnahme nebeneinander, mindestens 40 px von der linken Kartenkante, nichts ragt heraus',
+    g3.lLinks >= g3.zRechts - 1 && g3.lRechts <= g3.kLinks + g3.kBreite && g3.zLinks - g3.kLinks >= 40 && g3.zOben >= g3.kOben - 1 && g3.zUnten <= g3.kUnten + 1, JSON.stringify(g3));
   check('im Spiel ohne Schutzzone kein Seitenrand (env-Fallback 0)', drum.body === '0px 0px', drum.body);
   await page.setViewportSize(vp);
   await page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; D.save(); D.setScreen('setup'); });

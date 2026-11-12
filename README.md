@@ -671,7 +671,9 @@ Finish bleiben die Felder leer.
 liegt (Standard: ab 170, in den Einstellungen auf 100/180/nie änderbar). Dann wird
 Dart für Dart eingegeben: **Double** oder **Triple** sind Schalter oben im Zahlenfeld
 (Tipp an, nochmal Tipp aus – keiner an heißt Single, sie schließen sich gegenseitig
-aus), dann die Zahl tippen – plus `Bull`, `Bull ×2` und `0` für den Fehlwurf. Die
+aus), dann die Zahl tippen – plus `Bull` (mit Double `D Bull` = 50), `Bust` (die Aufnahme
+ist überworfen: 0 Punkte, drei Darts, die schon getippten Darts bleiben dran) und `0` für
+den Fehlwurf. Die
 Tasten behalten dabei die Feldzahl (18 bleibt 18) und
 bekommen ein kleines D bzw. T davor, damit das Zielfeld erkennbar bleibt. Die
 vorgeschlagenen Kacheln sind zugleich Tasten: Wer die angesagte 14 trifft, tippt
@@ -843,8 +845,11 @@ markiert, im Einzel-Dart-Modus ist die passende Zahl zusätzlich umrandet.
   sie nicht. Vorn stehen groß die naheliegenden Doppel – bei einem schon finishbaren Rest
   das Doppel selbst (erster Dart vorbei), das halbe nach einem Treffer ins einfache Feld
   und die nach einem Treffer ins Nachbarfeld (32 mit 2 Darts: D16, D8, D12), sonst das
-  Doppel aus der Finish-Tabelle und die Lieblingsdoppel –, darunter klein alle anderen,
-  die mit so vielen Darts möglich waren, zum Schluss „Weiß nicht“. Das Doppel steht als
+  Doppel aus der Finish-Tabelle und die Lieblingsdoppel –; seit dem 12.11. (Julius) sind
+  es genau drei große weiße Knöpfe in einer Reihe (die logischen zuerst, aufgefüllt in der
+  Vorzugsreihenfolge), darunter alle anderen, die mit so vielen Darts möglich waren, als
+  Raster mit großen Feldern (vier Spalten, quer sechs) – bedienbar mit ausgestrecktem
+  Arm –, zum Schluss „Weiß nicht“. Das Doppel steht als
   `dd` an der Aufnahme (1–20, 25 = Bull) und zählt in Doppelquote und Doppel-Analyse:
   war der Rest vor der Aufnahme schon mit einem Dart zu machen, lagen alle Darts der
   Aufnahme auf einem Doppel (der erste auf dem des Rests, die weiteren auf dem
