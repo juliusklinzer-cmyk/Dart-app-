@@ -7483,7 +7483,14 @@ button.st-krow:hover { background: #ffffff06; }
 .st-pos.m1 { background: #d9b45a; color: #0d0a0b; }
 .st-pos.m2 { background: #b9c0c8; color: #0d0a0b; }
 .st-pos.m3 { background: #b07a4c; color: #0d0a0b; }
-.st-av { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 0.68rem; font-weight: 800; color: #fff; }
+/* Bilder vor Namen: in Ranglisten, Kader-Zeilen, Highlights und der
+   Gegnerbilanz steht das Profilbild bzw. der Initialen-Kreis (Julius, 12.11.). */
+.st-lrow .av { width: 30px; height: 30px; font-size: 0.68rem; }
+.st-kname b .av { vertical-align: middle; margin: -3px 6px 0 0; }
+.st-hlz .av { flex: none; width: 26px; height: 26px; font-size: 0.62rem; }
+.st-gname { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.st-gname > span { min-width: 0; }
+.st-gname .av { flex: none; width: 26px; height: 26px; font-size: 0.62rem; }
 .st-lrow .nm { min-width: 0; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .st-lrow .nm small { display: block; font-size: 0.7rem; color: var(--muted); }
 .st-lrow .val { font-family: var(--font-cond); font-weight: 700; font-size: 1.2rem; font-variant-numeric: tabular-nums; }

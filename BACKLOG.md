@@ -32,6 +32,7 @@
 
 ## Erledigt
 
+- [x] DRT-043 Statistik: Profilbild vor jedem Namen, wo bisher ein Platzhalter oder nur der Name stand (Julius 12.11.): Liga-Rangliste (statt Initialen-Kürzel in farbigem Kreis), Einzelrangliste der ganzen Liga, Kader-Beitrag, Highlights, Gegnerbilanz; ohne Profil (Liga-Spieler anderer Teams, fremde Gegner) der Initialen-Kreis wie überall, Farbe aus dem Namen; Cache v193 · von:Julius · am:2026-11-12 · fertig:2026-11-12
 - [x] DRT-041 Deploy von DRT-039 und DRT-038 zusammen (Stand fd806950, Cache v192) nach Freigabe von Julius ausgeführt, Rauchprobe ping 200, live liefert v192 · von:Claude · am:2026-11-12 · fertig:2026-11-12
 - [x] DRT-026 Doppel-Fehlwürfe im Punkte-Modus: Entscheidung Julius 12.11.: nein, keine Frage „Darts aufs Doppel 0/1/2/3“; die Doppelquote bleibt aus Einzel-Darts und den erfragten Finish-Doppeln · von:Julius · am:2026-11-10 · fertig:2026-11-12
 - [x] DRT-002 Backup geprüft (Julius 12.11.): crontab auf dem Server angesehen, Restore nach DEPLOY.md „Backup“ geübt · prio:hoch · von:Audit H7/S-M6 · am:2026-11-08 · fertig:2026-11-12

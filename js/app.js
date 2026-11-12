@@ -6402,7 +6402,7 @@
     var o = {};
     m.forEach(function (s) {
       var x = o[s.gegnerId];
-      if (!x) x = o[s.gegnerId] = { name: s.gegner, team: '', n: 0, w: 0, lw: 0, ll: 0, pts: 0, darts: 0 };
+      if (!x) x = o[s.gegnerId] = { id: s.gegnerId, name: s.gegner, team: '', n: 0, w: 0, lw: 0, ll: 0, pts: 0, darts: 0 };
       x.n++; if (s.won) x.w++;
       x.lw += s.legsWon; x.ll += s.legsLost; x.pts += s.st.points; x.darts += s.st.darts;
       if (s.team) x.team = s.team;
@@ -6413,7 +6413,7 @@
     var html = '<table class="st-tab"><thead><tr><th>Gegner</th><th class="n">Spiele</th><th class="n">Siege : Niederl.</th><th class="n">Legs</th><th class="n">Dein Ø</th><th class="n">Siegquote</th></tr></thead><tbody>' +
       zeilen.map(function (x, i) {
         var q = x.w / x.n * 100, farbe = q > 50 ? ST_FARBE.gruen : q === 50 ? ST_FARBE.gold : ST_FARBE.rot;
-        return '<tr class="st-fade" style="animation-delay:' + (Math.min(i, 12) * 60) + 'ms"><td><b>' + esc(x.name) + '</b>' + (x.team ? '<small>' + esc(x.team) + '</small>' : '') + '</td><td class="n">' + x.n + '</td>' +
+        return '<tr class="st-fade" style="animation-delay:' + (Math.min(i, 12) * 60) + 'ms"><td><div class="st-gname">' + stAvatar(x.name, stProfilZuId(x.id)) + '<span><b>' + esc(x.name) + '</b>' + (x.team ? '<small>' + esc(x.team) + '</small>' : '') + '</span></div></td><td class="n">' + x.n + '</td>' +
           '<td class="n" style="color:' + farbe + '">' + x.w + ' : ' + (x.n - x.w) + '</td><td class="n">' + x.lw + ' : ' + x.ll + '</td><td class="n">' + (x.darts ? (x.pts / x.darts * 3).toFixed(1).replace('.', ',') : '–') + '</td>' +
           '<td class="n"><b style="color:' + farbe + '">' + Math.round(q) + ' %</b></td></tr>';
       }).join('') + '</tbody></table>' +
@@ -6662,9 +6662,22 @@
         '<span class="d">' + (k[5] || '') + '</span></div>';
     }).join('') + '</div>';
   }
-  function stLrow(i, name, sub, wert, farbe) {
-    var ini = String(name).split(' ').map(function (x) { return x.charAt(0); }).join('').slice(0, 2).toUpperCase();
-    return '<div class="st-lrow"><span class="st-pos' + (i < 3 ? ' m' + (i + 1) : '') + '">' + (i + 1) + '</span><span class="st-av" style="background:' + farbe + '">' + esc(ini) + '</span><span class="nm">' + esc(name) + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</span><span class="val">' + wert + '</span></div>';
+  /* Bild vor dem Namen: das Profil (Foto oder Initialen-Kreis wie ueberall),
+     ohne Profil (Liga-Spieler anderer Teams, fremde Gegner) der Initialen-
+     Kreis in einer Farbe aus dem Namen - kein eigener Platzhalter mehr
+     (Julius, 12.11.). */
+  function stAvatar(name, p, cls) {
+    if (p && S.profiles.indexOf(p) >= 0) return avatarHTML(p, cls || 'xs');
+    var h = 0;
+    String(name || '').split('').forEach(function (c) { h = (h * 31 + c.charCodeAt(0)) % 9973; });
+    return avatarHTML({ id: 'name:' + name, name: name || '?', hue: HUES[h % HUES.length] }, cls || 'xs');
+  }
+  function stProfilZuId(id) {
+    for (var i = 0; i < S.profiles.length; i++) if (S.profiles[i].id === id) return S.profiles[i];
+    return null;
+  }
+  function stLrow(i, name, sub, wert, farbe, p) {
+    return '<div class="st-lrow"><span class="st-pos' + (i < 3 ? ' m' + (i + 1) : '') + '">' + (i + 1) + '</span>' + stAvatar(name, p, 'sm') + '<span class="nm">' + esc(name) + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</span><span class="val">' + wert + '</span></div>';
   }
   function stName(s) { return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
   function stLigaName(p) { return p.voll || p.name; }
@@ -6955,7 +6968,7 @@
     var mP = Math.max.apply(null, [1].concat(d.er.map(function (z) { return z.punkte; })));
     var top = d.er.length ? '<div class="st-kliste">' + d.er.slice(0, 12).map(function (z, i) {
       return '<div class="st-krow' + (z.team === LIGA.team ? ' wir' : '') + '" style="animation-delay:' + (i * 40) + 'ms"><span class="st-krang">' + z.platz + '.</span>' +
-        '<span class="st-kname"><b>' + esc(z.name) + (z.gast ? '<span class="st-gast">Gast</span>' : '') + '</b><small>' + esc(z.team) + ' · Einzel ' + z.siege + ':' + z.nied + '</small></span>' +
+        '<span class="st-kname"><b>' + stAvatar(z.name, z.team === LIGA.team ? stProfilZuName(z.name) : null) + esc(z.name) + (z.gast ? '<span class="st-gast">Gast</span>' : '') + '</b><small>' + esc(z.team) + ' · Einzel ' + z.siege + ':' + z.nied + '</small></span>' +
         stBalken(z.punkte / mP * 100, z.team === LIGA.team ? F.rot : F.blau) + '<span class="st-kwert">' + z.punkte + '</span></div>';
     }).join('') + '</div>' : '<p class="st-leer">Noch kein Spielbericht.</p>';
     h += '<div class="st-raster">' + stTabelleKarte(d, '') + stKarte('einzel', 'Einzelrangliste', 'Die besten 12 der Liga nach Punkten (Sieg = 2 + Leg-Differenz)', top) + stHlKarte(d, '') + '</div>';
@@ -6995,7 +7008,7 @@
     var cl = wir ? careerLiga() : null;
     var html = er.length ? '<div class="st-kliste">' + er.map(function (z, i) {
       var p = wir ? stProfilZuName(z.name) : null, ls = p && cl ? cl[p.id] : null, q = z.siege + z.nied ? z.siege / (z.siege + z.nied) : 0;
-      var innen = '<span class="st-krang">' + z.platz + '.</span><span class="st-kname"><b>' + esc(z.name) + (z.gast ? '<span class="st-gast">Gast</span>' : '') + '</b>' +
+      var innen = '<span class="st-krang">' + z.platz + '.</span><span class="st-kname"><b>' + stAvatar(z.name, p) + esc(z.name) + (z.gast ? '<span class="st-gast">Gast</span>' : '') + '</b>' +
         '<small>Einzel ' + z.siege + ' : ' + z.nied + ' · Legs ' + z.lf + ':' + z.la + (ls && ls.darts ? ' · Ø ' + ls.avg.toFixed(1).replace('.', ',') : '') + '</small></span>' +
         stBalken(z.punkte / mP * 100, stQuoteFarbe(q * 0.6)) + '<span class="st-kwert">' + z.punkte + '</span>';
       return p ? '<button type="button" class="st-krow" style="animation-delay:' + (i * 50) + 'ms" data-action="stats-person" data-wert="' + esc(p.id) + '">' + innen + '</button>'
@@ -7034,7 +7047,7 @@
     var g = function (t, l, w) {
       if (!l.length) return '';
       return '<div class="st-art"><span class="st-art-titel">' + t + '</span><div class="st-hl">' + l.slice(0, 6).map(function (h, i) {
-        return '<div class="st-hlz' + (h.team === LIGA.team ? ' wir' : '') + '" style="animation-delay:' + (i * 50) + 'ms"><b>' + w(h) + '</b><span>' + esc(h.name) + (name ? '' : '<small>' + esc(h.team) + '</small>') + '</span></div>';
+        return '<div class="st-hlz' + (h.team === LIGA.team ? ' wir' : '') + '" style="animation-delay:' + (i * 50) + 'ms">' + stAvatar(h.name, h.team === LIGA.team ? stProfilZuName(h.name) : null) + '<b>' + w(h) + '</b><span>' + esc(h.name) + (name ? '' : '<small>' + esc(h.team) + '</small>') + '</span></div>';
       }).join('') + '</div></div>';
     };
     var inhalt = g('180er', nur(d.hl.s180), function (h) { return h.n + '×'; }) + g('Highfinishes', nur(d.hl.highfinish), function (h) { return h.wert; }) + g('Shortlegs', nur(d.hl.shortleg), function (h) { return h.wert + ' D'; });
@@ -7053,7 +7066,7 @@
         return '<button type="button" class="st-kachel' + (k === def ? ' on' : '') + '" data-action="stats-liga" data-wert="' + k[0] + '"><span class="t">' + k[1] + '</span><span class="v">' + (t ? k[3](k[2](t)) : '–') + '</span><span class="n">' + (t ? esc(t.name) : 'noch offen') + '</span></button>';
       }).join('') + '</div>' +
       '<div class="st-liste"><h4><span>' + def[1] + ' · ' + (name ? 'Spieler' : 'alle Spieler') + '</span><span>nur Ligaspiele</span></h4>' +
-        (rows.length ? sortiert(def).slice(0, 12).map(function (z, i) { return stLrow(i, z.name, z.team, def[3](def[2](z)), z.team === LIGA.team ? ST_FARBE.rot : '#5b6a7a'); }).join('') : '<p class="st-leer">Noch kein Spielbericht.</p>') +
+        (rows.length ? sortiert(def).slice(0, 12).map(function (z, i) { return stLrow(i, z.name, z.team, def[3](def[2](z)), z.team === LIGA.team ? ST_FARBE.rot : '#5b6a7a', z.team === LIGA.team ? stProfilZuName(z.name) : null); }).join('') : '<p class="st-leer">Noch kein Spielbericht.</p>') +
       '</div></div><div class="st-seite">' + stHlKarte(d, name === LIGA.team ? LIGA.team : name) + '</div></div></div>';
   }
 

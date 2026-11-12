@@ -4173,6 +4173,7 @@ check('Spieltag fuer Spieltag: Saeulen je Spieltag und die Punkte-Linie',
   (await page.locator('#st-spieltage g.st-growY').count()) >= 1 && (await page.locator('#st-spieltage path.st-draw').count()) === 1);
 check('Kader-Beitrag aus der Einzelrangliste, Tabelle mit uns markiert, Bilanz gegen jedes Team',
   (await page.locator('#st-kader .st-krow').count()) >= 4 && (await page.locator('#st-tabelle .st-krow.wir.an').count()) === 1 && (await page.locator('#st-teamgegner .st-erg').count()) >= 1);
+if (process.env.SHOTS) { for (const s of [["#st-kader", "kader"], ["#st-einzel", "einzel"], ["#st-ligarang", "ligarang"]]) { const l = page.locator(s[0]); if (await l.count()) { await l.first().scrollIntoViewIfNeeded(); await page.waitForTimeout(900); await page.screenshot({ path: "tests/.shots/" + s[1] + ".png" }); } } }
 check('Liga-Rangliste: vier Kacheln, Liste unserer Spieler, Highlights daneben',
   (await page.locator('#st-ligarang .st-kachel').count()) === 4 && (await page.locator('#st-ligarang .st-lrow').count()) >= 4 && (await page.locator('#st-ligarang #st-highlights').count()) === 1);
 await page.locator('#st-ligarang .st-kachel[data-wert="won"]').click();
@@ -6678,9 +6679,10 @@ check('die Person: Wer-Karte mit Profilbild und Namen, Spieler-Chips, der Gewaeh
   check('Kennzahlen mit einer Nachkommastelle und Komma, der Vergleich heisst "vs. letzte 10" (oder fehlt bei wenigen Spielen)',
     /^\d+,\d$/.test(z.avg) && !z.davor && !z.einzel, JSON.stringify(z));
 }
+if (process.env.SHOTS) { await page.locator("#st-gegner").scrollIntoViewIfNeeded(); await page.waitForTimeout(900); await page.screenshot({ path: "tests/.shots/gegner.png" }); }
 check('Spielerprofil: der Spieler in Rot gegen den Rest des Teams in Blau, Gegnerbilanz mit Prozentzahl, Aktivitaet ueber die ganze Breite mit Kennkacheln', await page.evaluate(() => {
   const r = document.getElementById('st-radar'), g = document.getElementById('st-gegner'), k = document.getElementById('st-kalender');
-  return r.textContent.includes('Rest des Teams') && r.querySelectorAll('polygon').length >= 6 && !!g && !g.querySelector('.st-track') && /\d+ %/.test(g.querySelector('tbody td:last-child').textContent) && getComputedStyle(g.querySelector('tbody td.n')).whiteSpace === 'nowrap' &&
+  return r.textContent.includes('Rest des Teams') && r.querySelectorAll('polygon').length >= 6 && !!g && !g.querySelector('.st-track') && /\d+ %/.test(g.querySelector('tbody td:last-child').textContent) && getComputedStyle(g.querySelector('tbody td.n')).whiteSpace === 'nowrap' && g.querySelectorAll('tbody tr .av').length === g.querySelectorAll('tbody tr').length &&
     !!k && k.classList.contains('breit') && k.querySelectorAll('.st-mini').length === 6 && document.getElementById('st-spielarten').classList.contains('zwei');
 }));
 check('weitere Spielarten: je gespielter Art ein Kopf mit drei Kennzahlen, zugeklappt', await page.evaluate((e) => {
