@@ -7779,3 +7779,12 @@ button.st-krow:hover { background: #ffffff06; }
   .vg-panel .vg-koerper { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
   .vg-panel.spielt .vg-koerper { overflow: hidden; }
 }
+
+/* Desktop (Julius 15.11.): Spiel-Setup, Turnier, Liga, Spieler, Profil und
+   Co. (body.fix-setup) liefen am grossen Bildschirm ueber die ganze Breite,
+   die Statistik nicht. Ab 1400 px - breiter als jedes iPad - gilt fuer sie
+   dieselbe Maximalbreite wie fuer die Statistik; am iPad bleibt alles voll
+   breit. Die Spielbilder (rand-aus, am-board) bleiben ueberall Vollbild. */
+@media (min-width: 1400px) {
+  body.fix-setup:not(.rand-aus):not(.am-board) { max-width: var(--maxw, 1320px); margin-left: auto; margin-right: auto; }
+}
