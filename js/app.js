@@ -6373,7 +6373,10 @@
   function stKalenderKarte(alle, f, titel) {
     var gs = f.modus === 'alle' ? alle : alle.filter(function (s) { return s.modus === f.modus; });
     var cnt = {};
-    gs.forEach(function (s) { var k = stTag(s.at); cnt[k] = (cnt[k] || 0) + 1; });
+    /* Gezaehlt werden Legs, nicht Spiele: eine Session mit zwoelf Legs ist
+       ein Spiel, aber ein ganzer Abend (Julius 15.11.2026). */
+    var legsVon = function (s) { return s.legs || 1; };
+    gs.forEach(function (s) { var k = stTag(s.at); cnt[k] = (cnt[k] || 0) + legsVon(s); });
     var wochen = window.innerWidth < 700 ? 17 : window.innerWidth < 1100 ? 26 : 30, lab = 22, zelle = 13, gap = 3, W = lab + wochen * (zelle + gap), H = 7 * (zelle + gap) + 22;
     var heute = new Date(); heute.setHours(12, 0, 0, 0);
     var dow = (heute.getDay() + 6) % 7;
@@ -6387,8 +6390,8 @@
         if (dt > heute) continue;
         var k = stTag(dt.getTime()), c = cnt[k] || 0;
         gesamt += c; wc += c; wt[d] += c; if (c) tage++;
-        svg += '<rect x="' + (lab + wk * (zelle + gap)) + '" y="' + (d * (zelle + gap)) + '" width="' + zelle + '" height="' + zelle + '" rx="3" fill="' + (c === 0 ? '#ffffff0a' : c === 1 ? '#e5484d66' : c === 2 ? '#e5484daa' : '#e5484d') + '" class="st-pt" style="animation-delay:' + ((wk + d) * 22) + 'ms"' +
-          (c ? ' data-tip="' + esc('<b>' + stDatum(dt.getTime()) + '</b><br>' + plural(c, 'Spiel', 'Spiele')) + '"' : '') + '/>';
+        svg += '<rect x="' + (lab + wk * (zelle + gap)) + '" y="' + (d * (zelle + gap)) + '" width="' + zelle + '" height="' + zelle + '" rx="3" fill="' + (c === 0 ? '#ffffff0a' : c <= 3 ? '#e5484d66' : c <= 8 ? '#e5484daa' : '#e5484d') + '" class="st-pt" style="animation-delay:' + ((wk + d) * 22) + 'ms"' +
+          (c ? ' data-tip="' + esc('<b>' + stDatum(dt.getTime()) + '</b><br>' + plural(c, 'Leg', 'Legs')) + '"' : '') + '/>';
         if (d === 0 && dt.getMonth() !== letzterM && dt.getDate() <= 7) { letzterM = dt.getMonth(); svg += '<text x="' + (lab + wk * (zelle + gap)) + '" y="' + (H - 6) + '" class="st-ax">' + ST_MONATE[letzterM] + '</text>'; }
       }
       jeWoche.push(wc);
@@ -6400,11 +6403,11 @@
     jeWoche.forEach(function (w) { if (w) { lauf++; if (lauf > lang) lang = lauf; } else lauf = 0; });
     var WT = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
     var top = wt.indexOf(Math.max.apply(null, wt));
-    var mk = stMonat(Date.now()), dm = gs.filter(function (s) { return stMonat(s.at) === mk; }).length;
+    var mk = stMonat(Date.now()), dm = gs.reduce(function (a, s) { return a + (stMonat(s.at) === mk ? legsVon(s) : 0); }, 0);
     var F = ST_FARBE, letzte = jeWoche[jeWoche.length - 1] || 0;
-    var rechts = stMinis([['Diese Woche', letzte, plural(letzte, 'Spiel', 'Spiele'), F.rot], ['Serie', serie, plural(serie, 'Woche', 'Wochen') + ' in Folge', F.gold], ['Diesen Monat', dm, plural(dm, 'Spiel', 'Spiele'), F.blau],
-      ['Längste Serie', lang, 'Wochen am Stück'], ['Aktivster Tag', gesamt ? WT[top].slice(0, 2) : '–', gesamt ? WT[top] : ''], ['Ø je Woche', stFmt(gesamt / wochen, 1), 'Spiele', F.gruen]]);
-    return stKarte('kalender', titel || 'Aktivität', 'Gespielte Spiele der letzten ' + wochen + ' Wochen. ' + plural(gesamt, 'Spiel', 'Spiele') + ' an ' + plural(tage, 'Tag', 'Tagen') + '.',
+    var rechts = stMinis([['Diese Woche', letzte, plural(letzte, 'Leg', 'Legs'), F.rot], ['Serie', serie, plural(serie, 'Woche', 'Wochen') + ' in Folge', F.gold], ['Diesen Monat', dm, plural(dm, 'Leg', 'Legs'), F.blau],
+      ['Längste Serie', lang, 'Wochen am Stück'], ['Aktivster Tag', gesamt ? WT[top].slice(0, 2) : '–', gesamt ? WT[top] : ''], ['Ø je Woche', stFmt(gesamt / wochen, 1), 'Legs', F.gruen]]);
+    return stKarte('kalender', titel || 'Aktivität', 'Gespielte Legs der letzten ' + wochen + ' Wochen. ' + plural(gesamt, 'Leg', 'Legs') + ' an ' + plural(tage, 'Tag', 'Tagen') + '.',
       '<div class="st-akt"><svg class="st-svg st-kal" viewBox="0 0 ' + W + ' ' + H + '">' + svg + '</svg>' + rechts + '</div>', true);
   }
 

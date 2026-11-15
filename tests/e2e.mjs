@@ -6647,7 +6647,7 @@ check('Liga-Bilanz, weitere Spielarten und alle Zahlen stehen als Karten dabei',
 check('Big Scores je Monat als gestapelte Balken, Doppelquote im Verlauf, Modi-Vergleich, Aktivitaet, Gegnerbilanz, Rekorde',
   (await page.locator('#st-big g.st-growY').count()) >= 2 && (await page.locator('#st-dbltrend path.st-draw').count()) === 1 &&
   (await text('#st-modi')).includes('Liga') && (await text('#st-modi')).includes('Turnier') &&
-  (await text('#st-kalender')).includes('Spiele an') && (await page.locator('#st-gegner tbody tr').count()) === 2 /* nur Duelle */ &&
+  (await text('#st-kalender')).includes('Legs an') && (await page.locator('#st-gegner tbody tr').count()) === 2 /* nur Duelle */ &&
   (await text('#st-rekorde')).toLowerCase().includes('bester average') && (await text('#st-rekorde')).includes('vs.'));
 await insBild('#st-form', 300);
 await page.locator('#st-form .st-pill').last().hover();

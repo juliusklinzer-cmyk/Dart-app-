@@ -1091,7 +1091,9 @@ auch in der Rangliste je Spielart) und klein darunter dem Vergleich „▲ +0,5 
 12.11.2026 genau in der Anordnung des Entwurfs „Darts Statistik“ (Julius: „genau wie im
 Design“; nur sein Block „Doppel erfassen“ fehlt, die Doppel-Abfrage sitzt im Spiel) –
 Kartentitel in Barlow fett, normale Schreibung, kein Anton, kein Symbol, kein Balken:
-**Spieleraktivität** (ganz breit, zuerst: 30 Wochen als Kacheln, am Tablet 26, am Handy 17;
+**Spieleraktivität** (ganz breit, zuerst: 30 Wochen als Kacheln, am Tablet 26, am Handy 17; gezählt
+werden Legs, nicht Spiele – eine Session mit zwölf Legs ist ein Spiel, aber ein ganzer Abend
+(Julius 15.11.2026); Farbstufen 1–3, 4–8, ab 9 Legs am Tag;
 rechts sechs Kennkacheln – diese Woche, Serie in Wochen, diesen Monat, längste Serie,
 aktivster Wochentag, Ø je Woche), **Average-Entwicklung** (zwei Spalten breit) (Ø je Spiel, gleitender Schnitt über 5 Spiele in Gold, Trendlinie aus
 kleinsten Quadraten mit „Trend ± Punkte“, First 9 dünn, bester Punkt beschriftet; der Zeiger
