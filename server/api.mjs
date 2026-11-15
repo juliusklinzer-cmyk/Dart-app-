@@ -17,7 +17,7 @@ import { sendJson, sendFehler, leseCookies, leseJson, clientIp, HttpFehler, MAX_
 import { istAdresse, adresse } from './lib/mail.mjs';
 import { erstelleMitteilungen, THEMEN, KANAELE } from './lib/mitteilungen.mjs';
 
-const KINDS = new Set(['501', 'cricket', 'rtw', 'finisher', 'kaiwen', 'hunter', 'tournament']);
+const KINDS = new Set(['501', 'cricket', 'rtw', 'finisher', 'kaiwen', 'hunter', 'vergleich', 'tournament']);
 const MAX_SPIELER = 16;
 const SEITE = 200; // Spiele pro Abruf
 
@@ -612,6 +612,34 @@ export function createApi(db, config) {
     if (m.winner !== undefined && m.winner !== null && !istId(m.winner)) throw kaputt(was + ': Sieger');
   }
 
+  /* Dartvergleich (DRT-049): hoechstens zwei Legs mit je bis zu 400 Darts,
+     jeder Dart Stelle in mm (oder null), Feld n/m, Ziel z. Die Clients
+     zeichnen fremde Eintraege direkt ins Profil - deshalb hier so streng
+     wie spielGueltig() im Client. */
+  function pruefeVergleich(p) {
+    liste(p.legs, 'Legs');
+    if (!p.legs.length || p.legs.length > 2) throw kaputt('Legs');
+    const zahl = (v) => typeof v === 'number' && Number.isFinite(v);
+    for (const l of p.legs) {
+      if (!istObjekt(l) || (l.set !== 0 && l.set !== 1)) throw kaputt('Leg');
+      liste(l.darts, 'Darts');
+      if (l.darts.length > 400) throw kaputt('Darts');
+      for (const d of l.darts) {
+        if (!istObjekt(d)) throw kaputt('Dart');
+        if (!((d.x === null && d.y === null) || (zahl(d.x) && zahl(d.y) && Math.abs(d.x) <= 400 && Math.abs(d.y) <= 400))) throw kaputt('Dart: Stelle');
+        if (!zahl(d.n) || !(d.n === 0 || d.n === 25 || (Number.isInteger(d.n) && d.n >= 1 && d.n <= 20))) throw kaputt('Dart: Feld');
+        if (!Number.isInteger(d.m) || d.m < 0 || d.m > 3) throw kaputt('Dart: Ring');
+        if (d.z !== undefined && !(typeof d.z === 'string' && d.z.length <= 8)) throw kaputt('Dart: Ziel');
+      }
+    }
+    if (p.start !== undefined && p.start !== 301 && p.start !== 501) throw kaputt('Startwert');
+    if (p.sets !== undefined) {
+      liste(p.sets, 'Sets');
+      if (p.sets.length > 2 || !p.sets.every((s) => typeof s === 'string' && s.length <= 40)) throw kaputt('Sets');
+    }
+    if (p.serie !== undefined && !(typeof p.serie === 'string' && p.serie.length <= 40)) throw kaputt('Serie');
+  }
+
   /* Ein Archiv-Eintrag, wie archiveGame()/archiveTournament() ihn bauen. */
   function pruefeSpielInhalt(art, p) {
     if (!istObjekt(p)) throw kaputt('kein Objekt');
@@ -630,6 +658,7 @@ export function createApi(db, config) {
     if (art === 'finisher') liste(p.rounds, 'Runden');
     else if (art === 'kaiwen') liste(p.versuche, 'Versuche');
     else if (art === 'cricket' || art === 'rtw' || art === 'hunter') liste(p.throws, 'Wuerfe');
+    else if (art === 'vergleich') pruefeVergleich(p);   // Dartvergleich: zwei Legs mit Einzeldarts (DRT-049)
     else if (p.throws !== undefined) liste(p.throws, 'Wuerfe');
   }
 

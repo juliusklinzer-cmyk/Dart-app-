@@ -3254,6 +3254,102 @@ check('eine andere Gruppe verwirft die Tabelle, der Average bleibt', await page.
 /* ---------- Phase 3: Finish-Tabelle ansehen und anpassen ---------- */
 });
 
+/* ---------- Dartvergleich im Profil (DRT-049) ---------- */
+await gruppe('Dartvergleich im Profil: zwei Legs mit Zielvorgabe, Scheibe antippen, Auswertung', async () => {
+await page.evaluate((id) => { const D = window.__dart; D.state().game = null; D.state().vgl = null; D.setScreen('players'); }, dblId);
+await profilOeffnen('.player-card[data-id="' + dblId + '"]');
+check('die Finish-Kachel bietet den Dartvergleich an', (await page.locator('[data-action="profil-vergleich"]').count()) === 1);
+await page.locator('[data-action="profil-vergleich"]').click();
+check('ohne Runden: Erklaerung und "Erste Runde spielen"',
+  (await text('.vg-leer')).includes('Leg mit Pfeil 1') && (await text('[data-action="vgl-start"]')).includes('Erste Runde'), await text('.vg-koerper'));
+const vgGeo = await page.evaluate(() => {
+  const D = window.__dart, z = D.vglZiel('T20'), d16 = D.vglZiel('D16'), s14 = D.vglZiel('S14'), bull = D.vglZiel('BULL');
+  return { z, f: D.vglFeld(z.x, z.y), f16: D.vglFeld(d16.x, d16.y), s14: D.vglFeld(s14.x, s14.y), bull: D.vglFeld(bull.x, bull.y), mitte: D.vglFeld(0, 0), weg: D.vglFeld(0, -200), eins: D.vglFeld(20, -100) };
+});
+check('Geometrie: T20 oben bei 103 mm, D16 und S14 werden erkannt, Mitte ist Bull, 200 mm ist daneben, 20 mm rechts von T20 ist die 1',
+  vgGeo.z.x === 0 && vgGeo.z.y === -103 && vgGeo.f.n === 20 && vgGeo.f.m === 3 && vgGeo.f16.n === 16 && vgGeo.f16.m === 2 &&
+  vgGeo.s14.n === 14 && vgGeo.s14.m === 1 && vgGeo.bull.n === 25 && vgGeo.bull.m === 2 && vgGeo.mitte.m === 2 && vgGeo.weg.n === 0 && vgGeo.eins.n === 1, JSON.stringify(vgGeo));
+await page.locator('[data-action="vgl-start"]').click();
+check('Leg 1 mit Pfeil 1 beginnt bei 501, Ziel T20, Scheibe gezoomt',
+  (await text('.vg-rest b')) === '501' && (await text('.vg-zielzahl')) === 'T20' && (await text('.vg-chip')).includes('Pfeil 1') &&
+  (await page.locator('svg.vg-board:not(.voll)').count()) === 1 && (await text('.vg-legnr')).includes('Leg 1 von 2'));
+/* Ein echter Tipp: die Mitte des Zoom-Fensters ist das Ziel. */
+const vgBox = await page.locator('svg.vg-board').boundingBox();
+await page.locator('svg.vg-board').click({ position: { x: vgBox.width / 2, y: vgBox.height / 2 } });
+check('ein Tipp in die Mitte des Zoom-Fensters trifft T20: Rest 441, Dart 1 steht als T20 mit 60',
+  (await text('.vg-rest b')) === '441' && (await text('.vg-slot >> nth=0')).replace(/\s+/g, ' ').includes('T20 60'), await text('.vg-seite'));
+const vgWurf = (label) => page.evaluate((l) => { const D = window.__dart, z = D.vglZiel(l); return D.vglDart(z.x, z.y); }, label);
+await vgWurf('T20'); await vgWurf('T20');
+check('nach 180: Rest 321, die Aufnahme steht unter "Letzte Aufnahme", die Slots sind leer',
+  (await text('.vg-rest b')) === '321' && (await text('.vg-letzte')).includes('= 180') && (await page.locator('.vg-slot.voll').count()) === 0);
+await vgWurf('T20'); await vgWurf('T20'); await vgWurf('T20');
+const vgPlan141 = await page.evaluate((id) => {
+  const D = window.__dart, w = window.Checkout && window.Checkout.suggest(141, 3, D.lieblingsDoppel(id));
+  return w ? w.map((t) => D.vglZiel(t).label) : null;
+}, dblId);
+check('bei 141 kommt der Weg aus der eigenen Finish-Tabelle als Ziel (' + (vgPlan141 || []).join(' ') + ')',
+  !!vgPlan141 && (await text('.vg-zielzahl')) === vgPlan141[0] && (await text('.vg-ziel-box small')).replace(/\s+/g, ' ') === vgPlan141.join(' · '), await text('.vg-ziel-box'));
+/* Dem Plan folgen, bis Leg 1 vorbei ist. */
+for (let i = 0; i < 6 && (await text('.vg-legnr')).includes('Leg 1'); i++) await vgWurf((await text('.vg-zielzahl')).trim());
+check('Leg 1 fertig in 9 Darts, Leg 2 mit Pfeil 2 beginnt bei 501, Banner sagt es',
+  (await text('.vg-chip')).includes('Pfeil 2') && (await text('.vg-rest b')) === '501' && (await text('.vg-banner')).includes('Leg fertig in 9 Darts'), await text('.vg-koerper'));
+/* Leg 2: Bust, Zuruecknehmen, Daneben. */
+for (let i = 0; i < 6; i++) await vgWurf('T20');   // 141
+await vgWurf('T20');                                  // 81 (nicht nach Plan)
+await vgWurf('T20');                                  // 21
+await vgWurf('T20');                                  // Bust
+check('Bust: der Rest springt auf 141 zurueck, Banner "Bust"', (await text('.vg-rest b')) === '141' && (await text('.vg-banner')).includes('Bust'), await text('.vg-seite'));
+await page.locator('[data-action="vgl-undo"]').click();
+check('Dart zurueck macht den Bust rueckgaengig: Rest 21, zwei Darts in der Aufnahme', (await text('.vg-rest b')) === '21' && (await page.locator('.vg-slot.voll').count()) === 2);
+await page.locator('[data-action="vgl-daneben"]').click();
+check('Daneben zaehlt 0: Rest 21, Aufnahme zu Ende mit "Daneben"', (await text('.vg-rest b')) === '21' && (await text('.vg-letzte')).includes('Daneben'));
+await page.locator('[data-action="vgl-voll"]').click();
+check('"Ganze Scheibe" zeigt die volle Scheibe', (await page.locator('svg.vg-board.voll').count()) === 1 && (await text('[data-action="vgl-voll"]')).includes('Zoom'));
+for (let i = 0; i < 6 && (await page.locator('.vg-zielzahl').count()); i++) await vgWurf((await text('.vg-zielzahl')).trim());
+const vgEintrag = await page.evaluate(() => { const h = window.__dart.state().history[0]; return { kind: h.kind, legs: h.legs.length, sets: h.sets, start: h.start, n: h.legs.map((l) => l.darts.length), z: h.legs[0].darts[0].z, vgl: window.__dart.state().vgl }; });
+check('die Runde ist archiviert: kind vergleich, zwei Legs, Set-Namen, 501, Leg 1 mit 9 Darts, Ziel T20 am ersten Dart',
+  vgEintrag.kind === 'vergleich' && vgEintrag.legs === 2 && vgEintrag.sets.join('|') === 'Pfeil 1|Pfeil 2' && vgEintrag.start === 501 && vgEintrag.n[0] === 9 && vgEintrag.z === 'T20' && vgEintrag.vgl === null, JSON.stringify(vgEintrag));
+check('die Auswertung zeigt Fazit, elf Zahlen-Zeilen, zwei Trefferbilder, eine Runde und "Naechste Runde spielen"',
+  (await page.locator('.vg-fazit').count()) === 1 && (await page.locator('.vg-tab .vg-row').count()) === 11 && (await page.locator('.vg-bild svg').count()) === 2 &&
+  (await page.locator('.vg-runde').count()) === 1 && (await text('[data-action="vgl-start"]')).includes('Nächste Runde'), await text('.vg-koerper'));
+const vgZahlen = await page.evaluate(() => [...document.querySelectorAll('.vg-tab .vg-row')].map((r) => r.innerText.replace(/\s+/g, ' ').trim()));
+check('Pfeil 1 (9 Darts, Ø 167,0) gewinnt Average und Darts je Leg, Pfeil 2 hat einen Bust-Dart weniger im Ziel',
+  vgZahlen[0].startsWith('167,0') && (await page.locator('.vg-tab .vg-row >> nth=0 >> b.win').count()) === 1 && vgZahlen[1].startsWith('9,0') && /Zielfeld getroffen/.test(vgZahlen[3]), JSON.stringify(vgZahlen));
+await page.locator('.vg-name[data-set="0"]').fill('Alte 22 g');
+await page.locator('.vg-name[data-set="0"]').dispatchEvent('change');
+check('der Name von Set 1 laesst sich aendern und bleibt gespeichert', (await page.evaluate((id) => window.__dart.state().vglNamen[id][0], dblId)) === 'Alte 22 g' && (await text('.vg-fazit')).includes('Alte 22 g'));
+await page.locator('[data-action="profil-panel-zu"]').click();
+check('Fertig schliesst die Tafel, die Kachel zeigt "1 Runde"', (await page.locator('.vg-panel').count()) === 0 && (await text('[data-action="profil-vergleich"]')).includes('1 Runde'));
+/* Eintraege anderer Geraete: gute kommen durch uebernehmeSpiele, kaputte nicht, und die Tafel zeichnet trotz Muell. */
+const vgFremd = await page.evaluate((id) => {
+  const D = window.__dart, S = D.state(), gut = JSON.parse(JSON.stringify(S.history.find((h) => h.kind === 'vergleich')));
+  gut.id = D.uid(); gut.at = Date.now() - 3600e3;
+  const gutId = gut.id;
+  const kaputt = [
+    Object.assign({}, gut, { id: D.uid(), legs: [null] }),
+    Object.assign({}, gut, { id: D.uid(), legs: [{ set: 'length', darts: [] }] }),
+    Object.assign({}, gut, { id: D.uid(), legs: [{ set: 0, darts: [{ x: 'a', y: 1, n: 20, m: 3 }] }] }),
+    Object.assign({}, gut, { id: D.uid(), start: '<img src=x>' }),
+    Object.assign({}, gut, { id: D.uid(), legs: [{ set: 0, darts: 'nix' }] })
+  ];
+  const kaputtIds = kaputt.map((k) => k.id);
+  const vorher = S.history.length;
+  /* Zeilen, wie der Server sie liefert: Kennung, Spielart, Inhalt. */
+  D.uebernehmeSpiele([gut].concat(kaputt).map((e) => ({ id: e.id, kind: 'vergleich', payload: JSON.parse(JSON.stringify(e)) })));
+  const nachher = S.history.length, drin = S.history.some((h) => h.id === gutId), muell = S.history.some((h) => kaputtIds.includes(h.id));
+  /* Muell direkt in den Stand legen (wie ein alter oder manipulierter Speicher) - die Tafel muss ihn ignorieren. */
+  S.history.unshift(kaputt[0], kaputt[3]);
+  D.ui().profilPanel = 'vergleich'; D.render();
+  const tafel = document.querySelector('.vg-panel') ? document.querySelector('.vg-koerper').innerHTML : '';
+  S.history = S.history.filter((h) => !kaputtIds.includes(h.id)); D.save(); D.render();
+  return { vorher, nachher, drin, muell, runden: (tafel.match(/class="vg-runde"/g) || []).length, img: tafel.includes('<img') };
+}, dblId);
+check('uebernehmeSpiele nimmt einen gueltigen fremden Vergleich an und verwirft fuenf kaputte; die Tafel zeichnet zwei Runden und kein eingeschleustes Markup',
+  vgFremd.nachher === vgFremd.vorher + 1 && vgFremd.drin && !vgFremd.muell && vgFremd.runden === 2 && !vgFremd.img, JSON.stringify(vgFremd));
+await page.locator('[data-action="profil-panel-zu"]').click();
+});
+
+
 await gruppe('Finish-Tabelle im Profil: Liste, Editor, Alternativen, eigene Eintraege', async () => {
 await page.evaluate((id) => { const D = window.__dart; D.state().game = null; D.setScreen('players'); }, dblId);
 await profilOeffnen('.player-card[data-id="' + dblId + '"]');

@@ -7604,6 +7604,133 @@ button.st-krow:hover { background: #ffffff06; }
   #screen-game.active:not(.turnier) #scoreboard.solo .pcard .rest-zeile.z3 { font-size: clamp(3rem, 49cqi, 40rem); }
 }
 
+/* ---------- Dartvergleich im Profil (DRT-049) ----------
+   Zwei Sets, Set 1 rot, Set 2 blau (--f). Spielen: links die gezoomte
+   Scheibe, rechts Rest, Ziel, die drei Darts der Aufnahme. Auswertung:
+   Kopf mit beiden Sets, Fazit, vier Karten im Raster. */
+.vg-panel { gap: 12px; }
+.vg-koerper { display: flex; flex-direction: column; gap: 12px; min-width: 0; min-height: 0; }
+.vg-banner { padding: 10px 14px; border-radius: 12px; background: #2a2224; color: #fff; font-weight: 600; text-align: center; box-shadow: inset 0 0 0 1.5px var(--aktiv-linie); animation: vg-ein 0.3s cubic-bezier(0.2, 1.3, 0.4, 1) both; }
+.vg-banner.bust { background: #3a1a1c; box-shadow: inset 0 0 0 1.5px var(--rot, #e5484d); }
+.vg-banner.leg, .vg-banner.runde { background: #1d2b22; box-shadow: inset 0 0 0 1.5px #4ade80; }
+@keyframes vg-ein { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+.vg-kopf { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 10px; }
+.vg-set { position: relative; min-width: 0; display: grid; grid-template-columns: 12px minmax(0, 1fr); grid-template-rows: auto auto auto; column-gap: 10px; padding: 12px 14px; border-radius: 16px; background: #1c1718; border: 1px solid #2a2224; }
+.vg-set i { grid-row: 1 / span 3; align-self: start; margin-top: 6px; width: 12px; height: 12px; border-radius: 50%; background: var(--f); box-shadow: 0 0 10px var(--f); }
+.vg-set .vg-name { min-width: 0; margin: 0; padding: 0; border: none; border-bottom: 1px dashed #3a2e30; border-radius: 0; background: transparent; color: var(--text); font-family: var(--font-body); font-weight: 700; font-size: 1rem; line-height: 1.5; }
+.vg-set input.vg-name:focus { outline: none; border-bottom-color: var(--f); }
+.vg-set b { font-family: var(--font-display); font-weight: 400; font-size: 2rem; line-height: 1.1; color: var(--f); }
+.vg-set small { font-size: 0.75rem; color: var(--muted); }
+.vg-vs { font-family: var(--font-display); font-size: 1.1rem; color: var(--muted); text-transform: uppercase; }
+.vg-zeile { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.vg-zeile .vg-start { margin: 0 0 0 auto; min-height: 44px; }
+.vg-zeile > .pa-text { margin: 0 0 0 auto; }
+.vg-seg { display: inline-flex; padding: 2px; border-radius: 999px; background: #1c1718; border: 1px solid #2a2224; }
+.vg-seg button { margin: 0; min-height: 40px; padding: 0 14px; border: none; border-radius: 999px; background: transparent; color: var(--muted); font-family: var(--font-body); font-weight: 600; font-size: 0.85rem; letter-spacing: 0; text-transform: none; }
+.vg-seg button.on { background: #2a2224; color: #fff; box-shadow: inset 0 0 0 1.5px var(--aktiv-linie); }
+.vg-link { margin: 0; padding: 0; border: none; background: none; color: var(--laser-hell); font: inherit; text-decoration: underline; min-height: 0; text-transform: none; letter-spacing: 0; }
+.vg-leer .pa-text { font-size: 0.95rem; max-width: 70ch; }
+.vg-fazit { margin: 0; padding: 12px 14px; border-radius: 14px; background: #1c1718; border: 1px solid #2a2224; font-size: 0.95rem; line-height: 1.45; text-wrap: pretty; }
+.vg-fazit b { color: #fff; }
+.vg-raster { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.vg-karte { min-width: 0; display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 16px; background: #1c1718; border: 1px solid #2a2224; }
+.vg-karte h3 { margin: 0; font-family: var(--font-body); font-weight: 700; font-size: 1rem; letter-spacing: 0; text-transform: none; }
+.vg-karte .pa-text { margin: -4px 0 0; }
+.vg-tab { display: flex; flex-direction: column; }
+.vg-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1fr); align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid #241d1f; }
+.vg-row:last-child { border-bottom: none; }
+.vg-row span { text-align: center; font-size: 0.8rem; color: var(--muted); }
+.vg-row b { font-family: var(--font-cond); font-weight: 700; font-size: 1.1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vg-row b:first-child { text-align: right; color: #e9a1a4; }
+.vg-row b:last-child { text-align: left; color: #9fd3ec; }
+.vg-row b.win { color: #fff; text-shadow: 0 0 12px rgba(255, 193, 77, 0.6); }
+.vg-row b.win::after { content: ' ★'; color: #ffc14d; font-size: 0.75em; }
+.vg-bilder { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.vg-bild svg { display: block; width: 100%; aspect-ratio: 1; border-radius: 12px; }
+.vg-bild .vg-bg { fill: #110d0e; }
+.vg-bild .vg-bett { fill: rgba(255, 255, 255, 0.07); stroke: rgba(255, 255, 255, 0.35); stroke-width: 0.5; }
+.vg-bild .vg-achse { stroke: rgba(255, 255, 255, 0.12); stroke-width: 0.4; }
+.vg-bild .vg-ax { font-family: var(--font-cond); font-size: 3.6px; fill: rgba(255, 255, 255, 0.4); }
+.vg-bild .vg-ax.r { text-anchor: end; }
+.vg-bild circle { fill: var(--f); fill-opacity: 0.55; }
+.vg-bild circle.hit { fill-opacity: 1; stroke: #fff; stroke-width: 0.4; }
+.vg-bild circle.vg-mitte { fill: none; stroke: #ffc14d; stroke-width: 0.9; }
+.vg-bild-sub { margin-top: 6px; font-size: 0.75rem; color: var(--muted); text-align: center; }
+.vg-richtung { display: flex; flex-direction: column; gap: 6px; }
+.vg-rz { display: grid; grid-template-columns: minmax(0, 1fr) 96px minmax(0, 1fr); align-items: center; gap: 8px; }
+.vg-rz .m { text-align: center; font-size: 0.8rem; color: var(--muted); }
+.vg-rz .l, .vg-rz .r { position: relative; display: flex; align-items: center; height: 26px; min-width: 0; }
+.vg-rz .l { justify-content: flex-end; }
+.vg-rz i { display: block; height: 100%; border-radius: 6px; opacity: 0.75; min-width: 2px; }
+.vg-rz b { position: absolute; top: 0; line-height: 26px; font-family: var(--font-cond); font-weight: 700; font-size: 0.9rem; padding: 0 6px; color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8); }
+.vg-rz .l b { right: 0; }
+.vg-rz .r b { left: 0; }
+.vg-runden { display: flex; flex-direction: column; }
+.vg-runde { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid #241d1f; }
+.vg-runde:last-child { border-bottom: none; }
+.vg-rd b { font-family: var(--font-display); font-weight: 400; font-size: 1.2rem; margin-right: 8px; }
+.vg-rd small, .vg-rl small { font-size: 0.75rem; color: var(--muted); }
+.vg-rl { display: flex; flex-direction: column; min-width: 0; padding-left: 10px; border-left: 3px solid var(--f, #3a2e30); border-radius: 2px; }
+.vg-rl b { font-family: var(--font-cond); font-weight: 700; font-size: 1.05rem; }
+.vg-rl.win b::after { content: ' ★'; color: #ffc14d; font-size: 0.8em; }
+.vg-fuss { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; }
+.vg-fuss .pa-text { margin-right: auto; }
+
+/* Spielen */
+.vg-spiel { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; min-height: 0; }
+.vg-board-wrap { position: relative; width: 100%; max-width: min(100%, 72vh); margin: 0 auto; }
+.vg-board { display: block; width: 100%; aspect-ratio: 1; border-radius: 50%; touch-action: manipulation; cursor: crosshair; background: #0b0809; }
+.vg-board:not(.voll) { border-radius: 18px; }
+.vg-board .vg-rand { fill: #0b0809; }
+.vg-board .vg-f { stroke: #0b0809; stroke-width: 0.6; }
+.vg-board .vg-zahl { font-family: var(--font-cond); font-weight: 700; text-anchor: middle; dominant-baseline: central; pointer-events: none; }
+.vg-board .vg-zahl.aussen { font-size: 16px; fill: #f2eeee; }
+.vg-board .vg-zahl.innen { font-size: 7px; fill: rgba(255, 255, 255, 0.35); }
+.vg-board.voll .vg-zahl.innen { display: none; }
+.vg-board .vg-ziel { fill: rgba(255, 255, 255, 0.12); stroke: #fff; stroke-width: 1.1; pointer-events: none; animation: vg-puls 1.6s ease-in-out infinite; }
+.vg-board.voll .vg-ziel { stroke-width: 2.2; }
+@keyframes vg-puls { 0%, 100% { stroke-opacity: 1; } 50% { stroke-opacity: 0.45; } }
+.vg-board .vg-kreuz line { stroke: #fff; stroke-width: 0.5; pointer-events: none; }
+.vg-board .vg-alt { opacity: 0.45; pointer-events: none; }
+.vg-board .vg-dart circle { stroke: #fff; stroke-width: 0.6; pointer-events: none; }
+.vg-board .vg-dart text { font-family: var(--font-cond); font-weight: 700; font-size: 3.2px; fill: #fff; text-anchor: middle; pointer-events: none; }
+.vg-board.voll .vg-dart circle { r: 5; }
+.vg-board.voll .vg-dart text { font-size: 6px; }
+.vg-board.voll .vg-alt { r: 3.2; }
+.vg-board-knoepfe { display: flex; justify-content: center; gap: 8px; margin-top: 8px; }
+.vg-board-knoepfe .btn { margin: 0; }
+.vg-seite { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.vg-oben { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.vg-chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px 6px 8px; border-radius: 999px; background: #1c1718; border: 1px solid #2a2224; font-weight: 700; }
+.vg-chip i { width: 10px; height: 10px; border-radius: 50%; background: var(--f); box-shadow: 0 0 8px var(--f); }
+.vg-legnr { font-size: 0.85rem; color: var(--muted); }
+.vg-rest, .vg-ziel-box { display: flex; flex-direction: column; padding: 12px 14px; border-radius: 16px; background: #1c1718; border: 1px solid #2a2224; }
+.vg-rest b { font-family: var(--font-display); font-weight: 400; font-size: clamp(3rem, 9vh, 5rem); line-height: 1; }
+.vg-rest small, .vg-ziel-box small { font-size: 0.8rem; color: var(--muted); }
+.vg-zielzahl { font-family: var(--font-display); font-weight: 400; font-size: clamp(2.2rem, 6vh, 3.4rem); line-height: 1.05; color: #ffc14d; }
+.vg-slots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.vg-slot { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 56px; border-radius: 12px; background: #1c1718; border: 1px solid #2a2224; }
+.vg-slot.dran { border-color: var(--aktiv-linie); box-shadow: inset 0 0 0 1px var(--aktiv-linie); }
+.vg-slot b { font-family: var(--font-cond); font-weight: 700; font-size: 1.2rem; }
+.vg-slot small { font-size: 0.75rem; color: var(--muted); }
+.vg-letzte { margin: 0; }
+.vg-knoepfe { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
+.vg-knoepfe .btn { margin: 0; flex: 1 1 auto; }
+
+@media (min-width: 700px) {
+  .vg-raster { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .vg-spiel { grid-template-columns: minmax(0, 1.15fr) minmax(260px, 0.85fr); align-items: start; }
+  .vg-board-wrap { max-width: min(100%, 78vh); }
+}
+@media (min-width: 700px) and (min-height: 501px) {
+  .vg-panel .vg-koerper { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
+  .vg-panel.spielt .vg-koerper { overflow: hidden; }
+  .vg-panel.spielt .vg-spiel { height: 100%; min-height: 0; grid-template-rows: minmax(0, 1fr); }
+  .vg-panel.spielt .vg-board-wrap { height: 100%; display: flex; flex-direction: column; align-items: center; min-height: 0; max-width: none; }
+  .vg-panel.spielt .vg-board { width: auto; height: calc(100% - 52px); max-width: 100%; aspect-ratio: 1; }
+  .vg-panel.spielt .vg-seite { height: 100%; min-height: 0; overflow-y: auto; scrollbar-width: none; }
+}
+
 </style>
 <!-- Gemalter Streifen ganz oben, nur in der installierten App: seit iOS 26/27 legt
      das System einen Glas-Blur ueber den oberen Rand der Seite. Ein deckend
@@ -11784,6 +11911,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
          auffliegen. Lieber verwerfen als abstürzen. */
       if (s.game && s.game.kind === 'finisher' && !Array.isArray(s.game.rounds)) s.game = null;
       if (s.game && s.game.kind === 'kaiwen' && !(Array.isArray(s.game.versuche) && s.game.versuche.length)) s.game = null;
+      /* Dartvergleich: eine angefangene Runde ohne brauchbare Legs faellt weg. */
+      if (s.vgl && !(typeof s.vgl === 'object' && typeof s.vgl.pid === 'string' && Array.isArray(s.vgl.legs) && s.vgl.legs.length && s.vgl.legs.every(function (l) { return l && Array.isArray(l.darts); }))) s.vgl = null;
       /* Ein Spiel ohne Spielerliste kann es ebenso wenig geben: jeder
          Spielbildschirm liest sie als Erstes. Ohne Spiel gehoert der
          Bildschirm zurueck ins Setup. (Bis v3 fing das nur der Zufall ab:
@@ -11898,6 +12027,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (kind === 'quick') return 'Schnelles X01';
     if (kind === 'kaiwen') return 'Kaiwen';
     if (kind === 'hunter') return 'Hunter';
+    if (kind === 'vergleich') return 'Dartvergleich';
     return 'X01';
   }
   function activeProfiles() { return S.profiles.filter(function (p) { return !p.hidden; }); }
@@ -15067,7 +15197,27 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (kind === 'cricket' || kind === 'rtw' || kind === 'hunter') return spieler && istListe(g.throws);
     if (kind === 'finisher') return spieler && istListe(g.rounds) && g.rounds.every(function (rd) { return !!rd && istListe(rd.throws); });
     if (kind === 'kaiwen') return spieler && istListe(g.versuche) && g.versuche.every(function (v) { return !!v && typeof v.zahl === 'number' && istListe(v.visits); });
+    if (kind === 'vergleich') return spieler && vglEintragGueltig(g);
     return false;
+  }
+  /* Dartvergleich (DRT-049): zwei Legs mit Einzeldarts. Die Form wird hart
+     geprueft, weil Eintraege anderer Geraete ungefiltert ins Profil
+     gezeichnet werden - ein kaputter Dart darf dort nichts kaputtmachen. */
+  function vglLegGueltig(l) {
+    if (!l || typeof l !== 'object' || (l.set !== 0 && l.set !== 1) || !istListe(l.darts) || l.darts.length > 400) return false;
+    return l.darts.every(function (d) {
+      return !!d && typeof d === 'object' &&
+        ((d.x === null && d.y === null) || (typeof d.x === 'number' && typeof d.y === 'number' && isFinite(d.x) && isFinite(d.y) && Math.abs(d.x) <= 400 && Math.abs(d.y) <= 400)) &&
+        typeof d.n === 'number' && (d.n === 0 || d.n === 25 || (d.n >= 1 && d.n <= 20 && d.n % 1 === 0)) &&
+        typeof d.m === 'number' && d.m >= 0 && d.m <= 3 && d.m % 1 === 0 &&
+        (d.z === undefined || (typeof d.z === 'string' && d.z.length <= 8));
+    });
+  }
+  function vglEintragGueltig(g) {
+    if (!istListe(g.legs) || !g.legs.length || g.legs.length > 2 || !g.legs.every(vglLegGueltig)) return false;
+    if (g.start !== undefined && g.start !== 301 && g.start !== 501) return false;
+    if (g.sets !== undefined && !(istListe(g.sets) && g.sets.length <= 2 && g.sets.every(function (s) { return typeof s === 'string' && s.length <= 40; }))) return false;
+    return g.serie === undefined || (typeof g.serie === 'string' && g.serie.length <= 40);
   }
 
   /*
@@ -16594,6 +16744,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       koerper = profilBearbeitenHtml(p, eigen);
     } else if (UI.profilPanel === 'tabelle') {
       koerper = finishTabelleHtml(p, darf, eigen);
+    } else if (UI.profilPanel === 'vergleich') {
+      koerper = vglPanelHtml(p, darf);
     } else if (UI.profilPanel === 'stats') {
       koerper = '<div class="pa-panel">' +
         '<div class="pa-panel-kopf"><span class="pa-panel-titel">' + (eigen ? 'Meine Stats' : 'Statistik') + '</span>' +
@@ -16654,7 +16806,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var knopf = wahl ? '<button class="btn pa-btn hell" data-action="profil-gruppen-ok">OK</button>'
       : (darf ? '<button class="btn pa-btn" data-action="finish-ermitteln">Meine besten Finishes ermitteln</button>' : '') +
         '<button class="btn pa-btn" data-action="profil-tabelle">' + (darf ? 'Finish-Tabelle anpassen' : 'Finish-Tabelle ansehen') +
-          '<span class="pa-btn-sub">' + (nEig ? nEig + ' angepasst' : '') + '</span></button>';
+          '<span class="pa-btn-sub">' + (nEig ? nEig + ' angepasst' : '') + '</span></button>' +
+        /* Dartvergleich (DRT-049): zwei Pfeil-Sets im Wechsel je ein Leg. */
+        '<button class="btn pa-btn" data-action="profil-vergleich">Dartvergleich<span class="pa-btn-sub">' + vglKachelSub(p) + '</span></button>';
     return '<div class="pa-kachel pa-finish">' +
       '<span class="kt">Finish-Weg · Lieblingsgruppe</span>' +
       '<div class="pa-kette">' + kette + '</div>' +
@@ -16662,6 +16816,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       (wahl ? '' : '<p class="pa-text">' + stand + '</p>') +
       '<div class="pa-finish-knoepfe">' + knopf + '</div>' +
     '</div>';
+  }
+
+  function vglKachelSub(p) {
+    var n = vglRunden(p.id).length;
+    if (S.vgl && S.vgl.pid === p.id) return 'Runde läuft';
+    return n ? plural(n, 'Runde', 'Runden') : '';
   }
 
   /* ---------- Profil bearbeiten (Entwurf "Profil bearbeiten", Okt. 2026) ----------
@@ -18353,7 +18513,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var eindeutig = alle.filter(function (s) { if (gesehen[s.id]) return false; gesehen[s.id] = 1; return true; });
     var s = statsSumme(alle), F = ST_FARBE;
     var andere = wertbareHistorie().filter(function (h) {
-      return (h.kind || '501') !== '501' && h.kind !== 'quick' && (h.players || []).some(function (id) { return crew.some(function (p) { return p.id === id; }); });
+      return (h.kind || '501') !== '501' && h.kind !== 'quick' && h.kind !== 'vergleich' && (h.players || []).some(function (id) { return crew.some(function (p) { return p.id === id; }); });
     }).length;
     var h = stWer('team', '', esc(LIGA.team), plural(crew.length, 'Spieler', 'Spieler') + ' im Kader · alle Spielarten: Liga, Turnier, Schnell und Solo');
     if (!s) return h + '<p class="st-leer">Noch keine Spiele.</p>';
@@ -18681,6 +18841,451 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     }
     return '';
   }
+
+  /* ================= Dartvergleich (DRT-049, Julius 15.11.2026) =================
+     Zwei Pfeil-Sets im Wechsel je ein Leg (501 oder 301). Jeder Dart hat ein
+     vorgegebenes Ziel - T20 beim Scoring, sonst der Weg aus der eigenen
+     Finish-Tabelle - und wird dort angetippt, wo er steckte: auf einer
+     Scheibe, die aufs Ziel gezoomt ist (ein Fenster von 100 mm, so reicht
+     der Finger fuer zwei, drei Millimeter). Eine Runde = beide Legs; sie
+     wird wie ein Spiel archiviert (kind 'vergleich', ein Spieler, kein
+     Sieger) und zum Server geladen. Die Auswertung im Profil stellt Pfeil 1
+     gegen Pfeil 2 - letzte Runde und alle Runden der Serie: Average, Darts
+     je Leg, Trefferquoten, Streuung, Tendenz (links/rechts, hoch/tief) und
+     das Trefferbild. Masse in Millimetern nach Turnierscheibe, Mitte 0/0,
+     y nach unten; Segment 20 oben, dann im Uhrzeigersinn (ST_BOARD). */
+  var VG_MM = { bullI: 6.35, bullA: 15.9, triI: 99, triA: 107, dblI: 162, dblA: 170, rand: 226, zahl: 192, innen: 136 };
+  var VG_FARBE = [ST_FARBE.rot, ST_FARBE.blau];
+  var VG_NAMEN = ['Pfeil 1', 'Pfeil 2'];
+  var VG_ZOOM = 50;   // halbe Fensterbreite in mm beim Zoom aufs Ziel
+
+  function vglRund(v) { return Math.round(v * 10) / 10; }
+  /* Welches Feld liegt unter dem Punkt? */
+  function vglFeld(x, y) {
+    var r = Math.sqrt(x * x + y * y);
+    if (r <= VG_MM.bullI) return { n: 25, m: 2 };
+    if (r <= VG_MM.bullA) return { n: 25, m: 1 };
+    if (r > VG_MM.dblA) return { n: 0, m: 0 };
+    var w = Math.atan2(x, -y) * 180 / Math.PI;
+    var i = ((Math.round(w / 18) % 20) + 20) % 20;
+    var m = r >= VG_MM.triI && r <= VG_MM.triA ? 3 : r >= VG_MM.dblI ? 2 : 1;
+    return { n: ST_BOARD[i], m: m };
+  }
+  function vglFeldLabel(f) {
+    if (!f || !f.n) return 'Daneben';
+    if (f.n === 25) return f.m === 2 ? 'Bull' : '25';
+    return (f.m === 3 ? 'T' : f.m === 2 ? 'D' : '') + f.n;
+  }
+  function vglWert(f) { return f && f.n ? f.n * f.m : 0; }
+  function vglWinkel(n) { return n === 25 ? 0 : ST_BOARD.indexOf(n) * 18 * Math.PI / 180; }
+  /* Ziel aus einem Routen-Label ('T20', 'BULL', 'S14', '14', 'Bull'): Feld
+     und Mittelpunkt in mm. Singles zielen auf das grosse innere Feld. */
+  function vglZiel(label) {
+    var f = labelDart(label === 'Bull' ? 'BULL' : String(label || 'T20'));
+    if (!f || !f.n || (f.n !== 25 && ST_BOARD.indexOf(f.n) < 0)) f = { n: 20, m: 3 };
+    if (f.n === 25) return { n: 25, m: f.m, x: 0, y: 0, label: f.m === 2 ? 'Bull' : '25' };
+    var w = vglWinkel(f.n);
+    var r = f.m === 3 ? (VG_MM.triI + VG_MM.triA) / 2 : f.m === 2 ? (VG_MM.dblI + VG_MM.dblA) / 2 : (VG_MM.bullA + VG_MM.triI) / 2;
+    return { n: f.n, m: f.m, x: vglRund(r * Math.sin(w)), y: vglRund(-r * Math.cos(w)), label: vglFeldLabel(f) };
+  }
+  function vglStartwert() { return S.settings.vglStart === 301 ? 301 : 501; }
+
+  /* Ein Leg nachrechnen: Aufnahmen mit Bust (Rest bleibt, drei Darts
+     zaehlen), Checkout nur per Doppel, und das Ziel fuer den naechsten Dart.
+     Der Plan einer Aufnahme bleibt stehen, solange die Darts wie geplant
+     fallen (wie planFuer im Spiel); sonst wird fuer den neuen Rest
+     nachgeschlagen. Ohne Weg (ueber 170 oder kein Stellwurf) heisst das
+     Ziel T20. */
+  function vglLegState(leg, start, dbl) {
+    var rest = start, visits = [], visit = null, plan = null, pi = 0, fertig = false, gewertet = 0;
+    var neuerPlan = function (r, k) { var p = r > 0 && r <= 170 ? planFuer(r, k, dbl) : null; plan = p && p.darts && p.darts.length ? p.darts : null; pi = 0; };
+    (leg.darts || []).forEach(function (d) {
+      if (fertig) return;
+      if (!visit) { visit = { restVor: rest, darts: [], score: 0, bust: false, co: false }; visits.push(visit); neuerPlan(rest, 3); }
+      var v = vglWert(d), neu = rest - v;
+      visit.darts.push(d);
+      if (neu < 0 || neu === 1 || (neu === 0 && d.m !== 2)) {
+        visit.bust = true; visit.score = 0; rest = visit.restVor; gewertet += 3; visit = null;
+      } else {
+        rest = neu; visit.score += v;
+        if (neu === 0) { visit.co = true; fertig = true; gewertet += visit.darts.length; visit = null; }
+        else if (visit.darts.length === 3) { gewertet += 3; visit = null; }
+        else {
+          var z = plan && plan[pi] ? vglZiel(plan[pi]) : null;
+          if (z && z.n === d.n && z.m === d.m) pi++; else neuerPlan(rest, 3 - visit.darts.length);
+        }
+      }
+    });
+    if (!visit && !fertig) neuerPlan(rest, 3);
+    var inVisit = visit ? visit.darts.length : 0, geworfen = gewertet + inVisit;
+    var offen = plan ? plan.slice(pi) : null;
+    return { rest: rest, visits: visits, fertig: fertig, inVisit: inVisit, visit: visit, restVorVisit: visit ? visit.restVor : rest,
+      ziel: fertig ? null : vglZiel(offen && offen[0] ? offen[0] : 'T20'), plan: offen, darts: geworfen, punkte: start - rest,
+      avg: geworfen ? (start - rest) / geworfen * 3 : 0 };
+  }
+
+  function vglRunden(pid) {
+    return wertbareHistorie().filter(function (h) { return h.kind === 'vergleich' && Array.isArray(h.players) && h.players[0] === pid && vglEintragGueltig(h); })
+      .slice().sort(function (a, b) { return (b.at || 0) - (a.at || 0); });
+  }
+  /* Eine Serie ist ein Vergleich derselben zwei Sets; "Neuen Vergleich
+     beginnen" faengt eine neue an. Ohne Merker gilt die juengste Runde. */
+  function vglSerie(pid, runden) {
+    S.vglSerie = S.vglSerie || {};
+    if (S.vglSerie[pid]) return S.vglSerie[pid];
+    if (runden.length && runden[0].serie) return runden[0].serie;
+    return null;   // noch kein Vergleich: erst der Start einer Runde legt die Serie an
+  }
+  function vglNamen(pid, runden) {
+    var n = S.vgl && S.vgl.pid === pid ? S.vgl.sets : (S.vglNamen && S.vglNamen[pid]);
+    if (!n) {
+      var serie = vglSerie(pid, runden), r = serie ? runden.filter(function (x) { return x.serie === serie; })[0] : null;
+      n = r && Array.isArray(r.sets) ? r.sets : null;
+    }
+    return [String((n && n[0]) || VG_NAMEN[0]).slice(0, 24), String((n && n[1]) || VG_NAMEN[1]).slice(0, 24)];
+  }
+  function vglNameSetzen(pid, set, wert) {
+    var namen = vglNamen(pid, vglRunden(pid));
+    namen[set] = String(wert || '').trim().slice(0, 24) || VG_NAMEN[set];
+    S.vglNamen = S.vglNamen || {};
+    S.vglNamen[pid] = namen;
+    if (S.vgl && S.vgl.pid === pid) S.vgl.sets = namen.slice();
+  }
+  function vglRundeStarten(pid) {
+    var runden = vglRunden(pid), serie = vglSerie(pid, runden);
+    if (!serie) { S.vglSerie = S.vglSerie || {}; serie = S.vglSerie[pid] = uid(); }
+    var bisher = runden.filter(function (r) { return r.serie === serie; }).length;
+    S.vgl = { id: uid(), pid: pid, serie: serie, sets: vglNamen(pid, runden), start: vglStartwert(), at: Date.now(), legs: [{ set: bisher % 2, darts: [] }] };
+    UI.vglSpiel = true; UI.vglVoll = false; UI.vglBanner = null; UI.vglAbbruch = false;
+  }
+  function vglBanner(text, art) {
+    UI.vglBanner = { text: text, art: art || '', at: Date.now() };
+    setTimeout(function () {
+      var akt = document.activeElement;
+      if (akt && akt.tagName === 'INPUT' && akt.closest && akt.closest('.vg-panel')) return;   // tippt gerade einen Set-Namen
+      if (S.screen === 'profile' && UI.profilPanel === 'vergleich') render();
+    }, 4300);
+  }
+  /* Ein Dart: Stelle in mm (null = daneben ohne Stelle). Ziel ist, was der
+     Spieler gerade werfen soll. Leg zu Ende: das zweite Leg mit dem anderen
+     Set beginnt, nach beiden wird die Runde abgelegt. */
+  function vglDart(x, y) {
+    var g = S.vgl;
+    if (!g || !S.profiles.some(function (p) { return p.id === g.pid; })) return false;
+    var leg = g.legs[g.legs.length - 1], dbl = lieblingsDoppel(g.pid);
+    var st = vglLegState(leg, g.start, dbl);
+    if (st.fertig) return false;
+    var ohne = x === null || x === undefined || !isFinite(x) || !isFinite(y);
+    var f = ohne ? { n: 0, m: 0 } : vglFeld(x, y);
+    pomp();
+    leg.darts.push({ x: ohne ? null : vglRund(x), y: ohne ? null : vglRund(y), n: f.n, m: f.m, z: st.ziel.label });
+    var nach = vglLegState(leg, g.start, dbl), vis = nach.visits[nach.visits.length - 1];
+    if (nach.fertig) {
+      if (g.legs.length < 2) {
+        g.legs.push({ set: 1 - leg.set, darts: [] });
+        UI.vglVoll = false;
+        vglBanner('Leg fertig in ' + plural(nach.darts, 'Dart', 'Darts') + ' · Ø ' + stFmt(nach.avg) + ' – jetzt ' + g.sets[1 - leg.set], 'leg');
+      } else {
+        vglRundeAblegen(g, nach);
+      }
+    } else if (vis && vis.bust) {
+      vglBanner('Bust – Rest bleibt ' + nach.rest, 'bust');
+    }
+    save(); render();
+    return true;
+  }
+  function vglRundeAblegen(g, nach) {
+    var eintrag = { id: g.id || uid(), kind: 'vergleich', at: Date.now(), players: [g.pid], winner: null, serie: g.serie, sets: g.sets.slice(), start: g.start,
+      legs: g.legs.map(function (l) { return { set: l.set, darts: l.darts }; }) };
+    var schonDa = S.history.some(function (h) { return h.id === eintrag.id; });
+    if (!schonDa) S.history.unshift(eintrag);
+    if (S.history.length > MAX_HISTORY) S.history.length = MAX_HISTORY;
+    if (!schonDa) meldeNeuesSpiel(S.history[0]);
+    S.vgl = null; UI.vglSpiel = false; UI.vglScope = 'letzte'; UI.vglAbbruch = false;
+    vglBanner('Runde fertig: letztes Leg in ' + plural(nach.darts, 'Dart', 'Darts') + ' · Ø ' + stFmt(nach.avg), 'runde');
+  }
+  function vglUndo() {
+    var g = S.vgl;
+    if (!g) return;
+    var leg = g.legs[g.legs.length - 1];
+    if (!leg.darts.length) { if (g.legs.length < 2) return; g.legs.pop(); leg = g.legs[g.legs.length - 1]; }
+    leg.darts.pop();
+    UI.vglBanner = null;
+    save(); render();
+  }
+
+  /* ---------- Auswertung je Set ---------- */
+  /* legs: [{ darts, start }]. Versatz je Dart im Zielsystem: u nach rechts,
+     v nach oben (vom Bull weg), gedreht um den Zielwinkel - so liegen T20
+     und D16 im selben Bild. */
+  function vglAuswertung(legs) {
+    var a = { legs: 0, fertig: 0, darts: 0, punkte: 0, avg: null, dartsJeLeg: null, best: null, ziel: [0, 0], seg: [0, 0], t20: [0, 0], dbl: [0, 0],
+      offs: [], du: null, dv: null, radius: null, abstand: null, richtung: { ziel: 0, links: 0, rechts: 0, hoch: 0, tief: 0, weg: 0 }, s100: 0, s140: 0, s180: 0 };
+    legs.forEach(function (l) {
+      var st = vglLegState(l, l.start || 501, null);
+      a.legs++; a.darts += st.darts; a.punkte += st.punkte;
+      if (st.fertig) { a.fertig++; a.dartsFertig = (a.dartsFertig || 0) + st.darts; if (a.best === null || st.darts < a.best) a.best = st.darts; }
+      st.visits.forEach(function (v) { if (!v.bust) { if (v.score >= 180) a.s180++; else if (v.score >= 140) a.s140++; else if (v.score >= 100) a.s100++; } });
+      (l.darts || []).forEach(function (d) {
+        var z = vglZiel(d.z || 'T20'), treffer = d.n === z.n && d.m === z.m;
+        a.ziel[1]++; a.seg[1]++;
+        if (treffer) { a.ziel[0]++; a.richtung.ziel++; }
+        if (d.n === z.n) a.seg[0]++;
+        if (z.n === 20 && z.m === 3) { a.t20[1]++; if (treffer) a.t20[0]++; }
+        if (z.m === 2) { a.dbl[1]++; if (treffer) a.dbl[0]++; }
+        if (d.x === null || d.x === undefined) { if (!treffer) a.richtung.weg++; return; }
+        var dx = d.x - z.x, dy = d.y - z.y, w = vglWinkel(z.n);
+        var u = dx * Math.cos(w) + dy * Math.sin(w), v = dx * Math.sin(w) - dy * Math.cos(w);
+        a.offs.push([u, v, treffer]);
+        if (!treffer) { if (Math.abs(u) >= Math.abs(v)) a.richtung[u > 0 ? 'rechts' : 'links']++; else a.richtung[v > 0 ? 'hoch' : 'tief']++; }
+      });
+    });
+    if (a.darts) a.avg = a.punkte / a.darts * 3;
+    if (a.fertig) a.dartsJeLeg = a.dartsFertig / a.fertig;
+    if (a.offs.length) {
+      var su = 0, sv = 0, sd = 0;
+      a.offs.forEach(function (o) { su += o[0]; sv += o[1]; sd += Math.sqrt(o[0] * o[0] + o[1] * o[1]); });
+      a.du = su / a.offs.length; a.dv = sv / a.offs.length; a.abstand = sd / a.offs.length;
+      var sq = 0;
+      a.offs.forEach(function (o) { sq += (o[0] - a.du) * (o[0] - a.du) + (o[1] - a.dv) * (o[1] - a.dv); });
+      a.radius = Math.sqrt(sq / a.offs.length);
+    }
+    return a;
+  }
+  function vglTendenz(a) {
+    if (a.du === null) return '–';
+    var t = [];
+    if (Math.abs(a.du) >= 2) t.push(stFmt(Math.abs(a.du), 0) + ' mm ' + (a.du > 0 ? 'rechts' : 'links'));
+    if (Math.abs(a.dv) >= 2) t.push(stFmt(Math.abs(a.dv), 0) + ' mm ' + (a.dv > 0 ? 'hoch' : 'tief'));
+    return t.length ? t.join(', ') : 'mittig';
+  }
+  function vglPct(q) { return q[1] ? stFmt(q[0] / q[1] * 100, 0) + ' %' : '–'; }
+  function vglFazit(A, B, namen) {
+    if (!A.legs || !B.legs) return '';
+    var s = [], d = (B.avg || 0) - (A.avg || 0);
+    if (Math.abs(d) < 1) s.push('Beim Scoring nehmen sich ' + esc(namen[0]) + ' und ' + esc(namen[1]) + ' nichts (Ø ' + stFmt(A.avg) + ' gegen ' + stFmt(B.avg) + ').');
+    else s.push('<b>' + esc(namen[d > 0 ? 1 : 0]) + '</b> scort stärker: Ø ' + stFmt(d > 0 ? B.avg : A.avg) + ' gegen ' + stFmt(d > 0 ? A.avg : B.avg) + ', also ' + stFmt(Math.abs(d)) + ' Punkte je Aufnahme mehr.');
+    if (A.radius !== null && B.radius !== null) {
+      var r = B.radius - A.radius;
+      if (Math.abs(r) < 1.5) s.push('Die Streuung ist gleich (' + stFmt(A.radius, 0) + ' mm).');
+      else s.push('Mit ' + esc(namen[r < 0 ? 1 : 0]) + ' liegen die Darts ' + stFmt(Math.abs(r), 0) + ' mm enger beieinander.');
+    }
+    if (A.dartsJeLeg !== null && B.dartsJeLeg !== null && Math.abs(A.dartsJeLeg - B.dartsJeLeg) >= 1) {
+      s.push(esc(namen[A.dartsJeLeg < B.dartsJeLeg ? 0 : 1]) + ' braucht im Schnitt ' + stFmt(Math.abs(A.dartsJeLeg - B.dartsJeLeg)) + ' Darts weniger je Leg.');
+    }
+    return s.join(' ');
+  }
+
+  /* ---------- Bildschirm: Profil-Tafel ---------- */
+  function vglPanelHtml(p, darf) {
+    var laeuft = S.vgl && S.vgl.pid === p.id ? S.vgl : null;
+    var spielt = !!(laeuft && UI.vglSpiel && darf);
+    return '<div class="pa-panel vg-panel' + (spielt ? ' spielt' : '') + '">' +
+      '<div class="pa-panel-kopf"><span class="pa-panel-titel">Dartvergleich</span>' +
+        (spielt ? '<button class="btn hell pa-fertig" data-action="vgl-pause">Pause</button>' : '<button class="btn hell pa-fertig" data-action="profil-panel-zu">Fertig</button>') + '</div>' +
+      '<div class="vg-koerper">' + (spielt ? vglSpielHtml(p, laeuft) : vglUebersichtHtml(p, darf, laeuft)) + '</div></div>';
+  }
+  function vglBannerHtml() {
+    var b = UI.vglBanner && Date.now() - UI.vglBanner.at < 4200 ? UI.vglBanner : null;
+    return b ? '<div class="vg-banner ' + b.art + '" role="status">' + esc(b.text) + '</div>' : '';
+  }
+  function vglSetChip(namen, set, extra) {
+    return '<span class="vg-chip" style="--f:' + VG_FARBE[set] + '"><i></i>' + esc(namen[set]) + (extra ? '<small>' + extra + '</small>' : '') + '</span>';
+  }
+
+  /* Die Scheibe in Millimetern. Zoom: ein Fenster von 2 x VG_ZOOM um das
+     Ziel; voll: die ganze Scheibe. Die Zahlen innen helfen im Zoom bei der
+     Orientierung, aussen stehen sie fuer die volle Ansicht. */
+  function vglScheibeSvg(ziel, leg, st, voll, set) {
+    var vb = voll ? [-VG_MM.rand, -VG_MM.rand, 2 * VG_MM.rand, 2 * VG_MM.rand] : [ziel.x - VG_ZOOM, ziel.y - VG_ZOOM, 2 * VG_ZOOM, 2 * VG_ZOOM];
+    var P = function (r, a) { return (r * Math.sin(a)).toFixed(2) + ' ' + (-r * Math.cos(a)).toFixed(2); };
+    var seg = function (r0, r1, a0, a1) { return 'M' + P(r1, a0) + 'A' + r1 + ' ' + r1 + ' 0 0 1 ' + P(r1, a1) + 'L' + P(r0, a1) + 'A' + r0 + ' ' + r0 + ' 0 0 0 ' + P(r0, a0) + 'Z'; };
+    var h = '<svg class="vg-board' + (voll ? ' voll' : '') + '" viewBox="' + vb.join(' ') + '" data-vg="board" role="img" aria-label="Scheibe, antippen wo der Dart steckt">' +
+      '<circle cx="0" cy="0" r="' + VG_MM.rand + '" class="vg-rand"/>';
+    var zielPfad = '';
+    ST_BOARD.forEach(function (n, i) {
+      var a0 = (i * 18 - 9) * Math.PI / 180, a1 = (i * 18 + 9) * Math.PI / 180, alt = i % 2;
+      var sgl = alt ? '#e6d8b5' : '#17120f', ring = alt ? '#2f9a58' : '#d0353c';
+      h += '<path d="' + seg(VG_MM.bullA, VG_MM.triI, a0, a1) + '" fill="' + sgl + '" class="vg-f"/>' +
+        '<path d="' + seg(VG_MM.triI, VG_MM.triA, a0, a1) + '" fill="' + ring + '" class="vg-f"/>' +
+        '<path d="' + seg(VG_MM.triA, VG_MM.dblI, a0, a1) + '" fill="' + sgl + '" class="vg-f"/>' +
+        '<path d="' + seg(VG_MM.dblI, VG_MM.dblA, a0, a1) + '" fill="' + ring + '" class="vg-f"/>';
+      var am = i * 18 * Math.PI / 180;
+      h += '<text class="vg-zahl aussen" x="' + (VG_MM.zahl * Math.sin(am)).toFixed(1) + '" y="' + (-VG_MM.zahl * Math.cos(am)).toFixed(1) + '">' + n + '</text>' +
+        '<text class="vg-zahl innen" x="' + (VG_MM.innen * Math.sin(am)).toFixed(1) + '" y="' + (-VG_MM.innen * Math.cos(am)).toFixed(1) + '">' + n + '</text>';
+      if (ziel.n === n) {
+        var r0 = ziel.m === 3 ? VG_MM.triI : ziel.m === 2 ? VG_MM.dblI : VG_MM.bullA, r1 = ziel.m === 3 ? VG_MM.triA : ziel.m === 2 ? VG_MM.dblA : VG_MM.triI;
+        zielPfad = seg(r0, r1, a0, a1);
+      }
+    });
+    h += '<circle cx="0" cy="0" r="' + VG_MM.bullA + '" fill="#2f9a58" class="vg-f"/><circle cx="0" cy="0" r="' + VG_MM.bullI + '" fill="#d0353c" class="vg-f"/>';
+    if (ziel.n === 25) h += '<circle cx="0" cy="0" r="' + (ziel.m === 2 ? VG_MM.bullI : VG_MM.bullA) + '" class="vg-ziel"/>';
+    else if (zielPfad) h += '<path d="' + zielPfad + '" class="vg-ziel"/>';
+    h += '<g class="vg-kreuz"><line x1="' + (ziel.x - 3) + '" y1="' + ziel.y + '" x2="' + (ziel.x + 3) + '" y2="' + ziel.y + '"/><line x1="' + ziel.x + '" y1="' + (ziel.y - 3) + '" x2="' + ziel.x + '" y2="' + (ziel.y + 3) + '"/></g>';
+    /* Marker: fruehere Darts dieses Legs blass, die laufende Aufnahme kraeftig und nummeriert. */
+    var aktuelle = st.visit ? st.visit.darts : [];
+    (leg.darts || []).forEach(function (d) {
+      if (d.x === null || d.x === undefined) return;
+      var k = aktuelle.indexOf(d);
+      if (k < 0) h += '<circle cx="' + d.x + '" cy="' + d.y + '" r="1.7" class="vg-alt" style="fill:' + VG_FARBE[set] + '"/>';
+      else h += '<g class="vg-dart"><circle cx="' + d.x + '" cy="' + d.y + '" r="2.6" style="fill:' + VG_FARBE[set] + '"/><text x="' + d.x + '" y="' + (d.y + 1.1) + '">' + (k + 1) + '</text></g>';
+    });
+    return h + '</svg>';
+  }
+  function vglSpielHtml(p, g) {
+    var leg = g.legs[g.legs.length - 1], dbl = lieblingsDoppel(p.id);
+    var st = vglLegState(leg, g.start, dbl), set = leg.set, ziel = st.ziel || vglZiel('T20');
+    var namen = g.sets, voll = !!UI.vglVoll;
+    var slots = [0, 1, 2].map(function (i) {
+      var d = st.visit ? st.visit.darts[i] : null;
+      return '<span class="vg-slot' + (d ? ' voll' : i === st.inVisit ? ' dran' : '') + '">' + (d ? '<b>' + vglFeldLabel(d) + '</b><small>' + vglWert(d) + '</small>' : '<b>·</b>') + '</span>';
+    }).join('');
+    var letzte = !st.visit && st.visits.length ? st.visits[st.visits.length - 1] : null;
+    var planText = (st.plan && st.plan.length ? st.plan.map(function (l) { return vglZiel(l).label; }) : ['T20', 'T20', 'T20'].slice(0, 3 - st.inVisit)).join(' · ');
+    return vglBannerHtml() +
+      '<div class="vg-spiel">' +
+        '<div class="vg-board-wrap">' + vglScheibeSvg(ziel, leg, st, voll, set) +
+          '<div class="vg-board-knoepfe"><button class="btn ghost small" data-action="vgl-voll">' + (voll ? 'Zoom aufs Ziel' : 'Ganze Scheibe') + '</button>' +
+          '<button class="btn ghost small" data-action="vgl-daneben">Daneben</button></div></div>' +
+        '<div class="vg-seite">' +
+          '<div class="vg-oben">' + vglSetChip(namen, set) + '<span class="vg-legnr">Leg ' + g.legs.length + ' von 2 · ' + g.start + '</span></div>' +
+          '<div class="vg-rest"><span class="kt">Rest</span><b>' + st.rest + '</b><small>' + plural(st.darts, 'Dart', 'Darts') + (st.darts ? ' · Ø ' + stFmt(st.avg) : '') + '</small></div>' +
+          '<div class="vg-ziel-box"><span class="kt">Ziel für Dart ' + (st.inVisit + 1) + '</span><b class="vg-zielzahl">' + esc(ziel.label) + '</b><small>' + esc(planText) + '</small></div>' +
+          '<div class="vg-slots">' + slots + '</div>' +
+          (letzte ? '<p class="pa-text vg-letzte">Letzte Aufnahme: ' + letzte.darts.map(vglFeldLabel).join(' · ') + ' = ' + (letzte.bust ? 'Bust' : letzte.score) + '</p>' : '<p class="pa-text vg-letzte">Tippe auf die Scheibe, wo der Dart steckt. Daneben = kein Feld.</p>') +
+          '<div class="vg-knoepfe"><button class="btn ghost" data-action="vgl-undo"' + (leg.darts.length || g.legs.length > 1 ? '' : ' disabled') + '>Dart zurück</button>' +
+            (UI.vglAbbruch ? '<button class="btn ghost" data-action="vgl-abbruch-nein">Doch nicht</button><button class="btn hell" data-action="vgl-abbruch">Runde verwerfen</button>'
+              : '<button class="btn ghost leise" data-action="vgl-abbruch">Abbrechen</button>') + '</div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function vglUebersichtHtml(p, darf, laeuft) {
+    var runden = vglRunden(p.id), serie = vglSerie(p.id, runden), namen = vglNamen(p.id, runden);
+    var aktuelle = serie ? runden.filter(function (r) { return r.serie === serie; }) : [], fruehere = runden.length - aktuelle.length;
+    var scope = aktuelle.length >= 2 && UI.vglScope !== 'alle' ? 'letzte' : 'alle';
+    var basis = scope === 'letzte' ? aktuelle.slice(0, 1) : aktuelle;
+    var legsVon = function (set) { var out = []; basis.forEach(function (r) { r.legs.forEach(function (l) { if (l.set === set) out.push({ darts: l.darts, start: r.start || 501 }); }); }); return out; };
+    var A = vglAuswertung(legsVon(0)), B = vglAuswertung(legsVon(1));
+    var fremd = S.vgl && S.vgl.pid !== p.id ? profile(S.vgl.pid) : null;
+    var kopfSet = function (set, a) {
+      return '<div class="vg-set" style="--f:' + VG_FARBE[set] + '"><i></i>' +
+        (darf ? '<input class="vg-name" data-role="vgl-name" data-set="' + set + '" value="' + esc(namen[set]) + '" maxlength="24" aria-label="Name Set ' + (set + 1) + '">' : '<span class="vg-name">' + esc(namen[set]) + '</span>') +
+        '<b>' + (a.avg === null ? '–' : stFmt(a.avg)) + '</b><small>' + (a.legs ? 'Ø · ' + plural(a.legs, 'Leg', 'Legs') : 'noch kein Leg') + '</small></div>';
+    };
+    var startKnopf = '';
+    if (darf) {
+      if (laeuft) startKnopf = '<button class="btn hell vg-start" data-action="vgl-start">Weiterspielen · Leg ' + laeuft.legs.length + ' von 2</button>';
+      else if (fremd) startKnopf = '<p class="pa-text">Es läuft noch eine Runde von ' + esc(fremd.name) + '. Erst dort beenden oder <button class="vg-link" data-action="vgl-fremd-weg">verwerfen</button>.</p>';
+      else startKnopf = '<button class="btn hell vg-start" data-action="vgl-start">' + (aktuelle.length ? 'Nächste Runde spielen' : 'Erste Runde spielen') + ' · 2 Legs</button>';
+    }
+    var zeile = '<div class="vg-zeile">' +
+      (aktuelle.length >= 2 ? '<div class="vg-seg" role="tablist"><button class="' + (scope === 'letzte' ? 'on' : '') + '" data-action="vgl-scope" data-value="letzte">Letzte Runde</button><button class="' + (scope === 'alle' ? 'on' : '') + '" data-action="vgl-scope" data-value="alle">Alle ' + aktuelle.length + ' Runden</button></div>' : '<span></span>') +
+      (darf && !laeuft ? '<div class="vg-seg" aria-label="Startwert"><button class="' + (vglStartwert() === 501 ? 'on' : '') + '" data-action="vgl-startwert" data-value="501">501</button><button class="' + (vglStartwert() === 301 ? 'on' : '') + '" data-action="vgl-startwert" data-value="301">301</button></div>' : '') +
+      startKnopf + '</div>';
+    var h = vglBannerHtml() + '<div class="vg-kopf">' + kopfSet(0, A) + '<span class="vg-vs">vs</span>' + kopfSet(1, B) + '</div>' + zeile;
+    if (!aktuelle.length) {
+      h += '<div class="vg-leer"><p class="pa-text">So geht es: Du wirfst ein Leg mit ' + esc(namen[0]) + ' und eines mit ' + esc(namen[1]) + '. Jeder Dart bekommt ein Ziel (T20, am Ende der Weg aus deiner Finish-Tabelle), und du tippst auf der gezoomten Scheibe an, wo er steckte. ' +
+        'Danach siehst du Average, Trefferquoten, Streuung und das Trefferbild beider Sets – für die letzte Runde und für alle Runden zusammen. Die Namen oben kannst du ändern, zum Beispiel „Alte 22 g“ und „Neue 24 g“.</p></div>';
+      return h;
+    }
+    var fazit = vglFazit(A, B, namen);
+    h += (fazit ? '<p class="vg-fazit">' + fazit + '</p>' : '') +
+      '<div class="vg-raster">' +
+        '<div class="vg-karte"><h3>Zahlen</h3>' + vglVergleichHtml(A, B) + '</div>' +
+        '<div class="vg-karte"><h3>Trefferbild</h3><p class="pa-text">Jeder Dart als Punkt um sein Ziel; der Ring ist der Schwerpunkt. Oben heißt vom Bull weg.</p><div class="vg-bilder">' + vglBildSvg(A, 0, namen) + vglBildSvg(B, 1, namen) + '</div></div>' +
+        '<div class="vg-karte"><h3>Wohin die Fehlwürfe gehen</h3>' + vglRichtungHtml(A, B) + '</div>' +
+        '<div class="vg-karte"><h3>Runden</h3>' + vglRundenHtml(aktuelle, namen) + '</div>' +
+      '</div>' +
+      (fruehere ? '<p class="pa-text">Dazu ' + plural(fruehere, 'frühere Runde', 'frühere Runden') + ' aus anderen Vergleichen.</p>' : '') +
+      (darf && !laeuft ? '<div class="vg-fuss">' + (UI.vglNeuFrage
+        ? '<span class="pa-text">Neue Serie, zum Beispiel für andere Pfeile? Die bisherigen Runden bleiben im Archiv.</span><button class="btn ghost" data-action="vgl-neu-nein">Doch nicht</button><button class="btn hell" data-action="vgl-neu">Ja, neu beginnen</button>'
+        : '<button class="btn ghost leise" data-action="vgl-neu">Neuen Vergleich beginnen</button>') + '</div>' : '');
+    return h;
+  }
+  function vglVergleichHtml(A, B) {
+    var zeilen = [
+      ['3-Dart-Average', A.avg, B.avg, 1, stFmt],
+      ['Darts je Leg', A.dartsJeLeg, B.dartsJeLeg, -1, stFmt],
+      ['Bestes Leg', A.best, B.best, -1, function (v) { return plural(v, 'Dart', 'Darts'); }],
+      ['Zielfeld getroffen', A.ziel, B.ziel, 1, vglPct, true],
+      ['Richtiges Segment', A.seg, B.seg, 1, vglPct, true],
+      ['T20-Quote', A.t20, B.t20, 1, vglPct, true],
+      ['Doppelquote', A.dbl, B.dbl, 1, vglPct, true],
+      ['100+ · 140+ · 180', [A.s100, A.s140, A.s180], [B.s100, B.s140, B.s180], 0, function (v) { return v.join(' · '); }],
+      ['Streuung', A.radius, B.radius, -1, function (v) { return stFmt(v, 0) + ' mm'; }],
+      ['Ø Abstand zum Ziel', A.abstand, B.abstand, -1, function (v) { return stFmt(v, 0) + ' mm'; }],
+      ['Tendenz', vglTendenz(A), vglTendenz(B), 0, String]
+    ];
+    return '<div class="vg-tab">' + zeilen.map(function (z) {
+      var a = z[1], b = z[2], quote = !!z[5];
+      var va = quote ? (a[1] ? a[0] / a[1] : null) : a, vb = quote ? (b[1] ? b[0] / b[1] : null) : b;
+      var leerA = va === null || va === undefined, leerB = vb === null || vb === undefined;
+      var win = 0;
+      if (z[3] && !leerA && !leerB && typeof va === 'number' && typeof vb === 'number' && Math.abs(va - vb) > 1e-9) win = (vb - va) * z[3] > 0 ? 2 : 1;
+      return '<div class="vg-row"><b class="' + (win === 1 ? 'win' : '') + '">' + (leerA ? '–' : z[4](a)) + '</b><span>' + z[0] + '</span><b class="' + (win === 2 ? 'win' : '') + '">' + (leerB ? '–' : z[4](b)) + '</b></div>';
+    }).join('') + '</div>';
+  }
+  /* Trefferbild: Fenster 90 x 90 mm, das Zielfeld als Band von 8 mm Hoehe
+     (Triple- und Doppelring) mit der Segmentbreite am Triple (etwa 32 mm). */
+  function vglBildSvg(a, set, namen) {
+    var W = 45, pts = a.offs.map(function (o) {
+      return '<circle cx="' + o[0].toFixed(1) + '" cy="' + (-o[1]).toFixed(1) + '" r="1.5" class="' + (o[2] ? 'hit' : '') + '"/>';
+    }).join('');
+    var mitte = a.du !== null ? '<circle cx="' + a.du.toFixed(1) + '" cy="' + (-a.dv).toFixed(1) + '" r="3.2" class="vg-mitte"/>' : '';
+    return '<div class="vg-bild" style="--f:' + VG_FARBE[set] + '"><svg viewBox="' + (-W) + ' ' + (-W) + ' ' + (2 * W) + ' ' + (2 * W) + '" role="img" aria-label="Trefferbild ' + esc(namen[set]) + '">' +
+      '<rect x="' + (-W) + '" y="' + (-W) + '" width="' + (2 * W) + '" height="' + (2 * W) + '" class="vg-bg"/>' +
+      '<rect x="-16.2" y="-4" width="32.4" height="8" rx="1" class="vg-bett"/>' +
+      '<line x1="' + (-W) + '" y1="0" x2="' + W + '" y2="0" class="vg-achse"/><line x1="0" y1="' + (-W) + '" x2="0" y2="' + W + '" class="vg-achse"/>' +
+      '<text x="' + (-W + 2) + '" y="-1.5" class="vg-ax">links</text><text x="' + (W - 2) + '" y="-1.5" class="vg-ax r">rechts</text>' +
+      '<text x="1.5" y="' + (-W + 5) + '" class="vg-ax">hoch</text><text x="1.5" y="' + (W - 2) + '" class="vg-ax">tief</text>' +
+      pts + mitte + '</svg><div class="vg-bild-sub">' + esc(namen[set]) + ' · ' + plural(a.offs.length, 'Dart', 'Darts') + (a.du !== null ? ' · Schwerpunkt ' + vglTendenz(a) : '') + '</div></div>';
+  }
+  function vglRichtungHtml(A, B) {
+    var reihen = [['ziel', 'Im Ziel'], ['links', 'Links'], ['rechts', 'Rechts'], ['hoch', 'Hoch'], ['tief', 'Tief'], ['weg', 'Weit daneben']];
+    var maxA = Math.max(1, A.ziel[1]), maxB = Math.max(1, B.ziel[1]);
+    return '<div class="vg-richtung">' + reihen.map(function (r) {
+      var a = A.richtung[r[0]], b = B.richtung[r[0]];
+      return '<div class="vg-rz"><span class="l"><i style="width:' + (a / maxA * 100).toFixed(1) + '%;background:' + VG_FARBE[0] + '"></i><b>' + (A.ziel[1] ? stFmt(a / maxA * 100, 0) + ' %' : '–') + '</b></span>' +
+        '<span class="m">' + r[1] + '</span>' +
+        '<span class="r"><i style="width:' + (b / maxB * 100).toFixed(1) + '%;background:' + VG_FARBE[1] + '"></i><b>' + (B.ziel[1] ? stFmt(b / maxB * 100, 0) + ' %' : '–') + '</b></span></div>';
+    }).join('') + '</div>';
+  }
+  function vglRundenHtml(runden, namen) {
+    return '<div class="vg-runden">' + runden.slice(0, 12).map(function (r, i) {
+      var je = [null, null];
+      r.legs.forEach(function (l) { je[l.set] = vglLegState(l, r.start || 501, null); });
+      var zelle = function (set) {
+        var s = je[set];
+        if (!s) return '<span class="vg-rl">–</span>';
+        var besser = je[1 - set] && s.fertig && (!je[1 - set].fertig || s.darts < je[1 - set].darts);
+        return '<span class="vg-rl' + (besser ? ' win' : '') + '" style="--f:' + VG_FARBE[set] + '"><b>' + plural(s.darts, 'Dart', 'Darts') + '</b><small>Ø ' + stFmt(s.avg) + (s.fertig ? '' : ' · offen') + '</small></span>';
+      };
+      return '<div class="vg-runde"><span class="vg-rd"><b>' + (runden.length - i) + '</b><small>' + fmtDate(r.at) + ' · ' + (Number(r.start) || 501) + '</small></span>' + zelle(0) + zelle(1) + '</div>';
+    }).join('') + (runden.length > 12 ? '<p class="pa-text">und ' + (runden.length - 12) + ' weitere.</p>' : '') + '</div>';
+  }
+
+  /* Antippen der Scheibe: Bildschirmpunkt in Millimeter zurueckrechnen
+     (viewBox und preserveAspectRatio meet, mittig). */
+  function vglTapMm(svg, ev) {
+    var vb = String(svg.getAttribute('viewBox')).split(/\s+/).map(Number), r = svg.getBoundingClientRect();
+    if (vb.length < 4 || !r.width || !r.height) return null;
+    var sc = Math.min(r.width / vb[2], r.height / vb[3]);
+    var ox = r.left + (r.width - vb[2] * sc) / 2, oy = r.top + (r.height - vb[3] * sc) / 2;
+    return [vb[0] + (ev.clientX - ox) / sc, vb[1] + (ev.clientY - oy) / sc];
+  }
+  document.addEventListener('click', function (ev) {
+    var svg = ev.target && ev.target.closest ? ev.target.closest('svg.vg-board') : null;
+    if (!svg || !S.vgl || !UI.vglSpiel || S.screen !== 'profile') return;
+    var k = vglTapMm(svg, ev);
+    if (k) vglDart(k[0], k[1]);
+  });
+  document.addEventListener('change', function (ev) {
+    var el = ev.target;
+    if (!el || !el.getAttribute || el.getAttribute('data-role') !== 'vgl-name' || !UI.profile) return;
+    vglNameSetzen(UI.profile, Number(el.getAttribute('data-set')) === 1 ? 1 : 0, el.value);
+    save(); render();
+  });
 
   /* ================= Liga-Spielplan ================= */
 
@@ -25370,6 +25975,32 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       case 'stats-bereich': statsFilter().bereich = Number(el.getAttribute('data-wert')) || 0; render(); break;
       case 'profil-tabelle': UI.profilPanel = 'tabelle'; UI.tab = null; tabZustand(); render(); break;
       case 'profil-panel-zu': UI.profilPanel = null; UI.tab = null; render(); break;
+      /* Dartvergleich (DRT-049) */
+      case 'profil-vergleich': UI.profilPanel = 'vergleich'; UI.vglSpiel = false; UI.vglNeuFrage = false; UI.vglAbbruch = false; render(); break;
+      case 'vgl-start':
+        if (!UI.profile || !bearbeitbar(UI.profile)) break;
+        if (S.vgl && S.vgl.pid === UI.profile) UI.vglSpiel = true;
+        else if (!S.vgl) vglRundeStarten(UI.profile);
+        else break;
+        save(); render(); break;
+      case 'vgl-pause': UI.vglSpiel = false; UI.vglAbbruch = false; render(); break;
+      case 'vgl-undo': vglUndo(); break;
+      case 'vgl-daneben': vglDart(null, null); break;
+      case 'vgl-voll': UI.vglVoll = !UI.vglVoll; render(); break;
+      case 'vgl-abbruch':
+        if (!UI.vglAbbruch) { UI.vglAbbruch = true; render(); break; }
+        S.vgl = null; UI.vglSpiel = false; UI.vglAbbruch = false; save(); render(); break;
+      case 'vgl-abbruch-nein': UI.vglAbbruch = false; render(); break;
+      case 'vgl-fremd-weg': S.vgl = null; save(); render(); break;
+      case 'vgl-scope': UI.vglScope = el.getAttribute('data-value') === 'alle' ? 'alle' : 'letzte'; render(); break;
+      case 'vgl-startwert': S.settings.vglStart = Number(el.getAttribute('data-value')) === 301 ? 301 : 501; save(); render(); break;
+      case 'vgl-neu':
+        if (!UI.profile || !bearbeitbar(UI.profile)) break;
+        if (!UI.vglNeuFrage) { UI.vglNeuFrage = true; render(); break; }
+        S.vglSerie = S.vglSerie || {}; S.vglSerie[UI.profile] = uid();
+        if (S.vglNamen) delete S.vglNamen[UI.profile];
+        UI.vglNeuFrage = false; UI.vglScope = 'alle'; save(); render(); break;
+      case 'vgl-neu-nein': UI.vglNeuFrage = false; render(); break;
       /* Finish-Tabelle: Filter, Rest waehlen, Editor */
       case 'tab-filter': tabZustand().filter = el.getAttribute('data-value'); render(); break;
       case 'tab-rest': {
@@ -27960,6 +28591,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       profile: profile,
       activeProfiles: activeProfiles,
       lieblingsDoppel: lieblingsDoppel,
+      vglDart: vglDart, vglZiel: vglZiel, vglFeld: vglFeld, vglLegState: vglLegState, vglAuswertung: vglAuswertung,   // Dartvergleich, fuer Tests
       finishGruppen: finishGruppen,
       finishGruppenSetzen: finishGruppenSetzen,
       finishNachruesten: finishNachruesten,

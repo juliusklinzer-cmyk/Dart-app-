@@ -1539,6 +1539,28 @@ jede weitere ist sofort da; Spieler ohne eigene Tabelle bekommen das Referenzpro
 ihres Lieblingsdoppels). Im Spiel gilt der eigene Weg als Plan wie jeder andere:
 solange die Darts fallen wie angesagt, bleibt er stehen.
 
+**Dartvergleich** (Knopf in der Finish-Kachel, Tafel „Dartvergleich“, Julius 15.11.2026):
+zwei Pfeil-Sets gegeneinander, zum Beispiel alte gegen neue Darts. Eine Runde sind zwei
+Legs (501, wahlweise 301), eines mit Set 1, eines mit Set 2; die Reihenfolge wechselt
+von Runde zu Runde. Jeder Dart hat ein vorgegebenes Ziel – T20 beim Scoring, ab 170 der
+Weg aus der eigenen Finish-Tabelle (`planFuer`, der Plan bleibt stehen, solange die
+Darts fallen wie geplant) – und wird dort angetippt, wo er steckte: auf einer Scheibe in
+echten Millimetern (Bull 6,35/15,9, Triple 99–107, Doppel 162–170), die als Fenster von
+100 mm aufs Ziel gezoomt ist, so reicht der Finger für zwei, drei Millimeter; „Ganze
+Scheibe“ für weite Fehlwürfe, „Daneben“ für Würfe ohne Feld. Rest, Ziel, der Plan der
+Aufnahme, die drei Darts, Bust (Rest bleibt, drei Darts zählen), Checkout nur per Doppel,
+„Dart zurück“ auch über das Leg-Ende hinweg. Eine fertige Runde wird wie ein Spiel
+archiviert (`kind: 'vergleich'`, ein Spieler, kein Sieger, `legs[].darts[]` mit
+`x, y, n, m, z` = Stelle, Feld, Ziel) und zum Server geladen; eine angefangene Runde
+überlebt in `S.vgl` den Neustart. Die Auswertung stellt Set 1 (rot) gegen Set 2 (blau),
+für die letzte Runde oder alle Runden der Serie: 3-Dart-Average, Darts je Leg, bestes Leg,
+Zielfeld und Segment getroffen, T20- und Doppelquote, 100+/140+/180, Streuung (Radius um
+den eigenen Schwerpunkt) und Ø Abstand zum Ziel in mm, Tendenz (links/rechts, hoch/tief ab
+2 mm), das Trefferbild (jeder Dart um sein Ziel gedreht, Ring = Schwerpunkt), „Wohin die
+Fehlwürfe gehen“ und die Liste der Runden; darüber ein Fazit in Worten. Die Set-Namen sind
+frei („Alte 22 g“), „Neuen Vergleich beginnen“ startet eine neue Serie, die alten Runden
+bleiben im Archiv.
+
 ## Tests
 
 ```bash
