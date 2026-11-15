@@ -7673,9 +7673,42 @@ button.st-krow:hover { background: #ffffff06; }
 .vg-fuss { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px; }
 .vg-fuss .pa-text { margin-right: auto; }
 
-/* Spielen */
+/* Spielen - im Vollbild (Julius 15.11.): die Tafel liegt fest ueber dem
+   ganzen Bild, oben Set, Aufnahme-Zaehler und die zwei Knoepfe Verwerfen
+   und Pause, die Scheibe bekommt den Rest; hochkant darunter, quer rechts
+   daneben: Ziel, die drei Darts, Dart zurueck / Daneben / Ganze Scheibe.
+   Kein Rest - das Programm zaehlt Aufnahmen, nicht Punkte. */
 .vg-spiel { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; min-height: 0; }
 .vg-board-wrap { position: relative; width: 100%; max-width: min(100%, 72vh); margin: 0 auto; }
+.pa-panel.vg-panel.spielt {
+  position: fixed; inset: 0; z-index: 39; border-radius: 0; box-shadow: none; background: var(--bg); min-height: 0; overflow: hidden; overscroll-behavior: contain; gap: 8px;
+  padding: max(8px, env(safe-area-inset-top, 0px)) max(10px, env(safe-area-inset-right, 0px)) max(8px, env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-left, 0px));
+}
+.vg-panel.spielt .vg-koerper { flex: 1 1 auto; min-height: 0; overflow: hidden; gap: 8px; }
+.vg-spiel-kopf { flex: none; flex-wrap: wrap; min-height: 44px; row-gap: 6px; }
+.vg-kopf-links { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; flex-wrap: wrap; }
+.vg-kopf-links .vg-chip { white-space: nowrap; }
+.vg-kopf-knoepfe { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex: 0 1 auto; flex-wrap: wrap; margin-left: auto; }
+.vg-kopf-knoepfe .btn { margin: 0; min-height: 44px; }
+.vg-frage { font-size: 0.9rem; color: var(--muted); }
+.vg-panel.spielt .vg-spiel { flex: 1 1 auto; min-height: 0; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; gap: 8px; align-items: stretch; }
+.vg-panel.spielt .vg-board-wrap { height: 100%; min-height: 0; max-width: none; margin: 0; display: flex; align-items: center; justify-content: center; }
+.vg-panel.spielt .vg-board { width: auto; height: 100%; max-width: 100%; aspect-ratio: 1; }
+/* Hochkant gibt die Breite das Mass, quer die Hoehe - so bleibt das Kaestchen quadratisch. */
+@media (orientation: portrait) { .vg-panel.spielt .vg-board { width: 100%; height: auto; max-height: 100%; } }
+.vg-panel.spielt .vg-seite { gap: 8px; min-height: 0; }
+.vg-panel.spielt .vg-ziel-box { flex-direction: row; flex-wrap: wrap; align-items: baseline; column-gap: 12px; row-gap: 0; padding: 8px 12px; }
+.vg-panel.spielt .vg-ziel-box .kt { flex: 1 1 100%; }
+.vg-panel.spielt .vg-letzte { font-size: 0.85rem; }
+.vg-panel.spielt .vg-knoepfe { margin-top: 0; }
+.vg-panel.spielt .vg-knoepfe .btn { min-height: 44px; }
+@media (orientation: landscape) {
+  .vg-panel.spielt .vg-spiel { grid-template-columns: minmax(0, 1fr) minmax(220px, 30%); grid-template-rows: minmax(0, 1fr); }
+  .vg-panel.spielt .vg-seite { height: 100%; overflow-y: auto; scrollbar-width: none; }
+  .vg-panel.spielt .vg-ziel-box { flex-direction: column; align-items: stretch; }
+  .vg-panel.spielt .vg-knoepfe { flex-direction: column; margin-top: auto; }
+  .vg-panel.spielt .vg-knoepfe .btn { flex: none; }
+}
 .vg-board { display: block; width: 100%; aspect-ratio: 1; border-radius: 50%; touch-action: manipulation; cursor: crosshair; background: #0b0809; }
 .vg-board:not(.voll) { border-radius: 18px; }
 .vg-board .vg-rand { fill: #0b0809; }
@@ -7722,8 +7755,4 @@ button.st-krow:hover { background: #ffffff06; }
 @media (min-width: 700px) and (min-height: 501px) {
   .vg-panel .vg-koerper { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
   .vg-panel.spielt .vg-koerper { overflow: hidden; }
-  .vg-panel.spielt .vg-spiel { height: 100%; min-height: 0; grid-template-rows: minmax(0, 1fr); }
-  .vg-panel.spielt .vg-board-wrap { height: 100%; display: flex; flex-direction: column; align-items: center; min-height: 0; max-width: none; }
-  .vg-panel.spielt .vg-board { width: auto; height: calc(100% - 52px); max-width: 100%; aspect-ratio: 1; }
-  .vg-panel.spielt .vg-seite { height: 100%; min-height: 0; overflow-y: auto; scrollbar-width: none; }
 }

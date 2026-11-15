@@ -633,6 +633,7 @@ export function createApi(db, config) {
       }
     }
     if (p.start !== undefined && p.start !== 301 && p.start !== 501) throw kaputt('Startwert');
+    if (p.prog !== undefined && p.prog !== 'lang' && p.prog !== 'kurz') throw kaputt('Programm');   // Zielprogramm (DRT-051)
     if (p.sets !== undefined) {
       liste(p.sets, 'Sets');
       if (p.sets.length > 2 || !p.sets.every((s) => typeof s === 'string' && s.length <= 40)) throw kaputt('Sets');
