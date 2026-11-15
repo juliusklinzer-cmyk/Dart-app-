@@ -634,6 +634,10 @@ export function createApi(db, config) {
     }
     if (p.start !== undefined && p.start !== 301 && p.start !== 501) throw kaputt('Startwert');
     if (p.prog !== undefined && p.prog !== 'lang' && p.prog !== 'kurz') throw kaputt('Programm');   // Zielprogramm (DRT-051)
+    if (p.programm !== undefined) {   // beim Werfen umgestellte Ziele (DRT-052)
+      liste(p.programm, 'Ziele');
+      if (p.programm.length > 40 || !p.programm.every((z) => typeof z === 'string' && z.length <= 4 && (z === 'Bull' || /^[TDS]?\d{1,2}$/.test(z)))) throw kaputt('Ziele');
+    }
     if (p.sets !== undefined) {
       liste(p.sets, 'Sets');
       if (p.sets.length > 2 || !p.sets.every((s) => typeof s === 'string' && s.length <= 40)) throw kaputt('Sets');

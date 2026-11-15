@@ -7697,19 +7697,39 @@ button.st-krow:hover { background: #ffffff06; }
 /* Hochkant gibt die Breite das Mass, quer die Hoehe - so bleibt das Kaestchen quadratisch. */
 @media (orientation: portrait) { .vg-panel.spielt .vg-board { width: 100%; height: auto; max-height: 100%; } }
 .vg-panel.spielt .vg-seite { gap: 8px; min-height: 0; }
-.vg-panel.spielt .vg-ziel-box { flex-direction: row; flex-wrap: wrap; align-items: baseline; column-gap: 12px; row-gap: 0; padding: 8px 12px; }
-.vg-panel.spielt .vg-ziel-box .kt { flex: 1 1 100%; }
+.vg-panel.spielt .vg-ziel-box { padding: 8px 12px; }
+.vg-stand { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; }
+.vg-box { display: flex; flex-direction: column; padding: 8px 12px; border-radius: 16px; background: #1c1718; border: 1px solid #2a2224; min-width: 0; }
+.vg-aufnahme b { font-family: var(--font-display); font-weight: 400; font-size: clamp(2.2rem, 6vh, 3.4rem); line-height: 1.05; white-space: nowrap; }
+.vg-aufnahme b small { font-size: 0.42em; color: var(--muted); margin-left: 4px; }
+.vg-zielwahl { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.vg-zchip { margin: 0; min-height: 36px; padding: 0 11px; border-radius: 999px; border: 1px solid #2a2224; background: #1c1718; color: var(--text); font-family: var(--font-cond); font-weight: 700; font-size: 1rem; letter-spacing: 0.02em; text-transform: none; cursor: pointer; }
+.vg-zchip.on { background: #ffc14d; border-color: #ffc14d; color: #0d0a0b; }
+.vg-zielwahl small { flex: 1 1 100%; font-size: 0.75rem; color: var(--muted); }
+/* Lupe auf der ganzen Scheibe: rundes Fenster ueber dem Finger mit Fadenkreuz. */
+.vg-lupe { position: fixed; z-index: 70; width: 150px; height: 150px; border-radius: 50%; border: 2px solid #fff; overflow: hidden; pointer-events: none; background: #0b0809; box-shadow: 0 10px 34px rgba(0, 0, 0, 0.65); }
+.vg-lupe svg.vg-board { width: 100%; height: 100%; border-radius: 0; }
+.vg-lupe::before, .vg-lupe::after { content: ''; position: absolute; left: 50%; top: 50%; background: #fff; transform: translate(-50%, -50%); pointer-events: none; box-shadow: 0 0 4px rgba(0, 0, 0, 0.8); }
+.vg-lupe::before { width: 2px; height: 30px; }
+.vg-lupe::after { width: 30px; height: 2px; }
+.vg-lupe .vg-board.voll .vg-dart circle { r: 2; }
+.vg-lupe .vg-board.voll .vg-alt { r: 1.4; }
+.vg-lupe .vg-board.voll .vg-dart text { font-size: 2.6px; }
+.vg-lupe .vg-board.voll .vg-zahl.aussen { display: block; font-size: 9px; }
+/* Am Handy hochkant braucht die Scheibe die Hoehe - der Hinweis unter den Chips faellt weg. */
+@media (max-height: 900px) { .vg-panel.spielt .vg-zielwahl small:not(.vg-zielfest) { display: none; } }
+.vg-panel.spielt .vg-box { padding: 6px 12px; }
 .vg-panel.spielt .vg-letzte { font-size: 0.85rem; }
 .vg-panel.spielt .vg-knoepfe { margin-top: 0; }
 .vg-panel.spielt .vg-knoepfe .btn { min-height: 44px; }
 @media (orientation: landscape) {
   .vg-panel.spielt .vg-spiel { grid-template-columns: minmax(0, 1fr) minmax(220px, 30%); grid-template-rows: minmax(0, 1fr); }
   .vg-panel.spielt .vg-seite { height: 100%; overflow-y: auto; scrollbar-width: none; }
-  .vg-panel.spielt .vg-ziel-box { flex-direction: column; align-items: stretch; }
+  .vg-panel.spielt .vg-zielwahl small:not(.vg-zielfest) { display: none; }
   .vg-panel.spielt .vg-knoepfe { flex-direction: column; margin-top: auto; }
   .vg-panel.spielt .vg-knoepfe .btn { flex: none; }
 }
-.vg-board { display: block; width: 100%; aspect-ratio: 1; border-radius: 50%; touch-action: manipulation; cursor: crosshair; background: #0b0809; }
+.vg-board { display: block; width: 100%; aspect-ratio: 1; border-radius: 50%; touch-action: none; cursor: crosshair; background: #0b0809; }
 .vg-board:not(.voll) { border-radius: 18px; }
 .vg-board .vg-rand { fill: #0b0809; }
 .vg-board .vg-f { stroke: #0b0809; stroke-width: 0.6; }

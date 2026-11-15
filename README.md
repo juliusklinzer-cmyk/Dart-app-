@@ -1541,31 +1541,40 @@ solange die Darts fallen wie angesagt, bleibt er stehen.
 
 **Dartvergleich** (Knopf in der Finish-Kachel, Tafel „Dartvergleich“, Julius 15.11.2026):
 zwei Pfeil-Sets gegeneinander, zum Beispiel alte gegen neue Darts. Beide werfen dasselbe
-**Zielprogramm** (DRT-051, statt 501): 5 Aufnahmen auf T20, 5 auf T19, 5 auf D20, 5 auf D16,
-je Aufnahme drei Darts – wahlweise die kurze Fassung mit 10 Aufnahmen (3/2/3/2). Erst wirft
-Set 1 das ganze Programm, dann Set 2; die Reihenfolge wechselt von Runde zu Runde. Gespielt
-wird im **Vollbild**: oben das Set, „Aufnahme 7 von 20 · Durchgang 1 von 2“ und die zwei
-Knöpfe **Verwerfen** (mit Rückfrage) und **Pause** (Runde bleibt in `S.vgl`), darunter die
-Scheibe so groß, wie das Bild erlaubt (hochkant volle Breite, quer volle Höhe), daneben bzw.
-darunter Ziel, Stand im Block („noch 3 Aufnahmen auf T19 · bisher 12 von 21 im Ziel“), die
-drei Darts der Aufnahme, „Letzte Aufnahme“, **Dart zurück**, **Daneben** und **Ganze
-Scheibe**. Kein Rest – das Programm zählt Aufnahmen. Man wirft drei Darts und tippt sie
-danach nacheinander an: die Scheibe in echten Millimetern (Bull 6,35/15,9, Triple 99–107,
-Doppel 162–170) ist als Fenster von 190 mm aufs Zielsegment gezoomt – vom Doppel bis zum
-Bull, damit beide immer mit im Bild sind (Julius 15.11.) – und bleibt dort stehen, bis der
-Block vorbei ist; beim Wechsel sagt ein Banner „Jetzt 5 Aufnahmen auf T19“. Eine fertige
-Runde wird wie ein Spiel archiviert (`kind: 'vergleich'`, ein Spieler, kein Sieger,
-`prog: 'lang' | 'kurz'`, `legs[].darts[]` mit `x, y, n, m, z` = Stelle, Feld, Ziel) und zum
-Server geladen. Die Auswertung stellt Set 1 (rot) gegen Set 2 (blau), für die letzte Runde
-oder alle Runden der Serie: Im Ziel, Ø Punkte je Aufnahme auf T20/T19, Quote je Ziel (T20,
-T19, D20, D16), richtiges Segment, Streuung (Radius um den eigenen Schwerpunkt) und Ø Abstand
-zum Ziel in mm, Tendenz (links/rechts, hoch/tief ab 2 mm), das Trefferbild (jeder Dart um
-sein Ziel gedreht, Ring = Schwerpunkt), „Wohin die Fehlwürfe gehen“ und die Liste der Runden
-(Treffer je Set, Stern für das bessere); darüber ein Fazit in Worten (wer öfter trifft,
-Punkte je Aufnahme, Doppel, Streuung). Runden der ersten Fassung (501/301-Legs mit
-Finish-Weg, Feld `start`) bleiben lesbar und bringen ihre eigenen Zeilen (Average, Darts je
-Leg) mit; Zeilen ohne Zahl auf beiden Seiten fallen weg. Die Set-Namen sind frei („Alte 22
-g“), „Neuen Vergleich beginnen“ startet eine neue Serie, die alten Runden bleiben im Archiv.
+**Zielprogramm** (DRT-051, statt 501): standardmäßig 10 Aufnahmen – 3 auf T20, 2 auf T19,
+3 auf D20, 2 auf D16 – oder die lange Fassung mit 20 (5/5/5/5), je Aufnahme drei Darts. Das
+**Ziel lässt sich beim Werfen umstellen** (DRT-052, Chips T20 … Bull unter dem Ziel): vor dem
+ersten Dart gilt es ab der laufenden, sonst ab der nächsten Aufnahme bis zum Ende des ersten
+Durchgangs; der zweite Durchgang wirft dasselbe Programm (`programm[]` in der Runde, Chips
+dann aus). Erst wirft Set 1 das ganze Programm, dann Set 2; die Reihenfolge wechselt von
+Runde zu Runde. Gespielt wird im **Vollbild**: oben das Set, „Aufnahme 7 von 10 · Durchgang
+1 von 2“ und die zwei Knöpfe **Verwerfen** (mit Rückfrage) und **Pause** (Runde bleibt in
+`S.vgl`), darunter die Scheibe so groß, wie das Bild erlaubt (hochkant volle Breite, quer
+volle Höhe), daneben bzw. darunter „Aufnahme 3 / 10“, das Ziel mit Namen („T20 · Triple 20 ·
+noch 2 Aufnahmen“), die Ziel-Chips, die drei Darts der Aufnahme, „Bisher 12 von 21 im Ziel ·
+letzte Aufnahme …“, **Dart zurück**, **Daneben** und **Ganze Scheibe**. Kein Rest – das
+Programm zählt Aufnahmen. Man wirft drei Darts und tippt sie danach nacheinander an: die
+Scheibe in echten Millimetern (Bull 6,35/15,9, Triple 99–107, Doppel 162–170) ist als Fenster
+von 190 mm aufs Zielsegment gezoomt – vom Doppel bis zum Bull, damit beide immer mit im Bild
+sind – und bleibt dort stehen, bis der Block vorbei ist; beim Wechsel sagt ein Banner „Jetzt
+5 Aufnahmen auf T19“. Gebucht wird beim **Aufsetzen des Fingers** (`pointerdown`, nicht
+`click` – ein Tipp kam am iPad sonst oft nicht an, wie bei den Spieltasten). Die **ganze
+Scheibe** reicht bis knapp hinter die Zahlen (±204 mm statt ±226) und hat eine **Lupe**: Finger
+aufsetzen öffnet ein rundes 44-mm-Fenster mit Fadenkreuz über dem Finger, ziehen bewegt es,
+loslassen setzt den Dart. Eine fertige Runde wird wie ein Spiel archiviert (`kind:
+'vergleich'`, ein Spieler, kein Sieger, `prog: 'kurz' | 'lang'`, `programm[]`,
+`legs[].darts[]` mit `x, y, n, m, z` = Stelle, Feld, Ziel) und zum Server geladen (der prüft
+`prog`, `programm` und jeden Dart). Die Auswertung stellt Set 1 (rot) gegen Set 2 (blau), für
+die letzte Runde oder alle Runden der Serie: Im Ziel, Ø Punkte je Aufnahme auf Triple-Ziele,
+eine Quote je vorgekommenem Ziel (T20, D16, Bull …), richtiges Segment, Streuung (Radius um
+den eigenen Schwerpunkt) und Ø Abstand zum Ziel in mm, Tendenz (links/rechts, hoch/tief ab
+2 mm), das Trefferbild (jeder Dart um sein Ziel gedreht, Ring = Schwerpunkt), „Wohin die
+Fehlwürfe gehen“ und die Liste der Runden (Treffer je Set, Stern für das bessere); darüber ein
+Fazit in Worten (wer öfter trifft, Punkte je Aufnahme, Doppel, Streuung). Runden der ersten
+Fassung (501/301-Legs mit Finish-Weg, Feld `start`) bleiben lesbar und bringen ihre eigenen
+Zeilen (Average, Darts je Leg) mit; Zeilen ohne Zahl auf beiden Seiten fallen weg. Die
+Set-Namen sind frei („Alte 22 g“), „Neuen Vergleich beginnen“ startet eine neue Serie, die
+alten Runden bleiben im Archiv.
 
 ## Tests
 

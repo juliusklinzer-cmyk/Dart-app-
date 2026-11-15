@@ -7700,19 +7700,39 @@ button.st-krow:hover { background: #ffffff06; }
 /* Hochkant gibt die Breite das Mass, quer die Hoehe - so bleibt das Kaestchen quadratisch. */
 @media (orientation: portrait) { .vg-panel.spielt .vg-board { width: 100%; height: auto; max-height: 100%; } }
 .vg-panel.spielt .vg-seite { gap: 8px; min-height: 0; }
-.vg-panel.spielt .vg-ziel-box { flex-direction: row; flex-wrap: wrap; align-items: baseline; column-gap: 12px; row-gap: 0; padding: 8px 12px; }
-.vg-panel.spielt .vg-ziel-box .kt { flex: 1 1 100%; }
+.vg-panel.spielt .vg-ziel-box { padding: 8px 12px; }
+.vg-stand { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; }
+.vg-box { display: flex; flex-direction: column; padding: 8px 12px; border-radius: 16px; background: #1c1718; border: 1px solid #2a2224; min-width: 0; }
+.vg-aufnahme b { font-family: var(--font-display); font-weight: 400; font-size: clamp(2.2rem, 6vh, 3.4rem); line-height: 1.05; white-space: nowrap; }
+.vg-aufnahme b small { font-size: 0.42em; color: var(--muted); margin-left: 4px; }
+.vg-zielwahl { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.vg-zchip { margin: 0; min-height: 36px; padding: 0 11px; border-radius: 999px; border: 1px solid #2a2224; background: #1c1718; color: var(--text); font-family: var(--font-cond); font-weight: 700; font-size: 1rem; letter-spacing: 0.02em; text-transform: none; cursor: pointer; }
+.vg-zchip.on { background: #ffc14d; border-color: #ffc14d; color: #0d0a0b; }
+.vg-zielwahl small { flex: 1 1 100%; font-size: 0.75rem; color: var(--muted); }
+/* Lupe auf der ganzen Scheibe: rundes Fenster ueber dem Finger mit Fadenkreuz. */
+.vg-lupe { position: fixed; z-index: 70; width: 150px; height: 150px; border-radius: 50%; border: 2px solid #fff; overflow: hidden; pointer-events: none; background: #0b0809; box-shadow: 0 10px 34px rgba(0, 0, 0, 0.65); }
+.vg-lupe svg.vg-board { width: 100%; height: 100%; border-radius: 0; }
+.vg-lupe::before, .vg-lupe::after { content: ''; position: absolute; left: 50%; top: 50%; background: #fff; transform: translate(-50%, -50%); pointer-events: none; box-shadow: 0 0 4px rgba(0, 0, 0, 0.8); }
+.vg-lupe::before { width: 2px; height: 30px; }
+.vg-lupe::after { width: 30px; height: 2px; }
+.vg-lupe .vg-board.voll .vg-dart circle { r: 2; }
+.vg-lupe .vg-board.voll .vg-alt { r: 1.4; }
+.vg-lupe .vg-board.voll .vg-dart text { font-size: 2.6px; }
+.vg-lupe .vg-board.voll .vg-zahl.aussen { display: block; font-size: 9px; }
+/* Am Handy hochkant braucht die Scheibe die Hoehe - der Hinweis unter den Chips faellt weg. */
+@media (max-height: 900px) { .vg-panel.spielt .vg-zielwahl small:not(.vg-zielfest) { display: none; } }
+.vg-panel.spielt .vg-box { padding: 6px 12px; }
 .vg-panel.spielt .vg-letzte { font-size: 0.85rem; }
 .vg-panel.spielt .vg-knoepfe { margin-top: 0; }
 .vg-panel.spielt .vg-knoepfe .btn { min-height: 44px; }
 @media (orientation: landscape) {
   .vg-panel.spielt .vg-spiel { grid-template-columns: minmax(0, 1fr) minmax(220px, 30%); grid-template-rows: minmax(0, 1fr); }
   .vg-panel.spielt .vg-seite { height: 100%; overflow-y: auto; scrollbar-width: none; }
-  .vg-panel.spielt .vg-ziel-box { flex-direction: column; align-items: stretch; }
+  .vg-panel.spielt .vg-zielwahl small:not(.vg-zielfest) { display: none; }
   .vg-panel.spielt .vg-knoepfe { flex-direction: column; margin-top: auto; }
   .vg-panel.spielt .vg-knoepfe .btn { flex: none; }
 }
-.vg-board { display: block; width: 100%; aspect-ratio: 1; border-radius: 50%; touch-action: manipulation; cursor: crosshair; background: #0b0809; }
+.vg-board { display: block; width: 100%; aspect-ratio: 1; border-radius: 50%; touch-action: none; cursor: crosshair; background: #0b0809; }
 .vg-board:not(.voll) { border-radius: 18px; }
 .vg-board .vg-rand { fill: #0b0809; }
 .vg-board .vg-f { stroke: #0b0809; stroke-width: 0.6; }
@@ -15249,6 +15269,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (!istListe(g.legs) || !g.legs.length || g.legs.length > 2 || !g.legs.every(vglLegGueltig)) return false;
     if (g.start !== undefined && g.start !== 301 && g.start !== 501) return false;
     if (g.prog !== undefined && g.prog !== 'lang' && g.prog !== 'kurz') return false;
+    if (g.programm !== undefined && !(istListe(g.programm) && g.programm.length <= 40 && g.programm.every(vglZielGueltig))) return false;
     if (g.sets !== undefined && !(istListe(g.sets) && g.sets.length <= 2 && g.sets.every(function (s) { return typeof s === 'string' && s.length <= 40; }))) return false;
     return g.serie === undefined || (typeof g.serie === 'string' && g.serie.length <= 40);
   }
@@ -18900,8 +18921,14 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
      (0) mit Rand ins Bild, egal in welche Richtung das Segment zeigt. */
   var VG_ZOOM = 95;
   var VG_ZOOM_MITTE = 85;
+  var VG_VOLL = 204;   // halbe Breite der ganzen Scheibe im Bild (Zahlen bei 192)
+  var VG_LUPE = 22;    // halbe Breite des Lupenfensters in mm
   /* Zielprogramm je Durchgang: [Ziel, Aufnahmen]. */
-  var VG_PROG = { lang: [['T20', 5], ['T19', 5], ['D20', 5], ['D16', 5]], kurz: [['T20', 3], ['T19', 2], ['D20', 3], ['D16', 2]] };
+  var VG_PROG = { kurz: [['T20', 3], ['T19', 2], ['D20', 3], ['D16', 2]], lang: [['T20', 5], ['T19', 5], ['D20', 5], ['D16', 5]] };
+  /* Ziele, die sich beim Werfen umstellen lassen (Julius 15.11.: "das Ziel
+     als Variable"): gilt ab der laufenden bzw. naechsten Aufnahme bis zum
+     Ende des ersten Durchgangs; der zweite wirft dasselbe Programm. */
+  var VG_ZIELE = ['T20', 'T19', 'T18', 'T17', 'T16', 'D20', 'D16', 'D18', 'D12', 'D10', 'D8', 'Bull'];
 
   function vglRund(v) { return Math.round(v * 10) / 10; }
   /* Welches Feld liegt unter dem Punkt? */
@@ -18932,7 +18959,16 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var r = f.m === 3 ? (VG_MM.triI + VG_MM.triA) / 2 : f.m === 2 ? (VG_MM.dblI + VG_MM.dblA) / 2 : (VG_MM.bullA + VG_MM.triI) / 2;
     return { n: f.n, m: f.m, x: vglRund(r * Math.sin(w)), y: vglRund(-r * Math.cos(w)), label: vglFeldLabel(f) };
   }
-  function vglProgWahl() { return S.settings.vglProg === 'kurz' ? 'kurz' : 'lang'; }
+  function vglProgWahl() { return S.settings.vglProg === 'lang' ? 'lang' : 'kurz'; }
+  function vglZielGueltig(l) { return typeof l === 'string' && l.length <= 4 && (l === 'Bull' || /^[TDS]?\d{1,2}$/.test(l)); }
+  /* Das Programm einer Runde: die beim Werfen umgestellte Liste, sonst die Vorgabe. */
+  function vglProgrammVon(r) {
+    return r && Array.isArray(r.programm) && r.programm.length && r.programm.length <= 40 && r.programm.every(vglZielGueltig) ? r.programm : vglProgramm(r && r.prog);
+  }
+  function vglZielName(label) {
+    var f = vglZiel(label);
+    return f.n === 25 ? (f.m === 2 ? 'Bullseye' : '25') : (f.m === 3 ? 'Triple ' : f.m === 2 ? 'Doppel ' : 'Single ') + f.n;
+  }
   /* Das Programm als Liste je Aufnahme: ['T20', 'T20', ..., 'D16']. */
   function vglProgramm(prog) {
     var out = [];
@@ -18976,8 +19012,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   }
   /* Ein Durchgang des Zielprogramms nachrechnen: Aufnahme k zielt auf
      programm[k], drei Darts je Aufnahme, kein Rest. Treffer = Zielfeld. */
-  function vglDrillState(leg, prog) {
-    var programm = vglProgramm(prog), n = programm.length, alle = leg.darts || [];
+  function vglDrillState(leg, programm) {
+    var n = programm.length, alle = leg.darts || [];
     var geworfen = Math.min(alle.length, n * 3), fertig = geworfen >= n * 3;
     var visits = [], treffer = 0, punkte = 0;
     for (var k = 0; k < Math.ceil(geworfen / 3); k++) {
@@ -18999,7 +19035,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   /* r: die Runde (S.vgl oder ein Archiv-Eintrag) - mit prog das Programm,
      sonst ein 501/301-Leg der ersten Fassung. */
   function vglState(leg, r, dbl) {
-    return r && r.prog ? vglDrillState(leg, r.prog) : vglLegState(leg, (r && Number(r.start)) || 501, dbl || null);
+    return r && (r.prog || r.programm) ? vglDrillState(leg, vglProgrammVon(r)) : vglLegState(leg, (r && Number(r.start)) || 501, dbl || null);
   }
 
   function vglRunden(pid) {
@@ -19033,7 +19069,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var runden = vglRunden(pid), serie = vglSerie(pid, runden);
     if (!serie) { S.vglSerie = S.vglSerie || {}; serie = S.vglSerie[pid] = uid(); }
     var bisher = runden.filter(function (r) { return r.serie === serie; }).length;
-    S.vgl = { id: uid(), pid: pid, serie: serie, sets: vglNamen(pid, runden), prog: vglProgWahl(), at: Date.now(), legs: [{ set: bisher % 2, darts: [] }] };
+    S.vgl = { id: uid(), pid: pid, serie: serie, sets: vglNamen(pid, runden), prog: vglProgWahl(), programm: vglProgramm(vglProgWahl()), at: Date.now(), legs: [{ set: bisher % 2, darts: [] }] };
     UI.vglSpiel = true; UI.vglVoll = false; UI.vglBanner = null; UI.vglAbbruch = false;
   }
   function vglBanner(text, art) {
@@ -19080,7 +19116,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   function vglRundeAblegen(g, nach) {
     var eintrag = { id: g.id || uid(), kind: 'vergleich', at: Date.now(), players: [g.pid], winner: null, serie: g.serie, sets: g.sets.slice(),
       legs: g.legs.map(function (l) { return { set: l.set, darts: l.darts }; }) };
-    if (g.prog) eintrag.prog = g.prog; else eintrag.start = g.start;
+    if (g.prog) { eintrag.prog = g.prog; eintrag.programm = vglProgrammVon(g).slice(); } else eintrag.start = g.start;
     var schonDa = S.history.some(function (h) { return h.id === eintrag.id; });
     if (!schonDa) S.history.unshift(eintrag);
     if (S.history.length > MAX_HISTORY) S.history.length = MAX_HISTORY;
@@ -19105,7 +19141,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
      und D16 im selben Bild. */
   function vglAuswertung(legs) {
     var a = { legs: 0, legs501: 0, fertig: 0, darts: 0, darts501: 0, punkte501: 0, avg: null, dartsJeLeg: null, best: null, ziel: [0, 0], seg: [0, 0],
-      t20: [0, 0], t19: [0, 0], d20: [0, 0], d16: [0, 0], dbl: [0, 0], scoreDarts: 0, scorePunkte: 0, pktJeAufnahme: null,
+      jeZiel: {}, dbl: [0, 0], scoreDarts: 0, scorePunkte: 0, pktJeAufnahme: null,
       offs: [], du: null, dv: null, radius: null, abstand: null, richtung: { ziel: 0, links: 0, rechts: 0, hoch: 0, tief: 0, weg: 0 }, s100: 0, s140: 0, s180: 0 };
     legs.forEach(function (l) {
       var st = vglState(l, l, null);
@@ -19121,8 +19157,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         a.ziel[1]++; a.seg[1]++;
         if (treffer) { a.ziel[0]++; a.richtung.ziel++; }
         if (d.n === z.n) a.seg[0]++;
-        var key = z.m === 3 && z.n === 20 ? 't20' : z.m === 3 && z.n === 19 ? 't19' : z.m === 2 && z.n === 20 ? 'd20' : z.m === 2 && z.n === 16 ? 'd16' : null;
-        if (key) { a[key][1]++; if (treffer) a[key][0]++; }
+        if (!a.jeZiel[z.label]) a.jeZiel[z.label] = [0, 0];
+        a.jeZiel[z.label][1]++; if (treffer) a.jeZiel[z.label][0]++;
         if (z.m === 3) { a.scoreDarts++; a.scorePunkte += vglWert(d); }
         if (z.m === 2) { a.dbl[1]++; if (treffer) a.dbl[0]++; }
         if (d.x === null || d.x === undefined) { if (!treffer) a.richtung.weg++; return; }
@@ -19215,7 +19251,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
      Orientierung, aussen stehen sie fuer die volle Ansicht. */
   function vglScheibeSvg(ziel, leg, st, voll, set) {
     var zw = vglWinkel(ziel.n), zm = ziel.n === 25 ? [0, 0] : [VG_ZOOM_MITTE * Math.sin(zw), -VG_ZOOM_MITTE * Math.cos(zw)];
-    var vb = voll ? [-VG_MM.rand, -VG_MM.rand, 2 * VG_MM.rand, 2 * VG_MM.rand] : [zm[0] - VG_ZOOM, zm[1] - VG_ZOOM, 2 * VG_ZOOM, 2 * VG_ZOOM];
+    /* Ganze Scheibe: bis knapp hinter die Zahlen (204 mm), nicht bis zum Rand bei 226 - so ist die Scheibe ein Siebtel groesser (Julius 15.11.). */
+    var vb = voll ? [-VG_VOLL, -VG_VOLL, 2 * VG_VOLL, 2 * VG_VOLL] : [zm[0] - VG_ZOOM, zm[1] - VG_ZOOM, 2 * VG_ZOOM, 2 * VG_ZOOM];
     var P = function (r, a) { return (r * Math.sin(a)).toFixed(2) + ' ' + (-r * Math.cos(a)).toFixed(2); };
     var seg = function (r0, r1, a0, a1) { return 'M' + P(r1, a0) + 'A' + r1 + ' ' + r1 + ' 0 0 1 ' + P(r1, a1) + 'L' + P(r0, a1) + 'A' + r0 + ' ' + r0 + ' 0 0 0 ' + P(r0, a0) + 'Z'; };
     var h = '<svg class="vg-board' + (voll ? ' voll' : '') + '" viewBox="' + vb.join(' ') + '" data-vg="board" role="img" aria-label="Scheibe, antippen wo der Dart steckt">' +
@@ -19260,10 +19297,18 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var letzte = !st.visit && st.visits.length ? st.visits[st.visits.length - 1] : null;
     var info;
     if (st.drill) {
-      /* Kein Rest (Julius: "nicht so wichtig") - Ziel, Stand im Block und die Treffer bisher. */
-      info = '<div class="vg-ziel-box"><span class="kt">Ziel · Aufnahme ' + st.aufnahme + ' von ' + st.gesamt + '</span><b class="vg-zielzahl">' + esc(ziel.label) + '</b>' +
-        '<small>' + (st.blockRest > 1 ? 'noch ' + st.blockRest + ' Aufnahmen auf ' + esc(ziel.label) : 'letzte Aufnahme auf ' + esc(ziel.label)) +
-        ' · bisher ' + st.treffer + ' von ' + st.darts + ' im Ziel</small></div>';
+      /* Kein Rest (Julius: "nicht so wichtig"): Aufnahme x von n, das Ziel
+         mit Namen, darunter die Zielwahl (nur im ersten Durchgang - der
+         zweite wirft dasselbe), die drei Darts, der Stand. */
+      var ersterDG = g.legs.length === 1;
+      info = '<div class="vg-stand">' +
+        '<div class="vg-box vg-aufnahme"><span class="kt">Aufnahme</span><b>' + st.aufnahme + '<small>/ ' + st.gesamt + '</small></b></div>' +
+        '<div class="vg-box vg-ziel-box"><span class="kt">Ziel</span><b class="vg-zielzahl">' + esc(ziel.label) + '</b><small>' + esc(vglZielName(ziel.label)) +
+          (st.blockRest > 1 ? ' · noch ' + st.blockRest + ' Aufnahmen' : ' · letzte Aufnahme darauf') + '</small></div></div>' +
+        '<div class="vg-zielwahl">' + (ersterDG
+          ? VG_ZIELE.map(function (l) { return '<button class="vg-zchip' + (l === ziel.label ? ' on' : '') + '" data-action="vgl-ziel" data-value="' + l + '" aria-pressed="' + (l === ziel.label) + '">' + l + '</button>'; }).join('') +
+            '<small>Umstellen gilt ab ' + (st.inVisit ? 'der nächsten' : 'dieser') + ' Aufnahme bis zum Ende des Durchgangs; der zweite Durchgang wirft dasselbe.</small>'
+          : '<small class="vg-zielfest">Ziele wie im ersten Durchgang.</small>') + '</div>';
     } else {
       var planText = (st.plan && st.plan.length ? st.plan.map(function (l) { return vglZiel(l).label; }) : ['T20', 'T20', 'T20'].slice(0, 3 - st.inVisit)).join(' · ');
       info = '<div class="vg-rest"><span class="kt">Rest</span><b>' + st.rest + '</b><small>' + plural(st.darts, 'Dart', 'Darts') + (st.darts ? ' · Ø ' + stFmt(st.avg) : '') + '</small></div>' +
@@ -19274,8 +19319,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '<div class="vg-board-wrap">' + vglScheibeSvg(ziel, leg, st, voll, set) + '</div>' +
         '<div class="vg-seite">' + info +
           '<div class="vg-slots">' + slots + '</div>' +
-          (letzte ? '<p class="pa-text vg-letzte">Letzte Aufnahme: ' + letzte.darts.map(vglFeldLabel).join(' · ') + (st.drill ? ' · ' + letzte.treffer + ' im Ziel' : ' = ' + (letzte.bust ? 'Bust' : letzte.score)) + '</p>'
-            : '<p class="pa-text vg-letzte">Wirf drei Darts, dann tippe nacheinander an, wo sie steckten. Daneben = kein Feld.</p>') +
+          '<p class="pa-text vg-letzte">' + (st.drill && st.darts ? 'Bisher ' + st.treffer + ' von ' + st.darts + ' im Ziel' + (letzte ? ' · letzte Aufnahme ' + letzte.darts.map(vglFeldLabel).join(' · ') : '') + (voll ? ' · Lupe: Finger aufsetzen, zielen, loslassen setzt den Dart' : '')
+            : letzte ? 'Letzte Aufnahme: ' + letzte.darts.map(vglFeldLabel).join(' · ') + ' = ' + (letzte.bust ? 'Bust' : letzte.score)
+            : voll ? 'Finger aufsetzen, mit der Lupe zielen, loslassen setzt den Dart.' : 'Wirf drei Darts, dann tippe nacheinander an, wo sie steckten. Daneben = kein Feld.') + '</p>' +
           '<div class="vg-knoepfe"><button class="btn ghost" data-action="vgl-undo"' + (leg.darts.length || g.legs.length > 1 ? '' : ' disabled') + '>Dart zurück</button>' +
             '<button class="btn ghost" data-action="vgl-daneben">Daneben</button>' +
             '<button class="btn ghost" data-action="vgl-voll">' + (voll ? 'Zoom aufs Ziel' : 'Ganze Scheibe') + '</button></div>' +
@@ -19305,12 +19351,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     }
     var zeile = '<div class="vg-zeile">' +
       (aktuelle.length >= 2 ? '<div class="vg-seg" role="tablist"><button class="' + (scope === 'letzte' ? 'on' : '') + '" data-action="vgl-scope" data-value="letzte">Letzte Runde</button><button class="' + (scope === 'alle' ? 'on' : '') + '" data-action="vgl-scope" data-value="alle">Alle ' + aktuelle.length + ' Runden</button></div>' : '<span></span>') +
-      (darf && !laeuft ? '<div class="vg-seg" aria-label="Umfang"><button class="' + (vglProgWahl() === 'lang' ? 'on' : '') + '" data-action="vgl-prog" data-value="lang">20 Aufnahmen</button><button class="' + (vglProgWahl() === 'kurz' ? 'on' : '') + '" data-action="vgl-prog" data-value="kurz">10 Aufnahmen</button></div>' : '') +
+      (darf && !laeuft ? '<div class="vg-seg" aria-label="Umfang"><button class="' + (vglProgWahl() === 'kurz' ? 'on' : '') + '" data-action="vgl-prog" data-value="kurz">10 Aufnahmen</button><button class="' + (vglProgWahl() === 'lang' ? 'on' : '') + '" data-action="vgl-prog" data-value="lang">20 Aufnahmen</button></div>' : '') +
       startKnopf + '</div>';
     var h = vglBannerHtml() + '<div class="vg-kopf">' + kopfSet(0, A) + '<span class="vg-vs">vs</span>' + kopfSet(1, B) + '</div>' + zeile;
     if (!aktuelle.length) {
       h += '<div class="vg-leer"><p class="pa-text">So geht es: Erst wirfst du mit ' + esc(namen[0]) + ' das Programm, dann mit ' + esc(namen[1]) + ': ' + vglProgText(vglProgWahl()) + ' – je Aufnahme drei Darts. ' +
-        'Erst werfen, dann nacheinander auf der gezoomten Scheibe antippen, wo die drei steckten; die Scheibe bleibt auf dem Ziel stehen, bis der Block vorbei ist. ' +
+        'Erst werfen, dann nacheinander auf der gezoomten Scheibe antippen, wo die drei steckten; die Scheibe bleibt auf dem Ziel stehen, bis der Block vorbei ist. Das Ziel kannst du beim Werfen jederzeit umstellen (T20 bis Bull), der zweite Durchgang wirft dann dasselbe. ' +
         'Danach siehst du Trefferquote je Ziel, Punkte je Aufnahme, Streuung und das Trefferbild beider Sets – für die letzte Runde und für alle Runden zusammen. Die Namen oben kannst du ändern, zum Beispiel „Alte 22 g“ und „Neue 24 g“.</p></div>';
       return h;
     }
@@ -19334,15 +19380,16 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var zeilen = [
       ['Im Ziel', A.ziel, B.ziel, 1, vglPct, true],
       ['Ø Punkte je Aufnahme · T20/T19', A.pktJeAufnahme, B.pktJeAufnahme, 1, stFmt],
-      ['T20', A.t20, B.t20, 1, vglPct, true],
-      ['T19', A.t19, B.t19, 1, vglPct, true],
-      ['D20', A.d20, B.d20, 1, vglPct, true],
-      ['D16', A.d16, B.d16, 1, vglPct, true],
+    ];
+    /* Eine Zeile je Ziel, das in der Runde vorkam - in der Reihenfolge der Zielwahl, Unbekanntes dahinter. */
+    var zielLabels = Object.keys(A.jeZiel).concat(Object.keys(B.jeZiel)).filter(function (l, i, arr) { return arr.indexOf(l) === i; })
+      .sort(function (x, y) { var ix = VG_ZIELE.indexOf(x), iy = VG_ZIELE.indexOf(y); return (ix < 0 ? 99 : ix) - (iy < 0 ? 99 : iy) || (x < y ? -1 : 1); });
+    zielLabels.forEach(function (l) { zeilen.push([l, A.jeZiel[l] || [0, 0], B.jeZiel[l] || [0, 0], 1, vglPct, true]); });
+    zeilen.push(
       ['Richtiges Segment', A.seg, B.seg, 1, vglPct, true],
       ['Streuung', A.radius, B.radius, -1, function (v) { return stFmt(v, 0) + ' mm'; }],
       ['Ø Abstand zum Ziel', A.abstand, B.abstand, -1, function (v) { return stFmt(v, 0) + ' mm'; }],
-      ['Tendenz', vglTendenz(A), vglTendenz(B), 0, String]
-    ];
+      ['Tendenz', vglTendenz(A), vglTendenz(B), 0, String]);
     if (A.legs501 || B.legs501) {
       zeilen.push(['3-Dart-Average (501)', A.avg, B.avg, 1, stFmt],
         ['Darts je Leg', A.dartsJeLeg, B.dartsJeLeg, -1, stFmt],
@@ -19415,12 +19462,67 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var ox = r.left + (r.width - vb[2] * sc) / 2, oy = r.top + (r.height - vb[3] * sc) / 2;
     return [vb[0] + (ev.clientX - ox) / sc, vb[1] + (ev.clientY - oy) / sc];
   }
-  document.addEventListener('click', function (ev) {
+  /* Im Zoom bucht schon das Aufsetzen des Fingers (pointerdown) - ein click
+     kam am iPad oft nicht an, wie bei den Spieltasten (Julius 15.11.: "dann
+     druecke ich dreimal, dann drueckt er auf einmal 3 Knoepfe"). Auf der
+     ganzen Scheibe oeffnet das Aufsetzen eine Lupe (44 mm Fenster ueber dem
+     Finger), der Finger zieht sie, Loslassen setzt den Dart. */
+  var vglLupe = null;
+  function vglLupeWeg() {
+    if (vglLupe && vglLupe.el && vglLupe.el.parentNode) vglLupe.el.parentNode.removeChild(vglLupe.el);
+    vglLupe = null;
+  }
+  function vglLupeZeigen(svg, ev) {
+    var k = vglTapMm(svg, ev);
+    if (!k) return;
+    var wrap = svg.parentNode;
+    if (!vglLupe) {
+      var el = document.createElement('div');
+      el.className = 'vg-lupe';
+      el.innerHTML = svg.outerHTML.replace(/ class="vg-board/, ' class="vg-lupe-svg vg-board').replace(/ data-vg="board"/, '').replace(/ role="img"[^>]*?(?=>)/, '');
+      wrap.appendChild(el);
+      vglLupe = { el: el, svg: el.querySelector('svg'), k: k };
+    }
+    vglLupe.k = k;
+    vglLupe.svg.setAttribute('viewBox', (k[0] - VG_LUPE).toFixed(1) + ' ' + (k[1] - VG_LUPE).toFixed(1) + ' ' + (2 * VG_LUPE) + ' ' + (2 * VG_LUPE));
+    /* Die Lupe liegt fest im Bild (position: fixed): am liebsten ueber dem
+       Finger, sonst daneben, zuletzt darunter - die Hand verdeckt, was unter
+       dem Finger liegt. */
+    var L = vglLupe.el.offsetWidth || 150, A = 36, vw = window.innerWidth, vh = window.innerHeight;
+    var x = Math.max(4, Math.min(vw - L - 4, ev.clientX - L / 2)), y = ev.clientY - L - A;
+    if (y < 4) {
+      y = Math.max(4, Math.min(vh - L - 4, ev.clientY - L / 2));
+      if (ev.clientX + A + L + 4 <= vw) x = ev.clientX + A;
+      else if (ev.clientX - A - L >= 4) x = ev.clientX - A - L;
+      else { x = Math.max(4, Math.min(vw - L - 4, ev.clientX - L / 2)); y = Math.min(vh - L - 4, ev.clientY + A); }
+    }
+    vglLupe.el.style.left = x + 'px'; vglLupe.el.style.top = y + 'px';
+  }
+  document.addEventListener('pointerdown', function (ev) {
     var svg = ev.target && ev.target.closest ? ev.target.closest('svg.vg-board') : null;
-    if (!svg || !S.vgl || !UI.vglSpiel || S.screen !== 'profile') return;
+    if (!svg || svg.classList.contains('vg-lupe-svg') || !S.vgl || !UI.vglSpiel || S.screen !== 'profile' || !ev.isPrimary || ev.button > 0) return;
+    ev.preventDefault();
+    if (svg.classList.contains('voll')) {
+      try { svg.setPointerCapture(ev.pointerId); } catch (e) { /* alte Browser */ }
+      vglLupeZeigen(svg, ev);
+      return;
+    }
     var k = vglTapMm(svg, ev);
     if (k) vglDart(k[0], k[1]);
   });
+  document.addEventListener('pointermove', function (ev) {
+    if (!vglLupe) return;
+    var svg = document.querySelector('svg.vg-board.voll:not(.vg-lupe-svg)');
+    if (!svg) { vglLupeWeg(); return; }
+    vglLupeZeigen(svg, ev);
+  });
+  document.addEventListener('pointerup', function () {
+    if (!vglLupe) return;
+    var k = vglLupe.k;
+    vglLupeWeg();
+    if (k) vglDart(k[0], k[1]);
+  });
+  document.addEventListener('pointercancel', vglLupeWeg);
   document.addEventListener('change', function (ev) {
     var el = ev.target;
     if (!el || !el.getAttribute || el.getAttribute('data-role') !== 'vgl-name' || !UI.profile) return;
@@ -26134,7 +26236,17 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       case 'vgl-abbruch-nein': UI.vglAbbruch = false; render(); break;
       case 'vgl-fremd-weg': S.vgl = null; save(); render(); break;
       case 'vgl-scope': UI.vglScope = el.getAttribute('data-value') === 'alle' ? 'alle' : 'letzte'; render(); break;
-      case 'vgl-prog': S.settings.vglProg = el.getAttribute('data-value') === 'kurz' ? 'kurz' : 'lang'; save(); render(); break;
+      case 'vgl-prog': S.settings.vglProg = el.getAttribute('data-value') === 'lang' ? 'lang' : 'kurz'; save(); render(); break;
+      /* Ziel umstellen: ab der laufenden Aufnahme (ohne Dart) bzw. der naechsten
+         bis zum Ende - nur im ersten Durchgang, der zweite wirft dasselbe. */
+      case 'vgl-ziel': {
+        var zg = S.vgl, zl = el.getAttribute('data-value');
+        if (!zg || !zg.prog || zg.legs.length !== 1 || !UI.vglSpiel || !vglZielGueltig(zl)) break;
+        var zp = vglProgrammVon(zg).slice(), zs = vglDrillState(zg.legs[0], zp);
+        if (zs.fertig) break;
+        for (var zi = zs.aufnahme - 1 + (zs.inVisit ? 1 : 0); zi < zp.length; zi++) zp[zi] = zl;
+        zg.programm = zp; UI.vglVoll = false; save(); render(); break;
+      }
       case 'vgl-neu':
         if (!UI.profile || !bearbeitbar(UI.profile)) break;
         if (!UI.vglNeuFrage) { UI.vglNeuFrage = true; render(); break; }
@@ -28732,7 +28844,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       profile: profile,
       activeProfiles: activeProfiles,
       lieblingsDoppel: lieblingsDoppel,
-      vglDart: vglDart, vglZiel: vglZiel, vglFeld: vglFeld, vglLegState: vglLegState, vglState: vglState, vglProgramm: vglProgramm, vglAuswertung: vglAuswertung,   // Dartvergleich, fuer Tests
+      vglDart: vglDart, vglZiel: vglZiel, vglFeld: vglFeld, vglLegState: vglLegState, vglState: vglState, vglProgramm: vglProgramm, vglProgrammVon: vglProgrammVon, vglAuswertung: vglAuswertung,   // Dartvergleich, fuer Tests
       finishGruppen: finishGruppen,
       finishGruppenSetzen: finishGruppenSetzen,
       finishNachruesten: finishNachruesten,
