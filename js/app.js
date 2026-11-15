@@ -7467,8 +7467,8 @@
      Zwei Pfeil-Sets, jedes wirft dasselbe Zielprogramm (DRT-051, Julius:
      "nicht 501 spielen"): 5 Aufnahmen auf T20, 5 auf T19, 5 auf D20, 5 auf
      D16 - je Aufnahme drei Darts, erst werfen, dann nacheinander antippen,
-     wo sie steckten. Die Scheibe ist aufs Ziel gezoomt (Fenster 100 mm, so
-     reicht der Finger fuer zwei, drei Millimeter) und bleibt dort stehen,
+     wo sie steckten. Die Scheibe ist aufs Zielsegment gezoomt (Fenster 190 mm
+     vom Doppel bis zum Bull, Julius 15.11.) und bleibt dort stehen,
      bis der Block vorbei ist - nichts springt zwischen den drei Darts.
      Kurze Fassung: 10 Aufnahmen (3/2/3/2). Eine Runde = beide Durchgaenge;
      sie wird wie ein Spiel archiviert (kind 'vergleich', ein Spieler, kein
@@ -7482,7 +7482,12 @@
   var VG_MM = { bullI: 6.35, bullA: 15.9, triI: 99, triA: 107, dblI: 162, dblA: 170, rand: 226, zahl: 192, innen: 136 };
   var VG_FARBE = [ST_FARBE.rot, ST_FARBE.blau];
   var VG_NAMEN = ['Pfeil 1', 'Pfeil 2'];
-  var VG_ZOOM = 50;   // halbe Fensterbreite in mm beim Zoom aufs Ziel
+  /* Zoomfenster (Julius 15.11.: "Doppel und Bull immer mit drin"): vom
+     Doppel des Zielsegments bis zum Bull, Mitte auf halbem Weg (85 mm vom
+     Bull), halbe Breite 95 mm - so passen Doppelring (170) und Bullseye
+     (0) mit Rand ins Bild, egal in welche Richtung das Segment zeigt. */
+  var VG_ZOOM = 95;
+  var VG_ZOOM_MITTE = 85;
   /* Zielprogramm je Durchgang: [Ziel, Aufnahmen]. */
   var VG_PROG = { lang: [['T20', 5], ['T19', 5], ['D20', 5], ['D16', 5]], kurz: [['T20', 3], ['T19', 2], ['D20', 3], ['D16', 2]] };
 
@@ -7792,11 +7797,13 @@
     return '<span class="vg-chip" style="--f:' + VG_FARBE[set] + '"><i></i>' + esc(namen[set]) + (extra ? '<small>' + extra + '</small>' : '') + '</span>';
   }
 
-  /* Die Scheibe in Millimetern. Zoom: ein Fenster von 2 x VG_ZOOM um das
-     Ziel; voll: die ganze Scheibe. Die Zahlen innen helfen im Zoom bei der
+  /* Die Scheibe in Millimetern. Zoom: ein Fenster von 2 x VG_ZOOM, dessen
+     Mitte VG_ZOOM_MITTE vom Bull in Richtung des Zielsegments liegt - das
+     Doppel oben und das Bull unten sind immer im Bild; voll: die ganze Scheibe. Die Zahlen innen helfen im Zoom bei der
      Orientierung, aussen stehen sie fuer die volle Ansicht. */
   function vglScheibeSvg(ziel, leg, st, voll, set) {
-    var vb = voll ? [-VG_MM.rand, -VG_MM.rand, 2 * VG_MM.rand, 2 * VG_MM.rand] : [ziel.x - VG_ZOOM, ziel.y - VG_ZOOM, 2 * VG_ZOOM, 2 * VG_ZOOM];
+    var zw = vglWinkel(ziel.n), zm = ziel.n === 25 ? [0, 0] : [VG_ZOOM_MITTE * Math.sin(zw), -VG_ZOOM_MITTE * Math.cos(zw)];
+    var vb = voll ? [-VG_MM.rand, -VG_MM.rand, 2 * VG_MM.rand, 2 * VG_MM.rand] : [zm[0] - VG_ZOOM, zm[1] - VG_ZOOM, 2 * VG_ZOOM, 2 * VG_ZOOM];
     var P = function (r, a) { return (r * Math.sin(a)).toFixed(2) + ' ' + (-r * Math.cos(a)).toFixed(2); };
     var seg = function (r0, r1, a0, a1) { return 'M' + P(r1, a0) + 'A' + r1 + ' ' + r1 + ' 0 0 1 ' + P(r1, a1) + 'L' + P(r0, a1) + 'A' + r0 + ' ' + r0 + ' 0 0 0 ' + P(r0, a0) + 'Z'; };
     var h = '<svg class="vg-board' + (voll ? ' voll' : '') + '" viewBox="' + vb.join(' ') + '" data-vg="board" role="img" aria-label="Scheibe, antippen wo der Dart steckt">' +
@@ -7820,14 +7827,14 @@
     h += '<circle cx="0" cy="0" r="' + VG_MM.bullA + '" fill="#2f9a58" class="vg-f"/><circle cx="0" cy="0" r="' + VG_MM.bullI + '" fill="#d0353c" class="vg-f"/>';
     if (ziel.n === 25) h += '<circle cx="0" cy="0" r="' + (ziel.m === 2 ? VG_MM.bullI : VG_MM.bullA) + '" class="vg-ziel"/>';
     else if (zielPfad) h += '<path d="' + zielPfad + '" class="vg-ziel"/>';
-    h += '<g class="vg-kreuz"><line x1="' + (ziel.x - 3) + '" y1="' + ziel.y + '" x2="' + (ziel.x + 3) + '" y2="' + ziel.y + '"/><line x1="' + ziel.x + '" y1="' + (ziel.y - 3) + '" x2="' + ziel.x + '" y2="' + (ziel.y + 3) + '"/></g>';
+    h += '<g class="vg-kreuz"><line x1="' + (ziel.x - 4) + '" y1="' + ziel.y + '" x2="' + (ziel.x + 4) + '" y2="' + ziel.y + '"/><line x1="' + ziel.x + '" y1="' + (ziel.y - 4) + '" x2="' + ziel.x + '" y2="' + (ziel.y + 4) + '"/></g>';
     /* Marker: fruehere Darts dieses Legs blass, die laufende Aufnahme kraeftig und nummeriert. */
     var aktuelle = st.visit ? st.visit.darts : [];
     (leg.darts || []).forEach(function (d) {
       if (d.x === null || d.x === undefined) return;
       var k = aktuelle.indexOf(d);
-      if (k < 0) h += '<circle cx="' + d.x + '" cy="' + d.y + '" r="1.7" class="vg-alt" style="fill:' + VG_FARBE[set] + '"/>';
-      else h += '<g class="vg-dart"><circle cx="' + d.x + '" cy="' + d.y + '" r="2.6" style="fill:' + VG_FARBE[set] + '"/><text x="' + d.x + '" y="' + (d.y + 1.1) + '">' + (k + 1) + '</text></g>';
+      if (k < 0) h += '<circle cx="' + d.x + '" cy="' + d.y + '" r="2.2" class="vg-alt" style="fill:' + VG_FARBE[set] + '"/>';
+      else h += '<g class="vg-dart"><circle cx="' + d.x + '" cy="' + d.y + '" r="3.4" style="fill:' + VG_FARBE[set] + '"/><text x="' + d.x + '" y="' + (d.y + 1.5) + '">' + (k + 1) + '</text></g>';
     });
     return h + '</svg>';
   }

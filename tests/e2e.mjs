@@ -3301,10 +3301,14 @@ check('hochkant nutzt die Scheibe die Breite: quadratisch, mindestens 85 % der B
 }
 check('Durchgang 1 mit Pfeil 1: Ziel T20, Aufnahme 1 von 20, Scheibe gezoomt',
   (await text('.vg-zielzahl')) === 'T20' && (await text('.vg-chip')).includes('Pfeil 1') && (await page.locator('svg.vg-board:not(.voll)').count()) === 1 && (await text('.vg-legnr')).includes('Aufnahme 1 von 20'), await text('.vg-spiel-kopf'));
-/* Ein echter Tipp: die Mitte des Zoom-Fensters ist das Ziel. */
+/* Ein echter Tipp auf die Zielmitte (0, -103 mm). Das Zoomfenster reicht vom Doppel bis zum
+   Bull (Julius 15.11.): viewBox 190 mm, Mitte 85 mm ueber dem Bull - Doppelring (-170) und
+   Bullseye (0) liegen beide im Fenster. */
 const vgBox = await page.locator('svg.vg-board').boundingBox();
-await page.locator('svg.vg-board').click({ position: { x: vgBox.width / 2, y: vgBox.height / 2 } });
-check('ein Tipp in die Mitte des Zoom-Fensters trifft T20: Dart 1 steht als T20 mit 60, "1 von 1 im Ziel"',
+const vgVbA = (await page.locator('svg.vg-board').getAttribute('viewBox')).split(' ').map(Number);
+check('das Zoomfenster zeigt Doppel und Bull zugleich: 190 mm, von -180 bis +10 mm', vgVbA[1] <= -172 && vgVbA[1] + vgVbA[3] >= 2 && vgVbA[2] === 190 && vgVbA[0] === -95, JSON.stringify(vgVbA));
+await page.locator('svg.vg-board').click({ position: { x: (0 - vgVbA[0]) / vgVbA[2] * vgBox.width, y: (-103 - vgVbA[1]) / vgVbA[3] * vgBox.height } });
+check('ein Tipp auf die Zielmitte im Zoomfenster trifft T20: Dart 1 steht als T20 mit 60, "1 von 1 im Ziel"',
   (await text('.vg-slot >> nth=0')).replace(/\s+/g, ' ').includes('T20 60') && (await text('.vg-ziel-box')).includes('1 von 1 im Ziel'), await text('.vg-seite'));
 const vgWurf = (label) => page.evaluate((l) => { const D = window.__dart, z = D.vglZiel(l); return D.vglDart(z.x, z.y); }, label);
 const vgVb = () => page.locator('svg.vg-board').getAttribute('viewBox');

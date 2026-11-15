@@ -7717,16 +7717,19 @@ button.st-krow:hover { background: #ffffff06; }
 .vg-board .vg-zahl.aussen { font-size: 16px; fill: #f2eeee; }
 .vg-board .vg-zahl.innen { font-size: 7px; fill: rgba(255, 255, 255, 0.35); }
 .vg-board.voll .vg-zahl.innen { display: none; }
+/* Im Zoom (Doppel bis Bull) wuerden die grossen Aussenzahlen am Rand abgeschnitten - innen stehen sie ohnehin. */
+.vg-board:not(.voll) .vg-zahl.aussen { display: none; }
 .vg-board .vg-ziel { fill: rgba(255, 255, 255, 0.12); stroke: #fff; stroke-width: 1.1; pointer-events: none; animation: vg-puls 1.6s ease-in-out infinite; }
 .vg-board.voll .vg-ziel { stroke-width: 2.2; }
 @keyframes vg-puls { 0%, 100% { stroke-opacity: 1; } 50% { stroke-opacity: 0.45; } }
 .vg-board .vg-kreuz line { stroke: #fff; stroke-width: 0.5; pointer-events: none; }
 .vg-board .vg-alt { opacity: 0.45; pointer-events: none; }
 .vg-board .vg-dart circle { stroke: #fff; stroke-width: 0.6; pointer-events: none; }
-.vg-board .vg-dart text { font-family: var(--font-cond); font-weight: 700; font-size: 3.2px; fill: #fff; text-anchor: middle; pointer-events: none; }
+.vg-board .vg-dart text { font-family: var(--font-cond); font-weight: 700; font-size: 4.2px; fill: #fff; text-anchor: middle; pointer-events: none; }
 .vg-board.voll .vg-dart circle { r: 5; }
 .vg-board.voll .vg-dart text { font-size: 6px; }
 .vg-board.voll .vg-alt { r: 3.2; }
+.vg-board .vg-kreuz line { stroke-width: 0.7; }
 .vg-board-knoepfe { display: flex; justify-content: center; gap: 8px; margin-top: 8px; }
 .vg-board-knoepfe .btn { margin: 0; }
 .vg-seite { display: flex; flex-direction: column; gap: 10px; min-width: 0; }

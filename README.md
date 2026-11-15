@@ -1551,7 +1551,8 @@ darunter Ziel, Stand im Block („noch 3 Aufnahmen auf T19 · bisher 12 von 21 i
 drei Darts der Aufnahme, „Letzte Aufnahme“, **Dart zurück**, **Daneben** und **Ganze
 Scheibe**. Kein Rest – das Programm zählt Aufnahmen. Man wirft drei Darts und tippt sie
 danach nacheinander an: die Scheibe in echten Millimetern (Bull 6,35/15,9, Triple 99–107,
-Doppel 162–170) ist als Fenster von 100 mm aufs Ziel gezoomt und bleibt dort stehen, bis der
+Doppel 162–170) ist als Fenster von 190 mm aufs Zielsegment gezoomt – vom Doppel bis zum
+Bull, damit beide immer mit im Bild sind (Julius 15.11.) – und bleibt dort stehen, bis der
 Block vorbei ist; beim Wechsel sagt ein Banner „Jetzt 5 Aufnahmen auf T19“. Eine fertige
 Runde wird wie ein Spiel archiviert (`kind: 'vergleich'`, ein Spieler, kein Sieger,
 `prog: 'lang' | 'kurz'`, `legs[].darts[]` mit `x, y, n, m, z` = Stelle, Feld, Ziel) und zum
