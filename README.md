@@ -577,7 +577,11 @@ Stellwurf nur, wenn im Versuch noch Darts folgen), den Verlauf als grüne und ro
 Eingabe: Punkte (Tastenfeld, Schnellwahl, Finish-Frage nach der Dartzahl, auch per
 Tasten 1/2/3) oder Einzel-Darts (Wechsel-Knopf, die Wahl bleibt fürs Spiel), dazu die
 Fernsteuerung mit Tastatureingabe (wie im X01: Clear bucht den eingetippten Rest, Minus
-einen Bust, Plus oder Shift gedrückt zeigt die Aufnahmen des Versuchs groß). Testspieler setzen weder Rekord noch PB. In der
+einen Bust, Plus oder Shift gedrückt zeigt die Aufnahmen des Versuchs groß). Die Tastatur zählt in
+der Fernsteuerung auch dann, wenn das Tastenfeld zuletzt auf Einzel-Darts stand (DRT-053,
+Julius 15.11.: nach dem Wechsel zurück kam keine Ziffer mehr an); nur eine angefangene
+Einzel-Darts-Aufnahme muss erst dort zu Ende geworfen oder zurückgenommen werden, die
+Anzeige sagt es. Testspieler setzen weder Rekord noch PB. In der
 Rangliste steht der App-Rekord mit Namen in der Rekorde-Karte, die Spiele-Liste nennt
 höchste Zahl und Checks. Nach jedem
 Versuch steht kurz „+10“ oder „−1“ am Score. Undo wie im X01, auch über das

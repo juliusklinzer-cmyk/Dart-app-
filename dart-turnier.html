@@ -28351,7 +28351,17 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (ev.key === 'Escape' && UI.kwFern) { UI.kwFern = false; UI.kwVerlauf = false; UI.input = ''; save(); render(); ev.preventDefault(); return; }
     if (kg.done) return;
     if (ev.key.toLowerCase() === 'z' && !UI.kwFern) { undoKaiwen(kg); ev.preventDefault(); return; }
-    if (kaiwenModus() !== 'total') return;
+    /* Steht das Tastenfeld auf Einzel-Darts, gehoert die Tastatur nur in der
+       Fernsteuerung der Punkte-Eingabe - dort gibt es kein Tastenfeld, und
+       vorher blieb jede Ziffer stumm (Julius 15.11., DRT-053). Laeuft eine
+       angefangene Einzel-Darts-Aufnahme, sagt die Anzeige es. */
+    if (kaiwenModus() !== 'total') {
+      if (!UI.kwFern) return;
+      if (kaiwenVersuch(kg).offen.length) {
+        if (tasteZiffer(ev) !== null || ev.key === 'Enter' || istRestTaste(ev)) { UI.error = 'Die Aufnahme läuft in Einzel-Darts, bitte dort weiter eintragen.'; render(); ev.preventDefault(); }
+        return;
+      }
+    }
     /* Wie im X01: Clear bucht den eingetippten Rest, Minus einen Bust. */
     if (istRestTaste(ev)) {
       ev.preventDefault();

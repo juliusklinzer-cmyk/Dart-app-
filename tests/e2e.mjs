@@ -5933,14 +5933,27 @@ await gruppe('Kaiwen: Team-Checkout, Regeln, Rekord und PB', async () => {
   await page.locator('#kw-pad-darts .num-grid button[data-num="20"]').click();
   await page.locator('#kw-pad-darts [data-action="kw-end-visit"]').click(); ks = await kst();
   check('OK fuellt die Aufnahme mit Fehlwuerfen auf: 60 gebucht, jetzt A', ks.rest === 87 && ks.offen.length === 0 && ks.werfer === kA && ks.dartsVersuch === 3);
-  await page.locator('[data-action="kw-swap"]').click();
-  /* Fernsteuerung: Tastatur */
+  /* Fernsteuerung: Tastatur - und zwar auch, wenn das Tastenfeld gerade auf
+     Einzel-Darts steht (Julius 15.11., DRT-053: nach dem Wechsel zurueck in
+     den Tastaturmodus kam keine Ziffer mehr an). */
+  check('das Tastenfeld steht noch auf Einzel-Darts', await visible('#kw-pad-darts'));
   await page.locator('.kw-pad-kopf [data-action="kw-fern"]').click();
-  check('Fernsteuerung: Board-Anzeige ohne Tastenfeld', await page.evaluate(() => document.getElementById('screen-kaiwen').classList.contains('fern')) && !(await visible('#kw-pad-total')));
-  await page.keyboard.type('45'); await page.keyboard.press('Enter'); ks = await kst();
+  check('Fernsteuerung: Board-Anzeige ohne Tastenfeld', await page.evaluate(() => document.getElementById('screen-kaiwen').classList.contains('fern')) && !(await visible('#kw-pad-total')) && !(await visible('#kw-pad-darts')));
+  await page.keyboard.type('45');
+  check('die Ziffern erscheinen in der Anzeige, obwohl das Tastenfeld auf Einzel-Darts stand', (await text('#kw-ff-display')).trim() === '45', await text('#kw-ff-display'));
+  await page.keyboard.press('Enter'); ks = await kst();
   check('45 per Tastatur gebucht: Rest 42', ks.rest === 42 && ks.werfer === kB);
   await page.keyboard.press('Escape');
-  check('Escape beendet die Fernsteuerung', !(await page.evaluate(() => document.getElementById('screen-kaiwen').classList.contains('fern'))));
+  check('Escape beendet die Fernsteuerung, das Tastenfeld steht wieder auf Einzel-Darts', !(await page.evaluate(() => document.getElementById('screen-kaiwen').classList.contains('fern'))) && (await visible('#kw-pad-darts')));
+  /* Angefangene Einzel-Darts-Aufnahme: die Fernsteuerung bucht nichts, sondern sagt es. */
+  await page.locator('#kw-pad-darts .num-grid button[data-num="1"]').click();
+  await page.locator('.kw-pad-kopf [data-action="kw-fern"]').click();
+  await page.keyboard.type('5'); ks = await kst();
+  check('mit angefangener Einzel-Darts-Aufnahme bleibt die Ziffer ohne Wirkung und die Anzeige erklaert es', ks.offen.length === 1 && (await text('#kw-ff-error')).includes('Einzel-Darts'), await text('#kw-ff-error'));
+  await page.keyboard.press('Escape');
+  await page.locator('#kw-pad-darts [data-action="undo-game"]').click(); ks = await kst();
+  check('Dart zurueck, dann auf Punkte', ks.offen.length === 0 && ks.rest === 42);
+  await page.locator('[data-action="kw-swap"]').click();
   /* Finish-Frage per Tastatur in der Fernsteuerung: Rest 42, "42" Enter, dann "2". */
   await page.locator('.kw-pad-kopf [data-action="kw-fern"]').click();
   await page.keyboard.type('42'); await page.keyboard.press('Enter');
