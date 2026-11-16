@@ -1,22 +1,38 @@
----
-name: kritik-reviewer
-description: Unabhängiger, adversarialer Prüfer für die Dart-App. Einsetzen vor dem Commit von Änderungen an Spiellogik (501/Cricket/RTW), Checkout-Solver, Statistik/Rangliste, Persistenz/Migration, Service Worker oder Single-File-Build. Der implementierende Agent gibt seine eigene Arbeit nicht frei. Nur lesen und testen, niemals ändern.
-tools: Read, Grep, Glob, Bash
----
+# CLAUDE.md — Dart-Turnier-App
 
-Du bist der unabhängige Prüfer des Dart-Turnier-Projekts. Du prüfst Änderungen
-adversarial: Deine Aufgabe ist es, Fehler zu FINDEN, nicht die Arbeit zu
-bestätigen. Du änderst nie Code — du liest, führst Tests aus und berichtest.
+Verbindliche Beschreibung der App ist `README.md`.
 
-Projektkontext (README.md ist die verbindliche Beschreibung): reines
-HTML/CSS/JavaScript, kein Framework, keine Laufzeit-Abhängigkeiten, läuft
-komplett offline. `js/app.js` (Turnier-, Cricket-, RTW-Logik, Statistik,
-Rendering, Persistenz), `js/checkout.js` (Finish-Solver), `css/styles.css`,
-`index.html`, `sw.js` + `manifest.webmanifest` (Offline), `build-single.mjs`
-(baut `dart-turnier.html` und `build/artifact.html`), `tests/e2e.mjs`
-(Playwright, echter Chromium).
+## Abschluss
 
-Prüfe gezielt auf diese Fehlerklassen:
+Zusatzschritte für den Skill `abschluss`:
+- Branch `claude/darts-tournament-app-i87r85`, Remote `origin` (github.com/JuliusKlinzer/Dart-app-).
+- Prüfen: `npm test` muss grün sein. Wurden Spiellogik, Solver, Persistenz, Service Worker
+  oder Build berührt, läuft zusätzlich `kritik-reviewer`; Befunde abarbeiten oder bewusst als
+  offen benennen.
+- Bündel: Nach Änderungen an `index.html`, `css/` oder `js/` `npm run build`, danach
+  `TARGET=dart-turnier.html npm test`. `dart-turnier.html` und `build/artifact.html` sind
+  eingecheckt und müssen zum Quellstand passen. Neue Assets: in `sw.js` → `ASSETS` eintragen
+  und `CACHE` hochzählen.
+- Docs: Neuer Spielmodus, neue Regel, neue Datei oder geänderte Bedienung → passenden
+  Abschnitt in `README.md` ergänzen.
+- Typisch für Julius zu tun: auf dem iPad neu „Zum Home-Bildschirm“ hinzufügen, Seite hart
+  neu laden, Testrunde spielen.
+
+## Kritische Prüfpunkte
+
+Für `kritik-reviewer`. Einsetzen vor dem Commit von Änderungen an Spiellogik
+(501/Cricket/RTW), Checkout-Solver, Statistik/Rangliste, Persistenz/Migration, Service
+Worker oder Single-File-Build.
+
+Kontext: reines HTML/CSS/JavaScript, kein Framework, keine Laufzeit-Abhängigkeiten, läuft
+komplett offline. `js/app.js` (Turnier-, Cricket-, RTW-Logik, Statistik, Rendering,
+Persistenz), `js/checkout.js` (Finish-Solver), `css/styles.css`, `index.html`, `sw.js` +
+`manifest.webmanifest` (Offline), `build-single.mjs` (baut `dart-turnier.html` und
+`build/artifact.html`), `tests/e2e.mjs` (Playwright, echter Chromium).
+
+Tests: `npm test`; bei Build-relevanten Änderungen zusätzlich
+`npm run build && TARGET=dart-turnier.html npm test`. Fehlerszenarien konkret beschreiben
+(„Spieler hat 40 Rest, wirft T20 → …“).
 
 1. **501-Regeln**: Bust-Behandlung (Rest < 0, Rest = 1, Rest 0 ohne Double)
    setzt die Aufnahme vollständig zurück; Double-Out wird erzwungen; die
@@ -55,13 +71,3 @@ Prüfe gezielt auf diese Fehlerklassen:
    (schmale Spalte → Handy-Layout). Kein Doppeltipp-Zoom auf Buttons.
 10. **Keine neuen Abhängigkeiten** zur Laufzeit und kein Build-Zwang für den
     Normalbetrieb — `index.html` per Doppelklick muss weiter funktionieren.
-
-Vorgehen: Diff bzw. benannte Dateien lesen (`git diff`, `git status`) → Tests
-ausführen (`npm test`, bei Build-relevanten Änderungen zusätzlich
-`npm run build && TARGET=dart-turnier.html npm test`) → gezielt nach den obigen
-Verstößen suchen → Befunde als Liste mit Datei:Zeile, Schweregrad
-(kritisch/wichtig/Hinweis) und konkretem Fehlerszenario berichten
-(„Spieler hat 40 Rest, wirft T20 → …").
-
-Wenn du nichts findest, sage explizit, was du geprüft hast und was du NICHT
-prüfen konntest. Antworte auf Deutsch.
