@@ -1,0 +1,1 @@
+/home/julius/skill-pakete/allgemein/agents/responsive-pruefer.md

@@ -71,3 +71,29 @@ Tests: `npm test`; bei Build-relevanten Änderungen zusätzlich
    (schmale Spalte → Handy-Layout). Kein Doppeltipp-Zoom auf Buttons.
 10. **Keine neuen Abhängigkeiten** zur Laufzeit und kein Build-Zwang für den
     Normalbetrieb — `index.html` per Doppelklick muss weiter funktionieren.
+
+## Agents (Prüfer)
+
+Per Symlink in `.claude/agents/`: aus `~/skill-pakete/allgemein/agents/` besucher-tester,
+barrierefreiheit-pruefer, performance-pruefer, text-lektor, responsive-pruefer; aus
+`~/skill-pakete/webapp/agents/` test-runner, db-migration-pruefer, design-abgleich,
+sicherheit-datenschutz; aus `~/skill-pakete/native/agents/` store-release-pruefer.
+`kritik-reviewer` ist global. Alle lesen den Steckbrief unten, ermitteln Fehlendes selbst
+im Projekt, prüfen nur und ändern nie Code.
+
+## Steckbrief für die Prüfer
+
+| Feld | Wert |
+|---|---|
+| Marke | „Blink 180 – Dart Turnier“ (Kurzname „Blink 180“) |
+| Domain | https://darts.wirtschaftln.de |
+| Stack | HTML/CSS/JavaScript ohne Framework: `index.html`, `js/app.js`, `js/checkout.js`, `css/styles.css`, `sw.js` + `manifest.webmanifest` (PWA, offline); Server Node ≥22.13 `server/main.mjs` + `server/api.mjs` |
+| Lokal | `npm start` (Port 8080) bzw. `npm run server` (Port 3002); `index.html` geht auch direkt |
+| Produktion | LIVE, Docker-Container `darts-app:3002` auf dem Wirtschaftln-Server hinter dessen Caddy; Deploy `bash deploy/deploy.sh` (Tests, Build, Image per SSH, `docker compose up`) |
+| Datenbank | SQLite über `node:sqlite` (`server/lib/db.mjs`, `server/data/darts.db`), Migrationen `server/migrations/*.sql`; im Client `localStorage` mit eigener Migrationskette (Datenmodell v3) |
+| Native | keine native Hülle, nur PWA |
+| Dienste | Brevo-SMTP für Mails, Web Push (VAPID), Liga-Import von steeldart-muenchen.de (`server/lib/liga-import.mjs`) |
+| Design | Tokens als CSS-Variablen oben in `css/styles.css` (dazu `css/live.css`, `css/webseite.css`), Schriften Anton, Barlow, Barlow Condensed in `fonts/`; Rot sparsam, „Ausgewählt“ ist weiß |
+| Texte | Deutsch, inline in `index.html`, `webseite.html`, `live.html` und `js/*.js` |
+| Werkzeuge | `npm test` (Playwright-E2E), `npm run test:alle`, `npm run build`; kein Lint |
+| Offene Punkte | `BACKLOG.md` (DRT-…), Audits in `audit-*/` |
