@@ -2566,7 +2566,12 @@
   }
 
   /* Wertet eine Liste von Spielen aus – für ein Turnier genauso wie für die Karriere. */
-  function collectStats(matchLists, ids) {
+  /* nurFertigeLegs: fuer Karriere, Liga-Wertung und den Statistik-Reiter
+     zaehlen nur Legs mit Sieger - ein angefangenes Leg (laufendes oder
+     abgebrochenes Turnier) gaebe sonst je Ansicht andere Zahlen als die
+     Spielliste (Audit 17.11.). Die Live-Anzeigen im Spiel rechnen weiter
+     mit allen Aufnahmen. */
+  function collectStats(matchLists, ids, nurFertigeLegs) {
     var map = {};
     ids.forEach(function (id) { map[id] = emptyStat(id); map[id].dartsInWonLegs = 0; map[id].legsWon501 = 0; });
     function stat(id) {
@@ -2593,6 +2598,7 @@
           });
         }
         m.legs.forEach(function (leg) {
+          if (nurFertigeLegs && !leg.winner) return;
           var rest = {};
           var visitNo = {};
           var legVon = leg && typeof leg.start === 'number' ? leg.start : start;
@@ -2600,6 +2606,7 @@
              301er in sechs Darts ist kein Rekord neben einem 501er in neun.
              Average, 180er, Finishes und die Leg-Bilanz zaehlen weiter fuer alle. */
           var ist501 = legVon === 501;
+          var doppelLeg = legVon === 501 || legVon === 301;
           m.p.forEach(function (pid) { rest[pid] = legVon; visitNo[pid] = 0; });
 
           leg.visits.forEach(function (v) {
@@ -2622,7 +2629,11 @@
                auf einem Doppel (der erste auf dem des Rests, die weiteren auf
                dem Finish-Doppel); sonst zaehlt nur der Finish-Dart. Fehlwuerfe
                aufs Doppel in Aufnahmen ohne Finish bleiben dort unbekannt. */
-            if (v.k && v.k.length) {
+            /* Nur 301er und 501er - dieselbe Auswahl wie die Doppel-Analyse
+               (doppelJeFeld), sonst stuende neben "50 %" ein "100 %"
+               (Audit 17.11.). */
+            if (!doppelLeg) { /* andere Startwerte zaehlen nicht */ }
+            else if (v.k && v.k.length) {
               var r = before;
               for (var i = 0; i < v.k.length; i++) {
                 var d = v.k[i];
@@ -2700,7 +2711,7 @@
       lists.push({ matches: S.matches, start: tourStart() });
     }
     var ids = S.profiles.map(function (p) { return p.id; });
-    var map = collectStats(lists, ids);
+    var map = collectStats(lists, ids, true);
     var open = S.game && S.game.done && !testSpiel(S.game) ? [S.game] : [];
     wertbar.concat(open).forEach(function (h) {
       if (h.liga && h.liga.uebung) return;
@@ -2833,7 +2844,7 @@
     var lists = wertbareHistorie().filter(function (h) { return h.liga && !h.liga.uebung && h.matches; })
       .map(function (h) { return { matches: h.matches, start: (h.settings && h.settings.start) || 501 }; });
     if (S.matches.length && S.tour && S.tour.liga && !S.tour.liga.uebung && !turnierSchonArchiviert()) lists.push({ matches: S.matches, start: tourStart() });
-    var map = collectStats(lists, S.profiles.map(function (p) { return p.id; }));
+    var map = collectStats(lists, S.profiles.map(function (p) { return p.id; }), true);
     /* Nachgetragene Spieltage: die Highlights der Ligaleitung fuer unsere Leute. */
     wertbareHistorie().forEach(function (h) {
       ligaBogenHighlights(h).forEach(function (e) { if (e.id && map[e.id]) statHighlightsDazu(map[e.id], e); });
@@ -5964,6 +5975,7 @@
     (m.legs || []).forEach(function (leg) {
       var rest = typeof leg.start === 'number' ? leg.start : (start || 501);
       if (rest !== 501 && rest !== 301) return;
+      if (!leg.winner) return;   // wie collectStats(..., true): nur fertige Legs
       (leg.visits || []).forEach(function (v) {
         if (v.p !== pid) return;
         if (v.k && v.k.length) {
@@ -5993,9 +6005,14 @@
   function spielerSpiele(pid) {
     var out = [];
     function nimm(m, start, at, modus, h) {
-      if (!m || !m.done || m.kampflos || !m.p || m.p.indexOf(pid) < 0) return;
+      if (!m || m.kampflos || !m.p || m.p.indexOf(pid) < 0) return;
+      /* Wie career(): auch eine abgebrochene oder noch laufende Partie
+         zaehlt mit ihren fertigen Legs (ohne Sieg oder Niederlage) - sonst
+         fehlte z. B. der 9-Darter aus "Spiel beenden & speichern" hier,
+         stuende aber in der Spielerliste (Audit 17.11.). */
+      if (!m.done && !(m.legs || []).some(function (l) { return l.winner; })) return;
       var solo = m.p.length < 2;
-      var map = collectStats([{ matches: [m], start: start }], m.p);
+      var map = collectStats([{ matches: [m], start: start }], m.p, true);
       var st = finalize(map[pid]);
       /* Ein Schnelles X01 kann mehr als zwei Spieler haben: dann zaehlt jedes
          fremd gewonnene Leg als verloren (wie collectStats), und der Gegner
@@ -6003,7 +6020,9 @@
       var andere = m.p.filter(function (x) { return x !== pid; });
       var gegnerId = andere.length === 1 ? andere[0] : null;
       var gewertet = (m.legs || []).filter(function (l) { return l.winner; });
-      var legs = (m.legs || []).filter(function (l) { return l.winner || (l.visits && l.visits.length); }).length;
+      /* Nur fertige Legs - wie collectStats(..., true); ein angefangenes
+         Leg (laufendes oder abgebrochenes Turnier) zaehlt nicht (Kritik 17.11.). */
+      var legs = (m.legs || []).filter(function (l) { return l.winner; }).length;
       out.push({
         id: m.id, at: m.at || at || 0, modus: solo ? 'solo' : modus, solo: solo, session: !!m.session,
         gegnerId: gegnerId, gegner: solo ? '' : andere.map(pname).join(' / '),
@@ -6017,7 +6036,9 @@
     }
     if (S.matches.length && !(S.tour && S.tour.liga && S.tour.liga.uebung) && turnierWertbar() && !turnierSchonArchiviert()) {
       var modusLive = S.tour && S.tour.liga ? 'liga' : 'turnier';
-      S.matches.forEach(function (m) { nimm(m, tourStart(), m.at, m.kind === 'quick' ? 'quick' : modusLive, S.tour); });
+      /* Eine noch laufende Partie hat kein m.at - sie gehoert ans Ende der
+         Reihe (jetzt), nicht auf den 1.1.1970 (Kritik 17.11.). */
+      S.matches.forEach(function (m) { nimm(m, tourStart(), m.at || Date.now(), m.kind === 'quick' ? 'quick' : modusLive, S.tour); });
     }
     wertbareHistorie().forEach(function (h) {
       if (h.liga && h.liga.uebung) return;
@@ -16785,7 +16806,10 @@
     if (istRestTaste(ev)) { restBuchen(); ev.preventDefault(); return; }
     if (istUeberworfenTaste(ev)) { ueberworfenBuchen(); ev.preventDefault(); return; }
     if (zTotal !== null) { pressKey(zTotal); ev.preventDefault(); }
-    else if (ev.key === 'Enter') { pressKey('ok'); ev.preventDefault(); }
+    /* Markieren: dieses Enter hat die Aufnahme gebucht - sonst nimmt der
+       Dialog-Handler dasselbe Enter als Antwort auf "Mit wie vielen Darts?"
+       und bucht still die erste Wahl (Audit 17.11.: Rest 40 -> 1 Dart). */
+    else if (ev.key === 'Enter') { ev.eingabeGebucht = true; pressKey('ok'); ev.preventDefault(); }
     else if (ev.key === 'Backspace') { pressKey('del'); ev.preventDefault(); }
   });
 
@@ -16938,8 +16962,13 @@
     if (zKw !== null) { kaiwenKey(zKw); ev.preventDefault(); }
     else if (ev.key === 'Enter') {
       /* Dieses Enter ist verbraucht: oeffnet es die Finish-Frage, darf der
-         Dialog-Handler dahinter sie nicht mit demselben Enter bestaetigen. */
-      ev.eingabeGebucht = true; kaiwenKey('ok'); ev.preventDefault();
+         Dialog-Handler dahinter sie nicht mit demselben Enter bestaetigen.
+         In der Fernsteuerung bucht ein Enter auf leerem Feld nichts - wie im
+         X01 und Finisher; ein doppeltes Enter verschenkte sonst eine
+         Aufnahme als 0 (Audit 17.11.). Die 0 gibt es dort per Ziffer. */
+      ev.preventDefault();
+      if (UI.kwFern && UI.input === '') return;
+      ev.eingabeGebucht = true; kaiwenKey('ok');
     }
     else if (ev.key === 'Backspace') { kaiwenKey('del'); ev.preventDefault(); }
   });

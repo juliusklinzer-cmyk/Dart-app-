@@ -2228,6 +2228,22 @@ await page.keyboard.press('Tab');
 check('Tab: Einzel-Darts -> Turnier', await visible('#pad-key'));
 await page.keyboard.press('Tab');
 check('Tab: Turnier -> wieder Punkte', await visible('#pad-total'));
+/* Punkte-Feld mit Hardware-Tastatur (Audit 17.11.): das Enter, das den
+   Checkout bucht, darf nicht zugleich die Dart-Frage beantworten. */
+{
+  const vorher = await page.evaluate(() => { const s = window.__dart.state().settings, v = s.dartModeFrom; s.dartModeFrom = 0; return v; });
+  const tq = async (z) => { await page.keyboard.type(z); await page.keyboard.press('Enter'); };
+  await tq('180'); await tq('180'); await tq('180'); await tq('180');
+  await tq('141');
+  check('Punkte-Feld per Tastatur: Enter auf dem Checkout laesst die Frage "Mit wie vielen Darts?" stehen', await page.evaluate(() => {
+    const o = window.__dart.ui().overlay;
+    return !!(o && o.type === 'checkout-darts') && !window.__dart.currentMatch().legs.some((l) => l.visits.some((v) => v.c));
+  }));
+  await page.keyboard.press('Backspace');
+  check('Backspace schliesst die Frage, nichts gebucht', await page.evaluate(() => !window.__dart.ui().overlay && !window.__dart.currentMatch().legs.some((l) => l.visits.some((v) => v.c))));
+  await page.evaluate(() => { const D = window.__dart; D.activeLeg(D.currentMatch()).visits.length = 0; D.ui().input = ''; D.save(); D.setScreen('game'); });
+  await page.evaluate((v) => { window.__dart.state().settings.dartModeFrom = v; }, vorher);
+}
 /* Spielende am Board: Pfeile waehlen zwischen Statistik und Ruecknahme,
    Enter bestaetigt - auch das Schnelle Spiel laeuft ohne Bildschirm-Tipp. */
 await modus('turnier');
@@ -5987,6 +6003,10 @@ await gruppe('Kaiwen: Team-Checkout, Regeln, Rekord und PB', async () => {
   check('die Finish-Frage erscheint auch in der Fernsteuerung und bleibt offen', (await page.locator('#overlay-card [data-action="co-darts"]').count()) >= 2 && (await page.evaluate(() => window.__dart.ui().overlay && window.__dart.ui().overlay.type === 'checkout-darts')));
   await page.keyboard.press('2'); ks = await kst();
   check('die Ziffer 2 bucht den Check mit zwei Darts: 157, naechster Versuch', ks.zahl === 157 && ks.dartsVersuch === 0 && (await page.evaluate(() => !window.__dart.ui().overlay)));
+  /* Enter auf leerem Feld bucht in der Fernsteuerung nichts (Audit 17.11.:
+     ein doppeltes Enter verschenkte eine Aufnahme als 0). */
+  await page.keyboard.press('Enter'); ks = await kst();
+  check('Enter auf leerem Feld bucht in der Kaiwen-Fernsteuerung keine 0', ks.zahl === 157 && ks.dartsVersuch === 0);
   /* Clear, Minus und Shift in der Fernsteuerung, wie im X01. */
   await page.keyboard.down('Shift'); await page.waitForTimeout(80);
   check('Shift gedrueckt zeigt die Aufnahmen des Versuchs gross', (await visible('#kw-verlauf-gross')) && (await text('#kw-verlauf-gross')).includes('157'));
@@ -6813,6 +6833,25 @@ check('je Doppel Treffer und Versuche wie die Doppelquote: D12 1/1, D16 0/1, D8 
   !!dash.g9 && JSON.stringify(dash.g9.doppel['12']) === '[1,1]' && JSON.stringify(dash.g9.doppel['16']) === '[0,1]' && JSON.stringify(dash.g9.doppel['8']) === '[1,3]', JSON.stringify(dash.g9 && dash.g9.doppel));
 check('die Summe: vier Ligaspiele, Average punktgenau, Doppelquote 4 von 10, Siegquote 50 %',
   dash.liga.n === 4 && dash.liga.matches === 4 && dash.liga.win === 50 && dash.liga.hits === 4 && dash.liga.att === 10 && dash.liga.avg > 100, JSON.stringify(dash.liga));
+/* Audit 17.11.: Spielerliste/Rangliste (career) und Statistik-Reiter
+   (spielerSpiele) werten dieselben Partien - auch eine mit "Spiel beenden &
+   speichern" abgelegte (done: false) mit ihrem fertigen 9-Darter, und ein
+   angefangenes Leg zaehlt nirgends. */
+const gleich = await page.evaluate((me) => {
+  const D = window.__dart, S = D.state(), ids = D.activeProfiles().map((p) => p.id), b = ids.find((x) => x !== me);
+  const v = (p, s, c) => ({ p, s, d: 3, b: false, c: !!c, o: 0 });
+  S.history.unshift({ id: 'gleich_q', kind: 'quick', at: Date.now() - 1000, lineup: [me, b], settings: { start: 501, bestOf: 3 }, winner: null, abgebrochen: true,
+    matches: [{ id: 'gleich_m', kind: 'quick', p: [me, b], starter: me, done: false, winner: null, at: Date.now() - 1000,
+      legs: [{ starter: me, start: 501, winner: me, visits: [v(me, 180), v(b, 60), v(me, 180), v(b, 60), v(me, 141, true)] },
+             { starter: b, start: 501, winner: null, visits: [v(b, 60), v(me, 180)] }] }] });
+  const c = D.career()[me], reihe = D.spielerSpiele(me), sum = D.statsSumme(reihe);
+  const s180 = reihe.reduce((n, x) => n + x.st.s180, 0), darts = reihe.reduce((n, x) => n + x.st.darts, 0);
+  const g = reihe.find((x) => x.id === 'gleich_m');
+  S.history.shift(); D.save();
+  return { c180: c.s180, s180, cDarts: c.darts, darts, cAvg: +c.avg.toFixed(2), sAvg: +sum.avg.toFixed(2), da: !!g, won: g && g.won, best: c.bestLeg };
+}, dash.me);
+check('Spielerliste und Statistik-Reiter zaehlen dieselben 180er, Darts und denselben Average, die abgelegte Partie steht ohne Sieg in der Reihe, das angefangene Leg zaehlt nicht',
+  gleich.c180 === gleich.s180 && gleich.cDarts === gleich.darts && gleich.cAvg === gleich.sAvg && gleich.da && gleich.won === null && gleich.best === 9, JSON.stringify(gleich));
 
 await page.evaluate((id) => { const D = window.__dart; D.ui().profile = id; D.ui().profilPanel = 'stats'; D.ui().statsFilter = null; D.setScreen('profile'); }, dash.me);
 check('die Tafel oeffnet mit dem Dashboard: Filter-Chips, acht Kennzahlen, dreizehn Karten',

@@ -3791,12 +3791,17 @@ body.tastatur #overlay-card :is(button, select, input):focus { outline: 3px soli
   #screen-game.active #pad-total .display-row { height: 48px; margin-bottom: 6px; }
   #screen-game.active #pad-total .score-display { font-size: 2rem; }
   #screen-game.active #pad-total .quick-row { gap: var(--gap-keys); margin-bottom: 6px; }
-  #screen-game.active #pad-total .quick-row button { height: 44px; font-size: 1rem; }
-  #screen-game.active #pad-total .keypad button { font-size: 1.5rem; }
-  #screen-game.active #pad-total .keypad button.ok { font-size: 1.1rem; }
-  :is(#screen-game.active #pad-darts, #screen-finisher.active #fin-pad) .num-grid button { font-size: 1.15rem; }
-  :is(#screen-game.active #pad-darts, #screen-finisher.active #fin-pad) .num-grid button.mult, :is(#screen-game.active #pad-darts, #screen-finisher.active #fin-pad) .num-grid button.bull { font-size: 0.9rem; }
-  :is(#screen-game.active #pad-darts, #screen-finisher.active #fin-pad) .num-grid button.end-visit { font-size: 1rem; }
+  #screen-game.active #pad-total .quick-row button { height: 44px; font-size: clamp(16px, 2.6vh, 30px); }
+  /* Hochkant dieselben mitwachsenden Groessen wie quer und in Kaiwen
+     (Audit 17.11.: 27 px Ziffern auf 207 px hohen Tasten am iPad hoch). */
+  #screen-game.active #pad-total .keypad button { font-size: clamp(26px, 6.4vh, 68px); }
+  #screen-game.active #pad-total .keypad button.ok { font-size: clamp(22px, 4.8vh, 50px); }
+  /* Hochkant auch an der Breite gedeckelt: in der schmalen Split-View-
+     Spalte (320 px breit, 1180 hoch) liefen "Double" und "Bust" sonst
+     ueber die 70 px breiten Tasten (Kritik 17.11.). */
+  :is(#screen-game.active #pad-darts, #screen-finisher.active #fin-pad) .num-grid button { font-size: clamp(18px, min(5vh, 8vw), 54px); }
+  :is(#screen-game.active #pad-darts, #screen-finisher.active #fin-pad) .num-grid button.mult, :is(#screen-game.active #pad-darts, #screen-finisher.active #fin-pad) .num-grid button.bull { font-size: clamp(12px, min(3vh, 4.6vw), 32px); }
+  :is(#screen-game.active #pad-darts, #screen-finisher.active #fin-pad) .num-grid button.end-visit, :is(#screen-game.active #pad-darts, #screen-finisher.active #fin-pad) .num-grid button.bust { font-size: clamp(13px, min(4vh, 5vw), 46px); }
   /* Fernsteuerung hochkant: zwei Karten, der Rest so gross wie die Karte erlaubt. */
   :is(#screen-game.active.turnier #scoreboard, #screen-finisher.active.fern #ff-karten) .pcard .rest-zeile {
     font-size: clamp(2.4rem, 30vh, 10rem);
@@ -6738,6 +6743,12 @@ button.pa-gruppe { cursor: pointer; }
 .ft-knoepfe .pa-btn:disabled { opacity: 0.4; }
 .ft-segs { display: flex; gap: 4px; padding: 3px; border-radius: 12px; background: #141011; align-self: flex-start; width: 100%; box-sizing: border-box; }
 .ft-segs button { flex: 1 1 0; min-width: 0; padding: 0 10px; border-radius: 9px; background: transparent; border: none; color: var(--text); font-family: var(--font-body); font-weight: 600; font-size: 0.9rem; text-transform: none; letter-spacing: 0; }
+/* Umschalter Alle | Angepasst der Finish-Tabelle: dieselbe Segment-Optik
+   wie im Bogen-Dialog, das Panel liegt aber nicht in einem Overlay
+   (Audit 17.11.: Knoepfe standen in Browser-Grau). */
+.ft-filter.dl-segment { display: flex; gap: 4px; padding: 3px; border-radius: 12px; background: #1c1718; }
+.ft-filter.dl-segment button { flex: 1 1 0; min-width: 0; border-radius: 9px; background: transparent; border: none; box-shadow: none; color: var(--text); font-family: var(--font-body); font-weight: 600; white-space: nowrap; text-transform: none; letter-spacing: 0; }
+.ft-filter.dl-segment button.active { background: #2a2224; box-shadow: inset 0 0 0 1.5px var(--aktiv-linie), 0 0 18px var(--schein-weich); color: #fff; }
 .ft-segs button.active { background: #2a2224; box-shadow: inset 0 0 0 1.5px var(--aktiv-linie), 0 0 18px var(--schein-weich); color: #fff; }
 .ft-pad { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; }
 .ft-pad button { height: 44px; min-height: 0; margin: 0; padding: 0; border-radius: 8px; background: #241d1f; border: none; color: var(--text); font-family: var(--font-cond); font-weight: 700; font-size: 1.05rem; font-variant-numeric: tabular-nums; text-transform: none; letter-spacing: 0; }
