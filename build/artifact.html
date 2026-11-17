@@ -28498,7 +28498,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         if (anz >= 1 && anz <= 3 && ov.options.indexOf(anz) >= 0) {
           var coScore = ov.score, coFin = !!ov.fin, coKw = !!ov.kw;
           UI.overlay = null;
-          if (coFin) finisherFinishBuchen(anz); else if (coKw) kaiwenVisit(S.game, coScore, anz, true, false); else commitVisit(coScore, anz, true, false);
+          if (coFin) finisherFinishBuchen(anz); else if (coKw) kaiwenVisit(S.game, coScore, anz, true, false); else checkoutBuchen(coScore, anz);
         }
       } else if (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight' ||
                  ev.key === 'ArrowUp' || ev.key === 'ArrowDown' || ev.key === 'Tab') {
@@ -28514,10 +28514,31 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         var coAnz = ov.options[Math.min(ov.wahl || 0, ov.options.length - 1)];
         var coSc = ov.score;
         UI.overlay = null;
-        if (ov.fin) finisherFinishBuchen(coAnz); else if (ov.kw) kaiwenVisit(S.game, coSc, coAnz, true, false); else commitVisit(coSc, coAnz, true, false);
+        if (ov.fin) finisherFinishBuchen(coAnz); else if (ov.kw) kaiwenVisit(S.game, coSc, coAnz, true, false); else checkoutBuchen(coSc, coAnz);
       } else if (ev.key === 'Backspace') {
         if (ov.kw) undoKaiwen(S.game); else undo();
         ev.preventDefault();
+      }
+    } else if (ov.type === 'checkout-doppel') {
+      /* Doppel-Frage per Tastatur (Kritik 17.11.): am iPad mit Tastatur
+         liegt der Fokus auf der Karte statt auf einem Knopf - dann nimmt
+         Enter das wahrscheinlichste Doppel (erster grosser Knopf), sonst
+         den markierten. Backspace/Esc fuehren zurueck zur Dartzahl. */
+      var cdFokus = document.activeElement && document.activeElement.closest &&
+        document.activeElement.closest('#overlay-card [data-action="co-doppel"]');
+      if (tasteZiffer(ev) !== null) {
+        ev.preventDefault(); ev.stopImmediatePropagation();
+      } else if (ev.key === 'Enter' && !cdFokus && !ev.eingabeGebucht) {
+        ev.preventDefault();
+        var cdErst = document.querySelector('#overlay-card [data-action="co-doppel"].primary') ||
+          document.querySelector('#overlay-card [data-action="co-doppel"]');
+        if (cdErst) cdErst.click();
+      } else if (ev.key === 'Backspace' || ev.key === 'Escape') {
+        ev.preventDefault(); ev.stopImmediatePropagation();
+        var cdOpts = [];
+        for (var cdN = 1; cdN <= 3; cdN++) if (Checkout.possible(ov.rest, cdN)) cdOpts.push(cdN);
+        UI.overlay = { type: 'checkout-darts', score: ov.score, options: cdOpts, wahl: Math.max(0, cdOpts.indexOf(ov.n)) };
+        save(); render();
       }
     } else if (ov.type === 'turnier-ende') {
       var teOffene = naechsteEinzel();

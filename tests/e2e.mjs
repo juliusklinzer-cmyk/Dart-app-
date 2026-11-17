@@ -2235,6 +2235,27 @@ tippeQ = async (z) => { await page.keyboard.type(z); await page.keyboard.press('
 await tippeQ('180'); await tippeQ('180'); await tippeQ('180'); await tippeQ('180');
 await tippeQ('141');
 await page.keyboard.press('3');
+/* Auch per Tastatur kommt danach die Doppel-Frage (Julius 17.11.: in der
+   Solo-Session im Tastatur-Modus wurde nie gefragt). Der wahrscheinlichste
+   Knopf hat den Fokus, Enter nimmt ihn. */
+check('Tastatur: nach der Dartzahl fragt die App nach dem Doppel, D12 hat den Fokus', await page.evaluate(() => {
+  const o = window.__dart.ui().overlay;
+  return !!(o && o.type === 'checkout-doppel') && document.activeElement && document.activeElement.getAttribute('data-d') === '12';
+}));
+await page.keyboard.press('Backspace');
+check('Backspace fuehrt aus der Doppel-Frage zurueck zur Dartzahl, nichts gebucht', await page.evaluate(() => {
+  const o = window.__dart.ui().overlay, m = window.__dart.currentMatch();
+  return !!(o && o.type === 'checkout-darts') && !m.legs.some((l) => l.visits.some((v) => v.c));
+}));
+await page.keyboard.press('3');
+/* Am iPad mit Tastatur liegt der Fokus auf der Karte statt auf einem Knopf
+   (pointer: coarse) - Enter nimmt dann trotzdem das wahrscheinlichste Doppel. */
+await page.evaluate(() => { const k = document.getElementById('overlay-card'); k.setAttribute('tabindex', '-1'); k.focus(); });
+await page.keyboard.press('Enter');
+check('Enter bucht das Doppel an der Aufnahme (dd = 12)', await page.evaluate(() => {
+  const m = window.__dart.currentMatch();
+  return !!m && m.legs.some((l) => l.visits.some((v) => v.c && v.dd === 12));
+}));
 check('das Spielende markiert die erste Wahl', await page.evaluate(() => {
   const o = window.__dart.ui().overlay;
   return !!(o && o.type === 'game-done' && document.querySelector('#overlay-card .btn.wahl') &&
@@ -2248,6 +2269,7 @@ check('Enter bestaetigt: der Checkout ist zurueckgenommen', await page.evaluate(
   !window.__dart.ui().overlay && !window.__dart.state().game.done));
 await tippeQ('141');
 await page.keyboard.press('3');
+await page.keyboard.press('Enter');   // Doppel-Frage: D12
 await page.keyboard.press('Enter');
 check('Enter oeffnet die Spielstatistik', await visible('#screen-summary'));
 
@@ -4832,10 +4854,15 @@ await page.keyboard.press('ArrowRight');
 check('Pfeil rechts waehlt 2 Darts', await page.evaluate(() =>
   document.querySelector('#overlay-card .btn.wahl').textContent.trim() === '2'));
 await page.keyboard.press('Enter');
-check('Enter bucht den Checkout mit 2 Darts', await page.evaluate(() => {
+check('danach fragt die App per Tastatur nach dem Doppel, D20 hat den Fokus', await page.evaluate(() => {
+  const o = window.__dart.ui().overlay;
+  return !!(o && o.type === 'checkout-doppel') && document.activeElement && document.activeElement.getAttribute('data-d') === '20';
+}));
+await page.keyboard.press('Enter');
+check('Enter bucht den Checkout mit 2 Darts auf D20', await page.evaluate(() => {
   const m = window.__dart.currentMatch();
   const co = m.legs[0].visits.filter((x) => x.c)[0];
-  return m.done && co && co.d === 2;
+  return m.done && co && co.d === 2 && co.dd === 20;
 }));
 check('danach uebernimmt die grosse Endsequenz', await page.evaluate(() => {
   const o = window.__dart.ui().overlay;
