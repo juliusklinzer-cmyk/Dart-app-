@@ -656,9 +656,28 @@ Solo Boost.
    nach Average. Sind alle drei Werte gleich, weist der Siegerbildschirm einen
    geteilten Sieg aus.
 6. **Nachzügler und Frühgeher** – „Spieler nachtragen oder abmelden" auf der
-   Turnierseite ergänzt einen Spieler samt Spielen gegen alle bisherigen Teilnehmer
-   oder streicht die offenen Spiele eines Abgemeldeten. Gespielte Ergebnisse bleiben
-   in jedem Fall erhalten.
+   Turnierseite ergänzt einen Spieler samt Spielen gegen alle bisherigen Teilnehmer.
+   Wer früher gehen muss, wird abgemeldet – auch mitten im Spiel über das Menü
+   („Spieler muss gehen"). Zur Wahl: **An die Gegner werten** (eine angefangene
+   Partie zählt als Aufgabe, die geworfenen Legs bleiben in der Statistik und die
+   Legs des Gegners werden in der Tabelle aufgefüllt; jede noch nicht begonnene
+   Partie geht kampflos mit z. B. 2:0 an den Gegner) oder **Spiele streichen**
+   (entfallen ganz). In der Karriere zählt eine Aufgabe als normaler Sieg, ein w.o.
+   gar nicht. Im geteilten Turnier gibt es nur „An die Gegner werten“, das als
+   Ergebnis auch beim anderen iPad ankommt; eine Partie, die dort gerade läuft,
+   beendet das andere iPad.
+7. **Zwei Scheiben** – Im geteilten Turnier (Boards 2) ist jedes iPad eine Scheibe:
+   wer anlegt S1, wer beitritt S2, oben im Spielplan umstellbar. Über dem Spielplan
+   steht je Scheibe, was dort läuft oder als Nächstes dran ist; vorgeschlagen wird
+   die erste offene Partie, deren Spieler gerade nicht an der anderen Scheibe stehen
+   (sonst „wartet auf …“). Jede Partie trägt im Spielplan die Scheibe, auf der sie
+   läuft oder lief.
+8. **Zwischendurch** – Unter dem Spielplan lässt sich ein kurzes Nebenspiel starten
+   (Cricket, Round the World, Finisher, Hunter), vorausgewählt sind die Spieler, die
+   gerade nicht spielen. Es ist ein normales freies Spiel mit eigener Statistik,
+   jederzeit beendbar; „Spiel verlassen“ und „Zum Turnier“ führen zurück in den
+   Spielplan. Wird im geteilten Turnier die eigene Scheibe frei, meldet das
+   Nebenspiel einmal „Scheibe 2 ist frei“.
 
 ## Eingabe
 

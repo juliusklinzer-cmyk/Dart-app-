@@ -175,11 +175,14 @@ await page.goto(BASE);
    blieb ungeprueft. Die Gruppen teilen sich Zustand ueber die Variablen unten (frueher
    Top-Level-const), deshalb stehen die hier auf Modulebene. */
 async function gruppe(name, fn) {
+  /* NUR=Teilname: nur passende Gruppen (fuer schnelle Laeufe; Gruppen, die
+     auf dem Zustand frueherer aufbauen, brauchen den vollen Lauf). */
+  if (process.env.NUR && !name.includes(process.env.NUR)) return;
   group(name);
   try { await fn(); }
   catch (e) { check(name + ' (Gruppe abgebrochen)', false, String(e && e.message || e).split(String.fromCharCode(10))[0]); }
 }
-let names, matchCount, rounds, pairs, firstName, activeName, hist0, table1, winner, opts, sumText, final, afterReload, carr, board, c1, champ, avgBoard, legBoard, detail, profileNames, c2, c3, cs, pA, pB, fuehrend, cSum, cCar, cWinner, before, rtwStarter, rA, misses, weiter, rTarget, rGross, wurfZahl, vorWeiter, vorRest, rSum, rCar, rWin, rBefore, kategorien, lines, legend, colors, det, ids, winnerBefore, dartsBefore, restBefore, standingsBefore, loserId, visitsBefore, profileCount, matchesBefore, voided, addable, quoteDartWeg, quotePunkteWeg, histText, histLower, alleIds, wahlHoehe, cOrder, throwsBefore, throwsMid, deadColor, liveColor, bullTot, cgKey, finState, fst, fA, fB, zielzahl, stechenDa, rundeVorher, finSum, finCar, ffA, ffGegner, vorher, rfrage, nachher, wonVorher, bestVorher, qOrder, qIds, amWurf, qSum, qCar, wonNachher, sA, sB, dranId, stand, bA, bB, drei, drei2, tippeQ, soloId, soloVorher, soloNachher, soloProfil, tippe, ntBox, kaderIds, neuerGast, nachtrag, rtwAufbau, eZiel, rtwIds, aufnahme, rtwSt, stCar, feierText, werferName, vorWurf, feierAn, restVorBust, farben, chipFarbe, weg, engine, engineStd, kal, dblId, avgVor, fiErg, fiStand, fiGegner, fiAmWurf, dblName, fiLage1, tokensDrin, gRest, fiLage2, tabEig, ersterSpieltag, rundenSoll, ical, icalPfad, icalInhalt, einzel, wechselProbe, ltZeilen, ltSoll, ltPunkte, ltLegDiff, zoomVor, zoomNach, peNach, visit, malen, fuellIds, vorG3, planWahl, vpTablet, kachel, vorMenu, tVor, tDoppel, tLeer;
+let names, matchCount, rounds, pairs, firstName, activeName, hist0, table1, winner, opts, sumText, final, afterReload, carr, board, c1, champ, avgBoard, legBoard, detail, profileNames, c2, c3, cs, pA, pB, fuehrend, cSum, cCar, cWinner, before, rtwStarter, rA, misses, weiter, rTarget, rGross, wurfZahl, vorWeiter, vorRest, rSum, rCar, rWin, rBefore, kategorien, lines, legend, colors, det, ids, winnerBefore, dartsBefore, restBefore, standingsBefore, loserId, visitsBefore, profileCount, matchesBefore, voided, addable, quoteDartWeg, quotePunkteWeg, histText, histLower, alleIds, wahlHoehe, cOrder, throwsBefore, throwsMid, deadColor, liveColor, bullTot, cgKey, finState, fst, fA, fB, zielzahl, stechenDa, rundeVorher, finSum, finCar, ffA, ffGegner, vorher, rfrage, nachher, wonVorher, bestVorher, qOrder, qIds, amWurf, qSum, qCar, wonNachher, sA, sB, dranId, stand, bA, bB, drei, drei2, tippeQ, soloId, soloVorher, soloNachher, soloProfil, tippe, ntBox, kaderIds, neuerGast, nachtrag, rtwAufbau, eZiel, rtwIds, aufnahme, rtwSt, stCar, feierText, werferName, vorWurf, feierAn, restVorBust, farben, chipFarbe, weg, engine, engineStd, kal, dblId, avgVor, fiErg, fiStand, fiGegner, fiAmWurf, dblName, fiLage1, tokensDrin, gRest, fiLage2, tabEig, ersterSpieltag, rundenSoll, ical, icalPfad, icalInhalt, einzel, wechselProbe, ltZeilen, ltSoll, ltPunkte, ltLegDiff, zoomVor, zoomNach, peNach, visit, malen, fuellIds, vorG3, planWahl, vpTablet, kachel, vorMenu, tVor, tDoppel, tLeer, erste, geht, sbInfo, eigen, eigenP, zwLineup, fehlerVor, zurueck;
 
 async function quickLeg() {
   await typeScore(180); await typeScore(60);   // 321 / 441
@@ -1245,14 +1248,17 @@ await page.locator('#overlay-card [data-action="ov-cancel"]').click();
 await spielVerlassen();
 matchesBefore = await page.evaluate(() => window.__dart.state().matches.length);
 await page.locator('[data-action="roster-change"]').click();
-await page.locator('#overlay-card [data-action="withdraw-player"]').first().click();
+await page.locator('#overlay-card [data-action="abmelden-frage"]').first().click();
+check('Abmelden fragt: an die Gegner oder streichen',
+  (await page.locator('#overlay-card [data-action="abmelden-wo"]').count()) === 1 &&
+  (await page.locator('#overlay-card [data-action="abmelden-streichen"]').count()) === 1);
+await page.locator('#overlay-card [data-action="abmelden-streichen"]').click();
 voided = await page.evaluate(() => window.__dart.state().matches.filter((m) => m.void).length);
 check('offene Spiele des Abgemeldeten entfallen', voided > 0, String(voided));
 check('gespielte Spiele bleiben erhalten',
   (await page.evaluate(() => window.__dart.state().matches.filter((m) => m.done && m.void).length)) === 0);
-await page.locator('#overlay-card [data-action="ov-cancel"]').click();
 check('Tabelle behält den Abgemeldeten', (await st()).length === 4);
-await page.locator('[data-action="roster-change"]').click();
+await page.locator('#screen-tournament [data-action="roster-change"]').click();
 addable = await page.locator('#overlay-card [data-action="add-player"]').count();
 if (addable === 0) {
   await page.locator('#overlay-card [data-action="ov-cancel"]').click();
@@ -1270,6 +1276,113 @@ check('Nachzügler bekommt Spiele gegen alle',
   `${matchesBefore} -> ${await page.evaluate(() => window.__dart.state().matches.length)}`);
 check('Nachzügler steht in der Tabelle', (await st()).length === 5);
 
+});
+
+await gruppe('Früher gehen, zwei Scheiben, Zwischendurch (Julius 18.11.)', async () => {
+await page.evaluate(() => localStorage.clear());
+await page.reload();
+await page.locator('[data-action="start-game"]').click();
+/* Erste Partie anfangen, ein Leg an den ersten Spieler, dann muss der zweite gehen. */
+erste = await page.evaluate(() => { const m = window.__dart.state().matches[0]; return { id: m.id, a: m.p[0], b: m.p[1] }; });
+await page.locator('#schedule [data-action="open-match"][data-id="' + erste.id + '"]').click();
+await page.evaluate((e) => {
+  const m = window.__dart.state().matches.find((x) => x.id === e.id);
+  m.starter = e.a;
+  m.legs = [{ starter: e.a, winner: e.a, visits: [
+    { p: e.a, s: 180, d: 3 }, { p: e.b, s: 45, d: 3 }, { p: e.a, s: 180, d: 3 }, { p: e.b, s: 45, d: 3 }, { p: e.a, s: 141, d: 3, c: true } ] },
+    { starter: e.b, winner: null, visits: [{ p: e.b, s: 26, d: 3 }] }];
+  window.__dart.state().screen = 'game';
+  window.__dart.save(); window.__dart.render();
+}, erste);
+await page.locator('#game-menu').click();
+check('im Turnierspiel bietet das Menü „Spieler muss gehen“', await visible('#game-menu-geht'));
+await page.locator('#game-menu-geht').click();
+check('es fragt, wer geht', (await text('#overlay-card')).includes('Wer muss gehen'));
+await page.locator('#overlay-card [data-action="abmelden-frage"][data-id="' + erste.b + '"]').click();
+check('der Dialog nennt die angefangene Partie mit Stand', (await text('#overlay-card')).includes('angefangen, 0:1'), await text('#overlay-card'));
+await page.locator('#overlay-card [data-action="abmelden-wo"]').click();
+geht = await page.evaluate((e) => {
+  const S = window.__dart.state();
+  const m = S.matches.find((x) => x.id === e.id);
+  const rest = S.matches.filter((x) => x.p.includes(e.b) && x.id !== e.id);
+  const tab = window.__dart.standings();
+  const a = tab.find((x) => x.id === e.a), b = tab.find((x) => x.id === e.b);
+  return { screen: S.screen, done: m.done, winner: m.winner, aufgabe: m.aufgabe, legs: m.legs.length,
+    restWo: rest.every((x) => x.done && x.kampflos && x.winner !== e.b), aWon: a.won, aLegs: a.legsWon, bLost: b.lost, bLegsLost: b.legsLost,
+    ltw: Math.floor(S.tour.bestOf / 2) + 1, offen: S.matches.filter((x) => !x.done && !x.void && x.p.includes(e.b)).length };
+}, erste);
+check('die angefangene Partie geht als Aufgabe an den Gegner, Legs bleiben', geht.done && geht.winner === erste.a && geht.aufgabe === erste.b && geht.legs === 2, JSON.stringify(geht));
+check('seine übrigen Spiele gehen kampflos an die Gegner', geht.restWo && geht.offen === 0, JSON.stringify(geht));
+check('danach steht das Turnier im Bild', geht.screen === 'tournament');
+check('Tabelle: Sieg mit aufgefüllten Legs, der Geher hat lauter Niederlagen', geht.aWon >= 1 && geht.aLegs >= geht.ltw && geht.bLost === 3 && geht.bLegsLost >= 3 * geht.ltw, JSON.stringify(geht));
+check('im Spielplan steht „Aufgabe“ und „w.o.“', (await text('#schedule')).includes('Aufgabe') && (await text('#schedule')).includes('w.o.'));
+check('ohne zweites iPad keine Scheiben-Anzeige', (await page.locator('#schedule .sb-stand').count()) === 0);
+
+/* Zwei Scheiben: geteiltes Turnier nachgestellt, an der anderen Scheibe läuft eine Partie. */
+sbInfo = await page.evaluate((e) => {
+  const S = window.__dart.state();
+  S.tour.geteilt = true; S.tour.meineScheibe = 'S2';
+  const offen = S.matches.filter((x) => !x.done && !x.void);
+  offen[0].belegtVon = 'Max';
+  window.__dart.render();
+  return { belegt: offen[0].p, belegtId: offen[0].id };
+}, erste);
+check('zwei Scheiben: je Scheibe eine Zeile, die eigene zuerst', (await page.locator('#schedule .sb-zeile').count()) === 2 &&
+  (await page.locator('#schedule .sb-zeile').first().innerText()).includes('S2'));
+check('die andere Scheibe zeigt die laufende Partie', (await page.locator('#schedule .sb-zeile').nth(1).innerText()).toLowerCase().includes('läuft'));
+eigen = await page.locator('#schedule .sb-zeile.mein [data-action="open-match"]').getAttribute('data-id').catch(() => null);
+eigenP = eigen ? await page.evaluate((id) => window.__dart.state().matches.find((x) => x.id === id).p, eigen) : [];
+/* Drei Spieler übrig: jede andere Partie braucht einen von der anderen Scheibe - dann sagt die Zeile, auf wen sie wartet. */
+check('die eigene Scheibe schlägt eine freie Partie vor oder nennt, auf wen sie wartet', !!eigen &&
+  (!eigenP.some((id) => sbInfo.belegt.includes(id)) || (await page.locator('#schedule .sb-zeile.mein').innerText()).includes('wartet auf')),
+  JSON.stringify({ eigen, eigenP, b: sbInfo.belegt }));
+/* Ein fünfter Spieler: jetzt gibt es eine freie Partie, die vorgezogen wird. */
+await page.evaluate(() => {
+  const S = window.__dart.state();
+  const frei = S.tour.players.filter((id) => !(S.tour.raus || []).includes(id));
+  ['n1', 'n2'].forEach((id, i) => { S.profiles.push({ id, name: 'Neu ' + i, avatar: null, hue: 40 + i, created: Date.now() }); S.tour.players.push(id); });
+  S.matches.push({ id: 'mfrei', round: 99, p: ['n1', 'n2'], starter: null, legs: [], done: false, winner: null, at: null });
+  window.__dart.render();
+});
+check('eine spätere Partie mit freien Spielern wird vorgezogen', (await page.locator('#schedule .sb-zeile.mein [data-action="open-match"]').getAttribute('data-id')) === 'mfrei');
+await page.evaluate(() => { const S = window.__dart.state(); S.matches = S.matches.filter((m) => m.id !== 'mfrei'); S.tour.players = S.tour.players.filter((id) => id !== 'n1' && id !== 'n2'); S.profiles = S.profiles.filter((p) => p.id !== 'n1' && p.id !== 'n2'); window.__dart.render(); });
+check('im Spielplan trägt die laufende Partie ihre Scheibe', (await page.locator('#schedule .match-row .scheibe').count()) >= 1);
+/* Tastatur am iPad: Pfeile im Spielplan dürfen an der Scheiben-Zeile nicht stolpern. */
+fehlerVor = errors.length;
+await page.keyboard.press('ArrowDown');
+await page.keyboard.press('ArrowDown');
+check('Pfeiltasten im Spielplan mit Scheiben-Anzeige laufen ohne Fehler', errors.length === fehlerVor &&
+  (await page.locator('#schedule .match-row.wahl').count()) === 1, errors.slice(fehlerVor).join(' | '));
+await page.locator('#schedule [data-action="meine-scheibe"][data-value="S1"]').click();
+check('die Scheibe des iPads lässt sich umstellen', await page.evaluate(() => window.__dart.state().tour.meineScheibe === 'S1'));
+await page.evaluate(() => { const S = window.__dart.state(); S.tour.geteilt = false; S.matches.forEach((x) => { delete x.belegtVon; }); window.__dart.render(); });
+
+/* Fehltipp beim Namen: Abmeldung zurücknehmen öffnet alle Spiele wieder. */
+await page.locator('#screen-tournament [data-action="roster-change"]').click();
+await page.locator('#overlay-card [data-action="abmelden-zurueck"][data-id="' + erste.b + '"]').click();
+zurueck = await page.evaluate((e) => {
+  const S = window.__dart.state();
+  const m = S.matches.find((x) => x.id === e.id);
+  return { offen: !m.done && !m.aufgabe && m.legs.length === 2, alle: S.matches.filter((x) => x.p.includes(e.b)).every((x) => !x.done && !x.kampflos && !x.void), raus: (S.tour.raus || []).length };
+}, erste);
+check('Abmeldung zurücknehmen: alle seine Spiele wieder offen, Legs der angefangenen bleiben', zurueck.offen && zurueck.alle && zurueck.raus === 0, JSON.stringify(zurueck));
+await page.locator('#overlay-card [data-action="ov-cancel"]').click();
+
+/* Zwischendurch: Cricket nebenbei, zurück ins Turnier, beenden. */
+check('die Zwischendurch-Karte bietet vier Nebenspiele', (await page.locator('#zwischendurch-karte [data-action="zw-wahl"]').count()) === 4);
+await page.locator('#zwischendurch-karte [data-action="zw-wahl"][data-kind="cricket"]').click();
+check('der Dialog wählt die freien Spieler vor', (await page.locator('#overlay-card .zw-chip.an').count()) >= 1);
+zwLineup = await page.evaluate(() => window.__dart.state().lineup.slice());
+await page.locator('#overlay-card [data-action="zw-los"]').click();
+await bullOffGo();
+check('das Nebenspiel läuft als Cricket', await page.evaluate(() => { const S = window.__dart.state(); return !!S.game && S.game.kind === 'cricket' && S.game.zwischendurch === true && S.screen === 'cricket'; }));
+check('die Turnier-Aufstellung bleibt unberührt', JSON.stringify(await page.evaluate(() => window.__dart.state().lineup)) === JSON.stringify(zwLineup));
+await page.locator('#screen-cricket [data-action="game-menu"]').first().click();
+await page.locator('#cricket-menu-overlay [data-action="leave-game"]').click();
+check('Spiel verlassen führt zurück ins Turnier', await page.evaluate(() => window.__dart.state().screen === 'tournament'));
+check('die Karte zeigt das laufende Nebenspiel', (await text('#zwischendurch-karte')).includes('Cricket'));
+await page.locator('#zwischendurch-karte [data-action="zw-beenden"]').click();
+check('ein Nebenspiel ohne Wurf ist sofort weg', await page.evaluate(() => !window.__dart.state().game && window.__dart.state().screen === 'tournament'));
 });
 
 await gruppe('Regression: Nebenwirkungen der ersten Korrekturrunde', async () => {

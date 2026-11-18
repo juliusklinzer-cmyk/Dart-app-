@@ -1079,6 +1079,7 @@
     var lastRound = 0;
     S.matches.forEach(function (m) { if (m.round > lastRound) lastRound = m.round; });
     t.players.forEach(function (other) {
+      if ((t.raus || []).indexOf(other) >= 0) return;   // wer schon gegangen ist, spielt nicht mehr
       S.matches.push({
         id: uid(), round: lastRound + 1, p: [other, pid],
         starter: null, legs: [], done: false, winner: null, at: null, added: true
@@ -1089,15 +1090,82 @@
     save();
   }
 
-  function withdrawFromTournament(pid) {
+  /* Wer frueher gehen muss (Julius 18.11.: Tobi musste nach einem Leg
+     weg). art 'wo': jede offene Partie geht an den Gegner - eine
+     angefangene als Aufgabe (geworfene Legs bleiben, m.aufgabe = wer ging),
+     eine noch nicht begonnene kampflos (w.o.); in der Turniertabelle
+     zaehlt beides als Sieg mit vollen Legs (woWertung). art 'streichen':
+     die offenen Partien entfallen (abgebrochen bzw. "entfällt"), wie
+     bisher. Partien, die gerade am anderen iPad laufen, bleiben unberuehrt
+     - die beendet das andere Geraet selbst. Rueckgabe: wie viele das sind. */
+  function withdrawFromTournament(pid, art) {
+    var woanders = 0;
     S.matches.forEach(function (m) {
-      if (m.done || m.p.indexOf(pid) < 0) return;
-      // Bereits geworfene Legs bleiben gewertet – die Partie gilt als
-      // abgebrochen, nicht als nie stattgefunden.
-      m.void = true;
-      m.started = m.legs.some(function (l) { return l.visits.length > 0; });
+      if (m.done || m.void || m.p.indexOf(pid) < 0) return;
+      if (m.belegtVon) { woanders++; return; }
+      var angefangen = m.legs.some(function (l) { return l.visits.length > 0; });
+      m.weg = pid;   // fuer "Abmeldung zuruecknehmen"
+      if (art === 'wo') {
+        m.done = true;
+        m.winner = m.p[0] === pid ? m.p[1] : m.p[0];
+        m.at = Date.now();
+        if (angefangen) m.aufgabe = pid;
+        else { m.kampflos = true; m.legs = []; }
+        if (geteiltesTurnier() && window.DartSync && window.DartSync.turnier) window.DartSync.turnier.ergebnis(m);
+      } else {
+        // Bereits geworfene Legs bleiben gewertet – die Partie gilt als
+        // abgebrochen, nicht als nie stattgefunden.
+        m.void = true;
+        m.started = angefangen;
+      }
+      if (S.current === m.id) {
+        S.current = null;
+        if (S.screen === 'game' || S.screen === 'bulloff') S.screen = 'tournament';
+      }
     });
+    var t = tour();
+    if (!t.raus) t.raus = [];
+    if (t.raus.indexOf(pid) < 0) t.raus.push(pid);
     save();
+    return woanders;
+  }
+
+  /* Abmeldung zuruecknehmen (Fehltipp beim Namen): alle Partien, die das
+     Abmelden entschieden oder gestrichen hat, sind wieder offen - eine
+     Aufgabe mit ihren geworfenen Legs. Nur ohne zweites iPad: dort liegen
+     die Ergebnisse schon beim Server und beim anderen Geraet. */
+  function abmeldungZuruecknehmen(pid) {
+    if (geteiltesTurnier()) return;
+    S.matches.forEach(function (m) {
+      if (m.weg !== pid) return;
+      if (m.kampflos) { m.kampflos = false; m.legs = []; }
+      m.done = false; m.winner = null; m.at = null;
+      delete m.aufgabe; delete m.void; delete m.started; delete m.weg;
+    });
+    var t = tour();
+    if (t.raus) t.raus = t.raus.filter(function (id) { return id !== pid; });
+    save();
+  }
+
+  /* Kampflose Partien und Aufgaben in der Turniertabelle: collectStats
+     laesst kampflose aus (keine Wuerfe, und in der Karriere zaehlt so ein
+     Sieg nicht). Im Turnier zaehlen sie als Sieg mit vollen Legs (z. B.
+     2:0), eine Aufgabe fuellt die Legs des Gegners auf - sonst lohnte es
+     sich, bei 0:1 zu gehen. Nur im freien Turnier, das Ligaspiel rechnet
+     seinen Stand selbst (ligaStandDaten). */
+  function woWertung(map, matches, ltw) {
+    function st(id) { if (!map[id]) map[id] = emptyStat(id); return map[id]; }
+    matches.forEach(function (m) {
+      if (!m.done || !m.winner || m.p.length !== 2) return;
+      var verlierer = m.p[0] === m.winner ? m.p[1] : m.p[0];
+      if (m.kampflos) {
+        st(m.winner).matches++; st(m.winner).won++; st(m.winner).legsWon += ltw;
+        st(verlierer).matches++; st(verlierer).lost++; st(verlierer).legsLost += ltw;
+      } else if (m.aufgabe) {
+        var fehlt = ltw - legsWon(m, m.winner);
+        if (fehlt > 0) { st(m.winner).legsWon += fehlt; st(verlierer).legsLost += fehlt; }
+      }
+    });
   }
 
   function isPlaying(pid) {
@@ -1123,6 +1191,62 @@
    * Hintergrundtakt zeichnet sonst achtmal die Minute ohne Grund neu.
    */
   function geteiltesTurnier() { return S.tour && S.tour.geteilt ? S.tour : null; }
+
+  /* ---- Zwei Scheiben im freien Turnier (Julius 18.11.) ----
+   * Im geteilten Turnier ist jedes iPad eine Scheibe: wer anlegt S1, wer
+   * beitritt S2 (umstellbar). Anders als im Ligaspiel sind die Partien
+   * nicht fest verteilt: jede Scheibe nimmt als Naechstes die erste offene
+   * Partie, deren Spieler gerade frei sind - so wartet niemand auf einen,
+   * der noch an der anderen Scheibe steht. Gespielt bekommt die Partie die
+   * Scheibe des iPads, das sie geoeffnet hat (m.scheibe, kommt mit dem
+   * Ergebnis beim anderen an). */
+  function scheibenAnzeige() { return !!(geteiltesTurnier() && !S.tour.liga); }
+  function meineScheibe() {
+    if (!S.tour) return 'S1';
+    /* Vor dem Update beigetreten: dort fehlt das Feld - wer beigetreten
+       ist, hat angelegtVon. */
+    if (!S.tour.meineScheibe) return S.tour.angelegtVon ? 'S2' : 'S1';
+    return S.tour.meineScheibe === 'S2' ? 'S2' : 'S1';
+  }
+  function andereScheibe() { return meineScheibe() === 'S1' ? 'S2' : 'S1'; }
+  function partieAngefangen(m) { return m.legs.some(function (l) { return l.visits.length > 0; }); }
+  /* Wo eine offene Partie gerade laeuft (oder angefangen liegt), sonst null. */
+  function laeuftAuf(m) {
+    if (m.done || m.void) return null;
+    if (m.belegtVon) return andereScheibe();
+    if (S.current === m.id || partieAngefangen(m)) return m.scheibe || meineScheibe();
+    return null;
+  }
+  function scheibeVon(m) {
+    if (m.done) return m.scheibe || null;
+    return laeuftAuf(m);
+  }
+  /* Je Scheibe: die laufende Partie oder die naechste. wartet = Spieler
+     der naechsten, die gerade an der anderen Scheibe stehen. */
+  function naechsteJeScheibe() {
+    var aus = { S1: null, S2: null };
+    var belegt = {};
+    S.matches.forEach(function (m) {
+      var wo = laeuftAuf(m);
+      if (!wo) return;
+      m.p.forEach(function (id) { belegt[id] = wo; });
+      if (!aus[wo]) aus[wo] = { m: m, laeuft: true, wartet: [] };
+    });
+    var offen = S.matches.filter(function (m) { return !m.done && !m.void && !laeuftAuf(m); });
+    ['S1', 'S2'].forEach(function (sb) {
+      if (aus[sb]) return;
+      var frei = null;
+      for (var i = 0; i < offen.length; i++) {
+        if (!offen[i].p.some(function (id) { return belegt[id]; })) { frei = offen[i]; break; }
+      }
+      var m = frei || offen[0];
+      if (!m) return;
+      aus[sb] = { m: m, laeuft: false, wartet: m.p.filter(function (id) { return belegt[id]; }) };
+      offen.splice(offen.indexOf(m), 1);
+      m.p.forEach(function (id) { if (!belegt[id]) belegt[id] = sb; });
+    });
+    return aus;
+  }
 
   /* Der Turnier-Modus (Riesenanzeige am Board) gehoert zu Liga-Einzeln -
      dort startet er am Board-iPad von selbst. In normalen Turnieren und im
@@ -1224,7 +1348,7 @@
       S.tour = {
         start: daten.plan.start, bestOf: daten.plan.bestOf,
         players: (daten.plan.players || []).slice(),
-        geteilt: true, sid: daten.id, cursor: 0,
+        geteilt: true, sid: daten.id, cursor: 0, meineScheibe: 'S2',
         angelegtVon: daten.angelegtVonName || null,
         liga: daten.plan.liga || null,
         planStand: daten.plan.planStand || 0
@@ -1311,12 +1435,13 @@
     }
     if (daten.status === 'beendet') S.tour.beendet = true;
     if (geteiltesTurnierAufraeumen()) neu = true;
+    if (neu) zwischendurchPruefen();
     /* Frische Ergebnisse des anderen Geraets sofort ins Bild -- sonst zeigt
        die Tabelle rechts alte Averages, bis irgendetwas anderes neu zeichnet. */
     if (neu) setTimeout(render, 0);
     /* Kam das letzte Einzel des Ligaspiels vom anderen Gerät, stempelt auch
        dieses Gerät die Endzeit für den Spielberichtsbogen. */
-    if (neu && S.tour.liga && !S.tour.liga.zeitBis && S.matches.length && !nextOpenMatch()) {
+    if (neu && S.tour && S.tour.liga && !S.tour.liga.zeitBis && S.matches.length && !nextOpenMatch()) {
       S.tour.liga.zeitBis = Date.now();
     }
     if (neu) save();
@@ -2487,7 +2612,7 @@
     if (!m) return;
     /* Ein nur als Ergebnis eingetragenes Einzel hat keine Aufnahme, die
        sich zuruecknehmen liesse - es wird ueber "aendern" korrigiert. */
-    if (m.ergebnis || m.kampflos) { UI.overlay = null; render(); return; }
+    if (m.ergebnis || m.kampflos || m.aufgabe) { UI.overlay = null; render(); return; }
     while (m.legs.length && m.legs[m.legs.length - 1].visits.length === 0) m.legs.pop();
     if (!m.legs.length) {
       /* Noch nichts geworfen: Zurueck fuehrt wieder ins Ausbullen - ein
@@ -2692,6 +2817,7 @@
   /* Statistik des laufenden Turniers. */
   function stats() {
     var map = collectStats([{ matches: S.matches, start: tourStart() }], tourPlayers());
+    if (!(S.tour && S.tour.liga)) woWertung(map, S.matches, legsToWin());
     Object.keys(map).forEach(function (k) { finalize(map[k]); });
     return map;
   }
@@ -2891,6 +3017,7 @@
     var start = (h.settings && h.settings.start) || 501;
     var ids = (h.lineup || []).slice();
     var map = collectStats([{ matches: h.matches, start: start }], ids);
+    if (!h.liga) woWertung(map, h.matches, Math.floor(((h.settings && h.settings.bestOf) || 1) / 2) + 1);
     ids.forEach(function (id) {
       finalize(map[id]);
       map[id].name = pname(id);
@@ -3665,12 +3792,15 @@
     return g.legs.filter(function (l) { return l.winner; }).length;
   }
 
+  /* Ein Nebenspiel fuehrt zurueck ins laufende Turnier. */
+  function nachSpielScreen(g) { return g && g.zwischendurch && S.matches.length ? 'tournament' : 'setup'; }
   function finishGame() {
+    var zuruck = nachSpielScreen(S.game);
     liveEnde(S.game);
     archiveGame(S.game);
     S.game = null;
     UI.overlay = null;
-    S.screen = 'setup';
+    S.screen = zuruck;
     save(); render();
   }
 
@@ -4704,6 +4834,70 @@
       '</div>';
   }
 
+  /* ================= Zwischendurch (Julius 18.11.) =================
+   * Wartet eine Scheibe, weil ein noetiger Spieler noch an der anderen
+   * steht, laesst sich ein kurzes Nebenspiel einschieben: Cricket, Round
+   * the World, Finisher oder Hunter, jederzeit beendbar. Es ist ein ganz
+   * normales freies Spiel (S.game, eigene Statistik), nur mit dem Merker
+   * zwischendurch - der Weg zurueck fuehrt dann ins Turnier statt ins
+   * Setup. Das Schnelle X01 fehlt bewusst: es teilt sich den
+   * Spielbildschirm mit den Turnierpartien. */
+  var ZW_ARTEN = ['cricket', 'rtw', 'finisher', 'hunter'];
+  function zwischendurchFrei() {
+    /* Wer gerade nicht an einer Scheibe steht. */
+    var belegt = {};
+    S.matches.forEach(function (m) {
+      if (m.done || m.void) return;
+      if (m.belegtVon || S.current === m.id || partieAngefangen(m)) m.p.forEach(function (id) { belegt[id] = 1; });
+    });
+    var raus = (S.tour && S.tour.raus) || [];
+    return tourPlayers().filter(function (id) { return !belegt[id] && profile(id) && raus.indexOf(id) < 0; });
+  }
+  function zwischendurchKarte() {
+    var g = S.game;
+    if (g && g.zwischendurch) {
+      return '<h2>Zwischendurch</h2>' +
+        '<div class="zw-laeuft"><div><b>' + esc(kindName(g.kind)) + '</b><small>' +
+          esc((g.players || []).map(pname).join(', ')) + (g.done ? ' · fertig' : ' · läuft') + '</small></div>' +
+        '<div class="zw-knoepfe"><button class="btn ghost" data-action="zw-beenden">Beenden</button>' +
+        '<button class="btn primary" data-action="resume">' + (g.done ? 'Ergebnis' : 'Weiter') + '</button></div></div>';
+    }
+    if (g) return '<h2>Zwischendurch</h2><p class="hint">Es läuft noch ein ' + esc(kindName(g.kind)) + ' (oben unter „Spiel“ fortsetzen oder beenden), danach geht hier wieder ein Nebenspiel.</p>';
+    return '<h2>Zwischendurch</h2>' +
+      '<p class="hint">Warten bis die andere Scheibe frei ist? Ein kurzes Spiel nebenbei, jederzeit beendbar. Das Turnier läuft weiter.</p>' +
+      '<div class="zw-arten">' + ZW_ARTEN.map(function (k) {
+        return '<button class="btn ghost" data-action="zw-wahl" data-kind="' + k + '">' + esc(kindName(k)) + '</button>';
+      }).join('') + '</div>';
+  }
+  function zwischendurchStarten(kind, ids) {
+    if (ZW_ARTEN.indexOf(kind) < 0 || !ids.length) return;
+    /* Eine geoeffnete Turnierpartie loslassen (der Spielstand bleibt), sonst
+       teilten sich beide den Ausbull-Bildschirm. */
+    if (S.current) { partieVerlassen(); S.current = null; }
+    var altLineup = S.lineup.slice(), altOnline = S.settings.online;
+    S.lineup = ids.slice();
+    S.settings.online = 0;   // ein Nebenspiel bleibt an diesem iPad
+    try { startGame(kind); } finally { S.lineup = altLineup; S.settings.online = altOnline; }
+    if (S.game && S.game.kind === kind) {
+      S.game.zwischendurch = true;
+      /* Was jetzt schon frei ist, meldet die App nicht noch einmal. */
+      var nx = scheibenAnzeige() ? naechsteJeScheibe()[meineScheibe()] : null;
+      UI.zwGemeldet = nx && !nx.laeuft && !nx.wartet.length ? nx.m.id : null;
+    }
+    save(); render();
+  }
+  /* Nach einem Abgleich: ist die naechste Partie der eigenen Scheibe
+     gerade frei geworden, sagt das Nebenspiel einmal Bescheid. */
+  function zwischendurchPruefen() {
+    var g = S.game;
+    if (!g || !g.zwischendurch || g.done || !scheibenAnzeige()) return;
+    if (S.screen !== spielScreen(g.kind) || UI.overlay || UI.menu) return;
+    var nx = naechsteJeScheibe()[meineScheibe()];
+    if (!nx || nx.laeuft || nx.wartet.length || nx.m.id === UI.zwGemeldet) return;
+    UI.zwGemeldet = nx.m.id;
+    UI.overlay = { type: 'zw-frei', id: nx.m.id };
+  }
+
   function renderTournament() {
     var liga = S.tour && S.tour.liga ? S.tour.liga : null;
     var kopfH1 = document.querySelector('#screen-tournament .app-header h1');
@@ -4768,6 +4962,34 @@
 
     var next = nextOpenMatch();
     var html = '';
+    /* Zwei Scheiben (geteiltes freies Turnier): oben je Scheibe, was dort
+       laeuft oder als Naechstes dran ist - die eigene zuerst, mit Start. */
+    var sbAnz = scheibenAnzeige();
+    if (sbAnz) {
+      var jeSb = naechsteJeScheibe();
+      var ich = meineScheibe();
+      var eigenNaechste = jeSb[ich] && !jeSb[ich].laeuft ? jeSb[ich].m : null;
+      if (eigenNaechste) next = eigenNaechste;
+      var sbZeile = function (sb) {
+        var e = jeSb[sb];
+        var mein = sb === ich;
+        var paar = e ? esc(pname(e.m.p[0])) + ' <span class="muted">vs</span> ' + esc(pname(e.m.p[1])) : '';
+        return '<div class="sb-zeile' + (mein ? ' mein' : '') + '">' +
+          '<span class="scheibe">' + sb + '</span>' +
+          '<div class="sb-text"><small>' + (mein ? 'Dieses iPad · ' : '') +
+            (!e ? 'nichts mehr offen' : e.laeuft ? 'läuft' : e.wartet.length ? 'als Nächstes, wartet auf ' + esc(e.wartet.map(pname).join(' und ')) : 'als Nächstes') +
+          '</small>' + (e ? '<span class="sb-paar">' + paar + '</span>' : '') + '</div>' +
+          (mein && e && !e.m.belegtVon && !S.tour.beendet
+            ? '<button class="go" data-action="open-match" data-id="' + esc(e.m.id) + '">' + (e.laeuft || e.m.legs.length ? 'Weiter' : 'Start') + '</button>' : '') +
+          '</div>';
+      };
+      html += '<div class="sb-stand">' + sbZeile(ich) + sbZeile(ich === 'S1' ? 'S2' : 'S1') +
+        '<div class="sb-ich"><span>Dieses iPad ist</span><div class="options sb-wahl" role="group" aria-label="Scheibe dieses iPads">' +
+          ['S1', 'S2'].map(function (sb) {
+            return '<button data-action="meine-scheibe" data-value="' + sb + '" class="' + (sb === ich ? 'active' : '') + '" aria-pressed="' + (sb === ich) + '">Scheibe ' + sb.slice(1) + '</button>';
+          }).join('') +
+        '</div></div></div>';
+    }
     var round = 0;
     S.matches.forEach(function (m) {
       if (m.round !== round) {
@@ -4783,7 +5005,7 @@
       var isNext = next && next.id === m.id;
       var score = m.kampflos
         ? (m.winner === m.p[0] ? legsToWin() + ':0' : '0:' + legsToWin()) + ' w.o.'
-        : m.legs.length ? legsWon(m, m.p[0]) + ':' + legsWon(m, m.p[1]) : '–:–';
+        : m.legs.length ? legsWon(m, m.p[0]) + ':' + legsWon(m, m.p[1]) + (m.aufgabe ? ' Aufgabe' : '') : '–:–';
       /* Zaehlt der Gegner mit seinem System (Modus "Nur Ergebnisse"), wird
          je Einzel nur der Leg-Stand eingetragen - der Knopf dafuer steht
          dann vorn, Mitschreiben in der App bleibt daneben moeglich. */
@@ -4794,7 +5016,8 @@
           posA + (m.winner === m.p[0] ? '<b>' + esc(a) + '</b>' : esc(a)) + ' <span class="muted">vs</span> ' +
           posB + (m.winner === m.p[1] ? '<b>' + esc(b) + '</b>' : esc(b)) +
         '</div>' +
-        (liga && m.scheibe ? '<span class="scheibe">' + m.scheibe + '</span>' : '') +
+        (liga && m.scheibe ? '<span class="scheibe">' + m.scheibe + '</span>'
+          : sbAnz && scheibeVon(m) ? '<span class="scheibe">' + scheibeVon(m) + '</span>' : '') +
         '<div class="res">' + (m.void ? (m.started ? 'abgebrochen ' + score : 'entfällt') : score) + '</div>' +
         (m.done || m.void
           ? (liga && m.kampflos
@@ -4819,9 +5042,11 @@
         '</div>';
     });
     $('schedule').innerHTML = html;
+    $('zwischendurch-karte').classList.toggle('hidden', !!liga);
+    $('zwischendurch-karte').innerHTML = liga ? '' : zwischendurchKarte();
     /* Per Tastatur gewaehltes Einzel (8/2 bzw. Pfeile, Enter startet). */
     if (UI.planTastatur) {
-      var pwKnopf = UI.planWahlId ? document.querySelector('#schedule [data-action="open-match"][data-id="' + UI.planWahlId + '"]') : null;
+      var pwKnopf = UI.planWahlId ? document.querySelector('#schedule .match-row [data-action="open-match"][data-id="' + UI.planWahlId + '"]') : null;
       if (pwKnopf) pwKnopf.closest('.match-row').classList.add('wahl');
     }
 
@@ -9312,6 +9537,8 @@
     var menuEnde = schnell && (m.session || entschiedeneLegs(S.game) > 0);
     $('game-menu-session').classList.toggle('hidden', !menuEnde);
     $('game-menu-session').textContent = m.session ? 'Session beenden' : 'Spiel beenden & speichern';
+    /* Im freien Turnier: wer frueher gehen muss (Julius 18.11.). */
+    $('game-menu-geht').classList.toggle('hidden', schnell || !S.tour || !!S.tour.liga || m.done || m.p.length !== 2);
     $('game-menu-overlay').classList.toggle('hidden', !UI.menu);
     menueFokus($('game-menu-overlay'));
     var hz = $('spiel-hinweis');
@@ -12399,7 +12626,7 @@
         '<h2 class="kt sg-abstand">Highlights</h2><div class="sg-hl-liste">' + hlZeilen(d.hl) + '</div></div>' +
       '</div>';
     $('summary-actions').innerHTML = '<div class="sg-aktionen"><div class="sg-knoepfe">' +
-      '<button class="btn ghost" data-action="finish-game">Zum Menü</button>' +
+      '<button class="btn ghost" data-action="finish-game">' + (S.game && S.game.zwischendurch && S.matches.length ? 'Zum Turnier' : 'Zum Menü') + '</button>' +
       '<button class="btn start-rot" data-action="restart-game">' + d.haupt + '</button></div></div>';
   }
 
@@ -12531,7 +12758,7 @@
       var mAkt = null;
       if (found.live) {
         mAkt = {
-          fix: m.done && !m.ergebnis && !m.kampflos ? { label: 'Letzte Aufnahme zurücknehmen', action: 'reopen-match', attrs: ' data-id="' + esc(m.id) + '"' } : null,
+          fix: m.done && !m.ergebnis && !m.kampflos && !m.aufgabe ? { label: 'Letzte Aufnahme zurücknehmen', action: 'reopen-match', attrs: ' data-id="' + esc(m.id) + '"' } : null,
           zurueck: { label: 'Zur Tabelle', action: 'to-tournament' },
           haupt: !allMatchesDone() ? { label: 'Nächstes Spiel', action: 'ov-next-match' } : { label: 'Turnier auswerten', action: 'to-winner' }
         };
@@ -13785,17 +14012,80 @@
         '<button class="' + gdKl(0, 'btn primary full') + '" data-action="open-summary" data-kind="' + esc((S.game ? S.game.kind : 'cricket')) + '" data-id="current">Weiter zur Spielstatistik</button>' +
         '<button class="' + gdKl(1, 'btn ghost full') + '" data-action="undo-game">Letzten Dart zurück</button>' +
         (gdWahl >= 0 ? '<p class="te-hint">↑ ↓ / Tab · wählen &nbsp;&nbsp; Enter · bestätigen</p>' : '');
+    } else if (o.type === 'zwischendurch') {
+      var zwFrei = zwischendurchFrei();
+      var zwMax = o.kind === 'hunter' ? HUNTER_MAX : 12;
+      html = '<h3>' + esc(kindName(o.kind)) + ' zwischendurch</h3>' +
+        '<p>Wer spielt mit? Die Reihenfolge des Antippens ist die Wurfreihenfolge.</p>' +
+        '<div class="zw-spieler">' + tourPlayers().filter(function (id) { return profile(id); }).map(function (id) {
+          var nr = o.sel.indexOf(id);
+          return '<button class="zw-chip' + (nr >= 0 ? ' an' : '') + '" data-action="zw-spieler" data-id="' + esc(id) + '" aria-pressed="' + (nr >= 0) + '">' +
+            avatarHTML(profile(id), 'sm') + '<span>' + esc(pname(id)) + '</span>' +
+            (nr >= 0 ? '<i>' + (nr + 1) + '</i>' : zwFrei.indexOf(id) < 0 ? '<small>spielt</small>' : '') + '</button>';
+        }).join('') + '</div>' +
+        (o.sel.length > zwMax ? '<p class="hint">' + esc(kindName(o.kind)) + ' spielen höchstens ' + zwMax + '.</p>' : '') +
+        '<div class="row-btns two"><button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
+        '<button class="btn primary" data-action="zw-los"' + (o.sel.length && o.sel.length <= zwMax ? '' : ' disabled') + '>Los geht’s</button></div>';
+    } else if (o.type === 'zw-frei') {
+      var zfM = matchById(o.id);
+      html = '<h3>Scheibe ' + meineScheibe().slice(1) + ' ist frei</h3>' +
+        '<p>' + (zfM ? '<b>' + esc(pname(zfM.p[0])) + '</b> gegen <b>' + esc(pname(zfM.p[1])) + '</b> kann jetzt starten.' : 'Das nächste Turnierspiel kann starten.') +
+        ' Das Nebenspiel bleibt stehen, bis ihr es beendet.</p>' +
+        '<div class="row-btns two"><button class="btn ghost" data-action="ov-cancel">Weiterspielen</button>' +
+        '<button class="btn primary" data-action="zw-zum-turnier">Zum Turnier</button></div>';
+    } else if (o.type === 'geht-wer') {
+      /* Aus dem laufenden Spiel: wer muss gehen? */
+      var gwM = matchById(o.id);
+      html = '<h3>Wer muss gehen?</h3>' +
+        '<p>Die Partie geht an den anderen, die geworfenen Legs bleiben in der Statistik. Danach kannst du auch die übrigen Spiele regeln.</p>' +
+        (gwM ? '<div class="row-btns two">' + gwM.p.map(function (id) {
+          return '<button class="btn" data-action="abmelden-frage" data-id="' + esc(id) + '">' + esc(pname(id)) + '</button>';
+        }).join('') + '</div>' : '') +
+        '<button class="btn ghost full" data-action="ov-cancel">Zurück zum Spiel</button>';
+    } else if (o.type === 'abmelden') {
+      /* Wer geht, dessen offene Spiele: an die Gegner (Aufgabe bzw. w.o.)
+         oder streichen. Im geteilten Turnier nur an die Gegner - das geht
+         als Ergebnis an das andere iPad, ein Streichen kennt der Server nicht. */
+      var abOffen = S.matches.filter(function (m) { return !m.done && !m.void && m.p.indexOf(o.id) >= 0; });
+      var abWoanders = abOffen.filter(function (m) { return m.belegtVon; });
+      var abHier = abOffen.filter(function (m) { return !m.belegtVon; });
+      var abLaeuft = abHier.filter(function (m) { return m.legs.some(function (l) { return l.visits.length > 0; }); });
+      var abGeg = function (m) { return pname(m.p[0] === o.id ? m.p[1] : m.p[0]); };
+      var ltwAb = legsToWin();
+      html = '<h3>' + esc(pname(o.id)) + ' geht</h3>' +
+        '<div class="ab-liste">' +
+          abLaeuft.map(function (m) {
+            return '<div class="ab-zeile"><b>' + esc(abGeg(m)) + '</b><span>angefangen, ' + legsWon(m, o.id) + ':' + legsWon(m, m.p[0] === o.id ? m.p[1] : m.p[0]) + '</span></div>';
+          }).join('') +
+          (abHier.length - abLaeuft.length
+            ? '<div class="ab-zeile"><b>' + plural(abHier.length - abLaeuft.length, 'offenes Spiel', 'offene Spiele') + '</b><span>' +
+              esc(abHier.filter(function (m) { return abLaeuft.indexOf(m) < 0; }).map(abGeg).join(', ')) + '</span></div>' : '') +
+        '</div>' +
+        (abWoanders.length ? '<p class="hint">' + plural(abWoanders.length, 'Spiel läuft', 'Spiele laufen') + ' gerade am anderen iPad – das dort über das Menü beenden.</p>' : '') +
+        (abHier.length
+          ? '<button class="btn primary full" data-action="abmelden-wo" data-id="' + esc(o.id) + '">An die Gegner werten</button>' +
+            '<p class="hint">Jeder Gegner bekommt den Sieg und ' + ltwAb + ':0 Legs in der Tabelle' +
+              (abLaeuft.length ? ', bei der angefangenen Partie werden die Legs aufgefüllt' : '') +
+              '. Geworfene Legs bleiben in der Statistik.</p>' +
+            (geteiltesTurnier() ? '' :
+              '<button class="btn ghost full" data-action="abmelden-streichen" data-id="' + esc(o.id) + '">Spiele streichen</button>' +
+              '<p class="hint">Die Spiele entfallen ganz, niemand bekommt dafür einen Sieg.</p>')
+          : '<p>Keine offenen Spiele auf diesem iPad.</p>') +
+        '<button class="btn ghost full" data-action="' + (o.zurueck === 'spiel' ? 'ov-cancel' : 'roster-change') + '">Zurück</button>';
     } else if (o.type === 'roster-change') {
       var inTour = tourPlayers();
+      var rcRaus = (S.tour && S.tour.raus) || [];
       html = '<h3>Spieler im Turnier</h3>' +
-        '<p>Nachzügler bekommen Spiele gegen alle bisherigen Teilnehmer. Wer abgemeldet wird, behält seine gespielten Ergebnisse; seine offenen Spiele entfallen.</p>' +
+        '<p>Nachzügler bekommen Spiele gegen alle bisherigen Teilnehmer. Wer früher gehen muss, wird abgemeldet: seine offenen Spiele gehen an die Gegner oder entfallen, Gespieltes bleibt.</p>' +
         '<div class="roster-change">' +
         inTour.map(function (id) {
           var out = !isPlaying(id);
           return '<div class="rc-row">' + avatarHTML(profile(id), 'sm') +
             '<span class="rc-name">' + esc(pname(id)) + '</span>' +
-            (out ? '<span class="muted">keine offenen Spiele</span>'
-                 : '<button class="btn danger ghost small" data-action="withdraw-player" data-id="' + esc(id) + '">Abmelden</button>') +
+            (out ? (rcRaus.indexOf(id) >= 0 && !geteiltesTurnier()
+                    ? '<button class="btn ghost small" data-action="abmelden-zurueck" data-id="' + esc(id) + '">Zurücknehmen</button>'
+                    : '<span class="muted">' + (rcRaus.indexOf(id) >= 0 ? 'abgemeldet' : 'keine offenen Spiele') + '</span>')
+                 : '<button class="btn danger ghost small" data-action="abmelden-frage" data-id="' + esc(id) + '">Abmelden</button>') +
             '</div>';
         }).join('') +
         activeProfiles().filter(function (p) { return inTour.indexOf(p.id) < 0; }).map(function (p) {
@@ -14103,6 +14393,7 @@
       S.tour.geteilt = true;
       S.tour.sid = sid;
       S.tour.cursor = 0;
+      S.tour.meineScheibe = 'S1';
       var konten = S.tour.players.filter(function (id) { return String(id).indexOf('u_') === 0; });
       window.DartSync.turnier.anlegen(sid, plan, konten).catch(function () {
         S.tour.geteilt = false;
@@ -14469,6 +14760,7 @@
       S.tour.geteilt = true;
       S.tour.sid = sid;
       S.tour.cursor = 0;
+      S.tour.meineScheibe = 'S1';
       var konten = S.tour.players.filter(function (id) { return String(id).indexOf('u_') === 0; });
       window.DartSync.turnier.anlegen(sid, plan, konten).catch(function () {
         S.tour.geteilt = false;
@@ -14522,6 +14814,7 @@
     var m = matchById(id);
     if (!m) { render(); return; }
     S.current = id;
+    if (scheibenAnzeige() && !m.done && !m.belegtVon) m.scheibe = meineScheibe();
     UI.input = ''; UI.darts = []; UI.mult = 1; UI.modeOverride = null; UI.error = ''; UI.overlay = null; UI.menu = false;
     UI.bullWahl = 0; UI.bullTastatur = tastaturBetrieb();
     /* Am Board-iPad (Turnier-Modus gemerkt) startet jedes Liga-Einzel
@@ -14582,7 +14875,7 @@
         // nicht gespeichertes zeigt sich im Setup als Hinweis-Box.
         // spielScreen: das Schnelle Spiel heisst 'quick', sein Bildschirm
         // aber 'game' - der rohe kind-Name liesse die Seite schwarz.
-        if (target === 'setup' && S.game && !S.game.done) target = spielScreen(S.game.kind);
+        if (target === 'setup' && S.game && !S.game.done && !(S.game.zwischendurch && S.matches.length)) target = spielScreen(S.game.kind);
         /* Ein fertig gespieltes Turnier, das nie über „Turnier abschließen"
            gegangen ist, hielt den Game-Tab sonst wochenlang in der alten
            Tabelle fest. Es wird jetzt wie beim Abschließen archiviert (der
@@ -14960,7 +15253,7 @@
       case 'summary-back': {
         var from = UI.summary && UI.summary.from;
         UI.summary = null;
-        S.screen = from === 'stats' || from === 'players' || from === 'liga' ? from
+        S.screen = from === 'stats' || from === 'players' || from === 'liga' || (from === 'tournament' && S.matches.length) ? from
           : S.game && !S.game.done ? S.game.kind
           : S.matches.length ? 'tournament' : 'stats';
         save(); render();
@@ -15054,7 +15347,7 @@
       case 'leave-game':
         UI.menu = false;
         if (S.game && S.game.done) finishGame();
-        else { S.screen = 'setup'; UI.overlay = null; save(); render(); }
+        else { S.screen = nachSpielScreen(S.game); UI.overlay = null; save(); render(); }
         break;
       /* Einem geteilten Turnier beitreten. Ein eigenes laufendes Turnier
          wird vorher archiviert – wie beim Start eines neuen auch. */
@@ -15152,6 +15445,13 @@
         break;
       case 'restart-game': {
         var kind = S.game ? S.game.kind : S.mode;
+        /* Revanche eines Nebenspiels: dieselben Spieler, wieder zwischendurch. */
+        if (S.game && S.game.zwischendurch && S.matches.length) {
+          var rzIds = (S.game.players || []).filter(function (id) { return profile(id); });
+          finishGame();
+          zwischendurchStarten(kind, rzIds);
+          break;
+        }
         finishGame();
         startGame(kind);
         break;
@@ -15171,7 +15471,7 @@
       case 'to-tournament':
         UI.menu = false;
         // Aus dem Bull-Off eines Trainingsspiels führt der Weg ins Setup zurück.
-        if (S.game && !S.game.started) { liveEnde(S.game); S.game = null; S.screen = 'setup'; }
+        if (S.game && !S.game.started) { var bzZiel = nachSpielScreen(S.game); liveEnde(S.game); S.game = null; S.screen = bzZiel; }
         // Ein Schnelles Spiel gehört zu keinem Spielplan – zurück ins Setup,
         // das laufende Spiel bleibt in der Fortsetzen-Box stehen.
         else if (S.game && S.game.kind === 'quick') S.screen = 'setup';
@@ -15189,6 +15489,8 @@
         save(); render();
         break;
       case 'open-match':
+        /* Ein Nebenspiel, das noch beim Ausbullen steht, weicht der Turnierpartie. */
+        if (S.game && S.game.zwischendurch && !S.game.started) { liveEnde(S.game); S.game = null; }
         openMatch(el.getAttribute('data-id'));
         break;
       case 'pick-starter': {
@@ -16067,9 +16369,84 @@
         render();
         break;
       case 'withdraw-player':
-        withdrawFromTournament(el.getAttribute('data-id'));
+        withdrawFromTournament(el.getAttribute('data-id'), 'streichen');
         render();
         break;
+      case 'zw-wahl': {
+        var zwKind = el.getAttribute('data-kind');
+        if (ZW_ARTEN.indexOf(zwKind) < 0 || S.game) break;
+        UI.overlay = { type: 'zwischendurch', kind: zwKind, sel: zwischendurchFrei().slice(0, zwKind === 'hunter' ? HUNTER_MAX : 12) };
+        render();
+        break;
+      }
+      case 'zw-spieler': {
+        var zo = UI.overlay;
+        if (!zo || zo.type !== 'zwischendurch') break;
+        var zid = el.getAttribute('data-id');
+        var zi = zo.sel.indexOf(zid);
+        if (zi >= 0) zo.sel.splice(zi, 1); else zo.sel.push(zid);
+        render();
+        break;
+      }
+      case 'zw-los': {
+        var zl = UI.overlay;
+        if (!zl || zl.type !== 'zwischendurch' || S.game) break;
+        if (!zl.sel.length || zl.sel.length > (zl.kind === 'hunter' ? HUNTER_MAX : 12)) break;
+        UI.overlay = null;
+        zwischendurchStarten(zl.kind, zl.sel);
+        break;
+      }
+      case 'zw-zum-turnier':
+        UI.overlay = null; UI.menu = false;
+        S.screen = 'tournament';
+        save(); render();
+        break;
+      case 'zw-beenden':
+        if (!S.game || !S.game.zwischendurch) break;
+        if (S.game.done) { finishGame(); break; }
+        if (!(S.game.throws || []).length && !(S.game.rounds || []).some(function (r) { return r.throws && r.throws.length; })) {
+          liveEnde(S.game); S.game = null; save(); render(); break;
+        }
+        UI.overlay = { type: 'confirm-discard-game' };
+        render();
+        break;
+      case 'meine-scheibe':
+        if (!S.tour) break;
+        S.tour.meineScheibe = el.getAttribute('data-value') === 'S2' ? 'S2' : 'S1';
+        save(); render();
+        break;
+      case 'abmelden-frage': {
+        var afId = el.getAttribute('data-id');
+        var afVonSpiel = !!(UI.overlay && UI.overlay.type === 'geht-wer');
+        UI.menu = false;
+        UI.overlay = { type: 'abmelden', id: afId, zurueck: afVonSpiel ? 'spiel' : 'liste' };
+        render();
+        break;
+      }
+      case 'abmelden-wo':
+      case 'abmelden-streichen': {
+        var abId = el.getAttribute('data-id');
+        if (!S.tour || S.tour.liga) break;
+        if (action === 'abmelden-streichen' && geteiltesTurnier()) break;
+        withdrawFromTournament(abId, action === 'abmelden-wo' ? 'wo' : 'streichen');
+        UI.overlay = null;
+        if (S.screen === 'game' || S.screen === 'bulloff') S.screen = 'tournament';
+        save(); render();
+        break;
+      }
+      case 'abmelden-zurueck':
+        if (!S.tour || S.tour.liga) break;
+        abmeldungZuruecknehmen(el.getAttribute('data-id'));
+        render();
+        break;
+      case 'spieler-geht': {
+        var sgM = S.current ? matchById(S.current) : null;
+        UI.menu = false;
+        if (!sgM || sgM.done || !S.tour || S.tour.liga) { render(); break; }
+        UI.overlay = { type: 'geht-wer', id: sgM.id };
+        render();
+        break;
+      }
       case 'reset':
         UI.overlay = { type: 'confirm-reset' }; render();
         break;
@@ -16086,18 +16463,20 @@
       /* Ein abgebrochenes freies Spiel hat keinen Sieger und damit nichts,
          was in die Statistik gehören würde – es wird verworfen. */
       case 'ov-keep-legs':
+        var kzZiel = nachSpielScreen(S.game);
         liveEnde(S.game);
         archiveGame(S.game, true);
         S.game = null;
         UI.overlay = null;
-        S.screen = 'setup';
+        S.screen = kzZiel;
         save(); render();
         break;
       case 'ov-discard-game':
+        var dzZiel = nachSpielScreen(S.game);
         liveEnde(S.game);
         S.game = null;
         UI.overlay = null;
-        S.screen = 'setup';
+        S.screen = dzZiel;
         save(); render();
         break;
       case 'ov-reset': {
@@ -16651,7 +17030,7 @@
        startet es. Die Markierung erscheint erst mit der ersten Taste. */
     if (S.screen === 'tournament' && !UI.overlay && (bPfeil || ev.key === 'Tab' || ev.key === 'Enter') &&
         !(ev.target && ev.target.closest && ev.target.closest('input, select, textarea, [contenteditable="true"], [contenteditable=""]'))) {
-      var pKnoepfe = Array.prototype.slice.call(document.querySelectorAll('#schedule [data-action="open-match"]'));
+      var pKnoepfe = Array.prototype.slice.call(document.querySelectorAll('#schedule .match-row [data-action="open-match"]'));
       var pFokus = document.activeElement && document.activeElement !== document.body && document.activeElement.closest &&
         document.activeElement.closest('button, a');
       if (pKnoepfe.length && !(ev.key === 'Enter' && pFokus && !UI.planTastatur)) {

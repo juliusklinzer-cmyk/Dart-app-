@@ -314,6 +314,9 @@
         <button class="btn danger ghost full" data-action="reset">Turnier vorzeitig beenden</button>
       </div>
     </div>
+    <!-- Zwischendurch: ein kurzes Nebenspiel, waehrend an der anderen
+         Scheibe noch gespielt wird; das Turnier laeuft weiter. -->
+    <div class="card" id="zwischendurch-karte"></div>
   </div>
 
   <div class="turnier-rechts">
@@ -889,6 +892,8 @@
       <button class="btn ghost full hidden" id="game-menu-kamera" data-action="game-kamera">Kamera</button>
       <!-- Nur in der Solo-Session: die fertigen Legs ins Archiv, dann die Auswertung. -->
       <button class="btn ghost full hidden" id="game-menu-session" data-action="session-ende">Session beenden</button>
+      <!-- Nur im freien Turnier: ein Spieler muss frueher gehen. -->
+      <button class="btn ghost full hidden" id="game-menu-geht" data-action="spieler-geht">Spieler muss gehen</button>
       <div class="game-menu-zeile">
         <button class="btn ghost game-menu-raus" data-action="to-tournament">Spiel verlassen</button>
         <button class="btn primary" data-action="game-menu-zu">Weiterspielen</button>
