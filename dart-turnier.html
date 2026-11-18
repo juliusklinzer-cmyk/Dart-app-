@@ -7864,6 +7864,18 @@ button.st-krow:hover { background: #ffffff06; }
   .turnier-links > #zwischendurch-karte { flex: none; }
 }
 .zw-chip > :first-child { flex: none; }
+/* Handy quer und andere flache Fenster: die feste Spaltenhoehe reicht nicht
+   fuer Spielplan und Zwischendurch-Karte - dann scrollt die linke Spalte
+   als Ganzes statt den Spielplan auf null zu druecken (Responsiv-Pruefung
+   18.11.), rechts genauso die Statistik. */
+@media (min-width: 700px) and (max-height: 600px) {
+  .turnier-links { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+  .turnier-links::-webkit-scrollbar { width: 0; height: 0; display: none; }
+  .turnier-links > .card { flex: none; }
+  .turnier-links > .card > #schedule { flex: none; overflow: visible; }
+  .turnier-rechts > #karte-turnier-statistik { flex: none; }
+  #zwischendurch-karte .hint { display: none; }
+}
 
 </style>
 </head>

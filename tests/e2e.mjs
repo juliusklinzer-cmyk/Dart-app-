@@ -1284,7 +1284,7 @@ await page.reload();
 await page.locator('[data-action="start-game"]').click();
 /* Erste Partie anfangen, ein Leg an den ersten Spieler, dann muss der zweite gehen. */
 erste = await page.evaluate(() => { const m = window.__dart.state().matches[0]; return { id: m.id, a: m.p[0], b: m.p[1] }; });
-await page.locator('#schedule [data-action="open-match"][data-id="' + erste.id + '"]').click();
+await page.locator('#schedule .match-row [data-action="open-match"][data-id="' + erste.id + '"]').click();
 await page.evaluate((e) => {
   const m = window.__dart.state().matches.find((x) => x.id === e.id);
   m.starter = e.a;
