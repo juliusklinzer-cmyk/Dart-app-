@@ -26,7 +26,10 @@ alle Maße wachsen mit der Höhe des Bildschirms. Hochkant am Handy stehen die S
 oben und das Zahlenfeld darunter. Das Spielbild ist **fest im Rahmen** – auf jedem
 Format, nichts scrollt aus dem Bild, im Notfall werden die Tasten flacher. Tasten und
 Schrift werden auf Tablets automatisch größer, Doppeltipp-Zoom ist auf Buttons
-deaktiviert. Split View funktioniert ebenfalls – bei schmaler Spalte schaltet die App
+deaktiviert. In allen Spielbildern (X01, Cricket, Round the World, Finisher, Kaiwen,
+Hunter) löst jeder Knopf schon beim **Aufsetzen des Fingers** aus (`pointerdown`), nicht
+erst beim Loslassen – auch wenn der Finger dabei leicht rutscht. Listen und Formulare
+außerhalb der Spielbilder bleiben beim normalen Tipp, damit Scrollen nichts auslöst. Split View funktioniert ebenfalls – bei schmaler Spalte schaltet die App
 auf das Handy-Layout um.
 
 Lokal testen: `npm start` (Server auf http://localhost:8080).
@@ -146,14 +149,17 @@ von rechts herein, und die Kopfzeile nennt, wer danach kommt.
 
 ### Round the World (Training)
 
-Reihum von der 1 hoch bis zur 20 und zum Schluss Bull. Getroffen wird immer nur die
+Einmal im Uhrzeigersinn um die Scheibe – 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16,
+8, 11, 14, 9, 12, 5, 20 – und zum Schluss Bull. Im Setup lässt sich unter „Reihenfolge“
+auch 1 bis 20 wählen; Spiele von vor dem 21.11.2026 tragen keine Reihenfolge und werden
+so nachgerechnet, wie sie geworfen wurden (1 bis 20). Getroffen wird immer nur die
 eigene aktuelle Zahl:
 
 - **Single** – ein Feld weiter
 - **Double** – eine Zahl wird übersprungen
 - **Triple** – zwei Zahlen werden übersprungen
 
-Wer über die 20 hinausspringt, landet auf Bull. Mit dem Bull-Treffer ist die eigene
+Wer über die letzte Zahl hinausspringt, landet auf Bull. Mit dem Bull-Treffer ist die eigene
 Aufnahme beendet, die angefangene Runde wird aber zu Ende gespielt – so ist der
 spätere Startplatz nicht benachteiligt. Es gewinnt, wer den Bull mit den wenigsten
 Darts getroffen hat. Brauchen mehrere gleich wenige Darts, entscheidet ein Stechen:
@@ -161,15 +167,26 @@ jeder wirft einen Dart auf den Bull, wer am nächsten dran ist, gewinnt.
 Das Spielbild (Entwurf „Round the World“, Oktober 2026, dieselbe Sprache wie Cricket):
 links je Spieler eine Zeile mit Avatar, Name, **Laser-Fortschritt** über die 21
 Stationen, Darts und Treffern, beim Spieler am Wurf die drei Darts der Aufnahme, und
-rechts groß die **Zielzahl**. Rechts oben ••• (Menü: Spiel verlassen / Weiterspielen),
-Spielart, Spielerzahl und Runde, darunter **←** (letzter Dart zurück) und **Bust**
-(die restlichen Darts der Aufnahme als Fehlwürfe verbuchen).
+rechts groß die **Zielzahl**. Darunter (allein in den freien zwei Dritteln, ab vier
+Spielern als eigene Zeile) die **Werte** des Spielers am Wurf: der Weg um die Scheibe
+mit allen 21 Stationen, **Treffer je Runde** (3 Darts, wie die MPR im Cricket) und
+**Trefferquote**, beide gegen den eigenen Schnitt, die **Hochrechnung** bis Bull im
+jetzigen Tempo und der **Bestwert** mit dem Abstand dazu („3 Darts voraus“) – Station
+für Station gegen den besten eigenen Durchgang. Verglichen wird nur mit Spielen
+derselben Spielart (Einfach oder Boost). Rechts oben ••• (Menü: Spiel verlassen /
+Weiterspielen), Spielart, Reihenfolge, Spielerzahl und Runde.
 
 Auch hier wird vorher der Anwerfer ausgeworfen. Die Eingabe zeigt immer nur die Zahl,
 die gerade dran ist: groß und hell umrandet die Zahl selbst, im Boost darunter Double
 und Triple, unten Miss – jede Taste mit dem Hinweis, wohin der Treffer führt („dann 7“).
 Nach jedem Dart springt die Anzeige auf die neue Zahl, nach drei Darts auf den nächsten
-Spieler. Auf Bull bleiben nur noch „Bull“ und „Miss“.
+Spieler. Unten stehen **←** (letzter Dart zurück), **Miss** (ein Dart daneben) und der
+Abschluss der Aufnahme: vor dem ersten Dart **Bust** (alle drei daneben), danach
+**Weiter** (der Rest daneben). Im Einfach-Modus gibt es zusätzlich die
+**Schnelleingabe** „Treffer in der Aufnahme“ mit 1 bis 3 – ein Tipp bucht so viele
+Treffer und den Rest als Fehlwürfe; die Reihenfolge innerhalb der Aufnahme ändert dort
+nichts. Auf Bull bleiben nur „Bull“, Miss und der Abschluss. Im Profil und am Spielende
+steht zusätzlich „Treffer je Runde“.
 
 ### Finisher (Finish-Training)
 
@@ -197,11 +214,13 @@ Aufnahme (Treffer grün, der nächste Wurf hell umrandet, ohne Finish der Stellw
 Spiel verlassen / Weiterspielen), Spielerzahl, Zielpunkte und Runde, daneben im
 Kasten die **gezogene Zahl** – nach jedem Finish **rollt die neue Zahl** in der Mitte
 des Bildes aus und fliegt in ihr Feld; darunter das Einzel-Darts-Feld des X01 mit Double/Triple
-als Schalter, Bull, Bull ×2, 1 bis 20, **←** (Dart für Dart zurück – über eine
+als Schalter, Bull (mit Double **D Bull**), **Bust** (die offenen Darts daneben, der
+Rest springt auf den Stand vor der Aufnahme), 1 bis 20, **←** (Dart für Dart zurück – über eine
 Rundengrenze hinweg auch eine schon entschiedene Runde samt gezogener Zahl), **0**
 und **OK** (füllt die Aufnahme mit Fehlwürfen auf). Unter ••• schaltet **Fernsteuerung**
 auf die Board-Anzeige: die Karten in Plakatgröße mit dem Finish-Weg jedes Spielers,
-unten die letzten Aufnahmen und eine große Eingabe-Anzeige. Getippt wird wie im X01
+unten die letzten Aufnahmen und eine große Eingabe-Anzeige; ein Tipp auf den
+Finish-Weg des Spielers am Wurf bucht ihn Dart für Dart. Getippt wird wie im X01
 die **Aufnahme als Zahl** (85, Enter) – die App trägt die passenden Darts ein und
 füllt mit Fehlwürfen auf; wer bustet, bustet; beim Finish fragt sie nach der Dartzahl
 (1/2/3). Löschen nimmt Ziffern und dann Darts zurück, **⇄** oben rechts oder Esc
@@ -686,9 +705,15 @@ Solo Boost.
 `←` löscht die letzte Ziffer; bei leerem Feld nimmt es die letzte Aufnahme zurück,
 also zum Wurf davor und zum vorigen Spieler. Oben steht groß die getippte Zahl,
 darunter eine Schnellwahl mit den häufigsten Werten (26, 41, 45, 60, 81, 85), die
-sofort bucht. Steht beim Spieler am Wurf ein Finish an, zeigen die **drei Felder in
-seiner Karte** den Weg (z. B. T20 T19 D12) – neutral, keins ist markiert; ohne
-Finish bleiben die Felder leer.
+sofort bucht; was den Rest überwerfen würde, bleibt grau und gesperrt stehen. Steht
+beim Spieler am Wurf ein Finish an, zeigen die **drei Felder in seiner Karte** den Weg
+(z. B. T20 T19 D12). Ein **Tipp auf den Weg** bucht ihn als Finish mit genau diesen
+Darts – ohne Frage nach Dartzahl und Doppel, auch in der Fernsteuerung. Ohne Finish
+bleiben die Felder leer.
+
+Neben dem Rest steht die letzte Aufnahme, darunter kleiner, heller und weichgezeichnet
+die vorige: eine neue Aufnahme rollt von oben herein und schiebt die alte eine Zeile
+tiefer. Der Average oben rechts ist gut anderthalbmal so groß wie der Name.
 
 **Einzel-Dart-Modus:** Schaltet automatisch um, sobald der Rest im Finish-Bereich
 liegt (Standard: ab 170, in den Einstellungen auf 100/180/nie änderbar). Dann wird

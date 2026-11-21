@@ -152,7 +152,7 @@
     return {
       v: STAND_VERSION,
       screen: 'setup',
-      settings: { start: 501, bestOf: 1, dartModeFrom: MAX_CHECKOUT, cricketScoring: 1, finisherTo: 5, rtwBoost: 1, hunterVariante: 0, hunterHandicap: {}, hunterLeben: 1, turnierModus: 0, quickModus: 0, quickSaetze: 1, quickLegs: 1, ton: 1, feiern: 1, tastatur: 0, dartModeMerk: MAX_CHECKOUT },
+      settings: { start: 501, bestOf: 1, dartModeFrom: MAX_CHECKOUT, cricketScoring: 1, finisherTo: 5, rtwBoost: 1, rtwReihe: 0, hunterVariante: 0, hunterHandicap: {}, hunterLeben: 1, turnierModus: 0, quickModus: 0, quickSaetze: 1, quickLegs: 1, ton: 1, feiern: 1, tastatur: 0, dartModeMerk: MAX_CHECKOUT },
       mode: '501',
       game: null,
       profiles: DEFAULT_PLAYERS.map(function (n, i) {
@@ -542,6 +542,7 @@
       if (s.settings.cricketScoring === undefined) s.settings.cricketScoring = 1;
       /* Vor der Wahl gab es nur Boost -- wer von damals kommt, behaelt das. */
       if (s.settings.rtwBoost === undefined) s.settings.rtwBoost = 1;
+      if (s.settings.rtwReihe === undefined) s.settings.rtwReihe = 0;   // 0 = im Uhrzeigersinn, 1 = 1 bis 20
       if (s.settings.hunterVariante === undefined) s.settings.hunterVariante = 0;
       if (s.settings.hunterLeben === undefined) s.settings.hunterLeben = 1;
       if (!s.settings.hunterHandicap || typeof s.settings.hunterHandicap !== 'object') s.settings.hunterHandicap = {};
@@ -2665,7 +2666,7 @@
       s180: 0, s140: 0, s100: 0, s60: 0,
       bestLeg: null, tournaments: 0, tourWins: 0, ligaTage: 0,
       cricketGames: 0, cricketWins: 0, cricketMarks: 0, cricketDarts: 0,
-      rtwGames: 0, rtwWins: 0, rtwBest: null,
+      rtwGames: 0, rtwWins: 0, rtwBest: null, rtwHits: 0, rtwDarts: 0,
       finGames: 0, finWins: 0, finRounds: 0, finDarts: 0, finBest: null, finHigh: 0,
       kwGames: 0, kwVersuche: 0, kwChecks: 0, kwBestSolo: null, kwBestTeam: null,
       huGames: 0, huWins: 0, huFaenge: 0, huDarts: 0, huTreffer: 0, huBest: { normal: null, boost: null, h1: null, h2: null, h3: null },
@@ -2867,10 +2868,12 @@
         });
         if (h.winner && map[h.winner] && h.players.length > 1) map[h.winner].cricketWins++;   // allein gibt es keinen Sieg
       } else if (kind === 'rtw') {
-        var rs = rtwState({ players: h.players, throws: h.throws, boost: h.boost !== false });
+        var rs = rtwState({ players: h.players, throws: h.throws, boost: h.boost !== false, reihe: h.reihe });
         h.players.forEach(function (id) {
           if (!map[id]) return;
           map[id].rtwGames++;
+          map[id].rtwHits += rs.hits[id] || 0;
+          map[id].rtwDarts += rs.darts[id] || 0;
           // Jeder komplette Durchlauf zählt für die Bestleistung, nicht nur der Sieg.
           var fin = rs.finished[id];
           if (fin && (map[id].rtwBest === null || fin.darts < map[id].rtwBest)) map[id].rtwBest = fin.darts;
@@ -3199,10 +3202,25 @@
      gespielt, damit der spätere Startplatz nicht benachteiligt ist.
      Es gewinnt, wer den Bull mit den wenigsten Darts trifft; bei Gleichstand
      entscheidet ein Stechen auf Bull. */
+  /* Die Reihenfolge der 20 Zahlen. Richtig gespielt geht es im
+     Uhrzeigersinn um die Scheibe (Julius 21.11.): 1, 18, 4, 13 ... 5, 20,
+     dann Bull. Spiele ohne g.reihe stammen aus der Zeit davor und liefen
+     1 bis 20 -- sie werden so nachgerechnet, wie sie geworfen wurden. */
+  var RTW_SCHEIBE = [1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5, 20];
+  var RTW_ZAHLEN = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+  function rtwFolge(g) { return g && g.reihe === 'scheibe' ? RTW_SCHEIBE : RTW_ZAHLEN; }
+  /* Station 0..19 ist eine Zahl, 20 ist Bull. */
+  function rtwZiel(g, pos) { return pos >= 20 ? 25 : rtwFolge(g)[pos]; }
+  /* Wohin ein Treffer fuehrt: als Text fuer die Tasten. */
+  function rtwDann(g, pos, mult) {
+    var p = Math.min(20, pos + (g.boost ? mult : 1));
+    return p >= 20 ? 'dann Bull' : 'dann ' + rtwFolge(g)[p];
+  }
+
   function rtwState(g) {
     var n = g.players.length;
-    var st = { target: {}, darts: {}, hits: {}, finished: {}, winner: null, closing: false, turn: 0, visit: [] };
-    g.players.forEach(function (id) { st.target[id] = 1; st.darts[id] = 0; st.hits[id] = 0; });
+    var st = { target: {}, pos: {}, weg: {}, darts: {}, hits: {}, finished: {}, winner: null, closing: false, turn: 0, visit: [] };
+    g.players.forEach(function (id) { st.target[id] = rtwZiel(g, 0); st.pos[id] = 0; st.weg[id] = [0]; st.darts[id] = 0; st.hits[id] = 0; });
 
     var turn = 0, inVisit = 0, over = false;
     for (var i = 0; i < g.throws.length && !over; i++) {
@@ -3214,6 +3232,7 @@
 
       if (t.n && target === 25 && t.n === 25) {
         st.hits[pid]++;
+        st.weg[pid][21] = st.darts[pid];
         st.finished[pid] = { darts: st.darts[pid], at: i };
       } else if (t.n && target !== 25 && t.n === target) {
         st.hits[pid]++;
@@ -3222,8 +3241,13 @@
            Die Spielart steht am Spiel, nicht in den Einstellungen -- sonst
            wuerde ein Umschalten mitten im Abend jeden schon geworfenen Dart
            rueckwirkend anders bewerten. */
-        var next = target + (g.boost ? t.m : 1);
-        st.target[pid] = next > 20 ? 25 : next;
+        var next = Math.min(20, st.pos[pid] + (g.boost ? t.m : 1));
+        /* weg[k]: nach wie vielen Darts Station k erreicht war -- fuer den
+           Vergleich mit dem eigenen Bestwert. Uebersprungene Stationen
+           zaehlen als im selben Dart erreicht. */
+        for (var k = st.pos[pid] + 1; k <= next; k++) st.weg[pid][k] = st.darts[pid];
+        st.pos[pid] = next;
+        st.target[pid] = rtwZiel(g, next);
       }
 
       inVisit++;
@@ -3517,7 +3541,7 @@
       scoring: kind === 'cricket' ? S.settings.cricketScoring === 1 : false,
       done: false, winner: null, started: false
     };
-    if (kind === 'rtw') S.game.boost = S.settings.rtwBoost === 1;
+    if (kind === 'rtw') { S.game.boost = S.settings.rtwBoost === 1; S.game.reihe = S.settings.rtwReihe === 1 ? 'zahlen' : 'scheibe'; }
     if (kind === 'hunter') {
       /* Variante und Handicap-Stufen stehen am Spiel, nicht in den
          Einstellungen: ein Umschalten mitten im Abend darf keinen schon
@@ -3648,7 +3672,7 @@
       /* Ohne die Spielart liesse sich das Spiel spaeter nicht nachrechnen:
          dieselben Wuerfe ergeben in Einfach und Boost verschiedene
          Zahlenfolgen. Altbestand hat sie nicht und war immer Boost. */
-      if (g.kind === 'rtw') eintrag.boost = g.boost !== false;
+      if (g.kind === 'rtw') { eintrag.boost = g.boost !== false; if (g.reihe) eintrag.reihe = g.reihe; }
       if (g.kind === 'hunter') {
         eintrag.variante = g.variante || 'normal';
         if (g.handicap) eintrag.handicap = g.handicap;
@@ -5124,7 +5148,7 @@
         var cs = cricketState({ players: h.players, throws: h.throws, scoring: h.scoring });
         h.players.forEach(function (id) { push(id, { cricketMarks: cs.allMarks[id], cricketDarts: cs.darts[id], cricketWins: sieg(id) }); });
       } else if (mode === 'rtw') {
-        var rs = rtwState({ players: h.players, throws: h.throws, boost: h.boost !== false });
+        var rs = rtwState({ players: h.players, throws: h.throws, boost: h.boost !== false, reihe: h.reihe });
         h.players.forEach(function (id) { var fin = rs.finished[id]; push(id, { rtwBest: fin ? fin.darts : null, rtwWins: sieg(id) }); });
       } else if (mode === 'finisher') {
         var st = {};
@@ -7105,7 +7129,7 @@
       var ausgang = allein ? '' : (h.winner === pid ? 'Sieg' : h.winner ? 'Niederlage' : 'abgebrochen') + ' · ';
       var erg;
       if (kind === 'rtw') {
-        var fin = rtwState({ players: h.players, throws: h.throws, boost: h.boost !== false }).finished[pid];
+        var fin = rtwState({ players: h.players, throws: h.throws, boost: h.boost !== false, reihe: h.reihe }).finished[pid];
         erg = fin ? plural(fin.darts, 'Dart', 'Darts') : 'nicht beendet';
       } else if (kind === 'kaiwen') {
         var ks = kaiwenState({ players: h.players, versuche: h.versuche || [] });
@@ -7131,7 +7155,9 @@
         mehr: [['Siegquote', st.cricketGames ? Math.round(st.cricketWins / st.cricketGames * 100) + ' %' : '–'], ['Marken gesamt', st.cricketMarks], ['Darts', st.cricketDarts]] },
       { k: 'rtw', t: 'Round the World', n: st.rtwGames,
         top: [['Spiele', st.rtwGames], ['Siege', st.rtwWins], ['Bestes', st.rtwBest ? st.rtwBest + ' Darts' : '–', 'kompletter Durchlauf', F.gold]],
-        mehr: [['Siegquote', st.rtwGames ? Math.round(st.rtwWins / st.rtwGames * 100) + ' %' : '–']] },
+        mehr: [['Siegquote', st.rtwGames ? Math.round(st.rtwWins / st.rtwGames * 100) + ' %' : '–'],
+          ['Treffer je Runde', st.rtwDarts ? komma(st.rtwHits / st.rtwDarts * 3, 2) : '–'],
+          ['Trefferquote', st.rtwDarts ? Math.round(st.rtwHits / st.rtwDarts * 100) + ' %' : '–']] },
       { k: 'finisher', t: 'Finisher', n: st.finGames,
         top: [['Spiele', st.finGames], ['Siege', st.finWins], ['Ø Darts', st.finRounds ? st.finAvgDarts.toFixed(1).replace('.', ',') : '–', 'je Finish', F.gruen]],
         mehr: [['Gewonnene Runden', st.finRounds], ['Schnellstes', st.finBest ? plural(st.finBest, 'Dart', 'Darts') : '–'], ['Höchste Zahl', st.finHigh || '–']] },
@@ -9654,6 +9680,15 @@
           weg = wRest >= 2 ? Checkout.suggest(wRest, 3, lieblingsDoppel(pid, x01Lage(m, leg, pid))) : null;
         }
       }
+      /* Der Finish-Weg des Spielers am Wurf ist zugleich die Kurzeingabe
+         (Julius 21.11.): ein Tipp bucht genau diese Darts als Finish --
+         auch in der Fernsteuerung, wo sonst getippt wird. */
+      var tippbar = istAktiv && weg && !nurAnzeige && !UI.darts.length;
+      if (tippbar) {
+        return '<button type="button" class="pfelder pfinish tippweg" data-action="finish-weg" data-weg="' + esc(weg.join(',')) + '"' +
+          ' aria-label="Finish ' + esc(weg.map(Checkout.pretty).join(' ')) + ' getroffen">' +
+          weg.map(function (d) { return '<span class="fk weg">' + Checkout.pretty(d) + '</span>'; }).join('') + '</button>';
+      }
       return '<div class="pfelder pfinish">' + (weg ? weg.map(function (d) {
         return '<span class="fk weg' + (istAktiv ? '' : ' wartet') + '">' + Checkout.pretty(d) + '</span>';
       }).join('') : '') + '</div>';
@@ -9842,7 +9877,14 @@
       $('key-display').innerHTML = UI.input === ''
         ? '<span class="cursor"></span>' : esc(UI.input);
     } else if (anzeige === 'total') {
-      $('quick-row').innerHTML = QUICK_SCORES.map(function (q) { return '<button data-quick="' + q + '">' + q + '</button>'; }).join('');
+      /* Was den Rest ueberwerfen wuerde, bleibt stehen, aber grau und
+         gesperrt (Julius 21.11.) -- die Reihe springt nicht, nur weil der
+         Rest klein wird. */
+      var qRest = m.done ? 0 : remainingIn(leg, active);
+      $('quick-row').innerHTML = QUICK_SCORES.map(function (q) {
+        var aus = q > qRest || qRest - q === 1;
+        return '<button data-quick="' + q + '"' + (aus ? ' disabled aria-disabled="true"' : '') + '>' + q + '</button>';
+      }).join('');
       var disp = $('score-display');
       disp.textContent = UI.input === '' ? '0' : UI.input;
       disp.classList.toggle('empty', UI.input === '');
@@ -10036,10 +10078,16 @@
     var n = g.players.length;
 
     $('rtw-sub').textContent = (g.boost ? 'Boost · Double +2, Triple +3' : 'Einfach · jeder Treffer +1') +
+      (g.reihe === 'scheibe' ? ' · im Uhrzeigersinn' : ' · 1 bis 20') +
       ' · ' + plural(n, 'Spieler', 'Spieler') + liveLabel(g);
     $('rtw-runde').textContent = 'Runde ' + (Math.floor(g.throws.length / (3 * n)) + 1);
+    /* Bis drei Spieler fuellt die Werte-Karte den Platz, den die fehlenden
+       Zeilen lassen; ab vier kommt sie als eigene Zeile darunter. */
     $('rtw-board').style.setProperty('--zeilen', Math.max(n, 3));
+    $('rtw-board').style.setProperty('--werte', Math.max(3 - n, 1));
     $('rtw-board').classList.toggle('viele', n > 3);
+    $('rtw-board').classList.toggle('werte-unten', n >= 3);
+    $('rtw-board').classList.toggle('allein', n === 1);
 
     /* Wie im Cricket: die fertige Aufnahme des Vorgaengers bleibt gedimmt in
        seiner Zeile stehen, bis er wieder dran ist. */
@@ -10049,7 +10097,7 @@
       var fin = st.finished[id];
       var istAkt = id === active;
       /* 21 Stationen: die 20 Zahlen und der Bull. */
-      var doneSteps = fin ? 21 : (t === 25 ? 20 : t - 1);
+      var doneSteps = fin ? 21 : st.pos[id];
       var darts = istAkt && !(st.inVisit === 0 && !g.done) ? visit : [];
       var istVorher = false;
       if (st.inVisit === 0 && !g.done && g.throws.length > 0 && g.players[(g.players.indexOf(active) - 1 + n) % n] === id && n > 1) {
@@ -10062,7 +10110,7 @@
           (d ? (d.n === 0 ? '–' : throwLabel(d)) : '') + '</span>';
       }).join('') : '';
       var meta = plural(st.darts[id], 'Dart', 'Darts') + ' · ' + plural(st.hits[id], 'Treffer', 'Treffer');
-      if (istAkt) meta = '<span id="rtw-fortschritt-txt">Station ' + Math.min(doneSteps + 1, 21) + ' von 21 · ' + meta + '</span>';
+      if (istAkt) meta = '<span id="rtw-fortschritt-txt">Station ' + Math.min(doneSteps + 1, 21) + ' von 21 · ' + plural(st.darts[id], 'Dart', 'Darts') + '</span>';
       return '<div class="rtw-row' + (istAkt ? ' act' : '') + (fin ? ' fin' : '') + (istVorher ? ' vorher' : '') + '">' +
         avatarHTML(profile(id), 'md') +
         '<div class="rw-main">' +
@@ -10076,7 +10124,7 @@
         '<div class="rw-tiles">' + kacheln + '</div>' +
         '<div class="rw-target' + (t === 25 && !fin ? ' bull' : '') + '">' + (fin ? '✓' : t === 25 ? 'Bull' : t) + '</div>' +
         '</div>';
-    }).join('');
+    }).join('') + rtwWerteHtml(g, st, active);
 
     $('rtw-turn').innerHTML = g.done
       ? '<b>' + esc(pname(g.winner)) + '</b> ' + (n < 2 ? 'ist durch' : 'gewinnt')
@@ -10114,17 +10162,45 @@
      * verbucht die restlichen Darts der Aufnahme als Fehlwuerfe.
      */
     var target = st.target[active];
-    var jump = function (mult) {
-      var next = target + mult;
-      return next > 20 ? 'dann Bull' : 'dann ' + next;
-    };
-    var miss = '<div class="rtw-reihe"><button class="rtw-key miss" data-num="0" data-mult="1">' +
-      '<span class="k">Miss</span><span class="sub">ein Dart daneben</span></button></div>';
+    var pos = st.pos[active];
+    var jump = function (mult) { return rtwDann(g, pos, mult); };
+    /*
+     * Unten Zurueck, Miss und der Abschluss der Aufnahme (Julius 21.11.):
+     * Vor dem ersten Dart heisst er Bust -- alle drei daneben --, danach
+     * Weiter, die restlichen Darts daneben. Bust nach einem Treffer war
+     * schief: getroffen ist getroffen.
+     */
+    var offen = g.done ? 0 : 3 - st.inVisit;
+    var schluss = st.inVisit === 0
+      ? '<span class="k">Bust</span><span class="sub">alle drei daneben</span>'
+      : '<span class="k">Weiter</span><span class="sub">' + (offen === 1 ? 'letzter Dart daneben' : 'Rest daneben') + '</span>';
+    var unten = '<div class="rtw-reihe drei">' +
+      '<button class="rtw-key zurueck" data-action="undo-game" aria-label="Letzten Dart zurücknehmen">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 12H7M11.5 6.5L6 12l5.5 5.5"></path></svg></button>' +
+      '<button class="rtw-key miss" data-num="0" data-mult="1"><span class="k">Miss</span><span class="sub">ein Dart</span></button>' +
+      '<button class="rtw-key bust" data-action="end-rtw-visit">' + schluss + '</button>' +
+      '</div>';
+    /* Schnelleingabe im Einfach-Modus: wie viele der offenen Darts trafen.
+       Die Reihenfolge innerhalb der Aufnahme aendert dort nichts -- jeder
+       Treffer ist ein Feld. Im Boost zaehlt, was getroffen wurde (D/T),
+       und auf Bull endet die Aufnahme mit dem Treffer: dort Dart fuer Dart. */
+    var schnell = '';
+    if (!g.boost && target !== 25 && offen > 0) {
+      var kn = '';
+      /* Hoechstens bis zur Bull-Station: der Bull selbst beendet die
+         Aufnahme mit seinem Dart und wird Dart fuer Dart gebucht. */
+      var qMax = Math.min(offen, 20 - pos);
+      for (var q = 1; q <= qMax; q++) {
+        kn += '<button class="rtw-key schnell" data-action="rtw-treffer" data-n="' + q + '"><span class="k">' + q + '</span></button>';
+      }
+      schnell = '<div class="rtw-schnell"><span class="l">' + (st.inVisit ? 'Von den letzten ' + offen + ' getroffen' : 'Treffer in der Aufnahme') + '</span>' +
+        '<div class="kn" style="--n:' + qMax + '">' + kn + '</div></div>';
+    }
     var treffer;
     if (target === 25) {
       treffer = '<div class="rtw-treffer nur-bull">' +
         '<button class="rtw-key gross bull" data-num="25" data-mult="1">' +
-          '<span class="z">Bull</span><span class="sub">Spiel gewonnen</span></button>' +
+          '<span class="z">Bull</span><span class="sub">' + (n < 2 ? 'geschafft' : 'Spiel gewonnen') + '</span></button>' +
         '</div>';
     } else if (!g.boost) {
       treffer = '<div class="rtw-treffer nur-zahl">' +
@@ -10141,7 +10217,86 @@
           '<span class="k"><span class="mx">T</span>' + target + '</span><span class="sub">' + jump(3) + '</span></button>' +
         '</div>';
     }
-    $('rtw-pad').innerHTML = treffer + miss;
+    $('rtw-pad').classList.toggle('mit-schnell', !!schnell);
+    $('rtw-pad').innerHTML = treffer + schnell + unten;
+  }
+
+  /*
+   * Was ein Durchgang allein spannend macht (Julius 21.11.): fuer den
+   * Spieler am Wurf der Weg um die Scheibe, Treffer je Runde (3 Darts, wie
+   * die MPR im Cricket) und Quote gegen den eigenen Schnitt, die
+   * Hochrechnung bis Bull und der Abstand zum eigenen Bestwert -- Station
+   * fuer Station gegen den besten Durchgang gerechnet.
+   * Vergleichswerte nur aus Spielen derselben Spielart (Einfach/Boost):
+   * im Boost kommt man mit denselben Treffern weiter.
+   */
+  var rtwProfilCache = null;
+  function rtwProfil(pid, boost, ohneId) {
+    var schluessel = pid + '|' + boost + '|' + ohneId + '|' + S.history.length + '|' + (S.history[0] && S.history[0].id);
+    if (rtwProfilCache && rtwProfilCache.k === schluessel) return rtwProfilCache.v;
+    var v = { spiele: 0, hits: 0, darts: 0, best: null, bestWeg: null };
+    wertbareHistorie().forEach(function (h) {
+      if (h.kind !== 'rtw' || h.id === ohneId || (h.players || []).indexOf(pid) < 0) return;
+      if ((h.boost !== false) !== !!boost) return;
+      var rs = rtwState({ players: h.players, throws: h.throws || [], boost: h.boost !== false, reihe: h.reihe });
+      v.spiele++;
+      v.hits += rs.hits[pid] || 0;
+      v.darts += rs.darts[pid] || 0;
+      var fin = rs.finished[pid];
+      if (fin && (v.best === null || fin.darts < v.best)) { v.best = fin.darts; v.bestWeg = rs.weg[pid]; }
+    });
+    rtwProfilCache = { k: schluessel, v: v };
+    return v;
+  }
+  function rtwHpr(hits, darts) { return darts ? hits / darts * 3 : null; }
+  function komma(x, stellen) { return x.toFixed(stellen).replace('.', ','); }
+
+  function rtwWerteHtml(g, st, pid) {
+    if (!pid || st.stechen) return '';
+    var folge = rtwFolge(g);
+    var pos = st.finished[pid] ? 21 : st.pos[pid];
+    var weg = folge.map(function (z, k) {
+      return '<span class="' + (k < pos ? 'ok' : k === pos ? 'jetzt' : '') + '">' + z + '</span>';
+    }).join('') + '<span class="bull' + (pos >= 21 ? ' ok' : pos === 20 ? ' jetzt' : '') + '">B</span>';
+
+    var pr = rtwProfil(pid, g.boost !== false, g.id);
+    var darts = st.darts[pid], hits = st.hits[pid];
+    var jetzt = rtwHpr(hits, darts), schnitt = rtwHpr(pr.hits, pr.darts);
+    var tendenz = function (a, b) { return a === null || b === null ? '' : a > b + 0.005 ? ' hoch' : a < b - 0.005 ? ' runter' : ''; };
+    var kz = function (wert, label, vergleich, klasse) {
+      return '<div class="kz"><span class="w">' + wert + '</span><span class="l">' + label + '</span>' +
+        '<span class="v' + (klasse || '') + '">' + vergleich + '</span></div>';
+    };
+    var quote = darts ? hits / darts * 100 : null, quoteSchnitt = pr.darts ? pr.hits / pr.darts * 100 : null;
+    /* Hochrechnung: dieses Tempo (Darts je Station) auf alle 21 Stationen. */
+    var hoch = st.finished[pid] ? st.finished[pid].darts : pos > 0 ? Math.round(darts / pos * 21) : null;
+    /* Abstand zum Bestwert: nach wie vielen Darts der beste Durchgang die
+       Station erreicht hatte, an der man jetzt steht. Wer laenger auf
+       derselben Zahl haengt, faellt erst mit dem naechsten Treffer zurueck --
+       deshalb zaehlt auch die Station, die man gerade versucht: hat der
+       Bestwert sie nach weniger Darts als jetzt schon geworfen, liegt man
+       hinten. */
+    var abstand = null;
+    if (pr.bestWeg && pos > 0) {
+      var ichDa = st.finished[pid] ? st.finished[pid].darts : st.weg[pid][pos];
+      var bestDa = pr.bestWeg[pos];
+      abstand = bestDa - ichDa;
+      var naechste = pr.bestWeg[pos + 1];
+      if (!st.finished[pid] && naechste !== undefined && darts > naechste) abstand = Math.min(abstand, naechste - darts);
+    }
+    var bestText = pr.best === null ? 'noch kein Durchgang' :
+      abstand === null ? 'dein Bestwert' :
+      abstand > 0 ? plural(abstand, 'Dart', 'Darts') + ' voraus' :
+      abstand < 0 ? plural(-abstand, 'Dart', 'Darts') + ' zurück' : 'gleichauf';
+    var bestKlasse = abstand === null ? '' : abstand > 0 ? ' hoch' : abstand < 0 ? ' runter' : '';
+    return '<div class="rtw-werte">' +
+      '<div class="rtw-weg" aria-label="Weg um die Scheibe">' + weg + '</div>' +
+      '<div class="rtw-kz">' +
+        kz(jetzt === null ? '–' : komma(jetzt, 2), 'Treffer je Runde', schnitt === null ? 'erstes Spiel' : 'Ø ' + komma(schnitt, 2), tendenz(jetzt, schnitt)) +
+        kz(quote === null ? '–' : Math.round(quote) + ' %', 'Trefferquote', quoteSchnitt === null ? '' : 'Ø ' + Math.round(quoteSchnitt) + ' %', tendenz(quote, quoteSchnitt)) +
+        kz(hoch === null ? '–' : (st.finished[pid] ? '' : '≈ ') + hoch, st.finished[pid] ? 'Darts bis Bull' : 'Hochrechnung', 'Darts bis Bull', pr.best !== null && hoch !== null ? (hoch < pr.best ? ' hoch' : hoch > pr.best ? ' runter' : '') : '') +
+        kz(pr.best === null ? '–' : String(pr.best), 'Bestwert', bestText, bestKlasse) +
+      '</div></div>';
   }
 
   function throwLabel(t) {
@@ -10533,9 +10688,13 @@
             '<span class="pmeta">Darts ' + st.darts[id] + ' · Aufnahmen ' + st.aufnahmen[id] + '</span></div>' +
             '<div class="fin-pillen">' + pillen + '</div></div>' +
           '<div class="rest-zeile"><span class="rest">' + (fertig ? HAKEN : st.rest[id]) + '</span></div>' +
-          '<div class="pfelder pfinish">' + (weg ? weg.map(function (d) {
-            return '<span class="fk weg' + (istAkt ? '' : ' wartet') + '">' + Checkout.pretty(d) + '</span>';
-          }).join('') : '') + '</div></div>';
+          (istAkt && weg
+            ? '<button type="button" class="pfelder pfinish tippweg" data-action="fin-finish-weg" data-weg="' + esc(weg.join(',')) + '"' +
+              ' aria-label="Finish ' + esc(weg.map(Checkout.pretty).join(' ')) + ' getroffen">' +
+              weg.map(function (d) { return '<span class="fk weg">' + Checkout.pretty(d) + '</span>'; }).join('') + '</button></div>'
+            : '<div class="pfelder pfinish">' + (weg ? weg.map(function (d) {
+                return '<span class="fk weg' + (istAkt ? '' : ' wartet') + '">' + Checkout.pretty(d) + '</span>';
+              }).join('') : '') + '</div></div>');
       }).join('');
       /* Unten links und rechts die letzten drei Aufnahmen: zu zweit fest
          je Spieler, ab dreien der am Wurf und der Naechste. */
@@ -10565,8 +10724,10 @@
       var prefix = UI.mult === 3 ? 'T' : UI.mult === 2 ? 'D' : '';
       var nums = '<button class="mult' + (UI.mult === 2 ? ' active' : '') + '" data-mult="2" aria-pressed="' + (UI.mult === 2) + '">Double</button>' +
         '<button class="mult' + (UI.mult === 3 ? ' active' : '') + '" data-mult="3" aria-pressed="' + (UI.mult === 3) + '">Triple</button>' +
-        '<button class="bull ' + (hl === '25' ? 'hl' : '') + '" data-num="25" data-mult="1">Bull</button>' +
-        '<button class="bull ' + (hl === 'BULL' ? 'hl' : '') + '" data-num="25" data-mult="2">Bull ×2</button>';
+        /* Wie im X01 (Julius 21.11.): Bull, mit Double davor D Bull, und
+           Bust statt "Bull ×2" -- ueberworfen, die Aufnahme verfaellt. */
+        '<button class="bull ' + ((hl === '25' && UI.mult === 1) || (hl === 'BULL' && UI.mult >= 2) ? 'hl' : '') + '" data-num="25">' + (UI.mult >= 2 ? '<span class="mx">D</span>Bull' : 'Bull') + '</button>' +
+        '<button class="bust" data-action="fin-bust" aria-label="Aufnahme als Bust buchen">Bust</button>';
       for (var nn = 1; nn <= 20; nn++) {
         nums += '<button data-num="' + nn + '" class="' + (nn === hlNum ? 'hl' : '') + '">' +
           (prefix ? '<span class="mx">' + prefix + '</span>' : '') + nn + '</button>';
@@ -12495,16 +12656,24 @@
       var rst = rtwState(g);
       var durch = function (id) { return id === g.winner || !!rst.finished[id]; };
       var rIds = g.players.slice().sort(function (a, b) {
-        return ((b === g.winner) - (a === g.winner)) || (durch(b) - durch(a)) || (rst.target[b] - rst.target[a]) || (rst.darts[a] - rst.darts[b]);
+        return ((b === g.winner) - (a === g.winner)) || (durch(b) - durch(a)) || (rst.pos[b] - rst.pos[a]) || (rst.darts[a] - rst.darts[b]);
       });
       d.titel = esc(pname(g.winner)) + (solo ? ' ist durch' : ' gewinnt!');
-      d.sub = 'Round the World' + (g.boost !== false ? ' · Boost' : '') + ' · bis Bull';
+      d.sub = 'Round the World' + (g.boost !== false ? ' · Boost' : '') + (g.reihe === 'scheibe' ? ' · im Uhrzeigersinn' : '') + ' · bis Bull';
       d.reihen = rIds.map(function (id) {
         var t = rst.target[id];
         return reihe(id, durch(id) ? 'durch mit Bull' : 'steht auf ' + (t === 25 ? 'Bull' : t), plural(rst.darts[id], 'Dart', 'Darts'));
       });
       var rq = quoteText(rIds, rst.hits, rst.darts);
       if (rq) d.hl.push(['Beste Quote', rq]);
+      var rh = bester(rIds, function (id) { return rst.darts[id] ? rst.hits[id] / rst.darts[id] * 3 : null; });
+      if (rh) d.hl.push(['Treffer je Runde', komma(rh.v, 2) + ' ' + vn(rh.id)]);
+      /* Allein: gegen den eigenen Bestwert derselben Spielart. */
+      if (solo && rst.finished[g.players[0]]) {
+        var rpr = rtwProfil(g.players[0], g.boost !== false, g.id);
+        var rDa = rst.finished[g.players[0]].darts;
+        d.hl.push(['Bestwert', rpr.best === null ? 'erster Durchgang' : rDa < rpr.best ? 'neuer Bestwert! vorher ' + rpr.best : rpr.best + ' Darts (' + (rDa === rpr.best ? 'eingestellt' : '+' + (rDa - rpr.best)) + ')']);
+      }
       if (g.winner) d.hl.push(['Bis Bull', plural(rst.darts[g.winner], 'Dart', 'Darts') + ' ' + vn(g.winner)]);
       d.hl.push(['Darts gesamt', String(summe(rst.darts, rIds))]);
       return d;
@@ -15528,6 +15697,45 @@
         save(); render();
         break;
       }
+      /* Einfach-Modus: k Treffer in der Aufnahme, der Rest daneben. Jeder
+         Treffer geht auf die Zahl, die nach dem vorigen dran ist. */
+      case 'rtw-treffer': {
+        var tg = S.game;
+        if (!tg || tg.kind !== 'rtw' || tg.done || tg.boost || settling()) return;
+        var tst = rtwState(tg);
+        if (tst.stechen) return;
+        var tOffen = 3 - tst.inVisit, tk = Math.min(Number(el.getAttribute('data-n')) || 0, tOffen, 20 - tst.pos[tg.players[tst.turn]]);
+        var tWer = tg.players[tst.turn];
+        if (tst.target[tWer] === 25) return;
+        pomp();
+        for (var tq = 0; tq < tOffen; tq++) {
+          var tz = rtwState(tg);
+          if (tg.players[tz.turn] !== tWer || tz.inVisit === 0 && tq > 0) break;   // Aufnahme ist um (Bull)
+          tg.throws.push(tq < tk && tz.target[tWer] !== 25 ? { n: tz.target[tWer], m: 1 } : { n: 0, m: 0 });
+          var tn = rtwState(tg);
+          if (tn.winner) { tg.done = true; tg.winner = tn.winner; tg.at = Date.now(); UI.overlay = { type: 'game-done', pid: tn.winner }; break; }
+          if (tn.finished[tWer] || tn.inVisit === 0) break;
+        }
+        UI.mult = 1;
+        save(); render();
+        break;
+      }
+      /* X01: ein Tipp auf den Finish-Weg bucht ihn als Aufnahme mit genau
+         diesen Darts -- Rest, Dartzahl und Doppel stehen damit fest, es
+         gibt keine Rueckfrage. Nur wenn der Weg noch zum Rest passt. */
+      case 'finish-weg': {
+        var xm = currentMatch();
+        if (!xm || xm.done || settling() || UI.darts.length) return;
+        var xl = activeLeg(xm), xp = activePlayer(xl, xm), xr = remainingIn(xl, xp);
+        var xd = (el.getAttribute('data-weg') || '').split(',').filter(Boolean).map(labelDart);
+        var xs = xd.reduce(function (a, d) { return a + d.n * d.m; }, 0);
+        var xLetzt = xd[xd.length - 1];
+        if (!xd.length || xd.length > 3 || xs !== xr || !xLetzt || xLetzt.m !== 2) return;
+        pomp();
+        UI.input = ''; UI.error = '';
+        commitVisit(xr, xd.length, true, false, xd);
+        break;
+      }
       /* Round the World: die restlichen Darts der Aufnahme sind daneben.
          Anders als bei Cricket zählt hier nicht die Zahl der Würfe modulo 3 –
          eine Aufnahme endet auch vorzeitig, wenn jemand den Bull trifft.
@@ -15537,9 +15745,43 @@
         if (!rwg || rwg.kind !== 'rtw' || rwg.done || settling()) return;
         if (rtwState(rwg).stechen) return;   // im Stechen gibt es keine Aufnahme aufzufuellen
         var offen = 3 - rtwState(rwg).inVisit;
+        pomp();
         for (var ri = 0; ri < offen; ri++) rwg.throws.push({ n: 0, m: 0 });
         UI.mult = 1;
+        /* Auch Bust/Weiter kann die Schlussrunde beenden (wer zuletzt wirft,
+           trifft den Bull nicht) -- dann steht der Sieger fest. */
+        var rwSt = rtwState(rwg);
+        if (rwSt.winner) { rwg.done = true; rwg.winner = rwSt.winner; rwg.at = Date.now(); UI.overlay = { type: 'game-done', pid: rwSt.winner }; }
         save(); render();
+        break;
+      }
+      /* Finisher: Bust -- die offenen Darts der Aufnahme daneben, der
+         letzte traegt das Bust (finisherState setzt den Rest zurueck). */
+      case 'fin-bust': {
+        var bg = S.game;
+        if (!bg || bg.kind !== 'finisher' || bg.done || settling()) return;
+        var brd = finisherRunde(bg);
+        if (brd.stechen) return;
+        pomp();
+        var bOffen = 3 - finisherState(bg).inVisit;
+        for (var bi = 0; bi < bOffen; bi++) brd.throws.push(bi === bOffen - 1 ? { n: 0, m: 0, bust: true } : { n: 0, m: 0 });
+        UI.mult = 1;
+        pruefeFinisherRunde(bg);
+        save(); render();
+        break;
+      }
+      /* Finisher-Fernsteuerung: ein Tipp auf den Finish-Weg bucht ihn Dart
+         fuer Dart -- dieselbe Buchung wie das Zahlenfeld. */
+      case 'fin-finish-weg': {
+        var wg = S.game;
+        if (!wg || wg.kind !== 'finisher' || wg.done || settling()) return;
+        var wst = finisherState(wg), wpid = wg.players[wst.turn];
+        var wDarts = (el.getAttribute('data-weg') || '').split(',').filter(Boolean).map(labelDart);
+        var wSumme = wDarts.reduce(function (a, d) { return a + d.n * d.m; }, 0);
+        var wLetzt = wDarts[wDarts.length - 1];
+        if (!wDarts.length || wDarts.length > 3 - wst.inVisit || wSumme !== wst.rest[wpid] || !wLetzt || wLetzt.m !== 2) return;
+        UI.input = ''; UI.error = '';
+        wDarts.forEach(function (d) { finisherDart(d.m, d.n); });
         break;
       }
       /* Finisher: die restlichen Darts der Aufnahme als Fehlwürfe auffüllen –
@@ -16606,11 +16848,15 @@
 
   document.addEventListener('click', function (ev) {
     if (isGhostTap(ev)) return;
-    /* Der click zur gerade per pointerdown gebuchten Spieltaste: schon erledigt. */
-    if (tasteSchonGetippt && Date.now() - tasteSchonGetipptZeit < 1200 && spielTaste(ev.target) === tasteSchonGetippt) {
-      tasteSchonGetippt = null;
+    /* Der click zu einer schon per pointerdown ausgeloesten Taste: erledigt.
+       Gezaehlt statt verglichen -- loest die Taste einen Bildschirmwechsel
+       aus, landet ihr click auf einem ganz anderen Knopf, und bei zwei
+       schnellen Tipps kommen erst beide pointerdown, dann beide clicks. */
+    if (zeigerGebucht && ((zeigerGebucht.unten && Date.now() - zeigerGebucht.ab < 5000) || Date.now() <= zeigerGebucht.bis)) {
+      zeigerGebucht = null;
       return;
     }
+    zeigerGebucht = null;
     if (ev.target.id === 'overlay' && UI.overlay && !bleibtOffen(UI.overlay.type)) {
       UI.overlay = null; UI.input = ''; render(); return;
     }
@@ -16682,7 +16928,25 @@
    * einem Bildschirmwechsel bleibt es beim click mit seiner Doppeltipp-
    * Pruefung. Welche Tasten: nur die im Spielbild, kein Dialog, kein Menue.
    */
-  var tasteSchonGetippt = null, tasteSchonGetipptZeit = 0;
+  /* Ein per pointerdown erledigter Tipp: sein click wird verworfen -- egal
+     wie lange der Finger lag (unten), und nach dem Loslassen nur noch kurz
+     (bis). Kommt kein click (Finger verrutscht), verfaellt die Sperre nach
+     400 ms und verschluckt keinen spaeteren echten Tipp. */
+  var zeigerGebucht = null;
+  function zeigerLos(ev) {
+    if (zeigerGebucht && zeigerGebucht.id === ev.pointerId && zeigerGebucht.unten) {
+      zeigerGebucht.unten = false;
+      zeigerGebucht.bis = Date.now() + (ev.type === 'pointercancel' ? 0 : 400);
+    }
+  }
+  /* Ein neuer Finger loest die Sperre eines frueheren, der nie losgelassen
+     gemeldet wurde -- sein click kommt dann nicht mehr. */
+  document.addEventListener('pointerdown', function (ev) {
+    if (zeigerGebucht && zeigerGebucht.id !== ev.pointerId) zeigerGebucht = null;
+  }, true);
+  document.addEventListener('pointerup', zeigerLos, true);
+  document.addEventListener('pointercancel', zeigerLos, true);
+  var CLICK_AKTIONEN = { 'finish-weg': 1, 'fin-finish-weg': 1, 'rtw-stechen': 1, 'fin-stechen': 1 };
   function spielTaste(ziel) {
     if (!ziel || !ziel.closest) return null;
     return ziel.closest('.keypad button, .kw-keys button, [data-quick], .mult-row button, .num-grid button.mult, [data-bull], [data-num]');
@@ -16729,10 +16993,25 @@
     if (!ev.isPrimary || ev.button !== 0) return;
     if (UI.overlay || UI.menu) return;
     if (Date.now() <= ghostTapUntil) return;
+    /* Seit 21.11. in allen Spielbildern und fuer jeden Knopf darin, nicht
+       nur das Zahlenfeld (Julius: "in der kompletten App, dass die Buttons
+       schnell getroffen werden"). Spielbilder scrollen nicht, also kann ein
+       Wisch dort nichts ausloesen, was er nicht soll. Listen und Formulare
+       (Setup, Statistik, Turnierplan) bleiben beim click: dort beginnt auf
+       einem Knopf auch mal ein Scrollen. */
+    if (!SPIEL_SCREENS[S.screen]) return;
     var taste = spielTaste(ev.target);
-    if (!taste || taste.disabled || !taste.closest('#screen-game, #screen-kaiwen, #screen-finisher')) return;
-    tasteSchonGetippt = taste; tasteSchonGetipptZeit = Date.now();
-    spielTasteTipp(taste);
+    var aktion = !taste && ev.target.closest ? ev.target.closest('button[data-action]') : null;
+    var knopf = taste || aktion;
+    if (!knopf || knopf.disabled || !knopf.closest('.screen.active') || knopf.closest('.game-menu, input, select, textarea')) return;
+    /* Was ein Leg, Spiel oder Stechen entscheidet, bleibt beim bewussten
+       Tipp (click): ein Streifen beim Wischen ueber die Karte soll kein
+       Finish buchen. */
+    if (aktion && CLICK_AKTIONEN[aktion.getAttribute('data-action')]) return;
+    zeigerGebucht = { id: ev.pointerId, unten: true, bis: 0, ab: Date.now() };
+    if (taste) { spielTasteTipp(taste); return; }
+    if (aktion.blur) aktion.blur();
+    handleAction(aktion.getAttribute('data-action'), aktion);
   });
 
   /* Name im Profil-Dialog: nur den Entwurf pflegen, nicht neu rendern –

@@ -244,8 +244,9 @@ async function finSetMult(mult) {
 }
 
 async function finDart(label) {
-  if (label === 'BULL') return page.locator('#fin-pad button[data-num="25"][data-mult="2"]').click();
-  if (label === '25') return page.locator('#fin-pad button[data-num="25"][data-mult="1"]').click();
+  /* Seit 21.11. wie im X01: Double-Schalter und Bull ergeben D Bull. */
+  if (label === 'BULL') { await finSetMult(2); return page.locator('#fin-pad button.bull[data-num="25"]').click(); }
+  if (label === '25') { await finSetMult(1); return page.locator('#fin-pad button.bull[data-num="25"]').click(); }
   const mult = label[0] === 'T' ? 3 : label[0] === 'D' ? 2 : 1;
   const num = parseInt(label.slice(1), 10);
   await finSetMult(mult);
@@ -936,6 +937,10 @@ check('zwei Spielarten zur Wahl',
   (await page.locator('#settings-rtw [data-setting="rtwBoost"] button').count()) === 2);
 check('Boost ist voreingestellt',
   await page.evaluate(() => window.__dart.state().settings.rtwBoost === 1));
+check('Uhrzeigersinn ist voreingestellt',
+  await page.evaluate(() => window.__dart.state().settings.rtwReihe === 0));
+/* Die Sprungregeln unten rechnen mit den Zahlen 1 bis 20. */
+await page.locator('#settings-rtw [data-setting="rtwReihe"] button[data-value="1"]').click();
 await page.locator('[data-action="start-game"]').click();
 check('Bull-Off auch im Training', await visible('#screen-bulloff'));
 rtwStarter = await page.locator('#bulloff-buttons button').first().locator('span:not(.av)').innerText();
@@ -2939,7 +2944,7 @@ await page.evaluate(() => {
 });
 
 await gruppe('Round the World: Einfach zählt nur die Zahl', async () => {
-rtwAufbau = async (boost, spieler) => {
+rtwAufbau = async (boost, spieler, reihe = 1) => {
   await page.evaluate((n) => {
     const D = window.__dart, S = D.state();
     S.game = null;
@@ -2948,8 +2953,9 @@ rtwAufbau = async (boost, spieler) => {
   }, spieler);
   await page.locator('[data-action="set-mode"][data-value="rtw"]').click();
   await page.locator('#settings-rtw [data-setting="rtwBoost"] button[data-value="' + boost + '"]').click();
+  await page.locator('#settings-rtw [data-setting="rtwReihe"] button[data-value="' + reihe + '"]').click();
   await page.locator('[data-action="start-game"]').click();
-  await page.locator('#bulloff-buttons button').first().click();
+  if (spieler > 1) await page.locator('#bulloff-buttons button').first().click();
 };
 await rtwAufbau(0, 2);
 eZiel = async () => {
@@ -3024,6 +3030,99 @@ check('die Spielart liegt im Archiv',
 
 /* ---------- Die 180er-Feier ---------- */
 
+});
+
+await gruppe('Finish-Weg antippen, graue Schnellwahl, Finisher-Bust (Julius 21.11.)', async () => {
+await page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; S.lineup = D.activeProfiles().slice(0, 1).map((p) => p.id); S.settings.feiern = 0; D.setScreen('setup'); });
+await page.locator('[data-action="set-mode"][data-value="quick"]').click();
+await page.locator('[data-action="start-game"]').click();
+const punkte = (v) => page.evaluate((v) => { const U = window.__dart.ui(); U.input = String(v); window.__dart.submitTotal(); }, v);
+await punkte(140); await punkte(140); await punkte(130);   // Rest 91
+await page.evaluate(() => { window.__dart.ui().modeOverride = 'total'; window.__dart.render(); });
+check('Punkte-Feld steht', await visible('#pad-total'));
+await punkte(41);   // Rest 50
+check('Rest 50', await page.evaluate(() => { const g = window.__dart.game(); const l = g.legs[g.legs.length - 1]; return 501 - l.visits.reduce((a, v) => a + v.s, 0) === 50; }));
+check('60, 81, 85 grau und gesperrt, Rest bleibt stehen', (await page.locator('#quick-row button:disabled').count()) === 3 &&
+  (await page.locator('#quick-row button').count()) === 6);
+check('Finish-Weg ist ein Knopf', (await page.locator('#scoreboard [data-action="finish-weg"]').count()) === 1);
+const weg = await page.locator('#scoreboard [data-action="finish-weg"]').getAttribute('data-weg');
+await page.locator('#scoreboard [data-action="finish-weg"]').click();
+check('ein Tipp bucht das Finish mit genau diesen Darts', await page.evaluate((weg) => {
+  const g = window.__dart.game(); const v = g.legs[0].visits[g.legs[0].visits.length - 1];
+  return v.c === true && v.s === 50 && v.d === weg.split(',').length && Array.isArray(v.k) && v.k.length === v.d;
+}, weg), weg);
+check('keine Rückfrage nach Darts oder Doppel', await page.evaluate(() => { const o = window.__dart.ui().overlay; return !o || (o.type !== 'checkout-darts' && o.type !== 'checkout-doppel'); }));
+await page.evaluate(() => { const D = window.__dart, S = D.state(); D.ui().overlay = null; D.ui().modeOverride = null; S.game = null; D.setScreen('setup'); });
+
+/* Finisher: Bust wie im X01 statt "Bull ×2". */
+await page.locator('[data-action="set-mode"][data-value="finisher"]').click();
+await page.locator('[data-action="start-game"]').click();
+await page.evaluate(() => { const g = window.__dart.game(); g.rounds[g.rounds.length - 1].zahl = 101; window.__dart.save(); window.__dart.render(); });
+check('Finisher hat Bust', (await page.locator('#fin-pad [data-action="fin-bust"]').count()) === 1);
+check('kein "Bull ×2" mehr', !(await text('#fin-pad')).includes('×2'));
+await page.evaluate(() => window.__dart.finisherDart(3, 20));
+await page.locator('#fin-pad [data-action="fin-bust"]').click();
+check('Bust: Rest zurück auf 101, Aufnahme um', await page.evaluate(() => {
+  const s = window.__dart.finisherState(); const id = window.__dart.game().players[0];
+  return s.rest[id] === 101 && s.inVisit === 0 && s.darts[id] === 3;
+}), JSON.stringify(await page.evaluate(() => window.__dart.finisherState())));
+await page.locator('#fin-pad [data-mult="2"]').click();
+check('mit Double steht D Bull', (await text('#fin-pad .bull')).replace(/\s/g, '') === 'DBull', await text('#fin-pad .bull'));
+await page.locator('#fin-pad [data-mult="2"]').click();
+await page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; S.settings.feiern = 1; D.save(); D.setScreen('setup'); });
+});
+
+await gruppe('Round the World im Uhrzeigersinn, Schnelleingabe und Werte (Julius 21.11.)', async () => {
+await rtwAufbau(0, 1, 0);
+eZiel = async () => {
+  const [id] = await page.evaluate(() => window.__dart.game().players);
+  return (await page.evaluate(() => window.__dart.rtwState())).target[id];
+};
+check('Reihe steht am Spiel', await page.evaluate(() => window.__dart.game().reihe === 'scheibe'));
+check('Kopfzeile nennt den Uhrzeigersinn', (await textKlein('#rtw-sub')).includes('uhrzeigersinn'), await text('#rtw-sub'));
+check('Start auf der 1', (await eZiel()) === 1);
+check('Taste sagt: dann 18', (await text('#rtw-pad')).includes('dann 18'), await text('#rtw-pad'));
+check('Abschluss heisst vor dem ersten Dart Bust',
+  (await text('#rtw-pad [data-action="end-rtw-visit"]')).startsWith('Bust'));
+check('Werte-Karte mit 21 Stationen', (await page.locator('#rtw-board .rtw-weg span').count()) === 21);
+check('Weg beginnt 1, 18, 4, 13', (await page.locator('#rtw-board .rtw-weg span').allInnerTexts()).slice(0, 4).join(',') === '1,18,4,13');
+await rDart('S1');
+check('nach der 1 kommt die 18', (await eZiel()) === 18, String(await eZiel()));
+check('nach einem Dart heisst der Abschluss Weiter',
+  (await text('#rtw-pad [data-action="end-rtw-visit"]')).startsWith('Weiter'));
+check('Schnelleingabe bietet nur noch 1 und 2', (await page.locator('#rtw-pad [data-action="rtw-treffer"]').count()) === 2);
+await page.locator('#rtw-pad [data-action="rtw-treffer"][data-n="2"]').click();
+check('zwei Treffer: 18 und 4, jetzt die 13', (await eZiel()) === 13, String(await eZiel()));
+check('die Aufnahme ist um', await page.evaluate(() => window.__dart.rtwState().inVisit === 0));
+await page.locator('#rtw-pad [data-action="rtw-treffer"][data-n="1"]').click();
+check('ein Treffer, Rest daneben: 3 Darts gebucht', await page.evaluate(() => window.__dart.game().throws.length === 6));
+check('jetzt die 6', (await eZiel()) === 6, String(await eZiel()));
+check('Treffer je Runde: 4 Treffer in 6 Darts = 2,00',
+  (await text('#rtw-board .rtw-kz .kz:first-child .w')) === '2,00', await text('#rtw-board .rtw-kz'));
+await page.locator('#rtw-pad [data-action="end-rtw-visit"]').click();
+check('Bust bucht drei Fehlwürfe', await page.evaluate(() => window.__dart.game().throws.length === 9));
+await page.locator('[data-action="undo-game"]').first().click();
+check('Zurück nimmt genau einen Dart', await page.evaluate(() => window.__dart.game().throws.length === 8));
+/* Bis Bull durchspielen: Bull bekommt keine Schnelleingabe. */
+await page.evaluate(() => { for (let i = 0; i < 30; i++) { const s = window.__dart.rtwState(); const id = window.__dart.game().players[0]; if (s.target[id] === 25) break; window.__dart.rtwDart(1, s.target[id]); } });
+check('auf Bull keine Schnelleingabe', (await page.locator('#rtw-pad [data-action="rtw-treffer"]').count()) === 0);
+await rDart('S25');
+check('allein durch', await page.evaluate(() => window.__dart.game().done));
+await page.locator('#overlay-card [data-action="open-summary"]').click();
+await page.locator('#summary-actions [data-action="finish-game"]').click();
+check('Reihe liegt im Archiv', await page.evaluate(() => window.__dart.state().history[0].reihe === 'scheibe'));
+/* Zweiter Durchgang: Bestwert und Schnitt kommen aus dem ersten. */
+await rtwAufbau(0, 1, 0);
+check('Bestwert aus dem ersten Durchgang', /^\d+$/.test(await text('#rtw-board .rtw-kz .kz:last-child .w')), await text('#rtw-board .rtw-kz'));
+check('Schnitt aus dem ersten Durchgang', (await text('#rtw-board .rtw-kz .kz:first-child .v')).startsWith('Ø'));
+await rDart('S1');
+check('Abstand zum Bestwert wird genannt', /voraus|zurück|gleichauf/.test(await text('#rtw-board .rtw-kz .kz:last-child .v')), await text('#rtw-board .rtw-kz .kz:last-child .v'));
+/* Altbestand ohne Reihe rechnet weiter 1 bis 20. */
+check('alte Spiele ohne Reihe laufen 1 bis 20', await page.evaluate(() => {
+  const D = window.__dart, g = D.game(), r = g.reihe; delete g.reihe;
+  const z = D.rtwState().target[g.players[0]]; g.reihe = r; return z === 2;
+}));
+await page.evaluate(() => { const D = window.__dart; D.state().game = null; D.setScreen('setup'); });
 });
 
 await gruppe('180: die Feier', async () => {
@@ -7331,8 +7430,9 @@ await gruppe('Allein im Punkte-Modus: die Restzahl fuellt die Karte - quer am iP
       boxUnten: b.getBoundingClientRect().bottom, felderOben: f ? f.getBoundingClientRect().top : 9999,
       body: getComputedStyle(document.body).paddingLeft + ' ' + getComputedStyle(document.body).paddingRight };
   });
-  check('Handy quer: die alte Aufnahme bleibt in ihrer Box (overflow hidden), die Box endet ueber den Feldern',
-    drum.overflow === 'hidden' && drum.alt === '25' && drum.anim === 'drumOut' && drum.boxUnten <= drum.felderOben + 1, JSON.stringify(drum));
+  /* Seit 21.11. bleibt die vorige Aufnahme weichgezeichnet unter der neuen stehen (drumNachWeich). */
+  check('Handy quer: die alte Aufnahme rutscht unter die neue und bleibt in ihrer Box, die Box endet ueber den Feldern',
+    drum.overflow === 'hidden' && drum.alt === '25' && drum.anim === 'drumNachWeich' && drum.boxUnten <= drum.felderOben + 1, JSON.stringify(drum));
   const g3 = await lage();
   check('Handy quer dreistellig (416): Zahl und Aufnahme nebeneinander, mindestens 40 px von der linken Kartenkante, nichts ragt heraus',
     g3.lLinks >= g3.zRechts - 1 && g3.lRechts <= g3.kLinks + g3.kBreite && g3.zLinks - g3.kLinks >= 40 && g3.zOben >= g3.kOben - 1 && g3.zUnten <= g3.kUnten + 1, JSON.stringify(g3));

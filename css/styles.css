@@ -4336,11 +4336,8 @@ body.fix-spiel #screen-rtw.active { flex: 1 1 auto; height: auto; min-height: 0;
   font-family: var(--font-cond); font-weight: 700; cursor: pointer; -webkit-tap-highlight-color: transparent; box-shadow: none;
 }
 #screen-rtw.active .rtw-key:active { background: var(--bg-3); }
-#screen-rtw.active .rtw-top { flex: none; height: clamp(40px, 9.5vh, 104px); display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(5px, 0.9vh, 10px); }
-#screen-rtw.active .rtw-top .rtw-key { border-radius: clamp(10px, 1.6vh, 16px); }
-#screen-rtw.active .rtw-top .zurueck svg { width: clamp(22px, 4.6vh, 50px); height: clamp(22px, 4.6vh, 50px); }
-#screen-rtw.active .rtw-top .bust { grid-column: span 2; font-size: clamp(18px, 4.2vh, 46px); }
-#screen-rtw.active #rtw-pad { flex: 1 1 auto; min-height: 0; display: grid; grid-template-rows: minmax(0, 3.5fr) minmax(0, 0.9fr); gap: clamp(5px, 0.9vh, 10px); margin: 0; }
+#screen-rtw.active #rtw-pad { flex: 1 1 auto; min-height: 0; display: grid; grid-template-rows: minmax(0, 3fr) minmax(0, 1fr); gap: clamp(5px, 0.9vh, 10px); margin: 0; }
+#screen-rtw.active #rtw-pad.mit-schnell { grid-template-rows: minmax(0, 2.4fr) minmax(0, 1fr) minmax(0, 1fr); }
 #screen-rtw.active .rtw-treffer {
   min-height: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: minmax(0, 2.2fr) minmax(0, 1.3fr);
   gap: clamp(5px, 0.9vh, 10px); flex: none;
@@ -4357,6 +4354,56 @@ body.fix-spiel #screen-rtw.active { flex: 1 1 auto; height: auto; min-height: 0;
 #screen-rtw.active .rtw-key .mx { color: var(--laser-hell); font-size: 0.62em; }
 #screen-rtw.active .rtw-key .sub { font-family: var(--font-cond); font-weight: 600; font-size: clamp(11px, 2.2vh, 24px); letter-spacing: 0.04em; color: var(--muted); white-space: nowrap; }
 #screen-rtw.active .rtw-reihe { display: grid; grid-template-columns: minmax(0, 1fr); min-height: 0; gap: 0; }
+/* Unten: Zurueck, Miss, Bust/Weiter (Julius 21.11.). */
+#screen-rtw.active .rtw-reihe.drei { grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr) minmax(0, 1.2fr); gap: clamp(5px, 0.9vh, 10px); }
+#screen-rtw.active .rtw-key.zurueck svg { width: clamp(22px, 4.4vh, 46px); height: clamp(22px, 4.4vh, 46px); }
+#screen-rtw.active .rtw-key.bust .k { font-family: var(--font-cond); font-weight: 700; font-size: clamp(20px, 4.6vh, 50px); line-height: 1; }
+/* Einfach: Treffer der Aufnahme mit einem Tipp. */
+#screen-rtw.active .rtw-schnell { min-height: 0; display: flex; flex-direction: column; gap: clamp(3px, 0.5vh, 6px); }
+#screen-rtw.active .rtw-schnell .l { flex: none; font-family: var(--font-cond); font-weight: 600; font-size: clamp(11px, 1.9vh, 20px); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+#screen-rtw.active .rtw-schnell .kn { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); gap: clamp(5px, 0.9vh, 10px); }
+#screen-rtw.active .rtw-key.schnell .k { font-family: var(--font-cond); font-weight: 700; font-size: clamp(22px, 5vh, 54px); line-height: 1; color: var(--laser-hell); }
+
+/* Werte-Karte links: Weg um die Scheibe und die Kennzahlen des Spielers
+   am Wurf. Bis drei Spieler fuellt sie die freien Zeilen, ab vier steht
+   sie als eigene Zeile darunter. */
+#screen-rtw.active .rtw-werte {
+  grid-row: span var(--werte, 1); min-height: 0; min-width: 0; overflow: hidden;
+  display: flex; flex-direction: column; justify-content: center; gap: clamp(8px, 2.4vh, 28px);
+  padding: clamp(10px, 2vh, 24px) clamp(10px, 1.6vw, 26px);
+  border-radius: clamp(12px, 1.8vh, 20px); border: 1px solid var(--line); background: var(--bg-2);
+}
+#screen-rtw.active .rtw-board.werte-unten { grid-template-rows: repeat(var(--zeilen, 3), minmax(0, 1fr)) auto; }
+#screen-rtw.active .rtw-board.werte-unten .rtw-werte { grid-row: auto; gap: 8px; padding: 8px 12px; }
+#screen-rtw.active .rtw-weg { display: grid; grid-template-columns: repeat(21, minmax(0, 1fr)); gap: clamp(2px, 0.4vw, 6px); }
+#screen-rtw.active .rtw-weg span {
+  min-width: 0; height: clamp(22px, 5vh, 52px); display: flex; align-items: center; justify-content: center;
+  border-radius: clamp(5px, 0.9vh, 9px); background: var(--bg-3); border: 1px solid var(--line);
+  font-family: var(--font-cond); font-weight: 700; font-size: clamp(10px, 2.1vh, 22px); color: var(--muted);
+  font-variant-numeric: tabular-nums; overflow: hidden;
+}
+#screen-rtw.active .rtw-weg span.ok {
+  color: #06131a; border-color: transparent;
+  background: linear-gradient(180deg, var(--laser-hell), var(--laser)); box-shadow: 0 0 8px var(--laser-weich);
+}
+#screen-rtw.active .rtw-weg span.jetzt { color: #fff; border-color: var(--aktiv-linie); background: var(--aktiv-flaeche); box-shadow: 0 0 12px var(--schein); }
+#screen-rtw.active .rtw-weg span.bull { color: var(--amber); }
+#screen-rtw.active .rtw-weg span.bull.ok { color: #06131a; }
+#screen-rtw.active .rtw-kz { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: clamp(6px, 1vw, 16px); }
+#screen-rtw.active .rtw-kz .kz { min-width: 0; display: flex; flex-direction: column; gap: clamp(1px, 0.4vh, 4px); }
+#screen-rtw.active .rtw-kz .w { font-family: var(--font-cond); font-weight: 700; font-size: clamp(22px, min(6.4vh, 4.6vw), 68px); line-height: 1; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+#screen-rtw.active .rtw-kz .l { font-family: var(--font-cond); font-weight: 600; font-size: clamp(11px, 1.9vh, 20px); letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#screen-rtw.active .rtw-kz .v { font-family: var(--font-cond); font-weight: 600; font-size: clamp(11px, 1.9vh, 20px); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#screen-rtw.active .rtw-kz .v.hoch { color: var(--laser-hell); }
+#screen-rtw.active .rtw-kz .v.hoch::before { content: '▲ '; font-size: 0.75em; }
+#screen-rtw.active .rtw-kz .v.runter { color: #e48a8a; }
+#screen-rtw.active .rtw-kz .v.runter::before { content: '▼ '; font-size: 0.75em; }
+/* Allein hat die Karte zwei Drittel der Hoehe: Weg und Zahlen gross. */
+#screen-rtw.active .rtw-board.allein .rtw-weg span { height: clamp(26px, 7.5vh, 76px); font-size: clamp(11px, 2.8vh, 30px); }
+#screen-rtw.active .rtw-board.allein .rtw-kz .w { font-size: clamp(26px, min(9.5vh, 6vw), 104px); }
+#screen-rtw.active .rtw-board.allein .rtw-kz .l, #screen-rtw.active .rtw-board.allein .rtw-kz .v { font-size: clamp(11px, min(2.3vh, 1.9vw), 24px); }
+#screen-rtw.active .rtw-board.werte-unten .rtw-kz .w { font-size: clamp(18px, 3.6vh, 40px); }
+#screen-rtw.active .rtw-board.werte-unten .rtw-weg span { height: clamp(18px, 3.2vh, 34px); font-size: clamp(9px, 1.6vh, 16px); }
 #screen-rtw.active .rtw-key.miss .k { color: var(--red); font-family: var(--font-cond); font-weight: 700; font-size: clamp(20px, 4.6vh, 50px); line-height: 1; }
 #screen-rtw.active #rtw-pad .rtw-stechen { grid-row: span 2; min-height: 0; overflow: auto; margin: 0; }
 /* Altlasten aus dem frueheren Layout (Tasten unten rechts, gedeckelte Hoehen) ausser Kraft. */
@@ -4390,13 +4437,11 @@ body.fix-spiel #screen-rtw.active { flex: 1 1 auto; height: auto; min-height: 0;
   #screen-rtw.active .rtw-h { font-size: 1rem; }
   #screen-rtw.active .rtw-sub { font-size: 0.7rem; }
   #screen-rtw.active .rtw-runde { font-size: 0.75rem; }
-  #screen-rtw.active .rtw-top { height: 44px; gap: 6px; }
-  #screen-rtw.active .rtw-top .bust { font-size: 1rem; }
   #screen-rtw.active .rtw-key.gross .z, #screen-rtw.active .rtw-treffer.nur-zahl .rtw-key.gross .z { font-size: clamp(40px, 8vh, 80px); }
   #screen-rtw.active .rtw-treffer.nur-bull .rtw-key.gross .z { font-size: 2rem; }
   #screen-rtw.active .rtw-key.mult .k { font-size: 1.6rem; }
   #screen-rtw.active .rtw-key .sub { font-size: 0.72rem; }
-  #screen-rtw.active .rtw-key.miss .k { font-size: 1.1rem; }
+  #screen-rtw.active .rtw-key.miss .k, #screen-rtw.active .rtw-key.bust .k, #screen-rtw.active .rtw-key.schnell .k { font-size: 1.1rem; }
 }
 /* Handy hoch: die Tafel ist so hoch wie ihre Zeilen, den Rest bekommen die
    Tasten. Vorher teilten sich Tafel und Tasten den Schirm, und mit zwei
@@ -4410,6 +4455,16 @@ body.fix-spiel #screen-rtw.active { flex: 1 1 auto; height: auto; min-height: 0;
   #screen-rtw.active .rtw-board.viele .rtw-row { min-height: clamp(56px, 8vh, 80px); }
   #screen-rtw.active .rtw-row .rw-target { font-size: clamp(28px, 6vh, 56px); }
   #screen-rtw.active .rtw-board.viele .rtw-row .rw-target { font-size: clamp(24px, 5vh, 44px); }
+  #screen-rtw.active .rtw-werte, #screen-rtw.active .rtw-board.werte-unten .rtw-werte { grid-row: auto; gap: 8px; padding: 8px 10px; }
+  #screen-rtw.active .rtw-weg { grid-template-columns: repeat(11, minmax(0, 1fr)); gap: 3px; }
+  #screen-rtw.active .rtw-weg span, #screen-rtw.active .rtw-board.werte-unten .rtw-weg span, #screen-rtw.active .rtw-board.allein .rtw-weg span { height: 22px; font-size: 12px; border-radius: 5px; }
+  #screen-rtw.active .rtw-kz { gap: 6px; }
+  #screen-rtw.active .rtw-kz .w, #screen-rtw.active .rtw-board.werte-unten .rtw-kz .w, #screen-rtw.active .rtw-board.allein .rtw-kz .w { font-size: 1.35rem; }
+  #screen-rtw.active .rtw-kz .l, #screen-rtw.active .rtw-kz .v, #screen-rtw.active .rtw-board.allein .rtw-kz .l, #screen-rtw.active .rtw-board.allein .rtw-kz .v { font-size: 0.68rem; letter-spacing: 0.02em; }
+  /* Ab vier Spielern reicht der Platz am Handy nicht fuer die Karte. */
+  #screen-rtw.active .rtw-board.viele .rtw-werte { display: none; }
+  #screen-rtw.active .rtw-key.bust .k, #screen-rtw.active .rtw-key.schnell .k { font-size: 1.3rem; }
+  #screen-rtw.active .rtw-schnell .l { font-size: 0.68rem; }
 }
 
 
@@ -7861,3 +7916,56 @@ button.st-krow:hover { background: #ffffff06; }
   .turnier-rechts > #karte-turnier-statistik { flex: none; }
   #zwischendurch-karte .hint { display: none; }
 }
+
+/* ================= Eingabe-Feinschliff (Julius 21.11.) ================= */
+/* Der Finish-Weg des Spielers am Wurf ist ein Knopf: ein Tipp bucht ihn. */
+.pcard button.pfelder.tippweg {
+  appearance: none; -webkit-appearance: none; background: none; border: 0; padding: 0; margin: 0;
+  width: 100%; color: inherit; font: inherit; text-align: inherit; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.pcard button.pfelder.tippweg .fk { border-color: var(--aktiv-linie); }
+.pcard button.pfelder.tippweg:active .fk { filter: brightness(1.2); transform: scale(0.98); }
+/* Schnellwahl, die den Rest ueberwerfen wuerde: grau und gesperrt. */
+.quick-row button:disabled { opacity: 0.32; pointer-events: none; }
+#screen-finisher.active #fin-pad .num-grid button.bust { color: var(--red); }
+
+/* Average: die Zahl gut anderthalbmal so gross wie der Name -- so hoch wie
+   Name und Leg-Zeile zusammen (Julius 21.11.). Das "Ø" bleibt klein. */
+:is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .pavg { align-self: center; line-height: 1; }
+:is(#screen-game.active #scoreboard, #screen-finisher.active #fin-board, #screen-finisher.active #ff-karten) .pcard .pavg b { font-size: 1.55em; }
+
+/* Drehrad neben dem Rest wie am Anfang (Julius 21.11.): die neue Aufnahme
+   kommt von oben, die vorige rutscht eine Zeile tiefer und bleibt dort
+   stehen -- kleiner, heller und weichgezeichnet. Beide groesser als
+   vorher (0,3 em waren neben dem Rest zu klein). */
+#screen-game.active:not(.turnier) #scoreboard .pcard .letzte-box { grid-template-rows: auto auto; align-content: center; row-gap: 0.02em; }
+#screen-game.active:not(.turnier) #scoreboard .pcard .letzte-box > .letzte { grid-area: 1 / 1; font-size: 0.42em; }
+#screen-game.active:not(.turnier) #scoreboard .pcard .letzte-box > .letzte-alt,
+#screen-game.active:not(.turnier) #scoreboard .pcard .letzte-box > .letzte-alt.still {
+  grid-area: 2 / 1; display: block; font-size: 0.3em; opacity: 0.4; filter: blur(1.2px); animation: none;
+}
+#screen-game.active:not(.turnier) #scoreboard .pcard .letzte-box > .letzte-alt.neu { animation: drumNachWeich 0.504s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+#screen-game.active:not(.turnier) #scoreboard .pcard .letzte.neu { animation: drumIn 0.504s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+/* Allein steht die Box schon auf halber Restgroesse. */
+#screen-game.active:not(.turnier) #scoreboard.solo .pcard .letzte-box > .letzte { font-size: 0.46em; }
+#screen-game.active:not(.turnier) #scoreboard.solo .pcard .letzte-box > .letzte-alt { font-size: 0.34em; }
+@keyframes drumNachWeich {
+  from { transform: translateY(-115%); opacity: 1; filter: blur(0); }
+  to { transform: none; opacity: 0.4; filter: blur(1.2px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #screen-game.active:not(.turnier) #scoreboard .pcard .letzte-box > .letzte-alt.neu,
+  #screen-game.active:not(.turnier) #scoreboard .pcard .letzte.neu { animation: none; }
+}
+
+/* RTW-Werte am Tablet hochkant: die Karte hat dort nur ein Drittel der
+   Tafel -- Leiste und Zahlen eine Stufe kleiner, damit nichts abschneidet. */
+@media (orientation: portrait) and (min-width: 700px) {
+  #screen-rtw.active .rtw-board:not(.allein) .rtw-werte { gap: 8px; padding: 8px 12px; }
+  #screen-rtw.active .rtw-board:not(.allein) .rtw-weg span { height: clamp(20px, 2.8vh, 34px); font-size: clamp(10px, 1.4vh, 16px); }
+  #screen-rtw.active .rtw-board:not(.allein) .rtw-kz .w { font-size: clamp(18px, 3vh, 36px); }
+  #screen-rtw.active .rtw-board:not(.allein) .rtw-kz .l, #screen-rtw.active .rtw-board:not(.allein) .rtw-kz .v { font-size: clamp(10px, 1.3vh, 15px); }
+}
+/* Schnelleingabe nie unter 44 px. */
+#screen-rtw.active .rtw-key.schnell { min-height: 44px; }
