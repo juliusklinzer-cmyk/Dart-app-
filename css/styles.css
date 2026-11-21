@@ -7929,6 +7929,18 @@ button.st-krow:hover { background: #ffffff06; }
 /* Schnellwahl, die den Rest ueberwerfen wuerde: grau und gesperrt. */
 .quick-row button:disabled { opacity: 0.32; pointer-events: none; }
 #screen-finisher.active #fin-pad .num-grid button.bust { color: var(--red); }
+/* Kaiwen wie X01: Bust im Zahlenfeld, Finish-Weg als Knopf. */
+#screen-kaiwen #kw-pad-darts .num-grid button.bust { color: var(--red); font-size: clamp(15px, 3vh, 32px); }
+#screen-kaiwen .kw-spieler button.pfelder.tippweg {
+  appearance: none; -webkit-appearance: none; background: none; border: 0; padding: 0;
+  width: 100%; color: inherit; font: inherit; text-align: inherit; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+#screen-kaiwen .kw-spieler button.pfelder.tippweg .fk { box-shadow: inset 0 0 0 1.5px var(--aktiv-linie); }
+#screen-kaiwen .kw-spieler button.pfelder.tippweg .fk.jetzt { box-shadow: inset 0 0 0 1.5px #f2eeee; }
+#screen-kaiwen .kw-spieler button.pfelder.tippweg:active .fk { filter: brightness(1.2); transform: scale(0.98); }
+/* Im Finish-Bereich macht Bust den ueberwerfenden Schnellwerten Platz. */
+.quick-row button.schnell-bust { color: var(--red); }
 
 /* Average: die Zahl gut anderthalbmal so gross wie der Name -- so hoch wie
    Name und Leg-Zeile zusammen (Julius 21.11.). Das "Ø" bleibt klein. */

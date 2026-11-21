@@ -3037,13 +3037,19 @@ await page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = nul
 await page.locator('[data-action="set-mode"][data-value="quick"]').click();
 await page.locator('[data-action="start-game"]').click();
 const punkte = (v) => page.evaluate((v) => { const U = window.__dart.ui(); U.input = String(v); window.__dart.submitTotal(); }, v);
+await page.evaluate(() => { window.__dart.ui().modeOverride = 'total'; window.__dart.render(); });
+check('über 170: sechs Schnellwerte, kein Bust', (await page.locator('#quick-row button[data-quick]').count()) === 6 && (await page.locator('#quick-row [data-action="bust-visit"]').count()) === 0);
 await punkte(140); await punkte(140); await punkte(130);   // Rest 91
 await page.evaluate(() => { window.__dart.ui().modeOverride = 'total'; window.__dart.render(); });
 check('Punkte-Feld steht', await visible('#pad-total'));
+check('Rest 91: 85 macht Bust Platz, 26 bis 81 bleiben', (await page.locator('#quick-row button[data-quick]').count()) === 5 && (await page.locator('#quick-row [data-action="bust-visit"]').count()) === 1);
+await page.locator('#quick-row [data-action="bust-visit"]').click();
+check('Bust aus der Schnellwahl: Rest bleibt 91, Bust gebucht', await page.evaluate(() => { const g = window.__dart.game(); const l = g.legs[g.legs.length - 1]; const v = l.visits[l.visits.length - 1]; return v.b === true && 501 - l.visits.reduce((a, x) => a + x.s, 0) === 91; }));
+await page.evaluate(() => { const g = window.__dart.game(); g.legs[g.legs.length - 1].visits.pop(); window.__dart.ui().modeOverride = 'total'; window.__dart.save(); window.__dart.render(); });
 await punkte(41);   // Rest 50
 check('Rest 50', await page.evaluate(() => { const g = window.__dart.game(); const l = g.legs[g.legs.length - 1]; return 501 - l.visits.reduce((a, v) => a + v.s, 0) === 50; }));
-check('60, 81, 85 grau und gesperrt, Rest bleibt stehen', (await page.locator('#quick-row button:disabled').count()) === 3 &&
-  (await page.locator('#quick-row button').count()) === 6);
+check('Finish-Bereich: 60, 81, 85 machen Bust Platz (Julius 21.11.)', (await page.locator('#quick-row button[data-quick]').count()) === 3 &&
+  (await page.locator('#quick-row [data-action="bust-visit"]').count()) === 1 && (await page.locator('#quick-row button:disabled').count()) === 0);
 check('Finish-Weg ist ein Knopf', (await page.locator('#scoreboard [data-action="finish-weg"]').count()) === 1);
 const weg = await page.locator('#scoreboard [data-action="finish-weg"]').getAttribute('data-weg');
 await page.locator('#scoreboard [data-action="finish-weg"]').click();
@@ -6240,14 +6246,27 @@ await gruppe('Kaiwen: Team-Checkout, Regeln, Rekord und PB', async () => {
   check('Enter danach im Einzel-Darts-Modus tut nichts und wirft keinen Fehler', !(await visible('#save-warning')) && errors.length === 0 && (await kst()).zahl === 167 && (await kst()).offen.length === 0, errors.join(' | '));
   /* Bull-Kanten per Einzeldart: Bull (25) auf 40 bustet nicht (Rest 15), D-Bull auf 50 ist ein Check. */
   await page.evaluate(() => { const g = window.__dart.game(); const v = g.versuche[g.versuche.length - 1]; v.zahl = 50; v.visits = []; v.offen = []; window.__dart.save(); window.__dart.render(); });
-  await page.locator('#kw-pad-darts .num-grid button[data-num="25"][data-mult="2"]').click(); ks = await kst();
+  await page.locator('#kw-pad-darts .num-grid button.mult[data-mult="2"]').click();
+  check('Kaiwen wie X01: mit Double steht D Bull, daneben Bust, kein "Bull ×2"', (await text('#kw-pad-darts .num-grid button.bull')).replace(/\s/g, '') === 'DBull' &&
+    (await page.locator('#kw-pad-darts [data-action="kw-bust"]').count()) === 1 && !(await text('#kw-pad-darts')).includes('×2'));
+  await page.locator('#kw-pad-darts .num-grid button[data-num="25"]').click(); ks = await kst();
   check('Doppel-Bull auf 50 ist ein Check mit einem Dart: 60', ks.zahl === 60 && ks.verlauf[ks.verlauf.length - 1].check);
-  await page.locator('#kw-pad-darts .num-grid button[data-num="25"][data-mult="1"]').click();
-  await page.locator('#kw-pad-darts .num-grid button[data-num="25"][data-mult="1"]').click(); ks = await kst();
+  await page.locator('#kw-pad-darts .num-grid button[data-num="25"]').click();
+  await page.locator('#kw-pad-darts .num-grid button[data-num="25"]').click(); ks = await kst();
   check('zweimal Bull auf 60: Rest 10, zwei Darts offen', ks.rest === 10 && ks.offen.length === 2);
   await page.locator('#kw-pad-darts .num-grid button[data-num="10"]').click(); ks = await kst();
   check('Single 10 auf 10 ist Rest 0 ohne Doppel: Bust, Rest wieder 60', ks.rest === 60 && ks.offen.length === 0 && ks.visitNr === 1);
+  await page.locator('#kw-pad-darts .num-grid button[data-num="20"]').click();
+  await page.locator('#kw-pad-darts [data-action="kw-bust"]').click(); ks = await kst();
+  check('Bust-Taste nach einer 20: Rest bleibt 60, die Aufnahme ist um', ks.rest === 60 && ks.offen.length === 0 && ks.visitNr === 2);
   await page.locator('[data-action="kw-swap"]').click();
+  check('Punkte-Eingabe auf 60: Bust steht in der Schnellwahl, 81 und 85 machen Platz', (await page.locator('#kw-quick [data-action="kw-bust"]').count()) === 1 &&
+    (await page.locator('#kw-quick [data-value="81"], #kw-quick [data-value="85"]').count()) === 0 && (await page.locator('#kw-quick [data-value="26"]').count()) === 1);
+  check('der Finish-Weg ist in der Punkte-Eingabe ein Knopf', (await page.locator('#kw-team [data-action="kw-finish-weg"]').count()) === 1);
+  const kwWeg = await page.locator('#kw-team [data-action="kw-finish-weg"]').getAttribute('data-weg');
+  await page.locator('#kw-team [data-action="kw-finish-weg"]').click(); ks = await kst();
+  check('ein Tipp auf den Finish-Weg checkt 60 ohne Rückfrage: 70', ks.zahl === 70 && ks.dartsVersuch === 0 && ks.verlauf[ks.verlauf.length - 1].check &&
+    !(await page.evaluate(() => window.__dart.ui().overlay)), kwWeg);
   /* Untergrenze: auf 2 geht es nach einem Fehlversuch nicht tiefer. */
   await page.evaluate(() => { const g = window.__dart.game(); const v = g.versuche[g.versuche.length - 1]; v.zahl = 2; v.visits = []; v.offen = []; window.__dart.save(); window.__dart.render(); });
   await kwKey('0'); await kwKey('0'); await kwKey('0'); ks = await kst();
@@ -6267,7 +6286,7 @@ await gruppe('Kaiwen: Team-Checkout, Regeln, Rekord und PB', async () => {
   await page.locator('#summary-actions [data-action="finish-game"]').click();
   check('Kaiwen gespeichert', (await page.evaluate(() => window.__dart.state().history.filter((h) => h.kind === 'kaiwen').length)) === 1);
   const kwCar = await carr();
-  check('Karriere: PB Team 167 fuer beide, sechs Checks verteilt', kwCar[kA].kwBestTeam === 167 && kwCar[kB].kwBestTeam === 167 && kwCar[kA].kwChecks + kwCar[kB].kwChecks === 6, JSON.stringify([kwCar[kA].kwChecks, kwCar[kB].kwChecks]));
+  check('Karriere: PB Team 167 fuer beide, sieben Checks verteilt (einer per Finish-Weg)', kwCar[kA].kwBestTeam === 167 && kwCar[kB].kwBestTeam === 167 && kwCar[kA].kwChecks + kwCar[kB].kwChecks === 7, JSON.stringify([kwCar[kA].kwChecks, kwCar[kB].kwChecks]));
   await rangAuf();
   await page.locator('[data-action="board-mode"][data-value="kaiwen"]').click();
   check('die Rangliste hat eine Kaiwen-Auswertung', (await text('#stats-rang')).includes('167'));

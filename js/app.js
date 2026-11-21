@@ -9881,10 +9881,7 @@
          gesperrt (Julius 21.11.) -- die Reihe springt nicht, nur weil der
          Rest klein wird. */
       var qRest = m.done ? 0 : remainingIn(leg, active);
-      $('quick-row').innerHTML = QUICK_SCORES.map(function (q) {
-        var aus = q > qRest || qRest - q === 1;
-        return '<button data-quick="' + q + '"' + (aus ? ' disabled aria-disabled="true"' : '') + '>' + q + '</button>';
-      }).join('');
+      $('quick-row').innerHTML = schnellReihe(qRest, 'bust-visit');
       var disp = $('score-display');
       disp.textContent = UI.input === '' ? '0' : UI.input;
       disp.classList.toggle('empty', UI.input === '');
@@ -9923,6 +9920,28 @@
       $('num-grid').innerHTML = nums;
       $('darts-error').textContent = UI.error;
     }
+  }
+
+  /* Schnellwahl der Punkte-Eingabe. Im Finish-Bereich (Rest bis 170)
+     braucht es die grossen Schnellwerte nicht mehr, dafuer Bust (Julius
+     21.11.): die Felder, die den Rest ueberwerfen wuerden, macht ein
+     Bust-Knopf frei - mindestens einer, sonst die hoechsten. Darueber
+     bleibt die Reihe wie sie ist; gesperrt wird dort nichts. */
+  var FINISH_BEREICH = 170;
+  function schnellReihe(rest, bustAktion, attr) {
+    attr = attr || function (q) { return 'data-quick="' + q + '"'; };
+    var knopf = function (q) { return '<button ' + attr(q) + '>' + q + '</button>'; };
+    if (!(rest > 0 && rest <= FINISH_BEREICH)) {
+      return QUICK_SCORES.map(function (q) {
+        var aus = !(rest > 0) || q > rest || rest - q === 1;
+        return '<button ' + attr(q) + (aus ? ' disabled aria-disabled="true"' : '') + '>' + q + '</button>';
+      }).join('');
+    }
+    var gut = QUICK_SCORES.filter(function (q) { return q <= rest && rest - q !== 1; });
+    if (gut.length === QUICK_SCORES.length) gut = gut.slice(0, -1);
+    var frei = QUICK_SCORES.length - gut.length;
+    return gut.map(knopf).join('') +
+      '<button class="bust schnell-bust" data-action="' + bustAktion + '" style="grid-column: span ' + frei + '; flex-grow: ' + frei + '" aria-label="Aufnahme als Bust buchen">Bust</button>';
   }
 
   function dartLabel(d) {
@@ -11143,6 +11162,10 @@
       }
     }
     for (var kl = 0; kl < 3; kl++) if (!kacheln[kl]) kacheln[kl] = '<span class="fk leer">–</span>';
+    /* Finish-Weg antippen bucht das Finish (wie im X01, Julius 21.11.):
+       nur in Punkte-Eingabe und Fernsteuerung, nur vor dem ersten Dart und
+       nur fuer einen echten Checkout-Weg (kein Stellwurf). */
+    var kwWeg = !g.done && (modus !== 'darts' || fern) && !st.offen.length && route && route.length <= dartsLeft ? route.join(',') : '';
 
     /* Team: je Spieler Avatar, Name, PB, letzte Aufnahme, drei Felder. */
     var teamHtml = g.players.map(function (id) {
@@ -11154,7 +11177,8 @@
           '<span class="kw-sp-name">' + esc(pname(id)) + '</span>' +
           '<span class="kw-sp-pb' + (pbBlitz ? ' blitz' : '') + '"><span class="kt">PB ' + (solo ? 'Solo' : 'Team') + '</span><b>' + (pb === null ? '–' : pb) + '</b></span>' +
           '<span class="kw-sp-letzte"><span class="kt">zuletzt</span><b>' + esc(st.letzte[id] || '–') + '</b></span></div>' +
-        '<div class="pfelder">' + (aktiv ? kacheln.join('') : '<span class="fk still"></span><span class="fk still"></span><span class="fk still"></span>') + '</div>' +
+        (aktiv && kwWeg ? '<button type="button" class="pfelder pfinish tippweg" data-action="kw-finish-weg" data-weg="' + esc(kwWeg) + '" aria-label="Finish ' + esc(route.map(Checkout.pretty).join(' ')) + ' buchen">' + kacheln.join('') + '</button>'
+          : '<div class="pfelder">' + (aktiv ? kacheln.join('') : '<span class="fk still"></span><span class="fk still"></span><span class="fk still"></span>') + '</div>') +
         '</div>';
     }).join('');
     $('kw-team').innerHTML = teamHtml;
@@ -11173,9 +11197,9 @@
     $('kw-pad-darts').classList.toggle('hidden', modus !== 'darts');
     $('kw-display').textContent = UI.input === '' ? '0' : UI.input;
     $('kw-error').textContent = UI.error;
-    $('kw-quick').innerHTML = QUICK_SCORES.map(function (q) {
-      return '<button data-action="kw-quick" data-value="' + q + '">' + q + '</button>';
-    }).join('');
+    /* Schnellwahl wie im X01: ueberwerfende Felder grau, im Finish-Bereich
+       macht Bust ihnen Platz (Julius 21.11.). */
+    $('kw-quick').innerHTML = schnellReihe(g.done ? 0 : st.rest, 'kw-bust', function (q) { return 'data-action="kw-quick" data-value="' + q + '"'; });
     if (modus === 'darts') {
       var hl = route ? route[0] : null;
       var hlMult = hl ? (hl.charAt(0) === 'T' ? 3 : hl.charAt(0) === 'D' || hl === 'BULL' ? 2 : 1) : 0;
@@ -11183,8 +11207,9 @@
       var prefix = UI.mult === 3 ? 'T' : UI.mult === 2 ? 'D' : '';
       var nums = '<button class="mult' + (UI.mult === 2 ? ' active' : '') + '" data-mult="2" aria-pressed="' + (UI.mult === 2) + '">Double</button>' +
         '<button class="mult' + (UI.mult === 3 ? ' active' : '') + '" data-mult="3" aria-pressed="' + (UI.mult === 3) + '">Triple</button>' +
-        '<button class="bull ' + (hl === '25' ? 'hl' : '') + '" data-num="25" data-mult="1">Bull</button>' +
-        '<button class="bull ' + (hl === 'BULL' ? 'hl' : '') + '" data-num="25" data-mult="2">Bull ×2</button>';
+        /* Wie im X01: Double + Bull ist D Bull, daneben Bust (Julius 21.11.). */
+        '<button class="bull ' + ((hl === '25' && UI.mult === 1) || (hl === 'BULL' && UI.mult >= 2) ? 'hl' : '') + '" data-num="25">' + (UI.mult >= 2 ? '<span class="mx">D</span>Bull' : 'Bull') + '</button>' +
+        '<button class="bust" data-action="kw-bust" aria-label="Aufnahme als Bust buchen">Bust</button>';
       for (var nn = 1; nn <= 20; nn++) {
         nums += '<button data-num="' + nn + '" class="' + (nn === hlNum ? 'hl' : '') + '">' + (prefix ? '<span class="mx">' + prefix + '</span>' : '') + nn + '</button>';
       }
@@ -16225,6 +16250,9 @@
         var bm = currentMatch();
         if (!bm || bm.done || settling()) return;
         if (fremdeDartsSperre()) { UI.error = spielerName(liveAmWurf(liveSpiel())) + ' trägt gerade selbst ein – warte, bis die Aufnahme gebucht ist.'; render(); return; }
+        /* Prellschutz wie bei der Schnellwahl: ein Doppeltipp buchte sonst
+           dem naechsten Spieler gleich mit einen Bust. */
+        if (quickDoubleTap('bust')) return;
         pomp();
         commitVisit(sum(UI.darts, function (d) { return d.v; }), 3, false, true, UI.darts);
         break;
@@ -16296,14 +16324,38 @@
         break;
       }
       case 'kw-quick':
-        if (settling()) break;
+        if (settling() || quickDoubleTap('kw' + el.getAttribute('data-value'))) break;
         UI.error = ''; UI.input = el.getAttribute('data-value');
         kaiwenAufnahme();
         break;
       case 'kw-end-visit':
         kaiwenAufnahmeEnde();
         break;
+      /* Bust: die angefangene Aufnahme ist ueberworfen, der Rest bleibt. */
+      case 'kw-bust': {
+        var kbg = S.game;
+        if (!kbg || kbg.kind !== 'kaiwen' || kbg.done || settling()) return;
+        if (UI.overlay && UI.overlay.type === 'checkout-darts') return;
+        if (quickDoubleTap('bust')) return;
+        var kbOffen = kaiwenVersuch(kbg).offen.slice();
+        pomp();
+        kaiwenVisit(kbg, sum(kbOffen, function (d) { return d.v; }), 3, false, true, kbOffen);
         break;
+      }
+      case 'kw-finish-weg': {
+        var kfg = S.game;
+        if (!kfg || kfg.kind !== 'kaiwen' || kfg.done || settling()) return;
+        var kfSt = kaiwenState(kfg);
+        if (kfSt.offen.length || (UI.overlay && UI.overlay.type === 'checkout-darts')) return;
+        var kfd = (el.getAttribute('data-weg') || '').split(',').filter(Boolean).map(labelDart);
+        var kfs = kfd.reduce(function (a, d) { return a + d.n * d.m; }, 0);
+        var kfLetzt = kfd[kfd.length - 1];
+        if (!kfd.length || kfd.length > 3 || kfs !== kfSt.rest || !kfLetzt || kfLetzt.m !== 2) return;
+        pomp();
+        UI.input = ''; UI.error = '';
+        kaiwenVisit(kfg, kfs, kfd.length, true, false, kfd.map(function (d) { return { m: d.m, n: d.n, v: d.m * d.n }; }));
+        break;
+      }
       case 'hu-handicap': {
         tipp();
         if (!S.settings.hunterHandicap || typeof S.settings.hunterHandicap !== 'object') S.settings.hunterHandicap = {};
@@ -16863,7 +16915,8 @@
     /* Menue (•••): ein Tipp neben die Karte schliesst es. */
     if (/^(game|cricket|rtw|fin|kw|hu)-menu-overlay$/.test(ev.target.id || '')) { UI.menu = false; render(); return; }
     /* Ein Tipp ins Bild tut in der Fernsteuerung nichts (Julius): das Menue
-       oeffnet nur •••, zurueck geht es ueber den ⌨-Knopf oben rechts. */
+       oeffnet nur •••, zurueck geht es ueber den ⌨-Knopf oben rechts.
+       Ausnahme seit 21.11.: der Finish-Weg ist ein Knopf und bucht. */
     var t = ev.target.closest('[data-action]');
     if (t) {
       /* Im Spielbild behaelt kein Knopf den Fokus: ein spaeteres Enter an
@@ -16946,7 +16999,7 @@
   }, true);
   document.addEventListener('pointerup', zeigerLos, true);
   document.addEventListener('pointercancel', zeigerLos, true);
-  var CLICK_AKTIONEN = { 'finish-weg': 1, 'fin-finish-weg': 1, 'rtw-stechen': 1, 'fin-stechen': 1 };
+  var CLICK_AKTIONEN = { 'finish-weg': 1, 'fin-finish-weg': 1, 'kw-finish-weg': 1, 'rtw-stechen': 1, 'fin-stechen': 1 };
   function spielTaste(ziel) {
     if (!ziel || !ziel.closest) return null;
     return ziel.closest('.keypad button, .kw-keys button, [data-quick], .mult-row button, .num-grid button.mult, [data-bull], [data-num]');
