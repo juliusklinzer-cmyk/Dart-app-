@@ -949,13 +949,22 @@ in allen Spielbildern.
   Fehlwürfen auf (`aufnahmeAuffuellen`).
   - Bei offenem Dialog oder Menü warten die Darts bis zu 20 s in einer Schlange.
   - Doppelt ankommende Ereignisse werden über die Laufnummer verworfen.
-  - Korrigiert Autodarts einen Dart nachträglich, kommt nur ein Hinweis. Die Korrektur
-    macht der Spieler mit ←.
+  - Jede Aufnahme der Brücke wird an die App-Aufnahme gebunden, die beim ersten Dart
+    offen ist (`aufnahmeSchluessel`). Nach Bust, Finish oder drei Darts werden weitere
+    Darts derselben Brücken-Aufnahme verworfen, mit Hinweis. Sie landen nie beim
+    nächsten Spieler.
+  - Nimmt Autodarts einen Fehlalarm zurück (`entfernt`), nimmt die App den Dart auch
+    zurück (`letztenDartZurueck`).
+  - Ändert Autodarts einen Dart nachträglich (`korrektur`), kommt nur ein Hinweis.
+    Die Korrektur macht der Spieler mit ←.
+  - Jedes offene Fenster bucht mit, auch ein verdecktes. Deshalb nur eins offen lassen.
+  - Nach einer Neuverbindung liefert die Brücke über `Last-Event-ID` nach.
 - **Bestands-Code:** Das Auslesen der beiden `/api/state`-Formate stammt aus
   [autodarts-dartcounter-bridge](https://github.com/nixuuu/autodarts-dartcounter-bridge)
   (MIT), Lizenz im Ordner.
-- **CSP:** `connect-src` erlaubt zusätzlich `http://127.0.0.1:*` und `http://localhost:*`,
-  sonst nichts Fremdes. Im Einzeldatei-Bündel ist der Anschluss nicht enthalten.
+- **CSP:** `connect-src` erlaubt zusätzlich nur `http://127.0.0.1:3190` und
+  `http://localhost:3190`. Die Brücke antwortet nur unter diesen Host-Namen (Schutz
+  gegen DNS-Rebinding). Im Einzeldatei-Bündel ist der Anschluss nicht enthalten.
 - **Einrichten:** Schritt für Schritt in `tools/autodarts-bruecke/ANLEITUNG.md`, dazu
   die Demo ohne Kameras (`start-demo-windows.bat` bzw. `npm run autodarts -- --demo`).
 - **Tests:** `npm run test:autodarts` baut einen Board Manager nach (beide Formate),
@@ -964,7 +973,10 @@ in allen Spielbildern.
   - Eine 180 wird gebucht.
   - Ziehen füllt auf.
   - Bei offenem Menü wartet ein Dart.
-  - Ein Checkout per D20 beendet das Leg.
+  - Ein Fehlalarm wird zurückgenommen.
+  - Nach einem Bust geht kein Dart an die nächste Aufnahme.
+  - Ein Checkout per D5 beendet das Leg.
+  - Darts hinter dem Leg-Dialog landen im neuen Leg.
   - Ausfälle von Board Manager und Brücke werden angezeigt.
   - Ohne Freischaltung ist nichts zu sehen.
 

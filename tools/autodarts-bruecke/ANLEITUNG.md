@@ -19,20 +19,30 @@ Das MacBook geht nicht: Autodarts Desktop gibt es nur für Windows und Linux.
      kalibrieren. Die Kameras sollten etwa 120° auseinander stehen.
    - Anmelden mit deinem Autodarts-Konto, wenn das Programm danach fragt.
 2. **Node.js** installieren, die LTS-Version von nodejs.org, mit allen Vorgaben.
-3. **Den Ordner `tools/autodarts-bruecke`** auf den PC holen, zum Beispiel über
-   GitHub mit „Code › Download ZIP“, oder per USB-Stick. Hinein gehören `bruecke.mjs`,
-   `start-windows.bat`, `start-demo-windows.bat` und die Lizenzdatei.
+   Danach den PC einmal neu starten. Sonst meldet das Fenster später
+   „node“ ist nicht als Befehl erkannt.
+3. **Den Ordner `tools/autodarts-bruecke`** auf den PC holen.
+   - Über GitHub: „Code › Download ZIP“, dann die ZIP mit Rechtsklick › „Alle
+     extrahieren“ entpacken und im entpackten Ordner `tools\autodarts-bruecke`
+     öffnen. Direkt aus der ZIP heraus starten die Dateien nicht richtig.
+   - Oder per USB-Stick.
+   - Im Ordner liegen `bruecke.mjs`, `start-windows.bat`, `start-demo-windows.bat`
+     und die Lizenzdatei.
+   - Warnt Windows beim ersten Doppelklick („Der Computer wurde durch Windows
+     geschützt“), wähle „Weitere Informationen“ › „Trotzdem ausführen“.
 
 ## Jedes Mal
 
-1. Autodarts Desktop starten und die Erkennung laufen lassen, also auf „Start“.
+1. Autodarts Desktop starten. Im Board Manager die Erkennung starten, das ist der
+   Knopf „Start“ oben. Unten muss der Zustand auf „Throw“ stehen.
 2. Doppelklick auf **`start-windows.bat`**. Im schwarzen Fenster steht dann:
    - `Autodarts-Brücke 1.0.0 auf http://127.0.0.1:3190, Quelle http://127.0.0.1:3180`
    - wenige Augenblicke später `Board Manager verbunden`
    - danach bei jedem Wurf eine Zeile wie `dart T20 (1. Dart)`
 
    Lass das Fenster offen.
-3. In **Chrome oder Edge** die App öffnen. Beim ersten Mal diese Adresse aufrufen:
+3. In **Chrome oder Edge** die App öffnen und wie immer anmelden. Beim ersten Mal
+   diese Adresse aufrufen:
    `https://darts.wirtschaftln.de/index.html?autodarts=an`
    Der Zusatz schaltet den Anschluss nur in diesem Browser frei. Für alle anderen
    bleibt die App, wie sie ist.
@@ -54,7 +64,8 @@ Das MacBook geht nicht: Autodarts Desktop gibt es nur für Windows und Linux.
      nicht mehr. Ein kurzer Hinweis sagt das.
    - Darts, die du wirfst, während ein Dialog offen ist, etwa „Leg gewonnen“,
      warten. Sie werden gebucht, sobald der Dialog zu ist.
-   - Lass nur ein Browserfenster mit der App offen. Gebucht wird nur im sichtbaren.
+   - Lass nur **ein** Browserfenster mit der App offen. Jedes offene Fenster bucht
+     mit, auch wenn Autodarts darüber liegt.
 
 ## Ohne Kameras ausprobieren
 
@@ -81,8 +92,12 @@ In der App erscheinen die Darts genauso wie später von den Kameras.
 | gelb „Darts ziehen“ | Autodarts wartet auf das Ziehen | Darts ziehen |
 | grün „Autodarts bereit“ | alles gut | werfen |
 
-Unter `http://127.0.0.1:3190/status` siehst du die letzten Ereignisse als Text.
-Schick mir den Inhalt, wenn etwas hakt.
+Hakt etwas, tippe `http://127.0.0.1:3190/status` in die Adresszeile des Browsers.
+Dort stehen die letzten Ereignisse als Text. Kopier den Inhalt und schick ihn an
+Claude, also hier in den Chat.
+
+Die Adresse der Brücke in der Karte bleibt `http://127.0.0.1:3190`. Andere Adressen
+lässt die App aus Sicherheitsgründen nicht zu.
 
 ## Wenn keine Darts ankommen
 

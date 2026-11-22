@@ -133,8 +133,8 @@
     var jetzt = Date.now();
     var ui = D.ui();
     if (gesperrt(ui)) { schlange.forEach(function (x) { x.at = jetzt; }); zeichnen(); return; }
-    /* Zwei Fenster: nur das sichtbare bucht. */
-    if (document.visibilityState === 'hidden') { schlange = []; zeichnen(); return; }
+    /* Auch ein verdecktes Fenster bucht (Autodarts Desktop liegt am selben
+       PC oft darueber). Deshalb: nur EIN Fenster mit der App offen lassen. */
     while (schlange.length) {
       ui = D.ui();
       if (gesperrt(ui)) { schlange.forEach(function (x) { x.at = jetzt; }); break; }
@@ -204,6 +204,7 @@
     document.head.appendChild(stil);
     chip = el('button', 'ad-chip'); chip.type = 'button'; chip.setAttribute('aria-label', 'Autodarts');
     chip.addEventListener('click', function () { panelAuf = !panelAuf; zeichnen(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && panelAuf) { panelAuf = false; zeichnen(); } });
     panel = el('div', 'ad-panel'); panel.hidden = true; panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', 'Autodarts');
     panel.addEventListener('click', function (e) {
       var b = e.target.closest('button[data-ad]'); if (!b) return;

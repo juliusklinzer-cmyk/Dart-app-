@@ -234,3 +234,6 @@ svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; 
   .recht-liste { grid-template-columns: minmax(0, 1fr); gap: 2px; }
   .recht-liste dd { margin-bottom: 10px; }
 }
+
+/* Sprungmarken (Inhaltsverzeichnis Datenschutz) nicht unter der festen Navigation. */
+html { scroll-padding-top: 84px; }

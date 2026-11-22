@@ -6184,7 +6184,7 @@ body.fix-spiel #screen-kaiwen.active { flex: 1 1 auto; height: auto; min-height:
 #screen-kaiwen .kw-pad-kopf svg { width: clamp(20px, 4vh, 42px); height: clamp(20px, 4vh, 42px); }
 #screen-kaiwen .kw-pad { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: clamp(5px, 0.9vh, 10px); margin: 0; }
 #screen-kaiwen .kw-pad .display-row { flex: none; height: clamp(46px, 13vh, 140px); display: flex; flex-direction: column; align-items: center; justify-content: center; background: #141011; border: 1px solid #241c1e; border-radius: clamp(12px, 1.8vh, 18px); }
-#screen-kaiwen .kw-pad .score-display { font-family: var(--font-cond); font-weight: 700; font-size: clamp(36px, 10vh, 110px); line-height: 1; color: #fff; text-shadow: 0 0 26px rgba(70, 170, 215, 0.35); font-variant-numeric: tabular-nums; background: none; border: none; padding: 0; min-height: 0; }
+#screen-kaiwen .kw-pad .score-display { font-family: var(--font-cond); font-weight: 700; font-size: clamp(32px, 9vh, 110px); line-height: 1; color: #fff; text-shadow: 0 0 26px rgba(70, 170, 215, 0.35); font-variant-numeric: tabular-nums; background: none; border: none; padding: 0; min-height: 0; }
 #screen-kaiwen .kw-pad .input-error { min-height: 1em; font-size: clamp(11px, 1.8vh, 18px); }
 #screen-kaiwen .kw-pad .quick-row { flex: none; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); height: clamp(40px, 9vh, 96px); gap: clamp(5px, 0.9vh, 10px); margin: 0; }
 #screen-kaiwen .kw-pad .quick-row button { height: 100%; min-height: 0; border-radius: clamp(10px, 1.6vh, 16px); background: #171213; border: 1px solid #2b2224; color: var(--text); font-family: var(--font-cond); font-weight: 700; font-size: clamp(18px, 4vh, 44px); padding: 0; }
@@ -6222,6 +6222,7 @@ body.fix-spiel #screen-kaiwen.active { flex: 1 1 auto; height: auto; min-height:
   #screen-kaiwen .kw-sp-pb b, #screen-kaiwen .kw-sp-letzte b { font-size: 16px; }
   #screen-kaiwen .kw-verlauf { display: none; }
   #screen-kaiwen .kw-pad .display-row { height: 46px; }
+  #screen-kaiwen .kw-pad .score-display { font-size: 36px; }
   #screen-kaiwen .kw-pad .quick-row { height: 40px; }
 }
 /* Handy quer: kompakter. */
@@ -6291,6 +6292,7 @@ body.fix-spiel #screen-kaiwen.active { flex: 1 1 auto; height: auto; min-height:
   #screen-kaiwen .kw-rechts, #screen-kaiwen .kw-pad { gap: 4px; }
   #screen-kaiwen .kw-pad-kopf { height: 34px; gap: 4px; }
   #screen-kaiwen .kw-pad .display-row { height: 40px; }
+  #screen-kaiwen .kw-pad .score-display { font-size: 32px; }
   #screen-kaiwen .kw-pad .quick-row { height: 34px; gap: 4px; }
   #screen-kaiwen .kw-pad .kw-keys { gap: 4px; }
   #screen-kaiwen #kw-pad-darts .num-grid { gap: 4px; }
