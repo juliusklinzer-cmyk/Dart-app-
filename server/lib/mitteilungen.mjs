@@ -21,6 +21,7 @@
  * Spieltag und ein Nachholspiel neu gemeldet werden.
  */
 import crypto from 'node:crypto';
+import { maskiere } from './mail.mjs';
 
 export const THEMEN = [
   { id: 'zusage', titel: 'Zusage zum Spieltag fehlt', text: '7 und 2 Tage vor dem Ligaspiel, solange du nicht abgestimmt hast', standard: 'beide', von: 'liga' },
@@ -162,7 +163,7 @@ export function erstelleMitteilungen(opt) {
         });
         ok = true;
       } catch (e) {
-        console.error('[mitteilung] Mail "' + themaId + '" an ' + u.email + ' fehlgeschlagen: ' + (e && e.message));
+        console.error('[mitteilung] Mail "' + themaId + '" an ' + maskiere(u.email) + ' fehlgeschlagen: ' + (e && e.message));
       }
     }
     if ((k === 'beide' || k === 'push') && push.bereit && inhalt.push) {
@@ -172,9 +173,9 @@ export function erstelleMitteilungen(opt) {
             { titel: inhalt.push.titel, text: inhalt.push.text, url: inhalt.push.url || appUrl, tag: tag });
           if (r.weg) qAboWeg.run(abo.id);
           else if (r.ok) { ok = true; qAboOk.run(new Date().toISOString(), abo.id); }
-          else console.error('[mitteilung] Push "' + themaId + '" an ' + u.display_name + ': ' + (r.status || '') + ' ' + (r.grund || ''));
+          else console.error('[mitteilung] Push "' + themaId + '" an ' + u.id + ': ' + (r.status || '') + ' ' + (r.grund || ''));
         } catch (e) {
-          console.error('[mitteilung] Push "' + themaId + '" an ' + u.display_name + ' fehlgeschlagen: ' + (e && e.message));
+          console.error('[mitteilung] Push "' + themaId + '" an ' + u.id + ' fehlgeschlagen: ' + (e && e.message));
         }
       }
     }

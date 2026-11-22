@@ -38,6 +38,18 @@ services:
     # Augenblick 128 MB -- mit 200 MB waere das beim Anmelden zu knapp.
     mem_limit: 320m
     cpu_shares: 512
+    # Haertung: keine Linux-Sonderrechte, keine Rechteausweitung, begrenzte
+    # Prozesszahl. Node braucht nichts davon (Port 3002 > 1024).
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 200
+    # Protokoll begrenzen: hoechstens 3 x 5 MB, dann wird das aelteste
+    # ueberschrieben (Datenschutz: keine Logs ohne Ende).
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "3"
 
 volumes:
   darts-data:

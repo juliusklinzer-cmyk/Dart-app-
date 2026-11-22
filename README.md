@@ -1090,7 +1090,7 @@ der Person – Filter, Kennzahlen, Diagramme, Liga-Bilanz, weitere Spielarten un
 „Fertig“ schließt sie) und **Liga-Statistik** (springt in Liga › Statistik),
 und beim eigenen Konto die **Konto-Kachel** (E-Mail – eine neue
 Adresse braucht das aktuelle Passwort, die alte Adresse bekommt einen Hinweis –,
-Passwort ändern, Abmelden; das Abmelden löst auch das Push-Abo dieses Geräts). Wer sein
+Passwort ändern, Abmelden, Konto löschen; das Abmelden löst auch das Push-Abo dieses Geräts). „Konto löschen“ verlangt das Passwort und löscht E-Mail, Name, Bild, Passwort, Zusagen, Benachrichtigungen und die allein gespielten Spiele; gemeinsame Spiele bleiben für die anderen und zeigen „Ehemaliges Mitglied“ (`POST /api/konto/loeschen`, die Geräte erfahren die gelöschten Kennungen über `ehemalige` in `/api/users`). Wer sein
 Passwort nicht mehr weiß, tippt auf der Anmeldeseite **„Passwort vergessen?“**: Der Server
 schickt einen Link an die Konto-Adresse (`POST /api/passwort-vergessen`, Absender dart@,
 gilt eine Stunde und einmal, nur der Hash des Tokens liegt in der Datenbank, die Antwort
@@ -1811,7 +1811,7 @@ bzw. `--ja` nur, was passieren würde):
 | `kassenwart.mjs [--aus] <e-mail>` | Macht ein Konto zum Kassenwart (bucht und löscht im Kassenbuch) oder nimmt die Rolle wieder. |
 | `konto-anlegen.mjs <e-mail> <anzeigename> <passwort>` | Legt ein Konto direkt an, ohne Einladungscode durch die App. |
 | `konto-loeschen.mjs <e-mail>` | Löscht ein Konto restlos; verweigert, solange aktive Spiele daran hängen. |
-| `konto-weg.mjs --mail <e-mail> [--wirklich]` | Entfernt ein Konto sauber: ohne Spiele ganz weg, mit Spielen bekommen diese Grabsteine und das Konto wird stillgelegt. |
+| `konto-weg.mjs --mail <e-mail> [--wirklich]` | Löscht ein Konto wie der Knopf in der App (`server/lib/konto-loeschen.mjs`): Stammdaten, Sitzungen, Zusagen und Benachrichtigungen weg, Spiele ohne andere Konten mit Grabstein, gemeinsame Spiele bleiben als „Ehemaliges Mitglied“; ohne Verweise verschwindet die Kontozeile ganz. |
 | `neustart.mjs --behalte <e-mail> [--wirklich]` | Sauberer Start vor dem ersten echten Abend: alle Spiele bekommen Grabsteine, alle Konten außer dem genannten verschwinden. |
 | `reset-password.mjs <e-mail> <neues-passwort>` | Setzt ein Passwort neu und meldet alle Geräte des Kontos ab (Notnagel, normal läuft „Passwort vergessen“ über den Mail-Link). |
 | `spiel-zurueckziehen.mjs <spiel-id> [...]` | Soft-Delete wie `DELETE /api/games/:id`; die Geräte räumen das Spiel beim nächsten Abgleich selbst aus. |

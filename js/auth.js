@@ -15,6 +15,8 @@
 
   var D = null;                    // Brücke zu app.js
   var nutzer = null;               // angemeldeter Account oder null
+  var ehemalige = [];              // Kennungen geloeschter Konten
+  var EHEMALIG = 'Ehemaliges Mitglied';
   var roster = [];                 // alle Accounts
   var ansicht = 'login';           // login | register | vergessen | neu | konto | passwort | zuordnung
   var reset = null;                // ?passwort=TOKEN aus der Mail: { token, name, gueltig }
@@ -192,6 +194,23 @@
      * daran, wird es nur ausgeblendet: im Archiv steht bloß die Kennung,
      * ohne Profil stünde dort „Unbekannt".
      */
+    /* Geloeschte Konten: Name und Bild auch in alten Spielen weg. */
+    var weg = {};
+    ehemalige.forEach(function (id) { weg[id] = 1; });
+    S.profiles.forEach(function (p) {
+      if (!weg[p.id]) return;
+      p.name = EHEMALIG; p.voll = null; p.avatar = null; p.kuerzel = null; p.wurfhand = null; p.finish = null; p.dbl = null;
+      p.hidden = true;
+    });
+    /* Mitgereiste Namen in den Spielen auch - sonst laedt das Geraet sie
+       beim naechsten Hochladen wieder hoch. Und raus aus der Aufstellung. */
+    if (ehemalige.length) {
+      S.history.forEach(function (h) {
+        if (h && h.namen && typeof h.namen === 'object') ehemalige.forEach(function (id) { if (h.namen[id]) h.namen[id] = EHEMALIG; });
+      });
+      S.lineup = S.lineup.filter(function (id) { return !weg[id]; });
+    }
+
     var imKader = {};
     roster.forEach(function (r) { imKader[r.id] = 1; });
     var raus = {};
@@ -223,6 +242,7 @@
       return ruf('GET', '/api/users');
     }).then(function (daten) {
       roster = daten.nutzer || [];
+      ehemalige = Array.isArray(daten.ehemalige) ? daten.ehemalige : [];
       rosterInProfile();
     });
   }
@@ -406,7 +426,7 @@
       return '<div class="card konto-karte">' +
         '<h2>Neues Passwort</h2>' +
         '<p class="hint">' + (reset.name ? 'Hallo ' + esc(reset.name) + ', vergib' : 'Vergib') + ' ein neues Passwort für dein Konto. Andere Geräte werden dabei abgemeldet.</p>' +
-        feld('konto-pass-neu', 'Neues Passwort', 'password', 'mindestens 6 Zeichen', 'new-password') +
+        feld('konto-pass-neu', 'Neues Passwort', 'password', 'mindestens 8 Zeichen', 'new-password') +
         feld('konto-pass-neu2', 'Nochmal', 'password', null, 'new-password') +
         '<button class="btn primary full" data-action="konto-passwort-setzen">Passwort setzen</button>' +
         '<button class="btn ghost full" data-action="konto-tab-login">Abbrechen</button>' +
@@ -431,7 +451,7 @@
             feld('konto-invite', 'Einladungscode', 'text', null, 'off')) +
           feld('konto-name', 'Anzeigename', 'text', 'wie dich alle nennen', 'nickname') +
           feld('konto-email', 'E-Mail', 'email', null, 'email') +
-          feld('konto-pass', 'Passwort', 'password', 'mindestens 6 Zeichen', 'new-password') +
+          feld('konto-pass', 'Passwort', 'password', 'mindestens 8 Zeichen', 'new-password') +
           '<button class="btn primary full" data-action="konto-register">Account anlegen</button>' +
           '<p class="hint">Mit der Registrierung gilt unsere <a href="datenschutz.html" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline">Datenschutzerklärung</a>.</p>'
         : feld('konto-email', 'E-Mail', 'email', null, 'email') +
@@ -490,6 +510,7 @@
       (offen ? '<button class="btn full" data-action="konto-zuordnen">Alte Profile zuordnen (' + offen + ')</button>' : '') +
       '<button class="btn ghost full" data-action="konto-passwort">Passwort ändern</button>' +
       '<button class="btn ghost full" data-action="konto-logout">Abmelden</button>' +
+      '<button class="btn ghost full" data-action="konto-loeschen">Konto löschen</button>' +
       '</div>';
   }
 
@@ -497,10 +518,25 @@
     return '<div class="card konto-karte">' +
       '<h2>Passwort ändern</h2>' +
       feld('konto-pass-alt', 'Bisheriges Passwort', 'password', null, 'current-password') +
-      feld('konto-pass-neu', 'Neues Passwort', 'password', 'mindestens 6 Zeichen', 'new-password') +
+      feld('konto-pass-neu', 'Neues Passwort', 'password', 'mindestens 8 Zeichen', 'new-password') +
       '<p class="hint">Deine anderen Geräte werden dabei abgemeldet.</p>' +
       '<button class="btn primary full" data-action="konto-passwort-speichern">Speichern</button>' +
       '<button class="btn ghost full" data-action="konto-zurueck">Zurück</button>' +
+      '</div>';
+  }
+
+  /* Konto loeschen (Art. 17 DSGVO): mit Passwort bestaetigen. */
+  function htmlLoeschen() {
+    return '<div class="card konto-karte">' +
+      '<h2>Konto löschen</h2>' +
+      '<p class="hint">Gelöscht werden deine E-Mail-Adresse, dein Name, dein Bild, dein Passwort, ' +
+        'deine Zusagen, Benachrichtigungen und die Spiele, die du allein eingetragen und gespielt hast. ' +
+        'Spiele mit anderen Mitgliedern bleiben für sie erhalten, dort steht dann „Ehemaliges Mitglied“. ' +
+        'Unterschriebene Spielberichte der Liga bleiben, wie die Ligaleitung sie bekommen hat.</p>' +
+      '<p class="hint">Das lässt sich nicht rückgängig machen. Auf diesem Gerät bleiben deine Spiele gespeichert, bis du die Website-Daten im Browser löschst.</p>' +
+      feld('konto-loesch-pass', 'Passwort zur Bestätigung', 'password', null, 'current-password') +
+      '<button class="btn danger full" data-action="konto-loeschen-ok">Konto endgültig löschen</button>' +
+      '<button class="btn ghost full" data-action="konto-zurueck">Abbrechen</button>' +
       '</div>';
   }
 
@@ -515,7 +551,7 @@
     if (schluessel !== letzterSchluessel) {
       letzterSchluessel = schluessel;
       var inhalt = nutzer
-        ? (ansicht === 'zuordnung' ? htmlZuordnung() : ansicht === 'passwort' ? htmlPasswort() : htmlKonto())
+        ? (ansicht === 'zuordnung' ? htmlZuordnung() : ansicht === 'passwort' ? htmlPasswort() : ansicht === 'loeschen' ? htmlLoeschen() : htmlKonto())
         : htmlLogin();
       /* Live-Region: Vorleser sagen "Passwort falsch" an, statt dass die
          Meldung stumm ueber dem Formular erscheint. Einmal beim Aufbau,
@@ -677,6 +713,40 @@
         /* Der Knopf sitzt seit dem Profil-Umbau in der Konto-Kachel des
            Profils - die Maske wohnt weiter im Konto-Bildschirm. */
         ansicht = 'passwort'; setzeMeldung(''); D.setScreen('konto'); neuZeichnen(true); break;
+
+      case 'konto-loeschen':
+        ansicht = 'loeschen'; setzeMeldung(''); D.setScreen('konto'); neuZeichnen(true); break;
+
+      case 'konto-loeschen-ok': {
+        var lPass = wert('konto-loesch-pass');
+        if (!lPass) { setzeMeldung('Bitte dein Passwort eingeben.', 'fehler'); neuZeichnen(true); break; }
+        beschaeftigt = true; setzeMeldung('Lösche das Konto …', 'ok'); render();
+        var lId = nutzer.id;
+        var pushVorher;
+        try { pushVorher = pushAbmelden(); } catch (e) { pushVorher = Promise.resolve(); }
+        Promise.race([pushVorher.catch(function () {}), new Promise(function (l) { setTimeout(l, 3000); })])
+          .then(function () { return ruf('POST', '/api/konto/loeschen', { password: lPass }); })
+          .then(function () {
+            beschaeftigt = false;
+            /* Eigenes Profil auf diesem Geraet anonymisieren wie bei den
+               anderen; Spiele allein verschwinden mit dem naechsten Abgleich. */
+            var S = D.state();
+            S.profiles.forEach(function (p) {
+              if (p.id === lId) { p.name = EHEMALIG; p.voll = null; p.avatar = null; p.kuerzel = null; p.wurfhand = null; p.finish = null; p.dbl = null; p.hidden = true; }
+            });
+            S.history.forEach(function (h) { if (h && h.namen && h.namen[lId]) h.namen[lId] = EHEMALIG; });
+            S.lineup = S.lineup.filter(function (id) { return id !== lId; });
+            D.save();
+            nutzer = null; roster = [];
+            setzeSchranke(true); merkeServer(null);
+            if (window.DartSync) window.DartSync.abgemeldet();
+            ansicht = 'login';
+            setzeMeldung('Dein Konto ist gelöscht.', 'ok');
+            neuZeichnen(true);
+          })
+          .catch(fehlerZeigen);
+        break;
+      }
 
       case 'konto-passwort-speichern':
         beschaeftigt = true;

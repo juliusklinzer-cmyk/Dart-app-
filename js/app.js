@@ -5651,7 +5651,8 @@
           '<button class="btn pa-btn" data-action="konto-mitteilungen">Benachrichtigungen</button>' +
           '<div class="pa-konto-luft"></div>' +
           '<button class="btn pa-btn" data-action="konto-passwort">Passwort ändern</button>' +
-          '<button class="btn pa-btn leise" data-action="konto-logout">Abmelden</button></div>' : '') +
+          '<button class="btn pa-btn leise" data-action="konto-logout">Abmelden</button>' +
+          '<button class="btn pa-btn leise" data-action="konto-loeschen">Konto löschen</button></div>' : '') +
       '</div>';
     }
     $('profile-detail').innerHTML = ausweis + koerper;

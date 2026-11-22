@@ -51,7 +51,7 @@ const GURKEN = [
 /* Gibt null zurueck, wenn das Passwort taugt, sonst den Grund auf Deutsch. */
 export function checkPassword(password) {
   const p = String(password || '');
-  if (p.length < 6) return 'Das Passwort muss mindestens 6 Zeichen haben.';
+  if (p.length < 8) return 'Das Passwort muss mindestens 8 Zeichen haben.';
   if (p.length > 200) return 'Das Passwort ist zu lang (hoechstens 200 Zeichen).';
   const flach = p.toLowerCase().replace(/\s+/g, '');
   if (GURKEN.indexOf(flach) >= 0) return 'Dieses Passwort ist zu bekannt. Nimm bitte ein anderes.';

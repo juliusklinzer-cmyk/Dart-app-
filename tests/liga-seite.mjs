@@ -112,7 +112,9 @@ try {
     const d = await j.json();
     check('/api/liga-gesamt liefert den Server-Stand (Datei neben der Datenbank)', j.status === 200 && d.marke === 'SERVER-STAND' && d.ligen.length >= 5);
     const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
-    check('Liga-Seite steht nicht im Service-Worker-Cache', !/liga\.html|liga\.css|liga\.js|liga-gesamt/.test(sw));
+    const assets = (/ASSETS\s*=\s*\[([\s\S]*?)\]/.exec(sw) || [])[1] || '';
+    check('Liga-Seite steht nicht in der Cache-Liste des Service Workers', assets.length > 0 && !/liga\.html|liga\.css|liga\.js|liga-gesamt/.test(assets));
+    check('... und der Service Worker nimmt sie auch beim Abruf nicht auf', /liga\\\.html\|css\\\/liga\\\.css/.test(sw));
   });
 
   await gruppe('Darstellung 390 und 1440 px', async () => {

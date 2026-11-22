@@ -1252,6 +1252,34 @@ async function main() {
        * dass sie wirklich weg ist; kommt sie zurueck, laeuft der Rest wieder.
        */
     });
+    await gruppe('Konto selbst löschen', async () => {
+      const weg = await geraet(browser, 'Weg');
+      try {
+        await registriere(weg, 'Wegzug', 'wegzug@example.de', 'abschied2026');
+        await weg.page.locator('#nav-konto').click();
+        await weg.page.waitForSelector('#screen-profile.active [data-action="konto-loeschen"]', { timeout: 10000 });
+        await weg.page.locator('#screen-profile [data-action="konto-loeschen"]').click();
+        await weg.page.waitForSelector('#konto-loesch-pass', { timeout: 10000 });
+        check('die Maske erklärt, was bleibt', (await weg.page.locator('#konto-inhalt').innerText()).includes('Ehemaliges Mitglied'));
+        await weg.page.locator('#konto-loesch-pass').fill('falsch-falsch');
+        await weg.page.locator('[data-action="konto-loeschen-ok"]').click();
+        await weg.page.waitForFunction(() => /stimmt nicht/.test(document.getElementById('konto-inhalt').innerText), null, { timeout: 10000 });
+        check('falsches Passwort: nichts passiert', await weg.page.evaluate(() => !!window.DartKonto.nutzer()));
+        await weg.page.locator('#konto-loesch-pass').fill('abschied2026');
+        await weg.page.locator('[data-action="konto-loeschen-ok"]').click();
+        await weg.page.waitForSelector('[data-action="konto-login"]', { timeout: 10000 });
+        check('danach abgemeldet mit Hinweis', (await weg.page.locator('#konto-inhalt').innerText()).includes('Konto ist gelöscht'));
+        check('die Schranke ist zu', await weg.page.evaluate(() => document.body.classList.contains('gesperrt')));
+        await weg.page.locator('#konto-email').fill('wegzug@example.de');
+        await weg.page.locator('#konto-pass').fill('abschied2026');
+        await weg.page.locator('[data-action="konto-login"]').click();
+        await weg.page.waitForFunction(() => /stimm|falsch|nicht/i.test(document.getElementById('konto-inhalt').innerText), null, { timeout: 10000 });
+        check('Anmelden geht nicht mehr', await weg.page.evaluate(() => !window.DartKonto.nutzer()));
+        check('keine Skriptfehler', weg.fehlerLog.length === 0, weg.fehlerLog.join(' | '));
+      } finally {
+        await weg.ctx.close();
+      }
+    });
     const kameraAn = await julius.page.evaluate(() => !!window.DartKamera).catch(() => false);
     if (!kameraAn) await gruppe('Kamera-Kopplung ist abgeschaltet', async () => {
       check('kein Kamera-Knopf', (await julius.page.locator('[data-action="game-kamera"]').count()) === 0 ||

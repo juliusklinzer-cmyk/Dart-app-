@@ -16,6 +16,15 @@
 import net from 'node:net';
 import tls from 'node:tls';
 import fs from 'node:fs';
+
+/* Mailadressen gehoeren nicht ins Container-Log: nur der erste Buchstabe
+   und die Domain bleiben, damit man Fehler noch zuordnen kann. */
+export function maskiere(adresse) {
+  const a = String(adresse || '');
+  const at = a.lastIndexOf('@');
+  if (at < 1) return '***';
+  return a[0] + '***' + a.slice(at);
+}
 import { randomBytes } from 'node:crypto';
 
 export const BREVO_HOST = 'smtp-relay.brevo.com';
@@ -347,14 +356,14 @@ export function erstelleMailer(cfg) {
       return { gesendet: true, id: id };
     }
     if (!bereit) {
-      console.log('[mail] nicht eingerichtet - verworfen: "' + kopfWert(m.betreff) + '" an ' + an.join(', '));
+      console.log('[mail] nicht eingerichtet - verworfen: "' + kopfWert(m.betreff) + '" an ' + an.map(maskiere).join(', '));
       return { gesendet: false, id: id };
     }
     const r = await smtpSenden({
       host: cfg.host || BREVO_HOST, port: cfg.port || BREVO_PORT, starttls: cfg.starttls !== false, name: cfg.heloName,
       user: cfg.user, pass: cfg.key, von: adresse(von).adresse, an: an.concat(cc), daten: daten
     });
-    console.log('[mail] gesendet: "' + kopfWert(m.betreff) + '" an ' + an.join(', ') + ' (' + r.antwort.slice(0, 80) + ')');
+    console.log('[mail] gesendet: "' + kopfWert(m.betreff) + '" an ' + an.map(maskiere).join(', ') + ' (' + r.antwort.slice(0, 80) + ')');
     return { gesendet: true, id: id };
   }
   return { bereit: bereit, sende: sende, absender: absender };

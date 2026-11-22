@@ -6,7 +6,7 @@
    beide leben vom Server (aktuelle Ergebnisse, Event-Stream) und nützen
    offline nichts; der Service Worker wird ohnehin nur von der App
    registriert. */
-var CACHE = 'dart-turnier-v210';
+var CACHE = 'dart-turnier-v211';
 var ASSETS = [
   './',
   './index.html',
@@ -85,7 +85,15 @@ self.addEventListener('fetch', function (e) {
      in den Offline-Cache jedes iPads – und die Erkennung selbst auch nicht. */
   if (pfad.indexOf('/modell/') === 0 || pfad.indexOf('linse-cv.js') >= 0) return;
 
+  /* Seiten nur fuer Angemeldete (Liga-Vorschau) nie in den Cache: sonst
+     saehe sie am geteilten iPad auch der Naechste nach dem Abmelden. */
+  if (/^\/(liga\.html|css\/liga\.css|js\/liga\.js|js\/liga-gesamt-daten\.js)$/.test(pfad)) return;
+
   var navigation = e.request.mode === 'navigate';
+  /* Abfrage-Teil nie im Cache-Schluessel: ?passwort=<Token> aus der Mail
+     soll nicht im Cache liegen bleiben, ?autodarts=an soll die gemerkte
+     Seite treffen. */
+  var schluessel = url.origin + url.pathname;
   /* Die Ergebnisse der Ligaleitung (js/liga-sdm.js) holt der Server
      stuendlich neu - die Datei kommt deshalb zuerst vom Netz und landet
      frisch im Cache; nur offline gilt die gemerkte Fassung. Alles andere
@@ -94,23 +102,23 @@ self.addEventListener('fetch', function (e) {
     e.respondWith(fetch(e.request).then(function (res) {
       if (res.ok && res.type === 'basic') {
         var kopie = res.clone();
-        caches.open(CACHE).then(function (c) { c.put(e.request, kopie); }).catch(function () {});
+        caches.open(CACHE).then(function (c) { c.put(schluessel, kopie); }).catch(function () {});
       }
       return res;
     }).catch(function () {
-      return caches.match(e.request).then(function (hit) { return hit || caches.match('./js/liga-sdm.js'); }).then(function (hit) { return hit || Response.error(); });
+      return caches.match(schluessel).then(function (hit) { return hit || caches.match('./js/liga-sdm.js'); }).then(function (hit) { return hit || Response.error(); });
     }));
     return;
   }
   e.respondWith(
-    caches.match(e.request).then(function (hit) {
+    caches.match(schluessel).then(function (hit) {
       return hit || fetch(e.request).then(function (res) {
         /* Nur einwandfreie, eigene Antworten merken. Ein 404 oder 500 im
            Cache bliebe sonst dauerhaft kleben – auch nachdem der Server
            längst wieder richtig antwortet. */
         if (res.ok && res.type === 'basic') {
           var copy = res.clone();
-          caches.open(CACHE).then(function (c) { c.put(e.request, copy); }).catch(function () {});
+          caches.open(CACHE).then(function (c) { c.put(schluessel, copy); }).catch(function () {});
         }
         return res;
       }).catch(function () {

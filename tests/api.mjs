@@ -1649,6 +1649,125 @@ async function main() {
       ok(!/\son[a-z]+\s*=/i.test(html.replace(/<!--[\s\S]*?-->/g, '')), 'und keine Inline-Event-Handler');
     }
 
+    console.log('\nKonto selbst loeschen (Art. 17, DRT-071)');
+    {
+      const lena = geraet('Lena');
+      r = await lena.ruf('POST', '/api/register', { invite: CODE, email: 'lena@example.de', name: 'Lena', password: 'lenaswurf2026' });
+      gleich(r.status, 201, 'Lena registriert sich');
+      const lenaId = r.daten.nutzer.id;
+      const allein = { ...spielPayload([lenaId]), id: 'lenaallein' };
+      r = await lena.ruf('POST', '/api/games', { id: allein.id, kind: '501', at: allein.at, payload: allein, players: [{ userId: lenaId }] });
+      gleich(r.status, 201, 'Lena traegt ein Solo-Spiel ein');
+      const mit = { ...spielPayload([lenaId, tobi_id]), id: 'lenamittobi', namen: { [lenaId]: 'Lena Echtname', [tobi_id]: 'Tobi' } };
+      r = await lena.ruf('POST', '/api/games', { id: mit.id, kind: '501', at: mit.at, payload: mit, players: [{ userId: lenaId }, { userId: tobi_id }] });
+      gleich(r.status, 201, '... und eins mit Tobi');
+      const vonTobi = { ...spielPayload([lenaId]), id: 'tobischreibtlena' };
+      r = await tobi.ruf('POST', '/api/games', { id: vonTobi.id, kind: '501', at: vonTobi.at, payload: vonTobi, players: [{ userId: lenaId }, { guestName: 'Gast Gerd' }] });
+      gleich(r.status, 201, 'Tobi schreibt Lena gegen einen Gast mit');
+      r = await lena.ruf('PUT', '/api/liga/zusagen/tr20261013', { status: 'dabei' });
+      gleich(r.status, 200, '... und sagt zum Training zu');
+
+      r = await lena.ruf('POST', '/api/konto/loeschen', { password: 'falsch-falsch' });
+      gleich(r.status, 403, 'ohne richtiges Passwort wird nichts geloescht');
+      r = await lena.rufOhneHeader('POST', '/api/konto/loeschen', { password: 'lenaswurf2026' });
+      gleich(r.status, 403, 'von fremder Seite (ohne App-Header) auch nicht');
+      r = await lena.ruf('POST', '/api/konto/loeschen', { password: 'lenaswurf2026' });
+      gleich(r.status, 200, 'mit Passwort loescht Lena ihr Konto');
+      r = await lena.ruf('GET', '/api/me');
+      gleich(r.daten.nutzer, null, 'danach ist sie abgemeldet');
+      r = await lena.ruf('POST', '/api/login', { email: 'lena@example.de', password: 'lenaswurf2026' });
+      gleich(r.status, 401, 'und kann sich nicht mehr anmelden');
+
+      const pdb = new DatabaseSync(dbDatei);
+      const zeile = pdb.prepare('SELECT * FROM users WHERE id = ?').get(lenaId);
+      ok(zeile && zeile.email.indexOf('lena') < 0 && zeile.display_name === 'Ehemaliges Mitglied' && !zeile.real_name && !zeile.avatar && zeile.password_hash === '!',
+        'Stammdaten sind leer, nur die Kennung bleibt fuer das gemeinsame Spiel');
+      gleich(pdb.prepare('SELECT COUNT(*) c FROM liga_zusagen WHERE user_id = ?').get(lenaId).c, 0, 'ihre Zusagen sind weg');
+      gleich(pdb.prepare('SELECT COUNT(*) c FROM sessions WHERE user_id = ?').get(lenaId).c, 0, 'ihre Sitzungen sind weg');
+      ok(!!pdb.prepare('SELECT deleted_at FROM games WHERE id = ?').get('lenaallein').deleted_at, 'das Solo-Spiel bekommt einen Grabstein');
+      ok(!pdb.prepare('SELECT deleted_at FROM games WHERE id = ?').get('lenamittobi').deleted_at, 'das Spiel mit Tobi bleibt');
+      ok(!pdb.prepare('SELECT payload FROM games WHERE id = ?').get('lenamittobi').payload.includes('Lena Echtname'), '... aber ohne ihren Namen im Spielinhalt');
+      ok(!pdb.prepare('SELECT deleted_at FROM games WHERE id = ?').get('tobischreibtlena').deleted_at, 'was Tobi eingetragen hat, bleibt Tobis');
+      pdb.close();
+
+      r = await tobi.ruf('GET', '/api/users');
+      ok(!r.daten.nutzer.some((n) => n.id === lenaId), 'Lena steht nicht mehr im Kader');
+      ok(Array.isArray(r.daten.ehemalige) && r.daten.ehemalige.includes(lenaId), 'die Geraete erfahren, dass die Kennung geloescht ist');
+      const pdbS = new DatabaseSync(dbDatei);
+      const seqMit = pdbS.prepare('SELECT seq FROM games WHERE id = ?').get('lenamittobi').seq;
+      pdbS.close();
+      r = await tobi.ruf('GET', '/api/games?since=' + (seqMit - 1));
+      {
+        const g = (r.daten.spiele || []).find((x) => x.id === 'lenamittobi');
+        ok(g && g.eingetragenVonName === 'Ehemaliges Mitglied', 'beim gemeinsamen Spiel steht „Ehemaliges Mitglied“ als Eintragende');
+      }
+
+      const nach = { ...spielPayload([tobi_id, lenaId]), id: 'offlinenachher', namen: { [lenaId]: 'Lena Echtname' } };
+      r = await tobi.ruf('POST', '/api/games', { id: nach.id, kind: '501', at: nach.at, payload: nach, players: [{ userId: tobi_id }, { userId: lenaId }] });
+      gleich(r.status, 201, 'ein offline gespieltes Spiel mit Lena laesst sich nach ihrer Loeschung noch hochladen');
+      {
+        const pdb3 = new DatabaseSync(dbDatei);
+        ok(!pdb3.prepare('SELECT payload FROM games WHERE id = ?').get('offlinenachher').payload.includes('Lena Echtname'), '... ohne ihren Namen');
+        pdb3.close();
+      }
+      r = await tobi.ruf('POST', '/api/games', { id: 'kenntkeiner', kind: '501', at: Date.now(), payload: { ...spielPayload([tobi_id, 'u_gibtsnicht']), id: 'kenntkeiner' }, players: [{ userId: tobi_id }, { userId: 'u_gibtsnicht' }] });
+      gleich(r.status, 201, 'eine ganz verschwundene Kennung wird zum Gast „Ehemaliges Mitglied“');
+
+      const leer = geraet('Leer');
+      r = await leer.ruf('POST', '/api/register', { invite: CODE, email: 'leer@example.de', name: 'Leer', password: 'leerlauf2026' });
+      const leerId = r.daten.nutzer.id;
+      r = await leer.ruf('POST', '/api/konto/loeschen', { password: 'leerlauf2026' });
+      gleich(r.status, 200, 'ein Konto ohne Spiele ...');
+      const pdb2 = new DatabaseSync(dbDatei);
+      ok(!pdb2.prepare('SELECT 1 FROM users WHERE id = ?').get(leerId), '... verschwindet ganz');
+      pdb2.close();
+      r = await leer.ruf('POST', '/api/register', { invite: CODE, email: 'leer@example.de', name: 'Leer', password: 'leerlauf2026' });
+      gleich(r.status, 201, 'die Adresse ist danach wieder frei');
+    }
+
+    console.log('\nCaptain-Adressen nicht fuer Gast-Konten (DRT-071)');
+    {
+      const besuch = geraet('Besuch2');
+      r = await besuch.ruf('POST', '/api/register', { invite: GAST_CODE, email: 'besuch2@example.de', name: 'Besuch2', password: 'turnierabend2026' });
+      gleich(r.status, 201, 'zweites Gast-Konto');
+      r = await julius.ruf('PUT', '/api/liga/empfaenger', { fest: ['captain@example.de'], gegner: { 'Team X': 'x@example.de' } });
+      gleich(r.status, 200, 'Julius hinterlegt Empfaenger');
+      r = await besuch.ruf('GET', '/api/liga/empfaenger');
+      gleich(r.status, 200, 'der Gast darf die Liste abrufen');
+      ok(!JSON.stringify(r.daten).includes('captain@example.de') && !JSON.stringify(r.daten).includes('x@example.de'), '... sieht aber keine Adressen');
+      r = await julius.ruf('GET', '/api/liga/empfaenger');
+      ok(JSON.stringify(r.daten).includes('captain@example.de'), 'Mitglieder sehen sie weiter');
+      await julius.ruf('PATCH', '/api/me', { voll: 'Julius Echtname' });
+      r = await besuch.ruf('GET', '/api/users');
+      ok(!JSON.stringify(r.daten).includes('Julius Echtname'), 'Gast-Konten sehen keine buergerlichen Namen');
+      r = await tobi.ruf('GET', '/api/users');
+      ok(JSON.stringify(r.daten).includes('Julius Echtname'), 'Mitglieder schon');
+      let letzter = 0;
+      for (let i = 0; i < 6; i++) letzter = (await besuch.ruf('POST', '/api/password', { alt: 'falsch' + i, neu: 'neuespasswort1' })).status;
+      gleich(letzter, 429, 'angemeldet Passwort raten: nach 5 Fehlversuchen ist Schluss');
+      const { netzVon } = await import('../server/lib/http.mjs');
+      gleich(netzVon('2a01:4f8:1c18:c092::1'), '2a01:4f8:1c18:c092::/64', 'IPv6 zaehlt als /64-Netz');
+      gleich(netzVon('2a01:4f8:1c18:c092:ffff:1:2:3'), '2a01:4f8:1c18:c092::/64', '... auch voll ausgeschrieben');
+      gleich(netzVon('1.2.3.4'), '1.2.3.4', 'IPv4 bleibt');
+    }
+
+    console.log('\nZuschauer-Link verfaellt (DRT-008)');
+    {
+      const pdb = new DatabaseSync(dbDatei);
+      const t = pdb.prepare('SELECT id, zuschauer FROM tournaments WHERE zuschauer IS NOT NULL LIMIT 1').get();
+      if (t) {
+        let rz = await fetch(BASIS + '/api/zuschauer/' + t.zuschauer);
+        const vorher = rz.status;
+        pdb.prepare("UPDATE tournaments SET status = 'beendet', ended_at = ?, created_at = ? WHERE id = ?")
+          .run(new Date(Date.now() - 31 * 864e5).toISOString(), new Date(Date.now() - 32 * 864e5).toISOString(), t.id);
+        rz = await fetch(BASIS + '/api/zuschauer/' + t.zuschauer);
+        ok(vorher === 200 && rz.status === 404, 'nach 30 Tagen ist der Ticker weg (vorher ' + vorher + ', nachher ' + rz.status + ')');
+      } else {
+        ok(false, 'kein Turnier mit Zuschauer-Schluessel im Test gefunden');
+      }
+      pdb.close();
+    }
+
     console.log('\nKamera-Relay nur mit Schalter (S-N1)');
     {
       const PORT2 = PORT + 50;

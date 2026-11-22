@@ -9,6 +9,8 @@
 import { randomBytes, createHash } from 'node:crypto';
 import { nextSeq, transaktion, zaehler } from './lib/db.mjs';
 import { hashPassword, verifyPassword, checkPassword, braucheNeuHash } from './lib/password.mjs';
+import { kontoLoeschen, EHEMALIG } from './lib/konto-loeschen.mjs';
+import { maskiere } from './lib/mail.mjs';
 import * as sess from './lib/session.mjs';
 import * as limit from './lib/ratelimit.mjs';
 import * as relay from './lib/relay.mjs';
@@ -282,7 +284,7 @@ export function createApi(db, config) {
       if (!einladung.gueltig) throw new HttpFehler(403, 'Dieser Einladungs-Link ist abgelaufen oder schon benutzt.');
       gastKonto = einladung.art === 'gast' ? 1 : 0;
     } else if (!(config.inviteHash && verifyPassword(code, config.inviteHash))) {
-      /* Der Gast-Code wird gern klein abgetippt ("blink182") - beides gilt. */
+      /* Der Gast-Code wird gern klein abgetippt - beides gilt. */
       if (config.gastInviteHash && (verifyPassword(code, config.gastInviteHash) ||
           verifyPassword(code.toUpperCase(), config.gastInviteHash))) gastKonto = 1;
       else throw new HttpFehler(403, 'Der Einladungscode stimmt nicht.');
@@ -456,8 +458,10 @@ export function createApi(db, config) {
       if (body.password === undefined || body.password === null || body.password === '') {
         throw new HttpFehler(400, 'Zum Ändern der E-Mail-Adresse bitte das aktuelle Passwort angeben.');
       }
+      pwPruefBremse(u);
       const voll2 = db.prepare('SELECT password_hash FROM users WHERE id = ?').get(u.id);
       if (!verifyPassword(String(body.password), voll2.password_hash)) {
+        limit.zaehle('pw-pruef:' + u.id, 5, 900e3);
         throw new HttpFehler(403, 'Das Passwort stimmt nicht.');
       }
     }
@@ -469,7 +473,7 @@ export function createApi(db, config) {
         knopf: { text: 'Zur Dart-App', url: config.appUrl || 'https://darts.wirtschaftln.de' },
         text: 'Hallo ' + u.display_name + ',\n\ndeine E-Mail-Adresse in der Dart-App wurde auf ' + email + ' geändert. ' +
           'Warst du das nicht, melde dich bei Julius.\n\nDart-App'
-      }).catch((e) => console.error('[mail] Hinweis E-Mail-Wechsel an ' + alteAdresse + ' fehlgeschlagen: ' + (e && e.message)));
+      }).catch((e) => console.error('[mail] Hinweis E-Mail-Wechsel an ' + maskiere(alteAdresse) + ' fehlgeschlagen: ' + (e && e.message)));
     }
     /* M19: `mailErinnerung` aus aelteren App-Staenden wird ignoriert - die
        Erinnerungen stellt man unter Benachrichtigungen (Thema zusage) ein. */
@@ -477,12 +481,22 @@ export function createApi(db, config) {
     sendJson(res, 200, { nutzer: eigenesProfil(frisch) });
   }
 
+  /* Wer schon angemeldet ist (z. B. eine uebernommene Sitzung am Bar-iPad),
+     darf das Passwort trotzdem nicht beliebig oft raten: 5 Fehlversuche je
+     Viertelstunde und Konto, fuer E-Mail-Wechsel, Passwortwechsel und
+     Konto loeschen gemeinsam. */
+  function pwPruefBremse(u) {
+    if (limit.pruefe('pw-pruef:' + u.id, 5, 900e3)) throw new HttpFehler(429, 'Zu viele falsche Passwörter. Bitte in einer Viertelstunde noch einmal.');
+  }
+
   async function passwortAendern(req, res) {
     pruefeHerkunft(req);
     const u = verlangeNutzer(req);
     const body = await leseJson(req, MAX_BODY_KLEIN);
+    pwPruefBremse(u);
     const voll = db.prepare('SELECT * FROM users WHERE id = ?').get(u.id);
     if (!verifyPassword(String(body.alt || ''), voll.password_hash)) {
+      limit.zaehle('pw-pruef:' + u.id, 5, 900e3);
       throw new HttpFehler(403, 'Das bisherige Passwort stimmt nicht.');
     }
     const schwach = checkPassword(body.neu);
@@ -492,6 +506,24 @@ export function createApi(db, config) {
     sess.destroyOtherSessions(db, u.id, leseCookies(req)[sess.COOKIE]);
     mitteilungen.konto(voll, 'passwort').catch(() => {});
     sendJson(res, 200, { ok: true });
+  }
+
+  /* Konto selbst loeschen (Art. 17 DSGVO). Wie beim Wechsel der E-Mail
+     weist man sich mit dem Passwort aus; eine uebernommene Sitzung allein
+     reicht nicht. */
+  async function kontoSelbstLoeschen(req, res) {
+    pruefeHerkunft(req);
+    const u = verlangeNutzer(req);
+    const body = await leseJson(req, MAX_BODY_KLEIN);
+    pwPruefBremse(u);
+    const voll = db.prepare('SELECT password_hash FROM users WHERE id = ?').get(u.id);
+    if (!verifyPassword(String(body.password || ''), voll.password_hash)) {
+      limit.zaehle('pw-pruef:' + u.id, 5, 900e3);
+      throw new HttpFehler(403, 'Das Passwort stimmt nicht.');
+    }
+    const r = kontoLoeschen(db, u.id);
+    console.log('[konto] Konto ' + u.id + ' auf eigenen Wunsch geloescht (' + (r.ganz ? 'ganz' : 'Huelle') + ', ' + r.grabsteine + ' Spiele weg)');
+    sendJson(res, 200, { ok: true, spieleWeg: r.grabsteine, spieleBleiben: r.geteilt }, { 'Set-Cookie': sess.clearCookieHeader(secure) });
   }
 
   /* ---------- Passwort vergessen: Link per Mail ----------
@@ -540,7 +572,7 @@ export function createApi(db, config) {
         text: 'Hallo ' + u.display_name + ',\n\njemand hat für dein Konto in der Dart-App ein neues Passwort angefordert. ' +
           'Mit diesem Link setzt du eines – er gilt eine Stunde und nur einmal:\n\n' + link + '\n\n' +
           'Warst du das nicht, ignoriere diese Mail einfach – dein Passwort bleibt, wie es ist.\n\nDart-App'
-      }).catch((e) => console.error('[mail] Passwort-Link an ' + u.email + ' fehlgeschlagen: ' + (e && e.message)));
+      }).catch((e) => console.error('[mail] Passwort-Link an ' + maskiere(u.email) + ' fehlgeschlagen: ' + (e && e.message)));
     }
     /* Immer dieselbe Antwort - ob es die Adresse gibt, bleibt Sache des Kontos. */
     sendJson(res, 200, { ok: true });
@@ -749,7 +781,14 @@ export function createApi(db, config) {
           ' ORDER BY display_name COLLATE NOCASE'
       )
       .all(siehtTest(u));
-    sendJson(res, 200, { nutzer: alle.map(oeffentlich) });
+    /* Geloeschte Konten: nur die Kennung, damit die Geraete Namen und Bild
+       in alten Spielen durch „Ehemaliges Mitglied“ ersetzen. */
+    const ehemalige = db.prepare("SELECT id FROM users WHERE status = 'geloescht'").all().map((z) => z.id);
+    /* Gast-Konten brauchen die buergerlichen Namen nicht (die stehen nur
+       auf dem Spielbericht, den Gaeste nicht schreiben). */
+    const liste = alle.map(oeffentlich);
+    if (u.gast_konto) liste.forEach((n) => { if (n.id !== u.id) n.voll = null; });
+    sendJson(res, 200, { nutzer: liste, ehemalige });
   }
 
   /* ---------- Spiele ---------- */
@@ -785,6 +824,18 @@ export function createApi(db, config) {
     if (da && !ersetzen) return sendJson(res, 200, { ok: true, seq: da.seq, schonDa: true });
 
     pruefeSpielInhalt(String(body.kind), body.payload);
+    /* Ein Mitspieler hat sein Konto inzwischen geloescht (Spiel offline
+       gespielt oder Turnier lief noch): das Spiel trotzdem annehmen, sonst
+       fehlte es allen anderen. Sein Name reist nicht mit. */
+    const ehemalig = new Set();
+    for (const p of spieler) {
+      if (!p || !p.userId) continue;
+      const z = db.prepare('SELECT status FROM users WHERE id = ?').get(String(p.userId));
+      if (!z || z.status === 'geloescht') ehemalig.add(String(p.userId));
+    }
+    if (ehemalig.size && body.payload.namen && typeof body.payload.namen === 'object') {
+      for (const id of ehemalig) if (id in body.payload.namen) body.payload.namen[id] = EHEMALIG;
+    }
     const inhalt = JSON.stringify(body.payload);
     if (inhalt.length > (String(body.kind) === 'tournament' ? MAX_TURNIER_ARCHIV : MAX_INHALT)) {
       throw new HttpFehler(413, 'Das Spiel ist zu gross.');
@@ -793,6 +844,10 @@ export function createApi(db, config) {
 
     const zeilen = spieler.map(function (p, i) {
       if (p && p.userId) {
+        if (ehemalig.has(String(p.userId))) {
+          const da2 = db.prepare('SELECT id FROM users WHERE id = ?').get(String(p.userId));
+          return da2 ? { pos: i, user_id: da2.id, guest_name: null } : { pos: i, user_id: null, guest_name: EHEMALIG };
+        }
         const treffer = db.prepare("SELECT id FROM users WHERE id = ? AND status = 'aktiv'").get(String(p.userId));
         if (!treffer) throw new HttpFehler(400, 'Ein Mitspieler ist kein bekannter Account.');
         return { pos: i, user_id: treffer.id, guest_name: null };
@@ -857,8 +912,18 @@ export function createApi(db, config) {
     const mehr = zeilen.length > SEITE;
     const seite = mehr ? zeilen.slice(0, SEITE) : zeilen;
 
+    /* Gast-Konten bekommen in den Spielen die Anzeigenamen statt der
+       buergerlichen Namen (namen[id] traegt sonst den vollen Namen). */
+    const anzeige = u.gast_konto ? new Map(db.prepare('SELECT id, display_name FROM users').all().map((x) => [x.id, x.display_name])) : null;
     const spiele = seite.map(function (z) {
       if (z.deleted_at) return { id: z.id, seq: z.seq, geloescht: true };
+      if (anzeige) {
+        const pl = JSON.parse(z.payload);
+        if (pl && pl.namen && typeof pl.namen === 'object') {
+          for (const id of Object.keys(pl.namen)) if (anzeige.has(id)) pl.namen[id] = anzeige.get(id);
+        }
+        return { id: z.id, seq: z.seq, kind: z.kind, at: z.client_at, payload: pl, eingetragenVon: z.recorded_by, eingetragenVonName: z.recorder_name };
+      }
       return {
         id: z.id,
         seq: z.seq,
@@ -1270,6 +1335,7 @@ export function createApi(db, config) {
   /* Der Live-Ticker: alles zu einem Turnier, ohne Konto, nur lesend - wer
      den geheimen Schluessel kennt. Bericht-Daten (Unterschriften,
      Nachmeldungen, Korrekturen) gehen hier bewusst nicht raus. */
+  const ZUSCHAUER_TAGE = 30;
   function zuschauerAnsicht(req, res, treffer) {
     /* O24: der Ticker fragt alle 4 s (150 je 10 min), die Webseite alle 6 s.
        Im Lokal haengen alle Zuschauer hinter einer WLAN-Adresse - 1200
@@ -1282,6 +1348,12 @@ export function createApi(db, config) {
     if (!/^[A-Za-z0-9_-]{8,40}$/.test(k)) throw new HttpFehler(404, 'Diesen Live-Ticker gibt es nicht.');
     const t = db.prepare('SELECT * FROM tournaments WHERE zuschauer = ?').get(k);
     if (!t) throw new HttpFehler(404, 'Diesen Live-Ticker gibt es nicht.');
+    /* DRT-008: der Link verfaellt 30 Tage nach Spielende (offene, laengst
+       vergessene Turniere 30 Tage nach dem Anlegen). */
+    const bezug = Date.parse(t.status === 'beendet' && t.ended_at ? t.ended_at : t.created_at);
+    if (Number.isFinite(bezug) && Date.now() - bezug > ZUSCHAUER_TAGE * 864e5) {
+      throw new HttpFehler(404, 'Dieser Live-Ticker ist abgelaufen.');
+    }
     const plan = JSON.parse(t.plan);
     const lg = plan.liga || null;
     const liga = lg ? {
@@ -1443,7 +1515,13 @@ export function createApi(db, config) {
     return { fest, tc, ligaleitung: LIGALEITUNG_MAIL, gegner };
   }
   async function ligaEmpfaengerHolen(req, res) {
-    verlangeNutzer(req);
+    const u = verlangeNutzer(req);
+    /* Gast-Konten verschicken keine Spielberichte und brauchen die
+       Adressen der Captains und Gegner nicht: nur die Namen. */
+    if (u.gast_konto) {
+      const st = empfaengerStand();
+      return sendJson(res, 200, { fest: ['', '', st.ligaleitung], tc: st.tc.map((t) => ({ name: t.name, email: null })), ligaleitung: st.ligaleitung, gegner: {} });
+    }
     sendJson(res, 200, empfaengerStand());
   }
   async function ligaEmpfaengerSpeichern(req, res) {
@@ -2326,6 +2404,7 @@ export function createApi(db, config) {
     ['GET', /^\/api\/me$/, me],
     ['PATCH', /^\/api\/me$/, profilAendern],
     ['POST', /^\/api\/password$/, passwortAendern],
+    ['POST', /^\/api\/konto\/loeschen$/, kontoSelbstLoeschen],
     ['POST', /^\/api\/passwort-vergessen$/, passwortVergessen],
     ['GET', /^\/api\/passwort-neu\/([A-Za-z0-9_.%-]{10,120})$/, passwortNeuPruefen],
     ['POST', /^\/api\/passwort-neu$/, passwortNeuSetzen],

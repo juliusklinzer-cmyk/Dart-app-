@@ -92,9 +92,23 @@ export class HttpFehler extends Error {
  * einem erfundenen Header am Rate-Limit vorbeimogeln.
  */
 export function clientIp(req, trustProxy) {
+  let ip = '';
   if (trustProxy) {
     const xff = req.headers['x-forwarded-for'];
-    if (xff) return String(xff).split(',')[0].trim();
+    if (xff) ip = String(xff).split(',')[0].trim();
   }
-  return req.socket.remoteAddress || 'unbekannt';
+  return netzVon(ip || req.socket.remoteAddress || 'unbekannt');
+}
+
+/* Fuer die Bremsen zaehlt bei IPv6 das ganze /64-Netz: ein Mietserver hat
+   davon 2^64 Adressen und koennte sonst jede Bremse umgehen. IPv4 (auch
+   als ::ffff:1.2.3.4) bleibt, wie es ist. */
+export function netzVon(ip) {
+  const a = String(ip);
+  if (a.indexOf(':') < 0 || /^::ffff:\d+\.\d+\.\d+\.\d+$/i.test(a)) return a;
+  let teile = a.split('%')[0].split('::');
+  const vorne = teile[0] ? teile[0].split(':') : [];
+  const hinten = teile.length > 1 && teile[1] ? teile[1].split(':') : [];
+  const voll = teile.length > 1 ? vorne.concat(new Array(Math.max(0, 8 - vorne.length - hinten.length)).fill('0'), hinten) : vorne;
+  return voll.slice(0, 4).map((x) => (parseInt(x, 16) || 0).toString(16)).join(':') + '::/64';
 }

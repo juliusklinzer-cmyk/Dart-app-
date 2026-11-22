@@ -40,9 +40,9 @@ mv backups-lokal.neu backups-lokal
 echo "Lokal gespiegelt: $(ls backups-lokal | wc -l) Staende unter $ZIEL/backups-lokal"
 
 if [ -n "$OFFSITE" ]; then
-  # Ohne --delete: auf dem zweiten Rechner duerfen aeltere Staende liegen
-  # bleiben, das ist dort ausdruecklich erwuenscht.
-  rsync -az backups-lokal/ "$OFFSITE"
+  # Mit --delete (22.11.2026): auch ausser Haus nur die letzten 14 Staende,
+  # so wie es die Datenschutzerklaerung verspricht.
+  rsync -az --delete backups-lokal/ "$OFFSITE"
   echo "Offsite kopiert nach: $OFFSITE"
 else
   echo "Kein DARTS_BACKUP_OFFSITE gesetzt -- keine Kopie ausser Haus."
