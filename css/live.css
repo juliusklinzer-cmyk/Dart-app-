@@ -101,3 +101,7 @@ body { margin: 0; min-height: 100dvh; }
 .motd .n { font-weight: 700; font-size: 1.1rem; margin: 2px 0; }
 .motd .d { color: var(--leise); font-size: 0.85rem; }
 .fuss { text-align: center; color: var(--leise); font-size: 0.8rem; margin-top: 18px; }
+/* Fuss der Seite (live.html, statisch): Impressum und Datenschutz. */
+.seiten-fuss { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 20px; padding: 0 16px max(12px, env(safe-area-inset-bottom)); font-size: 0.85rem; }
+.seiten-fuss a { color: var(--leise); text-decoration: none; min-height: 44px; display: inline-flex; align-items: center; }
+.seiten-fuss a:hover { color: var(--text); }

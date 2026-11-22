@@ -432,7 +432,8 @@
           feld('konto-name', 'Anzeigename', 'text', 'wie dich alle nennen', 'nickname') +
           feld('konto-email', 'E-Mail', 'email', null, 'email') +
           feld('konto-pass', 'Passwort', 'password', 'mindestens 6 Zeichen', 'new-password') +
-          '<button class="btn primary full" data-action="konto-register">Account anlegen</button>'
+          '<button class="btn primary full" data-action="konto-register">Account anlegen</button>' +
+          '<p class="hint">Mit der Registrierung gilt unsere <a href="datenschutz.html" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline">Datenschutzerklärung</a>.</p>'
         : feld('konto-email', 'E-Mail', 'email', null, 'email') +
           feld('konto-pass', 'Passwort', 'password', null, 'current-password') +
           '<button class="btn primary full" data-action="konto-login">Anmelden</button>' +

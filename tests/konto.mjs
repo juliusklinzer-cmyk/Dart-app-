@@ -298,6 +298,29 @@ async function main() {
         manifest.icons.some((i) => i.purpose === 'maskable'));
 
     });
+    await gruppe('Impressum und Datenschutz', async () => {
+      for (const [datei, titel] of [['impressum.html', 'Impressum'], ['datenschutz.html', 'Datenschutz']]) {
+        const res = await fetch(BASIS + '/' + datei);
+        const html = await res.text();
+        check('/' + datei + ' liefert 200', res.status === 200, String(res.status));
+        check('/' + datei + ' ist HTML', /^text\/html/.test(res.headers.get('content-type') || ''), res.headers.get('content-type'));
+        check('/' + datei + ' trägt die Überschrift', html.includes('<h1>' + titel + '</h1>'));
+        check('/' + datei + ' lädt nichts von fremden Servern',
+          !/<(script|link|img)[^>]+(src|href)="https?:/i.test(html));
+      }
+      const seite = await (await fetch(BASIS + '/')).text();
+      check('Webseite verlinkt das Impressum', /<a [^>]*href="impressum\.html"/.test(seite));
+      check('Webseite verlinkt die Datenschutzerklärung', /<a [^>]*href="datenschutz\.html"/.test(seite));
+      const live = await (await fetch(BASIS + '/live.html')).text();
+      check('Live-Ticker verlinkt beides', /href="impressum\.html"/.test(live) && /href="datenschutz\.html"/.test(live));
+      check('App zeigt die Links unter der Anmeldung',
+        (await julius.page.locator('#screen-konto a[href="impressum.html"]').isVisible()) &&
+        (await julius.page.locator('#screen-konto a[href="datenschutz.html"]').isVisible()));
+      await julius.page.click('[data-action="konto-tab-register"]');
+      check('Registrieren nennt die Datenschutzerklärung',
+        await julius.page.locator('#konto-inhalt a[href="datenschutz.html"]').isVisible());
+      await julius.page.click('[data-action="konto-tab-login"]');
+    });
     await gruppe('Registrierung mit falschem Code', async () => {
       await julius.page.locator('[data-action="konto-tab-register"]').click();
       await julius.page.locator('#konto-invite').fill('falsch');

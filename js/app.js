@@ -16867,6 +16867,55 @@
      (25) und doppelt (50) - steht Double oder Triple an, ist das grosse Bull
      gemeint, nichts wird still verworfen. Gibt zurueck, ob gebucht wurde -
      falsch heisst: falscher Bildschirm, Spiel vorbei oder Schonfrist. */
+  /* Fuer automatische Eingaben (Autodarts, js/autodarts.js): wie viele
+     Darts der laufenden Aufnahme schon gebucht sind (-1: kein Spiel am Wurf),
+     und das Auffuellen mit Fehlwuerfen, wenn gezogen wird, bevor drei Darts
+     erkannt waren (ein Dart fiel heraus oder ging daneben). */
+  var AUFNAHME_ENDE = { game: 'end-visit', cricket: 'end-cricket-visit', rtw: 'end-rtw-visit', finisher: 'fin-end-visit', kaiwen: 'kw-end-visit', hunter: 'hu-bust' };
+  function offeneAufnahme() {
+    var g = S.game;
+    if (S.screen === 'game') { var m = currentMatch(); return m && !m.done ? UI.darts.length : -1; }
+    if (!g || g.done || !AUFNAHME_ENDE[S.screen] || g.kind !== S.screen) return -1;
+    if (S.screen === 'cricket') return g.throws.length % 3;
+    if (S.screen === 'rtw') return rtwState(g).stechen ? -1 : rtwState(g).inVisit;
+    if (S.screen === 'finisher') return finisherRunde(g).stechen ? -1 : finisherState(g).inVisit;
+    if (S.screen === 'kaiwen') return kaiwenState(g).offen.length;
+    if (S.screen === 'hunter') return hunterState(g).inVisit;
+    return -1;
+  }
+  /* Kennung der laufenden Aufnahme: aendert sich, sobald sie vorbei ist
+     (drei Darts, Bust, Finish, Spielerwechsel, neues Leg oder Spiel). So
+     weiss js/autodarts.js, ob ein spaeter Dart noch zu ihr gehoert. */
+  function aufnahmeSchluessel() {
+    var g = S.game;
+    if (S.screen === 'game') {
+      var m = currentMatch(); if (!m || m.done) return '';
+      var l = activeLeg(m);
+      return 'x|' + m.id + '|' + m.legs.length + '|' + (l ? l.visits.length : 0);
+    }
+    if (offeneAufnahme() < 0) return '';
+    var id = (g.id || g.at0 || '') + '|' + S.screen + '|';
+    if (S.screen === 'cricket') return id + Math.floor(g.throws.length / 3);
+    if (S.screen === 'rtw') return id + (g.throws.length - rtwState(g).inVisit);
+    if (S.screen === 'finisher') { var r = finisherRunde(g); return id + g.rounds.length + '|' + (r.throws.length - finisherState(g).inVisit); }
+    if (S.screen === 'kaiwen') { var v = kaiwenVersuch(g); return id + g.versuche.length + '|' + v.visits.length; }
+    if (S.screen === 'hunter') return id + (g.throws.length - hunterState(g).inVisit);
+    return '';
+  }
+  /* Den letzten Dart der laufenden Aufnahme zuruecknehmen (Autodarts hat
+     einen Fehlalarm geloescht) - nur innerhalb der Aufnahme. */
+  function letztenDartZurueck() {
+    if (offeneAufnahme() <= 0 || UI.overlay) return false;
+    handleAction(S.screen === 'game' ? 'undo' : 'undo-game', null);
+    return true;
+  }
+  function aufnahmeAuffuellen() {
+    var n = offeneAufnahme();
+    if (n <= 0 || n >= 3 || UI.overlay) return false;
+    handleAction(AUFNAHME_ENDE[S.screen], null);
+    return true;
+  }
+
   function spielDart(mult, num) {
     /* Fuer jede Spielart gleich geprueft und normalisiert: nur echte Felder
        (0-20, 25), Faktor 1-3, und Bull hoechstens doppelt. */
@@ -18238,7 +18287,7 @@
       letztesSpielAm: letztesSpielAm,
       gaesteAufraeumen: gaesteAufraeumen,
       platzhalterEntfernen: platzhalterEntfernen,
-      pushDart: pushDart,
+      pushDart: pushDart, offeneAufnahme: offeneAufnahme, aufnahmeAuffuellen: aufnahmeAuffuellen, aufnahmeSchluessel: aufnahmeSchluessel, letztenDartZurueck: letztenDartZurueck,
       cricketDart: cricketDart,
       rtwDart: rtwDart,
       finisherDart: finisherDart,

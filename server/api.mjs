@@ -2305,6 +2305,16 @@ export function createApi(db, config) {
     for (const [gid, s] of geschlossen) livestrom.melden(gid, s, 'zu');
   }
 
+  /* Liga-Webseite (Vorschau, liga.html): alle Ligen der Ligaleitung, nur
+     fuer Angemeldete. Die Daten haelt server/lib/liga-gesamt.mjs. */
+  function ligaGesamt(req, res) {
+    verlangeNutzer(req);
+    const daten = config.ligaGesamt ? config.ligaGesamt() : null;
+    if (!daten) throw new HttpFehler(404, 'Noch keine Liga-Daten.');
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+    sendJson(res, 200, daten);
+  }
+
   /* ---------- Verteiler ---------- */
 
   const TID = '([A-Za-z0-9_-]{4,64})';
@@ -2353,6 +2363,7 @@ export function createApi(db, config) {
     ['PUT', new RegExp('^\\/api\\/tournaments\\/' + TID + '\\/matches\\/' + TID + '\\/live$'), partieLive],
     ['GET', /^\/api\/zuschauer\/([A-Za-z0-9_-]{1,64})$/, zuschauerAnsicht],
     ['GET', /^\/api\/oeffentlich\/liga$/, oeffentlicheLiga],
+    ['GET', /^\/api\/liga-gesamt$/, ligaGesamt],
     ['POST', new RegExp('^\\/api\\/tournaments\\/' + TID + '\\/matches\\/' + TID + '\\/claim$'), partieBeanspruchen],
     ['POST', new RegExp('^\\/api\\/tournaments\\/' + TID + '\\/matches\\/' + TID + '\\/frei$'), partieFreigeben],
     ['PUT', new RegExp('^\\/api\\/tournaments\\/' + TID + '\\/matches\\/' + TID + '$'), partieErgebnis],
@@ -2409,6 +2420,7 @@ export function createApi(db, config) {
     sendFehler(res, 404, 'Diesen Weg gibt es nicht.');
   }
   handleApi.aufraeumen = liveAufraeumen;
+  handleApi.nutzer = nutzer;   // fuer die nur Angemeldeten gezeigten Seiten (main.mjs)
   handleApi.erinnerungen = (heute) => mitteilungen.jobs(heute);
   handleApi.mitteilungen = mitteilungen;
   return handleApi;

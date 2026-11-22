@@ -16,6 +16,7 @@ import { aufraeumen as relayAufraeumen } from './lib/relay.mjs';
 import { createApi } from './api.mjs';
 import { erstelleDienste } from './lib/dienste.mjs';
 import { ladeLigaDaten, ligaDateiWaehlen, ligaAktualisieren } from './lib/liga.mjs';
+import { ligaGesamtDienst } from './lib/liga-gesamt.mjs';
 
 const SERVER_DIR = path.dirname(fileURLToPath(import.meta.url));
 const APP_DIR = path.dirname(SERVER_DIR); // Repo-Wurzel: index.html, css/, js/
@@ -55,6 +56,13 @@ const config = {
 
 /* Mailer, Push und Spielplan - aus der Umgebung, siehe lib/dienste.mjs. */
 Object.assign(config, erstelleDienste(process.env, APP_DIR, DATEN_DIR));
+
+/* Liga-Webseite (Vorschau, nur fuer Angemeldete): alle Ligen der Ligaleitung
+   fuer GET /api/liga-gesamt, stuendlich neu wie der Liga-Import (Schalter
+   DARTS_LIGA_GESAMT=1/0, sonst nur in Produktion). */
+const LIGA_GESAMT = process.env.DARTS_LIGA_GESAMT === '1' ||
+  (process.env.DARTS_LIGA_GESAMT !== '0' && process.env.NODE_ENV === 'production');
+config.ligaGesamt = ligaGesamtDienst({ appDir: APP_DIR, datenDir: DATEN_DIR, an: LIGA_GESAMT, taktMs: LIGA_IMPORT_TAKT_MS }).daten;
 
 if (!config.inviteHash) {
   console.warn('WARNUNG: DARTS_INVITE_HASH ist nicht gesetzt -- niemand kann sich registrieren.');
@@ -113,7 +121,12 @@ const TYPEN = {
 
 /* Was ausgeliefert werden darf. Alles andere im Repo (server/, tests/, .git)
    geht niemanden etwas an. */
-const ERLAUBT = new Set(['index.html', 'webseite.html', 'manifest.webmanifest', 'sw.js', 'dart-turnier.html', 'live.html']);
+const ERLAUBT = new Set(['index.html', 'webseite.html', 'manifest.webmanifest', 'sw.js', 'dart-turnier.html', 'live.html', 'liga.html', 'impressum.html', 'datenschutz.html']);
+/* Die Liga-Webseite (Vorschau fuer den Liga-Vorstand) gibt es nur mit
+   Anmeldung; Unangemeldete bekommen 404 wie fuer eine fehlende Datei. */
+/* Verglichen wird die aufgeloeste Datei, nicht die Adresse - sonst kaeme
+   /liga%2Ehtml an der Pruefung vorbei. */
+const NUR_ANGEMELDET = new Set(['liga.html', 'css/liga.css', 'js/liga.js', 'js/liga-gesamt-daten.js'].map((p) => path.join(APP_DIR, p)));
 // 'modell': CV-Modelle fuer die Kamera-Erkennung -- laedt nur das iPhone
 // als Linse, deshalb nimmt der Service Worker sie ausdruecklich nicht mit.
 const ERLAUBTE_ORDNER = new Set(['css', 'js', 'icons', 'fonts', 'modell']);
@@ -203,7 +216,9 @@ function liefereDatei(req, res, datei) {
    das zulaesst, aber weiterhin nichts von fremden Servern laedt. */
 const CSP =
   "default-src 'self'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline'; " +
-  "img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self'; font-src 'self'; " +
+  /* connect-src: dazu nur die Autodarts-Bruecke auf demselben Rechner
+     (js/autodarts.js, Test) - kein fremder Server. */
+  "img-src 'self' data: blob:; media-src 'self' blob: data:; connect-src 'self' http://127.0.0.1:3190 http://localhost:3190; font-src 'self'; " +
   "frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
 const CSP_BUENDEL =
   "default-src 'self'; script-src 'self' 'unsafe-inline'; worker-src blob:; style-src 'self' 'unsafe-inline'; " +
@@ -246,6 +261,14 @@ const server = http.createServer(function (req, res) {
   }
 
   const datei = statischerPfad(url.pathname);
+  if (datei && NUR_ANGEMELDET.has(datei)) {
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+    res.setHeader('Cache-Control', 'private, no-store');
+    if (!handleApi.nutzer(req)) {
+      res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+      return res.end('Nicht gefunden');
+    }
+  }
   if (!datei) {
     res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
     return res.end('Nicht gefunden');

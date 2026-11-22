@@ -921,6 +921,53 @@ sich direkt korrigieren, solange das Leg damit schlüssig bleibt.
 
 **Tastatur (am Laptop):** Ziffern, `Enter` = OK, `Backspace` = löschen, `z` = Undo.
 
+## Autodarts-Anschluss (Test)
+
+Seit 22.11.2026 kann die App erkannte Darts von **Autodarts** übernehmen, vorerst nur
+als Test auf Julius' Windows-PC. Die Kameras hängen an Autodarts Desktop. Die
+**Autodarts-Brücke** (`tools/autodarts-bruecke/bruecke.mjs`, Node ohne Abhängigkeiten)
+liest den lokalen Board Manager (`http://127.0.0.1:3180/api/state`) im 80-ms-Takt. Sie
+meldet jeden neuen Dart sofort als Ereignis auf `http://127.0.0.1:3190/ereignisse`
+(SSE, mit CORS für unsere Seite). Die Ereignisse sind `dart`, `ziehen`, `korrektur`,
+`unbekannt` und `status`. `js/autodarts.js` hört dort mit und bucht über `spielDart`,
+in allen Spielbildern.
+
+- **Unsichtbar für alle anderen:** Freigeschaltet wird der Anschluss nur in dem Browser,
+  der einmal `index.html?autodarts=an` öffnet. `?autodarts=aus` nimmt ihn wieder weg.
+  Ohne Freischaltung tut die Datei nichts.
+- **Bedienung:** Oben in der Mitte zeigt ein Punkt den Zustand:
+  - grau „aus“
+  - rot „Brücke nicht erreichbar“
+  - gelb „Board Manager fehlt“ oder „Darts ziehen“
+  - grün „Autodarts bereit“
+
+  Dahinter stehen die letzten Darts. Ein Tipp öffnet die Karte mit Ein/Aus und der
+  Adresse.
+- **Buchungsregeln:**
+  - Jeder Dart wird sofort gebucht.
+  - Werden die Darts gezogen, bevor drei erkannt waren, füllt die App die Aufnahme mit
+  Fehlwürfen auf (`aufnahmeAuffuellen`).
+  - Bei offenem Dialog oder Menü warten die Darts bis zu 20 s in einer Schlange.
+  - Doppelt ankommende Ereignisse werden über die Laufnummer verworfen.
+  - Korrigiert Autodarts einen Dart nachträglich, kommt nur ein Hinweis. Die Korrektur
+    macht der Spieler mit ←.
+- **Bestands-Code:** Das Auslesen der beiden `/api/state`-Formate stammt aus
+  [autodarts-dartcounter-bridge](https://github.com/nixuuu/autodarts-dartcounter-bridge)
+  (MIT), Lizenz im Ordner.
+- **CSP:** `connect-src` erlaubt zusätzlich `http://127.0.0.1:*` und `http://localhost:*`,
+  sonst nichts Fremdes. Im Einzeldatei-Bündel ist der Anschluss nicht enthalten.
+- **Einrichten:** Schritt für Schritt in `tools/autodarts-bruecke/ANLEITUNG.md`, dazu
+  die Demo ohne Kameras (`start-demo-windows.bat` bzw. `npm run autodarts -- --demo`).
+- **Tests:** `npm run test:autodarts` baut einen Board Manager nach (beide Formate),
+  startet die echte Brücke und spielt in Chromium X01. Geprüft werden:
+  - Einzeldarts kommen in unter einer Sekunde an.
+  - Eine 180 wird gebucht.
+  - Ziehen füllt auf.
+  - Bei offenem Menü wartet ein Dart.
+  - Ein Checkout per D20 beendet das Leg.
+  - Ausfälle von Board Manager und Brücke werden angezeigt.
+  - Ohne Freischaltung ist nichts zu sehen.
+
 ## Kamera-Kopplung (Linse)
 
 Der vierte Eingabemodus: ein **iPhone auf dem Stativ vor dem Board** meldet die
@@ -1312,8 +1359,50 @@ und `js/webseite.js`) liegt seit Oktober 2026 die öffentliche Seite im App-Stil
   (`?einladung=…`) öffnet das Registrieren mit eingetragenem Code.
 
 Der Endpunkt gibt keine Namen, Aufstellungen oder Berichte heraus, nur Tabelle,
-Spieltag-Kennung und den Zuschauer-Schlüssel. Kontakt, Impressum und
-Datenschutz fehlen auf der Seite noch (Texte stehen aus).
+Spieltag-Kennung und den Zuschauer-Schlüssel.
+
+**Impressum und Datenschutz** (seit 22.11.2026): `impressum.html` und
+`datenschutz.html`, statisch, im Stil der Webseite (Regeln am Ende von
+`css/webseite.css`), ohne Skript und ohne fremde Ressourcen. Verlinkt aus dem Fuß
+der Webseite, dem Fuß des Live-Tickers, dem Registrieren-Formular (Webseite und
+App) und unter der Anmeldung in der App (`#screen-konto`, fest in `index.html`).
+Grundlage ist die Bestandsaufnahme [docs/datenschutz-bestandsaufnahme.md](docs/datenschutz-bestandsaufnahme.md).
+**Wer Daten, Dienste, Fristen oder Sichtbarkeiten ändert, zieht dort und in
+`datenschutz.html` nach.** Neue HTML-Seiten brauchen außerdem einen Eintrag in
+`ERLAUBT` (`server/main.mjs`) und in der `COPY`-Zeile von `deploy/Dockerfile`.
+
+## Liga-Webseite (Vorschau, nicht öffentlich)
+
+`liga.html` (mit `css/liga.css`, `js/liga.js`) baut die Seite der Steeldart-Liga
+München (steeldart-muenchen.de) im Blink-180-Stil nach – als Vorschlag für den
+Liga-Vorstand. Bereiche: **Übersicht** (Neuigkeiten, Zahlen der Saison, nächste
+Spiele aller Ligen, letzte Ergebnisse, Tabellenspitze, Termine), **Ligen** (1. bis
+5. Liga, je Tabelle mit Form, Spielplan je Spieltag, Einzelrangliste, Highlights,
+Teams), **Spielbericht** (16 Einzel, Bilanz je Spieler, Highlights), **Team**
+(Spielort mit Karte, Telefon, Webseite, Teamcaptains, Spieler mit Bilanz,
+Spielplan), **Spieler** (Suche, Einzel-Bilanz, alle Einzel), **Teams & Lokale**
+und **Verein** (Kontakt, Regelecke, Veranstaltungen, Downloads – die
+Artikel und PDFs verlinken auf die Originalseite).
+
+- **Nicht öffentlich:** nirgends verlinkt, `noindex`; der Server liefert Seite,
+  CSS, Skript und Datendatei nur mit gültiger Anmeldung aus (sonst 404). Aufruf:
+  angemeldet `https://darts.wirtschaftln.de/liga.html`, lokal `npm run server`
+  und `http://localhost:3002/liga.html`, oder die Datei per Doppelklick (dann mit
+  dem Schnappschuss). Nicht im Service Worker.
+- **Daten:** `server/lib/liga-gesamt.mjs` liest alle Ligen aus der Navigation,
+  Spielpläne, Tabellen, jeden Spielbericht, `teams.html`, die Mannschaftsseiten
+  (Spielerlisten), Spielorte und die Vereinsseiten. Der Server holt das in
+  Produktion stündlich (Schalter `DARTS_LIGA_GESAMT=1/0`), schonend: bekannte
+  Spielberichte werden nie neu geladen, Mannschafts- und Vereinsseiten nur
+  einmal am Tag, dazwischen 0,4 s Pause. Der Stand liegt als
+  `liga-gesamt.json` neben der Datenbank und kommt über `GET /api/liga-gesamt`
+  (nur angemeldet).
+- **Schnappschuss:** `npm run liga-gesamt` (`tools/liga-gesamt.mjs`, Optionen
+  `--voll`, `--cache ORDNER`) schreibt `js/liga-gesamt-daten.js` – Rückfall ohne
+  Server und Startwert für den Server.
+- Einzelbilanzen, Form und Highlights rechnet die Seite aus den
+  Spielberichten (Punkte wie in der Einzelrangliste der Ligaleitung). Test:
+  `npm run test:liga-seite` (Teil von `test:alle`).
 
 ## Anmelden und gemeinsam spielen
 

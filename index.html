@@ -1236,6 +1236,8 @@
   <div id="konto-inhalt"></div>
   <!-- Vom Server endgueltig abgelehnte Uploads (renderKontoFehlschlaege in app.js). -->
   <div id="konto-fehlschlaege" class="hidden"></div>
+  <!-- Rechtliches, fest im HTML (nicht aus app.js): unaufdringlich unter dem Konto. -->
+  <p class="hint center konto-recht"><a href="impressum.html" target="_blank" rel="noopener" style="color:inherit;display:inline-flex;align-items:center;min-height:44px;padding:0 10px">Impressum</a> · <a href="datenschutz.html" target="_blank" rel="noopener" style="color:inherit;display:inline-flex;align-items:center;min-height:44px;padding:0 10px">Datenschutz</a></p>
 </section>
 
 <!-- ============ OVERLAY ============ -->
@@ -1273,6 +1275,9 @@
      window.DartKamera zeigt app.js weder Kamera-Knopf noch Koppeln-Link.
      Zum Wiedereinschalten die folgende Zeile wieder aktivieren. -->
 <!-- <script src="js/kamera.js"></script> -->
+<!-- Autodarts-Anschluss (Test): tut nichts, solange er nicht mit
+     ?autodarts=an in diesem Browser freigeschaltet ist. -->
+<script src="js/autodarts.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

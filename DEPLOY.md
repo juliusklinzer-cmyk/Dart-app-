@@ -24,7 +24,7 @@ git clone https://github.com/JuliusKlinzer/Dart-app-.git /var/www/darts
 cd /var/www/darts && git pull   # später aktualisieren
 ```
 
-Gebraucht werden `index.html`, `webseite.html`, `live.html`, `css/`, `js/`, `icons/`,
+Gebraucht werden `index.html`, `webseite.html`, `live.html`, `impressum.html`, `datenschutz.html`, `css/`, `js/`, `icons/`,
 `fonts/`, `manifest.webmanifest` und `sw.js`. Der Node-Server liefert unter `/` die
 öffentliche Webseite aus, die App liegt unter `/index.html`; ein reiner Dateiserver
 müsste `webseite.html` als Index nehmen.

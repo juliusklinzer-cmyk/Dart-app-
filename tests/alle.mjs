@@ -26,9 +26,11 @@ const SCHRITTE = [
   { name: 'Mail', skript: 'tests/mail.mjs' },
   { name: 'Mitteilungen', skript: 'tests/mitteilungen.mjs' },
   { name: 'Browser: index.html', skript: 'tests/e2e.mjs' },
+  { name: 'Autodarts-Brücke', skript: 'tests/autodarts.mjs' },
   { name: 'Einzeldatei bauen', skript: 'build-single.mjs' },
   { name: 'Browser: dart-turnier.html', skript: 'tests/e2e.mjs', env: { TARGET: 'dart-turnier.html' } },
   { name: 'Server-API', skript: 'tests/api.mjs' },
+  { name: 'Liga-Webseite (Vorschau)', skript: 'tests/liga-seite.mjs' },
   { name: 'Konto: zwei Geraete', skript: 'tests/konto.mjs' }
 ];
 
