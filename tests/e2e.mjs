@@ -4772,7 +4772,7 @@ await gruppe('Gaeste: temporaer, dauerhaft, Gast-Konto', async () => {
     D.ui().overlay = null;
     window.__ligaHeute = '2026-10-01';
     Object.assign(S, alt); D.render();
-    return !!o && o.type === 'liga-start' && !html.includes('Besuchskonto') && html.includes('Lenas');
+    return !!o && o.type === 'liga-start' && !html.includes('Besuchskonto') && html.includes('Lena Musterfrau');
   });
   check('in der Ligaspiel-Aufstellung steht kein Gast-Konto zur Wahl', imKader);
   await page.evaluate(() => {
@@ -6938,10 +6938,24 @@ await gruppe('Ligaspiel-Start: Gastspieler und Nachmeldung fuer beide Teams, fes
     const t = [...document.querySelectorAll('#overlay-card .ls-typ, #overlay-card .ls-kader .chip')].map((e) => e.getBoundingClientRect());
     return innerWidth === 390 && k.right <= innerWidth && t.length > 8 && t.every((r) => r.left >= 0 && r.right <= innerWidth);
   }));
+  /* Volle Namen in der Auswahl; wer keinen hat, bekommt zwei Felder (24.11.). */
+  const vf = await page.evaluate(() => {
+    const D = window.__dart, S = D.state(), w = D.ui().overlay.draft.wir;
+    const a = S.profiles.find((p) => p.id === w[0]), b = S.profiles.find((p) => p.id === w[1]);
+    window.__vollAlt = [a.id, a.voll, b.id, b.voll];
+    a.voll = 'Anna Vollname'; b.voll = null; D.render();
+    const opt = document.querySelector('[data-role="liga-pos"][data-i="0"]').selectedOptions[0].textContent;
+    const optB = document.querySelector('[data-role="liga-pos"][data-i="1"]').selectedOptions[0].textContent;
+    return { opt, optB, name: b.name, bId: b.id, fA: !!document.querySelector('[data-role="liga-voll-vor"][data-id="' + a.id + '"]'), fB: !!document.querySelector('[data-role="liga-voll-vor"][data-id="' + b.id + '"]') };
+  });
+  check('die Auswahl zeigt den vollen Namen, ohne ihn den Anzeigenamen mit zwei Feldern darunter',
+    vf.opt === 'Anna Vollname' && vf.optB === vf.name && !vf.fA && vf.fB, JSON.stringify(vf));
+  await page.locator(`[data-role="liga-voll-vor"][data-id="${vf.bId}"]`).fill('Berta');
   /* Position 4: jemand ohne Konto - "Anderer Name", als Gastspieler. */
   await page.locator('[data-role="liga-pos"][data-i="3"]').selectOption('__name');
   check('"Anderer Name" oeffnet Vor- und Nachname und stellt Gastspieler ein',
     (await page.locator('[data-role="liga-wir-vor"][data-i="3"]').count()) === 1 && (await typText('wir', 3)) === 'Gastspieler', await typText('wir', 3));
+  check('das Neuzeichnen behaelt den getippten Vornamen', (await page.locator(`[data-role="liga-voll-vor"][data-id="${vf.bId}"]`).inputValue()) === 'Berta');
   await page.locator('[data-action="liga-los"]').click();
   check('ohne Namen geht es nicht los', (await text('#overlay-card')).includes('Position 4: bitte Vor- und Nachnamen'));
   await page.locator('[data-role="liga-wir-vor"][data-i="3"]').fill('Gustav');
@@ -6961,6 +6975,9 @@ await gruppe('Ligaspiel-Start: Gastspieler und Nachmeldung fuer beide Teams, fes
   /* Gegner 2 ist neu zu melden. */
   await page.locator('#overlay-card .ls-typ[data-seite="gegner"][data-i="1"]').click();
   await page.locator('#overlay-card .ls-typ[data-seite="gegner"][data-i="1"]').click();
+  await page.locator('[data-action="liga-los"]').click();
+  check('halber voller Name: GAME ON wartet auf den Nachnamen', (await text('#overlay-card')).includes('bitte Vor- und Nachnamen eintragen, er wird im Profil gespeichert'), await text('#overlay-card .edit-error'));
+  await page.locator(`[data-role="liga-voll-nach"][data-id="${vf.bId}"]`).fill('Nachgetragen');
   check('Gegner 2 steht auf "neu melden"', (await typText('gegner', 1)) === 'neu melden');
   await page.locator('[data-action="liga-los"]').click();
   const nmStart = await page.evaluate(() => {
@@ -6970,6 +6987,7 @@ await gruppe('Ligaspiel-Start: Gastspieler und Nachmeldung fuer beide Teams, fes
   });
   check('das Ligaspiel steht, und die Nachmeldung von Gegner 2 oeffnet sich sofort (Team fest, Name drin)',
     nmStart.tour && nmStart.typ === 'nachmeldung' && nmStart.id === nmStart.sie1 && nmStart.start && nmStart.fest && nmStart.nach === 'Gegner2', JSON.stringify(nmStart));
+  check('der nachgetragene Name ist im Profil gespeichert', await page.evaluate((id) => window.__dart.profile(id).voll === 'Berta Nachgetragen', vf.bId));
   check('unser vierter ist der Gastspieler Gustav Gastmann', nmStart.gast === 'gast' && nmStart.gastName === 'Gustav Gastmann', JSON.stringify(nmStart));
   check('"Spaeter" statt Abbrechen', (await text('#overlay-card .dl-fuss')).includes('Später'));
   await page.locator('#overlay-card .dl-fuss [data-action="ov-cancel"]').click();

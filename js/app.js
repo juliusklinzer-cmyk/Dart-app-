@@ -1335,6 +1335,13 @@
     save(); render();
   }
 
+  /* Ligaspiel vom anderen Geraet: fehlt hier noch ein voller Name, kann er
+     dort gerade nachgetragen worden sein - Kader einmal frisch holen. */
+  function ligaNamenHolen() {
+    if (!S.tour || !S.tour.liga || !window.DartKonto || !window.DartKonto.holeRoster || !window.DartKonto.nutzer()) return;
+    if (!S.tour.players.some(function (id) { return String(id).indexOf('u_') === 0 && vollFehlt(profile(id)); })) return;
+    window.DartKonto.holeRoster().then(function () { save(); if (!UI.overlay) render(); }).catch(function () {});
+  }
   function uebernehmeTurnier(daten, beitritt) {
     if (!daten || !daten.plan) return false;
     var neu = false;
@@ -1367,11 +1374,12 @@
         });
       });
       neu = true;
+      ligaNamenHolen();
     }
 
     /* Spielerwechsel auf dem anderen iPad: neuerer Plan. */
     if (S.tour && S.tour.sid === daten.id && (daten.plan.planStand || 0) > (S.tour.planStand || 0)) {
-      if (planAnwenden(daten.plan)) neu = true;
+      if (planAnwenden(daten.plan)) { neu = true; ligaNamenHolen(); }
     }
 
     var ich = window.DartKonto && window.DartKonto.nutzer() ? window.DartKonto.nutzer().id : null;
@@ -2226,7 +2234,7 @@
       '<div class="feier-konfetti">' + teile + '</div>' +
       '<div class="feier-mitte">' +
         '<div class="feier-zahl">180</div>' +
-        '<div class="feier-name">' + esc(pname(pid)) + '</div>' +
+        '<div class="feier-name">' + esc(spielName(pid)) + '</div>' +
         '<div class="feier-gruss">Gratuliere!</div>' +
       '</div>';
 
@@ -2264,7 +2272,7 @@
       '<div class="feier-mitte">' +
         '<div class="feier-logo"></div>' +
         '<div class="feier-name">SECHZIG!</div>' +
-        '<div class="feier-gruss">' + esc(pname(pid)) + '</div>' +
+        '<div class="feier-gruss">' + esc(spielName(pid)) + '</div>' +
       '</div>';
 
     feierAnwerfen(box);
@@ -2630,7 +2638,7 @@
     var leg = m.legs[m.legs.length - 1];
     var weg = leg.visits.pop();
     leg.winner = null;
-    hinweisZeigen('Aufnahme ' + (weg.b ? weg.o + ' (Bust)' : weg.c ? weg.s + ' (Finish)' : weg.s) + ' von ' + pname(weg.p) + ' zurückgenommen');
+    hinweisZeigen('Aufnahme ' + (weg.b ? weg.o + ' (Bust)' : weg.c ? weg.s + ' (Finish)' : weg.s) + ' von ' + spielName(weg.p) + ' zurückgenommen');
     /* Im geteilten Turnier ist das Ergebnis schon beim Server: merken, dass
        hier korrigiert wird, sonst holt der Abgleich das alte zurueck. */
     if (m.done && m.kind !== 'quick' && geteiltesTurnier()) { m.korrektur = Date.now(); m.gemeldet = false; }
@@ -4661,6 +4669,43 @@
     var p = profile(pid);
     return p && p.voll ? p.voll : pname(pid);
   }
+  /* Name im laufenden Turnier: im Ligaspiel der volle, sonst der Anzeigename. */
+  function spielName(pid) { return S.tour && S.tour.liga && !S.game ? ligaName(pid) : pname(pid); }
+  /* Fehlt der buergerliche Name (Vor- UND Nachname)? Dann fragt ihn die
+     Aufstellung ab; er wird beim Spieler gespeichert (Julius, 24.11.). */
+  function vollFehlt(p) { return !!p && String(p.voll || '').trim().indexOf(' ') < 0; }
+  /* Die zwei Felder unter der Auswahl. Der Entwurf haelt je Spieler, was
+     getippt ist (draft.vollNamen). */
+  function vollFelderHtml(p, d) {
+    var n = (d.vollNamen || {})[p.id] || {};
+    return '<input class="dl-input" data-role="liga-voll-vor" data-id="' + esc(p.id) + '" maxlength="30" autocomplete="off" value="' + esc(n.vor || '') + '" placeholder="Vorname" aria-label="Vorname von ' + esc(p.name) + '">' +
+      '<input class="dl-input" data-role="liga-voll-nach" data-id="' + esc(p.id) + '" maxlength="29" autocomplete="off" value="' + esc(n.nach || '') + '" placeholder="Nachname" aria-label="Nachname von ' + esc(p.name) + '">';
+  }
+  /* Getippte volle Namen pruefen: Fehlertext oder ''. Konten muessen ihn
+     haben (SWO: buergerliche Namen), bei reinen Geraete-Profilen darf er fehlen. */
+  function vollPruefen(ids, d) {
+    for (var i = 0; i < ids.length; i++) {
+      var p = S.profiles.filter(function (x) { return x.id === ids[i]; })[0];
+      if (!p || !vollFehlt(p)) continue;
+      var n = (d.vollNamen || {})[p.id] || {};
+      var vor = String(n.vor || '').trim(), nach = String(n.nach || '').trim();
+      if ((!vor || !nach) && (vor || nach || String(p.id).indexOf('u_') === 0)) {
+        return p.name + ': bitte Vor- und Nachnamen eintragen, er wird im Profil gespeichert.';
+      }
+    }
+    return '';
+  }
+  /* ... und beim Spieler ablegen: hier sofort, bei Konten auch am Server. */
+  function vollUebernehmen(ids, d) {
+    ids.forEach(function (id) {
+      var p = S.profiles.filter(function (x) { return x.id === id; })[0];
+      var n = (d.vollNamen || {})[id] || {};
+      var voll = vollAusTeilen(n.vor, n.nach);
+      if (!p || !vollFehlt(p) || !voll || voll.indexOf(' ') < 0) return;
+      p.voll = voll.slice(0, 60);
+      if (String(id).indexOf('u_') === 0 && window.DartKonto && window.DartKonto.vollNachtragen) window.DartKonto.vollNachtragen(id, p.voll);
+    });
+  }
 
   /* Punkte je Einzel: der Sieger bekommt einen Punkt (auch kampflos).
      Rueckgabe [Punkte Sieger, Punkte Verlierer]. */
@@ -4997,7 +5042,7 @@
       var sbZeile = function (sb) {
         var e = jeSb[sb];
         var mein = sb === ich;
-        var paar = e ? esc(pname(e.m.p[0])) + ' <span class="muted">vs</span> ' + esc(pname(e.m.p[1])) : '';
+        var paar = e ? esc(spielName(e.m.p[0])) + ' <span class="muted">vs</span> ' + esc(spielName(e.m.p[1])) : '';
         return '<div class="sb-zeile' + (mein ? ' mein' : '') + '">' +
           '<span class="scheibe">' + sb + '</span>' +
           '<div class="sb-text"><small>' + (mein ? 'Dieses iPad · ' : '') +
@@ -5783,7 +5828,9 @@
     var fertig = function () {
       p.name = name;
       p.kuerzel = (d.kuerzel || '').replace(/[\u0000-\u001f<>"'&]/g, '').trim().slice(0, 3) || null;
+      var vollVorher = p.voll;
       p.voll = vollAusTeilen(d.vor, d.nach) || null;
+      if (!p.voll && vollVorher) p.vollWeg = 1; else if (p.voll) delete p.vollWeg;
       p.hue = d.hue;
       p.wurfhand = d.wurfhand;
       p.avatar = d.avatar;
@@ -9715,6 +9762,7 @@
       return zeilen.slice(-n).reverse().join('');
     };
 
+    $('scoreboard').classList.toggle('liga-namen', spielerName === ligaName);
     $('scoreboard').innerHTML = karten.map(function (pid, ki) {
       var istAktiv = pid === active;
       var rest = remainingIn(leg, pid) - (istAktiv ? pendingSum : 0);
@@ -13466,7 +13514,7 @@
           '<button class="' + ldKl(2, 'btn ghost full') + '" data-action="session-ende">Session beenden</button>' +
           (ldWahl >= 0 ? '<p class="te-hint">8 / 2 · wählen &nbsp;&nbsp; Enter · bestätigen &nbsp;&nbsp; Löschen · direkt zurück</p>' : '');
       } else
-      html = '<div class="big-emoji">🎯</div><h3>' + (o.satz ? 'Satz' : 'Leg') + ' an ' + esc(pname(o.pid)) + '</h3>' +
+      html = '<div class="big-emoji">🎯</div><h3>' + (o.satz ? 'Satz' : 'Leg') + ' an ' + esc(spielName(o.pid)) + '</h3>' +
         '<p>Stand: ' + ldStand + '</p>' +
         legStatHTML(m1, ldLeg) +
         '<button class="' + ldKl(0, 'btn primary full') + '" data-action="ov-next-leg">' + (o.satz ? 'Nächster Satz' : 'Nächstes Leg') + '</button>' +
@@ -13478,8 +13526,8 @@
     } else if (o.type === 'match-done') {
       var m2 = currentMatch();
       var last = !nextOpenMatch();
-      html = '<div class="big-emoji">🏅</div><h3>Glückwunsch, ' + esc(pname(o.pid)) + '!</h3>' +
-        '<p>' + esc(pname(m2.p[0])) + ' ' + legsWon(m2, m2.p[0]) + ':' + legsWon(m2, m2.p[1]) + ' ' + esc(pname(m2.p[1])) + '</p>' +
+      html = '<div class="big-emoji">🏅</div><h3>Glückwunsch, ' + esc(spielName(o.pid)) + '!</h3>' +
+        '<p>' + esc(spielName(m2.p[0])) + ' ' + legsWon(m2, m2.p[0]) + ':' + legsWon(m2, m2.p[1]) + ' ' + esc(spielName(m2.p[1])) + '</p>' +
         legStatHTML(m2, m2.legs.filter(function (l) { return l.winner; }).pop()) +
         '<button class="btn primary full" data-action="open-summary" data-kind="501" data-id="' + esc(m2.id) + '">Weiter zur Spielstatistik</button>' +
         (last ? (S.tour && S.tour.liga ? '<button class="btn primary start full" data-action="ov-next-match">Ergebnisse &amp; Man of the Day</button>' : '')
@@ -13789,11 +13837,13 @@
                melden - mit Vor- und Nachname darunter (Julius, 11.11.). */
             var ltName = ld.wir[i] === '__name';
             var ltN = (ld.wirNamen || [])[i] || {};
+            /* Kein voller Name hinterlegt: hier gleich nachtragen. */
+            var ltOhne = ltProfile.filter(function (p) { return p.id === ld.wir[i] && vollFehlt(p); })[0];
             return '<div class="ls-zeile"><span>' + (i + 1) + '</span>' +
               '<select data-role="liga-pos" data-i="' + i + '">' +
               ltProfile.map(function (p) {
                 return '<option value="' + p.id + '"' + (ld.wir[i] === p.id ? ' selected' : '') + '>' +
-                  esc(p.name) + '</option>';
+                  esc(p.voll || p.name) + '</option>';
               }).join('') +
               '<option value="__name"' + (ltName ? ' selected' : '') + '>Anderer Name (Gast oder neu) …</option>' +
               '</select>' + ligaTypKnopfHtml('wir', i, (ld.wirTyp || [])[i]) + '</div>' +
@@ -13802,8 +13852,12 @@
                   '<input data-role="liga-wir-vor" data-i="' + i + '" maxlength="30" autocomplete="off" value="' + esc(ltN.vor || '') + '" placeholder="Vorname">' +
                   '<input data-role="liga-wir-nach" data-i="' + i + '" maxlength="30" autocomplete="off" value="' + esc(ltN.nach || '') + '" placeholder="Nachname">' +
                   '</span></div>'
-                : '');
+                : ltOhne
+                  ? '<div class="ls-zeile ls-unter"><span></span><span class="namen-paar">' + vollFelderHtml(ltOhne, ld) + '</span></div>'
+                  : '');
           }).join('') +
+          (ltProfile.some(function (p) { return vollFehlt(p) && ld.wir.slice(0, 4).indexOf(p.id) >= 0; })
+            ? '<p class="hint">Voller Name fehlt: Vor- und Nachnamen unter dem Spieler eintragen, er wird in seinem Profil gespeichert.</p>' : '') +
           '<p class="hint">Status antippen: <b>gemeldet</b> → <b>Gastspieler</b> (nicht gemeldet; höchstens einer je Team und Spiel, ab dem dritten Einsatz nachmelden) → ' +
             '<b>neu melden</b> (Nachmeldung mit Unterschrift gleich nach dem Start, 10 €, U18 2 €). Gilt für beide Teams.</p>' +
           ligaGegnerFelderHtml(ltGegner, ld) +
@@ -13852,7 +13906,7 @@
           '<select data-role="' + rolle + '" data-i="' + i + '">' +
           uProfile.map(function (p) {
             return '<option value="' + p.id + '"' + (liste[i] === p.id ? ' selected' : '') + '>' +
-              esc(p.name) + '</option>';
+              esc(p.voll || p.name) + '</option>';
           }).join('') + '</select></label>';
       };
       html = '<h3>Übungs-Ligaspiel</h3>' +
@@ -14046,6 +14100,7 @@
         ? ligaKader().filter(function (p) { return wzBesetzt.indexOf(p.id) < 0 && !istLigaGegner(p.id); })
         : wzTeam.filter(function (id) { return wzBesetzt.indexOf(id) < 0; }).map(profile).filter(Boolean);
       var wzMap = career();
+      var wzOhne = wz.eigene && wz.draft.neu && vollFehlt(profile(wz.draft.neu)) ? profile(wz.draft.neu) : null;
       var wzKnopf = function (p) {
         var inTeam = wzTeam.indexOf(p.id);
         var st = wzMap[p.id];
@@ -14059,6 +14114,8 @@
         (o.fehler ? '<p class="hint fehler" role="alert">' + esc(o.fehler) + '</p>' : '') +
         (wzKandidaten.length ? '<div class="kt">' + (wz.eigene ? 'Aus dem Kader' : 'Schon auf dem Bogen') + '</div>' +
           '<div class="dl-raster">' + wzKandidaten.map(wzKnopf).join('') + '</div>' : '') +
+        (wzOhne ? '<div class="kt">Voller Name von ' + esc(wzOhne.name) + ' (wird im Profil gespeichert)</div>' +
+          '<div class="dl-raster">' + vollFelderHtml(wzOhne, wz.draft) + '</div>' : '') +
         '<div class="kt">Oder spontan nachmelden</div>' +
         '<div class="dl-raster">' +
           '<input class="dl-input" data-role="liga-neu-name" maxlength="30" autocomplete="off" value="' + esc(wz.draft.name || '') + '" placeholder="Vorname">' +
@@ -14298,7 +14355,7 @@
         '<button class="btn primary full" data-action="ov-cancel">Fertig</button>';
     } else if (o.type === 'edit-visit') {
       html = '<h3>Aufnahme korrigieren</h3>' +
-        '<p>Eingetragen waren <b>' + o.old + '</b> Punkte für ' + esc(pname(o.pid)) + '.</p>' +
+        '<p>Eingetragen waren <b>' + o.old + '</b> Punkte für ' + esc(spielName(o.pid)) + '.</p>' +
         '<div class="edit-value">' + (o.value === '' ? '–' : o.value) + '</div>' +
         (o.error ? '<p class="edit-error">' + esc(o.error) + '</p>' : '') +
         '<div class="keypad edit-pad">' +
@@ -14442,7 +14499,7 @@
       var usid = uid();
       var uGaeste = {};
       S.tour.players.forEach(function (id) {
-        if (String(id).indexOf('u_') !== 0) uGaeste[id] = pname(id);
+        if (String(id).indexOf('u_') !== 0) uGaeste[id] = ligaName(id);
       });
       var uPlan = {
         start: S.tour.start, bestOf: S.tour.bestOf, players: S.tour.players.slice(),
@@ -14504,6 +14561,8 @@
       o.fehler = 'Bitte alle vier Gegner mit Vor- und Nachnamen eintragen (SWO: bürgerliche Namen).';
       render(); return;
     }
+    var vollFehler = vollPruefen(wirKonten, d);
+    if (vollFehler) { o.fehler = vollFehler; render(); return; }
     /* Zwei gleichnamige Gegner würden auf dasselbe Gastprofil fallen und
        ihre Statistik verschmelzen – lieber gleich unterscheidbar machen. */
     if (namen.some(function (n, i) { return namen.indexOf(n) !== i; })) {
@@ -14517,6 +14576,7 @@
        geworfen hat, wird am Namen wiedererkannt – aber nie ein Profil, das
        bereits auf unserer Seite aufgestellt ist (sonst spielte jemand gegen
        sich selbst), und Ausgeblendete kommen zurück ins Licht. */
+    vollUebernehmen(wirKonten, d);
     wirNamen.forEach(function (n) {
       wir[n.i] = ligaGastId(n.voll, wir.filter(function (id) { return id !== '__name'; }));
     });
@@ -14581,7 +14641,7 @@
       var sid = uid();
       var gaeste = {};
       S.tour.players.forEach(function (id) {
-        if (String(id).indexOf('u_') !== 0) gaeste[id] = pname(id);
+        if (String(id).indexOf('u_') !== 0) gaeste[id] = (S.tour.liga ? ligaName(id) : pname(id));
       });
       var plan = {
         start: S.tour.start, bestOf: S.tour.bestOf, players: S.tour.players.slice(),
@@ -14786,7 +14846,7 @@
   function planAusStand() {
     var gaeste = {};
     S.tour.players.forEach(function (id) {
-      if (String(id).indexOf('u_') !== 0) gaeste[id] = pname(id);
+      if (String(id).indexOf('u_') !== 0) gaeste[id] = (S.tour.liga ? ligaName(id) : pname(id));
     });
     return {
       start: S.tour.start, bestOf: S.tour.bestOf, players: S.tour.players.slice(),
@@ -16649,6 +16709,11 @@
         var loNeuAufBogen = (loLg.heimSpieler || []).indexOf(neuId) < 0 && (loLg.gastSpieler || []).indexOf(neuId) < 0;
         var loGast = loNeuAufBogen && lo.draft.typ === 'gast';
         if (loGast && ligaGaeste(loLg, lo.seite, neuId) >= 1) { lo.fehler = LIGA_GAST_FEHLER; render(); break; }
+        if (lo.eigene && lo.draft.neu) {
+          var loVoll = vollPruefen([neuId], lo.draft);
+          if (loVoll) { lo.fehler = loVoll; render(); break; }
+          vollUebernehmen([neuId], lo.draft);   // vor dem Wechsel: der Plan nimmt den Namen mit
+        }
         var loRaus = (lo.seite === 'H' ? loLg.posH : loLg.posG)[lo.pos];
         /* Vor dem Wechsel setzen: ligaWechseln schickt den Plan gleich ans
            andere Geraet, der Status soll mit. */
@@ -17200,7 +17265,9 @@
     }
     if (ev.target.getAttribute('data-role') === 'liga-pos' && UI.overlay && UI.overlay.draft) {
       var lpD = UI.overlay.draft, lpI = Number(ev.target.getAttribute('data-i'));
-      var lpWar = lpD.wir[lpI] === '__name', lpWird = ev.target.value === '__name';
+      var lpUnten = function (id) { return id === '__name' || (String(id || '') !== '' && vollFehlt(profile(id))); };
+      var lpWird = ev.target.value === '__name';
+      var lpNeu = lpUnten(lpD.wir[lpI]) || lpUnten(ev.target.value);
       lpD.wir[lpI] = ev.target.value;
       /* "Anderer Name": Namensfelder darunter, als Gastspieler voreingestellt;
          nur dann neu zeichnen (sonst springt die Auswahl unter dem Finger weg). */
@@ -17208,13 +17275,19 @@
         if (!Array.isArray(lpD.wirTyp)) lpD.wirTyp = ['', '', '', ''];
         if (!lpD.wirTyp[lpI]) lpD.wirTyp[lpI] = 'gast';
       }
-      if (lpWar !== lpWird) render();
+      if (lpNeu) render();
     }
     if ((ev.target.getAttribute('data-role') === 'liga-wir-vor' || ev.target.getAttribute('data-role') === 'liga-wir-nach') && UI.overlay && UI.overlay.draft) {
       var lwD = UI.overlay.draft, lwI = Number(ev.target.getAttribute('data-i'));
       if (!Array.isArray(lwD.wirNamen)) lwD.wirNamen = [{}, {}, {}, {}];
       if (!lwD.wirNamen[lwI]) lwD.wirNamen[lwI] = {};
       lwD.wirNamen[lwI][ev.target.getAttribute('data-role') === 'liga-wir-vor' ? 'vor' : 'nach'] = ev.target.value;
+    }
+    if ((ev.target.getAttribute('data-role') === 'liga-voll-vor' || ev.target.getAttribute('data-role') === 'liga-voll-nach') && UI.overlay && UI.overlay.draft) {
+      var vnD = UI.overlay.draft, vnId = ev.target.getAttribute('data-id');
+      if (!vnD.vollNamen) vnD.vollNamen = {};
+      if (!vnD.vollNamen[vnId]) vnD.vollNamen[vnId] = {};
+      vnD.vollNamen[vnId][ev.target.getAttribute('data-role') === 'liga-voll-vor' ? 'vor' : 'nach'] = ev.target.value;
     }
     if (ev.target.getAttribute('data-role') === 'uebung-sie' && UI.overlay && UI.overlay.draft) {
       UI.overlay.draft.sie[Number(ev.target.getAttribute('data-i'))] = ev.target.value;

@@ -769,6 +769,29 @@ export function createApi(db, config) {
     limit.zaehle('tag-' + art + ':' + u.id, KONTINGENT[art], TAG);
   }
 
+  /* Den buergerlichen Namen eines Kollegen nachtragen, der noch keinen hat:
+     der Spielbericht verlangt ihn, und wer aufstellt, kennt ihn. Nur aus der
+     Mannschaft (kein Gast-Konto), nur fuer Mannschaftskonten, und nie ueber
+     einen schon vollstaendigen Namen hinweg - den aendert nur sein Besitzer. */
+  async function vollerNameNachtragen(req, res) {
+    pruefeHerkunft(req);
+    const u = verlangeNutzer(req);
+    if (u.gast_konto) throw new HttpFehler(403, 'Das geht nur mit einem Mannschaftskonto.');
+    const warte = limit.pruefe('voll:' + u.id, 60, TAG);
+    if (warte) throw new HttpFehler(429, 'Für heute sind genug Namen nachgetragen.');
+    const body = await leseJson(req);
+    const voll = typeof body.voll === 'string' ? pruefeVollName(body.voll) : null;
+    if (!voll || voll.indexOf(' ') < 0 || /[<>\u0000-\u001f]/.test(voll)) throw new HttpFehler(400, 'Bitte Vor- und Nachnamen angeben.');
+    limit.zaehle('voll:' + u.id, 60, TAG);
+    const z = typeof body.id === 'string'
+      ? db.prepare("SELECT id, real_name FROM users WHERE id = ? AND status = 'aktiv' AND gast_konto = 0 AND (test = 0 OR ? = 1)").get(body.id, siehtTest(u))
+      : null;
+    if (!z) throw new HttpFehler(404, 'Dieses Konto gibt es nicht.');
+    if (String(z.real_name || '').trim().indexOf(' ') >= 0) throw new HttpFehler(409, 'Dort ist schon ein voller Name hinterlegt.');
+    db.prepare('UPDATE users SET real_name = ? WHERE id = ?').run(voll, z.id);
+    sendJson(res, 200, { ok: true });
+  }
+
   /* Roster: alle aktiven Accounts, damit man Kollegen ins Turnier waehlen kann.
      Testkonten (test = 1) sieht nur, wer sieht_test hat -- fuer alle anderen
      gibt es sie nicht. */
@@ -2405,6 +2428,7 @@ export function createApi(db, config) {
     ['PATCH', /^\/api\/me$/, profilAendern],
     ['POST', /^\/api\/password$/, passwortAendern],
     ['POST', /^\/api\/konto\/loeschen$/, kontoSelbstLoeschen],
+    ['POST', /^\/api\/konto\/voller-name$/, vollerNameNachtragen],
     ['POST', /^\/api\/passwort-vergessen$/, passwortVergessen],
     ['GET', /^\/api\/passwort-neu\/([A-Za-z0-9_.%-]{10,120})$/, passwortNeuPruefen],
     ['POST', /^\/api\/passwort-neu$/, passwortNeuSetzen],

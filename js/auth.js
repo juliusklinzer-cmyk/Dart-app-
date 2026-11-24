@@ -109,11 +109,42 @@
     if (!nutzer) return Promise.resolve();
     var p = D.profile(nutzer.id);
     if (!p) return Promise.resolve();
-    return ruf('PATCH', '/api/me', { name: p.name, avatar: p.avatar, hue: p.hue, dbl: p.dbl || null, voll: p.voll || null, finish: p.finish || null,
+    /* Den vollen Namen nur mitschicken, wenn hier einer steht (oder er hier
+       bewusst geleert wurde): ein Geraet mit altem Stand wuerde sonst einen
+       inzwischen von einem Kollegen nachgetragenen Namen loeschen. */
+    var weg = !!p.vollWeg;
+    return ruf('PATCH', '/api/me', { name: p.name, avatar: p.avatar, hue: p.hue, dbl: p.dbl || null, voll: p.voll || (weg ? '' : undefined), finish: p.finish || null,
       kuerzel: p.kuerzel || null, wurfhand: p.wurfhand || null }).then(function (daten) {
       nutzer = daten.nutzer;
+      if (weg && !p.voll) delete p.vollWeg;
+      if (p.voll) delete p.vollWeg;
       profilOffenSetzen(false);
     });
+  }
+
+  /* Voller Name eines Kollegen, der noch keinen hinterlegt hat (Aufstellung
+     im Ligaspiel). Ohne Netz bleibt er hier stehen und geht mit dem naechsten
+     Kader-Abruf raus. */
+  var VOLL_OFFEN = 'dart-voll-offen';
+  function vollOffen() {
+    try { var o = JSON.parse(localStorage.getItem(VOLL_OFFEN) || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; }
+  }
+  function vollOffenSetzen(id, voll) {
+    var o = vollOffen();
+    if (voll) o[id] = voll; else delete o[id];
+    try { if (Object.keys(o).length) localStorage.setItem(VOLL_OFFEN, JSON.stringify(o)); else localStorage.removeItem(VOLL_OFFEN); } catch (e) { /* dann eben ohne Nachreichen */ }
+  }
+  function vollSenden(id, voll) {
+    return ruf('POST', '/api/konto/voller-name', { id: id, voll: voll }).then(function () { vollOffenSetzen(id, null); }, function (e) {
+      /* Abgelehnt (z. B. inzwischen selbst eingetragen): nicht noch einmal. */
+      if (e && e.status >= 400 && e.status < 500 && e.status !== 401 && e.status !== 429) vollOffenSetzen(id, null);
+    });
+  }
+  function vollNachtragen(id, voll) {
+    if (nutzer && id === nutzer.id) { profilGeaendert(id); return; }
+    /* Erst merken: steht die Anmeldung noch aus, geht er spaeter raus. */
+    vollOffenSetzen(id, voll);
+    if (nutzer) vollSenden(id, voll);
   }
 
   /* Profilbilder landen in einem style-Attribut (avatarHTML). Nur was
@@ -134,6 +165,8 @@
     S.profiles.forEach(function (p) { nachId[p.id] = p; });
 
     var eigenesNachgeruestet = false;
+    var offen = vollOffen();
+    var vollVon = function (r) { return (String(r.voll || '').trim().indexOf(' ') > 0 ? r.voll : offen[r.id] || r.voll) || null; };
     roster.forEach(function (r) {
       var p = nachId[r.id];
       if (p) {
@@ -158,7 +191,7 @@
         p.kuerzel = r.kuerzel || null;
         p.wurfhand = r.wurfhand || null;
         // Der buergerliche Name ebenso -- er steht auf dem Spielbericht.
-        p.voll = r.voll || null;
+        p.voll = vollVon(r);
         p.hidden = false;
         // Testkonto: kommt nur bei dem an, der es sehen darf -- und zaehlt
         // dort in keine Statistik.
@@ -174,7 +207,7 @@
           finish: r.finish && typeof r.finish === 'object' ? r.finish : null,
           kuerzel: r.kuerzel || null,
           wurfhand: r.wurfhand || null,
-          voll: r.voll || null,
+          voll: vollVon(r),
           test: !!r.test,
           gastKonto: !!r.gastKonto,
           created: Date.now()
@@ -238,6 +271,10 @@
     // Erst die eigene offene Aenderung hochschicken, dann den Stand holen --
     // sonst holt man sich den alten Namen zurueck, den man gerade geaendert hat.
     var vorlauf = profilOffen ? sichereProfil().catch(function () {}) : Promise.resolve();
+    var offen = vollOffen();
+    if (nutzer) Object.keys(offen).forEach(function (id) {
+      vorlauf = vorlauf.then(function () { return vollSenden(id, offen[id]); });
+    });
     return vorlauf.then(function () {
       return ruf('GET', '/api/users');
     }).then(function (daten) {
@@ -835,6 +872,7 @@
       holeRoster: holeRoster,
       darfBearbeiten: darfBearbeiten,
       profilGeaendert: profilGeaendert,
+      vollNachtragen: vollNachtragen,
       emailAendern: emailAendern,
       gesperrt: gesperrt,
       /* Kann der Server Mails verschicken (Brevo eingerichtet)? */

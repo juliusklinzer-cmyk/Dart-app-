@@ -435,7 +435,10 @@ und auf Wunsch **geteilt an zwei Scheiben**, wie es die SWO ohnehin verlangt.
 **Spielertypen (SWO):** Jede Zeile beider Teams trägt einen Status-Knopf, der
 per Tipp wechselt: **gemeldet** → **Gastspieler** (nicht gemeldet; höchstens einer
 je Team und Spiel, höchstens zwei Einsätze pro Saison, dann Nachmeldung) → **neu
-melden**. Bei uns steht in der Auswahl zusätzlich „Anderer Name (Gast oder neu)“
+melden**. Die Auswahl zeigt bei uns die vollen Namen. Hat jemand keinen hinterlegt, steht
+der Anzeigename, und darunter erscheinen Vor- und Nachname: Bei Konten sind sie Pflicht und
+werden beim Konto gespeichert (`POST /api/konto/voller-name`, nur solange dort keiner steht;
+ohne Netz wird nachgereicht), ebenso beim Einwechseln. Bei uns steht in der Auswahl zusätzlich „Anderer Name (Gast oder neu)“
 für jemanden ohne Konto, mit Vor- und Nachname darunter; beim Gegner setzt ein
 Kader-Chip, den die Ligaleitung schon als Gast führt (gestrichelt), den Status
 von selbst. Zwei Gastspieler in einem Team lehnt der Start ab. Wer „neu melden“

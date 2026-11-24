@@ -7991,3 +7991,15 @@ button.st-krow:hover { background: #ffffff06; }
 }
 /* Schnelleingabe nie unter 44 px. */
 #screen-rtw.active .rtw-key.schnell { min-height: 44px; }
+
+/* Ligaspiel am Handy hochkant: der volle Name bricht auf zwei Zeilen um
+   statt abgeschnitten zu werden (Julius, 24.11.). */
+@media (orientation: portrait) and (max-width: 560px) {
+  #screen-game.active:not(.turnier) #scoreboard.liga-namen:not(.solo) .pcard .pname {
+    white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
+    font-size: 14px; letter-spacing: 0; line-height: 1.05; overflow-wrap: break-word;
+  }
+  #screen-game.active:not(.turnier) #scoreboard.liga-namen:not(.solo) .pcard .pkopf { gap: 6px; }
+  #screen-game.active:not(.turnier) #scoreboard.liga-namen:not(.solo) .pcard .pavg,
+  #screen-game.active:not(.turnier) #scoreboard.liga-namen:not(.solo) .pcard .pavg b { font-size: 16px; }
+}

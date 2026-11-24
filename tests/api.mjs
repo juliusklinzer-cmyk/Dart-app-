@@ -944,6 +944,34 @@ async function main() {
     r = await julius.ruf('PATCH', '/api/me', { voll: 'x'.repeat(61) });
     gleich(r.status, 400, 'ueberlange Namen werden abgewiesen');
 
+    console.log('\nVollen Namen eines Kollegen nachtragen (24.11.)');
+    r = await fremd.ruf('POST', '/api/konto/voller-name', { id: julius_id, voll: 'Max Fremd' });
+    gleich(r.status, 401, 'ohne Anmeldung nicht');
+    r = await tobi.rufOhneHeader('POST', '/api/konto/voller-name', { id: julius_id, voll: 'Max Fremd' });
+    gleich(r.status, 403, 'ohne App-Header nicht');
+    {
+      const gastVoll = geraet('GastVoll');
+      await gastVoll.ruf('POST', '/api/register', { invite: GAST_CODE, email: 'gastvoll@example.de', name: 'GastVoll', password: 'turnierabend2026' });
+      r = await gastVoll.ruf('POST', '/api/konto/voller-name', { id: julius_id, voll: 'Max Fremd' });
+      gleich(r.status, 403, 'ein Gast-Konto nicht');
+      const gId = (await gastVoll.ruf('GET', '/api/me')).daten.nutzer.id;
+      r = await tobi.ruf('POST', '/api/konto/voller-name', { id: gId, voll: 'Gast Voll' });
+      gleich(r.status, 404, 'und nicht fuer ein Gast-Konto');
+    }
+    r = await tobi.ruf('POST', '/api/konto/voller-name', { id: julius_id, voll: 'Julius' });
+    gleich(r.status, 400, 'nur ein Vorname reicht nicht');
+    r = await tobi.ruf('POST', '/api/konto/voller-name', { id: julius_id, voll: '<b>Julius</b> K' });
+    gleich(r.status, 400, 'Markup wird abgewiesen');
+    r = await tobi.ruf('POST', '/api/konto/voller-name', { id: 'u_gibtsnicht', voll: 'Max Fremd' });
+    gleich(r.status, 404, 'unbekanntes Konto');
+    r = await tobi.ruf('POST', '/api/konto/voller-name', { id: julius_id, voll: ' Julius   Klinzer ' });
+    gleich(r.status, 200, 'Tobi traegt Julius nach');
+    r = await julius.ruf('GET', '/api/me');
+    gleich(r.daten.nutzer.voll, 'Julius Klinzer', 'und es steht bei Julius');
+    r = await tobi.ruf('POST', '/api/konto/voller-name', { id: julius_id, voll: 'Anders Heisst' });
+    gleich(r.status, 409, 'ein vollstaendiger Name wird nie ueberschrieben');
+    await julius.ruf('PATCH', '/api/me', { voll: '' });
+
     console.log('\nLiga-Tabelle');
     r = await fremd.ruf('GET', '/api/liga/tabelle');
     gleich(r.status, 401, 'ohne Anmeldung gibt es keine Tabelle');

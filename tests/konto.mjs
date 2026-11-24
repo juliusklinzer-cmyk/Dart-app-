@@ -180,6 +180,14 @@ async function ligaSpielStarten(page) {
   await page.evaluate((t) => { window.__ligaHeute = t; window.__dart.render(); }, tag);
   await page.locator('#liga-plan [data-action="liga-spiel"]').first().click();
   await page.evaluate(() => { window.__ligaHeute = '2026-10-01'; });
+  /* Konten ohne vollen Namen: die Aufstellung verlangt ihn (24.11.). */
+  const f = page.locator('[data-role="liga-voll-vor"]');
+  for (let i = 0; i < await f.count(); i++) {
+    const id = await f.nth(i).getAttribute('data-id');
+    const name = await page.evaluate((x) => window.__dart.profile(x).name, id);
+    await f.nth(i).fill(name.slice(0, 20));
+    await page.locator(`[data-role="liga-voll-nach"][data-id="${id}"]`).fill('Nachname');
+  }
 }
 
 /* Den Nachmeldungs-Dialog weglegen, falls er nach einem Wechsel offen ist.
@@ -1519,6 +1527,23 @@ async function main() {
       await tobi.page.locator('[data-action="turnier-beitreten"]').first().click();
       await tobi.page.waitForTimeout(800);
       check('Tobi ist im selben Ligaspiel', await tobi.page.evaluate((id) => window.__dart.state().tour.sid === id, lsid));
+
+      /* Volle Namen (24.11.): von Julius nachgetragen, auf Tobis Geraet da -
+         und ein veraltetes Profil auf Tobis Geraet loescht ihn nicht. */
+      await tobi.page.waitForTimeout(600);
+      const vollTobi = await tobi.page.evaluate(() => {
+        const D = window.__dart, S = D.state();
+        return S.tour.players.filter((id) => id.indexOf('u_') === 0).map((id) => D.profile(id).voll);
+      });
+      check('Tobis Geraet kennt die nachgetragenen vollen Namen', vollTobi.length > 0 && vollTobi.every((v) => /\S \S/.test(v || '')), JSON.stringify(vollTobi));
+      const nachPatch = await tobi.page.evaluate(async () => {
+        const K = window.DartKonto, p = window.__dart.profile(K.nutzer().id);
+        const vor = p.voll; p.voll = null; K.profilGeaendert(p.id);
+        await new Promise((r) => setTimeout(r, 700));
+        await K.holeRoster();
+        return { vor, nach: window.__dart.profile(K.nutzer().id).voll };
+      });
+      check('ein Profil ohne vollen Namen am alten Geraet loescht ihn nicht', !!nachPatch.vor && nachPatch.nach === nachPatch.vor, JSON.stringify(nachPatch));
 
       /* Tobi nimmt H2 - G2 und bullt aus (laeuft also bei ihm). */
       const tobiMatch = await tobi.page.evaluate(() => window.__dart.state().matches.find((m) => m.posPaar[0] === 1 && m.posPaar[1] === 1).id);
