@@ -6931,6 +6931,13 @@ await gruppe('Ligaspiel-Start: Gastspieler und Nachmeldung fuer beide Teams, fes
   check('jede eigene Position hat einen Status-Knopf, vorbelegt "gemeldet"',
     (await page.locator('#overlay-card .ls-typ[data-seite="wir"]').count()) === 4 && (await typText('wir', 0)) === 'gemeldet');
   check('und jede Gegner-Zeile auch', (await page.locator('#overlay-card .ls-typ[data-seite="gegner"]').count()) === 4 && (await typText('gegner', 3)) === 'gemeldet');
+  /* Am Handy schob die Chip-Zeile den Dialog auf 560 px, der Status-Knopf lag
+     ausserhalb des Bilds (24.11.). */
+  check('am Handy passt der Start-Dialog in die Breite, alle Status-Knoepfe sind im Bild', await page.evaluate(() => {
+    const k = document.getElementById('overlay-card').getBoundingClientRect();
+    const t = [...document.querySelectorAll('#overlay-card .ls-typ, #overlay-card .ls-kader .chip')].map((e) => e.getBoundingClientRect());
+    return innerWidth === 390 && k.right <= innerWidth && t.length > 8 && t.every((r) => r.left >= 0 && r.right <= innerWidth);
+  }));
   /* Position 4: jemand ohne Konto - "Anderer Name", als Gastspieler. */
   await page.locator('[data-role="liga-pos"][data-i="3"]').selectOption('__name');
   check('"Anderer Name" oeffnet Vor- und Nachname und stellt Gastspieler ein',
@@ -6969,6 +6976,24 @@ await gruppe('Ligaspiel-Start: Gastspieler und Nachmeldung fuer beide Teams, fes
   check('Spaeter schliesst den Bogen, die Nachmeldung bleibt offen', await page.evaluate(() => {
     const D = window.__dart, lg = D.state().tour.liga; return !D.ui().overlay && D.ligaTyp(lg, lg.sie[1]) === 'neu' && !(lg.nachmeldungen || []).length;
   }));
+  /* Wechsel: auch wer aus dem Kader kommt, kann nicht gemeldeter Gastspieler
+     sein. Gustav ist schon der eine Gast - der zweite geht nicht. */
+  const wSeite = await page.evaluate(() => (window.__dart.state().tour.liga.heim ? 'H' : 'G'));
+  await page.locator('[data-action="roster-change"]').click();
+  await page.locator(`[data-action="liga-wechsel-pos"][data-seite="${wSeite}"][data-pos="0"]`).click();
+  const kaderKnopf = page.locator('#overlay-card [data-action="liga-wechsel-neu"]').first();
+  const kaderId = await kaderKnopf.getAttribute('data-id');
+  await kaderKnopf.click();
+  await page.locator('[data-action="liga-neu-typ"][data-value="gast"]').click();
+  await page.locator('[data-action="liga-wechsel-ok"]').click();
+  check('ein zweiter Gastspieler aus dem Kader wird abgelehnt', (await text('#overlay-card')).includes('Höchstens ein nicht gemeldeter Gastspieler'));
+  await page.evaluate(() => { const D = window.__dart, lg = D.state().tour.liga; delete lg.typen[lg.wir[3]]; });
+  await page.locator('[data-action="liga-wechsel-ok"]').click();
+  check('ohne anderen Gast steht der Kader-Spieler als Gastspieler auf der Position', await page.evaluate(([s, id]) => {
+    const D = window.__dart, lg = D.state().tour.liga;
+    return (s === 'H' ? lg.posH : lg.posG)[0] === id && D.ligaTyp(lg, id) === 'gast' && D.ui().overlay.type === 'liga-wechsel';
+  }, [wSeite, kaderId]));
+  await page.evaluate(([s, id]) => { const D = window.__dart, lg = D.state().tour.liga; delete lg.typen[id]; lg.typen[lg.wir[3]] = 'gast'; D.ui().overlay = null; D.save(); D.setScreen('tournament'); }, [wSeite, kaderId]);
   /* Im Spielbericht steht der Gastspieler als "(Gast)". */
   await page.evaluate(() => { const D = window.__dart; D.ui().bericht = null; D.berichtNeu(); D.setScreen('bericht'); });
   check('auf dem Bogen steht hinter dem Gastspieler "(Gast)"', (await text('#bericht-blatt')).includes('Gastmann (Gast)'));
@@ -7642,6 +7667,7 @@ await gruppe('Handy-Block 2: GAME ON nur am Spieltag', async () => {
     D.save(); D.setScreen('liga'); D.ui().ligaTab = 'plan'; D.render();
   });
   check('die Karte zeigt den 5. Spieltag (24.11.)', (await textKlein('#liga-karte')).includes('5. spieltag'));
+  await ligaHeute('2026-11-20');
   check('vor dem Spieltag: kein GAME ON', (await page.locator('#liga-karte [data-action="liga-spiel"]').count()) === 0);
   await ligaHeute('2026-11-24');
   check('am Spieltag selbst steht GAME ON', (await page.locator('#liga-karte [data-action="liga-spiel"]').count()) === 1 &&

@@ -6829,7 +6829,8 @@
     var t0 = performance.now(), D = 1300;
     el.textContent = (0).toFixed(dez).replace('.', ',') + suf;
     requestAnimationFrame(function schritt(t) {
-      var p = Math.min(1, (t - t0) / D), e = 1 - Math.pow(1 - p, 3);
+      /* Der Bildzeitpunkt kann vor t0 liegen: nie negativ anfangen. */
+      var p = Math.max(0, Math.min(1, (t - t0) / D)), e = 1 - Math.pow(1 - p, 3);
       el.textContent = (ziel * e).toFixed(dez).replace('.', ',') + suf;
       if (p < 1 && el.isConnected) requestAnimationFrame(schritt);
     });
@@ -14064,10 +14065,14 @@
           '<input class="dl-input" data-role="liga-neu-nach" maxlength="30" autocomplete="off" value="' + esc(wz.draft.nach || '') + '" placeholder="Nachname">' +
         '</div>' +
         '<div class="dl-segment ls-neu-typ">' +
-          '<button type="button" data-action="liga-neu-typ" data-value="neu" class="' + (wz.draft.typ === 'gast' ? '' : 'active') + '">neu melden</button>' +
+          '<button type="button" data-action="liga-neu-typ" data-value="neu" class="' + (wz.draft.typ === 'gast' ? '' : 'active') + '">' + (wz.draft.neu ? 'gemeldet' : 'neu melden') + '</button>' +
           '<button type="button" data-action="liga-neu-typ" data-value="gast" class="' + (wz.draft.typ === 'gast' ? 'active' : '') + '">Gastspieler</button>' +
         '</div>' +
-        '<p class="dl-note">' + (wz.draft.typ === 'gast'
+        '<p class="dl-note">' + (wz.draft.neu && wzTeam.indexOf(wz.draft.neu) >= 0
+          ? 'Steht schon auf dem Bogen, der Status bleibt.'
+          : wz.draft.neu && wz.draft.typ !== 'gast'
+          ? 'Gewählter Spieler wird als gemeldet eingewechselt. Ist er nicht gemeldet: Gastspieler antippen.'
+          : wz.draft.typ === 'gast'
           ? 'Gastspieler: nicht gemeldet, höchstens einer je Mannschaft und Spiel, höchstens zwei Einsätze je Saison – steht so auf dem Bogen, ohne Unterschrift.'
           : 'Neuer Name kommt als Nachmeldung auf den Spielbericht und unterschreibt nach dem Einwechseln.') + '</p>' +
         '<div class="dl-fuss"><button class="btn ghost" data-action="roster-change">Zurück</button>' +
@@ -14835,6 +14840,18 @@
     if (lg && lgNeu) {
       ['posH', 'posG', 'heimSpieler', 'gastSpieler', 'wir', 'sie'].forEach(function (k) {
         if (Array.isArray(lgNeu[k])) lg[k] = lgNeu[k].slice();
+      });
+      /* Gastspieler-Status mitnehmen (wer am anderen Geraet als Gast
+         eingewechselt wurde), und den eines hier verworfenen Wechsels
+         fallen lassen. 'neu' bleibt aussen vor: die Nachmeldung samt
+         Unterschrift reist nicht im Plan, sonst fragte dieses Geraet sie
+         noch einmal ab. */
+      var lgAlle = (lg.heimSpieler || []).concat(lg.gastSpieler || []);
+      Object.keys(lg.typen || {}).forEach(function (id) {
+        if (lg.typen[id] === 'gast' && lgAlle.indexOf(id) < 0) delete lg.typen[id];
+      });
+      Object.keys(lgNeu.typen || {}).forEach(function (id) {
+        if (lgNeu.typen[id] === 'gast' && lgAlle.indexOf(id) >= 0 && !ligaTyp(lg, id)) ligaTypSetzen(lg, id, 'gast');
       });
     }
     if (Array.isArray(plan.players)) S.tour.players = plan.players.slice();
@@ -16627,15 +16644,18 @@
         }
         /* Spontaner Name als Gastspieler (statt Nachmeldung): nur einer je
            Seite, dann ohne Unterschrift auf den Bogen. */
-        var loGast = loSpontan && lo.draft.typ === 'gast';
+        /* Auch wer aus dem Kader kommt, kann fuer uns nicht gemeldeter
+           Gastspieler sein - solange er noch nicht auf dem Bogen steht. */
+        var loNeuAufBogen = (loLg.heimSpieler || []).indexOf(neuId) < 0 && (loLg.gastSpieler || []).indexOf(neuId) < 0;
+        var loGast = loNeuAufBogen && lo.draft.typ === 'gast';
         if (loGast && ligaGaeste(loLg, lo.seite, neuId) >= 1) { lo.fehler = LIGA_GAST_FEHLER; render(); break; }
         var loRaus = (lo.seite === 'H' ? loLg.posH : loLg.posG)[lo.pos];
+        /* Vor dem Wechsel setzen: ligaWechseln schickt den Plan gleich ans
+           andere Geraet, der Status soll mit. */
+        if (loNeuAufBogen) ligaTypSetzen(loLg, neuId, loGast ? 'gast' : '');
         var loFehler = ligaWechseln(lo.seite, lo.pos, neuId);
-        if (loFehler) { lo.fehler = loFehler; render(); break; }
+        if (loFehler) { if (loNeuAufBogen) ligaTypSetzen(loLg, neuId, ''); lo.fehler = loFehler; render(); break; }
         if (loGast) {
-          ligaTypSetzen(loLg, neuId, 'gast');
-          save();
-          if (geteiltesTurnier()) geteiltenPlanSenden();
           UI.overlay = { type: 'liga-wechsel' };
           render(); break;
         }

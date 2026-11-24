@@ -1573,7 +1573,7 @@ async function main() {
       await tobi.page.locator('#screen-game [data-action="to-tournament"]').click().catch(() => {});
       await tobi.page.evaluate(() => {
         const D = window.__dart;
-        D.ui().overlay = { type: 'liga-wechsel-zu', seite: D.state().tour.liga.heim ? 'G' : 'H', pos: 3, eigene: false, draft: { name: 'Ersatz', nach: 'Vier' } };
+        D.ui().overlay = { type: 'liga-wechsel-zu', seite: D.state().tour.liga.heim ? 'G' : 'H', pos: 3, eigene: false, draft: { name: 'Ersatz', nach: 'Vier', typ: 'gast' } };
         D.render();
       });
       await tobi.page.locator('[data-action="liga-wechsel-ok"]').click();
@@ -1584,6 +1584,10 @@ async function main() {
       check('Tobis Wechsel kommt bei Julius an', await julius.page.evaluate(() => {
         const D = window.__dart, S = D.state(), idx = S.tour.liga.heim ? 1 : 0;
         return S.matches.filter((m) => m.posPaar[idx] === 3 && !m.done).every((m) => (D.profile(m.p[idx]) || {}).voll === 'Ersatz Vier');
+      }));
+      check('und zwar als Gastspieler, auch auf Julius Geraet', await julius.page.evaluate(() => {
+        const D = window.__dart, lg = D.state().tour.liga;
+        return D.ligaTyp(lg, (lg.heim ? lg.posG : lg.posH)[3]) === 'gast';
       }));
 
       /* Funkloch beim Checkout: Tobis Einzel ist bei ihm fertig, das Ergebnis
