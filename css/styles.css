@@ -3025,15 +3025,15 @@ body { font-size: 1rem; }
 }
 .overlay.vollbild .liga-start .options button { min-height: 44px; padding-top: 8px; padding-bottom: 8px; }
 .overlay.vollbild .overlay-card > .row-btns:not(:first-child) { margin-top: var(--space-4); }
-/* Die Knopfzeile klebt am unteren Rand: der Ligaspiel-Dialog ist am iPhone
-   hoeher als der Schirm (929 zu 844 px), und GAME ON! darf nicht erst nach
-   dem Scrollen auftauchen (D3). Hintergrund und Linie, damit der Inhalt
-   sichtbar darunter durchlaeuft; der negative Rand unten gleicht die eigene
-   Sicherheitszone aus, sobald der Fuss am Ende des Blatts angekommen ist. */
+/* Beim Start steht die Knopfzeile am Ende der Seite (Julius, 25.11.: nicht klebend -
+   sie schnitt am iPad die letzte Auswahl ab). */
 .overlay.vollbild .overlay-card > .row-btns {
+  padding: var(--space-3) 0 max(12px, env(safe-area-inset-bottom, 0px));
+}
+/* Die uebrigen Vollbild-Dialoge (Versand, Nachtrag, Mitteilungen): klebt. */
+.overlay.vollbild .overlay-card > .row-btns:not(:has([data-action="liga-los"])) {
   position: sticky; bottom: 0; z-index: 1;
   background: var(--bg); border-top: 1px solid var(--line);
-  padding: var(--space-3) 0 max(12px, env(safe-area-inset-bottom, 0px));
   margin-bottom: calc(-1 * max(12px, env(safe-area-inset-bottom, 0px)));
 }
 .overlay-card .row-btns > .btn { margin-top: 0; }

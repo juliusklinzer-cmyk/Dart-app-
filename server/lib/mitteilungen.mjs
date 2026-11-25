@@ -101,7 +101,7 @@ export function erstelleMitteilungen(opt) {
   const qLogWeg = db.prepare('DELETE FROM mitteilung_log WHERE schluessel = ? AND user_id = ?');
   const qMitglieder = db.prepare("SELECT id, email, display_name, gast_konto FROM users WHERE status = 'aktiv' AND test = 0 ORDER BY created_at");
   const qZusage = db.prepare('SELECT status FROM liga_zusagen WHERE termin_id = ? AND user_id = ?');
-  const qZugesagt = db.prepare("SELECT u.id, u.email, u.display_name FROM liga_zusagen z JOIN users u ON u.id = z.user_id WHERE z.termin_id = ? AND (z.status IS NULL OR z.status = 'dabei') AND u.test = 0 AND u.status = 'aktiv' ORDER BY z.created_at");
+  const qZugesagt = db.prepare("SELECT u.id, u.email, u.display_name, u.real_name FROM liga_zusagen z JOIN users u ON u.id = z.user_id WHERE z.termin_id = ? AND (z.status IS NULL OR z.status = 'dabei') AND u.test = 0 AND u.gast_konto = 0 AND u.status = 'aktiv' ORDER BY z.created_at");
 
   function kanalVon(userId, themaId) {
     const t = THEMA[themaId];
@@ -271,7 +271,7 @@ export function erstelleMitteilungen(opt) {
       if (!t.tag || !t.gast || t.verschoben || tageBis(heute, t.tag) !== 1) continue;
       const x = terminText(t);
       const zu = qZugesagt.all(t.id);
-      const namen = zu.map((u) => u.display_name).join(', ') || 'noch niemand';
+      const namen = zu.map((u) => u.real_name || u.display_name).join(', ') || 'noch niemand';
       for (const u of zu) {
         const inhalt = {
           betreff: 'Morgen ' + t.nr + '. Spieltag gegen ' + x.gegner,

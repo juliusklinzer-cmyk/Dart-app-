@@ -1424,7 +1424,7 @@
         return neu;
       }
       // Fremder Anspruch: kein Start-Knopf, dafür der Name daneben.
-      var von = p.claimedBy && p.claimedBy !== ich ? (p.claimedByName || 'jemandem') : null;
+      var von = p.claimedBy && p.claimedBy !== ich ? ((S.tour.liga && profile(p.claimedBy).voll) || p.claimedByName || 'jemandem') : null;
       if ((m.belegtVon || null) !== von) {
         if (von) m.belegtVon = von; else delete m.belegtVon;
         neu = true;
@@ -3124,7 +3124,7 @@
   function allMatches() {
     var out = [];
     if (S.matches.length && !(S.tour && S.tour.liga && S.tour.liga.uebung) && turnierWertbar() && !turnierSchonArchiviert()) {
-      S.matches.forEach(function (m) { if (m.done && knownPlayers(m.p)) out.push({ m: m, start: tourStart(), live: true }); });
+      S.matches.forEach(function (m) { if (m.done && knownPlayers(m.p)) out.push({ m: m, start: tourStart(), live: true, liga: !!(S.tour && S.tour.liga) }); });
     }
     wertbareHistorie().forEach(function (h) {
       // Cricket, RTW und Finisher haben keine Match-Liste - und
@@ -3132,7 +3132,7 @@
       if (h.liga && h.liga.uebung) return;
       if ((h.kind || '501') !== '501' && h.kind !== 'quick') return;
       h.matches.forEach(function (m) {
-        if (m.done && knownPlayers(m.p)) out.push({ m: m, start: (h.settings && h.settings.start) || 501, at: h.at });
+        if (m.done && knownPlayers(m.p)) out.push({ m: m, start: (h.settings && h.settings.start) || 501, at: h.at, liga: !!h.liga });
       });
     });
     out.sort(function (a, b) { return (b.m.at || b.at || 0) - (a.m.at || a.at || 0); });
@@ -4976,7 +4976,7 @@
     /* Die Highlights, die der Spielberichtsbogen abfragt: 180er,
        High-Finishes ab 100 und Shortlegs bis 21 Darts – nur unsere Seite,
        jedes Leg einzeln (legHighlights). */
-    d.hl = teamHighlights(lg.wir, legHighlights(S.matches, tourStart(), lg.wir), pname);
+    d.hl = teamHighlights(lg.wir, legHighlights(S.matches, tourStart(), lg.wir));
     return d;
   }
 
@@ -5557,6 +5557,7 @@
       }
       var e = row.e;
       var m = e.m;
+      var lnm = e.liga ? ligaName : pname;
       var la = legsWon(m, m.p[0]), lb = legsWon(m, m.p[1]);
       var avgOf = function (pid) {
         var d = 0, p = 0;
@@ -5588,9 +5589,9 @@
           '</div>';
       }
       return '<div class="log-row tap" data-action="open-summary" data-kind="501" data-id="' + esc(m.id) + '" role="button" tabindex="0">' +
-        '<div class="lp ' + (m.winner === m.p[0] ? 'w' : '') + '">' + esc(pname(m.p[0])) + '<span class="a">Ø ' + avgOf(m.p[0]) + '</span></div>' +
+        '<div class="lp ' + (m.winner === m.p[0] ? 'w' : '') + '">' + esc(lnm(m.p[0])) + '<span class="a">Ø ' + avgOf(m.p[0]) + '</span></div>' +
         '<div class="ls">' + la + ':' + lb + '</div>' +
-        '<div class="lp right ' + (m.winner === m.p[1] ? 'w' : '') + '">' + esc(pname(m.p[1])) + '<span class="a">Ø ' + avgOf(m.p[1]) + '</span></div>' +
+        '<div class="lp right ' + (m.winner === m.p[1] ? 'w' : '') + '">' + esc(lnm(m.p[1])) + '<span class="a">Ø ' + avgOf(m.p[1]) + '</span></div>' +
         '<div class="ld">' + fmtDate(m.at || e.at) + (e.live ? ' · aktuelles Turnier' : '') + '</div>' +
         '</div>';
     }).join('') || '<p class="hint">Noch keine Spiele.</p>';
@@ -9226,7 +9227,7 @@
       fuss = '<div class="lk-knoepfe"><button class="btn primary start" data-action="live-ansehen" data-k="' + esc(fremdLive.zuschauer) + '">Live zuschauen</button></div>' + fuss;
     }
     var person = function (p, klasse) {
-      return '<span class="lt-person' + (klasse ? ' ' + klasse : '') + '">' + avatarHTML(zusageProfil(p), 'sm') + esc(p.name) + '</span>';
+      return '<span class="lt-person' + (klasse ? ' ' + klasse : '') + '">' + avatarHTML(zusageProfil(p), 'sm') + esc(zusageProfil(p).voll || p.name) + '</span>';
     };
     /* Drei Gruppen wie beim Training: dabei, kann nicht, noch keine Antwort -
        sonst weiss der Kapitaen nicht, wer abgesagt und wer nur noch nicht
@@ -9952,7 +9953,7 @@
         var aenderbar = !v.c && !m.done;
         return '<div class="v ' + (wieBust(v) ? 'bust' : v.c ? 'co' : '') + (aenderbar ? ' tap' : '') + '"' +
           (aenderbar ? ' data-action="edit-visit" data-i="' + e.idx + '" role="button" tabindex="0"' : '') + '>' +
-          '<span class="wer">' + esc(pname(v.p)) + '</span>' +
+          '<span class="wer">' + esc(spielName(v.p)) + '</span>' +
           '<span class="s">' + (v.b ? v.o : v.s) + '</span>' +
           '<span class="r">' + (wieBust(v) ? 'Bust' + grund : 'Rest ' + e.rest) + '</span></div>';
       }).join('') + '</div>';
@@ -10492,7 +10493,7 @@
     }
     if (kind === '501') {
       for (var i = 0; i < S.matches.length; i++) {
-        if (S.matches[i].id === id) return { m: S.matches[i], start: tourStart(), live: true };
+        if (S.matches[i].id === id) return { m: S.matches[i], start: tourStart(), live: true, liga: !!(S.tour && S.tour.liga) };
       }
       for (var h = 0; h < S.history.length; h++) {
         var e = S.history[h];
@@ -10500,7 +10501,7 @@
         if ((e.kind || '501') !== '501' && e.kind !== 'quick') continue;
         if (!Array.isArray(e.matches)) continue;
         for (var j = 0; j < e.matches.length; j++) {
-          if (e.matches[j].id === id) return { m: e.matches[j], start: (e.settings && e.settings.start) || 501, live: false, quick: e.kind === 'quick', at: e.at };
+          if (e.matches[j].id === id) return { m: e.matches[j], start: (e.settings && e.settings.start) || 501, live: false, quick: e.kind === 'quick', at: e.at, liga: !!e.liga };
         }
       }
       return null;
@@ -11732,7 +11733,10 @@
   /* Woher kommt der Bericht: aus dem laufenden Ligaspiel oder – über den
      Spieltag im Liga-Reiter – aus dem Archiv. */
   function ligaBerichtQuelle() {
-    if (UI.bericht) {
+    /* Ein gemerkter alter Bericht gilt nur, solange er auch gezeigt wird:
+       nach dem Blick ins Archiv landete sonst eine Nachmeldung im laufenden
+       Ligaspiel im ALTEN Bericht (Spieltag 5, 24.11.). */
+    if (UI.bericht && (S.screen === 'bericht' || !(S.tour && S.tour.liga))) {
       for (var i = 0; i < S.history.length; i++) {
         var h = S.history[i];
         if (h.liga && h.liga.terminId === UI.bericht && h.matches) {
@@ -11768,7 +11772,7 @@
     ids.forEach(function (id) {
       var h = hlMap[id];
       if (!h) return;
-      var nm = esc(pname(id));
+      var nm = esc(ligaName(id));
       if (h.s180 > 0) zeilen.push(nm + ' 180' + (h.s180 > 1 ? ' ×' + h.s180 : ''));
       h.finishes.forEach(function (f) { zeilen.push(nm + ' ' + f + ' Finish'); });
       h.shortlegs.forEach(function (d) { zeilen.push(nm + ' ' + d + '-Darter'); });
@@ -12209,7 +12213,9 @@
     /* Im geteilten Spiel kennt sonst nur dieses iPad die Nachmeldung - und
        der Bericht am anderen zeigte sie nicht (Spieltag 5, 24.11.). */
     if (S.tour && S.tour.liga === lg && geteiltesTurnier() && !S.tour.beendet) geteiltenPlanSenden();
-    berichtNachmeldungenEinsetzen();
+    /* Ausserhalb des Berichts liegt vielleicht noch das Blatt eines ANDEREN
+       Spiels da: dort nichts eintragen, sondern beim Oeffnen neu zeichnen. */
+    if (S.screen === 'bericht') berichtNachmeldungenEinsetzen(); else berichtStand = null;
     /* Beim Start mehrere "neu melden": gleich der naechste Bogen. */
     if (person.start && S.tour && S.tour.liga === lg && nachmeldungenOffenStarten()) { render(); return; }
     UI.overlay = { type: 'hinweis', titel: voll + ' ist nachgemeldet',
@@ -12608,7 +12614,7 @@
       wirP: d.wirP, sieP: d.sieP, wirS: d.wirS, sieS: d.sieS, wirL: d.wirL, sieL: d.sieL,
       /* Der Server nimmt hoechstens 80 Zeichen bzw. sechs Zeilen an und
          lehnt sonst die ganze Meldung ab - lieber hier kappen. */
-      mod: String(manOfTheDayText(mod) || '').slice(0, 80),
+      mod: String(manOfTheDayText(mod, ligaName) || '').slice(0, 80),
       hl: mitteilungsZeilen(d.hl).slice(0, 6),
       einzel: einzel
     };
@@ -12647,7 +12653,7 @@
         var v = map[k][a[0]];
         if (!(v > 0)) return;
         var besser = a[0] === 'bestLeg' ? (!best[a[0]] || v < best[a[0]].wert) : (!best[a[0]] || v > best[a[0]].wert);
-        if (besser) best[a[0]] = { wert: v, name: map[k].name };
+        if (besser) best[a[0]] = { wert: v, name: ligaName(k) };
       });
     });
     var alt = S.rekorde || null;
@@ -13007,19 +13013,19 @@
   var ST_PFEIL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 12H7M11.5 6.5L6 12l5.5 5.5"></path></svg>';
   function stZahl(s) { var m = /-?\d+(?:[.,]\d+)?/.exec(String(s)); return m ? parseFloat(m[0].replace(',', '.')) : NaN; }
   function statistikHtml(d) {
-    var n = d.spieler.length;
+    var n = d.spieler.length, nm = d.nm || pname;   // Ligaspiel: volle Namen
     var ergebnis = '<div class="st-ergebnis' + (d.archiv ? ' archiv' : '') + '">' +
       '<div class="st-links"><button class="st-zurueck" data-action="summary-back" aria-label="Zurück">' + ST_PFEIL + '</button>' +
         '<div class="st-art"><span class="kt">' + d.kind + '</span><span class="st-meta">' + d.meta + '</span></div></div>' +
       '<div class="st-stand">' + (d.zwei
-        ? '<span class="st-sn' + (d.sieger === d.zwei.a ? ' sieg' : '') + '">' + esc(pname(d.zwei.a)) + '</span><b>' + d.zwei.stand + '</b>' +
-          '<span class="st-sn' + (d.sieger === d.zwei.b ? ' sieg' : '') + '">' + esc(pname(d.zwei.b)) + '</span>'
+        ? '<span class="st-sn' + (d.sieger === d.zwei.a ? ' sieg' : '') + '">' + esc(nm(d.zwei.a)) + '</span><b>' + d.zwei.stand + '</b>' +
+          '<span class="st-sn' + (d.sieger === d.zwei.b ? ' sieg' : '') + '">' + esc(nm(d.zwei.b)) + '</span>'
         : '<b class="st-titel">' + d.titel + '</b>') + '</div>' +
-      '<div class="st-rechts">' + (d.sieger ? '<span class="st-pille">🏆 ' + esc(pname(d.sieger)) + '</span>' : d.pille ? '<span class="st-pille">' + d.pille + '</span>' : '') + '</div></div>';
+      '<div class="st-rechts">' + (d.sieger ? '<span class="st-pille">🏆 ' + esc(nm(d.sieger)) + '</span>' : d.pille ? '<span class="st-pille">' + d.pille + '</span>' : '') + '</div></div>';
     var cols = 'minmax(0, ' + (n <= 2 ? '1.1' : '1.3') + 'fr) repeat(' + n + ', minmax(0, 1fr))';
     var koepfe = d.spieler.map(function (sp) {
       return '<div class="st-sp' + (sp.id === d.sieger ? ' sieg' : '') + '">' + avatarHTML(profile(sp.id), 'md') +
-        '<span class="st-sp-name">' + esc(pname(sp.id)) + '</span><span class="st-sp-sub">' + (sp.sub || '') + '</span></div>';
+        '<span class="st-sp-name">' + esc(nm(sp.id)) + '</span><span class="st-sp-sub">' + (sp.sub || '') + '</span></div>';
     }).join('');
     var zeilen = d.zeilen.map(function (z) {
       var best = -1;
@@ -13038,7 +13044,7 @@
     var seite = d.seite ? '<div class="card st-verlauf"><span class="kt">' + d.seite.titel + '</span><div class="st-liste">' + (d.seite.eintraege.length ? d.seite.eintraege.map(function (e) {
       return '<div class="st-item' + (e.action ? ' tap' : '') + '"' + (e.action ? ' data-action="' + e.action + '" ' + (e.attrs || '') + ' role="button" tabindex="0"' : '') + '>' +
         '<span class="st-n">' + e.n + '</span><span class="st-wer">' +
-        (e.wer ? '<span class="st-punkt" style="background:hsl(' + hue(e.wer) + ',55%,52%)"></span><span class="st-wname">' + esc(pname(e.wer)) + '</span>' : '<span class="st-wname">' + (e.wertext || '') + '</span>') +
+        (e.wer ? '<span class="st-punkt" style="background:hsl(' + hue(e.wer) + ',55%,52%)"></span><span class="st-wname">' + esc(nm(e.wer)) + '</span>' : '<span class="st-wname">' + (e.wertext || '') + '</span>') +
         '</span><span class="st-wert">' + e.text + '</span></div>';
     }).join('') : '<p class="hint">Noch nichts.</p>') + '</div><span class="st-note">Die Werte fließen in Karriere-Statistik und Ranglisten ein.</span></div>' : '';
     var a = d.aktionen;
@@ -13101,7 +13107,7 @@
       var tTab = turnierTabelle(th);
       var tFertig = th.matches.filter(function (x) { return x.done; });
       d = {
-        kind: 'Turnier', archiv: true, aktionen: null,
+        kind: 'Turnier', archiv: true, aktionen: null, nm: th.liga ? ligaName : null,
         meta: fmtDate(th.at) + ' · ' + P((th.lineup || []).length, 'Spieler', 'Spieler') + ' · ' + tStart + ' Double Out' +
           (th.settings && th.settings.bestOf > 1 ? ' · Best of ' + th.settings.bestOf : ' · ein Leg') + ' · ' + P(tFertig.length, 'Spiel', 'Spiele'),
         zwei: null, titel: th.winner ? esc(pname(th.winner)) + ' gewinnt' : 'Turnier', sieger: th.winner || null,
@@ -13109,7 +13115,7 @@
         zeilen: x01Zeilen(tTab, false),
         seite: { titel: 'Spiele', eintraege: tFertig.map(function (x, i) {
           var verlierer = x.p[0] === x.winner ? x.p[1] : x.p[0];
-          return { n: 'Sp. ' + (i + 1), wer: x.winner, text: 'gegen ' + esc(pname(verlierer)) + ' · ' + legsWon(x, x.winner) + ':' + legsWon(x, verlierer),
+          return { n: 'Sp. ' + (i + 1), wer: x.winner, text: 'gegen ' + esc((th.liga ? ligaName : pname)(verlierer)) + ' · ' + legsWon(x, x.winner) + ':' + legsWon(x, verlierer),
             action: 'open-summary', attrs: 'data-kind="501" data-id="' + esc(x.id) + '"' };
         }) }
       };
@@ -13130,10 +13136,11 @@
         };
       }
       d = {
+        nm: found.liga ? ligaName : null,
         kind: 'X01 · ' + (mSolo ? 'Solo' : found.quick ? 'Schnelles Spiel' : found.live ? 'Turnierspiel ' + (mPos + 1) + ' von ' + S.matches.length : 'Turnierspiel'), archiv: !found.live, aktionen: mAkt,
         meta: (found.live ? '' : fmtDate(m.at || found.at) + ' · ') + found.start + ' Double Out · ' + (mehrereLegs(m) ? dauerText(m) : P(mLegs, 'Leg', 'Legs')),
         zwei: !mSolo && m.p.length === 2 ? { a: m.p[0], b: m.p[1], stand: x01Stand(m) } : null,
-        titel: m.winner ? esc(pname(m.winner)) + (mSolo ? ' hat ausgemacht' : ' gewinnt') : 'Offen',
+        titel: m.winner ? esc((found.liga ? ligaName : pname)(m.winner)) + (mSolo ? ' hat ausgemacht' : ' gewinnt') : 'Offen',
         sieger: mSolo ? null : m.winner || null, pille: mSolo ? '🎯 ausgemacht' : null,
         spieler: m.p.map(function (id) { return { id: id, sub: mSolo ? 'ausgecheckt' : P(legsWon(m, id), 'Leg', 'Legs') }; }),
         zeilen: x01Zeilen(m.p.map(function (id) { return map[id]; }), true),
@@ -17676,7 +17683,7 @@
     }
     var kl = function (id) { return id === leg.winner ? ' class="sieger"' : ''; };
     return '<table class="leg-stat' + (m.p.length > 2 ? ' viele' : '') + '"><thead><tr><th></th>' +
-      m.p.map(function (id) { return '<th' + kl(id) + '>' + esc(pname(id)) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      m.p.map(function (id) { return '<th' + kl(id) + '>' + esc(spielName(id)) + '</th>'; }).join('') + '</tr></thead><tbody>' +
       zeilen.map(function (z) {
         return '<tr><th>' + z[0] + '</th>' + m.p.map(function (id) { return '<td' + kl(id) + '>' + z[1](st[id], id) + '</td>'; }).join('') + '</tr>';
       }).join('') + '</tbody></table>';

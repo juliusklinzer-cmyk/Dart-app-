@@ -2816,6 +2816,18 @@ check('Enter startet das naechste Einzel direkt in der Riesenanzeige',
     return m && !m.done && m.legs.length === 1;
   }));
 
+/* Volle Namen auch bei den Highlights, in Bericht und Spielstatistik
+   (Julius 25.11.: im Spielbericht standen dort die Kuenstlernamen). */
+check('Highlights in Uebersicht und Spielbericht tragen volle Namen, keine Kuenstlernamen', await page.evaluate(() => {
+  const D = window.__dart, S = D.state(), id = S.matches.find((m) => m.done && m.legs.length).winner, p = D.profile(id);
+  const alt = [p.name, p.voll, S.screen, D.ui().overlay];
+  p.name = 'ZZKuenstler'; p.voll = 'Vera Vollname'; D.ui().overlay = null; D.ui().bericht = null;
+  let gut = true;
+  for (const sc of ['tournament', 'winner', 'bericht']) { D.setScreen(sc); if (/ZZKuenstler/i.test(document.querySelector('#screen-' + sc).innerText)) gut = false; }
+  const da = /Vera Vollname (180|141)/.test(document.getElementById('bericht-blatt').textContent);
+  p.name = alt[0]; p.voll = alt[1]; D.setScreen('game'); D.ui().overlay = alt[3]; D.render();
+  return gut && da;
+}));
 /* Aufraeumen fuer die naechsten Gruppen: das Probe-Ligaspiel restlos weg. */
 await page.evaluate(() => {
   const D = window.__dart, S = D.state();
@@ -4532,7 +4544,7 @@ check('der Nachname aus dem Profil steht getrennt im Bogen', await page.evaluate
 }));
 check('die Highlights stehen in Udos Form', await page.evaluate(() => {
   const t = document.getElementById('bericht-blatt').textContent;
-  return t.includes('Lenas 180') && t.includes('141 Finish');
+  return t.includes('Lena Musterfrau 180') && !t.includes('Lenas 180') && t.includes('141 Finish');
 }));
 check('das Blatt laesst sich Feld fuer Feld korrigieren',
   (await page.locator('#bericht-blatt [contenteditable]').count()) > 40);

@@ -1881,6 +1881,87 @@ async function main() {
       await leeren(julius); await leeren(tobi);
     });
 
+    /* Spieltag 5 (DCO, 24.11.): G5 kam als Gastspieler, der G6 musste neu
+       gemeldet werden, unterschrieb - und fehlte auf dem Bogen. */
+    await gruppe('Geteiltes Ligaspiel: erst ein Gast, dann eine Nachmeldung beim Wechsel', async () => {
+      const leeren = (g) => g.page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; S.matches = []; S.tour = null; S.current = null; D.ui().overlay = null; D.save(); D.setScreen('setup'); });
+      await leeren(julius); await leeren(tobi);
+      await julius.page.evaluate(() => window.__dart.setScreen('liga'));
+      await ligaSpielStarten(julius.page);
+      for (let i = 0; i < 4; i++) {
+        await julius.page.locator(`[data-role="liga-gegner"][data-i="${i}"]`).fill('Spieltag' + i);
+        await julius.page.locator(`[data-role="liga-gegner-nach"][data-i="${i}"]`).fill('Fuenf' + i);
+      }
+      await julius.page.locator('[data-action="liga-geteilt"][data-value="1"]').click();
+      await julius.page.locator('[data-action="liga-los"]').click();
+      await julius.page.waitForTimeout(1200);
+      const gsid = await julius.page.evaluate(() => window.__dart.state().tour.sid);
+      await tobi.page.evaluate(() => window.__dart.turnierListeAktualisieren());
+      await tobi.page.waitForTimeout(900);
+      await tobi.page.locator('[data-action="turnier-beitreten"][data-id="' + gsid + '"]').click();
+      await tobi.page.waitForTimeout(800);
+      const wechsel = async (g, pos, name, nach, typ) => {
+        await g.page.evaluate((w) => {
+          const D = window.__dart;
+          D.ui().overlay = { type: 'liga-wechsel-zu', seite: D.state().tour.liga.heim ? 'G' : 'H', pos: w[0], eigene: false, draft: { name: w[1], nach: w[2], typ: w[3] } };
+          D.render();
+        }, [pos, name, nach, typ]);
+        await g.page.locator('[data-action="liga-wechsel-ok"]').click();
+        await g.page.waitForTimeout(700);
+      };
+      await tobi.page.evaluate(() => { const D = window.__dart, S = D.state(), h = S.history.find((e) => e.liga); if (!h) {
+        S.history.push({ id: 'altbericht', at: 1, lineup: [], matches: [], settings: { start: 501, bestOf: 3 }, liga: { terminId: 'st09', nr: 9, gegner: 'Alt', heim: true, wir: [], sie: [], heimSpieler: [], gastSpieler: [] } });
+        D.ui().bericht = 'st09'; } else D.ui().bericht = h.liga.terminId;
+        D.setScreen('bericht'); D.setScreen('tournament'); });
+      /* Am iPad der Gegner: erst der Gast, dann die Nachmeldung. */
+      await wechsel(tobi, 0, 'Gerd', 'Gast', 'gast');
+      await tobi.page.evaluate(() => { window.__dart.ui().overlay = null; window.__dart.render(); });
+      await wechsel(tobi, 1, 'Zweiter', 'Gastversuch', 'gast');
+      check('ein zweiter Gastspieler wird abgelehnt', await tobi.page.evaluate(() => /Gast/.test((window.__dart.ui().overlay || {}).fehler || '')));
+      await wechsel(tobi, 1, 'Nino', 'Neuling', 'neu');
+      check('die Nachmeldung fragt gleich nach der Unterschrift', await tobi.page.evaluate(() => (window.__dart.ui().overlay || {}).type === 'nachmeldung'));
+      await tobi.page.locator('[data-action="nm-wahl"][data-feld="g"][data-value="m"]').click();
+      await tobi.page.evaluate(() => { window.__dart.ui().overlay.striche = [[[0.1, 0.5], [0.3, 0.3], [0.5, 0.6], [0.7, 0.4], [0.8, 0.5]]]; });
+      await tobi.page.locator('[data-action="nm-weiter"]').click();
+      await tobi.page.waitForTimeout(1500);
+      /* Auf Tobis iPad war vorher ein alter Bericht offen (UI.bericht): die
+         Nachmeldung gehoert trotzdem ins laufende Spiel. */
+      check('die Nachmeldung liegt im laufenden Spiel, nicht in einem alten Bericht', await tobi.page.evaluate(() => {
+        const D = window.__dart, S = D.state();
+        return /ist nachgemeldet/.test((D.ui().overlay || {}).titel || '') && (S.tour.liga.nachmeldungen || []).length === 1 &&
+          S.history.every((h) => !h.liga || !(h.liga.nachmeldungen || []).some((n) => n.nach === 'Neuling'));
+      }));
+      await julius.page.evaluate(() => window.DartSync.turnier.abgleich());
+      await julius.page.waitForTimeout(900);
+      const blatt = (g) => g.page.evaluate(() => {
+        const D = window.__dart, lg = D.state().tour.liga;
+        D.ui().overlay = null; D.ui().bericht = null; D.setScreen('bericht');
+        const b = document.getElementById('bericht-blatt');
+        const sp = [...b.querySelectorAll('.b-spieler')][lg.heim ? 1 : 0];
+        const z = [...sp.querySelectorAll('tr')].slice(1).map((r) => r.textContent.replace(/\s+/g, ' ').trim());
+        const nm = b.querySelector('.b-nach');
+        return { fuenf: z[4], sechs: z[5], seite2: nm.textContent.includes('Neuling') && nm.querySelectorAll('img').length === 1,
+          kreuz: /ja\s+X/.test(b.querySelector('td[data-feld="nachmeldungen"]').textContent) };
+      });
+      const passt = (x) => /GerdGast \(Gast\)/.test(x.fuenf) && /NinoNeuling \(nachgem\.\)/.test(x.sechs) && x.seite2 && x.kreuz;
+      check('auch das noch gezeichnete Blatt des alten Berichts bekommt sie nicht', await tobi.page.evaluate(() => {
+        const D = window.__dart, alt = D.ui().bericht;
+        D.ui().overlay = null; D.setScreen('bericht');
+        const gut = D.ui().bericht === alt && !!alt && !document.getElementById('bericht-blatt').textContent.includes('Neuling');
+        D.setScreen('tournament');
+        return gut;
+      }));
+      const a = await blatt(tobi), b = await blatt(julius);
+      check('am iPad der Nachmeldung: 5 ist Gast, 6 nachgemeldet, Seite 2 mit Unterschrift, Kreuz bei ja', passt(a), JSON.stringify(a));
+      check('am anderen iPad genauso', passt(b), JSON.stringify(b));
+      await julius.page.reload();
+      await julius.page.waitForTimeout(1200);
+      const c = await blatt(julius);
+      check('und nach dem Neuladen auch', passt(c), JSON.stringify(c));
+      await tobi.page.evaluate(() => { const D = window.__dart, S = D.state(); D.ui().bericht = null; S.history = S.history.filter((h) => h.id !== 'altbericht'); D.save(); });
+      await leeren(julius); await leeren(tobi);
+    });
+
     await gruppe('Geteiltes Ligaspiel: Befunde der Pruefung (kein Ergebnis geht verloren)', async () => {
       const leeren = (g) => g.page.evaluate(() => { const D = window.__dart, S = D.state(); S.game = null; S.matches = []; S.tour = null; S.current = null; D.ui().overlay = null; D.save(); D.setScreen('setup'); });
       await leeren(julius); await leeren(tobi);
