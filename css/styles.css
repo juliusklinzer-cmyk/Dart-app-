@@ -6670,6 +6670,52 @@ body.fix-spiel #screen-hunter.active { flex: 1 1 auto; height: auto; min-height:
   .st-sp .av, .st-vergleich.viele .st-sp .av { width: 26px; height: 26px; font-size: 10px; }
   .st-v, .st-vergleich.zwei .st-v { font-size: 17px; }
 }
+/* Turnier mit vielen Spielern und Ligaspiel: Rangliste statt Spalten (26.11.). */
+.st-ltab .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.st-rangliste { gap: 8px; padding: 12px 14px; }
+.st-ltab-rahmen { min-height: 0; overflow: auto; scrollbar-width: none; }
+.st-ltab { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.st-ltab th, .st-ltab td { padding: 6px 6px; border-bottom: 1px solid #1f191b; text-align: center; white-space: nowrap; }
+.st-ltab thead th { position: sticky; top: 0; background: var(--bg-2); font-family: var(--font-cond); font-weight: 700; font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.st-ltab td { font-family: var(--font-cond); font-weight: 700; font-size: 1.05rem; color: #9a8f90; }
+.st-ltab td.best { color: #fff; text-shadow: 0 0 18px rgba(70, 170, 215, 0.7); }
+.st-ltab .st-lname { text-align: left; width: 100%; }
+.st-ltab tbody th.st-lname { min-width: 9em; display: flex; align-items: center; gap: 10px; min-height: 44px; font-weight: 600; font-size: 0.95rem; color: var(--text); white-space: normal; }
+.st-lrang { flex: none; width: 1.4em; font-family: var(--font-cond); font-weight: 700; color: var(--muted); text-align: right; }
+.st-lwer { min-width: 0; line-height: 1.2; overflow-wrap: anywhere; }
+.st-ltab .st-lgruppe th { padding-top: 14px; text-align: left; font-family: var(--font-cond); font-weight: 700; font-size: 0.8rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.st-lkopf { padding: 8px 4px 2px; font-family: var(--font-cond); font-weight: 700; font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.st-item.st-paar-zeile { grid-template-columns: minmax(0, 1fr); flex: none; }
+.st-paar { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 10px; min-width: 0; }
+.st-paar > span { min-width: 0; font-size: 0.9rem; color: #9a8f90; line-height: 1.2; overflow-wrap: anywhere; }
+.st-paar > span:first-child { text-align: right; }
+.st-paar > span.sieg { color: #fff; font-weight: 600; }
+.st-paar b { font-family: var(--font-cond); font-weight: 700; font-size: 1rem; white-space: nowrap; color: var(--text); }
+@media (max-width: 599px) {
+  .st-ergebnis-liste { grid-template-columns: minmax(0, 1fr); }
+  .st-ergebnis-liste .st-rechts:empty { display: none; }
+  .st-ergebnis-liste .st-stand b { font-size: 2.4rem; }
+  .st-ltab .breit { display: none; }
+  .st-ltab th, .st-ltab td { padding: 6px 4px; }
+  .st-ltab td { font-size: 0.95rem; }
+  .st-ltab .avatar, .st-ltab .av { display: none; }
+}
+@media (max-width: 1099px) {
+  .st-ltab .breit { display: none; }
+  .st-ergebnis-liste { grid-template-columns: minmax(0, 1fr) auto; }
+  .st-ergebnis-liste .st-stand { grid-column: 1 / -1; grid-row: 2; }
+}
+@media (min-width: 700px) and (max-width: 1099px) {
+  #summary-box > .st-inhalt:has(> .st-rangliste) { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1.25fr) minmax(0, 1fr); }
+}
+@media (min-width: 700px) {
+  .st-rangliste { min-height: 0; padding: clamp(10px, 1.8vh, 22px) clamp(12px, 1.6vw, 26px); }
+  .st-ltab td { font-size: clamp(15px, 2.4vh, 24px); }
+  .st-ltab tbody th.st-lname { font-size: clamp(14px, 2.1vh, 20px); }
+  .st-paar > span { font-size: clamp(13px, 1.9vh, 19px); }
+  .st-paar b { font-size: clamp(14px, 2.1vh, 21px); }
+}
+
 /* Konto: derselbe Kopf wie ueberall statt der alten Kopfzeile. */
 #screen-konto > .app-header { display: none; }
 #screen-konto.active { display: flex; flex-direction: column; gap: 12px; padding: 8px 0 24px; }

@@ -41,6 +41,7 @@
 
 ## Erledigt
 
+- [x] DRT-092 Ergebnisse von Turnier (ab 5 Spielern) und Ligaspiel lesbar: Teamstand oben, Rangliste je Spieler mit vollen Namen, Spiele mit beiden Namen je Durchgang (v222) · von:Julius · fertig:2026-11-26
 - [x] DRT-091 Tabellen: Platz 1 und 2 als Aufstiegsplätze grün (App-Tabelle, Liga-Statistik, Webseite, Liga-Webseite ab 2. Liga) · von:Julius · fertig:2026-11-25
 - [x] DRT-090 Regeln: Auf- und Abstieg, keine Relegation (SWO 03.10.2026, Punkt 2) · von:Julius · fertig:2026-11-25
 - [x] DRT-089 Selbst gespieltes Ligaspiel steht sofort in Tabelle, Einzelrangliste, Highlights und Liga-Statistik, bis die Ligaleitung es einträgt (v219) · von:Julius · fertig:2026-11-25

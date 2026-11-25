@@ -13172,6 +13172,7 @@
   function stZahl(s) { var m = /-?\d+(?:[.,]\d+)?/.exec(String(s)); return m ? parseFloat(m[0].replace(',', '.')) : NaN; }
   function statistikHtml(d) {
     var n = d.spieler.length, nm = d.nm || pname;   // Ligaspiel: volle Namen
+    if (d.liste) return statistikListeHtml(d);
     var ergebnis = '<div class="st-ergebnis' + (d.archiv ? ' archiv' : '') + '">' +
       '<div class="st-links"><button class="st-zurueck" data-action="summary-back" aria-label="Zurück">' + ST_PFEIL + '</button>' +
         '<div class="st-art"><span class="kt">' + d.kind + '</span><span class="st-meta">' + d.meta + '</span></div></div>' +
@@ -13212,6 +13213,54 @@
       (a.zurueck ? '<button class="btn ghost" data-action="' + a.zurueck.action + '">' + a.zurueck.label + '</button>' : '') +
       (a.haupt ? '<button class="btn start-rot" data-action="' + a.haupt.action + '">' + a.haupt.label + '</button>' : '') + '</div>' : '';
     return { box: ergebnis + '<div class="st-inhalt' + (d.seite ? '' : ' allein') + '">' + vergleich + seite + '</div>', aktionen: aktionen };
+  }
+  /* Turnier mit vielen Spielern und Ligaspiel: eine Zeile je Spieler. */
+  function statistikListeHtml(d) {
+    var nm = d.nm || pname, tab = d.liste.tab, je = {};
+    tab.forEach(function (st) { je[st.id] = st; });
+    var spalten = [
+      { k: 'Siege', t: 'Einzel gewonnen : verloren', v: function (st) { return st.won + ':' + st.lost; }, z: function (st) { return st.won; } },
+      { k: 'Legs', v: function (st) { return st.legsWon + ':' + st.legsLost; }, z: function (st) { return st.legsWon - st.legsLost; } },
+      { k: 'Ø', t: '3-Dart-Average', v: function (st) { return st.darts ? st.avg.toFixed(1).replace('.', ',') : '–'; }, z: function (st) { return st.darts ? st.avg : NaN; } },
+      { k: 'First 9', klasse: 'breit', v: function (st) { return st.first9Darts ? st.first9.toFixed(1).replace('.', ',') : '–'; }, z: function (st) { return st.first9Darts ? st.first9 : NaN; } },
+      { k: '180', v: function (st) { return st.s180 || '–'; }, z: function (st) { return st.s180 || NaN; } },
+      { k: 'Finish', t: 'Höchstes Finish', v: function (st) { return st.highCO || '–'; }, z: function (st) { return st.highCO || NaN; } },
+      { k: 'Bestes Leg', klasse: 'breit', t: 'Wenigste Darts für ein gewonnenes Leg', v: function (st) { return st.bestLeg ? st.bestLeg + ' D.' : '–'; }, z: function (st) { return st.bestLeg ? -st.bestLeg : NaN; } }
+    ];
+    var best = spalten.map(function (sp) {
+      var w = tab.map(sp.z).filter(function (x) { return !isNaN(x); });
+      if (w.length < 2) return null;
+      var m = Math.max.apply(null, w);
+      return tab.map(sp.z).filter(function (x) { return x === m; }).length === 1 ? m : null;
+    });
+    var kopf = '<tr><th class="st-lname" scope="col"><span class="vh">Spieler</span></th>' + spalten.map(function (sp) {
+      return '<th scope="col" class="' + (sp.klasse || '') + '"' + (sp.t ? ' title="' + sp.t + '"' : '') + '>' + sp.k + '</th>';
+    }).join('') + '</tr>';
+    var koerper = d.liste.gruppen.map(function (g) {
+      return (g.titel ? '<tr class="st-lgruppe"><th colspan="' + (spalten.length + 1) + '" scope="rowgroup">' + esc(g.titel) + '</th></tr>' : '') +
+        g.ids.map(function (id, i) {
+          var st = je[id];
+          return '<tr><th scope="row" class="st-lname"><span class="st-lrang">' + (i + 1) + '</span>' + avatarHTML(profile(id), 'sm') +
+            '<span class="st-lwer">' + esc(nm(id)) + '</span></th>' + spalten.map(function (sp, k) {
+              return '<td class="' + (sp.klasse || '') + (best[k] !== null && sp.z(st) === best[k] ? ' best' : '') + '">' + sp.v(st) + '</td>';
+            }).join('') + '</tr>';
+        }).join('');
+    }).join('');
+    var z = d.zweiText;
+    var ergebnis = '<div class="st-ergebnis st-ergebnis-liste' + (d.archiv ? ' archiv' : '') + '">' +
+      '<div class="st-links"><button class="st-zurueck" data-action="summary-back" aria-label="Zurück">' + ST_PFEIL + '</button>' +
+        '<div class="st-art"><span class="kt">' + d.kind + '</span><span class="st-meta">' + d.meta + '</span></div></div>' +
+      '<div class="st-stand">' + (z
+        ? '<span class="st-sn' + (z.sieg === 'a' ? ' sieg' : '') + '">' + esc(z.a) + '</span><b>' + z.stand + '</b><span class="st-sn' + (z.sieg === 'b' ? ' sieg' : '') + '">' + esc(z.b) + '</span>'
+        : '<b class="st-titel">' + d.titel + '</b>') + '</div>' +
+      '<div class="st-rechts">' + (d.sieger ? '<span class="st-pille">🏆 ' + esc(nm(d.sieger)) + '</span>' : '') + '</div></div>';
+    var liste = '<div class="card st-vergleich st-rangliste"><span class="kt">' + (z ? 'Spieler beider Teams' : 'Endstand') + '</span>' +
+      '<div class="st-ltab-rahmen"><table class="st-ltab"><thead>' + kopf + '</thead><tbody>' + koerper + '</tbody></table></div></div>';
+    var seite = '<div class="card st-verlauf"><span class="kt">' + d.seite.titel + '</span><div class="st-liste">' + (d.seite.eintraege.length ? d.seite.eintraege.map(function (e) {
+      if (e.kopf) return '<div class="st-lkopf">' + esc(e.kopf) + '</div>';
+      return '<div class="st-item st-paar-zeile' + (e.action ? ' tap' : '') + '"' + (e.action ? ' data-action="' + e.action + '" ' + (e.attrs || '') + ' role="button" tabindex="0"' : '') + '>' + e.html + '</div>';
+    }).join('') : '<p class="hint">Noch nichts.</p>') + '</div><span class="st-note">Ein Tipp auf ein Spiel zeigt seine Statistik. Die Werte fließen in Karriere-Statistik und Ranglisten ein.</span></div>';
+    return { box: ergebnis + '<div class="st-inhalt">' + liste + seite + '</div>', aktionen: '' };
   }
   /* Die X01-Zeilen (Turnierspiel, schnelles Spiel, Turnier): eine Spalte je Spieler. */
   function x01Zeilen(stats, mitDoppel) {
@@ -13264,6 +13313,7 @@
       var tStart = (th.settings && th.settings.start) || 501;
       var tTab = turnierTabelle(th);
       var tFertig = th.matches.filter(function (x) { return x.done; });
+      var tNm = th.liga ? ligaName : pname;
       d = {
         kind: 'Turnier', archiv: true, aktionen: null, nm: th.liga ? ligaName : null,
         meta: fmtDate(th.at) + ' · ' + P((th.lineup || []).length, 'Spieler', 'Spieler') + ' · ' + tStart + ' Double Out' +
@@ -13277,6 +13327,43 @@
             action: 'open-summary', attrs: 'data-kind="501" data-id="' + esc(x.id) + '"' };
         }) }
       };
+      /* Viele Spieler oder Ligaspiel (Julius, 26.11.: "so voll, dass man
+         nichts sieht"): statt acht schmaler Spalten eine Rangliste mit einer
+         Zeile je Spieler, rechts die Spiele mit beiden Namen. */
+      if (th.liga || tTab.length > 4) {
+        var tSpielZeile = function (x) {
+          var a = x.p[0], b = x.p[1], wo = x.kampflos ? ' w.o.' : '';
+          var la = x.kampflos ? (x.winner === a ? Math.floor(((th.settings && th.settings.bestOf) || 3) / 2) + 1 : 0) : legsWon(x, a);
+          var lb = x.kampflos ? (x.winner === b ? Math.floor(((th.settings && th.settings.bestOf) || 3) / 2) + 1 : 0) : legsWon(x, b);
+          return { html: '<span class="st-paar"><span class="' + (x.winner === a ? 'sieg' : '') + '">' + esc(tNm(a)) + '</span><b>' + la + ':' + lb + wo + '</b>' +
+              '<span class="' + (x.winner === b ? 'sieg' : '') + '">' + esc(tNm(b)) + '</span></span>',
+            action: x.kampflos || x.ergebnis ? null : 'open-summary', attrs: 'data-kind="501" data-id="' + esc(x.id) + '"' };
+        };
+        d.liste = { tab: tTab, gruppen: [{ titel: '', ids: tTab.map(function (st) { return st.id; }) }] };
+        d.seite = { titel: 'Spiele', eintraege: [] };
+        if (th.liga) {
+          var tLg = th.liga, tErg = ligaErgebnisAus(th), tWir = ligaUnsereIds(th);
+          var tHeim = tLg.heim !== false;
+          d.zweiText = { a: tHeim ? LIGA.team : tLg.gegner, b: tHeim ? tLg.gegner : LIGA.team,
+            stand: tHeim ? tErg.wirS + ' : ' + tErg.sieS : tErg.sieS + ' : ' + tErg.wirS,
+            sieg: tErg.wirS === tErg.sieS ? null : (tErg.wirS > tErg.sieS) === tHeim ? 'a' : 'b' };
+          d.kind = 'Ligaspiel';
+          d.meta = fmtDate(th.at) + (tLg.nr ? ' · ' + tLg.nr + '. Spieltag' : '') + (tLg.ort ? ' · ' + esc(tLg.ort) : '') + ' · Best of ' + ((th.settings && th.settings.bestOf) || 3);
+          d.sieger = null;
+          d.liste.gruppen = [
+            { titel: LIGA.team, ids: tTab.map(function (st) { return st.id; }).filter(function (id) { return tWir[id]; }) },
+            { titel: tLg.gegner, ids: tTab.map(function (st) { return st.id; }).filter(function (id) { return !tWir[id]; }) }
+          ];
+          var tRunde = 0;
+          th.matches.forEach(function (x) {
+            if (!x.done) return;
+            if (x.round && x.round !== tRunde) { tRunde = x.round; d.seite.eintraege.push({ kopf: 'Durchgang ' + tRunde }); }
+            d.seite.eintraege.push(tSpielZeile(x));
+          });
+        } else {
+          d.seite.eintraege = tFertig.map(tSpielZeile);
+        }
+      }
 
     } else if (s.kind === '501') {
       var m = found.m;

@@ -7927,6 +7927,35 @@ await gruppe('Eigenes Ligaspiel zaehlt sofort, bis die Ligaleitung es eintraegt 
   check('ein kaputter Eintrag legt nichts lahm', r.kaputt);
 });
 
+await gruppe('Ergebnisse eines Ligaspiels: lesbar statt acht Spalten (Julius, 26.11.)', async () => {
+  for (const [w, h] of [[1180, 820], [820, 1180], [390, 844]]) {
+    await page.setViewportSize({ width: w, height: h });
+    const r = await page.evaluate(() => {
+      const D = window.__dart, S = D.state(), merk = JSON.stringify({ history: S.history, profiles: S.profiles });
+      const wir = ['ew0', 'ew1', 'ew2', 'ew3'], sie = ['eg0', 'eg1', 'eg2', 'eg3'], namen = {};
+      wir.concat(sie).forEach((x, i) => { namen[x] = ['Lena Langername', 'Tobias Thomas', 'Michael Schmeiß', 'Dominik Uhl', 'Hans Gegnermann', 'Peter Pfeil', 'Sabine Doppel', 'Kurt Kurz'][i]; S.profiles.push({ id: x, name: namen[x].split(' ')[0], voll: namen[x], gast: i > 3, hidden: i > 3, hue: i * 40, created: 1 }); });
+      const leg = (w) => ({ starter: w, winner: w, start: 501, visits: [{ p: w, s: 180, d: 3 }, { p: w, s: 180, d: 3 }, { p: w, s: 141, d: 3, c: true }] });
+      const matches = Array.from({ length: 16 }, (_, i) => { const a = wir[i % 4], b = sie[(i + (i >> 2)) % 4], s = i < 10 ? a : b; return { id: 'em' + i, round: (i >> 2) + 1, p: [a, b], starter: a, legs: [leg(s), leg(s)], done: true, winner: s, at: 1 }; });
+      S.history.unshift({ id: 'ergliga', at: Date.now(), lineup: wir.concat(sie), settings: { start: 501, bestOf: 3 }, matches, namen, liga: { terminId: 'st09', nr: 9, gegner: 'DCO', heim: true, wir, sie, heimSpieler: wir, gastSpieler: sie, typen: {}, abgeschlossen: 1 } });
+      D.ui().summary = { kind: 'turnier', id: 'ergliga' }; D.setScreen('summary');
+      const box = document.getElementById('summary-box');
+      const namenZellen = [...box.querySelectorAll('.st-ltab .st-lwer')];
+      const aus = {
+        stand: [...box.querySelector('.st-stand').children].map((e) => e.textContent.trim()).join(' '),
+        zeilen: namenZellen.length, voll: namenZellen.every((e) => e.scrollWidth <= e.clientWidth + 1 && !/…/.test(e.textContent)) && namenZellen.some((e) => e.textContent === 'Lena Langername'),
+        schmal: namenZellen.every((e) => e.getBoundingClientRect().width >= 60),
+        spiele: box.querySelectorAll('.st-paar').length, durchgaenge: box.querySelectorAll('.st-lkopf').length,
+        breite: document.documentElement.scrollWidth <= innerWidth
+      };
+      const m = JSON.parse(merk); S.history = m.history; S.profiles = m.profiles; D.save(); D.setScreen('setup');
+      return aus;
+    });
+    check(w + ' px: Endstand der Teams oben, acht Spielerzeilen mit vollen Namen, 16 Spiele in vier Durchgaengen',
+      r.stand === 'Blink 180 10 : 6 DCO' && r.zeilen === 8 && r.voll && r.schmal && r.spiele === 16 && r.durchgaenge === 4 && r.breite, JSON.stringify(r));
+  }
+  await page.setViewportSize({ width: 1180, height: 820 });
+});
+
 await gruppe('Handy-Block 2: GAME ON nur am Spieltag', async () => {
   await page.evaluate(() => {
     const D = window.__dart, S = D.state();
