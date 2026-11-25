@@ -6,9 +6,8 @@
 ## Wartet auf Julius
 
 - [ ] DRT-087 Game Day vor dem 6. Spieltag (09.12.) einmal am echten iPad ansehen: am 09.12. auf beiden iPads Startbild › „Ligaspiel heute“ › Game Day, Scheibe wählen, eintragen, Bereit · von:Claude · am:2026-11-25
-- [ ] DRT-086 5. Spieltag abschließen, damit er in die Statistik kommt: auf dem iPad mit dem offenen Ligaspiel Seite neu laden, Liga › 5. Spieltag › Spielbericht › Versenden › „Abschließen ohne Senden“ · von:Claude · am:2026-11-25
 - [ ] DRT-072 Autodarts am Board testen (Arme da): nach tools/autodarts-bruecke/ANLEITUNG.md Autodarts Desktop + Brücke am Windows-PC, App mit ?autodarts=an in Chrome, erst Demo (start-demo-windows.bat), dann echte Würfe; sagen, ob Darts schnell und richtig ankommen, bei Problemen Inhalt von http://127.0.0.1:3190/status schicken · von:Claude · am:2026-11-22
-- [ ] DRT-070 Impressum: Telefonnummer nennen, dann trage ich sie ein. AVV Hetzner, Brevo-Tracking aus, Brevo-Standort EU: später (Julius 25.11., noch nicht so wichtig) · von:Claude · am:2026-11-22
+- [ ] DRT-070 Impressum: Telefonnummer bestätigen (die vom 25.11. hatte 15 Stellen, eine deutsche Handynummer hat 11 oder 12), dann trage ich sie ein. AVV Hetzner, Brevo-Tracking aus, Brevo-Standort EU: später (Julius 25.11., noch nicht so wichtig) · von:Claude · am:2026-11-22
 
 ## Offen
 
@@ -43,6 +42,8 @@
 
 ## Erledigt
 
+- [x] DRT-088 Nach „Abschließen“ (mit und ohne Senden) zurück ins Menü (v218) · von:Julius · fertig:2026-11-25
+- [x] DRT-086 5. Spieltag abgeschlossen (Julius 25.11.) · fertig:2026-11-25
 - [x] DRT-080 Game Day (Liga-Tag-Modus): zwei iPads bereiten das Ligaspiel den ganzen Spieltag gemeinsam vor (S1 wir, S2 Gegner, Unterschriften vorab, Bereit, Countdown) und starten um 20:00 von selbst; tests/ligatag.mjs mit zwei Geräten; Kritik 25.11. abgearbeitet (v217) · von:Julius · fertig:2026-11-25
 - [x] DRT-073 Telefonnummern in liga.html bleiben: alle stammen von der öffentlichen Team-Seite der Steeldart-Liga (Julius 25.11.); Fehler behoben, dass nach einem Lokalwechsel die alte Nummer stehen blieb (DC Lohhof) · fertig:2026-11-25
 - [x] DRT-078 Gastspieler-Einsätze zählen: verworfen (Julius 25.11.) · fertig:2026-11-25

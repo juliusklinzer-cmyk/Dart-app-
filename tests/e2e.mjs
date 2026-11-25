@@ -6083,10 +6083,12 @@ await gruppe('Ligaspiel endet erst mit dem unterschriebenen Bericht', async () =
     return { laeuft: S.matches.length, archiv: !!h, zu: !!(h && h.liga.abgeschlossen) };
   }, termin);
   check('danach ist das Ligaspiel abgeschlossen und archiviert', nach.laeuft === 0 && nach.archiv && nach.zu, JSON.stringify(nach));
-  check('der Bericht bleibt sichtbar', await visible('#screen-bericht'));
-  check('Handkorrekturen im Bogen ueberstehen den Abschluss', (await text('#bericht-blatt')).includes('Handkorrektur'));
+  check('nach dem Abschliessen geht es ins Menue', await visible('#screen-setup'));
   await page.locator('#overlay-card [data-action="ov-hinweis-zu"]').click();
-  await page.evaluate(() => window.__dart.setScreen('liga'));
+  check('auch nach „Verstanden“', await visible('#screen-setup'));
+  await page.evaluate((t) => { const D = window.__dart; D.setScreen('liga'); D.action('liga-bericht', { getAttribute: () => t }); }, termin);
+  check('Handkorrekturen im Bogen ueberstehen den Abschluss', (await text('#bericht-blatt')).includes('Handkorrektur'));
+  await page.evaluate(() => { window.__dart.ui().bericht = null; window.__dart.setScreen('liga'); });
   check('rechts in der Liste steht der Spieltag als abgeschlossen',
     (await page.locator('#liga-liste .liga-spieltag').first().innerText()).includes('Abgeschlossen'));
   await ligaTipp(termin);

@@ -24529,13 +24529,23 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     }
   }
 
+  /* Gerade abgeschlossen: zurueck ins Menue (Julius, 25.11.), der Bericht
+     liegt ab jetzt im Spielplan. Wer inzwischen woanders ist, bleibt dort. */
+  function nachLigaAbschluss(lg, warZu) {
+    if (warZu || !lg.abgeschlossen || S.screen !== 'bericht') return;
+    UI.bericht = null; UI.berichtVon = null; berichtStand = null;
+    S.screen = 'setup';
+    save();
+  }
   function berichtOhneSendenAbschliessen() {
     var q = ligaBerichtQuelle();
     if (!q) return;
+    var warZu = !!q.liga.abgeschlossen;
     ligaAbschliessen(q.liga);
     if (!q.liga.uebung) mitteilungEreignis('bericht-offen', { termin: q.liga.terminId, nr: q.liga.nr, gegner: q.liga.gegner });
     UI.overlay = { type: 'hinweis', titel: 'Ligaspiel abgeschlossen',
-      text: 'Der Bericht ist unterschrieben, aber noch nicht verschickt – bitte selbst an die Ligaleitung schicken (Drucken → PDF). Im Spielplan steht der Spieltag als abgeschlossen.' };
+      text: 'Der Bericht ist unterschrieben, aber noch nicht verschickt – bitte selbst an die Ligaleitung schicken. Du findest ihn im Spielplan beim Spieltag unter „Spielbericht“ (Drucken → PDF).' };
+    nachLigaAbschluss(q.liga, warZu);
     render();
   }
 
@@ -24570,8 +24580,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
        hier noch undefined - die Mail war raus, die App meldete einen Fehler
        und schloss das Spiel nicht ab (Spieltag 5, 24.11.). */
     var fertig = function (wie) {
+      var warZu = !!lg.abgeschlossen;
       lg.berichtVersandt = Date.now();
       ligaAbschliessen(lg);
+      nachLigaAbschluss(lg, warZu);
       UI.overlay = { type: 'hinweis', titel: 'Ligaspiel abgeschlossen',
         text: wie + ' Empfänger: ' + liste + '. Im Spielplan steht der Spieltag jetzt als abgeschlossen – mit Ergebnissen und Bericht.' };
       render();
