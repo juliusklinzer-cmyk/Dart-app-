@@ -41,6 +41,7 @@
 
 ## Erledigt
 
+- [x] DRT-089 Selbst gespieltes Ligaspiel steht sofort in Tabelle, Einzelrangliste, Highlights und Liga-Statistik, bis die Ligaleitung es einträgt (v219) · von:Julius · fertig:2026-11-25
 - [x] DRT-072 Autodarts am Board: läuft mit Autodarts Desktop 2.1.1 am Windows-PC (Würfe lokal über 3180, Brücke, App), erste Aufnahme geprüft · von:Julius · fertig:2026-11-25
 - [x] DRT-088 Nach „Abschließen“ (mit und ohne Senden) zurück ins Menü (v218) · von:Julius · fertig:2026-11-25
 - [x] DRT-086 5. Spieltag abgeschlossen (Julius 25.11.) · fertig:2026-11-25

@@ -7160,18 +7160,19 @@
   /* ---- Liga-Daten (Ligaleitung) ---- */
   function stLigaDaten() {
     if (stLigaCache) return stLigaCache;
+    var spieltage = ligaSpieltage();
     var tab = ligaTabelleBerechnet();
-    var er = window.LIGA_DATEN.einzelranglisteAus(LIGA_SPIELTAGE);
+    var er = window.LIGA_DATEN.einzelranglisteAus(ligaSpieltage());
     var platz = 0, vorher = null;
     er.forEach(function (z, i) {
       var k = [z.punkte, z.siege - z.nied, z.lf - z.la, z.lf].join('|');
       if (k !== vorher) { platz = i + 1; vorher = k; }
       z.platz = platz;
     });
-    var hl = window.LIGA_DATEN.highlightsAus(LIGA_SPIELTAGE);
+    var hl = window.LIGA_DATEN.highlightsAus(ligaSpieltage());
     var spiele = [];
-    Object.keys(LIGA_SPIELTAGE).sort().forEach(function (tid) {
-      (LIGA_SPIELTAGE[tid] || []).forEach(function (sp) {
+    Object.keys(spieltage).sort().forEach(function (tid) {
+      (spieltage[tid] || []).forEach(function (sp) {
         if (!sp || !sp.heim || !sp.gast || sp.verschoben) return;
         var e = stPaar(sp.einzel);
         if (!e) return;
@@ -7234,7 +7235,7 @@
 
   /* ---- Person: Liga-Bilanz ---- */
   function stLigaBilanzKarte(p) {
-    var titel = 'Liga-Bilanz', sub = 'Persönlich in der ' + esc(LIGA.saison) + ': Einzelrangliste der Ligaleitung und Würfe aus der App';
+    var titel = 'Liga-Bilanz', sub = 'Persönlich in der ' + esc(LIGA.saison) + ': Einzelrangliste der Liga und Würfe aus der App';
     var d = stLigaDaten(), z = stErZeile(d, p), ls = careerLiga()[p.id];
     if (ls && !ls.matches && !ls.darts && !ls.s180 && !ls.highCO) ls = null;
     var n = stName(stLigaName(p));
@@ -7262,7 +7263,7 @@
       bl ? ['Bestes Leg', bl + ' Darts'] : null
     ]);
     if (hf.length || sl.length) {
-      html += '<p class="st-note">Laut Ligaleitung: ' + [hf.length ? 'Highfinishes ' + hf.map(function (x) { return x.wert; }).join(', ') : '',
+      html += '<p class="st-note">Im Spielbericht: ' + [hf.length ? 'Highfinishes ' + hf.map(function (x) { return x.wert; }).join(', ') : '',
         sl.length ? 'Shortlegs ' + sl.map(function (x) { return x.wert + ' Darts'; }).join(', ') : ''].filter(Boolean).join(' · ') + '</p>';
     }
     return stKarte('ligabilanz', titel, sub, html);
@@ -8548,7 +8549,122 @@
   var LIGA_TEAMS = window.LIGA_DATEN.teams;
   /* Die Tabelle wird aus den Ergebnissen aller Spieltage gerechnet
      (js/liga-daten.js, LIGA_SPIELTAGE) - nicht mehr von Hand gepflegt. */
-  function ligaTabelleBerechnet() { return window.LIGA_DATEN.tabelleAus(LIGA_SPIELTAGE, LIGA_TEAMS); }
+  function ligaTabelleBerechnet() { return window.LIGA_DATEN.tabelleAus(ligaSpieltage(), LIGA_TEAMS); }
+
+  /* Die Spieltage der Ligaleitung, dazu unsere eigenen Ligaspiele, die sie
+     noch nicht eingetragen hat (Julius, 25.11.: selbst gespielt steht sofort
+     in Tabelle, Einzelrangliste und Highlights). Sobald die Ligaleitung das
+     Ergebnis hat, gilt ihres. `eigen` markiert unsere. */
+  function ligaSpieltage() {
+    var eigene = {};
+    /* Nur ganz gespielte Spiele dieser Saison; bei mehreren Eintraegen zum
+       selben Spieltag der erste vollstaendige. */
+    var dazu = function (lg, matches, settings, namen, tag) {
+      if (!lg || lg.uebung || !lg.terminId || eigene[lg.terminId] || !Array.isArray(matches) || !ligaInSaison(tag)) return;
+      var gueltig = matches.filter(function (m) { return m && !m.void; });
+      if (!gueltig.length || gueltig.some(function (m) { return !m.done; })) return;
+      eigene[lg.terminId] = { liga: lg, matches: gueltig, settings: settings || {}, namen: namen || {}, tag: tag };
+    };
+    wertbareHistorie().forEach(function (h) { if (h.liga) dazu(h.liga, h.matches, h.settings, h.namen, h.liga.tag || isoTag(h.at)); });
+    /* Fertig gespielt, Bericht noch offen: auf diesem Geraet zaehlt es schon. */
+    if (S.tour && S.tour.liga && S.matches.length && !turnierSchonArchiviert() && turnierWertbar()) {
+      dazu(S.tour.liga, S.matches, { start: tourStart(), bestOf: tour().bestOf }, null, S.tour.liga.tag || isoTag(Date.now()));
+    }
+    var aus = null;
+    Object.keys(eigene).forEach(function (tid) {
+      /* Unsere Zeile im Spieltag der Ligaleitung - ueber unser Team, nicht
+         ueber die Schreibweise des Gegners. Ohne Zeile (spielfrei, Spielplan
+         geaendert) wird nichts dazuerfunden. */
+      var runde = LIGA_SPIELTAGE[tid] || [], i = -1;
+      runde.forEach(function (sp, n) { if (i < 0 && sp && sp.gast && (sp.heim === LIGA.team || sp.gast === LIGA.team)) i = n; });
+      if (i < 0 || runde[i].einzel) return;
+      var neu;
+      try { neu = Object.assign({}, runde[i], { verschoben: false }, ligaEigenesErgebnis(eigene[tid], runde[i])); }
+      catch (e) { return; }      // ein kaputter Eintrag legt nicht den Reiter lahm
+      if (eigene[tid].tag) neu.tag = eigene[tid].tag;
+      if (!aus) { aus = {}; Object.keys(LIGA_SPIELTAGE).forEach(function (k) { aus[k] = LIGA_SPIELTAGE[k]; }); }
+      aus[tid] = runde.slice();
+      aus[tid][i] = neu;
+    });
+    return aus || LIGA_SPIELTAGE;
+  }
+  function isoTag(ts) {
+    var d = new Date(ts || 0);
+    return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+  }
+  /* Gehoert das Datum zur Saison des geladenen Spielplans? Die Kennungen
+     st01, st02 ... kommen naechste Saison wieder. */
+  function ligaInSaison(tag) {
+    var tage = LIGA.termine.map(function (t) { return t.tag; }).filter(Boolean).sort();
+    if (!tage.length || !tag) return false;
+    var t = new Date(tag + 'T12:00:00').getTime(), rand = 60 * 86400e3;
+    return t >= new Date(tage[0] + 'T12:00:00').getTime() - rand && t <= new Date(tage[tage.length - 1] + 'T12:00:00').getTime() + rand;
+  }
+  function ligaEigenesErgebnis(e, zeile) {
+    var lg = e.liga, win = Math.floor((Number(e.settings.bestOf) || 3) / 2) + 1;
+    var wirHeimBogen = lg.heim !== false, wirHeimZeile = zeile.heim === LIGA.team;
+    var dreh = wirHeimBogen !== wirHeimZeile;      // Heimrecht getauscht: wie die Ligaleitung
+    var gegner = wirHeimZeile ? zeile.gast : zeile.heim;
+    var wirIds = [], sieIds = [];
+    e.matches.forEach(function (m) {
+      var w = wirHeimBogen ? m.p[0] : m.p[1], g = wirHeimBogen ? m.p[1] : m.p[0];
+      if (wirIds.indexOf(w) < 0) wirIds.push(w);
+      if (sieIds.indexOf(g) < 0) sieIds.push(g);
+    });
+    var namen = Object.assign(ligaNamenZuordnen(e, wirIds, LIGA.team), ligaNamenZuordnen(e, sieIds, gegner));
+    var eH = 0, eG = 0, lH = 0, lG = 0;
+    var partien = e.matches.map(function (m) {
+      var hid = dreh ? m.p[1] : m.p[0], gid = dreh ? m.p[0] : m.p[1];
+      var legs = function (id) { return m.kampflos ? (m.winner === id ? win : 0) : legsWon(m, id); };
+      var h = legs(hid), g = legs(gid);
+      lH += h; lG += g;
+      if (m.winner === hid) eH++; else eG++;
+      return [namen[hid], namen[gid], h, g];
+    });
+    var map = legHighlights(e.matches, Number(e.settings.start) || 501, []);
+    var highlights = Object.keys(map).filter(function (id) { return namen[id]; }).map(function (id) {
+      var x = map[id], was = [];
+      if (x.s180) was.push(x.s180 + '× 180');
+      if (x.shortlegs.length) was.push('Shortleg ' + x.shortlegs.join(', '));
+      if (x.finishes.length) was.push('Highfinish ' + x.finishes.join(', '));
+      if (!was.length) return null;
+      var z = { wer: namen[id], team: wirIds.indexOf(id) >= 0 ? LIGA.team : gegner, was: was.join(' · ') };
+      if (x.s180) z.s180 = x.s180;
+      if (x.shortlegs.length) z.shortleg = x.shortlegs.slice();
+      if (x.finishes.length) z.highfinish = x.finishes.slice();
+      return z;
+    }).filter(Boolean);
+    return { einzel: eH + ':' + eG, legs: lH + ':' + lG, partien: partien, highlights: highlights, eigen: true };
+  }
+  /* Schreibweise der Ligaleitung, damit dieselbe Person in der Rangliste
+     eine Zeile behaelt: ganzer Name, sonst (nur fuer Gemeldete) eindeutig
+     ueber Vor- oder Nachname - dieselbe Regel wie in der Liga-Bilanz. Zwei
+     Leute bekommen nie denselben Namen. Gaeste tragen einen Stern. */
+  function ligaNamenZuordnen(e, ids, team) {
+    var kader = ligaGegnerKader(team), aus = {}, vergeben = {};
+    var leute = ids.map(function (id) {
+      var p = profile(id), da = p && p.name !== 'Unbekannt';
+      var voll = da && p.voll && !vollFehlt(p) ? p.voll : e.namen[id] || (da ? p.voll || p.name : '') || 'Unbekannt';
+      return { id: id, voll: voll, p: { name: da ? p.name : voll, voll: voll }, typ: ligaNachgemeldet(e.liga, id) ? 'neu' : ligaTyp(e.liga, id) };
+    });
+    leute.forEach(function (x) {
+      var g = kader.filter(function (k) { return stName(k) === stName(x.voll) && !vergeben[k]; })[0];
+      if (g) { aus[x.id] = g; vergeben[g] = 1; }
+    });
+    leute.forEach(function (x) {
+      if (aus[x.id]) return;
+      var k = x.typ ? null : stEindeutig(kader.filter(function (n) { return !vergeben[n]; }).map(function (n) { return { x: n, t: stNamenPassen(x.p, n) }; }));
+      aus[x.id] = k || x.voll;
+      vergeben[aus[x.id]] = 1;
+    });
+    leute.forEach(function (x) { if (x.typ === 'gast') aus[x.id] = '*' + aus[x.id]; });
+    return aus;
+  }
+  /* Unsere Spieltage, deren Ergebnis noch nicht von der Ligaleitung kommt. */
+  function ligaEigeneNr() {
+    var sp = ligaSpieltage();
+    return LIGA.termine.filter(function (t) { return (sp[t.id] || []).some(function (x) { return x && x.eigen; }); }).map(function (t) { return t.nr; });
+  }
 
   /* Die Ergebnisse der Ligaleitung holt der Server stuendlich neu und
      liefert sie als js/liga-sdm.js aus (server/lib/liga.mjs). Die App laedt
@@ -8886,11 +9002,12 @@
 
   function renderLigaTabelle() {
     var tab = ligaTabelleBerechnet();
-    var ligaStand = window.LIGA_DATEN.stand;
+    var ligaStand = window.LIGA_DATEN.stand, eigeneNr = ligaEigeneNr();
     $('lt-stand').textContent = (tab.spiele
       ? 'Aus ' + plural(tab.spiele, 'Spiel', 'Spielen') + ' berechnet' + (tab.bis ? ', letztes am ' + datumDE(tab.bis) : '') + '.'
       : 'Noch kein Spiel gewertet.') +
-      (ligaStand ? ' Ergebnisse der Ligaleitung (steeldart-muenchen.de), geholt am ' + datumDE(ligaStand) + '.' : '');
+      (ligaStand ? ' Ergebnisse der Ligaleitung (steeldart-muenchen.de), geholt am ' + datumDE(ligaStand) + '.' : '') +
+      (eigeneNr.length ? ' ' + eigeneNr.map(function (n) { return n + '. Spieltag'; }).join(', ') + ': unser Ergebnis aus der App, bis die Ligaleitung es einträgt.' : '');
     /* Rechts neben der Tabelle alle Spiele je Spieltag (Ergebnisse der Ligaleitung). */
     $('lt-runden').innerHTML = ligaRundenAlleHtml();
     renderLigaEinzel();
@@ -8935,7 +9052,7 @@
   function renderLigaEinzel() {
     var ziel = $('lt-einzel');
     if (!ziel) return;
-    var er = window.LIGA_DATEN.einzelranglisteAus(LIGA_SPIELTAGE);
+    var er = window.LIGA_DATEN.einzelranglisteAus(ligaSpieltage());
     if (!er.length) { ziel.innerHTML = '<p class="hint">Noch kein Spielbericht der Ligaleitung.</p>'; return; }
     var KURZ = 15;
     var alle = !!UI.ligaEinzelAlle || er.length <= KURZ;
@@ -8965,7 +9082,7 @@
   function renderLigaHighlights() {
     var ziel = $('lt-highlights');
     if (!ziel) return;
-    var hl = window.LIGA_DATEN.highlightsAus(LIGA_SPIELTAGE);
+    var hl = window.LIGA_DATEN.highlightsAus(ligaSpieltage());
     var block = function (titel, liste, wert, leer) {
       return '<div class="lt-hl-block"><span class="lk-crew-titel">' + titel + '</span>' +
         (liste.length
@@ -9292,8 +9409,9 @@
     /* Seit der Spielplan der Ligaleitung komplett vorliegt, gibt es alle 18
        Spieltage: gezeigt werden die mit Ergebnis und der naechste, der Rest
        erst auf "Alle Spieltage" - sonst wird die Karte am Handy endlos. */
-    var mitDaten = LIGA.termine.filter(function (t) { return LIGA_SPIELTAGE[t.id] && LIGA_SPIELTAGE[t.id].length; });
-    var gespielt = function (t) { return LIGA_SPIELTAGE[t.id].some(function (sp) { return sp.gast && sp.einzel; }); };
+    var alleSp = ligaSpieltage();
+    var mitDaten = LIGA.termine.filter(function (t) { return alleSp[t.id] && alleSp[t.id].length; });
+    var gespielt = function (t) { return alleSp[t.id].some(function (sp) { return sp.gast && sp.einzel; }); };
     var zeigen = mitDaten;
     if (!UI.ligaRundenAlle) {
       var naechster = false;
@@ -9310,7 +9428,7 @@
         : '');
   }
   function ligaRundeHtml(t, h) {
-    var runde = LIGA_SPIELTAGE[t.id];
+    var runde = ligaSpieltage()[t.id];
     if (!runde || !runde.length) return '';
     return '<div class="lk-runde"><span class="lk-crew-titel">Alle Spiele · ' + t.nr + '. Spieltag</span>' +
       runde.map(function (sp, i) {
@@ -13866,7 +13984,7 @@
         '<button class="btn ghost" data-action="liga-bericht-teilen">Teilen</button>' +
         '<button class="btn hell" data-action="liga-bericht">Bogen und PDF</button></div>';
     } else if (o.type === 'liga-partien') {
-      var lpSp = (LIGA_SPIELTAGE[o.termin] || [])[o.i];
+      var lpSp = (ligaSpieltage()[o.termin] || [])[o.i];
       var lpT = LIGA.termine.filter(function (x) { return x.id === o.termin; })[0];
       var lpName = function (n) {
         return String(n).charAt(0) === '*' ? esc(n.slice(1)) + ' <small class="gast-marke">Gast</small>' : esc(n);
@@ -13891,9 +14009,9 @@
          Captain) und alle Spiele der Saison; gespielte oeffnen die Einzel. */
       var tiName = o.team;
       var ti = (window.LIGA_DATEN.teamInfo || {})[tiName] || {};
-      var tiSpiele = [];
+      var tiSpiele = [], tiAlle = ligaSpieltage();
       LIGA.termine.forEach(function (t) {
-        (LIGA_SPIELTAGE[t.id] || []).forEach(function (sp, i) {
+        (tiAlle[t.id] || []).forEach(function (sp, i) {
           if (!sp.gast || (sp.heim !== tiName && sp.gast !== tiName)) return;
           tiSpiele.push({ t: t, i: i, sp: sp });
         });
@@ -19597,7 +19715,7 @@
       standings: standings,
       stats: stats,
       career: career,
-      ligaErgebnisAus: ligaErgebnisAus,
+      ligaErgebnisAus: ligaErgebnisAus, ligaSpieltage: ligaSpieltage,
       allMatches: allMatches,
       ranking: function (key) { return ranking(boardDef(key), career()); },
       remainingIn: remainingIn,

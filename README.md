@@ -309,6 +309,11 @@ Einzelrangliste nach und vergleicht Zeile für Zeile mit der Webseite (`npm run 
 `js/liga-daten.js` mischt dazu, was die Webseite nicht weiß (`LIGA_HAND`: unsere
 Bogen-Aufstellung H1–H8/G1–G8, notfalls ein Ergebnis vom Papierbogen, bevor es die
 Ligaleitung hat) und gleicht unsere Termine mit dem Spielplan ab (Verlegungen).
+**Eigene Spiele sofort:** Ein in der App fertig gespieltes Ligaspiel dieser Saison zählt in
+Tabelle, Einzelrangliste, Highlights, Liga-Statistik und Spieltagsliste sofort
+(`ligaSpieltage()`), auf den beteiligten iPads nach dem letzten Einzel, sonst mit dem
+Abschluss. Hat die Ligaleitung ein Ergebnis, gilt ausschließlich ihres. Namen werden dem
+Kader zugeordnet (ganz, sonst eindeutig), Gäste und Nachgemeldete nur bei vollem Treffer.
 **Von selbst aktuell:** Der Server macht denselben Import stündlich
 (`server/lib/liga-import.mjs`, `server/lib/liga.mjs`): meist ein einziger Abruf des
 Spielplans, nur neue Spielberichte werden nachgeladen, einmal am Tag alles. Ändert

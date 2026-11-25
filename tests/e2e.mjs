@@ -7826,6 +7826,107 @@ await gruppe('Handy-Block 2: Punkte-Modus hochkant - Abstand zum Kopf, Rand, lan
   }, alterName);
 });
 
+await gruppe('Eigenes Ligaspiel zaehlt sofort, bis die Ligaleitung es eintraegt (Julius, 25.11.)', async () => {
+  const r = await page.evaluate(() => {
+    const D = window.__dart, S = D.state(), L = window.LIGA_DATEN;
+    const merk = JSON.stringify({ history: S.history, profiles: S.profiles, game: S.game, matches: S.matches, tour: S.tour });
+    S.game = null; S.matches = []; S.tour = null; S.history = S.history.filter((h) => !h.liga);
+    const t = L.liga.termine.find((x) => x.gast && x.tag && (L.spieltage[x.id] || []).some((s) => (s.heim === L.liga.team || s.gast === L.liga.team) && s.gast && !s.einzel && !s.verschoben));
+    const daheim = t.heim === L.liga.team, gegner = daheim ? t.gast : t.heim;
+    const vorTab = L.tabelleAus(L.spieltage, L.teams).zeilen.find((z) => z.team === L.liga.team);
+    const er = L.einzelranglisteAus(L.spieltage), bekannt = er.find((z) => z.team === L.liga.team && !z.gast);
+    const id = (n) => 'lt_' + n, namen = {};
+    const wir = [0, 1, 2, 3].map((i) => id('w' + i)), sie = [0, 1, 2, 3].map((i) => id('g' + i));
+    wir.forEach((x, i) => { namen[x] = i ? 'Unser Spieler' + i : bekannt.name; });
+    sie.forEach((x, i) => { namen[x] = 'Gegner Nummer' + i; });
+    wir.concat(sie).forEach((x) => S.profiles.push({ id: x, name: namen[x], voll: namen[x], gast: true, hidden: true, hue: 1, avatar: null, created: 1 }));
+    const heim = daheim ? wir : sie, gast = daheim ? sie : wir;
+    const matches = Array.from({ length: 16 }, (_, i) => {
+      const h = heim[i % 4], g = gast[(i + Math.floor(i / 4)) % 4], wirSieg = i < 10, sieger = wirSieg ? (daheim ? h : g) : (daheim ? g : h);
+      const leg = (w) => ({ starter: w, winner: w, start: 501, visits: [{ p: w, s: 180, d: 3 }, { p: w, s: 180, d: 3 }, { p: w, s: 141, d: 3, c: true }] });
+      return { id: 'm' + i, round: 1, p: [h, g], starter: h, legs: [leg(sieger), leg(sieger)], done: true, winner: sieger, at: 5 + i };
+    });
+    const lg = { terminId: t.id, nr: t.nr, gegner, heim: daheim, wir: wir.slice(), sie: sie.slice(), heimSpieler: heim.slice(), gastSpieler: gast.slice(), tag: t.tag, typen: { [sie[0]]: 'gast' }, abgeschlossen: 1 };
+    const eintrag = { id: 'ligaeigen', at: Date.now(), lineup: wir.concat(sie), settings: { start: 501, bestOf: 3 }, matches, liga: lg, namen };
+    S.history.unshift(eintrag);
+    D.ui().overlay = null; D.ui().ligaTab = 'tabelle'; D.setScreen('liga');
+    const sp = D.ligaSpieltage()[t.id].find((x) => x.eigen);
+    const tab = L.tabelleAus(D.ligaSpieltage(), L.teams).zeilen.find((z) => z.team === L.liga.team);
+    const er2 = L.einzelranglisteAus(D.ligaSpieltage());
+    const aus = {
+      ergebnis: sp && (daheim ? sp.einzel : sp.einzel.split(':').reverse().join(':')), legs: sp && sp.legs, partien: sp && sp.partien.length,
+      punkte: tab.punkte - vorTab.punkte, spiele: tab.spiele - vorTab.spiele,
+      eineZeile: er2.filter((z) => z.team === L.liga.team && z.name === bekannt.name).length, mehr: er2.find((z) => z.team === L.liga.team && z.name === bekannt.name).siege - bekannt.siege,
+      gast: er2.some((z) => z.name === 'Gegner Nummer0' && z.gast), hl: sp && sp.highlights.length, text: document.getElementById('lt-stand').textContent,
+      tabelle: document.getElementById('lt-tabelle').textContent.includes(L.liga.team)
+    };
+    /* Befunde der Kritik: Schreibweise, Heimrecht, Verlegung, Vorsaison, zwei Eintraege, Geschwister, Kurzname. */
+    const unsere = () => D.ligaSpieltage()[t.id].filter((x) => x.gast && (x.heim === L.liga.team || x.gast === L.liga.team));
+    const wirE = () => { const z = unsere()[0]; return z.eigen ? (z.heim === L.liga.team ? z.einzel : z.einzel.split(':').reverse().join(':')) : null; };
+    lg.gegner = 'Ganz andere Schreibweise';
+    aus.schreibweise = unsere().length === 1 && wirE() === '10:6' && !L.tabelleAus(D.ligaSpieltage(), L.teams).zeilen.some((z) => z.team === lg.gegner);
+    lg.gegner = gegner;
+    {
+      const rd = L.spieltage[t.id], k = rd.findIndex((x) => x.heim === t.heim && x.gast === t.gast), was = rd[k];
+      rd[k] = Object.assign({}, was, { heim: was.gast, gast: was.heim });
+      aus.heimrecht = unsere().length === 1 && wirE() === '10:6';
+      const seite = unsere()[0].heim === L.liga.team ? 0 : 1;
+      aus.heimrecht = aus.heimrecht && unsere()[0].partien.every((p) => /Unser Spieler/.test(p[seite]) || p[seite] === bekannt.name) && unsere()[0].partien.every((p) => /Gegner Nummer/.test(p[1 - seite]));
+      rd[k] = Object.assign({}, was, { verschoben: true });
+      aus.verlegt = wirE() === '10:6' && L.tabelleAus(D.ligaSpieltage(), L.teams).zeilen.find((z) => z.team === L.liga.team).spiele === vorTab.spiele + 1;
+      rd[k] = was;
+    }
+    lg.tag = String(Number(t.tag.slice(0, 4)) - 1) + t.tag.slice(4);
+    aus.vorsaison = !unsere()[0].eigen;
+    lg.tag = t.tag;
+    S.history.unshift({ id: 'abgebrochen', at: Date.now() + 1, lineup: [], settings: { start: 501, bestOf: 3 }, matches: matches.map((m, i) => Object.assign({}, m, { done: i === 0 })), liga: Object.assign({}, lg), namen });
+    aus.zwei = wirE() === '10:6';
+    S.history.shift();
+    {
+      const teile = bekannt.name.split(' '), nach = teile[teile.length - 1];
+      const z = (x) => L.einzelranglisteAus(D.ligaSpieltage()).filter((y) => y.team === L.liga.team && y.name === x);
+      const setz = (idx, n) => { namen[wir[idx]] = n; const p = S.profiles.find((x) => x.id === wir[idx]); p.name = n; p.voll = n; };
+      setz(1, teile[0].charAt(0) + 'xx ' + nach);
+      aus.geschwister = z(bekannt.name).length === 1 && z(teile[0].charAt(0) + 'xx ' + nach).length === 1;
+      setz(1, 'Unser Spieler1');
+      lg.typen[wir[2]] = 'neu'; setz(2, 'Neu ' + nach); setz(0, 'Ganz Anderer');
+      aus.neu = z('Neu ' + nach).length === 1 && z(bekannt.name)[0].siege === bekannt.siege;
+      delete lg.typen[wir[2]]; setz(2, 'Unser Spieler2');
+      setz(0, teile[0]);
+      aus.kurz = z(bekannt.name).length === 1 && z(bekannt.name)[0].siege > bekannt.siege && !z(teile[0]).length;
+      setz(0, bekannt.name);
+    }
+    const heil = matches[3].legs; matches[3].legs = null;
+    try { D.render(); aus.kaputt = !unsere()[0].eigen; } catch (e) { aus.kaputt = false; }
+    matches[3].legs = heil;
+    /* Sobald die Ligaleitung ein Ergebnis hat, gilt ihres. */
+    const orig = L.spieltage[t.id], i = orig.findIndex((x) => x.heim === t.heim && x.gast === t.gast), alt = orig[i];
+    orig[i] = Object.assign({}, alt, { einzel: '8:8', legs: '20:20' });
+    aus.ligaleitung = !D.ligaSpieltage()[t.id].some((x) => x.eigen);
+    orig[i] = alt;
+    matches[15].done = false;
+    aus.unfertig = !D.ligaSpieltage()[t.id].some((x) => x.eigen);
+    const m = JSON.parse(merk); Object.assign(S, m); D.ui().ligaTab = 'plan'; D.save(); D.setScreen('setup');
+    return aus;
+  });
+  check('Ergebnis, Legs und 16 Einzel stehen im Spieltag', r.ergebnis === '10:6' && r.partien === 16 && /^\d+:\d+$/.test(r.legs), JSON.stringify(r));
+  check('Tabelle: ein Spiel und zwei Punkte mehr', r.spiele === 1 && r.punkte === 2, JSON.stringify(r));
+  check('Einzelrangliste: dieselbe Person bleibt eine Zeile und bekommt ihre Siege dazu', r.eineZeile === 1 && r.mehr > 0, JSON.stringify(r));
+  check('Gastspieler bleibt Gast, Highlights sind dabei', r.gast && r.hl > 0, JSON.stringify(r));
+  check('die Tabelle sagt, dass das Ergebnis aus der App kommt', /unser Ergebnis aus der App/.test(r.text) && r.tabelle, r.text);
+  check('mit Ergebnis der Ligaleitung gilt ihres', r.ligaleitung);
+  check('ein unfertiges Ligaspiel zaehlt dort noch nicht', r.unfertig);
+  check('andere Schreibweise des Gegners zaehlt nicht doppelt', r.schreibweise);
+  check('getauschtes Heimrecht: wie die Ligaleitung, richtig herum', r.heimrecht);
+  check('ein verlegtes, gespieltes Spiel zaehlt', r.verlegt);
+  check('die Vorsaison zaehlt nicht', r.vorsaison);
+  check('ein abgebrochener Eintrag verdeckt den fertigen nicht', r.zwei);
+  check('gleicher Nachname und Anfangsbuchstabe: zwei Leute bleiben zwei', r.geschwister);
+  check('wer nachgemeldet ist, wird niemandem aus dem Kader zugeschlagen', r.neu);
+  check('ein Kurzname landet beim richtigen Kaderspieler', r.kurz);
+  check('ein kaputter Eintrag legt nichts lahm', r.kaputt);
+});
+
 await gruppe('Handy-Block 2: GAME ON nur am Spieltag', async () => {
   await page.evaluate(() => {
     const D = window.__dart, S = D.state();
