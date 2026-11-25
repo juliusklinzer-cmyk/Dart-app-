@@ -173,14 +173,14 @@
     var zeilen = tab.zeilen;
     $('tabelle-zeilen').innerHTML = zeilen.map(function (z, i) {
       var wir = z.team === TEAM;
-      return '<div class="tz' + (wir ? ' wir' : '') + '"><span class="rang">' + (i + 1) + '</span>' +
+      return '<div class="tz' + (wir ? ' wir' : '') + (i < 2 && Number(z.spiele) > 0 ? ' aufstieg' : '') + '"><span class="rang">' + (i + 1) + '</span>' +
         '<span class="team">' + esc(z.team) + '</span>' +
         '<span class="mitte">' + esc(z.spiele == null ? '' : z.spiele) + '</span>' +
         '<span class="pkt">' + esc(z.punkte == null ? '' : z.punkte) + '</span>' +
         '<span class="rechts">' + esc(String(z.legs || '0:0')).replace(':', ' : ') + '</span></div>';
     }).join('');
     var d = tab.bis ? datumTeile(tab.bis) : null;
-    $('tabelle-stand').textContent = (d ? 'Stand ' + d.kurz + d.jahr + ' · ' : '') + 'aus ' + tab.spiele + ' Spielen berechnet';
+    $('tabelle-stand').textContent = (d ? 'Stand ' + d.kurz + d.jahr + ' · ' : '') + 'aus ' + tab.spiele + ' Spielen berechnet · Platz 1 und 2: Aufstieg';
   }
 
   /* ---------- Live-Stand ---------- */

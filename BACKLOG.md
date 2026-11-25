@@ -41,6 +41,7 @@
 
 ## Erledigt
 
+- [x] DRT-091 Tabellen: Platz 1 und 2 als Aufstiegsplätze grün (App-Tabelle, Liga-Statistik, Webseite, Liga-Webseite ab 2. Liga) · von:Julius · fertig:2026-11-25
 - [x] DRT-090 Regeln: Auf- und Abstieg, keine Relegation (SWO 03.10.2026, Punkt 2) · von:Julius · fertig:2026-11-25
 - [x] DRT-089 Selbst gespieltes Ligaspiel steht sofort in Tabelle, Einzelrangliste, Highlights und Liga-Statistik, bis die Ligaleitung es einträgt (v219) · von:Julius · fertig:2026-11-25
 - [x] DRT-072 Autodarts am Board: läuft mit Autodarts Desktop 2.1.1 am Windows-PC (Würfe lokal über 3180, Brücke, App), erste Aufnahme geprüft · von:Julius · fertig:2026-11-25

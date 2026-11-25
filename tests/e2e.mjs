@@ -3980,7 +3980,7 @@ check('und enthaelt genau einen Eintrag',
 await page.locator('#liga-tabs button[data-tab="regeln"]').click();
 check('der Regeln-Reiter zeigt die Regelecke',
   (await visible('#liga-regeln')) && !(await visible('#liga-plan')));
-check('mit FAQ und Regelecke zum Aufklappen', (await page.locator('#liga-regeln details').count()) === 14,
+check('mit FAQ und Regelecke zum Aufklappen', (await page.locator('#liga-regeln details').count()) === 15,
   String(await page.locator('#liga-regeln details').count()));
 check('das FAQ beantwortet die Grundfragen', await page.evaluate(() => {
   const t = document.getElementById('liga-regeln').textContent;

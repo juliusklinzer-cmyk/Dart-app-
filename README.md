@@ -309,6 +309,7 @@ Einzelrangliste nach und vergleicht Zeile für Zeile mit der Webseite (`npm run 
 `js/liga-daten.js` mischt dazu, was die Webseite nicht weiß (`LIGA_HAND`: unsere
 Bogen-Aufstellung H1–H8/G1–G8, notfalls ein Ergebnis vom Papierbogen, bevor es die
 Ligaleitung hat) und gleicht unsere Termine mit dem Spielplan ab (Verlegungen).
+**Aufstiegsplätze:** Platz 1 und 2 stehen in allen Tabellen grün (SWO Punkt 2, sobald das Team ein Spiel hat; auf der Liga-Webseite ab der 2. Liga).
 **Eigene Spiele sofort:** Ein in der App fertig gespieltes Ligaspiel dieser Saison zählt in
 Tabelle, Einzelrangliste, Highlights, Liga-Statistik und Spieltagsliste sofort
 (`ligaSpieltage()`), auf den beteiligten iPads nach dem letzten Einzel, sonst mit dem

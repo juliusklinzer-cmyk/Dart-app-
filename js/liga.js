@@ -272,12 +272,13 @@
       '<th class="c-n mittel" scope="col">Einzel</th><th class="c-n breit" scope="col">Legs</th><th class="c-n" scope="col" title="Punkte">Pkt.</th><th class="c-form mittel" scope="col">Form</th></tr></thead><tbody>' +
       L.tabelle.map(function (z) {
         var e = paar(z.einzel) || [0, 0];
-        return '<tr><td class="c-r">' + z.platz + '</td><td class="c-team">' + teamLink(L, z.team) + '<span class="schmal unter">' + z.g + '-' + z.u + '-' + z.v + ' · Einzel ' + esc(z.einzel) + '</span></td>' +
+        var hoch = L.nr > 1 && z.platz <= 2 && Number(z.spiele) > 0;   // Aufstiegsplaetze (SWO Punkt 2), aus der 1. Liga geht es nicht hoeher
+        return '<tr' + (hoch ? ' class="aufstieg"' : '') + '><td class="c-r">' + z.platz + '</td><td class="c-team">' + teamLink(L, z.team) + '<span class="schmal unter">' + z.g + '-' + z.u + '-' + z.v + ' · Einzel ' + esc(z.einzel) + '</span></td>' +
           '<td class="c-n">' + z.spiele + '</td><td class="c-n breit">' + z.g + '</td><td class="c-n breit">' + z.u + '</td><td class="c-n breit">' + z.v + '</td>' +
           '<td class="c-n mittel">' + esc(z.einzel) + ' <span class="leise">' + diff(e[0], e[1]) + '</span></td><td class="c-n breit leise">' + esc(z.legs) + '</td>' +
           '<td class="c-n c-pkt">' + z.punkte + '</td><td class="c-form mittel">' + formHtml(z.form) + '</td></tr>';
       }).join('') + '</tbody></table></div>' +
-      '<p class="notiz">Sieg 2 Punkte, Unentschieden 1. Reihenfolge und Werte wie bei der Ligaleitung; Form = letzte fünf Spiele.</p>';
+      '<p class="notiz">Sieg 2 Punkte, Unentschieden 1. Reihenfolge und Werte wie bei der Ligaleitung; Form = letzte fünf Spiele.' + (L.nr > 1 ? ' Grün: Aufstiegsplätze (regulär Platz 1 und 2).' : '') + '</p>';
   }
 
   function aktuellerSpieltag(L) {

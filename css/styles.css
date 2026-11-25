@@ -49,6 +49,7 @@
 
 :root {
   color-scheme: dark;
+  --aufstieg: #4ade80;   /* Aufstiegsplaetze in den Tabellen */
   /* ---- Blink 180 -----------------------------------------------------
      Palette aus dem Rebranding-Entwurf („Dart App Rebranding"):
      warmes Schwarz, ein Rot, viel Weiß. Nur diese fünf Akzentwerte
@@ -5454,6 +5455,11 @@ body #stats-rang.log #board-log { display: block; }
 #liga-tabelle .standings tr.leader td { background: var(--aktiv-flaeche); box-shadow: none; text-shadow: none; }
 #liga-tabelle .standings tr.leader td.name { color: #fff; }
 #liga-tabelle .standings tr.leader td:last-child { color: var(--accent); }
+/* Aufstiegsplaetze: gruener Streifen vor dem Platz, kleine Marke am Namen. */
+#liga-tabelle .standings tr.aufstieg td.rank { box-shadow: inset 3px 0 0 var(--aufstieg); color: var(--aufstieg); }
+.aufstieg-marke { margin-left: 8px; padding: 1px 6px; border-radius: 6px; font-family: var(--font-cond); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--aufstieg); border: 1px solid var(--aufstieg); vertical-align: middle; }
+@media (max-width: 599px) { .aufstieg-marke { display: none; } }
+.st-krow.aufstieg .st-krang { color: var(--aufstieg); box-shadow: inset 3px 0 0 var(--aufstieg); padding-left: 6px; }
 #lt-platz { align-items: center; text-align: center; gap: 6px; }
 #lt-platz .lt-platz-zahl { font-family: var(--font-display); font-size: clamp(56px, 16vw, 110px); line-height: 1; color: #fff; }
 #lt-platz .lt-platz-info { font-family: var(--font-cond); font-weight: 600; font-size: 1.1rem; color: #c9c0c0; }

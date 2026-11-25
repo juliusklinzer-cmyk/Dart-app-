@@ -7496,11 +7496,11 @@
     var zs = d.tab.zeilen, mP = Math.max.apply(null, [1].concat(zs.map(function (z) { return z.punkte; })));
     var html = '<div class="st-kliste">' + zs.map(function (z, i) {
       var an = z.team === name, u = z.team === LIGA.team;
-      return '<button type="button" class="st-krow' + (an ? ' an' : '') + (u ? ' wir' : '') + '" style="animation-delay:' + (i * 40) + 'ms" data-action="stats-team" data-wert="' + esc(u ? 'wir' : z.team) + '">' +
+      return '<button type="button" class="st-krow' + (an ? ' an' : '') + (u ? ' wir' : '') + (i < LIGA_AUFSTEIGER && z.spiele > 0 ? ' aufstieg' : '') + '" style="animation-delay:' + (i * 40) + 'ms" data-action="stats-team" data-wert="' + esc(u ? 'wir' : z.team) + '">' +
         '<span class="st-krang">' + (i + 1) + '.</span><span class="st-kname"><b>' + esc(z.team) + '</b><small>' + z.g + ' S · ' + z.u + ' U · ' + z.v + ' N · Legs ' + esc(z.legs) + '</small></span>' +
         stBalken(z.punkte / mP * 100, an ? ST_FARBE.gold : u ? ST_FARBE.rot : '#5b5153') + '<span class="st-kwert">' + z.punkte + '</span></button>';
     }).join('') + '</div>';
-    return stKarte('tabelle', 'Tabelle', 'Punkte aller Teams, berechnet aus den Ergebnissen der Ligaleitung. Tipp wählt das Team.', html);
+    return stKarte('tabelle', 'Tabelle', 'Punkte aller Teams, berechnet aus den Ergebnissen der Ligaleitung. Grün: Aufstiegsplätze. Tipp wählt das Team.', html);
   }
   function stTeamGegnerKarte(sp) {
     var o = {}, r = [];
@@ -8547,6 +8547,8 @@
   var ligaTabelleKennung = null;
 
   var LIGA_TEAMS = window.LIGA_DATEN.teams;
+  /* Regulaer steigen die beiden Ersten auf (SWO 03.10.2026, Punkt 2). */
+  var LIGA_AUFSTEIGER = 2;
   /* Die Tabelle wird aus den Ergebnissen aller Spieltage gerechnet
      (js/liga-daten.js, LIGA_SPIELTAGE) - nicht mehr von Hand gepflegt. */
   function ligaTabelleBerechnet() { return window.LIGA_DATEN.tabelleAus(ligaSpieltage(), LIGA_TEAMS); }
@@ -9037,9 +9039,11 @@
       '<tbody>' + zeilen.map(function (z, i) {
         var wir = z.team === LIGA.team;
         /* Ein Tipp auf die Zeile: Lokal, Spielerliste und alle Spiele des Teams. */
-        return '<tr' + (wir ? ' class="leader"' : '') + ' data-action="liga-team-info" data-team="' + esc(z.team || '') + '" role="button" tabindex="0">' +
+        /* Platz 1 und 2: Aufstiegsplaetze (SWO Punkt 2, Julius 25.11.). */
+        var klassen = (wir ? 'leader' : '') + (i < LIGA_AUFSTEIGER && z.spiele > 0 ? ' aufstieg' : '');
+        return '<tr' + (klassen.trim() ? ' class="' + klassen.trim() + '"' : '') + ' data-action="liga-team-info" data-team="' + esc(z.team || '') + '" role="button" tabindex="0">' +
           '<td class="rank">' + (i + 1) + '</td>' +
-          '<td class="left name">' + esc(z.team || '') + '</td>' +
+          '<td class="left name">' + esc(z.team || '') + (i < LIGA_AUFSTEIGER && z.spiele > 0 ? '<small class="aufstieg-marke">Aufstieg</small>' : '') + '</td>' +
           zelle(z.spiele) + zelle(z.g) + zelle(z.u) + zelle(z.v) + zelle(z.legs) + zelle(z.einzel) + zelle(z.punkte) +
           '</tr>';
       }).join('') + '</tbody>';

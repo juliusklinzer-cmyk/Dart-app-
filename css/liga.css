@@ -173,6 +173,7 @@ a.sz:hover .sz-pfeil { color: var(--hell); }
 .tab .c-team a:hover { color: var(--blau); }
 .tab .c-form { width: 1%; white-space: nowrap; }
 .tab-liga tbody tr:first-child .c-r { color: var(--hell); }
+.tab-liga tbody tr.aufstieg .c-r { color: #4ade80; box-shadow: inset 3px 0 0 #4ade80; }
 .unter { display: block; font-size: 13px; color: var(--leiser); margin-top: 2px; }
 .schmal { display: none; }
 .sl-team { display: block; font-size: 13px; color: var(--leiser); margin-top: 2px; }
