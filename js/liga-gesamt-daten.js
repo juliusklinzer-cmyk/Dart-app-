@@ -4,7 +4,7 @@
    Stand unter GET /api/liga-gesamt. Nicht von Hand aendern. */
 window.LIGA_GESAMT = {
  "version": 1,
- "stand": "2026-11-25T01:42:23.952Z",
+ "stand": "2026-11-25T13:05:09.255Z",
  "quelle": "https://steeldart-muenchen.de/",
  "verein": {
   "willkommen": "Willkommen auf der Website des Steeldart München e.V.",
@@ -218,6 +218,12 @@ window.LIGA_GESAMT = {
   ]
  },
  "lokale": [
+  {
+   "name": "All-In Café",
+   "strasse": "Margaretenanger 9",
+   "plz": "85716",
+   "ort": "Unterschleißheim"
+  },
   {
    "name": "Bar Sehnsucht",
    "strasse": "Amalienstraße 26",
@@ -530,9 +536,8 @@ window.LIGA_GESAMT = {
      "name": "Florian Hartmann"
     }
    ],
-   "lokal": "Hopfenlandstüberl",
-   "telefon": "+498992564418",
-   "adresse": "Johann-Schmid-Str. 20, 85716 Unterschleißheim"
+   "lokal": "All-In Café",
+   "adresse": "Margaretenanger 9, 85716 Unterschleißheim"
   },
   "Harlekin": {
    "id": 227,
@@ -667,9 +672,8 @@ window.LIGA_GESAMT = {
      "name": "Hubert Starkl"
     }
    ],
-   "lokal": "Hopfenlandstüberl",
-   "telefon": "+498992564418",
-   "adresse": "Johann-Schmid-Str. 20, 85716 Unterschleißheim"
+   "lokal": "All-In Café",
+   "adresse": "Margaretenanger 9, 85716 Unterschleißheim"
   },
   "Double Trouble": {
    "id": 243,
@@ -4097,8 +4101,8 @@ window.LIGA_GESAMT = {
     },
     {
      "id": 228,
-     "lokal": "Hopfenlandstüberl",
-     "adresse": "Johann-Schmid-Str. 20, 85716 Unterschleißheim",
+     "lokal": "All-In Café",
+     "adresse": "Margaretenanger 9, 85716 Unterschleißheim",
      "spieler": [
       {
        "name": "Andreas Hartmann",
@@ -4131,8 +4135,7 @@ window.LIGA_GESAMT = {
        "rolle": "TC-2",
        "name": "Florian Hartmann"
       }
-     ],
-     "telefon": "+498992564418"
+     ]
     },
     {
      "id": 227,
@@ -5562,8 +5565,8 @@ window.LIGA_GESAMT = {
     },
     {
      "id": 236,
-     "lokal": "Hopfenlandstüberl",
-     "adresse": "Johann-Schmid-Str. 20, 85716 Unterschleißheim",
+     "lokal": "All-In Café",
+     "adresse": "Margaretenanger 9, 85716 Unterschleißheim",
      "spieler": [
       {
        "name": "Markus Wehrle",
@@ -5602,8 +5605,7 @@ window.LIGA_GESAMT = {
        "rolle": "TC-2",
        "name": "Hubert Starkl"
       }
-     ],
-     "telefon": "+498992564418"
+     ]
     },
     {
      "id": 243,

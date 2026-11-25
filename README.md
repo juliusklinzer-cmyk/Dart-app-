@@ -252,8 +252,8 @@ die weder zu- noch abgesagt haben – so sieht der Kapitän, wer nur noch nicht
 geschaut hat) – und unten die zwei Knöpfe **Bin dabei** / **Kann nicht** (jeder im
 Team antwortet aktiv; ein Entweder-oder: die gewählte Antwort bleibt gedrückt, ein
 Tipp auf die andere wechselt, austragen gibt es nicht) – und
-**nur am Spieltag selbst** darunter **GAME ON!**
-(startet das Ligaspiel; an allen anderen Tagen stehen dort nur die Zusagen, damit
+**nur am Spieltag selbst** darunter **Game Day**
+(Vorbereitung und Start des Ligaspiels, siehe „Game Day“; an allen anderen Tagen stehen dort nur die Zusagen, damit
 niemand Tage vorher aus Versehen den Spielabend anlegt – das Übungsspiel im
 Trainings-Reiter geht jederzeit). Die
 Zusagen färben die Karte: unter 4 rot, genau 4 gelb, ab 5 grün. **Läuft das
@@ -432,6 +432,26 @@ Gäste dieses Geräts und beim nächsten Aufeinandertreffen wiedererkannt), Best
 of 3 oder 5, **Finish-Anzeigen an oder aus** (aus ist Liga-konform, WDF 3.08) –
 und auf Wunsch **geteilt an zwei Scheiben**, wie es die SWO ohnehin verlangt.
 
+**Game Day (DRT-080):** Am Spieltag selbst ersetzt der Game Day den Startdialog (im
+Nachtrag bleibt er). Er geht den ganzen Tag: über „Game Day“ auf der Spieltag-Karte
+oder in der Zeile „Ligaspiel heute“ auf dem Startbild. Jedes iPad wählt seine Scheibe
+(Handys, die nur nachschauen, wählen keine und ändern nichts): **Scheibe 1 trägt uns
+ein, Scheibe 2 den Gegner**, umschaltbar mit „Hier eintragen“; steht nur ein iPad da,
+trägt es beides ein. Beide sehen jederzeit beide Aufstellungen, dazu den Countdown bis
+**20:00**. „Bereit“ prüft die eigene Seite, holt die Unterschrift von allen, die „neu
+melden“ sind („Später“ geht), und legt die Aufstellung fest („Aufstellung ändern“ löst
+das wieder). Danach sind Einwerfen und freie Spiele möglich. Um 20:00 starten beide
+Scheiben von selbst und öffnen ihr erstes Einzel mit dem Ausbullen. Fehlt ein „Bereit“
+oder läuft noch ein freies Spiel, wartet die App und weist hin; „Zum Ligaspiel“ legt
+das Spiel ab (fertige Legs kommen ins Archiv) und wechselt. „Sofort starten“ geht
+immer, fragt aber nach, wenn die andere Scheibe noch nicht bereit ist.
+Technik: `S.ligaTag` auf dem Gerät, `POST /api/liga/tag/<st06-Datum>` als Abgleich
+(je Feld gewinnt der letzte Schreiber, ohne Netz wird nachgereicht) und
+`…/start`, das genau ein geteiltes Turnier anlegt, auch bei gleichzeitigem Start.
+Scheibe 2 springt nach 10 s ein, wenn Scheibe 1 nicht startet. Tabelle `liga_tage`,
+nach drei Tagen gelöscht, Unterschriften schon beim Start; Gast-Konten haben keinen
+Zugang, Testkonten ihren eigenen Game Day. Ohne Konto läuft alles auf einem Gerät.
+
 **Spielertypen (SWO):** Jede Zeile beider Teams trägt einen Status-Knopf, der
 per Tipp wechselt: **gemeldet** → **Gastspieler** (nicht gemeldet; höchstens einer
 je Team und Spiel, höchstens zwei Einsätze pro Saison, dann Nachmeldung) → **neu
@@ -442,7 +462,7 @@ ohne Netz wird nachgereicht), ebenso beim Einwechseln. Bei uns steht in der Ausw
 für jemanden ohne Konto, mit Vor- und Nachname darunter; beim Gegner setzt ein
 Kader-Chip, den die Ligaleitung schon als Gast führt (gestrichelt), den Status
 von selbst. Zwei Gastspieler in einem Team lehnt der Start ab. Wer „neu melden“
-ist, bekommt gleich nach GAME ON den Nachmelde-Bogen (Team und Name fest,
+ist, bekommt bei „Bereit“ (im Nachtrag gleich nach dem Start) den Nachmelde-Bogen (Team und Name fest,
 „Später“ erlaubt); spätestens vor den Unterschriften der Teamcaptains holt die
 App die fehlende Unterschrift nach. Gastspieler stehen im Bogen als „Name
 (Gast)“, Nachgemeldete als „Name (nachgem.)“. Der Wechsel-Dialog bietet die drei
@@ -1768,6 +1788,7 @@ npm run test:mail          # MIME-Aufbau, SMTP-Dialog gegen einen Mini-Server, E
 npm run test:mitteilungen  # Web-Push-Verschlüsselung, VAPID, Themen-Einstellungen, Jobs
 npm run test:api           # Server allein: Registrierung, Rechte, Rate-Limit, Grabsteine
 npm run test:konto         # zwei Browser, zwei Accounts, ein gemeinsames Spiel (fester Port 3198, `TEST_PORT` setzbar)
+node tests/ligatag.mjs     # Game Day: zwei iPads bereiten vor und starten zur Anwurfzeit
 npm run test:alle          # alles nacheinander – auch Build und Einzeldatei, siehe unten
 ```
 

@@ -77,6 +77,9 @@ Weitere personenbezogene Tabellen:
 - `liga_tabelle`: Ligatabelle, öffentlich über `/api/oeffentlich/liga`.
 - `liga_empfaenger`: feste Bericht-Empfänger und **E-Mail-Adressen gegnerischer
   Teamcaptains** (Dritte), einmal eingetippt und dauerhaft gespeichert.
+- `liga_tage`: Vorbereitung eines Ligaspiels (Namen beider Teams, Status, bis zum Start die
+  **Unterschriften** von Nachmeldungen, Gerätekennung je Scheibe). Nur für Mitglieder, nicht für
+  Gast-Konten. Nach drei Tagen gelöscht, Unterschriften beim Start (sie stehen dann im Spielplan).
 - `einladungen`: Token, Ersteller, Nutzer. 30 Tage nach Ablauf gelöscht.
 - `passwort_resets`: SHA-256 des Tokens, gilt 1 h. Einen Tag nach Ablauf gelöscht.
 - `benachrichtigungen`, `push_abos` (Endpunkt, Schlüssel, **User-Agent gekürzt auf 120

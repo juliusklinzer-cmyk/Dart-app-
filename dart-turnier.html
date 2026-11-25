@@ -3052,6 +3052,42 @@ body { font-size: 1rem; }
   margin-bottom: calc(-1 * max(12px, env(safe-area-inset-bottom, 0px)));
 }
 .overlay-card .row-btns > .btn { margin-top: 0; }
+/* ---- Game Day (DRT-080): Vorbereitung des Ligaspiels an zwei iPads ---- */
+.overlay.liga-tag .overlay-card { max-width: 1080px; width: 100%; text-align: left; }
+.lt-kopf { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-4); }
+.lt-kopf p { margin: 0; color: var(--muted); }
+.lt-uhr { flex: none; text-align: right; line-height: 1.05; }
+.lt-uhr b { display: block; font-family: var(--font-cond); font-weight: 700; font-size: clamp(2rem, 6vw, 3.4rem); font-variant-numeric: tabular-nums; }
+.lt-uhr small { color: var(--muted); font-size: 0.82rem; }
+.lt-uhr.vorbei b { color: var(--accent); }
+.overlay.liga-tag .overlay-card .lt-status { margin: var(--space-3) 0; font-size: 1rem; font-weight: 600; color: var(--text); }
+.lt-plaetze { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: var(--space-2); }
+.lt-platz { display: flex; align-items: center; gap: var(--space-2); min-height: 64px; padding: 8px 14px; border-radius: 14px; background: var(--bg-2); border: 1px solid var(--line); }
+.lt-platz > div { flex: 1; min-width: 0; }
+.lt-platz b { display: block; }
+.lt-platz small { display: block; color: var(--muted); font-size: 0.85rem; overflow-wrap: anywhere; }
+.lt-platz.meiner { border-color: var(--aktiv-linie); box-shadow: 0 0 18px var(--schein-weich); }
+.lt-platz .btn { margin: 0; width: auto; min-height: 44px; white-space: nowrap; }
+.lt-marke { flex: none; font-size: 0.82rem; font-weight: 700; color: var(--muted); }
+.lt-platz.bereit .lt-marke { color: var(--text); }
+.lt-platz.bereit .lt-marke::before { content: '\2713\00a0'; }
+.lt-spalten { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 var(--space-4); margin-top: var(--space-2); }
+@media (min-width: 820px) { .lt-spalten { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.lt-spalten .ls-titel { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.lt-liste { list-style: none; counter-reset: lt; margin: 0; padding: 0; }
+.lt-liste li { counter-increment: lt; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 4px 12px; border-bottom: 1px solid var(--line); font-size: 1.1rem; font-weight: 600; }
+.lt-liste li::before { content: counter(lt); flex: none; width: 18px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.lt-liste li > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.lt-liste i { font-style: normal; font-weight: 400; color: var(--muted); }
+.lt-liste .ls-marke { flex: none; font-size: 0.8rem; color: var(--muted); }
+.lt-liste .ls-marke.gast, .lt-liste .ls-marke.neu { color: var(--text); }
+.overlay.liga-tag .dl-link { background: transparent; border: none; box-shadow: none; color: var(--muted); font-family: var(--font-body); font-weight: 600; font-size: 0.92rem; cursor: pointer; padding: 0 4px; margin: 0; min-height: 44px; text-transform: none; letter-spacing: 0; text-align: left; }
+.lt-opt-knopf { margin-top: var(--space-2) !important; }
+.lt-fest { pointer-events: none; opacity: 0.5; }
+.lt-knoepfe { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-4); padding-bottom: max(12px, env(safe-area-inset-bottom, 0px)); }
+.lt-knoepfe .btn { flex: 1 1 180px; margin: 0; min-height: 52px; }
+.overlay.liga-tag .overlay-card .lt-verlassen { margin: 0; text-align: center; }
+
 /* Vier Gegner-Optionen: 2x2 statt 3+1 (Bots schwer stand allein). */
 .liga-start .options:has(> button:nth-child(4):last-child) {
   display: grid; grid-template-columns: 1fr 1fr;
@@ -12324,6 +12360,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       if (!s.settings || typeof s.settings !== 'object') s.settings = newState().settings;
       if (START_SCORES.indexOf(s.settings.start) < 0) s.settings.start = 501;
       if (s.game === undefined) s.game = null;
+      /* Game Day (DRT-080): die Vorbereitung gilt nur, wenn sie ganz ist. */
+      if (s.ligaTag && !(typeof s.ligaTag === 'object' && typeof s.ligaTag.id === 'string' && typeof s.ligaTag.tag === 'string' &&
+          typeof s.ligaTag.terminId === 'string' && s.ligaTag.d && s.ligaTag.abbild && s.ligaTag.fehlt && s.ligaTag.nm &&
+          ['wir', 'wirTyp', 'wirNamen', 'gegner', 'gegnerNach', 'gegnerTyp'].every(function (k) { return Array.isArray(s.ligaTag.d[k]); }))) delete s.ligaTag;
       /* Ein Finisher-Spiel ohne Runden kann es nicht geben – ein solcher
          Stand käme aus einer kaputten Speicherung und würde beim Zeichnen
          auffliegen. Lieber verwerfen als abstürzen. */
@@ -12605,6 +12645,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var imSpiel = {};
     if (S.matches.length) tourPlayers().forEach(function (id) { imSpiel[id] = 1; });
     if (S.game && S.game.players) S.game.players.forEach(function (id) { imSpiel[id] = 1; });
+    /* Fuer heute Abend aufgestellt (Game Day): bleibt. */
+    if (S.ligaTag && S.ligaTag.d) S.ligaTag.d.wir.forEach(function (id) { imSpiel[id] = 1; });
     S.profiles = S.profiles.filter(function (p) {
       if (!p.gast || p.hidden || p.dauer) return true;   // dauerhafter Gast bleibt
       if (imSpiel[p.id]) return true;
@@ -16100,7 +16142,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       /* Wer im Online-Spiel auf den anderen wartet, legt das Handy weg: der
          Bildschirm bleibt an (sonst kein Abgleich, kein Klopfen, keine
          Feier), und die Audio-Sitzung wird offen gehalten. */
-      wachHalten(liveSichtbar);
+      wachHalten(liveSichtbar || !!(ligaTagVon(UI.overlay) && S.ligaTag.platz));
       if (window.DartSound && window.DartSound.halten) window.DartSound.halten(liveSichtbar && tonAn());
       tonKnopf(liveSichtbar);
       var lst = window.DartSync.live.status();
@@ -16212,7 +16254,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       var neu = liste.filter(function (t) { return !eigen || t.id !== eigen.sid; });
       var vorher = beitretbare.map(function (t) { return t.id; }).join(',');
       beitretbare = neu;
-      if (vorher !== neu.map(function (t) { return t.id; }).join(',')) render();
+      if (vorher !== neu.map(function (t) { return t.id; }).join(',') && !ligaTagVon(UI.overlay)) render();
     });
     liveBeitretbareHolen();
   }
@@ -16254,7 +16296,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       var neu = liste.filter(function (g) { return !eigen || g.id !== eigen.online.sid; });
       var vorher = liveBeitretbare.map(function (g) { return g.id + ':' + g.seq; }).join(',');
       liveBeitretbare = neu;
-      if (S.screen === 'setup' && vorher !== neu.map(function (g) { return g.id + ':' + g.seq; }).join(',')) render();
+      if (S.screen === 'setup' && !UI.overlay && vorher !== neu.map(function (g) { return g.id + ':' + g.seq; }).join(',')) render();
     });
   }
 
@@ -16275,11 +16317,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var box = $('beitreten-box');
     if (!box) return;
     var fremd = ligaLiveFremd();
-    box.classList.toggle('hidden', !beitretbare.length && !liveBeitretbare.length && !fremd);
+    var tagZeile = ligaTagZeileHtml();
+    box.classList.toggle('hidden', !beitretbare.length && !liveBeitretbare.length && !fremd && !tagZeile);
     var titel = box.querySelector('h2');
-    if (titel) titel.textContent = fremd ? 'Ligaspiel läuft' : beitretbare.length ? 'Turnier läuft' : 'Online-Spiel läuft';
+    if (titel) titel.textContent = tagZeile && !fremd && !beitretbare.length ? 'Ligaspiel heute' : fremd ? 'Ligaspiel läuft' : beitretbare.length ? 'Turnier läuft' : 'Online-Spiel läuft';
     var ich = liveNutzer();
-    $('beitreten-liste').innerHTML = (fremd ? '<div class="beitreten-zeile">' +
+    $('beitreten-liste').innerHTML = tagZeile + (fremd ? '<div class="beitreten-zeile">' +
         '<div class="who"><div class="nm">' + esc(fremd.heim ? LIGA.team + ' – ' + fremd.gegner : fremd.gegner + ' – ' + LIGA.team) + '</div>' +
         '<div class="sm">' + esc((fremd.nr ? fremd.nr + '. Spieltag' : 'Liga') + (fremd.ort ? ' · ' + fremd.ort : '')) + '</div></div>' +
         '<button class="btn primary small" data-action="live-ansehen" data-k="' + esc(fremd.zuschauer) + '">Live zuschauen</button>' +
@@ -21016,7 +21059,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
               /* GAME ON nur am Spieltag selbst - vorher stehen hier nur die
                  Zusagen, sonst startet jemand aus Versehen Tage vorher das
                  Ligaspiel (Julius, Handy-Block 2). */
-              (t.tag === heuteIso ? '<button class="btn ' + (fremd ? 'ghost' : 'primary start') + '" data-action="liga-spiel" data-id="' + esc(t.id) + '">Game On!</button>' : ''));
+              (t.tag === heuteIso ? '<button class="btn ' + (fremd ? 'ghost' : 'primary start') + '" data-action="liga-spiel" data-id="' + esc(t.id) + '">Game Day</button>' : ''));
       fuss = erklaerung + antwortZeile + '<div class="lk-knoepfe">' + knoepfe + '</div>';
     }
     /* Zuschauen steht oben, der Rest bleibt: ein auf dem Server haengen
@@ -23934,6 +23977,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       render();
       return;
     }
+    if (d.tag) {
+      var tPunkte = (o.striche || []).reduce(function (n, st) { return n + st.length; }, 0);
+      if (tPunkte < 4) { o.fehler = 'Bitte noch im Feld unterschreiben.'; render(); return; }
+      ligaTagUnterschrieben(d, signaturBild(o, SIGNATUR_PLAN_MAX));
+      return;
+    }
     var nq = ligaBerichtQuelle();
     var nListe = nq ? (d.team === 'H' ? nq.liga.heimSpieler : nq.liga.gastSpieler) || [] : [];
     /* Nach einem spontanen Wechsel steht die Person schon auf dem Bogen -
@@ -23947,7 +23996,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     /* Die Unterschrift steht gleich im Bogen (Entwurf Ligaspiel). */
     var nPunkte = (o.striche || []).reduce(function (n, st) { return n + st.length; }, 0);
     if (nPunkte < 4) { o.fehler = 'Bitte noch im Feld unterschreiben.'; render(); return; }
-    nachmeldungAbschliessen(nq, { team: d.team, nach: d.nach, vor: d.vor, u18: d.u18, g: d.g, id: d.id || null, start: !!d.start }, signaturBild(o));
+    nachmeldungAbschliessen(nq, { team: d.team, nach: d.nach, vor: d.vor, u18: d.u18, g: d.g, id: d.id || null, start: !!d.start }, signaturBild(o, SIGNATUR_PLAN_MAX));
   }
   /* "Abbrechen" nach einem spontanen Wechsel: ohne Nachmeldung darf der
      Spieler nicht auf dem Bogen stehen - der Wechsel wird zurueckgenommen,
@@ -24120,22 +24169,33 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   }
   /* Die Unterschrift als PNG fuer den Bericht: dunkle Tinte auf durchsichtigem
      Grund, auf die Strichbreite zugeschnitten. */
-  function signaturBild(o) {
-    var w = 900, h = Math.round(w * (o.ratio || 0.4));
+  /* Unterschriften der Nachmeldungen wandern mit dem Spielplan zwischen den
+     iPads: so klein, dass auch mehrere zusammen durchgehen. */
+  var SIGNATUR_PLAN_MAX = 36000;
+  function signaturBild(o, max) {
+    var breiten = max ? [900, 640, 480, 360, 260, 180] : [900], bild = '';
+    for (var i = 0; i < breiten.length; i++) {
+      bild = signaturBildIn(o, breiten[i]);
+      if (!max || bild.length <= max) break;
+    }
+    return bild;
+  }
+  function signaturBildIn(o, w) {
+    var h = Math.round(w * (o.ratio || 0.4));
     /* Auf die Striche zuschneiden (mit etwas Rand), damit die Unterschrift
        das TC-Feld im Bericht fuellt statt als Kringel in der Ecke zu stehen. */
     var x0 = 1, y0 = 1, x1 = 0, y1 = 0;
     o.striche.forEach(function (st) { st.forEach(function (p) {
       x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]);
     }); });
-    var rand = 14;
+    var rand = Math.max(4, Math.round(14 * w / 900));
     var bx = Math.max(0, Math.floor(x0 * w) - rand), by = Math.max(0, Math.floor(y0 * h) - rand);
     var bw = Math.min(w, Math.ceil(x1 * w) + rand) - bx, bh = Math.min(h, Math.ceil(y1 * h) + rand) - by;
     var c = document.createElement('canvas');
     c.width = Math.max(20, bw); c.height = Math.max(20, bh);
     var ctx = c.getContext('2d');
     ctx.translate(-bx, -by);
-    signaturZeichnen(ctx, o.striche, w, h, 6);
+    signaturZeichnen(ctx, o.striche, w, h, Math.max(1.6, 6 * w / 900));
     return c.toDataURL('image/png');
   }
 
@@ -24245,7 +24305,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (!o || o.type !== 'unterschrift' || !q) return;
     var punkte = o.striche.reduce(function (n, st) { return n + st.length; }, 0);
     if (punkte < 4) { o.fehler = 'Bitte erst im Feld unterschreiben.'; render(); return; }
-    if (o.wer === 'nachmeldung') { nachmeldungAbschliessen(q, o.person, signaturBild(o)); return; }
+    if (o.wer === 'nachmeldung') { nachmeldungAbschliessen(q, o.person, signaturBild(o, SIGNATUR_PLAN_MAX)); return; }
     if (!q.liga.unterschriften) q.liga.unterschriften = {};
     q.liga.unterschriften[o.wer] = signaturBild(o);
     save();
@@ -25254,7 +25314,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     /* Am Touch-Geraet kein Textfeld vorab fokussieren: iOS klappt sonst bei
        jedem Dialog die Tastatur aus (Nachmeldung, Versand, Aufstellung).
        Dort reicht der Fokus auf der Karte fuer Esc und Vorlese-Reihenfolge. */
-    var touch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    var touch = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || !!ligaTagVon(UI.overlay);   // Game Day: zeichnet sich nach, kein Feld vorab
     var ziel = touch ? null : karte.querySelector('input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])');
     if (!ziel && !touch && !(PFEIL_DIALOGE[typ] || typ === 'checkout-darts')) {
       ziel = karte.querySelector('.btn.primary:not([disabled])') || karte.querySelector('button:not([disabled]), [role="button"], [tabindex="0"]');
@@ -25306,7 +25366,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
   function renderOverlay() {
     var ov = $('overlay');
-    if (!UI.overlay) { ov.classList.add('hidden'); ov.classList.remove('gross', 'vollbild', 'match-ende'); dialogGeschlossen(); return; }
+    if (!UI.overlay) { ov.classList.add('hidden'); ov.classList.remove('gross', 'vollbild', 'match-ende', 'liga-tag'); dialogGeschlossen(); return; }
     ov.classList.remove('hidden');
     /* Im Turnier-Modus sprechen auch die Dialoge Plakatsprache - der
        Schreiber steht vorn an der Scheibe, gelesen wird vom Oche aus. */
@@ -25316,6 +25376,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     ov.classList.toggle('vollbild', !!VOLLBILD_DIALOGE[UI.overlay.type]);
     ov.classList.toggle('bogen', !!BOGEN_DIALOGE[UI.overlay.type] || (UI.overlay.type === 'confirm-reset' && !!(S.tour && S.tour.liga)));
     ov.classList.toggle('match-ende', UI.overlay.type === 'turnier-ende');
+    ov.classList.toggle('liga-tag', !!ligaTagVon(UI.overlay));
     ov.classList.toggle('bogen-breit', UI.overlay.type === 'liga-bericht-kurz');
     var o = UI.overlay;
     var html = '';
@@ -25496,7 +25557,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     } else if (o.type === 'finish') {
       html = finishDialogHtml(o);
     } else if (o.type === 'nachmeldung') {
-      var nq = ligaBerichtQuelle();
+      var nq = o.draft.tag ? ligaTagQuelle() : ligaBerichtQuelle();
       var nHeimTeam = nq ? (nq.liga.heim ? LIGA.team : nq.liga.gegner) : 'Heim';
       var nGastTeam = nq ? (nq.liga.heim ? nq.liga.gegner : LIGA.team) : 'Gast';
       var nd = o.draft;
@@ -25506,7 +25567,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       };
       var nListe = nq ? ((nd.team === 'H' ? nq.liga.heimSpieler : nq.liga.gastSpieler) || []) : [];
       var nIdx = nd.id ? nListe.indexOf(nd.id) : -1;
-      var nInfo = nIdx >= 0 ? 'steht als ' + nd.team + (nIdx + 1) + ' auf dem Bogen · ' + nListe.length + ' von 8 Plätzen belegt'
+      var nInfo = nd.tag ? 'Position ' + (Number(nd.tag.charAt(1)) + 1) + ' in der Aufstellung'
+        : nIdx >= 0 ? 'steht als ' + nd.team + (nIdx + 1) + ' auf dem Bogen · ' + nListe.length + ' von 8 Plätzen belegt'
         : nListe.length >= 8 ? 'Alle 8 Plätze belegt'
         : 'wird ' + nd.team + (nListe.length + 1) + ' · ' + nListe.length + ' von 8 Plätzen belegt';
       /* Nach einem spontanen Wechsel steht das Team fest - sonst landete
@@ -25517,7 +25579,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         : '<div class="dl-segment">' + nWahl('team', 'H', 'Heim · ' + esc(nHeimTeam)) + nWahl('team', 'G', 'Gast · ' + esc(nGastTeam)) + '</div>';
       html = '<div class="dl-kopf"><h3>Spieler nachmelden</h3>' +
         '<p>' + (nd.start
-          ? 'Beim Start als <b>neu melden</b> eingetragen: Mit der Unterschrift kommt die Person auf Seite 2 des Spielberichts. ' +
+          ? (nd.tag ? 'In der Aufstellung' : 'Beim Start') + ' als <b>neu melden</b> eingetragen: Mit der Unterschrift kommt die Person auf Seite 2 des Spielberichts. ' +
             '„Später“ geht – spätestens vor den Unterschriften der Teamcaptains muss sie nachgemeldet sein. '
           : 'Für Spieler, die spontan einspringen und noch nie gemeldet waren. Mit Name und Unterschrift kommen sie ' +
             'auf den Spielbericht (H5 bis H8 bzw. G5 bis G8) und sind danach beim Wechsel wählbar. ') +
@@ -25734,63 +25796,16 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       var lt = o.termin, ld = o.draft;
       var ltDaheim = lt.heim === LIGA.team;
       var ltGegner = ltDaheim ? lt.gast : lt.heim;
-      var ltProfile = ligaKader();
       var kannTeilenLiga = !!(window.DartKonto && window.DartKonto.nutzer() &&
         window.DartSync && window.DartSync.turnier);
-      html = '<h3>Ligaspiel</h3>' +
+      html = ligaTagVon(o) ? ligaTagHtml(o, ltGegner) : '<h3>Ligaspiel</h3>' +
         '<p>' + lt.nr + '. Spieltag · ' + esc(lt.heim) + ' vs ' + esc(lt.gast) +
           (lt.ort ? ' · ' + esc(lt.ort) : '') + '</p>' +
         (o.fehler ? '<p class="edit-error">' + esc(o.fehler) + '</p>' : '') +
         '<div class="liga-start">' +
-          '<div class="ls-titel">Unsere Positionen</div>' +
-          [0, 1, 2, 3].map(function (i) {
-            /* "Anderer Name": jemand ohne Konto - Gastspieler oder neu zu
-               melden - mit Vor- und Nachname darunter (Julius, 11.11.). */
-            var ltName = ld.wir[i] === '__name';
-            var ltN = (ld.wirNamen || [])[i] || {};
-            /* Kein voller Name hinterlegt: hier gleich nachtragen. */
-            var ltOhne = ltProfile.filter(function (p) { return p.id === ld.wir[i] && vollFehlt(p); })[0];
-            return '<div class="ls-zeile"><span>' + (i + 1) + '</span>' +
-              '<select data-role="liga-pos" data-i="' + i + '">' +
-              ltProfile.map(function (p) {
-                return '<option value="' + p.id + '"' + (ld.wir[i] === p.id ? ' selected' : '') + '>' +
-                  esc(p.voll || p.name) + '</option>';
-              }).join('') +
-              '<option value="__name"' + (ltName ? ' selected' : '') + '>Anderer Name (Gast oder neu) …</option>' +
-              '</select>' + ligaTypKnopfHtml('wir', i, (ld.wirTyp || [])[i]) + '</div>' +
-              (ltName
-                ? '<div class="ls-zeile ls-unter"><span></span><span class="namen-paar">' +
-                  '<input data-role="liga-wir-vor" data-i="' + i + '" maxlength="30" autocomplete="off" value="' + esc(ltN.vor || '') + '" placeholder="Vorname">' +
-                  '<input data-role="liga-wir-nach" data-i="' + i + '" maxlength="30" autocomplete="off" value="' + esc(ltN.nach || '') + '" placeholder="Nachname">' +
-                  '</span></div>'
-                : ltOhne
-                  ? '<div class="ls-zeile ls-unter"><span></span><span class="namen-paar">' + vollFelderHtml(ltOhne, ld) + '</span></div>'
-                  : '');
-          }).join('') +
-          (ltProfile.some(function (p) { return vollFehlt(p) && ld.wir.slice(0, 4).indexOf(p.id) >= 0; })
-            ? '<p class="hint">Voller Name fehlt: Vor- und Nachnamen unter dem Spieler eintragen, er wird in seinem Profil gespeichert.</p>' : '') +
-          '<p class="hint">Status antippen: <b>gemeldet</b> → <b>Gastspieler</b> (nicht gemeldet; höchstens einer je Team und Spiel, ab dem dritten Einsatz nachmelden) → ' +
-            '<b>neu melden</b> (Nachmeldung mit Unterschrift gleich nach dem Start, 10 €, U18 2 €). Gilt für beide Teams.</p>' +
+          ligaWirFelderHtml(ld) +
           ligaGegnerFelderHtml(ltGegner, ld) +
-          '<div class="ls-titel">Legs je Einzel</div>' +
-          '<div class="options">' +
-            '<button data-action="liga-bestof" data-value="3" class="' + (ld.bestOf === 3 ? 'active' : '') + '">Best of 3</button>' +
-            '<button data-action="liga-bestof" data-value="5" class="' + (ld.bestOf === 5 ? 'active' : '') + '">Best of 5</button>' +
-          '</div>' +
-          '<div class="ls-titel">Finish-Anzeigen</div>' +
-          '<div class="options">' +
-            '<button data-action="liga-finish" data-value="0" class="' + (ld.finish ? '' : 'active') + '">ohne</button>' +
-            '<button data-action="liga-finish" data-value="1" class="' + (ld.finish ? 'active' : '') + '">mit</button>' +
-          '</div>' +
-          '<p class="hint">Ohne ist Liga-konform: Der Schreiber darf das benötigte Doppel ' +
-            'nicht ansagen (WDF 3.08) – die App zeigt dann keine Finish-Wege.</p>' +
-          '<div class="ls-titel">Mitschreiben</div>' +
-          '<div class="options">' +
-            '<button data-action="liga-mitschreiben" data-value="0" class="' + (ld.nurErgebnis ? '' : 'active') + '">in der App</button>' +
-            '<button data-action="liga-mitschreiben" data-value="1" class="' + (ld.nurErgebnis ? 'active' : '') + '">nur Ergebnisse</button>' +
-          '</div>' +
-          '<p class="hint">Nur Ergebnisse: Der Gegner zählt mit seinem System, wir tragen je Einzel nur ' +
-            'den Leg-Stand ein – Siege und Legs zählen, Average und Highlights gibt es dann nicht.</p>' +
+          ligaOptionenHtml(ld) +
           (kannTeilenLiga
             ? '<div class="ls-titel">An zwei Scheiben</div>' +
               '<div class="options">' +
@@ -25802,6 +25817,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '<div class="row-btns two">' +
         '<button class="btn ghost" data-action="ov-cancel">Abbrechen</button>' +
         '<button class="btn primary start" data-action="liga-los">' + (ld.nachtrag ? 'Ergebnisse eintragen' : 'GAME ON!') + '</button></div>';
+    } else if (o.type === 'ligatag-hinweis') {
+      html = ligaTagHinweisHtml(o);
     } else if (o.type === 'uebung-start') {
       var ud = o.draft;
       var uProfile = activeProfiles();
@@ -26439,55 +26456,59 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     save(); render();
   }
 
-  function ligaSpielStarten() {
-    var o = UI.overlay;
-    if (!o || o.type !== 'liga-start') return;
-    var d = o.draft, t = o.termin;
-
+  /* Aufstellung pruefen - beide Teams oder nur eins (Game Day: jedes iPad
+     meldet seine Seite bereit). Liefert den Fehlertext oder ''. */
+  function ligaStartPruefen(d, teile) {
+    var mitWir = !teile || teile.wir, mitGegner = !teile || teile.gegner;
     var wir = d.wir.slice(0, 4);
     var wirTyp = Array.isArray(d.wirTyp) ? d.wirTyp : [], gegnerTyp = Array.isArray(d.gegnerTyp) ? d.gegnerTyp : [];
-    /* "Anderer Name" (Gastspieler oder Nachmeldung ohne Konto): Vor- und
-       Nachname wie beim Gegner, daraus wird ein Gast dieses Geraets. */
-    var wirNamen = [];
-    for (var wi = 0; wi < 4; wi++) {
-      if (wir[wi] !== '__name') continue;
-      var wn = (d.wirNamen || [])[wi] || {};
-      if (!String(wn.vor || '').trim() || !String(wn.nach || '').trim()) {
-        o.fehler = 'Position ' + (wi + 1) + ': bitte Vor- und Nachnamen eintragen (SWO: bürgerliche Namen).';
-        render(); return;
-      }
-      wirNamen.push({ i: wi, voll: (String(wn.vor).trim().slice(0, 30) + ' ' + String(wn.nach).trim().slice(0, 30)).replace(/\s+/g, ' ').trim() });
-    }
     var wirKonten = wir.filter(function (id) { return id !== '__name'; });
-    var doppelt = wirKonten.some(function (id, i) { return wirKonten.indexOf(id) !== i; }) ||
-      wirNamen.some(function (n, i) { return wirNamen.some(function (m, j) { return j !== i && m.voll === n.voll; }); });
-    if (wir.length < 4 || wir.some(function (id) { return !id; }) || doppelt) {
-      o.fehler = 'Bitte vier verschiedene eigene Spieler aufstellen.';
-      render(); return;
+    if (mitWir) {
+      /* "Anderer Name" (Gastspieler oder Nachmeldung ohne Konto): Vor- und
+         Nachname wie beim Gegner, daraus wird ein Gast dieses Geraets. */
+      var wirNamen = [];
+      for (var wi = 0; wi < 4; wi++) {
+        if (wir[wi] !== '__name') continue;
+        var voll = ligaWirVoll(d, wi);
+        if (!voll) return 'Position ' + (wi + 1) + ': bitte Vor- und Nachnamen eintragen (SWO: bürgerliche Namen).';
+        wirNamen.push(voll);
+      }
+      var doppelt = wirKonten.some(function (id, i) { return wirKonten.indexOf(id) !== i; }) ||
+        wirNamen.some(function (n, i) { return wirNamen.indexOf(n) !== i; });
+      if (wir.length < 4 || wir.some(function (id) { return !id; }) || doppelt) return 'Bitte vier verschiedene eigene Spieler aufstellen.';
     }
-    if (wirTyp.filter(function (t) { return t === 'gast'; }).length > 1 || gegnerTyp.filter(function (t) { return t === 'gast'; }).length > 1) {
-      o.fehler = LIGA_GAST_FEHLER;
-      render(); return;
+    if ((mitWir && wirTyp.filter(function (t) { return t === 'gast'; }).length > 1) ||
+        (mitGegner && gegnerTyp.filter(function (t) { return t === 'gast'; }).length > 1)) return LIGA_GAST_FEHLER;
+    if (mitGegner && [0, 1, 2, 3].some(function (i) {
+      return !String((d.gegner || [])[i] || '').trim() || !String((d.gegnerNach || [])[i] || '').trim();
+    })) return 'Bitte alle vier Gegner mit Vor- und Nachnamen eintragen (SWO: bürgerliche Namen).';
+    if (mitWir) {
+      var vollFehler = vollPruefen(wirKonten, d);
+      if (vollFehler) return vollFehler;
     }
-    var namen = d.gegner.map(function (n, i) {
-      return (String(n || '').trim().slice(0, 30) + ' ' +
-        String((d.gegnerNach || [])[i] || '').trim().slice(0, 30)).replace(/\s+/g, ' ').trim();
-    });
-    if (d.gegner.some(function (n, i) {
-      return !String(n || '').trim() || !String((d.gegnerNach || [])[i] || '').trim();
-    })) {
-      o.fehler = 'Bitte alle vier Gegner mit Vor- und Nachnamen eintragen (SWO: bürgerliche Namen).';
-      render(); return;
+    if (mitGegner) {
+      /* Zwei gleichnamige Gegner würden auf dasselbe Gastprofil fallen und
+         ihre Statistik verschmelzen – lieber gleich unterscheidbar machen. */
+      var namen = [0, 1, 2, 3].map(function (i) { return ligaGegnerVoll(d, i); });
+      if (namen.some(function (n, i) { return namen.indexOf(n) !== i; })) return 'Zwei Gegner heißen gleich – bitte unterscheidbar machen (z. B. Nachname dazu).';
     }
-    var vollFehler = vollPruefen(wirKonten, d);
-    if (vollFehler) { o.fehler = vollFehler; render(); return; }
-    /* Zwei gleichnamige Gegner würden auf dasselbe Gastprofil fallen und
-       ihre Statistik verschmelzen – lieber gleich unterscheidbar machen. */
-    if (namen.some(function (n, i) { return namen.indexOf(n) !== i; })) {
-      o.fehler = 'Zwei Gegner heißen gleich – bitte unterscheidbar machen (z. B. Nachname dazu).';
-      render(); return;
-    }
+    return '';
+  }
+  function ligaVollAus(vor, nach) {
+    return (String(vor || '').trim().slice(0, 30) + ' ' + String(nach || '').trim().slice(0, 30)).replace(/\s+/g, ' ').trim();
+  }
+  function ligaWirVoll(d, i) {
+    var n = (d.wirNamen || [])[i] || {};
+    return String(n.vor || '').trim() && String(n.nach || '').trim() ? ligaVollAus(n.vor, n.nach) : '';
+  }
+  function ligaGegnerVoll(d, i) { return ligaVollAus((d.gegner || [])[i], (d.gegnerNach || [])[i]); }
 
+  /* Aus der geprueften Aufstellung das Ligaspiel bauen: Turnier und 16 Einzel.
+     Legt Gaeste an, aendert sonst nichts am Stand. */
+  function ligaTourBauen(d, t) {
+    var wir = d.wir.slice(0, 4);
+    var wirTyp = Array.isArray(d.wirTyp) ? d.wirTyp : [], gegnerTyp = Array.isArray(d.gegnerTyp) ? d.gegnerTyp : [];
+    var wirKonten = wir.filter(function (id) { return id !== '__name'; });
     var daheim = t.heim === LIGA.team;
     var gegnerTeam = daheim ? t.gast : t.heim;
     /* Die Gegner sind Gäste dieses Geräts. Wer schon einmal gegen uns
@@ -26495,56 +26516,69 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
        bereits auf unserer Seite aufgestellt ist (sonst spielte jemand gegen
        sich selbst), und Ausgeblendete kommen zurück ins Licht. */
     vollUebernehmen(wirKonten, d);
-    wirNamen.forEach(function (n) {
-      wir[n.i] = ligaGastId(n.voll, wir.filter(function (id) { return id !== '__name'; }));
-    });
+    for (var wi = 0; wi < 4; wi++) {
+      if (wir[wi] !== '__name') continue;
+      wir[wi] = ligaGastId(ligaWirVoll(d, wi), wir.filter(function (id) { return id !== '__name'; }));
+    }
     var sie = [];
-    namen.forEach(function (n) {
-      sie.push(ligaGastId(n, wir.concat(sie)));
-    });
+    for (var gi = 0; gi < 4; gi++) sie.push(ligaGastId(ligaGegnerVoll(d, gi), wir.concat(sie)));
     /* Der SWO-Status je Spieler, beide Teams (nur wer nicht "gemeldet" ist). */
     var typen = {};
     wir.forEach(function (id, i) { if (wirTyp[i]) typen[id] = wirTyp[i]; });
     sie.forEach(function (id, i) { if (gegnerTyp[i]) typen[id] = gegnerTyp[i]; });
-
-    if (S.matches.length) archiveTournament();
-    if (S.game && S.game.done) archiveGame(S.game);
-    S.game = null;
     /* heimSpieler/gastSpieler sind die Bogen-Listen H1–H8 bzw. G1–G8 (erst
        die vier Startpositionen, Wechselspieler kommen hinten dazu).
        posH/posG ist die AKTUELLE Besetzung der vier Positionen. */
     var heimListe = daheim ? wir.slice() : sie.slice();
     var gastListe = daheim ? sie.slice() : wir.slice();
-    S.tour = {
-      start: 501, bestOf: d.bestOf, players: wir.concat(sie),
-      liga: {
-        terminId: t.id, nr: t.nr, gegner: gegnerTeam, heim: daheim,
-        wir: wir, sie: sie,
-        heimSpieler: heimListe, gastSpieler: gastListe,
-        posH: heimListe.slice(0, 4), posG: gastListe.slice(0, 4),
-        ort: t.ort || '', tag: t.tag || '',
-        finish: !!d.finish, zeitVon: Date.now(), zeitBis: null,
-        /* Der Gegner zaehlt mit seinem System: je Einzel nur der Leg-Stand. */
-        nurErgebnis: !!d.nurErgebnis,
-        typen: typen
-      }
+    return {
+      tour: {
+        start: 501, bestOf: d.bestOf, players: wir.concat(sie),
+        liga: {
+          terminId: t.id, nr: t.nr, gegner: gegnerTeam, heim: daheim,
+          wir: wir, sie: sie,
+          heimSpieler: heimListe, gastSpieler: gastListe,
+          posH: heimListe.slice(0, 4), posG: gastListe.slice(0, 4),
+          ort: t.ort || '', tag: t.tag || '',
+          finish: !!d.finish, zeitVon: Date.now(), zeitBis: null,
+          /* Der Gegner zaehlt mit seinem System: je Einzel nur der Leg-Stand. */
+          nurErgebnis: !!d.nurErgebnis,
+          typen: typen
+        }
+      },
+      matches: LIGA_EINZEL.map(function (paar, i) {
+        var h = heimListe[paar[0]], g = gastListe[paar[1]];
+        return {
+          id: uid(), round: Math.floor(i / 4) + 1, p: [h, g],
+          /* SWO Punkt 8 (Fassung Oktober 2026): „Jedes Spiel beginnt mit dem
+             Ausbullen. Der Spieler, der das Ausbullen gewinnt, beginnt das
+             erste Leg." Ohne Anwerfer oeffnet die Partie im Bull-Off; jedes
+             weitere Leg wechselt (macht ensureLeg von selbst). */
+          starter: null,
+          /* Welche Bogen-Positionen hier spielen und auf welcher Scheibe die
+             Partie im Doppelbetrieb läuft (zwei nebeneinander je Durchgang). */
+          posPaar: paar.slice(),
+          scheibe: LIGA_SCHEIBEN[i],
+          legs: [], done: false, winner: null, at: null
+        };
+      })
     };
-    S.matches = LIGA_EINZEL.map(function (paar, i) {
-      var h = heimListe[paar[0]], g = gastListe[paar[1]];
-      return {
-        id: uid(), round: Math.floor(i / 4) + 1, p: [h, g],
-        /* SWO Punkt 8 (Fassung Oktober 2026): „Jedes Spiel beginnt mit dem
-           Ausbullen. Der Spieler, der das Ausbullen gewinnt, beginnt das
-           erste Leg." Ohne Anwerfer oeffnet die Partie im Bull-Off; jedes
-           weitere Leg wechselt (macht ensureLeg von selbst). */
-        starter: null,
-        /* Welche Bogen-Positionen hier spielen und auf welcher Scheibe die
-           Partie im Doppelbetrieb läuft (zwei nebeneinander je Durchgang). */
-        posPaar: paar.slice(),
-        scheibe: LIGA_SCHEIBEN[i],
-        legs: [], done: false, winner: null, at: null
-      };
-    });
+  }
+
+  function ligaSpielStarten() {
+    var o = UI.overlay;
+    if (!o || o.type !== 'liga-start') return;
+    var d = o.draft, t = o.termin;
+    var fehler = ligaStartPruefen(d);
+    if (fehler) { o.fehler = fehler; render(); return; }
+    var bau = ligaTourBauen(d, t);
+    var wir = bau.tour.liga.wir;
+
+    if (S.matches.length) archiveTournament();
+    if (S.game && S.game.done) archiveGame(S.game);
+    S.game = null;
+    S.tour = bau.tour;
+    S.matches = bau.matches;
     S.current = null;
     S.lineup = wir.slice();
     UI.overlay = null;
@@ -26581,6 +26615,818 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     }
     save();
     render();
+  }
+
+  /* ================= Game Day (DRT-080) =================
+   * Am Ligatag richten zwei iPads das Spiel gemeinsam ein: iPad 1 an
+   * Scheibe 1 traegt uns ein, iPad 2 an Scheibe 2 (bei den Gegnern) deren
+   * Aufstellung; beide sehen beides. Wer fertig ist, tippt "Bereit". Bis
+   * 20:00 darf eingeworfen und frei gespielt werden, dann startet jede
+   * Scheibe von selbst mit ihrem ersten Einzel. Der Server verwahrt die
+   * Felder und sorgt dafuer, dass genau ein geteiltes Turnier entsteht
+   * (POST /api/liga/tag/...). Ohne Konto oder Netz geht alles auf einem
+   * Geraet. S.ligaTag ueberlebt einen Neustart und gilt nur an diesem Tag.
+   */
+  var LIGA_TAG_FELDER = ['w0', 'w1', 'w2', 'w3', 'g0', 'g1', 'g2', 'g3', 'nw0', 'nw1', 'nw2', 'nw3', 'ng0', 'ng1', 'ng2', 'ng3', 'opt'];
+  var LIGA_TAG_WEG = 90000;       // so lange ohne Meldung gilt das andere iPad als weg
+  var ligaTagRuf = false, ligaTagNochmal = null, ligaTagLetzter = 0, ligaTagGetippt = 0, ligaTagFokus = 0;
+  var ligaTagFrisch = 0, ligaTagGemerkt = '';
+  var ligaTagStartLaeuft = false, ligaTagStartVersuch = 0, ligaTagNeu = false, ligaTagSpaeterMerk = {};
+
+  function ligaTagAktiv() { return S.ligaTag && S.ligaTag.tag === ligaHeuteIso() ? S.ligaTag : null; }
+  /* Gehoert dieser Dialog zum Game Day? (Nach Mitternacht oder im Nachtrag
+     ist es der gewoehnliche Startdialog.) */
+  function ligaTagVon(o) {
+    var t = ligaTagAktiv();
+    return t && o && o.type === 'liga-start' && o.draft === t.d ? t : null;
+  }
+  function ligaTagTermin(id) {
+    return LIGA.termine.filter(function (x) { return x.id === id; })[0] || null;
+  }
+  /* Die Online-Schicht ist da und angemeldet (kein Gast-Konto). */
+  function ligaTagOnline() {
+    return !!(window.DartKonto && window.DartKonto.ruf && window.DartKonto.nutzer() && window.DartSync && window.DartSync.turnier && !ichBinGastKonto());
+  }
+  /* Auf einem Geraet mit Konten wird IMMER geteilt gespielt - auch wenn die
+     Anmeldung gerade noch laeuft oder der Server nicht antwortet. Sonst
+     startete es nach einem Neuladen sein eigenes Spiel am anderen vorbei. */
+  function ligaTagGeteilt() {
+    var t = S.ligaTag;
+    return !!((t && t.konto) || ligaTagOnline() || S.profiles.some(function (p) { return String(p.id).indexOf('u_') === 0; }));
+  }
+  /* Der Game Day gehoert zu dem Konto, das ihn geoeffnet hat: nach einem
+     Wechsel (auch zu Gast- oder Testkonto) faengt er neu an. */
+  function ligaTagKontoPruefen(t) {
+    if (!window.DartKonto || !window.DartKonto.nutzer()) return true;
+    var id = window.DartKonto.nutzer().id;
+    if (t.konto === id && !ichBinGastKonto()) return true;
+    if (!t.konto && !ichBinGastKonto()) { t.konto = id; t.geholt = false; save(); return true; }
+    delete S.ligaTag;
+    if (UI.overlay && (UI.overlay.type === 'liga-start' || UI.overlay.type === 'ligatag-hinweis' || (UI.overlay.draft && UI.overlay.draft.tag))) UI.overlay = null;
+    save(); render();
+    return false;
+  }
+  /* Zeitlimit fuer alle Anfragen: ein haengendes WLAN darf den Start nicht
+     sperren. Kommt die Antwort doch noch, schadet es nicht (gleiche Kennung). */
+  function ligaTagAnfrage(pfad, body) {
+    return new Promise(function (ok, nein) {
+      var uhr = setTimeout(function () { nein(new Error('Keine Antwort vom Server.')); }, 10000);
+      window.DartKonto.ruf('POST', '/api/liga/tag/' + pfad, body).then(function (r) { clearTimeout(uhr); ok(r); }, function (e) { clearTimeout(uhr); nein(e); });
+    });
+  }
+  /* Uhr des Servers (Geraete-Uhren gehen nicht gleich). */
+  var ligaTagVersatz = 0;
+  function ligaTagJetzt() { return Date.now() + ligaTagVersatz; }
+  /* Ein anderes Turnier oder ein noch offenes Ligaspiel laeuft hier: das
+     wird fuer den Game Day nie still beendet. */
+  function ligaTagTurnierOffen() { return S.matches.length > 0 && (!allMatchesDone() || ligaNochOffen()); }
+  /* Anwurf immer 20:00 (Julius, 25.11.). window.__ligaAnpfiff: nur Tests. */
+  function ligaTagAnpfiff(t) { return window.__ligaAnpfiff || new Date(t.tag + 'T20:00:00').getTime(); }
+  function ligaTagGeraet() {
+    if (!S.geraetId) { S.geraetId = uid() + uid(); save(); }
+    return S.geraetId;
+  }
+  function ligaAufstellungVorschlag(termin) {
+    /* Erst die Zusagen des Spieltags, dann die übrigen Profile, bis vier
+       Positionen stehen. Nur aktive Profile – eine versteckte Kennung stünde
+       sonst unsichtbar im Entwurf, während die Auswahl einen ganz anderen
+       Namen anzeigt. */
+    var aktive = ligaKader();
+    var vor = ((ligaZusagen && ligaZusagen[termin.id]) || [])
+      .filter(function (p) { return (p.status || 'dabei') === 'dabei'; })
+      .map(function (p) { return p.id; })
+      .filter(function (id) { return aktive.some(function (p) { return p.id === id; }); });
+    aktive.forEach(function (p) { if (vor.length < 4 && vor.indexOf(p.id) < 0) vor.push(p.id); });
+    return vor.slice(0, 4);
+  }
+  function ligaTagOeffnen(termin) {
+    var t = S.ligaTag, id = termin.id + '-' + termin.tag;
+    if (!t || t.id !== id) {
+      t = S.ligaTag = {
+        id: id, terminId: termin.id, tag: termin.tag, platz: null, bereit: false, seite: null,
+        konto: ligaTagOnline() ? window.DartKonto.nutzer().id : null,
+        seit: 0, geholt: false, plaetze: null, turnier: null, abbild: {}, fehlt: {}, nm: {}, sid: null, ruheBis: 0,
+        /* Best of 3 und ohne Finish-Hilfen (WDF 3.08) sind die Voreinstellung. */
+        d: { bestOf: 3, wir: ligaAufstellungVorschlag(termin), wirTyp: ['', '', '', ''], wirNamen: [{}, {}, {}, {}], vollNamen: {},
+          gegner: ['', '', '', ''], gegnerNach: ['', '', '', ''], gegnerTyp: ['', '', '', ''], geteilt: false, finish: false, nurErgebnis: false }
+      };
+      LIGA_TAG_FELDER.forEach(function (k) { t.abbild[k] = ligaTagText(t, k); });
+      ligaTagSpaeterMerk = {};
+    }
+    UI.overlay = { type: 'liga-start', termin: termin, draft: t.d, tag: true };
+    save(); render();
+    ligaTagAbgleich();
+  }
+  function ligaTagQuelle() {
+    var t = S.ligaTag, x = t && ligaTagTermin(t.terminId);
+    if (!x) return null;
+    var heim = x.heim === LIGA.team;
+    return { liga: { heim: heim, gegner: heim ? x.gast : x.heim, heimSpieler: [], gastSpieler: [] } };
+  }
+
+  /* ---- Felder: was dieses Geraet gerade eingetragen hat ---- */
+  function ligaTagFeld(t, k) {
+    var d = t.d, i = Number(k.charAt(k.length - 1));
+    if (k === 'opt') return { bestOf: d.bestOf === 5 ? 5 : 3, finish: !!d.finish, nurErgebnis: !!d.nurErgebnis };
+    if (k.charAt(0) === 'n') return (t.nm && t.nm[k]) || null;
+    if (k.charAt(0) === 'g') {
+      return { id: '', vor: String((d.gegner || [])[i] || '').slice(0, 30), nach: String((d.gegnerNach || [])[i] || '').slice(0, 30), typ: (d.gegnerTyp || [])[i] || '' };
+    }
+    var id = d.wir[i] || '', n = id === '__name' ? (d.wirNamen || [])[i] || {} : {};
+    return { id: id, vor: String(n.vor || '').slice(0, 30), nach: String(n.nach || '').slice(0, 30), typ: (d.wirTyp || [])[i] || '',
+      /* Reine Geraete-Profile kennt das andere iPad nicht: Name mitgeben. */
+      name: id && id !== '__name' && String(id).indexOf('u_') !== 0 ? ligaName(id).slice(0, 60) : '' };
+  }
+  /* Zum Vergleichen: der mitgegebene Name zaehlt nicht (er kaeme je Geraet
+     aus einem anderen Profil und wanderte sonst endlos hin und her). */
+  function ligaTagAlsText(k, v) {
+    if (!v) return 'null';
+    if (k === 'opt') return JSON.stringify([v.bestOf, !!v.finish, !!v.nurErgebnis]);
+    if (k.charAt(0) === 'n') return JSON.stringify([v.pid || '', v.vor, v.nach, v.u18, v.g, v.unterschrift]);
+    return JSON.stringify([v.id || '', v.vor || '', v.nach || '', v.typ || '']);
+  }
+  function ligaTagText(t, k) { return ligaTagAlsText(k, ligaTagFeld(t, k)); }
+  function ligaTagGeaendert(t) {
+    return LIGA_TAG_FELDER.filter(function (k) { return ligaTagText(t, k) !== t.abbild[k]; });
+  }
+  function ligaTagFeldSetzen(t, k, v) {
+    var d = t.d, i = Number(k.charAt(k.length - 1));
+    if (k === 'opt') { d.bestOf = v.bestOf === 5 ? 5 : 3; d.finish = !!v.finish; d.nurErgebnis = !!v.nurErgebnis; return; }
+    if (k.charAt(0) === 'n') { if (v) t.nm[k] = v; else delete t.nm[k]; return; }
+    if (k.charAt(0) === 'g') {
+      d.gegner[i] = v.vor || ''; d.gegnerNach[i] = v.nach || '';
+      d.gegnerTyp[i] = v.typ || '';
+      return;
+    }
+    d.wir[i] = v.id || '';
+    d.wirNamen[i] = v.id === '__name' ? { vor: v.vor || '', nach: v.nach || '' } : {};
+    d.wirTyp[i] = v.typ || '';
+    if (v.id && v.id !== '__name' && String(v.id).indexOf('u_') !== 0 && v.name && !S.profiles.some(function (p) { return p.id === v.id; })) {
+      S.profiles.push({ id: v.id, name: String(v.name).slice(0, 30), voll: v.name, avatar: null, hue: freeHue(), created: Date.now(), gast: true });
+    }
+  }
+
+  /* ---- Abgleich mit dem Server ---- */
+  function ligaTagAbgleich(extra) {
+    var t = ligaTagAktiv();
+    if (!t || !ligaTagOnline()) return Promise.resolve(false);
+    if (ligaTagRuf) {
+      if (extra) ligaTagNochmal = Object.assign(ligaTagNochmal || {}, extra);
+      return Promise.resolve(false);
+    }
+    if (!ligaTagKontoPruefen(t)) return Promise.resolve(false);
+    ligaTagRuf = true; ligaTagLetzter = Date.now();
+    /* Vorher abgemeldet, aber noch nicht angekommen: der alte Platz samt
+       "Bereit" gilt nicht mehr. */
+    var ab = S.ligaTagAb && S.ligaTagAb.id === t.id ? S.ligaTagAb : null;
+    if (ab) extra = Object.assign({ platz: 'keiner' }, extra || {}, extra && extra.platz ? { bereit: false } : {});
+    var body = Object.assign({ geraet: ligaTagGeraet(), seit: t.geholt ? t.seit : 0 }, extra || {});
+    if (t.geholt && t.platz) {
+      var neu = ligaTagGeaendert(t);
+      if (neu.length) { body.felder = {}; neu.forEach(function (k) { body.felder[k] = ligaTagFeld(t, k); }); }
+      /* Die Vorbelegung nur, wo der Server noch nichts hat. */
+      var vor = Object.keys(t.fehlt || {}).filter(function (k) { return neu.indexOf(k) < 0 && ligaTagText(t, k) !== 'null'; });
+      if (vor.length) { body.vorschlag = {}; vor.forEach(function (k) { body.vorschlag[k] = ligaTagFeld(t, k); }); }
+    }
+    return ligaTagAnfrage(t.id, body).then(function (r) {
+      ligaTagRuf = false;
+      if (ab && S.ligaTagAb === ab) delete S.ligaTagAb;
+      if (S.ligaTag !== t) { ligaTagNochmal = null; return false; }
+      if (!r || !r.tag) return false;
+      t.ohneNetz = false; t.stoerung = '';
+      ligaTagFrisch = Date.now();
+      if (typeof r.tag.jetzt === 'number') ligaTagVersatz = r.tag.jetzt - Date.now();
+      if (r.belegt) { t.frage = extra && extra.platz || null; }
+      ligaTagUebernehmen(t, r.tag);
+      var nochmal = ligaTagNochmal; ligaTagNochmal = null;
+      if (nochmal) return ligaTagAbgleich(nochmal);
+      /* Eben erst einen Platz bekommen: gleich alles holen und die Vorbelegung schicken. */
+      if (t.nachholen) { t.nachholen = false; setTimeout(ligaTagAbgleich, 30); }
+      return true;
+    }).catch(function (e) {
+      ligaTagRuf = false;
+      if (S.ligaTag !== t) { ligaTagNochmal = null; return false; }
+      var nochmal = ligaTagNochmal; ligaTagNochmal = null;
+      var vorher = JSON.stringify([!!t.ohneNetz, t.stoerung || '']);
+      /* Lehnt der Server eine Unterschrift ab, darf sie nicht jeden weiteren
+         Abgleich mitreissen: weg damit, sie wird neu geleistet. */
+      if (e && (e.status === 400 || e.status === 413) && body.felder) {
+        Object.keys(body.felder).forEach(function (k) { if (k.charAt(0) === 'n') { delete t.nm[k]; t.abbild[k] = 'null'; } });
+      }
+      t.ohneNetz = !e || !e.status || e.status >= 500;
+      t.stoerung = t.ohneNetz ? '' : e.status === 401 ? 'Nicht mehr angemeldet. Bitte unter Profil neu anmelden.' : (e.message || 'Der Server lehnt ab.');
+      save();
+      if (extra || nochmal || vorher !== JSON.stringify([t.ohneNetz, t.stoerung])) {
+        if ((extra || nochmal) && ligaTagVon(UI.overlay)) UI.overlay.fehler = t.ohneNetz ? 'Keine Verbindung zum Server. Bitte gleich nochmal versuchen.' : t.stoerung;
+        ligaTagZeichnen(true);
+      }
+      return false;
+    });
+  }
+  function ligaTagUebernehmen(t, tag) {
+    var bild = function () {
+      return JSON.stringify([t.plaetze, t.platz, t.turnier, t.bereit, LIGA_TAG_FELDER.map(function (k) { return ligaTagText(t, k); }), ligaTagVerbunden(t)]).replace(/"alter":\d+/g, '');
+    };
+    var vorher = bild();
+    var felder = tag.felder || {}, hat = function (k) { return Object.prototype.hasOwnProperty.call(felder, k); };
+    var alles = !t.geholt || !t.seit;
+    LIGA_TAG_FELDER.forEach(function (k) {
+      if (!hat(k)) {
+        if (alles && k.charAt(0) !== 'n') t.fehlt[k] = 1;
+        return;
+      }
+      delete t.fehlt[k];
+      /* Hier gerade geaendert: bleibt und geht gleich hoch. Ohne Scheibe
+         gilt immer, was der Server hat. */
+      var v = felder[k], eigen = !!t.platz && ligaTagText(t, k) !== t.abbild[k];
+      t.abbild[k] = ligaTagAlsText(k, v);
+      if (!eigen) ligaTagFeldSetzen(t, k, v);
+    });
+    t.geholt = true;
+    t.seit = tag.stand || 0;
+    t.plaetze = tag.plaetze || null;
+    t.plaetzeZeit = Date.now();
+    if (t.platz !== tag.meiner) {
+      /* Ab jetzt an einer Scheibe: einmal alles holen (auch Unterschriften). */
+      if (tag.meiner && !t.platz) { t.seit = 0; t.nachholen = true; }
+      t.platz = tag.meiner || null;
+      t.seite = null;
+    }
+    t.bereit = !!(t.platz && t.plaetze && t.plaetze[t.platz] && t.plaetze[t.platz].bereit);
+    t.turnier = tag.turnier || null;
+    t.gespielt = !!tag.gespielt;
+    save();
+    if (vorher !== bild()) ligaTagZeichnen();
+  }
+  function ligaTagVerbunden(t) {
+    return ['S1', 'S2'].map(function (s) {
+      var p = t.plaetze && t.plaetze[s];
+      return p ? (p.meiner || p.alter + (Date.now() - (t.plaetzeZeit || Date.now())) < LIGA_TAG_WEG ? 1 : 2) : 0;
+    });
+  }
+  function ligaTagAndere(t) { return t.platz === 'S1' ? 'S2' : 'S1'; }
+  /* Steht auch an der anderen Scheibe ein iPad? Dann traegt jedes eine Seite ein. */
+  function ligaTagZuZweit(t) { return !!(t.platz && t.plaetze && t.plaetze[ligaTagAndere(t)]); }
+  /* Was dieses Geraet eintraegt. */
+  function ligaTagTeile(t) {
+    if (!ligaTagGeteilt()) return { wir: true, gegner: true };
+    if (!t.platz) return {};
+    if (!ligaTagZuZweit(t)) return { wir: true, gegner: true };
+    var seite = t.seite || (t.platz === 'S1' ? 'wir' : 'gegner');
+    return seite === 'wir' ? { wir: true } : { gegner: true };
+  }
+  /* Nicht neu zeichnen, waehrend jemand tippt oder eine Auswahl offen hat. */
+  function ligaTagZeichnen(sofort) {
+    var offen = ligaTagVon(UI.overlay);
+    if (!offen) { if (!UI.overlay && (S.screen === 'setup' || S.screen === 'liga')) render(); return; }
+    var a = document.activeElement;
+    if (!sofort && a && $('overlay-card').contains(a) && /^(INPUT|SELECT)$/.test(a.tagName) &&
+        Date.now() - Math.max(ligaTagGetippt, ligaTagFokus) < (a.tagName === 'SELECT' ? 15000 : 5000)) { ligaTagNeu = true; return; }
+    ligaTagNeu = false;
+    /* Steht der Finger schon laenger im Feld, ohne zu tippen: neu zeichnen
+       und dort weitermachen. */
+    var wo = a && a.tagName === 'INPUT' && $('overlay-card').contains(a)
+      ? '[data-role="' + a.getAttribute('data-role') + '"]' + (a.hasAttribute('data-i') ? '[data-i="' + a.getAttribute('data-i') + '"]' : '') + (a.hasAttribute('data-id') ? '[data-id="' + a.getAttribute('data-id') + '"]' : '') : '';
+    var stelle = wo ? a.selectionStart : null;
+    render();
+    var feld = wo && $('overlay-card').querySelector(wo);
+    if (feld && document.activeElement !== feld) { feld.focus({ preventScroll: true }); try { feld.setSelectionRange(stelle, stelle); } catch (e) { /* egal */ } }
+  }
+
+  /* ---- Platz und Bereit ---- */
+  function ligaTagPlatz(wert) {
+    var t = ligaTagAktiv();
+    if (!t || (wert !== 'S1' && wert !== 'S2')) return;
+    if (!ligaTagOnline()) { UI.overlay.fehler = 'Keine Verbindung zum Server. Bitte gleich nochmal versuchen.'; render(); return; }
+    var belegt = t.plaetze && t.plaetze[wert] && !t.plaetze[wert].meiner;
+    /* Besetzte Scheibe (und hier noch keine): erst beim zweiten Tipp uebernehmen. */
+    if (belegt && !t.platz && t.frage !== wert) { t.frage = wert; render(); return; }
+    t.frage = null;
+    if (UI.overlay) UI.overlay.fehler = '';
+    ligaTagAbgleich({ platz: wert, uebernehmen: !!belegt });
+  }
+  function ligaTagBereit() {
+    var t = ligaTagAktiv(), o = UI.overlay;
+    if (!t || !ligaTagVon(o)) return;
+    var teile = ligaTagTeile(t);
+    if (!teile.wir && !teile.gegner) { o.fehler = 'Bitte erst eine Scheibe wählen.'; render(); return; }
+    var fehler = ligaStartPruefen(t.d, teile);
+    if (fehler) { o.fehler = fehler; render(); return; }
+    o.fehler = '';
+    if (teile.wir) vollUebernehmen(t.d.wir.filter(function (id) { return id !== '__name'; }), t.d);
+    ligaTagBereitWeiter();
+  }
+  /* Wer "neu melden" ist, unterschreibt jetzt - einer nach dem anderen. */
+  function ligaTagUnterschriftFehlt(t) {
+    var teile = ligaTagTeile(t), aus = null;
+    [['w', teile.wir, t.d.wirTyp], ['g', teile.gegner, t.d.gegnerTyp]].forEach(function (x) {
+      if (!x[1]) return;
+      for (var i = 0; i < 4; i++) {
+        var k = x[0] + i;
+        if (!aus && (x[2] || [])[i] === 'neu' && !ligaTagNmGueltig(t, k) && !ligaTagSpaeterMerk[k]) aus = k;
+      }
+    });
+    return aus;
+  }
+  function ligaTagPerson(t, k) {
+    var i = Number(k.charAt(1));
+    if (k.charAt(0) === 'g') return ligaGegnerVoll(t.d, i);
+    return t.d.wir[i] === '__name' ? ligaWirVoll(t.d, i) : ligaName(t.d.wir[i]);
+  }
+  /* Die Unterschrift gilt nur fuer den, der da noch steht. */
+  function ligaTagNmGueltig(t, k) {
+    var n = t.nm && t.nm['n' + k];
+    if (!n || !SIGNATUR_OK.test(String(n.unterschrift || ''))) return false;
+    var pid = k.charAt(0) === 'w' && t.d.wir[Number(k.charAt(1))] !== '__name' ? t.d.wir[Number(k.charAt(1))] : '';
+    return pid ? n.pid === pid : !n.pid && ligaVollAus(n.vor, n.nach) === ligaVollAus(ligaTagPerson(t, k), '');
+  }
+  function ligaTagBereitWeiter() {
+    var t = ligaTagAktiv();
+    if (!t) return;
+    var k = ligaTagUnterschriftFehlt(t), termin = ligaTagTermin(t.terminId);
+    if (k) {
+      var teil = vollSplit(ligaTagPerson(t, k)), heim = termin.heim === LIGA.team;
+      UI.overlay = { type: 'nachmeldung', striche: [],
+        draft: { team: (k.charAt(0) === 'w') === heim ? 'H' : 'G', teamFest: true, id: null, tag: k, start: true, nach: teil.nach, vor: teil.vor, u18: 'nein', g: null } };
+      render();
+      return;
+    }
+    UI.overlay = { type: 'liga-start', termin: termin, draft: t.d, tag: true };
+    if (!ligaTagGeteilt()) { t.bereit = true; save(); render(); return; }
+    save(); render();
+    if (!ligaTagOnline()) { UI.overlay.fehler = 'Keine Verbindung zum Server. Bitte gleich nochmal versuchen.'; render(); return; }
+    var teile = ligaTagTeile(t);
+    ligaTagAbgleich({ bereit: true, teile: teile.wir && teile.gegner ? 'beide' : teile.wir ? 'wir' : 'gegner' });
+  }
+  function ligaTagUnterschrieben(d, bild) {
+    var t = ligaTagAktiv();
+    if (!t) { UI.overlay = null; render(); return; }
+    var k = d.tag, i = Number(k.charAt(1));
+    var vor = d.vor.slice(0, 30), nach = d.nach.slice(0, 30);
+    var pid = k.charAt(0) === 'w' && t.d.wir[i] !== '__name' ? t.d.wir[i] : '';
+    t.nm['n' + k] = { pid: pid, vor: vor, nach: nach, u18: d.u18, g: d.g, unterschrift: bild };
+    /* Beim Unterschreiben korrigierter Name gilt auch in der Aufstellung. */
+    if (k.charAt(0) === 'g') { t.d.gegner[i] = vor; t.d.gegnerNach[i] = nach; }
+    else if (t.d.wir[i] === '__name') t.d.wirNamen[i] = { vor: vor, nach: nach };
+    save();
+    ligaTagBereitWeiter();
+  }
+  function ligaTagSpaeter(k) {
+    ligaTagSpaeterMerk[k] = true;      // spaetestens vor den TC-Unterschriften
+    ligaTagBereitWeiter();
+  }
+  function ligaTagNichtBereit() {
+    var t = ligaTagAktiv();
+    if (!t) return;
+    ligaTagSpaeterMerk = {};
+    if (!ligaTagGeteilt()) { t.bereit = false; save(); render(); return; }
+    if (!ligaTagOnline()) { if (UI.overlay) UI.overlay.fehler = 'Keine Verbindung zum Server. Bitte gleich nochmal versuchen.'; render(); return; }
+    ligaTagAbgleich({ bereit: false });
+  }
+  function ligaTagVerlassen() {
+    ligaTagAbmelden();
+    UI.overlay = null;
+    delete S.ligaTag;
+    save(); render();
+    ligaTagAbmeldenSenden();
+  }
+  /* Die Scheibe am Server freigeben - ohne Netz spaeter, sonst wartete das
+     andere iPad um 20:00 auf eins, das es nicht mehr gibt. */
+  function ligaTagAbmelden() {
+    var t = S.ligaTag;
+    if (!t || !t.platz) return;
+    S.ligaTagAb = { id: t.id, konto: t.konto || null, am: Date.now() };
+  }
+  var ligaTagAbRuf = false;
+  function ligaTagAbmeldenSenden() {
+    var ab = S.ligaTagAb;
+    if (!ab || ligaTagAbRuf || !ligaTagOnline()) return;
+    if ((ab.konto && ab.konto !== window.DartKonto.nutzer().id) || Date.now() - (ab.am || 0) > 86400e3) { delete S.ligaTagAb; save(); return; }
+    if (S.ligaTag && S.ligaTag.id === ab.id) return;      // geht mit dem naechsten Abgleich
+    ligaTagAbRuf = true;
+    ligaTagAnfrage(ab.id, { geraet: ligaTagGeraet(), seit: 1e9, platz: 'keiner' }).then(function () {
+      ligaTagAbRuf = false;
+      if (S.ligaTagAb === ab) { delete S.ligaTagAb; save(); }
+    }).catch(function () { ligaTagAbRuf = false; });
+  }
+
+  /* ---- Start ---- */
+  /* Alle iPads an den Scheiben bereit? */
+  function ligaTagAlleBereit(t) {
+    if (!ligaTagGeteilt()) return !!t.bereit;
+    if (!t.platz || !t.plaetze || !t.bereit) return false;
+    if (!['S1', 'S2'].every(function (s) { return !t.plaetze[s] || t.plaetze[s].bereit; })) return false;
+    return !ligaTagOffeneSeite(t);
+  }
+  /* Welche Aufstellung hat noch niemand bestaetigt? */
+  function ligaTagOffeneSeite(t) {
+    var hat = function (seite) {
+      return ['S1', 'S2'].some(function (s) { var p = t.plaetze && t.plaetze[s]; return p && p.bereit && (p.teile === seite || p.teile === 'beide'); });
+    };
+    return !hat('wir') ? 'wir' : !hat('gegner') ? 'gegner' : null;
+  }
+  function ligaTagLos() {
+    var t = ligaTagAktiv(), o = UI.overlay;
+    if (!t) return;
+    if (ligaTagTurnierOffen()) { UI.overlay = { type: 'ligatag-hinweis', art: 'turnier' }; render(); return; }
+    if (S.game && !S.game.done) { UI.overlay = { type: 'ligatag-hinweis', art: 'jetzt' }; render(); return; }
+    if (!ligaTagGeteilt()) {
+      ligaSpielStarten();
+      if (S.tour && S.tour.liga) { delete S.ligaTag; save(); }
+      return;
+    }
+    if (!t.platz) { o.fehler = 'Bitte erst eine Scheibe wählen.'; render(); return; }
+    if (t.turnier) { ligaTagBeitreten(); return; }
+    var an = ligaTagAndere(t);
+    if (!ligaTagAlleBereit(t) && !o.gefragt) {
+      o.gefragt = true;
+      o.fehler = ligaTagZuZweit(t) && !t.plaetze[an].bereit
+        ? 'Scheibe ' + an.charAt(1) + ' ist noch nicht bereit. Nochmal tippen startet trotzdem.'
+        : 'Das startet das Ligaspiel sofort, mit Live-Ticker. Nochmal tippen startet.';
+      render(); return;
+    }
+    ligaTagStarten(false);
+  }
+  /* auto: um 20:00 von selbst. Immer aus dem aktuellen Stand - erst
+     abgleichen (auch Eingaben dieses Geraets), dann starten. */
+  function ligaTagStarten(auto) {
+    var t = ligaTagAktiv();
+    if (!t || ligaTagStartLaeuft) return;
+    ligaTagStartVersuch = Date.now();
+    var nochmal = !!(UI.overlay && UI.overlay.nochmal);
+    if (!ligaTagOnline()) { ligaTagStartScheitert(t, null); return; }
+    ligaTagStartLaeuft = true;
+    ligaTagZeichnen(true);
+    var weiter = function (versuche) {
+      if (S.ligaTag !== t) { ligaTagStartLaeuft = false; return; }
+      if (ligaTagRuf && versuche) { setTimeout(function () { weiter(versuche - 1); }, 200); return; }
+      ligaTagAbgleich().then(function (gut) {
+        if (S.ligaTag !== t) { ligaTagStartLaeuft = false; return; }
+        if (!gut || ligaTagRuf) { ligaTagStartLaeuft = false; if (!gut) ligaTagStartScheitert(t, null); return; }
+        if (t.turnier) { ligaTagStartLaeuft = false; ligaTagBeitreten(); return; }
+        if (auto && !ligaTagAlleBereit(t)) { ligaTagStartLaeuft = false; ligaTagZeichnen(); return; }
+        ligaTagStartSenden(t, auto, nochmal);
+      }).catch(function (e) { ligaTagStartLaeuft = false; setTimeout(function () { throw e; }, 0); });
+    };
+    weiter(20);
+  }
+  function ligaTagStartSenden(t, auto, nochmal) {
+    var teile = ligaTagTeile(t), pruefen = teile.wir && !t.bereit;
+    /* Die vollen Namen hat das iPad geprueft, das die Seite eingetragen hat. */
+    var fehler = ligaStartPruefen(pruefen ? t.d : Object.assign({}, t.d, { vollNamen: ligaTagVollErsatz(t) }));
+    if (fehler) {
+      ligaTagStartLaeuft = false;
+      /* Trotz "Bereit" nicht spielbar: Haken zurueck, sonst versuchte er es ewig. */
+      if (auto) ligaTagAbgleich({ bereit: false });
+      if (!UI.overlay || ligaTagVon(UI.overlay) || UI.overlay.type === 'ligatag-hinweis') {
+        UI.overlay = { type: 'liga-start', termin: ligaTagTermin(t.terminId), draft: t.d, tag: true, fehler: fehler };
+        render();
+      }
+      return;
+    }
+    var bau = ligaTourBauen(pruefen ? t.d : Object.assign({}, t.d, { vollNamen: {} }), ligaTagTermin(t.terminId));
+    var lg = bau.tour.liga;
+    lg.nachmeldungen = [];
+    ligaTagUnterschriften(t, lg).forEach(function (n) { if (lg.typen[n.id] === 'neu') lg.nachmeldungen.push(n); });
+    if (!lg.nachmeldungen.length) delete lg.nachmeldungen;
+    var gaeste = {};
+    bau.tour.players.forEach(function (id) { if (String(id).indexOf('u_') !== 0) gaeste[id] = ligaName(id); });
+    var plan = {
+      start: bau.tour.start, bestOf: bau.tour.bestOf, players: bau.tour.players.slice(), gaeste: gaeste, liga: lg,
+      matches: bau.matches.map(function (m) {
+        return { id: m.id, round: m.round, p: m.p.slice(), starter: m.starter, posPaar: m.posPaar, scheibe: m.scheibe };
+      })
+    };
+    if (!t.sid) { t.sid = uid() + uid(); save(); }
+    ligaTagStartRuf(t, { geraet: ligaTagGeraet(), id: t.sid, plan: plan, auto: !!auto, stand: t.seit, nochmal: nochmal });
+  }
+  /* Die gueltigen Unterschriften der Vorbereitung, auf die Spieler des Spiels. */
+  function ligaTagUnterschriften(t, lg) {
+    var aus = [];
+    [['w', lg.wir], ['g', lg.sie]].forEach(function (x) {
+      for (var i = 0; i < 4; i++) {
+        var k = x[0] + i, n = t.nm && t.nm['n' + k];
+        if (!x[1] || !x[1][i] || !ligaTagNmGueltig(t, k)) continue;
+        aus.push({ team: (x[0] === 'w') === !!lg.heim ? 'H' : 'G', nach: n.nach, vor: n.vor, u18: n.u18, g: n.g, unterschrift: n.unterschrift, id: x[1][i] });
+      }
+    });
+    return aus;
+  }
+  /* Beim Start vom anderen iPad fehlende volle Namen nicht noch einmal fordern. */
+  function ligaTagVollErsatz(t) {
+    var aus = {};
+    t.d.wir.forEach(function (id) { aus[id] = { vor: 'x', nach: 'x' }; });
+    return aus;
+  }
+  function ligaTagBeitreten() {
+    var t = ligaTagAktiv();
+    if (!t || !t.platz || ligaTagStartLaeuft) return;
+    ligaTagStartLaeuft = true;
+    ligaTagStartVersuch = Date.now();
+    ligaTagStartRuf(t, { geraet: ligaTagGeraet() });
+  }
+  function ligaTagStartRuf(t, body) {
+    ligaTagAnfrage(t.id + '/start', body).then(function (r) {
+      ligaTagStartLaeuft = false;
+      if (S.ligaTag !== t || !r || !r.turnier) return;
+      ligaTagInsSpiel(t, r.turnier);
+    }).catch(function (e) {
+      ligaTagStartLaeuft = false;
+      if (S.ligaTag !== t) return;
+      ligaTagStartScheitert(t, e);
+    });
+  }
+  function ligaTagStartScheitert(t, e) {
+    var grund = e && e.daten && e.daten.grund;
+    if (grund === 'kennung') { t.sid = null; save(); }        // verbraucht: beim naechsten Mal eine neue
+    t.startFehler = e && e.status && e.status < 500 && !grund ? (e.status === 401 ? 'Nicht mehr angemeldet. Bitte unter Profil neu anmelden.' : e.message || 'Der Server lehnt ab.') : '';
+    if (!e || !e.status || e.status >= 500 || t.startFehler) {
+      if (!UI.overlay || ligaTagVon(UI.overlay)) { UI.overlay = { type: 'ligatag-hinweis', art: 'netz' }; render(); }
+      return;
+    }
+    if (grund) ligaTagAbgleich();
+    if (ligaTagVon(UI.overlay)) {
+      UI.overlay.fehler = e.message || 'Das hat nicht geklappt.';
+      if (grund === 'gespielt') UI.overlay.nochmal = true;
+      render();
+    }
+  }
+  /* Das geteilte Ligaspiel uebernehmen und an der eigenen Scheibe oeffnen. */
+  function ligaTagInsSpiel(t, daten) {
+    /* Zwischen Anfrage und Antwort etwas anderes begonnen: nichts wegwerfen,
+       der Takt steigt ein, sobald hier frei ist. */
+    var dialog = UI.overlay && !ligaTagVon(UI.overlay) && UI.overlay.type !== 'ligatag-hinweis';
+    if (ligaTagTurnierOffen() || (S.game && !S.game.done) || dialog) {
+      t.turnier = daten.id; save();
+      if (!dialog) { UI.overlay = null; ligaTagHinweis(ligaTagTurnierOffen() ? 'turnier' : 'jetzt'); render(); }
+      return;
+    }
+    var platz = t.platz || 'S1';
+    if (S.game) { archiveGame(S.game); S.game = null; }
+    if (S.matches.length) archiveTournament();
+    S.tour = null; S.matches = []; S.current = null;
+    delete S.ligaTag;
+    UI.overlay = null; UI.darts = []; UI.input = '';
+    uebernehmeTurnier(daten, true);
+    if (!S.tour) { save(); render(); return; }
+    S.tour.meineScheibe = platz;
+    var lg = S.tour.liga;
+    if (lg && Array.isArray(lg.wir)) S.lineup = lg.wir.slice(0, 4);
+    /* Erst nach dem Start unterschrieben (das andere iPad war schneller):
+       die Unterschrift kommt ins laufende Spiel. */
+    if (lg) {
+      var neu = ligaTagUnterschriften(t, lg).filter(function (n) {
+        return ligaTyp(lg, n.id) === 'neu' && !(lg.nachmeldungen || []).some(function (x) { return x.id === n.id; });
+      });
+      if (neu.length) { lg.nachmeldungen = (lg.nachmeldungen || []).concat(neu); geteiltenPlanSenden(); }
+    }
+    S.screen = 'tournament';
+    save(); render();
+    ligaTagErstesEinzel(platz);
+  }
+  function ligaTagErstesEinzel(platz) {
+    if (!S.tour || !S.tour.liga || S.tour.liga.nurErgebnis) return;
+    if (S.matches.some(function (m) { return m.done && m.scheibe === platz; })) return;
+    var m = S.matches.filter(function (x) { return x.scheibe === platz && !x.done && !x.void; })[0];
+    if (m && !m.belegtVon) openMatch(m.id);
+  }
+  /* Der Knopf im Hinweis um 20:00: laufendes Spiel ablegen und wechseln. */
+  function ligaTagWechseln() {
+    var t = ligaTagAktiv(), g = S.game;
+    UI.overlay = null;
+    if (!t) { render(); return; }
+    if (ligaTagTurnierOffen()) { UI.overlay = { type: 'ligatag-hinweis', art: 'turnier' }; render(); return; }
+    if (g) {
+      if (g.done) archiveGame(g);
+      else {
+        liveEnde(g, true);      // kein Wiederbeleben mitten im Ligaspiel
+        if (g.kind === 'quick' && (g.session || entschiedeneLegs(g))) archiveGame(g, true);
+      }
+      S.game = null;
+    }
+    UI.darts = []; UI.input = '';
+    S.screen = 'setup';
+    save();
+    if (t.turnier) { render(); ligaTagBeitreten(); return; }
+    if (ligaTagAlleBereit(t)) { render(); if (ligaTagGeteilt()) ligaTagStarten(true); else ligaTagAlleinStarten(t); return; }
+    ligaTagOeffnen(ligaTagTermin(t.terminId));
+  }
+  /* Ohne Konto: auf diesem einen Geraet. */
+  function ligaTagAlleinStarten(t) {
+    UI.overlay = { type: 'liga-start', termin: ligaTagTermin(t.terminId), draft: t.d, tag: true };
+    t.d.geteilt = false;
+    ligaSpielStarten();
+    if (!S.tour || !S.tour.liga) return;
+    ligaTagAbmelden();      // der Haken am Server faellt, sobald Netz da ist
+    delete S.ligaTag;
+    save();
+    if (!UI.overlay) { var m = nextOpenMatch(); if (m && !S.tour.liga.nurErgebnis) openMatch(m.id); }
+  }
+  /* Kein Netz zum Start: bewusst nur auf diesem Geraet (das andere iPad
+     kann dann nicht einsteigen). */
+  function ligaTagNurHier() {
+    var t = ligaTagAktiv();
+    if (!t) return;
+    if (ligaTagTurnierOffen()) { UI.overlay = { type: 'ligatag-hinweis', art: 'turnier' }; render(); return; }
+    if (S.game && !S.game.done) { UI.overlay = { type: 'ligatag-hinweis', art: 'jetzt' }; render(); return; }
+    ligaTagAlleinStarten(t);
+  }
+  function ligaTagHinweis(art) {
+    var t = ligaTagAktiv();
+    if (!t || UI.overlay || UI.menu) return;
+    /* Nie mitten in eine Eingabe hinein. */
+    if (UI.input || UI.darts.length || Date.now() - ligaTagGetippt < 3000) return;
+    if (Date.now() < (t.ruheBis || 0)) return;
+    t.ruheBis = Date.now() + 120000;
+    UI.overlay = { type: 'ligatag-hinweis', art: art };
+    render();
+  }
+
+  /* Jede Sekunde, aber nur an einem vorbereiteten Ligatag. */
+  function ligaTagTakt() {
+    var t = S.ligaTag;
+    if (!t || document.hidden || gesperrt()) return;
+    if (t.tag !== ligaHeuteIso() || S.history.some(function (h) { return h.liga && !h.liga.uebung && h.liga.abgeschlossen && h.liga.terminId === t.terminId; }) || (S.tour && S.tour.liga && !S.tour.liga.uebung && S.tour.liga.terminId === t.terminId)) {
+      delete S.ligaTag; save();
+      if (UI.overlay && (UI.overlay.type === 'liga-start' || UI.overlay.type === 'ligatag-hinweis')) {
+        if (UI.overlay.type === 'ligatag-hinweis') UI.overlay = null;
+        render();
+      }
+      return;
+    }
+    if (!ligaTagKontoPruefen(t)) return;
+    var jetzt = Date.now(), offen = !!ligaTagVon(UI.overlay);
+    /* Getipptes festhalten (die Felder selbst speichern nicht bei jeder Taste). */
+    if (offen) {
+      var stand = JSON.stringify(t.d);
+      if (stand !== ligaTagGemerkt) { if (ligaTagGemerkt) save(); ligaTagGemerkt = stand; }
+    }
+    if (ligaTagNeu) ligaTagZeichnen();
+    if (ligaTagOnline() && !ligaTagRuf && !ligaTagStartLaeuft) {
+      var dreckig = t.geholt && t.platz && jetzt - ligaTagGetippt > 700 && ligaTagGeaendert(t).length > 0;
+      if ((dreckig && jetzt - ligaTagLetzter > (t.ohneNetz || t.stoerung ? 5000 : 900)) ||
+          jetzt - ligaTagLetzter > (offen || Math.abs(ligaTagAnpfiff(t) - ligaTagJetzt()) < 600000 ? 4000 : 10000)) ligaTagAbgleich();
+    }
+    var uhr = document.querySelectorAll('[data-tag-uhr]');
+    for (var i = 0; i < uhr.length; i++) {
+      var txt = ligaTagUhrText(t);
+      if (uhr[i].textContent !== txt) uhr[i].textContent = txt;
+    }
+    if (!ligaTagVorbei && ligaTagJetzt() >= ligaTagAnpfiff(t)) { ligaTagVorbei = true; ligaTagZeichnen(); }
+    ligaTagUhr(t, ligaTagJetzt());
+  }
+  var ligaTagVorbei = false;
+  function ligaTagUhr(t, jetzt) {
+    if (ligaTagStartLaeuft || Date.now() - ligaTagStartVersuch < 8000) return;
+    var turnier = ligaTagTurnierOffen();
+    /* Hinter 'keine Verbindung' und 'es fehlt noch Bereit' geht es von selbst weiter. */
+    var weicherHinweis = UI.overlay && UI.overlay.type === 'ligatag-hinweis' && UI.overlay.art !== 'jetzt' && UI.overlay.art !== 'turnier';
+    var frei = !S.game && !turnier && (!UI.overlay || weicherHinweis || ligaTagVon(UI.overlay)) && S.screen !== 'bulloff' &&
+      !SPIEL_SCREENS[S.screen] && !(S.matches.length && (S.screen === 'tournament' || S.screen === 'winner'));
+    var art = turnier ? 'turnier' : 'jetzt';
+    var geteilt = ligaTagGeteilt();
+    if (geteilt && t.turnier) {              // laeuft schon (das andere iPad hat gestartet)
+      if (!t.platz || !ligaTagOnline()) return;
+      if (frei) ligaTagBeitreten(); else ligaTagHinweis(art);
+      return;
+    }
+    var anpfiff = ligaTagAnpfiff(t);
+    if (jetzt < anpfiff) return;
+    if (geteilt) {
+      if (!t.platz) return;                  // ein Handy, das nur nachschaut
+      /* Nie aus altem Stand: erst muss der Server geantwortet haben. */
+      if (!ligaTagOnline() || Date.now() - ligaTagFrisch > 9000) {
+        if (jetzt > anpfiff + 15000 && Date.now() - Math.max(ligaTagFrisch, ligaTagSeit) > 15000) ligaTagHinweis('netz');
+        return;
+      }
+    }
+    if (ligaTagAlleBereit(t)) {
+      if (!frei) { ligaTagHinweis(art); return; }
+      if (!geteilt) { ligaTagAlleinStarten(t); return; }
+      /* Scheibe 1 startet; Scheibe 2 springt ein, wenn von dort nichts kommt. */
+      if (t.platz === 'S2' && ligaTagZuZweit(t) && jetzt < anpfiff + 10000) return;
+      ligaTagStarten(true);
+      return;
+    }
+    if (t.gespielt && !t.bereit) return;     // heute schon gespielt: nicht weiter erinnern
+    if (!ligaTagVon(UI.overlay)) ligaTagHinweis(turnier ? 'turnier' : t.bereit ? 'warten' : 'fehlt');
+  }
+  var ligaTagSeit = Date.now();
+  setInterval(function () { if (S && S.ligaTag) ligaTagTakt(); if (S && S.ligaTagAb && !document.hidden) ligaTagAbmeldenSenden(); }, 1000);
+  document.addEventListener('input', function () { ligaTagGetippt = Date.now(); }, true);
+  document.addEventListener('keydown', function () { ligaTagGetippt = Date.now(); }, true);
+  document.addEventListener('focusin', function () { ligaTagFokus = Date.now(); }, true);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && S && S.ligaTag) { ligaTagSeit = Date.now(); ligaTagFrisch = 0; ligaTagAbgleich(); } });
+  window.addEventListener('online', function () { if (S && S.ligaTag) ligaTagAbgleich(); });
+
+  /* ---- Anzeige ---- */
+  function ligaTagUhrText(t) {
+    var s = Math.round((ligaTagAnpfiff(t) - ligaTagJetzt()) / 1000);
+    if (s <= 0) return '20:00';
+    var h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, zwei = function (n) { return ('0' + n).slice(-2); };
+    return (h ? h + ':' + zwei(m) : m) + ':' + zwei(s % 60);
+  }
+  function ligaTagZeileHtml() {
+    var heute = ligaHeuteIso();
+    var termin = LIGA.termine.filter(function (x) { return x.tag === heute && x.gast; })[0];
+    if (!termin || ichBinGastKonto() || S.matches.length || ligaTerminBelegt(termin)) return '';
+    var t = ligaTagAktiv();
+    var fremd = ligaLiveFremd();
+    if (fremd && !(t && t.platz)) return '';
+    return '<div class="beitreten-zeile">' +
+      '<div class="who"><div class="nm">' + esc(termin.heim) + ' – ' + esc(termin.gast) + '</div>' +
+      '<div class="sm">' + termin.nr + '. Spieltag · 20:00 Uhr' + (t && ligaTagJetzt() < ligaTagAnpfiff(t) ? ' · noch <span data-tag-uhr>' + ligaTagUhrText(t) + '</span>' : '') +
+        (t && t.platz ? ' · Scheibe ' + t.platz.charAt(1) + (t.bereit ? ' bereit' : ' noch nicht bereit') : '') + '</div></div>' +
+      '<button class="btn ' + (t && t.bereit ? 'ghost' : 'primary') + ' small" data-action="tag-oeffnen" data-id="' + esc(termin.id) + '">Game Day</button>' +
+      '</div>';
+  }
+  function ligaTagHtml(o, gegnerTeam) {
+    var t = S.ligaTag, d = t.d, lt = o.termin, online = ligaTagGeteilt();
+    var teile = ligaTagTeile(t), zuZweit = ligaTagZuZweit(t);
+    var vorbei = ligaTagJetzt() >= ligaTagAnpfiff(t);
+    var status, offenSeite = t.bereit && online ? ligaTagOffeneSeite(t) : null;
+    if (ligaTagStartLaeuft) status = 'Das Ligaspiel startet …';
+    else if (t.stoerung) status = t.stoerung;
+    else if (t.turnier) status = t.platz ? 'Das Ligaspiel läuft, dieses iPad steigt ein …' : 'Das Ligaspiel läuft schon. Zum Mitschreiben eine Scheibe wählen.';
+    else if (online && !t.geholt) status = t.ohneNetz ? 'Keine Verbindung. Eintragen geht, abgeglichen wird, sobald das Netz da ist.' : 'Wird geladen …';
+    else if (t.ohneNetz) status = 'Keine Verbindung zum Server. Eingetragenes wird nachgereicht.';
+    else if (online && !t.platz) status = 'An welcher Scheibe steht dieses iPad? Scheibe 1 trägt uns ein, Scheibe 2 den Gegner.';
+    else if (!t.bereit) status = vorbei ? '20:00 Uhr: Bitte Aufstellung fertig machen und „Bereit“ tippen.' : 'Spieler eintragen, dann „Bereit“ tippen.';
+    else if (zuZweit && !t.plaetze[ligaTagAndere(t)].bereit) status = (vorbei ? '20:00 Uhr: ' : 'Bereit. ') + 'Es fehlt noch Scheibe ' + ligaTagAndere(t).charAt(1) + '.';
+    else if (offenSeite) status = 'Die Aufstellung ' + (offenSeite === 'wir' ? 'von ' + LIGA.team : 'von ' + gegnerTeam) + ' hat noch niemand mit „Bereit“ bestätigt.';
+    else status = 'Bereit. Um 20:00 Uhr startet das erste Einzel von selbst, bis dahin könnt ihr einwerfen.';
+    var platz = function (s) {
+      var p = t.plaetze && t.plaetze[s], verb = ligaTagVerbunden(t)[s === 'S1' ? 0 : 1];
+      var text = !p ? 'frei' : p.meiner ? 'dieses iPad' : (p.name ? 'iPad von ' + p.name : 'anderes iPad') + (verb === 2 ? ' · nicht erreichbar' : '');
+      var knopf = p && p.meiner ? '' : '<button type="button" class="btn small ' + (t.platz ? 'ghost' : 'hell') + '" data-action="tag-platz" data-value="' + s + '">' +
+        (p && !t.platz ? (t.frage === s ? 'Wirklich übernehmen?' : 'Übernehmen') : t.platz ? (p ? 'Tauschen' : 'Hierhin wechseln') : 'Hier stehe ich') + '</button>';
+      return '<div class="lt-platz' + (p && p.meiner ? ' meiner' : '') + (p && p.bereit ? ' bereit' : '') + '">' +
+        '<div><b>Scheibe ' + s.charAt(1) + '</b><small>' + esc(text) + '</small></div>' +
+        (p ? '<span class="lt-marke">' + (p.bereit ? 'bereit' : 'trägt ein') + '</span>' : '') + knopf + '</div>';
+    };
+    var liste = function (namen, typen, unterschriften) {
+      return '<ol class="lt-liste">' + [0, 1, 2, 3].map(function (i) {
+        var typ = (typen || [])[i] || '';
+        return '<li><span>' + (namen[i] ? esc(namen[i]) : '<i>noch offen</i>') + '</span>' +
+          (typ ? '<small class="ls-marke ' + typ + '">' + (typ === 'neu' && unterschriften[i] ? 'neu, unterschrieben' : LIGA_TYP_TEXT[typ]) + '</small>' : '') + '</li>';
+      }).join('') + '</ol>';
+    };
+    var fest = t.bereit || (online && !t.platz) || !!t.turnier;
+    var unterschrieben = function (x) { return [0, 1, 2, 3].map(function (i) { return ligaTagNmGueltig(t, x + i); }); };
+    var umschalten = function (seite) {
+      return !fest && zuZweit ? '<button type="button" class="dl-link" data-action="tag-seite" data-value="' + seite + '">Hier eintragen</button>' : '';
+    };
+    var wirHtml = !fest && teile.wir ? ligaWirFelderHtml(d)
+      : '<div class="ls-titel">' + esc(LIGA.team) + umschalten('wir') + '</div>' +
+        liste([0, 1, 2, 3].map(function (i) { var id = d.wir[i]; return !id ? '' : id === '__name' ? ligaWirVoll(d, i) : ligaName(id); }), d.wirTyp, unterschrieben('w'));
+    var sieHtml = !fest && teile.gegner ? ligaGegnerFelderHtml(gegnerTeam, d)
+      : '<div class="ls-titel">' + esc(gegnerTeam) + umschalten('gegner') + '</div>' +
+        liste([0, 1, 2, 3].map(function (i) { return ligaGegnerVoll(d, i); }), d.gegnerTyp, unterschrieben('g'));
+    return '<div class="lt-kopf"><div><h3>Game Day</h3>' +
+        '<p>' + lt.nr + '. Spieltag · ' + esc(lt.heim) + ' vs ' + esc(lt.gast) + (lt.ort ? ' · ' + esc(lt.ort) : '') + '</p></div>' +
+        '<div class="lt-uhr' + (vorbei ? ' vorbei' : '') + '"><b data-tag-uhr>' + ligaTagUhrText(t) + '</b><small>' + (vorbei ? 'Anwurf' : 'bis zum Anwurf um 20:00') + '</small></div></div>' +
+      '<p class="lt-status" role="status">' + esc(status) + '</p>' +
+      (o.fehler ? '<p class="edit-error" role="alert">' + esc(o.fehler) + '</p>' : '') +
+      (online ? '<div class="lt-plaetze">' + platz('S1') + platz('S2') + '</div>' : '') +
+      '<div class="liga-start lt-spalten"><div>' + wirHtml + '</div><div>' + sieHtml + '</div></div>' +
+      '<button type="button" class="dl-link lt-opt-knopf" data-action="tag-optionen" aria-expanded="' + !!o.optionen + '">' +
+        (o.optionen ? 'Einstellungen zuklappen' : 'Einstellungen: Best of ' + d.bestOf + ', ' + (d.finish ? 'mit' : 'ohne') + ' Finish-Anzeigen' + (d.nurErgebnis ? ', nur Ergebnisse' : '')) + '</button>' +
+      (o.optionen ? '<div class="liga-start' + (fest ? ' lt-fest' : '') + '">' + ligaOptionenHtml(d) + '</div>' : '') +
+      '<div class="lt-knoepfe">' +
+        '<button class="btn ghost" data-action="tag-zu">Zurück</button>' +
+        (t.bereit ? '<button class="btn ghost" data-action="tag-zu" data-spiel="1">Einwerfen, freies Spiel</button>' +
+            '<button class="btn ghost" data-action="tag-aendern">Aufstellung ändern</button>'
+          : !fest ? '<button class="btn primary start" data-action="tag-bereit">Bereit</button>' : '') +
+        (!online || t.platz ? '<button class="btn ' + (ligaTagAlleBereit(t) ? 'primary start' : 'ghost') + '" data-action="liga-los">' + (ligaTagAlleBereit(t) ? 'GAME ON!' : 'Sofort starten') + '</button>' : '') +
+      '</div>' +
+      (t.platz ? '<p class="lt-verlassen"><button type="button" class="dl-link" data-action="tag-verlassen">Dieses iPad von der Scheibe abmelden</button></p>' : '');
+  }
+  function ligaTagHinweisHtml(o) {
+    var t = S.ligaTag, g = S.game;
+    if (!t) return '<p>Der Game Day ist vorbei.</p><button class="btn primary full" data-action="ov-cancel">Schließen</button>';
+    if (o.art === 'netz') {
+      return '<h3>' + (t.startFehler || t.stoerung ? 'Das Ligaspiel startet nicht' : 'Keine Verbindung') + '</h3><p>' + (t.startFehler || t.stoerung ? esc(t.startFehler || t.stoerung) + ' ' : 'Das Ligaspiel kann gerade nicht für beide iPads starten. Am besten kurz warten, es wird von selbst weiter versucht. ') +
+        'Nur auf diesem iPad heißt: Das andere kann nicht mitschreiben (dort dann bitte nicht starten), und es gibt keinen Live-Ticker.</p>' +
+        '<div class="row-btns two"><button class="btn hell" data-action="ov-cancel">Weiter versuchen</button>' +
+        '<button class="btn ghost" data-action="tag-nur-hier">Nur auf diesem iPad</button></div>';
+    }
+    if (o.art === 'turnier') {
+      return '<h3>Ligaspiel startet</h3><p>Hier läuft noch ein Turnier. Bitte erst abschließen oder beenden, dann steigt dieses iPad in das Ligaspiel ein.</p>' +
+        '<button class="btn primary full" data-action="ov-cancel">Verstanden</button>';
+    }
+    if (o.art === 'fehlt' || o.art === 'warten') {
+      return '<h3>20:00 Uhr</h3><p>' + (o.art === 'fehlt' ? 'Für das Ligaspiel fehlt an diesem iPad noch „Bereit“.' : ligaTagZuZweit(t) && !t.plaetze[ligaTagAndere(t)].bereit ? 'Das andere iPad ist noch nicht bereit.' : 'Eine Aufstellung hat noch niemand mit „Bereit“ bestätigt.') + '</p>' +
+        '<div class="row-btns two"><button class="btn ghost" data-action="ov-cancel">Gleich</button>' +
+        (g && !g.done ? '<button class="btn hell" data-action="tag-wechseln">Spiel beenden und hin</button>'
+          : '<button class="btn hell" data-action="tag-oeffnen">Zum Game Day</button>') + '</div>';
+    }
+    var legs = g && g.kind === 'quick' && (g.session || entschiedeneLegs(g));
+    return '<h3>Das Ligaspiel startet</h3><p>' + (!g ? 'Ein Tipp öffnet das erste Einzel an dieser Scheibe.'
+        : g.done ? 'Das fertige Spiel wird gespeichert.'
+        : legs ? 'Das laufende Spiel endet, die fertigen Legs werden gespeichert.'
+        : 'Das laufende Spiel ist noch nicht entschieden und wird nicht gespeichert.') + '</p>' +
+      '<div class="row-btns two"><button class="btn ghost" data-action="ov-cancel">Noch fertig spielen</button>' +
+      '<button class="btn hell" data-action="tag-wechseln">Zum Ligaspiel</button></div>';
   }
 
   /* Gegner-Gast finden oder anlegen: Wiederverwendung per Namensgleichheit,
@@ -26639,6 +27485,61 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           'value="' + esc((d.gegnerNach || [])[i] || '') + '" placeholder="Nachname">' +
           '</span>' + ligaTypKnopfHtml('gegner', i, (d.gegnerTyp || [])[i]) + '</div>';
       }).join('');
+  }
+  /* Unsere vier Positionen und die Einstellungen des Ligaspiels - im
+     Nachtrag (Vollbild-Dialog) und im Game Day dieselben. */
+  function ligaWirFelderHtml(ld) {
+    var ltProfile = ligaKader();
+    return '<div class="ls-titel">Unsere Positionen</div>' +
+          [0, 1, 2, 3].map(function (i) {
+            /* "Anderer Name": jemand ohne Konto - Gastspieler oder neu zu
+               melden - mit Vor- und Nachname darunter (Julius, 11.11.). */
+            var ltName = ld.wir[i] === '__name';
+            var ltN = (ld.wirNamen || [])[i] || {};
+            /* Kein voller Name hinterlegt: hier gleich nachtragen. */
+            var ltOhne = ltProfile.filter(function (p) { return p.id === ld.wir[i] && vollFehlt(p); })[0];
+            return '<div class="ls-zeile"><span>' + (i + 1) + '</span>' +
+              '<select data-role="liga-pos" data-i="' + i + '">' +
+              ltProfile.map(function (p) {
+                return '<option value="' + p.id + '"' + (ld.wir[i] === p.id ? ' selected' : '') + '>' +
+                  esc(p.voll || p.name) + '</option>';
+              }).join('') +
+              '<option value="__name"' + (ltName ? ' selected' : '') + '>Anderer Name (Gast oder neu) …</option>' +
+              '</select>' + ligaTypKnopfHtml('wir', i, (ld.wirTyp || [])[i]) + '</div>' +
+              (ltName
+                ? '<div class="ls-zeile ls-unter"><span></span><span class="namen-paar">' +
+                  '<input data-role="liga-wir-vor" data-i="' + i + '" maxlength="30" autocomplete="off" value="' + esc(ltN.vor || '') + '" placeholder="Vorname">' +
+                  '<input data-role="liga-wir-nach" data-i="' + i + '" maxlength="30" autocomplete="off" value="' + esc(ltN.nach || '') + '" placeholder="Nachname">' +
+                  '</span></div>'
+                : ltOhne
+                  ? '<div class="ls-zeile ls-unter"><span></span><span class="namen-paar">' + vollFelderHtml(ltOhne, ld) + '</span></div>'
+                  : '');
+          }).join('') +
+          (ltProfile.some(function (p) { return vollFehlt(p) && ld.wir.slice(0, 4).indexOf(p.id) >= 0; })
+            ? '<p class="hint">Voller Name fehlt: Vor- und Nachnamen unter dem Spieler eintragen, er wird in seinem Profil gespeichert.</p>' : '') +
+          '<p class="hint">Status antippen: <b>gemeldet</b> → <b>Gastspieler</b> (nicht gemeldet; höchstens einer je Team und Spiel, ab dem dritten Einsatz nachmelden) → ' +
+            '<b>neu melden</b> (Nachmeldung mit Unterschrift ' + (ligaTagAktiv() && ld === S.ligaTag.d ? 'bei „Bereit“' : 'gleich nach dem Start') + ', 10 €, U18 2 €). Gilt für beide Teams.</p>';
+  }
+  function ligaOptionenHtml(ld) {
+    return '<div class="ls-titel">Legs je Einzel</div>' +
+          '<div class="options">' +
+            '<button data-action="liga-bestof" data-value="3" class="' + (ld.bestOf === 3 ? 'active' : '') + '">Best of 3</button>' +
+            '<button data-action="liga-bestof" data-value="5" class="' + (ld.bestOf === 5 ? 'active' : '') + '">Best of 5</button>' +
+          '</div>' +
+          '<div class="ls-titel">Finish-Anzeigen</div>' +
+          '<div class="options">' +
+            '<button data-action="liga-finish" data-value="0" class="' + (ld.finish ? '' : 'active') + '">ohne</button>' +
+            '<button data-action="liga-finish" data-value="1" class="' + (ld.finish ? 'active' : '') + '">mit</button>' +
+          '</div>' +
+          '<p class="hint">Ohne ist Liga-konform: Der Schreiber darf das benötigte Doppel ' +
+            'nicht ansagen (WDF 3.08) – die App zeigt dann keine Finish-Wege.</p>' +
+          '<div class="ls-titel">Mitschreiben</div>' +
+          '<div class="options">' +
+            '<button data-action="liga-mitschreiben" data-value="0" class="' + (ld.nurErgebnis ? '' : 'active') + '">in der App</button>' +
+            '<button data-action="liga-mitschreiben" data-value="1" class="' + (ld.nurErgebnis ? 'active' : '') + '">nur Ergebnisse</button>' +
+          '</div>' +
+          '<p class="hint">Nur Ergebnisse: Der Gegner zählt mit seinem System, wir tragen je Einzel nur ' +
+            'den Leg-Stand ein – Siege und Legs zählen, Average und Highlights gibt es dann nicht.</p>';
   }
   /* Der naechste Spieltag mit Datum ab heute (heute selbst eingeschlossen). */
   function ligaNaechsterTermin() {
@@ -28033,26 +28934,18 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         /* Ein laufendes Turnier oder Spiel wird nicht kommentarlos ersetzt –
            ein fertiges, nur noch nicht gespeichertes darf aber weichen, das
            archiviert ligaSpielStarten() von selbst. */
-        if ((S.game && !S.game.done) || (S.matches.length && !allMatchesDone())) {
+        var lsTermin = null;
+        LIGA.termine.forEach(function (t) { if (t.id === el.getAttribute('data-id')) lsTermin = t; });
+        if (!lsTermin || !lsTermin.tag) break;
+        /* Game Day: vorbereiten geht auch neben einem laufenden Schnellen Spiel. */
+        var lsTag = lsTermin.tag === ligaHeuteIso();
+        if ((S.game && !S.game.done && !lsTag) || (S.matches.length && !allMatchesDone())) {
           UI.overlay = { type: 'hinweis', text: 'Es läuft noch ein Spiel oder Turnier – bitte erst abschließen oder beenden.' };
           render();
           break;
         }
-        var lsTermin = null;
-        LIGA.termine.forEach(function (t) { if (t.id === el.getAttribute('data-id')) lsTermin = t; });
-        if (!lsTermin || !lsTermin.tag) break;
-        /* Aufstellung vorbelegen: erst die Zusagen des Spieltags, dann die
-           übrigen Profile, bis vier Positionen stehen. Nur aktive Profile –
-           eine versteckte Kennung stünde sonst unsichtbar im Entwurf, während
-           die Auswahl einen ganz anderen Namen anzeigt. */
-        var lsAktive = ligaKader();
-        var lsVorschlag = ((ligaZusagen && ligaZusagen[lsTermin.id]) || [])
-          .filter(function (p) { return (p.status || 'dabei') === 'dabei'; })
-          .map(function (p) { return p.id; })
-          .filter(function (id) { return lsAktive.some(function (p) { return p.id === id; }); });
-        lsAktive.forEach(function (p) {
-          if (lsVorschlag.length < 4 && lsVorschlag.indexOf(p.id) < 0) lsVorschlag.push(p.id);
-        });
+        if (lsTag) { ligaTagOeffnen(lsTermin); break; }
+        var lsVorschlag = ligaAufstellungVorschlag(lsTermin);
         /* Ein vergangener Spieltag wird nachgetragen: dann sind "nur
            Ergebnisse" die Voreinstellung - gespielt wurde ja schon. */
         var lsNachtrag = lsTermin.tag < ligaHeuteIso();
@@ -28085,7 +28978,41 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         }
         break;
       case 'liga-los':
-        ligaSpielStarten();
+        if (ligaTagVon(UI.overlay)) ligaTagLos(); else ligaSpielStarten();
+        break;
+      case 'tag-oeffnen': {
+        var toT = ligaTagTermin(el.getAttribute('data-id') || (S.ligaTag && S.ligaTag.terminId));
+        if (toT && !ichBinGastKonto()) ligaTagOeffnen(toT);
+        break;
+      }
+      case 'tag-zu':
+        UI.overlay = null;
+        if (el.getAttribute('data-spiel') === '1') S.screen = 'setup';
+        save(); render();
+        break;
+      case 'tag-verlassen':
+        ligaTagVerlassen();
+        break;
+      case 'tag-platz':
+        ligaTagPlatz(el.getAttribute('data-value'));
+        break;
+      case 'tag-seite':
+        if (S.ligaTag) { S.ligaTag.seite = el.getAttribute('data-value') === 'gegner' ? 'gegner' : 'wir'; save(); render(); }
+        break;
+      case 'tag-optionen':
+        if (UI.overlay) { UI.overlay.optionen = !UI.overlay.optionen; render(); }
+        break;
+      case 'tag-bereit':
+        ligaTagBereit();
+        break;
+      case 'tag-aendern':
+        ligaTagNichtBereit();
+        break;
+      case 'tag-wechseln':
+        ligaTagWechseln();
+        break;
+      case 'tag-nur-hier':
+        ligaTagNurHier();
         break;
       case 'liga-gegner-kader': {
         /* Kader-Chip: in die naechste freie Gegner-Zeile, oder wieder raus. */
@@ -28523,6 +29450,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         kaiwenBeenden();
         break;
       case 'ov-cancel':
+        /* Game Day: "Spaeter" bei einer Unterschrift fuehrt zurueck in die Aufstellung. */
+        if (UI.overlay && UI.overlay.type === 'nachmeldung' && UI.overlay.draft.tag) { ligaTagSpaeter(UI.overlay.draft.tag); break; }
         UI.overlay = null; UI.input = ''; render();
         break;
       case 'ov-new-tournament':
@@ -29354,6 +30283,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         if (!Array.isArray(lpD.wirTyp)) lpD.wirTyp = ['', '', '', ''];
         if (!lpD.wirTyp[lpI]) lpD.wirTyp[lpI] = 'gast';
       }
+      /* Game Day: die Auswahl gibt den Fokus ab, sonst wartet das Neuzeichnen. */
+      if (ligaTagVon(UI.overlay) && ev.target.blur) ev.target.blur();
       if (lpNeu) render();
     }
     if ((ev.target.getAttribute('data-role') === 'liga-wir-vor' || ev.target.getAttribute('data-role') === 'liga-wir-nach') && UI.overlay && UI.overlay.draft) {

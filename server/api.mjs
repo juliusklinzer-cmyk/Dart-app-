@@ -1330,6 +1330,265 @@ export function createApi(db, config) {
     sendJson(res, 200, { turnier: turnierAntwort(frisch, 0, u) });
   }
 
+  /* ---------- Liga-Tag (Game Day, DRT-080) ----------
+     Vor dem Ligaspiel richten zwei iPads gemeinsam die Aufstellung ein. Der
+     Server verwahrt die Felder (je Feld gewinnt der letzte Schreiber), weiss,
+     welches Geraet an welcher Scheibe steht, und sorgt dafuer, dass aus der
+     Vorbereitung genau EIN geteiltes Turnier wird - auch wenn beide Geraete
+     um 20:00 gleichzeitig starten. */
+  const LIGA_TAG_FRIST = 3 * TAG;
+  const LIGA_TAG_FELD = /^(?:[wg][0-3]|n[wg][0-3]|opt)$/;
+  const LIGA_TAG_SIGNATUR = /^data:image\/png;base64,[A-Za-z0-9+/]+=*$/;
+  /* Wann sich ein Geraet zuletzt gemeldet hat: nur im Speicher, sonst waere
+     jede Abfrage ein Schreibvorgang. */
+  const ligaTagGesehen = new Map();
+
+  function ligaTagText(v, max, was) {
+    const t = v === undefined || v === null ? '' : v;
+    if (typeof t !== 'string' || t.length > max) throw new HttpFehler(400, 'Game Day: ' + was + ' ist unbrauchbar.');
+    return t;
+  }
+  /* Nur bekannte Formen, in fester Reihenfolge - der Client vergleicht die
+     Werte als Text. */
+  function ligaTagWert(k, v) {
+    if (v === null) {
+      if (k[0] === 'n') return null;
+      throw new HttpFehler(400, 'Game Day: Feld ist unbrauchbar.');
+    }
+    if (!istObjekt(v)) throw new HttpFehler(400, 'Game Day: Feld ist unbrauchbar.');
+    if (k === 'opt') {
+      return { bestOf: v.bestOf === 5 ? 5 : 3, finish: !!v.finish, nurErgebnis: !!v.nurErgebnis };
+    }
+    if (k[0] === 'n') {
+      const bild = ligaTagText(v.unterschrift, 60 * 1024, 'Unterschrift');
+      if (!LIGA_TAG_SIGNATUR.test(bild)) throw new HttpFehler(400, 'Game Day: Unterschrift ist unbrauchbar.');
+      const pid = ligaTagText(v.pid, 64, 'Spieler');   // Konto-Spieler: haengt an der Kennung, nicht am Namen
+      if (pid && !/^[A-Za-z0-9_-]+$/.test(pid)) throw new HttpFehler(400, 'Game Day: Spieler ist unbrauchbar.');
+      return { pid, vor: ligaTagText(v.vor, 30, 'Vorname'), nach: ligaTagText(v.nach, 30, 'Nachname'),
+        u18: v.u18 === 'ja' ? 'ja' : 'nein', g: ['w', 'm', 'd'].includes(v.g) ? v.g : '', unterschrift: bild };
+    }
+    const typ = v.typ === 'gast' || v.typ === 'neu' ? v.typ : '';
+    const aus = { id: '', vor: ligaTagText(v.vor, 30, 'Vorname'), nach: ligaTagText(v.nach, 30, 'Nachname'), typ };
+    if (k[0] === 'w') {
+      aus.id = ligaTagText(v.id, 64, 'Spieler');
+      if (aus.id && !/^[A-Za-z0-9_-]+$/.test(aus.id)) throw new HttpFehler(400, 'Game Day: Spieler ist unbrauchbar.');
+      aus.name = ligaTagText(v.name, 60, 'Name');
+    }
+    return aus;
+  }
+
+  /* Wer darf: nur Mitglieder. Gast-Konten duerfen die buergerlichen Namen
+     nicht sehen. Testkonten haben ihren eigenen Liga-Tag - ein Probelauf
+     startet nie das echte Spiel. */
+  function ligaTagZugang(req, roh) {
+    pruefeHerkunft(req);
+    const u = verlangeNutzer(req);
+    if (u.gast_konto) throw new HttpFehler(403, 'Mit einem Gast-Konto kannst du Ligaspiele verfolgen, aber nicht vorbereiten.');
+    const m = /^(st\d{2})-(\d{4}-\d{2}-\d{2})$/.exec(String(roh || ''));
+    if (!m || !ligaTermine().some((t) => t && t.id === m[1])) throw new HttpFehler(404, 'Diesen Spieltag gibt es im Spielplan nicht.');
+    return { u, id: m[0] + (u.test ? '-test' : '') };
+  }
+  function ligaTagGeraet(wert) {
+    const g = String(wert || '');
+    if (!/^[A-Za-z0-9_-]{6,40}$/.test(g)) throw new HttpFehler(400, 'Game Day: Geraet ist unbrauchbar.');
+    return g;
+  }
+  function ligaTagZeile(id) {
+    const r = db.prepare('SELECT * FROM liga_tage WHERE id = ?').get(id);
+    return r
+      ? { id, stand: r.stand, felder: JSON.parse(r.felder), plaetze: JSON.parse(r.plaetze), turnierId: r.turnier_id }
+      : { id, stand: 0, felder: {}, plaetze: {}, turnierId: null };
+  }
+  function ligaTagSchreiben(t) {
+    db.prepare(
+      'INSERT INTO liga_tage (id, stand, felder, plaetze, turnier_id, updated_at) VALUES (?, ?, ?, ?, ?, ?)' +
+        ' ON CONFLICT(id) DO UPDATE SET stand = excluded.stand, felder = excluded.felder, plaetze = excluded.plaetze,' +
+        ' turnier_id = excluded.turnier_id, updated_at = excluded.updated_at'
+    ).run(t.id, t.stand, JSON.stringify(t.felder), JSON.stringify(t.plaetze), t.turnierId, new Date().toISOString());
+  }
+  function ligaTagTurnier(t) {
+    if (!t.turnierId) return null;
+    const z = db.prepare('SELECT * FROM tournaments WHERE id = ?').get(t.turnierId);
+    return z && z.status === 'offen' ? z : null;
+  }
+  function ligaTagAntwort(t, geraet, seit) {
+    const jetzt = Date.now();
+    const plaetze = {};
+    let meiner = null;
+    for (const s of ['S1', 'S2']) {
+      const p = t.plaetze[s];
+      if (!p) { plaetze[s] = null; continue; }
+      if (p.geraet === geraet) meiner = s;
+      const gesehen = ligaTagGesehen.get(t.id + ':' + p.geraet) || p.seit || 0;
+      const wer = db.prepare('SELECT display_name, real_name FROM users WHERE id = ?').get(p.user);
+      plaetze[s] = { meiner: p.geraet === geraet, bereit: !!p.bereit, teile: p.bereit ? p.teile || '' : '', alter: Math.max(0, jetzt - gesehen),
+        name: wer ? wer.real_name || wer.display_name : '' };
+    }
+    const felder = {};
+    /* Unterschriften nur an die beiden iPads, nicht an Handys, die nachschauen. */
+    for (const k of Object.keys(t.felder)) {
+      if (t.felder[k].s > seit && (k[0] !== 'n' || meiner)) felder[k] = t.felder[k].v;
+    }
+    const turnier = ligaTagTurnier(t);
+    return { id: t.id, stand: t.stand, felder, plaetze, meiner, turnier: turnier ? turnier.id : null, gespielt: !!t.turnierId && !turnier, jetzt };
+  }
+
+  /* Ein Aufruf fuer alles: melden, Platz nehmen, bereit, Felder schreiben -
+     und als Antwort alles, was seit `seit` neu ist. */
+  async function ligaTagAbgleich(req, res, roh) {
+    const { u, id } = ligaTagZugang(req, roh);
+    const body = await leseJson(req, 600 * 1024);
+    const geraet = ligaTagGeraet(body.geraet);
+    const warte = limit.pruefe('liga-tag:' + u.id, 6000, 3600e3);
+    if (warte) throw new HttpFehler(429, 'Bitte etwas langsamer.');
+    limit.zaehle('liga-tag:' + u.id, 6000, 3600e3);
+    const lesen = (roh) => {
+      const aus = {};
+      if (roh === undefined) return aus;
+      if (!istObjekt(roh)) throw new HttpFehler(400, 'Game Day: Felder sind unbrauchbar.');
+      for (const k of Object.keys(roh)) {
+        if (!LIGA_TAG_FELD.test(k)) throw new HttpFehler(400, 'Game Day: Feld ist unbrauchbar.');
+        aus[k] = ligaTagWert(k, roh[k]);
+      }
+      return aus;
+    };
+    /* `felder`: hier eingetragen, der letzte Schreiber gewinnt. `vorschlag`:
+       nur die Vorbelegung eines Geraets - gilt nur, wo noch nichts steht. */
+    const neu = lesen(body.felder), vorschlag = lesen(body.vorschlag);
+    const wahl = body.platz === 'S1' || body.platz === 'S2' ? body.platz : body.platz === 'keiner' ? 'keiner' : null;
+    let t, belegt = false;
+    transaktion(db, function () {
+      t = ligaTagZeile(id);
+      let anders = false;
+      if (!t.stand && Object.keys(neu).length) {
+        db.prepare('DELETE FROM liga_tage WHERE updated_at < ?').run(new Date(Date.now() - LIGA_TAG_FRIST).toISOString());
+      }
+      const meiner = ['S1', 'S2'].find((s) => t.plaetze[s] && t.plaetze[s].geraet === geraet) || null;
+      if (wahl === 'keiner') {
+        if (meiner) { delete t.plaetze[meiner]; anders = true; }
+      } else if (wahl && wahl !== meiner) {
+        const anderer = t.plaetze[wahl];
+        if (anderer && !body.uebernehmen) belegt = true;
+        else {
+          const eigen = meiner ? t.plaetze[meiner] : { geraet, user: u.id, bereit: false, seit: Date.now() };
+          /* Wer schon an der anderen Scheibe steht, tauscht. */
+          if (meiner) { if (anderer) t.plaetze[meiner] = anderer; else delete t.plaetze[meiner]; }
+          eigen.user = u.id;
+          t.plaetze[wahl] = eigen;
+          anders = true;
+        }
+      }
+      const jetztMeiner = ['S1', 'S2'].find((s) => t.plaetze[s] && t.plaetze[s].geraet === geraet) || null;
+      /* Laeuft das Spiel schon, gibt es kein "Bereit" und keine Unterschriften
+         mehr: der Haken startete spaeter ein verworfenes Spiel neu, die
+         Unterschrift bliebe hier liegen (sie gehoert jetzt ins Spiel). */
+      const laeuft = !!ligaTagTurnier(t);
+      /* Schreiben darf nur, wer an einer Scheibe steht - ein Handy, das nur
+         nachschaut, veraendert nichts. */
+      if (jetztMeiner) {
+        const schreiben = {};
+        for (const k of Object.keys(vorschlag)) if (!t.felder[k]) schreiben[k] = vorschlag[k];
+        for (const k of Object.keys(neu)) {
+          if (!t.felder[k] || JSON.stringify(t.felder[k].v) !== JSON.stringify(neu[k])) schreiben[k] = neu[k];
+        }
+        if (laeuft) for (const k of Object.keys(schreiben)) if (k[0] === 'n') delete schreiben[k];
+        const ks = Object.keys(schreiben);
+        if (ks.length) {
+          t.stand++;
+          for (const k of ks) t.felder[k] = { v: schreiben[k], s: t.stand };
+          anders = true;
+          /* Wer eine schon bestaetigte Seite aendert, nimmt deren "Bereit" zurueck. */
+          for (const [zeichen, seite] of [['w', 'wir'], ['g', 'gegner']]) {
+            if (!ks.some((k) => k[0] === zeichen)) continue;
+            for (const s of ['S1', 'S2']) {
+              const p = t.plaetze[s];
+              if (p && p.bereit && (p.teile === seite || p.teile === 'beide')) p.bereit = false;
+            }
+          }
+        }
+      }
+      if (jetztMeiner && typeof body.bereit === 'boolean') {
+        const p = t.plaetze[jetztMeiner];
+        const soll = body.bereit && !laeuft;
+        const teile = ['wir', 'gegner', 'beide'].includes(body.teile) ? body.teile : '';
+        if (p.bereit !== soll || (soll && p.teile !== teile)) { p.bereit = soll; p.teile = teile; anders = true; }
+      }
+      if (anders) ligaTagSchreiben(t);
+    });
+    if (ligaTagGesehen.size > 500) ligaTagGesehen.clear();
+    ligaTagGesehen.set(id + ':' + geraet, Date.now());
+    sendJson(res, 200, { tag: ligaTagAntwort(t, geraet, Number(body.seit) || 0), belegt });
+  }
+
+  /* Start (mit Plan) oder Einsteigen (ohne): liefert immer dasselbe Turnier. */
+  async function ligaTagStart(req, res, roh) {
+    const { u, id } = ligaTagZugang(req, roh);
+    const body = await leseJson(req, MAX_INHALT + 64 * 1024);
+    const geraet = ligaTagGeraet(body.geraet);
+    let planText = null, sid = null;
+    if (body.plan !== undefined) {
+      pruefePlan(body.plan);
+      const lg = body.plan.liga;
+      if (!istObjekt(lg) || lg.uebung || lg.terminId !== id.slice(0, 4)) throw new HttpFehler(400, 'Der Plan gehoert nicht zu diesem Spieltag.');
+      sid = turnierId(body.id);
+      planText = JSON.stringify(body.plan);
+      if (planText.length > MAX_INHALT) throw new HttpFehler(413, 'Der Spielplan ist zu gross.');
+    }
+    let turnier = null, neu = false, grund = null;
+    try { transaktion(db, function () {
+      const t = ligaTagZeile(id);
+      if (!['S1', 'S2'].some((s) => t.plaetze[s] && t.plaetze[s].geraet === geraet)) {
+        throw new HttpFehler(403, 'Bitte erst eine Scheibe waehlen.');
+      }
+      const ins = db.prepare('INSERT OR IGNORE INTO tournament_players (tournament_id, user_id) VALUES (?, ?)');
+      turnier = ligaTagTurnier(t);
+      if (turnier) { ins.run(turnier.id, u.id); return; }
+      if (!planText) { grund = 'laeuft-nicht'; throw NICHTS; }
+      /* Von selbst (20:00) nur, wenn jede besetzte Scheibe bereit ist und
+         zusammen beide Aufstellungen bestaetigt sind. */
+      if (body.auto) {
+        const besetzt = ['S1', 'S2'].map((s) => t.plaetze[s]).filter(Boolean);
+        const hat = (seite) => besetzt.some((p) => p.teile === seite || p.teile === 'beide');
+        if (!besetzt.every((p) => p.bereit) || !hat('wir') || !hat('gegner')) { grund = 'nicht-bereit'; throw NICHTS; }
+      }
+      /* Immer nur aus dem aktuellen Stand: hat das andere iPad inzwischen
+         etwas geaendert, holt sich dieses erst die Aenderung. */
+      if ((Number(body.stand) || 0) !== t.stand) { grund = 'stand'; throw NICHTS; }
+      /* Heute schon einmal gespielt (oder verworfen): nur ausdruecklich. */
+      if (t.turnierId && !body.auto && !body.nochmal) { grund = 'gespielt'; throw NICHTS; }
+      if (db.prepare('SELECT 1 FROM tournaments WHERE id = ?').get(sid)) { grund = 'kennung'; throw NICHTS; }
+      kontingentPruefen(u, 'spiele');
+      db.prepare('INSERT INTO tournaments (id, plan, created_by, created_at) VALUES (?, ?, ?, ?)')
+        .run(sid, planText, u.id, new Date().toISOString());
+      const konten = new Set([u.id]);
+      for (const p of Array.isArray(body.plan.players) ? body.plan.players : []) konten.add(String(p));
+      for (const s of ['S1', 'S2']) if (t.plaetze[s]) konten.add(t.plaetze[s].user);
+      for (const k of konten) {
+        if (db.prepare("SELECT 1 FROM users WHERE id = ? AND status = 'aktiv'").get(k)) ins.run(sid, k);
+      }
+      /* Gestartet: die Bereit-Haken fallen (sonst startete ein verworfenes
+         Spiel sofort neu), die Unterschriften stehen jetzt im Plan. */
+      t.turnierId = sid;
+      for (const s of ['S1', 'S2']) if (t.plaetze[s]) t.plaetze[s].bereit = false;
+      for (const k of Object.keys(t.felder)) if (k[0] === 'n') delete t.felder[k];
+      t.stand++;
+      ligaTagSchreiben(t);
+      turnier = verlangeTurnier(sid);
+      neu = true;
+    }); } catch (e) { if (e !== NICHTS) throw e; }
+    if (grund) {
+      return sendJson(res, 409, { grund, fehler: {
+        'laeuft-nicht': 'Das Ligaspiel läuft noch nicht.',
+        'nicht-bereit': 'Es ist noch nicht jede Scheibe bereit.',
+        stand: 'Die Aufstellung wurde gerade geändert. Bitte nochmal tippen.',
+        gespielt: 'Dieses Ligaspiel wurde heute schon gestartet und beendet. Nochmal tippen legt ein neues an.',
+        kennung: 'Bitte nochmal tippen.'
+      }[grund] });
+    }
+    if (neu) kontingentZaehlen(u, 'spiele');
+    sendJson(res, neu ? 201 : 200, { turnier: turnierAntwort(turnier, 0, u), neu });
+  }
+
   /* Laufender Stand eines Einzels fuer die Zuschauer (vom spielenden
      Geraet nach jeder Aufnahme, gedrosselt). */
   async function partieLive(req, res, treffer) {
@@ -2407,6 +2666,8 @@ export function createApi(db, config) {
       db.prepare("DELETE FROM live_games WHERE status = 'zu' AND updated_at < ?").run(weg);
       // Einladungs-Links, die seit einem Monat abgelaufen sind, braucht niemand mehr.
       db.prepare('DELETE FROM einladungen WHERE expires_at < ?').run(new Date(Date.now() - 30 * 86400e3).toISOString());
+      // Liga-Tage (Namen der Gegner, Unterschriften) nach drei Tagen weg.
+      db.prepare('DELETE FROM liga_tage WHERE updated_at < ?').run(new Date(Date.now() - LIGA_TAG_FRIST).toISOString());
     });
     for (const [gid, s] of geschlossen) livestrom.melden(gid, s, 'zu');
   }
@@ -2456,6 +2717,8 @@ export function createApi(db, config) {
     ['PUT', /^\/api\/liga\/tabelle$/, ligaTabelleSpeichern],
     ['PUT', /^\/api\/liga\/zusagen\/([a-z0-9-]{2,40})$/, ligaZusageSetzen],
     ['POST', /^\/api\/liga\/bericht-mail$/, ligaBerichtMail],
+    ['POST', /^\/api\/liga\/tag\/([a-z0-9-]{8,20})$/, ligaTagAbgleich],
+    ['POST', /^\/api\/liga\/tag\/([a-z0-9-]{8,20})\/start$/, ligaTagStart],
     ['POST', /^\/api\/mail\/probe$/, mailProbe],
     ['GET', /^\/api\/mitteilungen$/, mitteilungenStand],
     ['PUT', /^\/api\/mitteilungen\/einstellungen$/, mitteilungenEinstellen],

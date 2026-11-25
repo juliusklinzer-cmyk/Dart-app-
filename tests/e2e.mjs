@@ -156,6 +156,8 @@ async function ligaSpielStarten() {
   });
   await ligaHeute(tag);
   await page.locator('#liga-plan [data-action="liga-spiel"]').first().click();
+  /* Ohne Game Day weiter (den prueft tests/ligatag.mjs): der gewoehnliche Startdialog. */
+  await page.evaluate(() => { delete window.__dart.state().ligaTag; });
   await ligaHeute('2026-10-01');
 }
 /* Einen Spieltag in der Liste antippen. Am Handy klappt ein Tipp auf den
@@ -7832,8 +7834,8 @@ await gruppe('Handy-Block 2: GAME ON nur am Spieltag', async () => {
   await ligaHeute('2026-11-20');
   check('vor dem Spieltag: kein GAME ON', (await page.locator('#liga-karte [data-action="liga-spiel"]').count()) === 0);
   await ligaHeute('2026-11-24');
-  check('am Spieltag selbst steht GAME ON', (await page.locator('#liga-karte [data-action="liga-spiel"]').count()) === 1 &&
-    (await textKlein('#liga-karte [data-action="liga-spiel"]')).includes('game on'));
+  check('am Spieltag selbst steht Game Day', (await page.locator('#liga-karte [data-action="liga-spiel"]').count()) === 1 &&
+    (await textKlein('#liga-karte [data-action="liga-spiel"]')).includes('game day'));
   await ligaHeute('2026-11-25');
   check('danach: "Von Hand nachtragen" statt GAME ON', (await page.locator('#liga-karte [data-action="liga-spiel"]').count()) === 1 &&
     (await textKlein('#liga-karte [data-action="liga-spiel"]')).includes('nachtragen'));

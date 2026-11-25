@@ -1029,7 +1029,9 @@
         resetNachsehen().then(function () { if (reset) neuZeichnen(true); });
       }
     }).catch(function (e) {
-      if (e && e.status) {
+      /* 5xx (Deploy, Neustart): der Server ist nur kurz weg - wie ein
+         Netzfehler, sonst bliebe das Geraet bis zum Neuladen ohne Konto. */
+      if (e && e.status && e.status < 500) {
         // Der Server antwortet, kennt aber /api/me nicht. Also steht hier gar
         // kein Dart-Server – die App bleibt die rein lokale App, ohne Hinweis.
         return;

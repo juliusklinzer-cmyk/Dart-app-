@@ -179,7 +179,7 @@ async function ligaSpielStarten(page) {
   });
   await page.evaluate((t) => { window.__ligaHeute = t; window.__dart.render(); }, tag);
   await page.locator('#liga-plan [data-action="liga-spiel"]').first().click();
-  await page.evaluate(() => { window.__ligaHeute = '2026-10-01'; });
+  await page.evaluate(() => { window.__ligaHeute = "2026-10-01"; delete window.__dart.state().ligaTag; window.__dart.render(); });
   /* Konten ohne vollen Namen: die Aufstellung verlangt ihn (24.11.). */
   const f = page.locator('[data-role="liga-voll-vor"]');
   for (let i = 0; i < await f.count(); i++) {

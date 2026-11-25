@@ -299,10 +299,15 @@ export async function ligaGesamtLaden(opt) {
       }
       t.name = name;
       if (u.captains && u.captains.length) t.captains = u.captains;
-      if (u.lokal) t.lokal = u.lokal;
-      if (u.adresse) t.adresse = u.adresse;
-      if (u.telefon) t.telefon = u.telefon;
-      if (u.web) t.web = u.web;
+      /* Lokal, Adresse, Telefon und Webseite gehoeren zusammen: wechselt ein
+         Team das Lokal, darf die alte Nummer nicht stehen bleiben (Julius,
+         25.11.: DC Lohhof). Ohne Lokal in der Uebersicht bleibt der alte Stand. */
+      if (u.lokal) {
+        for (const feld of ['lokal', 'adresse', 'telefon', 'web']) {
+          if (u[feld]) t[feld] = u[feld];
+          else delete t[feld];
+        }
+      }
       teams.push(t);
     }
     const saison = Object.values(uebersicht).find((x) => x.liga === eintrag.nr && x.saison);

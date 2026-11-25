@@ -31,7 +31,8 @@ const SCHRITTE = [
   { name: 'Browser: dart-turnier.html', skript: 'tests/e2e.mjs', env: { TARGET: 'dart-turnier.html' } },
   { name: 'Server-API', skript: 'tests/api.mjs' },
   { name: 'Liga-Webseite (Vorschau)', skript: 'tests/liga-seite.mjs' },
-  { name: 'Konto: zwei Geraete', skript: 'tests/konto.mjs' }
+  { name: 'Konto: zwei Geraete', skript: 'tests/konto.mjs' },
+  { name: 'Game Day: zwei iPads', skript: 'tests/ligatag.mjs' }
 ];
 
 const start = Date.now();
