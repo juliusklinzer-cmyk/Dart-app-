@@ -2730,20 +2730,14 @@ await page.keyboard.press('3');
 check('das Einzel ist entschieden - erst kommt gross die Statistik', await page.evaluate(() => {
   const o = window.__dart.ui().overlay;
   return window.__dart.currentMatch().done &&
-    o && o.type === 'turnier-ende' && o.phase === 'stat';
+    o && o.type === 'turnier-ende';
 }));
 check('mit Namen, Average und 180ern beider Spieler', await page.evaluate(() => {
   const t = document.getElementById('overlay-card').textContent;
   return t.includes('Spiel an') && t.includes('180er') && t.includes('Ø');
 }));
-await page.keyboard.press('Enter');
-check('Enter blendet die naechsten Einzel gross ein', await page.evaluate(() => {
-  const o = window.__dart.ui().overlay;
-  const t = document.getElementById('overlay-card').textContent;
-  return o && o.phase === 'weiter' && t.includes('Nächste Einzel') && t.includes('H2');
-}));
-check('die erste Begegnung leuchtet als naechste',
-  (await page.locator('.te-zeile.dran').count()) === 1);
+check('die naechsten Begegnungen stehen nicht mehr im Dialog (Julius 25.11.)', await page.evaluate(() =>
+  !document.querySelector('#overlay-card [data-action="open-match"]') && !document.getElementById('overlay-card').textContent.includes('Nächste Einzel')));
 check('der Dialog fuellt den ganzen Bildschirm', await page.evaluate(() => {
   const r = document.getElementById('overlay-card').getBoundingClientRect();
   return r.width >= window.innerWidth - 2 && r.height >= window.innerHeight - 2;
@@ -2751,15 +2745,65 @@ check('der Dialog fuellt den ganzen Bildschirm', await page.evaluate(() => {
   const r = document.getElementById('overlay-card').getBoundingClientRect();
   return JSON.stringify({ w: r.width, h: r.height, vw: window.innerWidth, vh: window.innerHeight });
 }));
-/* Mit den Pfeiltasten laesst sich eine andere Partie waehlen. */
+check('"Zur Übersicht" ist als Wahl markiert', await page.evaluate(() =>
+  document.querySelector('#overlay-card .btn.wahl').textContent.includes('Zur Übersicht')));
 await page.keyboard.press('ArrowDown');
-check('Pfeil runter waehlt die zweite Begegnung', await page.evaluate(() =>
-  document.querySelectorAll('.te-zeile')[1].classList.contains('dran')));
+check('die Ruecknahme ist nicht per 8/2 waehlbar (eine getippte Aufnahme loeschte sonst den Checkout)', await page.evaluate(() =>
+  document.querySelector('#overlay-card .btn.wahl').textContent.includes('Zur Übersicht') &&
+  !!document.querySelector('#overlay-card [data-action="undo"]')));
+await page.keyboard.press('7');
+check('eine Ziffer wird geschluckt', await page.evaluate(() =>
+  window.__dart.ui().input === '' && window.__dart.ui().overlay && window.__dart.ui().overlay.type === 'turnier-ende'));
+/* Loeschen nimmt den Checkout zurueck, erneut auschecken. */
+await page.keyboard.press('Backspace');
+check('Loeschen nimmt den letzten Dart zurueck', await page.evaluate(() => !window.__dart.currentMatch().done && !window.__dart.ui().overlay));
+await page.evaluate(() => { window.__dart.ui().input = ''; });
+await tippe('141');
+await page.keyboard.press('3');
+await page.keyboard.press('Enter');
+check('ein nachprellendes Enter blaettert die Statistik nicht weg', await page.evaluate(() => {
+  const o = window.__dart.ui().overlay; return o && o.type === 'turnier-ende'; }));
+await page.waitForTimeout(450);
+await page.keyboard.press('Enter');
+check('Enter fuehrt in die Uebersicht', (await visible('#screen-tournament')) && await page.evaluate(() => !window.__dart.ui().overlay));
+check('dort ist das naechste freie Einzel an derselben Scheibe markiert', await page.evaluate(() => {
+  const S = window.__dart.state(), fertig = S.matches.find((m) => m.id === S.tour.zuletzt);
+  const z = document.querySelector('#schedule .match-row.wahl [data-action="open-match"]');
+  const m = z && S.matches.find((x) => x.id === z.getAttribute('data-id'));
+  return !!(fertig && fertig.done && m && !m.done && m.scheibe === fertig.scheibe);
+}));
+await page.keyboard.press('Enter');
+check('ein sofort nachgeschobenes Enter startet noch nichts', await visible('#screen-tournament'));
+check('das zuletzt gespielte Einzel hat den Knopf Statistik', (await page.locator('#schedule .match-row.done [data-action="open-summary"]').count()) === 1);
+await page.keyboard.press('Backspace');
+check('Loeschen kurz danach fuehrt auf die Statistik, nicht ins Setup', await visible('#screen-summary'));
+check('dort laesst sich die letzte Aufnahme zuruecknehmen, weiter geht es nur zur Uebersicht', (await visible('#screen-summary')) &&
+  (await page.locator('#summary-actions [data-action="reopen-match"]').count()) === 1 &&
+  (await page.locator('#summary-actions [data-action="ov-next-match"]').count()) === 0);
+await page.evaluate(() => { window.__dart.state().tour.liga.unterschriften = { heim: 'x' }; window.__dart.render(); });
+check('nach einer Unterschrift nicht mehr', (await page.locator('#summary-actions [data-action="reopen-match"]').count()) === 0);
+await page.evaluate(() => { delete window.__dart.state().tour.liga.unterschriften; window.__dart.render(); });
+/* Zuruecknehmen und noch einmal auschecken - diesmal ohne Taste: nach acht
+   Sekunden geht es von selbst in die Uebersicht, auch im Punkte-Modus. */
+await page.evaluate(() => { window.__dart.ui().darts = [{ m: 1, n: 5, v: 5 }]; });
+await page.locator('#summary-actions [data-action="reopen-match"]').click();
+check('offene Darts eines anderen Einzels stoeren die Ruecknahme nicht', await page.evaluate(() =>
+  !window.__dart.currentMatch().done && window.__dart.ui().darts.length === 0));
+await page.evaluate(() => { window.__dart.ui().input = ''; });
+await page.evaluate(() => { window.__dart.ui().turnier = false; window.__dart.render(); });
+await modus('total');
+await typeScore(141);
+await coDarts();
+check('auch ohne Fernsteuerung kommt im Ligaspiel die Statistik der Begegnung', await page.evaluate(() => {
+  const o = window.__dart.ui().overlay, t = document.getElementById('overlay-card').textContent;
+  return o && o.type === 'turnier-ende' && t.includes('First 9') && t.includes('bestes Leg');
+}));
+await page.waitForTimeout(8400);
+check('nach acht Sekunden steht von selbst die Uebersicht', (await visible('#screen-tournament')) && await page.evaluate(() => !window.__dart.ui().overlay));
+await page.evaluate(() => { const D = window.__dart; D.state().settings.turnierModus = 1; D.state().screen = 'tournament'; D.render(); });
+await page.waitForTimeout(700);
+await page.keyboard.press('ArrowDown');
 await page.keyboard.press('ArrowUp');
-check('Pfeil hoch fuehrt zurueck zur ersten', await page.evaluate(() =>
-  document.querySelectorAll('.te-zeile')[0].classList.contains('dran')));
-check('unten steht "Zurück ins Menü"', await page.evaluate(() =>
-  !!document.querySelector('#overlay-card .te-zeile.te-menue[data-action="to-tournament"]')));
 await page.keyboard.press('Enter');
 /* Seit der SWO 10/2026 kommt vor jedem Einzel das Ausbullen - am Board
    ebenfalls per Enter bestaetigt. */
@@ -4287,8 +4331,7 @@ check('unser Heimspieler hat es 2:1 gewonnen', await page.evaluate(() => {
   return m.winner === m.p[0];
 }));
 /* Zurueck zur Uebersicht (ueber die Statistik, wie am Abend auch). */
-await page.locator('#overlay-card [data-action="open-summary"]').click();
-await page.locator('[data-action="summary-back"]').click();
+await page.locator('#overlay-card [data-action="ende-uebersicht"]').click();
 check('der Team-Stand zaehlt 1:0 und Legs 2:1', await page.evaluate(() => {
   const t = document.getElementById('liga-stand').innerText.replace(/\s+/g, ' ');
   return t.includes('Legs 2:1') && document.getElementById('spielplan-titel').textContent.includes('1 von 16');
@@ -5100,9 +5143,13 @@ check('Enter bucht den Checkout mit 2 Darts auf D20', await page.evaluate(() => 
 }));
 check('danach uebernimmt die grosse Endsequenz', await page.evaluate(() => {
   const o = window.__dart.ui().overlay;
-  return o && o.type === 'turnier-ende' && o.phase === 'stat';
+  return o && o.type === 'turnier-ende';
 }));
+await page.waitForTimeout(450);
+await page.keyboard.press('ArrowDown');
 await page.keyboard.press('Enter');
+check('zweite Wahl: die Uebersicht', await visible('#screen-tournament'));
+await page.waitForTimeout(900);
 await page.keyboard.press('Enter');
 check('ohne offene Spiele fuehrt Enter zum Endstand', await visible('#screen-winner'));
 await page.evaluate(() => {

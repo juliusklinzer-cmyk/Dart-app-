@@ -1414,6 +1414,7 @@
         if (m.done && m.gemeldet !== true && m.gemeldet !== 'abgelehnt' && m.at !== p.result.at) return neu;
         if (!m.done || m.at !== p.result.at) {
           S.matches[S.matches.indexOf(m)] = p.result;
+          if (S.tour.zuletzt === m.id) delete S.tour.zuletzt;   // nicht mehr unser Ergebnis
           if (S.current === m.id) S.current = null;
           neu = true;
         }
@@ -2341,20 +2342,12 @@
         m.at = Date.now();
         /* Das Schnelle Spiel ist mit dem Checkout vorbei – danach geht es in
            die Auswertung, nicht zum nächsten Spiel eines Spielplans. */
-        if (m.kind !== 'quick' && UI.turnier && turnierErlaubt()) {
-          /* Am Board: 8 Sekunden gross die Statistik des Einzels, dann die
-             naechsten Begegnungen - Enter ueberspringt jederzeit. Ein
-             frueherer Timer (Undo + neuer Checkout) wird weggeraeumt,
-             sonst verkuerzte er die neue Statistik-Anzeige. */
-          UI.overlay = { type: 'turnier-ende', pid: pid, id: m.id, phase: 'stat' };
-          if (turnierEndeTimer) clearTimeout(turnierEndeTimer);
-          turnierEndeTimer = setTimeout(function () {
-            turnierEndeTimer = null;
-            if (UI.overlay && UI.overlay.type === 'turnier-ende' && UI.overlay.phase === 'stat') {
-              UI.overlay.phase = 'weiter';
-              render();
-            }
-          }, 8000);
+        if (m.kind !== 'quick' && S.tour) S.tour.zuletzt = m.id;
+        if (m.kind !== 'quick' && ((S.tour && S.tour.liga) || (UI.turnier && turnierErlaubt()))) {
+          /* Ligaspiel (jede Eingabe) und Fernsteuerung: kurz die Statistik
+             der Begegnung, dann von selbst zurueck in die Uebersicht
+             (Julius, 25.11.2026). */
+          spielEndeZeigen(m.id, pid);
         } else {
           UI.overlay = { type: m.kind === 'quick' ? 'game-done' : 'match-done', pid: pid };
         }
@@ -3714,14 +3707,66 @@
     return !!(imSpiel || imTurnier);
   }
 
-  /* Die Auswahl nach einem Einzel am Board: alle offenen Partien des
-     aktuellen und des naechsten Durchgangs (hoechstens 8). Danach kommt in
-     Dialog und Tastatursteuerung noch "Zurueck ins Menue". */
-  function naechsteEinzel() {
-    var offen = S.matches.filter(function (x) { return !x.done && !x.void; });
-    if (!offen.length) return [];
-    var ab = Math.min.apply(null, offen.map(function (x) { return x.round || 1; }));
-    return offen.filter(function (x) { return (x.round || 1) <= ab + 1; }).slice(0, 8);
+  /* Nach einem Einzel: 8 Sekunden die Statistik der Begegnung, dann die
+     Uebersicht. Ein frueherer Timer (Ruecknahme + neuer Checkout) wird
+     weggeraeumt, sonst verkuerzte er die neue Anzeige. */
+  function spielEndeZeigen(id, pid) {
+    var ov = UI.overlay = { type: 'turnier-ende', pid: pid, id: id, seit: Date.now() };
+    if (turnierEndeTimer) clearTimeout(turnierEndeTimer);
+    turnierEndeTimer = setTimeout(function () {
+      turnierEndeTimer = null;
+      /* Liegt inzwischen ein anderer Dialog darueber (Hinweis vom anderen
+         Geraet), bleibt der stehen - dahinter geht es trotzdem zurueck. */
+      if (UI.overlay === ov) { spielEndeZurUebersicht(); return; }
+      var m = currentMatch();
+      if (S.screen === 'game' && m && m.id === id && m.done) { S.screen = 'tournament'; save(); render(); }
+    }, 8000);
+  }
+  function spielEndeZurUebersicht() {
+    if (turnierEndeTimer) { clearTimeout(turnierEndeTimer); turnierEndeTimer = null; }
+    var nx = planNaechstes();
+    UI.overlay = null;
+    UI.menu = false;
+    S.screen = 'tournament';
+    /* Mit Tastatur steht die Markierung gleich auf dem naechsten Einzel der
+       eigenen Scheibe. Ein nachprellendes Enter startet es nicht. */
+    UI.planWahlId = nx ? nx.id : null;
+    UI.planTastatur = tastaturBetrieb() && !!UI.planWahlId;
+    UI.planSperre = Date.now() + 800;
+    UI.planRueck = Date.now() + 15000;
+    save(); render();
+    if (UI.planTastatur) planWahlZeigen();
+  }
+  /* Das naechste freie Einzel, am liebsten an der Scheibe des letzten. */
+  function planNaechstes() {
+    var letztes = S.tour && S.tour.zuletzt ? matchById(S.tour.zuletzt) : null;
+    if (scheibenAnzeige()) {
+      var nx = naechsteJeScheibe()[meineScheibe()];
+      if (nx && !nx.m.belegtVon) return nx.m;
+    }
+    var frei = S.matches.filter(function (x) { return !x.done && !x.void && !x.belegtVon; });
+    var sb = letztes && letztes.scheibe;
+    var mein = sb ? frei.filter(function (x) { return x.scheibe === sb; }) : [];
+    return mein[0] || frei[0] || null;
+  }
+  /* Laesst sich die letzte Aufnahme dieses Einzels in der Uebersicht noch
+     zuruecknehmen? Nur das zuletzt an diesem Geraet gespielte, und im
+     Ligaspiel nicht mehr, sobald ein TC unterschrieben hat. */
+  function zuletztGespielt(m) {
+    if (!S.tour || S.tour.zuletzt !== m.id || S.tour.beendet) return false;
+    if (!m.done || m.void || m.ergebnis || m.kampflos || m.aufgabe) return false;
+    return ruecknahmeErlaubt(m);
+  }
+  /* Im geteilten Spiel nur die Viertelstunde, in der auch der Abgleich eine
+     Korrektur gelten laesst - ob am anderen iPad schon unterschrieben ist,
+     weiss dieses Geraet nicht. */
+  function ruecknahmeErlaubt(m) {
+    if (ligaUnterschrieben()) return false;
+    return !geteiltesTurnier() || Date.now() - (m.at || 0) < 15 * 60 * 1000;
+  }
+  function ligaUnterschrieben() {
+    var u = S.tour && S.tour.liga && S.tour.liga.unterschriften;
+    return !!(u && (u.heim || u.gast));
   }
 
   /* Die Zahlen einer Solo-Session (oder eines Solo-Spiels) ueber alle
@@ -5078,6 +5123,9 @@
     /* Zwei Scheiben (geteiltes freies Turnier): oben je Scheibe, was dort
        laeuft oder als Naechstes dran ist - die eigene zuerst, mit Start. */
     var sbAnz = scheibenAnzeige();
+    /* Ligaspiel: hervorgehoben ist das naechste freie Einzel der Scheibe, an
+       der hier zuletzt gespielt wurde (nicht das, was nebenan laeuft). */
+    if (liga && S.tour.zuletzt) next = planNaechstes() || next;
     if (sbAnz) {
       var jeSb = naechsteJeScheibe();
       var ich = meineScheibe();
@@ -5137,6 +5185,8 @@
             ? '<button class="go wo" data-action="liga-kampflos" data-id="' + esc(m.id) + '">ändern</button>'
             : liga && m.ergebnis && m.done
             ? '<button class="go wo" data-action="liga-ergebnis" data-id="' + esc(m.id) + '">ändern</button>'
+            : zuletztGespielt(m)
+            ? '<button class="fertig plan-stat" data-action="open-summary" data-kind="501" data-id="' + esc(m.id) + '">Statistik</button>'
             : m.done && !m.void ? '<span class="fertig">fertig</span>' : '')
           : m.belegtVon && Date.now() - (m.belegtSeit || Date.now()) > ((S.tour && S.tour.claimFrist) || 10 * 60000)
             ? '<span class="belegt">bei ' + esc(m.belegtVon) + ' hängengeblieben?</span>' +
@@ -5159,7 +5209,7 @@
     $('zwischendurch-karte').innerHTML = liga ? '' : zwischendurchKarte();
     /* Per Tastatur gewaehltes Einzel (8/2 bzw. Pfeile, Enter startet). */
     if (UI.planTastatur) {
-      var pwKnopf = UI.planWahlId ? document.querySelector('#schedule .match-row [data-action="open-match"][data-id="' + UI.planWahlId + '"]') : null;
+      var pwKnopf = UI.planWahlId ? document.querySelector('#schedule .match-row :is([data-action="open-match"], .plan-stat)[data-id="' + UI.planWahlId + '"]') : null;
       if (pwKnopf) pwKnopf.closest('.match-row').classList.add('wahl');
     }
 
@@ -13074,9 +13124,9 @@
       var mAkt = null;
       if (found.live) {
         mAkt = {
-          fix: m.done && !m.ergebnis && !m.kampflos && !m.aufgabe ? { label: 'Letzte Aufnahme zurücknehmen', action: 'reopen-match', attrs: ' data-id="' + esc(m.id) + '"' } : null,
-          zurueck: { label: 'Zur Tabelle', action: 'to-tournament' },
-          haupt: !allMatchesDone() ? { label: 'Nächstes Spiel', action: 'ov-next-match' } : { label: 'Turnier auswerten', action: 'to-winner' }
+          fix: m.done && ruecknahmeErlaubt(m) && !m.ergebnis && !m.kampflos && !m.aufgabe ? { label: 'Letzte Aufnahme zurücknehmen', action: 'reopen-match', attrs: ' data-id="' + esc(m.id) + '"' } : null,
+          zurueck: S.tour && S.tour.liga && !allMatchesDone() ? null : { label: S.tour && S.tour.liga ? 'Zur Übersicht' : 'Zur Tabelle', action: 'to-tournament' },
+          haupt: S.tour && S.tour.liga && !allMatchesDone() ? { label: 'Zur Übersicht', action: 'to-tournament' } : !allMatchesDone() ? { label: 'Nächstes Spiel', action: 'ov-next-match' } : { label: S.tour && S.tour.liga ? 'Ergebnisse' : 'Turnier auswerten', action: 'to-winner' }
         };
       }
       d = {
@@ -13451,7 +13501,7 @@
 
   function renderOverlay() {
     var ov = $('overlay');
-    if (!UI.overlay) { ov.classList.add('hidden'); ov.classList.remove('gross', 'vollbild'); dialogGeschlossen(); return; }
+    if (!UI.overlay) { ov.classList.add('hidden'); ov.classList.remove('gross', 'vollbild', 'match-ende'); dialogGeschlossen(); return; }
     ov.classList.remove('hidden');
     /* Im Turnier-Modus sprechen auch die Dialoge Plakatsprache - der
        Schreiber steht vorn an der Scheibe, gelesen wird vom Oche aus. */
@@ -13460,6 +13510,7 @@
        sondern ein eigener Bildschirm: Vollbild im App-Hintergrund. */
     ov.classList.toggle('vollbild', !!VOLLBILD_DIALOGE[UI.overlay.type]);
     ov.classList.toggle('bogen', !!BOGEN_DIALOGE[UI.overlay.type] || (UI.overlay.type === 'confirm-reset' && !!(S.tour && S.tour.liga)));
+    ov.classList.toggle('match-ende', UI.overlay.type === 'turnier-ende');
     ov.classList.toggle('bogen-breit', UI.overlay.type === 'liga-bericht-kurz');
     var o = UI.overlay;
     var html = '';
@@ -13497,65 +13548,47 @@
     }
 
     if (o.type === 'turnier-ende') {
-      var tm = matchById(o.id) || currentMatch();
-      if (!tm) { UI.overlay = null; ov.classList.add('hidden'); return; }
+      var tm = matchById(o.id);
+      /* Wieder geoeffnet oder vom Server ersetzt: nichts mehr zu zeigen. */
+      if (!tm || !tm.done || S.current !== o.id) { UI.overlay = null; ov.classList.add('hidden'); return; }
       /* Im Ligaspiel sprechen auch die Dialoge mit buergerlichen Namen. */
       var teName = S.tour && S.tour.liga ? ligaName : pname;
-      if (o.phase === 'stat') {
-        /* Die Kurzstatistik des Einzels - nur das, was am Abend zaehlt. */
-        var teSt = collectStats([{ matches: [tm], start: matchStart(tm) }], tm.p);
-        tm.p.forEach(function (id) { finalize(teSt[id]); });
-        html = '<h3>Spiel an ' + esc(teName(o.pid)) + '</h3>' +
-          '<p class="te-stand">' + esc(teName(tm.p[0])) + ' <b>' + legsWon(tm, tm.p[0]) + ':' +
-            legsWon(tm, tm.p[1]) + '</b> ' + esc(teName(tm.p[1])) + '</p>' +
-          '<div class="te-stat">' + tm.p.map(function (id) {
-            var s = teSt[id];
-            return '<div class="te-spalte' + (id === o.pid ? ' sieger' : '') + '">' +
-              '<div class="te-name">' + esc(teName(id)) + '</div>' +
-              '<div class="te-wert"><span>Ø</span><b>' + (s.darts ? s.avg.toFixed(1) : '–') + '</b></div>' +
-              '<div class="te-wert"><span>180er</span><b>' + s.s180 + '</b></div>' +
-              '<div class="te-wert"><span>Finish</span><b>' + (s.highCO || '–') + '</b></div>' +
-              '</div>';
-          }).join('') + '</div>' +
-          '<p class="te-hint">Enter · weiter</p>';
-      } else {
-        /* Die naechsten Begegnungen, gross - Enter startet die erste. */
-        var offene = naechsteEinzel();
-        var liga = S.tour && S.tour.liga;
-        /* Index hinter den Partien = "Zurueck ins Menue". */
-        var wahl = Math.min(o.wahl || 0, offene.length);
-        var mehrereDurchgaenge = offene.some(function (x) { return x.round !== offene[0].round; });
-        if (offene.length) {
-          var teRunde = null;
-          html = '<h3>Nächste Einzel</h3>' +
-            '<div class="te-next' + (offene.length > 4 ? ' viele' : '') + '">' + offene.map(function (x, i) {
-              var paar = liga && x.posPaar
-                ? 'H' + (x.posPaar[0] + 1) + ' ' + esc(teName(x.p[0])) + ' – G' + (x.posPaar[1] + 1) + ' ' + esc(teName(x.p[1]))
-                : esc(teName(x.p[0])) + ' – ' + esc(teName(x.p[1]));
-              var kopf = '';
-              if (mehrereDurchgaenge && x.round !== teRunde) {
-                teRunde = x.round;
-                kopf = '<div class="te-durchgang">Durchgang ' + x.round + '</div>';
-              }
-              return kopf + '<button class="te-zeile' + (i === wahl ? ' dran' : '') + '" ' +
-                'data-action="open-match" data-id="' + esc(x.id) + '">' +
-                (x.scheibe ? '<span class="te-scheibe">' + x.scheibe + '</span>' : '') +
-                '<span>' + paar + '</span></button>';
-            }).join('') +
-            '<button class="te-zeile te-menue' + (wahl === offene.length ? ' dran' : '') + '" data-action="to-tournament">' +
-              '<span>Zurück ins Menü</span></button>' +
-            '</div>' +
-            '<p class="te-hint">↑ ↓ · wählen &nbsp;&nbsp; Enter · starten &nbsp;&nbsp; Löschen · letzter Dart zurück</p>';
-        } else {
-          var teD = liga ? ligaStandDaten() : null;
-          html = '<h3>' + (liga ? 'Alle Einzel gespielt' : 'Alle Spiele beendet') + '</h3>' +
-            (teD ? '<p class="te-stand">' + esc(LIGA.team) + ' <b>' + teD.wirP + ':' + teD.sieP + '</b> ' +
-              esc(S.tour.liga.gegner) + '</p>' : '') +
-            '<button class="btn primary full" data-action="ov-next-match">' +
-              (liga ? 'Ergebnisse &amp; Man of the Day' : 'Zum Endstand') + '</button>' +
-            '<p class="te-hint">Enter · ' + (liga ? 'Ergebnisse' : 'Endstand') + '</p>';
-        }
-      }
+      var teLiga = !!(S.tour && S.tour.liga);
+      var teSt = collectStats([{ matches: [tm], start: matchStart(tm) }], tm.p);
+      tm.p.forEach(function (id) { finalize(teSt[id]); });
+      var teWerte = [
+        ['Ø', function (s) { return s.darts ? s.avg.toFixed(1) : '–'; }],
+        ['First 9', function (s) { return s.first9Darts ? s.first9.toFixed(1) : '–'; }],
+        ['180er', function (s) { return s.s180; }],
+        ['Höchstes Finish', function (s) { return s.highCO || '–'; }],
+        ['Darts bestes Leg', function (s) { return s.bestLeg || '–'; }]
+      ];
+      /* Weiter geht es in die Uebersicht; nur nach dem allerletzten Einzel
+         stehen vorn die Ergebnisse. */
+      var teKnoepfe = [];
+      if (!nextOpenMatch()) teKnoepfe.push(['to-winner', teLiga ? 'Ergebnisse &amp; Man of the Day' : 'Zum Endstand']);
+      teKnoepfe.push(['ende-uebersicht', 'Zur Übersicht']);
+      var teTasten = (UI.turnier && turnierErlaubt()) || tastaturBetrieb();
+      var teWahl = teTasten ? Math.min(o.wahl || 0, teKnoepfe.length - 1) : -1;
+      var teMehr = teKnoepfe.length > 1;
+      /* Die Ruecknahme ist nicht per 8/2 waehlbar: wer aus Gewohnheit eine
+         Aufnahme tippt, loeschte sonst mit Enter den Checkout. */
+      teKnoepfe.push(['undo', 'Letzten Dart zurück']);
+      var teA = tm.p[0], teB = tm.p[1];
+      var teKl = function (id) { return id === tm.winner ? ' sieger' : ''; };
+      html = '<h3>Spiel an ' + esc(teName(tm.winner)) + '</h3>' +
+        '<div class="te-kopf"><span class="te-name' + teKl(teA) + '">' + esc(teName(teA)) + '</span>' +
+          '<b>' + legsWon(tm, teA) + ':' + legsWon(tm, teB) + '</b>' +
+          '<span class="te-name' + teKl(teB) + '">' + esc(teName(teB)) + '</span></div>' +
+        '<div class="te-werte">' + teWerte.map(function (w) {
+          return '<div class="te-wert"><b class="' + teKl(teA) + '">' + w[1](teSt[teA]) + '</b><span>' + w[0] + '</span>' +
+            '<b class="' + teKl(teB) + '">' + w[1](teSt[teB]) + '</b></div>';
+        }).join('') + '</div>' +
+        '<div class="te-knoepfe">' + teKnoepfe.map(function (k, i) {
+          var kl = (teWahl < 0 ? i === 0 : i === teWahl) ? 'btn primary full' : 'btn ghost full';
+          return '<button class="' + kl + (i === teWahl ? ' wahl' : '') + '" data-action="' + k[0] + '">' + k[1] + '</button>';
+        }).join('') + '</div>' +
+        (teTasten ? '<p class="te-hint">' + (teMehr ? '8 / 2 · wählen &nbsp;&nbsp; Enter · bestätigen' : 'Enter · Übersicht') + ' &nbsp;&nbsp; Löschen · letzter Dart zurück</p>' : '');
     } else if (o.type === 'leg-done') {
       var m1 = currentMatch();
       /* Am Board waehlen die Pfeile zwischen Weiter und Ruecknahme - nur
@@ -13602,7 +13635,7 @@
         '<p>' + esc(spielName(m2.p[0])) + ' ' + legsWon(m2, m2.p[0]) + ':' + legsWon(m2, m2.p[1]) + ' ' + esc(spielName(m2.p[1])) + '</p>' +
         legStatHTML(m2, m2.legs.filter(function (l) { return l.winner; }).pop()) +
         '<button class="btn primary full" data-action="open-summary" data-kind="501" data-id="' + esc(m2.id) + '">Weiter zur Spielstatistik</button>' +
-        (last ? (S.tour && S.tour.liga ? '<button class="btn primary start full" data-action="ov-next-match">Ergebnisse &amp; Man of the Day</button>' : '')
+        (last ? ''
           : '<button class="btn ghost full" data-action="ov-next-match">Direkt zum nächsten Spiel</button>') +
         '<button class="btn ghost full" data-action="undo">Eingabe rückgängig</button>';
     } else if (o.type === 'unterschrift') {
@@ -15748,6 +15781,9 @@
         S.current = rid;
         UI.summary = null;
         S.screen = 'game';
+        /* Offene Darts eines anderen Einzels gehoeren nicht hierher - undo()
+           naehme sonst die statt des Finishes zurueck. */
+        UI.input = ''; UI.darts = []; UI.mult = 1; UI.modeOverride = null; UI.error = ''; UI.overlay = null; UI.menu = false;
         undo();          // hebt das Finish auf und öffnet das Match wieder
         break;
       }
@@ -15979,7 +16015,11 @@
         else { partieVerlassen(); S.screen = 'tournament'; }
         UI.overlay = null; save(); render();
         break;
+      case 'ende-uebersicht':
+        spielEndeZurUebersicht();
+        break;
       case 'to-winner':
+        UI.overlay = null;
         S.screen = 'winner'; save(); render();
         break;
       case 'finish-tournament':
@@ -17739,17 +17779,28 @@
     var bPfeil = ev.key === 'ArrowLeft' || ev.key === 'ArrowUp' || ev.key === 'ArrowRight' || ev.key === 'ArrowDown';
     /* Turnier-Menue: hoch/runter (8/2) waehlt das naechste Einzel, Enter
        startet es. Die Markierung erscheint erst mit der ersten Taste. */
+    var pFeld = ev.target && ev.target.closest && ev.target.closest('input, select, textarea, [contenteditable="true"], [contenteditable=""]');
+    if (S.screen === 'tournament' && !UI.overlay && !pFeld && ev.key === 'Enter') {
+      /* Alles gespielt: Enter fuehrt zu Ergebnissen bzw. Endstand. */
+      var pKnopf = document.activeElement && document.activeElement.closest && document.activeElement.closest('button, a');
+      if (!pKnopf && !UI.planTastatur && allMatchesDone()) {
+        ev.preventDefault(); ev.stopImmediatePropagation();
+        if (!ev.repeat && Date.now() >= (UI.planSperre || 0)) handleAction('to-winner', ev.target);
+        return;
+      }
+    }
     if (S.screen === 'tournament' && !UI.overlay && (bPfeil || ev.key === 'Tab' || ev.key === 'Enter') &&
         !(ev.target && ev.target.closest && ev.target.closest('input, select, textarea, [contenteditable="true"], [contenteditable=""]'))) {
-      var pKnoepfe = Array.prototype.slice.call(document.querySelectorAll('#schedule .match-row [data-action="open-match"]'));
+      var pKnoepfe = Array.prototype.slice.call(document.querySelectorAll('#schedule .match-row [data-action="open-match"], #schedule .match-row .plan-stat'));
       var pFokus = document.activeElement && document.activeElement !== document.body && document.activeElement.closest &&
         document.activeElement.closest('button, a');
       if (pKnoepfe.length && !(ev.key === 'Enter' && pFokus && !UI.planTastatur)) {
         var pIds = pKnoepfe.map(function (k) { return k.getAttribute('data-id'); });
         var pAlt = pIds.indexOf(UI.planWahlId);
         if (!UI.planTastatur || pAlt < 0) {
-          var pNext = nextOpenMatch();
-          pAlt = pNext && pIds.indexOf(pNext.id) >= 0 ? pIds.indexOf(pNext.id) : 0;
+          var pNext = planNaechstes() || nextOpenMatch();
+          pAlt = pNext && pIds.indexOf(pNext.id) >= 0 ? pIds.indexOf(pNext.id)
+            : Math.max(0, pKnoepfe.findIndex(function (k) { return !k.classList.contains('plan-stat'); }));
           ev.preventDefault(); ev.stopImmediatePropagation();
           /* Erster Druck (oder die Wahl ist inzwischen vergeben): nur zeigen. */
           UI.planTastatur = true; UI.planWahlId = pIds[pAlt];
@@ -17758,8 +17809,9 @@
         }
         ev.preventDefault(); ev.stopImmediatePropagation();
         if (ev.key === 'Enter') {
+          if (ev.repeat || Date.now() < (UI.planSperre || 0)) return;
           UI.planTastatur = tastaturBetrieb();
-          handleAction('open-match', pKnoepfe[pAlt]);
+          handleAction(pKnoepfe[pAlt].getAttribute('data-action'), pKnoepfe[pAlt]);
           return;
         }
         var pNeu = ev.key === 'Tab' ? (pAlt + 1) % pIds.length
@@ -18162,7 +18214,7 @@
       /* Nach Leg- und Spielende wird eine Ziffer nur geschluckt (8/2/4/6
          kommen im Leg-Ende-Dialog schon als Pfeile an) - nie zu einer
          Ruecknahme oder einem stillen Weiter. */
-      if (ov.type === 'leg-done' || ov.type === 'match-done' || ov.type === 'game-done') { ev.preventDefault(); return; }
+      if (ov.type === 'leg-done' || ov.type === 'match-done' || ov.type === 'game-done' || ov.type === 'turnier-ende') { ev.preventDefault(); return; }
     }
     if (ov.type === 'checkout-darts') {
       var zCo = tasteZiffer(ev);
@@ -18219,27 +18271,17 @@
         save(); render();
       }
     } else if (ov.type === 'turnier-ende') {
-      var teOffene = naechsteEinzel();
-      /* Waehlbar: die Partien und dahinter "Zurueck ins Menue". */
-      var teMax = teOffene.length ? teOffene.length : 0;
+      var teKn = document.querySelectorAll('#overlay-card .te-knoepfe .btn[data-action]:not([data-action="undo"])');
+      var teW = Math.min(ov.wahl || 0, teKn.length - 1);
       if (ev.key === 'Enter') {
         ev.preventDefault();
-        if (ov.phase === 'stat') { ov.phase = 'weiter'; ov.wahl = 0; render(); }
-        else if (teOffene.length) {
-          var teWahl = Math.min(ov.wahl || 0, teMax);
-          if (teWahl === teOffene.length) { handleAction('to-tournament', ev.target); return; }
-          UI.overlay = null;
-          openMatch(teOffene[teWahl].id);
-        } else {
-          handleAction('ov-next-match', ev.target);
-        }
-      } else if ((ev.key === 'ArrowDown' || ev.key === 'ArrowRight' || ev.key === 'Tab') && ov.phase === 'weiter') {
-        ov.wahl = ev.key === 'Tab'
-          ? ((ov.wahl || 0) + 1) % (teMax + 1)
-          : Math.min((ov.wahl || 0) + 1, teMax);
-        render(); ev.preventDefault();
-      } else if ((ev.key === 'ArrowUp' || ev.key === 'ArrowLeft') && ov.phase === 'weiter') {
-        ov.wahl = Math.max((ov.wahl || 0) - 1, 0);
+        /* Ein nachprellendes Enter der Dart-Frage blaettert nicht weg. */
+        if (ev.repeat || ev.eingabeGebucht || Date.now() - (ov.seit || 0) < 400) return;
+        var teZiel = teKn[teW];
+        if (teZiel) handleAction(teZiel.getAttribute('data-action'), teZiel);
+      } else if (ev.key === 'ArrowDown' || ev.key === 'ArrowRight' || ev.key === 'ArrowUp' || ev.key === 'ArrowLeft' || ev.key === 'Tab') {
+        ov.wahl = ev.key === 'Tab' ? (teW + 1) % teKn.length
+          : ev.key === 'ArrowDown' || ev.key === 'ArrowRight' ? Math.min(teW + 1, teKn.length - 1) : Math.max(teW - 1, 0);
         render(); ev.preventDefault();
       } else if (ev.key === 'Backspace') {
         undo(); ev.preventDefault();
@@ -18427,6 +18469,13 @@
          Escape dort regeln die Spielbilder selbst (Fernsteuerung, Menue). */
       if (ev.key === 'Backspace' && (SPIEL_SCREENS[S.screen] || S.screen === 'bulloff')) return;
       if (ev.key === 'Escape' && SPIEL_SCREENS[S.screen] && !UI.overlay) return;
+      /* Loeschen kurz nach der Rueckkehr aus einem Einzel meint den letzten
+         Dart: es fuehrt auf die Statistik mit der Ruecknahme. */
+      if (ev.key === 'Backspace' && S.screen === 'tournament' && !UI.overlay && Date.now() < (UI.planRueck || 0)) {
+        var pStat = document.querySelector('#schedule .plan-stat');
+        UI.planRueck = 0;
+        if (pStat) { ev.preventDefault(); ev.stopImmediatePropagation(); handleAction('open-summary', pStat); return; }
+      }
       /* Dialoge mit eigener Esc-Regel (Spielbilder) bleiben beim alten Weg. */
       if (tastaturZurueck()) { ev.preventDefault(); ev.stopImmediatePropagation(); }
       return;
@@ -18525,8 +18574,13 @@
     S.screen = 'summary';
   }
   if (S.screen === 'game' && currentMatch() && currentMatch().done) {
-    UI.summary = { kind: '501', id: currentMatch().id };
-    S.screen = 'summary';
+    /* Im Ligaspiel zurueck in die Uebersicht - die kurze Statistik nach dem
+       Einzel ist nach dem Neuladen vorbei. */
+    if (S.tour && (S.tour.liga || UI.turnier) && currentMatch().kind !== 'quick') S.screen = 'tournament';
+    else {
+      UI.summary = { kind: '501', id: currentMatch().id };
+      S.screen = 'summary';
+    }
   }
   if (S.screen === 'game' && !currentMatch()) S.screen = 'tournament';
   uiWiederherstellen();

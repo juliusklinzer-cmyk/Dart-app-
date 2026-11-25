@@ -2692,53 +2692,50 @@ button.blitzt { animation: tastenblitz 240ms var(--ease-out-stark); }
 .overlay.gross .row-btns .btn { min-height: 110px; font-size: 2.6rem; }
 .overlay.gross .big-emoji { font-size: 5rem; }
 
-/* Die Kurzstatistik des Einzels: zwei Spalten, der Sieger traegt Licht. */
-.te-stand { font-size: clamp(1.6rem, 4vh, 2.4rem); }
-.te-stand b { font-size: clamp(2.2rem, 6vh, 3.4rem); font-variant-numeric: tabular-nums; }
-.te-stat { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); margin: 14px 0 6px; }
-.te-spalte {
-  background: var(--bg-3); border: 1px solid var(--line); border-radius: var(--r-l);
-  padding: var(--space-4) var(--space-3);
+/* Die Kurzstatistik nach dem Einzel: ein ganzer Bildschirm, ohne Scrollen
+   auf jedem Format - alle Masse haengen an --u. In der Mitte die Werte, links
+   und rechts die Spieler. */
+.overlay.match-ende { padding: 0; place-items: stretch; grid-template-columns: minmax(0, 1fr); overflow-x: hidden; }
+.overlay.match-ende .overlay-card {
+  --u: min(1vh, 1.6vw); --m: max(112px, calc(25 * var(--u)));
+  max-width: none; width: 100%; min-width: 0; min-height: 100%; box-sizing: border-box; margin: 0;
+  border-radius: 0; border: none;
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  padding: max(calc(2.5 * var(--u)), env(safe-area-inset-top)) 16px max(calc(2.5 * var(--u)), env(safe-area-inset-bottom));
 }
-.te-spalte.sieger { border-color: var(--aktiv-linie); box-shadow: 0 0 26px var(--schein); }
-.te-name { font-size: clamp(1.6rem, 4.4vh, 2.6rem); font-weight: 800; margin-bottom: 8px; }
-.te-wert { display: flex; justify-content: space-between; align-items: baseline; padding: var(--space-1) var(--space-2); }
-.te-wert span { color: var(--muted); font-size: clamp(1.1rem, 2.8vh, 1.6rem); }
-.te-wert b { font-size: clamp(1.9rem, 5.5vh, 3.2rem); font-variant-numeric: tabular-nums; }
-
-/* Die naechsten Begegnungen: grosse Zeilen, die erste leuchtet. */
-.te-next { display: flex; flex-direction: column; gap: 10px; margin: 14px 0; text-align: left; }
-.te-zeile {
-  display: flex; align-items: center; gap: var(--space-4); width: 100%;
-  background: var(--bg-3); border: 1px solid var(--line); border-radius: var(--r-l);
-  padding: clamp(14px, 2.6vh, 24px) 22px;
-  font: inherit; font-size: clamp(1.6rem, 4.8vh, 2.8rem); font-weight: 700;
-  color: var(--text); text-align: left; cursor: pointer;
+.overlay.match-ende .overlay-card > * { width: 100%; max-width: 1000px; }
+.overlay.match-ende h3 { font-size: max(16px, calc(4.4 * var(--u))); margin: 0 0 calc(1.4 * var(--u)); line-height: 1.15; }
+.te-kopf { display: grid; grid-template-columns: minmax(0, 1fr) var(--m) minmax(0, 1fr); align-items: center; gap: 6px; }
+.te-kopf b { font-size: calc(10 * var(--u)); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.te-name { font-size: max(15px, calc(4 * var(--u))); font-weight: 800; line-height: 1.15; color: var(--muted); overflow-wrap: anywhere; hyphens: auto; }
+.te-name.sieger { color: var(--text); }
+@media (max-width: 699px) and (min-height: 501px) { .te-name { font-size: clamp(14px, 4.4vw, 18px); } }
+.te-werte { margin: calc(1.2 * var(--u)) 0; }
+.te-wert {
+  display: grid; grid-template-columns: minmax(0, 1fr) var(--m) minmax(0, 1fr); align-items: center;
+  gap: 6px; padding: calc(0.7 * var(--u)) 0; border-top: 1px solid var(--line);
 }
-.te-zeile.dran { border-color: var(--aktiv-linie); background: var(--aktiv-flaeche); box-shadow: 0 0 26px var(--schein); }
-/* Mehr als vier Partien (zwei Durchgaenge): kleinere Zeilen, damit alles
-   ins Bild passt; Ueberschrift je Durchgang; "Zurueck ins Menue" leiser. */
-.te-next.viele { gap: 6px; }
-.te-next.viele .te-zeile { font-size: clamp(1.15rem, 3.2vh, 2rem); padding: clamp(8px, 1.6vh, 16px) 18px; }
-.te-durchgang {
-  font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.08em;
-  color: var(--muted); font-size: clamp(0.85rem, 2vh, 1.15rem); margin: 6px 0 0;
+.te-wert span { color: var(--muted); font-size: max(13px, calc(2.8 * var(--u))); line-height: 1.1; }
+.te-wert b { font-size: max(19px, calc(6.4 * var(--u))); line-height: 1.1; color: var(--muted); font-variant-numeric: tabular-nums; }
+.te-wert b.sieger { color: var(--text); }
+/* Zur Uebersicht, letzter Dart zurueck (zuletzt auch: Ergebnisse). */
+.te-knoepfe { display: flex; gap: 10px; margin-top: calc(1 * var(--u)); }
+.overlay.match-ende .te-knoepfe .btn {
+  flex: 1 1 0; min-width: 0; margin: 0; padding: 6px 10px; line-height: 1.15;
+  min-height: max(46px, calc(8.5 * var(--u))); font-size: max(14px, calc(2.8 * var(--u)));
 }
-.te-zeile.te-menue {
-  margin-top: 6px; justify-content: center; color: var(--muted);
-  font-size: clamp(1.05rem, 2.8vh, 1.6rem); background: transparent;
+.overlay.match-ende .te-hint { font-size: max(13px, calc(2.2 * var(--u))); margin: calc(1.4 * var(--u)) 0 0; }
+@media (max-width: 699px) and (min-height: 501px) {
+  .te-knoepfe { flex-direction: column; }
+  .te-wert b { font-size: clamp(19px, 8vw, 36px); }
+  .overlay.match-ende .te-knoepfe .btn { flex: none; min-height: 50px; }
 }
-.te-zeile.te-menue.dran { color: var(--text); }
-.te-scheibe {
-  flex: none; font-size: clamp(1rem, 2.6vh, 1.5rem); font-weight: 700; color: var(--muted);
-  border: 1px solid var(--line); border-radius: var(--r-s); padding: var(--space-1) 10px;
-}
+@media (max-height: 500px) { .overlay.match-ende .te-hint { display: none; } }
 .te-hint { color: var(--muted); font-size: clamp(1.1rem, 2.8vh, 1.5rem); margin: 2vh 0 0; }
 /* Die per Pfeiltaste gewaehlte Option traegt einen blauen Laser-Ring -
    der ist auf hellen wie dunklen Knoepfen unuebersehbar. */
 .overlay.gross .btn.wahl,
-#screen-bulloff.turnier .bulloff button.wahl,
-.overlay.gross .te-zeile.dran {
+#screen-bulloff.turnier .bulloff button.wahl {
   outline: 3px solid var(--laser);
   outline-offset: 3px;
   box-shadow: 0 0 30px var(--schein-stark);
@@ -3411,7 +3408,6 @@ body { font-size: 1rem; }
 /* Tastatur-Bedienung am Board: der gewaehlte Knopf ist immer markiert. */
 body.tastatur #overlay-card .btn:focus,
 body.tastatur #overlay-card [role="button"]:focus,
-body.tastatur #overlay-card .te-zeile:focus,
 body.tastatur #screen-bulloff button:focus {
   outline: 3px solid var(--laser, #4fb3e0); outline-offset: 3px;
   box-shadow: 0 0 30px var(--schein-stark);
@@ -4971,6 +4967,8 @@ body.fix-spiel #screen-finisher.active { flex: 1 1 auto; height: auto; min-heigh
 #screen-tournament .match-row.next .go:not(.wo) { background: linear-gradient(180deg, #2a1416, #1a0d0e); border: 1.5px solid var(--accent); color: #fff; box-shadow: 0 0 22px rgba(229, 72, 77, 0.22); }
 #screen-tournament .match-row .go.wo { min-width: 0; color: var(--muted); font-weight: 600; text-transform: none; letter-spacing: 0; }
 #screen-tournament .match-row .fertig { flex: none; min-width: 70px; text-align: center; font-family: var(--font-cond); font-weight: 600; font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+/* Das zuletzt hier gespielte Einzel: "Statistik" zum Antippen (dort geht auch das Zuruecknehmen). */
+#screen-tournament .match-row .plan-stat { min-height: 44px; padding: 0 10px; background: transparent; border: none; border-radius: var(--r-m); box-shadow: inset 0 0 0 1.5px #3a2e30; color: var(--text); cursor: pointer; }
 /* Ligaspiel (Entwurf Okt. 2026): Positionen H hell, G gedeckt, Scheibe als
    Schild, "laeuft" fuer Partien am anderen Geraet, w.o. als leiser Knopf. */
 #screen-tournament .posmark { background: transparent; border: none; padding: 0; min-width: 0; font-family: var(--font-cond); font-size: 0.8em; letter-spacing: 0.02em; margin-right: 2px; }

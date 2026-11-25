@@ -797,10 +797,17 @@ ganzen Bildschirm (Pfeile wählen, Enter bestimmt den Anwerfer), die
 **Checkout-Frage** geht mit 1/2/3 oder Pfeilen + Enter, und die App nimmt am
 Board die volle Gerätebreite ein – kein schwarzer Rand, der den Schein
 abschneidet. Alle Dialoge füllen dabei den **ganzen Bildschirm** in maximaler
-Schrift. Nach dem Einzel erscheint **8 Sekunden groß die Kurzstatistik**
-(Ø, 180er, höchstes Finish beider Spieler) – Enter überspringt –, danach die
-**nächsten Begegnungen in groß**: mit den **Pfeiltasten** wird gewählt (die
-gewählte leuchtet), **Enter** startet sie direkt wieder in der Riesenanzeige.
+Schrift. Nach dem Einzel erscheint **8 Sekunden groß die Statistik der
+Begegnung** (Ø, First 9, 180er, höchstes Finish, bestes Leg beider Spieler), dann geht es
+**von selbst in die Übersicht** – im Ligaspiel in jeder Eingabe, sonst nur in der
+Fernsteuerung. Enter oder „Zur Übersicht“ geht sofort, „Letzten Dart zurück“ bzw. Löschen
+nimmt den Checkout zurück; nach dem letzten Einzel steht vorn „Ergebnisse & Man of the
+Day“. Eine Liste der nächsten Begegnungen kommt nicht mehr dazwischen (Julius,
+25.11.2026). In der Übersicht ist mit Tastatur das nächste freie Einzel der eigenen Scheibe
+markiert (8/2 wählt, Enter startet), und am zuletzt hier gespielten Einzel steht
+„Statistik“: dort lässt sich die letzte Aufnahme noch zurücknehmen, im Ligaspiel bis zur
+ersten Unterschrift, im geteilten Spiel 15 Minuten lang (Löschen kurz nach der Rückkehr
+führt ebenfalls dorthin). Ist alles gespielt, führt Enter zu den Ergebnissen.
 Eine eigene Statistik-Seite gibt es in der Fernsteuerung nicht. Ein Tipp ins Bild tut
 nichts; das Menü öffnet nur •••, und der ⌨-Knopf oben rechts beendet die
 Fernsteuerung – damit niemand ohne Tab und Esc gefangen sitzt.
@@ -1065,7 +1072,7 @@ Darts, Treffer, Quote; Finisher: Punkte, Ø Darts, schnellstes Finish, höchste 
 Hunter: Fänge, Darts, Treffer, Quote; Kaiwen: Checks, Darts, PB), rechts der Verlauf (Legs,
 Spiele eines Turniers zum Antippen, Runden, Felder, Fänge, Versuche). Im Turnierspiel
 stehen unten „Letzte Aufnahme zurücknehmen“, „Zur Tabelle“ und „Nächstes Spiel“ bzw.
-„Turnier auswerten“. Der Kopf mit der Navigation ist derselbe wie überall, auch im
+„Turnier auswerten“, im Ligaspiel nur „Zur Übersicht“ bzw. „Ergebnisse“. Der Kopf mit der Navigation ist derselbe wie überall, auch im
 Konto.
 
 Von dort geht es direkt weiter zum nächsten Spiel bzw. zur Turnierauswertung, oder das
