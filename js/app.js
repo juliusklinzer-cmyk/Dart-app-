@@ -9041,9 +9041,9 @@
         /* Ein Tipp auf die Zeile: Lokal, Spielerliste und alle Spiele des Teams. */
         /* Platz 1 und 2: Aufstiegsplaetze (SWO Punkt 2, Julius 25.11.). */
         var klassen = (wir ? 'leader' : '') + (i < LIGA_AUFSTEIGER && z.spiele > 0 ? ' aufstieg' : '');
-        return '<tr' + (klassen.trim() ? ' class="' + klassen.trim() + '"' : '') + ' data-action="liga-team-info" data-team="' + esc(z.team || '') + '" role="button" tabindex="0">' +
+        return '<tr' + (klassen.trim() ? ' class="' + klassen.trim() + '"' : '') + (klassen.indexOf('aufstieg') >= 0 ? ' title="Aufstiegsplatz"' : '') + ' data-action="liga-team-info" data-team="' + esc(z.team || '') + '" role="button" tabindex="0">' +
           '<td class="rank">' + (i + 1) + '</td>' +
-          '<td class="left name">' + esc(z.team || '') + (i < LIGA_AUFSTEIGER && z.spiele > 0 ? '<small class="aufstieg-marke">Aufstieg</small>' : '') + '</td>' +
+          '<td class="left name">' + esc(z.team || '') + '</td>' +
           zelle(z.spiele) + zelle(z.g) + zelle(z.u) + zelle(z.v) + zelle(z.legs) + zelle(z.einzel) + zelle(z.punkte) +
           '</tr>';
       }).join('') + '</tbody>';

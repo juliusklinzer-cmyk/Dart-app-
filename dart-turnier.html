@@ -5472,8 +5472,8 @@ body #stats-rang.log #board-log { display: block; }
 #liga-tabelle .standings tr.leader td:last-child { color: var(--accent); }
 /* Aufstiegsplaetze: gruener Streifen vor dem Platz, kleine Marke am Namen. */
 #liga-tabelle .standings tr.aufstieg td.rank { box-shadow: inset 3px 0 0 var(--aufstieg); color: var(--aufstieg); }
-.aufstieg-marke { margin-left: 8px; padding: 1px 6px; border-radius: 6px; font-family: var(--font-cond); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--aufstieg); border: 1px solid var(--aufstieg); vertical-align: middle; }
-@media (max-width: 599px) { .aufstieg-marke { display: none; } }
+#liga-tabelle .standings tr.aufstieg td.name::after { content: 'Aufstieg'; margin-left: 8px; padding: 1px 6px; border-radius: 6px; font-family: var(--font-cond); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--aufstieg); border: 1px solid var(--aufstieg); vertical-align: middle; }
+@media (max-width: 599px) { #liga-tabelle .standings tr.aufstieg td.name::after { display: none; } }
 .st-krow.aufstieg .st-krang { color: var(--aufstieg); box-shadow: inset 3px 0 0 var(--aufstieg); padding-left: 6px; }
 #lt-platz { align-items: center; text-align: center; gap: 6px; }
 #lt-platz .lt-platz-zahl { font-family: var(--font-display); font-size: clamp(56px, 16vw, 110px); line-height: 1; color: #fff; }
@@ -20896,9 +20896,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         /* Ein Tipp auf die Zeile: Lokal, Spielerliste und alle Spiele des Teams. */
         /* Platz 1 und 2: Aufstiegsplaetze (SWO Punkt 2, Julius 25.11.). */
         var klassen = (wir ? 'leader' : '') + (i < LIGA_AUFSTEIGER && z.spiele > 0 ? ' aufstieg' : '');
-        return '<tr' + (klassen.trim() ? ' class="' + klassen.trim() + '"' : '') + ' data-action="liga-team-info" data-team="' + esc(z.team || '') + '" role="button" tabindex="0">' +
+        return '<tr' + (klassen.trim() ? ' class="' + klassen.trim() + '"' : '') + (klassen.indexOf('aufstieg') >= 0 ? ' title="Aufstiegsplatz"' : '') + ' data-action="liga-team-info" data-team="' + esc(z.team || '') + '" role="button" tabindex="0">' +
           '<td class="rank">' + (i + 1) + '</td>' +
-          '<td class="left name">' + esc(z.team || '') + (i < LIGA_AUFSTEIGER && z.spiele > 0 ? '<small class="aufstieg-marke">Aufstieg</small>' : '') + '</td>' +
+          '<td class="left name">' + esc(z.team || '') + '</td>' +
           zelle(z.spiele) + zelle(z.g) + zelle(z.u) + zelle(z.v) + zelle(z.legs) + zelle(z.einzel) + zelle(z.punkte) +
           '</tr>';
       }).join('') + '</tbody>';
