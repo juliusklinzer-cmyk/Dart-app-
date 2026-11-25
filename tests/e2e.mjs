@@ -6590,9 +6590,15 @@ await gruppe('Oeffentliche Webseite (webseite.html): Spieltag, Termine, Ergebnis
   check('das laufende Board zeigt Rest, Average und wer dran ist', (await wp.locator('#live .board').count()) === 1 &&
     (await wtext('#live .board .bs:nth-child(2) .rest')) === '401' && (await wtext('#live .board .bs:nth-child(3) .rest')) === '441' &&
     (await wp.locator('#live .board .bs.dran .name').innerText()).includes('Kevin Wolf') && (await wtext('#live .board-kopf')).toLowerCase().includes('board 2'));
+  check('ohne offene Einzel kein "Als Naechstes"', !(await wtext('#live')).includes('Als Nächstes'));
   check('Ergebnisse heute und Highlights stehen', (await wtext('#live .he')).includes('H1 Markus Schäfer') && (await wtext('#live .he .erg')) === '0:2' &&
     (await wtext('#live .hl')).includes('180er') && (await wtext('#live .lk:last-child')).includes('121 Julius'));
   check('der naechste Termin traegt das Live-Schild', (await wtext('#termine-liste .termin.naechster.live .rechts')).toLowerCase().includes('live'));
+  turnier.matches.push({ id: 'm2', round: 1, p: [H[0], G[1]], posPaar: [2, 2], scheibe: 'S1' });
+  await wp.goto(wurzel + '/webseite.html');
+  await wp.waitForSelector('#live:not(.hidden) .he.kommt');
+  check('kommende Einzel stehen mit Board unter "Als Naechstes"', (await wtext('#live .he.kommt')).includes('H3 Markus Schäfer') && (await wtext('#live .he.kommt .erg')) === 'Board 1');
+  turnier.matches.pop();
   turnier.status = 'beendet'; turnier.live = [];
   apiMock['/api/oeffentlich/liga'].live.status = 'beendet';
   await wp.goto(wurzel + '/webseite.html');
@@ -7012,6 +7018,58 @@ await gruppe('Ligaspiel-Start: Gastspieler und Nachmeldung fuer beide Teams, fes
     return (s === 'H' ? lg.posH : lg.posG)[0] === id && D.ligaTyp(lg, id) === 'gast' && D.ui().overlay.type === 'liga-wechsel';
   }, [wSeite, kaderId]));
   await page.evaluate(([s, id]) => { const D = window.__dart, lg = D.state().tour.liga; delete lg.typen[id]; lg.typen[lg.wir[3]] = 'gast'; D.ui().overlay = null; D.save(); D.setScreen('tournament'); }, [wSeite, kaderId]);
+  /* Wechsel beim Gegner: der normale Fall ist ein gemeldeter Spieler aus
+     seinem Kader (Julius, 24.11.: es gab nur Gastspieler und Nachmeldung). */
+  {
+    const gSeite = wSeite === 'H' ? 'G' : 'H';
+    const merk = await page.evaluate((s) => { const lg = window.__dart.state().tour.liga; return JSON.stringify({ lg, m: window.__dart.state().matches, p: window.__dart.state().tour.players }); }, gSeite);
+    await page.locator('[data-action="roster-change"]').click();
+    await page.locator(`[data-action="liga-wechsel-pos"][data-seite="${gSeite}"][data-pos="2"]`).click();
+    const kn = page.locator('#overlay-card [data-action="liga-wechsel-neu"][data-name]');
+    check('der Kader des Gegners steht zur Auswahl', (await kn.count()) > 0);
+    const drei = await page.locator('#overlay-card [data-action="liga-neu-typ"]').allInnerTexts();
+    check('drei Status: gemeldet, Gastspieler, neu melden', drei.join('|').toLowerCase() === 'gemeldet|gastspieler|neu melden', drei.join('|'));
+    await page.locator('[data-role="liga-neu-name"]').fill('Ganz');
+    await page.locator('[data-role="liga-neu-nach"]').fill('Fremd');
+    check('ein unbekannter Name steht auf "neu melden"', (await page.locator('[data-action="liga-neu-typ"].active').getAttribute('data-value')) === 'neu');
+    const ersterName = await page.evaluate(() => {
+      const info = window.LIGA_DATEN.teamInfo[window.__dart.state().tour.liga.gegner];
+      return [...document.querySelectorAll('#overlay-card [data-name]')].map((b) => b.getAttribute('data-name')).find((n) => !info.spieler.some((x) => x.name === '*' + n));
+    });
+    await page.locator(`#overlay-card [data-name="${ersterName}"]`).click();
+    check('ein Kader-Spieler steht auf "gemeldet", der getippte Name ist weg', (await page.locator('[data-action="liga-neu-typ"].active').getAttribute('data-value')) === 'gemeldet' &&
+      (await page.locator('[data-role="liga-neu-name"]').inputValue()) === '');
+    await page.locator('[data-role="liga-neu-name"]').fill('X');
+    check('Tippen waehlt den Kader-Spieler wieder ab', await page.evaluate(() => !window.__dart.ui().overlay.draft.neuName && !document.querySelector('#overlay-card .dl-wahl.active')));
+    const teile = ersterName.split(' ');
+    await page.locator('[data-role="liga-neu-name"]').fill(teile[0].toLowerCase());
+    await page.locator('[data-role="liga-neu-nach"]').fill(teile.slice(1).join(' '));
+    check('ein getippter Kader-Name steht auf "gemeldet"', (await page.locator('[data-action="liga-neu-typ"].active').getAttribute('data-value')) === 'gemeldet');
+    await page.locator('[data-action="liga-wechsel-ok"]').click();
+    check('der Gegner-Wechsel gilt ohne Nachmeldung und ohne Gast-Status', await page.evaluate(([s, n]) => {
+      const D = window.__dart, lg = D.state().tour.liga, id = (s === 'H' ? lg.posH : lg.posG)[2];
+      return D.profile(id).voll === n && D.ligaTyp(lg, id) === '' && D.ui().overlay.type === 'liga-wechsel' && !(lg.nachmeldungen || []).length;
+    }, [gSeite, ersterName]));
+    /* Eigener Kader-Spieler als Nachmeldung: oeffnet den Nachmelde-Bogen. */
+    await page.locator(`[data-action="liga-wechsel-pos"][data-seite="${wSeite}"][data-pos="1"]`).click();
+    const kb = page.locator('#overlay-card [data-action="liga-wechsel-neu"][data-id]').first();
+    if (await kb.count()) {
+      await kb.click();
+      const bank = await page.locator('[data-action="liga-neu-typ"][data-value="neu"]').isDisabled();
+      if (!bank) {
+        await page.locator('[data-action="liga-neu-typ"][data-value="neu"]').click();
+        for (const f of await page.locator('#overlay-card .dl-raster [data-role^="voll"]').all()) if (!(await f.inputValue())) await f.fill('Test');
+        await page.locator('[data-action="liga-wechsel-ok"]').click();
+        check('Kader-Spieler mit "neu melden" landet im Nachmelde-Bogen', await page.evaluate(() => window.__dart.ui().overlay.type === 'nachmeldung'), await page.evaluate(() => JSON.stringify(window.__dart.ui().overlay)));
+        await page.locator('[data-action="nm-abbrechen"]').click();
+      }
+    }
+    await page.evaluate((m) => {
+      const D = window.__dart, S = D.state(), v = JSON.parse(m);
+      S.tour.liga = v.lg; S.matches = v.m; S.tour.players = v.p; delete S.nmOffen;
+      D.ui().overlay = null; D.save(); D.setScreen('tournament');
+    }, merk);
+  }
   /* Im Spielbericht steht der Gastspieler als "(Gast)". */
   await page.evaluate(() => { const D = window.__dart; D.ui().bericht = null; D.berichtNeu(); D.setScreen('bericht'); });
   check('auf dem Bogen steht hinter dem Gastspieler "(Gast)"', (await text('#bericht-blatt')).includes('Gastmann (Gast)'));
@@ -7028,6 +7086,7 @@ await gruppe('Ligaspiel-Start: Gastspieler und Nachmeldung fuer beide Teams, fes
     return (lg.nachmeldungen || []).some((n) => n.id === lg.sie[1] && n.nach === 'Gegner2' && !!n.unterschrift) &&
       document.querySelector('#bericht-blatt .b-nach').textContent.includes('Gegner2');
   }));
+  check('und auf Seite 1 steht "(nachgem.)" dahinter', (await text('#bericht-blatt')).includes('Gegner2 (nachgem.)'));
   check('der Hinweis sagt, dass die Person in der Aufstellung steht', (await text('#overlay-card')).includes('steht in der Aufstellung'));
   await page.locator('#overlay-card [data-action="ov-hinweis-zu"]').click();
   /* Versand: beide TCs und die Ligaleitung stehen fest, die Gegner-Adresse
@@ -7052,6 +7111,32 @@ await gruppe('Ligaspiel-Start: Gastspieler und Nachmeldung fuer beide Teams, fes
   });
   check('nach dem Versand sind die festen Zeilen und die Gegner-Adresse je Team gemerkt',
     gemerkt.fest[1] === 'neu-tc2@blink.de' && gemerkt.gegner === 'tc-neu@gegner.de', JSON.stringify(gemerkt));
+  /* Versand ueber den Server: die Mail ist raus, das Spiel abgeschlossen
+     (Spieltag 5: "fertig is not a function" nach erfolgreichem Versand). */
+  {
+    const anz = await page.evaluate(() => {
+      const D = window.__dart, K = window.DartKonto || {};
+      window.__echtKonto = window.DartKonto; window.__rufe = [];
+      window.DartKonto = Object.assign({}, K, { nutzer: () => ({ id: 'u_t', name: 'T', email: 't@t.de' }), mailBereit: () => true, gesperrt: () => false,
+        ruf: (m, p, b) => { window.__rufe.push(p); return Promise.resolve(p === '/api/liga/bericht-mail' ? { von: 'blink180@wirtschaftln.de' } : {}); } });
+      D.berichtVersandOeffnen();
+      return D.state().history.length;
+    });
+    await page.locator('[data-action="bericht-senden"]').click();
+    await page.waitForFunction(() => { const o = window.__dart.ui().overlay; return o && (o.type === 'hinweis' || o.fehler); }, null, { timeout: 15000 });
+    const nach = await page.evaluate(() => {
+      const D = window.__dart, o = D.ui().overlay, h = D.state().history[0] || {};
+      return { typ: o.type, titel: o.titel, text: o.text, fehler: o.fehler, rufe: window.__rufe.filter((p) => p === '/api/liga/bericht-mail').length,
+        zu: D.state().history.some((x) => x.liga && x.liga.berichtVersandt && x.liga.abgeschlossen), n: D.state().history.length };
+    });
+    check('Senden ueber den Server: einmal geschickt, kein Fehler, Ligaspiel abgeschlossen',
+      nach.typ === 'hinweis' && nach.titel === 'Ligaspiel abgeschlossen' && /Die Mail mit dem PDF ist raus/.test(nach.text) && nach.rufe === 1 && nach.zu && nach.n === anz + 1, JSON.stringify(nach));
+    await page.evaluate(() => {
+      const D = window.__dart, S = D.state();
+      window.DartKonto = window.__echtKonto; delete window.__echtKonto; delete window.__rufe;
+      S.history = S.history.filter((x) => !(x.liga && x.liga.berichtVersandt)); D.ui().overlay = null; D.ui().bericht = null; D.save();
+    });
+  }
   await page.evaluate(() => {
     const D = window.__dart, S = D.state();
     S.profiles = S.profiles.filter((p) => !/^(Typ Gegner|Gustav Gastmann)/.test(p.voll || p.name));

@@ -170,6 +170,25 @@
     });
     links += '</section>';
 
+    /* Als Naechstes: je Board die naechsten zwei offenen Einzel. */
+    var naechste = [], jeBoard = {};
+    if (!vorbei) partien.forEach(function (x) {
+      if (x.ergebnis || x.live) return;
+      var b = x.plan.scheibe || '';
+      jeBoard[b] = (jeBoard[b] || 0) + 1;
+      if (jeBoard[b] <= (b ? 2 : 4)) naechste.push(x);
+    });
+    if (naechste.length) {
+      links += '<section class="karte naechste"><h2>Als Nächstes</h2>' + naechste.map(function (x) {
+        var pm = x.plan;
+        return '<div class="einzel">' +
+          '<div class="a">' + esc(nm(x.p[0])) + ' <span class="pos">H' + (pm.posPaar ? zahl(pm.posPaar[0]) + 1 : '') + '</span></div>' +
+          '<div class="erg">–</div>' +
+          '<div><span class="pos">G' + (pm.posPaar ? zahl(pm.posPaar[1]) + 1 : '') + '</span> ' + esc(nm(x.p[1])) + '</div>' +
+          '<span class="chip">' + (pm.scheibe ? 'Board ' + esc(String(pm.scheibe).replace('S', '')) : 'offen') + '</span></div>';
+      }).join('') + '</section>';
+    }
+
     links += '<section class="karte"><h2>Alle Einzel</h2>';
     var runde = null;
     partien.forEach(function (x) {
@@ -304,6 +323,15 @@
     if (timer) clearInterval(timer);
     timer = null;
     box.innerHTML = '<p class="fehler-seite">' + esc(text) + '</p>';
+  }
+
+  /* Aus der App geoeffnet (?app=1): oben geht es zurueck. Auf dem iPhone hat
+     die installierte App keinen Zurueck-Knopf. */
+  if (/[?&]app=1\b/.test(location.search)) {
+    var zurueck = document.createElement('a');
+    zurueck.className = 'zur-app'; zurueck.href = 'index.html'; zurueck.textContent = '‹ Zur App';
+    document.body.insertBefore(zurueck, document.body.firstChild);
+    document.body.classList.add('aus-app');
   }
 
   /* Anderer Link im selben Tab (nur der #-Teil aendert sich): neu laden. */

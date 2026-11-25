@@ -1,10 +1,10 @@
-/* Automatisch erzeugt von tools/liga-gesamt.mjs am 2026-11-21 aus
+/* Automatisch erzeugt von tools/liga-gesamt.mjs am 2026-11-25 aus
    https://steeldart-muenchen.de/ (alle Ligen, Teams, Spielberichte, Vereinsseiten).
    Rueckfall fuer liga.html ohne Server; der Server liefert den stuendlichen
    Stand unter GET /api/liga-gesamt. Nicht von Hand aendern. */
 window.LIGA_GESAMT = {
  "version": 1,
- "stand": "2026-11-21T23:49:26.725Z",
+ "stand": "2026-11-25T01:42:23.952Z",
  "quelle": "https://steeldart-muenchen.de/",
  "verein": {
   "willkommen": "Willkommen auf der Website des Steeldart München e.V.",
@@ -3099,7 +3099,7 @@ window.LIGA_GESAMT = {
        "tag": "2026-10-13",
        "heim": "DC Lohhof 1",
        "gast": "SC Freising",
-       "ort": "Hopfenlandstüberl",
+       "ort": "All-In Café",
        "einzel": "7:9",
        "legs": "30:36",
        "bericht": 2401,
@@ -3482,7 +3482,7 @@ window.LIGA_GESAMT = {
        "tag": "2026-11-10",
        "heim": "DC Lohhof 1",
        "gast": "Bulls Eye Predator",
-       "ort": "Hopfenlandstüberl",
+       "ort": "All-In Café",
        "einzel": "14:2",
        "legs": "44:17",
        "bericht": 2410,
@@ -3730,7 +3730,7 @@ window.LIGA_GESAMT = {
        "tag": "2027-01-19",
        "heim": "DC Lohhof 1",
        "gast": "Mad Murphys",
-       "ort": "Hopfenlandstüberl"
+       "ort": "All-In Café"
       },
       {
        "tag": "2027-01-20",
@@ -3877,7 +3877,7 @@ window.LIGA_GESAMT = {
        "tag": "2027-03-09",
        "heim": "DC Lohhof 1",
        "gast": "Muskelbiere",
-       "ort": "Hopfenlandstüberl"
+       "ort": "All-In Café"
       },
       {
        "tag": "2027-03-11",
@@ -3935,7 +3935,7 @@ window.LIGA_GESAMT = {
        "tag": "2027-04-20",
        "heim": "DC Lohhof 1",
        "gast": "TSV Dachau 1865 1",
-       "ort": "Hopfenlandstüberl"
+       "ort": "All-In Café"
       },
       {
        "tag": "2027-04-22",
@@ -3958,7 +3958,7 @@ window.LIGA_GESAMT = {
        "tag": "2027-05-04",
        "heim": "DC Lohhof 1",
        "gast": "Harlekin",
-       "ort": "Hopfenlandstüberl"
+       "ort": "All-In Café"
       },
       {
        "tag": "2027-05-05",
@@ -4787,7 +4787,7 @@ window.LIGA_GESAMT = {
        "tag": "2026-10-22",
        "heim": "DC Lohhof 4",
        "gast": "Ehrlich Brothers 2",
-       "ort": "Hopfenlandstüberl",
+       "ort": "All-In Café",
        "einzel": "5:11",
        "legs": "25:37",
        "bericht": 2461,
@@ -5224,7 +5224,7 @@ window.LIGA_GESAMT = {
        "tag": "2026-12-03",
        "heim": "DC Lohhof 4",
        "gast": "Steel-Ikonen",
-       "ort": "Hopfenlandstüberl"
+       "ort": "All-In Café"
       }
      ]
     },
@@ -5254,7 +5254,7 @@ window.LIGA_GESAMT = {
        "tag": "2026-12-17",
        "heim": "DC Lohhof 4",
        "gast": "Double Trouble",
-       "ort": "Hopfenlandstüberl"
+       "ort": "All-In Café"
       }
      ]
     },
@@ -5312,7 +5312,7 @@ window.LIGA_GESAMT = {
        "tag": "2027-02-04",
        "heim": "DC Lohhof 4",
        "gast": "SV Aubing Dart2",
-       "ort": "Hopfenlandstüberl"
+       "ort": "All-In Café"
       }
      ]
     },
@@ -5323,7 +5323,7 @@ window.LIGA_GESAMT = {
        "tag": "2027-02-18",
        "heim": "DC Lohhof 4",
        "gast": "TSV Dachau 1865 2 Frozen Hands",
-       "ort": "Hopfenlandstüberl"
+       "ort": "All-In Café"
       },
       {
        "tag": "2027-02-22",
@@ -5401,7 +5401,7 @@ window.LIGA_GESAMT = {
        "tag": "2027-04-15",
        "heim": "DC Lohhof 4",
        "gast": "Dart Artists Germering",
-       "ort": "Hopfenlandstüberl"
+       "ort": "All-In Café"
       }
      ]
     },
@@ -5489,7 +5489,7 @@ window.LIGA_GESAMT = {
        "tag": "2027-06-10",
        "heim": "DC Lohhof 4",
        "gast": "TSV 1860 München",
-       "ort": "Hopfenlandstüberl"
+       "ort": "All-In Café"
       }
      ]
     },
@@ -8006,19 +8006,19 @@ window.LIGA_GESAMT = {
        "legs": "7:28",
        "bericht": 2324,
        "partien": [
-        ["Naser Sharifi", "*****", 2, 0],
+        ["Naser Sharifi", "Anonym", 2, 0],
         ["Michael Rogge", "Andi Kaiser", 0, 2],
         ["Christos Heuwald", "*Magnus Jelinek", 0, 2],
         ["Luck Heuwald", "Carl Friedrich Frank", 0, 2],
         ["Naser Sharifi", "Andi Kaiser", 0, 2],
-        ["Michael Rogge", "*****", 0, 2],
+        ["Michael Rogge", "Anonym", 0, 2],
         ["Christos Heuwald", "Julian Frank", 0, 2],
         ["Luck Heuwald", "*Magnus Jelinek", 0, 2],
-        ["Christos Heuwald", "*****", 0, 2],
+        ["Christos Heuwald", "Anonym", 0, 2],
         ["Michael Czechowsky", "Andi Kaiser", 1, 2],
         ["Michael Rogge", "*Magnus Jelinek", 0, 2],
         ["Naser Sharifi", "Julian Frank", 2, 1],
-        ["Michael Czechowsky", "*****", 0, 2],
+        ["Michael Czechowsky", "Anonym", 0, 2],
         ["Christos Heuwald", "Andi Kaiser", 0, 2],
         ["Naser Sharifi", "*Magnus Jelinek", 0, 2],
         ["Michael Rogge", "Julian Frank", 2, 1]
@@ -8576,7 +8576,7 @@ window.LIGA_GESAMT = {
        "name": "Andi Kaiser"
       },
       {
-       "name": "*****"
+       "name": "Anonym"
       },
       {
        "name": "Carl Friedrich Frank"

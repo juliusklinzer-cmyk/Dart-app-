@@ -48,7 +48,10 @@ export function text(html) {
 export function spielerName(roh) {
   const t = text(roh);
   const m = /^\(\s*\d+\s*\*\s*Gast\s*\)\s*(.+)$/.exec(t);
-  return m ? '*' + m[1].trim() : t;
+  const name = m ? '*' + m[1].trim() : t;
+  /* Von der Ligaleitung unkenntlich gemacht ("*****"): der Stern heisst hier
+     nicht Gastspieler, und "****" soll in keiner Rangliste stehen. */
+  return /^\*+$/.test(name) ? 'Anonym' : name;
 }
 function isoDatum(de) {
   const m = /(\d{2})\.(\d{2})\.(\d{4})/.exec(de || '');

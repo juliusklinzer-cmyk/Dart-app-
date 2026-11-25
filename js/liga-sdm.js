@@ -1,4 +1,4 @@
-/* Automatisch erzeugt von tools/liga-import.mjs am 2026-11-10 aus
+/* Automatisch erzeugt von tools/liga-import.mjs am 2026-11-25 aus
    https://steeldart-muenchen.de/4er-liga/4er-5-liga.html
    Nicht von Hand aendern - nach jedem Spieltag einfach neu erzeugen:
      node tools/liga-import.mjs
@@ -7,7 +7,7 @@
    in js/liga-daten.js (LIGA_HAND) und werden dort dazugemischt.
    Spielerlisten: "*Name" = Gastspieler (bei der Ligaleitung "(n * Gast)"). */
 window.LIGA_SDM = {
-  stand: '2026-11-10',
+  stand: '2026-11-25',
   quelle: 'https://steeldart-muenchen.de/4er-liga/4er-5-liga.html',
   spieltage: {
     st01: [
@@ -394,10 +394,122 @@ window.LIGA_SDM = {
     ],
     st04: [
       { heim: 'TSV Oberpframmern', gast: null },
-      { tag: '2026-11-09', heim: 'FT Gern Darts II', gast: 'Voodoo Darters', ort: 'Vereinsheim FT Gern' },
-      { tag: '2026-11-10', heim: 'Blink 180', gast: 'd`Haberer 2', ort: 'Bar Sehnsucht' },
-      { tag: '2026-11-11', heim: 'TSV Dachau 1865 4', gast: 'Treff ma nix', ort: 'TSV 1865 Dachau' },
-      { tag: '2026-11-13', heim: 'DCO', gast: 'Dart Artists Germering II', ort: 'Gasthof Gut Keferloh' }
+      {
+        tag: '2026-11-09',
+        heim: 'FT Gern Darts II',
+        gast: 'Voodoo Darters',
+        ort: 'Vereinsheim FT Gern',
+        einzel: '4:12',
+        legs: '12:26',
+        bericht: 2322,
+        partien: [
+          ['Maximilian Königsbauer', 'Martin Goerlich', 0, 2],
+          ['Sebastian Königsbauer', 'Martin Appelon', 0, 2],
+          ['Theresa Matejka', 'Jan Strelow', 1, 2],
+          ['*Patrick Wagner', 'Patrick Meyer', 2, 0],
+          ['Maximilian Königsbauer', 'Martin Appelon', 0, 2],
+          ['Sebastian Königsbauer', 'Martin Goerlich', 2, 1],
+          ['Theresa Matejka', 'Patrick Meyer', 1, 2],
+          ['*Patrick Wagner', 'Jan Strelow', 1, 2],
+          ['Theresa Matejka', 'Matthias Steinacher', 0, 2],
+          ['*Patrick Wagner', 'Martin Appelon', 0, 2],
+          ['Sebastian Königsbauer', 'Jan Strelow', 2, 1],
+          ['Maximilian Königsbauer', 'Josef Stahl', 0, 2],
+          ['*Patrick Wagner', 'Matthias Steinacher', 0, 2],
+          ['Theresa Matejka', 'Martin Appelon', 0, 2],
+          ['Maximilian Königsbauer', 'Jan Strelow', 1, 2],
+          ['Sebastian Königsbauer', 'Josef Stahl', 2, 0]
+        ]
+      },
+      {
+        tag: '2026-11-10',
+        heim: 'Blink 180',
+        gast: 'd`Haberer 2',
+        ort: 'Bar Sehnsucht',
+        einzel: '8:8',
+        legs: '19:19',
+        bericht: 2323,
+        partien: [
+          ['Dominik Uhl', 'Stefan Hügel', 2, 0],
+          ['Julius Klinzer', 'Reinhart Boehm', 2, 1],
+          ['*Michael Hofmann', '*Deniz Firat', 2, 0],
+          ['Tobias Thomas', 'Carol Zehetmeier', 2, 0],
+          ['Dominik Uhl', 'Reinhart Boehm', 0, 2],
+          ['Julius Klinzer', 'Stefan Hügel', 0, 2],
+          ['*Michael Hofmann', 'Carol Zehetmeier', 2, 1],
+          ['Tobias Thomas', '*Deniz Firat', 2, 0],
+          ['*Michael Hofmann', 'Stefan Hügel', 0, 2],
+          ['Tobias Thomas', 'Reinhart Boehm', 0, 2],
+          ['Julius Klinzer', '*Deniz Firat', 1, 2],
+          ['Dominik Uhl', 'Andrea Moosleitner', 2, 0],
+          ['Tobias Thomas', 'Stefan Hügel', 2, 1],
+          ['*Michael Hofmann', 'Reinhart Boehm', 0, 2],
+          ['Dominik Uhl', '*Deniz Firat', 1, 2],
+          ['Julius Klinzer', 'Andrea Moosleitner', 1, 2]
+        ]
+      },
+      {
+        tag: '2026-11-11',
+        heim: 'TSV Dachau 1865 4',
+        gast: 'Treff ma nix',
+        ort: 'TSV 1865 Dachau',
+        einzel: '7:9',
+        legs: '15:19',
+        bericht: 2325,
+        partien: [
+          ['Marius Forster', 'Bernhard Hoffmann', 0, 2],
+          ['Dominik Gaßner', 'Ralf Kilian', 2, 0],
+          ['Cordula Gangl', 'Franz Freinberger', 0, 2],
+          ['Lars Toni', 'Christian Matejka', 1, 2],
+          ['Marius Forster', 'Ralf Kilian', 2, 0],
+          ['Dominik Gaßner', 'Bernhard Hoffmann', 0, 2],
+          ['Cordula Gangl', 'Christian Matejka', 0, 2],
+          ['Lars Toni', 'Franz Freinberger', 2, 0],
+          ['Cordula Gangl', 'Bernhard Hoffmann', 0, 2],
+          ['Lars Toni', 'Sven Albrecht', 2, 0],
+          ['Dominik Gaßner', 'Franz Freinberger', 2, 1],
+          ['Marius Forster', 'Christian Matejka', 0, 2],
+          ['Lars Toni', 'Bernhard Hoffmann', 0, 2],
+          ['Cordula Gangl', 'Sven Albrecht', 0, 2],
+          ['Marius Forster', 'Linda Maier', 2, 0],
+          ['Dominik Gaßner', 'Yves Scherer', 2, 0]
+        ]
+      },
+      {
+        tag: '2026-11-13',
+        heim: 'DCO',
+        gast: 'Dart Artists Germering II',
+        ort: 'Gasthof Gut Keferloh',
+        einzel: '3:13',
+        legs: '7:28',
+        bericht: 2324,
+        partien: [
+          ['Naser Sharifi', 'Anonym', 2, 0],
+          ['Michael Rogge', 'Andi Kaiser', 0, 2],
+          ['Christos Heuwald', '*Magnus Jelinek', 0, 2],
+          ['Luck Heuwald', 'Carl Friedrich Frank', 0, 2],
+          ['Naser Sharifi', 'Andi Kaiser', 0, 2],
+          ['Michael Rogge', 'Anonym', 0, 2],
+          ['Christos Heuwald', 'Julian Frank', 0, 2],
+          ['Luck Heuwald', '*Magnus Jelinek', 0, 2],
+          ['Christos Heuwald', 'Anonym', 0, 2],
+          ['Michael Czechowsky', 'Andi Kaiser', 1, 2],
+          ['Michael Rogge', '*Magnus Jelinek', 0, 2],
+          ['Naser Sharifi', 'Julian Frank', 2, 1],
+          ['Michael Czechowsky', 'Anonym', 0, 2],
+          ['Christos Heuwald', 'Andi Kaiser', 0, 2],
+          ['Naser Sharifi', '*Magnus Jelinek', 0, 2],
+          ['Michael Rogge', 'Julian Frank', 2, 1]
+        ],
+        highlights: [
+          {
+            wer: '*Magnus Jelinek',
+            team: 'Dart Artists Germering II',
+            highfinish: [126],
+            was: 'Highfinish 126'
+          }
+        ]
+      }
     ],
     st05: [
       { heim: 'FT Gern Darts II', gast: null },
@@ -409,9 +521,9 @@ window.LIGA_SDM = {
     st06: [
       { heim: 'TSV Dachau 1865 4', gast: null },
       { tag: '2026-12-04', heim: 'FT Gern Darts II', gast: 'DCO', ort: 'Vereinsheim FT Gern', verschoben: true },
-      { tag: '2026-12-08', heim: 'd`Haberer 2', gast: 'Dart Artists Germering II', ort: 'Heuboden' },
       { tag: '2026-12-09', heim: 'Treff ma nix', gast: 'Blink 180', ort: 'Fiakerstüberl' },
-      { tag: '2026-12-11', heim: 'TSV Oberpframmern', gast: 'Voodoo Darters', ort: 'Gaststätte Anstoss' }
+      { tag: '2026-12-11', heim: 'TSV Oberpframmern', gast: 'Voodoo Darters', ort: 'Gaststätte Anstoss' },
+      { tag: '2026-12-20', heim: 'd`Haberer 2', gast: 'Dart Artists Germering II', ort: 'Heuboden', verschoben: true }
     ],
     st07: [
       { heim: 'DCO', gast: null },
@@ -506,6 +618,7 @@ window.LIGA_SDM = {
       spieler: [
         { name: 'Michael Schmeiß', info: 'TC-1' },
         { name: 'Tobias Thomas', info: 'TC-2' },
+        { name: '*Michael Hofmann' },
         { name: 'Alfred Buchner' },
         { name: 'Benjamin Bauer' },
         { name: 'Dominik Beuscher' },
@@ -522,6 +635,7 @@ window.LIGA_SDM = {
       adresse: 'Kapuzinerstr. 2, 80337 München',
       spieler: [
         { name: 'Andrea Moosleitner', info: 'TC-1' },
+        { name: '*Deniz Firat' },
         { name: 'Carol Zehetmeier' },
         { name: 'Christian Hackl' },
         { name: 'Mani Burgmair' },
@@ -537,9 +651,10 @@ window.LIGA_SDM = {
       adresse: 'Schusterhäusl 1, 82110 Germering',
       spieler: [
         { name: 'Julian Frank', info: 'TC-1' },
+        { name: '*Magnus Jelinek' },
         { name: '*Vincent Freer' },
         { name: 'Andi Kaiser' },
-        { name: '*****' },
+        { name: 'Anonym' },
         { name: 'Carl Friedrich Frank' },
         { name: 'Gerd Stegerer' },
         { name: 'Martin Kern-Emden' },
@@ -573,6 +688,7 @@ window.LIGA_SDM = {
       spieler: [
         { name: 'Theresa Matejka', info: 'TC-1' },
         { name: 'Maximilian Dallinger', info: 'TC-2' },
+        { name: '*Patrick Wagner' },
         { name: '*Tim Steidinger' },
         { name: 'Janik Guthmann' },
         { name: 'Maximilian Königsbauer' },

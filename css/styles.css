@@ -5890,7 +5890,7 @@ body #stats-rang.log #board-log { display: block; }
    sind als der Schirm (D3). Unten so viel Polster wie der Bogen selbst,
    per negativem Rand wieder aufgehoben, damit am Ende nichts doppelt ist. */
 .overlay.bogen .dl-fuss {
-  position: sticky; bottom: 0; z-index: 1;
+  position: sticky; bottom: calc(-1 * clamp(14px, 2.8vh, 32px)); z-index: 1;   /* sonst schaut darunter Inhalt durch */
   background: var(--bg-2); border-top: 1px solid var(--line);
   padding-top: clamp(8px, 1.4vh, 14px);
   padding-bottom: clamp(14px, 2.8vh, 32px); margin-bottom: calc(-1 * clamp(14px, 2.8vh, 32px));
@@ -5932,6 +5932,12 @@ body #stats-rang.log #board-log { display: block; }
   .overlay.bogen .dl-spalten, .overlay.bogen .dl-raster, .overlay.bogen .dl-bericht-spalten { grid-template-columns: minmax(0, 1fr); }
   .overlay.bogen .dl-fuss .btn { flex: 1 1 auto; }
 }
+/* Wechsel: der Kader des Gegners (oft zwoelf Namen) enger, damit Status und
+   Namensfelder ohne langes Rollen da sind. */
+.overlay.bogen .dl-raster.dl-kader { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.overlay.bogen .dl-kader .dl-wahl { min-height: 46px; padding: 4px 12px; }
+.overlay.bogen .dl-kader .dl-wahl .dl-wer b { font-size: clamp(13px, 1.9vh, 18px); }
+@media (max-width: 699px) { .overlay.bogen .dl-raster.dl-kader { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 
 /* ======================================================================

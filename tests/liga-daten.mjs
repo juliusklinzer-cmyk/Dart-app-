@@ -47,6 +47,7 @@ const er = D.einzelranglisteAus(D.spieltage);
 const berichte = spiele.filter((s) => s.partien).length;
 check('Einzelrangliste: 16 Siege je Spielbericht, Punkte fallend', er.reduce((a, z) => a + z.siege, 0) === 16 * berichte &&
   er.every((z, i) => !i || er[i - 1].punkte >= z.punkte));
+check('von der Ligaleitung unkenntlich gemachte Namen sind "Anonym", keine Sterne', er.every((z) => !/^\*+$/.test(z.name)) && (await import('../server/lib/liga-import.mjs')).spielerName('*****') === 'Anonym');
 check('Gastspieler stehen markiert in der Einzelrangliste', er.some((z) => z.gast) && er.every((z) => z.name.charAt(0) !== '*'));
 
 /* ---------- 2. Der Punkteschluessel an einem kleinen Beispiel ---------- */

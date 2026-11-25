@@ -1384,18 +1384,23 @@ export function createApi(db, config) {
       uebung: !!lg.uebung, wir: lg.wir || [], sie: lg.sie || [],
       heimSpieler: lg.heimSpieler || [], gastSpieler: lg.gastSpieler || [], zeitVon: lg.zeitVon || null
     } : null;
-    /* Namen: Konten mit Anzeigenamen, Gaeste wie eingetragen. */
+    const zeilen = db.prepare('SELECT match_id, result FROM tournament_matches WHERE tournament_id = ?').all(t.id);
+    const ergebnisse = {};
+    for (const z of zeilen) if (z.result) ergebnisse[z.match_id] = JSON.parse(z.result);
+    /* Namen: Konten mit Anzeigenamen, Gaeste wie eingetragen -
+       nur wer in einer Partie steht (nicht die Bank und Nachgemeldete). */
+    const inPartie = new Set();
+    for (const m of (plan.matches || []).concat(Object.values(ergebnisse))) for (const p of (m && m.p) || []) inPartie.add(String(p));
+    for (const w of (liveEinzel.get(t.id) || new Map()).values()) for (const p of (w.stand && w.stand.p) || []) inPartie.add(String(p));
     const namenListe = {};
     for (const id of Array.isArray(plan.players) ? plan.players : []) {
+      if (!inPartie.has(String(id))) continue;
       if (String(id).indexOf('u_') === 0) {
         const n = db.prepare('SELECT display_name FROM users WHERE id = ?').get(String(id));
         namenListe[id] = (n && n.display_name) || 'Spieler';
       }
       else namenListe[id] = (plan.gaeste && plan.gaeste[id]) || 'Gast';
     }
-    const zeilen = db.prepare('SELECT match_id, result FROM tournament_matches WHERE tournament_id = ?').all(t.id);
-    const ergebnisse = {};
-    for (const z of zeilen) if (z.result) ergebnisse[z.match_id] = JSON.parse(z.result);
     const jetzt = Date.now();
     const live = [];
     const lt = liveEinzel.get(t.id);

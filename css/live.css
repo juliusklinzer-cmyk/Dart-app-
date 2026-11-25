@@ -30,6 +30,11 @@ body { margin: 0; min-height: 100dvh; }
   max-width: 1280px; margin: 0 auto;
   padding: max(14px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
 }
+/* Zurueck in die App (nur, wenn der Ticker von dort geoeffnet wurde) */
+.zur-app { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; min-height: 44px;
+  padding: env(safe-area-inset-top) 16px 0 max(16px, env(safe-area-inset-left)); background: var(--bg);
+  color: var(--text); font-family: var(--eng); font-weight: 700; font-size: 1.05rem; text-decoration: none; }
+.aus-app .ticker { padding-top: 8px; }
 .lade, .fehler-seite { text-align: center; color: var(--leise); margin-top: 30vh; font-size: 1.1rem; }
 
 /* Kopf */

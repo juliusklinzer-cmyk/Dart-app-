@@ -297,6 +297,13 @@
         '<span class="erg">' + a + ':' + b + '</span>' +
         '<span class="' + (m.winner === x.p[1] ? 'w' : '') + '">' + esc(posG + nm(x.p[1])) + '</span></div>';
     });
+    var naechste = vorbei ? [] : partien.filter(function (x) { return !x.ergebnis && !x.live; }).slice(0, 4).map(function (x) {
+      var pm = x.plan;
+      var posH = pm.posPaar ? 'H' + (zahl(pm.posPaar[0]) + 1) + ' ' : '', posG = pm.posPaar ? 'G' + (zahl(pm.posPaar[1]) + 1) + ' ' : '';
+      return '<div class="he kommt"><span>' + esc(posH + nm(x.p[0])) + '</span>' +
+        '<span class="erg">' + (pm.scheibe ? 'Board ' + esc(String(pm.scheibe).replace('S', '')) : '–') + '</span>' +
+        '<span>' + esc(posG + nm(x.p[1])) + '</span></div>';
+    });
     var h180 = [], hfin = [], hleg = [];
     Object.keys(st).forEach(function (id) {
       var x = st[id];
@@ -309,6 +316,7 @@
     if (hfin.length) hl2.push(['High-Finishes', hfin.join(' · ')]);
     if (hleg.length) hl2.push(['Shortlegs', hleg.join(' · ')]);
     html += '<div class="live-raster">' +
+      (naechste.length ? '<div class="lk"><span class="kt">Als Nächstes</span>' + naechste.join('') + '</div>' : '') +
       '<div class="lk"><span class="kt">Ergebnisse heute</span>' + (heute.length ? heute.join('') : '<p class="live-leer">Noch kein Einzel fertig.</p>') + '</div>' +
       '<div class="lk"><span class="kt">Highlights</span>' + (hl2.length
         ? hl2.map(function (z) { return '<div class="hl"><span class="k">' + z[0] + '</span><span class="v">' + z[1] + '</span></div>'; }).join('')

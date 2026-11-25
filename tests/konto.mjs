@@ -1615,6 +1615,96 @@ async function main() {
         return D.ligaTyp(lg, (lg.heim ? lg.posG : lg.posH)[3]) === 'gast';
       }));
 
+      /* Nachmeldung: wer auf einem iPad unterschreibt, steht auch am anderen
+         im Bericht (Spieltag 5: dort fehlte sie). */
+      await julius.page.evaluate(() => {
+        const D = window.__dart; D.ui().overlay = null; D.ui().bericht = null; D.setScreen('bericht');
+      });
+      await julius.page.locator('#bericht-blatt [data-action="liga-nachmelden"]').click();
+      await julius.page.locator('[data-role="nm-nach"]').fill('Nachgemeldet');
+      await julius.page.locator('[data-role="nm-vor"]').fill('Nora');
+      await julius.page.locator('[data-action="nm-wahl"][data-feld="g"][data-value="w"]').click();
+      await julius.page.evaluate(() => { window.__dart.ui().overlay.striche = [[[0.1, 0.5], [0.3, 0.3], [0.5, 0.6], [0.7, 0.4], [0.8, 0.5]]]; });
+      /* Gleichzeitig wechselt Tobi: Julius' Plan trifft auf einen neueren
+         (409) - die Nachmeldung darf dabei nicht verloren gehen. */
+      await tobi.page.evaluate(() => {
+        const D = window.__dart;
+        D.ui().overlay = { type: 'liga-wechsel-zu', seite: D.state().tour.liga.heim ? 'G' : 'H', pos: 2, eigene: false, draft: { name: 'Ersatz', nach: 'Drei', typ: '' } };
+        D.render();
+      });
+      await tobi.page.locator('[data-action="liga-wechsel-ok"]').click();
+      await tobi.page.waitForTimeout(900);
+      check('ein gemeldeter Ersatz braucht keine Nachmeldung', await tobi.page.evaluate(() => (window.__dart.ui().overlay || {}).type === 'liga-wechsel'));
+      await tobi.page.evaluate(() => { window.__dart.ui().overlay = null; window.__dart.render(); });
+      await julius.page.locator('[data-action="nm-weiter"]').click();
+      await julius.page.waitForTimeout(1800);
+      await tobi.page.evaluate(() => window.DartSync.turnier.abgleich());
+      await tobi.page.waitForTimeout(800);
+      const nmBeide = [];
+      for (const g of [julius, tobi]) nmBeide.push(await g.page.evaluate(() => {
+        const D = window.__dart, lg = D.state().tour.liga, n = (lg.nachmeldungen || []).find((x) => x.nach === 'Nachgemeldet');
+        return { da: !!n && !!n.unterschrift, team: !!n && (n.team === 'H' ? lg.heimSpieler : lg.gastSpieler).includes(n.id), typ: n && D.ligaTyp(lg, n.id),
+          name: n && (D.profile(n.id) || {}).voll, ersatz: D.profile((lg.heim ? lg.posG : lg.posH)[2]).voll };
+      }));
+      check('die Nachmeldung steht auf beiden iPads, samt Team, Status und Tobis Wechsel', nmBeide.every((x) => x.da && x.team && x.typ === 'neu' && x.name === 'Nora Nachgemeldet' && x.ersatz === 'Ersatz Drei'), JSON.stringify(nmBeide));
+      await tobi.page.evaluate(() => { const D = window.__dart; D.ui().overlay = null; D.ui().bericht = null; D.setScreen('bericht'); });
+      check('Tobis Bericht zeigt sie auf Seite 2 und auf Seite 1 als nachgemeldet', await tobi.page.evaluate(() => {
+        const b = document.getElementById('bericht-blatt');
+        return b.querySelector('.b-nach').textContent.includes('Nachgemeldet') && !!b.querySelector('.b-nach img') && b.textContent.includes('Nachgemeldet (nachgem.)') &&
+          /ja\s+X/.test(b.querySelector('td[data-feld="nachmeldungen"]').textContent);
+      }));
+      for (const g of [julius, tobi]) await g.page.evaluate(() => { window.__dart.ui().overlay = null; window.__dart.setScreen('tournament'); });
+
+      /* Wechsel im Funkloch, waehrend das andere iPad den Plan aendert: der
+         eigene Wechsel wird darauf neu aufgesetzt statt still zu verschwinden. */
+      await julius.page.evaluate(() => window.DartSync.turnier.abgleich(true));
+      await julius.page.waitForTimeout(400);
+      await julius.page.context().setOffline(true);
+      /* Acht stehen schon auf dem Bogen: die Ersten kommen von der Bank zurueck. */
+      const wechsel = (g, pos) => g.page.evaluate((p) => {
+        const D = window.__dart, lg = D.state().tour.liga;
+        D.ui().overlay = { type: 'liga-wechsel-zu', seite: lg.heim ? 'G' : 'H', pos: p, eigene: false, draft: { neu: (lg.heim ? lg.gastSpieler : lg.heimSpieler)[p] } };
+        D.render();
+        document.querySelector('[data-action="liga-wechsel-ok"]').click();
+        return (D.ui().overlay || {}).fehler || '';
+      }, pos);
+      check('Wechsel im Funkloch geht', (await wechsel(julius, 0)) === '');
+      await julius.page.waitForTimeout(500);
+      check('und der am anderen iPad', (await wechsel(tobi, 2)) === '');
+      await tobi.page.waitForTimeout(1200);
+      await tobi.page.evaluate(() => { window.__dart.ui().overlay = null; window.__dart.render(); });
+      await julius.page.context().setOffline(false);
+      await julius.page.evaluate(() => window.DartSync.turnier.abgleich(true));
+      await julius.page.waitForTimeout(1800);
+      await tobi.page.evaluate(() => window.DartSync.turnier.abgleich(true));
+      await tobi.page.waitForTimeout(800);
+      const funkBeide = [];
+      for (const g of [julius, tobi]) funkBeide.push(await g.page.evaluate(() => {
+        const D = window.__dart, S = D.state(), lg = S.tour.liga, idx = lg.heim ? 1 : 0, l = lg.heim ? lg.posG : lg.posH;
+        const t = lg.heim ? lg.gastSpieler : lg.heimSpieler;
+        return { p0: l[0] === t[0], p2: l[2] === t[2], offen: !!S.tour.planOffen,
+          m: S.matches.filter((m) => m.posPaar[idx] === 0 && !m.done && !m.legs.some((x) => x.visits.length)).every((m) => m.p[idx] === l[0]),
+          nm: (lg.nachmeldungen || []).length, ov: (D.ui().overlay || {}).titel || '' };
+      }));
+      check('Wechsel im Funkloch und Wechsel am anderen iPad gelten beide, auf beiden Geraeten',
+        funkBeide.every((x) => x.p0 && x.p2 && x.m && !x.offen && x.nm === 1 && x.ov === ''), JSON.stringify(funkBeide));
+      for (const g of [julius, tobi]) await g.page.evaluate(() => { window.__dart.ui().overlay = null; window.__dart.setScreen('tournament'); });
+
+      /* Beide TCs haben unterschrieben: eine spaete Nachmeldung vom anderen
+         iPad aendert den Bogen hier nicht mehr. */
+      const finalStand = await julius.page.evaluate(() => {
+        const D = window.__dart, S = D.state(), lg = S.tour.liga, n0 = lg.nachmeldungen[0];
+        lg.unterschriften = { heim: n0.unterschrift, gast: n0.unterschrift };
+        const plan = { matches: [], players: S.tour.players.slice(), planStand: (S.tour.planStand || 0) + 5,
+          liga: Object.assign({}, JSON.parse(JSON.stringify(lg)), { nachmeldungen: [n0, Object.assign({}, n0, { id: 'spaet1', nach: 'Spaet' })] }) };
+        const echt = S.tour.planStand;
+        D.uebernehmeTurnier({ id: S.tour.sid, plan, partien: [] });
+        const n = lg.nachmeldungen.length;
+        delete lg.unterschriften; S.tour.planStand = echt; D.save();
+        return n;
+      });
+      check('ein von beiden TCs unterschriebener Bogen nimmt keine Nachmeldung mehr an', finalStand === 1, String(finalStand));
+
       /* Funkloch beim Checkout: Tobis Einzel ist bei ihm fertig, das Ergebnis
          kam aber nie beim Server an. Der naechste Abgleich reicht es nach. */
       await tobi.page.evaluate((id) => {
@@ -1655,6 +1745,22 @@ async function main() {
       await tobi.page.locator('[data-action="turnier-beitreten"]').first().click();
       await tobi.page.waitForTimeout(800);
       check('beide iPads sind im selben Ligaspiel', await tobi.page.evaluate((id) => window.__dart.state().tour.sid === id, fsid));
+      {
+        /* Wer nicht mitspielt, sieht das laufende Ligaspiel in der App und kann zuschauen. */
+        const merkTobi = await tobi.page.evaluate(() => { const S = window.__dart.state(); const m = JSON.stringify({ t: S.tour, m: S.matches, c: S.current }); return m; });
+        await tobi.page.evaluate(() => { const D = window.__dart, S = D.state(); S.tour = null; S.matches = []; S.current = null; D.save(); D.setScreen('setup'); });
+        await tobi.page.evaluate(() => window.__dart.ligaLiveHolen());
+        check('am Geraet ohne das Spiel steht "Live zuschauen" auf der Startseite', await warteBis(tobi.page, () => !!document.querySelector('#beitreten-box:not(.hidden) [data-action="live-ansehen"]'), null, 5000));
+        check('"Mitschreiben" statt "Mitmachen" beim Ligaspiel', /mitschreiben/i.test(await tobi.page.locator('#beitreten-liste').innerText()));
+        await tobi.page.evaluate(() => window.__dart.setScreen('liga'));
+        check('im Liga-Reiter traegt der Spieltag LIVE und den Knopf', await warteBis(tobi.page, () => !!document.querySelector('#liga-karte [data-action="live-ansehen"]'), null, 5000));
+        await tobi.page.locator('#liga-karte [data-action="live-ansehen"]').click();
+        await tobi.page.waitForSelector('.stand', { timeout: 10000 });
+        check('der Ticker aus der App hat einen Weg zurueck', (await tobi.page.locator('.zur-app').innerText()).includes('Zur App'));
+        await tobi.page.locator('.zur-app').click();
+        await tobi.page.waitForFunction(() => window.__dart && window.DartSync && window.DartKonto && window.DartKonto.nutzer(), null, { timeout: 15000 });
+        await tobi.page.evaluate((m) => { const v = JSON.parse(m), S = window.__dart.state(); S.tour = v.t; S.matches = v.m; S.current = v.c; window.__dart.save(); window.__dart.setScreen('tournament'); }, merkTobi);
+        }
       const ids = await julius.page.evaluate(() => window.__dart.state().matches.map((m) => m.id));
       const fertigHier = (g, id) => g.page.evaluate((id) => {
         const D = window.__dart, S = D.state(), m = S.matches.find((x) => x.id === id);
@@ -1714,6 +1820,9 @@ async function main() {
         await zp.waitForSelector('.stand', { timeout: 10000 });
         const ztext = await zp.locator('#ticker').innerText();
         check('Zuschauer sieht ohne Login das Einzel als LIVE', /live/i.test(ztext) && (await zp.locator('.live-einzel').count()) === 1, ztext.slice(0, 300));
+        check('"Als Naechstes" zeigt kommende Einzel mit Board', (await zp.locator('.karte.naechste .einzel').count()) >= 2 && /board 1/i.test(await zp.locator('.karte.naechste').innerText()) &&
+          /board 2/i.test(await zp.locator('.karte.naechste').innerText()));
+        check('ohne die App kein Knopf zurueck', (await zp.locator('.zur-app').count()) === 0);
         check('mit dem Rest nach der Aufnahme (401)', (await zp.locator('.live-einzel .le-rest').allInnerTexts()).includes('401'));
         check('und den Gastnamen', ztext.includes('Funk'));
         await zp.goto(BASIS + '/live.html#falsch123456');

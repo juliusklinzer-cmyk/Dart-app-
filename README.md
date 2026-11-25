@@ -445,8 +445,10 @@ von selbst. Zwei Gastspieler in einem Team lehnt der Start ab. Wer „neu melden
 ist, bekommt gleich nach GAME ON den Nachmelde-Bogen (Team und Name fest,
 „Später“ erlaubt); spätestens vor den Unterschriften der Teamcaptains holt die
 App die fehlende Unterschrift nach. Gastspieler stehen im Bogen als „Name
-(Gast)“, der Wechsel-Dialog zeigt „Gastspieler“ bzw. „nachgemeldet“ und bietet
-für einen spontanen Namen beides an.
+(Gast)“, Nachgemeldete als „Name (nachgem.)“. Der Wechsel-Dialog bietet die drei
+Status für jeden an, der neu auf den Bogen kommt; vorbelegt ist „gemeldet“ für alle
+aus dem Kader (Gastspieler, wen die Ligaleitung so führt) und „neu melden“ nur für
+einen unbekannten getippten Namen.
 Der Spielplan sind die **16 Einzel in vier Durchgängen, exakt in der
 Reihenfolge des Spielberichtsbogens** (`LIGA_EINZEL`); jede Begegnung steht
 als **H1 Name – G1 Name** da, und im Liga-Kontext erscheint der
@@ -508,7 +510,9 @@ nachgetragen.
 
 **Spielerwechsel** gibt es nach SWO: nur auf derselben Position, höchstens
 8 Spieler je Team, der Wechsel greift für alle noch nicht begonnenen Einzel
-der Position (im geteilten Spiel derzeit gesperrt). Der **Spielbericht** –
+der Position. Im geteilten Spiel reisen Wechsel und **Nachmeldungen** (samt
+Unterschrift) im Spielplan zum anderen iPad, bei gleichzeitigen Änderungen werden die
+Nachmeldungen beider Geräte zusammengeführt. Der **Spielbericht** –
 Udos Bogen als Blatt – füllt sich automatisch (Teams, Spieler H1–H8/G1–G8
 mit Vor- und Nachname aus dem bürgerlichen Namen, Legs je Einzel – kampflose
 mit **w.o.** –, rechts das Ergebnis je Einzel wie auf dem Bogen – 1 : 0 oder 0 : 1 –,
@@ -538,10 +542,11 @@ Teams mit dem Live-Ticker-Knopf (rotes LIVE-Schild), darunter „Für den Spielb
 mit 180ern, High-Finishes und Shortlegs als Zeilen sowie „Spieler nachmelden“ und
 „Spielbericht ansehen“ (die Turnier-Statistik entfällt dort). Die vier Dialoge des Ligaspiels sind
 breite Bogen nach demselben Entwurf: **Spieler wechseln** (Heim und Gast in zwei
-Spalten mit Status „gemeldet“, „Einzel läuft auf S1“ oder „Gast“; dann „Wechsel auf
-Position H2“ mit Kacheln aus dem Kader bzw. den schon nachgemeldeten Gästen und der
-spontanen Nachmeldung per Vor- und Nachname, die gleich zur Nachmeldung mit
-Unterschrift führt: der Spieler steht dann schon auf dem Bogen, das Team liegt fest,
+Spalten mit Status „gemeldet“, „Einzel läuft auf S1“, „Gastspieler“ oder
+„nachgemeldet“; dann „Wechsel auf Position H2“ mit Kacheln: bei uns der Kader, beim
+Gegner die Bank auf dem Bogen und sein Kader laut Ligaleitung, dazu ein anderer Name
+und der Status gemeldet / Gastspieler / neu melden. „Neu melden“ führt gleich zur
+Nachmeldung mit Unterschrift: der Spieler steht dann schon auf dem Bogen, das Team liegt fest,
 „Wechsel zurücknehmen“ setzt die alte Besetzung wieder ein), **Spieler nachmelden**
 (Team, Name, U18, Geschlecht, Platz auf dem Bogen und das Unterschriftsfeld in einem
 Bogen; der Dialog geht nur über seine Knöpfe zu, ein Strich neben das Feld oder die
@@ -1362,7 +1367,11 @@ und `js/webseite.js`) liegt seit Oktober 2026 die öffentliche Seite im App-Stil
 - **Am Spieltag stattdessen der Live-Stand**: sobald ein geteiltes Ligaspiel
   läuft (`GET /api/oeffentlich/liga` liefert den Zuschauer-Schlüssel), zeigt die
   Seite wie der Live-Ticker den Punktestand, die laufenden Boards mit Rest und
-  Average, „Ergebnisse heute“ und Highlights (alle 4 s neu). Ein beendetes Spiel
+  Average, „Als Nächstes“ mit Board, „Ergebnisse heute“ und Highlights (alle 4 s neu).
+  Dasselbe „Als Nächstes“ steht im Live-Ticker (zwei Einzel je Board). **In der App**
+  sehen Angemeldete, die nicht am spielenden iPad sitzen, das laufende Ligaspiel auf der
+  Startseite und im Liga-Reiter mit „Live zuschauen“ (`live.html?app=1#…`, oben geht es
+  zurück in die App); „Mitschreiben“ ist nur für das zweite iPad. Ein beendetes Spiel
   bleibt sechs Stunden als Endstand stehen; Übungsspiele zählen nicht.
 - **Ligatermine** (alle 18, gespielte mit Ergebnis, der nächste hervorgehoben,
   spielfreie als solche), **Ergebnisse** aller Spiele der Liga (aus

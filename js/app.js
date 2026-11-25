@@ -680,6 +680,11 @@
     var liste = (seite === 'H' ? lg.heimSpieler : lg.gastSpieler) || [];
     return liste.filter(function (id) { return id !== ausser && ligaTyp(lg, id) === 'gast'; }).length;
   }
+  /* Nachgemeldet (Unterschrift auf Seite 2) oder als solche vorgesehen. */
+  var LIGA_NACHGEM = '(nachgem.)';
+  function ligaNachgemeldet(lg, id) {
+    return ligaTyp(lg, id) === 'neu' || ((lg && lg.nachmeldungen) || []).some(function (n) { return n.id === id; });
+  }
   /* Beim Start als "neu melden" eingetragen, aber noch ohne Unterschrift
      auf Seite 2 - die holt die App spaetestens vor den TC-Unterschriften. */
   function ligaNachmeldungenOffen(lg) {
@@ -1379,7 +1384,7 @@
 
     /* Spielerwechsel auf dem anderen iPad: neuerer Plan. */
     if (S.tour && S.tour.sid === daten.id && (daten.plan.planStand || 0) > (S.tour.planStand || 0)) {
-      if (planAnwenden(daten.plan)) { neu = true; ligaNamenHolen(); }
+      if (planVomServer(daten.plan)) { neu = true; ligaNamenHolen(); }
     }
 
     var ich = window.DartKonto && window.DartKonto.nutzer() ? window.DartKonto.nutzer().id : null;
@@ -4260,6 +4265,7 @@
     }
     offeneEndenSenden();
     if (S.screen === 'setup' && letzterScreen !== 'setup') beitretbareHolen();
+    if ((S.screen === 'setup' || S.screen === 'liga') && letzterScreen !== S.screen) ligaLiveHolen();
     setupTakt(S.screen === 'setup');
     // Zusagen frisch holen, wenn man die Liga-Seite betritt – nicht bei
     // jedem Zeichnen, das wäre eine Anfrage je Tastendruck.
@@ -4367,6 +4373,37 @@
     });
     liveBeitretbareHolen();
   }
+  /* Laeuft gerade ein Ligaspiel auf ANDEREN Geraeten? Jeder mit der App soll
+     zuschauen koennen, auch wer nicht mitspielt (Julius, 24.11.): die App
+     fragt denselben oeffentlichen Stand wie die Webseite, der Stand selbst
+     steht im Live-Ticker. */
+  var LIGA_LIVE_TAKT = 60000;
+  var ligaLive = null;
+  function ligaLiveHolen() {
+    if (document.hidden || (S.screen !== 'setup' && S.screen !== 'liga')) return;
+    if (!window.DartKonto || !window.DartKonto.ruf || !window.DartKonto.nutzer || !window.DartKonto.nutzer()) return;
+    var abfrage = window.DartKonto.ruf('GET', '/api/oeffentlich/liga');
+    if (!abfrage || !abfrage.then) return;
+    abfrage.then(function (d) {
+      var l = d && d.live;
+      var neu = l && l.status === 'offen' && /^[A-Za-z0-9_-]{8,40}$/.test(String(l.zuschauer || '')) ? l : null;
+      var gleich = JSON.stringify(neu) === JSON.stringify(ligaLive);
+      ligaLive = neu;
+      if (!gleich && !UI.overlay && (S.screen === 'setup' || S.screen === 'liga')) render();
+    }).catch(function () { /* ohne Netz bleibt der letzte Stand */ });
+  }
+  setInterval(ligaLiveHolen, LIGA_LIVE_TAKT);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) ligaLiveHolen(); });
+  /* Das Ligaspiel der anderen - nicht das, das auf diesem Geraet laeuft. */
+  function ligaLiveFremd() {
+    if (!ligaLive || (S.tour && S.tour.liga && (S.tour.zuschauer === ligaLive.zuschauer || (!S.tour.liga.uebung && S.tour.liga.nr === ligaLive.nr)))) return null;
+    /* Schon abgeschlossen im Archiv: auf dem Server haengt nur noch ein Rest. */
+    if (S.history.some(function (h) { return h.liga && !h.liga.uebung && h.liga.abgeschlossen && h.liga.nr === ligaLive.nr && h.liga.tag === ligaLive.tag; })) return null;
+    return ligaLive;
+  }
+  function tickerOeffnen(k) {
+    if (/^[A-Za-z0-9_-]{8,40}$/.test(String(k || ''))) location.href = 'live.html?app=1#' + k;
+  }
   function liveBeitretbareHolen() {
     if (!window.DartSync || !window.DartSync.live) return;
     window.DartSync.live.offen().then(function (liste) {
@@ -4394,11 +4431,16 @@
   function renderBeitreten() {
     var box = $('beitreten-box');
     if (!box) return;
-    box.classList.toggle('hidden', !beitretbare.length && !liveBeitretbare.length);
+    var fremd = ligaLiveFremd();
+    box.classList.toggle('hidden', !beitretbare.length && !liveBeitretbare.length && !fremd);
     var titel = box.querySelector('h2');
-    if (titel) titel.textContent = beitretbare.length ? 'Turnier läuft' : 'Online-Spiel läuft';
+    if (titel) titel.textContent = fremd ? 'Ligaspiel läuft' : beitretbare.length ? 'Turnier läuft' : 'Online-Spiel läuft';
     var ich = liveNutzer();
-    $('beitreten-liste').innerHTML = liveBeitretbare.map(function (g) {
+    $('beitreten-liste').innerHTML = (fremd ? '<div class="beitreten-zeile">' +
+        '<div class="who"><div class="nm">' + esc(fremd.heim ? LIGA.team + ' – ' + fremd.gegner : fremd.gegner + ' – ' + LIGA.team) + '</div>' +
+        '<div class="sm">' + esc((fremd.nr ? fremd.nr + '. Spieltag' : 'Liga') + (fremd.ort ? ' · ' + fremd.ort : '')) + '</div></div>' +
+        '<button class="btn primary small" data-action="live-ansehen" data-k="' + esc(fremd.zuschauer) + '">Live zuschauen</button>' +
+        '</div>' : '') + liveBeitretbare.map(function (g) {
       var andere = (g.spielerNamen || []).filter(function (n, i) { return g.spieler[i] !== ich && n; });
       return '<div class="beitreten-zeile">' +
         '<div class="who"><div class="nm">' + esc(kindName(g.kind)) + ' von ' + esc(g.angelegtVonName || 'jemandem') + '</div>' +
@@ -4412,7 +4454,9 @@
         '<div class="who"><div class="nm">von ' + esc(t.angelegtVonName || 'jemandem') + '</div>' +
         '<div class="sm">' + plural((t.plan.players || []).length, 'Spieler', 'Spieler') + ' · ' +
         plural(offen, 'Partie offen', 'Partien offen') + '</div></div>' +
-        '<button class="btn primary small" data-action="turnier-beitreten" data-id="' + esc(t.id) + '">Mitmachen</button>' +
+        /* Liga: wer nur schauen will, nimmt "Live zuschauen" - Mitmachen
+           heisst hier mitschreiben (zweite Scheibe). */
+        '<button class="btn ' + (t.plan.liga ? 'ghost' : 'primary') + ' small" data-action="turnier-beitreten" data-id="' + esc(t.id) + '">' + (t.plan.liga ? 'Mitschreiben' : 'Mitmachen') + '</button>' +
         '</div>';
     }).join('');
   }
@@ -8939,6 +8983,9 @@
     var ich = online ? window.DartKonto.nutzer().id : null;
     var heuteIso = ligaHeuteIso();
     var laeuftId = S.tour && S.tour.liga && !S.tour.liga.uebung ? S.tour.liga.terminId : null;
+    /* ... oder auf anderen Geraeten: zuschauen. */
+    var fremdLive = laeuftId ? null : ligaLiveFremd(), fremdId = null;
+    if (fremdLive) LIGA.termine.forEach(function (t) { if (t.nr === fremdLive.nr && t.tag && t.tag === fremdLive.tag) fremdId = t.id; });
 
     /* Zusagen je Termin: wer "dabei" ist. Ohne Server bleibt die Zahl weg. */
     var zusagen = function (t) {
@@ -8952,7 +8999,7 @@
     var termine = LIGA.termine;
     var wahl = null;
     if (UI.ligaWahl) termine.forEach(function (t) { if (t.id === UI.ligaWahl) wahl = t; });
-    if (!wahl && laeuftId) termine.forEach(function (t) { if (!wahl && t.id === laeuftId) wahl = t; });
+    if (!wahl && (laeuftId || fremdId)) termine.forEach(function (t) { if (!wahl && t.id === (laeuftId || fremdId)) wahl = t; });
     if (!wahl) termine.forEach(function (t) { if (!wahl && t.tag && t.tag >= heuteIso && !ligaTerminBelegt(t)) wahl = t; });
     if (!wahl) termine.forEach(function (t) { if (!wahl && t.tag && t.tag >= heuteIso) wahl = t; });
     if (!wahl) termine.slice().reverse().forEach(function (t) { if (!wahl && t.tag) wahl = t; });
@@ -8987,6 +9034,8 @@
         var ld = ligaStandDaten();
         rechts = '● LIVE ' + ld.wirP + ' : ' + ld.sieP; rechtsKlasse = 'live';
         unten = 'Läuft · ' + ld.fertige + ' von ' + S.matches.length + ' Einzeln';
+      } else if (t.id === fremdId) {
+        rechts = '● LIVE'; rechtsKlasse = 'live';
       } else if (h) {
         var e = ligaErgebnisAus(h);
         /* Kein Haken am Ergebnis - der Stand sagt alles (Julius, 12.10.). */
@@ -9053,11 +9102,13 @@
         (wir ? '<span class="blink-logo" role="img" aria-label="Blink 180"></span>' : '<span class="lk-ini">' + esc(initialen(name)) + '</span>') +
         '<span class="lk-teamname">' + esc(name) + '</span><span class="lk-rolle">' + rolle + '</span></div>';
     };
-    var tonKlasse = live ? 'live' : (!h && !vorbei && ligaZusagen ? ton(leute.length) : 'neutral');
+    var fremd = t.id === fremdId;
+    var tonKlasse = live || fremd ? 'live' : (!h && !vorbei && ligaZusagen ? ton(leute.length) : 'neutral');
     karte.className = 'liga-karte ' + tonKlasse;
     var ld2 = live ? ligaStandDaten() : null;
     var kopfLinks = live
       ? '<span class="lk-live"><i></i>LIVE</span><span class="lk-einzel">Einzel ' + Math.min(ld2.fertige + 1, S.matches.length) + ' von ' + S.matches.length + '</span>'
+      : fremd ? '<span class="lk-live"><i></i>LIVE</span><span class="lk-einzel">' + esc(t.nr + '. Spieltag') + '</span>'
       : '<span class="lk-etikett">' + etikett + '</span>';
     var mitte = live
       ? '<div class="lk-stand"><span class="lk-punkte">' + ld2.wirP + ' : ' + ld2.sieP + '</span>' +
@@ -9116,8 +9167,13 @@
               /* GAME ON nur am Spieltag selbst - vorher stehen hier nur die
                  Zusagen, sonst startet jemand aus Versehen Tage vorher das
                  Ligaspiel (Julius, Handy-Block 2). */
-              (t.tag === heuteIso ? '<button class="btn primary start" data-action="liga-spiel" data-id="' + esc(t.id) + '">Game On!</button>' : ''));
+              (t.tag === heuteIso ? '<button class="btn ' + (fremd ? 'ghost' : 'primary start') + '" data-action="liga-spiel" data-id="' + esc(t.id) + '">Game On!</button>' : ''));
       fuss = erklaerung + antwortZeile + '<div class="lk-knoepfe">' + knoepfe + '</div>';
+    }
+    /* Zuschauen steht oben, der Rest bleibt: ein auf dem Server haengen
+       gebliebenes Spiel darf "Game On!" nicht verdecken. */
+    if (fremd) {
+      fuss = '<div class="lk-knoepfe"><button class="btn primary start" data-action="live-ansehen" data-k="' + esc(fremdLive.zuschauer) + '">Live zuschauen</button></div>' + fuss;
     }
     var person = function (p, klasse) {
       return '<span class="lt-person' + (klasse ? ' ' + klasse : '') + '">' + avatarHTML(zusageProfil(p), 'sm') + esc(p.name) + '</span>';
@@ -11679,7 +11735,10 @@
     var q = ligaBerichtQuelle();
     if (!q) { S.screen = 'liga'; render(); return; }
     var kennung = (UI.bericht || 'live') + ':' +
-      q.matches.filter(function (m) { return m.done; }).length;
+      q.matches.filter(function (m) { return m.done; }).length + ':' +
+      /* auch neu: wer dazukam (Wechsel, Nachmeldung), hier oder am anderen iPad */
+      [q.liga.heimSpieler, q.liga.gastSpieler, q.liga.nachmeldungen].map(function (l) { return (l || []).map(function (x) { return x && x.id ? x.id : x; }).join(','); }).join(':') + ':' +
+      JSON.stringify(q.liga.typen || {});
     if (berichtStand === kennung && $('bericht-blatt').innerHTML) return;
     berichtStand = kennung;
     var lg = q.liga;
@@ -11716,6 +11775,7 @@
         }
         /* Nicht gemeldeter Gastspieler: so steht es auch auf dem Papierbogen. */
         if (ids[i] && ligaTyp(lg, ids[i]) === 'gast') nach = (nach ? nach + ' ' : '') + '(Gast)';
+        else if (ids[i] && ligaNachgemeldet(lg, ids[i])) nach = (nach ? nach + ' ' : '') + LIGA_NACHGEM;
         zeilen += '<tr' + (i === 3 ? ' class="b-trenn"' : '') + '>' +
           '<th>' + praefix + (i + 1) + '</th>' +
           '<td contenteditable>' + esc(vor) + '</td>' +
@@ -11847,10 +11907,11 @@
         '<div class="b-protest" contenteditable></div>' +
         '<div class="b-fuss">Seite 2/2</div>' +
       '</div>';
+    /* Erst die Nachmeldungen, dann die Handkorrekturen darueber. */
+    berichtNachmeldungenEinsetzen();
     berichtKorrekturenEinsetzen();
     berichtWechselMarkieren();
     berichtUnterschriftenEinsetzen();
-    berichtNachmeldungenEinsetzen();
     berichtFinalisieren();
   }
 
@@ -12051,7 +12112,8 @@
     }
     var fehler = ligaWechseln(w.seite, w.pos, w.raus);
     if (fehler) return fehler;
-    var benutzt = lg.posH.concat(lg.posG).indexOf(id) >= 0 ||
+    /* Am anderen iPad schon nachgemeldet: bleibt im Team. */
+    var benutzt = (lg.nachmeldungen || []).some(function (n) { return n.id === id; }) || lg.posH.concat(lg.posG).indexOf(id) >= 0 ||
       S.matches.some(function (m) { return m.p.indexOf(id) >= 0; });
     if (!benutzt) {
       [lg.heimSpieler, lg.gastSpieler, lg.wir, lg.sie, S.tour.players].forEach(function (l) {
@@ -12089,10 +12151,14 @@
     var seite = unsere ? lg.wir : lg.sie;
     if (seite && seite.indexOf(id) < 0) seite.push(id);
     if (S.tour && S.tour.liga === lg && S.tour.players && S.tour.players.indexOf(id) < 0) S.tour.players.push(id);
+    lg.nachmeldungen = lg.nachmeldungen.filter(function (n) { return n.id !== id; });
     lg.nachmeldungen.push({ team: person.team, nach: person.nach, vor: person.vor, u18: person.u18, g: person.g, unterschrift: bild, id: id });
     ligaTypSetzen(lg, id, 'neu');
     if (S.nmOffen && S.nmOffen.id === id) delete S.nmOffen;
     save();
+    /* Im geteilten Spiel kennt sonst nur dieses iPad die Nachmeldung - und
+       der Bericht am anderen zeigte sie nicht (Spieltag 5, 24.11.). */
+    if (S.tour && S.tour.liga === lg && geteiltesTurnier() && !S.tour.beendet) geteiltenPlanSenden();
     berichtNachmeldungenEinsetzen();
     /* Beim Start mehrere "neu melden": gleich der naechste Bogen. */
     if (person.start && S.tour && S.tour.liga === lg && nachmeldungenOffenStarten()) { render(); return; }
@@ -12102,8 +12168,7 @@
         ' Gebühr nicht vergessen: ' + (person.u18 === 'ja' ? '2 €' : '10 €') + ' innerhalb von 14 Tagen.' };
     render();
   }
-  /* Die Nachmeldungen in den schon gezeichneten Bogen eintragen - ohne ihn
-     neu zu zeichnen (sonst waeren Handkorrekturen weg). */
+  /* Die Nachmeldungen in den gezeichneten Bogen eintragen. */
   function berichtNachmeldungenEinsetzen() {
     var q = ligaBerichtQuelle();
     var tab = document.querySelector('#bericht-blatt .b-nach');
@@ -12141,7 +12206,7 @@
         if (cells.length < 2 || cells[0].textContent.trim() || cells[1].textContent.trim()) return;
         var nm = liste.filter(function (n) { return n.id === pid; })[0];
         if (!nm) return;
-        cells[0].textContent = nm.vor; cells[1].textContent = nm.nach;
+        cells[0].textContent = nm.vor; cells[1].textContent = nm.nach + ' ' + LIGA_NACHGEM;
       });
     });
   }
@@ -12601,6 +12666,16 @@
     var pdf = berichtPdf();
     var liste = adressen.join(', ');
     try { if (navigator.clipboard) navigator.clipboard.writeText(liste).catch(function () {}); } catch (e) { /* egal */ }
+    /* Vor dem Server-Zweig: er steigt mit return aus, darunter waere das
+       hier noch undefined - die Mail war raus, die App meldete einen Fehler
+       und schloss das Spiel nicht ab (Spieltag 5, 24.11.). */
+    var fertig = function (wie) {
+      lg.berichtVersandt = Date.now();
+      ligaAbschliessen(lg);
+      UI.overlay = { type: 'hinweis', titel: 'Ligaspiel abgeschlossen',
+        text: wie + ' Empfänger: ' + liste + '. Im Spielplan steht der Spieltag jetzt als abgeschlossen – mit Ergebnissen und Bericht.' };
+      render();
+    };
     /* Mit eingerichtetem Mailversand schickt der Server die Mail samt PDF
        von blink180@ - ohne Teilen-Menue, mit Kopie ins Blink-Postfach. Geht
        das schief, bleibt der Dialog offen und bietet das Teilen-Menue an. */
@@ -12612,7 +12687,7 @@
         window.DartKonto.ruf('POST', '/api/liga/bericht-mail', { an: adressen, betreff: betreff, text: text, pdf: b64, name: name }).then(function (d) {
           o.sendet = false;
           fertig('Die Mail mit dem PDF ist raus, Absender ' + (d && d.von ? d.von : 'blink180@wirtschaftln.de') + ', Kopie im Blink-Postfach.');
-        }).catch(function (e) {
+        }, function (e) {   // nur der Versand selbst: ein Fehler danach heisst nicht "nicht geschickt"
           o.sendet = false;
           o.ohneServer = true;
           /* Abgelehnte Adresse (400, Erlaubtliste des Servers: Ligaleitung
@@ -12623,6 +12698,10 @@
             ? e.message + ' Bitte die Adresse prüfen – oder unten über das Teilen-Menü schicken.'
             : 'Der Server konnte die Mail nicht schicken (' + (e && e.message ? e.message : 'keine Verbindung') + '). Unten geht es über das Teilen-Menü.';
           render();
+        }).catch(function (e) {
+          o.sendet = false;
+          o.fehler = 'Die Mail ist raus, nicht noch einmal senden. Nur das Abschließen hat nicht geklappt (' + (e && e.message ? e.message : 'unbekannt') + '): bitte „Abschließen ohne Senden“ antippen.';
+          UI.overlay = o; render();
         });
       };
       leser.onerror = function () { o.sendet = false; o.fehler = 'Das PDF ließ sich nicht lesen.'; render(); };
@@ -12631,13 +12710,6 @@
     }
     var datei = null;
     try { datei = new File([pdf], name, { type: 'application/pdf' }); } catch (e) { datei = null; }
-    var fertig = function (wie) {
-      lg.berichtVersandt = Date.now();
-      ligaAbschliessen(lg);
-      UI.overlay = { type: 'hinweis', titel: 'Ligaspiel abgeschlossen',
-        text: wie + ' Empfänger: ' + liste + '. Im Spielplan steht der Spieltag jetzt als abgeschlossen – mit Ergebnissen und Bericht.' };
-      render();
-    };
     if (datei && navigator.canShare && navigator.canShare({ files: [datei] }) && navigator.share) {
       navigator.share({ files: [datei], title: betreff, text: text }).then(function () {
         fertig('Das PDF ist an die Mail übergeben.');
@@ -13577,7 +13649,8 @@
             '<div class="row-btns two">' +
               '<button class="btn ghost" data-action="ticker-kopieren">Link kopieren</button>' +
               '<button class="btn primary" data-action="ticker-teilen">Teilen</button>' +
-            '</div>'
+            '</div>' +
+            '<button class="btn ghost full" data-action="live-ansehen" data-k="' + esc(lt) + '">Hier ansehen</button>'
           : '<p>' + (S.tour && S.tour.geteilt
               ? 'Der Link kommt gleich vom Server – bitte in ein paar Sekunden nochmal öffnen.'
               : 'Den Live-Ticker gibt es für Ligaspiele im Modus „geteilt“ (beim Start des Ligaspiels wählen) – dann liegt der Stand beim Server.') + '</p>') +
@@ -14057,7 +14130,6 @@
          Position, wie es die SWO erlaubt. */
       var wlg = S.tour && S.tour.liga;
       if (!wlg) { UI.overlay = null; ov.classList.add('hidden'); return; }
-      var wUnsere = wlg.heim ? 'H' : 'G';
       var wHeimTeam = wlg.heim ? LIGA.team : wlg.gegner, wGastTeam = wlg.heim ? wlg.gegner : LIGA.team;
       /* Status je Position: laeuft gerade ein Einzel (auch am anderen
          Geraet), steht das dabei - sonst "gemeldet" bzw. "Gast". */
@@ -14069,7 +14141,7 @@
         })[0];
         if (laeuft) return { t: 'Einzel läuft' + (laeuft.scheibe ? ' auf ' + laeuft.scheibe : ''), hell: true };
         var wTyp = ligaTyp(wlg, (seite === 'H' ? wlg.posH : wlg.posG)[i]);
-        return { t: wTyp === 'gast' ? 'Gastspieler' : wTyp === 'neu' ? 'nachgemeldet' : seite === wUnsere ? 'gemeldet' : 'Gast', hell: false };
+        return { t: wTyp === 'gast' ? 'Gastspieler' : wTyp === 'neu' ? 'nachgemeldet' : 'gemeldet', hell: false };
       };
       var wSpalte = function (seite, titel, posListe) {
         return '<div class="dl-spalte"><div class="kt">' + titel + '</div>' + posListe.map(function (id, i) {
@@ -14094,44 +14166,52 @@
       var wzTeam = (wz.seite === 'H' ? wzLg.heimSpieler : wzLg.gastSpieler) || [];
       var wzBesetzt = wzLg.posH.concat(wzLg.posG);
       /* Eigene Seite: der Kader (alle Stammspieler, die nicht auf dem Bogen
-         stehen); Gegner: wer schon nachgemeldet ist. Dazu immer die
-         spontane Nachmeldung mit Namen. */
+         stehen); Gegner: wer schon auf dem Bogen steht, und sein Kader laut
+         Ligaleitung. Der normale Wechsel ist ein gemeldeter Spieler -
+         Gastspieler und Nachmeldung sind die Sonderfaelle (Julius, 24.11.). */
       var wzKandidaten = wz.eigene
         ? ligaKader().filter(function (p) { return wzBesetzt.indexOf(p.id) < 0 && !istLigaGegner(p.id); })
         : wzTeam.filter(function (id) { return wzBesetzt.indexOf(id) < 0; }).map(profile).filter(Boolean);
+      var wzKaderNamen = wz.eigene ? [] : wechselGegnerKader(wzLg);
+      var wzKaderGaeste = ligaGegnerKaderGaeste(wzLg.gegner);
       var wzMap = career();
       var wzOhne = wz.eigene && wz.draft.neu && vollFehlt(profile(wz.draft.neu)) ? profile(wz.draft.neu) : null;
+      var wzAufBogen = !!wechselAufBogen(wz, wzLg);
+      var wzTyp = wechselTyp(wz, wzLg);
       var wzKnopf = function (p) {
         var inTeam = wzTeam.indexOf(p.id);
-        var st = wzMap[p.id];
-        var sub = (st && st.darts ? 'Ø ' + st.avg.toFixed(1) + ' · ' : '') + (inTeam >= 0 ? (wz.eigene ? 'gemeldet' : 'nachgemeldet') : 'Kader');
+        var st = wzMap[p.id], typ = ligaTyp(wzLg, p.id);
+        var sub = (st && st.darts ? 'Ø ' + st.avg.toFixed(1) + ' · ' : '') +
+          (inTeam < 0 ? 'Kader' : typ === 'gast' ? 'Gastspieler' : ligaNachgemeldet(wzLg, p.id) ? 'nachgemeldet' : 'gemeldet');
         return '<button type="button" class="dl-wahl' + (wz.draft.neu === p.id ? ' active' : '') + '" data-action="liga-wechsel-neu" data-id="' + esc(p.id) + '">' +
           '<span class="dl-k h">' + (inTeam >= 0 ? wz.seite + (inTeam + 1) : '') + '</span>' +
           '<span class="dl-wer"><b>' + esc(ligaName(p.id)) + '</b><small>' + esc(sub) + '</small></span></button>';
+      };
+      var wzNameKnopf = function (n) {
+        return '<button type="button" class="dl-wahl' + (wz.draft.neuName === n ? ' active' : '') + '" data-action="liga-wechsel-neu" data-name="' + esc(n) + '">' +
+          '<span class="dl-wer"><b>' + esc(n) + '</b>' + (wzKaderGaeste.indexOf(n) >= 0 ? '<small>Gastspieler</small>' : '') + '</span></button>';
+      };
+      var wzTypKnopf = function (wert, t) {
+        return '<button type="button" data-action="liga-neu-typ" data-value="' + (wert || 'gemeldet') + '" class="' + (wzTyp === wert ? 'active' : '') + '"' +
+          (wzAufBogen ? ' disabled' : '') + '>' + t + '</button>';
       };
       html = '<div class="dl-kopf"><h3>Wechsel auf Position ' + wz.seite + (wz.pos + 1) + '</h3>' +
         '<p>Raus: ' + esc(ligaName(wzPosListe[wz.pos])) + '. Der neue Spieler übernimmt alle offenen Einzel von ' + wz.seite + (wz.pos + 1) + '.</p></div>' +
         (o.fehler ? '<p class="hint fehler" role="alert">' + esc(o.fehler) + '</p>' : '') +
         (wzKandidaten.length ? '<div class="kt">' + (wz.eigene ? 'Aus dem Kader' : 'Schon auf dem Bogen') + '</div>' +
           '<div class="dl-raster">' + wzKandidaten.map(wzKnopf).join('') + '</div>' : '') +
+        (wzKaderNamen.length ? '<div class="kt">Kader ' + esc(wzLg.gegner) + '</div>' +
+          '<div class="dl-raster dl-kader">' + wzKaderNamen.map(wzNameKnopf).join('') + '</div>' : '') +
         (wzOhne ? '<div class="kt">Voller Name von ' + esc(wzOhne.name) + ' (wird im Profil gespeichert)</div>' +
           '<div class="dl-raster">' + vollFelderHtml(wzOhne, wz.draft) + '</div>' : '') +
-        '<div class="kt">Oder spontan nachmelden</div>' +
+        '<div class="kt">Oder anderer Name</div>' +
         '<div class="dl-raster">' +
           '<input class="dl-input" data-role="liga-neu-name" maxlength="30" autocomplete="off" value="' + esc(wz.draft.name || '') + '" placeholder="Vorname">' +
           '<input class="dl-input" data-role="liga-neu-nach" maxlength="30" autocomplete="off" value="' + esc(wz.draft.nach || '') + '" placeholder="Nachname">' +
         '</div>' +
-        '<div class="dl-segment ls-neu-typ">' +
-          '<button type="button" data-action="liga-neu-typ" data-value="neu" class="' + (wz.draft.typ === 'gast' ? '' : 'active') + '">' + (wz.draft.neu ? 'gemeldet' : 'neu melden') + '</button>' +
-          '<button type="button" data-action="liga-neu-typ" data-value="gast" class="' + (wz.draft.typ === 'gast' ? 'active' : '') + '">Gastspieler</button>' +
-        '</div>' +
-        '<p class="dl-note">' + (wz.draft.neu && wzTeam.indexOf(wz.draft.neu) >= 0
-          ? 'Steht schon auf dem Bogen, der Status bleibt.'
-          : wz.draft.neu && wz.draft.typ !== 'gast'
-          ? 'Gewählter Spieler wird als gemeldet eingewechselt. Ist er nicht gemeldet: Gastspieler antippen.'
-          : wz.draft.typ === 'gast'
-          ? 'Gastspieler: nicht gemeldet, höchstens einer je Mannschaft und Spiel, höchstens zwei Einsätze je Saison – steht so auf dem Bogen, ohne Unterschrift.'
-          : 'Neuer Name kommt als Nachmeldung auf den Spielbericht und unterschreibt nach dem Einwechseln.') + '</p>' +
+        '<div class="kt">Status</div>' +
+        '<div class="dl-segment ls-neu-typ">' + wzTypKnopf('', 'gemeldet') + wzTypKnopf('gast', 'Gastspieler') + wzTypKnopf('neu', 'neu melden') + '</div>' +
+        '<p class="dl-note" data-role="wechsel-note">' + wechselNote(wz, wzLg) + '</p>' +
         '<div class="dl-fuss"><button class="btn ghost" data-action="roster-change">Zurück</button>' +
         '<button class="btn hell" data-action="liga-wechsel-ok">Einwechseln</button></div>';
     } else if (o.type === 'confirm-reset') {
@@ -14683,7 +14763,7 @@
   function ligaGegnerKader(team) {
     var info = (window.LIGA_DATEN.teamInfo || {})[team] || {};
     var namen = [];
-    var dazu = function (n) { n = String(n || '').replace(/^\*/, '').trim(); if (n && namen.indexOf(n) < 0) namen.push(n); };
+    var dazu = function (n) { n = String(n || '').replace(/^\*/, '').trim(); if (/[A-Za-zÀ-ž]/.test(n) && n !== 'Anonym' && namen.indexOf(n) < 0) namen.push(n); };   // von der Ligaleitung unkenntlich gemacht
     (info.spieler || []).forEach(function (s) { dazu(s.name); });
     Object.keys(LIGA_SPIELTAGE).forEach(function (tid) {
       (LIGA_SPIELTAGE[tid] || []).forEach(function (sp) {
@@ -14866,27 +14946,79 @@
     S.tour.planOffen = true; save();
     if (planUnterwegs) { planNochmal = true; return; }
     planUnterwegs = true;
-    window.DartSync.turnier.planAendern(planAusStand(), S.tour.planStand || 0).then(function (d) {
+    var basis = S.tour.planStand || 0, sid = S.tour.sid;
+    window.DartSync.turnier.planAendern(planAusStand(), basis).then(function (d) {
       planUnterwegs = false;
+      if (!S.tour || S.tour.sid !== sid) { planNochmal = false; return; }
       if (d && d.turnier && d.turnier.plan) { S.tour.planStand = d.turnier.plan.planStand || 0; }
       if (planNochmal) { planNochmal = false; save(); geteiltenPlanSenden(); return; }
-      delete S.tour.planOffen; save();
+      delete S.tour.planOffen; delete S.tour.planWechsel; save();
     }).catch(function (e) {
+      var nochmal = planNochmal;
       planUnterwegs = false; planNochmal = false;
-      if (!e || !e.status) return;   // kein Netz: planOffen bleibt, der Abgleich schickt nach
+      if (!S.tour || S.tour.sid !== sid) return;
+      /* Kein Netz oder der Server hustet (Deploy, zu viele Anfragen):
+         planOffen bleibt, der Abgleich schickt nach. */
+      if (!e || !e.status || e.status >= 500 || e.status === 429) return;
       delete S.tour.planOffen;
-      /* Das andere iPad war schneller: dessen Plan gilt, der Wechsel hier
-         muss neu gemacht werden. */
-      if (e && e.status === 409 && e.daten && e.daten.turnier) {
+      if (e.status === 409 && e.daten && e.daten.turnier) {
+        /* Das andere iPad war schneller: dessen Plan gilt, der eigene Wechsel
+           wird darauf neu aufgesetzt, wenn er die Position nicht auch
+           gewechselt hat (planVomServer), eigene Nachmeldungen bleiben. */
         uebernehmeTurnier(e.daten.turnier);
-        UI.overlay = { type: 'hinweis', titel: 'Wechsel nicht übernommen',
-          text: 'Auf dem anderen iPad wurde gerade auch gewechselt. Bitte den Wechsel hier noch einmal prüfen und ggf. wiederholen.' };
-      } else if (e && e.status) {
-        UI.overlay = { type: 'hinweis', titel: 'Wechsel nur hier',
-          text: 'Der Wechsel kam nicht beim Server an (' + (e && e.message ? e.message : 'kein Netz') + '). Das andere iPad kennt ihn noch nicht – bitte dort ebenfalls wechseln oder gleich nochmal versuchen.' };
+        var oben = ((e.daten.turnier.plan && e.daten.turnier.plan.liga) || {}).nachmeldungen;
+        var fehlt = ((S.tour.liga && S.tour.liga.nachmeldungen) || []).some(function (n) {
+          return !(Array.isArray(oben) ? oben : []).some(function (x) { return x && x.id === n.id; });
+        });
+        /* Nur auf einem neueren Stand als dem eben abgelehnten - sonst
+           liefe das im Kreis. */
+        if ((S.tour.planStand || 0) > basis) {
+          if ((fehlt || nochmal || S.tour.planOffen) && !planUnterwegs) geteiltenPlanSenden();
+          save(); render();
+          return;
+        }
       }
+      delete S.tour.planWechsel;
+      UI.overlay = { type: 'hinweis', titel: 'Änderung nur hier',
+        text: 'Der Wechsel oder die Nachmeldung kam nicht beim Server an (' + (e.message || 'abgelehnt') + '). Das andere iPad kennt sie noch nicht – bitte dort ebenfalls eintragen oder gleich nochmal versuchen.' };
       render();
     });
+  }
+  /* Noch nicht bestaetigte eigene Wechsel, je Position einer: ueberschreibt
+     ein fremder Plan (anderer Wechsel, Nachmeldung am anderen iPad) die
+     Aufstellung, werden sie darauf neu aufgesetzt. */
+  function planWechselMerken(seite, pos, raus, neu) {
+    if (!geteiltesTurnier()) return;
+    var l = S.tour.planWechsel = Array.isArray(S.tour.planWechsel) ? S.tour.planWechsel : [];
+    var da = l.filter(function (w) { return w.seite === seite && w.pos === pos; })[0];
+    if (da) da.neu = neu; else l.push({ seite: seite, pos: pos, raus: raus, neu: neu });
+    S.tour.planWechsel = l.filter(function (w) { return w.raus !== w.neu; });
+  }
+  function planVomServer(plan) {
+    var lg = S.tour && S.tour.liga;
+    var offen = lg && S.tour.planOffen && Array.isArray(S.tour.planWechsel) ? S.tour.planWechsel.map(function (w) {
+      return { seite: w.seite, pos: w.pos, raus: w.raus, neu: w.neu, typ: ligaTyp(lg, w.neu) };
+    }) : [];
+    if (!planAnwenden(plan)) return false;
+    if (!offen.length) return true;
+    S.tour.planWechsel = [];
+    var weg = [];
+    offen.forEach(function (w) {
+      var jetzt = (w.seite === 'H' ? lg.posH : lg.posG)[w.pos];
+      if (jetzt === w.neu) { planWechselMerken(w.seite, w.pos, w.raus, w.neu); return; }
+      if (jetzt === w.raus && !(w.typ === 'gast' && ligaGaeste(lg, w.seite, w.neu) >= 1)) {
+        if (w.typ === 'gast') ligaTypSetzen(lg, w.neu, 'gast');
+        if (!ligaWechseln(w.seite, w.pos, w.neu)) return;
+        if (w.typ === 'gast') ligaTypSetzen(lg, w.neu, '');
+      }
+      weg.push(w.seite + (w.pos + 1) + ' (' + ligaName(w.neu) + ')');
+    });
+    if (weg.length) {
+      UI.overlay = { type: 'hinweis', titel: 'Wechsel nicht übernommen',
+        text: 'Auf dem anderen iPad wurde gerade auch gewechselt: ' + weg.join(', ') + '. Bitte den Wechsel hier noch einmal prüfen und ggf. wiederholen.' };
+      setTimeout(render, 0);
+    }
+    return true;
   }
   /* Einen geaenderten Plan vom anderen iPad uebernehmen: Aufstellung und
      Spielerlisten, und die Paarungen der Einzel, die hier noch nicht
@@ -14894,18 +15026,45 @@
   function planNachreichen() {
     if (S.tour && S.tour.planOffen && !planUnterwegs) geteiltenPlanSenden();
   }
+  /* Nachmeldungen beider iPads zusammenfuehren (je Person eine, die hiesige
+     gilt): wer nachgemeldet ist, steht danach auch hier im Team. */
+  function nachmeldungenMischen(lg, fremde) {
+    var liste = Array.isArray(lg.nachmeldungen) ? lg.nachmeldungen : [];
+    (Array.isArray(fremde) ? fremde : []).forEach(function (n) {
+      if (!n || typeof n !== 'object' || !n.id || (n.team !== 'H' && n.team !== 'G') || !SIGNATUR_OK.test(String(n.unterschrift || ''))) return;
+      if (liste.some(function (x) { return x.id === n.id; })) return;
+      liste.push({ team: n.team, nach: String(n.nach || ''), vor: String(n.vor || ''), u18: n.u18 === 'ja' ? 'ja' : 'nein',
+        g: String(n.g || ''), unterschrift: String(n.unterschrift), id: String(n.id) });
+    });
+    if (!liste.length) return;
+    lg.nachmeldungen = liste;
+    liste.forEach(function (n) {
+      var dazu = function (l) { if (Array.isArray(l) && l.indexOf(n.id) < 0) l.push(n.id); };
+      var bogen = n.team === 'H' ? lg.heimSpieler : lg.gastSpieler;
+      if (bogen && bogen.length < 8) dazu(bogen);
+      /* Name aus der Nachmeldung: im Bogen des anderen iPads korrigiert. */
+      var gp = profile(n.id), gv = (n.vor + ' ' + n.nach).replace(/\s+/g, ' ').trim();
+      if (gp && gp.gast && gv) { if (gp.name === gp.voll) gp.name = gv.slice(0, 30); gp.voll = gv; }
+      dazu((n.team === 'H') === !!lg.heim ? lg.wir : lg.sie);
+      dazu(S.tour.players);
+      ligaTypSetzen(lg, n.id, 'neu');
+      if (S.nmOffen && S.nmOffen.id === n.id) delete S.nmOffen;
+      if (UI.overlay && UI.overlay.type === 'nachmeldung' && UI.overlay.draft && UI.overlay.draft.id === n.id) UI.overlay = null;
+    });
+  }
   function planAnwenden(plan) {
     if (!S.tour || !plan) return false;
     var lgNeu = plan.liga, lg = S.tour.liga;
+    /* Von beiden TCs unterschrieben: am Bogen aendert sich nichts mehr. */
+    if (lg && berichtIstFinal(lg)) { S.tour.planStand = plan.planStand || 0; return true; }
     if (lg && lgNeu) {
       ['posH', 'posG', 'heimSpieler', 'gastSpieler', 'wir', 'sie'].forEach(function (k) {
         if (Array.isArray(lgNeu[k])) lg[k] = lgNeu[k].slice();
       });
       /* Gastspieler-Status mitnehmen (wer am anderen Geraet als Gast
          eingewechselt wurde), und den eines hier verworfenen Wechsels
-         fallen lassen. 'neu' bleibt aussen vor: die Nachmeldung samt
-         Unterschrift reist nicht im Plan, sonst fragte dieses Geraet sie
-         noch einmal ab. */
+         fallen lassen. 'neu' kommt nur zusammen mit der unterschriebenen
+         Nachmeldung (unten), sonst fragte dieses Geraet sie noch einmal ab. */
       var lgAlle = (lg.heimSpieler || []).concat(lg.gastSpieler || []);
       Object.keys(lg.typen || {}).forEach(function (id) {
         if (lg.typen[id] === 'gast' && lgAlle.indexOf(id) < 0) delete lg.typen[id];
@@ -14915,6 +15074,7 @@
       });
     }
     if (Array.isArray(plan.players)) S.tour.players = plan.players.slice();
+    if (lg && lgNeu) nachmeldungenMischen(lg, lgNeu.nachmeldungen);
     var g = plan.gaeste || {};
     Object.keys(g).forEach(function (gid) {
       if (S.profiles.some(function (p) { return p.id === gid; })) return;
@@ -14930,6 +15090,74 @@
     });
     S.tour.planStand = plan.planStand || 0;
     return true;
+  }
+
+  /* ---- Wechsel-Dialog: Auswahl und Status ---- */
+  function nameNorm(n) { return String(n || '').replace(/\s+/g, ' ').trim().toLowerCase(); }
+  /* Der Kader des Gegners laut Ligaleitung, ohne wer schon auf dem Bogen steht. */
+  function wechselGegnerKader(lg) {
+    var da = (lg.heimSpieler || []).concat(lg.gastSpieler || []).map(function (id) { return nameNorm(ligaName(id)); });
+    return ligaGegnerKader(lg.gegner).filter(function (n) { return da.indexOf(nameNorm(n)) < 0; });
+  }
+  function wechselGetippt(d) {
+    return (String(d.name || '').trim().slice(0, 30) + ' ' + String(d.nach || '').trim().slice(0, 30)).replace(/\s+/g, ' ').trim();
+  }
+  /* Getippter Name, den es im Kader schon gibt: dann ist es der. */
+  function wechselBekannt(o, lg) {
+    var n = nameNorm(wechselGetippt(o.draft));
+    if (!n) return null;
+    /* Steht schon auf dem Bogen (Bank oder aktiv). */
+    var da = ((o.seite === 'H' ? lg.heimSpieler : lg.gastSpieler) || []).filter(function (id) { return nameNorm(ligaName(id)) === n; })[0];
+    if (da) return { id: da };
+    if (o.eigene) {
+      var p = ligaKader().filter(function (x) { return nameNorm(x.voll) === n; })[0];
+      return p ? { id: p.id } : null;
+    }
+    var k = wechselGegnerKader(lg).filter(function (x) { return nameNorm(x) === n; })[0];
+    return k ? { name: k } : null;
+  }
+  /* Der Status fuer den Bogen: angetippt, sonst gemeldet fuer jeden aus dem
+     Kader (Gast, wen die Ligaleitung so fuehrt) und "neu melden" fuer einen
+     unbekannten Namen. Wer schon auf dem Bogen steht, behaelt seinen. */
+  function wechselAufBogen(o, lg) {
+    var b = o.draft.neu ? { id: o.draft.neu } : o.draft.neuName ? null : wechselBekannt(o, lg);
+    return b && b.id && (lg.heimSpieler || []).concat(lg.gastSpieler || []).indexOf(b.id) >= 0 ? b.id : null;
+  }
+  function wechselTyp(o, lg) {
+    var d = o.draft, bogenId = wechselAufBogen(o, lg);
+    if (bogenId) return ligaNachgemeldet(lg, bogenId) ? 'neu' : ligaTyp(lg, bogenId);
+    if (d.typ === '' || d.typ === 'gast' || d.typ === 'neu') return d.typ;
+    if (d.neu) return '';
+    var bekannt = d.neuName ? { name: d.neuName } : wechselBekannt(o, lg);
+    if (bekannt) return bekannt.name && ligaGegnerKaderGaeste(lg.gegner).indexOf(bekannt.name) >= 0 ? 'gast' : '';
+    return d.neuName || wechselGetippt(d) ? 'neu' : '';
+  }
+  function wechselNote(o, lg) {
+    if (wechselAufBogen(o, lg)) return 'Steht schon auf dem Bogen, der Status bleibt.';
+    var typ = wechselTyp(o, lg);
+    return typ === 'gast'
+      ? 'Gastspieler: nicht gemeldet, höchstens einer je Mannschaft und Spiel, höchstens zwei Einsätze je Saison – steht so auf dem Bogen, ohne Unterschrift.'
+      : typ === 'neu'
+      ? 'Neu melden: kommt als Nachmeldung auf Seite 2 des Spielberichts und unterschreibt gleich nach dem Einwechseln.'
+      : 'Gemeldet: normaler Wechsel, ohne Unterschrift.';
+  }
+  /* Beim Tippen nur Status und Hinweis nachziehen (das Feld behaelt den
+     Fokus); ein vorher gewaehlter Spieler ist damit abgewaehlt. */
+  function wechselTippen() {
+    var o = UI.overlay, lg = S.tour && S.tour.liga;
+    if (!o || o.type !== 'liga-wechsel-zu' || !lg) return;
+    var karte = $('overlay-card');
+    if (o.draft.neu || o.draft.neuName) {
+      o.draft.neu = ''; o.draft.neuName = ''; o.draft.typ = null;
+      karte.querySelectorAll('.dl-wahl.active').forEach(function (b) { b.classList.remove('active'); });
+    }
+    var typ = wechselTyp(o, lg) || 'gemeldet';
+    karte.querySelectorAll('[data-action="liga-neu-typ"]').forEach(function (b) {
+      b.disabled = !!wechselAufBogen(o, lg);
+      b.classList.toggle('active', b.getAttribute('data-value') === typ);
+    });
+    var note = karte.querySelector('[data-role="wechsel-note"]');
+    if (note) note.textContent = wechselNote(o, lg);
   }
 
   function ligaWechseln(seite, pos, neueId) {
@@ -14964,6 +15192,7 @@
       if (teamListe.length >= 8) return 'Mehr als 8 Spieler je Team lässt die SWO nicht zu.';
       teamListe.push(neueId);
     }
+    planWechselMerken(seite, pos, posListe[pos], neueId);
     posListe[pos] = neueId;
     if (S.tour.players.indexOf(neueId) < 0) S.tour.players.push(neueId);
     var unsereSeite = lg.heim ? 'H' : 'G';
@@ -16050,7 +16279,8 @@
       }
       case 'liga-neu-typ':
         if (UI.overlay && UI.overlay.type === 'liga-wechsel-zu') {
-          UI.overlay.draft.typ = el.getAttribute('data-value') === 'gast' ? 'gast' : 'neu';
+          var ntWahl = el.getAttribute('data-value');
+          UI.overlay.draft.typ = ntWahl === 'gast' || ntWahl === 'neu' ? ntWahl : '';
           UI.overlay.fehler = '';
           render();
         }
@@ -16238,6 +16468,9 @@
         if (kZelle) kZelle.innerHTML = berichtKreuzHtml(kq.liga, kFeld);
         break;
       }
+      case 'live-ansehen':
+        tickerOeffnen(el.getAttribute('data-k'));
+        break;
       case 'liga-ticker':
         if (S.tour && S.tour.geteilt && !S.tour.zuschauer && window.DartSync && window.DartSync.turnier) {
           window.DartSync.turnier.abgleich(true).then(function () { render(); });
@@ -16657,8 +16890,10 @@
       case 'liga-wechsel-neu': {
         var lwn = UI.overlay;
         if (!lwn || lwn.type !== 'liga-wechsel-zu') break;
-        var lwnId = el.getAttribute('data-id');
-        lwn.draft.neu = lwn.draft.neu === lwnId ? '' : lwnId;
+        var lwnId = el.getAttribute('data-id') || '', lwnName = el.getAttribute('data-name') || '';
+        lwn.draft.neu = lwnId && lwn.draft.neu !== lwnId ? lwnId : '';
+        lwn.draft.neuName = lwnName && lwn.draft.neuName !== lwnName ? lwnName : '';
+        lwn.draft.typ = null;   // jeder Spieler bringt seinen Status mit
         lwn.draft.name = ''; lwn.draft.nach = ''; lwn.fehler = '';
         render();
         break;
@@ -16685,30 +16920,34 @@
         var lo = UI.overlay;
         if (!lo || lo.type !== 'liga-wechsel-zu') break;
         var loLg = S.tour.liga;
-        var neuId, loSpontan = false, loNeuAngelegt = false;
+        var neuId, loNeuAngelegt = false;
+        var loTyp = wechselTyp(lo, loLg);
         if (lo.draft.neu) {
           neuId = lo.draft.neu;
         } else {
-          var loVor = String(lo.draft.name || '').trim(), loNach = String(lo.draft.nach || '').trim();
-          if (!loVor || !loNach) {
+          if (!lo.draft.neuName && (!String(lo.draft.name || '').trim() || !String(lo.draft.nach || '').trim())) {
             lo.fehler = 'Bitte einen Spieler wählen oder Vor- und Nachnamen eintragen.'; render(); break;
           }
-          var loName = (loVor.slice(0, 30) + ' ' + loNach.slice(0, 30)).replace(/\s+/g, ' ').trim();
+          var loBekannt = lo.draft.neuName ? { name: lo.draft.neuName } : wechselBekannt(lo, loLg);
           /* Nur die AKTIVE Besetzung ausschließen: wer auf der Bank sitzt,
              wird am Namen wiedererkannt und darf zurückwechseln – sonst
              entstünde ein zweites Profil desselben Menschen. */
           var loVorher = S.profiles.length;
-          neuId = ligaGastId(loName, loLg.posH.concat(loLg.posG));
+          neuId = loBekannt && loBekannt.id ? loBekannt.id
+            : ligaGastId(loBekannt ? loBekannt.name : wechselGetippt(lo.draft), loLg.posH.concat(loLg.posG));
           loNeuAngelegt = S.profiles.length > loVorher;
-          loSpontan = (loLg.heimSpieler || []).indexOf(neuId) < 0 && (loLg.gastSpieler || []).indexOf(neuId) < 0;
         }
-        /* Spontaner Name als Gastspieler (statt Nachmeldung): nur einer je
-           Seite, dann ohne Unterschrift auf den Bogen. */
-        /* Auch wer aus dem Kader kommt, kann fuer uns nicht gemeldeter
-           Gastspieler sein - solange er noch nicht auf dem Bogen steht. */
+        /* Status nur fuer den, der neu auf den Bogen kommt: Gastspieler
+           (einer je Seite, ohne Unterschrift) oder Nachmeldung. */
         var loNeuAufBogen = (loLg.heimSpieler || []).indexOf(neuId) < 0 && (loLg.gastSpieler || []).indexOf(neuId) < 0;
-        var loGast = loNeuAufBogen && lo.draft.typ === 'gast';
-        if (loGast && ligaGaeste(loLg, lo.seite, neuId) >= 1) { lo.fehler = LIGA_GAST_FEHLER; render(); break; }
+        var loGast = loNeuAufBogen && loTyp === 'gast';
+        var loNachmelden = loNeuAufBogen && loTyp === 'neu';
+        /* Abgelehnt: das eben angelegte Gastprofil wieder weg. */
+        var loVerwerfen = function (text) {
+          if (loNeuAngelegt) S.profiles = S.profiles.filter(function (p) { return p.id !== neuId; });
+          lo.fehler = text; render();
+        };
+        if (loGast && ligaGaeste(loLg, lo.seite, neuId) >= 1) { loVerwerfen(LIGA_GAST_FEHLER); break; }
         if (lo.eigene && lo.draft.neu) {
           var loVoll = vollPruefen([neuId], lo.draft);
           if (loVoll) { lo.fehler = loVoll; render(); break; }
@@ -16719,16 +16958,11 @@
            andere Geraet, der Status soll mit. */
         if (loNeuAufBogen) ligaTypSetzen(loLg, neuId, loGast ? 'gast' : '');
         var loFehler = ligaWechseln(lo.seite, lo.pos, neuId);
-        if (loFehler) { if (loNeuAufBogen) ligaTypSetzen(loLg, neuId, ''); lo.fehler = loFehler; render(); break; }
-        if (loGast) {
-          UI.overlay = { type: 'liga-wechsel' };
-          render(); break;
-        }
-        /* Ein spontan eingewechselter Name ist eine Nachmeldung: gleich
-           weiter zu Alter, Geschlecht und Unterschrift fuer den Bogen. Der
+        if (loFehler) { if (loNeuAufBogen) ligaTypSetzen(loLg, neuId, ''); loVerwerfen(loFehler); break; }
+        /* "Neu melden" (getippter Name oder Kader-Spieler): gleich weiter zu Alter, Geschlecht und Unterschrift fuer den Bogen. Der
            Spieler steht schon auf dem Bogen - das Overlay kennt ihn (id),
            das Team steht fest, und "Abbrechen" nimmt den Wechsel zurueck. */
-        if (loSpontan) {
+        if (loNachmelden) {
           var loP = profile(neuId), loTeile = vollSplit(loP && loP.voll);
           var loDraft = { team: lo.seite, teamFest: true, id: neuId, neuAngelegt: loNeuAngelegt,
             wechsel: { seite: lo.seite, pos: lo.pos, raus: loRaus },
@@ -17311,9 +17545,11 @@
     }
     if (ev.target.getAttribute('data-role') === 'liga-neu-name' && UI.overlay && UI.overlay.draft) {
       UI.overlay.draft.name = ev.target.value;
+      wechselTippen();
     }
     if (ev.target.getAttribute('data-role') === 'liga-neu-nach' && UI.overlay && UI.overlay.draft) {
       UI.overlay.draft.nach = ev.target.value;
+      wechselTippen();
     }
   });
 
@@ -18377,6 +18613,7 @@
       liveUebernehmen: liveUebernehmen,
       liveGetrennt: liveGetrennt,
       liveBeitreten: liveBeitreten,
+      ligaLiveHolen: ligaLiveHolen,
       liveBeitretbare: function () { return liveBeitretbare; },
       letztesSpielAm: letztesSpielAm,
       gaesteAufraeumen: gaesteAufraeumen,
