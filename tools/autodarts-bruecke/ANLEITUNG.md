@@ -15,9 +15,8 @@ Das MacBook geht nicht: Autodarts Desktop gibt es nur für Windows und Linux.
 1. **Autodarts Desktop** von autodarts.com installieren und starten.
    - Steck jede Kamera an einen eigenen USB-Port am PC, nicht alle an einen Hub.
      Windows macht sonst bei mehreren Kameras Ärger.
-   - Im Board Manager die drei Kameras zuordnen. Sobald die Arme montiert sind,
-     kalibrieren. Die Kameras sollten etwa 120° auseinander stehen.
-   - Anmelden mit deinem Autodarts-Konto, wenn das Programm danach fragt.
+   - Anmelden, Board anlegen, dann bei „Set up cameras“ die drei „USB Camera“
+     zuordnen und „Calibrate“ tippen, bis alle drei Rahmen grün sind.
 2. **Node.js** installieren, die LTS-Version von nodejs.org, mit allen Vorgaben.
    Danach den PC einmal neu starten. Sonst meldet das Fenster später
    „node“ ist nicht als Befehl erkannt.
@@ -33,8 +32,7 @@ Das MacBook geht nicht: Autodarts Desktop gibt es nur für Windows und Linux.
 
 ## Jedes Mal
 
-1. Autodarts Desktop starten. Im Board Manager die Erkennung starten, das ist der
-   Knopf „Start“ oben. Unten muss der Zustand auf „Throw“ stehen.
+1. Autodarts Desktop starten und dort die Erkennung starten.
 2. Doppelklick auf **`start-windows.bat`**. Im schwarzen Fenster steht dann:
    - `Autodarts-Brücke 1.0.0 auf http://127.0.0.1:3190, Quelle http://127.0.0.1:3180`
    - wenige Augenblicke später `Board Manager verbunden`
@@ -101,7 +99,8 @@ lässt die App aus Sicherheitsgründen nicht zu.
 
 ## Wenn keine Darts ankommen
 
-Manche Autodarts-Versionen liefern die Würfe lokal nicht mehr aus. Dann steht in
+Geprüft am 25.11.2026 mit Autodarts Desktop 2.1.1: Die Würfe kommen lokal an. Sollte
+eine spätere Version sie nicht mehr ausliefern, steht in
 der Karte, die beim Antippen des Punkts aufgeht: „Board meldet Würfe, aber ohne
 Liste“. Sag mir dann Bescheid. Der Plan B ist dann der Weg über die
 Autodarts-Cloud mit dem fertigen Werkzeug darts-caller, das sich mit deinem
