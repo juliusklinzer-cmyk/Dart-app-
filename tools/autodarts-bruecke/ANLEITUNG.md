@@ -44,14 +44,16 @@ Das MacBook geht nicht: Autodarts Desktop gibt es nur für Windows und Linux.
    `https://darts.wirtschaftln.de/index.html?autodarts=an`
    Der Zusatz schaltet den Anschluss nur in diesem Browser frei. Für alle anderen
    bleibt die App, wie sie ist.
-4. Oben in der Mitte steht jetzt **„Autodarts aus“**. Antippen, dann auf
-   **„Einschalten“** tippen.
+4. Im Startbild unten bei den Einstellungen steht **„Autodarts › Einrichten“**. Antippen:
+   Eine Karte zeigt vier Schritte (Brücke läuft, Autodarts verbunden, Erkennung läuft
+   und ist kalibriert, Testwurf erkannt). Sind alle grün, **„Einschalten“** tippen.
    - Der Browser fragt beim ersten Mal, ob die Seite auf Geräte im lokalen
      Netzwerk bzw. auf Apps auf diesem Gerät zugreifen darf. Wähle **Zulassen**.
    - Aus Versehen „Blockieren“ gedrückt? Dann auf das Schloss links in der
      Adresszeile, „Website-Einstellungen“, den Punkt „Lokales Netzwerk“ bzw.
      „Apps auf diesem Gerät“ auf „Zulassen“ stellen und die Seite neu laden.
-   - Steht dort **„Autodarts bereit“** mit grünem Punkt, ist alles verbunden.
+   - Eingeschaltet steht bei „Eingabe“ nur noch **Autodarts**: jedes Spiel an diesem
+     Gerät zählt über die Kameras, oben steht der Zustand (grün „Autodarts bereit“).
 5. Spiel starten wie immer und werfen.
    - Jeder Dart wird sofort gebucht.
    - Ziehst du die Darts, bevor drei erkannt waren, weil einer herausgefallen ist,
@@ -80,14 +82,14 @@ und drückst jeweils Enter:
 
 In der App erscheinen die Darts genauso wie später von den Kameras.
 
-## Was der Punkt oben bedeutet
+## Was der Zustand oben bedeutet (nur wenn eingeschaltet)
 
 | Anzeige | Bedeutung | Was tun |
 |---|---|---|
-| grau „Autodarts aus“ | ausgeschaltet | antippen, dann „Einschalten“ |
 | rot „Brücke nicht erreichbar“ | das schwarze Fenster läuft nicht | `start-windows.bat` starten |
-| gelb „Board Manager fehlt“ | Autodarts läuft nicht, oder die Erkennung ist gestoppt | Autodarts starten, auf „Start“ |
-| gelb „Darts ziehen“ | Autodarts wartet auf das Ziehen | Darts ziehen |
+| gelb „Autodarts nicht verbunden“ | Autodarts Desktop läuft nicht | Autodarts starten |
+| gelb „Erkennung gestoppt“ | die Erkennung ist aus | in Autodarts die Erkennung starten |
+| gelb „Pfeile ziehen“ | Autodarts wartet auf das Ziehen | Darts ziehen |
 | grün „Autodarts bereit“ | alles gut | werfen |
 
 Hakt etwas, tippe `http://127.0.0.1:3190/status` in die Adresszeile des Browsers.

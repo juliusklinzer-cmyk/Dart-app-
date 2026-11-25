@@ -111,15 +111,25 @@ try {
   await page.evaluate((a) => localStorage.setItem('dart-autodarts-v1', JSON.stringify({ frei: false, an: false, adresse: a })), `http://127.0.0.1:${BR_PORT}`);
   await page.goto(HERKUNFT + '/index.html?autodarts=an');
   await page.waitForFunction(() => window.__dart && window.DartAutodarts);
-  check('Knopf erscheint, steht auf aus', (await page.locator('.ad-chip').textContent()).includes('aus'));
-  /* Wie ein echter Mausklick an die Stelle (der Knopf liegt fest ueber der App). */
+  /* Wie ein echter Mausklick an die Stelle. */
   const tippe = async (sel) => { const r = await page.locator(sel).boundingBox(); await page.mouse.click(r.x + r.width / 2, r.y + r.height / 2); await warte(120); };
-  await tippe('.ad-chip');
-  check('Tipp auf den Knopf öffnet die Karte', await page.locator('.ad-panel').isVisible());
+  await page.evaluate(() => window.__dart.setScreen('setup'));
+  check('aus: kein Knopf oben im Bild', !(await page.locator('.ad-chip').isVisible()));
+  check('die Einrichtung steht bei den Einstellungen', await page.locator('#setting-autodarts').isVisible() && /Einrichten/.test(await page.locator('#setting-autodarts').textContent()));
+  await tippe('#setting-autodarts [data-action="autodarts-einrichten"]');
+  check('Einrichten öffnet die Karte mit den Schritten', await page.locator('.ad-panel').isVisible() && (await page.locator('.ad-schritte li').count()) === 4);
+  await page.waitForFunction(() => document.querySelectorAll('.ad-schritte li.ok').length === 3, null, { timeout: 5000 }).catch(() => {});
+  check('Brücke, Autodarts und Erkennung grün, Einschalten noch gesperrt (Testwurf fehlt)',
+    (await page.locator('.ad-schritte li.ok').count()) === 3 && await page.locator('.ad-panel [data-ad="an"]').isDisabled());
+  await wirf('S1');
+  await page.waitForFunction(() => document.querySelectorAll('.ad-schritte li.ok').length === 4, null, { timeout: 5000 }).catch(() => {});
+  check('Testwurf erkannt, nichts gebucht', (await page.locator('.ad-schritte li.ok').count()) === 4 && (await page.evaluate(() => window.DartAutodarts.zustand().schlange)) === 0);
+  await ziehe();
   await tippe('.ad-panel [data-ad="an"]');
   await page.waitForFunction(() => window.DartAutodarts.zustand().verbunden && window.DartAutodarts.zustand().board.verbunden, null, { timeout: 5000 }).catch(() => {});
-  check('verbunden mit Brücke und Board Manager', (await page.locator('.ad-chip').textContent()).includes('bereit'), await page.locator('.ad-chip').textContent());
+  check('eingeschaltet: oben steht der Zustand', (await page.locator('.ad-chip').textContent()).includes('bereit'), await page.locator('.ad-chip').textContent());
   await tippe('.ad-panel [data-ad="zu"]');
+  check('bei der Eingabe steht nur noch Autodarts', await page.locator('#eingabe-autodarts').isVisible() && !(await page.locator('#eingabe-wahl [data-action="eingabe"]').first().isVisible()));
   check('Freischaltung überlebt Neuladen', await page.evaluate(() => JSON.parse(localStorage.getItem('dart-autodarts-v1')).frei === true));
 
   /* Schnelles X01, ein Spieler, 501. */
@@ -201,7 +211,7 @@ try {
   console.log('\nFehlerfälle');
   board.close(); board.closeAllConnections && board.closeAllConnections();
   await warte(1800);
-  check('Board Manager weg: gelb "Board Manager fehlt"', (await page.locator('.ad-chip').textContent()).includes('Board Manager fehlt'), await page.locator('.ad-chip').textContent());
+  check('Autodarts weg: gelb "nicht verbunden"', (await page.locator('.ad-chip').textContent()).includes('Autodarts nicht verbunden'), await page.locator('.ad-chip').textContent());
   bruecke.kill();
   await warte(1500);
   check('Brücke weg: rot "nicht erreichbar"', (await page.locator('.ad-chip').textContent()).includes('nicht erreichbar'), await page.locator('.ad-chip').textContent());

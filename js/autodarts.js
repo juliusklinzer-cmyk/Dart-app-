@@ -42,20 +42,23 @@
   var neuTimer = null;
   var panelAuf = false;
 
+  /* geprueft: an diesem Geraet kam schon einmal ein erkannter Dart an
+     (Testwurf beim Einrichten) - erst dann laesst es sich einschalten. */
   function laden() {
     try {
       var z = JSON.parse(localStorage.getItem(SCHLUESSEL) || '{}');
-      return { frei: !!z.frei, an: !!z.an, adresse: typeof z.adresse === 'string' && z.adresse ? z.adresse : VORGABE };
-    } catch (e) { return { frei: false, an: false, adresse: VORGABE }; }
+      return { frei: !!z.frei, an: !!z.an, geprueft: !!z.geprueft || !!z.an, adresse: typeof z.adresse === 'string' && z.adresse ? z.adresse : VORGABE };
+    } catch (e) { return { frei: false, an: false, geprueft: false, adresse: VORGABE }; }
   }
   function speichern() {
     try { localStorage.setItem(SCHLUESSEL, JSON.stringify(cfg)); } catch (e) { /* privat */ }
   }
 
   /* ================= Verbindung ================= */
+  /* Verbunden wird, wenn Autodarts an ist oder gerade eingerichtet wird. */
   function verbinden() {
     trennen();
-    if (!cfg.an) { zeichnen(); return; }
+    if (!cfg.an && !panelAuf) { zeichnen(); return; }
     try {
       strom = new EventSource(cfg.adresse.replace(/\/+$/, '') + '/ereignisse');
     } catch (e) { board.fehler = 'Adresse ungültig'; zeichnen(); return; }
@@ -80,18 +83,22 @@
     });
     strom.addEventListener('dart', function (e) {
       var d = json(e); if (!d || !neu(d)) return;
-      schlange.push({ typ: 'dart', a: d.aufnahme, nr: d.nr, m: Number(d.m), n: Number(d.n), label: d.label, at: Date.now() });
       verlauf.push(d.label); if (verlauf.length > 6) verlauf.shift();
+      /* Beim Einrichten (noch aus): nur der Testwurf, gebucht wird nichts. */
+      if (!cfg.an) { if (!cfg.geprueft) { cfg.geprueft = true; speichern(); } zeichnen(); return; }
+      schlange.push({ typ: 'dart', a: d.aufnahme, nr: d.nr, m: Number(d.m), n: Number(d.n), label: d.label, at: Date.now() });
       abarbeiten();
     });
     strom.addEventListener('ziehen', function (e) {
       var d = json(e); if (!d || !neu(d)) return;
+      if (!cfg.an) { verlauf.push('|'); if (verlauf.length > 6) verlauf.shift(); zeichnen(); return; }
       schlange.push({ typ: 'ziehen', a: d.aufnahme, at: Date.now() });
       verlauf.push('|'); if (verlauf.length > 6) verlauf.shift();
       abarbeiten();
     });
     strom.addEventListener('entfernt', function (e) {
       var d = json(e); if (!d || !neu(d)) return;
+      if (!cfg.an) return;
       schlange.push({ typ: 'entfernt', a: d.aufnahme, nr: d.nr, label: d.label, at: Date.now() });
       abarbeiten();
     });
@@ -198,20 +205,28 @@
       '.ad-panel h3{margin:0 0 8px;font:700 18px var(--font-cond,system-ui);letter-spacing:.03em}.ad-panel p{margin:6px 0;color:#bdb4b4}.ad-panel label{display:block;margin:10px 0 4px;font-size:13px;color:#9a8f90}' +
       '.ad-panel input{width:100%;box-sizing:border-box;padding:10px;border-radius:10px;border:1px solid #3a3032;background:#0e0b0c;color:#fff;font:15px ui-monospace,monospace}' +
       '.ad-panel .ad-zeile{display:flex;gap:8px;margin-top:12px}.ad-panel button{flex:1;min-height:44px;border-radius:12px;border:1px solid #3a3032;background:#221b1d;color:#fff;font:700 15px var(--font-cond,system-ui);cursor:pointer}' +
-      '.ad-panel button.an{background:#f2eeee;color:#111}.ad-panel code{font-size:13px;color:#e8e2e2}' +
+      '.ad-panel button.an{background:#f2eeee;color:#111}.ad-panel button:disabled{opacity:.4;cursor:default}.ad-panel code{font-size:13px;color:#e8e2e2}' +
+      '.ad-chip[hidden]{display:none}.ad-schritte{list-style:none;margin:12px 0;padding:0;display:flex;flex-direction:column;gap:8px}' +
+      '.ad-schritte li{display:flex;gap:10px;align-items:flex-start}.ad-schritte i{flex:none;width:22px;height:22px;border-radius:50%;border:2px solid #3a3032;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:13px;color:#06140b}' +
+      '.ad-schritte li.ok i{background:#3ccf7a;border-color:#3ccf7a}.ad-schritte b{display:block;font-weight:600;color:#e8e2e2}.ad-schritte small{display:block;color:#9a8f90;font-size:13px}' +
+      '.ad-klein{font-size:13px}.ad-mehr{margin-top:12px}.ad-mehr summary{cursor:pointer;color:#9a8f90;font-size:13px;min-height:32px}' +
       '.ad-hinweis{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:2147483002;max-width:min(520px,calc(100vw - 32px));padding:10px 14px;border-radius:12px;background:#2a1d1f;border:1px solid #e5484d;color:#fff;font:600 14px/1.35 var(--font-body,system-ui)}' +
       '.ad-hinweis[hidden]{display:none}';
     document.head.appendChild(stil);
     chip = el('button', 'ad-chip'); chip.type = 'button'; chip.setAttribute('aria-label', 'Autodarts');
-    chip.addEventListener('click', function () { panelAuf = !panelAuf; zeichnen(); });
-    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && panelAuf) { panelAuf = false; zeichnen(); } });
+    chip.addEventListener('click', function () { if (panelAuf) schliessen(); else oeffnen(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && panelAuf) schliessen(); });
     panel = el('div', 'ad-panel'); panel.hidden = true; panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', 'Autodarts');
     panel.addEventListener('click', function (e) {
       var b = e.target.closest('button[data-ad]'); if (!b) return;
       var was = b.getAttribute('data-ad');
-      if (was === 'an') { cfg.an = !cfg.an; speichern(); verbinden(); }
+      if (was === 'an') {
+        if (!cfg.an && !schritte().every(function (x) { return x.ok; })) return;
+        cfg.an = !cfg.an; speichern(); verbinden();
+        if (window.__dart) window.__dart.render();
+      }
       if (was === 'speichern') { var i = panel.querySelector('input'); cfg.adresse = (i.value || VORGABE).trim(); speichern(); verbinden(); }
-      if (was === 'zu') panelAuf = false;
+      if (was === 'zu') { schliessen(); return; }
       zeichnen();
     });
     hinweisBox = el('div', 'ad-hinweis'); hinweisBox.hidden = true; hinweisBox.setAttribute('role', 'status');
@@ -224,31 +239,66 @@
     hinweisTimer = setTimeout(function () { hinweisBox.hidden = true; }, 4500);
   }
   function lage() {
-    if (!cfg.an) return { farbe: '', text: 'Autodarts aus' };
     if (!verbunden) return { farbe: 'rot', text: 'Brücke nicht erreichbar', mehr: 'Läuft das Fenster der Brücke? Hat der Browser den Zugriff auf dieses Gerät erlaubt (Schloss links in der Adresszeile › Website-Einstellungen)?' };
-    if (!board.verbunden) return { farbe: 'gelb', text: 'Board Manager fehlt' };
+    if (!board.verbunden) return { farbe: 'gelb', text: 'Autodarts nicht verbunden', mehr: 'Autodarts Desktop starten und dort die Erkennung starten.' };
     var b = (board.board || '').toLowerCase();
-    if (/takeout/.test(b)) return { farbe: 'gelb', text: 'Darts ziehen' };
+    if (/takeout/.test(b)) return { farbe: 'gelb', text: 'Pfeile ziehen' };
+    if (!/throw|takeout/.test(b)) return { farbe: 'gelb', text: 'Erkennung gestoppt', mehr: 'In Autodarts Desktop die Erkennung starten.' };
     return { farbe: 'gruen', text: 'Autodarts bereit' };
+  }
+  /* Die vier Schritte der Einrichtung, jeweils erledigt oder nicht. */
+  function schritte() {
+    var b = (board.board || '').toLowerCase();
+    return [
+      { ok: verbunden, text: 'Brücke läuft', mehr: 'start-windows.bat im Ordner Autodarts-Bruecke starten.' },
+      { ok: verbunden && board.verbunden, text: 'Autodarts Desktop verbunden', mehr: 'Autodarts Desktop starten.' },
+      { ok: verbunden && board.verbunden && /throw|takeout/.test(b), text: 'Erkennung läuft und ist kalibriert', mehr: 'In Autodarts kalibrieren (alle drei Rahmen grün) und die Erkennung starten.' },
+      { ok: cfg.geprueft, text: 'Testwurf erkannt', mehr: 'Einen Dart werfen. Er wird beim Einrichten nicht gebucht.' }
+    ];
   }
   function zeichnen() {
     if (!chip) return;
     var l = lage();
-    chip.className = 'ad-chip' + (l.farbe ? ' ' + l.farbe : '');
+    /* Im Spiel nur, wenn Autodarts an ist: der Zustand, klein oben. */
+    chip.hidden = !cfg.an;
+    chip.className = 'ad-chip ' + l.farbe;
     var letzte = verlauf.slice(-3).filter(function (x) { return x !== '|'; }).join(' ');
-    chip.innerHTML = '<i></i><span>' + esc(l.text) + '</span>' + (letzte && cfg.an ? '<span class="ad-v">' + esc(letzte) + '</span>' : '') +
+    chip.innerHTML = '<i></i><span>' + esc(l.text) + '</span>' + (letzte ? '<span class="ad-v">' + esc(letzte) + '</span>' : '') +
       (schlange.length ? '<span class="ad-v">· ' + schlange.length + ' wartet</span>' : '');
     panel.hidden = !panelAuf;
+    if (window.__dart && window.__dart.state && window.__dart.state().screen === 'setup' && !(document.activeElement && /INPUT|SELECT/.test(document.activeElement.tagName))) {
+      var zeile = document.getElementById('setting-autodarts');
+      var text = cfg.an ? l.text : 'aus';
+      if (zeile && zeile.getAttribute('data-stand') !== text) window.__dart.render();
+    }
     if (!panelAuf) return;
     var fokus = document.activeElement && panel.contains(document.activeElement) && document.activeElement.tagName === 'INPUT';
     if (fokus) return;   // nicht unter dem Tippen neu zeichnen
-    panel.innerHTML = '<h3>Autodarts (Test)</h3>' +
-      '<p>' + esc(l.text) + (board.fehler && cfg.an ? ' – ' + esc(board.fehler) : '') + '</p>' + (l.mehr ? '<p>' + esc(l.mehr) + '</p>' : '') +
-      '<p>Jeder erkannte Dart wird sofort gebucht. Werden die Darts gezogen, bevor drei erkannt waren, zählen die fehlenden als daneben. Korrigieren wie gewohnt mit ←.</p>' +
-      '<label for="ad-adresse">Adresse der Brücke</label><input id="ad-adresse" value="' + esc(cfg.adresse) + '" spellcheck="false" autocomplete="off">' +
-      '<p>Brücke ' + (brueckeVersion ? esc(brueckeVersion) : '–') + ' · zuletzt: <code>' + esc(verlauf.join(' ') || '–') + '</code></p>' +
-      '<div class="ad-zeile"><button type="button" data-ad="an" class="' + (cfg.an ? 'an' : '') + '">' + (cfg.an ? 'Ausschalten' : 'Einschalten') + '</button>' +
-      '<button type="button" data-ad="speichern">Verbinden</button><button type="button" data-ad="zu">Schließen</button></div>';
+    var st = schritte(), fertig = st.every(function (x) { return x.ok; });
+    panel.innerHTML = '<h3>Autodarts an diesem Gerät</h3>' +
+      '<p>' + (cfg.an ? 'Eingeschaltet: jedes Spiel an diesem Gerät zählt über die Kameras. Von Hand nur noch korrigieren.'
+        : 'Die Kameras erkennen jeden Dart, die App bucht ihn. Erst wenn alles grün ist, lässt es sich einschalten.') + '</p>' +
+      '<ol class="ad-schritte">' + st.map(function (x) {
+        return '<li class="' + (x.ok ? 'ok' : '') + '"><i aria-hidden="true">' + (x.ok ? '✓' : '') + '</i><span><b>' + esc(x.text) + '</b>' + (x.ok ? '' : '<small>' + esc(x.mehr) + '</small>') + '</span></li>';
+      }).join('') + '</ol>' +
+      (verlauf.length ? '<p class="ad-klein">Zuletzt erkannt: <code>' + esc(verlauf.join(' ')) + '</code></p>' : '') +
+      '<div class="ad-zeile">' +
+        (cfg.an ? '<button type="button" data-ad="an">Ausschalten</button>'
+          : '<button type="button" data-ad="an" class="an"' + (fertig ? '' : ' disabled') + '>Einschalten</button>') +
+        '<button type="button" data-ad="zu">Schließen</button></div>' +
+      '<details class="ad-mehr"><summary>Adresse der Brücke</summary><input id="ad-adresse" value="' + esc(cfg.adresse) + '" spellcheck="false" autocomplete="off" aria-label="Adresse der Brücke">' +
+        '<div class="ad-zeile"><button type="button" data-ad="speichern">Verbinden</button></div><p class="ad-klein">Brücke ' + (brueckeVersion ? esc(brueckeVersion) : '–') + '</p></details>';
+  }
+  function oeffnen() {
+    panelAuf = true;
+    if (!strom) verbinden(); else zeichnen();
+    var b = panel.querySelector('button:not([disabled])');
+    if (b) b.focus();
+  }
+  function schliessen() {
+    panelAuf = false;
+    if (!cfg.an) trennen();
+    zeichnen();
   }
 
   /* ================= Start ================= */
@@ -259,8 +309,12 @@
     verbinden();
   }
   window.DartAutodarts = {
-    zustand: function () { return { an: cfg.an, verbunden: verbunden, board: board, schlange: schlange.length, letzteSeq: letzteSeq, verlauf: verlauf.slice() }; },
+    zustand: function () { return { an: cfg.an, geprueft: cfg.geprueft, verbunden: verbunden, board: board, schlange: schlange.length, letzteSeq: letzteSeq, verlauf: verlauf.slice() }; },
     verbinden: verbinden,
+    /* Fuer app.js: ist Autodarts an diesem Geraet an, und wie steht es? */
+    an: function () { return cfg.an; },
+    lage: function () { return cfg.an ? lage() : { farbe: '', text: 'aus' }; },
+    oeffnen: function () { if (panel) oeffnen(); }
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
 })();

@@ -10,6 +10,7 @@
 
 ## Offen
 
+- [ ] DRT-094 Autodarts Schritt 2: Großanzeige für den 34-Zoll-Monitor nach Entwurf (Canvas „Blink 180 Darts-App Redesign“, Ultra1v1 und UltraSingle, hell/dunkel), Schritt 3: Autostart am PC (Autodarts Desktop, Brücke, Chrome im Vollbild) · von:Julius · am:2026-11-26
 - [ ] DRT-082 Hinweise aus der Kritik 25.11.: Plan mit allen Unterschriften geht bei jedem 8-s-Abgleich komplett über die Leitung (Nachmeldungen eigener Abruf); Löschfrist für geteilte Turniere (Unterschriften, U18) am Server; laufendes Einzel ohne Wurf steht im Ticker noch unter „Als Nächstes“; beide iPads melden gleichzeitig den 8. Spieler nach; Unterschriften wandern nicht zum anderen iPad, dort ist die Rücknahme des letzten Einzels deshalb noch 15 Minuten möglich und änderte einen schon unterschriebenen Bogen (partieUebernehmen gegen berichtIstFinal absichern) · von:Claude · am:2026-11-25
 - [ ] DRT-075 (Julius 25.11.: als Nächstes) Sicherheit, Rest aus dem Audit 22.11. (audit-2026-11-22/sicherheit.md): scrypt-Warteschlange gegen Blockade (W2), Session-Tokens nur als Hash speichern (H1), Backups verschlüsseln (H2), E-Mail bei Registrierung bestätigen (H3), Ergebnisse nach Turnierende nur 24 h änderbar (H7), Basis-Image per Digest (H8), Knopf „Gerät leeren“ fürs Bar-iPad (H9); Server-Härtung (SSH nur Schlüssel, Firewall 22/80/443, Auto-Updates) per SSH prüfen · von:Claude · am:2026-11-22
 - [ ] DRT-077 Ligaspiel-Wechsel, Rest: falscher Status (Gastspieler/gemeldet) ist nach dem Einwechseln nur per Hand im Bogen änderbar (Status-Knopf im Wechsel-Dialog ergänzen) · von:Claude · am:2026-11-24
@@ -41,6 +42,7 @@
 
 ## Erledigt
 
+- [x] DRT-093 Autodarts Schritt 1: Einrichtung bei den Einstellungen mit vier Prüfschritten und Testwurf, eingeschaltet zählt jedes Spiel über Autodarts, kein Knopf mehr oben wenn aus (v223) · von:Julius · fertig:2026-11-26
 - [x] DRT-092 Ergebnisse von Turnier (ab 5 Spielern) und Ligaspiel lesbar: Teamstand oben, Rangliste je Spieler mit vollen Namen, Spiele mit beiden Namen je Durchgang (v222) · von:Julius · fertig:2026-11-26
 - [x] DRT-091 Tabellen: Platz 1 und 2 als Aufstiegsplätze grün (App-Tabelle, Liga-Statistik, Webseite, Liga-Webseite ab 2. Liga) · von:Julius · fertig:2026-11-25
 - [x] DRT-090 Regeln: Auf- und Abstieg, keine Relegation (SWO 03.10.2026, Punkt 2) · von:Julius · fertig:2026-11-25

@@ -8095,3 +8095,9 @@ button.st-krow:hover { background: #ffffff06; }
   #screen-game.active:not(.turnier) #scoreboard.liga-namen:not(.solo) .pcard .pavg,
   #screen-game.active:not(.turnier) #scoreboard.liga-namen:not(.solo) .pcard .pavg b { font-size: 16px; }
 }
+
+/* Autodarts in den Einstellungen: Zustandspunkt vor dem Text. */
+.ad-punkt { display: inline-block; width: 10px; height: 10px; margin-right: 8px; border-radius: 50%; background: #666; vertical-align: middle; }
+.ad-punkt.gruen { background: #3ccf7a; }
+.ad-punkt.gelb { background: #e6b93a; }
+.ad-punkt.rot { background: #e5484d; }

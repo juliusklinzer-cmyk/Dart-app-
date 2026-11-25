@@ -4704,7 +4704,24 @@
       b.classList.toggle('active', Number(b.getAttribute('data-value')) === ziel);
     });
     var dartmode = $('setting-dartmode');
-    if (dartmode) dartmode.classList.toggle('hidden', eingabe !== 1);
+    if (dartmode) dartmode.classList.toggle('hidden', eingabe !== 1 || autodartsAn());
+    /* Autodarts: in der Eingabe-Wahl steht dann nur noch Autodarts, die
+       Einrichtung wohnt bei den Geraete-Einstellungen unten. */
+    var adAn = autodartsAn();
+    document.querySelectorAll('#eingabe-wahl [data-action="eingabe"]').forEach(function (b) { b.classList.toggle('hidden', adAn); });
+    var adWahl = $('eingabe-autodarts');
+    if (adWahl) adWahl.classList.toggle('hidden', !adAn);
+    var adZeile = $('setting-autodarts');
+    if (adZeile) {
+      adZeile.classList.toggle('hidden', !window.DartAutodarts);
+      if (window.DartAutodarts) {
+        var adLage = window.DartAutodarts.lage();
+        adZeile.setAttribute('data-stand', adLage.text);
+        var adKnopf = adZeile.querySelector('[data-action="autodarts-einrichten"]');
+        adKnopf.innerHTML = '<i class="ad-punkt ' + esc(adLage.farbe || '') + '" aria-hidden="true"></i>' + (adAn ? esc(adLage.text) : 'Einrichten');
+        adKnopf.classList.toggle('active', adAn);
+      }
+    }
     /* Ton: zwei Schalter. Feiern (180 und SECHZIG!) gibt es nur im X01. */
     document.querySelectorAll('#settings-ton [data-action="schalter"]').forEach(function (b) {
       var an = S.settings[b.getAttribute('data-key')] !== 0;
@@ -10236,7 +10253,11 @@
     return (d.m === 3 ? 'T' : d.m === 2 ? 'D' : '') + d.n;
   }
 
+  /* Autodarts an diesem Geraet eingeschaltet (js/autodarts.js): dann zaehlen
+     die Kameras, und das Spielbild zeigt die Einzel-Darts (Julius, 26.11.). */
+  function autodartsAn() { return !!(window.DartAutodarts && window.DartAutodarts.an && window.DartAutodarts.an()); }
   function effectiveMode(rest) {
+    if (autodartsAn()) return 'darts';
     if (UI.turnier && turnierErlaubt()) return 'turnier';
     if (UI.kamera && window.DartKamera) return 'kamera';
     /* Stehen Darts der laufenden Aufnahme an, zeigt jedes Geraet sie -
@@ -16963,6 +16984,9 @@
       /* Eingabe-Wahl im Setup (siehe renderSetup): 2 = Tastatur, 0 =
          Standard, 1 = Gemischt. Standard merkt sich die Grenze, damit
          Gemischt sie wiederfindet. */
+      case 'autodarts-einrichten':
+        if (window.DartAutodarts && window.DartAutodarts.oeffnen) window.DartAutodarts.oeffnen();
+        break;
       case 'eingabe': {
         var ew = Number(el.getAttribute('data-value'));
         S.settings.tastatur = ew === 2 ? 1 : 0;

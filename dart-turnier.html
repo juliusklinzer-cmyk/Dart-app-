@@ -8111,6 +8111,12 @@ button.st-krow:hover { background: #ffffff06; }
   #screen-game.active:not(.turnier) #scoreboard.liga-namen:not(.solo) .pcard .pavg b { font-size: 16px; }
 }
 
+/* Autodarts in den Einstellungen: Zustandspunkt vor dem Text. */
+.ad-punkt { display: inline-block; width: 10px; height: 10px; margin-right: 8px; border-radius: 50%; background: #666; vertical-align: middle; }
+.ad-punkt.gruen { background: #3ccf7a; }
+.ad-punkt.gelb { background: #e6b93a; }
+.ad-punkt.rot { background: #e5484d; }
+
 </style>
 </head>
 <body>
@@ -8270,6 +8276,8 @@ button.st-krow:hover { background: #ffffff06; }
         <button data-action="eingabe" data-value="2" aria-label="Tastatur"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2.2"></rect><path d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M6.5 14h11"></path></svg></button>
         <button data-action="eingabe" data-value="0"><span class="lang">Standard</span><span class="kurz">Std.</span></button>
         <button data-action="eingabe" data-value="1"><span class="lang">Gemischt</span><span class="kurz">Mix</span></button>
+        <!-- Autodarts an diesem Geraet an: die einzige Eingabe (Korrigieren von Hand im Spiel). -->
+        <button class="hidden active" id="eingabe-autodarts" data-action="autodarts-einrichten" aria-pressed="true">Autodarts</button>
       </div>
     </div>
     <div class="setting" id="setting-dartmode">
@@ -8368,6 +8376,13 @@ button.st-krow:hover { background: #ffffff06; }
       <div class="options schalter">
         <button data-action="schalter" data-key="ton" aria-pressed="true">Klänge</button>
         <button data-action="schalter" data-key="feiern" id="setting-feiern" aria-pressed="true">Feiern</button>
+      </div>
+    </div>
+    <!-- Autodarts an diesem Geraet (js/autodarts.js): nur, wo freigeschaltet. -->
+    <div class="setting hidden" id="setting-autodarts">
+      <label>Autodarts</label>
+      <div class="options">
+        <button type="button" data-action="autodarts-einrichten">Einrichten</button>
       </div>
     </div>
     </div>
@@ -16605,7 +16620,24 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       b.classList.toggle('active', Number(b.getAttribute('data-value')) === ziel);
     });
     var dartmode = $('setting-dartmode');
-    if (dartmode) dartmode.classList.toggle('hidden', eingabe !== 1);
+    if (dartmode) dartmode.classList.toggle('hidden', eingabe !== 1 || autodartsAn());
+    /* Autodarts: in der Eingabe-Wahl steht dann nur noch Autodarts, die
+       Einrichtung wohnt bei den Geraete-Einstellungen unten. */
+    var adAn = autodartsAn();
+    document.querySelectorAll('#eingabe-wahl [data-action="eingabe"]').forEach(function (b) { b.classList.toggle('hidden', adAn); });
+    var adWahl = $('eingabe-autodarts');
+    if (adWahl) adWahl.classList.toggle('hidden', !adAn);
+    var adZeile = $('setting-autodarts');
+    if (adZeile) {
+      adZeile.classList.toggle('hidden', !window.DartAutodarts);
+      if (window.DartAutodarts) {
+        var adLage = window.DartAutodarts.lage();
+        adZeile.setAttribute('data-stand', adLage.text);
+        var adKnopf = adZeile.querySelector('[data-action="autodarts-einrichten"]');
+        adKnopf.innerHTML = '<i class="ad-punkt ' + esc(adLage.farbe || '') + '" aria-hidden="true"></i>' + (adAn ? esc(adLage.text) : 'Einrichten');
+        adKnopf.classList.toggle('active', adAn);
+      }
+    }
     /* Ton: zwei Schalter. Feiern (180 und SECHZIG!) gibt es nur im X01. */
     document.querySelectorAll('#settings-ton [data-action="schalter"]').forEach(function (b) {
       var an = S.settings[b.getAttribute('data-key')] !== 0;
@@ -22137,7 +22169,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return (d.m === 3 ? 'T' : d.m === 2 ? 'D' : '') + d.n;
   }
 
+  /* Autodarts an diesem Geraet eingeschaltet (js/autodarts.js): dann zaehlen
+     die Kameras, und das Spielbild zeigt die Einzel-Darts (Julius, 26.11.). */
+  function autodartsAn() { return !!(window.DartAutodarts && window.DartAutodarts.an && window.DartAutodarts.an()); }
   function effectiveMode(rest) {
+    if (autodartsAn()) return 'darts';
     if (UI.turnier && turnierErlaubt()) return 'turnier';
     if (UI.kamera && window.DartKamera) return 'kamera';
     /* Stehen Darts der laufenden Aufnahme an, zeigt jedes Geraet sie -
@@ -28864,6 +28900,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       /* Eingabe-Wahl im Setup (siehe renderSetup): 2 = Tastatur, 0 =
          Standard, 1 = Gemischt. Standard merkt sich die Grenze, damit
          Gemischt sie wiederfindet. */
+      case 'autodarts-einrichten':
+        if (window.DartAutodarts && window.DartAutodarts.oeffnen) window.DartAutodarts.oeffnen();
+        break;
       case 'eingabe': {
         var ew = Number(el.getAttribute('data-value'));
         S.settings.tastatur = ew === 2 ? 1 : 0;

@@ -964,6 +964,13 @@ sich direkt korrigieren, solange das Leg damit schlüssig bleibt.
 
 ## Autodarts-Anschluss (Test)
 
+**Einrichten (seit 26.11.):** Freigeschaltet (`?autodarts=an`) steht im Startbild bei den
+Einstellungen „Autodarts › Einrichten“. Die Karte prüft vier Schritte: Brücke läuft,
+Autodarts verbunden, Erkennung läuft, Testwurf erkannt (beim Einrichten wird nichts
+gebucht). Erst dann lässt es sich einschalten. Eingeschaltet zählt jedes Spiel an diesem
+Gerät über die Kameras (Spielbild in Einzel-Darts, bei „Eingabe“ steht nur noch
+Autodarts), oben steht der Zustand; ausgeschaltet gibt es keinen Knopf im Spiel.
+
 Seit 22.11.2026 kann die App erkannte Darts von **Autodarts** übernehmen, vorerst nur
 als Test auf Julius' Windows-PC. Die Kameras hängen an Autodarts Desktop. Die
 **Autodarts-Brücke** (`tools/autodarts-bruecke/bruecke.mjs`, Node ohne Abhängigkeiten)

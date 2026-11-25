@@ -176,6 +176,8 @@
         <button data-action="eingabe" data-value="2" aria-label="Tastatur"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="19" height="12" rx="2.2"></rect><path d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M6.5 14h11"></path></svg></button>
         <button data-action="eingabe" data-value="0"><span class="lang">Standard</span><span class="kurz">Std.</span></button>
         <button data-action="eingabe" data-value="1"><span class="lang">Gemischt</span><span class="kurz">Mix</span></button>
+        <!-- Autodarts an diesem Geraet an: die einzige Eingabe (Korrigieren von Hand im Spiel). -->
+        <button class="hidden active" id="eingabe-autodarts" data-action="autodarts-einrichten" aria-pressed="true">Autodarts</button>
       </div>
     </div>
     <div class="setting" id="setting-dartmode">
@@ -274,6 +276,13 @@
       <div class="options schalter">
         <button data-action="schalter" data-key="ton" aria-pressed="true">Klänge</button>
         <button data-action="schalter" data-key="feiern" id="setting-feiern" aria-pressed="true">Feiern</button>
+      </div>
+    </div>
+    <!-- Autodarts an diesem Geraet (js/autodarts.js): nur, wo freigeschaltet. -->
+    <div class="setting hidden" id="setting-autodarts">
+      <label>Autodarts</label>
+      <div class="options">
+        <button type="button" data-action="autodarts-einrichten">Einrichten</button>
       </div>
     </div>
     </div>
