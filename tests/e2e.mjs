@@ -7956,6 +7956,31 @@ await gruppe('Ergebnisse eines Ligaspiels: lesbar statt acht Spalten (Julius, 26
   await page.setViewportSize({ width: 1180, height: 820 });
 });
 
+await gruppe('Autodarts-Grossanzeige am breiten Monitor (Julius, 26.11.)', async () => {
+  const lage = () => page.evaluate(() => { const g = document.getElementById('gross'); return { an: !!g && !g.hidden, text: g && !g.hidden ? g.innerText.replace(/\s+/g, ' ') : '', hell: !!document.querySelector('#gross .g-buehne.hell'), zurueck: !document.getElementById('gross-zurueck').hidden }; });
+  await page.evaluate(() => {
+    window.__adEcht = window.DartAutodarts;
+    const D = window.__dart, S = D.state(), ids = D.activeProfiles().slice(0, 2).map((p) => p.id);
+    window.__grossMerk = JSON.stringify({ game: S.game, hell: S.settings.hell });
+    S.game = { id: 'gg', kind: 'quick', start: 501, bestOf: 3, p: ids, players: ids, starter: ids[0], legs: [{ starter: ids[0], start: 501, visits: [{ p: ids[0], s: 100, d: 3 }, { p: ids[1], s: 60, d: 3 }] }], done: false, started: true };
+    D.ui().darts = []; D.ui().overlay = null; D.setScreen('game');
+  });
+  await page.setViewportSize({ width: 1720, height: 720 });
+  check('ohne Autodarts: normales Spielbild', !(await lage()).an);
+  await page.evaluate(() => { window.DartAutodarts = { an: () => true, lage: () => ({ farbe: 'gruen', text: 'Autodarts bereit' }), oeffnen() {} }; window.__dart.render(); });
+  const a = await lage();
+  check('mit Autodarts am breiten Monitor: Grossanzeige mit beiden Spielern, Rest und Zustand', a.an && /401/.test(a.text) && /441/.test(a.text) && /Autodarts bereit/.test(a.text) && /BEST OF 3/.test(a.text), a.text.slice(0, 300));
+  await page.locator('#gross [data-action="gross-aus"]').click();
+  check('„Eingabe“ blendet sie fuer Korrekturen aus, ein Knopf fuehrt zurueck', !(await lage()).an && (await lage()).zurueck);
+  await page.locator('#gross-zurueck').click();
+  check('zurueck zur Grossanzeige', (await lage()).an);
+  await page.evaluate(() => { const D = window.__dart; D.state().settings.hell = 1; D.render(); });
+  check('Darstellung hell', (await lage()).hell);
+  await page.setViewportSize({ width: 1180, height: 820 });
+  check('am iPad (kein breiter Monitor) bleibt das normale Spielbild', !(await lage()).an);
+  await page.evaluate(() => { const D = window.__dart, S = D.state(), m = JSON.parse(window.__grossMerk); window.DartAutodarts = window.__adEcht; S.game = m.game; S.settings.hell = m.hell; D.save(); D.setScreen('setup'); });
+});
+
 await gruppe('Handy-Block 2: GAME ON nur am Spieltag', async () => {
   await page.evaluate(() => {
     const D = window.__dart, S = D.state();

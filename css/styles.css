@@ -8101,3 +8101,74 @@ button.st-krow:hover { background: #ffffff06; }
 .ad-punkt.gruen { background: #3ccf7a; }
 .ad-punkt.gelb { background: #e6b93a; }
 .ad-punkt.rot { background: #e5484d; }
+
+/* ===== Autodarts-Grossanzeige (34 Zoll ueber der Scheibe, Entwurf 26.11.) =====
+   Gebaut auf 3440 x 1440 px, per transform auf den Bildschirm skaliert. */
+#gross { position: fixed; inset: 0; z-index: 40; background: #0d0a0b; overflow: hidden; }
+#gross[hidden] { display: none; }
+body.gross-an #gross { background: var(--gross-bg, #0d0a0b); }
+body.gross-an .ad-chip { display: none !important; }
+.g-buehne { position: absolute; left: 50%; top: 50%; width: 3440px; height: 1440px; transform-origin: 50% 50%; box-sizing: border-box; padding: 48px 72px 56px; background: var(--bg); color: var(--text); font-family: var(--font-body, Barlow, sans-serif); display: flex; flex-direction: column; gap: 40px; }
+.g-kopf { display: flex; align-items: center; gap: 40px; height: 88px; }
+.g-logo { width: 72px; height: 72px; flex: none; }
+.g-marke { font-family: var(--font-display, Anton, sans-serif); font-size: 40px; letter-spacing: 1px; }
+.g-spiel { flex: 1; text-align: center; font-size: 30px; font-weight: 700; letter-spacing: 3px; color: var(--leise); }
+.g-knopf { margin: 0; min-height: 72px; padding: 0 32px; border-radius: 36px; border: 0; background: var(--fl); color: var(--leise); font: 700 26px var(--font-body, Barlow, sans-serif); cursor: pointer; text-transform: none; letter-spacing: 0; }
+.g-haupt { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 1080px minmax(0, 1fr); gap: 48px; }
+.g-haupt.g-solo { grid-template-columns: 1040px 1040px minmax(0, 1fr); gap: 56px; }
+.g-spieler { border-radius: 48px; padding: 52px 64px; display: flex; flex-direction: column; gap: 28px; min-width: 0; color: var(--leise); }
+.g-spieler.g-dran { background: var(--fl); box-shadow: var(--schein); color: var(--text); }
+.g-oben { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+.g-wer { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.g-name { font-family: var(--font-display, Anton, sans-serif); font-size: 96px; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.g-unter { font-size: 28px; color: var(--leise); }
+.g-legs { display: flex; flex-direction: column; align-items: flex-end; }
+.g-legs span { font-family: var(--font-display, Anton, sans-serif); font-size: 96px; line-height: 1; }
+.g-legs small { font-size: 22px; font-weight: 700; letter-spacing: 2px; color: var(--leise); }
+.g-mitte { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; }
+.g-rest { font-family: var(--font-display, Anton, sans-serif); font-size: 360px; line-height: 1; font-variant-numeric: tabular-nums; }
+.g-solo .g-rest { font-size: 400px; }
+.g-kacheln { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; width: 100%; }
+.g-k { height: 132px; border-radius: 24px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; background: var(--bg); font-family: var(--font-cond, 'Barlow Condensed', sans-serif); font-weight: 700; font-size: 84px; line-height: 1; color: var(--text); }
+.g-k.g-weg { background: transparent; border: 3px dashed var(--blau); color: var(--blau); }
+.g-k.g-leer { opacity: 0.5; }
+.g-k.g-summe { background: transparent; font-family: var(--font-display, Anton, sans-serif); font-size: 96px; }
+.g-verlauf { display: flex; justify-content: center; align-items: baseline; gap: 24px; min-height: 56px; font-family: var(--font-cond, 'Barlow Condensed', sans-serif); font-weight: 700; font-size: 40px; line-height: 1; color: var(--leise); }
+.g-verlauf .g-neu { font-size: 56px; color: var(--text); }
+.g-spieler:not(.g-dran) .g-verlauf .g-neu { color: var(--leise); }
+.g-verlauf .g-bust { text-decoration: line-through; color: #e5484d; }
+.g-avg { display: flex; justify-content: center; gap: 56px; font-size: 26px; color: var(--leise); }
+.g-avg b { font-family: var(--font-cond, 'Barlow Condensed', sans-serif); font-weight: 700; font-size: 36px; color: inherit; }
+.g-dran .g-avg b { color: var(--text); }
+.g-scheibe-box { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; min-width: 0; }
+.g-status { display: flex; align-items: center; gap: 12px; padding: 10px 24px; border-radius: 999px; background: var(--fl); font-size: 26px; font-weight: 700; color: var(--text); }
+.g-status i { width: 14px; height: 14px; border-radius: 50%; }
+.g-scheibe { width: 1080px; height: 1080px; display: block; }
+.g-solo .g-scheibe { width: 1040px; height: 1040px; }
+.g-ba { fill: #161616; } .g-bb { fill: #efe4c8; } .g-ra { fill: #d7322e; } .g-rb { fill: #1d8a4a; } .g-rand { fill: #0b0b0b; }
+.g-zl { fill: #f4f1ea; font-family: var(--font-cond, 'Barlow Condensed', sans-serif); font-weight: 700; font-size: 19px; }
+.g-dart { fill: #36b7ee; stroke: #ffffff; stroke-width: 1.5; }
+.g-ziel { fill: none; stroke: #36b7ee; stroke-width: 3; stroke-dasharray: 5 4; }
+.g-training { display: flex; flex-direction: column; gap: 48px; min-width: 0; padding-top: 12px; }
+.g-block { display: flex; flex-direction: column; gap: 28px; }
+.g-zeile { display: flex; justify-content: space-between; align-items: baseline; }
+.g-ueber { font-size: 26px; font-weight: 700; letter-spacing: 3px; color: var(--leise); }
+.g-hinweis { font-size: 24px; color: var(--leise); }
+.g-werte { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px 48px; }
+.g-wert { display: flex; flex-direction: column; gap: 6px; }
+.g-titel { font-size: 22px; font-weight: 700; letter-spacing: 2px; color: var(--leise); }
+.g-wert > div { display: flex; align-items: baseline; gap: 18px; }
+.g-wert b { font-family: var(--font-cond, 'Barlow Condensed', sans-serif); font-weight: 700; font-size: 104px; line-height: 1; }
+.g-diff { font-family: var(--font-cond, 'Barlow Condensed', sans-serif); font-weight: 700; font-size: 40px; color: var(--blau); }
+.g-diff.minus, .g-diff.leise { color: var(--leise); }
+.g-diagramm { width: 100%; display: block; overflow: visible; }
+.g-frueher { fill: var(--linie); } .g-heute { fill: var(--blau); }
+.g-bw { fill: var(--text); font-family: var(--font-cond, 'Barlow Condensed', sans-serif); font-weight: 700; font-size: 30px; }
+.g-linie { fill: none; stroke: var(--text); stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
+.g-schnitt { stroke: var(--leise); stroke-width: 2; stroke-dasharray: 8 8; }
+.g-achse { stroke: var(--linie); stroke-width: 2; }
+.g-st { fill: var(--leise); font-family: var(--font-body, Barlow, sans-serif); font-weight: 600; font-size: 22px; }
+.g-vergleich { display: flex; gap: 48px; align-items: baseline; font-size: 26px; color: var(--leise); }
+.g-vergleich b { font-family: var(--font-cond, 'Barlow Condensed', sans-serif); font-weight: 700; font-size: 40px; color: var(--text); }
+.gross-zurueck { position: fixed; right: 16px; bottom: 16px; z-index: 39; margin: 0; min-height: 48px; padding: 0 20px; border-radius: 24px; border: 1px solid var(--line); background: var(--bg-2); color: var(--text); font-weight: 700; cursor: pointer; }
+.gross-zurueck[hidden] { display: none; }

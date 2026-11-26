@@ -964,6 +964,16 @@ sich direkt korrigieren, solange das Leg damit schlüssig bleibt.
 
 ## Autodarts-Anschluss (Test)
 
+**Großanzeige (34 Zoll, seit 26.11.):** Ist Autodarts an und das Fenster breit (ab 1,9:1,
+mindestens 1500 px), zeigt ein X01-Spiel mit einem oder zwei Spielern die Großanzeige nach
+Entwurf: Spieler links und rechts (Rest, Aufnahme mit Finish-Weg gestrichelt, letzte
+Aufnahmen, 3-Dart- und Match-Average, Legs), in der Mitte die Scheibe mit den Darts der
+Aufnahme und dem nächsten Ziel; allein im Training rechts „Heute“ gegen alle Trainings
+(Schnitt, Erste 9, Doppelquote, T20-Quote, bestes Leg, Legs) und die letzten 12 Legs.
+Gebaut auf 3440 × 1440 und skaliert. „Eingabe“ oben rechts blendet sie für Korrekturen
+aus, „Großanzeige“ unten rechts holt sie zurück. Hell oder dunkel: Einstellung
+„Darstellung“ (gilt vorerst nur hier). Das Livebild der Kameras fehlt noch.
+
 **Einrichten (seit 26.11.):** Freigeschaltet (`?autodarts=an`) steht im Startbild bei den
 Einstellungen „Autodarts › Einrichten“. Die Karte prüft vier Schritte: Brücke läuft,
 Autodarts verbunden, Erkennung läuft, Testwurf erkannt (beim Einrichten wird nichts

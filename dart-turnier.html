@@ -8117,6 +8117,77 @@ button.st-krow:hover { background: #ffffff06; }
 .ad-punkt.gelb { background: #e6b93a; }
 .ad-punkt.rot { background: #e5484d; }
 
+/* ===== Autodarts-Grossanzeige (34 Zoll ueber der Scheibe, Entwurf 26.11.) =====
+   Gebaut auf 3440 x 1440 px, per transform auf den Bildschirm skaliert. */
+#gross { position: fixed; inset: 0; z-index: 40; background: #0d0a0b; overflow: hidden; }
+#gross[hidden] { display: none; }
+body.gross-an #gross { background: var(--gross-bg, #0d0a0b); }
+body.gross-an .ad-chip { display: none !important; }
+.g-buehne { position: absolute; left: 50%; top: 50%; width: 3440px; height: 1440px; transform-origin: 50% 50%; box-sizing: border-box; padding: 48px 72px 56px; background: var(--bg); color: var(--text); font-family: var(--font-body, Barlow, sans-serif); display: flex; flex-direction: column; gap: 40px; }
+.g-kopf { display: flex; align-items: center; gap: 40px; height: 88px; }
+.g-logo { width: 72px; height: 72px; flex: none; }
+.g-marke { font-family: var(--font-display, Anton, sans-serif); font-size: 40px; letter-spacing: 1px; }
+.g-spiel { flex: 1; text-align: center; font-size: 30px; font-weight: 700; letter-spacing: 3px; color: var(--leise); }
+.g-knopf { margin: 0; min-height: 72px; padding: 0 32px; border-radius: 36px; border: 0; background: var(--fl); color: var(--leise); font: 700 26px var(--font-body, Barlow, sans-serif); cursor: pointer; text-transform: none; letter-spacing: 0; }
+.g-haupt { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 1080px minmax(0, 1fr); gap: 48px; }
+.g-haupt.g-solo { grid-template-columns: 1040px 1040px minmax(0, 1fr); gap: 56px; }
+.g-spieler { border-radius: 48px; padding: 52px 64px; display: flex; flex-direction: column; gap: 28px; min-width: 0; color: var(--leise); }
+.g-spieler.g-dran { background: var(--fl); box-shadow: var(--schein); color: var(--text); }
+.g-oben { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+.g-wer { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.g-name { font-family: var(--font-display, Anton, sans-serif); font-size: 96px; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.g-unter { font-size: 28px; color: var(--leise); }
+.g-legs { display: flex; flex-direction: column; align-items: flex-end; }
+.g-legs span { font-family: var(--font-display, Anton, sans-serif); font-size: 96px; line-height: 1; }
+.g-legs small { font-size: 22px; font-weight: 700; letter-spacing: 2px; color: var(--leise); }
+.g-mitte { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; }
+.g-rest { font-family: var(--font-display, Anton, sans-serif); font-size: 360px; line-height: 1; font-variant-numeric: tabular-nums; }
+.g-solo .g-rest { font-size: 400px; }
+.g-kacheln { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; width: 100%; }
+.g-k { height: 132px; border-radius: 24px; display: flex; align-items: center; justify-content: center; box-sizing: border-box; background: var(--bg); font-family: var(--font-cond, 'Barlow Condensed', sans-serif); font-weight: 700; font-size: 84px; line-height: 1; color: var(--text); }
+.g-k.g-weg { background: transparent; border: 3px dashed var(--blau); color: var(--blau); }
+.g-k.g-leer { opacity: 0.5; }
+.g-k.g-summe { background: transparent; font-family: var(--font-display, Anton, sans-serif); font-size: 96px; }
+.g-verlauf { display: flex; justify-content: center; align-items: baseline; gap: 24px; min-height: 56px; font-family: var(--font-cond, 'Barlow Condensed', sans-serif); font-weight: 700; font-size: 40px; line-height: 1; color: var(--leise); }
+.g-verlauf .g-neu { font-size: 56px; color: var(--text); }
+.g-spieler:not(.g-dran) .g-verlauf .g-neu { color: var(--leise); }
+.g-verlauf .g-bust { text-decoration: line-through; color: #e5484d; }
+.g-avg { display: flex; justify-content: center; gap: 56px; font-size: 26px; color: var(--leise); }
+.g-avg b { font-family: var(--font-cond, 'Barlow Condensed', sans-serif); font-weight: 700; font-size: 36px; color: inherit; }
+.g-dran .g-avg b { color: var(--text); }
+.g-scheibe-box { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 28px; min-width: 0; }
+.g-status { display: flex; align-items: center; gap: 12px; padding: 10px 24px; border-radius: 999px; background: var(--fl); font-size: 26px; font-weight: 700; color: var(--text); }
+.g-status i { width: 14px; height: 14px; border-radius: 50%; }
+.g-scheibe { width: 1080px; height: 1080px; display: block; }
+.g-solo .g-scheibe { width: 1040px; height: 1040px; }
+.g-ba { fill: #161616; } .g-bb { fill: #efe4c8; } .g-ra { fill: #d7322e; } .g-rb { fill: #1d8a4a; } .g-rand { fill: #0b0b0b; }
+.g-zl { fill: #f4f1ea; font-family: var(--font-cond, 'Barlow Condensed', sans-serif); font-weight: 700; font-size: 19px; }
+.g-dart { fill: #36b7ee; stroke: #ffffff; stroke-width: 1.5; }
+.g-ziel { fill: none; stroke: #36b7ee; stroke-width: 3; stroke-dasharray: 5 4; }
+.g-training { display: flex; flex-direction: column; gap: 48px; min-width: 0; padding-top: 12px; }
+.g-block { display: flex; flex-direction: column; gap: 28px; }
+.g-zeile { display: flex; justify-content: space-between; align-items: baseline; }
+.g-ueber { font-size: 26px; font-weight: 700; letter-spacing: 3px; color: var(--leise); }
+.g-hinweis { font-size: 24px; color: var(--leise); }
+.g-werte { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px 48px; }
+.g-wert { display: flex; flex-direction: column; gap: 6px; }
+.g-titel { font-size: 22px; font-weight: 700; letter-spacing: 2px; color: var(--leise); }
+.g-wert > div { display: flex; align-items: baseline; gap: 18px; }
+.g-wert b { font-family: var(--font-cond, 'Barlow Condensed', sans-serif); font-weight: 700; font-size: 104px; line-height: 1; }
+.g-diff { font-family: var(--font-cond, 'Barlow Condensed', sans-serif); font-weight: 700; font-size: 40px; color: var(--blau); }
+.g-diff.minus, .g-diff.leise { color: var(--leise); }
+.g-diagramm { width: 100%; display: block; overflow: visible; }
+.g-frueher { fill: var(--linie); } .g-heute { fill: var(--blau); }
+.g-bw { fill: var(--text); font-family: var(--font-cond, 'Barlow Condensed', sans-serif); font-weight: 700; font-size: 30px; }
+.g-linie { fill: none; stroke: var(--text); stroke-width: 3; stroke-linejoin: round; stroke-linecap: round; }
+.g-schnitt { stroke: var(--leise); stroke-width: 2; stroke-dasharray: 8 8; }
+.g-achse { stroke: var(--linie); stroke-width: 2; }
+.g-st { fill: var(--leise); font-family: var(--font-body, Barlow, sans-serif); font-weight: 600; font-size: 22px; }
+.g-vergleich { display: flex; gap: 48px; align-items: baseline; font-size: 26px; color: var(--leise); }
+.g-vergleich b { font-family: var(--font-cond, 'Barlow Condensed', sans-serif); font-weight: 700; font-size: 40px; color: var(--text); }
+.gross-zurueck { position: fixed; right: 16px; bottom: 16px; z-index: 39; margin: 0; min-height: 48px; padding: 0 20px; border-radius: 24px; border: 1px solid var(--line); background: var(--bg-2); color: var(--text); font-weight: 700; cursor: pointer; }
+.gross-zurueck[hidden] { display: none; }
+
 </style>
 </head>
 <body>
@@ -8376,6 +8447,15 @@ button.st-krow:hover { background: #ffffff06; }
       <div class="options schalter">
         <button data-action="schalter" data-key="ton" aria-pressed="true">Klänge</button>
         <button data-action="schalter" data-key="feiern" id="setting-feiern" aria-pressed="true">Feiern</button>
+      </div>
+    </div>
+    <!-- Hell oder dunkel: gilt vorerst fuer die Autodarts-Grossanzeige,
+         spaeter fuer die ganze App (Redesign). -->
+    <div class="setting" id="setting-darstellung">
+      <label>Darstellung</label>
+      <div class="options" data-setting="hell">
+        <button data-value="0">Dunkel</button>
+        <button data-value="1">Hell</button>
       </div>
     </div>
     <!-- Autodarts an diesem Geraet (js/autodarts.js): nur, wo freigeschaltet. -->
@@ -8929,6 +9009,8 @@ button.st-krow:hover { background: #ffffff06; }
 <!-- ============ SPIEL ============ -->
 <section id="screen-game" class="screen game">
   <div id="spiel-hinweis" class="spiel-hinweis" role="status" aria-live="polite"></div>
+  <!-- Autodarts-Grossanzeige ausgeblendet (Eingabe/Korrektur): zurueck dorthin. -->
+  <button type="button" id="gross-zurueck" class="gross-zurueck" data-action="gross-an" hidden>Großanzeige</button>
   <!-- Kopfleiste (Entwurf "X01 Redesign", 10/2026): links das Menue (Spiel
        verlassen), in der Mitte Spiel und Stand, rechts die Fernsteuerung
        (Board-Anzeige, Eingabe ueber Tastatur) und der Wechsel zwischen
@@ -12470,6 +12552,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       if (s.settings.online === undefined) s.settings.online = 0;
       if (s.settings.ton !== 0) s.settings.ton = 1;
       if (s.settings.feiern !== 0) s.settings.feiern = 1;
+      if (s.settings.hell !== 1) s.settings.hell = 0;   // Darstellung: 0 dunkel, 1 hell
       /* Spieldauer des Schnellen Spiels (Saetze/Legs) kam spaeter dazu --
          Altbestand spielt weiter ein Leg. */
       if (s.settings.quickModus !== 1) s.settings.quickModus = 0;
@@ -16253,6 +16336,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (S.screen === 'profile') { renderProfile(); if (UI.profilPanel === 'foto') fotoZiehenEinrichten(); if (UI.profilPanel === 'stats') { var stF = statsFilter(), stW = $('profile-detail').querySelector('.st-dash'); statsNachRender(stW, ['profil', UI.profile, stF.modus, stF.bereich, stW && stW.getAttribute('data-spiele')].join('|')); } }
     if (S.screen === 'bulloff') renderBullOff();
     if (S.screen === 'game') renderGame();
+    grossanzeige();
     if (S.screen === 'cricket') renderCricket();
     if (S.screen === 'rtw') renderRtw();
     if (S.screen === 'finisher') renderFinisher();
@@ -22169,6 +22253,253 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return (d.m === 3 ? 'T' : d.m === 2 ? 'D' : '') + d.n;
   }
 
+  /* ================= Autodarts-Grossanzeige (Entwurf "Autodarts 34 Zoll", 26.11.) =================
+   * Ist Autodarts an diesem Geraet an und steht ein breiter Monitor ueber der
+   * Scheibe (Seitenverhaeltnis ab 1,9:1), zeigt das X01-Spiel statt des
+   * iPad-Spielbilds die Grossanzeige: links und rechts die Spieler (Rest,
+   * laufende Aufnahme mit Finish-Weg, letzte Aufnahmen, Average), in der
+   * Mitte die Scheibe mit den Treffern der Aufnahme. Allein im Training
+   * steht rechts "Heute im Vergleich mit allen Trainings". Gebaut auf
+   * 3440 x 1440 und auf den Bildschirm skaliert. Dialoge (Checkout, Leg
+   * gewonnen) liegen darueber; "Eingabe" blendet sie fuer Korrekturen aus.
+   */
+  var GROSS_W = 3440, GROSS_H = 1440;
+  var GROSS_FARBEN = {
+    hell: { bg: '#f6f3f1', fl: '#ffffff', linie: '#e3dcda', text: '#151011', leise: '#6b6062', blau: '#1f6f95', rot: '#c8323a', gelb: '#8a5a00', schein: '0 2px 4px rgba(21,16,17,0.06)' },
+    dunkel: { bg: '#0d0a0b', fl: '#171213', linie: '#241c1e', text: '#f2eeee', leise: '#9a8f90', blau: '#7cc8ea', rot: '#e5484d', gelb: '#ffc14d', schein: '0 0 120px rgba(70,170,215,0.20)' }
+  };
+  function grossErlaubt() {
+    if (!autodartsAn() || S.screen !== 'game' || UI.grossAus) return false;
+    var m = currentMatch();
+    if (!m || !m.p || m.p.length > 2 || !activeLeg(m)) return false;
+    return window.innerWidth >= 1500 && window.innerWidth / Math.max(1, window.innerHeight) >= 1.9;
+  }
+  var grossBox = null, grossKennung = '';
+  function grossanzeige() {
+    if (S.screen !== 'game') UI.grossAus = false;
+    var an = grossErlaubt();
+    document.body.classList.toggle('gross-an', an);
+    if (!an) {
+      if (grossBox) { grossBox.hidden = true; grossKennung = ''; }
+      var zurueck = $('gross-zurueck');
+      if (zurueck) zurueck.hidden = !(UI.grossAus && autodartsAn() && S.screen === 'game');
+      return;
+    }
+    if (!grossBox) {
+      grossBox = document.createElement('div');
+      grossBox.id = 'gross';
+      grossBox.setAttribute('role', 'region');
+      grossBox.setAttribute('aria-label', 'Großanzeige');
+      document.body.appendChild(grossBox);
+      window.addEventListener('resize', function () { grossSkalieren(); grossanzeige(); });
+    }
+    grossBox.hidden = false;
+    var html = grossHtml();
+    if (html !== grossKennung) { grossKennung = html; grossBox.innerHTML = html; }
+    grossSkalieren();
+  }
+  function grossSkalieren() {
+    var buehne = grossBox && grossBox.firstElementChild;
+    if (!buehne) return;
+    var f = Math.min(window.innerWidth / GROSS_W, window.innerHeight / GROSS_H);
+    buehne.style.transform = 'translate(-50%, -50%) scale(' + f + ')';
+  }
+  /* "Julius Klinzer" -> "JULIUS K." */
+  function grossName(pid) {
+    var t = String(ligaName(pid) || pname(pid)).trim().split(/\s+/);
+    return (t.length > 1 ? t[0] + ' ' + t[t.length - 1].charAt(0) + '.' : t[0]).toUpperCase();
+  }
+  function grossKomma(x, n) { return isFinite(x) ? x.toFixed(n === undefined ? 1 : n).replace('.', ',') : '–'; }
+  function grossLegWerte(leg, pid) {
+    var pts = 0, darts = 0;
+    (leg.visits || []).forEach(function (v) { if (v.p !== pid) return; darts += v.d || 0; if (!v.b) pts += v.s || 0; });
+    return { pts: pts, darts: darts, avg: darts ? pts / darts * 3 : NaN };
+  }
+  function grossHtml() {
+    var m = currentMatch(), leg = activeLeg(m);
+    var hell = S.settings.hell === 1, c = GROSS_FARBEN[hell ? 'hell' : 'dunkel'];
+    var active = m.done && m.winner ? m.winner : activePlayer(leg, m);
+    var start = matchStart(m), solo = m.p.length === 1;
+    var legNr = m.legs.length;
+    var bestOf = Number(m.bestOf) || 1;
+    var kopf = (solo ? 'TRAINING · ' : '') + start + ' · DOUBLE OUT' + (!solo && bestOf > 1 ? ' · BEST OF ' + bestOf : '') + ' · LEG ' + legNr + (solo ? ' HEUTE' : '');
+    var lage = window.DartAutodarts && window.DartAutodarts.lage ? window.DartAutodarts.lage() : { farbe: '', text: '' };
+    var lageFarbe = lage.farbe === 'gruen' ? c.blau : lage.farbe === 'gelb' ? c.gelb : c.rot;
+    var lageText = lage.farbe === 'gruen' ? 'Autodarts bereit' : lage.text;
+    var spieler = function (pid) {
+      var dran = pid === active && !m.done;
+      var darts = dran ? UI.darts : [];
+      var offen = dran ? sum(darts, function (d) { return d.v; }) : 0;
+      var rest = remainingIn(leg, pid) - offen;
+      var ohneFinish = m.kind !== 'quick' && S.tour && S.tour.liga && !S.tour.liga.finish;
+      var weg = dran && !ohneFinish && rest >= 2 && rest <= 170 ? Checkout.suggest(rest, 3 - darts.length, lieblingsDoppel(pid, x01Lage(m, leg, pid))) : null;
+      var kacheln = [];
+      for (var i = 0; i < 3; i++) {
+        if (darts[i]) kacheln.push('<span class="g-k">' + esc(dartLabel(darts[i])) + '</span>');
+        else if (weg && weg[i - darts.length]) kacheln.push('<span class="g-k g-weg">' + esc(weg[i - darts.length]) + '</span>');
+        else kacheln.push('<span class="g-k' + (dran ? '' : ' g-leer') + '"></span>');
+      }
+      kacheln.push('<span class="g-k g-summe">' + (darts.length ? offen : '') + '</span>');
+      var eigene = (leg.visits || []).filter(function (v) { return v.p === pid; }).slice(-6).reverse();
+      var verlauf = eigene.map(function (v, i) {
+        return '<span class="' + (i === 0 ? 'g-neu' : '') + (wieBust(v) ? ' g-bust' : '') + '">' + (wieBust(v) ? (v.s ? v.s : '0') : v.s) + '</span>';
+      }).join('');
+      var lw = grossLegWerte(leg, pid);
+      var st = collectStats([{ matches: [m], start: start }], [pid])[pid]; finalize(st);
+      var unter = solo ? 'Dart ' + Math.min(3, darts.length + 1) + ' von 3 · Darts im Leg ' + (lw.darts + darts.length)
+        : dran ? 'Am Wurf' + (leg.starter === pid ? ' · warf Leg ' + legNr + ' an' : '') : m.done ? (m.winner === pid ? 'Gewinnt' : '') : 'Wartet';
+      return '<section class="g-spieler' + (dran || solo ? ' g-dran' : '') + '" aria-label="' + esc(ligaName(pid)) + '">' +
+        '<div class="g-oben"><div class="g-wer"><span class="g-name">' + esc(grossName(pid)) + '</span><span class="g-unter">' + esc(unter) + '</span></div>' +
+          (solo ? '' : '<div class="g-legs"><span>' + legsWon(m, pid) + '</span><small>LEGS</small></div>') + '</div>' +
+        '<div class="g-mitte"><span class="g-rest">' + rest + '</span>' +
+          '<div class="g-kacheln" role="group" aria-label="Aktuelle Aufnahme">' + kacheln.join('') + '</div></div>' +
+        '<div class="g-verlauf" aria-label="Letzte Aufnahmen, die jüngste zuerst">' + verlauf + '</div>' +
+        (solo ? '' : '<div class="g-avg"><span>3-Dart Ø <b>' + grossKomma(lw.avg) + '</b></span><span>Match Ø <b>' + grossKomma(st.darts ? st.avg : NaN) + '</b></span></div>') +
+        '</section>';
+    };
+    var treffer = active && !m.done ? UI.darts : [];
+    var wegAktiv = null;
+    if (active && !m.done) {
+      var restA = remainingIn(leg, active) - sum(UI.darts, function (d) { return d.v; });
+      if (restA >= 2 && restA <= 170 && UI.darts.length < 3) wegAktiv = Checkout.suggest(restA, 3 - UI.darts.length, lieblingsDoppel(active, x01Lage(m, leg, active)));
+    }
+    var mitte = '<div class="g-scheibe-box"><span class="g-status" role="status"><i style="background:' + lageFarbe + '"></i>' + esc(lageText) + '</span>' +
+      grossScheibe(treffer, wegAktiv && wegAktiv[0]) + '</div>';
+    var inhalt = solo
+      ? '<main class="g-haupt g-solo">' + spieler(m.p[0]) + mitte + grossTraining(m.p[0], m) + '</main>'
+      : '<main class="g-haupt">' + spieler(m.p[0]) + mitte + spieler(m.p[1]) + '</main>';
+    return '<div class="g-buehne' + (hell ? ' hell' : '') + '" style="--bg:' + c.bg + ';--fl:' + c.fl + ';--linie:' + c.linie + ';--text:' + c.text + ';--leise:' + c.leise + ';--blau:' + c.blau + ';--schein:' + c.schein + '">' +
+      '<header class="g-kopf"><span class="blink-logo g-logo" aria-hidden="true"></span><span class="g-marke">BLINK 180</span><span class="g-spiel">' + esc(kopf) + '</span>' +
+        '<button type="button" class="g-knopf" data-action="gross-aus" aria-label="Eingabe und Menü zeigen">Eingabe</button></header>' +
+      inhalt + '</div>';
+  }
+  /* Die Scheibe als SVG, mit den Darts der Aufnahme und dem naechsten Ziel. */
+  var GROSS_ZAHLEN = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5];
+  var grossScheibeGrund = null;
+  function grossPunkt(r, grad) {
+    var w = (grad - 90) * Math.PI / 180;
+    return (r * Math.cos(w)).toFixed(1) + ' ' + (r * Math.sin(w)).toFixed(1);
+  }
+  function grossSektor(r1, r2, a, b, cls) {
+    return '<path class="' + cls + '" d="M' + grossPunkt(r2, a) + 'A' + r2 + ' ' + r2 + ' 0 0 1 ' + grossPunkt(r2, b) + 'L' + grossPunkt(r1, b) + 'A' + r1 + ' ' + r1 + ' 0 0 0 ' + grossPunkt(r1, a) + 'Z"/>';
+  }
+  function grossScheibe(darts, ziel) {
+    if (!grossScheibeGrund) {
+      var h = '<circle class="g-rand" r="204"/>';
+      GROSS_ZAHLEN.forEach(function (z, i) {
+        var a = i * 18 - 9, b = a + 18, hellFeld = i % 2 === 1;
+        h += grossSektor(15.9, 99, a, b, hellFeld ? 'g-bb' : 'g-ba') + grossSektor(99, 107, a, b, hellFeld ? 'g-rb' : 'g-ra') +
+          grossSektor(107, 162, a, b, hellFeld ? 'g-bb' : 'g-ba') + grossSektor(162, 170, a, b, hellFeld ? 'g-rb' : 'g-ra');
+        var p = grossPunkt(186, i * 18).split(' ');
+        h += '<text class="g-zl" x="' + p[0] + '" y="' + p[1] + '" text-anchor="middle" dominant-baseline="central">' + z + '</text>';
+      });
+      grossScheibeGrund = h + '<circle class="g-rb" r="15.9"/><circle class="g-ra" r="6.35"/>';
+    }
+    var ort = function (mult, n) {
+      if (n === 25) return mult === 2 ? '0 0' : '0 -11';
+      var i = GROSS_ZAHLEN.indexOf(n);
+      if (i < 0) return null;
+      return grossPunkt(mult === 3 ? 103 : mult === 2 ? 166 : 135, i * 18);
+    };
+    var punkte = darts.map(function (d, i) {
+      var p = d.n ? ort(d.m, d.n) : null;
+      if (!p) return '';
+      p = p.split(' ');
+      return '<circle class="g-dart" cx="' + p[0] + '" cy="' + p[1] + '" r="5"/>';
+    }).join('');
+    var zielHtml = '';
+    var zm = /^([TD]?)(\d+|Bull|BULL|DB)$/.exec(String(ziel || ''));
+    if (zm) {
+      var zn = /bull|db/i.test(zm[2]) ? 25 : Number(zm[2]), zmult = zm[1] === 'T' ? 3 : zm[1] === 'D' || /^DB$/i.test(zm[2]) ? 2 : 1;
+      var zp = ort(zmult, zn);
+      if (zp) { zp = zp.split(' '); zielHtml = '<circle class="g-ziel" cx="' + zp[0] + '" cy="' + zp[1] + '" r="11"/>'; }
+    }
+    var text = darts.length ? 'Scheibe mit den Darts dieser Aufnahme: ' + darts.map(dartLabel).join(', ') : 'Scheibe, noch kein Dart in dieser Aufnahme';
+    return '<svg class="g-scheibe" role="img" aria-label="' + esc(text) + '" viewBox="-206 -206 412 412">' + grossScheibeGrund + zielHtml + punkte + '</svg>';
+  }
+  /* Rechts im Training: heute gegen alle bisherigen Trainings (allein
+     gespielte Schnelle X01). */
+  function grossTraining(pid, m) {
+    var heute = heuteISO();
+    var alle = [], heutige = [];
+    wertbareHistorie().forEach(function (h) {
+      if (h.kind !== 'quick' || (h.players || []).length !== 1 || h.players[0] !== pid || !h.matches) return;
+      alle.push({ matches: h.matches, start: (h.settings && h.settings.start) || 501 });
+      if (isoTag(h.at) === heute) heutige.push({ matches: h.matches, start: (h.settings && h.settings.start) || 501 });
+    });
+    var jetzt = { matches: [m], start: matchStart(m) };
+    var stH = collectStats(heutige.concat([jetzt]), [pid])[pid]; finalize(stH);
+    var stA = collectStats(alle.concat([jetzt]), [pid])[pid]; finalize(stA);
+    /* Legs (fertige, 501er) in zeitlicher Folge fuer das Diagramm. */
+    var legs = [];
+    alle.concat([jetzt]).forEach(function (l) {
+      l.matches.forEach(function (mm) {
+        (mm.legs || []).forEach(function (lg) {
+          if (!lg.winner) return;
+          var w = grossLegWerte(lg, pid);
+          if (w.darts) legs.push({ avg: w.avg, darts: w.darts, heute: l === jetzt || heutige.indexOf(l) >= 0 });
+        });
+      });
+    });
+    var t20 = function (lists) {
+      var tr = 0, n = 0;
+      lists.forEach(function (l) { l.matches.forEach(function (mm) { (mm.legs || []).forEach(function (lg) {
+        var r = l.start || 501;
+        (lg.visits || []).forEach(function (v) {
+          if (v.p !== pid) return;
+          (v.k || []).forEach(function (d) { if (r > 100) { n++; if (d.m === 3 && d.n === 20) tr++; } });
+          if (!v.b) r -= v.s || 0;
+        });
+      }); }); });
+      return n >= 9 ? tr / n * 100 : NaN;
+    };
+    var t20H = t20(heutige.concat([jetzt])), t20A = t20(alle.concat([jetzt]));
+    var diff = function (a, b, prozent) {
+      if (!isFinite(a) || !isFinite(b)) return '';
+      var d = a - b;
+      return '<span class="g-diff' + (d < 0 ? ' minus' : '') + '">' + (d >= 0 ? '+' : '−') + grossKomma(Math.abs(d), prozent ? 0 : 1) + (prozent ? ' %' : '') + '</span>';
+    };
+    var heuteLegs = legs.filter(function (l) { return l.heute; });
+    var kachel = function (titel, wert, neben) {
+      return '<div class="g-wert"><span class="g-titel">' + titel + '</span><div><b>' + wert + '</b>' + (neben || '') + '</div></div>';
+    };
+    var html = '<div class="g-training"><div class="g-block"><div class="g-zeile"><span class="g-ueber">HEUTE</span><span class="g-hinweis">Vergleich mit allen Trainings</span></div>' +
+      '<div class="g-werte">' +
+        kachel('SCHNITT', stH.darts ? grossKomma(stH.avg) : '–', stH.darts ? diff(stH.avg, stA.avg) : '') +
+        kachel('ERSTE 9', stH.first9Darts ? grossKomma(stH.first9) : '–', stH.first9Darts ? diff(stH.first9, stA.first9) : '') +
+        kachel('DOPPELQUOTE', stH.doubleAttempts ? grossKomma(stH.doubleQuote, 0) + ' %' : '–', stH.doubleAttempts && stA.doubleAttempts ? diff(stH.doubleQuote, stA.doubleQuote, true) : '') +
+        kachel('T20 QUOTE', isFinite(t20H) ? grossKomma(t20H, 0) + ' %' : '–', diff(t20H, t20A, true)) +
+        kachel('BESTES LEG', stH.bestLeg ? stH.bestLeg + ' Darts' : '–', stA.bestLeg ? '<span class="g-diff leise">Rekord ' + stA.bestLeg + '</span>' : '') +
+        kachel('LEGS', String(heuteLegs.length), heuteLegs.length ? '<span class="g-diff leise">Ø ' + Math.round(sum(heuteLegs, function (l) { return l.darts; }) / heuteLegs.length) + ' Darts</span>' : '') +
+      '</div></div>';
+    var letzte = legs.slice(-12);
+    if (letzte.length) {
+      var max = Math.max.apply(null, letzte.map(function (l) { return l.avg; }).concat([stA.avg || 0])) * 1.15 || 1;
+      var breit = 1000 / 12, y = function (v) { return (300 - v / max * 280).toFixed(1); };
+      var linie = letzte.map(function (l, i) {
+        var von = Math.max(0, i - 2), teil = letzte.slice(von, i + 1);
+        return (i * breit + breit / 2).toFixed(1) + ',' + y(sum(teil, function (x) { return x.avg; }) / teil.length);
+      }).join(' ');
+      var ersterHeute = -1;
+      letzte.forEach(function (l, i) { if (l.heute && ersterHeute < 0) ersterHeute = i; });
+      var balken = letzte.map(function (l, i) {
+        var x = i * breit + breit * 0.22, hoehe = 300 - Number(y(l.avg));
+        return '<rect x="' + x.toFixed(1) + '" y="' + y(l.avg) + '" width="' + (breit * 0.56).toFixed(1) + '" height="' + hoehe.toFixed(1) + '" rx="8" class="' + (l.heute ? 'g-heute' : 'g-frueher') + '"/>' +
+          (l.heute ? '<text x="' + (i * breit + breit / 2).toFixed(1) + '" y="' + (Number(y(l.avg)) - 12) + '" text-anchor="middle" class="g-bw">' + grossKomma(l.avg) + '</text>' : '');
+      }).join('');
+      var sechs = legs.slice(-6), davor = legs.slice(-12, -6);
+      var mittel = function (l) { return l.length ? sum(l, function (x) { return x.avg; }) / l.length : NaN; };
+      html += '<div class="g-block"><div class="g-zeile"><span class="g-ueber">LETZTE ' + letzte.length + ' LEGS</span><span class="g-hinweis">Linie: Schnitt über 3 Legs</span></div>' +
+        '<svg class="g-diagramm" viewBox="0 0 1000 360" role="img" aria-label="Schnitt der letzten ' + letzte.length + ' Legs">' + balken +
+          '<polyline points="' + linie + '" class="g-linie"/>' +
+          (stA.darts ? '<line x1="0" x2="1000" y1="' + y(stA.avg) + '" y2="' + y(stA.avg) + '" class="g-schnitt"/><text x="1000" y="' + (Number(y(stA.avg)) + 30) + '" text-anchor="end" class="g-st">Ø aller Zeiten ' + grossKomma(stA.avg) + '</text>' : '') +
+          '<line x1="0" x2="1000" y1="300" y2="300" class="g-achse"/>' +
+          (ersterHeute >= 0 ? '<text x="' + (ersterHeute * breit).toFixed(1) + '" y="340" class="g-st">heute</text>' : '') + '</svg>' +
+        (davor.length ? '<div class="g-vergleich"><span>Letzte 6 Legs <b>' + grossKomma(mittel(sechs)) + '</b></span><span>Davor <b>' + grossKomma(mittel(davor)) + '</b></span>' + diff(mittel(sechs), mittel(davor)) + '</div>' : '') +
+        '</div>';
+    }
+    return html + '</div>';
+  }
   /* Autodarts an diesem Geraet eingeschaltet (js/autodarts.js): dann zaehlen
      die Kameras, und das Spielbild zeigt die Einzel-Darts (Julius, 26.11.). */
   function autodartsAn() { return !!(window.DartAutodarts && window.DartAutodarts.an && window.DartAutodarts.an()); }
@@ -28900,6 +29231,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       /* Eingabe-Wahl im Setup (siehe renderSetup): 2 = Tastatur, 0 =
          Standard, 1 = Gemischt. Standard merkt sich die Grenze, damit
          Gemischt sie wiederfindet. */
+      case 'gross-aus':
+        UI.grossAus = true; render();
+        break;
+      case 'gross-an':
+        UI.grossAus = false; render();
+        break;
       case 'autodarts-einrichten':
         if (window.DartAutodarts && window.DartAutodarts.oeffnen) window.DartAutodarts.oeffnen();
         break;

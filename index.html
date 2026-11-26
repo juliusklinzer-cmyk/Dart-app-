@@ -278,6 +278,15 @@
         <button data-action="schalter" data-key="feiern" id="setting-feiern" aria-pressed="true">Feiern</button>
       </div>
     </div>
+    <!-- Hell oder dunkel: gilt vorerst fuer die Autodarts-Grossanzeige,
+         spaeter fuer die ganze App (Redesign). -->
+    <div class="setting" id="setting-darstellung">
+      <label>Darstellung</label>
+      <div class="options" data-setting="hell">
+        <button data-value="0">Dunkel</button>
+        <button data-value="1">Hell</button>
+      </div>
+    </div>
     <!-- Autodarts an diesem Geraet (js/autodarts.js): nur, wo freigeschaltet. -->
     <div class="setting hidden" id="setting-autodarts">
       <label>Autodarts</label>
@@ -829,6 +838,8 @@
 <!-- ============ SPIEL ============ -->
 <section id="screen-game" class="screen game">
   <div id="spiel-hinweis" class="spiel-hinweis" role="status" aria-live="polite"></div>
+  <!-- Autodarts-Grossanzeige ausgeblendet (Eingabe/Korrektur): zurueck dorthin. -->
+  <button type="button" id="gross-zurueck" class="gross-zurueck" data-action="gross-an" hidden>Großanzeige</button>
   <!-- Kopfleiste (Entwurf "X01 Redesign", 10/2026): links das Menue (Spiel
        verlassen), in der Mitte Spiel und Stand, rechts die Fernsteuerung
        (Board-Anzeige, Eingabe ueber Tastatur) und der Wechsel zwischen
