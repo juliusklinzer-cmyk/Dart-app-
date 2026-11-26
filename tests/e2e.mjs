@@ -7977,7 +7977,8 @@ await gruppe('Autodarts-Grossanzeige am breiten Monitor (Julius, 26.11.)', async
   await page.evaluate(() => { const D = window.__dart; D.state().settings.hell = 1; D.render(); });
   check('Darstellung hell', (await lage()).hell);
   await page.setViewportSize({ width: 1180, height: 820 });
-  check('am iPad (kein breiter Monitor) bleibt das normale Spielbild', !(await lage()).an);
+  await page.waitForFunction(() => { const g = document.getElementById('gross'); return !g || g.hidden; }, null, { timeout: 3000 }).catch(() => {});
+  check('am iPad (kein breiter Monitor) bleibt das normale Spielbild', !(await lage()).an, JSON.stringify([await page.evaluate(() => [innerWidth, innerHeight, window.__dart.state().screen])]));
   await page.evaluate(() => { const D = window.__dart, S = D.state(), m = JSON.parse(window.__grossMerk); window.DartAutodarts = window.__adEcht; S.game = m.game; S.settings.hell = m.hell; D.save(); D.setScreen('setup'); });
 });
 
