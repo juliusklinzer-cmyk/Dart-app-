@@ -6792,6 +6792,9 @@ button.pa-gruppe { cursor: pointer; }
 .pa-konto-feld span { font-size: 0.8rem; color: #857a7b; }
 .pa-konto-feld b { font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pa-konto-luft { flex: 1 1 auto; }
+.pa-darstellung .options { gap: 8px; }
+.pa-darstellung .options button { flex: 1 1 0; min-height: 44px; margin: 0; }
+.pa-darstellung small { font-size: 0.75rem; color: #857a7b; }
 
 /* Tafel "Meine Stats" */
 .pa-panel { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: 22px; background: var(--bg-2); box-shadow: 0 0 0 1.5px #2a2224; min-width: 0; }

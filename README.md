@@ -971,8 +971,8 @@ Aufnahmen, 3-Dart- und Match-Average, Legs), in der Mitte die Scheibe mit den Da
 Aufnahme und dem nächsten Ziel; allein im Training rechts „Heute“ gegen alle Trainings
 (Schnitt, Erste 9, Doppelquote, T20-Quote, bestes Leg, Legs) und die letzten 12 Legs.
 Gebaut auf 3440 × 1440 und skaliert. „Eingabe“ oben rechts blendet sie für Korrekturen
-aus, „Großanzeige“ unten rechts holt sie zurück. Hell oder dunkel: Einstellung
-„Darstellung“ (gilt vorerst nur hier). Das Livebild der Kameras fehlt noch.
+aus, „Großanzeige“ unten rechts holt sie zurück. Hell oder dunkel: im eigenen Profil
+in der Konto-Kachel unter „Darstellung“ (gilt vorerst nur hier). Das Livebild der Kameras fehlt noch.
 
 **Einrichten (seit 26.11.):** Freigeschaltet (`?autodarts=an`) steht im Startbild bei den
 Einstellungen „Autodarts › Einrichten“. Die Karte prüft vier Schritte: Brücke läuft,

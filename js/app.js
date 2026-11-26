@@ -5813,6 +5813,16 @@
         '</div>' +
         (eigen ? '<div class="pa-kachel pa-konto"><span class="kt">Konto</span>' +
           '<div class="pa-konto-feld"><span>E-Mail</span><b>' + esc(nutzer.email || '') + '</b></div>' +
+          /* Darstellung hell/dunkel (Julius 26.11.): gehoert ins Profil, nicht
+             zum Spiel. Gilt vorerst nur fuer die Autodarts-Grossanzeige, spaeter
+             fuer die ganze App. Gespeichert am Geraet (S.settings.hell). */
+          '<div class="pa-konto-feld pa-darstellung"><span>Darstellung</span>' +
+            '<div class="options" data-setting="hell" id="setting-darstellung">' +
+              [['0', 'Dunkel'], ['1', 'Hell']].map(function (o) {
+                return '<button data-value="' + o[0] + '" aria-pressed="' + (String(S.settings.hell === 1 ? 1 : 0) === o[0]) + '"' +
+                  (String(S.settings.hell === 1 ? 1 : 0) === o[0] ? ' class="active"' : '') + '>' + o[1] + '</button>';
+              }).join('') +
+            '</div><small>Vorerst nur die Autodarts-Großanzeige</small></div>' +
           /* Benachrichtigungen (Push und Mail je Thema): Dialog aus js/auth.js. */
           '<button class="btn pa-btn" data-action="konto-mitteilungen">Benachrichtigungen</button>' +
           '<div class="pa-konto-luft"></div>' +

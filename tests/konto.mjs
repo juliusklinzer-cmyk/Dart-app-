@@ -428,6 +428,15 @@ async function main() {
           return D.state().screen === 'profile' && D.ui().profile === id &&
             !!document.querySelector('#screen-profile [data-action="edit-current-profile"]');
         }, juliusId));
+      /* Darstellung hell/dunkel steht im eigenen Profil (Konto-Kachel), nicht
+         mehr bei den Spieleinstellungen (Julius 26.11.). */
+      await julius.page.locator('#profile-detail #setting-darstellung button[data-value="1"]').click();
+      check('Darstellung hell im Profil umschaltbar', await julius.page.evaluate(() =>
+        window.__dart.state().settings.hell === 1 &&
+        !!document.querySelector('#profile-detail #setting-darstellung button[data-value="1"].active') &&
+        !document.querySelector('#screen-setup #setting-darstellung')));
+      await julius.page.locator('#profile-detail #setting-darstellung button[data-value="0"]').click();
+      check('und zurueck auf dunkel', await julius.page.evaluate(() => window.__dart.state().settings.hell === 0));
 
       /* Weg seit dem Profil-Umbau: Flaeche "Profil bearbeiten" -> "Foto
          aendern" -> Flaeche "Foto anpassen" (Galerie = #avatar-input) ->
