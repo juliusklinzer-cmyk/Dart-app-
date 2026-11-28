@@ -15754,6 +15754,11 @@
         d: { bestOf: 3, wir: ligaAufstellungVorschlag(termin), wirTyp: ['', '', '', ''], wirNamen: [{}, {}, {}, {}], vollNamen: {},
           gegner: ['', '', '', ''], gegnerNach: ['', '', '', ''], gegnerTyp: ['', '', '', ''], geteilt: false, finish: false, nurErgebnis: false, ohneNamen: false }
       };
+      /* Die Ligaspiel-Voreinstellungen dieses Geraets (Liga-Einstellungen). */
+      if (typeof ligaVorgaben === 'function') {
+        var gdVor = ligaVorgaben();
+        t.d.bestOf = gdVor.bestOf; t.d.finish = gdVor.finish; t.d.ohneNamen = gdVor.ohneNamen; t.d.nurErgebnis = gdVor.nurErgebnis;
+      }
       gdErsatzBereit(t.d);
       LIGA_TAG_FELDER.forEach(function (k) { t.abbild[k] = ligaTagText(t, k); });
       ligaTagSpaeterMerk = {};
@@ -16090,8 +16095,8 @@
     if (ligaTagTurnierOffen()) { UI.overlay = { type: 'ligatag-hinweis', art: 'turnier' }; render(); return; }
     if (S.game && !S.game.done) { UI.overlay = { type: 'ligatag-hinweis', art: 'jetzt' }; render(); return; }
     if (!ligaTagGeteilt()) {
-      ligaSpielStarten();
-      if (S.tour && S.tour.liga) { delete S.ligaTag; save(); }
+      /* Ein Geraet ohne Konten: GAME ON startet gleich das erste Einzel. */
+      ligaTagAlleinStarten(t);
       return;
     }
     if (!t.platz) { o.fehler = 'Bitte erst eine Scheibe wählen.'; render(); return; }
@@ -16233,7 +16238,8 @@
     var dialog = UI.overlay && !ligaTagVon(UI.overlay) && UI.overlay.type !== 'ligatag-hinweis';
     if (ligaTagTurnierOffen() || (S.game && !S.game.done) || dialog) {
       t.turnier = daten.id; save();
-      if (!dialog) { UI.overlay = null; ligaTagHinweis(ligaTagTurnierOffen() ? 'turnier' : 'jetzt'); render(); }
+      /* Gerade bestaetigt oder gestartet: der Hinweis kommt sofort, ohne Ruhezeit. */
+      if (!dialog) { UI.overlay = { type: 'ligatag-hinweis', art: ligaTagTurnierOffen() ? 'turnier' : 'jetzt' }; render(); }
       return;
     }
     var platz = t.platz || 'S1';
@@ -16370,7 +16376,13 @@
     }
     /* Die andere Scheibe hat GAME ON gedrueckt, hier ist der Game Day zu. */
     if (geteilt && !t.turnier && t.platz && ligaTagZuZweit(t) && gdGameOn(t, ligaTagAndere(t)) && !gdGameOn(t, t.platz) && !ligaTagVon(UI.overlay)) {
-      ligaTagHinweis('gameon');
+      /* Die Frage hat Vorrang: sie ersetzt einen offenen Anwurf-Hinweis und
+         wartet nicht auf die Ruhezeit (abgelehnt wird mit "Noch nicht"). */
+      var hw = UI.overlay && UI.overlay.type === 'ligatag-hinweis' ? UI.overlay.art : null;
+      if ((!UI.overlay || hw === 'anwurf') && !UI.menu && !UI.input && !UI.darts.length && Date.now() - ligaTagGetippt >= 3000) {
+        UI.overlay = { type: 'ligatag-hinweis', art: 'gameon' };
+        render();
+      }
       return;
     }
     if (geteilt && t.turnier) {              // laeuft schon (das andere iPad hat gestartet)
@@ -16384,7 +16396,11 @@
       if (!t.platz) return;                  // ein Handy, das nur nachschaut
       /* Nie aus altem Stand: erst muss der Server geantwortet haben. */
       if (!ligaTagOnline() || Date.now() - ligaTagFrisch > 9000) {
-        if (jetzt > anpfiff + 15000 && Date.now() - Math.max(ligaTagFrisch, ligaTagSeit) > 15000) ligaTagHinweis('netz');
+        if (jetzt > anpfiff + 15000 && Date.now() - Math.max(ligaTagFrisch, ligaTagSeit) > 15000) {
+          /* Ein Anwurf-Hinweis von eben wird zur Netz-Frage - nie stumm. */
+          if (UI.overlay && UI.overlay.type === 'ligatag-hinweis' && UI.overlay.art === 'anwurf') { UI.overlay = { type: 'ligatag-hinweis', art: 'netz' }; render(); }
+          else ligaTagHinweis('netz');
+        }
         return;
       }
     }
@@ -16392,7 +16408,10 @@
        20:00 erscheint GAME ON gross, die andere Scheibe bestaetigt. Wer
        gerade woanders ist, bekommt einen Hinweis. */
     if (ligaTagAlleBereit(t)) {
-      if (!ligaTagVon(UI.overlay)) ligaTagHinweis('anwurf');
+      /* Ein Hinweis "noch nicht bereit" von eben ist ueberholt: auf Anwurf umstellen. */
+      if (UI.overlay && UI.overlay.type === 'ligatag-hinweis' && (UI.overlay.art === 'warten' || UI.overlay.art === 'fehlt')) {
+        UI.overlay = { type: 'ligatag-hinweis', art: 'anwurf' }; render();
+      } else if (!ligaTagVon(UI.overlay)) ligaTagHinweis('anwurf');
       return;
     }
     if (t.gespielt && !t.bereit) return;     // heute schon gespielt: nicht weiter erinnern
