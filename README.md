@@ -589,7 +589,7 @@ Der Spielplan sind die **16 Einzel in vier Durchgängen, exakt in der
 Reihenfolge des Spielberichtsbogens** (`LIGA_EINZEL`); jede Begegnung steht
 als **H1 Name – G1 Name** da, und im Liga-Kontext erscheint der
 **bürgerliche Name** aus dem Profil statt des Spitznamens (die SWO will keine
-Künstlernamen). Jedes Einzel trägt seine Scheibe (S1/S2); je zwei Einzel laufen parallel, und jeder Spieler beider Teams spielt genau 2× an S1 und 2× an S2. Ist der Abend durch, wird der **Spielbericht am iPad unterschrieben**: „Unterschreiben“ öffnet nacheinander je einen ganzen Bildschirm für TC Heim und TC Gast (mit dem Finger, „Nochmal“ löscht), danach die Mailadressen: fünf Zeilen mit Rolle, davon drei fest – unsere beiden Teamcaptains (TC-1/TC-2 laut Ligaleitung, Adresse vom Konto mit diesem Namen) und die Ligaleitung (Udo Kern, spielbericht@steeldart-muenchen.de) –, dazu der TC des Gegners, dessen Adresse die App je Team behält (Rückspiel, nächste Saison), und eine freie Zeile; alles ist änderbar, angemeldet kommt die Liste vom Server (`GET/PUT /api/liga/empfaenger`, Tabelle `liga_empfaenger`) und ist auf allen Geräten dieselbe, sonst gilt, was dieses Gerät zuletzt verschickt hat (die Mail geht an alle eingetragenen Adressen und in Kopie an unser Postfach). „Senden“ macht aus dem Bogen – genau wie er auf dem Bildschirm steht, mit allen Handkorrekturen und Unterschriften – ein zweiseitiges A4-PDF und öffnet das Teilen-Menü; die Adressen sind dann schon kopiert und werden in der Mail nur eingefügt. Ohne Teilen-Menü (Computer) wird das PDF heruntergeladen und die Mail mit Empfängern geöffnet. Ist auf dem Server der **Mailversand** eingerichtet (siehe „Mails aus der App“), schickt „Senden“ die Mail mit dem PDF direkt vom Server: Absender blink180@wirtschaftln.de, Kopie ins Blink-Postfach, ohne Teilen-Menü; schlägt das fehl, bleibt der Dialog offen und bietet das Teilen-Menü an. Im **Spielbericht** zeigt jede Einzel-Zeile die echte Bogennummer der Spieler: Wer eingewechselt wurde, steht dort als H5–H8 bzw. G5–G8. Bis zur Unterschrift ist jedes Feld anpassbar (auch die Einzel-Bezeichnung), Nachmeldungen und Proteste werden per Tipp auf „ja“ oder „nein“ angekreuzt. Sobald **beide TCs unterschrieben** haben, ist der Bericht **final**: kein Feld lässt sich mehr ändern, oben steht nur noch „Versenden“. **Abschluss:** Nach dem letzten Einzel wird das Ligaspiel nicht beendet. Es kommen zuerst die **Ergebnisse** mit den Highlights beider Teams (jedes Finish ab 100 und jedes gewonnene Leg bis 21 Darts je Spieler, nicht nur das beste; der Bogen wächst bei mehr als sieben Zeilen) und je einem **Man of the Day** (meiste gewonnene Einzel, dann Leg-Differenz, dann Average; bei Gleichstand geteilt), dann geht es zum Spielbericht. Erst wenn der unterschrieben und verschickt ist (oder „Abschließen ohne Senden“), ist das Ligaspiel abgeschlossen und die App kehrt ins Menü zurück: Es wandert ins Archiv, im Spielplan steht der Spieltag als „Abgeschlossen“ mit Endstand, Ergebnissen und Bericht und lässt sich nicht noch einmal starten. Bis dahin bleibt es komplett offen; auch der Spiel-Tab archiviert es nicht still. Ein Spieltag mit archiviertem, aber noch nicht abgeschlossenem Ligaspiel zeigt „Bericht offen“. Im **geteilten Ligaspiel an zwei iPads** geht der Spielerwechsel als geänderter Spielplan an den Server; das andere iPad übernimmt ihn beim nächsten Abgleich, ein dort laufendes oder fertiges Einzel bleibt unberührt. Fertige Einzel, deren Ergebnis wegen eines Funklochs nicht beim Server ankam, reicht die App bei jedem Abgleich nach. **Nachmeldungen** gehen über „Spieler nachmelden“ im Ligaspiel (oder den Knopf auf Seite 2 des Berichts): Team, Nachname, Vorname, U18 ja/nein und w/m/d, danach unterschreibt die Person mit dem Finger. Sie steht dann mit Unterschrift auf Seite 2, „Nachmeldungen: ja“ ist angekreuzt, und sie gehört zum Team (H5–H8 bzw. G5–G8), einsetzbar über „Spieler wechseln“. Jedes Einzel
+Künstlernamen). Jedes Einzel trägt seine Scheibe (S1/S2); je zwei Einzel laufen parallel, und jeder Spieler beider Teams spielt genau 2× an S1 und 2× an S2. Ist der Abend durch, wird der **Spielbericht am iPad unterschrieben**: „Unterschreiben“ öffnet nacheinander je einen Dialog für TC Heim und TC Gast (mit dem Finger, „Nochmal“ löscht; er geht nur über seine Knöpfe zu), danach die Mailadressen: fünf Zeilen mit Rolle, davon drei fest – unsere beiden Teamcaptains (TC-1/TC-2 laut Ligaleitung, Adresse vom Konto mit diesem Namen) und die Ligaleitung (Udo Kern, spielbericht@steeldart-muenchen.de) –, dazu der TC des Gegners, dessen Adresse die App je Team behält (Rückspiel, nächste Saison), und eine freie Zeile; alles ist änderbar, angemeldet kommt die Liste vom Server (`GET/PUT /api/liga/empfaenger`, Tabelle `liga_empfaenger`) und ist auf allen Geräten dieselbe, sonst gilt, was dieses Gerät zuletzt verschickt hat (die Mail geht an alle eingetragenen Adressen und in Kopie an unser Postfach). „Senden“ macht aus dem Bogen – genau wie er auf dem Bildschirm steht, mit allen Handkorrekturen und Unterschriften – ein zweiseitiges A4-PDF und öffnet das Teilen-Menü; die Adressen sind dann schon kopiert und werden in der Mail nur eingefügt. Ohne Teilen-Menü (Computer) wird das PDF heruntergeladen und die Mail mit Empfängern geöffnet. Ist auf dem Server der **Mailversand** eingerichtet (siehe „Mails aus der App“), schickt „Senden“ die Mail mit dem PDF direkt vom Server: Absender blink180@wirtschaftln.de, Kopie ins Blink-Postfach, ohne Teilen-Menü; schlägt das fehl, bleibt der Dialog offen und bietet das Teilen-Menü an. Im **Spielbericht** zeigt jede Einzel-Zeile die echte Bogennummer der Spieler: Wer eingewechselt wurde, steht dort als H5–H8 bzw. G5–G8. Bis zur Unterschrift ist jedes Feld anpassbar (auch die Einzel-Bezeichnung), Nachmeldungen und Proteste werden per Tipp auf „ja“ oder „nein“ angekreuzt. Sobald **beide TCs unterschrieben** haben, ist der Bericht **final**: kein Feld lässt sich mehr ändern, oben steht nur noch „Versenden“. **Abschluss:** Nach dem letzten Einzel wird das Ligaspiel nicht beendet. Es kommen zuerst die **Ergebnisse** mit den Highlights beider Teams (jedes Finish ab 100 und jedes gewonnene Leg bis 21 Darts je Spieler, nicht nur das beste; der Bogen wächst bei mehr als sieben Zeilen) und je einem **Man of the Match** (bis November 2026 „Man of the Day“, die Regel ist dieselbe: meiste gewonnene Einzel, dann Leg-Differenz, dann Average; bei Gleichstand geteilt), dann geht es zum Spielbericht. Erst wenn der unterschrieben und verschickt ist (oder „Abschließen ohne Senden“), ist das Ligaspiel abgeschlossen und die App kehrt ins Menü zurück: Es wandert ins Archiv, im Spielplan steht der Spieltag als „Abgeschlossen“ mit Endstand, Ergebnissen und Bericht und lässt sich nicht noch einmal starten. Bis dahin bleibt es komplett offen; auch der Spiel-Tab archiviert es nicht still. Ein Spieltag mit archiviertem, aber noch nicht abgeschlossenem Ligaspiel zeigt „Bericht offen“. Im **geteilten Ligaspiel an zwei iPads** geht der Spielerwechsel als geänderter Spielplan an den Server; das andere iPad übernimmt ihn beim nächsten Abgleich, ein dort laufendes oder fertiges Einzel bleibt unberührt. Fertige Einzel, deren Ergebnis wegen eines Funklochs nicht beim Server ankam, reicht die App bei jedem Abgleich nach. **Nachmeldungen** gehen über „Spieler nachmelden“ im Ligaspiel (oder den Knopf auf Seite 2 des Berichts): Team, Nachname, Vorname, U18 ja/nein und w/m/d, danach unterschreibt die Person mit dem Finger. Sie steht dann mit Unterschrift auf Seite 2, „Nachmeldungen: ja“ ist angekreuzt, und sie gehört zum Team (H5–H8 bzw. G5–G8), einsetzbar über „Spieler wechseln“. Jedes Einzel
 **beginnt mit dem Ausbullen** (SWO Punkt 8, Fassung Oktober 2026): der
 Gewinner wirft Leg 1 an, danach wechselt der Anwurf. Im Übungs-Ligaspiel gegen
 Bots wirft der eigene Spieler ohne Ausbullen an. Die Übersicht zeigt den **Team-Stand** – groß die **Punkte
@@ -598,8 +598,9 @@ als Summe der gewonnenen Einzel** (jedes gewonnene Einzel = 1 Punkt, egal ob 2:0
 180er-Feiern bleiben im Ligaspiel aus – mitten im Einzel gegen ein fremdes
 Team wäre der Löwe fehl am Platz.
 
-Tritt eine Position nicht an (nur drei gemeldet), wertet der **w.o.-Knopf**
-am Einzel es **kampflos**: der Anwesende gewinnt 2:0 (bzw. 3:0) mit vollen
+Tritt eine Position nicht an (nur drei gemeldet), wertet ein Tipp auf die
+**Namen eines offenen Einzels** („Kampflos werten“: antippen, wer fehlt, dann
+„W.O. werten“) es **kampflos**: der Anwesende gewinnt 2:0 (bzw. 3:0) mit vollen
 Punkten nach Staffel – in der persönlichen Statistik und Rangliste zählt das
 Einzel gar nicht (kein Wurf, kein Sieg, keine Niederlage). Über **„ändern"**
 lässt sich die Wertung zurücknehmen; im geteilten Spiel wandert sie sofort
@@ -607,7 +608,7 @@ auf das andere Gerät und ist dort nicht mehr rückholbar.
 
 **Nur Ergebnisse** (Oktober 2026): Zählt der Gegner mit seinem eigenen System,
 wird beim Start unter **Mitschreiben** „nur Ergebnisse“ gewählt. Dann trägt
-jedes Einzel in der Übersicht vorn den Knopf **Ergebnis**: ein Tipp, und die
+jedes Einzel in der Übersicht den Knopf **Eintragen**: ein Tipp, und die
 möglichen Leg-Stände stehen als Kacheln da (Bo3: 2:0, 2:1, 1:2, 0:2 – Heim :
 Gast wie auf dem Bogen, der Sieger klein darunter). Das Einzel ist damit fertig,
 „ändern“ öffnet die Kacheln noch einmal, „Ergebnis zurücknehmen“ macht es wieder
@@ -661,6 +662,70 @@ Spielers der Liga) steht im Reiter **Liga › Statistik** (seit 12.11.2026 dort,
 mehr im Reiter Statistik). Im Regeln-Reiter der Liga-Seite stehen dazu ein
 FAQ für Neue und Udos Regelecke.
 
+**Redesign November 2026 (Ligaspiel-Ablauf, Entwürfe „Ligaspiel 11/12“, „Liste 5a–17“,
+„A/B/C“, hell und dunkel):** Übersicht, Dialoge, Spielende und Spielbericht des
+Ligaspiels tragen die Tokens `--t-*` und folgen der Darstellung hell/dunkel
+(`hellAblauf()` in `js/app.js`; Klassen `la-*`, Regeln in `css/styles.css` hinter
+`@@LIGASPIEL-ABLAUF@@`). Das freie Turnier bleibt, wie es ist.
+- **Übersicht:** Kopf „LIGASPIEL“ mit Spieltag, „Vorzeitig beenden“, „Ligaspiel
+  verlassen“ und dem LIVE-Schild (Ticker). Links die acht Einzel einer Scheibe nach
+  Durchgängen, umschaltbar mit SCHEIBE 1 / SCHEIBE 2 (im geteilten Spiel steht die
+  eigene vorn); je Zeile Heim links, Gast rechts mit Bogennummer (eingewechselt =
+  eingekreist, z. B. G5), in der Mitte Ergebnis, „läuft bei S2“, „bei S2
+  hängengeblieben? ÜBERNEHMEN“ oder GAME ON (das nächste Einzel blau). Darunter die
+  **Wechsel** mit „Rücktausch“ (setzt den vorherigen Spieler wieder auf die Position,
+  gleiche Regeln wie „Spieler wechseln“). Rechts der Stand groß, die Einzel der
+  anderen Scheibe, die vier jüngsten **Highlights** (180er, High Finishes ab 100,
+  Shortlegs, beide Teams), „SPIELER WECHSELN / NACHMELDEN“ und „Spielbericht“; ist
+  alles gespielt, „ZUM SPIELENDE“. Ein Tipp auf die Namen eines offenen Einzels
+  öffnet „Kampflos werten“ (dort auch „Nur das Ergebnis eintragen“).
+- **Andere Scheibe (Julius, 28.11.):** Ein Einzel darf an der anderen Scheibe
+  gestartet werden als laut Bogen geplant, wenn eine Scheibe zu lange braucht. Im
+  geteilten Spiel fragt das iPad nach („Einzel 11 · geplant für Scheibe 1 – an
+  Scheibe 2 starten?“, HIER STARTEN); die geplante Scheibe sieht es dann als
+  laufend. Der Bericht bleibt beim Bogen (die Scheibe des Einzels ändert sich nicht).
+- **Vorzeitig beenden (Julius, 28.11.):** Nur noch für den Notfall: alle offenen
+  Einzel werden **kampflos für Heim** oder **kampflos für Gast** gewertet (2:0 bzw.
+  3:0, ein hier angefangenes Einzel zählt mit, seine Würfe fallen weg wie bei jedem
+  kampflosen Einzel – der Dialog sagt es dann). Ein Einzel, das gerade am anderen
+  iPad läuft, bleibt unangetastet; hängt es über die Frist (Akku leer), zählt es wie
+  ein offenes. Den Knopf gibt es nur, solange ein Einzel offen und der Bericht noch
+  nicht von beiden TCs unterschrieben ist. „Was ist passiert?“ ist Pflicht und steht im Spielbericht auf Seite 2
+  unter „Proteste und Anmerkungen“ (unter einer schon korrigierten Zeile), „Proteste: ja“
+  ist angekreuzt; im geteilten Spiel reist der Grund mit dem Plan zum anderen iPad. Danach geht es
+  **direkt zum Spielbericht**; abgeschlossen ist das Ligaspiel wie immer erst mit
+  Unterschriften und Versand. „Offene Einzel entfallen“ und „verwerfen“ gibt es im
+  Ligaspiel nicht mehr; das Übungsspiel kennt sie weiter (entfallen: die gespielten
+  Einzel kommen ins Archiv, in der Liga-Wertung zählt nichts).
+- **Nur Ergebnisse:** die 16 Einzel in zwei Spalten (Durchgang 1/2 und 3/4), je Einzel
+  EINTRAGEN bzw. das Ergebnis zum Ändern; rechts Stand, Highlights, Wechsel und die
+  Knöpfe. Der Dialog „Ergebnis eintragen“ wählt erst den Leg-Stand und speichert mit
+  SPEICHERN; dazu freiwillig je Spieler **Highlights für den Spielbericht** (180er
+  zählen, High Finish 100–170, Shortleg 9–21 Darts, beides nur mit gewonnenem Leg).
+  Sie stehen am Einzel (`m.hlHand`) und erscheinen in Übersicht, Spielende und
+  Bericht – nicht in Statistik und Rangliste (dort zählen weiter nur Würfe und was
+  die Ligaleitung meldet). Im geteilten Spiel reisen sie mit dem Ergebnis zum
+  anderen iPad; später ergänzte bleiben auf diesem iPad.
+- **Spielende:** Endstand groß („Blink 180 gewinnt“, Einzel, Legs, Punkte für die
+  Tabelle), je Team der **Man of the Match** mit Foto, Begründung und drei Werten,
+  die **Rekorde der Begegnung** (bester Average in einem Einzel, höchste Aufnahme,
+  bestes Leg, höchstes Finish, beste First 9 eines Legs, meiste 100+, längstes
+  Einzel; die **Doppelquote** nur aus Einzeln, in denen jeder Dart des Spielers
+  erfasst ist – sonst fehlt die Kachel, geschätzt wird nichts) und die Highlights der
+  Begegnung (für den Bogen, große Aufnahmen ab 140, schöne Finishes unter 100, beste
+  Legs). Bei Nur Ergebnisse stattdessen „Spieler des Abends“, alle Einzel und die von
+  Hand eingetragenen Highlights.
+- **Spielbericht:** am Bildschirm als Karten (Kopf mit Stand, Spielort und Zeiten,
+  Spieler H1–H8/G1–G8, Einzelspiele, Highlights mit „Eintragen“, Angaben ja/nein,
+  Seite 2 mit Nachmeldungen und Protesten, nach den Unterschriften „Bericht ist
+  final“). Jedes Feld lässt sich antippen und korrigieren; es schreibt in den Bogen
+  (`#bericht-blatt`), der unsichtbar daneben steht und weiter PDF, Druck und die
+  gemerkten Korrekturen trägt. Unterschrift (Schritte TC Heim → TC Gast) und Versand
+  sind mittige Dialoge.
+- **Nachmelden:** dazu freiwillig ein **Foto** (Kamera oder Galerie, zugeschnitten wie
+  ein Profilbild); es bleibt beim Gastprofil auf diesem iPad und reist nicht mit dem
+  Spielplan. Ohne Foto steht ein Platzhalter mit Kürzel.
+
 Die **Turnier-Übersicht** (Entwurf „Turnier Redesign“, überarbeitet Oktober 2026)
 trägt dieselbe Kopfleiste wie das Setup, darunter die Titelzeile mit Format,
 Spielerzahl und „N von M gespielt“ sowie „Turnier verlassen“. Links der Spielplan
@@ -686,9 +751,7 @@ Nachmeldung mit Unterschrift: der Spieler steht dann schon auf dem Bogen, das Te
 (Team, Name, U18, Geschlecht, Platz auf dem Bogen und das Unterschriftsfeld in einem
 Bogen; der Dialog geht nur über seine Knöpfe zu, ein Strich neben das Feld oder die
 Zurück-Taste wirft nichts weg, und nach einem Neuladen steht er wieder da, solange der
-Spontane noch nicht nachgemeldet ist), **Ligaspiel vorzeitig beenden?** (nicht begonnene
-Einzel kampflos für den Gegner, offene Einzel entfallen oder Ligaspiel verwerfen; ein
-Einzel, das das andere iPad gerade spielt, bleibt unangetastet) und der **Spielbericht** in Kurzfassung (alle Einzel, Summe, Highlights,
+Spontane noch nicht nachgemeldet ist), **Ligaspiel vorzeitig beenden?** (seit November 2026: siehe unten) und der **Spielbericht** in Kurzfassung (alle Einzel, Summe, Highlights,
 „Teilen“ und „Bogen und PDF“ führen zum vollen Bogen).
 
 Der **Sieger-Bildschirm** (Entwurf „Sieger“, Oktober 2026) trägt den Setup-Kopf,

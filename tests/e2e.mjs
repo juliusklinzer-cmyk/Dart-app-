@@ -105,6 +105,11 @@ async function navTo(screen) {
     if (screen === 'liga') return;
     await page.locator('#liga-kopf .lg-logo').click();
   }
+  /* Das Ligaspiel (Redesign Nov. 2026) hat ebenfalls keine Hauptnavigation:
+     Spielende -> Zur Uebersicht -> Ligaspiel verlassen. */
+  const ls = await page.evaluate(() => { const S = window.__dart && window.__dart.state(); return S && S.tour && S.tour.liga && !window.__dart.ui().overlay ? S.screen : ''; });
+  if (ls === 'winner') await page.locator('#ls-ende [data-action="to-tournament"]').click();
+  if (ls === 'winner' || ls === 'tournament') await page.locator('#ligaspiel [data-action="to-setup"]').click();
   await page.locator('#nav [data-screen="' + screen + '"]').click();
 }
 /* Spielerliste: am Handy oeffnet der Tipp auf die Karte das Profil, am
@@ -2568,7 +2573,7 @@ for (let i = 0; i < 4; i++) {
 await page.locator('[data-action="liga-finish"][data-value="1"]').click();
 await page.locator('[data-action="liga-los"]').click();
 check('das Ligaspiel steht', await visible('#screen-tournament'));
-await page.locator('#schedule .match-row .go:not(.wo)').first().click();
+await page.locator('#ligaspiel .la-einzel [data-action="open-match"]').first().click();
 check('das Liga-Einzel beginnt mit dem Ausbullen (SWO 10/2026)', await visible('#screen-bulloff'));
 await ligaAusbullen();
 check('das Einzel oeffnet im Spielbild des Ligaspiels mit Wechsel- und Tastatur-Knopf', (await visible('#lz-spiel [data-action="game-swap"]')) && (await visible('#lz-spiel [data-action="game-fern"]')));
@@ -2678,7 +2683,7 @@ check('und die Eingabe-Anzeige steht wieder bereit', await visible('#lz-spiel .l
 /* Auch der Weg ueber die Uebersicht: am Board-iPad (Modus gemerkt) oeffnet
    ein Liga-Einzel direkt in der Riesenanzeige. */
 await page.evaluate(() => window.__dart.setScreen('tournament'));
-await page.locator('#schedule .match-row .go:not(.wo)').first().click();
+await page.locator('#ligaspiel .la-einzel [data-action="open-match"]').first().click();
 await ligaAusbullen();
 check('das Liga-Einzel oeffnet nach dem Ausbullen im Turnier-Modus', await visible('#lz-spiel.lz-tast'));
 /* Ziffernblock tippt Zahlen - auch mit NumLock aus (Playwright simuliert
@@ -2811,13 +2816,13 @@ await page.keyboard.press('Enter');
 check('Enter fuehrt in die Uebersicht', (await visible('#screen-tournament')) && await page.evaluate(() => !window.__dart.ui().overlay));
 check('dort ist das naechste freie Einzel an derselben Scheibe markiert', await page.evaluate(() => {
   const S = window.__dart.state(), fertig = S.matches.find((m) => m.id === S.tour.zuletzt);
-  const z = document.querySelector('#schedule .match-row.wahl [data-action="open-match"]');
+  const z = document.querySelector('#ligaspiel .la-einzel.wahl [data-action="open-match"]');
   const m = z && S.matches.find((x) => x.id === z.getAttribute('data-id'));
   return !!(fertig && fertig.done && m && !m.done && m.scheibe === fertig.scheibe);
 }));
 await page.keyboard.press('Enter');
 check('ein sofort nachgeschobenes Enter startet noch nichts', await visible('#screen-tournament'));
-check('das zuletzt gespielte Einzel hat den Knopf Statistik', (await page.locator('#schedule .match-row.done [data-action="open-summary"]').count()) === 1);
+check('das zuletzt gespielte Einzel hat den Knopf Statistik', (await page.locator('#ligaspiel .la-einzel.fertig [data-action="open-summary"]').count()) === 1);
 await page.keyboard.press('Backspace');
 check('Loeschen kurz danach fuehrt auf die Statistik, nicht ins Setup', await visible('#screen-summary'));
 check('dort laesst sich die letzte Aufnahme zuruecknehmen, weiter geht es nur zur Uebersicht', (await visible('#screen-summary')) &&
@@ -2901,34 +2906,70 @@ await page.locator('[data-action="liga-mitschreiben"][data-value="1"]').click();
 await page.locator('[data-action="liga-los"]').click();
 check('das Ligaspiel steht', await visible('#screen-tournament'));
 check('der Modus steht im Ligaspiel', await page.evaluate(() => window.__dart.state().tour.liga.nurErgebnis === true));
-check('jedes Einzel traegt vorn den Ergebnis-Knopf', (await page.locator('#schedule .match-row .go[data-action="liga-ergebnis"]').count()) === 16);
-check('Mitschreiben in der App bleibt daneben moeglich', (await page.locator('#schedule .match-row .go.wo[data-action="open-match"]').count()) === 16);
-await page.locator('#schedule .match-row .go[data-action="liga-ergebnis"]').first().click();
-check('die Kacheln zeigen alle Bo3-Staende', (await page.locator('.lerg-grid .lerg').count()) === 4);
-await page.locator('.lerg-grid .lerg[data-h="2"][data-g="1"]').click();
-check('das Einzel ist mit 2:1 fertig', (await text('#schedule .match-row.done .res')).trim() === '2:1');
+check('jedes Einzel traegt den Knopf Eintragen', (await page.locator('#ligaspiel .la-einzel [data-action="liga-ergebnis"]').count()) === 16);
+check('Mitschreiben in der App bleibt moeglich (Tipp auf die Namen)', (await page.locator('#ligaspiel .la-namen[data-action="liga-kampflos"]').count()) === 16);
+await page.locator('#ligaspiel .la-namen[data-action="liga-kampflos"]').first().click({ position: { x: 30, y: 12 } });
+check('... dort steht "In der App mitschreiben"', await visible('#overlay-card [data-action="open-match"]'));
+await page.locator('#overlay-card [data-action="ov-cancel"]').click();
+await page.locator('#ligaspiel .la-einzel [data-action="liga-ergebnis"]').first().click();
+check('die Kacheln zeigen alle Bo3-Staende', (await page.locator('.la-varianten .la-variante').count()) === 4);
+await page.locator('[data-action="la-erg-speichern"]').click();
+check('ohne gewaehlten Stand speichert nichts', (await text('#overlay-card')).includes('Leg-Stand antippen') &&
+  await page.evaluate(() => !window.__dart.state().matches[0].done));
+await page.locator('.la-varianten .la-variante[data-h="2"][data-g="1"]').click();
+check('der Tipp waehlt nur aus', await page.evaluate(() => !window.__dart.state().matches[0].done) && await visible('.la-varianten .la-variante.an[data-h="2"][data-g="1"]'));
+/* Highlights fuer den Bericht: Pruefung und Uebernahme. */
+const ergIds = await page.evaluate(() => window.__dart.state().matches[0].p);
+await page.locator(`[data-action="la-hl-180"][data-pid="${ergIds[0]}"][data-d="1"]`).click();
+await page.locator(`[data-role="la-hl"][data-pid="${ergIds[1]}"][data-feld="hf"]`).fill('121');
+await page.locator(`[data-role="la-hl"][data-pid="${ergIds[0]}"][data-feld="sl"]`).fill('25');
+await page.locator('[data-action="la-erg-speichern"]').click();
+check('ein Shortleg ueber 21 Darts lehnt der Dialog ab', (await text('#overlay-card')).includes('9 bis 21 Darts') &&
+  await page.evaluate(() => !window.__dart.state().matches[0].done));
+await page.locator(`[data-role="la-hl"][data-pid="${ergIds[0]}"][data-feld="sl"]`).fill('18');
+await page.locator('[data-action="la-erg-speichern"]').click();
+check('der Gast hat ein Leg gewonnen: sein Finish ist erlaubt, alles gespeichert', await page.evaluate((ids) => {
+  const m = window.__dart.state().matches[0];
+  return m.done && m.hlHand && m.hlHand[ids[0]].s180 === 1 && m.hlHand[ids[0]].sl[0] === 18 && m.hlHand[ids[1]].hf[0] === 121;
+}, ergIds));
+check('das Einzel ist mit 2:1 fertig', (await text('#ligaspiel .la-einzel.fertig .la-erg')).trim() === '2 : 1');
 check('drei Legs ohne einen Wurf, Sieger ist der Heimspieler', await page.evaluate(() => {
   const m = window.__dart.state().matches[0];
   return m.done && m.ergebnis === true && m.winner === m.p[0] && m.legs.length === 3 &&
     m.legs.every((l) => l.visits.length === 0) && m.legs.filter((l) => l.winner === m.p[0]).length === 2;
 }));
-check('in der Turnier-Statistik gibt es dafuer keinen Average', (await page.locator('#stats-grid .stat-card').first().locator('.line b').first().innerText()).trim() === '–');
-check('der Stand zaehlt das Einzel: 1:0, Legs 2:1', (await text('#liga-stand')).indexOf('Einzel 1:0 · Legs 2:1') >= 0, await text('#liga-stand'));
-await page.locator('#schedule .match-row.done .go[data-action="liga-ergebnis"]').click();
-check('"aendern" oeffnet die Kacheln mit dem Stand als gewaehlt', await visible('.lerg-grid .lerg.active[data-h="2"][data-g="1"]'));
+check('in der Statistik gibt es dafuer keinen Average', await page.evaluate(() => {
+  const D = window.__dart, m = D.state().matches[0], st = D.stats()[m.p[0]];
+  return st.darts === 0 && !st.avg;
+}));
+check('die Highlights stehen in der Uebersicht (von Hand)', (await text('#ligaspiel .la-hl-liste')).includes('121') && (await text('#ligaspiel .la-hl-liste')).includes('18 D'));
+check('aber nicht in der Statistik', await page.evaluate((ids) => window.__dart.stats()[ids[0]].s180 === 0, ergIds));
+/* Kritik 28.11.: der Dialog verspricht sie fuer den Spielbericht - also
+   stehen sie auch auf dem Bogen (und damit in Karten und PDF). */
+check('die von Hand eingetragenen Highlights stehen im Spielbericht', await page.evaluate(() => {
+  const D = window.__dart, vor = D.state().screen;
+  D.ui().bericht = null; D.setScreen('bericht');
+  const t = document.getElementById('bericht-blatt').textContent;
+  D.setScreen(vor);
+  return /121 Finish/.test(t) && /18-Darter/.test(t) && /180/.test(t);
+}));
+check('der Stand zaehlt das Einzel: 1:0, Legs 2:1', (await text('#la-stand')).indexOf('Einzel 1:0 · Legs 2:1') >= 0, await text('#la-stand'));
+await page.locator('#ligaspiel .la-einzel.fertig [data-action="liga-ergebnis"]').click();
+check('"aendern" oeffnet die Kacheln mit dem Stand als gewaehlt', await visible('.la-varianten .la-variante.an[data-h="2"][data-g="1"]'));
 await page.locator('[data-action="liga-ergebnis-zurueck"]').click();
-check('zurueckgenommen: das Einzel ist wieder offen', await page.evaluate(() => {
+check('zurueckgenommen: das Einzel ist wieder offen, ohne seine Highlights', await page.evaluate(() => {
   const m = window.__dart.state().matches[0];
-  return !m.done && !m.ergebnis && m.legs.length === 0 && m.winner === null;
+  return !m.done && !m.ergebnis && m.legs.length === 0 && m.winner === null && !m.hlHand;
 }));
 /* Im normalen Ligaspiel fuehrt der w.o.-Dialog ebenfalls zum Ergebnis. */
 await page.evaluate(() => { window.__dart.state().tour.liga.nurErgebnis = false; window.__dart.save(); });
 await page.reload();
-await page.locator('#schedule .match-row .go.wo[data-action="liga-kampflos"]').first().click();
+await page.locator('#ligaspiel .la-namen[data-action="liga-kampflos"]').first().click({ position: { x: 30, y: 12 } });
 check('der w.o.-Dialog bietet "nur das Ergebnis eintragen"', await visible('.overlay-card [data-action="liga-ergebnis"]'));
 await page.locator('.overlay-card [data-action="liga-ergebnis"]').click();
-await page.locator('.lerg-grid .lerg[data-h="0"][data-g="2"]').click();
-check('0:2 fuer den Gast eingetragen', (await text('#schedule .match-row.done .res')).trim() === '0:2');
+await page.locator('.la-varianten .la-variante[data-h="0"][data-g="2"]').click();
+await page.locator('[data-action="la-erg-speichern"]').click();
+check('0:2 fuer den Gast eingetragen', (await text('#ligaspiel .la-einzel.fertig .la-erg')).trim() === '0 : 2');
 
 /* Aufraeumen: Probe-Ligaspiel weg. */
 await page.evaluate(() => {
@@ -4051,10 +4092,10 @@ check('das Uebungsspiel steht wie ein Ligaspiel', (await visible('#screen-tourna
   }));
 check('vier Bots stehen als Gegner bereit', await page.evaluate(() =>
   window.__dart.state().profiles.filter((p) => p.bot === 'mittel').length === 4));
-check('der Team-Stand ist da wie im echten Ligaspiel', await visible('#liga-stand'));
+check('der Team-Stand ist da wie im echten Ligaspiel', await visible('#la-stand'));
 
 /* Erstes Einzel: der Mensch wirft, dann wirft der Bot von selbst. */
-await page.locator('#schedule .match-row .go:not(.wo)').first().click();
+await page.locator('#ligaspiel .la-einzel [data-action="open-match"]').first().click();
 await page.evaluate(() => { window.__dart.ui().input = '60'; window.__dart.submitTotal(); });
 check('nach dem Menschen ist der Bot dran', await page.evaluate(() => {
   const D = window.__dart, m = D.currentMatch();
@@ -4077,7 +4118,7 @@ check('und der Mensch ist wieder am Wurf', await page.evaluate(() => {
 /* Abbrechen: das Uebungsspiel landet im Archiv, zaehlt aber nirgends
    in der Liga-Wertung. */
 await spielVerlassen();
-await page.locator('[data-action="reset"]').click();
+await page.locator('#ligaspiel [data-action="reset"]').click();
 await page.locator('[data-action="ov-reset"]').click();
 check('das Uebungsspiel liegt als solches im Archiv', await page.evaluate(() =>
   window.__dart.state().history.some((h) => h.liga && h.liga.uebung)));
@@ -4305,25 +4346,25 @@ for (let i = 0; i < 4; i++) {
 }
 await page.locator('[data-action="liga-los"]').click();
 check('das Ligaspiel steht', await visible('#screen-tournament'));
-check('der Kopf sagt Ligaspiel', (await text('#screen-tournament h1')).toLowerCase().includes('ligaspiel'));
+check('der Kopf sagt Ligaspiel', (await text('#ligaspiel h1')).toLowerCase().includes('ligaspiel'));
 check('16 Einzel in 4 Durchgaengen', await page.evaluate(() => {
   const M = window.__dart.state().matches;
   return M.length === 16 && M.filter((m) => m.round === 4).length === 4;
 }));
 check('der Team-Stand steht statt der Tabelle',
-  (await visible('#liga-stand')) && !(await page.locator('#screen-tournament .standings').isVisible()));
+  (await visible('#la-stand')) && !(await page.locator('#screen-tournament .standings').isVisible()));
 check('die Gegner sind als Gaeste angelegt', await page.evaluate(() => {
   return window.__dart.state().profiles.filter((p) => p.gast && p.name.indexOf('Dachau ') === 0).length === 4;
 }));
 check('jede Begegnung traegt ihre H/G-Kennungen',
-  (await page.locator('#schedule .posmark').count()) === 32,
-  String(await page.locator('#schedule .posmark').count()));
-check('im Liga-Kontext steht der buergerliche Name statt des Spitznamens',
-  (await text('#schedule')).includes('Lena Musterfrau'));
+  (await page.locator('#ligaspiel .la-einzel .la-pos').count()) === 32,
+  String(await page.locator('#ligaspiel .la-einzel .la-pos').count()));
+check('im Liga-Kontext steht der buergerliche Name statt des Spitznamens (kurz, voll im Titel)',
+  (await text('#ligaspiel')).includes('Lena Mu.') && (await page.locator('#ligaspiel .la-name[title="Lena Musterfrau"]').count()) === 4);
 
 /* Erstes Einzel: es wird ausgebullt (SWO Punkt 8, Oktober 2026) -
    hier gewinnt der Heimspieler das Ausbullen und wirft an. */
-await page.locator('#schedule .match-row .go:not(.wo)').first().click();
+await page.locator('#ligaspiel .la-einzel [data-action="open-match"]').first().click();
 check('erst das Ausbullen, noch kein Anwerfer', (await visible('#screen-bulloff')) &&
   await page.evaluate(() => !window.__dart.currentMatch().starter));
 await ligaAusbullen();
@@ -4360,15 +4401,13 @@ check('unser Heimspieler hat es 2:1 gewonnen', await page.evaluate(() => {
 /* Zurueck zur Uebersicht (ueber die Statistik, wie am Abend auch). */
 await page.locator('#overlay-card [data-action="ende-uebersicht"]').click();
 check('der Team-Stand zaehlt 1:0 und Legs 2:1', await page.evaluate(() => {
-  const t = document.getElementById('liga-stand').innerText.replace(/\s+/g, ' ');
-  return t.includes('Legs 2:1') && document.getElementById('spielplan-titel').textContent.includes('1 von 16');
+  const t = document.getElementById('la-stand').innerText.replace(/\s+/g, ' ');
+  return t.includes('Legs 2:1') && t.includes('1 von 16 Einzel');
 }));
-check('die 180er stehen fuer den Spielbericht bereit', await page.evaluate(() => {
-  const el = document.getElementById('liga-bericht-karte');
-  return el.innerText.includes('180er');
-}));
+check('die 180er stehen bei den Highlights', await page.evaluate(() =>
+  [...document.querySelectorAll('#ligaspiel .la-hl-kachel small')].some((e) => e.textContent.trim() === '180')));
 check('gross stehen die Punkte: ein gewonnenes Einzel = 1:0', await page.evaluate(() => {
-  const z = [...document.querySelectorAll('#liga-stand .lg-zahl')].map((e) => e.textContent.trim());
+  const z = [...document.querySelectorAll('#la-stand .lg-zahl')].map((e) => e.textContent.trim());
   return z.join(':') === '1:0';
 }));
 await page.keyboard.press('NumpadMultiply');
@@ -4386,45 +4425,50 @@ check('jedes Einzel traegt seine Scheibe', await page.evaluate(() => {
 });
 
 await gruppe('Kampflos nach SWO: nicht gestellter Spieler', async () => {
-check('offene Einzel bieten den w.o.-Knopf an',
-  (await page.locator('#schedule .go.wo').count()) === 15,
-  String(await page.locator('#schedule .go.wo').count()));
-await page.locator('#schedule .go.wo').first().click();
-check('der Dialog fragt, wer nicht antritt', (await text('#overlay-card')).includes('Kampflos'));
-/* Der Gast (zweiter Knopf) fehlt - unser Heimspieler gewinnt 2:0 ohne Wurf. */
-await page.locator('[data-action="liga-kampflos-wer"]').nth(1).click();
+check('offene Einzel bieten kampflos an (Tipp auf die Namen)',
+  (await page.locator('#ligaspiel [data-action="liga-kampflos"]').count()) === 15,
+  String(await page.locator('#ligaspiel [data-action="liga-kampflos"]').count()));
+const woId = await page.evaluate(() => window.__dart.state().matches[1].id);
+await page.locator(`#ligaspiel .la-namen[data-action="liga-kampflos"][data-id="${woId}"]`).click({ position: { x: 30, y: 12 } });
+check('der Dialog fragt, wer nicht antritt', (await text('#overlay-card')).toLowerCase().includes('kampflos'));
+check('W.O. geht erst, wenn feststeht, wer fehlt', await page.locator('[data-action="liga-kampflos-wer"]').isDisabled());
+/* Der Gast (zweite Karte) fehlt - unser Heimspieler gewinnt 2:0 ohne Wurf. */
+await page.locator('[data-action="la-wo-wahl"]').nth(1).click();
+check('der Dialog sagt, was daraus folgt', (await text('#overlay-card')).includes('bekommt das Einzel'));
+await page.locator('[data-action="liga-kampflos-wer"]').click();
 check('das Einzel ist ohne einen einzigen Wurf gewertet', await page.evaluate(() => {
   const m = window.__dart.state().matches.find((x) => x.kampflos);
   return !!m && m.done && m.legs.length === 0;
 }));
 check('der Stand zaehlt es voll: 2:0 Punkte und Legs 4:1', await page.evaluate(() => {
-  const z = [...document.querySelectorAll('#liga-stand .lg-zahl')].map((e) => e.textContent.trim());
-  const t = document.getElementById('liga-stand').innerText.replace(/\s+/g, ' ');
+  const z = [...document.querySelectorAll('#la-stand .lg-zahl')].map((e) => e.textContent.trim());
+  const t = document.getElementById('la-stand').innerText.replace(/\s+/g, ' ');
   return z.join(':') === '2:0' && t.includes('Legs 4:1');
 }));
-check('am gewerteten Einzel steht jetzt aendern', (await text('#schedule')).includes('ändern'));
+check('am gewerteten Einzel steht w.o. zum Aendern', (await text(`#ligaspiel .la-erg[data-action="liga-kampflos"][data-id="${woId}"]`)).includes('w.o.'));
 /* Und die Wertung laesst sich zuruecknehmen ... */
-await page.locator('#schedule .go.wo').first().click();
+await page.locator(`#ligaspiel .la-erg[data-action="liga-kampflos"][data-id="${woId}"]`).click();
 await page.locator('[data-action="liga-kampflos-zurueck"]').click();
 check('zurueckgenommen: wieder 1:0 Punkte und das Einzel offen', await page.evaluate(() => {
-  const z = [...document.querySelectorAll('#liga-stand .lg-zahl')].map((e) => e.textContent.trim());
+  const z = [...document.querySelectorAll('#la-stand .lg-zahl')].map((e) => e.textContent.trim());
   return z.join(':') === '1:0' && !window.__dart.state().matches.some((x) => x.kampflos);
 }));
 /* ... und fuer den Spielbericht gleich wieder eintragen. */
-await page.locator('#schedule .go.wo').first().click();
-await page.locator('[data-action="liga-kampflos-wer"]').nth(1).click();
+await page.locator(`#ligaspiel .la-namen[data-action="liga-kampflos"][data-id="${woId}"]`).click({ position: { x: 30, y: 12 } });
+await page.locator('[data-action="la-wo-wahl"]').nth(1).click();
+await page.locator('[data-action="liga-kampflos-wer"]').click();
 
 /* Ohne Finish-Hilfen (Voreinstellung): im Einzel gibt es keine Finish-Leiste –
    der Schreiber darf das Doppel ja nicht ansagen (WDF 3.08). */
-await page.locator('#schedule .match-row .go:not(.wo)').first().click();
+await page.locator('#ligaspiel .la-einzel [data-action="open-match"]').first().click();
 await ligaAusbullen();
 check('Liga-konform: keine Finish-Felder im Einzel', (await page.locator('#scoreboard .pcard .pfelder .fk').count()) === 0);
 await spielVerlassen();
 /* Das Oeffnen hat ein leeres Leg angelegt - der w.o.-Knopf muss bleiben,
    solange kein echter Wurf gefallen ist (15 = 14 offene + 1x aendern). */
-check('ein nur angetipptes Einzel behaelt den w.o.-Knopf',
-  (await page.locator('#schedule .go.wo').count()) === 15,
-  String(await page.locator('#schedule .go.wo').count()));
+check('ein nur angetipptes Einzel laesst sich weiter kampflos werten',
+  (await page.locator('#ligaspiel [data-action="liga-kampflos"]').count()) === 15,
+  String(await page.locator('#ligaspiel [data-action="liga-kampflos"]').count()));
 
 /* Unterschrift ins Feld malen (Nachmeldung, Spielbericht). */
 malen = async () => {
@@ -4437,10 +4481,11 @@ malen = async () => {
 };
 
 /* Spielerwechsel: nur auf derselben Position, Gegner als neuer Gast. */
-await page.locator('[data-action="roster-change"]').click();
+await page.locator('#ligaspiel [data-action="roster-change"]').click();
 check('der Wechsel-Dialog zeigt alle acht Positionen',
   (await page.locator('#overlay-card [data-action="liga-wechsel-pos"]').count()) === 8);
 await page.locator('[data-action="liga-wechsel-pos"][data-seite="G"][data-pos="1"]').click();
+await page.locator('[data-action="la-wechsel-neu-name"]').click();
 await page.locator('[data-role="liga-neu-name"]').fill('Dachau');
 await page.locator('[data-role="liga-neu-nach"]').fill('Ersatz');
 await page.locator('[data-action="liga-wechsel-ok"]').click();
@@ -4459,7 +4504,7 @@ check('alle offenen G2-Einzel gehoeren jetzt dem Ersatz', await page.evaluate(()
 check('der spontane Ersatz landet direkt im Nachmelde-Bogen', (await textKlein('#overlay-card h3')).includes('spieler nachmelden') &&
   (await page.locator('[data-role="nm-nach"]').inputValue()) === 'Ersatz');
 check('das Team steht fest und die Infozeile nennt G5 (fuenfter Name auf dem Bogen)', (await page.locator('[data-action="nm-wahl"][data-feld="team"]').count()) === 0 &&
-  (await text('#overlay-card .dl-info')).includes('steht als G5'), await text('#overlay-card .dl-info'));
+  (await text('#overlay-card .la-info')).includes('steht als G5'), await text('#overlay-card .la-info'));
 await page.keyboard.press('Escape');
 check('Escape schliesst die Nachmeldung nicht', await page.evaluate(() => !!document.querySelector('#overlay-card [data-action="nm-weiter"]')));
 await page.reload(); await page.waitForFunction(() => window.__dart);
@@ -4492,8 +4537,9 @@ check('der Hinweis sagt, dass der Spieler eingewechselt ist', (await text('#over
 await page.locator('#overlay-card [data-action="ov-hinweis-zu"]').click();
 /* "Wechsel zuruecknehmen": der Ausgewechselte kommt zurueck, der Name verschwindet wieder. */
 vorG3 = await page.evaluate(() => { const S = window.__dart.state(); return { id: S.tour.liga.posG[2], profile: S.profiles.length }; });
-await page.locator('[data-action="roster-change"]').click();
+await page.locator('#ligaspiel [data-action="roster-change"]').click();
 await page.locator('[data-action="liga-wechsel-pos"][data-seite="G"][data-pos="2"]').click();
+await page.locator('[data-action="la-wechsel-neu-name"]').click();
 await page.locator('[data-role="liga-neu-name"]').fill('Zweiter');
 await page.locator('[data-role="liga-neu-nach"]').fill('Ersatz');
 await page.locator('[data-action="liga-wechsel-ok"]').click();
@@ -4508,23 +4554,29 @@ check('Wechsel zuruecknehmen stellt G3 wieder her und entfernt den Namen', await
 check('danach steht wieder der Wechsel-Dialog', (await page.locator('#overlay-card [data-action="liga-wechsel-pos"]').count()) === 8);
 await page.locator('#overlay-card [data-action="ov-cancel"]').click();
 
-/* Der Spielbericht: erst der Bogen in Kurzfassung (Entwurf Ligaspiel), dann Udos Bogen. */
-await page.locator('[data-action="liga-bericht-kurz"]').click();
-check('der Kurz-Bogen zeigt alle Einzel, die Summe und Highlights', (await page.locator('#overlay-card .dl-einzel').count()) === 16 &&
-  (await textKlein('#overlay-card')).includes('summe') && (await textKlein('#overlay-card')).includes('highlights'));
-await page.locator('#overlay-card [data-action="liga-bericht"]').click();
-check('der Spielbericht oeffnet sich', await visible('#screen-bericht'));
+/* Der Spielbericht (Entwurf "Liste 13"): Karten am Bildschirm, Udos Bogen dahinter. */
+await page.locator('#la-fuss [data-action="liga-bericht"]').click();
+check('der Spielbericht oeffnet sich', await visible('#screen-bericht') && await visible('#la-bericht'));
+check('die Karten zeigen alle 16 Einzel, Endergebnis, Highlights und Seite 2', (await page.locator('#la-bericht [data-bkf^="einzel-"]').count()) === 16 &&
+  (await textKlein('#la-bericht')).includes('endergebnis') && (await textKlein('#la-bericht')).includes('highlights') && (await textKlein('#la-bericht')).includes('seite 2/2'));
 check('nach einem Wechsel steht die echte Bogennummer im Einzel (G5 statt G2)', await page.evaluate(() =>
   document.getElementById('bericht-blatt').textContent.includes('– G5')));
 check('die eingewechselte Nummer ist eingekreist (Wunsch Ligaleitung), die anderen nicht', await page.evaluate(() => {
   const k = [...document.querySelectorAll('#bericht-blatt th[data-plan] .b-wechsel')].map((e) => e.textContent);
   return k.length > 0 && k.every((t) => t === 'G5') && !!document.querySelector('#bericht-blatt .b-klein .b-wechsel');
 }));
-check('auch eine Handkorrektur der Einzel-Bezeichnung wird eingekreist', await page.evaluate(() => {
+check('auch eine Handkorrektur der Einzel-Bezeichnung wird eingekreist (in Karte und Bogen)', await page.evaluate(async () => {
   const th = document.querySelector('#bericht-blatt th[data-plan="1|1"]');
-  th.focus(); th.textContent = 'H5 – G1'; th.dispatchEvent(new Event('input', { bubbles: true })); th.blur();
-  const ok = th.querySelectorAll('.b-wechsel').length === 1 && th.querySelector('.b-wechsel').textContent === 'H5';
-  th.focus(); th.textContent = 'H1 – G1'; th.dispatchEvent(new Event('input', { bubbles: true })); th.blur();
+  const tippe = async (txt) => {
+    const f = document.querySelector('#la-bericht [data-bkf="' + th.getAttribute('data-kf') + '"]');
+    f.focus(); f.textContent = txt; f.dispatchEvent(new Event('input', { bubbles: true })); f.blur();
+    await new Promise((r) => setTimeout(r, 450));
+  };
+  await tippe('H5 – G1');
+  const karte = document.querySelector('#la-bericht [data-bkf="' + th.getAttribute('data-kf') + '"]');
+  const ok = th.querySelectorAll('.b-wechsel').length === 1 && th.querySelector('.b-wechsel').textContent === 'H5' &&
+    karte.querySelectorAll('.la-b-wechsel').length === 1 && karte.querySelector('.la-b-wechsel').textContent === 'H5';
+  await tippe('H1 – G1');
   return ok && !th.querySelector('.b-wechsel');
 }));
 check('mit den 16 Einzeln in Bogen-Reihenfolge', await page.evaluate(() => {
@@ -4562,7 +4614,8 @@ check('die Highlights stehen in Udos Form', await page.evaluate(() => {
   return t.includes('Lena Musterfrau 180') && !t.includes('Lenas 180') && t.includes('141 Finish');
 }));
 check('das Blatt laesst sich Feld fuer Feld korrigieren',
-  (await page.locator('#bericht-blatt [contenteditable]').count()) > 40);
+  (await page.locator('#bericht-blatt [contenteditable]').count()) > 40 && (await page.locator('#la-bericht [contenteditable="true"]').count()) > 40);
+check('die eingewechselte Bogennummer ist auch in den Karten eingekreist', (await page.locator('#la-bericht .la-b-paarung .la-b-wechsel').count()) > 0);
 
 });
 
@@ -4571,14 +4624,16 @@ await gruppe('Spielbericht: beide TCs unterschreiben am iPad, dann Versand als P
   check('oben steht Unterschreiben statt Drucken',
     await visible('#screen-bericht [data-action="bericht-unterschreiben"]'));
   await page.locator('#screen-bericht [data-action="bericht-unterschreiben"]').click();
-  check('mit offenen Einzeln wird noch nicht unterschrieben', (await text('#overlay-card')).includes('Noch nicht fertig'));
+  check('mit offenen Einzeln wird noch nicht unterschrieben', (await textKlein('#overlay-card')).includes('noch nicht fertig'));
   await page.locator('#overlay-card [data-action="ov-hinweis-zu"]').click();
   /* Fuer den Rest des Tests: die offenen Einzel als entfallen markieren. */
   await page.evaluate(() => { window.__dart.state().matches.forEach((m) => { if (!m.done) m.void = 'test'; }); });
   await page.locator('#screen-bericht [data-action="bericht-unterschreiben"]').click();
-  check('ganzer Bildschirm fuer TC Heim mit Unterschriftsfeld',
-    (await text('#overlay-card h3')).includes('TC Heim') && await visible('#signatur') &&
-    await page.evaluate(() => document.getElementById('overlay').classList.contains('vollbild')));
+  check('Dialog fuer TC Heim mit Unterschriftsfeld (Schritt 1 von 2)',
+    (await text('#overlay-card h3')).toUpperCase().includes('TC HEIM') && await visible('#signatur') &&
+    await page.evaluate(() => document.getElementById('overlay').classList.contains('la') && !!document.querySelector('#overlay-card .la-schritt.an')));
+  await page.locator('#overlay').click({ position: { x: 5, y: 5 } });
+  check('ein Tipp daneben schliesst ihn nicht', await page.evaluate(() => (window.__dart.ui().overlay || {}).type === 'unterschrift'));
   await page.locator('[data-action="signatur-weiter"]').click();
   check('ohne Unterschrift geht es nicht weiter', (await text('#overlay-card')).includes('Bitte erst im Feld unterschreiben'));
   await malen();
@@ -4586,7 +4641,7 @@ await gruppe('Spielbericht: beide TCs unterschreiben am iPad, dann Versand als P
   check('Nochmal leert das Feld', await page.evaluate(() => window.__dart.ui().overlay.striche.length === 0));
   await malen();
   await page.locator('[data-action="signatur-weiter"]').click();
-  check('danach TC Gast', (await text('#overlay-card h3')).includes('TC Gast'));
+  check('danach TC Gast', (await text('#overlay-card h3')).toUpperCase().includes('TC GAST'));
   await malen();
   await page.locator('[data-action="signatur-weiter"]').click();
   /* Seit 11.11.: Zeile 1 und 2 sind unsere TCs, Zeile 3 die Ligaleitung. */
@@ -4605,33 +4660,43 @@ await gruppe('Spielbericht: beide TCs unterschreiben am iPad, dann Versand als P
     document.getElementById('bericht-blatt').classList.contains('final') &&
     document.querySelectorAll('#bericht-blatt [contenteditable="true"], #bericht-blatt [contenteditable=""]').length === 0));
   check('oben steht jetzt "Versenden"', (await textKlein('#screen-bericht [data-action="bericht-unterschreiben"]')).includes('versenden'));
-  check('kein Nachmelden mehr im finalen Bericht', !(await visible('#bericht-blatt [data-action="liga-nachmelden"]')));
+  check('kein Nachmelden mehr im finalen Bericht', (await page.locator('#la-bericht [data-action="liga-nachmelden"]').count()) === 0);
+  check('auch in den Karten laesst sich nichts mehr aendern, oben steht "Bericht ist final"', (await page.locator('#la-bericht [contenteditable="true"]').count()) === 0 &&
+    (await textKlein('#la-bericht')).includes('bericht ist final') && (await page.locator('#la-bericht .la-b-sigfeld img').count()) === 2);
   /* Fuer die naechsten Pruefungen: Unterschriften zuruecksetzen. */
   await page.evaluate(() => {
     const D = window.__dart; delete D.state().tour.liga.unterschriften; D.berichtNeu(); D.save(); D.setScreen('bericht');
   });
   check('ohne Unterschriften ist wieder jedes Feld aenderbar', await page.evaluate(() =>
     !document.getElementById('bericht-blatt').classList.contains('final') &&
-    document.querySelectorAll('#bericht-blatt th[contenteditable][data-kf]').length === 16));
-  await page.locator('#bericht-blatt [data-kf="einzel-15"]').click();
+    document.querySelectorAll('#bericht-blatt th[contenteditable][data-kf]').length === 16 &&
+    document.querySelectorAll('#la-bericht [data-bkf^="einzel-"][contenteditable="true"]').length === 16));
+  await page.locator('#la-bericht [data-bkf="einzel-15"]').click();
   await page.keyboard.press('End'); await page.keyboard.type(' (H5)');
-  await page.locator('#bericht-blatt [data-action="bericht-kreuz"][data-feld="proteste"][data-wert="nein"]').click();
+  check('getippt wird in den Bogen dahinter', (await text('#bericht-blatt [data-kf="einzel-15"]')).includes('(H5)'));
+  await page.locator('#la-bericht [data-action="bericht-kreuz"][data-feld="proteste"][data-wert="nein"]').click();
+  check('das Kreuz steht auch in den Karten', await page.evaluate(() => document.querySelector('#la-bericht [data-feld="proteste"][data-wert="nein"]').classList.contains('active')));
   check('Ja/Nein laesst sich ankreuzen', (await text('#bericht-blatt td[data-feld="proteste"]')).replace(/\s+/g, ' ').includes('nein X'));
   await page.evaluate(() => { const D = window.__dart; D.berichtNeu(); D.setScreen('bericht'); });
   check('Einzel-Bezeichnung und Kreuz bleiben nach dem Neuaufbau', (await text('#bericht-blatt [data-kf="einzel-15"]')).includes('(H5)') &&
     (await text('#bericht-blatt td[data-feld="proteste"]')).replace(/\s+/g, ' ').includes('nein X'));
 
   /* Nachmeldung: Formular, Unterschrift, dann steht sie auf Seite 2 und im Team. */
-  await page.locator('#bericht-blatt [data-action="liga-nachmelden"]').click();
-  check('Nachmelden oeffnet einen breiten Bogen mit Unterschriftsfeld', (await textKlein('#overlay-card h3')).includes('spieler nachmelden') &&
-    await page.evaluate(() => document.getElementById('overlay').classList.contains('bogen')) && (await page.locator('#overlay-card #signatur').count()) === 1);
+  await page.locator('#la-bericht [data-action="liga-nachmelden"]').click();
+  check('Nachmelden oeffnet einen breiten Dialog mit Unterschriftsfeld und freiwilligem Foto', (await textKlein('#overlay-card h3')).includes('spieler nachmelden') &&
+    await page.evaluate(() => document.getElementById('overlay').classList.contains('la')) && (await page.locator('#overlay-card #signatur').count()) === 1 &&
+    (await page.locator('#overlay-card [data-role="nm-foto"]').count()) === 1 && (await page.locator('#overlay-card .la-foto-bild.leer').count()) === 1);
+  await page.locator('#overlay-card [data-role="nm-foto"]').setInputFiles({ name: 'foto.png', mimeType: 'image/png',
+    buffer: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64') });
+  await page.waitForFunction(() => !!document.querySelector('#overlay-card .la-foto-bild:not(.leer)'), null, { timeout: 5000 }).catch(() => {});
+  check('ein Foto laesst sich dazunehmen (zugeschnitten wie ein Profilbild)', await page.evaluate(() => /^data:image\/jpeg/.test(window.__dart.ui().overlay.draft.foto || '')));
   await page.locator('[data-action="nm-weiter"]').click();
   check('unvollstaendig geht es nicht weiter', (await text('#overlay-card')).includes('Bitte alle Felder'));
   await page.locator('[data-role="nm-nach"]').fill('Neumann');
   await page.locator('[data-role="nm-vor"]').fill('Nora');
   await page.locator('[data-action="nm-wahl"][data-feld="u18"][data-value="nein"]').click();
   await page.locator('[data-action="nm-wahl"][data-feld="g"][data-value="w"]').click();
-  check('die Infozeile nennt den Platz auf dem Bogen', /wird [HG]\d · \d von 8 Plätzen belegt/.test(await text('#overlay-card')), await text('#overlay-card .dl-info'));
+  check('die Infozeile nennt den Platz auf dem Bogen', /wird [HG]\d · \d von 8 Plätzen belegt/.test(await text('#overlay-card')), await text('#overlay-card .la-info'));
   await page.locator('[data-action="nm-weiter"]').click();
   check('ohne Unterschrift geht es nicht weiter', (await text('#overlay-card')).includes('unterschreiben'));
   await malen();
@@ -4641,10 +4706,16 @@ await gruppe('Spielbericht: beide TCs unterschreiben am iPad, dann Versand als P
     return t.includes('Neumann') && t.includes('Nora') && t.includes('Ersatz') && document.querySelectorAll('#bericht-blatt .b-nach td img').length === 2;
   }));
   check('und "Nachmeldungen: ja" ist angekreuzt', (await text('#bericht-blatt td[data-feld="nachmeldungen"]')).replace(/\s+/g, ' ').includes('ja X'));
+  check('die Karten zeigen die Nachmeldung mit Unterschrift', (await text('#la-bericht')).includes('Neumann') && (await page.locator('#la-bericht .la-b-sig img').count()) >= 1);
   check('und sie gehoert jetzt zum Team', await page.evaluate(() => {
     const D = window.__dart, S = D.state(), lg = S.tour.liga;
     const liste = lg.heim ? lg.heimSpieler : lg.gastSpieler;
     return liste.some((id) => (D.profile(id) || {}).voll === 'Nora Neumann');
+  }));
+  check('das Foto steht beim Gastprofil (nicht in der Nachmeldung, die reist mit dem Plan)', await page.evaluate(() => {
+    const D = window.__dart, S = D.state(), lg = S.tour.liga;
+    const n = (lg.nachmeldungen || []).find((x) => x.nach === 'Neumann');
+    return !!n && /^data:image\/jpeg/.test((D.profile(n.id) || {}).avatar || '') && !('foto' in n);
   }));
   await page.locator('#overlay-card [data-action="ov-hinweis-zu"]').click();
   const pdf = await page.evaluate(async () => {
@@ -4670,11 +4741,60 @@ await gruppe('Spielbericht: beide TCs unterschreiben am iPad, dann Versand als P
 await page.locator('[data-action="bericht-zurueck"]').click();
 check('zurueck im Ligaspiel', await visible('#screen-tournament'));
 
-/* Vorzeitig beenden: das gespielte Einzel wandert als Ligaspiel ins Archiv. */
-await page.locator('[data-action="reset"]').click();
+/* Vorzeitig beenden (Julius, 28.11.): nur noch fuer den Notfall - alle
+   offenen Einzel kampflos fuer Heim oder fuer Gast, der Grund ist Pflicht
+   und steht im Bericht; danach geht es zum Spielbericht. */
+const vorBeenden = await page.evaluate(() => window.__dart.state().matches.filter((m) => m.done).map((m) => m.id));
+/* Kritik 28.11.: eine fruehere Korrektur im Protestfeld darf den Grund nicht verdecken. */
+await page.evaluate(() => {
+  const D = window.__dart, lg = D.state().tour.liga;
+  D.ui().bericht = null; D.setScreen('bericht');
+  const felder = [...document.querySelectorAll('#bericht-blatt [contenteditable]:not([data-kf])')];
+  lg.berichtKorrekturen = { [felder.indexOf(document.querySelector('#bericht-blatt .b-protest'))]: 'Beginn verspaetet wegen Stau' };
+  D.setScreen('tournament');
+});
+await page.locator('#ligaspiel [data-action="reset"]').click();
+check('Beenden bietet genau zwei Wege: kampflos fuer Heim oder fuer Gast', (await page.locator('#overlay-card [data-action="reset-art"]').count()) === 2 &&
+  (await page.locator('#overlay-card [data-action="reset-art"][data-value="heim"]').count()) === 1 && (await page.locator('#overlay-card [data-action="reset-art"][data-value="gast"]').count()) === 1 &&
+  !(await textKlein('#overlay-card')).includes('verwerfen'));
 await page.locator('[data-action="ov-reset"]').click();
+check('ohne Wahl wird nicht beendet', (await text('#overlay-card')).includes('Heim oder für Gast') && await page.evaluate((n) => window.__dart.state().matches.filter((m) => m.done).length === n, vorBeenden.length));
+await page.locator('[data-action="reset-art"][data-value="gast"]').click();
+await page.locator('[data-action="ov-reset"]').click();
+check('ohne Grund wird nicht beendet (Pflichttext fuer den Bericht)', (await text('#overlay-card')).includes('was passiert ist') && await page.evaluate((n) => window.__dart.state().matches.filter((m) => m.done).length === n, vorBeenden.length));
+await page.locator('[data-role="la-grund"]').fill('Testabbruch: Gegner musste nach Einzel 1 gehen.');
+await page.locator('[data-action="ov-reset"]').click();
+check('danach steht der Spielbericht, alle offenen Einzel kampflos fuer den Gast', (await visible('#la-bericht')) && await page.evaluate((vor) => {
+  const S = window.__dart.state();
+  const offen = S.matches.filter((m) => vor.indexOf(m.id) < 0);
+  return S.screen === 'bericht' && S.matches.length === 16 && S.matches.every((m) => m.done) && offen.length === 16 - vor.length && offen.length > 0 &&
+    offen.every((m) => m.kampflos && m.winner === m.p[1] && m.legs.length === 0) && !S.matches.find((m) => m.id === vor[0]).legs.every((l) => !l.visits.length);
+}, vorBeenden));
+check('der Grund steht auf Seite 2 (Proteste) und "Proteste: ja" ist angekreuzt', (await text('#bericht-blatt .b-protest')).includes('Testabbruch') &&
+  (await text('#bericht-blatt td[data-feld="proteste"]')).replace(/\s+/g, ' ').includes('ja X') && (await text('#la-bericht .la-b-protest')).includes('Testabbruch'));
+check('eine fruehere Protest-Korrektur bleibt, der Grund steht darunter', await page.evaluate(() => {
+  const t = document.querySelector('#bericht-blatt .b-protest').textContent;
+  return t.indexOf('Beginn verspaetet wegen Stau') === 0 && t.includes('Testabbruch');
+}));
+check('alles gespielt: „Vorzeitig beenden“ gibt es nicht mehr', await page.evaluate(() => {
+  const D = window.__dart; D.setScreen('tournament');
+  const da = !!document.querySelector('#ligaspiel [data-action="reset"]');
+  D.setScreen('bericht');
+  return !da;
+}));
+check('Ziffern in einem Berichtsfeld sind Ziffern, keine Pfeiltasten', await (async () => {
+  await page.locator('#la-bericht .la-b-protest').evaluate((el) => el.focus());
+  const vor = await page.evaluate(() => document.activeElement && document.activeElement.className);
+  await page.keyboard.press('2'); await page.keyboard.press('8');
+  return page.evaluate((v) => window.__dart.state().screen === 'bericht' && document.activeElement && document.activeElement.className === v, vor);
+})());
+check('abgeschlossen ist es erst mit dem Bericht: noch nicht im Archiv', await page.evaluate(() =>
+  window.__dart.state().history.filter((h) => h.liga).length === 0 && !!window.__dart.state().tour));
+await page.evaluate(() => { const D = window.__dart; D.ui().overlay = { type: 'bericht-versand', adressen: ['', '', ''] }; D.render(); });
+await page.locator('[data-action="bericht-ohne-senden"]').click();
 check('das Ligaspiel liegt im Archiv', await page.evaluate(() =>
   window.__dart.state().history.filter((h) => h.liga).length === 1));
+await page.locator('#overlay-card [data-action="ov-hinweis-zu"]').click();
 
 });
 
@@ -6290,15 +6410,16 @@ await gruppe('Ligaspiel endet erst mit dem unterschriebenen Bericht', async () =
     return S.tour.liga.terminId;
   });
   check('alle Einzel gespielt: der Weg geht zu Ergebnissen und Bericht',
-    await visible('#liga-bericht-karte [data-action="to-winner"]'));
+    await visible('#la-fuss [data-action="to-winner"]'));
   await navTo('setup');
   check('der Spiel-Tab beendet das Ligaspiel nicht, sondern zeigt die Ergebnisse',
     (await visible('#screen-winner')) && await page.evaluate(() => window.__dart.state().matches.length === 16));
-  check('Man of the Day fuer beide Teams', (await page.locator('#winner-box .motd .motd-titel').count()) === 2);
+  check('Man of the Match fuer beide Teams', (await page.locator('#ls-ende .la-motm').count()) === 2 && (await textKlein('#ls-ende')).includes('man of the match'));
+  check('ohne einen Wurf gibt es keine Rekorde (nichts wird geschaetzt)', (await page.locator('#ls-ende .la-rekord').count()) === 0);
   check('kein "Ligaspiel abschliessen" ohne Bericht', !(await visible('#screen-winner [data-action="finish-tournament"]')));
-  await page.locator('#winner-box [data-action="liga-bericht"]').first().click();
+  await page.locator('#ls-ende [data-action="liga-bericht"]').first().click();
   check('weiter zum Spielbericht', await visible('#screen-bericht'));
-  await page.locator('#bericht-blatt td[contenteditable]').nth(2).click();
+  await page.locator('#la-bericht [data-bf="2"]').click();
   await page.keyboard.type('Handkorrektur');
   await page.evaluate(() => {
     const D = window.__dart;
@@ -7004,8 +7125,8 @@ await gruppe('Audit 11/2026: Spielbericht und Bogen nennen beide Shortlegs eines
     S.current = null; D.ui().overlay = null; D.ui().bericht = null;
     D.setScreen('tournament');
   });
-  const karte = await page.evaluate(() => document.getElementById('liga-bericht-karte').innerText.replace(/\s+/g, ' '));
-  check('die Karte "Fuer den Spielbericht" nennt beide Shortlegs und beide Finishes', karte.includes('9 Darts') && karte.includes('11 Darts') &&
+  const karte = await page.evaluate(() => document.querySelector('#ligaspiel .la-hl').innerText.replace(/\s+/g, ' '));
+  check('die Highlights der Uebersicht nennen beide Shortlegs und beide Finishes', karte.includes('9 D') && karte.includes('11 D') &&
     karte.includes('141') && karte.includes('101'), karte);
   await page.evaluate(() => { const D = window.__dart; D.berichtNeu(); D.setScreen('bericht'); });
   const blatt = await page.evaluate(() => {
@@ -7016,6 +7137,91 @@ await gruppe('Audit 11/2026: Spielbericht und Bogen nennen beide Shortlegs eines
   check('der Bogen fuehrt jedes Shortleg in einer eigenen Zeile', blatt.darter === 2 && blatt.f141 && blatt.f101, JSON.stringify(blatt));
   check('der Bogen hat weiter mindestens sieben Highlight-Zeilen je Seite', blatt.zeilen >= 14, String(blatt.zeilen));
   await page.evaluate(() => { const D = window.__dart, S = D.state(); S.matches = []; S.tour = null; S.current = null; D.ui().bericht = null; D.setScreen('setup'); });
+}
+
+});
+
+/* Ligaspiel-Ablauf (Redesign Nov. 2026): Start an der anderen Scheibe mit
+   Rueckfrage, hell und dunkel ohne Ueberlauf auf Handy, iPad hoch und quer. */
+await gruppe('Ligaspiel-Ablauf: Scheiben-Rueckfrage, hell/dunkel ohne Ueberlauf', async () => {
+{
+  const bauen = async (screen) => page.evaluate((scr) => {
+    const D = window.__dart, S = D.state();
+    const wir = D.activeProfiles().slice(0, 4).map((p) => p.id);
+    const sie = ['abg1', 'abg2', 'abg3', 'abg4'];
+    sie.forEach((id, i) => { if (!S.profiles.some((p) => p.id === id)) S.profiles.push({ id, name: 'Ablauf ' + (i + 1), voll: 'Ablauf Gegnerin' + (i + 1), avatar: null, hue: 30, created: Date.now(), gast: true, dauer: true }); });
+    const EIN = [[0, 0], [1, 1], [2, 2], [3, 3], [0, 1], [1, 0], [2, 3], [3, 2], [2, 0], [3, 1], [1, 2], [0, 3], [3, 0], [2, 1], [0, 2], [1, 3]];
+    const SB = ['S1', 'S2', 'S1', 'S2', 'S1', 'S2', 'S1', 'S2', 'S2', 'S1', 'S1', 'S2', 'S1', 'S2', 'S2', 'S1'];
+    const v = (p, s, extra) => Object.assign({ p, s, d: 3, b: false }, extra || {});
+    S.game = null;
+    if (!('__dsOrig' in window)) window.__dsOrig = window.DartSync || null;
+    /* Kein Server: das geteilte Spiel nur vortaeuschen, alles andere bleibt
+       (im Einzeldatei-Buendel gibt es DartSync gar nicht). */
+    if (window.__dsOrig) window.DartSync = Object.assign({}, window.__dsOrig, { turnier: Object.assign({}, window.__dsOrig.turnier || {}, { takt() {}, abgleich() { return Promise.resolve(); }, beanspruchen() { return Promise.reject({}); },
+      ergebnis() { return Promise.resolve(); }, ende() { return Promise.resolve(); }, planAendern() { return Promise.resolve({}); }, herzschlag() {} }) });
+    S.tour = { start: 501, bestOf: 3, players: wir.concat(sie), geteilt: true, sid: 'abl1', meineScheibe: 'S2', liga: {
+      terminId: 'st09', nr: 9, gegner: 'TSV Oberpframmern', heim: true, wir, sie, heimSpieler: wir.slice(), gastSpieler: sie.slice(),
+      posH: wir.slice(), posG: sie.slice(), ort: 'Bar Sehnsucht', tag: '2027-01-12', finish: false, zeitVon: Date.now(), zeitBis: null } };
+    S.matches = EIN.map((pp, i) => ({ id: 'abm' + i, round: Math.floor(i / 4) + 1, p: [wir[pp[0]], sie[pp[1]]], starter: null, posPaar: pp.slice(), scheibe: SB[i], legs: [], done: false, winner: null, at: null }));
+    const fertig = scr === 'tournament' ? [0, 1, 2] : S.matches.map((m, i) => i);
+    fertig.forEach((i) => { const m = S.matches[i]; const A = m.p[0], B = m.p[1];
+      m.legs = [{ starter: A, winner: A, visits: [v(A, 180), v(B, 60), v(A, 140), v(B, 60), v(A, 141, { c: true })] }, { starter: B, winner: A, visits: [v(B, 60), v(A, 100), v(B, 60), v(A, 140), v(B, 60), v(A, 121), v(B, 60), v(A, 140, { c: true })] }];
+      m.done = true; m.winner = A; m.at = Date.now(); m.starter = A; });
+    S.current = null; D.ui().overlay = null; D.ui().bericht = null; D.ui().laScheibe = null;
+    D.berichtNeu(); D.setScreen(scr);
+  }, screen);
+  await bauen('tournament');
+  check('im geteilten Ligaspiel steht links die eigene Scheibe (hier S2)', (await page.locator('#ligaspiel .la-reiter-knopf.an').innerText()).includes('2'));
+  const fremd = page.locator('#ligaspiel [data-action="la-andere-scheibe"]').first();
+  const fremdId = await fremd.getAttribute('data-id');
+  check('ein Einzel der anderen Scheibe fragt erst nach', (await page.evaluate((id) => window.__dart.state().matches.find((m) => m.id === id).scheibe, fremdId)) === 'S1' &&
+    (await page.locator('#ligaspiel .la-spalte-links [data-action="la-andere-scheibe"]').count()) === 0);
+  await fremd.click();
+  const frage = (await textKlein('#overlay-card'));
+  check('Rueckfrage: geplant fuer Scheibe 1, an Scheibe 2 starten?', frage.includes('geplant für scheibe 1') && frage.includes('an scheibe 2 starten') && frage.includes('bleibt es beim bogen'), frage);
+  await page.locator('#overlay-card [data-action="ov-cancel"]').click();
+  check('Abbrechen startet nichts', await page.evaluate(() => !window.__dart.state().current && !window.__dart.ui().overlay));
+  await fremd.click();
+  await page.locator('#overlay-card [data-action="open-match"]').click();
+  await page.waitForTimeout(300);
+  check('HIER STARTEN oeffnet das Einzel hier, der Bogen behaelt seine Scheibe', await page.evaluate((id) => {
+    const S = window.__dart.state(), m = S.matches.find((x) => x.id === id);
+    return S.current === id && (S.screen === 'bulloff' || S.screen === 'game') && m.scheibe === 'S1';
+  }, fremdId));
+  /* hell und dunkel, Handy, iPad hoch und quer: nichts ragt heraus, und hell gilt nur hier. */
+  const ueberlauf = [], vpVorher = page.viewportSize();
+  for (const vp of [{ width: 390, height: 844 }, { width: 820, height: 1180 }, { width: 1180, height: 820 }]) {
+    await page.setViewportSize(vp);
+    for (const hell of [0, 1]) {
+      for (const scr of ['tournament', 'winner', 'bericht']) {
+        await bauen(scr);
+        const r = await page.evaluate((h) => {
+          const D = window.__dart; D.state().settings.hell = h; D.render();
+          const de = document.documentElement;
+          return { breit: de.scrollWidth > de.clientWidth + 1, hell: de.getAttribute('data-hell'), bereich: de.classList.contains('t-bereich') };
+        }, hell);
+        if (r.breit || r.hell !== String(hell) || !r.bereich) ueberlauf.push(vp.width + '/' + scr + '/hell' + hell + ':' + JSON.stringify(r));
+      }
+      await page.evaluate((h) => { const D = window.__dart; D.ui().overlay = { type: 'confirm-reset' }; D.state().settings.hell = h; D.setScreen('tournament'); }, hell);
+      const dlg = await page.evaluate(() => { const c = document.getElementById('overlay-card').getBoundingClientRect(); return c.right <= window.innerWidth + 1 && c.left >= -1 && document.getElementById('overlay').classList.contains('la'); });
+      if (!dlg) ueberlauf.push(vp.width + '/beenden/hell' + hell);
+      await page.evaluate(() => { window.__dart.ui().overlay = null; });
+    }
+  }
+  check('Uebersicht, Spielende, Bericht und Dialog: hell und dunkel ohne Ueberlauf auf 390, 820x1180 und 1180x820', ueberlauf.length === 0, ueberlauf.join(' | '));
+  await page.setViewportSize(vpVorher);
+  check('ein freies Turnier bleibt dunkel und unberuehrt', await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    if ('__dsOrig' in window) { if (window.__dsOrig) window.DartSync = window.__dsOrig; delete window.__dsOrig; }
+    S.matches = []; S.tour = null; S.current = null; S.settings.hell = 1; D.ui().overlay = null; D.setScreen('setup');
+    return document.documentElement.getAttribute('data-hell') === '0' && !document.documentElement.classList.contains('t-bereich');
+  }));
+  await page.evaluate(() => {
+    const D = window.__dart, S = D.state();
+    S.settings.hell = 0; S.profiles = S.profiles.filter((p) => !/^abg/.test(p.id)); D.ui().overlay = null; D.ui().bericht = null;
+    if ('__dsOrig' in window) { if (window.__dsOrig) window.DartSync = window.__dsOrig; delete window.__dsOrig; }
+    D.setScreen('setup');
+  });
 }
 
 });
@@ -7045,9 +7251,27 @@ await gruppe('Uebungsspiel als Testlauf: Bericht und Versand ohne Ligaleitung', 
     S.current = null; D.ui().overlay = null; D.ui().bericht = null;
     D.setScreen('winner');
   });
-  const wb = await page.evaluate(() => document.getElementById('winner-box').innerText.replace(/\s+/g, ' '));
+  const wb = await page.evaluate(() => document.getElementById('ls-ende').innerText.replace(/\s+/g, ' '));
   check('der Ergebnis-Bildschirm des Uebungsspiels fuehrt weiter zum Spielbericht und nennt den Testlauf',
     wb.includes('Übungsspiel') && /weiter zum spielbericht/i.test(wb) && wb.includes('Testlauf') && wb.includes('nichts geht an die Ligaleitung'), wb);
+  const rk = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('#ls-ende .la-rekord')].map((e) => [e.querySelector('small').textContent.trim(), e.querySelector('b').textContent.trim()])));
+  check('Rekorde der Begegnung aus den Wuerfen: hoechste Aufnahme 180, hoechstes Finish 141, bestes Leg 9 Darts',
+    rk['HÖCHSTE AUFNAHME'] === '180' && rk['HÖCHSTES FINISH'] === '141' && rk['BESTES LEG'] === '9 Darts', JSON.stringify(rk));
+  check('keine Doppelquote, wenn die Darts aufs Doppel nicht erfasst sind', !('BESTE DOPPELQUOTE' in rk), JSON.stringify(rk));
+  check('Man of the Match mit Begruendung und Werten', (await textKlein('#ls-ende .la-motm-paar')).includes('man of the match') && (await page.locator('#ls-ende .la-motm-werte b').count()) >= 1);
+  const dq = await page.evaluate(() => {
+    const D = window.__dart, A = 'dqa', B = 'dqb';
+    const k = (n, m) => ({ n, m });
+    /* A wirft jeden Dart einzeln (301): 180, dann 81 mit dem dritten Dart daneben aufs D20, dann S20 und D10 -
+       drei Darts aufs Doppel, einer sitzt. */
+    const voll = { id: 'dq1', p: [A, B], done: true, winner: A, legs: [{ start: 301, starter: A, winner: A, visits: [
+      { p: A, s: 180, d: 3, b: false, k: [k(20, 3), k(20, 3), k(20, 3)] }, { p: B, s: 60, d: 3, b: false },
+      { p: A, s: 81, d: 3, b: false, k: [k(20, 3), k(7, 3), k(0, 0)] }, { p: B, s: 60, d: 3, b: false },
+      { p: A, s: 40, d: 2, b: false, c: true, k: [k(20, 1), k(10, 2)] }] }] };
+    const ohne = JSON.parse(JSON.stringify(voll)); ohne.legs[0].visits.forEach((v) => { delete v.k; });
+    return { voll: (D.laRekorde([voll], 501).doppel || {}).wert || null, ohne: D.laRekorde([ohne], 501).doppel || null };
+  });
+  check('die Doppelquote zaehlt nur, wo jeder Dart erfasst ist (1 / 3), sonst gibt es keine', dq.voll === '1 / 3' && dq.ohne === null, JSON.stringify(dq));
   await page.evaluate(() => { const D = window.__dart; D.ui().bericht = null; D.berichtVersandOeffnen(); });
   const vd = await page.evaluate(() => ({
     text: document.getElementById('overlay-card').innerText.replace(/\s+/g, ' '),
@@ -7055,7 +7279,7 @@ await gruppe('Uebungsspiel als Testlauf: Bericht und Versand ohne Ligaleitung', 
     platzhalter: document.querySelector('#overlay-card input[data-role="bericht-mail"]').getAttribute('placeholder')
   }));
   check('der Versand-Dialog ist ein Testlauf: keine Ligaleitung, keine gemerkten Adressen, eigene Adresse als Platzhalter',
-    vd.text.includes('Testlauf') && vd.werte.every((w) => w === '') && vd.platzhalter === 'deine Adresse', JSON.stringify(vd));
+    /testlauf/i.test(vd.text) && vd.werte.every((w) => w === '') && vd.platzhalter === 'deine Adresse', JSON.stringify(vd));
   await page.evaluate(() => { const D = window.__dart, S = D.state(); D.ui().overlay = null; S.matches = []; S.tour = null; S.current = null; D.ui().bericht = null;
     S.profiles = S.profiles.filter((p) => !/^tlg/.test(p.id)); delete S.settings.berichtMails; D.setScreen('setup'); });
 }
@@ -7287,15 +7511,15 @@ await gruppe('Ligaspiel-Start: Gastspieler und Nachmeldung fuer beide Teams, fes
     nmStart.tour && nmStart.typ === 'nachmeldung' && nmStart.id === nmStart.sie1 && nmStart.start && nmStart.fest && nmStart.nach === 'Gegner2', JSON.stringify(nmStart));
   check('der nachgetragene Name ist im Profil gespeichert', await page.evaluate((id) => window.__dart.profile(id).voll === 'Berta Nachgetragen', vf.bId));
   check('unser vierter ist der Gastspieler Gustav Gastmann', nmStart.gast === 'gast' && nmStart.gastName === 'Gustav Gastmann', JSON.stringify(nmStart));
-  check('"Spaeter" statt Abbrechen', (await text('#overlay-card .dl-fuss')).includes('Später'));
-  await page.locator('#overlay-card .dl-fuss [data-action="ov-cancel"]').click();
+  check('"Spaeter" statt Abbrechen', (await text('#overlay-card .la-dlg-fuss')).includes('Später'));
+  await page.locator('#overlay-card .la-dlg-fuss [data-action="ov-cancel"]').click();
   check('Spaeter schliesst den Bogen, die Nachmeldung bleibt offen', await page.evaluate(() => {
     const D = window.__dart, lg = D.state().tour.liga; return !D.ui().overlay && D.ligaTyp(lg, lg.sie[1]) === 'neu' && !(lg.nachmeldungen || []).length;
   }));
   /* Wechsel: auch wer aus dem Kader kommt, kann nicht gemeldeter Gastspieler
      sein. Gustav ist schon der eine Gast - der zweite geht nicht. */
   const wSeite = await page.evaluate(() => (window.__dart.state().tour.liga.heim ? 'H' : 'G'));
-  await page.locator('[data-action="roster-change"]').click();
+  await page.locator('#ligaspiel [data-action="roster-change"]').click();
   await page.locator(`[data-action="liga-wechsel-pos"][data-seite="${wSeite}"][data-pos="0"]`).click();
   const kaderKnopf = page.locator('#overlay-card [data-action="liga-wechsel-neu"]').first();
   const kaderId = await kaderKnopf.getAttribute('data-id');
@@ -7315,12 +7539,14 @@ await gruppe('Ligaspiel-Start: Gastspieler und Nachmeldung fuer beide Teams, fes
   {
     const gSeite = wSeite === 'H' ? 'G' : 'H';
     const merk = await page.evaluate((s) => { const lg = window.__dart.state().tour.liga; return JSON.stringify({ lg, m: window.__dart.state().matches, p: window.__dart.state().tour.players }); }, gSeite);
-    await page.locator('[data-action="roster-change"]').click();
+    await page.locator('#ligaspiel [data-action="roster-change"]').click();
     await page.locator(`[data-action="liga-wechsel-pos"][data-seite="${gSeite}"][data-pos="2"]`).click();
     const kn = page.locator('#overlay-card [data-action="liga-wechsel-neu"][data-name]');
     check('der Kader des Gegners steht zur Auswahl', (await kn.count()) > 0);
     const drei = await page.locator('#overlay-card [data-action="liga-neu-typ"]').allInnerTexts();
     check('drei Status: gemeldet, Gastspieler, neu melden', drei.join('|').toLowerCase() === 'gemeldet|gastspieler|neu melden', drei.join('|'));
+    check('ein neuer Name kommt ueber "Neu"', (await page.locator('[data-role="liga-neu-name"]').count()) === 0);
+    await page.locator('[data-action="la-wechsel-neu-name"]').click();
     await page.locator('[data-role="liga-neu-name"]').fill('Ganz');
     await page.locator('[data-role="liga-neu-nach"]').fill('Fremd');
     check('ein unbekannter Name steht auf "neu melden"', (await page.locator('[data-action="liga-neu-typ"].active').getAttribute('data-value')) === 'neu');
@@ -7350,7 +7576,7 @@ await gruppe('Ligaspiel-Start: Gastspieler und Nachmeldung fuer beide Teams, fes
       const bank = await page.locator('[data-action="liga-neu-typ"][data-value="neu"]').isDisabled();
       if (!bank) {
         await page.locator('[data-action="liga-neu-typ"][data-value="neu"]').click();
-        for (const f of await page.locator('#overlay-card .dl-raster [data-role^="voll"]').all()) if (!(await f.inputValue())) await f.fill('Test');
+        for (const f of await page.locator('#overlay-card .la-zwei [data-role^="liga-voll"]').all()) if (!(await f.inputValue())) await f.fill('Test');
         await page.locator('[data-action="liga-wechsel-ok"]').click();
         check('Kader-Spieler mit "neu melden" landet im Nachmelde-Bogen', await page.evaluate(() => window.__dart.ui().overlay.type === 'nachmeldung'), await page.evaluate(() => JSON.stringify(window.__dart.ui().overlay)));
         await page.locator('[data-action="nm-abbrechen"]').click();
@@ -7390,7 +7616,7 @@ await gruppe('Ligaspiel-Start: Gastspieler und Nachmeldung fuer beide Teams, fes
     D.save(); D.berichtVersandOeffnen();
   }, nmStart.gegner);
   const mails = await page.evaluate(() => Array.from(document.querySelectorAll('[data-role="bericht-mail"]')).map((e) => e.value));
-  const rollen = await page.evaluate(() => Array.from(document.querySelectorAll('#overlay-card .ls-mail small')).map((e) => e.textContent.trim()));
+  const rollen = await page.evaluate(() => Array.from(document.querySelectorAll('#overlay-card .la-mail-rolle')).map((e) => e.textContent.trim()));
   check('fuenf Zeilen: beide TCs, Ligaleitung (Udo), TC Gegner (gemerkt), eine freie',
     JSON.stringify(mails) === JSON.stringify(['tc1@blink.de', 'tc2@blink.de', 'spielbericht@steeldart-muenchen.de', 'tc@gegner.de', '']), JSON.stringify(mails));
   check('die Rollen stehen ueber den Feldern, mit den TC-Namen laut Ligaleitung',
@@ -8634,6 +8860,8 @@ await page.locator('#lz-bo-fuss .lz-bo-wo').click();
 check('der Link oeffnet den w.o.-Dialog fuer dieses Einzel', await page.evaluate(() => {
   const o = window.__dart.ui().overlay; return o && o.type === 'liga-kampflos' && o.id === 'lzm5';
 }));
+/* Ablauf-Dialog (LsWo): erst antippen, wer fehlt, dann W.O. WERTEN. */
+await page.locator('#overlay-card [data-action="la-wo-wahl"]').nth(1).click();
 await page.locator('#overlay-card [data-action="liga-kampflos-wer"]').first().click();
 check('nach der Wertung geht es in die Uebersicht, das Einzel ist kampflos', (await visible('#screen-tournament')) && await page.evaluate(() => {
   const m = window.__dart.state().matches[5]; return m.done && m.kampflos;

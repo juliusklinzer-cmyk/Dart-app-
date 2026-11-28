@@ -1,7 +1,6 @@
 # Backlog – Darts App
 
 ## In Arbeit
-- [ ] DRT-097 Liga-Redesign nach Entwurf in Paketen: 1) Kopf, Hell/Dunkel-Tokens, Spielplan (v226); 2) Training, Kasse, Regeln; 3) Tabelle mit Ligen 1-5, Teamseite; Einstellungen; Live-Ticker (Handy, Browser, TV, App, ohne Namen); Game Day mit GAME-ON-Bestaetigung, Ersatz, Challenge (v228); offen (in Arbeit): Training, Tabelle, Statistik (Mannschaft, Rangliste, Einzel), Kasse, Regeln, Liga-Einstellungen mit Rollen, Teamseite, Ligaspiel-Ablauf, Game Day mit GAME-ON-Bestätigung, Live/TV/Handy · von:Julius · am:2026-11-28
 
 
 ## Wartet auf Julius
@@ -11,6 +10,7 @@
 
 ## Offen
 
+- [ ] DRT-098 Rest aus dem Liga-Redesign: Liga-Einstellungen Vereinsheim, Training, Rollen und Spielbericht sind nur Anzeige (keine Rollen am Server); Ligaspiel „verwerfen“ gibt es laut Entwurf nicht mehr (versehentlich gestartetes echtes Ligaspiel nur über kampflos + Bericht) – bei Bedarf als kleinen Link zurück; Hand-Highlights und Nachmelde-Foto reisen nicht zum anderen iPad, später ergänzte Highlights bleiben lokal; Spielende fasst gleiche Hand-Highlights zusammen; Foto-Feld auch bei Nachmeldung eines Kontos; „Wertung zurücknehmen“ nach vorzeitigem Ende lässt den Protest-Text stehen; Kurzbericht mit „Teilen“ ohne Einstieg (Code steht noch); Gast-Fotos im localStorage (Speicher, Fotos Dritter) · von:Claude · am:2026-11-28
 - [ ] DRT-094 Autodarts Schritt 3: Autostart am PC (Autodarts Desktop, Brücke, Chrome im Vollbild), wenn der Rechner dafür bereit ist (Julius 26.11.); dazu offen: Livebild der Kameras in der Großanzeige (Kamera-Knopf aus dem Entwurf) · von:Julius · am:2026-11-26
 - [ ] DRT-082 Hinweise aus der Kritik 25.11.: Plan mit allen Unterschriften geht bei jedem 8-s-Abgleich komplett über die Leitung (Nachmeldungen eigener Abruf); Löschfrist für geteilte Turniere (Unterschriften, U18) am Server; laufendes Einzel ohne Wurf steht im Ticker noch unter „Als Nächstes“; beide iPads melden gleichzeitig den 8. Spieler nach; Unterschriften wandern nicht zum anderen iPad, dort ist die Rücknahme des letzten Einzels deshalb noch 15 Minuten möglich und änderte einen schon unterschriebenen Bogen (partieUebernehmen gegen berichtIstFinal absichern) · von:Claude · am:2026-11-25
 - [ ] DRT-075 (Julius 25.11.: als Nächstes) Sicherheit, Rest aus dem Audit 22.11. (audit-2026-11-22/sicherheit.md): scrypt-Warteschlange gegen Blockade (W2), Session-Tokens nur als Hash speichern (H1), Backups verschlüsseln (H2), E-Mail bei Registrierung bestätigen (H3), Ergebnisse nach Turnierende nur 24 h änderbar (H7), Basis-Image per Digest (H8), Knopf „Gerät leeren“ fürs Bar-iPad (H9); Server-Härtung (SSH nur Schlüssel, Firewall 22/80/443, Auto-Updates) per SSH prüfen · von:Claude · am:2026-11-22
@@ -43,6 +43,7 @@
 
 ## Erledigt
 
+- [x] DRT-097 Liga-Redesign nach Entwurf, alle Slides: Kopf mit Logo zurück, Hell/Dunkel-Grundlage, Spielplan, Training, Kasse, Regeln (Auf-/Abstieg, Fragen), Tabelle Ligen 1–5 mit Teamseite, Liga-Einstellungen, Game Day (Scheibenwahl, Aufstellung mit Kader und Ersatz, GAME ON mit Bestätigung), Live-Ticker (Handy, Browser, TV, App, ohne Namen), Statistik (Mannschaft, Rangliste, Einzel), Zählen, Ligaspiel-Ablauf (Übersicht, Dialoge, Beenden kampflos Heim/Gast, Spielende, Spielbericht, Unterschrift, Versand); zwei Kritik-Runden abgearbeitet; Abschlusstest ganzer Ligaabend an zwei iPads (tests/ligaspiel-abschluss.mjs) in der Deploy-Suite (v230) · von:Julius · fertig:2026-11-28
 - [x] DRT-096 Entscheidungen zum Liga-Redesign (Julius 28.11.): eigener Bereich wie im Entwurf, Hell/Dunkel für die ganze App, Zahnrad in der Liga darf es auch, GAME-ON-Bestätigung statt Autostart, Doppel-Frage wählbar (Game Day und Einstellungen), Beenden kampflos Heim/Gast für den Notfall, Namen im Live-Ticker per Einstellung, Fotos freiwillig sonst Platzhalter, Einzel an anderer Scheibe mit Warnung, Ligen 1–4 in die App, Auf-/Abstieg und Fragen-Feld in die Regeln, Training ohne Unsicher, Testspiel gegen nächsten Gegner unten rechts · von:Julius · fertig:2026-11-28
 - [x] DRT-095 Autodarts Schritt 2: Großanzeige für den 34-Zoll-Monitor nach Entwurf (1 gegen 1, Training mit Heute-Vergleich und letzten 12 Legs), Einstellung Darstellung hell/dunkel (v224) · von:Julius · fertig:2026-11-26
 - [x] DRT-093 Autodarts Schritt 1: Einrichtung bei den Einstellungen mit vier Prüfschritten und Testwurf, eingeschaltet zählt jedes Spiel über Autodarts, kein Knopf mehr oben wenn aus (v223) · von:Julius · fertig:2026-11-26

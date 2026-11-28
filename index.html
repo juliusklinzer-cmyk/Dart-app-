@@ -358,6 +358,10 @@
     </div>
   </div>
   </div>
+  <!-- Nur im Ligaspiel: die Uebersicht nach dem Entwurf (Nov. 2026), gezeichnet
+       von renderLigaspiel in js/app.js. Kopf, Spalten und Statistik des
+       freien Turniers sind dann ausgeblendet. -->
+  <div id="ligaspiel" class="la-seite hidden"></div>
 </section>
 
 <!-- ============ STATISTIK ============ -->
@@ -1005,6 +1009,9 @@
     </div>
   </div>
   <div id="winner-box"></div>
+  <!-- Nur im Ligaspiel: Spielende nach dem Entwurf (Nov. 2026), gezeichnet von
+       renderLigaEnde in js/app.js. -->
+  <div id="ls-ende" class="la-seite hidden"></div>
 </section>
 
 <!-- ============ FINISHER ============ -->
@@ -1096,16 +1103,12 @@
      aus dem Ligaspiel befüllt, jede Zelle antippbar und korrigierbar,
      danach direkt drucken. Beim Druck erscheint nur das Blatt. -->
 <section id="screen-bericht" class="screen">
-  <header class="app-header row bericht-kopfzeile">
-    <button class="icon-btn" data-action="bericht-zurueck" aria-label="Zurück">‹</button>
-    <h1>Spielbericht</h1>
-    <button class="btn primary start small" data-action="bericht-unterschreiben">Unterschreiben</button>
-  </header>
-  <p class="hint bericht-hinweis">Alle Felder lassen sich antippen und von Hand korrigieren.
-    Danach <b>Unterschreiben</b>: erst TC Heim, dann TC Gast mit dem Finger, dann geht der
-    Bericht als PDF per Mail raus. Seite 2 (Nachmeldungen, Proteste) ist mit dabei.</p>
-  <div id="bericht-blatt"></div>
-  <button class="btn ghost full bericht-drucken" data-action="bericht-drucken">Drucken</button>
+  <!-- Redesign Nov. 2026 (Entwuerfe "Liste 13/16"): am Bildschirm der Bericht
+       als Karten (#la-bericht, renderBericht/laBerichtKarten in js/app.js).
+       Der Bogen #bericht-blatt bleibt das Original fuer PDF, Druck und die
+       gemerkten Korrekturen - unsichtbar ausserhalb des Bildes. -->
+  <div id="la-bericht" class="la-seite"></div>
+  <div id="bericht-blatt" inert aria-hidden="true"></div>
 </section>
 
 <!-- ============ KAIWEN ============ -->

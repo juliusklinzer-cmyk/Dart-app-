@@ -642,6 +642,8 @@ export function createApi(db, config) {
     if (m.p !== undefined) idListe(m.p, was + ': Spieler', true);
     if (m.legs !== undefined) liste(m.legs, was + ': Legs');
     if (m.winner !== undefined && m.winner !== null && !istId(m.winner)) throw kaputt(was + ': Sieger');
+    /* Die Scheibe steht im Ligaspiel-Ablauf im Markup (Kritik 28.11.). */
+    if (m.scheibe !== undefined && m.scheibe !== null && m.scheibe !== 'S1' && m.scheibe !== 'S2') throw kaputt(was + ': Scheibe');
   }
 
   /* Dartvergleich (DRT-049): hoechstens zwei Legs mit je bis zu 400 Darts,

@@ -516,7 +516,7 @@ async function main() {
       await a.page.locator('[data-action="tag-zu"]').first().click();
       await a.page.route('**/api/liga/tag/**', (r) => r.fulfill({ status: 401, contentType: 'application/json', body: '{"fehler":"Nicht angemeldet."}' }));
       await anpfiff(a, 300);
-      check('nach 20:00 kommt ein Hinweis', await bis(a, () => /startet nicht/.test(document.getElementById('overlay-card').innerText) && (window.__dart.ui().overlay || {}).type === 'ligatag-hinweis', null, 30000), JSON.stringify(await st(a)));
+      check('nach 20:00 kommt ein Hinweis', await bis(a, () => /startet nicht/i.test(document.getElementById('overlay-card').innerText) && (window.__dart.ui().overlay || {}).type === 'ligatag-hinweis', null, 30000), JSON.stringify(await st(a)));
       await a.page.unroute('**/api/liga/tag/**');
     });
     await gruppe('W5: offline Getipptes ueberlebt das Neuladen', async () => {
