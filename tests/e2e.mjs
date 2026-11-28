@@ -7965,6 +7965,160 @@ await gruppe('Handy-Block 2: GAME ON nur am Spieltag', async () => {
   await page.evaluate(() => { const D = window.__dart; D.ui().ligaWahl = null; D.setScreen('setup'); });
 });
 
+await gruppe('Live-Ticker (live.html): Handy, Browser, Fernseher, hell/dunkel, nur Ergebnisse, ohne Namen', async () => {
+  /* Ein Ligaspiel wie am Spielabend: 16 Einzel, 9 fertig, zwei laufen
+     (Scheibe 1 und 2), auf G4 wurde ab Einzel 12 G5 eingewechselt. */
+  const wurzel = BASE.replace(/\/[^/]*$/, '');
+  const EZ = [[0,0],[1,1],[2,2],[3,3],[0,1],[1,0],[2,3],[3,2],[2,0],[3,1],[1,2],[0,3],[3,0],[2,1],[0,2],[1,3]];
+  const SCH = ['S1','S2','S1','S2','S1','S2','S1','S2','S2','S1','S1','S2','S1','S2','S2','S1'];
+  const ERG = [[2,1],[0,2],[2,0],[1,2],[2,1],[2,0],[2,1],[0,2],null,[0,2]];
+  const H = ['u_h1','u_h2','u_h3','u_h4'], G = ['g1','g2','g3','g4','g5'];
+  const NAMEN = { u_h1: 'Lenas B.', u_h2: 'Dominik', u_h3: 'Tobi', u_h4: 'Julius', g1: 'René Mai', g2: 'Stefan Edelbauer', g3: 'Andreas Sedlbauer', g4: 'Florian Janetschko', g5: 'Stephan Uhrig' };
+  const v = (p, s, extra) => Object.assign({ p, s, d: 3, b: false, c: false }, extra || {});
+  const baue = (opt) => {
+    const matches = EZ.map((pp, i) => ({ id: 'm' + i, round: Math.floor(i / 4) + 1, p: [H[pp[0]], i >= 11 && pp[1] === 3 ? 'g5' : G[pp[1]]], posPaar: pp.slice(), scheibe: SCH[i] }));
+    const ergebnisse = {};
+    ERG.forEach((e, i) => {
+      if (!e) return;
+      const m = matches[i], legs = [];
+      for (let k = 0; k < e[0] + e[1]; k++) {
+        const w = k < e[0] ? m.p[0] : m.p[1], l = w === m.p[0] ? m.p[1] : m.p[0];
+        legs.push({ starter: m.p[k % 2], winner: w, visits: opt.erg ? [] : [v(w, i === 0 && k === 0 ? 180 : 140), v(l, 60), v(w, 140), v(l, 45), v(w, 100), v(l, 85), v(w, i === 4 && k === 0 ? 121 : 61, { c: true, dd: 16 })] });
+      }
+      ergebnisse[m.id] = { id: m.id, p: m.p, winner: e[0] > e[1] ? m.p[0] : m.p[1], done: true, legs, at: i };
+    });
+    const p8 = matches[8].p, p10 = matches[10].p;
+    const live = opt.erg ? [] : [
+      { matchId: 'm8', stand: { p: p8, starter: p8[0], start: 501, legs: [{ starter: p8[0], winner: null, visits: [v(p8[0], 100), v(p8[1], 60), v(p8[0], 85)] }], darts: [] }, alter: 0 },
+      { matchId: 'm10', stand: { p: p10, starter: p10[0], start: 501, legs: [{ starter: p10[0], winner: null, visits: [v(p10[0], 140)] }], darts: [{ m: 3, n: 20, v: 60 }] }, alter: 0 }
+    ];
+    const namen = {};
+    Object.keys(NAMEN).forEach((id) => { namen[id] = opt.ohne ? (id[0] === 'u' ? 'H' + id.slice(-1) : 'G' + id.slice(-1)) : NAMEN[id]; });
+    return { status: 'offen', start: 501, bestOf: 3, ohneNamen: !!opt.ohne, namen, matches, ergebnisse, live, stand: Date.now(),
+      liga: { terminId: 'st07', nr: 7, gegner: 'TSV Oberpframmern', heim: true, ort: 'Bar Sehnsucht', tag: '2027-01-12', uebung: false,
+        wir: H, sie: G, heimSpieler: H, gastSpieler: G, nurErgebnis: !!opt.erg, ohneNamen: !!opt.ohne } };
+  };
+  apiMock['/api/zuschauer/tickerlive01'] = { turnier: baue({}) };
+  apiMock['/api/zuschauer/tickererg001'] = { turnier: baue({ erg: true }) };
+  apiMock['/api/zuschauer/tickeranon01'] = { turnier: baue({ ohne: true }) };
+  const lfehler = [];
+  const oeffne = async (w, h, schema, pfad) => {
+    const ctx = await browser.newContext({ viewport: { width: w, height: h }, colorScheme: schema });
+    const lp = await ctx.newPage();
+    lp.on('pageerror', (e) => lfehler.push(String(e)));
+    lp.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) lfehler.push(m.text()); });
+    await lp.goto(wurzel + '/live.html' + pfad);
+    await lp.waitForSelector('.lt [data-stand]', { timeout: 8000 });
+    return lp;
+  };
+  const lage = (lp) => lp.evaluate(() => {
+    const st = document.querySelector('[data-stand]').getBoundingClientRect();
+    return { layout: document.body.dataset.layout, sw: document.documentElement.scrollWidth, cw: document.documentElement.clientWidth,
+      sh: document.documentElement.scrollHeight, ih: innerHeight, stand: document.querySelector('[data-stand]').textContent.replace(/\s/g, ''),
+      standSichtbar: st.width > 0 && st.top >= 0 && st.bottom <= innerHeight, bg: getComputedStyle(document.body).backgroundColor,
+      text: document.getElementById('ticker').innerText };
+  });
+  const HELL = 'rgb(246, 243, 241)', DUNKEL = 'rgb(13, 10, 11)';
+
+  /* Handy */
+  let lp = await oeffne(390, 844, 'light', '#tickerlive01');
+  let l = await lage(lp);
+  check('Handy (390): Handy-Ansicht, kein seitlicher Ueberlauf, Stand 5:4 oben sichtbar', l.layout === 'handy' && l.sw <= l.cw && l.stand === '5:4' && l.standSichtbar, JSON.stringify([l.layout, l.sw, l.cw, l.stand]));
+  check('Handy: hell folgt dem Geraet', l.bg === HELL, l.bg);
+  check('Handy: beide laufenden Einzel mit Rest, Scheibe 1 zuerst', (await lp.locator('.scheibe.live').count()) === 2 &&
+    (await lp.locator('.scheibe.live .b-scheibe').first().innerText()).toLowerCase().includes('scheibe 1') &&
+    (await lp.locator('.scheibe.live[data-einzel="9"] .b-rest').allInnerTexts()).join(',') === '316,441', (await lp.locator('.scheibe.live[data-einzel="9"] .b-rest').allInnerTexts()).join(','));
+  check('Handy: wer dran ist, ist markiert; Ø und "zuletzt" stehen dabei', (await lp.locator('.scheibe.live[data-einzel="9"] .b-zeile.dran .b-name').innerText()).toLowerCase() === 'rené mai' &&
+    /zuletzt 85/.test(await lp.locator('.scheibe.live[data-einzel="9"] .b-zeile').first().innerText()));
+  check('Handy: laufende Darts zaehlen schon im Rest (140 + T20)', (await lp.locator('.scheibe.live[data-einzel="11"] .b-rest').allInnerTexts()).join(',') === '361,441',
+    (await lp.locator('.scheibe.live[data-einzel="11"] .b-rest').allInnerTexts()).join(','));
+  check('Handy: Ergebnisse (juengstes zuerst), Als Naechstes und Rekorde', (await lp.locator('.h-block.historie .k-ez').count()) === 5 &&
+    (await lp.locator('.h-block.historie .k-ez .nr').first().innerText()) === '10' && (await lp.locator('.h-block.naechste .k-ez').count()) === 4 &&
+    /Bester Average/.test(l.text) && /Höchste Aufnahme/.test(l.text));
+  await lp.context().close();
+
+  /* Browser hell und dunkel */
+  lp = await oeffne(1180, 820, 'light', '#tickerlive01');
+  l = await lage(lp);
+  check('Browser (1180): Web-Ansicht, kein seitlicher Ueberlauf, Stand sichtbar', l.layout === 'web' && l.sw <= l.cw && l.stand === '5:4' && l.standSichtbar, JSON.stringify([l.layout, l.sw, l.cw]));
+  check('Browser: hell', l.bg === HELL, l.bg);
+  check('Browser: alle 16 Einzel in vier Durchgaengen, zwei LIVE mit Scheibe', (await lp.locator('.w-liste.alle .w-ez').count()) === 16 &&
+    (await lp.locator('.w-liste.alle .durchgang').count()) === 4 && (await lp.locator('.w-liste.alle .chip.live').count()) === 2 &&
+    (await lp.locator('.w-liste.alle .w-ez').nth(8).innerText()).includes('LIVE · S2'));
+  check('Browser: Als Naechstes je Scheibe zwei, mit Scheibe', (await lp.locator('.w-liste.naechste .w-ez').count()) === 4 &&
+    /S1/.test(await lp.locator('.w-liste.naechste').innerText()) && /S2/.test(await lp.locator('.w-liste.naechste').innerText()));
+  check('Browser: 16 Punkte-Striche, Heim-Siege blau, zwei live', (await lp.locator('.pille').count()) === 16 && (await lp.locator('.pille.live').count()) === 2 &&
+    (await lp.locator('.pille.heim').count()) === 5);
+  check('Browser: Man of the Day, Highlights (180er, High Finish 121) und Statistik je Team', (await lp.locator('.motd-k').count()) === 2 &&
+    /180er/.test(await lp.locator('.w-hl').innerText()) && /121/.test(await lp.locator('.w-hl').innerText()) &&
+    (await lp.locator('.s-team').count()) === 2 && (await lp.locator('.s-zeile').count()) === 9);
+  check('Browser: Verlauf mit den Darts, die gerade fliegen', /Dominik 140 · Andreas wirft: T20/.test(await lp.locator('.scheibe.live[data-einzel="11"] .b-verlauf').innerText()));
+  await lp.context().close();
+  lp = await oeffne(1180, 820, 'dark', '#tickerlive01');
+  l = await lage(lp);
+  check('Browser dunkel: folgt dem Geraet, Live-Karte mit weissem Rahmen', l.bg === DUNKEL &&
+    (await lp.locator('.scheibe.live').first().evaluate((e) => getComputedStyle(e).boxShadow)).includes('rgb(255, 255, 255)'), l.bg);
+  await lp.goto(wurzel + '/live.html?hell=1#tickerlive01');
+  await lp.waitForSelector('.lt [data-stand]');
+  check('?hell=1 erzwingt hell trotz dunklem Geraet', (await lage(lp)).bg === HELL);
+  await lp.context().close();
+  lp = await oeffne(768, 1024, 'light', '?hell=0#tickerlive01');
+  l = await lage(lp);
+  check('?hell=0 erzwingt dunkel; iPad hoch (768) ohne seitlichen Ueberlauf', l.bg === DUNKEL && l.layout === 'web' && l.sw <= l.cw, JSON.stringify([l.bg, l.sw, l.cw]));
+  await lp.context().close();
+
+  /* Fernseher */
+  lp = await oeffne(1920, 1080, 'dark', '#tickerlive01');
+  l = await lage(lp);
+  check('Fernseher (1920x1080): TV-Ansicht ohne Scrollen, Stand sichtbar', l.layout === 'tv' && l.sw <= l.cw && l.sh <= l.ih && l.stand === '5:4' && l.standSichtbar,
+    JSON.stringify([l.layout, l.sw, l.cw, l.sh, l.ih]));
+  check('Fernseher: zwei Scheiben, Ergebnisse, Als Naechstes, Rekorde', (await lp.locator('.t-scheiben .scheibe.live').count()) === 2 &&
+    (await lp.locator('.t-unten .t-spalte').count()) === 3 && /Rekorde des Abends/i.test(l.text));
+  check('Fernseher: der Rahmen fuellt das Bild (zoom 1,3)', await lp.evaluate(() => {
+    const r = document.querySelector('.tv-rahmen').getBoundingClientRect();
+    return Math.abs(r.width - innerWidth) < 2 && Math.abs(r.height - innerHeight) < 2;
+  }));
+  check('Fernseher: Impressum-Fuss ausgeblendet', !(await lp.locator('.seiten-fuss').isVisible()));
+  await lp.locator('[data-aktion="voll"]').click();
+  l = await lage(lp);
+  check('Vollbild: nur Stand und die beiden Scheiben, ohne Ueberlauf', (await lp.locator('.tv-rahmen.voll .v-scheibe.live').count()) === 2 &&
+    (await lp.locator('.t-unten').count()) === 0 && l.sw <= l.cw && l.sh <= l.ih && l.standSichtbar);
+  check('Vollbild: der Rest passt in seine Spalte', await lp.evaluate(() => [...document.querySelectorAll('.v-rest')].every((e) => e.scrollWidth <= e.clientWidth + 1)));
+  await lp.locator('[data-aktion="voll"]').click();
+  check('Vollbild wieder aus', (await lp.locator('.tv-rahmen.voll').count()) === 0 && (await lp.locator('.t-unten').count()) === 1);
+  await lp.context().close();
+  lp = await oeffne(1280, 800, 'light', '?tv=1#tickerlive01');
+  l = await lage(lp);
+  check('?tv=1 erzwingt die TV-Ansicht auch am Laptop, ohne Scrollen', l.layout === 'tv' && l.sw <= l.cw && l.sh <= l.ih && l.standSichtbar && l.bg === HELL);
+  await lp.context().close();
+
+  /* Nur Ergebnisse */
+  lp = await oeffne(1180, 820, 'light', '#tickererg001');
+  l = await lage(lp);
+  check('Nur Ergebnisse (Browser): vier Durchgaenge mit Leg-Staenden, keine Scheiben-Karten', (await lp.locator('.e-runde').count()) === 4 &&
+    (await lp.locator('.e-ez').count()) === 16 && (await lp.locator('.scheibe').count()) === 0 && /nur Ergebnisse/.test(l.text) && l.sw <= l.cw);
+  check('Nur Ergebnisse: der Wechsel G4 → G5 steht da', (await lp.locator('.wx-zeile').count()) === 1 && (await lp.locator('.wx-zeile').innerText()).includes('G4 → G5') &&
+    (await lp.locator('.wx-zeile').innerText()).includes('Stephan Uhrig'));
+  await lp.setViewportSize({ width: 1920, height: 1080 });
+  await lp.waitForSelector('.lt-tv.erg');
+  l = await lage(lp);
+  check('Nur Ergebnisse am Fernseher: ohne Scrollen', l.layout === 'tv' && l.sh <= l.ih && l.sw <= l.cw && l.standSichtbar);
+  await lp.setViewportSize({ width: 390, height: 844 });
+  await lp.waitForSelector('.lt-handy');
+  l = await lage(lp);
+  check('Nur Ergebnisse am Handy: Durchgaenge, kein Ueberlauf', (await lp.locator('.h-runde').count()) === 4 && l.sw <= l.cw);
+  await lp.context().close();
+
+  /* Live ohne Namen: der Server liefert Kennungen, der Ticker doppelt sie nicht */
+  lp = await oeffne(390, 844, 'dark', '#tickeranon01');
+  l = await lage(lp);
+  check('Ohne Namen: keine Namen, nur Kennungen, keine doppelte Position', !/René|Dominik|Tobi|Lenas|Stephan/.test(l.text) && /\bH1\b/.test(l.text) &&
+    (await lp.locator('.b-pos').count()) === 0 && (await lp.locator('.scheibe.live .b-name').first().innerText()) === 'H2');
+  await lp.context().close();
+  delete apiMock['/api/zuschauer/tickerlive01']; delete apiMock['/api/zuschauer/tickererg001']; delete apiMock['/api/zuschauer/tickeranon01'];
+  check('Live-Ticker ohne JS-Fehler', lfehler.length === 0, lfehler.join(' | '));
+});
+
 await gruppe('Fehlerfreiheit', async () => {
 check('keine JS-Fehler', errors.length === 0, errors.join(' | '));
 
