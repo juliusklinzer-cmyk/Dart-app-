@@ -2331,7 +2331,7 @@
     // Die 60 gehört dem Löwen – bei jeder geworfenen 60 (siehe feiere60).
     else if (!isBust && score === FEIER_60 && !ligaMatch) feiere60(pid);
 
-    UI.input = ''; UI.darts = []; UI.mult = 1; UI.error = '';
+    UI.input = ''; UI.darts = []; UI.mult = 1; UI.error = ''; UI.warnung = null;
     /* "Punkte" von Hand gilt nur fuer diese Aufnahme, danach entscheidet
        wieder "Einzel-Darts ab Rest". Wer dagegen Einzel-Darts waehlt, will
        Dart fuer Dart mitschreiben - das bleibt bis zum Ende der Partie. */
@@ -2386,6 +2386,25 @@
     if (!m || m.done) return;   // beendetes Spiel nimmt keine Würfe mehr an
     var leg = activeLeg(m);
     var rest = remainingIn(leg, activePlayer(leg, m));
+    /* Ligaspiel (Entwurf Warnungen): die getippte Zahl bleibt stehen und
+       wackelt. Mehr als 180 und unmoegliche Summen bucht Enter nie. Mehr als
+       der Rest bucht erst das zweite Enter (bzw. OK) - als ueberworfen, der
+       Rest bleibt wie vor der Aufnahme (Julius, 28.11.: erst nachfragen). */
+    var lzEin = lzAktiv() && S.screen === 'game' && !UI.darts.length;
+    if (lzEin) {
+      var lzArt = v > MAX_VISIT ? 'hoch' : IMPOSSIBLE[v] ? 'unmoeglich' : v > rest ? 'rest' : null;
+      if (lzArt === 'hoch' || lzArt === 'unmoeglich') { lzWarnen(lzArt, rest); return; }
+      if (lzArt === 'rest') {
+        var lzAlt = lzWarnungJetzt();
+        /* Ein nachprellendes Enter (unter 250 ms) zaehlt nicht als Bestaetigung. */
+        if (!(lzAlt && lzAlt.art === 'rest' && Date.now() - lzAlt.seit >= 250)) { lzWarnen('rest', rest); return; }
+        UI.warnung = null;
+        pomp();
+        commitVisit(v, 3, false, true);
+        return;
+      }
+      UI.warnung = null;
+    }
 
     if (v > MAX_VISIT) { UI.error = 'Maximal ' + MAX_VISIT; UI.input = ''; render(); return; }
     if (IMPOSSIBLE[v]) { UI.error = v + ' ist mit 3 Darts nicht möglich'; UI.input = ''; render(); return; }
@@ -2401,6 +2420,8 @@
       for (var n = 1; n <= 3; n++) if (Checkout.possible(rest, n)) opts.push(n);
       if (!opts.length) { UI.error = 'Kein gültiges Finish auf Doppel'; UI.input = ''; render(); return; }
       UI.overlay = { type: 'checkout-darts', score: v, options: opts };
+      /* Ligaspiel: erst waehlen, dann "Leg bestaetigen" (Entwurf LsCheckout). */
+      if (lzEin) { UI.overlay.lz = true; UI.overlay.gew = opts.length === 1 ? opts[0] : null; }
       save();   // die offene Frage uebersteht einen Neustart
       render();
       return;
@@ -2448,24 +2469,33 @@
     }
     return { alle: alle, logisch: logisch, andere: alle.filter(function (d) { return logisch.indexOf(d) < 0; }) };
   }
-  /* Ohne Einzel-Darts im Ligaspiel wird nicht gefragt (der Schreiber ist
-     Schiedsrichter) - sonst ueberall: Turnier, Schnelles X01, Solo. */
+  /* Im Ligaspiel steuert die Einstellung "Finish-Anzeigen" die Frage
+     (Julius, 28.11.): mit Anzeigen wird nach dem Doppel gefragt, ohne
+     (ligakonform, der Schreiber ist Schiedsrichter) nicht - sonst
+     ueberall: Turnier, Schnelles X01, Solo. */
   function doppelFrageNoetig(m) {
     if (!m) return false;
-    if (m.kind !== 'quick' && S.tour && S.tour.liga) return false;
+    if (m.kind !== 'quick' && S.tour && S.tour.liga) return !!S.tour.liga.finish;
     return true;
   }
-  /* Nach "Mit wie vielen Darts?": das Doppel steht fest, wird erfragt oder
-     bleibt offen (Liga). */
-  function checkoutBuchen(score, n) {
+  /* Was nach "Mit wie vielen Darts?" kommt: das Doppel steht fest
+     (eindeutig), wird erfragt (frage) oder bleibt offen (offen). */
+  function checkoutPlan(n) {
     var m = currentMatch();
-    if (!m || m.done) return;
+    if (!m || m.done) return null;
     var leg = activeLeg(m), pid = activePlayer(leg, m);
     var rest = remainingIn(leg, pid);
     var k = doppelKandidaten(rest, n, finishFavoriten(finishGruppen(profile(pid))));
-    if (k.alle.length === 1) { commitVisit(score, n, true, false, null, k.alle[0]); return; }
-    if (!k.alle.length || !doppelFrageNoetig(m)) { commitVisit(score, n, true, false); return; }
-    UI.overlay = { type: 'checkout-doppel', score: score, n: n, rest: rest, logisch: k.logisch, andere: k.andere };
+    if (k.alle.length === 1) return { art: 'eindeutig', dd: k.alle[0], rest: rest, k: k };
+    if (!k.alle.length || !doppelFrageNoetig(m)) return { art: 'offen', rest: rest, k: k };
+    return { art: 'frage', rest: rest, k: k };
+  }
+  function checkoutBuchen(score, n) {
+    var p = checkoutPlan(n);
+    if (!p) return;
+    if (p.art === 'eindeutig') { commitVisit(score, n, true, false, null, p.dd); return; }
+    if (p.art === 'offen') { commitVisit(score, n, true, false); return; }
+    UI.overlay = { type: 'checkout-doppel', score: score, n: n, rest: p.rest, logisch: p.k.logisch, andere: p.k.andere };
     save(); render();
   }
   function doppelName(d) { return d === 25 ? 'Bull' : 'D' + d; }
@@ -2482,13 +2512,14 @@
            leerem Feld geht es die naechste Aufnahme zurueck. Nur fuer
            Aufnahmen, die als Punkte getippt wurden - nicht im Board-Modus. */
         var weg = undo();
+        UI.warnung = null;
         if (weg && !weg.k && !UI.turnier && !UI.darts.length) {
           UI.input = String(weg.b ? weg.o : weg.s);
           render();
         }
         return;
       }
-      klick(); UI.input = UI.input.slice(0, -1); render(); return;
+      klick(); UI.input = UI.input.slice(0, -1); UI.warnung = null; render(); return;
     }
     if (k === 'ok') {
       /* OK auf leerem Feld ist die No-Score-Aufnahme: 0 Punkte, drei
@@ -2499,8 +2530,13 @@
     var next = UI.input + k;
     if (next.length > 3) return;
     var val = parseInt(next, 10);
-    if (val > MAX_VISIT) { UI.error = 'Maximal ' + MAX_VISIT; render(); return; }
+    if (val > MAX_VISIT) {
+      /* Ligaspiel: die zu hohe Zahl bleibt rot stehen (Entwurf WarnHandZuHoch). */
+      if (lzAktiv() && S.screen === 'game' && !UI.darts.length) { tipp(); UI.input = String(val); lzWarnen('hoch', null); return; }
+      UI.error = 'Maximal ' + MAX_VISIT; render(); return;
+    }
     tipp();
+    UI.warnung = null;
     UI.input = String(val);
     /* Keine automatische Uebernahme mehr: jede Aufnahme wird mit OK
        bestaetigt - ein Vertipper bei der dritten Ziffer landete sonst sofort
@@ -5777,7 +5813,7 @@
      Zaehlen im Ligaspiel. Jedes Paket traegt nur in seiner Funktion ein,
      wann es gilt. */
   function hellAblauf() { return false; }
-  function hellZaehlen() { return false; }
+  function hellZaehlen() { return lzAktiv(); }
   function darstellungAnwenden() {
     var de = document.documentElement;
     var liga = !!($('screen-liga') && $('screen-liga').classList.contains('active'));
@@ -10069,10 +10105,468 @@
     setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
   }
 
+  /* ================= Ligaspiel: Zaehlen nach Entwurf (Redesign Nov. 2026) =================
+   * Nur im Ligaspiel (auch im Uebungs-Ligaspiel) zeichnet das X01 ein eigenes
+   * Spielbild (#lz-spiel): mit Tastatur zwei grosse Karten nebeneinander und
+   * unten die getippte Zahl, von Hand die Karten links untereinander und
+   * rechts der Ziffernblock. Dazu das Ausbullen mit "w.o. werten" und die
+   * Dialoge Checkout, Leg gewonnen, Ergebnis nach dem Einzel, Aufnahme
+   * korrigieren, Zwischenstand und Tastenbelegung. Farben ueber die Tokens
+   * --t-* (hell/dunkel). Normale Spiele, Turniere und Training zeichnen wie
+   * bisher - alles hier haengt an lzAktiv().
+   */
+  function lzAktiv() {
+    if (!S.tour || !S.tour.liga) return false;
+    if (S.screen !== 'game' && S.screen !== 'bulloff') return false;
+    if (S.screen === 'bulloff' && S.game && !S.game.started) return false;
+    var m = currentMatch();
+    return !!(m && m.kind !== 'quick' && S.matches.indexOf(m) >= 0);
+  }
+  /* Die Dialoge, die im Ligaspiel nach Entwurf gezeichnet werden. */
+  var LZ_DIALOGE = { 'checkout-darts': 1, 'checkout-doppel': 1, 'leg-done': 1, 'turnier-ende': 1, 'edit-visit': 1, 'team-stand': 1, 'lz-info': 1 };
+  function lzDialog(o) {
+    if (!o || !LZ_DIALOGE[o.type] || o.fin || o.kw) return false;
+    if (o.type === 'team-stand') return !!(S.tour && S.tour.liga);
+    return lzAktiv() && S.screen === 'game';
+  }
+  /* "TSV Oberpframmern" -> "Oberpframmern": im Kopf zaehlt der Ortsname. */
+  function lzTeamKurz(name) {
+    var n = String(name || '').trim();
+    return n.replace(/^(TSV|SV|FC|DC|SC|TV|ESV|SpVgg|DSC|SG|DV|1\.)\s+/i, '') || n;
+  }
+  function lzScheibe(m) { return m && m.scheibe ? 'Scheibe ' + String(m.scheibe).replace(/^S/, '') : ''; }
+  /* Schnitt des Einzels bis hierher (alle Legs), wie auf dem Bogen. */
+  function lzSchnitt(m, pid, plusPunkte, plusDarts) {
+    var pts = plusPunkte || 0, darts = plusDarts || 0;
+    m.legs.forEach(function (l) {
+      l.visits.forEach(function (v) { if (v.p !== pid) return; darts += v.d || 0; if (!v.b) pts += v.s || 0; });
+    });
+    return darts ? grossKomma(pts / darts * 3, 1) : '–';
+  }
+  /* Hoeher ist besser - ausser bei Darts und bestem Leg. Bei Gleichstand
+     leuchtet der Sieger. */
+  function lzBesser(a, b, kleinerBesser, siegerA) {
+    var x = parseFloat(String(a).replace(',', '.')), y = parseFloat(String(b).replace(',', '.'));
+    if (!isFinite(x) && !isFinite(y)) return siegerA;
+    if (!isFinite(x)) return false;
+    if (!isFinite(y)) return true;
+    if (x === y) return siegerA;
+    return kleinerBesser ? x < y : x > y;
+  }
+  var LZ_SVG = {
+    tastatur: '<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="14" rx="2"/><path d="M6 9h.1M10 9h.1M14 9h.1M18 9h.1M6 12h.1M10 12h.1M14 12h.1M18 12h.1M7 16h10"/></svg>',
+    info: '<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6"/><circle cx="12" cy="7.5" r=".5" fill="currentColor" stroke="none"/></svg>',
+    menue: '<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><circle cx="4.5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19.5" cy="12" r="1.8"/></svg>',
+    wechsel: '<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h14M14.5 4.5L18 8l-3.5 3.5M20 16H6M9.5 12.5L6 16l3.5 3.5"/></svg>',
+    loeschen: '<svg aria-hidden="true" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 5H9l-6 7 6 7h11a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/><path d="M12 9.5l5 5M17 9.5l-5 5"/></svg>',
+    warnung: '<svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 4.5c.8-1.4 2.6-1.4 3.4 0l8 14c.8 1.4-.1 2.5-1.7 2.5H4c-1.6 0-2.5-1.1-1.7-2.5Z"/><path d="M12 9v5"/><circle cx="12" cy="17" r="0.5"/></svg>',
+    checkout: '<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M7.5 12l3 3 6-7"/></svg>',
+    haken: '<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4 4 10-10"/></svg>',
+    pokal: '<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v8a4 4 0 0 1-8 0ZM8 6H4v3a4 4 0 0 0 4 4M16 6h4v3a4 4 0 0 1-4 4M12 16v4M8 20h8"/></svg>',
+    korrektur: '<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="12" height="15" rx="1"/><path d="M7 8h6M7 12h3M12 19l6-6 2 2-6 6-3 1 1-3Z"/></svg>',
+    pfeil: '<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5 7 7-7 7"/></svg>',
+    zurueck: '<svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 9H4V4"/><path d="M4 9c3-5 13-6 16 1.5 2.5 7-3 11-9 10"/></svg>',
+    fahne: '<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V3M5 4c5-3 9 3 14 0v11c-5 3-9-3-14 0"/></svg>',
+    bull: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>'
+  };
+
+  /* ---- Warnungen beim Tippen (Entwurf WarnZuHoch, WarnHandZuHoch, WarnUeberRest) ----
+     Die Zahl bleibt stehen (rot bzw. gelb) und wackelt kurz. Mehr als 180
+     und unmoegliche Summen bucht Enter nie; mehr als der Rest bucht erst
+     das zweite Enter (bzw. OK) als ueberworfen - der Rest bleibt dann wie
+     vor der Aufnahme. */
+  function lzWarnen(art, rest) {
+    var alt = UI.warnung;
+    var gleich = alt && alt.art === art && alt.wert === UI.input;
+    UI.warnung = { art: art, wert: UI.input, rest: rest, seit: gleich ? alt.seit : Date.now(), wackel: Date.now() };
+    UI.error = '';
+    render();
+  }
+  function lzWarnungJetzt() {
+    return UI.warnung && UI.warnung.wert === UI.input ? UI.warnung : null;
+  }
+  function lzMeldung(hand) {
+    var w = lzWarnungJetzt();
+    if (w && w.art === 'hoch') return { titel: 'Höchstens 180', text: hand ? 'Löschen und neu tippen' : 'Mehr geht mit drei Darts nicht. Löschen und neu tippen.', farbe: 'rot' };
+    if (w && w.art === 'unmoeglich') {
+      var andere = Object.keys(IMPOSSIBLE).map(Number).filter(function (z) { return String(z) !== w.wert; }).sort(function (a, b) { return a - b; });
+      return { titel: w.wert + ' ist nicht möglich', text: hand ? 'Mit drei Darts nicht zu werfen' : 'Mit drei Darts nicht zu werfen (wie ' + andere.join(', ') + ').', farbe: 'rot' };
+    }
+    if (w && w.art === 'rest') return { titel: 'Mehr als der Rest ' + w.rest, text: hand ? 'OK bucht als überworfen' : 'Enter bucht als überworfen, Löschen korrigiert.', farbe: 'gelb' };
+    if (UI.error) return { titel: UI.error, text: '', farbe: 'rot' };
+    return null;
+  }
+  function lzMeldungHtml(hand) {
+    var md = lzMeldung(hand);
+    return '<div class="lz-meldung' + (md ? ' ' + md.farbe : '') + '" role="alert">' +
+      (md ? '<b>' + esc(md.titel) + '</b>' + (md.text ? '<span>' + esc(md.text) + '</span>' : '') : '') + '</div>';
+  }
+  /* Die getippte Zahl, gross; leer steht nur der Strich. */
+  function lzTippHtml() {
+    var w = lzWarnungJetzt();
+    var md = lzMeldung(false);
+    var seit = w ? Date.now() - (w.wackel || 0) : 9999;
+    var wackel = w && seit >= 0 && seit < 450 ? ' wackelt" style="animation-delay:-' + seit + 'ms' : '';
+    return UI.input === ''
+      ? '<span class="lz-strich" aria-hidden="true"></span>'
+      : '<span class="lz-tipp' + (w && md ? ' ' + md.farbe : '') + wackel + '">' + esc(UI.input) + '</span>';
+  }
+
+  /* ---- Checkout im Ligaspiel (Entwurf LsCheckout, LsCheckout1, LsCheckout2) ----
+     Erst die Dartzahl waehlen, dann - nur mit Finish-Anzeigen und wenn das
+     Doppel nicht feststeht - das Doppel; "Leg bestaetigen" bucht. Ohne
+     Finish-Anzeigen (ligakonform) gibt es keine Doppel-Frage. */
+  function lzCoDarts(n) {
+    var o = UI.overlay;
+    if (!o || o.type !== 'checkout-darts' || o.options.indexOf(n) < 0) return;
+    var p = checkoutPlan(n);
+    if (!p) return;
+    if (p.art === 'frage') {
+      var alle = p.k.logisch.concat(p.k.andere);
+      UI.overlay = { type: 'checkout-doppel', lz: true, score: o.score, n: n, rest: p.rest, logisch: p.k.logisch, andere: p.k.andere, dp: alle[0], options: o.options };
+      save();
+    } else {
+      o.gew = n;
+    }
+    render();
+  }
+  function lzCoWeiter() {
+    var o = UI.overlay;
+    if (!o) return;
+    if (o.type === 'checkout-darts') {
+      if (!o.gew) return;
+      var p = checkoutPlan(o.gew);
+      if (p && p.art === 'frage') { lzCoDarts(o.gew); return; }
+      UI.overlay = null;
+      checkoutBuchen(o.score, o.gew);
+      return;
+    }
+    if (o.type === 'checkout-doppel') {
+      UI.overlay = null;
+      commitVisit(o.score, o.n, true, false, null, o.dp || null);
+    }
+  }
+  function lzCoZurueck() {
+    var o = UI.overlay;
+    if (!o || o.type !== 'checkout-doppel') return;
+    var opts = o.options;
+    if (!opts) { opts = []; for (var n = 1; n <= 3; n++) if (Checkout.possible(o.rest, n)) opts.push(n); }
+    UI.overlay = { type: 'checkout-darts', lz: true, score: o.score, options: opts, gew: o.n };
+    save(); render();
+  }
+  /* Tastatur: 1/2/3 wie ein Tipp, Pfeile waehlen, Enter bestaetigt,
+     Loeschen nimmt zurueck (bzw. fuehrt von der Doppel-Frage zur Dartzahl). */
+  function lzCheckoutTaste(ev, ov) {
+    var z = tasteZiffer(ev);
+    var pfeil = ev.key === 'ArrowLeft' || ev.key === 'ArrowRight' || ev.key === 'ArrowUp' || ev.key === 'ArrowDown' || ev.key === 'Tab';
+    var vor = ev.key === 'ArrowRight' || ev.key === 'ArrowDown' || ev.key === 'Tab';
+    if (ov.type === 'checkout-darts') {
+      if (z !== null) {
+        ev.preventDefault(); ev.stopImmediatePropagation();
+        var n = parseInt(z, 10);
+        if (n >= 1 && n <= 3 && ov.options.indexOf(n) >= 0) lzCoDarts(n);
+      } else if (pfeil) {
+        ev.preventDefault();
+        var i = ov.options.indexOf(ov.gew);
+        i = i < 0 ? 0 : vor ? (ev.key === 'Tab' ? (i + 1) % ov.options.length : Math.min(ov.options.length - 1, i + 1)) : Math.max(0, i - 1);
+        ov.gew = ov.options[i];
+        render();
+      } else if (ev.key === 'Enter' && !ev.eingabeGebucht) {
+        ev.preventDefault();
+        if (!ev.repeat) lzCoWeiter();
+      } else if (ev.key === 'Backspace') {
+        ev.preventDefault();
+        undo();
+      }
+      return;
+    }
+    var alle = ov.logisch.concat(ov.andere);
+    if (z !== null) { ev.preventDefault(); ev.stopImmediatePropagation(); }
+    else if (pfeil) {
+      ev.preventDefault();
+      var j = alle.indexOf(ov.dp);
+      j = j < 0 ? 0 : vor ? (j + 1) % alle.length : (j - 1 + alle.length) % alle.length;
+      ov.dp = alle[j];
+      render();
+    } else if (ev.key === 'Enter' && !ev.eingabeGebucht) {
+      ev.preventDefault();
+      if (!ev.repeat) lzCoWeiter();
+    } else if (ev.key === 'Backspace' || ev.key === 'Escape') {
+      ev.preventDefault(); ev.stopImmediatePropagation();
+      lzCoZurueck();
+    }
+  }
+
+  /* ---- Dialog-Huelle: oben die Leiste des Ligaspiels (nur Checkout, Leg,
+     Ergebnis), darunter der weichgezeichnete Spielstand und die Karte. ---- */
+  function lzKopfHtml(m) {
+    var lg = S.tour.liga, d = ligaStandDaten() || { wirP: 0, sieP: 0 };
+    var sub = lg.uebung ? 'Übungsspiel' : [lg.nr ? lg.nr + '. Spieltag' : '', kurzDatum(lg.tag)].filter(Boolean).join(' · ');
+    return '<header class="lz-ov-kopf">' +
+      '<span class="lz-ov-titel"><b>Ligaspiel</b>' + (sub ? '<small>' + esc(sub) + '</small>' : '') + '</span>' +
+      '<span class="lz-ov-teams"><span class="lz-ov-team">' + esc(LIGA.team) + '</span>' + teamLogoHtml(LIGA.team, 'lz-logo') +
+        '<b>' + d.wirP + ' : ' + d.sieP + '</b>' + teamLogoHtml(lg.gegner, 'lz-logo') + '<span class="lz-ov-team">' + esc(lg.gegner) + '</span></span>' +
+      '<span class="lz-ov-ort">' + esc([lg.ort, lzScheibe(m)].filter(Boolean).join(' · ')) + '</span>' +
+      '</header>';
+  }
+  function lzHuelle(inhalt, opt) {
+    return '<div class="lz-ov' + (opt.kopf ? ' mit-kopf' : '') + '">' + (opt.kopf ? lzKopfHtml(opt.m) : '') +
+      '<div class="lz-ov-flaeche">' +
+        '<div class="lz-schleier"' + (opt.zu ? ' data-action="ov-cancel" aria-hidden="true"' : ' aria-hidden="true"') + '></div>' +
+        '<div class="lz-dlg ' + opt.klasse + '"' + (opt.attr || '') + '>' + inhalt + '</div>' +
+      '</div></div>';
+  }
+  function lzWerteHtml(zeilen, nA, nB) {
+    return '<div class="lz-werte"><div class="lz-werte-kopf"><span>' + esc(nA) + '</span><span></span><span>' + esc(nB) + '</span></div>' +
+      zeilen.map(function (z) {
+        return '<div class="lz-wert-zeile"><b class="' + (z.besserA ? 'gut' : '') + '">' + z.a + '</b><span>' + z.t + '</span><b class="' + (z.besserA ? '' : 'gut') + '">' + z.b + '</b></div>';
+      }).join('') + '</div>';
+  }
+  function lzKurzName(pid) {
+    var t = String(ligaName(pid) || pname(pid)).trim().split(/\s+/);
+    return t.length > 1 ? t[0] + ' ' + t[t.length - 1].charAt(0) + '.' : t[0];
+  }
+
+  function lzCheckoutHtml(o) {
+    var m = currentMatch();
+    if (!m || m.done) return false;
+    var leg = activeLeg(m), pid = activePlayer(leg, m);
+    var s2 = o.type === 'checkout-doppel';
+    var mitFinish = !!S.tour.liga.finish;
+    var kopf = '<div class="lz-co-kopf"><span class="lz-marke gold">' + LZ_SVG.checkout + 'Checkout</span>' +
+      (s2 ? '<button type="button" class="lz-text" data-action="co-zurueck">Zurück</button>' : '') + '</div>' +
+      '<div class="lz-co-zahl"><b>' + o.score + '</b><span>zugemacht von <b>' + esc(ligaName(pid)) + '</b></span></div>';
+    var inhalt;
+    if (!s2) {
+      var frageBei = [];
+      var knoepfe = [1, 2, 3].map(function (n) {
+        var geht = o.options.indexOf(n) >= 0;
+        var plan = geht ? checkoutPlan(n) : null;
+        if (plan && plan.art === 'frage') frageBei.push(n);
+        var an = o.gew === n;
+        var txt = n === 1 ? 'Dart' : 'Darts';
+        if (plan && mitFinish) txt += plan.art === 'eindeutig' ? ', ' + doppelName(plan.dd) + ' ist klar' : plan.art === 'frage' ? ', dann Doppel wählen' : '';
+        return '<button type="button" class="lz-co-n' + (an ? ' an' : '') + '"' +
+          (geht ? ' data-action="co-darts" data-n="' + n + '" aria-pressed="' + an + '"' : ' disabled aria-disabled="true"') + '>' +
+          '<b>' + n + '</b><span>' + txt + '</span></button>';
+      }).join('');
+      var unten = '';
+      if (o.gew) {
+        var gp = checkoutPlan(o.gew);
+        var mit = o.gew === 1 ? 'einem Dart' : o.gew + ' Darts';
+        var satz = gp && gp.art === 'eindeutig' && mitFinish ? 'Auf <b>' + doppelName(gp.dd) + '</b>, mit ' + mit + ' eindeutig.' : 'Mit ' + mit + ' zugemacht.';
+        unten = '<div class="lz-co-fuss"><span class="lz-co-satz">' + satz + '</span>' +
+          '<button type="button" class="lz-ja" data-action="co-ok">Leg bestätigen</button></div>';
+      } else if (frageBei.length) {
+        unten = '<span class="lz-hinweis">Bei ' + frageBei.join(' oder ') + ' Darts folgt die Frage nach dem Doppel.</span>';
+      }
+      inhalt = '<h3 class="lz-frage">Mit wie vielen Darts?</h3><div class="lz-co-darts">' + knoepfe + '</div>' + unten;
+    } else {
+      var alle = o.logisch.concat(o.andere);
+      var top = alle.slice(0, 3), rest = alle.slice(3);
+      var dk = function (d, gross) {
+        var an = d === o.dp;
+        return '<button type="button" class="' + (gross ? 'lz-dp-gross' : 'lz-dp') + (an ? ' an' : '') + '" data-action="co-doppel" data-d="' + d + '" aria-pressed="' + an + '">' + doppelName(d) + '</button>';
+      };
+      inhalt = '<div class="lz-frage-zeile"><h3 class="lz-frage">Auf welchem Doppel?</h3><span>mit ' + plural(o.n, 'Dart', 'Darts') + '</span></div>' +
+        '<div class="lz-dp-top">' + top.map(function (d) { return dk(d, true); }).join('') + '</div>' +
+        (rest.length ? '<div class="lz-dp-rest">' + rest.map(function (d) { return dk(d, false); }).join('') + '</div>' : '') +
+        '<div class="lz-co-fuss"><button type="button" class="lz-text" data-action="co-doppel" data-d="0">Weiß nicht</button>' +
+        '<button type="button" class="lz-ja" data-action="co-ok">Leg bestätigen</button></div>';
+    }
+    return lzHuelle(kopf + inhalt, { kopf: true, m: m, klasse: 'lz-dlg-co' });
+  }
+
+  function lzLegHtml(o) {
+    var m = currentMatch();
+    if (!m) return false;
+    var ldLeg = m.legs.filter(function (l) { return l.winner; }).pop();
+    var sieger = o.pid, A = m.p[0], B = m.p[1];
+    var nr = S.matches.indexOf(m) + 1;
+    var legNr = ldLeg ? m.legs.indexOf(ldLeg) + 1 : m.legs.length;
+    var co = ldLeg ? ldLeg.visits.filter(function (v) { return v.c; }).pop() : null;
+    var dartsLeg = ldLeg ? dartsInLeg(ldLeg, sieger) : 0;
+    var teile = [];
+    if (co) {
+      /* Das Doppel nur, wenn es erfasst ist (erfragt, eindeutig oder als
+         Einzel-Dart) - die Punkte-Eingabe kennt sonst nur die Summe. */
+      var letzter = co.k && co.k.length ? co.k[co.k.length - 1] : null;
+      var dpl = co.dd ? doppelName(co.dd) : letzter && letzter.m === 2 ? doppelName(letzter.n) : '';
+      teile.push(co.s + ' Rest mit ' + plural(co.d, 'Dart', 'Darts') + (dpl ? ' auf ' + dpl : ''));
+    }
+    var hl = [];
+    if (dartsLeg && dartsLeg <= 21) hl.push('Shortleg');
+    if (co && co.s >= 100) hl.push('Highfinish');
+    if (dartsLeg) teile.push('Leg in ' + dartsLeg + ' Darts' + (hl.length ? ', das ist ein ' + hl.join(' und ein ') + ' für den Bogen' : '') + '.');
+    var st = ldLeg ? collectStats([{ matches: [{ p: m.p, legs: [ldLeg] }], start: matchStart(m) }], m.p) : null;
+    if (st) m.p.forEach(function (id) { finalize(st[id]); });
+    var w = function (id, f) { return st ? f(st[id]) : '–'; };
+    var siegerA = sieger === A;
+    var zeile = function (t, f, kleiner) {
+      var a = w(A, f), b = w(B, f);
+      return { t: t, a: a, b: b, besserA: lzBesser(a, b, kleiner, siegerA) };
+    };
+    var zeilen = [
+      zeile('Average', function (s) { return s.darts ? grossKomma(s.avg, 1) : '–'; }),
+      /* Die Darts zaehlen nur beim Sieger - der andere hat ja nicht ausgemacht. */
+      { t: 'Darts', a: w(A, function (s) { return s.darts || '–'; }), b: w(B, function (s) { return s.darts || '–'; }), besserA: siegerA },
+      zeile('Höchste Aufnahme', function (s) { return s.highScore || '–'; }),
+      zeile('Finish', function (s) { return s.highCO || '–'; })
+    ];
+    /* Das naechste Leg legt das Spielbild schon an (ensureLeg). */
+    var offen = m.legs[m.legs.length - 1];
+    var naechstesNr = offen && !offen.winner ? m.legs.length : m.legs.length + 1;
+    var sIdx = m.p.indexOf(m.starter); if (sIdx < 0) sIdx = 0;
+    var naechster = offen && !offen.winner ? offen.starter : m.p[(sIdx + m.legs.length) % m.p.length];
+    var wahl = (UI.turnier && turnierErlaubt()) || tastaturBetrieb() ? (o.wahl || 0) : -1;
+    var kl = function (i, grund) { return grund + (i === wahl ? ' wahl' : ''); };
+    var knoepfe = (legDoneUebersicht() ? '<button type="button" class="' + kl(2, 'lz-text') + '" data-action="to-tournament">Zur Übersicht</button>' : '') +
+      '<button type="button" class="' + kl(1, 'lz-text') + '" data-action="undo">Eingabe rückgängig</button>' +
+      '<button type="button" class="' + kl(0, 'lz-ja') + '" data-action="ov-next-leg">Nächstes Leg</button>';
+    var inhalt = '<span class="lz-marke blau">' + LZ_SVG.haken + 'Einzel ' + nr + ' · Leg ' + legNr + '</span>' +
+      '<div class="lz-leg-titel"><h3>Leg an ' + esc(lzKurzName(sieger)) + '</h3><b>' + legsWon(m, A) + ' : ' + legsWon(m, B) + '</b></div>' +
+      (teile.length ? '<p class="lz-leg-satz">' + esc(teile.join(' · ')) + '</p>' : '') +
+      lzWerteHtml(zeilen, lzKurzName(A), lzKurzName(B)) +
+      '<div class="lz-dlg-fuss"><span class="lz-leise">Leg ' + naechstesNr + ' wirft ' + esc(ligaName(naechster)) + ' an.</span>' +
+        '<div class="lz-knopfreihe">' + knoepfe + '</div></div>';
+    return lzHuelle(inhalt, { kopf: true, m: m, klasse: 'lz-dlg-leg' });
+  }
+
+  function lzEinzelHtml(o) {
+    var tm = matchById(o.id);
+    if (!tm || !tm.done || S.current !== o.id) return false;
+    var sieger = tm.winner, verlierer = tm.p[0] === sieger ? tm.p[1] : tm.p[0];
+    var st = collectStats([{ matches: [tm], start: matchStart(tm) }], tm.p);
+    tm.p.forEach(function (id) { finalize(st[id]); });
+    var A = tm.p[0], B = tm.p[1], siegerA = sieger === A;
+    var zeile = function (t, f, kleiner) {
+      var a = f(st[A]), b = f(st[B]);
+      return { t: t, a: a, b: b, besserA: lzBesser(a, b, kleiner, siegerA) };
+    };
+    var zeilen = [
+      zeile('Average', function (s) { return s.darts ? grossKomma(s.avg, 1) : '–'; }),
+      zeile('First 9', function (s) { return s.first9Darts ? grossKomma(s.first9, 1) : '–'; }),
+      zeile('180er', function (s) { return s.s180 || 0; }),
+      zeile('Höchstes Finish', function (s) { return s.highCO || '–'; }),
+      zeile('Bestes Leg', function (s) { return s.bestLeg ? s.bestLeg + ' D' : '–'; }, true)
+    ];
+    var legs = tm.legs.filter(function (l) { return l.winner; }).map(function (l, i) {
+      var gew = l.winner === sieger;
+      return '<span class="lz-leg-chip' + (gew ? ' gewonnen' : '') + '"><small>Leg ' + (i + 1) + '</small><b>' + (gew ? dartsInLeg(l, sieger) + ' D' : 'verloren') + '</b></span>';
+    }).join('');
+    var nr = S.matches.indexOf(tm) + 1;
+    var nx = planNaechstes();
+    var links = nx
+      ? '<span class="lz-leise">Laut Bogen frei für ' + esc(lzScheibe(nx) || 'diese Scheibe') + '</span><b>' + esc(ligaName(nx.p[0])) + ' gegen ' + esc(ligaName(nx.p[1])) + '</b>'
+      : !nextOpenMatch() ? '<b>Alle ' + S.matches.length + ' Einzel gespielt</b>' : '';
+    /* Dieselben Knoepfe wie bisher (Tastatur: te-knoepfe, ohne Ruecknahme
+       waehlbar) - im DOM die Hauptaktion zuerst, gezeigt von rechts. */
+    var kn = [];
+    if (!nextOpenMatch()) kn.push(['to-winner', 'Ergebnisse & Man of the Day']);
+    kn.push(['ende-uebersicht', 'Zur Übersicht']);
+    var tasten = (UI.turnier && turnierErlaubt()) || tastaturBetrieb();
+    var wahl = tasten ? Math.min(o.wahl || 0, kn.length - 1) : -1;
+    var knoepfe = kn.map(function (k, i) {
+      return '<button type="button" class="' + (i === 0 ? 'lz-ja' : 'lz-text') + (i === wahl ? ' wahl' : '') + '" data-action="' + k[0] + '">' + esc(k[1]) + '</button>';
+    }).join('') + '<button type="button" class="lz-text" data-action="undo">Letzte Aufnahme zurück</button>';
+    var inhalt = '<span class="lz-marke">Einzel ' + nr + ' · Runde ' + tm.round + (tm.scheibe ? ' · ' + esc(lzScheibe(tm)) : '') + '</span>' +
+      '<div class="lz-erg">' +
+        '<div class="lz-sieg">' +
+          '<span class="lz-sieg-marke">' + LZ_SVG.pokal + '<b>Sieg</b></span>' +
+          avatarHTML(profile(sieger), 'lz-av-gross') +
+          '<h3>' + esc(ligaName(sieger)) + '</h3>' +
+          '<b class="lz-sieg-stand">' + legsWon(tm, sieger) + ' : ' + legsWon(tm, verlierer) + '</b>' +
+          '<span class="lz-gegen">gegen ' + avatarHTML(profile(verlierer), 'lz-av-klein') + esc(ligaName(verlierer)) + '</span>' +
+          '<div class="lz-legs">' + legs + '</div>' +
+        '</div>' +
+        lzWerteHtml(zeilen, lzKurzName(A), lzKurzName(B)) +
+      '</div>' +
+      '<div class="lz-dlg-fuss"><span class="lz-naechstes">' + links + '</span><div class="lz-knopfreihe te-knoepfe">' + knoepfe + '</div></div>';
+    return lzHuelle(inhalt, { kopf: true, m: tm, klasse: 'lz-dlg-erg' });
+  }
+
+  function lzKorrekturHtml(o) {
+    var fehler = o.error || '';
+    var zuHoch = o.value !== '' && Number(o.value) > MAX_VISIT;
+    if (zuHoch && (!fehler || /^Maximal/.test(fehler))) fehler = 'Das wären ' + o.value + ' Punkte, mehr als ' + MAX_VISIT + '.';
+    var tasten = [1, 2, 3, 4, 5, 6, 7, 8, 9].map(function (n) { return '<button type="button" data-editkey="' + n + '">' + n + '</button>'; }).join('') +
+      '<button type="button" class="lz-ed-weg" data-editkey="del" aria-label="Löschen">' + LZ_SVG.zurueck + '</button>' +
+      '<button type="button" data-editkey="0">0</button>' +
+      '<button type="button" class="lz-ed-ok" data-editkey="ok">Übernehmen</button>';
+    var inhalt = '<span class="lz-ed-titel">' + LZ_SVG.korrektur + '<h3>Aufnahme korrigieren</h3></span>' +
+      '<p class="lz-ed-text">Eingetragen waren <b>' + o.old + '</b> Punkte für ' + esc(ligaName(o.pid)) + '.</p>' +
+      '<div class="lz-ed-wert"><s>' + o.old + '</s>' + LZ_SVG.pfeil + '<b>' + (o.value === '' ? '–' : esc(o.value)) + '</b></div>' +
+      (fehler ? '<p class="lz-ed-fehler" role="alert">' + esc(fehler) + '</p>' : '') +
+      '<div class="lz-ed-tasten">' + tasten + '</div>' +
+      '<button type="button" class="lz-text lz-mitte" data-action="ov-cancel">Abbrechen</button>';
+    return lzHuelle(inhalt, { kopf: false, zu: true, klasse: 'lz-dlg-ed' });
+  }
+
+  function lzStandHtml() {
+    var d = ligaStandDaten();
+    if (!d) return false;
+    var lg = S.tour.liga;
+    var laufend = S.matches.filter(function (m) {
+      return !m.done && !m.void && (m.id === S.current || m.belegtVon ||
+        m.legs.some(function (l) { return l.visits.length > 0; }));
+    });
+    var restVon = function (m, pid) {
+      var l = activeLeg(m);
+      return l && !l.winner ? remainingIn(l, pid) : '–';
+    };
+    var zeilen = laufend.map(function (m) {
+      return '<div class="lz-st-zeile">' +
+        '<span class="lz-st-sp"><span>' + esc(ligaName(m.p[0])) + '</span><b>' + restVon(m, m.p[0]) + '</b></span>' +
+        '<span class="lz-st-legs"><b>' + legsWon(m, m.p[0]) + ' : ' + legsWon(m, m.p[1]) + '</b><small>Legs</small></span>' +
+        '<span class="lz-st-sp rechts"><span>' + esc(ligaName(m.p[1])) + '</span><b>' + restVon(m, m.p[1]) + '</b></span>' +
+        '<span class="lz-st-sb">' + esc(m.scheibe || '') + '</span></div>';
+    }).join('');
+    var inhalt = '<h3 class="lz-marke lz-mitte">Zwischenstand</h3>' +
+      '<div class="lz-st-gross">' +
+        '<span class="lz-st-team">' + teamLogoHtml(LIGA.team, 'lz-logo-gross') + '<b>' + esc(LIGA.team) + '</b></span>' +
+        '<b class="lz-st-zahl">' + d.wirP + '<span> : </span>' + d.sieP + '</b>' +
+        '<span class="lz-st-team">' + teamLogoHtml(lg.gegner, 'lz-logo-gross') + '<b>' + esc(lg.gegner) + '</b></span>' +
+      '</div>' +
+      '<span class="lz-st-unter">Einzel ' + d.wirS + ':' + d.sieS + ' · Legs ' + d.wirL + ':' + d.sieL + ' · ' + d.fertige + ' von ' + S.matches.length + ' gespielt</span>' +
+      (zeilen ? '<div class="lz-st-laeuft"><span class="lz-marke"><i class="lz-puls"></i>Läuft gerade</span>' + zeilen + '</div>' : '') +
+      '<span class="lz-st-taste"><kbd>*</kbd>noch einmal, Enter oder Antippen schließt</span>';
+    return lzHuelle(inhalt, { kopf: false, zu: true, klasse: 'lz-dlg-st', attr: ' data-action="ov-cancel"' });
+  }
+
+  function lzInfoHtml() {
+    var T = [['0 bis 9', 'Punkte der Aufnahme tippen'], ['Enter', 'Aufnahme buchen, nach dem Leg: nächstes Leg'],
+      ['Löschen', 'Ziffer weg, bei leerem Feld letzte Aufnahme zurück'], ['1 · 2 · 3', 'Checkout: mit wie vielen Darts'],
+      ['−', 'Überworfen buchen'], ['Clear', 'Rest buchen: Rest 50, 8 tippen, Clear = 42 geworfen'],
+      ['Shift halten', 'Alle Würfe groß zeigen'], ['*', 'Teamstand groß ein und aus'],
+      ['Tab', 'Eingabe wechseln'], ['Esc', 'Tastatureingabe beenden']];
+    var inhalt = '<div class="lz-info-kopf"><h3>Zählen mit der Tastatur</h3><button type="button" class="lz-text" data-action="ov-cancel">Schließen (Esc)</button></div>' +
+      '<div class="lz-info-raster">' + T.map(function (t) { return '<div><kbd>' + t[0] + '</kbd><span>' + t[1] + '</span></div>'; }).join('') + '</div>' +
+      '<p class="lz-leise">Ziffernblock ohne Pfeiltasten: 8, 2, 4, 6 wählen in Dialogen hoch, runter, links, rechts. / wirkt wie Tab, + gedrückt halten zeigt alle Würfe.</p>';
+    return lzHuelle(inhalt, { kopf: false, zu: true, klasse: 'lz-dlg-info' });
+  }
+
+  function lzDialogHtml(o) {
+    if (o.type === 'checkout-darts' || o.type === 'checkout-doppel') return lzCheckoutHtml(o);
+    if (o.type === 'leg-done') return lzLegHtml(o);
+    if (o.type === 'turnier-ende') return lzEinzelHtml(o);
+    if (o.type === 'edit-visit') return lzKorrekturHtml(o);
+    if (o.type === 'team-stand') return lzStandHtml(o);
+    if (o.type === 'lz-info') return lzInfoHtml(o);
+    return null;
+  }
+
   function renderBullOff() {
     var forGame = S.game && !S.game.started;
     var ids = forGame ? S.game.players : (currentMatch() ? currentMatch().p : null);
     if (!ids) { S.screen = 'tournament'; render(); return; }
+    /* Ligaspiel (Entwurf LsAusbullen): Tokens hell/dunkel, unten die Tasten
+       und "Nicht da? w.o. werten". Ist das Einzel inzwischen gewertet
+       (w.o. oder nur das Ergebnis), geht es zurueck in die Uebersicht. */
+    var lzBo = lzAktiv();
+    $('screen-bulloff').classList.toggle('lz', lzBo);
+    var lzFuss = $('lz-bo-fuss');
+    if (lzFuss && lzFuss.innerHTML) lzFuss.innerHTML = '';
+    if (lzBo && currentMatch().done) { S.screen = 'tournament'; save(); render(); return; }
 
     /* Bei mehr als zwei Spielern gibt der Bull-Wurf nicht nur den Anfänger
        vor, sondern die ganze Reihenfolge. Links stehen alle Namen, rechts
@@ -10131,7 +10625,7 @@
 
     $('bulloff-sub').textContent = ids.length > 2
       ? 'Wer war am nächsten am Bull? Er beginnt, danach geht es reihum weiter.'
-      : 'Wer war näher am Bull? Antippen – der wirft an.';
+      : lzBo ? 'Wer war näher am Bull? Antippen, der wirft an.' : 'Wer war näher am Bull? Antippen – der wirft an.';
     /* Rechts oben der Zusammenhang: welches Spiel, welche Spielart. */
     var boM = forGame ? null : currentMatch();
     $('bulloff-ctx').textContent = forGame
@@ -10158,7 +10652,14 @@
         avatarHTML(profile(pid), 'md') + '<span>' + esc(ligaName && S.tour && S.tour.liga ? ligaName(pid) : pname(pid)) + '</span>' +
         '<em class="bo-tag">' + (i === bWahl ? 'wirft an' : 'antippen, wenn näher') + '</em></button>';
     }).join('') +
-      (amBoard || (S.tour && S.tour.liga) ? '<p class="te-hint"><b>4 / 6</b> wählen &nbsp;&nbsp; <b>Enter</b> der beginnt</p>' : '');
+      ((amBoard || (S.tour && S.tour.liga)) && !lzBo ? '<p class="te-hint"><b>4 / 6</b> wählen &nbsp;&nbsp; <b>Enter</b> der beginnt</p>' : '');
+    /* Im Ligaspiel: unten die Tasten und der Weg zur w.o.-Wertung (der
+       vorhandene Dialog "Kampflos werten"). */
+    if (lzBo && lzFuss && boM) {
+      lzFuss.innerHTML = '<span class="lz-bo-platz"></span>' +
+        '<p class="lz-bo-tasten"><span><b>4 / 6</b> wählen</span><span><b>Enter</b> der beginnt</span></p>' +
+        '<button type="button" class="lz-bo-wo" data-action="liga-kampflos" data-id="' + esc(boM.id) + '">' + LZ_SVG.fahne + 'Nicht da? w.o. werten</button>';
+    }
   }
 
   /* Wer nach dem Aktiven dran ist - fuer die Fernsteuerung (rechts der
@@ -10175,6 +10676,10 @@
     if (!m) { S.screen = 'tournament'; render(); return; }
     var leg = ensureLeg(m);
     if (!leg) { S.screen = 'tournament'; render(); return; }
+    /* Ligaspiel: eigenes Spielbild (#lz-spiel, siehe lzSpielZeichnen). */
+    var lzJetzt = lzAktiv();
+    $('screen-game').classList.toggle('lz', lzJetzt);
+    if (!lzJetzt && $('lz-spiel').innerHTML) { $('lz-spiel').innerHTML = ''; $('lz-spiel').className = 'lz-spiel'; }
 
     var active = m.done && m.winner ? m.winner : activePlayer(leg, m);
     var schnell = m.kind === 'quick';
@@ -10216,7 +10721,7 @@
         : plural(m.p.length, 'Spieler', 'Spieler') + ' · ' + matchStart(m) + ' DO';
     } else {
       var idx = S.matches.indexOf(m);
-      $('game-match-label').textContent = 'Spiel ' + (idx + 1) + ' von ' + S.matches.length;
+      $('game-match-label').textContent = (S.tour && S.tour.liga ? 'Einzel ' : 'Spiel ') + (idx + 1) + ' von ' + S.matches.length;
       subText = tour().bestOf > 1
         ? 'Leg ' + m.legs.length + ' · Stand ' + legsWon(m, m.p[0]) + ':' + legsWon(m, m.p[1]) + ' · ' + plural(legsToWin(), 'Leg', 'Legs') + ' zum Sieg'
         : 'Ein Leg · ' + tourStart() + ' Double Out';
@@ -10394,6 +10899,149 @@
       return zeilen.slice(-n).reverse().join('');
     };
 
+    /* Ligaspiel (Entwurf "Zaehlen", Nov. 2026): eigenes Spielbild in
+       #lz-spiel. Die alten Behaelter bleiben leer - sonst stuenden Tasten
+       und Karten doppelt im Dokument. */
+    if (lzAktiv()) { lzSpielZeichnen(); return; }
+
+    function lzSpielZeichnen() {
+      var box = $('lz-spiel');
+      ['scoreboard', 'quick-row', 'num-grid', 'key-hist-l', 'key-hist-r', 'key-display', 'history'].forEach(function (id) {
+        var e = $(id); if (e && e.innerHTML) e.innerHTML = '';
+      });
+      UI.letzterModus = mode;
+      $('screen-game').classList.toggle('turnier', mode === 'turnier');
+      if (mode !== 'turnier') $('screen-game').classList.remove('verlauf');
+      var hand = !fern;
+      var lg = S.tour.liga;
+      var nr = S.matches.indexOf(m) + 1;
+      var tsd = ligaStandDaten() || { wirP: 0, sieP: 0 };
+      var zeile = ['Einzel ' + nr + ' von ' + S.matches.length, lzScheibe(m), 'Best of ' + (tour().bestOf || 3), String(matchStart(m))]
+        .filter(Boolean).join(' · ');
+      var kopf = '<header class="lz-kopf">' +
+        '<span class="lz-zeile">' + esc(zeile) + '</span>' +
+        '<div class="lz-kopf-rechts">' +
+          '<button type="button" class="lz-stand" data-action="lz-stand" aria-label="Zwischenstand groß zeigen">' +
+            '<span class="lz-leise">' + esc(LIGA.team) + '</span> ' + tsd.wirP + ' : ' + tsd.sieP + ' <span class="lz-leise">' + esc(lzTeamKurz(lg.gegner)) + '</span></button>' +
+          '<div class="lz-knoepfe">' +
+            '<button type="button" class="lz-rund' + (fern ? ' an' : '') + '" data-action="game-fern" aria-pressed="' + fern + '" aria-label="' + (fern ? 'Tastatureingabe ist an' : 'Zur Tastatureingabe wechseln') + '">' + LZ_SVG.tastatur + '</button>' +
+            (hand ? '<button type="button" class="lz-rund leise" data-action="game-swap" aria-label="' + (anzeige === 'darts' ? 'Zur Punkte-Eingabe wechseln' : 'Zu den Einzel-Darts wechseln') + '">' + LZ_SVG.wechsel + '</button>' : '') +
+            '<button type="button" class="lz-rund leise" data-action="lz-info" aria-label="Tastenbelegung erklären">' + LZ_SVG.info + '</button>' +
+            '<button type="button" class="lz-rund leise" data-action="game-menu" aria-label="Menü">' + LZ_SVG.menue + '</button>' +
+          '</div>' +
+        '</div></header>';
+
+      /* Die letzten sechs Aufnahmen je Spieler (Liga-Vorschrift), die
+         juengste gross vorn. Kommt eine neue, rollt sie von links herein,
+         die anderen ruecken nach, die siebte verschwindet. */
+      function aufnahmenHtml(pid) {
+        var eigene = [];
+        leg.visits.forEach(function (v, i) { if (v.p === pid) eigene.push({ v: v, i: i }); });
+        var liste = eigene.slice(-7).reverse();
+        var frisch = eigene.length && eigene[eigene.length - 1].i === neuesteVisit && seitAufnahme >= 0 && seitAufnahme < 600;
+        var anim = function (n) { return frisch ? ' style="animation:lz' + n + ' .5s cubic-bezier(0.23,1,0.32,1) -' + seitAufnahme + 'ms both"' : ''; };
+        var zahl = function (x) { return x.v.b ? x.v.o : x.v.s; };
+        var kl = function (x) { return wieBust(x.v) ? ' bust' : x.v.c ? ' co' : ''; };
+        var neu = liste[0];
+        var neuHtml = '';
+        if (neu) {
+          var aenderbar = !neu.v.c && !m.done;
+          neuHtml = aenderbar
+            ? '<button type="button" class="lz-neu' + kl(neu) + '" data-action="edit-visit" data-i="' + neu.i + '" aria-label="Letzte Aufnahme ' + zahl(neu) + ' korrigieren"' + anim('Rein') + '>' + zahl(neu) + '</button>'
+            : '<span class="lz-neu' + kl(neu) + '"' + anim('Rein') + '>' + zahl(neu) + '</span>';
+        }
+        var alt = liste.slice(1, 6).map(function (x) { return '<span class="' + kl(x).trim() + '"' + anim('Schub') + '>' + zahl(x) + '</span>'; }).join('');
+        var geist = frisch && liste[6] ? '<span class="lz-geist" aria-hidden="true" style="animation:lzRaus .5s cubic-bezier(0.23,1,0.32,1) -' + seitAufnahme + 'ms both">' + zahl(liste[6]) + '</span>' : '';
+        return '<div class="lz-auf" role="group" aria-label="Letzte sechs Aufnahmen, die jüngste zuerst">' + neuHtml +
+          '<div class="lz-alt">' + alt + geist + '</div></div>';
+      }
+      /* Der Finish-Weg: nur mit Finish-Anzeigen. Beim Spieler am Wurf ist er
+         zugleich die Kurzeingabe (ein Tipp bucht das Finish), am Board sieht
+         auch der Wartende seinen Weg (abgedunkelt). In Einzel-Darts stehen
+         hier die drei Darts der Aufnahme. */
+      function wegHtml(pid, istAktiv) {
+        if (m.done) return '';
+        if (anzeige === 'darts' || (fern && UI.darts.length)) return istAktiv ? felderHTML(pid, true) : '';
+        var weg = null;
+        if (!ohneFinish) {
+          if (istAktiv) weg = route;
+          else if (fern) {
+            var wr = remainingIn(leg, pid);
+            weg = wr >= 2 ? Checkout.suggest(wr, 3, lieblingsDoppel(pid, x01Lage(m, leg, pid))) : null;
+          }
+        }
+        if (!weg) return '';
+        var felder = weg.map(function (d) { return '<span class="lz-feld">' + Checkout.pretty(d) + '</span>'; }).join('');
+        var text = weg.map(Checkout.pretty).join(' ');
+        return istAktiv
+          ? '<button type="button" class="lz-weg" data-action="finish-weg" data-weg="' + esc(weg.join(',')) + '" aria-label="Finish ' + esc(text) + ' getroffen">' + felder + '</button>'
+          : '<div class="lz-weg wartet" role="img" aria-label="Finish-Weg ' + esc(text) + '">' + felder + '</div>';
+      }
+      var karten = m.p.map(function (pid, ki) {
+        var istAktiv = pid === active && !m.done;
+        var rest = remainingIn(leg, pid) - (istAktiv ? pendingSum : 0);
+        var pos = m.posPaar ? (ki === 0 ? 'H' + (m.posPaar[0] + 1) : 'G' + (m.posPaar[1] + 1)) : '';
+        var schnitt = lzSchnitt(m, pid, istAktiv ? pendingSum : 0, istAktiv ? UI.darts.length : 0);
+        return '<section class="lz-karte' + (istAktiv || (m.done && pid === m.winner) ? ' aktiv' : '') + '" aria-label="' + esc(ligaName(pid)) + (istAktiv ? ', am Wurf' : '') + '">' +
+          '<div class="lz-k-name"><b>' + esc(lzKurzName(pid)) + '</b><span>' + esc(pos) + '</span></div>' +
+          '<div class="lz-k-werte"><div class="lz-wert"><b>' + legsWon(m, pid) + '</b><span>Legs</span></div>' +
+            '<div class="lz-wert"><b>' + schnitt + '</b><span>Schnitt</span></div></div>' +
+          '<span class="lz-rest">' + rest + '</span>' +
+          '<div class="lz-weg-zeile">' + wegHtml(pid, istAktiv) + '</div>' +
+          aufnahmenHtml(pid) +
+          '</section>';
+      });
+      var haupt, fuss = '';
+      if (fern) {
+        haupt = '<main class="lz-haupt">' + karten.join('') + '</main>';
+        fuss = '<footer class="lz-fuss">' + lzMeldungHtml(false) +
+          '<div class="lz-tipp-feld" role="status" aria-live="polite" aria-label="Getippte Zahl">' + lzTippHtml() + '</div><span></span></footer>';
+      } else {
+        var eingabe;
+        if (anzeige === 'darts') {
+          /* Einzel-Darts: dasselbe Raster wie sonst (Double/Triple-Schalter,
+             Bull, Bust, 1-20, Zurueck, 0, OK) - im Stil des Entwurfs. */
+          var hl = route ? route[0] : null;
+          var hlMult = hl ? (hl.charAt(0) === 'T' ? 3 : hl.charAt(0) === 'D' || hl === 'BULL' ? 2 : 1) : 0;
+          var hlNum = hl && hl !== 'BULL' && hl !== '25' && UI.mult === hlMult ? parseInt(hl.slice(1), 10) : null;
+          var prefix = UI.mult === 3 ? 'T' : UI.mult === 2 ? 'D' : '';
+          var bullHl = (hl === '25' && UI.mult === 1) || (hl === 'BULL' && UI.mult >= 2);
+          var nums = '<button class="mult' + (UI.mult === 2 ? ' active' : '') + '" data-mult="2" aria-pressed="' + (UI.mult === 2) + '">Double</button>' +
+            '<button class="mult' + (UI.mult === 3 ? ' active' : '') + '" data-mult="3" aria-pressed="' + (UI.mult === 3) + '">Triple</button>' +
+            '<button class="bull ' + (bullHl ? 'hl' : '') + '" data-num="25">' + (UI.mult >= 2 ? '<span class="mx">D</span>Bull' : 'Bull') + '</button>' +
+            '<button class="bust" data-action="bust-visit" aria-label="Aufnahme als Bust buchen">Bust</button>';
+          for (var dn = 1; dn <= 20; dn++) {
+            nums += '<button data-num="' + dn + '" class="' + (dn === hlNum ? 'hl' : '') + '">' + (prefix ? '<span class="mx">' + prefix + '</span>' : '') + dn + '</button>';
+          }
+          nums += '<button class="zurueck" data-action="undo" aria-label="Letzten Dart zurücknehmen">' + LZ_SVG.loeschen + '</button>' +
+            '<button class="miss" data-num="0" aria-label="Fehlwurf">0</button>' +
+            '<button class="end-visit" data-action="end-visit">OK</button>';
+          eingabe = '<div class="lz-eingabe lz-eingabe-darts">' + lzMeldungHtml(true) +
+            '<div class="num-grid lz-ziffern" role="group" aria-label="Einzel-Darts">' + nums + '</div></div>';
+        } else {
+          var qRest = m.done ? 0 : remainingIn(leg, active);
+          var tasten = [1, 2, 3, 4, 5, 6, 7, 8, 9].map(function (n) { return '<button type="button" data-key="' + n + '">' + n + '</button>'; }).join('') +
+            '<button type="button" class="lz-weg-taste" data-key="del" aria-label="Zurück, letzte Ziffer oder letzte Aufnahme">' + LZ_SVG.loeschen + '</button>' +
+            '<button type="button" data-key="0">0</button>' +
+            '<button type="button" class="lz-ok" data-key="ok">OK</button>';
+          eingabe = '<div class="lz-eingabe">' + lzMeldungHtml(true) +
+            '<div class="lz-tipp-feld" role="status" aria-live="polite" aria-label="Getippte Zahl">' + lzTippHtml() + '</div>' +
+            '<div class="lz-schnell" role="group" aria-label="Kurzwahl, bucht sofort">' + schnellReihe(qRest, 'bust-visit') + '</div>' +
+            '<div class="lz-tasten" role="group" aria-label="Zahlenfeld">' + tasten + '</div></div>';
+        }
+        haupt = '<main class="lz-haupt"><div class="lz-karten">' + karten.join('') + '</div>' + eingabe + '</main>';
+      }
+      /* Shift (oder +) gedrueckt halten: alle Wuerfe des Einzels gross. */
+      var verlauf = fern ? '<div class="lz-verlauf history" id="lz-verlauf">' + verlaufZweiHtml() + '</div>' : '';
+      /* Wechsel zwischen Tastatur und Hand: die neue Ansicht kommt herein
+         (Entwurf ZaehlenWechsel). */
+      var art = fern ? 'tast' : 'hand';
+      if (UI.lzArt && UI.lzArt !== art) UI.lzRein = art;
+      UI.lzArt = art;
+      box.className = 'lz-spiel lz-' + art + (anzeige === 'darts' ? ' lz-darts' : '') + (UI.lzRein ? ' lz-rein-' + UI.lzRein : '');
+      box.innerHTML = kopf + haupt + fuss + verlauf;
+    }
+
     $('scoreboard').classList.toggle('liga-namen', spielerName === ligaName);
     $('scoreboard').innerHTML = karten.map(function (pid, ki) {
       var istAktiv = pid === active;
@@ -10483,10 +11131,15 @@
           '<span class="r">' + (wieBust(v) ? 'Bust' + grund : 'Rest ' + e.rest) + '</span></div>';
       }).join('') + '</div>';
     } else {
-      /* Kompletter Match-Verlauf, neueste Aufnahme oben, mit Leg-Trennern.
-         Korrigieren lässt sich nur das laufende Leg – abgeschlossene Legs
-         stehen als Beleg da und würden sonst ihr Finish verlieren. */
-      $('history').innerHTML = m.p.map(function (pid) {
+      $('history').innerHTML = verlaufZweiHtml();
+    }
+
+    /* Kompletter Match-Verlauf zu zweit, neueste Aufnahme oben, mit
+       Leg-Trennern (auch fuer die Wurfliste des Ligaspiels, #lz-verlauf).
+       Korrigieren lässt sich nur das laufende Leg – abgeschlossene Legs
+       stehen als Beleg da und würden sonst ihr Finish verlieren. */
+    function verlaufZweiHtml() {
+      return m.p.map(function (pid) {
         var rows = [];
         for (var li = m.legs.length - 1; li >= 0; li--) {
           var lg = m.legs[li];
@@ -14350,7 +15003,7 @@
        Dort reicht der Fokus auf der Karte fuer Esc und Vorlese-Reihenfolge. */
     var touch = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || !!ligaTagVon(UI.overlay);   // Game Day: zeichnet sich nach, kein Feld vorab
     var ziel = touch ? null : karte.querySelector('input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])');
-    if (!ziel && !touch && !(PFEIL_DIALOGE[typ] || typ === 'checkout-darts')) {
+    if (!ziel && !touch && !(PFEIL_DIALOGE[typ] || typ === 'checkout-darts' || (typ === 'checkout-doppel' && UI.overlay && UI.overlay.lz))) {
       ziel = karte.querySelector('.btn.primary:not([disabled])') || karte.querySelector('button:not([disabled]), [role="button"], [tabindex="0"]');
     }
     if (!ziel) { karte.setAttribute('tabindex', '-1'); ziel = karte; }
@@ -14400,7 +15053,7 @@
 
   function renderOverlay() {
     var ov = $('overlay');
-    if (!UI.overlay) { ov.classList.add('hidden'); ov.classList.remove('gross', 'vollbild', 'match-ende', 'liga-tag'); dialogGeschlossen(); return; }
+    if (!UI.overlay) { ov.classList.add('hidden'); ov.classList.remove('gross', 'vollbild', 'match-ende', 'liga-tag', 'lz'); dialogGeschlossen(); return; }
     ov.classList.remove('hidden');
     /* Im Turnier-Modus sprechen auch die Dialoge Plakatsprache - der
        Schreiber steht vorn an der Scheibe, gelesen wird vom Oche aus. */
@@ -14414,8 +15067,17 @@
     ov.classList.toggle('bogen-breit', UI.overlay.type === 'liga-bericht-kurz');
     var o = UI.overlay;
     var html = '';
+    /* Ligaspiel: Checkout, Leg, Ergebnis, Korrektur, Zwischenstand und
+       Tastenbelegung nach Entwurf (lzDialogHtml) - statt Plakat-Vollbild. */
+    var lzDlg = lzDialog(o);
+    ov.classList.toggle('lz', lzDlg);
+    if (lzDlg) ov.classList.remove('gross', 'match-ende', 'vollbild', 'bogen', 'bogen-breit');
+    var lzHtml = lzDlg ? lzDialogHtml(o) : null;
+    if (lzHtml === false) { UI.overlay = null; ov.classList.add('hidden'); ov.classList.remove('lz'); return; }
 
-    if (o.type === 'checkout-darts') {
+    if (lzHtml !== null) {
+      html = lzHtml;
+    } else if (o.type === 'checkout-darts') {
       var coWahl = (UI.turnier && turnierErlaubt()) || (o.kw && UI.kwFern) ? Math.min(o.wahl || 0, o.options.length - 1) : -1;
       html = '<h3>Checkout!</h3><p>Mit wie vielen Darts wurde ' + o.score + ' beendet?</p>' +
         '<div class="row-btns">' + o.options.map(function (n, i) {
@@ -14447,7 +15109,9 @@
       if (!currentMatch()) { UI.overlay = null; ov.classList.add('hidden'); return; }
     }
 
-    if (o.type === 'turnier-ende') {
+    if (lzHtml !== null) {
+      /* schon gezeichnet (Ligaspiel) */
+    } else if (o.type === 'turnier-ende') {
       var tm = matchById(o.id);
       /* Wieder geoeffnet oder vom Server ersetzt: nichts mehr zu zeigen. */
       if (!tm || !tm.done || S.current !== o.id) { UI.overlay = null; ov.classList.add('hidden'); return; }
@@ -15366,7 +16030,7 @@
     dialogGeoeffnet(ov, karte, o);
     /* Mit Tastatur: in Dialogen ohne eigene Pfeil-Wahl gleich den
        Hauptknopf markieren, damit immer etwas sichtbar gewaehlt ist. */
-    if (document.body.classList.contains('tastatur') && !PFEIL_DIALOGE[o.type] && o.type !== 'checkout-darts' &&
+    if (document.body.classList.contains('tastatur') && !PFEIL_DIALOGE[o.type] && o.type !== 'checkout-darts' && !(lzDlg && o.type === 'checkout-doppel') &&
         !karte.contains(document.activeElement) && !karte.querySelector('input, select, textarea, canvas')) {
       var erster = karte.querySelector('.btn.primary') || karte.querySelector('button');
       if (erster) erster.focus({ preventScroll: true });
@@ -17125,7 +17789,7 @@
 
   /* Nach diesen Tipps erscheint sofort ein Spielfeld unter dem Finger –
      ein nachrutschender zweiter Tipp darf dort kein Wurf werden. */
-  var SETTLE_ACTIONS = { 'restart-game': 1, 'ov-next-leg': 1, 'co-darts': 1, 'co-doppel': 1 };
+  var SETTLE_ACTIONS = { 'restart-game': 1, 'ov-next-leg': 1, 'co-darts': 1, 'co-doppel': 1, 'co-ok': 1 };
 
   function handleAction(action, el) {
     var screenBefore = S.screen;
@@ -18502,6 +19166,8 @@
       }
       case 'co-darts': {
         if (!UI.overlay || UI.overlay.type !== 'checkout-darts') break;
+        /* Ligaspiel: waehlen, "Leg bestaetigen" bucht (bzw. folgt die Doppel-Frage). */
+        if (UI.overlay.lz) { if (el.blur) el.blur(); lzCoDarts(Number(el.getAttribute('data-n'))); break; }
         var n = Number(el.getAttribute('data-n'));
         var score = UI.overlay.score;
         if (el.blur) el.blur();   // sonst "klickt" ein spaeteres Enter den versteckten Knopf
@@ -18514,12 +19180,37 @@
       }
       case 'co-doppel': {
         if (!UI.overlay || UI.overlay.type !== 'checkout-doppel') break;
+        if (UI.overlay.lz) {
+          /* Ligaspiel: ein Doppel waehlen; "Weiß nicht" bucht ohne Doppel. */
+          var lzD = Number(el.getAttribute('data-d')) || 0;
+          if (el.blur) el.blur();
+          if (lzD) { UI.overlay.dp = lzD; render(); break; }
+          var lzO = UI.overlay;
+          UI.overlay = null;
+          commitVisit(lzO.score, lzO.n, true, false);
+          break;
+        }
         var cdO = UI.overlay, cdD = Number(el.getAttribute('data-d')) || 0;
         if (el.blur) el.blur();
         UI.overlay = null;
         commitVisit(cdO.score, cdO.n, true, false, null, cdD || null);
         break;
       }
+      case 'co-ok':
+        if (el && el.blur) el.blur();
+        lzCoWeiter();
+        break;
+      case 'co-zurueck':
+        lzCoZurueck();
+        break;
+      /* Ligaspiel: Tastenbelegung und Zwischenstand (auch per Tipp auf den Stand im Kopf). */
+      case 'lz-info':
+        UI.menu = false; UI.overlay = { type: 'lz-info' }; render();
+        break;
+      case 'lz-stand':
+        if (!S.tour || !S.tour.liga) break;
+        UI.menu = false; UI.overlay = { type: 'team-stand' }; render();
+        break;
       case 'fin-fern':
         UI.menu = false; UI.finFern = true; UI.input = ''; UI.error = '';
         save(); render();
@@ -19284,10 +19975,10 @@
   var CLICK_AKTIONEN = { 'finish-weg': 1, 'fin-finish-weg': 1, 'kw-finish-weg': 1, 'rtw-stechen': 1, 'fin-stechen': 1 };
   function spielTaste(ziel) {
     if (!ziel || !ziel.closest) return null;
-    return ziel.closest('.keypad button, .kw-keys button, [data-quick], .mult-row button, .num-grid button.mult, [data-bull], [data-num]');
+    return ziel.closest('.keypad button, .lz-tasten button, .kw-keys button, [data-quick], .mult-row button, .num-grid button.mult, [data-bull], [data-num]');
   }
   function spielTasteTipp(ziel) {
-    var key2 = ziel.closest('.keypad button, .kw-keys button');
+    var key2 = ziel.closest('.keypad button, .lz-tasten button, .kw-keys button');
     if (key2) { if (S.screen === 'kaiwen') kaiwenKey(key2.getAttribute('data-key')); else pressKey(key2.getAttribute('data-key')); return true; }
 
     var quick = ziel.closest('[data-quick]');
@@ -19744,7 +20435,7 @@
     /* In allen anderen Dialogen: Pfeile (und der Ziffernblock) wandern von
        Knopf zu Knopf - auch zu "Abbrechen" -, Enter drueckt den markierten.
        Dialoge mit eigener Pfeil-Wahl und Felder/Listen bleiben aussen vor. */
-    if (UI.overlay && !PFEIL_DIALOGE[UI.overlay.type] && UI.overlay.type !== 'checkout-darts' &&
+    if (UI.overlay && !PFEIL_DIALOGE[UI.overlay.type] && UI.overlay.type !== 'checkout-darts' && !(UI.overlay.lz && UI.overlay.type === 'checkout-doppel') &&
         (ev.key === 'ArrowDown' || ev.key === 'ArrowUp' || ev.key === 'ArrowLeft' || ev.key === 'ArrowRight' || (ev.key === 'Tab' && !ev.isTrusted)) &&
         !(ev.target && ev.target.closest && ev.target.closest('input, select, textarea'))) {
       var oKnoepfe = Array.prototype.filter.call(
@@ -19848,8 +20539,10 @@
     if (zTurnier !== null) {
       if (UI.input.length < 3) {
         UI.input = UI.input === '0' ? zTurnier : UI.input + zTurnier;
-        UI.error = '';
-        render();
+        UI.error = ''; UI.warnung = null;
+        /* Ligaspiel: mehr als 180 steht gleich rot da. */
+        if (lzAktiv() && parseInt(UI.input, 10) > MAX_VISIT) lzWarnen('hoch', null);
+        else render();
       }
       ev.preventDefault();
     } else if (ev.key === 'Enter') {
@@ -19861,7 +20554,7 @@
     } else if (ev.key === 'Backspace') {
       /* Erst Ziffern löschen, im leeren Zustand die letzte Aufnahme – so
          korrigiert man vom Board aus ohne Maus bis zum vorigen Spieler. */
-      if (UI.input) { klick(); UI.input = UI.input.slice(0, -1); UI.error = ''; render(); }
+      if (UI.input) { klick(); UI.input = UI.input.slice(0, -1); UI.error = ''; UI.warnung = null; render(); }
       else undo();
       ev.preventDefault();
     }
@@ -20025,8 +20718,14 @@
      seiner Seite, alle Legs mit Trennern. Loslassen führt zurück in die
      Spielansicht; verliert das Fenster den Fokus (Alt-Tab), klappt die
      Ansicht ebenfalls zu, sonst bliebe sie hängen. */
-  /* "*" am Ziffernblock: Team-Zwischenstand gross ein- und wieder ausblenden. */
+  /* "*" am Ziffernblock: Team-Zwischenstand gross ein- und wieder ausblenden.
+     Im Ligaspiel schliesst ihn auch Enter (der Entwurf hat keinen Knopf). */
   document.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Enter' && UI.overlay && UI.overlay.type === 'team-stand' && lzDialog(UI.overlay)) {
+      ev.preventDefault(); ev.stopImmediatePropagation();
+      UI.overlay = null; render();
+      return;
+    }
     if (!(ev.key === '*' || ev.code === 'NumpadMultiply')) return;
     if (!S.tour || !S.tour.liga || (S.screen !== 'game' && S.screen !== 'tournament')) return;
     var at = document.activeElement;
@@ -20081,6 +20780,8 @@
        andere gehoert dem X01-Spielbild. */
     if (S.screen !== 'game' && !(S.screen === 'finisher' && UI.overlay.fin) && !(S.screen === 'kaiwen' && UI.overlay.kw)) return;
     var ov = UI.overlay;
+    /* Ligaspiel: eigener Ablauf der Checkout-Frage (lzCheckoutTaste). */
+    if (ov.lz && (ov.type === 'checkout-darts' || ov.type === 'checkout-doppel')) { lzCheckoutTaste(ev, ov); return; }
     /* Ziffer im Leg-Ende-Dialog: weiter zum naechsten Leg, und die Ziffer
        beginnt dort gleich die Aufnahme (Turnier-Modus). Nach Spielende wird
        eine Ziffer nur geschluckt - nie zu einer Ruecknahme. */
@@ -20146,7 +20847,10 @@
         save(); render();
       }
     } else if (ov.type === 'turnier-ende') {
-      var teKn = document.querySelectorAll('#overlay-card .te-knoepfe .btn[data-action]:not([data-action="undo"])');
+      var teKn = document.querySelectorAll('#overlay-card .te-knoepfe [data-action]:not([data-action="undo"])');
+      /* Im Ligaspiel stehen die Knoepfe nebeneinander, die Hauptaktion rechts:
+         dort fuehrt links (wie runter) zur naechsten Wahl. */
+      var teLz = lzDialog(ov);
       var teW = Math.min(ov.wahl || 0, teKn.length - 1);
       if (ev.key === 'Enter') {
         ev.preventDefault();
@@ -20156,7 +20860,7 @@
         if (teZiel) handleAction(teZiel.getAttribute('data-action'), teZiel);
       } else if (ev.key === 'ArrowDown' || ev.key === 'ArrowRight' || ev.key === 'ArrowUp' || ev.key === 'ArrowLeft' || ev.key === 'Tab') {
         ov.wahl = ev.key === 'Tab' ? (teW + 1) % teKn.length
-          : ev.key === 'ArrowDown' || ev.key === 'ArrowRight' ? Math.min(teW + 1, teKn.length - 1) : Math.max(teW - 1, 0);
+          : ev.key === 'ArrowDown' || ev.key === (teLz ? 'ArrowLeft' : 'ArrowRight') ? Math.min(teW + 1, teKn.length - 1) : Math.max(teW - 1, 0);
         render(); ev.preventDefault();
       } else if (ev.key === 'Backspace') {
         undo(); ev.preventDefault();
@@ -20189,8 +20893,11 @@
       var ldW = Math.min(ov.wahl || 0, ldN - 1);
       if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp' ||
           ev.key === 'ArrowRight' || ev.key === 'ArrowLeft' || ev.key === 'Tab') {
+        /* Ligaspiel: die Knoepfe stehen nebeneinander, "Nächstes Leg" rechts -
+           links (wie runter) fuehrt zur Ruecknahme und weiter zur Uebersicht. */
+        var ldLz = lzDialog(ov);
         ov.wahl = ev.key === 'Tab' ? (ldW + 1) % ldN
-          : (ev.key === 'ArrowDown' || ev.key === 'ArrowRight') ? Math.min(ldN - 1, ldW + 1) : Math.max(0, ldW - 1);
+          : (ev.key === 'ArrowDown' || ev.key === (ldLz ? 'ArrowLeft' : 'ArrowRight')) ? Math.min(ldN - 1, ldW + 1) : Math.max(0, ldW - 1);
         render(); ev.preventDefault();
       } else if (ev.key === 'Enter' && !imDialog) {
         ev.preventDefault();
@@ -20357,7 +21064,7 @@
     }
     if (!bereich) return;
     /* Dialoge nach Leg und Spiel waehlen selbst; die Spielbilder ebenso. */
-    if (UI.overlay && (PFEIL_DIALOGE[UI.overlay.type] || UI.overlay.type === 'checkout-darts')) return;
+    if (UI.overlay && (PFEIL_DIALOGE[UI.overlay.type] || UI.overlay.type === 'checkout-darts' || (UI.overlay.lz && UI.overlay.type === 'checkout-doppel'))) return;
     if (istPfeil) {
       if (imFeld) {
         /* Im Textfeld bewegen links/rechts die Schreibmarke, in einer

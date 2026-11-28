@@ -81,6 +81,8 @@ const textKlein = async (sel) => (await $(sel).innerText()).toLowerCase();
 async function coDarts() {
   await page.locator('#overlay-card [data-action="co-darts"]').first().click();
   if (await page.locator('#overlay-card [data-action="co-doppel"]').count()) await page.locator('#overlay-card [data-action="co-doppel"]').first().click();
+  /* Im Ligaspiel (Entwurf LsCheckout) bucht erst "Leg bestätigen". */
+  if (await page.locator('#overlay-card [data-action="co-ok"]').count()) await page.locator('#overlay-card [data-action="co-ok"]').click();
 }
 /* Der Statistik-Reiter der Liga-Seite zeigt die Liga-Statistik (Liga › Statistik). */
 async function ligaStatistik() {
@@ -113,31 +115,46 @@ async function profilOeffnen(sel) {
 }
 const tapText = async (t, scope = 'body') => { await page.locator(`${scope} >> text="${t}"`).first().click(); };
 
-/* Punkte über das Zahlenfeld eingeben (wie am Handy getippt). */
+/* Punkte über das Zahlenfeld eingeben (wie am Handy getippt). Im
+   Ligaspiel steht das Zahlenfeld im eigenen Spielbild (#lz-spiel). */
+const lzAn = async () => (await page.locator('#screen-game.lz.active').count()) > 0;
 async function typeScore(n) {
-  for (const c of String(n)) await page.locator(`.keypad button[data-key="${c}"]`).click();
+  const pad = (await lzAn()) ? '#lz-spiel .lz-tasten' : '.keypad';
+  for (const c of String(n)) await page.locator(`${pad} button[data-key="${c}"]`).click();
   /* Jede Aufnahme wird mit OK bestaetigt -- keine automatische Uebernahme. */
-  await page.locator('.keypad button[data-key="ok"]').click();
+  await page.locator(`${pad} button[data-key="ok"]`).click();
 }
 /* Double und Triple sind Schalter im Zahlenfeld: Tipp an, nochmal Tipp aus
    (keiner an heisst Single). */
+const dartsRaster = async () => ((await lzAn()) ? '#lz-spiel .lz-ziffern' : '#num-grid');
 async function setMult(mult) {
   const ist = await page.evaluate(() => window.__dart.ui().mult);
   if (ist === mult) return;
-  if (mult === 1) await page.locator(`#num-grid button.mult[data-mult="${ist}"]`).click();
-  else await page.locator(`#num-grid button.mult[data-mult="${mult}"]`).click();
+  const g = await dartsRaster();
+  if (mult === 1) await page.locator(`${g} button.mult[data-mult="${ist}"]`).click();
+  else await page.locator(`${g} button.mult[data-mult="${mult}"]`).click();
 }
 async function dart(label) {
+  const g = await dartsRaster();
   /* D Bull: Double an, dann die Bull-Taste (sie zeigt dann "D Bull"). */
-  if (label === 'BULL') { await setMult(2); return page.locator('#num-grid button[data-num="25"]').click(); }
+  if (label === 'BULL') { await setMult(2); return page.locator(`${g} button[data-num="25"]`).click(); }
   const mult = label[0] === 'T' ? 3 : label[0] === 'D' ? 2 : 1;
   const num = parseInt(label.replace(/^[TDS]/, ''), 10);
   await setMult(mult);
-  await page.locator(`#num-grid button[data-num="${num}"]`).click();
+  await page.locator(`${g} button[data-num="${num}"]`).click();
 }
 /* Eingabemodus ueber die Kopf-Knoepfe: ⌨ schaltet die Fernsteuerung, ⇄
    wechselt zwischen Punkten und Einzel-Darts. */
 async function modus(ziel) {
+  /* Ligaspiel: eigenes Spielbild, die Knoepfe stehen in seinem Kopf. */
+  if (await lzAn()) {
+    const tast = async () => (await page.locator('#lz-spiel.lz-tast').count()) > 0;
+    if (ziel === 'turnier') { if (!(await tast())) await page.locator('#lz-spiel [data-action="game-fern"]').click(); return; }
+    if (await tast()) await page.locator('#lz-spiel [data-action="game-fern"]').click();
+    const lzIst = (await page.locator('#lz-spiel.lz-darts').count()) ? 'darts' : 'total';
+    if (lzIst !== ziel) await page.locator('#lz-spiel [data-action="game-swap"]').click();
+    return;
+  }
   if (ziel === 'turnier') { if (!(await visible('#pad-key'))) await page.locator('#game-fern').click(); return; }
   if (await visible('#pad-key')) await page.locator('#game-fern').click();
   const ist = (await visible('#pad-darts')) ? 'darts' : 'total';
@@ -145,10 +162,10 @@ async function modus(ziel) {
 }
 /* Spiel verlassen geht ueber das Menue (•••). */
 async function spielVerlassen() {
-  await page.locator('#game-menu').click();
+  await page.locator((await lzAn()) ? '#lz-spiel [data-action="game-menu"]' : '#game-menu').click();
   await page.locator('#game-menu-overlay [data-action="to-tournament"]').click();
 }
-const rest = (i) => page.locator('.pcard').nth(i).locator('.rest').innerText();
+const rest = (i) => page.locator('.pcard, .lz-karte').nth(i).locator('.rest, .lz-rest').innerText();
 const st = () => page.evaluate(() => window.__dart.standings());
 /* GAME ON steht auf der Spieltag-Karte nur am Spieltag selbst (Handy-Block 2):
    zum Start eines Ligaspiels stellt der Test den Stichtag auf den gewaehlten
@@ -2554,52 +2571,54 @@ check('das Ligaspiel steht', await visible('#screen-tournament'));
 await page.locator('#schedule .match-row .go:not(.wo)').first().click();
 check('das Liga-Einzel beginnt mit dem Ausbullen (SWO 10/2026)', await visible('#screen-bulloff'));
 await ligaAusbullen();
-check('das Einzel oeffnet mit Wechsel- und Fernsteuerungs-Knopf', (await visible('#game-swap')) && (await visible('#game-fern')));
+check('das Einzel oeffnet im Spielbild des Ligaspiels mit Wechsel- und Tastatur-Knopf', (await visible('#lz-spiel [data-action="game-swap"]')) && (await visible('#lz-spiel [data-action="game-fern"]')));
 await modus('turnier');
-check('Tastatur-Feld sichtbar', await visible('#pad-key'));
-check('Zahlenfeld und Einzel-Darts weg', !(await visible('#pad-total')) && !(await visible('#pad-darts')));
-check('der Wechsel-Knopf ist weg, die Fernsteuerung leuchtet - Esc fuehrt zurueck',
-  !(await visible('#game-swap')) && await page.locator('#game-fern').evaluate((e) => e.classList.contains('an')));
-check('Verlauf ausgeblendet', !(await page.locator('#history').isVisible()));
+check('Tastatur-Ansicht sichtbar', await visible('#lz-spiel.lz-tast .lz-fuss .lz-tipp-feld'));
+check('Zahlenfeld und Einzel-Darts weg', !(await visible('#lz-spiel .lz-tasten')) && !(await visible('#lz-spiel .lz-ziffern')));
+check('der Wechsel-Knopf ist weg, die Tastatur leuchtet - Esc fuehrt zurueck',
+  (await page.locator('#lz-spiel [data-action="game-swap"]').count()) === 0 && await page.locator('#lz-spiel [data-action="game-fern"]').evaluate((e) => e.classList.contains('an') && e.getAttribute('aria-pressed') === 'true'));
+check('Verlauf ausgeblendet', !(await page.locator('#lz-verlauf').isVisible()));
 check('keine mittlere Finish-Leiste - der Finish steht im Spielerfeld',
   (await page.locator('#checkout-bar').count()) === 0);
-check('wer nicht dran ist, tritt leicht zurueck', await page.evaluate(() => {
-  const o = parseFloat(getComputedStyle(document.querySelector('.pcard:not(.active)')).opacity);
-  return o >= 0.79 && o < 1;
+check('wer nicht dran ist, tritt zurueck (ohne Flaeche, leise Schrift)', await page.evaluate(() => {
+  const a = document.querySelector('.lz-karte.aktiv'), w = document.querySelector('.lz-karte:not(.aktiv)');
+  return getComputedStyle(w).backgroundColor === 'rgba(0, 0, 0, 0)' && getComputedStyle(a).backgroundColor !== 'rgba(0, 0, 0, 0)' &&
+    getComputedStyle(w.querySelector('.lz-rest')).color !== getComputedStyle(a.querySelector('.lz-rest')).color;
 }));
-check('Rest steht in Plakatgroesse', await page.locator('.pcard .rest').first()
+check('Rest steht in Plakatgroesse', await page.locator('.lz-karte .lz-rest').first()
   .evaluate((e) => parseFloat(getComputedStyle(e).fontSize) > 60));
 check('die Eingabe-Anzeige steht bereit (kein echtes Feld, keine iPad-Leiste)',
-  (await visible('#key-display')) &&
-  (await page.evaluate(() => !document.querySelector('#pad-key input'))));
+  (await visible('#lz-spiel .lz-fuss .lz-tipp-feld')) &&
+  (await page.evaluate(() => !document.querySelector('#lz-spiel input'))));
 check('kein Ruecknahme-Knopf im Kopf - zurueck geht ueber Loeschen',
-  (await page.locator('#screen-game .game-header [data-action="undo"]').count()) === 0);
+  (await page.locator('#lz-spiel .lz-kopf [data-action="undo"]').count()) === 0);
 check('die Seite fuellt genau den Bildschirm, nichts scrollt',
   await page.evaluate(() => document.documentElement.scrollHeight <= window.innerHeight + 1));
 
 /* Eintippen wie am Liga-Abend: Zahl, Enter. Es wirft der Heimspieler an. */
-check('leer steht nur der blaue Eingabestrich',
-  (await page.locator('#key-display .cursor').count()) === 1);
+check('leer steht nur der Eingabestrich',
+  (await page.locator('#lz-spiel .lz-fuss .lz-strich').count()) === 1);
 await page.keyboard.type('60');
-check('die Anzeige zeigt gross, was getippt wurde', (await text('#key-display')).trim() === '60');
+check('die Anzeige zeigt gross, was getippt wurde', (await text('#lz-spiel .lz-fuss .lz-tipp')).trim() === '60');
 check('und der Strich ist beim Tippen weg',
-  (await page.locator('#key-display .cursor').count()) === 0);
+  (await page.locator('#lz-spiel .lz-strich').count()) === 0);
 await page.keyboard.press('Enter');
 check('Aufnahme gebucht: 501 - 60 = 441', (await rest(0)) === '441', await rest(0));
-check('die Karte zeigt Schnitt, Siege und Darts', await page.evaluate(() => {
-  const t = document.getElementById('scoreboard').innerText;
-  return t.includes('\u00d8') && t.includes('Siege') && t.includes('Darts');
+check('die Karte zeigt Legs und Schnitt (Entwurf)', await page.evaluate(() => {
+  const t = document.querySelector('#lz-spiel .lz-karte').innerText.toLowerCase();
+  return t.includes('legs') && t.includes('schnitt') && t.includes('h1');
 }));
 /* Fernsteuerung: die Karten bleiben stehen - links der Heimspieler mit
    seiner 60 neben dem Rest, die Markierung wandert zum Gast rechts. Die
    Liste unter dem Heimspieler zeigt nur die Aufnahmen davor - noch keine. */
-check('die Karten bleiben stehen: links Heim, rechts wirft jetzt der Gast - kein Drehrad neben dem Rest', await page.evaluate(() => {
-  const k = document.querySelectorAll('#scoreboard .pcard');
-  return k.length === 2 && !k[0].classList.contains('active') && k[1].classList.contains('active') &&
-    !k[0].querySelector('.letzte') && !k[1].querySelector('.letzte');
+check('die Karten bleiben stehen: links Heim, rechts wirft jetzt der Gast - nichts neben dem Rest', await page.evaluate(() => {
+  const k = document.querySelectorAll('#lz-spiel .lz-karte');
+  return k.length === 2 && !k[0].classList.contains('aktiv') && k[1].classList.contains('aktiv') &&
+    k[0].querySelector('.lz-rest').nextElementSibling.classList.contains('lz-weg-zeile');
 }));
-check('die Liste unter dem Heimspieler zeigt seine 60 (die letzten sechs, inklusive der letzten)',
-  (await text('#key-hist-l')).includes('60') && (await text('#key-hist-l')).includes('Rest 441'));
+check('unter dem Heimspieler steht seine 60 als juengste der letzten sechs Aufnahmen',
+  await page.evaluate(() => document.querySelector('#lz-spiel .lz-karte .lz-auf .lz-neu').textContent === '60' &&
+    !document.querySelectorAll('#lz-spiel .lz-karte')[1].querySelector('.lz-neu')));
 check('keine Sechzig-Feier im Ligaspiel - auch nicht am Board', await page.evaluate(() =>
   !document.getElementById('feier').classList.contains('an')));
 
@@ -2607,58 +2626,61 @@ check('keine Sechzig-Feier im Ligaspiel - auch nicht am Board', await page.evalu
 await page.keyboard.press('Backspace');
 check('leeres Feld + Loeschen nimmt die Aufnahme zurueck', (await rest(0)) === '501', await rest(0));
 
-/* Unmoegliche Aufnahme: Fehler erscheint unter dem Feld. */
+/* Unmoegliche Aufnahme: die Zahl bleibt rot stehen, daneben die Meldung
+   (Entwurf Warnungen) - Loeschen und neu tippen. */
 await page.keyboard.type('179');
 await page.keyboard.press('Enter');
-check('unmoegliche Zahl wird abgewiesen', (await text('#key-error')).includes('nicht möglich'));
+check('unmoegliche Zahl wird abgewiesen', (await text('#lz-spiel .lz-meldung')).includes('nicht möglich') &&
+  await page.evaluate(() => window.__dart.ui().input === '179' && window.__dart.activeLeg(window.__dart.currentMatch()).visits.length === 0));
+for (let i = 0; i < 3; i++) await page.keyboard.press('Backspace');
 
 await page.keyboard.type('45');
 await page.keyboard.press('Enter');
-check('der Modus bleibt nach der Aufnahme an', await visible('#pad-key'));
+check('der Modus bleibt nach der Aufnahme an', await visible('#lz-spiel.lz-tast'));
 check('45 gebucht', (await rest(0)) === '456', await rest(0));
 
 /* Shift gedrueckt halten: die Wurfliste, je Spieler auf seiner Seite. */
 await page.keyboard.down('Shift');
-check('Shift zeigt die Wurfliste', await page.locator('#history').isVisible());
-check('mit den Aufnahmen beider Seiten', (await page.locator('#history .col').count()) === 2);
+check('Shift zeigt die Wurfliste', await page.locator('#lz-verlauf').isVisible());
+check('mit den Aufnahmen beider Seiten', (await page.locator('#lz-verlauf .col').count()) === 2);
 await page.keyboard.up('Shift');
-check('Loslassen fuehrt in die Spielansicht zurueck', !(await page.locator('#history').isVisible()));
+check('Loslassen fuehrt in die Spielansicht zurueck', !(await page.locator('#lz-verlauf').isVisible()));
 
 /* Zurueck in den normalen Modus: Tab - und ohne Esc-Taste (Magic Keyboard
    am iPad) geht auch Cmd+. als Apple-Escape. */
 await page.keyboard.press('Tab');
-check('Tab fuehrt in den normalen Modus zurueck', await visible('#pad-total'));
+check('Tab fuehrt in den normalen Modus zurueck', await visible('#lz-spiel .lz-tasten'));
 await modus('turnier');
 await page.keyboard.press('Meta+.');
-check('Cmd+. beendet den Turnier-Modus ebenfalls', await visible('#pad-total'));
+check('Cmd+. beendet den Turnier-Modus ebenfalls', await visible('#lz-spiel .lz-tasten'));
 await modus('turnier');
-check('und der Weg zurueck steht wieder', await visible('#pad-key'));
+check('und der Weg zurueck steht wieder', await visible('#lz-spiel.lz-tast'));
 
 /* Ein Tipp ins Bild tut nichts - das Menue oeffnet nur •••; ohne Tastatur
    fuehrt der ⌨-Knopf im Kopf zurueck. */
-await page.locator('#scoreboard').click({ position: { x: 60, y: 60 } });
-check('ein Tipp ins Bild oeffnet KEIN Menue', !(await visible('#game-menu-overlay')) && (await visible('#pad-key')));
-await page.locator('#game-menu').click();
+await page.locator('#lz-spiel .lz-haupt').click({ position: { x: 60, y: 60 } });
+check('ein Tipp ins Bild oeffnet KEIN Menue', !(await visible('#game-menu-overlay')) && (await visible('#lz-spiel.lz-tast')));
+await page.locator('#lz-spiel [data-action="game-menu"]').click();
 check('••• oeffnet es', await visible('#game-menu-overlay'));
 await page.locator('#game-menu-overlay [data-action="game-menu-zu"]').click();
 check('Weiterspielen schliesst es wieder', !(await visible('#game-menu-overlay')));
-await page.locator('#game-fern').click();
-check('der ⌨-Knopf beendet die Fernsteuerung', await visible('#pad-total'));
+await page.locator('#lz-spiel [data-action="game-fern"]').click();
+check('der ⌨-Knopf beendet die Fernsteuerung', await visible('#lz-spiel .lz-tasten'));
 await modus('turnier');
-check('und auch danach steht der Weg zurueck', await visible('#pad-key'));
+check('und auch danach steht der Weg zurueck', await visible('#lz-spiel.lz-tast'));
 
 /* Der Modus ueberlebt den Neustart - der Bildschirm haengt ja fest am Board.
    Nach dem Laden steht die Uebersicht; das naechste Liga-Einzel oeffnet
    direkt in der Riesenanzeige. */
 await page.reload();
-check('Turnier-Modus uebersteht den Neustart', await visible('#pad-key'));
-check('und die Eingabe-Anzeige steht wieder bereit', await visible('#key-display'));
+check('Turnier-Modus uebersteht den Neustart', await visible('#lz-spiel.lz-tast'));
+check('und die Eingabe-Anzeige steht wieder bereit', await visible('#lz-spiel .lz-fuss .lz-tipp-feld'));
 /* Auch der Weg ueber die Uebersicht: am Board-iPad (Modus gemerkt) oeffnet
    ein Liga-Einzel direkt in der Riesenanzeige. */
 await page.evaluate(() => window.__dart.setScreen('tournament'));
 await page.locator('#schedule .match-row .go:not(.wo)').first().click();
 await ligaAusbullen();
-check('das Liga-Einzel oeffnet nach dem Ausbullen im Turnier-Modus', await visible('#pad-key'));
+check('das Liga-Einzel oeffnet nach dem Ausbullen im Turnier-Modus', await visible('#lz-spiel.lz-tast'));
 /* Ziffernblock tippt Zahlen - auch mit NumLock aus (Playwright simuliert
    genau das: Numpad6 meldet dann "Pfeil rechts"). */
 await page.keyboard.press('Numpad6'); await page.keyboard.press('Numpad0');
@@ -2677,20 +2699,26 @@ await tippe('140');   // Heim -> 136
 await tippe('140');   // Gast -> 161
 await tippe('96');    // Heim -> 40
 await tippe('60');    // Gast -> 101
-check('der Finish-Weg steht im Kasten - auch beim Wartenden', await page.evaluate(() => {
+check('der Finish-Weg steht in der Karte - auch beim Wartenden (abgedunkelt)', await page.evaluate(() => {
   // Heim (40, am Wurf) sieht sein D20 - und der Gast (101, wartet) seinen Weg.
-  const aktiv = document.querySelector('.pcard.active .pfinish').innerText;
-  const wartend = document.querySelector('.pcard:not(.active) .pfinish').innerText;
+  const aktiv = document.querySelector('.lz-karte.aktiv .lz-weg').innerText;
+  const wartend = document.querySelector('.lz-karte:not(.aktiv) .lz-weg.wartet').innerText;
   return aktiv.includes('D20') && wartend.trim() !== '';
 }));
 await tippe('40');    // Heim checkt aus - Abfrage nach den Darts
-check('Checkout-Abfrage steht', (await text('#overlay-card')).includes('wie vielen Darts'));
+check('Checkout-Abfrage steht', (await page.locator('#overlay-card').textContent()).includes('Mit wie vielen Darts'));
 await page.keyboard.press('9');   // daneben getippt - darf nichts tun
 check('verirrte Ziffer veraendert die Eingabe nicht',
   await page.evaluate(() => window.__dart.ui().input === '40'));
-check('die Abfrage steht noch', (await text('#overlay-card')).includes('wie vielen Darts'));
+check('die Abfrage steht noch', (await page.locator('#overlay-card').textContent()).includes('Mit wie vielen Darts'));
 await page.keyboard.press('1');
-check('Taste 1 bucht den Checkout mit einem Dart', await page.evaluate(() => {
+check('Taste 1 waehlt einen Dart (D20 eindeutig), gebucht ist noch nichts', await page.evaluate(() => {
+  const o = window.__dart.ui().overlay, m = window.__dart.currentMatch();
+  return o && o.type === 'checkout-darts' && o.gew === 1 && !m.legs[0].visits.some((x) => x.c) &&
+    document.getElementById('overlay-card').textContent.includes('Auf D20, mit einem Dart eindeutig.');
+}));
+await page.keyboard.press('Enter');
+check('Enter bestaetigt: der Checkout mit einem Dart', await page.evaluate(() => {
   const m = window.__dart.currentMatch();
   const co = m.legs[0].visits.filter((x) => x.c)[0];
   return !m.done && co && co.d === 1;
@@ -2699,33 +2727,33 @@ check('Taste 1 bucht den Checkout mit einem Dart', await page.evaluate(() => {
 });
 
 await gruppe('Turnier-Modus: das ganze Einzel per Tastatur zu Ende', async () => {
-check('das Leg-Ende steht in Plakatgroesse', await page.evaluate(() => {
+check('das Leg-Ende steht nach Entwurf: Karte ueber dem Spielbild, mit der Leiste des Ligaspiels', await page.evaluate(() => {
   const ov = document.getElementById('overlay');
-  return ov.classList.contains('gross') &&
+  return ov.classList.contains('lz') && !ov.classList.contains('gross') && !!document.querySelector('#overlay-card .lz-ov-kopf') &&
     document.getElementById('overlay-card').textContent.includes('Leg an');
 }));
 check('Naechstes Leg ist als Wahl markiert', await page.evaluate(() =>
-  document.querySelector('#overlay-card .btn.wahl').textContent.includes('Nächstes Leg')));
+  document.querySelector('#overlay-card .wahl').textContent.includes('Nächstes Leg')));
 await page.keyboard.press('ArrowDown');
 check('Pfeil runter waehlt die Ruecknahme', await page.evaluate(() =>
-  document.querySelector('#overlay-card .btn.wahl').textContent.includes('rückgängig')));
+  document.querySelector('#overlay-card .wahl').textContent.includes('rückgängig')));
 await page.keyboard.press('ArrowUp');
 check('Pfeil hoch fuehrt zurueck zu Naechstes Leg', await page.evaluate(() =>
-  document.querySelector('#overlay-card .btn.wahl').textContent.includes('Nächstes Leg')));
+  document.querySelector('#overlay-card .wahl').textContent.includes('Nächstes Leg')));
 await page.keyboard.press('Numpad2');
 check('Ziffernblock 2 waehlt nach dem Leg die Ruecknahme (statt still weiterzumachen)', await page.evaluate(() =>
   window.__dart.ui().overlay && window.__dart.ui().overlay.type === 'leg-done' &&
-  document.querySelector('#overlay-card .btn.wahl').textContent.includes('rückgängig')));
+  document.querySelector('#overlay-card .wahl').textContent.includes('rückgängig')));
 await page.keyboard.press('Numpad2');
-check('noch einmal 2: "Zur Ligaspiel-Übersicht" bzw. Turnieruebersicht', await page.evaluate(() =>
-  /bersicht/.test(document.querySelector('#overlay-card .btn.wahl').textContent)));
+check('noch einmal 2: "Zur Übersicht"', await page.evaluate(() =>
+  /bersicht/.test(document.querySelector('#overlay-card .wahl').textContent)));
 await page.keyboard.press('5');
 check('andere Ziffern werden geschluckt', await page.evaluate(() =>
   window.__dart.ui().overlay && window.__dart.ui().overlay.type === 'leg-done' && window.__dart.ui().input === ''));
 await page.keyboard.press('Numpad8');
 await page.keyboard.press('Numpad8');
 check('8 fuehrt wieder hoch zu Naechstes Leg', await page.evaluate(() =>
-  document.querySelector('#overlay-card .btn.wahl').textContent.includes('Nächstes Leg')));
+  document.querySelector('#overlay-card .wahl').textContent.includes('Nächstes Leg')));
 await page.keyboard.press('Enter');
 check('Enter startet das naechste Leg', await page.evaluate(() =>
   !window.__dart.ui().overlay && window.__dart.currentMatch().legs.length === 2));
@@ -2737,29 +2765,33 @@ await tippe('180');   // Heim -> 141
 await tippe('60');    // Gast
 await tippe('141');   // Heim checkt - Dart-Frage
 await page.keyboard.press('3');
+check('mit Finish-Anzeigen folgt bei 3 Darts die Doppel-Frage', await page.evaluate(() => {
+  const o = window.__dart.ui().overlay; return o && o.type === 'checkout-doppel' && o.n === 3 && !!o.dp;
+}));
+await page.keyboard.press('Enter');
 check('das Einzel ist entschieden - erst kommt gross die Statistik', await page.evaluate(() => {
   const o = window.__dart.ui().overlay;
   return window.__dart.currentMatch().done &&
     o && o.type === 'turnier-ende';
 }));
-check('mit Namen, Average und 180ern beider Spieler', await page.evaluate(() => {
+check('mit Sieger, Average und 180ern beider Spieler', await page.evaluate(() => {
   const t = document.getElementById('overlay-card').textContent;
-  return t.includes('Spiel an') && t.includes('180er') && t.includes('Ø');
+  return t.includes('Sieg') && t.includes('180er') && t.includes('Average') && t.includes('First 9');
 }));
 check('die naechsten Begegnungen stehen nicht mehr im Dialog (Julius 25.11.)', await page.evaluate(() =>
   !document.querySelector('#overlay-card [data-action="open-match"]') && !document.getElementById('overlay-card').textContent.includes('Nächste Einzel')));
-check('der Dialog fuellt den ganzen Bildschirm', await page.evaluate(() => {
-  const r = document.getElementById('overlay-card').getBoundingClientRect();
-  return r.width >= window.innerWidth - 2 && r.height >= window.innerHeight - 2;
+check('die Ergebnis-Karte steht ganz im Bild, oben die Leiste des Ligaspiels (Entwurf LsEinzelErgebnis)', await page.evaluate(() => {
+  const d = document.querySelector('#overlay-card .lz-dlg-erg'), r = d && d.getBoundingClientRect();
+  return !!r && !!document.querySelector('#overlay-card .lz-ov-kopf') && r.left >= 0 && r.right <= window.innerWidth + 1 && r.width > 200;
 }), await page.evaluate(() => {
-  const r = document.getElementById('overlay-card').getBoundingClientRect();
-  return JSON.stringify({ w: r.width, h: r.height, vw: window.innerWidth, vh: window.innerHeight });
+  const d = document.querySelector('#overlay-card .lz-dlg-erg'), r = d && d.getBoundingClientRect();
+  return r ? JSON.stringify({ l: r.left, w: r.width, vw: window.innerWidth }) : 'keine Karte';
 }));
 check('"Zur Übersicht" ist als Wahl markiert', await page.evaluate(() =>
-  document.querySelector('#overlay-card .btn.wahl').textContent.includes('Zur Übersicht')));
+  document.querySelector('#overlay-card .wahl').textContent.includes('Zur Übersicht')));
 await page.keyboard.press('ArrowDown');
 check('die Ruecknahme ist nicht per 8/2 waehlbar (eine getippte Aufnahme loeschte sonst den Checkout)', await page.evaluate(() =>
-  document.querySelector('#overlay-card .btn.wahl').textContent.includes('Zur Übersicht') &&
+  document.querySelector('#overlay-card .wahl').textContent.includes('Zur Übersicht') &&
   !!document.querySelector('#overlay-card [data-action="undo"]')));
 await page.keyboard.press('7');
 check('eine Ziffer wird geschluckt', await page.evaluate(() =>
@@ -2770,6 +2802,7 @@ check('Loeschen nimmt den letzten Dart zurueck', await page.evaluate(() => !wind
 await page.evaluate(() => { window.__dart.ui().input = ''; });
 await tippe('141');
 await page.keyboard.press('3');
+await page.keyboard.press('Enter');   // bestaetigt das Doppel - das Einzel ist aus
 await page.keyboard.press('Enter');
 check('ein nachprellendes Enter blaettert die Statistik nicht weg', await page.evaluate(() => {
   const o = window.__dart.ui().overlay; return o && o.type === 'turnier-ende'; }));
@@ -2806,7 +2839,7 @@ await typeScore(141);
 await coDarts();
 check('auch ohne Fernsteuerung kommt im Ligaspiel die Statistik der Begegnung', await page.evaluate(() => {
   const o = window.__dart.ui().overlay, t = document.getElementById('overlay-card').textContent;
-  return o && o.type === 'turnier-ende' && t.includes('First 9') && t.includes('bestes Leg');
+  return o && o.type === 'turnier-ende' && t.includes('First 9') && t.includes('Bestes Leg');
 }));
 await page.waitForTimeout(8400);
 check('nach acht Sekunden steht von selbst die Uebersicht', (await visible('#screen-tournament')) && await page.evaluate(() => !window.__dart.ui().overlay));
@@ -2821,7 +2854,7 @@ check('Enter oeffnet das naechste Einzel mit dem Ausbullen', await visible('#scr
 await page.keyboard.press('Enter');
 await page.waitForTimeout(150);
 check('Enter startet das naechste Einzel direkt in der Riesenanzeige',
-  (await visible('#pad-key')) && await page.evaluate(() => {
+  (await visible('#lz-spiel.lz-tast')) && await page.evaluate(() => {
     const m = window.__dart.currentMatch();
     return m && !m.done && m.legs.length === 1;
   }));
@@ -7963,6 +7996,281 @@ await gruppe('Handy-Block 2: GAME ON nur am Spieltag', async () => {
     (await textKlein('#liga-karte [data-action="liga-spiel"]')).includes('nachtragen'));
   await ligaHeute('2026-10-01');
   await page.evaluate(() => { const D = window.__dart; D.ui().ligaWahl = null; D.setScreen('setup'); });
+});
+
+await gruppe('Ligaspiel: Zaehlen nach Entwurf (Redesign Nov. 2026)', async () => {
+/* Ein Ligaspiel im Zustand des Entwurfs: Einzel 5 (H1 gegen G2), Leg 2,
+   Lena am Wurf mit Rest 141 (bzw. 40), Stefan mit 220. */
+const lzBau = (o) => page.evaluate((o) => {
+  const D = window.__dart, S = D.state(), U = D.ui();
+  const W = ['lzt_h1', 'lzt_h2', 'lzt_h3', 'lzt_h4'], G = ['lzt_g1', 'lzt_g2', 'lzt_g3', 'lzt_g4'];
+  if (!S.profiles.some((p) => p.id === 'lzt_h1')) {
+    ['Lena Becker', 'Dominik Uhl', 'Tobias Thomas', 'Julius Klinzer'].forEach((n, i) => S.profiles.push({ id: W[i], name: 'LZ' + n.split(' ')[0], voll: n, hue: 20 + 60 * i, created: Date.now() }));
+    ['René Mai', 'Stefan Edelbauer', 'Andreas Sedlbauer', 'Florian Janetschko'].forEach((n, i) => S.profiles.push({ id: G[i], name: n, voll: n, hue: 200 + 30 * i, gast: true, dauer: true, created: Date.now() }));
+  }
+  const E = [[0, 0], [1, 1], [2, 2], [3, 3], [0, 1], [1, 0], [2, 3], [3, 2], [2, 0], [3, 1], [1, 2], [0, 3], [3, 0], [2, 1], [0, 2], [1, 3]];
+  const SB = ['S1', 'S2', 'S1', 'S2', 'S1', 'S2', 'S1', 'S2', 'S2', 'S1', 'S1', 'S2', 'S1', 'S2', 'S2', 'S1'];
+  S.game = null;
+  S.tour = { start: 501, bestOf: 3, players: W.concat(G), liga: { terminId: 'lztest', nr: 7, gegner: 'TSV Oberpframmern', heim: true, wir: W.slice(), sie: G.slice(),
+    heimSpieler: W.slice(), gastSpieler: G.slice(), posH: W.slice(), posG: G.slice(), ort: 'Bar Sehnsucht', tag: '2027-01-12', finish: o.finish !== false, zeitVon: Date.now(), zeitBis: null, typen: {} } };
+  S.matches = E.map((p, i) => ({ id: 'lzm' + i, round: Math.floor(i / 4) + 1, p: [W[p[0]], G[p[1]]], starter: null, posPaar: p.slice(), scheibe: SB[i], legs: [], done: false, winner: null, at: null }));
+  const m = S.matches[4], L = m.p[0], St = m.p[1];
+  const v = (p, s, x) => Object.assign({ p, s, d: 3, b: false, c: false, o: 0 }, x || {});
+  m.starter = L;
+  m.legs = [{ starter: L, start: 501, winner: null, visits: [] }];
+  [60, 45, 100, 60, 41, 54].forEach((z, i) => { m.legs[0].visits.push(v(L, z)); m.legs[0].visits.push(v(St, [41, 60, 45, 26, 28, 81][i])); });
+  if (o.rest40) { m.legs[0].visits.push(v(L, 60)); m.legs[0].visits.push(v(St, 0, { b: true, o: 60 })); m.legs[0].visits.push(v(L, 41)); m.legs[0].visits.push(v(St, 0, { b: true, o: 60 })); }
+  S.current = m.id;
+  S.settings.dartModeFrom = 0;
+  S.settings.hell = o.hell ? 1 : 0;
+  U.turnier = !!o.tast; S.settings.turnierModus = U.turnier ? 1 : 0;
+  U.input = ''; U.overlay = null; U.menu = false; U.warnung = null; U.error = ''; U.lzArt = null; U.lzRein = null;
+  S.screen = o.screen || 'game';
+  D.render();
+}, o);
+const lzBesuche = () => page.evaluate(() => window.__dart.activeLeg(window.__dart.currentMatch()).visits.length);
+const lzAmWurf = () => page.evaluate(() => { const D = window.__dart, m = D.currentMatch(); return D.activePlayer(D.activeLeg(m), m); });
+const lzMeldung = () => page.evaluate(() => (document.querySelector('#lz-spiel .lz-meldung') || {}).textContent || '');
+const lzAlt = await page.evaluate(() => ({ dmf: window.__dart.state().settings.dartModeFrom, hell: window.__dart.state().settings.hell }));
+
+/* --- Normale Spiele bleiben, wie sie sind --- */
+await lzBau({ hell: 1 });
+await page.evaluate(() => { const S = window.__dart.state(); window.__lzLiga = S.tour.liga; delete S.tour.liga; window.__dart.render(); });
+check('ohne Ligaspiel: altes Spielbild, kein #lz-spiel, nicht hell', await page.evaluate(() =>
+  !document.getElementById('screen-game').classList.contains('lz') && !document.getElementById('lz-spiel').innerHTML &&
+  document.querySelectorAll('#scoreboard .pcard').length === 2 && !!document.querySelector('#pad-total:not(.hidden)') &&
+  document.documentElement.getAttribute('data-hell') === '0'));
+await page.evaluate(() => { const S = window.__dart.state(); S.tour.liga = window.__lzLiga; delete window.__lzLiga; window.__dart.render(); });
+check('im Ligaspiel: eigenes Spielbild, die alten Behaelter leer', await page.evaluate(() =>
+  document.getElementById('screen-game').classList.contains('lz') && document.querySelectorAll('#lz-spiel .lz-karte').length === 2 &&
+  !document.querySelector('#scoreboard .pcard') && !document.querySelector('#quick-row button')));
+check('hell gilt im Ligaspiel (Darstellung hell), die Flaeche ist hell', await page.evaluate(() =>
+  document.documentElement.getAttribute('data-hell') === '1' && getComputedStyle(document.getElementById('lz-spiel')).backgroundColor === 'rgb(246, 243, 241)'));
+check('Kopf nach Entwurf: Einzel, Scheibe, Best of, Startpunkte und der Teamstand', await page.evaluate(() => {
+  const t = document.querySelector('#lz-spiel .lz-kopf').innerText.toLowerCase();
+  return t.includes('einzel 5 von 16') && t.includes('scheibe 1') && t.includes('best of 3') && t.includes('501') && t.includes('oberpframmern');
+}));
+check('Karten: Name mit Bogen-Position, Legs, Schnitt, Rest, sechs Aufnahmen (die juengste vorn)', await page.evaluate(() => {
+  const k = document.querySelectorAll('#lz-spiel .lz-karte');
+  const a = k[0].innerText.toLowerCase();
+  return k[0].classList.contains('aktiv') && !k[1].classList.contains('aktiv') && a.includes('lena b.') && a.includes('h1') &&
+    k[1].innerText.includes('G2') && a.includes('legs') && a.includes('schnitt') && k[0].querySelector('.lz-rest').textContent === '141' &&
+    k[0].querySelector('.lz-neu').textContent === '54' && k[0].querySelectorAll('.lz-alt span').length === 5;
+}));
+check('der Finish-Weg steht beim Spieler am Wurf und bucht per Tipp', await page.evaluate(() => {
+  const w = document.querySelector('#lz-spiel .lz-karte.aktiv [data-action="finish-weg"]');
+  return !!w && w.textContent.replace(/\s/g, '') === 'T20T19D12';
+}));
+
+/* --- Ueber dem Rest: erst nachfragen (Julius, 28.11.) - von Hand --- */
+const okHand = '#lz-spiel .lz-tasten button[data-key="ok"]';
+for (const z of ['1', '6', '0']) await page.locator(`#lz-spiel .lz-tasten button[data-key="${z}"]`).click();
+await page.locator(okHand).click();
+check('mehr als der Rest: nichts gebucht, die Zahl bleibt gelb mit Rueckfrage', (await lzBesuche()) === 12 &&
+  (await rest(0)) === '141' && (await lzMeldung()).includes('Mehr als der Rest 141') && (await lzMeldung()).includes('OK bucht als überworfen') &&
+  await page.evaluate(() => window.__dart.ui().input === '160' && !!document.querySelector('#lz-spiel .lz-tipp.gelb')));
+await page.locator(okHand).click();
+check('ein sofort nachgeschobenes OK (Prellen) bucht noch nicht', (await lzBesuche()) === 12);
+await page.waitForTimeout(300);
+await page.locator(okHand).click();
+check('das zweite OK bucht ueberworfen: 0 Punkte, drei Darts, Rest wie vor der Aufnahme', await page.evaluate(() => {
+  const D = window.__dart, l = D.activeLeg(D.currentMatch()), v = l.visits[l.visits.length - 1];
+  return l.visits.length === 13 && v.b === true && v.s === 0 && v.o === 160 && v.d === 3 && !v.c && D.ui().input === '';
+}) && (await rest(0)) === '141' && (await lzAmWurf()) === 'lzt_g2');
+await page.locator('#lz-spiel .lz-tasten button[data-key="del"]').click();
+check('Zurueck nimmt genau diese eine Aufnahme zurueck', (await lzBesuche()) === 12 && (await lzAmWurf()) === 'lzt_h1' && (await rest(0)) === '141');
+await page.evaluate(() => { window.__dart.ui().input = ''; window.__dart.render(); });
+for (const z of ['1', '9', '1']) await page.locator(`#lz-spiel .lz-tasten button[data-key="${z}"]`).click();
+check('mehr als 180 von Hand: steht rot da, "Höchstens 180"', (await lzMeldung()).includes('Höchstens 180') &&
+  await page.evaluate(() => window.__dart.ui().input === '191' && !!document.querySelector('#lz-spiel .lz-tipp.rot')));
+await page.locator(okHand).click();
+await page.waitForTimeout(300);
+await page.locator(okHand).click();
+check('und OK bucht sie nie', (await lzBesuche()) === 12 && (await rest(0)) === '141');
+await page.evaluate(() => { window.__dart.ui().input = ''; window.__dart.render(); });
+
+/* --- Mit Tastatur --- */
+await page.setViewportSize({ width: 1180, height: 820 });
+await lzBau({ tast: true });
+check('mit Tastatur (iPad quer): zwei Karten nebeneinander, unten die Zahl, dunkel', await page.evaluate(() => {
+  const k = document.querySelectorAll('#lz-spiel .lz-karte');
+  return document.getElementById('lz-spiel').classList.contains('lz-tast') && k[0].getBoundingClientRect().top === k[1].getBoundingClientRect().top &&
+    !!document.querySelector('#lz-spiel .lz-fuss .lz-strich') && document.documentElement.getAttribute('data-hell') === '0';
+}));
+await page.setViewportSize({ width: 390, height: 844 });
+await page.keyboard.type('191');
+check('Tastatur: 191 steht gleich rot mit "Höchstens 180"', (await lzMeldung()).includes('Höchstens 180') && (await lzMeldung()).includes('Löschen und neu tippen'));
+await page.keyboard.press('Enter');
+check('Enter bucht sie nicht', (await lzBesuche()) === 12);
+for (let i = 0; i < 3; i++) await page.keyboard.press('Backspace');
+await page.keyboard.type('179'); await page.keyboard.press('Enter');
+check('unmoegliche Summe: "179 ist nicht möglich" mit den anderen', (await lzMeldung()).includes('179 ist nicht möglich') && (await lzMeldung()).includes('163') && (await lzBesuche()) === 12);
+for (let i = 0; i < 3; i++) await page.keyboard.press('Backspace');
+await page.keyboard.type('160'); await page.keyboard.press('Enter');
+check('Tastatur: mehr als der Rest fragt "Enter bucht als überworfen"', (await lzMeldung()).includes('Enter bucht als überworfen') && (await lzBesuche()) === 12);
+await page.keyboard.press('Backspace');
+check('Loeschen korrigiert (Ziffer weg, Warnung weg)', await page.evaluate(() => window.__dart.ui().input === '16') && !(await lzMeldung()));
+await page.keyboard.type('0'); await page.keyboard.press('Enter');
+await page.waitForTimeout(300);
+await page.keyboard.press('Enter');
+check('zweites Enter bucht ueberworfen, Rest bleibt 141, Gast am Wurf', await page.evaluate(() => {
+  const D = window.__dart, l = D.activeLeg(D.currentMatch()), v = l.visits[l.visits.length - 1];
+  return l.visits.length === 13 && v.b && v.o === 160 && v.s === 0;
+}) && (await rest(0)) === '141' && (await lzAmWurf()) === 'lzt_g2');
+await page.keyboard.press('Backspace');
+check('Loeschen im leeren Feld nimmt genau sie zurueck', (await lzBesuche()) === 12 && (await lzAmWurf()) === 'lzt_h1');
+
+/* --- Checkout: Doppel-Frage je nach Einstellung Finish-Anzeigen --- */
+await lzBau({ tast: true, rest40: true, finish: true });
+await page.keyboard.type('40'); await page.keyboard.press('Enter');
+check('Checkout im Ligaspiel nach Entwurf: Leiste, 40, "Mit wie vielen Darts?"', await page.evaluate(() => {
+  const ov = document.getElementById('overlay'), t = ov.innerText.toLowerCase();
+  return ov.classList.contains('lz') && !ov.classList.contains('gross') && t.includes('7. spieltag') && t.includes('mit wie vielen darts') &&
+    t.includes('d20 ist klar') && document.querySelectorAll('#overlay-card [data-action="co-darts"]').length === 3;
+}));
+await page.keyboard.press('Enter');
+check('Enter ohne Wahl bucht nichts', await page.evaluate(() => window.__dart.ui().overlay && window.__dart.ui().overlay.type === 'checkout-darts') && (await lzBesuche()) === 16);
+await page.keyboard.press('2');
+check('mit Finish-Anzeigen: bei 2 Darts folgt "Auf welchem Doppel?", D20 vorgewaehlt', await page.evaluate(() => {
+  const o = window.__dart.ui().overlay;
+  return o && o.type === 'checkout-doppel' && o.dp === 20 && !!document.querySelector('#overlay-card .lz-dp-gross.an[data-d="20"]');
+}));
+await page.keyboard.press('ArrowRight');
+check('Pfeil waehlt das naechste Doppel', await page.evaluate(() => window.__dart.ui().overlay.dp === 10));
+await page.keyboard.press('Backspace');
+check('Loeschen fuehrt zurueck zur Dartzahl (2 gewaehlt)', await page.evaluate(() => { const o = window.__dart.ui().overlay; return o && o.type === 'checkout-darts' && o.gew === 2; }));
+await page.keyboard.press('Enter');
+await page.keyboard.press('Enter');
+check('Enter bestaetigt das Leg: 2 Darts auf D20', await page.evaluate(() => {
+  const l = window.__dart.currentMatch().legs[0], v = l.visits[l.visits.length - 1];
+  return v.c && v.d === 2 && v.dd === 20 && l.winner === 'lzt_h1';
+}));
+check('Leg gewonnen nach Entwurf: Rest, Darts, Doppel, Statistik, wer anwirft', await page.evaluate(() => {
+  const t = document.getElementById('overlay-card').innerText;
+  return window.__dart.ui().overlay.type === 'leg-done' && /leg an lena b\./i.test(t) && t.includes('40 Rest mit 2 Darts auf D20') &&
+    t.includes('Average') && t.includes('Höchste Aufnahme') && t.includes('Leg 2 wirft Stefan Edelbauer an.');
+}));
+await page.keyboard.press('ArrowLeft');
+check('nach links waehlt "Eingabe rückgängig"', await page.evaluate(() => /rückgängig/.test(document.querySelector('#overlay-card .wahl').textContent)));
+await page.keyboard.press('Enter');
+check('und nimmt den Checkout zurueck (ein Schritt)', (await lzBesuche()) === 16 && await page.evaluate(() => !window.__dart.ui().overlay && !window.__dart.currentMatch().legs[0].winner));
+await page.evaluate(() => { window.__dart.ui().input = ''; window.__dart.render(); });
+await page.keyboard.type('40'); await page.keyboard.press('Enter');
+await page.keyboard.press('1');
+check('1 Dart: eindeutig, "Auf D20, mit einem Dart eindeutig." und Leg bestätigen', await page.evaluate(() => {
+  const o = window.__dart.ui().overlay, t = document.getElementById('overlay-card').innerText;
+  return o.type === 'checkout-darts' && o.gew === 1 && t.includes('Auf D20, mit einem Dart eindeutig.') && !!document.querySelector('#overlay-card [data-action="co-ok"]');
+}));
+await page.locator('#overlay-card [data-action="co-ok"]').click();
+check('Leg bestätigen bucht 1 Dart auf D20', await page.evaluate(() => {
+  const l = window.__dart.currentMatch().legs[0], v = l.visits[l.visits.length - 1];
+  return v.c && v.d === 1 && v.dd === 20;
+}));
+
+await lzBau({ tast: false, rest40: true, finish: false });
+check('ohne Finish-Anzeigen: kein Finish-Weg im Spielbild', await page.evaluate(() => !document.querySelector('#lz-spiel .lz-weg')));
+await typeScore(40);
+await page.locator('#overlay-card [data-action="co-darts"][data-n="2"]').click();
+check('ohne Finish-Anzeigen (ligakonform): keine Doppel-Frage, "Mit 2 Darts zugemacht."', await page.evaluate(() => {
+  const o = window.__dart.ui().overlay, t = document.getElementById('overlay-card').innerText;
+  return o.type === 'checkout-darts' && o.gew === 2 && !document.querySelector('#overlay-card [data-action="co-doppel"]') &&
+    t.includes('Mit 2 Darts zugemacht.') && !t.includes('ist klar');
+}));
+await page.locator('#overlay-card [data-action="co-ok"]').click();
+check('gebucht mit 2 Darts, ohne Doppel', await page.evaluate(() => {
+  const l = window.__dart.currentMatch().legs[0], v = l.visits[l.visits.length - 1];
+  return v.c && v.d === 2 && !v.dd;
+}));
+
+/* --- Korrektur, Zwischenstand, Tastenbelegung --- */
+await lzBau({});
+await page.locator('#lz-spiel .lz-karte.aktiv button.lz-neu').click();
+check('ein Tipp auf die letzte Aufnahme oeffnet "Aufnahme korrigieren" nach Entwurf', await page.evaluate(() =>
+  window.__dart.ui().overlay.type === 'edit-visit' && document.getElementById('overlay').classList.contains('lz') &&
+  document.getElementById('overlay-card').innerText.includes('Eingetragen waren 54 Punkte für Lena Becker.')));
+for (const z of ['1', '9', '0']) await page.locator(`#overlay-card [data-editkey="${z}"]`).click();
+check('mehr als 180: "Das wären 190 Punkte, mehr als 180."', (await text('#overlay-card')).includes('Das wären 190 Punkte, mehr als 180.'));
+for (let i = 0; i < 3; i++) await page.locator('#overlay-card [data-editkey="del"]').click();
+for (const z of ['4', '5']) await page.locator(`#overlay-card [data-editkey="${z}"]`).click();
+await page.locator('#overlay-card [data-editkey="ok"]').click();
+check('Übernehmen korrigiert 54 auf 45 (Rest 150)', !(await page.evaluate(() => window.__dart.ui().overlay)) && (await rest(0)) === '150');
+await page.locator('#lz-spiel [data-action="lz-stand"]').click();
+check('Tipp auf den Teamstand: Zwischenstand gross, mit dem laufenden Einzel', await page.evaluate(() => {
+  const t = document.getElementById('overlay-card').innerText;
+  return window.__dart.ui().overlay.type === 'team-stand' && !!document.querySelector('#overlay-card .lz-dlg-st') && /läuft gerade/i.test(t) && t.includes('150') && t.includes('220');
+}));
+await page.keyboard.press('Enter');
+check('Enter schliesst ihn', await page.evaluate(() => !window.__dart.ui().overlay));
+await page.locator('#lz-spiel [data-action="lz-info"]').click();
+check('der Info-Knopf erklaert die Tastenbelegung', (await text('#overlay-card')).includes('Überworfen buchen') && (await text('#overlay-card')).includes('Teamstand groß ein und aus'));
+await page.keyboard.press('Escape');
+check('Esc schliesst die Tastenbelegung', await page.evaluate(() => !window.__dart.ui().overlay));
+await page.locator('#lz-spiel [data-action="game-fern"]').click();
+check('der Wechsel zur Tastatur gleitet herein (Entwurf ZaehlenWechsel)', await page.evaluate(() =>
+  document.getElementById('lz-spiel').classList.contains('lz-tast') && document.getElementById('lz-spiel').classList.contains('lz-rein-tast')));
+
+/* --- Ausbullen: "Nicht da? w.o. werten" --- */
+await lzBau({ screen: 'bulloff' });
+await page.evaluate(() => { const D = window.__dart, S = D.state(); S.current = 'lzm5'; D.render(); });
+check('Ausbullen im Ligaspiel nach Entwurf mit "Nicht da? w.o. werten"', await page.evaluate(() =>
+  document.getElementById('screen-bulloff').classList.contains('lz') && !!document.querySelector('#lz-bo-fuss .lz-bo-wo') &&
+  document.querySelectorAll('#bulloff-buttons [data-action="pick-starter"]').length === 2 && !document.querySelector('#bulloff-buttons .te-hint')));
+await page.locator('#lz-bo-fuss .lz-bo-wo').click();
+check('der Link oeffnet den w.o.-Dialog fuer dieses Einzel', await page.evaluate(() => {
+  const o = window.__dart.ui().overlay; return o && o.type === 'liga-kampflos' && o.id === 'lzm5';
+}));
+await page.locator('#overlay-card [data-action="liga-kampflos-wer"]').first().click();
+check('nach der Wertung geht es in die Uebersicht, das Einzel ist kampflos', (await visible('#screen-tournament')) && await page.evaluate(() => {
+  const m = window.__dart.state().matches[5]; return m.done && m.kampflos;
+}));
+
+/* --- Hell und dunkel ohne Ueberlauf, Fingerziele mindestens 44 px --- */
+for (const vp of [{ width: 390, height: 844 }, { width: 820, height: 1180 }, { width: 1180, height: 820 }]) {
+  await page.setViewportSize(vp);
+  for (const hell of [0, 1]) {
+    for (const tast of [false, true]) {
+      await lzBau({ hell, tast });
+      const befund = await page.evaluate(() => {
+        const box = document.getElementById('lz-spiel'), fehler = [];
+        if (document.documentElement.scrollWidth > window.innerWidth + 1) fehler.push('Seite breiter als der Bildschirm');
+        if (box.scrollHeight > box.clientHeight + 1 || box.scrollWidth > box.clientWidth + 1) fehler.push('Spielbild laeuft ueber ' + box.scrollWidth + 'x' + box.scrollHeight);
+        document.querySelectorAll('#lz-spiel .lz-karte').forEach((k, i) => {
+          if (k.scrollHeight > k.clientHeight + 1 || k.scrollWidth > k.clientWidth + 1) fehler.push('Karte ' + i + ' laeuft ueber');
+        });
+        const b = box.getBoundingClientRect();
+        document.querySelectorAll('#lz-spiel button').forEach((k) => {
+          const r = k.getBoundingClientRect();
+          if (r.width < 44 || r.height < 44) fehler.push('Knopf ' + (k.getAttribute('data-key') || k.getAttribute('data-action') || k.textContent) + ' ' + Math.round(r.width) + 'x' + Math.round(r.height));
+          if (r.right > b.right + 1 || r.bottom > b.bottom + 1 || r.left < b.left - 1) fehler.push('Knopf ausserhalb: ' + k.textContent);
+        });
+        return fehler;
+      });
+      check(`${vp.width}x${vp.height} ${hell ? 'hell' : 'dunkel'} ${tast ? 'Tastatur' : 'von Hand'}: kein Ueberlauf, Knoepfe ab 44 px`, befund.length === 0, befund.slice(0, 4).join('; '));
+    }
+  }
+  await lzBau({ tast: true, rest40: true, hell: 1 });
+  await page.keyboard.type('40'); await page.keyboard.press('Enter');
+  await page.keyboard.press('2');
+  const coBefund = await page.evaluate(() => {
+    const d = document.querySelector('#overlay-card .lz-dlg'), r = d.getBoundingClientRect(), fehler = [];
+    if (r.left < -1 || r.right > window.innerWidth + 1) fehler.push('Dialog breiter als der Bildschirm');
+    d.querySelectorAll('button').forEach((k) => { const q = k.getBoundingClientRect(); if (q.height < 44 || q.width < 44) fehler.push(k.textContent + ' ' + Math.round(q.width) + 'x' + Math.round(q.height)); });
+    return fehler;
+  });
+  check(`${vp.width}x${vp.height}: die Doppel-Frage passt, Knoepfe ab 44 px`, coBefund.length === 0, coBefund.slice(0, 4).join('; '));
+}
+await page.setViewportSize({ width: 390, height: 844 });
+
+/* Aufraeumen */
+await page.evaluate((alt) => {
+  const D = window.__dart, S = D.state(), U = D.ui();
+  U.overlay = null; U.turnier = false; U.input = ''; U.warnung = null;
+  S.settings.turnierModus = 0; S.settings.dartModeFrom = alt.dmf; S.settings.hell = alt.hell;
+  S.tour = null; S.matches = []; S.current = null; S.game = null;
+  S.profiles = S.profiles.filter((p) => String(p.id).indexOf('lzt_') !== 0);
+  S.lineup = D.activeProfiles().filter((p) => !p.gast).slice(0, 4).map((p) => p.id);
+  D.setScreen('setup');
+}, lzAlt);
 });
 
 await gruppe('Fehlerfreiheit', async () => {

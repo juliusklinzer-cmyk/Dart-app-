@@ -787,6 +787,8 @@
   </header>
   <span class="bo-ctx" id="bulloff-ctx"></span>
   <div id="bulloff-buttons" class="bulloff"></div>
+  <!-- Nur im Ligaspiel: Tasten-Hinweis und "Nicht da? w.o. werten". -->
+  <div id="lz-bo-fuss" class="lz-bo-fuss"></div>
   <button class="btn ghost bo-zurueck" data-action="to-tournament"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 12H7M11.5 6.5L6 12l5.5 5.5"></path></svg><span>Zurück</span></button>
 </section>
 
@@ -795,6 +797,9 @@
   <div id="spiel-hinweis" class="spiel-hinweis" role="status" aria-live="polite"></div>
   <!-- Autodarts-Grossanzeige ausgeblendet (Eingabe/Korrektur): zurueck dorthin. -->
   <button type="button" id="gross-zurueck" class="gross-zurueck" data-action="gross-an" hidden>Großanzeige</button>
+  <!-- Ligaspiel (Entwurf "Zaehlen", Nov. 2026): eigenes Spielbild, gezeichnet
+       von lzSpielZeichnen in renderGame. Sonst leer und unsichtbar. -->
+  <div id="lz-spiel" class="lz-spiel"></div>
   <!-- Kopfleiste (Entwurf "X01 Redesign", 10/2026): links das Menue (Spiel
        verlassen), in der Mitte Spiel und Stand, rechts die Fernsteuerung
        (Board-Anzeige, Eingabe ueber Tastatur) und der Wechsel zwischen
