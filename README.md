@@ -2035,6 +2035,7 @@ npm run test:mitteilungen  # Web-Push-Verschlüsselung, VAPID, Themen-Einstellun
 npm run test:api           # Server allein: Registrierung, Rechte, Rate-Limit, Grabsteine
 npm run test:konto         # zwei Browser, zwei Accounts, ein gemeinsames Spiel (fester Port 3198, `TEST_PORT` setzbar)
 node tests/ligatag.mjs     # Game Day: zwei iPads bereiten vor, GAME ON mit Bestaetigung
+node tests/ligaspiel-abschluss.mjs  # ganzer Ligaabend an zwei iPads: GAME DAY, 16 Einzel, Spielbericht, Ticker, Statistik
 npm run test:alle          # alles nacheinander – auch Build und Einzeldatei, siehe unten
 ```
 

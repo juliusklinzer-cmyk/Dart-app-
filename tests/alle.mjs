@@ -32,7 +32,9 @@ const SCHRITTE = [
   { name: 'Server-API', skript: 'tests/api.mjs' },
   { name: 'Liga-Webseite (Vorschau)', skript: 'tests/liga-seite.mjs' },
   { name: 'Konto: zwei Geraete', skript: 'tests/konto.mjs' },
-  { name: 'Game Day: zwei iPads', skript: 'tests/ligatag.mjs' }
+  { name: 'Game Day: zwei iPads', skript: 'tests/ligatag.mjs' },
+  /* Abschlusstest (Julius 28.11.): ein ganzer Ligaabend an zwei iPads. */
+  { name: 'Ligaabend: GAME DAY bis Spielbericht', skript: 'tests/ligaspiel-abschluss.mjs' }
 ];
 
 const start = Date.now();

@@ -12,6 +12,7 @@
     "autodarts": "node tools/autodarts-bruecke/bruecke.mjs",
     "test:engine": "node tests/checkout-engine.mjs",
     "test:konto": "node tests/konto.mjs",
+    "test:abschluss": "node tests/ligaspiel-abschluss.mjs",
     "test:liga": "node tests/liga-daten.mjs",
     "test:liga-seite": "node tests/liga-seite.mjs",
     "liga-gesamt": "node tools/liga-gesamt.mjs",
