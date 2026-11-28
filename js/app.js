@@ -9167,9 +9167,11 @@
      Highlights. Unsere Liga kommt aus LIGA_DATEN, die anderen vier aus den
      Gesamtdaten der Ligaleitung (GET /api/liga-gesamt, nur angemeldet). */
   var LIGA_EIGENE_NR = 5;
-  var ligaGesamt = window.LIGA_GESAMT || null, ligaGesamtLaeuft = false, ligaGesamtFehler = '';
+  var ligaGesamt = window.LIGA_GESAMT || null, ligaGesamtLaeuft = false, ligaGesamtFehler = '', ligaGesamtFehlZeit = 0;
   function ligaGesamtLaden() {
-    if (ligaGesamt || ligaGesamtLaeuft) return;
+    /* Nach einem Fehlschlag erst nach einer Minute (oder neuer Ligawahl)
+       wieder fragen - sonst laedt jedes Zeichnen erneut. */
+    if (ligaGesamt || ligaGesamtLaeuft || (ligaGesamtFehlZeit && Date.now() - ligaGesamtFehlZeit < 60000)) return;
     ligaGesamtLaeuft = true; ligaGesamtFehler = '';
     fetch('/api/liga-gesamt', { credentials: 'same-origin' }).then(function (r) {
       if (!r.ok) throw new Error(r.status === 401 || r.status === 403 ? 'Die anderen Ligen gibt es nur angemeldet.' : 'Die Ligadaten sind gerade nicht erreichbar.');
@@ -9179,7 +9181,7 @@
       if (!ligaGesamt) ligaGesamtFehler = 'Die Ligadaten sind gerade nicht erreichbar.';
     }).catch(function (e) {
       ligaGesamtFehler = e && e.message && /Ligen|Ligadaten/.test(e.message) ? e.message : 'Ohne Verbindung gibt es nur unsere Liga.';
-    }).then(function () { ligaGesamtLaeuft = false; if (S.screen === 'liga') render(); });
+    }).then(function () { ligaGesamtLaeuft = false; if (!ligaGesamt) ligaGesamtFehlZeit = Date.now(); if (S.screen === 'liga') render(); });
   }
   /* Eine Liga als einheitliche Sicht: Teams, Runden (je Spieltag alle
      Spiele, spielfrei inklusive), Team-Infos und die Tabelle. */
@@ -17983,7 +17985,7 @@
         break;
       case 'liga-nr':
         UI.ligaNr = Number(el.getAttribute('data-nr')) || LIGA_EIGENE_NR;
-        UI.ligaNrAuf = false; UI.ligaRunde = null;
+        UI.ligaNrAuf = false; UI.ligaRunde = null; ligaGesamtFehlZeit = 0;
         render();
         break;
       case 'liga-runde-blaettern':
