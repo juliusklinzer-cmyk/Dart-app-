@@ -2976,11 +2976,17 @@ check('ein zweites Uebernehmen gibt es nicht mehr', (await page.locator('#liga-k
    Liga-Rangliste, zugeordnet ueber die Reihenfolge der 16 Einzel. */
 {
   await ligaStatistik();
-  await page.locator('#liga-statistik .st-chip[data-action="stats-team"][data-wert="Dart Artists Germering II"]').click();
-  const hl = await page.evaluate(() => document.getElementById('st-highlights').innerText.replace(/\s+/g, ' '));
-  check('Liga › Statistik › Germering: die Highlights nennen das gemeldete Shortleg von Gerd Stegerer (20 Darts)', /20 D Gerd Stegerer/.test(hl), hl.slice(0, 200));
+  await page.evaluate(() => { const D = window.__dart; D.ui().lstAnsicht = 'mannschaft'; D.render(); });
+  await page.locator('#liga-statistik [data-action="lst-auf"][data-wert="team"]').click();
+  await page.locator('#liga-statistik [data-action="lst-team"][data-wert="Dart Artists Germering II"]').click();
+  const hl = await page.evaluate(() => document.getElementById('lst-highlights').innerText.replace(/\s+/g, ' '));
+  check('Liga › Statistik › Germering: die Highlights nennen das gemeldete Shortleg von Gerd Stegerer (20 Darts)', /bestes: 20 Darts, Gerd Stegerer/.test(hl), hl.slice(0, 200));
+  /* Dasselbe Shortleg in seiner Einzelstatistik bei den Personal Bests. */
+  await page.evaluate(() => window.__dart.action('lst-spieler', { getAttribute: () => 'Dart Artists Germering II|Gerd Stegerer' }));
+  const pb = await page.evaluate(() => ((document.getElementById('lst-bests') || {}).innerText || '').replace(/\s+/g, ' '));
+  check('Einzelstatistik Gerd Stegerer: Personal Bests mit dem gemeldeten Shortleg (20 Darts)', /BESTES LEG .*20 Darts/.test(pb), pb.slice(0, 200));
   /* Zurueck in den Spielplan - fuer den Bericht den 2. Spieltag erneut waehlen. */
-  await page.evaluate(() => { const D = window.__dart; D.ui().ligaTeam = 'wir'; D.ui().ligaTab = 'plan'; D.ui().ligaWahl = 'st02'; D.ui().ligaZu = false; D.render(); });
+  await page.evaluate(() => { const D = window.__dart; D.ui().ligaTeam = 'wir'; D.ui().lstAnsicht = 'mannschaft'; D.ui().lstSpieler = null; D.ui().ligaTab = 'plan'; D.ui().ligaWahl = 'st02'; D.ui().ligaZu = false; D.render(); });
 }
 await page.locator('#liga-karte [data-action="liga-bericht"]').click();
 check('der Spielbericht oeffnet', await visible('#screen-bericht'));
@@ -4639,56 +4645,252 @@ check('das Ligaspiel liegt im Archiv', await page.evaluate(() =>
 
 });
 
-await gruppe('Liga › Statistik: unser Team, Gesamte Liga, ein Gegner (seit 12.11. im Liga-Reiter)', async () => {
+await gruppe('Liga › Statistik: Mannschaft, Spieler-Rangliste, Einzelstatistik (Entwuerfe LigaStTeam, LigaStRang, LigaStSpieler)', async () => {
 await ligaStatistik();
+await page.evaluate(() => { const D = window.__dart; D.ui().lstAnsicht = 'mannschaft'; D.ui().ligaTeam = 'wir'; D.ui().ligaNr = 5; D.render(); });
 check('der Statistik-Reiter der Liga zeigt die Liga-Statistik im Liga-Reiter, Reiter Statistik bleibt zu', (await visible('#screen-liga')) &&
-  (await visible('#liga-statistik .st-dash')) && (await page.locator('#liga-tabs button.active[data-tab="statistik"]').count()) === 1 && !(await visible('#screen-stats')));
-check('die Wer-Karte traegt kein Symbol und keinen Balken, der Titel ist unser Team', await page.evaluate(() => {
-  const w = document.querySelector('#liga-statistik .st-wer');
-  return !!w && !w.querySelector('.i') && getComputedStyle(w).borderLeftWidth === '1px' && w.querySelector('b').textContent.trim() === 'Blink 180' &&
+  (await visible('#liga-statistik .lst')) && (await page.locator('#liga-tabs button.active[data-tab="statistik"]').count()) === 1 && !(await visible('#screen-stats')));
+check('Umschalter Mannschaft · Spieler-Rangliste · Einzelstatistik, Mannschaft gewaehlt, kein Emoji', await page.evaluate(() => {
+  const t = [...document.querySelectorAll('#liga-statistik .lst-reiter button')].map((b) => b.textContent.trim());
+  const an = document.querySelector('#liga-statistik .lst-reiter button.an');
+  return t.join('|') === 'Mannschaft|Spieler-Rangliste|Einzelstatistik' && an && an.getAttribute('data-wert') === 'mannschaft' &&
     !/[\u{1F300}-\u{1FAFF}]/u.test(document.getElementById('liga-statistik').textContent);
 }));
-check('Team-Auswahl: unsere Mannschaft, Gesamte Liga und die Gegner', await page.evaluate(() => {
-  const t = [...document.querySelectorAll('#liga-statistik .st-chip[data-action="stats-team"]')].map((b) => b.textContent.trim());
-  return t[0] === 'Blink 180' && t[1] === 'Gesamte Liga' && t.some((x) => x.includes('TSV Dachau')) && t.length >= 10;
+check('die Statistik ist umgebaut: kein fix-setup, die Seite rollt', await page.evaluate(() => !document.body.classList.contains('fix-setup')));
+const kopfM = await page.evaluate(() => ({
+  titel: document.querySelector('#liga-statistik .lst-wer .lst-gross').textContent.trim(),
+  liga: document.querySelector('#liga-statistik .lst-wahl-liga .lst-wahl-knopf').textContent.trim(),
+  team: document.querySelector('#liga-statistik .lst-wahl-team .lst-wahl-knopf').textContent.trim(),
+  kpi: [...document.querySelectorAll('#liga-statistik .lst-kpi .lst-etikett')].map((e) => e.textContent.trim()).join('|')
 }));
-const kpiBlink = (await text('#liga-statistik .st-kpis')).toLowerCase();
-check('Kennzahlen: Tabellenplatz, Punkte, Einzel-Quote, Leg-Quote, Team-Average, Doppelquote, 180er',
-  ['tabellenplatz', 'punkte', 'einzel-quote', 'leg-quote', 'team-average', 'doppelquote', '180er'].every((k) => kpiBlink.includes(k)), kpiBlink.slice(0, 200));
-check('Team-Average aus den Wuerfen unserer Ligaspiele, das 141er-Finish als hoechstes', await page.evaluate(() => {
-  const k = document.querySelectorAll('#liga-statistik .st-kpi');
-  return parseFloat(k[4].querySelector('.z').getAttribute('data-zahl')) > 0 && k[6].textContent.includes('141');
+check('Kopf: Blink 180, Liga SDM 4er Liga 5, Mannschaft Blink 180; Kennzahlen Tabellenplatz, Einzel, Legs, Bester Spieler',
+  kopfM.titel === 'Blink 180' && kopfM.liga === 'SDM 4er Liga 5' && kopfM.team === 'Blink 180' && kopfM.kpi === 'TABELLENPLATZ|EINZEL|LEGS|BESTER SPIELER', JSON.stringify(kopfM));
+check('Einzel und Legs der Kennzahlen = Summe der Spieltag-Kacheln, Platz = Tabelle', await page.evaluate(() => {
+  const k = [...document.querySelectorAll('#liga-statistik .lst-kpi .lst-kpi-zahl')].map((e) => e.textContent.trim());
+  let ef = 0, ea = 0, lf = 0, la = 0;
+  document.querySelectorAll('#lst-spieltage .lst-tag').forEach((t) => {
+    const e = t.querySelector('.e b').textContent.split(':').map(Number), l = t.querySelector('.e span').textContent.replace('Legs ', '').split(':').map(Number);
+    ef += e[0]; ea += e[1]; lf += l[0]; la += l[1];
+  });
+  const z = window.LIGA_DATEN.tabelleAus(window.LIGA_DATEN.spieltage, window.LIGA_DATEN.teams);
+  return document.querySelectorAll('#lst-spieltage .lst-tag').length >= 1 && k[1] === ef + ':' + ea && k[2] === lf + ':' + la && /^\d+\.$/.test(k[0]) && Number(k[0].replace('.', '')) >= 1 && z.zeilen.length >= 9;
 }));
-check('Spieltag fuer Spieltag: Saeulen je Spieltag und die Punkte-Linie',
-  (await page.locator('#st-spieltage g.st-growY').count()) >= 1 && (await page.locator('#st-spieltage path.st-draw').count()) === 1);
-check('Kader-Beitrag aus der Einzelrangliste, Tabelle mit uns markiert, Bilanz gegen jedes Team',
-  (await page.locator('#st-kader .st-krow').count()) >= 4 && (await page.locator('#st-tabelle .st-krow.wir.an').count()) === 1 && (await page.locator('#st-teamgegner .st-erg').count()) >= 1);
-if (process.env.SHOTS) { for (const s of [["#st-kader", "kader"], ["#st-einzel", "einzel"], ["#st-ligarang", "ligarang"]]) { const l = page.locator(s[0]); if (await l.count()) { await l.first().scrollIntoViewIfNeeded(); await page.waitForTimeout(900); await page.screenshot({ path: "tests/.shots/" + s[1] + ".png" }); } } }
-check('Liga-Rangliste: vier Kacheln, Liste unserer Spieler, Highlights daneben',
-  (await page.locator('#st-ligarang .st-kachel').count()) === 4 && (await page.locator('#st-ligarang .st-lrow').count()) >= 4 && (await page.locator('#st-ligarang #st-highlights').count()) === 1);
-await page.locator('#st-ligarang .st-kachel[data-wert="won"]').click();
-check('eine Kachel waehlt die Kennzahl der Liste', (await page.locator('#st-ligarang .st-kachel.on[data-wert="won"]').count()) === 1 && (await text('#st-ligarang .st-liste h4')).toLowerCase().includes('siege'));
+check('Form & Siegquote: Ring, S : U : N und zehn Felder fuer die letzten Begegnungen', (await page.locator('#lst-form .lst-ring').count()) === 1 &&
+  (await page.locator('#lst-form .lst-zelle').count()) === 10 && /\d+ : \d+ : \d+/.test(await text('#lst-form')));
+check('Naechster Gegner mit sechs Vergleichszeilen, Heim und auswaerts mit Liga-Schnitt', (await page.locator('#lst-naechster .lst-vgl').count()) === 6 &&
+  (await page.locator('#lst-heimausw .lst-ha').count()) === 2 && (await page.locator('#lst-heimausw .lst-ha-bar em').count()) === 2);
+check('nur fuer unser Team: Team-Average aus den Wuerfen unserer Ligaspiele (Verlauf mit Punkten), Doppelquote und Spieleraktivitaet',
+  (await page.locator('#lst-teamavg svg circle').count()) >= 1 && (await page.locator('#lst-teamdbl').count()) === 1 && (await page.locator('#lst-aktivitaet svg rect').count()) >= 140);
+check('Mannschaftsprofil: Netz mit vier Ringen, Liga-Schnitt und Team; Einzel und Legs gewonnen je 9 Teams, wir markiert', await page.evaluate(() =>
+  document.querySelectorAll('#lst-profil svg polygon').length === 6 && document.querySelectorAll('#lst-einzelgew .lst-bz').length === 9 &&
+  document.querySelectorAll('#lst-legsgew .lst-bz').length === 9 && document.querySelector('#lst-einzelgew .lst-bz.an .n').textContent === 'Blink 180'));
+check('Wer holt die Punkte: die Anteile ergeben zusammen rund 100 %', await page.evaluate(() => {
+  const w = [...document.querySelectorAll('#lst-punkte .lst-anteil b')].map((b) => parseInt(b.textContent, 10));
+  const s = w.reduce((a, b) => a + b, 0);
+  return w.length >= 3 && s >= 96 && s <= 104;
+}));
+const rekB = await textKlein('#lst-rekorde');
+check('Mannschaftsrekorde: Punkte, Siege, Legs aus den Spielberichten, Average aus der App, das 141er-Finish als hoechstes',
+  ['meiste punkte', 'meiste siege', 'meiste legs', 'bester average', 'höchstes finish', 'höchster sieg', 'serie ohne niederlage'].every((k) => rekB.includes(k)) && /höchstes finish[\s\S]*?141/.test(rekB), rekB.slice(0, 300));
+if (process.env.SHOTS_LST) { for (const h of [0, 1]) { await page.evaluate((x) => { const D = window.__dart; D.state().settings.hell = x; D.render(); }, h); await page.setViewportSize({ width: 1180, height: 820 }); await page.waitForTimeout(900); await page.screenshot({ path: process.env.SHOTS_LST + '/mannschaft-' + (h ? 'hell' : 'dunkel') + '.png', fullPage: true }); } await page.evaluate(() => { window.__dart.state().settings.hell = 0; window.__dart.render(); }); await page.setViewportSize({ width: 390, height: 844 }); }
 
-await page.locator('#liga-statistik .st-chip[data-action="stats-team"][data-wert="alle"]').click();
-check('Gesamte Liga: Tabelle, Einzelrangliste mit Spielern anderer Teams, Highlights der ganzen Liga', await page.evaluate(() => {
-  const e = document.getElementById('st-einzel').innerText;
-  return document.querySelectorAll('#st-tabelle .st-krow').length >= 9 && document.querySelectorAll('#st-einzel .st-krow').length === 12 &&
-    e.includes('Treff ma nix') && document.querySelectorAll('#st-ligarang .st-lrow').length === 12 && !!document.querySelector('#st-highlights');
+/* Mannschaft waehlen: ein fremdes Team - ohne die Karten aus der App. */
+await page.locator('#liga-statistik [data-action="lst-auf"][data-wert="team"]').click();
+check('die Mannschaftswahl listet alle 9 Teams mit Platz', await page.evaluate(() => {
+  const z = [...document.querySelectorAll('#liga-statistik .lst-pop [data-action="lst-team"]')];
+  return z.length === 9 && z.every((b) => /\d+\. Platz/.test(b.textContent)) && z.filter((b) => b.classList.contains('an')).length === 1;
 }));
-check('auch Spieler aus Spielen ohne uns (Reinhart Boehm, d`Haberer 2) stehen in der Liga-Rangliste', (await text('#st-ligarang')).includes('Reinhart Boehm'));
+await page.locator('#liga-statistik [data-action="lst-team"][data-wert="TSV Dachau 1865 4"]').click();
+check('fremdes Team: Titel gewechselt, Liste zu, keine Karten aus der App (Average, Doppelquote, Aktivitaet, App-Rekorde)', await page.evaluate(() => {
+  const r = document.getElementById('lst-rekorde');
+  return document.querySelector('#liga-statistik .lst-wer .lst-gross').textContent === 'TSV Dachau 1865 4' && !document.querySelector('#liga-statistik .lst-pop') &&
+    !document.getElementById('lst-teamavg') && !document.getElementById('lst-teamdbl') && !document.getElementById('lst-aktivitaet') &&
+    !!r && !/BESTER AVERAGE|BESTE DOPPELQUOTE|LEG-AVERAGE/.test(r.textContent) && document.querySelectorAll('#lst-einzelgew .lst-bz.an').length === 1;
+}));
+check('die Spieltag-Kacheln oeffnen die 16 Einzel des Spielberichts', (await page.locator('#lst-spieltage .lst-tag.tap').count()) >= 1);
+await page.locator('#lst-spieltage .lst-tag.tap').first().click();
+check('ein Tipp auf einen Spieltag zeigt die Einzel', (await page.locator('#overlay-card .lp-tab tbody tr').count()) >= 1);
+await page.locator('#overlay-card [data-action="ov-cancel"]').click();
 
-await page.locator('#liga-statistik .st-chip[data-action="stats-team"][data-wert="TSV Dachau 1865 4"]').click();
-check('nur der Gegner: Kader ohne Tipp zur Person, Team-Average nur fuer unser Team', await page.evaluate(() => {
-  const rows = [...document.querySelectorAll('#st-kader .st-krow')];
-  return rows.length > 0 && rows.every((r) => r.tagName !== 'BUTTON') && document.querySelector('#liga-statistik .st-kpis').textContent.includes('nur für unser Team');
+/* Spieler-Rangliste mit Wertung (frueher die Einzelrangliste im Tabellen-Reiter). */
+await page.locator('#liga-statistik .lst-reiter [data-wert="rangliste"]').click();
+const rang = await page.evaluate(() => {
+  const z = [...document.querySelectorAll('#lst-rang-zeilen .lst-rz')];
+  const er = window.LIGA_DATEN.einzelranglisteAus(window.LIGA_DATEN.spieltage);
+  return {
+    n: z.length, gesamt: er.length, kopf: [...document.querySelectorAll('#lst-rangliste .lst-sp')].map((b) => b.textContent.trim()).join('|'),
+    ersteWir: z.slice(0, 15).length, wir: z.filter((r) => r.classList.contains('wir')).length, luecke: document.querySelectorAll('#lst-rang-zeilen .lst-luecke').length,
+    wirAlle: z.slice(15).every((r) => r.classList.contains('wir')),
+    wertung: z.every((r) => { const sv = r.children[4].textContent.split(':').map(Number), b = parseInt(r.querySelector('.wt b').textContent, 10); return Math.round((sv[0] + 2) / (sv[0] + sv[1] + 4) * 100) === b; }),
+    rangAuf: z.slice(0, 15).every((r, i, a) => !i || Number(r.children[0].textContent) >= Number(a[i - 1].children[0].textContent)),
+    gold: z.slice(0, 3).every((r) => r.querySelector('.rang.gold')),
+    mehr: (document.querySelector('#lst-rangliste [data-action="liga-einzel-alle"]') || {}).textContent || '',
+    fuss: (document.querySelector('#liga-statistik .lst-fuss') || {}).textContent || ''
+  };
+});
+check('Rangliste: Spalten Rang, Spieler, Team, Einzel, S : N, Quote, Wertung, Legs, Pkt', rang.kopf === 'RANG|SPIELER|TEAM|EINZEL|S : N|QUOTE|WERTUNG *|LEGS|PKT', rang.kopf);
+check('Rangliste: erst 15 Spieler, dazu unsere uebrigen mit Luecke, „Alle N Spieler zeigen“', rang.n > 15 && rang.n < rang.gesamt && rang.wirAlle && rang.luecke >= 1 && rang.mehr === 'Alle ' + rang.gesamt + ' Spieler zeigen', JSON.stringify(rang).slice(0, 300));
+check('Wertung = (Siege + 2) / (Einzel + 4) in jeder Zeile, Rang 1 bis 3 in Gold, Fussnote erklaert die Wertung', rang.wertung && rang.rangAuf && rang.gold && /\(Siege \+ 2\) ÷ \(Einzel \+ 4\)/.test(rang.fuss));
+await page.locator('#lst-rangliste [data-action="liga-einzel-alle"]').click();
+check('alle zeigen: jede Zeile der Einzelrangliste, unsere hervorgehoben, Gast markiert', await page.evaluate(() => {
+  const z = [...document.querySelectorAll('#lst-rang-zeilen .lst-rz')], er = window.LIGA_DATEN.einzelranglisteAus(window.LIGA_DATEN.spieltage);
+  return z.length === er.length && z.some((r) => r.classList.contains('wir')) && z.filter((r) => r.classList.contains('wir')).every((r) => r.querySelector('.team').textContent === 'Blink 180') &&
+    z.some((r) => r.querySelector('.lst-gast')) && !document.querySelector('#lst-rang-zeilen .lst-luecke') && /Reinhart Boehm/.test(document.getElementById('lst-rangliste').textContent);
 }));
-await page.locator('#st-tabelle .st-krow[data-wert="wir"]').click();
-check('ein Tipp in der Tabelle wechselt das Team', (await page.locator('#liga-statistik .st-chip.on[data-wert="wir"]').count()) === 1);
-/* Ein Tipp auf eine Person im Kader-Beitrag fuehrt in Statistik › Einzel. */
-await page.locator('#st-kader button.st-krow').first().click();
-check('ein Tipp auf eine Person im Kader-Beitrag oeffnet ihre Einzelstatistik im Reiter Statistik', (await visible('#screen-stats')) &&
+const rangVor = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('#lst-rang-zeilen .lst-rz')].map((r) => [r.querySelector('.nn').textContent + '|' + r.querySelector('.team').textContent, r.children[0].textContent])));
+await page.locator('#lst-rangliste .lst-sp[data-wert="pk"]').click();
+check('Sortieren nach Punkten: absteigend, PKT markiert, der Rang bleibt der Platz in der Liga', await page.evaluate((vor) => {
+  const z = [...document.querySelectorAll('#lst-rang-zeilen .lst-rz')], pk = z.map((r) => Number(r.children[8].textContent));
+  return pk.every((v, i) => !i || v <= pk[i - 1]) && document.querySelector('#lst-rangliste .lst-sp.an').getAttribute('data-wert') === 'pk' &&
+    z.every((r) => vor[r.querySelector('.nn').textContent + '|' + r.querySelector('.team').textContent] === r.children[0].textContent) && /sortiert nach Punkten/.test(document.querySelector('.lst-rang-titel').textContent);
+}, rangVor));
+await page.locator('#lst-rangliste .lst-sp[data-wert="n"]').click();
+check('Sortieren nach Name: alphabetisch', await page.evaluate(() => {
+  const n = [...document.querySelectorAll('#lst-rang-zeilen .nn')].map((e) => e.textContent);
+  return n.every((v, i) => !i || n[i - 1].localeCompare(v, 'de') <= 0);
+}));
+await page.locator('#liga-statistik [data-action="lst-auf"][data-wert="team"]').click();
+check('Mannschaftswahl der Rangliste: Ganze Liga und die Teams mit Spielerzahl', await page.evaluate(() => {
+  const z = [...document.querySelectorAll('#liga-statistik .lst-pop [data-action="lst-team"]')];
+  return z.length === 10 && z[0].getAttribute('data-wert') === '' && z.every((b) => /\d+ Spieler/.test(b.textContent));
+}));
+await page.locator('#liga-statistik .lst-pop [data-action="lst-team"][data-wert="Blink 180"]').click();
+check('nur Blink 180: alle Zeilen unsere, kein „Alle zeigen“', await page.evaluate(() => {
+  const z = [...document.querySelectorAll('#lst-rang-zeilen .lst-rz')];
+  return z.length >= 4 && z.every((r) => r.classList.contains('wir')) && !document.querySelector('#lst-rangliste [data-action="liga-einzel-alle"]');
+}));
+await page.evaluate(() => { const D = window.__dart; D.ui().lstSort = 'b'; D.ui().ligaEinzelAlle = false; D.render(); });
+if (process.env.SHOTS_LST) { for (const h of [0, 1]) { await page.evaluate((x) => { const D = window.__dart; D.ui().lstRangTeam = null; D.state().settings.hell = x; D.render(); }, h); await page.setViewportSize({ width: 1180, height: 820 }); await page.waitForTimeout(900); await page.screenshot({ path: process.env.SHOTS_LST + '/rangliste-' + (h ? 'hell' : 'dunkel') + '.png', fullPage: true }); } await page.evaluate(() => { window.__dart.state().settings.hell = 0; window.__dart.render(); }); await page.setViewportSize({ width: 390, height: 844 }); }
+
+/* Ein Name fuehrt in die Einzelstatistik. */
+const appName = await page.evaluate(() => {
+  /* Ein Spieler unseres Teams mit Wuerfen aus der App (Liga-Average im Kader-Beitrag). */
+  const z = [...document.querySelectorAll('#lst-rang-zeilen .lst-rz.wir .nm')];
+  for (const b of z) { window.__dart.action('lst-spieler', { getAttribute: () => b.getAttribute('data-wert') }); if (document.getElementById('lst-avg')) return b.getAttribute('data-wert'); }
+  return null;
+});
+check('ein Name der Rangliste oeffnet die Einzelstatistik: unser Spieler mit Average-Entwicklung, Doppelquote, Big Scores, Doppel-Analyse und Spielerprofil aus der App', !!appName &&
+  (await page.locator('#liga-statistik .lst-reiter button.an[data-wert="einzel"]').count()) === 1 &&
+  (await page.locator('#lst-avg svg').count()) === 1 &&
+  (await page.locator('#lst-doppel').count()) === 1 && (await page.locator('#lst-radar').count()) === 1 && (await page.locator('#lst-big').count()) === 1, String(appName));
+check('Einzelstatistik: Name, Rang im Team und in der Liga, Liga-Bilanz mit Liga-Ø aus der App, Form mit 12 Feldern, Gegnerbilanz, Umfeld', await page.evaluate((key) => {
+  const name = key.split('|')[1], h = document.querySelector('#liga-statistik .lst-held');
+  return h.querySelector('.lst-gross').textContent === name && /Rang \d+ im Team von \d+/.test(h.textContent) && /Rang \d+ in der Liga von \d+/.test(h.textContent) &&
+    /Liga-Ø/.test(document.getElementById('lst-bilanz').textContent) && document.querySelectorAll('#lst-form .lst-zelle').length === 12 &&
+    document.querySelectorAll('#lst-gegner .lst-gz:not(.kopf)').length >= 1 && /DEIN Ø/.test(document.getElementById('lst-gegner').textContent) &&
+    document.querySelectorAll('#lst-umfeld .lst-tz').length >= 3 && document.querySelector('#lst-teamrang .lst-tz.an .n b').textContent === name &&
+    document.querySelector('#liga-statistik .lst-wahl-spieler .lst-wahl-knopf').textContent.trim() === name;
+}, appName || '|'));
+if (process.env.SHOTS_LST) { for (const h of [0, 1]) { await page.evaluate((x) => { const D = window.__dart; D.state().settings.hell = x; D.render(); }, h); await page.setViewportSize({ width: 1180, height: 820 }); await page.waitForTimeout(900); await page.screenshot({ path: process.env.SHOTS_LST + '/einzel-' + (h ? 'hell' : 'dunkel') + '.png', fullPage: true }); } await page.evaluate(() => { window.__dart.state().settings.hell = 0; window.__dart.render(); }); await page.setViewportSize({ width: 390, height: 844 }); }
+/* Spielerwahl: erst die Mannschaft, dann geht die Spielerliste auf. */
+await page.locator('#liga-statistik [data-action="lst-auf"][data-wert="team"]').click();
+await page.locator('#liga-statistik .lst-pop [data-action="lst-team"][data-wert="d`Haberer 2"]').click();
+check('Mannschaft in der Einzelstatistik: die Spielerliste geht auf, die Spieler des Teams zuerst', await page.evaluate(() => {
+  const z = [...document.querySelectorAll('#liga-statistik .lst-wahl-spieler .lst-pop [data-action="lst-spieler"]')];
+  return z.length > 9 && z[0].getAttribute('data-wert').indexOf('d`Haberer 2|') === 0;
+}));
+await page.locator('#liga-statistik .lst-wahl-spieler .lst-pop [data-action="lst-spieler"][data-wert="d`Haberer 2|Reinhart Boehm"]').click();
+check('fremder Spieler: nur was die Spielberichte hergeben - keine Karten aus der App, kein Liga-Ø', await page.evaluate(() =>
+  document.querySelector('#liga-statistik .lst-held .lst-gross').textContent === 'Reinhart Boehm' && !document.querySelector('#liga-statistik .lst-pop') &&
+  !document.getElementById('lst-avg') && !document.getElementById('lst-doppel') && !document.getElementById('lst-radar') && !document.getElementById('lst-big') &&
+  !/Liga-Ø|Doppelquote/.test(document.getElementById('lst-bilanz').textContent) && !/DEIN Ø/.test(document.getElementById('lst-gegner').textContent) &&
+  /SIEGE AN EINEM ABEND/.test(document.getElementById('lst-bests').textContent) && document.querySelectorAll('#lst-form .lst-zelle.s, #lst-form .lst-zelle.n').length >= 1));
+/* Ein Profil gehoert hoechstens einem Liga-Spieler: "Michael" mit vollem
+   Namen Schmeiss darf nicht auch bei Goebel oder dem Gast Hofmann stehen
+   (sonst staenden dort Schmeiss' Wuerfe). */
+check('jedes Profil nur bei einem Spieler: Schmeiß hat es, Göbel und der Gast Hofmann nicht', await page.evaluate(() => {
+  const D = window.__dart, S = D.state();
+  S.profiles.push({ id: 'u_michi_test', name: 'Michael', voll: 'Michael Schmeiß', hue: 123, created: Date.now() });
+  const bild = (key) => { D.action('lst-spieler', { getAttribute: () => key }); return document.querySelector('#liga-statistik .lst-held .lst-bild').outerHTML; };
+  const s = bild('Blink 180|Michael Schmeiß'), g = bild('Blink 180|Michael Göbel'), h = bild('Blink 180|Michael Hofmann');
+  S.profiles = S.profiles.filter((p) => p.id !== 'u_michi_test'); D.render();
+  return /hsl\(123,/.test(s) && !/hsl\(123,/.test(g) && !/hsl\(123,/.test(h);
+}));
+
+/* Ligawahl wie in der Tabelle: eine andere Liga kommt vom Server, hat nur Spielberichte. */
+{
+  /* Ohne Daten vom Server (hier: ohne Konto) ein Hinweis statt "Lädt …". */
+  await page.locator('#liga-statistik [data-action="lst-auf"][data-wert="liga"]').click();
+  await page.locator('#liga-statistik .lst-pop [data-action="lst-liga"][data-nr="2"]').click();
+  await page.waitForFunction(() => !/Lädt/.test(document.getElementById('liga-statistik').textContent), null, { timeout: 5000 }).catch(() => {});
+  check('Liga 2 ohne Daten vom Server: ein Hinweis statt einer leeren Statistik', /angemeldet|Verbindung|nicht erreichbar/.test(await text('#liga-statistik')), (await text('#liga-statistik')).slice(0, 160));
+  const t = fs.readFileSync(path.join(ROOT, 'js/liga-gesamt-daten.js'), 'utf8');
+  apiMock['/api/liga-gesamt'] = JSON.parse(t.slice(t.indexOf('{'), t.lastIndexOf('}') + 1));
+  await page.locator('#liga-statistik [data-action="lst-auf"][data-wert="liga"]').click();
+  check('Ligawahl: SDM 4er Liga 1 bis 5, die gewählte (2) markiert, unsere benannt', await page.evaluate(() => {
+    const z = [...document.querySelectorAll('#liga-statistik .lst-pop [data-action="lst-liga"]')];
+    return z.length === 5 && z[1].classList.contains('an') && z.filter((b) => b.classList.contains('an')).length === 1 && /unsere/.test(z[4].textContent);
+  }));
+  await page.locator('#liga-statistik .lst-pop [data-action="lst-liga"][data-nr="3"]').click();
+  await page.waitForFunction(() => !/Lädt/.test(document.getElementById('liga-statistik').textContent), null, { timeout: 5000 }).catch(() => {});
+  await page.locator('#liga-statistik .lst-reiter [data-wert="mannschaft"]').click();
+  check('Liga 3: Mannschaft eines Teams dort, ohne Karten aus der App', await page.evaluate(() => {
+    const titel = (document.querySelector('#liga-statistik .lst-wer .lst-gross') || {}).textContent || '';
+    return /SDM 4er Liga 3/.test(document.querySelector('#liga-statistik .lst-wahl-liga').textContent) && titel && titel !== 'Blink 180' &&
+      !document.getElementById('lst-teamavg') && !document.getElementById('lst-aktivitaet') && document.querySelectorAll('#lst-einzelgew .lst-bz').length >= 6 &&
+      /SDM 4er Liga 3/.test(document.getElementById('liga-sub').textContent);
+  }));
+  await page.locator('#liga-statistik .lst-reiter [data-wert="rangliste"]').click();
+  check('Liga 3: Rangliste aus den Spielberichten, keiner von uns hervorgehoben', await page.evaluate(() =>
+    document.querySelectorAll('#lst-rang-zeilen .lst-rz').length >= 15 && !document.querySelector('#lst-rang-zeilen .lst-rz.wir')));
+  await page.locator('#liga-tabs button[data-tab="tabelle"]').click();
+  check('die Ligawahl gilt auch in der Tabelle', /SDM 4er Liga 3/.test(await text('#liga-tabelle .lg-ligaknopf')));
+  await page.evaluate(() => { const D = window.__dart; D.ui().ligaNr = 5; D.ui().ligaTab = 'statistik'; D.render(); });
+  delete apiMock['/api/liga-gesamt'];
+}
+
+/* Hell und dunkel, Handy bis Laptop: kein seitlicher Ueberlauf. */
+{
+  const vpAlt = page.viewportSize();
+  const lagen = [];
+  for (const vp of [{ width: 390, height: 844 }, { width: 820, height: 1180 }, { width: 1180, height: 820 }, { width: 1366, height: 900 }]) {
+    await page.setViewportSize(vp);
+    for (const h of [1, 0]) {
+      for (const a of ['mannschaft', 'rangliste', 'einzel']) {
+        const r = await page.evaluate(({ h, a }) => {
+          const D = window.__dart; D.state().settings.hell = h; D.ui().lstAnsicht = a; D.ui().lstSpieler = null; D.ui().lstAuf = ''; D.ui().ligaEinzelAlle = false; D.render();
+          const w = window.innerWidth, wurzel = document.getElementById('liga-statistik');
+          let breit = null;
+          wurzel.querySelectorAll('*').forEach((el) => { const b = el.getBoundingClientRect(); if (!breit && b.width && b.right > w + 1) breit = el.className || el.tagName; });
+          return { h: document.documentElement.getAttribute('data-hell'), sw: document.documentElement.scrollWidth, w, breit,
+            bg: getComputedStyle(document.querySelector('#liga-statistik .lst-karte')).backgroundColor };
+        }, { h, a });
+        lagen.push({ vp: vp.width, hell: h, a, ok: r.h === String(h) && r.sw <= r.w && !r.breit && r.bg === (h ? 'rgb(255, 255, 255)' : 'rgb(23, 18, 19)'), r });
+      }
+    }
+  }
+  const schlecht = lagen.filter((l) => !l.ok);
+  check('hell und dunkel auf 390, 820 (hochkant), 1180 und 1366 px: Karten in den Farben des Entwurfs, kein seitlicher Ueberlauf', !schlecht.length, JSON.stringify(schlecht).slice(0, 400));
+  await page.evaluate(() => { const D = window.__dart; D.state().settings.hell = 0; D.ui().lstAnsicht = 'mannschaft'; D.render(); });
+  await page.setViewportSize(vpAlt);
+}
+if (process.env.SHOTS_LST) {
+  for (const a of ['mannschaft', 'einzel']) { await page.evaluate((x) => { const D = window.__dart; D.state().settings.hell = 1; D.ui().lstAnsicht = x; D.render(); }, a); await page.waitForTimeout(900); await page.screenshot({ path: process.env.SHOTS_LST + '/handy-' + a + '-hell.png', fullPage: false }); }
+  await page.evaluate(() => { const D = window.__dart; D.state().settings.hell = 0; D.ui().lstAnsicht = 'mannschaft'; D.render(); });
+}
+
+/* Datenschutz: ein Gast-Konto sieht keine buergerlichen Namen aus den Profilen
+   unserer Mitglieder - nur, was die Ligaleitung ohnehin veroeffentlicht. */
+/* (Den Server-Teil - p.voll fuer Gast-Konten leer - erledigt server/api.mjs;
+   hier: die Statistik selbst zeigt nie den vollen Namen eines Profils.) */
+check('Gast-Konto: die Statistik zeigt keinen vollen Namen aus unseren Profilen, nur die Namen der Spielberichte', await page.evaluate(() => {
+  const D = window.__dart, S = D.state(), echt = window.DartKonto;
+  const p = S.profiles.find((x) => !x.gast && !x.bot && !x.gastKonto && !x.hidden);
+  const alt = p.voll; p.voll = 'Zacharias Geheimname';
+  window.DartKonto = new Proxy({ nutzer: () => ({ id: 'u_gastsicht', gastKonto: true }) }, { get: (t, k) => (k in t ? t[k] : () => null) });
+  let gefunden = false;
+  for (const a of ['mannschaft', 'rangliste', 'einzel']) { D.ui().lstAnsicht = a; D.render(); if (/Geheimname/.test(document.getElementById('liga-statistik').textContent)) gefunden = true; }
+  p.voll = alt; window.DartKonto = echt; D.ui().lstAnsicht = 'mannschaft'; D.render();
+  return !gefunden;
+}));
+
+/* Von der Liga in die Statistik des Reiters: die Karten dort werden im Bild sichtbar (der geteilte Beobachter bleibt dran). */
+await page.evaluate(() => {
+  const D = window.__dart, p = D.state().profiles.find((x) => !x.gast && !x.bot && !x.hidden);
+  D.action('stats-person', { getAttribute: () => p.id });
+});
+check('aus der Liga in die Einzelstatistik des Reiters Statistik', (await visible('#screen-stats')) &&
   (await page.locator('#stats-ebene button.on[data-wert="person"]').count()) === 1 && (await visible('#stats-main .st-wer .av')));
-/* Am Handy liegt die erste Karte unter den Kennzahlen - erst ins Bild rollen. */
 await page.locator('#stats-main .st-karte').first().scrollIntoViewIfNeeded();
 await page.waitForTimeout(1200);
 check('aus der Liga kommend werden die Karten im Bild sichtbar (der geteilte Beobachter bleibt dran)', await page.evaluate(() => {

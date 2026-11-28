@@ -445,7 +445,7 @@
       <button type="button" data-action="liga-tab" data-tab="plan" class="active">Spielplan</button>
       <button type="button" data-action="liga-tab" data-tab="training">Training</button>
       <button type="button" data-action="liga-tab" data-tab="tabelle">Tabelle</button>
-      <!-- Liga-Statistik: unser Team, gesamte Liga, Gegner (#liga-statistik). -->
+      <!-- Liga-Statistik: Mannschaft, Spieler-Rangliste, Einzelstatistik (#liga-statistik). -->
       <button type="button" data-action="liga-tab" data-tab="statistik">Statistik</button>
       <button type="button" data-action="liga-tab" data-tab="kasse">Kasse</button>
       <button type="button" data-action="liga-tab" data-tab="regeln">Regeln</button>
@@ -489,10 +489,10 @@
 
   <!-- Die Vereinskasse: ein Kassenbuch fuer alle - Einzahlung oder
        Ausgabe erfassen, der Bestand rechnet sich von selbst. -->
-  <!-- Liga-Statistik (Mannschaft, gesamte Liga, ein Gegner): Team-Chips,
-       Kennzahlen, Spieltag fuer Spieltag, Kader-Beitrag, Tabelle, Bilanz je
-       Team, Highlights, Liga-Rangliste - gezeichnet von renderLigaStatistik(). -->
-  <div id="liga-statistik" class="hidden liga-zwei"></div>
+  <!-- Liga-Statistik (Entwuerfe LigaStTeam, LigaStRang, LigaStSpieler):
+       Mannschaft im Ligavergleich, Spieler-Rangliste mit Wertung und
+       Einzelstatistik, Ligawahl 1 bis 5 - gezeichnet von renderLigaStatistik(). -->
+  <div id="liga-statistik" class="hidden"></div>
 
   <div id="liga-kasse" class="hidden lg-spalten">
     <div id="kasse-karte"></div>
