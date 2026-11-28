@@ -554,7 +554,9 @@
       if (s.settings.online === undefined) s.settings.online = 0;
       if (s.settings.ton !== 0) s.settings.ton = 1;
       if (s.settings.feiern !== 0) s.settings.feiern = 1;
-      if ([0, 1, 2].indexOf(s.settings.hell) < 0) s.settings.hell = 0;   // Darstellung: 0 dunkel, 1 hell, 2 automatisch (folgt dem Geraet)
+      if ([0, 1, 2].indexOf(s.settings.hell) < 0) s.settings.hell = 0;
+      /* Ligaspiel-Voreinstellungen fuer neue Game Days (Liga-Einstellungen). */
+      if (!s.settings.ligaVor || typeof s.settings.ligaVor !== 'object') s.settings.ligaVor = { bestOf: 3, finish: false, ohneNamen: false, nurErgebnis: false };   // Darstellung: 0 dunkel, 1 hell, 2 automatisch (folgt dem Geraet)
       /* Spieldauer des Schnellen Spiels (Saetze/Legs) kam spaeter dazu --
          Altbestand spielt weiter ein Leg. */
       if (s.settings.quickModus !== 1) s.settings.quickModus = 0;
@@ -4231,7 +4233,7 @@
     var mitMenue = screen === 'game' || screen === 'cricket' || screen === 'rtw' || screen === 'finisher' || screen === 'kaiwen' || screen === 'hunter';
     if (!mitMenue) UI.menu = false;
     /* Beim Betreten der Liga zeigt der Spielplan wieder den naechsten Spieltag. */
-    if (screen !== 'liga') { UI.ligaWahl = null; UI.ligaZu = false; UI.ligaAendern = null; UI.trainingAendern = null; UI.kasseZeile = null; UI.ligaTeamSeite = null; UI.ligaNrAuf = false; }
+    if (screen !== 'liga') { UI.ligaWahl = null; UI.ligaZu = false; UI.ligaAendern = null; UI.trainingAendern = null; UI.kasseZeile = null; UI.ligaTeamSeite = null; UI.ligaNrAuf = false; UI.ligaEinst = null; }
     $('nav').classList.toggle('hidden', !navFor);
     if (navFor) {
       $('nav').querySelectorAll('button').forEach(function (b) {
@@ -5781,7 +5783,7 @@
   function darstellungAnwenden() {
     var de = document.documentElement;
     var liga = !!($('screen-liga') && $('screen-liga').classList.contains('active'));
-    var bereich = (liga && !!LIGA_NEU[UI.ligaTab || 'plan']) || (!liga && (hellAblauf() || hellZaehlen()));
+    var bereich = (liga && (!!LIGA_NEU[UI.ligaTab || 'plan'] || !!UI.ligaEinst || !!UI.ligaTeamSeite)) || (!liga && (hellAblauf() || hellZaehlen()));
     var w = istHell() && bereich ? '1' : '0';
     if (de.getAttribute('data-hell') !== w) de.setAttribute('data-hell', w);
     de.classList.toggle('in-liga', liga);
@@ -9339,6 +9341,107 @@
   }
   var ligaTabelleHtml = '';
 
+  /* Liga-Einstellungen (Entwurf LigaEinst, Redesign Nov. 2026): links die
+     Bereiche, rechts die Werte. Darstellung und die Ligaspiel-Voreinstellungen
+     gelten fuer dieses Geraet und sind fuer jeden einstellbar; Kassenjahr und
+     Anfangsbestand stellt, wer die Kasse fuehrt (im Reiter Kasse). Vereinsheim,
+     Training, Rollen und Spielbericht stehen hier zum Nachsehen - Rollen fuer
+     Admin und TCs gibt es auf dem Server noch nicht. */
+  var LE_BEREICHE = [['heim', 'Vereinsheim'], ['training', 'Training'], ['team', 'Team und Rollen'], ['spiel', 'Ligaspiel'], ['bericht', 'Spielbericht'], ['kasse', 'Kasse'], ['darst', 'Darstellung']];
+  var LE_ICON = {
+    heim: '<path d="M4 11.5L12 5l8 6.5"/><path d="M6.5 10.5V19h11v-8.5"/><path d="M10 19v-4h4v4"/>',
+    training: '<path d="M4 9v6M7 7v10M17 7v10M20 9v6M7 12h10"/>',
+    team: '<circle cx="12" cy="7" r="3"/><path d="M6.5 19v-1.8c0-2.8 2.5-4.5 5.5-4.5s5.5 1.7 5.5 4.5V19Z"/><circle cx="4.8" cy="9.5" r="2.2"/><circle cx="19.2" cy="9.5" r="2.2"/>',
+    spiel: '<path d="M7 3h10v6a5 5 0 0 1-10 0z"/><path d="M7 5H4v2a3 3 0 0 0 3 3M17 5h3v2a3 3 0 0 1-3 3"/><path d="M12 14v3M9 17h6l1 3.5H8z"/>',
+    bericht: '<path d="M6 3h9l4 4v14H6Z M15 3v5h4M9 12h7M9 16h7"/>',
+    kasse: '<circle cx="12" cy="12" r="9"/><path d="M16 8c-3-2-8 0-8 4s5 6 8 4M7 11h8M7 14h8"/>',
+    darst: '<path d="M2 12s4-6 10-6 10 6 10 6-4 6-10 6-10-6-10-6Z"/><circle cx="12" cy="12" r="3"/>'
+  };
+  function leIcon(k, g) { return '<svg aria-hidden="true" width="' + (g || 18) + '" height="' + (g || 18) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + LE_ICON[k] + '</svg>'; }
+  var LE_SCHLOSS = '<svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15" r="1"/></svg>';
+  /* Voreinstellungen fuer neue Game Days an diesem Geraet. */
+  function ligaVorgaben() {
+    var v = S.settings.ligaVor;
+    return { bestOf: v && v.bestOf === 5 ? 5 : 3, finish: !!(v && v.finish), ohneNamen: !!(v && v.ohneNamen), nurErgebnis: !!(v && v.nurErgebnis) };
+  }
+  function renderLigaEinstellungen() {
+    var wahl = UI.ligaEinst || 'darst';
+    var online = !!(window.DartKonto && window.DartKonto.nutzer());
+    var wart = !!(kasseDaten && kasseDaten.kassenwart);
+    var gast = ichBinGastKonto();
+    var ti = (window.LIGA_DATEN.teamInfo || {})[LIGA.team] || {};
+    var tc = function (n) { var x = (ti.spieler || []).filter(function (s) { return s.info === n; })[0]; return x ? String(x.name).replace(/^\*/, '') : '–'; };
+    var vor = ligaVorgaben();
+    var konfig = kasseDaten && kasseDaten.konfig ? kasseDaten.konfig : null;
+    /* Zeilen: [titel, text, wert] oder [titel, text, [[wert, name], ...], aktuell, aktion] */
+    var vz = function (titel, text, wert, link) { return { titel: titel, text: text, wert: wert, link: link || '' }; };
+    var wz = function (k, titel, text, werte, akt, darf) { return { k: k, titel: titel, text: text, werte: werte, akt: akt, darf: darf }; };
+    var darfVor = !gast;
+    var B = {
+      heim: ['Vereinsheim', 'Unser Lokal für Heimspiele und das Training. Logo und Bild stehen im Spielplan, beim Training und im Game Day.', []],
+      training: ['Training', 'DiensDarts, unser Dienstags-Training im Vereinsheim.', [
+        vz('Name', 'So heißt das Training in der App', 'DiensDarts'),
+        wz('tag', 'Trainingstag', 'Jede Woche', [['di', 'Dienstag'], ['mi', 'Mittwoch'], ['do', 'Donnerstag']], 'di', false),
+        vz('Ort', 'Kommt aus dem Vereinsheim', ti.lokal || 'Bar Sehnsucht'),
+        wz('liga', 'Ligaspiel am Trainingstag', 'Dann fällt das Training aus', [['aus', 'kein Training'], ['an', 'trotzdem']], 'aus', false),
+        wz('kal', 'Im Kalender', 'Wie der Eintrag im Kalender landet', [['tag', 'ganztägig'], ['zeit', 'mit Uhrzeit']], 'tag', false)]],
+      team: ['Team und Rollen', 'Wer was darf. TC-1 und TC-2 stehen so auch bei der Ligaleitung.', [
+        vz('Team', 'SDM 4er Liga ' + LIGA_EIGENE_NR + ' · ' + LIGA.saison, LIGA.team),
+        vz('TC-1', 'Teamcaptain, unterschreibt den Bogen', tc('TC-1')),
+        vz('TC-2', 'Teamcaptain, Vertretung', tc('TC-2')),
+        vz('Kasse führt', 'Verwaltet Buchungen und Beiträge', ((kasseDaten && kasseDaten.kassenwarte) || []).join(', ') || '–')]],
+      spiel: ['Ligaspiel', 'Voreinstellungen für jeden neuen Game Day an diesem Gerät. Scheibe 1 übernimmt sie beim Erstellen, meist bleibt alles gleich.', [
+        wz('legs', 'Legs je Einzel', 'Liga 5 spielt Best of 3', [['3', 'Best of 3'], ['5', 'Best of 5']], String(vor.bestOf), darfVor),
+        wz('finish', 'Finish-Anzeigen', 'Ohne ist ligakonform. Mit zeigt Finishwege und fragt beim Checkout nach dem Doppel', [['ohne', 'ohne'], ['mit', 'mit']], vor.finish ? 'mit' : 'ohne', darfVor),
+        wz('live', 'Live für Zuschauer', 'Ohne Namen zeigt nur H1, G1 und die Stände', [['namen', 'mit Namen'], ['anonym', 'ohne Namen']], vor.ohneNamen ? 'anonym' : 'namen', darfVor),
+        wz('mit', 'Mitschreiben', 'Nur Ergebnisse, wenn der Gegner selbst zählt', [['app', 'in der App'], ['erg', 'nur Ergebnisse']], vor.nurErgebnis ? 'erg' : 'app', darfVor)]],
+      bericht: ['Spielbericht', 'Wohin der Bogen nach den Unterschriften geht.', [
+        vz('Ligaleitung', 'laut Bogen V5.2', LIGALEITUNG_MAIL),
+        vz('TC-1 und TC-2', 'Adresse vom jeweiligen Konto', tc('TC-1') + ', ' + tc('TC-2')),
+        vz('Weitere Adressen', 'Merkt sich die App beim Versand', 'beim Versand wählbar')]],
+      kasse: ['Kasse', 'Grundwerte fürs Kassenbuch. Buchungen selbst stehen im Reiter Kasse.', [
+        vz('Kassenjahr', 'Beginnt mit dem Anfangsbestand', konfig ? String(konfig.jahr) : '–', wart ? 'kasse' : ''),
+        vz('Anfangsbestand', 'Stand zu Beginn des Kassenjahrs', konfig ? euro(konfig.anfangsbestand) : '–', wart ? 'kasse' : ''),
+        vz('Kasse führt', 'Steht auch unter Team und Rollen', ((kasseDaten && kasseDaten.kassenwarte) || []).join(', ') || '–')]],
+      darst: ['Darstellung', 'Gilt nur für dich auf diesem Gerät.', [
+        wz('modus', 'Hell oder dunkel', 'Automatisch folgt dem iPad', [['2', 'automatisch'], ['1', 'hell'], ['0', 'dunkel']], String([0, 1, 2].indexOf(S.settings.hell) < 0 ? 0 : S.settings.hell), true)]]
+    };
+    var zeileHtml = function (z) {
+      var rechts;
+      if (z.werte) {
+        rechts = '<div class="le-wahl">' + z.werte.map(function (w) {
+          var an = w[0] === z.akt;
+          return '<button type="button" class="' + (an ? 'an' : '') + '"' + (z.darf ? ' data-action="le-wert" data-k="' + z.k + '" data-value="' + w[0] + '"' : ' disabled') + ' aria-pressed="' + an + '">' + w[1] + '</button>';
+        }).join('') + '</div>';
+      } else {
+        rechts = '<span class="le-wert"><span>' + esc(z.wert) + '</span>' + (z.link ? '<button type="button" class="lg-aendern" data-action="liga-tab" data-tab="' + z.link + '">Ändern</button>' : '') + '</span>';
+      }
+      return '<div class="le-zeile"><span class="le-zeile-text"><b>' + esc(z.titel) + '</b><small>' + esc(z.text) + '</small></span>' + rechts + '</div>';
+    };
+    var b = B[wahl];
+    var heimHtml = wahl === 'heim'
+      ? '<div class="le-heim"><div class="le-bilder"><span class="lg-klein-titel">Logo</span><div class="sehnsucht-logo le-logo" role="img" aria-label="Logo ' + esc(ti.lokal || 'Vereinsheim') + '"></div>' +
+          '<span class="lg-klein-titel">Bild vom Lokal</span><div class="le-bild-leer">' + leIcon('heim', 22) + '<span>noch kein Bild</span></div></div>' +
+          '<div class="le-felder"><div class="le-feld"><span class="lg-klein-titel">Name</span><b>' + esc(ti.lokal || 'Bar Sehnsucht') + '</b></div>' +
+          '<div class="le-feld"><span class="lg-klein-titel">Adresse</span><b>' + esc(ti.adresse || '') + '</b></div>' +
+          '<span class="lg-text lg-mit-icon">' + LG_PIN_ROT + 'Die Route in Maps kommt aus der Adresse.</span>' +
+          '<span class="lg-text">Logo, Bild und Adresse ändern geht, sobald es Rollen für Admin und TCs gibt.</span></div></div>'
+      : '';
+    var rolle = gast ? 'Gast-Konto, nur ansehen' : wart ? 'Du führst die Kasse' : online ? 'Mitglied' : 'Nicht angemeldet';
+    $('liga-einstellungen').innerHTML =
+      '<nav class="le-nav" aria-label="Bereiche der Einstellungen">' +
+        '<span class="le-nav-titel"><button type="button" class="lg-rund fl" data-action="liga-einst-zu" aria-label="Zurück">' + LG_LINKS + '</button><b>EINSTELLUNGEN</b></span>' +
+        LE_BEREICHE.map(function (x) {
+          var an = x[0] === wahl;
+          var offen = x[0] === 'darst' || (x[0] === 'spiel' && darfVor) || (x[0] === 'kasse' && wart);
+          return '<button type="button" class="le-nav-knopf' + (an ? ' an' : '') + '" data-action="liga-einst-bereich" data-value="' + x[0] + '"' + (an ? ' aria-current="page"' : '') + '>' + leIcon(x[0]) + '<span>' + x[1] + '</span>' + (offen ? '' : LE_SCHLOSS) + '</button>';
+        }).join('') +
+        '<div class="le-rolle"><span class="lg-mit-icon">' + leIcon('team', 16) + '<b>' + esc(rolle) + '</b></span><small>Admin und TCs stellen hier alles für die Liga ein. Alle anderen sehen die Einstellungen und wählen nur die Darstellung.</small></div>' +
+      '</nav>' +
+      '<section class="le-inhalt lg-karte"><b class="le-titel">' + esc(b[0].toUpperCase()) + '</b><span class="le-unter">' + esc(b[1]) + '</span>' +
+        heimHtml + '<div class="le-zeilen">' + b[2].map(zeileHtml).join('') + '</div></section>';
+  }
+
   /* Teamseite (Entwurf LigaTeam): Logo, Name, Lokal mit Adresse, Platz
      und Punkte; links die Spieler mit TC, rechts alle Spiele der Saison.
      Gespielte Spiele oeffnen die 16 Einzel. */
@@ -9488,7 +9591,16 @@
       b.classList.toggle('active', b.getAttribute('data-tab') === tab);
       if (b.getAttribute('data-tab') === 'kasse') b.classList.toggle('hidden', ohneKasse);
     });
-    /* Die Teamseite eines Teams liegt ueber allen Reitern. */
+    /* Einstellungen und Teamseite liegen ueber allen Reitern. */
+    var einst = !!UI.ligaEinst;
+    $('liga-einstellungen').classList.toggle('hidden', !einst);
+    if (einst) {
+      ['liga-plan', 'liga-training', 'liga-tabelle', 'liga-statistik', 'liga-kasse', 'liga-regeln', 'liga-teamseite'].forEach(function (id) { $(id).classList.add('hidden'); });
+      if ($('liga-statistik').innerHTML) $('liga-statistik').innerHTML = '';
+      $('liga-tabs').querySelectorAll('button').forEach(function (b2) { b2.classList.remove('active'); });
+      renderLigaEinstellungen();
+      return;
+    }
     var teamSeite = !!UI.ligaTeamSeite;
     $('liga-teamseite').classList.toggle('hidden', !teamSeite);
     if (teamSeite) {
@@ -18023,12 +18135,36 @@
         render();
         break;
       case 'liga-einst':
-        UI.overlay = { type: 'liga-einst' };
+        UI.ligaEinst = UI.ligaEinst ? null : 'darst'; UI.ligaTeamSeite = null;
+        window.scrollTo(0, 0);
         render();
         break;
+      case 'liga-einst-zu':
+        UI.ligaEinst = null;
+        render();
+        break;
+      case 'liga-einst-bereich':
+        UI.ligaEinst = el.getAttribute('data-value') || 'darst';
+        render();
+        break;
+      case 'le-wert': {
+        var lwK = el.getAttribute('data-k'), lwV = el.getAttribute('data-value');
+        if (lwK === 'modus') { S.settings.hell = Number(lwV); }
+        else {
+          var lwVor = ligaVorgaben();
+          if (lwK === 'legs') lwVor.bestOf = lwV === '5' ? 5 : 3;
+          else if (lwK === 'finish') lwVor.finish = lwV === 'mit';
+          else if (lwK === 'live') lwVor.ohneNamen = lwV === 'anonym';
+          else if (lwK === 'mit') lwVor.nurErgebnis = lwV === 'erg';
+          S.settings.ligaVor = lwVor;
+        }
+        save(); render();
+        break;
+      }
       case 'liga-tab':
         UI.ligaTab = el.getAttribute('data-tab');
-        UI.ligaTeamSeite = null; UI.ligaNrAuf = false;
+        UI.ligaTeamSeite = null; UI.ligaNrAuf = false; UI.ligaEinst = null;
+        if (UI.ligaTab === 'kasse' && el.closest && el.closest('#liga-einstellungen')) UI.kasseForm = true;
         UI.boardLog = false;
         render();
         break;
