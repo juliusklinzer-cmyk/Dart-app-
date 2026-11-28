@@ -330,6 +330,43 @@ body[data-layout="tv"] .seiten-fuss { display: none; }
 .v-legs { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .v-legzahl { font-family: var(--anzeige); font-size: 44px; line-height: 1; white-space: nowrap; }
 
+/* ---------- App-Ansicht (?app=1 ab 700 px): die iPad-Seite des Entwurfs ---------- */
+/* Dasselbe Markup wie am Fernseher, aber 1180 x 820 als Grundmass: quer
+   skaliert js/live.js es aufs Fenster, hoch bleibt es 1:1 und darf
+   scrollen. "Zurueck" steht im Kopf, die Leiste "Zur App" entfaellt. */
+body[data-layout="app"] .zur-app, body[data-layout="app"] .seiten-fuss { display: none; }
+.tv-rahmen.app-rahmen { width: auto; height: auto; overflow: visible; }
+.app-rahmen .t-main, .app-rahmen .t-unten { overflow: visible; }
+.app-rahmen.voll .v-scheibe { min-height: 260px; }
+/* Schmal (iPad hoch, kleines Fenster): Scheiben und Listen untereinander. */
+.app-rahmen.schmal .t-kopf { grid-template-columns: auto minmax(0, 1fr) auto; padding: 12px 20px 4px; }
+.app-rahmen.schmal .t-zeile { white-space: normal; }
+.app-rahmen.schmal .t-main { padding: 8px 20px 24px; }
+.app-rahmen.schmal .teams { gap: 14px; }
+.app-rahmen.schmal .teams .team { gap: 12px; }
+.app-rahmen.schmal .teams .tn { font-size: 24px; line-height: 1.05; white-space: normal; overflow-wrap: anywhere; }
+.app-rahmen.schmal .teams .tlogo { width: 52px; height: 52px; }
+.app-rahmen.schmal .teams .zahlen { gap: 10px; font-size: 80px; }
+.app-rahmen.schmal .teams .zahlen .dp { font-size: 40px; }
+.app-rahmen.schmal .t-scheiben { grid-template-columns: minmax(0, 1fr); }
+.app-rahmen.schmal .t-unten { grid-template-columns: minmax(0, 1fr); }
+.app-rahmen.schmal .t-spalte.mitte { border: 0; border-top: 1px solid var(--t-linie); border-bottom: 1px solid var(--t-linie); }
+.app-rahmen.schmal .e-runden { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.app-rahmen.schmal .e-unten { grid-template-columns: minmax(0, 1fr); }
+.app-rahmen.schmal .e-spalte + .e-spalte { border-left: 0; border-top: 1px solid var(--t-linie); }
+.app-rahmen.schmal.voll { padding: 14px 20px 24px; }
+.app-rahmen.schmal .v-scheibe { padding: 14px 20px 20px; }
+.app-rahmen.schmal .v-reihe { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); grid-template-areas: "wa . wb" "ra lg rb"; row-gap: 4px; }
+.app-rahmen.schmal .v-wer { grid-area: wa; align-items: center; text-align: center; }
+.app-rahmen.schmal .v-wer.r { grid-area: wb; align-items: center; }
+.app-rahmen.schmal .v-namezeile, .app-rahmen.schmal .v-wer.r .v-namezeile { flex-direction: row; }
+.app-rahmen.schmal .v-name { font-size: 28px; }
+.app-rahmen.schmal .v-sub { font-size: 15px; white-space: normal; }
+.app-rahmen.schmal .v-rest { font-size: 110px; }
+.app-rahmen.schmal .v-rest.a { grid-area: ra; }
+.app-rahmen.schmal .v-rest.b { grid-area: rb; }
+.app-rahmen.schmal .v-legs { grid-area: lg; }
+
 /* Fuss der Seite (live.html, statisch): Impressum und Datenschutz. */
 .seiten-fuss { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 24px; padding: 6px 16px max(16px, env(safe-area-inset-bottom)); font-size: 13px; }
 .seiten-fuss a { color: var(--t-leise); text-decoration: none; min-height: 44px; display: inline-flex; align-items: center; }

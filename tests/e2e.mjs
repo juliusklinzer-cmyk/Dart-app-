@@ -8092,6 +8092,45 @@ await gruppe('Live-Ticker (live.html): Handy, Browser, Fernseher, hell/dunkel, n
   check('?tv=1 erzwingt die TV-Ansicht auch am Laptop, ohne Scrollen', l.layout === 'tv' && l.sw <= l.cw && l.sh <= l.ih && l.standSichtbar && l.bg === HELL);
   await lp.context().close();
 
+  /* Aus der App (?app=1): am iPad die iPad-Seite des Entwurfs mit "Zurück",
+     am Handy die Handy-Ansicht mit der Leiste "Zur App". */
+  lp = await oeffne(1180, 820, 'dark', '?app=1&hell=1#tickerlive01');
+  l = await lage(lp);
+  check('App am iPad quer (?app=1): iPad-Ansicht ohne Scrollen, Stand sichtbar, hell per ?hell=1', l.layout === 'app' && l.sw <= l.cw && l.sh <= l.ih &&
+    l.stand === '5:4' && l.standSichtbar && l.bg === HELL, JSON.stringify([l.layout, l.sw, l.cw, l.sh, l.ih, l.bg]));
+  check('App: "Zurück" im Kopf fuehrt in die App, keine zweite Leiste, kein Impressum-Fuss', (await lp.locator('.t-kopf a.zurueck[href="index.html"]').isVisible()) &&
+    !(await lp.locator('.zur-app').isVisible()) && !(await lp.locator('.seiten-fuss').isVisible()));
+  check('App: zwei Scheiben nebeneinander, Ergebnisse, Als Naechstes, Rekorde', (await lp.locator('.app-rahmen .t-scheiben .scheibe.live').count()) === 2 &&
+    (await lp.locator('.app-rahmen .t-spalte').count()) === 3 && await lp.evaluate(() => {
+      const k = [...document.querySelectorAll('.t-scheiben .scheibe')].map((e) => e.getBoundingClientRect());
+      return Math.abs(k[0].top - k[1].top) < 2;
+    }));
+  await lp.locator('[data-aktion="voll"]').click();
+  l = await lage(lp);
+  check('App-Vollbild: Stand und beide Scheiben, ohne Scrollen und Ueberlauf', (await lp.locator('.app-rahmen.voll .v-scheibe.live').count()) === 2 &&
+    l.sw <= l.cw && l.sh <= l.ih && l.standSichtbar);
+  await lp.locator('[data-aktion="voll"]').click();
+  check('App-Vollbild wieder aus', (await lp.locator('.app-rahmen.voll').count()) === 0 && (await lp.locator('.app-rahmen .t-unten').count()) === 1);
+  await lp.setViewportSize({ width: 820, height: 1180 });
+  await lp.waitForFunction(() => !!document.querySelector('.app-rahmen.schmal'));
+  l = await lage(lp);
+  check('App am iPad hoch: untereinander, ohne seitlichen Ueberlauf, Stand oben', l.layout === 'app' && l.sw <= l.cw && l.standSichtbar && await lp.evaluate(() => {
+    const k = [...document.querySelectorAll('.t-scheiben .scheibe')].map((e) => e.getBoundingClientRect());
+    return k[1].top > k[0].bottom;
+  }), JSON.stringify([l.sw, l.cw]));
+  await lp.locator('[data-aktion="voll"]').click();
+  l = await lage(lp);
+  check('App-Vollbild hoch: kein Ueberlauf, Rest passt', l.sw <= l.cw && await lp.evaluate(() => [...document.querySelectorAll('.v-rest')].every((e) => e.scrollWidth <= e.clientWidth + 1)));
+  await lp.setViewportSize({ width: 390, height: 844 });
+  await lp.waitForSelector('.lt-handy');
+  check('App am Handy (?app=1): Handy-Ansicht mit der Leiste "Zur App"', (await lp.locator('.zur-app').isVisible()) && (await lage(lp)).sw <= 390);
+  await lp.context().close();
+  lp = await oeffne(1180, 820, 'light', '?app=1#tickererg001');
+  l = await lage(lp);
+  check('App, nur Ergebnisse (LsLiveErg iPad): Durchgaenge und Wechsel ohne Scrollen, kein Vollbild-Knopf', l.layout === 'app' && (await lp.locator('.app-rahmen .e-runde').count()) === 4 &&
+    (await lp.locator('.app-rahmen .wx-zeile').count()) === 1 && (await lp.locator('[data-aktion="voll"]').count()) === 0 && l.sh <= l.ih && l.sw <= l.cw);
+  await lp.context().close();
+
   /* Nur Ergebnisse */
   lp = await oeffne(1180, 820, 'light', '#tickererg001');
   l = await lage(lp);

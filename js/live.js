@@ -12,6 +12,8 @@
  *   tv     ab 1600 px Breite und Seitenverhaeltnis 1,6 (oder ?tv=1):
  *          ein fester Bildschirm ohne Scrollen, auf Wunsch Vollbild
  *          (nur Stand und die beiden Scheiben, ?voll=1)
+ *   app    aus der App geoeffnet (?app=1) ab 700 px: die iPad-Seite des
+ *          Entwurfs (LsLive), oben "Zurueck" in die App, Vollbild wie tv
  *
  * Hell/dunkel folgt dem Geraet, ?hell=1 bzw. ?hell=0 legt es fest.
  * Gerechnet wird hier aus den Wuerfen - der Server verwahrt nur. Was nicht
@@ -632,23 +634,26 @@
     var a = le.spieler[0], b = le.spieler[1];
     return '<section class="karte live scheibe v-scheibe" data-einzel="' + le.x.nr + '"><span class="v-kopf"><span class="b-scheibe">' + (le.scheibe ? 'Scheibe ' + esc(le.scheibe) : 'Einzel') + '</span>' +
       '<span class="b-info">' + esc(le.info) + '</span></span><div class="v-reihe">' + seite(a, false) +
-      '<span class="v-rest' + (a.dran ? ' dran' : '') + '">' + a.rest + '</span><span class="v-legs"><span class="v-legzahl">' + a.legs + ' : ' + b.legs + '</span><span class="b-lab">Legs</span></span>' +
-      '<span class="v-rest' + (b.dran ? ' dran' : '') + '">' + b.rest + '</span>' + seite(b, true) + '</div></section>';
+      '<span class="v-rest a' + (a.dran ? ' dran' : '') + '">' + a.rest + '</span><span class="v-legs"><span class="v-legzahl">' + a.legs + ' : ' + b.legs + '</span><span class="b-lab">Legs</span></span>' +
+      '<span class="v-rest b' + (b.dran ? ' dran' : '') + '">' + b.rest + '</span>' + seite(b, true) + '</div></section>';
   }
+  /* Fernseher und App-Ansicht (iPad, ?app=1) teilen sich das Markup: der
+     Entwurf LsLive ist dieselbe Seite, am Fernseher nur 1,3-fach. */
   function zeichneTv(d) {
     var plaetze = tvPlaetze(d);
+    var rahmen = 'lt lt-tv tv-rahmen' + (layout === 'app' ? ' lt-app app-rahmen' : '');
     var vollKnopf = function (an) {
       return '<button type="button" class="knopf quadrat" data-aktion="voll" aria-label="' + (an ? 'Vollbild verlassen' : 'Vollbild: nur Stand und die beiden laufenden Einzel') + '" title="' +
         (an ? 'Vollbild verlassen' : 'Vollbild') + '">' + icon(an ? IC.vollAus : IC.vollAn, 20, '', 2.2) + '</button>';
     };
     if (voll && !d.nurErg) {
-      return '<div class="lt lt-tv tv-rahmen voll"><div class="v-oben"><span class="t-zeile">' + esc(kopfZeile(d, false)) + aktuell() + '</span>' +
+      return '<div class="' + rahmen + ' voll"><div class="v-oben"><span class="t-zeile">' + esc(kopfZeile(d, false)) + aktuell() + '</span>' +
         '<span class="t-rechts">' + liveSchild(d) + vollKnopf(true) + '</span></div>' +
         teamZeile(d, 'tv voll') + '<div class="v-scheiben">' + plaetze.map(function (p) {
           return p.x ? vollScheibe(d, liveEinzel(d, p.x)) : freieScheibe(d, p, true);
         }).join('') + '</div></div>';
     }
-    var h = '<div class="lt lt-tv tv-rahmen' + (d.nurErg ? ' erg' : '') + '"><header class="t-kopf">' + zurueckKnopf() +
+    var h = '<div class="' + rahmen + (d.nurErg ? ' erg' : '') + '"><header class="t-kopf">' + zurueckKnopf() +
       '<span class="t-zeile">' + esc(kopfZeile(d, false)) + aktuell() + '</span>' +
       '<span class="t-rechts">' + liveSchild(d) + (d.nurErg ? '' : vollKnopf(false)) + '</span></header><main class="t-main">' + teamZeile(d, 'tv');
     if (d.nurErg) {
@@ -668,20 +673,37 @@
   }
 
   /* ---------- Layout und Zeichnen ---------- */
+  /* handy: schmaler als 700 px. app: aus der App geoeffnet (?app=1) ab
+     700 px - die iPad-Seite des Entwurfs (LsLive, LsLiveVoll, LsLiveErg).
+     tv: ?tv=1 oder ein grosser Querbildschirm. Sonst web. */
   function welchesLayout() {
     var b = window.innerWidth || document.documentElement.clientWidth, hoehe = window.innerHeight || document.documentElement.clientHeight;
     if (tvWunsch === true) return 'tv';
+    if (b < 700) return 'handy';
+    if (ausApp) return 'app';
     if (tvWunsch !== false && b >= 1600 && hoehe > 0 && b / hoehe >= 1.6) return 'tv';
-    return b < 700 ? 'handy' : 'web';
+    return 'web';
   }
   /* Der Fernseher zeigt einen festen Rahmen (Entwurf: 1477 x 830, am
-     1920er-Fernseher 1,3-fach), skaliert auf das ganze Fenster. */
+     1920er-Fernseher 1,3-fach), skaliert auf das ganze Fenster. Die App-
+     Ansicht ist die iPad-Seite (1180 x 820): quer skaliert sie mit, hoch
+     (iPad im Hochformat) bleibt sie 1:1, stapelt sich und darf scrollen. */
   var ZOOM_GEHT = 'zoom' in document.documentElement.style;
-  function tvMasse() {
+  function rahmenMasse() {
     var r = box.querySelector('.tv-rahmen');
     if (!r) return;
-    var b = window.innerWidth, hoehe = window.innerHeight;
-    var z = ZOOM_GEHT ? Math.min(b / 1477, hoehe / 830) : 1;
+    var b = window.innerWidth, hoehe = window.innerHeight, z;
+    if (layout === 'app') {
+      z = b / hoehe >= 1.25 ? Math.max(0.8, Math.min(b / 1180, hoehe / 820)) : 1;
+      if (!ZOOM_GEHT || !(z > 0)) z = 1;
+      r.style.zoom = ZOOM_GEHT ? String(z) : '';
+      r.style.width = '';
+      r.style.height = '';
+      r.style.minHeight = (hoehe / z) + 'px';
+      r.classList.toggle('schmal', document.documentElement.clientWidth / z < 1000);
+      return;
+    }
+    z = ZOOM_GEHT ? Math.min(b / 1477, hoehe / 830) : 1;
     if (!(z > 0)) z = 1;
     r.style.zoom = ZOOM_GEHT ? String(z) : '';
     r.style.width = (b / z) + 'px';
@@ -692,8 +714,8 @@
     var d = aufbereiten(daten);
     layout = welchesLayout();
     document.body.setAttribute('data-layout', layout);
-    box.innerHTML = layout === 'tv' ? zeichneTv(d) : layout === 'handy' ? zeichneHandy(d) : zeichneWeb(d);
-    if (layout === 'tv') tvMasse();
+    box.innerHTML = layout === 'tv' || layout === 'app' ? zeichneTv(d) : layout === 'handy' ? zeichneHandy(d) : zeichneWeb(d);
+    rahmenMasse();
     /* Fuer Bildschirmleser nur der Stand, nicht die ganze Seite alle 4 s. */
     var sr = document.getElementById('sr-stand');
     var neu = d.heimTeam + ' ' + d.hp + ' zu ' + d.gp + ' ' + d.gastTeam + (d.vorbei ? ', Endstand' : '');
@@ -706,7 +728,7 @@
     var problem = fehlerZahl ? 'Verbindung wird gesucht …' : gedrosselt ? 'Viele Zuschauer – etwas langsamer' : '';
     var text = problem || ('aktualisiert vor ' + s + ' s');
     Array.prototype.forEach.call(box.querySelectorAll('.aktuell'), function (el) {
-      el.textContent = layout === 'tv' ? (problem ? ' · ' + problem : '') : text;
+      el.textContent = layout === 'tv' || layout === 'app' ? (problem ? ' · ' + problem : '') : text;
       el.classList.toggle('problem', !!problem);
     });
   }
@@ -755,8 +777,8 @@
   }
 
   /* Aus der App geoeffnet (?app=1): oben geht es zurueck. Auf dem iPhone hat
-     die installierte App keinen Zurueck-Knopf. (Am Fernseher steht der
-     Knopf im Kopf, siehe zurueckKnopf.) */
+     die installierte App keinen Zurueck-Knopf. Die Leiste gilt fuers Handy;
+     ab 700 px (App-Ansicht) steht "Zurueck" im Kopf, siehe zurueckKnopf. */
   if (ausApp) {
     var zurueck = document.createElement('a');
     zurueck.className = 'zur-app'; zurueck.href = 'index.html';
@@ -781,7 +803,7 @@
     groesseTimer = setTimeout(function () {
       groesseTimer = null;
       if (welchesLayout() !== layout) zeichne();
-      else if (layout === 'tv') tvMasse();
+      else rahmenMasse();
     }, 120);
   });
 

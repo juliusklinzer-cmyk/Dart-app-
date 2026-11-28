@@ -1570,15 +1570,22 @@ richtet sich nach dem Bildschirm:
   unten Ergebnisse, Als Nächstes und Rekorde (mit Doppelquote ab 3 Versuchen).
   Der Knopf oben rechts (oder `?voll=1`) schaltet das **Vollbild** um: nur
   Stand und die beiden Scheiben, groß.
+- **Aus der App** (`live.html?app=1#…`, „Live zuschauen“) ab 700 px Breite
+  (Entwurf LsLive im Format iPad): dieselbe Seite wie am Fernseher mit
+  „Zurück“ in die App oben links, quer aufs Fenster skaliert (iPad 1180 × 820
+  ohne Scrollen), hoch 1:1 mit Scheiben und Listen untereinander. Der Knopf
+  oben rechts bzw. `?voll=1` schaltet auch hier das Vollbild (LsLiveVoll) um.
+  Am Handy bleibt es die Handy-Ansicht mit der Leiste „Zur App“.
 
 **Nur Ergebnisse** (das Ligaspiel läuft mit `liga.nurErgebnis`, Entwürfe
 LsLiveErg): statt der Scheiben die vier Durchgänge mit Leg-Ständen (ein
 laufendes Einzel trägt einen blauen Punkt), darunter Highlights und **Wechsel**
 („▲ neu für ▼ alt“, Kennungen wie „G4 → G5“, abgeleitet aus dem Spielplan).
 
-**Hell/dunkel** folgt dem Gerät; `?hell=1` bzw. `?hell=0` legt es fest. Farben
-sind die Tokens der App (`--t-*`). Aus der App geöffnet (`?app=1`) steht oben
-„Zur App“. Was nicht da ist, bleibt weg: kein Average ohne Würfe, kein
+**Hell/dunkel** folgt dem Gerät; `?hell=1` bzw. `?hell=0` legt es fest (die
+App hängt den Parameter passend zu ihrer Darstellung an). Farben sind die
+Tokens der App (`--t-*`). Parameter im Überblick: `app=1`, `hell=1|0`,
+`tv=1|0`, `voll=1`, der Schlüssel steht hinter `#`. Was nicht da ist, bleibt weg: kein Average ohne Würfe, kein
 „zuletzt“ ohne Aufnahme, keine Doppelquote ohne Einzeldarts oder Finish-Doppel.
 
 **Live ohne Namen**: Trägt der Plan `liga.ohneNamen: true`, gibt der Server in
