@@ -4471,7 +4471,8 @@
     return ligaLive;
   }
   function tickerOeffnen(k) {
-    if (/^[A-Za-z0-9_-]{8,40}$/.test(String(k || ''))) location.href = 'live.html?app=1#' + k;
+    /* Hell oder dunkel wie in der App (Liga-Einstellungen, Darstellung). */
+    if (/^[A-Za-z0-9_-]{8,40}$/.test(String(k || ''))) location.href = 'live.html?app=1&hell=' + (istHell() ? '1' : '0') + '#' + k;
   }
   function liveBeitretbareHolen() {
     if (!window.DartSync || !window.DartSync.live) return;
