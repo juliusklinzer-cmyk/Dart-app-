@@ -298,7 +298,8 @@ Unsicher / Kann nicht“ und wer kommt) und rechts das Übungs-Ligaspiel mit Vor
 als Band (Zahl, daneben Punkte, Legs und Abstand zur Spitze), darunter die Ligatabelle
 und den Stand; rechts Alle Spiele, Einzelrangliste und Highlights – am Computer rollt
 diese Spalte als Ganzes, damit alles erreichbar bleibt. **Statistik** ist die Liga-Statistik
-(Mannschaft, gesamte Liga, jeder Gegner; siehe [Statistik und Ranglisten](#statistik-und-ranglisten)).
+nach den Entwürfen LigaStTeam, LigaStRang und LigaStSpieler (Mannschaft, Spieler-Rangliste,
+Einzelstatistik; siehe [Liga › Statistik](#liga--statistik-redesign-november-2026)).
 **Kasse** zeigt links
 den Kassenstand (Anfang, Einnahmen, Ausgaben) und „Buchung erfassen“, rechts das
 Kassenbuch und die Gründungsbeiträge als Chips. **Regeln** stehen in zwei Spalten
@@ -354,12 +355,12 @@ Passt eine Seite nicht (Spielbericht ohne 16 Einzel, Teamseite ohne Spielerliste
 gibt der Import nur eine Warnung aus und lässt die Stelle leer; nur ein kaputter
 Spielplan bricht ab.
 
-Im Reiter **Tabelle** stehen darunter die **Einzelrangliste** der ganzen Liga
-(alle Spieler aller Teams, Schlüssel der Ligaleitung: Sieger 2 Punkte plus
-Leg-Differenz, also 2:0 = 4 und 2:1 = 3, Verlierer seine gewonnenen Legs; Reihenfolge
-Punkte, Spiel-Differenz, Leg-Differenz; gleiche Werte = gleicher Platz; erst 15,
-dann alle; unsere Leute hervorgehoben, Gäste markiert) und die **Highlights** der
-Liga (180er je Spieler, kürzeste Legs, höchste Finishes). Ein Tipp auf ein Team in
+Die **Einzelrangliste** der ganzen Liga (alle Spieler aller Teams, Punkte nach dem
+Schlüssel der Ligaleitung: Sieger 2 Punkte plus Leg-Differenz, also 2:0 = 4 und
+2:1 = 3, Verlierer seine gewonnenen Legs) steht seit dem Redesign als
+**Spieler-Rangliste** in Liga › Statistik (erst 15 und unsere übrigen, dann alle;
+unsere Leute hervorgehoben, Gäste markiert); im Reiter **Tabelle** stehen die
+**Highlights** der Liga (180er je Spieler, kürzeste Legs, höchste Finishes). Ein Tipp auf ein Team in
 der Ligatabelle öffnet Lokal mit Adresse, Spielerliste (TC = Team-Captain) und alle
 Spiele des Teams; gespielte führen zu den 16 Einzeln. Liegt unser eigenes Spiel bei
 der Ligaleitung vor, bietet die Spieltag-Karte „Spielbericht übernehmen“ von selbst an.
@@ -566,10 +567,9 @@ Endergebnis als Summe der Legs und Punkte, Spielzeit, Highlights je Seite), jede
 Zelle lässt sich antippen und korrigieren, und **„Drucken"** gibt Seite 1
 plus das Nachmelde-/Protest-Leerformular als Seite 2 aus. Nach dem Abschluss
 bleibt der Bericht über den Spieltag im Liga-Reiter abrufbar. Die Liga-Auswertung
-(Team-Kennzahlen, Spieltag für Spieltag, Kader-Beitrag, Tabelle, Bilanz gegen jedes
-Team, Highlights, Liga-Rangliste; Team-Auswahl Blink 180, Gesamte Liga, jeder Gegner)
-steht im Reiter **Liga › Statistik** (seit 12.11.2026 dort, nicht mehr im Reiter
-Statistik). Im Regeln-Reiter der Liga-Seite stehen dazu ein
+(Mannschaft im Ligavergleich, Spieler-Rangliste mit Wertung, Einzelstatistik jedes
+Spielers der Liga) steht im Reiter **Liga › Statistik** (seit 12.11.2026 dort, nicht
+mehr im Reiter Statistik). Im Regeln-Reiter der Liga-Seite stehen dazu ein
 FAQ für Neue und Udos Regelecke.
 
 Die **Turnier-Übersicht** (Entwurf „Turnier Redesign“, überarbeitet Oktober 2026)
@@ -1350,18 +1350,7 @@ nur, wo man das Profil auch pflegen darf: eigenes Konto, Gäste) und Spieler-Chi
 ganzen Kader (dieselben Leute wie in der Rangliste: keine Bots, keine Testkonten, Gäste nur
 dauerhafte); voreingestellt ist das eigene Konto. **Mannschaft** ist die Crew über alle
 Spielarten (unten) mit den Bestenlisten darunter. Die **Liga-Statistik** wohnt seit dem
-12.11. im Reiter **Liga › Statistik** (Chips: Blink 180, Gesamte Liga, jeder
-Gegner) und rechnet aus den Spielberichten der Ligaleitung (`LIGA_SPIELTAGE`): je Team sieben
-Kennzahlen (Tabellenplatz, Punkte mit S/U/N, Einzel-Quote, Leg-Quote, Team-Average und
-Doppelquote aus den Würfen der App – nur für unser Team –, 180er mit höchstem Finish und
-Shortleg), dann **Spieltag für Spieltag** (Einzel gewonnen und verloren als Säulen, Punkte
-aufsummiert als Linie), **Kader-Beitrag** (Punkte je Spieler in der Einzelrangliste, bei uns
-mit Liga-Ø; ein Tipp führt in Statistik › Einzel zu dieser Person), **Tabelle** (ein Tipp wählt das Team), **Bilanz gegen
-jedes Team** (Ergebnis-Pillen je Begegnung), bei Gegnern die **Highlights**, und die
-**Liga-Rangliste** aus der Einzelrangliste (Kacheln Punkte, Siege, Legs, Siegquote ab zwei
-Einzeln; die Liste dazu; daneben die Highlights laut Spielberichten). „Gesamte Liga“ zeigt
-Teams, Begegnungen, 180er, höchstes Finish, kürzestes Leg und Tabellenführer, die Tabelle, die
-besten 12 der Einzelrangliste und die Highlights der ganzen Liga. **Statistik › Mannschaft** ist die
+12.11. im Reiter **Liga › Statistik** (siehe [Liga › Statistik](#liga--statistik-redesign-november-2026)). **Statistik › Mannschaft** ist die
 Crew: Spiele (X01 einmal je Spiel, dazu die anderen Arten), Team-Average, First 9, Doppelquote,
 180er, höchstes Finish über alle Einsätze des Kaders, **Kader im Vergleich** (Chips für
 Average, First 9, Doppelquote, Siegquote, 180er, höchstes Finish, bestes Leg; ein Tipp öffnet
@@ -1423,6 +1412,57 @@ Ein Turnier wandert per **„Turnier abschließen"** ins Archiv (die letzten 500
 gespeichert); abgebrochene Turniere behalten ihre bereits gespielten Spiele in der
 Statistik. Ein Schnelles X01 über mehrere Legs lässt sich beim Abbrechen mit
 „Gespielte Legs behalten“ ohne Sieger übernehmen (Average, 180er, Finishes zählen).
+
+### Liga › Statistik (Redesign November 2026)
+
+Nach den Entwürfen **LigaStTeam**, **LigaStRang** und **LigaStSpieler**, hell und dunkel
+wie die übrigen umgebauten Liga-Reiter (`lstMannschaftHtml`, `lstRanglisteHtml`,
+`lstEinzelHtml` in `js/app.js`, CSS-Klassen `lst-`). Oben der Umschalter **Mannschaft ·
+Spieler-Rangliste · Einzelstatistik**, rechts die Auswahl **Liga** (SDM 4er Liga 1 bis 5,
+derselbe Stand wie in der Tabelle; die anderen Ligen kommen vom Server und haben nur
+Spielberichte, keine Würfe), **Mannschaft** und in der Einzelstatistik **Spieler** (erst die
+gewählte Mannschaft, dann alle nach Rang). Gerechnet wird aus den Spielberichten der
+Ligaleitung (Einzel, Legs, Highlights) samt unserer in der App gespielten, noch nicht
+gemeldeten Spiele. **Average, Doppelquote, Rekorde aus Würfen und die Aktivität gibt es
+nur für Blink 180** aus der App – Average, Doppelquote und Rekorde aus den Ligaspielen
+(keine Übung), die Aktivität aus allen X01-Spielen der Crew. Bei fremden Teams und
+Spielern fehlen diese Karten, statt dass etwas erfunden wird. Die Würfe gehören einem
+Liga-Spieler nur, wenn sein Profil eindeutig zu ihm passt: erst der ganze Name, dann ein
+Vor- oder Nachname, den es nur einmal gibt; jedes Profil höchstens einmal, Gäste laut
+Spielbericht nie. In der hellen Darstellung sind Grün und Rot dunkler als im Entwurf,
+damit Text darauf lesbar bleibt.
+
+- **Mannschaft:** Logo und Name, vier Kennzahlen (Tabellenplatz mit Punkten, Einzel mit
+  Liga-Schnitt und Rang, Legs mit Rang, bester Spieler nach Wertung), **Form & Siegquote**
+  (Ring = Anteil der Punkte, S : U : N, aktuelle und längste Serie ohne Niederlage, die
+  letzten zehn Begegnungen), **Spieltag für Spieltag** (ein Tipp zeigt die 16 Einzel),
+  **Nächster Gegner** (Platz, Punkte, Einzel, Legs, daheim/auswärts, bester Spieler;
+  Blau = wer vorne liegt), **Heim und Auswärts** (Strich = Liga-Schnitt), bei uns
+  **Team-Average** je Liga-Einzel (gleitender Schnitt über 5, Trend) und **Doppelquote im
+  Verlauf**, **Mannschaftsprofil** (Netz aus Einzel, Legs, Heim, Auswärts, Zu Null = Einzel
+  ohne Gegenleg gewonnen, Punkte; Mitte = Schnitt aller Teams), **Einzel** und **Legs
+  gewonnen** aller Teams, **Wer holt die Punkte** (Anteil an den gewonnenen Einzeln),
+  **Highlights** (Team von Liga gesamt), **Mannschaftsrekorde** und bei uns die
+  **Spieleraktivität** (gespielte Legs aller Spieler in der App, 21 Wochen).
+- **Spieler-Rangliste:** alle Spieler der Liga mit Einzel, S : N, Quote, **Wertung** =
+  (Siege + 2) ÷ (Einzel + 4), Legs und Punkten der Einzelrangliste. **Rang** ist der Platz
+  in der ganzen Liga nach Wertung (gleiche Wertung, Punkte und Leg-Differenz teilen sich den
+  Platz) und bleibt beim Umsortieren und beim Filtern nach Team stehen. Ein Tipp auf eine
+  Spalte sortiert um. Erst die besten 15 und unsere übrigen Spieler (mit „· · ·“
+  dazwischen), „Alle N Spieler zeigen“ zeigt alle; unsere Leute hervorgehoben, Gäste laut
+  Spielbericht markiert. Ein Name öffnet die Einzelstatistik.
+- **Einzelstatistik:** Bild (Profil bei uns, sonst das Team-Abzeichen), Rang im Team und in
+  der Liga, **Liga-Bilanz** (Platz, Punkte, Einzel, Legs, bei uns Liga-Ø und Doppelquote aus
+  der App, bestes Leg), **Form & Siegquote** (die letzten 12 Einzel), bei uns mit Würfen
+  **Average-Entwicklung** (gleitender Schnitt über 3), **Doppelquote im Verlauf**, **Big
+  Scores**, **Doppel-Analyse** und **Spielerprofil** (gegen den Rest des Teams), dann
+  **Personal Bests** (aus der App und den Spielberichten: Siege und Legs an einem Abend,
+  längste Siegesserie), **Gegnerbilanz** (Head-to-Head, bei uns mit eigenem Ø),
+  **Rang im Team** und **Umfeld in der Liga**.
+
+Ein Gast-Konto sieht dieselben öffentlichen Namen der Spielberichte, aber keine vollen
+Namen aus unseren Profilen. Am Handy steht alles untereinander, die Rangliste zeigt dort
+Rang, Spieler mit Team, S : N, Wertung und Punkte.
 
 ## Öffentliche Webseite
 
