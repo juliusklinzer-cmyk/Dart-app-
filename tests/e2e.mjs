@@ -4795,7 +4795,21 @@ check('nur Blink 180: alle Zeilen unsere, kein „Alle zeigen“', await page.ev
 await page.evaluate(() => { const D = window.__dart; D.ui().lstSort = 'b'; D.ui().ligaEinzelAlle = false; D.render(); });
 if (process.env.SHOTS_LST) { for (const h of [0, 1]) { await page.evaluate((x) => { const D = window.__dart; D.ui().lstRangTeam = null; D.state().settings.hell = x; D.render(); }, h); await page.setViewportSize({ width: 1180, height: 820 }); await page.waitForTimeout(900); await page.screenshot({ path: process.env.SHOTS_LST + '/rangliste-' + (h ? 'hell' : 'dunkel') + '.png', fullPage: true }); } await page.evaluate(() => { window.__dart.state().settings.hell = 0; window.__dart.render(); }); await page.setViewportSize({ width: 390, height: 844 }); }
 
-/* Ein Name fuehrt in die Einzelstatistik. */
+/* Ein Name fuehrt in die Einzelstatistik. Seit der Kritik vom 28.11. ordnet
+   die Statistik ein Profil nur zu, wenn sein voller Name nicht widerspricht -
+   im Testzustand tragen die Profile Phantasienamen (Lena Musterfrau statt
+   Lenas Becker). Fuer diese Pruefungen bekommen sie die Bogennamen, danach
+   wieder die alten. */
+const vollMerk = await page.evaluate(() => {
+  const D = window.__dart, S = D.state(), merk = {};
+  const bogen = ((window.LIGA_DATEN.teamInfo || {})['Blink 180'] || {}).spieler || [];
+  bogen.forEach((s) => {
+    const n = String(s.name).replace(/^\*/, '').trim(), vor = n.split(' ')[0];
+    S.profiles.forEach((p) => { if (p.name === vor && !p.gast) { merk[p.id] = p.voll || null; p.voll = n; } });
+  });
+  D.render();
+  return merk;
+});
 const appName = await page.evaluate(() => {
   /* Ein Spieler unseres Teams mit Wuerfen aus der App (Liga-Average im Kader-Beitrag). */
   const z = [...document.querySelectorAll('#lst-rang-zeilen .lst-rz.wir .nm')];
@@ -4814,6 +4828,7 @@ check('Einzelstatistik: Name, Rang im Team und in der Liga, Liga-Bilanz mit Liga
     document.querySelectorAll('#lst-umfeld .lst-tz').length >= 3 && document.querySelector('#lst-teamrang .lst-tz.an .n b').textContent === name &&
     document.querySelector('#liga-statistik .lst-wahl-spieler .lst-wahl-knopf').textContent.trim() === name;
 }, appName || '|'));
+await page.evaluate((m) => { const D = window.__dart; D.state().profiles.forEach((p) => { if (p.id in m) p.voll = m[p.id]; }); D.render(); }, vollMerk);
 if (process.env.SHOTS_LST) { for (const h of [0, 1]) { await page.evaluate((x) => { const D = window.__dart; D.state().settings.hell = x; D.render(); }, h); await page.setViewportSize({ width: 1180, height: 820 }); await page.waitForTimeout(900); await page.screenshot({ path: process.env.SHOTS_LST + '/einzel-' + (h ? 'hell' : 'dunkel') + '.png', fullPage: true }); } await page.evaluate(() => { window.__dart.state().settings.hell = 0; window.__dart.render(); }); await page.setViewportSize({ width: 390, height: 844 }); }
 /* Spielerwahl: erst die Mannschaft, dann geht die Spielerliste auf. */
 await page.locator('#liga-statistik [data-action="lst-auf"][data-wert="team"]').click();

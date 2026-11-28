@@ -554,9 +554,9 @@
       if (s.settings.online === undefined) s.settings.online = 0;
       if (s.settings.ton !== 0) s.settings.ton = 1;
       if (s.settings.feiern !== 0) s.settings.feiern = 1;
-      if ([0, 1, 2].indexOf(s.settings.hell) < 0) s.settings.hell = 0;
+      if ([0, 1, 2].indexOf(s.settings.hell) < 0) s.settings.hell = 0;   // Darstellung: 0 dunkel, 1 hell, 2 automatisch (folgt dem Geraet)
       /* Ligaspiel-Voreinstellungen fuer neue Game Days (Liga-Einstellungen). */
-      if (!s.settings.ligaVor || typeof s.settings.ligaVor !== 'object') s.settings.ligaVor = { bestOf: 3, finish: false, ohneNamen: false, nurErgebnis: false };   // Darstellung: 0 dunkel, 1 hell, 2 automatisch (folgt dem Geraet)
+      if (!s.settings.ligaVor || typeof s.settings.ligaVor !== 'object') s.settings.ligaVor = { bestOf: 3, finish: false, ohneNamen: false, nurErgebnis: false };
       /* Spieldauer des Schnellen Spiels (Saetze/Legs) kam spaeter dazu --
          Altbestand spielt weiter ein Leg. */
       if (s.settings.quickModus !== 1) s.settings.quickModus = 0;
@@ -7658,11 +7658,20 @@
     var m = {}, vergeben = {};
     d.profile = m;
     if (!d.eigene) return m;
-    var leute = d.spieler.filter(function (p) { return p.team === LIGA.team && !p.gast; }), crew = statsCrew();
+    /* Nur eigene Konten und Profile, keine Gaeste (Dauergaeste koennen Gegner
+       sein). Passt nur ein Namensteil, darf der andere nicht widersprechen
+       (Kritik 28.11.: "Michael Huber" bekam sonst Stefan Hubers Wuerfe). */
+    var leute = d.spieler.filter(function (p) { return p.team === LIGA.team && !p.gast; });
+    var crew = statsCrew().filter(function (c) { return !c.gast && !c.gastKonto && !c.bot; });
+    var widerspricht = function (c, name) {
+      var n = stName(name).split(' '), v = stName(c.voll).split(' ').filter(Boolean);
+      if (n.length < 2 || v.length < 2) return false;
+      return v[0] !== n[0] || v[v.length - 1] !== n[n.length - 1];
+    };
     ['ganz', 'vor', 'nach'].forEach(function (art) {
       leute.forEach(function (p) {
         if (m[p.key]) return;
-        var t = crew.filter(function (c) { return !vergeben[c.id] && stNamenPassen(c, p.name)[art]; });
+        var t = crew.filter(function (c) { return !vergeben[c.id] && stNamenPassen(c, p.name)[art] && (art === 'ganz' || !widerspricht(c, p.name)); });
         if (t.length !== 1) return;
         if (art !== 'ganz' && leute.some(function (q) { return q !== p && !m[q.key] && stNamenPassen(t[0], q.name)[art]; })) return;
         m[p.key] = t[0]; vergeben[t[0].id] = 1;
@@ -17306,7 +17315,8 @@
       var neu = ligaTagGeaendert(t);
       if (neu.length) { body.felder = {}; neu.forEach(function (k) { body.felder[k] = ligaTagFeld(t, k); }); }
       /* Die Vorbelegung nur, wo der Server noch nichts hat. */
-      var vor = Object.keys(t.fehlt || {}).filter(function (k) { return neu.indexOf(k) < 0 && ligaTagText(t, k) !== 'null'; });
+      /* Die Einstellungen schlaegt nur Scheibe 1 vor (Liga-Voreinstellungen). */
+      var vor = Object.keys(t.fehlt || {}).filter(function (k) { return neu.indexOf(k) < 0 && ligaTagText(t, k) !== 'null' && (k !== 'opt' || t.platz === 'S1'); });
       if (vor.length) { body.vorschlag = {}; vor.forEach(function (k) { body.vorschlag[k] = ligaTagFeld(t, k); }); }
     }
     return ligaTagAnfrage(t.id, body).then(function (r) {
@@ -17346,7 +17356,7 @@
   }
   function ligaTagUebernehmen(t, tag) {
     var bild = function () {
-      return JSON.stringify([t.plaetze, t.platz, t.turnier, t.bereit, LIGA_TAG_FELDER.map(function (k) { return ligaTagText(t, k); }), ligaTagVerbunden(t)]).replace(/"alter":\d+/g, '');
+      return JSON.stringify([t.plaetze, t.platz, t.turnier, t.bereit, LIGA_TAG_FELDER.map(function (k) { return ligaTagText(t, k); }), ligaTagVerbunden(t)]).replace(/"(gameOn)?[aA]lter":\d+/g, '');
     };
     var vorher = bild();
     var felder = tag.felder || {}, hat = function (k) { return Object.prototype.hasOwnProperty.call(felder, k); };
@@ -17468,7 +17478,9 @@
     if (k) {
       var teil = vollSplit(ligaTagPerson(t, k)), heim = termin.heim === LIGA.team;
       UI.overlay = { type: 'nachmeldung', striche: [],
-        draft: { team: (k.charAt(0) === 'w') === heim ? 'H' : 'G', teamFest: true, id: null, tag: k, start: true, nach: teil.nach, vor: teil.vor, u18: 'nein', g: null } };
+        draft: { team: (k.charAt(0) === 'w') === heim ? 'H' : 'G', teamFest: true, id: null, tag: k, start: true, nach: teil.nach, vor: teil.vor,
+          /* Was "+ Spieler" schon wusste (U18, Geschlecht), steht schon da. */
+          u18: ((t.d.neuInfo || {})[k.slice(1)] || {}).u18 === 'ja' ? 'ja' : 'nein', g: ((t.d.neuInfo || {})[k.slice(1)] || {}).g || null } };
       render();
       return;
     }
@@ -17550,6 +17562,22 @@
     var t = ligaTagAktiv(), o = UI.overlay;
     if (!t) return;
     if (ligaTagTurnierOffen()) { UI.overlay = { type: 'ligatag-hinweis', art: 'turnier' }; render(); return; }
+    /* Zu zweit geht GAME ON auch mit einem laufenden freien Spiel erst an die
+       andere Scheibe (Kritik 28.11.): gestartet wird nach ihrer Bestaetigung,
+       das freie Spiel bleibt bis dahin stehen. */
+    var zweiBereit = ligaTagGeteilt() && t.platz && !t.turnier && ligaTagZuZweit(t) && ligaTagAlleBereit(t);
+    if (zweiBereit) {
+      var anIdx = ligaTagAndere(t) === 'S1' ? 0 : 1;
+      if (gdGameOn(t, ligaTagAndere(t))) { ligaTagStarten(false); return; }
+      /* Die andere Scheibe antwortet nicht (Akku, WLAN): zweiter Tipp startet trotzdem. */
+      if (ligaTagVerbunden(t)[anIdx] === 2) {
+        if (!o.gefragt) { o.gefragt = true; o.fehler = 'Scheibe ' + ligaTagAndere(t).charAt(1) + ' ist nicht erreichbar. Nochmal GAME ON startet trotzdem.'; render(); return; }
+        ligaTagAbgleich({ gameOn: true }).then(function () { ligaTagStarten(false); });
+        return;
+      }
+      ligaTagAbgleich({ gameOn: true }).then(function () { ligaTagZeichnen(true); });
+      return;
+    }
     if (S.game && !S.game.done) { UI.overlay = { type: 'ligatag-hinweis', art: 'jetzt' }; render(); return; }
     if (!ligaTagGeteilt()) {
       /* Ein Geraet ohne Konten: GAME ON startet gleich das erste Einzel. */
@@ -17559,13 +17587,6 @@
     if (!t.platz) { o.fehler = 'Bitte erst eine Scheibe wählen.'; render(); return; }
     if (t.turnier) { ligaTagBeitreten(); return; }
     var an = ligaTagAndere(t);
-    /* Zu zweit: GAME ON meldet sich bei der anderen Scheibe, die bestaetigt
-       und startet. Hat sie schon gedrueckt, ist das hier die Bestaetigung. */
-    if (ligaTagZuZweit(t) && ligaTagAlleBereit(t)) {
-      if (gdGameOn(t, an)) { ligaTagStarten(false); return; }
-      ligaTagAbgleich({ gameOn: true }).then(function () { ligaTagZeichnen(true); });
-      return;
-    }
     if (!ligaTagAlleBereit(t) && !o.gefragt) {
       o.gefragt = true;
       o.fehler = ligaTagZuZweit(t) && !t.plaetze[an].bereit
@@ -17747,8 +17768,12 @@
     S.screen = 'setup';
     save();
     if (t.turnier) { render(); ligaTagBeitreten(); return; }
-    if (ligaTagAlleBereit(t)) { render(); if (ligaTagGeteilt()) ligaTagStarten(true); else ligaTagAlleinStarten(t); return; }
+    if (ligaTagAlleBereit(t) && !ligaTagGeteilt()) { render(); ligaTagAlleinStarten(t); return; }
+    /* Zu zweit startet nie eine Scheibe allein: zum Game Day, GAME ON geht
+       an die andere (Kritik 28.11.). */
     ligaTagOeffnen(ligaTagTermin(t.terminId));
+    if (ligaTagGeteilt() && ligaTagAlleBereit(t) && ligaTagZuZweit(t)) ligaTagAbgleich({ gameOn: true }).then(function () { ligaTagZeichnen(true); });
+    else if (ligaTagGeteilt() && ligaTagAlleBereit(t)) ligaTagStarten(false);
   }
   /* Ohne Konto: auf diesem einen Geraet. */
   function ligaTagAlleinStarten(t) {
@@ -17794,6 +17819,9 @@
       return;
     }
     if (!ligaTagKontoPruefen(t)) return;
+    /* Ein Game Day von vor dem Update kennt die Ersatzfelder noch nicht: als
+       unveraendert merken, sonst nimmt der erste Abgleich beiden "Bereit". */
+    LIGA_TAG_FELDER.forEach(function (k) { if (!Object.prototype.hasOwnProperty.call(t.abbild, k)) t.abbild[k] = ligaTagText(t, k); });
     var jetzt = Date.now(), offen = !!ligaTagVon(UI.overlay);
     /* Getipptes festhalten (die Felder selbst speichern nicht bei jeder Taste). */
     if (offen) {
@@ -17956,6 +17984,11 @@
       if (pg && f['g' + i] && !pg.avatar) pg.avatar = f['g' + i];
     }
   }
+  function gdFotoWeg(d, seite, i) {
+    var k = (seite === 'gegner' ? 'g' : 'w') + i;
+    if (d.fotos) delete d.fotos[k];
+    if (d.neuInfo) delete d.neuInfo[k];
+  }
   function gdKurz(name) {
     var t = String(name || '').replace(/[^A-Za-zÀ-ž ]/g, ' ').split(' ').filter(Boolean);
     return ((t[0] || '?')[0] + (t.length > 1 ? t[t.length - 1][0] : '')).toUpperCase();
@@ -18067,6 +18100,7 @@
     var gameOnKnopf = function (gross) {
       if (ligaTagStartLaeuft) return '<div class="gd-warte' + (gross ? ' gross' : '') + '"><i></i>DAS LIGASPIEL STARTET …</div>';
       if (ichGo) return '<div class="gd-warte' + (gross ? ' gross' : '') + '"><i></i>WARTE AUF SCHEIBE ' + andere.charAt(1) + '</div>' +
+        (ligaTagVerbunden(t)[andere === 'S1' ? 0 : 1] === 2 ? '<button type="button" class="gd-klein-link" data-action="gd-trotzdem">Scheibe ' + andere.charAt(1) + ' antwortet nicht: trotzdem starten</button>' : '') +
         '<button type="button" class="gd-klein-link" data-action="gd-gameon-ab">Abbrechen</button>';
       return '<button type="button" class="gd-gameon' + (gross ? ' gross' : '') + '" data-action="liga-los">GAME ON</button>';
     };
@@ -19995,8 +20029,9 @@
           if (gcS === 'wir' ? gcX.id === gcId : gcX.name === gcName) gcDrin = gci;
           if (gcFrei < 0 && !gcX.name) gcFrei = gci;
         }
-        if (gcDrin >= 0) gdPosSetzen(gcD, gcS, gcDrin, {});
+        if (gcDrin >= 0) { gdPosSetzen(gcD, gcS, gcDrin, {}); gdFotoWeg(gcD, gcS, gcDrin); }
         else if (gcFrei >= 0) {
+          gdFotoWeg(gcD, gcS, gcFrei);
           if (gcS === 'wir') gdPosSetzen(gcD, 'wir', gcFrei, { id: gcId, typ: '' });
           else { var gcT2 = gcName.split(' '); gdPosSetzen(gcD, 'gegner', gcFrei, { vor: gcT2.slice(0, -1).join(' ') || gcName, nach: gcT2.length > 1 ? gcT2[gcT2.length - 1] : '', typ: '' }); }
         }
@@ -20006,7 +20041,9 @@
       case 'gd-raus': {
         var grT = ligaTagAktiv();
         if (!grT) break;
-        gdPosSetzen(grT.d, el.getAttribute('data-seite') === 'gegner' ? 'gegner' : 'wir', Number(el.getAttribute('data-i')), {});
+        var grS = el.getAttribute('data-seite') === 'gegner' ? 'gegner' : 'wir', grI = Number(el.getAttribute('data-i'));
+        gdPosSetzen(grT.d, grS, grI, {});
+        gdFotoWeg(grT.d, grS, grI);
         ligaTagGetippt = Date.now(); save(); render();
         break;
       }
@@ -20058,9 +20095,26 @@
       case 'gd-challenge':
         gdChallenge(true); render();
         break;
-      case 'gd-los':
-        ligaTagStarten(false);
+      case 'gd-los': {
+        /* Erst den aktuellen Stand holen: hat die andere Scheibe GAME ON
+           zurueckgenommen oder die Aufstellung geaendert, startet nichts. */
+        var glT = ligaTagAktiv();
+        if (!glT) break;
+        ligaTagAbgleich().then(function () {
+          if (S.ligaTag !== glT) return;
+          if (!gdGameOn(glT, ligaTagAndere(glT)) || !ligaTagAlleBereit(glT)) {
+            if (ligaTagVon(UI.overlay)) { UI.overlay.fehler = 'Scheibe ' + ligaTagAndere(glT).charAt(1) + ' hat GAME ON zurückgenommen oder die Aufstellung geändert.'; render(); }
+            return;
+          }
+          ligaTagStarten(false);
+        });
         break;
+      }
+      case 'gd-trotzdem': {
+        var gtzT = ligaTagAktiv();
+        if (gtzT) ligaTagStarten(false);
+        break;
+      }
       case 'gd-gameon-ab':
         if (UI.overlay && UI.overlay.type === 'ligatag-hinweis') UI.overlay = null;
         ligaTagAbgleich({ gameOn: false }).then(function () { ligaTagZeichnen(true); });
@@ -21868,7 +21922,9 @@
       /* Markieren: DIESES Enter hat die Aufnahme gebucht - der Overlay-
          Listener weiter unten darf es nicht gleich noch als Bestaetigung
          der frisch geoeffneten Checkout-Frage verstehen. */
-      if (UI.input !== '') { UI.error = ''; ev.eingabeGebucht = true; submitTotal(); }
+      /* Gehaltenes Enter (Tastenwiederholung) bucht nichts - sonst bestaetigte
+         es im Ligaspiel "mehr als der Rest" von selbst (Kritik 28.11.). */
+      if (UI.input !== '' && !ev.repeat) { UI.error = ''; ev.eingabeGebucht = true; submitTotal(); }
       ev.preventDefault();
     } else if (ev.key === 'Backspace') {
       /* Erst Ziffern löschen, im leeren Zustand die letzte Aufnahme – so
@@ -21899,7 +21955,7 @@
       if (S.screen !== 'game' || !UI.turnier || UI.overlay || UI.menu) return;
       if (ev.key === 'Enter') {
         ev.preventDefault();
-        if (UI.input !== '') { UI.error = ''; ev.eingabeGebucht = true; submitTotal(); }
+        if (UI.input !== '' && !ev.repeat) { UI.error = ''; ev.eingabeGebucht = true; submitTotal(); }
       } else if (ev.key === 'Backspace' && !feld.value) {
         ev.preventDefault();
         undo();

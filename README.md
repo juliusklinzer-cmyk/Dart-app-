@@ -531,8 +531,16 @@ Scheibe 2“, Abbrechen geht), die andere Scheibe fragt **„Kann es losgehen?�
 „LOS GEHT'S“ startet auf beiden das erste Einzel mit Ausbullen, „Noch nicht“ nimmt das
 GAME ON zurück. Ist die andere Scheibe gerade woanders (freies Spiel, anderer
 Bildschirm), kommt die Frage als Hinweis; um 20:00 erinnert ein Hinweis an den Anwurf.
-Drücken beide im selben Moment, startet Scheibe 1. Ein laufendes freies Spiel oder
-Turnier wird nie still beendet. Technik: Felder `w4–w7`/`g4–g7` für Ersatz,
+Drücken beide im selben Moment, startet Scheibe 1. Nochmal GAME ON frischt ein
+wartendes auf (es gilt drei Minuten). Antwortet die andere Scheibe nicht mehr (Akku,
+WLAN; „nicht erreichbar“), steht beim Warten „trotzdem starten“, bzw. ein zweites
+GAME ON startet. Der Server startet mit zwei Scheiben nur, solange beide bereit sind
+und ein GAME ON steht – hat die eine es zurückgenommen oder geändert, startet
+„LOS GEHT'S“ nichts aus altem Stand. Auch mit einem laufenden freien Spiel geht GAME ON
+erst an die andere Scheibe; nach dem Start fragt die App, ob das freie Spiel
+abgelegt wird. Ein laufendes freies Spiel oder Turnier wird nie still beendet.
+Fotos und U18/Geschlecht aus „+ Spieler“ hängen an der Person (herausnehmen
+löscht sie), die Einstellungen schlägt nur Scheibe 1 vor. Technik: Felder `w4–w7`/`g4–g7` für Ersatz,
 `opt.ohneNamen` (geht als `liga.ohneNamen` in den Plan, der Live-Ticker zeigt dann nur
 Kennungen), je Scheibe `gameOn` am Server (nur mit Bereit; jede Änderung, „Bereit“
 zurück oder der Start nehmen es zurück; `gameOn: false` darf jede Scheibe senden). Neue

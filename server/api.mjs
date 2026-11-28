@@ -1527,7 +1527,8 @@ export function createApi(db, config) {
       if (jetztMeiner && typeof body.gameOn === 'boolean') {
         if (body.gameOn) {
           const p = t.plaetze[jetztMeiner];
-          if (p.bereit && !laeuft && !p.gameOn) { p.gameOn = Date.now(); anders = true; }
+          /* Nochmal gedrueckt frischt es auf (sonst galt es nach 3 Minuten als alt). */
+          if (p.bereit && !laeuft) { p.gameOn = Date.now(); anders = true; }
         } else {
           for (const s of ['S1', 'S2']) if (t.plaetze[s] && t.plaetze[s].gameOn) { t.plaetze[s].gameOn = 0; anders = true; }
         }
@@ -1570,6 +1571,13 @@ export function createApi(db, config) {
         const hat = (seite) => besetzt.some((p) => p.teile === seite || p.teile === 'beide');
         if (!besetzt.every((p) => p.bereit) || !hat('wir') || !hat('gegner')) { grund = 'nicht-bereit'; throw NICHTS; }
       }
+      /* Zwei Scheiben: gestartet wird nur, solange beide bereit sind und ein
+         GAME ON steht (hoechstens zehn Minuten alt). Hat die eine Scheibe es
+         zurueckgenommen oder die Aufstellung geaendert, startet die
+         Bestaetigung der anderen nichts aus altem Stand (Kritik 28.11.). */
+      const zwei = ['S1', 'S2'].every((s) => t.plaetze[s]);
+      if (zwei && (!['S1', 'S2'].every((s) => t.plaetze[s].bereit) ||
+          !['S1', 'S2'].some((s) => t.plaetze[s].gameOn && Date.now() - t.plaetze[s].gameOn < 600000))) { grund = 'kein-gameon'; throw NICHTS; }
       /* Immer nur aus dem aktuellen Stand: hat das andere iPad inzwischen
          etwas geaendert, holt sich dieses erst die Aenderung. */
       if ((Number(body.stand) || 0) !== t.stand) { grund = 'stand'; throw NICHTS; }
@@ -1599,6 +1607,7 @@ export function createApi(db, config) {
       return sendJson(res, 409, { grund, fehler: {
         'laeuft-nicht': 'Das Ligaspiel läuft noch nicht.',
         'nicht-bereit': 'Es ist noch nicht jede Scheibe bereit.',
+        'kein-gameon': 'Die andere Scheibe hat GAME ON zurückgenommen oder die Aufstellung geändert. Bitte dort nochmal GAME ON drücken.',
         stand: 'Die Aufstellung wurde gerade geändert. Bitte nochmal tippen.',
         gespielt: 'Dieses Ligaspiel wurde heute schon gestartet und beendet. Nochmal tippen legt ein neues an.',
         kennung: 'Bitte nochmal tippen.'
