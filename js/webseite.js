@@ -282,7 +282,8 @@
         var pos = pm.posPaar ? (i === 0 ? 'H' : 'G') + (zahl(pm.posPaar[i]) + 1) : '';
         var a = st[pid] && st[pid].avg;
         html += '<div class="bs' + (pid === dran ? ' dran' : '') + '"><span class="dot"></span>' +
-          '<span class="name"><span class="pos">' + pos + '</span> ' + esc(nm(pid)) + '</span>' +
+          /* "Live ohne Namen": der Server liefert die Kennung statt des Namens - dann nicht doppelt. */
+          '<span class="name"><span class="pos">' + pos + '</span>' + (nm(pid) === pos ? '' : ' ' + esc(nm(pid))) + '</span>' +
           '<span class="avg">Ø ' + (a ? a.toFixed(1) : '–') + '</span><span class="rest">' + r + '</span></div>';
       });
       html += '</div>';
