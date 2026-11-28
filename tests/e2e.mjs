@@ -3853,8 +3853,8 @@ check('links steht gross der naechste Spieltag mit Datum, Gegner und Lokal',
   (await page.locator('#liga-karte .lg-ort').count()) === 1, (await textKlein('#liga-karte')).replace(/\s+/g, ' ').slice(0, 160));
 check('die Gegner tragen ihr Logo', (await page.locator('#liga-liste .liga-spieltag .lg-teamlogo').count()) >= 16);
 await page.locator('#liga-tabs button[data-tab="training"]').click();
-check('Training: DiensDarts links, Uebungsspiel mit Gegner-Vorwahl rechts',
-  (await textKlein('#dienstdarts-karte')).includes('diensdarts') && (await page.locator('#uebung-karte [data-action="uebung-vorwahl"][data-value="mittel"].active').count()) === 1);
+check('Training: DiensDarts links, rechts die Dienstage und das Uebungsspiel gegen zweites Team, Bots oder den naechsten Gegner',
+  (await textKlein('#dienstdarts-karte')).includes('diensdarts') && (await page.locator('#uebung-karte [data-action="uebung-start"][data-gegner]').count()) === 3);
 await page.locator('#liga-tabs button[data-tab="tabelle"]').click();
 check('Tabelle: links oben unser Platz, darunter die Tabelle, darunter der Stand',
   (await textKlein('#lt-platz')).includes('unser platz') && (await text('#lt-platz')).includes('.') &&
@@ -4013,8 +4013,9 @@ check('das Sehnsucht-Logo haengt an der Karte',
 check('ohne Konto verweist die Umfrage auf die Anmeldung',
   (await text('#dienstdarts-karte')).includes('anmelden'));
 
+check('rechts die naechsten sechs Dienstage', (await page.locator('#uebung-karte .lg-termin').count()) === 6);
 /* Das Uebungsspiel gegen Bots: kompletter Liga-Ablauf, aber ohne Wertung. */
-await page.locator('[data-action="uebung-start"]').click();
+await page.locator('[data-action="uebung-start"][data-gegner="bots"]').click();
 check('der Aufstellungs-Dialog oeffnet sich', (await text('#overlay-card')).includes('Übungs-Ligaspiel'));
 check('Bots mittel sind vorgewaehlt', await page.evaluate(() =>
   document.querySelector('[data-action="uebung-gegner"][data-value="mittel"]').classList.contains('active')));

@@ -4231,7 +4231,7 @@
     var mitMenue = screen === 'game' || screen === 'cricket' || screen === 'rtw' || screen === 'finisher' || screen === 'kaiwen' || screen === 'hunter';
     if (!mitMenue) UI.menu = false;
     /* Beim Betreten der Liga zeigt der Spielplan wieder den naechsten Spieltag. */
-    if (screen !== 'liga') { UI.ligaWahl = null; UI.ligaZu = false; UI.ligaAendern = null; }
+    if (screen !== 'liga') { UI.ligaWahl = null; UI.ligaZu = false; UI.ligaAendern = null; UI.trainingAendern = null; UI.kasseZeile = null; }
     $('nav').classList.toggle('hidden', !navFor);
     if (navFor) {
       $('nav').querySelectorAll('button').forEach(function (b) {
@@ -4257,6 +4257,13 @@
       setTimeout(function () { throw e; }, 0);
     }
   }
+
+  /* Regeln: wie im Entwurf ist immer nur eine Antwort offen. */
+  document.addEventListener('toggle', function (e) {
+    var d = e.target;
+    if (!d || !d.open || !d.matches || !d.matches('#liga-regeln details.regel')) return;
+    document.querySelectorAll('#liga-regeln details.regel[open]').forEach(function (x) { if (x !== d) x.open = false; });
+  }, true);
 
   /* "Automatisch" folgt dem Geraet: wechselt das iPad abends auf dunkel,
      zieht die App mit. */
@@ -4293,7 +4300,7 @@
     /* Das Startbild steht am Tablet und quergedrehten Handy fest im Rahmen,
        innen scrollen nur Spielerliste und Einstellungen (body.fix-setup). */
     document.body.classList.toggle('fix-setup', S.screen === 'setup' || S.screen === 'tournament' || S.screen === 'bulloff' ||
-      (S.screen === 'liga' && (UI.ligaTab || 'plan') !== 'plan') || S.screen === 'players' || S.screen === 'winner' || S.screen === 'profile' || S.screen === 'summary');
+      (S.screen === 'liga' && !LIGA_NEU[UI.ligaTab || 'plan']) || S.screen === 'players' || S.screen === 'winner' || S.screen === 'profile' || S.screen === 'summary');
     if (S.screen === 'setup') { gaesteAufraeumen(); renderSetup(); }
     /* Der Hintergrundtakt laeuft nur da, wo man ihn auch sieht: im
        Turnierbildschirm. Sonst fragt die App den ganzen Abend nach Daten,
@@ -5764,7 +5771,7 @@
   /* Die Reiter der Liga, die schon nach dem Redesign gebaut sind. Nur dort
      gilt hell - die uebrigen haben noch dunkle Karten und blieben auf
      hellem Grund unlesbar (Kritik 28.11.); sie kommen Paket fuer Paket. */
-  var LIGA_NEU = { plan: 1 };
+  var LIGA_NEU = { plan: 1, training: 1, kasse: 1, regeln: 1 };
   function darstellungAnwenden() {
     var de = document.documentElement;
     var liga = !!($('screen-liga') && $('screen-liga').classList.contains('active'));
@@ -8636,6 +8643,9 @@
       '<text x="60" y="' + (fs > 30 ? 73 : 71) + '" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="' + fs + '" fill="' + a[1] + '">' + esc(a[2]) + '</text></svg>';
   }
   var LG_PFEIL = '<svg class="lg-pfeil" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5 7 7-7 7"/></svg>';
+  var LG_KALENDER = '<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18"/><path d="M8 14h3M8 17h7"/></svg>';
+  var LG_PIN_ROT = '<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e5484d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.7"/></svg>';
+  var LG_PLUS = '<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M7 12h10"/></svg>';
   var LG_HAKEN = '<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4 4 10-10"/></svg>';
   /* Regulaer steigen die beiden Ersten auf (SWO 03.10.2026, Punkt 2). */
   var LIGA_AUFSTEIGER = 2;
@@ -8867,135 +8877,151 @@
     }).join('') + '</select>';
   }
 
-  /* Das Kassenbuch -- aufgebaut wie die Excel-Vorlage der Kassenwartin:
-     Kassenjahr, Kassenwart, Anfangsbestand, dann Nr / Datum / Beschreibung /
-     Kategorie / Einnahme / Ausgabe / Saldo und unten die Summen. Buchen
-     darf nur der Kassenwart; alle anderen sehen das Buch und den
-     PayPal-Knopf fuers Vereinskonto. */
+  /* Die Kasse (Entwurf LigaKasse, Redesign Nov. 2026): links der Kassenstand
+     mit Anfang, Einnahmen, Ausgaben und "BUCHUNG ERFASSEN" (das Formular
+     klappt darunter auf), darunter der Gruendungsbeitrag mit Fotos; rechts
+     das Kassenbuch als Tabelle mit Saldo und Endbestand. Eintragen darf
+     jeder Angemeldete, der Kassenwart verwaltet alles (Zeile antippen:
+     aendern oder loeschen). */
   function renderLigaKasse() {
     var online = !!(window.DartSync && window.DartSync.kasse && window.DartKonto && window.DartKonto.nutzer());
     /* Waehrend jemand mitten in einer Buchung steckt (Fokus im Formular
        ODER schon etwas eingetragen), wird nicht neu gebaut - sonst wischte
        ein Hintergrund-Abgleich Betrag und Auswahl weg. */
     var fokus = document.activeElement;
-    if (fokus && fokus.closest && fokus.closest('#kasse-karte')) return;
+    if (fokus && fokus.closest && fokus.closest('#kasse-karte .kasse-form')) return;
     var kbAlt = $('kasse-betrag'), ktAlt = $('kasse-text');
     if ((kbAlt && kbAlt.value) || (ktAlt && ktAlt.value)) return;
     var d = kasseDaten;
     var konfig = d && d.konfig ? d.konfig : { jahr: new Date().getFullYear(), anfangsbestand: 0, beitrag: 5000, paypal: '' };
     var saldo = d ? d.saldo : konfig.anfangsbestand;
-    /* Eintragen darf jeder Angemeldete; der Kassenwart verwaltet alles. */
     var darf = online;
     var wart = !!(online && d && d.kassenwart);
     var ich = online ? window.DartKonto.nutzer().id : null;
     var bearbeite = UI.kasseEdit || null;
+    var formOffen = !!(darf && (UI.kasseForm || bearbeite));
     var art = bearbeite ? (bearbeite.betrag < 0 ? 'aus' : 'ein') : (UI.kasseArt === 'aus' ? 'aus' : 'ein');
     var katWahl = bearbeite ? bearbeite.kategorie : UI.kasseKategorie;
     var eintraege = (d && d.eintraege) || [];
     var summeEin = sum(eintraege, function (e) { return e.betrag > 0 ? e.betrag : 0; });
     var summeAus = sum(eintraege, function (e) { return e.betrag < 0 ? -e.betrag : 0; });
+    var mitglieder = (d && d.mitglieder) || [];
+    var wer = ((d && d.kassenwarte) || []).join(', ');
 
-    /* Laufender Saldo wie Spalte G der Vorlage: Anfangsbestand + Einnahmen - Ausgaben. */
+    var form = !formOffen ? '' :
+      '<div class="kasse-form lg-form' + (bearbeite ? ' bearbeiten' : '') + '">' +
+        '<h3>' + (bearbeite ? 'Buchung Nr. ' + (eintraege.indexOf(bearbeite) + 1) + ' ändern' : 'Buchung erfassen') + '</h3>' +
+        (bearbeite ? '' : '<p class="lg-text">Jede Einzahlung und jede Ausgabe hier eintragen, sie steht sofort im Kassenbuch. ' +
+          esc(wer || 'Wer die Kasse führt,') + ' prüft und verwaltet die Buchungen.</p>') +
+        '<div class="options lg-seg2" id="kasse-art">' +
+          '<button type="button" data-action="kasse-art" data-value="ein" class="' + (art === 'ein' ? 'active' : '') + '">Einnahme</button>' +
+          '<button type="button" data-action="kasse-art" data-value="aus" class="' + (art === 'aus' ? 'active' : '') + '">Ausgabe</button>' +
+        '</div>' +
+        '<div class="zeile">' +
+          '<input id="kasse-datum" type="date" value="' + (bearbeite ? bearbeite.datum : heuteISO()) + '" aria-label="Datum">' +
+          kasseKategorieWahl(art, katWahl) +
+        '</div>' +
+        '<div class="zeile">' +
+          '<input id="kasse-betrag" type="text" inputmode="decimal" placeholder="Betrag in €" aria-label="Betrag in Euro"' + (bearbeite ? ' value="' + (Math.abs(bearbeite.betrag) / 100).toFixed(2).replace('.', ',') + '"' : '') + '>' +
+          '<input id="kasse-text" type="text" maxlength="80" placeholder="Beschreibung" aria-label="Beschreibung"' + (bearbeite ? ' value="' + esc(bearbeite.text) + '"' : '') + '>' +
+        '</div>' +
+        '<div id="kasse-mitglied-zeile" class="' + (art === 'ein' && (katWahl || kasseKategorien('ein')[0]) === 'Mitgliedsbeiträge' ? '' : 'hidden') + '">' +
+          '<select id="kasse-mitglied" aria-label="Mitglied"><option value="">Mitglied (für wen ist der Beitrag?)</option>' +
+            mitglieder.filter(function (m) { return wart || m.id === ich; }).map(function (m) {
+              return '<option value="' + m.id + '"' + (bearbeite && bearbeite.mitglied === m.id ? ' selected' : (!bearbeite && m.id === ich ? ' selected' : '')) + '>' + esc(m.name) + '</option>';
+            }).join('') +
+          '</select></div>' +
+        '<div class="kasse-knoepfe">' +
+          '<button class="btn hell" data-action="kasse-buchen">' + (bearbeite ? 'Änderung speichern' : 'Buchen') + '</button>' +
+          '<button class="btn ghost" data-action="kasse-edit-abbruch">Abbrechen</button>' +
+        '</div>' +
+        '<p class="hint" id="kasse-meldung"></p>' +
+        (wart ? '<details class="kasse-konfig"><summary>Kassenjahr und Anfangsbestand</summary>' +
+          '<div class="zeile">' +
+            '<input id="kasse-jahr" type="number" min="2000" max="2100" value="' + konfig.jahr + '" aria-label="Kassenjahr">' +
+            '<input id="kasse-anfang" type="text" inputmode="decimal" value="' + (konfig.anfangsbestand / 100).toFixed(2).replace('.', ',') + '" aria-label="Anfangsbestand in Euro">' +
+          '</div>' +
+          '<button class="btn ghost full" data-action="kasse-konfig">Speichern</button>' +
+        '</details>' : '') +
+      '</div>';
+
+    var bezahlt = mitglieder.filter(function (m) { return m.gezahlt >= konfig.beitrag; }).length;
+    var ichOffen = !wart && mitglieder.some(function (m) { return m.id === ich && m.gezahlt < konfig.beitrag; });
+    var ichName = '';
+    mitglieder.forEach(function (m) { if (m.id === ich) ichName = m.name; });
+    var beitragHtml = mitglieder.length
+      ? '<section class="lg-beitrag" aria-label="Gründungsbeitrag">' +
+          '<div class="lg-abschnitt-kopf"><h2>Gründungsbeitrag</h2><span>' + euro(konfig.beitrag) + ' pro Kopf · ' + bezahlt + ' von ' + mitglieder.length + ' bezahlt</span></div>' +
+          '<div class="lt-leute lg-beitrag-liste" role="list">' + mitglieder.map(function (m) {
+            var voll = m.gezahlt >= konfig.beitrag;
+            var bild = '<span class="lg-beitrag-bild">' + avatarHTML({ id: m.id, name: m.name, avatar: m.avatar, hue: m.hue }, 'lg-av') +
+              (voll ? '<span class="lg-haken" aria-label="bezahlt">' + LG_HAKEN + '</span>' : '') + '</span>';
+            var name = '<span>' + esc(m.name) + '</span>' + (!voll && m.gezahlt > 0 ? '<small>' + euro(m.gezahlt) + '</small>' : '');
+            /* Kassenwart: ein Tipp auf ein offenes Mitglied bucht den Beitrag. */
+            if (!voll && wart) {
+              return '<button type="button" class="lt-person offen" role="listitem" data-action="kasse-beitrag" data-id="' + esc(m.id) + '" data-name="' + esc(m.name) + '" title="Beitrag als bezahlt buchen">' + bild + name + '</button>';
+            }
+            return '<div class="lt-person' + (voll ? '' : ' offen') + '" role="listitem">' + bild + name + '</div>';
+          }).join('') + '</div>' +
+          (ichOffen ? '<div class="lg-antwort"><span>Dein Beitrag ist noch offen.</span><button type="button" class="lg-aendern stark" data-action="kasse-beitrag" data-id="' + esc(ich) + '" data-name="' + esc(ichName) + '">Ich habe eingezahlt</button></div>' : '') +
+        '</section>'
+      : '';
+
+    $('kasse-karte').innerHTML =
+      '<section class="lg-karte kasse-stand" aria-label="Kassenstand">' +
+        '<span class="lg-etikett lg-mit-icon">' + LG_KALENDER + 'Kassenstand · Kassenjahr ' + konfig.jahr + '</span>' +
+        '<span class="lg-saldo' + (saldo < 0 ? ' minus' : '') + '">' + euro(saldo) + '</span>' +
+        '<div class="lg-drei">' +
+          '<div><span>Anfangsbestand</span><b>' + euro(konfig.anfangsbestand) + '</b></div>' +
+          '<div><span>Einnahmen</span><b class="plus">+' + euro(summeEin) + '</b></div>' +
+          '<div><span>Ausgaben</span><b class="minus">−' + euro(summeAus) + '</b></div>' +
+        '</div>' +
+        '<span class="lg-text">Kasse führt: ' + esc(wer || 'noch offen') + '</span>' +
+        '<div class="lg-linie"></div>' +
+        (darf
+          ? '<div class="lg-kasse-knoepfe">' +
+              (formOffen ? '' : '<button type="button" class="lg-wort lg-mit-icon" data-action="kasse-form">' + LG_PLUS + 'BUCHUNG ERFASSEN</button>') +
+              (konfig.paypal ? '<a class="lg-link leise kasse-paypal" href="' + esc(konfig.paypal) + '" target="_blank" rel="noopener">Per PayPal ins Vereinskonto einzahlen</a>' : '') +
+            '</div>' + form
+          : '<p class="lg-text">Zum Ansehen und Eintragen bitte anmelden.</p>' +
+            (konfig.paypal ? '<a class="lg-link leise kasse-paypal" href="' + esc(konfig.paypal) + '" target="_blank" rel="noopener">Per PayPal ins Vereinskonto einzahlen</a>' : '')) +
+      '</section>' + beitragHtml;
+
+    /* Kassenbuch: Nr, Datum, Buchung (Text und Kategorie), Betrag, Saldo -
+       neueste oben. Antippen zeigt Aendern und Loeschen, wo man darf. */
     var lauf = konfig.anfangsbestand;
     var zeilen = eintraege.map(function (e, i) {
       lauf += e.betrag;
-      return '<div class="kasse-eintrag">' +
-        '<div class="nr">' + (i + 1) + '</div>' +
-        '<div class="was"><div class="txt">' + esc(e.text) +
-          (e.mitgliedName && e.kategorie === 'Mitgliedsbeiträge' && e.text.indexOf(e.mitgliedName) < 0 ? ' <span class="muted">(' + esc(e.mitgliedName) + ')</span>' : '') + '</div>' +
-          '<div class="wer">' + datumDE(e.datum) + ' · ' + esc(e.kategorie || '') + (e.von ? ' · gebucht von ' + esc(e.von) : '') + '</div></div>' +
-        '<div class="zahlen"><span class="betrag ' + (e.betrag < 0 ? 'minus' : 'plus') + '">' +
-          (e.betrag > 0 ? '+' : '−') + euro(Math.abs(e.betrag)) + '</span>' +
-          '<span class="saldo">Saldo ' + euro(lauf) + '</span></div>' +
-        (wart ? '<button class="weg edit" data-action="kasse-edit" data-id="' + esc(e.id) + '" aria-label="Buchung ändern">✎</button>' : '') +
-        (wart || e.meins ? '<button class="weg" data-action="kasse-weg" data-id="' + esc(e.id) + '" aria-label="Buchung löschen">✕</button>' : '') +
-        '</div>';
-    });
-
-    /* Gruendungsbeitrag je Mitglied: bezahlt oder offen. */
-    var mitglieder = (d && d.mitglieder) || [];
-    var offen = mitglieder.filter(function (m) { return m.gezahlt < konfig.beitrag; }).length;
-    var beitragHtml = mitglieder.length ? '<div class="kasse-beitraege"><div class="karte-kopf"><span class="lk-crew-titel">Gründungsbeitrag ' + euro(konfig.beitrag) + ' pro Kopf</span>' +
-      '<span class="kb-offen ' + (offen ? 'gelb' : 'gruen') + '">' + (offen ? offen + ' offen' : 'alle bezahlt') + '</span></div>' +
-      '<div class="lt-leute">' + mitglieder.map(function (m) {
-        var voll = m.gezahlt >= konfig.beitrag;
-        return '<span class="lt-person kb-zeile ' + (voll ? 'voll' : 'offen') + '">' +
-          avatarHTML({ id: m.id, name: m.name, avatar: m.avatar, hue: m.hue }, 'sm') +
-          '<span class="kb-name">' + esc(m.name) + '</span>' +
-          '<span class="kb-status">' + (voll ? '✓' : m.gezahlt > 0 ? euro(m.gezahlt) : 'offen') + '</span>' +
-          (!voll && (wart || m.id === ich) ? '<button class="btn ghost small" data-action="kasse-beitrag" data-id="' + esc(m.id) + '" data-name="' + esc(m.name) + '">' + (m.id === ich && !wart ? 'Eingezahlt' : 'Bezahlt') + '</button>' : '') +
-          '</span>';
-      }).join('') + '</div></div>' : '';
-
-    $('kasse-karte').innerHTML =
-      '<div class="liga-karte weiss kasse-stand">' +
-        '<div class="lk-kopf"><span class="lk-crew-titel">Kassenstand · Kassenjahr ' + konfig.jahr + '</span>' +
-          '<span class="hint">Kasse führt: ' + esc(((d && d.kassenwarte) || []).join(', ') || 'noch offen') + '</span></div>' +
-        '<span class="ks-saldo ' + (saldo < 0 ? 'minus' : 'plus') + '">' + euro(saldo) + '</span>' +
-        '<div class="ks-drei">' +
-          '<div><span class="lk-crew-titel">Anfang</span><b>' + euro(konfig.anfangsbestand) + '</b></div>' +
-          '<div><span class="lk-crew-titel">Einnahmen</span><b class="plus">+ ' + euro(summeEin) + '</b></div>' +
-          '<div><span class="lk-crew-titel">Ausgaben</span><b class="minus">− ' + euro(summeAus) + '</b></div>' +
+      var tippbar = wart || e.meins;
+      var offenZ = tippbar && UI.kasseZeile === e.id;
+      return '<div class="lg-buch-zeile' + (tippbar ? ' tap' : '') + (offenZ ? ' offen' : '') + '"' + (tippbar ? ' data-action="kasse-zeile" data-id="' + esc(e.id) + '" role="button" tabindex="0"' : '') + '>' +
+          '<span class="nr">' + (i + 1) + '</span>' +
+          '<span class="dt">' + datumDE(e.datum).slice(0, 6) + '</span>' +
+          '<span class="was"><b>' + esc(e.text) +
+            (e.mitgliedName && e.kategorie === 'Mitgliedsbeiträge' && e.text.indexOf(e.mitgliedName) < 0 ? ' (' + esc(e.mitgliedName) + ')' : '') + '</b>' +
+            '<small>' + esc(e.kategorie || '') + (e.von ? ' · gebucht von ' + esc(e.von) : '') + '</small></span>' +
+          '<span class="betrag ' + (e.betrag < 0 ? 'minus' : 'plus') + '">' + (e.betrag > 0 ? '+' : '−') + euro(Math.abs(e.betrag)) + '</span>' +
+          '<span class="saldo">' + euro(lauf) + '</span>' +
         '</div>' +
-      '</div>' +
-      '<div class="card kasse-erfassen">' +
-      (darf
-        ? '<div class="kasse-form' + (bearbeite ? ' bearbeiten' : '') + '">' +
-            '<h3>' + (bearbeite ? 'Buchung Nr. ' + (eintraege.indexOf(bearbeite) + 1) + ' ändern' : 'Eintragen: Einzahlung oder Ausgabe') + '</h3>' +
-            (bearbeite ? '' : '<p class="hint">Jede Einzahlung und jede Ausgabe hier eintragen – sie steht sofort im Kassenbuch. ' +
-              (((d && d.kassenwarte) || []).join(', ') || 'Wer die Kasse führt,') + ' prüft und verwaltet die Buchungen.</p>') +
-            '<div class="options" id="kasse-art">' +
-              '<button data-action="kasse-art" data-value="ein" class="' + (art === 'ein' ? 'active' : '') + '">Einnahme</button>' +
-              '<button data-action="kasse-art" data-value="aus" class="' + (art === 'aus' ? 'active' : '') + '">Ausgabe</button>' +
-            '</div>' +
-            '<div class="zeile">' +
-              '<input id="kasse-datum" type="date" value="' + (bearbeite ? bearbeite.datum : heuteISO()) + '" aria-label="Datum">' +
-              kasseKategorieWahl(art, katWahl) +
-            '</div>' +
-            '<div class="zeile">' +
-              '<input id="kasse-betrag" type="text" inputmode="decimal" placeholder="Betrag in €"' + (bearbeite ? ' value="' + (Math.abs(bearbeite.betrag) / 100).toFixed(2).replace('.', ',') + '"' : '') + '>' +
-              '<input id="kasse-text" type="text" maxlength="80" placeholder="Beschreibung"' + (bearbeite ? ' value="' + esc(bearbeite.text) + '"' : '') + '>' +
-            '</div>' +
-            '<div id="kasse-mitglied-zeile" class="' + (art === 'ein' && (katWahl || kasseKategorien('ein')[0]) === 'Mitgliedsbeiträge' ? '' : 'hidden') + '">' +
-              '<select id="kasse-mitglied"><option value="">Mitglied (für wen ist der Beitrag?)</option>' +
-                mitglieder.filter(function (m) { return wart || m.id === ich; }).map(function (m) {
-                  return '<option value="' + m.id + '"' + (bearbeite && bearbeite.mitglied === m.id ? ' selected' : (!bearbeite && m.id === ich ? ' selected' : '')) + '>' + esc(m.name) + '</option>';
-                }).join('') +
-              '</select></div>' +
-            '<div class="kasse-knoepfe">' +
-              '<button class="btn hell" data-action="kasse-buchen">' + (bearbeite ? 'Änderung speichern' : 'Buchen') + '</button>' +
-              (bearbeite
-                ? '<button class="btn ghost" data-action="kasse-edit-abbruch">Abbrechen</button>'
-                : konfig.paypal
-                  ? '<a class="btn ghost kasse-paypal" href="' + esc(konfig.paypal) + '" target="_blank" rel="noopener">Per PayPal einzahlen</a>'
-                  : '<span></span>') +
-            '</div>' +
-            '<p class="hint" id="kasse-meldung"></p>' +
-            (wart ? '<details class="kasse-konfig"><summary>Kassenjahr und Anfangsbestand (Kasse)</summary>' +
-              '<div class="zeile">' +
-                '<input id="kasse-jahr" type="number" min="2000" max="2100" value="' + konfig.jahr + '" aria-label="Kassenjahr">' +
-                '<input id="kasse-anfang" type="text" inputmode="decimal" value="' + (konfig.anfangsbestand / 100).toFixed(2).replace('.', ',') + '" aria-label="Anfangsbestand in Euro">' +
-              '</div>' +
-              '<button class="btn ghost full" data-action="kasse-konfig">Speichern</button>' +
-            '</details>' : '') +
-          '</div>'
-        : '<h2>Buchung erfassen</h2><p class="hint">Zum Ansehen und Eintragen bitte anmelden.</p>' +
-          (konfig.paypal ? '<a class="btn ghost full kasse-paypal" href="' + esc(konfig.paypal) + '" target="_blank" rel="noopener">Per PayPal einzahlen</a>' : '')) +
-      '</div>';
+        (offenZ ? '<div class="lg-buch-aktion">' +
+          (wart ? '<button type="button" class="lg-link" data-action="kasse-edit" data-id="' + esc(e.id) + '">Ändern</button>' : '') +
+          '<button type="button" class="lg-link rot" data-action="kasse-weg" data-id="' + esc(e.id) + '">Löschen</button></div>' : '');
+    });
     $('kasse-buch').innerHTML =
-      '<div class="card kasse-liste">' +
-        '<div class="karte-kopf"><h2>Kassenbuch</h2><span class="hint">' + plural(zeilen.length, 'Buchung', 'Buchungen') + '</span></div>' +
-        '<div class="kasse-zeilen">' + (zeilen.length ? zeilen.slice().reverse().join('') : '<p class="hint">Noch keine Buchung.</p>') + '</div>' +
-      '</div>' +
-      (beitragHtml ? '<div class="card kasse-beitraege-karte">' + beitragHtml + '</div>' : '');
+      '<section class="lg-buch" aria-label="Kassenbuch">' +
+        '<div class="lg-abschnitt-kopf"><h2>Kassenbuch</h2><span>' + plural(zeilen.length, 'Buchung', 'Buchungen') + '</span></div>' +
+        '<div class="lg-buch-kopf"><span>NR</span><span>DATUM</span><span>BUCHUNG</span><span class="r">BETRAG</span><span class="r">SALDO</span></div>' +
+        (zeilen.length ? zeilen.slice().reverse().join('') : '<p class="lg-text lg-leer">Noch keine Buchung.</p>') +
+        '<div class="lg-buch-ende"><span>Endbestand</span><b>' + euro(saldo) + '</b></div>' +
+      '</section>';
   }
 
   /* Highlights der ganzen Saison (nur unsere Spieler, nur echte Spieltage):
      180er, High-Finishes ab 100 und Shortlegs bis 21 Darts - je mit
      Spieltag und Einzel, wie sie der Bogen abfragt. */
   /* DiensDarts als iCal: ein ganztaegiger Eintrag fuer den naechsten Dienstag. */
-  function trainingKalender() {
-    var d = naechsterDienstag();
+  function trainingKalender(tag) {
+    var d = tag || naechsterDienstag();
     var iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     var e = new Date(d.getTime()); e.setDate(e.getDate() + 1);
     var ende = e.getFullYear() + String(e.getMonth() + 1).padStart(2, '0') + String(e.getDate()).padStart(2, '0');
@@ -9014,82 +9040,109 @@
   var PIN_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"></path><circle cx="12" cy="9.5" r="2.5"></circle></svg>';
   var MAPS_SVG = '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"></path><path d="M9 4v14M15 6v14"></path></svg>';
 
+  /* Die naechsten Dienstage ohne Ligaspiel (Entwurf LigaTraining: rechts
+     die naechsten sechs). */
+  function naechsteDienstage(n) {
+    var erster = naechsterDienstag(), liste = [], d = new Date(erster.getTime());
+    for (var i = 0; liste.length < n && i < n * 3; i++) {
+      var iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      if (!LIGA.termine.some(function (t) { return t.tag === iso && t.gast && !t.verschoben; })) liste.push(new Date(d.getTime()));
+      d.setDate(d.getDate() + 7);
+    }
+    return liste;
+  }
+
+  /* Training (Entwurf LigaTraining, Redesign Nov. 2026): links das gewaehlte
+     DiensDarts mit Logo, Datum, Route und den Gruppen Dabei / Noch keine
+     Antwort / Kann nicht; darunter "Du bist dabei · ändern" bzw. "Kommst du?".
+     Rechts die naechsten Dienstage und das Uebungs-Ligaspiel. "Unsicher" gibt
+     es nicht mehr (Julius 28.11.) - alte Antworten "unsicher" zaehlen als
+     noch keine Antwort. */
   function renderLigaTraining() {
-    var d = naechsterDienstag();
-    var tid = trainingsTerminId(d);
+    var tage = naechsteDienstage(6);
+    var tids = tage.map(trainingsTerminId);
+    var wahlI = Math.max(0, tids.indexOf(UI.trainingWahl));
+    var d = tage[wahlI], tid = tids[wahlI];
     var online = !!(window.DartSync && window.DartSync.liga && window.DartKonto && window.DartKonto.nutzer());
     var ich = online ? window.DartKonto.nutzer().id : null;
-    var antworten = (ligaZusagen && ligaZusagen[tid]) || [];
+    var antwortenVon = function (id) { return (ligaZusagen && ligaZusagen[id]) || []; };
+    var antworten = antwortenVon(tid);
     var meine = null;
-    antworten.forEach(function (a) { if (a.id === ich) meine = a.status || 'dabei'; });
+    antworten.forEach(function (a) { if (a.id === ich && a.status !== 'unsicher') meine = a.status || 'dabei'; });
     var dabei = antworten.filter(function (a) { return (a.status || 'dabei') === 'dabei'; });
-    var unsicher = antworten.filter(function (a) { return a.status === 'unsicher'; });
     var absagen = antworten.filter(function (a) { return a.status === 'absage'; });
-
-    var knopf = function (status, text) {
-      return '<button class="btn ghost' + (meine === status ? ' aktiv' : '') + '" ' +
-        'data-action="training-zusage" data-tid="' + esc(tid) + '" data-status="' + esc(status) + '">' + text + '</button>';
-    };
-    var reihe = function (a, leise) {
-      return '<div class="dd-reihe' + (leise ? ' leise' : '') + '">' +
-        avatarHTML(zusageProfil(a), 'sm') +
-        '<span class="nm">' + esc(a.name) + '</span></div>';
-    };
-
-    var MONATE_K = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+    var geantwortet = {};
+    antworten.forEach(function (a) { if (a.status !== 'unsicher') geantwortet[a.id] = 1; });
+    var offen = S.profiles.filter(function (p) {
+      return String(p.id).indexOf('u_') === 0 && !p.hidden && !p.gastKonto && !p.test && !p.bot && !p.gast && !geantwortet[p.id];
+    });
     var heute0 = new Date(heuteISO() + 'T12:00:00');
     var d12 = new Date(d.getTime()); d12.setHours(12, 0, 0, 0);
-    var tage = Math.round((d12 - heute0) / 86400000);
-    var wann = tage <= 0 ? 'heute' : tage === 1 ? 'morgen' : 'in ' + tage + ' Tagen';
-    var knopf = function (status, text) {
-      return '<button class="btn' + (meine === status ? ' hell aktiv' : ' ghost') + '" ' +
-        'data-action="training-zusage" data-tid="' + esc(tid) + '" data-status="' + esc(status) + '">' + text + '</button>';
+    var tageBis = Math.round((d12 - heute0) / 86400000);
+    var wann = tageBis <= 0 ? 'heute' : tageBis === 1 ? 'morgen' : 'in ' + tageBis + ' Tagen';
+    var MONATE_K = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+    var TAG_K = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+    var person = function (a, klasse) {
+      var pr = a.id ? zusageProfil(a) : a;
+      return '<div class="lt-person' + (klasse ? ' ' + klasse : '') + '" role="listitem">' + avatarHTML(pr, 'lg-av') + '<span>' + esc(pr.name || a.name) + '</span></div>';
     };
     var gruppe = function (titel, liste, klasse) {
-      if (!liste.length && klasse !== 'gruen') return '';
-      return '<div class="dd-gruppe ' + klasse + '"><span class="lk-crew-titel">' + titel + ' · <b class="' + klasse + '">' + liste.length + '</b></span>' +
-        '<div class="lt-leute">' + (liste.map(function (a) {
-          return '<span class="lt-person">' + avatarHTML({ id: a.id, name: a.name, avatar: a.avatar, hue: a.hue }, 'sm') + esc(a.name) + '</span>';
-        }).join('') || '<span class="muted">Noch keine Zusage.</span>') + '</div></div>';
+      if (!liste.length) return '';
+      return '<div class="lg-gruppe"><span class="lk-crew-titel">' + titel + '</span>' +
+        '<div class="lt-leute" role="list" aria-label="' + titel + '">' + liste.map(function (a) { return person(a, klasse); }).join('') + '</div></div>';
     };
+    var antwort = '';
+    if (online) {
+      if (meine && UI.trainingAendern !== tid) {
+        antwort = '<div class="lg-antwort">' + (meine === 'dabei' ? LG_HAKEN + '<b>Du bist dabei</b>' : '<b>Du kannst nicht</b>') +
+          '<button type="button" class="lg-aendern" data-action="training-aendern" data-tid="' + esc(tid) + '">ändern</button></div>';
+      } else {
+        antwort = '<div class="lg-frage"><span>Kommst du?</span>' +
+          '<button type="button" class="lg-wort' + (meine === 'dabei' ? ' an' : '') + '" data-action="training-zusage" data-tid="' + esc(tid) + '" data-status="dabei">DABEI</button>' +
+          '<button type="button" class="lg-wort leise' + (meine === 'absage' ? ' an' : '') + '" data-action="training-zusage" data-tid="' + esc(tid) + '" data-status="absage">KANN NICHT</button></div>';
+      }
+    } else {
+      antwort = '<p class="lg-text">Dienstags ist Dart-Training in der Bar Sehnsucht. Zum Abstimmen bitte anmelden.</p>';
+    }
     $('dienstdarts-karte').innerHTML =
-      '<div class="lk-kopf"><span class="lk-etikett">Nächstes Training · ' + wann + '</span>' +
-        '<span class="lk-icons">' +
-          '<a class="icon-btn rund" href="https://maps.apple.com/?q=' + encodeURIComponent('Bar Sehnsucht München') + '" target="_blank" rel="noopener" title="Route in Maps" aria-label="Route in Maps">' + MAPS_SVG + '</a>' +
-          '<button class="icon-btn rund" data-action="training-ical" title="In den Kalender" aria-label="In den Kalender">' + KALENDER_SVG + '</button>' +
-        '</span></div>' +
-      '<div class="dd-kopf"><div class="sehnsucht-logo" role="img" aria-label="Sehnsucht Divebar Munich"></div>' +
-        '<div class="dd-titel-block"><span class="dd-name">DiensDarts</span>' +
-          '<span class="dd-datum">' + ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'][d.getDay()] + ' ' + d.getDate() + '. ' + MONATE_K[d.getMonth()] + '</span>' +
-          '<span class="lk-ort">' + PIN_SVG + 'Bar Sehnsucht · jeden Dienstag</span></div></div>' +
-      (online
-        ? '<div class="dd-antworten">' + knopf('dabei', 'Bin dabei') + knopf('unsicher', 'Unsicher') + knopf('absage', 'Kann nicht') + '</div>'
-        : '<p class="hint">Dienstags ist Dart-Training in der Bar Sehnsucht. Zum Abstimmen bitte anmelden.</p>') +
-      '<div class="dd-liste">' +
-        gruppe('Kommen', dabei, 'gruen') + gruppe('Unsicher', unsicher, 'gelb') + gruppe('Kann nicht', absagen, 'rot') +
-      '</div>';
+      '<div class="lg-karte-kopf lg-zwischen"><span class="lg-etikett">' + (wahlI === 0 ? 'Nächstes Training' : 'Training') + ' · ' + wann + '</span>' +
+        '<button type="button" class="lg-rund" data-action="training-ical" data-tid="' + esc(tid) + '" aria-label="In den Kalender" title="In den Kalender">' + LG_KALENDER + '</button></div>' +
+      '<div class="dd-kopf lg-dd-kopf"><div class="sehnsucht-logo" role="img" aria-label="Logo Bar Sehnsucht"></div>' +
+        '<div class="lg-dd-titel"><span class="lg-dd-name">DiensDarts</span>' +
+          '<span class="lg-dd-datum">' + TAG_K[d.getDay()] + ' ' + d.getDate() + '. ' + MONATE_K[d.getMonth()] + '</span>' +
+          '<a class="lg-dd-ort" href="https://maps.apple.com/?q=' + encodeURIComponent('Bar Sehnsucht München') + '" target="_blank" rel="noopener" aria-label="Route zur Bar Sehnsucht">' + LG_PIN_ROT + '<b>Bar Sehnsucht</b><span>· jeden Dienstag</span></a>' +
+        '</div></div>' +
+      '<div class="lg-linie"></div>' +
+      '<div class="lg-auf"><b>' + dabei.length + ' kommen</b></div>' +
+      '<div class="lk-crew">' + gruppe('DABEI', dabei, '') + gruppe('NOCH KEINE ANTWORT', offen, 'offen') + gruppe('KANN NICHT', absagen, 'absage') + '</div>' +
+      antwort;
 
-    /* Rechts: das Uebungs-Ligaspiel mit Vorwahl von Gegner und Bot-Staerke. */
-    var ug = UI.uebungGegner || 'mittel';
-    var wahl = function (aktion, wert, text, klein) {
-      return '<button class="' + (ug === wert ? 'active' : '') + '" data-action="' + aktion + '" data-value="' + wert + '">' +
-        '<span>' + text + '</span>' + (klein ? '<small>' + klein + '</small>' : '') + '</button>';
+    /* Rechts: die naechsten Dienstage, darunter das Uebungs-Ligaspiel. */
+    var zeilen = tage.map(function (t, i) {
+      var a = antwortenVon(tids[i]);
+      var n = a.filter(function (x) { return (x.status || 'dabei') === 'dabei'; }).length;
+      var m = null;
+      a.forEach(function (x) { if (x.id === ich && x.status !== 'unsicher') m = x.status || 'dabei'; });
+      var du = !online ? '' : m === 'dabei' ? 'Du bist dabei' : m === 'absage' ? 'Du kannst nicht' : 'noch offen';
+      return '<div class="lg-termin' + (i === wahlI ? ' wahl' : '') + '" data-action="training-wahl" data-tid="' + esc(tids[i]) + '" role="button" tabindex="0">' +
+        '<span class="sehnsucht-logo klein" aria-hidden="true"></span>' +
+        '<b class="lg-termin-datum">' + TAG_K[t.getDay()] + ' ' + String(t.getDate()).padStart(2, '0') + '.' + String(t.getMonth() + 1).padStart(2, '0') + '.</b>' +
+        '<span class="lg-termin-du">' + du + '</span>' +
+        '<span class="lg-termin-zahl">' + (n ? '<b>' + n + '</b>kommen' : 'noch keiner') + '</span></div>';
+    }).join('');
+    var naechster = ligaNaechsterTermin();
+    var ueZeile = function (gegner, titel, klein) {
+      return '<button type="button" class="lg-ue-zeile" data-action="uebung-start" data-gegner="' + gegner + '"><span class="lg-ue-titel">' + titel + '</span>' +
+        (klein ? '<span class="lg-ue-klein">' + klein + '</span>' : '') + LG_PFEIL + '</button>';
     };
     $('uebung-karte').innerHTML =
-      '<h2 class="gross">Übungs-Ligaspiel</h2>' +
-      '<p class="hint">Der komplette Liga-Ablauf zum Üben: 16 Einzel in Bogen-Reihenfolge, zwei Scheiben, Team-Stand und Spielbericht. Zählt nirgends in die Liga-Wertung.</p>' +
-      '<div class="setting"><label>Gegner</label><div class="options">' +
-        (ligaNaechsterTermin() ? wahl('uebung-vorwahl', 'liga', 'Nächster Gegner', (function (t) { return t.heim === LIGA.team ? t.gast : t.heim; })(ligaNaechsterTermin())).replace('<button class="', '<button class="breit ') : '') +
-        wahl('uebung-vorwahl', 'team', 'Zweites eigenes Team') +
-        '<button class="' + (ug !== 'team' && ug !== 'liga' ? 'active' : '') + '" data-action="uebung-vorwahl" data-value="bots"><span>Gegen Bots</span></button>' +
-      '</div></div>' +
-      (ug !== 'team' && ug !== 'liga'
-        ? '<div class="setting"><label>Bot-Stärke</label><div class="options drei">' +
-            wahl('uebung-vorwahl', 'leicht', 'Leicht', '≈ 38er-Aufnahmen') + wahl('uebung-vorwahl', 'mittel', 'Mittel', '≈ 52') + wahl('uebung-vorwahl', 'schwer', 'Schwer', '≈ 72') +
-          '</div></div>'
-        : '') +
-      '<div class="luft"></div>' +
-      '<button class="btn primary start full" data-action="uebung-start">Übungsspiel aufstellen</button>';
+      '<div class="lg-block"><span class="lg-block-titel">Nächste Dienstage</span>' + zeilen + '</div>' +
+      '<div class="lg-block lg-ue"><span class="lg-block-titel">Übungs Ligaspiel</span>' +
+        '<span class="lg-ue-text">Ein ganzer Ligaabend nach Spielberichtsbogen, jederzeit.</span>' +
+        ueZeile('team', 'Gegen ein zweites eigenes Team') +
+        ueZeile('bots', 'Gegen Bots', 'Stärke wählbar') +
+        (naechster ? ueZeile('liga', 'Gegen den nächsten Gegner', esc(naechster.heim === LIGA.team ? naechster.gast : naechster.heim)) : '') +
+      '</div>';
   }
 
   function renderLigaTabelle() {
@@ -17854,6 +17907,11 @@
         }
         break;
       case 'uebung-start': {
+        /* Die Zeilen im Training waehlen den Gegner gleich mit (zweites
+           Team, Bots, naechster Gegner); die Bot-Staerke bleibt im Dialog. */
+        var usG = el && el.getAttribute ? el.getAttribute('data-gegner') : null;
+        if (usG === 'team' || usG === 'liga') UI.uebungGegner = usG;
+        else if (usG === 'bots' && ['leicht', 'mittel', 'schwer'].indexOf(UI.uebungGegner) < 0) UI.uebungGegner = 'mittel';
         /* Aufstellung vorbelegen: erst die DiensDarts-Zusagen, dann der
            Rest der aktiven Profile - Team B bekommt die naechsten vier. */
         var utAktive = activeProfiles().filter(function (p) { return !p.bot; });
@@ -17881,7 +17939,12 @@
         UI.uebungGegner = el.getAttribute('data-value') === 'bots' ? (UI.uebungGegner === 'team' || !UI.uebungGegner ? 'mittel' : UI.uebungGegner) : el.getAttribute('data-value');
         render();
         break;
-      case 'training-ical': trainingKalender(); break;
+      case 'training-ical': {
+        var tiTid = el.getAttribute('data-tid') || '';
+        var tiM = /^tr(\d{4})(\d{2})(\d{2})$/.exec(tiTid);
+        trainingKalender(tiM ? new Date(+tiM[1], +tiM[2] - 1, +tiM[3], 12) : null);
+        break;
+      }
       case 'uebung-gegner':
         if (UI.overlay && UI.overlay.type === 'uebung-start') {
           UI.overlay.draft.modus = el.getAttribute('data-value');
@@ -17927,7 +17990,7 @@
         };
         (UI.kasseEdit ? window.DartSync.kasse.aendern(UI.kasseEdit.id, kbDaten) : window.DartSync.kasse.buchen(kbDaten)).then(function (d) {
           kasseDaten = d;
-          UI.kasseArt = 'ein'; UI.kasseKategorie = null; UI.kasseEdit = null;
+          UI.kasseArt = 'ein'; UI.kasseKategorie = null; UI.kasseEdit = null; UI.kasseForm = false; UI.kasseZeile = null;
           if ($('kasse-betrag')) $('kasse-betrag').value = '';
           if ($('kasse-text')) $('kasse-text').value = '';
           if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
@@ -17957,7 +18020,7 @@
         var keId = Number(el.getAttribute('data-id'));
         var keE = (kasseDaten.eintraege || []).filter(function (e) { return e.id === keId; })[0];
         if (!keE) break;
-        UI.kasseEdit = keE;
+        UI.kasseEdit = keE; UI.kasseZeile = null;
         UI.kasseArt = keE.betrag < 0 ? 'aus' : 'ein';
         UI.kasseKategorie = keE.kategorie;
         if ($('kasse-betrag')) $('kasse-betrag').value = '';
@@ -17968,8 +18031,19 @@
         if (keForm && keForm.scrollIntoView) keForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
         break;
       }
+      case 'kasse-form':
+        UI.kasseForm = true;
+        render();
+        if ($('kasse-betrag')) $('kasse-betrag').focus();
+        break;
+      case 'kasse-zeile': {
+        var kzId = Number(el.getAttribute('data-id'));
+        UI.kasseZeile = UI.kasseZeile === kzId ? null : kzId;
+        render();
+        break;
+      }
       case 'kasse-edit-abbruch': {
-        UI.kasseEdit = null; UI.kasseArt = 'ein'; UI.kasseKategorie = null;
+        UI.kasseEdit = null; UI.kasseArt = 'ein'; UI.kasseKategorie = null; UI.kasseForm = false;
         if ($('kasse-betrag')) $('kasse-betrag').value = '';
         if ($('kasse-text')) $('kasse-text').value = '';
         if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
@@ -17997,13 +18071,24 @@
         }).catch(function () { /* bleibt stehen */ });
         break;
       }
+      case 'training-wahl':
+        UI.trainingWahl = el.getAttribute('data-tid');
+        render();
+        break;
+      case 'training-aendern':
+        UI.trainingAendern = el.getAttribute('data-tid');
+        render();
+        break;
       case 'training-zusage': {
         if (!(window.DartSync && window.DartSync.liga && window.DartKonto && window.DartKonto.nutzer())) return;
         var tzTid = el.getAttribute('data-tid');
-        /* Nochmal auf die eigene Antwort tippen traegt sie wieder aus. */
-        var tzStatus = el.classList.contains('aktiv') ? null : el.getAttribute('data-status');
+        /* DABEI oder KANN NICHT - ein Entweder-oder wie im Spielplan; die
+           eigene Antwort nochmal antippen schliesst nur "ändern". */
+        if (el.classList.contains('an')) { UI.trainingAendern = null; render(); return; }
+        var tzStatus = el.getAttribute('data-status');
         window.DartSync.liga.zusage(tzTid, tzStatus).then(function (z) {
           ligaZusagen = z;
+          UI.trainingAendern = null;
           render();
         }).catch(function (e) { zusageFehlgeschlagen(e); });
         break;

@@ -469,9 +469,9 @@
        wer kommt, und darunter dem Uebungs-Ligaspiel (zwei eigene Teams
        oder Bots), das ablaeuft wie ein echtes: 16 Einzel, zwei Scheiben,
        Spielbericht - nur ohne Liga-Wertung. -->
-  <div id="liga-training" class="hidden liga-zwei">
-    <div class="liga-karte weiss" id="dienstdarts-karte"></div>
-    <div class="card liga-uebung" id="uebung-karte"></div>
+  <div id="liga-training" class="hidden lg-spalten">
+    <section class="lg-karte" id="dienstdarts-karte" aria-label="Nächstes Training"></section>
+    <aside class="lg-seite" id="uebung-karte"></aside>
   </div>
 
   <!-- Die Ligatabelle: von Hand gepflegt (die Liga veröffentlicht die
@@ -520,21 +520,21 @@
        Team, Highlights, Liga-Rangliste - gezeichnet von renderLigaStatistik(). -->
   <div id="liga-statistik" class="hidden liga-zwei"></div>
 
-  <div id="liga-kasse" class="hidden liga-zwei">
-    <div class="liga-links" id="kasse-karte"></div>
-    <div class="liga-rechts" id="kasse-buch"></div>
+  <div id="liga-kasse" class="hidden lg-spalten">
+    <div id="kasse-karte"></div>
+    <div id="kasse-buch"></div>
   </div>
 
   <!-- Regeln und FAQ: fest im HTML, verständlich zusammengefasst aus der
        SDM-SWO (Stand 22.01.2026) und den WDF Playing & Tournament Rules –
        die Originale sind ganz unten verlinkt. Aufklappbar, damit die Seite
        nicht zur Tapete wird. -->
-  <div id="liga-regeln" class="hidden liga-zwei">
-    <div class="card regel-spalte">
-    <h2>Für Neue: die wichtigsten Fragen</h2>
+  <div id="liga-regeln" class="hidden lg-spalten">
+    <section class="regel-spalte">
+    <div class="lg-regel-kopf"><h2>Für Neue: die wichtigsten Fragen</h2><span>Ein Tipp klappt die Antwort auf</span></div>
     <div class="regel-liste">
 
-    <details class="card regel">
+    <details class="card regel" open>
       <summary>Wie läuft ein Ligaspieltag ab?</summary>
       <p>Spielbeginn ist generell <b>20:00 Uhr</b>. Das Auswärtsteam hat vorher mindestens
         <b>15 Minuten zum Einwerfen</b>. Gespielt werden <b>16 Einzel</b>, jedes davon
@@ -674,9 +674,9 @@
     </details>
 
     </div>
-    </div>
-    <div class="card regel-spalte">
-    <h2>Aus der Regelecke (von Udo)</h2>
+    </section>
+    <section class="regel-spalte">
+    <div class="lg-regel-kopf"><h2>Aus der Regelecke</h2><span>von Udo, Spielleiter Liga</span></div>
     <div class="regel-liste">
 
     <details class="card regel">
@@ -744,7 +744,7 @@
       </ul>
     </details>
       </div>
-    </div>
+    </section>
   </div>
 </section>
 

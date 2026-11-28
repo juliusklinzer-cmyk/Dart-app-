@@ -8330,3 +8330,126 @@ html.in-liga body { color: var(--t-text); }
   .lg-tag { font-size: 64px; }
   .lg-gegner b { font-size: 30px; }
 }
+
+/* ---------- Gemeinsam fuer die umgebauten Liga-Reiter ---------- */
+#screen-liga .lg-spalten { display: flex; flex-direction: row; flex-wrap: wrap; align-items: flex-start; gap: 40px; padding: 0 20px 32px; }
+#screen-liga .lg-spalten.hidden { display: none; }
+.lg-zwischen { justify-content: space-between; }
+.lg-rund { width: 44px; height: 44px; min-height: 0; margin: 0; padding: 0; border-radius: 50%; border: 0; background: var(--t-bg); color: var(--t-text); display: flex; align-items: center; justify-content: center; cursor: pointer; flex: none; }
+.lg-rund svg { width: 20px; height: 20px; }
+.lg-mit-icon { display: inline-flex; align-items: center; gap: 8px; }
+.lg-mit-icon svg { flex: none; }
+.lg-abschnitt-kopf { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 0 12px 10px; }
+.lg-abschnitt-kopf h2 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 20px; letter-spacing: 0.5px; text-transform: uppercase; color: var(--t-text); }
+.lg-abschnitt-kopf span { font-size: 14px; color: var(--t-leise); }
+.lg-block { display: flex; flex-direction: column; }
+.lg-block-titel { padding: 0 12px 8px; font-size: 13px; font-weight: 700; letter-spacing: 1.5px; color: var(--t-leise); text-transform: uppercase; }
+
+/* ---------- Training (Entwurf LigaTraining) ---------- */
+.lg-dd-kopf { display: flex; align-items: center; gap: 26px; }
+#dienstdarts-karte .lg-dd-kopf .sehnsucht-logo { flex: none; width: 120px; height: 120px; margin: 0; border-radius: 16px; background-color: #000; background-size: contain; background-repeat: no-repeat; background-position: center; box-sizing: border-box; border: 8px solid #000; }
+.lg-dd-titel { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.lg-dd-name { font-family: var(--font-display); font-size: 56px; line-height: 0.95; text-transform: uppercase; }
+.lg-dd-datum { font-family: var(--font-cond); font-weight: 700; font-size: 24px; }
+.lg-dd-ort { display: flex; align-items: center; gap: 8px; min-height: 32px; text-decoration: none; color: var(--t-text); }
+.lg-dd-ort b { font-size: 16px; }
+.lg-dd-ort span { font-size: 15px; color: var(--t-leise); }
+.lg-termin { display: grid; grid-template-columns: 36px 64px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 52px; padding: 4px 12px; border-radius: 12px; color: var(--t-text); cursor: pointer; box-sizing: border-box; }
+.lg-termin.wahl { background: var(--t-fl); }
+.lg-termin .sehnsucht-logo.klein { width: 36px; height: 36px; margin: 0; border-radius: 50%; background-color: #141011; background-size: contain; background-repeat: no-repeat; background-position: center; border: 4px solid #141011; box-sizing: border-box; }
+.lg-termin-datum { font-family: var(--font-cond); font-weight: 700; font-size: 20px; white-space: nowrap; }
+.lg-termin-du { font-size: 14px; color: var(--t-leise); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lg-termin-zahl { display: flex; align-items: baseline; gap: 6px; font-size: 13px; color: var(--t-leise); white-space: nowrap; }
+.lg-termin-zahl b { font-family: var(--font-cond); font-weight: 700; font-size: 18px; color: var(--t-text); }
+.lg-ue { border-top: 1px solid var(--t-linie); padding-top: 16px; margin-top: 28px; }
+.lg-ue-text { padding: 0 12px 8px; font-size: 14px; color: var(--t-leise); }
+.lg-ue-zeile { display: flex; align-items: center; gap: 12px; min-height: 50px; width: 100%; height: auto; margin: 0; padding: 0 12px; border: 0; border-radius: 12px; background: transparent; color: var(--t-text); cursor: pointer; text-align: left; font-family: var(--font-body); }
+.lg-ue-zeile:hover { background: var(--t-fl); }
+.lg-ue-titel { flex-grow: 1; font-size: 16px; font-weight: 700; }
+.lg-ue-klein { font-size: 14px; color: var(--t-leise); }
+
+/* ---------- Kasse (Entwurf LigaKasse) ---------- */
+#liga-kasse #kasse-karte { flex: 1 1 420px; min-width: 0; display: flex; flex-direction: column; gap: 32px; }
+#liga-kasse #kasse-buch { flex: 999 1 560px; min-width: 0; }
+#screen-liga .kasse-stand { flex: none; }
+.lg-saldo { font-family: var(--font-display); font-size: 72px; line-height: 1; color: var(--t-text); }
+.lg-saldo.minus { color: var(--t-rot); }
+.lg-drei { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.lg-drei > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lg-drei span { font-size: 13px; color: var(--t-leise); }
+.lg-drei b { font-family: var(--font-cond); font-weight: 700; font-size: 24px; white-space: nowrap; }
+.lg-drei b.plus, .lg-buch-zeile .betrag.plus { color: var(--t-gruen); }
+.lg-drei b.minus, .lg-buch-zeile .betrag.minus { color: var(--t-rot); }
+.lg-kasse-knoepfe { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 28px; }
+.lg-kasse-knoepfe .lg-wort { display: inline-flex; align-items: center; gap: 10px; }
+.lg-kasse-knoepfe .lg-wort svg { width: 24px; height: 24px; }
+.lg-form { display: flex; flex-direction: column; gap: 12px; }
+.lg-form h3 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 20px; letter-spacing: 0.5px; text-transform: uppercase; }
+.lg-form .zeile { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.lg-form input, .lg-form select { min-height: 48px; margin: 0; box-sizing: border-box; width: 100%; border-radius: 10px; border: 1.5px solid var(--t-linie); background: var(--t-bg); color: var(--t-text); font-family: var(--font-body); font-size: 16px; padding: 0 12px; }
+.lg-form .lg-seg2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.lg-form .lg-seg2 button { min-height: 44px; margin: 0; border-radius: 10px; border: 1.5px solid var(--t-linie); background: transparent; color: var(--t-leise); font-weight: 700; }
+.lg-form .lg-seg2 button.active { border-color: var(--t-text); color: var(--t-text); background: var(--t-bg); }
+.lg-form .kasse-knoepfe { display: flex; gap: 10px; }
+.lg-form .kasse-knoepfe .btn { flex: 1 1 0; margin: 0; min-height: 48px; }
+.lg-form .kasse-konfig summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; color: var(--t-leise); font-size: 14px; }
+.lg-form .kasse-konfig .btn { color: var(--t-text); border-color: var(--t-linie); background: transparent; margin-top: 10px; }
+#screen-liga .lg-form .hint { color: var(--t-leise); margin: 0; }
+.lg-beitrag { display: flex; flex-direction: column; gap: 14px; padding: 0 8px; }
+.lg-beitrag .lg-abschnitt-kopf { padding: 0; }
+.lg-beitrag-liste { display: flex; flex-wrap: wrap; gap: 14px; }
+#screen-liga .lg-beitrag .lt-person { width: 64px; height: auto; min-height: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--t-text); font-family: var(--font-body); }
+#screen-liga .lg-beitrag .lt-person > span:not(.lg-beitrag-bild) { font-size: 13px; font-weight: 600; white-space: nowrap; max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
+#screen-liga .lg-beitrag .lt-person small { font-size: 12px; color: var(--t-leise); }
+#screen-liga .lg-beitrag .lt-person.offen { opacity: 0.45; }
+#screen-liga .lg-beitrag button.lt-person.offen { cursor: pointer; }
+.lg-beitrag-bild { position: relative; display: block; }
+.lg-haken { position: absolute; right: -2px; bottom: -2px; width: 22px; height: 22px; border-radius: 50%; background: var(--t-text); color: var(--t-bg); display: flex; align-items: center; justify-content: center; }
+.lg-haken svg { width: 13px; height: 13px; stroke-width: 3.5; }
+.lg-aendern.stark { color: var(--t-text); font-weight: 700; font-size: 15px; }
+.lg-buch { display: flex; flex-direction: column; }
+.lg-buch-kopf, .lg-buch-zeile { display: grid; grid-template-columns: 28px 64px minmax(0, 1fr) 96px 92px; gap: 12px; align-items: center; padding: 0 12px; }
+.lg-buch-kopf { height: 32px; font-size: 12px; font-weight: 700; letter-spacing: 1.5px; color: var(--t-leise); }
+.lg-buch-kopf .r { text-align: right; }
+.lg-buch-zeile { min-height: 50px; border-top: 1px solid var(--t-linie); color: var(--t-text); }
+.lg-buch-zeile.tap { cursor: pointer; }
+.lg-buch-zeile.offen { background: var(--t-fl); border-radius: 10px; }
+.lg-buch-zeile .nr { font-family: var(--font-cond); font-weight: 700; font-size: 16px; color: var(--t-leise); }
+.lg-buch-zeile .dt { font-family: var(--font-cond); font-weight: 700; font-size: 17px; color: var(--t-leise); }
+.lg-buch-zeile .was { display: flex; flex-direction: column; min-width: 0; }
+.lg-buch-zeile .was b { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lg-buch-zeile .was small { font-size: 12px; color: var(--t-leise); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lg-buch-zeile .betrag { font-family: var(--font-cond); font-weight: 700; font-size: 20px; text-align: right; white-space: nowrap; }
+.lg-buch-zeile .saldo { font-family: var(--font-cond); font-weight: 700; font-size: 18px; text-align: right; color: var(--t-leise); white-space: nowrap; }
+.lg-buch-aktion { display: flex; justify-content: flex-end; gap: 24px; padding: 0 12px 6px; }
+.lg-link.rot { color: var(--t-rot); }
+.lg-buch-ende { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; min-height: 52px; padding: 0 12px; border-top: 2px solid var(--t-text); }
+.lg-buch-ende span { font-size: 15px; font-weight: 700; }
+.lg-buch-ende b { font-family: var(--font-cond); font-weight: 700; font-size: 24px; }
+.lg-leer { padding: 12px; }
+
+/* ---------- Regeln (Entwurf LigaRegeln) ---------- */
+#liga-regeln .regel-spalte { flex: 1 1 460px; min-width: 0; display: flex; flex-direction: column; margin: 0; padding: 0; border: 0; background: transparent; box-shadow: none; }
+.lg-regel-kopf { display: flex; flex-direction: column; gap: 2px; padding: 0 12px 12px; }
+.lg-regel-kopf h2 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 20px; letter-spacing: 0.5px; text-transform: uppercase; color: var(--t-text); }
+.lg-regel-kopf span { font-size: 13px; color: var(--t-leise); }
+#liga-regeln .regel-liste { display: flex; flex-direction: column; gap: 0; }
+#liga-regeln details.regel { margin: 0; padding: 0; border: 0; border-radius: 16px; background: transparent; box-shadow: none; color: var(--t-text); }
+#liga-regeln details.regel[open] { background: var(--t-fl); box-shadow: var(--t-schein); }
+#liga-regeln details.regel summary { display: flex; align-items: center; gap: 14px; min-height: 54px; padding: 8px 16px; font-family: var(--font-body); font-size: 16px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--t-text); cursor: pointer; list-style: none; }
+#liga-regeln details.regel summary::-webkit-details-marker { display: none; }
+#liga-regeln details.regel summary::after { content: ''; flex: none; margin-left: auto; width: 9px; height: 9px; border-right: 2px solid var(--t-leise); border-bottom: 2px solid var(--t-leise); transform: rotate(45deg) translate(-2px, -2px); transition: transform 0.25s; }
+#liga-regeln details.regel[open] summary { font-weight: 700; }
+#liga-regeln details.regel[open] summary::after { transform: rotate(225deg) translate(-2px, -2px); }
+#liga-regeln details.regel p, #liga-regeln details.regel li { margin: 0 16px 10px; font-size: 15px; line-height: 1.55; color: var(--t-text); }
+#liga-regeln details.regel > :last-child { margin-bottom: 18px; }
+#liga-regeln details.regel a { color: var(--t-blau); }
+@media (max-width: 699px) {
+  #screen-liga .lg-spalten { padding: 0 0 24px; gap: 24px; }
+  .lg-dd-name { font-size: 40px; }
+  #dienstdarts-karte .lg-dd-kopf .sehnsucht-logo { width: 84px; height: 84px; }
+  .lg-dd-kopf { gap: 16px; }
+  .lg-saldo { font-size: 56px; }
+  .lg-buch-kopf, .lg-buch-zeile { grid-template-columns: 22px 50px minmax(0, 1fr) 84px; gap: 8px; }
+  .lg-buch-kopf > :last-child, .lg-buch-zeile .saldo { display: none; }
+}
