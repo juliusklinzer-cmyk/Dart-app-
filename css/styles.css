@@ -8194,6 +8194,8 @@ html[data-hell="1"] {
 html.in-liga, html.in-liga body { background: var(--t-bg); }
 html[data-hell="1"].in-liga { color-scheme: light; }
 html.in-liga body { color: var(--t-text); }
+html.t-bereich, html.t-bereich body { background: var(--t-bg); }
+html[data-hell="1"].t-bereich { color-scheme: light; }
 
 /* Liga-Kopf (Entwurf LigaQuerHell): Logo, Reiter, Zeile, Zahnrad. */
 #screen-liga.active { gap: 0; padding-top: 0; color: var(--t-text); }
@@ -8572,3 +8574,7 @@ html[data-hell="1"] .lh-zeile .wert { color: #9a6200; }
 }
 
 /* @@LIGA-STATISTIK@@ Hier fuegt das Statistik-Paket seine Regeln ein (nicht verschieben). */
+
+/* @@LIGASPIEL-ABLAUF@@ Hier fuegt das Paket Ligaspiel-Ablauf seine Regeln ein (nicht verschieben). */
+
+/* @@LIGASPIEL-ZAEHLEN@@ Hier fuegt das Paket Zaehlen im Ligaspiel seine Regeln ein (nicht verschieben). */

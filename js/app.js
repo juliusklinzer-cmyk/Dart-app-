@@ -5772,12 +5772,20 @@
      gilt hell - die uebrigen haben noch dunkle Karten und blieben auf
      hellem Grund unlesbar (Kritik 28.11.); sie kommen Paket fuer Paket. */
   var LIGA_NEU = { plan: 1, training: 1, kasse: 1, regeln: 1, tabelle: 1 };
+  /* Bereiche ausserhalb des Liga-Reiters, die schon nach dem Redesign
+     gebaut sind: das Ligaspiel (Uebersicht, Dialoge, Bericht) und das
+     Zaehlen im Ligaspiel. Jedes Paket traegt nur in seiner Funktion ein,
+     wann es gilt. */
+  function hellAblauf() { return false; }
+  function hellZaehlen() { return false; }
   function darstellungAnwenden() {
     var de = document.documentElement;
     var liga = !!($('screen-liga') && $('screen-liga').classList.contains('active'));
-    var w = istHell() && liga && LIGA_NEU[UI.ligaTab || 'plan'] ? '1' : '0';
+    var bereich = (liga && !!LIGA_NEU[UI.ligaTab || 'plan']) || (!liga && (hellAblauf() || hellZaehlen()));
+    var w = istHell() && bereich ? '1' : '0';
     if (de.getAttribute('data-hell') !== w) de.setAttribute('data-hell', w);
     de.classList.toggle('in-liga', liga);
+    de.classList.toggle('t-bereich', !liga && bereich);
   }
   function darstellungKnoepfe() {
     var ist = [0, 1, 2].indexOf(S.settings.hell) < 0 ? 0 : S.settings.hell;
