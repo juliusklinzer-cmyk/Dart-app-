@@ -8453,3 +8453,122 @@ html.in-liga body { color: var(--t-text); }
   .lg-buch-kopf, .lg-buch-zeile { grid-template-columns: 22px 50px minmax(0, 1fr) 84px; gap: 8px; }
   .lg-buch-kopf > :last-child, .lg-buch-zeile .saldo { display: none; }
 }
+
+/* ---------- Tabelle (Entwurf LigaTabelle) ---------- */
+#screen-liga .lg-tabelle { gap: 24px 40px; }
+.lg-ligawahl { flex: 1 1 100%; display: flex; align-items: center; flex-wrap: wrap; gap: 12px 24px; }
+.lg-ligawahl-box { position: relative; display: flex; align-items: center; gap: 12px; }
+.lg-klein-titel { font-size: 12px; font-weight: 700; letter-spacing: 1.5px; color: var(--t-leise); text-transform: uppercase; }
+.lg-ligaknopf { display: flex; align-items: center; gap: 10px; min-height: 44px; min-width: 210px; margin: 0; padding: 0 14px; border-radius: 8px; border: 0; background: var(--t-fl); box-shadow: inset 0 0 0 1px var(--t-linie); color: var(--t-text); font-family: var(--font-body); font-size: 16px; font-weight: 700; cursor: pointer; }
+.lg-ligaknopf span { flex: 1; text-align: left; }
+.lg-ligaliste { position: absolute; top: 52px; left: 0; z-index: 6; width: 250px; display: flex; flex-direction: column; padding: 6px; border-radius: 12px; background: var(--t-fl); box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25), inset 0 0 0 1px var(--t-linie); }
+.lg-ligaliste button { display: flex; align-items: center; gap: 10px; min-height: 44px; margin: 0; padding: 0 10px; border-radius: 8px; border: 0; background: transparent; color: var(--t-text); font-family: var(--font-body); font-size: 15px; font-weight: 500; cursor: pointer; text-align: left; }
+.lg-ligaliste button span { flex: 1; }
+.lg-ligaliste button small { font-size: 12px; color: var(--t-leise); }
+.lg-ligaliste button.an { background: rgba(70, 170, 215, 0.14); font-weight: 700; }
+html[data-hell="1"] .lg-ligaliste button.an { background: rgba(31, 111, 149, 0.10); }
+.lg-tab-haupt { flex: 999 1 600px; min-width: 0; display: flex; flex-direction: column; gap: 28px; }
+.lg-tab { display: flex; flex-direction: column; }
+.lg-tab-kopf, .lg-tab-zeile { display: grid; grid-template-columns: 28px 32px minmax(0, 1fr) 36px 80px 64px 64px 44px; gap: 12px; align-items: center; padding: 0 14px; }
+.lg-tab-kopf { height: 44px; font-size: 12px; font-weight: 700; letter-spacing: 1.5px; color: var(--t-leise); }
+.lg-tab-kopf .r, .lg-tab-zeile .r { text-align: right; }
+.lg-tab-kopf .m, .lg-tab-zeile .m { text-align: center; }
+.lg-tab-zeile { position: relative; height: 42px; border-radius: 12px; color: var(--t-text); cursor: pointer; font-family: var(--font-cond); font-weight: 700; font-size: 20px; }
+.lg-tab-zeile > .r, .lg-tab-zeile > .m { color: var(--t-leise); }
+.lg-tab-zeile > .pkt { color: var(--t-text); font-size: 24px; }
+.lg-tab-zeile .rank { font-size: 22px; color: var(--t-leise); }
+.lg-tab-zeile.aufstieg .rank { color: var(--t-gruen); }
+.lg-tab-zeile.abstieg .rank { color: var(--t-rot); }
+.lg-tab-zeile.wir { background: var(--t-hl); box-shadow: var(--t-schein); z-index: 2; }
+html[data-hell="1"] .lg-tab-zeile.wir { box-shadow: 0 1px 2px rgba(21, 16, 17, 0.06); }
+.lg-tab-zeile .name { display: flex; align-items: center; gap: 10px; min-width: 0; font-family: var(--font-body); }
+.lg-tab-zeile .name > span:first-child { font-size: 16px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lg-tab-zeile.wir .name > span:first-child { font-weight: 700; }
+.lg-badge { flex: none; padding: 2px 8px; border-radius: 6px; font-family: var(--font-cond); font-weight: 700; font-size: 15px; animation: lg-badge 0.5s ease 1.6s both; color: var(--t-leise); }
+.lg-badge.hoch { color: var(--t-gruen); background: rgba(76, 201, 138, 0.16); }
+.lg-badge.runter { color: var(--t-rot); background: rgba(229, 72, 77, 0.14); }
+html[data-hell="1"] .lg-badge.hoch { background: rgba(31, 122, 69, 0.12); }
+.lg-tab-zeile.anim { animation: lg-rang 1.2s cubic-bezier(0.2, 0.7, 0.2, 1) 0.3s both; }
+@keyframes lg-rang { from { transform: translateY(var(--dy)); } to { transform: none; } }
+@keyframes lg-badge { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .lg-tab-zeile.anim, .lg-badge { animation: none; } }
+.lg-teamlogo.klein { width: 32px; height: 32px; }
+.lg-teamlogo.mini { width: 28px; height: 28px; }
+.lg-teamlogo.gross { width: 84px; height: 84px; }
+.lg-tab-fuss { padding: 10px 14px 0; font-size: 13px; color: var(--t-leise); }
+.lg-tab-fuss.m { text-align: center; }
+.lg-runde { display: flex; flex-direction: column; }
+.lg-runde-kopf { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 0 4px 8px; }
+.lg-runde-kopf > span { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 180px; }
+.lg-runde-kopf b { font-family: var(--font-display); font-weight: 400; font-size: 22px; letter-spacing: 0.5px; }
+.lg-runde-kopf small { font-size: 13px; color: var(--t-leise); }
+.lg-rund.leer { background: transparent; }
+.lg-rund:disabled { opacity: 0.3; cursor: default; }
+.lg-paar { display: grid; grid-template-columns: minmax(0, 1fr) 28px 72px 28px minmax(0, 1fr); align-items: center; gap: 10px; min-height: 40px; padding: 0 14px; border-radius: 12px; color: var(--t-text); }
+.lg-paar.tap { cursor: pointer; }
+.lg-paar.wir { background: var(--t-hl); }
+.lg-paar .h, .lg-paar .g { font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lg-paar .h { text-align: right; }
+.lg-paar .fett { font-weight: 700; }
+.lg-paar .erg { font-family: var(--font-cond); font-weight: 700; font-size: 22px; text-align: center; white-space: nowrap; }
+.lg-paar .erg.offen { color: var(--t-leise); font-size: 16px; }
+.lg-tab-seite { flex: 1 1 360px; gap: 28px; }
+.lh-block { display: flex; flex-direction: column; gap: 4px; }
+.lh-kopf { display: flex; align-items: center; justify-content: space-between; height: 44px; padding: 0 12px; }
+.lh-kopf > span:last-child { font-size: 13px; color: var(--t-leise); }
+.lh-zeile { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 52px; padding: 0 12px; border-radius: 12px; color: var(--t-text); }
+.lh-zeile.wir { background: var(--t-hl); }
+.lh-zeile .ico { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--t-bg); color: var(--t-leise); }
+.lh-zeile .ico svg { width: 18px; height: 18px; }
+.lh-zeile .was { display: flex; flex-direction: column; min-width: 0; }
+.lh-zeile .was b { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lh-zeile.wir .was b { font-weight: 700; }
+.lh-zeile .was small { font-size: 12px; color: var(--t-leise); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lh-zeile .wert { font-family: var(--font-cond); font-weight: 700; font-size: 24px; color: #ffc14d; white-space: nowrap; }
+html[data-hell="1"] .lh-zeile .wert { color: #9a6200; }
+.lh-block .lg-link { padding: 0 12px; }
+
+/* ---------- Teamseite (Entwurf LigaTeam) ---------- */
+#screen-liga .lg-teamseite { display: flex; flex-direction: column; gap: 22px; padding: 0 20px 32px; color: var(--t-text); }
+#screen-liga .lg-teamseite.hidden { display: none; }
+.lg-team-kopf { display: flex; align-items: center; gap: 22px; }
+.lg-rund.fl { background: var(--t-fl); }
+.lg-team-titel { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
+.lg-team-titel > b { font-family: var(--font-display); font-weight: 400; font-size: 44px; line-height: 1; text-transform: uppercase; }
+.lg-team-platz { display: flex; flex-direction: column; align-items: flex-end; }
+.lg-team-platz b { font-family: var(--font-display); font-weight: 400; font-size: 44px; line-height: 1; }
+.lg-team-platz small { font-size: 13px; color: var(--t-leise); }
+.lg-team-zwei { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 32px; align-items: start; }
+#screen-liga .lg-team-karte { padding: 22px 26px; gap: 0; }
+.lg-team-karte > .lg-klein-titel { padding-bottom: 10px; }
+.lg-team-karte .lg-klein-titel svg { width: 16px; height: 16px; }
+.lg-sp-zeile { display: flex; align-items: center; gap: 12px; min-height: 44px; border-top: 1px solid var(--t-linie); }
+.lg-sp-zeile .kurz { width: 32px; height: 32px; border-radius: 50%; background: var(--t-bg); display: flex; align-items: center; justify-content: center; font-family: var(--font-cond); font-weight: 700; font-size: 13px; color: var(--t-leise); flex: none; }
+.lg-sp-zeile .nm { flex: 1; font-size: 16px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lg-sp-zeile .chip { font-family: var(--font-cond); font-weight: 700; font-size: 13px; padding: 3px 8px; border-radius: 6px; box-shadow: inset 0 0 0 1.5px var(--t-text); }
+.lg-sp-zeile .chip.leise { color: var(--t-leise); box-shadow: inset 0 0 0 1.5px var(--t-linie); }
+.lg-sp-spiel { display: grid; grid-template-columns: 30px 22px minmax(0, 1fr) auto 18px; align-items: center; gap: 8px; min-height: 36px; padding: 0 8px; border-radius: 8px; color: var(--t-text); }
+.lg-sp-spiel.tap { cursor: pointer; }
+.lg-sp-spiel.wir { background: var(--t-hl); }
+.lg-sp-spiel .nr { font-family: var(--font-cond); font-weight: 700; font-size: 13px; color: var(--t-leise); }
+.lg-sp-spiel .at { font-size: 13px; color: var(--t-leise); }
+.lg-sp-spiel .gg { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lg-sp-spiel.frei .gg { color: var(--t-leise); }
+.lg-sp-spiel.wir .gg { font-weight: 700; }
+.lg-sp-spiel .er { display: flex; align-items: baseline; gap: 6px; font-size: 14px; color: var(--t-leise); white-space: nowrap; }
+.lg-sp-spiel .er b { font-family: var(--font-cond); font-weight: 700; font-size: 17px; color: var(--t-text); }
+.lg-sp-spiel .pf { color: var(--t-leise); display: flex; }
+.lg-sp-spiel .pf svg { width: 16px; height: 16px; }
+.lg-gegner-knopf { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0 0 2px; border: 0; background: transparent; color: var(--t-text); text-align: left; cursor: pointer; font-family: var(--font-body); min-height: 0; height: auto; }
+@media (max-width: 899px) {
+  .lg-tab-kopf, .lg-tab-zeile { grid-template-columns: 24px 28px minmax(0, 1fr) 30px 56px 44px; gap: 8px; padding: 0 8px; }
+  .lg-tab-kopf > :nth-child(6), .lg-tab-kopf > :nth-child(7), .lg-tab-zeile > :nth-child(6), .lg-tab-zeile > :nth-child(7) { display: none; }
+  .lg-team-zwei { grid-template-columns: minmax(0, 1fr); }
+  .lg-team-titel > b, .lg-team-platz b { font-size: 30px; }
+  .lg-teamlogo.gross { width: 56px; height: 56px; }
+  .lg-team-kopf { gap: 12px; flex-wrap: wrap; }
+  .lg-paar { grid-template-columns: minmax(0, 1fr) 24px 56px 24px minmax(0, 1fr); gap: 6px; padding: 0 6px; }
+  .lg-paar .h, .lg-paar .g { font-size: 13px; }
+}
+
+/* @@LIGA-STATISTIK@@ Hier fuegt das Statistik-Paket seine Regeln ein (nicht verschieben). */

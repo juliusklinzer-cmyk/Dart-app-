@@ -479,39 +479,11 @@
   <!-- Tabelle: links oben unser Platz, darunter die Tabelle und der Stand;
        rechts (am Computer eine rollende Spalte) Alle Spiele, Einzelrangliste
        und Highlights der Ligaleitung. -->
-  <div id="liga-tabelle" class="hidden liga-zwei breit">
-    <div class="liga-links">
-      <div class="liga-karte weiss" id="lt-platz"></div>
-      <div class="card lt-karte">
-        <div class="karte-kopf"><h2>Ligatabelle</h2><span class="hint">Tipp auf ein Team: Lokal, Spieler, Spiele</span></div>
-        <div class="lt-scroll"><table class="standings" id="lt-tabelle"></table></div>
-      </div>
-      <div class="card lt-stand-karte">
-        <span class="lk-crew-titel">Stand</span>
-        <p class="hint">Berechnet aus den Ergebnissen aller Spieltage (Karte Alle Spiele):
-          Sieg 2 Punkte, Unentschieden 1. Reihenfolge nach Punkten, dann Leg-Differenz, dann Einzel-Differenz.
-          Platz 1 und 2 (grün) sind die Aufstiegsplätze.</p>
-        <p class="hint" id="lt-stand"></p>
-      </div>
-    </div>
-    <div class="liga-rechts">
-      <!-- Alle Spiele je Spieltag (Ergebnisse der Ligaleitung, LIGA_SPIELTAGE). -->
-      <div class="card lt-runden-karte">
-        <div class="karte-kopf"><h2>Alle Spiele</h2><span class="hint">je Spieltag, Tipp zeigt die Einzel</span></div>
-        <div class="lt-runden" id="lt-runden"></div>
-      </div>
-      <!-- Einzelrangliste und Highlights der ganzen Liga, gerechnet aus allen
-           Spielberichten der Ligaleitung (js/liga-sdm.js, tools/liga-import.mjs). -->
-      <div class="card lt-einzel-karte">
-        <div class="karte-kopf"><h2>Einzelrangliste</h2><span class="hint">alle Spieler der Liga</span></div>
-        <div class="lt-scroll" id="lt-einzel"></div>
-      </div>
-      <div class="card lt-hl-karte">
-        <div class="karte-kopf"><h2>Highlights</h2><span class="hint">180er, Shortlegs, Highfinishes</span></div>
-        <div class="lt-hl" id="lt-highlights"></div>
-      </div>
-    </div>
-  </div>
+  <!-- Tabelle (Entwurf LigaTabelle): Ligawahl, Tabelle, Spieltage zum
+       Blaettern, gemeldete Highlights - gezeichnet von renderLigaTabelle(). -->
+  <div id="liga-tabelle" class="hidden lg-spalten lg-tabelle"></div>
+  <!-- Teamseite eines Teams (Entwurf LigaTeam), ueber allen Reitern. -->
+  <div id="liga-teamseite" class="hidden lg-teamseite"></div>
 
   <!-- Die Vereinskasse: ein Kassenbuch fuer alle - Einzahlung oder
        Ausgabe erfassen, der Bestand rechnet sich von selbst. -->

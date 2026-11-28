@@ -3856,51 +3856,17 @@ await page.locator('#liga-tabs button[data-tab="training"]').click();
 check('Training: DiensDarts links, rechts die Dienstage und das Uebungsspiel gegen zweites Team, Bots oder den naechsten Gegner',
   (await textKlein('#dienstdarts-karte')).includes('diensdarts') && (await page.locator('#uebung-karte [data-action="uebung-start"][data-gegner]').count()) === 3);
 await page.locator('#liga-tabs button[data-tab="tabelle"]').click();
-check('Tabelle: links oben unser Platz, darunter die Tabelle, darunter der Stand',
-  (await textKlein('#lt-platz')).includes('unser platz') && (await text('#lt-platz')).includes('.') &&
-  await page.evaluate(() => {
-    const links = document.querySelector('#liga-tabelle .liga-links');
-    const reihe = ['#lt-platz', '.lt-karte', '.lt-stand-karte'].map((s) => document.querySelector(s));
-    return reihe.every((el) => el && el.parentElement === links) && reihe[0].compareDocumentPosition(reihe[1]) & 4 && reihe[1].compareDocumentPosition(reihe[2]) & 4 &&
-      ['.lt-runden-karte', '.lt-einzel-karte', '.lt-hl-karte'].every((s) => document.querySelector(s).parentElement.classList.contains('liga-rechts'));
-  }));
-/* Am Computer: der Platz als Band ueber der Tabelle, alle neun Teams ohne
-   Rollen; rechts rollt die ganze Spalte (vorher stand die Einzelrangliste
-   fest, "Alle Spiele" hatte null Hoehe und alles darunter war unerreichbar). */
-{
-  const vpTab = page.viewportSize();
-  await page.setViewportSize({ width: 1366, height: 768 });
-  await page.waitForTimeout(150);
-  const g = await page.evaluate(() => {
-    const r = (s) => document.querySelector(s).getBoundingClientRect();
-    const rechts = document.querySelector('#liga-tabelle .liga-rechts');
-    const tab = document.querySelector('.lt-karte .lt-scroll');
-    const zahl = r('#lt-platz .lt-platz-zahl'), info = r('#lt-platz .lt-platz-info');
-    return {
-      fix: document.body.classList.contains('fix-setup'),
-      platzUeberTabelle: r('#lt-platz').bottom <= r('.lt-karte').top + 1 && Math.abs(r('#lt-platz').left - r('.lt-karte').left) < 1,
-      band: zahl.right <= info.left && zahl.height < r('#lt-platz').height + 1,
-      standUnten: r('.lt-stand-karte').top >= r('.lt-karte').bottom - 1 && r('.lt-stand-karte').bottom <= innerHeight + 1,
-      tabelleOhneRollen: tab.scrollHeight <= tab.clientHeight + 1 && document.querySelectorAll('#lt-tabelle tbody tr').length === 9,
-      rundenSichtbar: r('#lt-runden').height > 100,
-      spalteRollt: getComputedStyle(rechts).overflowY === 'auto' && rechts.scrollHeight > rechts.clientHeight + 100,
-      imRahmen: rechts.getBoundingClientRect().bottom <= innerHeight + 1 && document.scrollingElement.scrollHeight <= innerHeight + 1
-    };
-  });
-  check('Computer: Platz-Band links ueber der Tabelle, Zahl neben Punkten', g.fix && g.platzUeberTabelle && g.band, JSON.stringify(g));
-  check('Computer: alle neun Teams ohne Rollen, der Stand darunter im Rahmen', g.tabelleOhneRollen && g.standUnten, JSON.stringify(g));
-  check('Computer: rechts rollt die Spalte mit Alle Spiele, Einzelrangliste, Highlights', g.rundenSichtbar && g.spalteRollt && g.imRahmen, JSON.stringify(g));
-  await page.setViewportSize(vpTab);
-  await page.waitForTimeout(150);
-}
-/* Daten der Ligaleitung (js/liga-sdm.js): Einzelrangliste, Highlights, Teams, alle Spieltage. */
-check('Tabelle: Einzelrangliste der Liga, erst 15 Spieler, mit Legs, Spielen, Punkten',
-  (await page.locator('#lt-einzel .standings.einzel tbody tr').count()) === 15 && /legs/i.test(await text('#lt-einzel thead')) &&
-  (await page.locator('#lt-einzel tr.wir').count()) >= 1);
-await page.locator('#lt-einzel [data-action="liga-einzel-alle"]').click();
-check('"Alle Spieler zeigen" klappt die ganze Liste auf', (await page.locator('#lt-einzel .standings.einzel tbody tr').count()) > 15);
-check('Tabelle: Highlights mit 180ern, Shortlegs und Highfinishes',
-  /180er/i.test(await text('#lt-highlights')) && /shortlegs/i.test(await text('#lt-highlights')) && (await page.locator('#lt-highlights .lt-hl-zeile').count()) >= 1);
+/* Tabelle nach Entwurf (Redesign Nov. 2026): Ligawahl, Tabelle mit Logo,
+   Aufstieg gruen, unsere Zeile hervorgehoben; Spieltage zum Blaettern;
+   rechts die gemeldeten Highlights. Die Einzelrangliste steht seitdem in
+   der Statistik (Rangliste). */
+check('Tabelle: Ligawahl, neun Teams, unsere Zeile hervorgehoben, Platz 1 und 2 als Aufstieg',
+  (await text('#liga-tabelle .lg-ligaknopf')).includes('SDM 4er Liga 5') && (await page.locator('#lt-tabelle .lg-tab-zeile').count()) === 9 &&
+  (await page.locator('#lt-tabelle .lg-tab-zeile.wir[data-team="Blink 180"]').count()) === 1 && (await page.locator('#lt-tabelle .lg-tab-zeile.aufstieg').count()) === 2 &&
+  (await page.locator('#lt-tabelle .lg-tab-zeile .lg-teamlogo').count()) === 9);
+check('Tabelle: Highlights mit Shortlegs, Highfinishes und 180ern, je mit Team und Datum',
+  /Shortleg/.test(await text('#lt-highlights')) && /High Finish/.test(await text('#lt-highlights')) && /180 ·/.test(await text('#lt-highlights')) &&
+  (await page.locator('#lt-highlights .lh-zeile').count()) >= 3);
 check('Tabelle: der Stand der Ligaleitung steht dabei', /Ligaleitung/.test(await text('#lt-stand')));
 /* Der Server holt die Ergebnisse der Ligaleitung stuendlich; die App laedt
    js/liga-sdm.js beim Oeffnen des Reiters nach (als <script>, hoechstens
@@ -3908,7 +3874,12 @@ check('Tabelle: der Stand der Ligaleitung steht dabei', /Ligaleitung/.test(await
    liefert die Route eine Fassung, in der wir den 4. Spieltag 9:7 gewonnen
    haben - danach wieder die echte Datei, damit der Rest des Tests stimmt. */
 {
-  const vorher = await page.evaluate(() => ({ platz: document.querySelector('#lt-platz .lt-platz-zahl').textContent, stand: document.querySelector('#lt-stand').textContent }));
+  const lage = () => page.evaluate(() => ({
+    platz: document.querySelector('#lt-tabelle .lg-tab-zeile.wir .rank').textContent, stand: document.querySelector('#lt-stand').textContent,
+    zeile: [...document.querySelector('#lt-tabelle .lg-tab-zeile[data-team="Blink 180"]').children].map((t) => t.textContent.trim()).join('|'),
+    runde: document.querySelector('#lt-runden').textContent
+  }));
+  const vorher = await lage();
   const sdmNeu = (() => {
     const fenster = {};
     new Function('window', fs.readFileSync(path.join(ROOT, 'js', 'liga-sdm.js'), 'utf8'))(fenster);
@@ -3921,39 +3892,46 @@ check('Tabelle: der Stand der Ligaleitung steht dabei', /Ligaleitung/.test(await
   dateiMock['/js/liga-sdm.js'] = sdmNeu;
   await page.evaluate(() => window.__dart.ligaDatenPruefen(true));
   await page.waitForFunction(() => /01\.01\.2099/.test(document.querySelector('#lt-stand').textContent), null, { timeout: 5000 }).catch(() => {});
-  const nachher = await page.evaluate(() => ({
-    platz: document.querySelector('#lt-platz .lt-platz-zahl').textContent, stand: document.querySelector('#lt-stand').textContent,
-    zeile: [...document.querySelector('#lt-tabelle tr[data-team="Blink 180"]').querySelectorAll('td')].map((t) => t.textContent.trim()).join('|'),
-    runde: document.querySelector('#lt-runden').textContent
-  }));
-  check('Nachgeladene Ergebnisse der Ligaleitung: neuer Stand, Sieg am 4. Spieltag in Tabelle und Alle Spiele',
-    /01\.01\.2099/.test(nachher.stand) && /\|Blink 180\|4\|3\|0\|1\|/.test(nachher.zeile) && /9:7/.test(nachher.runde) && nachher.platz !== vorher.platz, JSON.stringify(nachher));
+  const nachher = await lage();
+  check('Nachgeladene Ergebnisse der Ligaleitung: neuer Stand, Sieg am 4. Spieltag in Tabelle und Spieltag',
+    /01\.01\.2099/.test(nachher.stand) && /Blink 180[^|]*\|4\|3 · 0 · 1\|/.test(nachher.zeile) && /9 : 7/.test(nachher.runde) && nachher.platz !== vorher.platz, JSON.stringify(nachher));
   delete dateiMock['/js/liga-sdm.js'];
   await page.evaluate(() => window.__dart.ligaDatenPruefen(true));
   await page.waitForFunction((alt) => document.querySelector('#lt-stand').textContent === alt, vorher.stand, { timeout: 5000 }).catch(() => {});
-  check('die echte Datei stellt den alten Stand wieder her', (await text('#lt-stand')) === vorher.stand && (await text('#lt-platz .lt-platz-zahl')) === vorher.platz);
-  check('Nachladen ohne Aenderung zeichnet nichts neu (Kennung gleich)', await page.evaluate(() => {
-    const k = document.querySelector('#lt-tabelle').innerHTML; window.__dart.ligaDatenPruefen(true);
-    return new Promise((r) => setTimeout(() => r(document.querySelector('#lt-tabelle').innerHTML === k), 800));
+  check('die echte Datei stellt den alten Stand wieder her', (await lage()).stand === vorher.stand && (await lage()).platz === vorher.platz);
+  check('Nachladen ohne Aenderung zeichnet nichts neu', await page.evaluate(() => {
+    const k = document.querySelector('#lt-tabelle'); window.__dart.ligaDatenPruefen(true);
+    return new Promise((r) => setTimeout(() => r(document.querySelector('#lt-tabelle') === k), 800));
   }));
 }
-rundenSoll = await page.evaluate(() => {
-  const sp = window.LIGA_DATEN.spieltage;
-  return Object.keys(sp).filter((id) => sp[id].some((s) => s.gast && s.einzel)).length + 1;
-});
-check('Alle Spiele: gespielte Spieltage und der naechste, der Rest auf Knopf',
-  (await page.locator('#lt-runden .lk-runde').count()) === rundenSoll && await visible('#lt-runden [data-action="liga-runden-alle"]'));
-await page.locator('#lt-runden [data-action="liga-runden-alle"]').click();
-check('"Alle 18 Spieltage zeigen" zeigt alle 18', (await page.locator('#lt-runden .lk-runde').count()) === 18);
-await page.locator('#lt-runden [data-action="liga-runden-alle"]').click();
-check('"Nur gespielte Spieltage" klappt wieder zu', (await page.locator('#lt-runden .lk-runde').count()) === rundenSoll);
-await page.locator('#lt-tabelle tr[data-action="liga-team-info"][data-team="Blink 180"]').click();
-check('Tipp auf ein Team: Lokal mit Adresse, Spielerliste, alle 16 Spiele',
-  /Bar Sehnsucht · Amalienstraße 26/.test(await text('#overlay-card')) && (await page.locator('#overlay-card .ti-spieler li').count()) >= 4 &&
-  (await page.locator('#overlay-card .ti-spiele .lr-zeile').count()) === 16);
-await page.locator('#overlay-card .ti-spiele .lr-zeile.tap').first().click();
+/* Spieltage blaettern: Start ist der letzte gespielte. */
+{
+  const kopf = () => page.evaluate(() => document.querySelector('#lt-runden .lg-runde-kopf b').textContent);
+  const vor = await kopf();
+  await page.locator('#lt-runden [data-action="liga-runde-blaettern"][data-wert="-1"]').click();
+  const zurueck = await kopf();
+  check('Spieltage: der letzte gespielte steht da, ein Pfeil blaettert zurueck', /SPIELTAG \d+/.test(vor) && zurueck !== vor && Number(zurueck.replace(/\D/g, '')) === Number(vor.replace(/\D/g, '')) - 1, vor + ' -> ' + zurueck);
+}
+/* Ein Tipp auf ein Team unserer Liga: die Mannschaftsstatistik. */
+await page.locator('#lt-tabelle .lg-tab-zeile[data-team="Treff ma nix"]').click();
+check('Tipp auf ein Team der Tabelle oeffnet seine Mannschaftsstatistik', await page.evaluate(() => window.__dart.ui().ligaTab === 'statistik' && window.__dart.ui().ligaTeam === 'Treff ma nix'));
+await page.evaluate(() => { const D = window.__dart; D.ui().ligaTeam = 'wir'; D.ui().ligaTab = 'tabelle'; D.render(); });
+/* Die Teamseite (Entwurf LigaTeam): Lokal mit Adresse, Spieler, alle Spiele. */
+await page.evaluate(() => { const D = window.__dart; D.ui().ligaTeamSeite = { team: 'Blink 180', nr: 5 }; D.render(); });
+check('Teamseite: Lokal mit Adresse, Spielerliste, 16 Spiele und 2 spielfrei',
+  /Bar Sehnsucht\s*· Amalienstraße 26/.test(await text('#liga-teamseite')) && (await page.locator('#liga-teamseite .lg-sp-zeile').count()) >= 4 &&
+  (await page.locator('#liga-teamseite .lg-sp-spiel:not(.frei)').count()) === 16 && (await page.locator('#liga-teamseite .lg-sp-spiel.frei').count()) === 2);
+await page.locator('#liga-teamseite .lg-sp-spiel.tap').first().click();
 check('ein gespieltes Spiel des Teams oeffnet die 16 Einzel', (await page.locator('#overlay-card .lp-tab tbody tr').count()) === 16);
 await page.locator('#overlay-card [data-action="ov-cancel"]').click();
+await page.locator('#liga-teamseite [data-action="liga-team-zu"]').click();
+check('zurueck von der Teamseite', !(await visible('#liga-teamseite')) && (await visible('#liga-tabelle')));
+/* Eine andere Liga: die Daten kommen vom Server (hier: ohne Konto keine). */
+await page.locator('#liga-tabelle [data-action="liga-nr-auf"]').click();
+await page.locator('#liga-tabelle [data-action="liga-nr"][data-nr="2"]').click();
+await page.waitForFunction(() => !/Lädt/.test(document.getElementById('liga-tabelle').textContent), null, { timeout: 5000 }).catch(() => {});
+check('Liga 2 ohne Anmeldung: ein Hinweis statt einer leeren Tabelle', /angemeldet|Verbindung|nicht erreichbar/.test(await text('#liga-tabelle')), (await text('#liga-tabelle')).slice(0, 120));
+await page.evaluate(() => { const D = window.__dart; D.ui().ligaNr = 5; D.render(); });
 await page.locator('#liga-tabs button[data-tab="plan"]').click();
 /* Ohne Server gibt es keine Konten – der Plan bleibt lesbar, das
    Eintragen erklaert sich per Hinweis. */
@@ -4123,20 +4101,12 @@ await gruppe('Liga: alle Spiele des Spieltags', async () => {
   check('Escape schliesst den Dialog', !(await visible('#overlay-card')));
   await page.evaluate(() => { const D = window.__dart; D.ui().ligaWahl = null; D.render(); });
   await page.locator('#liga-tabs button[data-tab="tabelle"]').click();
-  /* Gezeigt: alle Spieltage mit Ergebnis plus der naechste, je fuenf Zeilen. */
-  const rundenGezeigt = await page.evaluate(() => {
-    const D = window.LIGA_DATEN; const ids = D.liga.termine.map((t) => t.id).filter((id) => D.spieltage[id] && D.spieltage[id].length);
-    const gespielt = ids.filter((id) => D.spieltage[id].some((s) => s.gast && s.einzel));
-    const gezeigt = ids.filter((id, i) => gespielt.includes(id) || i === gespielt.length);
-    return { n: gezeigt.length, wir: gezeigt.filter((id) => D.spieltage[id].some((s) => s.gast && (s.heim === 'Blink 180' || s.gast === 'Blink 180'))).length };
-  });
-  check('im Tabellen-Reiter stehen unter der Tabelle alle Spiele der gespielten Spieltage und des naechsten',
-    (await page.locator('#lt-runden .lk-runde').count()) === rundenGezeigt.n && rundenGezeigt.n >= 4 &&
-    (await page.locator('#lt-runden .lr-zeile').count()) === 5 * rundenGezeigt.n &&
-    (await textKlein('#lt-runden')).includes('alle spiele · 1. spieltag') && (await textKlein('#lt-runden')).includes('alle spiele · 2. spieltag'));
-  check('2. Spieltag: unser Spiel mit 6:10 und 13:22 Legs, unsere Spiele markiert',
-    (await textKlein('#lt-runden')).includes('6:10') && (await textKlein('#lt-runden')).includes('13:22') &&
-    (await page.locator('#lt-runden .lr-zeile.wir').count()) === rundenGezeigt.wir);
+  /* Unter der Tabelle ein Spieltag zum Blaettern: hier der 2. (Index 1). */
+  await page.evaluate(() => { const D = window.__dart; D.ui().ligaRunde = { nr: 5, i: 1 }; D.render(); });
+  check('Spieltag 2 unter der Tabelle: vier Spiele, spielfrei genannt',
+    /SPIELTAG 2/.test(await text('#lt-runden')) && (await page.locator('#lt-runden .lg-paar').count()) === 4 && /spielfrei/.test(await text('#lt-runden')));
+  check('2. Spieltag: unser Spiel mit 6 : 10, als unseres markiert',
+    (await text('#lt-runden')).includes('6 : 10') && (await page.locator('#lt-runden .lg-paar.wir').count()) === 1);
   await page.locator('#liga-tabs button[data-tab="plan"]').click();
 }
 
@@ -4180,17 +4150,19 @@ await page.locator('#liga-tabs button[data-tab="tabelle"]').click();
 check('der Tabellen-Reiter oeffnet sich',
   (await visible('#liga-tabelle')) && !(await visible('#liga-plan')));
 check('alle neun Teams der Liga stehen vorbefuellt drin',
-  (await page.locator('#lt-tabelle tbody tr').count()) === 9,
-  String(await page.locator('#lt-tabelle tbody tr').count()));
+  (await page.locator('#lt-tabelle .lg-tab-zeile').count()) === 9,
+  String(await page.locator('#lt-tabelle .lg-tab-zeile').count()));
 check('Blink 180 ist hervorgehoben', await page.evaluate(() => {
-  const tr = document.querySelector('#lt-tabelle tr.leader');
-  return !!tr && tr.textContent.includes('Blink 180');
+  const z = document.querySelector('#lt-tabelle .lg-tab-zeile.wir');
+  return !!z && z.textContent.includes('Blink 180');
 }));
-check('nichts ist mehr von Hand zu tippen', (await page.locator('#lt-tabelle td[contenteditable]').count()) === 0);
 /* Die Zeilen sind die aus allen Ergebnissen der Ligaleitung gerechneten
    (LIGA_DATEN.tabelleAus) - die Zahlen wandern mit jedem Import, die Regeln
    nicht: Punkte fallend, bei Gleichstand die Leg-Differenz. */
-ltZeilen = await page.evaluate(() => [...document.querySelectorAll('#lt-tabelle tbody tr')].map((tr) => [...tr.querySelectorAll('td')].map((td) => td.textContent.trim()).join('|')));
+ltZeilen = await page.evaluate(() => [...document.querySelectorAll('#lt-tabelle .lg-tab-zeile')].map((r) => {
+  const c = r.children, sun = c[4].textContent.split('·').map((s) => s.trim());
+  return [c[0].textContent.trim(), c[2].firstChild.textContent.trim(), c[3].textContent.trim(), sun[0], sun[1], sun[2], c[6].textContent.trim(), c[5].textContent.trim(), c[7].textContent.trim()].join('|');
+}));
 ltSoll = await page.evaluate(() => {
   const D = window.LIGA_DATEN; const tab = D.tabelleAus(D.spieltage, D.teams);
   return { zeilen: tab.zeilen.map((z, i) => [i + 1, z.team, z.spiele, z.g, z.u, z.v, z.legs, z.einzel, z.punkte].join('|')), spiele: tab.spiele };
@@ -4203,10 +4175,10 @@ check('Punkte fallend, bei gleichen Punkten die bessere Leg-Differenz zuerst',
   ltZeilen.every((z, i) => !i || ltPunkte[i] < ltPunkte[i - 1] || (ltPunkte[i] === ltPunkte[i - 1] && ltLegDiff[i] <= ltLegDiff[i - 1])), ltZeilen.join(' / '));
 check('Blink 180 steht mit mindestens drei Spielen und Siegen drin (1., 2., 3. Spieltag der Ligaleitung)',
   ltZeilen.some((z) => { const t = z.split('|'); return t[1] === 'Blink 180' && Number(t[2]) >= 3 && Number(t[3]) >= 2; }), ltZeilen.join(' / '));
-check('der Stand nennt die Zahl der gewerteten Spiele und die Ligaleitung als Quelle',
-  (await text('#lt-stand')).includes('Aus ' + ltSoll.spiele + ' Spielen berechnet') && ltSoll.spiele >= 10 && /Ligaleitung/.test(await text('#lt-stand')), await text('#lt-stand'));
-check('mit den Spalten der Ligaleitung (Sp, g, u, v, Legs, Spiele, Pkt)', await page.evaluate(() =>
-  [...document.querySelectorAll('#lt-tabelle thead th')].map((th) => th.textContent).join(',') === '#,Mannschaft,Sp,g,u,v,Legs,Spiele,Pkt'));
+check('der Stand nennt die Regeln und die Ligaleitung als Quelle',
+  /steigen auf/.test(await text('#lt-stand')) && /Ligaleitung/.test(await text('#lt-stand')), await text('#lt-stand'));
+check('mit den Spalten des Entwurfs (SP, S · U · N, Einzel, Legs, Pkt)', await page.evaluate(() =>
+  [...document.querySelectorAll('#liga-tabelle .lg-tab-kopf span')].map((s) => s.textContent).join(',') === '#,,TEAM,SP,S · U · N,EINZEL,LEGS,PKT'));
 await page.locator('#liga-tabs button[data-tab="plan"]').click();
 
 });

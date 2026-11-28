@@ -4231,7 +4231,7 @@
     var mitMenue = screen === 'game' || screen === 'cricket' || screen === 'rtw' || screen === 'finisher' || screen === 'kaiwen' || screen === 'hunter';
     if (!mitMenue) UI.menu = false;
     /* Beim Betreten der Liga zeigt der Spielplan wieder den naechsten Spieltag. */
-    if (screen !== 'liga') { UI.ligaWahl = null; UI.ligaZu = false; UI.ligaAendern = null; UI.trainingAendern = null; UI.kasseZeile = null; }
+    if (screen !== 'liga') { UI.ligaWahl = null; UI.ligaZu = false; UI.ligaAendern = null; UI.trainingAendern = null; UI.kasseZeile = null; UI.ligaTeamSeite = null; UI.ligaNrAuf = false; }
     $('nav').classList.toggle('hidden', !navFor);
     if (navFor) {
       $('nav').querySelectorAll('button').forEach(function (b) {
@@ -5771,7 +5771,7 @@
   /* Die Reiter der Liga, die schon nach dem Redesign gebaut sind. Nur dort
      gilt hell - die uebrigen haben noch dunkle Karten und blieben auf
      hellem Grund unlesbar (Kritik 28.11.); sie kommen Paket fuer Paket. */
-  var LIGA_NEU = { plan: 1, training: 1, kasse: 1, regeln: 1 };
+  var LIGA_NEU = { plan: 1, training: 1, kasse: 1, regeln: 1, tabelle: 1 };
   function darstellungAnwenden() {
     var de = document.documentElement;
     var liga = !!($('screen-liga') && $('screen-liga').classList.contains('active'));
@@ -8635,7 +8635,9 @@
     if (!a) {
       var kz = String(name).replace(/[`'’]/g, ' ').replace(/[^A-Za-zÄÖÜäöü0-9 ]/g, '').split(' ').filter(function (w) { return w && !/^\d+$/.test(w); });
       kz = kz.length === 1 ? kz[0].slice(0, 3).toUpperCase() : kz.slice(0, 3).map(function (w) { return w[0]; }).join('').toUpperCase();
-      a = ['hsl(' + hue(String(name)) + ',45%,30%)', '#ffffff', kz];
+      var hz = 0;
+      for (var hi = 0; hi < String(name).length; hi++) hz = (hz * 31 + String(name).charCodeAt(hi)) % 360;
+      a = ['hsl(' + hz + ',45%,30%)', '#ffffff', kz];
     }
     var fs = a[2].length > 2 ? 30 : 36;
     return '<svg class="' + k + '" viewBox="0 0 120 120" role="img" aria-label="Logo ' + esc(name) + '"><circle cx="60" cy="60" r="58" fill="' + a[0] + '"/>' +
@@ -8646,6 +8648,11 @@
   var LG_KALENDER = '<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18"/><path d="M8 14h3M8 17h7"/></svg>';
   var LG_PIN_ROT = '<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e5484d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.7"/></svg>';
   var LG_PLUS = '<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M7 12h10"/></svg>';
+  var LG_LINKS = '<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 5-7 7 7 7"/></svg>';
+  var LG_ZIEL = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>';
+  var LG_UHR = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg>';
+  var LG_FLAMME = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c4 0 7-2.8 7-6.8 0-3.6-2.6-6.1-4.2-8.2-.6 2-1.6 3.2-2.8 3.9C12 8 11 5 8.5 2.5 8.6 6 5 8.9 5 15.2 5 19.2 8 22 12 22Z"/></svg>';
+  var LG_LEUTE = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20v-1.3c0-2.8 2.7-4.7 6-4.7s6 1.9 6 4.7V20"/><circle cx="17.5" cy="9" r="2.4"/><path d="M17 14.2c2.4.2 4 1.7 4 3.8V20"/></svg>';
   var LG_HAKEN = '<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4 4 10-10"/></svg>';
   /* Regulaer steigen die beiden Ersten auf (SWO 03.10.2026, Punkt 2). */
   var LIGA_AUFSTEIGER = 2;
@@ -9145,51 +9152,239 @@
       '</div>';
   }
 
-  function renderLigaTabelle() {
-    var tab = ligaTabelleBerechnet();
-    var ligaStand = window.LIGA_DATEN.stand, eigeneNr = ligaEigeneNr();
-    $('lt-stand').textContent = (tab.spiele
-      ? 'Aus ' + plural(tab.spiele, 'Spiel', 'Spielen') + ' berechnet' + (tab.bis ? ', letztes am ' + datumDE(tab.bis) : '') + '.'
-      : 'Noch kein Spiel gewertet.') +
-      (ligaStand ? ' Ergebnisse der Ligaleitung (steeldart-muenchen.de), geholt am ' + datumDE(ligaStand) + '.' : '') +
-      (eigeneNr.length ? ' ' + eigeneNr.map(function (n) { return n + '. Spieltag'; }).join(', ') + ': unser Ergebnis aus der App, bis die Ligaleitung es einträgt.' : '');
-    /* Rechts neben der Tabelle alle Spiele je Spieltag (Ergebnisse der Ligaleitung). */
-    $('lt-runden').innerHTML = ligaRundenAlleHtml();
-    renderLigaEinzel();
-    renderLigaHighlights();
-    var zeilen = tab.zeilen;
-    /* Links ueber der Tabelle: unser Platz, Punkte und Legs, Abstand zur Spitze. */
-    var platz = -1;
-    zeilen.forEach(function (z, i) { if (platz < 0 && z.team === LIGA.team) platz = i; });
-    var pz = platz >= 0 ? zeilen[platz] : null;
-    var spitze = zeilen[0] ? Number(zeilen[0].punkte) || 0 : 0;
-    var abstand = pz ? spitze - (Number(pz.punkte) || 0) : 0;
-    $('lt-platz').innerHTML = pz
-      ? '<span class="lk-crew-titel">Unser Platz</span><span class="lt-platz-zahl">' + (platz + 1) + '.</span>' +
-        '<span class="lt-platz-info">' + plural(Number(pz.punkte) || 0, 'Punkt', 'Punkte') + ' · Legs ' + esc(String(pz.legs || '0:0')).replace(':', ' : ') + '</span>' +
-        '<span class="lt-platz-sub">' + (platz === 0 ? 'Tabellenführer' : plural(abstand, 'Punkt', 'Punkte') + ' hinter Platz 1') + '</span>'
-      : '';
-    var kennung = JSON.stringify(zeilen);
-    if (ligaTabelleKennung === kennung && $('lt-tabelle').innerHTML) return;
-    ligaTabelleKennung = kennung;
+  /* ---------- Tabelle (Entwurf LigaTabelle, Redesign Nov. 2026) ----------
+     Oben die Ligawahl (SDM 4er Liga 1 bis 5), links die Tabelle mit Logo,
+     Aufstieg gruen, Abstieg rot und unserer Bewegung seit dem vorigen
+     Spieltag, darunter die Spieltage zum Blaettern; rechts die gemeldeten
+     Highlights. Unsere Liga kommt aus LIGA_DATEN, die anderen vier aus den
+     Gesamtdaten der Ligaleitung (GET /api/liga-gesamt, nur angemeldet). */
+  var LIGA_EIGENE_NR = 5;
+  var ligaGesamt = window.LIGA_GESAMT || null, ligaGesamtLaeuft = false, ligaGesamtFehler = '';
+  function ligaGesamtLaden() {
+    if (ligaGesamt || ligaGesamtLaeuft) return;
+    ligaGesamtLaeuft = true; ligaGesamtFehler = '';
+    fetch('/api/liga-gesamt', { credentials: 'same-origin' }).then(function (r) {
+      if (!r.ok) throw new Error(r.status === 401 || r.status === 403 ? 'Die anderen Ligen gibt es nur angemeldet.' : 'Die Ligadaten sind gerade nicht erreichbar.');
+      return r.json();
+    }).then(function (g) {
+      ligaGesamt = g && g.ligen ? g : null;
+      if (!ligaGesamt) ligaGesamtFehler = 'Die Ligadaten sind gerade nicht erreichbar.';
+    }).catch(function (e) {
+      ligaGesamtFehler = e && e.message && /Ligen|Ligadaten/.test(e.message) ? e.message : 'Ohne Verbindung gibt es nur unsere Liga.';
+    }).then(function () { ligaGesamtLaeuft = false; if (S.screen === 'liga') render(); });
+  }
+  /* Eine Liga als einheitliche Sicht: Teams, Runden (je Spieltag alle
+     Spiele, spielfrei inklusive), Team-Infos und die Tabelle. */
+  function ligaSicht(nr) {
+    if (nr === LIGA_EIGENE_NR) {
+      var alle = ligaSpieltage(), runden = [];
+      LIGA.termine.forEach(function (t) { runden.push({ id: t.id, nr: t.nr, spiele: alle[t.id] || [] }); });
+      return { nr: nr, name: 'SDM 4er Liga ' + nr, eigene: true, teams: LIGA_TEAMS, runden: runden, teamInfo: window.LIGA_DATEN.teamInfo || {}, tabelle: ligaTabelleBerechnet() };
+    }
+    if (!ligaGesamt) return null;
+    var l = null;
+    (ligaGesamt.ligen || []).forEach(function (x) { if (x.nr === nr) l = x; });
+    if (!l) return null;
+    var namen = (l.teams || []).map(function (t) { return t.name; }).filter(Boolean);
+    if (!namen.length) namen = (l.tabelle || []).map(function (z) { return z.team; });
+    var info = {};
+    (l.teams || []).forEach(function (t) { if (t.name) info[t.name] = t; });
+    var karte = {}, rundenG = (l.spieltage || []).map(function (s) {
+      var spiele = (s.spiele || []).slice();
+      var dabei = {};
+      spiele.forEach(function (sp) { dabei[sp.heim] = 1; dabei[sp.gast] = 1; });
+      namen.forEach(function (n) { if (!dabei[n] && spiele.length) spiele.push({ heim: n }); });
+      var id = 'g' + nr + '-' + s.nr;
+      karte[id] = spiele;
+      return { id: id, nr: s.nr, spiele: spiele };
+    });
+    return { nr: nr, name: 'SDM 4er Liga ' + nr, eigene: false, teams: namen, runden: rundenG, teamInfo: info, tabelle: window.LIGA_DATEN.tabelleAus(karte, namen) };
+  }
+  /* Tabelle nach einem bestimmten Spieltag (fuer die Bewegung ▲/▼). */
+  function ligaTabelleBis(sicht, bisNr) {
+    var karte = {};
+    sicht.runden.forEach(function (r) { if (r.nr <= bisNr) karte[r.id] = r.spiele; });
+    return window.LIGA_DATEN.tabelleAus(karte, sicht.teams);
+  }
+  /* Eine Runde zaehlt als gespielt, wenn mehr als die Haelfte ihrer Spiele
+     ein Ergebnis hat - ein vorgezogenes Einzelspiel macht noch keinen
+     Spieltag (Liga 2: sonst "Stand nach Spieltag 7" nach vier Runden). */
+  function ligaRundeGespielt(r) {
+    var echt = r.spiele.filter(function (sp) { return sp.gast; });
+    var fertig = echt.filter(function (sp) { return sp.einzel && !sp.verschoben; });
+    return echt.length > 0 && fertig.length * 2 > echt.length;
+  }
+  function kurzDatum(iso) { return iso ? iso.slice(8, 10) + '.' + iso.slice(5, 7) + '.' : ''; }
 
-    /* Spalten wie die Tabelle der Ligaleitung: Spiele, gewonnen /
-       unentschieden / verloren, Legs, Einzel ("Spiele" 9:7), Punkte. */
-    var zelle = function (v) { return '<td>' + esc(v === undefined || v === null ? '' : String(v)) + '</td>'; };
-    $('lt-tabelle').innerHTML =
-      '<thead><tr><th>#</th><th class="left">Mannschaft</th><th>Sp</th><th>g</th><th>u</th><th>v</th>' +
-        '<th>Legs</th><th title="Einzel">Spiele</th><th>Pkt</th></tr></thead>' +
-      '<tbody>' + zeilen.map(function (z, i) {
-        var wir = z.team === LIGA.team;
-        /* Ein Tipp auf die Zeile: Lokal, Spielerliste und alle Spiele des Teams. */
-        /* Platz 1 und 2: Aufstiegsplaetze (SWO Punkt 2, Julius 25.11.). */
-        var klassen = (wir ? 'leader' : '') + (i < LIGA_AUFSTEIGER && z.spiele > 0 ? ' aufstieg' : '');
-        return '<tr' + (klassen.trim() ? ' class="' + klassen.trim() + '"' : '') + (klassen.indexOf('aufstieg') >= 0 ? ' title="Aufstiegsplatz"' : '') + ' data-action="liga-team-info" data-team="' + esc(z.team || '') + '" role="button" tabindex="0">' +
-          '<td class="rank">' + (i + 1) + '</td>' +
-          '<td class="left name">' + esc(z.team || '') + '</td>' +
-          zelle(z.spiele) + zelle(z.g) + zelle(z.u) + zelle(z.v) + zelle(z.legs) + zelle(z.einzel) + zelle(z.punkte) +
-          '</tr>';
-      }).join('') + '</tbody>';
+  function renderLigaTabelle() {
+    var nr = UI.ligaNr || LIGA_EIGENE_NR;
+    if (nr !== LIGA_EIGENE_NR && !ligaGesamt) ligaGesamtLaden();
+    var sicht = ligaSicht(nr);
+    var ziel = $('liga-tabelle');
+    var wahlHtml = '<div class="lg-ligawahl"><span class="lg-klein-titel">Liga</span>' +
+      '<div class="lg-ligawahl-box"><button type="button" class="lg-ligaknopf" data-action="liga-nr-auf" aria-expanded="' + (UI.ligaNrAuf ? 'true' : 'false') + '"><span>SDM 4er Liga ' + nr + '</span>' +
+        '<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>' +
+        (UI.ligaNrAuf ? '<div class="lg-ligaliste">' + [1, 2, 3, 4, 5].map(function (n) {
+          return '<button type="button" class="' + (n === nr ? 'an' : '') + '" data-action="liga-nr" data-nr="' + n + '"><span>SDM 4er Liga ' + n + '</span>' + (n === LIGA_EIGENE_NR ? '<small>unsere</small>' : '') + '</button>';
+        }).join('') + '</div>' : '') +
+      '</div>';
+    if (!sicht) {
+      ziel.innerHTML = wahlHtml + '<span class="lg-text">' + esc(ligaGesamtLaeuft ? 'Lädt …' : ligaGesamtFehler || 'Lädt …') + '</span></div>';
+      return;
+    }
+    var gespielt = sicht.runden.filter(ligaRundeGespielt);
+    var letzte = gespielt.length ? gespielt[gespielt.length - 1].nr : 0;
+    var vorige = gespielt.length > 1 ? gespielt[gespielt.length - 2].nr : 0;
+    var datumBis = '';
+    if (gespielt.length) gespielt[gespielt.length - 1].spiele.forEach(function (sp) { if (sp.tag && sp.einzel && sp.tag > datumBis) datumBis = sp.tag; });
+    var infoText = sicht.teams.length + ' Teams' + (letzte ? ' · Stand nach Spieltag ' + letzte : ' · noch kein Spieltag gewertet');
+    $('liga-sub').textContent = letzte ? 'Stand nach Spieltag ' + letzte + (datumBis ? ' · ' + kurzDatum(datumBis) : '') : 'SDM 4er Liga ' + nr + ' · ' + LIGA.saison;
+    wahlHtml += '<span class="lg-text">' + esc(infoText) + '</span></div>';
+
+    var zeilen = sicht.tabelle.zeilen;
+    var alt = {};
+    if (vorige) ligaTabelleBis(sicht, vorige).zeilen.forEach(function (z, i) { alt[z.team] = i + 1; });
+    var kennung = nr + '|' + JSON.stringify(zeilen);
+    var animieren = ligaTabelleKennung !== kennung;
+    ligaTabelleKennung = kennung;
+    var aufstieg = nr !== 1, abstieg = nr !== 5;
+    var tabelleHtml = '<section class="lg-tab" aria-label="Ligatabelle"><div class="lg-tab-kopf" role="row"><span>#</span><span></span><span>TEAM</span><span class="r">SP</span><span class="m">S · U · N</span><span class="r">EINZEL</span><span class="r">LEGS</span><span class="r">PKT</span></div>' +
+      '<div id="lt-tabelle">' + zeilen.map(function (z, i) {
+        var wir = z.team === LIGA.team, platz = i + 1;
+        var vorher = alt[z.team] || platz, diff = vorher - platz;
+        var klasse = (wir ? ' wir' : '') + (aufstieg && i < LIGA_AUFSTEIGER && z.spiele > 0 ? ' aufstieg' : '') + (abstieg && i >= zeilen.length - 2 && z.spiele > 0 ? ' abstieg' : '') + (animieren && vorige && diff ? ' anim' : '');
+        var badge = wir && vorige ? '<span class="lg-badge ' + (diff > 0 ? 'hoch' : diff < 0 ? 'runter' : 'gleich') + '">' + (diff > 0 ? '▲ ' + diff : diff < 0 ? '▼ ' + (-diff) : '=') + '</span>' : '';
+        return '<div class="lg-tab-zeile' + klasse + '" role="row" style="--dy:' + (diff * 42) + 'px" data-action="liga-tab-team" data-team="' + esc(z.team) + '" data-nr="' + nr + '" tabindex="0" title="' + (sicht.eigene ? 'Mannschaftsstatistik öffnen' : 'Teamseite öffnen') + '">' +
+          '<span class="rank">' + platz + '</span>' + teamLogoHtml(z.team, 'klein') +
+          '<span class="name"><span>' + esc(z.team) + '</span>' + badge + '</span>' +
+          '<span class="r">' + z.spiele + '</span><span class="m">' + z.g + ' · ' + z.u + ' · ' + z.v + '</span>' +
+          '<span class="r">' + esc(z.einzel) + '</span><span class="r">' + esc(z.legs) + '</span><span class="r pkt">' + z.punkte + '</span></div>';
+      }).join('') + '</div>' +
+      '<span class="lg-tab-fuss" id="lt-stand">' + (aufstieg ? 'Platz 1 und 2 (grün) steigen auf. ' : '') + (abstieg ? 'Die letzten beiden (rot) steigen ab. ' : '') +
+        (vorige ? 'Seit dem ' + vorige + '. Spieltag. ' : '') + 'Sieg 2 Punkte, Unentschieden 1. Bei Gleichstand zählen Legs, dann Einzel.' +
+        (sicht.eigene && ligaEigeneNr().length ? ' ' + ligaEigeneNr().map(function (n) { return n + '. Spieltag'; }).join(', ') + ': unser Ergebnis aus der App, bis die Ligaleitung es einträgt.' : '') +
+        (sicht.eigene && window.LIGA_DATEN.stand ? ' Ergebnisse der Ligaleitung, geholt am ' + datumDE(window.LIGA_DATEN.stand) + '.' : '') + '</span></section>';
+
+    /* Spieltage zum Blaettern: Start ist der laufende bzw. letzte gespielte. */
+    var runden = sicht.runden.filter(function (r) { return r.spiele.length; });
+    var rIndex = UI.ligaRunde && UI.ligaRunde.nr === nr ? UI.ligaRunde.i : -1;
+    if (rIndex < 0 || rIndex >= runden.length) {
+      rIndex = 0;
+      runden.forEach(function (r, i) { if (ligaRundeGespielt(r)) rIndex = i; });
+    }
+    var runde = runden[rIndex];
+    var rundeHtml = '';
+    if (runde) {
+      var tags = runde.spiele.map(function (sp) { return sp.tag; }).filter(Boolean).sort();
+      var frei = runde.spiele.filter(function (sp) { return !sp.gast; }).map(function (sp) { return sp.heim; });
+      var datum = tags.length ? kurzDatum(tags[0]) + (tags[tags.length - 1] !== tags[0] ? ' bis ' + kurzDatum(tags[tags.length - 1]) : '') : '';
+      rundeHtml = '<section class="lg-runde" aria-label="Spieltage" id="lt-runden">' +
+        '<div class="lg-runde-kopf"><button type="button" class="lg-rund leer" data-action="liga-runde-blaettern" data-wert="-1" aria-label="Voriger Spieltag"' + (rIndex <= 0 ? ' disabled' : '') + '>' + LG_LINKS + '</button>' +
+          '<span><b>SPIELTAG ' + runde.nr + '</b><small>' + datum + '</small></span>' +
+          '<button type="button" class="lg-rund leer" data-action="liga-runde-blaettern" data-wert="1" aria-label="Nächster Spieltag"' + (rIndex >= runden.length - 1 ? ' disabled' : '') + '>' + LG_PFEIL + '</button></div>' +
+        runde.spiele.map(function (sp, i) {
+          if (!sp.gast) return '';
+          var wir = sp.heim === LIGA.team || sp.gast === LIGA.team;
+          var erg = sp.verschoben ? 'verschoben' : sp.einzel ? String(sp.einzel).replace(':', ' : ') : 'offen';
+          var tipp = sp.partien && sp.partien.length ? ' data-action="liga-partien" data-termin="' + esc(runde.id) + '" data-i="' + i + '" role="button" tabindex="0"' : '';
+          return '<div class="lg-paar' + (wir ? ' wir' : '') + (tipp ? ' tap' : '') + '"' + tipp + '>' +
+            '<span class="h' + (sp.heim === LIGA.team ? ' fett' : '') + '">' + esc(sp.heim) + '</span>' + teamLogoHtml(sp.heim, 'mini') +
+            '<span class="erg' + (sp.einzel ? '' : ' offen') + '">' + erg + '</span>' + teamLogoHtml(sp.gast, 'mini') +
+            '<span class="g' + (sp.gast === LIGA.team ? ' fett' : '') + '">' + esc(sp.gast) + '</span></div>';
+        }).join('') +
+        (frei.length ? '<span class="lg-tab-fuss m">spielfrei: ' + frei.map(esc).join(', ') + '</span>' : '') + '</section>';
+      UI.ligaRunde = { nr: nr, i: rIndex };
+    }
+
+    /* Rechts: gemeldete Highlights (nur unsere Liga hat sie in den Daten). */
+    var hlHtml = '';
+    if (sicht.eigene) {
+      var hl = window.LIGA_DATEN.highlightsAus(ligaSpieltage());
+      var liste = [];
+      hl.highfinish.forEach(function (z) { liste.push({ z: z, art: 'High Finish', wert: String(z.wert), tag: z.tag || '', ico: LG_ZIEL }); });
+      hl.shortleg.forEach(function (z) { liste.push({ z: z, art: 'Shortleg', wert: z.wert + ' Darts', tag: z.tag || '', ico: LG_UHR }); });
+      liste.sort(function (a, b) { return a.tag < b.tag ? 1 : a.tag > b.tag ? -1 : 0; });
+      hl.s180.forEach(function (z) { liste.push({ z: z, art: '180', wert: z.n + '×', tag: '', ico: LG_FLAMME }); });
+      var KURZ = 8, alleHl = !!UI.ligaHlAlle || liste.length <= KURZ;
+      hlHtml = '<section class="lh-block" aria-label="Gemeldete Highlights" id="lt-highlights">' +
+        '<div class="lh-kopf"><span class="lg-klein-titel">Gemeldete Highlights</span><span>aus den Spielberichten</span></div>' +
+        (liste.length ? liste.slice(0, alleHl ? liste.length : KURZ).map(function (h) {
+          return '<div class="lh-zeile' + (h.z.team === LIGA.team ? ' wir' : '') + '"><span class="ico">' + h.ico + '</span>' +
+            '<span class="was"><b>' + esc(h.z.name) + '</b><small>' + h.art + ' · ' + esc(h.z.team) + (h.z.gast ? ' · Gast' : '') + ' · ' + (h.tag ? kurzDatum(h.tag) : 'Saison') + '</small></span>' +
+            '<span class="wert">' + h.wert + '</span></div>';
+        }).join('') : '<p class="lg-text">Noch nichts gemeldet.</p>') +
+        (liste.length > KURZ ? '<button type="button" class="lg-link" data-action="liga-hl-alle">' + (UI.ligaHlAlle ? 'Weniger zeigen' : 'Alle ' + liste.length + ' zeigen') + '</button>' : '') +
+        '<span class="lg-tab-fuss">High Finishes ab 100, Shortlegs bis 21 Darts und jede 180, wie sie die Teams im Spielbericht melden.</span></section>';
+    } else {
+      hlHtml = '<section class="lh-block" aria-label="Gemeldete Highlights"><div class="lh-kopf"><span class="lg-klein-titel">Gemeldete Highlights</span></div>' +
+        '<p class="lg-text">Für die anderen Ligen liegen keine Highlights vor.</p></section>';
+    }
+    /* Nur neu zeichnen, wenn sich etwas geaendert hat - sonst bricht jeder
+       Abgleich im Hintergrund die Rang-Animation ab. */
+    var html = wahlHtml + '<div class="lg-tab-haupt">' + tabelleHtml + rundeHtml + '</div><aside class="lg-seite lg-tab-seite">' + hlHtml + '</aside>';
+    var ohneAnim = html.replace(/ anim"/g, '"');
+    if (ohneAnim === ligaTabelleHtml && ziel.firstChild) return;
+    ligaTabelleHtml = ohneAnim;
+    ziel.innerHTML = html;
+  }
+  var ligaTabelleHtml = '';
+
+  /* Teamseite (Entwurf LigaTeam): Logo, Name, Lokal mit Adresse, Platz
+     und Punkte; links die Spieler mit TC, rechts alle Spiele der Saison.
+     Gespielte Spiele oeffnen die 16 Einzel. */
+  function renderLigaTeamSeite() {
+    var o = UI.ligaTeamSeite, sicht = ligaSicht(o.nr || LIGA_EIGENE_NR);
+    var ziel = $('liga-teamseite');
+    if (!sicht) { ziel.innerHTML = '<p class="lg-text">Lädt …</p>'; return; }
+    var name = o.team, ti = sicht.teamInfo[name] || {};
+    var platz = 0, zeile = null;
+    sicht.tabelle.zeilen.forEach(function (z, i) { if (z.team === name) { platz = i + 1; zeile = z; } });
+    var spieler = (ti.spieler || []).map(function (p) {
+      var roh = String(p.name || p), gast = roh.charAt(0) === '*', nm = gast ? roh.slice(1).trim() : roh.trim();
+      var t = nm.split(' ').filter(Boolean);
+      return { name: nm, kurz: ((t[0] || '?')[0] + (t.length > 1 ? t[t.length - 1][0] : '')).toUpperCase(), info: p.info || '', gast: gast };
+    });
+    var spiele = [];
+    sicht.runden.forEach(function (r) {
+      var gefunden = false;
+      r.spiele.forEach(function (sp, i) {
+        if (sp.heim !== name && sp.gast !== name) return;
+        gefunden = true;
+        if (!sp.gast) { spiele.push({ nr: r.nr, frei: true }); return; }
+        var daheim = sp.heim === name;
+        spiele.push({ nr: r.nr, daheim: daheim, gegner: daheim ? sp.gast : sp.heim, sp: sp, id: r.id, i: i });
+      });
+      if (!gefunden && r.spiele.length) spiele.push({ nr: r.nr, frei: true });
+    });
+    ziel.innerHTML =
+      '<div class="lg-team-kopf"><button type="button" class="lg-rund fl" data-action="liga-team-zu" aria-label="Zurück">' + LG_LINKS + '</button>' +
+        teamLogoHtml(name, 'gross') +
+        '<span class="lg-team-titel"><b>' + esc(name) + '</b>' +
+          (ti.lokal ? '<a class="lg-dd-ort" href="https://maps.apple.com/?q=' + encodeURIComponent(ti.lokal + (ti.adresse ? ', ' + ti.adresse : '')) + '" target="_blank" rel="noopener">' + LG_PIN_ROT + '<b>' + esc(ti.lokal) + '</b>' + (ti.adresse ? '<span>· ' + esc(ti.adresse) + '</span>' : '') + '</a>' : '') + '</span>' +
+        (zeile ? '<span class="lg-team-platz"><b>' + platz + '.</b><small>' + zeile.punkte + ':' + (zeile.spiele * 2 - zeile.punkte) + ' Punkte · Einzel ' + esc(zeile.einzel) + '</small></span>' : '') +
+      '</div>' +
+      '<div class="lg-team-zwei">' +
+        '<section class="lg-karte lg-team-karte"><span class="lg-klein-titel lg-mit-icon">' + LG_LEUTE + 'Spieler · ' + spieler.length + '</span>' +
+          (spieler.length ? spieler.map(function (s) {
+            return '<div class="lg-sp-zeile"><span class="kurz">' + esc(s.kurz) + '</span><span class="nm">' + esc(s.name) + '</span>' +
+              (s.info ? '<span class="chip">' + esc(s.info) + '</span>' : '') + (s.gast ? '<span class="chip leise">Gast</span>' : '') + '</div>';
+          }).join('') : '<p class="lg-text">Keine Spielerliste.</p>') +
+        '</section>' +
+        '<section class="lg-karte lg-team-karte"><span class="lg-klein-titel lg-mit-icon">' + LG_KALENDER + 'Spiele der Saison</span>' +
+          spiele.map(function (g) {
+            if (g.frei) return '<div class="lg-sp-spiel frei"><span class="nr">' + g.nr + '</span><span></span><span class="gg">spielfrei</span><span></span><span></span></div>';
+            var gesp = !!(g.sp.einzel && !g.sp.verschoben);
+            var tipp = gesp && g.sp.partien && g.sp.partien.length ? ' data-action="liga-partien" data-termin="' + esc(g.id) + '" data-i="' + g.i + '" role="button" tabindex="0"' : '';
+            var e = gesp ? String(g.sp.einzel).split(':') : null;
+            var eig = e ? (g.daheim ? e[0] + ':' + e[1] : e[1] + ':' + e[0]) : '';
+            return '<div class="lg-sp-spiel' + (g.gegner === LIGA.team ? ' wir' : '') + (tipp ? ' tap' : '') + '"' + tipp + '>' +
+              '<span class="nr">' + g.nr + '</span><span class="at">' + (g.daheim ? '' : '@') + '</span><span class="gg">' + esc(g.gegner) + '</span>' +
+              '<span class="er">' + (gesp ? '<b>' + eig + '</b>' + esc(g.sp.legs ? (g.daheim ? g.sp.legs : String(g.sp.legs).split(':').reverse().join(':')) : '') : g.sp.verschoben ? 'verschoben' : (g.sp.tag ? kurzDatum(g.sp.tag) : '–')) + '</span>' +
+              '<span class="pf">' + (tipp ? LG_PFEIL : '') + '</span></div>';
+          }).join('') +
+          '<span class="lg-tab-fuss">@ = auswärts. Gespielte Spiele antippen, dann kommen die Einzel.</span>' +
+        '</section>' +
+      '</div>';
   }
 
   /* Die Einzelrangliste der ganzen Liga (alle Spieler aller Teams), wie
@@ -9283,6 +9478,15 @@
       b.classList.toggle('active', b.getAttribute('data-tab') === tab);
       if (b.getAttribute('data-tab') === 'kasse') b.classList.toggle('hidden', ohneKasse);
     });
+    /* Die Teamseite eines Teams liegt ueber allen Reitern. */
+    var teamSeite = !!UI.ligaTeamSeite;
+    $('liga-teamseite').classList.toggle('hidden', !teamSeite);
+    if (teamSeite) {
+      ['liga-plan', 'liga-training', 'liga-tabelle', 'liga-statistik', 'liga-kasse', 'liga-regeln'].forEach(function (id) { $(id).classList.add('hidden'); });
+      if ($('liga-statistik').innerHTML) $('liga-statistik').innerHTML = '';
+      renderLigaTeamSeite();
+      return;
+    }
     $('liga-plan').classList.toggle('hidden', tab !== 'plan');
     $('liga-training').classList.toggle('hidden', tab !== 'training');
     $('liga-tabelle').classList.toggle('hidden', tab !== 'tabelle');
@@ -9475,7 +9679,7 @@
           ? '<div class="lk-stand"><span class="lk-punkte">' + ld2.wirP + ' : ' + ld2.sieP + '</span><span class="lk-legs">Punkte · Legs ' + ld2.wirL + ' : ' + ld2.sieL + '</span></div>'
           : '<div class="lk-datum"><span class="lg-tag">' + ('0' + d.getDate()).slice(-2) + '</span>' +
               '<span class="lg-monat"><b>' + MONATE_LANG[d.getMonth()].toUpperCase() + '</b><small>' + TAGE_LANG[d.getDay()] + ', 20:00 · ' + wann + '</small></span></div>') +
-        '<span class="lg-gegner"><b>' + esc(gegnerName) + '</b>' + (gz ? '<small>' + esc(gz) + '</small>' : '') + '</span>' +
+        '<button type="button" class="lg-gegner lg-gegner-knopf" data-action="liga-team-info" data-team="' + esc(gegnerName) + '" title="Teamseite öffnen"><b>' + esc(gegnerName) + '</b>' + (gz ? '<small>' + esc(gz) + '</small>' : '') + '</button>' +
       '</div>';
     var tiOrt = (window.LIGA_DATEN.teamInfo || {})[t.heim] || {};
     var ortZeile = '<a class="lg-ort" href="https://maps.apple.com/?q=' + encodeURIComponent((tiOrt.lokal || t.ort) + (tiOrt.adresse ? ', ' + tiOrt.adresse : '')) + '" target="_blank" rel="noopener">' +
@@ -14508,8 +14712,11 @@
         '<button class="btn ghost" data-action="liga-bericht-teilen">Teilen</button>' +
         '<button class="btn hell" data-action="liga-bericht">Bogen und PDF</button></div>';
     } else if (o.type === 'liga-partien') {
-      var lpSp = (ligaSpieltage()[o.termin] || [])[o.i];
-      var lpT = LIGA.termine.filter(function (x) { return x.id === o.termin; })[0];
+      var lpG = /^g(\d)-(\d+)$/.exec(String(o.termin || ''));
+      var lpSicht = lpG ? ligaSicht(+lpG[1]) : null, lpRunde = null;
+      if (lpSicht) lpSicht.runden.forEach(function (r) { if (r.id === o.termin) lpRunde = r; });
+      var lpSp = lpG ? (lpRunde ? lpRunde.spiele[o.i] : null) : (ligaSpieltage()[o.termin] || [])[o.i];
+      var lpT = lpG ? (lpRunde ? { nr: lpRunde.nr } : null) : LIGA.termine.filter(function (x) { return x.id === o.termin; })[0];
       var lpName = function (n) {
         return String(n).charAt(0) === '*' ? esc(n.slice(1)) + ' <small class="gast-marke">Gast</small>' : esc(n);
       };
@@ -17380,7 +17587,11 @@
         render();
         break;
       case 'liga-team-info':
-        UI.overlay = { type: 'liga-team-info', team: el.getAttribute('data-team') };
+        /* Seit dem Redesign eine eigene Seite (Entwurf LigaTeam). */
+        UI.overlay = null;
+        UI.ligaTeamSeite = { team: el.getAttribute('data-team'), nr: Number(el.getAttribute('data-nr')) || LIGA_EIGENE_NR };
+        if (S.screen !== 'liga') S.screen = 'liga';
+        window.scrollTo(0, 0);
         render();
         break;
       case 'liga-einzel-alle': UI.ligaEinzelAlle = !UI.ligaEinzelAlle; ligaTabelleKennung = null; render(); break;
@@ -17758,6 +17969,41 @@
         // Ohne data-id: alle Termine. Mit: nur dieser eine Spieltag.
         ligaKalender(el.getAttribute('data-id') || null);
         break;
+      case 'liga-nr-auf':
+        UI.ligaNrAuf = !UI.ligaNrAuf;
+        render();
+        break;
+      case 'liga-nr':
+        UI.ligaNr = Number(el.getAttribute('data-nr')) || LIGA_EIGENE_NR;
+        UI.ligaNrAuf = false; UI.ligaRunde = null;
+        render();
+        break;
+      case 'liga-runde-blaettern':
+        if (UI.ligaRunde) UI.ligaRunde = { nr: UI.ligaRunde.nr, i: UI.ligaRunde.i + Number(el.getAttribute('data-wert')) };
+        render();
+        break;
+      case 'liga-hl-alle':
+        UI.ligaHlAlle = !UI.ligaHlAlle;
+        render();
+        break;
+      case 'liga-tab-team': {
+        /* Unsere Liga: die Mannschaftsstatistik des Teams; andere Ligen:
+           die Teamseite (dort gibt es keine Statistik). */
+        var ttTeam = el.getAttribute('data-team'), ttNr = Number(el.getAttribute('data-nr')) || LIGA_EIGENE_NR;
+        if (ttNr === LIGA_EIGENE_NR) {
+          UI.ligaTab = 'statistik'; UI.ligaTeam = ttTeam === LIGA.team ? 'wir' : ttTeam;
+          window.scrollTo(0, 0);
+        } else {
+          UI.ligaTeamSeite = { team: ttTeam, nr: ttNr };
+          window.scrollTo(0, 0);
+        }
+        render();
+        break;
+      }
+      case 'liga-team-zu':
+        UI.ligaTeamSeite = null;
+        render();
+        break;
       case 'liga-saison':
         UI.ligaSaison = !UI.ligaSaison;
         render();
@@ -17772,6 +18018,7 @@
         break;
       case 'liga-tab':
         UI.ligaTab = el.getAttribute('data-tab');
+        UI.ligaTeamSeite = null; UI.ligaNrAuf = false;
         UI.boardLog = false;
         render();
         break;
