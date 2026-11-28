@@ -4231,7 +4231,7 @@
     var mitMenue = screen === 'game' || screen === 'cricket' || screen === 'rtw' || screen === 'finisher' || screen === 'kaiwen' || screen === 'hunter';
     if (!mitMenue) UI.menu = false;
     /* Beim Betreten der Liga zeigt der Spielplan wieder den naechsten Spieltag. */
-    if (screen !== 'liga') { UI.ligaWahl = null; UI.ligaZu = false; }
+    if (screen !== 'liga') { UI.ligaWahl = null; UI.ligaZu = false; UI.ligaAendern = null; }
     $('nav').classList.toggle('hidden', !navFor);
     if (navFor) {
       $('nav').querySelectorAll('button').forEach(function (b) {
@@ -4244,7 +4244,7 @@
      die App bedienbar: eine Leiste sagt Bescheid, der Fehler landet trotzdem
      in der Konsole (und in den Tests). */
   function render() {
-    try { darstellungAnwenden(); renderInnen(); fokusWiederherstellen(); }
+    try { renderInnen(); darstellungAnwenden(); fokusWiederherstellen(); }
     catch (e) {
       var bar = $('render-fehler');
       if (!bar) {
@@ -5761,10 +5761,16 @@
     if (h === 2) return !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches);
     return h === 1;
   }
+  /* Die Reiter der Liga, die schon nach dem Redesign gebaut sind. Nur dort
+     gilt hell - die uebrigen haben noch dunkle Karten und blieben auf
+     hellem Grund unlesbar (Kritik 28.11.); sie kommen Paket fuer Paket. */
+  var LIGA_NEU = { plan: 1 };
   function darstellungAnwenden() {
-    var w = istHell() ? '1' : '0', de = document.documentElement;
+    var de = document.documentElement;
+    var liga = !!($('screen-liga') && $('screen-liga').classList.contains('active'));
+    var w = istHell() && liga && LIGA_NEU[UI.ligaTab || 'plan'] ? '1' : '0';
     if (de.getAttribute('data-hell') !== w) de.setAttribute('data-hell', w);
-    de.classList.toggle('in-liga', S.screen === 'liga');
+    de.classList.toggle('in-liga', liga);
   }
   function darstellungKnoepfe() {
     var ist = [0, 1, 2].indexOf(S.settings.hell) < 0 ? 0 : S.settings.hell;
@@ -9298,10 +9304,32 @@
       return (nr === 1 ? 'Tabellenführer' : 'Platz ' + nr) + ', ' + z.g + ' von ' + z.spiele + ' gewonnen';
     };
     var ganz = !!UI.ligaSaison;
+    /* Noch zu erledigen: ein gespielter Spieltag mit offenem Bericht oder
+       (beim letzten Spieltag) einem Bogen der Ligaleitung, der noch nicht
+       uebernommen ist - der bleibt in der Liste, bis er erledigt ist
+       (Kritik 28.11.). */
+    var letzterVorbei = null;
+    termine.forEach(function (t) { if (t.tag && t.tag < heuteIso) letzterVorbei = t; });
+    var zuTun = function (t) {
+      if (!t.tag || t.tag >= heuteIso) return false;
+      var eh = ligaTerminEintrag(t);
+      if (eh) return !eh.liga.abgeschlossen;
+      return t === letzterVorbei && !!ligaBogenEintrag(t) && !ichBinGastKonto();
+    };
     var zeigenListe = termine.filter(function (t) {
       if (ganz) return true;
-      return t.tag && (t.tag >= heuteIso || t.id === laeuftId || t.id === fremdId || (wahl && t.id === wahl.id));
-    }).slice(0, ganz ? 99 : 8);
+      return t.tag && (t.tag >= heuteIso || t.id === laeuftId || t.id === fremdId || (wahl && t.id === wahl.id) || zuTun(t));
+    });
+    if (!ganz) {
+      /* Am Saisonende: mit den letzten Spieltagen auf acht auffuellen. */
+      var mitTag = termine.filter(function (t) { return t.tag; });
+      for (var fi = mitTag.length - 1; fi >= 0 && zeigenListe.length < 8; fi--) {
+        if (zeigenListe.indexOf(mitTag[fi]) < 0) zeigenListe.push(mitTag[fi]);
+      }
+      zeigenListe.sort(function (a, b) { return termine.indexOf(a) - termine.indexOf(b); });
+      var vorbeiZeilen = zeigenListe.filter(function (t) { return t.tag < heuteIso; });
+      zeigenListe = vorbeiZeilen.concat(zeigenListe.filter(function (t) { return t.tag >= heuteIso; }).slice(0, Math.max(8 - vorbeiZeilen.length, 3)));
+    }
     var platzHtml = platzZ
       ? '<button type="button" class="lg-platz" data-action="liga-tab" data-tab="tabelle"><span class="lg-platz-nr">' + platzNr + '.</span>' +
           '<span class="lg-platz-text"><b>Platz ' + platzNr + ' · ' + plural(platzZ.punkte, 'Punkt', 'Punkte') + '</b>' +
@@ -9341,6 +9369,8 @@
         return wir > sie ? 'Sieg' : wir < sie ? 'Niederlage' : 'Remis';
       }
       var info = 'Spieltag ' + t.nr + ' · ' + (daheim ? 'Heim, ' + esc(t.ort) : 'auswärts');
+      if (h && !h.liga.abgeschlossen) info = 'Spieltag ' + t.nr + ' · Bericht offen';
+      else if (!h && vorbei && ligaBogenEintrag(t) && !ichBinGastKonto()) info = 'Spieltag ' + t.nr + ' · noch nicht übernommen';
       return '<div class="liga-spieltag' + (vorbei && !h ? ' vorbei' : '') + (h ? ' gespielt' : '') + (wahl && !zugeklappt && t.id === wahl.id ? ' wahl' : '') +
         '" data-action="liga-wahl" data-id="' + esc(t.id) + '" role="button" tabindex="0">' +
         '<span class="lt-datum"><small>' + WOCHENTAGE[new Date(t.tag + 'T12:00:00').getDay()].replace('.', '').toUpperCase() + '</small><b>' + t.tag.slice(8, 10) + '.' + t.tag.slice(5, 7) + '.</b></span>' +
@@ -9414,7 +9444,7 @@
     var crew = '';
     if (ligaZusagen) {
       var fehlt = soll - n;
-      var hinweisZ = h || live ? '' : n < soll ? (fehlt === 1 ? 'einer fehlt noch' : fehlt + ' fehlen noch') : n === soll ? 'komplett' : soll + ' spielen, ' + (n - soll) + ' Ersatz';
+      var hinweisZ = h || live || vorbei ? '' : n < soll ? (fehlt === 1 ? 'einer fehlt noch' : fehlt + ' fehlen noch') : n === soll ? 'komplett' : soll + ' spielen, ' + (n - soll) + ' Ersatz';
       var plaetze = '';
       for (var pi = 0; pi < soll; pi++) plaetze += '<i class="' + (pi < n ? 'an' : '') + '"></i>';
       var ersatz = '';
@@ -9425,7 +9455,7 @@
         '<div class="lk-crew">' + gruppe('DABEI', leute, '') +
           (!h && !live && !vorbei ? gruppe('NOCH KEINE ANTWORT', offen, 'offen') : '') +
           (!h && !live ? gruppe('ABGESAGT', absagen, 'absage') : '') + '</div>' +
-        (n > soll && !h && !live ? '<p class="lg-text">Die vier Spieler legt der Teamcaptain beim Start des Ligaspiels fest, die anderen stehen als Ersatz bereit.</p>' : '');
+        (n > soll && !h && !live && !vorbei ? '<p class="lg-text">Die vier Spieler legt der Teamcaptain beim Start des Ligaspiels fest, die anderen stehen als Ersatz bereit.</p>' : '');
     }
 
     var fuss = '';

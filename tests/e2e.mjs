@@ -7690,9 +7690,9 @@ await gruppe('Spielplan am Handy: der Spieltag klappt in der Liste auf, jeder sa
   });
   let g = await lage();
   check('die Karte steht in der Liste direkt unter dem 5. Spieltag', g.inListe && g.vorher === 'st05' && g.offen && g.sichtbar, JSON.stringify(g));
-  check('in der Karte steht das Datum nicht doppelt', await page.evaluate(() =>
-    getComputedStyle(document.querySelector('#liga-karte .lk-datum')).display === 'none'));
-  check('die Liste zeigt die kommenden Spieltage: darueber keiner, darunter die naechsten', g.vor.length === 0 && g.nach.length >= 6 && g.nach.every((id) => id > 'st05'), JSON.stringify({ vor: g.vor, nach: g.nach }));
+  check('in der Karte steht das Datum nicht doppelt, Uhrzeit und wann bleiben', await page.evaluate(() =>
+    getComputedStyle(document.querySelector('#liga-karte .lg-tag')).display === 'none' && /20:00/.test(document.querySelector('#liga-karte .lg-monat small').textContent)));
+  check('die Liste zeigt die kommenden Spieltage: darueber hoechstens der letzte, darunter die naechsten', g.vor.length <= 1 && g.vor.every((id) => id < 'st05') && g.nach.length >= 6 && g.nach.every((id) => id > 'st05'), JSON.stringify({ vor: g.vor, nach: g.nach }));
   check('Dabei mit Tobi, Noch keine Antwort mit mir, Abgesagt mit Max - das Gast-Konto fehlt',
     /DABEI Tobi/.test(g.text) && /ABGESAGT Max/.test(g.text) && /NOCH KEINE ANTWORT Ich/.test(g.text) && !g.text.includes('Besuch') && /1 von 4 dabei/.test(g.roh), g.text);
   check('Max ist als Absage markiert', await page.evaluate(() => { const p = Array.from(document.querySelectorAll('#liga-karte .lt-person')).find((e) => e.textContent.includes('Max')); return !!p && p.classList.contains('absage'); }));

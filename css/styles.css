@@ -8210,7 +8210,8 @@ html.in-liga body { color: var(--t-text); }
 @media (max-width: 1099px) { .lg-info { display: none; } }
 @media (max-width: 699px) {
   .lb-kopf { gap: 16px; padding-left: 12px; margin-bottom: 16px; }
-  .lg-nav { gap: 20px; }
+  /* Die Reiter rollen seitlich - der Verlauf rechts zeigt, dass es weitergeht. */
+  .lg-nav { gap: 20px; padding-right: 24px; -webkit-mask-image: linear-gradient(to right, #000 80%, transparent); mask-image: linear-gradient(to right, #000 80%, transparent); }
   .lg-nav button { font-size: 18px; height: 56px; }
 }
 
@@ -8282,6 +8283,11 @@ html.in-liga body { color: var(--t-text); }
 .lg-gameday span { font-size: 15px; color: var(--t-leise); }
 .lg-gameday-knopf { min-width: 220px; min-height: 58px; padding: 0 30px; margin: 0; border-radius: 8px; border: 0; background: linear-gradient(to top right, #e5484d 0%, #b2508f 45%, #2f8fd0 100%); color: #ffffff; box-shadow: -10px 8px 28px rgba(229, 72, 77, 0.35), 10px -8px 28px rgba(47, 143, 208, 0.4); font-family: var(--font-display); font-size: 26px; letter-spacing: 1.5px; cursor: pointer; }
 #screen-liga .lg-karte .lk-status { color: var(--t-text); }
+/* Die alten Knoepfe auf der neuen Karte: Farben aus den Tokens, damit sie
+   auch auf der weissen Karte (hell) lesbar bleiben (Kritik 28.11.). */
+#screen-liga .lg-karte .btn.ghost, #screen-liga .lg-karte .btn:not(.primary):not(.hell) { background: transparent; border: 1.5px solid var(--t-linie); color: var(--t-text); box-shadow: none; }
+#screen-liga .lg-karte .btn.hell { background: var(--t-text); border-color: var(--t-text); color: var(--t-fl); }
+#screen-liga .lg-karte .lk-gast { color: var(--t-leise); }
 #screen-liga .lg-karte .lk-hinweis { color: var(--t-leise); }
 
 /* Rechte Spalte */
@@ -8320,7 +8326,7 @@ html.in-liga body { color: var(--t-text); }
   #liga-plan .lg-spalten { padding: 0 0 24px; gap: 24px; }
   #screen-liga .lg-karte { padding: 20px; }
   #screen-liga .lg-karte.in-liste { margin: 4px 0 10px; }
-  #screen-liga .lg-karte.in-liste .lk-datum { display: none; }
+  #screen-liga .lg-karte.in-liste .lg-tag, #screen-liga .lg-karte.in-liste .lg-monat b { display: none; }
   .lg-tag { font-size: 64px; }
   .lg-gegner b { font-size: 30px; }
 }
