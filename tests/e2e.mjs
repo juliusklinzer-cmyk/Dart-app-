@@ -4799,11 +4799,16 @@ await gruppe('Gaeste: temporaer, dauerhaft, Gast-Konto', async () => {
     const knopf = document.querySelector('#liga-plan [data-action="liga-spiel"]');
     D.action('liga-spiel', knopf);
     const o = D.ui().overlay;
+    /* Game Day (Redesign): die Aufstellung unserer Seite mit den Kader-Chips. */
+    if (S.ligaTag) { S.ligaTag.platz = 'S1'; S.ligaTag.geholt = true; S.ligaTag.plaetze = { S1: { meiner: true, bereit: false, teile: '' }, S2: null }; }
+    if (o) { o.panel = 'auf'; o.seite = 'wir'; }
+    D.render();
     const html = document.getElementById('overlay-card').innerHTML;
-    D.ui().overlay = null;
+    const chips = document.querySelectorAll('#overlay-card [data-action="gd-chip"][data-seite="wir"]').length;
+    D.ui().overlay = null; delete S.ligaTag;
     window.__ligaHeute = '2026-10-01';
     Object.assign(S, alt); D.render();
-    return !!o && o.type === 'liga-start' && !html.includes('Besuchskonto') && html.includes('Lena Musterfrau');
+    return !!o && o.type === 'liga-start' && !html.includes('Besuchskonto') && chips >= 2;
   });
   check('in der Ligaspiel-Aufstellung steht kein Gast-Konto zur Wahl', imKader);
   await page.evaluate(() => {
