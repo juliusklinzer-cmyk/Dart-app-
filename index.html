@@ -435,41 +435,33 @@
        im Setup (Marke, Navigation als Text-Reiter - #nav wandert per JS
        hierher), darunter die Liga-Zeile mit den Reitern, dann links gross
        der naechste bzw. gewaehlte Spieltag, rechts alle Spieltage kompakt. -->
-  <div class="setup-kopf" id="liga-kopf">
-    <div class="marke" data-action="nav" data-screen="setup" role="button" tabindex="0" aria-label="Zum Spiel">
-      <span class="blink-logo" role="img" aria-label="Blink 180"></span>
-      <div>
-        <div class="wort">Blink <span class="rot">180</span></div>
-        <div class="sub">Dart Turnier · est. 2026</div>
-      </div>
-    </div>
-  </div>
-  <div class="reiter-zeile">
-    <span class="kt" id="liga-sub"></span>
-    <div class="options kopf-reiter" id="liga-tabs">
-      <button data-action="liga-tab" data-tab="plan" class="active">Spielplan</button>
-      <button data-action="liga-tab" data-tab="training">Training</button>
-      <button data-action="liga-tab" data-tab="tabelle">Tabelle</button>
+  <!-- Entwurf "Liga" (Redesign Nov. 2026): die Liga ist ein eigener
+       Bereich ohne Hauptnavigation. Das Logo fuehrt zurueck zum Spiel, die
+       Reiter in Anton, rechts die Zeile zum Reiter und das Zahnrad (Liga-
+       Einstellungen, darin hell oder dunkel). Farben ueber die Tokens --t-*. -->
+  <header class="lb-kopf" id="liga-kopf">
+    <button type="button" class="lg-logo" data-action="nav" data-screen="setup" aria-label="Liga verlassen, zurück zum Spiel"><span class="blink-logo" aria-hidden="true"></span></button>
+    <nav class="lg-nav" id="liga-tabs" aria-label="Liga Bereiche">
+      <button type="button" data-action="liga-tab" data-tab="plan" class="active">Spielplan</button>
+      <button type="button" data-action="liga-tab" data-tab="training">Training</button>
+      <button type="button" data-action="liga-tab" data-tab="tabelle">Tabelle</button>
       <!-- Liga-Statistik: unser Team, gesamte Liga, Gegner (#liga-statistik). -->
-      <button data-action="liga-tab" data-tab="statistik">Statistik</button>
-      <button data-action="liga-tab" data-tab="kasse">Kasse</button>
-      <button data-action="liga-tab" data-tab="regeln">Regeln</button>
-    </div>
-  </div>
+      <button type="button" data-action="liga-tab" data-tab="statistik">Statistik</button>
+      <button type="button" data-action="liga-tab" data-tab="kasse">Kasse</button>
+      <button type="button" data-action="liga-tab" data-tab="regeln">Regeln</button>
+    </nav>
+    <span class="lg-info" id="liga-sub"></span>
+    <button type="button" class="lg-zahnrad" data-action="liga-einst" aria-label="Einstellungen, zum Beispiel hell oder dunkel"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M10 2h4l.5 2.3 1.8.8 2-1.2 2.8 2.8-1.2 2 .8 1.8L23 11v2l-2.3.5-.8 1.8 1.2 2-2.8 2.8-2-1.2-1.8.8L14 22h-4l-.5-2.3-1.8-.8-2 1.2-2.8-2.8 1.2-2-.8-1.8L1 13v-2l2.3-.5.8-1.8-1.2-2 2.8-2.8 2 1.2 1.8-.8Z" transform="translate(1 1) scale(.9167)"/></svg></button>
+  </header>
 
   <div id="liga-plan">
     <p class="hint hidden" id="liga-hinweis"></p>
-    <div class="liga-spalten">
-      <!-- Links: der gewaehlte Spieltag gross (Datum, Gegner, Ort, Team,
-           Zusage und Start) - oder das LIVE-Schild, solange gespielt wird. -->
-      <div class="liga-karte" id="liga-karte"></div>
-      <!-- Rechts: alle Spieltage, ein Tipp zeigt ihn links gross. -->
-      <div class="card liga-liste-karte">
-        <div class="karte-kopf"><h2>Alle Spieltage</h2>
-          <button class="btn ghost small" data-action="liga-ical" title="Alle Termine in den Kalender"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span>Alle in den Kalender</span></button>
-        </div>
-        <div id="liga-liste"></div>
-      </div>
+    <div class="liga-spalten lg-spalten">
+      <!-- Links: der gewaehlte Spieltag gross (Datum, Gegner, Ort, Zusagen,
+           GAME DAY) - oder das LIVE-Schild, solange gespielt wird. -->
+      <section class="liga-karte lg-karte" id="liga-karte" aria-label="Spieltag"></section>
+      <!-- Rechts: unser Platz und die Spieltage, ein Tipp zeigt ihn links gross. -->
+      <aside class="lg-seite" id="liga-liste"></aside>
     </div>
   </div>
 

@@ -1,6 +1,7 @@
 # Backlog – Darts App
 
 ## In Arbeit
+- [ ] DRT-097 Liga-Redesign nach Entwurf in Paketen: 1) Kopf, Hell/Dunkel-Tokens, Spielplan (v226); offen: Training, Tabelle, Statistik (Mannschaft, Rangliste, Einzel), Kasse, Regeln, Liga-Einstellungen mit Rollen, Teamseite, Ligaspiel-Ablauf, Game Day mit GAME-ON-Bestätigung, Live/TV/Handy · von:Julius · am:2026-11-28
 
 
 ## Wartet auf Julius
@@ -42,6 +43,7 @@
 
 ## Erledigt
 
+- [x] DRT-096 Entscheidungen zum Liga-Redesign (Julius 28.11.): eigener Bereich wie im Entwurf, Hell/Dunkel für die ganze App, Zahnrad in der Liga darf es auch, GAME-ON-Bestätigung statt Autostart, Doppel-Frage wählbar (Game Day und Einstellungen), Beenden kampflos Heim/Gast für den Notfall, Namen im Live-Ticker per Einstellung, Fotos freiwillig sonst Platzhalter, Einzel an anderer Scheibe mit Warnung, Ligen 1–4 in die App, Auf-/Abstieg und Fragen-Feld in die Regeln, Training ohne Unsicher, Testspiel gegen nächsten Gegner unten rechts · von:Julius · fertig:2026-11-28
 - [x] DRT-095 Autodarts Schritt 2: Großanzeige für den 34-Zoll-Monitor nach Entwurf (1 gegen 1, Training mit Heute-Vergleich und letzten 12 Legs), Einstellung Darstellung hell/dunkel (v224) · von:Julius · fertig:2026-11-26
 - [x] DRT-093 Autodarts Schritt 1: Einrichtung bei den Einstellungen mit vier Prüfschritten und Testwurf, eingeschaltet zählt jedes Spiel über Autodarts, kein Knopf mehr oben wenn aus (v223) · von:Julius · fertig:2026-11-26
 - [x] DRT-092 Ergebnisse von Turnier (ab 5 Spielern) und Ligaspiel lesbar: Teamstand oben, Rangliste je Spieler mit vollen Namen, Spiele mit beiden Namen je Durchgang (v222) · von:Julius · fertig:2026-11-26

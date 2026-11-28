@@ -8175,3 +8175,152 @@ body.gross-an .ad-chip { display: none !important; }
 .g-vergleich b { font-family: var(--font-cond, 'Barlow Condensed', sans-serif); font-weight: 700; font-size: 40px; color: var(--text); }
 .gross-zurueck { position: fixed; right: 16px; bottom: 16px; z-index: 39; margin: 0; min-height: 48px; padding: 0 20px; border-radius: 24px; border: 1px solid var(--line); background: var(--bg-2); color: var(--text); font-weight: 700; cursor: pointer; }
 .gross-zurueck[hidden] { display: none; }
+
+/* ======================================================================
+   Redesign Nov. 2026: Tokens hell und dunkel (--t-*). Gesetzt ueber
+   html[data-hell] (darstellungAnwenden in js/app.js). Bisher nutzen sie die
+   Liga; der Rest der App folgt mit seinem Redesign.
+   ====================================================================== */
+:root {
+  --t-bg: #0d0a0b; --t-fl: #171213; --t-linie: #241c1e; --t-text: #f2eeee; --t-leise: #9a8f90;
+  --t-blau: #7cc8ea; --t-gelb: #ffc14d; --t-gruen: #4cc98a; --t-rot: #ff6b6b; --t-hl: rgba(70, 170, 215, 0.13);
+  --t-karte: inset 0 0 0 1.5px #ffffff; --t-schein: inset 0 0 0 1.5px #ffffff, 0 0 32px rgba(70, 170, 215, 0.08);
+}
+html[data-hell="1"] {
+  --t-bg: #f6f3f1; --t-fl: #ffffff; --t-linie: #e3dcda; --t-text: #151011; --t-leise: #6b6062;
+  --t-blau: #1f6f95; --t-gelb: #8a5a00; --t-gruen: #1f7a45; --t-rot: #c0313a; --t-hl: #ffffff;
+  --t-karte: 0 1px 2px rgba(21, 16, 17, 0.06); --t-schein: 0 1px 2px rgba(21, 16, 17, 0.06);
+}
+html.in-liga, html.in-liga body { background: var(--t-bg); }
+html[data-hell="1"].in-liga { color-scheme: light; }
+html.in-liga body { color: var(--t-text); }
+
+/* Liga-Kopf (Entwurf LigaQuerHell): Logo, Reiter, Zeile, Zahnrad. */
+#screen-liga.active { gap: 0; padding-top: 0; color: var(--t-text); }
+.lb-kopf { display: flex; align-items: center; gap: 28px; padding: 0 8px 0 20px; margin: 0 -12px 24px; border-bottom: 1px solid var(--t-linie); }
+.lg-logo { flex: none; display: flex; width: 44px; height: 44px; align-items: center; justify-content: center; padding: 0; margin: 0; border: 0; background: transparent; cursor: pointer; border-radius: 50%; }
+.lg-logo .blink-logo { width: 40px; height: 40px; border: 0; box-shadow: none; }
+.lg-nav { display: flex; gap: 28px; flex: 1 1 auto; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.lg-nav::-webkit-scrollbar { display: none; }
+.lg-nav button { height: 64px; display: flex; align-items: center; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; font-family: var(--font-display); font-weight: 400; font-size: 20px; letter-spacing: 0.5px; text-transform: uppercase; white-space: nowrap; color: var(--t-leise); cursor: pointer; min-height: 0; }
+.lg-nav button.active { color: var(--t-text); background: transparent; border: 0; }
+.lg-nav button:hover { color: var(--t-text); }
+.lg-info { flex: none; font-size: 14px; color: var(--t-leise); white-space: nowrap; }
+.lg-zahnrad { flex: none; width: 44px; height: 44px; margin: 0; padding: 0; border-radius: 50%; border: 0; background: var(--t-fl); color: var(--t-text); display: flex; align-items: center; justify-content: center; cursor: pointer; min-height: 0; }
+@media (max-width: 1099px) { .lg-info { display: none; } }
+@media (max-width: 699px) {
+  .lb-kopf { gap: 16px; padding-left: 12px; margin-bottom: 16px; }
+  .lg-nav { gap: 20px; }
+  .lg-nav button { font-size: 18px; height: 56px; }
+}
+
+/* Liga-Einstellungen (Zahnrad) */
+.le-kopf { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.le-kopf .lp-titel { margin: 0; }
+.le-sub { font-size: 14px; color: var(--muted); }
+.le-feld { display: flex; flex-direction: column; gap: 12px; padding: 14px 0 18px; border-top: 1px solid var(--line); margin-bottom: 8px; }
+.le-text { display: flex; flex-direction: column; gap: 2px; }
+.le-text small { color: var(--muted); font-size: 0.85rem; }
+.le-seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.le-seg button { min-height: 44px; margin: 0; }
+
+/* Spielplan (Entwurf LigaQuerHell): links die Karte zum Spieltag, rechts
+   Platz und Spieltage. Die Seite rollt als Ganzes (kein fix-setup). */
+#screen-liga #liga-hinweis { margin: 0 0 12px; color: var(--t-leise); }
+#liga-plan .lg-spalten { display: flex; flex-direction: row; flex-wrap: wrap; align-items: flex-start; gap: 40px; padding: 0 20px 32px; }
+#screen-liga .lg-karte { flex: 999 1 560px; min-width: 0; box-sizing: border-box; padding: 28px 32px; border: 0; border-radius: 24px; background: var(--t-fl); box-shadow: var(--t-karte); display: flex; flex-direction: column; gap: 18px; color: var(--t-text); }
+#screen-liga .lg-karte.live { box-shadow: inset 0 0 0 2px var(--accent); }
+.lg-karte .lg-karte-kopf { display: flex; align-items: center; gap: 12px; }
+.lg-etikett { font-size: 13px; font-weight: 700; letter-spacing: 1.5px; color: var(--t-leise); text-transform: uppercase; }
+.lg-wann { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 36px; }
+#screen-liga .lg-karte .lk-datum { display: flex; align-items: flex-end; gap: 14px; font-family: inherit; font-size: inherit; text-transform: none; letter-spacing: 0; }
+.lg-tag { font-family: var(--font-display); font-size: 88px; line-height: 0.9; }
+.lg-monat { display: flex; flex-direction: column; padding-bottom: 2px; }
+.lg-monat b { font-family: var(--font-display); font-weight: 400; font-size: 28px; line-height: 1; }
+.lg-monat small { font-family: var(--font-cond); font-weight: 700; font-size: 20px; color: var(--t-leise); }
+.lg-gegner { display: flex; flex-direction: column; gap: 4px; padding-bottom: 2px; min-width: 0; }
+.lg-gegner b { font-family: var(--font-display); font-weight: 400; font-size: 38px; line-height: 1; text-transform: uppercase; }
+.lg-gegner small { font-size: 15px; color: var(--t-leise); }
+.lg-ort { display: flex; align-items: center; gap: 10px; min-height: 44px; text-decoration: none; color: var(--t-text); }
+.lg-ort svg { flex: none; }
+.lg-ort b { font-size: 16px; }
+.lg-adresse { flex-grow: 1; font-size: 15px; color: var(--t-leise); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lg-route { font-size: 15px; font-weight: 700; }
+.lg-linie { height: 1px; background: var(--t-linie); }
+.lg-auf { display: flex; align-items: baseline; gap: 14px; }
+.lg-auf b { font-family: var(--font-cond); font-weight: 700; font-size: 26px; }
+.lg-auf span { font-size: 15px; font-weight: 600; color: var(--t-leise); }
+.lg-auf span.gelb { color: var(--t-gelb); }
+.lg-plaetze { display: flex; align-items: center; gap: 14px; }
+.lg-balken { flex-grow: 1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.lg-balken i { height: 6px; border-radius: 3px; background: var(--t-linie); }
+.lg-balken i.an { background: var(--t-text); }
+.lg-ersatz { display: flex; gap: 6px; }
+.lg-ersatz i { width: 6px; height: 6px; border-radius: 3px; background: var(--t-leise); }
+#screen-liga .lg-karte .lk-crew { display: flex; flex-direction: row; flex-wrap: wrap; align-items: flex-start; gap: 16px 36px; margin: 0; padding: 0; border: 0; }
+.lg-gruppe { display: flex; flex-direction: column; gap: 10px; }
+#screen-liga .lg-gruppe .lk-crew-titel { font-size: 12px; font-weight: 700; letter-spacing: 1.5px; color: var(--t-leise); font-family: var(--font-body); text-transform: uppercase; }
+#screen-liga .lg-gruppe .lt-leute { display: flex; flex-wrap: wrap; gap: 12px; }
+#screen-liga .lg-gruppe .lt-person { width: 60px; height: auto; min-height: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 0; background: none; border: 0; border-radius: 0; color: var(--t-text); }
+#screen-liga .lg-gruppe .lt-person .av { filter: none; opacity: 1; }
+#screen-liga .lg-gruppe .lt-person > span:last-child { font-size: 13px; font-weight: 700; white-space: nowrap; max-width: 76px; overflow: hidden; text-overflow: ellipsis; }
+#screen-liga .lg-gruppe .lt-person.offen { opacity: 0.55; }
+#screen-liga .lg-gruppe .lt-person.absage { opacity: 0.4; }
+#screen-liga .lg-gruppe .lt-person.offen > span:last-child, #screen-liga .lg-gruppe .lt-person.absage > span:last-child { font-weight: 400; color: var(--t-leise); }
+#screen-liga .lg-gruppe .lt-person.absage > span:last-child { text-decoration: line-through; }
+.av.lg-av { width: 52px; height: 52px; font-size: 18px; border-radius: 50%; }
+.lg-text { margin: 0; font-size: 14px; color: var(--t-leise); }
+.lg-antwort { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+.lg-antwort b { font-size: 17px; }
+.lg-aendern { min-height: 44px; padding: 0 6px; margin: 0; border: 0; background: transparent; color: var(--t-leise); font-family: var(--font-body); font-size: 14px; text-decoration: underline; cursor: pointer; }
+.lg-frage { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 28px; }
+.lg-frage > span { font-size: 15px; color: var(--t-leise); }
+.lg-wort { min-height: 44px; padding: 0; margin: 0; border: 0; background: transparent; font-family: var(--font-display); font-size: 22px; letter-spacing: 0.5px; cursor: pointer; color: var(--t-text); }
+.lg-wort.leise { color: var(--t-leise); }
+.lg-wort.an { text-decoration: underline; text-underline-offset: 6px; }
+.lg-gameday { display: flex; align-items: center; flex-wrap: wrap; gap: 18px; padding-top: 4px; }
+.lg-gameday span { font-size: 15px; color: var(--t-leise); }
+.lg-gameday-knopf { min-width: 220px; min-height: 58px; padding: 0 30px; margin: 0; border-radius: 8px; border: 0; background: linear-gradient(to top right, #e5484d 0%, #b2508f 45%, #2f8fd0 100%); color: #ffffff; box-shadow: -10px 8px 28px rgba(229, 72, 77, 0.35), 10px -8px 28px rgba(47, 143, 208, 0.4); font-family: var(--font-display); font-size: 26px; letter-spacing: 1.5px; cursor: pointer; }
+#screen-liga .lg-karte .lk-status { color: var(--t-text); }
+#screen-liga .lg-karte .lk-hinweis { color: var(--t-leise); }
+
+/* Rechte Spalte */
+#screen-liga .lg-seite { flex: 1 1 380px; min-width: 0; display: flex; flex-direction: column; }
+.lg-platz { display: flex; align-items: center; gap: 14px; height: auto; width: 100%; padding: 0 12px 14px; margin: 0; border: 0; background: transparent; color: var(--t-text); text-align: left; cursor: pointer; font-family: var(--font-body); min-height: 0; }
+.lg-platz-nr { font-family: var(--font-display); font-size: 40px; line-height: 1; width: 44px; }
+.lg-platz-text { display: flex; flex-direction: column; flex-grow: 1; }
+.lg-platz-text b { font-size: 15px; font-weight: 700; }
+.lg-platz-text small { font-size: 13px; color: var(--t-leise); }
+.lg-pfeil { color: var(--t-leise); flex: none; }
+.lg-liste-linie { height: 1px; background: var(--t-linie); margin: 0 12px 6px; }
+#liga-liste .liga-spieltag { display: grid; grid-template-columns: 56px 40px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 56px; padding: 4px 12px; margin: 0; border: 0; border-radius: 12px; background: transparent; color: var(--t-text); box-sizing: border-box; cursor: pointer; box-shadow: none; }
+#liga-liste .liga-spieltag.wahl { background: var(--t-fl); box-shadow: none; }
+#liga-liste .liga-spieltag.frei { cursor: default; opacity: 0.6; }
+#liga-liste .liga-spieltag.vorbei { opacity: 0.7; }
+#liga-liste .lt-datum { display: flex; flex-direction: column; line-height: 1.1; }
+#liga-liste .lt-datum small { font-size: 12px; font-weight: 700; color: var(--t-leise); }
+#liga-liste .lt-datum b { font-family: var(--font-cond); font-weight: 700; font-size: 20px; }
+.lg-teamlogo { width: 40px; height: 40px; border-radius: 50%; flex: none; display: block; }
+.lg-teamlogo.blink-logo { border: 0; box-shadow: none; }
+.lg-logo-leer { width: 40px; height: 40px; }
+#liga-liste .lt-wer { display: flex; flex-direction: column; min-width: 0; }
+#liga-liste .lt-gegner { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--t-text); }
+#liga-liste .lt-unten { font-size: 12px; color: var(--t-leise); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#liga-liste .lt-rechts { display: flex; flex-direction: row; align-items: center; gap: 8px; font-family: var(--font-body); font-weight: 400; font-size: 13px; letter-spacing: 0; color: var(--t-leise); white-space: nowrap; }
+#liga-liste .lt-rechts b { font-family: var(--font-cond); font-weight: 700; font-size: 18px; color: var(--t-text); }
+#liga-liste .lt-rechts small { font-size: 13px; }
+#liga-liste .lt-rechts.live, #liga-liste .lt-rechts.live small { color: var(--accent); }
+#liga-liste .lt-rechts.fertig.sieg small { color: var(--t-gruen); }
+#liga-liste .lt-rechts.fertig.niederlage small { color: var(--t-rot); }
+.lg-liste-fuss { display: flex; justify-content: space-between; padding: 0 12px; margin-top: 6px; border-top: 1px solid var(--t-linie); }
+.lg-link { min-height: 44px; display: flex; align-items: center; margin: 0; padding: 0; border: 0; background: transparent; color: var(--t-text); font-family: var(--font-body); font-size: 15px; font-weight: 700; cursor: pointer; }
+.lg-link.leise { color: var(--t-leise); font-weight: 600; }
+/* Handy: die Karte haengt unter der gewaehlten Zeile. */
+@media (max-width: 699px) {
+  #liga-plan .lg-spalten { padding: 0 0 24px; gap: 24px; }
+  #screen-liga .lg-karte { padding: 20px; }
+  #screen-liga .lg-karte.in-liste { margin: 4px 0 10px; }
+  #screen-liga .lg-karte.in-liste .lk-datum { display: none; }
+  .lg-tag { font-size: 64px; }
+  .lg-gegner b { font-size: 30px; }
+}

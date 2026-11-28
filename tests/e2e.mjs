@@ -97,6 +97,12 @@ async function rangAuf() {
 }
 /* Navigation: die Reiter stehen in jedem Kopf (Setup, Turnier, Rangliste, Liga, Spieler). */
 async function navTo(screen) {
+  /* Die Liga ist ein eigener Bereich ohne Hauptnavigation (Redesign
+     Nov. 2026): heraus geht es ueber das Logo. */
+  if (await page.evaluate(() => window.__dart && window.__dart.state().screen === 'liga')) {
+    if (screen === 'liga') return;
+    await page.locator('#liga-kopf .lg-logo').click();
+  }
   await page.locator('#nav [data-screen="' + screen + '"]').click();
 }
 /* Spielerliste: am Handy oeffnet der Tipp auf die Karte das Profil, am
@@ -164,6 +170,8 @@ async function ligaSpielStarten() {
    schon offenen wieder zu - deshalb nur tippen, wenn er nicht offen ist. */
 async function ligaTipp(id) {
   const z = page.locator('#liga-liste .liga-spieltag[data-id="' + id + '"]');
+  /* Die Liste zeigt die kommenden acht; "Ganze Saison" zeigt alle. */
+  if (!(await z.count())) await page.locator('#liga-liste [data-action="liga-saison"]').click();
   if (!(await z.evaluate((e) => e.classList.contains('wahl')))) await z.click();
 }
 
@@ -3827,22 +3835,23 @@ await page.evaluate(() => {
 });
 await navTo('liga');
 check('Liga-Seite oeffnet sich', await visible('#screen-liga'));
-check('Liga-Zeile nennt Liga und Saison', (await textKlein('#liga-sub')).includes('5. liga') && (await textKlein('#liga-sub')).includes('saison'));
+check('Liga-Zeile nennt Liga und Saison', (await textKlein('#liga-sub')).includes('liga 5') && (await textKlein('#liga-sub')).includes('saison'));
+check('die Liste zeigt die kommenden acht Spieltage', (await page.locator('.liga-spieltag').count()) === 8);
+await page.locator('#liga-liste [data-action="liga-saison"]').click();
 check('18 Spieltage stehen im Plan', (await page.locator('.liga-spieltag').count()) === 18,
   String(await page.locator('.liga-spieltag').count()));
 check('zwei davon sind spielfrei', (await page.locator('.liga-spieltag.frei').count()) === 2);
 ersterSpieltag = await page.locator('.liga-spieltag:not(.frei)').first().innerText();
 check('der erste Spieltag traegt Datum, Gegner und Ort',
-  ersterSpieltag.includes('06.10.2026') && ersterSpieltag.includes('TSV Dachau') &&
+  ersterSpieltag.includes('06.10.') && ersterSpieltag.includes('TSV Dachau') &&
   ersterSpieltag.includes('Bar Sehnsucht'), ersterSpieltag.replace(/\s+/g, ' ').slice(0, 80));
 check('Heimspiele sind als Heim markiert', ersterSpieltag.toLowerCase().includes('heim'));
 check('der Kalender-Knopf fuer alle Termine sitzt ueber der Liste',
   (await page.locator('#screen-liga [data-action="liga-ical"]:not([data-id])').count()) === 1);
-check('der gewaehlte Spieltag hat sein eigenes Kalender-Icon',
-  (await page.locator('#liga-karte [data-action="liga-ical"][data-id]').count()) === 1);
-check('links steht gross der naechste Spieltag mit Datum, Gegner und Team',
-  (await textKlein('#liga-karte')).includes('nächster spieltag') && (await textKlein('#liga-karte')).includes('spieltag ·') &&
-  (await page.locator('#liga-karte .lk-teams .blink-logo').count()) === 1);
+check('links steht gross der naechste Spieltag mit Datum, Gegner und Lokal',
+  (await textKlein('#liga-karte')).includes('spieltag 1 von 18 · heim') && (await textKlein('#liga-karte')).includes('tsv dachau') &&
+  (await page.locator('#liga-karte .lg-ort').count()) === 1, (await textKlein('#liga-karte')).replace(/\s+/g, ' ').slice(0, 160));
+check('die Gegner tragen ihr Logo', (await page.locator('#liga-liste .liga-spieltag .lg-teamlogo').count()) >= 16);
 await page.locator('#liga-tabs button[data-tab="training"]').click();
 check('Training: DiensDarts links, Uebungsspiel mit Gegner-Vorwahl rechts',
   (await textKlein('#dienstdarts-karte')).includes('diensdarts') && (await page.locator('#uebung-karte [data-action="uebung-vorwahl"][data-value="mittel"].active').count()) === 1);
@@ -3967,14 +3976,6 @@ check('mit Datum und Ort des ersten Spieltags',
 await ligaTipp('st02');
 check('ein Tipp auf einen Spieltag zeigt ihn links gross', (await text('#liga-karte')).includes('Germering'));
 await ligaTipp('st01');
-;[einzel] = await Promise.all([
-  page.waitForEvent('download'),
-  page.locator('#liga-karte [data-action="liga-ical"][data-id="st01"]').click()
-]);
-check('ein Termin allein heisst nach seinem Spieltag',
-  einzel.suggestedFilename() === 'blink180-spieltag-1.ics');
-check('und enthaelt genau einen Eintrag',
-  (fs.readFileSync(await einzel.path(), 'utf8').match(/BEGIN:VEVENT/g) || []).length === 1);
 
 /* Der Regeln-Reiter: Udos Regelecke, aufklappbar. */
 await page.locator('#liga-tabs button[data-tab="regeln"]').click();
@@ -4085,10 +4086,10 @@ await gruppe('Liga: alle Spiele des Spieltags', async () => {
 {
   await navTo('liga');
   await page.evaluate(() => { const D = window.__dart; D.ui().ligaTab = 'plan'; D.ui().ligaWahl = 'st01'; D.render(); });
-  check('der Liga-Kopf ist der des Setups: Navigation als Text-Reiter, kein Logo-Menue',
-    (await page.locator('#liga-kopf #nav').count()) === 1 && (await page.locator('#screen-liga [data-action="logo-menu"]').count()) === 0);
+  check('die Liga ist ein eigener Bereich: keine Hauptnavigation, das Logo fuehrt zurueck, dazu das Zahnrad',
+    !(await visible('#nav')) && (await page.locator('#liga-kopf .lg-logo[data-action="nav"][data-screen="setup"]').count()) === 1 && (await page.locator('#liga-kopf [data-action="liga-einst"]').count()) === 1);
   check('die Liga-Zeile nennt Liga und Saison und traegt die sechs Reiter',
-    (await textKlein('#liga-sub')).includes('5. liga') && (await page.locator('#liga-tabs button').count()) === 6);
+    (await textKlein('#liga-sub')).includes('liga 5') && (await page.locator('#liga-tabs button').count()) === 6);
   check('unsere Spieltag-Karte zeigt keine fremden Spiele mehr', (await page.locator('#liga-karte .lk-runde').count()) === 0);
   const termineMitTag = await page.evaluate(() => window.LIGA_DATEN.liga.termine.filter((t) => t.tag).length);
   check('in der Spieltage-Liste gibt es keinen "Alle Spiele"-Link mehr', (await page.locator('#liga-liste [data-action="liga-runde"]').count()) === 0 && termineMitTag === 16);
@@ -4096,8 +4097,8 @@ await gruppe('Liga: alle Spiele des Spieltags', async () => {
      rechts mit Stand und "Niederlage" - ohne Link. */
   await ligaHeute('2026-10-07');
   const st01 = page.locator('#liga-liste .liga-spieltag[data-id="st01"] .lt-rechts');
-  check('vergangenes Spiel: Stand 7 : 9 und darunter Niederlage, rot', (await st01.evaluate((e) => e.className.includes('fertig') && e.className.includes('niederlage'))) &&
-    (await st01.locator('.lt-stand').evaluate((e) => e.textContent)) === '7 : 9' && (await st01.locator('.lt-ausgang').evaluate((e) => e.textContent)) === 'Niederlage');
+  check('vergangenes Spiel: Stand 7 : 9 und Niederlage', (await st01.evaluate((e) => e.className.includes('fertig') && e.className.includes('niederlage'))) &&
+    (await st01.locator('b').evaluate((e) => e.textContent)) === '7 : 9' && (await st01.locator('small').evaluate((e) => e.textContent)) === 'Niederlage');
   await ligaHeute('2026-10-01');
   await page.evaluate(() => { const D = window.__dart; D.ui().overlay = { type: 'liga-runde', termin: 'st01' }; D.render(); });
   const zeilen = await page.locator('#overlay-card .lr-zeile').count();
@@ -6089,8 +6090,8 @@ await gruppe('Ligaspiel endet erst mit dem unterschriebenen Bericht', async () =
   await page.evaluate((t) => { const D = window.__dart; D.setScreen('liga'); D.action('liga-bericht', { getAttribute: () => t }); }, termin);
   check('Handkorrekturen im Bogen ueberstehen den Abschluss', (await text('#bericht-blatt')).includes('Handkorrektur'));
   await page.evaluate(() => { window.__dart.ui().bericht = null; window.__dart.setScreen('liga'); });
-  check('rechts in der Liste steht der Spieltag als abgeschlossen',
-    (await page.locator('#liga-liste .liga-spieltag').first().innerText()).includes('Abgeschlossen'));
+  check('rechts in der Liste steht der Spieltag mit Ergebnis',
+    /\d+ : \d+\s*(Sieg|Niederlage|Remis)/.test(await page.locator('#liga-liste .liga-spieltag').first().innerText()));
   await ligaTipp(termin);
   const karte = page.locator('#liga-karte');
   check('links steht der Spieltag als abgeschlossen', (await karte.innerText()).includes('Abgeschlossen'));
@@ -7680,7 +7681,7 @@ await gruppe('Spielplan am Handy: der Spieltag klappt in der Liste auf, jeder sa
   const lage = () => page.evaluate(() => {
     const liste = document.getElementById('liga-liste'), karte = document.getElementById('liga-karte');
     const kinder = Array.from(liste.children), i = kinder.indexOf(karte);
-    const datum = (el) => { const b = el.querySelector('.lt-datum b'); const m = b && b.textContent.match(/(\d\d)\.(\d\d)\.(\d{4})/); return m ? m[3] + m[2] + m[1] : null; };
+    const datum = (el) => el.classList && el.classList.contains('liga-spieltag') ? el.getAttribute('data-id') : null;
     const vor = kinder.slice(0, Math.max(0, i - 1)).map(datum).filter(Boolean), nach = kinder.slice(i + 1).map(datum).filter(Boolean);
     return { inListe: i >= 0, vorher: i > 0 ? kinder[i - 1].getAttribute('data-id') : null, offen: i > 0 && kinder[i - 1].classList.contains('wahl'),
       vor, nach, sichtbar: karte.offsetParent !== null, wahl: liste.querySelectorAll('.liga-spieltag.wahl').length, roh: karte.textContent,
@@ -7689,42 +7690,32 @@ await gruppe('Spielplan am Handy: der Spieltag klappt in der Liste auf, jeder sa
   });
   let g = await lage();
   check('die Karte steht in der Liste direkt unter dem 5. Spieltag', g.inListe && g.vorher === 'st05' && g.offen && g.sichtbar, JSON.stringify(g));
-  check('Zeile und Karte sind ein Kasten: keine Fuge, kein Rand dazwischen, kein doppeltes Datum', await page.evaluate(() => {
-    const z = document.querySelector('#liga-liste .liga-spieltag.offen'), k = document.getElementById('liga-karte');
-    const zr = z.getBoundingClientRect(), kr = k.getBoundingClientRect(), zs = getComputedStyle(z), ks = getComputedStyle(k);
-    return Math.abs(kr.top - zr.bottom) < 1 && zs.borderBottomWidth === '0px' && ks.borderTopWidth === '0px' &&
-      zs.borderBottomLeftRadius === '0px' && ks.borderTopLeftRadius === '0px' && zs.borderLeftColor === ks.borderLeftColor &&
-      getComputedStyle(k.querySelector('.lk-datum')).display === 'none' && Math.abs(zr.left - kr.left) < 1 && Math.abs(zr.right - kr.right) < 1;
-  }));
-  check('darueber nur vergangene Spieltage, darunter nur kommende', g.vor.length >= 4 && g.vor.every((d) => d < '20261124') && g.nach.length >= 10 && g.nach.every((d) => d > '20261124'), JSON.stringify({ vor: g.vor, nach: g.nach }));
-  check('Dabei 1 / 4 mit Tobi, Kann nicht 1 mit Max, Noch keine Antwort 1 mit mir - das Gast-Konto fehlt',
-    /Dabei · 1 \/ 4 Tobi/.test(g.text) && /Kann nicht · 1 Max/.test(g.text) && /Noch keine Antwort · 1 Ich/.test(g.text) && !g.text.includes('Besuch'), g.text);
+  check('in der Karte steht das Datum nicht doppelt', await page.evaluate(() =>
+    getComputedStyle(document.querySelector('#liga-karte .lk-datum')).display === 'none'));
+  check('die Liste zeigt die kommenden Spieltage: darueber keiner, darunter die naechsten', g.vor.length === 0 && g.nach.length >= 6 && g.nach.every((id) => id > 'st05'), JSON.stringify({ vor: g.vor, nach: g.nach }));
+  check('Dabei mit Tobi, Noch keine Antwort mit mir, Abgesagt mit Max - das Gast-Konto fehlt',
+    /DABEI Tobi/.test(g.text) && /ABGESAGT Max/.test(g.text) && /NOCH KEINE ANTWORT Ich/.test(g.text) && !g.text.includes('Besuch') && /1 von 4 dabei/.test(g.roh), g.text);
   check('Max ist als Absage markiert', await page.evaluate(() => { const p = Array.from(document.querySelectorAll('#liga-karte .lt-person')).find((e) => e.textContent.includes('Max')); return !!p && p.classList.contains('absage'); }));
   const knoepfe = page.locator('#liga-karte [data-action="liga-zusage"]');
   const knopfText = await page.evaluate(() => Array.from(document.querySelectorAll('#liga-karte [data-action="liga-zusage"]')).map((b) => b.textContent.trim()).join('|'));
-  check('zwei Knoepfe: Bin dabei und Kann nicht, keiner gedrueckt', (await knoepfe.count()) === 2 && knopfText === 'Bin dabei|Kann nicht' &&
-    (await page.locator('#liga-karte [data-action="liga-zusage"].aktiv').count()) === 0);
+  check('Kommst du? DABEI oder KANN NICHT, keins gewaehlt', (await knoepfe.count()) === 2 && knopfText === 'DABEI|KANN NICHT' &&
+    (await page.locator('#liga-karte [data-action="liga-zusage"].an').count()) === 0 && /Kommst du\?/.test(g.roh));
   await page.locator('#liga-karte [data-action="liga-zusage"][data-status="absage"]').click();
-  await page.waitForFunction(() => /Kann nicht · 2/.test(document.getElementById('liga-karte').textContent));
+  await page.waitForFunction(() => /Du kannst nicht/.test(document.getElementById('liga-karte').textContent));
   g = await lage();
-  check('Kann nicht: ich stehe bei den Absagen, der Knopf ist gedrueckt, keine offene Antwort mehr',
-    /Kann nicht · 2 Max Ich/.test(g.text) && !g.text.includes('Noch keine Antwort') && (await page.locator('#liga-karte [data-action="liga-zusage"][data-status="absage"].aktiv').count()) === 1, g.text);
-  check('die gedrueckte Absage ist rot markiert', await page.evaluate(() => {
-    const b = document.querySelector('#liga-karte [data-action="liga-zusage"][data-status="absage"]');
-    return b.classList.contains('absage') && b.getAttribute('aria-pressed') === 'true' && getComputedStyle(b).borderColor.indexOf('229, 72, 77') >= 0;
-  }));
+  check('Kann nicht: ich stehe bei Abgesagt, keine offene Antwort mehr, die Frage ist weg',
+    /ABGESAGT Max Ich/.test(g.text) && !g.text.includes('NOCH KEINE ANTWORT') && (await knoepfe.count()) === 0, g.text);
+  await page.locator('#liga-karte [data-action="liga-aendern"]').click();
+  check('ändern zeigt die Frage wieder, KANN NICHT ist gewaehlt', (await page.locator('#liga-karte [data-action="liga-zusage"][data-status="absage"].an').count()) === 1);
   await page.locator('#liga-karte [data-action="liga-zusage"][data-status="absage"]').click();
   await page.waitForTimeout(150);
   g = await lage();
-  check('nochmal auf Kann nicht getippt: nichts aendert sich, die Antwort bleibt', /Kann nicht · 2 Max Ich/.test(g.text) && !g.text.includes('Noch keine Antwort'), g.text);
+  check('nochmal auf KANN NICHT getippt: nichts aendert sich, die Antwort bleibt', /ABGESAGT Max Ich/.test(g.text) && /Du kannst nicht/.test(g.roh), g.text);
+  await page.locator('#liga-karte [data-action="liga-aendern"]').click();
   await page.locator('#liga-karte [data-action="liga-zusage"][data-status="dabei"]').click();
-  await page.waitForFunction(() => /Dabei · 2 \/ 4/.test(document.getElementById('liga-karte').textContent));
+  await page.waitForFunction(() => /2 von 4 dabei/.test(document.getElementById('liga-karte').textContent));
   g = await lage();
-  check('Bin dabei: 2 / 4 mit Tobi und mir, bei Kann nicht nur noch Max', /Dabei · 2 \/ 4 Tobi Ich/.test(g.text) && /Kann nicht · 1 Max/.test(g.text) &&
-    (await page.locator('#liga-karte [data-action="liga-zusage"][data-status="dabei"].aktiv').count()) === 1 && (await page.locator('#liga-karte [data-action="liga-zusage"][data-status="absage"].aktiv').count()) === 0, g.text);
-  await page.locator('#liga-karte [data-action="liga-zusage"][data-status="dabei"]').click();
-  await page.waitForTimeout(150);
-  check('nochmal auf Bin dabei getippt: ich bleibe dabei', /Dabei · 2 \/ 4 Tobi Ich/.test((await lage()).text));
+  check('DABEI: 2 von 4 mit Tobi und mir, bei Abgesagt nur noch Max', /DABEI Tobi Ich/.test(g.text) && /ABGESAGT Max$/.test(g.text) && /Du bist dabei/.test(g.roh), g.text);
   /* Zuklappen und woanders aufklappen. */
   await page.locator('#liga-liste .liga-spieltag.wahl').click();
   g = await lage();
@@ -7988,7 +7979,7 @@ await gruppe('Handy-Block 2: GAME ON nur am Spieltag', async () => {
     S.game = null; S.matches = []; S.tour = null; S.current = null; D.ui().overlay = null; D.ui().ligaWahl = 'st05';
     D.save(); D.setScreen('liga'); D.ui().ligaTab = 'plan'; D.render();
   });
-  check('die Karte zeigt den 5. Spieltag (24.11.)', (await textKlein('#liga-karte')).includes('5. spieltag'));
+  check('die Karte zeigt den 5. Spieltag (24.11.)', (await textKlein('#liga-karte')).includes('spieltag 5 von'));
   await ligaHeute('2026-11-20');
   check('vor dem Spieltag: kein GAME ON', (await page.locator('#liga-karte [data-action="liga-spiel"]').count()) === 0);
   await ligaHeute('2026-11-24');

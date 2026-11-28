@@ -237,6 +237,26 @@ Welche Seite eines Einzels unsere ist, entscheidet im Zweifel die Bogen-Position
 fehlt, zählt damit richtig und wird in die Aufstellung übernommen (1. Spieltag:
 Konradson statt Michi stand sonst auf der falschen Seite, 8:8 statt 7:9).
 
+**Redesign November 2026 (Entwurf „Liga Spielplan, iPad quer und Laptop“, hell
+und dunkel):** Die Liga ist ein eigener Bereich ohne Hauptnavigation. Oben das
+Blink-Logo (zurück zum Spiel), die Reiter in Versalien, rechts die Zeile zum
+Reiter („SDM 4er Liga 5 · Saison 2026/27“) und das Zahnrad mit den
+Liga-Einstellungen (bisher: Darstellung automatisch, hell oder dunkel; gilt für
+dich auf diesem Gerät, dieselbe Einstellung wie im Profil). Die Farben kommen aus
+Tokens `--t-*` in `css/styles.css`, umgeschaltet über `html[data-hell]`; der Rest
+der App folgt mit seinem Redesign. **Spielplan:** links die Karte zum Spieltag –
+„Spieltag 6 von 18 · Auswärts“, groß Tag und Monat, Wochentag, 20:00 und wann,
+der Gegner mit Tabellenplatz und Siegen, Lokal mit Adresse und Route, dann
+„3 von 4 dabei“ mit vier Balken (dazu Punkte für Ersatz ab dem fünften) und den
+Gruppen Dabei, Noch keine Antwort, Abgesagt mit Foto. Darunter „Du bist dabei ·
+ändern“ bzw. die Frage „Kommst du? DABEI · KANN NICHT“ und am Spieltag der Knopf
+GAME DAY. Rechts der eigene Platz (führt zur Tabelle) und die kommenden acht
+Spieltage mit Logo, Zusagen bzw. Ergebnis; „Ganze Saison“ zeigt alle 18, „In den
+Kalender“ lädt alle Termine. Die Gegner tragen die Abzeichen aus dem Entwurf
+(`TEAM_ABZEICHEN` in `js/app.js`), wer keins hat, bekommt eins aus Kürzel und
+Farbton. Was unten zur Fassung vom Oktober steht, gilt weiter für die übrigen
+Reiter und für Live, Ergebnisse und Nachtrag.
+
 Der Reiter **Liga** (Entwurf „Liga · Spielplan“, Oktober 2026) trägt denselben
 Kopf wie überall: der des Setups (Marke, Navigation als Text-Reiter), darunter
 die Liga-Zeile mit Saison und den Reitern Spielplan · Training · Tabelle ·
