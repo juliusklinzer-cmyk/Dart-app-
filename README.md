@@ -257,6 +257,53 @@ Kalender“ lädt alle Termine. Die Gegner tragen die Abzeichen aus dem Entwurf
 Farbton. Was unten zur Fassung vom Oktober steht, gilt weiter für die übrigen
 Reiter und für Live, Ergebnisse und Nachtrag.
 
+**Training** (Entwurf „Liga Training“): links das gewählte DiensDarts mit Logo der
+Sehnsucht, Datum, Route und den Gruppen Dabei, Noch keine Antwort und Kann nicht
+(„Unsicher“ gibt es nicht mehr; alte Antworten „unsicher“ zählen als noch keine
+Antwort), darunter „Du bist dabei · ändern“ bzw. „Kommst du? DABEI · KANN NICHT“
+und rechts oben der Kalender-Knopf. Rechts die nächsten sechs Dienstage ohne
+Ligaspiel (antippen wählt) und das Übungs-Ligaspiel: gegen ein zweites eigenes Team,
+gegen Bots (Stärke im Dialog) oder gegen den nächsten Gegner.
+
+**Kasse** (Entwurf „Liga Kasse“): links der Kassenstand mit Anfangsbestand,
+Einnahmen und Ausgaben, „Kasse führt“, „BUCHUNG ERFASSEN“ (das Formular klappt in der
+Karte auf) und PayPal; darunter der Gründungsbeitrag mit Fotos und Haken (wer die
+Kasse führt, bucht einen offenen Beitrag mit einem Tipp aufs Foto, alle anderen
+melden „Ich habe eingezahlt“). Rechts das Kassenbuch als Tabelle Nr · Datum ·
+Buchung · Betrag · Saldo mit Endbestand; eine Zeile antippen zeigt „Ändern“ und
+„Löschen“, wo man darf.
+
+**Regeln** (Entwurf „Liga Regeln“): zwei Spalten „Für Neue: die wichtigsten Fragen“
+und „Aus der Regelecke“ (von Udo), als Akkordeon – immer nur eine Antwort offen, die
+erste ist aufgeklappt. Die Frage zu Auf- und Abstieg steht dabei.
+
+**Tabelle** (Entwurf „Liga Tabelle“): oben die Ligawahl SDM 4er Liga 1 bis 5 (unsere
+aus `LIGA_DATEN`, die anderen vier aus den Gesamtdaten der Ligaleitung, `GET
+/api/liga-gesamt`, nur angemeldet; ohne Verbindung ein Hinweis, neuer Versuch nach einer
+Minute). Die Tabelle mit Logo, S · U · N, Einzel, Legs, Punkten; Platz 1 und 2 grün
+(Aufstieg, nicht in Liga 1), die letzten beiden rot (Abstieg, nicht in Liga 5); unsere
+Zeile hervorgehoben mit ▲/▼/= seit dem vorigen gespielten Spieltag (die Zeilen gleiten
+einmal an ihren Platz). Ein Tipp auf ein Team öffnet in unserer Liga seine
+Mannschaftsstatistik, in den anderen seine Teamseite. Darunter ein Spieltag zum
+Blättern (Start: der letzte gespielte; als gespielt gilt eine Runde, wenn mehr als die
+Hälfte ihrer Spiele ein Ergebnis hat), ein Tipp zeigt die 16 Einzel. Rechts die
+gemeldeten Highlights (High Finishes, Shortlegs mit Datum, 180er der Saison). Die
+Einzelrangliste steht seitdem in der Statistik.
+
+**Teamseite** (Entwurf „Liga Team“): eigene Seite über den Reitern – Logo, Name, Lokal
+mit Adresse (Route), Platz und Punkte; links die Spieler mit TC-1/TC-2 und Gast,
+rechts alle Spiele der Saison (@ = auswärts, gespielte antippen zeigt die Einzel).
+Erreichbar über den Gegner in der Spieltag-Karte und über die Tabellen anderer Ligen.
+
+**Einstellungen** (Entwurf „Liga Einstellungen“, Zahnrad): links die Bereiche
+Vereinsheim, Training, Team und Rollen, Ligaspiel, Spielbericht, Kasse, Darstellung,
+rechts die Werte. Einstellbar sind die Darstellung (automatisch, hell, dunkel; gilt für
+dich auf diesem Gerät), die Ligaspiel-Voreinstellungen für neue Game Days an diesem
+Gerät (`S.settings.ligaVor`: Legs, Finish-Anzeigen, Live mit/ohne Namen,
+Mitschreiben) und – für wen die Kasse führt – Kassenjahr und Anfangsbestand (im
+Reiter Kasse). Vereinsheim, Training, Rollen und Spielbericht stehen zum Nachsehen da
+(mit Schloss): Rollen für Admin und TCs gibt es auf dem Server noch nicht.
+
 Der Reiter **Liga** (Entwurf „Liga · Spielplan“, Oktober 2026) trägt denselben
 Kopf wie überall: der des Setups (Marke, Navigation als Text-Reiter), darunter
 die Liga-Zeile mit Saison und den Reitern Spielplan · Training · Tabelle ·
@@ -457,6 +504,40 @@ Spielabend nach SDM-Spielberichtsbogen aufsetzen: unsere vier **Positionen**
 Gäste dieses Geräts und beim nächsten Aufeinandertreffen wiedererkannt), Best
 of 3 oder 5, **Finish-Anzeigen an oder aus** (aus ist Liga-konform, WDF 3.08) –
 und auf Wunsch **geteilt an zwei Scheiben**, wie es die SWO ohnehin verlangt.
+
+**Game Day nach dem Redesign (Nov. 2026, Entwürfe „Ligaspiel 1–8“):** Der Game Day ist
+eine eigene Seite. Zuerst **„Wo bist du?“: Scheibe 1, Scheibe 2 oder Zuschauer**
+(Zuschauer trägt nichts ein und schaut, sobald es läuft, live zu). Dann „Willkommen in
+der <Lokal>“ mit der Uhr bis 20:00 (danach rot „über der Zeit“), die beiden Teams mit
+Status „In Arbeit“/„Bereit!“ und ihren Positionen, und eine **Challenge** bis es
+losgeht (eine Zahl unter 100 mit Finishweg, „Neu“ würfelt die nächste). „Ändern“ am
+eigenen Team öffnet die **Aufstellung**: Reihenfolge **H1–H4 bzw. G1–G4 spielen, 5–8
+sind Ersatz**, Status je Zeile antippen (gemeldet → Gastspieler → neu melden), Foto
+(freiwillig, sonst Platzhalter; bleibt auf diesem Gerät und hängt nach dem Start am
+Gast-Profil), × nimmt heraus; daneben der **Kader** als Chips (unsere Konten bzw. die
+Spieler des Gegners laut Ligaleitung; ein Tipp setzt in die nächste freie Position oder
+nimmt heraus) und „+ Spieler“ für einen **neuen Spieler** (Name, Anzeigename, Status
+Gastspieler oder neu melden, U18, Geschlecht, Foto). Fehlt einem unserer Spieler der
+volle Name für den Bogen, steht das Feld direkt unter seiner Zeile. **BEREIT** prüft die
+Seite (mit einem iPad für beide Teams führt es danach zur anderen), holt Unterschriften
+für „neu melden“ und schließt das Fenster. Das Zahnrad zeigt die **Einstellungen**
+(Finish-Anzeigen ohne/mit – mit heißt auch: beim Checkout nach dem Doppel fragen –, Live
+für Zuschauer mit/ohne Namen, Legs, Mitschreiben); sie gelten für beide Scheiben,
+Scheibe 2 sieht sie nur. Dort auch „Einwerfen: freies Spiel“ und „Dieses iPad von der
+Scheibe abmelden“. **Es startet nichts mehr von selbst:** sind beide Teams bereit,
+erscheint **GAME ON** (nach 20:00 groß in der Mitte). Wer drückt, wartet („Warte auf
+Scheibe 2“, Abbrechen geht), die andere Scheibe fragt **„Kann es losgehen?“** –
+„LOS GEHT'S“ startet auf beiden das erste Einzel mit Ausbullen, „Noch nicht“ nimmt das
+GAME ON zurück. Ist die andere Scheibe gerade woanders (freies Spiel, anderer
+Bildschirm), kommt die Frage als Hinweis; um 20:00 erinnert ein Hinweis an den Anwurf.
+Drücken beide im selben Moment, startet Scheibe 1. Ein laufendes freies Spiel oder
+Turnier wird nie still beendet. Technik: Felder `w4–w7`/`g4–g7` für Ersatz,
+`opt.ohneNamen` (geht als `liga.ohneNamen` in den Plan, der Live-Ticker zeigt dann nur
+Kennungen), je Scheibe `gameOn` am Server (nur mit Bereit; jede Änderung, „Bereit“
+zurück oder der Start nehmen es zurück; `gameOn: false` darf jede Scheibe senden). Neue
+Game Days übernehmen die Ligaspiel-Voreinstellungen aus den Liga-Einstellungen.
+Was der folgende Absatz zum Start um 20:00 und zu „Sofort starten“ sagt, ist damit
+abgelöst; der Rest gilt weiter.
 
 **Game Day (DRT-080):** Am Spieltag selbst ersetzt der Game Day den Startdialog (im
 Nachtrag bleibt er). Er geht den ganzen Tag: über „Game Day“ auf der Spieltag-Karte
@@ -1875,7 +1956,7 @@ npm run test:mail          # MIME-Aufbau, SMTP-Dialog gegen einen Mini-Server, E
 npm run test:mitteilungen  # Web-Push-Verschlüsselung, VAPID, Themen-Einstellungen, Jobs
 npm run test:api           # Server allein: Registrierung, Rechte, Rate-Limit, Grabsteine
 npm run test:konto         # zwei Browser, zwei Accounts, ein gemeinsames Spiel (fester Port 3198, `TEST_PORT` setzbar)
-node tests/ligatag.mjs     # Game Day: zwei iPads bereiten vor und starten zur Anwurfzeit
+node tests/ligatag.mjs     # Game Day: zwei iPads bereiten vor, GAME ON mit Bestaetigung
 npm run test:alle          # alles nacheinander – auch Build und Einzeldatei, siehe unten
 ```
 
