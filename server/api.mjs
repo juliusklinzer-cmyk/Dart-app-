@@ -1337,7 +1337,8 @@ export function createApi(db, config) {
      Vorbereitung genau EIN geteiltes Turnier wird - auch wenn beide Geraete
      um 20:00 gleichzeitig starten. */
   const LIGA_TAG_FRIST = 3 * TAG;
-  const LIGA_TAG_FELD = /^(?:[wg][0-3]|n[wg][0-3]|opt)$/;
+  /* Positionen 0-3 spielen, 4-7 sind Ersatz (Redesign Nov. 2026); Unterschriften nur 0-3. */
+  const LIGA_TAG_FELD = /^(?:[wg][0-7]|n[wg][0-3]|opt)$/;
   const LIGA_TAG_SIGNATUR = /^data:image\/png;base64,[A-Za-z0-9+/]+=*$/;
   /* Wann sich ein Geraet zuletzt gemeldet hat: nur im Speicher, sonst waere
      jede Abfrage ein Schreibvorgang. */
@@ -1357,7 +1358,7 @@ export function createApi(db, config) {
     }
     if (!istObjekt(v)) throw new HttpFehler(400, 'Game Day: Feld ist unbrauchbar.');
     if (k === 'opt') {
-      return { bestOf: v.bestOf === 5 ? 5 : 3, finish: !!v.finish, nurErgebnis: !!v.nurErgebnis };
+      return { bestOf: v.bestOf === 5 ? 5 : 3, finish: !!v.finish, nurErgebnis: !!v.nurErgebnis, ohneNamen: !!v.ohneNamen };
     }
     if (k[0] === 'n') {
       const bild = ligaTagText(v.unterschrift, 60 * 1024, 'Unterschrift');
@@ -1422,7 +1423,9 @@ export function createApi(db, config) {
       const gesehen = ligaTagGesehen.get(t.id + ':' + p.geraet) || p.seit || 0;
       const wer = db.prepare('SELECT display_name, real_name FROM users WHERE id = ?').get(p.user);
       plaetze[s] = { meiner: p.geraet === geraet, bereit: !!p.bereit, teile: p.bereit ? p.teile || '' : '', alter: Math.max(0, jetzt - gesehen),
-        name: wer ? wer.real_name || wer.display_name : '' };
+        name: wer ? wer.real_name || wer.display_name : '',
+        /* GAME ON gedrueckt (wartet auf die Bestaetigung der anderen Scheibe). */
+        gameOn: !!(p.bereit && p.gameOn), gameOnAlter: p.bereit && p.gameOn ? Math.max(0, jetzt - p.gameOn) : 0 };
     }
     const felder = {};
     /* Unterschriften nur an die beiden iPads, nicht an Handys, die nachschauen. */
@@ -1505,13 +1508,29 @@ export function createApi(db, config) {
               if (p && p.bereit && (p.teile === seite || p.teile === 'beide')) p.bereit = false;
             }
           }
+          /* Jede Aenderung nimmt ein gedruecktes GAME ON zurueck. */
+          for (const s of ['S1', 'S2']) if (t.plaetze[s]) t.plaetze[s].gameOn = 0;
         }
       }
       if (jetztMeiner && typeof body.bereit === 'boolean') {
         const p = t.plaetze[jetztMeiner];
         const soll = body.bereit && !laeuft;
         const teile = ['wir', 'gegner', 'beide'].includes(body.teile) ? body.teile : '';
-        if (p.bereit !== soll || (soll && p.teile !== teile)) { p.bereit = soll; p.teile = teile; anders = true; }
+        if (p.bereit !== soll || (soll && p.teile !== teile)) {
+          p.bereit = soll; p.teile = teile; anders = true;
+          if (!soll) for (const s of ['S1', 'S2']) if (t.plaetze[s]) t.plaetze[s].gameOn = 0;
+        }
+      }
+      /* GAME ON (Redesign Nov. 2026): eine bereite Scheibe drueckt, die andere
+         bestaetigt und startet. false (Abbrechen, "Noch nicht") nimmt jedes
+         gedrueckte GAME ON zurueck - das darf jede der beiden Scheiben. */
+      if (jetztMeiner && typeof body.gameOn === 'boolean') {
+        if (body.gameOn) {
+          const p = t.plaetze[jetztMeiner];
+          if (p.bereit && !laeuft && !p.gameOn) { p.gameOn = Date.now(); anders = true; }
+        } else {
+          for (const s of ['S1', 'S2']) if (t.plaetze[s] && t.plaetze[s].gameOn) { t.plaetze[s].gameOn = 0; anders = true; }
+        }
       }
       if (anders) ligaTagSchreiben(t);
     });
@@ -1569,7 +1588,7 @@ export function createApi(db, config) {
       /* Gestartet: die Bereit-Haken fallen (sonst startete ein verworfenes
          Spiel sofort neu), die Unterschriften stehen jetzt im Plan. */
       t.turnierId = sid;
-      for (const s of ['S1', 'S2']) if (t.plaetze[s]) t.plaetze[s].bereit = false;
+      for (const s of ['S1', 'S2']) if (t.plaetze[s]) { t.plaetze[s].bereit = false; t.plaetze[s].gameOn = 0; }
       for (const k of Object.keys(t.felder)) if (k[0] === 'n') delete t.felder[k];
       t.stand++;
       ligaTagSchreiben(t);

@@ -5781,7 +5781,7 @@
   function darstellungAnwenden() {
     var de = document.documentElement;
     var liga = !!($('screen-liga') && $('screen-liga').classList.contains('active'));
-    var bereich = (liga && !!LIGA_NEU[UI.ligaTab || 'plan']) || (!liga && (hellAblauf() || hellZaehlen()));
+    var bereich = (liga && !!LIGA_NEU[UI.ligaTab || 'plan']) || !!ligaTagVon(UI.overlay) || (!liga && (hellAblauf() || hellZaehlen()));
     var w = istHell() && bereich ? '1' : '0';
     if (de.getAttribute('data-hell') !== w) de.setAttribute('data-hell', w);
     de.classList.toggle('in-liga', liga);
@@ -14398,7 +14398,7 @@
 
   function renderOverlay() {
     var ov = $('overlay');
-    if (!UI.overlay) { ov.classList.add('hidden'); ov.classList.remove('gross', 'vollbild', 'match-ende', 'liga-tag'); dialogGeschlossen(); return; }
+    if (!UI.overlay) { ov.classList.add('hidden'); ov.classList.remove('gross', 'vollbild', 'match-ende', 'liga-tag', 'gd'); dialogGeschlossen(); return; }
     ov.classList.remove('hidden');
     /* Im Turnier-Modus sprechen auch die Dialoge Plakatsprache - der
        Schreiber steht vorn an der Scheibe, gelesen wird vom Oche aus. */
@@ -14409,6 +14409,7 @@
     ov.classList.toggle('bogen', !!BOGEN_DIALOGE[UI.overlay.type] || (UI.overlay.type === 'confirm-reset' && !!(S.tour && S.tour.liga)));
     ov.classList.toggle('match-ende', UI.overlay.type === 'turnier-ende');
     ov.classList.toggle('liga-tag', !!ligaTagVon(UI.overlay));
+    ov.classList.toggle('gd', !!ligaTagVon(UI.overlay));
     ov.classList.toggle('bogen-breit', UI.overlay.type === 'liga-bericht-kurz');
     var o = UI.overlay;
     var html = '';
@@ -15670,7 +15671,7 @@
    * (POST /api/liga/tag/...). Ohne Konto oder Netz geht alles auf einem
    * Geraet. S.ligaTag ueberlebt einen Neustart und gilt nur an diesem Tag.
    */
-  var LIGA_TAG_FELDER = ['w0', 'w1', 'w2', 'w3', 'g0', 'g1', 'g2', 'g3', 'nw0', 'nw1', 'nw2', 'nw3', 'ng0', 'ng1', 'ng2', 'ng3', 'opt'];
+  var LIGA_TAG_FELDER = ['w0', 'w1', 'w2', 'w3', 'g0', 'g1', 'g2', 'g3', 'w4', 'w5', 'w6', 'w7', 'g4', 'g5', 'g6', 'g7', 'nw0', 'nw1', 'nw2', 'nw3', 'ng0', 'ng1', 'ng2', 'ng3', 'opt'];
   var LIGA_TAG_WEG = 90000;       // so lange ohne Meldung gilt das andere iPad als weg
   var ligaTagRuf = false, ligaTagNochmal = null, ligaTagLetzter = 0, ligaTagGetippt = 0, ligaTagFokus = 0;
   var ligaTagFrisch = 0, ligaTagGemerkt = '';
@@ -15751,8 +15752,9 @@
         seit: 0, geholt: false, plaetze: null, turnier: null, abbild: {}, fehlt: {}, nm: {}, sid: null, ruheBis: 0,
         /* Best of 3 und ohne Finish-Hilfen (WDF 3.08) sind die Voreinstellung. */
         d: { bestOf: 3, wir: ligaAufstellungVorschlag(termin), wirTyp: ['', '', '', ''], wirNamen: [{}, {}, {}, {}], vollNamen: {},
-          gegner: ['', '', '', ''], gegnerNach: ['', '', '', ''], gegnerTyp: ['', '', '', ''], geteilt: false, finish: false, nurErgebnis: false }
+          gegner: ['', '', '', ''], gegnerNach: ['', '', '', ''], gegnerTyp: ['', '', '', ''], geteilt: false, finish: false, nurErgebnis: false, ohneNamen: false }
       };
+      gdErsatzBereit(t.d);
       LIGA_TAG_FELDER.forEach(function (k) { t.abbild[k] = ligaTagText(t, k); });
       ligaTagSpaeterMerk = {};
     }
@@ -15770,8 +15772,15 @@
   /* ---- Felder: was dieses Geraet gerade eingetragen hat ---- */
   function ligaTagFeld(t, k) {
     var d = t.d, i = Number(k.charAt(k.length - 1));
-    if (k === 'opt') return { bestOf: d.bestOf === 5 ? 5 : 3, finish: !!d.finish, nurErgebnis: !!d.nurErgebnis };
+    if (k === 'opt') return { bestOf: d.bestOf === 5 ? 5 : 3, finish: !!d.finish, nurErgebnis: !!d.nurErgebnis, ohneNamen: !!d.ohneNamen };
     if (k.charAt(0) === 'n') return (t.nm && t.nm[k]) || null;
+    /* Ersatz (Positionen 5-8): eigene Listen, die Spielpositionen bleiben vier. */
+    if (i >= 4) {
+      var e = gdPos(d, k.charAt(0) === 'g' ? 'gegner' : 'wir', i);
+      return k.charAt(0) === 'g' ? { id: '', vor: String(e.vor).slice(0, 30), nach: String(e.nach).slice(0, 30), typ: e.typ }
+        : { id: e.id, vor: String(e.vor).slice(0, 30), nach: String(e.nach).slice(0, 30), typ: e.typ,
+            name: e.id && e.id !== '__name' && String(e.id).indexOf('u_') !== 0 ? ligaName(e.id).slice(0, 60) : '' };
+    }
     if (k.charAt(0) === 'g') {
       return { id: '', vor: String((d.gegner || [])[i] || '').slice(0, 30), nach: String((d.gegnerNach || [])[i] || '').slice(0, 30), typ: (d.gegnerTyp || [])[i] || '' };
     }
@@ -15784,7 +15793,7 @@
      aus einem anderen Profil und wanderte sonst endlos hin und her). */
   function ligaTagAlsText(k, v) {
     if (!v) return 'null';
-    if (k === 'opt') return JSON.stringify([v.bestOf, !!v.finish, !!v.nurErgebnis]);
+    if (k === 'opt') return JSON.stringify([v.bestOf, !!v.finish, !!v.nurErgebnis, !!v.ohneNamen]);
     if (k.charAt(0) === 'n') return JSON.stringify([v.pid || '', v.vor, v.nach, v.u18, v.g, v.unterschrift]);
     return JSON.stringify([v.id || '', v.vor || '', v.nach || '', v.typ || '']);
   }
@@ -15794,8 +15803,15 @@
   }
   function ligaTagFeldSetzen(t, k, v) {
     var d = t.d, i = Number(k.charAt(k.length - 1));
-    if (k === 'opt') { d.bestOf = v.bestOf === 5 ? 5 : 3; d.finish = !!v.finish; d.nurErgebnis = !!v.nurErgebnis; return; }
+    if (k === 'opt') { d.bestOf = v.bestOf === 5 ? 5 : 3; d.finish = !!v.finish; d.nurErgebnis = !!v.nurErgebnis; d.ohneNamen = !!v.ohneNamen; return; }
     if (k.charAt(0) === 'n') { if (v) t.nm[k] = v; else delete t.nm[k]; return; }
+    if (i >= 4) {
+      gdPosSetzen(d, k.charAt(0) === 'g' ? 'gegner' : 'wir', i, v || {});
+      if (k.charAt(0) === 'w' && v && v.id && v.id !== '__name' && String(v.id).indexOf('u_') !== 0 && v.name && !S.profiles.some(function (p) { return p.id === v.id; })) {
+        S.profiles.push({ id: v.id, name: String(v.name).slice(0, 30), voll: v.name, avatar: null, hue: freeHue(), created: Date.now(), gast: true });
+      }
+      return;
+    }
     if (k.charAt(0) === 'g') {
       d.gegner[i] = v.vor || ''; d.gegnerNach[i] = v.nach || '';
       d.gegnerTyp[i] = v.typ || '';
@@ -16081,6 +16097,13 @@
     if (!t.platz) { o.fehler = 'Bitte erst eine Scheibe wählen.'; render(); return; }
     if (t.turnier) { ligaTagBeitreten(); return; }
     var an = ligaTagAndere(t);
+    /* Zu zweit: GAME ON meldet sich bei der anderen Scheibe, die bestaetigt
+       und startet. Hat sie schon gedrueckt, ist das hier die Bestaetigung. */
+    if (ligaTagZuZweit(t) && ligaTagAlleBereit(t)) {
+      if (gdGameOn(t, an)) { ligaTagStarten(false); return; }
+      ligaTagAbgleich({ gameOn: true }).then(function () { ligaTagZeichnen(true); });
+      return;
+    }
     if (!ligaTagAlleBereit(t) && !o.gefragt) {
       o.gefragt = true;
       o.fehler = ligaTagZuZweit(t) && !t.plaetze[an].bereit
@@ -16129,6 +16152,15 @@
     }
     var bau = ligaTourBauen(pruefen ? t.d : Object.assign({}, t.d, { vollNamen: {} }), ligaTagTermin(t.terminId));
     var lg = bau.tour.liga;
+    /* Live ohne Namen (Game-Day-Einstellung) und die Ersatzspieler 5-8. */
+    if (t.d.ohneNamen) lg.ohneNamen = true;
+    var ersatz = { wir: [], sie: [] };
+    for (var ei = 4; ei < 8; ei++) {
+      var ew = gdPos(t.d, 'wir', ei), eg = gdPos(t.d, 'gegner', ei);
+      if (ew.name) ersatz.wir.push({ id: ew.id && ew.id !== '__name' ? ew.id : '', name: ew.name, typ: ew.typ });
+      if (eg.name) ersatz.sie.push({ name: eg.name, typ: eg.typ });
+    }
+    if (ersatz.wir.length || ersatz.sie.length) lg.ersatz = ersatz;
     lg.nachmeldungen = [];
     ligaTagUnterschriften(t, lg).forEach(function (n) { if (lg.typen[n.id] === 'neu') lg.nachmeldungen.push(n); });
     if (!lg.nachmeldungen.length) delete lg.nachmeldungen;
@@ -16214,6 +16246,7 @@
     if (!S.tour) { save(); render(); return; }
     S.tour.meineScheibe = platz;
     var lg = S.tour.liga;
+    gdFotosAnwenden(t, lg);
     if (lg && Array.isArray(lg.wir)) S.lineup = lg.wir.slice(0, 4);
     /* Erst nach dem Start unterschrieben (das andere iPad war schneller):
        die Unterschrift kommt ins laufende Spiel. */
@@ -16310,6 +16343,8 @@
       if ((dreckig && jetzt - ligaTagLetzter > (t.ohneNetz || t.stoerung ? 5000 : 900)) ||
           jetzt - ligaTagLetzter > (offen || Math.abs(ligaTagAnpfiff(t) - ligaTagJetzt()) < 600000 ? 4000 : 10000)) ligaTagAbgleich();
     }
+    var gdU = document.querySelectorAll('[data-gd-uhr]');
+    for (var gi = 0; gi < gdU.length; gi++) { var gt = gdUhr(t); if (gdU[gi].textContent !== gt) gdU[gi].textContent = gt; }
     var uhr = document.querySelectorAll('[data-tag-uhr]');
     for (var i = 0; i < uhr.length; i++) {
       var txt = ligaTagUhrText(t);
@@ -16328,6 +16363,16 @@
       !SPIEL_SCREENS[S.screen] && !(S.matches.length && (S.screen === 'tournament' || S.screen === 'winner'));
     var art = turnier ? 'turnier' : 'jetzt';
     var geteilt = ligaTagGeteilt();
+    /* Beide haben im selben Moment GAME ON gedrueckt: Scheibe 1 startet. */
+    if (geteilt && !t.turnier && t.platz === 'S1' && ligaTagZuZweit(t) && gdGameOn(t, 'S1') && gdGameOn(t, 'S2') && ligaTagAlleBereit(t)) {
+      if (frei || ligaTagVon(UI.overlay)) ligaTagStarten(false);
+      return;
+    }
+    /* Die andere Scheibe hat GAME ON gedrueckt, hier ist der Game Day zu. */
+    if (geteilt && !t.turnier && t.platz && ligaTagZuZweit(t) && gdGameOn(t, ligaTagAndere(t)) && !gdGameOn(t, t.platz) && !ligaTagVon(UI.overlay)) {
+      ligaTagHinweis('gameon');
+      return;
+    }
     if (geteilt && t.turnier) {              // laeuft schon (das andere iPad hat gestartet)
       if (!t.platz || !ligaTagOnline()) return;
       if (frei) ligaTagBeitreten(); else ligaTagHinweis(art);
@@ -16343,12 +16388,11 @@
         return;
       }
     }
+    /* Seit dem Redesign (Nov. 2026) startet nichts mehr von selbst: um
+       20:00 erscheint GAME ON gross, die andere Scheibe bestaetigt. Wer
+       gerade woanders ist, bekommt einen Hinweis. */
     if (ligaTagAlleBereit(t)) {
-      if (!frei) { ligaTagHinweis(art); return; }
-      if (!geteilt) { ligaTagAlleinStarten(t); return; }
-      /* Scheibe 1 startet; Scheibe 2 springt ein, wenn von dort nichts kommt. */
-      if (t.platz === 'S2' && ligaTagZuZweit(t) && jetzt < anpfiff + 10000) return;
-      ligaTagStarten(true);
+      if (!ligaTagVon(UI.overlay)) ligaTagHinweis('anwurf');
       return;
     }
     if (t.gespielt && !t.bereit) return;     // heute schon gespielt: nicht weiter erinnern
@@ -16383,67 +16427,328 @@
       '<button class="btn ' + (t && t.bereit ? 'ghost' : 'primary') + ' small" data-action="tag-oeffnen" data-id="' + esc(termin.id) + '">Game Day</button>' +
       '</div>';
   }
+  /* ===== Game Day nach Entwurf (LsWahl, LsGameDay; Redesign Nov. 2026) =====
+     Wahl (Scheibe 1, Scheibe 2, Zuschauer), dann die Seite mit Willkommen,
+     Uhr, beiden Teams, Challenge und GAME ON. GAME ON startet nicht mehr von
+     selbst um 20:00 und auch nicht sofort: die andere Scheibe bestaetigt
+     ("Kann es losgehen?"), erst dann startet das Ausbullen auf beiden.
+     Positionen 1-4 spielen, 5-8 sind Ersatz (Felder w4-w7/g4-g7). */
+  var GD_TYP_REIHE = ['', 'gast', 'neu'];
+  var GD_TYP_TEXT = { '': 'gemeldet', gast: 'Gastspieler', neu: 'neu melden' };
+  function gdErsatzBereit(d) {
+    if (!Array.isArray(d.wirE)) d.wirE = ['', '', '', ''];
+    if (!Array.isArray(d.wirETyp)) d.wirETyp = ['', '', '', ''];
+    if (!Array.isArray(d.wirENamen)) d.wirENamen = [{}, {}, {}, {}];
+    if (!Array.isArray(d.gegnerE)) d.gegnerE = ['', '', '', ''];
+    if (!Array.isArray(d.gegnerENach)) d.gegnerENach = ['', '', '', ''];
+    if (!Array.isArray(d.gegnerETyp)) d.gegnerETyp = ['', '', '', ''];
+    if (!d.fotos || typeof d.fotos !== 'object') d.fotos = {};
+  }
+  /* Eine Position (0-7) einer Seite lesen: { id, vor, nach, typ, name }. */
+  function gdPos(d, seite, i) {
+    gdErsatzBereit(d);
+    var e = i >= 4, j = e ? i - 4 : i;
+    if (seite === 'gegner') {
+      var vor = e ? d.gegnerE[j] : (d.gegner || [])[j], nach = e ? d.gegnerENach[j] : (d.gegnerNach || [])[j];
+      var voll = (String(vor || '').trim() + ' ' + String(nach || '').trim()).trim();
+      return { id: '', vor: vor || '', nach: nach || '', typ: (e ? d.gegnerETyp[j] : (d.gegnerTyp || [])[j]) || '', name: voll };
+    }
+    var id = (e ? d.wirE[j] : d.wir[j]) || '';
+    var n = id === '__name' ? ((e ? d.wirENamen[j] : (d.wirNamen || [])[j]) || {}) : {};
+    var name = !id ? '' : id === '__name' ? (String(n.vor || '') + ' ' + String(n.nach || '')).trim() : ligaName(id);
+    return { id: id, vor: n.vor || '', nach: n.nach || '', typ: (e ? d.wirETyp[j] : (d.wirTyp || [])[j]) || '', name: name };
+  }
+  function gdPosSetzen(d, seite, i, v) {
+    gdErsatzBereit(d);
+    var e = i >= 4, j = e ? i - 4 : i;
+    if (seite === 'gegner') {
+      if (e) { d.gegnerE[j] = v.vor || ''; d.gegnerENach[j] = v.nach || ''; d.gegnerETyp[j] = v.typ || ''; }
+      else { d.gegner[j] = v.vor || ''; d.gegnerNach[j] = v.nach || ''; d.gegnerTyp[j] = v.typ || ''; }
+      return;
+    }
+    if (e) { d.wirE[j] = v.id || ''; d.wirENamen[j] = v.id === '__name' ? { vor: v.vor || '', nach: v.nach || '' } : {}; d.wirETyp[j] = v.typ || ''; }
+    else { d.wir[j] = v.id || ''; if (!d.wirNamen) d.wirNamen = [{}, {}, {}, {}]; d.wirNamen[j] = v.id === '__name' ? { vor: v.vor || '', nach: v.nach || '' } : {}; d.wirTyp[j] = v.typ || ''; }
+  }
+  /* Am Game Day aufgenommene Fotos (freiwillig, nur auf diesem Geraet) an
+     die Gast-Profile des Spiels haengen - sonst bleibt der Platzhalter. */
+  function gdFotosAnwenden(t, lg) {
+    var f = t && t.d && t.d.fotos;
+    if (!f || !lg) return;
+    for (var i = 0; i < 4; i++) {
+      var pw = lg.wir && lg.wir[i] ? profile(lg.wir[i]) : null, pg = lg.sie && lg.sie[i] ? profile(lg.sie[i]) : null;
+      if (pw && f['w' + i] && !pw.avatar && String(pw.id).indexOf('u_') !== 0) pw.avatar = f['w' + i];
+      if (pg && f['g' + i] && !pg.avatar) pg.avatar = f['g' + i];
+    }
+  }
+  function gdKurz(name) {
+    var t = String(name || '').replace(/[^A-Za-zÀ-ž ]/g, ' ').split(' ').filter(Boolean);
+    return ((t[0] || '?')[0] + (t.length > 1 ? t[t.length - 1][0] : '')).toUpperCase();
+  }
+  /* Bild einer Position: Profilfoto, sonst das hier aufgenommene, sonst Kuerzel. */
+  function gdBild(d, seite, i, x, klasse) {
+    var foto = d.fotos && d.fotos[(seite === 'gegner' ? 'g' : 'w') + i];
+    var p = seite === 'wir' && x.id && x.id !== '__name' ? profile(x.id) : null;
+    if (p) return avatarHTML(p, klasse);
+    if (foto && avatarSicher(foto)) return '<span class="av ' + klasse + '" style="background-image:url(' + foto + ')"></span>';
+    return '<span class="av ' + klasse + ' init gd-init">' + esc(gdKurz(x.name)) + '</span>';
+  }
+  /* Seiten-Kennung fuer die Positionen: Heim H, Gast G. */
+  function gdBuchstabe(lt, seite) {
+    var wirHeim = lt.heim === LIGA.team;
+    return (seite === 'wir') === wirHeim ? 'H' : 'G';
+  }
+  function gdSeiteBereit(t, seite) {
+    if (!ligaTagGeteilt()) return !!t.bereit;
+    return ['S1', 'S2'].some(function (s) { var p = t.plaetze && t.plaetze[s]; return p && p.bereit && (p.teile === seite || p.teile === 'beide'); });
+  }
+  /* GAME ON der anderen Scheibe (frisch, hoechstens 3 Minuten alt). */
+  function gdGameOn(t, s) {
+    var p = t.plaetze && t.plaetze[s];
+    return !!(p && p.gameOn && (p.gameOnAlter || 0) + (Date.now() - (t.plaetzeZeit || Date.now())) < 180000);
+  }
+  function gdUhr(t) {
+    var s = Math.round((ligaTagAnpfiff(t) - ligaTagJetzt()) / 1000);
+    var a = Math.abs(s), h = Math.floor(a / 3600), m = Math.floor(a / 60) % 60, zwei = function (n) { return ('0' + n).slice(-2); };
+    return (s < 0 ? '−' : '') + (h ? h + ':' + zwei(m) : m) + ':' + zwei(a % 60);
+  }
+  /* Challenge bis es losgeht: eine Zahl unter 100 mit Finishweg. */
+  function gdChallenge(neu) {
+    if (!UI.gdZahl || neu) {
+      var z, w, n = 0;
+      do { z = 2 + Math.floor(Math.random() * 98); w = window.Checkout && Checkout.suggest ? Checkout.suggest(z, 3) : null; n++; } while ((!w || !w.length || z === UI.gdZahl) && n < 50);
+      UI.gdZahl = z; UI.gdWeg = w || [];
+    }
+    return { zahl: UI.gdZahl, weg: UI.gdWeg };
+  }
+
   function ligaTagHtml(o, gegnerTeam) {
     var t = S.ligaTag, d = t.d, lt = o.termin, online = ligaTagGeteilt();
-    var teile = ligaTagTeile(t), zuZweit = ligaTagZuZweit(t);
+    gdErsatzBereit(d);
+    var zuZweit = ligaTagZuZweit(t), teile = ligaTagTeile(t);
     var vorbei = ligaTagJetzt() >= ligaTagAnpfiff(t);
-    var status, offenSeite = t.bereit && online ? ligaTagOffeneSeite(t) : null;
-    if (ligaTagStartLaeuft) status = 'Das Ligaspiel startet …';
-    else if (t.stoerung) status = t.stoerung;
-    else if (t.turnier) status = t.platz ? 'Das Ligaspiel läuft, dieses iPad steigt ein …' : 'Das Ligaspiel läuft schon. Zum Mitschreiben eine Scheibe wählen.';
-    else if (online && !t.geholt) status = t.ohneNetz ? 'Keine Verbindung. Eintragen geht, abgeglichen wird, sobald das Netz da ist.' : 'Wird geladen …';
-    else if (t.ohneNetz) status = 'Keine Verbindung zum Server. Eingetragenes wird nachgereicht.';
-    else if (online && !t.platz) status = 'An welcher Scheibe steht dieses iPad? Scheibe 1 trägt uns ein, Scheibe 2 den Gegner.';
-    else if (!t.bereit) status = vorbei ? '20:00 Uhr: Bitte Aufstellung fertig machen und „Bereit“ tippen.' : 'Spieler eintragen, dann „Bereit“ tippen.';
-    else if (zuZweit && !t.plaetze[ligaTagAndere(t)].bereit) status = (vorbei ? '20:00 Uhr: ' : 'Bereit. ') + 'Es fehlt noch Scheibe ' + ligaTagAndere(t).charAt(1) + '.';
-    else if (offenSeite) status = 'Die Aufstellung ' + (offenSeite === 'wir' ? 'von ' + LIGA.team : 'von ' + gegnerTeam) + ' hat noch niemand mit „Bereit“ bestätigt.';
-    else status = 'Bereit. Um 20:00 Uhr startet das erste Einzel von selbst, bis dahin könnt ihr einwerfen.';
-    var platz = function (s) {
-      var p = t.plaetze && t.plaetze[s], verb = ligaTagVerbunden(t)[s === 'S1' ? 0 : 1];
-      var text = !p ? 'frei' : p.meiner ? 'dieses iPad' : (p.name ? 'iPad von ' + p.name : 'anderes iPad') + (verb === 2 ? ' · nicht erreichbar' : '');
-      var knopf = p && p.meiner ? '' : '<button type="button" class="btn small ' + (t.platz ? 'ghost' : 'hell') + '" data-action="tag-platz" data-value="' + s + '">' +
-        (p && !t.platz ? (t.frage === s ? 'Wirklich übernehmen?' : 'Übernehmen') : t.platz ? (p ? 'Tauschen' : 'Hierhin wechseln') : 'Hier stehe ich') + '</button>';
-      return '<div class="lt-platz' + (p && p.meiner ? ' meiner' : '') + (p && p.bereit ? ' bereit' : '') + '">' +
-        '<div><b>Scheibe ' + s.charAt(1) + '</b><small>' + esc(text) + '</small></div>' +
-        (p ? '<span class="lt-marke">' + (p.bereit ? 'bereit' : 'trägt ein') + '</span>' : '') + knopf + '</div>';
+    var tiHeim = (window.LIGA_DATEN.teamInfo || {})[lt.heim] || {};
+    var lokal = tiHeim.lokal || lt.ort || '';
+    var MON = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+    var dt = new Date(lt.tag + 'T12:00:00');
+    var datum = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'][dt.getDay()] + ' ' + ('0' + dt.getDate()).slice(-2) + '.' + MON[dt.getMonth()] + '.' + dt.getFullYear();
+    var zahnrad = '<button type="button" class="gd-rad" data-action="gd-panel" data-value="ein" aria-label="Einstellungen">' +
+      '<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M10 2h4l.5 2.3 1.8.8 2-1.2 2.8 2.8-1.2 2 .8 1.8L23 11v2l-2.3.5-.8 1.8 1.2 2-2.8 2.8-2-1.2-1.8.8L14 22h-4l-.5-2.3-1.8-.8-2 1.2-2.8-2.8 1.2-2-.8-1.8L1 13v-2l2.3-.5.8-1.8-1.2-2 2.8-2.8 2 1.2 1.8-.8Z" transform="translate(1 1) scale(.9167)"/></svg></button>';
+    var zurueck = '<button type="button" class="gd-zurueck" data-action="tag-zu">' + LG_LINKS + '<span>Spielplan</span></button>';
+    var fehler = o.fehler ? '<p class="gd-fehler" role="alert">' + esc(o.fehler) + '</p>' : '';
+
+    /* 1) Wahl: Wo bist du? (nur geteilt und noch ohne Scheibe) */
+    if (online && !t.platz && !t.turnier) {
+      var wahlKnopf = function (s, titel, text, bild) {
+        var p = t.plaetze && t.plaetze[s];
+        var belegt = p && !p.meiner;
+        return '<button type="button" class="gd-wahl-knopf" data-action="' + (s === 'Z' ? 'gd-zuschauer' : 'tag-platz') + '" data-value="' + s + '">' + bild +
+          '<b>' + titel + '</b><span>' + text + '</span>' +
+          (belegt ? '<small>' + (t.frage === s ? 'Nochmal tippen übernimmt' : (p.name ? 'iPad von ' + esc(p.name) : 'anderes iPad') + ' · antippen übernimmt') + '</small>' : '') + '</button>';
+      };
+      var wirHeim = lt.heim === LIGA.team;
+      return '<div class="gd-seite">' +
+        '<header class="gd-kopf">' + zurueck + '<b class="gd-titel">GAME DAY</b><span class="gd-sub">' + lt.nr + '. Spieltag · ' + esc(lt.heim) + ' gegen ' + esc(lt.gast) + ' · heute 20:00' + (lokal ? ' · ' + esc(lokal) : '') + '</span></header>' +
+        '<main class="gd-wahl"><b class="gd-frage-gross">WO BIST DU?</b>' + fehler +
+          '<div class="gd-wahl-drei">' +
+            wahlKnopf('S1', 'SCHEIBE 1', 'Trägt die Aufstellung von ' + esc(LIGA.team) + ' ein (' + (wirHeim ? 'Heim' : 'Gast') + ')', teamLogoHtml(LIGA.team, 'gd-gross')) +
+            wahlKnopf('S2', 'SCHEIBE 2', 'Trägt die Aufstellung von ' + esc(gegnerTeam) + ' ein (' + (wirHeim ? 'Gast' : 'Heim') + ')', teamLogoHtml(gegnerTeam, 'gd-gross')) +
+            wahlKnopf('Z', 'ZUSCHAUER', 'Live mitschauen, beide Scheiben, ohne etwas einzutragen',
+              '<span class="gd-auge" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-6.5 10-6.5S22 12 22 12s-4 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="3.2"/></svg></span>') +
+          '</div></main></div>';
+    }
+
+    /* 2) Die Game-Day-Seite */
+    var andere = ligaTagAndere(t);
+    var ichGo = !!(t.platz && gdGameOn(t, t.platz)), andereGo = !!(t.platz && zuZweit && gdGameOn(t, andere));
+    var beide = gdSeiteBereit(t, 'wir') && gdSeiteBereit(t, 'gegner') && (!zuZweit || ['S1', 'S2'].every(function (s) { return !t.plaetze[s] || t.plaetze[s].bereit; }));
+    var eins = !online || !zuZweit;
+    var meineSeite = eins ? null : (teile.wir ? 'wir' : 'gegner');
+    var karte = function (seite) {
+      var team = seite === 'wir' ? LIGA.team : gegnerTeam;
+      var bereit = gdSeiteBereit(t, seite);
+      var eigen = !t.turnier && (eins || meineSeite === seite) && !(online && !t.platz);
+      var s = seite === 'wir' ? 'S1' : 'S2', p = t.plaetze && t.plaetze[s];
+      var wo = (lt.heim === team ? 'Heim' : 'Gast') + (eins ? ' · auf diesem iPad' : ' · Scheibe ' + s.charAt(1) + (p && p.meiner ? ' · dieses iPad' : p ? (ligaTagVerbunden(t)[s === 'S1' ? 0 : 1] === 2 ? ' · nicht erreichbar' : '') : ' · noch frei'));
+      return '<div class="gd-team' + (eigen ? ' eigen' : '') + '">' + teamLogoHtml(team, 'gd-mittel') +
+        '<span class="gd-team-text"><b>' + esc(team) + '</b><small>' + wo + '</small></span>' +
+        (eigen ? '<button type="button" class="gd-aendern" data-action="gd-auf" data-value="' + seite + '"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Ändern</button>' : '') +
+        '<span class="gd-status' + (bereit ? ' bereit' : '') + '"><i></i>' + (bereit ? 'Bereit!' : 'In Arbeit') + '</span></div>';
     };
-    var liste = function (namen, typen, unterschriften) {
-      return '<ol class="lt-liste">' + [0, 1, 2, 3].map(function (i) {
-        var typ = (typen || [])[i] || '';
-        return '<li><span>' + (namen[i] ? esc(namen[i]) : '<i>noch offen</i>') + '</span>' +
-          (typ ? '<small class="ls-marke ' + typ + '">' + (typ === 'neu' && unterschriften[i] ? 'neu, unterschrieben' : LIGA_TYP_TEXT[typ]) + '</small>' : '') + '</li>';
-      }).join('') + '</ol>';
+    var liste = function (seite) {
+      var b = gdBuchstabe(lt, seite), z = '';
+      for (var i = 0; i < 8; i++) {
+        var x = gdPos(d, seite, i);
+        if (i >= 4 && !x.name) continue;
+        if (i === 4) z += '<div class="gd-trenn"><span>ERSATZ</span><i></i></div>';
+        z += '<div class="gd-pos"><span class="gd-nr">' + b + (i + 1) + '</span>' +
+          (x.name ? gdBild(d, seite, i, x, 'gd-av') + '<span class="gd-name">' + esc(x.name) + '</span>' : '<span class="gd-leer"></span><span class="gd-name leise">offen</span>') + '</div>';
+      }
+      return '<div class="gd-liste">' + z + '</div>';
     };
-    var fest = t.bereit || (online && !t.platz) || !!t.turnier;
-    var unterschrieben = function (x) { return [0, 1, 2, 3].map(function (i) { return ligaTagNmGueltig(t, x + i); }); };
-    var umschalten = function (seite) {
-      return !fest && zuZweit ? '<button type="button" class="dl-link" data-action="tag-seite" data-value="' + seite + '">Hier eintragen</button>' : '';
+    var chal = gdChallenge(false);
+    var gameOnText = ichGo ? 'Scheibe ' + andere.charAt(1) + ' muss noch bestätigen, dann startet das Ausbullen auf beiden Scheiben.'
+      : eins ? 'Startet das erste Einzel mit Ausbullen.' : 'Die andere Scheibe bestätigt kurz, dann startet auf beiden das erste Einzel mit Ausbullen.';
+    var gameOnKnopf = function (gross) {
+      if (ligaTagStartLaeuft) return '<div class="gd-warte' + (gross ? ' gross' : '') + '"><i></i>DAS LIGASPIEL STARTET …</div>';
+      if (ichGo) return '<div class="gd-warte' + (gross ? ' gross' : '') + '"><i></i>WARTE AUF SCHEIBE ' + andere.charAt(1) + '</div>' +
+        '<button type="button" class="gd-klein-link" data-action="gd-gameon-ab">Abbrechen</button>';
+      return '<button type="button" class="gd-gameon' + (gross ? ' gross' : '') + '" data-action="liga-los">GAME ON</button>';
     };
-    var wirHtml = !fest && teile.wir ? ligaWirFelderHtml(d)
-      : '<div class="ls-titel">' + esc(LIGA.team) + umschalten('wir') + '</div>' +
-        liste([0, 1, 2, 3].map(function (i) { var id = d.wir[i]; return !id ? '' : id === '__name' ? ligaWirVoll(d, i) : ligaName(id); }), d.wirTyp, unterschrieben('w'));
-    var sieHtml = !fest && teile.gegner ? ligaGegnerFelderHtml(gegnerTeam, d)
-      : '<div class="ls-titel">' + esc(gegnerTeam) + umschalten('gegner') + '</div>' +
-        liste([0, 1, 2, 3].map(function (i) { return ligaGegnerVoll(d, i); }), d.gegnerTyp, unterschrieben('g'));
-    return '<div class="lt-kopf"><div><h3>Game Day</h3>' +
-        '<p>' + lt.nr + '. Spieltag · ' + esc(lt.heim) + ' vs ' + esc(lt.gast) + (lt.ort ? ' · ' + esc(lt.ort) : '') + '</p></div>' +
-        '<div class="lt-uhr' + (vorbei ? ' vorbei' : '') + '"><b data-tag-uhr>' + ligaTagUhrText(t) + '</b><small>' + (vorbei ? 'Anwurf' : 'bis zum Anwurf um 20:00') + '</small></div></div>' +
-      '<p class="lt-status" role="status">' + esc(status) + '</p>' +
-      (o.fehler ? '<p class="edit-error" role="alert">' + esc(o.fehler) + '</p>' : '') +
-      (online ? '<div class="lt-plaetze">' + platz('S1') + platz('S2') + '</div>' : '') +
-      '<div class="liga-start lt-spalten"><div>' + wirHtml + '</div><div>' + sieHtml + '</div></div>' +
-      '<button type="button" class="dl-link lt-opt-knopf" data-action="tag-optionen" aria-expanded="' + !!o.optionen + '">' +
-        (o.optionen ? 'Einstellungen zuklappen' : 'Einstellungen: Best of ' + d.bestOf + ', ' + (d.finish ? 'mit' : 'ohne') + ' Finish-Anzeigen' + (d.nurErgebnis ? ', nur Ergebnisse' : '')) + '</button>' +
-      (o.optionen ? '<div class="liga-start' + (fest ? ' lt-fest' : '') + '">' + ligaOptionenHtml(d) + '</div>' : '') +
-      '<div class="lt-knoepfe">' +
-        '<button class="btn ghost" data-action="tag-zu">Zurück</button>' +
-        (t.bereit ? '<button class="btn ghost" data-action="tag-zu" data-spiel="1">Einwerfen, freies Spiel</button>' +
-            '<button class="btn ghost" data-action="tag-aendern">Aufstellung ändern</button>'
-          : !fest ? '<button class="btn primary start" data-action="tag-bereit">Bereit</button>' : '') +
-        (!online || t.platz ? '<button class="btn ' + (ligaTagAlleBereit(t) ? 'primary start' : 'ghost') + '" data-action="liga-los">' + (ligaTagAlleBereit(t) ? 'GAME ON!' : 'Sofort starten') + '</button>' : '') +
-      '</div>' +
-      (t.platz ? '<p class="lt-verlassen"><button type="button" class="dl-link" data-action="tag-verlassen">Dieses iPad von der Scheibe abmelden</button></p>' : '');
+    var status = t.turnier ? (t.platz ? 'Das Ligaspiel läuft, dieses iPad steigt ein …' : 'Das Ligaspiel läuft schon.')
+      : t.stoerung ? t.stoerung
+      : online && !t.geholt ? (t.ohneNetz ? 'Keine Verbindung. Eintragen geht, abgeglichen wird, sobald das Netz da ist.' : 'Wird geladen …')
+      : t.ohneNetz ? 'Keine Verbindung zum Server. Eingetragenes wird nachgereicht.' : '';
+    var mitte = vorbei && beide && !t.turnier
+      ? '<section class="gd-anwurf"><span class="gd-klein-titel">ANWURF</span>' + gameOnKnopf(true) + '<span class="gd-hinweis">' + gameOnText + '</span></section>'
+      : '<section class="gd-challenge"><span class="gd-klein-titel"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>CHALLENGE · BIS ES LOSGEHT</span>' +
+          '<b class="gd-zahl">' + chal.zahl + '</b>' +
+          '<div class="gd-weg">' + chal.weg.map(function (f) { return '<span>' + esc(f) + '</span>'; }).join('') + '</div>' +
+          '<button type="button" class="gd-neu" data-action="gd-challenge"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>NEU</button>' +
+          '<span class="gd-hinweis">Geschafft? Neu tippen, dann kommt die nächste Zahl unter 100.</span>' +
+          (beide && !t.turnier ? '<div class="gd-go-ecke">' + gameOnKnopf(false) + '<span class="gd-hinweis r">' + gameOnText + '</span></div>' : '') +
+        '</section>';
+    var scheibeText = eins ? (online ? 'EIN IPAD' : 'DIESES GERÄT') + (d.nurErgebnis ? ' · NUR ERGEBNISSE' : '')
+      : 'SCHEIBE ' + t.platz.charAt(1) + ' · ' + ((t.platz === 'S1') === (lt.heim === LIGA.team) ? 'HEIM' : 'GAST');
+    var seite = '<div class="gd-seite">' +
+      '<header class="gd-kopf">' + zurueck + '<b class="gd-titel">GAME DAY</b><span class="gd-sub">' + lt.nr + '. Spieltag · ' + datum + '</span><span class="gd-luft"></span>' +
+        '<span class="gd-chip">' + scheibeText + '</span>' + zahnrad + '</header>' +
+      '<main class="gd-haupt">' + fehler + (status ? '<p class="gd-status-zeile" role="status">' + esc(status) + '</p>' : '') +
+        '<div class="gd-willkommen"><span><small>WILLKOMMEN IN DER</small><b>' + esc(lokal.toUpperCase()) + '</b></span>' +
+          '<span class="gd-uhr' + (vorbei ? ' ueber' : '') + '"><b data-gd-uhr>' + gdUhr(t) + '</b><small>' + (vorbei ? 'über der Zeit, Anwurf war 20:00' : 'bis zum Anwurf um 20:00') + '</small></span></div>' +
+        '<div class="gd-teams">' + karte('wir') + karte('gegner') + liste('wir') + liste('gegner') + '</div>' +
+        mitte +
+      '</main></div>';
+
+    /* 3) Fenster ueber der Seite */
+    var panel = '';
+    if (andereGo && !ichGo && !t.turnier && !ligaTagStartLaeuft) {
+      var ersteH = gdPos(d, 'wir', 0).name || 'H1', ersteG = gdPos(d, 'gegner', 0).name || 'G1';
+      panel = '<div class="gd-schleier"><div class="gd-frage-karte" role="dialog" aria-modal="true">' +
+        '<span class="gd-klein-titel">SCHEIBE ' + andere.charAt(1) + ' HAT GAME ON GEDRÜCKT</span><b>KANN ES LOSGEHEN?</b>' +
+        '<p>Wenn du bestätigst, starten beide Scheiben mit dem Ausbullen des ersten Einzels. Hier: ' + esc(t.platz === 'S1' ? ersteH + ' gegen ' + ersteG : ersteG + ' gegen ' + ersteH) + '.</p>' +
+        '<div class="gd-frage-knoepfe"><button type="button" class="gd-klein-link gross" data-action="gd-gameon-ab">Noch nicht</button>' +
+        '<button type="button" class="gd-gameon" data-action="gd-los">LOS GEHT\'S</button></div></div></div>';
+    } else if (o.panel === 'ein') {
+      panel = gdEinstellungenHtml(t, eins);
+    } else if (o.panel === 'neu') {
+      panel = gdNeuHtml(o);
+    } else if (o.panel === 'auf') {
+      panel = gdAufstellungHtml(t, o, lt, gegnerTeam);
+    }
+    return seite + panel;
   }
+
+  function gdAufstellungHtml(t, o, lt, gegnerTeam) {
+    var d = t.d, seite = o.seite === 'gegner' ? 'gegner' : 'wir';
+    var team = seite === 'wir' ? LIGA.team : gegnerTeam, b = gdBuchstabe(lt, seite);
+    var belegt = {};
+    var zeilen = '';
+    for (var i = 0; i < 8; i++) {
+      var x = gdPos(d, seite, i);
+      if (i === 4) zeilen += '<div class="gd-trenn"><span>ERSATZ</span><i></i></div>';
+      if (x.name) belegt[seite === 'wir' ? x.id + '|' + x.name : x.name] = 1;
+      zeilen += '<div class="gd-auf-zeile"><span class="gd-nr">' + b + (i + 1) + '</span>' +
+        (x.name ? gdBild(d, seite, i, x, 'gd-av gross') : '<span class="gd-leer gross"></span>') +
+        '<span class="gd-name' + (x.name ? '' : ' leise') + '">' + (x.name ? esc(x.name) : 'offen') + '</span>' +
+        (x.name && !(seite === 'wir' && x.id && x.id !== '__name')
+          ? '<label class="gd-foto-knopf"><input type="file" accept="image/*" data-role="gd-foto" data-seite="' + seite + '" data-i="' + i + '" hidden>' +
+            '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2.5h6L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.4"/></svg>Foto</label>'
+          : '<span></span>') +
+        (x.name ? '<button type="button" class="gd-typ' + (x.typ ? ' ' + x.typ : '') + '" data-action="gd-typ" data-seite="' + seite + '" data-i="' + i + '">' + GD_TYP_TEXT[x.typ || ''] + '</button>' : '<span></span>') +
+        (x.name ? '<button type="button" class="gd-raus" data-action="gd-raus" data-seite="' + seite + '" data-i="' + i + '" aria-label="' + esc(x.name) + ' herausnehmen">×</button>' : '<span></span>') +
+        '</div>';
+      /* Unserem Spieler fehlt der volle Name (Bogen): hier nachtragen. */
+      var vp = seite === 'wir' && i < 4 && x.id && x.id !== '__name' ? profile(x.id) : null;
+      if (vp && vollFehlt(vp)) zeilen += '<div class="gd-voll"><span>Voller Name für den Bogen:</span>' + vollFelderHtml(vp, d) + '</div>';
+    }
+    var chips;
+    if (seite === 'wir') {
+      chips = ligaKader().map(function (p) {
+        var drin = false;
+        for (var k = 0; k < 8; k++) if (gdPos(d, 'wir', k).id === p.id) drin = true;
+        return '<button type="button" class="gd-chip' + (drin ? ' drin' : '') + '" data-action="gd-chip" data-seite="wir" data-id="' + esc(p.id) + '">' + avatarHTML(p, 'gd-av gross') + '<span>' + esc(p.name) + '</span></button>';
+      }).join('');
+    } else {
+      chips = ligaGegnerKader(gegnerTeam).map(function (n) {
+        var drin = false;
+        for (var k = 0; k < 8; k++) if (gdPos(d, 'gegner', k).name === n) drin = true;
+        var t2 = n.split(' ');
+        return '<button type="button" class="gd-chip' + (drin ? ' drin' : '') + '" data-action="gd-chip" data-seite="gegner" data-name="' + esc(n) + '"><span class="av gd-av gross init gd-init">' + esc(gdKurz(n)) + '</span><span>' + esc(t2[0] + (t2.length > 1 ? ' ' + t2[t2.length - 1].charAt(0) + '.' : '')) + '</span></button>';
+      }).join('');
+    }
+    var andereSeite = seite === 'wir' ? 'gegner' : 'wir', andersTeam = seite === 'wir' ? gegnerTeam : LIGA.team;
+    var aBereit = gdSeiteBereit(t, andereSeite);
+    var eins = !ligaTagGeteilt() || !ligaTagZuZweit(t);
+    var gegenListe = '';
+    for (var g = 0; g < 8; g++) {
+      var y = gdPos(d, andereSeite, g);
+      if (g >= 4 && !y.name) continue;
+      if (g === 4) gegenListe += '<div class="gd-trenn klein"><span>ERSATZ</span><i></i></div>';
+      gegenListe += '<div class="gd-pos"><span class="gd-nr">' + gdBuchstabe(lt, andereSeite) + (g + 1) + '</span>' +
+        ((aBereit || eins) && y.name ? gdBild(d, andereSeite, g, y, 'gd-av') + '<span class="gd-name">' + esc(y.name) + '</span>' : '<span class="gd-leer"></span><span class="gd-name leise">offen</span>') + '</div>';
+    }
+    return '<div class="gd-panel" role="dialog" aria-modal="true" aria-label="Aufstellung">' +
+      '<header class="gd-panel-kopf">' + teamLogoHtml(team, 'gd-panel-logo') +
+        '<span class="gd-panel-titel"><b>AUFSTELLUNG ' + esc(team.toUpperCase()) + '</b><small>' + b + '1 bis ' + b + '4 starten, ' + b + '5 bis ' + b + '8 sind Ersatz. Es muss noch nicht jeder gemeldet sein, Nachmelden geht auch später. Status antippen: gemeldet, Gastspieler, neu melden.</small></span>' +
+        '<span class="gd-luft"></span><button type="button" class="gd-klein-link" data-action="gd-panel-zu">Abbrechen</button>' +
+        '<button type="button" class="gd-bereit" data-action="tag-bereit">BEREIT</button></header>' +
+      (o.fehler ? '<p class="gd-fehler" role="alert">' + esc(o.fehler) + '</p>' : '') +
+      '<div class="gd-panel-drei">' +
+        '<section class="gd-spalte"><span class="gd-klein-titel">REIHENFOLGE</span><div class="gd-rollen">' + zeilen + '</div></section>' +
+        '<section class="gd-spalte"><span class="gd-klein-titel">KADER</span><span class="gd-hinweis">Antippen, um einen Spieler in die nächste freie Position zu setzen oder wieder herauszunehmen.</span>' +
+          '<div class="gd-chips">' + chips + '</div>' +
+          '<button type="button" class="gd-plus" data-action="gd-panel" data-value="neu" data-seite="' + seite + '"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Spieler</button></section>' +
+        '<section class="gd-spalte gd-gegner-spalte"><span class="gd-gegner-kopf">' + teamLogoHtml(andersTeam, 'mini') + '<span class="gd-klein-titel">' + (seite === 'wir' ? 'GEGNER' : 'WIR') + '</span><span class="gd-luft"></span>' +
+          '<span class="gd-status klein' + (aBereit ? ' bereit' : '') + '"><i></i>' + (aBereit ? 'Bereit!' : 'In Arbeit') + '</span></span>' +
+          '<span class="gd-team-name">' + esc(andersTeam) + '</span>' + gegenListe +
+          '<span class="gd-hinweis">' + (eins ? 'Das andere Team trägst du hier auch ein: Fenster schließen und dort Ändern.' : 'Erscheint, sobald ' + (seite === 'wir' ? 'der Gegner' : 'die andere Scheibe') + ' Bereit drückt.') + '</span></section>' +
+      '</div></div>';
+  }
+
+  function gdNeuHtml(o) {
+    var n = o.neu || (o.neu = { status: 'gast', u18: 'nein', g: 'm', foto: '' });
+    var seg = function (feld, opts) {
+      return '<div class="gd-seg">' + opts.map(function (x) {
+        return '<button type="button" class="' + (n[feld] === x[0] ? 'an' : '') + '" data-action="gd-neu-wahl" data-feld="' + feld + '" data-value="' + x[0] + '">' + x[1] + '</button>';
+      }).join('') + '</div>';
+    };
+    return '<div class="gd-schleier"><div class="gd-neu-karte" role="dialog" aria-modal="true" aria-label="Neuer Spieler">' +
+      '<b class="gd-neu-titel">NEUER SPIELER</b>' +
+      '<div class="gd-neu-foto">' + (n.foto && avatarSicher(n.foto) ? '<span class="av gd-av riesig" style="background-image:url(' + n.foto + ')"></span>' : '<span class="gd-leer riesig"></span>') +
+        '<span class="gd-neu-foto-knoepfe"><label class="gd-foto-knopf gross"><input type="file" accept="image/*" capture="user" data-role="gd-neu-foto" hidden>Foto aufnehmen</label>' +
+        '<label class="gd-foto-knopf gross"><input type="file" accept="image/*" data-role="gd-neu-foto" hidden>Aus Fotos</label><small>freiwillig</small></span></div>' +
+      '<label class="gd-feld"><span>Name</span><input data-role="gd-neu-name" maxlength="60" autocomplete="off" value="' + esc(n.name || '') + '" placeholder="Vorname Nachname"></label>' +
+      '<label class="gd-feld"><span>Anzeigename</span><input data-role="gd-neu-anzeige" maxlength="30" autocomplete="off" value="' + esc(n.anzeige || '') + '" placeholder="Spitzname, freiwillig"></label>' +
+      '<div class="gd-feld"><span>Status</span>' + seg('status', [['gast', 'Gastspieler'], ['neu', 'neu melden']]) + '</div>' +
+      '<div class="gd-feld zwei"><div><span>Unter 18?</span>' + seg('u18', [['nein', 'Nein'], ['ja', 'Ja']]) + '</div><div><span>Geschlecht</span>' + seg('g', [['w', 'w'], ['m', 'm'], ['d', 'd']]) + '</div></div>' +
+      '<p class="gd-hinweis">' + (n.status === 'neu' ? 'Neu melden: Die Unterschrift folgt in der App, spätestens vor den Unterschriften der Teamcaptains. Gebühr 10 € (U18: 2 €) innerhalb von 14 Tagen.' : 'Gastspieler: höchstens einer pro Mannschaft. Danach steht er im Kader und kann aufgestellt werden.') + '</p>' +
+      (o.neuFehler ? '<p class="gd-fehler" role="alert">' + esc(o.neuFehler) + '</p>' : '') +
+      '<div class="gd-frage-knoepfe"><button type="button" class="gd-klein-link gross" data-action="gd-panel" data-value="auf">Abbrechen</button>' +
+      '<button type="button" class="gd-bereit" data-action="gd-neu-hinzu">HINZUFÜGEN</button></div></div></div>';
+  }
+
+  function gdEinstellungenHtml(t, eins) {
+    var d = t.d;
+    var fest = !eins && t.platz === 'S2';
+    var opt = function (k, titel, text, werte, akt) {
+      return '<div class="gd-opt"><span class="gd-opt-text"><b>' + titel + '</b><small>' + text + '</small></span><div class="gd-seg">' +
+        werte.map(function (w) {
+          return '<button type="button" class="' + (akt === w[0] ? 'an' : '') + '"' + (fest ? ' disabled' : ' data-action="gd-opt" data-k="' + k + '" data-value="' + w[0] + '"') + '>' + w[1] + '</button>';
+        }).join('') + '</div></div>';
+    };
+    return '<div class="gd-schleier"><div class="gd-ein-karte" role="dialog" aria-modal="true" aria-label="Einstellungen">' +
+      '<b class="gd-neu-titel">EINSTELLUNGEN</b><span class="gd-hinweis">' + (fest ? 'Festgelegt an Scheibe 1 beim Erstellen. Hier nur zum Nachsehen.' : 'Gilt für beide Scheiben. Meist bleibt alles wie beim letzten Mal.') + '</span>' +
+      opt('finish', 'Finish-Anzeigen', 'Ohne ist ligakonform: der Schreiber sagt kein Doppel an. Mit zeigt Finishwege und fragt beim Checkout nach dem Doppel.', [['ohne', 'ohne'], ['mit', 'mit']], d.finish ? 'mit' : 'ohne') +
+      opt('live', 'Live für Zuschauer', 'Ohne Namen zeigt nur H1, G1 und die Stände.', [['namen', 'mit Namen'], ['anonym', 'ohne Namen']], d.ohneNamen ? 'anonym' : 'namen') +
+      opt('legs', 'Legs je Einzel', 'Liga 5 spielt Best of 3.', [['3', 'Best of 3'], ['5', 'Best of 5']], String(d.bestOf === 5 ? 5 : 3)) +
+      opt('mit', 'Mitschreiben', 'Nur Ergebnisse, wenn der Gegner mit eigenem System zählt. Ohne Ausbullen und Würfe, Zuschauer sehen nur die Ergebnisse.', [['app', 'in der App'], ['erg', 'nur Ergebnisse']], d.nurErgebnis ? 'erg' : 'app') +
+      '<div class="gd-ein-unten">' +
+        (t.platz ? '<button type="button" class="gd-klein-link" data-action="tag-verlassen">Dieses iPad von der Scheibe abmelden</button>' : '<span></span>') +
+        (t.bereit ? '<button type="button" class="gd-klein-link" data-action="tag-zu" data-spiel="1">Einwerfen: freies Spiel</button>' : '') +
+        '<button type="button" class="gd-bereit" data-action="gd-panel-zu">FERTIG</button></div>' +
+      '</div></div>';
+  }
+
   function ligaTagHinweisHtml(o) {
     var t = S.ligaTag, g = S.game;
     if (!t) return '<p>Der Game Day ist vorbei.</p><button class="btn primary full" data-action="ov-cancel">Schließen</button>';
@@ -16452,6 +16757,16 @@
         'Nur auf diesem iPad heißt: Das andere kann nicht mitschreiben (dort dann bitte nicht starten), und es gibt keinen Live-Ticker.</p>' +
         '<div class="row-btns two"><button class="btn hell" data-action="ov-cancel">Weiter versuchen</button>' +
         '<button class="btn ghost" data-action="tag-nur-hier">Nur auf diesem iPad</button></div>';
+    }
+    if (o.art === 'anwurf') {
+      return '<h3>20:00 Uhr · Anwurf</h3><p>Beide Aufstellungen sind bereit. Das Ligaspiel startet mit GAME ON am Game Day, die andere Scheibe bestätigt.</p>' +
+        '<div class="row-btns two"><button class="btn ghost" data-action="ov-cancel">Gleich</button>' +
+        '<button class="btn hell" data-action="tag-oeffnen">Zum Game Day</button></div>';
+    }
+    if (o.art === 'gameon') {
+      return '<h3>Scheibe ' + ligaTagAndere(t).charAt(1) + ' hat GAME ON gedrückt</h3><p>Kann es losgehen? Dann startet auf beiden Scheiben das erste Einzel mit Ausbullen.</p>' +
+        '<div class="row-btns two"><button class="btn ghost" data-action="gd-gameon-ab">Noch nicht</button>' +
+        '<button class="btn hell" data-action="tag-oeffnen">Zum Game Day</button></div>';
     }
     if (o.art === 'turnier') {
       return '<h3>Ligaspiel startet</h3><p>Hier läuft noch ein Turnier. Bitte erst abschließen oder beenden, dann steigt dieses iPad in das Ligaspiel ein.</p>' +
@@ -18106,9 +18421,132 @@
       case 'tag-optionen':
         if (UI.overlay) { UI.overlay.optionen = !UI.overlay.optionen; render(); }
         break;
-      case 'tag-bereit':
+      case 'tag-bereit': {
+        /* Ein iPad fuer beide Teams: BEREIT im Fenster prueft erst diese
+           Seite und fuehrt dann zur anderen (Entwurf A2). */
+        var tbT = ligaTagAktiv(), tbO = UI.overlay;
+        if (tbT && tbO && tbO.panel === 'auf' && (!ligaTagGeteilt() || !ligaTagZuZweit(tbT))) {
+          var tbSeite = tbO.seite === 'gegner' ? 'gegner' : 'wir', tbAndere = tbSeite === 'wir' ? 'gegner' : 'wir';
+          var tbTeil = {}; tbTeil[tbSeite] = true;
+          var tbF = ligaStartPruefen(tbT.d, tbTeil);
+          if (tbF) { tbO.fehler = tbF; render(); break; }
+          var tbTeil2 = {}; tbTeil2[tbAndere] = true;
+          if (ligaStartPruefen(tbT.d, tbTeil2)) { tbO.seite = tbAndere; tbO.fehler = 'Jetzt die Aufstellung von ' + (tbAndere === 'wir' ? LIGA.team : ligaTagTermin(tbT.terminId) && (ligaTagTermin(tbT.terminId).heim === LIGA.team ? ligaTagTermin(tbT.terminId).gast : ligaTagTermin(tbT.terminId).heim)) + '.'; render(); break; }
+        }
         ligaTagBereit();
         break;
+      }
+      case 'gd-panel': {
+        var gpO = UI.overlay;
+        if (!gpO) break;
+        gpO.panel = el.getAttribute('data-value') || null; gpO.fehler = '';
+        if (gpO.panel === 'neu') { gpO.neu = { status: 'gast', u18: 'nein', g: 'm', foto: '', name: '', anzeige: '' }; gpO.neuFehler = ''; }
+        render();
+        break;
+      }
+      case 'gd-panel-zu':
+        if (UI.overlay) { UI.overlay.panel = null; UI.overlay.fehler = ''; render(); }
+        break;
+      case 'gd-auf': {
+        var gaT = ligaTagAktiv(), gaO = UI.overlay;
+        if (!gaT || !gaO) break;
+        if (gaT.bereit) ligaTagNichtBereit();
+        gaO.panel = 'auf'; gaO.seite = el.getAttribute('data-value') === 'gegner' ? 'gegner' : 'wir'; gaO.fehler = '';
+        if (ligaTagZuZweit(gaT)) gaT.seite = gaO.seite;
+        render();
+        break;
+      }
+      case 'gd-chip': {
+        var gcT = ligaTagAktiv();
+        if (!gcT) break;
+        var gcD = gcT.d, gcS = el.getAttribute('data-seite') === 'gegner' ? 'gegner' : 'wir';
+        var gcId = el.getAttribute('data-id') || '', gcName = el.getAttribute('data-name') || '';
+        var gcDrin = -1, gcFrei = -1;
+        for (var gci = 0; gci < 8; gci++) {
+          var gcX = gdPos(gcD, gcS, gci);
+          if (gcS === 'wir' ? gcX.id === gcId : gcX.name === gcName) gcDrin = gci;
+          if (gcFrei < 0 && !gcX.name) gcFrei = gci;
+        }
+        if (gcDrin >= 0) gdPosSetzen(gcD, gcS, gcDrin, {});
+        else if (gcFrei >= 0) {
+          if (gcS === 'wir') gdPosSetzen(gcD, 'wir', gcFrei, { id: gcId, typ: '' });
+          else { var gcT2 = gcName.split(' '); gdPosSetzen(gcD, 'gegner', gcFrei, { vor: gcT2.slice(0, -1).join(' ') || gcName, nach: gcT2.length > 1 ? gcT2[gcT2.length - 1] : '', typ: '' }); }
+        }
+        ligaTagGetippt = Date.now(); save(); render();
+        break;
+      }
+      case 'gd-raus': {
+        var grT = ligaTagAktiv();
+        if (!grT) break;
+        gdPosSetzen(grT.d, el.getAttribute('data-seite') === 'gegner' ? 'gegner' : 'wir', Number(el.getAttribute('data-i')), {});
+        ligaTagGetippt = Date.now(); save(); render();
+        break;
+      }
+      case 'gd-typ': {
+        var gtT = ligaTagAktiv();
+        if (!gtT) break;
+        var gtS = el.getAttribute('data-seite') === 'gegner' ? 'gegner' : 'wir', gtI = Number(el.getAttribute('data-i'));
+        var gtX = gdPos(gtT.d, gtS, gtI);
+        gtX.typ = GD_TYP_REIHE[(GD_TYP_REIHE.indexOf(gtX.typ || '') + 1) % GD_TYP_REIHE.length];
+        gdPosSetzen(gtT.d, gtS, gtI, gtX);
+        ligaTagGetippt = Date.now(); save(); render();
+        break;
+      }
+      case 'gd-neu-wahl':
+        if (UI.overlay && UI.overlay.neu) { UI.overlay.neu[el.getAttribute('data-feld')] = el.getAttribute('data-value'); render(); }
+        break;
+      case 'gd-neu-hinzu': {
+        var gnT = ligaTagAktiv(), gnO = UI.overlay;
+        if (!gnT || !gnO || !gnO.neu) break;
+        var gnN = gnO.neu, gnName = String(gnN.name || '').replace(/\s+/g, ' ').trim();
+        var gnTeile = gnName.split(' ');
+        if (gnTeile.length < 2) { gnO.neuFehler = 'Bitte Vor- und Nachnamen eintragen.'; render(); break; }
+        var gnS = gnO.seite === 'gegner' ? 'gegner' : 'wir', gnFrei = -1;
+        for (var gni = 0; gni < 8; gni++) if (gnFrei < 0 && !gdPos(gnT.d, gnS, gni).name) gnFrei = gni;
+        if (gnFrei < 0) { gnO.neuFehler = 'Alle acht Positionen sind belegt.'; render(); break; }
+        var gnVor = gnTeile.slice(0, -1).join(' '), gnNach = gnTeile[gnTeile.length - 1];
+        var gnTyp = gnN.status === 'neu' ? 'neu' : 'gast';
+        if (gnS === 'wir') gdPosSetzen(gnT.d, 'wir', gnFrei, { id: '__name', vor: gnVor, nach: gnNach, typ: gnTyp });
+        else gdPosSetzen(gnT.d, 'gegner', gnFrei, { vor: gnVor, nach: gnNach, typ: gnTyp });
+        gdErsatzBereit(gnT.d);
+        if (gnN.foto) gnT.d.fotos[(gnS === 'gegner' ? 'g' : 'w') + gnFrei] = gnN.foto;
+        /* U18 und Geschlecht fuer die Nachmeldung merken (der Unterschrift-Dialog fragt sie). */
+        if (gnTyp === 'neu') { if (!gnT.d.neuInfo) gnT.d.neuInfo = {}; gnT.d.neuInfo[(gnS === 'gegner' ? 'g' : 'w') + gnFrei] = { u18: gnN.u18, g: gnN.g }; }
+        gnO.panel = 'auf'; gnO.neu = null; gnO.neuFehler = '';
+        ligaTagGetippt = Date.now(); save(); render();
+        break;
+      }
+      case 'gd-opt': {
+        var goT = ligaTagAktiv();
+        if (!goT) break;
+        var goK = el.getAttribute('data-k'), goV = el.getAttribute('data-value'), goD = goT.d;
+        if (goK === 'finish') goD.finish = goV === 'mit';
+        else if (goK === 'live') goD.ohneNamen = goV === 'anonym';
+        else if (goK === 'legs') goD.bestOf = goV === '5' ? 5 : 3;
+        else if (goK === 'mit') goD.nurErgebnis = goV === 'erg';
+        ligaTagGetippt = Date.now(); save(); render();
+        break;
+      }
+      case 'gd-challenge':
+        gdChallenge(true); render();
+        break;
+      case 'gd-los':
+        ligaTagStarten(false);
+        break;
+      case 'gd-gameon-ab':
+        if (UI.overlay && UI.overlay.type === 'ligatag-hinweis') UI.overlay = null;
+        ligaTagAbgleich({ gameOn: false }).then(function () { ligaTagZeichnen(true); });
+        render();
+        break;
+      case 'gd-zuschauer': {
+        /* Zuschauer: dieses Geraet traegt nichts ein. Laeuft das Spiel, geht
+           es zum Live-Ticker, sonst zurueck zum Spielplan. */
+        var gzF = ligaLiveFremd();
+        UI.overlay = null;
+        if (gzF && gzF.zuschauer) { render(); handleActionInner('live-ansehen', { getAttribute: function (n) { return n === 'data-k' ? gzF.zuschauer : null; } }); }
+        else { UI.overlay = { type: 'hinweis', titel: 'Zuschauer', text: 'Sobald das Ligaspiel läuft, siehst du es hier im Spielplan unter LIVE. Vorher gibt es noch nichts zu sehen.' }; render(); }
+        break;
+      }
       case 'tag-aendern':
         ligaTagNichtBereit();
         break;
@@ -19477,6 +19915,25 @@
     });
   }
   $('avatar-input').addEventListener('change', bildGewaehlt);
+  /* Game Day: Fotos fuer Positionen und neue Spieler (freiwillig). */
+  document.addEventListener('change', function (ev) {
+    var r = ev.target && ev.target.getAttribute && ev.target.getAttribute('data-role');
+    if (r !== 'gd-foto' && r !== 'gd-neu-foto') return;
+    var f = ev.target.files && ev.target.files[0];
+    if (!f) return;
+    var seite = ev.target.getAttribute('data-seite') === 'gegner' ? 'g' : 'w', i = ev.target.getAttribute('data-i');
+    readAvatar(f, function (url) {
+      var t = ligaTagAktiv();
+      if (!url || !t) return;
+      if (r === 'gd-neu-foto') { if (UI.overlay && UI.overlay.neu) UI.overlay.neu.foto = url; }
+      else { gdErsatzBereit(t.d); t.d.fotos[seite + i] = url; save(); }
+      render();
+    });
+  });
+  document.addEventListener('input', function (ev) {
+    var r = ev.target && ev.target.getAttribute && ev.target.getAttribute('data-role');
+    if ((r === 'gd-neu-name' || r === 'gd-neu-anzeige') && UI.overlay && UI.overlay.neu) UI.overlay.neu[r === 'gd-neu-name' ? 'name' : 'anzeige'] = ev.target.value;
+  });
   if ($('avatar-kamera')) $('avatar-kamera').addEventListener('change', bildGewaehlt);
 
   /* Als Schaltfläche angesagte Elemente müssen auch per Tastatur gehen. */
