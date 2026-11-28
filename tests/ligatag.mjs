@@ -13,7 +13,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { hashPassword } from '../server/lib/password.mjs';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
-const PORT = 38461;
+const PORT = Number(process.env.TEST_PORT) || 38461;
 const BASIS = `http://127.0.0.1:${PORT}`;
 const CODE = 'ligatag-test';
 const TAG = '2026-12-09';              // 6. Spieltag, auswaerts bei Treff ma nix
@@ -426,7 +426,7 @@ async function main() {
       await a.page.locator('[data-action="tag-zu"]').first().click();
       await a.page.route('**/start', (r) => r.fulfill({ status: 429, contentType: 'application/json', body: '{"fehler":"Genug fuer heute."}' }));
       await anpfiff(a, 300);
-      check('lehnt der Server nur den Start ab, steht es da', await bis(a, () => /startet nicht/.test(document.getElementById('overlay-card').innerText) && /Genug fuer heute/.test(document.getElementById('overlay-card').innerText), null, 15000));
+      check('lehnt der Server nur den Start ab, steht es da', await bis(a, () => /startet nicht/i.test(document.getElementById('overlay-card').innerText) && /Genug fuer heute/.test(document.getElementById('overlay-card').innerText), null, 15000));
       await a.page.unroute('**/start');
       check('und geht weiter, sobald es wieder darf', await bis(a, () => !!window.__dart.state().tour, null, 25000));
       await leeren(a); await warten(500);
@@ -466,7 +466,7 @@ async function main() {
       await a.page.locator('[data-action="tag-zu"]').first().click();
       await a.page.route('**/api/liga/tag/**', (r) => r.fulfill({ status: 401, contentType: 'application/json', body: '{"fehler":"Nicht angemeldet."}' }));
       await anpfiff(a, 300);
-      check('nach 20:00 kommt ein Hinweis', await bis(a, () => /startet nicht/.test(document.getElementById('overlay-card').innerText) && (window.__dart.ui().overlay || {}).type === 'ligatag-hinweis', null, 30000), JSON.stringify(await st(a)));
+      check('nach 20:00 kommt ein Hinweis', await bis(a, () => /startet nicht/i.test(document.getElementById('overlay-card').innerText) && (window.__dart.ui().overlay || {}).type === 'ligatag-hinweis', null, 30000), JSON.stringify(await st(a)));
       await a.page.unroute('**/api/liga/tag/**');
     });
     await gruppe('W5: offline Getipptes ueberlebt das Neuladen', async () => {

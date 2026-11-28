@@ -1556,7 +1556,7 @@ async function main() {
 
       /* Tobi nimmt H2 - G2 und bullt aus (laeuft also bei ihm). */
       const tobiMatch = await tobi.page.evaluate(() => window.__dart.state().matches.find((m) => m.posPaar[0] === 1 && m.posPaar[1] === 1).id);
-      await tobi.page.locator('#schedule .match-row [data-action="open-match"][data-id="' + tobiMatch + '"]').click();
+      await tobi.page.locator('#ligaspiel [data-action="open-match"][data-id="' + tobiMatch + '"]').click();
       await tobi.page.waitForTimeout(800);
       await tobi.page.locator('#bulloff-buttons [data-action="pick-starter"]').first().click();
       await tobi.page.waitForTimeout(400);
@@ -1629,7 +1629,7 @@ async function main() {
       await julius.page.evaluate(() => {
         const D = window.__dart; D.ui().overlay = null; D.ui().bericht = null; D.setScreen('bericht');
       });
-      await julius.page.locator('#bericht-blatt [data-action="liga-nachmelden"]').click();
+      await julius.page.locator('#la-bericht [data-action="liga-nachmelden"]').click();
       await julius.page.locator('[data-role="nm-nach"]').fill('Nachgemeldet');
       await julius.page.locator('[data-role="nm-vor"]').fill('Nora');
       await julius.page.locator('[data-action="nm-wahl"][data-feld="g"][data-value="w"]').click();
@@ -1793,7 +1793,7 @@ async function main() {
 
       /* 2) Tobi faellt mitten im Einzel aus: Julius kann es nach der Frist uebernehmen. */
       await tobi.page.evaluate(() => window.__dart.setScreen('tournament'));
-      await tobi.page.locator('#schedule .match-row [data-action="open-match"][data-id="' + ids[1] + '"]').click();
+      await tobi.page.locator('#ligaspiel [data-action="open-match"][data-id="' + ids[1] + '"]').click();
       await tobi.page.waitForTimeout(800);
       check('Tobi spielt das zweite Einzel', await tobi.page.evaluate((id) => window.__dart.state().current === id, ids[1]));
       await tobi.page.context().setOffline(true);
@@ -1801,14 +1801,16 @@ async function main() {
       await julius.page.waitForTimeout(500);
       await julius.page.evaluate(() => window.__dart.render());
       check('waehrend Tobi spielt: "laeuft bei Tobi", kein Start-Knopf',
-        (await julius.page.locator('#schedule').innerText()).toLowerCase().includes('läuft bei tobi'));
+        (await julius.page.locator('#ligaspiel').innerText()).toLowerCase().includes('läuft bei s2') &&
+        (await julius.page.locator('#ligaspiel [data-action="open-match"][data-id="' + ids[1] + '"]').count()) === 0 &&
+        (await julius.page.locator('#ligaspiel .la-zustand[title*="Tobi"]').count()) >= 1);
       await julius.page.waitForTimeout(4000);            // Frist im Test: 3 s ohne Lebenszeichen (DARTS_CLAIM_FRIST_MS)
       await julius.page.evaluate(() => window.DartSync.turnier.abgleich(true));
       await julius.page.waitForTimeout(500);
       await julius.page.evaluate(() => window.__dart.render());
       check('nach der Frist: "haengengeblieben?" mit Uebernehmen',
-        (await julius.page.locator('#schedule').innerText()).toLowerCase().includes('hängengeblieben'));
-      await julius.page.locator('#schedule .match-row [data-action="open-match"][data-id="' + ids[1] + '"]').click();
+        (await julius.page.locator('#ligaspiel').innerText()).toLowerCase().includes('hängengeblieben'));
+      await julius.page.locator('#ligaspiel [data-action="open-match"][data-id="' + ids[1] + '"]').click();
       await julius.page.waitForTimeout(900);
       check('Julius uebernimmt das Einzel', await julius.page.evaluate((id) => window.__dart.state().current === id, ids[1]));
       /* Zuschauer-Link: ohne Konto, sieht das laufende Einzel mit LIVE und Rest. */
@@ -1994,7 +1996,7 @@ async function main() {
       /* A) Julius checkt im Funkloch aus; Tobi "uebernimmt" das scheinbar
             haengengebliebene Einzel und geht ohne Wurf zurueck. */
       await julius.page.evaluate(() => window.__dart.setScreen('tournament'));
-      await julius.page.locator('#schedule .match-row [data-action="open-match"][data-id="' + ids[0] + '"]').click();
+      await julius.page.locator('#ligaspiel [data-action="open-match"][data-id="' + ids[0] + '"]').click();
       await julius.page.waitForTimeout(800);
       await julius.page.context().setOffline(true);
       await julius.page.evaluate((id) => {
@@ -2008,7 +2010,7 @@ async function main() {
       await tobi.page.evaluate(() => { window.__dart.setScreen('tournament'); return window.DartSync.turnier.abgleich(true); });
       await tobi.page.waitForTimeout(400);
       await tobi.page.evaluate(() => window.__dart.render());
-      await tobi.page.locator('#schedule .match-row [data-action="open-match"][data-id="' + ids[0] + '"]').click();
+      await tobi.page.locator('#ligaspiel [data-action="open-match"][data-id="' + ids[0] + '"]').click();
       await tobi.page.waitForTimeout(900);
       await tobi.page.locator('#screen-bulloff [data-action="to-tournament"]').click();
       await tobi.page.waitForTimeout(800);

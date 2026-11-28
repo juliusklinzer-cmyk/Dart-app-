@@ -8576,5 +8576,628 @@ html[data-hell="1"] .lh-zeile .wert { color: #9a6200; }
 /* @@LIGA-STATISTIK@@ Hier fuegt das Statistik-Paket seine Regeln ein (nicht verschieben). */
 
 /* @@LIGASPIEL-ABLAUF@@ Hier fuegt das Paket Ligaspiel-Ablauf seine Regeln ein (nicht verschieben). */
+/* Ligaspiel-Ablauf: Anfang */
+/* Ligaspiel-Ablauf (Entwuerfe "Ligaspiel 11/12", "Liste 5a-17", "A/B/C",
+   Nov. 2026): Uebersicht, Dialoge, Spielende und Bericht. Farben nur aus
+   den Tokens --t-*; was die Entwuerfe darueber hinaus brauchen, steht hier
+   als --la-*. Klassen mit la- (frei, per grep geprueft). */
+:root {
+  --la-dunkel: rgba(0, 0, 0, 0.6);
+  --la-poprand: inset 0 0 0 1.5px #ffffff, 0 24px 80px rgba(0, 0, 0, 0.5);
+  --la-glow: 0 0 12px rgba(255, 255, 255, 0.55);
+  --la-blaufl: rgba(70, 170, 215, 0.16);
+  --la-blaufl-leise: rgba(70, 170, 215, 0.12);
+  --la-goldfl: rgba(255, 193, 77, 0.07);
+  --la-live-fl: rgba(0, 0, 0, 0.35); --la-live-farbe: #ffffff; --la-live-schein: 0 0 14px rgba(70, 170, 215, 0.6);
+  --la-rot: #e5484d; --la-rotfl: rgba(229, 72, 77, 0.14);
+  --la-orange: #d9822b; --la-orangefl: rgba(217, 130, 43, 0.14);
+  --la-gruen: #2f9e5b;
+}
+html[data-hell="1"] {
+  --la-dunkel: rgba(21, 16, 17, 0.45);
+  --la-poprand: 0 24px 80px rgba(0, 0, 0, 0.25);
+  --la-glow: 0 0 10px rgba(31, 111, 149, 0.35);
+  --la-goldfl: rgba(255, 193, 77, 0.16);
+  --la-live-fl: #ffffff; --la-live-farbe: #151011; --la-live-schein: 0 0 16px rgba(31, 111, 149, 0.45);
+}
+@keyframes la-puls { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+@keyframes la-rein { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .la-seite *, .overlay.la * { animation: none !important; }
+}
+
+/* ---------- Grundbausteine ---------- */
+.la-ic { flex: none; }
+.la-leise { color: var(--t-leise); }
+.la-luft { flex: 1 1 auto; }
+.la-kopfzeile { display: flex; align-items: center; gap: 8px; padding-bottom: 6px; color: var(--t-text); }
+.la-kopfzeile b { font-family: var(--font-cond); font-weight: 700; font-size: 15px; letter-spacing: 1.5px; }
+.la-knopf { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 44px; margin: 0; padding: 0 16px; border-radius: 8px; border: 0; background: transparent; color: var(--t-text); font-family: var(--font-body); font-size: 14px; font-weight: 700; cursor: pointer; text-align: center; }
+.la-knopf.rand { box-shadow: inset 0 0 0 1.5px var(--t-linie); }
+.la-knopf.blau { background: var(--la-blaufl); box-shadow: inset 0 0 0 1.5px var(--t-blau); color: var(--t-blau); font-family: var(--font-display); font-weight: 400; font-size: 16px; letter-spacing: 0.5px; }
+.la-knopf.rot { background: var(--la-rotfl); box-shadow: inset 0 0 0 1.5px var(--la-rot); color: var(--la-rot); font-family: var(--font-display); font-weight: 400; font-size: 20px; letter-spacing: 0.5px; }
+.la-knopf.gross { min-height: 48px; }
+.la-knopf.klein { padding: 0 12px; }
+.la-knopf.klar { padding: 0 8px; }
+.la-knopf:disabled { opacity: 0.45; cursor: default; }
+.la-leise-knopf { min-height: 44px; margin: 0; padding: 0 6px; border: 0; background: transparent; color: var(--t-leise); font-family: var(--font-body); font-size: 15px; font-weight: 600; cursor: pointer; }
+.la-av { flex: none; width: 34px; height: 34px; border-radius: 50%; background: center / cover no-repeat var(--t-linie); display: inline-flex; align-items: center; justify-content: center; font-family: var(--font-cond); font-weight: 700; font-size: 14px; color: var(--t-leise); }
+.la-pos { flex: none; font-family: var(--font-cond); font-weight: 700; font-size: 13px; color: var(--t-leise); min-width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; }
+.la-pos.ein { box-shadow: inset 0 0 0 1.5px var(--t-text); padding: 0 2px; }
+
+/* ---------- Uebersicht ---------- */
+#screen-tournament.ls-modus.active { padding: 0; gap: 0; }
+body.fix-setup #screen-tournament.ls-modus.active { padding: 0; gap: 0; }
+#screen-tournament.ls-modus > #turnier-kopf, #screen-tournament.ls-modus > .turnier-titel, #screen-tournament.ls-modus > .turnier-spalten { display: none; }
+body:has(> #screen-tournament.ls-modus.active) { padding-left: 0; padding-right: 0; }
+.la-seite { display: flex; flex-direction: column; min-width: 0; color: var(--t-text); font-family: var(--font-body); }
+.la-seite.hidden { display: none; }
+body.fix-setup #screen-tournament > #ligaspiel { flex: 1 1 auto; min-height: 0; }
+.la-kopf { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 16px; padding: 12px 20px 12px 32px; border-bottom: 1px solid var(--t-linie); }
+.la-kopf-text { display: flex; flex-direction: column; min-width: 0; }
+.la-titel { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 22px; line-height: 1.1; letter-spacing: 0; color: var(--t-text); }
+.la-kopf-text .la-leise { font-size: 13px; }
+.la-live { display: inline-flex; align-items: center; min-height: 44px; margin: 0; padding: 0; border: 0; background: transparent; cursor: pointer; }
+.la-live-pille { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px; border-radius: 6px; background: var(--la-live-fl); box-shadow: inset 0 0 0 1.5px var(--t-blau), var(--la-live-schein); color: var(--la-live-farbe); font-family: var(--font-cond); font-weight: 700; font-size: 15px; letter-spacing: 1.5px; }
+.la-live-pille i { width: 9px; height: 9px; border-radius: 50%; background: var(--la-rot); box-shadow: 0 0 8px var(--la-rot); animation: la-puls 1.2s infinite; }
+.la-haupt { display: flex; flex-direction: column; gap: 20px; padding: 14px 16px 24px; min-width: 0; }
+.la-spalte-links, .la-seite-rechts { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.la-seite-rechts { gap: 14px; }
+.la-reiter-zeile { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 4px 16px; padding: 0 10px 6px; }
+.la-reiter-zeile > .la-leise { font-size: 13px; padding-bottom: 10px; }
+.la-reiter { display: flex; gap: 10px; }
+.la-reiter-knopf { display: flex; align-items: baseline; gap: 8px; min-height: 44px; margin: 0; padding: 6px 14px; border: 0; border-radius: 8px; background: transparent; color: var(--t-leise); font-family: var(--font-display); font-weight: 400; font-size: 24px; letter-spacing: 0.5px; cursor: pointer; }
+.la-reiter-knopf.an { color: var(--t-text); box-shadow: inset 0 0 0 1.5px var(--t-text); }
+.la-dg-titel { display: block; font-size: 11px; color: var(--t-leise); opacity: 0.8; padding: 6px 10px 0; }
+.la-liste { display: flex; flex-direction: column; min-width: 0; }
+.la-liste.rollt { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+.la-liste.rollt::-webkit-scrollbar { display: none; }
+/* Eine Einzel-Zeile: die Namen liegen als ein Feld unter der Mitte
+   (antippbar fuer w.o.), Ergebnis bzw. GAME ON obenauf. */
+.la-einzel { display: grid; grid-template-columns: minmax(0, 1fr) 132px minmax(0, 1fr) 26px; align-items: center; column-gap: 12px; min-height: 44px; padding: 0 10px; border-radius: 8px; background: transparent; }
+.la-einzel.naechstes { background: var(--t-hl); }
+.la-einzel.wahl { box-shadow: inset 0 0 0 2px var(--t-blau); }
+.la-namen { grid-column: 1 / 4; grid-row: 1; display: grid; grid-template-columns: minmax(0, 1fr) 132px minmax(0, 1fr); align-items: center; column-gap: 12px; min-height: 44px; min-width: 0; margin: 0; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; }
+button.la-namen { cursor: pointer; }
+.la-mitte { grid-column: 2; grid-row: 1; position: relative; z-index: 1; display: flex; justify-content: center; align-items: center; min-width: 0; }
+.la-sb { grid-column: 4; grid-row: 1; font-family: var(--font-cond); font-weight: 700; font-size: 12px; color: var(--t-leise); text-align: right; }
+.la-spieler { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 17px; white-space: nowrap; overflow: hidden; }
+.la-seite-rechts .la-spieler { font-size: 16px; }
+.la-name { color: var(--t-text); font-weight: 400; overflow: hidden; text-overflow: ellipsis; }
+.la-spieler.sieg .la-name { font-weight: 700; text-shadow: var(--la-glow); }
+.la-erg { position: relative; margin: 0; padding: 0 6px; border: 0; background: transparent; color: var(--t-text); font-family: var(--font-display); font-weight: 400; font-size: 26px; line-height: 1; white-space: nowrap; }
+button.la-erg { min-height: 44px; cursor: pointer; }
+.la-erg small { margin-left: 6px; font-family: var(--font-cond); font-weight: 700; font-size: 12px; letter-spacing: 0.5px; color: var(--t-leise); }
+.la-erg.laeuft { color: var(--t-blau); }
+.la-erg.laeuft i { position: absolute; right: 100%; top: 50%; margin-right: 4px; transform: translateY(-50%); width: 10px; height: 10px; border-radius: 50%; background: var(--t-blau); animation: la-puls 1.6s infinite; }
+.la-zustand { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--t-leise); white-space: nowrap; }
+.la-zustand i { width: 7px; height: 7px; border-radius: 50%; background: var(--t-leise); animation: la-puls 1.6s infinite; }
+.la-haengt { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 4px 0; }
+.la-haengt small { font-size: 11px; font-weight: 700; color: var(--la-orange); white-space: nowrap; }
+.la-uebernehmen { width: 112px; min-height: 32px; margin: 0; border-radius: 8px; border: 0; background: var(--la-orangefl); box-shadow: inset 0 0 0 1.5px var(--la-orange); color: var(--la-orange); font-family: var(--font-cond); font-weight: 700; font-size: 15px; letter-spacing: 0.5px; cursor: pointer; }
+.la-gameon { width: 112px; min-height: 38px; margin: 0; border-radius: 8px; border: 0; background: transparent; box-shadow: inset 0 0 0 1.5px var(--t-linie); color: var(--t-text); font-family: var(--font-display); font-weight: 400; font-size: 16px; letter-spacing: 0.5px; cursor: pointer; }
+.la-gameon.an { background: var(--la-blaufl); box-shadow: inset 0 0 0 1.5px var(--t-blau); color: var(--t-blau); }
+/* Touch-Ziel: die Knoepfe sind flacher als 44 px, die Zeile nicht. */
+.la-gameon, .la-uebernehmen, .la-eintragen { position: relative; }
+.la-gameon::after, .la-uebernehmen::after, .la-eintragen::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
+.la-wechsel { display: flex; flex-direction: column; padding: 14px 10px 0; }
+.la-wechselzeile { display: grid; grid-template-columns: 26px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 5px 6px 5px 12px; margin-bottom: 6px; border-radius: 8px; background: var(--t-fl); }
+.la-wechselwer { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.la-wechselwer > span { display: flex; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.la-wechselwer .rein { font-size: 15px; font-weight: 700; }
+.la-wechselwer .raus { font-size: 14px; color: var(--t-leise); }
+.la-wechselwer .la-pos { width: 26px; height: 26px; color: var(--t-text); }
+.la-wechselwer .raus .la-pos { color: var(--t-leise); }
+.la-pfeil { font-style: normal; font-size: 16px; }
+.la-pfeil.rauf { color: var(--la-gruen); }
+.la-pfeil.runter { color: var(--la-rot); }
+.lg-teamlogo.la-logo-s { width: 26px; height: 26px; border-radius: 50%; }
+.lg-teamlogo.la-logo { width: 52px; height: 52px; border-radius: 50%; }
+.la-stand { background: var(--t-fl); border-radius: 12px; padding: 20px 18px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.la-stand.gross { padding: 44px 24px 40px; gap: 12px; }
+.la-stand-reihe { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 12px; width: 100%; }
+.la-stand.gross .la-stand-reihe { gap: 18px; }
+.la-stand-team { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; text-align: center; }
+.la-stand-team b { font-size: 13px; font-weight: 700; }
+.la-stand.gross .la-stand-team b { font-size: 15px; }
+.la-stand:not(.gross) .lg-teamlogo.la-logo { width: 44px; height: 44px; }
+.la-stand-zahl { font-family: var(--font-display); font-size: 60px; line-height: 1; white-space: nowrap; }
+.la-stand.gross .la-stand-zahl { font-size: 88px; letter-spacing: 2px; }
+.la-doppel { color: var(--t-leise); }
+.la-stand > .la-leise { font-size: 13px; text-align: center; }
+.la-drueben { display: flex; flex-direction: column; min-height: 0; }
+.la-hl-kacheln { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.la-hl-kachel { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 8px; background: var(--t-fl); min-width: 0; }
+.la-hl-kachel b { font-family: var(--font-cond); font-weight: 700; font-size: 24px; line-height: 1; color: var(--t-gelb); }
+.la-hl-kachel span { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.la-hl-kachel small { font-size: 11px; color: var(--t-leise); }
+.la-hl-leer { margin: 0; font-size: 13px; }
+.la-fuss { display: flex; align-items: center; gap: 10px; }
+.la-fuss > .la-knopf.blau { flex: 2 1 0; }
+.la-fuss > .la-knopf.rand { flex: 1 1 0; }
+/* Nur Ergebnisse (Entwurf "Ligaspiel A"): vier Durchgaenge in zwei Spalten. */
+.la-erg-liste { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; min-width: 0; align-content: start; }
+.la-erg-spalte, .la-dg { display: flex; flex-direction: column; min-width: 0; }
+.la-dg { padding-bottom: 10px; }
+.la-dg .la-dg-titel { font-size: 12px; opacity: 1; padding: 4px 10px 2px; }
+.la-einzel.erg { grid-template-columns: minmax(0, 1fr) 92px minmax(0, 1fr) 0; column-gap: 8px; min-height: 42px; }
+.la-einzel.erg.mit-sb { grid-template-columns: minmax(0, 1fr) 92px minmax(0, 1fr) 24px; }
+.la-einzel.erg .la-namen { grid-template-columns: minmax(0, 1fr) 92px minmax(0, 1fr); column-gap: 8px; min-height: 42px; }
+.la-einzel.erg .la-spieler { font-size: 15px; }
+.la-erg.klein { font-size: 24px; }
+.la-eintragen { width: 84px; min-height: 34px; margin: 0; border-radius: 8px; border: 0; background: transparent; box-shadow: inset 0 0 0 1.5px var(--t-linie); color: var(--t-text); font-family: var(--font-cond); font-weight: 700; font-size: 15px; letter-spacing: 0.5px; cursor: pointer; }
+.la-eintragen.an { background: var(--la-blaufl); box-shadow: inset 0 0 0 1.5px var(--t-blau); color: var(--t-blau); }
+.la-hl-liste { display: flex; flex-direction: column; }
+.la-hl-zeile { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 10px; min-height: 34px; padding: 0 4px; border-top: 1px solid var(--t-linie); }
+.la-hl-zeile span { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.la-hl-zeile small { font-size: 13px; color: var(--t-leise); }
+.la-hl-zeile b { font-family: var(--font-display); font-weight: 400; font-size: 18px; color: var(--t-gelb); min-width: 44px; text-align: right; }
+.la-haupt.erg .la-wechselzeile { grid-template-columns: 24px minmax(0, 1fr) auto; gap: 10px; padding: 5px 6px 5px 10px; }
+.la-haupt.erg .la-wechsel { padding: 0; }
+.la-haupt.erg .la-wechselwer .rein { font-size: 14px; }
+.la-haupt.erg .la-wechselwer .raus { font-size: 13px; }
+.la-haupt.erg .la-wechselwer .la-pos { width: auto; min-width: 0; height: auto; }
+.la-haupt.erg .lg-teamlogo.la-logo-s { width: 24px; height: 24px; }
+.la-haupt.erg .la-fuss { flex-direction: column; align-items: stretch; }
+.la-haupt.erg .la-fuss > .la-knopf { flex: none; font-size: 15px; }
+.la-haupt.erg .la-fuss > .la-knopf.blau { font-size: 16px; }
+@media (min-width: 700px) {
+  .la-erg-liste { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+/* Tablet quer und Laptop: fest im Rahmen, zwei Spalten, die Listen rollen innen. */
+@media (min-width: 1000px) and (min-height: 600px) {
+  .la-haupt { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; padding: 14px 32px 18px; }
+  .la-haupt.erg { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 28px; padding: 14px 32px 20px; }
+  body.fix-setup .la-haupt { flex: 1 1 auto; min-height: 0; overflow: hidden; }
+  body.fix-setup .la-spalte-links > .la-liste.eigene { flex: 0 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
+  body.fix-setup .la-spalte-links > .la-liste.eigene::-webkit-scrollbar { display: none; }
+  body.fix-setup .la-spalte-links > .la-wechsel { margin-top: auto; }
+  body.fix-setup .la-drueben { flex: 1 1 auto; }
+  body.fix-setup .la-haupt.erg > .la-erg-liste { overflow-y: auto; scrollbar-width: none; min-height: 0; }
+  body.fix-setup .la-haupt.erg > .la-seite-rechts { overflow-y: auto; scrollbar-width: none; }
+}
+/* Schmaler (iPad hoch, Split View): eine Spalte, die Seite rollt. */
+@media (min-width: 700px) and (max-width: 999.98px), (min-width: 700px) and (max-height: 599.98px) {
+  body.fix-setup #screen-tournament > #ligaspiel { overflow-y: auto; scrollbar-width: none; }
+  .la-haupt { padding: 14px 24px 24px; }
+}
+@media (max-width: 699.98px) {
+  .la-kopf { padding: 10px 16px; gap: 0 10px; }
+  .la-kopf-text { flex-basis: 100%; }
+  .la-kopf > .la-luft { display: none; }
+  .la-leise-knopf { font-size: 14px; padding: 0 4px; }
+  .la-reiter-knopf { font-size: 20px; padding: 6px 10px; }
+  .la-einzel, .la-einzel .la-namen { grid-template-columns: minmax(0, 1fr) 100px minmax(0, 1fr); column-gap: 6px; }
+  .la-einzel { grid-template-columns: minmax(0, 1fr) 100px minmax(0, 1fr) 0; padding: 0 4px; }
+  .la-einzel .la-sb { display: none; }
+  .la-pos { min-width: 20px; }
+  .la-einzel.erg, .la-einzel.erg.mit-sb { grid-template-columns: minmax(0, 1fr) 84px minmax(0, 1fr) 0; }
+  .la-einzel.erg.mit-sb { grid-template-columns: minmax(0, 1fr) 84px minmax(0, 1fr) 22px; }
+  .la-einzel.erg .la-namen { grid-template-columns: minmax(0, 1fr) 84px minmax(0, 1fr); }
+  .la-spieler, .la-seite-rechts .la-spieler { font-size: 15px; gap: 6px; }
+  .la-gameon, .la-uebernehmen { width: 96px; }
+  .la-eintragen { width: 80px; }
+  .la-stand.gross { padding: 24px 16px; }
+  .la-stand.gross .la-stand-zahl { font-size: 64px; }
+  .la-hl-kacheln { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .la-fuss { flex-wrap: wrap; }
+  .la-fuss > .la-knopf.blau { flex: 1 1 100%; }
+}
+
+/* ---------- Dialoge (Entwuerfe Liste 5a-15, 17, B) ---------- */
+.overlay.la { background: var(--la-dunkel); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); place-items: center; padding: 24px; }
+.overlay.la .overlay-card { max-width: min(var(--la-w, 640px), 100%); width: 100%; box-sizing: border-box; margin: auto 0; background: var(--t-fl); color: var(--t-text); border: 0; border-radius: 24px; padding: 30px 34px; display: flex; flex-direction: column; gap: 18px; box-shadow: var(--la-poprand); text-align: left; animation: la-rein 0.35s ease both; font-family: var(--font-body); }
+.overlay.la .overlay-card p { margin: 0; }
+.overlay.la .overlay-card .btn { margin-top: 0; }
+.la-dlg-kopf { display: flex; align-items: center; gap: 16px; }
+.la-dlg-kopf.klein { gap: 10px; }
+.la-dlg-titel { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 34px; line-height: 1.05; letter-spacing: 0; color: var(--t-text); text-transform: none; }
+.overlay.la .la-dlg-titel { font-size: 34px; }
+.overlay.la .la-dlg-titel.gross { font-size: 40px; line-height: 1; }
+.overlay.la .la-dlg-titel.mittel { font-size: 32px; line-height: 1; }
+.la-symbol { width: 56px; height: 56px; flex: none; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--la-blaufl); color: var(--t-blau); }
+.la-symbol.warn { background: var(--la-rotfl); color: var(--la-rot); }
+.la-symbol.klein { width: 52px; height: 52px; }
+.overlay.la .la-dlg-text { font-size: 17px; line-height: 1.45; color: var(--t-text); }
+.overlay.la .la-dlg-text.leise { font-size: 16px; color: var(--t-leise); line-height: 1.45; }
+.overlay.la .la-dlg-text.leise b { color: var(--t-text); }
+.overlay.la .la-dlg-text.klein { font-size: 14px; }
+.overlay.la .la-dlg-text.mittel { font-size: 15px; }
+.overlay.la .la-dlg-zusatz { font-size: 14px; line-height: 1.45; color: var(--t-leise); }
+.la-status { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 10px; background: var(--t-bg); font-size: 15px; font-weight: 600; }
+.la-status i { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--t-blau); animation: la-puls 1.2s infinite; }
+.la-dlg-fuss { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; padding-top: 4px; }
+.la-links { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; }
+.la-links.spalte { flex-direction: column; align-items: flex-start; gap: 0; }
+.la-haupt-knopf { min-height: 52px; padding: 0 28px; font-size: 19px; }
+.la-knopf.rot.la-haupt-knopf { font-size: 20px; }
+.la-haupt-knopf.gross-text { min-height: 54px; padding: 0 30px; font-size: 22px; }
+.la-leise-knopf.mit-symbol { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; }
+.la-leise-knopf.klein { font-size: 13px; min-height: 44px; }
+.la-leise-knopf:disabled { opacity: 0.45; }
+.la-etikett { display: flex; align-items: baseline; gap: 10px; font-size: 12px; font-weight: 700; letter-spacing: 1.5px; color: var(--t-leise); }
+.la-etikett .la-leise { font-size: 13px; font-weight: 400; letter-spacing: 0; }
+.la-etikett.mit-symbol { align-items: center; }
+.overlay.la .la-fehler, .la-fehler { padding: 10px 14px; border-radius: 8px; background: rgba(229, 72, 77, 0.12); color: var(--la-rot); font-size: 14px; font-weight: 600; }
+.overlay.la .overlay-card .la-fehler { color: var(--la-rot); }
+.overlay.la .la-notiz, .la-notiz { display: flex; align-items: center; gap: 6px; font-size: 13px; line-height: 1.45; color: var(--t-leise); margin: 0; }
+.la-notiz b { color: var(--t-text); }
+.la-info { display: flex; align-items: center; gap: 8px; padding-top: 6px; font-size: 14px; font-weight: 600; }
+.la-feld { display: flex; flex-direction: column; gap: 6px; }
+.la-feldname { font-size: 13px; font-weight: 700; color: var(--t-leise); }
+.la-text { min-height: 92px; padding: 12px 14px; border-radius: 10px; border: 0; background: var(--t-bg); color: var(--t-text); font-family: var(--font-body); font-size: 16px; resize: none; box-sizing: border-box; width: 100%; }
+.la-eingabe { min-height: 46px; width: 100%; box-sizing: border-box; padding: 0 14px; margin: 0; border-radius: 8px; border: 0; background: var(--t-bg); color: var(--t-text); font-family: var(--font-body); font-size: 16px; }
+.la-text::placeholder, .la-eingabe::placeholder, .la-zahl::placeholder { color: var(--t-leise); opacity: 0.8; }
+.la-seg { display: flex; padding: 3px; border-radius: 10px; background: var(--t-bg); }
+.la-seg-knopf { flex: 1 1 0; min-height: 42px; margin: 0; padding: 0 14px; border-radius: 8px; border: 0; background: transparent; color: var(--t-text); font-family: var(--font-body); font-size: 15px; font-weight: 700; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.la-seg-knopf.active { background: var(--la-blaufl); box-shadow: inset 0 0 0 1.5px var(--t-blau); color: var(--t-blau); }
+.la-seg-knopf:disabled { opacity: 0.5; cursor: default; }
+.la-fest { display: flex; align-items: center; min-height: 46px; padding: 0 14px; border-radius: 8px; box-shadow: inset 0 0 0 1.5px var(--t-linie); font-size: 15px; font-weight: 700; }
+/* Beenden */
+.la-optionen { display: flex; flex-direction: column; gap: 8px; }
+.la-option { display: flex; align-items: center; gap: 14px; min-height: 64px; margin: 0; padding: 0 18px; border-radius: 8px; border: 0; background: var(--t-bg); color: var(--t-text); font-family: var(--font-body); text-align: left; cursor: pointer; }
+.la-option.an { background: var(--la-blaufl-leise); box-shadow: inset 0 0 0 1.5px var(--t-blau); }
+.la-radio { width: 22px; height: 22px; flex: none; border-radius: 50%; box-shadow: inset 0 0 0 2px var(--t-linie); display: flex; align-items: center; justify-content: center; }
+.la-radio i { width: 10px; height: 10px; border-radius: 50%; background: transparent; }
+.la-option.an .la-radio { box-shadow: inset 0 0 0 2px var(--t-blau); }
+.la-option.an .la-radio i { background: var(--t-blau); }
+.la-option.rot.an { background: rgba(229, 72, 77, 0.10); box-shadow: inset 0 0 0 1.5px var(--la-rot); }
+.la-option.rot.an .la-radio { box-shadow: inset 0 0 0 2px var(--la-rot); }
+.la-option.rot.an .la-radio i { background: var(--la-rot); }
+.la-option.rot b { color: var(--la-rot); }
+.la-option-text { display: flex; flex-direction: column; gap: 2px; }
+.la-option-text b { font-size: 17px; font-weight: 700; }
+.la-option-text small { font-size: 14px; color: var(--t-leise); }
+/* w.o. werten */
+.la-wo-paar { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+.la-wo-karte { display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 0; padding: 20px 16px; border-radius: 8px; border: 0; background: var(--t-bg); color: var(--t-text); font-family: var(--font-body); cursor: pointer; min-width: 0; }
+.la-wo-karte.an { box-shadow: inset 0 0 0 2px var(--t-text); }
+.la-wo-karte.blass { opacity: 0.75; }
+.la-wo-karte b { font-size: 17px; font-weight: 700; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.la-wo-karte small { font-size: 14px; font-weight: 700; color: var(--t-leise); }
+.la-wo-karte.an small { color: var(--t-text); }
+.la-av.gross { width: 64px; height: 64px; font-size: 26px; }
+.overlay.la .la-folge { min-height: 22px; font-size: 15px; color: var(--t-text); }
+/* Ergebnis eintragen */
+.la-paarung { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 16px; }
+.la-paarung > span { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.la-paarung > span.r { justify-content: flex-end; text-align: right; }
+.la-paarung b { font-family: var(--font-display); font-weight: 400; font-size: 26px; line-height: 1.1; overflow-wrap: anywhere; }
+.la-paarung .la-leise { font-size: 15px; }
+.la-paarung .la-pos { font-size: 15px; }
+.la-varianten { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.la-varianten.n6 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.la-variante { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 80px; margin: 0; padding: 4px 6px; border-radius: 8px; border: 0; background: var(--t-bg); color: var(--t-text); cursor: pointer; min-width: 0; }
+.la-variante.an { background: var(--la-blaufl); box-shadow: inset 0 0 0 1.5px var(--t-blau); color: var(--t-blau); }
+.la-variante b { font-family: var(--font-display); font-weight: 400; font-size: 36px; line-height: 1; }
+.la-variante small { font-family: var(--font-body); font-size: 13px; font-weight: 600; opacity: 0.85; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.la-hl-boxen { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; }
+.la-hl-box { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-radius: 10px; background: var(--t-bg); min-width: 0; }
+.la-hl-box > b { font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.la-hl-feld { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 14px; }
+.la-zaehler { display: flex; align-items: center; gap: 4px; }
+.la-zaehler b { font-family: var(--font-display); font-weight: 400; font-size: 22px; min-width: 28px; text-align: center; color: var(--t-leise); }
+.la-zaehler b.gold { color: var(--t-gelb); }
+.la-rund { position: relative; width: 36px; height: 36px; margin: 0; padding: 0; border-radius: 50%; border: 0; background: var(--t-fl); color: var(--t-text); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.la-rund::after { content: ''; position: absolute; inset: -4px; }
+.la-zahl { width: 92px; min-height: 38px; padding: 0 10px; margin: 0; border-radius: 8px; border: 0; background: var(--t-fl); color: var(--t-text); font-family: var(--font-body); font-size: 15px; text-align: right; box-sizing: border-box; }
+/* Nachmelden */
+.la-nm-raster { display: grid; grid-template-columns: 96px minmax(0, 1fr) minmax(0, 1fr); gap: 22px; align-items: start; }
+.la-nm-raster.ohne-foto { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.la-nm-spalte { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.la-foto { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.la-foto-bild { width: 84px; height: 84px; border-radius: 50%; background: center / cover no-repeat var(--t-bg); display: flex; align-items: center; justify-content: center; color: var(--t-leise); }
+.la-foto-knopf { position: relative; min-height: 34px; gap: 5px; padding: 0 10px; font-size: 13px; overflow: hidden; }
+.la-foto-knopf::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
+.la-datei { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 1; }
+.la-leise.klein { font-size: 12px; }
+.la-sig-block { display: flex; flex-direction: column; gap: 6px; }
+.la-sig-kopf { display: flex; align-items: center; justify-content: space-between; }
+.la-sig-kopf .la-leise-knopf { min-height: 44px; margin: -6px 0; font-size: 14px; }
+.la-sig { position: relative; border-radius: 10px; background: var(--t-bg); box-shadow: inset 0 0 0 1.5px var(--t-linie); }
+.la-sig.klein { height: 110px; }
+.la-sig.gross { height: 240px; border-radius: 12px; }
+.overlay.la .la-sig .signatur { position: relative; z-index: 1; width: 100%; height: 100%; margin: 0; background: transparent; border: 0; border-radius: inherit; box-shadow: none; }
+/* Die Tinte ist dunkel (so steht sie auf dem Papierbogen) - auf dunklem
+   Grund zeigt das Feld sie hell. */
+html:not([data-hell="1"]) .overlay.la .la-sig .signatur { filter: invert(1) hue-rotate(180deg); }
+.la-sig-linie { position: absolute; left: 18px; right: 18px; bottom: 34px; height: 1px; background: var(--t-linie); pointer-events: none; }
+.la-sig.gross .la-sig-linie { left: 28px; right: 28px; bottom: 54px; height: 1.5px; }
+.la-sig-tipp { position: absolute; left: 18px; bottom: 12px; font-size: 14px; color: var(--t-leise); pointer-events: none; }
+.la-sig-tipp.mitte { left: 0; right: 0; bottom: auto; top: 96px; text-align: center; font-size: 15px; }
+.la-sig.gezeichnet .la-sig-tipp { display: none; }
+.la-sig-name { position: absolute; left: 28px; bottom: 22px; font-size: 13px; color: var(--t-leise); pointer-events: none; }
+/* Wechseln */
+.la-wz-spalten { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; }
+.la-wz-spalte { display: flex; flex-direction: column; min-width: 0; }
+.la-wz-team { display: flex; align-items: center; gap: 10px; padding-bottom: 8px; }
+.la-wz-team b { font-family: var(--font-display); font-weight: 400; font-size: 20px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lg-teamlogo.la-logo-m { width: 28px; height: 28px; border-radius: 50%; flex: none; }
+.la-wz-zeile { display: flex; align-items: center; gap: 12px; min-height: 54px; border-top: 1px solid var(--t-linie); }
+.la-pos-kreis { font-family: var(--font-cond); font-weight: 700; font-size: 14px; width: 30px; height: 30px; flex: none; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--t-linie); color: var(--t-leise); }
+.la-wz-wer { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; }
+.la-wz-wer b { font-size: 16px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.la-wz-wer small { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--t-leise); }
+.la-wz-wer small.laeuft { color: var(--t-blau); }
+.la-wz-wer small i { width: 7px; height: 7px; border-radius: 50%; background: var(--t-blau); animation: la-puls 1.2s infinite; }
+.la-wz-zeile.bank { opacity: 0.8; }
+.overlay.la .la-raus { color: var(--t-text); display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 15px; margin: 0; }
+.la-abschnitt { display: flex; flex-direction: column; gap: 8px; }
+.la-kacheln { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.la-kachel { display: flex; align-items: center; gap: 10px; min-height: 54px; margin: 0; padding: 0 12px 0 8px; border-radius: 8px; border: 0; background: var(--t-bg); color: var(--t-text); font-family: var(--font-body); text-align: left; cursor: pointer; min-width: 0; }
+.la-kachel.active { background: var(--la-blaufl); box-shadow: inset 0 0 0 1.5px var(--t-blau); }
+.la-kachel.neu { justify-content: center; gap: 8px; background: transparent; box-shadow: inset 0 0 0 1.5px var(--t-linie); font-size: 15px; font-weight: 700; padding: 0 12px; }
+.la-kachel.neu.an { background: var(--la-blaufl); box-shadow: inset 0 0 0 1.5px var(--t-blau); color: var(--t-blau); }
+.la-kachel-text { display: flex; flex-direction: column; min-width: 0; }
+.la-kachel-text b { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.la-kachel-text small { font-size: 12px; color: var(--t-leise); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.la-zwei { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+/* Unterschrift */
+.la-schritte { display: flex; align-items: center; gap: 10px; }
+.la-schritt { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: 8px; color: var(--t-leise); font-family: var(--font-cond); font-weight: 700; font-size: 15px; }
+.la-schritt.an { box-shadow: inset 0 0 0 1.5px var(--t-blau); color: var(--t-blau); }
+.la-schritt.fertig { color: var(--t-text); }
+.overlay.la .la-dlg-kopf .la-kopf-text { gap: 4px; }
+.overlay.la .la-dlg-kopf .la-kopf-text .la-leise { font-size: 15px; }
+/* Versand */
+.la-mails { display: flex; flex-direction: column; gap: 8px; }
+.la-mail { display: grid; grid-template-columns: 150px minmax(0, 1fr); align-items: center; gap: 12px; }
+.la-mail-rolle { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 13px; font-weight: 700; color: var(--t-leise); }
+.la-mail-rolle em { display: inline-flex; align-items: center; gap: 3px; padding: 1px 6px; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--t-linie); font-size: 11px; font-style: normal; }
+.la-mail .la-eingabe { min-height: 44px; font-size: 15px; }
+/* Uebrige Dialoge ueber dem Ligaspiel: Tokens statt der alten Farben. */
+.overlay.la-haut .overlay-card { background: var(--t-fl); color: var(--t-text); border-color: var(--t-linie); }
+.overlay.la-haut .overlay-card p, .overlay.la-haut .overlay-card .hint { color: var(--t-leise); }
+.overlay.la-haut .overlay-card .btn.ghost, .overlay.la-haut .overlay-card .btn:not(.primary):not(.hell):not(.danger):not(.start) { background: transparent; border: 1.5px solid var(--t-linie); color: var(--t-text); box-shadow: none; }
+.overlay.la-haut .overlay-card .btn.hell { background: var(--t-text); border-color: var(--t-text); color: var(--t-fl); }
+.overlay.la-haut .ticker-link { background: var(--t-bg); color: var(--t-text); border-color: var(--t-linie); }
+.overlay.la-haut { background: var(--la-dunkel); }
+@media (max-width: 699.98px) {
+  .overlay.la { padding: 12px; place-items: start center; }
+  .overlay.la .overlay-card { padding: 22px 18px; gap: 14px; border-radius: 20px; }
+  .overlay.la .la-dlg-titel, .overlay.la .la-dlg-titel.mittel { font-size: 26px; }
+  .overlay.la .la-dlg-titel.gross { font-size: 30px; }
+  .la-symbol { width: 44px; height: 44px; }
+  .la-symbol .la-ic { width: 22px; height: 22px; }
+  .la-varianten, .la-varianten.n6 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .la-hl-boxen, .la-wz-spalten, .la-zwei { grid-template-columns: minmax(0, 1fr); }
+  .la-nm-raster, .la-nm-raster.ohne-foto { grid-template-columns: minmax(0, 1fr); }
+  .la-kacheln { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .la-mail { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+  .la-paarung b { font-size: 20px; }
+  .la-wz-spalten { gap: 18px; }
+  .la-dlg-fuss { justify-content: flex-end; }
+  .la-dlg-fuss > .la-luft { flex-basis: 100%; height: 0; }
+  .la-haupt-knopf { padding: 0 20px; }
+}
+
+/* ---------- Spielende (Entwuerfe "Ligaspiel 18", "Liste 17") ---------- */
+#screen-winner.ls-modus.active { padding: 0; gap: 0; background: none; }
+body.fix-setup #screen-winner.ls-modus.active { padding: 0; gap: 0; }
+#screen-winner.ls-modus > #winner-kopf, #screen-winner.ls-modus > #winner-box { display: none; }
+body:has(> #screen-winner.ls-modus.active) { padding-left: 0; padding-right: 0; }
+body.fix-setup #screen-winner > #ls-ende { flex: 1 1 auto; min-height: 0; overflow-y: auto; scrollbar-width: none; }
+body.fix-setup #screen-winner > #ls-ende::-webkit-scrollbar { display: none; }
+.la-ende-kopf { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 16px; padding: 14px 28px; border-bottom: 1px solid var(--t-linie); }
+.la-titel.klein { font-size: 18px; letter-spacing: 0.5px; }
+.la-ende-kopf .la-kopf-text .la-leise { font-size: 12px; }
+.la-ende-stand { display: flex; align-items: center; gap: 14px; }
+.la-ende-team { font-size: 16px; font-weight: 700; white-space: nowrap; }
+.lg-teamlogo.la-logo-ende { width: 32px; height: 32px; border-radius: 50%; flex: none; }
+.lg-teamlogo.la-logo-xs { width: 24px; height: 24px; border-radius: 50%; flex: none; }
+.la-ende-zahl { font-family: var(--font-display); font-size: 30px; line-height: 1; min-width: 86px; text-align: center; }
+.la-ende-ort { justify-self: end; font-size: 14px; text-align: right; }
+.la-ende { display: flex; flex-direction: column; gap: 22px; padding: 26px 32px 32px; color: var(--t-text); }
+.la-ende.erg { gap: 20px; padding-top: 24px; }
+.la-ende-titel { display: flex; align-items: center; flex-wrap: wrap; gap: 18px 24px; }
+.la-ende-titel > .la-kopf-text { flex: 1 1 380px; gap: 4px; }
+.la-ende-pokal { color: var(--t-gelb); display: flex; }
+.la-ende-h1 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 48px; line-height: 1; letter-spacing: 0; color: var(--t-text); }
+.la-ende-titel .la-kopf-text > .la-leise { font-size: 15px; }
+.la-ende-hinweis { font-size: 13px; }
+.la-ende-knoepfe { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+.la-ic.gold, .la-symbol .gold { color: var(--t-gelb); }
+.la-motm-paar { display: flex; gap: 16px; }
+.la-motm { flex: 1 1 0; min-width: 0; background: var(--t-fl); border-radius: 20px; padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; }
+.la-motm > .la-etikett { align-items: center; }
+.la-motm-person { display: flex; align-items: center; gap: 18px; min-width: 0; }
+.la-motm-bilder { display: flex; flex: none; }
+.la-motm-bilder .la-av + .la-av { margin-left: -24px; }
+.la-av.motm { width: 84px; height: 84px; font-size: 34px; box-shadow: 0 0 0 3px var(--t-gelb); }
+.la-av.motm-erg { width: 72px; height: 72px; font-size: 29px; }
+.la-motm-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.la-motm-text > b { font-family: var(--font-display); font-weight: 400; font-size: 30px; line-height: 1; overflow-wrap: anywhere; }
+.la-motm-text > span:not(.la-etikett) { font-size: 15px; }
+.la-motm-text > small { font-size: 13px; color: var(--t-leise); }
+.la-motm-werte { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.la-motm-werte > span { display: flex; flex-direction: column; gap: 2px; padding: 10px 12px; border-radius: 12px; background: var(--t-bg); min-width: 0; }
+.la-motm-werte small { font-size: 12px; color: var(--t-leise); }
+.la-motm-werte b { font-family: var(--font-display); font-weight: 400; font-size: 24px; line-height: 1; }
+.la-motm.erg { flex-direction: row; align-items: center; gap: 18px; padding: 18px 20px; }
+.la-motm.erg.gold { box-shadow: inset 0 0 0 2px var(--t-gelb); background: var(--la-goldfl); }
+.la-motm.erg .la-motm-text > b { font-size: 28px; }
+.la-motm.erg .la-etikett { align-items: center; gap: 6px; }
+.la-rekorde { display: flex; flex-direction: column; gap: 14px; padding: 20px 22px 22px; border-radius: 20px; background: var(--la-goldfl); }
+.la-rekorde-kopf { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+.la-rekorde-kopf b { font-family: var(--font-display); font-weight: 400; font-size: 24px; color: var(--t-gelb); }
+.la-rekorde-kopf small { font-size: 14px; }
+.la-rekord-raster { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.la-rekord { background: var(--t-fl); border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.la-rekord-kopf { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.la-rekord-kopf small { font-size: 12px; font-weight: 700; letter-spacing: 1.5px; color: var(--t-leise); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.la-rekord > b { font-family: var(--font-display); font-weight: 400; font-size: 36px; line-height: 1.05; color: var(--t-gelb); white-space: nowrap; }
+.la-rekord-wer { display: flex; flex-direction: column; min-width: 0; }
+.la-rekord-wer span { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.la-rekord-wer small { font-size: 12px; color: var(--t-leise); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.la-karte-ende { background: var(--t-fl); border-radius: 20px; padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.la-kopfzeile.gross { gap: 10px; padding: 0; flex-wrap: wrap; }
+.la-kopfzeile.gross .la-ic { color: var(--t-leise); }
+.la-kopfzeile.gross b { font-family: var(--font-display); font-weight: 400; font-size: 20px; letter-spacing: 0.5px; }
+.la-kopfzeile.gross small { font-size: 13px; }
+.la-hlb { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 28px; }
+.la-hlb-spalte { display: flex; flex-direction: column; min-width: 0; }
+.la-hlb-kopf { display: flex; align-items: center; gap: 8px; padding-bottom: 2px; color: var(--t-leise); }
+.la-hlb-kopf small { font-size: 12px; font-weight: 700; letter-spacing: 1.5px; }
+.la-hlb-spalte > .la-leise.klein { padding-bottom: 8px; }
+.la-hlb-zeile { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: baseline; padding: 8px 0; border-top: 1px solid var(--t-linie); }
+.la-hlb-zeile > span { display: flex; flex-direction: column; min-width: 0; }
+.la-hlb-zeile b { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.la-hlb-zeile small { font-size: 12px; color: var(--t-leise); }
+.la-hlb-zeile em { font-style: normal; font-family: var(--font-cond); font-weight: 700; font-size: 24px; color: var(--t-gelb); }
+.la-hinweis-band { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 12px; background: var(--t-fl); font-size: 14px; color: var(--t-leise); }
+.la-alle { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.la-alle .la-dg { gap: 6px; padding: 0; }
+.la-alle .la-dg-titel { padding: 0; font-size: 12px; opacity: 1; }
+.la-alle-zeile { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px; min-height: 36px; padding: 0 10px; border-radius: 8px; background: var(--t-bg); }
+.la-alle-zeile span { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.la-alle-zeile span.r { text-align: right; }
+.la-alle-zeile span.sieg { font-weight: 700; }
+.la-alle-zeile b { font-family: var(--font-display); font-weight: 400; font-size: 18px; }
+.la-hl-teams { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; }
+.la-hl-teams > div { display: flex; flex-direction: column; min-width: 0; }
+.la-hl-team { display: flex; align-items: center; gap: 10px; padding-bottom: 8px; }
+.la-hl-team b { font-size: 15px; font-weight: 700; }
+.la-hl-teams .la-hlb-zeile { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+.la-hl-teams .la-hlb-zeile > span { flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; }
+.la-hl-teams .la-hlb-zeile small { font-size: 13px; }
+.la-hl-teams .la-hlb-zeile em { font-size: 22px; min-width: 52px; text-align: right; }
+@media (max-width: 999.98px) {
+  .la-hlb, .la-alle { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .la-rekord-raster { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .la-ende-kopf { grid-template-columns: minmax(0, 1fr) auto; }
+  .la-ende-ort { display: none; }
+}
+@media (max-width: 699.98px) {
+  .la-ende-kopf { grid-template-columns: minmax(0, 1fr); padding: 10px 16px; gap: 6px; }
+  .la-ende-stand { gap: 8px; }
+  .la-ende-team { font-size: 13px; white-space: normal; }
+  .la-ende { padding: 18px 16px 24px; gap: 16px; }
+  .la-ende-h1 { font-size: 34px; }
+  .la-ende-pokal .la-ic { width: 40px; height: 40px; }
+  .la-ende-knoepfe { margin-left: 0; flex-wrap: wrap; }
+  .la-motm-paar { flex-direction: column; }
+  .la-motm-text > b { font-size: 24px; }
+  .la-av.motm { width: 64px; height: 64px; font-size: 26px; }
+  .la-rekord > b { font-size: 28px; }
+  .la-hlb, .la-hl-teams { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .la-alle { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ---------- Spielbericht als Karten (Entwuerfe "Liste 13" und "16") ---------- */
+/* Der Bogen bleibt das Original fuer PDF und Druck - am Bildschirm
+   ausserhalb des Bildes (gezeichnet, damit das PDF ihn abmessen kann). */
+#screen-bericht #bericht-blatt { position: fixed; left: -12000px; top: 0; width: 820px; pointer-events: none; }
+#bericht-blatt .b-protest { white-space: pre-wrap; }
+@media print {
+  #la-bericht { display: none !important; }
+  #screen-bericht #bericht-blatt { position: static !important; left: auto; width: auto; pointer-events: auto; }
+}
+body:has(> #screen-bericht.active) { padding-left: 0; padding-right: 0; }
+#screen-bericht.active { padding: 0; }
+.la-b-kopf { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 16px; padding: 14px 28px; border-bottom: 1px solid var(--t-linie); }
+.la-b-kopf .la-leise { flex: 1 1 200px; font-size: 14px; }
+.la-titel.mittel { font-size: 26px; line-height: 1.1; }
+.la-rund.gross { width: 44px; height: 44px; }
+.la-b { display: flex; flex-direction: column; gap: 16px; padding: 18px 28px 28px; color: var(--t-text); max-width: 1180px; margin: 0 auto; box-sizing: border-box; }
+.la-b-hinweis { margin: 0; font-size: 14px; line-height: 1.5; color: var(--t-leise); }
+.la-b-hinweis b { color: var(--t-text); }
+.la-b-final { display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-radius: 12px; background: var(--la-blaufl-leise); box-shadow: inset 0 0 0 1.5px var(--t-blau); color: var(--t-blau); }
+.la-b-final > span { display: flex; flex-direction: column; gap: 2px; }
+.la-b-final b { font-family: var(--font-display); font-weight: 400; font-size: 20px; }
+.la-b-final small { font-size: 14px; color: var(--t-leise); }
+.la-b-karte { padding: 20px 24px; border-radius: 16px; background: var(--t-fl); display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.la-b-zeile { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px; }
+.la-b-teams { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 24px; }
+.la-b-teamkopf { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.la-b-teamkopf > span { display: flex; flex-direction: column; min-width: 0; }
+.la-b-teamkopf.r { justify-content: flex-end; text-align: right; }
+.la-b-teamkopf.r > span { align-items: flex-end; }
+.lg-teamlogo.la-logo-b { width: 56px; height: 56px; border-radius: 50%; flex: none; }
+.la-bf.la-b-teamname { font-family: var(--font-display); font-size: 28px; line-height: 1.05; text-transform: uppercase; background: transparent; min-height: 0; padding: 0; }
+.la-b-stand { display: flex; flex-direction: column; align-items: center; }
+.la-b-stand b { font-family: var(--font-display); font-weight: 400; font-size: 64px; line-height: 1; white-space: nowrap; }
+.la-b-stand small { font-size: 13px; color: var(--t-leise); }
+.la-b-info { display: grid; grid-template-columns: 1.4fr 0.8fr 1fr 0.8fr 0.8fr; gap: 10px; }
+.la-b-info label { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.la-b-info label > span:first-child { font-size: 12px; font-weight: 700; color: var(--t-leise); }
+.la-b-info label > span.rot { color: var(--la-rot); }
+/* Ein Feld des Bogens: antippen und tippen. */
+.la-bf { display: flex; align-items: center; min-height: 36px; padding: 0 10px; border-radius: 8px; background: var(--t-bg); font-size: 15px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--t-text); outline: none; box-sizing: border-box; }
+.la-bf[contenteditable="true"] { cursor: text; -webkit-user-select: text; user-select: text; }
+.la-bf[contenteditable="true"]:focus { box-shadow: inset 0 0 0 1.5px var(--t-blau); white-space: normal; text-overflow: clip; }
+.la-b-zwei { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; }
+.la-b-zwei.oben { gap: 16px; align-items: start; }
+.la-b-stapel { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.la-b-spalte { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.la-b-team { display: flex; align-items: center; gap: 10px; padding-bottom: 4px; }
+.la-b-team b { font-family: var(--font-display); font-weight: 400; font-size: 18px; }
+.la-b-raster { display: grid; gap: 6px; align-items: center; }
+.la-b-raster.spieler { grid-template-columns: 30px minmax(0, 1fr) minmax(0, 1fr); }
+.la-b-raster.kopf { font-family: var(--font-cond); font-weight: 700; font-size: 12px; color: var(--t-leise); }
+.la-b-pos { font-family: var(--font-cond); font-weight: 700; font-size: 14px; color: var(--t-leise); }
+.la-b-ersatz { display: flex; align-items: center; gap: 8px; padding: 6px 0 4px; font-family: var(--font-cond); font-weight: 700; font-size: 12px; letter-spacing: 1px; color: var(--t-leise); }
+.la-b-ersatz i { flex: 1; height: 2px; background: var(--t-text); }
+.la-b-raster.einzel { grid-template-columns: minmax(0, 1fr) 70px 70px; padding: 0 10px; }
+.la-b-raster.einzel:not(.kopf):not(.summe) { min-height: 34px; border-radius: 8px; background: var(--t-bg); padding: 0 0 0 10px; }
+.la-b-raster.einzel.kopf > span:not(:first-child) { text-align: center; }
+.la-b-raster.einzel .la-bf { background: transparent; justify-content: center; min-height: 34px; }
+.la-b-raster.einzel .la-bf.la-b-paarung { justify-content: flex-start; padding: 0; font-family: var(--font-cond); font-weight: 700; font-size: 15px; }
+.la-b-legs { font-family: var(--font-display); font-size: 17px; }
+.la-b-erg { font-size: 14px; font-weight: 700; color: var(--t-leise); }
+.la-b-erg.heim { color: var(--t-text); }
+.la-b-raster.einzel.summe { min-height: 44px; border-radius: 8px; box-shadow: inset 0 0 0 1.5px var(--t-text); margin-top: 4px; font-size: 15px; font-weight: 700; }
+.la-b-raster.einzel.summe .la-b-legs { font-size: 20px; }
+.la-b-wechsel { display: inline-flex; align-items: center; justify-content: center; min-width: 26px; height: 22px; padding: 0 3px; border-radius: 999px; box-shadow: inset 0 0 0 1.5px var(--t-text); font-family: var(--font-cond); font-weight: 700; font-size: 14px; color: var(--t-text); box-sizing: border-box; }
+.la-b-paarung .la-b-wechsel { height: 24px; margin-left: 2px; }
+.la-b-hl-seite { display: flex; flex-direction: column; gap: 6px; }
+.la-b-hl-kopf { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.la-b-hl-kopf b { font-size: 14px; font-weight: 700; }
+.la-b-hl-kopf .la-knopf { font-size: 13px; }
+.la-b-hl { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 10px; min-height: 34px; margin: 0; padding: 0 10px; border-radius: 8px; border: 0; background: var(--t-bg); color: var(--t-text); font-family: var(--font-body); text-align: left; }
+button.la-b-hl { min-height: 44px; cursor: pointer; }
+.la-b-hl span { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.la-b-hl small { font-size: 13px; color: var(--t-leise); }
+.la-b-hl b { font-family: var(--font-display); font-weight: 400; font-size: 17px; color: var(--t-gelb); min-width: 40px; text-align: right; }
+.la-b-hl.bearbeiten { display: block; padding: 0; background: transparent; }
+.la-b-angabe { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.la-b-angabe b { font-size: 15px; font-weight: 700; }
+.la-seg.klein .la-seg-knopf { min-width: 64px; min-height: 36px; padding: 0 12px; font-size: 14px; color: var(--t-leise); flex: none; }
+.la-seg.klein .la-seg-knopf.active { color: var(--t-blau); }
+.la-seg.klein .la-seg-knopf:disabled { opacity: 1; }
+.la-seg.klein .la-seg-knopf::after { content: ''; position: absolute; inset: -4px 0; }
+.la-seg-knopf { position: relative; }
+.la-b-raster.nach { grid-template-columns: 70px minmax(0, 1fr) minmax(0, 1fr) 60px 70px minmax(0, 1.2fr); padding: 0 4px; }
+.la-b-sig { display: flex; align-items: center; justify-content: center; min-height: 36px; border-radius: 8px; background: #fbfaf7; }
+.la-b-sig img { max-width: 100%; max-height: 32px; }
+.la-b-leer { display: flex; align-items: center; justify-content: center; min-height: 52px; border-radius: 8px; border: 1.5px dashed var(--t-linie); font-size: 14px; color: var(--t-leise); }
+.la-bf.la-b-protest { display: block; min-height: 110px; padding: 12px 14px; border-radius: 10px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.la-bf.la-b-protest:empty::before { content: 'Antippen zum Schreiben'; color: var(--t-leise); }
+.la-b-unterschrift { display: flex; flex-direction: column; gap: 6px; }
+.la-b-unterschrift > span { display: flex; justify-content: space-between; font-size: 13px; }
+.la-b-unterschrift small { color: var(--t-leise); font-weight: 600; font-size: 13px; }
+.la-b-sigfeld { height: 84px; border-radius: 10px; background: #fbfaf7; box-shadow: inset 0 0 0 1.5px var(--t-linie); display: flex; align-items: center; justify-content: center; }
+.la-b-sigfeld img { max-width: 80%; max-height: 70px; }
+.la-b-fuss { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px; padding-top: 4px; }
+.la-b .la-notiz { display: block; font-size: 12px; }
+.la-b .la-notiz .la-b-wechsel { margin-right: 6px; }
+@media (max-width: 999.98px) {
+  .la-b-zwei.oben { grid-template-columns: minmax(0, 1fr); }
+  .la-b-info { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 699.98px) {
+  .la-b-kopf { padding: 10px 16px; }
+  .la-b { padding: 14px 12px 24px; }
+  .la-b-karte { padding: 16px 14px; }
+  .la-b-teams { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .la-b-teamkopf.r { justify-content: flex-start; text-align: left; flex-direction: row-reverse; }
+  .la-b-teamkopf.r > span { align-items: flex-start; }
+  .la-b-stand b { font-size: 48px; }
+  .la-bf.la-b-teamname { font-size: 22px; }
+  .la-b-info { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .la-b-zwei { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .la-b-raster.nach { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .la-b-raster.nach.kopf { display: none; }
+}
+/* Ligaspiel-Ablauf: Ende */
 
 /* @@LIGASPIEL-ZAEHLEN@@ Hier fuegt das Paket Zaehlen im Ligaspiel seine Regeln ein (nicht verschieben). */
