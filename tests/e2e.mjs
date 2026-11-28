@@ -183,16 +183,15 @@ async function ligaSpielStarten() {
     return t ? t.tag : null;
   });
   await ligaHeute(tag);
-  await page.locator('#liga-plan [data-action="liga-spiel"]').first().click();
+  await page.locator('#liga-karte [data-action="liga-spiel"]').click();
   /* Ohne Game Day weiter (den prueft tests/ligatag.mjs): der gewoehnliche Startdialog. */
   await page.evaluate(() => { delete window.__dart.state().ligaTag; });
   await ligaHeute('2026-10-01');
 }
-/* Einen Spieltag in der Liste antippen. Am Handy klappt ein Tipp auf den
-   schon offenen wieder zu - deshalb nur tippen, wenn er nicht offen ist. */
+/* Einen Spieltag in der Liste antippen (nur, wenn er nicht schon gewaehlt ist). */
 async function ligaTipp(id) {
   const z = page.locator('#liga-liste .liga-spieltag[data-id="' + id + '"]');
-  /* Die Liste zeigt die kommenden acht; "Ganze Saison" zeigt alle. */
+  /* Die Liste zeigt die vergangenen und die naechsten; "Ganze Saison" zeigt alle. */
   if (!(await z.count())) await page.locator('#liga-liste [data-action="liga-saison"]').click();
   if (!(await z.evaluate((e) => e.classList.contains('wahl')))) await z.click();
 }
@@ -5176,7 +5175,7 @@ await gruppe('Gaeste: temporaer, dauerhaft, Gast-Konto', async () => {
     D.setScreen('liga'); D.ui().ligaTab = 'plan'; D.render();
     const w = document.querySelector('#liga-liste .liga-spieltag.wahl');
     window.__ligaHeute = window.LIGA_DATEN.liga.termine.find((x) => x.id === w.getAttribute('data-id')).tag; D.render();
-    const knopf = document.querySelector('#liga-plan [data-action="liga-spiel"]');
+    const knopf = document.querySelector('#liga-karte [data-action="liga-spiel"]');
     D.action('liga-spiel', knopf);
     const o = D.ui().overlay;
     /* Game Day (Redesign): die Aufstellung unserer Seite mit den Kader-Chips. */
@@ -6466,7 +6465,7 @@ await gruppe('Ligaspiel endet erst mit dem unterschriebenen Bericht', async () =
     /* GAME ON gibt es nur am Spieltag selbst (Handy-Block 2). */
     window.__ligaHeute = window.LIGA_DATEN.liga.termine.find((x) => x.id === t).tag;
     D.save(); D.setScreen('liga');
-    const da = !!document.querySelector('#liga-plan [data-action="liga-spiel"]');
+    const da = !!document.querySelector('#liga-karte [data-action="liga-spiel"]');
     window.__ligaHeute = '2026-10-01'; D.render();
     return da;
   }, termin);
@@ -8117,7 +8116,7 @@ await gruppe('Allein im Punkte-Modus: die Restzahl fuellt die Karte - quer am iP
   check('ausserhalb des Spiels sind die Seitenpolster 12 px - der max()-Ausdruck mit den Insets parst', await page.evaluate(() => getComputedStyle(document.body).paddingLeft === '12px' && getComputedStyle(document.body).paddingRight === '12px'));
 });
 
-await gruppe('Spielplan am Handy: der Spieltag klappt in der Liste auf, jeder sagt zu oder ab', async () => {
+await gruppe('Spielplan am Handy: die Spieltage als Karten zum Wischen, jeder sagt zu oder ab', async () => {
   const vp = page.viewportSize();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.evaluate(() => {
@@ -8143,20 +8142,36 @@ await gruppe('Spielplan am Handy: der Spieltag klappt in der Liste auf, jeder sa
   });
   await page.waitForFunction(() => document.querySelector('#liga-karte .lk-crew-titel'));
   const lage = () => page.evaluate(() => {
-    const liste = document.getElementById('liga-liste'), karte = document.getElementById('liga-karte');
-    const kinder = Array.from(liste.children), i = kinder.indexOf(karte);
-    const datum = (el) => el.classList && el.classList.contains('liga-spieltag') ? el.getAttribute('data-id') : null;
-    const vor = kinder.slice(0, Math.max(0, i - 1)).map(datum).filter(Boolean), nach = kinder.slice(i + 1).map(datum).filter(Boolean);
-    return { inListe: i >= 0, vorher: i > 0 ? kinder[i - 1].getAttribute('data-id') : null, offen: i > 0 && kinder[i - 1].classList.contains('wahl'),
-      vor, nach, sichtbar: karte.offsetParent !== null, wahl: liste.querySelectorAll('.liga-spieltag.wahl').length, roh: karte.textContent,
-      text: Array.from(karte.querySelectorAll('.lk-crew-titel')).map((el) => el.textContent.trim() + ' ' +
-        Array.from(el.nextElementSibling.querySelectorAll('.lt-person')).map((p) => p.lastChild.textContent.trim()).join(' ')).join(' | ') };
+    const kar = document.getElementById('liga-karussell'), karte = document.getElementById('liga-karte');
+    const kr = kar.getBoundingClientRect(), r = karte ? karte.getBoundingClientRect() : null;
+    return { imStreifen: !!karte && karte.parentNode === kar, id: karte && karte.getAttribute('data-id'), karten: kar.children.length,
+      mittig: !!r && Math.abs((r.left + r.right) / 2 - (kr.left + kr.right) / 2) < 2, sichtbar: !!karte && karte.offsetParent !== null,
+      hoehe: Math.round(kr.height), kHoehe: r ? Math.round(r.height) : 0, ui: window.__dart.ui().ligaWahl,
+      zeilen: Array.from(document.querySelectorAll('#liga-liste .liga-spieltag')).map((z) => z.getAttribute('data-id')),
+      wahl: Array.from(document.querySelectorAll('#liga-liste .liga-spieltag.wahl')).map((z) => z.getAttribute('data-id')).join(','),
+      roh: karte ? karte.textContent : '',
+      text: karte ? Array.from(karte.querySelectorAll('.lk-crew-titel')).map((el) => el.textContent.trim() + ' ' +
+        Array.from(el.nextElementSibling.querySelectorAll('.lt-person')).map((p) => p.lastChild.textContent.trim()).join(' ')).join(' | ') : '' };
   });
+  const mitTag = await page.evaluate(() => window.LIGA_DATEN.liga.termine.filter((t) => t.tag).map((t) => t.id));
   let g = await lage();
-  check('die Karte steht in der Liste direkt unter dem 5. Spieltag', g.inListe && g.vorher === 'st05' && g.offen && g.sichtbar, JSON.stringify(g));
-  check('in der Karte steht das Datum nicht doppelt, Uhrzeit und wann bleiben', await page.evaluate(() =>
-    getComputedStyle(document.querySelector('#liga-karte .lg-tag')).display === 'none' && /20:00/.test(document.querySelector('#liga-karte .lg-monat small').textContent)));
-  check('die Liste zeigt die kommenden Spieltage: darueber hoechstens der letzte, darunter die naechsten', g.vor.length <= 1 && g.vor.every((id) => id < 'st05') && g.nach.length >= 6 && g.nach.every((id) => id > 'st05'), JSON.stringify({ vor: g.vor, nach: g.nach }));
+  check('am Handy steht der 5. Spieltag als Karte im Streifen, mittig eingerastet', g.imStreifen && g.id === 'st05' && g.mittig && g.sichtbar && g.wahl === 'st05', JSON.stringify(g).slice(0, 300));
+  check('jeder Spieltag mit Datum hat eine Karte, die Nachbarkarten schauen am Rand herein', g.karten === mitTag.length && await page.evaluate(() => {
+    const k = document.getElementById('liga-karte'), n = k.nextElementSibling, v = k.previousElementSibling, b = window.innerWidth;
+    const nl = n.getBoundingClientRect().left, vr = v.getBoundingClientRect().right;
+    return nl < b && nl > b - 40 && vr > 0 && vr < 40;
+  }));
+  /* Die Hoehe gleitet (0,32 s), wenn die Karte waechst - etwa wenn die Zusagen ankommen. */
+  const hochGenug = await page.waitForFunction(() => {
+    const k = document.getElementById('liga-karussell'), c = document.getElementById('liga-karte');
+    const h = k.getBoundingClientRect().height, kh = c.getBoundingClientRect().height;
+    return h >= kh && h <= kh + 24;
+  }, null, { timeout: 2000 }).then(() => true).catch(() => false);
+  g = await lage();
+  check('der Streifen ist so hoch wie die Karte im Bild', hochGenug, g.hoehe + ' / ' + g.kHoehe);
+  check('die Liste zeigt die vergangenen Spieltage oben und die kommenden darunter (Julius, 28.11.)',
+    ['st01', 'st02', 'st03', 'st04'].every((id) => g.zeilen.indexOf(id) >= 0 && g.zeilen.indexOf(id) < g.zeilen.indexOf('st05')) &&
+    g.zeilen.slice(g.zeilen.indexOf('st05') + 1).length >= 3 && g.zeilen.slice(g.zeilen.indexOf('st05') + 1).every((id) => id > 'st05'), g.zeilen.join(','));
   check('Dabei mit Tobi, Noch keine Antwort mit mir, Abgesagt mit Max - das Gast-Konto fehlt',
     /DABEI Tobi/.test(g.text) && /ABGESAGT Max/.test(g.text) && /NOCH KEINE ANTWORT Ich/.test(g.text) && !g.text.includes('Besuch') && /1 von 4 dabei/.test(g.roh), g.text);
   check('Max ist als Absage markiert', await page.evaluate(() => { const p = Array.from(document.querySelectorAll('#liga-karte .lt-person')).find((e) => e.textContent.includes('Max')); return !!p && p.classList.contains('absage'); }));
@@ -8169,6 +8184,7 @@ await gruppe('Spielplan am Handy: der Spieltag klappt in der Liste auf, jeder sa
   g = await lage();
   check('Kann nicht: ich stehe bei Abgesagt, keine offene Antwort mehr, die Frage ist weg',
     /ABGESAGT Max Ich/.test(g.text) && !g.text.includes('NOCH KEINE ANTWORT') && (await knoepfe.count()) === 0, g.text);
+  check('nach der Antwort steht der Streifen noch beim 5. Spieltag', g.id === 'st05' && g.mittig, JSON.stringify(g).slice(0, 200));
   await page.locator('#liga-karte [data-action="liga-aendern"]').click();
   check('ändern zeigt die Frage wieder, KANN NICHT ist gewaehlt', (await page.locator('#liga-karte [data-action="liga-zusage"][data-status="absage"].an').count()) === 1);
   await page.locator('#liga-karte [data-action="liga-zusage"][data-status="absage"]').click();
@@ -8180,19 +8196,42 @@ await gruppe('Spielplan am Handy: der Spieltag klappt in der Liste auf, jeder sa
   await page.waitForFunction(() => /2 von 4 dabei/.test(document.getElementById('liga-karte').textContent));
   g = await lage();
   check('DABEI: 2 von 4 mit Tobi und mir, bei Abgesagt nur noch Max', /DABEI Tobi Ich/.test(g.text) && /ABGESAGT Max$/.test(g.text) && /Du bist dabei/.test(g.roh), g.text);
-  /* Zuklappen und woanders aufklappen. */
-  await page.locator('#liga-liste .liga-spieltag.wahl').click();
+  /* Wischen: eine Karte weiter - die rastet ein und ist der gewaehlte Spieltag. */
+  const naechste = await page.evaluate(() => {
+    const k = document.getElementById('liga-karussell'), c = document.getElementById('liga-karte');
+    k.scrollBy({ left: c.nextElementSibling.offsetLeft - c.offsetLeft });
+    return c.nextElementSibling.getAttribute('data-id');
+  });
+  const gewischt = await page.waitForFunction((id) => window.__dart.ui().ligaWahl === id && document.getElementById('liga-karte').getAttribute('data-id') === id &&
+    (document.querySelector('#liga-liste .liga-spieltag.wahl') || {}).getAttribute && document.querySelector('#liga-liste .liga-spieltag.wahl').getAttribute('data-id') === id, naechste, { timeout: 3000 }).then(() => true).catch(() => false);
   g = await lage();
-  check('ein Tipp auf die offene Zeile klappt sie zu - keine Karte, keine Markierung', !g.sichtbar && g.wahl === 0, JSON.stringify(g));
+  check('gewischt: die naechste Karte rastet ein, die Liste markiert ihren Spieltag', gewischt && g.mittig && g.wahl === naechste, JSON.stringify(g).slice(0, 200));
+  /* Ein Abgleich mitten im Wischen (neu zeichnen, waehrend der Streifen
+     laeuft) wirft ihn nicht zurueck. */
+  const mitten = await page.evaluate(() => new Promise((ok) => {
+    const k = document.getElementById('liga-karussell'), c = document.getElementById('liga-karte'), n = c.nextElementSibling;
+    k.scrollBy({ left: n.offsetLeft - c.offsetLeft });
+    requestAnimationFrame(() => { window.__dart.render(); ok(n.getAttribute('data-id')); });
+  }));
+  await page.waitForTimeout(600);
+  g = await lage();
+  check('ein Neuzeichnen mitten im Wischen wirft den Streifen nicht zurueck', g.id === mitten && g.mittig && g.wahl === mitten, JSON.stringify(g).slice(0, 200));
   await ligaTipp('st02');
+  const getippt = await page.waitForFunction(() => {
+    const k = document.getElementById('liga-karussell'), c = document.getElementById('liga-karte');
+    if (!c || c.getAttribute('data-id') !== 'st02') return false;
+    const kr = k.getBoundingClientRect(), r = c.getBoundingClientRect();
+    return Math.abs((r.left + r.right) / 2 - (kr.left + kr.right) / 2) < 2;
+  }, null, { timeout: 3000 }).then(() => true).catch(() => false);
   g = await lage();
-  check('ein Tipp auf den 2. Spieltag oeffnet ihn an Ort und Stelle', g.inListe && g.vorher === 'st02' && g.sichtbar && g.roh.includes('Germering'), JSON.stringify(g));
+  check('ein Tipp auf den 2. Spieltag laesst den Streifen zu seiner Karte gleiten', getippt && g.roh.includes('Germering') && g.wahl === 'st02', JSON.stringify(g).slice(0, 200));
   /* Tablet: wieder zwei Spalten, die Karte links. */
   await page.setViewportSize({ width: 1133, height: 744 });
   await page.waitForTimeout(150);
-  check('am Tablet steht die Karte wieder links in der Spalte', await page.evaluate(() => {
-    const k = document.getElementById('liga-karte');
-    return k.parentNode.classList.contains('liga-spalten') && k.parentNode.firstElementChild === k && !k.classList.contains('in-liste') && k.offsetParent !== null;
+  check('am Tablet steht die Karte wieder links in der Spalte, der Streifen ist weg', await page.evaluate(() => {
+    const k = document.getElementById('liga-karte'), kar = document.getElementById('liga-karussell');
+    return k.parentNode.classList.contains('liga-spalten') && k.parentNode.firstElementChild === k && k.offsetParent !== null &&
+      kar.offsetParent === null && kar.children.length === 0 && /Germering/.test(k.textContent);
   }));
   await page.evaluate(() => {
     const D = window.__dart, S = D.state();

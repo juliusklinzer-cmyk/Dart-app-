@@ -250,9 +250,19 @@ der Gegner mit Tabellenplatz und Siegen, Lokal mit Adresse und Route, dann
 „3 von 4 dabei“ mit vier Balken (dazu Punkte für Ersatz ab dem fünften) und den
 Gruppen Dabei, Noch keine Antwort, Abgesagt mit Foto. Darunter „Du bist dabei ·
 ändern“ bzw. die Frage „Kommst du? DABEI · KANN NICHT“ und am Spieltag der Knopf
-GAME DAY. Rechts der eigene Platz (führt zur Tabelle) und die kommenden acht
-Spieltage mit Logo, Zusagen bzw. Ergebnis; „Ganze Saison“ zeigt alle 18, „In den
-Kalender“ lädt alle Termine. Die Gegner tragen die Abzeichen aus dem Entwurf
+GAME DAY. Rechts der eigene Platz (führt zur Tabelle) und die Spieltage mit Logo,
+Zusagen bzw. Ergebnis: oben die vergangenen mit Stand und Sieg/Niederlage,
+darunter die kommenden (auf acht Zeilen aufgefüllt, mindestens vier); „Ganze
+Saison“ zeigt alle 18 mit den spielfreien, „In den Kalender“ lädt alle Termine.
+**Am Handy** (unter 700 px) stehen alle Spieltage als Karten in einem Streifen
+über der Liste: seitlich wischen wechselt den Spieltag, die Karte rastet mittig
+ein, links und rechts schaut die Nachbarkarte herein. Die eingerastete Karte ist
+der gewählte Spieltag (in der Liste markiert); ein Tipp auf eine Zeile lässt den
+Streifen zu ihrer Karte gleiten, ein Tipp auf die hereinschauende Nachbarkarte
+holt sie in die Mitte. Der Streifen ist so hoch wie die Karte im Bild, beim
+Wischen gleitet die Höhe mit. Im ganzen Liga-Bereich gibt ein Knopf beim Tipp
+kurz nach und wird blasser, statt hell aufzublitzen (der Blitz sah auf Reitern
+ohne eigene Fläche wie ein weißes Viereck aus). Die Gegner tragen die Abzeichen aus dem Entwurf
 (`TEAM_ABZEICHEN` in `js/app.js`), wer keins hat, bekommt eins aus Kürzel und
 Farbton. Was unten zur Fassung vom Oktober steht, gilt weiter für die übrigen
 Reiter und für Live, Ergebnisse und Nachtrag.
@@ -348,11 +358,8 @@ und „Live zuschauen“ (Ticker). Gespielte Spieltage zeigen Ergebnis, „Ergeb
 und „Spielbericht“. **Rechts alle Spieltage** kompakt: Nummer, Datum, Gegner, Lokal,
 rechts das Ergebnis (gespielt), die Zusagen (2 / 4) oder LIVE; ein Tipp zeigt den
 Spieltag links groß, Spielfrei-Runden gedimmt. **Am Handy** (unter 700 px) gibt es
-keine zwei Spalten: der angetippte Spieltag klappt **selbst auf** – die Zeile wird
-zum Kopf, die Karte hängt ohne Fuge darunter (ein Kasten, gleiche Randfarbe, ohne
-das Datum ein zweites Mal), vergangene Spieltage darüber, kommende darunter; ein
-Tipp auf die offene Zeile klappt sie wieder zu. Beim Öffnen des Spielplans ist der
-nächste Spieltag offen. **„Alle in den Kalender“** lädt alle
+keine zwei Spalten (seit 28.11.2026: die Spieltage als Karten zum Wischen, siehe
+oben). Beim Öffnen des Spielplans ist der nächste Spieltag gewählt. **„Alle in den Kalender“** lädt alle
 Termine als iCal-Datei (ganztägig). Die Zusagen liegen auf dem Server und sind für
 alle gleich; ohne Server bleibt der Spielplan lesbar, nur das Eintragen entfällt.
 Am Tablet steht das Bild fest im Rahmen, die Liste scrollt innen; am Handy quer

@@ -8209,6 +8209,13 @@ html[data-hell="1"].t-bereich { color-scheme: light; }
 .lg-nav button { height: 64px; display: flex; align-items: center; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; font-family: var(--font-display); font-weight: 400; font-size: 20px; letter-spacing: 0.5px; text-transform: uppercase; white-space: nowrap; color: var(--t-leise); cursor: pointer; min-height: 0; }
 .lg-nav button.active { color: var(--t-text); background: transparent; border: 0; }
 .lg-nav button:hover { color: var(--t-text); }
+/* Druck im Liga-Bereich: kein heller Blitz hinter dem Knopf - bei Reitern
+   und Textknoepfen ohne eigene Flaeche war das ein weisses Viereck (Julius,
+   28.11.). Der Knopf gibt kurz nach und wird blasser, ohne Rahmen und Ecke.
+   Der Name beginnt mit "tastenblitz", damit app.js die Klasse wieder abnimmt. */
+@keyframes tastenblitz-druck { from { opacity: 0.45; transform: scale(0.94); } }
+html.in-liga #screen-liga button.blitzt { animation: tastenblitz-druck 280ms cubic-bezier(0.22, 1, 0.36, 1); }
+@media (prefers-reduced-motion: reduce) { @keyframes tastenblitz-druck { from { opacity: 0.45; } } }
 .lg-info { flex: none; font-size: 14px; color: var(--t-leise); white-space: nowrap; }
 .lg-zahnrad { flex: none; width: 44px; height: 44px; margin: 0; padding: 0; border-radius: 50%; border: 0; background: var(--t-fl); color: var(--t-text); display: flex; align-items: center; justify-content: center; cursor: pointer; min-height: 0; }
 @media (max-width: 1099px) { .lg-info { display: none; } }
@@ -8325,14 +8332,38 @@ html[data-hell="1"].t-bereich { color-scheme: light; }
 .lg-liste-fuss { display: flex; justify-content: space-between; padding: 0 12px; margin-top: 6px; border-top: 1px solid var(--t-linie); }
 .lg-link { min-height: 44px; display: flex; align-items: center; margin: 0; padding: 0; border: 0; background: transparent; color: var(--t-text); font-family: var(--font-body); font-size: 15px; font-weight: 700; cursor: pointer; }
 .lg-link.leise { color: var(--t-leise); font-weight: 600; }
-/* Handy: die Karte haengt unter der gewaehlten Zeile. */
+/* Handy: alle Spieltage als Karten zum Wischen ueber der Liste (Julius,
+   28.11.). Der Streifen reicht bis an den Bildschirmrand, die Karte rastet
+   mittig ein, links und rechts schauen 18 px der Nachbarkarten herein. Die
+   Hoehe setzt app.js (lgWischHoehe): immer die der Karte im Bild. */
+.lg-karussell { display: none; }
 @media (max-width: 699px) {
   #liga-plan .lg-spalten { padding: 0 0 24px; gap: 24px; }
   #screen-liga .lg-karte { padding: 20px; }
-  #screen-liga .lg-karte.in-liste { margin: 4px 0 10px; }
-  #screen-liga .lg-karte.in-liste .lg-tag, #screen-liga .lg-karte.in-liste .lg-monat b { display: none; }
+  #screen-liga .lg-karussell {
+    display: flex; flex: 1 1 100%; position: relative; align-items: flex-start; gap: 10px;
+    box-sizing: border-box; min-width: 0; margin: -4px -12px -16px; padding: 4px 28px 16px;
+    overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    transition: height 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+    /* Hoehere Nachbarkarten enden unten weich statt mit harter Kante - nur
+       im unteren Polster, die Karte im Bild bleibt ganz deckend. */
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 16px), transparent);
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 16px), transparent);
+  }
+  #screen-liga .lg-karussell:focus { outline: none; }
+  #screen-liga .lg-karussell:focus-visible { outline: 2px solid var(--t-blau); outline-offset: -2px; }
+  #screen-liga .lg-karussell.zieht { transition: none; }
+  #screen-liga .lg-karussell.hidden { display: none; }
+  #screen-liga .lg-karussell::-webkit-scrollbar { display: none; }
+  #screen-liga .lg-karussell > .lg-karte { flex: 0 0 100%; scroll-snap-align: center; scroll-snap-stop: always; }
+  #screen-liga .lg-karte.hidden { display: none; }
   .lg-tag { font-size: 64px; }
+  .lg-monat small { font-size: 17px; }
   .lg-gegner b { font-size: 30px; }
+}
+@media (max-width: 699px) and (prefers-reduced-motion: reduce) {
+  #screen-liga .lg-karussell { transition: none; }
 }
 
 /* ---------- Gemeinsam fuer die umgebauten Liga-Reiter ---------- */
