@@ -1638,23 +1638,72 @@ export function createApi(db, config) {
     }
     const plan = JSON.parse(t.plan);
     const lg = plan.liga || null;
+    /* "Live ohne Namen" (plan.liga.ohneNamen === true): kein einziger Name
+       geht raus, weder unserer noch der des Gegners - an ihrer Stelle die
+       Bogen-Kennung (H1-H8 / G1-G8). Gefiltert wird hier, nicht erst im
+       Ticker: das JSON ist oeffentlich. Fehlt der Schalter, wie bisher. */
+    const ohneNamen = !!(lg && lg.ohneNamen === true);
     const liga = lg ? {
       terminId: lg.terminId, nr: lg.nr, gegner: lg.gegner, heim: !!lg.heim, ort: lg.ort || '', tag: lg.tag || '',
       uebung: !!lg.uebung, wir: lg.wir || [], sie: lg.sie || [],
-      heimSpieler: lg.heimSpieler || [], gastSpieler: lg.gastSpieler || [], zeitVon: lg.zeitVon || null
+      heimSpieler: lg.heimSpieler || [], gastSpieler: lg.gastSpieler || [], zeitVon: lg.zeitVon || null,
+      nurErgebnis: !!lg.nurErgebnis, ohneNamen
     } : null;
+    /* Spielstaende nur mit den Feldern, die Ticker und Webseite zeichnen.
+       Das Ergebnis ist das Partie-Objekt des Geraets; was dort sonst noch
+       haengt (z. B. belegtVon mit dem vollen Namen des anderen Schreibers),
+       bleibt hier. */
+    const nummer = (v) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+    const kennungVon = (v) => (v === null || v === undefined ? null : String(v));
+    const aufnahme = (v) => {
+      const o = { p: kennungVon(v && v.p), s: nummer(v && v.s), d: nummer(v && v.d), b: !!(v && v.b), c: !!(v && v.c) };
+      if (v && typeof v.dd === 'number' && Number.isFinite(v.dd)) o.dd = v.dd;
+      if (v && Array.isArray(v.k)) o.k = v.k.slice(0, 3).map((x) => ({ m: nummer(x && x.m), n: nummer(x && x.n) }));
+      return o;
+    };
+    const spielstand = (m) => {
+      if (!istObjekt(m)) return null;
+      const o = {
+        id: kennungVon(m.id), p: Array.isArray(m.p) ? m.p.map(kennungVon) : [], starter: kennungVon(m.starter),
+        done: !!m.done, winner: kennungVon(m.winner), kampflos: !!m.kampflos, ergebnis: !!m.ergebnis, void: !!m.void,
+        legs: (Array.isArray(m.legs) ? m.legs : []).filter(istObjekt).map((l) => ({
+          starter: kennungVon(l.starter), winner: kennungVon(l.winner), ergebnis: !!l.ergebnis,
+          visits: (Array.isArray(l.visits) ? l.visits : []).filter(istObjekt).map(aufnahme)
+        }))
+      };
+      if (typeof m.start === 'number' && Number.isFinite(m.start)) o.start = m.start;
+      if (typeof m.at === 'number' && Number.isFinite(m.at)) o.at = m.at;
+      if (Array.isArray(m.darts)) o.darts = m.darts.filter(istObjekt).slice(0, 3).map((d) => ({ m: nummer(d.m), n: nummer(d.n), v: nummer(d.v) }));
+      return o;
+    };
     const zeilen = db.prepare('SELECT match_id, result FROM tournament_matches WHERE tournament_id = ?').all(t.id);
     const ergebnisse = {};
-    for (const z of zeilen) if (z.result) ergebnisse[z.match_id] = JSON.parse(z.result);
+    for (const z of zeilen) if (z.result) ergebnisse[z.match_id] = spielstand(JSON.parse(z.result));
     /* Namen: Konten mit Anzeigenamen, Gaeste wie eingetragen -
        nur wer in einer Partie steht (nicht die Bank und Nachgemeldete). */
     const inPartie = new Set();
     for (const m of (plan.matches || []).concat(Object.values(ergebnisse))) for (const p of (m && m.p) || []) inPartie.add(String(p));
     for (const w of (liveEinzel.get(t.id) || new Map()).values()) for (const p of (w.stand && w.stand.p) || []) inPartie.add(String(p));
+    /* Bogen-Kennung: Platz in der Bogen-Liste (Wechselspieler stehen
+       hinten, also H5-H8), sonst die Position aus dem Spielplan. */
+    const bogen = (liste) => (Array.isArray(liste) ? liste : []).map((x) => String(x && typeof x === 'object' ? x.id : x));
+    const heimBogen = bogen(lg && lg.heimSpieler), gastBogen = bogen(lg && lg.gastSpieler);
+    const kennung = (id) => {
+      const s = String(id);
+      if (heimBogen.indexOf(s) >= 0) return 'H' + (heimBogen.indexOf(s) + 1);
+      if (gastBogen.indexOf(s) >= 0) return 'G' + (gastBogen.indexOf(s) + 1);
+      for (const m of plan.matches || []) {
+        const i = m && Array.isArray(m.p) ? m.p.map(String).indexOf(s) : -1;
+        const pos = i === 0 || i === 1 ? Number(m.posPaar && m.posPaar[i]) : NaN;
+        if (Number.isInteger(pos) && pos >= 0 && pos < 8) return (i === 0 ? 'H' : 'G') + (pos + 1);
+      }
+      return 'Spieler';
+    };
     const namenListe = {};
     for (const id of Array.isArray(plan.players) ? plan.players : []) {
       if (!inPartie.has(String(id))) continue;
-      if (String(id).indexOf('u_') === 0) {
+      if (ohneNamen) namenListe[id] = kennung(id);
+      else if (String(id).indexOf('u_') === 0) {
         const n = db.prepare('SELECT display_name FROM users WHERE id = ?').get(String(id));
         namenListe[id] = (n && n.display_name) || 'Spieler';
       }
@@ -1666,13 +1715,14 @@ export function createApi(db, config) {
     if (lt && t.status === 'offen') {
       for (const [mid, w] of lt) {
         if (ergebnisse[mid] || jetzt - w.at > 15 * 60000) continue;   // fertig oder seit 15 min still
-        live.push({ matchId: mid, stand: w.stand, alter: jetzt - w.at });
+        const stand = spielstand(w.stand);
+        if (stand) live.push({ matchId: mid, stand, alter: jetzt - w.at });
       }
     }
     res.setHeader('Cache-Control', 'no-store');
     sendJson(res, 200, {
       turnier: {
-        status: t.status, start: plan.start || 501, bestOf: plan.bestOf || 3, liga, namen: namenListe,
+        status: t.status, start: plan.start || 501, bestOf: plan.bestOf || 3, liga, namen: namenListe, ohneNamen,
         matches: (plan.matches || []).map((m) => ({ id: m.id, round: m.round, p: m.p, posPaar: m.posPaar || null, scheibe: m.scheibe || null })),
         ergebnisse, live, stand: jetzt
       }

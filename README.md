@@ -1465,6 +1465,50 @@ Grundlage ist die Bestandsaufnahme [docs/datenschutz-bestandsaufnahme.md](docs/d
 `datenschutz.html` nach.** Neue HTML-Seiten brauchen außerdem einen Eintrag in
 `ERLAUBT` (`server/main.mjs`) und in der `COPY`-Zeile von `deploy/Dockerfile`.
 
+## Live-Ticker (live.html)
+
+Der Zuschauer-Link eines geteilten Ligaspiels (`live.html#<schlüssel>`, ohne
+Konto) holt alle 4 s `GET /api/zuschauer/<schlüssel>` und zeichnet den Abend nach
+den Entwürfen vom November 2026 (`js/live.js`, `css/live.css`). Die Ansicht
+richtet sich nach dem Bildschirm:
+
+- **Handy** (unter 700 px, Entwurf LsLiveHandy): Kopf mit Spieltag und LIVE,
+  Stand mit Logos, je laufendem Einzel eine Scheiben-Karte (Legs, Rest, blauer
+  Punkt = am Wurf, „Ø … · zuletzt …“), darunter Ergebnisse (die letzten fünf),
+  Als Nächstes und Rekorde des Abends.
+- **Browser, Laptop, iPad** (LsLiveWeb): Kopf „Live-Ticker“ mit „aktualisiert
+  vor … s“, Stand mit 16 Strichen (blau Heim-Sieg, grau Gast-Sieg, rot gerahmt
+  live), „Gerade live“ mit den Scheiben-Karten samt Verlauf der letzten
+  Aufnahmen (und den Darts, die gerade fliegen), alle Einzel nach Durchgängen,
+  Als Nächstes (zwei je Scheibe), Man of the Day, Highlights (180er, High
+  Finishes, Shortlegs, höchste Aufnahme ab 140) und die Statistik des Abends.
+- **Fernseher** (ab 1600 px Breite und Seitenverhältnis 1,6, oder `?tv=1`;
+  `?tv=0` schaltet es ab; LsLive im Format TV): ein fester Bildschirm ohne
+  Scrollen, auf jede Größe skaliert (am 1920er-Fernseher 1,3-fach) – Stand, die
+  beiden Scheiben (eine freie Scheibe zeigt, was dort als Nächstes kommt),
+  unten Ergebnisse, Als Nächstes und Rekorde (mit Doppelquote ab 3 Versuchen).
+  Der Knopf oben rechts (oder `?voll=1`) schaltet das **Vollbild** um: nur
+  Stand und die beiden Scheiben, groß.
+
+**Nur Ergebnisse** (das Ligaspiel läuft mit `liga.nurErgebnis`, Entwürfe
+LsLiveErg): statt der Scheiben die vier Durchgänge mit Leg-Ständen (ein
+laufendes Einzel trägt einen blauen Punkt), darunter Highlights und **Wechsel**
+(„▲ neu für ▼ alt“, Kennungen wie „G4 → G5“, abgeleitet aus dem Spielplan).
+
+**Hell/dunkel** folgt dem Gerät; `?hell=1` bzw. `?hell=0` legt es fest. Farben
+sind die Tokens der App (`--t-*`). Aus der App geöffnet (`?app=1`) steht oben
+„Zur App“. Was nicht da ist, bleibt weg: kein Average ohne Würfe, kein
+„zuletzt“ ohne Aufnahme, keine Doppelquote ohne Einzeldarts oder Finish-Doppel.
+
+**Live ohne Namen**: Trägt der Plan `liga.ohneNamen: true`, gibt der Server in
+`zuschauerAnsicht` (`server/api.mjs`) keinen einzigen Namen heraus, sondern
+statt jedes Namens die Bogen-Kennung (H1–H8 / G1–G8, Platz in
+`heimSpieler`/`gastSpieler`); der Ticker zeigt dann nur diese. Unabhängig davon
+gehen Ergebnisse und Live-Stände nur noch mit den Feldern raus, die Ticker und
+Webseite zeichnen (Spieler, Legs, Aufnahmen mit Einzeldarts und Finish-Doppel,
+laufende Darts) – was sonst am Partie-Objekt des Geräts hängt (etwa `belegtVon`
+mit einem vollen Namen), bleibt beim Server.
+
 ## Liga-Webseite (Vorschau, nicht öffentlich)
 
 `liga.html` (mit `css/liga.css`, `js/liga.js`) baut die Seite der Steeldart-Liga

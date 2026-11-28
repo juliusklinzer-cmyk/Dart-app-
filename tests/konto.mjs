@@ -1828,12 +1828,16 @@ async function main() {
         await zp.goto(BASIS + '/live.html#' + token);
         await zp.waitForSelector('.stand', { timeout: 10000 });
         const ztext = await zp.locator('#ticker').innerText();
-        check('Zuschauer sieht ohne Login das Einzel als LIVE', /live/i.test(ztext) && (await zp.locator('.live-einzel').count()) === 1, ztext.slice(0, 300));
-        check('"Als Naechstes" zeigt kommende Einzel mit Board', (await zp.locator('.karte.naechste .einzel').count()) >= 2 && /board 1/i.test(await zp.locator('.karte.naechste').innerText()) &&
-          /board 2/i.test(await zp.locator('.karte.naechste').innerText()));
+        check('Zuschauer sieht ohne Login das Einzel als LIVE (Handy-Ansicht)', /live/i.test(ztext) && (await zp.locator('.lt-handy .scheibe.live').count()) === 1, ztext.slice(0, 300));
+        check('"Als Naechstes" zeigt kommende Einzel', (await zp.locator('.h-block.naechste .k-ez').count()) >= 2);
         check('ohne die App kein Knopf zurueck', (await zp.locator('.zur-app').count()) === 0);
-        check('mit dem Rest nach der Aufnahme (401)', (await zp.locator('.live-einzel .le-rest').allInnerTexts()).includes('401'));
+        check('mit dem Rest nach der Aufnahme (401)', (await zp.locator('.scheibe.live .b-rest').allInnerTexts()).includes('401'));
         check('und den Gastnamen', ztext.includes('Funk'));
+        /* Im Browser (breit) traegt "Als Naechstes" die Scheibe: je Scheibe zwei. */
+        await zp.setViewportSize({ width: 1180, height: 820 });
+        await zp.waitForSelector('.lt-web .w-liste.naechste', { timeout: 5000 });
+        const zn = await zp.locator('.w-liste.naechste').innerText();
+        check('"Als Naechstes" zeigt kommende Einzel mit Scheibe', (await zp.locator('.w-liste.naechste .w-ez').count()) >= 2 && /\bS1\b/.test(zn) && /\bS2\b/.test(zn), zn);
         await zp.goto(BASIS + '/live.html#falsch123456');
         await zp.waitForTimeout(1500);
         check('falscher Link: freundlicher Hinweis statt Daten', (await zp.locator('.fehler-seite').count()) === 1);
