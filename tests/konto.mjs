@@ -2237,7 +2237,8 @@ async function main() {
     await new Promise((r) => setTimeout(r, 300));
     if (proc.exitCode === null) proc.kill('SIGKILL');
     try {
-      fs.rmSync(tmp, { recursive: true, force: true });
+      /* Unter Windows haelt der eben beendete Server die DB manchmal noch fest. */
+      try { fs.rmSync(tmp, { recursive: true, force: true }); } catch (e) { /* Wegwerf-Ordner */ }
     } catch (e) { /* Wegwerf-Verzeichnis */ }
   }
 

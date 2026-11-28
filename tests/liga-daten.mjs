@@ -150,7 +150,8 @@ console.log('\nLiga-Import: Beispielseiten der Ligaleitung');
     g.geaendert === true && g.stand === '2026-11-12' && wahl.quelle === 'server' && wahl.stand === '2026-11-12' && sdmAusText(fs.readFileSync(wahl.pfad, 'utf8')).spieltage.st02[0].einzel === '8:8');
   g = await ligaAktualisieren({ appDir, datenDir, laden: async () => { throw new Error('Netz weg'); }, heute: new Date(2026, 10, 13) });
   check('Netzfehler: alte Datei bleibt, Fehler wird gemeldet', g.fehler === 'Netz weg' && ligaDateiWaehlen(appDir, datenDir).stand === '2026-11-12');
-  fs.rmSync(tmp, { recursive: true, force: true });
+  /* Unter Windows haelt der eben beendete Server die DB manchmal noch fest. */
+  try { fs.rmSync(tmp, { recursive: true, force: true }); } catch (e) { /* Wegwerf-Ordner */ }
 }
 
 console.log(fehler ? '\n' + fehler + ' Fehler' : '\nAlle Liga-Daten-Tests bestanden');

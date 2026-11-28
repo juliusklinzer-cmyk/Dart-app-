@@ -165,7 +165,8 @@ try {
 } finally {
   if (browser) await browser.close();
   proc.kill('SIGTERM');
-  fs.rmSync(tmp, { recursive: true, force: true });
+  /* Unter Windows haelt der eben beendete Server die DB manchmal noch fest. */
+  try { fs.rmSync(tmp, { recursive: true, force: true }); } catch (e) { /* Wegwerf-Ordner */ }
 }
 console.log('\n' + (geprueft - fehler) + ' von ' + geprueft + ' Pruefungen gruen');
 process.exit(fehler ? 1 : 0);
