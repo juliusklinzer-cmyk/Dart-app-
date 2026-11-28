@@ -8209,6 +8209,8 @@ html[data-hell="1"] {
 html.in-liga, html.in-liga body { background: var(--t-bg); }
 html[data-hell="1"].in-liga { color-scheme: light; }
 html.in-liga body { color: var(--t-text); }
+html.t-bereich, html.t-bereich body { background: var(--t-bg); }
+html[data-hell="1"].t-bereich { color-scheme: light; }
 
 /* Liga-Kopf (Entwurf LigaQuerHell): Logo, Reiter, Zeile, Zahnrad. */
 #screen-liga.active { gap: 0; padding-top: 0; color: var(--t-text); }
@@ -8345,6 +8347,452 @@ html.in-liga body { color: var(--t-text); }
   .lg-tag { font-size: 64px; }
   .lg-gegner b { font-size: 30px; }
 }
+
+/* ---------- Gemeinsam fuer die umgebauten Liga-Reiter ---------- */
+#screen-liga .lg-spalten { display: flex; flex-direction: row; flex-wrap: wrap; align-items: flex-start; gap: 40px; padding: 0 20px 32px; }
+#screen-liga .lg-spalten.hidden { display: none; }
+.lg-zwischen { justify-content: space-between; }
+.lg-rund { width: 44px; height: 44px; min-height: 0; margin: 0; padding: 0; border-radius: 50%; border: 0; background: var(--t-bg); color: var(--t-text); display: flex; align-items: center; justify-content: center; cursor: pointer; flex: none; }
+.lg-rund svg { width: 20px; height: 20px; }
+.lg-mit-icon { display: inline-flex; align-items: center; gap: 8px; }
+.lg-mit-icon svg { flex: none; }
+.lg-abschnitt-kopf { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 0 12px 10px; }
+.lg-abschnitt-kopf h2 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 20px; letter-spacing: 0.5px; text-transform: uppercase; color: var(--t-text); }
+.lg-abschnitt-kopf span { font-size: 14px; color: var(--t-leise); }
+.lg-block { display: flex; flex-direction: column; }
+.lg-block-titel { padding: 0 12px 8px; font-size: 13px; font-weight: 700; letter-spacing: 1.5px; color: var(--t-leise); text-transform: uppercase; }
+
+/* ---------- Training (Entwurf LigaTraining) ---------- */
+.lg-dd-kopf { display: flex; align-items: center; gap: 26px; }
+#dienstdarts-karte .lg-dd-kopf .sehnsucht-logo { flex: none; width: 120px; height: 120px; margin: 0; border-radius: 16px; background-color: #000; background-size: contain; background-repeat: no-repeat; background-position: center; box-sizing: border-box; border: 8px solid #000; }
+.lg-dd-titel { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.lg-dd-name { font-family: var(--font-display); font-size: 56px; line-height: 0.95; text-transform: uppercase; }
+.lg-dd-datum { font-family: var(--font-cond); font-weight: 700; font-size: 24px; }
+.lg-dd-ort { display: flex; align-items: center; gap: 8px; min-height: 32px; text-decoration: none; color: var(--t-text); }
+.lg-dd-ort b { font-size: 16px; }
+.lg-dd-ort span { font-size: 15px; color: var(--t-leise); }
+.lg-termin { display: grid; grid-template-columns: 36px 64px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 52px; padding: 4px 12px; border-radius: 12px; color: var(--t-text); cursor: pointer; box-sizing: border-box; }
+.lg-termin.wahl { background: var(--t-fl); }
+.lg-termin .sehnsucht-logo.klein { width: 36px; height: 36px; margin: 0; border-radius: 50%; background-color: #141011; background-size: contain; background-repeat: no-repeat; background-position: center; border: 4px solid #141011; box-sizing: border-box; }
+.lg-termin-datum { font-family: var(--font-cond); font-weight: 700; font-size: 20px; white-space: nowrap; }
+.lg-termin-du { font-size: 14px; color: var(--t-leise); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lg-termin-zahl { display: flex; align-items: baseline; gap: 6px; font-size: 13px; color: var(--t-leise); white-space: nowrap; }
+.lg-termin-zahl b { font-family: var(--font-cond); font-weight: 700; font-size: 18px; color: var(--t-text); }
+.lg-ue { border-top: 1px solid var(--t-linie); padding-top: 16px; margin-top: 28px; }
+.lg-ue-text { padding: 0 12px 8px; font-size: 14px; color: var(--t-leise); }
+.lg-ue-zeile { display: flex; align-items: center; gap: 12px; min-height: 50px; width: 100%; height: auto; margin: 0; padding: 0 12px; border: 0; border-radius: 12px; background: transparent; color: var(--t-text); cursor: pointer; text-align: left; font-family: var(--font-body); }
+.lg-ue-zeile:hover { background: var(--t-fl); }
+.lg-ue-titel { flex-grow: 1; font-size: 16px; font-weight: 700; }
+.lg-ue-klein { font-size: 14px; color: var(--t-leise); }
+
+/* ---------- Kasse (Entwurf LigaKasse) ---------- */
+#liga-kasse #kasse-karte { flex: 1 1 420px; min-width: 0; display: flex; flex-direction: column; gap: 32px; }
+#liga-kasse #kasse-buch { flex: 999 1 560px; min-width: 0; }
+#screen-liga .kasse-stand { flex: none; }
+.lg-saldo { font-family: var(--font-display); font-size: 72px; line-height: 1; color: var(--t-text); }
+.lg-saldo.minus { color: var(--t-rot); }
+.lg-drei { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.lg-drei > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.lg-drei span { font-size: 13px; color: var(--t-leise); }
+.lg-drei b { font-family: var(--font-cond); font-weight: 700; font-size: 24px; white-space: nowrap; }
+.lg-drei b.plus, .lg-buch-zeile .betrag.plus { color: var(--t-gruen); }
+.lg-drei b.minus, .lg-buch-zeile .betrag.minus { color: var(--t-rot); }
+.lg-kasse-knoepfe { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 28px; }
+.lg-kasse-knoepfe .lg-wort { display: inline-flex; align-items: center; gap: 10px; }
+.lg-kasse-knoepfe .lg-wort svg { width: 24px; height: 24px; }
+.lg-form { display: flex; flex-direction: column; gap: 12px; }
+.lg-form h3 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 20px; letter-spacing: 0.5px; text-transform: uppercase; }
+.lg-form .zeile { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.lg-form input, .lg-form select { min-height: 48px; margin: 0; box-sizing: border-box; width: 100%; border-radius: 10px; border: 1.5px solid var(--t-linie); background: var(--t-bg); color: var(--t-text); font-family: var(--font-body); font-size: 16px; padding: 0 12px; }
+.lg-form .lg-seg2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.lg-form .lg-seg2 button { min-height: 44px; margin: 0; border-radius: 10px; border: 1.5px solid var(--t-linie); background: transparent; color: var(--t-leise); font-weight: 700; }
+.lg-form .lg-seg2 button.active { border-color: var(--t-text); color: var(--t-text); background: var(--t-bg); }
+.lg-form .kasse-knoepfe { display: flex; gap: 10px; }
+.lg-form .kasse-knoepfe .btn { flex: 1 1 0; margin: 0; min-height: 48px; }
+.lg-form .kasse-konfig summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; color: var(--t-leise); font-size: 14px; }
+.lg-form .kasse-konfig .btn { color: var(--t-text); border-color: var(--t-linie); background: transparent; margin-top: 10px; }
+#screen-liga .lg-form .hint { color: var(--t-leise); margin: 0; }
+.lg-beitrag { display: flex; flex-direction: column; gap: 14px; padding: 0 8px; }
+.lg-beitrag .lg-abschnitt-kopf { padding: 0; }
+.lg-beitrag-liste { display: flex; flex-wrap: wrap; gap: 14px; }
+#screen-liga .lg-beitrag .lt-person { width: 64px; height: auto; min-height: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--t-text); font-family: var(--font-body); }
+#screen-liga .lg-beitrag .lt-person > span:not(.lg-beitrag-bild) { font-size: 13px; font-weight: 600; white-space: nowrap; max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
+#screen-liga .lg-beitrag .lt-person small { font-size: 12px; color: var(--t-leise); }
+#screen-liga .lg-beitrag .lt-person.offen { opacity: 0.45; }
+#screen-liga .lg-beitrag button.lt-person.offen { cursor: pointer; }
+.lg-beitrag-bild { position: relative; display: block; }
+.lg-haken { position: absolute; right: -2px; bottom: -2px; width: 22px; height: 22px; border-radius: 50%; background: var(--t-text); color: var(--t-bg); display: flex; align-items: center; justify-content: center; }
+.lg-haken svg { width: 13px; height: 13px; stroke-width: 3.5; }
+.lg-aendern.stark { color: var(--t-text); font-weight: 700; font-size: 15px; }
+.lg-buch { display: flex; flex-direction: column; }
+.lg-buch-kopf, .lg-buch-zeile { display: grid; grid-template-columns: 28px 64px minmax(0, 1fr) 96px 92px; gap: 12px; align-items: center; padding: 0 12px; }
+.lg-buch-kopf { height: 32px; font-size: 12px; font-weight: 700; letter-spacing: 1.5px; color: var(--t-leise); }
+.lg-buch-kopf .r { text-align: right; }
+.lg-buch-zeile { min-height: 50px; border-top: 1px solid var(--t-linie); color: var(--t-text); }
+.lg-buch-zeile.tap { cursor: pointer; }
+.lg-buch-zeile.offen { background: var(--t-fl); border-radius: 10px; }
+.lg-buch-zeile .nr { font-family: var(--font-cond); font-weight: 700; font-size: 16px; color: var(--t-leise); }
+.lg-buch-zeile .dt { font-family: var(--font-cond); font-weight: 700; font-size: 17px; color: var(--t-leise); }
+.lg-buch-zeile .was { display: flex; flex-direction: column; min-width: 0; }
+.lg-buch-zeile .was b { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lg-buch-zeile .was small { font-size: 12px; color: var(--t-leise); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lg-buch-zeile .betrag { font-family: var(--font-cond); font-weight: 700; font-size: 20px; text-align: right; white-space: nowrap; }
+.lg-buch-zeile .saldo { font-family: var(--font-cond); font-weight: 700; font-size: 18px; text-align: right; color: var(--t-leise); white-space: nowrap; }
+.lg-buch-aktion { display: flex; justify-content: flex-end; gap: 24px; padding: 0 12px 6px; }
+.lg-link.rot { color: var(--t-rot); }
+.lg-buch-ende { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; min-height: 52px; padding: 0 12px; border-top: 2px solid var(--t-text); }
+.lg-buch-ende span { font-size: 15px; font-weight: 700; }
+.lg-buch-ende b { font-family: var(--font-cond); font-weight: 700; font-size: 24px; }
+.lg-leer { padding: 12px; }
+
+/* ---------- Regeln (Entwurf LigaRegeln) ---------- */
+#liga-regeln .regel-spalte { flex: 1 1 460px; min-width: 0; display: flex; flex-direction: column; margin: 0; padding: 0; border: 0; background: transparent; box-shadow: none; }
+.lg-regel-kopf { display: flex; flex-direction: column; gap: 2px; padding: 0 12px 12px; }
+.lg-regel-kopf h2 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 20px; letter-spacing: 0.5px; text-transform: uppercase; color: var(--t-text); }
+.lg-regel-kopf span { font-size: 13px; color: var(--t-leise); }
+#liga-regeln .regel-liste { display: flex; flex-direction: column; gap: 0; }
+#liga-regeln details.regel { margin: 0; padding: 0; border: 0; border-radius: 16px; background: transparent; box-shadow: none; color: var(--t-text); }
+#liga-regeln details.regel[open] { background: var(--t-fl); box-shadow: var(--t-schein); }
+#liga-regeln details.regel summary { display: flex; align-items: center; gap: 14px; min-height: 54px; padding: 8px 16px; font-family: var(--font-body); font-size: 16px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--t-text); cursor: pointer; list-style: none; }
+#liga-regeln details.regel summary::-webkit-details-marker { display: none; }
+#liga-regeln details.regel summary::after { content: ''; flex: none; margin-left: auto; width: 9px; height: 9px; border-right: 2px solid var(--t-leise); border-bottom: 2px solid var(--t-leise); transform: rotate(45deg) translate(-2px, -2px); transition: transform 0.25s; }
+#liga-regeln details.regel[open] summary { font-weight: 700; }
+#liga-regeln details.regel[open] summary::after { transform: rotate(225deg) translate(-2px, -2px); }
+#liga-regeln details.regel p, #liga-regeln details.regel li { margin: 0 16px 10px; font-size: 15px; line-height: 1.55; color: var(--t-text); }
+#liga-regeln details.regel > :last-child { margin-bottom: 18px; }
+#liga-regeln details.regel a { color: var(--t-blau); }
+@media (max-width: 699px) {
+  #screen-liga .lg-spalten { padding: 0 0 24px; gap: 24px; }
+  .lg-dd-name { font-size: 40px; }
+  #dienstdarts-karte .lg-dd-kopf .sehnsucht-logo { width: 84px; height: 84px; }
+  .lg-dd-kopf { gap: 16px; }
+  .lg-saldo { font-size: 56px; }
+  .lg-buch-kopf, .lg-buch-zeile { grid-template-columns: 22px 50px minmax(0, 1fr) 84px; gap: 8px; }
+  .lg-buch-kopf > :last-child, .lg-buch-zeile .saldo { display: none; }
+}
+
+/* ---------- Tabelle (Entwurf LigaTabelle) ---------- */
+#screen-liga .lg-tabelle { gap: 24px 40px; }
+.lg-ligawahl { flex: 1 1 100%; display: flex; align-items: center; flex-wrap: wrap; gap: 12px 24px; }
+.lg-ligawahl-box { position: relative; display: flex; align-items: center; gap: 12px; }
+.lg-klein-titel { font-size: 12px; font-weight: 700; letter-spacing: 1.5px; color: var(--t-leise); text-transform: uppercase; }
+.lg-ligaknopf { display: flex; align-items: center; gap: 10px; min-height: 44px; min-width: 210px; margin: 0; padding: 0 14px; border-radius: 8px; border: 0; background: var(--t-fl); box-shadow: inset 0 0 0 1px var(--t-linie); color: var(--t-text); font-family: var(--font-body); font-size: 16px; font-weight: 700; cursor: pointer; }
+.lg-ligaknopf span { flex: 1; text-align: left; }
+.lg-ligaliste { position: absolute; top: 52px; left: 0; z-index: 6; width: 250px; display: flex; flex-direction: column; padding: 6px; border-radius: 12px; background: var(--t-fl); box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25), inset 0 0 0 1px var(--t-linie); }
+.lg-ligaliste button { display: flex; align-items: center; gap: 10px; min-height: 44px; margin: 0; padding: 0 10px; border-radius: 8px; border: 0; background: transparent; color: var(--t-text); font-family: var(--font-body); font-size: 15px; font-weight: 500; cursor: pointer; text-align: left; }
+.lg-ligaliste button span { flex: 1; }
+.lg-ligaliste button small { font-size: 12px; color: var(--t-leise); }
+.lg-ligaliste button.an { background: rgba(70, 170, 215, 0.14); font-weight: 700; }
+html[data-hell="1"] .lg-ligaliste button.an { background: rgba(31, 111, 149, 0.10); }
+.lg-tab-haupt { flex: 999 1 600px; min-width: 0; display: flex; flex-direction: column; gap: 28px; }
+.lg-tab { display: flex; flex-direction: column; }
+.lg-tab-kopf, .lg-tab-zeile { display: grid; grid-template-columns: 28px 32px minmax(0, 1fr) 36px 80px 64px 64px 44px; gap: 12px; align-items: center; padding: 0 14px; }
+.lg-tab-kopf { height: 44px; font-size: 12px; font-weight: 700; letter-spacing: 1.5px; color: var(--t-leise); }
+.lg-tab-kopf .r, .lg-tab-zeile .r { text-align: right; }
+.lg-tab-kopf .m, .lg-tab-zeile .m { text-align: center; }
+.lg-tab-zeile { position: relative; height: 42px; border-radius: 12px; color: var(--t-text); cursor: pointer; font-family: var(--font-cond); font-weight: 700; font-size: 20px; }
+.lg-tab-zeile > .r, .lg-tab-zeile > .m { color: var(--t-leise); }
+.lg-tab-zeile > .pkt { color: var(--t-text); font-size: 24px; }
+.lg-tab-zeile .rank { font-size: 22px; color: var(--t-leise); }
+.lg-tab-zeile.aufstieg .rank { color: var(--t-gruen); }
+.lg-tab-zeile.abstieg .rank { color: var(--t-rot); }
+.lg-tab-zeile.wir { background: var(--t-hl); box-shadow: var(--t-schein); z-index: 2; }
+html[data-hell="1"] .lg-tab-zeile.wir { box-shadow: 0 1px 2px rgba(21, 16, 17, 0.06); }
+.lg-tab-zeile .name { display: flex; align-items: center; gap: 10px; min-width: 0; font-family: var(--font-body); }
+.lg-tab-zeile .name > span:first-child { font-size: 16px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lg-tab-zeile.wir .name > span:first-child { font-weight: 700; }
+.lg-badge { flex: none; padding: 2px 8px; border-radius: 6px; font-family: var(--font-cond); font-weight: 700; font-size: 15px; animation: lg-badge 0.5s ease 1.6s both; color: var(--t-leise); }
+.lg-badge.hoch { color: var(--t-gruen); background: rgba(76, 201, 138, 0.16); }
+.lg-badge.runter { color: var(--t-rot); background: rgba(229, 72, 77, 0.14); }
+html[data-hell="1"] .lg-badge.hoch { background: rgba(31, 122, 69, 0.12); }
+.lg-tab-zeile.anim { animation: lg-rang 1.2s cubic-bezier(0.2, 0.7, 0.2, 1) 0.3s both; }
+@keyframes lg-rang { from { transform: translateY(var(--dy)); } to { transform: none; } }
+@keyframes lg-badge { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .lg-tab-zeile.anim, .lg-badge { animation: none; } }
+.lg-teamlogo.klein { width: 32px; height: 32px; }
+.lg-teamlogo.mini { width: 28px; height: 28px; }
+.lg-teamlogo.gross { width: 84px; height: 84px; }
+.lg-tab-fuss { padding: 10px 14px 0; font-size: 13px; color: var(--t-leise); }
+.lg-tab-fuss.m { text-align: center; }
+.lg-runde { display: flex; flex-direction: column; }
+.lg-runde-kopf { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 0 4px 8px; }
+.lg-runde-kopf > span { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 180px; }
+.lg-runde-kopf b { font-family: var(--font-display); font-weight: 400; font-size: 22px; letter-spacing: 0.5px; }
+.lg-runde-kopf small { font-size: 13px; color: var(--t-leise); }
+.lg-rund.leer { background: transparent; }
+.lg-rund:disabled { opacity: 0.3; cursor: default; }
+.lg-paar { display: grid; grid-template-columns: minmax(0, 1fr) 28px 72px 28px minmax(0, 1fr); align-items: center; gap: 10px; min-height: 40px; padding: 0 14px; border-radius: 12px; color: var(--t-text); }
+.lg-paar.tap { cursor: pointer; }
+.lg-paar.wir { background: var(--t-hl); }
+.lg-paar .h, .lg-paar .g { font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lg-paar .h { text-align: right; }
+.lg-paar .fett { font-weight: 700; }
+.lg-paar .erg { font-family: var(--font-cond); font-weight: 700; font-size: 22px; text-align: center; white-space: nowrap; }
+.lg-paar .erg.offen { color: var(--t-leise); font-size: 16px; }
+.lg-tab-seite { flex: 1 1 360px; gap: 28px; }
+.lh-block { display: flex; flex-direction: column; gap: 4px; }
+.lh-kopf { display: flex; align-items: center; justify-content: space-between; height: 44px; padding: 0 12px; }
+.lh-kopf > span:last-child { font-size: 13px; color: var(--t-leise); }
+.lh-zeile { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; align-items: center; gap: 12px; min-height: 52px; padding: 0 12px; border-radius: 12px; color: var(--t-text); }
+.lh-zeile.wir { background: var(--t-hl); }
+.lh-zeile .ico { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--t-bg); color: var(--t-leise); }
+.lh-zeile .ico svg { width: 18px; height: 18px; }
+.lh-zeile .was { display: flex; flex-direction: column; min-width: 0; }
+.lh-zeile .was b { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lh-zeile.wir .was b { font-weight: 700; }
+.lh-zeile .was small { font-size: 12px; color: var(--t-leise); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lh-zeile .wert { font-family: var(--font-cond); font-weight: 700; font-size: 24px; color: #ffc14d; white-space: nowrap; }
+html[data-hell="1"] .lh-zeile .wert { color: #9a6200; }
+.lh-block .lg-link { padding: 0 12px; }
+
+/* ---------- Teamseite (Entwurf LigaTeam) ---------- */
+#screen-liga .lg-teamseite { display: flex; flex-direction: column; gap: 22px; padding: 0 20px 32px; color: var(--t-text); }
+#screen-liga .lg-teamseite.hidden { display: none; }
+.lg-team-kopf { display: flex; align-items: center; gap: 22px; }
+.lg-rund.fl { background: var(--t-fl); }
+.lg-team-titel { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 0; }
+.lg-team-titel > b { font-family: var(--font-display); font-weight: 400; font-size: 44px; line-height: 1; text-transform: uppercase; }
+.lg-team-platz { display: flex; flex-direction: column; align-items: flex-end; }
+.lg-team-platz b { font-family: var(--font-display); font-weight: 400; font-size: 44px; line-height: 1; }
+.lg-team-platz small { font-size: 13px; color: var(--t-leise); }
+.lg-team-zwei { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 32px; align-items: start; }
+#screen-liga .lg-team-karte { padding: 22px 26px; gap: 0; }
+.lg-team-karte > .lg-klein-titel { padding-bottom: 10px; }
+.lg-team-karte .lg-klein-titel svg { width: 16px; height: 16px; }
+.lg-sp-zeile { display: flex; align-items: center; gap: 12px; min-height: 44px; border-top: 1px solid var(--t-linie); }
+.lg-sp-zeile .kurz { width: 32px; height: 32px; border-radius: 50%; background: var(--t-bg); display: flex; align-items: center; justify-content: center; font-family: var(--font-cond); font-weight: 700; font-size: 13px; color: var(--t-leise); flex: none; }
+.lg-sp-zeile .nm { flex: 1; font-size: 16px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lg-sp-zeile .chip { font-family: var(--font-cond); font-weight: 700; font-size: 13px; padding: 3px 8px; border-radius: 6px; box-shadow: inset 0 0 0 1.5px var(--t-text); }
+.lg-sp-zeile .chip.leise { color: var(--t-leise); box-shadow: inset 0 0 0 1.5px var(--t-linie); }
+.lg-sp-spiel { display: grid; grid-template-columns: 30px 22px minmax(0, 1fr) auto 18px; align-items: center; gap: 8px; min-height: 36px; padding: 0 8px; border-radius: 8px; color: var(--t-text); }
+.lg-sp-spiel.tap { cursor: pointer; }
+.lg-sp-spiel.wir { background: var(--t-hl); }
+.lg-sp-spiel .nr { font-family: var(--font-cond); font-weight: 700; font-size: 13px; color: var(--t-leise); }
+.lg-sp-spiel .at { font-size: 13px; color: var(--t-leise); }
+.lg-sp-spiel .gg { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lg-sp-spiel.frei .gg { color: var(--t-leise); }
+.lg-sp-spiel.wir .gg { font-weight: 700; }
+.lg-sp-spiel .er { display: flex; align-items: baseline; gap: 6px; font-size: 14px; color: var(--t-leise); white-space: nowrap; }
+.lg-sp-spiel .er b { font-family: var(--font-cond); font-weight: 700; font-size: 17px; color: var(--t-text); }
+.lg-sp-spiel .pf { color: var(--t-leise); display: flex; }
+.lg-sp-spiel .pf svg { width: 16px; height: 16px; }
+.lg-gegner-knopf { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0 0 2px; border: 0; background: transparent; color: var(--t-text); text-align: left; cursor: pointer; font-family: var(--font-body); min-height: 0; height: auto; }
+@media (max-width: 899px) {
+  .lg-tab-kopf, .lg-tab-zeile { grid-template-columns: 24px 28px minmax(0, 1fr) 30px 56px 44px; gap: 8px; padding: 0 8px; }
+  .lg-tab-kopf > :nth-child(6), .lg-tab-kopf > :nth-child(7), .lg-tab-zeile > :nth-child(6), .lg-tab-zeile > :nth-child(7) { display: none; }
+  .lg-team-zwei { grid-template-columns: minmax(0, 1fr); }
+  .lg-team-titel > b, .lg-team-platz b { font-size: 30px; }
+  .lg-teamlogo.gross { width: 56px; height: 56px; }
+  .lg-team-kopf { gap: 12px; flex-wrap: wrap; }
+  .lg-paar { grid-template-columns: minmax(0, 1fr) 24px 56px 24px minmax(0, 1fr); gap: 6px; padding: 0 6px; }
+  .lg-paar .h, .lg-paar .g { font-size: 13px; }
+}
+
+/* ---------- Liga-Einstellungen (Entwurf LigaEinst) ---------- */
+#screen-liga .le-seite { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 32px; padding: 0 20px 32px; align-items: start; color: var(--t-text); }
+#screen-liga .le-seite.hidden { display: none; }
+.le-nav { display: flex; flex-direction: column; gap: 4px; }
+.le-nav-titel { display: flex; align-items: center; gap: 10px; padding: 0 12px 12px 0; }
+.le-nav-titel b { font-family: var(--font-display); font-weight: 400; font-size: 26px; }
+.le-nav-knopf { display: flex; align-items: center; gap: 12px; min-height: 48px; margin: 0; padding: 0 12px; border-radius: 8px; border: 0; background: transparent; color: var(--t-leise); font-family: var(--font-body); font-size: 16px; font-weight: 700; cursor: pointer; text-align: left; }
+.le-nav-knopf span { flex: 1; }
+.le-nav-knopf.an { background: var(--t-fl); box-shadow: inset 0 0 0 1.5px var(--t-text); color: var(--t-text); }
+.le-nav-knopf svg:last-child:not(:first-child) { color: var(--t-leise); }
+.le-rolle { display: flex; flex-direction: column; gap: 6px; margin-top: 16px; padding: 14px; border-radius: 12px; background: var(--t-fl); }
+.le-rolle b { font-size: 14px; }
+.le-rolle small { font-size: 13px; color: var(--t-leise); line-height: 1.4; }
+#screen-liga .le-inhalt { gap: 0; padding: 26px 30px; }
+.le-titel { font-family: var(--font-display); font-weight: 400; font-size: 30px; line-height: 1; }
+.le-unter { font-size: 14px; color: var(--t-leise); padding: 6px 0 18px; }
+.le-zeilen { display: flex; flex-direction: column; }
+.le-zeile { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 20px; padding: 14px 0; border-top: 1px solid var(--t-linie); }
+.le-zeile-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.le-zeile-text b { font-size: 16px; }
+.le-zeile-text small { font-size: 13px; color: var(--t-leise); }
+.le-wahl { display: flex; padding: 3px; border-radius: 10px; background: var(--t-bg); }
+.le-wahl button { min-height: 38px; margin: 0; padding: 0 14px; border-radius: 8px; border: 0; background: transparent; color: var(--t-leise); font-family: var(--font-body); font-size: 15px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.le-wahl button.an { background: var(--t-fl); box-shadow: inset 0 0 0 1.5px var(--t-text); color: var(--t-text); }
+.le-wahl button:disabled { cursor: default; }
+.le-wert { display: flex; align-items: center; gap: 14px; font-size: 16px; text-align: right; }
+.le-heim { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 28px; padding-bottom: 8px; }
+.le-bilder, .le-felder { display: flex; flex-direction: column; gap: 10px; }
+.le-felder { gap: 14px; }
+#liga-einstellungen .le-logo { width: 140px; height: 140px; margin: 0; border-radius: 16px; background-color: #000; background-size: contain; background-repeat: no-repeat; background-position: center; border: 10px solid #000; box-sizing: border-box; }
+.le-bild-leer { width: 200px; height: 112px; border-radius: 12px; border: 1.5px dashed var(--t-linie); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; color: var(--t-leise); font-size: 13px; }
+.le-feld { display: flex; flex-direction: column; gap: 6px; }
+.le-feld b { min-height: 44px; display: flex; align-items: center; padding: 0 14px; border-radius: 8px; background: var(--t-bg); font-weight: 400; font-size: 16px; }
+@media (max-width: 899px) {
+  #screen-liga .le-seite { grid-template-columns: minmax(0, 1fr); padding: 0 0 24px; gap: 16px; }
+  .le-heim { grid-template-columns: minmax(0, 1fr); }
+  .le-zeile { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .le-wahl { justify-self: start; }
+  #screen-liga .le-inhalt { padding: 20px; }
+}
+
+/* ---------- Game Day (Entwurf LsWahl, LsGameDay) ---------- */
+#overlay.gd { padding: 0; align-items: stretch; justify-content: stretch; background: var(--t-bg); }
+#overlay.gd #overlay-card { position: relative; width: 100%; max-width: none; height: 100%; max-height: none; margin: 0; padding: 0; border: 0; border-radius: 0; background: var(--t-bg); box-shadow: none; color: var(--t-text); overflow: hidden; display: flex; flex-direction: column; font-family: var(--font-body); text-align: left; }
+.gd-seite { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
+.gd-kopf { display: flex; align-items: center; gap: 14px; padding: 12px 20px 12px 24px; border-bottom: 1px solid var(--t-linie); flex: none; }
+.gd-zurueck { display: flex; align-items: center; gap: 8px; min-height: 44px; margin: 0; padding: 0 14px; border-radius: 8px; border: 0; background: var(--t-fl); color: var(--t-text); font-family: var(--font-body); font-size: 15px; font-weight: 700; cursor: pointer; }
+.gd-titel { font-family: var(--font-display); font-weight: 400; font-size: 20px; }
+.gd-sub { font-size: 14px; color: var(--t-leise); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gd-luft { flex: 1; }
+.gd-chip { display: inline-flex; align-items: center; height: 32px; padding: 0 12px; border-radius: 8px; box-shadow: inset 0 0 0 1.5px var(--t-text); font-family: var(--font-cond); font-weight: 700; font-size: 14px; letter-spacing: 0.5px; white-space: nowrap; }
+.gd-rad { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; margin: 0; padding: 0; border-radius: 8px; border: 0; background: var(--t-fl); color: var(--t-text); cursor: pointer; flex: none; min-height: 0; }
+.gd-fehler { margin: 0; padding: 10px 14px; border-radius: 10px; background: rgba(229, 72, 77, 0.14); color: var(--t-rot); font-size: 15px; font-weight: 600; }
+.gd-status-zeile { margin: 0; font-size: 14px; color: var(--t-leise); }
+/* Wahl */
+.gd-wahl { flex: 1; display: flex; flex-direction: column; gap: 24px; padding: 30px 32px 36px; }
+.gd-frage-gross { font-family: var(--font-display); font-weight: 400; font-size: 44px; line-height: 1; text-align: center; }
+.gd-wahl-drei { flex: 1; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.gd-wahl-knopf { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; min-height: 280px; margin: 0; padding: 24px; border-radius: 8px; border: 0; background: var(--t-fl); box-shadow: var(--t-karte); color: var(--t-text); cursor: pointer; font-family: var(--font-body); }
+.gd-wahl-knopf b { font-family: var(--font-display); font-weight: 400; font-size: 52px; line-height: 1; letter-spacing: 1px; }
+.gd-wahl-knopf span { font-size: 17px; color: var(--t-leise); text-align: center; max-width: 280px; }
+.gd-wahl-knopf small { font-size: 14px; color: var(--t-gelb); }
+.lg-teamlogo.gd-gross { width: 110px; height: 110px; }
+.lg-teamlogo.gd-mittel { width: 44px; height: 44px; }
+.lg-teamlogo.gd-panel-logo { width: 48px; height: 48px; }
+.gd-auge { width: 110px; height: 110px; border-radius: 50%; background: var(--t-bg); display: flex; align-items: center; justify-content: center; color: var(--t-text); }
+.gd-auge svg { width: 56px; height: 56px; }
+/* Seite */
+.gd-haupt { flex: 1; display: flex; flex-direction: column; gap: 16px; padding: 18px 32px 26px; min-height: 0; }
+.gd-willkommen { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.gd-willkommen > span:first-child { display: flex; flex-direction: column; }
+.gd-willkommen small { font-size: 12px; font-weight: 700; letter-spacing: 1.5px; color: var(--t-leise); }
+.gd-willkommen b { font-family: var(--font-display); font-weight: 400; font-size: 48px; line-height: 1; }
+.gd-uhr { display: flex; flex-direction: column; align-items: flex-end; }
+.gd-uhr b { font-family: var(--font-display); font-weight: 400; font-size: 64px; line-height: 1; font-variant-numeric: tabular-nums; }
+.gd-uhr.ueber b { color: #e5484d; }
+.gd-uhr small { font-size: 13px; font-weight: 400; letter-spacing: 0; color: var(--t-leise); }
+.gd-teams { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 28px; }
+.gd-team { display: flex; align-items: center; gap: 14px; padding: 14px 18px; border-radius: 12px; background: var(--t-fl); min-width: 0; }
+.gd-team.eigen { box-shadow: var(--t-karte); }
+.gd-team-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.gd-team-text b { font-family: var(--font-display); font-weight: 400; font-size: 20px; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gd-team-text small { font-size: 13px; color: var(--t-leise); }
+.gd-aendern { display: flex; align-items: center; gap: 8px; min-height: 44px; margin: 0; padding: 0 10px; border-radius: 8px; border: 0; background: transparent; color: var(--t-text); font-family: var(--font-body); font-size: 15px; font-weight: 700; cursor: pointer; }
+.gd-status { display: inline-flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: 8px; box-shadow: inset 0 0 0 1.5px var(--t-linie); color: var(--t-leise); font-family: var(--font-cond); font-weight: 700; font-size: 14px; white-space: nowrap; flex: none; }
+.gd-status i { width: 8px; height: 8px; border-radius: 50%; background: var(--t-leise); animation: gdPuls 1.6s infinite; }
+.gd-status.bereit { box-shadow: inset 0 0 0 1.5px var(--t-blau); color: var(--t-blau); }
+.gd-status.bereit i { background: var(--t-blau); animation: none; }
+.gd-status.klein { height: 26px; padding: 0 10px; font-size: 13px; }
+@keyframes gdPuls { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+@media (prefers-reduced-motion: reduce) { .gd-status i, .gd-warte i { animation: none; } }
+.gd-liste { display: flex; flex-direction: column; padding: 0 6px; }
+.gd-pos { display: flex; align-items: center; gap: 12px; min-height: 38px; border-top: 1px solid var(--t-linie); }
+.gd-nr { font-family: var(--font-cond); font-weight: 700; font-size: 14px; color: var(--t-leise); width: 26px; flex: none; }
+.av.gd-av { width: 28px; height: 28px; font-size: 11px; flex: none; }
+.av.gd-av.gross { width: 36px; height: 36px; font-size: 13px; }
+.av.gd-av.riesig { width: 96px; height: 96px; font-size: 28px; }
+.gd-init { background: var(--t-linie); color: var(--t-leise); }
+.gd-leer { width: 28px; height: 28px; border-radius: 50%; box-shadow: inset 0 0 0 2px var(--t-linie); flex: none; }
+.gd-leer.gross { width: 36px; height: 36px; }
+.gd-leer.riesig { width: 96px; height: 96px; }
+.gd-name { font-size: 15px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gd-name.leise { color: var(--t-leise); font-weight: 400; }
+.gd-trenn { display: flex; align-items: center; gap: 10px; padding: 14px 0 6px; }
+.gd-trenn span { font-family: var(--font-cond); font-weight: 700; font-size: 13px; letter-spacing: 1px; color: var(--t-leise); white-space: nowrap; }
+.gd-trenn i { flex: 1; height: 2px; border-radius: 1px; background: var(--t-text); }
+.gd-trenn.klein { padding-top: 8px; }
+.gd-klein-titel { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; letter-spacing: 1.5px; color: var(--t-leise); }
+.gd-hinweis { font-size: 13px; color: var(--t-leise); }
+.gd-hinweis.r { text-align: right; }
+.gd-challenge { position: relative; flex: 1; min-height: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+.gd-zahl { font-family: var(--font-display); font-weight: 400; font-size: 120px; line-height: 0.95; }
+.gd-weg { display: flex; gap: 12px; min-height: 58px; flex-wrap: wrap; justify-content: center; }
+.gd-weg span { min-width: 92px; padding: 12px 18px; box-sizing: border-box; border-radius: 8px; box-shadow: inset 0 0 0 2px var(--t-blau); background: rgba(70, 170, 215, 0.12); color: var(--t-blau); font-family: var(--font-display); font-size: 26px; text-align: center; }
+.gd-neu { display: flex; align-items: center; gap: 10px; min-height: 52px; margin: 0; padding: 0 28px; border-radius: 8px; border: 0; background: transparent; box-shadow: inset 0 0 0 1.5px var(--t-text); color: var(--t-text); font-family: var(--font-display); font-size: 20px; letter-spacing: 1px; cursor: pointer; }
+.gd-go-ecke { position: absolute; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; max-width: 300px; }
+.gd-gameon { min-width: 240px; min-height: 60px; margin: 0; border-radius: 8px; border: 0; background: linear-gradient(to top right, #e5484d 0%, #b2508f 45%, #2f8fd0 100%); color: #fff; box-shadow: -10px 8px 28px rgba(229, 72, 77, 0.35), 10px -8px 28px rgba(47, 143, 208, 0.4); font-family: var(--font-display); font-size: 28px; letter-spacing: 1.5px; cursor: pointer; }
+.gd-gameon.gross { min-width: 420px; min-height: 76px; font-size: 40px; }
+.gd-warte { display: flex; align-items: center; justify-content: center; gap: 10px; min-width: 240px; min-height: 60px; padding: 0 16px; box-sizing: border-box; border-radius: 10px; box-shadow: inset 0 0 0 2px var(--t-blau); color: var(--t-blau); font-family: var(--font-display); font-size: 20px; letter-spacing: 1px; }
+.gd-warte.gross { min-width: 420px; min-height: 76px; font-size: 28px; }
+.gd-warte i { width: 10px; height: 10px; border-radius: 50%; background: var(--t-blau); animation: gdPuls 1.2s infinite; }
+.gd-klein-link { min-height: 32px; margin: 0; padding: 0 6px; border: 0; background: transparent; color: var(--t-leise); font-family: var(--font-body); font-size: 14px; font-weight: 600; text-decoration: underline; cursor: pointer; }
+.gd-klein-link.gross { min-height: 52px; font-size: 16px; padding: 0 18px; }
+.gd-anwurf { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; min-height: 260px; }
+/* Fenster */
+.gd-schleier { position: absolute; inset: 0; z-index: 6; display: flex; align-items: center; justify-content: center; padding: 24px; background: rgba(0, 0, 0, 0.6); }
+html[data-hell="1"] .gd-schleier { background: rgba(21, 16, 17, 0.45); }
+.gd-frage-karte, .gd-neu-karte, .gd-ein-karte { width: min(620px, 100%); max-height: 100%; overflow-y: auto; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px; padding: 28px 32px; border-radius: 16px; background: var(--t-fl); box-shadow: var(--t-karte); color: var(--t-text); }
+.gd-frage-karte b { font-family: var(--font-display); font-weight: 400; font-size: 44px; line-height: 1; }
+.gd-frage-karte p { margin: 0; font-size: 16px; color: var(--t-leise); }
+.gd-frage-knoepfe { display: flex; justify-content: flex-end; align-items: center; gap: 12px; padding-top: 6px; }
+.gd-neu-titel { font-family: var(--font-display); font-weight: 400; font-size: 28px; }
+.gd-panel { position: absolute; inset: 0; z-index: 5; background: var(--t-bg); display: flex; flex-direction: column; }
+.gd-panel-kopf { display: flex; align-items: center; gap: 16px; padding: 16px 32px; border-bottom: 1px solid var(--t-linie); }
+.gd-panel-titel { display: flex; flex-direction: column; min-width: 0; }
+.gd-panel-titel b { font-family: var(--font-display); font-weight: 400; font-size: 32px; line-height: 1; }
+.gd-panel-titel small { font-size: 14px; color: var(--t-leise); max-width: 640px; }
+.gd-bereit { min-height: 52px; margin: 0; padding: 0 28px; border-radius: 8px; border: 0; background: rgba(70, 170, 215, 0.16); color: var(--t-blau); box-shadow: inset 0 0 0 1.5px var(--t-blau); font-family: var(--font-display); font-size: 22px; letter-spacing: 1px; cursor: pointer; }
+.gd-panel .gd-fehler { margin: 12px 32px 0; }
+.gd-panel-drei { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1.1fr) minmax(0, 0.85fr); gap: 32px; padding: 22px 32px 28px; }
+.gd-spalte { display: flex; flex-direction: column; gap: 12px; min-height: 0; overflow-y: auto; }
+.gd-rollen { display: flex; flex-direction: column; }
+.gd-auf-zeile { display: grid; grid-template-columns: 30px 36px minmax(0, 1fr) auto auto 32px; align-items: center; gap: 12px; min-height: 46px; border-top: 1px solid var(--t-linie); }
+.gd-raus { width: 32px; height: 32px; min-height: 0; margin: 0; padding: 0; border-radius: 8px; border: 0; background: transparent; color: var(--t-leise); font-size: 20px; line-height: 1; cursor: pointer; }
+.gd-voll { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 8px; padding: 0 0 8px 42px; }
+.gd-voll span { font-size: 12px; color: var(--t-gelb); }
+.gd-voll input { min-height: 40px; margin: 0; box-sizing: border-box; border-radius: 8px; border: 1.5px solid var(--t-linie); background: var(--t-bg); color: var(--t-text); font-family: var(--font-body); font-size: 15px; padding: 0 10px; }
+.gd-auf-zeile .gd-nr { font-size: 15px; }
+.gd-auf-zeile .gd-name { font-size: 16px; }
+.gd-foto-knopf { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 10px; border-radius: 8px; box-shadow: inset 0 0 0 1.5px var(--t-linie); color: var(--t-leise); font-size: 13px; font-weight: 700; cursor: pointer; }
+.gd-foto-knopf.gross { min-height: 44px; padding: 0 16px; font-size: 15px; color: var(--t-text); }
+.gd-typ { min-height: 32px; margin: 0; padding: 0 12px; border-radius: 8px; border: 0; background: transparent; box-shadow: inset 0 0 0 1.5px var(--t-linie); color: var(--t-leise); font-family: var(--font-cond); font-weight: 700; font-size: 14px; cursor: pointer; white-space: nowrap; }
+.gd-typ.gast { box-shadow: inset 0 0 0 1.5px var(--t-gelb); color: var(--t-gelb); }
+.gd-typ.neu { box-shadow: inset 0 0 0 1.5px var(--t-blau); color: var(--t-blau); }
+.gd-chips { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.gd-chip { display: flex; align-items: center; gap: 10px; min-height: 52px; margin: 0; padding: 0 14px 0 8px; border-radius: 8px; border: 0; background: var(--t-fl); color: var(--t-text); font-family: var(--font-body); font-size: 15px; font-weight: 600; cursor: pointer; text-align: left; min-width: 0; }
+.gd-chip span:last-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gd-chip.drin { box-shadow: inset 0 0 0 2px var(--t-blau); background: rgba(70, 170, 215, 0.12); }
+.gd-plus { align-self: flex-start; display: flex; align-items: center; gap: 8px; min-height: 48px; margin: 0; padding: 0 18px; border-radius: 8px; border: 0; background: transparent; box-shadow: inset 0 0 0 1.5px var(--t-text); color: var(--t-text); font-family: var(--font-body); font-size: 15px; font-weight: 700; cursor: pointer; }
+.gd-gegner-spalte { gap: 10px; padding-left: 28px; border-left: 1px solid var(--t-linie); }
+.gd-gegner-kopf { display: flex; align-items: center; gap: 10px; }
+.gd-team-name { font-family: var(--font-display); font-weight: 400; font-size: 18px; }
+.gd-neu-foto { display: flex; align-items: center; gap: 18px; }
+.gd-neu-foto-knoepfe { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.gd-neu-foto-knoepfe small { font-size: 13px; color: var(--t-leise); }
+.gd-feld { display: flex; flex-direction: column; gap: 6px; }
+.gd-feld > span, .gd-feld > div > span { font-size: 12px; font-weight: 700; letter-spacing: 1px; color: var(--t-leise); text-transform: uppercase; }
+.gd-feld input { min-height: 48px; margin: 0; box-sizing: border-box; border-radius: 10px; border: 1.5px solid var(--t-linie); background: var(--t-bg); color: var(--t-text); font-family: var(--font-body); font-size: 17px; padding: 0 12px; }
+.gd-feld.zwei { flex-direction: row; gap: 24px; }
+.gd-feld.zwei > div { display: flex; flex-direction: column; gap: 6px; }
+.gd-seg { display: flex; gap: 8px; flex-wrap: wrap; }
+.gd-seg button { min-height: 44px; margin: 0; padding: 0 16px; border-radius: 8px; border: 0; background: transparent; box-shadow: inset 0 0 0 1.5px var(--t-linie); color: var(--t-text); font-family: var(--font-body); font-size: 15px; font-weight: 600; cursor: pointer; }
+.gd-seg button.an { background: rgba(70, 170, 215, 0.16); box-shadow: inset 0 0 0 1.5px var(--t-blau); color: var(--t-blau); }
+.gd-seg button:disabled { cursor: default; opacity: 0.7; }
+.gd-opt { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 12px 0; border-top: 1px solid var(--t-linie); }
+.gd-opt-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gd-opt-text b { font-size: 16px; }
+.gd-opt .gd-seg { flex: none; flex-wrap: nowrap; }
+.gd-opt-text small { font-size: 13px; color: var(--t-leise); }
+.gd-ein-unten { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-top: 6px; }
+@media (max-width: 899px) {
+  .gd-wahl-drei { grid-template-columns: minmax(0, 1fr); }
+  .gd-wahl-knopf { min-height: 0; flex-direction: row; justify-content: flex-start; text-align: left; }
+  .gd-wahl-knopf b { font-size: 34px; }
+  .lg-teamlogo.gd-gross, .gd-auge { width: 64px; height: 64px; }
+  .gd-teams { grid-template-columns: minmax(0, 1fr); }
+  .gd-panel-drei { grid-template-columns: minmax(0, 1fr); overflow-y: auto; }
+  .gd-gegner-spalte { padding-left: 0; border-left: 0; }
+  .gd-willkommen b { font-size: 32px; }
+  .gd-uhr b { font-size: 44px; }
+  .gd-go-ecke { position: static; align-items: stretch; max-width: none; }
+  .gd-gameon.gross, .gd-warte.gross { min-width: 0; width: 100%; }
+  .gd-haupt, .gd-wahl { padding: 14px 16px 20px; }
+  .gd-kopf { padding: 10px 12px; flex-wrap: wrap; }
+  .gd-sub { display: none; }
+  .gd-panel-kopf { flex-wrap: wrap; padding: 12px 16px; }
+  .gd-panel-drei { padding: 14px 16px 20px; }
+}
+
+
+/* @@LIGA-STATISTIK@@ Hier fuegt das Statistik-Paket seine Regeln ein (nicht verschieben). */
+
+/* @@LIGASPIEL-ABLAUF@@ Hier fuegt das Paket Ligaspiel-Ablauf seine Regeln ein (nicht verschieben). */
+
+/* @@LIGASPIEL-ZAEHLEN@@ Hier fuegt das Paket Zaehlen im Ligaspiel seine Regeln ein (nicht verschieben). */
 
 </style>
 </head>
@@ -8798,9 +9246,9 @@ html.in-liga body { color: var(--t-text); }
        wer kommt, und darunter dem Uebungs-Ligaspiel (zwei eigene Teams
        oder Bots), das ablaeuft wie ein echtes: 16 Einzel, zwei Scheiben,
        Spielbericht - nur ohne Liga-Wertung. -->
-  <div id="liga-training" class="hidden liga-zwei">
-    <div class="liga-karte weiss" id="dienstdarts-karte"></div>
-    <div class="card liga-uebung" id="uebung-karte"></div>
+  <div id="liga-training" class="hidden lg-spalten">
+    <section class="lg-karte" id="dienstdarts-karte" aria-label="Nächstes Training"></section>
+    <aside class="lg-seite" id="uebung-karte"></aside>
   </div>
 
   <!-- Die Ligatabelle: von Hand gepflegt (die Liga veröffentlicht die
@@ -8808,39 +9256,13 @@ html.in-liga body { color: var(--t-text); }
   <!-- Tabelle: links oben unser Platz, darunter die Tabelle und der Stand;
        rechts (am Computer eine rollende Spalte) Alle Spiele, Einzelrangliste
        und Highlights der Ligaleitung. -->
-  <div id="liga-tabelle" class="hidden liga-zwei breit">
-    <div class="liga-links">
-      <div class="liga-karte weiss" id="lt-platz"></div>
-      <div class="card lt-karte">
-        <div class="karte-kopf"><h2>Ligatabelle</h2><span class="hint">Tipp auf ein Team: Lokal, Spieler, Spiele</span></div>
-        <div class="lt-scroll"><table class="standings" id="lt-tabelle"></table></div>
-      </div>
-      <div class="card lt-stand-karte">
-        <span class="lk-crew-titel">Stand</span>
-        <p class="hint">Berechnet aus den Ergebnissen aller Spieltage (Karte Alle Spiele):
-          Sieg 2 Punkte, Unentschieden 1. Reihenfolge nach Punkten, dann Leg-Differenz, dann Einzel-Differenz.
-          Platz 1 und 2 (grün) sind die Aufstiegsplätze.</p>
-        <p class="hint" id="lt-stand"></p>
-      </div>
-    </div>
-    <div class="liga-rechts">
-      <!-- Alle Spiele je Spieltag (Ergebnisse der Ligaleitung, LIGA_SPIELTAGE). -->
-      <div class="card lt-runden-karte">
-        <div class="karte-kopf"><h2>Alle Spiele</h2><span class="hint">je Spieltag, Tipp zeigt die Einzel</span></div>
-        <div class="lt-runden" id="lt-runden"></div>
-      </div>
-      <!-- Einzelrangliste und Highlights der ganzen Liga, gerechnet aus allen
-           Spielberichten der Ligaleitung (js/liga-sdm.js, tools/liga-import.mjs). -->
-      <div class="card lt-einzel-karte">
-        <div class="karte-kopf"><h2>Einzelrangliste</h2><span class="hint">alle Spieler der Liga</span></div>
-        <div class="lt-scroll" id="lt-einzel"></div>
-      </div>
-      <div class="card lt-hl-karte">
-        <div class="karte-kopf"><h2>Highlights</h2><span class="hint">180er, Shortlegs, Highfinishes</span></div>
-        <div class="lt-hl" id="lt-highlights"></div>
-      </div>
-    </div>
-  </div>
+  <!-- Tabelle (Entwurf LigaTabelle): Ligawahl, Tabelle, Spieltage zum
+       Blaettern, gemeldete Highlights - gezeichnet von renderLigaTabelle(). -->
+  <div id="liga-tabelle" class="hidden lg-spalten lg-tabelle"></div>
+  <!-- Teamseite eines Teams (Entwurf LigaTeam), ueber allen Reitern. -->
+  <div id="liga-teamseite" class="hidden lg-teamseite"></div>
+  <!-- Liga-Einstellungen (Entwurf LigaEinst): Zahnrad im Liga-Kopf. -->
+  <div id="liga-einstellungen" class="hidden le-seite"></div>
 
   <!-- Die Vereinskasse: ein Kassenbuch fuer alle - Einzahlung oder
        Ausgabe erfassen, der Bestand rechnet sich von selbst. -->
@@ -8849,21 +9271,21 @@ html.in-liga body { color: var(--t-text); }
        Team, Highlights, Liga-Rangliste - gezeichnet von renderLigaStatistik(). -->
   <div id="liga-statistik" class="hidden liga-zwei"></div>
 
-  <div id="liga-kasse" class="hidden liga-zwei">
-    <div class="liga-links" id="kasse-karte"></div>
-    <div class="liga-rechts" id="kasse-buch"></div>
+  <div id="liga-kasse" class="hidden lg-spalten">
+    <div id="kasse-karte"></div>
+    <div id="kasse-buch"></div>
   </div>
 
   <!-- Regeln und FAQ: fest im HTML, verständlich zusammengefasst aus der
        SDM-SWO (Stand 22.01.2026) und den WDF Playing & Tournament Rules –
        die Originale sind ganz unten verlinkt. Aufklappbar, damit die Seite
        nicht zur Tapete wird. -->
-  <div id="liga-regeln" class="hidden liga-zwei">
-    <div class="card regel-spalte">
-    <h2>Für Neue: die wichtigsten Fragen</h2>
+  <div id="liga-regeln" class="hidden lg-spalten">
+    <section class="regel-spalte">
+    <div class="lg-regel-kopf"><h2>Für Neue: die wichtigsten Fragen</h2><span>Ein Tipp klappt die Antwort auf</span></div>
     <div class="regel-liste">
 
-    <details class="card regel">
+    <details class="card regel" open>
       <summary>Wie läuft ein Ligaspieltag ab?</summary>
       <p>Spielbeginn ist generell <b>20:00 Uhr</b>. Das Auswärtsteam hat vorher mindestens
         <b>15 Minuten zum Einwerfen</b>. Gespielt werden <b>16 Einzel</b>, jedes davon
@@ -9003,9 +9425,9 @@ html.in-liga body { color: var(--t-text); }
     </details>
 
     </div>
-    </div>
-    <div class="card regel-spalte">
-    <h2>Aus der Regelecke (von Udo)</h2>
+    </section>
+    <section class="regel-spalte">
+    <div class="lg-regel-kopf"><h2>Aus der Regelecke</h2><span>von Udo, Spielleiter Liga</span></div>
     <div class="regel-liste">
 
     <details class="card regel">
@@ -9073,7 +9495,7 @@ html.in-liga body { color: var(--t-text); }
       </ul>
     </details>
       </div>
-    </div>
+    </section>
   </div>
 </section>
 
@@ -12693,7 +13115,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       if (s.settings.online === undefined) s.settings.online = 0;
       if (s.settings.ton !== 0) s.settings.ton = 1;
       if (s.settings.feiern !== 0) s.settings.feiern = 1;
-      if ([0, 1, 2].indexOf(s.settings.hell) < 0) s.settings.hell = 0;   // Darstellung: 0 dunkel, 1 hell, 2 automatisch (folgt dem Geraet)
+      if ([0, 1, 2].indexOf(s.settings.hell) < 0) s.settings.hell = 0;
+      /* Ligaspiel-Voreinstellungen fuer neue Game Days (Liga-Einstellungen). */
+      if (!s.settings.ligaVor || typeof s.settings.ligaVor !== 'object') s.settings.ligaVor = { bestOf: 3, finish: false, ohneNamen: false, nurErgebnis: false };   // Darstellung: 0 dunkel, 1 hell, 2 automatisch (folgt dem Geraet)
       /* Spieldauer des Schnellen Spiels (Saetze/Legs) kam spaeter dazu --
          Altbestand spielt weiter ein Leg. */
       if (s.settings.quickModus !== 1) s.settings.quickModus = 0;
@@ -16370,7 +16794,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var mitMenue = screen === 'game' || screen === 'cricket' || screen === 'rtw' || screen === 'finisher' || screen === 'kaiwen' || screen === 'hunter';
     if (!mitMenue) UI.menu = false;
     /* Beim Betreten der Liga zeigt der Spielplan wieder den naechsten Spieltag. */
-    if (screen !== 'liga') { UI.ligaWahl = null; UI.ligaZu = false; UI.ligaAendern = null; }
+    if (screen !== 'liga') { UI.ligaWahl = null; UI.ligaZu = false; UI.ligaAendern = null; UI.trainingAendern = null; UI.kasseZeile = null; UI.ligaTeamSeite = null; UI.ligaNrAuf = false; UI.ligaEinst = null; }
     $('nav').classList.toggle('hidden', !navFor);
     if (navFor) {
       $('nav').querySelectorAll('button').forEach(function (b) {
@@ -16396,6 +16820,13 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       setTimeout(function () { throw e; }, 0);
     }
   }
+
+  /* Regeln: wie im Entwurf ist immer nur eine Antwort offen. */
+  document.addEventListener('toggle', function (e) {
+    var d = e.target;
+    if (!d || !d.open || !d.matches || !d.matches('#liga-regeln details.regel')) return;
+    document.querySelectorAll('#liga-regeln details.regel[open]').forEach(function (x) { if (x !== d) x.open = false; });
+  }, true);
 
   /* "Automatisch" folgt dem Geraet: wechselt das iPad abends auf dunkel,
      zieht die App mit. */
@@ -16432,7 +16863,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     /* Das Startbild steht am Tablet und quergedrehten Handy fest im Rahmen,
        innen scrollen nur Spielerliste und Einstellungen (body.fix-setup). */
     document.body.classList.toggle('fix-setup', S.screen === 'setup' || S.screen === 'tournament' || S.screen === 'bulloff' ||
-      (S.screen === 'liga' && (UI.ligaTab || 'plan') !== 'plan') || S.screen === 'players' || S.screen === 'winner' || S.screen === 'profile' || S.screen === 'summary');
+      (S.screen === 'liga' && !LIGA_NEU[UI.ligaTab || 'plan']) || S.screen === 'players' || S.screen === 'winner' || S.screen === 'profile' || S.screen === 'summary');
     if (S.screen === 'setup') { gaesteAufraeumen(); renderSetup(); }
     /* Der Hintergrundtakt laeuft nur da, wo man ihn auch sieht: im
        Turnierbildschirm. Sonst fragt die App den ganzen Abend nach Daten,
@@ -16601,7 +17032,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return ligaLive;
   }
   function tickerOeffnen(k) {
-    if (/^[A-Za-z0-9_-]{8,40}$/.test(String(k || ''))) location.href = 'live.html?app=1#' + k;
+    /* Hell oder dunkel wie in der App (Liga-Einstellungen, Darstellung). */
+    if (/^[A-Za-z0-9_-]{8,40}$/.test(String(k || ''))) location.href = 'live.html?app=1&hell=' + (istHell() ? '1' : '0') + '#' + k;
   }
   function liveBeitretbareHolen() {
     if (!window.DartSync || !window.DartSync.live) return;
@@ -17903,13 +18335,21 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   /* Die Reiter der Liga, die schon nach dem Redesign gebaut sind. Nur dort
      gilt hell - die uebrigen haben noch dunkle Karten und blieben auf
      hellem Grund unlesbar (Kritik 28.11.); sie kommen Paket fuer Paket. */
-  var LIGA_NEU = { plan: 1 };
+  var LIGA_NEU = { plan: 1, training: 1, kasse: 1, regeln: 1, tabelle: 1 };
+  /* Bereiche ausserhalb des Liga-Reiters, die schon nach dem Redesign
+     gebaut sind: das Ligaspiel (Uebersicht, Dialoge, Bericht) und das
+     Zaehlen im Ligaspiel. Jedes Paket traegt nur in seiner Funktion ein,
+     wann es gilt. */
+  function hellAblauf() { return false; }
+  function hellZaehlen() { return false; }
   function darstellungAnwenden() {
     var de = document.documentElement;
     var liga = !!($('screen-liga') && $('screen-liga').classList.contains('active'));
-    var w = istHell() && liga && LIGA_NEU[UI.ligaTab || 'plan'] ? '1' : '0';
+    var bereich = (liga && (!!LIGA_NEU[UI.ligaTab || 'plan'] || !!UI.ligaEinst || !!UI.ligaTeamSeite)) || !!ligaTagVon(UI.overlay) || (!liga && (hellAblauf() || hellZaehlen()));
+    var w = istHell() && bereich ? '1' : '0';
     if (de.getAttribute('data-hell') !== w) de.setAttribute('data-hell', w);
     de.classList.toggle('in-liga', liga);
+    de.classList.toggle('t-bereich', !liga && bereich);
   }
   function darstellungKnoepfe() {
     var ist = [0, 1, 2].indexOf(S.settings.hell) < 0 ? 0 : S.settings.hell;
@@ -20767,7 +21207,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (!a) {
       var kz = String(name).replace(/[`'’]/g, ' ').replace(/[^A-Za-zÄÖÜäöü0-9 ]/g, '').split(' ').filter(function (w) { return w && !/^\d+$/.test(w); });
       kz = kz.length === 1 ? kz[0].slice(0, 3).toUpperCase() : kz.slice(0, 3).map(function (w) { return w[0]; }).join('').toUpperCase();
-      a = ['hsl(' + hue(String(name)) + ',45%,30%)', '#ffffff', kz];
+      var hz = 0;
+      for (var hi = 0; hi < String(name).length; hi++) hz = (hz * 31 + String(name).charCodeAt(hi)) % 360;
+      a = ['hsl(' + hz + ',45%,30%)', '#ffffff', kz];
     }
     var fs = a[2].length > 2 ? 30 : 36;
     return '<svg class="' + k + '" viewBox="0 0 120 120" role="img" aria-label="Logo ' + esc(name) + '"><circle cx="60" cy="60" r="58" fill="' + a[0] + '"/>' +
@@ -20775,6 +21217,14 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       '<text x="60" y="' + (fs > 30 ? 73 : 71) + '" text-anchor="middle" font-family="Arial Black, Arial, sans-serif" font-weight="900" font-size="' + fs + '" fill="' + a[1] + '">' + esc(a[2]) + '</text></svg>';
   }
   var LG_PFEIL = '<svg class="lg-pfeil" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 5 7 7-7 7"/></svg>';
+  var LG_KALENDER = '<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18"/><path d="M8 14h3M8 17h7"/></svg>';
+  var LG_PIN_ROT = '<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#e5484d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.7"/></svg>';
+  var LG_PLUS = '<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M7 12h10"/></svg>';
+  var LG_LINKS = '<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 5-7 7 7 7"/></svg>';
+  var LG_ZIEL = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>';
+  var LG_UHR = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg>';
+  var LG_FLAMME = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c4 0 7-2.8 7-6.8 0-3.6-2.6-6.1-4.2-8.2-.6 2-1.6 3.2-2.8 3.9C12 8 11 5 8.5 2.5 8.6 6 5 8.9 5 15.2 5 19.2 8 22 12 22Z"/></svg>';
+  var LG_LEUTE = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20v-1.3c0-2.8 2.7-4.7 6-4.7s6 1.9 6 4.7V20"/><circle cx="17.5" cy="9" r="2.4"/><path d="M17 14.2c2.4.2 4 1.7 4 3.8V20"/></svg>';
   var LG_HAKEN = '<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4 4 10-10"/></svg>';
   /* Regulaer steigen die beiden Ersten auf (SWO 03.10.2026, Punkt 2). */
   var LIGA_AUFSTEIGER = 2;
@@ -21006,135 +21456,151 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     }).join('') + '</select>';
   }
 
-  /* Das Kassenbuch -- aufgebaut wie die Excel-Vorlage der Kassenwartin:
-     Kassenjahr, Kassenwart, Anfangsbestand, dann Nr / Datum / Beschreibung /
-     Kategorie / Einnahme / Ausgabe / Saldo und unten die Summen. Buchen
-     darf nur der Kassenwart; alle anderen sehen das Buch und den
-     PayPal-Knopf fuers Vereinskonto. */
+  /* Die Kasse (Entwurf LigaKasse, Redesign Nov. 2026): links der Kassenstand
+     mit Anfang, Einnahmen, Ausgaben und "BUCHUNG ERFASSEN" (das Formular
+     klappt darunter auf), darunter der Gruendungsbeitrag mit Fotos; rechts
+     das Kassenbuch als Tabelle mit Saldo und Endbestand. Eintragen darf
+     jeder Angemeldete, der Kassenwart verwaltet alles (Zeile antippen:
+     aendern oder loeschen). */
   function renderLigaKasse() {
     var online = !!(window.DartSync && window.DartSync.kasse && window.DartKonto && window.DartKonto.nutzer());
     /* Waehrend jemand mitten in einer Buchung steckt (Fokus im Formular
        ODER schon etwas eingetragen), wird nicht neu gebaut - sonst wischte
        ein Hintergrund-Abgleich Betrag und Auswahl weg. */
     var fokus = document.activeElement;
-    if (fokus && fokus.closest && fokus.closest('#kasse-karte')) return;
+    if (fokus && fokus.closest && fokus.closest('#kasse-karte .kasse-form')) return;
     var kbAlt = $('kasse-betrag'), ktAlt = $('kasse-text');
     if ((kbAlt && kbAlt.value) || (ktAlt && ktAlt.value)) return;
     var d = kasseDaten;
     var konfig = d && d.konfig ? d.konfig : { jahr: new Date().getFullYear(), anfangsbestand: 0, beitrag: 5000, paypal: '' };
     var saldo = d ? d.saldo : konfig.anfangsbestand;
-    /* Eintragen darf jeder Angemeldete; der Kassenwart verwaltet alles. */
     var darf = online;
     var wart = !!(online && d && d.kassenwart);
     var ich = online ? window.DartKonto.nutzer().id : null;
     var bearbeite = UI.kasseEdit || null;
+    var formOffen = !!(darf && (UI.kasseForm || bearbeite));
     var art = bearbeite ? (bearbeite.betrag < 0 ? 'aus' : 'ein') : (UI.kasseArt === 'aus' ? 'aus' : 'ein');
     var katWahl = bearbeite ? bearbeite.kategorie : UI.kasseKategorie;
     var eintraege = (d && d.eintraege) || [];
     var summeEin = sum(eintraege, function (e) { return e.betrag > 0 ? e.betrag : 0; });
     var summeAus = sum(eintraege, function (e) { return e.betrag < 0 ? -e.betrag : 0; });
+    var mitglieder = (d && d.mitglieder) || [];
+    var wer = ((d && d.kassenwarte) || []).join(', ');
 
-    /* Laufender Saldo wie Spalte G der Vorlage: Anfangsbestand + Einnahmen - Ausgaben. */
+    var form = !formOffen ? '' :
+      '<div class="kasse-form lg-form' + (bearbeite ? ' bearbeiten' : '') + '">' +
+        '<h3>' + (bearbeite ? 'Buchung Nr. ' + (eintraege.indexOf(bearbeite) + 1) + ' ändern' : 'Buchung erfassen') + '</h3>' +
+        (bearbeite ? '' : '<p class="lg-text">Jede Einzahlung und jede Ausgabe hier eintragen, sie steht sofort im Kassenbuch. ' +
+          esc(wer || 'Wer die Kasse führt,') + ' prüft und verwaltet die Buchungen.</p>') +
+        '<div class="options lg-seg2" id="kasse-art">' +
+          '<button type="button" data-action="kasse-art" data-value="ein" class="' + (art === 'ein' ? 'active' : '') + '">Einnahme</button>' +
+          '<button type="button" data-action="kasse-art" data-value="aus" class="' + (art === 'aus' ? 'active' : '') + '">Ausgabe</button>' +
+        '</div>' +
+        '<div class="zeile">' +
+          '<input id="kasse-datum" type="date" value="' + (bearbeite ? bearbeite.datum : heuteISO()) + '" aria-label="Datum">' +
+          kasseKategorieWahl(art, katWahl) +
+        '</div>' +
+        '<div class="zeile">' +
+          '<input id="kasse-betrag" type="text" inputmode="decimal" placeholder="Betrag in €" aria-label="Betrag in Euro"' + (bearbeite ? ' value="' + (Math.abs(bearbeite.betrag) / 100).toFixed(2).replace('.', ',') + '"' : '') + '>' +
+          '<input id="kasse-text" type="text" maxlength="80" placeholder="Beschreibung" aria-label="Beschreibung"' + (bearbeite ? ' value="' + esc(bearbeite.text) + '"' : '') + '>' +
+        '</div>' +
+        '<div id="kasse-mitglied-zeile" class="' + (art === 'ein' && (katWahl || kasseKategorien('ein')[0]) === 'Mitgliedsbeiträge' ? '' : 'hidden') + '">' +
+          '<select id="kasse-mitglied" aria-label="Mitglied"><option value="">Mitglied (für wen ist der Beitrag?)</option>' +
+            mitglieder.filter(function (m) { return wart || m.id === ich; }).map(function (m) {
+              return '<option value="' + m.id + '"' + (bearbeite && bearbeite.mitglied === m.id ? ' selected' : (!bearbeite && m.id === ich ? ' selected' : '')) + '>' + esc(m.name) + '</option>';
+            }).join('') +
+          '</select></div>' +
+        '<div class="kasse-knoepfe">' +
+          '<button class="btn hell" data-action="kasse-buchen">' + (bearbeite ? 'Änderung speichern' : 'Buchen') + '</button>' +
+          '<button class="btn ghost" data-action="kasse-edit-abbruch">Abbrechen</button>' +
+        '</div>' +
+        '<p class="hint" id="kasse-meldung"></p>' +
+        (wart ? '<details class="kasse-konfig"><summary>Kassenjahr und Anfangsbestand</summary>' +
+          '<div class="zeile">' +
+            '<input id="kasse-jahr" type="number" min="2000" max="2100" value="' + konfig.jahr + '" aria-label="Kassenjahr">' +
+            '<input id="kasse-anfang" type="text" inputmode="decimal" value="' + (konfig.anfangsbestand / 100).toFixed(2).replace('.', ',') + '" aria-label="Anfangsbestand in Euro">' +
+          '</div>' +
+          '<button class="btn ghost full" data-action="kasse-konfig">Speichern</button>' +
+        '</details>' : '') +
+      '</div>';
+
+    var bezahlt = mitglieder.filter(function (m) { return m.gezahlt >= konfig.beitrag; }).length;
+    var ichOffen = !wart && mitglieder.some(function (m) { return m.id === ich && m.gezahlt < konfig.beitrag; });
+    var ichName = '';
+    mitglieder.forEach(function (m) { if (m.id === ich) ichName = m.name; });
+    var beitragHtml = mitglieder.length
+      ? '<section class="lg-beitrag" aria-label="Gründungsbeitrag">' +
+          '<div class="lg-abschnitt-kopf"><h2>Gründungsbeitrag</h2><span>' + euro(konfig.beitrag) + ' pro Kopf · ' + bezahlt + ' von ' + mitglieder.length + ' bezahlt</span></div>' +
+          '<div class="lt-leute lg-beitrag-liste" role="list">' + mitglieder.map(function (m) {
+            var voll = m.gezahlt >= konfig.beitrag;
+            var bild = '<span class="lg-beitrag-bild">' + avatarHTML({ id: m.id, name: m.name, avatar: m.avatar, hue: m.hue }, 'lg-av') +
+              (voll ? '<span class="lg-haken" aria-label="bezahlt">' + LG_HAKEN + '</span>' : '') + '</span>';
+            var name = '<span>' + esc(m.name) + '</span>' + (!voll && m.gezahlt > 0 ? '<small>' + euro(m.gezahlt) + '</small>' : '');
+            /* Kassenwart: ein Tipp auf ein offenes Mitglied bucht den Beitrag. */
+            if (!voll && wart) {
+              return '<button type="button" class="lt-person offen" role="listitem" data-action="kasse-beitrag" data-id="' + esc(m.id) + '" data-name="' + esc(m.name) + '" title="Beitrag als bezahlt buchen">' + bild + name + '</button>';
+            }
+            return '<div class="lt-person' + (voll ? '' : ' offen') + '" role="listitem">' + bild + name + '</div>';
+          }).join('') + '</div>' +
+          (ichOffen ? '<div class="lg-antwort"><span>Dein Beitrag ist noch offen.</span><button type="button" class="lg-aendern stark" data-action="kasse-beitrag" data-id="' + esc(ich) + '" data-name="' + esc(ichName) + '">Ich habe eingezahlt</button></div>' : '') +
+        '</section>'
+      : '';
+
+    $('kasse-karte').innerHTML =
+      '<section class="lg-karte kasse-stand" aria-label="Kassenstand">' +
+        '<span class="lg-etikett lg-mit-icon">' + LG_KALENDER + 'Kassenstand · Kassenjahr ' + konfig.jahr + '</span>' +
+        '<span class="lg-saldo' + (saldo < 0 ? ' minus' : '') + '">' + euro(saldo) + '</span>' +
+        '<div class="lg-drei">' +
+          '<div><span>Anfangsbestand</span><b>' + euro(konfig.anfangsbestand) + '</b></div>' +
+          '<div><span>Einnahmen</span><b class="plus">+' + euro(summeEin) + '</b></div>' +
+          '<div><span>Ausgaben</span><b class="minus">−' + euro(summeAus) + '</b></div>' +
+        '</div>' +
+        '<span class="lg-text">Kasse führt: ' + esc(wer || 'noch offen') + '</span>' +
+        '<div class="lg-linie"></div>' +
+        (darf
+          ? '<div class="lg-kasse-knoepfe">' +
+              (formOffen ? '' : '<button type="button" class="lg-wort lg-mit-icon" data-action="kasse-form">' + LG_PLUS + 'BUCHUNG ERFASSEN</button>') +
+              (konfig.paypal ? '<a class="lg-link leise kasse-paypal" href="' + esc(konfig.paypal) + '" target="_blank" rel="noopener">Per PayPal ins Vereinskonto einzahlen</a>' : '') +
+            '</div>' + form
+          : '<p class="lg-text">Zum Ansehen und Eintragen bitte anmelden.</p>' +
+            (konfig.paypal ? '<a class="lg-link leise kasse-paypal" href="' + esc(konfig.paypal) + '" target="_blank" rel="noopener">Per PayPal ins Vereinskonto einzahlen</a>' : '')) +
+      '</section>' + beitragHtml;
+
+    /* Kassenbuch: Nr, Datum, Buchung (Text und Kategorie), Betrag, Saldo -
+       neueste oben. Antippen zeigt Aendern und Loeschen, wo man darf. */
     var lauf = konfig.anfangsbestand;
     var zeilen = eintraege.map(function (e, i) {
       lauf += e.betrag;
-      return '<div class="kasse-eintrag">' +
-        '<div class="nr">' + (i + 1) + '</div>' +
-        '<div class="was"><div class="txt">' + esc(e.text) +
-          (e.mitgliedName && e.kategorie === 'Mitgliedsbeiträge' && e.text.indexOf(e.mitgliedName) < 0 ? ' <span class="muted">(' + esc(e.mitgliedName) + ')</span>' : '') + '</div>' +
-          '<div class="wer">' + datumDE(e.datum) + ' · ' + esc(e.kategorie || '') + (e.von ? ' · gebucht von ' + esc(e.von) : '') + '</div></div>' +
-        '<div class="zahlen"><span class="betrag ' + (e.betrag < 0 ? 'minus' : 'plus') + '">' +
-          (e.betrag > 0 ? '+' : '−') + euro(Math.abs(e.betrag)) + '</span>' +
-          '<span class="saldo">Saldo ' + euro(lauf) + '</span></div>' +
-        (wart ? '<button class="weg edit" data-action="kasse-edit" data-id="' + esc(e.id) + '" aria-label="Buchung ändern">✎</button>' : '') +
-        (wart || e.meins ? '<button class="weg" data-action="kasse-weg" data-id="' + esc(e.id) + '" aria-label="Buchung löschen">✕</button>' : '') +
-        '</div>';
-    });
-
-    /* Gruendungsbeitrag je Mitglied: bezahlt oder offen. */
-    var mitglieder = (d && d.mitglieder) || [];
-    var offen = mitglieder.filter(function (m) { return m.gezahlt < konfig.beitrag; }).length;
-    var beitragHtml = mitglieder.length ? '<div class="kasse-beitraege"><div class="karte-kopf"><span class="lk-crew-titel">Gründungsbeitrag ' + euro(konfig.beitrag) + ' pro Kopf</span>' +
-      '<span class="kb-offen ' + (offen ? 'gelb' : 'gruen') + '">' + (offen ? offen + ' offen' : 'alle bezahlt') + '</span></div>' +
-      '<div class="lt-leute">' + mitglieder.map(function (m) {
-        var voll = m.gezahlt >= konfig.beitrag;
-        return '<span class="lt-person kb-zeile ' + (voll ? 'voll' : 'offen') + '">' +
-          avatarHTML({ id: m.id, name: m.name, avatar: m.avatar, hue: m.hue }, 'sm') +
-          '<span class="kb-name">' + esc(m.name) + '</span>' +
-          '<span class="kb-status">' + (voll ? '✓' : m.gezahlt > 0 ? euro(m.gezahlt) : 'offen') + '</span>' +
-          (!voll && (wart || m.id === ich) ? '<button class="btn ghost small" data-action="kasse-beitrag" data-id="' + esc(m.id) + '" data-name="' + esc(m.name) + '">' + (m.id === ich && !wart ? 'Eingezahlt' : 'Bezahlt') + '</button>' : '') +
-          '</span>';
-      }).join('') + '</div></div>' : '';
-
-    $('kasse-karte').innerHTML =
-      '<div class="liga-karte weiss kasse-stand">' +
-        '<div class="lk-kopf"><span class="lk-crew-titel">Kassenstand · Kassenjahr ' + konfig.jahr + '</span>' +
-          '<span class="hint">Kasse führt: ' + esc(((d && d.kassenwarte) || []).join(', ') || 'noch offen') + '</span></div>' +
-        '<span class="ks-saldo ' + (saldo < 0 ? 'minus' : 'plus') + '">' + euro(saldo) + '</span>' +
-        '<div class="ks-drei">' +
-          '<div><span class="lk-crew-titel">Anfang</span><b>' + euro(konfig.anfangsbestand) + '</b></div>' +
-          '<div><span class="lk-crew-titel">Einnahmen</span><b class="plus">+ ' + euro(summeEin) + '</b></div>' +
-          '<div><span class="lk-crew-titel">Ausgaben</span><b class="minus">− ' + euro(summeAus) + '</b></div>' +
+      var tippbar = wart || e.meins;
+      var offenZ = tippbar && UI.kasseZeile === e.id;
+      return '<div class="lg-buch-zeile' + (tippbar ? ' tap' : '') + (offenZ ? ' offen' : '') + '"' + (tippbar ? ' data-action="kasse-zeile" data-id="' + esc(e.id) + '" role="button" tabindex="0"' : '') + '>' +
+          '<span class="nr">' + (i + 1) + '</span>' +
+          '<span class="dt">' + datumDE(e.datum).slice(0, 6) + '</span>' +
+          '<span class="was"><b>' + esc(e.text) +
+            (e.mitgliedName && e.kategorie === 'Mitgliedsbeiträge' && e.text.indexOf(e.mitgliedName) < 0 ? ' (' + esc(e.mitgliedName) + ')' : '') + '</b>' +
+            '<small>' + esc(e.kategorie || '') + (e.von ? ' · gebucht von ' + esc(e.von) : '') + '</small></span>' +
+          '<span class="betrag ' + (e.betrag < 0 ? 'minus' : 'plus') + '">' + (e.betrag > 0 ? '+' : '−') + euro(Math.abs(e.betrag)) + '</span>' +
+          '<span class="saldo">' + euro(lauf) + '</span>' +
         '</div>' +
-      '</div>' +
-      '<div class="card kasse-erfassen">' +
-      (darf
-        ? '<div class="kasse-form' + (bearbeite ? ' bearbeiten' : '') + '">' +
-            '<h3>' + (bearbeite ? 'Buchung Nr. ' + (eintraege.indexOf(bearbeite) + 1) + ' ändern' : 'Eintragen: Einzahlung oder Ausgabe') + '</h3>' +
-            (bearbeite ? '' : '<p class="hint">Jede Einzahlung und jede Ausgabe hier eintragen – sie steht sofort im Kassenbuch. ' +
-              (((d && d.kassenwarte) || []).join(', ') || 'Wer die Kasse führt,') + ' prüft und verwaltet die Buchungen.</p>') +
-            '<div class="options" id="kasse-art">' +
-              '<button data-action="kasse-art" data-value="ein" class="' + (art === 'ein' ? 'active' : '') + '">Einnahme</button>' +
-              '<button data-action="kasse-art" data-value="aus" class="' + (art === 'aus' ? 'active' : '') + '">Ausgabe</button>' +
-            '</div>' +
-            '<div class="zeile">' +
-              '<input id="kasse-datum" type="date" value="' + (bearbeite ? bearbeite.datum : heuteISO()) + '" aria-label="Datum">' +
-              kasseKategorieWahl(art, katWahl) +
-            '</div>' +
-            '<div class="zeile">' +
-              '<input id="kasse-betrag" type="text" inputmode="decimal" placeholder="Betrag in €"' + (bearbeite ? ' value="' + (Math.abs(bearbeite.betrag) / 100).toFixed(2).replace('.', ',') + '"' : '') + '>' +
-              '<input id="kasse-text" type="text" maxlength="80" placeholder="Beschreibung"' + (bearbeite ? ' value="' + esc(bearbeite.text) + '"' : '') + '>' +
-            '</div>' +
-            '<div id="kasse-mitglied-zeile" class="' + (art === 'ein' && (katWahl || kasseKategorien('ein')[0]) === 'Mitgliedsbeiträge' ? '' : 'hidden') + '">' +
-              '<select id="kasse-mitglied"><option value="">Mitglied (für wen ist der Beitrag?)</option>' +
-                mitglieder.filter(function (m) { return wart || m.id === ich; }).map(function (m) {
-                  return '<option value="' + m.id + '"' + (bearbeite && bearbeite.mitglied === m.id ? ' selected' : (!bearbeite && m.id === ich ? ' selected' : '')) + '>' + esc(m.name) + '</option>';
-                }).join('') +
-              '</select></div>' +
-            '<div class="kasse-knoepfe">' +
-              '<button class="btn hell" data-action="kasse-buchen">' + (bearbeite ? 'Änderung speichern' : 'Buchen') + '</button>' +
-              (bearbeite
-                ? '<button class="btn ghost" data-action="kasse-edit-abbruch">Abbrechen</button>'
-                : konfig.paypal
-                  ? '<a class="btn ghost kasse-paypal" href="' + esc(konfig.paypal) + '" target="_blank" rel="noopener">Per PayPal einzahlen</a>'
-                  : '<span></span>') +
-            '</div>' +
-            '<p class="hint" id="kasse-meldung"></p>' +
-            (wart ? '<details class="kasse-konfig"><summary>Kassenjahr und Anfangsbestand (Kasse)</summary>' +
-              '<div class="zeile">' +
-                '<input id="kasse-jahr" type="number" min="2000" max="2100" value="' + konfig.jahr + '" aria-label="Kassenjahr">' +
-                '<input id="kasse-anfang" type="text" inputmode="decimal" value="' + (konfig.anfangsbestand / 100).toFixed(2).replace('.', ',') + '" aria-label="Anfangsbestand in Euro">' +
-              '</div>' +
-              '<button class="btn ghost full" data-action="kasse-konfig">Speichern</button>' +
-            '</details>' : '') +
-          '</div>'
-        : '<h2>Buchung erfassen</h2><p class="hint">Zum Ansehen und Eintragen bitte anmelden.</p>' +
-          (konfig.paypal ? '<a class="btn ghost full kasse-paypal" href="' + esc(konfig.paypal) + '" target="_blank" rel="noopener">Per PayPal einzahlen</a>' : '')) +
-      '</div>';
+        (offenZ ? '<div class="lg-buch-aktion">' +
+          (wart ? '<button type="button" class="lg-link" data-action="kasse-edit" data-id="' + esc(e.id) + '">Ändern</button>' : '') +
+          '<button type="button" class="lg-link rot" data-action="kasse-weg" data-id="' + esc(e.id) + '">Löschen</button></div>' : '');
+    });
     $('kasse-buch').innerHTML =
-      '<div class="card kasse-liste">' +
-        '<div class="karte-kopf"><h2>Kassenbuch</h2><span class="hint">' + plural(zeilen.length, 'Buchung', 'Buchungen') + '</span></div>' +
-        '<div class="kasse-zeilen">' + (zeilen.length ? zeilen.slice().reverse().join('') : '<p class="hint">Noch keine Buchung.</p>') + '</div>' +
-      '</div>' +
-      (beitragHtml ? '<div class="card kasse-beitraege-karte">' + beitragHtml + '</div>' : '');
+      '<section class="lg-buch" aria-label="Kassenbuch">' +
+        '<div class="lg-abschnitt-kopf"><h2>Kassenbuch</h2><span>' + plural(zeilen.length, 'Buchung', 'Buchungen') + '</span></div>' +
+        '<div class="lg-buch-kopf"><span>NR</span><span>DATUM</span><span>BUCHUNG</span><span class="r">BETRAG</span><span class="r">SALDO</span></div>' +
+        (zeilen.length ? zeilen.slice().reverse().join('') : '<p class="lg-text lg-leer">Noch keine Buchung.</p>') +
+        '<div class="lg-buch-ende"><span>Endbestand</span><b>' + euro(saldo) + '</b></div>' +
+      '</section>';
   }
 
   /* Highlights der ganzen Saison (nur unsere Spieler, nur echte Spieltage):
      180er, High-Finishes ab 100 und Shortlegs bis 21 Darts - je mit
      Spieltag und Einzel, wie sie der Bogen abfragt. */
   /* DiensDarts als iCal: ein ganztaegiger Eintrag fuer den naechsten Dienstag. */
-  function trainingKalender() {
-    var d = naechsterDienstag();
+  function trainingKalender(tag) {
+    var d = tag || naechsterDienstag();
     var iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
     var e = new Date(d.getTime()); e.setDate(e.getDate() + 1);
     var ende = e.getFullYear() + String(e.getMonth() + 1).padStart(2, '0') + String(e.getDate()).padStart(2, '0');
@@ -21153,129 +21619,447 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   var PIN_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"></path><circle cx="12" cy="9.5" r="2.5"></circle></svg>';
   var MAPS_SVG = '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"></path><path d="M9 4v14M15 6v14"></path></svg>';
 
-  function renderLigaTraining() {
-    var d = naechsterDienstag();
-    var tid = trainingsTerminId(d);
-    var online = !!(window.DartSync && window.DartSync.liga && window.DartKonto && window.DartKonto.nutzer());
-    var ich = online ? window.DartKonto.nutzer().id : null;
-    var antworten = (ligaZusagen && ligaZusagen[tid]) || [];
-    var meine = null;
-    antworten.forEach(function (a) { if (a.id === ich) meine = a.status || 'dabei'; });
-    var dabei = antworten.filter(function (a) { return (a.status || 'dabei') === 'dabei'; });
-    var unsicher = antworten.filter(function (a) { return a.status === 'unsicher'; });
-    var absagen = antworten.filter(function (a) { return a.status === 'absage'; });
-
-    var knopf = function (status, text) {
-      return '<button class="btn ghost' + (meine === status ? ' aktiv' : '') + '" ' +
-        'data-action="training-zusage" data-tid="' + esc(tid) + '" data-status="' + esc(status) + '">' + text + '</button>';
-    };
-    var reihe = function (a, leise) {
-      return '<div class="dd-reihe' + (leise ? ' leise' : '') + '">' +
-        avatarHTML(zusageProfil(a), 'sm') +
-        '<span class="nm">' + esc(a.name) + '</span></div>';
-    };
-
-    var MONATE_K = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
-    var heute0 = new Date(heuteISO() + 'T12:00:00');
-    var d12 = new Date(d.getTime()); d12.setHours(12, 0, 0, 0);
-    var tage = Math.round((d12 - heute0) / 86400000);
-    var wann = tage <= 0 ? 'heute' : tage === 1 ? 'morgen' : 'in ' + tage + ' Tagen';
-    var knopf = function (status, text) {
-      return '<button class="btn' + (meine === status ? ' hell aktiv' : ' ghost') + '" ' +
-        'data-action="training-zusage" data-tid="' + esc(tid) + '" data-status="' + esc(status) + '">' + text + '</button>';
-    };
-    var gruppe = function (titel, liste, klasse) {
-      if (!liste.length && klasse !== 'gruen') return '';
-      return '<div class="dd-gruppe ' + klasse + '"><span class="lk-crew-titel">' + titel + ' · <b class="' + klasse + '">' + liste.length + '</b></span>' +
-        '<div class="lt-leute">' + (liste.map(function (a) {
-          return '<span class="lt-person">' + avatarHTML({ id: a.id, name: a.name, avatar: a.avatar, hue: a.hue }, 'sm') + esc(a.name) + '</span>';
-        }).join('') || '<span class="muted">Noch keine Zusage.</span>') + '</div></div>';
-    };
-    $('dienstdarts-karte').innerHTML =
-      '<div class="lk-kopf"><span class="lk-etikett">Nächstes Training · ' + wann + '</span>' +
-        '<span class="lk-icons">' +
-          '<a class="icon-btn rund" href="https://maps.apple.com/?q=' + encodeURIComponent('Bar Sehnsucht München') + '" target="_blank" rel="noopener" title="Route in Maps" aria-label="Route in Maps">' + MAPS_SVG + '</a>' +
-          '<button class="icon-btn rund" data-action="training-ical" title="In den Kalender" aria-label="In den Kalender">' + KALENDER_SVG + '</button>' +
-        '</span></div>' +
-      '<div class="dd-kopf"><div class="sehnsucht-logo" role="img" aria-label="Sehnsucht Divebar Munich"></div>' +
-        '<div class="dd-titel-block"><span class="dd-name">DiensDarts</span>' +
-          '<span class="dd-datum">' + ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'][d.getDay()] + ' ' + d.getDate() + '. ' + MONATE_K[d.getMonth()] + '</span>' +
-          '<span class="lk-ort">' + PIN_SVG + 'Bar Sehnsucht · jeden Dienstag</span></div></div>' +
-      (online
-        ? '<div class="dd-antworten">' + knopf('dabei', 'Bin dabei') + knopf('unsicher', 'Unsicher') + knopf('absage', 'Kann nicht') + '</div>'
-        : '<p class="hint">Dienstags ist Dart-Training in der Bar Sehnsucht. Zum Abstimmen bitte anmelden.</p>') +
-      '<div class="dd-liste">' +
-        gruppe('Kommen', dabei, 'gruen') + gruppe('Unsicher', unsicher, 'gelb') + gruppe('Kann nicht', absagen, 'rot') +
-      '</div>';
-
-    /* Rechts: das Uebungs-Ligaspiel mit Vorwahl von Gegner und Bot-Staerke. */
-    var ug = UI.uebungGegner || 'mittel';
-    var wahl = function (aktion, wert, text, klein) {
-      return '<button class="' + (ug === wert ? 'active' : '') + '" data-action="' + aktion + '" data-value="' + wert + '">' +
-        '<span>' + text + '</span>' + (klein ? '<small>' + klein + '</small>' : '') + '</button>';
-    };
-    $('uebung-karte').innerHTML =
-      '<h2 class="gross">Übungs-Ligaspiel</h2>' +
-      '<p class="hint">Der komplette Liga-Ablauf zum Üben: 16 Einzel in Bogen-Reihenfolge, zwei Scheiben, Team-Stand und Spielbericht. Zählt nirgends in die Liga-Wertung.</p>' +
-      '<div class="setting"><label>Gegner</label><div class="options">' +
-        (ligaNaechsterTermin() ? wahl('uebung-vorwahl', 'liga', 'Nächster Gegner', (function (t) { return t.heim === LIGA.team ? t.gast : t.heim; })(ligaNaechsterTermin())).replace('<button class="', '<button class="breit ') : '') +
-        wahl('uebung-vorwahl', 'team', 'Zweites eigenes Team') +
-        '<button class="' + (ug !== 'team' && ug !== 'liga' ? 'active' : '') + '" data-action="uebung-vorwahl" data-value="bots"><span>Gegen Bots</span></button>' +
-      '</div></div>' +
-      (ug !== 'team' && ug !== 'liga'
-        ? '<div class="setting"><label>Bot-Stärke</label><div class="options drei">' +
-            wahl('uebung-vorwahl', 'leicht', 'Leicht', '≈ 38er-Aufnahmen') + wahl('uebung-vorwahl', 'mittel', 'Mittel', '≈ 52') + wahl('uebung-vorwahl', 'schwer', 'Schwer', '≈ 72') +
-          '</div></div>'
-        : '') +
-      '<div class="luft"></div>' +
-      '<button class="btn primary start full" data-action="uebung-start">Übungsspiel aufstellen</button>';
+  /* Die naechsten Dienstage ohne Ligaspiel (Entwurf LigaTraining: rechts
+     die naechsten sechs). */
+  function naechsteDienstage(n) {
+    var erster = naechsterDienstag(), liste = [], d = new Date(erster.getTime());
+    for (var i = 0; liste.length < n && i < n * 3; i++) {
+      var iso = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      if (!LIGA.termine.some(function (t) { return t.tag === iso && t.gast && !t.verschoben; })) liste.push(new Date(d.getTime()));
+      d.setDate(d.getDate() + 7);
+    }
+    return liste;
   }
 
-  function renderLigaTabelle() {
-    var tab = ligaTabelleBerechnet();
-    var ligaStand = window.LIGA_DATEN.stand, eigeneNr = ligaEigeneNr();
-    $('lt-stand').textContent = (tab.spiele
-      ? 'Aus ' + plural(tab.spiele, 'Spiel', 'Spielen') + ' berechnet' + (tab.bis ? ', letztes am ' + datumDE(tab.bis) : '') + '.'
-      : 'Noch kein Spiel gewertet.') +
-      (ligaStand ? ' Ergebnisse der Ligaleitung (steeldart-muenchen.de), geholt am ' + datumDE(ligaStand) + '.' : '') +
-      (eigeneNr.length ? ' ' + eigeneNr.map(function (n) { return n + '. Spieltag'; }).join(', ') + ': unser Ergebnis aus der App, bis die Ligaleitung es einträgt.' : '');
-    /* Rechts neben der Tabelle alle Spiele je Spieltag (Ergebnisse der Ligaleitung). */
-    $('lt-runden').innerHTML = ligaRundenAlleHtml();
-    renderLigaEinzel();
-    renderLigaHighlights();
-    var zeilen = tab.zeilen;
-    /* Links ueber der Tabelle: unser Platz, Punkte und Legs, Abstand zur Spitze. */
-    var platz = -1;
-    zeilen.forEach(function (z, i) { if (platz < 0 && z.team === LIGA.team) platz = i; });
-    var pz = platz >= 0 ? zeilen[platz] : null;
-    var spitze = zeilen[0] ? Number(zeilen[0].punkte) || 0 : 0;
-    var abstand = pz ? spitze - (Number(pz.punkte) || 0) : 0;
-    $('lt-platz').innerHTML = pz
-      ? '<span class="lk-crew-titel">Unser Platz</span><span class="lt-platz-zahl">' + (platz + 1) + '.</span>' +
-        '<span class="lt-platz-info">' + plural(Number(pz.punkte) || 0, 'Punkt', 'Punkte') + ' · Legs ' + esc(String(pz.legs || '0:0')).replace(':', ' : ') + '</span>' +
-        '<span class="lt-platz-sub">' + (platz === 0 ? 'Tabellenführer' : plural(abstand, 'Punkt', 'Punkte') + ' hinter Platz 1') + '</span>'
-      : '';
-    var kennung = JSON.stringify(zeilen);
-    if (ligaTabelleKennung === kennung && $('lt-tabelle').innerHTML) return;
-    ligaTabelleKennung = kennung;
+  /* Training (Entwurf LigaTraining, Redesign Nov. 2026): links das gewaehlte
+     DiensDarts mit Logo, Datum, Route und den Gruppen Dabei / Noch keine
+     Antwort / Kann nicht; darunter "Du bist dabei · ändern" bzw. "Kommst du?".
+     Rechts die naechsten Dienstage und das Uebungs-Ligaspiel. "Unsicher" gibt
+     es nicht mehr (Julius 28.11.) - alte Antworten "unsicher" zaehlen als
+     noch keine Antwort. */
+  function renderLigaTraining() {
+    var tage = naechsteDienstage(6);
+    var tids = tage.map(trainingsTerminId);
+    var wahlI = Math.max(0, tids.indexOf(UI.trainingWahl));
+    var d = tage[wahlI], tid = tids[wahlI];
+    var online = !!(window.DartSync && window.DartSync.liga && window.DartKonto && window.DartKonto.nutzer());
+    var ich = online ? window.DartKonto.nutzer().id : null;
+    var antwortenVon = function (id) { return (ligaZusagen && ligaZusagen[id]) || []; };
+    var antworten = antwortenVon(tid);
+    var meine = null;
+    antworten.forEach(function (a) { if (a.id === ich && a.status !== 'unsicher') meine = a.status || 'dabei'; });
+    var dabei = antworten.filter(function (a) { return (a.status || 'dabei') === 'dabei'; });
+    var absagen = antworten.filter(function (a) { return a.status === 'absage'; });
+    var geantwortet = {};
+    antworten.forEach(function (a) { if (a.status !== 'unsicher') geantwortet[a.id] = 1; });
+    var offen = S.profiles.filter(function (p) {
+      return String(p.id).indexOf('u_') === 0 && !p.hidden && !p.gastKonto && !p.test && !p.bot && !p.gast && !geantwortet[p.id];
+    });
+    var heute0 = new Date(heuteISO() + 'T12:00:00');
+    var d12 = new Date(d.getTime()); d12.setHours(12, 0, 0, 0);
+    var tageBis = Math.round((d12 - heute0) / 86400000);
+    var wann = tageBis <= 0 ? 'heute' : tageBis === 1 ? 'morgen' : 'in ' + tageBis + ' Tagen';
+    var MONATE_K = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+    var TAG_K = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+    var person = function (a, klasse) {
+      var pr = a.id ? zusageProfil(a) : a;
+      return '<div class="lt-person' + (klasse ? ' ' + klasse : '') + '" role="listitem">' + avatarHTML(pr, 'lg-av') + '<span>' + esc(pr.name || a.name) + '</span></div>';
+    };
+    var gruppe = function (titel, liste, klasse) {
+      if (!liste.length) return '';
+      return '<div class="lg-gruppe"><span class="lk-crew-titel">' + titel + '</span>' +
+        '<div class="lt-leute" role="list" aria-label="' + titel + '">' + liste.map(function (a) { return person(a, klasse); }).join('') + '</div></div>';
+    };
+    var antwort = '';
+    if (online) {
+      if (meine && UI.trainingAendern !== tid) {
+        antwort = '<div class="lg-antwort">' + (meine === 'dabei' ? LG_HAKEN + '<b>Du bist dabei</b>' : '<b>Du kannst nicht</b>') +
+          '<button type="button" class="lg-aendern" data-action="training-aendern" data-tid="' + esc(tid) + '">ändern</button></div>';
+      } else {
+        antwort = '<div class="lg-frage"><span>Kommst du?</span>' +
+          '<button type="button" class="lg-wort' + (meine === 'dabei' ? ' an' : '') + '" data-action="training-zusage" data-tid="' + esc(tid) + '" data-status="dabei">DABEI</button>' +
+          '<button type="button" class="lg-wort leise' + (meine === 'absage' ? ' an' : '') + '" data-action="training-zusage" data-tid="' + esc(tid) + '" data-status="absage">KANN NICHT</button></div>';
+      }
+    } else {
+      antwort = '<p class="lg-text">Dienstags ist Dart-Training in der Bar Sehnsucht. Zum Abstimmen bitte anmelden.</p>';
+    }
+    $('dienstdarts-karte').innerHTML =
+      '<div class="lg-karte-kopf lg-zwischen"><span class="lg-etikett">' + (wahlI === 0 ? 'Nächstes Training' : 'Training') + ' · ' + wann + '</span>' +
+        '<button type="button" class="lg-rund" data-action="training-ical" data-tid="' + esc(tid) + '" aria-label="In den Kalender" title="In den Kalender">' + LG_KALENDER + '</button></div>' +
+      '<div class="dd-kopf lg-dd-kopf"><div class="sehnsucht-logo" role="img" aria-label="Logo Bar Sehnsucht"></div>' +
+        '<div class="lg-dd-titel"><span class="lg-dd-name">DiensDarts</span>' +
+          '<span class="lg-dd-datum">' + TAG_K[d.getDay()] + ' ' + d.getDate() + '. ' + MONATE_K[d.getMonth()] + '</span>' +
+          '<a class="lg-dd-ort" href="https://maps.apple.com/?q=' + encodeURIComponent('Bar Sehnsucht München') + '" target="_blank" rel="noopener" aria-label="Route zur Bar Sehnsucht">' + LG_PIN_ROT + '<b>Bar Sehnsucht</b><span>· jeden Dienstag</span></a>' +
+        '</div></div>' +
+      '<div class="lg-linie"></div>' +
+      '<div class="lg-auf"><b>' + dabei.length + ' kommen</b></div>' +
+      '<div class="lk-crew">' + gruppe('DABEI', dabei, '') + gruppe('NOCH KEINE ANTWORT', offen, 'offen') + gruppe('KANN NICHT', absagen, 'absage') + '</div>' +
+      antwort;
 
-    /* Spalten wie die Tabelle der Ligaleitung: Spiele, gewonnen /
-       unentschieden / verloren, Legs, Einzel ("Spiele" 9:7), Punkte. */
-    var zelle = function (v) { return '<td>' + esc(v === undefined || v === null ? '' : String(v)) + '</td>'; };
-    $('lt-tabelle').innerHTML =
-      '<thead><tr><th>#</th><th class="left">Mannschaft</th><th>Sp</th><th>g</th><th>u</th><th>v</th>' +
-        '<th>Legs</th><th title="Einzel">Spiele</th><th>Pkt</th></tr></thead>' +
-      '<tbody>' + zeilen.map(function (z, i) {
-        var wir = z.team === LIGA.team;
-        /* Ein Tipp auf die Zeile: Lokal, Spielerliste und alle Spiele des Teams. */
-        /* Platz 1 und 2: Aufstiegsplaetze (SWO Punkt 2, Julius 25.11.). */
-        var klassen = (wir ? 'leader' : '') + (i < LIGA_AUFSTEIGER && z.spiele > 0 ? ' aufstieg' : '');
-        return '<tr' + (klassen.trim() ? ' class="' + klassen.trim() + '"' : '') + (klassen.indexOf('aufstieg') >= 0 ? ' title="Aufstiegsplatz"' : '') + ' data-action="liga-team-info" data-team="' + esc(z.team || '') + '" role="button" tabindex="0">' +
-          '<td class="rank">' + (i + 1) + '</td>' +
-          '<td class="left name">' + esc(z.team || '') + '</td>' +
-          zelle(z.spiele) + zelle(z.g) + zelle(z.u) + zelle(z.v) + zelle(z.legs) + zelle(z.einzel) + zelle(z.punkte) +
-          '</tr>';
-      }).join('') + '</tbody>';
+    /* Rechts: die naechsten Dienstage, darunter das Uebungs-Ligaspiel. */
+    var zeilen = tage.map(function (t, i) {
+      var a = antwortenVon(tids[i]);
+      var n = a.filter(function (x) { return (x.status || 'dabei') === 'dabei'; }).length;
+      var m = null;
+      a.forEach(function (x) { if (x.id === ich && x.status !== 'unsicher') m = x.status || 'dabei'; });
+      var du = !online ? '' : m === 'dabei' ? 'Du bist dabei' : m === 'absage' ? 'Du kannst nicht' : 'noch offen';
+      return '<div class="lg-termin' + (i === wahlI ? ' wahl' : '') + '" data-action="training-wahl" data-tid="' + esc(tids[i]) + '" role="button" tabindex="0">' +
+        '<span class="sehnsucht-logo klein" aria-hidden="true"></span>' +
+        '<b class="lg-termin-datum">' + TAG_K[t.getDay()] + ' ' + String(t.getDate()).padStart(2, '0') + '.' + String(t.getMonth() + 1).padStart(2, '0') + '.</b>' +
+        '<span class="lg-termin-du">' + du + '</span>' +
+        '<span class="lg-termin-zahl">' + (n ? '<b>' + n + '</b>kommen' : 'noch keiner') + '</span></div>';
+    }).join('');
+    var naechster = ligaNaechsterTermin();
+    var ueZeile = function (gegner, titel, klein) {
+      return '<button type="button" class="lg-ue-zeile" data-action="uebung-start" data-gegner="' + gegner + '"><span class="lg-ue-titel">' + titel + '</span>' +
+        (klein ? '<span class="lg-ue-klein">' + klein + '</span>' : '') + LG_PFEIL + '</button>';
+    };
+    $('uebung-karte').innerHTML =
+      '<div class="lg-block"><span class="lg-block-titel">Nächste Dienstage</span>' + zeilen + '</div>' +
+      '<div class="lg-block lg-ue"><span class="lg-block-titel">Übungs Ligaspiel</span>' +
+        '<span class="lg-ue-text">Ein ganzer Ligaabend nach Spielberichtsbogen, jederzeit.</span>' +
+        ueZeile('team', 'Gegen ein zweites eigenes Team') +
+        ueZeile('bots', 'Gegen Bots', 'Stärke wählbar') +
+        (naechster ? ueZeile('liga', 'Gegen den nächsten Gegner', esc(naechster.heim === LIGA.team ? naechster.gast : naechster.heim)) : '') +
+      '</div>';
+  }
+
+  /* ---------- Tabelle (Entwurf LigaTabelle, Redesign Nov. 2026) ----------
+     Oben die Ligawahl (SDM 4er Liga 1 bis 5), links die Tabelle mit Logo,
+     Aufstieg gruen, Abstieg rot und unserer Bewegung seit dem vorigen
+     Spieltag, darunter die Spieltage zum Blaettern; rechts die gemeldeten
+     Highlights. Unsere Liga kommt aus LIGA_DATEN, die anderen vier aus den
+     Gesamtdaten der Ligaleitung (GET /api/liga-gesamt, nur angemeldet). */
+  var LIGA_EIGENE_NR = 5;
+  var ligaGesamt = window.LIGA_GESAMT || null, ligaGesamtLaeuft = false, ligaGesamtFehler = '', ligaGesamtFehlZeit = 0;
+  function ligaGesamtLaden() {
+    /* Nach einem Fehlschlag erst nach einer Minute (oder neuer Ligawahl)
+       wieder fragen - sonst laedt jedes Zeichnen erneut. */
+    if (ligaGesamt || ligaGesamtLaeuft || (ligaGesamtFehlZeit && Date.now() - ligaGesamtFehlZeit < 60000)) return;
+    ligaGesamtLaeuft = true; ligaGesamtFehler = '';
+    fetch('/api/liga-gesamt', { credentials: 'same-origin' }).then(function (r) {
+      if (!r.ok) throw new Error(r.status === 401 || r.status === 403 ? 'Die anderen Ligen gibt es nur angemeldet.' : 'Die Ligadaten sind gerade nicht erreichbar.');
+      return r.json();
+    }).then(function (g) {
+      ligaGesamt = g && g.ligen ? g : null;
+      if (!ligaGesamt) ligaGesamtFehler = 'Die Ligadaten sind gerade nicht erreichbar.';
+    }).catch(function (e) {
+      ligaGesamtFehler = e && e.message && /Ligen|Ligadaten/.test(e.message) ? e.message : 'Ohne Verbindung gibt es nur unsere Liga.';
+    }).then(function () { ligaGesamtLaeuft = false; if (!ligaGesamt) ligaGesamtFehlZeit = Date.now(); if (S.screen === 'liga') render(); });
+  }
+  /* Eine Liga als einheitliche Sicht: Teams, Runden (je Spieltag alle
+     Spiele, spielfrei inklusive), Team-Infos und die Tabelle. */
+  function ligaSicht(nr) {
+    if (nr === LIGA_EIGENE_NR) {
+      var alle = ligaSpieltage(), runden = [];
+      LIGA.termine.forEach(function (t) { runden.push({ id: t.id, nr: t.nr, spiele: alle[t.id] || [] }); });
+      return { nr: nr, name: 'SDM 4er Liga ' + nr, eigene: true, teams: LIGA_TEAMS, runden: runden, teamInfo: window.LIGA_DATEN.teamInfo || {}, tabelle: ligaTabelleBerechnet() };
+    }
+    if (!ligaGesamt) return null;
+    var l = null;
+    (ligaGesamt.ligen || []).forEach(function (x) { if (x.nr === nr) l = x; });
+    if (!l) return null;
+    var namen = (l.teams || []).map(function (t) { return t.name; }).filter(Boolean);
+    if (!namen.length) namen = (l.tabelle || []).map(function (z) { return z.team; });
+    var info = {};
+    (l.teams || []).forEach(function (t) { if (t.name) info[t.name] = t; });
+    var karte = {}, rundenG = (l.spieltage || []).map(function (s) {
+      var spiele = (s.spiele || []).slice();
+      var dabei = {};
+      spiele.forEach(function (sp) { dabei[sp.heim] = 1; dabei[sp.gast] = 1; });
+      namen.forEach(function (n) { if (!dabei[n] && spiele.length) spiele.push({ heim: n }); });
+      var id = 'g' + nr + '-' + s.nr;
+      karte[id] = spiele;
+      return { id: id, nr: s.nr, spiele: spiele };
+    });
+    return { nr: nr, name: 'SDM 4er Liga ' + nr, eigene: false, teams: namen, runden: rundenG, teamInfo: info, tabelle: window.LIGA_DATEN.tabelleAus(karte, namen) };
+  }
+  /* Tabelle nach einem bestimmten Spieltag (fuer die Bewegung ▲/▼). */
+  function ligaTabelleBis(sicht, bisNr) {
+    var karte = {};
+    sicht.runden.forEach(function (r) { if (r.nr <= bisNr) karte[r.id] = r.spiele; });
+    return window.LIGA_DATEN.tabelleAus(karte, sicht.teams);
+  }
+  /* Eine Runde zaehlt als gespielt, wenn mehr als die Haelfte ihrer Spiele
+     ein Ergebnis hat - ein vorgezogenes Einzelspiel macht noch keinen
+     Spieltag (Liga 2: sonst "Stand nach Spieltag 7" nach vier Runden). */
+  function ligaRundeGespielt(r) {
+    var echt = r.spiele.filter(function (sp) { return sp.gast; });
+    var fertig = echt.filter(function (sp) { return sp.einzel && !sp.verschoben; });
+    return echt.length > 0 && fertig.length * 2 > echt.length;
+  }
+  function kurzDatum(iso) { return iso ? iso.slice(8, 10) + '.' + iso.slice(5, 7) + '.' : ''; }
+
+  function renderLigaTabelle() {
+    var nr = UI.ligaNr || LIGA_EIGENE_NR;
+    if (nr !== LIGA_EIGENE_NR && !ligaGesamt) ligaGesamtLaden();
+    var sicht = ligaSicht(nr);
+    var ziel = $('liga-tabelle');
+    var wahlHtml = '<div class="lg-ligawahl"><span class="lg-klein-titel">Liga</span>' +
+      '<div class="lg-ligawahl-box"><button type="button" class="lg-ligaknopf" data-action="liga-nr-auf" aria-expanded="' + (UI.ligaNrAuf ? 'true' : 'false') + '"><span>SDM 4er Liga ' + nr + '</span>' +
+        '<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>' +
+        (UI.ligaNrAuf ? '<div class="lg-ligaliste">' + [1, 2, 3, 4, 5].map(function (n) {
+          return '<button type="button" class="' + (n === nr ? 'an' : '') + '" data-action="liga-nr" data-nr="' + n + '"><span>SDM 4er Liga ' + n + '</span>' + (n === LIGA_EIGENE_NR ? '<small>unsere</small>' : '') + '</button>';
+        }).join('') + '</div>' : '') +
+      '</div>';
+    if (!sicht) {
+      ziel.innerHTML = wahlHtml + '<span class="lg-text">' + esc(ligaGesamtLaeuft ? 'Lädt …' : ligaGesamtFehler || 'Lädt …') + '</span></div>';
+      return;
+    }
+    var gespielt = sicht.runden.filter(ligaRundeGespielt);
+    var letzte = gespielt.length ? gespielt[gespielt.length - 1].nr : 0;
+    var vorige = gespielt.length > 1 ? gespielt[gespielt.length - 2].nr : 0;
+    var datumBis = '';
+    if (gespielt.length) gespielt[gespielt.length - 1].spiele.forEach(function (sp) { if (sp.tag && sp.einzel && sp.tag > datumBis) datumBis = sp.tag; });
+    var infoText = sicht.teams.length + ' Teams' + (letzte ? ' · Stand nach Spieltag ' + letzte : ' · noch kein Spieltag gewertet');
+    $('liga-sub').textContent = letzte ? 'Stand nach Spieltag ' + letzte + (datumBis ? ' · ' + kurzDatum(datumBis) : '') : 'SDM 4er Liga ' + nr + ' · ' + LIGA.saison;
+    wahlHtml += '<span class="lg-text">' + esc(infoText) + '</span></div>';
+
+    var zeilen = sicht.tabelle.zeilen;
+    var alt = {};
+    if (vorige) ligaTabelleBis(sicht, vorige).zeilen.forEach(function (z, i) { alt[z.team] = i + 1; });
+    var kennung = nr + '|' + JSON.stringify(zeilen);
+    var animieren = ligaTabelleKennung !== kennung;
+    ligaTabelleKennung = kennung;
+    var aufstieg = nr !== 1, abstieg = nr !== 5;
+    var tabelleHtml = '<section class="lg-tab" aria-label="Ligatabelle"><div class="lg-tab-kopf" role="row"><span>#</span><span></span><span>TEAM</span><span class="r">SP</span><span class="m">S · U · N</span><span class="r">EINZEL</span><span class="r">LEGS</span><span class="r">PKT</span></div>' +
+      '<div id="lt-tabelle">' + zeilen.map(function (z, i) {
+        var wir = z.team === LIGA.team, platz = i + 1;
+        var vorher = alt[z.team] || platz, diff = vorher - platz;
+        var klasse = (wir ? ' wir' : '') + (aufstieg && i < LIGA_AUFSTEIGER && z.spiele > 0 ? ' aufstieg' : '') + (abstieg && i >= zeilen.length - 2 && z.spiele > 0 ? ' abstieg' : '') + (animieren && vorige && diff ? ' anim' : '');
+        var badge = wir && vorige ? '<span class="lg-badge ' + (diff > 0 ? 'hoch' : diff < 0 ? 'runter' : 'gleich') + '">' + (diff > 0 ? '▲ ' + diff : diff < 0 ? '▼ ' + (-diff) : '=') + '</span>' : '';
+        return '<div class="lg-tab-zeile' + klasse + '" role="row" style="--dy:' + (diff * 42) + 'px" data-action="liga-tab-team" data-team="' + esc(z.team) + '" data-nr="' + nr + '" tabindex="0" title="' + (sicht.eigene ? 'Mannschaftsstatistik öffnen' : 'Teamseite öffnen') + '">' +
+          '<span class="rank">' + platz + '</span>' + teamLogoHtml(z.team, 'klein') +
+          '<span class="name"><span>' + esc(z.team) + '</span>' + badge + '</span>' +
+          '<span class="r">' + z.spiele + '</span><span class="m">' + z.g + ' · ' + z.u + ' · ' + z.v + '</span>' +
+          '<span class="r">' + esc(z.einzel) + '</span><span class="r">' + esc(z.legs) + '</span><span class="r pkt">' + z.punkte + '</span></div>';
+      }).join('') + '</div>' +
+      '<span class="lg-tab-fuss" id="lt-stand">' + (aufstieg ? 'Platz 1 und 2 (grün) steigen auf. ' : '') + (abstieg ? 'Die letzten beiden (rot) steigen ab. ' : '') +
+        (vorige ? 'Seit dem ' + vorige + '. Spieltag. ' : '') + 'Sieg 2 Punkte, Unentschieden 1. Bei Gleichstand zählen Legs, dann Einzel.' +
+        (sicht.eigene && ligaEigeneNr().length ? ' ' + ligaEigeneNr().map(function (n) { return n + '. Spieltag'; }).join(', ') + ': unser Ergebnis aus der App, bis die Ligaleitung es einträgt.' : '') +
+        (sicht.eigene && window.LIGA_DATEN.stand ? ' Ergebnisse der Ligaleitung, geholt am ' + datumDE(window.LIGA_DATEN.stand) + '.' : '') + '</span></section>';
+
+    /* Spieltage zum Blaettern: Start ist der laufende bzw. letzte gespielte. */
+    var runden = sicht.runden.filter(function (r) { return r.spiele.length; });
+    var rIndex = UI.ligaRunde && UI.ligaRunde.nr === nr ? UI.ligaRunde.i : -1;
+    if (rIndex < 0 || rIndex >= runden.length) {
+      rIndex = 0;
+      runden.forEach(function (r, i) { if (ligaRundeGespielt(r)) rIndex = i; });
+    }
+    var runde = runden[rIndex];
+    var rundeHtml = '';
+    if (runde) {
+      var tags = runde.spiele.map(function (sp) { return sp.tag; }).filter(Boolean).sort();
+      var frei = runde.spiele.filter(function (sp) { return !sp.gast; }).map(function (sp) { return sp.heim; });
+      var datum = tags.length ? kurzDatum(tags[0]) + (tags[tags.length - 1] !== tags[0] ? ' bis ' + kurzDatum(tags[tags.length - 1]) : '') : '';
+      rundeHtml = '<section class="lg-runde" aria-label="Spieltage" id="lt-runden">' +
+        '<div class="lg-runde-kopf"><button type="button" class="lg-rund leer" data-action="liga-runde-blaettern" data-wert="-1" aria-label="Voriger Spieltag"' + (rIndex <= 0 ? ' disabled' : '') + '>' + LG_LINKS + '</button>' +
+          '<span><b>SPIELTAG ' + runde.nr + '</b><small>' + datum + '</small></span>' +
+          '<button type="button" class="lg-rund leer" data-action="liga-runde-blaettern" data-wert="1" aria-label="Nächster Spieltag"' + (rIndex >= runden.length - 1 ? ' disabled' : '') + '>' + LG_PFEIL + '</button></div>' +
+        runde.spiele.map(function (sp, i) {
+          if (!sp.gast) return '';
+          var wir = sp.heim === LIGA.team || sp.gast === LIGA.team;
+          var erg = sp.verschoben ? 'verschoben' : sp.einzel ? String(sp.einzel).replace(':', ' : ') : 'offen';
+          var tipp = sp.partien && sp.partien.length ? ' data-action="liga-partien" data-termin="' + esc(runde.id) + '" data-i="' + i + '" role="button" tabindex="0"' : '';
+          return '<div class="lg-paar' + (wir ? ' wir' : '') + (tipp ? ' tap' : '') + '"' + tipp + '>' +
+            '<span class="h' + (sp.heim === LIGA.team ? ' fett' : '') + '">' + esc(sp.heim) + '</span>' + teamLogoHtml(sp.heim, 'mini') +
+            '<span class="erg' + (sp.einzel ? '' : ' offen') + '">' + erg + '</span>' + teamLogoHtml(sp.gast, 'mini') +
+            '<span class="g' + (sp.gast === LIGA.team ? ' fett' : '') + '">' + esc(sp.gast) + '</span></div>';
+        }).join('') +
+        (frei.length ? '<span class="lg-tab-fuss m">spielfrei: ' + frei.map(esc).join(', ') + '</span>' : '') + '</section>';
+      UI.ligaRunde = { nr: nr, i: rIndex };
+    }
+
+    /* Rechts: gemeldete Highlights (nur unsere Liga hat sie in den Daten). */
+    var hlHtml = '';
+    if (sicht.eigene) {
+      var hl = window.LIGA_DATEN.highlightsAus(ligaSpieltage());
+      var liste = [];
+      hl.highfinish.forEach(function (z) { liste.push({ z: z, art: 'High Finish', wert: String(z.wert), tag: z.tag || '', ico: LG_ZIEL }); });
+      hl.shortleg.forEach(function (z) { liste.push({ z: z, art: 'Shortleg', wert: z.wert + ' Darts', tag: z.tag || '', ico: LG_UHR }); });
+      liste.sort(function (a, b) { return a.tag < b.tag ? 1 : a.tag > b.tag ? -1 : 0; });
+      hl.s180.forEach(function (z) { liste.push({ z: z, art: '180', wert: z.n + '×', tag: '', ico: LG_FLAMME }); });
+      var KURZ = 8, alleHl = !!UI.ligaHlAlle || liste.length <= KURZ;
+      hlHtml = '<section class="lh-block" aria-label="Gemeldete Highlights" id="lt-highlights">' +
+        '<div class="lh-kopf"><span class="lg-klein-titel">Gemeldete Highlights</span><span>aus den Spielberichten</span></div>' +
+        (liste.length ? liste.slice(0, alleHl ? liste.length : KURZ).map(function (h) {
+          return '<div class="lh-zeile' + (h.z.team === LIGA.team ? ' wir' : '') + '"><span class="ico">' + h.ico + '</span>' +
+            '<span class="was"><b>' + esc(h.z.name) + '</b><small>' + h.art + ' · ' + esc(h.z.team) + (h.z.gast ? ' · Gast' : '') + ' · ' + (h.tag ? kurzDatum(h.tag) : 'Saison') + '</small></span>' +
+            '<span class="wert">' + h.wert + '</span></div>';
+        }).join('') : '<p class="lg-text">Noch nichts gemeldet.</p>') +
+        (liste.length > KURZ ? '<button type="button" class="lg-link" data-action="liga-hl-alle">' + (UI.ligaHlAlle ? 'Weniger zeigen' : 'Alle ' + liste.length + ' zeigen') + '</button>' : '') +
+        '<span class="lg-tab-fuss">High Finishes ab 100, Shortlegs bis 21 Darts und jede 180, wie sie die Teams im Spielbericht melden.</span></section>';
+    } else {
+      hlHtml = '<section class="lh-block" aria-label="Gemeldete Highlights"><div class="lh-kopf"><span class="lg-klein-titel">Gemeldete Highlights</span></div>' +
+        '<p class="lg-text">Für die anderen Ligen liegen keine Highlights vor.</p></section>';
+    }
+    /* Nur neu zeichnen, wenn sich etwas geaendert hat - sonst bricht jeder
+       Abgleich im Hintergrund die Rang-Animation ab. */
+    var html = wahlHtml + '<div class="lg-tab-haupt">' + tabelleHtml + rundeHtml + '</div><aside class="lg-seite lg-tab-seite">' + hlHtml + '</aside>';
+    var ohneAnim = html.replace(/ anim"/g, '"');
+    if (ohneAnim === ligaTabelleHtml && ziel.firstChild) return;
+    ligaTabelleHtml = ohneAnim;
+    ziel.innerHTML = html;
+  }
+  var ligaTabelleHtml = '';
+
+  /* Liga-Einstellungen (Entwurf LigaEinst, Redesign Nov. 2026): links die
+     Bereiche, rechts die Werte. Darstellung und die Ligaspiel-Voreinstellungen
+     gelten fuer dieses Geraet und sind fuer jeden einstellbar; Kassenjahr und
+     Anfangsbestand stellt, wer die Kasse fuehrt (im Reiter Kasse). Vereinsheim,
+     Training, Rollen und Spielbericht stehen hier zum Nachsehen - Rollen fuer
+     Admin und TCs gibt es auf dem Server noch nicht. */
+  var LE_BEREICHE = [['heim', 'Vereinsheim'], ['training', 'Training'], ['team', 'Team und Rollen'], ['spiel', 'Ligaspiel'], ['bericht', 'Spielbericht'], ['kasse', 'Kasse'], ['darst', 'Darstellung']];
+  var LE_ICON = {
+    heim: '<path d="M4 11.5L12 5l8 6.5"/><path d="M6.5 10.5V19h11v-8.5"/><path d="M10 19v-4h4v4"/>',
+    training: '<path d="M4 9v6M7 7v10M17 7v10M20 9v6M7 12h10"/>',
+    team: '<circle cx="12" cy="7" r="3"/><path d="M6.5 19v-1.8c0-2.8 2.5-4.5 5.5-4.5s5.5 1.7 5.5 4.5V19Z"/><circle cx="4.8" cy="9.5" r="2.2"/><circle cx="19.2" cy="9.5" r="2.2"/>',
+    spiel: '<path d="M7 3h10v6a5 5 0 0 1-10 0z"/><path d="M7 5H4v2a3 3 0 0 0 3 3M17 5h3v2a3 3 0 0 1-3 3"/><path d="M12 14v3M9 17h6l1 3.5H8z"/>',
+    bericht: '<path d="M6 3h9l4 4v14H6Z M15 3v5h4M9 12h7M9 16h7"/>',
+    kasse: '<circle cx="12" cy="12" r="9"/><path d="M16 8c-3-2-8 0-8 4s5 6 8 4M7 11h8M7 14h8"/>',
+    darst: '<path d="M2 12s4-6 10-6 10 6 10 6-4 6-10 6-10-6-10-6Z"/><circle cx="12" cy="12" r="3"/>'
+  };
+  function leIcon(k, g) { return '<svg aria-hidden="true" width="' + (g || 18) + '" height="' + (g || 18) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + LE_ICON[k] + '</svg>'; }
+  var LE_SCHLOSS = '<svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15" r="1"/></svg>';
+  /* Voreinstellungen fuer neue Game Days an diesem Geraet. */
+  function ligaVorgaben() {
+    var v = S.settings.ligaVor;
+    return { bestOf: v && v.bestOf === 5 ? 5 : 3, finish: !!(v && v.finish), ohneNamen: !!(v && v.ohneNamen), nurErgebnis: !!(v && v.nurErgebnis) };
+  }
+  function renderLigaEinstellungen() {
+    var wahl = UI.ligaEinst || 'darst';
+    var online = !!(window.DartKonto && window.DartKonto.nutzer());
+    var wart = !!(kasseDaten && kasseDaten.kassenwart);
+    var gast = ichBinGastKonto();
+    var ti = (window.LIGA_DATEN.teamInfo || {})[LIGA.team] || {};
+    var tc = function (n) { var x = (ti.spieler || []).filter(function (s) { return s.info === n; })[0]; return x ? String(x.name).replace(/^\*/, '') : '–'; };
+    var vor = ligaVorgaben();
+    var konfig = kasseDaten && kasseDaten.konfig ? kasseDaten.konfig : null;
+    /* Zeilen: [titel, text, wert] oder [titel, text, [[wert, name], ...], aktuell, aktion] */
+    var vz = function (titel, text, wert, link) { return { titel: titel, text: text, wert: wert, link: link || '' }; };
+    var wz = function (k, titel, text, werte, akt, darf) { return { k: k, titel: titel, text: text, werte: werte, akt: akt, darf: darf }; };
+    var darfVor = !gast;
+    var B = {
+      heim: ['Vereinsheim', 'Unser Lokal für Heimspiele und das Training. Logo und Bild stehen im Spielplan, beim Training und im Game Day.', []],
+      training: ['Training', 'DiensDarts, unser Dienstags-Training im Vereinsheim.', [
+        vz('Name', 'So heißt das Training in der App', 'DiensDarts'),
+        wz('tag', 'Trainingstag', 'Jede Woche', [['di', 'Dienstag'], ['mi', 'Mittwoch'], ['do', 'Donnerstag']], 'di', false),
+        vz('Ort', 'Kommt aus dem Vereinsheim', ti.lokal || 'Bar Sehnsucht'),
+        wz('liga', 'Ligaspiel am Trainingstag', 'Dann fällt das Training aus', [['aus', 'kein Training'], ['an', 'trotzdem']], 'aus', false),
+        wz('kal', 'Im Kalender', 'Wie der Eintrag im Kalender landet', [['tag', 'ganztägig'], ['zeit', 'mit Uhrzeit']], 'tag', false)]],
+      team: ['Team und Rollen', 'Wer was darf. TC-1 und TC-2 stehen so auch bei der Ligaleitung.', [
+        vz('Team', 'SDM 4er Liga ' + LIGA_EIGENE_NR + ' · ' + LIGA.saison, LIGA.team),
+        vz('TC-1', 'Teamcaptain, unterschreibt den Bogen', tc('TC-1')),
+        vz('TC-2', 'Teamcaptain, Vertretung', tc('TC-2')),
+        vz('Kasse führt', 'Verwaltet Buchungen und Beiträge', ((kasseDaten && kasseDaten.kassenwarte) || []).join(', ') || '–')]],
+      spiel: ['Ligaspiel', 'Voreinstellungen für jeden neuen Game Day an diesem Gerät. Scheibe 1 übernimmt sie beim Erstellen, meist bleibt alles gleich.', [
+        wz('legs', 'Legs je Einzel', 'Liga 5 spielt Best of 3', [['3', 'Best of 3'], ['5', 'Best of 5']], String(vor.bestOf), darfVor),
+        wz('finish', 'Finish-Anzeigen', 'Ohne ist ligakonform. Mit zeigt Finishwege und fragt beim Checkout nach dem Doppel', [['ohne', 'ohne'], ['mit', 'mit']], vor.finish ? 'mit' : 'ohne', darfVor),
+        wz('live', 'Live für Zuschauer', 'Ohne Namen zeigt nur H1, G1 und die Stände', [['namen', 'mit Namen'], ['anonym', 'ohne Namen']], vor.ohneNamen ? 'anonym' : 'namen', darfVor),
+        wz('mit', 'Mitschreiben', 'Nur Ergebnisse, wenn der Gegner selbst zählt', [['app', 'in der App'], ['erg', 'nur Ergebnisse']], vor.nurErgebnis ? 'erg' : 'app', darfVor)]],
+      bericht: ['Spielbericht', 'Wohin der Bogen nach den Unterschriften geht.', [
+        vz('Ligaleitung', 'laut Bogen V5.2', LIGALEITUNG_MAIL),
+        vz('TC-1 und TC-2', 'Adresse vom jeweiligen Konto', tc('TC-1') + ', ' + tc('TC-2')),
+        vz('Weitere Adressen', 'Merkt sich die App beim Versand', 'beim Versand wählbar')]],
+      kasse: ['Kasse', 'Grundwerte fürs Kassenbuch. Buchungen selbst stehen im Reiter Kasse.', [
+        vz('Kassenjahr', 'Beginnt mit dem Anfangsbestand', konfig ? String(konfig.jahr) : '–', wart ? 'kasse' : ''),
+        vz('Anfangsbestand', 'Stand zu Beginn des Kassenjahrs', konfig ? euro(konfig.anfangsbestand) : '–', wart ? 'kasse' : ''),
+        vz('Kasse führt', 'Steht auch unter Team und Rollen', ((kasseDaten && kasseDaten.kassenwarte) || []).join(', ') || '–')]],
+      darst: ['Darstellung', 'Gilt nur für dich auf diesem Gerät.', [
+        wz('modus', 'Hell oder dunkel', 'Automatisch folgt dem iPad', [['2', 'automatisch'], ['1', 'hell'], ['0', 'dunkel']], String([0, 1, 2].indexOf(S.settings.hell) < 0 ? 0 : S.settings.hell), true)]]
+    };
+    var zeileHtml = function (z) {
+      var rechts;
+      if (z.werte) {
+        rechts = '<div class="le-wahl">' + z.werte.map(function (w) {
+          var an = w[0] === z.akt;
+          return '<button type="button" class="' + (an ? 'an' : '') + '"' + (z.darf ? ' data-action="le-wert" data-k="' + z.k + '" data-value="' + w[0] + '"' : ' disabled') + ' aria-pressed="' + an + '">' + w[1] + '</button>';
+        }).join('') + '</div>';
+      } else {
+        rechts = '<span class="le-wert"><span>' + esc(z.wert) + '</span>' + (z.link ? '<button type="button" class="lg-aendern" data-action="liga-tab" data-tab="' + z.link + '">Ändern</button>' : '') + '</span>';
+      }
+      return '<div class="le-zeile"><span class="le-zeile-text"><b>' + esc(z.titel) + '</b><small>' + esc(z.text) + '</small></span>' + rechts + '</div>';
+    };
+    var b = B[wahl];
+    var heimHtml = wahl === 'heim'
+      ? '<div class="le-heim"><div class="le-bilder"><span class="lg-klein-titel">Logo</span><div class="sehnsucht-logo le-logo" role="img" aria-label="Logo ' + esc(ti.lokal || 'Vereinsheim') + '"></div>' +
+          '<span class="lg-klein-titel">Bild vom Lokal</span><div class="le-bild-leer">' + leIcon('heim', 22) + '<span>noch kein Bild</span></div></div>' +
+          '<div class="le-felder"><div class="le-feld"><span class="lg-klein-titel">Name</span><b>' + esc(ti.lokal || 'Bar Sehnsucht') + '</b></div>' +
+          '<div class="le-feld"><span class="lg-klein-titel">Adresse</span><b>' + esc(ti.adresse || '') + '</b></div>' +
+          '<span class="lg-text lg-mit-icon">' + LG_PIN_ROT + 'Die Route in Maps kommt aus der Adresse.</span>' +
+          '<span class="lg-text">Logo, Bild und Adresse ändern geht, sobald es Rollen für Admin und TCs gibt.</span></div></div>'
+      : '';
+    var rolle = gast ? 'Gast-Konto, nur ansehen' : wart ? 'Du führst die Kasse' : online ? 'Mitglied' : 'Nicht angemeldet';
+    $('liga-einstellungen').innerHTML =
+      '<nav class="le-nav" aria-label="Bereiche der Einstellungen">' +
+        '<span class="le-nav-titel"><button type="button" class="lg-rund fl" data-action="liga-einst-zu" aria-label="Zurück">' + LG_LINKS + '</button><b>EINSTELLUNGEN</b></span>' +
+        LE_BEREICHE.map(function (x) {
+          var an = x[0] === wahl;
+          var offen = x[0] === 'darst' || (x[0] === 'spiel' && darfVor) || (x[0] === 'kasse' && wart);
+          return '<button type="button" class="le-nav-knopf' + (an ? ' an' : '') + '" data-action="liga-einst-bereich" data-value="' + x[0] + '"' + (an ? ' aria-current="page"' : '') + '>' + leIcon(x[0]) + '<span>' + x[1] + '</span>' + (offen ? '' : LE_SCHLOSS) + '</button>';
+        }).join('') +
+        '<div class="le-rolle"><span class="lg-mit-icon">' + leIcon('team', 16) + '<b>' + esc(rolle) + '</b></span><small>Admin und TCs stellen hier alles für die Liga ein. Alle anderen sehen die Einstellungen und wählen nur die Darstellung.</small></div>' +
+      '</nav>' +
+      '<section class="le-inhalt lg-karte"><b class="le-titel">' + esc(b[0].toUpperCase()) + '</b><span class="le-unter">' + esc(b[1]) + '</span>' +
+        heimHtml + '<div class="le-zeilen">' + b[2].map(zeileHtml).join('') + '</div></section>';
+  }
+
+  /* Teamseite (Entwurf LigaTeam): Logo, Name, Lokal mit Adresse, Platz
+     und Punkte; links die Spieler mit TC, rechts alle Spiele der Saison.
+     Gespielte Spiele oeffnen die 16 Einzel. */
+  function renderLigaTeamSeite() {
+    var o = UI.ligaTeamSeite, sicht = ligaSicht(o.nr || LIGA_EIGENE_NR);
+    var ziel = $('liga-teamseite');
+    if (!sicht) { ziel.innerHTML = '<p class="lg-text">Lädt …</p>'; return; }
+    var name = o.team, ti = sicht.teamInfo[name] || {};
+    var platz = 0, zeile = null;
+    sicht.tabelle.zeilen.forEach(function (z, i) { if (z.team === name) { platz = i + 1; zeile = z; } });
+    var spieler = (ti.spieler || []).map(function (p) {
+      var roh = String(p.name || p), gast = roh.charAt(0) === '*', nm = gast ? roh.slice(1).trim() : roh.trim();
+      var t = nm.split(' ').filter(Boolean);
+      return { name: nm, kurz: ((t[0] || '?')[0] + (t.length > 1 ? t[t.length - 1][0] : '')).toUpperCase(), info: p.info || '', gast: gast };
+    });
+    var spiele = [];
+    sicht.runden.forEach(function (r) {
+      var gefunden = false;
+      r.spiele.forEach(function (sp, i) {
+        if (sp.heim !== name && sp.gast !== name) return;
+        gefunden = true;
+        if (!sp.gast) { spiele.push({ nr: r.nr, frei: true }); return; }
+        var daheim = sp.heim === name;
+        spiele.push({ nr: r.nr, daheim: daheim, gegner: daheim ? sp.gast : sp.heim, sp: sp, id: r.id, i: i });
+      });
+      if (!gefunden && r.spiele.length) spiele.push({ nr: r.nr, frei: true });
+    });
+    ziel.innerHTML =
+      '<div class="lg-team-kopf"><button type="button" class="lg-rund fl" data-action="liga-team-zu" aria-label="Zurück">' + LG_LINKS + '</button>' +
+        teamLogoHtml(name, 'gross') +
+        '<span class="lg-team-titel"><b>' + esc(name) + '</b>' +
+          (ti.lokal ? '<a class="lg-dd-ort" href="https://maps.apple.com/?q=' + encodeURIComponent(ti.lokal + (ti.adresse ? ', ' + ti.adresse : '')) + '" target="_blank" rel="noopener">' + LG_PIN_ROT + '<b>' + esc(ti.lokal) + '</b>' + (ti.adresse ? '<span>· ' + esc(ti.adresse) + '</span>' : '') + '</a>' : '') + '</span>' +
+        (zeile ? '<span class="lg-team-platz"><b>' + platz + '.</b><small>' + zeile.punkte + ':' + (zeile.spiele * 2 - zeile.punkte) + ' Punkte · Einzel ' + esc(zeile.einzel) + '</small></span>' : '') +
+      '</div>' +
+      '<div class="lg-team-zwei">' +
+        '<section class="lg-karte lg-team-karte"><span class="lg-klein-titel lg-mit-icon">' + LG_LEUTE + 'Spieler · ' + spieler.length + '</span>' +
+          (spieler.length ? spieler.map(function (s) {
+            return '<div class="lg-sp-zeile"><span class="kurz">' + esc(s.kurz) + '</span><span class="nm">' + esc(s.name) + '</span>' +
+              (s.info ? '<span class="chip">' + esc(s.info) + '</span>' : '') + (s.gast ? '<span class="chip leise">Gast</span>' : '') + '</div>';
+          }).join('') : '<p class="lg-text">Keine Spielerliste.</p>') +
+        '</section>' +
+        '<section class="lg-karte lg-team-karte"><span class="lg-klein-titel lg-mit-icon">' + LG_KALENDER + 'Spiele der Saison</span>' +
+          spiele.map(function (g) {
+            if (g.frei) return '<div class="lg-sp-spiel frei"><span class="nr">' + g.nr + '</span><span></span><span class="gg">spielfrei</span><span></span><span></span></div>';
+            var gesp = !!(g.sp.einzel && !g.sp.verschoben);
+            var tipp = gesp && g.sp.partien && g.sp.partien.length ? ' data-action="liga-partien" data-termin="' + esc(g.id) + '" data-i="' + g.i + '" role="button" tabindex="0"' : '';
+            var e = gesp ? String(g.sp.einzel).split(':') : null;
+            var eig = e ? (g.daheim ? e[0] + ':' + e[1] : e[1] + ':' + e[0]) : '';
+            return '<div class="lg-sp-spiel' + (g.gegner === LIGA.team ? ' wir' : '') + (tipp ? ' tap' : '') + '"' + tipp + '>' +
+              '<span class="nr">' + g.nr + '</span><span class="at">' + (g.daheim ? '' : '@') + '</span><span class="gg">' + esc(g.gegner) + '</span>' +
+              '<span class="er">' + (gesp ? '<b>' + eig + '</b>' + esc(g.sp.legs ? (g.daheim ? g.sp.legs : String(g.sp.legs).split(':').reverse().join(':')) : '') : g.sp.verschoben ? 'verschoben' : (g.sp.tag ? kurzDatum(g.sp.tag) : '–')) + '</span>' +
+              '<span class="pf">' + (tipp ? LG_PFEIL : '') + '</span></div>';
+          }).join('') +
+          '<span class="lg-tab-fuss">@ = auswärts. Gespielte Spiele antippen, dann kommen die Einzel.</span>' +
+        '</section>' +
+      '</div>';
   }
 
   /* Die Einzelrangliste der ganzen Liga (alle Spieler aller Teams), wie
@@ -21369,6 +22153,24 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       b.classList.toggle('active', b.getAttribute('data-tab') === tab);
       if (b.getAttribute('data-tab') === 'kasse') b.classList.toggle('hidden', ohneKasse);
     });
+    /* Einstellungen und Teamseite liegen ueber allen Reitern. */
+    var einst = !!UI.ligaEinst;
+    $('liga-einstellungen').classList.toggle('hidden', !einst);
+    if (einst) {
+      ['liga-plan', 'liga-training', 'liga-tabelle', 'liga-statistik', 'liga-kasse', 'liga-regeln', 'liga-teamseite'].forEach(function (id) { $(id).classList.add('hidden'); });
+      if ($('liga-statistik').innerHTML) $('liga-statistik').innerHTML = '';
+      $('liga-tabs').querySelectorAll('button').forEach(function (b2) { b2.classList.remove('active'); });
+      renderLigaEinstellungen();
+      return;
+    }
+    var teamSeite = !!UI.ligaTeamSeite;
+    $('liga-teamseite').classList.toggle('hidden', !teamSeite);
+    if (teamSeite) {
+      ['liga-plan', 'liga-training', 'liga-tabelle', 'liga-statistik', 'liga-kasse', 'liga-regeln'].forEach(function (id) { $(id).classList.add('hidden'); });
+      if ($('liga-statistik').innerHTML) $('liga-statistik').innerHTML = '';
+      renderLigaTeamSeite();
+      return;
+    }
     $('liga-plan').classList.toggle('hidden', tab !== 'plan');
     $('liga-training').classList.toggle('hidden', tab !== 'training');
     $('liga-tabelle').classList.toggle('hidden', tab !== 'tabelle');
@@ -21561,7 +22363,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           ? '<div class="lk-stand"><span class="lk-punkte">' + ld2.wirP + ' : ' + ld2.sieP + '</span><span class="lk-legs">Punkte · Legs ' + ld2.wirL + ' : ' + ld2.sieL + '</span></div>'
           : '<div class="lk-datum"><span class="lg-tag">' + ('0' + d.getDate()).slice(-2) + '</span>' +
               '<span class="lg-monat"><b>' + MONATE_LANG[d.getMonth()].toUpperCase() + '</b><small>' + TAGE_LANG[d.getDay()] + ', 20:00 · ' + wann + '</small></span></div>') +
-        '<span class="lg-gegner"><b>' + esc(gegnerName) + '</b>' + (gz ? '<small>' + esc(gz) + '</small>' : '') + '</span>' +
+        '<button type="button" class="lg-gegner lg-gegner-knopf" data-action="liga-team-info" data-team="' + esc(gegnerName) + '" title="Teamseite öffnen"><b>' + esc(gegnerName) + '</b>' + (gz ? '<small>' + esc(gz) + '</small>' : '') + '</button>' +
       '</div>';
     var tiOrt = (window.LIGA_DATEN.teamInfo || {})[t.heim] || {};
     var ortZeile = '<a class="lg-ort" href="https://maps.apple.com/?q=' + encodeURIComponent((tiOrt.lokal || t.ort) + (tiOrt.adresse ? ', ' + tiOrt.adresse : '')) + '" target="_blank" rel="noopener">' +
@@ -26272,7 +27074,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
   function renderOverlay() {
     var ov = $('overlay');
-    if (!UI.overlay) { ov.classList.add('hidden'); ov.classList.remove('gross', 'vollbild', 'match-ende', 'liga-tag'); dialogGeschlossen(); return; }
+    if (!UI.overlay) { ov.classList.add('hidden'); ov.classList.remove('gross', 'vollbild', 'match-ende', 'liga-tag', 'gd'); dialogGeschlossen(); return; }
     ov.classList.remove('hidden');
     /* Im Turnier-Modus sprechen auch die Dialoge Plakatsprache - der
        Schreiber steht vorn an der Scheibe, gelesen wird vom Oche aus. */
@@ -26283,6 +27085,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     ov.classList.toggle('bogen', !!BOGEN_DIALOGE[UI.overlay.type] || (UI.overlay.type === 'confirm-reset' && !!(S.tour && S.tour.liga)));
     ov.classList.toggle('match-ende', UI.overlay.type === 'turnier-ende');
     ov.classList.toggle('liga-tag', !!ligaTagVon(UI.overlay));
+    ov.classList.toggle('gd', !!ligaTagVon(UI.overlay));
     ov.classList.toggle('bogen-breit', UI.overlay.type === 'liga-bericht-kurz');
     var o = UI.overlay;
     var html = '';
@@ -26594,8 +27397,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '<button class="btn ghost" data-action="liga-bericht-teilen">Teilen</button>' +
         '<button class="btn hell" data-action="liga-bericht">Bogen und PDF</button></div>';
     } else if (o.type === 'liga-partien') {
-      var lpSp = (ligaSpieltage()[o.termin] || [])[o.i];
-      var lpT = LIGA.termine.filter(function (x) { return x.id === o.termin; })[0];
+      var lpG = /^g(\d)-(\d+)$/.exec(String(o.termin || ''));
+      var lpSicht = lpG ? ligaSicht(+lpG[1]) : null, lpRunde = null;
+      if (lpSicht) lpSicht.runden.forEach(function (r) { if (r.id === o.termin) lpRunde = r; });
+      var lpSp = lpG ? (lpRunde ? lpRunde.spiele[o.i] : null) : (ligaSpieltage()[o.termin] || [])[o.i];
+      var lpT = lpG ? (lpRunde ? { nr: lpRunde.nr } : null) : LIGA.termine.filter(function (x) { return x.id === o.termin; })[0];
       var lpName = function (n) {
         return String(n).charAt(0) === '*' ? esc(n.slice(1)) + ' <small class="gast-marke">Gast</small>' : esc(n);
       };
@@ -27541,7 +28347,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
    * (POST /api/liga/tag/...). Ohne Konto oder Netz geht alles auf einem
    * Geraet. S.ligaTag ueberlebt einen Neustart und gilt nur an diesem Tag.
    */
-  var LIGA_TAG_FELDER = ['w0', 'w1', 'w2', 'w3', 'g0', 'g1', 'g2', 'g3', 'nw0', 'nw1', 'nw2', 'nw3', 'ng0', 'ng1', 'ng2', 'ng3', 'opt'];
+  var LIGA_TAG_FELDER = ['w0', 'w1', 'w2', 'w3', 'g0', 'g1', 'g2', 'g3', 'w4', 'w5', 'w6', 'w7', 'g4', 'g5', 'g6', 'g7', 'nw0', 'nw1', 'nw2', 'nw3', 'ng0', 'ng1', 'ng2', 'ng3', 'opt'];
   var LIGA_TAG_WEG = 90000;       // so lange ohne Meldung gilt das andere iPad als weg
   var ligaTagRuf = false, ligaTagNochmal = null, ligaTagLetzter = 0, ligaTagGetippt = 0, ligaTagFokus = 0;
   var ligaTagFrisch = 0, ligaTagGemerkt = '';
@@ -27622,8 +28428,14 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         seit: 0, geholt: false, plaetze: null, turnier: null, abbild: {}, fehlt: {}, nm: {}, sid: null, ruheBis: 0,
         /* Best of 3 und ohne Finish-Hilfen (WDF 3.08) sind die Voreinstellung. */
         d: { bestOf: 3, wir: ligaAufstellungVorschlag(termin), wirTyp: ['', '', '', ''], wirNamen: [{}, {}, {}, {}], vollNamen: {},
-          gegner: ['', '', '', ''], gegnerNach: ['', '', '', ''], gegnerTyp: ['', '', '', ''], geteilt: false, finish: false, nurErgebnis: false }
+          gegner: ['', '', '', ''], gegnerNach: ['', '', '', ''], gegnerTyp: ['', '', '', ''], geteilt: false, finish: false, nurErgebnis: false, ohneNamen: false }
       };
+      /* Die Ligaspiel-Voreinstellungen dieses Geraets (Liga-Einstellungen). */
+      if (typeof ligaVorgaben === 'function') {
+        var gdVor = ligaVorgaben();
+        t.d.bestOf = gdVor.bestOf; t.d.finish = gdVor.finish; t.d.ohneNamen = gdVor.ohneNamen; t.d.nurErgebnis = gdVor.nurErgebnis;
+      }
+      gdErsatzBereit(t.d);
       LIGA_TAG_FELDER.forEach(function (k) { t.abbild[k] = ligaTagText(t, k); });
       ligaTagSpaeterMerk = {};
     }
@@ -27641,8 +28453,15 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   /* ---- Felder: was dieses Geraet gerade eingetragen hat ---- */
   function ligaTagFeld(t, k) {
     var d = t.d, i = Number(k.charAt(k.length - 1));
-    if (k === 'opt') return { bestOf: d.bestOf === 5 ? 5 : 3, finish: !!d.finish, nurErgebnis: !!d.nurErgebnis };
+    if (k === 'opt') return { bestOf: d.bestOf === 5 ? 5 : 3, finish: !!d.finish, nurErgebnis: !!d.nurErgebnis, ohneNamen: !!d.ohneNamen };
     if (k.charAt(0) === 'n') return (t.nm && t.nm[k]) || null;
+    /* Ersatz (Positionen 5-8): eigene Listen, die Spielpositionen bleiben vier. */
+    if (i >= 4) {
+      var e = gdPos(d, k.charAt(0) === 'g' ? 'gegner' : 'wir', i);
+      return k.charAt(0) === 'g' ? { id: '', vor: String(e.vor).slice(0, 30), nach: String(e.nach).slice(0, 30), typ: e.typ }
+        : { id: e.id, vor: String(e.vor).slice(0, 30), nach: String(e.nach).slice(0, 30), typ: e.typ,
+            name: e.id && e.id !== '__name' && String(e.id).indexOf('u_') !== 0 ? ligaName(e.id).slice(0, 60) : '' };
+    }
     if (k.charAt(0) === 'g') {
       return { id: '', vor: String((d.gegner || [])[i] || '').slice(0, 30), nach: String((d.gegnerNach || [])[i] || '').slice(0, 30), typ: (d.gegnerTyp || [])[i] || '' };
     }
@@ -27655,7 +28474,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
      aus einem anderen Profil und wanderte sonst endlos hin und her). */
   function ligaTagAlsText(k, v) {
     if (!v) return 'null';
-    if (k === 'opt') return JSON.stringify([v.bestOf, !!v.finish, !!v.nurErgebnis]);
+    if (k === 'opt') return JSON.stringify([v.bestOf, !!v.finish, !!v.nurErgebnis, !!v.ohneNamen]);
     if (k.charAt(0) === 'n') return JSON.stringify([v.pid || '', v.vor, v.nach, v.u18, v.g, v.unterschrift]);
     return JSON.stringify([v.id || '', v.vor || '', v.nach || '', v.typ || '']);
   }
@@ -27665,8 +28484,15 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   }
   function ligaTagFeldSetzen(t, k, v) {
     var d = t.d, i = Number(k.charAt(k.length - 1));
-    if (k === 'opt') { d.bestOf = v.bestOf === 5 ? 5 : 3; d.finish = !!v.finish; d.nurErgebnis = !!v.nurErgebnis; return; }
+    if (k === 'opt') { d.bestOf = v.bestOf === 5 ? 5 : 3; d.finish = !!v.finish; d.nurErgebnis = !!v.nurErgebnis; d.ohneNamen = !!v.ohneNamen; return; }
     if (k.charAt(0) === 'n') { if (v) t.nm[k] = v; else delete t.nm[k]; return; }
+    if (i >= 4) {
+      gdPosSetzen(d, k.charAt(0) === 'g' ? 'gegner' : 'wir', i, v || {});
+      if (k.charAt(0) === 'w' && v && v.id && v.id !== '__name' && String(v.id).indexOf('u_') !== 0 && v.name && !S.profiles.some(function (p) { return p.id === v.id; })) {
+        S.profiles.push({ id: v.id, name: String(v.name).slice(0, 30), voll: v.name, avatar: null, hue: freeHue(), created: Date.now(), gast: true });
+      }
+      return;
+    }
     if (k.charAt(0) === 'g') {
       d.gegner[i] = v.vor || ''; d.gegnerNach[i] = v.nach || '';
       d.gegnerTyp[i] = v.typ || '';
@@ -27945,13 +28771,20 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (ligaTagTurnierOffen()) { UI.overlay = { type: 'ligatag-hinweis', art: 'turnier' }; render(); return; }
     if (S.game && !S.game.done) { UI.overlay = { type: 'ligatag-hinweis', art: 'jetzt' }; render(); return; }
     if (!ligaTagGeteilt()) {
-      ligaSpielStarten();
-      if (S.tour && S.tour.liga) { delete S.ligaTag; save(); }
+      /* Ein Geraet ohne Konten: GAME ON startet gleich das erste Einzel. */
+      ligaTagAlleinStarten(t);
       return;
     }
     if (!t.platz) { o.fehler = 'Bitte erst eine Scheibe wählen.'; render(); return; }
     if (t.turnier) { ligaTagBeitreten(); return; }
     var an = ligaTagAndere(t);
+    /* Zu zweit: GAME ON meldet sich bei der anderen Scheibe, die bestaetigt
+       und startet. Hat sie schon gedrueckt, ist das hier die Bestaetigung. */
+    if (ligaTagZuZweit(t) && ligaTagAlleBereit(t)) {
+      if (gdGameOn(t, an)) { ligaTagStarten(false); return; }
+      ligaTagAbgleich({ gameOn: true }).then(function () { ligaTagZeichnen(true); });
+      return;
+    }
     if (!ligaTagAlleBereit(t) && !o.gefragt) {
       o.gefragt = true;
       o.fehler = ligaTagZuZweit(t) && !t.plaetze[an].bereit
@@ -28000,6 +28833,15 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     }
     var bau = ligaTourBauen(pruefen ? t.d : Object.assign({}, t.d, { vollNamen: {} }), ligaTagTermin(t.terminId));
     var lg = bau.tour.liga;
+    /* Live ohne Namen (Game-Day-Einstellung) und die Ersatzspieler 5-8. */
+    if (t.d.ohneNamen) lg.ohneNamen = true;
+    var ersatz = { wir: [], sie: [] };
+    for (var ei = 4; ei < 8; ei++) {
+      var ew = gdPos(t.d, 'wir', ei), eg = gdPos(t.d, 'gegner', ei);
+      if (ew.name) ersatz.wir.push({ id: ew.id && ew.id !== '__name' ? ew.id : '', name: ew.name, typ: ew.typ });
+      if (eg.name) ersatz.sie.push({ name: eg.name, typ: eg.typ });
+    }
+    if (ersatz.wir.length || ersatz.sie.length) lg.ersatz = ersatz;
     lg.nachmeldungen = [];
     ligaTagUnterschriften(t, lg).forEach(function (n) { if (lg.typen[n.id] === 'neu') lg.nachmeldungen.push(n); });
     if (!lg.nachmeldungen.length) delete lg.nachmeldungen;
@@ -28072,7 +28914,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var dialog = UI.overlay && !ligaTagVon(UI.overlay) && UI.overlay.type !== 'ligatag-hinweis';
     if (ligaTagTurnierOffen() || (S.game && !S.game.done) || dialog) {
       t.turnier = daten.id; save();
-      if (!dialog) { UI.overlay = null; ligaTagHinweis(ligaTagTurnierOffen() ? 'turnier' : 'jetzt'); render(); }
+      /* Gerade bestaetigt oder gestartet: der Hinweis kommt sofort, ohne Ruhezeit. */
+      if (!dialog) { UI.overlay = { type: 'ligatag-hinweis', art: ligaTagTurnierOffen() ? 'turnier' : 'jetzt' }; render(); }
       return;
     }
     var platz = t.platz || 'S1';
@@ -28085,6 +28928,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (!S.tour) { save(); render(); return; }
     S.tour.meineScheibe = platz;
     var lg = S.tour.liga;
+    gdFotosAnwenden(t, lg);
     if (lg && Array.isArray(lg.wir)) S.lineup = lg.wir.slice(0, 4);
     /* Erst nach dem Start unterschrieben (das andere iPad war schneller):
        die Unterschrift kommt ins laufende Spiel. */
@@ -28181,6 +29025,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       if ((dreckig && jetzt - ligaTagLetzter > (t.ohneNetz || t.stoerung ? 5000 : 900)) ||
           jetzt - ligaTagLetzter > (offen || Math.abs(ligaTagAnpfiff(t) - ligaTagJetzt()) < 600000 ? 4000 : 10000)) ligaTagAbgleich();
     }
+    var gdU = document.querySelectorAll('[data-gd-uhr]');
+    for (var gi = 0; gi < gdU.length; gi++) { var gt = gdUhr(t); if (gdU[gi].textContent !== gt) gdU[gi].textContent = gt; }
     var uhr = document.querySelectorAll('[data-tag-uhr]');
     for (var i = 0; i < uhr.length; i++) {
       var txt = ligaTagUhrText(t);
@@ -28199,6 +29045,22 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       !SPIEL_SCREENS[S.screen] && !(S.matches.length && (S.screen === 'tournament' || S.screen === 'winner'));
     var art = turnier ? 'turnier' : 'jetzt';
     var geteilt = ligaTagGeteilt();
+    /* Beide haben im selben Moment GAME ON gedrueckt: Scheibe 1 startet. */
+    if (geteilt && !t.turnier && t.platz === 'S1' && ligaTagZuZweit(t) && gdGameOn(t, 'S1') && gdGameOn(t, 'S2') && ligaTagAlleBereit(t)) {
+      if (frei || ligaTagVon(UI.overlay)) ligaTagStarten(false);
+      return;
+    }
+    /* Die andere Scheibe hat GAME ON gedrueckt, hier ist der Game Day zu. */
+    if (geteilt && !t.turnier && t.platz && ligaTagZuZweit(t) && gdGameOn(t, ligaTagAndere(t)) && !gdGameOn(t, t.platz) && !ligaTagVon(UI.overlay)) {
+      /* Die Frage hat Vorrang: sie ersetzt einen offenen Anwurf-Hinweis und
+         wartet nicht auf die Ruhezeit (abgelehnt wird mit "Noch nicht"). */
+      var hw = UI.overlay && UI.overlay.type === 'ligatag-hinweis' ? UI.overlay.art : null;
+      if ((!UI.overlay || hw === 'anwurf') && !UI.menu && !UI.input && !UI.darts.length && Date.now() - ligaTagGetippt >= 3000) {
+        UI.overlay = { type: 'ligatag-hinweis', art: 'gameon' };
+        render();
+      }
+      return;
+    }
     if (geteilt && t.turnier) {              // laeuft schon (das andere iPad hat gestartet)
       if (!t.platz || !ligaTagOnline()) return;
       if (frei) ligaTagBeitreten(); else ligaTagHinweis(art);
@@ -28210,16 +29072,22 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       if (!t.platz) return;                  // ein Handy, das nur nachschaut
       /* Nie aus altem Stand: erst muss der Server geantwortet haben. */
       if (!ligaTagOnline() || Date.now() - ligaTagFrisch > 9000) {
-        if (jetzt > anpfiff + 15000 && Date.now() - Math.max(ligaTagFrisch, ligaTagSeit) > 15000) ligaTagHinweis('netz');
+        if (jetzt > anpfiff + 15000 && Date.now() - Math.max(ligaTagFrisch, ligaTagSeit) > 15000) {
+          /* Ein Anwurf-Hinweis von eben wird zur Netz-Frage - nie stumm. */
+          if (UI.overlay && UI.overlay.type === 'ligatag-hinweis' && UI.overlay.art === 'anwurf') { UI.overlay = { type: 'ligatag-hinweis', art: 'netz' }; render(); }
+          else ligaTagHinweis('netz');
+        }
         return;
       }
     }
+    /* Seit dem Redesign (Nov. 2026) startet nichts mehr von selbst: um
+       20:00 erscheint GAME ON gross, die andere Scheibe bestaetigt. Wer
+       gerade woanders ist, bekommt einen Hinweis. */
     if (ligaTagAlleBereit(t)) {
-      if (!frei) { ligaTagHinweis(art); return; }
-      if (!geteilt) { ligaTagAlleinStarten(t); return; }
-      /* Scheibe 1 startet; Scheibe 2 springt ein, wenn von dort nichts kommt. */
-      if (t.platz === 'S2' && ligaTagZuZweit(t) && jetzt < anpfiff + 10000) return;
-      ligaTagStarten(true);
+      /* Ein Hinweis "noch nicht bereit" von eben ist ueberholt: auf Anwurf umstellen. */
+      if (UI.overlay && UI.overlay.type === 'ligatag-hinweis' && (UI.overlay.art === 'warten' || UI.overlay.art === 'fehlt')) {
+        UI.overlay = { type: 'ligatag-hinweis', art: 'anwurf' }; render();
+      } else if (!ligaTagVon(UI.overlay)) ligaTagHinweis('anwurf');
       return;
     }
     if (t.gespielt && !t.bereit) return;     // heute schon gespielt: nicht weiter erinnern
@@ -28254,67 +29122,328 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       '<button class="btn ' + (t && t.bereit ? 'ghost' : 'primary') + ' small" data-action="tag-oeffnen" data-id="' + esc(termin.id) + '">Game Day</button>' +
       '</div>';
   }
+  /* ===== Game Day nach Entwurf (LsWahl, LsGameDay; Redesign Nov. 2026) =====
+     Wahl (Scheibe 1, Scheibe 2, Zuschauer), dann die Seite mit Willkommen,
+     Uhr, beiden Teams, Challenge und GAME ON. GAME ON startet nicht mehr von
+     selbst um 20:00 und auch nicht sofort: die andere Scheibe bestaetigt
+     ("Kann es losgehen?"), erst dann startet das Ausbullen auf beiden.
+     Positionen 1-4 spielen, 5-8 sind Ersatz (Felder w4-w7/g4-g7). */
+  var GD_TYP_REIHE = ['', 'gast', 'neu'];
+  var GD_TYP_TEXT = { '': 'gemeldet', gast: 'Gastspieler', neu: 'neu melden' };
+  function gdErsatzBereit(d) {
+    if (!Array.isArray(d.wirE)) d.wirE = ['', '', '', ''];
+    if (!Array.isArray(d.wirETyp)) d.wirETyp = ['', '', '', ''];
+    if (!Array.isArray(d.wirENamen)) d.wirENamen = [{}, {}, {}, {}];
+    if (!Array.isArray(d.gegnerE)) d.gegnerE = ['', '', '', ''];
+    if (!Array.isArray(d.gegnerENach)) d.gegnerENach = ['', '', '', ''];
+    if (!Array.isArray(d.gegnerETyp)) d.gegnerETyp = ['', '', '', ''];
+    if (!d.fotos || typeof d.fotos !== 'object') d.fotos = {};
+  }
+  /* Eine Position (0-7) einer Seite lesen: { id, vor, nach, typ, name }. */
+  function gdPos(d, seite, i) {
+    gdErsatzBereit(d);
+    var e = i >= 4, j = e ? i - 4 : i;
+    if (seite === 'gegner') {
+      var vor = e ? d.gegnerE[j] : (d.gegner || [])[j], nach = e ? d.gegnerENach[j] : (d.gegnerNach || [])[j];
+      var voll = (String(vor || '').trim() + ' ' + String(nach || '').trim()).trim();
+      return { id: '', vor: vor || '', nach: nach || '', typ: (e ? d.gegnerETyp[j] : (d.gegnerTyp || [])[j]) || '', name: voll };
+    }
+    var id = (e ? d.wirE[j] : d.wir[j]) || '';
+    var n = id === '__name' ? ((e ? d.wirENamen[j] : (d.wirNamen || [])[j]) || {}) : {};
+    var name = !id ? '' : id === '__name' ? (String(n.vor || '') + ' ' + String(n.nach || '')).trim() : ligaName(id);
+    return { id: id, vor: n.vor || '', nach: n.nach || '', typ: (e ? d.wirETyp[j] : (d.wirTyp || [])[j]) || '', name: name };
+  }
+  function gdPosSetzen(d, seite, i, v) {
+    gdErsatzBereit(d);
+    var e = i >= 4, j = e ? i - 4 : i;
+    if (seite === 'gegner') {
+      if (e) { d.gegnerE[j] = v.vor || ''; d.gegnerENach[j] = v.nach || ''; d.gegnerETyp[j] = v.typ || ''; }
+      else { d.gegner[j] = v.vor || ''; d.gegnerNach[j] = v.nach || ''; d.gegnerTyp[j] = v.typ || ''; }
+      return;
+    }
+    if (e) { d.wirE[j] = v.id || ''; d.wirENamen[j] = v.id === '__name' ? { vor: v.vor || '', nach: v.nach || '' } : {}; d.wirETyp[j] = v.typ || ''; }
+    else { d.wir[j] = v.id || ''; if (!d.wirNamen) d.wirNamen = [{}, {}, {}, {}]; d.wirNamen[j] = v.id === '__name' ? { vor: v.vor || '', nach: v.nach || '' } : {}; d.wirTyp[j] = v.typ || ''; }
+  }
+  /* Am Game Day aufgenommene Fotos (freiwillig, nur auf diesem Geraet) an
+     die Gast-Profile des Spiels haengen - sonst bleibt der Platzhalter. */
+  function gdFotosAnwenden(t, lg) {
+    var f = t && t.d && t.d.fotos;
+    if (!f || !lg) return;
+    for (var i = 0; i < 4; i++) {
+      var pw = lg.wir && lg.wir[i] ? profile(lg.wir[i]) : null, pg = lg.sie && lg.sie[i] ? profile(lg.sie[i]) : null;
+      if (pw && f['w' + i] && !pw.avatar && String(pw.id).indexOf('u_') !== 0) pw.avatar = f['w' + i];
+      if (pg && f['g' + i] && !pg.avatar) pg.avatar = f['g' + i];
+    }
+  }
+  function gdKurz(name) {
+    var t = String(name || '').replace(/[^A-Za-zÀ-ž ]/g, ' ').split(' ').filter(Boolean);
+    return ((t[0] || '?')[0] + (t.length > 1 ? t[t.length - 1][0] : '')).toUpperCase();
+  }
+  /* Bild einer Position: Profilfoto, sonst das hier aufgenommene, sonst Kuerzel. */
+  function gdBild(d, seite, i, x, klasse) {
+    var foto = d.fotos && d.fotos[(seite === 'gegner' ? 'g' : 'w') + i];
+    var p = seite === 'wir' && x.id && x.id !== '__name' ? profile(x.id) : null;
+    if (p) return avatarHTML(p, klasse);
+    if (foto && avatarSicher(foto)) return '<span class="av ' + klasse + '" style="background-image:url(' + foto + ')"></span>';
+    return '<span class="av ' + klasse + ' init gd-init">' + esc(gdKurz(x.name)) + '</span>';
+  }
+  /* Seiten-Kennung fuer die Positionen: Heim H, Gast G. */
+  function gdBuchstabe(lt, seite) {
+    var wirHeim = lt.heim === LIGA.team;
+    return (seite === 'wir') === wirHeim ? 'H' : 'G';
+  }
+  function gdSeiteBereit(t, seite) {
+    if (!ligaTagGeteilt()) return !!t.bereit;
+    return ['S1', 'S2'].some(function (s) { var p = t.plaetze && t.plaetze[s]; return p && p.bereit && (p.teile === seite || p.teile === 'beide'); });
+  }
+  /* GAME ON der anderen Scheibe (frisch, hoechstens 3 Minuten alt). */
+  function gdGameOn(t, s) {
+    var p = t.plaetze && t.plaetze[s];
+    return !!(p && p.gameOn && (p.gameOnAlter || 0) + (Date.now() - (t.plaetzeZeit || Date.now())) < 180000);
+  }
+  function gdUhr(t) {
+    var s = Math.round((ligaTagAnpfiff(t) - ligaTagJetzt()) / 1000);
+    var a = Math.abs(s), h = Math.floor(a / 3600), m = Math.floor(a / 60) % 60, zwei = function (n) { return ('0' + n).slice(-2); };
+    return (s < 0 ? '−' : '') + (h ? h + ':' + zwei(m) : m) + ':' + zwei(a % 60);
+  }
+  /* Challenge bis es losgeht: eine Zahl unter 100 mit Finishweg. */
+  function gdChallenge(neu) {
+    if (!UI.gdZahl || neu) {
+      var z, w, n = 0;
+      do { z = 2 + Math.floor(Math.random() * 98); w = window.Checkout && Checkout.suggest ? Checkout.suggest(z, 3) : null; n++; } while ((!w || !w.length || z === UI.gdZahl) && n < 50);
+      UI.gdZahl = z; UI.gdWeg = w || [];
+    }
+    return { zahl: UI.gdZahl, weg: UI.gdWeg };
+  }
+
   function ligaTagHtml(o, gegnerTeam) {
     var t = S.ligaTag, d = t.d, lt = o.termin, online = ligaTagGeteilt();
-    var teile = ligaTagTeile(t), zuZweit = ligaTagZuZweit(t);
+    gdErsatzBereit(d);
+    var zuZweit = ligaTagZuZweit(t), teile = ligaTagTeile(t);
     var vorbei = ligaTagJetzt() >= ligaTagAnpfiff(t);
-    var status, offenSeite = t.bereit && online ? ligaTagOffeneSeite(t) : null;
-    if (ligaTagStartLaeuft) status = 'Das Ligaspiel startet …';
-    else if (t.stoerung) status = t.stoerung;
-    else if (t.turnier) status = t.platz ? 'Das Ligaspiel läuft, dieses iPad steigt ein …' : 'Das Ligaspiel läuft schon. Zum Mitschreiben eine Scheibe wählen.';
-    else if (online && !t.geholt) status = t.ohneNetz ? 'Keine Verbindung. Eintragen geht, abgeglichen wird, sobald das Netz da ist.' : 'Wird geladen …';
-    else if (t.ohneNetz) status = 'Keine Verbindung zum Server. Eingetragenes wird nachgereicht.';
-    else if (online && !t.platz) status = 'An welcher Scheibe steht dieses iPad? Scheibe 1 trägt uns ein, Scheibe 2 den Gegner.';
-    else if (!t.bereit) status = vorbei ? '20:00 Uhr: Bitte Aufstellung fertig machen und „Bereit“ tippen.' : 'Spieler eintragen, dann „Bereit“ tippen.';
-    else if (zuZweit && !t.plaetze[ligaTagAndere(t)].bereit) status = (vorbei ? '20:00 Uhr: ' : 'Bereit. ') + 'Es fehlt noch Scheibe ' + ligaTagAndere(t).charAt(1) + '.';
-    else if (offenSeite) status = 'Die Aufstellung ' + (offenSeite === 'wir' ? 'von ' + LIGA.team : 'von ' + gegnerTeam) + ' hat noch niemand mit „Bereit“ bestätigt.';
-    else status = 'Bereit. Um 20:00 Uhr startet das erste Einzel von selbst, bis dahin könnt ihr einwerfen.';
-    var platz = function (s) {
-      var p = t.plaetze && t.plaetze[s], verb = ligaTagVerbunden(t)[s === 'S1' ? 0 : 1];
-      var text = !p ? 'frei' : p.meiner ? 'dieses iPad' : (p.name ? 'iPad von ' + p.name : 'anderes iPad') + (verb === 2 ? ' · nicht erreichbar' : '');
-      var knopf = p && p.meiner ? '' : '<button type="button" class="btn small ' + (t.platz ? 'ghost' : 'hell') + '" data-action="tag-platz" data-value="' + s + '">' +
-        (p && !t.platz ? (t.frage === s ? 'Wirklich übernehmen?' : 'Übernehmen') : t.platz ? (p ? 'Tauschen' : 'Hierhin wechseln') : 'Hier stehe ich') + '</button>';
-      return '<div class="lt-platz' + (p && p.meiner ? ' meiner' : '') + (p && p.bereit ? ' bereit' : '') + '">' +
-        '<div><b>Scheibe ' + s.charAt(1) + '</b><small>' + esc(text) + '</small></div>' +
-        (p ? '<span class="lt-marke">' + (p.bereit ? 'bereit' : 'trägt ein') + '</span>' : '') + knopf + '</div>';
+    var tiHeim = (window.LIGA_DATEN.teamInfo || {})[lt.heim] || {};
+    var lokal = tiHeim.lokal || lt.ort || '';
+    var MON = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
+    var dt = new Date(lt.tag + 'T12:00:00');
+    var datum = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'][dt.getDay()] + ' ' + ('0' + dt.getDate()).slice(-2) + '.' + MON[dt.getMonth()] + '.' + dt.getFullYear();
+    var zahnrad = '<button type="button" class="gd-rad" data-action="gd-panel" data-value="ein" aria-label="Einstellungen">' +
+      '<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M10 2h4l.5 2.3 1.8.8 2-1.2 2.8 2.8-1.2 2 .8 1.8L23 11v2l-2.3.5-.8 1.8 1.2 2-2.8 2.8-2-1.2-1.8.8L14 22h-4l-.5-2.3-1.8-.8-2 1.2-2.8-2.8 1.2-2-.8-1.8L1 13v-2l2.3-.5.8-1.8-1.2-2 2.8-2.8 2 1.2 1.8-.8Z" transform="translate(1 1) scale(.9167)"/></svg></button>';
+    var zurueck = '<button type="button" class="gd-zurueck" data-action="tag-zu">' + LG_LINKS + '<span>Spielplan</span></button>';
+    var fehler = o.fehler ? '<p class="gd-fehler" role="alert">' + esc(o.fehler) + '</p>' : '';
+
+    /* 1) Wahl: Wo bist du? (nur geteilt und noch ohne Scheibe) */
+    if (online && !t.platz && !t.turnier) {
+      var wahlKnopf = function (s, titel, text, bild) {
+        var p = t.plaetze && t.plaetze[s];
+        var belegt = p && !p.meiner;
+        return '<button type="button" class="gd-wahl-knopf" data-action="' + (s === 'Z' ? 'gd-zuschauer' : 'tag-platz') + '" data-value="' + s + '">' + bild +
+          '<b>' + titel + '</b><span>' + text + '</span>' +
+          (belegt ? '<small>' + (t.frage === s ? 'Nochmal tippen übernimmt' : (p.name ? 'iPad von ' + esc(p.name) : 'anderes iPad') + ' · antippen übernimmt') + '</small>' : '') + '</button>';
+      };
+      var wirHeim = lt.heim === LIGA.team;
+      return '<div class="gd-seite">' +
+        '<header class="gd-kopf">' + zurueck + '<b class="gd-titel">GAME DAY</b><span class="gd-sub">' + lt.nr + '. Spieltag · ' + esc(lt.heim) + ' gegen ' + esc(lt.gast) + ' · heute 20:00' + (lokal ? ' · ' + esc(lokal) : '') + '</span></header>' +
+        '<main class="gd-wahl"><b class="gd-frage-gross">WO BIST DU?</b>' + fehler +
+          '<div class="gd-wahl-drei">' +
+            wahlKnopf('S1', 'SCHEIBE 1', 'Trägt die Aufstellung von ' + esc(LIGA.team) + ' ein (' + (wirHeim ? 'Heim' : 'Gast') + ')', teamLogoHtml(LIGA.team, 'gd-gross')) +
+            wahlKnopf('S2', 'SCHEIBE 2', 'Trägt die Aufstellung von ' + esc(gegnerTeam) + ' ein (' + (wirHeim ? 'Gast' : 'Heim') + ')', teamLogoHtml(gegnerTeam, 'gd-gross')) +
+            wahlKnopf('Z', 'ZUSCHAUER', 'Live mitschauen, beide Scheiben, ohne etwas einzutragen',
+              '<span class="gd-auge" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s4-6.5 10-6.5S22 12 22 12s-4 6.5-10 6.5S2 12 2 12Z"/><circle cx="12" cy="12" r="3.2"/></svg></span>') +
+          '</div></main></div>';
+    }
+
+    /* 2) Die Game-Day-Seite */
+    var andere = ligaTagAndere(t);
+    var ichGo = !!(t.platz && gdGameOn(t, t.platz)), andereGo = !!(t.platz && zuZweit && gdGameOn(t, andere));
+    var beide = gdSeiteBereit(t, 'wir') && gdSeiteBereit(t, 'gegner') && (!zuZweit || ['S1', 'S2'].every(function (s) { return !t.plaetze[s] || t.plaetze[s].bereit; }));
+    var eins = !online || !zuZweit;
+    var meineSeite = eins ? null : (teile.wir ? 'wir' : 'gegner');
+    var karte = function (seite) {
+      var team = seite === 'wir' ? LIGA.team : gegnerTeam;
+      var bereit = gdSeiteBereit(t, seite);
+      var eigen = !t.turnier && (eins || meineSeite === seite) && !(online && !t.platz);
+      var s = seite === 'wir' ? 'S1' : 'S2', p = t.plaetze && t.plaetze[s];
+      var wo = (lt.heim === team ? 'Heim' : 'Gast') + (eins ? ' · auf diesem iPad' : ' · Scheibe ' + s.charAt(1) + (p && p.meiner ? ' · dieses iPad' : p ? (ligaTagVerbunden(t)[s === 'S1' ? 0 : 1] === 2 ? ' · nicht erreichbar' : '') : ' · noch frei'));
+      return '<div class="gd-team' + (eigen ? ' eigen' : '') + '">' + teamLogoHtml(team, 'gd-mittel') +
+        '<span class="gd-team-text"><b>' + esc(team) + '</b><small>' + wo + '</small></span>' +
+        (eigen ? '<button type="button" class="gd-aendern" data-action="gd-auf" data-value="' + seite + '"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>Ändern</button>' : '') +
+        '<span class="gd-status' + (bereit ? ' bereit' : '') + '"><i></i>' + (bereit ? 'Bereit!' : 'In Arbeit') + '</span></div>';
     };
-    var liste = function (namen, typen, unterschriften) {
-      return '<ol class="lt-liste">' + [0, 1, 2, 3].map(function (i) {
-        var typ = (typen || [])[i] || '';
-        return '<li><span>' + (namen[i] ? esc(namen[i]) : '<i>noch offen</i>') + '</span>' +
-          (typ ? '<small class="ls-marke ' + typ + '">' + (typ === 'neu' && unterschriften[i] ? 'neu, unterschrieben' : LIGA_TYP_TEXT[typ]) + '</small>' : '') + '</li>';
-      }).join('') + '</ol>';
+    var liste = function (seite) {
+      var b = gdBuchstabe(lt, seite), z = '';
+      for (var i = 0; i < 8; i++) {
+        var x = gdPos(d, seite, i);
+        if (i >= 4 && !x.name) continue;
+        if (i === 4) z += '<div class="gd-trenn"><span>ERSATZ</span><i></i></div>';
+        z += '<div class="gd-pos"><span class="gd-nr">' + b + (i + 1) + '</span>' +
+          (x.name ? gdBild(d, seite, i, x, 'gd-av') + '<span class="gd-name">' + esc(x.name) + '</span>' : '<span class="gd-leer"></span><span class="gd-name leise">offen</span>') + '</div>';
+      }
+      return '<div class="gd-liste">' + z + '</div>';
     };
-    var fest = t.bereit || (online && !t.platz) || !!t.turnier;
-    var unterschrieben = function (x) { return [0, 1, 2, 3].map(function (i) { return ligaTagNmGueltig(t, x + i); }); };
-    var umschalten = function (seite) {
-      return !fest && zuZweit ? '<button type="button" class="dl-link" data-action="tag-seite" data-value="' + seite + '">Hier eintragen</button>' : '';
+    var chal = gdChallenge(false);
+    var gameOnText = ichGo ? 'Scheibe ' + andere.charAt(1) + ' muss noch bestätigen, dann startet das Ausbullen auf beiden Scheiben.'
+      : eins ? 'Startet das erste Einzel mit Ausbullen.' : 'Die andere Scheibe bestätigt kurz, dann startet auf beiden das erste Einzel mit Ausbullen.';
+    var gameOnKnopf = function (gross) {
+      if (ligaTagStartLaeuft) return '<div class="gd-warte' + (gross ? ' gross' : '') + '"><i></i>DAS LIGASPIEL STARTET …</div>';
+      if (ichGo) return '<div class="gd-warte' + (gross ? ' gross' : '') + '"><i></i>WARTE AUF SCHEIBE ' + andere.charAt(1) + '</div>' +
+        '<button type="button" class="gd-klein-link" data-action="gd-gameon-ab">Abbrechen</button>';
+      return '<button type="button" class="gd-gameon' + (gross ? ' gross' : '') + '" data-action="liga-los">GAME ON</button>';
     };
-    var wirHtml = !fest && teile.wir ? ligaWirFelderHtml(d)
-      : '<div class="ls-titel">' + esc(LIGA.team) + umschalten('wir') + '</div>' +
-        liste([0, 1, 2, 3].map(function (i) { var id = d.wir[i]; return !id ? '' : id === '__name' ? ligaWirVoll(d, i) : ligaName(id); }), d.wirTyp, unterschrieben('w'));
-    var sieHtml = !fest && teile.gegner ? ligaGegnerFelderHtml(gegnerTeam, d)
-      : '<div class="ls-titel">' + esc(gegnerTeam) + umschalten('gegner') + '</div>' +
-        liste([0, 1, 2, 3].map(function (i) { return ligaGegnerVoll(d, i); }), d.gegnerTyp, unterschrieben('g'));
-    return '<div class="lt-kopf"><div><h3>Game Day</h3>' +
-        '<p>' + lt.nr + '. Spieltag · ' + esc(lt.heim) + ' vs ' + esc(lt.gast) + (lt.ort ? ' · ' + esc(lt.ort) : '') + '</p></div>' +
-        '<div class="lt-uhr' + (vorbei ? ' vorbei' : '') + '"><b data-tag-uhr>' + ligaTagUhrText(t) + '</b><small>' + (vorbei ? 'Anwurf' : 'bis zum Anwurf um 20:00') + '</small></div></div>' +
-      '<p class="lt-status" role="status">' + esc(status) + '</p>' +
-      (o.fehler ? '<p class="edit-error" role="alert">' + esc(o.fehler) + '</p>' : '') +
-      (online ? '<div class="lt-plaetze">' + platz('S1') + platz('S2') + '</div>' : '') +
-      '<div class="liga-start lt-spalten"><div>' + wirHtml + '</div><div>' + sieHtml + '</div></div>' +
-      '<button type="button" class="dl-link lt-opt-knopf" data-action="tag-optionen" aria-expanded="' + !!o.optionen + '">' +
-        (o.optionen ? 'Einstellungen zuklappen' : 'Einstellungen: Best of ' + d.bestOf + ', ' + (d.finish ? 'mit' : 'ohne') + ' Finish-Anzeigen' + (d.nurErgebnis ? ', nur Ergebnisse' : '')) + '</button>' +
-      (o.optionen ? '<div class="liga-start' + (fest ? ' lt-fest' : '') + '">' + ligaOptionenHtml(d) + '</div>' : '') +
-      '<div class="lt-knoepfe">' +
-        '<button class="btn ghost" data-action="tag-zu">Zurück</button>' +
-        (t.bereit ? '<button class="btn ghost" data-action="tag-zu" data-spiel="1">Einwerfen, freies Spiel</button>' +
-            '<button class="btn ghost" data-action="tag-aendern">Aufstellung ändern</button>'
-          : !fest ? '<button class="btn primary start" data-action="tag-bereit">Bereit</button>' : '') +
-        (!online || t.platz ? '<button class="btn ' + (ligaTagAlleBereit(t) ? 'primary start' : 'ghost') + '" data-action="liga-los">' + (ligaTagAlleBereit(t) ? 'GAME ON!' : 'Sofort starten') + '</button>' : '') +
-      '</div>' +
-      (t.platz ? '<p class="lt-verlassen"><button type="button" class="dl-link" data-action="tag-verlassen">Dieses iPad von der Scheibe abmelden</button></p>' : '');
+    var status = t.turnier ? (t.platz ? 'Das Ligaspiel läuft, dieses iPad steigt ein …' : 'Das Ligaspiel läuft schon.')
+      : t.stoerung ? t.stoerung
+      : online && !t.geholt ? (t.ohneNetz ? 'Keine Verbindung. Eintragen geht, abgeglichen wird, sobald das Netz da ist.' : 'Wird geladen …')
+      : t.ohneNetz ? 'Keine Verbindung zum Server. Eingetragenes wird nachgereicht.' : '';
+    var mitte = vorbei && beide && !t.turnier
+      ? '<section class="gd-anwurf"><span class="gd-klein-titel">ANWURF</span>' + gameOnKnopf(true) + '<span class="gd-hinweis">' + gameOnText + '</span></section>'
+      : '<section class="gd-challenge"><span class="gd-klein-titel"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>CHALLENGE · BIS ES LOSGEHT</span>' +
+          '<b class="gd-zahl">' + chal.zahl + '</b>' +
+          '<div class="gd-weg">' + chal.weg.map(function (f) { return '<span>' + esc(f) + '</span>'; }).join('') + '</div>' +
+          '<button type="button" class="gd-neu" data-action="gd-challenge"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>NEU</button>' +
+          '<span class="gd-hinweis">Geschafft? Neu tippen, dann kommt die nächste Zahl unter 100.</span>' +
+          (beide && !t.turnier ? '<div class="gd-go-ecke">' + gameOnKnopf(false) + '<span class="gd-hinweis r">' + gameOnText + '</span></div>' : '') +
+        '</section>';
+    var scheibeText = eins ? (online ? 'EIN IPAD' : 'DIESES GERÄT') + (d.nurErgebnis ? ' · NUR ERGEBNISSE' : '')
+      : 'SCHEIBE ' + t.platz.charAt(1) + ' · ' + ((t.platz === 'S1') === (lt.heim === LIGA.team) ? 'HEIM' : 'GAST');
+    var seite = '<div class="gd-seite">' +
+      '<header class="gd-kopf">' + zurueck + '<b class="gd-titel">GAME DAY</b><span class="gd-sub">' + lt.nr + '. Spieltag · ' + datum + '</span><span class="gd-luft"></span>' +
+        '<span class="gd-chip">' + scheibeText + '</span>' + zahnrad + '</header>' +
+      '<main class="gd-haupt">' + fehler + (status ? '<p class="gd-status-zeile" role="status">' + esc(status) + '</p>' : '') +
+        '<div class="gd-willkommen"><span><small>WILLKOMMEN IN DER</small><b>' + esc(lokal.toUpperCase()) + '</b></span>' +
+          '<span class="gd-uhr' + (vorbei ? ' ueber' : '') + '"><b data-gd-uhr>' + gdUhr(t) + '</b><small>' + (vorbei ? 'über der Zeit, Anwurf war 20:00' : 'bis zum Anwurf um 20:00') + '</small></span></div>' +
+        '<div class="gd-teams">' + karte('wir') + karte('gegner') + liste('wir') + liste('gegner') + '</div>' +
+        mitte +
+      '</main></div>';
+
+    /* 3) Fenster ueber der Seite */
+    var panel = '';
+    if (andereGo && !ichGo && !t.turnier && !ligaTagStartLaeuft) {
+      var ersteH = gdPos(d, 'wir', 0).name || 'H1', ersteG = gdPos(d, 'gegner', 0).name || 'G1';
+      panel = '<div class="gd-schleier"><div class="gd-frage-karte" role="dialog" aria-modal="true">' +
+        '<span class="gd-klein-titel">SCHEIBE ' + andere.charAt(1) + ' HAT GAME ON GEDRÜCKT</span><b>KANN ES LOSGEHEN?</b>' +
+        '<p>Wenn du bestätigst, starten beide Scheiben mit dem Ausbullen des ersten Einzels. Hier: ' + esc(t.platz === 'S1' ? ersteH + ' gegen ' + ersteG : ersteG + ' gegen ' + ersteH) + '.</p>' +
+        '<div class="gd-frage-knoepfe"><button type="button" class="gd-klein-link gross" data-action="gd-gameon-ab">Noch nicht</button>' +
+        '<button type="button" class="gd-gameon" data-action="gd-los">LOS GEHT\'S</button></div></div></div>';
+    } else if (o.panel === 'ein') {
+      panel = gdEinstellungenHtml(t, eins);
+    } else if (o.panel === 'neu') {
+      panel = gdNeuHtml(o);
+    } else if (o.panel === 'auf') {
+      panel = gdAufstellungHtml(t, o, lt, gegnerTeam);
+    }
+    return seite + panel;
   }
+
+  function gdAufstellungHtml(t, o, lt, gegnerTeam) {
+    var d = t.d, seite = o.seite === 'gegner' ? 'gegner' : 'wir';
+    var team = seite === 'wir' ? LIGA.team : gegnerTeam, b = gdBuchstabe(lt, seite);
+    var belegt = {};
+    var zeilen = '';
+    for (var i = 0; i < 8; i++) {
+      var x = gdPos(d, seite, i);
+      if (i === 4) zeilen += '<div class="gd-trenn"><span>ERSATZ</span><i></i></div>';
+      if (x.name) belegt[seite === 'wir' ? x.id + '|' + x.name : x.name] = 1;
+      zeilen += '<div class="gd-auf-zeile"><span class="gd-nr">' + b + (i + 1) + '</span>' +
+        (x.name ? gdBild(d, seite, i, x, 'gd-av gross') : '<span class="gd-leer gross"></span>') +
+        '<span class="gd-name' + (x.name ? '' : ' leise') + '">' + (x.name ? esc(x.name) : 'offen') + '</span>' +
+        (x.name && !(seite === 'wir' && x.id && x.id !== '__name')
+          ? '<label class="gd-foto-knopf"><input type="file" accept="image/*" data-role="gd-foto" data-seite="' + seite + '" data-i="' + i + '" hidden>' +
+            '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-2.5h6L17 8h3v11H4z"/><circle cx="12" cy="13" r="3.4"/></svg>Foto</label>'
+          : '<span></span>') +
+        (x.name ? '<button type="button" class="gd-typ' + (x.typ ? ' ' + x.typ : '') + '" data-action="gd-typ" data-seite="' + seite + '" data-i="' + i + '">' + GD_TYP_TEXT[x.typ || ''] + '</button>' : '<span></span>') +
+        (x.name ? '<button type="button" class="gd-raus" data-action="gd-raus" data-seite="' + seite + '" data-i="' + i + '" aria-label="' + esc(x.name) + ' herausnehmen">×</button>' : '<span></span>') +
+        '</div>';
+      /* Unserem Spieler fehlt der volle Name (Bogen): hier nachtragen. */
+      var vp = seite === 'wir' && i < 4 && x.id && x.id !== '__name' ? profile(x.id) : null;
+      if (vp && vollFehlt(vp)) zeilen += '<div class="gd-voll"><span>Voller Name für den Bogen:</span>' + vollFelderHtml(vp, d) + '</div>';
+    }
+    var chips;
+    if (seite === 'wir') {
+      chips = ligaKader().map(function (p) {
+        var drin = false;
+        for (var k = 0; k < 8; k++) if (gdPos(d, 'wir', k).id === p.id) drin = true;
+        return '<button type="button" class="gd-chip' + (drin ? ' drin' : '') + '" data-action="gd-chip" data-seite="wir" data-id="' + esc(p.id) + '">' + avatarHTML(p, 'gd-av gross') + '<span>' + esc(p.name) + '</span></button>';
+      }).join('');
+    } else {
+      chips = ligaGegnerKader(gegnerTeam).map(function (n) {
+        var drin = false;
+        for (var k = 0; k < 8; k++) if (gdPos(d, 'gegner', k).name === n) drin = true;
+        var t2 = n.split(' ');
+        return '<button type="button" class="gd-chip' + (drin ? ' drin' : '') + '" data-action="gd-chip" data-seite="gegner" data-name="' + esc(n) + '"><span class="av gd-av gross init gd-init">' + esc(gdKurz(n)) + '</span><span>' + esc(t2[0] + (t2.length > 1 ? ' ' + t2[t2.length - 1].charAt(0) + '.' : '')) + '</span></button>';
+      }).join('');
+    }
+    var andereSeite = seite === 'wir' ? 'gegner' : 'wir', andersTeam = seite === 'wir' ? gegnerTeam : LIGA.team;
+    var aBereit = gdSeiteBereit(t, andereSeite);
+    var eins = !ligaTagGeteilt() || !ligaTagZuZweit(t);
+    var gegenListe = '';
+    for (var g = 0; g < 8; g++) {
+      var y = gdPos(d, andereSeite, g);
+      if (g >= 4 && !y.name) continue;
+      if (g === 4) gegenListe += '<div class="gd-trenn klein"><span>ERSATZ</span><i></i></div>';
+      gegenListe += '<div class="gd-pos"><span class="gd-nr">' + gdBuchstabe(lt, andereSeite) + (g + 1) + '</span>' +
+        ((aBereit || eins) && y.name ? gdBild(d, andereSeite, g, y, 'gd-av') + '<span class="gd-name">' + esc(y.name) + '</span>' : '<span class="gd-leer"></span><span class="gd-name leise">offen</span>') + '</div>';
+    }
+    return '<div class="gd-panel" role="dialog" aria-modal="true" aria-label="Aufstellung">' +
+      '<header class="gd-panel-kopf">' + teamLogoHtml(team, 'gd-panel-logo') +
+        '<span class="gd-panel-titel"><b>AUFSTELLUNG ' + esc(team.toUpperCase()) + '</b><small>' + b + '1 bis ' + b + '4 starten, ' + b + '5 bis ' + b + '8 sind Ersatz. Es muss noch nicht jeder gemeldet sein, Nachmelden geht auch später. Status antippen: gemeldet, Gastspieler, neu melden.</small></span>' +
+        '<span class="gd-luft"></span><button type="button" class="gd-klein-link" data-action="gd-panel-zu">Abbrechen</button>' +
+        '<button type="button" class="gd-bereit" data-action="tag-bereit">BEREIT</button></header>' +
+      (o.fehler ? '<p class="gd-fehler" role="alert">' + esc(o.fehler) + '</p>' : '') +
+      '<div class="gd-panel-drei">' +
+        '<section class="gd-spalte"><span class="gd-klein-titel">REIHENFOLGE</span><div class="gd-rollen">' + zeilen + '</div></section>' +
+        '<section class="gd-spalte"><span class="gd-klein-titel">KADER</span><span class="gd-hinweis">Antippen, um einen Spieler in die nächste freie Position zu setzen oder wieder herauszunehmen.</span>' +
+          '<div class="gd-chips">' + chips + '</div>' +
+          '<button type="button" class="gd-plus" data-action="gd-panel" data-value="neu" data-seite="' + seite + '"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>Spieler</button></section>' +
+        '<section class="gd-spalte gd-gegner-spalte"><span class="gd-gegner-kopf">' + teamLogoHtml(andersTeam, 'mini') + '<span class="gd-klein-titel">' + (seite === 'wir' ? 'GEGNER' : 'WIR') + '</span><span class="gd-luft"></span>' +
+          '<span class="gd-status klein' + (aBereit ? ' bereit' : '') + '"><i></i>' + (aBereit ? 'Bereit!' : 'In Arbeit') + '</span></span>' +
+          '<span class="gd-team-name">' + esc(andersTeam) + '</span>' + gegenListe +
+          '<span class="gd-hinweis">' + (eins ? 'Das andere Team trägst du hier auch ein: Fenster schließen und dort Ändern.' : 'Erscheint, sobald ' + (seite === 'wir' ? 'der Gegner' : 'die andere Scheibe') + ' Bereit drückt.') + '</span></section>' +
+      '</div></div>';
+  }
+
+  function gdNeuHtml(o) {
+    var n = o.neu || (o.neu = { status: 'gast', u18: 'nein', g: 'm', foto: '' });
+    var seg = function (feld, opts) {
+      return '<div class="gd-seg">' + opts.map(function (x) {
+        return '<button type="button" class="' + (n[feld] === x[0] ? 'an' : '') + '" data-action="gd-neu-wahl" data-feld="' + feld + '" data-value="' + x[0] + '">' + x[1] + '</button>';
+      }).join('') + '</div>';
+    };
+    return '<div class="gd-schleier"><div class="gd-neu-karte" role="dialog" aria-modal="true" aria-label="Neuer Spieler">' +
+      '<b class="gd-neu-titel">NEUER SPIELER</b>' +
+      '<div class="gd-neu-foto">' + (n.foto && avatarSicher(n.foto) ? '<span class="av gd-av riesig" style="background-image:url(' + n.foto + ')"></span>' : '<span class="gd-leer riesig"></span>') +
+        '<span class="gd-neu-foto-knoepfe"><label class="gd-foto-knopf gross"><input type="file" accept="image/*" capture="user" data-role="gd-neu-foto" hidden>Foto aufnehmen</label>' +
+        '<label class="gd-foto-knopf gross"><input type="file" accept="image/*" data-role="gd-neu-foto" hidden>Aus Fotos</label><small>freiwillig</small></span></div>' +
+      '<label class="gd-feld"><span>Name</span><input data-role="gd-neu-name" maxlength="60" autocomplete="off" value="' + esc(n.name || '') + '" placeholder="Vorname Nachname"></label>' +
+      '<label class="gd-feld"><span>Anzeigename</span><input data-role="gd-neu-anzeige" maxlength="30" autocomplete="off" value="' + esc(n.anzeige || '') + '" placeholder="Spitzname, freiwillig"></label>' +
+      '<div class="gd-feld"><span>Status</span>' + seg('status', [['gast', 'Gastspieler'], ['neu', 'neu melden']]) + '</div>' +
+      '<div class="gd-feld zwei"><div><span>Unter 18?</span>' + seg('u18', [['nein', 'Nein'], ['ja', 'Ja']]) + '</div><div><span>Geschlecht</span>' + seg('g', [['w', 'w'], ['m', 'm'], ['d', 'd']]) + '</div></div>' +
+      '<p class="gd-hinweis">' + (n.status === 'neu' ? 'Neu melden: Die Unterschrift folgt in der App, spätestens vor den Unterschriften der Teamcaptains. Gebühr 10 € (U18: 2 €) innerhalb von 14 Tagen.' : 'Gastspieler: höchstens einer pro Mannschaft. Danach steht er im Kader und kann aufgestellt werden.') + '</p>' +
+      (o.neuFehler ? '<p class="gd-fehler" role="alert">' + esc(o.neuFehler) + '</p>' : '') +
+      '<div class="gd-frage-knoepfe"><button type="button" class="gd-klein-link gross" data-action="gd-panel" data-value="auf">Abbrechen</button>' +
+      '<button type="button" class="gd-bereit" data-action="gd-neu-hinzu">HINZUFÜGEN</button></div></div></div>';
+  }
+
+  function gdEinstellungenHtml(t, eins) {
+    var d = t.d;
+    var fest = !eins && t.platz === 'S2';
+    var opt = function (k, titel, text, werte, akt) {
+      return '<div class="gd-opt"><span class="gd-opt-text"><b>' + titel + '</b><small>' + text + '</small></span><div class="gd-seg">' +
+        werte.map(function (w) {
+          return '<button type="button" class="' + (akt === w[0] ? 'an' : '') + '"' + (fest ? ' disabled' : ' data-action="gd-opt" data-k="' + k + '" data-value="' + w[0] + '"') + '>' + w[1] + '</button>';
+        }).join('') + '</div></div>';
+    };
+    return '<div class="gd-schleier"><div class="gd-ein-karte" role="dialog" aria-modal="true" aria-label="Einstellungen">' +
+      '<b class="gd-neu-titel">EINSTELLUNGEN</b><span class="gd-hinweis">' + (fest ? 'Festgelegt an Scheibe 1 beim Erstellen. Hier nur zum Nachsehen.' : 'Gilt für beide Scheiben. Meist bleibt alles wie beim letzten Mal.') + '</span>' +
+      opt('finish', 'Finish-Anzeigen', 'Ohne ist ligakonform: der Schreiber sagt kein Doppel an. Mit zeigt Finishwege und fragt beim Checkout nach dem Doppel.', [['ohne', 'ohne'], ['mit', 'mit']], d.finish ? 'mit' : 'ohne') +
+      opt('live', 'Live für Zuschauer', 'Ohne Namen zeigt nur H1, G1 und die Stände.', [['namen', 'mit Namen'], ['anonym', 'ohne Namen']], d.ohneNamen ? 'anonym' : 'namen') +
+      opt('legs', 'Legs je Einzel', 'Liga 5 spielt Best of 3.', [['3', 'Best of 3'], ['5', 'Best of 5']], String(d.bestOf === 5 ? 5 : 3)) +
+      opt('mit', 'Mitschreiben', 'Nur Ergebnisse, wenn der Gegner mit eigenem System zählt. Ohne Ausbullen und Würfe, Zuschauer sehen nur die Ergebnisse.', [['app', 'in der App'], ['erg', 'nur Ergebnisse']], d.nurErgebnis ? 'erg' : 'app') +
+      '<div class="gd-ein-unten">' +
+        (t.platz ? '<button type="button" class="gd-klein-link" data-action="tag-verlassen">Dieses iPad von der Scheibe abmelden</button>' : '<span></span>') +
+        (t.bereit ? '<button type="button" class="gd-klein-link" data-action="tag-zu" data-spiel="1">Einwerfen: freies Spiel</button>' : '') +
+        '<button type="button" class="gd-bereit" data-action="gd-panel-zu">FERTIG</button></div>' +
+      '</div></div>';
+  }
+
   function ligaTagHinweisHtml(o) {
     var t = S.ligaTag, g = S.game;
     if (!t) return '<p>Der Game Day ist vorbei.</p><button class="btn primary full" data-action="ov-cancel">Schließen</button>';
@@ -28323,6 +29452,16 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         'Nur auf diesem iPad heißt: Das andere kann nicht mitschreiben (dort dann bitte nicht starten), und es gibt keinen Live-Ticker.</p>' +
         '<div class="row-btns two"><button class="btn hell" data-action="ov-cancel">Weiter versuchen</button>' +
         '<button class="btn ghost" data-action="tag-nur-hier">Nur auf diesem iPad</button></div>';
+    }
+    if (o.art === 'anwurf') {
+      return '<h3>20:00 Uhr · Anwurf</h3><p>Beide Aufstellungen sind bereit. Das Ligaspiel startet mit GAME ON am Game Day, die andere Scheibe bestätigt.</p>' +
+        '<div class="row-btns two"><button class="btn ghost" data-action="ov-cancel">Gleich</button>' +
+        '<button class="btn hell" data-action="tag-oeffnen">Zum Game Day</button></div>';
+    }
+    if (o.art === 'gameon') {
+      return '<h3>Scheibe ' + ligaTagAndere(t).charAt(1) + ' hat GAME ON gedrückt</h3><p>Kann es losgehen? Dann startet auf beiden Scheiben das erste Einzel mit Ausbullen.</p>' +
+        '<div class="row-btns two"><button class="btn ghost" data-action="gd-gameon-ab">Noch nicht</button>' +
+        '<button class="btn hell" data-action="tag-oeffnen">Zum Game Day</button></div>';
     }
     if (o.art === 'turnier') {
       return '<h3>Ligaspiel startet</h3><p>Hier läuft noch ein Turnier. Bitte erst abschließen oder beenden, dann steigt dieses iPad in das Ligaspiel ein.</p>' +
@@ -29466,7 +30605,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         render();
         break;
       case 'liga-team-info':
-        UI.overlay = { type: 'liga-team-info', team: el.getAttribute('data-team') };
+        /* Seit dem Redesign eine eigene Seite (Entwurf LigaTeam). */
+        UI.overlay = null;
+        UI.ligaTeamSeite = { team: el.getAttribute('data-team'), nr: Number(el.getAttribute('data-nr')) || LIGA_EIGENE_NR };
+        if (S.screen !== 'liga') S.screen = 'liga';
+        window.scrollTo(0, 0);
         render();
         break;
       case 'liga-einzel-alle': UI.ligaEinzelAlle = !UI.ligaEinzelAlle; ligaTabelleKennung = null; render(); break;
@@ -29844,6 +30987,41 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         // Ohne data-id: alle Termine. Mit: nur dieser eine Spieltag.
         ligaKalender(el.getAttribute('data-id') || null);
         break;
+      case 'liga-nr-auf':
+        UI.ligaNrAuf = !UI.ligaNrAuf;
+        render();
+        break;
+      case 'liga-nr':
+        UI.ligaNr = Number(el.getAttribute('data-nr')) || LIGA_EIGENE_NR;
+        UI.ligaNrAuf = false; UI.ligaRunde = null; ligaGesamtFehlZeit = 0;
+        render();
+        break;
+      case 'liga-runde-blaettern':
+        if (UI.ligaRunde) UI.ligaRunde = { nr: UI.ligaRunde.nr, i: UI.ligaRunde.i + Number(el.getAttribute('data-wert')) };
+        render();
+        break;
+      case 'liga-hl-alle':
+        UI.ligaHlAlle = !UI.ligaHlAlle;
+        render();
+        break;
+      case 'liga-tab-team': {
+        /* Unsere Liga: die Mannschaftsstatistik des Teams; andere Ligen:
+           die Teamseite (dort gibt es keine Statistik). */
+        var ttTeam = el.getAttribute('data-team'), ttNr = Number(el.getAttribute('data-nr')) || LIGA_EIGENE_NR;
+        if (ttNr === LIGA_EIGENE_NR) {
+          UI.ligaTab = 'statistik'; UI.ligaTeam = ttTeam === LIGA.team ? 'wir' : ttTeam;
+          window.scrollTo(0, 0);
+        } else {
+          UI.ligaTeamSeite = { team: ttTeam, nr: ttNr };
+          window.scrollTo(0, 0);
+        }
+        render();
+        break;
+      }
+      case 'liga-team-zu':
+        UI.ligaTeamSeite = null;
+        render();
+        break;
       case 'liga-saison':
         UI.ligaSaison = !UI.ligaSaison;
         render();
@@ -29853,11 +31031,36 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         render();
         break;
       case 'liga-einst':
-        UI.overlay = { type: 'liga-einst' };
+        UI.ligaEinst = UI.ligaEinst ? null : 'darst'; UI.ligaTeamSeite = null;
+        window.scrollTo(0, 0);
         render();
         break;
+      case 'liga-einst-zu':
+        UI.ligaEinst = null;
+        render();
+        break;
+      case 'liga-einst-bereich':
+        UI.ligaEinst = el.getAttribute('data-value') || 'darst';
+        render();
+        break;
+      case 'le-wert': {
+        var lwK = el.getAttribute('data-k'), lwV = el.getAttribute('data-value');
+        if (lwK === 'modus') { S.settings.hell = Number(lwV); }
+        else {
+          var lwVor = ligaVorgaben();
+          if (lwK === 'legs') lwVor.bestOf = lwV === '5' ? 5 : 3;
+          else if (lwK === 'finish') lwVor.finish = lwV === 'mit';
+          else if (lwK === 'live') lwVor.ohneNamen = lwV === 'anonym';
+          else if (lwK === 'mit') lwVor.nurErgebnis = lwV === 'erg';
+          S.settings.ligaVor = lwVor;
+        }
+        save(); render();
+        break;
+      }
       case 'liga-tab':
         UI.ligaTab = el.getAttribute('data-tab');
+        UI.ligaTeamSeite = null; UI.ligaNrAuf = false; UI.ligaEinst = null;
+        if (UI.ligaTab === 'kasse' && el.closest && el.closest('#liga-einstellungen')) UI.kasseForm = true;
         UI.boardLog = false;
         render();
         break;
@@ -29937,9 +31140,132 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       case 'tag-optionen':
         if (UI.overlay) { UI.overlay.optionen = !UI.overlay.optionen; render(); }
         break;
-      case 'tag-bereit':
+      case 'tag-bereit': {
+        /* Ein iPad fuer beide Teams: BEREIT im Fenster prueft erst diese
+           Seite und fuehrt dann zur anderen (Entwurf A2). */
+        var tbT = ligaTagAktiv(), tbO = UI.overlay;
+        if (tbT && tbO && tbO.panel === 'auf' && (!ligaTagGeteilt() || !ligaTagZuZweit(tbT))) {
+          var tbSeite = tbO.seite === 'gegner' ? 'gegner' : 'wir', tbAndere = tbSeite === 'wir' ? 'gegner' : 'wir';
+          var tbTeil = {}; tbTeil[tbSeite] = true;
+          var tbF = ligaStartPruefen(tbT.d, tbTeil);
+          if (tbF) { tbO.fehler = tbF; render(); break; }
+          var tbTeil2 = {}; tbTeil2[tbAndere] = true;
+          if (ligaStartPruefen(tbT.d, tbTeil2)) { tbO.seite = tbAndere; tbO.fehler = 'Jetzt die Aufstellung von ' + (tbAndere === 'wir' ? LIGA.team : ligaTagTermin(tbT.terminId) && (ligaTagTermin(tbT.terminId).heim === LIGA.team ? ligaTagTermin(tbT.terminId).gast : ligaTagTermin(tbT.terminId).heim)) + '.'; render(); break; }
+        }
         ligaTagBereit();
         break;
+      }
+      case 'gd-panel': {
+        var gpO = UI.overlay;
+        if (!gpO) break;
+        gpO.panel = el.getAttribute('data-value') || null; gpO.fehler = '';
+        if (gpO.panel === 'neu') { gpO.neu = { status: 'gast', u18: 'nein', g: 'm', foto: '', name: '', anzeige: '' }; gpO.neuFehler = ''; }
+        render();
+        break;
+      }
+      case 'gd-panel-zu':
+        if (UI.overlay) { UI.overlay.panel = null; UI.overlay.fehler = ''; render(); }
+        break;
+      case 'gd-auf': {
+        var gaT = ligaTagAktiv(), gaO = UI.overlay;
+        if (!gaT || !gaO) break;
+        if (gaT.bereit) ligaTagNichtBereit();
+        gaO.panel = 'auf'; gaO.seite = el.getAttribute('data-value') === 'gegner' ? 'gegner' : 'wir'; gaO.fehler = '';
+        if (ligaTagZuZweit(gaT)) gaT.seite = gaO.seite;
+        render();
+        break;
+      }
+      case 'gd-chip': {
+        var gcT = ligaTagAktiv();
+        if (!gcT) break;
+        var gcD = gcT.d, gcS = el.getAttribute('data-seite') === 'gegner' ? 'gegner' : 'wir';
+        var gcId = el.getAttribute('data-id') || '', gcName = el.getAttribute('data-name') || '';
+        var gcDrin = -1, gcFrei = -1;
+        for (var gci = 0; gci < 8; gci++) {
+          var gcX = gdPos(gcD, gcS, gci);
+          if (gcS === 'wir' ? gcX.id === gcId : gcX.name === gcName) gcDrin = gci;
+          if (gcFrei < 0 && !gcX.name) gcFrei = gci;
+        }
+        if (gcDrin >= 0) gdPosSetzen(gcD, gcS, gcDrin, {});
+        else if (gcFrei >= 0) {
+          if (gcS === 'wir') gdPosSetzen(gcD, 'wir', gcFrei, { id: gcId, typ: '' });
+          else { var gcT2 = gcName.split(' '); gdPosSetzen(gcD, 'gegner', gcFrei, { vor: gcT2.slice(0, -1).join(' ') || gcName, nach: gcT2.length > 1 ? gcT2[gcT2.length - 1] : '', typ: '' }); }
+        }
+        ligaTagGetippt = Date.now(); save(); render();
+        break;
+      }
+      case 'gd-raus': {
+        var grT = ligaTagAktiv();
+        if (!grT) break;
+        gdPosSetzen(grT.d, el.getAttribute('data-seite') === 'gegner' ? 'gegner' : 'wir', Number(el.getAttribute('data-i')), {});
+        ligaTagGetippt = Date.now(); save(); render();
+        break;
+      }
+      case 'gd-typ': {
+        var gtT = ligaTagAktiv();
+        if (!gtT) break;
+        var gtS = el.getAttribute('data-seite') === 'gegner' ? 'gegner' : 'wir', gtI = Number(el.getAttribute('data-i'));
+        var gtX = gdPos(gtT.d, gtS, gtI);
+        gtX.typ = GD_TYP_REIHE[(GD_TYP_REIHE.indexOf(gtX.typ || '') + 1) % GD_TYP_REIHE.length];
+        gdPosSetzen(gtT.d, gtS, gtI, gtX);
+        ligaTagGetippt = Date.now(); save(); render();
+        break;
+      }
+      case 'gd-neu-wahl':
+        if (UI.overlay && UI.overlay.neu) { UI.overlay.neu[el.getAttribute('data-feld')] = el.getAttribute('data-value'); render(); }
+        break;
+      case 'gd-neu-hinzu': {
+        var gnT = ligaTagAktiv(), gnO = UI.overlay;
+        if (!gnT || !gnO || !gnO.neu) break;
+        var gnN = gnO.neu, gnName = String(gnN.name || '').replace(/\s+/g, ' ').trim();
+        var gnTeile = gnName.split(' ');
+        if (gnTeile.length < 2) { gnO.neuFehler = 'Bitte Vor- und Nachnamen eintragen.'; render(); break; }
+        var gnS = gnO.seite === 'gegner' ? 'gegner' : 'wir', gnFrei = -1;
+        for (var gni = 0; gni < 8; gni++) if (gnFrei < 0 && !gdPos(gnT.d, gnS, gni).name) gnFrei = gni;
+        if (gnFrei < 0) { gnO.neuFehler = 'Alle acht Positionen sind belegt.'; render(); break; }
+        var gnVor = gnTeile.slice(0, -1).join(' '), gnNach = gnTeile[gnTeile.length - 1];
+        var gnTyp = gnN.status === 'neu' ? 'neu' : 'gast';
+        if (gnS === 'wir') gdPosSetzen(gnT.d, 'wir', gnFrei, { id: '__name', vor: gnVor, nach: gnNach, typ: gnTyp });
+        else gdPosSetzen(gnT.d, 'gegner', gnFrei, { vor: gnVor, nach: gnNach, typ: gnTyp });
+        gdErsatzBereit(gnT.d);
+        if (gnN.foto) gnT.d.fotos[(gnS === 'gegner' ? 'g' : 'w') + gnFrei] = gnN.foto;
+        /* U18 und Geschlecht fuer die Nachmeldung merken (der Unterschrift-Dialog fragt sie). */
+        if (gnTyp === 'neu') { if (!gnT.d.neuInfo) gnT.d.neuInfo = {}; gnT.d.neuInfo[(gnS === 'gegner' ? 'g' : 'w') + gnFrei] = { u18: gnN.u18, g: gnN.g }; }
+        gnO.panel = 'auf'; gnO.neu = null; gnO.neuFehler = '';
+        ligaTagGetippt = Date.now(); save(); render();
+        break;
+      }
+      case 'gd-opt': {
+        var goT = ligaTagAktiv();
+        if (!goT) break;
+        var goK = el.getAttribute('data-k'), goV = el.getAttribute('data-value'), goD = goT.d;
+        if (goK === 'finish') goD.finish = goV === 'mit';
+        else if (goK === 'live') goD.ohneNamen = goV === 'anonym';
+        else if (goK === 'legs') goD.bestOf = goV === '5' ? 5 : 3;
+        else if (goK === 'mit') goD.nurErgebnis = goV === 'erg';
+        ligaTagGetippt = Date.now(); save(); render();
+        break;
+      }
+      case 'gd-challenge':
+        gdChallenge(true); render();
+        break;
+      case 'gd-los':
+        ligaTagStarten(false);
+        break;
+      case 'gd-gameon-ab':
+        if (UI.overlay && UI.overlay.type === 'ligatag-hinweis') UI.overlay = null;
+        ligaTagAbgleich({ gameOn: false }).then(function () { ligaTagZeichnen(true); });
+        render();
+        break;
+      case 'gd-zuschauer': {
+        /* Zuschauer: dieses Geraet traegt nichts ein. Laeuft das Spiel, geht
+           es zum Live-Ticker, sonst zurueck zum Spielplan. */
+        var gzF = ligaLiveFremd();
+        UI.overlay = null;
+        if (gzF && gzF.zuschauer) { render(); handleActionInner('live-ansehen', { getAttribute: function (n) { return n === 'data-k' ? gzF.zuschauer : null; } }); }
+        else { UI.overlay = { type: 'hinweis', titel: 'Zuschauer', text: 'Sobald das Ligaspiel läuft, siehst du es hier im Spielplan unter LIVE. Vorher gibt es noch nichts zu sehen.' }; render(); }
+        break;
+      }
       case 'tag-aendern':
         ligaTagNichtBereit();
         break;
@@ -29993,6 +31319,11 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         }
         break;
       case 'uebung-start': {
+        /* Die Zeilen im Training waehlen den Gegner gleich mit (zweites
+           Team, Bots, naechster Gegner); die Bot-Staerke bleibt im Dialog. */
+        var usG = el && el.getAttribute ? el.getAttribute('data-gegner') : null;
+        if (usG === 'team' || usG === 'liga') UI.uebungGegner = usG;
+        else if (usG === 'bots' && ['leicht', 'mittel', 'schwer'].indexOf(UI.uebungGegner) < 0) UI.uebungGegner = 'mittel';
         /* Aufstellung vorbelegen: erst die DiensDarts-Zusagen, dann der
            Rest der aktiven Profile - Team B bekommt die naechsten vier. */
         var utAktive = activeProfiles().filter(function (p) { return !p.bot; });
@@ -30020,7 +31351,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         UI.uebungGegner = el.getAttribute('data-value') === 'bots' ? (UI.uebungGegner === 'team' || !UI.uebungGegner ? 'mittel' : UI.uebungGegner) : el.getAttribute('data-value');
         render();
         break;
-      case 'training-ical': trainingKalender(); break;
+      case 'training-ical': {
+        var tiTid = el.getAttribute('data-tid') || '';
+        var tiM = /^tr(\d{4})(\d{2})(\d{2})$/.exec(tiTid);
+        trainingKalender(tiM ? new Date(+tiM[1], +tiM[2] - 1, +tiM[3], 12) : null);
+        break;
+      }
       case 'uebung-gegner':
         if (UI.overlay && UI.overlay.type === 'uebung-start') {
           UI.overlay.draft.modus = el.getAttribute('data-value');
@@ -30066,7 +31402,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         };
         (UI.kasseEdit ? window.DartSync.kasse.aendern(UI.kasseEdit.id, kbDaten) : window.DartSync.kasse.buchen(kbDaten)).then(function (d) {
           kasseDaten = d;
-          UI.kasseArt = 'ein'; UI.kasseKategorie = null; UI.kasseEdit = null;
+          UI.kasseArt = 'ein'; UI.kasseKategorie = null; UI.kasseEdit = null; UI.kasseForm = false; UI.kasseZeile = null;
           if ($('kasse-betrag')) $('kasse-betrag').value = '';
           if ($('kasse-text')) $('kasse-text').value = '';
           if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
@@ -30096,7 +31432,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         var keId = Number(el.getAttribute('data-id'));
         var keE = (kasseDaten.eintraege || []).filter(function (e) { return e.id === keId; })[0];
         if (!keE) break;
-        UI.kasseEdit = keE;
+        UI.kasseEdit = keE; UI.kasseZeile = null;
         UI.kasseArt = keE.betrag < 0 ? 'aus' : 'ein';
         UI.kasseKategorie = keE.kategorie;
         if ($('kasse-betrag')) $('kasse-betrag').value = '';
@@ -30107,8 +31443,19 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         if (keForm && keForm.scrollIntoView) keForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
         break;
       }
+      case 'kasse-form':
+        UI.kasseForm = true;
+        render();
+        if ($('kasse-betrag')) $('kasse-betrag').focus();
+        break;
+      case 'kasse-zeile': {
+        var kzId = Number(el.getAttribute('data-id'));
+        UI.kasseZeile = UI.kasseZeile === kzId ? null : kzId;
+        render();
+        break;
+      }
       case 'kasse-edit-abbruch': {
-        UI.kasseEdit = null; UI.kasseArt = 'ein'; UI.kasseKategorie = null;
+        UI.kasseEdit = null; UI.kasseArt = 'ein'; UI.kasseKategorie = null; UI.kasseForm = false;
         if ($('kasse-betrag')) $('kasse-betrag').value = '';
         if ($('kasse-text')) $('kasse-text').value = '';
         if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
@@ -30136,13 +31483,24 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         }).catch(function () { /* bleibt stehen */ });
         break;
       }
+      case 'training-wahl':
+        UI.trainingWahl = el.getAttribute('data-tid');
+        render();
+        break;
+      case 'training-aendern':
+        UI.trainingAendern = el.getAttribute('data-tid');
+        render();
+        break;
       case 'training-zusage': {
         if (!(window.DartSync && window.DartSync.liga && window.DartKonto && window.DartKonto.nutzer())) return;
         var tzTid = el.getAttribute('data-tid');
-        /* Nochmal auf die eigene Antwort tippen traegt sie wieder aus. */
-        var tzStatus = el.classList.contains('aktiv') ? null : el.getAttribute('data-status');
+        /* DABEI oder KANN NICHT - ein Entweder-oder wie im Spielplan; die
+           eigene Antwort nochmal antippen schliesst nur "ändern". */
+        if (el.classList.contains('an')) { UI.trainingAendern = null; render(); return; }
+        var tzStatus = el.getAttribute('data-status');
         window.DartSync.liga.zusage(tzTid, tzStatus).then(function (z) {
           ligaZusagen = z;
+          UI.trainingAendern = null;
           render();
         }).catch(function (e) { zusageFehlgeschlagen(e); });
         break;
@@ -31276,6 +32634,25 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     });
   }
   $('avatar-input').addEventListener('change', bildGewaehlt);
+  /* Game Day: Fotos fuer Positionen und neue Spieler (freiwillig). */
+  document.addEventListener('change', function (ev) {
+    var r = ev.target && ev.target.getAttribute && ev.target.getAttribute('data-role');
+    if (r !== 'gd-foto' && r !== 'gd-neu-foto') return;
+    var f = ev.target.files && ev.target.files[0];
+    if (!f) return;
+    var seite = ev.target.getAttribute('data-seite') === 'gegner' ? 'g' : 'w', i = ev.target.getAttribute('data-i');
+    readAvatar(f, function (url) {
+      var t = ligaTagAktiv();
+      if (!url || !t) return;
+      if (r === 'gd-neu-foto') { if (UI.overlay && UI.overlay.neu) UI.overlay.neu.foto = url; }
+      else { gdErsatzBereit(t.d); t.d.fotos[seite + i] = url; save(); }
+      render();
+    });
+  });
+  document.addEventListener('input', function (ev) {
+    var r = ev.target && ev.target.getAttribute && ev.target.getAttribute('data-role');
+    if ((r === 'gd-neu-name' || r === 'gd-neu-anzeige') && UI.overlay && UI.overlay.neu) UI.overlay.neu[r === 'gd-neu-name' ? 'name' : 'anzeige'] = ev.target.value;
+  });
   if ($('avatar-kamera')) $('avatar-kamera').addEventListener('change', bildGewaehlt);
 
   /* Als Schaltfläche angesagte Elemente müssen auch per Tastatur gehen. */

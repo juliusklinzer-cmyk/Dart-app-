@@ -1,7 +1,7 @@
 # Backlog – Darts App
 
 ## In Arbeit
-- [ ] DRT-097 Liga-Redesign nach Entwurf in Paketen: 1) Kopf, Hell/Dunkel-Tokens, Spielplan (v226); offen: Training, Tabelle, Statistik (Mannschaft, Rangliste, Einzel), Kasse, Regeln, Liga-Einstellungen mit Rollen, Teamseite, Ligaspiel-Ablauf, Game Day mit GAME-ON-Bestätigung, Live/TV/Handy · von:Julius · am:2026-11-28
+- [ ] DRT-097 Liga-Redesign nach Entwurf in Paketen: 1) Kopf, Hell/Dunkel-Tokens, Spielplan (v226); 2) Training, Kasse, Regeln; 3) Tabelle mit Ligen 1-5, Teamseite; Einstellungen; Live-Ticker (Handy, Browser, TV, App, ohne Namen); Game Day mit GAME-ON-Bestaetigung, Ersatz, Challenge (v228); offen (in Arbeit): Training, Tabelle, Statistik (Mannschaft, Rangliste, Einzel), Kasse, Regeln, Liga-Einstellungen mit Rollen, Teamseite, Ligaspiel-Ablauf, Game Day mit GAME-ON-Bestätigung, Live/TV/Handy · von:Julius · am:2026-11-28
 
 
 ## Wartet auf Julius
