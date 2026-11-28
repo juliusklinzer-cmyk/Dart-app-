@@ -693,6 +693,33 @@ Spielbericht). Am Handy quer entfällt die Endstand-Karte. Spielerwechsel und vo
 Am Tablet steht alles fest im Rahmen, der Spielplan scrollt innen; am Handy quer
 entfällt die Turnier-Statistik.
 
+**Zählen im Ligaspiel** (Entwurf „Zählen“, Redesign November 2026): Im Ligaspiel
+(auch im Übungs-Ligaspiel) hat das X01 ein eigenes Spielbild in den Farben hell/dunkel
+(Darstellung im Profil). Kopf: links „Einzel 5 von 16 · Scheibe 1 · Best of 3 · 501“,
+rechts der Teamstand (Tipp darauf zeigt den Zwischenstand groß) und runde Knöpfe für
+Tastatur, Einzel-Darts (nur von Hand), Tastenbelegung und das Menü (•••). **Mit
+Tastatur** stehen zwei große Karten nebeneinander – Name mit Bogen-Position (H1/G2),
+Legs, Schnitt des Einzels, der Rest in Plakatgröße, darunter der Finish-Weg (nur mit
+Finish-Anzeigen; ein Tipp bucht ihn) und die letzten sechs Aufnahmen, die jüngste groß
+vorn (ein Tipp darauf korrigiert sie); unten in der Mitte die getippte Zahl. **Von Hand**
+stehen die Karten links untereinander, rechts Meldung, getippte Zahl, Schnellwahl und
+Ziffernblock; ein Tipp auf ⌨ wechselt, die neue Ansicht gleitet herein. Einzelne Darts
+stehen nur dort, wo sie erfasst wurden (Einzel-Darts, Autodarts) – die Punkte-Eingabe
+kennt nur die Summe. **Warnungen**: mehr als 180 oder eine unmögliche Summe bleibt rot
+stehen und wackelt (Enter bucht nie), mehr als der Rest gelb mit „Enter bucht als
+überworfen, Löschen korrigiert“. Shift oder + gedrückt zeigt alle Würfe groß, „*“ (oder
+der Tipp auf den Teamstand) den **Zwischenstand** mit dem, was gerade läuft. Die Dialoge
+tragen oben die Leiste des Ligaspiels (Spieltag, Teams mit Stand, Ort und Scheibe) über
+dem weichgezeichneten Spielbild: **Checkout** – erst die Dartzahl (1/2/3, „D20 ist klar“),
+mit Finish-Anzeigen bei offenem Doppel danach „Auf welchem Doppel?“, gebucht wird mit
+„Leg bestätigen“ (Tastatur: 1/2/3 oder Pfeile, Enter; Löschen führt von der Doppel-Frage
+zurück), **Leg gewonnen** mit Rest, Darts und Doppel (wenn erfasst), Shortleg- bzw.
+Highfinish-Hinweis, Kurzstatistik und wer das nächste Leg anwirft, **Ergebnis nach dem
+Einzel** mit Sieger, Legs, Average, First 9, 180ern, höchstem Finish, bestem Leg und dem
+nächsten Einzel laut Bogen, **Aufnahme korrigieren** mit altem und neuem Wert. Das
+**Ausbullen** im Ligaspiel trägt unten „Nicht da? w.o. werten“: es öffnet den
+vorhandenen Dialog „Kampflos werten“, danach geht es in die Übersicht.
+
 Das **Ausbullen** (Entwurf „Ausbullen“, Oktober 2026) ist auf allen Spielarten
 gleich: „Zurück“ oben links, Zielscheibe und Titel mittig, rechts oben der
 Zusammenhang („Spiel 3 von 6“, „Cricket · 4 Spieler“). Zu zweit stehen zwei große
@@ -1025,12 +1052,14 @@ markiert, im Einzel-Dart-Modus ist die passende Zahl zusätzlich umrandet.
 
 **Regeln, die die App durchsetzt:**
 - Double Out: Wer mit einem Single/Triple auf 0 kommt, hat überworfen.
-- Bust bei Rest unter 0 oder Rest 1 – der Stand vor der Aufnahme bleibt stehen.
+- Bust bei Rest unter 0 oder Rest 1 – der Stand vor der Aufnahme bleibt stehen. Im
+  Ligaspiel fragt die App bei **mehr als dem Rest** erst nach: die Zahl bleibt gelb
+  stehen, erst das zweite Enter (bzw. OK) bucht sie als überworfen, Löschen korrigiert.
 - Bei Eingabe der Gesamtpunktzahl fragt die App bei einem Finish nach, mit wie vielen
   Darts ausgecheckt wurde (nur die tatsächlich möglichen Anzahlen stehen zur Wahl),
   damit der Average stimmt.
-- **Welches Doppel?** (Julius, 12.11.2026, DRT-035): Danach fragt die App außer im
-  Ligaspiel, auf welchem Doppel zugemacht wurde – per Ausschlussverfahren aus Rest und
+- **Welches Doppel?** (Julius, 12.11.2026, DRT-035): Danach fragt die App, auf welchem
+  Doppel zugemacht wurde (im Ligaspiel nur mit Finish-Anzeigen, siehe unten) – per Ausschlussverfahren aus Rest und
   Dartzahl (`doppelKandidaten`): Steht das Doppel fest (32 mit einem Dart = D16), fragt
   sie nicht. Vorn stehen groß die naheliegenden Doppel – bei einem schon finishbaren Rest
   das Doppel selbst (erster Dart vorbei), das halbe nach einem Treffer ins einfache Feld
@@ -1043,8 +1072,10 @@ markiert, im Einzel-Dart-Modus ist die passende Zahl zusätzlich umrandet.
   `dd` an der Aufnahme (1–20, 25 = Bull) und zählt in Doppelquote und Doppel-Analyse:
   war der Rest vor der Aufnahme schon mit einem Dart zu machen, lagen alle Darts der
   Aufnahme auf einem Doppel (der erste auf dem des Rests, die weiteren auf dem
-  Finish-Doppel), sonst nur der Finish-Dart. Im Ligaspiel bleibt die Frage aus – der
-  Schreiber ist Schiedsrichter –, eindeutige Doppel werden aber auch dort vermerkt.
+  Finish-Doppel), sonst nur der Finish-Dart. Im Ligaspiel entscheidet seit dem
+  28.11.2026 (Julius) die Einstellung **Finish-Anzeigen**: mit Anzeigen fragt die App
+  nach dem Doppel, ohne (ligakonform, der Schreiber ist Schiedsrichter) nicht –
+  eindeutige Doppel werden in beiden Fällen vermerkt.
 - Mit 3 Darts unmögliche Summen (179, 178, 176, 175, 173, 172, 169, 166, 163) werden
   abgelehnt.
 

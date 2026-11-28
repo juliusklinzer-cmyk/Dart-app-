@@ -163,6 +163,13 @@ async function profilOeffnen(g) {
    data-mode gibt es seit dem Kopf-Umbau nicht mehr. */
 async function modusAuf(page, ziel) {
   const sichtbar = (sel) => page.locator(sel).isVisible();
+  /* Ligaspiel: eigenes Spielbild (#lz-spiel), die Knoepfe stehen in seinem Kopf. */
+  if (await page.locator('#screen-game.lz.active').count()) {
+    if (await page.locator('#lz-spiel.lz-tast').count()) await page.locator('#lz-spiel [data-action="game-fern"]').click();
+    const lzIst = (await page.locator('#lz-spiel.lz-darts').count()) ? 'darts' : 'total';
+    if (lzIst !== ziel) await page.locator('#lz-spiel [data-action="game-swap"]').click();
+    return;
+  }
   if (await sichtbar('#pad-key')) await page.locator('#game-fern').click();
   const ist = (await sichtbar('#pad-darts')) ? 'darts' : 'total';
   if (ist !== ziel) await page.locator('#game-swap').click();
@@ -204,8 +211,10 @@ async function nachmeldungZu(g) {
 
 /* Punktzahl ueber das Zahlenfeld eintippen -- so wie am Board auch. */
 async function typeScoreAuf(page, n) {
-  for (const c of String(n)) await page.locator('.keypad button[data-key="' + c + '"]').click();
-  await page.locator('.keypad button[data-key="ok"]').click();
+  /* Im Ligaspiel steht das Zahlenfeld im eigenen Spielbild. */
+  const pad = (await page.locator('#screen-game.lz.active').count()) ? '#lz-spiel .lz-tasten' : '.keypad';
+  for (const c of String(n)) await page.locator(pad + ' button[data-key="' + c + '"]').click();
+  await page.locator(pad + ' button[data-key="ok"]').click();
 }
 
 /* Wartet bis zu `ms` auf eine Bedingung in der Seite und liefert true/false,
@@ -719,6 +728,7 @@ async function main() {
       if (await tobi.page.locator('#overlay-card [data-action="co-darts"]').count()) {
         await tobi.page.locator('#overlay-card [data-action="co-darts"]').first().click();
         if (await tobi.page.locator('#overlay-card [data-action="co-doppel"]').count()) await tobi.page.locator('#overlay-card [data-action="co-doppel"]').first().click();
+        if (await tobi.page.locator('#overlay-card [data-action="co-ok"]').count()) await tobi.page.locator('#overlay-card [data-action="co-ok"]').click();
       }
       await tobi.page.waitForTimeout(900);
       check('Tobis Partie ist entschieden',
@@ -1162,6 +1172,7 @@ async function main() {
       if (await julius.page.locator('#overlay-card [data-action="co-darts"]').count()) {
         await julius.page.locator('#overlay-card [data-action="co-darts"]').first().click();
         if (await julius.page.locator('#overlay-card [data-action="co-doppel"]').count()) await julius.page.locator('#overlay-card [data-action="co-doppel"]').first().click();
+        if (await julius.page.locator('#overlay-card [data-action="co-ok"]').count()) await julius.page.locator('#overlay-card [data-action="co-ok"]').click();
       }
       await julius.page.waitForTimeout(900);
       check('Julius hat ausgemacht', await julius.page.evaluate(() => window.__dart.state().game.done));
