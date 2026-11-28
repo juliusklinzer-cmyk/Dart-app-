@@ -407,11 +407,12 @@ export function ligaGesamtDienst({ appDir, datenDir, an, taktMs }) {
         fs.writeFileSync(datei + '.neu', JSON.stringify(daten));
         fs.renameSync(datei + '.neu', datei);
         console.log('[liga-gesamt] neuer Stand: ' + r.zusammenfassung);
+        r.geaendert = true;
       }
       return r;
     } catch (e) {
       console.error('[liga-gesamt] Abgleich fehlgeschlagen: ' + ((e && e.message) || e));
-      return null;
+      return { fehler: String((e && e.message) || e) };
     } finally {
       laeuft = false;
     }

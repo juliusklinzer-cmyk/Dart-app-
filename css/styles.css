@@ -7120,7 +7120,9 @@ button.pa-gruppe { cursor: pointer; }
   .ios-oben {
     display: block; position: fixed; inset: 0 0 auto; height: 11px;
     pointer-events: none; z-index: 1000;
-    background: var(--bg);
+    /* --t-bg ist ausserhalb der hellen Bereiche gleich --bg (#0d0a0b);
+       im hellen Bereich hell, wie Seite und Statusleiste (theme-color). */
+    background: var(--t-bg, var(--bg));
   }
 }
 
@@ -8460,6 +8462,12 @@ html[data-hell="1"].t-bereich { color-scheme: light; }
 #screen-liga .lg-tabelle { gap: 24px 40px; }
 .lg-ligawahl { flex: 1 1 100%; display: flex; align-items: center; flex-wrap: wrap; gap: 12px 24px; }
 .lg-ligawahl-box { position: relative; display: flex; align-items: center; gap: 12px; }
+/* "Daten aktualisieren" (nur TCs und Admin): rechts in der Zeile der Ligawahl. */
+.lg-holen { margin-left: auto; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
+.lg-holen-knopf { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin: 0; padding: 0 16px; border-radius: 8px; border: 0; background: transparent; box-shadow: inset 0 0 0 1.5px var(--t-linie); color: var(--t-text); font-family: var(--font-body); font-size: 15px; font-weight: 600; cursor: pointer; }
+.lg-holen-knopf:disabled { opacity: 0.55; cursor: default; }
+.lg-holen-text { font-size: 14px; color: var(--t-leise); }
+.lg-holen-text.fehler { color: var(--t-rot); }
 .lg-klein-titel { font-size: 12px; font-weight: 700; letter-spacing: 1.5px; color: var(--t-leise); text-transform: uppercase; }
 .lg-ligaknopf { display: flex; align-items: center; gap: 10px; min-height: 44px; min-width: 210px; margin: 0; padding: 0 14px; border-radius: 8px; border: 0; background: var(--t-fl); box-shadow: inset 0 0 0 1px var(--t-linie); color: var(--t-text); font-family: var(--font-body); font-size: 16px; font-weight: 700; cursor: pointer; }
 .lg-ligaknopf span { flex: 1; text-align: left; }
@@ -9041,14 +9049,23 @@ html[data-hell="1"] .lst {
 .lst-tz .sv { font-family: var(--font-cond); font-weight: 700; font-size: 14px; color: var(--t-leise); text-align: center; }
 .lst-tz .w { font-family: var(--font-cond); font-weight: 700; font-size: 15px; text-align: right; white-space: nowrap; }
 /* Bewegung nur bei neuer Auswahl (.anim): Karten blenden auf, Balken wachsen, Ringe fuellen sich. */
-@keyframes lst-auf { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+/* Wie in der alten Statistik (st-rein, st-grow): Karten gleiten 18 px herein,
+   die Kennzahlen springen auf; jede Karte erst, wenn sie ins Bild scrollt
+   (.lst-wart, lstNachRender), die Zahlen zaehlen dabei hoch. */
+@keyframes lst-auf { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes lst-pop { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: none; } }
 @keyframes lst-breit { from { transform: scaleX(0); } to { transform: none; } }
 @keyframes lst-ring { from { stroke-dashoffset: 326.7; } to { stroke-dashoffset: var(--o); } }
-.lst.anim .lst-karte { animation: lst-auf 0.45s ease both; }
+.lst.anim .lst-karte { animation: lst-auf 0.6s ease both; }
+.lst.anim .lst-karte.lst-kpi { animation: lst-pop 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+.lst.anim .lst-kpis > .lst-kpi:nth-child(2) { animation-delay: 0.06s; }
+.lst.anim .lst-kpis > .lst-kpi:nth-child(3) { animation-delay: 0.12s; }
+.lst.anim .lst-kpis > .lst-kpi:nth-child(4) { animation-delay: 0.18s; }
+.lst.anim .lst-wart, .lst.anim .lst-wart * { animation-play-state: paused !important; }
 .lst.anim .lst-bz-bar i, .lst.anim .lst-wbar i, .lst.anim .lst-voll i, .lst.anim .lst-ha-bar i, .lst.anim .lst-split i:first-child { transform-origin: left center; animation: lst-breit 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) 0.15s both; }
 .lst.anim .lst-ring-wert { animation: lst-ring 1.1s cubic-bezier(0.2, 0.7, 0.2, 1) 0.2s both; }
 @media (prefers-reduced-motion: reduce) {
-  .lst.anim .lst-karte, .lst.anim .lst-bz-bar i, .lst.anim .lst-wbar i, .lst.anim .lst-voll i, .lst.anim .lst-ha-bar i, .lst.anim .lst-split i, .lst.anim .lst-ring-wert { animation: none; }
+  .lst.anim .lst-karte, .lst.anim .lst-karte.lst-kpi, .lst.anim .lst-bz-bar i, .lst.anim .lst-wbar i, .lst.anim .lst-voll i, .lst.anim .lst-ha-bar i, .lst.anim .lst-split i, .lst.anim .lst-ring-wert { animation: none; }
 }
 /* Tablet hochkant (die Seite ist dort hoechstens 860 px breit, --maxw) und
    schmale Fenster: zwei Spalten, gemischte Reihen untereinander. */
@@ -9781,15 +9798,22 @@ body:has(> #screen-game.lz.active) { padding-bottom: 0; }
   background: var(--t-bg); color: var(--t-text); font-family: var(--font-body);
 }
 .lz-spiel.lz-hand { gap: 12px; padding-bottom: max(20px, env(safe-area-inset-bottom, 0px)); }
-.lz-spiel.lz-rein-hand > .lz-haupt { animation: lzReinHand 0.55s cubic-bezier(0.23, 1, 0.32, 1) both; }
-.lz-spiel.lz-rein-tast > .lz-haupt, .lz-spiel.lz-rein-tast > .lz-fuss { animation: lzReinTast 0.4s ease both; }
+.lz-spiel.lz-rein-hand > .lz-haupt { animation: lzReinHand 0.55s cubic-bezier(0.23, 1, 0.32, 1) both; animation-delay: var(--lz-rein-verz, 0ms); }
+.lz-spiel.lz-rein-tast > .lz-haupt, .lz-spiel.lz-rein-tast > .lz-fuss { animation: lzReinTast 0.4s ease both; animation-delay: var(--lz-rein-verz, 0ms); }
 .lz-spiel button { touch-action: manipulation; font-family: inherit; }
+/* Auf groesseren iPads waechst das ganze Ligaspiel im selben Mass mit
+   (--t-zoom aus darstellungAnwenden, nie unter 1): Spielbild, Ausbullen,
+   Uebersicht, Spielende und die Dialoge darueber. */
+.lz-spiel, .la-seite, #overlay.lz .lz-ov, .overlay.la .overlay-card, #screen-bulloff.lz.active > * { zoom: var(--t-zoom, 1); }
+/* Unterschriftsfeld: unvergroessert, Safari rechnet Fingerpositionen in
+   vergroesserten Bereichen anders als Chrome (Kritik 28.11.). */
+.overlay.la.la-sig .overlay-card { zoom: 1; }
 .lz-leise { color: var(--t-leise); }
 
 .lz-kopf { flex: none; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 24px; min-height: 56px; padding: 0 8px; }
 .lz-zeile { font-size: 18px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--t-leise); }
 .lz-kopf-rechts { display: flex; align-items: center; gap: 24px; min-width: 0; }
-.lz-stand {
+.lz-spiel .lz-stand {
   min-height: 44px; margin: 0; padding: 0 4px; border: 0; background: transparent; cursor: pointer;
   font-family: var(--font-cond); font-weight: 700; font-size: 26px; line-height: 1; color: var(--t-text);
   text-transform: uppercase; white-space: nowrap;
@@ -9827,7 +9851,13 @@ button.lz-neu { cursor: pointer; min-width: 44px; }
 .lz-alt { display: flex; align-items: baseline; gap: 12px; min-width: 0; font-size: 26px; color: var(--t-leise); overflow: hidden; white-space: nowrap; }
 .lz-auf .bust { color: var(--t-rot); text-decoration: line-through; }
 .lz-auf .co { color: var(--t-blau); }
-.lz-geist { opacity: 0; }
+/* Die siebte Aufnahme beim Ausblenden: ohne eigenen Platz (lzFlugStarten). */
+.lz-alt { position: relative; }
+/* Waehrend des Gleitens darf die bisher juengste von links in die Reihe
+   fliegen, ohne am Rand der Reihe abgeschnitten zu werden. */
+@media (min-width: 700px) and (min-height: 600px) { .lz-alt.fliegt { overflow: visible; } }
+.lz-geist { position: absolute; right: 0; bottom: 0; opacity: 0; pointer-events: none; }
+.lz-auf [data-vi] { transform-origin: 0 100%; }
 /* Einzel-Darts der laufenden Aufnahme in der Karte */
 .lz-karte .pfelder { display: flex; gap: 10px; }
 .lz-karte .pfelder .fk {
@@ -9862,7 +9892,7 @@ button.lz-neu { cursor: pointer; min-width: 44px; }
 
 /* Von Hand (Entwurf ZaehlenHand): Karten links untereinander, rechts der Ziffernblock. */
 .lz-hand .lz-haupt { display: flex; gap: 16px; }
-.lz-karten { flex: 1 1 auto; min-width: 0; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr); grid-auto-rows: minmax(0, 1fr); gap: 16px; }
+.lz-karten { flex: 999 1 560px; min-width: 0; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr); grid-auto-rows: minmax(0, 1fr); gap: 16px; }
 .lz-hand .lz-karte {
   display: grid; padding: 22px 40px; align-content: center; column-gap: 40px; row-gap: 4px;
   grid-template-columns: 290px minmax(0, 1fr); grid-template-rows: auto auto auto auto;
@@ -9884,7 +9914,7 @@ button.lz-neu { cursor: pointer; min-width: 44px; }
 .lz-hand .lz-weg-zeile { justify-content: flex-start; align-self: start; min-height: 48px; margin-top: 16px; }
 .lz-hand .lz-weg { gap: 8px; }
 .lz-hand .lz-feld { min-width: 68px; padding: 8px 10px; border-radius: 8px; font-size: 32px; }
-.lz-eingabe { flex: 0 1 440px; min-width: 0; min-height: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: 8px; }
+.lz-eingabe { flex: 1 1 380px; max-width: 440px; min-width: 0; min-height: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: 8px; }
 .lz-eingabe .lz-meldung { flex: none; height: 56px; align-items: center; justify-content: flex-end; text-align: center; gap: 2px; }
 .lz-eingabe .lz-meldung b { font-size: 22px; }
 .lz-eingabe .lz-meldung span { font-size: 16px; }
@@ -9966,7 +9996,7 @@ button.lz-neu { cursor: pointer; min-width: 44px; }
   .lz-kopf { padding: 0; min-height: 0; gap: 4px 12px; }
   .lz-zeile { width: 100%; font-size: 12px; letter-spacing: 1px; }
   .lz-kopf-rechts { width: 100%; justify-content: space-between; gap: 8px; }
-  .lz-stand { font-size: 19px; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .lz-spiel .lz-stand { font-size: 19px; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .lz-tast .lz-haupt { grid-template-columns: minmax(0, 1fr); gap: 8px; }
   .lz-karte { border-radius: 18px; padding: 10px 16px; }
   .lz-karten { gap: 8px; }
@@ -10101,6 +10131,8 @@ body.fix-setup #screen-bulloff.lz.active { height: auto; }
   display: flex; flex-direction: column; gap: 18px; padding: 30px 34px; border-radius: 24px;
   background: var(--t-fl); color: var(--t-text); box-shadow: var(--lz-pop); animation: lzDlgRein 0.35s ease both;
 }
+/* Schon offen: beim Neuzeichnen kein zweites Hereingleiten (lzHuelle). */
+#overlay.lz .lz-dlg.still { animation: none; }
 #overlay.lz h3 { margin: 0; color: var(--t-text); }
 #overlay.lz p { margin: 0; color: var(--t-leise); font-size: 15px; font-family: var(--font-body); }
 #overlay.lz button { touch-action: manipulation; font-family: inherit; }

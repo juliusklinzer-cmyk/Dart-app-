@@ -7123,7 +7123,9 @@ button.pa-gruppe { cursor: pointer; }
   .ios-oben {
     display: block; position: fixed; inset: 0 0 auto; height: 11px;
     pointer-events: none; z-index: 1000;
-    background: var(--bg);
+    /* --t-bg ist ausserhalb der hellen Bereiche gleich --bg (#0d0a0b);
+       im hellen Bereich hell, wie Seite und Statusleiste (theme-color). */
+    background: var(--t-bg, var(--bg));
   }
 }
 
@@ -8463,6 +8465,12 @@ html[data-hell="1"].t-bereich { color-scheme: light; }
 #screen-liga .lg-tabelle { gap: 24px 40px; }
 .lg-ligawahl { flex: 1 1 100%; display: flex; align-items: center; flex-wrap: wrap; gap: 12px 24px; }
 .lg-ligawahl-box { position: relative; display: flex; align-items: center; gap: 12px; }
+/* "Daten aktualisieren" (nur TCs und Admin): rechts in der Zeile der Ligawahl. */
+.lg-holen { margin-left: auto; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
+.lg-holen-knopf { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin: 0; padding: 0 16px; border-radius: 8px; border: 0; background: transparent; box-shadow: inset 0 0 0 1.5px var(--t-linie); color: var(--t-text); font-family: var(--font-body); font-size: 15px; font-weight: 600; cursor: pointer; }
+.lg-holen-knopf:disabled { opacity: 0.55; cursor: default; }
+.lg-holen-text { font-size: 14px; color: var(--t-leise); }
+.lg-holen-text.fehler { color: var(--t-rot); }
 .lg-klein-titel { font-size: 12px; font-weight: 700; letter-spacing: 1.5px; color: var(--t-leise); text-transform: uppercase; }
 .lg-ligaknopf { display: flex; align-items: center; gap: 10px; min-height: 44px; min-width: 210px; margin: 0; padding: 0 14px; border-radius: 8px; border: 0; background: var(--t-fl); box-shadow: inset 0 0 0 1px var(--t-linie); color: var(--t-text); font-family: var(--font-body); font-size: 16px; font-weight: 700; cursor: pointer; }
 .lg-ligaknopf span { flex: 1; text-align: left; }
@@ -9044,14 +9052,23 @@ html[data-hell="1"] .lst {
 .lst-tz .sv { font-family: var(--font-cond); font-weight: 700; font-size: 14px; color: var(--t-leise); text-align: center; }
 .lst-tz .w { font-family: var(--font-cond); font-weight: 700; font-size: 15px; text-align: right; white-space: nowrap; }
 /* Bewegung nur bei neuer Auswahl (.anim): Karten blenden auf, Balken wachsen, Ringe fuellen sich. */
-@keyframes lst-auf { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+/* Wie in der alten Statistik (st-rein, st-grow): Karten gleiten 18 px herein,
+   die Kennzahlen springen auf; jede Karte erst, wenn sie ins Bild scrollt
+   (.lst-wart, lstNachRender), die Zahlen zaehlen dabei hoch. */
+@keyframes lst-auf { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes lst-pop { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: none; } }
 @keyframes lst-breit { from { transform: scaleX(0); } to { transform: none; } }
 @keyframes lst-ring { from { stroke-dashoffset: 326.7; } to { stroke-dashoffset: var(--o); } }
-.lst.anim .lst-karte { animation: lst-auf 0.45s ease both; }
+.lst.anim .lst-karte { animation: lst-auf 0.6s ease both; }
+.lst.anim .lst-karte.lst-kpi { animation: lst-pop 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) both; }
+.lst.anim .lst-kpis > .lst-kpi:nth-child(2) { animation-delay: 0.06s; }
+.lst.anim .lst-kpis > .lst-kpi:nth-child(3) { animation-delay: 0.12s; }
+.lst.anim .lst-kpis > .lst-kpi:nth-child(4) { animation-delay: 0.18s; }
+.lst.anim .lst-wart, .lst.anim .lst-wart * { animation-play-state: paused !important; }
 .lst.anim .lst-bz-bar i, .lst.anim .lst-wbar i, .lst.anim .lst-voll i, .lst.anim .lst-ha-bar i, .lst.anim .lst-split i:first-child { transform-origin: left center; animation: lst-breit 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) 0.15s both; }
 .lst.anim .lst-ring-wert { animation: lst-ring 1.1s cubic-bezier(0.2, 0.7, 0.2, 1) 0.2s both; }
 @media (prefers-reduced-motion: reduce) {
-  .lst.anim .lst-karte, .lst.anim .lst-bz-bar i, .lst.anim .lst-wbar i, .lst.anim .lst-voll i, .lst.anim .lst-ha-bar i, .lst.anim .lst-split i, .lst.anim .lst-ring-wert { animation: none; }
+  .lst.anim .lst-karte, .lst.anim .lst-karte.lst-kpi, .lst.anim .lst-bz-bar i, .lst.anim .lst-wbar i, .lst.anim .lst-voll i, .lst.anim .lst-ha-bar i, .lst.anim .lst-split i, .lst.anim .lst-ring-wert { animation: none; }
 }
 /* Tablet hochkant (die Seite ist dort hoechstens 860 px breit, --maxw) und
    schmale Fenster: zwei Spalten, gemischte Reihen untereinander. */
@@ -9784,15 +9801,22 @@ body:has(> #screen-game.lz.active) { padding-bottom: 0; }
   background: var(--t-bg); color: var(--t-text); font-family: var(--font-body);
 }
 .lz-spiel.lz-hand { gap: 12px; padding-bottom: max(20px, env(safe-area-inset-bottom, 0px)); }
-.lz-spiel.lz-rein-hand > .lz-haupt { animation: lzReinHand 0.55s cubic-bezier(0.23, 1, 0.32, 1) both; }
-.lz-spiel.lz-rein-tast > .lz-haupt, .lz-spiel.lz-rein-tast > .lz-fuss { animation: lzReinTast 0.4s ease both; }
+.lz-spiel.lz-rein-hand > .lz-haupt { animation: lzReinHand 0.55s cubic-bezier(0.23, 1, 0.32, 1) both; animation-delay: var(--lz-rein-verz, 0ms); }
+.lz-spiel.lz-rein-tast > .lz-haupt, .lz-spiel.lz-rein-tast > .lz-fuss { animation: lzReinTast 0.4s ease both; animation-delay: var(--lz-rein-verz, 0ms); }
 .lz-spiel button { touch-action: manipulation; font-family: inherit; }
+/* Auf groesseren iPads waechst das ganze Ligaspiel im selben Mass mit
+   (--t-zoom aus darstellungAnwenden, nie unter 1): Spielbild, Ausbullen,
+   Uebersicht, Spielende und die Dialoge darueber. */
+.lz-spiel, .la-seite, #overlay.lz .lz-ov, .overlay.la .overlay-card, #screen-bulloff.lz.active > * { zoom: var(--t-zoom, 1); }
+/* Unterschriftsfeld: unvergroessert, Safari rechnet Fingerpositionen in
+   vergroesserten Bereichen anders als Chrome (Kritik 28.11.). */
+.overlay.la.la-sig .overlay-card { zoom: 1; }
 .lz-leise { color: var(--t-leise); }
 
 .lz-kopf { flex: none; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 24px; min-height: 56px; padding: 0 8px; }
 .lz-zeile { font-size: 18px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--t-leise); }
 .lz-kopf-rechts { display: flex; align-items: center; gap: 24px; min-width: 0; }
-.lz-stand {
+.lz-spiel .lz-stand {
   min-height: 44px; margin: 0; padding: 0 4px; border: 0; background: transparent; cursor: pointer;
   font-family: var(--font-cond); font-weight: 700; font-size: 26px; line-height: 1; color: var(--t-text);
   text-transform: uppercase; white-space: nowrap;
@@ -9830,7 +9854,13 @@ button.lz-neu { cursor: pointer; min-width: 44px; }
 .lz-alt { display: flex; align-items: baseline; gap: 12px; min-width: 0; font-size: 26px; color: var(--t-leise); overflow: hidden; white-space: nowrap; }
 .lz-auf .bust { color: var(--t-rot); text-decoration: line-through; }
 .lz-auf .co { color: var(--t-blau); }
-.lz-geist { opacity: 0; }
+/* Die siebte Aufnahme beim Ausblenden: ohne eigenen Platz (lzFlugStarten). */
+.lz-alt { position: relative; }
+/* Waehrend des Gleitens darf die bisher juengste von links in die Reihe
+   fliegen, ohne am Rand der Reihe abgeschnitten zu werden. */
+@media (min-width: 700px) and (min-height: 600px) { .lz-alt.fliegt { overflow: visible; } }
+.lz-geist { position: absolute; right: 0; bottom: 0; opacity: 0; pointer-events: none; }
+.lz-auf [data-vi] { transform-origin: 0 100%; }
 /* Einzel-Darts der laufenden Aufnahme in der Karte */
 .lz-karte .pfelder { display: flex; gap: 10px; }
 .lz-karte .pfelder .fk {
@@ -9865,7 +9895,7 @@ button.lz-neu { cursor: pointer; min-width: 44px; }
 
 /* Von Hand (Entwurf ZaehlenHand): Karten links untereinander, rechts der Ziffernblock. */
 .lz-hand .lz-haupt { display: flex; gap: 16px; }
-.lz-karten { flex: 1 1 auto; min-width: 0; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr); grid-auto-rows: minmax(0, 1fr); gap: 16px; }
+.lz-karten { flex: 999 1 560px; min-width: 0; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr); grid-auto-rows: minmax(0, 1fr); gap: 16px; }
 .lz-hand .lz-karte {
   display: grid; padding: 22px 40px; align-content: center; column-gap: 40px; row-gap: 4px;
   grid-template-columns: 290px minmax(0, 1fr); grid-template-rows: auto auto auto auto;
@@ -9887,7 +9917,7 @@ button.lz-neu { cursor: pointer; min-width: 44px; }
 .lz-hand .lz-weg-zeile { justify-content: flex-start; align-self: start; min-height: 48px; margin-top: 16px; }
 .lz-hand .lz-weg { gap: 8px; }
 .lz-hand .lz-feld { min-width: 68px; padding: 8px 10px; border-radius: 8px; font-size: 32px; }
-.lz-eingabe { flex: 0 1 440px; min-width: 0; min-height: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: 8px; }
+.lz-eingabe { flex: 1 1 380px; max-width: 440px; min-width: 0; min-height: 0; display: flex; flex-direction: column; justify-content: flex-end; gap: 8px; }
 .lz-eingabe .lz-meldung { flex: none; height: 56px; align-items: center; justify-content: flex-end; text-align: center; gap: 2px; }
 .lz-eingabe .lz-meldung b { font-size: 22px; }
 .lz-eingabe .lz-meldung span { font-size: 16px; }
@@ -9969,7 +9999,7 @@ button.lz-neu { cursor: pointer; min-width: 44px; }
   .lz-kopf { padding: 0; min-height: 0; gap: 4px 12px; }
   .lz-zeile { width: 100%; font-size: 12px; letter-spacing: 1px; }
   .lz-kopf-rechts { width: 100%; justify-content: space-between; gap: 8px; }
-  .lz-stand { font-size: 19px; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .lz-spiel .lz-stand { font-size: 19px; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .lz-tast .lz-haupt { grid-template-columns: minmax(0, 1fr); gap: 8px; }
   .lz-karte { border-radius: 18px; padding: 10px 16px; }
   .lz-karten { gap: 8px; }
@@ -10104,6 +10134,8 @@ body.fix-setup #screen-bulloff.lz.active { height: auto; }
   display: flex; flex-direction: column; gap: 18px; padding: 30px 34px; border-radius: 24px;
   background: var(--t-fl); color: var(--t-text); box-shadow: var(--lz-pop); animation: lzDlgRein 0.35s ease both;
 }
+/* Schon offen: beim Neuzeichnen kein zweites Hereingleiten (lzHuelle). */
+#overlay.lz .lz-dlg.still { animation: none; }
 #overlay.lz h3 { margin: 0; color: var(--t-text); }
 #overlay.lz p { margin: 0; color: var(--t-leise); font-size: 15px; font-family: var(--font-body); }
 #overlay.lz button { touch-action: manipulation; font-family: inherit; }
@@ -14096,6 +14128,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
      zweimal an S1 und zweimal an S2. */
   var LIGA_SCHEIBEN = ['S1', 'S2', 'S1', 'S2', 'S1', 'S2', 'S1', 'S2',
     'S2', 'S1', 'S1', 'S2', 'S1', 'S2', 'S2', 'S1'];
+  /* Wer beim Ausbullen zuerst auf Bull wirft (Index wie LIGA_EINZEL):
+     H = Heim, G = Gast. Er steht in der Ansicht vorne. Jeder Spieler beider
+     Teams bullt so genau zweimal zuerst und zweimal als Zweiter, die beiden
+     gleichzeitigen Einzel an S1 und S2 stehen gegengleich, und an jeder
+     Scheibe wechselt es fast immer (Julius 28.11.). */
+  var LIGA_BULL_ZUERST = 'HGGHHGGHHGHGGHGH';
   /* Die Tabelle der allerersten Fassung (Durchgang 3/4 anders) – nur noch
      für die Migration alter Stände und Berichte aus dem Alt-Archiv. */
   var LIGA_EINZEL_ALT = [
@@ -16443,21 +16481,13 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var rest = remainingIn(leg, activePlayer(leg, m));
     /* Ligaspiel (Entwurf Warnungen): die getippte Zahl bleibt stehen und
        wackelt. Mehr als 180 und unmoegliche Summen bucht Enter nie. Mehr als
-       der Rest bucht erst das zweite Enter (bzw. OK) - als ueberworfen, der
-       Rest bleibt wie vor der Aufnahme (Julius, 28.11.: erst nachfragen). */
+       der Rest ist wie ueberall sofort ueberworfen (Bust), ohne Rueckfrage -
+       der Rest bleibt wie vor der Aufnahme (Julius 28.11.: "das ist
+       normalerweise automatisch Bust"). */
     var lzEin = lzAktiv() && S.screen === 'game' && !UI.darts.length;
     if (lzEin) {
-      var lzArt = v > MAX_VISIT ? 'hoch' : IMPOSSIBLE[v] ? 'unmoeglich' : v > rest ? 'rest' : null;
-      if (lzArt === 'hoch' || lzArt === 'unmoeglich') { lzWarnen(lzArt, rest); return; }
-      if (lzArt === 'rest') {
-        var lzAlt = lzWarnungJetzt();
-        /* Ein nachprellendes Enter (unter 250 ms) zaehlt nicht als Bestaetigung. */
-        if (!(lzAlt && lzAlt.art === 'rest' && Date.now() - lzAlt.seit >= 250)) { lzWarnen('rest', rest); return; }
-        UI.warnung = null;
-        pomp();
-        commitVisit(v, 3, false, true);
-        return;
-      }
+      var lzArt = v > MAX_VISIT ? 'hoch' : IMPOSSIBLE[v] ? 'unmoeglich' : null;
+      if (lzArt) { lzWarnen(lzArt, rest); return; }
       UI.warnung = null;
     }
 
@@ -21228,6 +21258,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return !!(S.tour && S.tour.liga && (S.screen === 'tournament' || S.screen === 'winner'));
   }
   function hellZaehlen() { return lzAktiv(); }
+  var tZoomJetzt = 1, tZoomBreite = -1, tZoomHoehe = -1;
+  /* Drehen oder Fenstergroesse: die Skalierung (--t-zoom) neu rechnen. */
+  window.addEventListener('resize', function () { try { darstellungAnwenden(); } catch (e) { /* vor dem Start */ } });
   function darstellungAnwenden() {
     var de = document.documentElement;
     var liga = !!($('screen-liga') && $('screen-liga').classList.contains('active'));
@@ -21235,7 +21268,33 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var w = istHell() && bereich ? '1' : '0';
     if (de.getAttribute('data-hell') !== w) de.setAttribute('data-hell', w);
     de.classList.toggle('in-liga', liga);
+    /* Wer die Liga-Statistik wieder betritt (auch ueber das Logo-Menue
+       direkt auf den Reiter), sieht die Bewegung wieder. */
+    if (!(liga && (UI.ligaTab || 'plan') === 'statistik')) lstKennung = '';
     de.classList.toggle('t-bereich', !liga && bereich);
+    /* Statusleiste am iPad/iPhone: ohne Statusleisten-Tag faerbt iOS sie in
+       der theme-color. Sie folgt der Seite - hell im hellen Bereich, sonst
+       dunkel -, zusammen mit dem Streifen .ios-oben (--t-bg). Sonst stand
+       ueber der hellen Liga ein dunkler Balken (Julius 28.11.). */
+    /* Groesse: Die neuen Liga-Ansichten sind fuer das iPad mit 1180 x 820
+       (quer) bzw. 820 x 1180 (hochkant) gezeichnet. Auf groesseren iPads
+       (Pro 12,9") wuchsen nur die Flaechen, Zahlen und Tasten blieben
+       gleich - die Verhaeltnisse stimmten nicht mehr (Julius 28.11.). Jetzt
+       waechst alles im selben Mass mit (CSS zoom ueber --t-zoom).
+       Verkleinert wird nie: kleinere Schirme haben ihr eigenes Layout,
+       und die Fingerziele bleiben mindestens 44 px. */
+    var bw = window.innerWidth || 0, bh = window.innerHeight || 0, quer = bw >= bh;
+    /* Im Safari-Tab klappen die Leisten beim Scrollen ein und aus und
+       aendern nur die Hoehe ein Stueck: dann bleibt die Groesse stehen. */
+    if (bw !== tZoomBreite || Math.abs(bh - tZoomHoehe) > 120) {
+      tZoomBreite = bw; tZoomHoehe = bh;
+      var tz = bw >= 700 ? Math.min(bw / (quer ? 1180 : 820), bh / (quer ? 820 : 1180)) : 1;
+      tz = Math.max(1, Math.min(1.5, Math.floor(tz * 100) / 100));
+      if (tz !== tZoomJetzt) { tZoomJetzt = tz; de.style.setProperty('--t-zoom', String(tz)); }
+    }
+    var tc = document.querySelector('meta[name="theme-color"]');
+    var farbe = w === '1' ? '#f6f3f1' : '#0d0a0b';
+    if (tc && tc.getAttribute('content') !== farbe) tc.setAttribute('content', farbe);
   }
   function darstellungKnoepfe() {
     var ist = [0, 1, 2].indexOf(S.settings.hell) < 0 ? 0 : S.settings.hell;
@@ -23785,7 +23844,67 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var kennung = [nr, ansicht, team, UI.lstSort, UI.lstRangTeam && UI.lstRangTeam.team, UI.lstSpieler && UI.lstSpieler.key, !!d].join('|');
     var anim = kennung !== lstKennung;
     lstKennung = kennung;
-    wurzel.innerHTML = '<div class="lst lst-' + ansicht + (anim ? ' anim' : '') + '">' + reiter + '<div class="lst-haupt">' + inhalt + '</div></div>';
+    /* Zeichnet ein Abgleich im Hintergrund dasselbe noch einmal, bleibt die
+       Seite stehen - sonst brach er die laufende Bewegung ab (Julius
+       28.11.: "die Animationen sind weg"). */
+    var innen = reiter + '<div class="lst-haupt">' + inhalt + '</div>';
+    var alt = wurzel.firstElementChild;
+    if (!anim && alt && alt.classList.contains('lst-' + ansicht) && lstInnenZuletzt === innen) return;
+    lstInnenZuletzt = innen;
+    wurzel.innerHTML = '<div class="lst lst-' + ansicht + (anim ? ' anim' : '') + '">' + innen + '</div>';
+    lstNachRender(wurzel.firstElementChild, anim);
+  }
+  /* Wie in der alten Statistik (statsNachRender): Karten kommen herein,
+     Kennzahlen springen auf, Balken wachsen, Ringe fuellen sich, Zahlen
+     zaehlen hoch - einmal je Auswahl. Jede Karte startet erst, wenn sie ins
+     Bild scrollt (.lst-wart haelt sie bis dahin an). */
+  var lstInnenZuletzt = '', lstBeobachter = null;
+  var LST_ZAHLEN = '.lst-kpi-zahl, .lst-ring-zahl, .lst-form-gross, .lst-platz > b, .lst-mini > b, .lst-hlz .w > b, .lst-tz .w, .lst-tz .sv, .lst-tag .e > b';
+  function lstZaehlen(el) {
+    var text = el.textContent, teile = [], re = /\d+(?:,\d+)?/g, x, ab = 0;
+    while ((x = re.exec(text))) {
+      teile.push(text.slice(ab, x.index));
+      var dez = x[0].indexOf(',') >= 0 ? x[0].split(',')[1].length : 0;
+      teile.push({ z: Number(x[0].replace(',', '.')), dez: dez });
+      ab = x.index + x[0].length;
+    }
+    if (!teile.length) return null;
+    teile.push(text.slice(ab));
+    var bei = function (e) {
+      return teile.map(function (t) { return typeof t === 'string' ? t : (t.z * e).toFixed(t.dez).replace('.', ','); }).join('');
+    };
+    /* Bis die Karte startet, steht der Endwert (die Karte ist bis dahin
+       unsichtbar); erst beim Start springt sie auf 0 und zaehlt hoch. */
+    return function () {
+      el.textContent = bei(0);
+      var t0 = performance.now(), D = 1300;
+      requestAnimationFrame(function schritt(t) {
+        var q = Math.max(0, Math.min(1, (t - t0) / D)), e = 1 - Math.pow(1 - q, 3);
+        el.textContent = q >= 1 ? text : bei(e);
+        if (q < 1 && el.isConnected) requestAnimationFrame(schritt);
+      });
+    };
+  }
+  function lstNachRender(lst, anim) {
+    if (lstBeobachter) { lstBeobachter.disconnect(); lstBeobachter = null; }
+    if (!lst || !anim) return;
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var karten = Array.prototype.slice.call(lst.querySelectorAll('.lst-karte'));
+    var starter = karten.map(function (k) {
+      var z = Array.prototype.slice.call(k.querySelectorAll(LST_ZAHLEN)).filter(function (el) { return !el.children.length; });
+      return z.map(lstZaehlen).filter(Boolean);
+    });
+    var los = function (i) { karten[i].classList.remove('lst-wart'); starter[i].forEach(function (f) { f(); }); starter[i] = []; };
+    if (!('IntersectionObserver' in window)) { karten.forEach(function (_, i) { los(i); }); return; }
+    karten.forEach(function (k) { k.classList.add('lst-wart'); });
+    lstBeobachter = new IntersectionObserver(function (eintraege, beob) {
+      eintraege.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        beob.unobserve(e.target);
+        los(karten.indexOf(e.target));
+      });
+    }, { threshold: 0, rootMargin: '0px 0px -5% 0px' });
+    karten.forEach(function (k) { lstBeobachter.observe(k); });
   }
 
   /* ---- Mannschaft · alle Spielarten (die Crew) ---- */
@@ -25333,18 +25452,20 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
      Gesamtdaten der Ligaleitung (GET /api/liga-gesamt, nur angemeldet). */
   var LIGA_EIGENE_NR = 5;
   var ligaGesamt = window.LIGA_GESAMT || null, ligaGesamtLaeuft = false, ligaGesamtFehler = '', ligaGesamtFehlerAm = 0;
-  function ligaGesamtLaden() {
+  function ligaGesamtLaden(erzwingen) {
     /* Nach einem Fehler erst nach einer halben Minute wieder fragen: jede
        Antwort zeichnet neu, und das Zeichnen fragte sofort wieder - dann
-       stand dort immer nur "Lädt …" statt des Hinweises. */
-    if (ligaGesamt || ligaGesamtLaeuft || (ligaGesamtFehler && Date.now() - ligaGesamtFehlerAm < 30000)) return;
+       stand dort immer nur "Lädt …" statt des Hinweises. "erzwingen" holt
+       neu (Knopf "Daten aktualisieren"), der alte Stand bleibt bis dahin. */
+    if (ligaGesamtLaeuft || (!erzwingen && (ligaGesamt || (ligaGesamtFehler && Date.now() - ligaGesamtFehlerAm < 30000)))) return;
     ligaGesamtLaeuft = true; ligaGesamtFehler = '';
-    fetch('/api/liga-gesamt', { credentials: 'same-origin' }).then(function (r) {
+    fetch('/api/liga-gesamt' + (erzwingen ? '?t=' + Date.now() : ''), { credentials: 'same-origin', cache: erzwingen ? 'no-store' : 'default' }).then(function (r) {
       if (!r.ok) throw new Error(r.status === 401 || r.status === 403 ? 'Die anderen Ligen gibt es nur angemeldet.' : 'Die Ligadaten sind gerade nicht erreichbar.');
       return r.json();
     }).then(function (g) {
-      ligaGesamt = g && g.ligen ? g : null;
-      if (!ligaGesamt) ligaGesamtFehler = 'Die Ligadaten sind gerade nicht erreichbar.';
+      if (g && g.ligen) ligaGesamt = g;
+      else if (!ligaGesamt) ligaGesamtFehler = 'Die Ligadaten sind gerade nicht erreichbar.';
+      ligaTabelleHtml = '';
     }).catch(function (e) {
       ligaGesamtFehler = e && e.message && /Ligen|Ligadaten/.test(e.message) ? e.message : 'Ohne Verbindung gibt es nur unsere Liga.';
     }).then(function () { ligaGesamtLaeuft = false; if (ligaGesamtFehler) ligaGesamtFehlerAm = Date.now(); if (S.screen === 'liga') render(); });
@@ -25392,6 +25513,41 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   }
   function kurzDatum(iso) { return iso ? iso.slice(8, 10) + '.' + iso.slice(5, 7) + '.' : ''; }
 
+  /* Knopf "Daten aktualisieren" an der Tabelle (Julius 28.11.): holt die
+     Ergebnisse der Ligaleitung sofort statt erst zur vollen Stunde - unsere
+     Liga und die Ligen 1 bis 5 samt Highlights. Nur Teamcaptains und der
+     Admin sehen ihn; der Server prueft das noch einmal. */
+  function ichDarfLigaPflege() {
+    var n = window.DartKonto && window.DartKonto.nutzer && window.DartKonto.nutzer();
+    return !!(n && n.ligaPflege && !n.gastKonto);
+  }
+  function ligaJetztHolen() {
+    if ((UI.ligaHolen && UI.ligaHolen.laeuft) || !window.DartKonto || !window.DartKonto.ruf) return;
+    UI.ligaHolen = { laeuft: true, text: 'Holt die Daten der Ligaleitung …' };
+    render();
+    /* Haengt der Abruf, steht der Knopf nach zwei Minuten wieder bereit. */
+    var uhr = null;
+    var zeit = new Promise(function (_, nein) { uhr = setTimeout(function () { nein(new Error('Die Ligaleitung antwortet gerade nicht. Bitte später noch einmal.')); }, 120000); });
+    Promise.race([window.DartKonto.ruf('POST', '/api/liga/aktualisieren', {}), zeit]).then(function (r) {
+      var neu = (r.eigene && r.eigene.geaendert) || (r.gesamt && r.gesamt.geaendert);
+      var teil = (r.eigene && r.eigene.fehler) || (r.gesamt && r.gesamt.fehler);
+      UI.ligaHolen = teil ? { text: 'Ein Teil kam nicht an (' + (r.eigene && r.eigene.fehler ? 'unsere Liga' : 'die anderen Ligen') + '), der Rest ist aktuell.', fehler: true }
+        : !r.eigene && !r.gesamt ? { text: 'Der Server holt die Daten gerade schon – gleich noch einmal schauen.' }
+        : { text: neu ? 'Neue Daten der Ligaleitung sind da.' : 'Alles auf dem Stand der Ligaleitung.' };
+      ligaDatenPruefen(true);
+      ligaGesamtLaden(true);
+    }).catch(function (e) {
+      UI.ligaHolen = { text: e && e.status ? (e.message || 'Das hat nicht geklappt.') : e && /Ligaleitung/.test(e.message || '') ? e.message : 'Keine Verbindung zum Server.', fehler: true };
+    }).then(function () { clearTimeout(uhr); if (S.screen === 'liga') render(); });
+  }
+  function ligaHolenHtml() {
+    if (!ichDarfLigaPflege()) return '';
+    var h = UI.ligaHolen || {};
+    return '<span class="lg-holen"><button type="button" class="lg-holen-knopf" data-action="liga-holen"' + (h.laeuft ? ' disabled' : '') + '>' +
+      '<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-14.9-4M4 4v4h4M4 13a8 8 0 0 0 14.9 4M20 20v-4h-4"/></svg>' +
+      (h.laeuft ? 'Holt …' : 'Daten aktualisieren') + '</button>' +
+      (h.text && !h.laeuft ? '<small class="lg-holen-text' + (h.fehler ? ' fehler' : '') + '" role="status">' + esc(h.text) + '</small>' : '') + '</span>';
+  }
   function renderLigaTabelle() {
     var nr = UI.ligaNr || LIGA_EIGENE_NR;
     if (nr !== LIGA_EIGENE_NR && !ligaGesamt) ligaGesamtLaden();
@@ -25405,7 +25561,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         }).join('') + '</div>' : '') +
       '</div>';
     if (!sicht) {
-      ziel.innerHTML = wahlHtml + '<span class="lg-text">' + esc(ligaGesamtLaeuft ? 'Lädt …' : ligaGesamtFehler || 'Lädt …') + '</span></div>';
+      ziel.innerHTML = wahlHtml + '<span class="lg-text">' + esc(ligaGesamtLaeuft ? 'Lädt …' : ligaGesamtFehler || 'Lädt …') + '</span>' + ligaHolenHtml() + '</div>';
       return;
     }
     var gespielt = sicht.runden.filter(ligaRundeGespielt);
@@ -25415,7 +25571,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (gespielt.length) gespielt[gespielt.length - 1].spiele.forEach(function (sp) { if (sp.tag && sp.einzel && sp.tag > datumBis) datumBis = sp.tag; });
     var infoText = sicht.teams.length + ' Teams' + (letzte ? ' · Stand nach Spieltag ' + letzte : ' · noch kein Spieltag gewertet');
     $('liga-sub').textContent = letzte ? 'Stand nach Spieltag ' + letzte + (datumBis ? ' · ' + kurzDatum(datumBis) : '') : 'SDM 4er Liga ' + nr + ' · ' + LIGA.saison;
-    wahlHtml += '<span class="lg-text">' + esc(infoText) + '</span></div>';
+    wahlHtml += '<span class="lg-text">' + esc(infoText) + '</span>' + ligaHolenHtml() + '</div>';
 
     var zeilen = sicht.tabelle.zeilen;
     var alt = {};
@@ -25589,9 +25745,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
           '<div class="le-felder"><div class="le-feld"><span class="lg-klein-titel">Name</span><b>' + esc(ti.lokal || 'Bar Sehnsucht') + '</b></div>' +
           '<div class="le-feld"><span class="lg-klein-titel">Adresse</span><b>' + esc(ti.adresse || '') + '</b></div>' +
           '<span class="lg-text lg-mit-icon">' + LG_PIN_ROT + 'Die Route in Maps kommt aus der Adresse.</span>' +
-          '<span class="lg-text">Logo, Bild und Adresse ändern geht, sobald es Rollen für Admin und TCs gibt.</span></div></div>'
+          '<span class="lg-text">Logo, Bild und Adresse ändern kommt später.</span></div></div>'
       : '';
-    var rolle = gast ? 'Gast-Konto, nur ansehen' : wart ? 'Du führst die Kasse' : online ? 'Mitglied' : 'Nicht angemeldet';
+    var ichK = window.DartKonto && window.DartKonto.nutzer && window.DartKonto.nutzer();
+    var rolle = gast ? 'Gast-Konto, nur ansehen' : ichK && ichK.admin ? 'Admin' : ichK && ichK.ligaPflege ? 'Teamcaptain' : wart ? 'Du führst die Kasse' : online ? 'Mitglied' : 'Nicht angemeldet';
     $('liga-einstellungen').innerHTML =
       '<nav class="le-nav" aria-label="Bereiche der Einstellungen">' +
         '<span class="le-nav-titel"><button type="button" class="lg-rund fl" data-action="liga-einst-zu" aria-label="Zurück">' + LG_LINKS + '</button><b>EINSTELLUNGEN</b></span>' +
@@ -26381,11 +26538,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     bull: '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/></svg>'
   };
 
-  /* ---- Warnungen beim Tippen (Entwurf WarnZuHoch, WarnHandZuHoch, WarnUeberRest) ----
-     Die Zahl bleibt stehen (rot bzw. gelb) und wackelt kurz. Mehr als 180
-     und unmoegliche Summen bucht Enter nie; mehr als der Rest bucht erst
-     das zweite Enter (bzw. OK) als ueberworfen - der Rest bleibt dann wie
-     vor der Aufnahme. */
+  /* ---- Warnungen beim Tippen (Entwurf WarnZuHoch, WarnHandZuHoch) ----
+     Die Zahl bleibt rot stehen und wackelt kurz. Mehr als 180 und
+     unmoegliche Summen bucht Enter nie. Mehr als der Rest warnt nicht
+     mehr, das ist sofort ueberworfen (Julius 28.11.). */
   function lzWarnen(art, rest) {
     var alt = UI.warnung;
     var gleich = alt && alt.art === art && alt.wert === UI.input;
@@ -26403,7 +26559,6 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       var andere = Object.keys(IMPOSSIBLE).map(Number).filter(function (z) { return String(z) !== w.wert; }).sort(function (a, b) { return a - b; });
       return { titel: w.wert + ' ist nicht möglich', text: hand ? 'Mit drei Darts nicht zu werfen' : 'Mit drei Darts nicht zu werfen (wie ' + andere.join(', ') + ').', farbe: 'rot' };
     }
-    if (w && w.art === 'rest') return { titel: 'Mehr als der Rest ' + w.rest, text: hand ? 'OK bucht als überworfen' : 'Enter bucht als überworfen, Löschen korrigiert.', farbe: 'gelb' };
     if (UI.error) return { titel: UI.error, text: '', farbe: 'rot' };
     return null;
   }
@@ -26508,6 +26663,88 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     }
   }
 
+  /* ---- Wurfliste im Ligaspiel: jede Zahl gleitet an ihren neuen Platz ----
+     (FLIP, Julius 28.11.: "fluessiger und weniger abgehackt"). Vor dem
+     Neuzeichnen merkt sich lzFlugMessen, wo jede Zahl steht (samt einer
+     gerade laufenden Bewegung), danach startet lzFlugStarten fuer jede
+     Zahl, die sich bewegt hat, eine Bewegung vom alten an den neuen Platz.
+     Die bisher juengste schrumpft dabei weich auf die kleine Groesse. So
+     laeuft auch ein Neuzeichnen mitten in der Bewegung nahtlos weiter.
+     Gerechnet wird in Bildschirm-Pixeln, die Verschiebung wird durch die
+     Skalierung (--t-zoom) geteilt. */
+  var LZ_FLUG_MS = 520, lzFlugSeit = 0;
+  /* Liefert getBoundingClientRect in einem vergroesserten Bereich (CSS
+     zoom) sichtbare Bildschirm-Pixel (Chrome seit 2024) oder die eigenen,
+     unvergroesserten (WebKit/Safari)? Einmal ausmessen statt raten. */
+  var zoomRectSichtbar = null;
+  function zoomRectVisuell() {
+    if (zoomRectSichtbar !== null) return zoomRectSichtbar;
+    try {
+      var d = document.createElement('div');
+      d.style.cssText = 'position:absolute;left:-9999px;top:0;width:100px;height:10px;zoom:2;visibility:hidden';
+      document.body.appendChild(d);
+      zoomRectSichtbar = d.getBoundingClientRect().width > 150;
+      d.remove();
+    } catch (e) { zoomRectSichtbar = true; }
+    return zoomRectSichtbar;
+  }
+  function lzFlugMessen(box) {
+    if (!box || !box.firstChild || !Element.prototype.animate) return null;
+    var a = {};
+    var els = box.querySelectorAll('.lz-auf [data-vi]');
+    for (var i = 0; i < els.length; i++) {
+      var r = els[i].getBoundingClientRect();
+      a[els[i].getAttribute('data-vi')] = { l: r.left, b: r.bottom, h: r.height, o: parseFloat(getComputedStyle(els[i]).opacity) };
+    }
+    return a;
+  }
+  function lzFlugStarten(box, vorher) {
+    if (!vorher) return;
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var jetzt = Date.now();
+    var laeuft = jetzt - lzFlugSeit < LZ_FLUG_MS;
+    /* Sichtbare Pixel durch die Vergroesserung teilen; liefert der Browser
+       schon die eigenen (Safari), passt es so. */
+    var z = zoomRectVisuell() ? (tZoomJetzt || 1) : 1;
+    var EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
+    var bewegt = false;
+    var els = box.querySelectorAll('.lz-auf [data-vi]');
+    for (var i = 0; i < els.length; i++) {
+      var el = els[i], a = vorher[el.getAttribute('data-vi')];
+      var r = el.getBoundingClientRect();
+      var geist = el.classList.contains('lz-geist');
+      if (!a) {
+        if (geist) continue;
+        /* Neu: blendet ein und waechst aus der Ecke heran. */
+        el.animate([{ opacity: 0, transform: 'translateX(-18px) scale(0.86)' }, { opacity: 1, transform: 'none' }],
+          { duration: LZ_FLUG_MS, easing: EASE, fill: 'backwards' });
+        bewegt = true;
+        continue;
+      }
+      var dx = (a.l - r.left) / z, dy = (a.b - r.bottom) / z, sk = r.height ? a.h / r.height : 1;
+      var still = Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5 && Math.abs(sk - 1) < 0.02;
+      if (geist) {
+        /* Die siebte: von ihrem alten Platz aus ein Stueck weiter und weg. */
+        el.animate([{ opacity: a.o, transform: 'translate(' + dx + 'px,' + dy + 'px) scale(' + sk + ')' },
+          { opacity: 0, transform: 'translate(' + (dx + 16) + 'px,' + dy + 'px) scale(' + sk + ')' }],
+          { duration: laeuft && still ? Math.max(120, LZ_FLUG_MS - (jetzt - lzFlugSeit)) : LZ_FLUG_MS * 0.5, easing: 'ease-out', fill: 'forwards' });
+        bewegt = true;
+        continue;
+      }
+      if (still) continue;
+      el.animate([{ transform: 'translate(' + dx + 'px,' + dy + 'px) scale(' + sk + ')' }, { transform: 'none' }],
+        { duration: laeuft ? Math.max(160, LZ_FLUG_MS - (jetzt - lzFlugSeit)) : LZ_FLUG_MS, easing: EASE });
+      bewegt = true;
+    }
+    if (bewegt && !laeuft) lzFlugSeit = jetzt;
+    if (bewegt) {
+      var reihen = box.querySelectorAll('.lz-alt');
+      for (var k = 0; k < reihen.length; k++) reihen[k].classList.add('fliegt');
+      var bis = LZ_FLUG_MS - (Date.now() - lzFlugSeit) + 40;
+      setTimeout(function () { for (var k2 = 0; k2 < reihen.length; k2++) reihen[k2].classList.remove('fliegt'); }, Math.max(60, bis));
+    }
+  }
+
   /* ---- Dialog-Huelle: oben die Leiste des Ligaspiels (nur Checkout, Leg,
      Ergebnis), darunter der weichgezeichnete Spielstand und die Karte. ---- */
   function lzKopfHtml(m) {
@@ -26520,11 +26757,19 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       '<span class="lz-ov-ort">' + esc([lg.ort, lzScheibe(m)].filter(Boolean).join(' · ')) + '</span>' +
       '</header>';
   }
+  /* Die Karte gleitet nur beim Oeffnen herein. Jeder Tipp zeichnet den
+     Dialog neu (neue Elemente starten ihre Animation von vorn) - ohne das
+     sprang er bei jeder Wahl wieder 12 px hoch (Julius 28.11., "wackelt"). */
+  var lzDlgZuletzt = null, lzDlgSeit = 0, LZ_DLG_MS = 350;
   function lzHuelle(inhalt, opt) {
+    if (UI.overlay !== lzDlgZuletzt) { lzDlgZuletzt = UI.overlay; lzDlgSeit = Date.now(); }
+    var seit = Date.now() - lzDlgSeit;
+    var anim = seit >= LZ_DLG_MS ? ' still' : '';
+    var verz = seit > 0 && seit < LZ_DLG_MS ? ' style="animation-delay:-' + seit + 'ms"' : '';
     return '<div class="lz-ov' + (opt.kopf ? ' mit-kopf' : '') + '">' + (opt.kopf ? lzKopfHtml(opt.m) : '') +
       '<div class="lz-ov-flaeche">' +
         '<div class="lz-schleier"' + (opt.zu ? ' data-action="ov-cancel" aria-hidden="true"' : ' aria-hidden="true"') + '></div>' +
-        '<div class="lz-dlg ' + opt.klasse + '"' + (opt.attr || '') + '>' + inhalt + '</div>' +
+        '<div class="lz-dlg ' + opt.klasse + anim + '"' + verz + (opt.attr || '') + '>' + inhalt + '</div>' +
       '</div></div>';
   }
   function lzWerteHtml(zeilen, nA, nB) {
@@ -26748,7 +26993,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var T = [['0 bis 9', 'Punkte der Aufnahme tippen'], ['Enter', 'Aufnahme buchen, nach dem Leg: nächstes Leg'],
       ['Löschen', 'Ziffer weg, bei leerem Feld letzte Aufnahme zurück'], ['1 · 2 · 3', 'Checkout: mit wie vielen Darts'],
       ['−', 'Überworfen buchen'], ['Clear', 'Rest buchen: Rest 50, 8 tippen, Clear = 42 geworfen'],
-      ['Shift halten', 'Alle Würfe groß zeigen'], ['*', 'Teamstand groß ein und aus'],
+      ['Shift halten', 'Alle Würfe groß zeigen'], ['* halten', 'Teamstand groß zeigen'],
       ['Tab', 'Eingabe wechseln'], ['Esc', 'Tastatureingabe beenden']];
     var inhalt = '<div class="lz-info-kopf"><h3>Zählen mit der Tastatur</h3><button type="button" class="lz-text" data-action="ov-cancel">Schließen (Esc)</button></div>' +
       '<div class="lz-info-raster">' + T.map(function (t) { return '<div><kbd>' + t[0] + '</kbd><span>' + t[1] + '</span></div>'; }).join('') + '</div>' +
@@ -26766,6 +27011,19 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return null;
   }
 
+  /* Bullt im Einzel m der Gast zuerst? Die Stelle im Spielplan kommt aus
+     den Bogen-Positionen (posPaar), sonst aus der Reihenfolge der Einzel. */
+  function bullZuerstGast(m) {
+    if (!m) return false;
+    var i = -1;
+    if (m.posPaar) {
+      for (var k = 0; k < LIGA_EINZEL.length; k++) {
+        if (LIGA_EINZEL[k][0] === m.posPaar[0] && LIGA_EINZEL[k][1] === m.posPaar[1]) { i = k; break; }
+      }
+    }
+    if (i < 0) i = S.matches.indexOf(m);
+    return i >= 0 && LIGA_BULL_ZUERST.charAt(i) === 'G';
+  }
   function renderBullOff() {
     var forGame = S.game && !S.game.started;
     var ids = forGame ? S.game.players : (currentMatch() ? currentMatch().p : null);
@@ -26774,6 +27032,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
        und "Nicht da? w.o. werten". Ist das Einzel inzwischen gewertet
        (w.o. oder nur das Ergebnis), geht es zurueck in die Uebersicht. */
     var lzBo = lzAktiv();
+    /* Ligaspiel: vorne steht, wer zuerst auf Bull wirft (LIGA_BULL_ZUERST) -
+       die Reihenfolge der Partie (Heim, Gast) bleibt dabei unberuehrt. */
+    if (!forGame && S.tour && S.tour.liga && ids.length === 2 && bullZuerstGast(currentMatch())) ids = [ids[1], ids[0]];
     $('screen-bulloff').classList.toggle('lz', lzBo);
     var lzFuss = $('lz-bo-fuss');
     if (lzFuss && lzFuss.innerHTML) lzFuss.innerHTML = '';
@@ -27123,7 +27384,6 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       UI.letzterModus = mode;
       $('screen-game').classList.toggle('turnier', mode === 'turnier');
       if (mode !== 'turnier') $('screen-game').classList.remove('verlauf');
-      var hand = !fern;
       var lg = S.tour.liga;
       var nr = S.matches.indexOf(m) + 1;
       var tsd = ligaStandDaten() || { wirP: 0, sieP: 0 };
@@ -27136,21 +27396,23 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
             '<span class="lz-leise">' + esc(LIGA.team) + '</span> ' + tsd.wirP + ' : ' + tsd.sieP + ' <span class="lz-leise">' + esc(lzTeamKurz(lg.gegner)) + '</span></button>' +
           '<div class="lz-knoepfe">' +
             '<button type="button" class="lz-rund' + (fern ? ' an' : '') + '" data-action="game-fern" aria-pressed="' + fern + '" aria-label="' + (fern ? 'Tastatureingabe ist an' : 'Zur Tastatureingabe wechseln') + '">' + LZ_SVG.tastatur + '</button>' +
-            (hand ? '<button type="button" class="lz-rund leise" data-action="game-swap" aria-label="' + (anzeige === 'darts' ? 'Zur Punkte-Eingabe wechseln' : 'Zu den Einzel-Darts wechseln') + '">' + LZ_SVG.wechsel + '</button>' : '') +
             '<button type="button" class="lz-rund leise" data-action="lz-info" aria-label="Tastenbelegung erklären">' + LZ_SVG.info + '</button>' +
             '<button type="button" class="lz-rund leise" data-action="game-menu" aria-label="Menü">' + LZ_SVG.menue + '</button>' +
           '</div>' +
         '</div></header>';
 
       /* Die letzten sechs Aufnahmen je Spieler (Liga-Vorschrift), die
-         juengste gross vorn. Kommt eine neue, rollt sie von links herein,
-         die anderen ruecken nach, die siebte verschwindet. */
+         juengste gross vorn. Kommt eine neue, gleitet jede Zahl von ihrem
+         alten an ihren neuen Platz (lzFlug), die bisher juengste schrumpft
+         dabei in die Reihe, die siebte blendet aus. data-vi ist der
+         Schluessel je Aufnahme (Leg und Index). */
+      var legNr = m.legs.indexOf(leg);
       function aufnahmenHtml(pid) {
         var eigene = [];
         leg.visits.forEach(function (v, i) { if (v.p === pid) eigene.push({ v: v, i: i }); });
         var liste = eigene.slice(-7).reverse();
-        var frisch = eigene.length && eigene[eigene.length - 1].i === neuesteVisit && seitAufnahme >= 0 && seitAufnahme < 600;
-        var anim = function (n) { return frisch ? ' style="animation:lz' + n + ' .5s cubic-bezier(0.23,1,0.32,1) -' + seitAufnahme + 'ms both"' : ''; };
+        var frisch = eigene.length && eigene[eigene.length - 1].i === neuesteVisit && seitAufnahme >= 0 && seitAufnahme < LZ_FLUG_MS;
+        var anim = function (x) { return ' data-vi="' + legNr + '-' + x.i + '"'; };
         var zahl = function (x) { return x.v.b ? x.v.o : x.v.s; };
         var kl = function (x) { return wieBust(x.v) ? ' bust' : x.v.c ? ' co' : ''; };
         var neu = liste[0];
@@ -27158,11 +27420,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         if (neu) {
           var aenderbar = !neu.v.c && !m.done;
           neuHtml = aenderbar
-            ? '<button type="button" class="lz-neu' + kl(neu) + '" data-action="edit-visit" data-i="' + neu.i + '" aria-label="Letzte Aufnahme ' + zahl(neu) + ' korrigieren"' + anim('Rein') + '>' + zahl(neu) + '</button>'
-            : '<span class="lz-neu' + kl(neu) + '"' + anim('Rein') + '>' + zahl(neu) + '</span>';
+            ? '<button type="button" class="lz-neu' + kl(neu) + '" data-action="edit-visit" data-i="' + neu.i + '" aria-label="Letzte Aufnahme ' + zahl(neu) + ' korrigieren"' + anim(neu) + '>' + zahl(neu) + '</button>'
+            : '<span class="lz-neu' + kl(neu) + '"' + anim(neu) + '>' + zahl(neu) + '</span>';
         }
-        var alt = liste.slice(1, 6).map(function (x) { return '<span class="' + kl(x).trim() + '"' + anim('Schub') + '>' + zahl(x) + '</span>'; }).join('');
-        var geist = frisch && liste[6] ? '<span class="lz-geist" aria-hidden="true" style="animation:lzRaus .5s cubic-bezier(0.23,1,0.32,1) -' + seitAufnahme + 'ms both">' + zahl(liste[6]) + '</span>' : '';
+        var alt = liste.slice(1, 6).map(function (x) { return '<span class="' + kl(x).trim() + '"' + anim(x) + '>' + zahl(x) + '</span>'; }).join('');
+        /* Die siebte bleibt kurz als Geist (ohne Platz) stehen und blendet aus. */
+        var geist = frisch && liste[6] ? '<span class="lz-geist" aria-hidden="true"' + anim(liste[6]) + '>' + zahl(liste[6]) + '</span>' : '';
         return '<div class="lz-auf" role="group" aria-label="Letzte sechs Aufnahmen, die jüngste zuerst">' + neuHtml +
           '<div class="lz-alt">' + alt + geist + '</div></div>';
       }
@@ -27246,11 +27509,22 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       var verlauf = fern ? '<div class="lz-verlauf history" id="lz-verlauf">' + verlaufZweiHtml() + '</div>' : '';
       /* Wechsel zwischen Tastatur und Hand: die neue Ansicht kommt herein
          (Entwurf ZaehlenWechsel). */
+      /* Nur fuer die Dauer des Hereingleitens: jede Eingabe zeichnet das
+         Spielbild neu, und eine stehengebliebene Klasse liess die ganze
+         Flaeche bei jedem Tastendruck wieder von der Seite hereinfahren
+         (Julius 28.11.: "der ganze Bildschirm zieht kurz zur Seite").
+         Zeichnet es waehrenddessen neu, laeuft die Animation weiter. */
       var art = fern ? 'tast' : 'hand';
-      if (UI.lzArt && UI.lzArt !== art) UI.lzRein = art;
+      /* Wo die Zahlen der Wurflisten gerade stehen - fuer das Gleiten. */
+      var flugVorher = UI.lzArt === art ? lzFlugMessen(box) : null;
+      if (UI.lzArt && UI.lzArt !== art) { UI.lzRein = art; UI.lzReinSeit = Date.now(); }
       UI.lzArt = art;
+      var reinSeit = UI.lzRein ? Date.now() - (UI.lzReinSeit || 0) : 0;
+      if (UI.lzRein && (reinSeit < 0 || reinSeit >= 600)) UI.lzRein = null;
       box.className = 'lz-spiel lz-' + art + (anzeige === 'darts' ? ' lz-darts' : '') + (UI.lzRein ? ' lz-rein-' + UI.lzRein : '');
+      box.style.setProperty('--lz-rein-verz', UI.lzRein && reinSeit > 0 ? '-' + reinSeit + 'ms' : '0ms');
       box.innerHTML = kopf + haupt + fuss + verlauf;
+      lzFlugStarten(box, flugVorher);
     }
 
     $('scoreboard').classList.toggle('liga-namen', spielerName === ligaName);
@@ -27753,6 +28027,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     /* Stehen Darts der laufenden Aufnahme an, zeigt jedes Geraet sie -
        auch das des Mitspielers im Online-Spiel, egal wie es eingestellt ist. */
     if (UI.darts.length) return 'darts';
+    /* Ligaspiel: nur die Punkte-Eingabe wie im Entwurf, keine Einzel-Darts -
+       auch nicht ueber "Einzel-Darts ab Rest" (Julius 28.11.). */
+    if (lzAktiv()) return 'total';
     if (UI.modeOverride) return UI.modeOverride;
     var t = S.settings.dartModeFrom;
     return (t > 0 && rest <= t) ? 'darts' : 'total';
@@ -31220,7 +31497,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
 
   function renderOverlay() {
     var ov = $('overlay');
-    if (!UI.overlay) { ov.classList.add('hidden'); ov.classList.remove('gross', 'vollbild', 'match-ende', 'liga-tag', 'gd', 'lz', 'la', 'la-haut'); dialogGeschlossen(); return; }
+    if (!UI.overlay) { ov.classList.add('hidden'); ov.classList.remove('gross', 'vollbild', 'match-ende', 'liga-tag', 'gd', 'lz', 'la', 'la-haut', 'la-sig'); dialogGeschlossen(); return; }
     ov.classList.remove('hidden');
     /* Im Turnier-Modus sprechen auch die Dialoge Plakatsprache - der
        Schreiber steht vorn an der Scheibe, gelesen wird vom Oche aus. */
@@ -31624,7 +31901,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         '<div class="liga-start">' +
           '<div class="ls-titel">Gegner</div>' +
           '<div class="options">' +
-            (uTermin ? ['liga', 'team', 'leicht', 'mittel', 'schwer'] : ['team', 'leicht', 'mittel', 'schwer']).map(function (g) {
+            /* Gegen den naechsten Gegner geht es seit 28.11. ueber den Game Day
+               (ligaTagProbeOeffnen), nicht mehr hier. */
+            ['team', 'leicht', 'mittel', 'schwer'].map(function (g) {
               var txt = g === 'liga' ? esc(uGegnerTeam) + '<small>Probelauf · ' + uTermin.nr + '. Spieltag</small>' : g === 'team' ? 'Team B' : 'Bots ' + g;
               return '<button data-action="uebung-gegner" data-value="' + g + '" class="' +
                 (ud.modus === g ? 'active' : '') + (g === 'liga' ? ' breit' : '') + '">' + txt + '</button>';
@@ -31938,9 +32217,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
        Entwuerfen (Tokens, hell und dunkel); im Ligaspiel tragen auch die
        uebrigen Dialoge die Tokens (la-haut). */
     var laD = laDialogHtml(o);
-    if (laD === false) { UI.overlay = null; ov.classList.add('hidden'); ov.classList.remove('la', 'la-haut'); dialogGeschlossen(); return; }
+    if (laD === false) { UI.overlay = null; ov.classList.add('hidden'); ov.classList.remove('la', 'la-haut', 'la-sig'); dialogGeschlossen(); return; }
     if (laD !== null) html = laD;
     ov.classList.toggle('la', laD !== null);
+    /* Dialoge mit Unterschriftsfeld bleiben unvergroessert: Safari rechnet
+       Fingerpositionen in einem vergroesserten Bereich anders (Kritik 28.11.). */
+    ov.classList.toggle('la-sig', laD !== null && (o.type === 'unterschrift' || o.type === 'nachmeldung'));
     ov.classList.toggle('la-haut', laD === null && hellAblauf());
     if (laD !== null) $('overlay-card').style.setProperty('--la-w', LA_DIALOG_BREITE[o.type] + 'px');
     else $('overlay-card').style.removeProperty('--la-w');
@@ -32271,7 +32553,25 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return t && o && o.type === 'liga-start' && o.draft === t.d ? t : null;
   }
   function ligaTagTermin(id) {
-    return LIGA.termine.filter(function (x) { return x.id === id; })[0] || null;
+    var x = LIGA.termine.filter(function (y) { return y.id === id; })[0] || null;
+    /* Probe (Uebungsspiel als Game Day): derselbe Spieltag, aber heute. */
+    var t = S.ligaTag;
+    if (x && t && t.probe && t.terminId === id) x = Object.assign({}, x, { tag: t.tag, probe: true });
+    return x;
+  }
+  /* Probe vor dem Spieltag (Julius 28.11.): "Gegen den naechsten Gegner" im
+     Training laeuft genau wie der Spieltag ueber den Game Day - Einstellungen,
+     Scheibe waehlen, Wartebereich mit Aufstellung, BEREIT, GAME ON -, aber
+     heute, mit eigener Kennung am Server (...-p) und als Uebungsspiel: nichts
+     zaehlt fuer die Liga, kein oeffentlicher Live-Link, der echte Game Day
+     des Spieltags bleibt unberuehrt. */
+  function ligaTagProbeOeffnen() {
+    var n = ligaNaechsterTermin(), heute = ligaHeuteIso(), t = S.ligaTag;
+    var hinweis = function (text) { UI.overlay = { type: 'hinweis', text: text }; render(); };
+    if (!n) return hinweis('Im Spielplan steht kein kommender Spieltag.');
+    if (n.tag === heute || (t && !t.probe && t.tag === heute)) return hinweis('Heute ist Spieltag – der Game Day läuft über den Spielplan.');
+    if ((S.game && !S.game.done) || (S.matches.length && !allMatchesDone())) return hinweis('Es läuft noch ein Spiel oder Turnier – bitte erst abschließen oder beenden.');
+    ligaTagOeffnen(Object.assign({}, n, { tag: heute, probe: true }));
   }
   /* Die Online-Schicht ist da und angemeldet (kein Gast-Konto). */
   function ligaTagOnline() {
@@ -32330,10 +32630,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     return vor.slice(0, 4);
   }
   function ligaTagOeffnen(termin) {
-    var t = S.ligaTag, id = termin.id + '-' + termin.tag;
+    var t = S.ligaTag, id = termin.id + '-' + termin.tag + (termin.probe ? '-p' : '');
     if (!t || t.id !== id) {
       t = S.ligaTag = {
-        id: id, terminId: termin.id, tag: termin.tag, platz: null, bereit: false, seite: null,
+        id: id, terminId: termin.id, tag: termin.tag, probe: !!termin.probe, platz: null, bereit: false, seite: null,
         konto: ligaTagOnline() ? window.DartKonto.nutzer().id : null,
         seit: 0, geholt: false, plaetze: null, turnier: null, abbild: {}, fehlt: {}, nm: {}, sid: null, ruheBis: 0,
         /* Best of 3 und ohne Finish-Hilfen (WDF 3.08) sind die Voreinstellung. */
@@ -32755,6 +33055,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     }
     var bau = ligaTourBauen(pruefen ? t.d : Object.assign({}, t.d, { vollNamen: {} }), ligaTagTermin(t.terminId));
     var lg = bau.tour.liga;
+    /* Probe: ein Uebungsspiel (zaehlt nirgends, Bericht nur an dich). */
+    if (t.probe) { lg.uebung = true; lg.probe = true; }
     /* Live ohne Namen (Game-Day-Einstellung) und die Ersatzspieler 5-8. */
     if (t.d.ohneNamen) lg.ohneNamen = true;
     var ersatz = { wir: [], sie: [] };
@@ -32930,7 +33232,9 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   function ligaTagTakt() {
     var t = S.ligaTag;
     if (!t || document.hidden || gesperrt()) return;
-    if (t.tag !== ligaHeuteIso() || S.history.some(function (h) { return h.liga && !h.liga.uebung && h.liga.abgeschlossen && h.liga.terminId === t.terminId; }) || (S.tour && S.tour.liga && !S.tour.liga.uebung && S.tour.liga.terminId === t.terminId)) {
+    /* Die Probe endet wie der echte Game Day, sobald ihr Spiel laeuft. */
+    var tagSpiel = S.tour && S.tour.liga && S.tour.liga.terminId === t.terminId && (t.probe ? !!S.tour.liga.probe : !S.tour.liga.uebung);
+    if (t.tag !== ligaHeuteIso() || (!t.probe && S.history.some(function (h) { return h.liga && !h.liga.uebung && h.liga.abgeschlossen && h.liga.terminId === t.terminId; })) || tagSpiel) {
       delete S.ligaTag; save();
       if (UI.overlay && (UI.overlay.type === 'liga-start' || UI.overlay.type === 'ligatag-hinweis')) {
         if (UI.overlay.type === 'ligatag-hinweis') UI.overlay = null;
@@ -33162,7 +33466,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var datum = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'][dt.getDay()] + ' ' + ('0' + dt.getDate()).slice(-2) + '.' + MON[dt.getMonth()] + '.' + dt.getFullYear();
     var zahnrad = '<button type="button" class="gd-rad" data-action="gd-panel" data-value="ein" aria-label="Einstellungen">' +
       '<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M10 2h4l.5 2.3 1.8.8 2-1.2 2.8 2.8-1.2 2 .8 1.8L23 11v2l-2.3.5-.8 1.8 1.2 2-2.8 2.8-2-1.2-1.8.8L14 22h-4l-.5-2.3-1.8-.8-2 1.2-2.8-2.8 1.2-2-.8-1.8L1 13v-2l2.3-.5.8-1.8-1.2-2 2.8-2.8 2 1.2 1.8-.8Z" transform="translate(1 1) scale(.9167)"/></svg></button>';
-    var zurueck = '<button type="button" class="gd-zurueck" data-action="tag-zu">' + LG_LINKS + '<span>Spielplan</span></button>';
+    var zurueck = '<button type="button" class="gd-zurueck" data-action="tag-zu">' + LG_LINKS + '<span>' + (t.probe ? 'Training' : 'Spielplan') + '</span></button>';
     var fehler = o.fehler ? '<p class="gd-fehler" role="alert">' + esc(o.fehler) + '</p>' : '';
 
     /* 1) Wahl: Wo bist du? (nur geteilt und noch ohne Scheibe) */
@@ -33176,7 +33480,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       };
       var wirHeim = lt.heim === LIGA.team;
       return '<div class="gd-seite">' +
-        '<header class="gd-kopf">' + zurueck + '<b class="gd-titel">GAME DAY</b><span class="gd-sub">' + lt.nr + '. Spieltag · ' + esc(lt.heim) + ' gegen ' + esc(lt.gast) + ' · heute 20:00' + (lokal ? ' · ' + esc(lokal) : '') + '</span></header>' +
+        '<header class="gd-kopf">' + zurueck + '<b class="gd-titel">GAME DAY</b><span class="gd-sub">' + (t.probe ? 'Probe als Übungsspiel · ' : '') + lt.nr + '. Spieltag · ' + esc(lt.heim) + ' gegen ' + esc(lt.gast) + (t.probe ? '' : ' · heute 20:00') + (lokal ? ' · ' + esc(lokal) : '') + '</span></header>' +
         '<main class="gd-wahl"><b class="gd-frage-gross">WO BIST DU?</b>' + fehler +
           '<div class="gd-wahl-drei">' +
             wahlKnopf('S1', 'SCHEIBE 1', 'Trägt die Aufstellung von ' + esc(LIGA.team) + ' ein (' + (wirHeim ? 'Heim' : 'Gast') + ')', teamLogoHtml(LIGA.team, 'gd-gross')) +
@@ -33240,7 +33544,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     var scheibeText = eins ? (online ? 'EIN IPAD' : 'DIESES GERÄT') + (d.nurErgebnis ? ' · NUR ERGEBNISSE' : '')
       : 'SCHEIBE ' + t.platz.charAt(1) + ' · ' + ((t.platz === 'S1') === (lt.heim === LIGA.team) ? 'HEIM' : 'GAST');
     var seite = '<div class="gd-seite">' +
-      '<header class="gd-kopf">' + zurueck + '<b class="gd-titel">GAME DAY</b><span class="gd-sub">' + lt.nr + '. Spieltag · ' + datum + '</span><span class="gd-luft"></span>' +
+      '<header class="gd-kopf">' + zurueck + '<b class="gd-titel">GAME DAY</b><span class="gd-sub">' + (t.probe ? 'Probe als Übungsspiel · ' : '') + lt.nr + '. Spieltag · ' + datum + '</span><span class="gd-luft"></span>' +
         '<span class="gd-chip">' + scheibeText + '</span>' + zahnrad + '</header>' +
       '<main class="gd-haupt">' + fehler + (status ? '<p class="gd-status-zeile" role="status">' + esc(status) + '</p>' : '') +
         '<div class="gd-willkommen"><span><small>WILLKOMMEN IN DER</small><b>' + esc(lokal.toUpperCase()) + '</b></span>' +
@@ -33531,7 +33835,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
   }
   /* Der naechste Spieltag mit Datum ab heute (heute selbst eingeschlossen). */
   function ligaNaechsterTermin() {
-    var heute = heuteISO(), best = null;
+    /* ligaHeuteIso: im Betrieb dasselbe wie heuteISO, Tests stellen den Tag. */
+    var heute = ligaHeuteIso(), best = null;
     LIGA.termine.forEach(function (t) { if (t.tag && t.tag >= heute && (!best || t.tag < best.tag)) best = t; });
     return best;
   }
@@ -35029,7 +35334,12 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         save(); render();
         break;
       }
+      case 'liga-holen':
+        ligaJetztHolen();
+        break;
       case 'liga-tab':
+        /* Wer den Statistik-Reiter oeffnet, sieht die Bewegung wieder. */
+        if (el.getAttribute('data-tab') === 'statistik' && UI.ligaTab !== 'statistik') lstKennung = '';
         UI.ligaTab = el.getAttribute('data-tab');
         UI.ligaTeamSeite = null; UI.ligaNrAuf = false; UI.ligaEinst = null;
         if (UI.ligaTab === 'kasse' && el.closest && el.closest('#liga-einstellungen')) UI.kasseForm = true;
@@ -35314,7 +35624,10 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         /* Die Zeilen im Training waehlen den Gegner gleich mit (zweites
            Team, Bots, naechster Gegner); die Bot-Staerke bleibt im Dialog. */
         var usG = el && el.getAttribute ? el.getAttribute('data-gegner') : null;
-        if (usG === 'team' || usG === 'liga') UI.uebungGegner = usG;
+        /* Gegen den naechsten Gegner: die Probe des Spieltags ueber den Game Day. */
+        if (usG === 'liga') { ligaTagProbeOeffnen(); break; }
+        if (usG === 'team') UI.uebungGegner = usG;
+        if (UI.uebungGegner === 'liga') UI.uebungGegner = 'mittel';
         else if (usG === 'bots' && ['leicht', 'mittel', 'schwer'].indexOf(UI.uebungGegner) < 0) UI.uebungGegner = 'mittel';
         /* Aufstellung vorbelegen: erst die DiensDarts-Zusagen, dann der
            Rest der aktiven Profile - Team B bekommt die naechsten vier. */
@@ -35350,6 +35663,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         break;
       }
       case 'uebung-gegner':
+        if (el.getAttribute('data-value') === 'liga') { UI.overlay = null; ligaTagProbeOeffnen(); break; }
         if (UI.overlay && UI.overlay.type === 'uebung-start') {
           UI.overlay.draft.modus = el.getAttribute('data-value');
           /* Geteilt braucht zwei echte Teams - Bots werfen auf dem einen
@@ -35851,6 +36165,7 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
         fernsteuerung(!UI.turnier);
         break;
       case 'game-swap': {
+        if (lzAktiv()) break;   // Ligaspiel: nur Punkte (Julius 28.11.)
         tipp();
         /* Ein Tipp wechselt zwischen Punkten und Einzel-Darts. */
         var gsJetzt = UI.letzterModus === 'kamera' ? 'darts' : UI.letzterModus;
@@ -37161,8 +37476,8 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
       /* Markieren: DIESES Enter hat die Aufnahme gebucht - der Overlay-
          Listener weiter unten darf es nicht gleich noch als Bestaetigung
          der frisch geoeffneten Checkout-Frage verstehen. */
-      /* Gehaltenes Enter (Tastenwiederholung) bucht nichts - sonst bestaetigte
-         es im Ligaspiel "mehr als der Rest" von selbst (Kritik 28.11.). */
+      /* Gehaltenes Enter (Tastenwiederholung) bucht nichts - sonst buchte es
+         die naechste Aufnahme gleich mit (Kritik 28.11.). */
       if (UI.input !== '' && !ev.repeat) { UI.error = ''; ev.eingabeGebucht = true; submitTotal(); }
       ev.preventDefault();
     } else if (ev.key === 'Backspace') {
@@ -37332,8 +37647,14 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
      seiner Seite, alle Legs mit Trennern. Loslassen führt zurück in die
      Spielansicht; verliert das Fenster den Fokus (Alt-Tab), klappt die
      Ansicht ebenfalls zu, sonst bliebe sie hängen. */
-  /* "*" am Ziffernblock: Team-Zwischenstand gross ein- und wieder ausblenden.
-     Im Ligaspiel schliesst ihn auch Enter (der Entwurf hat keinen Knopf). */
+  /* "*" am Ziffernblock: Team-Zwischenstand gross, solange die Taste
+     gedrueckt bleibt - Loslassen fuehrt zurueck ins Spiel (Julius 28.11.,
+     wie Shift fuer die Wurfliste). Verliert das Fenster den Fokus, klappt
+     er ebenfalls zu. Ueber das Menue geoeffnet schliesst ihn Enter (der
+     Entwurf hat keinen Knopf). */
+  function sternStandZu() {
+    if (UI.overlay && UI.overlay.type === 'team-stand' && UI.overlay.stern) { UI.overlay = null; render(); }
+  }
   document.addEventListener('keydown', function (ev) {
     if (ev.key === 'Enter' && UI.overlay && UI.overlay.type === 'team-stand' && lzDialog(UI.overlay)) {
       ev.preventDefault(); ev.stopImmediatePropagation();
@@ -37344,11 +37665,19 @@ if (typeof module !== 'undefined') module.exports = (typeof window !== 'undefine
     if (!S.tour || !S.tour.liga || (S.screen !== 'game' && S.screen !== 'tournament')) return;
     var at = document.activeElement;
     if (at && (at.tagName === 'INPUT' || at.tagName === 'TEXTAREA' || at.isContentEditable)) return;
-    if (UI.overlay && UI.overlay.type === 'team-stand') { UI.overlay = null; render(); }
-    else if (!UI.overlay) { UI.overlay = { type: 'team-stand' }; render(); }
-    else return;
+    if (UI.overlay && UI.overlay.type === 'team-stand') { ev.preventDefault(); return; }
+    if (UI.overlay || ev.repeat) return;
+    UI.overlay = { type: 'team-stand', stern: true, code: ev.code || '' }; render();
     ev.preventDefault();
   });
+  document.addEventListener('keyup', function (ev) {
+    /* Auf Tastaturen ohne Ziffernblock ist * Shift plus "+": wird Shift
+       zuerst losgelassen, kommt das Loslassen als "+" - dieselbe Taste
+       (ev.code) zaehlt deshalb auch. */
+    var o = UI.overlay;
+    if (ev.key === '*' || ev.code === 'NumpadMultiply' || (o && o.type === 'team-stand' && o.stern && o.code && ev.code === o.code)) sternStandZu();
+  });
+  window.addEventListener('blur', sternStandZu);
 
   /* Kaiwen-Fernsteuerung: "+" (oder Shift) zeigt die Aufnahmen des
      laufenden Versuchs gross, solange die Taste gedrueckt bleibt. */

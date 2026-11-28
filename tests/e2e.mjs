@@ -2576,7 +2576,8 @@ check('das Ligaspiel steht', await visible('#screen-tournament'));
 await page.locator('#ligaspiel .la-einzel [data-action="open-match"]').first().click();
 check('das Liga-Einzel beginnt mit dem Ausbullen (SWO 10/2026)', await visible('#screen-bulloff'));
 await ligaAusbullen();
-check('das Einzel oeffnet im Spielbild des Ligaspiels mit Wechsel- und Tastatur-Knopf', (await visible('#lz-spiel [data-action="game-swap"]')) && (await visible('#lz-spiel [data-action="game-fern"]')));
+check('das Einzel oeffnet im Spielbild des Ligaspiels mit Tastatur-Knopf, ohne Einzel-Darts (nur Punkte, Julius 28.11.)', (await page.locator('#lz-spiel [data-action="game-swap"]').count()) === 0 &&
+  (await visible('#lz-spiel [data-action="game-fern"]')) && (await visible('#lz-spiel .lz-tasten')) && (await page.locator('#lz-spiel .lz-ziffern').count()) === 0);
 await modus('turnier');
 check('Tastatur-Ansicht sichtbar', await visible('#lz-spiel.lz-tast .lz-fuss .lz-tipp-feld'));
 check('Zahlenfeld und Einzel-Darts weg', !(await visible('#lz-spiel .lz-tasten')) && !(await visible('#lz-spiel .lz-ziffern')));
@@ -4077,12 +4078,11 @@ await page.locator('[data-action="uebung-start"][data-gegner="bots"]').click();
 check('der Aufstellungs-Dialog oeffnet sich', (await text('#overlay-card')).includes('Übungs-Ligaspiel'));
 check('Bots mittel sind vorgewaehlt', await page.evaluate(() =>
   document.querySelector('[data-action="uebung-gegner"][data-value="mittel"]').classList.contains('active')));
-/* Probelauf gegen den naechsten Gegner: dieselben Gegner-Zeilen mit Kader-Chips wie im echten Start. */
-await page.locator('[data-action="uebung-gegner"][data-value="liga"]').click();
-check('Probelauf gegen den naechsten Gegner: Kader-Chips und vier Gegner-Zeilen',
-  (await page.locator('#overlay-card .ls-kader .chip').count()) >= 4 && (await page.locator('#overlay-card [data-role="liga-gegner"]').count()) === 4 &&
-  (await text('#overlay-card')).includes('Probelauf'));
-await page.locator('[data-action="uebung-gegner"][data-value="mittel"]').click();
+/* Gegen den naechsten Gegner geht es ueber den Game Day (tests/ligatag-probe.mjs),
+   nicht mehr ueber diesen Dialog (Julius 28.11.). */
+check('der Dialog bietet nur Team B und Bots, nicht mehr den naechsten Gegner',
+  (await page.locator('#overlay-card [data-action="uebung-gegner"][data-value="liga"]').count()) === 0 &&
+  (await page.locator('#overlay-card [data-action="uebung-gegner"][data-value="team"]').count()) === 1);
 await page.locator('[data-action="uebung-los"]').click();
 check('das Uebungsspiel steht wie ein Ligaspiel', (await visible('#screen-tournament')) &&
   await page.evaluate(() => {
@@ -4410,13 +4410,15 @@ check('gross stehen die Punkte: ein gewonnenes Einzel = 1:0', await page.evaluat
   const z = [...document.querySelectorAll('#la-stand .lg-zahl')].map((e) => e.textContent.trim());
   return z.join(':') === '1:0';
 }));
-await page.keyboard.press('NumpadMultiply');
-check('"*" zeigt im Ligaspiel den Zwischenstand gross', await page.evaluate(() => {
+await page.keyboard.down('NumpadMultiply');
+check('"*" gedrueckt halten zeigt im Ligaspiel den Zwischenstand gross', await page.evaluate(() => {
   const o = window.__dart.ui().overlay; const t = document.getElementById('overlay-card').textContent;
   return !!o && o.type === 'team-stand' && t.includes('Zwischenstand') && t.includes('1 von 16 gespielt');
 }));
-await page.keyboard.press('NumpadMultiply');
-check('nochmal "*" blendet ihn aus', await page.evaluate(() => !window.__dart.ui().overlay));
+await page.keyboard.down('NumpadMultiply');
+check('die Tastenwiederholung beim Halten laesst ihn stehen', await page.evaluate(() => { const o = window.__dart.ui().overlay; return !!o && o.type === 'team-stand'; }));
+await page.keyboard.up('NumpadMultiply');
+check('Loslassen von "*" blendet ihn aus (Julius 28.11.)', await page.evaluate(() => !window.__dart.ui().overlay));
 check('jedes Einzel traegt seine Scheibe', await page.evaluate(() => {
   const M = window.__dart.state().matches;
   return M[0].scheibe === 'S1' && M[1].scheibe === 'S2';
@@ -4810,6 +4812,12 @@ check('Umschalter Mannschaft · Spieler-Rangliste · Einzelstatistik, Mannschaft
     !/[\u{1F300}-\u{1FAFF}]/u.test(document.getElementById('liga-statistik').textContent);
 }));
 check('die Statistik ist umgebaut: kein fix-setup, die Seite rollt', await page.evaluate(() => !document.body.classList.contains('fix-setup')));
+check('Bewegung wie in der alten Statistik: Karten warten aufs Hineinscrollen, ein Neuzeichnen im Hintergrund bricht nichts ab', await page.evaluate(() => {
+  const l = document.querySelector('#liga-statistik .lst');
+  const wart = document.querySelectorAll('#liga-statistik .lst-karte.lst-wart').length;
+  window.__dart.render();
+  return !!l && l.classList.contains('anim') && wart >= 1 && document.querySelector('#liga-statistik .lst') === l;
+}));
 const kopfM = await page.evaluate(() => ({
   titel: document.querySelector('#liga-statistik .lst-wer .lst-gross').textContent.trim(),
   liga: document.querySelector('#liga-statistik .lst-wahl-liga .lst-wahl-knopf').textContent.trim(),
@@ -4818,6 +4826,8 @@ const kopfM = await page.evaluate(() => ({
 }));
 check('Kopf: Blink 180, Liga SDM 4er Liga 5, Mannschaft Blink 180; Kennzahlen Tabellenplatz, Einzel, Legs, Bester Spieler',
   kopfM.titel === 'Blink 180' && kopfM.liga === 'SDM 4er Liga 5' && kopfM.team === 'Blink 180' && kopfM.kpi === 'TABELLENPLATZ|EINZEL|LEGS|BESTER SPIELER', JSON.stringify(kopfM));
+/* Die Kennzahlen zaehlen beim Oeffnen hoch (wie in der alten Statistik). */
+await page.waitForTimeout(1500);
 check('Einzel und Legs der Kennzahlen = Summe der Spieltag-Kacheln, Platz = Tabelle', await page.evaluate(() => {
   const k = [...document.querySelectorAll('#liga-statistik .lst-kpi .lst-kpi-zahl')].map((e) => e.textContent.trim());
   let ef = 0, ea = 0, lf = 0, la = 0;
@@ -8703,21 +8713,21 @@ check('der Finish-Weg steht beim Spieler am Wurf und bucht per Tipp', await page
   return !!w && w.textContent.replace(/\s/g, '') === 'T20T19D12';
 }));
 
-/* --- Ueber dem Rest: erst nachfragen (Julius, 28.11.) - von Hand --- */
+check('auch mit "Einzel-Darts ab Rest 170" bleibt das Ligaspiel bei der Punkte-Eingabe', await page.evaluate(() => {
+  const D = window.__dart, S = D.state(); S.settings.dartModeFrom = 170; D.ui().modeOverride = 'darts'; D.render();
+  const ok = !document.querySelector('#lz-spiel.lz-darts') && !!document.querySelector('#lz-spiel .lz-tasten') && !document.querySelector('#lz-spiel [data-action="game-swap"]');
+  S.settings.dartModeFrom = 0; D.ui().modeOverride = null; D.render();
+  return ok;
+}));
+
+/* --- Ueber dem Rest: sofort ueberworfen, keine Rueckfrage (Julius 28.11.) - von Hand --- */
 const okHand = '#lz-spiel .lz-tasten button[data-key="ok"]';
 for (const z of ['1', '6', '0']) await page.locator(`#lz-spiel .lz-tasten button[data-key="${z}"]`).click();
 await page.locator(okHand).click();
-check('mehr als der Rest: nichts gebucht, die Zahl bleibt gelb mit Rueckfrage', (await lzBesuche()) === 12 &&
-  (await rest(0)) === '141' && (await lzMeldung()).includes('Mehr als der Rest 141') && (await lzMeldung()).includes('OK bucht als überworfen') &&
-  await page.evaluate(() => window.__dart.ui().input === '160' && !!document.querySelector('#lz-spiel .lz-tipp.gelb')));
-await page.locator(okHand).click();
-check('ein sofort nachgeschobenes OK (Prellen) bucht noch nicht', (await lzBesuche()) === 12);
-await page.waitForTimeout(300);
-await page.locator(okHand).click();
-check('das zweite OK bucht ueberworfen: 0 Punkte, drei Darts, Rest wie vor der Aufnahme', await page.evaluate(() => {
+check('mehr als der Rest: OK bucht gleich ueberworfen, 0 Punkte, drei Darts, Rest wie vor der Aufnahme, keine Warnung', await page.evaluate(() => {
   const D = window.__dart, l = D.activeLeg(D.currentMatch()), v = l.visits[l.visits.length - 1];
-  return l.visits.length === 13 && v.b === true && v.s === 0 && v.o === 160 && v.d === 3 && !v.c && D.ui().input === '';
-}) && (await rest(0)) === '141' && (await lzAmWurf()) === 'lzt_g2');
+  return l.visits.length === 13 && v.b === true && v.s === 0 && v.o === 160 && v.d === 3 && !v.c && D.ui().input === '' && !D.ui().warnung;
+}) && (await rest(0)) === '141' && (await lzAmWurf()) === 'lzt_g2' && !(await lzMeldung()));
 await page.locator('#lz-spiel .lz-tasten button[data-key="del"]').click();
 check('Zurueck nimmt genau diese eine Aufnahme zurueck', (await lzBesuche()) === 12 && (await lzAmWurf()) === 'lzt_h1' && (await rest(0)) === '141');
 await page.evaluate(() => { window.__dart.ui().input = ''; window.__dart.render(); });
@@ -8747,17 +8757,13 @@ for (let i = 0; i < 3; i++) await page.keyboard.press('Backspace');
 await page.keyboard.type('179'); await page.keyboard.press('Enter');
 check('unmoegliche Summe: "179 ist nicht möglich" mit den anderen', (await lzMeldung()).includes('179 ist nicht möglich') && (await lzMeldung()).includes('163') && (await lzBesuche()) === 12);
 for (let i = 0; i < 3; i++) await page.keyboard.press('Backspace');
-await page.keyboard.type('160'); await page.keyboard.press('Enter');
-check('Tastatur: mehr als der Rest fragt "Enter bucht als überworfen"', (await lzMeldung()).includes('Enter bucht als überworfen') && (await lzBesuche()) === 12);
-await page.keyboard.press('Backspace');
+await page.keyboard.type('16');
 check('Loeschen korrigiert (Ziffer weg, Warnung weg)', await page.evaluate(() => window.__dart.ui().input === '16') && !(await lzMeldung()));
 await page.keyboard.type('0'); await page.keyboard.press('Enter');
-await page.waitForTimeout(300);
-await page.keyboard.press('Enter');
-check('zweites Enter bucht ueberworfen, Rest bleibt 141, Gast am Wurf', await page.evaluate(() => {
+check('Tastatur: mehr als der Rest bucht mit dem ersten Enter ueberworfen, Rest bleibt 141, Gast am Wurf', await page.evaluate(() => {
   const D = window.__dart, l = D.activeLeg(D.currentMatch()), v = l.visits[l.visits.length - 1];
   return l.visits.length === 13 && v.b && v.o === 160 && v.s === 0;
-}) && (await rest(0)) === '141' && (await lzAmWurf()) === 'lzt_g2');
+}) && (await rest(0)) === '141' && (await lzAmWurf()) === 'lzt_g2' && !(await lzMeldung()));
 await page.keyboard.press('Backspace');
 check('Loeschen im leeren Feld nimmt genau sie zurueck', (await lzBesuche()) === 12 && (await lzAmWurf()) === 'lzt_h1');
 
@@ -8843,7 +8849,7 @@ check('Tipp auf den Teamstand: Zwischenstand gross, mit dem laufenden Einzel', a
 await page.keyboard.press('Enter');
 check('Enter schliesst ihn', await page.evaluate(() => !window.__dart.ui().overlay));
 await page.locator('#lz-spiel [data-action="lz-info"]').click();
-check('der Info-Knopf erklaert die Tastenbelegung', (await text('#overlay-card')).includes('Überworfen buchen') && (await text('#overlay-card')).includes('Teamstand groß ein und aus'));
+check('der Info-Knopf erklaert die Tastenbelegung', (await text('#overlay-card')).includes('Überworfen buchen') && (await text('#overlay-card')).includes('Teamstand groß zeigen'));
 await page.keyboard.press('Escape');
 check('Esc schliesst die Tastenbelegung', await page.evaluate(() => !window.__dart.ui().overlay));
 await page.locator('#lz-spiel [data-action="game-fern"]').click();
@@ -8856,6 +8862,20 @@ await page.evaluate(() => { const D = window.__dart, S = D.state(); S.current = 
 check('Ausbullen im Ligaspiel nach Entwurf mit "Nicht da? w.o. werten"', await page.evaluate(() =>
   document.getElementById('screen-bulloff').classList.contains('lz') && !!document.querySelector('#lz-bo-fuss .lz-bo-wo') &&
   document.querySelectorAll('#bulloff-buttons [data-action="pick-starter"]').length === 2 && !document.querySelector('#bulloff-buttons .te-hint')));
+check('Ausbullen-Reihenfolge: jeder bullt zweimal zuerst (vorne in der Ansicht) und zweimal als Zweiter, S1 und S2 gegengleich', await page.evaluate(() => {
+  const D = window.__dart, S = D.state(), zuerst = {}, je = [];
+  for (const m of S.matches) {
+    S.current = m.id; D.render();
+    const b = [...document.querySelectorAll('#bulloff-buttons [data-action="pick-starter"]')].map((x) => x.getAttribute('data-id'));
+    if (b.length !== 2 || b.slice().sort().join() !== m.p.slice().sort().join()) return false;
+    zuerst[b[0]] = (zuerst[b[0]] || 0) + 1; je.push(b[0] === m.p[0] ? 'H' : 'G');
+  }
+  S.current = 'lzm5'; D.render();
+  const ids = S.tour.liga.wir.concat(S.tour.liga.sie);
+  const paare = [0, 2, 4, 6, 8, 10, 12, 14].every((i) => je[i] !== je[i + 1]);
+  return ids.every((id) => zuerst[id] === 2) && je[0] === 'H' && je[1] === 'G' && paare &&
+    S.matches.every((m) => m.p[0].startsWith('lzt_h'));
+}));
 await page.locator('#lz-bo-fuss .lz-bo-wo').click();
 check('der Link oeffnet den w.o.-Dialog fuer dieses Einzel', await page.evaluate(() => {
   const o = window.__dart.ui().overlay; return o && o.type === 'liga-kampflos' && o.id === 'lzm5';
@@ -8868,8 +8888,15 @@ check('nach der Wertung geht es in die Uebersicht, das Einzel ist kampflos', (aw
 }));
 
 /* --- Hell und dunkel ohne Ueberlauf, Fingerziele mindestens 44 px --- */
-for (const vp of [{ width: 390, height: 844 }, { width: 820, height: 1180 }, { width: 1180, height: 820 }]) {
+for (const vp of [{ width: 390, height: 844 }, { width: 820, height: 1180 }, { width: 1180, height: 820 }, { width: 1366, height: 1024 }]) {
   await page.setViewportSize(vp);
+  /* Groessere iPads: alles waechst im selben Mass (Julius 28.11.), nie kleiner. */
+  /* Das resize-Ereignis kommt nach setViewportSize nicht immer sofort an:
+     auf den Wert warten statt einmal zu lesen (Kritik 28.11.). */
+  check('Skalierung bei ' + vp.width + 'x' + vp.height, await page.waitForFunction((w) => {
+    const z = getComputedStyle(document.documentElement).getPropertyValue('--t-zoom').trim();
+    return w === 1366 ? z === '1.15' : (z === '' || z === '1');
+  }, vp.width, { timeout: 3000 }).then(() => true).catch(() => false));
   for (const hell of [0, 1]) {
     for (const tast of [false, true]) {
       await lzBau({ hell, tast });

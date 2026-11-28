@@ -263,7 +263,18 @@ Sehnsucht, Datum, Route und den Gruppen Dabei, Noch keine Antwort und Kann nicht
 Antwort), darunter „Du bist dabei · ändern“ bzw. „Kommst du? DABEI · KANN NICHT“
 und rechts oben der Kalender-Knopf. Rechts die nächsten sechs Dienstage ohne
 Ligaspiel (antippen wählt) und das Übungs-Ligaspiel: gegen ein zweites eigenes Team,
-gegen Bots (Stärke im Dialog) oder gegen den nächsten Gegner.
+gegen Bots (Stärke im Dialog) oder gegen den nächsten Gegner. **Gegen den nächsten Gegner**
+ist seit 28.11. die **Probe des Spieltags** und läuft genau wie der Abend selbst über den
+**Game Day** (Julius: „einfach den Spieltag simulieren, damit ich nochmal testen kann“):
+Einstellungen (Namen im Live-Ticker, Finish-Anzeigen, Best of …), Scheibe wählen,
+Wartebereich mit Aufstellung beider Teams, BEREIT, GAME ON und „LOS GEHT'S“ an beiden
+iPads – nur heute statt am Spieltag, oben „Probe als Übungsspiel“, zurück geht es ins
+Training. Am Server hat die Probe einen eigenen Game Day (Kennung `st06-<heute>-p`), der
+echte Spieltag bleibt unberührt; gestartet wird ein **Übungsspiel** (`uebung`, `probe`):
+es zählt nirgends, bekommt keinen öffentlichen Live-Link, der Bericht geht nur an dich.
+Am Spieltag selbst gibt es keine Probe (dann läuft der echte Game Day über den Spielplan),
+und ein laufendes Spiel muss erst abgeschlossen sein. Der alte Startdialog bietet nur
+noch Team B und Bots. Test: `tests/ligatag-probe.mjs` (zwei iPads, echter Server).
 
 **Kasse** (Entwurf „Liga Kasse“): links der Kassenstand mit Anfangsbestand,
 Einnahmen und Ausgaben, „Kasse führt“, „BUCHUNG ERFASSEN“ (das Formular klappt in der
@@ -280,7 +291,15 @@ erste ist aufgeklappt. Die Frage zu Auf- und Abstieg steht dabei.
 **Tabelle** (Entwurf „Liga Tabelle“): oben die Ligawahl SDM 4er Liga 1 bis 5 (unsere
 aus `LIGA_DATEN`, die anderen vier aus den Gesamtdaten der Ligaleitung, `GET
 /api/liga-gesamt`, nur angemeldet; ohne Verbindung ein Hinweis, neuer Versuch nach einer
-Minute). Die Tabelle mit Logo, S · U · N, Einzel, Legs, Punkten; Platz 1 und 2 grün
+Minute). **„Daten aktualisieren“** (nur Teamcaptains laut Ligaleitung, TC-1/TC-2, und der
+Admin; Julius 28.11.): holt die Ergebnisse der Ligaleitung sofort statt erst zur vollen
+Stunde – unsere Liga und die Ligen 1 bis 5 samt Highlights (`POST /api/liga/aktualisieren`,
+der Server prüft die Rolle, ein Abruf zur Zeit – auch gegen den stündlichen –, ein zweiter
+Druck in derselben Minute nach einem Erfolg holt nicht noch einmal, nach einem Fehler schon;
+kommt nur ein Teil an, sagt der Knopf das, nach zwei Minuten ohne Antwort gibt er auf). Ohne Claude oder sonstige API: es ist derselbe Abgleich, den der Server
+stündlich macht. Der Admin ist eine Rolle am Konto (`users.admin`, Migration 022 setzt
+Julius, `server/scripts/admin.mjs` setzt oder nimmt sie); in den Liga-Einstellungen steht
+dann „Admin“ bzw. „Teamcaptain“. Die Tabelle mit Logo, S · U · N, Einzel, Legs, Punkten; Platz 1 und 2 grün
 (Aufstieg, nicht in Liga 1), die letzten beiden rot (Abstieg, nicht in Liga 5); unsere
 Zeile hervorgehoben mit ▲/▼/= seit dem vorigen gespielten Spieltag (die Zeilen gleiten
 einmal an ihren Platz). Ein Tipp auf ein Team öffnet in unserer Liga seine
@@ -467,9 +486,10 @@ Ligaspiel, gilt die Woche danach. Eine Umfrage fragt je Termin
 **Bin dabei / Unsicher / Kann nicht** ab (serverweit, mit Bild und Namen aller,
 die kommen). Darunter startet das **Übungs-Ligaspiel**: der komplette
 Liga-Ablauf – 16 Einzel in Bogen-Reihenfolge, zwei Scheiben, Team-Stand,
-Spielbericht – als **Probelauf gegen den nächsten Gegner** laut Spielplan (Gäste
+Spielbericht – als **Probelauf gegen den nächsten Gegner** laut Spielplan (seit 28.11.
+über den Game Day wie am Spieltag, siehe oben; Gäste
 aus dessen Kader-Chips, Ausbullen, Heim/Gast wie am Spieltag, geteilt an zwei
-iPads möglich; danach Bericht, Unterschriften und Versand, vorbelegt nur mit der
+iPads; danach Bericht, Unterschriften und Versand, vorbelegt nur mit der
 eigenen Adresse, Betreff „[Test] …“, Adressen werden nicht gemerkt, keine
 Mitteilung ans Team), gegen ein zweites eigenes Team **oder gegen Bots** in drei
 Stärken (leicht ≈ 38er-Aufnahmen, mittel ≈ 52, schwer ≈ 72; Bots stellen sich
@@ -768,18 +788,25 @@ entfällt die Turnier-Statistik.
 (auch im Übungs-Ligaspiel) hat das X01 ein eigenes Spielbild in den Farben hell/dunkel
 (Darstellung im Profil). Kopf: links „Einzel 5 von 16 · Scheibe 1 · Best of 3 · 501“,
 rechts der Teamstand (Tipp darauf zeigt den Zwischenstand groß) und runde Knöpfe für
-Tastatur, Einzel-Darts (nur von Hand), Tastenbelegung und das Menü (•••). **Mit
+Tastatur, Tastenbelegung und das Menü (•••). Im Ligaspiel gibt es nur die Punkte-Eingabe wie im
+Entwurf, keine Einzel-Darts – auch nicht über „Einzel-Darts ab Rest“ (Julius 28.11.; Autodarts
+bleibt). **Mit
 Tastatur** stehen zwei große Karten nebeneinander – Name mit Bogen-Position (H1/G2),
 Legs, Schnitt des Einzels, der Rest in Plakatgröße, darunter der Finish-Weg (nur mit
 Finish-Anzeigen; ein Tipp bucht ihn) und die letzten sechs Aufnahmen, die jüngste groß
 vorn (ein Tipp darauf korrigiert sie); unten in der Mitte die getippte Zahl. **Von Hand**
 stehen die Karten links untereinander, rechts Meldung, getippte Zahl, Schnellwahl und
-Ziffernblock; ein Tipp auf ⌨ wechselt, die neue Ansicht gleitet herein. Einzelne Darts
-stehen nur dort, wo sie erfasst wurden (Einzel-Darts, Autodarts) – die Punkte-Eingabe
-kennt nur die Summe. **Warnungen**: mehr als 180 oder eine unmögliche Summe bleibt rot
-stehen und wackelt (Enter bucht nie), mehr als der Rest gelb mit „Enter bucht als
-überworfen, Löschen korrigiert“. Shift oder + gedrückt zeigt alle Würfe groß, „*“ (oder
-der Tipp auf den Teamstand) den **Zwischenstand** mit dem, was gerade läuft. Die Dialoge
+Ziffernblock (Tastenfeld 380 bis 440 px, die Karten bekommen den Rest); ein Tipp auf ⌨
+wechselt, die neue Ansicht gleitet einmal herein (nur beim Wechsel, nicht bei jeder Eingabe).
+Einzelne Darts stehen nur dort, wo sie erfasst wurden (Autodarts) – die Punkte-Eingabe
+kennt nur die Summe. **Wurfliste**: kommt eine Aufnahme dazu, gleitet jede Zahl von ihrem
+alten an ihren neuen Platz, die bisher jüngste schrumpft dabei weich in die Reihe, die neue
+blendet ein, die siebte aus (FLIP mit der Web Animations API, `lzFlugMessen`/`lzFlugStarten`;
+ein Neuzeichnen mitten in der Bewegung läuft nahtlos weiter). **Warnungen**: mehr als 180
+oder eine unmögliche Summe bleibt rot stehen und wackelt (Enter bucht nie). Mehr als der
+Rest ist sofort überworfen (Bust), ohne Rückfrage (Julius 28.11.). Shift oder + gedrückt
+zeigt alle Würfe groß, „*“ **gedrückt halten** (oder der Tipp auf den Teamstand) den
+**Zwischenstand** mit dem, was gerade läuft; Loslassen führt zurück. Die Dialoge
 tragen oben die Leiste des Ligaspiels (Spieltag, Teams mit Stand, Ort und Scheibe) über
 dem weichgezeichneten Spielbild: **Checkout** – erst die Dartzahl (1/2/3, „D20 ist klar“),
 mit Finish-Anzeigen bei offenem Doppel danach „Auf welchem Doppel?“, gebucht wird mit
@@ -789,7 +816,25 @@ Highfinish-Hinweis, Kurzstatistik und wer das nächste Leg anwirft, **Ergebnis n
 Einzel** mit Sieger, Legs, Average, First 9, 180ern, höchstem Finish, bestem Leg und dem
 nächsten Einzel laut Bogen, **Aufnahme korrigieren** mit altem und neuem Wert. Das
 **Ausbullen** im Ligaspiel trägt unten „Nicht da? w.o. werten“: es öffnet den
-vorhandenen Dialog „Kampflos werten“, danach geht es in die Übersicht.
+vorhandenen Dialog „Kampflos werten“, danach geht es in die Übersicht. Vorne steht, wer
+zuerst auf Bull wirft (`LIGA_BULL_ZUERST`): jeder Spieler beider Teams bullt genau zweimal
+zuerst und zweimal als Zweiter, die beiden gleichzeitigen Einzel an S1 und S2 stehen
+gegengleich (Einzel 1 Heim, Einzel 2 Gast …). Die Reihenfolge der Partie (Heim, Gast)
+bleibt dabei unberührt.
+
+**Größe am iPad**: Die Ligaspiel-Ansichten (Zählen, Ausbullen, Übersicht, Spielende und
+ihre Dialoge) sind für 1180 × 820 (quer) bzw. 820 × 1180 (hochkant) gezeichnet. Auf
+größeren iPads (Pro 12,9") wächst alles im selben Maß mit (`--t-zoom`, CSS `zoom`,
+gerechnet in `darstellungAnwenden`, auch beim Drehen; ändern die Safari-Leisten nur die Höhe
+ein Stück, bleibt sie stehen); verkleinert wird nie, damit die Fingerziele mindestens 44 px
+bleiben. Dialoge mit Unterschriftsfeld (`.la-sig`) bleiben unvergrößert, weil Safari
+Fingerpositionen in vergrößerten Bereichen anders rechnet als Chrome; die Wurflisten-Animation
+misst einmal aus, welche Pixel der Browser liefert (`zoomRectVisuell`).
+
+**Statusleiste (iPad/iPhone)**: ohne `apple-mobile-web-app-status-bar-style` färbt iOS sie
+in der `theme-color`. Die folgt jetzt der Seite – hell im hellen Bereich (#f6f3f1), sonst
+dunkel –, zusammen mit dem deckenden Streifen `.ios-oben` (`--t-bg`); so legt iOS keinen
+Glas-Blur über den oberen Rand.
 
 Das **Ausbullen** (Entwurf „Ausbullen“, Oktober 2026) ist auf allen Spielarten
 gleich: „Zurück“ oben links, Zielscheibe und Titel mittig, rechts oben der
@@ -1643,6 +1688,12 @@ damit Text darauf lesbar bleibt.
   längste Siegesserie), **Gegnerbilanz** (Head-to-Head, bei uns mit eigenem Ø),
   **Rang im Team** und **Umfeld in der Liga**.
 
+**Bewegung wie in der alten Statistik** (Julius 28.11.): einmal je Auswahl gleiten die Karten
+18 px herein, die Kennzahlen springen auf, Balken wachsen, Ringe füllen sich und die Zahlen
+zählen hoch – jede Karte erst, wenn sie ins Bild scrollt (`lstNachRender`, `.lst-wart`). Wer
+den Reiter öffnet, sieht sie wieder; zeichnet ein Abgleich im Hintergrund dasselbe noch
+einmal, bleibt die Seite stehen und bricht nichts ab.
+
 Ein Gast-Konto sieht dieselben öffentlichen Namen der Spielberichte, aber keine vollen
 Namen aus unseren Profilen. Am Handy steht alles untereinander, die Rangliste zeigt dort
 Rang, Spieler mit Team, S : N, Wertung und Punkte.
@@ -2167,6 +2218,7 @@ bzw. `--ja` nur, was passieren würde):
 | `einzel-umschreiben.mjs <spiel-id> <einzel-id> <alt> <neu> [--ja]` | Schreibt ein gespieltes Einzel nachträglich einem anderen Spieler zu (vergessener Wechsel am Spieltag). |
 | `invite-hash.mjs [code]` | Würfelt einen Einladungscode oder hasht den eigenen für `DARTS_INVITE_HASH` (`npm run invite`). |
 | `kassenwart.mjs [--aus] <e-mail>` | Macht ein Konto zum Kassenwart (bucht und löscht im Kassenbuch) oder nimmt die Rolle wieder. |
+| `admin.mjs [--aus] <e-mail>` | Macht ein Konto zum Admin (holt wie die TCs die Liga-Daten auf Knopfdruck) oder nimmt die Rolle wieder. |
 | `konto-anlegen.mjs <e-mail> <anzeigename> <passwort>` | Legt ein Konto direkt an, ohne Einladungscode durch die App. |
 | `konto-loeschen.mjs <e-mail>` | Löscht ein Konto restlos; verweigert, solange aktive Spiele daran hängen. |
 | `konto-weg.mjs --mail <e-mail> [--wirklich]` | Löscht ein Konto wie der Knopf in der App (`server/lib/konto-loeschen.mjs`): Stammdaten, Sitzungen, Zusagen und Benachrichtigungen weg, Spiele ohne andere Konten mit Grabstein, gemeinsame Spiele bleiben als „Ehemaliges Mitglied“; ohne Verweise verschwindet die Kontozeile ganz. |

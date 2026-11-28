@@ -176,6 +176,8 @@ async function main() {
       // Lebenszeichen im Live-Strom alle 300 ms statt alle 25 s.
       DARTS_SSE_PULS_MS: '300',
       // Spielbericht-Mail (S3): erlaubte Fremdadresse neben der eigenen.
+      // Knopf "Daten aktualisieren": Stellvertreter statt Abruf im Netz.
+      DARTS_LIGA_JETZT_TEST: '1',
       NODE_ENV: 'test'
     },
     stdio: ['ignore', 'pipe', 'pipe']
@@ -1071,6 +1073,29 @@ async function main() {
     }
     r = await julius.ruf('GET', '/api/kasse');
     ok(r.daten.kassenwart === true && r.daten.kassenwarte.some((n) => n.indexOf('Julius') === 0), 'als Kassenwart steht Julius im Kopf des Buchs');
+
+    console.log('\nLiga-Daten aktualisieren (nur TCs und Admin, Julius 28.11.)');
+    r = await julius.ruf('GET', '/api/me');
+    ok(r.daten.nutzer.ligaPflege === false && r.daten.nutzer.admin === false, 'ohne Rolle (kein TC, kein Admin) gibt es den Knopf nicht');
+    r = await julius.ruf('POST', '/api/liga/aktualisieren', {});
+    gleich(r.status, 403, 'und der Server lehnt den Abruf ab');
+    r = await tobi.ruf('GET', '/api/me');
+    ok(r.daten.nutzer.ligaPflege === true && r.daten.nutzer.admin === false, 'Tobias Thomas ist TC-2 laut Ligaleitung: er darf');
+    r = await tobi.rufOhneHeader('POST', '/api/liga/aktualisieren', {});
+    gleich(r.status, 403, 'nur aus der App');
+    r = await tobi.ruf('POST', '/api/liga/aktualisieren', {});
+    ok(r.status === 200 && r.daten.ok === true && !r.daten.eben, 'der TC holt die Daten der Ligaleitung');
+    r = await tobi.ruf('POST', '/api/liga/aktualisieren', {});
+    ok(r.status === 200 && r.daten.eben === true, 'ein zweiter Druck in derselben Minute ruft die Ligaleitung nicht noch einmal');
+    {
+      const direkt = new DatabaseSync(dbDatei);
+      direkt.exec("UPDATE users SET admin = 1 WHERE email = 'julius@example.de'");
+      direkt.close();
+    }
+    r = await julius.ruf('GET', '/api/me');
+    ok(r.daten.nutzer.ligaPflege === true && r.daten.nutzer.admin === true, 'als Admin darf Julius auch');
+    r = await julius.ruf('POST', '/api/liga/aktualisieren', {});
+    ok(r.status === 200 && r.daten.ok === true, 'und loest den Abruf auch aus');
     r = await julius.ruf('POST', '/api/kasse', { betrag: 5000, text: 'Gründungsbeitrag Tobi', kategorie: 'Mitgliedsbeiträge', datum: '2026-09-01', mitglied: tobi_id });
     gleich(r.status, 200, 'Julius bucht Tobis Gruendungsbeitrag');
     gleich(r.daten.saldo, 5000, 'der Bestand rechnet mit');

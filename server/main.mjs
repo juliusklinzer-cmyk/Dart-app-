@@ -62,7 +62,8 @@ Object.assign(config, erstelleDienste(process.env, APP_DIR, DATEN_DIR));
    DARTS_LIGA_GESAMT=1/0, sonst nur in Produktion). */
 const LIGA_GESAMT = process.env.DARTS_LIGA_GESAMT === '1' ||
   (process.env.DARTS_LIGA_GESAMT !== '0' && process.env.NODE_ENV === 'production');
-config.ligaGesamt = ligaGesamtDienst({ appDir: APP_DIR, datenDir: DATEN_DIR, an: LIGA_GESAMT, taktMs: LIGA_IMPORT_TAKT_MS }).daten;
+const ligaGesamt = ligaGesamtDienst({ appDir: APP_DIR, datenDir: DATEN_DIR, an: LIGA_GESAMT, taktMs: LIGA_IMPORT_TAKT_MS });
+config.ligaGesamt = ligaGesamt.daten;
 
 if (!config.inviteHash) {
   console.warn('WARNUNG: DARTS_INVITE_HASH ist nicht gesetzt -- niemand kann sich registrieren.');
@@ -80,7 +81,16 @@ let ligaVollZuletzt = 0;
    sich etwas, gilt sofort die neue Datei - fuer /js/liga-sdm.js, die
    Erinnerungen und die Tabellen-Mitteilung, die gleich mit angestossen
    wird. Fehler lassen die alte Datei stehen. */
+/* Immer nur ein Abgleich: drueckt ein TC "Daten aktualisieren", waehrend
+   der stuendliche laeuft, wartet er auf denselben (Kritik 28.11.). */
+let ligaAbgleichLauf = null;
 function ligaAbgleich() {
+  if (!ligaAbgleichLauf) {
+    ligaAbgleichLauf = ligaAbgleichEinmal().finally(function () { ligaAbgleichLauf = null; });
+  }
+  return ligaAbgleichLauf;
+}
+function ligaAbgleichEinmal() {
   const voll = Date.now() - ligaVollZuletzt > 20 * 3600e3;
   return ligaAktualisieren({ appDir: APP_DIR, datenDir: DATEN_DIR, voll }).then(function (r) {
     if (r.fehler) { console.error('[liga] Abgleich fehlgeschlagen: ' + r.fehler); return r; }
@@ -95,6 +105,22 @@ function ligaAbgleich() {
     return r;
   }).catch(function (e) { console.error('[liga] Abgleich fehlgeschlagen:', e); return { fehler: String(e) }; });
 }
+/* Knopf "Daten holen" an der Liga-Tabelle (TCs und Admin, POST
+   /api/liga/aktualisieren): beide Abgleiche sofort. Im Test
+   (DARTS_LIGA_JETZT_TEST=1) ein Stellvertreter ohne Netz. */
+const ligaKurz = (r) => (r ? { geaendert: !!r.geaendert, zusammenfassung: r.zusammenfassung || '', fehler: r.fehler || null } : null);
+config.ligaJetzt = process.env.DARTS_LIGA_JETZT_TEST === '1'
+  ? async () => ({ ok: true, eigene: { geaendert: false, zusammenfassung: 'Test', fehler: null }, gesamt: null })
+  : (LIGA_IMPORT || LIGA_GESAMT)
+    ? async function () {
+      const [a, b] = await Promise.all([LIGA_IMPORT ? ligaAbgleich() : null, LIGA_GESAMT ? ligaGesamt.abgleich() : null]);
+      const eigene = ligaKurz(a), gesamt = ligaKurz(b);
+      /* Fehlgeschlagen nur, wenn jeder gelaufene Abruf scheiterte (laeuft der
+         stuendliche gerade, liefert er null und holt den Stand selbst). */
+      const gelaufen = [eigene, gesamt].filter(Boolean);
+      return { ok: !(gelaufen.length && gelaufen.every((x) => x.fehler)), eigene, gesamt };
+    }
+    : null;
 if (LIGA_IMPORT) {
   setTimeout(ligaAbgleich, 20e3).unref();
   setInterval(ligaAbgleich, LIGA_IMPORT_TAKT_MS).unref();

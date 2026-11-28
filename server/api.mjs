@@ -56,7 +56,17 @@ export function createApi(db, config) {
     /* M19: users.mail_erinnerung ist seit Migration 018 nur noch eine alte
        Spalte - was gilt, steht je Thema in `benachrichtigungen`
        (GET /api/mitteilungen). Hier deshalb kein mailErinnerung mehr. */
-    return { id: u.id, name: u.display_name, email: u.email, avatar: u.avatar, hue: u.hue, dbl: u.dbl, voll: u.real_name || null, finish: finishAus(u), kuerzel: u.kuerzel || null, wurfhand: u.wurfhand || null, seit: u.created_at, kassenwart: u.kassenwart ? true : false, gastKonto: u.gast_konto ? true : false };
+    return { id: u.id, name: u.display_name, email: u.email, avatar: u.avatar, hue: u.hue, dbl: u.dbl, voll: u.real_name || null, finish: finishAus(u), kuerzel: u.kuerzel || null, wurfhand: u.wurfhand || null, seit: u.created_at, kassenwart: u.kassenwart ? true : false, gastKonto: u.gast_konto ? true : false,
+      admin: u.admin ? true : false, ligaPflege: darfLigaPflege(u) };
+  }
+  /* Liga-Daten pflegen (Knopf an der Liga-Tabelle): der Admin (users.admin,
+     Migration 022) und unsere Teamcaptains laut Ligaleitung (TC-1/TC-2,
+     ueber das Konto mit diesem Namen). Gast-Konten nie. */
+  function darfLigaPflege(u) {
+    if (!u || u.gast_konto) return false;
+    if (u.admin) return true;
+    const mail = String(u.email || '').toLowerCase();
+    return !!mail && teamcaptains().some((t) => !!t.email && String(t.email).toLowerCase() === mail);
   }
 
   function uid(praefix) {
@@ -1387,9 +1397,11 @@ export function createApi(db, config) {
     pruefeHerkunft(req);
     const u = verlangeNutzer(req);
     if (u.gast_konto) throw new HttpFehler(403, 'Mit einem Gast-Konto kannst du Ligaspiele verfolgen, aber nicht vorbereiten.');
-    const m = /^(st\d{2})-(\d{4}-\d{2}-\d{2})$/.exec(String(roh || ''));
+    /* "-p": die Probe vor dem Spieltag (Uebungsspiel als Game Day, Julius
+       28.11.) - ein eigener Game Day, der den echten nie beruehrt. */
+    const m = /^(st\d{2})-(\d{4}-\d{2}-\d{2})(-p)?$/.exec(String(roh || ''));
     if (!m || !ligaTermine().some((t) => t && t.id === m[1])) throw new HttpFehler(404, 'Diesen Spieltag gibt es im Spielplan nicht.');
-    return { u, id: m[0] + (u.test ? '-test' : '') };
+    return { u, id: m[0] + (u.test ? '-test' : ''), probe: !!m[3] };
   }
   function ligaTagGeraet(wert) {
     const g = String(wert || '');
@@ -1544,14 +1556,16 @@ export function createApi(db, config) {
 
   /* Start (mit Plan) oder Einsteigen (ohne): liefert immer dasselbe Turnier. */
   async function ligaTagStart(req, res, roh) {
-    const { u, id } = ligaTagZugang(req, roh);
+    const { u, id, probe } = ligaTagZugang(req, roh);
     const body = await leseJson(req, MAX_INHALT + 64 * 1024);
     const geraet = ligaTagGeraet(body.geraet);
     let planText = null, sid = null;
     if (body.plan !== undefined) {
       pruefePlan(body.plan);
       const lg = body.plan.liga;
-      if (!istObjekt(lg) || lg.uebung || lg.terminId !== id.slice(0, 4)) throw new HttpFehler(400, 'Der Plan gehoert nicht zu diesem Spieltag.');
+      /* Der echte Game Day startet nur ein echtes Ligaspiel, die Probe nur
+         ein Uebungsspiel (es zaehlt nirgends und bekommt keinen Live-Link). */
+      if (!istObjekt(lg) || !!lg.uebung !== probe || lg.terminId !== id.slice(0, 4)) throw new HttpFehler(400, 'Der Plan gehoert nicht zu diesem Spieltag.');
       sid = turnierId(body.id);
       planText = JSON.stringify(body.plan);
       if (planText.length > MAX_INHALT) throw new HttpFehler(413, 'Der Spielplan ist zu gross.');
@@ -1864,6 +1878,38 @@ export function createApi(db, config) {
       return { name: String(s.name || '').replace(/^\*/, '').trim(), email: k ? k.email : null };
     });
   }
+  /* ---------- Liga-Daten jetzt holen (Julius, 28.11.) ----------
+   * Der Server holt die Ergebnisse der Ligaleitung ohnehin stuendlich (eigene
+   * Liga und die Ligen 1 bis 5 samt Highlights). Der Knopf an der Tabelle
+   * stoesst beide Abgleiche sofort an - nur fuer TCs und den Admin. Es laeuft
+   * immer nur ein Abruf; wer innerhalb einer Minute noch einmal drueckt,
+   * bekommt das letzte Ergebnis (die Seite der Ligaleitung nicht ueberrennen). */
+  let ligaJetztLauf = null, ligaJetztZuletzt = 0, ligaJetztErgebnis = null;
+  async function ligaJetztAktualisieren(req, res) {
+    pruefeHerkunft(req);
+    const u = verlangeNutzer(req);
+    if (!darfLigaPflege(u)) throw new HttpFehler(403, 'Die Liga-Daten holen nur die Teamcaptains und der Admin.');
+    if (typeof config.ligaJetzt !== 'function') throw new HttpFehler(503, 'Der Abgleich mit der Ligaleitung ist auf diesem Server aus.');
+    /* Gemerkt wird nur ein Erfolg - nach einem Fehler darf gleich wieder
+       gefragt werden (Kritik 28.11.: sonst hiess es "alles aktuell"). */
+    if (!ligaJetztLauf && ligaJetztErgebnis && Date.now() - ligaJetztZuletzt < 60e3) {
+      return sendJson(res, 200, Object.assign({}, ligaJetztErgebnis, { eben: true }));
+    }
+    if (!ligaJetztLauf) {
+      ligaJetztLauf = Promise.resolve()
+        .then(() => config.ligaJetzt())
+        .catch((e) => ({ ok: false, fehler: String((e && e.message) || e) }))
+        .then((r) => {
+          ligaJetztLauf = null;
+          if (r && r.ok !== false) { ligaJetztErgebnis = r; ligaJetztZuletzt = Date.now(); }
+          return r;
+        });
+    }
+    const r = await ligaJetztLauf;
+    if (!r || r.ok === false) throw new HttpFehler(502, 'Die Seite der Ligaleitung ist gerade nicht erreichbar. Die Daten bleiben auf dem alten Stand.');
+    sendJson(res, 200, r);
+  }
+
   function empfaengerStand() {
     const tc = teamcaptains();
     const fest = [tc[0] && tc[0].email ? tc[0].email : '', tc[1] && tc[1].email ? tc[1].email : '', LIGALEITUNG_MAIL];
@@ -2797,6 +2843,7 @@ export function createApi(db, config) {
     ['PUT', /^\/api\/liga\/tabelle$/, ligaTabelleSpeichern],
     ['PUT', /^\/api\/liga\/zusagen\/([a-z0-9-]{2,40})$/, ligaZusageSetzen],
     ['POST', /^\/api\/liga\/bericht-mail$/, ligaBerichtMail],
+    ['POST', /^\/api\/liga\/aktualisieren$/, ligaJetztAktualisieren],
     ['POST', /^\/api\/liga\/tag\/([a-z0-9-]{8,20})$/, ligaTagAbgleich],
     ['POST', /^\/api\/liga\/tag\/([a-z0-9-]{8,20})\/start$/, ligaTagStart],
     ['POST', /^\/api\/mail\/probe$/, mailProbe],

@@ -34,7 +34,8 @@ const SCHRITTE = [
   { name: 'Konto: zwei Geraete', skript: 'tests/konto.mjs' },
   { name: 'Game Day: zwei iPads', skript: 'tests/ligatag.mjs' },
   /* Abschlusstest (Julius 28.11.): ein ganzer Ligaabend an zwei iPads. */
-  { name: 'Ligaabend: GAME DAY bis Spielbericht', skript: 'tests/ligaspiel-abschluss.mjs' }
+  { name: 'Ligaabend: GAME DAY bis Spielbericht', skript: 'tests/ligaspiel-abschluss.mjs' },
+  { name: 'Probe vor dem Spieltag: Übungsspiel als Game Day', skript: 'tests/ligatag-probe.mjs' }
 ];
 
 const start = Date.now();
