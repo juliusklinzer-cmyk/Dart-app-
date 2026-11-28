@@ -821,6 +821,43 @@ async function main() {
     ok(r.daten.live && r.daten.live.status === 'beendet', 'ein Uebungsspiel verdraengt den Endstand nicht');
     await julius.ruf('POST', '/api/tournaments/ligaueb1/ende');
 
+    /* "Live ohne Namen" (plan.liga.ohneNamen): der oeffentliche Ticker
+       bekommt nur Bogen-Kennungen, weder unsere Namen noch die der Gegner. */
+    r = await julius.ruf('POST', '/api/tournaments', { id: 'ligaanon1', plan: {
+      start: 501, bestOf: 3, players: [julius_id, tobi_id, 'gastanon1', 'gastanon2'], gaeste: { gastanon1: 'Gerda Geheimname', gastanon2: 'Otto Verborgen' },
+      matches: [{ id: 'anon1', round: 1, p: [julius_id, 'gastanon1'], posPaar: [0, 0], scheibe: 'S1' }, { id: 'anon2', round: 1, p: [tobi_id, 'gastanon2'], posPaar: [1, 1], scheibe: 'S2' }],
+      liga: { terminId: 'st03', nr: 3, gegner: 'Voodoo Darters', heim: true, ort: 'Bar Sehnsucht', tag: '2026-10-26', ohneNamen: true, nurErgebnis: false,
+        wir: [julius_id, tobi_id], sie: ['gastanon1', 'gastanon2'], heimSpieler: [julius_id, tobi_id], gastSpieler: ['gastanon1', 'gastanon2'] }
+    }, players: [tobi_id] });
+    gleich(r.status, 201, 'ein Ligaspiel "Live ohne Namen" wird angelegt');
+    r = await julius.ruf('GET', '/api/tournaments/ligaanon1');
+    const zsAnon = r.daten.turnier.zuschauer;
+    r = await julius.ruf('PUT', '/api/tournaments/ligaanon1/matches/anon1', { result: {
+      id: 'anon1', p: [julius_id, 'gastanon1'], winner: julius_id, done: true, at: 5, belegtVon: 'Gerda Geheimname',
+      legs: [{ starter: julius_id, winner: julius_id, visits: [{ p: julius_id, s: 100, d: 3, b: false, c: false, k: [{ m: 3, n: 20 }, { m: 1, n: 20 }, { m: 1, n: 20 }] }] }]
+    } });
+    gleich(r.status, 200, 'mit einem fertigen Einzel');
+    r = await tobi.ruf('PUT', '/api/tournaments/ligaanon1/matches/anon2/live', {
+      stand: { p: [tobi_id, 'gastanon2'], starter: tobi_id, start: 501, legs: [{ starter: tobi_id, visits: [{ p: tobi_id, s: 60, d: 3 }], winner: null }], darts: [{ m: 3, n: 20, v: 60 }] }
+    });
+    gleich(r.status, 200, 'und einem laufenden');
+    r = await fremd.ruf('GET', '/api/zuschauer/' + zsAnon);
+    {
+      const t = r.daten.turnier, roh = JSON.stringify(r.daten);
+      ok(t.ohneNamen === true && t.liga.ohneNamen === true, 'der Ticker weiss, dass er ohne Namen zeigt');
+      ok(t.namen[julius_id] === 'H1' && t.namen[tobi_id] === 'H2' && t.namen.gastanon1 === 'G1' && t.namen.gastanon2 === 'G2',
+        'statt der Namen stehen die Bogen-Kennungen', JSON.stringify(t.namen));
+      ok(!/Julius|"Tobi"|Gerda|Geheimname|Otto|Verborgen/.test(roh), 'kein einziger Name im JSON (auch nicht aus dem Ergebnis-Objekt)', roh.slice(0, 400));
+      ok(!('gaeste' in t) && !('belegtVon' in t.ergebnisse.anon1), 'weder Gaesteliste noch belegtVon');
+      ok(t.ergebnisse.anon1.legs[0].visits[0].s === 100 && t.ergebnisse.anon1.legs[0].visits[0].k.length === 3 && t.live.length === 1 &&
+        t.live[0].stand.legs[0].visits[0].s === 60 && t.live[0].stand.darts[0].v === 60, 'Stand, Einzeldarts und laufendes Einzel kommen trotzdem');
+    }
+    await julius.ruf('POST', '/api/tournaments/ligaanon1/ende');
+    /* Ohne den Schalter bleibt alles wie bisher - nur belegtVon & Co. fallen weg. */
+    r = await fremd.ruf('GET', '/api/zuschauer/' + zs);
+    ok(r.daten.turnier.ohneNamen === false && /^Julius/.test(r.daten.turnier.namen[julius_id]) && r.daten.turnier.namen[tobi_id] === 'Tobi',
+      'ohne "Live ohne Namen" stehen die Anzeigenamen wie bisher');
+
     console.log('\nLiga-Zusagen');
     r = await fremd.ruf('GET', '/api/liga/zusagen');
     gleich(r.status, 401, 'ohne Anmeldung gibt es keine Zusagen');
